@@ -1,22 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { flags, criteriaDefinitions, buildGrid } from "./flagData";
+import { useState, useEffect, useRef, Fragment } from "react";
+import { flags, criteria, rowKeys, colKeys, buildGrid, normalise } from "./flagData";
 import "./App.css";
 
-const GRID_SIZE = 3;
+const SIZE = 3;
+const GAME_HASH = "#/1";
 
-function normalise(str) {
-  return str.trim().toLowerCase().replace(/[^a-z0-9 ]/g, "");
-}
-
-function Autocomplete({ onSubmit, disabled, usedNames }) {
+function Autocomplete({ onSubmit, usedNames }) {
   const [value, setValue] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [highlighted, setHighlighted] = useState(-1);
   const inputRef = useRef(null);
 
-  useEffect(() => {
-    if (!disabled) inputRef.current?.focus();
-  }, [disabled]);
+  useEffect(() => { inputRef.current?.focus(); }, []);
 
   function handleChange(e) {
     const v = e.target.value;
@@ -24,11 +19,7 @@ function Autocomplete({ onSubmit, disabled, usedNames }) {
     setHighlighted(-1);
     if (v.length < 1) { setSuggestions([]); return; }
     const norm = normalise(v);
-    setSuggestions(
-      flags
-        .filter(f => normalise(f.name).includes(norm))
-        .slice(0, 6)
-    );
+    setSuggestions(flags.filter(f => normalise(f.name).includes(norm)).slice(0, 6));
   }
 
   function submit(name) {
@@ -57,7 +48,6 @@ function Autocomplete({ onSubmit, disabled, usedNames }) {
         onChange={handleChange}
         onKeyDown={handleKey}
         placeholder="Type a country…"
-        disabled={disabled}
         autoComplete="off"
       />
       {suggestions.length > 0 && (
@@ -78,11 +68,8 @@ function Autocomplete({ onSubmit, disabled, usedNames }) {
   );
 }
 
-function Cell({ cell, answer, isActive, onClick, rowLabel, colLabel }) {
-  const status = answer
-    ? answer.correct ? "correct" : "wrong"
-    : isActive ? "active" : "idle";
-
+function Cell({ answer, isActive, onClick, rowLabel, colLabel }) {
+  const status = answer ? (answer.correct ? "correct" : "wrong") : isActive ? "active" : "idle";
   return (
     <div className={`cell cell-${status}`} onClick={!answer ? onClick : undefined}>
       {answer ? (
@@ -106,50 +93,36 @@ function Cell({ cell, answer, isActive, onClick, rowLabel, colLabel }) {
 }
 
 export default function App() {
-  const [gameData, setGameData] = useState(null);
+  useEffect(() => {
+    if (window.location.hash !== GAME_HASH) {
+      window.history.replaceState(null, "", GAME_HASH);
+    }
+  }, []);
+
+  const [grid] = useState(() => buildGrid());
   const [answers, setAnswers] = useState({});
   const [activeCell, setActiveCell] = useState(null);
-  const [score, setScore] = useState(0);
   const [wrongFlash, setWrongFlash] = useState(false);
+
   const usedNames = new Set(Object.values(answers).map(a => a.name));
-
-  function startGame() {
-    const data = buildGrid(GRID_SIZE);
-    setGameData(data);
-    setAnswers({});
-    setActiveCell(null);
-    setScore(0);
-  }
-
-  useEffect(() => { startGame(); }, []);
-
-  function handleCellClick(idx) {
-    setActiveCell(idx);
-  }
+  const totalCells = SIZE * SIZE;
+  const answered = Object.keys(answers).length;
+  const score = Object.values(answers).filter(a => a.correct).length;
+  const allDone = answered === totalCells;
 
   function handleSubmit(name) {
-    if (activeCell === null || !gameData) return;
-    const cell = gameData.grid[activeCell];
-    const isCorrect = cell.validFlags.some(f => normalise(f.name) === normalise(name));
-    const newAnswer = { name, correct: isCorrect };
-    setAnswers(prev => ({ ...prev, [activeCell]: newAnswer }));
-    if (isCorrect) {
-      setScore(s => s + 1);
-      const nextEmpty = gameData.grid.findIndex((_, i) => i !== activeCell && !answers[i] && answers[i] !== 0);
-      setActiveCell(nextEmpty === -1 ? null : nextEmpty);
+    if (activeCell === null) return;
+    const cell = grid[activeCell];
+    const correct = cell.validFlags.some(f => normalise(f.name) === normalise(name));
+    setAnswers(prev => ({ ...prev, [activeCell]: { name, correct } }));
+    if (correct) {
+      const next = grid.findIndex((_, i) => i !== activeCell && !answers[i]);
+      setActiveCell(next === -1 ? null : next);
     } else {
       setWrongFlash(true);
       setTimeout(() => setWrongFlash(false), 600);
     }
   }
-
-  const totalCells = GRID_SIZE * GRID_SIZE;
-  const answered = Object.keys(answers).length;
-  const allDone = answered === totalCells;
-
-  if (!gameData) return <div className="loading">Loading…</div>;
-
-  const { rowKeys, colKeys, grid } = gameData;
 
   return (
     <div className="app">
@@ -160,38 +133,32 @@ export default function App() {
 
       <div className="score-bar">
         <span className="score">{score} / {totalCells}</span>
-        <button className="btn-new" onClick={startGame}>New game</button>
       </div>
 
       <div className="grid-wrap">
-        <div className="grid" style={{ gridTemplateColumns: `140px repeat(${GRID_SIZE}, 1fr)` }}>
+        <div className="grid" style={{ gridTemplateColumns: `140px repeat(${SIZE}, 1fr)` }}>
           <div className="corner-cell" />
           {colKeys.map(k => (
-            <div key={k} className="header-cell col-header">
-              {criteriaDefinitions[k].label}
-            </div>
+            <div key={k} className="header-cell col-header">{criteria[k].label}</div>
           ))}
 
           {rowKeys.map((rk, r) => (
-            <>
-              <div key={rk} className="header-cell row-header">
-                {criteriaDefinitions[rk].label}
-              </div>
+            <Fragment key={rk}>
+              <div className="header-cell row-header">{criteria[rk].label}</div>
               {colKeys.map((ck, c) => {
-                const idx = r * GRID_SIZE + c;
+                const idx = r * SIZE + c;
                 return (
                   <Cell
                     key={idx}
-                    cell={grid[idx]}
                     answer={answers[idx]}
                     isActive={activeCell === idx}
-                    onClick={() => handleCellClick(idx)}
-                    rowLabel={criteriaDefinitions[rk].label}
-                    colLabel={criteriaDefinitions[ck].label}
+                    onClick={() => setActiveCell(idx)}
+                    rowLabel={criteria[rk].label}
+                    colLabel={criteria[ck].label}
                   />
                 );
               })}
-            </>
+            </Fragment>
           ))}
         </div>
       </div>
@@ -199,20 +166,19 @@ export default function App() {
       {activeCell !== null && !answers[activeCell] && (
         <div className={`input-area ${wrongFlash ? "flash-wrong" : ""}`}>
           <div className="active-clue">
-            <span className="clue-tag">{criteriaDefinitions[rowKeys[Math.floor(activeCell / GRID_SIZE)]].label}</span>
+            <span className="clue-tag">{criteria[rowKeys[Math.floor(activeCell / SIZE)]].label}</span>
             <span className="clue-sep">+</span>
-            <span className="clue-tag">{criteriaDefinitions[colKeys[activeCell % GRID_SIZE]].label}</span>
+            <span className="clue-tag">{criteria[colKeys[activeCell % SIZE]].label}</span>
           </div>
-          <Autocomplete onSubmit={handleSubmit} disabled={false} usedNames={usedNames} />
+          <Autocomplete onSubmit={handleSubmit} usedNames={usedNames} />
         </div>
       )}
 
       {allDone && (
         <div className="result-banner">
           <p className="result-text">
-            {score === totalCells ? "🎉 Perfect score!" : `${score} of ${totalCells} correct`}
+            {score === totalCells ? "Perfect score!" : `${score} of ${totalCells} correct`}
           </p>
-          <button className="btn-new btn-large" onClick={startGame}>Play again</button>
         </div>
       )}
     </div>
