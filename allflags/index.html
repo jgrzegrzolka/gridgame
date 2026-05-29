@@ -24,16 +24,15 @@
       }
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, 80px);
+        grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
         gap: 8px;
       }
       .flag {
         position: relative;
-        width: 80px;
-        height: 60px;
+        aspect-ratio: 4 / 3;
         border: 1px solid #ddd;
         overflow: hidden;
-        cursor: default;
+        cursor: zoom-in;
       }
       .flag img {
         width: 100%;
@@ -60,13 +59,52 @@
       .flag:hover::after {
         opacity: 1;
       }
+      dialog#zoom {
+        width: min(90vw, 420px);
+        padding: 16px;
+        border: none;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+      dialog#zoom::backdrop {
+        background: rgba(0, 0, 0, 0.6);
+      }
+      dialog#zoom img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid #ddd;
+      }
+      dialog#zoom p {
+        margin: 12px 0 0;
+        text-align: center;
+        font-size: 16px;
+      }
     </style>
   </head>
   <body>
     <h1>All Flags</h1>
     <p class="count" id="count">Loading…</p>
     <div class="grid" id="grid"></div>
+    <dialog id="zoom">
+      <img alt="" />
+      <p></p>
+    </dialog>
     <script>
+      const zoom = document.getElementById('zoom');
+      const zoomImg = zoom.querySelector('img');
+      const zoomName = zoom.querySelector('p');
+      function openZoom(c) {
+        zoomImg.src = `../flags/svg/${c.code}.svg`;
+        zoomImg.alt = c.name;
+        zoomName.textContent = c.name;
+        zoom.showModal();
+      }
+      zoom.addEventListener('click', (e) => {
+        if (e.target === zoom) zoom.close();
+      });
+
       fetch('../flags/countries.json')
         .then((r) => r.json())
         .then((countries) => {
@@ -75,6 +113,7 @@
             const wrap = document.createElement('div');
             wrap.className = 'flag';
             wrap.dataset.name = c.name;
+            wrap.addEventListener('click', () => openZoom(c));
             const img = document.createElement('img');
             img.src = `../flags/svg/${c.code}.svg`;
             img.alt = c.name;
