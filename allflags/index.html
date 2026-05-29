@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>All Flags</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: 24px;
+        background: #fafafa;
+        color: #1c1c1c;
+      }
+      h1 {
+        font-size: 20px;
+        font-weight: 500;
+        margin: 0 0 4px;
+      }
+      .count {
+        color: #666;
+        font-size: 14px;
+        margin: 0 0 20px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 80px);
+        gap: 8px;
+      }
+      .flag {
+        position: relative;
+        width: 80px;
+        height: 60px;
+        border: 1px solid #ddd;
+        overflow: hidden;
+        cursor: default;
+      }
+      .flag img {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .flag::after {
+        content: attr(data-name);
+        position: absolute;
+        bottom: calc(100% + 4px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1c1c1c;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 80ms;
+        z-index: 10;
+      }
+      .flag:hover::after {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>All Flags</h1>
+    <p class="count" id="count">Loading…</p>
+    <div class="grid" id="grid"></div>
+    <script>
+      fetch('../flags/countries.json')
+        .then((r) => r.json())
+        .then((countries) => {
+          const grid = document.getElementById('grid');
+          for (const c of countries) {
+            const wrap = document.createElement('div');
+            wrap.className = 'flag';
+            wrap.dataset.name = c.name;
+            const img = document.createElement('img');
+            img.src = `../flags/svg/${c.code}.svg`;
+            img.alt = c.name;
+            img.loading = 'lazy';
+            wrap.appendChild(img);
+            grid.appendChild(wrap);
+          }
+          document.getElementById('count').textContent = `${countries.length} flags`;
+        })
+        .catch((err) => {
+          document.getElementById('count').textContent = 'Failed to load: ' + err.message;
+        });
+    </script>
+  </body>
+</html>
