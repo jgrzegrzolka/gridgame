@@ -12,15 +12,20 @@
         background: #fafafa;
         color: #1c1c1c;
       }
-      h1 {
-        font-size: 20px;
-        font-weight: 500;
-        margin: 0 0 4px;
+      .continent, .other {
+        margin-bottom: 32px;
       }
-      .count {
-        color: #666;
+      .continent h2, .other h2 {
+        font-size: 16px;
+        font-weight: 500;
+        margin: 0 0 12px;
+        color: #1c1c1c;
+      }
+      .section-count {
+        color: #999;
+        font-weight: 400;
         font-size: 14px;
-        margin: 0 0 20px;
+        margin-left: 6px;
       }
       .grid {
         display: grid;
@@ -67,15 +72,43 @@
         outline: none;
         background: #fff;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        opacity: 0;
+        transform: scaleX(0);
+        transition: opacity 150ms ease,
+                    transform 350ms cubic-bezier(0.4, 0, 0.2, 1),
+                    overlay 350ms ease allow-discrete,
+                    display 350ms ease allow-discrete;
+      }
+      dialog#zoom[open] {
+        opacity: 1;
+        transform: scaleX(1);
+      }
+      @starting-style {
+        dialog#zoom[open] {
+          opacity: 0;
+          transform: scaleX(0);
+        }
       }
       dialog#zoom::backdrop {
+        background: rgba(0, 0, 0, 0);
+        transition: background 200ms ease,
+                    overlay 200ms ease allow-discrete,
+                    display 200ms ease allow-discrete;
+      }
+      dialog#zoom[open]::backdrop {
         background: rgba(0, 0, 0, 0.6);
+      }
+      @starting-style {
+        dialog#zoom[open]::backdrop {
+          background: rgba(0, 0, 0, 0);
+        }
       }
       dialog#zoom img {
         display: block;
         width: 100%;
         height: auto;
         border: 1px solid #ddd;
+        box-sizing: border-box;
       }
       dialog#zoom p {
         margin: 12px 0 0;
@@ -85,14 +118,14 @@
     </style>
   </head>
   <body>
-    <h1>All Flags</h1>
-    <p class="count" id="count">Loading…</p>
-    <div class="grid" id="grid"></div>
+    <div id="sections"></div>
     <dialog id="zoom">
       <img alt="" />
       <p></p>
     </dialog>
-    <script>
+    <script type="module">
+      import { CONTINENTS, splitByCategory, groupByContinent } from '../flags/group.js';
+
       const zoom = document.getElementById('zoom');
       const zoomImg = zoom.querySelector('img');
       const zoomName = zoom.querySelector('p');
@@ -106,26 +139,50 @@
         if (e.target === zoom) zoom.close();
       });
 
+      function flagTile(c) {
+        const wrap = document.createElement('div');
+        wrap.className = 'flag';
+        wrap.dataset.name = c.name;
+        wrap.addEventListener('click', () => openZoom(c));
+        const img = document.createElement('img');
+        img.src = `../flags/svg/${c.code}.svg`;
+        img.alt = c.name;
+        img.loading = 'lazy';
+        wrap.appendChild(img);
+        return wrap;
+      }
+
+      function renderSection(parent, title, items, className) {
+        if (items.length === 0) return;
+        const section = document.createElement('section');
+        section.className = className;
+        const h2 = document.createElement('h2');
+        h2.textContent = title;
+        const countSpan = document.createElement('span');
+        countSpan.className = 'section-count';
+        countSpan.textContent = items.length;
+        h2.appendChild(countSpan);
+        section.appendChild(h2);
+        const grid = document.createElement('div');
+        grid.className = 'grid';
+        for (const c of items) grid.appendChild(flagTile(c));
+        section.appendChild(grid);
+        parent.appendChild(section);
+      }
+
       fetch('../flags/countries.json')
         .then((r) => r.json())
-        .then((countries) => {
-          const grid = document.getElementById('grid');
-          for (const c of countries) {
-            const wrap = document.createElement('div');
-            wrap.className = 'flag';
-            wrap.dataset.name = c.name;
-            wrap.addEventListener('click', () => openZoom(c));
-            const img = document.createElement('img');
-            img.src = `../flags/svg/${c.code}.svg`;
-            img.alt = c.name;
-            img.loading = 'lazy';
-            wrap.appendChild(img);
-            grid.appendChild(wrap);
+        .then((all) => {
+          const sections = document.getElementById('sections');
+          const { countries, other } = splitByCategory(all);
+          const byContinent = groupByContinent(countries);
+          for (const continent of CONTINENTS) {
+            renderSection(sections, continent, byContinent[continent], 'continent');
           }
-          document.getElementById('count').textContent = `${countries.length} flags`;
+          renderSection(sections, 'Other', other, 'other');
         })
         .catch((err) => {
-          document.getElementById('count').textContent = 'Failed to load: ' + err.message;
+          document.getElementById('sections').textContent = 'Failed to load: ' + err.message;
         });
     </script>
   </body>

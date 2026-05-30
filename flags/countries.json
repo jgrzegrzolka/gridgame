@@ -1799,13 +1799,6 @@
     "statehood": "un_member"
   },
   {
-    "code": "xx",
-    "name": "Unknown",
-    "continent": null,
-    "category": "other",
-    "statehood": null
-  },
-  {
     "code": "uy",
     "name": "Uruguay",
     "continent": "South America",
