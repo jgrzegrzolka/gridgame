@@ -306,3 +306,32 @@ export function saveBest(store, key, value) {
     // Storage may be disabled or full - degrade gracefully.
   }
 }
+
+// Storage key for the best score of a given variant + mode. Keeping
+// this in code (rather than inlined as a template literal at the call
+// site) gives a single source of truth + a target for tests.
+/**
+ * @param {string} variantKey
+ * @param {string} modeKey
+ * @returns {string}
+ */
+export function bestKey(variantKey, modeKey) {
+  return `flagquiz.best.${variantKey}.${modeKey}`;
+}
+
+// End-of-game flow: read the previous best for this variant/mode,
+// decide whether the current run beats it, and persist if so. Returns
+// what to display and whether the displayed value is freshly set.
+/**
+ * @param {BestStore} store
+ * @param {string} variantKey
+ * @param {string} modeKey
+ * @param {Result} current
+ * @returns {{ best: Result, isNew: boolean }}
+ */
+export function recordResult(store, variantKey, modeKey, current) {
+  const key = bestKey(variantKey, modeKey);
+  const outcome = nextBest(loadBest(store, key), current);
+  if (outcome.isNew) saveBest(store, key, outcome.best);
+  return outcome;
+}

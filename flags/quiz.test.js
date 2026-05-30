@@ -17,6 +17,8 @@ import {
   nextBest,
   loadBest,
   saveBest,
+  bestKey,
+  recordResult,
 } from './quiz.js';
 
 /**
@@ -433,4 +435,69 @@ test('loadBest does not throw when the store throws', () => {
     setItem: () => {},
   };
   assert.equal(loadBest(throwingStore, 'k'), null);
+});
+
+test('bestKey produces the expected namespaced format', () => {
+  assert.equal(bestKey('europe', '20'), 'flagquiz.best.europe.20');
+  assert.equal(bestKey('all', 'all'), 'flagquiz.best.all.all');
+  // Variant keys can contain dashes (north-america etc.) - must round-trip
+  assert.equal(bestKey('north-america', '20'), 'flagquiz.best.north-america.20');
+});
+
+test('recordResult on an empty store saves the result and reports isNew', () => {
+  const store = fakeStore();
+  const current = { score: 87, time: 65432 };
+  const r = recordResult(store, 'europe', '20', current);
+  assert.deepEqual(r, { best: current, isNew: true });
+  // The store now holds the value at the right key
+  assert.deepEqual(
+    loadBest(store, bestKey('europe', '20')),
+    current,
+  );
+});
+
+test('recordResult does not save when the current run does not beat the best', () => {
+  const store = fakeStore();
+  const previous = { score: 90, time: 30000 };
+  saveBest(store, bestKey('europe', '20'), previous);
+  const worse = { score: 80, time: 10000 };
+  const r = recordResult(store, 'europe', '20', worse);
+  assert.deepEqual(r, { best: previous, isNew: false });
+  // Storage still holds the original
+  assert.deepEqual(
+    loadBest(store, bestKey('europe', '20')),
+    previous,
+  );
+});
+
+test('recordResult updates the store when the current run beats the best', () => {
+  const store = fakeStore();
+  saveBest(store, bestKey('europe', '20'), { score: 80, time: 60000 });
+  const better = { score: 95, time: 40000 };
+  const r = recordResult(store, 'europe', '20', better);
+  assert.deepEqual(r, { best: better, isNew: true });
+  assert.deepEqual(
+    loadBest(store, bestKey('europe', '20')),
+    better,
+  );
+});
+
+test('recordResult uses separate slots per variant/mode pair', () => {
+  const store = fakeStore();
+  recordResult(store, 'europe', '20', { score: 100, time: 30000 });
+  recordResult(store, 'asia', '20', { score: 70, time: 90000 });
+  recordResult(store, 'europe', 'all', { score: 85, time: 200000 });
+  // Each slot kept its own value - no cross-contamination
+  assert.deepEqual(
+    loadBest(store, bestKey('europe', '20')),
+    { score: 100, time: 30000 },
+  );
+  assert.deepEqual(
+    loadBest(store, bestKey('asia', '20')),
+    { score: 70, time: 90000 },
+  );
+  assert.deepEqual(
+    loadBest(store, bestKey('europe', 'all')),
+    { score: 85, time: 200000 },
+  );
 });

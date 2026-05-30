@@ -174,9 +174,7 @@
         VARIANTS,
         availableModes,
         formatTime,
-        nextBest,
-        loadBest,
-        saveBest,
+        recordResult,
         poolFor,
         targetFor,
       } from '../flags/quiz.js';
@@ -305,12 +303,9 @@
           finalScoreLineEl.style.color = `hsl(${ratio * 120}, 65%, 38%)`;
           timeEl.textContent = `Time: ${formatTime(elapsed)}`;
 
-          const bestKey = `flagquiz.best.${key}.${mode}`;
-          const { best, isNew } = nextBest(
-            loadBest(localStorage, bestKey),
-            { score: pct, time: elapsed },
+          const { best, isNew } = recordResult(
+            localStorage, key, mode, { score: pct, time: elapsed },
           );
-          if (isNew) saveBest(localStorage, bestKey, best);
           bestEl.textContent = `Best: ${best.score}% in ${formatTime(best.time)}`;
           if (isNew) {
             const badge = document.createElement('span');
