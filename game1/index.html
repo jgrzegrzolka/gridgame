@@ -15,6 +15,36 @@
         flex-direction: column;
         align-items: center;
       }
+      .menu-title {
+        font-size: 20px;
+        font-weight: 500;
+        margin: 0 0 20px;
+      }
+      .variants {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-width: 400px;
+        width: 100%;
+      }
+      .variants li {
+        margin-bottom: 10px;
+      }
+      .variants a {
+        color: #1c1c1c;
+        text-decoration: none;
+        font-size: 18px;
+        font-weight: 500;
+      }
+      .variants a:hover {
+        text-decoration: underline;
+      }
+      .variant-count {
+        color: #666;
+        font-size: 14px;
+        font-weight: 400;
+        margin-left: 6px;
+      }
       .status {
         font-size: 14px;
         color: #666;
@@ -77,30 +107,44 @@
         font-weight: 500;
         margin: 0 0 16px;
       }
-      .reload-hint {
+      .result-links {
         font-size: 14px;
         color: #666;
         margin: 0;
       }
+      .result-links a {
+        color: #1c1c1c;
+      }
     </style>
   </head>
   <body>
-    <div id="game">
-      <p class="status" id="status">0 / 100 &nbsp;·&nbsp; score 100</p>
+    <div id="menu" hidden>
+      <h1 class="menu-title">Choose a quiz</h1>
+      <ul class="variants" id="variants"></ul>
+    </div>
+    <div id="game" hidden>
+      <p class="status" id="status"></p>
       <p class="country-name" id="country-name">Loading…</p>
       <div class="choices" id="choices"></div>
       <p class="feedback" id="feedback"></p>
     </div>
-    <div class="result" id="result" hidden>
-      <p class="final-score">Final score: <span id="final-score">0</span> / 100</p>
-      <p class="reload-hint">Reload the page for a new game.</p>
+    <div id="result" hidden>
+      <p class="final-score">
+        Final score: <span id="final-score">0</span> /
+        <span id="final-target">0</span>
+      </p>
+      <p class="result-links">
+        <a id="play-again" href="#">Play again</a> ·
+        <a href="./">Back to menu</a>
+      </p>
     </div>
     <script type="module">
-      import { pickQuestion } from '../flags/quiz.js';
+      import { pickQuestion, VARIANTS, poolFor } from '../flags/quiz.js';
 
-      const TARGET_CORRECT = 100;
-      const STARTING_SCORE = 100;
+      const DEFAULT_TARGET = 50;
 
+      const menuEl = document.getElementById('menu');
+      const variantsEl = document.getElementById('variants');
       const gameEl = document.getElementById('game');
       const statusEl = document.getElementById('status');
       const countryNameEl = document.getElementById('country-name');
@@ -108,77 +152,124 @@
       const feedbackEl = document.getElementById('feedback');
       const resultEl = document.getElementById('result');
       const finalScoreEl = document.getElementById('final-score');
+      const finalTargetEl = document.getElementById('final-target');
+      const playAgainEl = document.getElementById('play-again');
 
-      let countries = [];
-      let currentAnswer = null;
-      let correctCount = 0;
-      let wrongCount = 0;
-
-      function score() {
-        return Math.max(0, STARTING_SCORE - wrongCount);
-      }
-
-      function updateStatus() {
-        statusEl.textContent = `${correctCount} / ${TARGET_CORRECT}  ·  score ${score()}`;
-      }
-
-      function render(q) {
-        currentAnswer = q.answer;
-        countryNameEl.textContent = q.answer.name;
-        choicesEl.innerHTML = '';
-        for (const c of q.choices) {
-          const tile = document.createElement('button');
-          tile.className = 'flag-choice';
-          tile.dataset.code = c.code;
-          const img = document.createElement('img');
-          img.src = `../flags/svg/${c.code}.svg`;
-          img.alt = '';
-          tile.appendChild(img);
-          tile.addEventListener('click', () => onAnswer(c, tile));
-          choicesEl.appendChild(tile);
-        }
-        feedbackEl.textContent = '';
-      }
-
-      function onAnswer(chosen, tile) {
-        if (chosen.code === currentAnswer.code) {
-          tile.classList.add('correct');
-          for (const t of choicesEl.querySelectorAll('.flag-choice')) {
-            t.disabled = true;
-          }
-          feedbackEl.textContent = '';
-          correctCount++;
-          updateStatus();
-          if (correctCount >= TARGET_CORRECT) {
-            setTimeout(showResult, 500);
-          } else {
-            setTimeout(() => render(pickQuestion(countries)), 500);
-          }
-        } else {
-          tile.classList.add('wrong');
-          tile.disabled = true;
-          feedbackEl.textContent = chosen.name;
-          wrongCount++;
-          updateStatus();
-        }
-      }
-
-      function showResult() {
-        finalScoreEl.textContent = score();
-        gameEl.hidden = true;
-        resultEl.hidden = false;
-      }
+      const variantKey = new URLSearchParams(window.location.search).get('v');
 
       fetch('../flags/countries.json')
         .then((r) => r.json())
         .then((all) => {
-          countries = all;
-          updateStatus();
-          render(pickQuestion(countries));
+          if (!variantKey) {
+            renderMenu(all);
+          } else if (!VARIANTS[variantKey]) {
+            renderUnknown(variantKey);
+          } else {
+            startGame(variantKey, all);
+          }
         })
         .catch((err) => {
-          countryNameEl.textContent = 'Failed to load: ' + err.message;
+          document.body.textContent = 'Failed to load: ' + err.message;
         });
+
+      function renderMenu(all) {
+        for (const [key, { label }] of Object.entries(VARIANTS)) {
+          const pool = poolFor(key, all);
+          const target = Math.min(DEFAULT_TARGET, pool.length);
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = `?v=${key}`;
+          a.textContent = label;
+          const count = document.createElement('span');
+          count.className = 'variant-count';
+          count.textContent = `${pool.length} flags · ${target} questions`;
+          li.appendChild(a);
+          li.appendChild(count);
+          variantsEl.appendChild(li);
+        }
+        menuEl.hidden = false;
+      }
+
+      function renderUnknown(key) {
+        menuEl.hidden = false;
+        const title = document.querySelector('.menu-title');
+        title.textContent = `Unknown variant "${key}" — pick one:`;
+        // still render the menu below so user can recover
+        fetch('../flags/countries.json')
+          .then((r) => r.json())
+          .then(renderMenu);
+      }
+
+      function startGame(key, all) {
+        const pool = poolFor(key, all);
+        const target = Math.min(DEFAULT_TARGET, pool.length);
+
+        let currentAnswer = null;
+        let correctCount = 0;
+        let wrongCount = 0;
+
+        function score() {
+          return Math.max(0, target - wrongCount);
+        }
+
+        function updateStatus() {
+          statusEl.textContent = `${correctCount} / ${target}  ·  score ${score()}`;
+        }
+
+        function render(q) {
+          currentAnswer = q.answer;
+          countryNameEl.textContent = q.answer.name;
+          choicesEl.innerHTML = '';
+          for (const c of q.choices) {
+            const tile = document.createElement('button');
+            tile.className = 'flag-choice';
+            tile.dataset.code = c.code;
+            const img = document.createElement('img');
+            img.src = `../flags/svg/${c.code}.svg`;
+            img.alt = '';
+            tile.appendChild(img);
+            tile.addEventListener('click', () => onAnswer(c, tile));
+            choicesEl.appendChild(tile);
+          }
+          feedbackEl.textContent = '';
+        }
+
+        function onAnswer(chosen, tile) {
+          if (chosen.code === currentAnswer.code) {
+            tile.classList.add('correct');
+            for (const t of choicesEl.querySelectorAll('.flag-choice')) {
+              t.disabled = true;
+            }
+            feedbackEl.textContent = '';
+            correctCount++;
+            updateStatus();
+            if (correctCount >= target) {
+              setTimeout(showResult, 500);
+            } else {
+              setTimeout(() => render(pickQuestion(pool)), 500);
+            }
+          } else {
+            tile.classList.add('wrong');
+            tile.disabled = true;
+            feedbackEl.textContent = chosen.name;
+            wrongCount++;
+            updateStatus();
+          }
+        }
+
+        function showResult() {
+          finalScoreEl.textContent = score();
+          finalTargetEl.textContent = target;
+          gameEl.hidden = true;
+          resultEl.hidden = false;
+        }
+
+        playAgainEl.href = window.location.pathname + window.location.search;
+
+        gameEl.hidden = false;
+        updateStatus();
+        render(pickQuestion(pool));
+      }
     </script>
   </body>
 </html>
