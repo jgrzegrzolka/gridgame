@@ -37,17 +37,10 @@
       .variants a:hover {
         text-decoration: underline;
       }
-      .status {
-        font-size: 14px;
-        color: #666;
-        margin: 0 0 12px;
-        text-align: center;
-        font-variant-numeric: tabular-nums;
-      }
       .country-name {
         font-size: 28px;
         font-weight: 500;
-        margin: 0 0 24px;
+        margin: 0 0 40px;
         text-align: center;
       }
       .choices {
@@ -101,7 +94,19 @@
       .result {
         text-align: center;
         margin-top: 80px;
+        animation: result-in 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
       }
+      @keyframes result-in {
+        0%   { opacity: 0; transform: translateY(16px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+      .grade {
+        font-size: 24px;
+        font-weight: 500;
+        margin: 0 0 16px;
+      }
+      .grade.perfect, .grade.good { color: #2a9d4a; }
+      .grade.poor { color: #c5302d; }
       .final-score {
         font-size: 36px;
         font-weight: 500;
@@ -122,12 +127,12 @@
       <ul class="variants" id="variants"></ul>
     </div>
     <div id="game" hidden>
-      <p class="status" id="status"></p>
       <p class="country-name" id="country-name">Loading…</p>
       <div class="choices" id="choices"></div>
       <p class="feedback" id="feedback"></p>
     </div>
     <div id="result" hidden>
+      <p class="grade" id="grade"></p>
       <p class="final-score">
         Final score: <span id="final-score">0</span> /
         <span id="final-target">0</span>
@@ -149,11 +154,11 @@
       const menuEl = document.getElementById('menu');
       const variantsEl = document.getElementById('variants');
       const gameEl = document.getElementById('game');
-      const statusEl = document.getElementById('status');
       const countryNameEl = document.getElementById('country-name');
       const choicesEl = document.getElementById('choices');
       const feedbackEl = document.getElementById('feedback');
       const resultEl = document.getElementById('result');
+      const gradeEl = document.getElementById('grade');
       const finalScoreEl = document.getElementById('final-score');
       const finalTargetEl = document.getElementById('final-target');
       const playAgainEl = document.getElementById('play-again');
@@ -201,15 +206,10 @@
         const quiz = createQuiz(pool, target);
 
         let currentAnswer = null;
-        let correctCount = 0;
         let wrongCount = 0;
 
         function score() {
           return Math.max(0, target - wrongCount);
-        }
-
-        function updateStatus() {
-          statusEl.textContent = `${correctCount} / ${target}  ·  score ${score()}`;
         }
 
         function render(q) {
@@ -237,8 +237,6 @@
               t.disabled = true;
             }
             feedbackEl.textContent = '';
-            correctCount++;
-            updateStatus();
             const nextQ = quiz.next();
             if (!nextQ) {
               setTimeout(showResult, 500);
@@ -250,13 +248,24 @@
             tile.disabled = true;
             feedbackEl.textContent = chosen.name;
             wrongCount++;
-            updateStatus();
           }
         }
 
         function showResult() {
-          finalScoreEl.textContent = score();
+          const finalScore = score();
+          const ratio = finalScore / target;
+          finalScoreEl.textContent = finalScore;
           finalTargetEl.textContent = target;
+          if (ratio === 1) {
+            gradeEl.textContent = 'Perfect!';
+            gradeEl.className = 'grade perfect';
+          } else if (ratio >= 0.7) {
+            gradeEl.textContent = 'Well done!';
+            gradeEl.className = 'grade good';
+          } else {
+            gradeEl.textContent = 'Keep practicing';
+            gradeEl.className = 'grade poor';
+          }
           gameEl.hidden = true;
           resultEl.hidden = false;
         }
@@ -264,7 +273,6 @@
         playAgainEl.href = window.location.pathname + window.location.search;
 
         gameEl.hidden = false;
-        updateStatus();
         render(quiz.next());
       }
     </script>
