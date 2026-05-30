@@ -240,3 +240,24 @@ export function formatTime(ms) {
   const milli = ms % 1000;
   return `${min}:${sec.toString().padStart(2, '0')}.${milli.toString().padStart(3, '0')}`;
 }
+
+/**
+ * @typedef {{ score: number, time: number }} Result
+ */
+
+// Decide what to keep as "best" between a previous best and a current
+// result. Higher score wins; if scores are tied, faster time wins.
+// Returns the chosen value and whether it represents a new best.
+/**
+ * @param {Result | null} prev
+ * @param {Result} current
+ * @returns {{ best: Result, isNew: boolean }}
+ */
+export function nextBest(prev, current) {
+  if (!prev) return { best: current, isNew: true };
+  if (current.score > prev.score) return { best: current, isNew: true };
+  if (current.score === prev.score && current.time < prev.time) {
+    return { best: current, isNew: true };
+  }
+  return { best: prev, isNew: false };
+}

@@ -14,6 +14,7 @@ import {
   formatTime,
   LOOKALIKES,
   lookalikesOf,
+  nextBest,
 } from './quiz.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -322,4 +323,45 @@ test('pickQuestion falls back to allowing lookalikes when the pool is too small 
     const codes = new Set(q.choices.map((c) => c.code));
     assert.ok(codes.has(q.answer.code), 'answer always present in choices');
   }
+});
+
+test('nextBest treats a null previous as the first best', () => {
+  const r = nextBest(null, { score: 80, time: 60000 });
+  assert.deepEqual(r, { best: { score: 80, time: 60000 }, isNew: true });
+});
+
+test('nextBest prefers the higher score regardless of time', () => {
+  const prev = { score: 90, time: 10000 };
+  const curr = { score: 95, time: 60000 }; // slower but better score
+  const r = nextBest(prev, curr);
+  assert.deepEqual(r, { best: curr, isNew: true });
+});
+
+test('nextBest keeps the previous when the current score is lower', () => {
+  const prev = { score: 90, time: 60000 };
+  const curr = { score: 80, time: 1 }; // even instant time can not save a worse score
+  const r = nextBest(prev, curr);
+  assert.deepEqual(r, { best: prev, isNew: false });
+});
+
+test('nextBest breaks score ties on faster time', () => {
+  const prev = { score: 90, time: 60000 };
+  const curr = { score: 90, time: 30000 };
+  const r = nextBest(prev, curr);
+  assert.deepEqual(r, { best: curr, isNew: true });
+});
+
+test('nextBest keeps the previous on a tied score with a slower time', () => {
+  const prev = { score: 90, time: 30000 };
+  const curr = { score: 90, time: 60000 };
+  const r = nextBest(prev, curr);
+  assert.deepEqual(r, { best: prev, isNew: false });
+});
+
+test('nextBest keeps the previous when score and time are identical', () => {
+  const prev = { score: 90, time: 30000 };
+  const curr = { score: 90, time: 30000 };
+  const r = nextBest(prev, curr);
+  // Same numbers - no reason to declare a new best; isNew must be false.
+  assert.deepEqual(r, { best: prev, isNew: false });
 });
