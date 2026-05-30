@@ -107,13 +107,6 @@
         0%   { opacity: 0; transform: translateY(16px); }
         100% { opacity: 1; transform: translateY(0); }
       }
-      .grade {
-        font-size: 24px;
-        font-weight: 500;
-        margin: 0 0 16px;
-      }
-      .grade.perfect, .grade.good { color: #2a9d4a; }
-      .grade.poor { color: #c5302d; }
       .final-score {
         font-size: 36px;
         font-weight: 500;
@@ -146,14 +139,12 @@
       <p class="feedback" id="feedback"></p>
     </div>
     <div id="result" hidden>
-      <p class="grade" id="grade"></p>
-      <p class="final-score">
+      <p class="final-score" id="final-score-line">
         Final score: <span id="final-score">0</span>%
       </p>
       <p class="time" id="time"></p>
       <p class="result-links">
-        <a id="play-again" href="#">Play again</a> ·
-        <a href="./">Back to menu</a>
+        <a id="play-again" href="#">Play again</a>
       </p>
     </div>
     <script type="module">
@@ -173,7 +164,7 @@
       const choicesEl = document.getElementById('choices');
       const feedbackEl = document.getElementById('feedback');
       const resultEl = document.getElementById('result');
-      const gradeEl = document.getElementById('grade');
+      const finalScoreLineEl = document.getElementById('final-score-line');
       const finalScoreEl = document.getElementById('final-score');
       const timeEl = document.getElementById('time');
       const playTimerEl = document.getElementById('play-timer');
@@ -283,17 +274,9 @@
           cancelAnimationFrame(timerRaf);
           const ratio = score() / target;
           finalScoreEl.textContent = Math.round(ratio * 100);
+          // Red (0) -> yellow (60) -> green (120) along the score ratio.
+          finalScoreLineEl.style.color = `hsl(${ratio * 120}, 65%, 38%)`;
           timeEl.textContent = `Time: ${formatTime(Date.now() - startTime)}`;
-          if (ratio === 1) {
-            gradeEl.textContent = 'Perfect!';
-            gradeEl.className = 'grade perfect';
-          } else if (ratio >= 0.7) {
-            gradeEl.textContent = 'Well done!';
-            gradeEl.className = 'grade good';
-          } else {
-            gradeEl.textContent = 'Keep practicing';
-            gradeEl.className = 'grade poor';
-          }
           gameEl.hidden = true;
           resultEl.hidden = false;
         }
