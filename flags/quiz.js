@@ -18,6 +18,34 @@ export function pickQuestion(countries, choiceCount = 4) {
   return { answer, choices };
 }
 
+// Builds a quiz that asks every answer at most once. Each call to .next()
+// returns the next question (or null when exhausted). Distractors are
+// drawn from the full pool excluding the current answer, so wrong choices
+// can recur but the country being asked never does.
+export function createQuiz(pool, count, choiceCount = 4) {
+  if (pool.length < choiceCount) {
+    throw new Error(
+      `Need at least ${choiceCount} entries, got ${pool.length}`,
+    );
+  }
+  if (count > pool.length) {
+    throw new Error(
+      `Cannot ask ${count} unique questions from a pool of ${pool.length}`,
+    );
+  }
+  const queue = shuffle(pool).slice(0, count);
+  return {
+    total: count,
+    next() {
+      if (queue.length === 0) return null;
+      const answer = queue.shift();
+      const distractors = shuffle(pool.filter((c) => c.code !== answer.code))
+        .slice(0, choiceCount - 1);
+      return { answer, choices: shuffle([answer, ...distractors]) };
+    },
+  };
+}
+
 // Variant definitions. The key is the URL slug (?v=<key>); the order
 // here is the display order in the menu.
 export const VARIANTS = {
@@ -65,4 +93,19 @@ export function poolFor(variantKey, countries) {
     throw new Error(`Unknown variant: ${variantKey}`);
   }
   return countries.filter(variant.filter);
+}
+
+// How many questions a given variant should ask. Continents and "Others"
+// run through every flag in the pool; the two pan-pool variants are
+// capped so the game stays finite.
+export const BIG_VARIANT_TARGET = 40;
+const BIG_VARIANTS = new Set(['countries', 'all']);
+
+export function targetFor(variantKey, pool) {
+  if (!VARIANTS[variantKey]) {
+    throw new Error(`Unknown variant: ${variantKey}`);
+  }
+  return BIG_VARIANTS.has(variantKey)
+    ? Math.min(BIG_VARIANT_TARGET, pool.length)
+    : pool.length;
 }
