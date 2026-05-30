@@ -306,8 +306,9 @@
           const { best, isNew } = recordResult(
             localStorage, key, mode, { score: pct, time: elapsed },
           );
-          bestEl.textContent = `Best: ${best.score}% in ${formatTime(best.time)}`;
+          bestEl.textContent = `Your best score: ${best.score}% in ${formatTime(best.time)}`;
           if (isNew) {
+            bestEl.appendChild(document.createTextNode(' '));
             const badge = document.createElement('span');
             badge.className = 'new-badge';
             badge.textContent = 'new!';
