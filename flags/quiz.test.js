@@ -19,6 +19,7 @@ import {
   saveBest,
   bestKey,
   recordResult,
+  scoreColor,
 } from './quiz.js';
 
 /**
@@ -500,4 +501,18 @@ test('recordResult uses separate slots per variant/mode pair', () => {
     loadBest(store, bestKey('europe', 'all')),
     { score: 85, time: 200000 },
   );
+});
+
+test('scoreColor anchors: 0 = red, 0.5 = yellow, 1 = green', () => {
+  assert.equal(scoreColor(0), 'hsl(0, 65%, 38%)');
+  assert.equal(scoreColor(0.5), 'hsl(60, 65%, 38%)');
+  assert.equal(scoreColor(1), 'hsl(120, 65%, 38%)');
+});
+
+test('scoreColor clamps ratios outside [0, 1]', () => {
+  // Defensive clamp so a stray input (rounding, garbage data) cannot
+  // produce an out-of-gamut hue. Below zero clamps to red, above one
+  // clamps to green.
+  assert.equal(scoreColor(-0.5), 'hsl(0, 65%, 38%)');
+  assert.equal(scoreColor(2), 'hsl(120, 65%, 38%)');
 });

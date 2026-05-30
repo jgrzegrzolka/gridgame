@@ -38,6 +38,12 @@
       .variants a:hover {
         text-decoration: underline;
       }
+      .variants .best-badge {
+        font-size: 13px;
+        font-weight: 500;
+        margin-left: 4px;
+        font-variant-numeric: tabular-nums;
+      }
       .play-timer {
         font-size: 14px;
         color: #666;
@@ -175,6 +181,9 @@
         availableModes,
         formatTime,
         recordResult,
+        loadBest,
+        bestKey,
+        scoreColor,
         poolFor,
         targetFor,
       } from '../flags/quiz.js';
@@ -228,6 +237,14 @@
             a.href = `?v=${key}&n=${m}`;
             a.textContent = m;
             li.appendChild(a);
+            const best = loadBest(localStorage, bestKey(key, m));
+            if (best) {
+              const badge = document.createElement('span');
+              badge.className = 'best-badge';
+              badge.textContent = `${best.score}%`;
+              badge.style.color = scoreColor(best.score / 100);
+              li.appendChild(badge);
+            }
             if (i < usable.length - 1) li.append(' | ');
           });
           variantsEl.appendChild(li);
@@ -299,8 +316,7 @@
           const pct = Math.round(ratio * 100);
           const elapsed = Date.now() - startTime;
           finalScoreEl.textContent = pct;
-          // Red (0) -> yellow (60) -> green (120) along the score ratio.
-          finalScoreLineEl.style.color = `hsl(${ratio * 120}, 65%, 38%)`;
+          finalScoreLineEl.style.color = scoreColor(ratio);
           timeEl.textContent = `Time: ${formatTime(elapsed)}`;
 
           const { best, isNew } = recordResult(
