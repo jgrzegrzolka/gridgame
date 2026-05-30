@@ -29,7 +29,6 @@ const OTHER_CODES = new Set([
   'gb-nir', // Northern Ireland
   'gb-sct', // Scotland
   'gb-wls', // Wales
-  'xx',     // Unknown
 ]);
 
 // Statehood classification (only consulted when category === 'country').
