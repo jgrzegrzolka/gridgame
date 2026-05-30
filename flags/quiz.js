@@ -241,6 +241,19 @@ export function formatTime(ms) {
   return `${min}:${sec.toString().padStart(2, '0')}.${milli.toString().padStart(3, '0')}`;
 }
 
+// CSS color string for a score ratio (0..1). Maps to a hue going red
+// (0) -> yellow (0.5) -> green (1) at a fixed saturation/lightness that
+// reads well on the off-white background. Inputs outside [0, 1] are
+// clamped.
+/**
+ * @param {number} ratio
+ * @returns {string}
+ */
+export function scoreColor(ratio) {
+  const clamped = Math.max(0, Math.min(1, ratio));
+  return `hsl(${clamped * 120}, 65%, 38%)`;
+}
+
 /**
  * @typedef {{ score: number, time: number }} Result
  *
