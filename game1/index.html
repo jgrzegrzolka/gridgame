@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Game 1 — Flag Quiz</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: 24px;
+        background: #fafafa;
+        color: #1c1c1c;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .country-name {
+        font-size: 28px;
+        font-weight: 500;
+        margin: 16px 0 24px;
+        text-align: center;
+      }
+      .choices {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        width: min(90vw, 480px);
+      }
+      .flag-choice {
+        padding: 0;
+        border: 2px solid #ddd;
+        background: #fff;
+        cursor: pointer;
+        aspect-ratio: 4 / 3;
+        overflow: hidden;
+        transition: border-color 100ms;
+      }
+      .flag-choice:hover:not(:disabled) {
+        border-color: #999;
+      }
+      .flag-choice:disabled {
+        cursor: default;
+      }
+      .flag-choice.correct {
+        border-color: #2a9d4a;
+        box-shadow: 0 0 0 2px #2a9d4a;
+      }
+      .flag-choice.wrong {
+        border-color: #c5302d;
+        box-shadow: 0 0 0 2px #c5302d;
+      }
+      .flag-choice img {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .feedback {
+        margin: 20px 0 12px;
+        font-size: 18px;
+        min-height: 24px;
+        text-align: center;
+      }
+      .next {
+        font-size: 16px;
+        padding: 8px 20px;
+        border: 1px solid #1c1c1c;
+        background: #1c1c1c;
+        color: #fff;
+        cursor: pointer;
+      }
+      .next:hover {
+        background: #333;
+      }
+      .next[hidden] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="country-name" id="country-name">Loading…</p>
+    <div class="choices" id="choices"></div>
+    <p class="feedback" id="feedback"></p>
+    <button class="next" id="next" hidden>Next</button>
+    <script type="module">
+      import { pickQuestion } from '../flags/quiz.js';
+
+      const countryNameEl = document.getElementById('country-name');
+      const choicesEl = document.getElementById('choices');
+      const feedbackEl = document.getElementById('feedback');
+      const nextBtn = document.getElementById('next');
+
+      let countries = [];
+      let currentAnswer = null;
+
+      function render(q) {
+        currentAnswer = q.answer;
+        countryNameEl.textContent = q.answer.name;
+        choicesEl.innerHTML = '';
+        for (const c of q.choices) {
+          const tile = document.createElement('button');
+          tile.className = 'flag-choice';
+          tile.dataset.code = c.code;
+          const img = document.createElement('img');
+          img.src = `../flags/svg/${c.code}.svg`;
+          img.alt = '';
+          tile.appendChild(img);
+          tile.addEventListener('click', () => onAnswer(c));
+          choicesEl.appendChild(tile);
+        }
+        feedbackEl.textContent = '';
+        nextBtn.hidden = true;
+      }
+
+      function onAnswer(chosen) {
+        const correct = chosen.code === currentAnswer.code;
+        for (const tile of choicesEl.querySelectorAll('.flag-choice')) {
+          tile.disabled = true;
+          const code = tile.dataset.code;
+          if (code === currentAnswer.code) tile.classList.add('correct');
+          if (code === chosen.code && !correct) tile.classList.add('wrong');
+        }
+        feedbackEl.textContent = correct
+          ? 'Correct!'
+          : `Wrong — you picked ${chosen.name}.`;
+        nextBtn.hidden = false;
+      }
+
+      nextBtn.addEventListener('click', () => {
+        render(pickQuestion(countries));
+      });
+
+      fetch('../flags/countries.json')
+        .then((r) => r.json())
+        .then((all) => {
+          countries = all;
+          render(pickQuestion(countries));
+        })
+        .catch((err) => {
+          countryNameEl.textContent = 'Failed to load: ' + err.message;
+        });
+    </script>
+  </body>
+</html>
