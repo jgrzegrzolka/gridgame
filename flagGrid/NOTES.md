@@ -31,9 +31,10 @@ game highlights cells as correct / wrong / duplicate as they fill in.
   enrich the data.
 - **UI**: minimal v0 at `flagGrid/index.html` — 3x3 grid with column
   headers, clickable cells, autocomplete picker (`<dialog>` + prefix
-  search over country names), live cell validation with colour
-  feedback (green = valid, red = invalid, amber = duplicate), and a
-  "Solved!" status when all 9 cells are filled, valid, and distinct.
+  search over country names, suggestions start at 3 characters typed),
+  live cell validation with colour feedback (green = valid, red =
+  invalid, amber = duplicate), and a "Solved!" status when all 9
+  cells are filled, valid, and distinct.
   The active puzzle is `continent(Europe/Asia/Africa)` x
   `nameStartsWith(A/B/C)` — every cell is solvable; the game aspect
   is mild until richer categories land.

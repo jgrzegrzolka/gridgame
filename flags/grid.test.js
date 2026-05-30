@@ -6,6 +6,7 @@ import {
   continent,
   statehood,
   nameStartsWith,
+  suggest,
 } from './grid.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -74,6 +75,60 @@ test('nameStartsWith predicate matches countries whose name starts with the lett
 test('nameStartsWith is case-insensitive in both the letter and the country name', () => {
   assert.equal(nameStartsWith('a').predicate(country({ code: 'al', name: 'Albania' })), true);
   assert.equal(nameStartsWith('A').predicate(country({ code: 'al', name: 'albania' })), true);
+});
+
+test('suggest returns an empty list while the trimmed query is under 3 characters', () => {
+  const countries = [
+    country({ code: 'fr', name: 'France' }),
+    country({ code: 'de', name: 'Germany' }),
+  ];
+  assert.deepEqual(suggest(countries, ''), []);
+  assert.deepEqual(suggest(countries, 'f'), []);
+  assert.deepEqual(suggest(countries, 'fr'), []);
+});
+
+test('suggest treats whitespace-only queries as too short', () => {
+  const countries = [country({ code: 'fr', name: 'France' })];
+  assert.deepEqual(suggest(countries, '   '), []);
+});
+
+test('suggest matches by case-insensitive prefix once the query reaches 3 chars', () => {
+  const countries = [
+    country({ code: 'fr', name: 'France' }),
+    country({ code: 'fi', name: 'Finland' }),
+    country({ code: 'de', name: 'Germany' }),
+  ];
+  assert.deepEqual(suggest(countries, 'fra').map((c) => c.code), ['fr']);
+  assert.deepEqual(suggest(countries, 'FRA').map((c) => c.code), ['fr']);
+});
+
+test('suggest matches against country names case-insensitively', () => {
+  const countries = [country({ code: 'fr', name: 'france' })];
+  assert.deepEqual(suggest(countries, 'FRA').map((c) => c.code), ['fr']);
+});
+
+test('suggest trims whitespace around the query', () => {
+  const countries = [country({ code: 'fr', name: 'France' })];
+  assert.deepEqual(suggest(countries, '  fra  ').map((c) => c.code), ['fr']);
+});
+
+test('suggest returns an empty list when nothing matches the prefix', () => {
+  const countries = [country({ code: 'fr', name: 'France' })];
+  assert.deepEqual(suggest(countries, 'xyz'), []);
+});
+
+test('suggest caps results at the default limit of 8', () => {
+  const countries = Array.from({ length: 20 }, (_, i) =>
+    country({ code: `c${i}`, name: `Country${i}` })
+  );
+  assert.equal(suggest(countries, 'cou').length, 8);
+});
+
+test('suggest respects a custom limit', () => {
+  const countries = Array.from({ length: 20 }, (_, i) =>
+    country({ code: `c${i}`, name: `Country${i}` })
+  );
+  assert.equal(suggest(countries, 'cou', 3).length, 3);
 });
 
 test('validateCell is true when country satisfies both row and column', () => {

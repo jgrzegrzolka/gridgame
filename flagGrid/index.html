@@ -31,6 +31,7 @@
         solutionState,
         continent,
         nameStartsWith,
+        suggest,
       } from '../flags/grid.js';
 
       const puzzle = {
@@ -98,12 +99,8 @@
       }
 
       pickerInputEl.addEventListener('input', () => {
-        const q = pickerInputEl.value.trim().toLowerCase();
         suggestionsEl.innerHTML = '';
-        if (!q) return;
-        const matches = allCountries
-          .filter((c) => c.name.toLowerCase().startsWith(q))
-          .slice(0, 8);
+        const matches = suggest(allCountries, pickerInputEl.value);
         for (const country of matches) {
           const li = document.createElement('li');
           const img = document.createElement('img');

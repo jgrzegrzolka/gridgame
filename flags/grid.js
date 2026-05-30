@@ -145,3 +145,28 @@ export function nameStartsWith(letter) {
     predicate: (c) => c.name.toUpperCase().startsWith(upper),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Picker autocomplete.
+// ---------------------------------------------------------------------------
+
+const MIN_QUERY_LENGTH = 3;
+
+/**
+ * Return countries whose name starts with the given query, case-insensitive,
+ * capped at `limit` results. Returns an empty list while the trimmed query is
+ * shorter than MIN_QUERY_LENGTH so the picker dropdown stays empty until the
+ * player has typed something substantive.
+ *
+ * @param {Country[]} allCountries
+ * @param {string} query
+ * @param {number} [limit] max results (default 8)
+ * @returns {Country[]}
+ */
+export function suggest(allCountries, query, limit = 8) {
+  const q = query.trim().toLowerCase();
+  if (q.length < MIN_QUERY_LENGTH) return [];
+  return allCountries
+    .filter((c) => c.name.toLowerCase().startsWith(q))
+    .slice(0, limit);
+}
