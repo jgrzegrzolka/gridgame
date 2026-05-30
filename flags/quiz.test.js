@@ -10,6 +10,8 @@ import {
   poolFor,
   targetFor,
   MODES,
+  availableModes,
+  formatTime,
 } from './quiz.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -183,4 +185,57 @@ test('targetFor("all", pool) returns the full pool length', () => {
 
 test('targetFor throws on an unknown mode', () => {
   assert.throws(() => targetFor('99', countries), /Unknown mode/);
+});
+
+test('availableModes offers both 20 and all when pool >= 20', () => {
+  assert.deepEqual(availableModes(50), ['20', 'all']);
+});
+
+test('availableModes still offers 20 exactly at the boundary', () => {
+  assert.deepEqual(availableModes(20), ['20', 'all']);
+});
+
+test('availableModes hides 20 when pool is below 20', () => {
+  assert.deepEqual(availableModes(19), ['all']);
+  assert.deepEqual(availableModes(13), ['all']);
+  assert.deepEqual(availableModes(4), ['all']);
+});
+
+test('availableModes returns "all" alone for an empty pool', () => {
+  assert.deepEqual(availableModes(0), ['all']);
+});
+
+test('availableModes preserves MODES insertion order', () => {
+  // "20" must come first so the menu reads "Label: 20 | all".
+  assert.deepEqual(availableModes(100), ['20', 'all']);
+});
+
+test('formatTime(0) renders zero with the full three-digit ms field', () => {
+  assert.equal(formatTime(0), '0:00.000');
+});
+
+test('formatTime pads sub-second values', () => {
+  assert.equal(formatTime(1), '0:00.001');
+  assert.equal(formatTime(42), '0:00.042');
+  assert.equal(formatTime(999), '0:00.999');
+});
+
+test('formatTime rolls milliseconds into seconds at 1000', () => {
+  assert.equal(formatTime(1000), '0:01.000');
+  assert.equal(formatTime(1001), '0:01.001');
+});
+
+test('formatTime rolls seconds into minutes at 60000', () => {
+  assert.equal(formatTime(59999), '0:59.999');
+  assert.equal(formatTime(60000), '1:00.000');
+});
+
+test('formatTime handles multi-minute durations without zero-padding the minutes', () => {
+  assert.equal(formatTime(123456), '2:03.456');
+  assert.equal(formatTime(600000), '10:00.000');
+});
+
+test('formatTime floors rather than rounds so it never overshoots elapsed time', () => {
+  // 1999ms is just under 2 seconds - must read 0:01.999, not 0:02.000.
+  assert.equal(formatTime(1999), '0:01.999');
 });

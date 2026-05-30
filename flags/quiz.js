@@ -156,3 +156,31 @@ export function targetFor(modeKey, pool) {
   }
   return Math.min(MODES[modeKey], pool.length);
 }
+
+// Which mode keys make sense for a pool of this size. A mode is usable
+// when its labelled count (e.g. 20) is <= the pool, OR when it has no
+// fixed count (Infinity = "all"). Preserves MODES insertion order.
+/**
+ * @param {number} poolSize
+ * @returns {string[]}
+ */
+export function availableModes(poolSize) {
+  return Object.keys(MODES).filter(
+    (m) => MODES[m] === Infinity || MODES[m] <= poolSize,
+  );
+}
+
+// Pretty-print a duration in milliseconds as M:SS.mmm (e.g. 1:23.456).
+// Floors rather than rounds so the displayed value never overshoots the
+// real elapsed time.
+/**
+ * @param {number} ms
+ * @returns {string}
+ */
+export function formatTime(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  const milli = ms % 1000;
+  return `${min}:${sec.toString().padStart(2, '0')}.${milli.toString().padStart(3, '0')}`;
+}
