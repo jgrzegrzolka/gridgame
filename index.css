@@ -1,0 +1,21 @@
+body {
+  padding: 48px 24px 24px 48px;
+}
+.menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-width: 400px;
+}
+.menu li {
+  margin-bottom: 10px;
+}
+.menu a {
+  color: var(--link-color);
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 500;
+}
+.menu a:hover {
+  text-decoration: underline;
+}
