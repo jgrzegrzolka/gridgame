@@ -15,10 +15,17 @@
         flex-direction: column;
         align-items: center;
       }
+      .status {
+        font-size: 14px;
+        color: #666;
+        margin: 0 0 12px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
       .country-name {
         font-size: 28px;
         font-weight: 500;
-        margin: 16px 0 24px;
+        margin: 0 0 24px;
         text-align: center;
       }
       .choices {
@@ -61,21 +68,59 @@
         min-height: 24px;
         text-align: center;
       }
+      .result {
+        text-align: center;
+        margin-top: 80px;
+      }
+      .final-score {
+        font-size: 36px;
+        font-weight: 500;
+        margin: 0 0 16px;
+      }
+      .reload-hint {
+        font-size: 14px;
+        color: #666;
+        margin: 0;
+      }
     </style>
   </head>
   <body>
-    <p class="country-name" id="country-name">Loading…</p>
-    <div class="choices" id="choices"></div>
-    <p class="feedback" id="feedback"></p>
+    <div id="game">
+      <p class="status" id="status">0 / 100 &nbsp;·&nbsp; score 100</p>
+      <p class="country-name" id="country-name">Loading…</p>
+      <div class="choices" id="choices"></div>
+      <p class="feedback" id="feedback"></p>
+    </div>
+    <div class="result" id="result" hidden>
+      <p class="final-score">Final score: <span id="final-score">0</span> / 100</p>
+      <p class="reload-hint">Reload the page for a new game.</p>
+    </div>
     <script type="module">
       import { pickQuestion } from '../flags/quiz.js';
 
+      const TARGET_CORRECT = 100;
+      const STARTING_SCORE = 100;
+
+      const gameEl = document.getElementById('game');
+      const statusEl = document.getElementById('status');
       const countryNameEl = document.getElementById('country-name');
       const choicesEl = document.getElementById('choices');
       const feedbackEl = document.getElementById('feedback');
+      const resultEl = document.getElementById('result');
+      const finalScoreEl = document.getElementById('final-score');
 
       let countries = [];
       let currentAnswer = null;
+      let correctCount = 0;
+      let wrongCount = 0;
+
+      function score() {
+        return Math.max(0, STARTING_SCORE - wrongCount);
+      }
+
+      function updateStatus() {
+        statusEl.textContent = `${correctCount} / ${TARGET_CORRECT}  ·  score ${score()}`;
+      }
 
       function render(q) {
         currentAnswer = q.answer;
@@ -102,18 +147,33 @@
             t.disabled = true;
           }
           feedbackEl.textContent = '';
-          setTimeout(() => render(pickQuestion(countries)), 500);
+          correctCount++;
+          updateStatus();
+          if (correctCount >= TARGET_CORRECT) {
+            setTimeout(showResult, 500);
+          } else {
+            setTimeout(() => render(pickQuestion(countries)), 500);
+          }
         } else {
           tile.classList.add('wrong');
           tile.disabled = true;
           feedbackEl.textContent = chosen.name;
+          wrongCount++;
+          updateStatus();
         }
+      }
+
+      function showResult() {
+        finalScoreEl.textContent = score();
+        gameEl.hidden = true;
+        resultEl.hidden = false;
       }
 
       fetch('../flags/countries.json')
         .then((r) => r.json())
         .then((all) => {
           countries = all;
+          updateStatus();
           render(pickQuestion(countries));
         })
         .catch((err) => {
