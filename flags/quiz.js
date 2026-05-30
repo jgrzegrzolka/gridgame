@@ -28,6 +28,65 @@ function shuffle(arr) {
   return a;
 }
 
+// Flags that look essentially identical at the sizes shown in the quiz.
+// When the answer is in one of these groups, the other members are
+// excluded from being distractors in the same question (so the user is
+// never asked to tell two near-identical flags apart).
+/** @type {string[][]} */
+export const LOOKALIKES = [
+  ['id', 'mc'], // Indonesia, Monaco - red over white
+  ['ro', 'td'], // Romania, Chad - vertical blue/yellow/red
+  ['nl', 'lu'], // Netherlands, Luxembourg - red/white/blue horizontal
+  ['ie', 'ci'], // Ireland, Cote d'Ivoire - vertical tricolour, mirrored
+  // Norwegian flag - used by Norway and its two uninhabited dependencies
+  ['no', 'sj', 'bv'],
+  // French tricolour - used by France, Clipperton, and the overseas
+  // departments/collectivities that fly the plain tricolour
+  ['fr', 're', 'cp', 'gp', 'mf', 'pm', 'wf', 'gf', 'yt', 'bl'],
+];
+
+/**
+ * @param {string} code
+ * @returns {string[]} the group containing this code (including itself), or just [code]
+ */
+export function lookalikesOf(code) {
+  for (const group of LOOKALIKES) {
+    if (group.includes(code)) return group;
+  }
+  return [code];
+}
+
+// Picks a set of `choiceCount` choices for one question. Ensures no two
+// choices share a LOOKALIKES group - we exclude lookalikes of the
+// answer, and as each distractor is picked we exclude lookalikes of
+// that distractor too. Falls back to allowing duplicates only when the
+// pool is too small to satisfy the strict rule.
+/**
+ * @template {{ code: string }} T
+ * @param {T[]} pool
+ * @param {T} answer
+ * @param {number} choiceCount
+ * @returns {T[]}
+ */
+function buildChoices(pool, answer, choiceCount) {
+  const taken = new Set(lookalikesOf(answer.code));
+  const distractors = [];
+  for (const c of shuffle(pool)) {
+    if (distractors.length === choiceCount - 1) break;
+    if (taken.has(c.code)) continue;
+    distractors.push(c);
+    for (const k of lookalikesOf(c.code)) taken.add(k);
+  }
+  if (distractors.length < choiceCount - 1) {
+    // Pool too small to give every choice its own lookalike group.
+    // Relax: any non-answer entry is fair game.
+    const fallback = shuffle(pool.filter((c) => c.code !== answer.code))
+      .slice(0, choiceCount - 1);
+    return shuffle([answer, ...fallback]);
+  }
+  return shuffle([answer, ...distractors]);
+}
+
 /**
  * @template {{ code: string }} T
  * @param {T[]} countries
@@ -40,9 +99,8 @@ export function pickQuestion(countries, choiceCount = 4) {
       `Need at least ${choiceCount} entries, got ${countries.length}`,
     );
   }
-  const choices = shuffle(countries).slice(0, choiceCount);
-  const answer = choices[Math.floor(Math.random() * choiceCount)];
-  return { answer, choices };
+  const answer = countries[Math.floor(Math.random() * countries.length)];
+  return { answer, choices: buildChoices(countries, answer, choiceCount) };
 }
 
 // Builds a quiz that asks every answer at most once. Each call to .next()
@@ -74,9 +132,7 @@ export function createQuiz(pool, count, choiceCount = 4) {
       if (queue.length === 0) return null;
       const answer = queue.shift();
       if (!answer) return null;
-      const distractors = shuffle(pool.filter((c) => c.code !== answer.code))
-        .slice(0, choiceCount - 1);
-      return { answer, choices: shuffle([answer, ...distractors]) };
+      return { answer, choices: buildChoices(pool, answer, choiceCount) };
     },
   };
 }

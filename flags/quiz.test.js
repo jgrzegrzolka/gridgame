@@ -12,6 +12,8 @@ import {
   MODES,
   availableModes,
   formatTime,
+  LOOKALIKES,
+  lookalikesOf,
 } from './quiz.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -238,4 +240,86 @@ test('formatTime handles multi-minute durations without zero-padding the minutes
 test('formatTime floors rather than rounds so it never overshoots elapsed time', () => {
   // 1999ms is just under 2 seconds - must read 0:01.999, not 0:02.000.
   assert.equal(formatTime(1999), '0:01.999');
+});
+
+test('lookalikesOf returns the group that contains the code', () => {
+  assert.deepEqual(lookalikesOf('id'), ['id', 'mc']);
+  assert.deepEqual(lookalikesOf('mc'), ['id', 'mc']);
+  assert.deepEqual(lookalikesOf('ro'), ['ro', 'td']);
+  assert.deepEqual(lookalikesOf('td'), ['ro', 'td']);
+});
+
+test('lookalikesOf returns just the code itself when no group matches', () => {
+  assert.deepEqual(lookalikesOf('us'), ['us']);
+  assert.deepEqual(lookalikesOf('jp'), ['jp']);
+  assert.deepEqual(lookalikesOf('not-a-real-code'), ['not-a-real-code']);
+});
+
+test('LOOKALIKES groups are disjoint (no code appears in two groups)', () => {
+  const seen = new Set();
+  for (const group of LOOKALIKES) {
+    for (const code of group) {
+      assert.ok(!seen.has(code), `${code} appears in more than one group`);
+      seen.add(code);
+    }
+  }
+});
+
+test('LOOKALIKES codes all exist in countries.json', () => {
+  const known = new Set(countries.map((c) => c.code));
+  for (const group of LOOKALIKES) {
+    for (const code of group) {
+      assert.ok(known.has(code), `${code} listed in LOOKALIKES but missing from countries.json`);
+    }
+  }
+});
+
+test('pickQuestion never pairs known lookalikes when the pool has alternatives', () => {
+  for (let i = 0; i < 1000; i++) {
+    const q = pickQuestion(countries);
+    const codes = new Set(q.choices.map((c) => c.code));
+    for (const group of LOOKALIKES) {
+      const present = group.filter((c) => codes.has(c));
+      assert.ok(
+        present.length <= 1,
+        `pickQuestion paired ${present.join(' + ')} in one question`,
+      );
+    }
+  }
+});
+
+test('createQuiz never pairs known lookalikes across a full run', () => {
+  for (let run = 0; run < 50; run++) {
+    const quiz = createQuiz(countries, 30);
+    let q;
+    while ((q = quiz.next())) {
+      const codes = new Set(q.choices.map((c) => c.code));
+      for (const group of LOOKALIKES) {
+        const present = group.filter((c) => codes.has(c));
+        assert.ok(
+          present.length <= 1,
+          `createQuiz paired ${present.join(' + ')} in one question`,
+        );
+      }
+    }
+  }
+});
+
+test('pickQuestion falls back to allowing lookalikes when the pool is too small to avoid them', () => {
+  // Pool of 4 where 2 entries are lookalikes (id + mc). When 'id' or
+  // 'mc' is drawn as the answer, excluding lookalikes leaves only 2
+  // usable distractors - we need 3. Fallback must let the question
+  // still build (with the lookalike included).
+  const tinyPool = [
+    { code: 'id', name: 'Indonesia' },
+    { code: 'mc', name: 'Monaco' },
+    { code: 'us', name: 'United States' },
+    { code: 'jp', name: 'Japan' },
+  ];
+  for (let i = 0; i < 50; i++) {
+    const q = pickQuestion(tinyPool);
+    assert.equal(q.choices.length, 4, 'choice count must stay 4 even in fallback');
+    const codes = new Set(q.choices.map((c) => c.code));
+    assert.ok(codes.has(q.answer.code), 'answer always present in choices');
+  }
 });
