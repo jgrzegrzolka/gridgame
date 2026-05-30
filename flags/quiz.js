@@ -38,6 +38,11 @@ export const LOOKALIKES = [
   ['ro', 'td'], // Romania, Chad - vertical blue/yellow/red
   ['nl', 'lu'], // Netherlands, Luxembourg - red/white/blue horizontal
   ['ie', 'ci'], // Ireland, Cote d'Ivoire - vertical tricolour, mirrored
+  // Norwegian flag - used by Norway and its two uninhabited dependencies
+  ['no', 'sj', 'bv'],
+  // French tricolour - used by France, Clipperton, and the overseas
+  // departments/collectivities that fly the plain tricolour
+  ['fr', 're', 'cp', 'gp', 'mf', 'pm', 'wf', 'gf', 'yt', 'bl'],
 ];
 
 /**
@@ -51,10 +56,11 @@ export function lookalikesOf(code) {
   return [code];
 }
 
-// Picks a set of `choiceCount` choices for one question. Avoids putting
-// flags from the same LOOKALIKES group together. Falls back to allowing
-// the lookalikes only when the pool is too small to fill the slots
-// otherwise.
+// Picks a set of `choiceCount` choices for one question. Ensures no two
+// choices share a LOOKALIKES group - we exclude lookalikes of the
+// answer, and as each distractor is picked we exclude lookalikes of
+// that distractor too. Falls back to allowing duplicates only when the
+// pool is too small to satisfy the strict rule.
 /**
  * @template {{ code: string }} T
  * @param {T[]} pool
@@ -63,14 +69,21 @@ export function lookalikesOf(code) {
  * @returns {T[]}
  */
 function buildChoices(pool, answer, choiceCount) {
-  const exclude = new Set(lookalikesOf(answer.code));
-  let usable = pool.filter((c) => !exclude.has(c.code));
-  if (usable.length < choiceCount - 1) {
-    // Tiny pool: allow lookalikes rather than fail. Still exclude the
-    // answer itself so we don't pick it twice.
-    usable = pool.filter((c) => c.code !== answer.code);
+  const taken = new Set(lookalikesOf(answer.code));
+  const distractors = [];
+  for (const c of shuffle(pool)) {
+    if (distractors.length === choiceCount - 1) break;
+    if (taken.has(c.code)) continue;
+    distractors.push(c);
+    for (const k of lookalikesOf(c.code)) taken.add(k);
   }
-  const distractors = shuffle(usable).slice(0, choiceCount - 1);
+  if (distractors.length < choiceCount - 1) {
+    // Pool too small to give every choice its own lookalike group.
+    // Relax: any non-answer entry is fair game.
+    const fallback = shuffle(pool.filter((c) => c.code !== answer.code))
+      .slice(0, choiceCount - 1);
+    return shuffle([answer, ...fallback]);
+  }
   return shuffle([answer, ...distractors]);
 }
 
