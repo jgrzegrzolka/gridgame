@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { pickQuestion, VARIANTS, poolFor } from './quiz.js';
+import { pickQuestion, createQuiz, VARIANTS, poolFor } from './quiz.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const countries = JSON.parse(
@@ -116,4 +116,40 @@ test('every variant returns at least 4 entries (enough for a 4-choice question)'
       `variant "${key}" has only ${pool.length} entries`,
     );
   }
+});
+
+test('createQuiz never repeats the same answer across the run', () => {
+  const quiz = createQuiz(sample, sample.length);
+  const seen = new Set();
+  let q;
+  while ((q = quiz.next())) {
+    assert.ok(!seen.has(q.answer.code), `answer ${q.answer.code} repeated`);
+    seen.add(q.answer.code);
+  }
+  assert.equal(seen.size, sample.length);
+});
+
+test('createQuiz yields exactly `count` questions then null', () => {
+  const quiz = createQuiz(sample, 5);
+  for (let i = 0; i < 5; i++) {
+    assert.ok(quiz.next(), `expected question #${i + 1}`);
+  }
+  assert.equal(quiz.next(), null);
+});
+
+test('createQuiz choices always include the answer and are unique', () => {
+  const quiz = createQuiz(sample, sample.length);
+  let q;
+  while ((q = quiz.next())) {
+    const codes = new Set(q.choices.map((c) => c.code));
+    assert.equal(codes.size, 4);
+    assert.ok(codes.has(q.answer.code));
+  }
+});
+
+test('createQuiz throws if count exceeds pool size', () => {
+  assert.throws(
+    () => createQuiz(sample, sample.length + 1),
+    /Cannot ask/,
+  );
 });

@@ -15,11 +15,6 @@
         flex-direction: column;
         align-items: center;
       }
-      .menu-title {
-        font-size: 20px;
-        font-weight: 500;
-        margin: 0 0 20px;
-      }
       .variants {
         list-style: none;
         padding: 0;
@@ -38,12 +33,6 @@
       }
       .variants a:hover {
         text-decoration: underline;
-      }
-      .variant-count {
-        color: #666;
-        font-size: 14px;
-        font-weight: 400;
-        margin-left: 6px;
       }
       .status {
         font-size: 14px;
@@ -119,7 +108,6 @@
   </head>
   <body>
     <div id="menu" hidden>
-      <h1 class="menu-title">Choose a quiz</h1>
       <ul class="variants" id="variants"></ul>
     </div>
     <div id="game" hidden>
@@ -139,9 +127,18 @@
       </p>
     </div>
     <script type="module">
-      import { pickQuestion, VARIANTS, poolFor } from '../flags/quiz.js';
+      import { createQuiz, VARIANTS, poolFor } from '../flags/quiz.js';
 
-      const DEFAULT_TARGET = 50;
+      // Continent and "others" variants ask every flag in the pool;
+      // the two pan-pool variants are capped to keep the game finite.
+      const BIG_VARIANT_TARGET = 40;
+      const BIG_VARIANTS = new Set(['countries', 'all']);
+
+      function targetFor(key, pool) {
+        return BIG_VARIANTS.has(key)
+          ? Math.min(BIG_VARIANT_TARGET, pool.length)
+          : pool.length;
+      }
 
       const menuEl = document.getElementById('menu');
       const variantsEl = document.getElementById('variants');
@@ -160,10 +157,8 @@
       fetch('../flags/countries.json')
         .then((r) => r.json())
         .then((all) => {
-          if (!variantKey) {
-            renderMenu(all);
-          } else if (!VARIANTS[variantKey]) {
-            renderUnknown(variantKey);
+          if (!variantKey || !VARIANTS[variantKey]) {
+            renderMenu();
           } else {
             startGame(variantKey, all);
           }
@@ -172,37 +167,22 @@
           document.body.textContent = 'Failed to load: ' + err.message;
         });
 
-      function renderMenu(all) {
+      function renderMenu() {
         for (const [key, { label }] of Object.entries(VARIANTS)) {
-          const pool = poolFor(key, all);
-          const target = Math.min(DEFAULT_TARGET, pool.length);
           const li = document.createElement('li');
           const a = document.createElement('a');
           a.href = `?v=${key}`;
           a.textContent = label;
-          const count = document.createElement('span');
-          count.className = 'variant-count';
-          count.textContent = `${pool.length} flags · ${target} questions`;
           li.appendChild(a);
-          li.appendChild(count);
           variantsEl.appendChild(li);
         }
         menuEl.hidden = false;
       }
 
-      function renderUnknown(key) {
-        menuEl.hidden = false;
-        const title = document.querySelector('.menu-title');
-        title.textContent = `Unknown variant "${key}" — pick one:`;
-        // still render the menu below so user can recover
-        fetch('../flags/countries.json')
-          .then((r) => r.json())
-          .then(renderMenu);
-      }
-
       function startGame(key, all) {
         const pool = poolFor(key, all);
-        const target = Math.min(DEFAULT_TARGET, pool.length);
+        const target = targetFor(key, pool);
+        const quiz = createQuiz(pool, target);
 
         let currentAnswer = null;
         let correctCount = 0;
@@ -243,10 +223,11 @@
             feedbackEl.textContent = '';
             correctCount++;
             updateStatus();
-            if (correctCount >= target) {
+            const nextQ = quiz.next();
+            if (!nextQ) {
               setTimeout(showResult, 500);
             } else {
-              setTimeout(() => render(pickQuestion(pool)), 500);
+              setTimeout(() => render(nextQ), 500);
             }
           } else {
             tile.classList.add('wrong');
@@ -268,7 +249,7 @@
 
         gameEl.hidden = false;
         updateStatus();
-        render(pickQuestion(pool));
+        render(quiz.next());
       }
     </script>
   </body>
