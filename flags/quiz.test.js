@@ -12,7 +12,10 @@ import {
   BIG_VARIANT_TARGET,
 } from './quiz.js';
 
+/** @typedef {import('./group.js').Country} Country */
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
+/** @type {Country[]} */
 const countries = JSON.parse(
   readFileSync(join(__dirname, 'countries.json'), 'utf8'),
 );
