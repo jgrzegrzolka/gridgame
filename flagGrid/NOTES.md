@@ -21,17 +21,23 @@ game highlights cells as correct / wrong / duplicate as they fill in.
 
 - **Engine**: `flags/grid.js` — `validateCell`, `solutionState`, the
   `Category` / `Puzzle` / `SolutionState` types, and a starter set of
-  category factories (`continent`, `statehood`).
+  category factories (`continent`, `statehood`, `nameStartsWith`).
 - **Tests**: `flags/grid.test.js` — covers predicate behaviour,
   cell validation, empty/partial/full solutions, and duplicate
   detection.
-- **Categories available today**: continent + statehood. These are the
-  only Country fields in `flags/countries.json`, so the engine is
-  proven end-to-end but the playable surface is thin until we add more
-  data.
-- **UI**: not built yet. No page at `/flagGrid/` other than this file.
-- **Menu integration**: home menu (`/index.html`) does not link here
-  yet.
+- **Categories available today**: continent, statehood,
+  nameStartsWith. These are the only fields on `Country` in
+  `flags/countries.json`, so the playable surface is thin until we
+  enrich the data.
+- **UI**: minimal v0 at `flagGrid/index.html` — 3x3 grid with column
+  headers, clickable cells, autocomplete picker (`<dialog>` + prefix
+  search over country names), live cell validation with colour
+  feedback (green = valid, red = invalid, amber = duplicate), and a
+  "Solved!" status when all 9 cells are filled, valid, and distinct.
+  The active puzzle is `continent(Europe/Asia/Africa)` x
+  `nameStartsWith(A/B/C)` — every cell is solvable; the game aspect
+  is mild until richer categories land.
+- **Menu integration**: linked from the home menu (`/index.html`).
 
 ## What to build next
 

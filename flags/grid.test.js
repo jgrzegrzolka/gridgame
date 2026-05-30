@@ -5,6 +5,7 @@ import {
   solutionState,
   continent,
   statehood,
+  nameStartsWith,
 } from './grid.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -63,6 +64,16 @@ test('statehood predicate matches countries with that statehood', () => {
 test('statehood category defaults label to a humanised value', () => {
   assert.equal(statehood('un_member').label, 'un member');
   assert.equal(statehood('un_member', 'UN member').label, 'UN member');
+});
+
+test('nameStartsWith predicate matches countries whose name starts with the letter', () => {
+  assert.equal(nameStartsWith('A').predicate(country({ code: 'al', name: 'Albania' })), true);
+  assert.equal(nameStartsWith('A').predicate(country({ code: 'be', name: 'Belgium' })), false);
+});
+
+test('nameStartsWith is case-insensitive in both the letter and the country name', () => {
+  assert.equal(nameStartsWith('a').predicate(country({ code: 'al', name: 'Albania' })), true);
+  assert.equal(nameStartsWith('A').predicate(country({ code: 'al', name: 'albania' })), true);
 });
 
 test('validateCell is true when country satisfies both row and column', () => {

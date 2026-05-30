@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flag Grid</title>
+    <link rel="stylesheet" href="../common.css" />
+    <link rel="stylesheet" href="index.css" />
+  </head>
+  <body>
+    <a class="back" href="../" aria-label="Back">←</a>
+    <p class="status" id="status"></p>
+    <table class="grid">
+      <thead>
+        <tr>
+          <th class="corner"></th>
+          <th class="col-header" data-col="0"></th>
+          <th class="col-header" data-col="1"></th>
+          <th class="col-header" data-col="2"></th>
+        </tr>
+      </thead>
+      <tbody id="grid-body"></tbody>
+    </table>
+    <dialog id="picker">
+      <input type="text" id="picker-input" placeholder="Type a country name…" autocomplete="off" />
+      <ul class="suggestions" id="suggestions"></ul>
+    </dialog>
+    <script type="module">
+      import {
+        validateCell,
+        solutionState,
+        continent,
+        nameStartsWith,
+      } from '../flags/grid.js';
+
+      const puzzle = {
+        rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+        cols: [nameStartsWith('A'), nameStartsWith('B'), nameStartsWith('C')],
+      };
+
+      /** @type {(import('../flags/group.js').Country | null)[][]} */
+      const solution = [
+        [null, null, null],
+        [null, null, null],
+        [null, null, null],
+      ];
+
+      /** @type {import('../flags/group.js').Country[]} */
+      let allCountries = [];
+      /** @type {{ row: number, col: number } | null} */
+      let activeCell = null;
+
+      const statusEl = document.getElementById('status');
+      const gridBodyEl = document.getElementById('grid-body');
+      const pickerEl = document.getElementById('picker');
+      const pickerInputEl = document.getElementById('picker-input');
+      const suggestionsEl = document.getElementById('suggestions');
+      const colHeaderEls = document.querySelectorAll('.col-header');
+
+      // Render column headers from the puzzle.
+      colHeaderEls.forEach((th, i) => {
+        th.textContent = puzzle.cols[i].label;
+      });
+
+      // Build the row structure once; renderGrid() repopulates cell contents.
+      for (let r = 0; r < 3; r++) {
+        const tr = document.createElement('tr');
+        const rowHeader = document.createElement('th');
+        rowHeader.textContent = puzzle.rows[r].label;
+        tr.appendChild(rowHeader);
+        for (let c = 0; c < 3; c++) {
+          const td = document.createElement('td');
+          td.className = 'cell';
+          td.dataset.row = String(r);
+          td.dataset.col = String(c);
+          td.addEventListener('click', () => openPicker(r, c));
+          tr.appendChild(td);
+        }
+        gridBodyEl.appendChild(tr);
+      }
+
+      fetch('../flags/countries.json')
+        .then((r) => r.json())
+        .then((all) => {
+          allCountries = all;
+          renderGrid();
+        })
+        .catch((err) => {
+          statusEl.textContent = 'Failed to load: ' + err.message;
+        });
+
+      function openPicker(row, col) {
+        activeCell = { row, col };
+        pickerInputEl.value = '';
+        suggestionsEl.innerHTML = '';
+        pickerEl.showModal();
+        pickerInputEl.focus();
+      }
+
+      pickerInputEl.addEventListener('input', () => {
+        const q = pickerInputEl.value.trim().toLowerCase();
+        suggestionsEl.innerHTML = '';
+        if (!q) return;
+        const matches = allCountries
+          .filter((c) => c.name.toLowerCase().startsWith(q))
+          .slice(0, 8);
+        for (const country of matches) {
+          const li = document.createElement('li');
+          const img = document.createElement('img');
+          img.src = `../flags/svg/${country.code}.svg`;
+          img.alt = '';
+          li.appendChild(img);
+          const name = document.createElement('span');
+          name.textContent = country.name;
+          li.appendChild(name);
+          li.addEventListener('click', () => pickCountry(country));
+          suggestionsEl.appendChild(li);
+        }
+      });
+
+      pickerEl.addEventListener('click', (e) => {
+        if (e.target === pickerEl) pickerEl.close();
+      });
+
+      function pickCountry(country) {
+        if (!activeCell) return;
+        solution[activeCell.row][activeCell.col] = country;
+        pickerEl.close();
+        renderGrid();
+      }
+
+      function renderGrid() {
+        const state = solutionState(puzzle, solution);
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 3; c++) {
+            const td = /** @type {HTMLTableCellElement} */ (
+              gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`)
+            );
+            td.className = 'cell';
+            td.innerHTML = '';
+            const country = solution[r][c];
+            const cellState = state.cells[r][c];
+            if (!cellState.filled || !country) {
+              td.textContent = '+';
+              continue;
+            }
+            td.classList.add('filled');
+            const img = document.createElement('img');
+            img.src = `../flags/svg/${country.code}.svg`;
+            img.alt = country.name;
+            td.appendChild(img);
+            const name = document.createElement('div');
+            name.textContent = country.name;
+            td.appendChild(name);
+            if (cellState.duplicate) td.classList.add('duplicate');
+            else if (cellState.valid) td.classList.add('valid');
+            else td.classList.add('invalid');
+          }
+        }
+        if (state.complete) {
+          statusEl.textContent = 'Solved!';
+          statusEl.classList.add('complete');
+        } else {
+          statusEl.textContent = '';
+          statusEl.classList.remove('complete');
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -128,3 +128,20 @@ export function statehood(value, label) {
     predicate: (c) => c.statehood === value,
   };
 }
+
+/**
+ * Category: country's name starts with the given letter (case-insensitive).
+ * Useful as a "boring but always satisfiable" category for v0 puzzles that
+ * use the existing data only.
+ *
+ * @param {string} letter single character; case-insensitive
+ * @returns {Category}
+ */
+export function nameStartsWith(letter) {
+  const upper = letter.toUpperCase();
+  return {
+    id: `nameStartsWith:${upper}`,
+    label: `Starts with ${upper}`,
+    predicate: (c) => c.name.toUpperCase().startsWith(upper),
+  };
+}
