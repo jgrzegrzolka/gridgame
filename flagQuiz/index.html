@@ -177,9 +177,9 @@
             feedbackEl.textContent = '';
             const nextQ = quiz.next();
             if (!nextQ) {
-              setTimeout(showResult, 500);
+              setTimeout(showResult, 250);
             } else {
-              setTimeout(() => render(nextQ), 500);
+              setTimeout(() => render(nextQ), 250);
             }
           } else {
             tile.classList.add('wrong');
