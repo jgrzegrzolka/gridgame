@@ -93,7 +93,7 @@
       }
       .result {
         text-align: center;
-        margin-top: 80px;
+        margin-top: 120px;
         animation: result-in 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
       }
       @keyframes result-in {
@@ -110,7 +110,13 @@
       .final-score {
         font-size: 36px;
         font-weight: 500;
+        margin: 0 0 8px;
+      }
+      .time {
+        font-size: 14px;
+        color: #666;
         margin: 0 0 16px;
+        font-variant-numeric: tabular-nums;
       }
       .result-links {
         font-size: 14px;
@@ -134,9 +140,9 @@
     <div id="result" hidden>
       <p class="grade" id="grade"></p>
       <p class="final-score">
-        Final score: <span id="final-score">0</span> /
-        <span id="final-target">0</span>
+        Final score: <span id="final-score">0</span>%
       </p>
+      <p class="time" id="time"></p>
       <p class="result-links">
         <a id="play-again" href="#">Play again</a> ·
         <a href="./">Back to menu</a>
@@ -160,8 +166,15 @@
       const resultEl = document.getElementById('result');
       const gradeEl = document.getElementById('grade');
       const finalScoreEl = document.getElementById('final-score');
-      const finalTargetEl = document.getElementById('final-target');
+      const timeEl = document.getElementById('time');
       const playAgainEl = document.getElementById('play-again');
+
+      function formatTime(ms) {
+        const totalSec = Math.round(ms / 1000);
+        const min = Math.floor(totalSec / 60);
+        const sec = totalSec % 60;
+        return `${min}:${sec.toString().padStart(2, '0')}`;
+      }
 
       const params = new URLSearchParams(window.location.search);
       const variantKey = params.get('v');
@@ -207,6 +220,7 @@
 
         let currentAnswer = null;
         let wrongCount = 0;
+        const startTime = Date.now();
 
         function score() {
           return Math.max(0, target - wrongCount);
@@ -252,10 +266,9 @@
         }
 
         function showResult() {
-          const finalScore = score();
-          const ratio = finalScore / target;
-          finalScoreEl.textContent = finalScore;
-          finalTargetEl.textContent = target;
+          const ratio = score() / target;
+          finalScoreEl.textContent = Math.round(ratio * 100);
+          timeEl.textContent = `Time: ${formatTime(Date.now() - startTime)}`;
           if (ratio === 1) {
             gradeEl.textContent = 'Perfect!';
             gradeEl.className = 'grade perfect';
