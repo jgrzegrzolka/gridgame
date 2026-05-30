@@ -289,6 +289,14 @@
         const target = targetFor(mode, pool);
         const quiz = createQuiz(pool, target);
 
+        // Kick off background fetches for every flag in the pool so
+        // they are warm in the HTTP cache by the time each question
+        // renders. The browser handles queueing + parallelism; we
+        // never need the Image objects after construction.
+        for (const c of pool) {
+          new Image().src = `../flags/svg/${c.code}.svg`;
+        }
+
         let currentAnswer = null;
         let wrongCount = 0;
         const startTime = Date.now();
