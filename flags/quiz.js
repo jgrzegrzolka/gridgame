@@ -240,3 +240,98 @@ export function formatTime(ms) {
   const milli = ms % 1000;
   return `${min}:${sec.toString().padStart(2, '0')}.${milli.toString().padStart(3, '0')}`;
 }
+
+/**
+ * @typedef {{ score: number, time: number }} Result
+ *
+ * @typedef {Object} BestStore
+ * @property {(key: string) => string | null} getItem
+ * @property {(key: string, value: string) => void} setItem
+ */
+
+// Decide what to keep as "best" between a previous best and a current
+// result. Higher score wins; if scores are tied, faster time wins.
+// Returns the chosen value and whether it represents a new best.
+/**
+ * @param {Result | null} prev
+ * @param {Result} current
+ * @returns {{ best: Result, isNew: boolean }}
+ */
+export function nextBest(prev, current) {
+  if (!prev) return { best: current, isNew: true };
+  if (current.score > prev.score) return { best: current, isNew: true };
+  if (current.score === prev.score && current.time < prev.time) {
+    return { best: current, isNew: true };
+  }
+  return { best: prev, isNew: false };
+}
+
+// Read a stored best from any Storage-like object. Returns null when
+// the key is missing, the value is unparseable, or the parsed value
+// does not look like a Result. Never throws.
+/**
+ * @param {BestStore} store
+ * @param {string} key
+ * @returns {Result | null}
+ */
+export function loadBest(store, key) {
+  try {
+    const raw = store.getItem(key);
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.score === 'number' &&
+      typeof parsed.time === 'number'
+    ) {
+      return { score: parsed.score, time: parsed.time };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Write a best to any Storage-like object. Silently no-ops if the
+// store throws (e.g. private-mode localStorage with quota of zero).
+/**
+ * @param {BestStore} store
+ * @param {string} key
+ * @param {Result} value
+ */
+export function saveBest(store, key, value) {
+  try {
+    store.setItem(key, JSON.stringify(value));
+  } catch {
+    // Storage may be disabled or full - degrade gracefully.
+  }
+}
+
+// Storage key for the best score of a given variant + mode. Keeping
+// this in code (rather than inlined as a template literal at the call
+// site) gives a single source of truth + a target for tests.
+/**
+ * @param {string} variantKey
+ * @param {string} modeKey
+ * @returns {string}
+ */
+export function bestKey(variantKey, modeKey) {
+  return `flagquiz.best.${variantKey}.${modeKey}`;
+}
+
+// End-of-game flow: read the previous best for this variant/mode,
+// decide whether the current run beats it, and persist if so. Returns
+// what to display and whether the displayed value is freshly set.
+/**
+ * @param {BestStore} store
+ * @param {string} variantKey
+ * @param {string} modeKey
+ * @param {Result} current
+ * @returns {{ best: Result, isNew: boolean }}
+ */
+export function recordResult(store, variantKey, modeKey, current) {
+  const key = bestKey(variantKey, modeKey);
+  const outcome = nextBest(loadBest(store, key), current);
+  if (outcome.isNew) saveBest(store, key, outcome.best);
+  return outcome;
+}

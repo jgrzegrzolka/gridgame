@@ -14,7 +14,27 @@ import {
   formatTime,
   LOOKALIKES,
   lookalikesOf,
+  nextBest,
+  loadBest,
+  saveBest,
+  bestKey,
+  recordResult,
 } from './quiz.js';
+
+/**
+ * @param {Record<string, string>} [initial]
+ */
+function fakeStore(initial = {}) {
+  /** @type {Map<string, string>} */
+  const data = new Map(Object.entries(initial));
+  return {
+    /** @param {string} k */
+    getItem: (k) => (data.has(k) ? /** @type {string} */ (data.get(k)) : null),
+    /** @param {string} k @param {string} v */
+    setItem: (k, v) => data.set(k, v),
+    _dump: () => Object.fromEntries(data),
+  };
+}
 
 /** @typedef {import('./group.js').Country} Country */
 
@@ -322,4 +342,162 @@ test('pickQuestion falls back to allowing lookalikes when the pool is too small 
     const codes = new Set(q.choices.map((c) => c.code));
     assert.ok(codes.has(q.answer.code), 'answer always present in choices');
   }
+});
+
+test('nextBest treats a null previous as the first best', () => {
+  const r = nextBest(null, { score: 80, time: 60000 });
+  assert.deepEqual(r, { best: { score: 80, time: 60000 }, isNew: true });
+});
+
+test('nextBest prefers the higher score regardless of time', () => {
+  const prev = { score: 90, time: 10000 };
+  const curr = { score: 95, time: 60000 }; // slower but better score
+  const r = nextBest(prev, curr);
+  assert.deepEqual(r, { best: curr, isNew: true });
+});
+
+test('nextBest keeps the previous when the current score is lower', () => {
+  const prev = { score: 90, time: 60000 };
+  const curr = { score: 80, time: 1 }; // even instant time can not save a worse score
+  const r = nextBest(prev, curr);
+  assert.deepEqual(r, { best: prev, isNew: false });
+});
+
+test('nextBest breaks score ties on faster time', () => {
+  const prev = { score: 90, time: 60000 };
+  const curr = { score: 90, time: 30000 };
+  const r = nextBest(prev, curr);
+  assert.deepEqual(r, { best: curr, isNew: true });
+});
+
+test('nextBest keeps the previous on a tied score with a slower time', () => {
+  const prev = { score: 90, time: 30000 };
+  const curr = { score: 90, time: 60000 };
+  const r = nextBest(prev, curr);
+  assert.deepEqual(r, { best: prev, isNew: false });
+});
+
+test('nextBest keeps the previous when score and time are identical', () => {
+  const prev = { score: 90, time: 30000 };
+  const curr = { score: 90, time: 30000 };
+  const r = nextBest(prev, curr);
+  // Same numbers - no reason to declare a new best; isNew must be false.
+  assert.deepEqual(r, { best: prev, isNew: false });
+});
+
+test('loadBest returns null when the key is missing', () => {
+  assert.equal(loadBest(fakeStore(), 'whatever'), null);
+});
+
+test('loadBest round-trips through saveBest', () => {
+  const store = fakeStore();
+  const value = { score: 87, time: 65432 };
+  saveBest(store, 'best.europe.20', value);
+  assert.deepEqual(loadBest(store, 'best.europe.20'), value);
+});
+
+test('saveBest stringifies as JSON (not [object Object])', () => {
+  const store = fakeStore();
+  saveBest(store, 'k', { score: 50, time: 1000 });
+  assert.equal(store.getItem('k'), '{"score":50,"time":1000}');
+});
+
+test('loadBest returns null when the stored value is unparseable', () => {
+  const store = fakeStore({ k: 'not json at all' });
+  assert.equal(loadBest(store, 'k'), null);
+});
+
+test('loadBest returns null when the stored JSON has the wrong shape', () => {
+  const store = fakeStore({
+    a: '{"foo":"bar"}',
+    b: '{"score":"high","time":1000}', // wrong type for score
+    c: 'null',
+    d: '[1,2,3]',
+  });
+  assert.equal(loadBest(store, 'a'), null);
+  assert.equal(loadBest(store, 'b'), null);
+  assert.equal(loadBest(store, 'c'), null);
+  assert.equal(loadBest(store, 'd'), null);
+});
+
+test('saveBest is a no-op when the store throws (no crash)', () => {
+  const throwingStore = {
+    getItem: () => null,
+    setItem: () => { throw new Error('quota exceeded'); },
+  };
+  // Must not throw - saveBest is meant to degrade silently.
+  assert.doesNotThrow(() => saveBest(throwingStore, 'k', { score: 1, time: 2 }));
+});
+
+test('loadBest does not throw when the store throws', () => {
+  const throwingStore = {
+    getItem: () => { throw new Error('access denied'); },
+    setItem: () => {},
+  };
+  assert.equal(loadBest(throwingStore, 'k'), null);
+});
+
+test('bestKey produces the expected namespaced format', () => {
+  assert.equal(bestKey('europe', '20'), 'flagquiz.best.europe.20');
+  assert.equal(bestKey('all', 'all'), 'flagquiz.best.all.all');
+  // Variant keys can contain dashes (north-america etc.) - must round-trip
+  assert.equal(bestKey('north-america', '20'), 'flagquiz.best.north-america.20');
+});
+
+test('recordResult on an empty store saves the result and reports isNew', () => {
+  const store = fakeStore();
+  const current = { score: 87, time: 65432 };
+  const r = recordResult(store, 'europe', '20', current);
+  assert.deepEqual(r, { best: current, isNew: true });
+  // The store now holds the value at the right key
+  assert.deepEqual(
+    loadBest(store, bestKey('europe', '20')),
+    current,
+  );
+});
+
+test('recordResult does not save when the current run does not beat the best', () => {
+  const store = fakeStore();
+  const previous = { score: 90, time: 30000 };
+  saveBest(store, bestKey('europe', '20'), previous);
+  const worse = { score: 80, time: 10000 };
+  const r = recordResult(store, 'europe', '20', worse);
+  assert.deepEqual(r, { best: previous, isNew: false });
+  // Storage still holds the original
+  assert.deepEqual(
+    loadBest(store, bestKey('europe', '20')),
+    previous,
+  );
+});
+
+test('recordResult updates the store when the current run beats the best', () => {
+  const store = fakeStore();
+  saveBest(store, bestKey('europe', '20'), { score: 80, time: 60000 });
+  const better = { score: 95, time: 40000 };
+  const r = recordResult(store, 'europe', '20', better);
+  assert.deepEqual(r, { best: better, isNew: true });
+  assert.deepEqual(
+    loadBest(store, bestKey('europe', '20')),
+    better,
+  );
+});
+
+test('recordResult uses separate slots per variant/mode pair', () => {
+  const store = fakeStore();
+  recordResult(store, 'europe', '20', { score: 100, time: 30000 });
+  recordResult(store, 'asia', '20', { score: 70, time: 90000 });
+  recordResult(store, 'europe', 'all', { score: 85, time: 200000 });
+  // Each slot kept its own value - no cross-contamination
+  assert.deepEqual(
+    loadBest(store, bestKey('europe', '20')),
+    { score: 100, time: 30000 },
+  );
+  assert.deepEqual(
+    loadBest(store, bestKey('asia', '20')),
+    { score: 70, time: 90000 },
+  );
+  assert.deepEqual(
+    loadBest(store, bestKey('europe', 'all')),
+    { score: 85, time: 200000 },
+  );
 });

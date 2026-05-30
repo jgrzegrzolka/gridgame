@@ -112,12 +112,31 @@
         font-size: 36px;
         font-weight: 500;
         margin: 0 0 8px;
+        border-radius: 8px;
+      }
+      .final-score.celebrate {
+        animation: celebrate-pulse 1.3s ease-out 4;
+      }
+      @keyframes celebrate-pulse {
+        0%   { box-shadow: 0 0 0 0 rgba(42, 157, 74, 0.5); }
+        100% { box-shadow: 0 0 0 28px rgba(42, 157, 74, 0); }
       }
       .time {
         font-size: 14px;
         color: #666;
+        margin: 0 0 8px;
+        font-variant-numeric: tabular-nums;
+      }
+      .best {
+        font-size: 14px;
+        color: #666;
         margin: 0 0 16px;
         font-variant-numeric: tabular-nums;
+      }
+      .best .new-badge {
+        color: #2a9d4a;
+        font-weight: 500;
+        margin-left: 6px;
       }
       .result-links {
         font-size: 14px;
@@ -144,6 +163,7 @@
         Final score: <span id="final-score">0</span>%
       </p>
       <p class="time" id="time"></p>
+      <p class="best" id="best"></p>
       <p class="result-links">
         <a id="play-again" href="#">Play again</a>
       </p>
@@ -154,6 +174,7 @@
         VARIANTS,
         availableModes,
         formatTime,
+        recordResult,
         poolFor,
         targetFor,
       } from '../flags/quiz.js';
@@ -168,6 +189,7 @@
       const finalScoreLineEl = document.getElementById('final-score-line');
       const finalScoreEl = document.getElementById('final-score');
       const timeEl = document.getElementById('time');
+      const bestEl = document.getElementById('best');
       const playTimerEl = document.getElementById('play-timer');
       const playAgainEl = document.getElementById('play-again');
 
@@ -274,10 +296,25 @@
         function showResult() {
           cancelAnimationFrame(timerRaf);
           const ratio = score() / target;
-          finalScoreEl.textContent = Math.round(ratio * 100);
+          const pct = Math.round(ratio * 100);
+          const elapsed = Date.now() - startTime;
+          finalScoreEl.textContent = pct;
           // Red (0) -> yellow (60) -> green (120) along the score ratio.
           finalScoreLineEl.style.color = `hsl(${ratio * 120}, 65%, 38%)`;
-          timeEl.textContent = `Time: ${formatTime(Date.now() - startTime)}`;
+          timeEl.textContent = `Time: ${formatTime(elapsed)}`;
+
+          const { best, isNew } = recordResult(
+            localStorage, key, mode, { score: pct, time: elapsed },
+          );
+          bestEl.textContent = `Best: ${best.score}% in ${formatTime(best.time)}`;
+          if (isNew) {
+            const badge = document.createElement('span');
+            badge.className = 'new-badge';
+            badge.textContent = 'new!';
+            bestEl.appendChild(badge);
+            finalScoreLineEl.classList.add('celebrate');
+          }
+
           gameEl.hidden = true;
           resultEl.hidden = false;
         }
