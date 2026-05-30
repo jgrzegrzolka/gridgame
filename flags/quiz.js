@@ -36,7 +36,6 @@ function shuffle(arr) {
 export const LOOKALIKES = [
   ['id', 'mc'], // Indonesia, Monaco - red over white
   ['ro', 'td'], // Romania, Chad - vertical blue/yellow/red
-  ['nl', 'lu'], // Netherlands, Luxembourg - red/white/blue horizontal
   ['ie', 'ci'], // Ireland, Cote d'Ivoire - vertical tricolour, mirrored
   // Norwegian flag - used by Norway and its two uninhabited dependencies
   ['no', 'sj', 'bv'],
