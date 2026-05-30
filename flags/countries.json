@@ -1,1086 +1,1899 @@
 [
   {
     "code": "af",
-    "name": "Afghanistan"
+    "name": "Afghanistan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ax",
-    "name": "Aland Islands"
+    "name": "Aland Islands",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "al",
-    "name": "Albania"
+    "name": "Albania",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "dz",
-    "name": "Algeria"
+    "name": "Algeria",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "as",
-    "name": "American Samoa"
+    "name": "American Samoa",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "ad",
-    "name": "Andorra"
+    "name": "Andorra",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ao",
-    "name": "Angola"
+    "name": "Angola",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ai",
-    "name": "Anguilla"
+    "name": "Anguilla",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "aq",
-    "name": "Antarctica"
+    "name": "Antarctica",
+    "continent": "Antarctica",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "ag",
-    "name": "Antigua and Barbuda"
+    "name": "Antigua and Barbuda",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ar",
-    "name": "Argentina"
+    "name": "Argentina",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "am",
-    "name": "Armenia"
+    "name": "Armenia",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "aw",
-    "name": "Aruba"
+    "name": "Aruba",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "sh-ac",
-    "name": "Ascension Island"
+    "name": "Ascension Island",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "asean",
-    "name": "Association of Southeast Asian Nations"
+    "name": "Association of Southeast Asian Nations",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "au",
-    "name": "Australia"
+    "name": "Australia",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "at",
-    "name": "Austria"
+    "name": "Austria",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "az",
-    "name": "Azerbaijan"
+    "name": "Azerbaijan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bs",
-    "name": "Bahamas"
+    "name": "Bahamas",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bh",
-    "name": "Bahrain"
+    "name": "Bahrain",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bd",
-    "name": "Bangladesh"
+    "name": "Bangladesh",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bb",
-    "name": "Barbados"
+    "name": "Barbados",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "es-pv",
-    "name": "Basque Country"
+    "name": "Basque Country",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "by",
-    "name": "Belarus"
+    "name": "Belarus",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "be",
-    "name": "Belgium"
+    "name": "Belgium",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bz",
-    "name": "Belize"
+    "name": "Belize",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bj",
-    "name": "Benin"
+    "name": "Benin",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bm",
-    "name": "Bermuda"
+    "name": "Bermuda",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "bt",
-    "name": "Bhutan"
+    "name": "Bhutan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bo",
-    "name": "Bolivia"
+    "name": "Bolivia",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bq",
-    "name": "Bonaire, Sint Eustatius and Saba"
+    "name": "Bonaire, Sint Eustatius and Saba",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "ba",
-    "name": "Bosnia and Herzegovina"
+    "name": "Bosnia and Herzegovina",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bw",
-    "name": "Botswana"
+    "name": "Botswana",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bv",
-    "name": "Bouvet Island"
+    "name": "Bouvet Island",
+    "continent": "Antarctica",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "br",
-    "name": "Brazil"
+    "name": "Brazil",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "io",
-    "name": "British Indian Ocean Territory"
+    "name": "British Indian Ocean Territory",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "bn",
-    "name": "Brunei Darussalam"
+    "name": "Brunei Darussalam",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bg",
-    "name": "Bulgaria"
+    "name": "Bulgaria",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bf",
-    "name": "Burkina Faso"
+    "name": "Burkina Faso",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "bi",
-    "name": "Burundi"
+    "name": "Burundi",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "cv",
-    "name": "Cabo Verde"
+    "name": "Cabo Verde",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "kh",
-    "name": "Cambodia"
+    "name": "Cambodia",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "cm",
-    "name": "Cameroon"
+    "name": "Cameroon",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ca",
-    "name": "Canada"
+    "name": "Canada",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ic",
-    "name": "Canary Islands"
+    "name": "Canary Islands",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "es-ct",
-    "name": "Catalonia"
+    "name": "Catalonia",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "ky",
-    "name": "Cayman Islands"
+    "name": "Cayman Islands",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "cf",
-    "name": "Central African Republic"
+    "name": "Central African Republic",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "cefta",
-    "name": "Central European Free Trade Agreement"
+    "name": "Central European Free Trade Agreement",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "td",
-    "name": "Chad"
+    "name": "Chad",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "cl",
-    "name": "Chile"
+    "name": "Chile",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "cn",
-    "name": "China"
+    "name": "China",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "cx",
-    "name": "Christmas Island"
+    "name": "Christmas Island",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "cp",
-    "name": "Clipperton Island"
+    "name": "Clipperton Island",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "cc",
-    "name": "Cocos (Keeling) Islands"
+    "name": "Cocos (Keeling) Islands",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "co",
-    "name": "Colombia"
+    "name": "Colombia",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "km",
-    "name": "Comoros"
+    "name": "Comoros",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ck",
-    "name": "Cook Islands"
+    "name": "Cook Islands",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "cr",
-    "name": "Costa Rica"
+    "name": "Costa Rica",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "hr",
-    "name": "Croatia"
+    "name": "Croatia",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "cu",
-    "name": "Cuba"
+    "name": "Cuba",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "cw",
-    "name": "Curaçao"
+    "name": "Curaçao",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "cy",
-    "name": "Cyprus"
+    "name": "Cyprus",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "cz",
-    "name": "Czech Republic"
+    "name": "Czech Republic",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ci",
-    "name": "Côte d'Ivoire"
+    "name": "Côte d'Ivoire",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "cd",
-    "name": "Democratic Republic of the Congo"
+    "name": "Democratic Republic of the Congo",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "dk",
-    "name": "Denmark"
+    "name": "Denmark",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "dg",
-    "name": "Diego Garcia"
+    "name": "Diego Garcia",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "dj",
-    "name": "Djibouti"
+    "name": "Djibouti",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "dm",
-    "name": "Dominica"
+    "name": "Dominica",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "do",
-    "name": "Dominican Republic"
+    "name": "Dominican Republic",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "eac",
-    "name": "East African Community"
+    "name": "East African Community",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "ec",
-    "name": "Ecuador"
+    "name": "Ecuador",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "eg",
-    "name": "Egypt"
+    "name": "Egypt",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sv",
-    "name": "El Salvador"
+    "name": "El Salvador",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gb-eng",
-    "name": "England"
+    "name": "England",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "gq",
-    "name": "Equatorial Guinea"
+    "name": "Equatorial Guinea",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "er",
-    "name": "Eritrea"
+    "name": "Eritrea",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ee",
-    "name": "Estonia"
+    "name": "Estonia",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sz",
-    "name": "Eswatini"
+    "name": "Eswatini",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "et",
-    "name": "Ethiopia"
+    "name": "Ethiopia",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "eu",
-    "name": "Europe"
+    "name": "Europe",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "fk",
-    "name": "Falkland Islands"
+    "name": "Falkland Islands",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "fo",
-    "name": "Faroe Islands"
+    "name": "Faroe Islands",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "fm",
-    "name": "Federated States of Micronesia"
+    "name": "Federated States of Micronesia",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "fj",
-    "name": "Fiji"
+    "name": "Fiji",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "fi",
-    "name": "Finland"
+    "name": "Finland",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "fr",
-    "name": "France"
+    "name": "France",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gf",
-    "name": "French Guiana"
+    "name": "French Guiana",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "pf",
-    "name": "French Polynesia"
+    "name": "French Polynesia",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "tf",
-    "name": "French Southern Territories"
+    "name": "French Southern Territories",
+    "continent": "Antarctica",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "ga",
-    "name": "Gabon"
+    "name": "Gabon",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "es-ga",
-    "name": "Galicia"
+    "name": "Galicia",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "gm",
-    "name": "Gambia"
+    "name": "Gambia",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ge",
-    "name": "Georgia"
+    "name": "Georgia",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "de",
-    "name": "Germany"
+    "name": "Germany",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gh",
-    "name": "Ghana"
+    "name": "Ghana",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gi",
-    "name": "Gibraltar"
+    "name": "Gibraltar",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "gr",
-    "name": "Greece"
+    "name": "Greece",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gl",
-    "name": "Greenland"
+    "name": "Greenland",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "gd",
-    "name": "Grenada"
+    "name": "Grenada",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gp",
-    "name": "Guadeloupe"
+    "name": "Guadeloupe",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "gu",
-    "name": "Guam"
+    "name": "Guam",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "gt",
-    "name": "Guatemala"
+    "name": "Guatemala",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gg",
-    "name": "Guernsey"
+    "name": "Guernsey",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "gn",
-    "name": "Guinea"
+    "name": "Guinea",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gw",
-    "name": "Guinea-Bissau"
+    "name": "Guinea-Bissau",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gy",
-    "name": "Guyana"
+    "name": "Guyana",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ht",
-    "name": "Haiti"
+    "name": "Haiti",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "hm",
-    "name": "Heard Island and McDonald Islands"
+    "name": "Heard Island and McDonald Islands",
+    "continent": "Antarctica",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "va",
-    "name": "Holy See"
+    "name": "Holy See",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_observer"
   },
   {
     "code": "hn",
-    "name": "Honduras"
+    "name": "Honduras",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "hk",
-    "name": "Hong Kong"
+    "name": "Hong Kong",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "hu",
-    "name": "Hungary"
+    "name": "Hungary",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "is",
-    "name": "Iceland"
+    "name": "Iceland",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "in",
-    "name": "India"
+    "name": "India",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "id",
-    "name": "Indonesia"
+    "name": "Indonesia",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ir",
-    "name": "Iran"
+    "name": "Iran",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "iq",
-    "name": "Iraq"
+    "name": "Iraq",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ie",
-    "name": "Ireland"
+    "name": "Ireland",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "im",
-    "name": "Isle of Man"
+    "name": "Isle of Man",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "il",
-    "name": "Israel"
+    "name": "Israel",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "it",
-    "name": "Italy"
+    "name": "Italy",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "jm",
-    "name": "Jamaica"
+    "name": "Jamaica",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "jp",
-    "name": "Japan"
+    "name": "Japan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "je",
-    "name": "Jersey"
+    "name": "Jersey",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "jo",
-    "name": "Jordan"
+    "name": "Jordan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "kz",
-    "name": "Kazakhstan"
+    "name": "Kazakhstan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ke",
-    "name": "Kenya"
+    "name": "Kenya",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ki",
-    "name": "Kiribati"
+    "name": "Kiribati",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "xk",
-    "name": "Kosovo"
+    "name": "Kosovo",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "non_un"
   },
   {
     "code": "kw",
-    "name": "Kuwait"
+    "name": "Kuwait",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "kg",
-    "name": "Kyrgyzstan"
+    "name": "Kyrgyzstan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "la",
-    "name": "Laos"
+    "name": "Laos",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "lv",
-    "name": "Latvia"
+    "name": "Latvia",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "arab",
-    "name": "League of Arab States"
+    "name": "League of Arab States",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "lb",
-    "name": "Lebanon"
+    "name": "Lebanon",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ls",
-    "name": "Lesotho"
+    "name": "Lesotho",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "lr",
-    "name": "Liberia"
+    "name": "Liberia",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ly",
-    "name": "Libya"
+    "name": "Libya",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "li",
-    "name": "Liechtenstein"
+    "name": "Liechtenstein",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "lt",
-    "name": "Lithuania"
+    "name": "Lithuania",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "lu",
-    "name": "Luxembourg"
+    "name": "Luxembourg",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mo",
-    "name": "Macau"
+    "name": "Macau",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "mg",
-    "name": "Madagascar"
+    "name": "Madagascar",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mw",
-    "name": "Malawi"
+    "name": "Malawi",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "my",
-    "name": "Malaysia"
+    "name": "Malaysia",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mv",
-    "name": "Maldives"
+    "name": "Maldives",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ml",
-    "name": "Mali"
+    "name": "Mali",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mt",
-    "name": "Malta"
+    "name": "Malta",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mh",
-    "name": "Marshall Islands"
+    "name": "Marshall Islands",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mq",
-    "name": "Martinique"
+    "name": "Martinique",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "mr",
-    "name": "Mauritania"
+    "name": "Mauritania",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mu",
-    "name": "Mauritius"
+    "name": "Mauritius",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "yt",
-    "name": "Mayotte"
+    "name": "Mayotte",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "mx",
-    "name": "Mexico"
+    "name": "Mexico",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "md",
-    "name": "Moldova"
+    "name": "Moldova",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mc",
-    "name": "Monaco"
+    "name": "Monaco",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mn",
-    "name": "Mongolia"
+    "name": "Mongolia",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "me",
-    "name": "Montenegro"
+    "name": "Montenegro",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ms",
-    "name": "Montserrat"
+    "name": "Montserrat",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "ma",
-    "name": "Morocco"
+    "name": "Morocco",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mz",
-    "name": "Mozambique"
+    "name": "Mozambique",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mm",
-    "name": "Myanmar"
+    "name": "Myanmar",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "na",
-    "name": "Namibia"
+    "name": "Namibia",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "nr",
-    "name": "Nauru"
+    "name": "Nauru",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "np",
-    "name": "Nepal"
+    "name": "Nepal",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "nl",
-    "name": "Netherlands"
+    "name": "Netherlands",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "nc",
-    "name": "New Caledonia"
+    "name": "New Caledonia",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "nz",
-    "name": "New Zealand"
+    "name": "New Zealand",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ni",
-    "name": "Nicaragua"
+    "name": "Nicaragua",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ne",
-    "name": "Niger"
+    "name": "Niger",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ng",
-    "name": "Nigeria"
+    "name": "Nigeria",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "nu",
-    "name": "Niue"
+    "name": "Niue",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "nf",
-    "name": "Norfolk Island"
+    "name": "Norfolk Island",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "kp",
-    "name": "North Korea"
+    "name": "North Korea",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mk",
-    "name": "North Macedonia"
+    "name": "North Macedonia",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gb-nir",
-    "name": "Northern Ireland"
+    "name": "Northern Ireland",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "mp",
-    "name": "Northern Mariana Islands"
+    "name": "Northern Mariana Islands",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "no",
-    "name": "Norway"
+    "name": "Norway",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "om",
-    "name": "Oman"
+    "name": "Oman",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "pc",
-    "name": "Pacific Community"
+    "name": "Pacific Community",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "pk",
-    "name": "Pakistan"
+    "name": "Pakistan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "pw",
-    "name": "Palau"
+    "name": "Palau",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "pa",
-    "name": "Panama"
+    "name": "Panama",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "pg",
-    "name": "Papua New Guinea"
+    "name": "Papua New Guinea",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "py",
-    "name": "Paraguay"
+    "name": "Paraguay",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "pe",
-    "name": "Peru"
+    "name": "Peru",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ph",
-    "name": "Philippines"
+    "name": "Philippines",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "pn",
-    "name": "Pitcairn"
+    "name": "Pitcairn",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "pl",
-    "name": "Poland"
+    "name": "Poland",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "pt",
-    "name": "Portugal"
+    "name": "Portugal",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "pr",
-    "name": "Puerto Rico"
+    "name": "Puerto Rico",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "qa",
-    "name": "Qatar"
+    "name": "Qatar",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "cg",
-    "name": "Republic of the Congo"
+    "name": "Republic of the Congo",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ro",
-    "name": "Romania"
+    "name": "Romania",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ru",
-    "name": "Russia"
+    "name": "Russia",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "rw",
-    "name": "Rwanda"
+    "name": "Rwanda",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "re",
-    "name": "Réunion"
+    "name": "Réunion",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "bl",
-    "name": "Saint Barthélemy"
+    "name": "Saint Barthélemy",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "sh-hl",
-    "name": "Saint Helena"
+    "name": "Saint Helena",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "sh",
-    "name": "Saint Helena, Ascension and Tristan da Cunha"
+    "name": "Saint Helena, Ascension and Tristan da Cunha",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "kn",
-    "name": "Saint Kitts and Nevis"
+    "name": "Saint Kitts and Nevis",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "lc",
-    "name": "Saint Lucia"
+    "name": "Saint Lucia",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "mf",
-    "name": "Saint Martin"
+    "name": "Saint Martin",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "pm",
-    "name": "Saint Pierre and Miquelon"
+    "name": "Saint Pierre and Miquelon",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "vc",
-    "name": "Saint Vincent and the Grenadines"
+    "name": "Saint Vincent and the Grenadines",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ws",
-    "name": "Samoa"
+    "name": "Samoa",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sm",
-    "name": "San Marino"
+    "name": "San Marino",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "st",
-    "name": "Sao Tome and Principe"
+    "name": "Sao Tome and Principe",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sa",
-    "name": "Saudi Arabia"
+    "name": "Saudi Arabia",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gb-sct",
-    "name": "Scotland"
+    "name": "Scotland",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "sn",
-    "name": "Senegal"
+    "name": "Senegal",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "rs",
-    "name": "Serbia"
+    "name": "Serbia",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sc",
-    "name": "Seychelles"
+    "name": "Seychelles",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sl",
-    "name": "Sierra Leone"
+    "name": "Sierra Leone",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sg",
-    "name": "Singapore"
+    "name": "Singapore",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sx",
-    "name": "Sint Maarten"
+    "name": "Sint Maarten",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "sk",
-    "name": "Slovakia"
+    "name": "Slovakia",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "si",
-    "name": "Slovenia"
+    "name": "Slovenia",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sb",
-    "name": "Solomon Islands"
+    "name": "Solomon Islands",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "so",
-    "name": "Somalia"
+    "name": "Somalia",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "za",
-    "name": "South Africa"
+    "name": "South Africa",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gs",
-    "name": "South Georgia and the South Sandwich Islands"
+    "name": "South Georgia and the South Sandwich Islands",
+    "continent": "Antarctica",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "kr",
-    "name": "South Korea"
+    "name": "South Korea",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ss",
-    "name": "South Sudan"
+    "name": "South Sudan",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "es",
-    "name": "Spain"
+    "name": "Spain",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "lk",
-    "name": "Sri Lanka"
+    "name": "Sri Lanka",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ps",
-    "name": "State of Palestine"
+    "name": "State of Palestine",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_observer"
   },
   {
     "code": "sd",
-    "name": "Sudan"
+    "name": "Sudan",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sr",
-    "name": "Suriname"
+    "name": "Suriname",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sj",
-    "name": "Svalbard and Jan Mayen"
+    "name": "Svalbard and Jan Mayen",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "se",
-    "name": "Sweden"
+    "name": "Sweden",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ch",
-    "name": "Switzerland"
+    "name": "Switzerland",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sy",
-    "name": "Syria"
+    "name": "Syria",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "tw",
-    "name": "Taiwan"
+    "name": "Taiwan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "non_un"
   },
   {
     "code": "tj",
-    "name": "Tajikistan"
+    "name": "Tajikistan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "tz",
-    "name": "Tanzania"
+    "name": "Tanzania",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "th",
-    "name": "Thailand"
+    "name": "Thailand",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "tl",
-    "name": "Timor-Leste"
+    "name": "Timor-Leste",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "tg",
-    "name": "Togo"
+    "name": "Togo",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "tk",
-    "name": "Tokelau"
+    "name": "Tokelau",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "to",
-    "name": "Tonga"
+    "name": "Tonga",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "tt",
-    "name": "Trinidad and Tobago"
+    "name": "Trinidad and Tobago",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "sh-ta",
-    "name": "Tristan da Cunha"
+    "name": "Tristan da Cunha",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "tn",
-    "name": "Tunisia"
+    "name": "Tunisia",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "tm",
-    "name": "Turkmenistan"
+    "name": "Turkmenistan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "tc",
-    "name": "Turks and Caicos Islands"
+    "name": "Turks and Caicos Islands",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "tv",
-    "name": "Tuvalu"
+    "name": "Tuvalu",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "tr",
-    "name": "Türkiye"
+    "name": "Türkiye",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ug",
-    "name": "Uganda"
+    "name": "Uganda",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ua",
-    "name": "Ukraine"
+    "name": "Ukraine",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ae",
-    "name": "United Arab Emirates"
+    "name": "United Arab Emirates",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "gb",
-    "name": "United Kingdom"
+    "name": "United Kingdom",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "un",
-    "name": "United Nations"
+    "name": "United Nations",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "um",
-    "name": "United States Minor Outlying Islands"
+    "name": "United States Minor Outlying Islands",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "us",
-    "name": "United States of America"
+    "name": "United States of America",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "xx",
-    "name": "Unknown"
+    "name": "Unknown",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "uy",
-    "name": "Uruguay"
+    "name": "Uruguay",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "uz",
-    "name": "Uzbekistan"
+    "name": "Uzbekistan",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "vu",
-    "name": "Vanuatu"
+    "name": "Vanuatu",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "ve",
-    "name": "Venezuela"
+    "name": "Venezuela",
+    "continent": "South America",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "vn",
-    "name": "Vietnam"
+    "name": "Vietnam",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "vg",
-    "name": "Virgin Islands (British)"
+    "name": "Virgin Islands (British)",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "vi",
-    "name": "Virgin Islands (U.S.)"
+    "name": "Virgin Islands (U.S.)",
+    "continent": "North America",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "gb-wls",
-    "name": "Wales"
+    "name": "Wales",
+    "continent": null,
+    "category": "other",
+    "statehood": null
   },
   {
     "code": "wf",
-    "name": "Wallis and Futuna"
+    "name": "Wallis and Futuna",
+    "continent": "Oceania",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "eh",
-    "name": "Western Sahara"
+    "name": "Western Sahara",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "territory"
   },
   {
     "code": "ye",
-    "name": "Yemen"
+    "name": "Yemen",
+    "continent": "Asia",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "zm",
-    "name": "Zambia"
+    "name": "Zambia",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   },
   {
     "code": "zw",
-    "name": "Zimbabwe"
+    "name": "Zimbabwe",
+    "continent": "Africa",
+    "category": "country",
+    "statehood": "un_member"
   }
 ]
