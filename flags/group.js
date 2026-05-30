@@ -1,3 +1,15 @@
+/**
+ * @typedef {'Africa' | 'Asia' | 'Europe' | 'North America' | 'South America' | 'Oceania' | 'Antarctica'} Continent
+ *
+ * @typedef {Object} Country
+ * @property {string} code
+ * @property {string} name
+ * @property {'country' | 'other'} category
+ * @property {Continent | null} continent
+ * @property {string | null} [statehood]
+ */
+
+/** @type {Continent[]} */
 export const CONTINENTS = [
   'Africa',
   'Asia',
@@ -8,8 +20,14 @@ export const CONTINENTS = [
   'Antarctica',
 ];
 
+/**
+ * @param {Country[]} entries
+ * @returns {{ countries: Country[], other: Country[] }}
+ */
 export function splitByCategory(entries) {
+  /** @type {Country[]} */
   const countries = [];
+  /** @type {Country[]} */
   const other = [];
   for (const e of entries) {
     (e.category === 'country' ? countries : other).push(e);
@@ -17,10 +35,23 @@ export function splitByCategory(entries) {
   return { countries, other };
 }
 
+/**
+ * @param {Country[]} countries
+ * @returns {Record<Continent, Country[]>}
+ */
 export function groupByContinent(countries) {
-  const groups = Object.fromEntries(CONTINENTS.map((c) => [c, []]));
+  /** @type {Record<Continent, Country[]>} */
+  const groups = {
+    Africa: [],
+    Asia: [],
+    Europe: [],
+    'North America': [],
+    'South America': [],
+    Oceania: [],
+    Antarctica: [],
+  };
   for (const c of countries) {
-    if (!(c.continent in groups)) {
+    if (!c.continent || !(c.continent in groups)) {
       throw new Error(`Unknown continent "${c.continent}" for ${c.code} (${c.name})`);
     }
     groups[c.continent].push(c);

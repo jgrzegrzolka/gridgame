@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { CONTINENTS, splitByCategory, groupByContinent } from './group.js';
 
+/** @typedef {import('./group.js').Country} Country */
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
+/** @type {Country[]} */
 const countries = JSON.parse(
   readFileSync(join(__dirname, 'countries.json'), 'utf8'),
 );
@@ -42,6 +45,7 @@ test('groupByContinent throws on an unknown continent', () => {
   assert.throws(
     () =>
       groupByContinent([
+        // @ts-expect-error - deliberately invalid continent to verify the throw path
         { code: 'xx', name: 'Typo', continent: 'Antartica', category: 'country' },
       ]),
     /Unknown continent "Antartica"/,
