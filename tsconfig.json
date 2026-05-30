@@ -11,5 +11,5 @@
     "lib": ["ES2022", "DOM"],
     "types": ["node"]
   },
-  "include": ["flags/**/*.js", "game1/**/*.js"]
+  "include": ["flags/**/*.js", "flagQuiz/**/*.js"]
 }
