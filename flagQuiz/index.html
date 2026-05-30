@@ -37,6 +37,13 @@
       .variants a:hover {
         text-decoration: underline;
       }
+      .play-timer {
+        font-size: 14px;
+        color: #666;
+        margin: 0 0 12px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
       .country-name {
         font-size: 28px;
         font-weight: 500;
@@ -133,6 +140,7 @@
       <ul class="variants" id="variants"></ul>
     </div>
     <div id="game" hidden>
+      <p class="play-timer" id="play-timer">0:00.000</p>
       <p class="country-name" id="country-name">Loading…</p>
       <div class="choices" id="choices"></div>
       <p class="feedback" id="feedback"></p>
@@ -167,13 +175,15 @@
       const gradeEl = document.getElementById('grade');
       const finalScoreEl = document.getElementById('final-score');
       const timeEl = document.getElementById('time');
+      const playTimerEl = document.getElementById('play-timer');
       const playAgainEl = document.getElementById('play-again');
 
       function formatTime(ms) {
-        const totalSec = Math.round(ms / 1000);
+        const totalSec = Math.floor(ms / 1000);
         const min = Math.floor(totalSec / 60);
         const sec = totalSec % 60;
-        return `${min}:${sec.toString().padStart(2, '0')}`;
+        const milli = ms % 1000;
+        return `${min}:${sec.toString().padStart(2, '0')}.${milli.toString().padStart(3, '0')}`;
       }
 
       const params = new URLSearchParams(window.location.search);
@@ -183,30 +193,39 @@
       fetch('../flags/countries.json')
         .then((r) => r.json())
         .then((all) => {
-          if (
-            !variantKey || !VARIANTS[variantKey] ||
-            !modeKey || !(modeKey in MODES)
-          ) {
-            renderMenu();
-          } else {
-            startGame(variantKey, modeKey, all);
+          const variant = variantKey ? VARIANTS[variantKey] : null;
+          const target = modeKey ? MODES[modeKey] : undefined;
+          if (!variant || target === undefined) {
+            renderMenu(all);
+            return;
           }
+          const pool = all.filter(variant.filter);
+          if (target !== Infinity && target > pool.length) {
+            // Hand-edited URL asking for more questions than the pool can offer.
+            renderMenu(all);
+            return;
+          }
+          startGame(variantKey, modeKey, all);
         })
         .catch((err) => {
           document.body.textContent = 'Failed to load: ' + err.message;
         });
 
-      function renderMenu() {
+      function renderMenu(all) {
         const modeKeys = Object.keys(MODES);
-        for (const [key, { label }] of Object.entries(VARIANTS)) {
+        for (const [key, variant] of Object.entries(VARIANTS)) {
+          const poolSize = all.filter(variant.filter).length;
+          const usable = modeKeys.filter(
+            (m) => MODES[m] === Infinity || MODES[m] <= poolSize,
+          );
           const li = document.createElement('li');
-          li.append(`${label}: `);
-          modeKeys.forEach((m, i) => {
+          li.append(`${variant.label}: `);
+          usable.forEach((m, i) => {
             const a = document.createElement('a');
             a.href = `?v=${key}&n=${m}`;
             a.textContent = m;
             li.appendChild(a);
-            if (i < modeKeys.length - 1) li.append(' | ');
+            if (i < usable.length - 1) li.append(' | ');
           });
           variantsEl.appendChild(li);
         }
@@ -221,6 +240,12 @@
         let currentAnswer = null;
         let wrongCount = 0;
         const startTime = Date.now();
+        let timerRaf = 0;
+
+        function tickTimer() {
+          playTimerEl.textContent = formatTime(Date.now() - startTime);
+          timerRaf = requestAnimationFrame(tickTimer);
+        }
 
         function score() {
           return Math.max(0, target - wrongCount);
@@ -266,6 +291,7 @@
         }
 
         function showResult() {
+          cancelAnimationFrame(timerRaf);
           const ratio = score() / target;
           finalScoreEl.textContent = Math.round(ratio * 100);
           timeEl.textContent = `Time: ${formatTime(Date.now() - startTime)}`;
@@ -286,6 +312,7 @@
         playAgainEl.href = window.location.pathname + window.location.search;
 
         gameEl.hidden = false;
+        tickTimer();
         render(quiz.next());
       }
     </script>
