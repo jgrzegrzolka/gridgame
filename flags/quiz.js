@@ -28,6 +28,52 @@ function shuffle(arr) {
   return a;
 }
 
+// Flags that look essentially identical at the sizes shown in the quiz.
+// When the answer is in one of these groups, the other members are
+// excluded from being distractors in the same question (so the user is
+// never asked to tell two near-identical flags apart).
+/** @type {string[][]} */
+export const LOOKALIKES = [
+  ['id', 'mc'], // Indonesia, Monaco - red over white
+  ['ro', 'td'], // Romania, Chad - vertical blue/yellow/red
+  ['nl', 'lu'], // Netherlands, Luxembourg - red/white/blue horizontal
+  ['ie', 'ci'], // Ireland, Cote d'Ivoire - vertical tricolour, mirrored
+];
+
+/**
+ * @param {string} code
+ * @returns {string[]} the group containing this code (including itself), or just [code]
+ */
+export function lookalikesOf(code) {
+  for (const group of LOOKALIKES) {
+    if (group.includes(code)) return group;
+  }
+  return [code];
+}
+
+// Picks a set of `choiceCount` choices for one question. Avoids putting
+// flags from the same LOOKALIKES group together. Falls back to allowing
+// the lookalikes only when the pool is too small to fill the slots
+// otherwise.
+/**
+ * @template {{ code: string }} T
+ * @param {T[]} pool
+ * @param {T} answer
+ * @param {number} choiceCount
+ * @returns {T[]}
+ */
+function buildChoices(pool, answer, choiceCount) {
+  const exclude = new Set(lookalikesOf(answer.code));
+  let usable = pool.filter((c) => !exclude.has(c.code));
+  if (usable.length < choiceCount - 1) {
+    // Tiny pool: allow lookalikes rather than fail. Still exclude the
+    // answer itself so we don't pick it twice.
+    usable = pool.filter((c) => c.code !== answer.code);
+  }
+  const distractors = shuffle(usable).slice(0, choiceCount - 1);
+  return shuffle([answer, ...distractors]);
+}
+
 /**
  * @template {{ code: string }} T
  * @param {T[]} countries
@@ -40,9 +86,8 @@ export function pickQuestion(countries, choiceCount = 4) {
       `Need at least ${choiceCount} entries, got ${countries.length}`,
     );
   }
-  const choices = shuffle(countries).slice(0, choiceCount);
-  const answer = choices[Math.floor(Math.random() * choiceCount)];
-  return { answer, choices };
+  const answer = countries[Math.floor(Math.random() * countries.length)];
+  return { answer, choices: buildChoices(countries, answer, choiceCount) };
 }
 
 // Builds a quiz that asks every answer at most once. Each call to .next()
@@ -74,9 +119,7 @@ export function createQuiz(pool, count, choiceCount = 4) {
       if (queue.length === 0) return null;
       const answer = queue.shift();
       if (!answer) return null;
-      const distractors = shuffle(pool.filter((c) => c.code !== answer.code))
-        .slice(0, choiceCount - 1);
-      return { answer, choices: shuffle([answer, ...distractors]) };
+      return { answer, choices: buildChoices(pool, answer, choiceCount) };
     },
   };
 }
