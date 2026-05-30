@@ -9,7 +9,7 @@ import {
   VARIANTS,
   poolFor,
   targetFor,
-  BIG_VARIANT_TARGET,
+  MODES,
 } from './quiz.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -164,27 +164,23 @@ test('createQuiz throws if count exceeds pool size', () => {
   );
 });
 
-test('targetFor returns the full pool length for continent variants', () => {
-  for (const key of ['europe', 'asia', 'africa', 'north-america',
-                     'south-america', 'oceania', 'others']) {
-    const pool = poolFor(key, countries);
-    assert.equal(targetFor(key, pool), pool.length);
-  }
+test('MODES contains "20" and "all" in that display order', () => {
+  assert.deepEqual(Object.keys(MODES), ['20', 'all']);
 });
 
-test('targetFor caps the pan-pool variants at BIG_VARIANT_TARGET', () => {
-  for (const key of ['countries', 'all']) {
-    const pool = poolFor(key, countries);
-    assert.ok(pool.length > BIG_VARIANT_TARGET, `pool ${key} unexpectedly small`);
-    assert.equal(targetFor(key, pool), BIG_VARIANT_TARGET);
-  }
+test('targetFor("20", pool) returns 20 when pool is large enough', () => {
+  assert.equal(targetFor('20', countries), 20);
 });
 
-test('targetFor falls back to pool size when a big-variant pool is small', () => {
+test('targetFor("20", tinyPool) clamps to pool length', () => {
   const tinyPool = sample.slice(0, 5);
-  assert.equal(targetFor('all', tinyPool), 5);
+  assert.equal(targetFor('20', tinyPool), 5);
 });
 
-test('targetFor throws on an unknown variant', () => {
-  assert.throws(() => targetFor('mars', countries), /Unknown variant/);
+test('targetFor("all", pool) returns the full pool length', () => {
+  assert.equal(targetFor('all', countries), countries.length);
+});
+
+test('targetFor throws on an unknown mode', () => {
+  assert.throws(() => targetFor('99', countries), /Unknown mode/);
 });

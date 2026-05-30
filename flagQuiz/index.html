@@ -141,6 +141,7 @@
       import {
         createQuiz,
         VARIANTS,
+        MODES,
         poolFor,
         targetFor,
       } from '../flags/quiz.js';
@@ -157,15 +158,20 @@
       const finalTargetEl = document.getElementById('final-target');
       const playAgainEl = document.getElementById('play-again');
 
-      const variantKey = new URLSearchParams(window.location.search).get('v');
+      const params = new URLSearchParams(window.location.search);
+      const variantKey = params.get('v');
+      const modeKey = params.get('n');
 
       fetch('../flags/countries.json')
         .then((r) => r.json())
         .then((all) => {
-          if (!variantKey || !VARIANTS[variantKey]) {
+          if (
+            !variantKey || !VARIANTS[variantKey] ||
+            !modeKey || !(modeKey in MODES)
+          ) {
             renderMenu();
           } else {
-            startGame(variantKey, all);
+            startGame(variantKey, modeKey, all);
           }
         })
         .catch((err) => {
@@ -173,20 +179,25 @@
         });
 
       function renderMenu() {
+        const modeKeys = Object.keys(MODES);
         for (const [key, { label }] of Object.entries(VARIANTS)) {
           const li = document.createElement('li');
-          const a = document.createElement('a');
-          a.href = `?v=${key}`;
-          a.textContent = label;
-          li.appendChild(a);
+          li.append(`${label}: `);
+          modeKeys.forEach((m, i) => {
+            const a = document.createElement('a');
+            a.href = `?v=${key}&n=${m}`;
+            a.textContent = m;
+            li.appendChild(a);
+            if (i < modeKeys.length - 1) li.append(' | ');
+          });
           variantsEl.appendChild(li);
         }
         menuEl.hidden = false;
       }
 
-      function startGame(key, all) {
+      function startGame(key, mode, all) {
         const pool = poolFor(key, all);
-        const target = targetFor(key, pool);
+        const target = targetFor(mode, pool);
         const quiz = createQuiz(pool, target);
 
         let currentAnswer = null;
