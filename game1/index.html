@@ -61,34 +61,18 @@
         min-height: 24px;
         text-align: center;
       }
-      .next {
-        font-size: 16px;
-        padding: 8px 20px;
-        border: 1px solid #1c1c1c;
-        background: #1c1c1c;
-        color: #fff;
-        cursor: pointer;
-      }
-      .next:hover {
-        background: #333;
-      }
-      .next[hidden] {
-        display: none;
-      }
     </style>
   </head>
   <body>
     <p class="country-name" id="country-name">Loading…</p>
     <div class="choices" id="choices"></div>
     <p class="feedback" id="feedback"></p>
-    <button class="next" id="next" hidden>Next</button>
     <script type="module">
       import { pickQuestion } from '../flags/quiz.js';
 
       const countryNameEl = document.getElementById('country-name');
       const choicesEl = document.getElementById('choices');
       const feedbackEl = document.getElementById('feedback');
-      const nextBtn = document.getElementById('next');
 
       let countries = [];
       let currentAnswer = null;
@@ -105,30 +89,26 @@
           img.src = `../flags/svg/${c.code}.svg`;
           img.alt = '';
           tile.appendChild(img);
-          tile.addEventListener('click', () => onAnswer(c));
+          tile.addEventListener('click', () => onAnswer(c, tile));
           choicesEl.appendChild(tile);
         }
         feedbackEl.textContent = '';
-        nextBtn.hidden = true;
       }
 
-      function onAnswer(chosen) {
-        const correct = chosen.code === currentAnswer.code;
-        for (const tile of choicesEl.querySelectorAll('.flag-choice')) {
+      function onAnswer(chosen, tile) {
+        if (chosen.code === currentAnswer.code) {
+          tile.classList.add('correct');
+          for (const t of choicesEl.querySelectorAll('.flag-choice')) {
+            t.disabled = true;
+          }
+          feedbackEl.textContent = '';
+          setTimeout(() => render(pickQuestion(countries)), 500);
+        } else {
+          tile.classList.add('wrong');
           tile.disabled = true;
-          const code = tile.dataset.code;
-          if (code === currentAnswer.code) tile.classList.add('correct');
-          if (code === chosen.code && !correct) tile.classList.add('wrong');
+          feedbackEl.textContent = chosen.name;
         }
-        feedbackEl.textContent = correct
-          ? 'Correct!'
-          : `Wrong — you picked ${chosen.name}.`;
-        nextBtn.hidden = false;
       }
-
-      nextBtn.addEventListener('click', () => {
-        render(pickQuestion(countries));
-      });
 
       fetch('../flags/countries.json')
         .then((r) => r.json())
