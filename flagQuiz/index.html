@@ -175,6 +175,8 @@
         availableModes,
         formatTime,
         nextBest,
+        loadBest,
+        saveBest,
         poolFor,
         targetFor,
       } from '../flags/quiz.js';
@@ -192,22 +194,6 @@
       const bestEl = document.getElementById('best');
       const playTimerEl = document.getElementById('play-timer');
       const playAgainEl = document.getElementById('play-again');
-
-      function loadBest(key) {
-        try {
-          const raw = localStorage.getItem(key);
-          return raw ? JSON.parse(raw) : null;
-        } catch {
-          return null;
-        }
-      }
-      function saveBest(key, value) {
-        try {
-          localStorage.setItem(key, JSON.stringify(value));
-        } catch {
-          // localStorage may be disabled (private mode etc.) - silently skip.
-        }
-      }
 
       const params = new URLSearchParams(window.location.search);
       const variantKey = params.get('v');
@@ -321,10 +307,10 @@
 
           const bestKey = `flagquiz.best.${key}.${mode}`;
           const { best, isNew } = nextBest(
-            loadBest(bestKey),
+            loadBest(localStorage, bestKey),
             { score: pct, time: elapsed },
           );
-          if (isNew) saveBest(bestKey, best);
+          if (isNew) saveBest(localStorage, bestKey, best);
           bestEl.textContent = `Best: ${best.score}% in ${formatTime(best.time)}`;
           if (isNew) {
             const badge = document.createElement('span');

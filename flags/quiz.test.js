@@ -15,7 +15,24 @@ import {
   LOOKALIKES,
   lookalikesOf,
   nextBest,
+  loadBest,
+  saveBest,
 } from './quiz.js';
+
+/**
+ * @param {Record<string, string>} [initial]
+ */
+function fakeStore(initial = {}) {
+  /** @type {Map<string, string>} */
+  const data = new Map(Object.entries(initial));
+  return {
+    /** @param {string} k */
+    getItem: (k) => (data.has(k) ? /** @type {string} */ (data.get(k)) : null),
+    /** @param {string} k @param {string} v */
+    setItem: (k, v) => data.set(k, v),
+    _dump: () => Object.fromEntries(data),
+  };
+}
 
 /** @typedef {import('./group.js').Country} Country */
 
@@ -364,4 +381,56 @@ test('nextBest keeps the previous when score and time are identical', () => {
   const r = nextBest(prev, curr);
   // Same numbers - no reason to declare a new best; isNew must be false.
   assert.deepEqual(r, { best: prev, isNew: false });
+});
+
+test('loadBest returns null when the key is missing', () => {
+  assert.equal(loadBest(fakeStore(), 'whatever'), null);
+});
+
+test('loadBest round-trips through saveBest', () => {
+  const store = fakeStore();
+  const value = { score: 87, time: 65432 };
+  saveBest(store, 'best.europe.20', value);
+  assert.deepEqual(loadBest(store, 'best.europe.20'), value);
+});
+
+test('saveBest stringifies as JSON (not [object Object])', () => {
+  const store = fakeStore();
+  saveBest(store, 'k', { score: 50, time: 1000 });
+  assert.equal(store.getItem('k'), '{"score":50,"time":1000}');
+});
+
+test('loadBest returns null when the stored value is unparseable', () => {
+  const store = fakeStore({ k: 'not json at all' });
+  assert.equal(loadBest(store, 'k'), null);
+});
+
+test('loadBest returns null when the stored JSON has the wrong shape', () => {
+  const store = fakeStore({
+    a: '{"foo":"bar"}',
+    b: '{"score":"high","time":1000}', // wrong type for score
+    c: 'null',
+    d: '[1,2,3]',
+  });
+  assert.equal(loadBest(store, 'a'), null);
+  assert.equal(loadBest(store, 'b'), null);
+  assert.equal(loadBest(store, 'c'), null);
+  assert.equal(loadBest(store, 'd'), null);
+});
+
+test('saveBest is a no-op when the store throws (no crash)', () => {
+  const throwingStore = {
+    getItem: () => null,
+    setItem: () => { throw new Error('quota exceeded'); },
+  };
+  // Must not throw - saveBest is meant to degrade silently.
+  assert.doesNotThrow(() => saveBest(throwingStore, 'k', { score: 1, time: 2 }));
+});
+
+test('loadBest does not throw when the store throws', () => {
+  const throwingStore = {
+    getItem: () => { throw new Error('access denied'); },
+    setItem: () => {},
+  };
+  assert.equal(loadBest(throwingStore, 'k'), null);
 });

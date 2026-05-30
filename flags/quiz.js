@@ -243,6 +243,10 @@ export function formatTime(ms) {
 
 /**
  * @typedef {{ score: number, time: number }} Result
+ *
+ * @typedef {Object} BestStore
+ * @property {(key: string) => string | null} getItem
+ * @property {(key: string, value: string) => void} setItem
  */
 
 // Decide what to keep as "best" between a previous best and a current
@@ -260,4 +264,45 @@ export function nextBest(prev, current) {
     return { best: current, isNew: true };
   }
   return { best: prev, isNew: false };
+}
+
+// Read a stored best from any Storage-like object. Returns null when
+// the key is missing, the value is unparseable, or the parsed value
+// does not look like a Result. Never throws.
+/**
+ * @param {BestStore} store
+ * @param {string} key
+ * @returns {Result | null}
+ */
+export function loadBest(store, key) {
+  try {
+    const raw = store.getItem(key);
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.score === 'number' &&
+      typeof parsed.time === 'number'
+    ) {
+      return { score: parsed.score, time: parsed.time };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Write a best to any Storage-like object. Silently no-ops if the
+// store throws (e.g. private-mode localStorage with quota of zero).
+/**
+ * @param {BestStore} store
+ * @param {string} key
+ * @param {Result} value
+ */
+export function saveBest(store, key, value) {
+  try {
+    store.setItem(key, JSON.stringify(value));
+  } catch {
+    // Storage may be disabled or full - degrade gracefully.
+  }
 }
