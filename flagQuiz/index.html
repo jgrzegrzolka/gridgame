@@ -23,15 +23,22 @@
         border-collapse: collapse;
       }
       .variants td {
-        padding: 4px 0;
+        padding: 2px 0;
       }
       .variants .label {
         padding-right: 24px;
         font-size: 18px;
         font-weight: 500;
+        vertical-align: top;
+      }
+      .variants tr.variant-start td {
+        padding-top: 10px;
+      }
+      .variants tr.variant-start:first-child td {
+        padding-top: 2px;
       }
       .variants .link {
-        padding-right: 6px;
+        padding-right: 12px;
       }
       .variants .link a {
         color: #1c1c1c;
@@ -50,9 +57,6 @@
       }
       .variants .time {
         color: #666;
-      }
-      .variants .gap {
-        width: 18px;
       }
       .play-timer {
         font-size: 14px;
@@ -239,28 +243,22 @@
           document.body.textContent = 'Failed to load: ' + err.message;
         });
 
-      // Modes appear as fixed columns so rows align even when a row
-      // is missing a mode (e.g. South America has no '20').
-      const MODE_ORDER = ['20', 'all'];
-
-      function modeCells(key, mode, usable) {
+      function modeRow(key, mode) {
         const link = document.createElement('td');
         link.className = 'link';
+        const a = document.createElement('a');
+        a.href = `?v=${key}&n=${mode}`;
+        a.textContent = mode;
+        link.appendChild(a);
         const pct = document.createElement('td');
         pct.className = 'pct';
         const time = document.createElement('td');
         time.className = 'time';
-        if (usable.includes(mode)) {
-          const a = document.createElement('a');
-          a.href = `?v=${key}&n=${mode}`;
-          a.textContent = mode;
-          link.appendChild(a);
-          const best = loadBest(localStorage, bestKey(key, mode));
-          if (best) {
-            pct.textContent = `${best.score}%`;
-            pct.style.color = scoreColor(best.score / 100);
-            time.textContent = formatTime(best.time);
-          }
+        const best = loadBest(localStorage, bestKey(key, mode));
+        if (best) {
+          pct.textContent = `${best.score}%`;
+          pct.style.color = scoreColor(best.score / 100);
+          time.textContent = formatTime(best.time);
         }
         return [link, pct, time];
       }
@@ -268,20 +266,20 @@
       function renderMenu(all) {
         for (const [key, variant] of Object.entries(VARIANTS)) {
           const usable = availableModes(all.filter(variant.filter).length);
-          const tr = document.createElement('tr');
-          const label = document.createElement('td');
-          label.className = 'label';
-          label.textContent = variant.label;
-          tr.appendChild(label);
-          MODE_ORDER.forEach((m, i) => {
-            for (const cell of modeCells(key, m, usable)) tr.appendChild(cell);
-            if (i < MODE_ORDER.length - 1) {
-              const gap = document.createElement('td');
-              gap.className = 'gap';
-              tr.appendChild(gap);
+          if (usable.length === 0) continue;
+          usable.forEach((mode, i) => {
+            const tr = document.createElement('tr');
+            if (i === 0) {
+              tr.className = 'variant-start';
+              const label = document.createElement('td');
+              label.className = 'label';
+              label.rowSpan = usable.length;
+              label.textContent = variant.label;
+              tr.appendChild(label);
             }
+            for (const cell of modeRow(key, mode)) tr.appendChild(cell);
+            variantsEl.appendChild(tr);
           });
-          variantsEl.appendChild(tr);
         }
         menuEl.hidden = false;
       }
