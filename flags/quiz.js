@@ -94,3 +94,18 @@ export function poolFor(variantKey, countries) {
   }
   return countries.filter(variant.filter);
 }
+
+// How many questions a given variant should ask. Continents and "Others"
+// run through every flag in the pool; the two pan-pool variants are
+// capped so the game stays finite.
+export const BIG_VARIANT_TARGET = 40;
+const BIG_VARIANTS = new Set(['countries', 'all']);
+
+export function targetFor(variantKey, pool) {
+  if (!VARIANTS[variantKey]) {
+    throw new Error(`Unknown variant: ${variantKey}`);
+  }
+  return BIG_VARIANTS.has(variantKey)
+    ? Math.min(BIG_VARIANT_TARGET, pool.length)
+    : pool.length;
+}

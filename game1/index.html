@@ -127,18 +127,12 @@
       </p>
     </div>
     <script type="module">
-      import { createQuiz, VARIANTS, poolFor } from '../flags/quiz.js';
-
-      // Continent and "others" variants ask every flag in the pool;
-      // the two pan-pool variants are capped to keep the game finite.
-      const BIG_VARIANT_TARGET = 40;
-      const BIG_VARIANTS = new Set(['countries', 'all']);
-
-      function targetFor(key, pool) {
-        return BIG_VARIANTS.has(key)
-          ? Math.min(BIG_VARIANT_TARGET, pool.length)
-          : pool.length;
-      }
+      import {
+        createQuiz,
+        VARIANTS,
+        poolFor,
+        targetFor,
+      } from '../flags/quiz.js';
 
       const menuEl = document.getElementById('menu');
       const variantsEl = document.getElementById('variants');
