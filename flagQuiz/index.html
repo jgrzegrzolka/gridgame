@@ -160,7 +160,8 @@
       import {
         createQuiz,
         VARIANTS,
-        MODES,
+        availableModes,
+        formatTime,
         poolFor,
         targetFor,
       } from '../flags/quiz.js';
@@ -178,14 +179,6 @@
       const playTimerEl = document.getElementById('play-timer');
       const playAgainEl = document.getElementById('play-again');
 
-      function formatTime(ms) {
-        const totalSec = Math.floor(ms / 1000);
-        const min = Math.floor(totalSec / 60);
-        const sec = totalSec % 60;
-        const milli = ms % 1000;
-        return `${min}:${sec.toString().padStart(2, '0')}.${milli.toString().padStart(3, '0')}`;
-      }
-
       const params = new URLSearchParams(window.location.search);
       const variantKey = params.get('v');
       const modeKey = params.get('n');
@@ -193,15 +186,15 @@
       fetch('../flags/countries.json')
         .then((r) => r.json())
         .then((all) => {
-          const variant = variantKey ? VARIANTS[variantKey] : null;
-          const target = modeKey ? MODES[modeKey] : undefined;
-          if (!variant || target === undefined) {
+          const variant = variantKey && VARIANTS[variantKey];
+          if (!variant || !modeKey) {
             renderMenu(all);
             return;
           }
           const pool = all.filter(variant.filter);
-          if (target !== Infinity && target > pool.length) {
-            // Hand-edited URL asking for more questions than the pool can offer.
+          if (!availableModes(pool.length).includes(modeKey)) {
+            // Unknown mode, or hand-edited URL asking for more questions
+            // than the pool can offer.
             renderMenu(all);
             return;
           }
@@ -212,12 +205,8 @@
         });
 
       function renderMenu(all) {
-        const modeKeys = Object.keys(MODES);
         for (const [key, variant] of Object.entries(VARIANTS)) {
-          const poolSize = all.filter(variant.filter).length;
-          const usable = modeKeys.filter(
-            (m) => MODES[m] === Infinity || MODES[m] <= poolSize,
-          );
+          const usable = availableModes(all.filter(variant.filter).length);
           const li = document.createElement('li');
           li.append(`${variant.label}: `);
           usable.forEach((m, i) => {
