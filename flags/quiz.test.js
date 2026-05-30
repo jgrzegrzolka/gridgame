@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pickQuestion } from './quiz.js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { pickQuestion, VARIANTS, poolFor } from './quiz.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const countries = JSON.parse(
+  readFileSync(join(__dirname, 'countries.json'), 'utf8'),
+);
 
 const sample = Array.from({ length: 10 }, (_, i) => ({
   code: `c${i}`,
@@ -61,4 +69,51 @@ test('pickQuestion throws if input is too small', () => {
     () => pickQuestion(sample.slice(0, 3)),
     /Need at least 4 entries/,
   );
+});
+
+test('VARIANTS contains the expected 9 keys in display order', () => {
+  assert.deepEqual(Object.keys(VARIANTS), [
+    'europe',
+    'asia',
+    'africa',
+    'north-america',
+    'south-america',
+    'oceania',
+    'others',
+    'countries',
+    'all',
+  ]);
+});
+
+test('poolFor throws on an unknown variant', () => {
+  assert.throws(() => poolFor('mars', countries), /Unknown variant/);
+});
+
+test('poolFor("all") returns every entry from the input', () => {
+  assert.equal(poolFor('all', countries).length, countries.length);
+});
+
+test('poolFor("countries") = all entries minus "others"', () => {
+  const all = countries.length;
+  const others = poolFor('others', countries).length;
+  assert.equal(poolFor('countries', countries).length, all - others);
+});
+
+test('poolFor("europe") returns only category=country with continent=Europe', () => {
+  const europe = poolFor('europe', countries);
+  assert.ok(europe.length > 0);
+  for (const c of europe) {
+    assert.equal(c.category, 'country');
+    assert.equal(c.continent, 'Europe');
+  }
+});
+
+test('every variant returns at least 4 entries (enough for a 4-choice question)', () => {
+  for (const key of Object.keys(VARIANTS)) {
+    const pool = poolFor(key, countries);
+    assert.ok(
+      pool.length >= 4,
+      `variant "${key}" has only ${pool.length} entries`,
+    );
+  }
 });
