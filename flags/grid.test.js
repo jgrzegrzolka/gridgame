@@ -440,8 +440,8 @@ test('COLORS_FOR_RANDOM is the 7-colour canonical palette', () => {
 });
 
 test('MOTIFS_FOR_RANDOM lists every motif key that can be tagged on a flag', () => {
-  // Will grow as we add coat-of-arms / weapon / etc.
-  assert.deepEqual(MOTIFS_FOR_RANDOM, ['animal']);
+  // Will grow as we add weapon / etc.
+  assert.deepEqual(MOTIFS_FOR_RANDOM, ['animal', 'coat-of-arms']);
 });
 
 test('puzzleCellCounts counts countries satisfying both predicates per cell', () => {
@@ -517,8 +517,8 @@ function syntheticTaggedCountries() {
   let codeCounter = 0;
   // 3 countries per (continent, colour) intersection — every cell of any
   // shuffled puzzle has 3 candidates by construction. Every synthetic
-  // country also carries the 'animal' motif so a randomly-selected
-  // hasMotif col is solvable too.
+  // country also carries every motif from MOTIFS_FOR_RANDOM so any
+  // randomly-selected hasMotif col is solvable too.
   for (const cont of CONTINENTS_FOR_RANDOM) {
     for (const color of COLORS_FOR_RANDOM) {
       for (let n = 0; n < 3; n++) {
@@ -527,7 +527,7 @@ function syntheticTaggedCountries() {
           name: `${cont}-${color}-${n}`,
           continent: cont,
           colors: [color],
-          motifs: ['animal'],
+          motifs: [...MOTIFS_FOR_RANDOM],
         }));
       }
     }
