@@ -101,6 +101,19 @@ test('motifs (when present) are arrays drawn from MOTIFS_FOR_RANDOM', () => {
   assert.deepEqual(offenders, [], offenders.join('; '));
 });
 
+test('Europe pool supports the "20" quiz mode (Flag Quiz default)', () => {
+  // Main menu hardcodes flagQuiz/?v=europe&n=20. If Europe drops below
+  // 20 countries the boot fallback silently downgrades to "all" — clicking
+  // "Flag Quiz" gives the full ~50-question quiz instead of the 20-q one.
+  const n = COUNTRIES.filter(
+    (c) => c.category === 'country' && c.continent === 'Europe',
+  ).length;
+  assert.ok(
+    n >= 20,
+    `Europe pool is ${n} — flagQuiz default "Europe 20" needs >= 20`,
+  );
+});
+
 test('every entry has a corresponding SVG file at flags/svg/{code}.svg', () => {
   const missing = [];
   for (const c of COUNTRIES) {
