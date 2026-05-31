@@ -29,9 +29,7 @@
       <span class="burger-bars" aria-hidden="true"></span>
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
-      <table class="variants">
-        <tbody id="variants"></tbody>
-      </table>
+      <ul class="menu" id="quiz-menu"></ul>
     </nav>
     <div id="game" hidden>
       <p class="play-timer" id="play-timer">0:00.000</p>
@@ -56,14 +54,12 @@
         availableModes,
         formatTime,
         recordResult,
-        loadBest,
-        bestKey,
         scoreColor,
         poolFor,
         targetFor,
       } from '../flags/quiz.js?v=__BUILD__';
 
-      const variantsEl = document.getElementById('variants');
+      const quizMenuEl = document.getElementById('quiz-menu');
       const gameEl = document.getElementById('game');
       const countryNameEl = document.getElementById('country-name');
       const choicesEl = document.getElementById('choices');
@@ -114,44 +110,26 @@
           document.body.textContent = 'Failed to load: ' + err.message;
         });
 
-      function modeRow(key, mode) {
-        const link = document.createElement('td');
-        link.className = 'link';
-        const a = document.createElement('a');
-        a.href = `?v=${key}&n=${mode}`;
-        a.textContent = mode;
-        link.appendChild(a);
-        const pct = document.createElement('td');
-        pct.className = 'pct';
-        const time = document.createElement('td');
-        time.className = 'time';
-        const best = loadBest(localStorage, bestKey(key, mode));
-        if (best) {
-          pct.textContent = `${best.score}%`;
-          pct.style.color = scoreColor(best.score / 100);
-          time.textContent = formatTime(best.time);
-        }
-        return [link, pct, time];
-      }
-
       function renderMenu(all) {
         for (const [key, variant] of Object.entries(VARIANTS)) {
           const usable = availableModes(all.filter(variant.filter).length);
           if (usable.length === 0) continue;
-          usable.forEach((mode, i) => {
-            const tr = document.createElement('tr');
-            if (i === 0) {
-              tr.className = 'variant-start';
-              const label = document.createElement('td');
-              label.className = 'label';
-              label.rowSpan = usable.length;
-              label.textContent = variant.label;
-              tr.appendChild(label);
-            }
-            for (const cell of modeRow(key, mode)) tr.appendChild(cell);
-            variantsEl.appendChild(tr);
-          });
+          for (const mode of usable) {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = `?v=${key}&n=${mode}`;
+            a.textContent = `${variant.label} ${mode}`;
+            li.appendChild(a);
+            quizMenuEl.appendChild(li);
+          }
         }
+        const statsLi = document.createElement('li');
+        statsLi.className = 'menu-divider';
+        const statsA = document.createElement('a');
+        statsA.href = 'stats/';
+        statsA.textContent = 'Your stats';
+        statsLi.appendChild(statsA);
+        quizMenuEl.appendChild(statsLi);
       }
 
       function startGame(key, mode, all) {

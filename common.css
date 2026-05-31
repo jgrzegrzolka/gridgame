@@ -96,6 +96,11 @@ body {
 .menu li:last-child {
   margin-bottom: 0;
 }
+.menu li.menu-divider {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
 .menu a {
   color: var(--link-color);
   text-decoration: none;
