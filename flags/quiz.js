@@ -137,9 +137,19 @@ export function createQuiz(pool, count, choiceCount = 4) {
 }
 
 // Variant definitions. The key is the URL slug (?v=<key>); the order
-// here is the display order in the menu.
+// here is the display order in the menu — the two whole-world pools
+// come first, then the per-continent pools (and "Others" alongside
+// them as another narrow pool).
 /** @type {Record<string, Variant>} */
 export const VARIANTS = {
+  countries: {
+    label: 'All countries',
+    filter: (c) => c.category === 'country',
+  },
+  all: {
+    label: 'All flags',
+    filter: () => true,
+  },
   europe: {
     label: 'Europe',
     filter: (c) => c.category === 'country' && c.continent === 'Europe',
@@ -167,14 +177,6 @@ export const VARIANTS = {
   others: {
     label: 'Others',
     filter: (c) => c.category === 'other',
-  },
-  countries: {
-    label: 'All countries',
-    filter: (c) => c.category === 'country',
-  },
-  all: {
-    label: 'All flags',
-    filter: () => true,
   },
 };
 

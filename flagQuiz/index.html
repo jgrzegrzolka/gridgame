@@ -115,11 +115,23 @@
         });
 
       function renderMenu(all) {
+        // VARIANTS leads with the whole-world pools ("All countries",
+        // "All flags") followed by the narrow per-continent pools. We
+        // mark the first li that comes from a narrow pool with
+        // .menu-divider so the burger panel visually separates the two
+        // groups.
+        const WIDE_GROUP = new Set(['countries', 'all']);
+        let dividerPlaced = false;
         for (const [key, variant] of Object.entries(VARIANTS)) {
           const usable = availableModes(all.filter(variant.filter).length);
           if (usable.length === 0) continue;
-          for (const mode of usable) {
+          const needsDivider = !dividerPlaced && !WIDE_GROUP.has(key);
+          for (const [i, mode] of usable.entries()) {
             const li = document.createElement('li');
+            if (needsDivider && i === 0) {
+              li.className = 'menu-divider';
+              dividerPlaced = true;
+            }
             const a = document.createElement('a');
             a.href = `?v=${key}&n=${mode}`;
             a.textContent = `${variant.label} ${mode}`;
