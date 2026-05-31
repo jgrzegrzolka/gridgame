@@ -8,7 +8,8 @@
     "colors": [
       "white",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ax",
@@ -20,7 +21,8 @@
       "blue",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "al",
@@ -31,6 +33,9 @@
     "colors": [
       "red",
       "black"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -43,7 +48,8 @@
       "white",
       "green",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "as",
@@ -55,6 +61,9 @@
       "red",
       "white",
       "blue"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -67,6 +76,10 @@
       "blue",
       "yellow",
       "red"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -79,7 +92,8 @@
       "red",
       "black",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ai",
@@ -92,6 +106,9 @@
       "white",
       "red",
       "orange"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -103,7 +120,8 @@
     "colors": [
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ag",
@@ -117,7 +135,8 @@
       "white",
       "black",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ar",
@@ -129,7 +148,8 @@
       "blue",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "am",
@@ -141,7 +161,8 @@
       "red",
       "blue",
       "orange"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "aw",
@@ -154,7 +175,8 @@
       "yellow",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sh-ac",
@@ -167,7 +189,8 @@
       "red",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "asean",
@@ -180,7 +203,8 @@
       "red",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "au",
@@ -192,7 +216,8 @@
       "blue",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "at",
@@ -203,7 +228,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "az",
@@ -216,7 +242,8 @@
       "red",
       "green",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bs",
@@ -228,7 +255,8 @@
       "black",
       "yellow",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bh",
@@ -239,7 +267,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bd",
@@ -250,7 +279,8 @@
     "colors": [
       "green",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bb",
@@ -262,7 +292,8 @@
       "blue",
       "yellow",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "es-pv",
@@ -274,7 +305,8 @@
       "red",
       "green",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "by",
@@ -286,7 +318,8 @@
       "red",
       "green",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "be",
@@ -298,7 +331,8 @@
       "black",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bz",
@@ -313,6 +347,9 @@
       "green",
       "yellow",
       "black"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -325,7 +362,8 @@
       "green",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bm",
@@ -339,6 +377,10 @@
       "white",
       "green",
       "yellow"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -351,6 +393,9 @@
       "yellow",
       "orange",
       "white"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -363,6 +408,10 @@
       "red",
       "yellow",
       "green"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -376,7 +425,8 @@
       "white",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ba",
@@ -388,7 +438,8 @@
       "blue",
       "yellow",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bw",
@@ -400,7 +451,8 @@
       "blue",
       "black",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bv",
@@ -412,7 +464,8 @@
       "red",
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "br",
@@ -425,7 +478,8 @@
       "yellow",
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "io",
@@ -438,7 +492,8 @@
       "white",
       "red",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bn",
@@ -451,7 +506,8 @@
       "white",
       "black",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bg",
@@ -463,7 +519,8 @@
       "white",
       "green",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bf",
@@ -475,7 +532,8 @@
       "red",
       "green",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bi",
@@ -487,7 +545,8 @@
       "red",
       "white",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cv",
@@ -500,7 +559,8 @@
       "white",
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "kh",
@@ -512,7 +572,8 @@
       "red",
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cm",
@@ -524,7 +585,8 @@
       "green",
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ca",
@@ -535,7 +597,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ic",
@@ -547,7 +610,8 @@
       "blue",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "es-ct",
@@ -558,7 +622,8 @@
     "colors": [
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ky",
@@ -572,6 +637,10 @@
       "white",
       "yellow",
       "green"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -586,7 +655,8 @@
       "green",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cefta",
@@ -597,7 +667,8 @@
     "colors": [
       "blue",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "td",
@@ -609,7 +680,8 @@
       "blue",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cl",
@@ -621,7 +693,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cn",
@@ -632,7 +705,8 @@
     "colors": [
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cx",
@@ -645,7 +719,8 @@
       "green",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cp",
@@ -657,7 +732,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cc",
@@ -668,7 +744,8 @@
     "colors": [
       "green",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "co",
@@ -680,7 +757,8 @@
       "yellow",
       "blue",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "km",
@@ -694,7 +772,8 @@
       "red",
       "blue",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ck",
@@ -706,7 +785,8 @@
       "blue",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cr",
@@ -718,7 +798,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "hr",
@@ -730,7 +811,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cu",
@@ -742,7 +824,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cw",
@@ -754,7 +837,8 @@
       "blue",
       "yellow",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cy",
@@ -766,7 +850,8 @@
       "white",
       "orange",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cz",
@@ -778,7 +863,8 @@
       "white",
       "red",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ci",
@@ -790,7 +876,8 @@
       "orange",
       "white",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cd",
@@ -802,7 +889,8 @@
       "blue",
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "dk",
@@ -813,7 +901,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "dg",
@@ -826,7 +915,8 @@
       "white",
       "red",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "dj",
@@ -839,7 +929,8 @@
       "green",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "dm",
@@ -853,6 +944,10 @@
       "black",
       "white",
       "red"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -865,7 +960,8 @@
       "blue",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "eac",
@@ -880,7 +976,8 @@
       "black",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ec",
@@ -892,6 +989,10 @@
       "yellow",
       "blue",
       "red"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -905,6 +1006,9 @@
       "white",
       "black",
       "yellow"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -916,6 +1020,9 @@
     "colors": [
       "blue",
       "white"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -927,7 +1034,8 @@
     "colors": [
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gq",
@@ -940,6 +1048,9 @@
       "white",
       "red",
       "blue"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -953,7 +1064,8 @@
       "green",
       "blue",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ee",
@@ -965,7 +1077,8 @@
       "blue",
       "black",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sz",
@@ -979,7 +1092,8 @@
       "red",
       "black",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "et",
@@ -992,7 +1106,8 @@
       "yellow",
       "red",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "eu",
@@ -1003,7 +1118,8 @@
     "colors": [
       "blue",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "fk",
@@ -1017,6 +1133,10 @@
       "red",
       "yellow",
       "green"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -1029,7 +1149,8 @@
       "white",
       "red",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "fm",
@@ -1040,7 +1161,8 @@
     "colors": [
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "fj",
@@ -1054,6 +1176,10 @@
       "white",
       "yellow",
       "green"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -1065,7 +1191,8 @@
     "colors": [
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "fr",
@@ -1077,7 +1204,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gf",
@@ -1089,7 +1217,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "pf",
@@ -1100,7 +1229,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "tf",
@@ -1112,7 +1242,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ga",
@@ -1124,7 +1255,8 @@
       "green",
       "yellow",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "es-ga",
@@ -1135,7 +1267,8 @@
     "colors": [
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gm",
@@ -1148,7 +1281,8 @@
       "blue",
       "green",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ge",
@@ -1159,7 +1293,8 @@
     "colors": [
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "de",
@@ -1171,7 +1306,8 @@
       "black",
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gh",
@@ -1184,7 +1320,8 @@
       "yellow",
       "green",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gi",
@@ -1196,6 +1333,9 @@
       "white",
       "red",
       "yellow"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -1207,7 +1347,8 @@
     "colors": [
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gl",
@@ -1218,7 +1359,8 @@
     "colors": [
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gd",
@@ -1230,7 +1372,8 @@
       "red",
       "yellow",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gp",
@@ -1242,7 +1385,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gu",
@@ -1256,7 +1400,8 @@
       "white",
       "yellow",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gt",
@@ -1267,6 +1412,10 @@
     "colors": [
       "blue",
       "white"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -1279,7 +1428,8 @@
       "white",
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gn",
@@ -1291,7 +1441,8 @@
       "red",
       "yellow",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gw",
@@ -1304,7 +1455,8 @@
       "yellow",
       "green",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gy",
@@ -1318,7 +1470,8 @@
       "yellow",
       "black",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ht",
@@ -1330,6 +1483,9 @@
       "blue",
       "red",
       "white"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -1342,7 +1498,8 @@
       "blue",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "va",
@@ -1353,7 +1510,8 @@
     "colors": [
       "yellow",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "hn",
@@ -1364,7 +1522,8 @@
     "colors": [
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "hk",
@@ -1375,7 +1534,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "hu",
@@ -1387,7 +1547,8 @@
       "red",
       "white",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "is",
@@ -1399,7 +1560,8 @@
       "blue",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "in",
@@ -1412,7 +1574,8 @@
       "white",
       "green",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "id",
@@ -1423,7 +1586,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ir",
@@ -1435,7 +1599,8 @@
       "green",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "iq",
@@ -1448,7 +1613,8 @@
       "white",
       "black",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ie",
@@ -1460,7 +1626,8 @@
       "green",
       "white",
       "orange"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "im",
@@ -1472,7 +1639,8 @@
       "red",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "il",
@@ -1483,7 +1651,8 @@
     "colors": [
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "it",
@@ -1495,7 +1664,8 @@
       "green",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "jm",
@@ -1507,7 +1677,8 @@
       "black",
       "yellow",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "jp",
@@ -1518,7 +1689,8 @@
     "colors": [
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "je",
@@ -1530,7 +1702,8 @@
       "white",
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "jo",
@@ -1543,7 +1716,8 @@
       "white",
       "green",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "kz",
@@ -1554,6 +1728,9 @@
     "colors": [
       "blue",
       "yellow"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -1567,6 +1744,9 @@
       "red",
       "green",
       "white"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -1580,6 +1760,9 @@
       "white",
       "yellow",
       "blue"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -1592,7 +1775,8 @@
       "blue",
       "yellow",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "kw",
@@ -1605,7 +1789,8 @@
       "white",
       "red",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "kg",
@@ -1616,7 +1801,8 @@
     "colors": [
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "la",
@@ -1628,7 +1814,8 @@
       "red",
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "lv",
@@ -1639,7 +1826,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "arab",
@@ -1651,7 +1839,8 @@
       "green",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "lb",
@@ -1663,7 +1852,8 @@
       "red",
       "white",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ls",
@@ -1676,7 +1866,8 @@
       "white",
       "green",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "lr",
@@ -1688,7 +1879,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ly",
@@ -1701,7 +1893,8 @@
       "black",
       "green",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "li",
@@ -1713,7 +1906,8 @@
       "blue",
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "lt",
@@ -1725,7 +1919,8 @@
       "yellow",
       "green",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "lu",
@@ -1737,7 +1932,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mo",
@@ -1749,7 +1945,8 @@
       "green",
       "yellow",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mg",
@@ -1761,7 +1958,8 @@
       "white",
       "red",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mw",
@@ -1773,7 +1971,8 @@
       "black",
       "red",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "my",
@@ -1786,7 +1985,8 @@
       "white",
       "blue",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mv",
@@ -1798,7 +1998,8 @@
       "red",
       "green",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ml",
@@ -1810,7 +2011,8 @@
       "green",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mt",
@@ -1821,7 +2023,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mh",
@@ -1833,7 +2036,8 @@
       "blue",
       "white",
       "orange"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mq",
@@ -1845,7 +2049,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mr",
@@ -1857,7 +2062,8 @@
       "green",
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mu",
@@ -1870,7 +2076,8 @@
       "blue",
       "yellow",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "yt",
@@ -1882,7 +2089,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mx",
@@ -1894,6 +2102,10 @@
       "green",
       "white",
       "red"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -1906,6 +2118,10 @@
       "blue",
       "yellow",
       "red"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -1917,7 +2133,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mn",
@@ -1929,7 +2146,8 @@
       "red",
       "blue",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "me",
@@ -1940,6 +2158,10 @@
     "colors": [
       "red",
       "yellow"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -1954,6 +2176,9 @@
       "white",
       "yellow",
       "green"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -1965,7 +2190,8 @@
     "colors": [
       "red",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mz",
@@ -1979,7 +2205,8 @@
       "black",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mm",
@@ -1992,7 +2219,8 @@
       "green",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "na",
@@ -2006,7 +2234,8 @@
       "green",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "nr",
@@ -2018,7 +2247,8 @@
       "blue",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "np",
@@ -2030,7 +2260,8 @@
       "red",
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "nl",
@@ -2042,7 +2273,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "nc",
@@ -2056,7 +2288,8 @@
       "green",
       "yellow",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "nz",
@@ -2068,7 +2301,8 @@
       "blue",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ni",
@@ -2079,6 +2313,9 @@
     "colors": [
       "blue",
       "white"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -2091,7 +2328,8 @@
       "orange",
       "white",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ng",
@@ -2102,7 +2340,8 @@
     "colors": [
       "green",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "nu",
@@ -2115,7 +2354,8 @@
       "blue",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "nf",
@@ -2126,7 +2366,8 @@
     "colors": [
       "green",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "kp",
@@ -2138,7 +2379,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mk",
@@ -2149,7 +2391,8 @@
     "colors": [
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gb-nir",
@@ -2161,7 +2404,8 @@
       "white",
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mp",
@@ -2174,7 +2418,8 @@
       "white",
       "yellow",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "no",
@@ -2186,7 +2431,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "om",
@@ -2198,7 +2444,8 @@
       "red",
       "white",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "pc",
@@ -2210,7 +2457,8 @@
       "blue",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "pk",
@@ -2221,7 +2469,8 @@
     "colors": [
       "green",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "pw",
@@ -2232,7 +2481,8 @@
     "colors": [
       "blue",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "pa",
@@ -2244,6 +2494,9 @@
       "red",
       "blue",
       "white"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -2257,6 +2510,9 @@
       "black",
       "white",
       "yellow"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -2269,6 +2525,9 @@
       "red",
       "white",
       "blue"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -2280,6 +2539,10 @@
     "colors": [
       "red",
       "white"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -2293,7 +2556,8 @@
       "red",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "pn",
@@ -2307,6 +2571,9 @@
       "white",
       "yellow",
       "green"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -2318,7 +2585,8 @@
     "colors": [
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "pt",
@@ -2332,6 +2600,9 @@
       "yellow",
       "blue",
       "white"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -2344,7 +2615,8 @@
       "blue",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "qa",
@@ -2355,7 +2627,8 @@
     "colors": [
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "cg",
@@ -2367,7 +2640,8 @@
       "green",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ro",
@@ -2379,7 +2653,8 @@
       "blue",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ru",
@@ -2391,7 +2666,8 @@
       "white",
       "blue",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "rw",
@@ -2403,7 +2679,8 @@
       "blue",
       "yellow",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "re",
@@ -2415,7 +2692,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "bl",
@@ -2427,7 +2705,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sh-hl",
@@ -2441,6 +2720,9 @@
       "white",
       "yellow",
       "green"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -2455,6 +2737,9 @@
       "white",
       "yellow",
       "green"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -2469,7 +2754,8 @@
       "yellow",
       "black",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "lc",
@@ -2482,7 +2768,8 @@
       "black",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "mf",
@@ -2494,7 +2781,8 @@
       "blue",
       "white",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "pm",
@@ -2507,7 +2795,8 @@
       "white",
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "vc",
@@ -2519,7 +2808,8 @@
       "blue",
       "yellow",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ws",
@@ -2531,7 +2821,8 @@
       "red",
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sm",
@@ -2542,6 +2833,9 @@
     "colors": [
       "white",
       "blue"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -2555,7 +2849,8 @@
       "yellow",
       "red",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sa",
@@ -2566,7 +2861,8 @@
     "colors": [
       "green",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gb-sct",
@@ -2577,7 +2873,8 @@
     "colors": [
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sn",
@@ -2589,7 +2886,8 @@
       "green",
       "yellow",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "rs",
@@ -2601,6 +2899,10 @@
       "red",
       "blue",
       "white"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -2615,7 +2917,8 @@
       "red",
       "white",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sl",
@@ -2627,7 +2930,8 @@
       "green",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sg",
@@ -2638,7 +2942,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sx",
@@ -2650,6 +2955,10 @@
       "red",
       "white",
       "blue"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -2662,6 +2971,9 @@
       "white",
       "blue",
       "red"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -2674,6 +2986,9 @@
       "white",
       "blue",
       "red"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -2687,7 +3002,8 @@
       "green",
       "yellow",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "so",
@@ -2698,7 +3014,8 @@
     "colors": [
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "za",
@@ -2713,7 +3030,8 @@
       "white",
       "red",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gs",
@@ -2727,7 +3045,8 @@
       "white",
       "yellow",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "kr",
@@ -2740,7 +3059,8 @@
       "red",
       "blue",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ss",
@@ -2755,7 +3075,8 @@
       "white",
       "blue",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "es",
@@ -2766,6 +3087,10 @@
     "colors": [
       "red",
       "yellow"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -2779,6 +3104,9 @@
       "red",
       "green",
       "orange"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -2792,7 +3120,8 @@
       "white",
       "green",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sd",
@@ -2805,7 +3134,8 @@
       "white",
       "black",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sr",
@@ -2818,7 +3148,8 @@
       "white",
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sj",
@@ -2830,7 +3161,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "se",
@@ -2841,7 +3173,8 @@
     "colors": [
       "blue",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ch",
@@ -2852,7 +3185,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sy",
@@ -2865,7 +3199,8 @@
       "white",
       "black",
       "green"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "tw",
@@ -2877,7 +3212,8 @@
       "red",
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "tj",
@@ -2890,7 +3226,8 @@
       "white",
       "green",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "tz",
@@ -2903,7 +3240,8 @@
       "yellow",
       "black",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "th",
@@ -2915,7 +3253,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "tl",
@@ -2928,7 +3267,8 @@
       "yellow",
       "black",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "tg",
@@ -2941,7 +3281,8 @@
       "yellow",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "tk",
@@ -2953,7 +3294,8 @@
       "blue",
       "yellow",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "to",
@@ -2964,7 +3306,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "tt",
@@ -2976,7 +3319,8 @@
       "red",
       "white",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "sh-ta",
@@ -2990,6 +3334,10 @@
       "white",
       "yellow",
       "green"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -3001,7 +3349,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "tm",
@@ -3013,7 +3362,8 @@
       "green",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "tc",
@@ -3026,6 +3376,10 @@
       "red",
       "white",
       "yellow"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -3039,7 +3393,8 @@
       "red",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "tr",
@@ -3050,7 +3405,8 @@
     "colors": [
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ug",
@@ -3063,6 +3419,9 @@
       "yellow",
       "red",
       "white"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -3074,7 +3433,8 @@
     "colors": [
       "blue",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ae",
@@ -3087,7 +3447,8 @@
       "green",
       "white",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "gb",
@@ -3099,7 +3460,8 @@
       "blue",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "un",
@@ -3110,7 +3472,8 @@
     "colors": [
       "blue",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "um",
@@ -3122,7 +3485,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "us",
@@ -3134,7 +3498,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "uy",
@@ -3146,7 +3511,8 @@
       "blue",
       "white",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "uz",
@@ -3159,7 +3525,8 @@
       "white",
       "green",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "vu",
@@ -3172,7 +3539,8 @@
       "red",
       "green",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ve",
@@ -3185,7 +3553,8 @@
       "blue",
       "red",
       "white"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "vn",
@@ -3196,7 +3565,8 @@
     "colors": [
       "red",
       "yellow"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "vg",
@@ -3210,6 +3580,9 @@
       "white",
       "green",
       "yellow"
+    ],
+    "motifs": [
+      "coat-of-arms"
     ]
   },
   {
@@ -3223,6 +3596,10 @@
       "blue",
       "red",
       "yellow"
+    ],
+    "motifs": [
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -3235,6 +3612,9 @@
       "white",
       "green",
       "red"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -3247,7 +3627,8 @@
       "red",
       "white",
       "blue"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "eh",
@@ -3260,7 +3641,8 @@
       "white",
       "green",
       "red"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "ye",
@@ -3272,7 +3654,8 @@
       "red",
       "white",
       "black"
-    ]
+    ],
+    "motifs": []
   },
   {
     "code": "zm",
@@ -3285,6 +3668,9 @@
       "red",
       "black",
       "orange"
+    ],
+    "motifs": [
+      "animal"
     ]
   },
   {
@@ -3299,6 +3685,9 @@
       "red",
       "black",
       "white"
+    ],
+    "motifs": [
+      "animal"
     ]
   }
 ]

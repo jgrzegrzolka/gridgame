@@ -7,6 +7,7 @@ import {
   continent,
   statehood,
   hasColor,
+  hasMotif,
   suggest,
   randomPuzzle,
   puzzleCellCounts,
@@ -14,6 +15,7 @@ import {
   generateRandomPuzzle,
   CONTINENTS_FOR_RANDOM,
   COLORS_FOR_RANDOM,
+  MOTIFS_FOR_RANDOM,
 } from './grid.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -92,6 +94,26 @@ test('hasColor category has a stable id and label', () => {
   const cat = hasColor('green');
   assert.equal(cat.id, 'hasColor:green');
   assert.equal(cat.label, 'Has green');
+});
+
+test('hasMotif predicate matches countries whose flag depicts that motif', () => {
+  const withAnimal = country({ code: 'al', name: 'Albania', motifs: ['animal'] });
+  const without = country({ code: 'fr', name: 'France', motifs: [] });
+  assert.equal(hasMotif('animal').predicate(withAnimal), true);
+  assert.equal(hasMotif('animal').predicate(without), false);
+});
+
+test('hasMotif predicate returns false when motifs is missing or empty', () => {
+  const noTag = country({ code: 'xx', name: 'Untagged' });
+  const emptyTag = country({ code: 'yy', name: 'EmptyTag', motifs: [] });
+  assert.equal(hasMotif('animal').predicate(noTag), false);
+  assert.equal(hasMotif('animal').predicate(emptyTag), false);
+});
+
+test('hasMotif category has a stable id and label', () => {
+  const cat = hasMotif('animal');
+  assert.equal(cat.id, 'hasMotif:animal');
+  assert.equal(cat.label, 'Has animal');
 });
 
 test('suggest returns an empty list while the trimmed query is under 3 characters', () => {
@@ -379,12 +401,32 @@ test('randomPuzzle row categories are all continent categories', () => {
   }
 });
 
-test('randomPuzzle column categories are all hasColor categories from the palette', () => {
+test('randomPuzzle column categories come from the colour or motif pools', () => {
   const p = randomPuzzle(() => 0);
   for (const c of p.cols) {
-    assert.ok(c.id.startsWith('hasColor:'), `expected hasColor id, got ${c.id}`);
-    const color = c.id.slice('hasColor:'.length);
-    assert.ok(COLORS_FOR_RANDOM.includes(color), `color ${color} not in palette`);
+    if (c.id.startsWith('hasColor:')) {
+      const color = c.id.slice('hasColor:'.length);
+      assert.ok(COLORS_FOR_RANDOM.includes(color), `color ${color} not in palette`);
+    } else if (c.id.startsWith('hasMotif:')) {
+      const motif = c.id.slice('hasMotif:'.length);
+      assert.ok(MOTIFS_FOR_RANDOM.includes(motif), `motif ${motif} not in palette`);
+    } else {
+      assert.fail(`unexpected col category id: ${c.id}`);
+    }
+  }
+});
+
+test('randomPuzzle always includes at least one motif column', () => {
+  // Run with 50 different seeded RNGs; every puzzle should have ≥1 motif col.
+  for (let i = 0; i < 50; i++) {
+    const seed = [(i * 17) % 100, (i * 29) % 100, (i * 41) % 100, (i * 53) % 100]
+      .map((n) => n / 100);
+    const p = randomPuzzle(sequenceRng(seed));
+    const motifCols = p.cols.filter((c) => c.id.startsWith('hasMotif:'));
+    assert.ok(
+      motifCols.length >= 1,
+      `seed ${i}: no motif col in [${p.cols.map((c) => c.id).join(', ')}]`,
+    );
   }
 });
 
@@ -409,6 +451,11 @@ test('COLORS_FOR_RANDOM is the 7-colour canonical palette', () => {
     COLORS_FOR_RANDOM,
     ['red', 'white', 'blue', 'green', 'yellow', 'black', 'orange'],
   );
+});
+
+test('MOTIFS_FOR_RANDOM lists every motif key that can be tagged on a flag', () => {
+  // Will grow as we add weapon / etc.
+  assert.deepEqual(MOTIFS_FOR_RANDOM, ['animal', 'coat-of-arms']);
 });
 
 test('puzzleCellCounts counts countries satisfying both predicates per cell', () => {
@@ -483,7 +530,9 @@ function syntheticTaggedCountries() {
   const out = [];
   let codeCounter = 0;
   // 3 countries per (continent, colour) intersection — every cell of any
-  // shuffled puzzle has 3 candidates by construction.
+  // shuffled puzzle has 3 candidates by construction. Every synthetic
+  // country also carries every motif from MOTIFS_FOR_RANDOM so any
+  // randomly-selected hasMotif col is solvable too.
   for (const cont of CONTINENTS_FOR_RANDOM) {
     for (const color of COLORS_FOR_RANDOM) {
       for (let n = 0; n < 3; n++) {
@@ -492,6 +541,7 @@ function syntheticTaggedCountries() {
           name: `${cont}-${color}-${n}`,
           continent: cont,
           colors: [color],
+          motifs: [...MOTIFS_FOR_RANDOM],
         }));
       }
     }

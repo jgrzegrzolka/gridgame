@@ -4,7 +4,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { COLORS_FOR_RANDOM } from './grid.js';
+import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from './grid.js';
 import { CONTINENTS } from './group.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -68,6 +68,26 @@ test('every entry has a non-empty colors array drawn from COLORS_FOR_RANDOM', ()
     for (const color of c.colors) {
       if (!palette.has(color)) {
         offenders.push(`${c.code}: color "${color}" not in canonical palette`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
+test('motifs (when present) are arrays drawn from MOTIFS_FOR_RANDOM', () => {
+  // motifs is optional and may be an empty array (most flags are untagged);
+  // any value in the array must come from the canonical motif palette.
+  const palette = new Set(MOTIFS_FOR_RANDOM);
+  const offenders = [];
+  for (const c of COUNTRIES) {
+    if (c.motifs === undefined) continue;
+    if (!Array.isArray(c.motifs)) {
+      offenders.push(`${c.code}: motifs should be an array`);
+      continue;
+    }
+    for (const motif of c.motifs) {
+      if (!palette.has(motif)) {
+        offenders.push(`${c.code}: motif "${motif}" not in palette`);
       }
     }
   }

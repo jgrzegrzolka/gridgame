@@ -197,6 +197,15 @@ export const COLORS_FOR_RANDOM = [
 ];
 
 /**
+ * Flag-motif palette. Each entry yields a hasMotif() category. Tagged on
+ * countries via scripts/add-flag-motifs.mjs.
+ */
+export const MOTIFS_FOR_RANDOM = [
+  'animal',
+  'coat-of-arms',
+];
+
+/**
  * Category: country's flag contains the given colour. Countries with no
  * `colors` field (or empty) never match.
  *
@@ -208,6 +217,21 @@ export function hasColor(color) {
     id: `hasColor:${color}`,
     label: `Has ${color}`,
     predicate: (c) => Array.isArray(c.colors) && c.colors.includes(color),
+  };
+}
+
+/**
+ * Category: country's flag depicts the given motif. Countries with no
+ * `motifs` field (or empty) never match.
+ *
+ * @param {string} motif one of MOTIFS_FOR_RANDOM
+ * @returns {Category}
+ */
+export function hasMotif(motif) {
+  return {
+    id: `hasMotif:${motif}`,
+    label: `Has ${motif}`,
+    predicate: (c) => Array.isArray(c.motifs) && c.motifs.includes(motif),
   };
 }
 
@@ -235,7 +259,13 @@ function pickRandom(pool, n, rng) {
 }
 
 /**
- * Build a random 3x3 puzzle with continent rows and flag-colour columns.
+ * Build a random 3x3 puzzle with continent rows. One of the three column
+ * slots is reserved for a motif (hasMotif) so motifs aren't drowned out
+ * by the bigger colour pool; the other two slots are drawn from the
+ * remaining motifs + all colours, so both motifs can still co-occur in
+ * a single puzzle. The three resulting cols are then shuffled so the
+ * reserved motif isn't always in the leftmost position.
+ *
  * Pure shuffle — does no validity checking. Callers that need a solvable
  * puzzle should use `generateRandomPuzzle` instead.
  *
@@ -244,10 +274,21 @@ function pickRandom(pool, n, rng) {
  */
 export function randomPuzzle(rng = Math.random) {
   const rowNames = pickRandom(CONTINENTS_FOR_RANDOM, 3, rng);
-  const colColors = pickRandom(COLORS_FOR_RANDOM, 3, rng);
+
+  const motifCategories = MOTIFS_FOR_RANDOM.map(hasMotif);
+  const colorCategories = COLORS_FOR_RANDOM.map(hasColor);
+
+  const [reservedMotif] = pickRandom(motifCategories, 1, rng);
+  const remainingPool = [
+    ...motifCategories.filter((m) => m.id !== reservedMotif.id),
+    ...colorCategories,
+  ];
+  const otherTwo = pickRandom(remainingPool, 2, rng);
+  const cols = pickRandom([reservedMotif, ...otherTwo], 3, rng);
+
   return {
     rows: rowNames.map(continent),
-    cols: colColors.map(hasColor),
+    cols,
   };
 }
 

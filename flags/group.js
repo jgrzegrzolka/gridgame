@@ -8,6 +8,7 @@
  * @property {Continent | null} continent
  * @property {string | null} [statehood]
  * @property {string[]} [colors]  palette: red/white/blue/green/yellow/black/orange
+ * @property {string[]} [motifs]  e.g. 'animal' (more coming: 'coat-of-arms', 'weapon')
  */
 
 /** @type {Continent[]} */
