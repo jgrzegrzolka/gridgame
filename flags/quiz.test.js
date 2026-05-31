@@ -107,7 +107,13 @@ test('pickQuestion throws if input is too small', () => {
 });
 
 test('VARIANTS contains the expected 9 keys in display order', () => {
+  // Whole-world pools first, then continents, then "others". The menu
+  // and stats page rely on this order — and on the boundary between
+  // the wide-pool group and the narrow-pool group, which is where the
+  // burger menu draws its divider.
   assert.deepEqual(Object.keys(VARIANTS), [
+    'countries',
+    'all',
     'europe',
     'asia',
     'africa',
@@ -115,8 +121,6 @@ test('VARIANTS contains the expected 9 keys in display order', () => {
     'south-america',
     'oceania',
     'others',
-    'countries',
-    'all',
   ]);
 });
 
