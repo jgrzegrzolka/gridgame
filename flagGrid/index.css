@@ -92,12 +92,12 @@ dialog#picker {
   font-size: 12px;
   font-family: inherit;
   border: none;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #f0f0f0;
   box-sizing: border-box;
 }
 #picker-input:focus {
   outline: none;
-  border-bottom-color: #999;
+  border-bottom-color: #e0e0e0;
 }
 .suggestions {
   list-style: none;
