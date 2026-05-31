@@ -123,29 +123,25 @@ body {
   position: relative;
   cursor: pointer;
 }
-/* Selection ring — the whole square reads as "active" so the user
-   sees they can type into it. Inset box-shadow keeps the table's
-   own borders intact. */
+/* Black focus ring on the cell's edge — no inset, no padding, just
+   the cell's outer line darkened. outline + negative offset sits ON
+   the existing border line without disturbing border-collapse. */
 .cell:focus {
-  outline: none;
+  outline: 2px solid #000;
+  outline-offset: -2px;
 }
-.cell:focus-visible::before,
-.cell:focus::before {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  box-shadow: inset 0 0 0 3px var(--link-color);
-  pointer-events: none;
-  z-index: 1;
-}
-/* In-cell echo of the autocomplete query. Sits above the focus ring
-   so the typed letters read clearly. */
+/* In-cell echo of the autocomplete query. Absolutely positioned at
+   the TOP of the cell — the user types at the top, suggestions appear
+   from the vertical middle, so neither covers the other. */
 .cell-query {
-  position: relative;
-  z-index: 2;
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
   font-size: 16px;
   color: #444;
   font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 /* Hover tint via a pseudo-element overlay rather than `background` on
    the cell itself. Painting on the cell's background under
@@ -194,14 +190,17 @@ body {
   40%, 60% { transform: translateX(4px); }
 }
 
-/* Suggestions popup — absolutely positioned just below the active
-   cell. JS sets top/left/width to track the cell's bounding rect.
+/* Suggestions popup — viewport-fixed so it tracks the cell without
+   scroll math. JS sets top/left to the cell's vertical middle, so the
+   panel overlaps the bottom half of the cell and extends downward.
    Hidden by default; revealed only when the query yields matches. */
 .suggestions {
-  position: absolute;
+  position: fixed;
   list-style: none;
   padding: 2px;
   margin: 0;
+  min-width: 200px;
+  max-width: 320px;
   background: #fff;
   border: 1px solid #999;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
@@ -216,15 +215,18 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 2px;
+  padding: 3px 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
 }
 .suggestions li:hover {
   background: #f0f0f0;
 }
-.suggestions li:first-child {
-  background: rgba(102, 0, 51, 0.08);
+/* Keyboard selection highlight — JS sets `.selected` on the row that
+   Arrow keys land on, and Enter picks it. Hover from a mouse takes
+   precedence visually so the two interactions don't fight. */
+.suggestions li.selected {
+  background: rgba(102, 0, 51, 0.16);
 }
 .suggestions li span {
   flex: 1;

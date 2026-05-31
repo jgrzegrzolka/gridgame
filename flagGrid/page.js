@@ -91,6 +91,10 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   const suggestionsEl = /** @type {HTMLUListElement} */ (document.getElementById('suggestions'));
   /** Current in-cell autocomplete query (live in the focused cell). */
   let query = '';
+  /** @type {Country[]} */
+  let currentMatches = [];
+  /** Index into currentMatches that arrow keys / Enter act on. */
+  let selectedIndex = 0;
   const colHeaderEls = document.querySelectorAll('.col-header');
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
   const playTimerEl = document.getElementById('play-timer-line');
@@ -179,6 +183,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     if (e.key === 'Escape') {
       e.preventDefault();
       query = '';
+      currentMatches = [];
       topMatch = null;
       renderCellContent(row, col);
       hideSuggestions();
@@ -186,7 +191,22 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     }
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (topMatch) pickCountry(topMatch);
+      const picked = currentMatches[selectedIndex];
+      if (picked) pickCountry(picked);
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (currentMatches.length === 0) return;
+      selectedIndex = (selectedIndex + 1) % currentMatches.length;
+      renderSelected();
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (currentMatches.length === 0) return;
+      selectedIndex = (selectedIndex - 1 + currentMatches.length) % currentMatches.length;
+      renderSelected();
       return;
     }
     if (e.key === 'Backspace') {
@@ -198,9 +218,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       }
       return;
     }
-    // Accept single characters that could appear in a country name —
-    // letters, spaces, apostrophes, hyphens. Modifiers + function keys
-    // produce e.key strings longer than 1, so they fall through.
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       query += e.key;
@@ -216,15 +233,17 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     }
     const excludeCodes = new Set();
     for (const row of solution) for (const cell of row) if (cell) excludeCodes.add(cell.code);
-    const matches = suggest(allCountries, query, { excludeCodes });
-    topMatch = matches[0] ?? null;
+    currentMatches = suggest(allCountries, query, { excludeCodes });
+    topMatch = currentMatches[0] ?? null;
+    selectedIndex = 0;
     suggestionsEl.innerHTML = '';
-    if (matches.length === 0) {
+    if (currentMatches.length === 0) {
       hideSuggestions();
       return;
     }
-    for (const country of matches) {
+    currentMatches.forEach((country, i) => {
       const li = document.createElement('li');
+      if (i === selectedIndex) li.classList.add('selected');
       const img = document.createElement('img');
       img.src = `../../flags/svg/${country.code}.svg`;
       img.alt = '';
@@ -232,33 +251,51 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       const name = document.createElement('span');
       name.textContent = country.name;
       li.appendChild(name);
-      // mousedown rather than click so the pick lands before the
-      // cell's blur event clears the query.
+      // mousedown — fires before the cell's blur that would clear
+      // the query and tear down the suggestions list.
       li.addEventListener('mousedown', (e) => {
         e.preventDefault();
         pickCountry(country);
       });
+      // Hover also moves the keyboard selection — keeps the highlighted
+      // row in sync with whatever the user's pointer is over, so
+      // Enter and click agree.
+      li.addEventListener('mouseenter', () => {
+        selectedIndex = i;
+        renderSelected();
+      });
       suggestionsEl.appendChild(li);
-    }
-    positionSuggestionsBelowActive();
+    });
+    positionSuggestionsAtActiveMiddle();
     suggestionsEl.hidden = false;
+  }
+
+  function renderSelected() {
+    const items = suggestionsEl.querySelectorAll('li');
+    items.forEach((li, i) => {
+      li.classList.toggle('selected', i === selectedIndex);
+    });
   }
 
   function hideSuggestions() {
     suggestionsEl.hidden = true;
     suggestionsEl.innerHTML = '';
+    currentMatches = [];
+    selectedIndex = 0;
   }
 
-  function positionSuggestionsBelowActive() {
+  function positionSuggestionsAtActiveMiddle() {
     if (!activeCell) return;
     const td = gridBodyEl.querySelector(
       `td[data-row="${activeCell.row}"][data-col="${activeCell.col}"]`,
     );
     if (!td) return;
     const rect = td.getBoundingClientRect();
-    suggestionsEl.style.top = `${window.scrollY + rect.bottom + 2}px`;
-    suggestionsEl.style.left = `${window.scrollX + rect.left}px`;
-    suggestionsEl.style.width = `${rect.width}px`;
+    // position: fixed — viewport-relative; anchor to the cell's
+    // vertical middle so the suggestions list overlaps the bottom
+    // half of the cell and extends downward.
+    suggestionsEl.style.top = `${rect.top + rect.height / 2}px`;
+    suggestionsEl.style.left = `${rect.left}px`;
   }
 
   function pickCountry(country) {
@@ -423,13 +460,12 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   }
 
   // Reposition any open suggestions on scroll/resize so the popup
-  // tracks its anchor cell. Cheap rAF-throttled wouldn't help here —
-  // suggestions are rarely open and the recalculation is one rect read.
+  // tracks its anchor cell.
   window.addEventListener('scroll', () => {
-    if (!suggestionsEl.hidden) positionSuggestionsBelowActive();
+    if (!suggestionsEl.hidden) positionSuggestionsAtActiveMiddle();
   });
   window.addEventListener('resize', () => {
-    if (!suggestionsEl.hidden) positionSuggestionsBelowActive();
+    if (!suggestionsEl.hidden) positionSuggestionsAtActiveMiddle();
   });
 
   // Initial visibility decisions:
