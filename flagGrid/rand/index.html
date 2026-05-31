@@ -26,10 +26,10 @@
       <ul class="suggestions" id="suggestions"></ul>
     </dialog>
     <script type="module">
-      import { runFlagGrid } from '../page.js';
-      import { randomPuzzle } from '../../flags/grid.js';
+      import { bootFlagGrid } from '../page.js';
+      import { generateRandomPuzzle } from '../../flags/grid.js';
 
-      runFlagGrid({ puzzle: randomPuzzle() });
+      bootFlagGrid((countries) => generateRandomPuzzle(countries));
     </script>
   </body>
 </html>

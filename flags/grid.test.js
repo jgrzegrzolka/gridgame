@@ -9,6 +9,9 @@ import {
   nameStartsWith,
   suggest,
   randomPuzzle,
+  puzzleCellCounts,
+  isPuzzleGeneratable,
+  generateRandomPuzzle,
   CONTINENTS_FOR_RANDOM,
   LETTERS_FOR_RANDOM,
 } from './grid.js';
@@ -393,6 +396,130 @@ test('LETTERS_FOR_RANDOM covers the full A-Z alphabet', () => {
   assert.equal(LETTERS_FOR_RANDOM.length, 26);
   assert.equal(LETTERS_FOR_RANDOM[0], 'A');
   assert.equal(LETTERS_FOR_RANDOM[25], 'Z');
+});
+
+test('puzzleCellCounts counts countries satisfying both predicates per cell', () => {
+  const puzzle = {
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [nameStartsWith('A'), nameStartsWith('B'), nameStartsWith('C')],
+  };
+  const countries = [
+    country({ code: 'al', name: 'Albania', continent: 'Europe' }),
+    country({ code: 'be', name: 'Belgium', continent: 'Europe' }),
+    country({ code: 'af', name: 'Afghanistan', continent: 'Asia' }),
+    country({ code: 'cm', name: 'Cameroon', continent: 'Africa' }),
+  ];
+  const counts = puzzleCellCounts(puzzle, countries);
+  assert.equal(counts[0][0], 1);  // Europe + A: Albania
+  assert.equal(counts[0][1], 1);  // Europe + B: Belgium
+  assert.equal(counts[0][2], 0);  // Europe + C: none
+  assert.equal(counts[1][0], 1);  // Asia + A: Afghanistan
+  assert.equal(counts[1][1], 0);  // Asia + B: none
+  assert.equal(counts[1][2], 0);  // Asia + C: none
+  assert.equal(counts[2][0], 0);  // Africa + A: none
+  assert.equal(counts[2][1], 0);  // Africa + B: none
+  assert.equal(counts[2][2], 1);  // Africa + C: Cameroon
+});
+
+test('isPuzzleGeneratable returns true when every cell meets minPerCell', () => {
+  const puzzle = {
+    rows: [continent('Europe'), continent('Europe'), continent('Europe')],
+    cols: [nameStartsWith('A'), nameStartsWith('A'), nameStartsWith('A')],
+  };
+  const countries = [
+    country({ code: 'al', name: 'Albania', continent: 'Europe' }),
+    country({ code: 'au', name: 'Austria', continent: 'Europe' }),
+  ];
+  assert.equal(isPuzzleGeneratable(puzzle, countries, 2), true);
+});
+
+test('isPuzzleGeneratable returns false when any single cell falls below minPerCell', () => {
+  const puzzle = {
+    rows: [continent('Europe'), continent('Europe'), continent('Europe')],
+    cols: [nameStartsWith('A'), nameStartsWith('A'), nameStartsWith('Z')],
+  };
+  const countries = [
+    country({ code: 'al', name: 'Albania', continent: 'Europe' }),
+    country({ code: 'au', name: 'Austria', continent: 'Europe' }),
+  ];
+  // Z col has zero matches in every row — below threshold 2.
+  assert.equal(isPuzzleGeneratable(puzzle, countries, 2), false);
+});
+
+test('isPuzzleGeneratable defaults to minPerCell of 2', () => {
+  const puzzle = {
+    rows: [continent('Europe'), continent('Europe'), continent('Europe')],
+    cols: [nameStartsWith('A'), nameStartsWith('A'), nameStartsWith('A')],
+  };
+  const oneCountry = [country({ code: 'al', name: 'Albania', continent: 'Europe' })];
+  // Each cell has exactly 1; default threshold 2 → false.
+  assert.equal(isPuzzleGeneratable(puzzle, oneCountry), false);
+});
+
+test('isPuzzleGeneratable with minPerCell=1 is the "no mutually-exclusive cell" check', () => {
+  const puzzle = {
+    rows: [continent('Europe'), continent('Europe'), continent('Europe')],
+    cols: [nameStartsWith('A'), nameStartsWith('A'), nameStartsWith('A')],
+  };
+  const oneCountry = [country({ code: 'al', name: 'Albania', continent: 'Europe' })];
+  assert.equal(isPuzzleGeneratable(puzzle, oneCountry, 1), true);
+});
+
+test('generateRandomPuzzle returns a puzzle where every cell has at least 2 valid countries', () => {
+  // Synthetic dataset: 3 countries per (continent, letter) intersection,
+  // so any shuffle yields plenty of candidates per cell.
+  /** @type {Country[]} */
+  const countries = [];
+  let codeCounter = 0;
+  for (const cont of CONTINENTS_FOR_RANDOM) {
+    for (const letter of LETTERS_FOR_RANDOM) {
+      for (let n = 0; n < 3; n++) {
+        countries.push(country({
+          code: `c${codeCounter++}`,
+          name: `${letter}${n}name`,
+          continent: cont,
+        }));
+      }
+    }
+  }
+  const puzzle = generateRandomPuzzle(countries, {
+    rng: sequenceRng([0.1, 0.5, 0.9, 0.2, 0.7, 0.3, 0.4, 0.6, 0.8]),
+  });
+  const counts = puzzleCellCounts(puzzle, countries);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      assert.ok(counts[r][c] >= 2, `cell [${r}][${c}] has ${counts[r][c]} (< 2)`);
+    }
+  }
+});
+
+test('generateRandomPuzzle throws when no valid puzzle can be found within maxAttempts', () => {
+  assert.throws(
+    () => generateRandomPuzzle([], { maxAttempts: 5 }),
+    /Could not generate a random puzzle/,
+  );
+});
+
+test('generateRandomPuzzle is deterministic given a deterministic RNG and the same countries', () => {
+  /** @type {Country[]} */
+  const countries = [];
+  let codeCounter = 0;
+  for (const cont of CONTINENTS_FOR_RANDOM) {
+    for (const letter of LETTERS_FOR_RANDOM) {
+      for (let n = 0; n < 3; n++) {
+        countries.push(country({
+          code: `c${codeCounter++}`,
+          name: `${letter}${n}name`,
+          continent: cont,
+        }));
+      }
+    }
+  }
+  const seed = [0.11, 0.27, 0.83, 0.04, 0.55, 0.62, 0.71, 0.99, 0.18, 0.36];
+  const p1 = generateRandomPuzzle(countries, { rng: sequenceRng(seed) });
+  const p2 = generateRandomPuzzle(countries, { rng: sequenceRng(seed) });
+  assert.deepEqual(p1.rows.map((r) => r.id), p2.rows.map((r) => r.id));
+  assert.deepEqual(p1.cols.map((c) => c.id), p2.cols.map((c) => c.id));
 });
 
 test('solutionState.complete is false when one cell is invalid even if all are filled and distinct', () => {

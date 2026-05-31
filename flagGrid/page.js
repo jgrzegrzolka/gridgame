@@ -4,12 +4,34 @@ import { tryPick, suggest } from '../flags/grid.js';
 /** @typedef {import('../flags/grid.js').Puzzle} Puzzle */
 
 /**
- * Mount the Flag Grid UI against the markup in the variant's index.html
- * for the given puzzle. Variants differ only in which puzzle they pass in.
+ * Fetch countries.json, build a puzzle from the variant's `puzzleFor`
+ * callback, then mount the UI. Any error during fetch or puzzle generation
+ * is surfaced in the #status element.
  *
- * @param {{ puzzle: Puzzle }} config
+ * @param {(countries: Country[]) => Puzzle} puzzleFor
  */
-export function runFlagGrid({ puzzle }) {
+export function bootFlagGrid(puzzleFor) {
+  fetch('../../flags/countries.json')
+    .then((r) => r.json())
+    .then((countries) => {
+      const puzzle = puzzleFor(countries);
+      runFlagGrid({ puzzle, countries });
+    })
+    .catch((err) => {
+      const statusEl = document.getElementById('status');
+      if (statusEl) statusEl.textContent = 'Failed to load: ' + err.message;
+    });
+}
+
+/**
+ * Mount the Flag Grid UI against the markup in the variant's index.html
+ * for the given puzzle and pre-fetched country list. Variants differ in
+ * which puzzle they supply; most will use bootFlagGrid() which handles
+ * the fetch + puzzle decision for them.
+ *
+ * @param {{ puzzle: Puzzle, countries: Country[] }} config
+ */
+export function runFlagGrid({ puzzle, countries }) {
   /** @type {(Country | null)[][]} */
   let solution = [
     [null, null, null],
@@ -18,7 +40,7 @@ export function runFlagGrid({ puzzle }) {
   ];
 
   /** @type {Country[]} */
-  let allCountries = [];
+  const allCountries = countries;
   /** @type {{ row: number, col: number } | null} */
   let activeCell = null;
   /** @type {Country | null} */
@@ -51,15 +73,7 @@ export function runFlagGrid({ puzzle }) {
     gridBodyEl.appendChild(tr);
   }
 
-  fetch('../../flags/countries.json')
-    .then((r) => r.json())
-    .then((all) => {
-      allCountries = all;
-      renderGrid();
-    })
-    .catch((err) => {
-      statusEl.textContent = 'Failed to load: ' + err.message;
-    });
+  renderGrid();
 
   function openPicker(row, col) {
     if (solution[row][col]) return;
