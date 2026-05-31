@@ -67,6 +67,13 @@ body {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+/* Mode label (e.g. "Europe 20") sits inline with the timer, with a
+   middle-dot separator drawn by ::after — only when there's content,
+   so the dot stays hidden during the brief empty state on first paint. */
+.play-mode:not(:empty)::after {
+  content: "·";
+  padding: 0 8px;
+}
 .country-name {
   font-size: 28px;
   font-weight: 500;

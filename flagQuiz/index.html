@@ -33,7 +33,10 @@
       <ul class="menu" id="quiz-menu"></ul>
     </nav>
     <div id="game" hidden>
-      <p class="play-timer" id="play-timer">0:00.000</p>
+      <p class="play-timer">
+        <span class="play-mode" id="play-mode"></span>
+        <span id="play-time">0:00.000</span>
+      </p>
       <p class="country-name" id="country-name">Loading…</p>
       <div class="choices" id="choices"></div>
       <p class="feedback" id="feedback"></p>
@@ -70,7 +73,8 @@
       const finalScoreEl = document.getElementById('final-score');
       const timeEl = document.getElementById('time');
       const bestEl = document.getElementById('best');
-      const playTimerEl = document.getElementById('play-timer');
+      const playTimerEl = document.getElementById('play-time');
+      const playModeEl = document.getElementById('play-mode');
       const playAgainEl = document.getElementById('play-again');
       const progressBarEl = document.getElementById('progress-bar');
 
@@ -146,6 +150,7 @@
         const pool = poolFor(key, all);
         const target = targetFor(mode, pool);
         const quiz = createQuiz(pool, target);
+        playModeEl.textContent = `${VARIANTS[key].label} ${mode}`;
 
         let currentAnswer = null;
         let wrongCount = 0;
