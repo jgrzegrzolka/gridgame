@@ -34,6 +34,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Cache-bust by stamping __BUILD__ with the commit SHA
+        # Each ?v=__BUILD__ in HTML imports becomes ?v=<sha> so browsers
+        # treat every build as a unique URL and refetch assets after deploy.
+        run: |
+          find . -name '*.html' -type f -exec sed -i "s/__BUILD__/${GITHUB_SHA}/g" {} +
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .

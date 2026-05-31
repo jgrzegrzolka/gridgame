@@ -3,9 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>All Flags</title>
-    <link rel="stylesheet" href="../common.css" />
-    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="../common.css?v=__BUILD__" />
+    <link rel="stylesheet" href="index.css?v=__BUILD__" />
   </head>
   <body>
     <a class="back" href="../" aria-label="Back">←</a>
@@ -15,7 +18,7 @@
       <p></p>
     </dialog>
     <script type="module">
-      import { CONTINENTS, splitByCategory, groupByContinent } from '../flags/group.js';
+      import { CONTINENTS, splitByCategory, groupByContinent } from '../flags/group.js?v=__BUILD__';
 
       const zoom = document.getElementById('zoom');
       const zoomImg = zoom.querySelector('img');
