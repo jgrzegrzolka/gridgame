@@ -49,6 +49,8 @@
       let allCountries = [];
       /** @type {{ row: number, col: number } | null} */
       let activeCell = null;
+      /** @type {import('../flags/group.js').Country | null} */
+      let topMatch = null;
 
       const statusEl = document.getElementById('status');
       const gridBodyEl = document.getElementById('grid-body');
@@ -93,6 +95,7 @@
         activeCell = { row, col };
         pickerInputEl.value = '';
         suggestionsEl.innerHTML = '';
+        topMatch = null;
         const td = gridBodyEl.querySelector(
           `td[data-row="${row}"][data-col="${col}"]`,
         );
@@ -107,6 +110,7 @@
       pickerInputEl.addEventListener('input', () => {
         suggestionsEl.innerHTML = '';
         const matches = suggest(allCountries, pickerInputEl.value);
+        topMatch = matches[0] ?? null;
         for (const country of matches) {
           const li = document.createElement('li');
           const img = document.createElement('img');
@@ -118,6 +122,13 @@
           li.appendChild(name);
           li.addEventListener('click', () => pickCountry(country));
           suggestionsEl.appendChild(li);
+        }
+      });
+
+      pickerInputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && topMatch) {
+          e.preventDefault();
+          pickCountry(topMatch);
         }
       });
 
