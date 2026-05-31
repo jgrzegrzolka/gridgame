@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Flag Quiz — Your Stats</title>
+    <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
+    <link rel="stylesheet" href="../index.css?v=__BUILD__" />
+  </head>
+  <body>
+    <a class="back" href="../../" aria-label="Back">←</a>
+    <table class="variants">
+      <tbody id="variants"></tbody>
+    </table>
+    <script type="module">
+      import {
+        VARIANTS,
+        availableModes,
+        formatTime,
+        loadBest,
+        bestKey,
+        scoreColor,
+      } from '../../flags/quiz.js?v=__BUILD__';
+
+      const variantsEl = document.getElementById('variants');
+
+      fetch('../../flags/countries.json?v=__BUILD__')
+        .then((r) => r.json())
+        .then(renderStats)
+        .catch((err) => {
+          document.body.textContent = 'Failed to load: ' + err.message;
+        });
+
+      function modeRow(key, mode) {
+        const link = document.createElement('td');
+        link.className = 'link';
+        const a = document.createElement('a');
+        // Stats lives at /flagQuiz/stats/, quiz at /flagQuiz/, so we need
+        // to step one level up when linking back to a specific quiz.
+        a.href = `../?v=${key}&n=${mode}`;
+        a.textContent = mode;
+        link.appendChild(a);
+        const pct = document.createElement('td');
+        pct.className = 'pct';
+        const time = document.createElement('td');
+        time.className = 'time';
+        const best = loadBest(localStorage, bestKey(key, mode));
+        if (best) {
+          pct.textContent = `${best.score}%`;
+          pct.style.color = scoreColor(best.score / 100);
+          time.textContent = formatTime(best.time);
+        }
+        return [link, pct, time];
+      }
+
+      function renderStats(all) {
+        for (const [key, variant] of Object.entries(VARIANTS)) {
+          const usable = availableModes(all.filter(variant.filter).length);
+          if (usable.length === 0) continue;
+          usable.forEach((mode, i) => {
+            const tr = document.createElement('tr');
+            if (i === 0) {
+              tr.className = 'variant-start';
+              const label = document.createElement('td');
+              label.className = 'label';
+              label.rowSpan = usable.length;
+              label.textContent = variant.label;
+              tr.appendChild(label);
+            }
+            for (const cell of modeRow(key, mode)) tr.appendChild(cell);
+            variantsEl.appendChild(tr);
+          });
+        }
+      }
+    </script>
+  </body>
+</html>
