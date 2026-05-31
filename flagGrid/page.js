@@ -88,9 +88,9 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   let topMatch = null;
 
   const gridBodyEl = document.getElementById('grid-body');
-  const pickerEl = /** @type {HTMLDialogElement} */ (document.getElementById('picker'));
-  const pickerInputEl = /** @type {HTMLInputElement} */ (document.getElementById('picker-input'));
-  const suggestionsEl = document.getElementById('suggestions');
+  const suggestionsEl = /** @type {HTMLUListElement} */ (document.getElementById('suggestions'));
+  /** Current in-cell autocomplete query (live in the focused cell). */
+  let query = '';
   const colHeaderEls = document.querySelectorAll('.col-header');
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
   const playTimerEl = document.getElementById('play-timer-line');
@@ -116,13 +116,9 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       td.dataset.row = String(r);
       td.dataset.col = String(c);
       td.tabIndex = 0;
-      td.addEventListener('click', () => openPicker(r, c));
-      td.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          openPicker(r, c);
-        }
-      });
+      td.addEventListener('focus', () => onCellFocus(r, c));
+      td.addEventListener('blur', () => onCellBlur(r, c));
+      td.addEventListener('keydown', (e) => onCellKey(r, c, e));
       tr.appendChild(td);
     }
     gridBodyEl.appendChild(tr);
@@ -154,30 +150,79 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     return isFinished() || gaveUp;
   }
 
-  function openPicker(row, col) {
-    if (isLocked()) return;
-    if (solution[row][col]) return;
+  function onCellFocus(row, col) {
     activeCell = { row, col };
-    pickerInputEl.value = '';
-    suggestionsEl.innerHTML = '';
+    query = '';
     topMatch = null;
-    const td = gridBodyEl.querySelector(
-      `td[data-row="${row}"][data-col="${col}"]`,
-    );
-    const rect = td.getBoundingClientRect();
-    pickerEl.style.top = rect.top + 'px';
-    pickerEl.style.left = rect.left + 'px';
-    pickerEl.style.width = rect.width + 'px';
-    pickerEl.show();
-    pickerInputEl.focus();
+    renderCellContent(row, col);
+    hideSuggestions();
   }
 
-  pickerInputEl.addEventListener('input', () => {
-    suggestionsEl.innerHTML = '';
+  function onCellBlur(row, col) {
+    // Suggestions get their own click handlers, which fire before
+    // blur — so a click on a suggestion still pickCountry()s before
+    // we clear here. Tabbing or clicking elsewhere clears the query
+    // and the in-cell echo.
+    if (activeCell && activeCell.row === row && activeCell.col === col) {
+      activeCell = null;
+    }
+    if (!solution[row][col]) {
+      query = '';
+      renderCellContent(row, col);
+    }
+    hideSuggestions();
+  }
+
+  function onCellKey(row, col, e) {
+    if (isLocked()) return;
+    if (solution[row][col]) return; // filled cells are inert
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      query = '';
+      topMatch = null;
+      renderCellContent(row, col);
+      hideSuggestions();
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (topMatch) pickCountry(topMatch);
+      return;
+    }
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      if (query.length > 0) {
+        query = query.slice(0, -1);
+        renderCellContent(row, col);
+        updateSuggestions();
+      }
+      return;
+    }
+    // Accept single characters that could appear in a country name —
+    // letters, spaces, apostrophes, hyphens. Modifiers + function keys
+    // produce e.key strings longer than 1, so they fall through.
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      query += e.key;
+      renderCellContent(row, col);
+      updateSuggestions();
+    }
+  }
+
+  function updateSuggestions() {
+    if (!activeCell) {
+      hideSuggestions();
+      return;
+    }
     const excludeCodes = new Set();
     for (const row of solution) for (const cell of row) if (cell) excludeCodes.add(cell.code);
-    const matches = suggest(allCountries, pickerInputEl.value, { excludeCodes });
+    const matches = suggest(allCountries, query, { excludeCodes });
     topMatch = matches[0] ?? null;
+    suggestionsEl.innerHTML = '';
+    if (matches.length === 0) {
+      hideSuggestions();
+      return;
+    }
     for (const country of matches) {
       const li = document.createElement('li');
       const img = document.createElement('img');
@@ -187,41 +232,53 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       const name = document.createElement('span');
       name.textContent = country.name;
       li.appendChild(name);
-      li.addEventListener('click', () => pickCountry(country));
+      // mousedown rather than click so the pick lands before the
+      // cell's blur event clears the query.
+      li.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        pickCountry(country);
+      });
       suggestionsEl.appendChild(li);
     }
-  });
+    positionSuggestionsBelowActive();
+    suggestionsEl.hidden = false;
+  }
 
-  pickerInputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && topMatch) {
-      e.preventDefault();
-      pickCountry(topMatch);
-    }
-  });
+  function hideSuggestions() {
+    suggestionsEl.hidden = true;
+    suggestionsEl.innerHTML = '';
+  }
 
-  document.addEventListener('click', (e) => {
-    if (!pickerEl.open) return;
-    if (pickerEl.contains(e.target)) return;
-    if (/** @type {HTMLElement} */ (e.target).closest('.cell')) return;
-    pickerEl.close();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && pickerEl.open) pickerEl.close();
-  });
+  function positionSuggestionsBelowActive() {
+    if (!activeCell) return;
+    const td = gridBodyEl.querySelector(
+      `td[data-row="${activeCell.row}"][data-col="${activeCell.col}"]`,
+    );
+    if (!td) return;
+    const rect = td.getBoundingClientRect();
+    suggestionsEl.style.top = `${window.scrollY + rect.bottom + 2}px`;
+    suggestionsEl.style.left = `${window.scrollX + rect.left}px`;
+    suggestionsEl.style.width = `${rect.width}px`;
+  }
 
   function pickCountry(country) {
     if (!activeCell) return;
     const { row, col } = activeCell;
     const result = tryPick(puzzle, solution, row, col, country);
-    pickerEl.close();
     if (!result.accepted) {
       if (!solution[row][col]) wrongCount++;
+      query = '';
+      topMatch = null;
+      hideSuggestions();
+      renderCellContent(row, col);
       shakeCell(row, col);
-      renderGrid();
       persistState();
       return;
     }
     solution = result.solution;
+    query = '';
+    topMatch = null;
+    hideSuggestions();
     const filled = countFilled();
     if (filled === 9) {
       finalTimeMs = Date.now() - sessionStart;
@@ -270,22 +327,41 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     }
   }
 
+  /**
+   * Render one cell's content: flag image when filled, or the current
+   * autocomplete query (gray text echo) when this is the active empty
+   * cell, or empty otherwise. Touches only the classes owned by the
+   * renderer — transient classes like .shake survive.
+   */
+  function renderCellContent(r, c) {
+    const td = /** @type {HTMLTableCellElement} */ (
+      gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`)
+    );
+    if (!td) return;
+    const country = solution[r][c];
+    for (const [klass, shouldHave] of cellRenderClasses(country)) {
+      td.classList.toggle(klass, shouldHave);
+    }
+    td.innerHTML = '';
+    if (country) {
+      const img = document.createElement('img');
+      img.src = `../../flags/svg/${country.code}.svg`;
+      img.alt = country.name;
+      td.appendChild(img);
+      return;
+    }
+    if (activeCell && activeCell.row === r && activeCell.col === c && query) {
+      const span = document.createElement('span');
+      span.className = 'cell-query';
+      span.textContent = query;
+      td.appendChild(span);
+    }
+  }
+
   function renderGrid() {
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 3; c++) {
-        const td = /** @type {HTMLTableCellElement} */ (
-          gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`)
-        );
-        const country = solution[r][c];
-        for (const [klass, shouldHave] of cellRenderClasses(country)) {
-          td.classList.toggle(klass, shouldHave);
-        }
-        td.innerHTML = '';
-        if (!country) continue;
-        const img = document.createElement('img');
-        img.src = `../../flags/svg/${country.code}.svg`;
-        img.alt = country.name;
-        td.appendChild(img);
+        renderCellContent(r, c);
       }
     }
     if (giveUpEl) giveUpEl.hidden = isLocked();
@@ -338,12 +414,23 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       if (isLocked()) return;
       gaveUp = true;
       finalTimeMs = Date.now() - sessionStart;
-      if (pickerEl.open) pickerEl.close();
+      hideSuggestions();
+      query = '';
       renderGrid();
       persistState();
       finishRound();
     });
   }
+
+  // Reposition any open suggestions on scroll/resize so the popup
+  // tracks its anchor cell. Cheap rAF-throttled wouldn't help here —
+  // suggestions are rarely open and the recalculation is one rect read.
+  window.addEventListener('scroll', () => {
+    if (!suggestionsEl.hidden) positionSuggestionsBelowActive();
+  });
+  window.addEventListener('resize', () => {
+    if (!suggestionsEl.hidden) positionSuggestionsBelowActive();
+  });
 
   // Initial visibility decisions:
   // - If the round was already finished in a previous session, show

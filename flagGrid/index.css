@@ -123,6 +123,30 @@ body {
   position: relative;
   cursor: pointer;
 }
+/* Selection ring — the whole square reads as "active" so the user
+   sees they can type into it. Inset box-shadow keeps the table's
+   own borders intact. */
+.cell:focus {
+  outline: none;
+}
+.cell:focus-visible::before,
+.cell:focus::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  box-shadow: inset 0 0 0 3px var(--link-color);
+  pointer-events: none;
+  z-index: 1;
+}
+/* In-cell echo of the autocomplete query. Sits above the focus ring
+   so the typed letters read clearly. */
+.cell-query {
+  position: relative;
+  z-index: 2;
+  font-size: 16px;
+  color: #444;
+  font-variant-numeric: tabular-nums;
+}
 /* Hover tint via a pseudo-element overlay rather than `background` on
    the cell itself. Painting on the cell's background under
    border-collapse: collapse made Firefox drop the shared right/bottom
@@ -170,41 +194,22 @@ body {
   40%, 60% { transform: translateX(4px); }
 }
 
-dialog#picker {
-  position: fixed;
-  margin: 0;
-  box-sizing: border-box;
-  padding: 0;
-  border: 1px solid #999;
-  border-radius: 0;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  flex-direction: column;
-  overflow: hidden;
-}
-dialog#picker[open] {
-  display: flex;
-}
-#picker-input {
-  display: block;
-  width: 100%;
-  padding: 6px;
-  font-size: 12px;
-  font-family: inherit;
-  border: none;
-  border-bottom: 1px solid #f0f0f0;
-  box-sizing: border-box;
-}
-#picker-input:focus {
-  outline: none;
-  border-bottom-color: #e0e0e0;
-}
+/* Suggestions popup — absolutely positioned just below the active
+   cell. JS sets top/left/width to track the cell's bounding rect.
+   Hidden by default; revealed only when the query yields matches. */
 .suggestions {
+  position: absolute;
   list-style: none;
   padding: 2px;
   margin: 0;
+  background: #fff;
+  border: 1px solid #999;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  z-index: 50;
+  max-height: 260px;
+  overflow-y: auto;
 }
-.suggestions:empty {
+.suggestions[hidden] {
   display: none;
 }
 .suggestions li {
@@ -213,10 +218,13 @@ dialog#picker[open] {
   gap: 4px;
   padding: 2px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
 }
 .suggestions li:hover {
   background: #f0f0f0;
+}
+.suggestions li:first-child {
+  background: rgba(102, 0, 51, 0.08);
 }
 .suggestions li span {
   flex: 1;
@@ -224,6 +232,12 @@ dialog#picker[open] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.suggestions img {
+  width: 20px;
+  height: 15px;
+  border: 1px solid #ddd;
+  flex-shrink: 0;
 }
 .suggestions img {
   width: 20px;
