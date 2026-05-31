@@ -6,14 +6,14 @@ import {
   tryPick,
   continent,
   statehood,
-  nameStartsWith,
+  hasColor,
   suggest,
   randomPuzzle,
   puzzleCellCounts,
   isPuzzleGeneratable,
   generateRandomPuzzle,
   CONTINENTS_FOR_RANDOM,
-  LETTERS_FOR_RANDOM,
+  COLORS_FOR_RANDOM,
 } from './grid.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -74,14 +74,24 @@ test('statehood category defaults label to a humanised value', () => {
   assert.equal(statehood('un_member', 'UN member').label, 'UN member');
 });
 
-test('nameStartsWith predicate matches countries whose name starts with the letter', () => {
-  assert.equal(nameStartsWith('A').predicate(country({ code: 'al', name: 'Albania' })), true);
-  assert.equal(nameStartsWith('A').predicate(country({ code: 'be', name: 'Belgium' })), false);
+test('hasColor predicate matches countries whose flag includes that colour', () => {
+  const flagFr = country({ code: 'fr', name: 'France', colors: ['blue', 'white', 'red'] });
+  const flagJp = country({ code: 'jp', name: 'Japan', colors: ['white', 'red'] });
+  assert.equal(hasColor('blue').predicate(flagFr), true);
+  assert.equal(hasColor('blue').predicate(flagJp), false);
 });
 
-test('nameStartsWith is case-insensitive in both the letter and the country name', () => {
-  assert.equal(nameStartsWith('a').predicate(country({ code: 'al', name: 'Albania' })), true);
-  assert.equal(nameStartsWith('A').predicate(country({ code: 'al', name: 'albania' })), true);
+test('hasColor predicate returns false when colors is missing or empty', () => {
+  const noTag = country({ code: 'xx', name: 'Untagged' }); // no colors field
+  const emptyTag = country({ code: 'yy', name: 'EmptyTag', colors: [] });
+  assert.equal(hasColor('red').predicate(noTag), false);
+  assert.equal(hasColor('red').predicate(emptyTag), false);
+});
+
+test('hasColor category has a stable id and label', () => {
+  const cat = hasColor('green');
+  assert.equal(cat.id, 'hasColor:green');
+  assert.equal(cat.label, 'Has green');
 });
 
 test('suggest returns an empty list while the trimmed query is under 3 characters', () => {
@@ -369,10 +379,12 @@ test('randomPuzzle row categories are all continent categories', () => {
   }
 });
 
-test('randomPuzzle column categories are all nameStartsWith letter categories', () => {
+test('randomPuzzle column categories are all hasColor categories from the palette', () => {
   const p = randomPuzzle(() => 0);
   for (const c of p.cols) {
-    assert.ok(c.id.startsWith('nameStartsWith:'), `expected nameStartsWith id, got ${c.id}`);
+    assert.ok(c.id.startsWith('hasColor:'), `expected hasColor id, got ${c.id}`);
+    const color = c.id.slice('hasColor:'.length);
+    assert.ok(COLORS_FOR_RANDOM.includes(color), `color ${color} not in palette`);
   }
 });
 
@@ -392,43 +404,44 @@ test('randomPuzzle is deterministic given a deterministic RNG', () => {
   assert.deepEqual(p1.cols.map((c) => c.id), p2.cols.map((c) => c.id));
 });
 
-test('LETTERS_FOR_RANDOM covers the full A-Z alphabet', () => {
-  assert.equal(LETTERS_FOR_RANDOM.length, 26);
-  assert.equal(LETTERS_FOR_RANDOM[0], 'A');
-  assert.equal(LETTERS_FOR_RANDOM[25], 'Z');
+test('COLORS_FOR_RANDOM is the 7-colour canonical palette', () => {
+  assert.deepEqual(
+    COLORS_FOR_RANDOM,
+    ['red', 'white', 'blue', 'green', 'yellow', 'black', 'orange'],
+  );
 });
 
 test('puzzleCellCounts counts countries satisfying both predicates per cell', () => {
   const puzzle = {
     rows: [continent('Europe'), continent('Asia'), continent('Africa')],
-    cols: [nameStartsWith('A'), nameStartsWith('B'), nameStartsWith('C')],
+    cols: [hasColor('red'), hasColor('blue'), hasColor('yellow')],
   };
   const countries = [
-    country({ code: 'al', name: 'Albania', continent: 'Europe' }),
-    country({ code: 'be', name: 'Belgium', continent: 'Europe' }),
-    country({ code: 'af', name: 'Afghanistan', continent: 'Asia' }),
-    country({ code: 'cm', name: 'Cameroon', continent: 'Africa' }),
+    country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] }),
+    country({ code: 'gr', name: 'Greece',  continent: 'Europe', colors: ['blue'] }),
+    country({ code: 'jp', name: 'Japan',   continent: 'Asia',   colors: ['red', 'white'] }),
+    country({ code: 'cm', name: 'Cameroon',continent: 'Africa', colors: ['yellow', 'green'] }),
   ];
   const counts = puzzleCellCounts(puzzle, countries);
-  assert.equal(counts[0][0], 1);  // Europe + A: Albania
-  assert.equal(counts[0][1], 1);  // Europe + B: Belgium
-  assert.equal(counts[0][2], 0);  // Europe + C: none
-  assert.equal(counts[1][0], 1);  // Asia + A: Afghanistan
-  assert.equal(counts[1][1], 0);  // Asia + B: none
-  assert.equal(counts[1][2], 0);  // Asia + C: none
-  assert.equal(counts[2][0], 0);  // Africa + A: none
-  assert.equal(counts[2][1], 0);  // Africa + B: none
-  assert.equal(counts[2][2], 1);  // Africa + C: Cameroon
+  assert.equal(counts[0][0], 1);  // Europe + red: Albania
+  assert.equal(counts[0][1], 1);  // Europe + blue: Greece
+  assert.equal(counts[0][2], 0);  // Europe + yellow: none
+  assert.equal(counts[1][0], 1);  // Asia + red: Japan
+  assert.equal(counts[1][1], 0);  // Asia + blue: none
+  assert.equal(counts[1][2], 0);  // Asia + yellow: none
+  assert.equal(counts[2][0], 0);  // Africa + red: none
+  assert.equal(counts[2][1], 0);  // Africa + blue: none
+  assert.equal(counts[2][2], 1);  // Africa + yellow: Cameroon
 });
 
 test('isPuzzleGeneratable returns true when every cell meets minPerCell', () => {
   const puzzle = {
     rows: [continent('Europe'), continent('Europe'), continent('Europe')],
-    cols: [nameStartsWith('A'), nameStartsWith('A'), nameStartsWith('A')],
+    cols: [hasColor('red'), hasColor('red'), hasColor('red')],
   };
   const countries = [
-    country({ code: 'al', name: 'Albania', continent: 'Europe' }),
-    country({ code: 'au', name: 'Austria', continent: 'Europe' }),
+    country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] }),
+    country({ code: 'pl', name: 'Poland',  continent: 'Europe', colors: ['red', 'white'] }),
   ];
   assert.equal(isPuzzleGeneratable(puzzle, countries, 2), true);
 });
@@ -436,22 +449,22 @@ test('isPuzzleGeneratable returns true when every cell meets minPerCell', () => 
 test('isPuzzleGeneratable returns false when any single cell falls below minPerCell', () => {
   const puzzle = {
     rows: [continent('Europe'), continent('Europe'), continent('Europe')],
-    cols: [nameStartsWith('A'), nameStartsWith('A'), nameStartsWith('Z')],
+    cols: [hasColor('red'), hasColor('red'), hasColor('orange')],
   };
   const countries = [
-    country({ code: 'al', name: 'Albania', continent: 'Europe' }),
-    country({ code: 'au', name: 'Austria', continent: 'Europe' }),
+    country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] }),
+    country({ code: 'pl', name: 'Poland',  continent: 'Europe', colors: ['red', 'white'] }),
   ];
-  // Z col has zero matches in every row — below threshold 2.
+  // The orange col has zero matches in every row — below threshold 2.
   assert.equal(isPuzzleGeneratable(puzzle, countries, 2), false);
 });
 
 test('isPuzzleGeneratable defaults to minPerCell of 2', () => {
   const puzzle = {
     rows: [continent('Europe'), continent('Europe'), continent('Europe')],
-    cols: [nameStartsWith('A'), nameStartsWith('A'), nameStartsWith('A')],
+    cols: [hasColor('red'), hasColor('red'), hasColor('red')],
   };
-  const oneCountry = [country({ code: 'al', name: 'Albania', continent: 'Europe' })];
+  const oneCountry = [country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] })];
   // Each cell has exactly 1; default threshold 2 → false.
   assert.equal(isPuzzleGeneratable(puzzle, oneCountry), false);
 });
@@ -459,29 +472,35 @@ test('isPuzzleGeneratable defaults to minPerCell of 2', () => {
 test('isPuzzleGeneratable with minPerCell=1 is the "no mutually-exclusive cell" check', () => {
   const puzzle = {
     rows: [continent('Europe'), continent('Europe'), continent('Europe')],
-    cols: [nameStartsWith('A'), nameStartsWith('A'), nameStartsWith('A')],
+    cols: [hasColor('red'), hasColor('red'), hasColor('red')],
   };
-  const oneCountry = [country({ code: 'al', name: 'Albania', continent: 'Europe' })];
+  const oneCountry = [country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] })];
   assert.equal(isPuzzleGeneratable(puzzle, oneCountry, 1), true);
 });
 
-test('generateRandomPuzzle returns a puzzle where every cell has at least 2 valid countries', () => {
-  // Synthetic dataset: 3 countries per (continent, letter) intersection,
-  // so any shuffle yields plenty of candidates per cell.
+function syntheticTaggedCountries() {
   /** @type {Country[]} */
-  const countries = [];
+  const out = [];
   let codeCounter = 0;
+  // 3 countries per (continent, colour) intersection — every cell of any
+  // shuffled puzzle has 3 candidates by construction.
   for (const cont of CONTINENTS_FOR_RANDOM) {
-    for (const letter of LETTERS_FOR_RANDOM) {
+    for (const color of COLORS_FOR_RANDOM) {
       for (let n = 0; n < 3; n++) {
-        countries.push(country({
+        out.push(country({
           code: `c${codeCounter++}`,
-          name: `${letter}${n}name`,
+          name: `${cont}-${color}-${n}`,
           continent: cont,
+          colors: [color],
         }));
       }
     }
   }
+  return out;
+}
+
+test('generateRandomPuzzle returns a puzzle where every cell has at least 2 valid countries', () => {
+  const countries = syntheticTaggedCountries();
   const puzzle = generateRandomPuzzle(countries, {
     rng: sequenceRng([0.1, 0.5, 0.9, 0.2, 0.7, 0.3, 0.4, 0.6, 0.8]),
   });
@@ -501,20 +520,7 @@ test('generateRandomPuzzle throws when no valid puzzle can be found within maxAt
 });
 
 test('generateRandomPuzzle is deterministic given a deterministic RNG and the same countries', () => {
-  /** @type {Country[]} */
-  const countries = [];
-  let codeCounter = 0;
-  for (const cont of CONTINENTS_FOR_RANDOM) {
-    for (const letter of LETTERS_FOR_RANDOM) {
-      for (let n = 0; n < 3; n++) {
-        countries.push(country({
-          code: `c${codeCounter++}`,
-          name: `${letter}${n}name`,
-          continent: cont,
-        }));
-      }
-    }
-  }
+  const countries = syntheticTaggedCountries();
   const seed = [0.11, 0.27, 0.83, 0.04, 0.55, 0.62, 0.71, 0.99, 0.18, 0.36];
   const p1 = generateRandomPuzzle(countries, { rng: sequenceRng(seed) });
   const p2 = generateRandomPuzzle(countries, { rng: sequenceRng(seed) });

@@ -182,25 +182,32 @@ export const CONTINENTS_FOR_RANDOM = [
 ];
 
 /**
- * Letters the random-puzzle generator draws from for the col axis (via
- * nameStartsWith).
+ * Flag-colour palette the random-puzzle generator draws from for the col
+ * axis. Must match the canonical palette tagged on each country in
+ * countries.json (see scripts/add-flag-colors.mjs).
  */
-export const LETTERS_FOR_RANDOM = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+export const COLORS_FOR_RANDOM = [
+  'red',
+  'white',
+  'blue',
+  'green',
+  'yellow',
+  'black',
+  'orange',
+];
 
 /**
- * Category: country's name starts with the given letter (case-insensitive).
- * Useful as a "boring but always satisfiable" category for v0 puzzles that
- * use the existing data only.
+ * Category: country's flag contains the given colour. Countries with no
+ * `colors` field (or empty) never match.
  *
- * @param {string} letter single character; case-insensitive
+ * @param {string} color one of COLORS_FOR_RANDOM
  * @returns {Category}
  */
-export function nameStartsWith(letter) {
-  const upper = letter.toUpperCase();
+export function hasColor(color) {
   return {
-    id: `nameStartsWith:${upper}`,
-    label: `Starts with ${upper}`,
-    predicate: (c) => c.name.toUpperCase().startsWith(upper),
+    id: `hasColor:${color}`,
+    label: `Has ${color}`,
+    predicate: (c) => Array.isArray(c.colors) && c.colors.includes(color),
   };
 }
 
@@ -228,19 +235,19 @@ function pickRandom(pool, n, rng) {
 }
 
 /**
- * Build a random 3x3 puzzle with continent rows and nameStartsWith-letter
- * columns. Pure shuffle — does no validity checking. Callers that need a
- * solvable puzzle should use `generateRandomPuzzle` instead.
+ * Build a random 3x3 puzzle with continent rows and flag-colour columns.
+ * Pure shuffle — does no validity checking. Callers that need a solvable
+ * puzzle should use `generateRandomPuzzle` instead.
  *
  * @param {() => number} [rng]  defaults to Math.random
  * @returns {Puzzle}
  */
 export function randomPuzzle(rng = Math.random) {
   const rowNames = pickRandom(CONTINENTS_FOR_RANDOM, 3, rng);
-  const colLetters = pickRandom(LETTERS_FOR_RANDOM, 3, rng);
+  const colColors = pickRandom(COLORS_FOR_RANDOM, 3, rng);
   return {
     rows: rowNames.map(continent),
-    cols: colLetters.map(nameStartsWith),
+    cols: colColors.map(hasColor),
   };
 }
 
