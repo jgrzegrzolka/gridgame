@@ -182,25 +182,32 @@ export const CONTINENTS_FOR_RANDOM = [
 ];
 
 /**
- * Letters the random-puzzle generator draws from for the col axis (via
- * nameStartsWith).
+ * Flag-colour palette the random-puzzle generator draws from for the col
+ * axis. Must match the canonical palette tagged on each country in
+ * countries.json (see scripts/add-flag-colors.mjs).
  */
-export const LETTERS_FOR_RANDOM = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+export const COLORS_FOR_RANDOM = [
+  'red',
+  'white',
+  'blue',
+  'green',
+  'yellow',
+  'black',
+  'orange',
+];
 
 /**
- * Category: country's name starts with the given letter (case-insensitive).
- * Useful as a "boring but always satisfiable" category for v0 puzzles that
- * use the existing data only.
+ * Category: country's flag contains the given colour. Countries with no
+ * `colors` field (or empty) never match.
  *
- * @param {string} letter single character; case-insensitive
+ * @param {string} color one of COLORS_FOR_RANDOM
  * @returns {Category}
  */
-export function nameStartsWith(letter) {
-  const upper = letter.toUpperCase();
+export function hasColor(color) {
   return {
-    id: `nameStartsWith:${upper}`,
-    label: `Starts with ${upper}`,
-    predicate: (c) => c.name.toUpperCase().startsWith(upper),
+    id: `hasColor:${color}`,
+    label: `Has ${color}`,
+    predicate: (c) => Array.isArray(c.colors) && c.colors.includes(color),
   };
 }
 
@@ -228,21 +235,91 @@ function pickRandom(pool, n, rng) {
 }
 
 /**
- * Build a random 3x3 puzzle with continent rows and nameStartsWith-letter
- * columns. This v0 generator just shuffles — it does NOT yet guard against
- * mutually-exclusive axis picks or empty cells (no country satisfies both
- * predicates). Those guards are the next step.
+ * Build a random 3x3 puzzle with continent rows and flag-colour columns.
+ * Pure shuffle — does no validity checking. Callers that need a solvable
+ * puzzle should use `generateRandomPuzzle` instead.
  *
  * @param {() => number} [rng]  defaults to Math.random
  * @returns {Puzzle}
  */
 export function randomPuzzle(rng = Math.random) {
   const rowNames = pickRandom(CONTINENTS_FOR_RANDOM, 3, rng);
-  const colLetters = pickRandom(LETTERS_FOR_RANDOM, 3, rng);
+  const colColors = pickRandom(COLORS_FOR_RANDOM, 3, rng);
   return {
     rows: rowNames.map(continent),
-    cols: colLetters.map(nameStartsWith),
+    cols: colColors.map(hasColor),
   };
+}
+
+/**
+ * For every cell in the puzzle, count how many of the given countries
+ * satisfy both the row and column predicates. Returns a 3x3 array.
+ *
+ * @param {Puzzle} puzzle
+ * @param {Country[]} countries
+ * @returns {number[][]}
+ */
+export function puzzleCellCounts(puzzle, countries) {
+  /** @type {number[][]} */
+  const counts = [
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+  ];
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      for (const country of countries) {
+        if (puzzle.rows[r].predicate(country) && puzzle.cols[c].predicate(country)) {
+          counts[r][c]++;
+        }
+      }
+    }
+  }
+  return counts;
+}
+
+/**
+ * Returns true iff every cell in `puzzle` has at least `minPerCell`
+ * countries that satisfy both row and column predicates. minPerCell = 1
+ * means "no mutually-exclusive intersection"; minPerCell = 2 (the default)
+ * also gives some slack against the no-duplicates constraint.
+ *
+ * @param {Puzzle} puzzle
+ * @param {Country[]} countries
+ * @param {number} [minPerCell] default 2
+ * @returns {boolean}
+ */
+export function isPuzzleGeneratable(puzzle, countries, minPerCell = 2) {
+  const counts = puzzleCellCounts(puzzle, countries);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (counts[r][c] < minPerCell) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Generate a random puzzle that's actually playable: re-rolls the shuffle
+ * until isPuzzleGeneratable returns true, or until maxAttempts is hit (at
+ * which point we throw — caller probably gave us too thin a country list,
+ * or the pools are too restrictive).
+ *
+ * @param {Country[]} countries
+ * @param {{ rng?: () => number, minPerCell?: number, maxAttempts?: number }} [options]
+ * @returns {Puzzle}
+ */
+export function generateRandomPuzzle(countries, options = {}) {
+  const { rng = Math.random, minPerCell = 2, maxAttempts = 200 } = options;
+  for (let i = 0; i < maxAttempts; i++) {
+    const puzzle = randomPuzzle(rng);
+    if (isPuzzleGeneratable(puzzle, countries, minPerCell)) {
+      return puzzle;
+    }
+  }
+  throw new Error(
+    `Could not generate a random puzzle with >= ${minPerCell} countries per cell after ${maxAttempts} attempts`,
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@
  * @property {'country' | 'other'} category
  * @property {Continent | null} continent
  * @property {string | null} [statehood]
+ * @property {string[]} [colors]  palette: red/white/blue/green/yellow/black/orange
  */
 
 /** @type {Continent[]} */

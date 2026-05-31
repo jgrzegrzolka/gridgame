@@ -4,1889 +4,3303 @@
     "name": "Afghanistan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "black",
+      "red",
+      "green",
+      "white"
+    ]
   },
   {
     "code": "ax",
     "name": "Aland Islands",
     "continent": "Europe",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "al",
     "name": "Albania",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "black"
+    ]
   },
   {
     "code": "dz",
     "name": "Algeria",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "green",
+      "red"
+    ]
   },
   {
     "code": "as",
     "name": "American Samoa",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "ad",
     "name": "Andorra",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "ao",
     "name": "Angola",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "black",
+      "yellow"
+    ]
   },
   {
     "code": "ai",
     "name": "Anguilla",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red",
+      "orange"
+    ]
   },
   {
     "code": "aq",
     "name": "Antarctica",
     "continent": "Antarctica",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "ag",
     "name": "Antigua and Barbuda",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "blue",
+      "white",
+      "black",
+      "yellow"
+    ]
   },
   {
     "code": "ar",
     "name": "Argentina",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "am",
     "name": "Armenia",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "blue",
+      "orange"
+    ]
   },
   {
     "code": "aw",
     "name": "Aruba",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "yellow",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "sh-ac",
     "name": "Ascension Island",
     "continent": "Africa",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "asean",
     "name": "Association of Southeast Asian Nations",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "au",
     "name": "Australia",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "at",
     "name": "Austria",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "az",
     "name": "Azerbaijan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "green",
+      "white"
+    ]
   },
   {
     "code": "bs",
     "name": "Bahamas",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "black",
+      "yellow",
+      "blue"
+    ]
   },
   {
     "code": "bh",
     "name": "Bahrain",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "bd",
     "name": "Bangladesh",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "red"
+    ]
   },
   {
     "code": "bb",
     "name": "Barbados",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow",
+      "black"
+    ]
   },
   {
     "code": "es-pv",
     "name": "Basque Country",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "red",
+      "green",
+      "white"
+    ]
   },
   {
     "code": "by",
     "name": "Belarus",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "green",
+      "white"
+    ]
   },
   {
     "code": "be",
     "name": "Belgium",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "black",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "bz",
     "name": "Belize",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "green",
+      "yellow",
+      "black"
+    ]
   },
   {
     "code": "bj",
     "name": "Benin",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "bm",
     "name": "Bermuda",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "red",
+      "blue",
+      "white",
+      "green",
+      "yellow"
+    ]
   },
   {
     "code": "bt",
     "name": "Bhutan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "yellow",
+      "orange",
+      "white"
+    ]
   },
   {
     "code": "bo",
     "name": "Bolivia",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "bq",
     "name": "Bonaire, Sint Eustatius and Saba",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "ba",
     "name": "Bosnia and Herzegovina",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow",
+      "white"
+    ]
   },
   {
     "code": "bw",
     "name": "Botswana",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "black",
+      "white"
+    ]
   },
   {
     "code": "bv",
     "name": "Bouvet Island",
     "continent": "Antarctica",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "red",
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "br",
     "name": "Brazil",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "io",
     "name": "British Indian Ocean Territory",
     "continent": "Asia",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red",
+      "green"
+    ]
   },
   {
     "code": "bn",
     "name": "Brunei Darussalam",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "yellow",
+      "white",
+      "black",
+      "red"
+    ]
   },
   {
     "code": "bg",
     "name": "Bulgaria",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "green",
+      "red"
+    ]
   },
   {
     "code": "bf",
     "name": "Burkina Faso",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "green",
+      "yellow"
+    ]
   },
   {
     "code": "bi",
     "name": "Burundi",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "green"
+    ]
   },
   {
     "code": "cv",
     "name": "Cabo Verde",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "kh",
     "name": "Cambodia",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "cm",
     "name": "Cameroon",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "ca",
     "name": "Canada",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "ic",
     "name": "Canary Islands",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "blue",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "es-ct",
     "name": "Catalonia",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "ky",
     "name": "Cayman Islands",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "cf",
     "name": "Central African Republic",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white",
+      "green",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "cefta",
     "name": "Central European Free Trade Agreement",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "blue",
+      "yellow"
+    ]
   },
   {
     "code": "td",
     "name": "Chad",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "cl",
     "name": "Chile",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "cn",
     "name": "China",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "cx",
     "name": "Christmas Island",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "green",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "cp",
     "name": "Clipperton Island",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "cc",
     "name": "Cocos (Keeling) Islands",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "green",
+      "yellow"
+    ]
   },
   {
     "code": "co",
     "name": "Colombia",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "yellow",
+      "blue",
+      "red"
+    ]
   },
   {
     "code": "km",
     "name": "Comoros",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "yellow",
+      "white",
+      "red",
+      "blue",
+      "green"
+    ]
   },
   {
     "code": "ck",
     "name": "Cook Islands",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "cr",
     "name": "Costa Rica",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "hr",
     "name": "Croatia",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "cu",
     "name": "Cuba",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "cw",
     "name": "Curaçao",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "yellow",
+      "white"
+    ]
   },
   {
     "code": "cy",
     "name": "Cyprus",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "orange",
+      "green"
+    ]
   },
   {
     "code": "cz",
     "name": "Czech Republic",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "red",
+      "blue"
+    ]
   },
   {
     "code": "ci",
     "name": "Côte d'Ivoire",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "orange",
+      "white",
+      "green"
+    ]
   },
   {
     "code": "cd",
     "name": "Democratic Republic of the Congo",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "dk",
     "name": "Denmark",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "dg",
     "name": "Diego Garcia",
     "continent": "Asia",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red",
+      "green"
+    ]
   },
   {
     "code": "dj",
     "name": "Djibouti",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "green",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "dm",
     "name": "Dominica",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "black",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "do",
     "name": "Dominican Republic",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "eac",
     "name": "East African Community",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "blue",
+      "white",
+      "green",
+      "black",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "ec",
     "name": "Ecuador",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "yellow",
+      "blue",
+      "red"
+    ]
   },
   {
     "code": "eg",
     "name": "Egypt",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "black",
+      "yellow"
+    ]
   },
   {
     "code": "sv",
     "name": "El Salvador",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "gb-eng",
     "name": "England",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "white",
+      "red"
+    ]
   },
   {
     "code": "gq",
     "name": "Equatorial Guinea",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white",
+      "red",
+      "blue"
+    ]
   },
   {
     "code": "er",
     "name": "Eritrea",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "green",
+      "blue",
+      "yellow"
+    ]
   },
   {
     "code": "ee",
     "name": "Estonia",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "black",
+      "white"
+    ]
   },
   {
     "code": "sz",
     "name": "Eswatini",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow",
+      "red",
+      "black",
+      "white"
+    ]
   },
   {
     "code": "et",
     "name": "Ethiopia",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "red",
+      "blue"
+    ]
   },
   {
     "code": "eu",
     "name": "Europe",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "blue",
+      "yellow"
+    ]
   },
   {
     "code": "fk",
     "name": "Falkland Islands",
     "continent": "South America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "fo",
     "name": "Faroe Islands",
     "continent": "Europe",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "white",
+      "red",
+      "blue"
+    ]
   },
   {
     "code": "fm",
     "name": "Federated States of Micronesia",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "fj",
     "name": "Fiji",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "fi",
     "name": "Finland",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "fr",
     "name": "France",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "gf",
     "name": "French Guiana",
     "continent": "South America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "pf",
     "name": "French Polynesia",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "tf",
     "name": "French Southern Territories",
     "continent": "Antarctica",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "ga",
     "name": "Gabon",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "blue"
+    ]
   },
   {
     "code": "es-ga",
     "name": "Galicia",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "gm",
     "name": "Gambia",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "blue",
+      "green",
+      "white"
+    ]
   },
   {
     "code": "ge",
     "name": "Georgia",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "red"
+    ]
   },
   {
     "code": "de",
     "name": "Germany",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "black",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "gh",
     "name": "Ghana",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow",
+      "green",
+      "black"
+    ]
   },
   {
     "code": "gi",
     "name": "Gibraltar",
     "continent": "Europe",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "white",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "gr",
     "name": "Greece",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "gl",
     "name": "Greenland",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "white",
+      "red"
+    ]
   },
   {
     "code": "gd",
     "name": "Grenada",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "gp",
     "name": "Guadeloupe",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "gu",
     "name": "Guam",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "gt",
     "name": "Guatemala",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "gg",
     "name": "Guernsey",
     "continent": "Europe",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "white",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "gn",
     "name": "Guinea",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "gw",
     "name": "Guinea-Bissau",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow",
+      "green",
+      "black"
+    ]
   },
   {
     "code": "gy",
     "name": "Guyana",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "red",
+      "yellow",
+      "black",
+      "white"
+    ]
   },
   {
     "code": "ht",
     "name": "Haiti",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "hm",
     "name": "Heard Island and McDonald Islands",
     "continent": "Antarctica",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "va",
     "name": "Vatican City",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_observer"
+    "statehood": "un_observer",
+    "colors": [
+      "yellow",
+      "white"
+    ]
   },
   {
     "code": "hn",
     "name": "Honduras",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "hk",
     "name": "Hong Kong",
     "continent": "Asia",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "hu",
     "name": "Hungary",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "green"
+    ]
   },
   {
     "code": "is",
     "name": "Iceland",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "in",
     "name": "India",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "orange",
+      "white",
+      "green",
+      "blue"
+    ]
   },
   {
     "code": "id",
     "name": "Indonesia",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "ir",
     "name": "Iran",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "iq",
     "name": "Iraq",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "black",
+      "green"
+    ]
   },
   {
     "code": "ie",
     "name": "Ireland",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white",
+      "orange"
+    ]
   },
   {
     "code": "im",
     "name": "Isle of Man",
     "continent": "Europe",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "red",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "il",
     "name": "Israel",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "it",
     "name": "Italy",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "jm",
     "name": "Jamaica",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "black",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "jp",
     "name": "Japan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "red"
+    ]
   },
   {
     "code": "je",
     "name": "Jersey",
     "continent": "Europe",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "white",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "jo",
     "name": "Jordan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "black",
+      "white",
+      "green",
+      "red"
+    ]
   },
   {
     "code": "kz",
     "name": "Kazakhstan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow"
+    ]
   },
   {
     "code": "ke",
     "name": "Kenya",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "black",
+      "red",
+      "green",
+      "white"
+    ]
   },
   {
     "code": "ki",
     "name": "Kiribati",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "yellow",
+      "blue"
+    ]
   },
   {
     "code": "xk",
     "name": "Kosovo",
     "continent": "Europe",
     "category": "country",
-    "statehood": "non_un"
+    "statehood": "non_un",
+    "colors": [
+      "blue",
+      "yellow",
+      "white"
+    ]
   },
   {
     "code": "kw",
     "name": "Kuwait",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white",
+      "red",
+      "black"
+    ]
   },
   {
     "code": "kg",
     "name": "Kyrgyzstan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "la",
     "name": "Laos",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "lv",
     "name": "Latvia",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "arab",
     "name": "League of Arab States",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "green",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "lb",
     "name": "Lebanon",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "green"
+    ]
   },
   {
     "code": "ls",
     "name": "Lesotho",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white",
+      "green",
+      "black"
+    ]
   },
   {
     "code": "lr",
     "name": "Liberia",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "ly",
     "name": "Libya",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "black",
+      "green",
+      "white"
+    ]
   },
   {
     "code": "li",
     "name": "Liechtenstein",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "lt",
     "name": "Lithuania",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "yellow",
+      "green",
+      "red"
+    ]
   },
   {
     "code": "lu",
     "name": "Luxembourg",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "mo",
     "name": "Macau",
     "continent": "Asia",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "green",
+      "yellow",
+      "white"
+    ]
   },
   {
     "code": "mg",
     "name": "Madagascar",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "red",
+      "green"
+    ]
   },
   {
     "code": "mw",
     "name": "Malawi",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "black",
+      "red",
+      "green"
+    ]
   },
   {
     "code": "my",
     "name": "Malaysia",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "blue",
+      "yellow"
+    ]
   },
   {
     "code": "mv",
     "name": "Maldives",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "green",
+      "white"
+    ]
   },
   {
     "code": "ml",
     "name": "Mali",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "mt",
     "name": "Malta",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "mh",
     "name": "Marshall Islands",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white",
+      "orange"
+    ]
   },
   {
     "code": "mq",
     "name": "Martinique",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "mr",
     "name": "Mauritania",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "mu",
     "name": "Mauritius",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "blue",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "yt",
     "name": "Mayotte",
     "continent": "Africa",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "mx",
     "name": "Mexico",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "md",
     "name": "Moldova",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "mc",
     "name": "Monaco",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "mn",
     "name": "Mongolia",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "blue",
+      "yellow"
+    ]
   },
   {
     "code": "me",
     "name": "Montenegro",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "ms",
     "name": "Montserrat",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "ma",
     "name": "Morocco",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "green"
+    ]
   },
   {
     "code": "mz",
     "name": "Mozambique",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white",
+      "black",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "mm",
     "name": "Myanmar",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "yellow",
+      "green",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "na",
     "name": "Namibia",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "green",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "nr",
     "name": "Nauru",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "np",
     "name": "Nepal",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "nl",
     "name": "Netherlands",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "nc",
     "name": "New Caledonia",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "green",
+      "yellow",
+      "black"
+    ]
   },
   {
     "code": "nz",
     "name": "New Zealand",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "ni",
     "name": "Nicaragua",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "ne",
     "name": "Niger",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "orange",
+      "white",
+      "green"
+    ]
   },
   {
     "code": "ng",
     "name": "Nigeria",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white"
+    ]
   },
   {
     "code": "nu",
     "name": "Niue",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "yellow",
+      "blue",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "nf",
     "name": "Norfolk Island",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "green",
+      "white"
+    ]
   },
   {
     "code": "kp",
     "name": "North Korea",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "mk",
     "name": "North Macedonia",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "gb-nir",
     "name": "Northern Ireland",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "white",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "mp",
     "name": "Northern Mariana Islands",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "no",
     "name": "Norway",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "om",
     "name": "Oman",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "green"
+    ]
   },
   {
     "code": "pc",
     "name": "Pacific Community",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "blue",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "pk",
     "name": "Pakistan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white"
+    ]
   },
   {
     "code": "pw",
     "name": "Palau",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow"
+    ]
   },
   {
     "code": "pa",
     "name": "Panama",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "pg",
     "name": "Papua New Guinea",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "black",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "py",
     "name": "Paraguay",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "pe",
     "name": "Peru",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "ph",
     "name": "Philippines",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "pn",
     "name": "Pitcairn",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "pl",
     "name": "Poland",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "red"
+    ]
   },
   {
     "code": "pt",
     "name": "Portugal",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "red",
+      "yellow",
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "pr",
     "name": "Puerto Rico",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "qa",
     "name": "Qatar",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "red"
+    ]
   },
   {
     "code": "cg",
     "name": "Republic of the Congo",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "ro",
     "name": "Romania",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "ru",
     "name": "Russia",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "blue",
+      "red"
+    ]
   },
   {
     "code": "rw",
     "name": "Rwanda",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "re",
     "name": "Réunion",
     "continent": "Africa",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "bl",
     "name": "Saint Barthélemy",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "sh-hl",
     "name": "Saint Helena",
     "continent": "Africa",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "sh",
     "name": "Saint Helena, Ascension and Tristan da Cunha",
     "continent": "Africa",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "kn",
     "name": "Saint Kitts and Nevis",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "red",
+      "yellow",
+      "black",
+      "white"
+    ]
   },
   {
     "code": "lc",
     "name": "Saint Lucia",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "black",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "mf",
     "name": "Saint Martin",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red"
+    ]
   },
   {
     "code": "pm",
     "name": "Saint Pierre and Miquelon",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "white",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "vc",
     "name": "Saint Vincent and the Grenadines",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "ws",
     "name": "Samoa",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "sm",
     "name": "San Marino",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "st",
     "name": "Sao Tome and Principe",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "red",
+      "black"
+    ]
   },
   {
     "code": "sa",
     "name": "Saudi Arabia",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white"
+    ]
   },
   {
     "code": "gb-sct",
     "name": "Scotland",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "sn",
     "name": "Senegal",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "red"
+    ]
   },
   {
     "code": "rs",
     "name": "Serbia",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "sc",
     "name": "Seychelles",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow",
+      "red",
+      "white",
+      "green"
+    ]
   },
   {
     "code": "sl",
     "name": "Sierra Leone",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "sg",
     "name": "Singapore",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "sx",
     "name": "Sint Maarten",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "sk",
     "name": "Slovakia",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "blue",
+      "red"
+    ]
   },
   {
     "code": "si",
     "name": "Slovenia",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "blue",
+      "red"
+    ]
   },
   {
     "code": "sb",
     "name": "Solomon Islands",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "green",
+      "yellow",
+      "white"
+    ]
   },
   {
     "code": "so",
     "name": "Somalia",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "za",
     "name": "South Africa",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "black",
+      "white",
+      "red",
+      "blue"
+    ]
   },
   {
     "code": "gs",
     "name": "South Georgia and the South Sandwich Islands",
     "continent": "Antarctica",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "kr",
     "name": "South Korea",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "white",
+      "red",
+      "blue",
+      "black"
+    ]
   },
   {
     "code": "ss",
     "name": "South Sudan",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "black",
+      "red",
+      "green",
+      "white",
+      "blue",
+      "yellow"
+    ]
   },
   {
     "code": "es",
     "name": "Spain",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "lk",
     "name": "Sri Lanka",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "yellow",
+      "red",
+      "green",
+      "orange"
+    ]
   },
   {
     "code": "ps",
     "name": "State of Palestine",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_observer"
+    "statehood": "un_observer",
+    "colors": [
+      "black",
+      "white",
+      "green",
+      "red"
+    ]
   },
   {
     "code": "sd",
     "name": "Sudan",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "black",
+      "green"
+    ]
   },
   {
     "code": "sr",
     "name": "Suriname",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "white",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "sj",
     "name": "Svalbard and Jan Mayen",
     "continent": "Europe",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "se",
     "name": "Sweden",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow"
+    ]
   },
   {
     "code": "ch",
     "name": "Switzerland",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "sy",
     "name": "Syria",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "black",
+      "green"
+    ]
   },
   {
     "code": "tw",
     "name": "Taiwan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "non_un"
+    "statehood": "non_un",
+    "colors": [
+      "red",
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "tj",
     "name": "Tajikistan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "green",
+      "yellow"
+    ]
   },
   {
     "code": "tz",
     "name": "Tanzania",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "black",
+      "blue"
+    ]
   },
   {
     "code": "th",
     "name": "Thailand",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "tl",
     "name": "Timor-Leste",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow",
+      "black",
+      "white"
+    ]
   },
   {
     "code": "tg",
     "name": "Togo",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "tk",
     "name": "Tokelau",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "yellow",
+      "white"
+    ]
   },
   {
     "code": "to",
     "name": "Tonga",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "tt",
     "name": "Trinidad and Tobago",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "black"
+    ]
   },
   {
     "code": "sh-ta",
     "name": "Tristan da Cunha",
     "continent": "Africa",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow",
+      "green"
+    ]
   },
   {
     "code": "tn",
     "name": "Tunisia",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "tm",
     "name": "Turkmenistan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "tc",
     "name": "Turks and Caicos Islands",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "tv",
     "name": "Tuvalu",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "tr",
     "name": "Türkiye",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white"
+    ]
   },
   {
     "code": "ug",
     "name": "Uganda",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "black",
+      "yellow",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "ua",
     "name": "Ukraine",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "yellow"
+    ]
   },
   {
     "code": "ae",
     "name": "United Arab Emirates",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "green",
+      "white",
+      "black"
+    ]
   },
   {
     "code": "gb",
     "name": "United Kingdom",
     "continent": "Europe",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "un",
     "name": "United Nations",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "blue",
+      "white"
+    ]
   },
   {
     "code": "um",
     "name": "United States Minor Outlying Islands",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "us",
     "name": "United States of America",
     "continent": "North America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "uy",
     "name": "Uruguay",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white",
+      "yellow"
+    ]
   },
   {
     "code": "uz",
     "name": "Uzbekistan",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "blue",
+      "white",
+      "green",
+      "red"
+    ]
   },
   {
     "code": "vu",
     "name": "Vanuatu",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "black",
+      "red",
+      "green",
+      "yellow"
+    ]
   },
   {
     "code": "ve",
     "name": "Venezuela",
     "continent": "South America",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "yellow",
+      "blue",
+      "red",
+      "white"
+    ]
   },
   {
     "code": "vn",
     "name": "Vietnam",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "vg",
     "name": "Virgin Islands (British)",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "blue",
+      "red",
+      "white",
+      "green",
+      "yellow"
+    ]
   },
   {
     "code": "vi",
     "name": "Virgin Islands (U.S.)",
     "continent": "North America",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "white",
+      "blue",
+      "red",
+      "yellow"
+    ]
   },
   {
     "code": "gb-wls",
     "name": "Wales",
     "continent": null,
     "category": "other",
-    "statehood": null
+    "statehood": null,
+    "colors": [
+      "white",
+      "green",
+      "red"
+    ]
   },
   {
     "code": "wf",
     "name": "Wallis and Futuna",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "red",
+      "white",
+      "blue"
+    ]
   },
   {
     "code": "eh",
     "name": "Western Sahara",
     "continent": "Africa",
     "category": "country",
-    "statehood": "territory"
+    "statehood": "territory",
+    "colors": [
+      "black",
+      "white",
+      "green",
+      "red"
+    ]
   },
   {
     "code": "ye",
     "name": "Yemen",
     "continent": "Asia",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "red",
+      "white",
+      "black"
+    ]
   },
   {
     "code": "zm",
     "name": "Zambia",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "red",
+      "black",
+      "orange"
+    ]
   },
   {
     "code": "zw",
     "name": "Zimbabwe",
     "continent": "Africa",
     "category": "country",
-    "statehood": "un_member"
+    "statehood": "un_member",
+    "colors": [
+      "green",
+      "yellow",
+      "red",
+      "black",
+      "white"
+    ]
   }
 ]
