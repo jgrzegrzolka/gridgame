@@ -71,7 +71,6 @@
       const bestEl = document.getElementById('best');
       const playTimerEl = document.getElementById('play-timer');
       const playAgainEl = document.getElementById('play-again');
-      const backEl = document.getElementById('back');
       const progressBarEl = document.getElementById('progress-bar');
 
       const DEFAULT_VARIANT = 'europe';
@@ -133,7 +132,6 @@
       }
 
       function startGame(key, mode, all) {
-        backEl.href = window.location.pathname;
         const pool = poolFor(key, all);
         const target = targetFor(mode, pool);
         const quiz = createQuiz(pool, target);
