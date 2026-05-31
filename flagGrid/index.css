@@ -45,6 +45,11 @@ body {
 .cell {
   position: relative;
   cursor: pointer;
+  /* background-clip stops the hover bg painting over the cell's borders.
+     Without this, Firefox under border-collapse: collapse paints the
+     hover background over the shared right/bottom borders and they
+     visually vanish. */
+  background-clip: padding-box;
 }
 .cell:hover {
   background: #fafafa;
