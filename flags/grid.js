@@ -92,6 +92,42 @@ export function solutionState(puzzle, solution) {
   return { cells, complete };
 }
 
+/**
+ * @typedef {Object} PickOutcome
+ * @property {boolean} accepted
+ * @property {(Country | null)[][]} [solution]  new solution when accepted
+ */
+
+/**
+ * Decides whether `country` can be placed at (row, col) in `solution`.
+ * Rejects if it fails either predicate or duplicates a country already
+ * placed in another cell. On accept, returns a fresh solution with the
+ * pick applied; the input is never mutated.
+ *
+ * @param {Puzzle} puzzle
+ * @param {(Country | null)[][]} solution
+ * @param {number} row
+ * @param {number} col
+ * @param {Country} country
+ * @returns {PickOutcome}
+ */
+export function tryPick(puzzle, solution, row, col, country) {
+  if (!validateCell(puzzle, row, col, country)) {
+    return { accepted: false };
+  }
+  for (let r = 0; r < solution.length; r++) {
+    for (let c = 0; c < solution[r].length; c++) {
+      if (r === row && c === col) continue;
+      if (solution[r][c]?.code === country.code) {
+        return { accepted: false };
+      }
+    }
+  }
+  const next = solution.map((rowArr) => rowArr.slice());
+  next[row][col] = country;
+  return { accepted: true, solution: next };
+}
+
 // ---------------------------------------------------------------------------
 // Starter categories. Today we can only express predicates over the fields
 // already on Country (continent, statehood) — useful for proving the engine

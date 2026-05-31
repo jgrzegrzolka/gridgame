@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   validateCell,
   solutionState,
+  tryPick,
   continent,
   statehood,
   nameStartsWith,
@@ -227,6 +228,72 @@ test('solutionState.complete is true when all nine cells are filled, valid, and 
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
       assert.deepEqual(state.cells[r][c], { filled: true, valid: true, duplicate: false });
+    }
+  }
+});
+
+function emptySolution() {
+  return [
+    [null, null, null],
+    [null, null, null],
+    [null, null, null],
+  ];
+}
+
+test('tryPick accepts a valid, unique pick and returns a new solution with the pick placed', () => {
+  const before = emptySolution();
+  const result = tryPick(PUZZLE, before, 0, 0, FR);
+  assert.equal(result.accepted, true);
+  assert.equal(result.solution[0][0], FR);
+  // Untouched cells remain null in the new solution.
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (r === 0 && c === 0) continue;
+      assert.equal(result.solution[r][c], null);
+    }
+  }
+});
+
+test('tryPick rejects when the row predicate fails', () => {
+  const result = tryPick(PUZZLE, emptySolution(), 0, 0, JP); // Asia in Europe row
+  assert.equal(result.accepted, false);
+  assert.equal(result.solution, undefined);
+});
+
+test('tryPick rejects when the column predicate fails', () => {
+  const result = tryPick(PUZZLE, emptySolution(), 0, 1, FR); // FR is UN, col 1 is Observer
+  assert.equal(result.accepted, false);
+});
+
+test('tryPick rejects a duplicate of a country already placed elsewhere', () => {
+  // Puzzle where two cells both accept FR (Europe + UN), so the duplicate
+  // path is exercised cleanly rather than masked by a predicate fail.
+  const dupPuzzle = {
+    rows: [EUROPE, EUROPE, AFRICA],
+    cols: [UN, UN, TERRITORY],
+  };
+  const solution = emptySolution();
+  solution[0][0] = FR;
+  const result = tryPick(dupPuzzle, solution, 1, 1, FR);
+  assert.equal(result.accepted, false);
+});
+
+test('tryPick accepts replacing the same cell with a different valid country', () => {
+  const solution = emptySolution();
+  solution[0][0] = FR;
+  const result = tryPick(PUZZLE, solution, 0, 0, DE);
+  assert.equal(result.accepted, true);
+  assert.equal(result.solution[0][0], DE);
+});
+
+test('tryPick does not mutate the original solution on accept', () => {
+  const before = emptySolution();
+  before[1][1] = JP;
+  const snapshot = before.map((r) => r.slice());
+  tryPick(PUZZLE, before, 0, 0, FR);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      assert.equal(before[r][c], snapshot[r][c]);
     }
   }
 });

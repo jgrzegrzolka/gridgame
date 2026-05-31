@@ -27,8 +27,7 @@
     </dialog>
     <script type="module">
       import {
-        validateCell,
-        solutionState,
+        tryPick,
         continent,
         nameStartsWith,
         suggest,
@@ -40,7 +39,7 @@
       };
 
       /** @type {(import('../flags/group.js').Country | null)[][]} */
-      const solution = [
+      let solution = [
         [null, null, null],
         [null, null, null],
         [null, null, null],
@@ -135,13 +134,30 @@
 
       function pickCountry(country) {
         if (!activeCell) return;
-        solution[activeCell.row][activeCell.col] = country;
+        const { row, col } = activeCell;
+        const result = tryPick(puzzle, solution, row, col, country);
         pickerEl.close();
+        if (!result.accepted) {
+          shakeCell(row, col);
+          return;
+        }
+        solution = result.solution;
         renderGrid();
       }
 
+      function shakeCell(row, col) {
+        const td = gridBodyEl.querySelector(
+          `td[data-row="${row}"][data-col="${col}"]`,
+        );
+        td.classList.remove('shake');
+        // Force reflow so re-adding the class restarts the animation
+        // even if it was already running.
+        void td.offsetWidth;
+        td.classList.add('shake');
+      }
+
       function renderGrid() {
-        const state = solutionState(puzzle, solution);
+        let filledCount = 0;
         for (let r = 0; r < 3; r++) {
           for (let c = 0; c < 3; c++) {
             const td = /** @type {HTMLTableCellElement} */ (
@@ -150,25 +166,19 @@
             td.className = 'cell';
             td.innerHTML = '';
             const country = solution[r][c];
-            const cellState = state.cells[r][c];
-            if (!cellState.filled || !country) {
+            if (!country) {
               td.textContent = '+';
               continue;
             }
+            filledCount++;
             td.classList.add('filled');
             const img = document.createElement('img');
             img.src = `../flags/svg/${country.code}.svg`;
             img.alt = country.name;
             td.appendChild(img);
-            const name = document.createElement('div');
-            name.textContent = country.name;
-            td.appendChild(name);
-            if (cellState.duplicate) td.classList.add('duplicate');
-            else if (cellState.valid) td.classList.add('valid');
-            else td.classList.add('invalid');
           }
         }
-        if (state.complete) {
+        if (filledCount === 9) {
           statusEl.textContent = 'Solved!';
           statusEl.classList.add('complete');
         } else {
