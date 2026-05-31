@@ -49,7 +49,7 @@ body {
   background: #fafafa;
 }
 .cell.filled {
-  padding: 4px;
+  padding: 10px;
 }
 .cell.filled img {
   display: block;
