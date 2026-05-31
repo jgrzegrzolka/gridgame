@@ -14,3 +14,16 @@ export const PUZZLE_1 = {
   rows: [continent('Europe'), continent('Asia'), continent('Africa')],
   cols: [hasColor('red'), hasMotif('animal'), hasMotif('coat-of-arms')],
 };
+
+/**
+ * Catalogue of every numbered puzzle, in chronological order. The
+ * archive page reads this list to render its index, and the menu's
+ * "Current" link still points at the latest entry by hand. When a new
+ * puzzle ships, add an entry here and create flagGrid/<slug>/index.html
+ * alongside it.
+ *
+ * @type {Array<{ slug: string, label: string, puzzle: Puzzle }>}
+ */
+export const ARCHIVE = [
+  { slug: '1', label: 'Game 1', puzzle: PUZZLE_1 },
+];
