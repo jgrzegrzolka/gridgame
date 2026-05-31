@@ -278,12 +278,21 @@ test('tryPick rejects a duplicate of a country already placed elsewhere', () => 
   assert.equal(result.accepted, false);
 });
 
-test('tryPick accepts replacing the same cell with a different valid country', () => {
+test('tryPick rejects any pick on an already-filled cell (placed cells are locked)', () => {
   const solution = emptySolution();
   solution[0][0] = FR;
+  // DE is a perfectly valid Europe + UN pick that would be accepted at
+  // (0,0) if the cell were empty — but the cell is filled, so reject.
   const result = tryPick(PUZZLE, solution, 0, 0, DE);
-  assert.equal(result.accepted, true);
-  assert.equal(result.solution[0][0], DE);
+  assert.equal(result.accepted, false);
+  assert.equal(result.solution, undefined);
+});
+
+test('tryPick rejects re-picking the same country into its own already-filled cell', () => {
+  const solution = emptySolution();
+  solution[0][0] = FR;
+  const result = tryPick(PUZZLE, solution, 0, 0, FR);
+  assert.equal(result.accepted, false);
 });
 
 test('tryPick does not mutate the original solution on accept', () => {

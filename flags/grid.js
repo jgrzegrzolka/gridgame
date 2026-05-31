@@ -100,7 +100,8 @@ export function solutionState(puzzle, solution) {
 
 /**
  * Decides whether `country` can be placed at (row, col) in `solution`.
- * Rejects if it fails either predicate or duplicates a country already
+ * Rejects if the cell is already filled (placed cells are locked), if the
+ * country fails either predicate, or if it duplicates a country already
  * placed in another cell. On accept, returns a fresh solution with the
  * pick applied; the input is never mutated.
  *
@@ -112,6 +113,9 @@ export function solutionState(puzzle, solution) {
  * @returns {PickOutcome}
  */
 export function tryPick(puzzle, solution, row, col, country) {
+  if (solution[row][col]) {
+    return { accepted: false };
+  }
   if (!validateCell(puzzle, row, col, country)) {
     return { accepted: false };
   }

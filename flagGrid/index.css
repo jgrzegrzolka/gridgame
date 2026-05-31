@@ -50,6 +50,10 @@ body {
 }
 .cell.filled {
   padding: 10px;
+  cursor: default;
+}
+.cell.filled:hover {
+  background: transparent;
 }
 .cell.filled img {
   display: block;

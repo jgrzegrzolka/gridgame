@@ -92,6 +92,7 @@
         });
 
       function openPicker(row, col) {
+        if (solution[row][col]) return;
         activeCell = { row, col };
         pickerInputEl.value = '';
         suggestionsEl.innerHTML = '';
