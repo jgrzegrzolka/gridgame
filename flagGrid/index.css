@@ -59,7 +59,7 @@ body {
 }
 .cell.shake {
   background: rgba(197, 48, 45, 0.20);
-  border-color: #c5302d;
+  box-shadow: inset 0 0 0 2px #c5302d;
   animation: cell-shake 0.4s ease-in-out;
 }
 @keyframes cell-shake {
