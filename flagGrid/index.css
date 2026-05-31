@@ -81,9 +81,11 @@ dialog#picker {
   border-radius: 0;
   background: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+dialog#picker[open] {
+  display: flex;
 }
 #picker-input {
   display: block;
