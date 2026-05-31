@@ -15,6 +15,7 @@ import {
   generateRandomPuzzle,
   formatGridStatus,
   cellRenderClasses,
+  pulseShake,
   CONTINENTS_FOR_RANDOM,
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
@@ -666,6 +667,63 @@ test('cellRenderClasses sets filled=false for an empty cell', () => {
 
 test('cellRenderClasses sets filled=true for any country', () => {
   assert.deepEqual(cellRenderClasses(FR), [['filled', true]]);
+});
+
+// Minimal stand-in for the slice of Element that pulseShake touches.
+// Lets us assert on class changes and synthesize event firings without
+// pulling in jsdom.
+function fakeCell() {
+  const classes = new Set();
+  /** @type {Map<string, Array<{ handler: () => void, once: boolean }>>} */
+  const listeners = new Map();
+  return {
+    classList: {
+      add: (c) => classes.add(c),
+      remove: (c) => classes.delete(c),
+      contains: (c) => classes.has(c),
+    },
+    addEventListener(type, handler, options) {
+      if (!listeners.has(type)) listeners.set(type, []);
+      listeners.get(type).push({ handler, once: !!options?.once });
+    },
+    fire(type) {
+      const all = listeners.get(type) ?? [];
+      listeners.set(type, []);
+      for (const entry of all) {
+        entry.handler();
+        if (!entry.once) listeners.get(type).push(entry);
+      }
+    },
+  };
+}
+
+test('pulseShake adds the .shake class to the cell', () => {
+  const cell = fakeCell();
+  pulseShake(cell);
+  assert.equal(cell.classList.contains('shake'), true);
+});
+
+test('pulseShake removes .shake when the cell fires animationend', () => {
+  // Regression: with renderGrid no longer wiping transient classes,
+  // .shake would otherwise stay painted forever once added. A
+  // corrected pick after a wrong one would show the flag on top of
+  // the lingering red overlay.
+  const cell = fakeCell();
+  pulseShake(cell);
+  cell.fire('animationend');
+  assert.equal(cell.classList.contains('shake'), false);
+});
+
+test('pulseShake wires a one-shot listener — a later stray animationend leaves a freshly-added .shake alone', () => {
+  const cell = fakeCell();
+  pulseShake(cell);
+  cell.fire('animationend'); // expected: clears .shake
+  // Simulate another interaction reapplying .shake (e.g. the user
+  // wrong-picks the same cell again) without re-calling pulseShake.
+  // The original {once: true} listener must NOT fire a second time.
+  cell.classList.add('shake');
+  cell.fire('animationend');
+  assert.equal(cell.classList.contains('shake'), true);
 });
 
 test('cellRenderClasses does not list any interaction-transient classes', () => {
