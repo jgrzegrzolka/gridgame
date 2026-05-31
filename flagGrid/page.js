@@ -3,6 +3,7 @@ import {
   suggest,
   formatGridStatus,
   cellRenderClasses,
+  pulseShake,
 } from '../flags/grid.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
@@ -165,7 +166,7 @@ export function runFlagGrid({ puzzle, countries }) {
     // Force reflow so re-adding the class restarts the animation even if
     // it was already running.
     void td.offsetWidth;
-    td.classList.add('shake');
+    pulseShake(td);
   }
 
   function renderGrid() {

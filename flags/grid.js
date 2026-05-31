@@ -393,6 +393,33 @@ export function suggest(allCountries, query, options = {}) {
 }
 
 /**
+ * Add a transient `.shake` class to a cell-like element and wire a
+ * one-shot listener that removes it when the cell's `animationend`
+ * event fires. Use this when an interaction needs to flash a visual
+ * pulse and then leave no trace — without the auto-remove the class
+ * (and its `::before` overlay) would stay painted forever now that
+ * renderGrid no longer wipes interaction transients.
+ *
+ * Caller is responsible for any reflow needed to restart an animation
+ * that's already running (`void el.offsetWidth` after `classList.remove`).
+ * That trick is real-DOM-specific and intentionally kept out here so
+ * the function stays node-testable against a hand-rolled fake.
+ *
+ * @param {{
+ *   classList: { add(c: string): void, remove(c: string): void },
+ *   addEventListener(type: string, handler: () => void, options?: { once?: boolean }): void,
+ * }} cell
+ */
+export function pulseShake(cell) {
+  cell.addEventListener(
+    'animationend',
+    () => cell.classList.remove('shake'),
+    { once: true },
+  );
+  cell.classList.add('shake');
+}
+
+/**
  * Returns the renderer-owned classes for a single grid cell, given
  * the country placed there (or null for empty). Each entry is
  * `[className, shouldHave]`, intended to be applied with
