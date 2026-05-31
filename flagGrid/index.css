@@ -1,5 +1,5 @@
 body {
-  padding: var(--page-top) 24px 24px;
+  padding: var(--page-top) 0 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
