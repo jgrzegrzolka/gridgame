@@ -8,9 +8,26 @@
     <link rel="stylesheet" href="index.css" />
   </head>
   <body>
-    <ul class="menu">
-      <li><a href="allflags/">All flags</a></li>
-      <li><a href="flagQuiz/">Flag Quiz</a></li>
-    </ul>
+    <button
+      type="button"
+      class="burger"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="burger-panel"
+      onclick="
+        const open = this.getAttribute('aria-expanded') === 'true';
+        this.setAttribute('aria-expanded', String(!open));
+        this.setAttribute('aria-label', open ? 'Open menu' : 'Close menu');
+        document.getElementById('burger-panel').hidden = open;
+      "
+    >
+      <span class="burger-bars" aria-hidden="true"></span>
+    </button>
+    <nav id="burger-panel" class="burger-panel" hidden>
+      <ul class="menu">
+        <li><a href="allflags/">All flags</a></li>
+        <li><a href="flagQuiz/">Flag Quiz</a></li>
+      </ul>
+    </nav>
   </body>
 </html>
