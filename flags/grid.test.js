@@ -454,8 +454,7 @@ test('COLORS_FOR_RANDOM is the 7-colour canonical palette', () => {
 });
 
 test('MOTIFS_FOR_RANDOM lists every motif key that can be tagged on a flag', () => {
-  // Will grow as we add weapon / etc.
-  assert.deepEqual(MOTIFS_FOR_RANDOM, ['animal', 'coat-of-arms']);
+  assert.deepEqual(MOTIFS_FOR_RANDOM, ['animal', 'coat-of-arms', 'weapon']);
 });
 
 test('puzzleCellCounts counts countries satisfying both predicates per cell', () => {

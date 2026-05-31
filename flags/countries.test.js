@@ -4,7 +4,12 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from './grid.js';
+import {
+  COLORS_FOR_RANDOM,
+  MOTIFS_FOR_RANDOM,
+  CONTINENTS_FOR_RANDOM,
+  generateRandomPuzzle,
+} from './grid.js';
 import { CONTINENTS } from './group.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -101,4 +106,66 @@ test('every entry has a corresponding SVG file at flags/svg/{code}.svg', () => {
     if (!existsSync(svgPath)) missing.push(c.code);
   }
   assert.deepEqual(missing, [], `missing SVG files: ${missing.join(', ')}`);
+});
+
+test('every (continent × color) cell has at least one candidate country', () => {
+  // Random-puzzle generation only ever picks cols from this colour pool
+  // and rows from this continent pool; if any intersection is empty, the
+  // solvability gate fails for that combo and the shuffle wastes a roll.
+  //
+  // KNOWN_EMPTY pins down combos that are genuinely zero in the real-world
+  // data — no flag in that continent uses that colour. Adding a NEW
+  // empty cell (regression) fails the test; filling a known-empty one is
+  // also fine (the exception just becomes a no-op).
+  const KNOWN_EMPTY = new Set([
+    'South America × orange', // no South American flag uses orange
+  ]);
+  const empty = [];
+  for (const cont of CONTINENTS_FOR_RANDOM) {
+    for (const color of COLORS_FOR_RANDOM) {
+      const n = COUNTRIES.filter(
+        (c) => c.continent === cont && Array.isArray(c.colors) && c.colors.includes(color),
+      ).length;
+      const label = `${cont} × ${color}`;
+      if (n === 0 && !KNOWN_EMPTY.has(label)) empty.push(label);
+    }
+  }
+  assert.deepEqual(empty, [], `unexpected empty cells: ${empty.join(', ')}`);
+});
+
+test('every (continent × motif) cell has at least one candidate country', () => {
+  // ≥2 is the preferred buffer against the no-duplicates rule (see
+  // isPuzzleGeneratable's default minPerCell). ≥1 is the absolute minimum
+  // — below that, the solvability gate can never pass for that combo and
+  // we'd risk hitting maxAttempts. Europe × weapon is currently 1 (just
+  // Malta) — acceptable but tight; see scripts/add-flag-motifs.mjs.
+  const empty = [];
+  for (const cont of CONTINENTS_FOR_RANDOM) {
+    for (const motif of MOTIFS_FOR_RANDOM) {
+      const n = COUNTRIES.filter(
+        (c) => c.continent === cont && Array.isArray(c.motifs) && c.motifs.includes(motif),
+      ).length;
+      if (n === 0) empty.push(`${cont} × ${motif}`);
+    }
+  }
+  assert.deepEqual(empty, [], `no candidate flags for: ${empty.join(', ')}`);
+});
+
+test('generateRandomPuzzle succeeds with the real countries.json under several seeds', () => {
+  // Real-data integration check: if motif tagging drifts to the point
+  // where the solvability gate can never pass, generateRandomPuzzle
+  // throws after maxAttempts. This pins down a few seeded RNGs so a
+  // regression shows up as a hard failure rather than a flaky game UI.
+  const seeds = [
+    [0.11, 0.27, 0.83, 0.04, 0.55, 0.62, 0.71, 0.99, 0.18, 0.36],
+    [0.42, 0.13, 0.77, 0.95, 0.03, 0.59, 0.21, 0.48, 0.66, 0.82],
+    [0.07, 0.31, 0.52, 0.69, 0.88, 0.14, 0.97, 0.25, 0.43, 0.61],
+  ];
+  for (const seed of seeds) {
+    let i = 0;
+    const rng = () => seed[i++ % seed.length];
+    const puzzle = generateRandomPuzzle(COUNTRIES, { rng });
+    assert.equal(puzzle.rows.length, 3);
+    assert.equal(puzzle.cols.length, 3);
+  }
 });

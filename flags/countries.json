@@ -63,7 +63,9 @@
       "blue"
     ],
     "motifs": [
-      "animal"
+      "animal",
+      "coat-of-arms",
+      "weapon"
     ]
   },
   {
@@ -93,7 +95,9 @@
       "black",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "weapon"
+    ]
   },
   {
     "code": "ai",
@@ -293,7 +297,9 @@
       "yellow",
       "black"
     ],
-    "motifs": []
+    "motifs": [
+      "weapon"
+    ]
   },
   {
     "code": "es-pv",
@@ -411,7 +417,8 @@
     ],
     "motifs": [
       "animal",
-      "coat-of-arms"
+      "coat-of-arms",
+      "weapon"
     ]
   },
   {
@@ -507,7 +514,9 @@
       "black",
       "red"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "bg",
@@ -573,7 +582,9 @@
       "blue",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "cm",
@@ -992,7 +1003,8 @@
     ],
     "motifs": [
       "animal",
-      "coat-of-arms"
+      "coat-of-arms",
+      "weapon"
     ]
   },
   {
@@ -1093,7 +1105,9 @@
       "black",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "weapon"
+    ]
   },
   {
     "code": "et",
@@ -1230,7 +1244,9 @@
       "red",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "tf",
@@ -1415,7 +1431,8 @@
     ],
     "motifs": [
       "animal",
-      "coat-of-arms"
+      "coat-of-arms",
+      "weapon"
     ]
   },
   {
@@ -1485,7 +1502,8 @@
       "white"
     ],
     "motifs": [
-      "coat-of-arms"
+      "coat-of-arms",
+      "weapon"
     ]
   },
   {
@@ -1600,7 +1618,9 @@
       "white",
       "red"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "iq",
@@ -1730,7 +1750,8 @@
       "yellow"
     ],
     "motifs": [
-      "animal"
+      "animal",
+      "coat-of-arms"
     ]
   },
   {
@@ -1746,7 +1767,8 @@
       "white"
     ],
     "motifs": [
-      "coat-of-arms"
+      "coat-of-arms",
+      "weapon"
     ]
   },
   {
@@ -2024,7 +2046,9 @@
       "red",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "weapon"
+    ]
   },
   {
     "code": "mh",
@@ -2147,7 +2171,9 @@
       "blue",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "me",
@@ -2206,7 +2232,9 @@
       "yellow",
       "red"
     ],
-    "motifs": []
+    "motifs": [
+      "weapon"
+    ]
   },
   {
     "code": "mm",
@@ -2445,7 +2473,9 @@
       "white",
       "green"
     ],
-    "motifs": []
+    "motifs": [
+      "weapon"
+    ]
   },
   {
     "code": "pc",
@@ -2862,7 +2892,10 @@
       "green",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms",
+      "weapon"
+    ]
   },
   {
     "code": "gb-sct",
@@ -3106,7 +3139,9 @@
       "orange"
     ],
     "motifs": [
-      "animal"
+      "animal",
+      "coat-of-arms",
+      "weapon"
     ]
   },
   {
@@ -3227,7 +3262,9 @@
       "green",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "tz",
@@ -3540,7 +3577,10 @@
       "green",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms",
+      "weapon"
+    ]
   },
   {
     "code": "ve",

@@ -203,6 +203,7 @@ export const COLORS_FOR_RANDOM = [
 export const MOTIFS_FOR_RANDOM = [
   'animal',
   'coat-of-arms',
+  'weapon',
 ];
 
 /**
