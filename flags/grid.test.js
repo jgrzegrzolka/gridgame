@@ -8,6 +8,9 @@ import {
   statehood,
   nameStartsWith,
   suggest,
+  randomPuzzle,
+  CONTINENTS_FOR_RANDOM,
+  LETTERS_FOR_RANDOM,
 } from './grid.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -342,6 +345,54 @@ test('tryPick does not mutate the original solution on accept', () => {
       assert.equal(before[r][c], snapshot[r][c]);
     }
   }
+});
+
+function sequenceRng(values) {
+  let i = 0;
+  return () => values[i++ % values.length];
+}
+
+test('randomPuzzle yields 3 row categories and 3 column categories', () => {
+  const p = randomPuzzle(() => 0);
+  assert.equal(p.rows.length, 3);
+  assert.equal(p.cols.length, 3);
+});
+
+test('randomPuzzle row categories are all continent categories', () => {
+  const p = randomPuzzle(() => 0);
+  for (const r of p.rows) {
+    assert.ok(r.id.startsWith('continent:'), `expected continent id, got ${r.id}`);
+    assert.ok(CONTINENTS_FOR_RANDOM.includes(r.label));
+  }
+});
+
+test('randomPuzzle column categories are all nameStartsWith letter categories', () => {
+  const p = randomPuzzle(() => 0);
+  for (const c of p.cols) {
+    assert.ok(c.id.startsWith('nameStartsWith:'), `expected nameStartsWith id, got ${c.id}`);
+  }
+});
+
+test('randomPuzzle picks distinct categories within each axis (no repeats)', () => {
+  // Even with a "weird" RNG that keeps returning the same fractional value,
+  // partial Fisher-Yates should still produce distinct picks.
+  const p = randomPuzzle(() => 0.42);
+  assert.equal(new Set(p.rows.map((r) => r.id)).size, 3);
+  assert.equal(new Set(p.cols.map((c) => c.id)).size, 3);
+});
+
+test('randomPuzzle is deterministic given a deterministic RNG', () => {
+  const seed = [0.11, 0.27, 0.83, 0.04, 0.55, 0.62, 0.71, 0.99, 0.18, 0.36];
+  const p1 = randomPuzzle(sequenceRng(seed));
+  const p2 = randomPuzzle(sequenceRng(seed));
+  assert.deepEqual(p1.rows.map((r) => r.id), p2.rows.map((r) => r.id));
+  assert.deepEqual(p1.cols.map((c) => c.id), p2.cols.map((c) => c.id));
+});
+
+test('LETTERS_FOR_RANDOM covers the full A-Z alphabet', () => {
+  assert.equal(LETTERS_FOR_RANDOM.length, 26);
+  assert.equal(LETTERS_FOR_RANDOM[0], 'A');
+  assert.equal(LETTERS_FOR_RANDOM[25], 'Z');
 });
 
 test('solutionState.complete is false when one cell is invalid even if all are filled and distinct', () => {

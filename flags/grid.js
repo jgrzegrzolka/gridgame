@@ -170,6 +170,24 @@ export function statehood(value, label) {
 }
 
 /**
+ * Continent names the random-puzzle generator draws from for the row axis.
+ */
+export const CONTINENTS_FOR_RANDOM = [
+  'Europe',
+  'Asia',
+  'Africa',
+  'North America',
+  'South America',
+  'Oceania',
+];
+
+/**
+ * Letters the random-puzzle generator draws from for the col axis (via
+ * nameStartsWith).
+ */
+export const LETTERS_FOR_RANDOM = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+/**
  * Category: country's name starts with the given letter (case-insensitive).
  * Useful as a "boring but always satisfiable" category for v0 puzzles that
  * use the existing data only.
@@ -183,6 +201,47 @@ export function nameStartsWith(letter) {
     id: `nameStartsWith:${upper}`,
     label: `Starts with ${upper}`,
     predicate: (c) => c.name.toUpperCase().startsWith(upper),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Random puzzles.
+// ---------------------------------------------------------------------------
+
+/**
+ * Pick `n` distinct elements from `pool` using a partial Fisher–Yates shuffle.
+ * Does not mutate the input.
+ *
+ * @template T
+ * @param {T[]} pool
+ * @param {number} n
+ * @param {() => number} rng  returns a value in [0, 1)
+ * @returns {T[]}
+ */
+function pickRandom(pool, n, rng) {
+  const arr = pool.slice();
+  for (let i = 0; i < n && i < arr.length; i++) {
+    const j = i + Math.floor(rng() * (arr.length - i));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.slice(0, n);
+}
+
+/**
+ * Build a random 3x3 puzzle with continent rows and nameStartsWith-letter
+ * columns. This v0 generator just shuffles — it does NOT yet guard against
+ * mutually-exclusive axis picks or empty cells (no country satisfies both
+ * predicates). Those guards are the next step.
+ *
+ * @param {() => number} [rng]  defaults to Math.random
+ * @returns {Puzzle}
+ */
+export function randomPuzzle(rng = Math.random) {
+  const rowNames = pickRandom(CONTINENTS_FOR_RANDOM, 3, rng);
+  const colLetters = pickRandom(LETTERS_FOR_RANDOM, 3, rng);
+  return {
+    rows: rowNames.map(continent),
+    cols: colLetters.map(nameStartsWith),
   };
 }
 

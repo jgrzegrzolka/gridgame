@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flag Grid — Random</title>
+    <link rel="stylesheet" href="../../common.css" />
+    <link rel="stylesheet" href="../index.css" />
+  </head>
+  <body>
+    <a class="back" href="../../" aria-label="Back">←</a>
+    <p class="status" id="status"></p>
+    <table class="grid">
+      <thead>
+        <tr>
+          <th class="corner"></th>
+          <th class="col-header" data-col="0"></th>
+          <th class="col-header" data-col="1"></th>
+          <th class="col-header" data-col="2"></th>
+        </tr>
+      </thead>
+      <tbody id="grid-body"></tbody>
+    </table>
+    <dialog id="picker">
+      <input type="text" id="picker-input" autocomplete="off" />
+      <ul class="suggestions" id="suggestions"></ul>
+    </dialog>
+    <script type="module">
+      import { runFlagGrid } from '../page.js';
+      import { randomPuzzle } from '../../flags/grid.js';
+
+      runFlagGrid({ puzzle: randomPuzzle() });
+    </script>
+  </body>
+</html>
