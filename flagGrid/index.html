@@ -178,10 +178,7 @@
             td.className = 'cell';
             td.innerHTML = '';
             const country = solution[r][c];
-            if (!country) {
-              td.textContent = '+';
-              continue;
-            }
+            if (!country) continue;
             filledCount++;
             td.classList.add('filled');
             const img = document.createElement('img');
