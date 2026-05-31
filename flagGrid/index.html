@@ -110,7 +110,9 @@
 
       pickerInputEl.addEventListener('input', () => {
         suggestionsEl.innerHTML = '';
-        const matches = suggest(allCountries, pickerInputEl.value);
+        const excludeCodes = new Set();
+        for (const row of solution) for (const cell of row) if (cell) excludeCodes.add(cell.code);
+        const matches = suggest(allCountries, pickerInputEl.value, { excludeCodes });
         topMatch = matches[0] ?? null;
         for (const country of matches) {
           const li = document.createElement('li');

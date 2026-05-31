@@ -196,17 +196,19 @@ const MIN_QUERY_LENGTH = 3;
  * Return countries whose name starts with the given query, case-insensitive,
  * capped at `limit` results. Returns an empty list while the trimmed query is
  * shorter than MIN_QUERY_LENGTH so the picker dropdown stays empty until the
- * player has typed something substantive.
+ * player has typed something substantive. Codes in `excludeCodes` are filtered
+ * out before the limit is applied so already-placed countries don't show up.
  *
  * @param {Country[]} allCountries
  * @param {string} query
- * @param {number} [limit] max results (default 8)
+ * @param {{ limit?: number, excludeCodes?: Set<string> }} [options]
  * @returns {Country[]}
  */
-export function suggest(allCountries, query, limit = 8) {
+export function suggest(allCountries, query, options = {}) {
+  const { limit = 8, excludeCodes = new Set() } = options;
   const q = query.trim().toLowerCase();
   if (q.length < MIN_QUERY_LENGTH) return [];
   return allCountries
-    .filter((c) => c.name.toLowerCase().startsWith(q))
+    .filter((c) => !excludeCodes.has(c.code) && c.name.toLowerCase().startsWith(q))
     .slice(0, limit);
 }

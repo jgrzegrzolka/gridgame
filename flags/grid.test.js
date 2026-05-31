@@ -129,7 +129,32 @@ test('suggest respects a custom limit', () => {
   const countries = Array.from({ length: 20 }, (_, i) =>
     country({ code: `c${i}`, name: `Country${i}` })
   );
-  assert.equal(suggest(countries, 'cou', 3).length, 3);
+  assert.equal(suggest(countries, 'cou', { limit: 3 }).length, 3);
+});
+
+test('suggest excludes countries whose codes are in excludeCodes', () => {
+  const countries = [
+    country({ code: 'fr', name: 'France' }),
+    country({ code: 'fi', name: 'Finland' }),
+  ];
+  const result = suggest(countries, 'fin', { excludeCodes: new Set(['fi']) });
+  assert.deepEqual(result.map((c) => c.code), []);
+});
+
+test('suggest only excludes the codes listed in excludeCodes, not unrelated matches', () => {
+  const countries = [
+    country({ code: 'fr', name: 'France' }),
+    country({ code: 'fra', name: 'Franconia' }),
+  ];
+  const result = suggest(countries, 'fra', { excludeCodes: new Set(['fr']) });
+  assert.deepEqual(result.map((c) => c.code), ['fra']);
+});
+
+test('suggest with an empty excludeCodes set behaves the same as no excludeCodes', () => {
+  const countries = [country({ code: 'fr', name: 'France' })];
+  const withEmpty = suggest(countries, 'fra', { excludeCodes: new Set() });
+  const without = suggest(countries, 'fra');
+  assert.deepEqual(withEmpty, without);
 });
 
 test('validateCell is true when country satisfies both row and column', () => {
