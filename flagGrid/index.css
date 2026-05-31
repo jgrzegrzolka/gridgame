@@ -1,11 +1,11 @@
 body {
-  /* flagGrid has no top chrome to clear (back button is bottom-right),
-     so override the shared --page-top down from 64px. */
-  --page-top: 16px;
   /* Shared by .grid and .below-grid so anything sitting below the
      board can match its width — lifted from .grid for that reason.
      Width AND height both read this var, so the cell stays square. */
   --grid-cell: min(140px, calc((100vw - 4px) / 4));
+  /* Inherit common.css's --page-top (64px) for desktop breathing room.
+     The mobile media query below tightens it to clear the full-width
+     burger with a 2px seam. */
   padding: var(--page-top) 2px 24px;
   display: flex;
   flex-direction: column;
