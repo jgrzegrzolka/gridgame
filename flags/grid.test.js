@@ -13,7 +13,9 @@ import {
   puzzleCellCounts,
   isPuzzleGeneratable,
   generateRandomPuzzle,
-  formatGridStatus,
+  computeGridScore,
+  loadGridState,
+  saveGridState,
   cellRenderClasses,
   pulseShake,
   CONTINENTS_FOR_RANDOM,
@@ -595,55 +597,116 @@ test('solutionState.complete is false when one cell is invalid even if all are f
   assert.equal(state.cells[2][2].valid, false);
 });
 
-test('formatGridStatus is silent mid-game regardless of progress or mistakes', () => {
-  // The running wrong-count is held back until the round ends so the
-  // status line stays empty while playing. Shake animation is the only
-  // feedback for a wrong pick during the game.
-  for (const wrongCount of [0, 1, 2, 7]) {
-    for (const filledCount of [0, 3, 5, 8]) {
-      assert.equal(
-        formatGridStatus({ filledCount, wrongCount, solved: false, gaveUp: false }),
-        '',
-        `mid-game with filled=${filledCount}, wrong=${wrongCount} should be silent`,
-      );
-    }
-  }
+test('computeGridScore returns 100 for a clean 9/9 solve with no mistakes', () => {
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0 }), 100);
 });
 
-test('formatGridStatus shows "Solved!" with the wrong-count tail when solved', () => {
-  assert.equal(
-    formatGridStatus({ filledCount: 9, wrongCount: 0, solved: true, gaveUp: false }),
-    'Solved! 0 wrong',
-  );
-  assert.equal(
-    formatGridStatus({ filledCount: 9, wrongCount: 1, solved: true, gaveUp: false }),
-    'Solved! 1 wrong',
-  );
-  assert.equal(
-    formatGridStatus({ filledCount: 9, wrongCount: 4, solved: true, gaveUp: false }),
-    'Solved! 4 wrong',
-  );
+test('computeGridScore deducts 3 points per wrong pick when fully solved', () => {
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 1 }), 97);
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 3 }), 91);
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 10 }), 70);
 });
 
-test('formatGridStatus reports the partial progress and wrong-count tail after give up', () => {
-  assert.equal(
-    formatGridStatus({ filledCount: 0, wrongCount: 0, solved: false, gaveUp: true }),
-    'Gave up — 0/9 filled, 0 wrong',
-  );
-  assert.equal(
-    formatGridStatus({ filledCount: 5, wrongCount: 2, solved: false, gaveUp: true }),
-    'Gave up — 5/9 filled, 2 wrong',
-  );
+test('computeGridScore deducts 10 points per empty cell — heavier than a wrong', () => {
+  // No wrongs, partial fill: only the empty penalty applies.
+  assert.equal(computeGridScore({ filledCount: 8, wrongCount: 0 }), 90);
+  assert.equal(computeGridScore({ filledCount: 5, wrongCount: 0 }), 60);
+  assert.equal(computeGridScore({ filledCount: 0, wrongCount: 0 }), 10);
 });
 
-test('formatGridStatus picks Solved over Gave up if both flags are set (defensive)', () => {
-  // page.js hides the give-up button once solved, so callers should
-  // never set both; pinning the precedence keeps the message coherent
-  // if a future caller forgets that invariant.
-  assert.equal(
-    formatGridStatus({ filledCount: 9, wrongCount: 3, solved: true, gaveUp: true }),
-    'Solved! 3 wrong',
-  );
+test('computeGridScore combines wrong and empty penalties for partial give-ups', () => {
+  // gave up at 5/9 with 2 wrongs: 100 - 3*2 - 10*4 = 54
+  assert.equal(computeGridScore({ filledCount: 5, wrongCount: 2 }), 54);
+  // gave up at 2/9 with 5 wrongs: 100 - 3*5 - 10*7 = 15
+  assert.equal(computeGridScore({ filledCount: 2, wrongCount: 5 }), 15);
+});
+
+test('computeGridScore clamps to 0 for absurd wrong counts', () => {
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 999 }), 0);
+  assert.equal(computeGridScore({ filledCount: 0, wrongCount: 999 }), 0);
+});
+
+// Minimal Storage-like fake — a Map with throw-on-quota toggle for the
+// saveGridState error-path test.
+function fakeStore({ throwOnSet = false } = {}) {
+  const data = new Map();
+  return {
+    getItem: (k) => (data.has(k) ? data.get(k) : null),
+    setItem: (k, v) => {
+      if (throwOnSet) throw new Error('quota exceeded');
+      data.set(k, v);
+    },
+    _data: data,
+  };
+}
+
+test('loadGridState returns null when the key is missing', () => {
+  assert.equal(loadGridState(fakeStore(), 'missing'), null);
+});
+
+test('loadGridState returns null when the stored value is unparseable', () => {
+  const store = fakeStore();
+  store.setItem('k', '{not json');
+  assert.equal(loadGridState(store, 'k'), null);
+});
+
+test('loadGridState rejects a parsed value whose shape is wrong', () => {
+  const store = fakeStore();
+  // picks must be a 9-element array
+  store.setItem('k', JSON.stringify({ picks: ['fr'], wrongCount: 0, gaveUp: false, finalTimeMs: null }));
+  assert.equal(loadGridState(store, 'k'), null);
+  // wrongCount must be a number
+  store.setItem('k', JSON.stringify({
+    picks: Array(9).fill(null), wrongCount: '0', gaveUp: false, finalTimeMs: null,
+  }));
+  assert.equal(loadGridState(store, 'k'), null);
+});
+
+test('loadGridState round-trips a well-formed state', () => {
+  const store = fakeStore();
+  const state = {
+    picks: ['fr', null, 'de', null, null, 'jp', null, 'in', null],
+    wrongCount: 2,
+    gaveUp: false,
+    finalTimeMs: null,
+  };
+  saveGridState(store, 'flaggrid.state.1', state);
+  assert.deepEqual(loadGridState(store, 'flaggrid.state.1'), state);
+});
+
+test('loadGridState normalises non-string picks to null', () => {
+  // Defensive against older builds that might have stored Country
+  // objects instead of code strings.
+  const store = fakeStore();
+  const raw = {
+    picks: ['fr', 42, null, { code: 'de' }, undefined, 'jp', null, 'in', null],
+    wrongCount: 0,
+    gaveUp: false,
+    finalTimeMs: null,
+  };
+  store.setItem('k', JSON.stringify(raw));
+  const out = loadGridState(store, 'k');
+  assert.deepEqual(out?.picks, ['fr', null, null, null, null, 'jp', null, 'in', null]);
+});
+
+test('saveGridState writes a parseable serialised state to the store', () => {
+  const store = fakeStore();
+  const state = {
+    picks: Array(9).fill(null),
+    wrongCount: 0,
+    gaveUp: false,
+    finalTimeMs: null,
+  };
+  saveGridState(store, 'k', state);
+  assert.deepEqual(JSON.parse(store._data.get('k')), state);
+});
+
+test('saveGridState swallows a Storage quota error (no throw)', () => {
+  const store = fakeStore({ throwOnSet: true });
+  // Must not throw — Storage may be disabled or full.
+  assert.doesNotThrow(() => saveGridState(store, 'k', {
+    picks: Array(9).fill(null), wrongCount: 0, gaveUp: false, finalTimeMs: null,
+  }));
 });
 
 test('cellRenderClasses sets filled=false for an empty cell', () => {

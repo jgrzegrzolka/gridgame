@@ -444,24 +444,84 @@ export function cellRenderClasses(country) {
 }
 
 /**
- * Format the status line shown under the grid based on the current
- * game state. Mid-game is intentionally silent — the player gets the
- * red shake on a wrong pick, and that's it; the running wrong-count
- * is held back until the round is over so it doesn't loom over the
- * board while playing. `solved` takes precedence over `gaveUp` — in
- * practice the page hides Give up once the grid is solved, but the
- * precedence is pinned here so callers don't have to.
+ * Compute the 0–100 final score for a grid round. Anchors at 100 for a
+ * clean 9/9 solve and decays from there. Penalties subtracted from 100:
+ *
+ *  - 3 points per wrong pick — light, since some wrongs are expected.
+ *  - 10 points per empty cell at end — heaviest penalty (≈3.3× a wrong),
+ *    because an empty cell means the player didn't even attempt that
+ *    intersection.
+ *
+ * Clamped to [0, 100] so a rough round bottoms out instead of going
+ * negative.
  *
  * @param {Object} state
- * @param {number} state.filledCount  0–9 cells currently filled
- * @param {number} state.wrongCount   total rejected picks so far
- * @param {boolean} state.solved      all 9 cells filled
- * @param {boolean} state.gaveUp      user pressed Give up
- * @returns {string}
+ * @param {number} state.filledCount  0–9 cells filled (correct picks)
+ * @param {number} state.wrongCount   total rejected picks
+ * @returns {number}
  */
-export function formatGridStatus({ filledCount, wrongCount, solved, gaveUp }) {
-  const wrongTail = wrongCount === 1 ? '1 wrong' : `${wrongCount} wrong`;
-  if (solved) return `Solved! ${wrongTail}`;
-  if (gaveUp) return `Gave up — ${filledCount}/9 filled, ${wrongTail}`;
-  return '';
+export function computeGridScore({ filledCount, wrongCount }) {
+  const emptyCount = 9 - filledCount;
+  const raw = 100 - 3 * wrongCount - 10 * emptyCount;
+  return Math.max(0, Math.min(100, raw));
+}
+
+/**
+ * @typedef {Object} GridState
+ * @property {Array<string | null>} picks  9 country codes (or null per empty cell)
+ * @property {number} wrongCount
+ * @property {boolean} gaveUp
+ * @property {number | null} finalTimeMs  null while mid-game; ms total when finished
+ */
+
+/**
+ * Read a persisted grid state from any Storage-like object. Returns
+ * null when the key is missing, the value is unparseable, or the
+ * parsed shape doesn't look like a GridState. Never throws — defensive
+ * against quota errors or stale schemas from older builds.
+ *
+ * @param {{ getItem(key: string): string | null }} store
+ * @param {string} key
+ * @returns {GridState | null}
+ */
+export function loadGridState(store, key) {
+  try {
+    const raw = store.getItem(key);
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      Array.isArray(parsed.picks) &&
+      parsed.picks.length === 9 &&
+      typeof parsed.wrongCount === 'number' &&
+      typeof parsed.gaveUp === 'boolean' &&
+      (parsed.finalTimeMs === null || typeof parsed.finalTimeMs === 'number')
+    ) {
+      return {
+        picks: parsed.picks.map((p) => (typeof p === 'string' ? p : null)),
+        wrongCount: parsed.wrongCount,
+        gaveUp: parsed.gaveUp,
+        finalTimeMs: parsed.finalTimeMs,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persist a grid state to any Storage-like object. Silently no-ops if
+ * the store throws (private-mode localStorage with zero quota, etc.).
+ *
+ * @param {{ setItem(key: string, value: string): void }} store
+ * @param {string} key
+ * @param {GridState} state
+ */
+export function saveGridState(store, key, state) {
+  try {
+    store.setItem(key, JSON.stringify(state));
+  } catch {
+    // Storage may be disabled or full — degrade gracefully.
+  }
 }

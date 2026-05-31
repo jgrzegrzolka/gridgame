@@ -12,21 +12,47 @@ body {
   align-items: center;
 }
 
-.status {
+/* Live timer above the grid — same styling as flagQuiz's .play-timer
+   so the two games read with consistent chrome. */
+.play-timer {
   font-size: 14px;
   color: #666;
-  margin: 16px 0 0;
+  margin: 0 0 12px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
-/* Status sits below the grid and is empty during play — collapse it
-   then so the grid + give-up wrapper hug each other. */
-.status:empty {
+.play-timer[hidden] {
   display: none;
 }
-.status.complete {
-  color: #2a9d4a;
-  font-size: 18px;
+
+/* End-of-round block shown when the grid is solved or given up.
+   Mirrors the same .final-score / .time / .result-links classes used
+   by flagQuiz so the two games feel like one product. */
+.result {
+  text-align: center;
+  margin-top: 24px;
+}
+.final-score {
+  font-size: 36px;
   font-weight: 500;
+  margin: 0 0 12px;
+}
+.time {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 16px;
+  font-variant-numeric: tabular-nums;
+}
+.result-links {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+.result-links a {
+  color: var(--link-color);
+}
+.result-links a[hidden] {
+  display: none;
 }
 /* Wrapper for anything that needs to sit under the grid sharing its
    width — Give-up button today, future stats line tomorrow. The

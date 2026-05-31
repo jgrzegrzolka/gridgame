@@ -1,49 +1,84 @@
 import {
   tryPick,
   suggest,
-  formatGridStatus,
+  computeGridScore,
+  loadGridState,
+  saveGridState,
   cellRenderClasses,
   pulseShake,
 } from '../flags/grid.js';
+import { formatTime, scoreColor } from '../flags/quiz.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/grid.js').Puzzle} Puzzle */
+/** @typedef {import('../flags/grid.js').GridState} GridState */
 
 /**
  * Fetch countries.json, build a puzzle from the variant's `puzzleFor`
- * callback, then mount the UI. Any error during fetch or puzzle generation
- * is surfaced in the #status element.
+ * callback, then mount the UI.
+ *
+ * Options:
+ *  - `stateKey`: localStorage key. When set, picks/wrongCount/finalTime
+ *    persist and a finished round is restored read-only on revisit.
+ *  - `allowReplay`: when true the end-game block shows a "Play again"
+ *    link. Pages that persist a single trial (e.g. Game 1) omit this.
  *
  * @param {(countries: Country[]) => Puzzle} puzzleFor
+ * @param {{ stateKey?: string, allowReplay?: boolean }} [options]
  */
-export function bootFlagGrid(puzzleFor) {
+export function bootFlagGrid(puzzleFor, options = {}) {
   fetch('../../flags/countries.json')
     .then((r) => r.json())
     .then((countries) => {
       const puzzle = puzzleFor(countries);
-      runFlagGrid({ puzzle, countries });
+      runFlagGrid({ puzzle, countries, options });
     })
     .catch((err) => {
-      const statusEl = document.getElementById('status');
-      if (statusEl) statusEl.textContent = 'Failed to load: ' + err.message;
+      const liveEl = document.getElementById('play-time');
+      if (liveEl) liveEl.textContent = 'Failed to load: ' + err.message;
     });
 }
 
 /**
  * Mount the Flag Grid UI against the markup in the variant's index.html
  * for the given puzzle and pre-fetched country list. Variants differ in
- * which puzzle they supply; most will use bootFlagGrid() which handles
- * the fetch + puzzle decision for them.
+ * which puzzle they supply and whether they persist state.
  *
- * @param {{ puzzle: Puzzle, countries: Country[] }} config
+ * @param {{
+ *   puzzle: Puzzle,
+ *   countries: Country[],
+ *   options?: { stateKey?: string, allowReplay?: boolean },
+ * }} config
  */
-export function runFlagGrid({ puzzle, countries }) {
+export function runFlagGrid({ puzzle, countries, options = {} }) {
+  const { stateKey, allowReplay = false } = options;
+  const store = stateKey ? globalThis.localStorage : null;
+  const byCode = new Map(countries.map((c) => [c.code, c]));
+
+  // Hydrate from any persisted state — picks come back as codes, look
+  // each one up in the live country list so the renderer has the same
+  // Country objects it would get from a fresh pick.
+  const saved = store && stateKey ? loadGridState(store, stateKey) : null;
   /** @type {(Country | null)[][]} */
   let solution = [
     [null, null, null],
     [null, null, null],
     [null, null, null],
   ];
+  let wrongCount = 0;
+  let gaveUp = false;
+  /** @type {number | null} */
+  let finalTimeMs = null;
+  if (saved) {
+    for (let i = 0; i < 9; i++) {
+      const code = saved.picks[i];
+      const c = code ? byCode.get(code) : null;
+      solution[Math.floor(i / 3)][i % 3] = c ?? null;
+    }
+    wrongCount = saved.wrongCount;
+    gaveUp = saved.gaveUp;
+    finalTimeMs = saved.finalTimeMs;
+  }
 
   /** @type {Country[]} */
   const allCountries = countries;
@@ -51,16 +86,20 @@ export function runFlagGrid({ puzzle, countries }) {
   let activeCell = null;
   /** @type {Country | null} */
   let topMatch = null;
-  let wrongCount = 0;
-  let gaveUp = false;
 
-  const statusEl = document.getElementById('status');
   const gridBodyEl = document.getElementById('grid-body');
   const pickerEl = /** @type {HTMLDialogElement} */ (document.getElementById('picker'));
   const pickerInputEl = /** @type {HTMLInputElement} */ (document.getElementById('picker-input'));
   const suggestionsEl = document.getElementById('suggestions');
   const colHeaderEls = document.querySelectorAll('.col-header');
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
+  const playTimerEl = document.getElementById('play-timer-line');
+  const playTimeEl = document.getElementById('play-time');
+  const resultEl = document.getElementById('result');
+  const finalScoreLineEl = document.getElementById('final-score-line');
+  const finalScoreEl = document.getElementById('final-score');
+  const timeEl = document.getElementById('time');
+  const playAgainEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('play-again'));
 
   colHeaderEls.forEach((th, i) => {
     th.textContent = puzzle.cols[i].label;
@@ -82,10 +121,34 @@ export function runFlagGrid({ puzzle, countries }) {
     gridBodyEl.appendChild(tr);
   }
 
+  // In-memory timer. We don't persist elapsed across sessions — if a
+  // /1/ game is finished, finalTimeMs is shown; otherwise the timer
+  // resets to 0 for this session.
+  const sessionStart = Date.now();
+  let timerRaf = 0;
+  function tickTimer() {
+    if (playTimeEl) playTimeEl.textContent = formatTime(Date.now() - sessionStart);
+    timerRaf = requestAnimationFrame(tickTimer);
+  }
+  function stopTimer() {
+    if (timerRaf) cancelAnimationFrame(timerRaf);
+    timerRaf = 0;
+  }
+
   renderGrid();
 
+  function isFinished() {
+    return finalTimeMs !== null;
+  }
+  function isLocked() {
+    // While solved is computed live during play, the persistence
+    // boundary is finalTimeMs: once that's set we treat the round as
+    // permanently over and the board as read-only.
+    return isFinished() || gaveUp;
+  }
+
   function openPicker(row, col) {
-    if (gaveUp) return;
+    if (isLocked()) return;
     if (solution[row][col]) return;
     activeCell = { row, col };
     pickerInputEl.value = '';
@@ -132,7 +195,6 @@ export function runFlagGrid({ puzzle, countries }) {
   document.addEventListener('click', (e) => {
     if (!pickerEl.open) return;
     if (pickerEl.contains(e.target)) return;
-    // Clicks on cells reopen the picker via their own handler; let them.
     if (/** @type {HTMLElement} */ (e.target).closest('.cell')) return;
     pickerEl.close();
   });
@@ -146,16 +208,20 @@ export function runFlagGrid({ puzzle, countries }) {
     const result = tryPick(puzzle, solution, row, col, country);
     pickerEl.close();
     if (!result.accepted) {
-      // Only count picks on still-empty cells. Tapping a locked cell
-      // can't reach pickCountry today (openPicker bails) but guard
-      // anyway so the counter stays honest.
       if (!solution[row][col]) wrongCount++;
       shakeCell(row, col);
       renderGrid();
+      persistState();
       return;
     }
     solution = result.solution;
+    const filled = countFilled();
+    if (filled === 9) {
+      finalTimeMs = Date.now() - sessionStart;
+    }
     renderGrid();
+    persistState();
+    if (filled === 9) finishRound();
   }
 
   function shakeCell(row, col) {
@@ -163,52 +229,88 @@ export function runFlagGrid({ puzzle, countries }) {
       `td[data-row="${row}"][data-col="${col}"]`,
     );
     td.classList.remove('shake');
-    // Force reflow so re-adding the class restarts the animation even if
-    // it was already running.
     void td.offsetWidth;
     pulseShake(td);
   }
 
+  function countFilled() {
+    let n = 0;
+    for (const row of solution) for (const c of row) if (c) n++;
+    return n;
+  }
+
   function renderGrid() {
-    let filledCount = 0;
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 3; c++) {
         const td = /** @type {HTMLTableCellElement} */ (
           gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`)
         );
         const country = solution[r][c];
-        // Apply ONLY the renderer-owned classes — interaction
-        // transients like .shake stay put across renders. See
-        // cellRenderClasses in flags/grid.js.
         for (const [klass, shouldHave] of cellRenderClasses(country)) {
           td.classList.toggle(klass, shouldHave);
         }
         td.innerHTML = '';
         if (!country) continue;
-        filledCount++;
         const img = document.createElement('img');
         img.src = `../../flags/svg/${country.code}.svg`;
         img.alt = country.name;
         td.appendChild(img);
       }
     }
-    const solved = filledCount === 9;
-    statusEl.classList.toggle('complete', solved);
-    statusEl.textContent = formatGridStatus({
-      filledCount,
+    if (giveUpEl) giveUpEl.hidden = isLocked();
+  }
+
+  function persistState() {
+    if (!store || !stateKey) return;
+    const picks = solution.flat().map((c) => (c ? c.code : null));
+    saveGridState(store, stateKey, {
+      picks,
       wrongCount,
-      solved,
       gaveUp,
+      finalTimeMs,
     });
-    if (giveUpEl) giveUpEl.hidden = solved || gaveUp;
+  }
+
+  function finishRound() {
+    stopTimer();
+    if (playTimerEl) playTimerEl.hidden = true;
+    if (!resultEl) return;
+    const filledCount = countFilled();
+    const score = computeGridScore({ filledCount, wrongCount });
+    if (finalScoreEl) finalScoreEl.textContent = String(score);
+    if (finalScoreLineEl) finalScoreLineEl.style.color = scoreColor(score / 100);
+    if (timeEl && finalTimeMs !== null) {
+      timeEl.textContent = `Time: ${formatTime(finalTimeMs)}`;
+    }
+    if (playAgainEl) {
+      if (allowReplay) {
+        playAgainEl.href = window.location.pathname + window.location.search;
+      } else {
+        playAgainEl.hidden = true;
+      }
+    }
+    resultEl.hidden = false;
   }
 
   if (giveUpEl) {
     giveUpEl.addEventListener('click', () => {
-      if (gaveUp) return;
+      if (isLocked()) return;
       gaveUp = true;
+      finalTimeMs = Date.now() - sessionStart;
       if (pickerEl.open) pickerEl.close();
       renderGrid();
+      persistState();
+      finishRound();
     });
+  }
+
+  // Initial visibility decisions:
+  // - If the round was already finished in a previous session, show
+  //   the result block read-only and skip starting the timer.
+  // - Otherwise start the live timer and keep the give-up button.
+  if (isFinished()) {
+    finishRound();
+  } else if (playTimerEl) {
+    tickTimer();
   }
 }
