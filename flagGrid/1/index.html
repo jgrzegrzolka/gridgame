@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flag Grid — Random</title>
+    <title>Flag Grid — Game 1</title>
     <link rel="stylesheet" href="../../common.css" />
     <link rel="stylesheet" href="../index.css" />
   </head>
@@ -48,9 +48,9 @@
     </dialog>
     <script type="module">
       import { bootFlagGrid } from '../page.js';
-      import { generateRandomPuzzle } from '../../flags/grid.js';
+      import { PUZZLE_1 } from '../puzzles.js';
 
-      bootFlagGrid((countries) => generateRandomPuzzle(countries));
+      bootFlagGrid(() => PUZZLE_1);
     </script>
   </body>
 </html>

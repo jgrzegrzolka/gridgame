@@ -9,8 +9,10 @@ import {
   MOTIFS_FOR_RANDOM,
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
+  isPuzzleGeneratable,
 } from './grid.js';
 import { CONTINENTS } from './group.js';
+import { PUZZLE_1 } from '../flagGrid/puzzles.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const COUNTRIES = JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'));
@@ -149,6 +151,13 @@ test('every (continent × motif) cell has at least one candidate country', () =>
     }
   }
   assert.deepEqual(empty, [], `no candidate flags for: ${empty.join(', ')}`);
+});
+
+test('PUZZLE_1 is solvable against the real countries.json', () => {
+  // The fixed flagGrid/1 puzzle: data drift that empties any of its cells
+  // (or drops a cell below the 2-candidate buffer) shows up here rather
+  // than as a stuck game.
+  assert.equal(isPuzzleGeneratable(PUZZLE_1, COUNTRIES), true);
 });
 
 test('generateRandomPuzzle succeeds with the real countries.json under several seeds', () => {
