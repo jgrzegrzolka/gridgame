@@ -8,34 +8,11 @@ body {
   align-items: center;
 }
 
-/* Narrow viewports: the grid takes nearly the full width, so the
-   corner burger button overlapped the top-right cell. Restyle it as
-   a full-width top bar (with the icon on the right) and push the
-   grid below it. */
+/* On narrow viewports the burger is a full-width top bar (see
+   common.css for the actual burger/panel rules). flagGrid's
+   --page-top is only 16px so we need to push the grid down to
+   clear the 44px bar. */
 @media (max-width: 600px) {
-  .burger {
-    top: 0;
-    right: 0;
-    left: 0;
-    width: 100%;
-    height: 44px;
-    border-radius: 0;
-    border-top: none;
-    border-left: none;
-    border-right: none;
-    justify-content: flex-end;
-    padding: 0 16px;
-  }
-  .burger-panel {
-    top: 44px;
-    right: 0;
-    left: 0;
-    border-radius: 0;
-    border-top: none;
-    border-left: none;
-    border-right: none;
-    min-width: 0;
-  }
   body {
     padding-top: 60px;
   }
