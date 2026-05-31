@@ -105,9 +105,9 @@ dialog#picker[open] {
   list-style: none;
   padding: 2px;
   margin: 0;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+}
+.suggestions:empty {
+  display: none;
 }
 .suggestions li {
   display: flex;
