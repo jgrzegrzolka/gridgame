@@ -1,5 +1,5 @@
 body {
-  padding: 40px 24px 24px;
+  padding: var(--page-top) 24px 24px;
 }
 .continent, .other {
   margin-bottom: 32px;
