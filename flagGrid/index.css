@@ -12,16 +12,6 @@ body {
   align-items: center;
 }
 
-/* On narrow viewports the burger is a full-width top bar (see
-   common.css for the actual burger/panel rules). flagGrid's
-   --page-top is only 16px, so we need just enough padding-top to
-   clear the 44px bar — 2px of breathing room reads as a clean seam
-   without the grid crashing into the burger. */
-@media (max-width: 600px) {
-  body {
-    padding-top: 46px;
-  }
-}
 .status {
   font-size: 14px;
   color: #666;
