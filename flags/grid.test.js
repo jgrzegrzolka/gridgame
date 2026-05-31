@@ -595,33 +595,19 @@ test('solutionState.complete is false when one cell is invalid even if all are f
   assert.equal(state.cells[2][2].valid, false);
 });
 
-test('formatGridStatus returns "" mid-game while the player is still clean', () => {
-  assert.equal(
-    formatGridStatus({ filledCount: 0, wrongCount: 0, solved: false, gaveUp: false }),
-    '',
-  );
-  assert.equal(
-    formatGridStatus({ filledCount: 5, wrongCount: 0, solved: false, gaveUp: false }),
-    '',
-  );
-});
-
-test('formatGridStatus uses the singular "1 wrong" form for exactly one mistake', () => {
-  assert.equal(
-    formatGridStatus({ filledCount: 3, wrongCount: 1, solved: false, gaveUp: false }),
-    '1 wrong',
-  );
-});
-
-test('formatGridStatus uses the plural "N wrong" form for two or more mistakes', () => {
-  assert.equal(
-    formatGridStatus({ filledCount: 4, wrongCount: 2, solved: false, gaveUp: false }),
-    '2 wrong',
-  );
-  assert.equal(
-    formatGridStatus({ filledCount: 6, wrongCount: 7, solved: false, gaveUp: false }),
-    '7 wrong',
-  );
+test('formatGridStatus is silent mid-game regardless of progress or mistakes', () => {
+  // The running wrong-count is held back until the round ends so the
+  // status line stays empty while playing. Shake animation is the only
+  // feedback for a wrong pick during the game.
+  for (const wrongCount of [0, 1, 2, 7]) {
+    for (const filledCount of [0, 3, 5, 8]) {
+      assert.equal(
+        formatGridStatus({ filledCount, wrongCount, solved: false, gaveUp: false }),
+        '',
+        `mid-game with filled=${filledCount}, wrong=${wrongCount} should be silent`,
+      );
+    }
+  }
 });
 
 test('formatGridStatus shows "Solved!" with the wrong-count tail when solved', () => {

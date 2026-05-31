@@ -1,32 +1,27 @@
 body {
-  /* flagGrid has no top chrome to clear (back button is bottom-right),
-     so override the shared --page-top down from 64px. */
-  --page-top: 16px;
   /* Shared by .grid and .below-grid so anything sitting below the
      board can match its width — lifted from .grid for that reason.
      Width AND height both read this var, so the cell stays square. */
-  --grid-cell: min(140px, calc((100vw - 4px) / 4));
+  --grid-cell: min(140px, calc((100vw - 4px) / 3.5));
+  /* Inherit common.css's --page-top (64px) for desktop breathing room.
+     The mobile media query below tightens it to clear the full-width
+     burger with a 2px seam. */
   padding: var(--page-top) 2px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* On narrow viewports the burger is a full-width top bar (see
-   common.css for the actual burger/panel rules). flagGrid's
-   --page-top is only 16px so we need to push the grid down to
-   clear the 44px bar. */
-@media (max-width: 600px) {
-  body {
-    padding-top: 60px;
-  }
-}
 .status {
   font-size: 14px;
   color: #666;
-  margin: 0 0 16px;
-  min-height: 22px;
+  margin: 16px 0 0;
   text-align: center;
+}
+/* Status sits below the grid and is empty during play — collapse it
+   then so the grid + give-up wrapper hug each other. */
+.status:empty {
+  display: none;
 }
 .status.complete {
   color: #2a9d4a;
@@ -35,10 +30,11 @@ body {
 }
 /* Wrapper for anything that needs to sit under the grid sharing its
    width — Give-up button today, future stats line tomorrow. The
-   table itself is auto-sized by its 4 columns, so we recompute that
-   width here to keep right-edges in lockstep. */
+   table's columns total 3.5 cells (half-width row header + three
+   full-width data columns), so we recompute that width here to keep
+   right-edges in lockstep. */
 .below-grid {
-  width: calc(4 * var(--grid-cell));
+  width: calc(3.5 * var(--grid-cell));
   margin-top: 16px;
   text-align: right;
 }
@@ -66,20 +62,36 @@ body {
   width: var(--grid-cell);
   height: var(--grid-cell);
   box-sizing: border-box;
-  border: 1px solid #ddd;
   padding: 8px;
   text-align: center;
   vertical-align: middle;
 }
+/* Borders live only on data cells — headers float around the grid as
+   bare labels so the 3x3 reads as the focus of the board. */
+.grid td {
+  border: 1px solid #ddd;
+}
 .grid th {
-  background: #f5f5f5;
   font-weight: 500;
   font-size: 14px;
   color: #1c1c1c;
 }
-.grid .corner {
-  background: transparent;
-  border: none;
+/* Half-height column headers (and the corner): "has red" sits in a
+   short banner on top of its full-width data column. */
+.grid thead th {
+  height: calc(var(--grid-cell) / 2);
+}
+/* Half-width row headers (and the corner): the row labels live in a
+   narrow strip on the left. Text reads bottom-to-top so longer
+   continent names like "South America" fit in the column height. */
+.grid .corner,
+.grid tbody th {
+  width: calc(var(--grid-cell) / 2);
+}
+.grid tbody th {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 12px;
 }
 .cell {
   position: relative;
