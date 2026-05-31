@@ -115,7 +115,14 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       td.className = 'cell';
       td.dataset.row = String(r);
       td.dataset.col = String(c);
+      td.tabIndex = 0;
       td.addEventListener('click', () => openPicker(r, c));
+      td.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openPicker(r, c);
+        }
+      });
       tr.appendChild(td);
     }
     gridBodyEl.appendChild(tr);
@@ -221,7 +228,11 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     }
     renderGrid();
     persistState();
-    if (filled === 9) finishRound();
+    if (filled === 9) {
+      finishRound();
+    } else {
+      focusNextEmpty();
+    }
   }
 
   function shakeCell(row, col) {
@@ -237,6 +248,26 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     let n = 0;
     for (const row of solution) for (const c of row) if (c) n++;
     return n;
+  }
+
+  /**
+   * Move keyboard focus to the next empty cell in reading order
+   * (left-to-right, top-to-bottom). No-op when the board is locked or
+   * already full. Uses preventScroll so initial focus on page load
+   * doesn't jump the viewport.
+   */
+  function focusNextEmpty() {
+    if (isLocked()) return;
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        if (solution[r][c]) continue;
+        const td = /** @type {HTMLTableCellElement | null} */ (
+          gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`)
+        );
+        if (td) td.focus({ preventScroll: true });
+        return;
+      }
+    }
   }
 
   function renderGrid() {
@@ -273,7 +304,11 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
 
   function finishRound() {
     stopTimer();
-    if (playTimerEl) playTimerEl.hidden = true;
+    // Freeze the live timer at the final value — keep the slot occupied
+    // so the grid doesn't shift up when the round ends.
+    if (playTimeEl && finalTimeMs !== null) {
+      playTimeEl.textContent = formatTime(finalTimeMs);
+    }
     if (!resultEl) return;
     const filledCount = countFilled();
     const score = computeGridScore({ filledCount, wrongCount });
@@ -283,11 +318,17 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       timeEl.textContent = `Time: ${formatTime(finalTimeMs)}`;
     }
     if (playAgainEl) {
-      if (allowReplay) {
-        playAgainEl.href = window.location.pathname + window.location.search;
-      } else {
-        playAgainEl.hidden = true;
-      }
+      // /1/ persists state, so a replay must first wipe it — otherwise
+      // the freshly-loaded round would just re-hydrate the same locked
+      // state we're trying to escape. /rand/ has no state, so this is
+      // a plain reload.
+      playAgainEl.href = window.location.pathname + window.location.search;
+      if (stateKey) playAgainEl.textContent = 'Retry';
+      playAgainEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (store && stateKey) store.removeItem(stateKey);
+        window.location.reload();
+      }, { once: true });
     }
     resultEl.hidden = false;
   }
@@ -310,7 +351,8 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   // - Otherwise start the live timer and keep the give-up button.
   if (isFinished()) {
     finishRound();
-  } else if (playTimerEl) {
-    tickTimer();
+  } else {
+    if (playTimerEl) tickTimer();
+    focusNextEmpty();
   }
 }
