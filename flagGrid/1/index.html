@@ -36,6 +36,7 @@
         <li class="menu-divider"><a href="../../" aria-label="Home"><span class="home-icon" aria-hidden="true"></span></a></li>
       </ul>
     </nav>
+    <p class="play-timer" id="play-timer-line"><span id="play-time">0:00.000</span></p>
     <table class="grid">
       <thead>
         <tr>
@@ -50,16 +51,21 @@
     <div class="below-grid">
       <button type="button" class="give-up" id="give-up">Give up</button>
     </div>
-    <p class="status" id="status"></p>
-    <dialog id="picker">
-      <input type="text" id="picker-input" autocomplete="off" />
-      <ul class="suggestions" id="suggestions"></ul>
-    </dialog>
+    <div id="result" class="result" hidden>
+      <p class="final-score" id="final-score-line">
+        Your score: <span id="final-score">0</span>
+      </p>
+      <p class="time" id="time"></p>
+      <p class="result-links">
+        <a id="play-again" href="#">Play again</a>
+      </p>
+    </div>
+    <ul class="suggestions" id="suggestions" hidden></ul>
     <script type="module">
       import { bootFlagGrid } from '../page.js?v=__BUILD__';
       import { PUZZLE_1 } from '../puzzles.js?v=__BUILD__';
 
-      bootFlagGrid(() => PUZZLE_1);
+      bootFlagGrid(() => PUZZLE_1, { stateKey: 'flaggrid.state.1', allowReplay: true });
     </script>
   </body>
 </html>

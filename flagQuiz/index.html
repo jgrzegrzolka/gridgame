@@ -43,7 +43,7 @@
     </div>
     <div id="result" hidden>
       <p class="final-score" id="final-score-line">
-        Final score: <span id="final-score">0</span>%
+        Final score: <span id="final-score">0</span>
       </p>
       <p class="time" id="time"></p>
       <p class="best" id="best"></p>
@@ -232,7 +232,7 @@
           const { best, isNew } = recordResult(
             localStorage, key, mode, { score: pct, time: elapsed },
           );
-          bestEl.textContent = `Your best score: ${best.score}% in ${formatTime(best.time)}`;
+          bestEl.textContent = `Your best score: ${best.score} in ${formatTime(best.time)}`;
           if (isNew) {
             bestEl.appendChild(document.createTextNode(' '));
             const badge = document.createElement('span');
