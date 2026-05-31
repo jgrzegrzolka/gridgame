@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 /** @type {Record<string, string[]>} */
 const COLORS = {
-  af: ['black', 'red', 'green', 'white'],
+  af: ['white', 'black'],
   ax: ['blue', 'yellow', 'red'],
   al: ['red', 'black'],
   dz: ['white', 'green', 'red'],
