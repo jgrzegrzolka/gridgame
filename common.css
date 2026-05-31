@@ -105,3 +105,33 @@ body {
 .menu a:hover {
   text-decoration: underline;
 }
+
+/* Narrow viewports: turn the corner burger into a full-width top bar
+   with a centered icon, and drop the panel below it. Pages that need
+   a body padding-top bump (e.g. flagGrid where --page-top is only
+   16px) handle that in their own CSS. */
+@media (max-width: 600px) {
+  .burger {
+    top: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: 44px;
+    border-radius: 0;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    justify-content: center;
+    padding: 0;
+  }
+  .burger-panel {
+    top: 44px;
+    right: 0;
+    left: 0;
+    border-radius: 0;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    min-width: 0;
+  }
+}
