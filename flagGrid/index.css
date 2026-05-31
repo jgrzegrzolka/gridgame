@@ -62,13 +62,16 @@ body {
   width: var(--grid-cell);
   height: var(--grid-cell);
   box-sizing: border-box;
-  border: 1px solid #ddd;
   padding: 8px;
   text-align: center;
   vertical-align: middle;
 }
+/* Borders live only on data cells — headers float around the grid as
+   bare labels so the 3x3 reads as the focus of the board. */
+.grid td {
+  border: 1px solid #ddd;
+}
 .grid th {
-  background: #f5f5f5;
   font-weight: 500;
   font-size: 14px;
   color: #1c1c1c;
@@ -89,10 +92,6 @@ body {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   font-size: 12px;
-}
-.grid .corner {
-  background: transparent;
-  border: none;
 }
 .cell {
   position: relative;
