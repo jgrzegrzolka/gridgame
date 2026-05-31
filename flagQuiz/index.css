@@ -14,6 +14,13 @@ body {
   transition: width 300ms ease;
   z-index: 30;
 }
+/* On narrow viewports the burger becomes a full-width 44px top bar
+   (see common.css), so the progress bar drops below it. */
+@media (max-width: 600px) {
+  .progress-bar {
+    top: 44px;
+  }
+}
 .variants {
   border-collapse: collapse;
 }
