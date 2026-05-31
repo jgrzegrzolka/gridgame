@@ -12,6 +12,26 @@
   </head>
   <body>
     <a class="back" href="../../" aria-label="Back">←</a>
+    <button
+      type="button"
+      class="burger"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="burger-panel"
+      onclick="
+        const open = this.getAttribute('aria-expanded') === 'true';
+        this.setAttribute('aria-expanded', String(!open));
+        this.setAttribute('aria-label', open ? 'Open menu' : 'Close menu');
+        document.getElementById('burger-panel').hidden = open;
+      "
+    >
+      <span class="burger-bars" aria-hidden="true"></span>
+    </button>
+    <nav id="burger-panel" class="burger-panel" hidden>
+      <ul class="menu">
+        <li><a href="../../">← Main page</a></li>
+      </ul>
+    </nav>
     <table class="variants">
       <tbody id="variants"></tbody>
     </table>

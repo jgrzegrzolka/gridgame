@@ -129,6 +129,12 @@
         statsA.textContent = 'Your stats';
         statsLi.appendChild(statsA);
         quizMenuEl.appendChild(statsLi);
+        const mainLi = document.createElement('li');
+        const mainA = document.createElement('a');
+        mainA.href = '../';
+        mainA.textContent = '← Main page';
+        mainLi.appendChild(mainA);
+        quizMenuEl.appendChild(mainLi);
       }
 
       function startGame(key, mode, all) {
