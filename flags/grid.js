@@ -391,3 +391,26 @@ export function suggest(allCountries, query, options = {}) {
     .filter((c) => !excludeCodes.has(c.code) && c.name.toLowerCase().includes(q))
     .slice(0, limit);
 }
+
+/**
+ * Format the status line shown under the grid based on the current
+ * game state. Returns an empty string for a clean mid-game state (no
+ * mistakes yet) so the line stays invisible until there's something
+ * to say. `solved` takes precedence over `gaveUp` — in practice the
+ * page hides Give up once the grid is solved, but the precedence is
+ * pinned here so callers don't have to.
+ *
+ * @param {Object} state
+ * @param {number} state.filledCount  0–9 cells currently filled
+ * @param {number} state.wrongCount   total rejected picks so far
+ * @param {boolean} state.solved      all 9 cells filled
+ * @param {boolean} state.gaveUp      user pressed Give up
+ * @returns {string}
+ */
+export function formatGridStatus({ filledCount, wrongCount, solved, gaveUp }) {
+  const wrongTail = wrongCount === 1 ? '1 wrong' : `${wrongCount} wrong`;
+  if (solved) return `Solved! ${wrongTail}`;
+  if (gaveUp) return `Gave up — ${filledCount}/9 filled, ${wrongTail}`;
+  if (wrongCount === 0) return '';
+  return wrongTail;
+}
