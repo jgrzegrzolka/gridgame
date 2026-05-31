@@ -144,8 +144,11 @@ export function runFlagGrid({ puzzle, countries }) {
       // can't reach pickCountry today (openPicker bails) but guard
       // anyway so the counter stays honest.
       if (!solution[row][col]) wrongCount++;
-      shakeCell(row, col);
+      // renderGrid rewrites td.className for every cell, which would
+      // wipe the .shake class if we added it first. Render the status
+      // first, then trigger the shake on the now-clean cell.
       renderGrid();
+      shakeCell(row, col);
       return;
     }
     solution = result.solution;
