@@ -45,6 +45,8 @@ export function runFlagGrid({ puzzle, countries }) {
   let activeCell = null;
   /** @type {Country | null} */
   let topMatch = null;
+  let wrongCount = 0;
+  let gaveUp = false;
 
   const statusEl = document.getElementById('status');
   const gridBodyEl = document.getElementById('grid-body');
@@ -52,6 +54,7 @@ export function runFlagGrid({ puzzle, countries }) {
   const pickerInputEl = /** @type {HTMLInputElement} */ (document.getElementById('picker-input'));
   const suggestionsEl = document.getElementById('suggestions');
   const colHeaderEls = document.querySelectorAll('.col-header');
+  const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
 
   colHeaderEls.forEach((th, i) => {
     th.textContent = puzzle.cols[i].label;
@@ -76,6 +79,7 @@ export function runFlagGrid({ puzzle, countries }) {
   renderGrid();
 
   function openPicker(row, col) {
+    if (gaveUp) return;
     if (solution[row][col]) return;
     activeCell = { row, col };
     pickerInputEl.value = '';
@@ -136,7 +140,12 @@ export function runFlagGrid({ puzzle, countries }) {
     const result = tryPick(puzzle, solution, row, col, country);
     pickerEl.close();
     if (!result.accepted) {
+      // Only count picks on still-empty cells. Tapping a locked cell
+      // can't reach pickCountry today (openPicker bails) but guard
+      // anyway so the counter stays honest.
+      if (!solution[row][col]) wrongCount++;
       shakeCell(row, col);
+      renderGrid();
       return;
     }
     solution = result.solution;
@@ -173,12 +182,26 @@ export function runFlagGrid({ puzzle, countries }) {
         td.appendChild(img);
       }
     }
-    if (filledCount === 9) {
-      statusEl.textContent = 'Solved!';
-      statusEl.classList.add('complete');
-    } else {
-      statusEl.textContent = '';
-      statusEl.classList.remove('complete');
-    }
+    const solved = filledCount === 9;
+    statusEl.classList.toggle('complete', solved);
+    statusEl.textContent = formatStatus(filledCount, solved);
+    if (giveUpEl) giveUpEl.hidden = solved || gaveUp;
+  }
+
+  function formatStatus(filledCount, solved) {
+    const wrongTail = wrongCount === 1 ? '1 wrong' : `${wrongCount} wrong`;
+    if (solved) return `Solved! ${wrongTail}`;
+    if (gaveUp) return `Gave up — ${filledCount}/9 filled, ${wrongTail}`;
+    if (wrongCount === 0) return '';
+    return wrongTail;
+  }
+
+  if (giveUpEl) {
+    giveUpEl.addEventListener('click', () => {
+      if (gaveUp) return;
+      gaveUp = true;
+      if (pickerEl.open) pickerEl.close();
+      renderGrid();
+    });
   }
 }
