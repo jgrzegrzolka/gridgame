@@ -14,6 +14,7 @@ import {
   isPuzzleGeneratable,
   generateRandomPuzzle,
   formatGridStatus,
+  cellRenderClasses,
   CONTINENTS_FOR_RANDOM,
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
@@ -656,4 +657,35 @@ test('formatGridStatus picks Solved over Gave up if both flags are set (defensiv
     formatGridStatus({ filledCount: 9, wrongCount: 3, solved: true, gaveUp: true }),
     'Solved! 3 wrong',
   );
+});
+
+test('cellRenderClasses sets filled=false for an empty cell', () => {
+  assert.deepEqual(cellRenderClasses(null), [['filled', false]]);
+  assert.deepEqual(cellRenderClasses(undefined), [['filled', false]]);
+});
+
+test('cellRenderClasses sets filled=true for any country', () => {
+  assert.deepEqual(cellRenderClasses(FR), [['filled', true]]);
+});
+
+test('cellRenderClasses does not list any interaction-transient classes', () => {
+  // The renderer (renderGrid in flagGrid/page.js) iterates over the
+  // pairs returned here and calls classList.toggle on each — so any
+  // class listed here is wiped on every render pass. Interaction
+  // transients like .shake (the wrong-pick pulse) are owned by event
+  // handlers and MUST NOT appear in this set, otherwise a render
+  // immediately after the handler would erase the animation before
+  // the browser ever paints it. Regression for the bug introduced by
+  // PR #46 and fixed by PR #48.
+  const TRANSIENT = ['shake'];
+  for (const country of [null, FR]) {
+    const managed = cellRenderClasses(country).map(([klass]) => klass);
+    for (const t of TRANSIENT) {
+      assert.ok(
+        !managed.includes(t),
+        `cellRenderClasses must not manage transient class ".${t}" — ` +
+          'that would cause renderGrid to wipe it.',
+      );
+    }
+  }
 });

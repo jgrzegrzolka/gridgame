@@ -1,4 +1,9 @@
-import { tryPick, suggest, formatGridStatus } from '../flags/grid.js';
+import {
+  tryPick,
+  suggest,
+  formatGridStatus,
+  cellRenderClasses,
+} from '../flags/grid.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/grid.js').Puzzle} Puzzle */
@@ -144,11 +149,8 @@ export function runFlagGrid({ puzzle, countries }) {
       // can't reach pickCountry today (openPicker bails) but guard
       // anyway so the counter stays honest.
       if (!solution[row][col]) wrongCount++;
-      // renderGrid rewrites td.className for every cell, which would
-      // wipe the .shake class if we added it first. Render the status
-      // first, then trigger the shake on the now-clean cell.
-      renderGrid();
       shakeCell(row, col);
+      renderGrid();
       return;
     }
     solution = result.solution;
@@ -173,12 +175,16 @@ export function runFlagGrid({ puzzle, countries }) {
         const td = /** @type {HTMLTableCellElement} */ (
           gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`)
         );
-        td.className = 'cell';
-        td.innerHTML = '';
         const country = solution[r][c];
+        // Apply ONLY the renderer-owned classes — interaction
+        // transients like .shake stay put across renders. See
+        // cellRenderClasses in flags/grid.js.
+        for (const [klass, shouldHave] of cellRenderClasses(country)) {
+          td.classList.toggle(klass, shouldHave);
+        }
+        td.innerHTML = '';
         if (!country) continue;
         filledCount++;
-        td.classList.add('filled');
         const img = document.createElement('img');
         img.src = `../../flags/svg/${country.code}.svg`;
         img.alt = country.name;

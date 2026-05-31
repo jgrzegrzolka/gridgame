@@ -393,6 +393,30 @@ export function suggest(allCountries, query, options = {}) {
 }
 
 /**
+ * Returns the renderer-owned classes for a single grid cell, given
+ * the country placed there (or null for empty). Each entry is
+ * `[className, shouldHave]`, intended to be applied with
+ * `classList.toggle(className, shouldHave)` — that way the renderer
+ * touches ONLY the classes it owns, and transient interaction
+ * classes (e.g. `.shake` added by a rejected pick) survive a render
+ * pass instead of getting wiped by a blanket `className = '...'`
+ * assignment.
+ *
+ * The returned set is intentionally narrow. If you want to add a new
+ * data-driven class, add it here AND in flags/grid.test.js's allowlist.
+ * Anything driven by user interaction (animation pulses, hover state,
+ * keyboard focus) does NOT belong here — those are owned by the
+ * interaction handlers, not the renderer.
+ *
+ * @param {Country | null | undefined} country
+ * @returns {Array<[string, boolean]>}
+ */
+export function cellRenderClasses(country) {
+  const filled = country !== null && country !== undefined;
+  return [['filled', filled]];
+}
+
+/**
  * Format the status line shown under the grid based on the current
  * game state. Returns an empty string for a clean mid-game state (no
  * mistakes yet) so the line stays invisible until there's something
