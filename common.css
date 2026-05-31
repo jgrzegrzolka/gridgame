@@ -111,6 +111,19 @@ body {
   text-decoration: underline;
 }
 
+/* House silhouette icon, reused for the back-to-home button and the
+   "Home" menu entry. Painted via CSS mask so it follows currentColor —
+   the same path data lives in favicon.svg. */
+.home-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/%3E%3C/svg%3E") center / contain no-repeat;
+  vertical-align: middle;
+}
+
 /* Narrow viewports: turn the corner burger into a full-width top bar
    with a centered icon, and drop the panel below it. Pages that need
    a body padding-top bump (e.g. flagGrid where --page-top is only

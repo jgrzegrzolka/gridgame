@@ -13,7 +13,7 @@
   </head>
   <body>
     <div class="progress-bar" id="progress-bar"></div>
-    <a class="back" id="back" href="../" aria-label="Back">←</a>
+    <a class="back" id="back" href="../" aria-label="Home"><span class="home-icon" aria-hidden="true"></span></a>
     <button
       type="button"
       class="burger"
@@ -133,7 +133,11 @@
         const mainLi = document.createElement('li');
         const mainA = document.createElement('a');
         mainA.href = '../';
-        mainA.textContent = 'Home';
+        mainA.setAttribute('aria-label', 'Home');
+        const mainIcon = document.createElement('span');
+        mainIcon.className = 'home-icon';
+        mainIcon.setAttribute('aria-hidden', 'true');
+        mainA.appendChild(mainIcon);
         mainLi.appendChild(mainA);
         quizMenuEl.appendChild(mainLi);
       }
