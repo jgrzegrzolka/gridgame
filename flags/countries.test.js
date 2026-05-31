@@ -114,6 +114,7 @@ const KNOWN_MOTIFS = [
   { code: 'sh-ac', motifs: ['animal', 'coat-of-arms'], note: 'Ascension Island turtle' },
   { code: 'sh-ta', motifs: ['animal', 'coat-of-arms'], note: 'Tristan da Cunha albatross' },
   { code: 'sh',    motifs: ['animal', 'coat-of-arms'], note: 'SH+A+T combined territory' },
+  { code: 'eg',    motifs: ['animal', 'coat-of-arms'], note: 'Egypt — Eagle of Saladin' },
 ];
 
 test('known animal/coat-of-arms flags keep their expected motif tags', () => {
