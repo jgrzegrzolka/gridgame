@@ -75,17 +75,21 @@ body {
 dialog#picker {
   position: fixed;
   margin: 0;
-  width: min(90vw, 260px);
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  box-sizing: border-box;
+  padding: 6px;
+  border: 1px solid #999;
+  border-radius: 4px;
   background: #fff;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
 }
 #picker-input {
   width: 100%;
-  padding: 8px;
-  font-size: 16px;
+  padding: 4px 6px;
+  font-size: 12px;
   font-family: inherit;
   border: 1px solid #ddd;
   box-sizing: border-box;
@@ -97,24 +101,32 @@ dialog#picker {
 .suggestions {
   list-style: none;
   padding: 0;
-  margin: 8px 0 0;
-  max-height: 280px;
+  margin: 0;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 .suggestions li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 4px;
+  gap: 4px;
+  padding: 2px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 11px;
 }
 .suggestions li:hover {
   background: #f0f0f0;
 }
+.suggestions li span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .suggestions img {
-  width: 28px;
-  height: 21px;
+  width: 20px;
+  height: 15px;
   border: 1px solid #ddd;
   flex-shrink: 0;
 }
