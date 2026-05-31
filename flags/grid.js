@@ -445,11 +445,12 @@ export function cellRenderClasses(country) {
 
 /**
  * Format the status line shown under the grid based on the current
- * game state. Returns an empty string for a clean mid-game state (no
- * mistakes yet) so the line stays invisible until there's something
- * to say. `solved` takes precedence over `gaveUp` — in practice the
- * page hides Give up once the grid is solved, but the precedence is
- * pinned here so callers don't have to.
+ * game state. Mid-game is intentionally silent — the player gets the
+ * red shake on a wrong pick, and that's it; the running wrong-count
+ * is held back until the round is over so it doesn't loom over the
+ * board while playing. `solved` takes precedence over `gaveUp` — in
+ * practice the page hides Give up once the grid is solved, but the
+ * precedence is pinned here so callers don't have to.
  *
  * @param {Object} state
  * @param {number} state.filledCount  0–9 cells currently filled
@@ -462,6 +463,5 @@ export function formatGridStatus({ filledCount, wrongCount, solved, gaveUp }) {
   const wrongTail = wrongCount === 1 ? '1 wrong' : `${wrongCount} wrong`;
   if (solved) return `Solved! ${wrongTail}`;
   if (gaveUp) return `Gave up — ${filledCount}/9 filled, ${wrongTail}`;
-  if (wrongCount === 0) return '';
-  return wrongTail;
+  return '';
 }
