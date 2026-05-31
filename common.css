@@ -9,16 +9,16 @@ body {
 }
 .back {
   position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 48px;
-  height: 48px;
+  bottom: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #fff;
-  border-top: 1px solid #ddd;
-  border-left: 1px solid #ddd;
+  border: 1px solid #ddd;
+  border-radius: 6px;
   color: var(--link-color);
   text-decoration: none;
   font-size: 22px;
