@@ -259,23 +259,33 @@ function pickRandom(pool, n, rng) {
 }
 
 /**
- * Build a random 3x3 puzzle with continent rows. Columns are drawn from a
- * pool that mixes colour categories (hasColor) and motif categories
- * (hasMotif), so a single random puzzle might have e.g. "Has red", "Has
- * blue", "Has animal" as its three columns. Pure shuffle — does no
- * validity checking. Callers that need a solvable puzzle should use
- * `generateRandomPuzzle` instead.
+ * Build a random 3x3 puzzle with continent rows. One of the three column
+ * slots is reserved for a motif (hasMotif) so motifs aren't drowned out
+ * by the bigger colour pool; the other two slots are drawn from the
+ * remaining motifs + all colours, so both motifs can still co-occur in
+ * a single puzzle. The three resulting cols are then shuffled so the
+ * reserved motif isn't always in the leftmost position.
+ *
+ * Pure shuffle — does no validity checking. Callers that need a solvable
+ * puzzle should use `generateRandomPuzzle` instead.
  *
  * @param {() => number} [rng]  defaults to Math.random
  * @returns {Puzzle}
  */
 export function randomPuzzle(rng = Math.random) {
   const rowNames = pickRandom(CONTINENTS_FOR_RANDOM, 3, rng);
-  const colPool = [
-    ...COLORS_FOR_RANDOM.map(hasColor),
-    ...MOTIFS_FOR_RANDOM.map(hasMotif),
+
+  const motifCategories = MOTIFS_FOR_RANDOM.map(hasMotif);
+  const colorCategories = COLORS_FOR_RANDOM.map(hasColor);
+
+  const [reservedMotif] = pickRandom(motifCategories, 1, rng);
+  const remainingPool = [
+    ...motifCategories.filter((m) => m.id !== reservedMotif.id),
+    ...colorCategories,
   ];
-  const cols = pickRandom(colPool, 3, rng);
+  const otherTwo = pickRandom(remainingPool, 2, rng);
+  const cols = pickRandom([reservedMotif, ...otherTwo], 3, rng);
+
   return {
     rows: rowNames.map(continent),
     cols,

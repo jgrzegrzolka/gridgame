@@ -416,6 +416,20 @@ test('randomPuzzle column categories come from the colour or motif pools', () =>
   }
 });
 
+test('randomPuzzle always includes at least one motif column', () => {
+  // Run with 50 different seeded RNGs; every puzzle should have ≥1 motif col.
+  for (let i = 0; i < 50; i++) {
+    const seed = [(i * 17) % 100, (i * 29) % 100, (i * 41) % 100, (i * 53) % 100]
+      .map((n) => n / 100);
+    const p = randomPuzzle(sequenceRng(seed));
+    const motifCols = p.cols.filter((c) => c.id.startsWith('hasMotif:'));
+    assert.ok(
+      motifCols.length >= 1,
+      `seed ${i}: no motif col in [${p.cols.map((c) => c.id).join(', ')}]`,
+    );
+  }
+});
+
 test('randomPuzzle picks distinct categories within each axis (no repeats)', () => {
   // Even with a "weird" RNG that keeps returning the same fractional value,
   // partial Fisher-Yates should still produce distinct picks.
