@@ -197,6 +197,14 @@ export const COLORS_FOR_RANDOM = [
 ];
 
 /**
+ * Flag-motif palette. Each entry yields a hasMotif() category. Tagged on
+ * countries via scripts/add-flag-motifs.mjs.
+ */
+export const MOTIFS_FOR_RANDOM = [
+  'animal',
+];
+
+/**
  * Category: country's flag contains the given colour. Countries with no
  * `colors` field (or empty) never match.
  *
@@ -208,6 +216,21 @@ export function hasColor(color) {
     id: `hasColor:${color}`,
     label: `Has ${color}`,
     predicate: (c) => Array.isArray(c.colors) && c.colors.includes(color),
+  };
+}
+
+/**
+ * Category: country's flag depicts the given motif. Countries with no
+ * `motifs` field (or empty) never match.
+ *
+ * @param {string} motif one of MOTIFS_FOR_RANDOM
+ * @returns {Category}
+ */
+export function hasMotif(motif) {
+  return {
+    id: `hasMotif:${motif}`,
+    label: `Has ${motif}`,
+    predicate: (c) => Array.isArray(c.motifs) && c.motifs.includes(motif),
   };
 }
 
@@ -235,19 +258,26 @@ function pickRandom(pool, n, rng) {
 }
 
 /**
- * Build a random 3x3 puzzle with continent rows and flag-colour columns.
- * Pure shuffle — does no validity checking. Callers that need a solvable
- * puzzle should use `generateRandomPuzzle` instead.
+ * Build a random 3x3 puzzle with continent rows. Columns are drawn from a
+ * pool that mixes colour categories (hasColor) and motif categories
+ * (hasMotif), so a single random puzzle might have e.g. "Has red", "Has
+ * blue", "Has animal" as its three columns. Pure shuffle — does no
+ * validity checking. Callers that need a solvable puzzle should use
+ * `generateRandomPuzzle` instead.
  *
  * @param {() => number} [rng]  defaults to Math.random
  * @returns {Puzzle}
  */
 export function randomPuzzle(rng = Math.random) {
   const rowNames = pickRandom(CONTINENTS_FOR_RANDOM, 3, rng);
-  const colColors = pickRandom(COLORS_FOR_RANDOM, 3, rng);
+  const colPool = [
+    ...COLORS_FOR_RANDOM.map(hasColor),
+    ...MOTIFS_FOR_RANDOM.map(hasMotif),
+  ];
+  const cols = pickRandom(colPool, 3, rng);
   return {
     rows: rowNames.map(continent),
-    cols: colColors.map(hasColor),
+    cols,
   };
 }
 
