@@ -101,6 +101,38 @@ test('motifs (when present) are arrays drawn from MOTIFS_FOR_RANDOM', () => {
   assert.deepEqual(offenders, [], offenders.join('; '));
 });
 
+// Hand-curated registry of flags whose motifs are visually obvious
+// from the rendered SVG. Lock-down test: a future data refresh (or
+// re-run of scripts/add-flag-motifs.mjs against drifted input) cannot
+// silently drop a tag without failing CI. Issues #50 and #52 were
+// real because the SH/AC entries had been *added* without the motif
+// pass running over them — this test would have caught both.
+const KNOWN_MOTIFS = [
+  // Coats of arms depicting an animal — listed under both 'animal'
+  // and 'coat-of-arms' so a partial removal still trips the assertion.
+  { code: 'sh-hl', motifs: ['animal', 'coat-of-arms'], note: 'Saint Helena wirebird' },
+  { code: 'sh-ac', motifs: ['animal', 'coat-of-arms'], note: 'Ascension Island turtle' },
+  { code: 'sh-ta', motifs: ['animal', 'coat-of-arms'], note: 'Tristan da Cunha albatross' },
+  { code: 'sh',    motifs: ['animal', 'coat-of-arms'], note: 'SH+A+T combined territory' },
+];
+
+test('known animal/coat-of-arms flags keep their expected motif tags', () => {
+  const offenders = [];
+  for (const { code, motifs: expected, note } of KNOWN_MOTIFS) {
+    const c = COUNTRIES.find((x) => x.code === code);
+    if (!c) {
+      offenders.push(`${code} (${note}): not found in countries.json`);
+      continue;
+    }
+    for (const m of expected) {
+      if (!c.motifs?.includes(m)) {
+        offenders.push(`${code} (${note}): expected motif "${m}", got ${JSON.stringify(c.motifs)}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
 test('All-countries pool supports the "20" quiz mode (Flag Quiz default)', () => {
   // Main menu hardcodes flagQuiz/?v=countries&n=20. If the country pool
   // dropped below 20 the boot fallback would silently downgrade the mode,
