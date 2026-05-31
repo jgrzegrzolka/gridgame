@@ -94,7 +94,13 @@
         activeCell = { row, col };
         pickerInputEl.value = '';
         suggestionsEl.innerHTML = '';
-        pickerEl.showModal();
+        const td = gridBodyEl.querySelector(
+          `td[data-row="${row}"][data-col="${col}"]`,
+        );
+        const rect = td.getBoundingClientRect();
+        pickerEl.style.top = rect.top + 'px';
+        pickerEl.style.left = rect.left + 'px';
+        pickerEl.show();
         pickerInputEl.focus();
       }
 
@@ -115,8 +121,15 @@
         }
       });
 
-      pickerEl.addEventListener('click', (e) => {
-        if (e.target === pickerEl) pickerEl.close();
+      document.addEventListener('click', (e) => {
+        if (!pickerEl.open) return;
+        if (pickerEl.contains(e.target)) return;
+        // Clicks on cells reopen the picker via their own handler; let them.
+        if (e.target.closest('.cell')) return;
+        pickerEl.close();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && pickerEl.open) pickerEl.close();
       });
 
       function pickCountry(country) {

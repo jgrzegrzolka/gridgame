@@ -73,14 +73,14 @@ body {
 }
 
 dialog#picker {
-  width: min(90vw, 360px);
+  position: fixed;
+  margin: 0;
+  width: min(90vw, 260px);
   padding: 12px;
   border: 1px solid #ddd;
-  border-radius: 0;
+  border-radius: 6px;
   background: #fff;
-}
-dialog#picker::backdrop {
-  background: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
 }
 #picker-input {
   width: 100%;
