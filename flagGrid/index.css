@@ -130,17 +130,16 @@ body {
   outline: 2px solid #000;
   outline-offset: -2px;
 }
-/* In-cell echo of the autocomplete query. Absolutely positioned at
-   the TOP of the cell — the user types at the top, suggestions appear
-   from the vertical middle, so neither covers the other. */
+/* In-cell echo of the autocomplete query. Pinned to the cell's
+   top-left corner (a little padding off the edges) and bold, so the
+   typed letters read like a label rather than centred body text. */
 .cell-query {
   position: absolute;
-  top: 4px;
-  left: 0;
-  right: 0;
+  top: 6px;
+  left: 8px;
   font-size: 16px;
-  color: #444;
-  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #1c1c1c;
   pointer-events: none;
 }
 /* Hover tint via a pseudo-element overlay rather than `background` on
