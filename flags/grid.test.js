@@ -13,6 +13,7 @@ import {
   puzzleCellCounts,
   isPuzzleGeneratable,
   generateRandomPuzzle,
+  formatGridStatus,
   CONTINENTS_FOR_RANDOM,
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
@@ -590,4 +591,69 @@ test('solutionState.complete is false when one cell is invalid even if all are f
   const state = solutionState(PUZZLE, solution);
   assert.equal(state.complete, false);
   assert.equal(state.cells[2][2].valid, false);
+});
+
+test('formatGridStatus returns "" mid-game while the player is still clean', () => {
+  assert.equal(
+    formatGridStatus({ filledCount: 0, wrongCount: 0, solved: false, gaveUp: false }),
+    '',
+  );
+  assert.equal(
+    formatGridStatus({ filledCount: 5, wrongCount: 0, solved: false, gaveUp: false }),
+    '',
+  );
+});
+
+test('formatGridStatus uses the singular "1 wrong" form for exactly one mistake', () => {
+  assert.equal(
+    formatGridStatus({ filledCount: 3, wrongCount: 1, solved: false, gaveUp: false }),
+    '1 wrong',
+  );
+});
+
+test('formatGridStatus uses the plural "N wrong" form for two or more mistakes', () => {
+  assert.equal(
+    formatGridStatus({ filledCount: 4, wrongCount: 2, solved: false, gaveUp: false }),
+    '2 wrong',
+  );
+  assert.equal(
+    formatGridStatus({ filledCount: 6, wrongCount: 7, solved: false, gaveUp: false }),
+    '7 wrong',
+  );
+});
+
+test('formatGridStatus shows "Solved!" with the wrong-count tail when solved', () => {
+  assert.equal(
+    formatGridStatus({ filledCount: 9, wrongCount: 0, solved: true, gaveUp: false }),
+    'Solved! 0 wrong',
+  );
+  assert.equal(
+    formatGridStatus({ filledCount: 9, wrongCount: 1, solved: true, gaveUp: false }),
+    'Solved! 1 wrong',
+  );
+  assert.equal(
+    formatGridStatus({ filledCount: 9, wrongCount: 4, solved: true, gaveUp: false }),
+    'Solved! 4 wrong',
+  );
+});
+
+test('formatGridStatus reports the partial progress and wrong-count tail after give up', () => {
+  assert.equal(
+    formatGridStatus({ filledCount: 0, wrongCount: 0, solved: false, gaveUp: true }),
+    'Gave up — 0/9 filled, 0 wrong',
+  );
+  assert.equal(
+    formatGridStatus({ filledCount: 5, wrongCount: 2, solved: false, gaveUp: true }),
+    'Gave up — 5/9 filled, 2 wrong',
+  );
+});
+
+test('formatGridStatus picks Solved over Gave up if both flags are set (defensive)', () => {
+  // page.js hides the give-up button once solved, so callers should
+  // never set both; pinning the precedence keeps the message coherent
+  // if a future caller forgets that invariant.
+  assert.equal(
+    formatGridStatus({ filledCount: 9, wrongCount: 3, solved: true, gaveUp: true }),
+    'Solved! 3 wrong',
+  );
 });

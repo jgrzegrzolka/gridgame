@@ -1,4 +1,4 @@
-import { tryPick, suggest } from '../flags/grid.js';
+import { tryPick, suggest, formatGridStatus } from '../flags/grid.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/grid.js').Puzzle} Puzzle */
@@ -184,16 +184,13 @@ export function runFlagGrid({ puzzle, countries }) {
     }
     const solved = filledCount === 9;
     statusEl.classList.toggle('complete', solved);
-    statusEl.textContent = formatStatus(filledCount, solved);
+    statusEl.textContent = formatGridStatus({
+      filledCount,
+      wrongCount,
+      solved,
+      gaveUp,
+    });
     if (giveUpEl) giveUpEl.hidden = solved || gaveUp;
-  }
-
-  function formatStatus(filledCount, solved) {
-    const wrongTail = wrongCount === 1 ? '1 wrong' : `${wrongCount} wrong`;
-    if (solved) return `Solved! ${wrongTail}`;
-    if (gaveUp) return `Gave up — ${filledCount}/9 filled, ${wrongTail}`;
-    if (wrongCount === 0) return '';
-    return wrongTail;
   }
 
   if (giveUpEl) {
