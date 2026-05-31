@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Flag Grid — Game 1</title>
+    <title>Flag Grid — Archive</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="../index.css?v=__BUILD__" />
@@ -36,27 +36,19 @@
         <li class="menu-divider"><a href="../../" aria-label="Home"><span class="home-icon" aria-hidden="true"></span></a></li>
       </ul>
     </nav>
-    <p class="status" id="status"></p>
-    <table class="grid">
-      <thead>
-        <tr>
-          <th class="corner"></th>
-          <th class="col-header" data-col="0"></th>
-          <th class="col-header" data-col="1"></th>
-          <th class="col-header" data-col="2"></th>
-        </tr>
-      </thead>
-      <tbody id="grid-body"></tbody>
-    </table>
-    <dialog id="picker">
-      <input type="text" id="picker-input" autocomplete="off" />
-      <ul class="suggestions" id="suggestions"></ul>
-    </dialog>
+    <ul class="menu" id="archive-list"></ul>
     <script type="module">
-      import { bootFlagGrid } from '../page.js?v=__BUILD__';
-      import { PUZZLE_1 } from '../puzzles.js?v=__BUILD__';
+      import { ARCHIVE } from '../puzzles.js?v=__BUILD__';
 
-      bootFlagGrid(() => PUZZLE_1);
+      const listEl = document.getElementById('archive-list');
+      for (const entry of ARCHIVE) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = `../${entry.slug}/`;
+        a.textContent = entry.label;
+        li.appendChild(a);
+        listEl.appendChild(li);
+      }
     </script>
   </body>
 </html>
