@@ -92,6 +92,46 @@ export function solutionState(puzzle, solution) {
   return { cells, complete };
 }
 
+/**
+ * @typedef {Object} PickOutcome
+ * @property {boolean} accepted
+ * @property {(Country | null)[][]} [solution]  new solution when accepted
+ */
+
+/**
+ * Decides whether `country` can be placed at (row, col) in `solution`.
+ * Rejects if the cell is already filled (placed cells are locked), if the
+ * country fails either predicate, or if it duplicates a country already
+ * placed in another cell. On accept, returns a fresh solution with the
+ * pick applied; the input is never mutated.
+ *
+ * @param {Puzzle} puzzle
+ * @param {(Country | null)[][]} solution
+ * @param {number} row
+ * @param {number} col
+ * @param {Country} country
+ * @returns {PickOutcome}
+ */
+export function tryPick(puzzle, solution, row, col, country) {
+  if (solution[row][col]) {
+    return { accepted: false };
+  }
+  if (!validateCell(puzzle, row, col, country)) {
+    return { accepted: false };
+  }
+  for (let r = 0; r < solution.length; r++) {
+    for (let c = 0; c < solution[r].length; c++) {
+      if (r === row && c === col) continue;
+      if (solution[r][c]?.code === country.code) {
+        return { accepted: false };
+      }
+    }
+  }
+  const next = solution.map((rowArr) => rowArr.slice());
+  next[row][col] = country;
+  return { accepted: true, solution: next };
+}
+
 // ---------------------------------------------------------------------------
 // Starter categories. Today we can only express predicates over the fields
 // already on Country (continent, statehood) — useful for proving the engine
@@ -130,6 +170,24 @@ export function statehood(value, label) {
 }
 
 /**
+ * Continent names the random-puzzle generator draws from for the row axis.
+ */
+export const CONTINENTS_FOR_RANDOM = [
+  'Europe',
+  'Asia',
+  'Africa',
+  'North America',
+  'South America',
+  'Oceania',
+];
+
+/**
+ * Letters the random-puzzle generator draws from for the col axis (via
+ * nameStartsWith).
+ */
+export const LETTERS_FOR_RANDOM = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+/**
  * Category: country's name starts with the given letter (case-insensitive).
  * Useful as a "boring but always satisfiable" category for v0 puzzles that
  * use the existing data only.
@@ -147,26 +205,70 @@ export function nameStartsWith(letter) {
 }
 
 // ---------------------------------------------------------------------------
+// Random puzzles.
+// ---------------------------------------------------------------------------
+
+/**
+ * Pick `n` distinct elements from `pool` using a partial Fisher–Yates shuffle.
+ * Does not mutate the input.
+ *
+ * @template T
+ * @param {T[]} pool
+ * @param {number} n
+ * @param {() => number} rng  returns a value in [0, 1)
+ * @returns {T[]}
+ */
+function pickRandom(pool, n, rng) {
+  const arr = pool.slice();
+  for (let i = 0; i < n && i < arr.length; i++) {
+    const j = i + Math.floor(rng() * (arr.length - i));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.slice(0, n);
+}
+
+/**
+ * Build a random 3x3 puzzle with continent rows and nameStartsWith-letter
+ * columns. This v0 generator just shuffles — it does NOT yet guard against
+ * mutually-exclusive axis picks or empty cells (no country satisfies both
+ * predicates). Those guards are the next step.
+ *
+ * @param {() => number} [rng]  defaults to Math.random
+ * @returns {Puzzle}
+ */
+export function randomPuzzle(rng = Math.random) {
+  const rowNames = pickRandom(CONTINENTS_FOR_RANDOM, 3, rng);
+  const colLetters = pickRandom(LETTERS_FOR_RANDOM, 3, rng);
+  return {
+    rows: rowNames.map(continent),
+    cols: colLetters.map(nameStartsWith),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Picker autocomplete.
 // ---------------------------------------------------------------------------
 
 const MIN_QUERY_LENGTH = 3;
 
 /**
- * Return countries whose name starts with the given query, case-insensitive,
- * capped at `limit` results. Returns an empty list while the trimmed query is
- * shorter than MIN_QUERY_LENGTH so the picker dropdown stays empty until the
- * player has typed something substantive.
+ * Return countries whose name contains the given query as a substring,
+ * case-insensitive, capped at `limit` results. Returns an empty list while the
+ * trimmed query is shorter than MIN_QUERY_LENGTH so the picker dropdown stays
+ * empty until the player has typed something substantive. Codes in
+ * `excludeCodes` are filtered out before the limit is applied so already-placed
+ * countries don't show up.
  *
  * @param {Country[]} allCountries
  * @param {string} query
- * @param {number} [limit] max results (default 8)
+ * @param {{ limit?: number, excludeCodes?: Set<string> }} [options]
  * @returns {Country[]}
  */
-export function suggest(allCountries, query, limit = 8) {
+export function suggest(allCountries, query, options = {}) {
+  const { limit = 8, excludeCodes = new Set() } = options;
   const q = query.trim().toLowerCase();
   if (q.length < MIN_QUERY_LENGTH) return [];
   return allCountries
-    .filter((c) => c.name.toLowerCase().startsWith(q))
+    .filter((c) => !excludeCodes.has(c.code) && c.name.toLowerCase().includes(q))
     .slice(0, limit);
 }

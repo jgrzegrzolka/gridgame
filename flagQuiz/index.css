@@ -1,5 +1,5 @@
 body {
-  padding: 24px;
+  padding: var(--page-top) 24px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -13,10 +13,6 @@ body {
   background: #c5302d;
   transition: width 300ms ease;
   z-index: 30;
-}
-#menu {
-  align-self: flex-start;
-  margin: 24px 0 0 24px;
 }
 .variants {
   border-collapse: collapse;

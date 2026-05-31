@@ -3,10 +3,14 @@ import assert from 'node:assert/strict';
 import {
   validateCell,
   solutionState,
+  tryPick,
   continent,
   statehood,
   nameStartsWith,
   suggest,
+  randomPuzzle,
+  CONTINENTS_FOR_RANDOM,
+  LETTERS_FOR_RANDOM,
 } from './grid.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -92,7 +96,7 @@ test('suggest treats whitespace-only queries as too short', () => {
   assert.deepEqual(suggest(countries, '   '), []);
 });
 
-test('suggest matches by case-insensitive prefix once the query reaches 3 chars', () => {
+test('suggest matches by case-insensitive substring once the query reaches 3 chars', () => {
   const countries = [
     country({ code: 'fr', name: 'France' }),
     country({ code: 'fi', name: 'Finland' }),
@@ -100,6 +104,18 @@ test('suggest matches by case-insensitive prefix once the query reaches 3 chars'
   ];
   assert.deepEqual(suggest(countries, 'fra').map((c) => c.code), ['fr']);
   assert.deepEqual(suggest(countries, 'FRA').map((c) => c.code), ['fr']);
+});
+
+test('suggest matches a substring that appears anywhere in the name, not just the prefix', () => {
+  const countries = [
+    country({ code: 'is', name: 'Iceland' }),
+    country({ code: 'gl', name: 'Greenland' }),
+    country({ code: 'es', name: 'Spain' }),
+  ];
+  assert.deepEqual(
+    suggest(countries, 'and').map((c) => c.code).sort(),
+    ['gl', 'is'],
+  );
 });
 
 test('suggest matches against country names case-insensitively', () => {
@@ -112,7 +128,7 @@ test('suggest trims whitespace around the query', () => {
   assert.deepEqual(suggest(countries, '  fra  ').map((c) => c.code), ['fr']);
 });
 
-test('suggest returns an empty list when nothing matches the prefix', () => {
+test('suggest returns an empty list when nothing matches the query', () => {
   const countries = [country({ code: 'fr', name: 'France' })];
   assert.deepEqual(suggest(countries, 'xyz'), []);
 });
@@ -128,7 +144,32 @@ test('suggest respects a custom limit', () => {
   const countries = Array.from({ length: 20 }, (_, i) =>
     country({ code: `c${i}`, name: `Country${i}` })
   );
-  assert.equal(suggest(countries, 'cou', 3).length, 3);
+  assert.equal(suggest(countries, 'cou', { limit: 3 }).length, 3);
+});
+
+test('suggest excludes countries whose codes are in excludeCodes', () => {
+  const countries = [
+    country({ code: 'fr', name: 'France' }),
+    country({ code: 'fi', name: 'Finland' }),
+  ];
+  const result = suggest(countries, 'fin', { excludeCodes: new Set(['fi']) });
+  assert.deepEqual(result.map((c) => c.code), []);
+});
+
+test('suggest only excludes the codes listed in excludeCodes, not unrelated matches', () => {
+  const countries = [
+    country({ code: 'fr', name: 'France' }),
+    country({ code: 'fra', name: 'Franconia' }),
+  ];
+  const result = suggest(countries, 'fra', { excludeCodes: new Set(['fr']) });
+  assert.deepEqual(result.map((c) => c.code), ['fra']);
+});
+
+test('suggest with an empty excludeCodes set behaves the same as no excludeCodes', () => {
+  const countries = [country({ code: 'fr', name: 'France' })];
+  const withEmpty = suggest(countries, 'fra', { excludeCodes: new Set() });
+  const without = suggest(countries, 'fra');
+  assert.deepEqual(withEmpty, without);
 });
 
 test('validateCell is true when country satisfies both row and column', () => {
@@ -229,6 +270,129 @@ test('solutionState.complete is true when all nine cells are filled, valid, and 
       assert.deepEqual(state.cells[r][c], { filled: true, valid: true, duplicate: false });
     }
   }
+});
+
+function emptySolution() {
+  return [
+    [null, null, null],
+    [null, null, null],
+    [null, null, null],
+  ];
+}
+
+test('tryPick accepts a valid, unique pick and returns a new solution with the pick placed', () => {
+  const before = emptySolution();
+  const result = tryPick(PUZZLE, before, 0, 0, FR);
+  assert.equal(result.accepted, true);
+  assert.equal(result.solution[0][0], FR);
+  // Untouched cells remain null in the new solution.
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (r === 0 && c === 0) continue;
+      assert.equal(result.solution[r][c], null);
+    }
+  }
+});
+
+test('tryPick rejects when the row predicate fails', () => {
+  const result = tryPick(PUZZLE, emptySolution(), 0, 0, JP); // Asia in Europe row
+  assert.equal(result.accepted, false);
+  assert.equal(result.solution, undefined);
+});
+
+test('tryPick rejects when the column predicate fails', () => {
+  const result = tryPick(PUZZLE, emptySolution(), 0, 1, FR); // FR is UN, col 1 is Observer
+  assert.equal(result.accepted, false);
+});
+
+test('tryPick rejects a duplicate of a country already placed elsewhere', () => {
+  // Puzzle where two cells both accept FR (Europe + UN), so the duplicate
+  // path is exercised cleanly rather than masked by a predicate fail.
+  const dupPuzzle = {
+    rows: [EUROPE, EUROPE, AFRICA],
+    cols: [UN, UN, TERRITORY],
+  };
+  const solution = emptySolution();
+  solution[0][0] = FR;
+  const result = tryPick(dupPuzzle, solution, 1, 1, FR);
+  assert.equal(result.accepted, false);
+});
+
+test('tryPick rejects any pick on an already-filled cell (placed cells are locked)', () => {
+  const solution = emptySolution();
+  solution[0][0] = FR;
+  // DE is a perfectly valid Europe + UN pick that would be accepted at
+  // (0,0) if the cell were empty — but the cell is filled, so reject.
+  const result = tryPick(PUZZLE, solution, 0, 0, DE);
+  assert.equal(result.accepted, false);
+  assert.equal(result.solution, undefined);
+});
+
+test('tryPick rejects re-picking the same country into its own already-filled cell', () => {
+  const solution = emptySolution();
+  solution[0][0] = FR;
+  const result = tryPick(PUZZLE, solution, 0, 0, FR);
+  assert.equal(result.accepted, false);
+});
+
+test('tryPick does not mutate the original solution on accept', () => {
+  const before = emptySolution();
+  before[1][1] = JP;
+  const snapshot = before.map((r) => r.slice());
+  tryPick(PUZZLE, before, 0, 0, FR);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      assert.equal(before[r][c], snapshot[r][c]);
+    }
+  }
+});
+
+function sequenceRng(values) {
+  let i = 0;
+  return () => values[i++ % values.length];
+}
+
+test('randomPuzzle yields 3 row categories and 3 column categories', () => {
+  const p = randomPuzzle(() => 0);
+  assert.equal(p.rows.length, 3);
+  assert.equal(p.cols.length, 3);
+});
+
+test('randomPuzzle row categories are all continent categories', () => {
+  const p = randomPuzzle(() => 0);
+  for (const r of p.rows) {
+    assert.ok(r.id.startsWith('continent:'), `expected continent id, got ${r.id}`);
+    assert.ok(CONTINENTS_FOR_RANDOM.includes(r.label));
+  }
+});
+
+test('randomPuzzle column categories are all nameStartsWith letter categories', () => {
+  const p = randomPuzzle(() => 0);
+  for (const c of p.cols) {
+    assert.ok(c.id.startsWith('nameStartsWith:'), `expected nameStartsWith id, got ${c.id}`);
+  }
+});
+
+test('randomPuzzle picks distinct categories within each axis (no repeats)', () => {
+  // Even with a "weird" RNG that keeps returning the same fractional value,
+  // partial Fisher-Yates should still produce distinct picks.
+  const p = randomPuzzle(() => 0.42);
+  assert.equal(new Set(p.rows.map((r) => r.id)).size, 3);
+  assert.equal(new Set(p.cols.map((c) => c.id)).size, 3);
+});
+
+test('randomPuzzle is deterministic given a deterministic RNG', () => {
+  const seed = [0.11, 0.27, 0.83, 0.04, 0.55, 0.62, 0.71, 0.99, 0.18, 0.36];
+  const p1 = randomPuzzle(sequenceRng(seed));
+  const p2 = randomPuzzle(sequenceRng(seed));
+  assert.deepEqual(p1.rows.map((r) => r.id), p2.rows.map((r) => r.id));
+  assert.deepEqual(p1.cols.map((c) => c.id), p2.cols.map((c) => c.id));
+});
+
+test('LETTERS_FOR_RANDOM covers the full A-Z alphabet', () => {
+  assert.equal(LETTERS_FOR_RANDOM.length, 26);
+  assert.equal(LETTERS_FOR_RANDOM[0], 'A');
+  assert.equal(LETTERS_FOR_RANDOM[25], 'Z');
 });
 
 test('solutionState.complete is false when one cell is invalid even if all are filled and distinct', () => {
