@@ -93,7 +93,7 @@ test('suggest treats whitespace-only queries as too short', () => {
   assert.deepEqual(suggest(countries, '   '), []);
 });
 
-test('suggest matches by case-insensitive prefix once the query reaches 3 chars', () => {
+test('suggest matches by case-insensitive substring once the query reaches 3 chars', () => {
   const countries = [
     country({ code: 'fr', name: 'France' }),
     country({ code: 'fi', name: 'Finland' }),
@@ -101,6 +101,18 @@ test('suggest matches by case-insensitive prefix once the query reaches 3 chars'
   ];
   assert.deepEqual(suggest(countries, 'fra').map((c) => c.code), ['fr']);
   assert.deepEqual(suggest(countries, 'FRA').map((c) => c.code), ['fr']);
+});
+
+test('suggest matches a substring that appears anywhere in the name, not just the prefix', () => {
+  const countries = [
+    country({ code: 'is', name: 'Iceland' }),
+    country({ code: 'gl', name: 'Greenland' }),
+    country({ code: 'es', name: 'Spain' }),
+  ];
+  assert.deepEqual(
+    suggest(countries, 'and').map((c) => c.code).sort(),
+    ['gl', 'is'],
+  );
 });
 
 test('suggest matches against country names case-insensitively', () => {
@@ -113,7 +125,7 @@ test('suggest trims whitespace around the query', () => {
   assert.deepEqual(suggest(countries, '  fra  ').map((c) => c.code), ['fr']);
 });
 
-test('suggest returns an empty list when nothing matches the prefix', () => {
+test('suggest returns an empty list when nothing matches the query', () => {
   const countries = [country({ code: 'fr', name: 'France' })];
   assert.deepEqual(suggest(countries, 'xyz'), []);
 });

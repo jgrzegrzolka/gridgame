@@ -193,11 +193,12 @@ export function nameStartsWith(letter) {
 const MIN_QUERY_LENGTH = 3;
 
 /**
- * Return countries whose name starts with the given query, case-insensitive,
- * capped at `limit` results. Returns an empty list while the trimmed query is
- * shorter than MIN_QUERY_LENGTH so the picker dropdown stays empty until the
- * player has typed something substantive. Codes in `excludeCodes` are filtered
- * out before the limit is applied so already-placed countries don't show up.
+ * Return countries whose name contains the given query as a substring,
+ * case-insensitive, capped at `limit` results. Returns an empty list while the
+ * trimmed query is shorter than MIN_QUERY_LENGTH so the picker dropdown stays
+ * empty until the player has typed something substantive. Codes in
+ * `excludeCodes` are filtered out before the limit is applied so already-placed
+ * countries don't show up.
  *
  * @param {Country[]} allCountries
  * @param {string} query
@@ -209,6 +210,6 @@ export function suggest(allCountries, query, options = {}) {
   const q = query.trim().toLowerCase();
   if (q.length < MIN_QUERY_LENGTH) return [];
   return allCountries
-    .filter((c) => !excludeCodes.has(c.code) && c.name.toLowerCase().startsWith(q))
+    .filter((c) => !excludeCodes.has(c.code) && c.name.toLowerCase().includes(q))
     .slice(0, limit);
 }
