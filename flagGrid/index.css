@@ -17,9 +17,14 @@ body {
   font-weight: 500;
 }
 .grid {
+  --grid-cell: 140px;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 .grid th, .grid td {
+  width: var(--grid-cell);
+  height: var(--grid-cell);
+  box-sizing: border-box;
   border: 1px solid #ddd;
   padding: 8px;
   text-align: center;
@@ -30,15 +35,12 @@ body {
   font-weight: 500;
   font-size: 14px;
   color: #1c1c1c;
-  width: 140px;
 }
 .grid .corner {
   background: transparent;
   border: none;
 }
 .cell {
-  width: 140px;
-  height: 110px;
   cursor: pointer;
   font-size: 28px;
   color: #ccc;
