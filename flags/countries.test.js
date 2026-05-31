@@ -101,16 +101,14 @@ test('motifs (when present) are arrays drawn from MOTIFS_FOR_RANDOM', () => {
   assert.deepEqual(offenders, [], offenders.join('; '));
 });
 
-test('Europe pool supports the "20" quiz mode (Flag Quiz default)', () => {
-  // Main menu hardcodes flagQuiz/?v=europe&n=20. If Europe drops below
-  // 20 countries the boot fallback silently downgrades to "all" — clicking
-  // "Flag Quiz" gives the full ~50-question quiz instead of the 20-q one.
-  const n = COUNTRIES.filter(
-    (c) => c.category === 'country' && c.continent === 'Europe',
-  ).length;
+test('All-countries pool supports the "20" quiz mode (Flag Quiz default)', () => {
+  // Main menu hardcodes flagQuiz/?v=countries&n=20. If the country pool
+  // dropped below 20 the boot fallback would silently downgrade the mode,
+  // so the "Flag Quiz" link wouldn't actually give a 20-q quiz.
+  const n = COUNTRIES.filter((c) => c.category === 'country').length;
   assert.ok(
     n >= 20,
-    `Europe pool is ${n} — flagQuiz default "Europe 20" needs >= 20`,
+    `All-countries pool is ${n} — flagQuiz default "All countries 20" needs >= 20`,
   );
 });
 
