@@ -16,7 +16,10 @@ import {
 import { CONTINENTS } from './group.js';
 import { PUZZLE_1, PUZZLE_2, PUZZLE_3 } from '../flagGrid/puzzles.js';
 
+/** @typedef {import('./group.js').Country} Country */
+
 const HERE = dirname(fileURLToPath(import.meta.url));
+/** @type {Country[]} */
 const COUNTRIES = JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'));
 const SVG_DIR = join(HERE, 'svg');
 
@@ -56,6 +59,7 @@ test('every entry has category "country" or "other"', () => {
 test('continent is in CONTINENTS for "country" entries, null for "other" entries', () => {
   for (const c of COUNTRIES) {
     if (c.category === 'country') {
+      assert.ok(c.continent, `${c.code}: country must have a non-null continent`);
       assert.ok(
         CONTINENTS.includes(c.continent),
         `${c.code}: continent "${c.continent}" not in CONTINENTS`,
@@ -207,7 +211,7 @@ test('PUZZLE_1 has an exemplary 9-distinct-country solution against the real cou
   // candidates and breaks the no-duplicates rule — fails this test rather
   // than producing a stuck game.
   const solution = findPuzzleSolution(PUZZLE_1, COUNTRIES);
-  assert.notEqual(solution, null);
+  assert.ok(solution);
   const codes = solution.flat().map((c) => c.code);
   assert.equal(new Set(codes).size, 9, `expected 9 distinct countries, got codes: ${codes.join(', ')}`);
   for (let r = 0; r < 3; r++) {
@@ -226,7 +230,7 @@ test('PUZZLE_1 has an exemplary 9-distinct-country solution against the real cou
 
 test('PUZZLE_2 has an exemplary 9-distinct-country solution against the real countries.json', () => {
   const solution = findPuzzleSolution(PUZZLE_2, COUNTRIES);
-  assert.notEqual(solution, null);
+  assert.ok(solution);
   const codes = solution.flat().map((c) => c.code);
   assert.equal(new Set(codes).size, 9, `expected 9 distinct countries, got codes: ${codes.join(', ')}`);
   for (let r = 0; r < 3; r++) {
@@ -247,7 +251,7 @@ test('PUZZLE_3 has an exemplary 9-distinct-country solution against the real cou
   // drift fails CI rather than a stuck game when Game 3 is finally
   // promoted into the ARCHIVE.
   const solution = findPuzzleSolution(PUZZLE_3, COUNTRIES);
-  assert.notEqual(solution, null);
+  assert.ok(solution);
   const codes = solution.flat().map((c) => c.code);
   assert.equal(new Set(codes).size, 9, `expected 9 distinct countries, got codes: ${codes.join(', ')}`);
   for (let r = 0; r < 3; r++) {
@@ -269,6 +273,7 @@ test('generateRandomPuzzle succeeds with the real countries.json under several s
   // the unified-pool generator now rejects many shuffles (exclusive-group
   // conflicts, empty cells), so a short cyclic seed could starve the
   // search before finding a valid puzzle.
+  /** @param {number} seed */
   function mulberry32(seed) {
     let a = seed | 0;
     return () => {

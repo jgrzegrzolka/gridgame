@@ -29,7 +29,7 @@ export function bootFlagQuiz() {
   const bestEl = document.getElementById('best');
   const playTimerEl = document.getElementById('play-time');
   const playModeEl = document.getElementById('play-mode');
-  const playAgainEl = document.getElementById('play-again');
+  const playAgainEl = /** @type {HTMLAnchorElement} */ (document.getElementById('play-again'));
   const progressBarEl = document.getElementById('progress-bar');
   const modeToggleEl = document.getElementById('mode-toggle');
 
@@ -177,7 +177,7 @@ export function bootFlagQuiz() {
         progressBarEl.style.width = (answeredCount / target * 100) + '%';
         tile.classList.add('correct');
         for (const t of choicesEl.querySelectorAll('.flag-choice')) {
-          t.disabled = true;
+          /** @type {HTMLButtonElement} */ (t).disabled = true;
         }
         feedbackEl.textContent = '';
         const nextQ = quiz.next();
@@ -199,7 +199,7 @@ export function bootFlagQuiz() {
       const ratio = score() / target;
       const pct = Math.round(ratio * 100);
       const elapsed = Date.now() - startTime;
-      finalScoreEl.textContent = pct;
+      finalScoreEl.textContent = String(pct);
       finalScoreLineEl.style.color = scoreColor(ratio);
       timeEl.textContent = `Time: ${formatTime(elapsed)}`;
 

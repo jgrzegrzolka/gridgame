@@ -25,7 +25,7 @@ export function bootFindFlag() {
   const resultEl = document.getElementById('result');
 
   // ---- zoom dialog (shared between found + missed grids) ----------
-  const zoom = document.getElementById('zoom');
+  const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
   const zoomImg = zoom.querySelector('img');
   const zoomName = zoom.querySelector('p');
   function openZoom(c) {
@@ -128,7 +128,7 @@ export function bootFindFlag() {
     const catEl = document.getElementById('find-cat');
     const countEl = document.getElementById('find-count');
     const timeEl = document.getElementById('find-time');
-    const inputEl = document.getElementById('find-input');
+    const inputEl = /** @type {HTMLInputElement} */ (document.getElementById('find-input'));
     const sugEl = document.getElementById('find-suggestions');
     const foundEl = document.getElementById('find-found');
     const giveUpEl = document.getElementById('give-up');
@@ -300,7 +300,7 @@ export function bootFindFlag() {
       for (const c of missed) missedEl.appendChild(flagTile(c));
       document.getElementById('missed-title').hidden = missed.length === 0;
 
-      document.getElementById('play-again').href =
+      /** @type {HTMLAnchorElement} */ (document.getElementById('play-again')).href =
         window.location.pathname + window.location.search;
 
       gameEl.hidden = true;

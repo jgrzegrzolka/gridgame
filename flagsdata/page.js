@@ -8,7 +8,7 @@ import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../flags/grid.js';
  * wires the zoom dialog. AND across groups, OR within.
  */
 export function bootFlagsData() {
-  const zoom = document.getElementById('zoom');
+  const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
   const zoomImg = zoom.querySelector('img');
   const zoomName = zoom.querySelector('p');
   const zoomData = zoom.querySelector('.country-data');
@@ -90,7 +90,7 @@ export function bootFlagsData() {
         s.tiles[i].hidden = !show;
         if (show) visible++;
       }
-      s.count.textContent = visible;
+      s.count.textContent = String(visible);
       s.section.hidden = visible === 0;
     }
     const any =

@@ -16,3 +16,10 @@ Rule of thumb: keep new code inside its feature folder. Promote something to `fl
 - When changing logic in any `flags/*.js`, update or add the matching test.
 - Run `npm test` before finishing a change.
 - The page-level `page.js` files are mostly DOM + `fetch` glue and aren't unit-tested — keep them thin and push reusable logic down into `flags/*.js`.
+
+## Type-checking
+
+- JSDoc-typed JS, checked by `tsc --noEmit`. Two configs:
+  - `tsconfig.json` (strict) covers `flags/**/*.js` — the engine and tests where type safety has the most ROI.
+  - `tsconfig.ui.json` (relaxed `strictNullChecks` / `noImplicitAny`) covers `**/page.js` — DOM glue where strict-mode ceremony around `getElementById` returning nullable wouldn't catch real bugs.
+- `npm run typecheck` runs both. CI runs it on every push and PR.
