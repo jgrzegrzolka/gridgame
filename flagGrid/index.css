@@ -130,18 +130,6 @@ body {
   outline: 2px solid #000;
   outline-offset: -2px;
 }
-/* In-cell echo of the autocomplete query. Pinned to the cell's
-   top-left corner (a little padding off the edges) and bold, so the
-   typed letters read like a label rather than centred body text. */
-.cell-query {
-  position: absolute;
-  top: 6px;
-  left: 8px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #1c1c1c;
-  pointer-events: none;
-}
 /* Hover tint via a pseudo-element overlay rather than `background` on
    the cell itself. Painting on the cell's background under
    border-collapse: collapse made Firefox drop the shared right/bottom
@@ -189,60 +177,131 @@ body {
   40%, 60% { transform: translateX(4px); }
 }
 
-/* Suggestions popup — viewport-fixed so it tracks the cell without
-   scroll math. JS sets top/left to the cell's vertical middle, so the
-   panel overlaps the bottom half of the cell and extends downward.
-   Hidden by default; revealed only when the query yields matches. */
-.suggestions {
-  position: fixed;
-  list-style: none;
-  padding: 2px;
-  margin: 0;
-  min-width: 200px;
-  max-width: 320px;
-  background: #fff;
-  border: 1px solid #999;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  z-index: 50;
-  max-height: 260px;
-  overflow-y: auto;
-}
-.suggestions[hidden] {
+/* Bottom-sheet picker. Tapping an empty cell opens this; on mobile it
+   sits pinned to the bottom edge (real <input> so the OS keyboard
+   appears), on desktop it centres as a modal. Suggestions live inside
+   the sheet so they scroll with it and don't have to track a cell
+   anchor across viewport changes. */
+.picker[hidden] {
   display: none;
 }
-.suggestions li {
+.picker-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+.picker-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 101;
+  background: #fff;
+  border-radius: 12px 12px 0 0;
+  padding: 12px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.18);
+}
+.picker-header {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 4px;
-  cursor: pointer;
-  font-size: 13px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
-.suggestions li:hover {
+.picker-cats {
+  flex: 1;
+  font-weight: 500;
+  font-size: 14px;
+  color: #1c1c1c;
+}
+.picker-close {
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  color: var(--link-color);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.picker-close:hover {
   background: #f0f0f0;
 }
+/* 16px font on the input prevents iOS from zooming the viewport when
+   the keyboard appears. Anything smaller triggers the auto-zoom. */
+.picker-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 16px;
+  border: 1px solid #999;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.picker-input:focus {
+  outline: 2px solid var(--link-color);
+  outline-offset: -2px;
+}
+.picker-suggestions {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.picker-suggestions li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  border-radius: 4px;
+}
 /* Keyboard selection highlight — JS sets `.selected` on the row that
-   Arrow keys land on, and Enter picks it. Hover from a mouse takes
-   precedence visually so the two interactions don't fight. */
-.suggestions li.selected {
+   Arrow keys land on, and Enter picks it. Hover from a mouse uses the
+   same tint so the two interactions agree. */
+.picker-suggestions li.selected,
+.picker-suggestions li:hover {
   background: rgba(102, 0, 51, 0.16);
 }
-.suggestions li span {
+.picker-suggestions span {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.suggestions img {
-  width: 20px;
-  height: 15px;
+.picker-suggestions img {
+  width: 28px;
+  height: 21px;
   border: 1px solid #ddd;
   flex-shrink: 0;
 }
-.suggestions img {
-  width: 20px;
-  height: 15px;
-  border: 1px solid #ddd;
-  flex-shrink: 0;
+
+/* Desktop: lift the sheet off the bottom edge and centre it as a
+   modal. Same markup, different layout. */
+@media (min-width: 600px) {
+  .picker-sheet {
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 480px;
+    max-width: calc(100vw - 32px);
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
+  }
+}
+
+/* Lock background scroll while the picker is open — keeps a finger
+   drag on the backdrop from scrolling the grid underneath on mobile. */
+body.picker-open {
+  overflow: hidden;
 }

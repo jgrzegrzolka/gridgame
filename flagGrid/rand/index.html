@@ -60,7 +60,27 @@
         <a id="play-again" href="#">Play again</a>
       </p>
     </div>
-    <ul class="suggestions" id="suggestions" hidden></ul>
+    <div class="picker" id="picker" hidden>
+      <div class="picker-backdrop" id="picker-backdrop"></div>
+      <div class="picker-sheet" role="dialog" aria-modal="true" aria-labelledby="picker-cats">
+        <header class="picker-header">
+          <span class="picker-cats" id="picker-cats"></span>
+          <button type="button" class="picker-close" id="picker-close" aria-label="Cancel">Cancel</button>
+        </header>
+        <input
+          type="text"
+          class="picker-input"
+          id="picker-input"
+          inputmode="text"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="Country name…"
+        />
+        <ul class="picker-suggestions" id="picker-suggestions"></ul>
+      </div>
+    </div>
     <script type="module">
       import { bootFlagGrid } from '../page.js?v=__BUILD__';
       import { generateRandomPuzzle } from '../../flags/grid.js?v=__BUILD__';
