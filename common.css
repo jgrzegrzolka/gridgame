@@ -207,14 +207,16 @@ body::before {
   color: #2a9d4a;
   font-weight: 500;
   margin-left: 6px;
-  animation: new-record-bounce 1s ease-out;
+  animation: new-record-bounce 2s ease-out;
   transform-origin: center bottom;
 }
 @keyframes new-record-bounce {
   0%   { transform: translateY(0); }
-  30%  { transform: translateY(-10px); }
-  50%  { transform: translateY(0); }
-  70%  { transform: translateY(-5px); }
+  18%  { transform: translateY(-12px); }
+  32%  { transform: translateY(0); }
+  45%  { transform: translateY(-8px); }
+  60%  { transform: translateY(0); }
+  75%  { transform: translateY(-4px); }
   100% { transform: translateY(0); }
 }
 
