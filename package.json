@@ -5,10 +5,13 @@
   "scripts": {
     "test": "node --test",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.ui.json",
-    "validate": "npm test && npm run typecheck"
+    "validate": "npm test && npm run typecheck",
+    "dev": "partykit dev --serve .",
+    "party:deploy": "partykit deploy"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "partykit": "^0.0.114",
     "typescript": "^6.0.3"
   }
 }
