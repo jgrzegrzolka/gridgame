@@ -67,7 +67,3 @@ body {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 8h18v2H3zM3 14h18v2H3zM8 3h2v18H8zM14 3h2v18h-2z'/%3E%3C/svg%3E");
           mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 8h18v2H3zM3 14h18v2H3zM8 3h2v18H8zM14 3h2v18h-2z'/%3E%3C/svg%3E");
 }
-.icon-ttt-online {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 8h18v2H3zM3 14h18v2H3zM8 3h2v18H8zM14 3h2v18h-2z'/%3E%3Cpath d='M19 4a2 2 0 110 4 2 2 0 010-4zM5 16a2 2 0 110 4 2 2 0 010-4z'/%3E%3Cpath d='M7.5 17.5l9-11' stroke='black' stroke-width='1.4' fill='none'/%3E%3C/svg%3E");
-          mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 8h18v2H3zM3 14h18v2H3zM8 3h2v18H8zM14 3h2v18h-2z'/%3E%3Cpath d='M19 4a2 2 0 110 4 2 2 0 010-4zM5 16a2 2 0 110 4 2 2 0 010-4z'/%3E%3Cpath d='M7.5 17.5l9-11' stroke='black' stroke-width='1.4' fill='none'/%3E%3C/svg%3E");
-}
