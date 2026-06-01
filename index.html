@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
   </head>
   <body>
+    <span class="back" aria-label="Home" aria-disabled="true" role="link"><span class="home-icon" aria-hidden="true"></span></span>
     <button
       type="button"
       class="burger"
@@ -32,10 +33,22 @@
         <li><a href="flagsdata/">Flags data</a></li>
       </ul>
     </nav>
-    <ul class="menu">
-      <li><a href="flagQuiz/?v=countries&amp;n=20">Flag Quiz</a></li>
-      <li><a href="flagGrid/2/">Flag Grid</a></li>
-      <li><a href="findFlag/">Find Flag</a></li>
-    </ul>
+    <section class="domain">
+      <h2 class="domain-title">Flags</h2>
+      <div class="game-tiles">
+        <a class="game-tile" href="flagQuiz/?v=countries&amp;n=20">
+          <span class="game-icon icon-quiz" aria-hidden="true"></span>
+          <span class="game-name">Quiz</span>
+        </a>
+        <a class="game-tile" href="flagGrid/2/">
+          <span class="game-icon icon-grid" aria-hidden="true"></span>
+          <span class="game-name">Grid</span>
+        </a>
+        <a class="game-tile" href="findFlag/">
+          <span class="game-icon icon-find" aria-hidden="true"></span>
+          <span class="game-name">Find</span>
+        </a>
+      </div>
+    </section>
   </body>
 </html>
