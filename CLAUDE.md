@@ -23,3 +23,4 @@ Rule of thumb: keep new code inside its feature folder. Promote something to `fl
   - `tsconfig.json` (strict) covers `flags/**/*.js` — the engine and tests where type safety has the most ROI.
   - `tsconfig.ui.json` (relaxed `strictNullChecks` / `noImplicitAny`) covers `**/page.js` — DOM glue where strict-mode ceremony around `getElementById` returning nullable wouldn't catch real bugs.
 - `npm run typecheck` runs both. CI runs it on every push and PR.
+- `npm run validate` runs tests + typecheck together — same gate CI enforces. Run this before pushing.
