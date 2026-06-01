@@ -200,13 +200,6 @@ body {
   margin: 0 0 12px;
   border-radius: 8px;
 }
-.final-score.celebrate {
-  animation: celebrate-pulse 1.3s ease-out 4;
-}
-@keyframes celebrate-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(42, 157, 74, 0.5); }
-  100% { box-shadow: 0 0 0 28px rgba(42, 157, 74, 0); }
-}
 .time {
   font-size: 14px;
   color: #666;
@@ -218,11 +211,6 @@ body {
   color: #666;
   margin: 0 0 28px;
   font-variant-numeric: tabular-nums;
-}
-.best .new-badge {
-  color: #2a9d4a;
-  font-weight: 500;
-  margin-left: 6px;
 }
 .result-links {
   font-size: 14px;

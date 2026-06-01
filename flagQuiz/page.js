@@ -185,7 +185,6 @@ export function bootFlagQuiz() {
         badge.className = 'new-badge';
         badge.textContent = 'new record!';
         bestEl.appendChild(badge);
-        finalScoreLineEl.classList.add('celebrate');
       }
 
       gameEl.hidden = true;
