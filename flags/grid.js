@@ -6,10 +6,19 @@
  * categories objects); `label` is what the UI renders; `predicate` decides
  * whether a country satisfies it.
  *
+ * `exclusiveGroup` (optional) tags categories whose values are mutually
+ * exclusive per country — a country has at most one `continent`, at most
+ * one `statehood`, etc. Two categories with the same `exclusiveGroup` but
+ * different ids on OPPOSITE axes always produce an empty cell (no country
+ * can satisfy both), so random-puzzle generation rejects such layouts
+ * symbolically via `axesConflict`. Same exclusiveGroup on the same axis is
+ * fine — different rows of the puzzle don't intersect with each other.
+ *
  * @typedef {Object} Category
  * @property {string} id
  * @property {string} label
  * @property {(country: Country) => boolean} predicate
+ * @property {string} [exclusiveGroup]
  */
 
 /**
@@ -151,6 +160,7 @@ export function continent(name) {
     id: `continent:${name}`,
     label: name,
     predicate: (c) => c.continent === name,
+    exclusiveGroup: 'continent',
   };
 }
 
@@ -166,6 +176,7 @@ export function statehood(value, label) {
     id: `statehood:${value}`,
     label: label ?? value.replace(/_/g, ' '),
     predicate: (c) => c.statehood === value,
+    exclusiveGroup: 'statehood',
   };
 }
 
@@ -261,36 +272,67 @@ function pickRandom(pool, n, rng) {
 }
 
 /**
- * Build a random 3x3 puzzle with continent rows. One of the three column
- * slots is reserved for a motif (hasMotif) so motifs aren't drowned out
- * by the bigger colour pool; the other two slots are drawn from the
- * remaining motifs + all colours, so both motifs can still co-occur in
- * a single puzzle. The three resulting cols are then shuffled so the
- * reserved motif isn't always in the leftmost position.
+ * Unified pool of categories for random puzzles: every continent, every
+ * canonical colour, every canonical motif. Both axes draw from this same
+ * pool — there's no fixed "rows are continents" structure any more.
+ *
+ * Returns a fresh array so callers can shuffle without affecting future
+ * calls.
+ *
+ * @returns {Category[]}
+ */
+export function buildRandomCategoryPool() {
+  return [
+    ...CONTINENTS_FOR_RANDOM.map(continent),
+    ...COLORS_FOR_RANDOM.map(hasColor),
+    ...MOTIFS_FOR_RANDOM.map(hasMotif),
+  ];
+}
+
+/**
+ * Detects the structural conflict that makes a puzzle provably unsolvable:
+ * two categories with the same `exclusiveGroup` but different ids on
+ * opposite axes (e.g. `continent:Africa` on rows and `continent:Europe`
+ * on cols → every cell at that row × col intersection has zero candidates).
+ *
+ * Pure symbolic check — no country lookup, no empirical counting. The
+ * empirical solvability gate is `isPuzzleGeneratable`.
+ *
+ * @param {Category[]} rows
+ * @param {Category[]} cols
+ * @returns {boolean}
+ */
+export function axesConflict(rows, cols) {
+  for (const r of rows) {
+    if (!r.exclusiveGroup) continue;
+    for (const c of cols) {
+      if (r.exclusiveGroup === c.exclusiveGroup && r.id !== c.id) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Build a random 3x3 puzzle by drawing 6 distinct categories from the
+ * unified pool and placing 3 on each axis. No bias for type — continents,
+ * colours, motifs can all land on either axis. By construction the 6
+ * categories are distinct across the whole puzzle (no duplicate row/col
+ * labels).
  *
  * Pure shuffle — does no validity checking. Callers that need a solvable
- * puzzle should use `generateRandomPuzzle` instead.
+ * puzzle should use `generateRandomPuzzle` instead, which gates on
+ * `axesConflict` (symbolic) plus `isPuzzleGeneratable` (empirical).
  *
  * @param {() => number} [rng]  defaults to Math.random
  * @returns {Puzzle}
  */
 export function randomPuzzle(rng = Math.random) {
-  const rowNames = pickRandom(CONTINENTS_FOR_RANDOM, 3, rng);
-
-  const motifCategories = MOTIFS_FOR_RANDOM.map(hasMotif);
-  const colorCategories = COLORS_FOR_RANDOM.map(hasColor);
-
-  const [reservedMotif] = pickRandom(motifCategories, 1, rng);
-  const remainingPool = [
-    ...motifCategories.filter((m) => m.id !== reservedMotif.id),
-    ...colorCategories,
-  ];
-  const otherTwo = pickRandom(remainingPool, 2, rng);
-  const cols = pickRandom([reservedMotif, ...otherTwo], 3, rng);
-
+  const six = pickRandom(buildRandomCategoryPool(), 6, rng);
   return {
-    rows: rowNames.map(continent),
-    cols,
+    rows: six.slice(0, 3),
+    cols: six.slice(3, 6),
   };
 }
 
@@ -428,6 +470,7 @@ export function generateRandomPuzzle(countries, options = {}) {
   const { rng = Math.random, minPerCell = 2, maxAttempts = 200 } = options;
   for (let i = 0; i < maxAttempts; i++) {
     const puzzle = randomPuzzle(rng);
+    if (axesConflict(puzzle.rows, puzzle.cols)) continue;
     if (isPuzzleGeneratable(puzzle, countries, minPerCell)) {
       return puzzle;
     }

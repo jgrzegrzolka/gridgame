@@ -14,6 +14,8 @@ import {
   findPuzzleSolution,
   isPuzzleGeneratable,
   generateRandomPuzzle,
+  axesConflict,
+  buildRandomCategoryPool,
   computeGridScore,
   loadGridState,
   saveGridState,
@@ -394,55 +396,57 @@ function sequenceRng(values) {
   return () => values[i++ % values.length];
 }
 
+// Mulberry32 — small seedable PRNG. We use this instead of sequenceRng for
+// tests that drive generateRandomPuzzle: with the unified-pool generator,
+// many shuffles are rejected (exclusive-group conflicts, empty cells), and
+// a short cyclic seed can starve the loop before it finds a valid puzzle.
+// Mulberry32 produces a long, well-distributed stream from a single integer.
+function mulberry32(seed) {
+  let a = seed | 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 test('randomPuzzle yields 3 row categories and 3 column categories', () => {
   const p = randomPuzzle(() => 0);
   assert.equal(p.rows.length, 3);
   assert.equal(p.cols.length, 3);
 });
 
-test('randomPuzzle row categories are all continent categories', () => {
-  const p = randomPuzzle(() => 0);
-  for (const r of p.rows) {
-    assert.ok(r.id.startsWith('continent:'), `expected continent id, got ${r.id}`);
-    assert.ok(CONTINENTS_FOR_RANDOM.includes(r.label));
-  }
-});
-
-test('randomPuzzle column categories come from the colour or motif pools', () => {
-  const p = randomPuzzle(() => 0);
-  for (const c of p.cols) {
-    if (c.id.startsWith('hasColor:')) {
-      const color = c.id.slice('hasColor:'.length);
+test('randomPuzzle categories come from the unified pool (continent / colour / motif)', () => {
+  // Both axes now draw from the same pool. Each category id must be one
+  // of the canonical types — no other prefix should ever appear.
+  const p = randomPuzzle(mulberry32(1));
+  for (const cat of [...p.rows, ...p.cols]) {
+    if (cat.id.startsWith('continent:')) {
+      assert.ok(CONTINENTS_FOR_RANDOM.includes(cat.label));
+    } else if (cat.id.startsWith('hasColor:')) {
+      const color = cat.id.slice('hasColor:'.length);
       assert.ok(COLORS_FOR_RANDOM.includes(color), `color ${color} not in palette`);
-    } else if (c.id.startsWith('hasMotif:')) {
-      const motif = c.id.slice('hasMotif:'.length);
+    } else if (cat.id.startsWith('hasMotif:')) {
+      const motif = cat.id.slice('hasMotif:'.length);
       assert.ok(MOTIFS_FOR_RANDOM.includes(motif), `motif ${motif} not in palette`);
     } else {
-      assert.fail(`unexpected col category id: ${c.id}`);
+      assert.fail(`unexpected category id: ${cat.id}`);
     }
   }
 });
 
-test('randomPuzzle always includes at least one motif column', () => {
-  // Run with 50 different seeded RNGs; every puzzle should have ≥1 motif col.
-  for (let i = 0; i < 50; i++) {
-    const seed = [(i * 17) % 100, (i * 29) % 100, (i * 41) % 100, (i * 53) % 100]
-      .map((n) => n / 100);
-    const p = randomPuzzle(sequenceRng(seed));
-    const motifCols = p.cols.filter((c) => c.id.startsWith('hasMotif:'));
-    assert.ok(
-      motifCols.length >= 1,
-      `seed ${i}: no motif col in [${p.cols.map((c) => c.id).join(', ')}]`,
-    );
+test('randomPuzzle picks 6 distinct categories across both axes (no duplicates anywhere)', () => {
+  // The unified-pool generator must never let the same category appear
+  // on both rows and cols — that would make the cell at their intersection
+  // a trivial "X AND X" with no extra constraint, which is visually
+  // confusing for the player. Run with several seeds.
+  for (let s = 1; s <= 20; s++) {
+    const p = randomPuzzle(mulberry32(s));
+    const ids = new Set([...p.rows, ...p.cols].map((c) => c.id));
+    assert.equal(ids.size, 6, `seed ${s}: not 6 distinct categories — ${[...p.rows, ...p.cols].map((c) => c.id).join(', ')}`);
   }
-});
-
-test('randomPuzzle picks distinct categories within each axis (no repeats)', () => {
-  // Even with a "weird" RNG that keeps returning the same fractional value,
-  // partial Fisher-Yates should still produce distinct picks.
-  const p = randomPuzzle(() => 0.42);
-  assert.equal(new Set(p.rows.map((r) => r.id)).size, 3);
-  assert.equal(new Set(p.cols.map((c) => c.id)).size, 3);
 });
 
 test('randomPuzzle is deterministic given a deterministic RNG', () => {
@@ -462,6 +466,65 @@ test('COLORS_FOR_RANDOM is the 7-colour canonical palette', () => {
 
 test('MOTIFS_FOR_RANDOM lists every motif key that can be tagged on a flag', () => {
   assert.deepEqual(MOTIFS_FOR_RANDOM, ['animal', 'coat-of-arms', 'weapon', 'star-or-moon']);
+});
+
+test('continent and statehood categories carry their exclusiveGroup', () => {
+  // Other categories (hasColor, hasMotif) are non-exclusive — a country
+  // can carry many colours and many motifs.
+  assert.equal(continent('Europe').exclusiveGroup, 'continent');
+  assert.equal(statehood('un_member').exclusiveGroup, 'statehood');
+  assert.equal(hasColor('red').exclusiveGroup, undefined);
+  assert.equal(hasMotif('animal').exclusiveGroup, undefined);
+});
+
+test('buildRandomCategoryPool returns one entry per continent + colour + motif', () => {
+  const pool = buildRandomCategoryPool();
+  const expected =
+    CONTINENTS_FOR_RANDOM.length + COLORS_FOR_RANDOM.length + MOTIFS_FOR_RANDOM.length;
+  assert.equal(pool.length, expected);
+  // Fresh array per call so the caller can shuffle without poisoning future calls.
+  assert.notEqual(buildRandomCategoryPool(), pool);
+});
+
+test('axesConflict flags two different values from the same exclusiveGroup on opposite axes', () => {
+  // Africa on rows + Europe on cols → cell at that intersection is empty
+  // (no country lives on two continents). axesConflict must catch this
+  // symbolically, without consulting the country list.
+  const conflict = axesConflict(
+    [continent('Africa'), hasColor('red'), hasMotif('animal')],
+    [continent('Europe'), hasColor('blue'), hasMotif('weapon')],
+  );
+  assert.equal(conflict, true);
+});
+
+test('axesConflict returns false when same-group categories live on the same axis', () => {
+  // Two continents as different rows is fine — they're separate rows of
+  // the puzzle, never combined as a conjunction.
+  const conflict = axesConflict(
+    [continent('Africa'), continent('Asia'), continent('Europe')],
+    [hasColor('red'), hasColor('blue'), hasMotif('animal')],
+  );
+  assert.equal(conflict, false);
+});
+
+test('axesConflict returns false when no categories share an exclusiveGroup', () => {
+  // Only colours and motifs — neither has an exclusiveGroup, so any layout works.
+  const conflict = axesConflict(
+    [hasColor('red'), hasColor('blue'), hasMotif('animal')],
+    [hasColor('green'), hasMotif('weapon'), hasMotif('coat-of-arms')],
+  );
+  assert.equal(conflict, false);
+});
+
+test('axesConflict returns false for different exclusiveGroups (continent vs statehood)', () => {
+  // Continent and statehood are both exclusive within their own group, but
+  // a country can simultaneously be in Africa AND be a UN member, so
+  // cross-group is fine.
+  const conflict = axesConflict(
+    [continent('Africa'), continent('Asia'), continent('Europe')],
+    [statehood('un_member'), statehood('un_observer'), statehood('territory')],
+  );
+  assert.equal(conflict, false);
 });
 
 test('puzzleCellCounts counts countries satisfying both predicates per cell', () => {
@@ -657,11 +720,25 @@ test('generateRandomPuzzle throws when no valid puzzle can be found within maxAt
 
 test('generateRandomPuzzle is deterministic given a deterministic RNG and the same countries', () => {
   const countries = syntheticTaggedCountries();
-  const seed = [0.11, 0.27, 0.83, 0.04, 0.55, 0.62, 0.71, 0.99, 0.18, 0.36];
-  const p1 = generateRandomPuzzle(countries, { rng: sequenceRng(seed) });
-  const p2 = generateRandomPuzzle(countries, { rng: sequenceRng(seed) });
+  const p1 = generateRandomPuzzle(countries, { rng: mulberry32(42) });
+  const p2 = generateRandomPuzzle(countries, { rng: mulberry32(42) });
   assert.deepEqual(p1.rows.map((r) => r.id), p2.rows.map((r) => r.id));
   assert.deepEqual(p1.cols.map((c) => c.id), p2.cols.map((c) => c.id));
+});
+
+test('generateRandomPuzzle never produces a puzzle where an exclusiveGroup is split across axes', () => {
+  // Walk a handful of seeds and confirm the symbolic gate has done its job
+  // on every generated puzzle. Belt-and-braces: even if isPuzzleGeneratable
+  // empirically accepts something, axesConflict should also be false.
+  const countries = syntheticTaggedCountries();
+  for (let s = 1; s <= 10; s++) {
+    const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(s) });
+    assert.equal(
+      axesConflict(puzzle.rows, puzzle.cols),
+      false,
+      `seed ${s}: produced a puzzle with split exclusive groups — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
+    );
+  }
 });
 
 test('solutionState.complete is false when one cell is invalid even if all are filled and distinct', () => {
