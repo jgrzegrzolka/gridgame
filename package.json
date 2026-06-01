@@ -6,7 +6,7 @@
     "test": "node --test",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.ui.json",
     "validate": "npm test && npm run typecheck",
-    "party:dev": "partykit dev",
+    "dev": "partykit dev --serve .",
     "party:deploy": "partykit deploy"
   },
   "devDependencies": {
