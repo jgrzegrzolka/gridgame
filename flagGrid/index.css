@@ -3,9 +3,6 @@ body {
      board can match its width — lifted from .grid for that reason.
      Width AND height both read this var, so the cell stays square. */
   --grid-cell: min(140px, calc((100vw - 4px) / 3.5));
-  /* Inherit common.css's --page-top (64px) for desktop breathing room.
-     The mobile media query below tightens it to clear the full-width
-     burger with a 2px seam. */
   padding: var(--page-top) 2px 24px;
   display: flex;
   flex-direction: column;
@@ -61,7 +58,9 @@ body {
    right-edges in lockstep. */
 .below-grid {
   width: calc(3.5 * var(--grid-cell));
-  margin-top: 16px;
+  /* Match the table's negative left shift so the Give-up button stays
+     right-aligned with the playable column. */
+  margin: 16px 0 0 calc(var(--grid-cell) / -4);
   text-align: right;
 }
 .give-up {
@@ -83,6 +82,12 @@ body {
 .grid {
   border-collapse: collapse;
   table-layout: fixed;
+  /* The table is 3.5 cells wide (½-cell row headers on the LEFT + three
+     full data columns); body flex-centers the whole box, which leaves
+     the playable 3×3 area sitting a quarter-cell right of page centre.
+     Shift the table left by that quarter-cell so the playable grid —
+     not the table box — reads as centred. */
+  margin-left: calc(var(--grid-cell) / -4);
 }
 .grid th, .grid td {
   width: var(--grid-cell);

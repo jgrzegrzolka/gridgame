@@ -1,27 +1,21 @@
 body {
-  padding: 0 24px 24px;
+  padding: var(--page-top) 24px 24px;
 }
+/* Sticky below the corner buttons (top: --page-top) so the pill row
+   never slides under them on scroll, and the bar's natural y matches
+   where every other page starts — keeps the visual baseline consistent. */
 #filter-bar {
   position: sticky;
-  top: 0;
+  top: var(--page-top);
   z-index: 5;
   background: #fafafa;
   margin: 0 -24px 16px;
-  /* Left padding clears the fixed home button (top: 12px; left: 12px;
-     width: 44px → right edge at 56px). On mobile the home button
-     becomes a flush 44×44 cell at top:0/left:0 sharing the bar's row,
-     so the clearance shrinks but the principle is the same. */
-  padding: 16px 24px 12px 68px;
+  padding: 16px 24px 12px 24px;
   border-bottom: 1px solid #eee;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px 16px;
-}
-@media (max-width: 600px) {
-  #filter-bar {
-    padding-left: 56px;
-  }
 }
 .filter-group {
   display: flex;
