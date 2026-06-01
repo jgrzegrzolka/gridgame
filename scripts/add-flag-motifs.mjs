@@ -84,7 +84,7 @@ const MOTIFS = {
   ug: ['animal'],                                   // Uganda — grey crowned crane
   vg: ['coat-of-arms'],                             // Virgin Islands (BR) — coa with St Ursula + lamps
   vi: ['animal', 'coat-of-arms'],                  // Virgin Islands (U.S.) — eagle coa
-  vu: ['coat-of-arms', 'weapon'],                  // Vanuatu — pig tusk (historic weapon) + emblem
+  vu: ['coat-of-arms'],                             // Vanuatu — boar's tusk + namele leaves emblem (tusk is a prosperity symbol, not a weapon)
   'gb-wls': ['animal'],                             // Wales — red dragon
   zm: ['animal'],                                   // Zambia — African fish eagle
   zw: ['animal'],                                   // Zimbabwe — Zimbabwe Bird
@@ -101,17 +101,23 @@ const STAR_OR_MOON = new Set([
   // Africa
   'ao', 'dz', 'bf', 'cm', 'cf', 'km', 'cd', 'dj', 'eh', 'gh', 'gw', 'lr',
   'ly', 'ma', 'mr', 'mz', 'sn', 'so', 'ss', 'tg', 'tn', 'cv', 'zw',
+  'st', 'et',
   // Asia
   'az', 'cn', 'il', 'jo', 'kp', 'mn', 'mv', 'my', 'np', 'pk', 'ph', 'sg',
   'sy', 'tj', 'tm', 'tr', 'uz', 'vn', 'tl',
+  'mm',
   // Europe
   'ba', 'si', 'xk',
   // North America (incl. territories)
   'cu', 'gd', 'hn', 'kn', 'pa', 'pr', 'us', 'aw',
+  'cw',
   // South America
   'br', 'cl', 'py', 'sr', 've',
   // Oceania
   'au', 'ck', 'fm', 'mh', 'mp', 'nr', 'nu', 'nz', 'pg', 'pw', 'sb', 'tv', 'ws',
+  'cx', 'tk', 'um',
+  // Antarctica
+  'tf', 'hm',
   // Other / supranational
   'eu',
 ]);
