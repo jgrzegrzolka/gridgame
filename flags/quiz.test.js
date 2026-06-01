@@ -85,8 +85,6 @@ test('pickQuestion choices all come from the input pool', () => {
 });
 
 test('pickQuestion answer can land at any of the four positions', () => {
-  // With 100 calls and 4 positions, each position should occur at least
-  // once with overwhelming probability (~1 in 10^12 chance otherwise).
   const positions = new Set();
   for (let i = 0; i < 100; i++) {
     const q = pickQuestion(sample);
@@ -108,10 +106,6 @@ test('pickQuestion throws if input is too small', () => {
 });
 
 test('VARIANTS contains the expected 9 keys in display order', () => {
-  // Whole-world pools first, then continents, then "others". The menu
-  // and stats page rely on this order — and on the boundary between
-  // the wide-pool group and the narrow-pool group, which is where the
-  // burger menu draws its divider.
   assert.deepEqual(Object.keys(VARIANTS), [
     'countries',
     'all',
@@ -239,22 +233,15 @@ test('defaultModeFor returns "20" when the pool can support a 20-question round'
 });
 
 test('defaultModeFor falls back to "all" for narrower pools', () => {
-  // Pools too small for the 20-question mode (e.g. South America) fall
-  // back to "all" so menu links and URL-resolution still land on a
-  // playable mode rather than silently 404-ing.
   assert.equal(defaultModeFor(19), 'all');
   assert.equal(defaultModeFor(4), 'all');
 });
 
 test('defaultModeFor returns "all" even for an empty pool (consistent with availableModes)', () => {
-  // Defensive: matches availableModes(0) === ['all']. No current
-  // variant actually has a zero pool, but the helper stays honest
-  // about its contract.
   assert.equal(defaultModeFor(0), 'all');
 });
 
 test('availableModes preserves MODES insertion order', () => {
-  // "20" must come first so the menu reads "Label: 20 | all".
   assert.deepEqual(availableModes(100), ['20', 'all']);
 });
 
@@ -284,7 +271,6 @@ test('formatTime handles multi-minute durations without zero-padding the minutes
 });
 
 test('formatTime floors rather than rounds so it never overshoots elapsed time', () => {
-  // 1999ms is just under 2 seconds - must read 0:01.999, not 0:02.000.
   assert.equal(formatTime(1999), '0:01.999');
 });
 
@@ -352,10 +338,6 @@ test('createQuiz never pairs known lookalikes across a full run', () => {
 });
 
 test('pickQuestion falls back to allowing lookalikes when the pool is too small to avoid them', () => {
-  // Pool of 4 where 2 entries are lookalikes (id + mc). When 'id' or
-  // 'mc' is drawn as the answer, excluding lookalikes leaves only 2
-  // usable distractors - we need 3. Fallback must let the question
-  // still build (with the lookalike included).
   const tinyPool = [
     { code: 'id', name: 'Indonesia' },
     { code: 'mc', name: 'Monaco' },
@@ -364,9 +346,9 @@ test('pickQuestion falls back to allowing lookalikes when the pool is too small 
   ];
   for (let i = 0; i < 50; i++) {
     const q = pickQuestion(tinyPool);
-    assert.equal(q.choices.length, 4, 'choice count must stay 4 even in fallback');
+    assert.equal(q.choices.length, 4);
     const codes = new Set(q.choices.map((c) => c.code));
-    assert.ok(codes.has(q.answer.code), 'answer always present in choices');
+    assert.ok(codes.has(q.answer.code));
   }
 });
 
@@ -377,14 +359,14 @@ test('nextBest treats a null previous as the first best', () => {
 
 test('nextBest prefers the higher score regardless of time', () => {
   const prev = { score: 90, time: 10000 };
-  const curr = { score: 95, time: 60000 }; // slower but better score
+  const curr = { score: 95, time: 60000 };
   const r = nextBest(prev, curr);
   assert.deepEqual(r, { best: curr, isNew: true });
 });
 
 test('nextBest keeps the previous when the current score is lower', () => {
   const prev = { score: 90, time: 60000 };
-  const curr = { score: 80, time: 1 }; // even instant time can not save a worse score
+  const curr = { score: 80, time: 1 };
   const r = nextBest(prev, curr);
   assert.deepEqual(r, { best: prev, isNew: false });
 });
@@ -407,7 +389,6 @@ test('nextBest keeps the previous when score and time are identical', () => {
   const prev = { score: 90, time: 30000 };
   const curr = { score: 90, time: 30000 };
   const r = nextBest(prev, curr);
-  // Same numbers - no reason to declare a new best; isNew must be false.
   assert.deepEqual(r, { best: prev, isNew: false });
 });
 
@@ -436,7 +417,7 @@ test('loadBest returns null when the stored value is unparseable', () => {
 test('loadBest returns null when the stored JSON has the wrong shape', () => {
   const store = fakeStore({
     a: '{"foo":"bar"}',
-    b: '{"score":"high","time":1000}', // wrong type for score
+    b: '{"score":"high","time":1000}',
     c: 'null',
     d: '[1,2,3]',
   });
@@ -451,7 +432,6 @@ test('saveBest is a no-op when the store throws (no crash)', () => {
     getItem: () => null,
     setItem: () => { throw new Error('quota exceeded'); },
   };
-  // Must not throw - saveBest is meant to degrade silently.
   assert.doesNotThrow(() => saveBest(throwingStore, 'k', { score: 1, time: 2 }));
 });
 
@@ -466,7 +446,6 @@ test('loadBest does not throw when the store throws', () => {
 test('bestKey produces the expected namespaced format', () => {
   assert.equal(bestKey('europe', '20'), 'flagquiz.best.europe.20');
   assert.equal(bestKey('all', 'all'), 'flagquiz.best.all.all');
-  // Variant keys can contain dashes (north-america etc.) - must round-trip
   assert.equal(bestKey('north-america', '20'), 'flagquiz.best.north-america.20');
 });
 
@@ -475,7 +454,6 @@ test('recordResult on an empty store saves the result and reports isNew', () => 
   const current = { score: 87, time: 65432 };
   const r = recordResult(store, 'europe', '20', current);
   assert.deepEqual(r, { best: current, isNew: true });
-  // The store now holds the value at the right key
   assert.deepEqual(
     loadBest(store, bestKey('europe', '20')),
     current,
@@ -489,7 +467,6 @@ test('recordResult does not save when the current run does not beat the best', (
   const worse = { score: 80, time: 10000 };
   const r = recordResult(store, 'europe', '20', worse);
   assert.deepEqual(r, { best: previous, isNew: false });
-  // Storage still holds the original
   assert.deepEqual(
     loadBest(store, bestKey('europe', '20')),
     previous,
@@ -513,7 +490,6 @@ test('recordResult uses separate slots per variant/mode pair', () => {
   recordResult(store, 'europe', '20', { score: 100, time: 30000 });
   recordResult(store, 'asia', '20', { score: 70, time: 90000 });
   recordResult(store, 'europe', 'all', { score: 85, time: 200000 });
-  // Each slot kept its own value - no cross-contamination
   assert.deepEqual(
     loadBest(store, bestKey('europe', '20')),
     { score: 100, time: 30000 },
@@ -535,9 +511,6 @@ test('scoreColor anchors: 0 = red, 0.5 = yellow, 1 = green', () => {
 });
 
 test('scoreColor clamps ratios outside [0, 1]', () => {
-  // Defensive clamp so a stray input (rounding, garbage data) cannot
-  // produce an out-of-gamut hue. Below zero clamps to red, above one
-  // clamps to green.
   assert.equal(scoreColor(-0.5), 'hsl(0, 65%, 38%)');
   assert.equal(scoreColor(2), 'hsl(120, 65%, 38%)');
 });

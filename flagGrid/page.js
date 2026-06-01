@@ -15,15 +15,6 @@ import { formatTime, scoreColor } from '../flags/quiz.js';
 /** @typedef {import('../flags/grid.js').GridState} GridState */
 
 /**
- * Fetch countries.json, build a puzzle from the variant's `puzzleFor`
- * callback, then mount the UI.
- *
- * Options:
- *  - `stateKey`: localStorage key. When set, picks/wrongCount/finalTime
- *    persist and a finished round is restored read-only on revisit.
- *  - `allowReplay`: when true the end-game block shows a "Play again"
- *    link. Pages that persist a single trial (e.g. Game 1) omit this.
- *
  * @param {(countries: Country[]) => Puzzle} puzzleFor
  * @param {{ stateKey?: string, allowReplay?: boolean }} [options]
  */
@@ -41,16 +32,6 @@ export function bootFlagGrid(puzzleFor, options = {}) {
 }
 
 /**
- * Mount the Flag Grid UI against the markup in the variant's index.html
- * for the given puzzle and pre-fetched country list. Variants differ in
- * which puzzle they supply and whether they persist state.
- *
- * Picking model: tapping (or pressing Enter on) an empty cell opens a
- * bottom-sheet picker that hosts a real <input>. The OS keyboard fires
- * for free, autocomplete suggestions live inside the sheet, and the
- * cell-level keydown handlers used in the previous design are gone —
- * mobile browsers never showed a keyboard for a focused <td>.
- *
  * @param {{
  *   puzzle: Puzzle,
  *   countries: Country[],
@@ -62,9 +43,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   const store = stateKey ? globalThis.localStorage : null;
   const byCode = new Map(countries.map((c) => [c.code, c]));
 
-  // Hydrate from any persisted state — picks come back as codes, look
-  // each one up in the live country list so the renderer has the same
-  // Country objects it would get from a fresh pick.
   const saved = store && stateKey ? loadGridState(store, stateKey) : null;
   /** @type {(Country | null)[][]} */
   let solution = [
@@ -89,12 +67,10 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
 
   /** @type {Country[]} */
   const allCountries = countries;
-  /** Which cell the open picker is filling. null when the picker is closed. */
   /** @type {{ row: number, col: number } | null} */
   let activeCell = null;
   /** @type {Country[]} */
   let currentMatches = [];
-  /** Index into currentMatches that arrow keys / Enter act on. */
   let selectedIndex = 0;
 
   const gridBodyEl = document.getElementById('grid-body');
@@ -145,9 +121,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     gridBodyEl.appendChild(tr);
   }
 
-  // In-memory timer. We don't persist elapsed across sessions — if a
-  // /1/ game is finished, finalTimeMs is shown; otherwise the timer
-  // resets to 0 for this session.
   const sessionStart = Date.now();
   let timerRaf = 0;
   function tickTimer() {
@@ -170,7 +143,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
 
   function onCellActivate(row, col) {
     if (isLocked()) return;
-    if (solution[row][col]) return; // filled cells are inert
+    if (solution[row][col]) return;
     openPicker(row, col);
   }
 
@@ -184,8 +157,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     renderSuggestions();
     pickerEl.hidden = false;
     document.body.classList.add('picker-open');
-    // Focus after the sheet is visible — iOS only pops the keyboard
-    // when focus moves to a visible element inside a user gesture.
+    // iOS only pops the keyboard when focus moves to an already-visible element inside a user gesture.
     pickerInputEl.focus();
   }
 
@@ -221,10 +193,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       const name = document.createElement('span');
       name.textContent = country.name;
       li.appendChild(name);
-      // mousedown — fires before the input's blur on desktop, so the
-      // pick lands before any blur-driven cleanup. Mobile fires touch
-      // before blur too, so a 'click' alternative would also work; we
-      // keep mousedown for parity with the previous design.
+      // mousedown fires before the input's blur, so the pick lands before blur-driven cleanup.
       li.addEventListener('mousedown', (e) => {
         e.preventDefault();
         pickCountry(country);
@@ -318,7 +287,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       `td[data-row="${row}"][data-col="${col}"]`,
     ));
     td.classList.remove('shake');
-    void td.offsetWidth;
+    void td.offsetWidth; // force a reflow so re-adding .shake restarts the animation.
     pulseShake(td);
   }
 
@@ -335,12 +304,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     if (td) td.focus({ preventScroll: true });
   }
 
-  /**
-   * Focus the first empty cell in reading order. Called both on page
-   * load and after each accepted pick — we deliberately do NOT
-   * auto-open the picker for the next cell so the player can pause,
-   * look at the board, and tap when they're ready.
-   */
   function focusNextEmpty() {
     if (isLocked()) return;
     for (let r = 0; r < 3; r++) {
@@ -352,11 +315,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     }
   }
 
-  /**
-   * Render one cell's content: flag image when filled, empty otherwise.
-   * Touches only the classes owned by the renderer — transient classes
-   * like .shake survive.
-   */
   function renderCellContent(r, c) {
     const td = /** @type {HTMLTableCellElement} */ (
       gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`)
@@ -382,8 +340,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       }
     }
     if (giveUpEl) giveUpEl.hidden = isLocked();
-    // Drives the CSS rule that suppresses cell hover + pointer cues
-    // when the round is over — empty cells stop looking interactable.
     document.body.classList.toggle('grid-locked', isLocked());
   }
 
@@ -400,8 +356,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
 
   function finishRound() {
     stopTimer();
-    // Freeze the live timer at the final value — keep the slot occupied
-    // so the grid doesn't shift up when the round ends.
     if (playTimeEl && finalTimeMs !== null) {
       playTimeEl.textContent = formatTime(finalTimeMs);
     }
@@ -414,10 +368,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       timeEl.textContent = `Time: ${formatTime(finalTimeMs)}`;
     }
     if (playAgainEl) {
-      // /1/ persists state, so a replay must first wipe it — otherwise
-      // the freshly-loaded round would just re-hydrate the same locked
-      // state we're trying to escape. /rand/ has no state, so this is
-      // a plain reload.
       playAgainEl.href = window.location.pathname + window.location.search;
       if (stateKey) playAgainEl.textContent = 'Retry';
       playAgainEl.addEventListener('click', (e) => {
@@ -441,14 +391,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     });
   }
 
-  // Initial visibility decisions:
-  // - If the round was already finished in a previous session, show
-  //   the result block read-only and skip starting the timer.
-  // - Otherwise start the live timer. We deliberately do NOT focus a
-  //   cell on load — :focus-visible fires on programmatic focus when
-  //   there's been no prior user interaction, painting a stray black
-  //   ring on the first cell before the player has done anything.
-  //   The user picks where to start by tapping.
   if (isFinished()) {
     finishRound();
   } else {

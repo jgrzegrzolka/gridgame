@@ -13,18 +13,11 @@ import {
 } from '../flags/findFlag.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 
-/**
- * Mount the Find Flag screen against the markup in
- * `findFlag/index.html`. When the URL has no `cat`, renders the
- * category chooser; otherwise jumps straight into the chosen round.
- */
 export function bootFindFlag() {
-  // ---- bootstrap ----------------------------------------------------
   const chooserEl = document.getElementById('chooser');
   const gameEl = document.getElementById('game');
   const resultEl = document.getElementById('result');
 
-  // ---- zoom dialog (shared between found + missed grids) ----------
   const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
   const zoomImg = zoom.querySelector('img');
   const zoomName = zoom.querySelector('p');
@@ -35,9 +28,6 @@ export function bootFindFlag() {
     zoom.showModal();
   }
   zoom.addEventListener('click', (e) => {
-    // Click on backdrop (the dialog element itself, not the content)
-    // closes the dialog. Click on the img/p inside doesn't propagate
-    // here because they're separate event targets.
     if (e.target === zoom) zoom.close();
   });
 
@@ -77,7 +67,6 @@ export function bootFindFlag() {
       document.body.textContent = 'Failed to load: ' + err.message;
     });
 
-  // ---- chooser ------------------------------------------------------
   function renderChooser(all) {
     const sectionsEl = document.getElementById('chooser-sections');
     const allCats = [
@@ -101,7 +90,7 @@ export function bootFindFlag() {
       for (const item of s.items) {
         const cat = categoryFromId(item.id);
         const count = findTargets(all, cat).length;
-        if (count === 0) continue; // skip categories with no countries (e.g. an Antarctica round would be 0/0)
+        if (count === 0) continue;
         const a = document.createElement('a');
         a.className = 'find-pill';
         a.href = `?cat=${encodeURIComponent(item.id)}`;
@@ -117,7 +106,6 @@ export function bootFindFlag() {
     });
   }
 
-  // ---- game ---------------------------------------------------------
   function startGame(category, all) {
     const targets = findTargets(all, category);
     const pool = findPool(all);
@@ -187,14 +175,10 @@ export function bootFindFlag() {
 
     function shakeInput() {
       inputEl.classList.remove('shake');
-      void inputEl.offsetWidth;
+      void inputEl.offsetWidth; // force a reflow so re-adding .shake restarts the animation.
       inputEl.classList.add('shake');
     }
     function flashWrong() {
-      // Red border + shake for ~700ms, no flag reveal. Both classes
-      // applied together; the shake animation auto-ends in 200ms,
-      // but the red border stays for the full duration so the
-      // mistake registers visually.
       inputEl.classList.remove('wrong', 'shake');
       void inputEl.offsetWidth;
       inputEl.classList.add('wrong', 'shake');
@@ -202,8 +186,6 @@ export function bootFindFlag() {
     }
 
     function appendFound(c) {
-      // Most-recent first: insert at the top of the grid so the
-      // player sees their last successful guess without scrolling.
       foundEl.insertBefore(flagTile(c), foundEl.firstChild);
     }
 
@@ -230,7 +212,6 @@ export function bootFindFlag() {
         renderSuggestions();
         return;
       }
-      // 'unknown' — couldn't resolve the typed text
       shakeInput();
     }
 
@@ -309,8 +290,6 @@ export function bootFindFlag() {
 
     gameEl.hidden = false;
     tick();
-    // Focus only on desktop — on mobile this would pop the keyboard
-    // before the player has even seen the category.
     if (!('ontouchstart' in window)) inputEl.focus();
   }
 }

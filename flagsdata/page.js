@@ -1,12 +1,6 @@
 import { CONTINENTS, splitByCategory, groupByContinent } from '../flags/group.js';
 import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../flags/grid.js';
 
-/**
- * Mount the Flags data explorer against the markup in
- * `flagsdata/index.html`. Loads countries.json, builds the filter bar
- * (continent / colors / motifs), renders per-continent sections, and
- * wires the zoom dialog. AND across groups, OR within.
- */
 export function bootFlagsData() {
   const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
   const zoomImg = zoom.querySelector('img');
@@ -36,7 +30,6 @@ export function bootFlagsData() {
     return wrap;
   }
 
-  // Filter state: empty set = no constraint. AND across groups, OR within.
   const filters = { continent: new Set(), color: new Set(), motif: new Set() };
 
   function matches(c) {
@@ -53,8 +46,6 @@ export function bootFlagsData() {
     return true;
   }
 
-  // Track section state so applyFilter can update visibility + counts
-  // without re-creating the DOM.
   /** @type {{ items: any[], tiles: HTMLElement[], section: HTMLElement, count: HTMLElement }[]} */
   const sectionStates = [];
 

@@ -1,7 +1,4 @@
 body {
-  /* Shared by .grid and .below-grid so anything sitting below the
-     board can match its width — lifted from .grid for that reason.
-     Width AND height both read this var, so the cell stays square. */
   --grid-cell: min(140px, calc((100vw - 4px) / 3.5));
   padding: var(--page-top) 2px 24px;
   display: flex;
@@ -9,8 +6,6 @@ body {
   align-items: center;
 }
 
-/* Live timer above the grid — same styling as flagQuiz's .play-timer
-   so the two games read with consistent chrome. */
 .play-timer {
   font-size: 14px;
   color: #666;
@@ -22,9 +17,6 @@ body {
   display: none;
 }
 
-/* End-of-round block shown when the grid is solved or given up.
-   Mirrors the same .final-score / .time / .result-links classes used
-   by flagQuiz so the two games feel like one product. */
 .result {
   text-align: center;
   margin-top: 24px;
@@ -51,15 +43,8 @@ body {
 .result-links a[hidden] {
   display: none;
 }
-/* Wrapper for anything that needs to sit under the grid sharing its
-   width — Give-up button today, future stats line tomorrow. The
-   table's columns total 3.5 cells (half-width row header + three
-   full-width data columns), so we recompute that width here to keep
-   right-edges in lockstep. */
 .below-grid {
   width: calc(3.5 * var(--grid-cell));
-  /* Match the table's negative left shift so the Give-up button stays
-     right-aligned with the playable column. */
   margin: 16px 0 0 calc(var(--grid-cell) / -4);
   text-align: right;
 }
@@ -82,11 +67,6 @@ body {
 .grid {
   border-collapse: collapse;
   table-layout: fixed;
-  /* The table is 3.5 cells wide (½-cell row headers on the LEFT + three
-     full data columns); body flex-centers the whole box, which leaves
-     the playable 3×3 area sitting a quarter-cell right of page centre.
-     Shift the table left by that quarter-cell so the playable grid —
-     not the table box — reads as centred. */
   margin-left: calc(var(--grid-cell) / -4);
 }
 .grid th, .grid td {
@@ -97,8 +77,6 @@ body {
   text-align: center;
   vertical-align: middle;
 }
-/* Borders live only on data cells — headers float around the grid as
-   bare labels so the 3x3 reads as the focus of the board. */
 .grid td {
   border: 1px solid #ddd;
 }
@@ -107,14 +85,9 @@ body {
   font-size: 14px;
   color: #1c1c1c;
 }
-/* Half-height column headers (and the corner): "has red" sits in a
-   short banner on top of its full-width data column. */
 .grid thead th {
   height: calc(var(--grid-cell) / 2);
 }
-/* Half-width row headers (and the corner): the row labels live in a
-   narrow strip on the left. Text reads bottom-to-top so longer
-   continent names like "South America" fit in the column height. */
 .grid .corner,
 .grid tbody th {
   width: calc(var(--grid-cell) / 2);
@@ -128,21 +101,11 @@ body {
   position: relative;
   cursor: pointer;
 }
-/* Black focus ring on the cell's edge — no inset, no padding, just
-   the cell's outer line darkened. outline + negative offset sits ON
-   the existing border line without disturbing border-collapse.
-   :focus-visible (not :focus) so the ring only appears for keyboard
-   navigation; click/tap to open the picker no longer leaves a stray
-   border behind. */
 .cell:focus-visible {
   outline: 2px solid #000;
   outline-offset: -2px;
 }
-/* Hover tint via a pseudo-element overlay rather than `background` on
-   the cell itself. Painting on the cell's background under
-   border-collapse: collapse made Firefox drop the shared right/bottom
-   borders; ::after is independent of border-collapse rendering and
-   reliably keeps the borders intact. */
+/* Firefox drops shared right/bottom cell borders if hover paints directly on the cell background under border-collapse, so the tint lives on ::after instead. */
 .cell::after {
   content: "";
   position: absolute;
@@ -156,10 +119,6 @@ body {
 .cell.filled:hover::after {
   background: transparent;
 }
-/* Round over — empty cells stop showing hover/pointer cues so the
-   board doesn't look interactable until the player hits Retry (which
-   reloads the page and clears this class). Driven by page.js
-   toggling `grid-locked` on the body off the isGridLocked predicate. */
 body.grid-locked .cell {
   cursor: default;
 }
@@ -195,11 +154,6 @@ body.grid-locked .cell:hover::after {
   40%, 60% { transform: translateX(4px); }
 }
 
-/* Centred-modal picker. Tapping an empty cell opens this; it sits in
-   the middle of the viewport on every screen size (real <input> so the
-   OS keyboard appears). Suggestions live inside the sheet so they
-   scroll with it and don't have to track a cell anchor across viewport
-   changes. */
 .picker[hidden] {
   display: none;
 }
@@ -250,14 +204,12 @@ body.grid-locked .cell:hover::after {
 .picker-close:hover {
   background: #f0f0f0;
 }
-/* 16px font on the input prevents iOS from zooming the viewport when
-   the keyboard appears. Anything smaller triggers the auto-zoom. */
 .picker-input {
   width: 100%;
   box-sizing: border-box;
   padding: 10px 12px;
   font: inherit;
-  font-size: 16px;
+  font-size: 16px; /* iOS zooms the viewport on focus when this is < 16px. */
   border: 1px solid #999;
   border-radius: 6px;
   margin-bottom: 8px;
@@ -283,9 +235,6 @@ body.grid-locked .cell:hover::after {
   font-size: 15px;
   border-radius: 4px;
 }
-/* Keyboard selection highlight — JS sets `.selected` on the row that
-   Arrow keys land on, and Enter picks it. Hover from a mouse uses the
-   same tint so the two interactions agree. */
 .picker-suggestions li.selected,
 .picker-suggestions li:hover {
   background: rgba(102, 0, 51, 0.16);
@@ -304,16 +253,10 @@ body.grid-locked .cell:hover::after {
   flex-shrink: 0;
 }
 
-/* Lock background scroll while the picker is open — keeps a finger
-   drag on the backdrop from scrolling the grid underneath on mobile. */
 body.picker-open {
   overflow: hidden;
 }
 
-/* Archive page: each puzzle is a square tile in a tight auto-fill
-   grid (modelled on /flagsdata/), so adding more games stays compact.
-   A tile shows its number always; the score line is appended only
-   when localStorage has a finished round for that slug. */
 .archive-grid {
   width: 100%;
   max-width: 720px;
@@ -321,11 +264,6 @@ body.picker-open {
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 4px;
 }
-/* Two-row grid so the number's Y is fixed by row 1 regardless of
-   whether the score row is filled — #1 and #2 line up even when only
-   one of them has been played. The number bottom-aligns in row 1 (so
-   it sits right above the tile centerline) and the score top-aligns
-   in row 2 (right below it). */
 .archive-tile {
   aspect-ratio: 1;
   border: 1px solid #ddd;

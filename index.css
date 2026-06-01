@@ -5,10 +5,6 @@ body {
   align-items: center;
 }
 
-/* Each .domain wraps one topic (Flags today; Movies, Books, ... later)
-   so the home page reads as a vertical stack of domain sections, each
-   listing its game-mode tiles. Adding a new domain = adding another
-   .domain section below. */
 .domain {
   width: 100%;
   max-width: 720px;
@@ -47,9 +43,6 @@ body {
   font-weight: 600;
 }
 
-/* Icon family — same CSS-mask + currentColor trick as .home-icon so the
-   shapes track the tile's text colour without bundling extra colour
-   info in the SVGs. 24x24 Material-style glyphs. */
 .game-icon {
   display: block;
   width: 40px;

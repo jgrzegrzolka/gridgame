@@ -14,18 +14,11 @@ body {
   transition: width 300ms ease;
   z-index: 30;
 }
-/* On narrow viewports the burger becomes a full-width 44px top bar
-   (see common.css), so the progress bar drops below it. */
 @media (max-width: 600px) {
   .progress-bar {
     top: 44px;
   }
 }
-/* Stats page: one row per variant (matches the new quiz menu's
-   one-row-per-variant layout), with each viable mode rendered as a
-   chip on the right. Played chip shows mode · score% · time with the
-   score tinted by scoreColor; untouched chip falls back to a "Play"
-   CTA so the row reads as actionable rather than incomplete. */
 .stats {
   list-style: none;
   padding: 0;
@@ -93,15 +86,11 @@ body {
   font-weight: 500;
   font-size: 14px;
 }
-/* Untouched slots — faded background + dashed border so they read as
-   empty-but-tappable rather than just "weak data". */
 .stats-chip-unplayed {
   background: #fafafa;
   border-style: dashed;
 }
 
-/* Mobile: stack the label above a row of full-width chips so each
-   chip stays large enough to tap comfortably. */
 @media (max-width: 600px) {
   .stats-row {
     flex-direction: column;
@@ -124,17 +113,10 @@ body {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-/* Mode label (e.g. "Europe") sits inline with the timer, with a
-   middle-dot separator drawn by ::after — only when there's content,
-   so the dot stays hidden during the brief empty state on first paint. */
 .play-mode:not(:empty)::after {
   content: "·";
   padding: 0 8px;
 }
-/* "20 | all" pill in the timer line — between play-mode and play-time.
-   Same middle-dot separator pattern so the row reads "Europe · 20 | all
-   · 0:42". Stays empty (no dot) for single-mode variants like South
-   America so we don't render a degenerate toggle. */
 .mode-toggle:not(:empty)::after {
   content: "·";
   padding: 0 8px;
