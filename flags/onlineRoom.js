@@ -86,6 +86,7 @@ export function applyHello(room, connId, rng = Math.random) {
 export function applyClaim(room, connId, row, col, country) {
   const role = room.roles.get(connId);
   if (!role) return { room, broadcasts: [] };
+  if (room.roles.size < 2) return { room, broadcasts: [] };
   if (isGameOver(room.game)) return { room, broadcasts: [] };
   if (room.game.currentPlayer !== role) return { room, broadcasts: [] };
 
@@ -96,7 +97,7 @@ export function applyClaim(room, connId, row, col, country) {
   const nextRoom = { ...room, game: outcome.nextState };
   return {
     room: nextRoom,
-    broadcasts: [{ to: 'all', message: { type: 'state', game: outcome.nextState, kind: outcome.kind } }],
+    broadcasts: [{ to: 'all', message: { type: 'state', game: outcome.nextState, kind: outcome.kind, row, col } }],
   };
 }
 

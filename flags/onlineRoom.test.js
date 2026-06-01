@@ -107,6 +107,15 @@ test('applyClaim: silently ignored when connId has no role', () => {
   assert.equal(r.room, room);
 });
 
+test('applyClaim: silently ignored when only one player is present', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice', rngHigh).room; // alice = O, alone
+  // alice IS the current player, but the opponent hasn't joined yet.
+  const r = applyClaim(room, 'alice', 0, 0, FR);
+  assert.equal(r.broadcasts.length, 0);
+  assert.equal(r.room.game.cells[0][0].owner, null);
+});
+
 test('applyClaim: silently ignored when it is not your turn', () => {
   let room = createRoom(PUZZLE);
   room = applyHello(room, 'alice', rngLow).room; // alice = X
@@ -117,7 +126,7 @@ test('applyClaim: silently ignored when it is not your turn', () => {
   assert.equal(r.room.game.cells[0][0].owner, null);
 });
 
-test('applyClaim: valid claim broadcasts new state to all', () => {
+test('applyClaim: valid claim broadcasts new state with row/col to all', () => {
   let room = createRoom(PUZZLE);
   room = applyHello(room, 'alice', rngHigh).room; // alice = O, moves first
   room = applyHello(room, 'bob', rngHigh).room;   // bob = X
@@ -127,6 +136,8 @@ test('applyClaim: valid claim broadcasts new state to all', () => {
   const msg = /** @type {any} */ (r.broadcasts[0].message);
   assert.equal(msg.type, 'state');
   assert.equal(msg.kind, 'claimed');
+  assert.equal(msg.row, 0);
+  assert.equal(msg.col, 0);
   assert.equal(msg.game.cells[0][0].owner, 'O');
   assert.equal(msg.game.currentPlayer, 'X');
 });
