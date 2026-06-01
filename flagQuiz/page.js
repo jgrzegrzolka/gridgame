@@ -10,12 +10,6 @@ import {
   targetFor,
 } from '../flags/quiz.js';
 
-/**
- * Mount the Flag Quiz screen against the markup in
- * `flagQuiz/index.html`. Reads variant/mode from the URL, falling
- * back to the variant's defaults if the URL is bare or asks for
- * something the pool can't satisfy, then starts the game.
- */
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
   const gameEl = document.getElementById('game');
@@ -42,20 +36,12 @@ export function bootFlagQuiz() {
   fetch('../flags/countries.json')
     .then((r) => r.json())
     .then((all) => {
-      // Render the variants table into the burger panel regardless of
-      // state — it doubles as the "other modes" navigator and as the
-      // stats display (best score + time per cell).
       renderMenu(all);
 
-      // Resolve the active variant/mode, falling back to the defaults
-      // if the URL is bare or asks for something we can't satisfy.
       let variantKey = urlVariant && VARIANTS[urlVariant]
         ? urlVariant
         : DEFAULT_VARIANT;
       let pool = all.filter(VARIANTS[variantKey].filter);
-      // URL-chosen mode if it's viable for this pool, else the
-      // variant's default mode ('20' when the pool supports it,
-      // 'all' otherwise). One call, no two-step fallback.
       let modeKey = urlMode && availableModes(pool.length).includes(urlMode)
         ? urlMode
         : defaultModeFor(pool.length);
@@ -67,12 +53,6 @@ export function bootFlagQuiz() {
     });
 
   function renderMenu(all) {
-    // VARIANTS leads with the whole-world pools ("All countries",
-    // "Flags data") followed by the narrow per-continent pools. We
-    // mark the first li that comes from a narrow pool with
-    // .menu-divider so the burger panel visually separates the two
-    // groups. One row per variant — the mode picker lives in-game
-    // (see renderModeToggle), not in this menu.
     const WIDE_GROUP = new Set(['countries', 'all']);
     let dividerPlaced = false;
     for (const [key, variant] of Object.entries(VARIANTS)) {
@@ -99,14 +79,6 @@ export function bootFlagQuiz() {
     quizMenuEl.appendChild(statsLi);
   }
 
-  /**
-   * Render the in-game "20 | all" pill. Hidden (empty span) when
-   * the active variant has only one viable mode — e.g. South
-   * America's pool is below 20, so only "all" is available and a
-   * single-item toggle would be noise. The current mode renders
-   * as a styled span; the other mode is a link that reloads to
-   * the alternate ?n=.
-   */
   function renderModeToggle(key, mode, modes) {
     modeToggleEl.innerHTML = '';
     if (modes.length < 2) return;

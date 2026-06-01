@@ -88,8 +88,6 @@ test('every entry has a non-empty colors array drawn from COLORS_FOR_RANDOM', ()
 });
 
 test('motifs (when present) are arrays drawn from MOTIFS_FOR_RANDOM', () => {
-  // motifs is optional and may be an empty array (most flags are untagged);
-  // any value in the array must come from the canonical motif palette.
   const palette = new Set(MOTIFS_FOR_RANDOM);
   const offenders = [];
   for (const c of COUNTRIES) {
@@ -107,15 +105,7 @@ test('motifs (when present) are arrays drawn from MOTIFS_FOR_RANDOM', () => {
   assert.deepEqual(offenders, [], offenders.join('; '));
 });
 
-// Hand-curated registry of flags whose motifs are visually obvious
-// from the rendered SVG. Lock-down test: a future data refresh (or
-// re-run of scripts/add-flag-motifs.mjs against drifted input) cannot
-// silently drop a tag without failing CI. Issues #50 and #52 were
-// real because the SH/AC entries had been *added* without the motif
-// pass running over them — this test would have caught both.
 const KNOWN_MOTIFS = [
-  // Coats of arms depicting an animal — listed under both 'animal'
-  // and 'coat-of-arms' so a partial removal still trips the assertion.
   { code: 'sh-hl', motifs: ['animal', 'coat-of-arms'], note: 'Saint Helena wirebird' },
   { code: 'sh-ac', motifs: ['animal', 'coat-of-arms'], note: 'Ascension Island turtle' },
   { code: 'sh-ta', motifs: ['animal', 'coat-of-arms'], note: 'Tristan da Cunha albatross' },
@@ -141,9 +131,6 @@ test('known animal/coat-of-arms flags keep their expected motif tags', () => {
 });
 
 test('All-countries pool supports the "20" quiz mode (Flag Quiz default)', () => {
-  // Main menu hardcodes flagQuiz/?v=countries&n=20. If the country pool
-  // dropped below 20 the boot fallback would silently downgrade the mode,
-  // so the "Flag Quiz" link wouldn't actually give a 20-q quiz.
   const n = COUNTRIES.filter((c) => c.category === 'country').length;
   assert.ok(
     n >= 20,
@@ -161,16 +148,8 @@ test('every entry has a corresponding SVG file at flags/svg/{code}.svg', () => {
 });
 
 test('every (continent × color) cell has at least one candidate country', () => {
-  // Random-puzzle generation only ever picks cols from this colour pool
-  // and rows from this continent pool; if any intersection is empty, the
-  // solvability gate fails for that combo and the shuffle wastes a roll.
-  //
-  // KNOWN_EMPTY pins down combos that are genuinely zero in the real-world
-  // data — no flag in that continent uses that colour. Adding a NEW
-  // empty cell (regression) fails the test; filling a known-empty one is
-  // also fine (the exception just becomes a no-op).
   const KNOWN_EMPTY = new Set([
-    'South America × orange', // no South American flag uses orange
+    'South America × orange',
   ]);
   const empty = [];
   for (const cont of CONTINENTS_FOR_RANDOM) {
@@ -186,11 +165,6 @@ test('every (continent × color) cell has at least one candidate country', () =>
 });
 
 test('every (continent × motif) cell has at least one candidate country', () => {
-  // ≥2 is the preferred buffer against the no-duplicates rule (see
-  // isPuzzleGeneratable's default minPerCell). ≥1 is the absolute minimum
-  // — below that, the solvability gate can never pass for that combo and
-  // we'd risk hitting maxAttempts. Europe × weapon is currently 1 (just
-  // Malta) — acceptable but tight; see scripts/add-flag-motifs.mjs.
   const empty = [];
   for (const cont of CONTINENTS_FOR_RANDOM) {
     for (const motif of MOTIFS_FOR_RANDOM) {
@@ -204,12 +178,6 @@ test('every (continent × motif) cell has at least one candidate country', () =>
 });
 
 test('PUZZLE_1 has an exemplary 9-distinct-country solution against the real countries.json', () => {
-  // Proof-of-solvability: not just "every cell has candidates" (the old
-  // isPuzzleGeneratable heuristic) but "an actual assignment of 9 distinct
-  // countries exists where every cell's pick satisfies its row and column".
-  // Data drift that empties a cell — or that leaves only overlapping
-  // candidates and breaks the no-duplicates rule — fails this test rather
-  // than producing a stuck game.
   const solution = findPuzzleSolution(PUZZLE_1, COUNTRIES);
   assert.ok(solution);
   const codes = solution.flat().map((c) => c.code);
@@ -223,8 +191,6 @@ test('PUZZLE_1 has an exemplary 9-distinct-country solution against the real cou
       );
     }
   }
-  // Keep the heuristic check too — a regression that only the count gate
-  // catches (e.g. an empty cell) should still surface as a clear failure.
   assert.equal(isPuzzleGeneratable(PUZZLE_1, COUNTRIES), true);
 });
 
@@ -246,10 +212,6 @@ test('PUZZLE_2 has an exemplary 9-distinct-country solution against the real cou
 });
 
 test('PUZZLE_3 has an exemplary 9-distinct-country solution against the real countries.json', () => {
-  // PUZZLE_3 is unlinked from the menu but the page exists at /flagGrid/3/
-  // and the puzzle object ships in puzzles.js. Pin solvability so a data
-  // drift fails CI rather than a stuck game when Game 3 is finally
-  // promoted into the ARCHIVE.
   const solution = findPuzzleSolution(PUZZLE_3, COUNTRIES);
   assert.ok(solution);
   const codes = solution.flat().map((c) => c.code);
@@ -267,12 +229,6 @@ test('PUZZLE_3 has an exemplary 9-distinct-country solution against the real cou
 });
 
 test('generateRandomPuzzle succeeds with the real countries.json under several seeds', () => {
-  // Real-data integration check: if motif tagging drifts to the point
-  // where the solvability gate can never pass, generateRandomPuzzle
-  // throws after maxAttempts. Drives a proper seeded PRNG (Mulberry32) —
-  // the unified-pool generator now rejects many shuffles (exclusive-group
-  // conflicts, empty cells), so a short cyclic seed could starve the
-  // search before finding a valid puzzle.
   /** @param {number} seed */
   function mulberry32(seed) {
     let a = seed | 0;

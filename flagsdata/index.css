@@ -1,9 +1,6 @@
 body {
   padding: var(--page-top) 24px 24px;
 }
-/* Sticky below the corner buttons (top: --page-top) so the pill row
-   never slides under them on scroll, and the bar's natural y matches
-   where every other page starts — keeps the visual baseline consistent. */
 #filter-bar {
   position: sticky;
   top: var(--page-top);

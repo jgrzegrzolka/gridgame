@@ -63,8 +63,6 @@ test('categoryFromId parses a hasMotif id', () => {
 });
 
 test('categoryFromId returns null for an unknown id prefix', () => {
-  // Stay defensive — the URL is user-editable, so a bad ?cat= should
-  // surface to the player rather than throw.
   assert.equal(categoryFromId('bogus:thing'), null);
   assert.equal(categoryFromId(''), null);
   assert.equal(categoryFromId(undefined), null);
@@ -72,8 +70,6 @@ test('categoryFromId returns null for an unknown id prefix', () => {
 });
 
 test('findTargets returns only countries matching the predicate, excluding "other" entries', () => {
-  // EU has 'star-or-moon' AND is category=other. It must NOT appear in
-  // a 'star-or-moon' game — Find Flag is for countries, not supranationals.
   const cat = categoryFromId('hasMotif:star-or-moon');
   assert.ok(cat);
   const targets = findTargets(SAMPLE, cat);
@@ -82,13 +78,10 @@ test('findTargets returns only countries matching the predicate, excluding "othe
   const redCat = categoryFromId('hasColor:red');
   assert.ok(redCat);
   const redTargets = findTargets(SAMPLE, redCat);
-  // FR, DE, KE, JP all have red; EU does not (and is also excluded as 'other')
   assert.deepEqual(redTargets.map((c) => c.code), ['fr', 'de', 'ke', 'jp']);
 });
 
 test('findPool excludes "other" entries but keeps every country', () => {
-  // Pool feeds autocomplete — must include flags that DON'T match the
-  // category, because typing the wrong flag is a teaching moment.
   const pool = findPool(SAMPLE);
   assert.deepEqual(pool.map((c) => c.code), ['fr', 'de', 'ke', 'jp']);
 });
@@ -104,9 +97,6 @@ test('classifyGuess returns "duplicate" for a target that\'s already been found'
 });
 
 test('classifyGuess returns "wrong-category" for a real country that isn\'t a target', () => {
-  // KE isn't in targets — guessing it tells us the player picked a real
-  // country but in the wrong category. UI uses this to reveal the flag
-  // briefly as a learning moment.
   const state = { targetCodes: new Set(['fr', 'de']), foundCodes: new Set() };
   assert.equal(classifyGuess(state, KE).kind, 'wrong-category');
 });
@@ -123,10 +113,6 @@ test('bestKey produces the expected namespaced format', () => {
 });
 
 /**
- * Minimal in-memory localStorage-shaped fake. Tests run in node where
- * `localStorage` doesn't exist, and we want to validate the persistence
- * helpers without dragging in jsdom.
- *
  * @returns {{
  *   getItem(key: string): string | null,
  *   setItem(key: string, value: string): void,
@@ -181,8 +167,6 @@ test('recordFindResult saves and reports isNew on an empty slot', () => {
 });
 
 test('recordFindResult prefers a higher "found" count even if time is longer', () => {
-  // Partial finish today; better partial finish tomorrow → tomorrow wins,
-  // because the player named more countries even if it took longer.
   const store = makeStore();
   recordFindResult(store, 'continent:Africa', { time: 30_000, found: 10, total: 13 });
   const { best, isNew } = recordFindResult(store, 'continent:Africa', {

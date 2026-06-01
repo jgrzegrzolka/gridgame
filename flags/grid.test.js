@@ -93,7 +93,7 @@ test('hasColor predicate matches countries whose flag includes that colour', () 
 });
 
 test('hasColor predicate returns false when colors is missing or empty', () => {
-  const noTag = country({ code: 'xx', name: 'Untagged' }); // no colors field
+  const noTag = country({ code: 'xx', name: 'Untagged' });
   const emptyTag = country({ code: 'yy', name: 'EmptyTag', colors: [] });
   assert.equal(hasColor('red').predicate(noTag), false);
   assert.equal(hasColor('red').predicate(emptyTag), false);
@@ -217,18 +217,16 @@ test('suggest with an empty excludeCodes set behaves the same as no excludeCodes
 });
 
 test('validateCell is true when country satisfies both row and column', () => {
-  assert.equal(validateCell(PUZZLE, 0, 0, FR), true);   // Europe x UN -> France
-  assert.equal(validateCell(PUZZLE, 0, 1, VA), true);   // Europe x Observer -> Vatican
-  assert.equal(validateCell(PUZZLE, 1, 2, HK), true);   // Asia x Territory -> Hong Kong
+  assert.equal(validateCell(PUZZLE, 0, 0, FR), true);
+  assert.equal(validateCell(PUZZLE, 0, 1, VA), true);
+  assert.equal(validateCell(PUZZLE, 1, 2, HK), true);
 });
 
 test('validateCell is false when the row predicate fails', () => {
-  // Japan is in Asia, but cell (0, 0) wants Europe.
   assert.equal(validateCell(PUZZLE, 0, 0, JP), false);
 });
 
 test('validateCell is false when the column predicate fails', () => {
-  // France is in Europe, but cell (0, 1) wants Observer (France is UN member).
   assert.equal(validateCell(PUZZLE, 0, 1, FR), false);
 });
 
@@ -259,12 +257,12 @@ test('solutionState reports filled+valid for a correct pick', () => {
   ];
   const state = solutionState(PUZZLE, solution);
   assert.deepEqual(state.cells[0][0], { filled: true, valid: true, duplicate: false });
-  assert.equal(state.complete, false); // other cells still empty
+  assert.equal(state.complete, false);
 });
 
 test('solutionState reports filled-but-invalid when a wrong country is dropped in', () => {
   const solution = [
-    [JP,   null, null],   // Japan: wrong continent for row 0 (Europe)
+    [JP,   null, null],
     [null, null, null],
     [null, null, null],
   ];
@@ -278,27 +276,15 @@ test('solutionState flags duplicates on every cell where the same country appear
     [null, null, null],
     [null, null, null],
   ];
-  // Drop France into another cell where it also happens to be valid?
-  // Europe x UN at (0, 0) and Asia x UN at (1, 0): France only satisfies (0, 0)
-  // so to test duplicate-but-valid we'd need a country that fits two cells.
-  // Use Germany at (0, 0) and France at... well, both Europe x UN. Reuse FR.
   solution[0][0] = FR;
-  solution[0][1] = FR; // not valid for col 1 (Observer), but duplicate is still flagged
+  solution[0][1] = FR;
   const state = solutionState(PUZZLE, solution);
   assert.equal(state.cells[0][0].duplicate, true);
   assert.equal(state.cells[0][1].duplicate, true);
 });
 
 test('solutionState.complete is true when all nine cells are filled, valid, and distinct', () => {
-  // A puzzle we know we can fully solve with distinct test countries.
-  // Need a country for each (continent, statehood) intersection.
-  // Reusing the same continent-row across columns means picking three
-  // distinct countries from that continent with the three different statehoods.
-  const FR2 = country({ code: 'de', name: 'Germany', continent: 'Europe', statehood: 'un_member' });
-  // For row 0 (Europe): FR (UN), VA (Observer), GL (Territory) -> three distinct codes.
-  // For row 1 (Asia): JP (UN), PS-like fake Observer, HK (Territory).
   const PS = country({ code: 'ps', name: 'Palestine', continent: 'Asia', statehood: 'un_observer' });
-  // For row 2 (Africa): KE (UN), fake Observer, fake Territory.
   const AF_OBS = country({ code: 'aob', name: 'AfricaObs', continent: 'Africa', statehood: 'un_observer' });
   const AF_TER = country({ code: 'ater', name: 'AfricaTer', continent: 'Africa', statehood: 'territory' });
 
@@ -331,7 +317,6 @@ test('tryPick accepts a valid, unique pick and returns a new solution with the p
   assert.equal(result.accepted, true);
   assert.ok(result.solution);
   assert.equal(result.solution[0][0], FR);
-  // Untouched cells remain null in the new solution.
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
       if (r === 0 && c === 0) continue;
@@ -341,19 +326,17 @@ test('tryPick accepts a valid, unique pick and returns a new solution with the p
 });
 
 test('tryPick rejects when the row predicate fails', () => {
-  const result = tryPick(PUZZLE, emptySolution(), 0, 0, JP); // Asia in Europe row
+  const result = tryPick(PUZZLE, emptySolution(), 0, 0, JP);
   assert.equal(result.accepted, false);
   assert.equal(result.solution, undefined);
 });
 
 test('tryPick rejects when the column predicate fails', () => {
-  const result = tryPick(PUZZLE, emptySolution(), 0, 1, FR); // FR is UN, col 1 is Observer
+  const result = tryPick(PUZZLE, emptySolution(), 0, 1, FR);
   assert.equal(result.accepted, false);
 });
 
 test('tryPick rejects a duplicate of a country already placed elsewhere', () => {
-  // Puzzle where two cells both accept FR (Europe + UN), so the duplicate
-  // path is exercised cleanly rather than masked by a predicate fail.
   const dupPuzzle = {
     rows: [EUROPE, EUROPE, AFRICA],
     cols: [UN, UN, TERRITORY],
@@ -367,8 +350,6 @@ test('tryPick rejects a duplicate of a country already placed elsewhere', () => 
 test('tryPick rejects any pick on an already-filled cell (placed cells are locked)', () => {
   const solution = emptySolution();
   solution[0][0] = FR;
-  // DE is a perfectly valid Europe + UN pick that would be accepted at
-  // (0,0) if the cell were empty — but the cell is filled, so reject.
   const result = tryPick(PUZZLE, solution, 0, 0, DE);
   assert.equal(result.accepted, false);
   assert.equal(result.solution, undefined);
@@ -399,11 +380,6 @@ function sequenceRng(values) {
   return () => values[i++ % values.length];
 }
 
-// Mulberry32 — small seedable PRNG. We use this instead of sequenceRng for
-// tests that drive generateRandomPuzzle: with the unified-pool generator,
-// many shuffles are rejected (exclusive-group conflicts, empty cells), and
-// a short cyclic seed can starve the loop before it finds a valid puzzle.
-// Mulberry32 produces a long, well-distributed stream from a single integer.
 /** @param {number} seed */
 function mulberry32(seed) {
   let a = seed | 0;
@@ -423,14 +399,9 @@ test('randomPuzzle yields 3 row categories and 3 column categories', () => {
 });
 
 test('randomPuzzle categories come from the unified pool (continent / colour / motif)', () => {
-  // Both axes now draw from the same pool. Each category id must be one
-  // of the canonical types — no other prefix should ever appear.
   const p = randomPuzzle(mulberry32(1));
   for (const cat of [...p.rows, ...p.cols]) {
     if (cat.id.startsWith('continent:')) {
-      // CONTINENTS_FOR_RANDOM is typed as Continent[] for caller convenience;
-      // here we're just probing "is this label one of them?" — widen to
-      // string[] so .includes() accepts an arbitrary cat.label.
       assert.ok(/** @type {readonly string[]} */ (CONTINENTS_FOR_RANDOM).includes(cat.label));
     } else if (cat.id.startsWith('hasColor:')) {
       const color = cat.id.slice('hasColor:'.length);
@@ -445,10 +416,6 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
 });
 
 test('randomPuzzle picks 6 distinct categories across both axes (no duplicates anywhere)', () => {
-  // The unified-pool generator must never let the same category appear
-  // on both rows and cols — that would make the cell at their intersection
-  // a trivial "X AND X" with no extra constraint, which is visually
-  // confusing for the player. Run with several seeds.
   for (let s = 1; s <= 20; s++) {
     const p = randomPuzzle(mulberry32(s));
     const ids = new Set([...p.rows, ...p.cols].map((c) => c.id));
@@ -476,8 +443,6 @@ test('MOTIFS_FOR_RANDOM lists every motif key that can be tagged on a flag', () 
 });
 
 test('continent and statehood categories carry their exclusiveGroup', () => {
-  // Other categories (hasColor, hasMotif) are non-exclusive — a country
-  // can carry many colours and many motifs.
   assert.equal(continent('Europe').exclusiveGroup, 'continent');
   assert.equal(statehood('un_member').exclusiveGroup, 'statehood');
   assert.equal(hasColor('red').exclusiveGroup, undefined);
@@ -489,14 +454,10 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif',
   const expected =
     CONTINENTS_FOR_RANDOM.length + COLORS_FOR_RANDOM.length + MOTIFS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
-  // Fresh array per call so the caller can shuffle without poisoning future calls.
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
 
 test('axesConflict flags two different values from the same exclusiveGroup on opposite axes', () => {
-  // Africa on rows + Europe on cols → cell at that intersection is empty
-  // (no country lives on two continents). axesConflict must catch this
-  // symbolically, without consulting the country list.
   const conflict = axesConflict(
     [continent('Africa'), hasColor('red'), hasMotif('animal')],
     [continent('Europe'), hasColor('blue'), hasMotif('weapon')],
@@ -505,8 +466,6 @@ test('axesConflict flags two different values from the same exclusiveGroup on op
 });
 
 test('axesConflict returns false when same-group categories live on the same axis', () => {
-  // Two continents as different rows is fine — they're separate rows of
-  // the puzzle, never combined as a conjunction.
   const conflict = axesConflict(
     [continent('Africa'), continent('Asia'), continent('Europe')],
     [hasColor('red'), hasColor('blue'), hasMotif('animal')],
@@ -515,7 +474,6 @@ test('axesConflict returns false when same-group categories live on the same axi
 });
 
 test('axesConflict returns false when no categories share an exclusiveGroup', () => {
-  // Only colours and motifs — neither has an exclusiveGroup, so any layout works.
   const conflict = axesConflict(
     [hasColor('red'), hasColor('blue'), hasMotif('animal')],
     [hasColor('green'), hasMotif('weapon'), hasMotif('coat-of-arms')],
@@ -524,9 +482,6 @@ test('axesConflict returns false when no categories share an exclusiveGroup', ()
 });
 
 test('axesConflict returns false for different exclusiveGroups (continent vs statehood)', () => {
-  // Continent and statehood are both exclusive within their own group, but
-  // a country can simultaneously be in Africa AND be a UN member, so
-  // cross-group is fine.
   const conflict = axesConflict(
     [continent('Africa'), continent('Asia'), continent('Europe')],
     [statehood('un_member'), statehood('un_observer'), statehood('territory')],
@@ -546,22 +501,18 @@ test('puzzleCellCounts counts countries satisfying both predicates per cell', ()
     country({ code: 'cm', name: 'Cameroon',continent: 'Africa', colors: ['yellow', 'green'] }),
   ];
   const counts = puzzleCellCounts(puzzle, countries);
-  assert.equal(counts[0][0], 1);  // Europe + red: Albania
-  assert.equal(counts[0][1], 1);  // Europe + blue: Greece
-  assert.equal(counts[0][2], 0);  // Europe + yellow: none
-  assert.equal(counts[1][0], 1);  // Asia + red: Japan
-  assert.equal(counts[1][1], 0);  // Asia + blue: none
-  assert.equal(counts[1][2], 0);  // Asia + yellow: none
-  assert.equal(counts[2][0], 0);  // Africa + red: none
-  assert.equal(counts[2][1], 0);  // Africa + blue: none
-  assert.equal(counts[2][2], 1);  // Africa + yellow: Cameroon
+  assert.equal(counts[0][0], 1);
+  assert.equal(counts[0][1], 1);
+  assert.equal(counts[0][2], 0);
+  assert.equal(counts[1][0], 1);
+  assert.equal(counts[1][1], 0);
+  assert.equal(counts[1][2], 0);
+  assert.equal(counts[2][0], 0);
+  assert.equal(counts[2][1], 0);
+  assert.equal(counts[2][2], 1);
 });
 
 test('isPuzzleGeneratable returns true when every cell meets minPerCell AND a no-duplicate solution exists', () => {
-  // 3 continents x 3 statehoods, one country per intersection — 9 distinct
-  // countries, every cell has exactly 1 candidate, minPerCell=1 satisfied,
-  // and the no-duplicate assignment trivially exists (each country fits one
-  // cell and only one cell).
   const puzzle = {
     rows: [continent('Europe'), continent('Asia'), continent('Africa')],
     cols: [UN, OBSERVER, TERRITORY],
@@ -582,7 +533,6 @@ test('isPuzzleGeneratable returns false when any single cell falls below minPerC
     country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] }),
     country({ code: 'pl', name: 'Poland',  continent: 'Europe', colors: ['red', 'white'] }),
   ];
-  // The orange col has zero matches in every row — below threshold 2.
   assert.equal(isPuzzleGeneratable(puzzle, countries, 2), false);
 });
 
@@ -592,14 +542,10 @@ test('isPuzzleGeneratable defaults to minPerCell of 2', () => {
     cols: [hasColor('red'), hasColor('red'), hasColor('red')],
   };
   const oneCountry = [country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] })];
-  // Each cell has exactly 1; default threshold 2 → false (per-cell gate).
   assert.equal(isPuzzleGeneratable(puzzle, oneCountry), false);
 });
 
 test('isPuzzleGeneratable returns false when the no-duplicates rule blocks a global solution even though every cell has candidates', () => {
-  // 9 Europe x red cells, 2 candidate countries. Per-cell counts (=2) pass
-  // both minPerCell=1 and minPerCell=2, but you cannot fill 9 cells with 2
-  // distinct countries — the new solvability check must catch this case.
   const puzzle = {
     rows: [continent('Europe'), continent('Europe'), continent('Europe')],
     cols: [hasColor('red'), hasColor('red'), hasColor('red')],
@@ -613,7 +559,6 @@ test('isPuzzleGeneratable returns false when the no-duplicates rule blocks a glo
 });
 
 test('findPuzzleSolution returns a valid 9-distinct-country solution when one exists', () => {
-  // 3 continents x 3 statehoods, one country per intersection.
   const puzzle = {
     rows: [continent('Europe'), continent('Asia'), continent('Africa')],
     cols: [UN, OBSERVER, TERRITORY],
@@ -624,10 +569,8 @@ test('findPuzzleSolution returns a valid 9-distinct-country solution when one ex
   const countries = [FR, VA, GL, JP, PS, HK, KE, AFOBS, AFTER];
   const solution = findPuzzleSolution(puzzle, countries);
   assert.ok(solution);
-  // 9 distinct codes.
   const codes = solution.flat().map((c) => c.code);
   assert.equal(new Set(codes).size, 9);
-  // Each cell's pick satisfies both predicates.
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
       assert.equal(validateCell(puzzle, r, c, solution[r][c]), true);
@@ -640,7 +583,6 @@ test('findPuzzleSolution returns null when any cell has zero candidates', () => 
     rows: [continent('Europe'), continent('Asia'), continent('Africa')],
     cols: [hasColor('red'), hasColor('blue'), hasColor('orange')],
   };
-  // No African country at all in the country pool, so every cell in row 2 is empty.
   const countries = [
     country({ code: 'al', name: 'Albania',  continent: 'Europe', colors: ['red'] }),
     country({ code: 'gr', name: 'Greece',   continent: 'Europe', colors: ['blue'] }),
@@ -650,8 +592,6 @@ test('findPuzzleSolution returns null when any cell has zero candidates', () => 
 });
 
 test('findPuzzleSolution returns null when the no-duplicate rule prevents any complete assignment', () => {
-  // 9 Europe x red cells, 2 candidate countries. Each cell individually has
-  // 2 candidates, but you can never fill 9 cells with only 2 distinct picks.
   const puzzle = {
     rows: [continent('Europe'), continent('Europe'), continent('Europe')],
     cols: [hasColor('red'), hasColor('red'), hasColor('red')],
@@ -685,10 +625,6 @@ function syntheticTaggedCountries() {
   /** @type {Country[]} */
   const out = [];
   let codeCounter = 0;
-  // 3 countries per (continent, colour) intersection — every cell of any
-  // shuffled puzzle has 3 candidates by construction. Every synthetic
-  // country also carries every motif from MOTIFS_FOR_RANDOM so any
-  // randomly-selected hasMotif col is solvable too.
   for (const cont of CONTINENTS_FOR_RANDOM) {
     for (const color of COLORS_FOR_RANDOM) {
       for (let n = 0; n < 3; n++) {
@@ -734,9 +670,6 @@ test('generateRandomPuzzle is deterministic given a deterministic RNG and the sa
 });
 
 test('generateRandomPuzzle never produces a puzzle where an exclusiveGroup is split across axes', () => {
-  // Walk a handful of seeds and confirm the symbolic gate has done its job
-  // on every generated puzzle. Belt-and-braces: even if isPuzzleGeneratable
-  // empirically accepts something, axesConflict should also be false.
   const countries = syntheticTaggedCountries();
   for (let s = 1; s <= 10; s++) {
     const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(s) });
@@ -756,7 +689,7 @@ test('solutionState.complete is false when one cell is invalid even if all are f
   const solution = [
     [FR, VA, GL],
     [JP, PS, HK],
-    [KE, AF_OBS, FR], // bottom-right is France: wrong continent (Europe vs Africa); also duplicates FR at (0,0)
+    [KE, AF_OBS, FR],
   ];
   const state = solutionState(PUZZLE, solution);
   assert.equal(state.complete, false);
@@ -774,26 +707,19 @@ test('computeGridScore deducts 3 points per wrong pick when fully solved', () =>
 });
 
 test('computeGridScore deducts 10 points per empty cell — heavier than a wrong', () => {
-  // No wrongs, partial fill: only the empty penalty applies.
   assert.equal(computeGridScore({ filledCount: 8, wrongCount: 0 }), 90);
   assert.equal(computeGridScore({ filledCount: 5, wrongCount: 0 }), 60);
   assert.equal(computeGridScore({ filledCount: 1, wrongCount: 0 }), 20);
 });
 
 test('computeGridScore returns 0 for an untouched board (give-up with nothing filled)', () => {
-  // The 10-per-empty rule would otherwise leave a 10-point floor
-  // (100 - 90 = 10) which felt like a participation prize for not
-  // engaging. Filled=0 is treated as a hard zero regardless of how
-  // many wrong picks the player burned through first.
   assert.equal(computeGridScore({ filledCount: 0, wrongCount: 0 }), 0);
   assert.equal(computeGridScore({ filledCount: 0, wrongCount: 1 }), 0);
   assert.equal(computeGridScore({ filledCount: 0, wrongCount: 20 }), 0);
 });
 
 test('computeGridScore combines wrong and empty penalties for partial give-ups', () => {
-  // gave up at 5/9 with 2 wrongs: 100 - 3*2 - 10*4 = 54
   assert.equal(computeGridScore({ filledCount: 5, wrongCount: 2 }), 54);
-  // gave up at 2/9 with 5 wrongs: 100 - 3*5 - 10*7 = 15
   assert.equal(computeGridScore({ filledCount: 2, wrongCount: 5 }), 15);
 });
 
@@ -802,8 +728,6 @@ test('computeGridScore clamps to 0 for absurd wrong counts', () => {
   assert.equal(computeGridScore({ filledCount: 0, wrongCount: 999 }), 0);
 });
 
-// Minimal Storage-like fake — a Map with throw-on-quota toggle for the
-// saveGridState error-path test.
 /**
  * @param {{ throwOnSet?: boolean }} [opts]
  * @returns {{
@@ -837,10 +761,8 @@ test('loadGridState returns null when the stored value is unparseable', () => {
 
 test('loadGridState rejects a parsed value whose shape is wrong', () => {
   const store = fakeStore();
-  // picks must be a 9-element array
   store.setItem('k', JSON.stringify({ picks: ['fr'], wrongCount: 0, gaveUp: false, finalTimeMs: null }));
   assert.equal(loadGridState(store, 'k'), null);
-  // wrongCount must be a number
   store.setItem('k', JSON.stringify({
     picks: Array(9).fill(null), wrongCount: '0', gaveUp: false, finalTimeMs: null,
   }));
@@ -860,8 +782,6 @@ test('loadGridState round-trips a well-formed state', () => {
 });
 
 test('loadGridState normalises non-string picks to null', () => {
-  // Defensive against older builds that might have stored Country
-  // objects instead of code strings.
   const store = fakeStore();
   const raw = {
     picks: ['fr', 42, null, { code: 'de' }, undefined, 'jp', null, 'in', null],
@@ -890,7 +810,6 @@ test('saveGridState writes a parseable serialised state to the store', () => {
 
 test('saveGridState swallows a Storage quota error (no throw)', () => {
   const store = fakeStore({ throwOnSet: true });
-  // Must not throw — Storage may be disabled or full.
   assert.doesNotThrow(() => saveGridState(store, 'k', {
     picks: Array(9).fill(null), wrongCount: 0, gaveUp: false, finalTimeMs: null,
   }));
@@ -909,9 +828,6 @@ test('isGridLocked is true once finalTimeMs is set (round finished)', () => {
 });
 
 test('isGridLocked treats a finalTimeMs of 0 as a finished round, not mid-game', () => {
-  // Defensive: 0 is a valid elapsed-ms reading too (immediate finish in
-  // a synthetic test). The "is it set" gate must be `!== null`, not
-  // truthiness, otherwise a 0-ms finish would look unfinished.
   assert.equal(isGridLocked({ gaveUp: false, finalTimeMs: 0 }), true);
 });
 
@@ -924,9 +840,6 @@ test('cellRenderClasses sets filled=true for any country', () => {
   assert.deepEqual(cellRenderClasses(FR), [['filled', true]]);
 });
 
-// Minimal stand-in for the slice of Element that pulseShake touches.
-// Lets us assert on class changes and synthesize event firings without
-// pulling in jsdom.
 function fakeCell() {
   /** @type {Set<string>} */
   const classes = new Set();
@@ -972,10 +885,6 @@ test('pulseShake adds the .shake class to the cell', () => {
 });
 
 test('pulseShake removes .shake when the cell fires animationend', () => {
-  // Regression: with renderGrid no longer wiping transient classes,
-  // .shake would otherwise stay painted forever once added. A
-  // corrected pick after a wrong one would show the flag on top of
-  // the lingering red overlay.
   const cell = fakeCell();
   pulseShake(cell);
   cell.fire('animationend');
@@ -985,33 +894,18 @@ test('pulseShake removes .shake when the cell fires animationend', () => {
 test('pulseShake wires a one-shot listener — a later stray animationend leaves a freshly-added .shake alone', () => {
   const cell = fakeCell();
   pulseShake(cell);
-  cell.fire('animationend'); // expected: clears .shake
-  // Simulate another interaction reapplying .shake (e.g. the user
-  // wrong-picks the same cell again) without re-calling pulseShake.
-  // The original {once: true} listener must NOT fire a second time.
+  cell.fire('animationend');
   cell.classList.add('shake');
   cell.fire('animationend');
   assert.equal(cell.classList.contains('shake'), true);
 });
 
 test('cellRenderClasses does not list any interaction-transient classes', () => {
-  // The renderer (renderGrid in flagGrid/page.js) iterates over the
-  // pairs returned here and calls classList.toggle on each — so any
-  // class listed here is wiped on every render pass. Interaction
-  // transients like .shake (the wrong-pick pulse) are owned by event
-  // handlers and MUST NOT appear in this set, otherwise a render
-  // immediately after the handler would erase the animation before
-  // the browser ever paints it. Regression for the bug introduced by
-  // PR #46 and fixed by PR #48.
   const TRANSIENT = ['shake'];
   for (const country of [null, FR]) {
     const managed = cellRenderClasses(country).map(([klass]) => klass);
     for (const t of TRANSIENT) {
-      assert.ok(
-        !managed.includes(t),
-        `cellRenderClasses must not manage transient class ".${t}" — ` +
-          'that would cause renderGrid to wipe it.',
-      );
+      assert.ok(!managed.includes(t), `cellRenderClasses must not manage transient class ".${t}"`);
     }
   }
 });

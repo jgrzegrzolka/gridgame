@@ -28,25 +28,18 @@ function shuffle(arr) {
   return a;
 }
 
-// Flags that look essentially identical at the sizes shown in the quiz.
-// When the answer is in one of these groups, the other members are
-// excluded from being distractors in the same question (so the user is
-// never asked to tell two near-identical flags apart).
 /** @type {string[][]} */
 export const LOOKALIKES = [
-  ['id', 'mc'], // Indonesia, Monaco - red over white
-  ['ro', 'td'], // Romania, Chad - vertical blue/yellow/red
-  ['ie', 'ci'], // Ireland, Cote d'Ivoire - vertical tricolour, mirrored
-  // Norwegian flag - used by Norway and its two uninhabited dependencies
+  ['id', 'mc'],
+  ['ro', 'td'],
+  ['ie', 'ci'],
   ['no', 'sj', 'bv'],
-  // French tricolour - used by France, Clipperton, and the overseas
-  // departments/collectivities that fly the plain tricolour
   ['fr', 're', 'cp', 'gp', 'mf', 'pm', 'wf', 'gf', 'yt', 'bl'],
 ];
 
 /**
  * @param {string} code
- * @returns {string[]} the group containing this code (including itself), or just [code]
+ * @returns {string[]}
  */
 export function lookalikesOf(code) {
   for (const group of LOOKALIKES) {
@@ -55,11 +48,6 @@ export function lookalikesOf(code) {
   return [code];
 }
 
-// Picks a set of `choiceCount` choices for one question. Ensures no two
-// choices share a LOOKALIKES group - we exclude lookalikes of the
-// answer, and as each distractor is picked we exclude lookalikes of
-// that distractor too. Falls back to allowing duplicates only when the
-// pool is too small to satisfy the strict rule.
 /**
  * @template {{ code: string }} T
  * @param {T[]} pool
@@ -77,8 +65,6 @@ function buildChoices(pool, answer, choiceCount) {
     for (const k of lookalikesOf(c.code)) taken.add(k);
   }
   if (distractors.length < choiceCount - 1) {
-    // Pool too small to give every choice its own lookalike group.
-    // Relax: any non-answer entry is fair game.
     const fallback = shuffle(pool.filter((c) => c.code !== answer.code))
       .slice(0, choiceCount - 1);
     return shuffle([answer, ...fallback]);
@@ -102,10 +88,6 @@ export function pickQuestion(countries, choiceCount = 4) {
   return { answer, choices: buildChoices(countries, answer, choiceCount) };
 }
 
-// Builds a quiz that asks every answer at most once. Each call to .next()
-// returns the next question (or null when exhausted). Distractors are
-// drawn from the full pool excluding the current answer, so wrong choices
-// can recur but the country being asked never does.
 /**
  * @template {{ code: string }} T
  * @param {T[]} pool
@@ -136,10 +118,6 @@ export function createQuiz(pool, count, choiceCount = 4) {
   };
 }
 
-// Variant definitions. The key is the URL slug (?v=<key>); the order
-// here is the display order in the menu — the two whole-world pools
-// come first, then the per-continent pools (and "Others" alongside
-// them as another narrow pool).
 /** @type {Record<string, Variant>} */
 export const VARIANTS = {
   countries: {
@@ -193,9 +171,6 @@ export function poolFor(variantKey, countries) {
   return countries.filter(variant.filter);
 }
 
-// Question-count modes. The key is the URL slug (?n=<key>) and also the
-// label rendered in the menu. The value is the upper bound; the actual
-// target is clamped to the pool size in case the pool is smaller.
 /** @type {Record<string, number>} */
 export const MODES = {
   '20': 20,
@@ -214,9 +189,6 @@ export function targetFor(modeKey, pool) {
   return Math.min(MODES[modeKey], pool.length);
 }
 
-// Which mode keys make sense for a pool of this size. A mode is usable
-// when its labelled count (e.g. 20) is <= the pool, OR when it has no
-// fixed count (Infinity = "all"). Preserves MODES insertion order.
 /**
  * @param {number} poolSize
  * @returns {string[]}
@@ -228,12 +200,6 @@ export function availableModes(poolSize) {
 }
 
 /**
- * Default mode key for a pool of the given size. Returns the first
- * viable mode in MODES insertion order — '20' when the pool is large
- * enough, falling back to 'all' for narrower variants. Single source
- * of truth shared by the menu (one row per variant linking to its
- * default mode) and the URL-resolution fallback in the quiz page.
- *
  * @param {number} poolSize
  * @returns {string | null}
  */
@@ -241,9 +207,6 @@ export function defaultModeFor(poolSize) {
   return availableModes(poolSize)[0] ?? null;
 }
 
-// Pretty-print a duration in milliseconds as M:SS.mmm (e.g. 1:23.456).
-// Floors rather than rounds so the displayed value never overshoots the
-// real elapsed time.
 /**
  * @param {number} ms
  * @returns {string}
@@ -256,10 +219,6 @@ export function formatTime(ms) {
   return `${min}:${sec.toString().padStart(2, '0')}.${milli.toString().padStart(3, '0')}`;
 }
 
-// CSS color string for a score ratio (0..1). Maps to a hue going red
-// (0) -> yellow (0.5) -> green (1) at a fixed saturation/lightness that
-// reads well on the off-white background. Inputs outside [0, 1] are
-// clamped.
 /**
  * @param {number} ratio
  * @returns {string}
@@ -277,9 +236,6 @@ export function scoreColor(ratio) {
  * @property {(key: string, value: string) => void} setItem
  */
 
-// Decide what to keep as "best" between a previous best and a current
-// result. Higher score wins; if scores are tied, faster time wins.
-// Returns the chosen value and whether it represents a new best.
 /**
  * @param {Result | null} prev
  * @param {Result} current
@@ -294,9 +250,6 @@ export function nextBest(prev, current) {
   return { best: prev, isNew: false };
 }
 
-// Read a stored best from any Storage-like object. Returns null when
-// the key is missing, the value is unparseable, or the parsed value
-// does not look like a Result. Never throws.
 /**
  * @param {BestStore} store
  * @param {string} key
@@ -320,8 +273,6 @@ export function loadBest(store, key) {
   }
 }
 
-// Write a best to any Storage-like object. Silently no-ops if the
-// store throws (e.g. private-mode localStorage with quota of zero).
 /**
  * @param {BestStore} store
  * @param {string} key
@@ -331,13 +282,10 @@ export function saveBest(store, key, value) {
   try {
     store.setItem(key, JSON.stringify(value));
   } catch {
-    // Storage may be disabled or full - degrade gracefully.
+    // localStorage may throw in private mode / zero quota; degrade silently.
   }
 }
 
-// Storage key for the best score of a given variant + mode. Keeping
-// this in code (rather than inlined as a template literal at the call
-// site) gives a single source of truth + a target for tests.
 /**
  * @param {string} variantKey
  * @param {string} modeKey
@@ -347,9 +295,6 @@ export function bestKey(variantKey, modeKey) {
   return `flagquiz.best.${variantKey}.${modeKey}`;
 }
 
-// End-of-game flow: read the previous best for this variant/mode,
-// decide whether the current run beats it, and persist if so. Returns
-// what to display and whether the displayed value is freshly set.
 /**
  * @param {BestStore} store
  * @param {string} variantKey
