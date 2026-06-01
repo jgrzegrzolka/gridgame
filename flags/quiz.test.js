@@ -121,24 +121,15 @@ test('poolFor throws on an unknown variant', () => {
   assert.throws(() => poolFor('mars', countries), /Unknown variant/);
 });
 
-test('poolFor("countries") returns only sovereign states (UN members + observers, no territories, no others)', () => {
-  const pool = poolFor('countries', countries);
-  assert.ok(pool.length > 0);
-  for (const c of pool) {
-    assert.equal(c.category, 'country');
-    assert.notEqual(c.statehood, 'territory');
-    assert.notEqual(c.statehood, 'non_un');
-  }
+test('poolFor("countries") is an identity over its input (scope is applied upstream)', () => {
+  assert.equal(poolFor('countries', countries).length, countries.length);
 });
 
-test('poolFor("europe") returns only sovereign Europe', () => {
+test('poolFor("europe") narrows by continent only — scope is applied upstream', () => {
   const europe = poolFor('europe', countries);
   assert.ok(europe.length > 0);
   for (const c of europe) {
-    assert.equal(c.category, 'country');
     assert.equal(c.continent, 'Europe');
-    assert.notEqual(c.statehood, 'territory');
-    assert.notEqual(c.statehood, 'non_un');
   }
 });
 

@@ -2,7 +2,6 @@
 /** @typedef {import('./grid.js').Category} Category */
 
 import { continent, hasColor, hasMotif } from './grid.js';
-import { sovereigntyOf } from './group.js';
 
 /**
  * @param {string | null | undefined} id
@@ -22,17 +21,18 @@ export function categoryFromId(id) {
  * @returns {Country[]}
  */
 export function findTargets(allCountries, category) {
-  return allCountries.filter(
-    (c) => sovereigntyOf(c) === 'sovereign' && category.predicate(c),
-  );
+  return allCountries.filter((c) => category.predicate(c));
 }
 
 /**
+ * Pass-through; kept so callers have a stable export to use even though
+ * we no longer apply an engine-level scope filter — scope is decided at
+ * the page level via flagsGamePool.
  * @param {Country[]} allCountries
  * @returns {Country[]}
  */
 export function findPool(allCountries) {
-  return allCountries.filter((c) => sovereigntyOf(c) === 'sovereign');
+  return allCountries;
 }
 
 /**

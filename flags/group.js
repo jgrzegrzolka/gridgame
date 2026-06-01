@@ -31,6 +31,40 @@ export function sovereigntyOf(c) {
   return 'sovereign';
 }
 
+const FLAGS_INCLUDE_ALL_KEY = 'gridgame.flags.includeAll';
+
+/**
+ * @param {{ getItem(key: string): string | null } | null | undefined} [store]
+ * @returns {boolean}
+ */
+export function isFlagsIncludeAll(store) {
+  const s = store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null);
+  if (!s) return false;
+  return s.getItem(FLAGS_INCLUDE_ALL_KEY) === 'true';
+}
+
+/**
+ * @param {{ setItem(key: string, value: string): void, removeItem(key: string): void }} store
+ * @param {boolean} value
+ */
+export function setFlagsIncludeAll(store, value) {
+  if (value) store.setItem(FLAGS_INCLUDE_ALL_KEY, 'true');
+  else store.removeItem(FLAGS_INCLUDE_ALL_KEY);
+}
+
+/**
+ * Returns the playable flag pool given the current include-all setting.
+ * When the toggle is on, every flag in countries.json is fair game;
+ * when off, only the 195 sovereign states.
+ * @param {Country[]} countries
+ * @param {boolean} [includeAll]
+ * @returns {Country[]}
+ */
+export function flagsGamePool(countries, includeAll = isFlagsIncludeAll()) {
+  if (includeAll) return countries;
+  return countries.filter((c) => sovereigntyOf(c) === 'sovereign');
+}
+
 /** @type {Continent[]} */
 export const CONTINENTS = [
   'Africa',

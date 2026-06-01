@@ -11,7 +11,7 @@ import {
   isGridLocked,
 } from '../flags/grid.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
-import { sovereigntyOf } from '../flags/group.js';
+import { flagsGamePool } from '../flags/group.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/grid.js').Puzzle} Puzzle */
@@ -24,8 +24,8 @@ import { sovereigntyOf } from '../flags/group.js';
 export function bootFlagGrid(puzzleFor, options = {}) {
   fetch('../../flags/countries.json')
     .then((r) => r.json())
-    .then((all) => {
-      const countries = all.filter((/** @type {import('../flags/group.js').Country} */ c) => sovereigntyOf(c) === 'sovereign');
+    .then((raw) => {
+      const countries = flagsGamePool(raw);
       const puzzle = puzzleFor(countries);
       runFlagGrid({ puzzle, countries, options });
     })

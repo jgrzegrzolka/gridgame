@@ -1,4 +1,4 @@
-import { CONTINENTS } from '../flags/group.js';
+import { CONTINENTS, flagsGamePool } from '../flags/group.js';
 import {
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
@@ -49,7 +49,8 @@ export function bootFindFlag() {
 
   fetch('../flags/countries.json')
     .then((r) => r.json())
-    .then((all) => {
+    .then((raw) => {
+      const all = flagsGamePool(raw);
       if (!catId) {
         renderChooser(all);
         chooserEl.hidden = false;

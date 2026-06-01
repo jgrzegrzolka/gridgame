@@ -9,6 +9,7 @@ import {
   poolFor,
   targetFor,
 } from '../flags/quiz.js';
+import { flagsGamePool } from '../flags/group.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -36,7 +37,8 @@ export function bootFlagQuiz() {
 
   fetch('../flags/countries.json')
     .then((r) => r.json())
-    .then((all) => {
+    .then((raw) => {
+      const all = flagsGamePool(raw);
       renderMenu(all);
 
       let variantKey = urlVariant && VARIANTS[urlVariant]

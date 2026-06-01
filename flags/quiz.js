@@ -1,5 +1,3 @@
-import { sovereigntyOf } from './group.js';
-
 /**
  * @typedef {import('./group.js').Country} Country
  *
@@ -120,35 +118,42 @@ export function createQuiz(pool, count, choiceCount = 4) {
   };
 }
 
-/** @type {Record<string, Variant>} */
+/**
+ * VARIANTS predicates only narrow by continent / "all". The sovereign-vs-
+ * include-everything scope is applied separately at fetch time via
+ * flagsGamePool, so flipping the "include territories etc." toggle
+ * widens every variant uniformly without needing per-variant changes.
+ *
+ * @type {Record<string, Variant>}
+ */
 export const VARIANTS = {
   countries: {
     label: 'All countries',
-    filter: (c) => sovereigntyOf(c) === 'sovereign',
+    filter: () => true,
   },
   europe: {
     label: 'Europe',
-    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'Europe',
+    filter: (c) => c.continent === 'Europe',
   },
   asia: {
     label: 'Asia',
-    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'Asia',
+    filter: (c) => c.continent === 'Asia',
   },
   africa: {
     label: 'Africa',
-    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'Africa',
+    filter: (c) => c.continent === 'Africa',
   },
   'north-america': {
     label: 'North America',
-    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'North America',
+    filter: (c) => c.continent === 'North America',
   },
   'south-america': {
     label: 'South America',
-    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'South America',
+    filter: (c) => c.continent === 'South America',
   },
   oceania: {
     label: 'Oceania',
-    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'Oceania',
+    filter: (c) => c.continent === 'Oceania',
   },
 };
 
