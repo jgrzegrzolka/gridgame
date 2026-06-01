@@ -45,7 +45,7 @@ body {
 
 :root {
   --x-color: #2d6a8c;
-  --o-color: var(--link-color);
+  --o-color: #dd6688;
 }
 
 .grid {
