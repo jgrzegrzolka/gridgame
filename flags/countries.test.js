@@ -14,7 +14,7 @@ import {
   validateCell,
 } from './grid.js';
 import { CONTINENTS } from './group.js';
-import { PUZZLE_1, PUZZLE_2 } from '../flagGrid/puzzles.js';
+import { PUZZLE_1, PUZZLE_2, PUZZLE_3 } from '../flagGrid/puzzles.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const COUNTRIES = JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'));
@@ -239,6 +239,27 @@ test('PUZZLE_2 has an exemplary 9-distinct-country solution against the real cou
     }
   }
   assert.equal(isPuzzleGeneratable(PUZZLE_2, COUNTRIES), true);
+});
+
+test('PUZZLE_3 has an exemplary 9-distinct-country solution against the real countries.json', () => {
+  // PUZZLE_3 is unlinked from the menu but the page exists at /flagGrid/3/
+  // and the puzzle object ships in puzzles.js. Pin solvability so a data
+  // drift fails CI rather than a stuck game when Game 3 is finally
+  // promoted into the ARCHIVE.
+  const solution = findPuzzleSolution(PUZZLE_3, COUNTRIES);
+  assert.notEqual(solution, null);
+  const codes = solution.flat().map((c) => c.code);
+  assert.equal(new Set(codes).size, 9, `expected 9 distinct countries, got codes: ${codes.join(', ')}`);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      assert.equal(
+        validateCell(PUZZLE_3, r, c, solution[r][c]),
+        true,
+        `cell [${r}][${c}] = ${solution[r][c].code} does not satisfy ${PUZZLE_3.rows[r].id} x ${PUZZLE_3.cols[c].id}`,
+      );
+    }
+  }
+  assert.equal(isPuzzleGeneratable(PUZZLE_3, COUNTRIES), true);
 });
 
 test('generateRandomPuzzle succeeds with the real countries.json under several seeds', () => {
