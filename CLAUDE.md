@@ -1,8 +1,18 @@
 # CLAUDE.md
 
+## Where things live
+
+The repo is feature-sliced — each game / explorer owns its folder:
+
+- `flagQuiz/`, `flagGrid/`, `findFlag/`, `flagsdata/`, `/` — one folder per page (HTML + sibling `page.js` + sibling `index.css`). The HTML is markup-only; `page.js` exports a `bootX()` function that the HTML calls inside a tiny `<script type="module">`.
+- `flags/` — shared flag-domain code: country data (`countries.json`, `svg/`) and the game-mode engines (`quiz.js`, `grid.js`, `findFlag.js`, `group.js`). Pure logic — no DOM, no `fetch`. All covered by `flags/*.test.js`.
+- `common.css` — chrome shared across pages (nav corner cluster, burger panel, body defaults).
+
+Rule of thumb: keep new code inside its feature folder. Promote something to `flags/` (or `common.css`) **only when the second consumer actually arrives** — speculative sharing locks the wrong shape.
+
 ## Tests
 
 - Tests live in `flags/*.test.js`, run with `npm test` (Node's built-in `node --test`).
-- When changing logic in `flags/group.js` or `flags/quiz.js`, update or add the matching test.
+- When changing logic in any `flags/*.js`, update or add the matching test.
 - Run `npm test` before finishing a change.
-- HTML/CSS and `<script type="module">` blocks inside HTML files aren't reachable by `node:test`. If you're adding branching logic to a page's inline script, prefer extracting the pure part into `flags/quiz.js` (or a sibling module) so it gets the same test treatment.
+- The page-level `page.js` files are mostly DOM + `fetch` glue and aren't unit-tested — keep them thin and push reusable logic down into `flags/*.js`.
