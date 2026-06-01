@@ -22,7 +22,9 @@ export function bootTicTacToe() {
  * @param {{ puzzle: import('../flags/grid.js').Puzzle, countries: Country[] }} config
  */
 function runTicTacToe({ puzzle, countries }) {
-  let state = newGame(puzzle);
+  let state = newGame(puzzle, 'O');
+  /** @type {Player | null} */
+  let lastRenderedPlayer = null;
 
   /** @type {{ row: number, col: number } | null} */
   let activeCell = null;
@@ -38,6 +40,7 @@ function runTicTacToe({ puzzle, countries }) {
   const pickerInputEl = /** @type {HTMLInputElement} */ (document.getElementById('picker-input'));
   const pickerSuggestionsEl = /** @type {HTMLUListElement} */ (document.getElementById('picker-suggestions'));
   const colHeaderEls = document.querySelectorAll('.col-header');
+  const turnLineEl = document.getElementById('turn-line');
   const turnBadgeEl = document.getElementById('turn-badge');
   const turnTextEl = document.getElementById('turn-text');
   const resultEl = document.getElementById('result');
@@ -240,16 +243,14 @@ function runTicTacToe({ puzzle, countries }) {
     const cell = state.cells[r][c];
     td.innerHTML = '';
     td.classList.toggle('owned', !!cell.owner);
+    td.classList.toggle('owner-x', cell.owner === 'X');
+    td.classList.toggle('owner-o', cell.owner === 'O');
     td.classList.remove('winning');
     if (cell.country && cell.owner) {
       const img = document.createElement('img');
       img.src = `../flags/svg/${cell.country.code}.svg`;
       img.alt = cell.country.name;
       td.appendChild(img);
-      const badge = document.createElement('span');
-      badge.className = 'owner-badge ' + cell.owner.toLowerCase();
-      badge.textContent = cell.owner;
-      td.appendChild(badge);
     }
   }
 
@@ -271,14 +272,21 @@ function runTicTacToe({ puzzle, countries }) {
   function renderTurn() {
     if (!turnBadgeEl || !turnTextEl) return;
     if (isGameOver(state)) {
-      turnBadgeEl.hidden = true;
-      turnTextEl.textContent = '';
+      if (turnLineEl) turnLineEl.hidden = true;
+      lastRenderedPlayer = null;
       return;
     }
+    if (turnLineEl) turnLineEl.hidden = false;
     turnBadgeEl.hidden = false;
     turnBadgeEl.textContent = state.currentPlayer;
+    const changed = lastRenderedPlayer !== state.currentPlayer;
     turnBadgeEl.className = 'turn-badge ' + state.currentPlayer.toLowerCase();
     turnTextEl.textContent = 'to move';
+    if (changed) {
+      void turnBadgeEl.offsetWidth; // restart the bounce animation on every turn change.
+      turnBadgeEl.classList.add('bounce');
+      lastRenderedPlayer = state.currentPlayer;
+    }
   }
 
   function renderAll() {

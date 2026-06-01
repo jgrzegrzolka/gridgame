@@ -34,9 +34,10 @@ function emptyCell() {
 
 /**
  * @param {Puzzle} puzzle
+ * @param {Player} [firstPlayer]
  * @returns {GameState}
  */
-export function newGame(puzzle) {
+export function newGame(puzzle, firstPlayer = 'X') {
   return {
     puzzle,
     cells: [
@@ -44,7 +45,7 @@ export function newGame(puzzle) {
       [emptyCell(), emptyCell(), emptyCell()],
       [emptyCell(), emptyCell(), emptyCell()],
     ],
-    currentPlayer: 'X',
+    currentPlayer: firstPlayer,
     winner: null,
     winningLine: null,
     draw: false,
