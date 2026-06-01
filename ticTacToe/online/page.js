@@ -7,11 +7,12 @@ import { suggest, pulseShake } from '../../flags/grid.js';
 const ROOM_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const ROOM_LEN = 5;
 
-// Local dev points at the partykit dev server. Phase 4 will swap in the
-// deployed URL when running on the live site.
-const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'ws://127.0.0.1:1999/parties/main/'
-  : 'ws://127.0.0.1:1999/parties/main/'; // TODO Phase 4: swap for prod URL
+// Localhost talks to the partykit dev server on :1999; everywhere else
+// talks to the deployed Cloudflare server.
+const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const SERVER_URL = IS_LOCAL
+  ? `ws://${window.location.hostname}:1999/parties/main/`
+  : 'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/main/';
 
 export function bootTicTacToeOnline() {
   fetch('../../flags/countries.json')
