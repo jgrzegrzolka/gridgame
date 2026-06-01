@@ -82,6 +82,7 @@ const MOTIFS = {
   tc: ['animal', 'coat-of-arms'],                  // Turks and Caicos — coa with lobster + conch
   tj: ['coat-of-arms'],                             // Tajikistan — crown + stars emblem
   ug: ['animal'],                                   // Uganda — grey crowned crane
+  va: ['coat-of-arms'],                             // Vatican City — papal tiara + crossed keys of Saint Peter (issue #58)
   vg: ['coat-of-arms'],                             // Virgin Islands (BR) — coa with St Ursula + lamps
   vi: ['animal', 'coat-of-arms'],                  // Virgin Islands (U.S.) — eagle coa
   vu: ['coat-of-arms'],                             // Vanuatu — boar's tusk + namele leaves emblem (tusk is a prosperity symbol, not a weapon)
