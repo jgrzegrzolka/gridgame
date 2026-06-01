@@ -5,6 +5,7 @@ import {
   loadGridState,
   saveGridState,
   recordGridResult,
+  fillEmptyCellsForGiveUp,
   cellRenderClasses,
   pulseShake,
   isGridLocked,
@@ -55,6 +56,8 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   let gaveUp = false;
   /** @type {number | null} */
   let finalTimeMs = null;
+  /** @type {Array<string | null>} */
+  let revealedCodes = Array(9).fill(null);
   if (saved) {
     for (let i = 0; i < 9; i++) {
       const code = saved.picks[i];
@@ -64,6 +67,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     wrongCount = saved.wrongCount;
     gaveUp = saved.gaveUp;
     finalTimeMs = saved.finalTimeMs;
+    revealedCodes = saved.revealedCodes.slice();
   }
 
   /** @type {Country[]} */
@@ -86,6 +90,9 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     document.getElementById('picker-suggestions')
   );
   const colHeaderEls = document.querySelectorAll('.col-header');
+  const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
+  const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
+  const zoomName = zoomEl ? /** @type {HTMLParagraphElement | null} */ (zoomEl.querySelector('p')) : null;
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
   const playTimerEl = document.getElementById('play-timer-line');
   const playTimeEl = document.getElementById('play-time');
@@ -144,9 +151,34 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   }
 
   function onCellActivate(row, col) {
+    const userPick = solution[row][col];
+    if (userPick) {
+      openZoom(userPick);
+      return;
+    }
+    const revealedCode = revealedCodes[row * 3 + col];
+    if (revealedCode) {
+      const c = byCode.get(revealedCode);
+      if (c) openZoom(c);
+      return;
+    }
     if (isLocked()) return;
-    if (solution[row][col]) return;
     openPicker(row, col);
+  }
+
+  /** @param {Country} c */
+  function openZoom(c) {
+    if (!zoomEl || !zoomImg || !zoomName) return;
+    zoomImg.src = `../../flags/svg/${c.code}.svg`;
+    zoomImg.alt = c.name;
+    zoomName.textContent = c.name;
+    zoomEl.showModal();
+  }
+
+  if (zoomEl) {
+    zoomEl.addEventListener('click', (e) => {
+      if (e.target === zoomEl) zoomEl.close();
+    });
   }
 
   function openPicker(row, col) {
@@ -322,8 +354,12 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`)
     );
     if (!td) return;
-    const country = solution[r][c];
-    for (const [klass, shouldHave] of cellRenderClasses(country)) {
+    const userPick = solution[r][c];
+    const revealedCode = revealedCodes[r * 3 + c];
+    const revealedCountry = !userPick && revealedCode ? byCode.get(revealedCode) ?? null : null;
+    const country = userPick ?? revealedCountry;
+    const revealed = !userPick && revealedCountry !== null;
+    for (const [klass, shouldHave] of cellRenderClasses(country, { revealed })) {
       td.classList.toggle(klass, shouldHave);
     }
     td.innerHTML = '';
@@ -353,6 +389,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       wrongCount,
       gaveUp,
       finalTimeMs,
+      revealedCodes,
     });
   }
 
@@ -401,6 +438,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       if (isLocked()) return;
       gaveUp = true;
       finalTimeMs = Date.now() - sessionStart;
+      revealedCodes = fillEmptyCellsForGiveUp(puzzle, solution, allCountries);
       closePicker();
       renderGrid();
       persistState();

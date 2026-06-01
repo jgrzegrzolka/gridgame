@@ -141,6 +141,27 @@ body::before {
   text-decoration: underline;
 }
 
+.give-up-row {
+  margin-top: 16px;
+  text-align: center;
+}
+.give-up {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--link-color);
+  cursor: pointer;
+}
+.give-up:hover {
+  background: #f0f0f0;
+}
+.give-up[hidden] {
+  display: none;
+}
+
 #result {
   text-align: center;
   margin-top: 32px;
@@ -186,15 +207,69 @@ body::before {
   color: #2a9d4a;
   font-weight: 500;
   margin-left: 6px;
-  animation: new-record-bounce 1s ease-out;
+  animation: new-record-bounce 2s ease-out;
   transform-origin: center bottom;
 }
 @keyframes new-record-bounce {
   0%   { transform: translateY(0); }
-  30%  { transform: translateY(-10px); }
-  50%  { transform: translateY(0); }
-  70%  { transform: translateY(-5px); }
+  18%  { transform: translateY(-12px); }
+  32%  { transform: translateY(0); }
+  45%  { transform: translateY(-8px); }
+  60%  { transform: translateY(0); }
+  75%  { transform: translateY(-4px); }
   100% { transform: translateY(0); }
+}
+
+dialog#zoom {
+  width: min(80vw, 320px);
+  padding: 16px;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  background: #fff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: scaleX(0);
+  transition: opacity 150ms ease,
+              transform 350ms cubic-bezier(0.4, 0, 0.2, 1),
+              overlay 350ms ease allow-discrete,
+              display 350ms ease allow-discrete;
+}
+dialog#zoom[open] {
+  opacity: 1;
+  transform: scaleX(1);
+}
+@starting-style {
+  dialog#zoom[open] {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+}
+dialog#zoom::backdrop {
+  background: rgba(0, 0, 0, 0);
+  transition: background 200ms ease,
+              overlay 200ms ease allow-discrete,
+              display 200ms ease allow-discrete;
+}
+dialog#zoom[open]::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+@starting-style {
+  dialog#zoom[open]::backdrop {
+    background: rgba(0, 0, 0, 0);
+  }
+}
+dialog#zoom img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #ddd;
+  box-sizing: border-box;
+}
+dialog#zoom p {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 16px;
 }
 
 .home-icon {

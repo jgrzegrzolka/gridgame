@@ -22,22 +22,6 @@ body {
   margin: 16px 0 0 calc(var(--grid-cell) / -4);
   text-align: right;
 }
-.give-up {
-  padding: 6px 14px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  color: var(--link-color);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-.give-up:hover {
-  background: #f0f0f0;
-}
-.give-up[hidden] {
-  display: none;
-}
 .grid {
   border-collapse: collapse;
   table-layout: fixed;
@@ -75,10 +59,6 @@ body {
   position: relative;
   cursor: pointer;
 }
-.cell:focus-visible {
-  outline: 2px solid #000;
-  outline-offset: -2px;
-}
 /* Firefox drops shared right/bottom cell borders if hover paints directly on the cell background under border-collapse, so the tint lives on ::after instead. */
 .cell::after {
   content: "";
@@ -101,7 +81,10 @@ body.grid-locked .cell:hover::after {
 }
 .cell.filled {
   padding: 10px;
-  cursor: default;
+  cursor: zoom-in;
+}
+body.grid-locked .cell.filled {
+  cursor: zoom-in;
 }
 .cell.filled:hover {
   background: transparent;
@@ -111,6 +94,17 @@ body.grid-locked .cell:hover::after {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+.cell.revealed {
+  background: rgba(197, 48, 45, 0.2);
+}
+.cell.revealed img {
+  animation: revealed-bounce 0.55s ease-in-out 3;
+}
+@keyframes revealed-bounce {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-8px); }
+  100% { transform: translateY(0); }
 }
 .cell.shake::before {
   content: '';

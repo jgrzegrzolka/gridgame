@@ -26,6 +26,7 @@ export function bootFlagQuiz() {
   const playAgainEl = /** @type {HTMLAnchorElement} */ (document.getElementById('play-again'));
   const progressBarEl = document.getElementById('progress-bar');
   const modeToggleEl = document.getElementById('mode-toggle');
+  const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
 
   const DEFAULT_VARIANT = 'countries';
 
@@ -193,6 +194,13 @@ export function bootFlagQuiz() {
     }
 
     playAgainEl.href = window.location.pathname + window.location.search;
+
+    if (giveUpEl) {
+      giveUpEl.addEventListener('click', () => {
+        wrongCount += target - answeredCount;
+        showResult();
+      }, { once: true });
+    }
 
     gameEl.hidden = false;
     tickTimer();

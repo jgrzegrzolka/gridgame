@@ -393,11 +393,44 @@ export function pulseShake(cell) {
 
 /**
  * @param {Country | null | undefined} country
+ * @param {{ revealed?: boolean }} [options]
  * @returns {Array<[string, boolean]>}
  */
-export function cellRenderClasses(country) {
+export function cellRenderClasses(country, options = {}) {
   const filled = country !== null && country !== undefined;
-  return [['filled', filled]];
+  return [
+    ['filled', filled],
+    ['revealed', Boolean(options.revealed)],
+  ];
+}
+
+/**
+ * Picks a valid country for each empty cell, excluding any country already
+ * used in the user's picks or in earlier reveals.
+ * @param {Puzzle} puzzle
+ * @param {(Country | null)[][]} solution
+ * @param {Country[]} countries
+ * @param {() => number} [random]
+ * @returns {Array<string | null>}
+ */
+export function fillEmptyCellsForGiveUp(puzzle, solution, countries, random = Math.random) {
+  /** @type {Array<string | null>} */
+  const result = Array(9).fill(null);
+  const used = new Set();
+  for (const row of solution) for (const c of row) if (c) used.add(c.code);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (solution[r][c]) continue;
+      const candidates = countries.filter(
+        (country) => validateCell(puzzle, r, c, country) && !used.has(country.code),
+      );
+      if (candidates.length === 0) continue;
+      const picked = candidates[Math.floor(random() * candidates.length)];
+      result[r * 3 + c] = picked.code;
+      used.add(picked.code);
+    }
+  }
+  return result;
 }
 
 const WRONG_PICK_PENALTY = 3;
@@ -422,6 +455,7 @@ export function computeGridScore({ filledCount, wrongCount }) {
  * @property {number} wrongCount
  * @property {boolean} gaveUp
  * @property {number | null} finalTimeMs
+ * @property {Array<string | null>} revealedCodes
  */
 
 /**
@@ -455,6 +489,10 @@ export function loadGridState(store, key) {
         wrongCount: parsed.wrongCount,
         gaveUp: parsed.gaveUp,
         finalTimeMs: parsed.finalTimeMs,
+        revealedCodes:
+          Array.isArray(parsed.revealedCodes) && parsed.revealedCodes.length === 9
+            ? parsed.revealedCodes.map((/** @type {unknown} */ p) => (typeof p === 'string' ? p : null))
+            : Array(9).fill(null),
       };
     }
     return null;
