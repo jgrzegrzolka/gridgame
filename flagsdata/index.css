@@ -7,12 +7,21 @@ body {
   z-index: 5;
   background: #fafafa;
   margin: 0 -24px 16px;
-  padding: 16px 24px 12px;
+  /* Left padding clears the fixed home button (top: 12px; left: 12px;
+     width: 44px → right edge at 56px). On mobile the home button
+     becomes a flush 44×44 cell at top:0/left:0 sharing the bar's row,
+     so the clearance shrinks but the principle is the same. */
+  padding: 16px 24px 12px 68px;
   border-bottom: 1px solid #eee;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px 16px;
+}
+@media (max-width: 600px) {
+  #filter-bar {
+    padding-left: 56px;
+  }
 }
 .filter-group {
   display: flex;
