@@ -141,6 +141,46 @@ body::before {
   text-decoration: underline;
 }
 
+#result {
+  text-align: center;
+  margin-top: 32px;
+  animation: result-in 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes result-in {
+  0%   { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.final-score {
+  font-size: 32px;
+  font-weight: 500;
+  margin: 0 0 12px;
+}
+.time {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+.best {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 20px;
+  font-variant-numeric: tabular-nums;
+}
+.best:empty {
+  display: none;
+}
+.result-links {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+.result-links a {
+  color: var(--link-color);
+}
+.result-links a[hidden] {
+  display: none;
+}
 .best .new-badge {
   display: inline-block;
   color: #2a9d4a;

@@ -1,5 +1,8 @@
+import { nextBest, loadBest, saveBest } from './quiz.js';
+
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./group.js').Continent} Continent */
+/** @typedef {import('./quiz.js').Result} Result */
 
 /**
  * @typedef {Object} Category
@@ -471,4 +474,25 @@ export function saveGridState(store, key, state) {
   } catch {
     // localStorage may throw in private mode / zero quota; degrade silently.
   }
+}
+
+/**
+ * @param {string} slug
+ * @returns {string}
+ */
+export function gridBestKey(slug) {
+  return `flaggrid.best.${slug}`;
+}
+
+/**
+ * @param {import('./quiz.js').BestStore} store
+ * @param {string} slug
+ * @param {Result} current
+ * @returns {{ best: Result, isNew: boolean }}
+ */
+export function recordGridResult(store, slug, current) {
+  const key = gridBestKey(slug);
+  const outcome = nextBest(loadBest(store, key), current);
+  if (outcome.isNew) saveBest(store, key, outcome.best);
+  return outcome;
 }
