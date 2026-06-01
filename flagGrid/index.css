@@ -22,22 +22,6 @@ body {
   margin: 16px 0 0 calc(var(--grid-cell) / -4);
   text-align: right;
 }
-.give-up {
-  padding: 6px 14px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  color: var(--link-color);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-.give-up:hover {
-  background: #f0f0f0;
-}
-.give-up[hidden] {
-  display: none;
-}
 .grid {
   border-collapse: collapse;
   table-layout: fixed;

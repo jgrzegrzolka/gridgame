@@ -141,6 +141,27 @@ body::before {
   text-decoration: underline;
 }
 
+.give-up-row {
+  margin-top: 16px;
+  text-align: center;
+}
+.give-up {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--link-color);
+  cursor: pointer;
+}
+.give-up:hover {
+  background: #f0f0f0;
+}
+.give-up[hidden] {
+  display: none;
+}
+
 #result {
   text-align: center;
   margin-top: 32px;

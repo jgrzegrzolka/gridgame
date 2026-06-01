@@ -259,24 +259,6 @@ dialog#zoom p {
   text-align: center;
   font-size: 16px;
 }
-.find-below {
-  margin-top: 16px;
-  text-align: center;
-}
-.give-up {
-  background: none;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font: inherit;
-  font-size: 14px;
-  color: var(--link-color);
-  cursor: pointer;
-}
-.give-up:hover {
-  background: #f0f0f0;
-}
-
 .missed-title {
   font-size: 14px;
   color: #999;
