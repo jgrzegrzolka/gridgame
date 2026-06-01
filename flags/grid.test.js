@@ -19,6 +19,8 @@ import {
   computeGridScore,
   loadGridState,
   saveGridState,
+  gridBestKey,
+  recordGridResult,
   cellRenderClasses,
   pulseShake,
   isGridLocked,
@@ -908,4 +910,34 @@ test('cellRenderClasses does not list any interaction-transient classes', () => 
       assert.ok(!managed.includes(t), `cellRenderClasses must not manage transient class ".${t}"`);
     }
   }
+});
+
+test('gridBestKey namespaces by slug', () => {
+  assert.equal(gridBestKey('1'), 'flaggrid.best.1');
+  assert.equal(gridBestKey('archive-42'), 'flaggrid.best.archive-42');
+});
+
+test('recordGridResult on an empty store saves and reports isNew', () => {
+  const store = fakeStore();
+  const current = { score: 75, time: 90000 };
+  const r = recordGridResult(store, '1', current);
+  assert.deepEqual(r, { best: current, isNew: true });
+  assert.equal(store.getItem(gridBestKey('1')), JSON.stringify(current));
+});
+
+test('recordGridResult prefers a higher score, then a faster time', () => {
+  const store = fakeStore();
+  recordGridResult(store, '1', { score: 80, time: 30000 });
+  const tieOnScoreFaster = recordGridResult(store, '1', { score: 80, time: 20000 });
+  assert.deepEqual(tieOnScoreFaster, { best: { score: 80, time: 20000 }, isNew: true });
+  const lowerScoreFaster = recordGridResult(store, '1', { score: 70, time: 5000 });
+  assert.deepEqual(lowerScoreFaster, { best: { score: 80, time: 20000 }, isNew: false });
+});
+
+test('recordGridResult slots are keyed per slug', () => {
+  const store = fakeStore();
+  recordGridResult(store, '1', { score: 100, time: 60000 });
+  recordGridResult(store, '2', { score: 50, time: 30000 });
+  assert.equal(store.getItem(gridBestKey('1')), JSON.stringify({ score: 100, time: 60000 }));
+  assert.equal(store.getItem(gridBestKey('2')), JSON.stringify({ score: 50, time: 30000 }));
 });

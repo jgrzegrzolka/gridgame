@@ -4,6 +4,7 @@ import {
   computeGridScore,
   loadGridState,
   saveGridState,
+  recordGridResult,
   cellRenderClasses,
   pulseShake,
   isGridLocked,
@@ -92,6 +93,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   const finalScoreLineEl = document.getElementById('final-score-line');
   const finalScoreEl = document.getElementById('final-score');
   const timeEl = document.getElementById('time');
+  const bestEl = document.getElementById('best');
   const playAgainEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('play-again'));
 
   colHeaderEls.forEach((th, i) => {
@@ -366,6 +368,21 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     if (finalScoreLineEl) finalScoreLineEl.style.color = scoreColor(score / 100);
     if (timeEl && finalTimeMs !== null) {
       timeEl.textContent = `Time: ${formatTime(finalTimeMs)}`;
+    }
+    if (stateKey && finalTimeMs !== null && bestEl) {
+      const slug = stateKey.replace(/^flaggrid\.state\./, '');
+      const { best, isNew } = recordGridResult(localStorage, slug, {
+        score,
+        time: finalTimeMs,
+      });
+      bestEl.textContent = `Your best: ${best.score} in ${formatTime(best.time)}`;
+      if (isNew) {
+        bestEl.appendChild(document.createTextNode(' '));
+        const badge = document.createElement('span');
+        badge.className = 'new-badge';
+        badge.textContent = 'new record!';
+        bestEl.appendChild(badge);
+      }
     }
     if (playAgainEl) {
       playAgainEl.href = window.location.pathname + window.location.search;

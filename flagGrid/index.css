@@ -17,32 +17,6 @@ body {
   display: none;
 }
 
-.result {
-  text-align: center;
-  margin-top: 24px;
-}
-.final-score {
-  font-size: 36px;
-  font-weight: 500;
-  margin: 0 0 12px;
-}
-.time {
-  font-size: 14px;
-  color: #666;
-  margin: 0 0 16px;
-  font-variant-numeric: tabular-nums;
-}
-.result-links {
-  font-size: 14px;
-  color: #666;
-  margin: 0;
-}
-.result-links a {
-  color: var(--link-color);
-}
-.result-links a[hidden] {
-  display: none;
-}
 .below-grid {
   width: calc(3.5 * var(--grid-cell));
   margin: 16px 0 0 calc(var(--grid-cell) / -4);
