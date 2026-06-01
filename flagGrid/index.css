@@ -125,8 +125,11 @@ body {
 }
 /* Black focus ring on the cell's edge — no inset, no padding, just
    the cell's outer line darkened. outline + negative offset sits ON
-   the existing border line without disturbing border-collapse. */
-.cell:focus {
+   the existing border line without disturbing border-collapse.
+   :focus-visible (not :focus) so the ring only appears for keyboard
+   navigation; click/tap to open the picker no longer leaves a stray
+   border behind. */
+.cell:focus-visible {
   outline: 2px solid #000;
   outline-offset: -2px;
 }
@@ -146,6 +149,16 @@ body {
   background: rgba(0, 0, 0, 0.04);
 }
 .cell.filled:hover::after {
+  background: transparent;
+}
+/* Round over — empty cells stop showing hover/pointer cues so the
+   board doesn't look interactable until the player hits Retry (which
+   reloads the page and clears this class). Driven by page.js
+   toggling `grid-locked` on the body off the isGridLocked predicate. */
+body.grid-locked .cell {
+  cursor: default;
+}
+body.grid-locked .cell:hover::after {
   background: transparent;
 }
 .cell.filled {
@@ -177,11 +190,11 @@ body {
   40%, 60% { transform: translateX(4px); }
 }
 
-/* Bottom-sheet picker. Tapping an empty cell opens this; on mobile it
-   sits pinned to the bottom edge (real <input> so the OS keyboard
-   appears), on desktop it centres as a modal. Suggestions live inside
-   the sheet so they scroll with it and don't have to track a cell
-   anchor across viewport changes. */
+/* Centred-modal picker. Tapping an empty cell opens this; it sits in
+   the middle of the viewport on every screen size (real <input> so the
+   OS keyboard appears). Suggestions live inside the sheet so they
+   scroll with it and don't have to track a cell anchor across viewport
+   changes. */
 .picker[hidden] {
   display: none;
 }
@@ -193,17 +206,19 @@ body {
 }
 .picker-sheet {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  max-width: calc(100vw - 32px);
   z-index: 101;
   background: #fff;
-  border-radius: 12px 12px 0 0;
+  border-radius: 8px;
   padding: 12px;
   max-height: 70vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
 }
 .picker-header {
   display: flex;
@@ -284,24 +299,53 @@ body {
   flex-shrink: 0;
 }
 
-/* Desktop: lift the sheet off the bottom edge and centre it as a
-   modal. Same markup, different layout. */
-@media (min-width: 600px) {
-  .picker-sheet {
-    left: 50%;
-    right: auto;
-    bottom: auto;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 480px;
-    max-width: calc(100vw - 32px);
-    border-radius: 8px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
-  }
-}
-
 /* Lock background scroll while the picker is open — keeps a finger
    drag on the backdrop from scrolling the grid underneath on mobile. */
 body.picker-open {
   overflow: hidden;
+}
+
+/* Archive page: each puzzle is a square tile in a tight auto-fill
+   grid (modelled on /flagsdata/), so adding more games stays compact.
+   A tile shows its number always; the score line is appended only
+   when localStorage has a finished round for that slug. */
+.archive-grid {
+  width: 100%;
+  max-width: 720px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 4px;
+}
+/* Two-row grid so the number's Y is fixed by row 1 regardless of
+   whether the score row is filled — #1 and #2 line up even when only
+   one of them has been played. The number bottom-aligns in row 1 (so
+   it sits right above the tile centerline) and the score top-aligns
+   in row 2 (right below it). */
+.archive-tile {
+  aspect-ratio: 1;
+  border: 1px solid #ddd;
+  background: #fff;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  justify-items: center;
+  text-decoration: none;
+  color: #1c1c1c;
+}
+.archive-tile:hover {
+  background: #f0f0f0;
+}
+.archive-tile-num {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--link-color);
+  align-self: end;
+}
+.archive-tile-score {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  align-self: start;
+  margin-top: 4px;
 }

@@ -11,6 +11,7 @@ import {
   targetFor,
   MODES,
   availableModes,
+  defaultModeFor,
   formatTime,
   LOOKALIKES,
   lookalikesOf,
@@ -230,6 +231,26 @@ test('availableModes hides 20 when pool is below 20', () => {
 
 test('availableModes returns "all" alone for an empty pool', () => {
   assert.deepEqual(availableModes(0), ['all']);
+});
+
+test('defaultModeFor returns "20" when the pool can support a 20-question round', () => {
+  assert.equal(defaultModeFor(20), '20');
+  assert.equal(defaultModeFor(50), '20');
+});
+
+test('defaultModeFor falls back to "all" for narrower pools', () => {
+  // Pools too small for the 20-question mode (e.g. South America) fall
+  // back to "all" so menu links and URL-resolution still land on a
+  // playable mode rather than silently 404-ing.
+  assert.equal(defaultModeFor(19), 'all');
+  assert.equal(defaultModeFor(4), 'all');
+});
+
+test('defaultModeFor returns "all" even for an empty pool (consistent with availableModes)', () => {
+  // Defensive: matches availableModes(0) === ['all']. No current
+  // variant actually has a zero pool, but the helper stays honest
+  // about its contract.
+  assert.equal(defaultModeFor(0), 'all');
 });
 
 test('availableModes preserves MODES insertion order', () => {

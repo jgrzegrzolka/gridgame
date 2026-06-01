@@ -30,24 +30,43 @@
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
       <ul class="menu">
-        <li><a href="../1/">Current</a></li>
+        <li><a href="../2/">Current</a></li>
         <li><a href="../archive/">Archive</a></li>
         <li><a href="../rand/">Random</a></li>
-        <li class="menu-divider"><a href="../../" aria-label="Home"><span class="home-icon" aria-hidden="true"></span></a></li>
       </ul>
     </nav>
-    <ul class="menu" id="archive-list"></ul>
+    <div class="archive-grid" id="archive-grid"></div>
     <script type="module">
       import { ARCHIVE } from '../puzzles.js?v=__BUILD__';
+      import { loadGridState, computeGridScore, isGridLocked } from '../../flags/grid.js?v=__BUILD__';
+      import { scoreColor } from '../../flags/quiz.js?v=__BUILD__';
 
-      const listEl = document.getElementById('archive-list');
+      const gridEl = document.getElementById('archive-grid');
       for (const entry of ARCHIVE) {
-        const li = document.createElement('li');
         const a = document.createElement('a');
         a.href = `../${entry.slug}/`;
-        a.textContent = entry.label;
-        li.appendChild(a);
-        listEl.appendChild(li);
+        a.className = 'archive-tile';
+
+        const num = document.createElement('div');
+        num.className = 'archive-tile-num';
+        num.textContent = `#${entry.slug}`;
+        a.appendChild(num);
+
+        // Only show a score when the round was actually played to
+        // completion (solved or gave up). An in-progress save (state
+        // exists but isGridLocked is false) leaves the tile bare.
+        const state = loadGridState(globalThis.localStorage, `flaggrid.state.${entry.slug}`);
+        if (state && isGridLocked(state)) {
+          const filledCount = state.picks.filter((p) => p !== null).length;
+          const score = computeGridScore({ filledCount, wrongCount: state.wrongCount });
+          const scoreEl = document.createElement('div');
+          scoreEl.className = 'archive-tile-score';
+          scoreEl.textContent = String(score);
+          scoreEl.style.color = scoreColor(score / 100);
+          a.appendChild(scoreEl);
+        }
+
+        gridEl.appendChild(a);
       }
     </script>
   </body>

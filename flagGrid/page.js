@@ -6,6 +6,7 @@ import {
   saveGridState,
   cellRenderClasses,
   pulseShake,
+  isGridLocked,
 } from '../flags/grid.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 
@@ -164,10 +165,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     return finalTimeMs !== null;
   }
   function isLocked() {
-    // While solved is computed live during play, the persistence
-    // boundary is finalTimeMs: once that's set we treat the round as
-    // permanently over and the board as read-only.
-    return isFinished() || gaveUp;
+    return isGridLocked({ gaveUp, finalTimeMs });
   }
 
   function onCellActivate(row, col) {
@@ -311,7 +309,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     if (filled === 9) {
       finishRound();
     } else {
-      advanceToNextEmpty();
+      focusNextEmpty();
     }
   }
 
@@ -338,32 +336,17 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   }
 
   /**
-   * Page load: focus the first empty cell so keyboard users can act,
-   * but do NOT auto-open the picker — popping the OS keyboard on
-   * arrival is jarring on mobile.
+   * Focus the first empty cell in reading order. Called both on page
+   * load and after each accepted pick — we deliberately do NOT
+   * auto-open the picker for the next cell so the player can pause,
+   * look at the board, and tap when they're ready.
    */
-  function focusFirstEmpty() {
+  function focusNextEmpty() {
     if (isLocked()) return;
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 3; c++) {
         if (solution[r][c]) continue;
         focusCell(r, c);
-        return;
-      }
-    }
-  }
-
-  /**
-   * After a successful pick: focus the next empty cell AND open its
-   * picker, so the player keeps filling without re-tapping.
-   */
-  function advanceToNextEmpty() {
-    if (isLocked()) return;
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
-        if (solution[r][c]) continue;
-        focusCell(r, c);
-        openPicker(r, c);
         return;
       }
     }
@@ -399,6 +382,9 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       }
     }
     if (giveUpEl) giveUpEl.hidden = isLocked();
+    // Drives the CSS rule that suppresses cell hover + pointer cues
+    // when the round is over — empty cells stop looking interactable.
+    document.body.classList.toggle('grid-locked', isLocked());
   }
 
   function persistState() {
@@ -458,11 +444,14 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   // Initial visibility decisions:
   // - If the round was already finished in a previous session, show
   //   the result block read-only and skip starting the timer.
-  // - Otherwise start the live timer and focus the first empty cell.
+  // - Otherwise start the live timer. We deliberately do NOT focus a
+  //   cell on load — :focus-visible fires on programmatic focus when
+  //   there's been no prior user interaction, painting a stray black
+  //   ring on the first cell before the player has done anything.
+  //   The user picks where to start by tapping.
   if (isFinished()) {
     finishRound();
   } else {
     if (playTimerEl) tickTimer();
-    focusFirstEmpty();
   }
 }
