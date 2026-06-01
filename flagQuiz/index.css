@@ -14,11 +14,6 @@ body {
   transition: width 300ms ease;
   z-index: 30;
 }
-@media (max-width: 600px) {
-  .progress-bar {
-    top: 44px;
-  }
-}
 .stats {
   list-style: none;
   padding: 0;
