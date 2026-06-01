@@ -51,6 +51,15 @@ export function bootFindFlag() {
 
   const includeAll = isFindIncludeAll();
 
+  const scopeToggleEl = /** @type {HTMLInputElement | null} */ (document.getElementById('scope-toggle-input'));
+  if (scopeToggleEl) {
+    scopeToggleEl.checked = includeAll;
+    scopeToggleEl.addEventListener('change', () => {
+      setFindIncludeAll(localStorage, scopeToggleEl.checked);
+      window.location.reload();
+    });
+  }
+
   fetch('../flags/countries.json')
     .then((r) => r.json())
     .then((raw) => {
@@ -74,23 +83,6 @@ export function bootFindFlag() {
 
   function renderChooser(all) {
     const sectionsEl = document.getElementById('chooser-sections');
-
-    const toggleWrap = document.createElement('div');
-    toggleWrap.className = 'chooser-scope';
-    const toggleLabel = document.createElement('label');
-    toggleLabel.className = 'scope-toggle';
-    const toggleInput = document.createElement('input');
-    toggleInput.type = 'checkbox';
-    toggleInput.checked = includeAll;
-    toggleInput.addEventListener('change', () => {
-      setFindIncludeAll(localStorage, toggleInput.checked);
-      window.location.reload();
-    });
-    toggleLabel.appendChild(toggleInput);
-    toggleLabel.appendChild(document.createTextNode(' Include territories & other flags'));
-    toggleWrap.appendChild(toggleLabel);
-    sectionsEl.appendChild(toggleWrap);
-
     const allCats = [
       ...CONTINENTS.map((n) => ({ id: `continent:${n}`, label: n })),
       ...COLORS_FOR_RANDOM.map((c) => ({ id: `hasColor:${c}`, label: `Has ${c}` })),
