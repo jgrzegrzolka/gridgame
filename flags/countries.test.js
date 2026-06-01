@@ -244,17 +244,22 @@ test('PUZZLE_2 has an exemplary 9-distinct-country solution against the real cou
 test('generateRandomPuzzle succeeds with the real countries.json under several seeds', () => {
   // Real-data integration check: if motif tagging drifts to the point
   // where the solvability gate can never pass, generateRandomPuzzle
-  // throws after maxAttempts. This pins down a few seeded RNGs so a
-  // regression shows up as a hard failure rather than a flaky game UI.
-  const seeds = [
-    [0.11, 0.27, 0.83, 0.04, 0.55, 0.62, 0.71, 0.99, 0.18, 0.36],
-    [0.42, 0.13, 0.77, 0.95, 0.03, 0.59, 0.21, 0.48, 0.66, 0.82],
-    [0.07, 0.31, 0.52, 0.69, 0.88, 0.14, 0.97, 0.25, 0.43, 0.61],
-  ];
-  for (const seed of seeds) {
-    let i = 0;
-    const rng = () => seed[i++ % seed.length];
-    const puzzle = generateRandomPuzzle(COUNTRIES, { rng });
+  // throws after maxAttempts. Drives a proper seeded PRNG (Mulberry32) —
+  // the unified-pool generator now rejects many shuffles (exclusive-group
+  // conflicts, empty cells), so a short cyclic seed could starve the
+  // search before finding a valid puzzle.
+  function mulberry32(seed) {
+    let a = seed | 0;
+    return () => {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  for (const seed of [1, 42, 1337, 9001]) {
+    const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
     assert.equal(puzzle.rows.length, 3);
     assert.equal(puzzle.cols.length, 3);
   }
