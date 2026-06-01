@@ -573,7 +573,9 @@
       "white",
       "green"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "cv",
@@ -857,7 +859,9 @@
       "white",
       "blue"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "cu",
@@ -1014,7 +1018,9 @@
       "red",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "eac",
@@ -1472,7 +1478,9 @@
       "yellow",
       "green"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "gt",
@@ -1616,7 +1624,9 @@
       "red",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "hu",
@@ -1788,7 +1798,10 @@
       "red",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "animal",
+      "coat-of-arms"
+    ]
   },
   {
     "code": "jo",
@@ -2041,7 +2054,9 @@
       "yellow",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "mg",
@@ -2629,7 +2644,6 @@
       "white"
     ],
     "motifs": [
-      "coat-of-arms",
       "star-or-moon"
     ]
   },
@@ -3206,7 +3220,10 @@
       "yellow",
       "green"
     ],
-    "motifs": []
+    "motifs": [
+      "animal",
+      "coat-of-arms"
+    ]
   },
   {
     "code": "kr",

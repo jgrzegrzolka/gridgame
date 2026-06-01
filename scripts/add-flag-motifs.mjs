@@ -35,6 +35,7 @@ const MOTIFS = {
   bt: ['animal'],                                   // Bhutan — white dragon
   bz: ['coat-of-arms'],                             // Belize — coa with loggers + tree
   dm: ['animal', 'coat-of-arms'],                  // Dominica — coa with parrot
+  do: ['coat-of-arms'],                             // Dominican Republic — central coa with bible, cross, flags, palm
   ec: ['animal', 'coat-of-arms', 'weapon'],        // Ecuador — coa with condor + ship + fasces (axe)
   eg: ['animal', 'coat-of-arms'],                  // Egypt — Eagle of Saladin national emblem
   es: ['animal', 'coat-of-arms'],                  // Spain — royal coa with lions
@@ -42,9 +43,13 @@ const MOTIFS = {
   fk: ['animal', 'coat-of-arms'],                  // Falkland Islands — coa with sheep
   gi: ['coat-of-arms'],                             // Gibraltar — coa with castle + key
   gq: ['coat-of-arms'],                             // Equatorial Guinea — coa with silk cotton tree
+  gs: ['animal', 'coat-of-arms'],                  // South Georgia and the South Sandwich Islands — coa with lion + reindeer + seal + penguin
   gt: ['animal', 'coat-of-arms', 'weapon'],        // Guatemala — coa with quetzal + rifles + sword
+  gu: ['coat-of-arms'],                             // Guam — Seal of Guam (proa + palm + Two Lovers Point)
+  hr: ['coat-of-arms'],                             // Croatia — checkered shield + crown of 5 regional shields
   ht: ['coat-of-arms', 'weapon'],                  // Haiti — coa with palm + cannons
   ir: ['coat-of-arms'],                             // Iran — stylised "Allah" national emblem
+  je: ['animal', 'coat-of-arms'],                  // Jersey — crowned shield with three Plantagenet leopards (lions passant)
   ke: ['coat-of-arms', 'weapon'],                  // Kenya — Maasai shield + spears
   kh: ['coat-of-arms'],                             // Cambodia — Angkor Wat as national emblem
   ki: ['animal'],                                   // Kiribati — frigate bird
@@ -60,7 +65,6 @@ const MOTIFS = {
   mz: ['weapon'],                                   // Mozambique — AK-47 + hoe
   ni: ['coat-of-arms'],                             // Nicaragua — triangle coa
   om: ['weapon'],                                   // Oman — crossed khanjar daggers
-  pa: ['coat-of-arms'],                             // Panama — quartered with star + tools
   pe: ['animal', 'coat-of-arms'],                  // Peru — coa with vicuña
   pf: ['coat-of-arms'],                             // French Polynesia — outrigger canoe + sun emblem
   pg: ['animal'],                                   // Papua New Guinea — bird of paradise
@@ -102,11 +106,11 @@ const STAR_OR_MOON = new Set([
   // Africa
   'ao', 'dz', 'bf', 'cm', 'cf', 'km', 'cd', 'dj', 'eh', 'gh', 'gw', 'lr',
   'ly', 'ma', 'mr', 'mz', 'sn', 'so', 'ss', 'tg', 'tn', 'cv', 'zw',
-  'st', 'et',
+  'st', 'et', 'bi',
   // Asia
   'az', 'cn', 'il', 'jo', 'kp', 'mn', 'mv', 'my', 'np', 'pk', 'ph', 'sg',
   'sy', 'tj', 'tm', 'tr', 'uz', 'vn', 'tl',
-  'mm',
+  'mm', 'hk', 'mo',
   // Europe
   'ba', 'si', 'xk',
   // North America (incl. territories)
