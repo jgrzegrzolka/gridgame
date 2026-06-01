@@ -8,6 +8,16 @@ body {
   background: #fafafa;
   color: #1c1c1c;
 }
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--page-top);
+  background: #fafafa;
+  z-index: 10;
+}
 .back {
   position: fixed;
   top: 12px;
