@@ -1,18 +1,17 @@
 import { suggest, pulseShake } from '../../flags/grid.js';
+import {
+  generateCode,
+  isValidRoomCode,
+  serverUrlFor,
+  initialClientState,
+  reduceServerMessage,
+} from './onlineClient.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 /** @typedef {import('../../flags/ticTacToe.js').GameState} GameState */
 /** @typedef {import('../../flags/ticTacToe.js').Player} Player */
 
-const ROOM_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-const ROOM_LEN = 5;
-
-// Localhost talks to the partykit dev server on :1999; everywhere else
-// talks to the deployed Cloudflare server.
-const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const SERVER_URL = IS_LOCAL
-  ? `ws://${window.location.hostname}:1999/parties/main/`
-  : 'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/main/';
+const SERVER_URL = serverUrlFor(window.location.hostname);
 
 export function bootTicTacToeOnline() {
   fetch('../../flags/countries.json')
@@ -32,11 +31,7 @@ function runOnline(countries) {
 
   /** @type {WebSocket | null} */
   let ws = null;
-  /** @type {GameState | null} */
-  let game = null;
-  /** @type {Player | null} */
-  let myRole = null;
-  let peerPresent = false;
+  let state = initialClientState();
   let lastRenderedTurn = /** @type {Player | null} */ (null);
 
   /** @type {{ row: number, col: number } | null} */
@@ -71,7 +66,7 @@ function runOnline(countries) {
   // ---- Lobby ----
   const params = new URL(window.location.href).searchParams;
   const roomParam = params.get('room');
-  if (roomParam && /^[A-Z0-9]{5}$/.test(roomParam.toUpperCase())) {
+  if (roomParam && isValidRoomCode(roomParam.toUpperCase())) {
     joinRoom(roomParam.toUpperCase());
   } else {
     showLobby();
@@ -89,20 +84,12 @@ function runOnline(countries) {
     joinForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const code = joinCodeEl.value.toUpperCase().trim();
-      if (!/^[A-Z0-9]{5}$/.test(code)) {
+      if (!isValidRoomCode(code)) {
         showError('Code must be 5 characters');
         return;
       }
       joinRoom(code);
     });
-  }
-
-  function generateCode() {
-    let code = '';
-    for (let i = 0; i < ROOM_LEN; i++) {
-      code += ROOM_ALPHABET[Math.floor(Math.random() * ROOM_ALPHABET.length)];
-    }
-    return code;
   }
 
   /** @param {string} message */
@@ -135,49 +122,30 @@ function runOnline(countries) {
 
   /** @param {any} msg */
   function onServerMessage(msg) {
-    switch (msg.type) {
-      case 'welcome':
-        myRole = msg.you;
-        game = msg.game;
-        peerPresent = msg.peerPresent;
-        buildGridIfNeeded();
-        renderRole();
-        renderGrid();
-        renderTurn();
-        renderStatus();
-        break;
-      case 'state':
-        game = msg.game;
-        renderGrid();
-        renderTurn();
-        renderStatus();
-        if (msg.kind === 'miss-invalid' || msg.kind === 'miss-duplicate') {
-          shakeCell(msg.row, msg.col);
-        }
-        if (game && (game.winner || game.draw)) {
-          finishRound();
-        }
-        break;
-      case 'peer-joined':
-        peerPresent = true;
-        renderStatus();
-        renderTurn();
-        break;
-      case 'peer-left':
-        peerPresent = false;
-        renderStatus();
-        renderTurn();
-        break;
-      case 'rejected':
-        setStatus(msg.reason === 'room-full' ? 'Room is full' : 'Rejected: ' + msg.reason);
-        if (ws) ws.close();
-        break;
+    const before = state;
+    const { state: nextState, effects } = reduceServerMessage(state, msg);
+    state = nextState;
+
+    if (msg.type === 'welcome') buildGridIfNeeded();
+    if (state.statusOverride && state.statusOverride !== before.statusOverride) {
+      setStatus(state.statusOverride);
+    } else {
+      renderRole();
+      renderGrid();
+      renderTurn();
+      renderStatus();
+    }
+    for (const effect of effects) {
+      if (effect.type === 'shake') shakeCell(effect.row, effect.col);
+      else if (effect.type === 'finished') finishRound();
+      else if (effect.type === 'close' && ws) ws.close();
     }
   }
 
   // ---- Grid (built once, on welcome) ----
   let gridBuilt = false;
   function buildGridIfNeeded() {
+    const { game } = state;
     if (gridBuilt || !game) return;
     gridBuilt = true;
     colHeaderEls.forEach((th, i) => { th.textContent = /** @type {GameState} */ (game).puzzle.cols[i].label; });
@@ -204,6 +172,7 @@ function runOnline(countries) {
 
   /** @param {number} r @param {number} c */
   function onCellActivate(r, c) {
+    const { game, myRole, peerPresent } = state;
     if (!game || !myRole) return;
     if (!peerPresent) return;
     if (game.winner || game.draw) return;
@@ -215,6 +184,7 @@ function runOnline(countries) {
   // ---- Picker ----
   /** @param {number} r @param {number} c */
   function openPicker(r, c) {
+    const { game } = state;
     if (!game) return;
     activeCell = { row: r, col: c };
     pickerCatsEl.textContent = `${game.puzzle.rows[r].label} × ${game.puzzle.cols[c].label}`;
@@ -239,6 +209,7 @@ function runOnline(countries) {
   }
 
   function updateSuggestions() {
+    const { game } = state;
     if (!game) return;
     const query = pickerInputEl.value;
     const excludeCodes = new Set();
@@ -315,12 +286,14 @@ function runOnline(countries) {
   // ---- Renderers ----
   function renderRole() {
     if (!roleBadgeEl) return;
+    const { myRole } = state;
     if (!myRole) { roleBadgeEl.textContent = '?'; return; }
     roleBadgeEl.textContent = myRole;
     roleBadgeEl.className = 'turn-badge ' + myRole.toLowerCase();
   }
 
   function renderGrid() {
+    const { game } = state;
     if (!game || !gridBuilt) return;
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 3; c++) {
@@ -352,6 +325,7 @@ function runOnline(countries) {
 
   function renderTurn() {
     if (!turnLineEl || !turnBadgeEl || !turnTextEl) return;
+    const { game, peerPresent } = state;
     if (!game || !peerPresent || game.winner || game.draw) {
       turnLineEl.hidden = true;
       lastRenderedTurn = null;
@@ -371,6 +345,7 @@ function runOnline(countries) {
 
   function renderStatus() {
     if (!statusEl) return;
+    const { game, myRole, peerPresent } = state;
     statusEl.className = 'status-line';
     if (!game) { statusEl.textContent = 'Connecting…'; return; }
     if (game.winner || game.draw) { statusEl.textContent = ''; return; }
@@ -407,6 +382,7 @@ function runOnline(countries) {
   }
 
   function finishRound() {
+    const { game, myRole } = state;
     if (!resultEl || !finalScoreEl || !game) return;
     if (game.winner) {
       const youWon = game.winner === myRole;

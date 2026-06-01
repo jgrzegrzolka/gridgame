@@ -11,5 +11,11 @@
     "lib": ["ES2022", "DOM"],
     "types": ["node"]
   },
-  "include": ["flags/**/*.js", "party/ticTacToeServer.js", "party/ticTacToeServer.test.js"]
+  "include": [
+    "flags/**/*.js",
+    "party/ticTacToeServer.js",
+    "party/ticTacToeServer.test.js",
+    "ticTacToe/online/onlineClient.js",
+    "ticTacToe/online/onlineClient.test.js"
+  ]
 }
