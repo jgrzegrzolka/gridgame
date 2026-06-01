@@ -59,6 +59,9 @@ body {
   position: relative;
   cursor: pointer;
 }
+.cell:focus {
+  outline: none;
+}
 /* Firefox drops shared right/bottom cell borders if hover paints directly on the cell background under border-collapse, so the tint lives on ::after instead. */
 .cell::after {
   content: "";
