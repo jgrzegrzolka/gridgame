@@ -75,10 +75,12 @@ test('findTargets returns only countries matching the predicate, excluding "othe
   // EU has 'star-or-moon' AND is category=other. It must NOT appear in
   // a 'star-or-moon' game — Find Flag is for countries, not supranationals.
   const cat = categoryFromId('hasMotif:star-or-moon');
+  assert.ok(cat);
   const targets = findTargets(SAMPLE, cat);
   assert.deepEqual(targets.map((c) => c.code), []);
 
   const redCat = categoryFromId('hasColor:red');
+  assert.ok(redCat);
   const redTargets = findTargets(SAMPLE, redCat);
   // FR, DE, KE, JP all have red; EU does not (and is also excluded as 'other')
   assert.deepEqual(redTargets.map((c) => c.code), ['fr', 'de', 'ke', 'jp']);
@@ -124,12 +126,18 @@ test('bestKey produces the expected namespaced format', () => {
  * Minimal in-memory localStorage-shaped fake. Tests run in node where
  * `localStorage` doesn't exist, and we want to validate the persistence
  * helpers without dragging in jsdom.
+ *
+ * @returns {{
+ *   getItem(key: string): string | null,
+ *   setItem(key: string, value: string): void,
+ *   _dump(): { [k: string]: string },
+ * }}
  */
 function makeStore() {
   /** @type {Map<string, string>} */
   const map = new Map();
   return {
-    getItem: (k) => (map.has(k) ? map.get(k) : null),
+    getItem: (k) => map.get(k) ?? null,
     setItem: (k, v) => { map.set(k, v); },
     _dump: () => Object.fromEntries(map.entries()),
   };

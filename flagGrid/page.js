@@ -314,9 +314,9 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   }
 
   function shakeCell(row, col) {
-    const td = gridBodyEl.querySelector(
+    const td = /** @type {HTMLTableCellElement} */ (gridBodyEl.querySelector(
       `td[data-row="${row}"][data-col="${col}"]`,
-    );
+    ));
     td.classList.remove('shake');
     void td.offsetWidth;
     pulseShake(td);

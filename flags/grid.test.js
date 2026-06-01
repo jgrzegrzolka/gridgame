@@ -316,6 +316,7 @@ test('solutionState.complete is true when all nine cells are filled, valid, and 
   }
 });
 
+/** @returns {(Country | null)[][]} */
 function emptySolution() {
   return [
     [null, null, null],
@@ -328,6 +329,7 @@ test('tryPick accepts a valid, unique pick and returns a new solution with the p
   const before = emptySolution();
   const result = tryPick(PUZZLE, before, 0, 0, FR);
   assert.equal(result.accepted, true);
+  assert.ok(result.solution);
   assert.equal(result.solution[0][0], FR);
   // Untouched cells remain null in the new solution.
   for (let r = 0; r < 3; r++) {
@@ -391,6 +393,7 @@ test('tryPick does not mutate the original solution on accept', () => {
   }
 });
 
+/** @param {number[]} values */
 function sequenceRng(values) {
   let i = 0;
   return () => values[i++ % values.length];
@@ -401,6 +404,7 @@ function sequenceRng(values) {
 // many shuffles are rejected (exclusive-group conflicts, empty cells), and
 // a short cyclic seed can starve the loop before it finds a valid puzzle.
 // Mulberry32 produces a long, well-distributed stream from a single integer.
+/** @param {number} seed */
 function mulberry32(seed) {
   let a = seed | 0;
   return () => {
@@ -424,7 +428,10 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
   const p = randomPuzzle(mulberry32(1));
   for (const cat of [...p.rows, ...p.cols]) {
     if (cat.id.startsWith('continent:')) {
-      assert.ok(CONTINENTS_FOR_RANDOM.includes(cat.label));
+      // CONTINENTS_FOR_RANDOM is typed as Continent[] for caller convenience;
+      // here we're just probing "is this label one of them?" — widen to
+      // string[] so .includes() accepts an arbitrary cat.label.
+      assert.ok(/** @type {readonly string[]} */ (CONTINENTS_FOR_RANDOM).includes(cat.label));
     } else if (cat.id.startsWith('hasColor:')) {
       const color = cat.id.slice('hasColor:'.length);
       assert.ok(COLORS_FOR_RANDOM.includes(color), `color ${color} not in palette`);
@@ -616,7 +623,7 @@ test('findPuzzleSolution returns a valid 9-distinct-country solution when one ex
   const AFTER = country({ code: 'ate', name: 'AfricaTer', continent: 'Africa', statehood: 'territory' });
   const countries = [FR, VA, GL, JP, PS, HK, KE, AFOBS, AFTER];
   const solution = findPuzzleSolution(puzzle, countries);
-  assert.notEqual(solution, null);
+  assert.ok(solution);
   // 9 distinct codes.
   const codes = solution.flat().map((c) => c.code);
   assert.equal(new Set(codes).size, 9);
@@ -797,10 +804,19 @@ test('computeGridScore clamps to 0 for absurd wrong counts', () => {
 
 // Minimal Storage-like fake — a Map with throw-on-quota toggle for the
 // saveGridState error-path test.
+/**
+ * @param {{ throwOnSet?: boolean }} [opts]
+ * @returns {{
+ *   getItem(key: string): string | null,
+ *   setItem(key: string, value: string): void,
+ *   _data: Map<string, string>,
+ * }}
+ */
 function fakeStore({ throwOnSet = false } = {}) {
+  /** @type {Map<string, string>} */
   const data = new Map();
   return {
-    getItem: (k) => (data.has(k) ? data.get(k) : null),
+    getItem: (k) => data.get(k) ?? null,
     setItem: (k, v) => {
       if (throwOnSet) throw new Error('quota exceeded');
       data.set(k, v);
@@ -867,7 +883,9 @@ test('saveGridState writes a parseable serialised state to the store', () => {
     finalTimeMs: null,
   };
   saveGridState(store, 'k', state);
-  assert.deepEqual(JSON.parse(store._data.get('k')), state);
+  const raw = store._data.get('k');
+  assert.ok(raw);
+  assert.deepEqual(JSON.parse(raw), state);
 });
 
 test('saveGridState swallows a Storage quota error (no throw)', () => {
@@ -910,25 +928,38 @@ test('cellRenderClasses sets filled=true for any country', () => {
 // Lets us assert on class changes and synthesize event firings without
 // pulling in jsdom.
 function fakeCell() {
+  /** @type {Set<string>} */
   const classes = new Set();
   /** @type {Map<string, Array<{ handler: () => void, once: boolean }>>} */
   const listeners = new Map();
   return {
     classList: {
+      /** @param {string} c */
       add: (c) => classes.add(c),
+      /** @param {string} c */
       remove: (c) => classes.delete(c),
+      /** @param {string} c */
       contains: (c) => classes.has(c),
     },
+    /**
+     * @param {string} type
+     * @param {() => void} handler
+     * @param {{ once?: boolean }} [options]
+     */
     addEventListener(type, handler, options) {
-      if (!listeners.has(type)) listeners.set(type, []);
-      listeners.get(type).push({ handler, once: !!options?.once });
+      let arr = listeners.get(type);
+      if (!arr) { arr = []; listeners.set(type, arr); }
+      arr.push({ handler, once: !!options?.once });
     },
+    /** @param {string} type */
     fire(type) {
       const all = listeners.get(type) ?? [];
-      listeners.set(type, []);
+      /** @type {Array<{ handler: () => void, once: boolean }>} */
+      const survivors = [];
+      listeners.set(type, survivors);
       for (const entry of all) {
         entry.handler();
-        if (!entry.once) listeners.get(type).push(entry);
+        if (!entry.once) survivors.push(entry);
       }
     },
   };

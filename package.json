@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "typecheck": "tsc"
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.ui.json",
+    "validate": "npm test && npm run typecheck"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",

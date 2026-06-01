@@ -1,4 +1,5 @@
 /** @typedef {import('./group.js').Country} Country */
+/** @typedef {import('./group.js').Continent} Continent */
 
 /**
  * One category in the grid. The `id` is a stable, debug-friendly handle for
@@ -182,6 +183,7 @@ export function statehood(value, label) {
 
 /**
  * Continent names the random-puzzle generator draws from for the row axis.
+ * @type {Continent[]}
  */
 export const CONTINENTS_FOR_RANDOM = [
   'Europe',
@@ -632,7 +634,7 @@ export function loadGridState(store, key) {
       (parsed.finalTimeMs === null || typeof parsed.finalTimeMs === 'number')
     ) {
       return {
-        picks: parsed.picks.map((p) => (typeof p === 'string' ? p : null)),
+        picks: parsed.picks.map((/** @type {unknown} */ p) => (typeof p === 'string' ? p : null)),
         wrongCount: parsed.wrongCount,
         gaveUp: parsed.gaveUp,
         finalTimeMs: parsed.finalTimeMs,

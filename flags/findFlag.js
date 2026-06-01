@@ -13,7 +13,7 @@ import { continent, hasColor, hasMotif } from './grid.js';
  * expected to surface "unknown category" to the player rather than
  * silently bouncing back to the chooser, so they understand why.
  *
- * @param {string} id e.g. 'continent:Africa', 'hasColor:red', 'hasMotif:weapon'
+ * @param {string | null | undefined} id e.g. 'continent:Africa', 'hasColor:red', 'hasMotif:weapon'
  * @returns {Category | null}
  */
 export function categoryFromId(id) {
