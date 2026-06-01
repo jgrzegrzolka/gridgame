@@ -68,6 +68,11 @@
       </div>
     </section>
 
+    <dialog id="zoom">
+      <img alt="" />
+      <p></p>
+    </dialog>
+
     <section id="result" hidden>
       <p class="final-score" id="final-score-line">
         You found <span id="final-found">0</span> / <span id="final-total">0</span>
@@ -103,6 +108,36 @@
       const chooserEl = document.getElementById('chooser');
       const gameEl = document.getElementById('game');
       const resultEl = document.getElementById('result');
+
+      // ---- zoom dialog (shared between found + missed grids) ----------
+      const zoom = document.getElementById('zoom');
+      const zoomImg = zoom.querySelector('img');
+      const zoomName = zoom.querySelector('p');
+      function openZoom(c) {
+        zoomImg.src = `../flags/svg/${c.code}.svg`;
+        zoomImg.alt = c.name;
+        zoomName.textContent = c.name;
+        zoom.showModal();
+      }
+      zoom.addEventListener('click', (e) => {
+        // Click on backdrop (the dialog element itself, not the content)
+        // closes the dialog. Click on the img/p inside doesn't propagate
+        // here because they're separate event targets.
+        if (e.target === zoom) zoom.close();
+      });
+
+      function flagTile(c) {
+        const li = document.createElement('li');
+        li.className = 'find-tile';
+        li.dataset.name = c.name;
+        li.addEventListener('click', () => openZoom(c));
+        const img = document.createElement('img');
+        img.src = `../flags/svg/${c.code}.svg`;
+        img.alt = c.name;
+        img.loading = 'lazy';
+        li.appendChild(img);
+        return li;
+      }
 
       const params = new URLSearchParams(window.location.search);
       const catId = params.get('cat');
@@ -252,17 +287,9 @@
         }
 
         function appendFound(c) {
-          // Most-recent first: insert at the top so the player sees their
-          // last successful guess without scrolling.
-          const li = document.createElement('li');
-          const img = document.createElement('img');
-          img.src = `../flags/svg/${c.code}.svg`;
-          img.alt = '';
-          li.appendChild(img);
-          const span = document.createElement('span');
-          span.textContent = c.name;
-          li.appendChild(span);
-          foundEl.insertBefore(li, foundEl.firstChild);
+          // Most-recent first: insert at the top of the grid so the
+          // player sees their last successful guess without scrolling.
+          foundEl.insertBefore(flagTile(c), foundEl.firstChild);
         }
 
         function submitCountry(c) {
@@ -355,17 +382,7 @@
           const missed = targets.filter((c) => !foundCodes.has(c.code));
           const missedEl = document.getElementById('find-missed');
           missedEl.innerHTML = '';
-          for (const c of missed) {
-            const li = document.createElement('li');
-            const img = document.createElement('img');
-            img.src = `../flags/svg/${c.code}.svg`;
-            img.alt = '';
-            li.appendChild(img);
-            const span = document.createElement('span');
-            span.textContent = c.name;
-            li.appendChild(span);
-            missedEl.appendChild(li);
-          }
+          for (const c of missed) missedEl.appendChild(flagTile(c));
           document.getElementById('missed-title').hidden = missed.length === 0;
 
           document.getElementById('play-again').href =
