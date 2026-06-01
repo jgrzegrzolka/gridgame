@@ -70,6 +70,7 @@ test('newGame produces empty 3x3 with X to move', () => {
   assert.equal(s.currentPlayer, 'X');
   assert.equal(s.winner, null);
   assert.equal(s.draw, false);
+  assert.equal(isGameOver(s), false);
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
       assert.equal(s.cells[r][c].owner, null);
@@ -240,4 +241,5 @@ test('draw when board fills with no winner', () => {
   assert.equal(out.nextState.winner, null);
   assert.equal(out.nextState.draw, true);
   assert.equal(isGameOver(out.nextState), true);
+  assert.equal(out.nextState.currentPlayer, 'X', 'turn does not flip on draw');
 });
