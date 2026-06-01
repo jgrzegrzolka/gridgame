@@ -17,6 +17,7 @@
     <dialog id="zoom">
       <img alt="" />
       <p></p>
+      <pre class="country-data"></pre>
     </dialog>
     <script type="module">
       import { CONTINENTS, splitByCategory, groupByContinent } from '../flags/group.js?v=__BUILD__';
@@ -24,10 +25,12 @@
       const zoom = document.getElementById('zoom');
       const zoomImg = zoom.querySelector('img');
       const zoomName = zoom.querySelector('p');
+      const zoomData = zoom.querySelector('.country-data');
       function openZoom(c) {
         zoomImg.src = `../flags/svg/${c.code}.svg`;
         zoomImg.alt = c.name;
         zoomName.textContent = c.name;
+        zoomData.textContent = JSON.stringify(c, null, 2);
         zoom.showModal();
       }
       zoom.addEventListener('click', (e) => {
