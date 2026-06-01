@@ -11,6 +11,7 @@ import {
   suggest,
   randomPuzzle,
   puzzleCellCounts,
+  findPuzzleSolution,
   isPuzzleGeneratable,
   generateRandomPuzzle,
   computeGridScore,
@@ -18,6 +19,7 @@ import {
   saveGridState,
   cellRenderClasses,
   pulseShake,
+  isGridLocked,
   CONTINENTS_FOR_RANDOM,
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
@@ -485,16 +487,20 @@ test('puzzleCellCounts counts countries satisfying both predicates per cell', ()
   assert.equal(counts[2][2], 1);  // Africa + yellow: Cameroon
 });
 
-test('isPuzzleGeneratable returns true when every cell meets minPerCell', () => {
+test('isPuzzleGeneratable returns true when every cell meets minPerCell AND a no-duplicate solution exists', () => {
+  // 3 continents x 3 statehoods, one country per intersection — 9 distinct
+  // countries, every cell has exactly 1 candidate, minPerCell=1 satisfied,
+  // and the no-duplicate assignment trivially exists (each country fits one
+  // cell and only one cell).
   const puzzle = {
-    rows: [continent('Europe'), continent('Europe'), continent('Europe')],
-    cols: [hasColor('red'), hasColor('red'), hasColor('red')],
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [UN, OBSERVER, TERRITORY],
   };
-  const countries = [
-    country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] }),
-    country({ code: 'pl', name: 'Poland',  continent: 'Europe', colors: ['red', 'white'] }),
-  ];
-  assert.equal(isPuzzleGeneratable(puzzle, countries, 2), true);
+  const PS    = country({ code: 'ps',  name: 'Palestine', continent: 'Asia',   statehood: 'un_observer' });
+  const AFOBS = country({ code: 'aob', name: 'AfricaObs', continent: 'Africa', statehood: 'un_observer' });
+  const AFTER = country({ code: 'ate', name: 'AfricaTer', continent: 'Africa', statehood: 'territory' });
+  const countries = [FR, VA, GL, JP, PS, HK, KE, AFOBS, AFTER];
+  assert.equal(isPuzzleGeneratable(puzzle, countries, 1), true);
 });
 
 test('isPuzzleGeneratable returns false when any single cell falls below minPerCell', () => {
@@ -516,17 +522,93 @@ test('isPuzzleGeneratable defaults to minPerCell of 2', () => {
     cols: [hasColor('red'), hasColor('red'), hasColor('red')],
   };
   const oneCountry = [country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] })];
-  // Each cell has exactly 1; default threshold 2 → false.
+  // Each cell has exactly 1; default threshold 2 → false (per-cell gate).
   assert.equal(isPuzzleGeneratable(puzzle, oneCountry), false);
 });
 
-test('isPuzzleGeneratable with minPerCell=1 is the "no mutually-exclusive cell" check', () => {
+test('isPuzzleGeneratable returns false when the no-duplicates rule blocks a global solution even though every cell has candidates', () => {
+  // 9 Europe x red cells, 2 candidate countries. Per-cell counts (=2) pass
+  // both minPerCell=1 and minPerCell=2, but you cannot fill 9 cells with 2
+  // distinct countries — the new solvability check must catch this case.
   const puzzle = {
     rows: [continent('Europe'), continent('Europe'), continent('Europe')],
     cols: [hasColor('red'), hasColor('red'), hasColor('red')],
   };
-  const oneCountry = [country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] })];
-  assert.equal(isPuzzleGeneratable(puzzle, oneCountry, 1), true);
+  const twoCountries = [
+    country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] }),
+    country({ code: 'pl', name: 'Poland',  continent: 'Europe', colors: ['red', 'white'] }),
+  ];
+  assert.equal(isPuzzleGeneratable(puzzle, twoCountries, 1), false);
+  assert.equal(isPuzzleGeneratable(puzzle, twoCountries, 2), false);
+});
+
+test('findPuzzleSolution returns a valid 9-distinct-country solution when one exists', () => {
+  // 3 continents x 3 statehoods, one country per intersection.
+  const puzzle = {
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [UN, OBSERVER, TERRITORY],
+  };
+  const PS    = country({ code: 'ps',  name: 'Palestine', continent: 'Asia',   statehood: 'un_observer' });
+  const AFOBS = country({ code: 'aob', name: 'AfricaObs', continent: 'Africa', statehood: 'un_observer' });
+  const AFTER = country({ code: 'ate', name: 'AfricaTer', continent: 'Africa', statehood: 'territory' });
+  const countries = [FR, VA, GL, JP, PS, HK, KE, AFOBS, AFTER];
+  const solution = findPuzzleSolution(puzzle, countries);
+  assert.notEqual(solution, null);
+  // 9 distinct codes.
+  const codes = solution.flat().map((c) => c.code);
+  assert.equal(new Set(codes).size, 9);
+  // Each cell's pick satisfies both predicates.
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      assert.equal(validateCell(puzzle, r, c, solution[r][c]), true);
+    }
+  }
+});
+
+test('findPuzzleSolution returns null when any cell has zero candidates', () => {
+  const puzzle = {
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [hasColor('red'), hasColor('blue'), hasColor('orange')],
+  };
+  // No African country at all in the country pool, so every cell in row 2 is empty.
+  const countries = [
+    country({ code: 'al', name: 'Albania',  continent: 'Europe', colors: ['red'] }),
+    country({ code: 'gr', name: 'Greece',   continent: 'Europe', colors: ['blue'] }),
+    country({ code: 'jp', name: 'Japan',    continent: 'Asia',   colors: ['red'] }),
+  ];
+  assert.equal(findPuzzleSolution(puzzle, countries), null);
+});
+
+test('findPuzzleSolution returns null when the no-duplicate rule prevents any complete assignment', () => {
+  // 9 Europe x red cells, 2 candidate countries. Each cell individually has
+  // 2 candidates, but you can never fill 9 cells with only 2 distinct picks.
+  const puzzle = {
+    rows: [continent('Europe'), continent('Europe'), continent('Europe')],
+    cols: [hasColor('red'), hasColor('red'), hasColor('red')],
+  };
+  const twoCountries = [
+    country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] }),
+    country({ code: 'pl', name: 'Poland',  continent: 'Europe', colors: ['red'] }),
+  ];
+  assert.equal(findPuzzleSolution(puzzle, twoCountries), null);
+});
+
+test('findPuzzleSolution does not mutate the inputs', () => {
+  const puzzle = {
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [UN, OBSERVER, TERRITORY],
+  };
+  const PS    = country({ code: 'ps',  name: 'Palestine', continent: 'Asia',   statehood: 'un_observer' });
+  const AFOBS = country({ code: 'aob', name: 'AfricaObs', continent: 'Africa', statehood: 'un_observer' });
+  const AFTER = country({ code: 'ate', name: 'AfricaTer', continent: 'Africa', statehood: 'territory' });
+  const countries = [FR, VA, GL, JP, PS, HK, KE, AFOBS, AFTER];
+  const beforeRowIds = puzzle.rows.map((r) => r.id);
+  const beforeColIds = puzzle.cols.map((c) => c.id);
+  const beforeCodes = countries.map((c) => c.code);
+  findPuzzleSolution(puzzle, countries);
+  assert.deepEqual(puzzle.rows.map((r) => r.id), beforeRowIds);
+  assert.deepEqual(puzzle.cols.map((c) => c.id), beforeColIds);
+  assert.deepEqual(countries.map((c) => c.code), beforeCodes);
 });
 
 function syntheticTaggedCountries() {
@@ -611,7 +693,17 @@ test('computeGridScore deducts 10 points per empty cell — heavier than a wrong
   // No wrongs, partial fill: only the empty penalty applies.
   assert.equal(computeGridScore({ filledCount: 8, wrongCount: 0 }), 90);
   assert.equal(computeGridScore({ filledCount: 5, wrongCount: 0 }), 60);
-  assert.equal(computeGridScore({ filledCount: 0, wrongCount: 0 }), 10);
+  assert.equal(computeGridScore({ filledCount: 1, wrongCount: 0 }), 20);
+});
+
+test('computeGridScore returns 0 for an untouched board (give-up with nothing filled)', () => {
+  // The 10-per-empty rule would otherwise leave a 10-point floor
+  // (100 - 90 = 10) which felt like a participation prize for not
+  // engaging. Filled=0 is treated as a hard zero regardless of how
+  // many wrong picks the player burned through first.
+  assert.equal(computeGridScore({ filledCount: 0, wrongCount: 0 }), 0);
+  assert.equal(computeGridScore({ filledCount: 0, wrongCount: 1 }), 0);
+  assert.equal(computeGridScore({ filledCount: 0, wrongCount: 20 }), 0);
 });
 
 test('computeGridScore combines wrong and empty penalties for partial give-ups', () => {
@@ -707,6 +799,25 @@ test('saveGridState swallows a Storage quota error (no throw)', () => {
   assert.doesNotThrow(() => saveGridState(store, 'k', {
     picks: Array(9).fill(null), wrongCount: 0, gaveUp: false, finalTimeMs: null,
   }));
+});
+
+test('isGridLocked is false mid-game (no gave-up, no finalTimeMs)', () => {
+  assert.equal(isGridLocked({ gaveUp: false, finalTimeMs: null }), false);
+});
+
+test('isGridLocked is true when the player gave up', () => {
+  assert.equal(isGridLocked({ gaveUp: true, finalTimeMs: null }), true);
+});
+
+test('isGridLocked is true once finalTimeMs is set (round finished)', () => {
+  assert.equal(isGridLocked({ gaveUp: false, finalTimeMs: 12345 }), true);
+});
+
+test('isGridLocked treats a finalTimeMs of 0 as a finished round, not mid-game', () => {
+  // Defensive: 0 is a valid elapsed-ms reading too (immediate finish in
+  // a synthetic test). The "is it set" gate must be `!== null`, not
+  // truthiness, otherwise a 0-ms finish would look unfinished.
+  assert.equal(isGridLocked({ gaveUp: false, finalTimeMs: 0 }), true);
 });
 
 test('cellRenderClasses sets filled=false for an empty cell', () => {

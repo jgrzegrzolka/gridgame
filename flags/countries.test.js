@@ -10,9 +10,11 @@ import {
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
   isPuzzleGeneratable,
+  findPuzzleSolution,
+  validateCell,
 } from './grid.js';
 import { CONTINENTS } from './group.js';
-import { PUZZLE_1 } from '../flagGrid/puzzles.js';
+import { PUZZLE_1, PUZZLE_2 } from '../flagGrid/puzzles.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const COUNTRIES = JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'));
@@ -197,11 +199,46 @@ test('every (continent × motif) cell has at least one candidate country', () =>
   assert.deepEqual(empty, [], `no candidate flags for: ${empty.join(', ')}`);
 });
 
-test('PUZZLE_1 is solvable against the real countries.json', () => {
-  // The fixed flagGrid/1 puzzle: data drift that empties any of its cells
-  // (or drops a cell below the 2-candidate buffer) shows up here rather
-  // than as a stuck game.
+test('PUZZLE_1 has an exemplary 9-distinct-country solution against the real countries.json', () => {
+  // Proof-of-solvability: not just "every cell has candidates" (the old
+  // isPuzzleGeneratable heuristic) but "an actual assignment of 9 distinct
+  // countries exists where every cell's pick satisfies its row and column".
+  // Data drift that empties a cell — or that leaves only overlapping
+  // candidates and breaks the no-duplicates rule — fails this test rather
+  // than producing a stuck game.
+  const solution = findPuzzleSolution(PUZZLE_1, COUNTRIES);
+  assert.notEqual(solution, null);
+  const codes = solution.flat().map((c) => c.code);
+  assert.equal(new Set(codes).size, 9, `expected 9 distinct countries, got codes: ${codes.join(', ')}`);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      assert.equal(
+        validateCell(PUZZLE_1, r, c, solution[r][c]),
+        true,
+        `cell [${r}][${c}] = ${solution[r][c].code} does not satisfy ${PUZZLE_1.rows[r].id} x ${PUZZLE_1.cols[c].id}`,
+      );
+    }
+  }
+  // Keep the heuristic check too — a regression that only the count gate
+  // catches (e.g. an empty cell) should still surface as a clear failure.
   assert.equal(isPuzzleGeneratable(PUZZLE_1, COUNTRIES), true);
+});
+
+test('PUZZLE_2 has an exemplary 9-distinct-country solution against the real countries.json', () => {
+  const solution = findPuzzleSolution(PUZZLE_2, COUNTRIES);
+  assert.notEqual(solution, null);
+  const codes = solution.flat().map((c) => c.code);
+  assert.equal(new Set(codes).size, 9, `expected 9 distinct countries, got codes: ${codes.join(', ')}`);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      assert.equal(
+        validateCell(PUZZLE_2, r, c, solution[r][c]),
+        true,
+        `cell [${r}][${c}] = ${solution[r][c].code} does not satisfy ${PUZZLE_2.rows[r].id} x ${PUZZLE_2.cols[c].id}`,
+      );
+    }
+  }
+  assert.equal(isPuzzleGeneratable(PUZZLE_2, COUNTRIES), true);
 });
 
 test('generateRandomPuzzle succeeds with the real countries.json under several seeds', () => {

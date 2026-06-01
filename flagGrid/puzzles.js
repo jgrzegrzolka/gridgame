@@ -15,6 +15,12 @@ export const PUZZLE_1 = {
   cols: [hasColor('red'), hasMotif('animal'), hasMotif('coat-of-arms')],
 };
 
+/** @type {Puzzle} */
+export const PUZZLE_2 = {
+  rows: [continent('North America'), continent('Africa'), continent('Asia')],
+  cols: [hasColor('red'), hasColor('white'), hasMotif('weapon')],
+};
+
 /**
  * Catalogue of every numbered puzzle, in chronological order. The
  * archive page reads this list to render its index, and the menu's
@@ -26,4 +32,5 @@ export const PUZZLE_1 = {
  */
 export const ARCHIVE = [
   { slug: '1', label: 'Game 1', puzzle: PUZZLE_1 },
+  { slug: '2', label: 'Game 2', puzzle: PUZZLE_2 },
 ];

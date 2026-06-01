@@ -112,8 +112,9 @@ body {
 }
 
 /* House silhouette icon, reused for the back-to-home button and the
-   "Home" menu entry. Painted via CSS mask so it follows currentColor —
-   the same path data lives in favicon.svg. */
+   "Home" menu entry. Painted via CSS mask so it follows currentColor.
+   Independent of favicon.svg now — the favicon switched to a 3×3
+   grid mark for the Flag Grid headline. */
 .home-icon {
   display: inline-block;
   width: 1em;

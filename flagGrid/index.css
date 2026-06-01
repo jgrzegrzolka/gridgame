@@ -125,22 +125,13 @@ body {
 }
 /* Black focus ring on the cell's edge — no inset, no padding, just
    the cell's outer line darkened. outline + negative offset sits ON
-   the existing border line without disturbing border-collapse. */
-.cell:focus {
+   the existing border line without disturbing border-collapse.
+   :focus-visible (not :focus) so the ring only appears for keyboard
+   navigation; click/tap to open the picker no longer leaves a stray
+   border behind. */
+.cell:focus-visible {
   outline: 2px solid #000;
   outline-offset: -2px;
-}
-/* In-cell echo of the autocomplete query. Pinned to the cell's
-   top-left corner (a little padding off the edges) and bold, so the
-   typed letters read like a label rather than centred body text. */
-.cell-query {
-  position: absolute;
-  top: 6px;
-  left: 8px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #1c1c1c;
-  pointer-events: none;
 }
 /* Hover tint via a pseudo-element overlay rather than `background` on
    the cell itself. Painting on the cell's background under
@@ -158,6 +149,16 @@ body {
   background: rgba(0, 0, 0, 0.04);
 }
 .cell.filled:hover::after {
+  background: transparent;
+}
+/* Round over — empty cells stop showing hover/pointer cues so the
+   board doesn't look interactable until the player hits Retry (which
+   reloads the page and clears this class). Driven by page.js
+   toggling `grid-locked` on the body off the isGridLocked predicate. */
+body.grid-locked .cell {
+  cursor: default;
+}
+body.grid-locked .cell:hover::after {
   background: transparent;
 }
 .cell.filled {
@@ -189,60 +190,162 @@ body {
   40%, 60% { transform: translateX(4px); }
 }
 
-/* Suggestions popup — viewport-fixed so it tracks the cell without
-   scroll math. JS sets top/left to the cell's vertical middle, so the
-   panel overlaps the bottom half of the cell and extends downward.
-   Hidden by default; revealed only when the query yields matches. */
-.suggestions {
-  position: fixed;
-  list-style: none;
-  padding: 2px;
-  margin: 0;
-  min-width: 200px;
-  max-width: 320px;
-  background: #fff;
-  border: 1px solid #999;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  z-index: 50;
-  max-height: 260px;
-  overflow-y: auto;
-}
-.suggestions[hidden] {
+/* Centred-modal picker. Tapping an empty cell opens this; it sits in
+   the middle of the viewport on every screen size (real <input> so the
+   OS keyboard appears). Suggestions live inside the sheet so they
+   scroll with it and don't have to track a cell anchor across viewport
+   changes. */
+.picker[hidden] {
   display: none;
 }
-.suggestions li {
+.picker-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+.picker-sheet {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  z-index: 101;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
+}
+.picker-header {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 4px;
-  cursor: pointer;
-  font-size: 13px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
-.suggestions li:hover {
+.picker-cats {
+  flex: 1;
+  font-weight: 500;
+  font-size: 14px;
+  color: #1c1c1c;
+}
+.picker-close {
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  color: var(--link-color);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.picker-close:hover {
   background: #f0f0f0;
 }
+/* 16px font on the input prevents iOS from zooming the viewport when
+   the keyboard appears. Anything smaller triggers the auto-zoom. */
+.picker-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 16px;
+  border: 1px solid #999;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.picker-input:focus {
+  outline: 2px solid var(--link-color);
+  outline-offset: -2px;
+}
+.picker-suggestions {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.picker-suggestions li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  border-radius: 4px;
+}
 /* Keyboard selection highlight — JS sets `.selected` on the row that
-   Arrow keys land on, and Enter picks it. Hover from a mouse takes
-   precedence visually so the two interactions don't fight. */
-.suggestions li.selected {
+   Arrow keys land on, and Enter picks it. Hover from a mouse uses the
+   same tint so the two interactions agree. */
+.picker-suggestions li.selected,
+.picker-suggestions li:hover {
   background: rgba(102, 0, 51, 0.16);
 }
-.suggestions li span {
+.picker-suggestions span {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.suggestions img {
-  width: 20px;
-  height: 15px;
+.picker-suggestions img {
+  width: 28px;
+  height: 21px;
   border: 1px solid #ddd;
   flex-shrink: 0;
 }
-.suggestions img {
-  width: 20px;
-  height: 15px;
+
+/* Lock background scroll while the picker is open — keeps a finger
+   drag on the backdrop from scrolling the grid underneath on mobile. */
+body.picker-open {
+  overflow: hidden;
+}
+
+/* Archive page: each puzzle is a square tile in a tight auto-fill
+   grid (modelled on /flagsdata/), so adding more games stays compact.
+   A tile shows its number always; the score line is appended only
+   when localStorage has a finished round for that slug. */
+.archive-grid {
+  width: 100%;
+  max-width: 720px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 4px;
+}
+/* Two-row grid so the number's Y is fixed by row 1 regardless of
+   whether the score row is filled — #1 and #2 line up even when only
+   one of them has been played. The number bottom-aligns in row 1 (so
+   it sits right above the tile centerline) and the score top-aligns
+   in row 2 (right below it). */
+.archive-tile {
+  aspect-ratio: 1;
   border: 1px solid #ddd;
-  flex-shrink: 0;
+  background: #fff;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  justify-items: center;
+  text-decoration: none;
+  color: #1c1c1c;
+}
+.archive-tile:hover {
+  background: #f0f0f0;
+}
+.archive-tile-num {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--link-color);
+  align-self: end;
+}
+.archive-tile-score {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  align-self: start;
+  margin-top: 4px;
 }

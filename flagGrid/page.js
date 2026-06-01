@@ -6,6 +6,7 @@ import {
   saveGridState,
   cellRenderClasses,
   pulseShake,
+  isGridLocked,
 } from '../flags/grid.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 
@@ -43,6 +44,12 @@ export function bootFlagGrid(puzzleFor, options = {}) {
  * Mount the Flag Grid UI against the markup in the variant's index.html
  * for the given puzzle and pre-fetched country list. Variants differ in
  * which puzzle they supply and whether they persist state.
+ *
+ * Picking model: tapping (or pressing Enter on) an empty cell opens a
+ * bottom-sheet picker that hosts a real <input>. The OS keyboard fires
+ * for free, autocomplete suggestions live inside the sheet, and the
+ * cell-level keydown handlers used in the previous design are gone —
+ * mobile browsers never showed a keyboard for a focused <td>.
  *
  * @param {{
  *   puzzle: Puzzle,
@@ -82,19 +89,25 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
 
   /** @type {Country[]} */
   const allCountries = countries;
+  /** Which cell the open picker is filling. null when the picker is closed. */
   /** @type {{ row: number, col: number } | null} */
   let activeCell = null;
-  /** @type {Country | null} */
-  let topMatch = null;
-
-  const gridBodyEl = document.getElementById('grid-body');
-  const suggestionsEl = /** @type {HTMLUListElement} */ (document.getElementById('suggestions'));
-  /** Current in-cell autocomplete query (live in the focused cell). */
-  let query = '';
   /** @type {Country[]} */
   let currentMatches = [];
   /** Index into currentMatches that arrow keys / Enter act on. */
   let selectedIndex = 0;
+
+  const gridBodyEl = document.getElementById('grid-body');
+  const pickerEl = document.getElementById('picker');
+  const pickerBackdropEl = document.getElementById('picker-backdrop');
+  const pickerCloseEl = document.getElementById('picker-close');
+  const pickerCatsEl = document.getElementById('picker-cats');
+  const pickerInputEl = /** @type {HTMLInputElement} */ (
+    document.getElementById('picker-input')
+  );
+  const pickerSuggestionsEl = /** @type {HTMLUListElement} */ (
+    document.getElementById('picker-suggestions')
+  );
   const colHeaderEls = document.querySelectorAll('.col-header');
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
   const playTimerEl = document.getElementById('play-timer-line');
@@ -120,9 +133,13 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       td.dataset.row = String(r);
       td.dataset.col = String(c);
       td.tabIndex = 0;
-      td.addEventListener('focus', () => onCellFocus(r, c));
-      td.addEventListener('blur', () => onCellBlur(r, c));
-      td.addEventListener('keydown', (e) => onCellKey(r, c, e));
+      td.addEventListener('click', () => onCellActivate(r, c));
+      td.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onCellActivate(r, c);
+        }
+      });
       tr.appendChild(td);
     }
     gridBodyEl.appendChild(tr);
@@ -148,45 +165,92 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     return finalTimeMs !== null;
   }
   function isLocked() {
-    // While solved is computed live during play, the persistence
-    // boundary is finalTimeMs: once that's set we treat the round as
-    // permanently over and the board as read-only.
-    return isFinished() || gaveUp;
+    return isGridLocked({ gaveUp, finalTimeMs });
   }
 
-  function onCellFocus(row, col) {
-    activeCell = { row, col };
-    query = '';
-    topMatch = null;
-    renderCellContent(row, col);
-    hideSuggestions();
-  }
-
-  function onCellBlur(row, col) {
-    // Suggestions get their own click handlers, which fire before
-    // blur — so a click on a suggestion still pickCountry()s before
-    // we clear here. Tabbing or clicking elsewhere clears the query
-    // and the in-cell echo.
-    if (activeCell && activeCell.row === row && activeCell.col === col) {
-      activeCell = null;
-    }
-    if (!solution[row][col]) {
-      query = '';
-      renderCellContent(row, col);
-    }
-    hideSuggestions();
-  }
-
-  function onCellKey(row, col, e) {
+  function onCellActivate(row, col) {
     if (isLocked()) return;
     if (solution[row][col]) return; // filled cells are inert
+    openPicker(row, col);
+  }
+
+  function openPicker(row, col) {
+    activeCell = { row, col };
+    pickerCatsEl.textContent =
+      `${puzzle.rows[row].label} × ${puzzle.cols[col].label}`;
+    pickerInputEl.value = '';
+    currentMatches = [];
+    selectedIndex = 0;
+    renderSuggestions();
+    pickerEl.hidden = false;
+    document.body.classList.add('picker-open');
+    // Focus after the sheet is visible — iOS only pops the keyboard
+    // when focus moves to a visible element inside a user gesture.
+    pickerInputEl.focus();
+  }
+
+  function closePicker() {
+    if (pickerEl.hidden) return;
+    activeCell = null;
+    pickerInputEl.value = '';
+    currentMatches = [];
+    selectedIndex = 0;
+    pickerSuggestionsEl.innerHTML = '';
+    pickerEl.hidden = true;
+    document.body.classList.remove('picker-open');
+  }
+
+  function updateSuggestions() {
+    const query = pickerInputEl.value;
+    const excludeCodes = new Set();
+    for (const row of solution) for (const cell of row) if (cell) excludeCodes.add(cell.code);
+    currentMatches = suggest(allCountries, query, { excludeCodes });
+    selectedIndex = 0;
+    renderSuggestions();
+  }
+
+  function renderSuggestions() {
+    pickerSuggestionsEl.innerHTML = '';
+    currentMatches.forEach((country, i) => {
+      const li = document.createElement('li');
+      if (i === selectedIndex) li.classList.add('selected');
+      const img = document.createElement('img');
+      img.src = `../../flags/svg/${country.code}.svg`;
+      img.alt = '';
+      li.appendChild(img);
+      const name = document.createElement('span');
+      name.textContent = country.name;
+      li.appendChild(name);
+      // mousedown — fires before the input's blur on desktop, so the
+      // pick lands before any blur-driven cleanup. Mobile fires touch
+      // before blur too, so a 'click' alternative would also work; we
+      // keep mousedown for parity with the previous design.
+      li.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        pickCountry(country);
+      });
+      li.addEventListener('mouseenter', () => {
+        selectedIndex = i;
+        renderSelected();
+      });
+      pickerSuggestionsEl.appendChild(li);
+    });
+  }
+
+  function renderSelected() {
+    const items = pickerSuggestionsEl.querySelectorAll('li');
+    items.forEach((li, i) => {
+      li.classList.toggle('selected', i === selectedIndex);
+    });
+  }
+
+  pickerInputEl.addEventListener('input', updateSuggestions);
+  pickerInputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       e.preventDefault();
-      query = '';
-      currentMatches = [];
-      topMatch = null;
-      renderCellContent(row, col);
-      hideSuggestions();
+      const cell = activeCell;
+      closePicker();
+      if (cell) focusCell(cell.row, cell.col);
       return;
     }
     if (e.key === 'Enter') {
@@ -209,94 +273,18 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       renderSelected();
       return;
     }
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      if (query.length > 0) {
-        query = query.slice(0, -1);
-        renderCellContent(row, col);
-        updateSuggestions();
-      }
-      return;
-    }
-    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      e.preventDefault();
-      query += e.key;
-      renderCellContent(row, col);
-      updateSuggestions();
-    }
-  }
+  });
 
-  function updateSuggestions() {
-    if (!activeCell) {
-      hideSuggestions();
-      return;
-    }
-    const excludeCodes = new Set();
-    for (const row of solution) for (const cell of row) if (cell) excludeCodes.add(cell.code);
-    currentMatches = suggest(allCountries, query, { excludeCodes });
-    topMatch = currentMatches[0] ?? null;
-    selectedIndex = 0;
-    suggestionsEl.innerHTML = '';
-    if (currentMatches.length === 0) {
-      hideSuggestions();
-      return;
-    }
-    currentMatches.forEach((country, i) => {
-      const li = document.createElement('li');
-      if (i === selectedIndex) li.classList.add('selected');
-      const img = document.createElement('img');
-      img.src = `../../flags/svg/${country.code}.svg`;
-      img.alt = '';
-      li.appendChild(img);
-      const name = document.createElement('span');
-      name.textContent = country.name;
-      li.appendChild(name);
-      // mousedown — fires before the cell's blur that would clear
-      // the query and tear down the suggestions list.
-      li.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        pickCountry(country);
-      });
-      // Hover also moves the keyboard selection — keeps the highlighted
-      // row in sync with whatever the user's pointer is over, so
-      // Enter and click agree.
-      li.addEventListener('mouseenter', () => {
-        selectedIndex = i;
-        renderSelected();
-      });
-      suggestionsEl.appendChild(li);
-    });
-    positionSuggestionsAtActiveMiddle();
-    suggestionsEl.hidden = false;
-  }
-
-  function renderSelected() {
-    const items = suggestionsEl.querySelectorAll('li');
-    items.forEach((li, i) => {
-      li.classList.toggle('selected', i === selectedIndex);
-    });
-  }
-
-  function hideSuggestions() {
-    suggestionsEl.hidden = true;
-    suggestionsEl.innerHTML = '';
-    currentMatches = [];
-    selectedIndex = 0;
-  }
-
-  function positionSuggestionsAtActiveMiddle() {
-    if (!activeCell) return;
-    const td = gridBodyEl.querySelector(
-      `td[data-row="${activeCell.row}"][data-col="${activeCell.col}"]`,
-    );
-    if (!td) return;
-    const rect = td.getBoundingClientRect();
-    // position: fixed — viewport-relative; anchor to the cell's
-    // vertical middle so the suggestions list overlaps the bottom
-    // half of the cell and extends downward.
-    suggestionsEl.style.top = `${rect.top + rect.height / 2}px`;
-    suggestionsEl.style.left = `${rect.left}px`;
-  }
+  pickerBackdropEl.addEventListener('click', () => {
+    const cell = activeCell;
+    closePicker();
+    if (cell) focusCell(cell.row, cell.col);
+  });
+  pickerCloseEl.addEventListener('click', () => {
+    const cell = activeCell;
+    closePicker();
+    if (cell) focusCell(cell.row, cell.col);
+  });
 
   function pickCountry(country) {
     if (!activeCell) return;
@@ -304,18 +292,14 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     const result = tryPick(puzzle, solution, row, col, country);
     if (!result.accepted) {
       if (!solution[row][col]) wrongCount++;
-      query = '';
-      topMatch = null;
-      hideSuggestions();
-      renderCellContent(row, col);
+      closePicker();
       shakeCell(row, col);
+      focusCell(row, col);
       persistState();
       return;
     }
     solution = result.solution;
-    query = '';
-    topMatch = null;
-    hideSuggestions();
+    closePicker();
     const filled = countFilled();
     if (filled === 9) {
       finalTimeMs = Date.now() - sessionStart;
@@ -344,31 +328,34 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     return n;
   }
 
+  function focusCell(r, c) {
+    const td = /** @type {HTMLTableCellElement | null} */ (
+      gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`)
+    );
+    if (td) td.focus({ preventScroll: true });
+  }
+
   /**
-   * Move keyboard focus to the next empty cell in reading order
-   * (left-to-right, top-to-bottom). No-op when the board is locked or
-   * already full. Uses preventScroll so initial focus on page load
-   * doesn't jump the viewport.
+   * Focus the first empty cell in reading order. Called both on page
+   * load and after each accepted pick — we deliberately do NOT
+   * auto-open the picker for the next cell so the player can pause,
+   * look at the board, and tap when they're ready.
    */
   function focusNextEmpty() {
     if (isLocked()) return;
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 3; c++) {
         if (solution[r][c]) continue;
-        const td = /** @type {HTMLTableCellElement | null} */ (
-          gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`)
-        );
-        if (td) td.focus({ preventScroll: true });
+        focusCell(r, c);
         return;
       }
     }
   }
 
   /**
-   * Render one cell's content: flag image when filled, or the current
-   * autocomplete query (gray text echo) when this is the active empty
-   * cell, or empty otherwise. Touches only the classes owned by the
-   * renderer — transient classes like .shake survive.
+   * Render one cell's content: flag image when filled, empty otherwise.
+   * Touches only the classes owned by the renderer — transient classes
+   * like .shake survive.
    */
   function renderCellContent(r, c) {
     const td = /** @type {HTMLTableCellElement} */ (
@@ -385,13 +372,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       img.src = `../../flags/svg/${country.code}.svg`;
       img.alt = country.name;
       td.appendChild(img);
-      return;
-    }
-    if (activeCell && activeCell.row === r && activeCell.col === c && query) {
-      const span = document.createElement('span');
-      span.className = 'cell-query';
-      span.textContent = query;
-      td.appendChild(span);
     }
   }
 
@@ -402,6 +382,9 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       }
     }
     if (giveUpEl) giveUpEl.hidden = isLocked();
+    // Drives the CSS rule that suppresses cell hover + pointer cues
+    // when the round is over — empty cells stop looking interactable.
+    document.body.classList.toggle('grid-locked', isLocked());
   }
 
   function persistState() {
@@ -451,31 +434,24 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       if (isLocked()) return;
       gaveUp = true;
       finalTimeMs = Date.now() - sessionStart;
-      hideSuggestions();
-      query = '';
+      closePicker();
       renderGrid();
       persistState();
       finishRound();
     });
   }
 
-  // Reposition any open suggestions on scroll/resize so the popup
-  // tracks its anchor cell.
-  window.addEventListener('scroll', () => {
-    if (!suggestionsEl.hidden) positionSuggestionsAtActiveMiddle();
-  });
-  window.addEventListener('resize', () => {
-    if (!suggestionsEl.hidden) positionSuggestionsAtActiveMiddle();
-  });
-
   // Initial visibility decisions:
   // - If the round was already finished in a previous session, show
   //   the result block read-only and skip starting the timer.
-  // - Otherwise start the live timer and keep the give-up button.
+  // - Otherwise start the live timer. We deliberately do NOT focus a
+  //   cell on load — :focus-visible fires on programmatic focus when
+  //   there's been no prior user interaction, painting a stray black
+  //   ring on the first cell before the player has done anything.
+  //   The user picks where to start by tapping.
   if (isFinished()) {
     finishRound();
   } else {
     if (playTimerEl) tickTimer();
-    focusNextEmpty();
   }
 }

@@ -147,7 +147,7 @@ export const VARIANTS = {
     filter: (c) => c.category === 'country',
   },
   all: {
-    label: 'All flags',
+    label: 'Flags data',
     filter: () => true,
   },
   europe: {
@@ -225,6 +225,20 @@ export function availableModes(poolSize) {
   return Object.keys(MODES).filter(
     (m) => MODES[m] === Infinity || MODES[m] <= poolSize,
   );
+}
+
+/**
+ * Default mode key for a pool of the given size. Returns the first
+ * viable mode in MODES insertion order — '20' when the pool is large
+ * enough, falling back to 'all' for narrower variants. Single source
+ * of truth shared by the menu (one row per variant linking to its
+ * default mode) and the URL-resolution fallback in the quiz page.
+ *
+ * @param {number} poolSize
+ * @returns {string | null}
+ */
+export function defaultModeFor(poolSize) {
+  return availableModes(poolSize)[0] ?? null;
 }
 
 // Pretty-print a duration in milliseconds as M:SS.mmm (e.g. 1:23.456).

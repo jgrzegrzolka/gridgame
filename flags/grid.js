@@ -321,10 +321,82 @@ export function puzzleCellCounts(puzzle, countries) {
 }
 
 /**
- * Returns true iff every cell in `puzzle` has at least `minPerCell`
- * countries that satisfy both row and column predicates. minPerCell = 1
- * means "no mutually-exclusive intersection"; minPerCell = 2 (the default)
- * also gives some slack against the no-duplicates constraint.
+ * Search for a no-duplicate solution: a 3x3 of distinct Country objects
+ * where every cell's country satisfies both the row and column predicate.
+ * Returns null if no such assignment exists.
+ *
+ * Backtracking with a most-constrained-first cell order (fewest candidates
+ * first). Distinctness is enforced by tracking the placed country codes —
+ * matches the no-duplicates rule used by tryPick and solutionState.
+ *
+ * Pure: does not mutate inputs.
+ *
+ * @param {Puzzle} puzzle
+ * @param {Country[]} countries
+ * @returns {Country[][] | null}  3x3 solution on success, null on failure
+ */
+export function findPuzzleSolution(puzzle, countries) {
+  /** @type {Country[][][]} */
+  const candidates = [];
+  for (let r = 0; r < 3; r++) {
+    /** @type {Country[][]} */
+    const row = [];
+    for (let c = 0; c < 3; c++) {
+      row.push(
+        countries.filter(
+          (co) => puzzle.rows[r].predicate(co) && puzzle.cols[c].predicate(co),
+        ),
+      );
+    }
+    candidates.push(row);
+  }
+
+  /** @type {Array<{ r: number, c: number }>} */
+  const cellOrder = [];
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) cellOrder.push({ r, c });
+  cellOrder.sort(
+    (a, b) => candidates[a.r][a.c].length - candidates[b.r][b.c].length,
+  );
+
+  /** @type {(Country | null)[][]} */
+  const solution = [
+    [null, null, null],
+    [null, null, null],
+    [null, null, null],
+  ];
+  /** @type {Set<string>} */
+  const used = new Set();
+
+  /** @param {number} i */
+  function backtrack(i) {
+    if (i === cellOrder.length) return true;
+    const { r, c } = cellOrder[i];
+    for (const co of candidates[r][c]) {
+      if (used.has(co.code)) continue;
+      solution[r][c] = co;
+      used.add(co.code);
+      if (backtrack(i + 1)) return true;
+      used.delete(co.code);
+      solution[r][c] = null;
+    }
+    return false;
+  }
+
+  if (!backtrack(0)) return null;
+  return /** @type {Country[][]} */ (solution);
+}
+
+/**
+ * Returns true iff (a) every cell in `puzzle` has at least `minPerCell`
+ * candidate countries AND (b) a no-duplicate assignment of 9 distinct
+ * countries exists where each cell's pick satisfies its row and column
+ * predicates.
+ *
+ * minPerCell is the UX-quality gate: ≥2 means the player can wrong-pick
+ * one country per cell and still finish. The solvability check is the
+ * hard correctness gate — without it, even a ≥2-per-cell puzzle could be
+ * unsolvable because the same handful of countries crowds every cell and
+ * the no-duplicates rule has no consistent assignment.
  *
  * @param {Puzzle} puzzle
  * @param {Country[]} countries
@@ -338,7 +410,7 @@ export function isPuzzleGeneratable(puzzle, countries, minPerCell = 2) {
       if (counts[r][c] < minPerCell) return false;
     }
   }
-  return true;
+  return findPuzzleSolution(puzzle, countries) !== null;
 }
 
 /**
@@ -453,7 +525,9 @@ export function cellRenderClasses(country) {
  *    intersection.
  *
  * Clamped to [0, 100] so a rough round bottoms out instead of going
- * negative.
+ * negative. The 9-cell penalty only accounts for 90 of the 100 points,
+ * so an untouched board would otherwise land at 10 — we floor that
+ * case at 0 explicitly: no engagement, no score.
  *
  * @param {Object} state
  * @param {number} state.filledCount  0–9 cells filled (correct picks)
@@ -461,6 +535,7 @@ export function cellRenderClasses(country) {
  * @returns {number}
  */
 export function computeGridScore({ filledCount, wrongCount }) {
+  if (filledCount === 0) return 0;
   const emptyCount = 9 - filledCount;
   const raw = 100 - 3 * wrongCount - 10 * emptyCount;
   return Math.max(0, Math.min(100, raw));
@@ -473,6 +548,21 @@ export function computeGridScore({ filledCount, wrongCount }) {
  * @property {boolean} gaveUp
  * @property {number | null} finalTimeMs  null while mid-game; ms total when finished
  */
+
+/**
+ * Is the round over? True iff the player gave up or filled all nine
+ * cells (the latter being the moment finalTimeMs is set). Multiple
+ * surfaces consume this — the give-up button hides, the picker refuses
+ * to open, and the page body gets a `grid-locked` class that the CSS
+ * uses to drop the cell hover/pointer cues so a finished board doesn't
+ * look interactable.
+ *
+ * @param {Pick<GridState, 'gaveUp' | 'finalTimeMs'>} state
+ * @returns {boolean}
+ */
+export function isGridLocked({ gaveUp, finalTimeMs }) {
+  return gaveUp || finalTimeMs !== null;
+}
 
 /**
  * Read a persisted grid state from any Storage-like object. Returns

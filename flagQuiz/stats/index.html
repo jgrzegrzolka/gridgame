@@ -13,29 +13,7 @@
   </head>
   <body>
     <a class="back" href="../../" aria-label="Home"><span class="home-icon" aria-hidden="true"></span></a>
-    <button
-      type="button"
-      class="burger"
-      aria-label="Open menu"
-      aria-expanded="false"
-      aria-controls="burger-panel"
-      onclick="
-        const open = this.getAttribute('aria-expanded') === 'true';
-        this.setAttribute('aria-expanded', String(!open));
-        this.setAttribute('aria-label', open ? 'Open menu' : 'Close menu');
-        document.getElementById('burger-panel').hidden = open;
-      "
-    >
-      <span class="burger-bars" aria-hidden="true"></span>
-    </button>
-    <nav id="burger-panel" class="burger-panel" hidden>
-      <ul class="menu">
-        <li><a href="../../" aria-label="Home"><span class="home-icon" aria-hidden="true"></span></a></li>
-      </ul>
-    </nav>
-    <table class="variants">
-      <tbody id="variants"></tbody>
-    </table>
+    <ul class="stats" id="stats"></ul>
     <script type="module">
       import {
         VARIANTS,
@@ -46,7 +24,7 @@
         scoreColor,
       } from '../../flags/quiz.js?v=__BUILD__';
 
-      const variantsEl = document.getElementById('variants');
+      const statsEl = document.getElementById('stats');
 
       fetch('../../flags/countries.json?v=__BUILD__')
         .then((r) => r.json())
@@ -55,45 +33,64 @@
           document.body.textContent = 'Failed to load: ' + err.message;
         });
 
-      function modeRow(key, mode) {
-        const link = document.createElement('td');
-        link.className = 'link';
+      /**
+       * Build one chip — a tappable link back to the quiz at this
+       * variant/mode. When a best score is stored, the chip shows
+       * mode · score% · time with the score tinted by scoreColor.
+       * When the slot is untouched it shows mode · Play, faded, with
+       * a CTA hint — keeps the row from looking incomplete.
+       */
+      function modeChip(key, mode) {
+        // Stats lives at /flagQuiz/stats/, quiz at /flagQuiz/, so we
+        // need to step one level up when linking back to the quiz.
         const a = document.createElement('a');
-        // Stats lives at /flagQuiz/stats/, quiz at /flagQuiz/, so we need
-        // to step one level up when linking back to a specific quiz.
         a.href = `../?v=${key}&n=${mode}`;
-        a.textContent = mode;
-        link.appendChild(a);
-        const pct = document.createElement('td');
-        pct.className = 'pct';
-        const time = document.createElement('td');
-        time.className = 'time';
+        a.className = 'stats-chip';
+
+        const modeEl = document.createElement('span');
+        modeEl.className = 'stats-chip-mode';
+        modeEl.textContent = mode;
+        a.appendChild(modeEl);
+
         const best = loadBest(localStorage, bestKey(key, mode));
         if (best) {
-          pct.textContent = `${best.score}%`;
-          pct.style.color = scoreColor(best.score / 100);
+          const score = document.createElement('span');
+          score.className = 'stats-chip-score';
+          score.textContent = `${best.score}%`;
+          score.style.color = scoreColor(best.score / 100);
+          a.appendChild(score);
+          const time = document.createElement('span');
+          time.className = 'stats-chip-time';
           time.textContent = formatTime(best.time);
+          a.appendChild(time);
+        } else {
+          a.classList.add('stats-chip-unplayed');
+          const cta = document.createElement('span');
+          cta.className = 'stats-chip-cta';
+          cta.textContent = 'Play';
+          a.appendChild(cta);
         }
-        return [link, pct, time];
+        return a;
       }
 
       function renderStats(all) {
         for (const [key, variant] of Object.entries(VARIANTS)) {
-          const usable = availableModes(all.filter(variant.filter).length);
-          if (usable.length === 0) continue;
-          usable.forEach((mode, i) => {
-            const tr = document.createElement('tr');
-            if (i === 0) {
-              tr.className = 'variant-start';
-              const label = document.createElement('td');
-              label.className = 'label';
-              label.rowSpan = usable.length;
-              label.textContent = variant.label;
-              tr.appendChild(label);
-            }
-            for (const cell of modeRow(key, mode)) tr.appendChild(cell);
-            variantsEl.appendChild(tr);
-          });
+          const modes = availableModes(all.filter(variant.filter).length);
+          if (modes.length === 0) continue;
+          const li = document.createElement('li');
+          li.className = 'stats-row';
+
+          const label = document.createElement('span');
+          label.className = 'stats-label';
+          label.textContent = variant.label;
+          li.appendChild(label);
+
+          const chips = document.createElement('span');
+          chips.className = 'stats-chips';
+          for (const mode of modes) chips.appendChild(modeChip(key, mode));
+          li.appendChild(chips);
+
+          statsEl.appendChild(li);
         }
       }
     </script>

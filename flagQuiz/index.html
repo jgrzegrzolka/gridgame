@@ -35,6 +35,7 @@
     <div id="game" hidden>
       <p class="play-timer">
         <span class="play-mode" id="play-mode"></span>
+        <span class="mode-toggle" id="mode-toggle"></span>
         <span id="play-time">0:00.000</span>
       </p>
       <p class="country-name" id="country-name">Loading…</p>
@@ -56,6 +57,7 @@
         createQuiz,
         VARIANTS,
         availableModes,
+        defaultModeFor,
         formatTime,
         recordResult,
         scoreColor,
@@ -77,9 +79,9 @@
       const playModeEl = document.getElementById('play-mode');
       const playAgainEl = document.getElementById('play-again');
       const progressBarEl = document.getElementById('progress-bar');
+      const modeToggleEl = document.getElementById('mode-toggle');
 
       const DEFAULT_VARIANT = 'countries';
-      const DEFAULT_MODE = '20';
 
       const params = new URLSearchParams(window.location.search);
       const urlVariant = params.get('v');
@@ -99,14 +101,12 @@
             ? urlVariant
             : DEFAULT_VARIANT;
           let pool = all.filter(VARIANTS[variantKey].filter);
+          // URL-chosen mode if it's viable for this pool, else the
+          // variant's default mode ('20' when the pool supports it,
+          // 'all' otherwise). One call, no two-step fallback.
           let modeKey = urlMode && availableModes(pool.length).includes(urlMode)
             ? urlMode
-            : DEFAULT_MODE;
-          // If the default itself isn't viable for this variant (pool < 20),
-          // fall back to the first available mode for that variant.
-          if (!availableModes(pool.length).includes(modeKey)) {
-            modeKey = availableModes(pool.length)[0];
-          }
+            : defaultModeFor(pool.length);
 
           startGame(variantKey, modeKey, all);
         })
@@ -116,28 +116,27 @@
 
       function renderMenu(all) {
         // VARIANTS leads with the whole-world pools ("All countries",
-        // "All flags") followed by the narrow per-continent pools. We
+        // "Flags data") followed by the narrow per-continent pools. We
         // mark the first li that comes from a narrow pool with
         // .menu-divider so the burger panel visually separates the two
-        // groups.
+        // groups. One row per variant — the mode picker lives in-game
+        // (see renderModeToggle), not in this menu.
         const WIDE_GROUP = new Set(['countries', 'all']);
         let dividerPlaced = false;
         for (const [key, variant] of Object.entries(VARIANTS)) {
-          const usable = availableModes(all.filter(variant.filter).length);
-          if (usable.length === 0) continue;
-          const needsDivider = !dividerPlaced && !WIDE_GROUP.has(key);
-          for (const [i, mode] of usable.entries()) {
-            const li = document.createElement('li');
-            if (needsDivider && i === 0) {
-              li.className = 'menu-divider';
-              dividerPlaced = true;
-            }
-            const a = document.createElement('a');
-            a.href = `?v=${key}&n=${mode}`;
-            a.textContent = `${variant.label} ${mode}`;
-            li.appendChild(a);
-            quizMenuEl.appendChild(li);
+          const pool = all.filter(variant.filter);
+          const defaultMode = defaultModeFor(pool.length);
+          if (defaultMode === null) continue;
+          const li = document.createElement('li');
+          if (!dividerPlaced && !WIDE_GROUP.has(key)) {
+            li.className = 'menu-divider';
+            dividerPlaced = true;
           }
+          const a = document.createElement('a');
+          a.href = `?v=${key}&n=${defaultMode}`;
+          a.textContent = variant.label;
+          li.appendChild(a);
+          quizMenuEl.appendChild(li);
         }
         const statsLi = document.createElement('li');
         statsLi.className = 'menu-divider';
@@ -146,23 +145,46 @@
         statsA.textContent = 'Your stats';
         statsLi.appendChild(statsA);
         quizMenuEl.appendChild(statsLi);
-        const mainLi = document.createElement('li');
-        const mainA = document.createElement('a');
-        mainA.href = '../';
-        mainA.setAttribute('aria-label', 'Home');
-        const mainIcon = document.createElement('span');
-        mainIcon.className = 'home-icon';
-        mainIcon.setAttribute('aria-hidden', 'true');
-        mainA.appendChild(mainIcon);
-        mainLi.appendChild(mainA);
-        quizMenuEl.appendChild(mainLi);
+      }
+
+      /**
+       * Render the in-game "20 | all" pill. Hidden (empty span) when
+       * the active variant has only one viable mode — e.g. South
+       * America's pool is below 20, so only "all" is available and a
+       * single-item toggle would be noise. The current mode renders
+       * as a styled span; the other mode is a link that reloads to
+       * the alternate ?n=.
+       */
+      function renderModeToggle(key, mode, modes) {
+        modeToggleEl.innerHTML = '';
+        if (modes.length < 2) return;
+        modes.forEach((m, i) => {
+          if (i > 0) {
+            const sep = document.createElement('span');
+            sep.className = 'mode-sep';
+            sep.textContent = '|';
+            modeToggleEl.appendChild(sep);
+          }
+          if (m === mode) {
+            const span = document.createElement('span');
+            span.className = 'mode-current';
+            span.textContent = m;
+            modeToggleEl.appendChild(span);
+          } else {
+            const a = document.createElement('a');
+            a.href = `?v=${key}&n=${m}`;
+            a.textContent = m;
+            modeToggleEl.appendChild(a);
+          }
+        });
       }
 
       function startGame(key, mode, all) {
         const pool = poolFor(key, all);
         const target = targetFor(mode, pool);
         const quiz = createQuiz(pool, target);
-        playModeEl.textContent = `${VARIANTS[key].label} ${mode}`;
+        playModeEl.textContent = VARIANTS[key].label;
+        renderModeToggle(key, mode, availableModes(pool.length));
 
         let currentAnswer = null;
         let wrongCount = 0;
@@ -243,6 +265,7 @@
           }
 
           gameEl.hidden = true;
+          progressBarEl.hidden = true;
           resultEl.hidden = false;
         }
 
