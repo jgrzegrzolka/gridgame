@@ -90,6 +90,9 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     document.getElementById('picker-suggestions')
   );
   const colHeaderEls = document.querySelectorAll('.col-header');
+  const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
+  const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
+  const zoomName = zoomEl ? /** @type {HTMLParagraphElement | null} */ (zoomEl.querySelector('p')) : null;
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
   const playTimerEl = document.getElementById('play-timer-line');
   const playTimeEl = document.getElementById('play-time');
@@ -148,9 +151,34 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   }
 
   function onCellActivate(row, col) {
+    const userPick = solution[row][col];
+    if (userPick) {
+      openZoom(userPick);
+      return;
+    }
+    const revealedCode = revealedCodes[row * 3 + col];
+    if (revealedCode) {
+      const c = byCode.get(revealedCode);
+      if (c) openZoom(c);
+      return;
+    }
     if (isLocked()) return;
-    if (solution[row][col]) return;
     openPicker(row, col);
+  }
+
+  /** @param {Country} c */
+  function openZoom(c) {
+    if (!zoomEl || !zoomImg || !zoomName) return;
+    zoomImg.src = `../../flags/svg/${c.code}.svg`;
+    zoomImg.alt = c.name;
+    zoomName.textContent = c.name;
+    zoomEl.showModal();
+  }
+
+  if (zoomEl) {
+    zoomEl.addEventListener('click', (e) => {
+      if (e.target === zoomEl) zoomEl.close();
+    });
   }
 
   function openPicker(row, col) {

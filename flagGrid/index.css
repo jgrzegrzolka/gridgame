@@ -85,7 +85,10 @@ body.grid-locked .cell:hover::after {
 }
 .cell.filled {
   padding: 10px;
-  cursor: default;
+  cursor: zoom-in;
+}
+body.grid-locked .cell.filled {
+  cursor: zoom-in;
 }
 .cell.filled:hover {
   background: transparent;
