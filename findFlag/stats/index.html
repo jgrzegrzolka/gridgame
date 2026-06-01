@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Find Flag — Your stats</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=__BUILD__" />
+    <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
+    <link rel="stylesheet" href="../index.css?v=__BUILD__" />
+    <link rel="stylesheet" href="index.css?v=__BUILD__" />
+  </head>
+  <body>
+    <a class="back" href="../" aria-label="Find Flag"><span class="home-icon" aria-hidden="true"></span></a>
+    <h1 class="find-title">Find Flag stats</h1>
+    <div id="stats-sections"></div>
+    <script type="module">
+      import { CONTINENTS } from '../../flags/group.js?v=__BUILD__';
+      import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../../flags/grid.js?v=__BUILD__';
+      import {
+        categoryFromId,
+        findTargets,
+        loadBest,
+      } from '../../flags/findFlag.js?v=__BUILD__';
+      import { formatTime, scoreColor } from '../../flags/quiz.js?v=__BUILD__';
+
+      const sectionsEl = document.getElementById('stats-sections');
+
+      fetch('../../flags/countries.json?v=__BUILD__')
+        .then((r) => r.json())
+        .then((all) => {
+          const sections = [
+            { title: 'Continents', ids: CONTINENTS.map((n) => ({ id: `continent:${n}`, label: n })) },
+            { title: 'Colors', ids: COLORS_FOR_RANDOM.map((c) => ({ id: `hasColor:${c}`, label: `Has ${c}` })) },
+            { title: 'Motifs', ids: MOTIFS_FOR_RANDOM.map((m) => ({ id: `hasMotif:${m}`, label: `Has ${m}` })) },
+          ];
+          for (const s of sections) {
+            const sec = document.createElement('section');
+            sec.className = 'chooser-section';
+            const h = document.createElement('h2');
+            h.textContent = s.title;
+            sec.appendChild(h);
+            const list = document.createElement('ul');
+            list.className = 'stats-rows';
+            for (const item of s.ids) {
+              const cat = categoryFromId(item.id);
+              const total = findTargets(all, cat).length;
+              const best = loadBest(localStorage, item.id);
+              const li = document.createElement('li');
+              li.className = 'stats-rows-row';
+              const labelLink = document.createElement('a');
+              labelLink.href = `../?cat=${encodeURIComponent(item.id)}`;
+              labelLink.textContent = item.label;
+              labelLink.className = 'stats-rows-label';
+              li.appendChild(labelLink);
+              const chip = document.createElement('span');
+              chip.className = 'stats-rows-chip';
+              if (best) {
+                chip.innerHTML = `<span class="stats-rows-score">${best.found} / ${best.total}</span><span class="stats-rows-time">${formatTime(best.time)}</span>`;
+                chip.style.color = scoreColor(best.found / best.total);
+              } else {
+                chip.innerHTML = `<span class="stats-rows-untouched">— / ${total}</span>`;
+              }
+              li.appendChild(chip);
+              list.appendChild(li);
+            }
+            sec.appendChild(list);
+            sectionsEl.appendChild(sec);
+          }
+        })
+        .catch((err) => {
+          document.body.textContent = 'Failed to load: ' + err.message;
+        });
+    </script>
+  </body>
+</html>
