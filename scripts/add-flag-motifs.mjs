@@ -11,9 +11,15 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 /** @type {Record<string, string[]>} */
 const MOTIFS = {
-  // Three motif kinds today: 'animal' (any creature in the design),
+  // Four motif kinds today: 'animal' (any creature in the design),
   // 'coat-of-arms' (heraldic shield / national emblem on the flag),
-  // and 'weapon' (sword, dagger, gun, spear, trident, cannon, etc.).
+  // 'weapon' (sword, dagger, gun, spear, trident, cannon, etc.),
+  // and 'star-or-moon' (any star shape — pentagram, hexagram, Southern
+  // Cross — or any moon — crescent or full disk). Sun emblems do NOT
+  // count as 'star-or-moon' (Japan, Argentina, Uruguay, North Macedonia,
+  // Kazakhstan, etc.). The 'star-or-moon' tag is applied via the
+  // STAR_OR_MOON set below, so this dict stays focused on the heraldic
+  // motifs and the diff for star-or-moon stays in one place.
   // A single flag often carries several — e.g. a coat of arms with a
   // sword-wielding lion is animal + coa + weapon.
   // Errors expected — edit this map and re-run.
@@ -30,7 +36,7 @@ const MOTIFS = {
   bz: ['coat-of-arms'],                             // Belize — coa with loggers + tree
   dm: ['animal', 'coat-of-arms'],                  // Dominica — coa with parrot
   ec: ['animal', 'coat-of-arms', 'weapon'],        // Ecuador — coa with condor + ship + fasces (axe)
-  eg: ['animal'],                                   // Egypt — eagle of Saladin
+  eg: ['animal', 'coat-of-arms'],                  // Egypt — Eagle of Saladin national emblem
   es: ['animal', 'coat-of-arms'],                  // Spain — royal coa with lions
   fj: ['animal', 'coat-of-arms'],                  // Fiji — coa with lion + dove
   fk: ['animal', 'coat-of-arms'],                  // Falkland Islands — coa with sheep
@@ -63,8 +69,9 @@ const MOTIFS = {
   py: ['coat-of-arms'],                             // Paraguay — coa with star + palm
   rs: ['animal', 'coat-of-arms'],                  // Serbia — eagle + shield coa
   sa: ['coat-of-arms', 'weapon'],                  // Saudi Arabia — sword + shahada national emblem
-  sh: ['coat-of-arms'],                             // Saint Helena aggregate — coa
-  'sh-hl': ['coat-of-arms'],                       // Saint Helena — coa
+  sh:      ['animal', 'coat-of-arms'],             // SH+A+T aggregate — coa depicts wirebird/turtle/albatross
+  'sh-hl': ['animal', 'coat-of-arms'],             // Saint Helena — coa with wirebird
+  'sh-ac': ['animal', 'coat-of-arms'],             // Ascension Island — coa with turtle
   'sh-ta': ['animal', 'coat-of-arms'],             // Tristan da Cunha — coa with albatross
   si: ['coat-of-arms'],                             // Slovenia — coa with Mt Triglav
   sk: ['coat-of-arms'],                             // Slovakia — coa with cross + mountains
@@ -83,17 +90,37 @@ const MOTIFS = {
   zw: ['animal'],                                   // Zimbabwe — Zimbabwe Bird
 };
 
-const PALETTE = new Set(['animal', 'coat-of-arms', 'weapon']);
+const PALETTE = new Set(['animal', 'coat-of-arms', 'weapon', 'star-or-moon']);
+
+// Flags with a visible star (pentagram, hexagram, Southern Cross, etc.)
+// or a moon (crescent or full disk). Kept as a flat set rather than
+// merged into MOTIFS so a single visual category lives in one place.
+// Sun emblems are NOT included (Japan, Argentina, Uruguay, Bangladesh,
+// Kazakhstan, North Macedonia, Niger, Rwanda, Taiwan, Antigua, etc.).
+const STAR_OR_MOON = new Set([
+  // Africa
+  'ao', 'dz', 'bf', 'cm', 'cf', 'km', 'cd', 'dj', 'eh', 'gh', 'gw', 'lr',
+  'ly', 'ma', 'mr', 'mz', 'sn', 'so', 'ss', 'tg', 'tn', 'cv', 'zw',
+  // Asia
+  'az', 'cn', 'il', 'jo', 'kp', 'mn', 'mv', 'my', 'np', 'pk', 'ph', 'sg',
+  'sy', 'tj', 'tm', 'tr', 'uz', 'vn', 'tl',
+  // Europe
+  'ba', 'si', 'xk',
+  // North America (incl. territories)
+  'cu', 'gd', 'hn', 'kn', 'pa', 'pr', 'us', 'aw',
+  // South America
+  'br', 'cl', 'py', 'sr', 've',
+  // Oceania
+  'au', 'ck', 'fm', 'mh', 'mp', 'nr', 'nu', 'nz', 'pg', 'pw', 'sb', 'tv', 'ws',
+  // Other / supranational
+  'eu',
+]);
 
 const path = 'flags/countries.json';
 const countries = JSON.parse(readFileSync(path, 'utf-8'));
 
 for (const c of countries) {
-  const tagged = MOTIFS[c.code];
-  if (!tagged) {
-    c.motifs = [];
-    continue;
-  }
+  const tagged = MOTIFS[c.code] ?? [];
   const seen = new Set();
   /** @type {string[]} */
   const filtered = [];
@@ -105,10 +132,16 @@ for (const c of countries) {
     seen.add(motif);
     filtered.push(motif);
   }
+  if (STAR_OR_MOON.has(c.code) && !seen.has('star-or-moon')) {
+    filtered.push('star-or-moon');
+  }
   c.motifs = filtered;
 }
 
 writeFileSync(path, JSON.stringify(countries, null, 2) + '\n');
 
-const tagCount = Object.keys(MOTIFS).length;
-console.log(`Tagged motifs on ${tagCount} countries (others get motifs: []).`);
+const heraldicCount = Object.keys(MOTIFS).length;
+const somCount = STAR_OR_MOON.size;
+console.log(
+  `Tagged heraldic motifs on ${heraldicCount} countries; star-or-moon on ${somCount} (others get motifs: []).`,
+);
