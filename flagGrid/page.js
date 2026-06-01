@@ -24,6 +24,8 @@ export function bootFlagGrid(puzzleFor, options = {}) {
   fetch('../../flags/countries.json')
     .then((r) => r.json())
     .then((countries) => {
+      // Grid uses the full 270 — more valid candidates per cell trades a
+      // tiny bit of challenge for a richer pool. No scope toggle here.
       const puzzle = puzzleFor(countries);
       runFlagGrid({ puzzle, countries, options });
     })

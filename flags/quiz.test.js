@@ -105,17 +105,15 @@ test('pickQuestion throws if input is too small', () => {
   );
 });
 
-test('VARIANTS contains the expected 9 keys in display order', () => {
+test('VARIANTS contains the expected 7 keys in display order (sovereign only)', () => {
   assert.deepEqual(Object.keys(VARIANTS), [
     'countries',
-    'all',
     'europe',
     'asia',
     'africa',
     'north-america',
     'south-america',
     'oceania',
-    'others',
   ]);
 });
 
@@ -123,21 +121,14 @@ test('poolFor throws on an unknown variant', () => {
   assert.throws(() => poolFor('mars', countries), /Unknown variant/);
 });
 
-test('poolFor("all") returns every entry from the input', () => {
-  assert.equal(poolFor('all', countries).length, countries.length);
+test('poolFor("countries") is an identity over its input (scope is applied upstream)', () => {
+  assert.equal(poolFor('countries', countries).length, countries.length);
 });
 
-test('poolFor("countries") = all entries minus "others"', () => {
-  const all = countries.length;
-  const others = poolFor('others', countries).length;
-  assert.equal(poolFor('countries', countries).length, all - others);
-});
-
-test('poolFor("europe") returns only category=country with continent=Europe', () => {
+test('poolFor("europe") narrows by continent only — scope is applied upstream', () => {
   const europe = poolFor('europe', countries);
   assert.ok(europe.length > 0);
   for (const c of europe) {
-    assert.equal(c.category, 'country');
     assert.equal(c.continent, 'Europe');
   }
 });
@@ -447,6 +438,19 @@ test('bestKey produces the expected namespaced format', () => {
   assert.equal(bestKey('europe', '20'), 'flagquiz.best.europe.20');
   assert.equal(bestKey('all', 'all'), 'flagquiz.best.all.all');
   assert.equal(bestKey('north-america', '20'), 'flagquiz.best.north-america.20');
+});
+
+test('bestKey appends .all suffix when includeAll is true', () => {
+  assert.equal(bestKey('europe', '20', true), 'flagquiz.best.europe.20.all');
+  assert.equal(bestKey('europe', '20', false), 'flagquiz.best.europe.20');
+});
+
+test('recordResult writes to a different slot when includeAll is true', () => {
+  const store = fakeStore();
+  recordResult(store, 'europe', '20', { score: 90, time: 60000 }, false);
+  recordResult(store, 'europe', '20', { score: 50, time: 60000 }, true);
+  assert.deepEqual(loadBest(store, bestKey('europe', '20', false)), { score: 90, time: 60000 });
+  assert.deepEqual(loadBest(store, bestKey('europe', '20', true)), { score: 50, time: 60000 });
 });
 
 test('recordResult on an empty store saves the result and reports isNew', () => {

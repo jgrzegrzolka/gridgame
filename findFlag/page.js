@@ -1,4 +1,4 @@
-import { CONTINENTS } from '../flags/group.js';
+import { CONTINENTS, flagsGamePool } from '../flags/group.js';
 import {
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
@@ -10,6 +10,8 @@ import {
   findPool,
   classifyGuess,
   recordFindResult,
+  isFindIncludeAll,
+  setFindIncludeAll,
 } from '../flags/findFlag.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 
@@ -47,9 +49,21 @@ export function bootFindFlag() {
   const params = new URLSearchParams(window.location.search);
   const catId = params.get('cat');
 
+  const includeAll = isFindIncludeAll();
+
+  const scopeToggleEl = /** @type {HTMLInputElement | null} */ (document.getElementById('scope-toggle-input'));
+  if (scopeToggleEl) {
+    scopeToggleEl.checked = includeAll;
+    scopeToggleEl.addEventListener('change', () => {
+      setFindIncludeAll(localStorage, scopeToggleEl.checked);
+      window.location.reload();
+    });
+  }
+
   fetch('../flags/countries.json')
     .then((r) => r.json())
-    .then((all) => {
+    .then((raw) => {
+      const all = flagsGamePool(raw, includeAll);
       if (!catId) {
         renderChooser(all);
         chooserEl.hidden = false;
@@ -263,6 +277,7 @@ export function bootFindFlag() {
         localStorage,
         category.id,
         { time: elapsed, found, total },
+        includeAll,
       );
       const bestEl = document.getElementById('best');
       bestEl.textContent =

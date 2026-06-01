@@ -1,3 +1,22 @@
+import { readBoolSetting, writeBoolSetting } from './group.js';
+
+const QUIZ_INCLUDE_ALL_KEY = 'gridgame.flagquiz.includeAll';
+
+/**
+ * @param {{ getItem(key: string): string | null } | null | undefined} [store]
+ */
+export function isQuizIncludeAll(store) {
+  return readBoolSetting(store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null), QUIZ_INCLUDE_ALL_KEY);
+}
+
+/**
+ * @param {{ setItem(key: string, value: string): void, removeItem(key: string): void }} store
+ * @param {boolean} value
+ */
+export function setQuizIncludeAll(store, value) {
+  writeBoolSetting(store, QUIZ_INCLUDE_ALL_KEY, value);
+}
+
 /**
  * @typedef {import('./group.js').Country} Country
  *
@@ -118,43 +137,42 @@ export function createQuiz(pool, count, choiceCount = 4) {
   };
 }
 
-/** @type {Record<string, Variant>} */
+/**
+ * VARIANTS predicates only narrow by continent / "all". The sovereign-vs-
+ * include-everything scope is applied separately at fetch time via
+ * flagsGamePool, so flipping the "include territories etc." toggle
+ * widens every variant uniformly without needing per-variant changes.
+ *
+ * @type {Record<string, Variant>}
+ */
 export const VARIANTS = {
   countries: {
     label: 'All countries',
-    filter: (c) => c.category === 'country',
-  },
-  all: {
-    label: 'Flags data',
     filter: () => true,
   },
   europe: {
     label: 'Europe',
-    filter: (c) => c.category === 'country' && c.continent === 'Europe',
+    filter: (c) => c.continent === 'Europe',
   },
   asia: {
     label: 'Asia',
-    filter: (c) => c.category === 'country' && c.continent === 'Asia',
+    filter: (c) => c.continent === 'Asia',
   },
   africa: {
     label: 'Africa',
-    filter: (c) => c.category === 'country' && c.continent === 'Africa',
+    filter: (c) => c.continent === 'Africa',
   },
   'north-america': {
     label: 'North America',
-    filter: (c) => c.category === 'country' && c.continent === 'North America',
+    filter: (c) => c.continent === 'North America',
   },
   'south-america': {
     label: 'South America',
-    filter: (c) => c.category === 'country' && c.continent === 'South America',
+    filter: (c) => c.continent === 'South America',
   },
   oceania: {
     label: 'Oceania',
-    filter: (c) => c.category === 'country' && c.continent === 'Oceania',
-  },
-  others: {
-    label: 'Others',
-    filter: (c) => c.category === 'other',
+    filter: (c) => c.continent === 'Oceania',
   },
 };
 
@@ -289,10 +307,12 @@ export function saveBest(store, key, value) {
 /**
  * @param {string} variantKey
  * @param {string} modeKey
+ * @param {boolean} [includeAll]
  * @returns {string}
  */
-export function bestKey(variantKey, modeKey) {
-  return `flagquiz.best.${variantKey}.${modeKey}`;
+export function bestKey(variantKey, modeKey, includeAll = false) {
+  const base = `flagquiz.best.${variantKey}.${modeKey}`;
+  return includeAll ? `${base}.all` : base;
 }
 
 /**
@@ -300,10 +320,11 @@ export function bestKey(variantKey, modeKey) {
  * @param {string} variantKey
  * @param {string} modeKey
  * @param {Result} current
+ * @param {boolean} [includeAll]
  * @returns {{ best: Result, isNew: boolean }}
  */
-export function recordResult(store, variantKey, modeKey, current) {
-  const key = bestKey(variantKey, modeKey);
+export function recordResult(store, variantKey, modeKey, current, includeAll = false) {
+  const key = bestKey(variantKey, modeKey, includeAll);
   const outcome = nextBest(loadBest(store, key), current);
   if (outcome.isNew) saveBest(store, key, outcome.best);
   return outcome;

@@ -8,7 +8,10 @@ import {
   scoreColor,
   poolFor,
   targetFor,
+  isQuizIncludeAll,
+  setQuizIncludeAll,
 } from '../flags/quiz.js';
+import { flagsGamePool } from '../flags/group.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -34,9 +37,12 @@ export function bootFlagQuiz() {
   const urlVariant = params.get('v');
   const urlMode = params.get('n');
 
+  const includeAll = isQuizIncludeAll();
+
   fetch('../flags/countries.json')
     .then((r) => r.json())
-    .then((all) => {
+    .then((raw) => {
+      const all = flagsGamePool(raw, includeAll);
       renderMenu(all);
 
       let variantKey = urlVariant && VARIANTS[urlVariant]
@@ -54,14 +60,34 @@ export function bootFlagQuiz() {
     });
 
   function renderMenu(all) {
-    const WIDE_GROUP = new Set(['countries', 'all']);
+    const toggleLi = document.createElement('li');
+    const toggleLabel = document.createElement('label');
+    toggleLabel.className = 'scope-toggle';
+    const toggleInput = document.createElement('input');
+    toggleInput.type = 'checkbox';
+    toggleInput.checked = includeAll;
+    toggleInput.addEventListener('change', () => {
+      setQuizIncludeAll(localStorage, toggleInput.checked);
+      window.location.reload();
+    });
+    toggleLabel.appendChild(toggleInput);
+    toggleLabel.appendChild(document.createTextNode(' Include territories & other flags'));
+    toggleLi.appendChild(toggleLabel);
+    quizMenuEl.appendChild(toggleLi);
+
+    const WIDE_GROUP = new Set(['countries']);
     let dividerPlaced = false;
+    let firstVariantPlaced = false;
     for (const [key, variant] of Object.entries(VARIANTS)) {
       const pool = all.filter(variant.filter);
       const defaultMode = defaultModeFor(pool.length);
       if (defaultMode === null) continue;
       const li = document.createElement('li');
-      if (!dividerPlaced && !WIDE_GROUP.has(key)) {
+      if (!firstVariantPlaced) {
+        // Separates the scope toggle from the variant list.
+        li.className = 'menu-divider';
+        firstVariantPlaced = true;
+      } else if (!dividerPlaced && !WIDE_GROUP.has(key)) {
         li.className = 'menu-divider';
         dividerPlaced = true;
       }
@@ -177,7 +203,7 @@ export function bootFlagQuiz() {
       timeEl.textContent = `Time: ${formatTime(elapsed)}`;
 
       const { best, isNew } = recordResult(
-        localStorage, key, mode, { score: pct, time: elapsed },
+        localStorage, key, mode, { score: pct, time: elapsed }, includeAll,
       );
       bestEl.textContent = `Your best score: ${best.score} in ${formatTime(best.time)}`;
       if (isNew) {

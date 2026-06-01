@@ -69,11 +69,13 @@ test('categoryFromId returns null for an unknown id prefix', () => {
   assert.equal(categoryFromId(null), null);
 });
 
-test('findTargets returns only countries matching the predicate, excluding "other" entries', () => {
+test('findTargets returns every entry matching the predicate — scope is applied upstream', () => {
   const cat = categoryFromId('hasMotif:star-or-moon');
   assert.ok(cat);
+  // EU is category=other but has the motif — engine no longer filters scope,
+  // so it appears here; pages filter via flagsGamePool before calling.
   const targets = findTargets(SAMPLE, cat);
-  assert.deepEqual(targets.map((c) => c.code), []);
+  assert.deepEqual(targets.map((c) => c.code), ['eu']);
 
   const redCat = categoryFromId('hasColor:red');
   assert.ok(redCat);
@@ -81,9 +83,9 @@ test('findTargets returns only countries matching the predicate, excluding "othe
   assert.deepEqual(redTargets.map((c) => c.code), ['fr', 'de', 'ke', 'jp']);
 });
 
-test('findPool excludes "other" entries but keeps every country', () => {
+test('findPool is a pass-through (scope is applied upstream via flagsGamePool)', () => {
   const pool = findPool(SAMPLE);
-  assert.deepEqual(pool.map((c) => c.code), ['fr', 'de', 'ke', 'jp']);
+  assert.deepEqual(pool.map((c) => c.code), ['fr', 'de', 'ke', 'jp', 'eu']);
 });
 
 test('classifyGuess returns "match" for an unfound target', () => {
@@ -110,6 +112,11 @@ test('classifyGuess returns "unknown" for null / undefined', () => {
 test('bestKey produces the expected namespaced format', () => {
   assert.equal(bestKey('continent:Africa'), 'findflag.best.continent:Africa');
   assert.equal(bestKey('hasMotif:weapon'), 'findflag.best.hasMotif:weapon');
+});
+
+test('bestKey appends .all suffix when includeAll is true', () => {
+  assert.equal(bestKey('continent:Europe', true), 'findflag.best.continent:Europe.all');
+  assert.equal(bestKey('continent:Europe', false), 'findflag.best.continent:Europe');
 });
 
 /**
