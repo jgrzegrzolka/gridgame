@@ -96,6 +96,9 @@ body.grid-locked .cell:hover::after {
   height: 100%;
   object-fit: contain;
 }
+.cell.revealed {
+  background: rgba(197, 48, 45, 0.2);
+}
 .cell.shake::before {
   content: '';
   position: absolute;

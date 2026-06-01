@@ -21,6 +21,7 @@ import {
   saveGridState,
   gridBestKey,
   recordGridResult,
+  fillEmptyCellsForGiveUp,
   cellRenderClasses,
   pulseShake,
   isGridLocked,
@@ -778,9 +779,35 @@ test('loadGridState round-trips a well-formed state', () => {
     wrongCount: 2,
     gaveUp: false,
     finalTimeMs: null,
+    revealedCodes: Array(9).fill(null),
   };
   saveGridState(store, 'flaggrid.state.1', state);
   assert.deepEqual(loadGridState(store, 'flaggrid.state.1'), state);
+});
+
+test('loadGridState defaults revealedCodes to 9 nulls when missing (back-compat)', () => {
+  const store = fakeStore();
+  store.setItem('k', JSON.stringify({
+    picks: Array(9).fill(null),
+    wrongCount: 0,
+    gaveUp: false,
+    finalTimeMs: null,
+  }));
+  const out = loadGridState(store, 'k');
+  assert.deepEqual(out?.revealedCodes, Array(9).fill(null));
+});
+
+test('loadGridState round-trips revealedCodes for a give-up state', () => {
+  const store = fakeStore();
+  const state = {
+    picks: ['fr', 'de', null, null, null, 'jp', null, 'in', null],
+    wrongCount: 1,
+    gaveUp: true,
+    finalTimeMs: 90000,
+    revealedCodes: [null, null, 'us', 'cn', 'br', null, 'eg', null, 'au'],
+  };
+  saveGridState(store, 'k', state);
+  assert.deepEqual(loadGridState(store, 'k'), state);
 });
 
 test('loadGridState normalises non-string picks to null', () => {
@@ -803,6 +830,7 @@ test('saveGridState writes a parseable serialised state to the store', () => {
     wrongCount: 0,
     gaveUp: false,
     finalTimeMs: null,
+    revealedCodes: Array(9).fill(null),
   };
   saveGridState(store, 'k', state);
   const raw = store._data.get('k');
@@ -813,7 +841,7 @@ test('saveGridState writes a parseable serialised state to the store', () => {
 test('saveGridState swallows a Storage quota error (no throw)', () => {
   const store = fakeStore({ throwOnSet: true });
   assert.doesNotThrow(() => saveGridState(store, 'k', {
-    picks: Array(9).fill(null), wrongCount: 0, gaveUp: false, finalTimeMs: null,
+    picks: Array(9).fill(null), wrongCount: 0, gaveUp: false, finalTimeMs: null, revealedCodes: Array(9).fill(null),
   }));
 });
 
@@ -834,12 +862,12 @@ test('isGridLocked treats a finalTimeMs of 0 as a finished round, not mid-game',
 });
 
 test('cellRenderClasses sets filled=false for an empty cell', () => {
-  assert.deepEqual(cellRenderClasses(null), [['filled', false]]);
-  assert.deepEqual(cellRenderClasses(undefined), [['filled', false]]);
+  assert.deepEqual(cellRenderClasses(null), [['filled', false], ['revealed', false]]);
+  assert.deepEqual(cellRenderClasses(undefined), [['filled', false], ['revealed', false]]);
 });
 
 test('cellRenderClasses sets filled=true for any country', () => {
-  assert.deepEqual(cellRenderClasses(FR), [['filled', true]]);
+  assert.deepEqual(cellRenderClasses(FR), [['filled', true], ['revealed', false]]);
 });
 
 function fakeCell() {
@@ -909,6 +937,51 @@ test('cellRenderClasses does not list any interaction-transient classes', () => 
     for (const t of TRANSIENT) {
       assert.ok(!managed.includes(t), `cellRenderClasses must not manage transient class ".${t}"`);
     }
+  }
+});
+
+test('cellRenderClasses flags revealed cells', () => {
+  assert.deepEqual(cellRenderClasses(FR, { revealed: true }), [['filled', true], ['revealed', true]]);
+  assert.deepEqual(cellRenderClasses(FR), [['filled', true], ['revealed', false]]);
+  assert.deepEqual(cellRenderClasses(null, { revealed: true }), [['filled', false], ['revealed', true]]);
+});
+
+test('fillEmptyCellsForGiveUp picks a valid country for each empty cell, skips user picks', () => {
+  const empty = /** @type {(import('./grid.js').Country | null)[][]} */ ([[null, null, null], [null, null, null], [null, null, null]]);
+  const pool = [FR, DE, VA, GL, JP, HK, KE];
+  const result = fillEmptyCellsForGiveUp(PUZZLE, empty, pool, () => 0);
+  // Indices the test pool can fill: (0,0) Europe/UN, (0,1) Europe/Observer, (0,2) Europe/Territory,
+  // (1,0) Asia/UN, (1,2) Asia/Territory, (2,0) Africa/UN. The other three have no candidate.
+  assert.ok(result[0] === 'fr' || result[0] === 'de');
+  assert.equal(result[1], 'va');
+  assert.equal(result[2], 'gl');
+  assert.equal(result[3], 'jp');
+  assert.equal(result[4], null);
+  assert.equal(result[5], 'hk');
+  assert.equal(result[6], 'ke');
+  assert.equal(result[7], null);
+  assert.equal(result[8], null);
+});
+
+test('fillEmptyCellsForGiveUp leaves user-picked cells as null in the result', () => {
+  const solution = /** @type {(import('./grid.js').Country | null)[][]} */ ([[FR, null, null], [null, null, null], [null, null, null]]);
+  const result = fillEmptyCellsForGiveUp(PUZZLE, solution, [FR, DE, VA, GL, JP, HK, KE], () => 0);
+  assert.equal(result[0], null, '(0,0) is already user-picked');
+  assert.equal(result[1], 'va');
+});
+
+test('fillEmptyCellsForGiveUp does not duplicate a country already used in the grid', () => {
+  // FR at (0,0). Reveal of (1,0) Asia/UN should NOT be FR (different cell, but exclusion guards the rule anyway).
+  // More meaningfully: if pool had only FR for both cells, (1,0) should be null.
+  const onlyFr = /** @type {import('./grid.js').Country[]} */ ([FR]);
+  const puzzle = /** @type {import('./grid.js').Puzzle} */ ({
+    rows: [EUROPE, EUROPE, EUROPE],
+    cols: [UN, UN, UN],
+  });
+  const solution = /** @type {(import('./grid.js').Country | null)[][]} */ ([[FR, null, null], [null, null, null], [null, null, null]]);
+  const result = fillEmptyCellsForGiveUp(puzzle, solution, onlyFr, () => 0);
+  for (let i = 1; i < 9; i++) {
+    assert.equal(result[i], null, `index ${i} cannot reuse FR`);
   }
 });
 
