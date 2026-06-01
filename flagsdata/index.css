@@ -1,5 +1,64 @@
 body {
-  padding: var(--page-top) 24px 24px;
+  padding: 0 24px 24px;
+}
+#filter-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fafafa;
+  margin: 0 -24px 16px;
+  padding: 16px 24px 12px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.filter-label {
+  font-size: 12px;
+  color: #666;
+  margin-right: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pill {
+  font: inherit;
+  font-size: 12px;
+  background: #fff;
+  color: #1c1c1c;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  padding: 3px 10px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.pill:hover {
+  background: #f0f0f0;
+}
+.pill.active {
+  background: #1c1c1c;
+  color: #fff;
+  border-color: #1c1c1c;
+}
+#filter-clear {
+  font: inherit;
+  font-size: 12px;
+  background: none;
+  border: none;
+  color: var(--link-color);
+  cursor: pointer;
+  padding: 4px 8px;
+  text-decoration: underline;
+}
+#filter-clear:hover {
+  background: #f0f0f0;
+  border-radius: 4px;
 }
 .continent, .other {
   margin-bottom: 32px;

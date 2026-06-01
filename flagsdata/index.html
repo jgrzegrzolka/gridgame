@@ -13,6 +13,7 @@
   </head>
   <body>
     <a class="back" href="../" aria-label="Home"><span class="home-icon" aria-hidden="true"></span></a>
+    <div id="filter-bar"></div>
     <div id="sections"></div>
     <dialog id="zoom">
       <img alt="" />
@@ -21,6 +22,7 @@
     </dialog>
     <script type="module">
       import { CONTINENTS, splitByCategory, groupByContinent } from '../flags/group.js?v=__BUILD__';
+      import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../flags/grid.js?v=__BUILD__';
 
       const zoom = document.getElementById('zoom');
       const zoomImg = zoom.querySelector('img');
@@ -50,6 +52,28 @@
         return wrap;
       }
 
+      // Filter state: empty set = no constraint. AND across groups, OR within.
+      const filters = { continent: new Set(), color: new Set(), motif: new Set() };
+
+      function matches(c) {
+        if (filters.continent.size) {
+          const key = c.continent ?? 'Other';
+          if (!filters.continent.has(key)) return false;
+        }
+        if (filters.color.size) {
+          if (!c.colors?.some((col) => filters.color.has(col))) return false;
+        }
+        if (filters.motif.size) {
+          if (!c.motifs?.some((m) => filters.motif.has(m))) return false;
+        }
+        return true;
+      }
+
+      // Track section state so applyFilter can update visibility + counts
+      // without re-creating the DOM.
+      /** @type {{ items: any[], tiles: HTMLElement[], section: HTMLElement, count: HTMLElement }[]} */
+      const sectionStates = [];
+
       function renderSection(parent, title, items, className) {
         if (items.length === 0) return;
         const section = document.createElement('section');
@@ -63,10 +87,86 @@
         section.appendChild(h2);
         const grid = document.createElement('div');
         grid.className = 'grid';
-        for (const c of items) grid.appendChild(flagTile(c));
+        const tiles = [];
+        for (const c of items) {
+          const tile = flagTile(c);
+          tiles.push(tile);
+          grid.appendChild(tile);
+        }
         section.appendChild(grid);
         parent.appendChild(section);
+        sectionStates.push({ items, tiles, section, count: countSpan });
       }
+
+      function applyFilter() {
+        for (const s of sectionStates) {
+          let visible = 0;
+          for (let i = 0; i < s.items.length; i++) {
+            const show = matches(s.items[i]);
+            s.tiles[i].hidden = !show;
+            if (show) visible++;
+          }
+          s.count.textContent = visible;
+          s.section.hidden = visible === 0;
+        }
+        const any =
+          filters.continent.size + filters.color.size + filters.motif.size > 0;
+        clearBtn.hidden = !any;
+      }
+
+      function buildFilterGroup(label, group, values) {
+        const wrap = document.createElement('div');
+        wrap.className = 'filter-group';
+        const labelEl = document.createElement('span');
+        labelEl.className = 'filter-label';
+        labelEl.textContent = label;
+        wrap.appendChild(labelEl);
+        for (const v of values) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          btn.dataset.group = group;
+          btn.dataset.value = v;
+          btn.textContent = v;
+          btn.addEventListener('click', () => {
+            if (filters[group].has(v)) {
+              filters[group].delete(v);
+              btn.classList.remove('active');
+            } else {
+              filters[group].add(v);
+              btn.classList.add('active');
+            }
+            applyFilter();
+          });
+          wrap.appendChild(btn);
+        }
+        return wrap;
+      }
+
+      const filterBar = document.getElementById('filter-bar');
+      filterBar.appendChild(
+        buildFilterGroup('Continent', 'continent', [...CONTINENTS, 'Other']),
+      );
+      filterBar.appendChild(
+        buildFilterGroup('Colors', 'color', COLORS_FOR_RANDOM),
+      );
+      filterBar.appendChild(
+        buildFilterGroup('Motifs', 'motif', MOTIFS_FOR_RANDOM),
+      );
+
+      const clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.id = 'filter-clear';
+      clearBtn.textContent = 'Clear';
+      clearBtn.hidden = true;
+      clearBtn.addEventListener('click', () => {
+        for (const k of Object.keys(filters)) filters[k].clear();
+        for (const el of filterBar.querySelectorAll('.pill.active')) {
+          el.classList.remove('active');
+        }
+        applyFilter();
+      });
+      filterBar.appendChild(clearBtn);
 
       fetch('../flags/countries.json')
         .then((r) => r.json())
