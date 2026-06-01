@@ -440,6 +440,19 @@ test('bestKey produces the expected namespaced format', () => {
   assert.equal(bestKey('north-america', '20'), 'flagquiz.best.north-america.20');
 });
 
+test('bestKey appends .all suffix when includeAll is true', () => {
+  assert.equal(bestKey('europe', '20', true), 'flagquiz.best.europe.20.all');
+  assert.equal(bestKey('europe', '20', false), 'flagquiz.best.europe.20');
+});
+
+test('recordResult writes to a different slot when includeAll is true', () => {
+  const store = fakeStore();
+  recordResult(store, 'europe', '20', { score: 90, time: 60000 }, false);
+  recordResult(store, 'europe', '20', { score: 50, time: 60000 }, true);
+  assert.deepEqual(loadBest(store, bestKey('europe', '20', false)), { score: 90, time: 60000 });
+  assert.deepEqual(loadBest(store, bestKey('europe', '20', true)), { score: 50, time: 60000 });
+});
+
 test('recordResult on an empty store saves the result and reports isNew', () => {
   const store = fakeStore();
   const current = { score: 87, time: 65432 };

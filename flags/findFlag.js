@@ -2,6 +2,24 @@
 /** @typedef {import('./grid.js').Category} Category */
 
 import { continent, hasColor, hasMotif } from './grid.js';
+import { readBoolSetting, writeBoolSetting } from './group.js';
+
+const FIND_INCLUDE_ALL_KEY = 'gridgame.flagfind.includeAll';
+
+/**
+ * @param {{ getItem(key: string): string | null } | null | undefined} [store]
+ */
+export function isFindIncludeAll(store) {
+  return readBoolSetting(store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null), FIND_INCLUDE_ALL_KEY);
+}
+
+/**
+ * @param {{ setItem(key: string, value: string): void, removeItem(key: string): void }} store
+ * @param {boolean} value
+ */
+export function setFindIncludeAll(store, value) {
+  writeBoolSetting(store, FIND_INCLUDE_ALL_KEY, value);
+}
 
 /**
  * @param {string | null | undefined} id
@@ -71,20 +89,23 @@ export function classifyGuess(state, country) {
 
 /**
  * @param {string} categoryId
+ * @param {boolean} [includeAll]
  * @returns {string}
  */
-export function bestKey(categoryId) {
-  return `findflag.best.${categoryId}`;
+export function bestKey(categoryId, includeAll = false) {
+  const base = `findflag.best.${categoryId}`;
+  return includeAll ? `${base}.all` : base;
 }
 
 /**
  * @param {{ getItem(key: string): string | null }} store
  * @param {string} categoryId
+ * @param {boolean} [includeAll]
  * @returns {FindBest | null}
  */
-export function loadBest(store, categoryId) {
+export function loadBest(store, categoryId, includeAll = false) {
   try {
-    const raw = store.getItem(bestKey(categoryId));
+    const raw = store.getItem(bestKey(categoryId, includeAll));
     if (raw === null) return null;
     const parsed = JSON.parse(raw);
     if (
@@ -105,10 +126,11 @@ export function loadBest(store, categoryId) {
  * @param {{ setItem(key: string, value: string): void }} store
  * @param {string} categoryId
  * @param {FindBest} best
+ * @param {boolean} [includeAll]
  */
-export function saveBest(store, categoryId, best) {
+export function saveBest(store, categoryId, best, includeAll = false) {
   try {
-    store.setItem(bestKey(categoryId), JSON.stringify(best));
+    store.setItem(bestKey(categoryId, includeAll), JSON.stringify(best));
   } catch {
     // localStorage may throw in private mode / zero quota; degrade silently.
   }
@@ -121,14 +143,15 @@ export function saveBest(store, categoryId, best) {
  * }} store
  * @param {string} categoryId
  * @param {FindBest} current
+ * @param {boolean} [includeAll]
  * @returns {{ best: FindBest, isNew: boolean }}
  */
-export function recordFindResult(store, categoryId, current) {
-  const prev = loadBest(store, categoryId);
+export function recordFindResult(store, categoryId, current, includeAll = false) {
+  const prev = loadBest(store, categoryId, includeAll);
   const isNew =
     !prev ||
     current.found > prev.found ||
     (current.found === prev.found && current.time < prev.time);
-  if (isNew) saveBest(store, categoryId, current);
+  if (isNew) saveBest(store, categoryId, current, includeAll);
   return { best: isNew ? current : prev ?? current, isNew };
 }

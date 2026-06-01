@@ -1,3 +1,22 @@
+import { readBoolSetting, writeBoolSetting } from './group.js';
+
+const QUIZ_INCLUDE_ALL_KEY = 'gridgame.flagquiz.includeAll';
+
+/**
+ * @param {{ getItem(key: string): string | null } | null | undefined} [store]
+ */
+export function isQuizIncludeAll(store) {
+  return readBoolSetting(store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null), QUIZ_INCLUDE_ALL_KEY);
+}
+
+/**
+ * @param {{ setItem(key: string, value: string): void, removeItem(key: string): void }} store
+ * @param {boolean} value
+ */
+export function setQuizIncludeAll(store, value) {
+  writeBoolSetting(store, QUIZ_INCLUDE_ALL_KEY, value);
+}
+
 /**
  * @typedef {import('./group.js').Country} Country
  *
@@ -288,10 +307,12 @@ export function saveBest(store, key, value) {
 /**
  * @param {string} variantKey
  * @param {string} modeKey
+ * @param {boolean} [includeAll]
  * @returns {string}
  */
-export function bestKey(variantKey, modeKey) {
-  return `flagquiz.best.${variantKey}.${modeKey}`;
+export function bestKey(variantKey, modeKey, includeAll = false) {
+  const base = `flagquiz.best.${variantKey}.${modeKey}`;
+  return includeAll ? `${base}.all` : base;
 }
 
 /**
@@ -299,10 +320,11 @@ export function bestKey(variantKey, modeKey) {
  * @param {string} variantKey
  * @param {string} modeKey
  * @param {Result} current
+ * @param {boolean} [includeAll]
  * @returns {{ best: Result, isNew: boolean }}
  */
-export function recordResult(store, variantKey, modeKey, current) {
-  const key = bestKey(variantKey, modeKey);
+export function recordResult(store, variantKey, modeKey, current, includeAll = false) {
+  const key = bestKey(variantKey, modeKey, includeAll);
   const outcome = nextBest(loadBest(store, key), current);
   if (outcome.isNew) saveBest(store, key, outcome.best);
   return outcome;

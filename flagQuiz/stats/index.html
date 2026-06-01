@@ -31,8 +31,11 @@
         loadBest,
         bestKey,
         scoreColor,
+        isQuizIncludeAll,
       } from '../../flags/quiz.js?v=__BUILD__';
+      import { flagsGamePool } from '../../flags/group.js?v=__BUILD__';
 
+      const includeAll = isQuizIncludeAll();
       const statsEl = document.getElementById('stats');
 
       fetch('../../flags/countries.json?v=__BUILD__')
@@ -61,7 +64,7 @@
         modeEl.textContent = mode;
         a.appendChild(modeEl);
 
-        const best = loadBest(localStorage, bestKey(key, mode));
+        const best = loadBest(localStorage, bestKey(key, mode, includeAll));
         if (best) {
           const score = document.createElement('span');
           score.className = 'stats-chip-score';
@@ -82,7 +85,8 @@
         return a;
       }
 
-      function renderStats(all) {
+      function renderStats(raw) {
+        const all = flagsGamePool(raw, includeAll);
         for (const [key, variant] of Object.entries(VARIANTS)) {
           const modes = availableModes(all.filter(variant.filter).length);
           if (modes.length === 0) continue;

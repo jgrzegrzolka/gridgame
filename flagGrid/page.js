@@ -11,7 +11,6 @@ import {
   isGridLocked,
 } from '../flags/grid.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
-import { flagsGamePool } from '../flags/group.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/grid.js').Puzzle} Puzzle */
@@ -24,8 +23,9 @@ import { flagsGamePool } from '../flags/group.js';
 export function bootFlagGrid(puzzleFor, options = {}) {
   fetch('../../flags/countries.json')
     .then((r) => r.json())
-    .then((raw) => {
-      const countries = flagsGamePool(raw);
+    .then((countries) => {
+      // Grid uses the full 270 — more valid candidates per cell trades a
+      // tiny bit of challenge for a richer pool. No scope toggle here.
       const puzzle = puzzleFor(countries);
       runFlagGrid({ puzzle, countries, options });
     })

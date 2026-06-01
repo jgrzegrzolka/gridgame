@@ -10,6 +10,8 @@ import {
   findPool,
   classifyGuess,
   recordFindResult,
+  isFindIncludeAll,
+  setFindIncludeAll,
 } from '../flags/findFlag.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 
@@ -47,10 +49,12 @@ export function bootFindFlag() {
   const params = new URLSearchParams(window.location.search);
   const catId = params.get('cat');
 
+  const includeAll = isFindIncludeAll();
+
   fetch('../flags/countries.json')
     .then((r) => r.json())
     .then((raw) => {
-      const all = flagsGamePool(raw);
+      const all = flagsGamePool(raw, includeAll);
       if (!catId) {
         renderChooser(all);
         chooserEl.hidden = false;
@@ -70,6 +74,23 @@ export function bootFindFlag() {
 
   function renderChooser(all) {
     const sectionsEl = document.getElementById('chooser-sections');
+
+    const toggleWrap = document.createElement('div');
+    toggleWrap.className = 'chooser-scope';
+    const toggleLabel = document.createElement('label');
+    toggleLabel.className = 'scope-toggle';
+    const toggleInput = document.createElement('input');
+    toggleInput.type = 'checkbox';
+    toggleInput.checked = includeAll;
+    toggleInput.addEventListener('change', () => {
+      setFindIncludeAll(localStorage, toggleInput.checked);
+      window.location.reload();
+    });
+    toggleLabel.appendChild(toggleInput);
+    toggleLabel.appendChild(document.createTextNode(' Include territories & other flags'));
+    toggleWrap.appendChild(toggleLabel);
+    sectionsEl.appendChild(toggleWrap);
+
     const allCats = [
       ...CONTINENTS.map((n) => ({ id: `continent:${n}`, label: n })),
       ...COLORS_FOR_RANDOM.map((c) => ({ id: `hasColor:${c}`, label: `Has ${c}` })),
@@ -264,6 +285,7 @@ export function bootFindFlag() {
         localStorage,
         category.id,
         { time: elapsed, found, total },
+        includeAll,
       );
       const bestEl = document.getElementById('best');
       bestEl.textContent =

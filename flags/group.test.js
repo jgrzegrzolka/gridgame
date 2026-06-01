@@ -8,8 +8,8 @@ import {
   splitByCategory,
   groupByContinent,
   sovereigntyOf,
-  isFlagsIncludeAll,
-  setFlagsIncludeAll,
+  readBoolSetting,
+  writeBoolSetting,
   flagsGamePool,
 } from './group.js';
 
@@ -115,16 +115,18 @@ function fakeStore() {
   };
 }
 
-test('isFlagsIncludeAll defaults to false on an empty store', () => {
-  assert.equal(isFlagsIncludeAll(fakeStore()), false);
+test('readBoolSetting defaults to false on an empty store', () => {
+  assert.equal(readBoolSetting(fakeStore(), 'whatever.key'), false);
 });
 
-test('setFlagsIncludeAll(true) flips isFlagsIncludeAll to true and round-trips', () => {
+test('writeBoolSetting(true) round-trips through readBoolSetting; (false) removes the key', () => {
   const store = fakeStore();
-  setFlagsIncludeAll(store, true);
-  assert.equal(isFlagsIncludeAll(store), true);
-  setFlagsIncludeAll(store, false);
-  assert.equal(isFlagsIncludeAll(store), false);
+  writeBoolSetting(store, 'k', true);
+  assert.equal(readBoolSetting(store, 'k'), true);
+  assert.equal(store._data.has('k'), true);
+  writeBoolSetting(store, 'k', false);
+  assert.equal(readBoolSetting(store, 'k'), false);
+  assert.equal(store._data.has('k'), false, 'key is removed, not just set to "false"');
 });
 
 test('flagsGamePool drops non-sovereign by default but returns everything when includeAll is true', () => {

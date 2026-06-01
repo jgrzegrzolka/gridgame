@@ -31,38 +31,42 @@ export function sovereigntyOf(c) {
   return 'sovereign';
 }
 
-const FLAGS_INCLUDE_ALL_KEY = 'gridgame.flags.includeAll';
+/**
+ * Returns the playable flag pool: 195 sovereign states by default, the
+ * full 270 when includeAll is true. The toggle itself is owned by each
+ * game (different storage keys, different UX placement), so this is a
+ * pure pool filter — callers pass the boolean they read.
+ *
+ * @param {Country[]} countries
+ * @param {boolean} includeAll
+ * @returns {Country[]}
+ */
+export function flagsGamePool(countries, includeAll) {
+  if (includeAll) return countries;
+  return countries.filter((c) => sovereigntyOf(c) === 'sovereign');
+}
 
 /**
- * @param {{ getItem(key: string): string | null } | null | undefined} [store]
+ * Tiny localStorage helpers for boolean settings — used by the per-game
+ * include-all toggles (Quiz, Find).
+ *
+ * @param {{ getItem(key: string): string | null } | null | undefined} store
+ * @param {string} key
  * @returns {boolean}
  */
-export function isFlagsIncludeAll(store) {
-  const s = store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null);
-  if (!s) return false;
-  return s.getItem(FLAGS_INCLUDE_ALL_KEY) === 'true';
+export function readBoolSetting(store, key) {
+  if (!store) return false;
+  return store.getItem(key) === 'true';
 }
 
 /**
  * @param {{ setItem(key: string, value: string): void, removeItem(key: string): void }} store
+ * @param {string} key
  * @param {boolean} value
  */
-export function setFlagsIncludeAll(store, value) {
-  if (value) store.setItem(FLAGS_INCLUDE_ALL_KEY, 'true');
-  else store.removeItem(FLAGS_INCLUDE_ALL_KEY);
-}
-
-/**
- * Returns the playable flag pool given the current include-all setting.
- * When the toggle is on, every flag in countries.json is fair game;
- * when off, only the 195 sovereign states.
- * @param {Country[]} countries
- * @param {boolean} [includeAll]
- * @returns {Country[]}
- */
-export function flagsGamePool(countries, includeAll = isFlagsIncludeAll()) {
-  if (includeAll) return countries;
-  return countries.filter((c) => sovereigntyOf(c) === 'sovereign');
+export function writeBoolSetting(store, key, value) {
+  if (value) store.setItem(key, 'true');
+  else store.removeItem(key);
 }
 
 /** @type {Continent[]} */

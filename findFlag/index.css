@@ -31,6 +31,9 @@ body {
 .find-random:hover {
   background: #333;
 }
+.chooser-scope {
+  margin-bottom: 20px;
+}
 .chooser-section {
   margin-bottom: 24px;
 }

@@ -32,14 +32,18 @@
         categoryFromId,
         findTargets,
         loadBest,
+        isFindIncludeAll,
       } from '../../flags/findFlag.js?v=__BUILD__';
+      import { flagsGamePool } from '../../flags/group.js?v=__BUILD__';
       import { formatTime, scoreColor } from '../../flags/quiz.js?v=__BUILD__';
 
+      const includeAll = isFindIncludeAll();
       const sectionsEl = document.getElementById('stats-sections');
 
       fetch('../../flags/countries.json?v=__BUILD__')
         .then((r) => r.json())
-        .then((all) => {
+        .then((raw) => {
+          const all = flagsGamePool(raw, includeAll);
           const sections = [
             { title: 'Continents', ids: CONTINENTS.map((n) => ({ id: `continent:${n}`, label: n })) },
             { title: 'Colors', ids: COLORS_FOR_RANDOM.map((c) => ({ id: `hasColor:${c}`, label: `Has ${c}` })) },
@@ -56,7 +60,7 @@
             for (const item of s.ids) {
               const cat = categoryFromId(item.id);
               const total = findTargets(all, cat).length;
-              const best = loadBest(localStorage, item.id);
+              const best = loadBest(localStorage, item.id, includeAll);
               const li = document.createElement('li');
               li.className = 'stats-rows-row';
               const labelLink = document.createElement('a');

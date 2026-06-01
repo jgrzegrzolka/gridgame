@@ -114,6 +114,11 @@ test('bestKey produces the expected namespaced format', () => {
   assert.equal(bestKey('hasMotif:weapon'), 'findflag.best.hasMotif:weapon');
 });
 
+test('bestKey appends .all suffix when includeAll is true', () => {
+  assert.equal(bestKey('continent:Europe', true), 'findflag.best.continent:Europe.all');
+  assert.equal(bestKey('continent:Europe', false), 'findflag.best.continent:Europe');
+});
+
 /**
  * @returns {{
  *   getItem(key: string): string | null,
