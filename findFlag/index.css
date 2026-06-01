@@ -302,11 +302,6 @@ dialog#zoom p {
   margin: 0 0 20px;
   font-variant-numeric: tabular-nums;
 }
-.best .new-badge {
-  color: #2a9d4a;
-  font-weight: 500;
-  margin-left: 6px;
-}
 .missed-title {
   font-size: 14px;
   color: #999;

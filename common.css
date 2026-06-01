@@ -141,6 +141,22 @@ body::before {
   text-decoration: underline;
 }
 
+.best .new-badge {
+  display: inline-block;
+  color: #2a9d4a;
+  font-weight: 500;
+  margin-left: 6px;
+  animation: new-record-bounce 1s ease-out;
+  transform-origin: center bottom;
+}
+@keyframes new-record-bounce {
+  0%   { transform: translateY(0); }
+  30%  { transform: translateY(-10px); }
+  50%  { transform: translateY(0); }
+  70%  { transform: translateY(-5px); }
+  100% { transform: translateY(0); }
+}
+
 .home-icon {
   display: inline-block;
   width: 1em;
