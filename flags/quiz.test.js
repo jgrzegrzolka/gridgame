@@ -105,17 +105,15 @@ test('pickQuestion throws if input is too small', () => {
   );
 });
 
-test('VARIANTS contains the expected 9 keys in display order', () => {
+test('VARIANTS contains the expected 7 keys in display order (sovereign only)', () => {
   assert.deepEqual(Object.keys(VARIANTS), [
     'countries',
-    'all',
     'europe',
     'asia',
     'africa',
     'north-america',
     'south-america',
     'oceania',
-    'others',
   ]);
 });
 
@@ -123,22 +121,24 @@ test('poolFor throws on an unknown variant', () => {
   assert.throws(() => poolFor('mars', countries), /Unknown variant/);
 });
 
-test('poolFor("all") returns every entry from the input', () => {
-  assert.equal(poolFor('all', countries).length, countries.length);
+test('poolFor("countries") returns only sovereign states (UN members + observers, no territories, no others)', () => {
+  const pool = poolFor('countries', countries);
+  assert.ok(pool.length > 0);
+  for (const c of pool) {
+    assert.equal(c.category, 'country');
+    assert.notEqual(c.statehood, 'territory');
+    assert.notEqual(c.statehood, 'non_un');
+  }
 });
 
-test('poolFor("countries") = all entries minus "others"', () => {
-  const all = countries.length;
-  const others = poolFor('others', countries).length;
-  assert.equal(poolFor('countries', countries).length, all - others);
-});
-
-test('poolFor("europe") returns only category=country with continent=Europe', () => {
+test('poolFor("europe") returns only sovereign Europe', () => {
   const europe = poolFor('europe', countries);
   assert.ok(europe.length > 0);
   for (const c of europe) {
     assert.equal(c.category, 'country');
     assert.equal(c.continent, 'Europe');
+    assert.notEqual(c.statehood, 'territory');
+    assert.notEqual(c.statehood, 'non_un');
   }
 });
 

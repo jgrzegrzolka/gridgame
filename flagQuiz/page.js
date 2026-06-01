@@ -54,7 +54,7 @@ export function bootFlagQuiz() {
     });
 
   function renderMenu(all) {
-    const WIDE_GROUP = new Set(['countries', 'all']);
+    const WIDE_GROUP = new Set(['countries']);
     let dividerPlaced = false;
     for (const [key, variant] of Object.entries(VARIANTS)) {
       const pool = all.filter(variant.filter);

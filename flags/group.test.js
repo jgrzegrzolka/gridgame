@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { CONTINENTS, splitByCategory, groupByContinent } from './group.js';
+import { CONTINENTS, splitByCategory, groupByContinent, sovereigntyOf } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
@@ -74,4 +74,21 @@ test('real data: 2 widely-recognised non-UN states (Taiwan + Kosovo)', () => {
   const nonUn = countries.filter((c) => c.statehood === 'non_un');
   assert.equal(nonUn.length, 2);
   assert.deepEqual(nonUn.map((c) => c.code).sort(), ['tw', 'xk']);
+});
+
+test('sovereigntyOf classifies UN members and observers as sovereign', () => {
+  assert.equal(sovereigntyOf({ code: 'de', name: 'Germany', category: 'country', continent: 'Europe', statehood: 'un_member' }), 'sovereign');
+  assert.equal(sovereigntyOf({ code: 'va', name: 'Vatican City', category: 'country', continent: 'Europe', statehood: 'un_observer' }), 'sovereign');
+});
+
+test('sovereigntyOf classifies non_un, territory, and other distinctly', () => {
+  assert.equal(sovereigntyOf({ code: 'tw', name: 'Taiwan', category: 'country', continent: 'Asia', statehood: 'non_un' }), 'non_un');
+  assert.equal(sovereigntyOf({ code: 'gl', name: 'Greenland', category: 'country', continent: 'Europe', statehood: 'territory' }), 'territory');
+  assert.equal(sovereigntyOf({ code: 'un', name: 'United Nations', category: 'other', continent: null }), 'other');
+});
+
+test('real data: sovereigntyOf yields the expected 195 / 2 / 58 / 15 split', () => {
+  const buckets = { sovereign: 0, non_un: 0, territory: 0, other: 0 };
+  for (const c of countries) buckets[sovereigntyOf(c)]++;
+  assert.deepEqual(buckets, { sovereign: 195, non_un: 2, territory: 58, other: 15 });
 });

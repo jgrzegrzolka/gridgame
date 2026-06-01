@@ -1,3 +1,5 @@
+import { sovereigntyOf } from './group.js';
+
 /**
  * @typedef {import('./group.js').Country} Country
  *
@@ -122,39 +124,31 @@ export function createQuiz(pool, count, choiceCount = 4) {
 export const VARIANTS = {
   countries: {
     label: 'All countries',
-    filter: (c) => c.category === 'country',
-  },
-  all: {
-    label: 'Flags data',
-    filter: () => true,
+    filter: (c) => sovereigntyOf(c) === 'sovereign',
   },
   europe: {
     label: 'Europe',
-    filter: (c) => c.category === 'country' && c.continent === 'Europe',
+    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'Europe',
   },
   asia: {
     label: 'Asia',
-    filter: (c) => c.category === 'country' && c.continent === 'Asia',
+    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'Asia',
   },
   africa: {
     label: 'Africa',
-    filter: (c) => c.category === 'country' && c.continent === 'Africa',
+    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'Africa',
   },
   'north-america': {
     label: 'North America',
-    filter: (c) => c.category === 'country' && c.continent === 'North America',
+    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'North America',
   },
   'south-america': {
     label: 'South America',
-    filter: (c) => c.category === 'country' && c.continent === 'South America',
+    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'South America',
   },
   oceania: {
     label: 'Oceania',
-    filter: (c) => c.category === 'country' && c.continent === 'Oceania',
-  },
-  others: {
-    label: 'Others',
-    filter: (c) => c.category === 'other',
+    filter: (c) => sovereigntyOf(c) === 'sovereign' && c.continent === 'Oceania',
   },
 };
 

@@ -2,6 +2,7 @@
 /** @typedef {import('./grid.js').Category} Category */
 
 import { continent, hasColor, hasMotif } from './grid.js';
+import { sovereigntyOf } from './group.js';
 
 /**
  * @param {string | null | undefined} id
@@ -22,7 +23,7 @@ export function categoryFromId(id) {
  */
 export function findTargets(allCountries, category) {
   return allCountries.filter(
-    (c) => c.category !== 'other' && category.predicate(c),
+    (c) => sovereigntyOf(c) === 'sovereign' && category.predicate(c),
   );
 }
 
@@ -31,7 +32,7 @@ export function findTargets(allCountries, category) {
  * @returns {Country[]}
  */
 export function findPool(allCountries) {
-  return allCountries.filter((c) => c.category !== 'other');
+  return allCountries.filter((c) => sovereigntyOf(c) === 'sovereign');
 }
 
 /**

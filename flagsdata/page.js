@@ -1,11 +1,25 @@
-import { CONTINENTS, splitByCategory, groupByContinent } from '../flags/group.js';
+import { CONTINENTS, sovereigntyOf } from '../flags/group.js';
 import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../flags/grid.js';
+
+/** @typedef {import('../flags/group.js').Country} Country */
+/** @typedef {import('../flags/group.js').Sovereignty} Sovereignty */
+
+/** @type {Sovereignty[]} */
+const STATUS_VALUES = ['sovereign', 'non_un', 'territory', 'other'];
+/** @type {Record<Sovereignty, string>} */
+const STATUS_LABELS = {
+  sovereign: 'Sovereign',
+  non_un: 'Non-UN',
+  territory: 'Territory',
+  other: 'Other',
+};
 
 export function bootFlagsData() {
   const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
   const zoomImg = zoom.querySelector('img');
   const zoomName = zoom.querySelector('p');
   const zoomData = zoom.querySelector('.country-data');
+  /** @param {Country} c */
   function openZoom(c) {
     zoomImg.src = `../flags/svg/${c.code}.svg`;
     zoomImg.alt = c.name;
@@ -17,6 +31,7 @@ export function bootFlagsData() {
     if (e.target === zoom) zoom.close();
   });
 
+  /** @param {Country} c */
   function flagTile(c) {
     const wrap = document.createElement('div');
     wrap.className = 'flag';
@@ -30,9 +45,16 @@ export function bootFlagsData() {
     return wrap;
   }
 
-  const filters = { continent: new Set(), color: new Set(), motif: new Set() };
+  const filters = {
+    status: new Set(),
+    continent: new Set(),
+    color: new Set(),
+    motif: new Set(),
+  };
 
+  /** @param {Country} c */
   function matches(c) {
+    if (filters.status.size && !filters.status.has(sovereigntyOf(c))) return false;
     if (filters.continent.size) {
       const key = c.continent ?? 'Other';
       if (!filters.continent.has(key)) return false;
@@ -46,69 +68,70 @@ export function bootFlagsData() {
     return true;
   }
 
-  /** @type {{ items: any[], tiles: HTMLElement[], section: HTMLElement, count: HTMLElement }[]} */
-  const sectionStates = [];
+  /** @type {{ items: Country[], tiles: HTMLElement[], count: HTMLElement } | null} */
+  let state = null;
 
-  function renderSection(parent, title, items, className) {
-    if (items.length === 0) return;
-    const section = document.createElement('section');
-    section.className = className;
+  function renderAll(parent, items) {
     const h2 = document.createElement('h2');
-    h2.textContent = title;
+    h2.textContent = 'Flags';
     const countSpan = document.createElement('span');
     countSpan.className = 'section-count';
-    countSpan.textContent = items.length;
+    countSpan.textContent = String(items.length);
     h2.appendChild(countSpan);
-    section.appendChild(h2);
+    parent.appendChild(h2);
     const grid = document.createElement('div');
     grid.className = 'grid';
+    /** @type {HTMLElement[]} */
     const tiles = [];
     for (const c of items) {
       const tile = flagTile(c);
       tiles.push(tile);
       grid.appendChild(tile);
     }
-    section.appendChild(grid);
-    parent.appendChild(section);
-    sectionStates.push({ items, tiles, section, count: countSpan });
+    parent.appendChild(grid);
+    state = { items, tiles, count: countSpan };
   }
 
   function applyFilter() {
-    for (const s of sectionStates) {
-      let visible = 0;
-      for (let i = 0; i < s.items.length; i++) {
-        const show = matches(s.items[i]);
-        s.tiles[i].hidden = !show;
-        if (show) visible++;
-      }
-      s.count.textContent = String(visible);
-      s.section.hidden = visible === 0;
+    if (!state) return;
+    let visible = 0;
+    for (let i = 0; i < state.items.length; i++) {
+      const show = matches(state.items[i]);
+      state.tiles[i].hidden = !show;
+      if (show) visible++;
     }
+    state.count.textContent =
+      visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
     const any =
-      filters.continent.size + filters.color.size + filters.motif.size > 0;
+      filters.status.size + filters.continent.size + filters.color.size + filters.motif.size > 0;
     clearBtn.hidden = !any;
   }
 
-  function buildFilterGroup(label, group, values) {
+  /**
+   * @param {string} label
+   * @param {keyof typeof filters} group
+   * @param {Array<{ value: string, label: string }>} entries
+   */
+  function buildFilterGroup(label, group, entries) {
     const wrap = document.createElement('div');
     wrap.className = 'filter-group';
     const labelEl = document.createElement('span');
     labelEl.className = 'filter-label';
     labelEl.textContent = label;
     wrap.appendChild(labelEl);
-    for (const v of values) {
+    for (const { value, label: pillLabel } of entries) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'pill';
       btn.dataset.group = group;
-      btn.dataset.value = v;
-      btn.textContent = v;
+      btn.dataset.value = value;
+      btn.textContent = pillLabel;
       btn.addEventListener('click', () => {
-        if (filters[group].has(v)) {
-          filters[group].delete(v);
+        if (filters[group].has(value)) {
+          filters[group].delete(value);
           btn.classList.remove('active');
         } else {
-          filters[group].add(v);
+          filters[group].add(value);
           btn.classList.add('active');
         }
         applyFilter();
@@ -120,13 +143,16 @@ export function bootFlagsData() {
 
   const filterBar = document.getElementById('filter-bar');
   filterBar.appendChild(
-    buildFilterGroup('Continent', 'continent', [...CONTINENTS, 'Other']),
+    buildFilterGroup('Status', 'status', STATUS_VALUES.map((v) => ({ value: v, label: STATUS_LABELS[v] }))),
   );
   filterBar.appendChild(
-    buildFilterGroup('Colors', 'color', COLORS_FOR_RANDOM),
+    buildFilterGroup('Continent', 'continent', [...CONTINENTS, 'Other'].map((v) => ({ value: v, label: v }))),
   );
   filterBar.appendChild(
-    buildFilterGroup('Motifs', 'motif', MOTIFS_FOR_RANDOM),
+    buildFilterGroup('Colors', 'color', COLORS_FOR_RANDOM.map((v) => ({ value: v, label: v }))),
+  );
+  filterBar.appendChild(
+    buildFilterGroup('Motifs', 'motif', MOTIFS_FOR_RANDOM.map((v) => ({ value: v, label: v }))),
   );
 
   const clearBtn = document.createElement('button');
@@ -135,7 +161,7 @@ export function bootFlagsData() {
   clearBtn.textContent = 'Clear';
   clearBtn.hidden = true;
   clearBtn.addEventListener('click', () => {
-    for (const k of Object.keys(filters)) filters[k].clear();
+    for (const k of /** @type {Array<keyof typeof filters>} */ (Object.keys(filters))) filters[k].clear();
     for (const el of filterBar.querySelectorAll('.pill.active')) {
       el.classList.remove('active');
     }
@@ -147,12 +173,7 @@ export function bootFlagsData() {
     .then((r) => r.json())
     .then((all) => {
       const sections = document.getElementById('sections');
-      const { countries, other } = splitByCategory(all);
-      const byContinent = groupByContinent(countries);
-      for (const continent of CONTINENTS) {
-        renderSection(sections, continent, byContinent[continent], 'continent');
-      }
-      renderSection(sections, 'Other', other, 'other');
+      renderAll(sections, all);
     })
     .catch((err) => {
       document.getElementById('sections').textContent = 'Failed to load: ' + err.message;

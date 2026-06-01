@@ -1,6 +1,8 @@
 /**
  * @typedef {'Africa' | 'Asia' | 'Europe' | 'North America' | 'South America' | 'Oceania' | 'Antarctica'} Continent
  *
+ * @typedef {'sovereign' | 'non_un' | 'territory' | 'other'} Sovereignty
+ *
  * @typedef {Object} Country
  * @property {string} code
  * @property {string} name
@@ -10,6 +12,24 @@
  * @property {string[]} [colors]
  * @property {string[]} [motifs]
  */
+
+/**
+ * Single source of truth for how each entry is classified.
+ *
+ *   sovereign — UN member or UN observer (195: the "games pool")
+ *   non_un    — partially-recognised states (currently Kosovo, Taiwan)
+ *   territory — overseas territory / dependency / autonomous region
+ *   other     — organisations, sub-national flags (EU, ASEAN, Wales, …)
+ *
+ * @param {Country} c
+ * @returns {Sovereignty}
+ */
+export function sovereigntyOf(c) {
+  if (c.category === 'other') return 'other';
+  if (c.statehood === 'territory') return 'territory';
+  if (c.statehood === 'non_un') return 'non_un';
+  return 'sovereign';
+}
 
 /** @type {Continent[]} */
 export const CONTINENTS = [
