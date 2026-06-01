@@ -161,25 +161,6 @@ body {
 .find-suggestions span {
   font-size: 14px;
 }
-.find-teach {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 12px;
-  padding: 8px 12px;
-  border: 1px solid #f0c8c8;
-  background: #fff5f5;
-  border-radius: 6px;
-  font-size: 14px;
-  color: #1c1c1c;
-}
-.find-teach img {
-  width: 36px;
-  height: 27px;
-  object-fit: cover;
-  border: 1px solid #ddd;
-  flex-shrink: 0;
-}
 .find-found,
 .find-missed {
   list-style: none;

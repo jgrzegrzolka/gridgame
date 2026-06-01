@@ -62,7 +62,6 @@
         />
         <ul class="find-suggestions" id="find-suggestions" hidden></ul>
       </div>
-      <p class="find-teach" id="find-teach" hidden></p>
       <ul class="find-found" id="find-found"></ul>
       <div class="find-below">
         <button type="button" class="give-up" id="give-up">Give up</button>
@@ -181,7 +180,6 @@
         const timeEl = document.getElementById('find-time');
         const inputEl = document.getElementById('find-input');
         const sugEl = document.getElementById('find-suggestions');
-        const teachEl = document.getElementById('find-teach');
         const foundEl = document.getElementById('find-found');
         const giveUpEl = document.getElementById('give-up');
 
@@ -190,7 +188,6 @@
 
         let matches = [];
         let selected = 0;
-        let teachTimer = 0;
         const startMs = Date.now();
         let timerRaf = 0;
         let finished = false;
@@ -244,26 +241,14 @@
           inputEl.classList.add('shake');
         }
         function flashWrong() {
-          inputEl.classList.remove('wrong');
+          // Red border + shake for ~700ms, no flag reveal. Both classes
+          // applied together; the shake animation auto-ends in 200ms,
+          // but the red border stays for the full duration so the
+          // mistake registers visually.
+          inputEl.classList.remove('wrong', 'shake');
           void inputEl.offsetWidth;
-          inputEl.classList.add('wrong');
-          setTimeout(() => inputEl.classList.remove('wrong'), 600);
-        }
-
-        function showTeach(c) {
-          // Reveal-and-teach: flash the wrong country's flag + name so
-          // the player learns what category it actually belongs to.
-          clearTimeout(teachTimer);
-          teachEl.innerHTML = '';
-          const img = document.createElement('img');
-          img.src = `../flags/svg/${c.code}.svg`;
-          img.alt = '';
-          teachEl.appendChild(img);
-          const span = document.createElement('span');
-          span.textContent = `${c.name} is not in this category`;
-          teachEl.appendChild(span);
-          teachEl.hidden = false;
-          teachTimer = setTimeout(() => { teachEl.hidden = true; }, 1800);
+          inputEl.classList.add('wrong', 'shake');
+          setTimeout(() => inputEl.classList.remove('wrong', 'shake'), 700);
         }
 
         function appendFound(c) {
@@ -298,7 +283,6 @@
           }
           if (outcome.kind === 'wrong-category') {
             flashWrong();
-            showTeach(c);
             inputEl.value = '';
             matches = [];
             renderSuggestions();
