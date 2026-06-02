@@ -91,6 +91,7 @@ export function initialClientState() {
  * @typedef {{ type: 'shake', row: number, col: number }
  *   | { type: 'finished' }
  *   | { type: 'close' }
+ *   | { type: 'rematch-started' }
  * } Effect
  */
 
@@ -129,6 +130,11 @@ export function reduceServerMessage(state, message) {
       const effects = [];
       if (message.kind === 'miss-invalid' || message.kind === 'miss-duplicate') {
         effects.push({ type: 'shake', row: message.row, col: message.col });
+      }
+      if (message.kind === 'rematch') {
+        // The grid headers depend on the puzzle, which changes on rematch,
+        // so the page needs to rebuild them. Result UI also needs hiding.
+        effects.push({ type: 'rematch-started' });
       }
       if (message.game && (message.game.winner || message.game.draw)) {
         effects.push({ type: 'finished' });

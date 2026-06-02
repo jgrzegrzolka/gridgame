@@ -19,6 +19,8 @@ import { categoryFromId } from './grid.js';
  * @property {string | null} hostId  - playerId of the room creator; always X
  * @property {Map<string, Player>} roles  - playerId -> X/O assignment
  * @property {Set<string>} present  - playerIds currently connected
+ * @property {Player} lastFirstPlayer  - who started the current game; the
+ *   rematch flips this so games alternate which side moves first
  */
 
 /**
@@ -42,6 +44,7 @@ export function createRoom(puzzle) {
     hostId: null,
     roles: new Map(),
     present: new Set(),
+    lastFirstPlayer: 'O',
   };
 }
 
@@ -154,6 +157,35 @@ export function applyDisconnect(room, playerId) {
 }
 
 /**
+ * Start a fresh game in the same room with the same players. Triggered when
+ * either player clicks "Play again" after the current game finishes.
+ *
+ *   - Silently ignored if the sender isn't a player in the room.
+ *   - Silently ignored while the current game is still in progress (you
+ *     can't restart mid-match by accident).
+ *   - The first-mover alternates between games. If O started the game that
+ *     just ended, X starts the rematch.
+ *   - Roles (host=X, joiner=O) are preserved across rematches.
+ *
+ * @param {Room} room
+ * @param {string} playerId
+ * @param {Puzzle} newPuzzle
+ * @returns {ApplyResult}
+ */
+export function applyStartRematch(room, playerId, newPuzzle) {
+  if (!room.roles.has(playerId)) return { room, broadcasts: [] };
+  if (!isGameOver(room.game)) return { room, broadcasts: [] };
+  /** @type {Player} */
+  const nextFirst = room.lastFirstPlayer === 'O' ? 'X' : 'O';
+  const newGameState = newGame(newPuzzle, nextFirst);
+  const nextRoom = { ...room, game: newGameState, lastFirstPlayer: nextFirst };
+  return {
+    room: nextRoom,
+    broadcasts: [{ to: 'all', message: { type: 'state', kind: 'rematch', game: newGameState } }],
+  };
+}
+
+/**
  * Structured-clone-safe snapshot of the room for persistence.
  *
  *   - `present` is omitted: it represents live WebSocket connections, which
@@ -176,6 +208,7 @@ export function serializeRoom(room) {
     },
     hostId: room.hostId,
     roles: [...room.roles.entries()],
+    lastFirstPlayer: room.lastFirstPlayer,
   };
 }
 
@@ -195,6 +228,7 @@ export function deserializeRoom(snapshot) {
     hostId: snapshot.hostId,
     roles: new Map(snapshot.roles),
     present: new Set(),
+    lastFirstPlayer: snapshot.lastFirstPlayer ?? 'O',
   };
 }
 

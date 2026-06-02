@@ -110,6 +110,14 @@ test('reduceServerMessage: a drawn state emits the "finished" effect', () => {
   assert.ok(r.effects.some((e) => e.type === 'finished'));
 });
 
+test('reduceServerMessage: state with kind=rematch emits the "rematch-started" effect', () => {
+  const state = initialClientState();
+  const game = /** @type {any} */ ({ currentPlayer: 'X', winner: null, draw: false });
+  const r = reduceServerMessage(state, { type: 'state', kind: 'rematch', game });
+  assert.ok(r.effects.some((e) => e.type === 'rematch-started'));
+  assert.equal(r.state.game, game);
+});
+
 test('reduceServerMessage: peer-joined toggles peerPresent without touching game state', () => {
   const game = /** @type {any} */ ({ currentPlayer: 'O' });
   const state = { ...initialClientState(), game };
