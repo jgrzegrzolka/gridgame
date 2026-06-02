@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   resolveLang,
   lookupString,
@@ -202,4 +203,46 @@ test('t: falls back when the key is missing from a partially-loaded cache', () =
   _seedCacheForTests({ quiz: { giveUp: 'Poddaję się' } });
   assert.equal(t('quiz.playAgain', 'Play again'), 'Play again');
   _resetCacheForTests();
+});
+
+// ---- JSON file parity ----
+
+/**
+ * Flatten a nested strings object into a sorted list of dotted keys, so
+ * two language files can be compared structurally regardless of object
+ * ordering.
+ *
+ * @param {Record<string, any>} obj
+ * @param {string} [prefix]
+ * @returns {string[]}
+ */
+function flattenKeys(obj, prefix = '') {
+  /** @type {string[]} */
+  const keys = [];
+  for (const [k, v] of Object.entries(obj)) {
+    const fullKey = prefix ? `${prefix}.${k}` : k;
+    if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+      keys.push(...flattenKeys(v, fullKey));
+    } else {
+      keys.push(fullKey);
+    }
+  }
+  return keys.sort();
+}
+
+test('i18n: en.json and pl.json have identical key trees', async () => {
+  const enText = await readFile(new URL('./i18n/en.json', import.meta.url), 'utf8');
+  const plText = await readFile(new URL('./i18n/pl.json', import.meta.url), 'utf8');
+  const enKeys = flattenKeys(JSON.parse(enText));
+  const plKeys = flattenKeys(JSON.parse(plText));
+  const enSet = new Set(enKeys);
+  const plSet = new Set(plKeys);
+  const missingInPl = enKeys.filter((k) => !plSet.has(k));
+  const missingInEn = plKeys.filter((k) => !enSet.has(k));
+  // Reporting both directions keeps the failure message useful no matter
+  // which side fell behind.
+  assert.deepEqual(
+    { missingInPl, missingInEn },
+    { missingInPl: [], missingInEn: [] },
+  );
 });
