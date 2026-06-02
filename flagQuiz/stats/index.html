@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Flag Quiz — Your Stats</title>
+    <title data-i18n="quiz.statsTitle">Flag Quiz — Your Stats</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="../index.css?v=__BUILD__" />
@@ -57,9 +57,7 @@
         setQuizIncludeAll,
       } from '../../flags/quiz.js?v=__BUILD__';
       import { flagsGamePool } from '../../flags/group.js?v=__BUILD__';
-      import { bootI18n, wireLangToggle } from '../../i18n.js?v=__BUILD__';
-
-      bootI18n('../../').then(wireLangToggle);
+      import { bootI18n, wireLangToggle, t } from '../../i18n.js?v=__BUILD__';
 
       const includeAll = isQuizIncludeAll();
       const statsEl = document.getElementById('stats');
@@ -71,12 +69,17 @@
         window.location.reload();
       });
 
-      fetch('../../flags/countries.json?v=__BUILD__')
-        .then((r) => r.json())
-        .then(renderStats)
-        .catch((err) => {
-          document.body.textContent = 'Failed to load: ' + err.message;
-        });
+      // Wait for i18n so renderStats can use translated variant labels and
+      // the "Play" CTA without a load-order race.
+      bootI18n('../../').then((lang) => {
+        wireLangToggle(lang);
+        return fetch('../../flags/countries.json?v=__BUILD__')
+          .then((r) => r.json())
+          .then(renderStats)
+          .catch((err) => {
+            document.body.textContent = `${t('quiz.failedToLoad', 'Failed to load:')} ${err.message}`;
+          });
+      });
 
       /**
        * Build one chip — a tappable link back to the quiz at this
@@ -112,7 +115,7 @@
           a.classList.add('stats-chip-unplayed');
           const cta = document.createElement('span');
           cta.className = 'stats-chip-cta';
-          cta.textContent = 'Play';
+          cta.textContent = t('quiz.play', 'Play');
           a.appendChild(cta);
         }
         return a;
@@ -128,7 +131,7 @@
 
           const label = document.createElement('span');
           label.className = 'stats-label';
-          label.textContent = variant.label;
+          label.textContent = t(`variant.${key}`, variant.label);
           li.appendChild(label);
 
           const chips = document.createElement('span');

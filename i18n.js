@@ -22,6 +22,17 @@ export const LANG_STORAGE_KEY = 'gridgame.lang';
 export const I18N_ENABLED = false;
 
 /**
+ * The most recently loaded strings, cached so JS that runs after bootI18n
+ * resolves can translate dynamically-created content via t(). Empty by
+ * default — t() falls back to the supplied fallback (which should always
+ * be the English source string), so callers don't need to special-case
+ * the not-yet-loaded path.
+ *
+ * @type {Strings}
+ */
+let cachedStrings = {};
+
+/**
  * Decide which language to use. Stored preference wins, otherwise fall back
  * to the browser's preferred language if it's one we support, otherwise the
  * default.
@@ -172,6 +183,40 @@ export async function bootI18n(base = './') {
   const res = await fetch(`${base}i18n/${lang}.json`);
   if (!res.ok) return lang;
   const strings = await res.json();
+  cachedStrings = strings;
   applyStringsToDocument(strings, lang);
   return lang;
+}
+
+/**
+ * Look up a translation for a dotted key against the strings most recently
+ * loaded by bootI18n. Falls back to the supplied fallback when nothing is
+ * loaded yet (or the key isn't translated) — that's the English source
+ * string at the call-site, so callers don't need to special-case load
+ * order.
+ *
+ * @param {string} key
+ * @param {string} fallback
+ * @returns {string}
+ */
+export function t(key, fallback) {
+  return lookupString(cachedStrings, key) ?? fallback;
+}
+
+/**
+ * Reset the in-memory string cache. Tests use this between cases; production
+ * code shouldn't need it.
+ */
+export function _resetCacheForTests() {
+  cachedStrings = {};
+}
+
+/**
+ * Seed the in-memory string cache. Tests use this to exercise t() without
+ * calling bootI18n; production code shouldn't need it.
+ *
+ * @param {Strings} strings
+ */
+export function _seedCacheForTests(strings) {
+  cachedStrings = strings;
 }

@@ -7,6 +7,9 @@ import {
   applyAttributes,
   setStoredLang,
   wireLangToggle,
+  t,
+  _resetCacheForTests,
+  _seedCacheForTests,
   DEFAULT_LANG,
   LANG_STORAGE_KEY,
 } from './i18n.js';
@@ -180,4 +183,23 @@ test('wireLangToggle: shows "English" and switches to en when current is pl', ()
 test('wireLangToggle: is a no-op when no element is found', () => {
   // Just ensures no throw; passing null is the "couldn't find lang-toggle" path.
   wireLangToggle('en', null);
+});
+
+// ---- t() ----
+
+test('t: returns the fallback when no strings have been loaded', () => {
+  _resetCacheForTests();
+  assert.equal(t('quiz.giveUp', 'Give up'), 'Give up');
+});
+
+test('t: returns the translation when the key is in the cache', () => {
+  _seedCacheForTests({ quiz: { giveUp: 'Poddaję się' } });
+  assert.equal(t('quiz.giveUp', 'Give up'), 'Poddaję się');
+  _resetCacheForTests();
+});
+
+test('t: falls back when the key is missing from a partially-loaded cache', () => {
+  _seedCacheForTests({ quiz: { giveUp: 'Poddaję się' } });
+  assert.equal(t('quiz.playAgain', 'Play again'), 'Play again');
+  _resetCacheForTests();
 });

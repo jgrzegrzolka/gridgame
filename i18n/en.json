@@ -20,5 +20,28 @@
     "grid": "Grid",
     "find": "Find",
     "ticTacToe": "Tic Tac Toe"
+  },
+  "quiz": {
+    "title": "Flag Quiz",
+    "statsTitle": "Flag Quiz — Your Stats",
+    "loading": "Loading…",
+    "giveUp": "Give up",
+    "finalScore": "Final score:",
+    "playAgain": "Play again",
+    "time": "Time",
+    "yourBestScore": "Your best score",
+    "in": "in",
+    "newRecord": "new record!",
+    "failedToLoad": "Failed to load:",
+    "play": "Play"
+  },
+  "variant": {
+    "countries": "All countries",
+    "europe": "Europe",
+    "asia": "Asia",
+    "africa": "Africa",
+    "north-america": "North America",
+    "south-america": "South America",
+    "oceania": "Oceania"
   }
 }
