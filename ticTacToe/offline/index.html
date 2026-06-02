@@ -6,14 +6,13 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Tic Tac Toe — Online</title>
+    <title>Tic Tac Toe</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="../index.css?v=__BUILD__" />
-    <link rel="stylesheet" href="index.css?v=__BUILD__" />
   </head>
   <body>
-    <a class="back" href="../../" aria-label="Home"><span class="home-icon" aria-hidden="true"></span></a>
+    <a class="back" href="../" aria-label="Home"><span class="home-icon" aria-hidden="true"></span></a>
     <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
     <button
       type="button"
@@ -32,35 +31,10 @@
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
       <ul class="menu">
-        <li><a href="../">Offline</a></li>
+        <li><a href="../../flagsdata/">Flags data</a></li>
       </ul>
     </nav>
-
-    <section id="lobby" class="lobby" hidden>
-      <h1 class="lobby-title">Play with a friend</h1>
-      <button type="button" class="lobby-btn" id="create-room">Create a new room</button>
-      <p class="lobby-or">— or —</p>
-      <form id="join-form" class="join-form">
-        <input
-          type="text"
-          id="join-code"
-          class="join-code"
-          inputmode="text"
-          autocomplete="off"
-          autocapitalize="characters"
-          spellcheck="false"
-          maxlength="5"
-          placeholder="ROOM CODE"
-        />
-        <button type="submit" class="lobby-btn">Join</button>
-      </form>
-      <p class="lobby-error" id="lobby-error" hidden></p>
-    </section>
-
-    <section id="game" class="online-game" hidden>
-      <p class="room-line">Room <strong id="room-code">-----</strong></p>
-      <p class="role-line"><span class="muted">You are</span> <span class="turn-badge" id="role-badge">?</span></p>
-      <p class="status-line" id="status-line">Waiting for opponent…</p>
+    <div class="game">
       <table class="grid">
         <thead>
           <tr>
@@ -72,15 +46,16 @@
         </thead>
         <tbody id="grid-body"></tbody>
       </table>
-      <p class="turn-line" id="turn-line" hidden><span class="turn-badge" id="turn-badge">O</span><span id="turn-text">to move</span></p>
+      <p class="turn-line" id="turn-line"><span class="turn-badge o" id="turn-badge">O</span><span id="turn-text">to move</span></p>
       <section id="result" hidden>
-        <p class="final-score" id="final-score-line"><span id="final-score"></span></p>
+        <p class="final-score" id="final-score-line">
+          <span id="final-score"></span>
+        </p>
         <p class="result-links">
-          <button type="button" class="result-link" id="play-again">Play again</button>
+          <a id="play-again" href="#">Play again</a>
         </p>
       </section>
-    </section>
-
+    </div>
     <div class="picker" id="picker" hidden>
       <div class="picker-backdrop" id="picker-backdrop"></div>
       <div class="picker-sheet" role="dialog" aria-modal="true" aria-labelledby="picker-cats">
@@ -102,10 +77,14 @@
         <ul class="picker-suggestions" id="picker-suggestions"></ul>
       </div>
     </div>
-
     <script type="module">
-      import { bootTicTacToeOnline } from './page.js?v=__BUILD__';
-      bootTicTacToeOnline();
+      import { bootTicTacToe } from './page.js?v=__BUILD__';
+      import { disableBurgerIfEmpty } from '../../common.js?v=__BUILD__';
+      bootTicTacToe();
+      disableBurgerIfEmpty(
+        document.querySelector('.burger'),
+        document.querySelector('#burger-panel .menu'),
+      );
     </script>
   </body>
 </html>

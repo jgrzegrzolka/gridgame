@@ -98,10 +98,10 @@ body.grid-locked .cell.filled {
   height: 100%;
   object-fit: contain;
 }
-.cell.revealed {
-  background: rgba(197, 48, 45, 0.2);
-}
 .cell.revealed img {
+  outline: 2px solid #c5302d;
+  outline-offset: -2px;
+  background: rgba(197, 48, 45, 0.2);
   animation: revealed-bounce 0.55s ease-in-out 3;
 }
 @keyframes revealed-bounce {

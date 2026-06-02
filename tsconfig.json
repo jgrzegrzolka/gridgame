@@ -15,7 +15,9 @@
     "flags/**/*.js",
     "party/ticTacToeServer.js",
     "party/ticTacToeServer.test.js",
-    "ticTacToe/online/onlineClient.js",
-    "ticTacToe/online/onlineClient.test.js"
+    "ticTacToe/onlineClient.js",
+    "ticTacToe/onlineClient.test.js",
+    "common.js",
+    "common.test.js"
   ]
 }
