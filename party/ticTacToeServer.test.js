@@ -264,6 +264,51 @@ test('onMessage: a valid claim broadcasts state to ALL connections', async () =>
   assert.equal(last.game.cells[0][0].owner, 'O');
 });
 
+test('rematch: a player message ignored while the game is in progress', async () => {
+  const a = mockConn('a'); const b = mockConn('b');
+  const srv = new TicTacToeServer(mockParty([a, b]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+  await srv.onConnect(b, ctxFor('bob',   'join'));
+  const aBefore = a.sent.length; const bBefore = b.sent.length;
+  await srv.onMessage(JSON.stringify({ type: 'rematch' }), a);
+  assert.equal(a.sent.length, bBefore - (bBefore - aBefore), 'no new state broadcast');
+  assert.equal(b.sent.length, bBefore);
+});
+
+test('rematch: after a game ends, a single click starts a fresh game and broadcasts to both', async () => {
+  const a = mockConn('a'); const b = mockConn('b');
+  const srv = new TicTacToeServer(mockParty([a, b]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+  await srv.onConnect(b, ctxFor('bob',   'join'));
+  // Force a finished state.
+  /** @type {import('../flags/onlineRoom.js').Room} */ (srv.room).game.winner = 'O';
+  const aBefore = a.sent.length; const bBefore = b.sent.length;
+  await srv.onMessage(JSON.stringify({ type: 'rematch' }), a);
+  const aMsgs = a.sent.slice(aBefore).map((s) => JSON.parse(s));
+  const bMsgs = b.sent.slice(bBefore).map((s) => JSON.parse(s));
+  const aRematch = aMsgs.find((m) => m.type === 'state' && m.kind === 'rematch');
+  const bRematch = bMsgs.find((m) => m.type === 'state' && m.kind === 'rematch');
+  assert.ok(aRematch, 'host receives the rematch state');
+  assert.ok(bRematch, 'joiner receives the rematch state');
+  assert.equal(aRematch.game.winner, null);
+});
+
+test('rematch: from a sender who is not in the room is silently ignored', async () => {
+  const a = mockConn('a'); const b = mockConn('b'); const c = mockConn('c');
+  const srv = new TicTacToeServer(mockParty([a, b, c]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+  await srv.onConnect(b, ctxFor('bob',   'join'));
+  /** @type {import('../flags/onlineRoom.js').Room} */ (srv.room).game.winner = 'O';
+  const aBefore = a.sent.length; const bBefore = b.sent.length;
+  // c is not registered in the room — server didn't see an onConnect for c.
+  await srv.onMessage(JSON.stringify({ type: 'rematch' }), c);
+  assert.equal(a.sent.length, aBefore);
+  assert.equal(b.sent.length, bBefore);
+});
+
 test('onClose: broadcasts peer-left and keeps the role for reconnect', async () => {
   const a = mockConn('a'); const b = mockConn('b');
   const conns = [a, b];

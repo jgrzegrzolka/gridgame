@@ -59,19 +59,24 @@ function defaultGeneratePlayerId() {
   return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/** The one production hostname that should hit the deployed PartyKit. */
+const PROD_HOSTNAME = 'jgrzegrzolka.github.io';
+
 /**
  * Which WebSocket URL the client should connect to.
- * Local hostnames go to the partykit dev server; anywhere else (including
- * the live GitHub Pages domain) goes to the deployed Cloudflare server.
+ * The deployed GitHub Pages site goes to the Cloudflare-hosted PartyKit.
+ * Anywhere else (localhost, 127.0.0.1, LAN IPs like 192.168.x.x when you
+ * open the dev server from another device) connects to a partykit dev
+ * server running on port 1999 on the same host.
  *
  * @param {string} hostname
  * @returns {string}
  */
 export function serverUrlFor(hostname) {
-  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
-  return isLocal
-    ? `ws://${hostname}:1999/parties/main/`
-    : 'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/main/';
+  if (hostname === PROD_HOSTNAME) {
+    return 'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/main/';
+  }
+  return `ws://${hostname}:1999/parties/main/`;
 }
 
 /**
@@ -91,6 +96,7 @@ export function initialClientState() {
  * @typedef {{ type: 'shake', row: number, col: number }
  *   | { type: 'finished' }
  *   | { type: 'close' }
+ *   | { type: 'rematch-started' }
  * } Effect
  */
 
@@ -129,6 +135,11 @@ export function reduceServerMessage(state, message) {
       const effects = [];
       if (message.kind === 'miss-invalid' || message.kind === 'miss-duplicate') {
         effects.push({ type: 'shake', row: message.row, col: message.col });
+      }
+      if (message.kind === 'rematch') {
+        // The grid headers depend on the puzzle, which changes on rematch,
+        // so the page needs to rebuild them. Result UI also needs hiding.
+        effects.push({ type: 'rematch-started' });
       }
       if (message.game && (message.game.winner || message.game.draw)) {
         effects.push({ type: 'finished' });

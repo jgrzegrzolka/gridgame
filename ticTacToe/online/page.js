@@ -66,6 +66,7 @@ function runOnline(countries) {
   const gridBodyEl = document.getElementById('grid-body');
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
+  const playAgainEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('play-again'));
   const colHeaderEls = document.querySelectorAll('.col-header');
   const pickerEl = document.getElementById('picker');
   const pickerBackdropEl = document.getElementById('picker-backdrop');
@@ -173,6 +174,7 @@ function runOnline(countries) {
     for (const effect of effects) {
       if (effect.type === 'shake') shakeCell(effect.row, effect.col);
       else if (effect.type === 'finished') finishRound();
+      else if (effect.type === 'rematch-started') startFreshRound();
       else if (effect.type === 'close') {
         // Server-side rejection — don't auto-reconnect, snap back to the
         // lobby with the reason visible so the user understands why their
@@ -450,6 +452,36 @@ function runOnline(countries) {
       finalScoreEl.textContent = 'Draw';
       finalScoreEl.style.color = '#1c1c1c';
     }
+    if (playAgainEl) playAgainEl.disabled = false;
     resultEl.hidden = false;
+  }
+
+  // The server-broadcast rematch state arrived: the grid headers need to be
+  // rebuilt for the new puzzle, the finished overlay needs to go away, and
+  // the body must shed the .game-over class so cells become clickable again.
+  // Render at the end too — onServerMessage already called renderGrid once,
+  // but against the OLD grid built from the OLD puzzle, so those writes hit
+  // stale td references and we have to re-render against the fresh grid.
+  function startFreshRound() {
+    if (resultEl) resultEl.hidden = true;
+    if (gridBodyEl) gridBodyEl.innerHTML = '';
+    gridBuilt = false;
+    lastRenderedTurn = null;
+    document.body.classList.remove('game-over');
+    buildGridIfNeeded();
+    renderGrid();
+    renderTurn();
+    renderStatus();
+  }
+
+  if (playAgainEl) {
+    playAgainEl.addEventListener('click', () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      // Disable the button immediately so spam-clicks don't fire multiple
+      // rematch messages — the next 'rematch-started' broadcast will reset
+      // the result UI entirely.
+      playAgainEl.disabled = true;
+      ws.send(JSON.stringify({ type: 'rematch' }));
+    });
   }
 }

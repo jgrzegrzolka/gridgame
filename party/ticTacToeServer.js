@@ -3,6 +3,7 @@ import {
   applyHello,
   applyClaim,
   applyDisconnect,
+  applyStartRematch,
   serializeRoom,
   deserializeRoom,
 } from '../flags/onlineRoom.js';
@@ -147,6 +148,15 @@ export class TicTacToeServer {
         const country = this.countries.find((c) => c.code === parsed.countryCode);
         if (!country) return;
         const result = applyClaim(this.room, playerId, parsed.row, parsed.col, country);
+        this.room = result.room;
+        await this.saveRoom();
+        this.dispatch(result.broadcasts);
+      } else if (parsed && parsed.type === 'rematch') {
+        const playerId = this.playerByConn.get(sender);
+        if (!playerId) return;
+        const newPuzzle = this.forcedPuzzle ?? generateRandomPuzzle(this.countries);
+        const result = applyStartRematch(this.room, playerId, newPuzzle);
+        if (result.broadcasts.length === 0) return;
         this.room = result.room;
         await this.saveRoom();
         this.dispatch(result.broadcasts);

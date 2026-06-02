@@ -51,15 +51,21 @@ test('isValidRoomCode: rejects wrong length and case', () => {
 
 // ---- Server URL selection ----
 
-test('serverUrlFor: localhost goes to local dev server', () => {
+test('serverUrlFor: localhost goes to a local dev server on port 1999', () => {
   assert.equal(serverUrlFor('localhost'), 'ws://localhost:1999/parties/main/');
   assert.equal(serverUrlFor('127.0.0.1'), 'ws://127.0.0.1:1999/parties/main/');
 });
 
-test('serverUrlFor: anything else goes to the deployed wss URL', () => {
-  const expected = 'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/main/';
-  assert.equal(serverUrlFor('jgrzegrzolka.github.io'), expected);
-  assert.equal(serverUrlFor('192.168.0.5'), expected);
+test('serverUrlFor: LAN IPs also route to the local dev server (testing from a phone, another laptop, etc.)', () => {
+  assert.equal(serverUrlFor('192.168.0.5'), 'ws://192.168.0.5:1999/parties/main/');
+  assert.equal(serverUrlFor('10.0.0.42'), 'ws://10.0.0.42:1999/parties/main/');
+});
+
+test('serverUrlFor: the production GitHub Pages hostname goes to the deployed Cloudflare PartyKit', () => {
+  assert.equal(
+    serverUrlFor('jgrzegrzolka.github.io'),
+    'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/main/',
+  );
 });
 
 // ---- Reducer ----
@@ -108,6 +114,14 @@ test('reduceServerMessage: a drawn state emits the "finished" effect', () => {
   const game = /** @type {any} */ ({ currentPlayer: 'O', winner: null, draw: true });
   const r = reduceServerMessage(state, { type: 'state', kind: 'claimed', game });
   assert.ok(r.effects.some((e) => e.type === 'finished'));
+});
+
+test('reduceServerMessage: state with kind=rematch emits the "rematch-started" effect', () => {
+  const state = initialClientState();
+  const game = /** @type {any} */ ({ currentPlayer: 'X', winner: null, draw: false });
+  const r = reduceServerMessage(state, { type: 'state', kind: 'rematch', game });
+  assert.ok(r.effects.some((e) => e.type === 'rematch-started'));
+  assert.equal(r.state.game, game);
 });
 
 test('reduceServerMessage: peer-joined toggles peerPresent without touching game state', () => {

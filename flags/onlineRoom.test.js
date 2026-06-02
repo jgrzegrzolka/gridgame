@@ -6,6 +6,7 @@ import {
   applyHello,
   applyClaim,
   applyDisconnect,
+  applyStartRematch,
   serializeRoom,
   deserializeRoom,
 } from './onlineRoom.js';
@@ -281,6 +282,77 @@ test('applyDisconnect: unknown playerId is a no-op', () => {
   assert.equal(r.room, room);
 });
 
+// ---- applyStartRematch ----
+
+const PUZZLE2 = {
+  rows: [continent('Africa'), continent('Asia'), continent('Europe')],
+  cols: [hasColor('blue'), hasColor('green'), hasColor('red')],
+};
+
+test('applyStartRematch: silently ignored when the sender is not in the room', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice').room;
+  room = applyHello(room, 'bob').room;
+  room.game.winner = 'X';
+  const r = applyStartRematch(room, 'stranger', PUZZLE2);
+  assert.equal(r.broadcasts.length, 0);
+  assert.equal(r.room, room);
+});
+
+test('applyStartRematch: silently ignored while the current game is still in progress', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice').room;
+  room = applyHello(room, 'bob').room;
+  // game.winner is null and no draw → not over
+  const r = applyStartRematch(room, 'alice', PUZZLE2);
+  assert.equal(r.broadcasts.length, 0);
+  assert.equal(r.room, room);
+});
+
+test('applyStartRematch: starts a fresh game with the new puzzle when the previous one is over', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice').room;
+  room = applyHello(room, 'bob').room;
+  room.game.winner = 'O';
+  const r = applyStartRematch(room, 'alice', PUZZLE2);
+  assert.equal(r.broadcasts.length, 1);
+  assert.equal(r.broadcasts[0].to, 'all');
+  const msg = /** @type {any} */ (r.broadcasts[0].message);
+  assert.equal(msg.type, 'state');
+  assert.equal(msg.kind, 'rematch');
+  assert.equal(msg.game.winner, null);
+  assert.deepEqual(
+    msg.game.puzzle.rows.map((/** @type {any} */ c) => c.id),
+    PUZZLE2.rows.map((c) => c.id),
+  );
+});
+
+test('applyStartRematch: flips the first-mover so each game alternates who starts', () => {
+  let room = createRoom(PUZZLE); // lastFirstPlayer = 'O'
+  room = applyHello(room, 'alice').room;
+  room = applyHello(room, 'bob').room;
+  room.game.winner = 'X';
+  const r1 = applyStartRematch(room, 'alice', PUZZLE2);
+  assert.equal(r1.room.game.currentPlayer, 'X', 'X starts after an O-started game');
+  assert.equal(r1.room.lastFirstPlayer, 'X');
+  // Finish that game and rematch again.
+  r1.room.game.winner = 'X';
+  const r2 = applyStartRematch(r1.room, 'bob', PUZZLE);
+  assert.equal(r2.room.game.currentPlayer, 'O', 'O starts after an X-started game');
+  assert.equal(r2.room.lastFirstPlayer, 'O');
+});
+
+test('applyStartRematch: roles (host=X, joiner=O) are preserved across rematches', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice').room;
+  room = applyHello(room, 'bob').room;
+  room.game.winner = 'O';
+  const r = applyStartRematch(room, 'alice', PUZZLE2);
+  assert.equal(r.room.roles.get('alice'), 'X');
+  assert.equal(r.room.roles.get('bob'), 'O');
+  assert.equal(r.room.hostId, 'alice');
+});
+
 // ---- serialize / deserialize ----
 
 test('serializeRoom + deserializeRoom round-trips game, roles, and hostId', () => {
@@ -298,6 +370,19 @@ test('serializeRoom + deserializeRoom round-trips game, roles, and hostId', () =
     restored.game.puzzle.rows.map((c) => c.id),
     room.game.puzzle.rows.map((c) => c.id),
   );
+});
+
+test('serializeRoom + deserializeRoom round-trip preserves lastFirstPlayer across eviction', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice').room;
+  room = applyHello(room, 'bob').room;
+  room.game.winner = 'X';
+  // First rematch flips lastFirstPlayer from 'O' to 'X'.
+  room = applyStartRematch(room, 'alice', PUZZLE).room;
+  assert.equal(room.lastFirstPlayer, 'X');
+  // Eviction round-trip via JSON (what party.storage actually does).
+  const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
+  assert.equal(restored.lastFirstPlayer, 'X', 'eviction must not reset the alternation');
 });
 
 test('serializeRoom omits the present set (live connections do not survive eviction)', () => {
