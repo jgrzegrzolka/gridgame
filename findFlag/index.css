@@ -149,13 +149,6 @@ body {
 .find-suggestions li:hover {
   background: #f0f0f0;
 }
-.find-suggestions img {
-  width: 28px;
-  height: 21px;
-  object-fit: cover;
-  border: 1px solid #ddd;
-  flex-shrink: 0;
-}
 .find-suggestions span {
   font-size: 14px;
 }
