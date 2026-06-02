@@ -1,14 +1,24 @@
 import { newGame, attemptClaim, isGameOver } from './ticTacToe.js';
+import { categoryFromId } from './grid.js';
 
 /** @typedef {import('./ticTacToe.js').GameState} GameState */
 /** @typedef {import('./ticTacToe.js').Player} Player */
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./grid.js').Puzzle} Puzzle */
+/** @typedef {import('./grid.js').Category} Category */
 
 /**
+ * Room state. `roles` is sticky (a playerId keeps its role across refreshes
+ * and even after a Durable Object eviction, since the room is persisted to
+ * party storage). `present` only tracks who currently has a live WebSocket —
+ * it is reset to empty on every DO load and is what drives the "peer-joined"
+ * / "peer-left" notifications.
+ *
  * @typedef {Object} Room
  * @property {GameState} game
- * @property {Map<string, Player>} roles
+ * @property {string | null} hostId  - playerId of the room creator; always X
+ * @property {Map<string, Player>} roles  - playerId -> X/O assignment
+ * @property {Set<string>} present  - playerIds currently connected
  */
 
 /**
@@ -27,66 +37,86 @@ import { newGame, attemptClaim, isGameOver } from './ticTacToe.js';
  * @returns {Room}
  */
 export function createRoom(puzzle) {
-  return { game: newGame(puzzle, 'O'), roles: new Map() };
+  return {
+    game: newGame(puzzle, 'O'),
+    hostId: null,
+    roles: new Map(),
+    present: new Set(),
+  };
 }
 
 /**
- * Connection joins the room. First connection gets X or O at random; second gets the other.
- * Idempotent: a known connId just receives a fresh welcome.
- * If the room already has two players (and this is a stranger), the connection is rejected.
+ * A playerId connects (or reconnects) to the room.
+ *
+ * Rules:
+ *   - Empty room: this player becomes the host and is assigned X.
+ *   - Room with one player: this player joins as O.
+ *   - Returning playerId already in roles: idempotent, just re-send welcome
+ *     and mark them present again (no role change, no role re-shuffle).
+ *   - Room with two distinct playerIds and a third stranger arrives: reject
+ *     with 'room-full'.
  *
  * @param {Room} room
- * @param {string} connId
- * @param {() => number} [rng]
+ * @param {string} playerId
  * @returns {ApplyResult}
  */
-export function applyHello(room, connId, rng = Math.random) {
-  if (room.roles.has(connId)) {
-    return { room, broadcasts: [welcomeFor(room, connId)] };
-  }
-  if (room.roles.size >= 2) {
+export function applyHello(room, playerId) {
+  const isReconnect = room.roles.has(playerId);
+
+  if (!isReconnect && room.roles.size >= 2) {
     return {
       room,
-      broadcasts: [{ to: connId, message: { type: 'rejected', reason: 'room-full' } }],
+      broadcasts: [{ to: playerId, message: { type: 'rejected', reason: 'room-full' } }],
       rejectConnection: true,
     };
   }
+
   const roles = new Map(room.roles);
-  /** @type {Player} */
-  let role;
-  if (roles.size === 0) {
-    role = rng() < 0.5 ? 'X' : 'O';
-  } else {
-    const taken = /** @type {Player} */ (roles.values().next().value);
-    role = taken === 'X' ? 'O' : 'X';
+  const present = new Set(room.present);
+  let hostId = room.hostId;
+
+  if (!isReconnect) {
+    /** @type {Player} */
+    let role;
+    if (roles.size === 0) {
+      role = 'X';
+      hostId = playerId;
+    } else {
+      role = 'O';
+    }
+    roles.set(playerId, role);
   }
-  roles.set(connId, role);
-  const nextRoom = { ...room, roles };
+  present.add(playerId);
+
+  const nextRoom = { ...room, hostId, roles, present };
   /** @type {Broadcast[]} */
-  const broadcasts = [welcomeFor(nextRoom, connId)];
-  if (roles.size === 2) {
-    // Notify the other player that their opponent has arrived.
-    for (const [id] of roles) {
-      if (id !== connId) broadcasts.push({ to: id, message: { type: 'peer-joined' } });
+  const broadcasts = [welcomeFor(nextRoom, playerId)];
+  // Tell the OTHER present player(s) that the peer is here. We notify on
+  // every fresh connect AND reconnect, since the other side cares about
+  // "peer's socket is live" — they don't know it's a refresh.
+  for (const id of present) {
+    if (id !== playerId) {
+      broadcasts.push({ to: id, message: { type: 'peer-joined' } });
     }
   }
   return { room: nextRoom, broadcasts };
 }
 
 /**
- * Connection sends a claim. Silently ignored if connection has no role or it isn't their turn.
+ * A playerId claims a cell. Silently ignored if the player has no role,
+ * the opponent isn't connected, it isn't their turn, or the game is over.
  *
  * @param {Room} room
- * @param {string} connId
+ * @param {string} playerId
  * @param {number} row
  * @param {number} col
  * @param {Country} country
  * @returns {ApplyResult}
  */
-export function applyClaim(room, connId, row, col, country) {
-  const role = room.roles.get(connId);
+export function applyClaim(room, playerId, row, col, country) {
+  const role = room.roles.get(playerId);
   if (!role) return { room, broadcasts: [] };
-  if (room.roles.size < 2) return { room, broadcasts: [] };
+  if (room.present.size < 2) return { room, broadcasts: [] };
   if (isGameOver(room.game)) return { room, broadcasts: [] };
   if (room.game.currentPlayer !== role) return { room, broadcasts: [] };
 
@@ -102,32 +132,106 @@ export function applyClaim(room, connId, row, col, country) {
 }
 
 /**
- * Connection drops. Remove their role and notify the remaining player (if any).
+ * A playerId's WebSocket drops. Roles stay sticky (so the player can
+ * reconnect with the same role), but they're removed from `present` and
+ * the remaining player(s) get a peer-left notification.
  *
  * @param {Room} room
- * @param {string} connId
+ * @param {string} playerId
  * @returns {ApplyResult}
  */
-export function applyDisconnect(room, connId) {
-  if (!room.roles.has(connId)) return { room, broadcasts: [] };
-  const roles = new Map(room.roles);
-  roles.delete(connId);
+export function applyDisconnect(room, playerId) {
+  if (!room.present.has(playerId)) return { room, broadcasts: [] };
+  const present = new Set(room.present);
+  present.delete(playerId);
+  const nextRoom = { ...room, present };
+  /** @type {Broadcast[]} */
+  const broadcasts = [];
+  for (const id of present) {
+    broadcasts.push({ to: id, message: { type: 'peer-left' } });
+  }
+  return { room: nextRoom, broadcasts };
+}
+
+/**
+ * Structured-clone-safe snapshot of the room for persistence.
+ *
+ *   - `present` is omitted: it represents live WebSocket connections, which
+ *     are gone after a Durable Object eviction.
+ *   - Puzzle category predicates (`(c) => c.continent === name` etc.) are
+ *     stripped because Cloudflare's storage uses structured clone, which
+ *     refuses to serialize functions. The predicates are rebuilt on load by
+ *     re-running the category factories via `categoryFromId(id)`.
+ *
+ * @param {Room} room
+ */
+export function serializeRoom(room) {
   return {
-    room: { ...room, roles },
-    broadcasts: [{ to: 'all', message: { type: 'peer-left' } }],
+    game: {
+      ...room.game,
+      puzzle: {
+        rows: room.game.puzzle.rows.map(stripCategory),
+        cols: room.game.puzzle.cols.map(stripCategory),
+      },
+    },
+    hostId: room.hostId,
+    roles: [...room.roles.entries()],
   };
 }
 
 /**
+ * @param {any} snapshot
+ * @returns {Room}
+ */
+export function deserializeRoom(snapshot) {
+  return {
+    game: {
+      ...snapshot.game,
+      puzzle: {
+        rows: snapshot.game.puzzle.rows.map(rehydrateCategory),
+        cols: snapshot.game.puzzle.cols.map(rehydrateCategory),
+      },
+    },
+    hostId: snapshot.hostId,
+    roles: new Map(snapshot.roles),
+    present: new Set(),
+  };
+}
+
+/**
+ * @param {Category} c
+ * @returns {{ id: string, label: string }}
+ */
+function stripCategory(c) {
+  return { id: c.id, label: c.label };
+}
+
+/**
+ * @param {{ id: string, label: string }} c
+ * @returns {Category}
+ */
+function rehydrateCategory(c) {
+  const rebuilt = categoryFromId(c.id);
+  if (rebuilt) return rebuilt;
+  // Unknown id (shouldn't happen with current factories) — keep the bare
+  // shape so the page can at least render the labels, even without
+  // working predicates.
+  return /** @type {Category} */ ({ id: c.id, label: c.label, predicate: () => false });
+}
+
+/**
  * @param {Room} room
- * @param {string} connId
+ * @param {string} playerId
  * @returns {Broadcast}
  */
-function welcomeFor(room, connId) {
-  const you = room.roles.get(connId);
-  const peerPresent = room.roles.size === 2;
+function welcomeFor(room, playerId) {
+  const you = room.roles.get(playerId);
+  let peerPresent = false;
+  for (const id of room.present) {
+    if (id !== playerId) { peerPresent = true; break; }
+  }
   return {
-    to: connId,
+    to: playerId,
     message: { type: 'welcome', you, game: room.game, peerPresent },
   };
 }

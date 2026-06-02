@@ -206,6 +206,24 @@ function pickRandom(pool, n, rng) {
   return arr.slice(0, n);
 }
 
+/**
+ * Reverse of the factory functions: given an `id` like 'continent:Europe',
+ * 'hasColor:red', 'hasMotif:weapon', or 'statehood:un_member', return a
+ * Category with its predicate restored. Used for rehydrating puzzles loaded
+ * from storage (storage strips functions during structured-clone).
+ *
+ * @param {string | null | undefined} id
+ * @returns {Category | null}
+ */
+export function categoryFromId(id) {
+  if (typeof id !== 'string') return null;
+  if (id.startsWith('continent:')) return continent(/** @type {any} */ (id.slice('continent:'.length)));
+  if (id.startsWith('hasColor:')) return hasColor(id.slice('hasColor:'.length));
+  if (id.startsWith('hasMotif:')) return hasMotif(id.slice('hasMotif:'.length));
+  if (id.startsWith('statehood:')) return statehood(id.slice('statehood:'.length));
+  return null;
+}
+
 /** @returns {Category[]} */
 export function buildRandomCategoryPool() {
   return [
