@@ -10,16 +10,7 @@ export const SUPPORTED_LANGS = /** @type {const} */ (['en', 'pl']);
 export const DEFAULT_LANG = 'en';
 export const LANG_STORAGE_KEY = 'gridgame.lang';
 
-/**
- * Kill-switch for the in-progress translation work. While only the chrome
- * and a handful of menu items are translated, presenting a language toggle
- * would let users land on a half-Polish, half-English page — worse than
- * leaving it English. With this flag off, bootI18n short-circuits to the
- * default language regardless of localStorage, and common.css hides the
- * #lang-toggle element. Flip to true once the remaining page-specific UI
- * (and ideally country names) are translated end-to-end.
- */
-export const I18N_ENABLED = false;
+export const I18N_ENABLED = true;
 
 /**
  * The most recently loaded strings, cached so JS that runs after bootI18n
@@ -125,19 +116,21 @@ export function setStoredLang(lang, store) {
 }
 
 /**
- * Configure a language-toggle link to display the *other* language's name
- * (in that language) and switch on click. Always shows the destination in
- * its own language so a user who doesn't read the current page can still
- * find the way out.
+ * Configure a language-toggle link to display the *current* language's flag
+ * (via the data-current attribute, picked up by CSS) and switch to the other
+ * language on click. The aria-label describes the action in the *current*
+ * language so a screen-reader user announcing the page in their language
+ * hears the action in the same language.
  *
  * @param {string} currentLang
- * @param {{ textContent: string | null, addEventListener(type: 'click', handler: (e: Event) => void): void } | null} [toggleEl]
+ * @param {{ setAttribute(name: string, value: string): void, addEventListener(type: 'click', handler: (e: Event) => void): void } | null} [toggleEl]
  */
 export function wireLangToggle(currentLang, toggleEl) {
   const el = toggleEl === undefined ? document.getElementById('lang-toggle') : toggleEl;
   if (!el) return;
   const next = currentLang === 'pl' ? 'en' : 'pl';
-  el.textContent = next === 'pl' ? 'Polski' : 'English';
+  el.setAttribute('data-current', currentLang);
+  el.setAttribute('aria-label', currentLang === 'pl' ? 'Przełącz na angielski' : 'Switch to Polish');
   el.addEventListener('click', (e) => {
     e.preventDefault();
     setStoredLang(next);
