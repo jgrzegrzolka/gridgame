@@ -12,6 +12,7 @@ import {
   isGridLocked,
 } from '../flags/grid.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
+import { t } from '../i18n.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/grid.js').Puzzle} Puzzle */
@@ -22,7 +23,7 @@ import { formatTime, scoreColor } from '../flags/quiz.js';
  * @param {{ stateKey?: string, allowReplay?: boolean }} [options]
  */
 export function bootFlagGrid(puzzleFor, options = {}) {
-  fetch('../../flags/countries.json')
+  return fetch('../../flags/countries.json')
     .then((r) => r.json())
     .then((countries) => {
       // Grid uses the full 270 — more valid candidates per cell trades a
@@ -32,7 +33,7 @@ export function bootFlagGrid(puzzleFor, options = {}) {
     })
     .catch((err) => {
       const liveEl = document.getElementById('play-time');
-      if (liveEl) liveEl.textContent = 'Failed to load: ' + err.message;
+      if (liveEl) liveEl.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
 }
 
@@ -405,7 +406,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     if (finalScoreEl) finalScoreEl.textContent = String(score);
     if (finalScoreLineEl) finalScoreLineEl.style.color = scoreColor(score / 100);
     if (timeEl && finalTimeMs !== null) {
-      timeEl.textContent = `Time: ${formatTime(finalTimeMs)}`;
+      timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(finalTimeMs)}`;
     }
     if (stateKey && finalTimeMs !== null && bestEl) {
       const slug = stateKey.replace(/^flaggrid\.state\./, '');
@@ -413,18 +414,19 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
         score,
         time: finalTimeMs,
       });
-      bestEl.textContent = `Your best: ${best.score} in ${formatTime(best.time)}`;
+      bestEl.textContent =
+        `${t('grid.yourBest', 'Your best')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`;
       if (isNew) {
         bestEl.appendChild(document.createTextNode(' '));
         const badge = document.createElement('span');
         badge.className = 'new-badge';
-        badge.textContent = 'new record!';
+        badge.textContent = t('game.newRecord', 'new record!');
         bestEl.appendChild(badge);
       }
     }
     if (playAgainEl) {
       playAgainEl.href = window.location.pathname + window.location.search;
-      if (stateKey) playAgainEl.textContent = 'Retry';
+      if (stateKey) playAgainEl.textContent = t('grid.retry', 'Retry');
       playAgainEl.addEventListener('click', (e) => {
         e.preventDefault();
         if (store && stateKey) store.removeItem(stateKey);

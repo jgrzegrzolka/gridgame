@@ -21,19 +21,33 @@
     "find": "Find",
     "ticTacToe": "Tic Tac Toe"
   },
+  "game": {
+    "giveUp": "Give up",
+    "playAgain": "Play again",
+    "time": "Time",
+    "in": "in",
+    "newRecord": "new record!",
+    "failedToLoad": "Failed to load:",
+    "cancel": "Cancel",
+    "countryName": "Country name…"
+  },
   "quiz": {
     "title": "Flag Quiz",
     "statsTitle": "Flag Quiz — Your Stats",
     "loading": "Loading…",
-    "giveUp": "Give up",
     "finalScore": "Final score:",
-    "playAgain": "Play again",
-    "time": "Time",
     "yourBestScore": "Your best score",
-    "in": "in",
-    "newRecord": "new record!",
-    "failedToLoad": "Failed to load:",
     "play": "Play"
+  },
+  "grid": {
+    "title1": "Flag Grid — Game 1",
+    "title2": "Flag Grid — Game 2",
+    "title3": "Flag Grid — Game 3",
+    "titleArchive": "Flag Grid — Previous games",
+    "titleRand": "Flag Grid — Random",
+    "yourScore": "Your score:",
+    "yourBest": "Your best",
+    "retry": "Retry"
   },
   "variant": {
     "countries": "All countries",
@@ -43,5 +57,19 @@
     "north-america": "North America",
     "south-america": "South America",
     "oceania": "Oceania"
+  },
+  "month": {
+    "jan": "Jan",
+    "feb": "Feb",
+    "mar": "Mar",
+    "apr": "Apr",
+    "may": "May",
+    "jun": "Jun",
+    "jul": "Jul",
+    "aug": "Aug",
+    "sep": "Sep",
+    "oct": "Oct",
+    "nov": "Nov",
+    "dec": "Dec"
   }
 }

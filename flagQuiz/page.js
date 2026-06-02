@@ -59,7 +59,7 @@ export function bootFlagQuiz() {
       startGame(variantKey, modeKey, all);
     })
     .catch((err) => {
-      document.body.textContent = `${t('quiz.failedToLoad', 'Failed to load:')} ${err.message}`;
+      document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
 
   function renderMenu(all) {
@@ -222,18 +222,18 @@ export function bootFlagQuiz() {
       const elapsed = Date.now() - startTime;
       finalScoreEl.textContent = String(pct);
       finalScoreLineEl.style.color = scoreColor(ratio);
-      timeEl.textContent = `${t('quiz.time', 'Time')}: ${formatTime(elapsed)}`;
+      timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
 
       const { best, isNew } = recordResult(
         localStorage, key, mode, { score: pct, time: elapsed }, includeAll,
       );
       bestEl.textContent =
-        `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('quiz.in', 'in')} ${formatTime(best.time)}`;
+        `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`;
       if (isNew) {
         bestEl.appendChild(document.createTextNode(' '));
         const badge = document.createElement('span');
         badge.className = 'new-badge';
-        badge.textContent = t('quiz.newRecord', 'new record!');
+        badge.textContent = t('game.newRecord', 'new record!');
         bestEl.appendChild(badge);
       }
 
