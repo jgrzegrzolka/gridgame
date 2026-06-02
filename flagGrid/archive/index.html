@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Flag Grid — Previous games</title>
+    <title data-i18n="grid.titleArchive">Flag Grid — Previous games</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="../index.css?v=__BUILD__" />
@@ -46,16 +46,23 @@
       import { ARCHIVE } from '../puzzles.js?v=__BUILD__';
       import { loadGridState, computeGridScore, isGridLocked } from '../../flags/grid.js?v=__BUILD__';
       import { scoreColor } from '../../flags/quiz.js?v=__BUILD__';
-      import { bootI18n, wireLangToggle } from '../../i18n.js?v=__BUILD__';
+      import { bootI18n, wireLangToggle, t } from '../../i18n.js?v=__BUILD__';
 
-      bootI18n('../../').then(wireLangToggle);
-
-      const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       function formatDate(iso) {
         const [, m, d] = iso.split('-').map(Number);
-        return `${MONTHS[m - 1]} ${d}`;
+        return `${t(`month.${MONTH_KEYS[m - 1]}`, MONTHS_EN[m - 1])} ${d}`;
       }
 
+      // Wait for i18n so the month abbreviations render in the right
+      // language on first paint (the archive list is built once).
+      bootI18n('../../').then((lang) => {
+        wireLangToggle(lang);
+        renderArchive();
+      });
+
+      function renderArchive() {
       const gridEl = document.getElementById('archive-grid');
       for (const entry of ARCHIVE) {
         const a = document.createElement('a');
@@ -87,6 +94,7 @@
         }
 
         gridEl.appendChild(a);
+      }
       }
     </script>
   </body>

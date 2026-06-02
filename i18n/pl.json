@@ -21,19 +21,33 @@
     "find": "Znajdź",
     "ticTacToe": "Kółko i krzyżyk"
   },
+  "game": {
+    "giveUp": "Poddaję się",
+    "playAgain": "Zagraj jeszcze raz",
+    "time": "Czas",
+    "in": "w",
+    "newRecord": "nowy rekord!",
+    "failedToLoad": "Nie udało się załadować:",
+    "cancel": "Anuluj",
+    "countryName": "Nazwa kraju…"
+  },
   "quiz": {
     "title": "Quiz flag",
     "statsTitle": "Quiz flag — Twoje statystyki",
     "loading": "Ładowanie…",
-    "giveUp": "Poddaję się",
     "finalScore": "Wynik końcowy:",
-    "playAgain": "Zagraj jeszcze raz",
-    "time": "Czas",
     "yourBestScore": "Twój najlepszy wynik",
-    "in": "w",
-    "newRecord": "nowy rekord!",
-    "failedToLoad": "Nie udało się załadować:",
     "play": "Zagraj"
+  },
+  "grid": {
+    "title1": "Siatka — Gra 1",
+    "title2": "Siatka — Gra 2",
+    "title3": "Siatka — Gra 3",
+    "titleArchive": "Siatka — Poprzednie gry",
+    "titleRand": "Siatka — Losowa",
+    "yourScore": "Twój wynik:",
+    "yourBest": "Twój najlepszy",
+    "retry": "Spróbuj ponownie"
   },
   "variant": {
     "countries": "Wszystkie kraje",
@@ -43,5 +57,19 @@
     "north-america": "Ameryka Północna",
     "south-america": "Ameryka Południowa",
     "oceania": "Oceania"
+  },
+  "month": {
+    "jan": "Sty",
+    "feb": "Lut",
+    "mar": "Mar",
+    "apr": "Kwi",
+    "may": "Maj",
+    "jun": "Cze",
+    "jul": "Lip",
+    "aug": "Sie",
+    "sep": "Wrz",
+    "oct": "Paź",
+    "nov": "Lis",
+    "dec": "Gru"
   }
 }
