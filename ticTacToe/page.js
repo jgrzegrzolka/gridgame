@@ -126,10 +126,6 @@ function runTicTacToe({ puzzle, countries }) {
     currentMatches.forEach((country, i) => {
       const li = document.createElement('li');
       if (i === selectedIndex) li.classList.add('selected');
-      const img = document.createElement('img');
-      img.src = `../flags/svg/${country.code}.svg`;
-      img.alt = '';
-      li.appendChild(img);
       const name = document.createElement('span');
       name.textContent = country.name;
       li.appendChild(name);
