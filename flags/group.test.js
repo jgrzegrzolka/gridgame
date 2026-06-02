@@ -95,10 +95,10 @@ test('sovereigntyOf classifies non_un, territory, and other distinctly', () => {
   assert.equal(sovereigntyOf({ code: 'un', name: 'United Nations', category: 'other', continent: null }), 'other');
 });
 
-test('real data: sovereigntyOf yields the expected 195 / 2 / 58 / 15 split', () => {
+test('real data: sovereigntyOf yields the expected 195 / 2 / 57 / 15 split', () => {
   const buckets = { sovereign: 0, non_un: 0, territory: 0, other: 0 };
   for (const c of countries) buckets[sovereigntyOf(c)]++;
-  assert.deepEqual(buckets, { sovereign: 195, non_un: 2, territory: 58, other: 15 });
+  assert.deepEqual(buckets, { sovereign: 195, non_un: 2, territory: 57, other: 15 });
 });
 
 /**

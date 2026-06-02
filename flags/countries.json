@@ -515,9 +515,11 @@
       "blue",
       "white",
       "red",
-      "green"
+      "green",
+      "yellow"
     ],
-    "motifs": []
+    "motifs": [],
+    "aliases": ["Diego Garcia"]
   },
   {
     "code": "bn",
@@ -959,20 +961,6 @@
     "colors": [
       "red",
       "white"
-    ],
-    "motifs": []
-  },
-  {
-    "code": "dg",
-    "name": "Diego Garcia",
-    "continent": "Asia",
-    "category": "country",
-    "statehood": "territory",
-    "colors": [
-      "blue",
-      "white",
-      "red",
-      "green"
     ],
     "motifs": []
   },
@@ -3571,7 +3559,8 @@
     "colors": [
       "green",
       "red",
-      "white"
+      "white",
+      "yellow"
     ],
     "motifs": [
       "star-or-moon"
