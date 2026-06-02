@@ -6,13 +6,14 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Flags data</title>
+    <title data-i18n="menu.flagsData">Flags data</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
   </head>
   <body>
     <a class="back" href="../" aria-label="Home" data-i18n-attr="aria-label:back"><span class="home-icon" aria-hidden="true"></span></a>
+    <a class="lang-toggle" id="lang-toggle" href="#"></a>
     <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee" data-i18n-attr="aria-label:coffee,title:coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
     <span class="burger" aria-label="Open menu" aria-disabled="true" role="button" data-i18n-attr="aria-label:menu.open"><span class="burger-bars" aria-hidden="true"></span></span>
     <div id="filter-bar"></div>
@@ -24,10 +25,13 @@
     </dialog>
     <script type="module">
       import { bootFlagsData } from './page.js?v=__BUILD__';
-      import { bootI18n } from '../i18n.js?v=__BUILD__';
+      import { bootI18n, wireLangToggle } from '../i18n.js?v=__BUILD__';
       // Filter labels are built synchronously inside bootFlagsData, so we
       // chain after bootI18n to make sure t() sees the loaded strings.
-      bootI18n('../').then(() => bootFlagsData());
+      bootI18n('../').then((lang) => {
+        wireLangToggle(lang);
+        bootFlagsData();
+      });
     </script>
   </body>
 </html>

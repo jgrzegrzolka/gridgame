@@ -18,7 +18,7 @@
   },
   "tile": {
     "quiz": "Quiz",
-    "grid": "Siatka",
+    "grid": "3x3",
     "find": "Znajdź",
     "ticTacToe": "Kółko i krzyżyk"
   },

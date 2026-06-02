@@ -21,7 +21,7 @@ body::before {
 .back {
   position: fixed;
   top: 12px;
-  right: 116px;
+  right: 168px;
   width: 44px;
   height: 44px;
   display: flex;
@@ -46,6 +46,31 @@ body::before {
 }
 .back[aria-disabled="true"]:hover {
   background: #fff;
+}
+.lang-toggle {
+  position: fixed;
+  top: 12px;
+  right: 116px;
+  width: 44px;
+  height: 44px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 25;
+  box-sizing: border-box;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 28px 21px;
+}
+.lang-toggle:hover {
+  background-color: #f0f0f0;
+}
+.lang-toggle[data-current="en"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 480'%3E%3Cpath fill='%23012169' d='M0 0h640v480H0z'/%3E%3Cpath fill='%23FFF' d='m75 0 244 181L562 0h78v62L400 241l240 178v61h-80L320 301 81 480H0v-60l239-178L0 64V0z'/%3E%3Cpath fill='%23C8102E' d='m424 281 216 159v40L369 281zm-184 20 6 35L54 480H0zM640 0v3L391 191l2-44L590 0zM0 0l239 176h-60L0 42z'/%3E%3Cpath fill='%23FFF' d='M241 0v480h160V0zM0 160v160h640V160z'/%3E%3Cpath fill='%23C8102E' d='M0 193v96h640v-96zM273 0v480h96V0z'/%3E%3C/svg%3E");
+}
+.lang-toggle[data-current="pl"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 480'%3E%3Cpath fill='%23fff' d='M0 0h640v240H0z'/%3E%3Cpath fill='%23dc143c' d='M0 240h640v240H0z'/%3E%3C/svg%3E");
 }
 .coffee {
   position: fixed;
@@ -160,13 +185,6 @@ body::before {
 }
 .menu a:hover {
   text-decoration: underline;
-}
-
-/* While i18n.I18N_ENABLED is false we hide the language toggle entry so the
-   user can't land on a half-Polish page. The data-i18n markup stays in place
-   so the wiring is ready for when translations are complete. */
-.menu li:has(> #lang-toggle) {
-  display: none;
 }
 
 .give-up-row {

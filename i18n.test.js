@@ -161,7 +161,9 @@ test('setStoredLang: is a no-op for unsupported codes', () => {
 
 function fakeToggle() {
   return {
-    textContent: /** @type {string | null} */ (''),
+    _attrs: /** @type {Record<string, string>} */ ({}),
+    /** @param {string} name @param {string} value */
+    setAttribute(name, value) { this._attrs[name] = value; },
     /** @type {Array<(e: any) => void>} */
     _handlers: [],
     /** @param {string} type @param {(e: any) => void} h */
@@ -171,16 +173,18 @@ function fakeToggle() {
   };
 }
 
-test('wireLangToggle: shows "Polski" and switches to pl when current is en', () => {
+test('wireLangToggle: tags current=en (so CSS shows UK flag) and aria-labels the action in English', () => {
   const toggle = fakeToggle();
   wireLangToggle('en', /** @type {any} */ (toggle));
-  assert.equal(toggle.textContent, 'Polski');
+  assert.equal(toggle._attrs['data-current'], 'en');
+  assert.equal(toggle._attrs['aria-label'], 'Switch to Polish');
 });
 
-test('wireLangToggle: shows "English" and switches to en when current is pl', () => {
+test('wireLangToggle: tags current=pl (so CSS shows Polish flag) and aria-labels the action in Polish', () => {
   const toggle = fakeToggle();
   wireLangToggle('pl', /** @type {any} */ (toggle));
-  assert.equal(toggle.textContent, 'English');
+  assert.equal(toggle._attrs['data-current'], 'pl');
+  assert.equal(toggle._attrs['aria-label'], 'Przełącz na angielski');
 });
 
 test('wireLangToggle: is a no-op when no element is found', () => {

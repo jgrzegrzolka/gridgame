@@ -115,17 +115,6 @@ export function bootFlagQuiz() {
     flagsDataA.textContent = t('menu.flagsData', 'Flags data');
     flagsDataLi.appendChild(flagsDataA);
     quizMenuEl.appendChild(flagsDataLi);
-
-    // Language toggle (last item — the bottom of the burger). Hidden by
-    // common.css while I18N_ENABLED is false; wireLangToggle still wires
-    // it up so it works the moment the flag flips.
-    const langLi = document.createElement('li');
-    langLi.className = 'menu-divider';
-    const langA = document.createElement('a');
-    langA.href = '#';
-    langA.id = 'lang-toggle';
-    langLi.appendChild(langA);
-    quizMenuEl.appendChild(langLi);
   }
 
   function renderModeToggle(key, mode, modes) {
