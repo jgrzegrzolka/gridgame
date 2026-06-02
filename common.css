@@ -162,6 +162,13 @@ body::before {
   text-decoration: underline;
 }
 
+/* While i18n.I18N_ENABLED is false we hide the language toggle entry so the
+   user can't land on a half-Polish page. The data-i18n markup stays in place
+   so the wiring is ready for when translations are complete. */
+.menu li:has(> #lang-toggle) {
+  display: none;
+}
+
 .give-up-row {
   margin-top: 16px;
   text-align: right;
