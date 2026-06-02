@@ -15,6 +15,19 @@ import {
   setFindIncludeAll,
 } from '../flags/findFlag.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
+import { t } from '../i18n.js';
+
+/**
+ * Map a continent name as it appears in the CONTINENTS array
+ * ("North America", "Europe", …) onto the `variant.*` key we use for
+ * translations. Keeps the chooser-pills label resolution alongside the
+ * already-translated variants from flagQuiz.
+ *
+ * @param {string} name
+ */
+function continentKey(name) {
+  return name.toLowerCase().replace(/ /g, '-');
+}
 
 export function bootFindFlag() {
   const chooserEl = document.getElementById('chooser');
@@ -61,7 +74,7 @@ export function bootFindFlag() {
     });
   }
 
-  fetch('../flags/countries.json')
+  return fetch('../flags/countries.json')
     .then((r) => r.json())
     .then((raw) => {
       const all = flagsGamePool(raw, includeAll);
@@ -79,20 +92,23 @@ export function bootFindFlag() {
       startGame(cat, all);
     })
     .catch((err) => {
-      document.body.textContent = 'Failed to load: ' + err.message;
+      document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
 
   function renderChooser(all) {
     const sectionsEl = document.getElementById('chooser-sections');
     const allCats = [
-      ...CONTINENTS.map((n) => ({ id: `continent:${n}`, label: n })),
+      ...CONTINENTS.map((n) => ({ id: `continent:${n}`, label: t(`variant.${continentKey(n)}`, n) })),
+      // Colors/motifs label as "Has <X>" — translating <X> depends on
+      // having color/motif name translations (not yet shipped), so the
+      // "Has <X>" string stays English for now.
       ...COLORS_FOR_RANDOM.map((c) => ({ id: `hasColor:${c}`, label: `Has ${c}` })),
       ...MOTIFS_FOR_RANDOM.map((m) => ({ id: `hasMotif:${m}`, label: `Has ${m}` })),
     ];
     const sections = [
-      { title: 'Continents', items: allCats.slice(0, CONTINENTS.length) },
-      { title: 'Colors', items: allCats.slice(CONTINENTS.length, CONTINENTS.length + COLORS_FOR_RANDOM.length) },
-      { title: 'Motifs', items: allCats.slice(CONTINENTS.length + COLORS_FOR_RANDOM.length) },
+      { title: t('findFlag.sections.continents', 'Continents'), items: allCats.slice(0, CONTINENTS.length) },
+      { title: t('findFlag.sections.colors', 'Colors'), items: allCats.slice(CONTINENTS.length, CONTINENTS.length + COLORS_FOR_RANDOM.length) },
+      { title: t('findFlag.sections.motifs', 'Motifs'), items: allCats.slice(CONTINENTS.length + COLORS_FOR_RANDOM.length) },
     ];
     for (const s of sections) {
       const sec = document.createElement('section');
@@ -269,7 +285,7 @@ export function bootFindFlag() {
       const total = targetCodes.size;
       document.getElementById('final-found').textContent = String(found);
       document.getElementById('final-total').textContent = String(total);
-      document.getElementById('final-time').textContent = `Time: ${formatTime(elapsed)}`;
+      document.getElementById('final-time').textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
       document.getElementById('final-score-line').style.color = scoreColor(found / total);
 
       const { best, isNew } = recordFindResult(
@@ -280,12 +296,12 @@ export function bootFindFlag() {
       );
       const bestEl = document.getElementById('best');
       bestEl.textContent =
-        `Your best: ${best.found} / ${best.total} in ${formatTime(best.time)}`;
+        `${t('findFlag.yourBest', 'Your best')}: ${best.found} / ${best.total} ${t('game.in', 'in')} ${formatTime(best.time)}`;
       if (isNew) {
         bestEl.appendChild(document.createTextNode(' '));
         const badge = document.createElement('span');
         badge.className = 'new-badge';
-        badge.textContent = 'new record!';
+        badge.textContent = t('game.newRecord', 'new record!');
         bestEl.appendChild(badge);
       }
 

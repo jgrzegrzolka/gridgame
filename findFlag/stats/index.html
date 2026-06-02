@@ -6,14 +6,14 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Find Flag — Your stats</title>
+    <title data-i18n="findFlag.statsTitle">Find Flag — Your stats</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="../index.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
   </head>
   <body>
-    <a class="back" href="../" aria-label="Find Flag"><span class="home-icon" aria-hidden="true"></span></a>
+    <a class="back" href="../" aria-label="Find Flag" data-i18n-attr="aria-label:backFindFlag"><span class="home-icon" aria-hidden="true"></span></a>
     <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee" data-i18n-attr="aria-label:coffee,title:coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
     <button
       type="button"
@@ -45,7 +45,7 @@
         <li class="menu-divider"><a href="#" id="lang-toggle">Polski</a></li>
       </ul>
     </nav>
-    <h1 class="find-title">Find Flag stats</h1>
+    <h1 class="find-title" data-i18n="findFlag.statsHeading">Find Flag stats</h1>
     <div id="stats-sections"></div>
     <script type="module">
       import { CONTINENTS } from '../../flags/group.js?v=__BUILD__';
@@ -59,9 +59,11 @@
       } from '../../flags/findFlag.js?v=__BUILD__';
       import { flagsGamePool } from '../../flags/group.js?v=__BUILD__';
       import { formatTime, scoreColor } from '../../flags/quiz.js?v=__BUILD__';
-      import { bootI18n, wireLangToggle } from '../../i18n.js?v=__BUILD__';
+      import { bootI18n, wireLangToggle, t } from '../../i18n.js?v=__BUILD__';
 
-      bootI18n('../../').then(wireLangToggle);
+      function continentKey(name) {
+        return name.toLowerCase().replace(/ /g, '-');
+      }
 
       const includeAll = isFindIncludeAll();
       const sectionsEl = document.getElementById('stats-sections');
@@ -73,14 +75,18 @@
         window.location.reload();
       });
 
-      fetch('../../flags/countries.json?v=__BUILD__')
-        .then((r) => r.json())
-        .then((raw) => {
+      // Wait for i18n so the section titles + continent pill labels
+      // render in the right language on first paint.
+      bootI18n('../../').then((lang) => {
+        wireLangToggle(lang);
+        return fetch('../../flags/countries.json?v=__BUILD__')
+          .then((r) => r.json())
+          .then((raw) => {
           const all = flagsGamePool(raw, includeAll);
           const sections = [
-            { title: 'Continents', ids: CONTINENTS.map((n) => ({ id: `continent:${n}`, label: n })) },
-            { title: 'Colors', ids: COLORS_FOR_RANDOM.map((c) => ({ id: `hasColor:${c}`, label: `Has ${c}` })) },
-            { title: 'Motifs', ids: MOTIFS_FOR_RANDOM.map((m) => ({ id: `hasMotif:${m}`, label: `Has ${m}` })) },
+            { title: t('findFlag.sections.continents', 'Continents'), ids: CONTINENTS.map((n) => ({ id: `continent:${n}`, label: t(`variant.${continentKey(n)}`, n) })) },
+            { title: t('findFlag.sections.colors', 'Colors'), ids: COLORS_FOR_RANDOM.map((c) => ({ id: `hasColor:${c}`, label: `Has ${c}` })) },
+            { title: t('findFlag.sections.motifs', 'Motifs'), ids: MOTIFS_FOR_RANDOM.map((m) => ({ id: `hasMotif:${m}`, label: `Has ${m}` })) },
           ];
           for (const s of sections) {
             const sec = document.createElement('section');
@@ -117,8 +123,9 @@
           }
         })
         .catch((err) => {
-          document.body.textContent = 'Failed to load: ' + err.message;
+          document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
         });
+      });
     </script>
   </body>
 </html>

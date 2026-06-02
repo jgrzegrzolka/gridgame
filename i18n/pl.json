@@ -1,5 +1,6 @@
 {
   "back": "Strona główna",
+  "backFindFlag": "Znajdź flagę",
   "coffee": "Postaw mi kawę",
   "menu": {
     "open": "Otwórz menu",
@@ -48,6 +49,22 @@
     "yourScore": "Twój wynik:",
     "yourBest": "Twój najlepszy",
     "retry": "Spróbuj ponownie"
+  },
+  "findFlag": {
+    "title": "Znajdź flagę",
+    "blurb": "Wybierz kategorię i nazwij każdą pasującą flagę.",
+    "statsTitle": "Znajdź flagę — Twoje statystyki",
+    "statsHeading": "Statystyki Znajdź flagę",
+    "typeCountryName": "Wpisz nazwę kraju…",
+    "youFound": "Znaleziono",
+    "missed": "Pominięte:",
+    "pickAnotherCategory": "Wybierz inną kategorię",
+    "yourBest": "Twój najlepszy",
+    "sections": {
+      "continents": "Kontynenty",
+      "colors": "Kolory",
+      "motifs": "Motywy"
+    }
   },
   "variant": {
     "countries": "Wszystkie kraje",

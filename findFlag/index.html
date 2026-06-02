@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Find Flag</title>
+    <title data-i18n="findFlag.title">Find Flag</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
@@ -48,10 +48,10 @@
     </nav>
 
     <section id="chooser" hidden>
-      <h1 class="find-title">Find Flag</h1>
-      <p class="find-blurb">Pick a category and name every flag that matches.</p>
+      <h1 class="find-title" data-i18n="findFlag.title">Find Flag</h1>
+      <p class="find-blurb" data-i18n="findFlag.blurb">Pick a category and name every flag that matches.</p>
       <div id="chooser-sections"></div>
-      <button type="button" class="find-random" id="find-random">Random</button>
+      <button type="button" class="find-random" id="find-random" data-i18n="menu.random">Random</button>
     </section>
 
     <section id="game" hidden>
@@ -71,12 +71,13 @@
           autocorrect="off"
           spellcheck="false"
           placeholder="Type a country name…"
+          data-i18n-attr="placeholder:findFlag.typeCountryName"
         />
         <ul class="find-suggestions" id="find-suggestions" hidden></ul>
       </div>
       <ul class="find-found" id="find-found"></ul>
       <div class="give-up-row">
-        <button type="button" class="give-up" id="give-up">Give up</button>
+        <button type="button" class="give-up" id="give-up" data-i18n="game.giveUp">Give up</button>
       </div>
     </section>
 
@@ -87,24 +88,26 @@
 
     <section id="result" hidden>
       <p class="final-score" id="final-score-line">
-        You found <span id="final-found">0</span> / <span id="final-total">0</span>
+        <span data-i18n="findFlag.youFound">You found</span> <span id="final-found">0</span> / <span id="final-total">0</span>
       </p>
       <p class="time" id="final-time"></p>
       <p class="best" id="best"></p>
-      <h2 class="missed-title" id="missed-title" hidden>Missed:</h2>
+      <h2 class="missed-title" id="missed-title" hidden data-i18n="findFlag.missed">Missed:</h2>
       <ul class="find-missed" id="find-missed"></ul>
       <p class="result-links">
-        <a id="play-again" href="#">Play again</a>
+        <a id="play-again" href="#" data-i18n="game.playAgain">Play again</a>
         ·
-        <a href="./">Pick another category</a>
+        <a href="./" data-i18n="findFlag.pickAnotherCategory">Pick another category</a>
       </p>
     </section>
 
     <script type="module">
       import { bootFindFlag } from './page.js?v=__BUILD__';
       import { bootI18n, wireLangToggle } from '../i18n.js?v=__BUILD__';
-      bootI18n('../').then(wireLangToggle);
-      bootFindFlag();
+      bootI18n('../').then((lang) => {
+        wireLangToggle(lang);
+        bootFindFlag();
+      });
     </script>
   </body>
 </html>

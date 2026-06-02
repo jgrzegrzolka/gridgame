@@ -1,5 +1,6 @@
 {
   "back": "Home",
+  "backFindFlag": "Find Flag",
   "coffee": "Buy me a coffee",
   "menu": {
     "open": "Open menu",
@@ -48,6 +49,22 @@
     "yourScore": "Your score:",
     "yourBest": "Your best",
     "retry": "Retry"
+  },
+  "findFlag": {
+    "title": "Find Flag",
+    "blurb": "Pick a category and name every flag that matches.",
+    "statsTitle": "Find Flag — Your stats",
+    "statsHeading": "Find Flag stats",
+    "typeCountryName": "Type a country name…",
+    "youFound": "You found",
+    "missed": "Missed:",
+    "pickAnotherCategory": "Pick another category",
+    "yourBest": "Your best",
+    "sections": {
+      "continents": "Continents",
+      "colors": "Colors",
+      "motifs": "Motifs"
+    }
   },
   "variant": {
     "countries": "All countries",
