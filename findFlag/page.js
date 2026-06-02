@@ -15,7 +15,7 @@ import {
   setFindIncludeAll,
 } from '../flags/findFlag.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
-import { t } from '../i18n.js';
+import { t, countryName, withLocalizedAliases } from '../i18n.js';
 
 /**
  * Map a continent name as it appears in the CONTINENTS array
@@ -39,8 +39,9 @@ export function bootFindFlag() {
   const zoomName = zoom.querySelector('p');
   function openZoom(c) {
     zoomImg.src = `../flags/svg/${c.code}.svg`;
-    zoomImg.alt = c.name;
-    zoomName.textContent = c.name;
+    const displayName = countryName(c);
+    zoomImg.alt = displayName;
+    zoomName.textContent = displayName;
     zoom.showModal();
   }
   zoom.addEventListener('click', (e) => {
@@ -48,13 +49,14 @@ export function bootFindFlag() {
   });
 
   function flagTile(c) {
+    const displayName = countryName(c);
     const li = document.createElement('li');
     li.className = 'find-tile';
-    li.dataset.name = c.name;
+    li.dataset.name = displayName;
     li.addEventListener('click', () => openZoom(c));
     const img = document.createElement('img');
     img.src = `../flags/svg/${c.code}.svg`;
-    img.alt = c.name;
+    img.alt = displayName;
     img.loading = 'lazy';
     li.appendChild(img);
     return li;
@@ -77,7 +79,7 @@ export function bootFindFlag() {
   return fetch('../flags/countries.json')
     .then((r) => r.json())
     .then((raw) => {
-      const all = flagsGamePool(raw, includeAll);
+      const all = withLocalizedAliases(flagsGamePool(raw, includeAll));
       if (!catId) {
         renderChooser(all);
         chooserEl.hidden = false;
@@ -178,7 +180,7 @@ export function bootFindFlag() {
         const li = document.createElement('li');
         if (i === selected) li.classList.add('selected');
         const span = document.createElement('span');
-        span.textContent = c.name;
+        span.textContent = countryName(c);
         li.appendChild(span);
         li.addEventListener('mousedown', (e) => {
           e.preventDefault();

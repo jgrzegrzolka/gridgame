@@ -1,6 +1,6 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake } from '../../flags/grid.js';
 import { newGame, attemptClaim, isGameOver } from '../../flags/ticTacToe.js';
-import { t } from '../../i18n.js';
+import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 /** @typedef {import('../../flags/ticTacToe.js').GameState} GameState */
@@ -9,7 +9,8 @@ import { t } from '../../i18n.js';
 export function bootTicTacToe() {
   fetch('../../flags/countries.json')
     .then((r) => r.json())
-    .then((countries) => {
+    .then((rawCountries) => {
+      const countries = withLocalizedAliases(rawCountries);
       const puzzle = generateRandomPuzzle(countries);
       runTicTacToe({ puzzle, countries });
     })
@@ -130,7 +131,7 @@ function runTicTacToe({ puzzle, countries }) {
       const li = document.createElement('li');
       if (i === selectedIndex) li.classList.add('selected');
       const name = document.createElement('span');
-      name.textContent = country.name;
+      name.textContent = countryName(country);
       li.appendChild(name);
       li.addEventListener('mousedown', (e) => {
         e.preventDefault();
@@ -248,7 +249,7 @@ function runTicTacToe({ puzzle, countries }) {
     if (cell.country && cell.owner) {
       const img = document.createElement('img');
       img.src = `../../flags/svg/${cell.country.code}.svg`;
-      img.alt = cell.country.name;
+      img.alt = countryName(cell.country);
       td.appendChild(img);
     }
   }

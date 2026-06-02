@@ -7,7 +7,7 @@ import {
   reduceServerMessage,
   getOrCreatePlayerId,
 } from './onlineClient.js';
-import { t } from '../i18n.js';
+import { t, countryName, withLocalizedAliases } from '../i18n.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/ticTacToe.js').GameState} GameState */
@@ -18,7 +18,7 @@ const SERVER_URL = serverUrlFor(window.location.hostname);
 export function bootTicTacToeOnline() {
   fetch('../flags/countries.json')
     .then((r) => r.json())
-    .then((countries) => runOnline(countries))
+    .then((countries) => runOnline(withLocalizedAliases(countries)))
     .catch((err) => {
       const lobbyEl = document.getElementById('lobby');
       if (lobbyEl) lobbyEl.hidden = false;
@@ -295,7 +295,7 @@ function runOnline(countries) {
       const li = document.createElement('li');
       if (i === selectedIndex) li.classList.add('selected');
       const name = document.createElement('span');
-      name.textContent = country.name;
+      name.textContent = countryName(country);
       li.appendChild(name);
       li.addEventListener('mousedown', (e) => { e.preventDefault(); pickCountry(country); });
       li.addEventListener('mouseenter', () => { selectedIndex = i; renderSelected(); });
@@ -370,7 +370,7 @@ function runOnline(countries) {
         if (cell.country && cell.owner) {
           const img = document.createElement('img');
           img.src = `../flags/svg/${cell.country.code}.svg`;
-          img.alt = cell.country.name;
+          img.alt = countryName(cell.country);
           td.appendChild(img);
         }
       }
