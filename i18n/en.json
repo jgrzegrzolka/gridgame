@@ -60,6 +60,7 @@
     "missed": "Missed:",
     "pickAnotherCategory": "Pick another category",
     "yourBest": "Your best",
+    "has": "Has {x}",
     "sections": {
       "continents": "Continents",
       "colors": "Colors",
@@ -120,5 +121,36 @@
     "oct": "Oct",
     "nov": "Nov",
     "dec": "Dec"
+  },
+  "color": {
+    "red": "red",
+    "white": "white",
+    "blue": "blue",
+    "green": "green",
+    "yellow": "yellow",
+    "black": "black",
+    "orange": "orange"
+  },
+  "motif": {
+    "animal": "animal",
+    "coat-of-arms": "coat of arms",
+    "weapon": "weapon",
+    "star-or-moon": "star or moon"
+  },
+  "status": {
+    "sovereign": "Sovereign",
+    "non_un": "Non-UN",
+    "territory": "Territory",
+    "other": "Other"
+  },
+  "continent": {
+    "other": "Other"
+  },
+  "flagsdata": {
+    "filterStatus": "Status",
+    "filterContinent": "Continent",
+    "filterColors": "Colors",
+    "filterMotifs": "Motifs",
+    "clear": "Clear"
   }
 }

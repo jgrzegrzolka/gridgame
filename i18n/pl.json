@@ -60,6 +60,7 @@
     "missed": "Pominięte:",
     "pickAnotherCategory": "Wybierz inną kategorię",
     "yourBest": "Twój najlepszy",
+    "has": "Ma {x}",
     "sections": {
       "continents": "Kontynenty",
       "colors": "Kolory",
@@ -120,5 +121,36 @@
     "oct": "Paź",
     "nov": "Lis",
     "dec": "Gru"
+  },
+  "color": {
+    "red": "czerwony",
+    "white": "biały",
+    "blue": "niebieski",
+    "green": "zielony",
+    "yellow": "żółty",
+    "black": "czarny",
+    "orange": "pomarańczowy"
+  },
+  "motif": {
+    "animal": "zwierzę",
+    "coat-of-arms": "herb",
+    "weapon": "broń",
+    "star-or-moon": "gwiazda lub księżyc"
+  },
+  "status": {
+    "sovereign": "Suwerenne",
+    "non_un": "Poza ONZ",
+    "territory": "Terytorium",
+    "other": "Inne"
+  },
+  "continent": {
+    "other": "Inne"
+  },
+  "flagsdata": {
+    "filterStatus": "Status",
+    "filterContinent": "Kontynent",
+    "filterColors": "Kolory",
+    "filterMotifs": "Motywy",
+    "clear": "Wyczyść"
   }
 }
