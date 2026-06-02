@@ -99,11 +99,14 @@ export function bootFindFlag() {
     const sectionsEl = document.getElementById('chooser-sections');
     const allCats = [
       ...CONTINENTS.map((n) => ({ id: `continent:${n}`, label: t(`variant.${continentKey(n)}`, n) })),
-      // Colors/motifs label as "Has <X>" — translating <X> depends on
-      // having color/motif name translations (not yet shipped), so the
-      // "Has <X>" string stays English for now.
-      ...COLORS_FOR_RANDOM.map((c) => ({ id: `hasColor:${c}`, label: `Has ${c}` })),
-      ...MOTIFS_FOR_RANDOM.map((m) => ({ id: `hasMotif:${m}`, label: `Has ${m}` })),
+      ...COLORS_FOR_RANDOM.map((c) => ({
+        id: `hasColor:${c}`,
+        label: t('findFlag.has', 'Has {x}').replace('{x}', t(`color.${c}`, c)),
+      })),
+      ...MOTIFS_FOR_RANDOM.map((m) => ({
+        id: `hasMotif:${m}`,
+        label: t('findFlag.has', 'Has {x}').replace('{x}', t(`motif.${m}`, m)),
+      })),
     ];
     const sections = [
       { title: t('findFlag.sections.continents', 'Continents'), items: allCats.slice(0, CONTINENTS.length) },

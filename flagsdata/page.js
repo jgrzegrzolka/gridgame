@@ -1,5 +1,28 @@
 import { CONTINENTS, sovereigntyOf } from '../flags/group.js';
 import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../flags/grid.js';
+import { t } from '../i18n.js';
+
+/** @param {string} v */
+function statusLabel(v) {
+  return t(`status.${v}`, STATUS_LABELS[/** @type {keyof typeof STATUS_LABELS} */ (v)]);
+}
+
+/** @param {string} name */
+function continentLabel(name) {
+  if (name === 'Other') return t('continent.other', 'Other');
+  const key = name.toLowerCase().replace(/ /g, '-');
+  return t(`variant.${key}`, name);
+}
+
+/** @param {string} v */
+function colorLabel(v) {
+  return t(`color.${v}`, v);
+}
+
+/** @param {string} v */
+function motifLabel(v) {
+  return t(`motif.${v}`, v);
+}
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/group.js').Sovereignty} Sovereignty */
@@ -73,7 +96,7 @@ export function bootFlagsData() {
 
   function renderAll(parent, items) {
     const h2 = document.createElement('h2');
-    h2.textContent = 'Flags';
+    h2.textContent = t('domain.flags', 'Flags');
     const countSpan = document.createElement('span');
     countSpan.className = 'section-count';
     countSpan.textContent = String(items.length);
@@ -143,22 +166,22 @@ export function bootFlagsData() {
 
   const filterBar = document.getElementById('filter-bar');
   filterBar.appendChild(
-    buildFilterGroup('Status', 'status', STATUS_VALUES.map((v) => ({ value: v, label: STATUS_LABELS[v] }))),
+    buildFilterGroup(t('flagsdata.filterStatus', 'Status'), 'status', STATUS_VALUES.map((v) => ({ value: v, label: statusLabel(v) }))),
   );
   filterBar.appendChild(
-    buildFilterGroup('Continent', 'continent', [...CONTINENTS, 'Other'].map((v) => ({ value: v, label: v }))),
+    buildFilterGroup(t('flagsdata.filterContinent', 'Continent'), 'continent', [...CONTINENTS, 'Other'].map((v) => ({ value: v, label: continentLabel(v) }))),
   );
   filterBar.appendChild(
-    buildFilterGroup('Colors', 'color', COLORS_FOR_RANDOM.map((v) => ({ value: v, label: v }))),
+    buildFilterGroup(t('flagsdata.filterColors', 'Colors'), 'color', COLORS_FOR_RANDOM.map((v) => ({ value: v, label: colorLabel(v) }))),
   );
   filterBar.appendChild(
-    buildFilterGroup('Motifs', 'motif', MOTIFS_FOR_RANDOM.map((v) => ({ value: v, label: v }))),
+    buildFilterGroup(t('flagsdata.filterMotifs', 'Motifs'), 'motif', MOTIFS_FOR_RANDOM.map((v) => ({ value: v, label: motifLabel(v) }))),
   );
 
   const clearBtn = document.createElement('button');
   clearBtn.type = 'button';
   clearBtn.id = 'filter-clear';
-  clearBtn.textContent = 'Clear';
+  clearBtn.textContent = t('flagsdata.clear', 'Clear');
   clearBtn.hidden = true;
   clearBtn.addEventListener('click', () => {
     for (const k of /** @type {Array<keyof typeof filters>} */ (Object.keys(filters))) filters[k].clear();
@@ -176,6 +199,6 @@ export function bootFlagsData() {
       renderAll(sections, all);
     })
     .catch((err) => {
-      document.getElementById('sections').textContent = 'Failed to load: ' + err.message;
+      document.getElementById('sections').textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
 }
