@@ -372,6 +372,19 @@ test('serializeRoom + deserializeRoom round-trips game, roles, and hostId', () =
   );
 });
 
+test('serializeRoom + deserializeRoom round-trip preserves lastFirstPlayer across eviction', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice').room;
+  room = applyHello(room, 'bob').room;
+  room.game.winner = 'X';
+  // First rematch flips lastFirstPlayer from 'O' to 'X'.
+  room = applyStartRematch(room, 'alice', PUZZLE).room;
+  assert.equal(room.lastFirstPlayer, 'X');
+  // Eviction round-trip via JSON (what party.storage actually does).
+  const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
+  assert.equal(restored.lastFirstPlayer, 'X', 'eviction must not reset the alternation');
+});
+
 test('serializeRoom omits the present set (live connections do not survive eviction)', () => {
   let room = createRoom(PUZZLE);
   room = applyHello(room, 'alice').room;
