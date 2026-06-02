@@ -62,7 +62,8 @@
     "colors": [
       "red",
       "white",
-      "blue"
+      "blue",
+      "yellow"
     ],
     "motifs": [
       "animal",
@@ -143,7 +144,9 @@
       "black",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "ar",
@@ -156,7 +159,9 @@
       "white",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "am",
@@ -426,7 +431,8 @@
     "colors": [
       "red",
       "yellow",
-      "green"
+      "green",
+      "blue"
     ],
     "motifs": [
       "animal",
@@ -515,9 +521,11 @@
       "blue",
       "white",
       "red",
-      "green"
+      "green",
+      "yellow"
     ],
-    "motifs": []
+    "motifs": [],
+    "aliases": ["Diego Garcia"]
   },
   {
     "code": "bn",
@@ -789,7 +797,9 @@
       "green",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "co",
@@ -963,20 +973,6 @@
     "motifs": []
   },
   {
-    "code": "dg",
-    "name": "Diego Garcia",
-    "continent": "Asia",
-    "category": "country",
-    "statehood": "territory",
-    "colors": [
-      "blue",
-      "white",
-      "red",
-      "green"
-    ],
-    "motifs": []
-  },
-  {
     "code": "dj",
     "name": "Djibouti",
     "continent": "Africa",
@@ -1007,7 +1003,8 @@
     ],
     "motifs": [
       "animal",
-      "coat-of-arms"
+      "coat-of-arms",
+      "star-or-moon"
     ]
   },
   {
@@ -1019,7 +1016,8 @@
     "colors": [
       "blue",
       "red",
-      "white"
+      "white",
+      "green"
     ],
     "motifs": [
       "coat-of-arms"
@@ -1050,7 +1048,8 @@
     "colors": [
       "yellow",
       "blue",
-      "red"
+      "red",
+      "green"
     ],
     "motifs": [
       "animal",
@@ -1083,7 +1082,9 @@
     "statehood": "un_member",
     "colors": [
       "blue",
-      "white"
+      "white",
+      "green",
+      "yellow"
     ],
     "motifs": [
       "coat-of-arms"
@@ -1301,7 +1302,9 @@
     "statehood": "territory",
     "colors": [
       "red",
-      "white"
+      "white",
+      "blue",
+      "orange"
     ],
     "motifs": [
       "coat-of-arms"
@@ -1343,7 +1346,8 @@
     "statehood": null,
     "colors": [
       "white",
-      "blue"
+      "blue",
+      "red"
     ],
     "motifs": []
   },
@@ -1494,7 +1498,9 @@
     "statehood": "un_member",
     "colors": [
       "blue",
-      "white"
+      "white",
+      "green",
+      "yellow"
     ],
     "motifs": [
       "animal",
@@ -1568,7 +1574,8 @@
     "colors": [
       "blue",
       "red",
-      "white"
+      "white",
+      "green"
     ],
     "motifs": [
       "coat-of-arms",
@@ -1868,7 +1875,8 @@
       "blue"
     ],
     "motifs": [
-      "animal"
+      "animal",
+      "star-or-moon"
     ]
   },
   {
@@ -2458,7 +2466,9 @@
     "statehood": "un_member",
     "colors": [
       "blue",
-      "white"
+      "white",
+      "green",
+      "yellow"
     ],
     "motifs": [
       "coat-of-arms"
@@ -2556,7 +2566,9 @@
       "red",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "mp",
@@ -2610,10 +2622,11 @@
     "statehood": null,
     "colors": [
       "blue",
-      "white",
-      "yellow"
+      "white"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "pk",
@@ -2685,7 +2698,9 @@
     "colors": [
       "red",
       "white",
-      "blue"
+      "blue",
+      "green",
+      "yellow"
     ],
     "motifs": [
       "coat-of-arms",
@@ -3133,7 +3148,8 @@
     "colors": [
       "red",
       "white",
-      "blue"
+      "blue",
+      "yellow"
     ],
     "motifs": [
       "animal",
@@ -3229,7 +3245,8 @@
       "red",
       "white",
       "yellow",
-      "green"
+      "green",
+      "black"
     ],
     "motifs": [
       "animal",
@@ -3571,7 +3588,8 @@
     "colors": [
       "green",
       "red",
-      "white"
+      "white",
+      "yellow"
     ],
     "motifs": [
       "star-or-moon"
@@ -3587,7 +3605,8 @@
       "blue",
       "red",
       "white",
-      "yellow"
+      "yellow",
+      "green"
     ],
     "motifs": [
       "animal",
@@ -3734,7 +3753,9 @@
       "white",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "uz",
