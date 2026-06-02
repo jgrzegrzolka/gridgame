@@ -217,12 +217,6 @@ body.grid-locked .cell.filled {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.picker-suggestions img {
-  width: 28px;
-  height: 21px;
-  border: 1px solid #ddd;
-  flex-shrink: 0;
-}
 
 body.picker-open {
   overflow: hidden;

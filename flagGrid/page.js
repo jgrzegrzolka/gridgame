@@ -1,6 +1,7 @@
 import {
   tryPick,
   suggest,
+  exactSingleMatch,
   computeGridScore,
   loadGridState,
   saveGridState,
@@ -215,6 +216,8 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     currentMatches = suggest(allCountries, query, { excludeCodes });
     selectedIndex = 0;
     renderSuggestions();
+    const auto = exactSingleMatch(currentMatches, query);
+    if (auto) pickCountry(auto);
   }
 
   function renderSuggestions() {
@@ -222,10 +225,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     currentMatches.forEach((country, i) => {
       const li = document.createElement('li');
       if (i === selectedIndex) li.classList.add('selected');
-      const img = document.createElement('img');
-      img.src = `../../flags/svg/${country.code}.svg`;
-      img.alt = '';
-      li.appendChild(img);
       const name = document.createElement('span');
       name.textContent = country.name;
       li.appendChild(name);

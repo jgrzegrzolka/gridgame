@@ -3,6 +3,7 @@ import {
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
   suggest,
+  exactSingleMatch,
 } from '../flags/grid.js';
 import {
   categoryFromId,
@@ -185,6 +186,8 @@ export function bootFindFlag() {
       matches = suggest(pool, inputEl.value, { excludeCodes: foundCodes });
       selected = 0;
       renderSuggestions();
+      const auto = exactSingleMatch(matches, inputEl.value);
+      if (auto) submitCountry(auto);
     }
 
     function shakeInput() {

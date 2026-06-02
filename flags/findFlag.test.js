@@ -224,3 +224,5 @@ test('loadBest does not throw when the store throws', () => {
   };
   assert.equal(loadBest(throwingStore, 'continent:Africa'), null);
 });
+
+

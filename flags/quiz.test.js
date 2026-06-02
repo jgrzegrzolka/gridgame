@@ -21,6 +21,7 @@ import {
   bestKey,
   recordResult,
   scoreColor,
+  preloadFlags,
 } from './quiz.js';
 
 /**
@@ -517,4 +518,29 @@ test('scoreColor anchors: 0 = red, 0.5 = yellow, 1 = green', () => {
 test('scoreColor clamps ratios outside [0, 1]', () => {
   assert.equal(scoreColor(-0.5), 'hsl(0, 65%, 38%)');
   assert.equal(scoreColor(2), 'hsl(120, 65%, 38%)');
+});
+
+test('preloadFlags invokes the loader once per pool entry with the SVG URL', () => {
+  const pool = [{ code: 'pl' }, { code: 'de' }, { code: 'us' }];
+  /** @type {string[]} */
+  const seen = [];
+  preloadFlags(pool, (url) => seen.push(url));
+  assert.deepEqual(seen, [
+    '../flags/svg/pl.svg',
+    '../flags/svg/de.svg',
+    '../flags/svg/us.svg',
+  ]);
+});
+
+test('preloadFlags accepts a custom base path', () => {
+  /** @type {string[]} */
+  const seen = [];
+  preloadFlags([{ code: 'fr' }], (url) => seen.push(url), '/static/flags/');
+  assert.deepEqual(seen, ['/static/flags/fr.svg']);
+});
+
+test('preloadFlags handles an empty pool without calling the loader', () => {
+  let calls = 0;
+  preloadFlags([], () => { calls++; });
+  assert.equal(calls, 0);
 });
