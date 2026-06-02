@@ -372,7 +372,16 @@ export function suggest(allCountries, query, options = {}) {
   const q = query.trim().toLowerCase();
   if (q.length < MIN_QUERY_LENGTH) return [];
   return allCountries
-    .filter((c) => !excludeCodes.has(c.code) && c.name.toLowerCase().includes(q))
+    .filter((c) => {
+      if (excludeCodes.has(c.code)) return false;
+      if (c.name.toLowerCase().includes(q)) return true;
+      if (c.aliases) {
+        for (const a of c.aliases) {
+          if (a.toLowerCase().includes(q)) return true;
+        }
+      }
+      return false;
+    })
     .slice(0, limit);
 }
 

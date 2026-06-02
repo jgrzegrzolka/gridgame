@@ -219,6 +219,27 @@ test('suggest with an empty excludeCodes set behaves the same as no excludeCodes
   assert.deepEqual(withEmpty, without);
 });
 
+test('suggest matches a country by its alias (case-insensitive)', () => {
+  const us = country({ code: 'us', name: 'United States of America', aliases: ['USA'] });
+  const fr = country({ code: 'fr', name: 'France' });
+  assert.deepEqual(suggest([us, fr], 'usa').map((c) => c.code), ['us']);
+  assert.deepEqual(suggest([us, fr], 'USA').map((c) => c.code), ['us']);
+});
+
+test('suggest matches by alias substring, not just exact alias', () => {
+  const cd = country({ code: 'cd', name: 'Democratic Republic of the Congo', aliases: ['DRC'] });
+  assert.deepEqual(suggest([cd], 'drc').map((c) => c.code), ['cd']);
+});
+
+test('suggest aliases do not displace name matches — both surface', () => {
+  const us = country({ code: 'us', name: 'United States of America', aliases: ['USA'] });
+  const fr = country({ code: 'fr', name: 'France' });
+  // "united" matches us via name only; "usa" matches us via alias only.
+  assert.deepEqual(suggest([us, fr], 'united').map((c) => c.code), ['us']);
+  assert.deepEqual(suggest([us, fr], 'usa').map((c) => c.code), ['us']);
+});
+
+
 test('validateCell is true when country satisfies both row and column', () => {
   assert.equal(validateCell(PUZZLE, 0, 0, FR), true);
   assert.equal(validateCell(PUZZLE, 0, 1, VA), true);

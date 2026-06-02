@@ -87,6 +87,28 @@ test('every entry has a non-empty colors array drawn from COLORS_FOR_RANDOM', ()
   assert.deepEqual(offenders, [], offenders.join('; '));
 });
 
+test('aliases (when present) are non-empty string arrays with no duplicates', () => {
+  const offenders = [];
+  for (const c of COUNTRIES) {
+    if (c.aliases === undefined) continue;
+    if (!Array.isArray(c.aliases) || c.aliases.length === 0) {
+      offenders.push(`${c.code}: aliases should be a non-empty array`);
+      continue;
+    }
+    const seen = new Set();
+    for (const a of c.aliases) {
+      if (typeof a !== 'string' || a.length === 0) {
+        offenders.push(`${c.code}: alias must be a non-empty string`);
+        continue;
+      }
+      const key = a.toLowerCase();
+      if (seen.has(key)) offenders.push(`${c.code}: duplicate alias "${a}"`);
+      seen.add(key);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
 test('motifs (when present) are arrays drawn from MOTIFS_FOR_RANDOM', () => {
   const palette = new Set(MOTIFS_FOR_RANDOM);
   const offenders = [];

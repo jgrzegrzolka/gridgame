@@ -945,7 +945,8 @@
     ],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "aliases": ["DRC"]
   },
   {
     "code": "dk",
@@ -2520,7 +2521,8 @@
     ],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "aliases": ["DPRK"]
   },
   {
     "code": "mk",
@@ -2662,7 +2664,8 @@
     "motifs": [
       "animal",
       "star-or-moon"
-    ]
+    ],
+    "aliases": ["PNG"]
   },
   {
     "code": "py",
@@ -3237,7 +3240,8 @@
       "blue",
       "black"
     ],
-    "motifs": []
+    "motifs": [],
+    "aliases": ["ROK"]
   },
   {
     "code": "ss",
@@ -3650,7 +3654,8 @@
       "white",
       "black"
     ],
-    "motifs": []
+    "motifs": [],
+    "aliases": ["UAE"]
   },
   {
     "code": "gb",
@@ -3705,7 +3710,8 @@
     ],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "aliases": ["USA"]
   },
   {
     "code": "uy",

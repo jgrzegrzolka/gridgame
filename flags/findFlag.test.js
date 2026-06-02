@@ -253,3 +253,15 @@ test('exactSingleMatch returns null for an empty or whitespace-only query', () =
 test('exactSingleMatch returns null when there are no matches', () => {
   assert.equal(exactSingleMatch([], 'France'), null);
 });
+
+test('exactSingleMatch accepts a full-name alias (e.g. "USA" -> United States)', () => {
+  const us = country({ code: 'us', name: 'United States of America', aliases: ['USA'] });
+  assert.equal(exactSingleMatch([us], 'USA'), us);
+  assert.equal(exactSingleMatch([us], 'usa'), us);
+});
+
+test('exactSingleMatch rejects an alias that is only a substring of the typed text', () => {
+  const us = country({ code: 'us', name: 'United States of America', aliases: ['USA'] });
+  assert.equal(exactSingleMatch([us], 'USAA'), null);
+});
+
