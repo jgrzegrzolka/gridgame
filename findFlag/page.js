@@ -12,6 +12,7 @@ import {
   recordFindResult,
   isFindIncludeAll,
   setFindIncludeAll,
+  exactSingleMatch,
 } from '../flags/findFlag.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 
@@ -185,6 +186,8 @@ export function bootFindFlag() {
       matches = suggest(pool, inputEl.value, { excludeCodes: foundCodes });
       selected = 0;
       renderSuggestions();
+      const auto = exactSingleMatch(matches, inputEl.value);
+      if (auto) submitCountry(auto);
     }
 
     function shakeInput() {
