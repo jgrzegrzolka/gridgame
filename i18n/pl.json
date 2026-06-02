@@ -66,6 +66,38 @@
       "motifs": "Motywy"
     }
   },
+  "ttt": {
+    "title": "Kółko i krzyżyk",
+    "lobbyTitle": "Zagraj ze znajomym",
+    "createRoom": "Utwórz nowy pokój",
+    "or": "— lub —",
+    "roomCodePlaceholder": "KOD POKOJU",
+    "join": "Dołącz",
+    "playOffline": "Graj offline",
+    "room": "Pokój",
+    "youAre": "Jesteś",
+    "waitingForOpponent": "Czekanie na przeciwnika…",
+    "waitingShareCode": "Czekanie na przeciwnika… udostępnij powyższy kod",
+    "toMove": "wykonuje ruch",
+    "yourTurn": "Twój ruch",
+    "opponentsTurn": "Ruch przeciwnika",
+    "connecting": "Łączenie…",
+    "connectionError": "Błąd połączenia",
+    "disconnectedReconnecting": "Rozłączono. Ponowne łączenie za {seconds}s…",
+    "codeMustBe5": "Kod musi mieć 5 znaków",
+    "failedToLoadCountries": "Nie udało się załadować państw:",
+    "youWin": "Wygrana!",
+    "opponentWins": "Wygrana przeciwnika",
+    "draw": "Remis",
+    "playerWins": "Wygrał {player}!",
+    "reject": {
+      "roomFull": "Pokój jest pełny",
+      "roomNotFound": "Pokój nie znaleziony — poproś znajomego o kod lub utwórz nowy pokój",
+      "codeCollision": "Ten kod jest już zajęty — spróbuj utworzyć nowy",
+      "missingPlayerId": "Błąd połączenia — odśwież stronę",
+      "fallback": "Odrzucono: {reason}"
+    }
+  },
   "variant": {
     "countries": "Wszystkie kraje",
     "europe": "Europa",

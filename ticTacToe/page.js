@@ -7,6 +7,7 @@ import {
   reduceServerMessage,
   getOrCreatePlayerId,
 } from './onlineClient.js';
+import { t } from '../i18n.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/ticTacToe.js').GameState} GameState */
@@ -22,7 +23,7 @@ export function bootTicTacToeOnline() {
       const lobbyEl = document.getElementById('lobby');
       if (lobbyEl) lobbyEl.hidden = false;
       const errEl = document.getElementById('lobby-error');
-      if (errEl) { errEl.hidden = false; errEl.textContent = 'Failed to load countries: ' + err.message; }
+      if (errEl) { errEl.hidden = false; errEl.textContent = `${t('ttt.failedToLoadCountries', 'Failed to load countries:')} ${err.message}`; }
     });
 }
 
@@ -100,7 +101,7 @@ function runOnline(countries) {
       e.preventDefault();
       const code = joinCodeEl.value.toUpperCase().trim();
       if (!isValidRoomCode(code)) {
-        showError('Code must be 5 characters');
+        showError(t('ttt.codeMustBe5', 'Code must be 5 characters'));
         return;
       }
       enterRoom(code, 'join');
@@ -126,7 +127,7 @@ function runOnline(countries) {
     if (lobbyEl) lobbyEl.hidden = true;
     if (gameEl) gameEl.hidden = false;
     if (roomCodeEl) roomCodeEl.textContent = code;
-    setStatus('Connecting…');
+    setStatus(t('ttt.connecting', 'Connecting…'));
     connect();
   }
 
@@ -137,7 +138,7 @@ function runOnline(countries) {
     ws = new WebSocket(wsUrl);
     ws.addEventListener('message', (ev) => onServerMessage(JSON.parse(ev.data)));
     ws.addEventListener('close', onSocketClose);
-    ws.addEventListener('error', () => setStatus('Connection error'));
+    ws.addEventListener('error', () => setStatus(t('ttt.connectionError', 'Connection error')));
   }
 
   function onSocketClose() {
@@ -151,7 +152,7 @@ function runOnline(countries) {
     activeRoom = { ...activeRoom, intent: 'join' };
     reconnectAttempts++;
     const delayMs = Math.min(30000, 1000 * 2 ** (reconnectAttempts - 1));
-    setStatus(`Disconnected. Reconnecting in ${Math.round(delayMs / 1000)}s…`);
+    setStatus(t('ttt.disconnectedReconnecting', 'Disconnected. Reconnecting in {seconds}s…').replace('{seconds}', String(Math.round(delayMs / 1000))));
     clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(connect, delayMs);
   }
@@ -395,7 +396,7 @@ function runOnline(countries) {
     turnBadgeEl.textContent = game.currentPlayer;
     const changed = lastRenderedTurn !== game.currentPlayer;
     turnBadgeEl.className = 'turn-badge ' + game.currentPlayer.toLowerCase();
-    turnTextEl.textContent = 'to move';
+    turnTextEl.textContent = t('ttt.toMove', 'to move');
     if (changed) {
       void turnBadgeEl.offsetWidth; // restart the bounce animation on every turn change
       turnBadgeEl.classList.add('bounce');
@@ -407,18 +408,18 @@ function runOnline(countries) {
     if (!statusEl) return;
     const { game, myRole, peerPresent } = state;
     statusEl.className = 'status-line';
-    if (!game) { statusEl.textContent = 'Connecting…'; return; }
+    if (!game) { statusEl.textContent = t('ttt.connecting', 'Connecting…'); return; }
     if (game.winner || game.draw) { statusEl.textContent = ''; return; }
     if (!peerPresent) {
-      statusEl.textContent = 'Waiting for opponent… share the code above';
+      statusEl.textContent = t('ttt.waitingShareCode', 'Waiting for opponent… share the code above');
       statusEl.classList.add('peer-missing');
       return;
     }
     if (game.currentPlayer === myRole) {
-      statusEl.textContent = 'Your turn';
+      statusEl.textContent = t('ttt.yourTurn', 'Your turn');
       statusEl.classList.add('your-turn');
     } else {
-      statusEl.textContent = "Opponent's turn";
+      statusEl.textContent = t('ttt.opponentsTurn', "Opponent's turn");
     }
   }
 
@@ -446,10 +447,12 @@ function runOnline(countries) {
     if (!resultEl || !finalScoreEl || !game) return;
     if (game.winner) {
       const youWon = game.winner === myRole;
-      finalScoreEl.textContent = youWon ? 'You win!' : 'Opponent wins';
+      finalScoreEl.textContent = youWon
+        ? t('ttt.youWin', 'You win!')
+        : t('ttt.opponentWins', 'Opponent wins');
       finalScoreEl.style.color = game.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
     } else {
-      finalScoreEl.textContent = 'Draw';
+      finalScoreEl.textContent = t('ttt.draw', 'Draw');
       finalScoreEl.style.color = '#1c1c1c';
     }
     if (playAgainEl) playAgainEl.disabled = false;

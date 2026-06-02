@@ -1,5 +1,6 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake } from '../../flags/grid.js';
 import { newGame, attemptClaim, isGameOver } from '../../flags/ticTacToe.js';
+import { t } from '../../i18n.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 /** @typedef {import('../../flags/ticTacToe.js').GameState} GameState */
@@ -14,7 +15,7 @@ export function bootTicTacToe() {
     })
     .catch((err) => {
       const turnText = document.getElementById('turn-text');
-      if (turnText) turnText.textContent = 'Failed to load: ' + err.message;
+      if (turnText) turnText.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
 }
 
@@ -279,7 +280,7 @@ function runTicTacToe({ puzzle, countries }) {
     turnBadgeEl.textContent = state.currentPlayer;
     const changed = lastRenderedPlayer !== state.currentPlayer;
     turnBadgeEl.className = 'turn-badge ' + state.currentPlayer.toLowerCase();
-    turnTextEl.textContent = 'to move';
+    turnTextEl.textContent = t('ttt.toMove', 'to move');
     if (changed) {
       void turnBadgeEl.offsetWidth; // restart the bounce animation on every turn change.
       turnBadgeEl.classList.add('bounce');
@@ -295,10 +296,11 @@ function runTicTacToe({ puzzle, countries }) {
   function finishRound() {
     if (!resultEl || !finalScoreEl) return;
     if (state.winner) {
-      finalScoreEl.textContent = `${state.winner} wins!`;
+      finalScoreEl.textContent =
+        t('ttt.playerWins', '{player} wins!').replace('{player}', state.winner);
       finalScoreEl.style.color = state.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
     } else {
-      finalScoreEl.textContent = 'Draw';
+      finalScoreEl.textContent = t('ttt.draw', 'Draw');
       finalScoreEl.style.color = '#1c1c1c';
     }
     if (playAgainEl) {

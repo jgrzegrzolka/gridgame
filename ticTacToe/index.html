@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Tic Tac Toe</title>
+    <title data-i18n="ttt.title">Tic Tac Toe</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
@@ -41,9 +41,9 @@
     </nav>
 
     <section id="lobby" class="lobby" hidden>
-      <h1 class="lobby-title">Play with a friend</h1>
-      <button type="button" class="lobby-btn" id="create-room">Create a new room</button>
-      <p class="lobby-or">— or —</p>
+      <h1 class="lobby-title" data-i18n="ttt.lobbyTitle">Play with a friend</h1>
+      <button type="button" class="lobby-btn" id="create-room" data-i18n="ttt.createRoom">Create a new room</button>
+      <p class="lobby-or" data-i18n="ttt.or">— or —</p>
       <form id="join-form" class="join-form">
         <input
           type="text"
@@ -55,18 +55,19 @@
           spellcheck="false"
           maxlength="5"
           placeholder="ROOM CODE"
+          data-i18n-attr="placeholder:ttt.roomCodePlaceholder"
         />
-        <button type="submit" class="lobby-btn">Join</button>
+        <button type="submit" class="lobby-btn" data-i18n="ttt.join">Join</button>
       </form>
       <p class="lobby-error" id="lobby-error" hidden></p>
-      <p class="lobby-or">— or —</p>
-      <a class="lobby-btn" href="offline/">Play offline</a>
+      <p class="lobby-or" data-i18n="ttt.or">— or —</p>
+      <a class="lobby-btn" href="offline/" data-i18n="ttt.playOffline">Play offline</a>
     </section>
 
     <section id="game" class="online-game" hidden>
-      <p class="room-line">Room <strong id="room-code">-----</strong></p>
-      <p class="role-line"><span class="muted">You are</span> <span class="turn-badge" id="role-badge">?</span></p>
-      <p class="status-line" id="status-line">Waiting for opponent…</p>
+      <p class="room-line"><span data-i18n="ttt.room">Room</span> <strong id="room-code">-----</strong></p>
+      <p class="role-line"><span class="muted" data-i18n="ttt.youAre">You are</span> <span class="turn-badge" id="role-badge">?</span></p>
+      <p class="status-line" id="status-line" data-i18n="ttt.waitingForOpponent">Waiting for opponent…</p>
       <table class="grid">
         <thead>
           <tr>
@@ -78,11 +79,11 @@
         </thead>
         <tbody id="grid-body"></tbody>
       </table>
-      <p class="turn-line" id="turn-line" hidden><span class="turn-badge" id="turn-badge">O</span><span id="turn-text">to move</span></p>
+      <p class="turn-line" id="turn-line" hidden><span class="turn-badge" id="turn-badge">O</span><span id="turn-text" data-i18n="ttt.toMove">to move</span></p>
       <section id="result" hidden>
         <p class="final-score" id="final-score-line"><span id="final-score"></span></p>
         <p class="result-links">
-          <button type="button" class="result-link" id="play-again">Play again</button>
+          <button type="button" class="result-link" id="play-again" data-i18n="game.playAgain">Play again</button>
         </p>
       </section>
     </section>
@@ -92,7 +93,7 @@
       <div class="picker-sheet" role="dialog" aria-modal="true" aria-labelledby="picker-cats">
         <header class="picker-header">
           <span class="picker-cats" id="picker-cats"></span>
-          <button type="button" class="picker-close" id="picker-close" aria-label="Cancel">Cancel</button>
+          <button type="button" class="picker-close" id="picker-close" aria-label="Cancel" data-i18n="game.cancel" data-i18n-attr="aria-label:game.cancel">Cancel</button>
         </header>
         <input
           type="text"
@@ -104,6 +105,7 @@
           autocorrect="off"
           spellcheck="false"
           placeholder="Country name…"
+          data-i18n-attr="placeholder:game.countryName"
         />
         <ul class="picker-suggestions" id="picker-suggestions"></ul>
       </div>
@@ -113,12 +115,14 @@
       import { bootTicTacToeOnline } from './page.js?v=__BUILD__';
       import { disableBurgerIfEmpty } from '../common.js?v=__BUILD__';
       import { bootI18n, wireLangToggle } from '../i18n.js?v=__BUILD__';
-      bootI18n('../').then(wireLangToggle);
-      bootTicTacToeOnline();
-      disableBurgerIfEmpty(
-        document.querySelector('.burger'),
-        document.querySelector('#burger-panel .menu'),
-      );
+      bootI18n('../').then((lang) => {
+        wireLangToggle(lang);
+        bootTicTacToeOnline();
+        disableBurgerIfEmpty(
+          document.querySelector('.burger'),
+          document.querySelector('#burger-panel .menu'),
+        );
+      });
     </script>
   </body>
 </html>

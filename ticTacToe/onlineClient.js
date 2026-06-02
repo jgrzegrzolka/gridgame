@@ -1,6 +1,8 @@
 /** @typedef {import('../flags/ticTacToe.js').GameState} GameState */
 /** @typedef {import('../flags/ticTacToe.js').Player} Player */
 
+import { t } from '../i18n.js';
+
 /** Alphabet for room codes — no ambiguous characters (no I/O/L/0/1). */
 export const ROOM_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export const ROOM_LEN = 5;
@@ -100,12 +102,19 @@ export function initialClientState() {
  * } Effect
  */
 
-/** @type {Record<string, string>} */
+/**
+ * Reject reasons keyed by the wire-protocol code. Each entry holds the i18n
+ * key plus its English fallback — translation happens at use time in the
+ * reducer below, because the strings cache may not be loaded yet when this
+ * module is imported.
+ *
+ * @type {Record<string, { key: string, fallback: string }>}
+ */
 const REJECT_MESSAGES = {
-  'room-full': 'Room is full',
-  'room-not-found': 'Room not found — ask your friend for the code or create a new room',
-  'code-collision': 'That code is already taken — try creating a new one',
-  'missing-player-id': 'Connection error — please reload the page',
+  'room-full': { key: 'ttt.reject.roomFull', fallback: 'Room is full' },
+  'room-not-found': { key: 'ttt.reject.roomNotFound', fallback: 'Room not found — ask your friend for the code or create a new room' },
+  'code-collision': { key: 'ttt.reject.codeCollision', fallback: 'That code is already taken — try creating a new one' },
+  'missing-player-id': { key: 'ttt.reject.missingPlayerId', fallback: 'Connection error — please reload the page' },
 };
 
 /**
@@ -153,7 +162,10 @@ export function reduceServerMessage(state, message) {
       return { state: { ...state, peerPresent: false }, effects: [] };
     }
     case 'rejected': {
-      const reason = REJECT_MESSAGES[message.reason] ?? 'Rejected: ' + message.reason;
+      const mapped = REJECT_MESSAGES[message.reason];
+      const reason = mapped
+        ? t(mapped.key, mapped.fallback)
+        : t('ttt.reject.fallback', 'Rejected: {reason}').replace('{reason}', message.reason);
       return {
         state: { ...state, statusOverride: reason },
         effects: [{ type: 'close' }],
