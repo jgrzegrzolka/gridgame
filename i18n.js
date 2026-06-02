@@ -103,6 +103,27 @@ export function setStoredLang(lang, store) {
 }
 
 /**
+ * Configure a language-toggle link to display the *other* language's name
+ * (in that language) and switch on click. Always shows the destination in
+ * its own language so a user who doesn't read the current page can still
+ * find the way out.
+ *
+ * @param {string} currentLang
+ * @param {{ textContent: string | null, addEventListener(type: 'click', handler: (e: Event) => void): void } | null} [toggleEl]
+ */
+export function wireLangToggle(currentLang, toggleEl) {
+  const el = toggleEl === undefined ? document.getElementById('lang-toggle') : toggleEl;
+  if (!el) return;
+  const next = currentLang === 'pl' ? 'en' : 'pl';
+  el.textContent = next === 'pl' ? 'Polski' : 'English';
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    setStoredLang(next);
+    window.location.reload();
+  });
+}
+
+/**
  * Apply translations to every [data-i18n] and [data-i18n-attr] element under
  * the given root, then update <html lang>. DOM-facing glue around the pure
  * helpers above.

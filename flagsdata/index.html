@@ -12,9 +12,9 @@
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
   </head>
   <body>
-    <a class="back" href="../" aria-label="Home"><span class="home-icon" aria-hidden="true"></span></a>
-    <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
-    <span class="burger" aria-label="Open menu" aria-disabled="true" role="button"><span class="burger-bars" aria-hidden="true"></span></span>
+    <a class="back" href="../" aria-label="Home" data-i18n-attr="aria-label:back"><span class="home-icon" aria-hidden="true"></span></a>
+    <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee" data-i18n-attr="aria-label:coffee,title:coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
+    <span class="burger" aria-label="Open menu" aria-disabled="true" role="button" data-i18n-attr="aria-label:menu.open"><span class="burger-bars" aria-hidden="true"></span></span>
     <div id="filter-bar"></div>
     <div id="sections"></div>
     <dialog id="zoom">
@@ -24,6 +24,8 @@
     </dialog>
     <script type="module">
       import { bootFlagsData } from './page.js?v=__BUILD__';
+      import { bootI18n } from '../i18n.js?v=__BUILD__';
+      bootI18n('../');
       bootFlagsData();
     </script>
   </body>

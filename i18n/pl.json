@@ -4,7 +4,13 @@
   "menu": {
     "open": "Otwórz menu",
     "close": "Zamknij menu",
-    "flagsData": "Dane flag"
+    "flagsData": "Dane flag",
+    "today": "Dziś",
+    "previousGames": "Poprzednie gry",
+    "random": "Losowa",
+    "pickCategory": "Wybierz kategorię",
+    "yourStats": "Twoje statystyki",
+    "includeTerritories": "Uwzględnij terytoria i inne flagi"
   },
   "domain": {
     "flags": "Flagi"
