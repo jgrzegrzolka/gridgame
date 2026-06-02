@@ -20,5 +20,28 @@
     "grid": "Siatka",
     "find": "Znajdź",
     "ticTacToe": "Kółko i krzyżyk"
+  },
+  "quiz": {
+    "title": "Quiz flag",
+    "statsTitle": "Quiz flag — Twoje statystyki",
+    "loading": "Ładowanie…",
+    "giveUp": "Poddaję się",
+    "finalScore": "Wynik końcowy:",
+    "playAgain": "Zagraj jeszcze raz",
+    "time": "Czas",
+    "yourBestScore": "Twój najlepszy wynik",
+    "in": "w",
+    "newRecord": "nowy rekord!",
+    "failedToLoad": "Nie udało się załadować:",
+    "play": "Zagraj"
+  },
+  "variant": {
+    "countries": "Wszystkie kraje",
+    "europe": "Europa",
+    "asia": "Azja",
+    "africa": "Afryka",
+    "north-america": "Ameryka Północna",
+    "south-america": "Ameryka Południowa",
+    "oceania": "Oceania"
   }
 }

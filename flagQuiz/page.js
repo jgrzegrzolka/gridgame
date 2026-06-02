@@ -13,6 +13,7 @@ import {
   preloadFlags,
 } from '../flags/quiz.js';
 import { flagsGamePool } from '../flags/group.js';
+import { t } from '../i18n.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -40,7 +41,7 @@ export function bootFlagQuiz() {
 
   const includeAll = isQuizIncludeAll();
 
-  fetch('../flags/countries.json')
+  return fetch('../flags/countries.json')
     .then((r) => r.json())
     .then((raw) => {
       const all = flagsGamePool(raw, includeAll);
@@ -58,7 +59,7 @@ export function bootFlagQuiz() {
       startGame(variantKey, modeKey, all);
     })
     .catch((err) => {
-      document.body.textContent = 'Failed to load: ' + err.message;
+      document.body.textContent = `${t('quiz.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
 
   function renderMenu(all) {
@@ -73,7 +74,7 @@ export function bootFlagQuiz() {
       window.location.reload();
     });
     toggleLabel.appendChild(toggleInput);
-    toggleLabel.appendChild(document.createTextNode(' Include territories & other flags'));
+    toggleLabel.appendChild(document.createTextNode(' ' + t('menu.includeTerritories', 'Include territories & other flags')));
     toggleLi.appendChild(toggleLabel);
     quizMenuEl.appendChild(toggleLi);
 
@@ -95,7 +96,7 @@ export function bootFlagQuiz() {
       }
       const a = document.createElement('a');
       a.href = `?v=${key}&n=${defaultMode}`;
-      a.textContent = variant.label;
+      a.textContent = t(`variant.${key}`, variant.label);
       li.appendChild(a);
       quizMenuEl.appendChild(li);
     }
@@ -103,7 +104,7 @@ export function bootFlagQuiz() {
     statsLi.className = 'menu-divider';
     const statsA = document.createElement('a');
     statsA.href = 'stats/';
-    statsA.textContent = 'Your stats';
+    statsA.textContent = t('menu.yourStats', 'Your stats');
     statsLi.appendChild(statsA);
     quizMenuEl.appendChild(statsLi);
 
@@ -111,9 +112,20 @@ export function bootFlagQuiz() {
     flagsDataLi.className = 'menu-divider';
     const flagsDataA = document.createElement('a');
     flagsDataA.href = '../flagsdata/';
-    flagsDataA.textContent = 'Flags data';
+    flagsDataA.textContent = t('menu.flagsData', 'Flags data');
     flagsDataLi.appendChild(flagsDataA);
     quizMenuEl.appendChild(flagsDataLi);
+
+    // Language toggle (last item — the bottom of the burger). Hidden by
+    // common.css while I18N_ENABLED is false; wireLangToggle still wires
+    // it up so it works the moment the flag flips.
+    const langLi = document.createElement('li');
+    langLi.className = 'menu-divider';
+    const langA = document.createElement('a');
+    langA.href = '#';
+    langA.id = 'lang-toggle';
+    langLi.appendChild(langA);
+    quizMenuEl.appendChild(langLi);
   }
 
   function renderModeToggle(key, mode, modes) {
@@ -144,7 +156,7 @@ export function bootFlagQuiz() {
     const pool = poolFor(key, all);
     const target = targetFor(mode, pool);
     const quiz = createQuiz(pool, target);
-    playModeEl.textContent = VARIANTS[key].label;
+    playModeEl.textContent = t(`variant.${key}`, VARIANTS[key].label);
     renderModeToggle(key, mode, availableModes(pool.length));
 
     let currentAnswer = null;
@@ -210,17 +222,18 @@ export function bootFlagQuiz() {
       const elapsed = Date.now() - startTime;
       finalScoreEl.textContent = String(pct);
       finalScoreLineEl.style.color = scoreColor(ratio);
-      timeEl.textContent = `Time: ${formatTime(elapsed)}`;
+      timeEl.textContent = `${t('quiz.time', 'Time')}: ${formatTime(elapsed)}`;
 
       const { best, isNew } = recordResult(
         localStorage, key, mode, { score: pct, time: elapsed }, includeAll,
       );
-      bestEl.textContent = `Your best score: ${best.score} in ${formatTime(best.time)}`;
+      bestEl.textContent =
+        `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('quiz.in', 'in')} ${formatTime(best.time)}`;
       if (isNew) {
         bestEl.appendChild(document.createTextNode(' '));
         const badge = document.createElement('span');
         badge.className = 'new-badge';
-        badge.textContent = 'new record!';
+        badge.textContent = t('quiz.newRecord', 'new record!');
         bestEl.appendChild(badge);
       }
 

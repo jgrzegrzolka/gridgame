@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Flag Quiz</title>
+    <title data-i18n="quiz.title">Flag Quiz</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
@@ -42,28 +42,30 @@
         <span class="mode-toggle" id="mode-toggle"></span>
         <span id="play-time">0:00.000</span>
       </p>
-      <p class="country-name" id="country-name">Loading…</p>
+      <p class="country-name" id="country-name" data-i18n="quiz.loading">Loading…</p>
       <div class="choices" id="choices"></div>
       <p class="feedback" id="feedback"></p>
       <div class="give-up-row">
-        <button type="button" class="give-up" id="give-up">Give up</button>
+        <button type="button" class="give-up" id="give-up" data-i18n="quiz.giveUp">Give up</button>
       </div>
     </div>
     <section id="result" hidden>
       <p class="final-score" id="final-score-line">
-        Final score: <span id="final-score">0</span>
+        <span data-i18n="quiz.finalScore">Final score:</span> <span id="final-score">0</span>
       </p>
       <p class="time" id="time"></p>
       <p class="best" id="best"></p>
       <p class="result-links">
-        <a id="play-again" href="#">Play again</a>
+        <a id="play-again" href="#" data-i18n="quiz.playAgain">Play again</a>
       </p>
     </section>
     <script type="module">
       import { bootFlagQuiz } from './page.js?v=__BUILD__';
       import { bootI18n, wireLangToggle } from '../i18n.js?v=__BUILD__';
-      bootI18n('../').then(wireLangToggle);
-      bootFlagQuiz();
+      // bootFlagQuiz uses t() while building the dynamic menu, so we have
+      // to wait for i18n to load first. The menu also includes the lang
+      // toggle, so wireLangToggle has to run after bootFlagQuiz resolves.
+      bootI18n('../').then((lang) => bootFlagQuiz().then(() => wireLangToggle(lang)));
     </script>
   </body>
 </html>
