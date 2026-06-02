@@ -1,0 +1,57 @@
+name: Deploy PartyKit
+
+# GitHub Pages auto-deploys the client on every push, but the PartyKit
+# WebSocket server lives at gridgame-ttt.jgrzegrzolka.partykit.dev and only
+# updates when partykit deploy runs. This workflow does that automatically
+# whenever a push to main touches the server or anything it imports.
+#
+# Heads-up: a deploy restarts every Durable Object, so any in-progress room
+# loses its game state. The path filter keeps this from happening on
+# client-only changes (HTML/CSS, page.js, i18n strings).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'party/**'
+      - 'flags/onlineRoom.js'
+      - 'flags/ticTacToe.js'
+      - 'flags/grid.js'
+      - 'flags/group.js'
+      - 'flags/countries.json'
+      - 'partykit.json'
+      - '.github/workflows/deploy-partykit.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm test
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run typecheck
+
+  deploy:
+    needs: [test, typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npx partykit deploy
+        env:
+          PARTYKIT_TOKEN: ${{ secrets.PARTYKIT_TOKEN }}
+          PARTYKIT_LOGIN: jgrzegrzolka
