@@ -81,34 +81,6 @@ export function classifyGuess(state, country) {
 }
 
 /**
- * Returns the country to auto-submit when the user has typed an exact full
- * country name (or one of its aliases) and the suggestion list has no
- * ambiguity; otherwise null.
- *
- * Ambiguity check is matches.length === 1 — so typing "Niger" while both
- * Niger and Nigeria match the substring waits for a deliberate pick rather
- * than guessing for the user.
- *
- * @template {{ name: string, aliases?: string[] }} T
- * @param {T[]} matches
- * @param {string} query
- * @returns {T | null}
- */
-export function exactSingleMatch(matches, query) {
-  if (matches.length !== 1) return null;
-  const typed = query.trim().toLowerCase();
-  if (!typed) return null;
-  const m = matches[0];
-  if (m.name.toLowerCase() === typed) return m;
-  if (m.aliases) {
-    for (const a of m.aliases) {
-      if (a.toLowerCase() === typed) return m;
-    }
-  }
-  return null;
-}
-
-/**
  * @typedef {Object} FindBest
  * @property {number} time
  * @property {number} found

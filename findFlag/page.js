@@ -3,6 +3,7 @@ import {
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
   suggest,
+  exactSingleMatch,
 } from '../flags/grid.js';
 import {
   categoryFromId,
@@ -12,7 +13,6 @@ import {
   recordFindResult,
   isFindIncludeAll,
   setFindIncludeAll,
-  exactSingleMatch,
 } from '../flags/findFlag.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 

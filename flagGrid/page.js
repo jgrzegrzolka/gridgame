@@ -1,6 +1,7 @@
 import {
   tryPick,
   suggest,
+  exactSingleMatch,
   computeGridScore,
   loadGridState,
   saveGridState,
@@ -215,6 +216,8 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     currentMatches = suggest(allCountries, query, { excludeCodes });
     selectedIndex = 0;
     renderSuggestions();
+    const auto = exactSingleMatch(currentMatches, query);
+    if (auto) pickCountry(auto);
   }
 
   function renderSuggestions() {

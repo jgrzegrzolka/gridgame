@@ -9,6 +9,7 @@ import {
   hasColor,
   hasMotif,
   suggest,
+  exactSingleMatch,
   randomPuzzle,
   puzzleCellCounts,
   findPuzzleSolution,
@@ -237,6 +238,50 @@ test('suggest aliases do not displace name matches — both surface', () => {
   // "united" matches us via name only; "usa" matches us via alias only.
   assert.deepEqual(suggest([us, fr], 'united').map((c) => c.code), ['us']);
   assert.deepEqual(suggest([us, fr], 'usa').map((c) => c.code), ['us']);
+});
+
+test('exactSingleMatch returns the country when the query equals its full name', () => {
+  const fr = country({ code: 'fr', name: 'France' });
+  assert.equal(exactSingleMatch([fr], 'France'), fr);
+});
+
+test('exactSingleMatch is case-insensitive and ignores surrounding whitespace', () => {
+  const fr = country({ code: 'fr', name: 'France' });
+  const de = country({ code: 'de', name: 'Germany' });
+  assert.equal(exactSingleMatch([fr], '  france  '), fr);
+  assert.equal(exactSingleMatch([de], 'GERMANY'), de);
+});
+
+test('exactSingleMatch returns null when more than one country matches (ambiguity)', () => {
+  const niger = country({ code: 'ne', name: 'Niger' });
+  const nigeria = country({ code: 'ng', name: 'Nigeria' });
+  assert.equal(exactSingleMatch([niger, nigeria], 'Niger'), null);
+});
+
+test('exactSingleMatch returns null when the single match is only a prefix of the typed text', () => {
+  const fr = country({ code: 'fr', name: 'France' });
+  assert.equal(exactSingleMatch([fr], 'Fran'), null);
+});
+
+test('exactSingleMatch returns null for an empty or whitespace-only query', () => {
+  const fr = country({ code: 'fr', name: 'France' });
+  assert.equal(exactSingleMatch([fr], ''), null);
+  assert.equal(exactSingleMatch([fr], '   '), null);
+});
+
+test('exactSingleMatch returns null when there are no matches', () => {
+  assert.equal(exactSingleMatch([], 'France'), null);
+});
+
+test('exactSingleMatch accepts a full-name alias (e.g. "USA" -> United States)', () => {
+  const us = country({ code: 'us', name: 'United States of America', aliases: ['USA'] });
+  assert.equal(exactSingleMatch([us], 'USA'), us);
+  assert.equal(exactSingleMatch([us], 'usa'), us);
+});
+
+test('exactSingleMatch rejects an alias that is only a substring of the typed text', () => {
+  const us = country({ code: 'us', name: 'United States of America', aliases: ['USA'] });
+  assert.equal(exactSingleMatch([us], 'USAA'), null);
 });
 
 

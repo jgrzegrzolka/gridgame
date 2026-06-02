@@ -10,7 +10,6 @@ import {
   loadBest,
   saveBest,
   recordFindResult,
-  exactSingleMatch,
 } from './findFlag.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -226,42 +225,4 @@ test('loadBest does not throw when the store throws', () => {
   assert.equal(loadBest(throwingStore, 'continent:Africa'), null);
 });
 
-test('exactSingleMatch returns the country when the query equals its full name', () => {
-  assert.equal(exactSingleMatch([FR], 'France'), FR);
-});
-
-test('exactSingleMatch is case-insensitive and ignores surrounding whitespace', () => {
-  assert.equal(exactSingleMatch([FR], '  france  '), FR);
-  assert.equal(exactSingleMatch([DE], 'GERMANY'), DE);
-});
-
-test('exactSingleMatch returns null when more than one country matches (ambiguity)', () => {
-  const niger = country({ code: 'ne', name: 'Niger' });
-  const nigeria = country({ code: 'ng', name: 'Nigeria' });
-  assert.equal(exactSingleMatch([niger, nigeria], 'Niger'), null);
-});
-
-test('exactSingleMatch returns null when the single match is only a prefix of the typed text', () => {
-  assert.equal(exactSingleMatch([FR], 'Fran'), null);
-});
-
-test('exactSingleMatch returns null for an empty or whitespace-only query', () => {
-  assert.equal(exactSingleMatch([FR], ''), null);
-  assert.equal(exactSingleMatch([FR], '   '), null);
-});
-
-test('exactSingleMatch returns null when there are no matches', () => {
-  assert.equal(exactSingleMatch([], 'France'), null);
-});
-
-test('exactSingleMatch accepts a full-name alias (e.g. "USA" -> United States)', () => {
-  const us = country({ code: 'us', name: 'United States of America', aliases: ['USA'] });
-  assert.equal(exactSingleMatch([us], 'USA'), us);
-  assert.equal(exactSingleMatch([us], 'usa'), us);
-});
-
-test('exactSingleMatch rejects an alias that is only a substring of the typed text', () => {
-  const us = country({ code: 'us', name: 'United States of America', aliases: ['USA'] });
-  assert.equal(exactSingleMatch([us], 'USAA'), null);
-});
 

@@ -1,4 +1,4 @@
-import { generateRandomPuzzle, suggest, pulseShake } from '../flags/grid.js';
+import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake } from '../flags/grid.js';
 import { newGame, attemptClaim, isGameOver } from '../flags/ticTacToe.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
@@ -119,6 +119,8 @@ function runTicTacToe({ puzzle, countries }) {
     currentMatches = suggest(countries, query, { excludeCodes });
     selectedIndex = 0;
     renderSuggestions();
+    const auto = exactSingleMatch(currentMatches, query);
+    if (auto) pickCountry(auto);
   }
 
   function renderSuggestions() {

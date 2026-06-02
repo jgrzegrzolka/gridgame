@@ -1,4 +1,4 @@
-import { suggest, pulseShake } from '../../flags/grid.js';
+import { suggest, exactSingleMatch, pulseShake } from '../../flags/grid.js';
 import {
   generateCode,
   isValidRoomCode,
@@ -222,6 +222,8 @@ function runOnline(countries) {
     currentMatches = suggest(countries, query, { excludeCodes });
     selectedIndex = 0;
     renderSuggestions();
+    const auto = exactSingleMatch(currentMatches, query);
+    if (auto) pickCountry(auto);
   }
 
   function renderSuggestions() {
