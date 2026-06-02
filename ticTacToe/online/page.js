@@ -5,6 +5,7 @@ import {
   serverUrlFor,
   initialClientState,
   reduceServerMessage,
+  getOrCreatePlayerId,
 } from './onlineClient.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
@@ -28,11 +29,21 @@ export function bootTicTacToeOnline() {
 /** @param {Country[]} countries */
 function runOnline(countries) {
   const byCode = new Map(countries.map((c) => [c.code, c]));
+  const playerId = getOrCreatePlayerId(window.localStorage);
 
   /** @type {WebSocket | null} */
   let ws = null;
   let state = initialClientState();
   let lastRenderedTurn = /** @type {Player | null} */ (null);
+
+  /** Current room context — needed by the auto-reconnect path. */
+  /** @type {{ code: string, intent: 'create' | 'join' } | null} */
+  let activeRoom = null;
+  /** Reconnect bookkeeping. The server's own 'rejected' sets this so we don't loop. */
+  let stopReconnecting = false;
+  let reconnectAttempts = 0;
+  /** @type {any} */
+  let reconnectTimer = 0;
 
   /** @type {{ row: number, col: number } | null} */
   let activeCell = null;
@@ -67,7 +78,10 @@ function runOnline(countries) {
   const params = new URL(window.location.href).searchParams;
   const roomParam = params.get('room');
   if (roomParam && isValidRoomCode(roomParam.toUpperCase())) {
-    joinRoom(roomParam.toUpperCase());
+    // A pre-existing ?room=... URL is always a join — the only way to get a
+    // create URL is by clicking the Create button, which sets intent=create
+    // on the in-page state (not in the URL).
+    enterRoom(roomParam.toUpperCase(), 'join');
   } else {
     showLobby();
   }
@@ -78,7 +92,7 @@ function runOnline(countries) {
   }
 
   if (createBtn) {
-    createBtn.addEventListener('click', () => joinRoom(generateCode()));
+    createBtn.addEventListener('click', () => enterRoom(generateCode(), 'create'));
   }
   if (joinForm) {
     joinForm.addEventListener('submit', (e) => {
@@ -88,7 +102,7 @@ function runOnline(countries) {
         showError('Code must be 5 characters');
         return;
       }
-      joinRoom(code);
+      enterRoom(code, 'join');
     });
   }
 
@@ -100,8 +114,11 @@ function runOnline(countries) {
   }
 
   // ---- Room join ----
-  /** @param {string} code */
-  function joinRoom(code) {
+  /** @param {string} code @param {'create' | 'join'} intent */
+  function enterRoom(code, intent) {
+    activeRoom = { code, intent };
+    stopReconnecting = false;
+    reconnectAttempts = 0;
     const url = new URL(window.location.href);
     url.searchParams.set('room', code);
     window.history.replaceState(null, '', url.toString());
@@ -109,15 +126,33 @@ function runOnline(countries) {
     if (gameEl) gameEl.hidden = false;
     if (roomCodeEl) roomCodeEl.textContent = code;
     setStatus('Connecting…');
-    connect(code);
+    connect();
   }
 
-  /** @param {string} code */
-  function connect(code) {
-    ws = new WebSocket(SERVER_URL + encodeURIComponent(code));
+  function connect() {
+    if (!activeRoom) return;
+    const { code, intent } = activeRoom;
+    const wsUrl = `${SERVER_URL}${encodeURIComponent(code)}?pid=${encodeURIComponent(playerId)}&intent=${intent}`;
+    ws = new WebSocket(wsUrl);
     ws.addEventListener('message', (ev) => onServerMessage(JSON.parse(ev.data)));
-    ws.addEventListener('close', () => setStatus('Disconnected. Reload to retry.'));
+    ws.addEventListener('close', onSocketClose);
     ws.addEventListener('error', () => setStatus('Connection error'));
+  }
+
+  function onSocketClose() {
+    if (stopReconnecting || !activeRoom) {
+      // Either the server rejected us (rejected -> close in the reducer)
+      // or we never had a room. Leave the status whatever the reducer set.
+      return;
+    }
+    // Subsequent reconnects are always 'join' — the room was already created
+    // on the first successful connect (or by the peer).
+    activeRoom = { ...activeRoom, intent: 'join' };
+    reconnectAttempts++;
+    const delayMs = Math.min(30000, 1000 * 2 ** (reconnectAttempts - 1));
+    setStatus(`Disconnected. Reconnecting in ${Math.round(delayMs / 1000)}s…`);
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, delayMs);
   }
 
   /** @param {any} msg */
@@ -138,8 +173,33 @@ function runOnline(countries) {
     for (const effect of effects) {
       if (effect.type === 'shake') shakeCell(effect.row, effect.col);
       else if (effect.type === 'finished') finishRound();
-      else if (effect.type === 'close' && ws) ws.close();
+      else if (effect.type === 'close') {
+        // Server-side rejection — don't auto-reconnect, snap back to the
+        // lobby with the reason visible so the user understands why their
+        // attempt didn't land them in a real room.
+        stopReconnecting = true;
+        clearTimeout(reconnectTimer);
+        if (ws) ws.close();
+        returnToLobbyWithError(state.statusOverride);
+      }
     }
+  }
+
+  /** @param {string | null} errorMessage */
+  function returnToLobbyWithError(errorMessage) {
+    if (gameEl) gameEl.hidden = true;
+    if (lobbyEl) lobbyEl.hidden = false;
+    if (errorMessage) showError(errorMessage);
+    // Clear ?room=… so reloading doesn't re-attempt the same dead room.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('room');
+    window.history.replaceState(null, '', url.toString());
+    activeRoom = null;
+    state = initialClientState();
+    gridBuilt = false;
+    if (gridBodyEl) gridBodyEl.innerHTML = '';
+    if (roomCodeEl) roomCodeEl.textContent = '-----';
+    lastRenderedTurn = null;
   }
 
   // ---- Grid (built once, on welcome) ----

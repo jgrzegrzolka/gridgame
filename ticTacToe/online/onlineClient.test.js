@@ -8,6 +8,7 @@ import {
   serverUrlFor,
   initialClientState,
   reduceServerMessage,
+  getOrCreatePlayerId,
 } from './onlineClient.js';
 
 // ---- Room code generation ----
@@ -132,9 +133,58 @@ test('reduceServerMessage: rejected sets a statusOverride and emits "close"', ()
   assert.deepEqual(r.effects, [{ type: 'close' }]);
 });
 
+test('reduceServerMessage: rejected with room-not-found gets a guiding message', () => {
+  const r = reduceServerMessage(initialClientState(), { type: 'rejected', reason: 'room-not-found' });
+  assert.match(/** @type {string} */ (r.state.statusOverride), /not found/i);
+  assert.deepEqual(r.effects, [{ type: 'close' }]);
+});
+
+test('reduceServerMessage: rejected with code-collision gets a clear message', () => {
+  const r = reduceServerMessage(initialClientState(), { type: 'rejected', reason: 'code-collision' });
+  assert.match(/** @type {string} */ (r.state.statusOverride), /already taken/i);
+  assert.deepEqual(r.effects, [{ type: 'close' }]);
+});
+
+test('reduceServerMessage: rejected with an unknown reason falls back to a generic message', () => {
+  const r = reduceServerMessage(initialClientState(), { type: 'rejected', reason: 'mystery' });
+  assert.equal(r.state.statusOverride, 'Rejected: mystery');
+});
+
 test('reduceServerMessage: unknown message type is a no-op', () => {
   const state = initialClientState();
   const r = reduceServerMessage(state, { type: 'something-new' });
   assert.equal(r.state, state);
   assert.deepEqual(r.effects, []);
+});
+
+// ---- getOrCreatePlayerId ----
+
+/**
+ * @param {Record<string, string>} [initial]
+ */
+function fakeStore(initial = {}) {
+  /** @type {Map<string, string>} */
+  const data = new Map(Object.entries(initial));
+  return {
+    /** @param {string} k */
+    getItem: (k) => (data.has(k) ? /** @type {string} */ (data.get(k)) : null),
+    /** @param {string} k @param {string} v */
+    setItem: (k, v) => { data.set(k, v); },
+    _dump: () => Object.fromEntries(data),
+  };
+}
+
+test('getOrCreatePlayerId: generates a fresh id on first call and persists it', () => {
+  const store = fakeStore();
+  const id = getOrCreatePlayerId(store, () => 'uuid-1');
+  assert.equal(id, 'uuid-1');
+  assert.equal(store._dump()['gridgame.player.id'], 'uuid-1');
+});
+
+test('getOrCreatePlayerId: returns the existing id on subsequent calls without regenerating', () => {
+  const store = fakeStore({ 'gridgame.player.id': 'existing-id' });
+  let generated = 0;
+  const id = getOrCreatePlayerId(store, () => { generated++; return 'new-id'; });
+  assert.equal(id, 'existing-id');
+  assert.equal(generated, 0, 'must not call the generator when an id already exists');
 });

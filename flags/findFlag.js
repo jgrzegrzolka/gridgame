@@ -1,8 +1,12 @@
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./grid.js').Category} Category */
 
-import { continent, hasColor, hasMotif } from './grid.js';
+import { categoryFromId as gridCategoryFromId } from './grid.js';
 import { readBoolSetting, writeBoolSetting } from './group.js';
+
+// Re-exported so existing findFlag callers don't need to update their import.
+// The implementation lives in grid.js next to the category factories.
+export const categoryFromId = gridCategoryFromId;
 
 const FIND_INCLUDE_ALL_KEY = 'gridgame.flagfind.includeAll';
 
@@ -19,18 +23,6 @@ export function isFindIncludeAll(store) {
  */
 export function setFindIncludeAll(store, value) {
   writeBoolSetting(store, FIND_INCLUDE_ALL_KEY, value);
-}
-
-/**
- * @param {string | null | undefined} id
- * @returns {Category | null}
- */
-export function categoryFromId(id) {
-  if (typeof id !== 'string') return null;
-  if (id.startsWith('continent:')) return continent(id.slice('continent:'.length));
-  if (id.startsWith('hasColor:')) return hasColor(id.slice('hasColor:'.length));
-  if (id.startsWith('hasMotif:')) return hasMotif(id.slice('hasMotif:'.length));
-  return null;
 }
 
 /**

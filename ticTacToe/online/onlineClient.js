@@ -31,6 +31,34 @@ export function isValidRoomCode(code) {
   return ROOM_CODE_RE.test(code);
 }
 
+const PLAYER_ID_KEY = 'gridgame.player.id';
+
+/**
+ * Returns the browser's stable playerId, generating + persisting one on the
+ * first call. Used as the identity the server keys roles by, so refreshes
+ * keep the same X/O assignment instead of getting shuffled.
+ *
+ * @param {{ getItem(key: string): string | null, setItem(key: string, value: string): void }} store
+ * @param {() => string} [generate]
+ * @returns {string}
+ */
+export function getOrCreatePlayerId(store, generate = defaultGeneratePlayerId) {
+  const existing = store.getItem(PLAYER_ID_KEY);
+  if (existing) return existing;
+  const fresh = generate();
+  store.setItem(PLAYER_ID_KEY, fresh);
+  return fresh;
+}
+
+function defaultGeneratePlayerId() {
+  if (typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  // Very-old-browser fallback: timestamp + random tail. Not RFC-4122 but
+  // unique enough for room identity.
+  return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 /**
  * Which WebSocket URL the client should connect to.
  * Local hostnames go to the partykit dev server; anywhere else (including
@@ -65,6 +93,14 @@ export function initialClientState() {
  *   | { type: 'close' }
  * } Effect
  */
+
+/** @type {Record<string, string>} */
+const REJECT_MESSAGES = {
+  'room-full': 'Room is full',
+  'room-not-found': 'Room not found — ask your friend for the code or create a new room',
+  'code-collision': 'That code is already taken — try creating a new one',
+  'missing-player-id': 'Connection error — please reload the page',
+};
 
 /**
  * Pure reducer over server-sent messages. State transitions on the left,
@@ -106,7 +142,7 @@ export function reduceServerMessage(state, message) {
       return { state: { ...state, peerPresent: false }, effects: [] };
     }
     case 'rejected': {
-      const reason = message.reason === 'room-full' ? 'Room is full' : 'Rejected: ' + message.reason;
+      const reason = REJECT_MESSAGES[message.reason] ?? 'Rejected: ' + message.reason;
       return {
         state: { ...state, statusOverride: reason },
         effects: [{ type: 'close' }],
