@@ -29,4 +29,5 @@ export const PUZZLE_3 = {
 export const ARCHIVE = [
   { slug: '1', label: 'Game 1', date: '2026-06-01', puzzle: PUZZLE_1 },
   { slug: '2', label: 'Game 2', date: '2026-06-02', puzzle: PUZZLE_2 },
+  { slug: '3', label: 'Game 3', date: '2026-06-03', puzzle: PUZZLE_3 },
 ];
