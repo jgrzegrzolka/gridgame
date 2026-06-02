@@ -33,26 +33,28 @@
         <li><a href="online/">Online</a></li>
       </ul>
     </nav>
-    <table class="grid">
-      <thead>
-        <tr>
-          <th class="corner"></th>
-          <th class="col-header" data-col="0"></th>
-          <th class="col-header" data-col="1"></th>
-          <th class="col-header" data-col="2"></th>
-        </tr>
-      </thead>
-      <tbody id="grid-body"></tbody>
-    </table>
-    <p class="turn-line" id="turn-line"><span class="turn-badge o" id="turn-badge">O</span><span id="turn-text">to move</span></p>
-    <section id="result" hidden>
-      <p class="final-score" id="final-score-line">
-        <span id="final-score"></span>
-      </p>
-      <p class="result-links">
-        <a id="play-again" href="#">Play again</a>
-      </p>
-    </section>
+    <div class="game">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th class="corner"></th>
+            <th class="col-header" data-col="0"></th>
+            <th class="col-header" data-col="1"></th>
+            <th class="col-header" data-col="2"></th>
+          </tr>
+        </thead>
+        <tbody id="grid-body"></tbody>
+      </table>
+      <p class="turn-line" id="turn-line"><span class="turn-badge o" id="turn-badge">O</span><span id="turn-text">to move</span></p>
+      <section id="result" hidden>
+        <p class="final-score" id="final-score-line">
+          <span id="final-score"></span>
+        </p>
+        <p class="result-links">
+          <a id="play-again" href="#">Play again</a>
+        </p>
+      </section>
+    </div>
     <div class="picker" id="picker" hidden>
       <div class="picker-backdrop" id="picker-backdrop"></div>
       <div class="picker-sheet" role="dialog" aria-modal="true" aria-labelledby="picker-cats">
