@@ -10,6 +10,7 @@ import {
   targetFor,
   isQuizIncludeAll,
   setQuizIncludeAll,
+  preloadFlags,
 } from '../flags/quiz.js';
 import { flagsGamePool } from '../flags/group.js';
 
@@ -43,6 +44,7 @@ export function bootFlagQuiz() {
     .then((r) => r.json())
     .then((raw) => {
       const all = flagsGamePool(raw, includeAll);
+      preloadFlags(all, (url) => { new Image().src = url; });
       renderMenu(all);
 
       let variantKey = urlVariant && VARIANTS[urlVariant]

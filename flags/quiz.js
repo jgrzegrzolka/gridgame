@@ -177,6 +177,21 @@ export const VARIANTS = {
 };
 
 /**
+ * Warms the browser HTTP cache for every flag in the pool by handing each
+ * SVG URL to the supplied loader (typically `new Image().src = url`). Lets
+ * the first question render off the wire while later questions hit cache.
+ *
+ * @param {{ code: string }[]} pool
+ * @param {(url: string) => void} load
+ * @param {string} [base]
+ */
+export function preloadFlags(pool, load, base = '../flags/svg/') {
+  for (const c of pool) {
+    load(`${base}${c.code}.svg`);
+  }
+}
+
+/**
  * @param {string} variantKey
  * @param {Country[]} countries
  * @returns {Country[]}
