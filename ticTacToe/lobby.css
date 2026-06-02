@@ -21,6 +21,7 @@
   font: inherit;
   font-size: 16px;
   color: var(--link-color);
+  text-decoration: none;
   cursor: pointer;
 }
 .lobby-btn:hover { background: #f0f0f0; }

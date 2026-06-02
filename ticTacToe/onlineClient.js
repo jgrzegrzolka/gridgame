@@ -1,5 +1,5 @@
-/** @typedef {import('../../flags/ticTacToe.js').GameState} GameState */
-/** @typedef {import('../../flags/ticTacToe.js').Player} Player */
+/** @typedef {import('../flags/ticTacToe.js').GameState} GameState */
+/** @typedef {import('../flags/ticTacToe.js').Player} Player */
 
 /** Alphabet for room codes — no ambiguous characters (no I/O/L/0/1). */
 export const ROOM_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
