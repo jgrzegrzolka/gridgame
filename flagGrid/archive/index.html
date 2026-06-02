@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Flag Grid — Archive</title>
+    <title>Flag Grid — Previous games</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="../index.css?v=__BUILD__" />
@@ -30,8 +30,8 @@
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
       <ul class="menu">
-        <li><a href="../2/">Current</a></li>
-        <li><a href="../archive/">Archive</a></li>
+        <li><a href="../2/">Today</a></li>
+        <li><a href="../archive/">Previous games</a></li>
         <li><a href="../rand/">Random</a></li>
       </ul>
     </nav>
@@ -40,6 +40,12 @@
       import { ARCHIVE } from '../puzzles.js?v=__BUILD__';
       import { loadGridState, computeGridScore, isGridLocked } from '../../flags/grid.js?v=__BUILD__';
       import { scoreColor } from '../../flags/quiz.js?v=__BUILD__';
+
+      const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      function formatDate(iso) {
+        const [, m, d] = iso.split('-').map(Number);
+        return `${MONTHS[m - 1]} ${d}`;
+      }
 
       const gridEl = document.getElementById('archive-grid');
       for (const entry of ARCHIVE) {
@@ -51,6 +57,11 @@
         num.className = 'archive-tile-num';
         num.textContent = `#${entry.slug}`;
         a.appendChild(num);
+
+        const dateEl = document.createElement('div');
+        dateEl.className = 'archive-tile-date';
+        dateEl.textContent = formatDate(entry.date);
+        a.appendChild(dateEl);
 
         // Only show a score when the round was actually played to
         // completion (solved or gave up). An in-progress save (state

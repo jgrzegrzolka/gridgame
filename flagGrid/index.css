@@ -234,7 +234,7 @@ body.picker-open {
   border: 1px solid #ddd;
   background: #fff;
   display: grid;
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: 1fr auto 1fr;
   justify-items: center;
   text-decoration: none;
   color: #1c1c1c;
@@ -248,6 +248,12 @@ body.picker-open {
   line-height: 1;
   color: var(--link-color);
   align-self: end;
+}
+.archive-tile-date {
+  font-size: 11px;
+  color: #888;
+  line-height: 1;
+  margin-top: 4px;
 }
 .archive-tile-score {
   font-size: 14px;

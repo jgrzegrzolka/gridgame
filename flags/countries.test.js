@@ -131,7 +131,8 @@ const KNOWN_MOTIFS = [
   { code: 'sh-hl', motifs: ['animal', 'coat-of-arms'], note: 'Saint Helena wirebird' },
   { code: 'sh-ac', motifs: ['animal', 'coat-of-arms'], note: 'Ascension Island turtle' },
   { code: 'sh-ta', motifs: ['animal', 'coat-of-arms'], note: 'Tristan da Cunha albatross' },
-  { code: 'sh',    motifs: ['animal', 'coat-of-arms'], note: 'SH+A+T combined territory' },
+  // sh (the combined territory) currently ships a plain Union Jack SVG with
+  // no coat of arms, so no motif tags apply to what the player actually sees.
   { code: 'eg',    motifs: ['animal', 'coat-of-arms'], note: 'Egypt — Eagle of Saladin' },
 ];
 

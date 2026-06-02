@@ -197,7 +197,8 @@
       "blue",
       "red",
       "white",
-      "yellow"
+      "yellow",
+      "green"
     ],
     "motifs": [
       "animal",
@@ -857,7 +858,8 @@
     "colors": [
       "red",
       "white",
-      "blue"
+      "blue",
+      "yellow"
     ],
     "motifs": [
       "coat-of-arms"
@@ -1109,7 +1111,8 @@
       "green",
       "white",
       "red",
-      "blue"
+      "blue",
+      "yellow"
     ],
     "motifs": [
       "coat-of-arms"
@@ -2014,7 +2017,8 @@
     "colors": [
       "blue",
       "red",
-      "yellow"
+      "yellow",
+      "black"
     ],
     "motifs": []
   },
@@ -2137,10 +2141,12 @@
     "statehood": "un_member",
     "colors": [
       "red",
-      "white"
+      "white",
+      "black"
     ],
     "motifs": [
-      "weapon"
+      "weapon",
+      "animal"
     ]
   },
   {
@@ -2238,7 +2244,8 @@
     "colors": [
       "blue",
       "yellow",
-      "red"
+      "red",
+      "green"
     ],
     "motifs": [
       "animal",
@@ -2281,7 +2288,9 @@
     "statehood": "un_member",
     "colors": [
       "red",
-      "yellow"
+      "yellow",
+      "blue",
+      "green"
     ],
     "motifs": [
       "animal",
@@ -2875,8 +2884,7 @@
       "blue",
       "red",
       "white",
-      "yellow",
-      "green"
+      "yellow"
     ],
     "motifs": [
       "animal",
@@ -2892,14 +2900,9 @@
     "colors": [
       "blue",
       "red",
-      "white",
-      "yellow",
-      "green"
+      "white"
     ],
-    "motifs": [
-      "animal",
-      "coat-of-arms"
-    ]
+    "motifs": []
   },
   {
     "code": "kn",
@@ -2995,7 +2998,10 @@
     "statehood": "un_member",
     "colors": [
       "white",
-      "blue"
+      "blue",
+      "green",
+      "yellow",
+      "red"
     ],
     "motifs": [
       "coat-of-arms"
@@ -3068,7 +3074,8 @@
     "colors": [
       "red",
       "blue",
-      "white"
+      "white",
+      "yellow"
     ],
     "motifs": [
       "animal",
@@ -3157,7 +3164,8 @@
     "colors": [
       "white",
       "blue",
-      "red"
+      "red",
+      "yellow"
     ],
     "motifs": [
       "coat-of-arms",
@@ -3269,7 +3277,9 @@
     "statehood": "un_member",
     "colors": [
       "red",
-      "yellow"
+      "yellow",
+      "blue",
+      "white"
     ],
     "motifs": [
       "animal",
