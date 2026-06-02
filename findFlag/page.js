@@ -158,10 +158,6 @@ export function bootFindFlag() {
       matches.forEach((c, i) => {
         const li = document.createElement('li');
         if (i === selected) li.classList.add('selected');
-        const img = document.createElement('img');
-        img.src = `../flags/svg/${c.code}.svg`;
-        img.alt = '';
-        li.appendChild(img);
         const span = document.createElement('span');
         span.textContent = c.name;
         li.appendChild(span);
