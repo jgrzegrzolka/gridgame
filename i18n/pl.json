@@ -1,0 +1,18 @@
+{
+  "back": "Strona główna",
+  "coffee": "Postaw mi kawę",
+  "menu": {
+    "open": "Otwórz menu",
+    "close": "Zamknij menu",
+    "flagsData": "Dane flag"
+  },
+  "domain": {
+    "flags": "Flagi"
+  },
+  "tile": {
+    "quiz": "Quiz",
+    "grid": "Siatka",
+    "find": "Znajdź",
+    "ticTacToe": "Kółko i krzyżyk"
+  }
+}

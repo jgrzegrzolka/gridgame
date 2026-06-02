@@ -1,0 +1,18 @@
+{
+  "back": "Home",
+  "coffee": "Buy me a coffee",
+  "menu": {
+    "open": "Open menu",
+    "close": "Close menu",
+    "flagsData": "Flags data"
+  },
+  "domain": {
+    "flags": "Flags"
+  },
+  "tile": {
+    "quiz": "Quiz",
+    "grid": "Grid",
+    "find": "Find",
+    "ticTacToe": "Tic Tac Toe"
+  }
+}

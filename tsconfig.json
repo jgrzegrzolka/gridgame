@@ -18,6 +18,8 @@
     "ticTacToe/onlineClient.js",
     "ticTacToe/onlineClient.test.js",
     "common.js",
-    "common.test.js"
+    "common.test.js",
+    "i18n.js",
+    "i18n.test.js"
   ]
 }
