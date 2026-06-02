@@ -66,6 +66,38 @@
       "motifs": "Motifs"
     }
   },
+  "ttt": {
+    "title": "Tic Tac Toe",
+    "lobbyTitle": "Play with a friend",
+    "createRoom": "Create a new room",
+    "or": "— or —",
+    "roomCodePlaceholder": "ROOM CODE",
+    "join": "Join",
+    "playOffline": "Play offline",
+    "room": "Room",
+    "youAre": "You are",
+    "waitingForOpponent": "Waiting for opponent…",
+    "waitingShareCode": "Waiting for opponent… share the code above",
+    "toMove": "to move",
+    "yourTurn": "Your turn",
+    "opponentsTurn": "Opponent's turn",
+    "connecting": "Connecting…",
+    "connectionError": "Connection error",
+    "disconnectedReconnecting": "Disconnected. Reconnecting in {seconds}s…",
+    "codeMustBe5": "Code must be 5 characters",
+    "failedToLoadCountries": "Failed to load countries:",
+    "youWin": "You win!",
+    "opponentWins": "Opponent wins",
+    "draw": "Draw",
+    "playerWins": "{player} wins!",
+    "reject": {
+      "roomFull": "Room is full",
+      "roomNotFound": "Room not found — ask your friend for the code or create a new room",
+      "codeCollision": "That code is already taken — try creating a new one",
+      "missingPlayerId": "Connection error — please reload the page",
+      "fallback": "Rejected: {reason}"
+    }
+  },
   "variant": {
     "countries": "All countries",
     "europe": "Europe",
