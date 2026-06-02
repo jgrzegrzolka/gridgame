@@ -60,21 +60,8 @@
       </div>
     </section>
     <script type="module">
-      import { bootI18n, setStoredLang } from './i18n.js?v=__BUILD__';
-      bootI18n().then((lang) => {
-        const toggle = document.getElementById('lang-toggle');
-        if (!toggle) return;
-        const next = lang === 'pl' ? 'en' : 'pl';
-        // The toggle always displays the OTHER language's name, in that
-        // language. That way a user who doesn't read the current language
-        // can still recognise the way out.
-        toggle.textContent = next === 'pl' ? 'Polski' : 'English';
-        toggle.addEventListener('click', (e) => {
-          e.preventDefault();
-          setStoredLang(next);
-          window.location.reload();
-        });
-      });
+      import { bootI18n, wireLangToggle } from './i18n.js?v=__BUILD__';
+      bootI18n().then(wireLangToggle);
     </script>
   </body>
 </html>

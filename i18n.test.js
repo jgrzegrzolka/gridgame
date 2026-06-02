@@ -6,6 +6,7 @@ import {
   applyTextContent,
   applyAttributes,
   setStoredLang,
+  wireLangToggle,
   DEFAULT_LANG,
   LANG_STORAGE_KEY,
 } from './i18n.js';
@@ -148,4 +149,35 @@ test('setStoredLang: is a no-op for unsupported codes', () => {
   const store = fakeStore();
   setStoredLang('xx', store);
   assert.deepEqual(store._dump(), {});
+});
+
+// ---- wireLangToggle ----
+
+function fakeToggle() {
+  return {
+    textContent: /** @type {string | null} */ (''),
+    /** @type {Array<(e: any) => void>} */
+    _handlers: [],
+    /** @param {string} type @param {(e: any) => void} h */
+    addEventListener(type, h) {
+      if (type === 'click') this._handlers.push(h);
+    },
+  };
+}
+
+test('wireLangToggle: shows "Polski" and switches to pl when current is en', () => {
+  const toggle = fakeToggle();
+  wireLangToggle('en', /** @type {any} */ (toggle));
+  assert.equal(toggle.textContent, 'Polski');
+});
+
+test('wireLangToggle: shows "English" and switches to en when current is pl', () => {
+  const toggle = fakeToggle();
+  wireLangToggle('pl', /** @type {any} */ (toggle));
+  assert.equal(toggle.textContent, 'English');
+});
+
+test('wireLangToggle: is a no-op when no element is found', () => {
+  // Just ensures no throw; passing null is the "couldn't find lang-toggle" path.
+  wireLangToggle('en', null);
 });

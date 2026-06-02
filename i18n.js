@@ -11,6 +11,17 @@ export const DEFAULT_LANG = 'en';
 export const LANG_STORAGE_KEY = 'gridgame.lang';
 
 /**
+ * Kill-switch for the in-progress translation work. While only the chrome
+ * and a handful of menu items are translated, presenting a language toggle
+ * would let users land on a half-Polish, half-English page — worse than
+ * leaving it English. With this flag off, bootI18n short-circuits to the
+ * default language regardless of localStorage, and common.css hides the
+ * #lang-toggle element. Flip to true once the remaining page-specific UI
+ * (and ideally country names) are translated end-to-end.
+ */
+export const I18N_ENABLED = false;
+
+/**
  * Decide which language to use. Stored preference wins, otherwise fall back
  * to the browser's preferred language if it's one we support, otherwise the
  * default.
@@ -103,6 +114,27 @@ export function setStoredLang(lang, store) {
 }
 
 /**
+ * Configure a language-toggle link to display the *other* language's name
+ * (in that language) and switch on click. Always shows the destination in
+ * its own language so a user who doesn't read the current page can still
+ * find the way out.
+ *
+ * @param {string} currentLang
+ * @param {{ textContent: string | null, addEventListener(type: 'click', handler: (e: Event) => void): void } | null} [toggleEl]
+ */
+export function wireLangToggle(currentLang, toggleEl) {
+  const el = toggleEl === undefined ? document.getElementById('lang-toggle') : toggleEl;
+  if (!el) return;
+  const next = currentLang === 'pl' ? 'en' : 'pl';
+  el.textContent = next === 'pl' ? 'Polski' : 'English';
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    setStoredLang(next);
+    window.location.reload();
+  });
+}
+
+/**
  * Apply translations to every [data-i18n] and [data-i18n-attr] element under
  * the given root, then update <html lang>. DOM-facing glue around the pure
  * helpers above.
@@ -131,6 +163,7 @@ export function applyStringsToDocument(strings, lang, doc) {
  * @returns {Promise<string>}
  */
 export async function bootI18n(base = './') {
+  if (!I18N_ENABLED) return DEFAULT_LANG;
   const stored = window.localStorage.getItem(LANG_STORAGE_KEY);
   const lang = resolveLang(stored, window.navigator.language);
   if (lang === DEFAULT_LANG) {

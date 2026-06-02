@@ -12,18 +12,21 @@
     <link rel="stylesheet" href="../index.css?v=__BUILD__" />
   </head>
   <body>
-    <a class="back" href="../../" aria-label="Home"><span class="home-icon" aria-hidden="true"></span></a>
-    <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
+    <a class="back" href="../../" aria-label="Home" data-i18n-attr="aria-label:back"><span class="home-icon" aria-hidden="true"></span></a>
+    <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee" data-i18n-attr="aria-label:coffee,title:coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
     <button
       type="button"
       class="burger"
       aria-label="Open menu"
       aria-expanded="false"
       aria-controls="burger-panel"
+      data-label-open="Open menu"
+      data-label-close="Close menu"
+      data-i18n-attr="aria-label:menu.open,data-label-open:menu.open,data-label-close:menu.close"
       onclick="
         const open = this.getAttribute('aria-expanded') === 'true';
         this.setAttribute('aria-expanded', String(!open));
-        this.setAttribute('aria-label', open ? 'Open menu' : 'Close menu');
+        this.setAttribute('aria-label', open ? this.dataset.labelOpen : this.dataset.labelClose);
         document.getElementById('burger-panel').hidden = open;
       "
     >
@@ -31,10 +34,11 @@
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
       <ul class="menu">
-        <li><a href="../2/">Today</a></li>
-        <li><a href="../archive/">Previous games</a></li>
-        <li><a href="../rand/">Random</a></li>
-        <li class="menu-divider"><a href="../../flagsdata/">Flags data</a></li>
+        <li><a href="../2/" data-i18n="menu.today">Today</a></li>
+        <li><a href="../archive/" data-i18n="menu.previousGames">Previous games</a></li>
+        <li><a href="../rand/" data-i18n="menu.random">Random</a></li>
+        <li class="menu-divider"><a href="../../flagsdata/" data-i18n="menu.flagsData">Flags data</a></li>
+        <li class="menu-divider"><a href="#" id="lang-toggle">Polski</a></li>
       </ul>
     </nav>
     <p class="play-timer" id="play-timer-line"><span id="play-time">0:00.000</span></p>
@@ -90,7 +94,9 @@
     <script type="module">
       import { bootFlagGrid } from '../page.js?v=__BUILD__';
       import { PUZZLE_2 } from '../puzzles.js?v=__BUILD__';
+      import { bootI18n, wireLangToggle } from '../../i18n.js?v=__BUILD__';
 
+      bootI18n('../../').then(wireLangToggle);
       bootFlagGrid(() => PUZZLE_2, { stateKey: 'flaggrid.state.2', allowReplay: true });
     </script>
   </body>

@@ -4,7 +4,13 @@
   "menu": {
     "open": "Open menu",
     "close": "Close menu",
-    "flagsData": "Flags data"
+    "flagsData": "Flags data",
+    "today": "Today",
+    "previousGames": "Previous games",
+    "random": "Random",
+    "pickCategory": "Pick a category",
+    "yourStats": "Your stats",
+    "includeTerritories": "Include territories & other flags"
   },
   "domain": {
     "flags": "Flags"
