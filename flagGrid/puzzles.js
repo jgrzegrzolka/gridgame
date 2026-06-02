@@ -20,8 +20,13 @@ export const PUZZLE_3 = {
   cols: [hasColor('white'), hasColor('green'), hasMotif('star-or-moon')],
 };
 
-/** @type {Array<{ slug: string, label: string, puzzle: Puzzle }>} */
+/**
+ * One Flag Grid game per day, starting 2026-06-01. The date is rendered
+ * on the archive tiles so the daily rhythm is visible at a glance.
+ *
+ * @type {Array<{ slug: string, label: string, date: string, puzzle: Puzzle }>}
+ */
 export const ARCHIVE = [
-  { slug: '1', label: 'Game 1', puzzle: PUZZLE_1 },
-  { slug: '2', label: 'Game 2', puzzle: PUZZLE_2 },
+  { slug: '1', label: 'Game 1', date: '2026-06-01', puzzle: PUZZLE_1 },
+  { slug: '2', label: 'Game 2', date: '2026-06-02', puzzle: PUZZLE_2 },
 ];
