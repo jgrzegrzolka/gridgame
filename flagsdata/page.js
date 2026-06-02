@@ -1,6 +1,6 @@
 import { CONTINENTS, sovereigntyOf } from '../flags/group.js';
 import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../flags/grid.js';
-import { t } from '../i18n.js';
+import { t, countryName } from '../i18n.js';
 
 /** @param {string} v */
 function statusLabel(v) {
@@ -44,9 +44,10 @@ export function bootFlagsData() {
   const zoomData = zoom.querySelector('.country-data');
   /** @param {Country} c */
   function openZoom(c) {
+    const displayName = countryName(c);
     zoomImg.src = `../flags/svg/${c.code}.svg`;
-    zoomImg.alt = c.name;
-    zoomName.textContent = c.name;
+    zoomImg.alt = displayName;
+    zoomName.textContent = displayName;
     zoomData.textContent = JSON.stringify(c, null, 2);
     zoom.showModal();
   }
@@ -56,13 +57,14 @@ export function bootFlagsData() {
 
   /** @param {Country} c */
   function flagTile(c) {
+    const displayName = countryName(c);
     const wrap = document.createElement('div');
     wrap.className = 'flag';
-    wrap.dataset.name = c.name;
+    wrap.dataset.name = displayName;
     wrap.addEventListener('click', () => openZoom(c));
     const img = document.createElement('img');
     img.src = `../flags/svg/${c.code}.svg`;
-    img.alt = c.name;
+    img.alt = displayName;
     img.loading = 'lazy';
     wrap.appendChild(img);
     return wrap;

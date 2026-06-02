@@ -204,6 +204,44 @@ export function t(key, fallback) {
 }
 
 /**
+ * Display name for a country in the active language. Falls back to the
+ * English name baked into countries.json when no translation is loaded
+ * (or a translation for this code is missing).
+ *
+ * @param {{ code: string, name: string }} c
+ * @returns {string}
+ */
+export function countryName(c) {
+  return t(`country.${c.code}`, c.name);
+}
+
+/**
+ * Enrich a list of countries with their localized name appended to each
+ * one's aliases. Lets `suggest()` in flags/grid.js match Polish input
+ * against the Polish name without coupling the engine to i18n — callers
+ * just pass `withLocalizedAliases(countries)` instead of the raw list.
+ *
+ * Entries whose localized name equals the English name pass through
+ * unmodified — no point bloating aliases with a duplicate. The generic
+ * preserves the input element type, so call-sites that pass `Country[]`
+ * get `Country[]` back without an extra cast. The inside is typed with
+ * `any` because the spread + override pattern widens past TypeScript's
+ * narrowing — the function's behavior is fully covered by i18n.test.js.
+ *
+ * @template T
+ * @param {T[]} countries
+ * @returns {T[]}
+ */
+export function withLocalizedAliases(countries) {
+  return countries.map((c) => {
+    const item = /** @type {any} */ (c);
+    const localized = countryName(item);
+    if (localized === item.name) return c;
+    return /** @type {any} */ ({ ...item, aliases: [...(item.aliases ?? []), localized] });
+  });
+}
+
+/**
  * Reset the in-memory string cache. Tests use this between cases; production
  * code shouldn't need it.
  */

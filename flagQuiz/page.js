@@ -13,7 +13,7 @@ import {
   preloadFlags,
 } from '../flags/quiz.js';
 import { flagsGamePool } from '../flags/group.js';
-import { t } from '../i18n.js';
+import { t, countryName } from '../i18n.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -176,7 +176,7 @@ export function bootFlagQuiz() {
 
     function render(q) {
       currentAnswer = q.answer;
-      countryNameEl.textContent = q.answer.name;
+      countryNameEl.textContent = countryName(q.answer);
       choicesEl.innerHTML = '';
       for (const c of q.choices) {
         const tile = document.createElement('button');
@@ -210,7 +210,7 @@ export function bootFlagQuiz() {
       } else {
         tile.classList.add('wrong');
         tile.disabled = true;
-        feedbackEl.textContent = chosen.name;
+        feedbackEl.textContent = countryName(chosen);
         wrongCount++;
       }
     }

@@ -9,6 +9,8 @@ import {
   setStoredLang,
   wireLangToggle,
   t,
+  countryName,
+  withLocalizedAliases,
   _resetCacheForTests,
   _seedCacheForTests,
   DEFAULT_LANG,
@@ -203,6 +205,46 @@ test('t: falls back when the key is missing from a partially-loaded cache', () =
   _seedCacheForTests({ quiz: { giveUp: 'Poddaję się' } });
   assert.equal(t('quiz.playAgain', 'Play again'), 'Play again');
   _resetCacheForTests();
+});
+
+// ---- countryName + withLocalizedAliases ----
+
+test('countryName: falls back to country.name when no translation is loaded', () => {
+  _resetCacheForTests();
+  assert.equal(countryName({ code: 'pl', name: 'Poland' }), 'Poland');
+});
+
+test('countryName: returns the translation when the code is in the cache', () => {
+  _seedCacheForTests({ country: { pl: 'Polska' } });
+  assert.equal(countryName({ code: 'pl', name: 'Poland' }), 'Polska');
+  _resetCacheForTests();
+});
+
+test('withLocalizedAliases: appends the localized name to aliases when different', () => {
+  _seedCacheForTests({ country: { pl: 'Polska' } });
+  const out = withLocalizedAliases([{ code: 'pl', name: 'Poland' }]);
+  assert.deepEqual(out, [{ code: 'pl', name: 'Poland', aliases: ['Polska'] }]);
+  _resetCacheForTests();
+});
+
+test('withLocalizedAliases: preserves existing aliases', () => {
+  _seedCacheForTests({ country: { us: 'Stany Zjednoczone' } });
+  const out = withLocalizedAliases([
+    { code: 'us', name: 'United States of America', aliases: ['USA'] },
+  ]);
+  assert.deepEqual(out, [{
+    code: 'us',
+    name: 'United States of America',
+    aliases: ['USA', 'Stany Zjednoczone'],
+  }]);
+  _resetCacheForTests();
+});
+
+test('withLocalizedAliases: passes entries through unchanged when localized name equals English', () => {
+  _resetCacheForTests();
+  const input = [{ code: 'tg', name: 'Togo' }];
+  const out = withLocalizedAliases(input);
+  assert.equal(out[0], input[0], 'no allocation when nothing changes');
 });
 
 // ---- JSON file parity ----

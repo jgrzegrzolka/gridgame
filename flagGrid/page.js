@@ -12,7 +12,7 @@ import {
   isGridLocked,
 } from '../flags/grid.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
-import { t } from '../i18n.js';
+import { t, countryName, withLocalizedAliases } from '../i18n.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/grid.js').Puzzle} Puzzle */
@@ -25,9 +25,12 @@ import { t } from '../i18n.js';
 export function bootFlagGrid(puzzleFor, options = {}) {
   return fetch('../../flags/countries.json')
     .then((r) => r.json())
-    .then((countries) => {
+    .then((rawCountries) => {
       // Grid uses the full 270 — more valid candidates per cell trades a
       // tiny bit of challenge for a richer pool. No scope toggle here.
+      // withLocalizedAliases makes `suggest()` accept input in the active
+      // language without coupling flags/grid.js to i18n.
+      const countries = withLocalizedAliases(rawCountries);
       const puzzle = puzzleFor(countries);
       runFlagGrid({ puzzle, countries, options });
     })
@@ -174,8 +177,9 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   function openZoom(c) {
     if (!zoomEl || !zoomImg || !zoomName) return;
     zoomImg.src = `../../flags/svg/${c.code}.svg`;
-    zoomImg.alt = c.name;
-    zoomName.textContent = c.name;
+    const displayName = countryName(c);
+    zoomImg.alt = displayName;
+    zoomName.textContent = displayName;
     zoomEl.showModal();
   }
 
@@ -227,7 +231,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       const li = document.createElement('li');
       if (i === selectedIndex) li.classList.add('selected');
       const name = document.createElement('span');
-      name.textContent = country.name;
+      name.textContent = countryName(country);
       li.appendChild(name);
       // mousedown fires before the input's blur, so the pick lands before blur-driven cleanup.
       li.addEventListener('mousedown', (e) => {
@@ -368,7 +372,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     if (country) {
       const img = document.createElement('img');
       img.src = `../../flags/svg/${country.code}.svg`;
-      img.alt = country.name;
+      img.alt = countryName(country);
       td.appendChild(img);
     }
   }
