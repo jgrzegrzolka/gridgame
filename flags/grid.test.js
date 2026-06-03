@@ -14,6 +14,7 @@ import {
   translateCategoryLabel,
   suggest,
   exactSingleMatch,
+  foldDiacritics,
   randomPuzzle,
   puzzleCellCounts,
   findPuzzleSolution,
@@ -288,6 +289,69 @@ test('exactSingleMatch rejects an alias that is only a substring of the typed te
   assert.equal(exactSingleMatch([us], 'USAA'), null);
 });
 
+// ---- foldDiacritics ----
+
+test('foldDiacritics lowercases and strips combining accents', () => {
+  assert.equal(foldDiacritics('España'), 'espana');
+  assert.equal(foldDiacritics('Côte d\'Ivoire'), 'cote d\'ivoire');
+  assert.equal(foldDiacritics('Türkiye'), 'turkiye');
+});
+
+test('foldDiacritics folds Polish ł that does not decompose under NFD', () => {
+  assert.equal(foldDiacritics('Łódź'), 'lodz');
+  assert.equal(foldDiacritics('Włochy'), 'wlochy');
+  assert.equal(foldDiacritics('Łotwa'), 'lotwa');
+});
+
+test('foldDiacritics folds non-combining Latin letters across other languages', () => {
+  assert.equal(foldDiacritics('Tromsø'), 'tromso');
+  assert.equal(foldDiacritics('Æthelstan'), 'aethelstan');
+  assert.equal(foldDiacritics('Cœur'), 'coeur');
+  assert.equal(foldDiacritics('Straße'), 'strasse');
+  assert.equal(foldDiacritics('Đại Việt'), 'dai viet');
+});
+
+test('foldDiacritics is the identity on plain ASCII (lowercased)', () => {
+  assert.equal(foldDiacritics('Poland'), 'poland');
+  assert.equal(foldDiacritics(''), '');
+});
+
+// ---- suggest + exactSingleMatch with folded diacritics ----
+
+test('suggest matches a localized alias that has Polish diacritics from an ASCII query', () => {
+  const it = country({ code: 'it', name: 'Italy', aliases: ['Włochy'] });
+  assert.deepEqual(suggest([it], 'wlochy').map((c) => c.code), ['it']);
+  assert.deepEqual(suggest([it], 'WLOCHY').map((c) => c.code), ['it']);
+  // Typing WITH the diacritics still works — the fold is applied symmetrically.
+  assert.deepEqual(suggest([it], 'Włochy').map((c) => c.code), ['it']);
+});
+
+test('suggest folds diacritics on country names too, not just aliases', () => {
+  const es = country({ code: 'es', name: 'España' });
+  assert.deepEqual(suggest([es], 'espana').map((c) => c.code), ['es']);
+  assert.deepEqual(suggest([es], 'esp').map((c) => c.code), ['es']);
+});
+
+test('suggest enforces the 3-char minimum on the raw input, not the folded form', () => {
+  // "ß" alone folds to "ss" (length 2), but the raw input is 1 character.
+  // The minimum-length rule should stay tied to what the user actually typed.
+  const de = country({ code: 'de', name: 'Straße' });
+  assert.deepEqual(suggest([de], 'ß'), []);
+});
+
+test('exactSingleMatch accepts the localized name typed without diacritics', () => {
+  const pl = country({ code: 'pl', name: 'Poland', aliases: ['Polska'] });
+  assert.equal(exactSingleMatch([pl], 'polska'), pl);
+  assert.equal(exactSingleMatch([pl], 'POLSKA'), pl);
+  assert.equal(exactSingleMatch([pl], 'Polska'), pl);
+});
+
+test('exactSingleMatch folds diacritics on both name and aliases', () => {
+  const it = country({ code: 'it', name: 'Italy', aliases: ['Włochy'] });
+  assert.equal(exactSingleMatch([it], 'wlochy'), it);
+  assert.equal(exactSingleMatch([it], 'Włochy'), it);
+  assert.equal(exactSingleMatch([it], 'italy'), it);
+});
 
 test('validateCell is true when country satisfies both row and column', () => {
   assert.equal(validateCell(PUZZLE, 0, 0, FR), true);
