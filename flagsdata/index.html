@@ -25,7 +25,7 @@
     </dialog>
     <script type="module">
       import { bootFlagsData } from './page.js?v=__BUILD__';
-      import { bootI18n, wireLangToggle } from '../i18n.js?v=__BUILD__';
+      import { bootI18n, wireLangToggle } from '../i18n.js';
       // Filter labels are built synchronously inside bootFlagsData, so we
       // chain after bootI18n to make sure t() sees the loaded strings.
       bootI18n('../').then((lang) => {

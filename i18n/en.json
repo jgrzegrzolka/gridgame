@@ -38,7 +38,11 @@
     "loading": "Loading…",
     "finalScore": "Final score:",
     "yourBestScore": "Your best score",
-    "play": "Play"
+    "play": "Play",
+    "mode": {
+      "60s": "60s",
+      "all": "all"
+    }
   },
   "grid": {
     "title1": "Flag Grid — Game 1",

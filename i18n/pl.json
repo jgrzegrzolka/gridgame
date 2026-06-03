@@ -38,7 +38,11 @@
     "loading": "Ładowanie…",
     "finalScore": "Wynik końcowy:",
     "yourBestScore": "Twój najlepszy wynik",
-    "play": "Zagraj"
+    "play": "Zagraj",
+    "mode": {
+      "60s": "60s",
+      "all": "wszystkie"
+    }
   },
   "grid": {
     "title1": "Siatka — Gra 1",

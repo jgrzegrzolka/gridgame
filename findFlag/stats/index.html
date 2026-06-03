@@ -48,18 +48,18 @@
     <h1 class="find-title" data-i18n="findFlag.statsHeading">Find Flag stats</h1>
     <div id="stats-sections"></div>
     <script type="module">
-      import { CONTINENTS } from '../../flags/group.js?v=__BUILD__';
-      import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../../flags/grid.js?v=__BUILD__';
+      import { CONTINENTS } from '../../flags/group.js';
+      import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../../flags/grid.js';
       import {
         categoryFromId,
         findTargets,
         loadBest,
         isFindIncludeAll,
         setFindIncludeAll,
-      } from '../../flags/findFlag.js?v=__BUILD__';
-      import { flagsGamePool } from '../../flags/group.js?v=__BUILD__';
-      import { formatTime, scoreColor } from '../../flags/quiz.js?v=__BUILD__';
-      import { bootI18n, wireLangToggle, t } from '../../i18n.js?v=__BUILD__';
+      } from '../../flags/findFlag.js';
+      import { flagsGamePool } from '../../flags/group.js';
+      import { formatTime, scoreColor } from '../../flags/quiz.js';
+      import { bootI18n, wireLangToggle, t } from '../../i18n.js';
 
       function continentKey(name) {
         return name.toLowerCase().replace(/ /g, '-');

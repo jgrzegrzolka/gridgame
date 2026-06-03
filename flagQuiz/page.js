@@ -131,15 +131,16 @@ export function bootFlagQuiz() {
         sep.textContent = '|';
         modeToggleEl.appendChild(sep);
       }
+      const label = t(`quiz.mode.${m}`, m);
       if (m === mode) {
         const span = document.createElement('span');
         span.className = 'mode-current';
-        span.textContent = m;
+        span.textContent = label;
         modeToggleEl.appendChild(span);
       } else {
         const a = document.createElement('a');
         a.href = `?v=${key}&n=${m}`;
-        a.textContent = m;
+        a.textContent = label;
         modeToggleEl.appendChild(a);
       }
     });
