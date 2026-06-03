@@ -234,6 +234,67 @@ export function buildRandomCategoryPool() {
 }
 
 /**
+ * The 9 cell signatures of a puzzle, each formed as `rowId|colId`. Used to
+ * compare puzzles for repeated cell content — e.g. "continent:Africa|hasColor:red"
+ * appearing in two different daily puzzles means the player will see the same
+ * cell prompt twice across the rotation.
+ *
+ * @param {Puzzle} puzzle
+ * @returns {string[]}
+ */
+export function puzzlePairs(puzzle) {
+  /** @type {string[]} */
+  const out = [];
+  for (const r of puzzle.rows) {
+    for (const c of puzzle.cols) {
+      out.push(`${r.id}|${c.id}`);
+    }
+  }
+  return out;
+}
+
+/**
+ * Checks whether two puzzles share any cell (rowCat × colCat) pair. The
+ * row/col axes are unordered for this comparison: a `hasColor:red`
+ * column in one puzzle still collides with a `hasColor:red` row in the
+ * other if their cross partner matches. We compare both axis orientations
+ * for that reason.
+ *
+ * @param {Puzzle} a
+ * @param {Puzzle} b
+ * @returns {string[]}
+ */
+export function sharedPuzzlePairs(a, b) {
+  const aPairs = new Set(puzzlePairs(a));
+  /** @type {Set<string>} */
+  const dupes = new Set();
+  for (const p of puzzlePairs(b)) {
+    if (aPairs.has(p)) dupes.add(p);
+    const [bRow, bCol] = p.split('|');
+    const swapped = `${bCol}|${bRow}`;
+    if (aPairs.has(swapped)) dupes.add(p);
+  }
+  return [...dupes];
+}
+
+/**
+ * A puzzle "mixes category families" when its 6 categories are not all
+ * colors and not all continents. Pure-color puzzles (red × white × ...)
+ * and pure-continent puzzles (Europe × Asia × ...) collapse the game into
+ * a single dimension; we want every daily puzzle to combine at least two
+ * families (continent + color, continent + motif, color + motif, ...).
+ *
+ * @param {Puzzle} puzzle
+ * @returns {boolean}
+ */
+export function puzzleMixesCategoryFamilies(puzzle) {
+  const all = [...puzzle.rows, ...puzzle.cols];
+  const allColors = all.every((c) => c.id.startsWith('hasColor:'));
+  const allContinents = all.every((c) => c.id.startsWith('continent:'));
+  return !allColors && !allContinents;
+}
+
+/**
  * @param {Category[]} rows
  * @param {Category[]} cols
  * @returns {boolean}

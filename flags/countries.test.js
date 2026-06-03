@@ -12,9 +12,11 @@ import {
   isPuzzleGeneratable,
   findPuzzleSolution,
   validateCell,
+  puzzleMixesCategoryFamilies,
+  sharedPuzzlePairs,
 } from './grid.js';
 import { CONTINENTS } from './group.js';
-import { PUZZLE_1, PUZZLE_2, PUZZLE_3 } from '../flagGrid/puzzles.js';
+import { PUZZLE_1, PUZZLE_2, PUZZLE_3, ARCHIVE } from '../flagGrid/puzzles.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
@@ -249,6 +251,55 @@ test('PUZZLE_3 has an exemplary 9-distinct-country solution against the real cou
     }
   }
   assert.equal(isPuzzleGeneratable(PUZZLE_3, COUNTRIES), true);
+});
+
+test('every ARCHIVE puzzle is solvable against the real countries.json', () => {
+  for (const entry of ARCHIVE) {
+    assert.equal(
+      isPuzzleGeneratable(entry.puzzle, COUNTRIES),
+      true,
+      `ARCHIVE puzzle "${entry.slug}" (${entry.date}) has no 9-distinct-country solution`,
+    );
+  }
+});
+
+test('every ARCHIVE puzzle mixes category families (not all colors, not all continents)', () => {
+  for (const entry of ARCHIVE) {
+    assert.equal(
+      puzzleMixesCategoryFamilies(entry.puzzle),
+      true,
+      `ARCHIVE puzzle "${entry.slug}" (${entry.date}) is a single-family puzzle — every cell is the same kind of category`,
+    );
+  }
+});
+
+test('ARCHIVE puzzles never repeat a (rowCat × colCat) pair across days', () => {
+  /** @type {string[]} */
+  const failures = [];
+  for (let i = 1; i < ARCHIVE.length; i++) {
+    for (let j = 0; j < i; j++) {
+      const shared = sharedPuzzlePairs(ARCHIVE[j].puzzle, ARCHIVE[i].puzzle);
+      for (const pair of shared) {
+        failures.push(
+          `${ARCHIVE[i].slug} (${ARCHIVE[i].date}) repeats pair "${pair}" from ${ARCHIVE[j].slug} (${ARCHIVE[j].date})`,
+        );
+      }
+    }
+  }
+  assert.deepEqual(failures, [], failures.join('; '));
+});
+
+test('ARCHIVE dates form a consecutive day-by-day sequence', () => {
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  for (let i = 1; i < ARCHIVE.length; i++) {
+    const prev = Date.parse(`${ARCHIVE[i - 1].date}T00:00:00Z`);
+    const curr = Date.parse(`${ARCHIVE[i].date}T00:00:00Z`);
+    assert.equal(
+      curr - prev,
+      MS_PER_DAY,
+      `ARCHIVE "${ARCHIVE[i].slug}" date ${ARCHIVE[i].date} is not exactly one day after ${ARCHIVE[i - 1].date}`,
+    );
+  }
 });
 
 test('generateRandomPuzzle succeeds with the real countries.json under several seeds', () => {
