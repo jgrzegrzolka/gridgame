@@ -5,6 +5,7 @@ import {
   newUltimateGame,
   attemptUltimateClaim,
   isUltimateGameOver,
+  applyUltimateGiveUp,
 } from './ultimateTicTacToe.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -337,4 +338,140 @@ test('isUltimateGameOver reflects winner and draw', () => {
   assert.equal(isUltimateGameOver(s), false);
   assert.equal(isUltimateGameOver({ ...s, winner: 'X' }), true);
   assert.equal(isUltimateGameOver({ ...s, draw: true }), true);
+});
+
+test('isUltimateGameOver: gaveUp marks the state terminal', () => {
+  const s = newUltimateGame(PUZZLE);
+  assert.equal(isUltimateGameOver({ ...s, gaveUp: true }), true);
+});
+
+test('applyUltimateGiveUp: fills all 81 empty sub-cells with valid revealed countries, no duplicates while supply allows', () => {
+  // POOL has 12 countries per (br × bc) pair → plenty to fill 9 sub-cells per
+  // small board (108 needed in total) without ever falling back to exhausted.
+  const s = newUltimateGame(PUZZLE);
+  const after = applyUltimateGiveUp(s, POOL, () => 0);
+  assert.equal(after.gaveUp, true);
+  assert.equal(isUltimateGameOver(after), true);
+  /** @type {Set<string>} */
+  const seen = new Set();
+  for (let br = 0; br < 3; br++) {
+    for (let bc = 0; bc < 3; bc++) {
+      const board = after.boards[br][bc];
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          const cell = board.cells[r][c];
+          assert.ok(cell.country, `(${br},${bc},${r},${c}) should be filled`);
+          assert.equal(cell.owner, null, 'revealed cells stay un-owned');
+          assert.equal(cell.revealed, true);
+          assert.equal(cell.exhausted, undefined, 'no exhausted flag when pool is plentiful');
+          assert.ok(PUZZLE.rows[br].predicate(/** @type {Country} */ (cell.country)));
+          assert.ok(PUZZLE.cols[bc].predicate(/** @type {Country} */ (cell.country)));
+          assert.equal(seen.has(/** @type {Country} */ (cell.country).code), false,
+            `country ${/** @type {Country} */ (cell.country).code} reused at (${br},${bc},${r},${c})`);
+          seen.add(/** @type {Country} */ (cell.country).code);
+        }
+      }
+    }
+  }
+  assert.equal(seen.size, 81, '81 distinct countries on the reveal');
+});
+
+test('applyUltimateGiveUp: preserves player-claimed sub-cells', () => {
+  let s = newUltimateGame(PUZZLE);
+  const c000 = countryFor(0, 0, 0);
+  const c110 = countryFor(1, 1, 0);
+  s = attemptUltimateClaim(s, 0, 0, 0, 0, c000, POOL).nextState;        // X
+  s = attemptUltimateClaim(s, 1, 1, 0, 0, c110, POOL).nextState;        // O
+  const after = applyUltimateGiveUp(s, POOL, () => 0);
+  const xCell = after.boards[0][0].cells[0][0];
+  assert.equal(xCell.owner, 'X');
+  assert.equal(xCell.country, c000);
+  assert.equal(xCell.revealed, undefined);
+  const oCell = after.boards[1][1].cells[0][0];
+  assert.equal(oCell.owner, 'O');
+  assert.equal(oCell.country, c110);
+});
+
+test('applyUltimateGiveUp: falls back to an already-used country and flags exhausted when the (row × col) pool is empty', () => {
+  // Pool has exactly ONE country valid for (Europe × red) — a country we
+  // assign by hand at (0,0,0,0). The remaining 8 sub-cells of (Europe × red)
+  // have no unused candidate left. They must still get filled, but with
+  // exhausted=true so the UI can paint a black background.
+  /** @type {Country} */
+  const ONLY = country({
+    code: 'eu-r-only', name: 'OnlyEuropeRed',
+    continent: 'Europe', colors: ['red'],
+  });
+  // Build a pool that:
+  //   - has the ONLY Europe×red country,
+  //   - has plenty of fillers for the other 8 small boards (so they're
+  //     not contributing exhausted noise to the assertion).
+  const fillers = POOL.filter((c) => !c.code.startsWith('00-'));
+  const pool = [...fillers, ONLY];
+  let s = newUltimateGame(PUZZLE);
+  // Place ONLY at (0,0,0,0) via attemptUltimateClaim — this consumes the
+  // single Europe×red candidate globally.
+  s = attemptUltimateClaim(s, 0, 0, 0, 0, ONLY, pool).nextState;
+  const after = applyUltimateGiveUp(s, pool, () => 0);
+  assert.equal(after.gaveUp, true);
+  // (0,0,0,0) is the player-claimed cell — untouched.
+  assert.equal(after.boards[0][0].cells[0][0].country, ONLY);
+  assert.equal(after.boards[0][0].cells[0][0].owner, 'X');
+  // The other 8 sub-cells of (0,0): the only valid Europe×red country is
+  // already on the board → every one of them gets it back as exhausted.
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (r === 0 && c === 0) continue;
+      const cell = after.boards[0][0].cells[r][c];
+      assert.equal(cell.country, ONLY, `(${r},${c}) falls back to ONLY`);
+      assert.equal(cell.revealed, true);
+      assert.equal(cell.exhausted, true, `(${r},${c}) flagged exhausted because no fresh candidate exists`);
+      assert.equal(cell.owner, null);
+    }
+  }
+  // Another small board (1,1 — Asia×blue) still has fresh fillers, so it
+  // should fill *without* the exhausted flag.
+  const otherBoard = after.boards[1][1];
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const cell = otherBoard.cells[r][c];
+      assert.ok(cell.country, `expected (1,1,${r},${c}) to be filled`);
+      assert.equal(cell.exhausted, undefined, `(1,1,${r},${c}) should not be exhausted — pool is plentiful`);
+    }
+  }
+});
+
+test('applyUltimateGiveUp: leaves a sub-cell empty when neither fresh nor exhausted candidate exists', () => {
+  // Tear the (Europe × red) pool down to zero: filter out POOL's 00-* entries
+  // and don't add anything to replace them. (0,0) has no valid country at all.
+  const sparsePool = POOL.filter((c) => !c.code.startsWith('00-'));
+  const s = newUltimateGame(PUZZLE);
+  const after = applyUltimateGiveUp(s, sparsePool, () => 0);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const cell = after.boards[0][0].cells[r][c];
+      assert.equal(cell.country, null, `(0,0,${r},${c}) must stay empty — no candidate exists`);
+      assert.equal(cell.exhausted, undefined);
+      assert.equal(cell.revealed, undefined);
+    }
+  }
+  // Other boards are still filled normally.
+  assert.ok(after.boards[1][1].cells[0][0].country);
+});
+
+test('applyUltimateGiveUp: is a no-op when the game is already over', () => {
+  const s = /** @type {UltimateGameState} */ ({ ...newUltimateGame(PUZZLE), winner: 'X' });
+  const after = applyUltimateGiveUp(s, POOL, () => 0);
+  assert.equal(after, s);
+});
+
+test('attemptUltimateClaim is rejected after give-up', () => {
+  const s = applyUltimateGiveUp(newUltimateGame(PUZZLE), POOL, () => 0);
+  // The board may be fully filled by give-up, but even if a synthetic empty
+  // existed, gaveUp must block the claim.
+  const synthetic = { ...s, boards: s.boards.map((row) => row.map((b) => ({
+    ...b, cells: b.cells.map((r) => r.map((cell) => ({ ...cell, owner: null, country: null }))),
+  }))) };
+  const out = attemptUltimateClaim(synthetic, 0, 0, 0, 0, countryFor(0, 0, 0), POOL);
+  assert.equal(out.kind, 'miss-taken');
 });

@@ -309,6 +309,55 @@ test('rematch: from a sender who is not in the room is silently ignored', async 
   assert.equal(b.sent.length, bBefore);
 });
 
+test('give-up: a player message broadcasts give-up state to both, freezes the board, blocks further claims', async () => {
+  const a = mockConn('a'); const b = mockConn('b');
+  const conns = [a, b];
+  const srv = new TicTacToeServer(mockParty(conns), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));   // X
+  await srv.onConnect(b, ctxFor('bob',   'join'));     // O
+  const aBefore = a.sent.length; const bBefore = b.sent.length;
+  await srv.onMessage(JSON.stringify({ type: 'give-up' }), a);
+  const aMsgs = a.sent.slice(aBefore).map((s) => JSON.parse(s));
+  const bMsgs = b.sent.slice(bBefore).map((s) => JSON.parse(s));
+  const aGiveUp = aMsgs.find((m) => m.type === 'state' && m.kind === 'give-up');
+  const bGiveUp = bMsgs.find((m) => m.type === 'state' && m.kind === 'give-up');
+  assert.ok(aGiveUp, 'resigning host sees the broadcast');
+  assert.ok(bGiveUp, 'opponent sees the broadcast');
+  assert.equal(aGiveUp.who, 'X', 'who carries the resigner role');
+  assert.equal(aGiveUp.game.gaveUp, true);
+  assert.equal(aGiveUp.game.cells[0][0].country.code, '00',
+    'the only matching country was placed in the only valid cell');
+  // Follow-up claim must be ignored — game is over.
+  const aAfter = a.sent.length;
+  await srv.onMessage(JSON.stringify({ type: 'claim', row: 1, col: 0, countryCode: '00' }), b);
+  assert.equal(a.sent.length, aAfter, 'no further broadcasts — board is frozen');
+});
+
+test('give-up: a sender who is not in the room is silently ignored', async () => {
+  const a = mockConn('a'); const b = mockConn('b'); const c = mockConn('c');
+  const srv = new TicTacToeServer(mockParty([a, b, c]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+  await srv.onConnect(b, ctxFor('bob',   'join'));
+  const aBefore = a.sent.length; const bBefore = b.sent.length;
+  await srv.onMessage(JSON.stringify({ type: 'give-up' }), c);
+  assert.equal(a.sent.length, aBefore);
+  assert.equal(b.sent.length, bBefore);
+});
+
+test('give-up: ignored once the game is already over', async () => {
+  const a = mockConn('a'); const b = mockConn('b');
+  const srv = new TicTacToeServer(mockParty([a, b]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+  await srv.onConnect(b, ctxFor('bob',   'join'));
+  /** @type {import('../flags/onlineRoom.js').Room} */ (srv.room).game.winner = 'X';
+  const aBefore = a.sent.length;
+  await srv.onMessage(JSON.stringify({ type: 'give-up' }), a);
+  assert.equal(a.sent.length, aBefore);
+});
+
 test('onClose: broadcasts peer-left and keeps the role for reconnect', async () => {
   const a = mockConn('a'); const b = mockConn('b');
   const conns = [a, b];

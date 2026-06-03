@@ -6,6 +6,7 @@ import {
   initialClientState,
   reduceServerMessage,
   getOrCreatePlayerId,
+  canGiveUpOnline,
 } from './onlineClient.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti } from '../confetti.js';
@@ -85,6 +86,12 @@ function runOnline(countries) {
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
   const playAgainEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('play-again'));
+  const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
+  /** Server stamps the resigner's role on the broadcast; we keep it locally so
+   * finishRound can pick "You gave up" vs "Opponent gave up" without re-deriving
+   * it from the game state. */
+  /** @type {boolean | null} */
+  let lastGaveUpByMe = null;
   const colHeaderEls = document.querySelectorAll('.col-header');
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
   const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
@@ -196,6 +203,7 @@ function runOnline(countries) {
     }
     for (const effect of effects) {
       if (effect.type === 'shake') shakeCell(effect.row, effect.col);
+      else if (effect.type === 'gave-up') lastGaveUpByMe = effect.byMe;
       else if (effect.type === 'finished') finishRound();
       else if (effect.type === 'rematch-started') startFreshRound();
       else if (effect.type === 'close') {
@@ -411,8 +419,10 @@ function runOnline(countries) {
         td.classList.toggle('owned', !!cell.owner);
         td.classList.toggle('owner-x', cell.owner === 'X');
         td.classList.toggle('owner-o', cell.owner === 'O');
+        td.classList.toggle('revealed', !!cell.revealed);
+        td.classList.toggle('exhausted', !!cell.exhausted);
         td.classList.remove('winning');
-        if (cell.country && cell.owner) {
+        if (cell.country) {
           const img = document.createElement('img');
           img.src = `../flags/svg/${cell.country.code}.svg`;
           img.alt = countryName(cell.country);
@@ -426,13 +436,19 @@ function runOnline(countries) {
         if (td) td.classList.add('winning');
       }
     }
-    document.body.classList.toggle('game-over', game.winner !== null || game.draw);
+    document.body.classList.toggle('game-over', game.winner !== null || game.draw || Boolean(game.gaveUp));
+    renderGiveUpButton();
+  }
+
+  function renderGiveUpButton() {
+    if (!giveUpEl) return;
+    giveUpEl.hidden = !canGiveUpOnline(state);
   }
 
   function renderTurn() {
     if (!turnLineEl || !turnBadgeEl || !turnTextEl) return;
     const { game, peerPresent } = state;
-    if (!game || !peerPresent || game.winner || game.draw) {
+    if (!game || !peerPresent || game.winner || game.draw || game.gaveUp) {
       turnLineEl.hidden = true;
       lastRenderedTurn = null;
       return;
@@ -451,11 +467,12 @@ function runOnline(countries) {
 
   function renderStatus() {
     renderShareButton();
+    renderGiveUpButton();
     if (!statusEl) return;
     const { game, myRole, peerPresent } = state;
     statusEl.className = 'status-line';
     if (!game) { statusEl.textContent = t('ttt.connecting', 'Connecting…'); return; }
-    if (game.winner || game.draw) { statusEl.textContent = ''; return; }
+    if (game.winner || game.draw || game.gaveUp) { statusEl.textContent = ''; return; }
     if (!peerPresent) {
       statusEl.textContent = t('ttt.waitingShareCode', 'Waiting for opponent… share the code above');
       statusEl.classList.add('peer-missing');
@@ -560,7 +577,12 @@ function runOnline(countries) {
   function finishRound() {
     const { game, myRole } = state;
     if (!resultEl || !finalScoreEl || !game) return;
-    if (game.winner) {
+    if (game.gaveUp) {
+      finalScoreEl.textContent = lastGaveUpByMe
+        ? t('ttt.youGaveUp', 'You gave up')
+        : t('ttt.opponentGaveUp', 'Opponent gave up');
+      finalScoreEl.style.color = '#1c1c1c';
+    } else if (game.winner) {
       const youWon = game.winner === myRole;
       finalScoreEl.textContent = youWon
         ? t('ttt.youWin', 'You win!')
@@ -586,11 +608,24 @@ function runOnline(countries) {
     if (gridBodyEl) gridBodyEl.innerHTML = '';
     gridBuilt = false;
     lastRenderedTurn = null;
+    lastGaveUpByMe = null;
     document.body.classList.remove('game-over');
     buildGridIfNeeded();
     renderGrid();
     renderTurn();
     renderStatus();
+  }
+
+  if (giveUpEl) {
+    giveUpEl.addEventListener('click', () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      if (!canGiveUpOnline(state)) return;
+      // Optimistically hide the button so a double-click doesn't queue a
+      // second give-up. The server-broadcast state will lock the rest of
+      // the UI when it arrives.
+      giveUpEl.hidden = true;
+      ws.send(JSON.stringify({ type: 'give-up' }));
+    });
   }
 
   if (playAgainEl) {

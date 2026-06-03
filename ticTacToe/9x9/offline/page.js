@@ -1,5 +1,5 @@
 import { generateUltimateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../../flags/grid.js';
-import { newUltimateGame, attemptUltimateClaim, isUltimateGameOver } from '../../../flags/ultimateTicTacToe.js';
+import { newUltimateGame, attemptUltimateClaim, isUltimateGameOver, applyUltimateGiveUp } from '../../../flags/ultimateTicTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../../i18n.js';
 import { launchConfetti } from '../../../confetti.js';
 
@@ -62,6 +62,7 @@ function runUltimateTicTacToe({ puzzle, countries }) {
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
   const playAgainEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('play-again'));
+  const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
 
   colHeaderEls.forEach((th, i) => {
     th.textContent = tCat(puzzle.cols[i]);
@@ -312,11 +313,13 @@ function runUltimateTicTacToe({ puzzle, countries }) {
             td.classList.toggle('owned', !!cell.owner);
             td.classList.toggle('owner-x', cell.owner === 'X');
             td.classList.toggle('owner-o', cell.owner === 'O');
+            td.classList.toggle('revealed', !!cell.revealed);
+            td.classList.toggle('exhausted', !!cell.exhausted);
             td.classList.toggle('in-claimed-x', board.winner === 'X');
             td.classList.toggle('in-claimed-o', board.winner === 'O');
             td.classList.toggle('in-dead', board.dead);
             td.classList.remove('winning');
-            if (cell.country && cell.owner) {
+            if (cell.country) {
               const img = document.createElement('img');
               img.src = `../../../flags/svg/${cell.country.code}.svg`;
               img.alt = countryName(cell.country);
@@ -348,6 +351,7 @@ function runUltimateTicTacToe({ puzzle, countries }) {
       }
     }
     document.body.classList.toggle('game-over', isUltimateGameOver(state));
+    if (giveUpEl) giveUpEl.hidden = isUltimateGameOver(state);
   }
 
   function renderTurn() {
@@ -377,7 +381,10 @@ function runUltimateTicTacToe({ puzzle, countries }) {
 
   function finishRound() {
     if (!resultEl || !finalScoreEl) return;
-    if (state.winner) {
+    if (state.gaveUp) {
+      finalScoreEl.textContent = t('ttt.gaveUp', 'Gave up');
+      finalScoreEl.style.color = '#1c1c1c';
+    } else if (state.winner) {
       finalScoreEl.textContent =
         t('ttt.playerWins', '{player} wins!').replace('{player}', state.winner);
       finalScoreEl.style.color = state.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
@@ -394,5 +401,15 @@ function runUltimateTicTacToe({ puzzle, countries }) {
       }, { once: true });
     }
     resultEl.hidden = false;
+  }
+
+  if (giveUpEl) {
+    giveUpEl.addEventListener('click', () => {
+      if (isUltimateGameOver(state)) return;
+      closePicker();
+      state = applyUltimateGiveUp(state, countries);
+      renderAll();
+      finishRound();
+    });
   }
 }

@@ -1,5 +1,5 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/grid.js';
-import { newGame, attemptClaim, isGameOver } from '../../flags/ticTacToe.js';
+import { newGame, attemptClaim, isGameOver, applyGiveUp } from '../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 
@@ -57,6 +57,7 @@ function runTicTacToe({ puzzle, countries }) {
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
   const playAgainEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('play-again'));
+  const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
 
   colHeaderEls.forEach((th, i) => {
     th.textContent = tCat(puzzle.cols[i]);
@@ -274,8 +275,10 @@ function runTicTacToe({ puzzle, countries }) {
     td.classList.toggle('owned', !!cell.owner);
     td.classList.toggle('owner-x', cell.owner === 'X');
     td.classList.toggle('owner-o', cell.owner === 'O');
+    td.classList.toggle('revealed', !!cell.revealed);
+    td.classList.toggle('exhausted', !!cell.exhausted);
     td.classList.remove('winning');
-    if (cell.country && cell.owner) {
+    if (cell.country) {
       const img = document.createElement('img');
       img.src = `../../flags/svg/${cell.country.code}.svg`;
       img.alt = countryName(cell.country);
@@ -296,6 +299,7 @@ function runTicTacToe({ puzzle, countries }) {
       }
     }
     document.body.classList.toggle('game-over', isGameOver(state));
+    if (giveUpEl) giveUpEl.hidden = isGameOver(state);
   }
 
   function renderTurn() {
@@ -325,7 +329,10 @@ function runTicTacToe({ puzzle, countries }) {
 
   function finishRound() {
     if (!resultEl || !finalScoreEl) return;
-    if (state.winner) {
+    if (state.gaveUp) {
+      finalScoreEl.textContent = t('ttt.gaveUp', 'Gave up');
+      finalScoreEl.style.color = '#1c1c1c';
+    } else if (state.winner) {
       finalScoreEl.textContent =
         t('ttt.playerWins', '{player} wins!').replace('{player}', state.winner);
       finalScoreEl.style.color = state.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
@@ -342,5 +349,15 @@ function runTicTacToe({ puzzle, countries }) {
       }, { once: true });
     }
     resultEl.hidden = false;
+  }
+
+  if (giveUpEl) {
+    giveUpEl.addEventListener('click', () => {
+      if (isGameOver(state)) return;
+      closePicker();
+      state = applyGiveUp(state, countries);
+      renderAll();
+      finishRound();
+    });
   }
 }

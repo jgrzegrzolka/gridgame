@@ -97,6 +97,9 @@
     "opponentWins": "Wygrana przeciwnika",
     "draw": "Remis",
     "playerWins": "Wygrał {player}!",
+    "gaveUp": "Poddanie",
+    "youGaveUp": "Poddajesz się",
+    "opponentGaveUp": "Przeciwnik się poddał",
     "reject": {
       "roomFull": "Pokój jest pełny",
       "roomNotFound": "Pokój nie znaleziony — poproś znajomego o kod lub utwórz nowy pokój",
