@@ -10,6 +10,7 @@ import {
   cellRenderClasses,
   pulseShake,
   isGridLocked,
+  translateCategoryLabel,
 } from '../flags/grid.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
@@ -17,6 +18,11 @@ import { t, countryName, withLocalizedAliases } from '../i18n.js';
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/grid.js').Puzzle} Puzzle */
 /** @typedef {import('../flags/grid.js').GridState} GridState */
+
+/** @param {import('../flags/grid.js').Category} c */
+function tCat(c) {
+  return translateCategoryLabel(c, t);
+}
 
 /**
  * @param {(countries: Country[]) => Puzzle} puzzleFor
@@ -111,13 +117,13 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   const playAgainEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('play-again'));
 
   colHeaderEls.forEach((th, i) => {
-    th.textContent = puzzle.cols[i].label;
+    th.textContent = tCat(puzzle.cols[i]);
   });
 
   for (let r = 0; r < 3; r++) {
     const tr = document.createElement('tr');
     const rowHeader = document.createElement('th');
-    rowHeader.textContent = puzzle.rows[r].label;
+    rowHeader.textContent = tCat(puzzle.rows[r]);
     tr.appendChild(rowHeader);
     for (let c = 0; c < 3; c++) {
       const td = document.createElement('td');
@@ -192,7 +198,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   function openPicker(row, col) {
     activeCell = { row, col };
     pickerCatsEl.textContent =
-      `${puzzle.rows[row].label} × ${puzzle.cols[col].label}`;
+      `${tCat(puzzle.rows[row])} × ${tCat(puzzle.cols[col])}`;
     pickerInputEl.value = '';
     currentMatches = [];
     selectedIndex = 0;

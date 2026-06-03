@@ -11,6 +11,7 @@ import {
   puzzlePairs,
   sharedPuzzlePairs,
   puzzleMixesCategoryFamilies,
+  translateCategoryLabel,
   suggest,
   exactSingleMatch,
   randomPuzzle,
@@ -631,6 +632,58 @@ test('puzzleMixesCategoryFamilies tolerates a single non-color row in an otherwi
     cols: [hasColor('green'), hasColor('blue'), hasColor('black')],
   };
   assert.equal(puzzleMixesCategoryFamilies(oneMotif), true);
+});
+
+/**
+ * @param {Record<string, string>} table
+ * @returns {(key: string, fallback: string) => string}
+ */
+function fakeTranslate(table) {
+  return (key, fallback) => (key in table ? table[key] : fallback);
+}
+
+test('translateCategoryLabel uses the variant.* key for continent categories — reuses the flagQuiz vocabulary', () => {
+  const t = fakeTranslate({ 'variant.africa': 'Afryka' });
+  assert.equal(translateCategoryLabel(continent('Africa'), t), 'Afryka');
+});
+
+test('translateCategoryLabel kebab-cases multi-word continent ids before looking them up', () => {
+  const t = fakeTranslate({ 'variant.north-america': 'Ameryka Północna' });
+  assert.equal(translateCategoryLabel(continent('North America'), t), 'Ameryka Północna');
+});
+
+test('translateCategoryLabel interpolates game.has with the color noun', () => {
+  const t = fakeTranslate({ 'game.has': 'Ma {x}', 'color.red': 'czerwony' });
+  assert.equal(translateCategoryLabel(hasColor('red'), t), 'Ma czerwony');
+});
+
+test('translateCategoryLabel interpolates game.has with the motif noun, hyphens and all', () => {
+  const t = fakeTranslate({ 'game.has': 'Ma {x}', 'motif.star-or-moon': 'gwiazda lub księżyc' });
+  assert.equal(translateCategoryLabel(hasMotif('star-or-moon'), t), 'Ma gwiazda lub księżyc');
+});
+
+test('translateCategoryLabel falls back to the baked English label when the variant key is missing', () => {
+  // The factory bakes label="Oceania"; if no translation is available
+  // the fallback should surface that label rather than rendering blank.
+  const t = fakeTranslate({});
+  assert.equal(translateCategoryLabel(continent('Oceania'), t), 'Oceania');
+});
+
+test('translateCategoryLabel falls back to the baked "Has X" label when game.has is missing', () => {
+  const t = fakeTranslate({});
+  assert.equal(translateCategoryLabel(hasColor('red'), t), 'Has red');
+});
+
+test('translateCategoryLabel returns the raw label for ids it does not recognise', () => {
+  const t = fakeTranslate({});
+  const stranger = { id: 'foo:bar', label: 'baked stranger', predicate: () => true };
+  assert.equal(translateCategoryLabel(stranger, t), 'baked stranger');
+});
+
+test('translateCategoryLabel returns the raw label for ids without a colon', () => {
+  const t = fakeTranslate({});
+  const noColon = { id: 'whatever', label: 'whatever-label', predicate: () => true };
+  assert.equal(translateCategoryLabel(noColon, t), 'whatever-label');
 });
 
 test('axesConflict returns false for different exclusiveGroups (continent vs statehood)', () => {

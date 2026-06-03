@@ -207,6 +207,43 @@ function pickRandom(pool, n, rng) {
 }
 
 /**
+ * Translate a category's display label by decoding its `id`. The factories
+ * above bake an English label (`"Africa"`, `"Has red"`) onto every Category
+ * so the engine stays pure of i18n; this is the boundary helper that page
+ * code uses at render time to swap in the active language. Unknown id
+ * prefixes fall through to the baked label so a stray category never
+ * renders blank.
+ *
+ * Key conventions:
+ *   `continent:<Name>` → `variant.<name-lower-kebab>` (reuses the flagQuiz
+ *      variant translations — continents are translated as nouns, not as
+ *      "Continent: Africa".)
+ *   `hasColor:<x>`     → `game.has` interpolated with `color.<x>`.
+ *   `hasMotif:<x>`     → `game.has` interpolated with `motif.<x>`.
+ *
+ * @param {Category} category
+ * @param {(key: string, fallback: string) => string} translate
+ * @returns {string}
+ */
+export function translateCategoryLabel(category, translate) {
+  const colon = category.id.indexOf(':');
+  if (colon < 0) return category.label;
+  const kind = category.id.slice(0, colon);
+  const value = category.id.slice(colon + 1);
+  if (kind === 'continent') {
+    const variantKey = value.toLowerCase().replace(/ /g, '-');
+    return translate(`variant.${variantKey}`, category.label);
+  }
+  if (kind === 'hasColor') {
+    return translate('game.has', 'Has {x}').replace('{x}', translate(`color.${value}`, value));
+  }
+  if (kind === 'hasMotif') {
+    return translate('game.has', 'Has {x}').replace('{x}', translate(`motif.${value}`, value));
+  }
+  return category.label;
+}
+
+/**
  * Reverse of the factory functions: given an `id` like 'continent:Europe',
  * 'hasColor:red', 'hasMotif:weapon', or 'statehood:un_member', return a
  * Category with its predicate restored. Used for rehydrating puzzles loaded
