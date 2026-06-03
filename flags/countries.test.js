@@ -302,6 +302,38 @@ test('ARCHIVE dates form a consecutive day-by-day sequence', () => {
   }
 });
 
+test('the main-menu 3x3 game tile in /index.html points at the most recent ARCHIVE puzzle', () => {
+  const indexHtml = readFileSync(join(HERE, '..', 'index.html'), 'utf-8');
+  const match = indexHtml.match(/class="game-tile"\s+href="flagGrid\/([^/"]+)\/"/);
+  assert.ok(match, 'no flagGrid game-tile <a class="game-tile" href="flagGrid/N/"> found in index.html');
+  const lastSlug = ARCHIVE[ARCHIVE.length - 1].slug;
+  assert.equal(
+    match[1],
+    lastSlug,
+    `main-menu 3x3 tile links to flagGrid/${match[1]}/, expected flagGrid/${lastSlug}/ (newest ARCHIVE entry)`,
+  );
+});
+
+test('every flagGrid burger-menu "Today" link points at the most recent ARCHIVE puzzle', () => {
+  const lastSlug = ARCHIVE[ARCHIVE.length - 1].slug;
+  const folders = [...ARCHIVE.map((e) => e.slug), 'archive', 'rand'];
+  /** @type {string[]} */
+  const failures = [];
+  for (const folder of folders) {
+    const path = join(HERE, '..', 'flagGrid', folder, 'index.html');
+    const html = readFileSync(path, 'utf-8');
+    const match = html.match(/href="\.\.\/([^/"]+)\/"\s+data-i18n="menu\.today"/);
+    if (!match) {
+      failures.push(`flagGrid/${folder}/index.html has no <a href="../N/" data-i18n="menu.today"> link`);
+      continue;
+    }
+    if (match[1] !== lastSlug) {
+      failures.push(`flagGrid/${folder}/index.html "Today" link points to ../${match[1]}/, expected ../${lastSlug}/`);
+    }
+  }
+  assert.deepEqual(failures, [], failures.join('; '));
+});
+
 test('generateRandomPuzzle succeeds with the real countries.json under several seeds', () => {
   /** @param {number} seed */
   function mulberry32(seed) {
