@@ -6,7 +6,7 @@
     "open": "Otwórz menu",
     "close": "Zamknij menu",
     "flagsData": "Dane flag",
-    "today": "Dziś",
+    "today": "Dzisiejsza zagadka",
     "previousGames": "Poprzednie gry",
     "random": "Losowa",
     "pickCategory": "Wybierz kategorię",
@@ -19,7 +19,7 @@
   "tile": {
     "quiz": "Quiz",
     "grid": "3x3",
-    "find": "Znajdź",
+    "find": "Znajdź wszystkie",
     "ticTacToe": "Kółko i krzyżyk"
   },
   "game": {
@@ -38,7 +38,11 @@
     "loading": "Ładowanie…",
     "finalScore": "Wynik końcowy:",
     "yourBestScore": "Twój najlepszy wynik",
-    "play": "Zagraj"
+    "play": "Zagraj",
+    "mode": {
+      "60s": "60s",
+      "all": "wszystkie"
+    }
   },
   "grid": {
     "title1": "Siatka — Gra 1",

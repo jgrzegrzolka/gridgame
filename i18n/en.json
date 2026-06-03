@@ -6,7 +6,7 @@
     "open": "Open menu",
     "close": "Close menu",
     "flagsData": "Flags data",
-    "today": "Today",
+    "today": "Today's puzzle",
     "previousGames": "Previous games",
     "random": "Random",
     "pickCategory": "Pick a category",
@@ -19,7 +19,7 @@
   "tile": {
     "quiz": "Quiz",
     "grid": "3x3",
-    "find": "Find",
+    "find": "Find all",
     "ticTacToe": "Tic Tac Toe"
   },
   "game": {
@@ -38,7 +38,11 @@
     "loading": "Loading…",
     "finalScore": "Final score:",
     "yourBestScore": "Your best score",
-    "play": "Play"
+    "play": "Play",
+    "mode": {
+      "60s": "60s",
+      "all": "all"
+    }
   },
   "grid": {
     "title1": "Flag Grid — Game 1",

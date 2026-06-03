@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve, relative } from 'node:path';
 import {
   resolveLang,
   lookupString,
@@ -275,6 +277,78 @@ function flattenKeys(obj, prefix = '') {
   }
   return keys.sort();
 }
+
+/**
+ * @param {string} dir
+ * @param {string[]} out
+ */
+async function collectSourceFiles(dir, out) {
+  const SKIP = new Set(['node_modules', '.git', '.partykit', 'svg', '.claude']);
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (SKIP.has(entry.name)) continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await collectSourceFiles(full, out);
+    } else if (entry.name.endsWith('.html') || entry.name.endsWith('.js')) {
+      out.push(full);
+    }
+  }
+}
+
+test('module imports of shared files use a single URL form repo-wide (no ?v= / bare splits)', async () => {
+  // Why this test exists: shared modules like i18n.js are imported from
+  // both HTML (cache-busted with ?v=__BUILD__) and page.js (bare). The
+  // browser keys ES modules by URL, so a mismatch produces two module
+  // instances with independent module-level state — bootI18n populates
+  // cachedStrings in one, JS-side t() calls read the empty other and
+  // every dynamic translation silently falls through to the English
+  // fallback. The fix is to standardise on a single URL form; this
+  // test pins that contract so the next time someone adds a shared
+  // import they cannot reintroduce the split.
+  const root = dirname(fileURLToPath(import.meta.url));
+  /** @type {string[]} */
+  const files = [];
+  await collectSourceFiles(root, files);
+
+  const importRe = /from\s+['"]([^'"]*?\.js)(\?v=__BUILD__)?['"]/g;
+  /** @type {Map<string, { with: Set<string>, without: Set<string> }>} */
+  const byResolved = new Map();
+  for (const f of files) {
+    const text = await readFile(f, 'utf-8');
+    for (const m of text.matchAll(importRe)) {
+      const importPath = m[1];
+      // Skip bare specifiers (node built-ins, node_modules); we only
+      // care about local file-graph imports where the URL form matters.
+      if (!importPath.startsWith('.')) continue;
+      const resolved = resolve(dirname(f), importPath);
+      let bucket = byResolved.get(resolved);
+      if (!bucket) {
+        bucket = { with: new Set(), without: new Set() };
+        byResolved.set(resolved, bucket);
+      }
+      const rel = relative(root, f);
+      if (m[2]) bucket.with.add(rel);
+      else bucket.without.add(rel);
+    }
+  }
+
+  /** @type {string[]} */
+  const failures = [];
+  for (const [resolvedPath, { with: withQ, without }] of byResolved) {
+    // Test files run in Node, never in a browser — they're allowed to
+    // import bare even when production HTML uses ?v=__BUILD__, because
+    // the browser-side dedup contract doesn't apply to them. Strip them
+    // from both sides before checking the split.
+    const withoutNonTest = [...without].filter((p) => !p.endsWith('.test.js'));
+    const withNonTest = [...withQ].filter((p) => !p.endsWith('.test.js'));
+    if (withNonTest.length > 0 && withoutNonTest.length > 0) {
+      failures.push(
+        `${relative(root, resolvedPath)}: with ?v=__BUILD__ in [${withNonTest.join(', ')}], bare in [${withoutNonTest.join(', ')}]`,
+      );
+    }
+  }
+  assert.deepEqual(failures, [], failures.join('\n'));
+});
 
 test('i18n: en.json and pl.json have identical key trees', async () => {
   const enText = await readFile(new URL('./i18n/en.json', import.meta.url), 'utf8');

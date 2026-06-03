@@ -85,7 +85,7 @@
     <script type="module">
       import { bootTicTacToe } from './page.js?v=__BUILD__';
       import { disableBurgerIfEmpty } from '../../common.js?v=__BUILD__';
-      import { bootI18n, wireLangToggle } from '../../i18n.js?v=__BUILD__';
+      import { bootI18n, wireLangToggle } from '../../i18n.js';
       bootI18n('../../').then((lang) => {
         wireLangToggle(lang);
         bootTicTacToe();
