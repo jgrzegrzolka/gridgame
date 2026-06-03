@@ -81,6 +81,20 @@ body {
   font-size: 14px;
   margin-left: 6px;
 }
+.letter-section {
+  margin-top: 24px;
+}
+.letter-section:first-of-type {
+  margin-top: 0;
+}
+.letter-section h3 {
+  font-size: 12px;
+  font-weight: 500;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 6px;
+}
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));

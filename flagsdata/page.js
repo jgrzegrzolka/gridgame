@@ -73,7 +73,14 @@ export function bootFlagsData() {
 
   const filters = emptyFilters();
 
-  /** @type {{ items: Country[], tiles: HTMLElement[], count: HTMLElement } | null} */
+  /**
+   * @type {{
+   *   items: Country[],
+   *   tiles: HTMLElement[],
+   *   count: HTMLElement,
+   *   sections: Array<{ el: HTMLElement, start: number, end: number }>,
+   * } | null}
+   */
   let state = null;
 
   function renderAll(parent, items) {
@@ -84,17 +91,45 @@ export function bootFlagsData() {
     countSpan.textContent = String(items.length);
     h2.appendChild(countSpan);
     parent.appendChild(h2);
-    const grid = document.createElement('div');
-    grid.className = 'grid';
+
+    // Sort by localized name so the first-letter grouping reflects what
+    // the user actually sees. Use the document lang so Polish sorts as
+    // Polish (Ł after L, Ż last) instead of system default.
+    const lang = document.documentElement.lang || 'en';
+    const sorted = [...items].sort((a, b) =>
+      countryName(a).localeCompare(countryName(b), lang),
+    );
+
     /** @type {HTMLElement[]} */
     const tiles = [];
-    for (const c of items) {
+    /** @type {Array<{ el: HTMLElement, start: number, end: number }>} */
+    const sections = [];
+    let currentLetter = '';
+    /** @type {HTMLElement | null} */
+    let currentGrid = null;
+    for (const c of sorted) {
+      const letter = countryName(c).charAt(0).toLocaleUpperCase(lang);
+      if (letter !== currentLetter) {
+        if (sections.length) sections[sections.length - 1].end = tiles.length;
+        currentLetter = letter;
+        const section = document.createElement('section');
+        section.className = 'letter-section';
+        const h3 = document.createElement('h3');
+        h3.textContent = letter;
+        section.appendChild(h3);
+        currentGrid = document.createElement('div');
+        currentGrid.className = 'grid';
+        section.appendChild(currentGrid);
+        parent.appendChild(section);
+        sections.push({ el: section, start: tiles.length, end: tiles.length });
+      }
       const tile = flagTile(c);
       tiles.push(tile);
-      grid.appendChild(tile);
+      /** @type {HTMLElement} */ (currentGrid).appendChild(tile);
     }
-    parent.appendChild(grid);
-    state = { items, tiles, count: countSpan };
+    if (sections.length) sections[sections.length - 1].end = tiles.length;
+
+    state = { items: sorted, tiles, count: countSpan, sections };
   }
 
   function applyFilter() {
@@ -104,6 +139,13 @@ export function bootFlagsData() {
       const show = matchesFilters(state.items[i], filters);
       state.tiles[i].hidden = !show;
       if (show) visible++;
+    }
+    for (const sec of state.sections) {
+      let anyVisible = false;
+      for (let i = sec.start; i < sec.end; i++) {
+        if (!state.tiles[i].hidden) { anyVisible = true; break; }
+      }
+      sec.el.hidden = !anyVisible;
     }
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
