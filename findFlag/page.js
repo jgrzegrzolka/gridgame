@@ -4,6 +4,7 @@ import {
   MOTIFS_FOR_RANDOM,
   suggest,
   exactSingleMatch,
+  translateCategoryLabel,
 } from '../flags/grid.js';
 import {
   categoryFromId,
@@ -157,7 +158,7 @@ export function bootFindFlag() {
     const foundEl = document.getElementById('find-found');
     const giveUpEl = document.getElementById('give-up');
 
-    catEl.textContent = category.label;
+    catEl.textContent = translateCategoryLabel(category, t);
     updateCount();
 
     let matches = [];

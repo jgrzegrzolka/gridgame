@@ -1,4 +1,4 @@
-import { suggest, exactSingleMatch, pulseShake } from '../flags/grid.js';
+import { suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../flags/grid.js';
 import {
   generateCode,
   isValidRoomCode,
@@ -14,6 +14,11 @@ import { t, countryName, withLocalizedAliases } from '../i18n.js';
 /** @typedef {import('../flags/ticTacToe.js').Player} Player */
 
 const SERVER_URL = serverUrlFor(window.location.hostname);
+
+/** @param {import('../flags/grid.js').Category} c */
+function tCat(c) {
+  return translateCategoryLabel(c, t);
+}
 
 export function bootTicTacToeOnline() {
   fetch('../flags/countries.json')
@@ -226,11 +231,11 @@ function runOnline(countries) {
     const { game } = state;
     if (gridBuilt || !game) return;
     gridBuilt = true;
-    colHeaderEls.forEach((th, i) => { th.textContent = /** @type {GameState} */ (game).puzzle.cols[i].label; });
+    colHeaderEls.forEach((th, i) => { th.textContent = tCat(/** @type {GameState} */ (game).puzzle.cols[i]); });
     for (let r = 0; r < 3; r++) {
       const tr = document.createElement('tr');
       const rowHeader = document.createElement('th');
-      rowHeader.textContent = /** @type {GameState} */ (game).puzzle.rows[r].label;
+      rowHeader.textContent = tCat(/** @type {GameState} */ (game).puzzle.rows[r]);
       tr.appendChild(rowHeader);
       for (let c = 0; c < 3; c++) {
         const td = document.createElement('td');
@@ -265,7 +270,7 @@ function runOnline(countries) {
     const { game } = state;
     if (!game) return;
     activeCell = { row: r, col: c };
-    pickerCatsEl.textContent = `${game.puzzle.rows[r].label} × ${game.puzzle.cols[c].label}`;
+    pickerCatsEl.textContent = `${tCat(game.puzzle.rows[r])} × ${tCat(game.puzzle.cols[c])}`;
     pickerInputEl.value = '';
     currentMatches = [];
     selectedIndex = 0;
