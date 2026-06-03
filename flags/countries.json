@@ -454,7 +454,9 @@
       "yellow",
       "red"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "ba",
@@ -526,7 +528,9 @@
       "green",
       "yellow"
     ],
-    "motifs": [],
+    "motifs": [
+      "coat-of-arms"
+    ],
     "aliases": [
       "Diego Garcia"
     ]
@@ -1042,7 +1046,9 @@
       "yellow",
       "red"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "ec",
@@ -1137,7 +1143,9 @@
       "blue",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "ee",
@@ -1355,7 +1363,9 @@
       "blue",
       "red"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "gm",
@@ -1736,7 +1746,9 @@
       "white",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "il",
@@ -1954,7 +1966,10 @@
       "white",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms",
+      "star-or-moon"
+    ]
   },
   {
     "code": "lb",
@@ -2026,7 +2041,9 @@
       "yellow",
       "black"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "lt",
@@ -2093,7 +2110,9 @@
       "red",
       "green"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "my",
@@ -3719,7 +3738,9 @@
       "blue",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "coat-of-arms"
+    ]
   },
   {
     "code": "um",
