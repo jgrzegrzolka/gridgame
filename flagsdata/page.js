@@ -78,7 +78,7 @@ export function bootFlagsData() {
    *   items: Country[],
    *   tiles: HTMLElement[],
    *   count: HTMLElement,
-   *   sections: Array<{ el: HTMLElement, start: number, end: number }>,
+   *   chips: Array<{ el: HTMLElement, start: number, end: number }>,
    * } | null}
    */
   let state = null;
@@ -100,36 +100,33 @@ export function bootFlagsData() {
       countryName(a).localeCompare(countryName(b), lang),
     );
 
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    parent.appendChild(grid);
+
     /** @type {HTMLElement[]} */
     const tiles = [];
     /** @type {Array<{ el: HTMLElement, start: number, end: number }>} */
-    const sections = [];
+    const chips = [];
     let currentLetter = '';
-    /** @type {HTMLElement | null} */
-    let currentGrid = null;
     for (const c of sorted) {
       const letter = countryName(c).charAt(0).toLocaleUpperCase(lang);
       if (letter !== currentLetter) {
-        if (sections.length) sections[sections.length - 1].end = tiles.length;
+        if (chips.length) chips[chips.length - 1].end = tiles.length;
         currentLetter = letter;
-        const section = document.createElement('section');
-        section.className = 'letter-section';
-        const h3 = document.createElement('h3');
-        h3.textContent = letter;
-        section.appendChild(h3);
-        currentGrid = document.createElement('div');
-        currentGrid.className = 'grid';
-        section.appendChild(currentGrid);
-        parent.appendChild(section);
-        sections.push({ el: section, start: tiles.length, end: tiles.length });
+        const chip = document.createElement('div');
+        chip.className = 'letter-chip';
+        chip.textContent = letter;
+        grid.appendChild(chip);
+        chips.push({ el: chip, start: tiles.length, end: tiles.length });
       }
       const tile = flagTile(c);
       tiles.push(tile);
-      /** @type {HTMLElement} */ (currentGrid).appendChild(tile);
+      grid.appendChild(tile);
     }
-    if (sections.length) sections[sections.length - 1].end = tiles.length;
+    if (chips.length) chips[chips.length - 1].end = tiles.length;
 
-    state = { items: sorted, tiles, count: countSpan, sections };
+    state = { items: sorted, tiles, count: countSpan, chips };
   }
 
   function applyFilter() {
@@ -140,12 +137,12 @@ export function bootFlagsData() {
       state.tiles[i].hidden = !show;
       if (show) visible++;
     }
-    for (const sec of state.sections) {
+    for (const chip of state.chips) {
       let anyVisible = false;
-      for (let i = sec.start; i < sec.end; i++) {
+      for (let i = chip.start; i < chip.end; i++) {
         if (!state.tiles[i].hidden) { anyVisible = true; break; }
       }
-      sec.el.hidden = !anyVisible;
+      chip.el.hidden = !anyVisible;
     }
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
