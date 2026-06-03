@@ -61,11 +61,11 @@ test('serverUrlFor: LAN IPs also route to the local dev server (testing from a p
   assert.equal(serverUrlFor('10.0.0.42'), 'ws://10.0.0.42:1999/parties/main/');
 });
 
-test('serverUrlFor: the production GitHub Pages hostname goes to the deployed Cloudflare PartyKit', () => {
-  assert.equal(
-    serverUrlFor('jgrzegrzolka.github.io'),
-    'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/main/',
-  );
+test('serverUrlFor: production hostnames go to the deployed Cloudflare PartyKit', () => {
+  const prod = 'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/main/';
+  assert.equal(serverUrlFor('jgrzegrzolka.github.io'), prod);
+  assert.equal(serverUrlFor('yetanotherquiz.com'), prod);
+  assert.equal(serverUrlFor('www.yetanotherquiz.com'), prod);
 });
 
 // ---- Reducer ----

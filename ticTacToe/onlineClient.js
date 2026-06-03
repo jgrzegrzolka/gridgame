@@ -61,21 +61,25 @@ function defaultGeneratePlayerId() {
   return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** The one production hostname that should hit the deployed PartyKit. */
-const PROD_HOSTNAME = 'jgrzegrzolka.github.io';
+/** Production hostnames that should hit the deployed PartyKit. */
+const PROD_HOSTNAMES = new Set([
+  'jgrzegrzolka.github.io',
+  'yetanotherquiz.com',
+  'www.yetanotherquiz.com',
+]);
 
 /**
  * Which WebSocket URL the client should connect to.
- * The deployed GitHub Pages site goes to the Cloudflare-hosted PartyKit.
- * Anywhere else (localhost, 127.0.0.1, LAN IPs like 192.168.x.x when you
- * open the dev server from another device) connects to a partykit dev
- * server running on port 1999 on the same host.
+ * The deployed site (GitHub Pages or the custom domain) goes to the
+ * Cloudflare-hosted PartyKit. Anywhere else (localhost, 127.0.0.1, LAN IPs
+ * like 192.168.x.x when you open the dev server from another device)
+ * connects to a partykit dev server running on port 1999 on the same host.
  *
  * @param {string} hostname
  * @returns {string}
  */
 export function serverUrlFor(hostname) {
-  if (hostname === PROD_HOSTNAME) {
+  if (PROD_HOSTNAMES.has(hostname)) {
     return 'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/main/';
   }
   return `ws://${hostname}:1999/parties/main/`;
