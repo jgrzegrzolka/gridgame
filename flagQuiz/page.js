@@ -20,6 +20,7 @@ import {
 } from '../flags/quiz.js';
 import { flagsGamePool } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
+import { launchConfetti } from '../confetti.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -305,6 +306,7 @@ export function bootFlagQuiz() {
           badge.className = 'new-badge';
           badge.textContent = t('game.newRecord', 'new record!');
           bestEl.appendChild(badge);
+          launchConfetti();
         }
       } else {
         // All-mode scoring is "fewer mistakes wins": store the raw
@@ -329,6 +331,7 @@ export function bootFlagQuiz() {
           badge.className = 'new-badge';
           badge.textContent = t('game.newRecord', 'new record!');
           bestEl.appendChild(badge);
+          launchConfetti();
         }
       }
 
