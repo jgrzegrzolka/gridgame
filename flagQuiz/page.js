@@ -119,7 +119,7 @@ export function bootFlagQuiz() {
     flagsDataLi.className = 'menu-divider';
     const flagsDataA = document.createElement('a');
     flagsDataA.href = '../flagsdata/';
-    flagsDataA.textContent = t('menu.flagsData', 'Flags data');
+    flagsDataA.textContent = t('menu.flagsData', 'Browse flags');
     flagsDataLi.appendChild(flagsDataA);
     quizMenuEl.appendChild(flagsDataLi);
   }
