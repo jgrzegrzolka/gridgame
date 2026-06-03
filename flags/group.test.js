@@ -78,10 +78,10 @@ test('real data: 195 UN-recognised states (193 members + 2 observers)', () => {
   assert.equal(recognised.length, 195);
 });
 
-test('real data: 2 widely-recognised non-UN states (Taiwan + Kosovo)', () => {
+test('real data: 5 widely-recognised non-UN states (Taiwan, Kosovo, Western Sahara, Cook Islands, Niue)', () => {
   const nonUn = countries.filter((c) => c.statehood === 'non_un');
-  assert.equal(nonUn.length, 2);
-  assert.deepEqual(nonUn.map((c) => c.code).sort(), ['tw', 'xk']);
+  assert.equal(nonUn.length, 5);
+  assert.deepEqual(nonUn.map((c) => c.code).sort(), ['ck', 'eh', 'nu', 'tw', 'xk']);
 });
 
 test('sovereigntyOf classifies UN members and observers as sovereign', () => {
@@ -95,10 +95,10 @@ test('sovereigntyOf classifies non_un, territory, and other distinctly', () => {
   assert.equal(sovereigntyOf({ code: 'un', name: 'United Nations', category: 'other', continent: null }), 'other');
 });
 
-test('real data: sovereigntyOf yields the expected 195 / 2 / 57 / 15 split', () => {
+test('real data: sovereigntyOf yields the expected 195 / 5 / 54 / 15 split', () => {
   const buckets = { sovereign: 0, non_un: 0, territory: 0, other: 0 };
   for (const c of countries) buckets[sovereigntyOf(c)]++;
-  assert.deepEqual(buckets, { sovereign: 195, non_un: 2, territory: 57, other: 15 });
+  assert.deepEqual(buckets, { sovereign: 195, non_un: 5, territory: 54, other: 15 });
 });
 
 /**

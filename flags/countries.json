@@ -13,7 +13,7 @@
   },
   {
     "code": "ax",
-    "name": "Aland Islands",
+    "name": "Åland Islands",
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
@@ -302,7 +302,9 @@
       "green",
       "red"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "bb",
@@ -514,7 +516,7 @@
   {
     "code": "io",
     "name": "British Indian Ocean Territory",
-    "continent": "Asia",
+    "continent": "Africa",
     "category": "country",
     "statehood": "territory",
     "colors": [
@@ -525,7 +527,9 @@
       "yellow"
     ],
     "motifs": [],
-    "aliases": ["Diego Garcia"]
+    "aliases": [
+      "Diego Garcia"
+    ]
   },
   {
     "code": "bn",
@@ -540,7 +544,8 @@
       "red"
     ],
     "motifs": [
-      "coat-of-arms"
+      "coat-of-arms",
+      "star-or-moon"
     ]
   },
   {
@@ -836,7 +841,7 @@
     "name": "Cook Islands",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory",
+    "statehood": "non_un",
     "colors": [
       "blue",
       "red",
@@ -920,7 +925,7 @@
   },
   {
     "code": "cz",
-    "name": "Czech Republic",
+    "name": "Czechia",
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -958,7 +963,9 @@
     "motifs": [
       "star-or-moon"
     ],
-    "aliases": ["DRC"]
+    "aliases": [
+      "DRC"
+    ]
   },
   {
     "code": "dk",
@@ -1003,7 +1010,6 @@
     ],
     "motifs": [
       "animal",
-      "coat-of-arms",
       "star-or-moon"
     ]
   },
@@ -1116,7 +1122,8 @@
       "yellow"
     ],
     "motifs": [
-      "coat-of-arms"
+      "coat-of-arms",
+      "star-or-moon"
     ]
   },
   {
@@ -1181,7 +1188,7 @@
   },
   {
     "code": "eu",
-    "name": "Europe",
+    "name": "European Union",
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -1598,20 +1605,6 @@
     ]
   },
   {
-    "code": "va",
-    "name": "Vatican City",
-    "continent": "Europe",
-    "category": "country",
-    "statehood": "un_observer",
-    "colors": [
-      "yellow",
-      "white"
-    ],
-    "motifs": [
-      "coat-of-arms"
-    ]
-  },
-  {
     "code": "hn",
     "name": "Honduras",
     "continent": "North America",
@@ -1796,7 +1789,9 @@
       "white",
       "red"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "je",
@@ -1842,7 +1837,7 @@
     ],
     "motifs": [
       "animal",
-      "coat-of-arms"
+      "star-or-moon"
     ]
   },
   {
@@ -1918,7 +1913,9 @@
       "red",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "la",
@@ -1931,7 +1928,9 @@
       "blue",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "lv",
@@ -2350,6 +2349,7 @@
       "red"
     ],
     "motifs": [
+      "coat-of-arms",
       "weapon",
       "star-or-moon"
     ]
@@ -2504,7 +2504,7 @@
     "name": "Niue",
     "continent": "Oceania",
     "category": "country",
-    "statehood": "territory",
+    "statehood": "non_un",
     "colors": [
       "yellow",
       "blue",
@@ -2541,7 +2541,9 @@
     "motifs": [
       "star-or-moon"
     ],
-    "aliases": ["DPRK"]
+    "aliases": [
+      "DPRK"
+    ]
   },
   {
     "code": "mk",
@@ -2553,7 +2555,9 @@
       "red",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "gb-nir",
@@ -2567,6 +2571,7 @@
       "yellow"
     ],
     "motifs": [
+      "coat-of-arms",
       "star-or-moon"
     ]
   },
@@ -2611,6 +2616,7 @@
       "green"
     ],
     "motifs": [
+      "coat-of-arms",
       "weapon"
     ]
   },
@@ -2687,7 +2693,9 @@
       "animal",
       "star-or-moon"
     ],
-    "aliases": ["PNG"]
+    "aliases": [
+      "PNG"
+    ]
   },
   {
     "code": "py",
@@ -2861,7 +2869,9 @@
       "yellow",
       "green"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "re",
@@ -3049,7 +3059,6 @@
       "white"
     ],
     "motifs": [
-      "coat-of-arms",
       "weapon"
     ]
   },
@@ -3266,7 +3275,9 @@
       "black"
     ],
     "motifs": [],
-    "aliases": ["ROK"]
+    "aliases": [
+      "ROK"
+    ]
   },
   {
     "code": "ss",
@@ -3429,7 +3440,9 @@
       "blue",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "tj",
@@ -3684,7 +3697,9 @@
       "black"
     ],
     "motifs": [],
-    "aliases": ["UAE"]
+    "aliases": [
+      "UAE"
+    ]
   },
   {
     "code": "gb",
@@ -3740,7 +3755,9 @@
     "motifs": [
       "star-or-moon"
     ],
-    "aliases": ["USA"]
+    "aliases": [
+      "USA"
+    ]
   },
   {
     "code": "uy",
@@ -3784,6 +3801,20 @@
       "red",
       "green",
       "yellow"
+    ],
+    "motifs": [
+      "coat-of-arms"
+    ]
+  },
+  {
+    "code": "va",
+    "name": "Vatican City",
+    "continent": "Europe",
+    "category": "country",
+    "statehood": "un_observer",
+    "colors": [
+      "yellow",
+      "white"
     ],
     "motifs": [
       "coat-of-arms"
@@ -3846,7 +3877,8 @@
       "white",
       "blue",
       "red",
-      "yellow"
+      "yellow",
+      "green"
     ],
     "motifs": [
       "animal",
@@ -3886,7 +3918,7 @@
     "name": "Western Sahara",
     "continent": "Africa",
     "category": "country",
-    "statehood": "territory",
+    "statehood": "non_un",
     "colors": [
       "black",
       "white",
