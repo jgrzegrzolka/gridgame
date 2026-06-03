@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title data-i18n="ttt9x9.title">Tic Tac Toe 9×9</title>
+    <link rel="icon" type="image/svg+xml" href="../../../favicon.svg?v=__BUILD__" />
+    <link rel="stylesheet" href="../../../common.css?v=__BUILD__" />
+    <link rel="stylesheet" href="../../index.css?v=__BUILD__" />
+  </head>
+  <body>
+    <a class="back" href="../../../" aria-label="Home" data-i18n-attr="aria-label:back"><span class="home-icon" aria-hidden="true"></span></a>
+    <a class="lang-toggle" id="lang-toggle" href="#"></a>
+    <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee" data-i18n-attr="aria-label:coffee,title:coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
+    <button
+      type="button"
+      class="burger"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="burger-panel"
+      data-label-open="Open menu"
+      data-label-close="Close menu"
+      data-i18n-attr="aria-label:menu.open,data-label-open:menu.open,data-label-close:menu.close"
+      onclick="
+        const open = this.getAttribute('aria-expanded') === 'true';
+        this.setAttribute('aria-expanded', String(!open));
+        this.setAttribute('aria-label', open ? this.dataset.labelOpen : this.dataset.labelClose);
+        document.getElementById('burger-panel').hidden = open;
+      "
+    >
+      <span class="burger-bars" aria-hidden="true"></span>
+    </button>
+    <nav id="burger-panel" class="burger-panel" hidden>
+      <ul class="menu">
+        <li><a href="../../../flagsdata/" data-i18n="menu.flagsData">Browse flags</a></li>
+      </ul>
+    </nav>
+    <div class="game">
+      <table class="grid is-9x9">
+        <thead>
+          <tr>
+            <th class="corner"></th>
+            <th class="col-header" data-col="0" colspan="3"></th>
+            <th class="col-header" data-col="1" colspan="3"></th>
+            <th class="col-header" data-col="2" colspan="3"></th>
+          </tr>
+        </thead>
+        <tbody id="grid-body"></tbody>
+      </table>
+      <p class="turn-line" id="turn-line"><span class="turn-badge o" id="turn-badge">O</span><span id="turn-text" data-i18n="ttt.toMove">to move</span></p>
+      <section id="result" hidden>
+        <p class="final-score" id="final-score-line">
+          <span id="final-score"></span>
+        </p>
+        <p class="result-links">
+          <a id="play-again" href="#" data-i18n="game.playAgain">Play again</a>
+        </p>
+      </section>
+    </div>
+    <dialog id="zoom">
+      <img alt="" />
+      <p></p>
+    </dialog>
+    <div class="picker" id="picker" hidden>
+      <div class="picker-backdrop" id="picker-backdrop"></div>
+      <div class="picker-sheet" role="dialog" aria-modal="true" aria-labelledby="picker-cats">
+        <header class="picker-header">
+          <span class="picker-cats" id="picker-cats"></span>
+          <button type="button" class="picker-close" id="picker-close" aria-label="Cancel" data-i18n="game.cancel" data-i18n-attr="aria-label:game.cancel">Cancel</button>
+        </header>
+        <input
+          type="text"
+          class="picker-input"
+          id="picker-input"
+          inputmode="text"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="Country name…"
+          data-i18n-attr="placeholder:game.countryName"
+        />
+        <ul class="picker-suggestions" id="picker-suggestions"></ul>
+      </div>
+    </div>
+    <script type="module">
+      import { bootTicTacToe9x9 } from './page.js?v=__BUILD__';
+      import { disableBurgerIfEmpty } from '../../../common.js?v=__BUILD__';
+      import { bootI18n, wireLangToggle } from '../../../i18n.js';
+      bootI18n('../../../').then((lang) => {
+        wireLangToggle(lang);
+        bootTicTacToe9x9();
+        disableBurgerIfEmpty(
+          document.querySelector('.burger'),
+          document.querySelector('#burger-panel .menu'),
+        );
+      });
+    </script>
+  </body>
+</html>

@@ -139,6 +139,67 @@ body.game-over .cell:hover::after {
   40%, 60% { transform: translateX(4px); }
 }
 
+/* ---- 9x9 variant ---- */
+
+.grid.is-9x9 {
+  --grid-cell: min(40px, calc((100vw - 4px) / 10.5));
+}
+.grid.is-9x9 tbody th {
+  width: 36px;
+  font-size: 11px;
+}
+.grid.is-9x9 .corner {
+  width: 36px;
+}
+.grid.is-9x9 .cell {
+  padding: 2px;
+}
+.grid.is-9x9 .cell.owned {
+  padding: 3px;
+}
+/* Thicker borders between the 9 small boards. Cells at the right edge of a
+ * small board (sub-col 2) get a darker right border — except when they're in
+ * the rightmost meta-column (bigcol 2), where the grid border is enough.
+ * Same logic mirrored for the bottom edge. */
+.grid.is-9x9 .cell[data-col="2"]:not([data-bigcol="2"]) {
+  border-right: 2px solid #888;
+}
+.grid.is-9x9 .cell[data-row="2"]:not([data-bigrow="2"]) {
+  border-bottom: 2px solid #888;
+}
+/* A claimed small board tints the whole small-board area in the winner's
+ * colour. Already-owned sub-cells keep their full-colour background; empty
+ * sub-cells in a claimed board get a light wash so the meta-claim reads at
+ * a glance without hiding the flags. */
+.grid.is-9x9 .cell.in-claimed-x:not(.owned) {
+  background: rgba(45, 106, 140, 0.18);
+}
+.grid.is-9x9 .cell.in-claimed-o:not(.owned) {
+  background: rgba(221, 102, 136, 0.18);
+}
+.grid.is-9x9 .cell.in-dead:not(.owned) {
+  background: rgba(0, 0, 0, 0.06);
+}
+/* Claimed-or-dead boards don't take new picks — hide the hover wash and
+ * snap the cursor back to default for sub-cells that don't already render
+ * a flag (which keep their zoom-in cursor from the base .cell.owned rule). */
+.grid.is-9x9 .cell.in-claimed-x:not(.owned):hover::after,
+.grid.is-9x9 .cell.in-claimed-o:not(.owned):hover::after,
+.grid.is-9x9 .cell.in-dead:not(.owned):hover::after {
+  background: transparent;
+}
+.grid.is-9x9 .cell.in-claimed-x:not(.owned),
+.grid.is-9x9 .cell.in-claimed-o:not(.owned),
+.grid.is-9x9 .cell.in-dead:not(.owned) {
+  cursor: default;
+}
+/* The 3 small boards that form the meta 3-in-a-row at game-end get a stronger
+ * gold ring around them. Stacks on top of the per-sub-cell .winning highlight
+ * inside each of those boards. */
+.grid.is-9x9 .cell.meta-winning {
+  box-shadow: inset 0 0 0 2px #f4c842;
+}
+
 .picker[hidden] {
   display: none;
 }
