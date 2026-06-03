@@ -17,7 +17,12 @@ export function bootTicTacToe9x9() {
     .then((r) => r.json())
     .then((rawCountries) => {
       const countries = withLocalizedAliases(rawCountries);
-      const puzzle = generateRandomPuzzle(countries);
+      // 9×9 needs each (row × col) small board to be playable to its end:
+      // 3 X moves + 3 O moves + 2 "blocker" moves = ~8 distinct countries
+      // before a 3-in-a-row resolves. Requiring ≥ 8 candidates per cell
+      // keeps thin pairs (e.g. Asia × cross) out of the puzzle so dead-by-
+      // exhaustion is the exception rather than the norm.
+      const puzzle = generateRandomPuzzle(countries, { minPerCell: 8 });
       runUltimateTicTacToe({ puzzle, countries });
     })
     .catch((err) => {
