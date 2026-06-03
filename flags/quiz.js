@@ -310,6 +310,23 @@ export function formatTime(ms) {
 }
 
 /**
+ * Accuracy as a 0..1 ratio for tinting purposes, derived from a mistakes
+ * count against the round's target. Clamped at both ends — give-up
+ * bookkeeping in all-mode can inflate `mistakes` above `target` (the
+ * unanswered remainder is added to wrongCount when the player walks
+ * away), and we want such a round to read as a flat 0 (red) rather than
+ * a nonsense negative ratio downstream.
+ *
+ * @param {number} mistakes
+ * @param {number} target
+ * @returns {number}
+ */
+export function accuracyRatio(mistakes, target) {
+  if (target <= 0) return 0;
+  return Math.max(0, Math.min(1, (target - mistakes) / target));
+}
+
+/**
  * @param {number} ratio
  * @returns {string}
  */
@@ -327,13 +344,27 @@ export function scoreColor(ratio) {
  */
 
 /**
+ * @callback ScoreComparator
+ * @param {number} candidate
+ * @param {number} incumbent
+ * @returns {boolean} true when `candidate` should displace `incumbent`
+ */
+
+/** @type {ScoreComparator} — default: higher score wins (60s mode, grid game). */
+export const higherScoreWins = (candidate, incumbent) => candidate > incumbent;
+
+/** @type {ScoreComparator} — `all` mode: fewer mistakes wins. */
+export const lowerScoreWins = (candidate, incumbent) => candidate < incumbent;
+
+/**
  * @param {Result | null} prev
  * @param {Result} current
+ * @param {ScoreComparator} [scoreBetter]
  * @returns {{ best: Result, isNew: boolean }}
  */
-export function nextBest(prev, current) {
+export function nextBest(prev, current, scoreBetter = higherScoreWins) {
   if (!prev) return { best: current, isNew: true };
-  if (current.score > prev.score) return { best: current, isNew: true };
+  if (scoreBetter(current.score, prev.score)) return { best: current, isNew: true };
   if (current.score === prev.score && current.time < prev.time) {
     return { best: current, isNew: true };
   }
@@ -383,7 +414,16 @@ export function saveBest(store, key, value) {
  * @returns {string}
  */
 export function bestKey(variantKey, modeKey, includeAll = false) {
-  const base = `flagquiz.best.${variantKey}.${modeKey}`;
+  // The `all` mode swapped its `Result.score` semantics from "percentage
+  // correct, higher wins" to "mistakes count, lower wins". Add a `.v2`
+  // segment so old percentage-shaped entries don't get reloaded and
+  // misinterpreted as monstrous mistake counts (e.g. `95` reading as 95
+  // mistakes out of a 269-flag pool). 60s and grid keys are unaffected
+  // — they always stored a count.
+  const base =
+    modeKey === 'all'
+      ? `flagquiz.best.${variantKey}.${modeKey}.v2`
+      : `flagquiz.best.${variantKey}.${modeKey}`;
   return includeAll ? `${base}.all` : base;
 }
 
@@ -393,11 +433,12 @@ export function bestKey(variantKey, modeKey, includeAll = false) {
  * @param {string} modeKey
  * @param {Result} current
  * @param {boolean} [includeAll]
+ * @param {ScoreComparator} [scoreBetter]
  * @returns {{ best: Result, isNew: boolean }}
  */
-export function recordResult(store, variantKey, modeKey, current, includeAll = false) {
+export function recordResult(store, variantKey, modeKey, current, includeAll = false, scoreBetter) {
   const key = bestKey(variantKey, modeKey, includeAll);
-  const outcome = nextBest(loadBest(store, key), current);
+  const outcome = nextBest(loadBest(store, key), current, scoreBetter);
   if (outcome.isNew) saveBest(store, key, outcome.best);
   return outcome;
 }

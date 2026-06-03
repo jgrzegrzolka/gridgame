@@ -54,6 +54,7 @@
         bestKey,
         scoreColor,
         isTimedMode,
+        accuracyRatio,
         isQuizIncludeAll,
         setQuizIncludeAll,
       } from '../../flags/quiz.js';
@@ -89,7 +90,7 @@
        * When the slot is untouched it shows mode · Play, faded, with
        * a CTA hint — keeps the row from looking incomplete.
        */
-      function modeChip(key, mode) {
+      function modeChip(key, mode, target) {
         // Stats lives at /flagQuiz/stats/, quiz at /flagQuiz/, so we
         // need to step one level up when linking back to the quiz.
         const a = document.createElement('a');
@@ -98,21 +99,24 @@
 
         const modeEl = document.createElement('span');
         modeEl.className = 'stats-chip-mode';
-        modeEl.textContent = mode;
+        modeEl.textContent = t(`quiz.mode.${mode}`, mode);
         a.appendChild(modeEl);
 
         const best = loadBest(localStorage, bestKey(key, mode, includeAll));
         if (best) {
           const score = document.createElement('span');
           score.className = 'stats-chip-score';
-          // 60s stores raw flag-count; all-mode stores a percentage. No
-          // shared denominator, so render each in its own units rather
-          // than forcing a fake percentage on the timed mode.
+          // Per-mode score semantics:
+          //   60s: best.score = flags answered correctly (raw count).
+          //   all: best.score = mistakes count (lower is better).
+          // Tint is always accuracy-based so green stays "clean run"
+          // regardless of which direction the score field reads in.
           if (isTimedMode(mode)) {
             score.textContent = String(best.score);
           } else {
-            score.textContent = `${best.score}%`;
-            score.style.color = scoreColor(best.score / 100);
+            const mistakes = best.score;
+            score.textContent = String(mistakes);
+            score.style.color = scoreColor(accuracyRatio(mistakes, target));
           }
           a.appendChild(score);
           const time = document.createElement('span');
@@ -132,7 +136,8 @@
       function renderStats(raw) {
         const all = flagsGamePool(raw, includeAll);
         for (const [key, variant] of Object.entries(VARIANTS)) {
-          const modes = availableModes(all.filter(variant.filter).length);
+          const variantPool = all.filter(variant.filter);
+          const modes = availableModes(variantPool.length);
           if (modes.length === 0) continue;
           const li = document.createElement('li');
           li.className = 'stats-row';
@@ -144,7 +149,7 @@
 
           const chips = document.createElement('span');
           chips.className = 'stats-chips';
-          for (const mode of modes) chips.appendChild(modeChip(key, mode));
+          for (const mode of modes) chips.appendChild(modeChip(key, mode, variantPool.length));
           li.appendChild(chips);
 
           statsEl.appendChild(li);

@@ -7,6 +7,8 @@ import {
   isTimedMode,
   timedRemainingMs,
   timedBudgetUsedMs,
+  lowerScoreWins,
+  accuracyRatio,
   formatTime,
   recordResult,
   scoreColor,
@@ -27,6 +29,7 @@ export function bootFlagQuiz() {
   const feedbackEl = document.getElementById('feedback');
   const resultEl = document.getElementById('result');
   const finalScoreLineEl = document.getElementById('final-score-line');
+  const finalScoreLabelEl = document.getElementById('final-score-label');
   const finalScoreEl = document.getElementById('final-score');
   const timeEl = document.getElementById('time');
   const bestEl = document.getElementById('best');
@@ -265,6 +268,9 @@ export function bootFlagQuiz() {
         // a clean sweep is green, a 50/50 round is amber, all-wrong is red.
         const totalPicks = answeredCount + wrongCount;
         const ratio = totalPicks === 0 ? 0 : answeredCount / totalPicks;
+        // Reset the label in case a prior all-mode round overwrote it
+        // with "Mistakes:". 60s mode keeps the original "Final score:".
+        finalScoreLabelEl.textContent = t('quiz.finalScore', 'Final score:');
         finalScoreEl.textContent = String(answeredCount);
         finalScoreLineEl.style.color = scoreColor(ratio);
 
@@ -301,14 +307,19 @@ export function bootFlagQuiz() {
           bestEl.appendChild(badge);
         }
       } else {
-        const ratio = countScore() / target;
-        const pct = Math.round(ratio * 100);
-        finalScoreEl.textContent = String(pct);
-        finalScoreLineEl.style.color = scoreColor(ratio);
+        // All-mode scoring is "fewer mistakes wins": store the raw
+        // wrongCount as Result.score (lower = better) and pass
+        // lowerScoreWins to recordResult so nextBest's tiebreaker
+        // (then-faster-time) still works for us. The colour tint stays
+        // accuracy-based so a clean sweep is green and a sloppy run is
+        // red, regardless of the underlying score direction.
+        finalScoreLabelEl.textContent = t('quiz.mistakes', 'Mistakes:');
+        finalScoreEl.textContent = String(wrongCount);
+        finalScoreLineEl.style.color = scoreColor(accuracyRatio(wrongCount, target));
         timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
 
         const { best, isNew } = recordResult(
-          localStorage, key, mode, { score: pct, time: elapsed }, includeAll,
+          localStorage, key, mode, { score: wrongCount, time: elapsed }, includeAll, lowerScoreWins,
         );
         bestEl.textContent =
           `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`;
