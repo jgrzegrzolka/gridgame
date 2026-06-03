@@ -54,6 +54,7 @@
         bestKey,
         scoreColor,
         isTimedMode,
+        accuracyRatio,
         isQuizIncludeAll,
         setQuizIncludeAll,
       } from '../../flags/quiz.js';
@@ -115,8 +116,7 @@
           } else {
             const mistakes = best.score;
             score.textContent = String(mistakes);
-            const accuracy = target > 0 ? Math.max(0, (target - mistakes) / target) : 0;
-            score.style.color = scoreColor(accuracy);
+            score.style.color = scoreColor(accuracyRatio(mistakes, target));
           }
           a.appendChild(score);
           const time = document.createElement('span');

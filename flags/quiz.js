@@ -310,6 +310,23 @@ export function formatTime(ms) {
 }
 
 /**
+ * Accuracy as a 0..1 ratio for tinting purposes, derived from a mistakes
+ * count against the round's target. Clamped at both ends — give-up
+ * bookkeeping in all-mode can inflate `mistakes` above `target` (the
+ * unanswered remainder is added to wrongCount when the player walks
+ * away), and we want such a round to read as a flat 0 (red) rather than
+ * a nonsense negative ratio downstream.
+ *
+ * @param {number} mistakes
+ * @param {number} target
+ * @returns {number}
+ */
+export function accuracyRatio(mistakes, target) {
+  if (target <= 0) return 0;
+  return Math.max(0, Math.min(1, (target - mistakes) / target));
+}
+
+/**
  * @param {number} ratio
  * @returns {string}
  */

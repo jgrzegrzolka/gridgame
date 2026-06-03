@@ -8,6 +8,7 @@ import {
   timedRemainingMs,
   timedBudgetUsedMs,
   lowerScoreWins,
+  accuracyRatio,
   formatTime,
   recordResult,
   scoreColor,
@@ -312,10 +313,9 @@ export function bootFlagQuiz() {
         // (then-faster-time) still works for us. The colour tint stays
         // accuracy-based so a clean sweep is green and a sloppy run is
         // red, regardless of the underlying score direction.
-        const ratio = countScore() / target;
         finalScoreLabelEl.textContent = t('quiz.mistakes', 'Mistakes:');
         finalScoreEl.textContent = String(wrongCount);
-        finalScoreLineEl.style.color = scoreColor(ratio);
+        finalScoreLineEl.style.color = scoreColor(accuracyRatio(wrongCount, target));
         timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
 
         const { best, isNew } = recordResult(

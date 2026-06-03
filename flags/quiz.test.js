@@ -21,6 +21,7 @@ import {
   nextBest,
   higherScoreWins,
   lowerScoreWins,
+  accuracyRatio,
   loadBest,
   saveBest,
   bestKey,
@@ -519,6 +520,35 @@ test('bestKey adds a .v2 segment for the all mode — orphans pre-mistakes-scori
 test('bestKey appends .all suffix when includeAll is true', () => {
   assert.equal(bestKey('europe', '60s', true), 'flagquiz.best.europe.60s.all');
   assert.equal(bestKey('europe', '60s', false), 'flagquiz.best.europe.60s');
+});
+
+test('accuracyRatio: clean sweep is 1 (full green)', () => {
+  assert.equal(accuracyRatio(0, 20), 1);
+});
+
+test('accuracyRatio: a few mistakes gives a partial ratio', () => {
+  assert.equal(accuracyRatio(5, 20), 0.75);
+});
+
+test('accuracyRatio: all wrong is 0 (full red)', () => {
+  assert.equal(accuracyRatio(20, 20), 0);
+});
+
+test('accuracyRatio clamps at 0 when mistakes exceed target — handles the give-up bookkeeping case', () => {
+  // All-mode give-up: wrongCount gets bumped by (target - answeredCount),
+  // so a player who walked away early can record mistakes greater than
+  // target. Without the clamp the ratio goes negative and downstream
+  // colour-mapping would land in undefined HSL territory.
+  assert.equal(accuracyRatio(25, 20), 0);
+});
+
+test('accuracyRatio: target=0 returns 0 (no questions = no accuracy signal)', () => {
+  assert.equal(accuracyRatio(0, 0), 0);
+  assert.equal(accuracyRatio(5, 0), 0);
+});
+
+test('accuracyRatio: target<0 is treated like target=0 (defensive — never happens in practice)', () => {
+  assert.equal(accuracyRatio(0, -1), 0);
 });
 
 test('higherScoreWins / lowerScoreWins are pure comparators on the score field', () => {
