@@ -982,6 +982,7 @@ test('loadGridState round-trips a well-formed state', () => {
     gaveUp: false,
     finalTimeMs: null,
     revealedCodes: Array(9).fill(null),
+    startedAtMs: 1717000000000,
   };
   saveGridState(store, 'flaggrid.state.1', state);
   assert.deepEqual(loadGridState(store, 'flaggrid.state.1'), state);
@@ -999,6 +1000,55 @@ test('loadGridState defaults revealedCodes to 9 nulls when missing (back-compat)
   assert.deepEqual(out?.revealedCodes, Array(9).fill(null));
 });
 
+test('loadGridState defaults startedAtMs to null when missing (back-compat with pre-feature saves)', () => {
+  // Saves written before the timer-persistence feature have no
+  // startedAtMs. The loader must surface that explicitly so page.js
+  // can fall back to Date.now() — silently substituting a stale
+  // timestamp would lock the timer into the past.
+  const store = fakeStore();
+  store.setItem('k', JSON.stringify({
+    picks: Array(9).fill(null),
+    wrongCount: 0,
+    gaveUp: false,
+    finalTimeMs: null,
+    revealedCodes: Array(9).fill(null),
+  }));
+  const out = loadGridState(store, 'k');
+  assert.equal(out?.startedAtMs, null);
+});
+
+test('loadGridState round-trips startedAtMs for a mid-round save — the timer-continuity contract', () => {
+  // The whole point of persisting startedAtMs: a mid-round reload
+  // (language switch, refresh) restores the same start timestamp so
+  // the display picks up where it left off rather than snapping to 0.
+  const store = fakeStore();
+  const state = {
+    picks: ['fr', null, 'de', null, null, null, null, null, null],
+    wrongCount: 1,
+    gaveUp: false,
+    finalTimeMs: null,
+    revealedCodes: Array(9).fill(null),
+    startedAtMs: 1717000123456,
+  };
+  saveGridState(store, 'k', state);
+  const loaded = loadGridState(store, 'k');
+  assert.equal(loaded?.startedAtMs, 1717000123456);
+});
+
+test('loadGridState rejects a startedAtMs of the wrong type — defends against shape drift', () => {
+  const store = fakeStore();
+  store.setItem('k', JSON.stringify({
+    picks: Array(9).fill(null),
+    wrongCount: 0,
+    gaveUp: false,
+    finalTimeMs: null,
+    revealedCodes: Array(9).fill(null),
+    startedAtMs: '1717000000000',
+  }));
+  const out = loadGridState(store, 'k');
+  assert.equal(out?.startedAtMs, null);
+});
+
 test('loadGridState round-trips revealedCodes for a give-up state', () => {
   const store = fakeStore();
   const state = {
@@ -1007,6 +1057,7 @@ test('loadGridState round-trips revealedCodes for a give-up state', () => {
     gaveUp: true,
     finalTimeMs: 90000,
     revealedCodes: [null, null, 'us', 'cn', 'br', null, 'eg', null, 'au'],
+    startedAtMs: null,
   };
   saveGridState(store, 'k', state);
   assert.deepEqual(loadGridState(store, 'k'), state);
@@ -1033,6 +1084,7 @@ test('saveGridState writes a parseable serialised state to the store', () => {
     gaveUp: false,
     finalTimeMs: null,
     revealedCodes: Array(9).fill(null),
+    startedAtMs: 1717000000000,
   };
   saveGridState(store, 'k', state);
   const raw = store._data.get('k');
@@ -1043,7 +1095,7 @@ test('saveGridState writes a parseable serialised state to the store', () => {
 test('saveGridState swallows a Storage quota error (no throw)', () => {
   const store = fakeStore({ throwOnSet: true });
   assert.doesNotThrow(() => saveGridState(store, 'k', {
-    picks: Array(9).fill(null), wrongCount: 0, gaveUp: false, finalTimeMs: null, revealedCodes: Array(9).fill(null),
+    picks: Array(9).fill(null), wrongCount: 0, gaveUp: false, finalTimeMs: null, revealedCodes: Array(9).fill(null), startedAtMs: null,
   }));
 });
 
