@@ -1,5 +1,6 @@
-import { CONTINENTS, sovereigntyOf } from '../flags/group.js';
+import { CONTINENTS } from '../flags/group.js';
 import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../flags/grid.js';
+import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
 import { t, countryName } from '../i18n.js';
 
 /** @param {string} v */
@@ -70,35 +71,7 @@ export function bootFlagsData() {
     return wrap;
   }
 
-  /** @typedef {{ include: Set<string>, exclude: Set<string> }} FilterSet */
-  /** @type {Record<'status' | 'continent' | 'color' | 'motif', FilterSet>} */
-  const filters = {
-    status: { include: new Set(), exclude: new Set() },
-    continent: { include: new Set(), exclude: new Set() },
-    color: { include: new Set(), exclude: new Set() },
-    motif: { include: new Set(), exclude: new Set() },
-  };
-
-  /** @param {Country} c */
-  function matches(c) {
-    const sov = sovereigntyOf(c);
-    if (filters.status.include.size && !filters.status.include.has(sov)) return false;
-    if (filters.status.exclude.has(sov)) return false;
-
-    const cont = c.continent ?? 'Other';
-    if (filters.continent.include.size && !filters.continent.include.has(cont)) return false;
-    if (filters.continent.exclude.has(cont)) return false;
-
-    const colors = c.colors ?? [];
-    if (filters.color.include.size && !colors.some((col) => filters.color.include.has(col))) return false;
-    if (filters.color.exclude.size && colors.some((col) => filters.color.exclude.has(col))) return false;
-
-    const motifs = c.motifs ?? [];
-    if (filters.motif.include.size && !motifs.some((m) => filters.motif.include.has(m))) return false;
-    if (filters.motif.exclude.size && motifs.some((m) => filters.motif.exclude.has(m))) return false;
-
-    return true;
-  }
+  const filters = emptyFilters();
 
   /** @type {{ items: Country[], tiles: HTMLElement[], count: HTMLElement } | null} */
   let state = null;
@@ -128,7 +101,7 @@ export function bootFlagsData() {
     if (!state) return;
     let visible = 0;
     for (let i = 0; i < state.items.length; i++) {
-      const show = matches(state.items[i]);
+      const show = matchesFilters(state.items[i], filters);
       state.tiles[i].hidden = !show;
       if (show) visible++;
     }
