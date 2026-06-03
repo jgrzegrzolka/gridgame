@@ -14,6 +14,7 @@ import {
 } from '../flags/grid.js';
 import { scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
+import { launchConfetti } from '../confetti.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/grid.js').Puzzle} Puzzle */
@@ -298,6 +299,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     renderGrid();
     persistState();
     if (filled === 9) {
+      launchConfetti();
       finishRound();
     } else {
       focusNextEmpty();

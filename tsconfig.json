@@ -19,6 +19,8 @@
     "ticTacToe/onlineClient.test.js",
     "common.js",
     "common.test.js",
+    "confetti.js",
+    "confetti.test.js",
     "i18n.js",
     "i18n.test.js"
   ]

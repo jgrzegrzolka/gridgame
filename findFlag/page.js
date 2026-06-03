@@ -17,6 +17,7 @@ import {
 } from '../flags/findFlag.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
+import { launchConfetti } from '../confetti.js';
 
 /**
  * Map a continent name as it appears in the CONTINENTS array
@@ -286,6 +287,7 @@ export function bootFindFlag() {
       if (finished) return;
       finished = true;
       cancelAnimationFrame(timerRaf);
+      if (!gaveUp) launchConfetti();
       const elapsed = Date.now() - startMs;
       const found = foundCodes.size;
       const total = targetCodes.size;
