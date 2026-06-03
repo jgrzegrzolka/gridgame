@@ -20,7 +20,8 @@
     "quiz": "Quiz",
     "grid": "3x3",
     "find": "Find all",
-    "ticTacToe": "Tic Tac Toe"
+    "ticTacToe": "Tic Tac Toe",
+    "ticTacToe9x9": "Tic Tac Toe 9×9"
   },
   "game": {
     "giveUp": "Give up",
@@ -103,6 +104,9 @@
       "missingPlayerId": "Connection error — please reload the page",
       "fallback": "Rejected: {reason}"
     }
+  },
+  "ttt9x9": {
+    "title": "Tic Tac Toe 9×9"
   },
   "variant": {
     "countries": "All countries",

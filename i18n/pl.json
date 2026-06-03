@@ -20,7 +20,8 @@
     "quiz": "Quiz",
     "grid": "3x3",
     "find": "Znajdź wszystkie",
-    "ticTacToe": "Kółko i krzyżyk"
+    "ticTacToe": "Kółko i krzyżyk",
+    "ticTacToe9x9": "Kółko i krzyżyk 9×9"
   },
   "game": {
     "giveUp": "Poddaję się",
@@ -103,6 +104,9 @@
       "missingPlayerId": "Błąd połączenia — odśwież stronę",
       "fallback": "Odrzucono: {reason}"
     }
+  },
+  "ttt9x9": {
+    "title": "Kółko i krzyżyk 9×9"
   },
   "variant": {
     "countries": "Wszystkie kraje",
