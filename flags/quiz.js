@@ -204,22 +204,50 @@ export function poolFor(variantKey, countries) {
   return countries.filter(variant.filter);
 }
 
-/** @type {Record<string, number>} */
+/**
+ * @typedef {{ kind: 'timed', budgetMs: number, penaltyMs: number }
+ *   | { kind: 'count', count: number }} Mode
+ *
+ * `60s` is a time-attack: 60-second budget, each wrong tile click subtracts
+ * 3 seconds. Round ends when the remaining budget hits zero OR the pool
+ * exhausts — score is the number of flags answered correctly.
+ *
+ * `all` is the original endurance mode: play through every flag in the
+ * pool. Score is the percentage correct.
+ *
+ * @type {Record<string, Mode>}
+ */
 export const MODES = {
-  '20': 20,
-  all: Infinity,
+  '60s': { kind: 'timed', budgetMs: 60_000, penaltyMs: 3_000 },
+  all: { kind: 'count', count: Infinity },
 };
 
 /**
+ * @param {string} modeKey
+ * @returns {boolean}
+ */
+export function isTimedMode(modeKey) {
+  const def = MODES[modeKey];
+  return def !== undefined && def.kind === 'timed';
+}
+
+/**
+ * Number of questions to queue up for the round. For timed modes we line
+ * up the whole pool — `quiz.next()` may run out before the timer does and
+ * that's a valid "pool exhausted" ending. For count modes we cap at the
+ * mode's count or the pool size, whichever is smaller (existing behaviour).
+ *
  * @param {string} modeKey
  * @param {{ length: number }} pool
  * @returns {number}
  */
 export function targetFor(modeKey, pool) {
-  if (!(modeKey in MODES)) {
+  const def = MODES[modeKey];
+  if (!def) {
     throw new Error(`Unknown mode: ${modeKey}`);
   }
-  return Math.min(MODES[modeKey], pool.length);
+  if (def.kind === 'timed') return pool.length;
+  return Math.min(def.count, pool.length);
 }
 
 /**
@@ -227,9 +255,11 @@ export function targetFor(modeKey, pool) {
  * @returns {string[]}
  */
 export function availableModes(poolSize) {
-  return Object.keys(MODES).filter(
-    (m) => MODES[m] === Infinity || MODES[m] <= poolSize,
-  );
+  return Object.keys(MODES).filter((m) => {
+    const def = MODES[m];
+    if (def.kind === 'timed') return true;
+    return def.count === Infinity || def.count <= poolSize;
+  });
 }
 
 /**
@@ -238,6 +268,33 @@ export function availableModes(poolSize) {
  */
 export function defaultModeFor(poolSize) {
   return availableModes(poolSize)[0] ?? null;
+}
+
+/**
+ * Remaining budget in milliseconds. Wall-clock burn plus the per-wrong
+ * penalty is subtracted from the budget; result is clamped at zero so
+ * callers can render and compare without branching.
+ *
+ * @param {{ budgetMs: number, penaltyMs: number, elapsedMs: number, wrongCount: number }} state
+ * @returns {number}
+ */
+export function timedRemainingMs({ budgetMs, penaltyMs, elapsedMs, wrongCount }) {
+  return Math.max(0, budgetMs - elapsedMs - wrongCount * penaltyMs);
+}
+
+/**
+ * Budget consumed in milliseconds — the value stored as `Result.time` for
+ * a timed round so that `nextBest` ranks rounds by efficiency. Equals
+ * `wall + wrongCount * penalty` on pool-exhaust (under budget) and caps at
+ * the budget on time-out, so a same-score round with fewer penalties
+ * always wins the tiebreaker. Symmetric with `timedRemainingMs`:
+ * `budgetUsed + remaining === budgetMs`.
+ *
+ * @param {{ budgetMs: number, penaltyMs: number, elapsedMs: number, wrongCount: number }} state
+ * @returns {number}
+ */
+export function timedBudgetUsedMs(state) {
+  return state.budgetMs - timedRemainingMs(state);
 }
 
 /**

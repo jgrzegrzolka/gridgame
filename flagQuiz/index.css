@@ -108,6 +108,20 @@ body {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+/* Wrong-pick penalty flash in the 60s mode — the -3s jump on the
+   countdown is too subtle without it. inline-block lets the transform
+   take hold; the keyframes hold red+big at the start then ease back. */
+#play-time {
+  display: inline-block;
+}
+#play-time.penalty {
+  animation: penalty-flash 600ms ease-out;
+}
+@keyframes penalty-flash {
+  0%   { color: #c5302d; transform: scale(1.5); }
+  35%  { color: #c5302d; transform: scale(1.5); }
+  100% { color: #666;    transform: scale(1); }
+}
 .play-mode:not(:empty)::after {
   content: "·";
   padding: 0 8px;

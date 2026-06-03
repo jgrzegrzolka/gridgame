@@ -53,6 +53,7 @@
         loadBest,
         bestKey,
         scoreColor,
+        isTimedMode,
         isQuizIncludeAll,
         setQuizIncludeAll,
       } from '../../flags/quiz.js?v=__BUILD__';
@@ -104,8 +105,15 @@
         if (best) {
           const score = document.createElement('span');
           score.className = 'stats-chip-score';
-          score.textContent = `${best.score}%`;
-          score.style.color = scoreColor(best.score / 100);
+          // 60s stores raw flag-count; all-mode stores a percentage. No
+          // shared denominator, so render each in its own units rather
+          // than forcing a fake percentage on the timed mode.
+          if (isTimedMode(mode)) {
+            score.textContent = String(best.score);
+          } else {
+            score.textContent = `${best.score}%`;
+            score.style.color = scoreColor(best.score / 100);
+          }
           a.appendChild(score);
           const time = document.createElement('span');
           time.className = 'stats-chip-time';
