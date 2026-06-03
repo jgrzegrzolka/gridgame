@@ -2,11 +2,15 @@
   --link-color: #660033;
   --page-top: 80px;
 }
+html {
+  scrollbar-gutter: stable;
+}
 body {
   font-family: system-ui, sans-serif;
   margin: 0;
   background: #fafafa;
   color: #1c1c1c;
+  overflow-x: hidden;
 }
 body::before {
   content: "";
