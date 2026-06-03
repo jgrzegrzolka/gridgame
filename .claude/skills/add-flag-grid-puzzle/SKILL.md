@@ -48,7 +48,7 @@ The next puzzle will be `PUZZLE_{N+1}`, dated `date + 1 day`.
 Pick 3 row categories and 3 column categories from these factories in `flags/grid.js`:
 - `continent('Europe' | 'Asia' | 'Africa' | 'North America' | 'South America' | 'Oceania')`
 - `hasColor('red' | 'white' | 'blue' | 'green' | 'yellow' | 'black' | 'orange')`
-- `hasMotif('animal' | 'coat-of-arms' | 'weapon' | 'star-or-moon')`
+- `hasMotif('animal' | 'coat-of-arms' | 'weapon' | 'star-or-moon' | 'cross')`
 
 Constraints to apply while designing (mirror the four rules):
 - Continents and statehoods carry an `exclusiveGroup` — never put two different continents on opposite axes (one on rows, one on cols). Same axis is fine. `axesConflict` enforces this.

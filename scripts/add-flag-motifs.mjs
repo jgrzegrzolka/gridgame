@@ -95,7 +95,7 @@ const MOTIFS = {
   zw: ['animal'],                                   // Zimbabwe — Zimbabwe Bird
 };
 
-const PALETTE = new Set(['animal', 'coat-of-arms', 'weapon', 'star-or-moon']);
+const PALETTE = new Set(['animal', 'coat-of-arms', 'weapon', 'star-or-moon', 'cross']);
 
 // Flags with a visible star (pentagram, hexagram, Southern Cross, etc.)
 // or a moon (crescent or full disk). Kept as a flat set rather than
@@ -127,6 +127,35 @@ const STAR_OR_MOON = new Set([
   'eu',
 ]);
 
+// Flags with a visible Christian/Latin/Greek cross or saltire (X-cross) as
+// part of the design — including Scandinavian crosses, Union Jack canton
+// ensigns (which inherit the St George + St Andrew + St Patrick combo),
+// and any country flag where a cross is a primary design element.
+// Excluded: crossed keys (Vatican), crossed swords inside a coat of arms
+// (already covered by 'weapon'), the Welsh dragon flag, and civil flags
+// without the Union Jack (Gibraltar's castle-and-key).
+const CROSS = new Set([
+  // Europe — Scandinavian crosses
+  'dk', 'fi', 'fo', 'is', 'no', 'se', 'ax',
+  // Europe — other standalone crosses
+  'ch', 'gr', 'mt',
+  // Europe — UK family
+  'gb', 'gb-eng', 'gb-sct', 'gb-nir',
+  // Asia
+  'ge',
+  // Africa — Burundi saltire + BIOT + Saint Helena/Ascension/Tristan ensigns
+  'bi', 'io', 'sh', 'sh-hl', 'sh-ac', 'sh-ta',
+  // North America — saltires, quartering crosses, Union Jack canton ensigns
+  'jm', 'dm', 'do',
+  'ai', 'bm', 'ky', 'ms', 'tc', 'vg',
+  // South America — Falkland Islands ensign
+  'fk',
+  // Antarctica — South Georgia and the South Sandwich Islands ensign
+  'gs',
+  // Oceania — sovereign + Union Jack canton ensigns + Tonga
+  'au', 'nz', 'fj', 'ck', 'nu', 'tv', 'pn', 'to',
+]);
+
 const path = 'flags/countries.json';
 const countries = JSON.parse(readFileSync(path, 'utf-8'));
 
@@ -146,6 +175,9 @@ for (const c of countries) {
   if (STAR_OR_MOON.has(c.code) && !seen.has('star-or-moon')) {
     filtered.push('star-or-moon');
   }
+  if (CROSS.has(c.code) && !seen.has('cross')) {
+    filtered.push('cross');
+  }
   c.motifs = filtered;
 }
 
@@ -153,6 +185,7 @@ writeFileSync(path, JSON.stringify(countries, null, 2) + '\n');
 
 const heraldicCount = Object.keys(MOTIFS).length;
 const somCount = STAR_OR_MOON.size;
+const crossCount = CROSS.size;
 console.log(
-  `Tagged heraldic motifs on ${heraldicCount} countries; star-or-moon on ${somCount} (others get motifs: []).`,
+  `Tagged heraldic motifs on ${heraldicCount} countries; star-or-moon on ${somCount}; cross on ${crossCount} (others get motifs: []).`,
 );

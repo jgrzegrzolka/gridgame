@@ -164,6 +164,7 @@ export const MOTIFS_FOR_RANDOM = [
   'coat-of-arms',
   'weapon',
   'star-or-moon',
+  'cross',
 ];
 
 /**

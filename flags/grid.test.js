@@ -576,7 +576,7 @@ test('COLORS_FOR_RANDOM is the 7-colour canonical palette', () => {
 });
 
 test('MOTIFS_FOR_RANDOM lists every motif key that can be tagged on a flag', () => {
-  assert.deepEqual(MOTIFS_FOR_RANDOM, ['animal', 'coat-of-arms', 'weapon', 'star-or-moon']);
+  assert.deepEqual(MOTIFS_FOR_RANDOM, ['animal', 'coat-of-arms', 'weapon', 'star-or-moon', 'cross']);
 });
 
 test('continent and statehood categories carry their exclusiveGroup', () => {
