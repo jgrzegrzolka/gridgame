@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Flag Grid 2</title>
+    <title>Flag Grid 4</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="../index.css?v=__BUILD__" />
@@ -92,12 +92,12 @@
     </div>
     <script type="module">
       import { bootFlagGrid } from '../page.js?v=__BUILD__';
-      import { PUZZLE_2 } from '../puzzles.js?v=__BUILD__';
+      import { PUZZLE_4 } from '../puzzles.js?v=__BUILD__';
       import { bootI18n, wireLangToggle } from '../../i18n.js';
 
       bootI18n('../../').then((lang) => {
         wireLangToggle(lang);
-        bootFlagGrid(() => PUZZLE_2, { stateKey: 'flaggrid.state.2', allowReplay: true });
+        bootFlagGrid(() => PUZZLE_4, { stateKey: 'flaggrid.state.4', allowReplay: true });
       });
     </script>
   </body>
