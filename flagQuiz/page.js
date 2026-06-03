@@ -17,6 +17,7 @@ import {
   isQuizIncludeAll,
   setQuizIncludeAll,
   preloadFlags,
+  shouldFireQuizConfetti,
 } from '../flags/quiz.js';
 import { flagsGamePool } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
@@ -306,8 +307,8 @@ export function bootFlagQuiz() {
           badge.className = 'new-badge';
           badge.textContent = t('game.newRecord', 'new record!');
           bestEl.appendChild(badge);
-          launchConfetti();
         }
+        if (shouldFireQuizConfetti({ timed: true, wrongCount, isNew })) launchConfetti();
       } else {
         // All-mode scoring is "fewer mistakes wins": store the raw
         // wrongCount as Result.score (lower = better) and pass
@@ -331,8 +332,8 @@ export function bootFlagQuiz() {
           badge.className = 'new-badge';
           badge.textContent = t('game.newRecord', 'new record!');
           bestEl.appendChild(badge);
-          launchConfetti();
         }
+        if (shouldFireQuizConfetti({ timed: false, wrongCount, isNew })) launchConfetti();
       }
 
       gameEl.hidden = true;

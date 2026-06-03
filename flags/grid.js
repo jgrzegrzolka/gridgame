@@ -442,6 +442,108 @@ export function findPuzzleSolution(puzzle, countries) {
 }
 
 /**
+ * Find a complete 81-distinct country assignment for an Ultimate (9×9)
+ * puzzle, respecting any sub-cells already populated in `preFilled`.
+ *
+ * Returns the 3×3×3×3 grid of countries (indexed `[bigRow][bigCol][r][c]`)
+ * or null if no consistent assignment exists. Uses backtracking with the
+ * MRV (most-constrained-first) heuristic; each cell's candidate list is
+ * shuffled with `rng` so repeat calls produce different solutions.
+ *
+ * Generation guarantees an 81-distinct solution exists on an empty board
+ * (via `hasUltimatePuzzleSolution`), so this returns non-null for the
+ * give-up-on-empty case. With claimed cells the result can be null if
+ * the player has steered the puzzle into an infeasible state — callers
+ * must handle that.
+ *
+ * @param {Puzzle} puzzle
+ * @param {(Country | null)[][][][]} preFilled 3×3×3×3 of claimed countries (or null when empty).
+ * @param {Country[]} countries
+ * @param {() => number} [rng]
+ * @returns {Country[][][][] | null}
+ */
+export function findUltimateAssignment(puzzle, preFilled, countries, rng = Math.random) {
+  /** @type {(Country | null)[][][][]} */
+  const result = preFilled.map((bigRow) =>
+    bigRow.map((board) => board.map((row) => row.slice())),
+  );
+  /** @type {Set<string>} */
+  const used = new Set();
+  /** @type {Array<{ br: number, bc: number, r: number, c: number, candidates: Country[] }>} */
+  const empties = [];
+
+  for (let br = 0; br < 3; br++) {
+    for (let bc = 0; bc < 3; bc++) {
+      const rowCat = puzzle.rows[br];
+      const colCat = puzzle.cols[bc];
+      // Every sub-cell of small board (br, bc) sees the same candidate
+      // pool initially — the (row × col) predicate is identical across
+      // the 9 sub-cells of one small board.
+      const valid = countries.filter(
+        (co) => rowCat.predicate(co) && colCat.predicate(co),
+      );
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          const claimed = preFilled[br][bc][r][c];
+          if (claimed) {
+            used.add(claimed.code);
+          } else {
+            empties.push({ br, bc, r, c, candidates: shuffleInPlace(valid.slice(), rng) });
+          }
+        }
+      }
+    }
+  }
+
+  // Drop already-claimed countries from each empty cell's domain. MRV
+  // sort favours the most-constrained empty cells first — without it,
+  // the search blows up on thin (row × col) pairs because we'd try
+  // wide-pool cells first, burn through countries needed elsewhere, and
+  // dead-end deep in the tree.
+  for (const e of empties) {
+    e.candidates = e.candidates.filter((co) => !used.has(co.code));
+  }
+  empties.sort((a, b) => a.candidates.length - b.candidates.length);
+
+  /** @param {number} i */
+  function backtrack(i) {
+    if (i === empties.length) return true;
+    const { br, bc, r, c, candidates } = empties[i];
+    for (const co of candidates) {
+      if (used.has(co.code)) continue;
+      result[br][bc][r][c] = co;
+      used.add(co.code);
+      if (backtrack(i + 1)) return true;
+      used.delete(co.code);
+      result[br][bc][r][c] = null;
+    }
+    return false;
+  }
+
+  if (!backtrack(0)) return null;
+  return /** @type {Country[][][][]} */ (result);
+}
+
+/**
+ * Fisher–Yates shuffle in place. Internal helper for randomizing
+ * candidate orderings inside backtracking solvers.
+ *
+ * @template T
+ * @param {T[]} arr
+ * @param {() => number} rng
+ * @returns {T[]}
+ */
+function shuffleInPlace(arr, rng) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+  }
+  return arr;
+}
+
+/**
  * @param {Puzzle} puzzle
  * @param {Country[]} countries
  * @param {number} [minPerCell]

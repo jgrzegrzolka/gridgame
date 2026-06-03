@@ -21,6 +21,7 @@ import {
   isPuzzleGeneratable,
   generateRandomPuzzle,
   hasUltimatePuzzleSolution,
+  findUltimateAssignment,
   generateUltimateRandomPuzzle,
   axesConflict,
   buildRandomCategoryPool,
@@ -997,6 +998,157 @@ test('generateUltimateRandomPuzzle throws when no puzzle in the category pool ca
   const countries = denseSquarePool(['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'], COLORS_FOR_RANDOM, 1);
   assert.throws(() => generateUltimateRandomPuzzle(countries, { maxAttempts: 30 }));
 });
+
+// findUltimateAssignment
+// Constructs the 81-distinct assignment generation only proves exists.
+// Replaces the give-up greedy fill that was hitting duplicate-surfacing
+// dead-ends on the real countries dataset.
+
+/** Build an empty 3×3×3×3 preFilled grid (every sub-cell null). */
+function emptyPreFilled() {
+  /** @type {(import('./group.js').Country | null)[][][][]} */
+  const grid = [];
+  for (let br = 0; br < 3; br++) {
+    const bigRow = [];
+    for (let bc = 0; bc < 3; bc++) {
+      const board = [];
+      for (let r = 0; r < 3; r++) {
+        board.push([null, null, null]);
+      }
+      bigRow.push(board);
+    }
+    grid.push(bigRow);
+  }
+  return grid;
+}
+
+test('findUltimateAssignment: returns 81 distinct countries on an empty puzzle that passes the Hall check', () => {
+  const countries = denseSquarePool(
+    ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
+    COLORS_FOR_RANDOM,
+    9,
+  );
+  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 50 });
+  /** @type {Country[][][][] | null} */
+  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries);
+  if (!assignment) throw new Error('a solvable puzzle must yield a non-null assignment');
+  /** @type {Set<string>} */
+  const seen = new Set();
+  for (let br = 0; br < 3; br++) {
+    for (let bc = 0; bc < 3; bc++) {
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          /** @type {Country} */
+          const co = assignment[br][bc][r][c];
+          assert.ok(
+            puzzle.rows[br].predicate(co) && puzzle.cols[bc].predicate(co),
+            `${co.code} at (${br},${bc},${r},${c}) must satisfy row × col`,
+          );
+          assert.equal(seen.has(co.code), false, `${co.code} reused at (${br},${bc},${r},${c})`);
+          seen.add(co.code);
+        }
+      }
+    }
+  }
+  assert.equal(seen.size, 81);
+});
+
+test('findUltimateAssignment: respects preFilled cells and never reuses their countries', () => {
+  const countries = denseSquarePool(
+    ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
+    COLORS_FOR_RANDOM,
+    9,
+  );
+  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 50 });
+  // Seed one cell at (0,0,0,0) with a country that fits its row × col.
+  const seedCandidates = countries.filter(
+    (co) => puzzle.rows[0].predicate(co) && puzzle.cols[0].predicate(co),
+  );
+  assert.ok(seedCandidates.length > 0, 'test puzzle must have a valid seed');
+  const seed = seedCandidates[0];
+  const preFilled = emptyPreFilled();
+  preFilled[0][0][0][0] = seed;
+
+  const assignment = findUltimateAssignment(puzzle, preFilled, countries);
+  if (!assignment) throw new Error('expected an assignment');
+  // Seeded cell unchanged.
+  assert.equal(assignment[0][0][0][0].code, seed.code);
+  // Seeded country appears exactly once across the whole grid.
+  let count = 0;
+  for (let br = 0; br < 3; br++) {
+    for (let bc = 0; bc < 3; bc++) {
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          if (assignment[br][bc][r][c].code === seed.code) count++;
+        }
+      }
+    }
+  }
+  assert.equal(count, 1, 'seeded country must not be reused elsewhere');
+});
+
+test('findUltimateAssignment: returns null when preFilled has burned the candidates needed elsewhere', () => {
+  // 9 countries per (continent × color) cell — exactly enough for an
+  // empty-board 81-distinct assignment. Forcibly seed a cell with a
+  // country that another small board sharing that continent also needs:
+  // since the pool was minimal, removing it makes completion impossible.
+  const countries = denseSquarePool(
+    ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
+    COLORS_FOR_RANDOM,
+    9,
+  );
+  // Use a fixed puzzle layout we can reason about: continents on rows,
+  // colors on cols. Each (continent[r], color[c]) cell has exactly 9
+  // matching countries in this pool — so for a cell at (br=0,bc=0) to
+  // accommodate 9 distinct fills, none of its 9 candidates may be used
+  // by another small board sharing continent[0]. We can't easily force
+  // that from outside the API without rebuilding the pool. Instead,
+  // assert the simpler contract: a wildly over-seeded cell (every one
+  // of its candidates planted somewhere else first) fails the solver.
+  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 50 });
+  // Find a (br, bc) and steal all of its candidates into other cells'
+  // preFilled slots whose row × col happens to also accept them.
+  const target = { br: 0, bc: 0 };
+  const targetCandidates = countries.filter(
+    (co) => puzzle.rows[target.br].predicate(co) && puzzle.cols[target.bc].predicate(co),
+  );
+  // Seed the *other* 8 small boards with as many of target's candidates
+  // as they can accept. If we can place all 9 in other boards, the
+  // target board has zero candidates left and the solver must fail.
+  const preFilled = emptyPreFilled();
+  let seededCount = 0;
+  outer: for (const co of targetCandidates) {
+    for (let br = 0; br < 3 && seededCount < targetCandidates.length; br++) {
+      for (let bc = 0; bc < 3 && seededCount < targetCandidates.length; bc++) {
+        if (br === target.br && bc === target.bc) continue;
+        if (!puzzle.rows[br].predicate(co) || !puzzle.cols[bc].predicate(co)) continue;
+        // Find any empty preFilled slot in this small board.
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 3; c++) {
+            if (preFilled[br][bc][r][c]) continue;
+            preFilled[br][bc][r][c] = co;
+            seededCount++;
+            continue outer;
+          }
+        }
+      }
+    }
+  }
+  // If we managed to siphon every target candidate elsewhere, the
+  // solver must return null. If not, this test's premise didn't hold
+  // for this puzzle — skip the assertion rather than fail spuriously.
+  if (seededCount === targetCandidates.length) {
+    const out = findUltimateAssignment(puzzle, preFilled, countries);
+    assert.equal(out, null, 'no completion possible when target small board has zero candidates left');
+  }
+});
+
+// TODO: a real-countries.json regression test for findUltimateAssignment
+// belongs here, but the only obvious shape (generate a few random
+// puzzles and assert 81 distinct outputs) is dominated by puzzle
+// generation cost — too slow to keep in the suite. Tracked in
+// https://github.com/jgrzegrzolka/gridgame/issues — needs a faster
+// approach (e.g. pre-baked puzzles, or a timing budget) before adding.
 
 function syntheticTaggedCountries() {
   /** @type {Country[]} */

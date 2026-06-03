@@ -1,5 +1,5 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/grid.js';
-import { newGame, attemptClaim, isGameOver, applyGiveUp } from '../../flags/ticTacToe.js';
+import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells } from '../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 
@@ -31,6 +31,12 @@ export function bootTicTacToe() {
  */
 function runTicTacToe({ puzzle, countries }) {
   let state = newGame(puzzle, 'O');
+  // Tracks the last-seen winningLine so renderGrid fires the win-shake
+  // only on the transition, not on later re-renders. Declared up here
+  // because renderAll() (called during init) calls renderGrid which
+  // reads it — a later declaration would hit a TDZ on first render.
+  /** @type {[number, number][] | null} */
+  let lastSeenWinningLine = null;
   /** @type {Player | null} */
   let lastRenderedPlayer = null;
 
@@ -298,6 +304,20 @@ function runTicTacToe({ puzzle, countries }) {
         if (td) td.classList.add('winning');
       }
     }
+    // Fire a one-shot shake on the freshly formed line; comparing against
+    // lastSeenWinningLine prevents the animation from replaying on later
+    // re-renders that re-apply the .winning class.
+    const fresh = newlyWinningCells(
+      { winningLine: lastSeenWinningLine },
+      { winningLine: state.winningLine },
+    );
+    for (const [r, c] of fresh) {
+      const td = gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`);
+      if (!td) continue;
+      td.classList.add('shake-win');
+      setTimeout(() => td.classList.remove('shake-win'), 1200);
+    }
+    lastSeenWinningLine = state.winningLine;
     document.body.classList.toggle('game-over', isGameOver(state));
     if (giveUpEl) giveUpEl.hidden = isGameOver(state);
   }
@@ -330,13 +350,16 @@ function runTicTacToe({ puzzle, countries }) {
   function finishRound() {
     if (!resultEl || !finalScoreEl) return;
     if (state.gaveUp) {
-      finalScoreEl.textContent = t('ttt.gaveUp', 'Gave up');
-      finalScoreEl.style.color = '#1c1c1c';
+      // Offline single-player: the player obviously knows they gave up, so the
+      // result section just offers Play again. Online keeps a label because
+      // "You/Opponent gave up" actually conveys information.
+      const finalScoreLineEl = document.getElementById('final-score-line');
+      if (finalScoreLineEl) finalScoreLineEl.hidden = true;
     } else if (state.winner) {
       finalScoreEl.textContent =
         t('ttt.playerWins', '{player} wins!').replace('{player}', state.winner);
       finalScoreEl.style.color = state.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
-      launchConfetti();
+      if (shouldFireTicTacToeConfetti({ winner: state.winner })) launchConfetti();
     } else {
       finalScoreEl.textContent = t('ttt.draw', 'Draw');
       finalScoreEl.style.color = '#1c1c1c';

@@ -442,3 +442,21 @@ export function recordResult(store, variantKey, modeKey, current, includeAll = f
   if (outcome.isNew) saveBest(store, key, outcome.best);
   return outcome;
 }
+
+/**
+ * Confetti rule for the quiz page.
+ * - timed (60s) mode: only on a new record, since every finished run is
+ *   inherently "complete" (the budget runs out) and the brag-worthy event
+ *   is beating your previous best.
+ * - untimed (all) mode: a clean sweep (wrongCount === 0) deserves the
+ *   reward on its own merits even if a previous run was equally clean
+ *   and faster; otherwise a new record (fewer mistakes than before, or
+ *   same mistakes but faster) also fires.
+ *
+ * @param {{ timed: boolean, wrongCount: number, isNew: boolean }} params
+ * @returns {boolean}
+ */
+export function shouldFireQuizConfetti({ timed, wrongCount, isNew }) {
+  if (timed) return isNew;
+  return wrongCount === 0 || isNew;
+}

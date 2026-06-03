@@ -147,3 +147,16 @@ export function recordFindResult(store, categoryId, current, includeAll = false)
   if (isNew) saveBest(store, categoryId, current, includeAll);
   return { best: isNew ? current : prev ?? current, isNew };
 }
+
+/**
+ * Confetti rule for the find-flag page: a clean sweep (found === total)
+ * always celebrates, even if a previous faster sweep means there's no
+ * new record; a new record (better partial result than before) also
+ * fires, so a give-up that still beat your previous best feels rewarded.
+ *
+ * @param {{ found: number, total: number, isNew: boolean }} params
+ * @returns {boolean}
+ */
+export function shouldFireFindFlagConfetti({ found, total, isNew }) {
+  return found === total || isNew;
+}
