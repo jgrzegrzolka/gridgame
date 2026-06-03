@@ -66,8 +66,8 @@ test('launchConfetti sets per-piece CSS custom properties and a background color
   assert.equal(piece.style._props['--start-left'], '50vw');
   assert.equal(piece.style._props['--drift'], '0px');
   assert.equal(piece.style._props['--rot'], '0deg');
-  assert.equal(piece.style._props['--dur'], '3300ms');
-  assert.equal(piece.style._props['--delay'], '500ms');
+  assert.equal(piece.style._props['--dur'], '6600ms');
+  assert.equal(piece.style._props['--delay'], '1000ms');
   assert.notEqual(piece.style.background, '');
 });
 
