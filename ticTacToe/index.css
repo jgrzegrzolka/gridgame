@@ -109,7 +109,7 @@ body.game-over .cell:hover::after {
 }
 .cell.owned {
   padding: 10px;
-  cursor: default;
+  cursor: zoom-in;
 }
 .cell.owned img {
   display: block;

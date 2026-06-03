@@ -47,6 +47,9 @@ function runTicTacToe({ puzzle, countries }) {
   const pickerInputEl = /** @type {HTMLInputElement} */ (document.getElementById('picker-input'));
   const pickerSuggestionsEl = /** @type {HTMLUListElement} */ (document.getElementById('picker-suggestions'));
   const colHeaderEls = document.querySelectorAll('.col-header');
+  const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
+  const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
+  const zoomName = zoomEl ? /** @type {HTMLParagraphElement | null} */ (zoomEl.querySelector('p')) : null;
   const turnLineEl = document.getElementById('turn-line');
   const turnBadgeEl = document.getElementById('turn-badge');
   const turnTextEl = document.getElementById('turn-text');
@@ -85,9 +88,29 @@ function runTicTacToe({ puzzle, countries }) {
 
   /** @param {number} row @param {number} col */
   function onCellActivate(row, col) {
+    const cellCountry = state.cells[row][col].country;
+    if (cellCountry) {
+      openZoom(cellCountry);
+      return;
+    }
     if (isGameOver(state)) return;
-    if (state.cells[row][col].owner) return;
     openPicker(row, col);
+  }
+
+  /** @param {Country} c */
+  function openZoom(c) {
+    if (!zoomEl || !zoomImg || !zoomName) return;
+    zoomImg.src = `../../flags/svg/${c.code}.svg`;
+    const displayName = countryName(c);
+    zoomImg.alt = displayName;
+    zoomName.textContent = displayName;
+    zoomEl.showModal();
+  }
+
+  if (zoomEl) {
+    zoomEl.addEventListener('click', (e) => {
+      if (e.target === zoomEl) zoomEl.close();
+    });
   }
 
   /** @param {number} row @param {number} col */

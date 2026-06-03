@@ -85,6 +85,9 @@ function runOnline(countries) {
   const finalScoreEl = document.getElementById('final-score');
   const playAgainEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('play-again'));
   const colHeaderEls = document.querySelectorAll('.col-header');
+  const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
+  const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
+  const zoomName = zoomEl ? /** @type {HTMLParagraphElement | null} */ (zoomEl.querySelector('p')) : null;
   const pickerEl = document.getElementById('picker');
   const pickerBackdropEl = document.getElementById('picker-backdrop');
   const pickerCloseEl = document.getElementById('picker-close');
@@ -256,12 +259,33 @@ function runOnline(countries) {
   /** @param {number} r @param {number} c */
   function onCellActivate(r, c) {
     const { game, myRole, peerPresent } = state;
-    if (!game || !myRole) return;
+    if (!game) return;
+    const cellCountry = game.cells[r][c].country;
+    if (cellCountry) {
+      openZoom(cellCountry);
+      return;
+    }
+    if (!myRole) return;
     if (!peerPresent) return;
     if (game.winner || game.draw) return;
-    if (game.cells[r][c].owner) return;
     if (game.currentPlayer !== myRole) return;
     openPicker(r, c);
+  }
+
+  /** @param {Country} c */
+  function openZoom(c) {
+    if (!zoomEl || !zoomImg || !zoomName) return;
+    zoomImg.src = `../flags/svg/${c.code}.svg`;
+    const displayName = countryName(c);
+    zoomImg.alt = displayName;
+    zoomName.textContent = displayName;
+    zoomEl.showModal();
+  }
+
+  if (zoomEl) {
+    zoomEl.addEventListener('click', (e) => {
+      if (e.target === zoomEl) zoomEl.close();
+    });
   }
 
   // ---- Picker ----
