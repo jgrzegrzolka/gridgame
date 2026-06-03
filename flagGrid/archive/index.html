@@ -44,8 +44,8 @@
     <div class="archive-grid" id="archive-grid"></div>
     <script type="module">
       import { ARCHIVE } from '../puzzles.js?v=__BUILD__';
-      import { loadGridState, computeGridScore, isGridLocked } from '../../flags/grid.js';
-      import { scoreColor } from '../../flags/quiz.js';
+      import { gridBestKey } from '../../flags/grid.js';
+      import { loadBest, scoreColor } from '../../flags/quiz.js';
       import { bootI18n, wireLangToggle, t } from '../../i18n.js';
 
       const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -79,17 +79,15 @@
         dateEl.textContent = formatDate(entry.date);
         a.appendChild(dateEl);
 
-        // Only show a score when the round was actually played to
-        // completion (solved or gave up). An in-progress save (state
-        // exists but isGridLocked is false) leaves the tile bare.
-        const state = loadGridState(globalThis.localStorage, `flaggrid.state.${entry.slug}`);
-        if (state && isGridLocked(state)) {
-          const filledCount = state.picks.filter((p) => p !== null).length;
-          const score = computeGridScore({ filledCount, wrongCount: state.wrongCount });
+        // Read the best record (written by recordGridResult on every
+        // finish) so retrying — or wiping the in-progress state for any
+        // reason — doesn't drop the badge from the archive.
+        const best = loadBest(globalThis.localStorage, gridBestKey(entry.slug));
+        if (best) {
           const scoreEl = document.createElement('div');
           scoreEl.className = 'archive-tile-score';
-          scoreEl.textContent = String(score);
-          scoreEl.style.color = scoreColor(score / 100);
+          scoreEl.textContent = String(best.score);
+          scoreEl.style.color = scoreColor(best.score / 100);
           a.appendChild(scoreEl);
         }
 
