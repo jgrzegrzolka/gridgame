@@ -167,6 +167,19 @@ export function bootFlagQuiz() {
     // dwindling timer rather than the meaningless "questions done" ratio.
     if (timed) {
       progressBarEl.style.width = '0%';
+      // Drop the flash class once the keyframes finish, so the next
+      // wrong click can restart the animation cleanly via reflow.
+      playTimerEl.addEventListener('animationend', () => {
+        playTimerEl.classList.remove('penalty');
+      });
+    }
+
+    function flashPenalty() {
+      playTimerEl.classList.remove('penalty');
+      // Force a reflow so the re-added class triggers the animation again
+      // even if a previous flash is still mid-flight.
+      void playTimerEl.offsetWidth;
+      playTimerEl.classList.add('penalty');
     }
 
     function tickTimer() {
@@ -236,6 +249,7 @@ export function bootFlagQuiz() {
         tile.disabled = true;
         feedbackEl.textContent = countryName(chosen);
         wrongCount++;
+        if (timed) flashPenalty();
       }
     }
 
