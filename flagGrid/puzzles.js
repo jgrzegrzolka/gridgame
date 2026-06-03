@@ -20,6 +20,12 @@ export const PUZZLE_3 = {
   cols: [hasColor('yellow'), hasColor('green'), hasMotif('star-or-moon')],
 };
 
+/** @type {Puzzle} */
+export const PUZZLE_4 = {
+  rows: [continent('Oceania'), continent('Europe'), hasMotif('star-or-moon')],
+  cols: [hasColor('white'), hasColor('green'), hasColor('blue')],
+};
+
 /**
  * One Flag Grid game per day, starting 2026-06-01. The date is rendered
  * on the archive tiles so the daily rhythm is visible at a glance.
@@ -30,4 +36,5 @@ export const ARCHIVE = [
   { slug: '1', label: 'Game 1', date: '2026-06-01', puzzle: PUZZLE_1 },
   { slug: '2', label: 'Game 2', date: '2026-06-02', puzzle: PUZZLE_2 },
   { slug: '3', label: 'Game 3', date: '2026-06-03', puzzle: PUZZLE_3 },
+  { slug: '4', label: 'Game 4', date: '2026-06-04', puzzle: PUZZLE_4 },
 ];
