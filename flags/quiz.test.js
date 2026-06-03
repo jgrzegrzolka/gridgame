@@ -19,6 +19,8 @@ import {
   LOOKALIKES,
   lookalikesOf,
   nextBest,
+  higherScoreWins,
+  lowerScoreWins,
   loadBest,
   saveBest,
   bestKey,
@@ -500,59 +502,113 @@ test('loadBest does not throw when the store throws', () => {
   assert.equal(loadBest(throwingStore, 'k'), null);
 });
 
-test('bestKey produces the expected namespaced format', () => {
-  assert.equal(bestKey('europe', '20'), 'flagquiz.best.europe.20');
-  assert.equal(bestKey('all', 'all'), 'flagquiz.best.all.all');
-  assert.equal(bestKey('north-america', '20'), 'flagquiz.best.north-america.20');
+test('bestKey produces the expected namespaced format for 60s mode', () => {
+  assert.equal(bestKey('europe', '60s'), 'flagquiz.best.europe.60s');
+  assert.equal(bestKey('north-america', '60s'), 'flagquiz.best.north-america.60s');
+});
+
+test('bestKey adds a .v2 segment for the all mode — orphans pre-mistakes-scoring entries', () => {
+  // Pre-mistakes-scoring all-mode stored a percentage; the new code
+  // stores a mistakes count. Loading the old shape under the new
+  // semantics would render `95` as "95 mistakes". The .v2 segment
+  // means the old keys are unreachable and never reloaded.
+  assert.equal(bestKey('europe', 'all'), 'flagquiz.best.europe.all.v2');
+  assert.equal(bestKey('countries', 'all', true), 'flagquiz.best.countries.all.v2.all');
 });
 
 test('bestKey appends .all suffix when includeAll is true', () => {
-  assert.equal(bestKey('europe', '20', true), 'flagquiz.best.europe.20.all');
-  assert.equal(bestKey('europe', '20', false), 'flagquiz.best.europe.20');
+  assert.equal(bestKey('europe', '60s', true), 'flagquiz.best.europe.60s.all');
+  assert.equal(bestKey('europe', '60s', false), 'flagquiz.best.europe.60s');
+});
+
+test('higherScoreWins / lowerScoreWins are pure comparators on the score field', () => {
+  assert.equal(higherScoreWins(10, 5), true);
+  assert.equal(higherScoreWins(5, 10), false);
+  assert.equal(higherScoreWins(5, 5), false);
+  assert.equal(lowerScoreWins(5, 10), true);
+  assert.equal(lowerScoreWins(10, 5), false);
+  assert.equal(lowerScoreWins(5, 5), false);
+});
+
+test('nextBest with lowerScoreWins prefers fewer mistakes (the all-mode shape)', () => {
+  const prev = { score: 5, time: 60000 };
+  const curr = { score: 3, time: 90000 };
+  const r = nextBest(prev, curr, lowerScoreWins);
+  assert.deepEqual(r, { best: curr, isNew: true });
+});
+
+test('nextBest with lowerScoreWins keeps the previous when current has more mistakes', () => {
+  const prev = { score: 2, time: 60000 };
+  const curr = { score: 5, time: 10000 };
+  const r = nextBest(prev, curr, lowerScoreWins);
+  assert.deepEqual(r, { best: prev, isNew: false });
+});
+
+test('nextBest with lowerScoreWins still breaks score ties on faster time', () => {
+  const prev = { score: 3, time: 70000 };
+  const curr = { score: 3, time: 50000 };
+  const r = nextBest(prev, curr, lowerScoreWins);
+  assert.deepEqual(r, { best: curr, isNew: true });
 });
 
 test('recordResult writes to a different slot when includeAll is true', () => {
   const store = fakeStore();
-  recordResult(store, 'europe', '20', { score: 90, time: 60000 }, false);
-  recordResult(store, 'europe', '20', { score: 50, time: 60000 }, true);
-  assert.deepEqual(loadBest(store, bestKey('europe', '20', false)), { score: 90, time: 60000 });
-  assert.deepEqual(loadBest(store, bestKey('europe', '20', true)), { score: 50, time: 60000 });
+  recordResult(store, 'europe', '60s', { score: 12, time: 60000 }, false);
+  recordResult(store, 'europe', '60s', { score: 8, time: 60000 }, true);
+  assert.deepEqual(loadBest(store, bestKey('europe', '60s', false)), { score: 12, time: 60000 });
+  assert.deepEqual(loadBest(store, bestKey('europe', '60s', true)), { score: 8, time: 60000 });
 });
 
 test('recordResult on an empty store saves the result and reports isNew', () => {
   const store = fakeStore();
-  const current = { score: 87, time: 65432 };
-  const r = recordResult(store, 'europe', '20', current);
+  const current = { score: 12, time: 45000 };
+  const r = recordResult(store, 'europe', '60s', current);
   assert.deepEqual(r, { best: current, isNew: true });
   assert.deepEqual(
-    loadBest(store, bestKey('europe', '20')),
+    loadBest(store, bestKey('europe', '60s')),
     current,
   );
 });
 
 test('recordResult does not save when the current run does not beat the best', () => {
   const store = fakeStore();
-  const previous = { score: 90, time: 30000 };
-  saveBest(store, bestKey('europe', '20'), previous);
-  const worse = { score: 80, time: 10000 };
-  const r = recordResult(store, 'europe', '20', worse);
+  const previous = { score: 15, time: 30000 };
+  saveBest(store, bestKey('europe', '60s'), previous);
+  const worse = { score: 10, time: 10000 };
+  const r = recordResult(store, 'europe', '60s', worse);
   assert.deepEqual(r, { best: previous, isNew: false });
   assert.deepEqual(
-    loadBest(store, bestKey('europe', '20')),
+    loadBest(store, bestKey('europe', '60s')),
     previous,
   );
 });
 
 test('recordResult updates the store when the current run beats the best', () => {
   const store = fakeStore();
-  saveBest(store, bestKey('europe', '20'), { score: 80, time: 60000 });
-  const better = { score: 95, time: 40000 };
-  const r = recordResult(store, 'europe', '20', better);
+  saveBest(store, bestKey('europe', '60s'), { score: 12, time: 60000 });
+  const better = { score: 18, time: 40000 };
+  const r = recordResult(store, 'europe', '60s', better);
   assert.deepEqual(r, { best: better, isNew: true });
   assert.deepEqual(
-    loadBest(store, bestKey('europe', '20')),
+    loadBest(store, bestKey('europe', '60s')),
     better,
   );
+});
+
+test('recordResult with lowerScoreWins (all-mode shape) keeps the lower-mistake run as best', () => {
+  const store = fakeStore();
+  saveBest(store, bestKey('europe', 'all'), { score: 5, time: 90000 });
+  const worse = { score: 8, time: 30000 };
+  const betterMistakes = { score: 3, time: 95000 };
+  assert.deepEqual(
+    recordResult(store, 'europe', 'all', worse, false, lowerScoreWins),
+    { best: { score: 5, time: 90000 }, isNew: false },
+  );
+  assert.deepEqual(
+    recordResult(store, 'europe', 'all', betterMistakes, false, lowerScoreWins),
+    { best: betterMistakes, isNew: true },
+  );
+  assert.deepEqual(loadBest(store, bestKey('europe', 'all')), betterMistakes);
 });
 
 test('recordResult uses separate slots per variant/mode pair', () => {
