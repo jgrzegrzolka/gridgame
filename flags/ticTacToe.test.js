@@ -1,7 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { continent, hasColor } from './grid.js';
-import { newGame, attemptClaim, findWinner, isGameOver, applyGiveUp } from './ticTacToe.js';
+import {
+  newGame,
+  attemptClaim,
+  findWinner,
+  isGameOver,
+  applyGiveUp,
+  shouldFireTicTacToeConfetti,
+  newlyWinningCells,
+} from './ticTacToe.js';
 
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./ticTacToe.js').Player} Player */
@@ -331,4 +339,58 @@ test('draw when board fills with no winner', () => {
   assert.equal(out.nextState.draw, true);
   assert.equal(isGameOver(out.nextState), true);
   assert.equal(out.nextState.currentPlayer, 'X', 'turn does not flip on draw');
+});
+
+// shouldFireTicTacToeConfetti
+// Rule: a win (winner is 'X' or 'O') fires confetti; draws and give-ups
+// (winner === null) never do. When myRole is provided (online), the
+// browser only celebrates *its own* win — the loser sees no confetti.
+// When myRole is absent (offline 3x3, 9x9, or anywhere with no notion
+// of "you"), any winner fires.
+
+test('shouldFireTicTacToeConfetti: offline (no myRole) fires on any X or O win', () => {
+  assert.equal(shouldFireTicTacToeConfetti({ winner: 'X' }), true);
+  assert.equal(shouldFireTicTacToeConfetti({ winner: 'O' }), true);
+  assert.equal(shouldFireTicTacToeConfetti({ winner: 'X', myRole: null }), true);
+  assert.equal(shouldFireTicTacToeConfetti({ winner: 'O', myRole: null }), true);
+});
+
+test('shouldFireTicTacToeConfetti: draws and give-ups never fire (winner is null)', () => {
+  assert.equal(shouldFireTicTacToeConfetti({ winner: null }), false);
+  assert.equal(shouldFireTicTacToeConfetti({ winner: null, myRole: 'X' }), false);
+  assert.equal(shouldFireTicTacToeConfetti({ winner: null, myRole: 'O' }), false);
+});
+
+test('shouldFireTicTacToeConfetti: online fires only when you (myRole) won', () => {
+  assert.equal(shouldFireTicTacToeConfetti({ winner: 'X', myRole: 'X' }), true,
+    'you played X and X won — celebrate');
+  assert.equal(shouldFireTicTacToeConfetti({ winner: 'O', myRole: 'O' }), true);
+});
+
+test('shouldFireTicTacToeConfetti: online does NOT fire when the opponent won', () => {
+  assert.equal(shouldFireTicTacToeConfetti({ winner: 'X', myRole: 'O' }), false,
+    'opponent winning should not show confetti on your screen');
+  assert.equal(shouldFireTicTacToeConfetti({ winner: 'O', myRole: 'X' }), false);
+});
+
+// newlyWinningCells
+// Drives the one-shot win-line shake animation: returns the cells to
+// animate on the transition `prev → next`, empty otherwise.
+
+test('newlyWinningCells: returns the new line when prev had no winner and next has one', () => {
+  const prev = { winningLine: null };
+  const next = { winningLine: /** @type {[number, number][]} */ ([[0, 0], [1, 1], [2, 2]]) };
+  assert.deepEqual(newlyWinningCells(prev, next), [[0, 0], [1, 1], [2, 2]]);
+});
+
+test('newlyWinningCells: returns empty when no winner exists yet (next.winningLine is null)', () => {
+  assert.deepEqual(newlyWinningCells({ winningLine: null }, { winningLine: null }), []);
+});
+
+test('newlyWinningCells: returns empty on re-renders where the line was already present', () => {
+  // The game is over and winningLine is unchanged — re-rendering should
+  // not retrigger the shake. (3x3 freezes, but offline page may still
+  // render once more on play-again wiring; this guards that case too.)
+  const line = /** @type {[number, number][]} */ ([[0, 0], [0, 1], [0, 2]]);
+  assert.deepEqual(newlyWinningCells({ winningLine: line }, { winningLine: line }), []);
 });

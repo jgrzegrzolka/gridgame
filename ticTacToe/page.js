@@ -8,6 +8,7 @@ import {
   getOrCreatePlayerId,
   canGiveUpOnline,
 } from './onlineClient.js';
+import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti } from '../confetti.js';
 
@@ -42,6 +43,12 @@ function runOnline(countries) {
   /** @type {WebSocket | null} */
   let ws = null;
   let state = initialClientState();
+  // Tracks the last-seen winningLine so renderGrid fires the win-shake
+  // only on the transition, not on later renders. Declared early because
+  // a server message can arrive (and call renderGrid) before a later
+  // declaration site, which would hit a TDZ.
+  /** @type {[number, number][] | null} */
+  let lastSeenWinningLine = null;
   let lastRenderedTurn = /** @type {Player | null} */ (null);
 
   /** Current room context — needed by the auto-reconnect path. */
@@ -436,6 +443,19 @@ function runOnline(countries) {
         if (td) td.classList.add('winning');
       }
     }
+    // One-shot shake on the freshly formed line — lastSeenWinningLine
+    // guards against re-shaking on later renders (rematch reset etc.).
+    const fresh = newlyWinningCells(
+      { winningLine: lastSeenWinningLine },
+      { winningLine: game.winningLine },
+    );
+    for (const [r, c] of fresh) {
+      const td = gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`);
+      if (!td) continue;
+      td.classList.add('shake-win');
+      setTimeout(() => td.classList.remove('shake-win'), 1200);
+    }
+    lastSeenWinningLine = game.winningLine;
     document.body.classList.toggle('game-over', game.winner !== null || game.draw || Boolean(game.gaveUp));
     renderGiveUpButton();
   }
@@ -588,7 +608,7 @@ function runOnline(countries) {
         ? t('ttt.youWin', 'You win!')
         : t('ttt.opponentWins', 'Opponent wins');
       finalScoreEl.style.color = game.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
-      if (youWon) launchConfetti();
+      if (shouldFireTicTacToeConfetti({ winner: game.winner, myRole })) launchConfetti();
     } else {
       finalScoreEl.textContent = t('ttt.draw', 'Draw');
       finalScoreEl.style.color = '#1c1c1c';

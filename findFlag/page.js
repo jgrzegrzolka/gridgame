@@ -14,6 +14,7 @@ import {
   recordFindResult,
   isFindIncludeAll,
   setFindIncludeAll,
+  shouldFireFindFlagConfetti,
 } from '../flags/findFlag.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
@@ -234,7 +235,7 @@ export function bootFindFlag() {
         inputEl.value = '';
         matches = [];
         renderSuggestions();
-        if (foundCodes.size === targetCodes.size) finish(false);
+        if (foundCodes.size === targetCodes.size) finish();
         return;
       }
       if (outcome.kind === 'duplicate') {
@@ -281,13 +282,12 @@ export function bootFindFlag() {
       }
     });
 
-    giveUpEl.addEventListener('click', () => finish(true));
+    giveUpEl.addEventListener('click', () => finish());
 
-    function finish(gaveUp) {
+    function finish() {
       if (finished) return;
       finished = true;
       cancelAnimationFrame(timerRaf);
-      if (!gaveUp) launchConfetti();
       const elapsed = Date.now() - startMs;
       const found = foundCodes.size;
       const total = targetCodes.size;
@@ -302,6 +302,7 @@ export function bootFindFlag() {
         { time: elapsed, found, total },
         includeAll,
       );
+      if (shouldFireFindFlagConfetti({ found, total, isNew })) launchConfetti();
       const bestEl = document.getElementById('best');
       bestEl.textContent =
         `${t('findFlag.yourBest', 'Your best')}: ${best.found} / ${best.total} ${t('game.in', 'in')} ${formatTime(best.time)}`;

@@ -1,4 +1,4 @@
-import { validateCell } from './grid.js';
+import { validateCell, findUltimateAssignment } from './grid.js';
 import { findWinner } from './ticTacToe.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -295,18 +295,20 @@ export function isUltimateGameOver(state) {
 }
 
 /**
- * Give-up reveal for the 9x9 ultimate game. Walks all 81 sub-cells; for each
- * empty sub-cell, picks a valid country (matches the small board's row × col
- * predicates) and writes it with owner=null + revealed=true.
+ * Give-up reveal for the 9x9 ultimate game.
  *
- * Two-tier fallback addresses the 9×9 pool pressure: each cell prefers an
- * unused country, but if the (row × col) pool has been fully consumed
- * elsewhere on the meta-board (a real possibility with 81 cells competing
- * for a shared global pool) it reaches back into the *all-valid* set and
- * accepts a country already shown elsewhere — marking the cell exhausted so
- * the UI can render a "this slot had no fresh answer left" indicator (black
- * background). If even the all-valid set is empty (degenerate puzzle, e.g.
- * tests with a missing predicate intersection), the cell is left empty.
+ * The empty-board case (the one a player hits most often) is solved by
+ * `findUltimateAssignment` — a backtracking solver that constructs the
+ * 81-distinct assignment generation already proved exists via Hall's
+ * condition. The previous implementation here did a greedy fill that
+ * could starve thin (row × col) pools and surface duplicates marked
+ * "exhausted", even though a valid assignment was always reachable.
+ *
+ * Partial-claim case: if the player has steered the board into a state
+ * where no 81-distinct completion exists (move validation in
+ * `attemptUltimateClaim` may not catch every dead-end), the solver
+ * returns null and we fall back to greedy fill with `.exhausted` marks
+ * so the UI can render "this slot had no fresh answer left" in black.
  *
  * No-op when the game is already over.
  *
@@ -318,6 +320,37 @@ export function isUltimateGameOver(state) {
 export function applyUltimateGiveUp(state, countries, random = Math.random) {
   if (isUltimateGameOver(state)) return state;
   const boards = cloneBoards(state.boards);
+
+  // Snapshot already-claimed sub-cells as the preFilled grid the solver
+  // must respect. Empty sub-cells map to null.
+  /** @type {(Country | null)[][][][]} */
+  const preFilled = boards.map((row) =>
+    row.map((board) => board.cells.map((cellRow) =>
+      cellRow.map((cell) => (cell.owner ? cell.country : null)),
+    )),
+  );
+  const assignment = findUltimateAssignment(state.puzzle, preFilled, countries, random);
+
+  if (assignment) {
+    for (let br = 0; br < 3; br++) {
+      for (let bc = 0; bc < 3; bc++) {
+        const board = boards[br][bc];
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 3; c++) {
+            if (board.cells[r][c].owner) continue;
+            const picked = assignment[br][bc][r][c];
+            if (picked) {
+              board.cells[r][c] = { owner: null, country: picked, revealed: true };
+            }
+          }
+        }
+      }
+    }
+    return { ...state, boards, gaveUp: true };
+  }
+
+  // Solver failed — fall back to greedy fill with .exhausted marks. This
+  // only fires when player claims have left no valid completion.
   const used = collectGlobalUsedCodes(boards);
   for (let br = 0; br < 3; br++) {
     for (let bc = 0; bc < 3; bc++) {
@@ -339,11 +372,49 @@ export function applyUltimateGiveUp(state, countries, random = Math.random) {
           } else {
             const picked = allValid[Math.floor(random() * allValid.length)];
             board.cells[r][c] = { owner: null, country: picked, revealed: true, exhausted: true };
-            // Don't add to `used` — it's already there by definition.
           }
         }
       }
     }
   }
   return { ...state, boards, gaveUp: true };
+}
+
+/**
+ * Small board coords [br, bc] whose 3-in-a-row line just appeared in the
+ * transition from `prev` to `next`. Used by the 9x9 page to fire a
+ * one-shot shake on the freshly-won small-board cells.
+ *
+ * Once a small board's `winningLine` is non-null it stays non-null for
+ * the rest of the game, so the result is non-empty only for boards
+ * that flipped from "no line yet" to "line just formed" this turn.
+ *
+ * @param {UltimateGameState} prev
+ * @param {UltimateGameState} next
+ * @returns {[number, number][]}
+ */
+export function newlyWonSmallBoards(prev, next) {
+  /** @type {[number, number][]} */
+  const out = [];
+  for (let br = 0; br < 3; br++) {
+    for (let bc = 0; bc < 3; bc++) {
+      const p = prev.boards[br][bc];
+      const n = next.boards[br][bc];
+      if (n.winningLine && !p.winningLine) out.push([br, bc]);
+    }
+  }
+  return out;
+}
+
+/**
+ * True iff the meta (big) 3-in-a-row line just appeared in this turn's
+ * transition. The 9x9 page uses this to fire a one-shot shake across
+ * every cell of the three winning small boards.
+ *
+ * @param {UltimateGameState} prev
+ * @param {UltimateGameState} next
+ * @returns {boolean}
+ */
+export function isMetaWinNewlyFormed(prev, next) {
+  return Boolean(next.winningLine) && !prev.winningLine;
 }

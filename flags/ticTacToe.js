@@ -223,3 +223,43 @@ export function applyGiveUp(state, countries, random = Math.random) {
   }
   return { ...state, cells, gaveUp: true };
 }
+
+/**
+ * Confetti rule for any Tic-Tac-Toe page (3x3, 9x9, online).
+ *
+ * Offline (myRole omitted/null): there is no "you" — the game has a
+ * winner from the local player's perspective regardless of which mark
+ * won, so fire on any X/O win.
+ *
+ * Online (myRole = 'X' | 'O'): only celebrate when *you* win; the loser
+ * gets the "Opponent wins" label without confetti.
+ *
+ * Draws and give-ups never fire (winner is null in both cases).
+ *
+ * @param {{ winner: Player | null, myRole?: Player | null }} params
+ * @returns {boolean}
+ */
+export function shouldFireTicTacToeConfetti({ winner, myRole = null }) {
+  if (winner !== 'X' && winner !== 'O') return false;
+  if (myRole === null || myRole === undefined) return true;
+  return winner === myRole;
+}
+
+/**
+ * Cells that just transitioned into a winning line this turn — empty
+ * unless the game went from "no winner" to "winner exists". The 3x3
+ * pages use this to fire a one-shot shake animation on the winning
+ * three cells without re-shaking on later re-renders.
+ *
+ * Once a 3-in-a-row exists the game is over and `winningLine` cannot
+ * change again, so the "prev had a line" case always returns empty.
+ *
+ * @param {{ winningLine: [number, number][] | null }} prev
+ * @param {{ winningLine: [number, number][] | null }} next
+ * @returns {[number, number][]}
+ */
+export function newlyWinningCells(prev, next) {
+  if (!next.winningLine) return [];
+  if (prev.winningLine) return [];
+  return next.winningLine;
+}

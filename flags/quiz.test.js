@@ -28,6 +28,7 @@ import {
   recordResult,
   scoreColor,
   preloadFlags,
+  shouldFireQuizConfetti,
 } from './quiz.js';
 
 /**
@@ -694,4 +695,32 @@ test('preloadFlags handles an empty pool without calling the loader', () => {
   let calls = 0;
   preloadFlags([], () => { calls++; });
   assert.equal(calls, 0);
+});
+
+// shouldFireQuizConfetti
+// Encodes the rule: timed (60s) celebrates only new records; untimed (all)
+// also celebrates a clean sweep on its own merits.
+
+test('shouldFireQuizConfetti: timed mode fires only on a new record', () => {
+  assert.equal(shouldFireQuizConfetti({ timed: true, wrongCount: 0, isNew: true }), true);
+  assert.equal(shouldFireQuizConfetti({ timed: true, wrongCount: 5, isNew: true }), true);
+  assert.equal(shouldFireQuizConfetti({ timed: true, wrongCount: 0, isNew: false }), false,
+    'timed mode does not reward a clean sweep on its own — only beating the prior best');
+  assert.equal(shouldFireQuizConfetti({ timed: true, wrongCount: 5, isNew: false }), false);
+});
+
+test('shouldFireQuizConfetti: untimed mode fires on a clean sweep (wrongCount === 0) even without a new record', () => {
+  assert.equal(shouldFireQuizConfetti({ timed: false, wrongCount: 0, isNew: false }), true,
+    'clean sweep gets confetti even if a prior run was equally clean and faster');
+  assert.equal(shouldFireQuizConfetti({ timed: false, wrongCount: 0, isNew: true }), true);
+});
+
+test('shouldFireQuizConfetti: untimed mode fires on a new record even with mistakes', () => {
+  assert.equal(shouldFireQuizConfetti({ timed: false, wrongCount: 3, isNew: true }), true,
+    'fewer mistakes than before still earns confetti even if not a clean sweep');
+});
+
+test('shouldFireQuizConfetti: untimed mode does NOT fire when there are mistakes and no new record', () => {
+  assert.equal(shouldFireQuizConfetti({ timed: false, wrongCount: 3, isNew: false }), false);
+  assert.equal(shouldFireQuizConfetti({ timed: false, wrongCount: 1, isNew: false }), false);
 });

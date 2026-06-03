@@ -10,6 +10,7 @@ import {
   loadBest,
   saveBest,
   recordFindResult,
+  shouldFireFindFlagConfetti,
 } from './findFlag.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -225,4 +226,29 @@ test('loadBest does not throw when the store throws', () => {
   assert.equal(loadBest(throwingStore, 'continent:Africa'), null);
 });
 
+// shouldFireFindFlagConfetti
+// Rule: clean sweep (found === total) celebrates even without a record;
+// new record fires too, so a partial give-up that still beat the prior
+// best earns confetti.
+
+test('shouldFireFindFlagConfetti: clean sweep fires even when not a new record', () => {
+  assert.equal(shouldFireFindFlagConfetti({ found: 10, total: 10, isNew: false }), true,
+    'finding every flag gets confetti even if a prior run was faster');
+  assert.equal(shouldFireFindFlagConfetti({ found: 10, total: 10, isNew: true }), true);
+});
+
+test('shouldFireFindFlagConfetti: new record fires even on a partial finish', () => {
+  assert.equal(shouldFireFindFlagConfetti({ found: 7, total: 10, isNew: true }), true,
+    'beating your previous best earns confetti even after a give-up');
+});
+
+test('shouldFireFindFlagConfetti: partial finish without a new record does NOT fire', () => {
+  assert.equal(shouldFireFindFlagConfetti({ found: 7, total: 10, isNew: false }), false);
+  assert.equal(shouldFireFindFlagConfetti({ found: 0, total: 10, isNew: false }), false);
+});
+
+test('shouldFireFindFlagConfetti: zero-target degenerate case fires on the trivial sweep', () => {
+  assert.equal(shouldFireFindFlagConfetti({ found: 0, total: 0, isNew: false }), true,
+    'found === total when both are 0 still counts as "all found"');
+});
 

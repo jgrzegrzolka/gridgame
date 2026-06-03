@@ -21,7 +21,7 @@
     "grid": "3x3",
     "find": "Znajdź wszystkie",
     "ticTacToe": "Kółko i krzyżyk",
-    "ticTacToe9x9": "Kółko i krzyżyk 9×9"
+    "ticTacToe9x9": "9×9"
   },
   "game": {
     "giveUp": "Poddaję się",
@@ -97,7 +97,6 @@
     "opponentWins": "Wygrana przeciwnika",
     "draw": "Remis",
     "playerWins": "Wygrał {player}!",
-    "gaveUp": "Poddanie",
     "youGaveUp": "Poddajesz się",
     "opponentGaveUp": "Przeciwnik się poddał",
     "reject": {
@@ -109,7 +108,7 @@
     }
   },
   "ttt9x9": {
-    "title": "Kółko i krzyżyk 9×9"
+    "title": "9×9"
   },
   "variant": {
     "countries": "Wszystkie kraje",

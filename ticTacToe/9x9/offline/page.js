@@ -1,5 +1,13 @@
 import { generateUltimateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../../flags/grid.js';
-import { newUltimateGame, attemptUltimateClaim, isUltimateGameOver, applyUltimateGiveUp } from '../../../flags/ultimateTicTacToe.js';
+import {
+  newUltimateGame,
+  attemptUltimateClaim,
+  isUltimateGameOver,
+  applyUltimateGiveUp,
+  newlyWonSmallBoards,
+  isMetaWinNewlyFormed,
+} from '../../../flags/ultimateTicTacToe.js';
+import { shouldFireTicTacToeConfetti } from '../../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../../i18n.js';
 import { launchConfetti } from '../../../confetti.js';
 
@@ -36,6 +44,12 @@ export function bootTicTacToe9x9() {
  */
 function runUltimateTicTacToe({ puzzle, countries }) {
   let state = newUltimateGame(puzzle, 'O');
+  // Snapshot of the previous state used by renderGrid to detect "what
+  // won this turn" for the one-shot shake animation. Must be declared
+  // before renderAll() is first invoked below — renderGrid reads it.
+  // Starts as the initial state (every winningLine === null) so nothing
+  // shakes on first render.
+  let prevState = state;
   /** @type {Player | null} */
   let lastRenderedPlayer = null;
 
@@ -350,6 +364,33 @@ function runUltimateTicTacToe({ puzzle, countries }) {
         }
       }
     }
+    // One-shot shake on freshly-won small boards (the 3 winning cells of
+    // each) and on the meta win (every cell of the 3 winning small
+    // boards). prevState gates against replaying the animation on later
+    // renders where the win is no longer "new".
+    for (const [br, bc] of newlyWonSmallBoards(prevState, state)) {
+      const board = state.boards[br][bc];
+      if (!board.winningLine) continue;
+      for (const [r, c] of board.winningLine) {
+        const td = findCell(br, bc, r, c);
+        if (!td) continue;
+        td.classList.add('shake-win');
+        setTimeout(() => td.classList.remove('shake-win'), 1200);
+      }
+    }
+    if (isMetaWinNewlyFormed(prevState, state) && state.winningLine) {
+      for (const [br, bc] of state.winningLine) {
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 3; c++) {
+            const td = findCell(br, bc, r, c);
+            if (!td) continue;
+            td.classList.add('shake-win');
+            setTimeout(() => td.classList.remove('shake-win'), 1200);
+          }
+        }
+      }
+    }
+    prevState = state;
     document.body.classList.toggle('game-over', isUltimateGameOver(state));
     if (giveUpEl) giveUpEl.hidden = isUltimateGameOver(state);
   }
@@ -382,13 +423,16 @@ function runUltimateTicTacToe({ puzzle, countries }) {
   function finishRound() {
     if (!resultEl || !finalScoreEl) return;
     if (state.gaveUp) {
-      finalScoreEl.textContent = t('ttt.gaveUp', 'Gave up');
-      finalScoreEl.style.color = '#1c1c1c';
+      // Offline single-player: the player obviously knows they gave up, so the
+      // result section just offers Play again. Online keeps a label because
+      // "You/Opponent gave up" actually conveys information.
+      const finalScoreLineEl = document.getElementById('final-score-line');
+      if (finalScoreLineEl) finalScoreLineEl.hidden = true;
     } else if (state.winner) {
       finalScoreEl.textContent =
         t('ttt.playerWins', '{player} wins!').replace('{player}', state.winner);
       finalScoreEl.style.color = state.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
-      launchConfetti();
+      if (shouldFireTicTacToeConfetti({ winner: state.winner })) launchConfetti();
     } else {
       finalScoreEl.textContent = t('ttt.draw', 'Draw');
       finalScoreEl.style.color = '#1c1c1c';

@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title data-i18n="ttt9x9.title">Tic Tac Toe 9×9</title>
+    <title data-i18n="ttt9x9.title">9×9</title>
     <link rel="icon" type="image/svg+xml" href="../../../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../../../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="../../index.css?v=__BUILD__" />
@@ -50,9 +50,11 @@
         </thead>
         <tbody id="grid-body"></tbody>
       </table>
-      <p class="turn-line" id="turn-line"><span class="turn-badge o" id="turn-badge">O</span><span id="turn-text" data-i18n="ttt.toMove">to move</span></p>
-      <div class="give-up-row">
-        <button type="button" class="give-up" id="give-up" data-i18n="game.giveUp">Give up</button>
+      <div class="turn-bar">
+        <p class="turn-line" id="turn-line"><span class="turn-badge o" id="turn-badge">O</span><span id="turn-text" data-i18n="ttt.toMove">to move</span></p>
+        <div class="give-up-row">
+          <button type="button" class="give-up" id="give-up" data-i18n="game.giveUp">Give up</button>
+        </div>
       </div>
       <section id="result" hidden>
         <p class="final-score" id="final-score-line">

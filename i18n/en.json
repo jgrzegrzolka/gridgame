@@ -21,7 +21,7 @@
     "grid": "3x3",
     "find": "Find all",
     "ticTacToe": "Tic Tac Toe",
-    "ticTacToe9x9": "Tic Tac Toe 9×9"
+    "ticTacToe9x9": "9×9"
   },
   "game": {
     "giveUp": "Give up",
@@ -97,7 +97,6 @@
     "opponentWins": "Opponent wins",
     "draw": "Draw",
     "playerWins": "{player} wins!",
-    "gaveUp": "Gave up",
     "youGaveUp": "You gave up",
     "opponentGaveUp": "Opponent gave up",
     "reject": {
@@ -109,7 +108,7 @@
     }
   },
   "ttt9x9": {
-    "title": "Tic Tac Toe 9×9"
+    "title": "9×9"
   },
   "variant": {
     "countries": "All countries",

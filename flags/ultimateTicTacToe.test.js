@@ -6,6 +6,8 @@ import {
   attemptUltimateClaim,
   isUltimateGameOver,
   applyUltimateGiveUp,
+  newlyWonSmallBoards,
+  isMetaWinNewlyFormed,
 } from './ultimateTicTacToe.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -475,3 +477,109 @@ test('attemptUltimateClaim is rejected after give-up', () => {
   const out = attemptUltimateClaim(synthetic, 0, 0, 0, 0, countryFor(0, 0, 0), POOL);
   assert.equal(out.kind, 'miss-taken');
 });
+
+// newlyWonSmallBoards / isMetaWinNewlyFormed
+// These drive the one-shot win-line shake animation in the 9x9 page —
+// they answer "which small boards just got won this turn?" and "did the
+// big-board 3-in-a-row line just appear this turn?". Constructed states
+// only populate the fields the detectors actually read.
+
+/**
+ * Build a meta-3x3 grid of small-board stubs from a 3x3 of winningLine
+ * values. `null` → board has no line yet; a `[number, number][]` → that
+ * board has the given winning line. Other SmallBoard fields are unused
+ * by the detectors so they're left undefined and cast away.
+ *
+ * @param {([number, number][] | null)[][]} grid
+ * @returns {import('./ultimateTicTacToe.js').UltimateGameState}
+ */
+function stateWithBoardLines(grid) {
+  return /** @type {any} */ ({
+    boards: grid.map((row) => row.map((winningLine) => ({ winningLine }))),
+    winningLine: null,
+  });
+}
+
+test('newlyWonSmallBoards: empty when no board changed', () => {
+  const s = stateWithBoardLines([
+    [null, null, null],
+    [null, null, null],
+    [null, null, null],
+  ]);
+  assert.deepEqual(newlyWonSmallBoards(s, s), []);
+});
+
+test('newlyWonSmallBoards: empty when a board that was already won stays won', () => {
+  const lineA = /** @type {[number, number][]} */ ([[0, 0], [0, 1], [0, 2]]);
+  const prev = stateWithBoardLines([
+    [lineA, null, null],
+    [null, null, null],
+    [null, null, null],
+  ]);
+  // Same line is still present after the next move — no shake retrigger.
+  const next = stateWithBoardLines([
+    [lineA, null, null],
+    [null, null, null],
+    [null, null, null],
+  ]);
+  assert.deepEqual(newlyWonSmallBoards(prev, next), []);
+});
+
+test('newlyWonSmallBoards: returns the coord of the small board that flipped to won this turn', () => {
+  const prev = stateWithBoardLines([
+    [null, null, null],
+    [null, null, null],
+    [null, null, null],
+  ]);
+  const next = stateWithBoardLines([
+    [null, null, null],
+    [null, [[1, 0], [1, 1], [1, 2]], null],
+    [null, null, null],
+  ]);
+  assert.deepEqual(newlyWonSmallBoards(prev, next), [[1, 1]]);
+});
+
+test('newlyWonSmallBoards: returns multiple coords if more than one board flipped at once', () => {
+  // A single move can't normally win two small boards, but the detector
+  // is defined per-board so a contrived state covers the contract.
+  const prev = stateWithBoardLines([
+    [null, null, null],
+    [null, null, null],
+    [null, null, null],
+  ]);
+  const next = stateWithBoardLines([
+    [[[0, 0], [0, 1], [0, 2]], null, null],
+    [null, null, null],
+    [null, null, [[2, 2], [1, 2], [0, 2]]],
+  ]);
+  assert.deepEqual(newlyWonSmallBoards(prev, next), [[0, 0], [2, 2]]);
+});
+
+test('isMetaWinNewlyFormed: false when there is no meta line yet', () => {
+  const s = stateWithBoardLines([
+    [null, null, null],
+    [null, null, null],
+    [null, null, null],
+  ]);
+  assert.equal(isMetaWinNewlyFormed(s, s), false);
+});
+
+test('isMetaWinNewlyFormed: true when the meta line transitions from null to present', () => {
+  const prev = /** @type {any} */ ({ boards: [], winningLine: null });
+  const next = /** @type {any} */ ({ boards: [], winningLine: [[0, 0], [1, 1], [2, 2]] });
+  assert.equal(isMetaWinNewlyFormed(prev, next), true);
+});
+
+test('isMetaWinNewlyFormed: false on re-renders where the meta line was already present', () => {
+  const line = [[0, 0], [1, 1], [2, 2]];
+  const prev = /** @type {any} */ ({ boards: [], winningLine: line });
+  const next = /** @type {any} */ ({ boards: [], winningLine: line });
+  assert.equal(isMetaWinNewlyFormed(prev, next), false);
+});
+
+// TODO: an end-to-end give-up-on-empty-board regression test against the
+// real countries.json belongs here (would have caught the duplicate-
+// surfacing bug that was fixed in this commit) but generation is too
+// slow with the current random-search-with-Hall-checks approach to keep
+// in the suite. Tracked in a follow-up GitHub issue — needs a faster
+// generation strategy or a pre-baked puzzle fixture first.
