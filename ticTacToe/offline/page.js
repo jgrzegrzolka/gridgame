@@ -1,10 +1,15 @@
-import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake } from '../../flags/grid.js';
+import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/grid.js';
 import { newGame, attemptClaim, isGameOver } from '../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 /** @typedef {import('../../flags/ticTacToe.js').GameState} GameState */
 /** @typedef {import('../../flags/ticTacToe.js').Player} Player */
+
+/** @param {import('../../flags/grid.js').Category} c */
+function tCat(c) {
+  return translateCategoryLabel(c, t);
+}
 
 export function bootTicTacToe() {
   fetch('../../flags/countries.json')
@@ -50,13 +55,13 @@ function runTicTacToe({ puzzle, countries }) {
   const playAgainEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('play-again'));
 
   colHeaderEls.forEach((th, i) => {
-    th.textContent = puzzle.cols[i].label;
+    th.textContent = tCat(puzzle.cols[i]);
   });
 
   for (let r = 0; r < 3; r++) {
     const tr = document.createElement('tr');
     const rowHeader = document.createElement('th');
-    rowHeader.textContent = puzzle.rows[r].label;
+    rowHeader.textContent = tCat(puzzle.rows[r]);
     tr.appendChild(rowHeader);
     for (let c = 0; c < 3; c++) {
       const td = document.createElement('td');
@@ -88,7 +93,7 @@ function runTicTacToe({ puzzle, countries }) {
   /** @param {number} row @param {number} col */
   function openPicker(row, col) {
     activeCell = { row, col };
-    pickerCatsEl.textContent = `${puzzle.rows[row].label} × ${puzzle.cols[col].label}`;
+    pickerCatsEl.textContent = `${tCat(puzzle.rows[row])} × ${tCat(puzzle.cols[col])}`;
     pickerInputEl.value = '';
     currentMatches = [];
     selectedIndex = 0;
