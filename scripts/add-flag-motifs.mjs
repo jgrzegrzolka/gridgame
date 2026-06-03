@@ -112,7 +112,7 @@ const STAR_OR_MOON = new Set([
   'sy', 'tj', 'tm', 'tr', 'uz', 'vn', 'tl',
   'mm', 'hk', 'mo',
   // Europe
-  'ba', 'si', 'xk',
+  'ba', 'si', 'xk', 'hr',
   // North America (incl. territories)
   'cu', 'gd', 'hn', 'kn', 'pa', 'pr', 'us', 'aw',
   'cw',
@@ -120,7 +120,7 @@ const STAR_OR_MOON = new Set([
   'br', 'cl', 'py', 'sr', 've',
   // Oceania
   'au', 'ck', 'fm', 'mh', 'mp', 'nr', 'nu', 'nz', 'pg', 'pw', 'sb', 'tv', 'ws',
-  'cx', 'tk', 'um',
+  'cx', 'tk', 'um', 'cc',
   // Antarctica
   'tf', 'hm',
   // Other / supranational
@@ -135,12 +135,12 @@ const STAR_OR_MOON = new Set([
 // (already covered by 'weapon'), the Welsh dragon flag, and civil flags
 // without the Union Jack (Gibraltar's castle-and-key).
 const CROSS = new Set([
-  // Europe — Scandinavian crosses
-  'dk', 'fi', 'fo', 'is', 'no', 'se', 'ax',
-  // Europe — other standalone crosses
-  'ch', 'gr', 'mt',
-  // Europe — UK family
-  'gb', 'gb-eng', 'gb-sct', 'gb-nir',
+  // Europe — Scandinavian crosses (incl. Norway-pattern dependencies)
+  'dk', 'fi', 'fo', 'is', 'no', 'se', 'ax', 'sj',
+  // Europe — other standalone crosses + Basque ikurriña
+  'ch', 'gr', 'mt', 'es-pv',
+  // Europe — UK family + Crown Dependencies
+  'gb', 'gb-eng', 'gb-sct', 'gb-nir', 'gg', 'je',
   // Asia
   'ge',
   // Africa — Burundi saltire + BIOT + Saint Helena/Ascension/Tristan ensigns
@@ -150,8 +150,9 @@ const CROSS = new Set([
   'ai', 'bm', 'ky', 'ms', 'tc', 'vg',
   // South America — Falkland Islands ensign
   'fk',
-  // Antarctica — South Georgia and the South Sandwich Islands ensign
-  'gs',
+  // Antarctica — Bouvet (Norway pattern), South Georgia ensign,
+  //             Heard Island and McDonald Islands (Australian ensign)
+  'bv', 'gs', 'hm',
   // Oceania — sovereign + Union Jack canton ensigns + Tonga
   'au', 'nz', 'fj', 'ck', 'nu', 'tv', 'pn', 'to',
 ]);
