@@ -70,26 +70,33 @@ export function bootFlagsData() {
     return wrap;
   }
 
+  /** @typedef {{ include: Set<string>, exclude: Set<string> }} FilterSet */
+  /** @type {Record<'status' | 'continent' | 'color' | 'motif', FilterSet>} */
   const filters = {
-    status: new Set(),
-    continent: new Set(),
-    color: new Set(),
-    motif: new Set(),
+    status: { include: new Set(), exclude: new Set() },
+    continent: { include: new Set(), exclude: new Set() },
+    color: { include: new Set(), exclude: new Set() },
+    motif: { include: new Set(), exclude: new Set() },
   };
 
   /** @param {Country} c */
   function matches(c) {
-    if (filters.status.size && !filters.status.has(sovereigntyOf(c))) return false;
-    if (filters.continent.size) {
-      const key = c.continent ?? 'Other';
-      if (!filters.continent.has(key)) return false;
-    }
-    if (filters.color.size) {
-      if (!c.colors?.some((col) => filters.color.has(col))) return false;
-    }
-    if (filters.motif.size) {
-      if (!c.motifs?.some((m) => filters.motif.has(m))) return false;
-    }
+    const sov = sovereigntyOf(c);
+    if (filters.status.include.size && !filters.status.include.has(sov)) return false;
+    if (filters.status.exclude.has(sov)) return false;
+
+    const cont = c.continent ?? 'Other';
+    if (filters.continent.include.size && !filters.continent.include.has(cont)) return false;
+    if (filters.continent.exclude.has(cont)) return false;
+
+    const colors = c.colors ?? [];
+    if (filters.color.include.size && !colors.some((col) => filters.color.include.has(col))) return false;
+    if (filters.color.exclude.size && colors.some((col) => filters.color.exclude.has(col))) return false;
+
+    const motifs = c.motifs ?? [];
+    if (filters.motif.include.size && !motifs.some((m) => filters.motif.include.has(m))) return false;
+    if (filters.motif.exclude.size && motifs.some((m) => filters.motif.exclude.has(m))) return false;
+
     return true;
   }
 
@@ -127,8 +134,10 @@ export function bootFlagsData() {
     }
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
-    const any =
-      filters.status.size + filters.continent.size + filters.color.size + filters.motif.size > 0;
+    let any = false;
+    for (const k of /** @type {Array<keyof typeof filters>} */ (Object.keys(filters))) {
+      if (filters[k].include.size || filters[k].exclude.size) { any = true; break; }
+    }
     clearBtn.hidden = !any;
   }
 
@@ -152,11 +161,17 @@ export function bootFlagsData() {
       btn.dataset.value = value;
       btn.textContent = pillLabel;
       btn.addEventListener('click', () => {
-        if (filters[group].has(value)) {
-          filters[group].delete(value);
+        const { include, exclude } = filters[group];
+        if (include.has(value)) {
+          include.delete(value);
+          exclude.add(value);
           btn.classList.remove('active');
+          btn.classList.add('exclude');
+        } else if (exclude.has(value)) {
+          exclude.delete(value);
+          btn.classList.remove('exclude');
         } else {
-          filters[group].add(value);
+          include.add(value);
           btn.classList.add('active');
         }
         applyFilter();
@@ -186,9 +201,13 @@ export function bootFlagsData() {
   clearBtn.textContent = t('flagsdata.clear', 'Clear');
   clearBtn.hidden = true;
   clearBtn.addEventListener('click', () => {
-    for (const k of /** @type {Array<keyof typeof filters>} */ (Object.keys(filters))) filters[k].clear();
-    for (const el of filterBar.querySelectorAll('.pill.active')) {
+    for (const k of /** @type {Array<keyof typeof filters>} */ (Object.keys(filters))) {
+      filters[k].include.clear();
+      filters[k].exclude.clear();
+    }
+    for (const el of filterBar.querySelectorAll('.pill.active, .pill.exclude')) {
       el.classList.remove('active');
+      el.classList.remove('exclude');
     }
     applyFilter();
   });

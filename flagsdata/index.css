@@ -46,6 +46,15 @@ body {
   color: #fff;
   border-color: #1c1c1c;
 }
+.pill.exclude {
+  background: #fff;
+  color: #c0392b;
+  border-color: #c0392b;
+  text-decoration: line-through;
+}
+.pill.exclude:hover {
+  background: #fdecea;
+}
 #filter-clear {
   font: inherit;
   font-size: 12px;
