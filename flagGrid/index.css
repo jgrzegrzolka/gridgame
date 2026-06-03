@@ -6,17 +6,6 @@ body {
   align-items: center;
 }
 
-.play-timer {
-  font-size: 14px;
-  color: #666;
-  margin: 0 0 12px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-.play-timer[hidden] {
-  display: none;
-}
-
 .below-grid {
   width: calc(3.5 * var(--grid-cell));
   margin: 16px 0 0 calc(var(--grid-cell) / -4);

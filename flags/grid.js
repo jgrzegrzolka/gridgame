@@ -607,39 +607,20 @@ export function computeGridScore({ filledCount, wrongCount }) {
  * @property {Array<string | null>} picks
  * @property {number} wrongCount
  * @property {boolean} gaveUp
- * @property {number | null} finalTimeMs
  * @property {Array<string | null>} revealedCodes
- * @property {number | null} startedAtMs
- *   Timestamp of the in-progress round's first frame. Persisted so a
- *   mid-round reload (language switch, refresh) keeps the timer
- *   continuous instead of snapping back to 0:00. Null for finished
- *   rounds (finalTimeMs carries the displayed value) and null for
- *   pre-feature saves where the field never landed.
  */
 
 /**
- * @param {Pick<GridState, 'gaveUp' | 'finalTimeMs'>} state
+ * A round is locked once the player either gave up or filled every
+ * cell (the picker only commits valid picks, so a fully-filled board
+ * is by construction a solved board). Replaces the old finalTimeMs
+ * signal — the 3x3 doesn't carry a timer any more.
+ *
+ * @param {Pick<GridState, 'gaveUp' | 'picks'>} state
  * @returns {boolean}
  */
-export function isGridLocked({ gaveUp, finalTimeMs }) {
-  return gaveUp || finalTimeMs !== null;
-}
-
-/**
- * What value goes into `GridState.startedAtMs` at save time. An
- * in-progress round persists its start timestamp so a reload (language
- * switch, refresh) keeps the timer continuous; a finished round drops
- * it because finalTimeMs is the source of truth and a stale anchor
- * would only confuse inspection. The check is `=== null` not
- * `=== undefined` so a (theoretical, defensive) `0` finalTimeMs still
- * counts as finished.
- *
- * @param {number | null} finalTimeMs
- * @param {number} sessionStart
- * @returns {number | null}
- */
-export function persistedStartedAtMs(finalTimeMs, sessionStart) {
-  return finalTimeMs === null ? sessionStart : null;
+export function isGridLocked({ gaveUp, picks }) {
+  return gaveUp || picks.every((p) => p !== null);
 }
 
 /**
@@ -657,19 +638,16 @@ export function loadGridState(store, key) {
       Array.isArray(parsed.picks) &&
       parsed.picks.length === 9 &&
       typeof parsed.wrongCount === 'number' &&
-      typeof parsed.gaveUp === 'boolean' &&
-      (parsed.finalTimeMs === null || typeof parsed.finalTimeMs === 'number')
+      typeof parsed.gaveUp === 'boolean'
     ) {
       return {
         picks: parsed.picks.map((/** @type {unknown} */ p) => (typeof p === 'string' ? p : null)),
         wrongCount: parsed.wrongCount,
         gaveUp: parsed.gaveUp,
-        finalTimeMs: parsed.finalTimeMs,
         revealedCodes:
           Array.isArray(parsed.revealedCodes) && parsed.revealedCodes.length === 9
             ? parsed.revealedCodes.map((/** @type {unknown} */ p) => (typeof p === 'string' ? p : null))
             : Array(9).fill(null),
-        startedAtMs: typeof parsed.startedAtMs === 'number' ? parsed.startedAtMs : null,
       };
     }
     return null;

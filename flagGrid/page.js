@@ -11,9 +11,8 @@ import {
   pulseShake,
   isGridLocked,
   translateCategoryLabel,
-  persistedStartedAtMs,
 } from '../flags/grid.js';
-import { formatTime, scoreColor } from '../flags/quiz.js';
+import { scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
@@ -42,8 +41,7 @@ export function bootFlagGrid(puzzleFor, options = {}) {
       runFlagGrid({ puzzle, countries, options });
     })
     .catch((err) => {
-      const liveEl = document.getElementById('play-time');
-      if (liveEl) liveEl.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
+      document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
 }
 
@@ -68,8 +66,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   ];
   let wrongCount = 0;
   let gaveUp = false;
-  /** @type {number | null} */
-  let finalTimeMs = null;
   /** @type {Array<string | null>} */
   let revealedCodes = Array(9).fill(null);
   if (saved) {
@@ -80,7 +76,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     }
     wrongCount = saved.wrongCount;
     gaveUp = saved.gaveUp;
-    finalTimeMs = saved.finalTimeMs;
     revealedCodes = saved.revealedCodes.slice();
   }
 
@@ -108,12 +103,9 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
   const zoomName = zoomEl ? /** @type {HTMLParagraphElement | null} */ (zoomEl.querySelector('p')) : null;
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
-  const playTimerEl = document.getElementById('play-timer-line');
-  const playTimeEl = document.getElementById('play-time');
   const resultEl = document.getElementById('result');
   const finalScoreLineEl = document.getElementById('final-score-line');
   const finalScoreEl = document.getElementById('final-score');
-  const timeEl = document.getElementById('time');
   const bestEl = document.getElementById('best');
   const playAgainEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('play-again'));
 
@@ -144,29 +136,10 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     gridBodyEl.appendChild(tr);
   }
 
-  // Restore the original start timestamp when a mid-round save is being
-  // resumed (language switch, refresh). Without this the timer would
-  // snap back to 0:00 even though the board kept all its picks. Finished
-  // rounds carry their elapsed time in saved.finalTimeMs and don't tick,
-  // so the value of sessionStart doesn't matter for them.
-  const sessionStart = saved?.startedAtMs ?? Date.now();
-  let timerRaf = 0;
-  function tickTimer() {
-    if (playTimeEl) playTimeEl.textContent = formatTime(Date.now() - sessionStart);
-    timerRaf = requestAnimationFrame(tickTimer);
-  }
-  function stopTimer() {
-    if (timerRaf) cancelAnimationFrame(timerRaf);
-    timerRaf = 0;
-  }
-
   renderGrid();
 
-  function isFinished() {
-    return finalTimeMs !== null;
-  }
   function isLocked() {
-    return isGridLocked({ gaveUp, finalTimeMs });
+    return isGridLocked({ gaveUp, picks: solution.flat().map((c) => (c ? c.code : null)) });
   }
 
   function onCellActivate(row, col) {
@@ -322,9 +295,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     solution = result.solution;
     closePicker();
     const filled = countFilled();
-    if (filled === 9) {
-      finalTimeMs = Date.now() - sessionStart;
-    }
     renderGrid();
     persistState();
     if (filled === 9) {
@@ -406,33 +376,28 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       picks,
       wrongCount,
       gaveUp,
-      finalTimeMs,
       revealedCodes,
-      startedAtMs: persistedStartedAtMs(finalTimeMs, sessionStart),
     });
   }
 
   function finishRound() {
-    stopTimer();
-    if (playTimeEl && finalTimeMs !== null) {
-      playTimeEl.textContent = formatTime(finalTimeMs);
-    }
     if (!resultEl) return;
     const filledCount = countFilled();
     const score = computeGridScore({ filledCount, wrongCount });
     if (finalScoreEl) finalScoreEl.textContent = String(score);
     if (finalScoreLineEl) finalScoreLineEl.style.color = scoreColor(score / 100);
-    if (timeEl && finalTimeMs !== null) {
-      timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(finalTimeMs)}`;
-    }
-    if (stateKey && finalTimeMs !== null && bestEl) {
+    if (stateKey && bestEl) {
       const slug = stateKey.replace(/^flaggrid\.state\./, '');
+      // The 3x3 no longer tracks time; we pass 0 to satisfy the shared
+      // Result shape that the rest of the project's best-score plumbing
+      // (nextBest, recordGridResult) was built around. Every new record
+      // ties on time, so the score is the only ranking signal.
       const { best, isNew } = recordGridResult(localStorage, slug, {
         score,
-        time: finalTimeMs,
+        time: 0,
       });
       bestEl.textContent =
-        `${t('grid.yourBest', 'Your best')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`;
+        `${t('grid.yourBest', 'Your best')}: ${best.score}`;
       if (isNew) {
         bestEl.appendChild(document.createTextNode(' '));
         const badge = document.createElement('span');
@@ -457,7 +422,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     giveUpEl.addEventListener('click', () => {
       if (isLocked()) return;
       gaveUp = true;
-      finalTimeMs = Date.now() - sessionStart;
       revealedCodes = fillEmptyCellsForGiveUp(puzzle, solution, allCountries);
       closePicker();
       renderGrid();
@@ -466,9 +430,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     });
   }
 
-  if (isFinished()) {
+  if (isLocked()) {
     finishRound();
-  } else {
-    if (playTimerEl) tickTimer();
   }
 }
