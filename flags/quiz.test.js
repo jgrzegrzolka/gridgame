@@ -12,6 +12,8 @@ import {
   MODES,
   availableModes,
   defaultModeFor,
+  isTimedMode,
+  timedRemainingMs,
   formatTime,
   LOOKALIKES,
   lookalikesOf,
@@ -180,17 +182,24 @@ test('createQuiz throws if count exceeds pool size', () => {
   );
 });
 
-test('MODES contains "20" and "all" in that display order', () => {
-  assert.deepEqual(Object.keys(MODES), ['20', 'all']);
+test('MODES contains "60s" and "all" in that display order', () => {
+  assert.deepEqual(Object.keys(MODES), ['60s', 'all']);
 });
 
-test('targetFor("20", pool) returns 20 when pool is large enough', () => {
-  assert.equal(targetFor('20', countries), 20);
+test('MODES["60s"] is a 60-second budget with a 3-second-per-wrong penalty', () => {
+  assert.deepEqual(MODES['60s'], { kind: 'timed', budgetMs: 60_000, penaltyMs: 3_000 });
 });
 
-test('targetFor("20", tinyPool) clamps to pool length', () => {
+test('isTimedMode is true only for time-budgeted modes', () => {
+  assert.equal(isTimedMode('60s'), true);
+  assert.equal(isTimedMode('all'), false);
+  assert.equal(isTimedMode('99'), false);
+});
+
+test('targetFor("60s", pool) queues the full pool — pool exhaustion is a valid end', () => {
+  assert.equal(targetFor('60s', countries), countries.length);
   const tinyPool = sample.slice(0, 5);
-  assert.equal(targetFor('20', tinyPool), 5);
+  assert.equal(targetFor('60s', tinyPool), 5);
 });
 
 test('targetFor("all", pool) returns the full pool length', () => {
@@ -201,40 +210,49 @@ test('targetFor throws on an unknown mode', () => {
   assert.throws(() => targetFor('99', countries), /Unknown mode/);
 });
 
-test('availableModes offers both 20 and all when pool >= 20', () => {
-  assert.deepEqual(availableModes(50), ['20', 'all']);
+test('availableModes offers both 60s and all for any pool size — the timed mode never gates on pool size', () => {
+  assert.deepEqual(availableModes(50), ['60s', 'all']);
+  assert.deepEqual(availableModes(19), ['60s', 'all']);
+  assert.deepEqual(availableModes(4), ['60s', 'all']);
+  assert.deepEqual(availableModes(0), ['60s', 'all']);
 });
 
-test('availableModes still offers 20 exactly at the boundary', () => {
-  assert.deepEqual(availableModes(20), ['20', 'all']);
-});
-
-test('availableModes hides 20 when pool is below 20', () => {
-  assert.deepEqual(availableModes(19), ['all']);
-  assert.deepEqual(availableModes(13), ['all']);
-  assert.deepEqual(availableModes(4), ['all']);
-});
-
-test('availableModes returns "all" alone for an empty pool', () => {
-  assert.deepEqual(availableModes(0), ['all']);
-});
-
-test('defaultModeFor returns "20" when the pool can support a 20-question round', () => {
-  assert.equal(defaultModeFor(20), '20');
-  assert.equal(defaultModeFor(50), '20');
-});
-
-test('defaultModeFor falls back to "all" for narrower pools', () => {
-  assert.equal(defaultModeFor(19), 'all');
-  assert.equal(defaultModeFor(4), 'all');
-});
-
-test('defaultModeFor returns "all" even for an empty pool (consistent with availableModes)', () => {
-  assert.equal(defaultModeFor(0), 'all');
+test('defaultModeFor returns "60s" — the time-attack is the headline mode', () => {
+  assert.equal(defaultModeFor(50), '60s');
+  assert.equal(defaultModeFor(19), '60s');
+  assert.equal(defaultModeFor(0), '60s');
 });
 
 test('availableModes preserves MODES insertion order', () => {
-  assert.deepEqual(availableModes(100), ['20', 'all']);
+  assert.deepEqual(availableModes(100), ['60s', 'all']);
+});
+
+test('timedRemainingMs subtracts wall-clock burn from the budget', () => {
+  assert.equal(
+    timedRemainingMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 12_000, wrongCount: 0 }),
+    48_000,
+  );
+});
+
+test('timedRemainingMs subtracts 3 seconds per wrong answer on top of the wall-clock burn', () => {
+  assert.equal(
+    timedRemainingMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 12_000, wrongCount: 2 }),
+    42_000,
+  );
+});
+
+test('timedRemainingMs clamps at zero — once you blow the budget you do not owe time', () => {
+  assert.equal(
+    timedRemainingMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 50_000, wrongCount: 10 }),
+    0,
+  );
+});
+
+test('timedRemainingMs returns the full budget at the start of the round', () => {
+  assert.equal(
+    timedRemainingMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 0, wrongCount: 0 }),
+    60_000,
+  );
 });
 
 test('formatTime(0) renders zero with the full three-digit ms field', () => {

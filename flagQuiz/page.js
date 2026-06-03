@@ -1,8 +1,11 @@
 import {
   createQuiz,
   VARIANTS,
+  MODES,
   availableModes,
   defaultModeFor,
+  isTimedMode,
+  timedRemainingMs,
   formatTime,
   recordResult,
   scoreColor,
@@ -145,21 +148,45 @@ export function bootFlagQuiz() {
     const pool = poolFor(key, all);
     const target = targetFor(mode, pool);
     const quiz = createQuiz(pool, target);
+    const timed = isTimedMode(mode);
+    const modeDef = MODES[mode];
+    const budgetMs = timed && modeDef.kind === 'timed' ? modeDef.budgetMs : 0;
+    const penaltyMs = timed && modeDef.kind === 'timed' ? modeDef.penaltyMs : 0;
     playModeEl.textContent = t(`variant.${key}`, VARIANTS[key].label);
     renderModeToggle(key, mode, availableModes(pool.length));
 
     let currentAnswer = null;
     let wrongCount = 0;
     let answeredCount = 0;
+    let gameOver = false;
     const startTime = Date.now();
     let timerRaf = 0;
 
+    // For timed mode the progress bar is the countdown — we widen it from
+    // 0% to 100% as the budget burns down, so the visual matches the
+    // dwindling timer rather than the meaningless "questions done" ratio.
+    if (timed) {
+      progressBarEl.style.width = '0%';
+    }
+
     function tickTimer() {
-      playTimerEl.textContent = formatTime(Date.now() - startTime);
+      if (timed) {
+        const elapsedMs = Date.now() - startTime;
+        const remaining = timedRemainingMs({ budgetMs, penaltyMs, elapsedMs, wrongCount });
+        playTimerEl.textContent = formatTime(remaining);
+        progressBarEl.style.width = ((budgetMs - remaining) / budgetMs * 100) + '%';
+        if (remaining <= 0 && !gameOver) {
+          gameOver = true;
+          showResult();
+          return;
+        }
+      } else {
+        playTimerEl.textContent = formatTime(Date.now() - startTime);
+      }
       timerRaf = requestAnimationFrame(tickTimer);
     }
 
-    function score() {
+    function countScore() {
       return Math.max(0, target - wrongCount);
     }
 
@@ -182,9 +209,12 @@ export function bootFlagQuiz() {
     }
 
     function onAnswer(chosen, tile) {
+      if (gameOver) return;
       if (chosen.code === currentAnswer.code) {
         answeredCount++;
-        progressBarEl.style.width = (answeredCount / target * 100) + '%';
+        if (!timed) {
+          progressBarEl.style.width = (answeredCount / target * 100) + '%';
+        }
         tile.classList.add('correct');
         for (const t of choicesEl.querySelectorAll('.flag-choice')) {
           /** @type {HTMLButtonElement} */ (t).disabled = true;
@@ -192,9 +222,14 @@ export function bootFlagQuiz() {
         feedbackEl.textContent = '';
         const nextQ = quiz.next();
         if (!nextQ) {
-          setTimeout(showResult, 250);
+          setTimeout(() => {
+            if (!gameOver) {
+              gameOver = true;
+              showResult();
+            }
+          }, 250);
         } else {
-          setTimeout(() => render(nextQ), 250);
+          setTimeout(() => { if (!gameOver) render(nextQ); }, 250);
         }
       } else {
         tile.classList.add('wrong');
@@ -206,24 +241,56 @@ export function bootFlagQuiz() {
 
     function showResult() {
       cancelAnimationFrame(timerRaf);
-      const ratio = score() / target;
-      const pct = Math.round(ratio * 100);
       const elapsed = Date.now() - startTime;
-      finalScoreEl.textContent = String(pct);
-      finalScoreLineEl.style.color = scoreColor(ratio);
-      timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
 
-      const { best, isNew } = recordResult(
-        localStorage, key, mode, { score: pct, time: elapsed }, includeAll,
-      );
-      bestEl.textContent =
-        `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`;
-      if (isNew) {
-        bestEl.appendChild(document.createTextNode(' '));
-        const badge = document.createElement('span');
-        badge.className = 'new-badge';
-        badge.textContent = t('game.newRecord', 'new record!');
-        bestEl.appendChild(badge);
+      if (timed) {
+        // Score = flags answered correctly. There's no "out of target"
+        // ratio to colour by, so tint by accuracy (correct vs total picks):
+        // a clean sweep is green, a 50/50 round is amber, all-wrong is red.
+        const totalPicks = answeredCount + wrongCount;
+        const ratio = totalPicks === 0 ? 0 : answeredCount / totalPicks;
+        finalScoreEl.textContent = String(answeredCount);
+        finalScoreLineEl.style.color = scoreColor(ratio);
+
+        // Record "budget consumed", not wall clock — `wall + penalties`
+        // bounds at 60s for time-outs and is lower only when the pool
+        // exhausts before the budget. That way nextBest's lower-time-wins
+        // tiebreaker rewards efficient rounds; a wall-clock metric would
+        // perversely favour the round that burned more penalties.
+        const budgetUsed = Math.min(budgetMs, elapsed + wrongCount * penaltyMs);
+        timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(budgetUsed)}`;
+
+        const { best, isNew } = recordResult(
+          localStorage, key, mode, { score: answeredCount, time: budgetUsed }, includeAll,
+        );
+        bestEl.textContent =
+          `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`;
+        if (isNew) {
+          bestEl.appendChild(document.createTextNode(' '));
+          const badge = document.createElement('span');
+          badge.className = 'new-badge';
+          badge.textContent = t('game.newRecord', 'new record!');
+          bestEl.appendChild(badge);
+        }
+      } else {
+        const ratio = countScore() / target;
+        const pct = Math.round(ratio * 100);
+        finalScoreEl.textContent = String(pct);
+        finalScoreLineEl.style.color = scoreColor(ratio);
+        timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
+
+        const { best, isNew } = recordResult(
+          localStorage, key, mode, { score: pct, time: elapsed }, includeAll,
+        );
+        bestEl.textContent =
+          `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`;
+        if (isNew) {
+          bestEl.appendChild(document.createTextNode(' '));
+          const badge = document.createElement('span');
+          badge.className = 'new-badge';
+          badge.textContent = t('game.newRecord', 'new record!');
+          bestEl.appendChild(badge);
+        }
       }
 
       gameEl.hidden = true;
@@ -235,7 +302,14 @@ export function bootFlagQuiz() {
 
     if (giveUpEl) {
       giveUpEl.addEventListener('click', () => {
-        wrongCount += target - answeredCount;
+        if (gameOver) return;
+        gameOver = true;
+        if (!timed) {
+          // Count-mode give-up: penalise the unanswered remainder so the
+          // score reflects "you walked away with this much" rather than
+          // crediting unattempted questions.
+          wrongCount += target - answeredCount;
+        }
         showResult();
       }, { once: true });
     }
