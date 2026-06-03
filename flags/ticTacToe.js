@@ -9,6 +9,11 @@ import { validateCell } from './grid.js';
  * @typedef {Object} Cell
  * @property {Player | null} owner
  * @property {Country | null} country
+ * @property {boolean} [revealed]  - true when the country was filled in by
+ *   the give-up reveal (not by a player claim). owner stays null.
+ * @property {boolean} [exhausted] - 9x9 only; true when even the give-up
+ *   reveal had to reuse a country that's already shown elsewhere because
+ *   no fresh valid country was available globally. Always implies revealed.
  */
 
 /**
@@ -19,6 +24,9 @@ import { validateCell } from './grid.js';
  * @property {Player | null} winner
  * @property {[number, number][] | null} winningLine
  * @property {boolean} draw
+ * @property {boolean} [gaveUp] - true when a player invoked give-up. The
+ *   board is then frozen (no further claims) and any empty cells have
+ *   been filled by applyGiveUp with revealed: true.
  */
 
 /**
@@ -49,6 +57,7 @@ export function newGame(puzzle, firstPlayer = 'X') {
     winner: null,
     winningLine: null,
     draw: false,
+    gaveUp: false,
   };
 }
 
@@ -131,7 +140,7 @@ function other(p) {
  * @returns {ClaimOutcome}
  */
 export function attemptClaim(state, row, col, country) {
-  if (state.winner || state.draw || state.cells[row][col].owner) {
+  if (state.winner || state.draw || state.gaveUp || state.cells[row][col].owner) {
     return { kind: 'miss-taken', nextState: state };
   }
 
@@ -171,5 +180,46 @@ export function attemptClaim(state, row, col, country) {
  * @returns {boolean}
  */
 export function isGameOver(state) {
-  return state.winner !== null || state.draw;
+  return state.winner !== null || state.draw || Boolean(state.gaveUp);
+}
+
+/**
+ * Give-up reveal. Walks every empty cell, picks a valid country that hasn't
+ * been used anywhere on the board, and writes it with owner=null +
+ * revealed=true. Returns a fresh state with gaveUp=true.
+ *
+ * No-op when the game is already over (winner/draw/already-gaveUp). The 3x3
+ * variant has no concept of "exhausted" — its global pool is the full
+ * country set, which is far larger than 9 cells. We still defensively skip
+ * a cell whose (row × col) intersection genuinely has zero countries left
+ * (e.g. a degenerate test puzzle), rather than crash.
+ *
+ * @param {GameState} state
+ * @param {Country[]} countries
+ * @param {() => number} [random]
+ * @returns {GameState}
+ */
+export function applyGiveUp(state, countries, random = Math.random) {
+  if (isGameOver(state)) return state;
+  /** @type {Set<string>} */
+  const used = new Set();
+  for (const row of state.cells) {
+    for (const cell of row) {
+      if (cell.country) used.add(cell.country.code);
+    }
+  }
+  const cells = cloneCells(state.cells);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (cells[r][c].owner) continue;
+      const candidates = countries.filter(
+        (country) => validateCell(state.puzzle, r, c, country) && !used.has(country.code),
+      );
+      if (candidates.length === 0) continue;
+      const picked = candidates[Math.floor(random() * candidates.length)];
+      cells[r][c] = { owner: null, country: picked, revealed: true };
+      used.add(picked.code);
+    }
+  }
+  return { ...state, cells, gaveUp: true };
 }

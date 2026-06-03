@@ -2,6 +2,7 @@ import {
   createRoom,
   applyHello,
   applyClaim,
+  applyGiveUp,
   applyDisconnect,
   applyStartRematch,
   serializeRoom,
@@ -148,6 +149,14 @@ export class TicTacToeServer {
         const country = this.countries.find((c) => c.code === parsed.countryCode);
         if (!country) return;
         const result = applyClaim(this.room, playerId, parsed.row, parsed.col, country);
+        this.room = result.room;
+        await this.saveRoom();
+        this.dispatch(result.broadcasts);
+      } else if (parsed && parsed.type === 'give-up') {
+        const playerId = this.playerByConn.get(sender);
+        if (!playerId) return;
+        const result = applyGiveUp(this.room, playerId, this.countries);
+        if (result.broadcasts.length === 0) return;
         this.room = result.room;
         await this.saveRoom();
         this.dispatch(result.broadcasts);

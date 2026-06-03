@@ -9,6 +9,7 @@ import {
   initialClientState,
   reduceServerMessage,
   getOrCreatePlayerId,
+  canGiveUpOnline,
 } from './onlineClient.js';
 
 // ---- Room code generation ----
@@ -116,6 +117,23 @@ test('reduceServerMessage: a drawn state emits the "finished" effect', () => {
   assert.ok(r.effects.some((e) => e.type === 'finished'));
 });
 
+test('reduceServerMessage: kind=give-up emits gave-up with byMe=true when the resigner is us', () => {
+  const state = { ...initialClientState(), myRole: /** @type {const} */ ('O') };
+  const game = /** @type {any} */ ({ currentPlayer: 'O', winner: null, draw: false, gaveUp: true });
+  const r = reduceServerMessage(state, { type: 'state', kind: 'give-up', game, who: 'O' });
+  assert.ok(r.effects.some((e) => e.type === 'gave-up' && /** @type {any} */ (e).byMe === true));
+  assert.ok(r.effects.some((e) => e.type === 'finished'), 'a gave-up state is terminal → finished fires');
+  assert.equal(r.state.game, game);
+});
+
+test('reduceServerMessage: kind=give-up emits gave-up with byMe=false when the opponent resigned', () => {
+  const state = { ...initialClientState(), myRole: /** @type {const} */ ('X') };
+  const game = /** @type {any} */ ({ currentPlayer: 'O', winner: null, draw: false, gaveUp: true });
+  const r = reduceServerMessage(state, { type: 'state', kind: 'give-up', game, who: 'O' });
+  assert.ok(r.effects.some((e) => e.type === 'gave-up' && /** @type {any} */ (e).byMe === false));
+  assert.ok(r.effects.some((e) => e.type === 'finished'));
+});
+
 test('reduceServerMessage: state with kind=rematch emits the "rematch-started" effect', () => {
   const state = initialClientState();
   const game = /** @type {any} */ ({ currentPlayer: 'X', winner: null, draw: false });
@@ -169,6 +187,71 @@ test('reduceServerMessage: unknown message type is a no-op', () => {
   const r = reduceServerMessage(state, { type: 'something-new' });
   assert.equal(r.state, state);
   assert.deepEqual(r.effects, []);
+});
+
+// ---- canGiveUpOnline ----
+
+/**
+ * @param {Partial<{ winner: 'X'|'O'|null, draw: boolean, gaveUp: boolean, currentPlayer: 'X'|'O' }>} [overrides]
+ */
+function liveGame(overrides = {}) {
+  return /** @type {any} */ ({
+    currentPlayer: 'O', winner: null, draw: false, gaveUp: false, ...overrides,
+  });
+}
+
+test('canGiveUpOnline: false on the bare lobby state (no role, no game, no peer)', () => {
+  assert.equal(canGiveUpOnline(initialClientState()), false);
+});
+
+test('canGiveUpOnline: false when the player has joined a room but the opponent has not arrived yet', () => {
+  const state = {
+    ...initialClientState(),
+    myRole: /** @type {const} */ ('X'),
+    game: liveGame(),
+    peerPresent: false,
+  };
+  assert.equal(canGiveUpOnline(state), false, 'lonely host cannot give up');
+});
+
+test('canGiveUpOnline: true when role + peer + a live game are all in place', () => {
+  const state = {
+    ...initialClientState(),
+    myRole: /** @type {const} */ ('O'),
+    game: liveGame(),
+    peerPresent: true,
+  };
+  assert.equal(canGiveUpOnline(state), true);
+});
+
+test('canGiveUpOnline: false once the game has a winner', () => {
+  const state = {
+    ...initialClientState(),
+    myRole: /** @type {const} */ ('O'),
+    game: liveGame({ winner: 'X' }),
+    peerPresent: true,
+  };
+  assert.equal(canGiveUpOnline(state), false);
+});
+
+test('canGiveUpOnline: false on a draw', () => {
+  const state = {
+    ...initialClientState(),
+    myRole: /** @type {const} */ ('O'),
+    game: liveGame({ draw: true }),
+    peerPresent: true,
+  };
+  assert.equal(canGiveUpOnline(state), false);
+});
+
+test('canGiveUpOnline: false once either side has already conceded', () => {
+  const state = {
+    ...initialClientState(),
+    myRole: /** @type {const} */ ('O'),
+    game: liveGame({ gaveUp: true }),
+    peerPresent: true,
+  };
+  assert.equal(canGiveUpOnline(state), false);
 });
 
 // ---- getOrCreatePlayerId ----

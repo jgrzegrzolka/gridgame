@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { continent, hasColor } from './grid.js';
-import { newGame, attemptClaim, findWinner, isGameOver } from './ticTacToe.js';
+import { newGame, attemptClaim, findWinner, isGameOver, applyGiveUp } from './ticTacToe.js';
 
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./ticTacToe.js').Player} Player */
@@ -221,6 +221,95 @@ test('attemptClaim returns miss-taken with state unchanged after game is over', 
   const out = attemptClaim(s, 2, 2, NG);
   assert.equal(out.kind, 'miss-taken');
   assert.equal(out.nextState, s, 'state is returned unchanged');
+});
+
+test('applyGiveUp: fills every empty cell with a valid unused country and freezes the game', () => {
+  // Empty board → all 9 cells get revealed picks, none used twice.
+  const pool = [FR, DE, IT, JP, KR, PK, KE, NA, NG];
+  const s = newGame(PUZZLE);
+  const after = applyGiveUp(s, pool, () => 0);
+  assert.equal(after.gaveUp, true);
+  assert.equal(isGameOver(after), true, 'gave-up state is terminal');
+  /** @type {Set<string>} */
+  const seen = new Set();
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const cell = after.cells[r][c];
+      assert.ok(cell.country, `cell (${r},${c}) should be filled`);
+      assert.equal(cell.owner, null, 'revealed cells stay un-owned');
+      assert.equal(cell.revealed, true, 'revealed flag is set');
+      // Validate the row/col predicate match — the engine MUST honour the puzzle.
+      assert.ok(PUZZLE.rows[r].predicate(/** @type {Country} */ (cell.country)));
+      assert.ok(PUZZLE.cols[c].predicate(/** @type {Country} */ (cell.country)));
+      assert.equal(seen.has(/** @type {Country} */ (cell.country).code), false, 'no duplicate across cells');
+      seen.add(/** @type {Country} */ (cell.country).code);
+    }
+  }
+});
+
+test('applyGiveUp: preserves cells already claimed by players', () => {
+  let s = newGame(PUZZLE);
+  s = attemptClaim(s, 0, 0, FR).nextState; // X claims (0,0) with FR
+  s = attemptClaim(s, 1, 1, KR).nextState; // O claims (1,1) with KR
+  const pool = [FR, DE, IT, JP, KR, PK, KE, NA, NG];
+  const after = applyGiveUp(s, pool, () => 0);
+  // Player picks survive unchanged.
+  assert.equal(after.cells[0][0].owner, 'X');
+  assert.equal(after.cells[0][0].country, FR);
+  assert.equal(after.cells[0][0].revealed, undefined);
+  assert.equal(after.cells[1][1].owner, 'O');
+  assert.equal(after.cells[1][1].country, KR);
+  // The other seven cells were filled.
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if ((r === 0 && c === 0) || (r === 1 && c === 1)) continue;
+      assert.equal(after.cells[r][c].revealed, true);
+      assert.equal(after.cells[r][c].owner, null);
+      const cell = after.cells[r][c];
+      assert.ok(cell.country && cell.country.code !== FR.code && cell.country.code !== KR.code,
+        `(${r},${c}) must not reuse a country already on the board`);
+    }
+  }
+});
+
+test('applyGiveUp: leaves a cell empty when no candidate satisfies (row × col) — does not crash', () => {
+  // Build a puzzle whose (0,0) intersection has zero candidates in the pool.
+  // Asia × red has JP in the full pool, but the pool we hand to applyGiveUp
+  // omits it — so (1,0) should end up empty rather than blow up.
+  const sparsePool = [FR, DE, IT, /* no JP */ KR, PK, KE, NA, NG];
+  const s = newGame(PUZZLE);
+  const after = applyGiveUp(s, sparsePool, () => 0);
+  assert.equal(after.gaveUp, true);
+  // (1,0) has no candidate → stays empty, no crash.
+  assert.equal(after.cells[1][0].country, null);
+  assert.equal(after.cells[1][0].owner, null);
+  // Other cells still filled.
+  assert.ok(after.cells[0][0].country);
+  assert.ok(after.cells[2][2].country);
+});
+
+test('applyGiveUp: is a no-op when the game is already over', () => {
+  // Walk a real win for X.
+  let s = newGame(PUZZLE);
+  s = attemptClaim(s, 0, 0, FR).nextState;
+  s = attemptClaim(s, 1, 0, JP).nextState;
+  s = attemptClaim(s, 0, 1, DE).nextState;
+  s = attemptClaim(s, 1, 1, KR).nextState;
+  s = attemptClaim(s, 0, 2, IT).nextState;
+  assert.equal(s.winner, 'X');
+  const after = applyGiveUp(s, [FR, DE, IT, JP, KR, PK, KE, NA, NG], () => 0);
+  assert.equal(after, s, 'returns the same state object — no work to do');
+});
+
+test('attemptClaim is rejected after give-up (board is frozen)', () => {
+  const s = applyGiveUp(newGame(PUZZLE), [FR, DE, IT, JP, KR, PK, KE, NA, NG], () => 0);
+  // Even with an empty owner check, gaveUp must close the door first. There
+  // are no empty cells here (give-up fills all 9), so use a synthetic empty:
+  const synthetic = { ...s, cells: s.cells.map((row, r) => row.map((cell, c) => (
+    r === 2 && c === 2 ? { owner: null, country: null } : cell
+  ))) };
+  const out = attemptClaim(synthetic, 2, 2, NG);
+  assert.equal(out.kind, 'miss-taken', 'gaveUp must reject claims even on a still-empty cell');
 });
 
 test('draw when board fills with no winner', () => {

@@ -1,4 +1,4 @@
-import { newGame, attemptClaim, isGameOver } from './ticTacToe.js';
+import { newGame, attemptClaim, isGameOver, applyGiveUp as applyGiveUpEngine } from './ticTacToe.js';
 import { categoryFromId } from './grid.js';
 
 /** @typedef {import('./ticTacToe.js').GameState} GameState */
@@ -154,6 +154,33 @@ export function applyDisconnect(room, playerId) {
     broadcasts.push({ to: id, message: { type: 'peer-left' } });
   }
   return { room: nextRoom, broadcasts };
+}
+
+/**
+ * A playerId concedes — fill empty cells with valid revealed countries and
+ * freeze the board. Both players see the reveal so the answers are useful
+ * to everyone in the room.
+ *
+ *   - Silently ignored if the sender is not in the room.
+ *   - Silently ignored if the current game is already over.
+ *   - The `who` field on the broadcast lets each client distinguish "you
+ *     gave up" from "your opponent gave up" without an extra round-trip.
+ *
+ * @param {Room} room
+ * @param {string} playerId
+ * @param {Country[]} countries
+ * @returns {ApplyResult}
+ */
+export function applyGiveUp(room, playerId, countries) {
+  const role = room.roles.get(playerId);
+  if (!role) return { room, broadcasts: [] };
+  if (isGameOver(room.game)) return { room, broadcasts: [] };
+  const nextGame = applyGiveUpEngine(room.game, countries);
+  const nextRoom = { ...room, game: nextGame };
+  return {
+    room: nextRoom,
+    broadcasts: [{ to: 'all', message: { type: 'state', kind: 'give-up', game: nextGame, who: role } }],
+  };
 }
 
 /**

@@ -5,6 +5,7 @@ import {
   createRoom,
   applyHello,
   applyClaim,
+  applyGiveUp,
   applyDisconnect,
   applyStartRematch,
   serializeRoom,
@@ -248,6 +249,77 @@ test('applyClaim: ignored once the game is over', () => {
   room.game.winner = 'O';
   const r = applyClaim(room, 'bob', 1, 1, KR);
   assert.equal(r.broadcasts.length, 0);
+});
+
+// ---- applyGiveUp ----
+
+const PK = country({ code: '12', name: 'Pakistan', continent: 'Asia', colors: ['green'] });
+const KE = country({ code: '20', name: 'Kenya', continent: 'Africa', colors: ['red'] });
+const NA = country({ code: '21', name: 'Namibia', continent: 'Africa', colors: ['blue'] });
+const NG = country({ code: '22', name: 'Nigeria', continent: 'Africa', colors: ['green'] });
+
+const TTT_POOL = [FR, DE, IT, JP, KR, PK, KE, NA, NG];
+
+test('applyGiveUp: silently ignored when sender is not in the room', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice').room;
+  room = applyHello(room, 'bob').room;
+  const r = applyGiveUp(room, 'stranger', TTT_POOL);
+  assert.equal(r.broadcasts.length, 0);
+  assert.equal(r.room, room);
+});
+
+test('applyGiveUp: silently ignored when the game is already over', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice').room;
+  room = applyHello(room, 'bob').room;
+  room.game.winner = 'X';
+  const r = applyGiveUp(room, 'alice', TTT_POOL);
+  assert.equal(r.broadcasts.length, 0);
+  assert.equal(r.room, room);
+});
+
+test('applyGiveUp: fills empties, marks state gaveUp, and broadcasts state to all with who=role', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice').room; // X (host)
+  room = applyHello(room, 'bob').room;   // O
+  const r = applyGiveUp(room, 'bob', TTT_POOL);
+  assert.equal(r.broadcasts.length, 1);
+  assert.equal(r.broadcasts[0].to, 'all');
+  const msg = /** @type {any} */ (r.broadcasts[0].message);
+  assert.equal(msg.type, 'state');
+  assert.equal(msg.kind, 'give-up');
+  assert.equal(msg.who, 'O', 'who carries the resigning role so each client can phrase the result');
+  assert.equal(msg.game.gaveUp, true);
+  // Every cell should be filled by the engine.
+  for (let rr = 0; rr < 3; rr++) {
+    for (let cc = 0; cc < 3; cc++) {
+      assert.ok(msg.game.cells[rr][cc].country, `(${rr},${cc}) was filled`);
+    }
+  }
+  assert.equal(r.room.game.gaveUp, true);
+});
+
+test('applyGiveUp: subsequent claim attempts are no-ops once the room has gaveUp', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice').room;
+  room = applyHello(room, 'bob').room;
+  room = applyGiveUp(room, 'alice', TTT_POOL).room;
+  // Even though bob would be next in normal play, the room is frozen.
+  const r = applyClaim(room, 'bob', 0, 0, FR);
+  assert.equal(r.broadcasts.length, 0, 'claim ignored after give-up');
+});
+
+test('applyGiveUp: enables Play Again — applyStartRematch accepts the room as terminal', () => {
+  let room = createRoom(PUZZLE);
+  room = applyHello(room, 'alice').room;
+  room = applyHello(room, 'bob').room;
+  room = applyGiveUp(room, 'bob', TTT_POOL).room;
+  // The fresh-puzzle param here is just a placeholder for the rematch.
+  const r = applyStartRematch(room, 'alice', PUZZLE);
+  assert.equal(r.broadcasts.length, 1, 'rematch is allowed after a give-up');
+  const msg = /** @type {any} */ (r.broadcasts[0].message);
+  assert.equal(msg.game.gaveUp, false, 'fresh game starts without gaveUp');
 });
 
 // ---- applyDisconnect ----

@@ -97,6 +97,9 @@
     "opponentWins": "Opponent wins",
     "draw": "Draw",
     "playerWins": "{player} wins!",
+    "gaveUp": "Gave up",
+    "youGaveUp": "You gave up",
+    "opponentGaveUp": "Opponent gave up",
     "reject": {
       "roomFull": "Room is full",
       "roomNotFound": "Room not found — ask your friend for the code or create a new room",

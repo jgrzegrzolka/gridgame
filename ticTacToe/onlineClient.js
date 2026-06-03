@@ -99,8 +99,24 @@ export function initialClientState() {
 }
 
 /**
+ * Whether the local player can currently click "Give up" in the online room.
+ * Requires a known role (we're past the lobby), a present opponent (no
+ * solo-giveup), and a live game (not won, not drawn, not already conceded).
+ *
+ * @param {ClientState} state
+ * @returns {boolean}
+ */
+export function canGiveUpOnline(state) {
+  const { game, myRole, peerPresent } = state;
+  if (!myRole || !peerPresent || !game) return false;
+  if (game.winner || game.draw || game.gaveUp) return false;
+  return true;
+}
+
+/**
  * @typedef {{ type: 'shake', row: number, col: number }
  *   | { type: 'finished' }
+ *   | { type: 'gave-up', byMe: boolean }
  *   | { type: 'close' }
  *   | { type: 'rematch-started' }
  * } Effect
@@ -154,7 +170,12 @@ export function reduceServerMessage(state, message) {
         // so the page needs to rebuild them. Result UI also needs hiding.
         effects.push({ type: 'rematch-started' });
       }
-      if (message.game && (message.game.winner || message.game.draw)) {
+      if (message.kind === 'give-up') {
+        // Surface "who" so the result UI can pick "You gave up" vs
+        // "Opponent gave up". Server stamps `who` with the resigner's role.
+        effects.push({ type: 'gave-up', byMe: message.who === state.myRole });
+      }
+      if (message.game && (message.game.winner || message.game.draw || message.game.gaveUp)) {
         effects.push({ type: 'finished' });
       }
       return { state: { ...state, game: message.game }, effects };

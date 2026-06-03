@@ -23,6 +23,8 @@ import { findWinner } from './ticTacToe.js';
  * @property {Player | null} winner    Meta-winner (3 small-board claims in a row), or null.
  * @property {[number, number][] | null} winningLine The 3 (bigRow, bigCol) coords of the meta 3-in-a-row.
  * @property {boolean} draw            Meta-draw: every meta-cell is claimed-or-dead and no meta-winner.
+ * @property {boolean} [gaveUp]        True when a player invoked give-up; the board is frozen and empty
+ *                                     sub-cells have been filled by applyUltimateGiveUp.
  */
 
 /**
@@ -71,6 +73,7 @@ export function newUltimateGame(puzzle, firstPlayer = 'X') {
     winner: null,
     winningLine: null,
     draw: false,
+    gaveUp: false,
   };
 }
 
@@ -230,7 +233,7 @@ function refreshDeadFlags(boards, puzzle, countries) {
  * @returns {UltimateClaimOutcome}
  */
 export function attemptUltimateClaim(state, bigRow, bigCol, smallRow, smallCol, country, countries) {
-  if (state.winner || state.draw) {
+  if (state.winner || state.draw || state.gaveUp) {
     return { kind: 'miss-taken', nextState: state };
   }
   const board = state.boards[bigRow][bigCol];
@@ -288,5 +291,59 @@ export function attemptUltimateClaim(state, bigRow, bigCol, smallRow, smallCol, 
  * @returns {boolean}
  */
 export function isUltimateGameOver(state) {
-  return state.winner !== null || state.draw;
+  return state.winner !== null || state.draw || Boolean(state.gaveUp);
+}
+
+/**
+ * Give-up reveal for the 9x9 ultimate game. Walks all 81 sub-cells; for each
+ * empty sub-cell, picks a valid country (matches the small board's row × col
+ * predicates) and writes it with owner=null + revealed=true.
+ *
+ * Two-tier fallback addresses the 9×9 pool pressure: each cell prefers an
+ * unused country, but if the (row × col) pool has been fully consumed
+ * elsewhere on the meta-board (a real possibility with 81 cells competing
+ * for a shared global pool) it reaches back into the *all-valid* set and
+ * accepts a country already shown elsewhere — marking the cell exhausted so
+ * the UI can render a "this slot had no fresh answer left" indicator (black
+ * background). If even the all-valid set is empty (degenerate puzzle, e.g.
+ * tests with a missing predicate intersection), the cell is left empty.
+ *
+ * No-op when the game is already over.
+ *
+ * @param {UltimateGameState} state
+ * @param {Country[]} countries
+ * @param {() => number} [random]
+ * @returns {UltimateGameState}
+ */
+export function applyUltimateGiveUp(state, countries, random = Math.random) {
+  if (isUltimateGameOver(state)) return state;
+  const boards = cloneBoards(state.boards);
+  const used = collectGlobalUsedCodes(boards);
+  for (let br = 0; br < 3; br++) {
+    for (let bc = 0; bc < 3; bc++) {
+      const rowCat = state.puzzle.rows[br];
+      const colCat = state.puzzle.cols[bc];
+      const board = boards[br][bc];
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          if (board.cells[r][c].owner) continue;
+          const allValid = countries.filter(
+            (country) => rowCat.predicate(country) && colCat.predicate(country),
+          );
+          if (allValid.length === 0) continue;
+          const fresh = allValid.filter((country) => !used.has(country.code));
+          if (fresh.length > 0) {
+            const picked = fresh[Math.floor(random() * fresh.length)];
+            board.cells[r][c] = { owner: null, country: picked, revealed: true };
+            used.add(picked.code);
+          } else {
+            const picked = allValid[Math.floor(random() * allValid.length)];
+            board.cells[r][c] = { owner: null, country: picked, revealed: true, exhausted: true };
+            // Don't add to `used` — it's already there by definition.
+          }
+        }
+      }
+    }
+  }
+  return { ...state, boards, gaveUp: true };
 }

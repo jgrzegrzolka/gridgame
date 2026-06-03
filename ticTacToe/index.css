@@ -123,6 +123,37 @@ body.game-over .cell:hover::after {
   box-shadow: inset 0 0 0 3px #f4c842;
 }
 
+/* Give-up reveal: flag fills the cell but no X/O background. A red outline
+ * mirrors the .revealed style used in flagGrid so the reveal reads the same
+ * across the app — "this answer was shown to you, not earned". */
+.cell.revealed {
+  padding: 10px;
+  cursor: zoom-in;
+}
+.cell.revealed img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  outline: 2px solid #c5302d;
+  outline-offset: -2px;
+}
+/* Exhausted: the give-up reveal had to reuse a country already on the
+ * board because the (row × col) pool was empty. Paint the cell black so
+ * the player can see "this slot had no fresh answer left". 9x9 only. */
+.cell.exhausted {
+  background: #000;
+}
+.cell.exhausted.revealed img {
+  outline-color: #f4c842;
+}
+
+/* Above-grid give-up button stays centered with the rest of the page. */
+.give-up-row {
+  margin-top: 16px;
+  text-align: center;
+}
+
 .cell.shake::before {
   content: '';
   position: absolute;
