@@ -103,11 +103,11 @@ export function bootFindFlag() {
       ...CONTINENTS.map((n) => ({ id: `continent:${n}`, label: t(`variant.${continentKey(n)}`, n) })),
       ...COLORS_FOR_RANDOM.map((c) => ({
         id: `hasColor:${c}`,
-        label: t('findFlag.has', 'Has {x}').replace('{x}', t(`color.${c}`, c)),
+        label: t('game.has', 'Has {x}').replace('{x}', t(`color.${c}`, c)),
       })),
       ...MOTIFS_FOR_RANDOM.map((m) => ({
         id: `hasMotif:${m}`,
-        label: t('findFlag.has', 'Has {x}').replace('{x}', t(`motif.${m}`, m)),
+        label: t('game.has', 'Has {x}').replace('{x}', t(`motif.${m}`, m)),
       })),
     ];
     const sections = [

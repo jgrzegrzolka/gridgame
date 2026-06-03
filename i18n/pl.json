@@ -30,7 +30,8 @@
     "newRecord": "nowy rekord!",
     "failedToLoad": "Nie udało się załadować:",
     "cancel": "Anuluj",
-    "countryName": "Nazwa kraju…"
+    "countryName": "Nazwa kraju…",
+    "has": "Ma {x}"
   },
   "quiz": {
     "title": "Quiz flag",
@@ -65,7 +66,6 @@
     "missed": "Pominięte:",
     "pickAnotherCategory": "Wybierz inną kategorię",
     "yourBest": "Twój najlepszy",
-    "has": "Ma {x}",
     "sections": {
       "continents": "Kontynenty",
       "colors": "Kolory",

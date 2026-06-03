@@ -30,7 +30,8 @@
     "newRecord": "new record!",
     "failedToLoad": "Failed to load:",
     "cancel": "Cancel",
-    "countryName": "Country name…"
+    "countryName": "Country name…",
+    "has": "Has {x}"
   },
   "quiz": {
     "title": "Flag Quiz",
@@ -65,7 +66,6 @@
     "missed": "Missed:",
     "pickAnotherCategory": "Pick another category",
     "yourBest": "Your best",
-    "has": "Has {x}",
     "sections": {
       "continents": "Continents",
       "colors": "Colors",
