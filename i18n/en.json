@@ -47,9 +47,6 @@
     }
   },
   "grid": {
-    "title1": "Flag Grid — Game 1",
-    "title2": "Flag Grid — Game 2",
-    "title3": "Flag Grid — Game 3",
     "titleArchive": "Flag Grid — Previous games",
     "titleRand": "Flag Grid — Random",
     "yourScore": "Your score:",

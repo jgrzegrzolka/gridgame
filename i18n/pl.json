@@ -47,9 +47,6 @@
     }
   },
   "grid": {
-    "title1": "Siatka — Gra 1",
-    "title2": "Siatka — Gra 2",
-    "title3": "Siatka — Gra 3",
     "titleArchive": "Siatka — Poprzednie gry",
     "titleRand": "Siatka — Losowa",
     "yourScore": "Twój wynik:",

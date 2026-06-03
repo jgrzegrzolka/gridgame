@@ -71,11 +71,9 @@ Append the new `PUZZLE_N` export immediately after the previous one, then append
 ### Step 5 — Create `flagGrid/N/index.html`
 
 Copy `flagGrid/{N-1}/index.html` byte-for-byte, then change only:
-- `<title data-i18n="grid.title{N-1}">Flag Grid — Game {N-1}</title>` → `grid.titleN` + `Game N`
+- `<title>Flag Grid {N-1}</title>` → `<title>Flag Grid N</title>` (the numbered titles are not translated — there is no `data-i18n` here and no i18n JSON entry to update)
 - the `import { PUZZLE_{N-1} } from ...` line → `PUZZLE_N`
 - `bootFlagGrid(() => PUZZLE_{N-1}, { stateKey: 'flaggrid.state.{N-1}', allowReplay: true });` → use `PUZZLE_N` and `flaggrid.state.N`
-
-Add the i18n keys `grid.titleN` to whichever lang JSON files the project ships (look at how `grid.title3` / `grid.title2` are defined and match the pattern).
 
 ### Step 6 — Re-point every "Today" link to the new slug
 
@@ -117,7 +115,6 @@ Expect zero matches outside of the `flagGrid/{N-1}/` folder itself (its own file
 - `flagGrid/rand/index.html` — burger menu "Today" link.
 - `flagGrid/N/index.html` — its own burger menu "Today" link (self-referential, points at `../N/`).
 - `index.html` — main-menu 3x3 game tile.
-- i18n JSON (en + pl) — add `grid.titleN`.
 
 ## What this skill does NOT do
 
