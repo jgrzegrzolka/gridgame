@@ -40,6 +40,16 @@ function runOnline(countries) {
   /** Current room context — needed by the auto-reconnect path. */
   /** @type {{ code: string, intent: 'create' | 'join' } | null} */
   let activeRoom = null;
+  /** Sticky across reconnects (activeRoom.intent flips to 'join' on reconnect). */
+  let isHost = false;
+  // Touch-first devices (phones, tablets) — the platforms where copying from
+  // the URL bar is fiddly and the native share sheet (WhatsApp etc.) is the
+  // whole point. Desktop users have ctrl-L + ctrl-C. Declared up here because
+  // a ?room=… URL triggers enterRoom() → renderShareButton() before the
+  // function body has finished evaluating.
+  const isTouchDevice =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches;
   /** Reconnect bookkeeping. The server's own 'rejected' sets this so we don't loop. */
   let stopReconnecting = false;
   let reconnectAttempts = 0;
@@ -59,6 +69,7 @@ function runOnline(countries) {
   const joinCodeEl = /** @type {HTMLInputElement} */ (document.getElementById('join-code'));
   const errorEl = document.getElementById('lobby-error');
   const roomCodeEl = document.getElementById('room-code');
+  const shareBtnEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('share-link'));
   const roleBadgeEl = document.getElementById('role-badge');
   const statusEl = document.getElementById('status-line');
   const turnLineEl = document.getElementById('turn-line');
@@ -119,6 +130,7 @@ function runOnline(countries) {
   /** @param {string} code @param {'create' | 'join'} intent */
   function enterRoom(code, intent) {
     activeRoom = { code, intent };
+    if (intent === 'create') isHost = true;
     stopReconnecting = false;
     reconnectAttempts = 0;
     const url = new URL(window.location.href);
@@ -127,6 +139,7 @@ function runOnline(countries) {
     if (lobbyEl) lobbyEl.hidden = true;
     if (gameEl) gameEl.hidden = false;
     if (roomCodeEl) roomCodeEl.textContent = code;
+    renderShareButton();
     setStatus(t('ttt.connecting', 'Connecting…'));
     connect();
   }
@@ -198,10 +211,12 @@ function runOnline(countries) {
     url.searchParams.delete('room');
     window.history.replaceState(null, '', url.toString());
     activeRoom = null;
+    isHost = false;
     state = initialClientState();
     gridBuilt = false;
     if (gridBodyEl) gridBodyEl.innerHTML = '';
     if (roomCodeEl) roomCodeEl.textContent = '-----';
+    renderShareButton();
     lastRenderedTurn = null;
   }
 
@@ -405,6 +420,7 @@ function runOnline(countries) {
   }
 
   function renderStatus() {
+    renderShareButton();
     if (!statusEl) return;
     const { game, myRole, peerPresent } = state;
     statusEl.className = 'status-line';
@@ -422,6 +438,75 @@ function runOnline(countries) {
       statusEl.textContent = t('ttt.opponentsTurn', "Opponent's turn");
     }
   }
+
+  // ---- Share link ----
+  function renderShareButton() {
+    if (!shareBtnEl) return;
+    shareBtnEl.hidden = !(isTouchDevice && isHost && !state.peerPresent);
+  }
+
+  async function onShareClick() {
+    if (!activeRoom) return;
+    const url = window.location.href;
+    const title = t('ttt.shareTitle', 'Tic-Tac-Toe room');
+    const text = t('ttt.shareText', "Let's play! Join my room:");
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title, text, url });
+        return;
+      } catch (err) {
+        // User dismissed the share sheet — leave the link unshared, don't fall
+        // through to clipboard (we'd silently overwrite their clipboard).
+        if (err && /** @type {{ name?: string }} */ (err).name === 'AbortError') return;
+        // Anything else (share unsupported for this payload, permissions, etc.):
+        // fall through to clipboard as a best-effort recovery.
+      }
+    }
+    // Async Clipboard API needs a secure context (HTTPS or localhost). On a
+    // bare LAN-IP URL — common when testing from a phone against the dev
+    // server — it's undefined, so we keep the legacy execCommand path as a
+    // last resort.
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      try {
+        await navigator.clipboard.writeText(url);
+        flashCopied();
+        return;
+      } catch {
+        // Permission denied or focus lost mid-call — try the legacy path.
+      }
+    }
+    if (legacyCopyToClipboard(url)) flashCopied();
+  }
+
+  /** @param {string} text @returns {boolean} */
+  function legacyCopyToClipboard(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    ta.style.pointerEvents = 'none';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch {
+      ok = false;
+    }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function flashCopied() {
+    if (!shareBtnEl) return;
+    shareBtnEl.classList.add('copied');
+    setTimeout(() => {
+      if (shareBtnEl) shareBtnEl.classList.remove('copied');
+    }, 1500);
+  }
+
+  if (shareBtnEl) shareBtnEl.addEventListener('click', onShareClick);
 
   /** @param {string} message */
   function setStatus(message) {
