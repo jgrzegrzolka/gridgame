@@ -11,13 +11,13 @@ export const PUZZLE_1 = {
 /** @type {Puzzle} */
 export const PUZZLE_2 = {
   rows: [continent('North America'), continent('Africa'), continent('Asia')],
-  cols: [hasColor('red'), hasColor('white'), hasMotif('weapon')],
+  cols: [hasColor('blue'), hasColor('white'), hasMotif('weapon')],
 };
 
 /** @type {Puzzle} */
 export const PUZZLE_3 = {
   rows: [hasColor('red'), continent('Africa'), continent('South America')],
-  cols: [hasColor('white'), hasColor('green'), hasMotif('star-or-moon')],
+  cols: [hasColor('yellow'), hasColor('green'), hasMotif('star-or-moon')],
 };
 
 /**

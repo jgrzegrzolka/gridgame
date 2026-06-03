@@ -8,6 +8,9 @@ import {
   statehood,
   hasColor,
   hasMotif,
+  puzzlePairs,
+  sharedPuzzlePairs,
+  puzzleMixesCategoryFamilies,
   suggest,
   exactSingleMatch,
   randomPuzzle,
@@ -548,6 +551,86 @@ test('axesConflict returns false when no categories share an exclusiveGroup', ()
     [hasColor('green'), hasMotif('weapon'), hasMotif('coat-of-arms')],
   );
   assert.equal(conflict, false);
+});
+
+test('puzzlePairs lists all 9 rowId|colId cell signatures in row-major order', () => {
+  const puzzle = {
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [hasColor('red'), hasColor('white'), hasMotif('weapon')],
+  };
+  assert.deepEqual(puzzlePairs(puzzle), [
+    'continent:Europe|hasColor:red',
+    'continent:Europe|hasColor:white',
+    'continent:Europe|hasMotif:weapon',
+    'continent:Asia|hasColor:red',
+    'continent:Asia|hasColor:white',
+    'continent:Asia|hasMotif:weapon',
+    'continent:Africa|hasColor:red',
+    'continent:Africa|hasColor:white',
+    'continent:Africa|hasMotif:weapon',
+  ]);
+});
+
+test('sharedPuzzlePairs returns [] when two puzzles have no overlapping cells', () => {
+  const a = {
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [hasColor('red'), hasMotif('animal'), hasMotif('coat-of-arms')],
+  };
+  const b = {
+    rows: [continent('Oceania'), hasColor('blue'), hasColor('yellow')],
+    cols: [hasMotif('weapon'), hasMotif('star-or-moon'), hasColor('black')],
+  };
+  assert.deepEqual(sharedPuzzlePairs(a, b), []);
+});
+
+test('sharedPuzzlePairs flags an Africa×red collision regardless of which puzzle uses Africa as a row vs column', () => {
+  const earlier = {
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [hasColor('red'), hasMotif('animal'), hasMotif('coat-of-arms')],
+  };
+  const sameAxis = {
+    rows: [continent('Oceania'), continent('Africa'), continent('South America')],
+    cols: [hasColor('red'), hasColor('white'), hasColor('green')],
+  };
+  assert.deepEqual(sharedPuzzlePairs(earlier, sameAxis), ['continent:Africa|hasColor:red']);
+
+  const swappedAxis = {
+    rows: [hasColor('red'), hasColor('white'), hasColor('green')],
+    cols: [continent('Oceania'), continent('Africa'), continent('South America')],
+  };
+  assert.deepEqual(sharedPuzzlePairs(earlier, swappedAxis), ['hasColor:red|continent:Africa']);
+});
+
+test('puzzleMixesCategoryFamilies is false when every category is a colour', () => {
+  const allColors = {
+    rows: [hasColor('red'), hasColor('white'), hasColor('blue')],
+    cols: [hasColor('green'), hasColor('yellow'), hasColor('black')],
+  };
+  assert.equal(puzzleMixesCategoryFamilies(allColors), false);
+});
+
+test('puzzleMixesCategoryFamilies is false when every category is a continent', () => {
+  const allContinents = {
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [continent('North America'), continent('South America'), continent('Oceania')],
+  };
+  assert.equal(puzzleMixesCategoryFamilies(allContinents), false);
+});
+
+test('puzzleMixesCategoryFamilies is true when families are mixed across the axes', () => {
+  const mixed = {
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [hasColor('red'), hasMotif('animal'), hasMotif('coat-of-arms')],
+  };
+  assert.equal(puzzleMixesCategoryFamilies(mixed), true);
+});
+
+test('puzzleMixesCategoryFamilies tolerates a single non-color row in an otherwise all-color puzzle', () => {
+  const oneMotif = {
+    rows: [hasColor('red'), hasColor('white'), hasMotif('star-or-moon')],
+    cols: [hasColor('green'), hasColor('blue'), hasColor('black')],
+  };
+  assert.equal(puzzleMixesCategoryFamilies(oneMotif), true);
 });
 
 test('axesConflict returns false for different exclusiveGroups (continent vs statehood)', () => {
