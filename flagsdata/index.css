@@ -104,7 +104,6 @@ body {
   position: relative;
   aspect-ratio: 4 / 3;
   border: 1px solid #ddd;
-  overflow: hidden;
   cursor: zoom-in;
 }
 .flag img {
