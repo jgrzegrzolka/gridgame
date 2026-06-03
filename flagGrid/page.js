@@ -11,6 +11,7 @@ import {
   pulseShake,
   isGridLocked,
   translateCategoryLabel,
+  persistedStartedAtMs,
 } from '../flags/grid.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
@@ -407,10 +408,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       gaveUp,
       finalTimeMs,
       revealedCodes,
-      // Carry only the *in-progress* start time forward; once the round
-      // is finished, finalTimeMs is the source of truth and a stale
-      // startedAtMs would just be confusing on inspection.
-      startedAtMs: finalTimeMs === null ? sessionStart : null,
+      startedAtMs: persistedStartedAtMs(finalTimeMs, sessionStart),
     });
   }
 

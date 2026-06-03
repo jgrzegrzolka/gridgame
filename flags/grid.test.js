@@ -24,6 +24,7 @@ import {
   computeGridScore,
   loadGridState,
   saveGridState,
+  persistedStartedAtMs,
   gridBestKey,
   recordGridResult,
   fillEmptyCellsForGiveUp,
@@ -1090,6 +1091,18 @@ test('saveGridState writes a parseable serialised state to the store', () => {
   const raw = store._data.get('k');
   assert.ok(raw);
   assert.deepEqual(JSON.parse(raw), state);
+});
+
+test('persistedStartedAtMs returns the sessionStart anchor for an in-progress round', () => {
+  assert.equal(persistedStartedAtMs(null, 1717000000000), 1717000000000);
+});
+
+test('persistedStartedAtMs returns null once the round has finished — finalTimeMs is the source of truth', () => {
+  assert.equal(persistedStartedAtMs(45000, 1717000000000), null);
+});
+
+test('persistedStartedAtMs treats a finalTimeMs of 0 as finished (defensive — null is the only "still running" sentinel)', () => {
+  assert.equal(persistedStartedAtMs(0, 1717000000000), null);
 });
 
 test('saveGridState swallows a Storage quota error (no throw)', () => {

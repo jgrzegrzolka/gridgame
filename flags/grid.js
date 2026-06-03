@@ -626,6 +626,23 @@ export function isGridLocked({ gaveUp, finalTimeMs }) {
 }
 
 /**
+ * What value goes into `GridState.startedAtMs` at save time. An
+ * in-progress round persists its start timestamp so a reload (language
+ * switch, refresh) keeps the timer continuous; a finished round drops
+ * it because finalTimeMs is the source of truth and a stale anchor
+ * would only confuse inspection. The check is `=== null` not
+ * `=== undefined` so a (theoretical, defensive) `0` finalTimeMs still
+ * counts as finished.
+ *
+ * @param {number | null} finalTimeMs
+ * @param {number} sessionStart
+ * @returns {number | null}
+ */
+export function persistedStartedAtMs(finalTimeMs, sessionStart) {
+  return finalTimeMs === null ? sessionStart : null;
+}
+
+/**
  * @param {{ getItem(key: string): string | null }} store
  * @param {string} key
  * @returns {GridState | null}
