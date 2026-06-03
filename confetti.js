@@ -27,7 +27,7 @@ export function launchConfetti(options = {}) {
   const {
     doc = document,
     count = 120,
-    duration = 3000,
+    duration = 5500,
     rng = Math.random,
     prefersReducedMotion = detectPrefersReducedMotion(doc),
   } = options;
@@ -43,8 +43,8 @@ export function launchConfetti(options = {}) {
     const startLeft = rng() * 100;
     const drift = (rng() - 0.5) * 240;
     const rot = rng() * 720 - 360;
-    const dur = 1800 + rng() * 1400;
-    const delay = rng() * 600;
+    const dur = 2400 + rng() * 1800;
+    const delay = rng() * 1000;
     piece.style.setProperty('--start-left', `${startLeft}vw`);
     piece.style.setProperty('--drift', `${drift}px`);
     piece.style.setProperty('--rot', `${rot}deg`);
