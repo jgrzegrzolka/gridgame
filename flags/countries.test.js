@@ -136,6 +136,11 @@ const KNOWN_MOTIFS = [
   // sh (the combined territory) currently ships a plain Union Jack SVG with
   // no coat of arms, so no motif tags apply to what the player actually sees.
   { code: 'eg',    motifs: ['animal', 'coat-of-arms'], note: 'Egypt — Eagle of Saladin' },
+  // Malta's George Cross emblem depicts St. George (sword = weapon) on
+  // horseback (horse = animal) slaying a dragon (animal again), framed
+  // as a cross. All three tags must be present together — they were
+  // silently dropped once before when the 'cross' motif was added.
+  { code: 'mt',    motifs: ['animal', 'weapon', 'cross'], note: 'Malta — George Cross emblem (horse, dragon, sword)' },
 ];
 
 test('known animal/coat-of-arms flags keep their expected motif tags', () => {
