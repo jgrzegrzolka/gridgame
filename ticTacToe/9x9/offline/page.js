@@ -1,4 +1,4 @@
-import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../../flags/grid.js';
+import { generateUltimateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../../flags/grid.js';
 import { newUltimateGame, attemptUltimateClaim, isUltimateGameOver } from '../../../flags/ultimateTicTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../../i18n.js';
 import { launchConfetti } from '../../../confetti.js';
@@ -17,12 +17,12 @@ export function bootTicTacToe9x9() {
     .then((r) => r.json())
     .then((rawCountries) => {
       const countries = withLocalizedAliases(rawCountries);
-      // 9×9 needs each (row × col) small board to be playable to its end:
-      // 3 X moves + 3 O moves + 2 "blocker" moves = ~8 distinct countries
-      // before a 3-in-a-row resolves. Requiring ≥ 8 candidates per cell
-      // keeps thin pairs (e.g. Asia × cross) out of the puzzle so dead-by-
-      // exhaustion is the exception rather than the norm.
-      const puzzle = generateRandomPuzzle(countries, { minPerCell: 8 });
+      // 9×9 requires every (row × col) small board to be filled with 9 distinct
+      // flags AND no flag shared across small boards (global no-duplicate).
+      // generateUltimateRandomPuzzle uses Hall's marriage theorem to ensure
+      // every generated puzzle admits a full 81-distinct-country solution, so
+      // no small board can dead-end early from a global-pool starvation.
+      const puzzle = generateUltimateRandomPuzzle(countries);
       runUltimateTicTacToe({ puzzle, countries });
     })
     .catch((err) => {

@@ -20,6 +20,8 @@ import {
   findPuzzleSolution,
   isPuzzleGeneratable,
   generateRandomPuzzle,
+  hasUltimatePuzzleSolution,
+  generateUltimateRandomPuzzle,
   axesConflict,
   buildRandomCategoryPool,
   computeGridScore,
@@ -888,6 +890,112 @@ test('findPuzzleSolution does not mutate the inputs', () => {
   assert.deepEqual(puzzle.rows.map((r) => r.id), beforeRowIds);
   assert.deepEqual(puzzle.cols.map((c) => c.id), beforeColIds);
   assert.deepEqual(countries.map((c) => c.code), beforeCodes);
+});
+
+/**
+ * Build a synthetic country pool where every (continent × color) cell of the
+ * 3×3 has exactly `perCell` distinct flags matching it. Each flag also carries
+ * every motif key so the random puzzle generator (which can pick motif rows/
+ * cols) still finds candidates for motif cells — keeps the helper usable for
+ * the `generateUltimateRandomPuzzle` test.
+ *
+ * @param {string[]} continents
+ * @param {string[]} colors
+ * @param {number} perCell
+ */
+function denseSquarePool(continents, colors, perCell) {
+  /** @type {Country[]} */
+  const out = [];
+  let idx = 0;
+  for (const cont of continents) {
+    for (const color of colors) {
+      for (let n = 0; n < perCell; n++) {
+        out.push(country({
+          code: `c${idx++}`, name: `${cont}-${color}-${n}`,
+          continent: /** @type {any} */ (cont), colors: [color],
+          motifs: [...MOTIFS_FOR_RANDOM],
+        }));
+      }
+    }
+  }
+  return out;
+}
+
+test('hasUltimatePuzzleSolution: true when each of the 9 cells has its own 9 disjoint candidates', () => {
+  const puzzle = {
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [hasColor('red'), hasColor('blue'), hasColor('green')],
+  };
+  const countries = denseSquarePool(['Europe', 'Asia', 'Africa'], ['red', 'blue', 'green'], 9);
+  assert.equal(hasUltimatePuzzleSolution(puzzle, countries), true);
+});
+
+test('hasUltimatePuzzleSolution: false when any cell falls below 9 candidates', () => {
+  const puzzle = {
+    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
+    cols: [hasColor('red'), hasColor('blue'), hasColor('green')],
+  };
+  // Every cell gets 9 except (Asia × blue) — remove one of its candidates,
+  // leaving 8. The singleton subset {(Asia, blue)} demands 9 but supply is 8.
+  const countries = denseSquarePool(['Europe', 'Asia', 'Africa'], ['red', 'blue', 'green'], 9);
+  const oneAsiaBlue = countries.find((c) => c.continent === 'Asia' && c.colors?.includes('blue'));
+  assert.ok(oneAsiaBlue);
+  const filtered = countries.filter((c) => c.code !== oneAsiaBlue.code);
+  assert.equal(hasUltimatePuzzleSolution(puzzle, filtered), false);
+});
+
+test('hasUltimatePuzzleSolution: false when cells share a candidate pool too thin to feed them all', () => {
+  // Three different cells all have a generous pool, but they share the SAME
+  // 12 multi-match countries. Demand for any pair of these cells is 18; their
+  // union of candidates is only 12. Hall fails.
+  const puzzle = {
+    rows: [continent('Europe'), continent('Europe'), continent('Europe')],
+    cols: [hasColor('red'), hasColor('white'), hasColor('blue')],
+  };
+  /** @type {Country[]} */
+  const multiMatch = [];
+  for (let i = 0; i < 12; i++) {
+    multiMatch.push(country({
+      code: `m${i}`, name: `multi-${i}`, continent: 'Europe',
+      colors: ['red', 'white', 'blue'],
+    }));
+  }
+  assert.equal(hasUltimatePuzzleSolution(puzzle, multiMatch), false);
+});
+
+test('hasUltimatePuzzleSolution: perCell=1 reduces it to the regular 9-distinct-country check', () => {
+  // Same multi-match pool of 12 countries, 9 cells — at perCell=1, total
+  // demand is 9 against supply 12. Hall passes.
+  const puzzle = {
+    rows: [continent('Europe'), continent('Europe'), continent('Europe')],
+    cols: [hasColor('red'), hasColor('white'), hasColor('blue')],
+  };
+  /** @type {Country[]} */
+  const multiMatch = [];
+  for (let i = 0; i < 12; i++) {
+    multiMatch.push(country({
+      code: `m${i}`, name: `multi-${i}`, continent: 'Europe',
+      colors: ['red', 'white', 'blue'],
+    }));
+  }
+  assert.equal(hasUltimatePuzzleSolution(puzzle, multiMatch, 1), true);
+  // Bump perCell to 2 — total demand 18 vs supply 12 → Hall fails.
+  assert.equal(hasUltimatePuzzleSolution(puzzle, multiMatch, 2), false);
+});
+
+test('generateUltimateRandomPuzzle returns a puzzle that passes hasUltimatePuzzleSolution', () => {
+  // Saturated synthetic pool — every (continent × color) cell has 9 flags of
+  // its own. Any combination the generator picks must pass the Hall check.
+  const countries = denseSquarePool(['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'], COLORS_FOR_RANDOM, 9);
+  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 50 });
+  assert.equal(hasUltimatePuzzleSolution(puzzle, countries), true);
+});
+
+test('generateUltimateRandomPuzzle throws when no puzzle in the category pool can be 9×9-solved', () => {
+  // Sparse pool — only 1 country per (continent × color) cell. Every puzzle
+  // fails the Hall check at the singleton subset (1 < 9).
+  const countries = denseSquarePool(['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'], COLORS_FOR_RANDOM, 1);
+  assert.throws(() => generateUltimateRandomPuzzle(countries, { maxAttempts: 30 }));
 });
 
 function syntheticTaggedCountries() {
