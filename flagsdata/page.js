@@ -78,7 +78,7 @@ export function bootFlagsData() {
    *   items: Country[],
    *   tiles: HTMLElement[],
    *   count: HTMLElement,
-   *   chips: Array<{ el: HTMLElement, start: number, end: number }>,
+   *   letterGroups: Array<{ letter: string, start: number, end: number }>,
    * } | null}
    */
   let state = null;
@@ -106,27 +106,25 @@ export function bootFlagsData() {
 
     /** @type {HTMLElement[]} */
     const tiles = [];
-    /** @type {Array<{ el: HTMLElement, start: number, end: number }>} */
-    const chips = [];
+    /** @type {Array<{ letter: string, start: number, end: number }>} */
+    const letterGroups = [];
     let currentLetter = '';
     for (const c of sorted) {
       const letter = countryName(c).charAt(0).toLocaleUpperCase(lang);
-      if (letter !== currentLetter) {
-        if (chips.length) chips[chips.length - 1].end = tiles.length;
+      const isFirstOfLetter = letter !== currentLetter;
+      if (isFirstOfLetter) {
+        if (letterGroups.length) letterGroups[letterGroups.length - 1].end = tiles.length;
+        letterGroups.push({ letter, start: tiles.length, end: tiles.length });
         currentLetter = letter;
-        const chip = document.createElement('div');
-        chip.className = 'letter-chip';
-        chip.textContent = letter;
-        grid.appendChild(chip);
-        chips.push({ el: chip, start: tiles.length, end: tiles.length });
       }
       const tile = flagTile(c);
+      if (isFirstOfLetter) tile.dataset.letter = letter;
       tiles.push(tile);
       grid.appendChild(tile);
     }
-    if (chips.length) chips[chips.length - 1].end = tiles.length;
+    if (letterGroups.length) letterGroups[letterGroups.length - 1].end = tiles.length;
 
-    state = { items: sorted, tiles, count: countSpan, chips };
+    state = { items: sorted, tiles, count: countSpan, letterGroups };
   }
 
   function applyFilter() {
@@ -137,12 +135,16 @@ export function bootFlagsData() {
       state.tiles[i].hidden = !show;
       if (show) visible++;
     }
-    for (const chip of state.chips) {
-      let anyVisible = false;
-      for (let i = chip.start; i < chip.end; i++) {
-        if (!state.tiles[i].hidden) { anyVisible = true; break; }
+    for (const group of state.letterGroups) {
+      let assigned = false;
+      for (let i = group.start; i < group.end; i++) {
+        if (!state.tiles[i].hidden && !assigned) {
+          state.tiles[i].dataset.letter = group.letter;
+          assigned = true;
+        } else {
+          delete state.tiles[i].dataset.letter;
+        }
       }
-      chip.el.hidden = !anyVisible;
     }
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;

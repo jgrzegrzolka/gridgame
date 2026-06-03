@@ -81,18 +81,19 @@ body {
   font-size: 14px;
   margin-left: 6px;
 }
-.letter-chip {
-  aspect-ratio: 4 / 3;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  padding: 2px 4px;
-  font-size: 11px;
+.flag[data-letter]::before {
+  content: attr(data-letter);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 10px;
   font-weight: 500;
-  color: #bbb;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  user-select: none;
+  color: #888;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 1px 4px;
+  border-radius: 3px;
+  z-index: 1;
+  pointer-events: none;
 }
 .grid {
   display: grid;
