@@ -477,6 +477,35 @@ export function generateRandomPuzzle(countries, options = {}) {
 
 const MIN_QUERY_LENGTH = 3;
 
+const NON_COMBINING_FOLD_MAP = /** @type {const} */ ({
+  'ł': 'l', 'đ': 'd', 'ø': 'o', 'æ': 'ae', 'œ': 'oe', 'ß': 'ss',
+});
+const NON_COMBINING_FOLD_RE = /[łđøæœß]/g;
+const COMBINING_MARKS_RE = /[̀-ͯ]/g;
+
+/**
+ * Normalize a string for diacritic-insensitive matching: lowercase, strip
+ * combining accents (NFD then drop U+0300–U+036F), and fold a few
+ * non-combining Latin letters (ł, đ, ø, æ, œ, ß) to their closest ASCII
+ * equivalents.
+ *
+ * The picker accepts "lodz" for "Łódź", "wlochy" for "Włochy", and "espana"
+ * for "España" because we apply this fold to both the query and every
+ * candidate name/alias before the substring/equality check. ł and friends
+ * need the manual map because they aren't combining-mark sequences — NFD
+ * leaves them as single codepoints.
+ *
+ * @param {string} s
+ * @returns {string}
+ */
+export function foldDiacritics(s) {
+  const stripped = s.toLowerCase().normalize('NFD').replace(COMBINING_MARKS_RE, '');
+  return stripped.replace(
+    NON_COMBINING_FOLD_RE,
+    (ch) => /** @type {Record<string, string>} */ (NON_COMBINING_FOLD_MAP)[ch] ?? ch,
+  );
+}
+
 /**
  * @param {Country[]} allCountries
  * @param {string} query
@@ -485,15 +514,19 @@ const MIN_QUERY_LENGTH = 3;
  */
 export function suggest(allCountries, query, options = {}) {
   const { limit = 8, excludeCodes = new Set() } = options;
-  const q = query.trim().toLowerCase();
-  if (q.length < MIN_QUERY_LENGTH) return [];
+  const trimmed = query.trim();
+  // Keep the "must type 3 chars" rule against the raw input, not the folded
+  // form — otherwise typing "ß" alone (folds to "ss") would inch over the
+  // threshold and surprise the user.
+  if (trimmed.length < MIN_QUERY_LENGTH) return [];
+  const q = foldDiacritics(trimmed);
   return allCountries
     .filter((c) => {
       if (excludeCodes.has(c.code)) return false;
-      if (c.name.toLowerCase().includes(q)) return true;
+      if (foldDiacritics(c.name).includes(q)) return true;
       if (c.aliases) {
         for (const a of c.aliases) {
-          if (a.toLowerCase().includes(q)) return true;
+          if (foldDiacritics(a).includes(q)) return true;
         }
       }
       return false;
@@ -517,13 +550,14 @@ export function suggest(allCountries, query, options = {}) {
  */
 export function exactSingleMatch(matches, query) {
   if (matches.length !== 1) return null;
-  const typed = query.trim().toLowerCase();
-  if (!typed) return null;
+  const trimmed = query.trim();
+  if (!trimmed) return null;
+  const typed = foldDiacritics(trimmed);
   const m = matches[0];
-  if (m.name.toLowerCase() === typed) return m;
+  if (foldDiacritics(m.name) === typed) return m;
   if (m.aliases) {
     for (const a of m.aliases) {
-      if (a.toLowerCase() === typed) return m;
+      if (foldDiacritics(a) === typed) return m;
     }
   }
   return null;
