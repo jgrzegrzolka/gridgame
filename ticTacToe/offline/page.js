@@ -1,6 +1,7 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/grid.js';
 import { newGame, attemptClaim, isGameOver } from '../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
+import { launchConfetti } from '../../confetti.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 /** @typedef {import('../../flags/ticTacToe.js').GameState} GameState */
@@ -328,6 +329,7 @@ function runTicTacToe({ puzzle, countries }) {
       finalScoreEl.textContent =
         t('ttt.playerWins', '{player} wins!').replace('{player}', state.winner);
       finalScoreEl.style.color = state.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
+      launchConfetti();
     } else {
       finalScoreEl.textContent = t('ttt.draw', 'Draw');
       finalScoreEl.style.color = '#1c1c1c';

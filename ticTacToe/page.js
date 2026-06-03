@@ -8,6 +8,7 @@ import {
   getOrCreatePlayerId,
 } from './onlineClient.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
+import { launchConfetti } from '../confetti.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/ticTacToe.js').GameState} GameState */
@@ -565,6 +566,7 @@ function runOnline(countries) {
         ? t('ttt.youWin', 'You win!')
         : t('ttt.opponentWins', 'Opponent wins');
       finalScoreEl.style.color = game.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
+      if (youWon) launchConfetti();
     } else {
       finalScoreEl.textContent = t('ttt.draw', 'Draw');
       finalScoreEl.style.color = '#1c1c1c';
