@@ -609,6 +609,12 @@ export function computeGridScore({ filledCount, wrongCount }) {
  * @property {boolean} gaveUp
  * @property {number | null} finalTimeMs
  * @property {Array<string | null>} revealedCodes
+ * @property {number | null} startedAtMs
+ *   Timestamp of the in-progress round's first frame. Persisted so a
+ *   mid-round reload (language switch, refresh) keeps the timer
+ *   continuous instead of snapping back to 0:00. Null for finished
+ *   rounds (finalTimeMs carries the displayed value) and null for
+ *   pre-feature saves where the field never landed.
  */
 
 /**
@@ -617,6 +623,23 @@ export function computeGridScore({ filledCount, wrongCount }) {
  */
 export function isGridLocked({ gaveUp, finalTimeMs }) {
   return gaveUp || finalTimeMs !== null;
+}
+
+/**
+ * What value goes into `GridState.startedAtMs` at save time. An
+ * in-progress round persists its start timestamp so a reload (language
+ * switch, refresh) keeps the timer continuous; a finished round drops
+ * it because finalTimeMs is the source of truth and a stale anchor
+ * would only confuse inspection. The check is `=== null` not
+ * `=== undefined` so a (theoretical, defensive) `0` finalTimeMs still
+ * counts as finished.
+ *
+ * @param {number | null} finalTimeMs
+ * @param {number} sessionStart
+ * @returns {number | null}
+ */
+export function persistedStartedAtMs(finalTimeMs, sessionStart) {
+  return finalTimeMs === null ? sessionStart : null;
 }
 
 /**
@@ -646,6 +669,7 @@ export function loadGridState(store, key) {
           Array.isArray(parsed.revealedCodes) && parsed.revealedCodes.length === 9
             ? parsed.revealedCodes.map((/** @type {unknown} */ p) => (typeof p === 'string' ? p : null))
             : Array(9).fill(null),
+        startedAtMs: typeof parsed.startedAtMs === 'number' ? parsed.startedAtMs : null,
       };
     }
     return null;

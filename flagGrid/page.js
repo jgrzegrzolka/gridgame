@@ -11,6 +11,7 @@ import {
   pulseShake,
   isGridLocked,
   translateCategoryLabel,
+  persistedStartedAtMs,
 } from '../flags/grid.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
@@ -143,7 +144,12 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     gridBodyEl.appendChild(tr);
   }
 
-  const sessionStart = Date.now();
+  // Restore the original start timestamp when a mid-round save is being
+  // resumed (language switch, refresh). Without this the timer would
+  // snap back to 0:00 even though the board kept all its picks. Finished
+  // rounds carry their elapsed time in saved.finalTimeMs and don't tick,
+  // so the value of sessionStart doesn't matter for them.
+  const sessionStart = saved?.startedAtMs ?? Date.now();
   let timerRaf = 0;
   function tickTimer() {
     if (playTimeEl) playTimeEl.textContent = formatTime(Date.now() - sessionStart);
@@ -402,6 +408,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       gaveUp,
       finalTimeMs,
       revealedCodes,
+      startedAtMs: persistedStartedAtMs(finalTimeMs, sessionStart),
     });
   }
 
