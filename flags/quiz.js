@@ -283,6 +283,21 @@ export function timedRemainingMs({ budgetMs, penaltyMs, elapsedMs, wrongCount })
 }
 
 /**
+ * Budget consumed in milliseconds — the value stored as `Result.time` for
+ * a timed round so that `nextBest` ranks rounds by efficiency. Equals
+ * `wall + wrongCount * penalty` on pool-exhaust (under budget) and caps at
+ * the budget on time-out, so a same-score round with fewer penalties
+ * always wins the tiebreaker. Symmetric with `timedRemainingMs`:
+ * `budgetUsed + remaining === budgetMs`.
+ *
+ * @param {{ budgetMs: number, penaltyMs: number, elapsedMs: number, wrongCount: number }} state
+ * @returns {number}
+ */
+export function timedBudgetUsedMs(state) {
+  return state.budgetMs - timedRemainingMs(state);
+}
+
+/**
  * @param {number} ms
  * @returns {string}
  */

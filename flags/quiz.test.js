@@ -14,6 +14,7 @@ import {
   defaultModeFor,
   isTimedMode,
   timedRemainingMs,
+  timedBudgetUsedMs,
   formatTime,
   LOOKALIKES,
   lookalikesOf,
@@ -253,6 +254,52 @@ test('timedRemainingMs returns the full budget at the start of the round', () =>
     timedRemainingMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 0, wrongCount: 0 }),
     60_000,
   );
+});
+
+test('timedBudgetUsedMs is zero at the start of the round', () => {
+  assert.equal(
+    timedBudgetUsedMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 0, wrongCount: 0 }),
+    0,
+  );
+});
+
+test('timedBudgetUsedMs on a clean pool-exhaust equals wall-clock elapsed (no penalty drag)', () => {
+  assert.equal(
+    timedBudgetUsedMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 25_000, wrongCount: 0 }),
+    25_000,
+  );
+});
+
+test('timedBudgetUsedMs on a pool-exhaust under budget adds penalty time onto the wall clock — fewer wrongs = lower score = better tiebreak', () => {
+  const clean = timedBudgetUsedMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 30_000, wrongCount: 0 });
+  const messy = timedBudgetUsedMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 30_000, wrongCount: 4 });
+  assert.equal(clean, 30_000);
+  assert.equal(messy, 42_000);
+  assert.ok(clean < messy, 'cleaner round must record a lower budget-used value');
+});
+
+test('timedBudgetUsedMs caps at the budget on time-out — over-running penalties do not inflate the recorded time', () => {
+  assert.equal(
+    timedBudgetUsedMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 60_000, wrongCount: 5 }),
+    60_000,
+  );
+  // Even if penalty + wall vastly exceed the budget the cap holds.
+  assert.equal(
+    timedBudgetUsedMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 90_000, wrongCount: 20 }),
+    60_000,
+  );
+});
+
+test('timedBudgetUsedMs and timedRemainingMs always sum to the budget — the symmetry that defines them', () => {
+  const cases = [
+    { budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 0,      wrongCount: 0 },
+    { budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 15_000, wrongCount: 2 },
+    { budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 60_000, wrongCount: 0 },
+    { budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 90_000, wrongCount: 20 },
+  ];
+  for (const c of cases) {
+    assert.equal(timedBudgetUsedMs(c) + timedRemainingMs(c), c.budgetMs);
+  }
 });
 
 test('formatTime(0) renders zero with the full three-digit ms field', () => {

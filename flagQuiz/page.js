@@ -6,6 +6,7 @@ import {
   defaultModeFor,
   isTimedMode,
   timedRemainingMs,
+  timedBudgetUsedMs,
   formatTime,
   recordResult,
   scoreColor,
@@ -266,12 +267,15 @@ export function bootFlagQuiz() {
         finalScoreEl.textContent = String(answeredCount);
         finalScoreLineEl.style.color = scoreColor(ratio);
 
-        // Record "budget consumed", not wall clock — `wall + penalties`
-        // bounds at 60s for time-outs and is lower only when the pool
-        // exhausts before the budget. That way nextBest's lower-time-wins
-        // tiebreaker rewards efficient rounds; a wall-clock metric would
-        // perversely favour the round that burned more penalties.
-        const budgetUsed = Math.min(budgetMs, elapsed + wrongCount * penaltyMs);
+        // Record "budget consumed", not wall clock — bounds at the
+        // budget for time-outs, lower only when the pool exhausts under
+        // budget. nextBest's lower-time tiebreaker then rewards
+        // efficient rounds; a wall-clock metric would perversely favour
+        // the round that burned more penalties. See timedBudgetUsedMs
+        // docstring and tests for the contract.
+        const budgetUsed = timedBudgetUsedMs({
+          budgetMs, penaltyMs, elapsedMs: elapsed, wrongCount,
+        });
         timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(budgetUsed)}`;
 
         const { best, isNew } = recordResult(
