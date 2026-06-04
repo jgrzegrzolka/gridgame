@@ -47,10 +47,11 @@ test('matchesFilters: status include filters by sovereignty', () => {
   assert.equal(matchesFilters(territory, f), false);
 });
 
-test('matchesFilters: status include with multiple values is OR within the group', () => {
+test('matchesFilters: status include with multiple scalar values is AND — unsatisfiable, every country fails', () => {
   const f = filters({ status: { include: ['sovereign', 'territory'] } });
-  assert.equal(matchesFilters(country(), f), true);
-  assert.equal(matchesFilters(country({ statehood: 'territory' }), f), true);
+  // A country can only have one statehood; two-value AND can never match.
+  assert.equal(matchesFilters(country(), f), false);
+  assert.equal(matchesFilters(country({ statehood: 'territory' }), f), false);
   assert.equal(matchesFilters(country({ statehood: 'non_un' }), f), false);
 });
 
@@ -67,10 +68,26 @@ test('matchesFilters: continent treats null/missing as "Other"', () => {
   assert.equal(matchesFilters(orphan, filters({ continent: { exclude: ['Other'] } })), false);
 });
 
-test('matchesFilters: color include passes when any colour overlaps', () => {
+test('matchesFilters: color include requires every selected colour to be present (AND)', () => {
   const c = country({ colors: ['red', 'white'] });
-  assert.equal(matchesFilters(c, filters({ color: { include: ['red', 'green'] } })), true);
+  assert.equal(matchesFilters(c, filters({ color: { include: ['red', 'white'] } })), true);
+  assert.equal(matchesFilters(c, filters({ color: { include: ['red', 'green'] } })), false);
   assert.equal(matchesFilters(c, filters({ color: { include: ['green'] } })), false);
+});
+
+test('matchesFilters: continent include with two values is unsatisfiable — every country fails', () => {
+  // Two continents AND-ed: no single country can be in both.
+  const f = filters({ continent: { include: ['Asia', 'Africa'] } });
+  assert.equal(matchesFilters(country({ continent: 'Asia' }), f), false);
+  assert.equal(matchesFilters(country({ continent: 'Africa' }), f), false);
+});
+
+test('matchesFilters: motif include requires every selected motif to be present (AND)', () => {
+  const both = country({ motifs: ['weapon', 'animal'] });
+  const onlyWeapon = country({ motifs: ['weapon'] });
+  const f = filters({ motif: { include: ['weapon', 'animal'] } });
+  assert.equal(matchesFilters(both, f), true);
+  assert.equal(matchesFilters(onlyWeapon, f), false);
 });
 
 test('matchesFilters: color exclude rejects when any excluded colour appears', () => {
