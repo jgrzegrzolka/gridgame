@@ -14,9 +14,11 @@ body {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  /* #666 on white = 5.74:1, passes WCAG AA. #999 (the previous value)
-   * was 2.85:1 — flagged by Lighthouse. */
-  color: #666;
+  /* --text-muted is #666 light / #a0a0a0 dark. The original literal #666
+   * gave 5.74:1 contrast on white; the dark equivalent on #141414 lands
+   * around 8.7:1. Both clear WCAG AA. (#999 was 2.85:1 — Lighthouse
+   * flagged it, hence the move to the muted slot.) */
+  color: var(--text-muted);
   margin: 0 0 10px;
   font-weight: 600;
 }
@@ -31,14 +33,14 @@ body {
   align-items: center;
   gap: 10px;
   padding: 20px 16px;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   text-decoration: none;
   color: var(--link-color);
 }
 .game-tile:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
 }
 .game-name {
   font-size: 16px;

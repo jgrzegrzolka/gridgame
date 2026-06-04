@@ -12,7 +12,7 @@ body {
 }
 .find-blurb {
   font-size: 14px;
-  color: #666;
+  color: var(--text-muted);
   margin: 0 0 20px;
   text-align: center;
 }
@@ -32,7 +32,7 @@ body {
   padding: 4px 8px;
 }
 .find-random:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
   border-radius: 4px;
 }
 .chooser-section {
@@ -42,7 +42,7 @@ body {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #999;
+  color: var(--text-disabled);
   margin: 0 0 10px;
   font-weight: 600;
 }
@@ -65,12 +65,14 @@ body {
   line-height: 1.4;
 }
 .chooser-pills .pill-count {
-  color: #999;
+  color: var(--text-disabled);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 .chooser-pills .pill.active .pill-count {
-  color: #ccc;
+  /* On an inverted .pill.active the count is muted; var(--icon-disabled)
+   * tracks the same "soft accent" semantic in both modes. */
+  color: var(--icon-disabled);
 }
 .chooser-pills .pill.exclude .pill-count {
   color: #c0392b;
@@ -88,8 +90,8 @@ body {
   gap: 12px;
   margin: 16px -24px 0;
   padding: 12px 24px;
-  background: #fafafa;
-  border-top: 1px solid #eee;
+  background: var(--bg);
+  border-top: 1px solid var(--border-subtle);
   z-index: 5;
 }
 .find-clear {
@@ -103,19 +105,20 @@ body {
   padding: 4px 6px;
 }
 .find-clear:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
   border-radius: 4px;
 }
 .find-play-count {
   flex: 1;
   text-align: right;
   font-size: 14px;
-  color: #666;
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 .find-play {
-  background: #1c1c1c;
-  color: #fff;
+  /* Inverted text — see .pill.active in common.css for the rationale. */
+  background: var(--text);
+  color: var(--bg);
   border: none;
   border-radius: 999px;
   padding: 10px 22px;
@@ -124,10 +127,11 @@ body {
   cursor: pointer;
 }
 .find-play:hover:not(:disabled) {
-  background: #333;
+  /* Hover state nudges off the pure inverted shade in both modes. */
+  background: var(--text-muted);
 }
 .find-play:disabled {
-  background: #ccc;
+  background: var(--icon-disabled);
   cursor: not-allowed;
 }
 
@@ -141,16 +145,16 @@ body {
 .find-cat {
   font-size: 22px;
   font-weight: 600;
-  color: #1c1c1c;
+  color: var(--text);
   flex: 1;
 }
 .find-count {
   font-size: 14px;
-  color: #666;
+  color: var(--text-muted);
 }
 .find-time {
   font-size: 14px;
-  color: #666;
+  color: var(--text-muted);
 }
 .find-input-wrap {
   position: relative;
@@ -160,19 +164,20 @@ body {
   width: 100%;
   box-sizing: border-box;
   padding: 12px 14px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 6px;
   font: inherit;
   font-size: 16px;
-  background: #fff;
+  background: var(--surface);
+  color: var(--text);
 }
 .find-input:focus {
   outline: none;
-  border-color: #1c1c1c;
+  border-color: var(--text);
 }
 .find-input.wrong {
   border-color: #c5302d;
-  background: #fff5f5;
+  background: var(--input-wrong-bg);
 }
 .find-input.shake {
   animation: find-shake 200ms ease;
@@ -193,8 +198,8 @@ body {
   list-style: none;
   padding: 4px 0;
   margin: 0;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
   max-height: 280px;
@@ -210,7 +215,7 @@ body {
 }
 .find-suggestions li.selected,
 .find-suggestions li:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
 }
 .find-suggestions span {
   font-size: 14px;
@@ -228,7 +233,7 @@ body {
 .find-tile {
   position: relative;
   aspect-ratio: 4 / 3;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   overflow: hidden;
   cursor: zoom-in;
 }
@@ -243,8 +248,10 @@ body {
   bottom: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
-  background: #1c1c1c;
-  color: #fff;
+  /* Tooltip uses inverted text — auto-flips with the palette so the
+   * floating label is always high-contrast against the page bg. */
+  background: var(--text);
+  color: var(--bg);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -267,7 +274,7 @@ body {
 
 .result-section-title {
   font-size: 14px;
-  color: #999;
+  color: var(--text-disabled);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;

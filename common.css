@@ -1,5 +1,36 @@
 :root {
+  /* Palette — light defaults. Dark overrides live in the
+   * prefers-color-scheme block below. Keep all color references in
+   * project CSS pointed at these vars; raw hex/rgba literals here are
+   * the source of truth and should change in only one place per mode. */
+  --bg: #fafafa;
+  --surface: #fff;
+  --surface-hover: #f0f0f0;
+  --surface-muted: #f5f5f5;
+  --border: #ddd;
+  --border-subtle: #eee;
+  --border-strong: #999;
+  --text: #1c1c1c;
+  --text-muted: #666;
+  --text-disabled: #999;
+  --icon-disabled: #ccc;
   --link-color: #660033;
+
+  /* Soft washes that look like "a tint of the accent" — these need
+   * dark equivalents that don't blow out against a near-black surface. */
+  --pill-exclude-hover-bg: #fdecea;
+  --input-wrong-bg: #fff5f5;
+  --picker-row-hover-bg: rgba(102, 0, 51, 0.16);
+  --cell-hover-wash: rgba(0, 0, 0, 0.04);
+  --button-ghost-hover-bg: rgba(0, 0, 0, 0.05);
+
+  /* 9×9 board surfaces. */
+  --exhausted-bg: #000;
+  --board-inner-border: #888;
+  --in-claimed-x-bg: rgba(45, 106, 140, 0.18);
+  --in-claimed-o-bg: rgba(221, 102, 136, 0.18);
+  --in-dead-bg: rgba(0, 0, 0, 0.06);
+
   --page-top: 80px;
   /* Inward push for the chrome cluster on wide viewports so the buttons
    * align with the right edge of the widest content the project ever
@@ -11,6 +42,38 @@
    * narrower than 756 px, so phones keep the original right:12px
    * behaviour. */
   --chrome-x-offset: max(0px, calc(50vw - 378px));
+
+  /* color-scheme tells the browser to render native form widgets,
+   * scrollbars, and the default selection colour using the OS theme. */
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141414;
+    --surface: #1f1f1f;
+    --surface-hover: #2a2a2a;
+    --surface-muted: #1a1a1a;
+    --border: #3a3a3a;
+    --border-subtle: #2a2a2a;
+    --border-strong: #6a6a6a;
+    --text: #e6e6e6;
+    --text-muted: #a0a0a0;
+    --text-disabled: #6e6e6e;
+    --icon-disabled: #555;
+    --link-color: #e88aae;
+
+    --pill-exclude-hover-bg: rgba(192, 57, 43, 0.22);
+    --input-wrong-bg: rgba(197, 48, 45, 0.14);
+    --picker-row-hover-bg: rgba(232, 138, 174, 0.18);
+    --cell-hover-wash: rgba(255, 255, 255, 0.06);
+    --button-ghost-hover-bg: rgba(255, 255, 255, 0.06);
+
+    --exhausted-bg: #050505;
+    --in-claimed-x-bg: rgba(45, 106, 140, 0.32);
+    --in-claimed-o-bg: rgba(221, 102, 136, 0.26);
+    --in-dead-bg: rgba(255, 255, 255, 0.05);
+  }
 }
 html {
   scrollbar-gutter: stable;
@@ -18,8 +81,8 @@ html {
 body {
   font-family: system-ui, sans-serif;
   margin: 0;
-  background: #fafafa;
-  color: #1c1c1c;
+  background: var(--bg);
+  color: var(--text);
   overflow-x: hidden;
 }
 /* When a page wraps its content in <main> for the a11y landmark,
@@ -57,7 +120,7 @@ body::before {
   left: 0;
   right: 0;
   height: var(--page-top);
-  background: #fafafa;
+  background: var(--bg);
   z-index: 10;
 }
 .back {
@@ -70,8 +133,8 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--link-color);
   text-decoration: none;
@@ -80,15 +143,15 @@ body::before {
   z-index: 25;
 }
 .back:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
 }
 .back[aria-disabled="true"] {
-  color: #ccc;
+  color: var(--icon-disabled);
   cursor: default;
   pointer-events: none;
 }
 .back[aria-disabled="true"]:hover {
-  background: #fff;
+  background: var(--surface);
 }
 .lang-toggle {
   position: fixed;
@@ -96,8 +159,8 @@ body::before {
   right: calc(220px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
-  background-color: #fff;
-  border: 1px solid #ddd;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
   z-index: 25;
@@ -107,7 +170,7 @@ body::before {
   background-size: 28px 21px;
 }
 .lang-toggle:hover {
-  background-color: #f0f0f0;
+  background-color: var(--surface-hover);
 }
 .lang-toggle[data-current="en"] {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 480'%3E%3Cpath fill='%23012169' d='M0 0h640v480H0z'/%3E%3Cpath fill='%23FFF' d='m75 0 244 181L562 0h78v62L400 241l240 178v61h-80L320 301 81 480H0v-60l239-178L0 64V0z'/%3E%3Cpath fill='%23C8102E' d='m424 281 216 159v40L369 281zm-184 20 6 35L54 480H0zM640 0v3L391 191l2-44L590 0zM0 0l239 176h-60L0 42z'/%3E%3Cpath fill='%23FFF' d='M241 0v480h160V0zM0 160v160h640V160z'/%3E%3Cpath fill='%23C8102E' d='M0 193v96h640v-96zM273 0v480h96V0z'/%3E%3C/svg%3E");
@@ -125,8 +188,8 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--link-color);
   text-decoration: none;
@@ -135,7 +198,7 @@ body::before {
   z-index: 25;
 }
 .coffee:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
 }
 .flags-link {
   position: fixed;
@@ -147,8 +210,8 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--link-color);
   text-decoration: none;
@@ -157,15 +220,15 @@ body::before {
   z-index: 25;
 }
 .flags-link:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
 }
 .flags-link[aria-disabled="true"] {
-  color: #ccc;
+  color: var(--icon-disabled);
   cursor: default;
   pointer-events: none;
 }
 .flags-link[aria-disabled="true"]:hover {
-  background: #fff;
+  background: var(--surface);
 }
 .burger {
   position: fixed;
@@ -177,27 +240,27 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
   z-index: 20;
   padding: 0;
 }
 .burger:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
 }
 .burger[aria-disabled="true"] {
   cursor: default;
   pointer-events: none;
 }
 .burger[aria-disabled="true"]:hover {
-  background: #fff;
+  background: var(--surface);
 }
 .burger[aria-disabled="true"] .burger-bars,
 .burger[aria-disabled="true"] .burger-bars::before,
 .burger[aria-disabled="true"] .burger-bars::after {
-  background: #ccc;
+  background: var(--icon-disabled);
 }
 .burger-bars,
 .burger-bars::before,
@@ -228,8 +291,8 @@ body::before {
   top: 64px;
   right: calc(12px + var(--chrome-x-offset));
   min-width: 180px;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   padding: 12px 16px;
@@ -250,7 +313,7 @@ body::before {
 .menu li.menu-divider {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-subtle);
 }
 .menu a {
   color: var(--link-color);
@@ -267,7 +330,7 @@ body::before {
  * the disabled-back-button pattern at the top of the file — same
  * visual language for "this is your current location, button is inert". */
 .menu a[aria-current="page"] {
-  color: #999;
+  color: var(--text-disabled);
   cursor: default;
   pointer-events: none;
 }
@@ -292,7 +355,7 @@ body::before {
   align-items: center;
   gap: 12px;
   font-size: 13px;
-  color: #1c1c1c;
+  color: var(--text);
   cursor: pointer;
   user-select: none;
 }
@@ -318,7 +381,7 @@ body::before {
 .scope-toggle-track {
   position: absolute;
   inset: 0;
-  background: #d0d0d0;
+  background: var(--border);
   border-radius: 9px;
   transition: background-color 0.15s;
   pointer-events: none;
@@ -329,7 +392,7 @@ body::before {
   left: 1px;
   width: 16px;
   height: 16px;
-  background: #fff;
+  background: var(--surface);
   border-radius: 50%;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   transition: left 0.15s ease;
@@ -345,8 +408,8 @@ body::before {
   outline-offset: 2px;
 }
 .give-up {
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 16px;
   font: inherit;
@@ -355,7 +418,7 @@ body::before {
   cursor: pointer;
 }
 .give-up:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
 }
 .give-up[hidden] {
   display: none;
@@ -371,30 +434,32 @@ body::before {
 .pill {
   font: inherit;
   font-size: 12px;
-  background: #fff;
-  color: #1c1c1c;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 999px;
   padding: 3px 10px;
   cursor: pointer;
   line-height: 1.4;
 }
 .pill:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
 }
 .pill.active {
-  background: #1c1c1c;
-  color: #fff;
-  border-color: #1c1c1c;
+  /* Inverted-text treatment — bg uses the text color and vice versa, so
+   * it stays high-contrast in both modes without a separate dark rule. */
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
 }
 .pill.exclude {
-  background: #fff;
+  background: var(--surface);
   color: #c0392b;
   border-color: #c0392b;
   text-decoration: line-through;
 }
 .pill.exclude:hover {
-  background: #fdecea;
+  background: var(--pill-exclude-hover-bg);
 }
 
 /* Give-up reveal — applied identically to every grid-based game so the
@@ -459,13 +524,13 @@ body::before {
 }
 .time {
   font-size: 14px;
-  color: #666;
+  color: var(--text-muted);
   margin: 0 0 8px;
   font-variant-numeric: tabular-nums;
 }
 .best {
   font-size: 14px;
-  color: #666;
+  color: var(--text-muted);
   margin: 0 0 20px;
   font-variant-numeric: tabular-nums;
 }
@@ -474,7 +539,7 @@ body::before {
 }
 .result-links {
   font-size: 14px;
-  color: #666;
+  color: var(--text-muted);
   margin: 0;
 }
 .result-links a {
@@ -507,7 +572,8 @@ dialog#zoom {
   border: none;
   border-radius: 0;
   outline: none;
-  background: #fff;
+  background: var(--surface);
+  color: var(--text);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   opacity: 0;
   transform: scaleX(0);
@@ -544,7 +610,7 @@ dialog#zoom img {
   display: block;
   width: 100%;
   height: auto;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   box-sizing: border-box;
 }
 dialog#zoom p {

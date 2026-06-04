@@ -26,7 +26,7 @@ body {
   align-items: center;
   gap: 16px;
   padding: 12px 4px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-subtle);
 }
 .stats-row:last-child {
   border-bottom: none;
@@ -35,7 +35,7 @@ body {
   flex: 1;
   font-size: 17px;
   font-weight: 500;
-  color: #1c1c1c;
+  color: var(--text);
 }
 .stats-chips {
   display: flex;
@@ -48,20 +48,20 @@ body {
   align-items: baseline;
   gap: 8px;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface);
   text-decoration: none;
   color: inherit;
   min-width: 140px;
   font-variant-numeric: tabular-nums;
 }
 .stats-chip:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
 }
 .stats-chip-mode {
   font-size: 12px;
-  color: #999;
+  color: var(--text-disabled);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -72,7 +72,7 @@ body {
 }
 .stats-chip-time {
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
   margin-left: auto;
 }
 .stats-chip-cta {
@@ -82,7 +82,7 @@ body {
   font-size: 14px;
 }
 .stats-chip-unplayed {
-  background: #fafafa;
+  background: var(--bg);
   border-style: dashed;
 }
 
@@ -103,7 +103,7 @@ body {
 }
 .play-timer {
   font-size: 14px;
-  color: #666;
+  color: var(--text-muted);
   margin: 0 0 12px;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -118,9 +118,12 @@ body {
   animation: penalty-flash 600ms ease-out;
 }
 @keyframes penalty-flash {
+  /* Lands back on the muted timer colour from --text-muted. The two
+   * earlier keyframes stay on the literal alarm red — that's the
+   * "you lost time" signal, not theme-dependent chrome. */
   0%   { color: #c5302d; transform: scale(1.5); }
   35%  { color: #c5302d; transform: scale(1.5); }
-  100% { color: #666;    transform: scale(1); }
+  100% { color: var(--text-muted); transform: scale(1); }
 }
 .play-mode:not(:empty)::after {
   content: "·";
@@ -138,11 +141,11 @@ body {
   text-decoration: underline;
 }
 .mode-toggle .mode-current {
-  color: #1c1c1c;
+  color: var(--text);
   font-weight: 500;
 }
 .mode-toggle .mode-sep {
-  color: #ddd;
+  color: var(--border);
   padding: 0 4px;
 }
 .country-name {
@@ -159,15 +162,15 @@ body {
 }
 .flag-choice {
   padding: 0;
-  border: 2px solid #ddd;
-  background: #fff;
+  border: 2px solid var(--border);
+  background: var(--surface);
   cursor: pointer;
   aspect-ratio: 4 / 3;
   overflow: hidden;
   transition: border-color 100ms;
 }
 .flag-choice:hover:not(:disabled) {
-  border-color: #999;
+  border-color: var(--border-strong);
 }
 .flag-choice:disabled {
   cursor: default;

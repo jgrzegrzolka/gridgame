@@ -34,7 +34,7 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 16px;
-  color: #1c1c1c;
+  color: var(--text);
   margin: 24px 0 0;
 }
 .turn-line[hidden] {
@@ -85,12 +85,12 @@ body {
   vertical-align: middle;
 }
 .grid td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
 }
 .grid th {
   font-weight: 500;
   font-size: 14px;
-  color: #1c1c1c;
+  color: var(--text);
   /* Truncate long header labels with an ellipsis instead of wrapping. Without
    * this a label like "Has star or moon" used to wrap to a second line and
    * push the whole grid down — and a rotated row header like "South America"
@@ -137,7 +137,7 @@ body {
   pointer-events: none;
 }
 .cell:hover::after {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--cell-hover-wash);
 }
 .cell.owned:hover::after {
   background: transparent;
@@ -174,7 +174,7 @@ body.game-over .cell:hover::after {
  * (row × col) pool was empty. Black background + gold outline mark
  * the cell as "no fresh answer left". */
 .cell.exhausted {
-  background: #000;
+  background: var(--exhausted-bg);
 }
 .cell.exhausted.revealed img {
   outline-color: #f4c842;
@@ -209,23 +209,23 @@ body.game-over .cell:hover::after {
  * the rightmost meta-column (bigcol 2), where the grid border is enough.
  * Same logic mirrored for the bottom edge. */
 .grid.is-9x9 .cell[data-col="2"]:not([data-bigcol="2"]) {
-  border-right: 2px solid #888;
+  border-right: 2px solid var(--board-inner-border);
 }
 .grid.is-9x9 .cell[data-row="2"]:not([data-bigrow="2"]) {
-  border-bottom: 2px solid #888;
+  border-bottom: 2px solid var(--board-inner-border);
 }
 /* A claimed small board tints the whole small-board area in the winner's
  * colour. Already-owned sub-cells keep their full-colour background; empty
  * sub-cells in a claimed board get a light wash so the meta-claim reads at
  * a glance without hiding the flags. */
 .grid.is-9x9 .cell.in-claimed-x:not(.owned) {
-  background: rgba(45, 106, 140, 0.18);
+  background: var(--in-claimed-x-bg);
 }
 .grid.is-9x9 .cell.in-claimed-o:not(.owned) {
-  background: rgba(221, 102, 136, 0.18);
+  background: var(--in-claimed-o-bg);
 }
 .grid.is-9x9 .cell.in-dead:not(.owned) {
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--in-dead-bg);
 }
 /* Claimed-or-dead boards don't take new picks — hide the hover wash and
  * snap the cursor back to default for sub-cells that don't already render
@@ -264,7 +264,8 @@ body.game-over .cell:hover::after {
   width: 480px;
   max-width: calc(100vw - 32px);
   z-index: 101;
-  background: #fff;
+  background: var(--surface);
+  color: var(--text);
   border-radius: 8px;
   padding: 12px;
   max-height: 70vh;
@@ -282,12 +283,12 @@ body.game-over .cell:hover::after {
   flex: 1;
   font-weight: 500;
   font-size: 14px;
-  color: #1c1c1c;
+  color: var(--text);
 }
 .picker-close {
   padding: 6px 12px;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--link-color);
   font: inherit;
@@ -295,7 +296,7 @@ body.game-over .cell:hover::after {
   cursor: pointer;
 }
 .picker-close:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
 }
 .picker-input {
   width: 100%;
@@ -303,9 +304,11 @@ body.game-over .cell:hover::after {
   padding: 10px 12px;
   font: inherit;
   font-size: 16px;
-  border: 1px solid #999;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   margin-bottom: 8px;
+  background: var(--surface);
+  color: var(--text);
 }
 .picker-input:focus {
   outline: 2px solid var(--link-color);
@@ -330,7 +333,7 @@ body.game-over .cell:hover::after {
 }
 .picker-suggestions li.selected,
 .picker-suggestions li:hover {
-  background: rgba(102, 0, 51, 0.16);
+  background: var(--picker-row-hover-bg);
 }
 .picker-suggestions span {
   flex: 1;

@@ -15,10 +15,10 @@ body {
   position: sticky;
   top: var(--page-top);
   z-index: 5;
-  background: #fafafa;
+  background: var(--bg);
   margin: 0 -24px 16px;
   padding: 16px 24px 12px 24px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -42,15 +42,15 @@ body {
   font: inherit;
   font-size: 13px;
   padding: 6px 12px;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 999px;
-  color: #1c1c1c;
+  color: var(--text);
   cursor: pointer;
   align-items: center;
   gap: 6px;
 }
-.filter-toggle:hover { background: #f0f0f0; }
+.filter-toggle:hover { background: var(--surface-hover); }
 .filter-toggle-count {
   display: inline-flex;
   align-items: center;
@@ -60,7 +60,7 @@ body {
   padding: 0 6px;
   border-radius: 999px;
   background: var(--link-color);
-  color: #fff;
+  color: var(--bg);
   font-size: 11px;
   font-weight: 600;
 }
@@ -90,7 +90,7 @@ body {
 }
 .filter-label {
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
   margin-right: 4px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -106,17 +106,17 @@ body {
   text-decoration: underline;
 }
 #filter-clear:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover);
   border-radius: 4px;
 }
 #sections h2 {
   font-size: 16px;
   font-weight: 500;
   margin: 0 0 12px;
-  color: #1c1c1c;
+  color: var(--text);
 }
 .section-count {
-  color: #999;
+  color: var(--text-disabled);
   font-weight: 400;
   font-size: 14px;
   margin-left: 6px;
@@ -129,7 +129,7 @@ body {
 .flag {
   position: relative;
   aspect-ratio: 4 / 3;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   overflow: hidden;
   cursor: zoom-in;
 }
@@ -144,6 +144,11 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
+  /* Caption stays a dark wash regardless of mode — flag SVGs render with
+   * their own colours and a light-on-dark caption is legible against any
+   * flag. The original rgba(28,28,28,0.85) is the canonical "text colour
+   * at 85% alpha" in light mode, so we keep it literal here rather than
+   * flipping with the palette. */
   background: rgba(28, 28, 28, 0.85);
   color: #fff;
   padding: 2px 4px;
@@ -162,12 +167,12 @@ body {
 dialog#zoom .country-data {
   margin: 12px 0 0;
   padding: 8px 10px;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 1.4;
-  color: #1c1c1c;
+  color: var(--text);
   max-height: 40vh;
   overflow: auto;
   white-space: pre;
