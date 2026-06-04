@@ -22,6 +22,17 @@ body {
   color: #1c1c1c;
   overflow-x: hidden;
 }
+/* When a page wraps its content in <main> for the a11y landmark,
+ * <main> becomes the flex child that body's `align-items: center`
+ * targets — so we mirror the same flex-column-center setup on <main>
+ * itself, otherwise the content (.domain etc.) sits left-aligned
+ * because <main> stretches to body width by default. */
+main {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 body::before {
   content: "";
   position: fixed;
