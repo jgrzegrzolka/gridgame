@@ -48,6 +48,9 @@ export function bootFlagQuiz() {
   const params = new URLSearchParams(window.location.search);
   const urlVariant = params.get('v');
   const urlMode = params.get('n');
+  // Compute the effective variant before renderMenu runs so the menu can
+  // mark the matching entry with aria-current="page".
+  const currentVariantKey = urlVariant && VARIANTS[urlVariant] ? urlVariant : DEFAULT_VARIANT;
 
   const includeAll = isQuizIncludeAll();
 
@@ -56,11 +59,9 @@ export function bootFlagQuiz() {
     .then((raw) => {
       const all = flagsGamePool(raw, includeAll);
       preloadFlags(all, (url) => { new Image().src = url; });
-      renderMenu(all);
+      renderMenu(all, currentVariantKey);
 
-      let variantKey = urlVariant && VARIANTS[urlVariant]
-        ? urlVariant
-        : DEFAULT_VARIANT;
+      const variantKey = currentVariantKey;
       let pool = all.filter(VARIANTS[variantKey].filter);
       let modeKey = urlMode && availableModes(pool.length).includes(urlMode)
         ? urlMode
@@ -72,7 +73,7 @@ export function bootFlagQuiz() {
       document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
 
-  function renderMenu(all) {
+  function renderMenu(all, currentVariantKey) {
     const toggleLi = document.createElement('li');
     const toggleLabel = document.createElement('label');
     toggleLabel.className = 'scope-toggle';
@@ -123,6 +124,9 @@ export function bootFlagQuiz() {
       const a = document.createElement('a');
       a.href = `?v=${key}&n=${defaultMode}`;
       a.textContent = t(`variant.${key}`, variant.label);
+      if (key === currentVariantKey) {
+        a.setAttribute('aria-current', 'page');
+      }
       li.appendChild(a);
       quizMenuEl.appendChild(li);
     }

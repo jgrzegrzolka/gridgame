@@ -233,6 +233,19 @@ body::before {
 .menu a:hover {
   text-decoration: underline;
 }
+/* "You are here" treatment for navigation menu items. aria-current="page"
+ * is the semantic marker; the same rule paints any menu link that points
+ * at the page the user is already on as grey and non-clickable. Matches
+ * the disabled-back-button pattern at the top of the file — same
+ * visual language for "this is your current location, button is inert". */
+.menu a[aria-current="page"] {
+  color: #999;
+  cursor: default;
+  pointer-events: none;
+}
+.menu a[aria-current="page"]:hover {
+  text-decoration: none;
+}
 
 .give-up-row {
   margin-top: 16px;
