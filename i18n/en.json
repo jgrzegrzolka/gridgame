@@ -50,7 +50,8 @@
     "titleRand": "Flag Grid — Random",
     "yourScore": "Your score:",
     "yourBest": "Your best",
-    "retry": "Retry"
+    "retry": "Retry",
+    "today": "Today"
   },
   "findFlag": {
     "title": "Find Flag",
