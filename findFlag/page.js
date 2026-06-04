@@ -4,10 +4,8 @@ import {
   MOTIFS_FOR_RANDOM,
   suggest,
   exactSingleMatch,
-  translateCategoryLabel,
 } from '../flags/engine.js';
 import {
-  categoryFromId,
   findTargets,
   findPool,
   classifyGuess,
@@ -15,22 +13,16 @@ import {
   isFindIncludeAll,
   setFindIncludeAll,
   shouldFireFindFlagConfetti,
+  parseFilterFromUrl,
+  serializeFilter,
+  rankedCategoryId,
+  filterToCategory,
+  pillLabel,
 } from '../flags/findFlag.js';
+import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti } from '../confetti.js';
-
-/**
- * Map a continent name as it appears in the CONTINENTS array
- * ("North America", "Europe", …) onto the `variant.*` key we use for
- * translations. Keeps the chooser-pills label resolution alongside the
- * already-translated variants from flagQuiz.
- *
- * @param {string} name
- */
-function continentKey(name) {
-  return name.toLowerCase().replace(/ /g, '-');
-}
 
 export function bootFindFlag() {
   const chooserEl = document.getElementById('chooser');
@@ -65,14 +57,12 @@ export function bootFindFlag() {
     return li;
   }
 
-  const params = new URLSearchParams(window.location.search);
-  const catId = params.get('cat');
-
   const includeAll = isFindIncludeAll();
+  const initialFilter = parseFilterFromUrl(window.location.search);
 
   // "Pick a category" is the chooser; aria-current applies only when the
-  // user is on the chooser itself (no ?cat= in the URL).
-  if (!catId) {
+  // user is on the chooser itself (no filter in the URL).
+  if (!initialFilter) {
     const pickLink = document.querySelector('.menu a[href="./"]');
     if (pickLink) pickLink.setAttribute('aria-current', 'page');
   }
@@ -94,69 +84,188 @@ export function bootFindFlag() {
     .then((r) => r.json())
     .then((raw) => {
       const all = withLocalizedAliases(flagsGamePool(raw, includeAll));
-      if (!catId) {
+      if (!initialFilter) {
         renderChooser(all);
         chooserEl.hidden = false;
         return;
       }
-      const cat = categoryFromId(catId);
-      if (!cat) {
-        chooserEl.hidden = false;
+      const category = filterToCategory(initialFilter, t);
+      const targets = findTargets(all, category);
+      if (targets.length < 1) {
+        // The user landed on a URL whose intersection is empty (only
+        // possible via hand-edited `?f=…` mixes — the chooser disables
+        // Play when the live total is 0). Fall back to the chooser
+        // instead of starting a 0/0 game that can only end in give-up.
         renderChooser(all);
+        chooserEl.hidden = false;
         return;
       }
-      startGame(cat, all);
+      startGame(category, initialFilter, all);
     })
     .catch((err) => {
       document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
 
+  /**
+   * @param {import('../flags/group.js').Country[]} all
+   */
   function renderChooser(all) {
     const sectionsEl = document.getElementById('chooser-sections');
-    const allCats = [
-      ...CONTINENTS.map((n) => ({ id: `continent:${n}`, label: t(`variant.${continentKey(n)}`, n) })),
-      ...COLORS_FOR_RANDOM.map((c) => ({
-        id: `hasColor:${c}`,
-        label: t('game.has', 'Has {x}').replace('{x}', t(`color.${c}`, c)),
-      })),
-      ...MOTIFS_FOR_RANDOM.map((m) => ({
-        id: `hasMotif:${m}`,
-        label: t('game.has', 'Has {x}').replace('{x}', t(`motif.${m}`, m)),
-      })),
-    ];
-    const sections = [
-      { title: t('findFlag.sections.continents', 'Continents'), items: allCats.slice(0, CONTINENTS.length) },
-      { title: t('findFlag.sections.colors', 'Colors'), items: allCats.slice(CONTINENTS.length, CONTINENTS.length + COLORS_FOR_RANDOM.length) },
-      { title: t('findFlag.sections.motifs', 'Motifs'), items: allCats.slice(CONTINENTS.length + COLORS_FOR_RANDOM.length) },
-    ];
-    for (const s of sections) {
-      const sec = document.createElement('section');
-      sec.className = 'chooser-section';
+    sectionsEl.innerHTML = '';
+
+    const filter = emptyFilters();
+
+    // Each section's items are the same pills as the legacy chooser —
+    // continents/colors/motifs from the engine's RANDOM constants, with
+    // 0-count entries dropped so the chooser only ever offers playable
+    // tags. Status / "Other continent" deliberately stay out: keeping
+    // the chooser's tag inventory the same as before the refactor.
+    const sections = /** @type {const} */ ([
+      {
+        title: t('findFlag.sections.continents', 'Continents'),
+        group: /** @type {'continent'} */ ('continent'),
+        items: CONTINENTS.map((value) => ({
+          value: /** @type {string} */ (value),
+          count: all.filter((c) => c.continent === value).length,
+        })).filter((it) => it.count > 0),
+      },
+      {
+        title: t('findFlag.sections.colors', 'Colors'),
+        group: /** @type {'color'} */ ('color'),
+        items: COLORS_FOR_RANDOM.map((value) => ({
+          value,
+          count: all.filter((c) => (c.colors ?? []).includes(value)).length,
+        })).filter((it) => it.count > 0),
+      },
+      {
+        title: t('findFlag.sections.motifs', 'Motifs'),
+        group: /** @type {'motif'} */ ('motif'),
+        items: MOTIFS_FOR_RANDOM.map((value) => ({
+          value,
+          count: all.filter((c) => (c.motifs ?? []).includes(value)).length,
+        })).filter((it) => it.count > 0),
+      },
+    ]);
+
+    /** @type {Array<{ btn: HTMLButtonElement, group: 'continent' | 'color' | 'motif', value: string }>} */
+    const allPills = [];
+
+    for (const sec of sections) {
+      const secEl = document.createElement('section');
+      secEl.className = 'chooser-section';
       const h = document.createElement('h2');
-      h.textContent = s.title;
-      sec.appendChild(h);
+      h.textContent = sec.title;
+      secEl.appendChild(h);
       const wrap = document.createElement('div');
       wrap.className = 'chooser-pills';
-      for (const item of s.items) {
-        const cat = categoryFromId(item.id);
-        const count = findTargets(all, cat).length;
-        if (count === 0) continue;
-        const a = document.createElement('a');
-        a.className = 'find-pill';
-        a.href = `?cat=${encodeURIComponent(item.id)}`;
-        a.innerHTML = `<span>${item.label}</span><span class="find-pill-count">${count}</span>`;
-        wrap.appendChild(a);
+      for (const it of sec.items) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'pill';
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'pill-label';
+        labelSpan.textContent = pillLabel(sec.group, it.value, 'include', t);
+        const countSpan = document.createElement('span');
+        countSpan.className = 'pill-count';
+        countSpan.textContent = String(it.count);
+        btn.appendChild(labelSpan);
+        btn.appendChild(countSpan);
+        const group = sec.group;
+        const value = it.value;
+        btn.addEventListener('click', () => cyclePill(group, value, btn));
+        wrap.appendChild(btn);
+        allPills.push({ btn, group, value });
       }
-      sec.appendChild(wrap);
-      sectionsEl.appendChild(sec);
+      secEl.appendChild(wrap);
+      sectionsEl.appendChild(secEl);
     }
-    document.getElementById('find-random').addEventListener('click', () => {
-      const i = Math.floor(Math.random() * allCats.length);
-      window.location.search = `?cat=${encodeURIComponent(allCats[i].id)}`;
+
+    const playBar = document.getElementById('find-play-bar');
+    const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
+    const clearBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-clear'));
+    const countEl = document.getElementById('find-play-count');
+    const randomBtn = document.getElementById('find-random');
+    if (playBar) playBar.hidden = false;
+
+    function updateBar() {
+      let selCount = 0;
+      for (const k of /** @type {Array<keyof typeof filter>} */ (Object.keys(filter))) {
+        selCount += filter[k].include.size + filter[k].exclude.size;
+      }
+      if (selCount === 0) {
+        countEl.textContent = '';
+        playBtn.disabled = true;
+        clearBtn.hidden = true;
+        return;
+      }
+      const matchCount = all.filter((c) => matchesFilters(c, filter)).length;
+      countEl.textContent = t('findFlag.flagsMatch', '{n} flags').replace('{n}', String(matchCount));
+      // Min playable size is 1 — a single-flag mix is allowed (trivial
+      // but the user explicitly chose it). 0 disables Play so the user
+      // adjusts the selection rather than starting an unwinnable game.
+      playBtn.disabled = matchCount < 1;
+      clearBtn.hidden = false;
+    }
+
+    /**
+     * @param {'continent' | 'color' | 'motif'} group
+     * @param {string} value
+     * @param {HTMLButtonElement} btn
+     */
+    function cyclePill(group, value, btn) {
+      const g = filter[group];
+      if (g.include.has(value)) {
+        g.include.delete(value);
+        g.exclude.add(value);
+        btn.classList.remove('active');
+        btn.classList.add('exclude');
+      } else if (g.exclude.has(value)) {
+        g.exclude.delete(value);
+        btn.classList.remove('exclude');
+      } else {
+        g.include.add(value);
+        btn.classList.add('active');
+      }
+      updateBar();
+    }
+
+    playBtn.addEventListener('click', () => {
+      if (playBtn.disabled) return;
+      const params = new URLSearchParams({ f: serializeFilter(filter) });
+      window.location.search = `?${params.toString()}`;
     });
+
+    clearBtn.addEventListener('click', () => {
+      for (const k of /** @type {Array<keyof typeof filter>} */ (Object.keys(filter))) {
+        filter[k].include.clear();
+        filter[k].exclude.clear();
+      }
+      for (const { btn } of allPills) {
+        btn.classList.remove('active', 'exclude');
+      }
+      updateBar();
+    });
+
+    if (randomBtn) {
+      randomBtn.addEventListener('click', () => {
+        if (allPills.length === 0) return;
+        const pick = allPills[Math.floor(Math.random() * allPills.length)];
+        const f = emptyFilters();
+        f[pick.group].include.add(pick.value);
+        const params = new URLSearchParams({ f: serializeFilter(f) });
+        window.location.search = `?${params.toString()}`;
+      });
+    }
+
+    updateBar();
   }
 
-  function startGame(category, all) {
+  /**
+   * @param {import('../flags/engine.js').Category} category
+   * @param {import('../flags/flagsFilter.js').Filters} filter
+   * @param {import('../flags/group.js').Country[]} all
+   */
+  function startGame(category, filter, all) {
     const targets = findTargets(all, category);
     const pool = findPool(all);
     const targetCodes = new Set(targets.map((c) => c.code));
@@ -171,7 +280,7 @@ export function bootFindFlag() {
     const foundEl = document.getElementById('find-found');
     const giveUpEl = document.getElementById('give-up');
 
-    catEl.textContent = translateCategoryLabel(category, t);
+    catEl.textContent = category.label;
     updateCount();
 
     let matches = [];
@@ -307,23 +416,36 @@ export function bootFindFlag() {
       document.getElementById('final-time').textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
       document.getElementById('final-score-line').style.color = scoreColor(found / total);
 
-      const { best, isNew } = recordFindResult(
-        localStorage,
-        category.id,
-        { time: elapsed, found, total },
-        includeAll,
-      );
-      if (shouldFireFindFlagConfetti({ found, total, isNew })) launchConfetti();
+      // Only ranked plays — exactly one positive tag, no excludes — write
+      // to the best-score store. Mix plays share no leaderboard slot with
+      // each other (the URL encodes infinitely many combinations) so
+      // recording them would clutter the stats page with one-off entries.
+      const rankedId = rankedCategoryId(filter);
       const bestEl = document.getElementById('best');
-      bestEl.textContent =
-        `${t('findFlag.yourBest', 'Your best')}: ${best.found} / ${best.total} ${t('game.in', 'in')} ${formatTime(best.time)}`;
-      if (isNew) {
-        bestEl.appendChild(document.createTextNode(' '));
-        const badge = document.createElement('span');
-        badge.className = 'new-badge';
-        badge.textContent = t('game.newRecord', 'new record!');
-        bestEl.appendChild(badge);
+      let isNew = false;
+      if (rankedId !== null) {
+        const result = recordFindResult(
+          localStorage,
+          rankedId,
+          { time: elapsed, found, total },
+          includeAll,
+        );
+        isNew = result.isNew;
+        const best = result.best;
+        bestEl.textContent =
+          `${t('findFlag.yourBest', 'Your best')}: ${best.found} / ${best.total} ${t('game.in', 'in')} ${formatTime(best.time)}`;
+        if (isNew) {
+          bestEl.appendChild(document.createTextNode(' '));
+          const badge = document.createElement('span');
+          badge.className = 'new-badge';
+          badge.textContent = t('game.newRecord', 'new record!');
+          bestEl.appendChild(badge);
+        }
+      } else {
+        // .best:empty { display: none } in common.css hides the line.
+        bestEl.textContent = '';
       }
+      if (shouldFireFindFlagConfetti({ found, total, isNew })) launchConfetti();
 
       const missed = targets.filter((c) => !foundCodes.has(c.code));
       const missedEl = document.getElementById('find-missed');

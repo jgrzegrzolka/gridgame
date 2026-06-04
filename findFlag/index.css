@@ -16,20 +16,24 @@ body {
   margin: 0 0 20px;
   text-align: center;
 }
+/* Random is now a secondary shortcut next to the primary Play button
+ * in the sticky bar, so it stays text-link-sized rather than the big
+ * black pill it used to be. */
 .find-random {
   display: block;
-  margin: 0 auto 24px;
-  background: #1c1c1c;
-  color: #fff;
+  margin: 4px auto 12px;
+  background: none;
   border: none;
-  border-radius: 999px;
-  padding: 10px 22px;
+  color: var(--link-color);
   font: inherit;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
+  text-decoration: underline;
+  padding: 4px 8px;
 }
 .find-random:hover {
-  background: #333;
+  background: #f0f0f0;
+  border-radius: 4px;
 }
 .chooser-section {
   margin-bottom: 24px;
@@ -47,25 +51,84 @@ body {
   flex-wrap: wrap;
   gap: 8px;
 }
-.find-pill {
+/* Chooser pills use the shared .pill (common.css) for the include /
+ * exclude tristate visual language. Size and inner layout are local —
+ * the chooser is the page's primary surface so its pills are large
+ * enough for comfortable tapping, unlike the dense filter-bar pills on
+ * flagsdata. */
+.chooser-pills .pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 999px;
-  color: #1c1c1c;
-  text-decoration: none;
   font-size: 14px;
+  line-height: 1.4;
 }
-.find-pill:hover {
-  background: #f0f0f0;
-}
-.find-pill-count {
+.chooser-pills .pill-count {
   color: #999;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+}
+.chooser-pills .pill.active .pill-count {
+  color: #ccc;
+}
+.chooser-pills .pill.exclude .pill-count {
+  color: #c0392b;
+}
+
+/* Sticky Play bar — stays in view as the user scrolls through pill
+ * sections, so the live N-flags count and the commit button are
+ * always reachable. The negative horizontal margin bleeds the bar
+ * to the body's content edge (matches flagsdata's filter-bar bleed). */
+.find-play-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px -24px 0;
+  padding: 12px 24px;
+  background: #fafafa;
+  border-top: 1px solid #eee;
+  z-index: 5;
+}
+.find-clear {
+  font: inherit;
+  font-size: 13px;
+  background: none;
+  border: none;
+  color: var(--link-color);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px 6px;
+}
+.find-clear:hover {
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+.find-play-count {
+  flex: 1;
+  text-align: right;
+  font-size: 14px;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+}
+.find-play {
+  background: #1c1c1c;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.find-play:hover:not(:disabled) {
+  background: #333;
+}
+.find-play:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 .find-header {

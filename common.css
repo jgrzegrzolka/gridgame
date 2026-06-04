@@ -361,6 +361,42 @@ body::before {
   display: none;
 }
 
+/* Tristate filter pill — neutral / .active (include) / .exclude (none-of).
+ * Shared by flagsdata's filter bar and findFlag's chooser; consumers
+ * override font-size/padding to fit their context (chooser pills are
+ * tap-target sized, filter-bar pills are dense). The cycle itself is
+ * identical across pages — same color language for include (dark) and
+ * exclude (red with strikethrough), so the user reads them the same way
+ * regardless of which page surfaces the control. */
+.pill {
+  font: inherit;
+  font-size: 12px;
+  background: #fff;
+  color: #1c1c1c;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  padding: 3px 10px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.pill:hover {
+  background: #f0f0f0;
+}
+.pill.active {
+  background: #1c1c1c;
+  color: #fff;
+  border-color: #1c1c1c;
+}
+.pill.exclude {
+  background: #fff;
+  color: #c0392b;
+  border-color: #c0392b;
+  text-decoration: line-through;
+}
+.pill.exclude:hover {
+  background: #fdecea;
+}
+
 /* Give-up reveal — applied identically to every grid-based game so the
  * "this answer was shown to you, not earned" signal reads the same: red wash,
  * red outline, and 3 bounces. Requires .cell { position: relative } on the host. */

@@ -44,7 +44,7 @@
   },
   "findFlag": {
     "title": "Znajdź wszystkie flagi po kategorii — Yet Another Quiz",
-    "blurb": "Wybierz kategorię i nazwij każdą pasującą flagę.",
+    "blurb": "Wybierz kategorie i nazwij każdą pasującą flagę.",
     "statsTitle": "Znajdź flagę — Twoje statystyki",
     "statsHeading": "Statystyki Znajdź flagę",
     "typeCountryName": "Wpisz nazwę kraju…",
@@ -52,6 +52,10 @@
     "missed": "Pominięte:",
     "pickAnotherCategory": "Wybierz inną kategorię",
     "yourBest": "Twój najlepszy",
+    "play": "Zagraj",
+    "clear": "Wyczyść",
+    "flagsMatch": "{n} flag",
+    "notPrefix": "Bez ",
     "sections": {
       "continents": "Kontynenty",
       "colors": "Kolory",
