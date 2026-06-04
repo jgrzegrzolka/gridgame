@@ -1,4 +1,11 @@
 :root {
+  /* Pin every browser to light rendering regardless of the OS theme.
+   * Without this, browsers on dark-OS users auto-darken native widgets
+   * (scrollbars, form controls, default selection, autofill bg) while
+   * the page itself stays light — that mismatch is what made dark-OS
+   * users see an "ugly" half-dark UI. We don't ship a dark theme, so
+   * forcing light keeps everything consistent. */
+  color-scheme: light;
   --link-color: #660033;
   --page-top: 80px;
   /* Inward push for the chrome cluster on wide viewports so the buttons
