@@ -1023,12 +1023,17 @@ function emptyPreFilled() {
 }
 
 test('findUltimateAssignment: returns 81 distinct countries on an empty puzzle that passes the Hall check', () => {
+  // perCell=10 (not 9) + generous maxAttempts so Hall has enough breathing
+  // room and the random axis generator doesn't fail outright on an unlucky
+  // CI run. With perCell=9 some axis combinations (especially continent ×
+  // motif) leave the Hall check tight, and 50 attempts isn't always enough
+  // to roll a Hall-passing layout — this fired once in CI before the bump.
   const countries = denseSquarePool(
     ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
     COLORS_FOR_RANDOM,
-    9,
+    10,
   );
-  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 50 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 500 });
   /** @type {Country[][][][] | null} */
   const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries);
   if (!assignment) throw new Error('a solvable puzzle must yield a non-null assignment');
@@ -1112,7 +1117,10 @@ test('findUltimateAssignment: returns null when preFilled has burned the candida
   // that from outside the API without rebuilding the pool. Instead,
   // assert the simpler contract: a wildly over-seeded cell (every one
   // of its candidates planted somewhere else first) fails the solver.
-  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 50 });
+  // perCell stays at 9 here — the test deliberately exploits the tight
+  // pool — but maxAttempts is generous so the puzzle generator itself
+  // doesn't flake out on an unlucky axis roll.
+  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 500 });
   // Find a (br, bc) and steal all of its candidates into other cells'
   // preFilled slots whose row × col happens to also accept them.
   const target = { br: 0, bc: 0 };
