@@ -800,15 +800,93 @@ export function fillEmptyCellsForGiveUp(puzzle, solution, countries, random = Ma
 const WRONG_PICK_PENALTY = 3;
 const EMPTY_CELL_PENALTY = 10;
 const FIRST_TRY_BONUS = 2;
-const MAX_OBSCURITY_PER_CELL = 5;
+const MAX_PUZZLE_OBSCURITY_PER_CELL = 5;
+const MAX_COUNTRY_RARITY_PER_CELL = 4;
 
 /**
  * Cap the score at base + the maximum first-try and obscurity bonus a
  * 9-cell grid can earn. A clean run where every cell is filled on the
  * first try with a maximally-rare country (one that fits this exact
- * cell and no other) reaches the ceiling.
+ * cell and no other AND is intrinsically obscure as a flag) reaches
+ * the ceiling.
  */
-const GRID_SCORE_MAX = 100 + 9 * FIRST_TRY_BONUS + 9 * MAX_OBSCURITY_PER_CELL;
+const GRID_SCORE_MAX =
+  100
+  + 9 * FIRST_TRY_BONUS
+  + 9 * (MAX_PUZZLE_OBSCURITY_PER_CELL + MAX_COUNTRY_RARITY_PER_CELL);
+
+/**
+ * Country-rarity tiers. Two hand-curated sets; everything else falls
+ * through as "middle". The lists are kept here (not in countries.json)
+ * because rarity is "how we score it", not "what the country is" —
+ * the dataset stays a clean description of the world, scoring concerns
+ * live next to the scoring code. Move to a sibling JSON if these lists
+ * outgrow ~200 entries each.
+ *
+ * Curation intent (good-enough v1, expect Jan to tweak as he plays):
+ *   WELL_KNOWN: large or globally-iconic countries whose flag a casual
+ *               player would recognise. The "you knew this" bucket.
+ *   OBSCURE:    micro-states + small-population countries + lesser-known
+ *               territories whose flags genuinely surprise. The "you
+ *               had to know this" bucket.
+ *   Everything else: middle tier (default +2).
+ */
+export const WELL_KNOWN_COUNTRIES = new Set([
+  // Europe
+  'gb', 'fr', 'de', 'it', 'es', 'pt', 'nl', 'be', 'ch', 'at',
+  'se', 'no', 'dk', 'fi', 'ie', 'gr', 'pl', 'cz', 'hu', 'ru',
+  'ua', 'ro',
+  // Americas
+  'us', 'ca', 'mx', 'br', 'ar', 'cl', 'co',
+  // Asia
+  'cn', 'jp', 'kr', 'in', 'id', 'th', 'vn', 'ph', 'my', 'sg',
+  'tr', 'sa', 'ae', 'il', 'ir', 'pk',
+  // Africa
+  'eg', 'za', 'ng', 'ke', 'ma',
+  // Oceania
+  'au', 'nz',
+]);
+export const OBSCURE_COUNTRIES = new Set([
+  // Micro-Europe
+  'ad', 'mc', 'sm', 'va', 'li', 'mt', 'gi', 'im', 'je', 'gg',
+  'fo', 'ax', 'sj',
+  // Pacific micro-states + remote territories
+  'nr', 'tv', 'pw', 'fm', 'mh', 'ki', 'sb', 'vu', 'ws', 'to',
+  'nu', 'ck', 'pn', 'wf', 'nf', 'cx', 'cc', 'pf', 'nc',
+  // Indian Ocean
+  'km', 'mu', 'sc', 'mv', 'io', 'tf', 'yt', 're',
+  // Caribbean — many small island states / territories with similar
+  // Union-Jack-derived flags, often hard to tell apart.
+  'ai', 'ag', 'bb', 'dm', 'gd', 'kn', 'lc', 'vc', 'tt', 'ms',
+  'vg', 'vi', 'ky', 'bq', 'sx', 'cw', 'aw', 'bl', 'mq', 'gp',
+  'pm', 'sh', 'tc',
+  // Africa — small island states + landlocked/lesser-known
+  'cv', 'st', 'sz', 'ls', 'dj', 'gm', 'gw', 'er', 'ss', 'cf',
+  'td', 'ne', 'bf', 'tg', 'bj', 'gn',
+  // Asia — small / often-confused flags
+  'bn', 'tl', 'bt', 'la',
+  // Americas — Central American + Guianas
+  'bz', 'gy', 'sr',
+  // Other oddities
+  'aq',
+]);
+
+/**
+ * Map a country to its rarity bonus, summed into the per-pick obscurity
+ * contribution alongside the puzzle-relative bonus. Three tiers:
+ *
+ *   well-known → +0  ("you knew this")
+ *   middle     → +2  (default)
+ *   obscure    → +4  ("you had to know this")
+ *
+ * @param {Pick<Country, 'code'>} country
+ * @returns {number}
+ */
+export function countryRarityBonus(country) {
+  if (WELL_KNOWN_COUNTRIES.has(country.code)) return 0;
+  if (OBSCURE_COUNTRIES.has(country.code)) return MAX_COUNTRY_RARITY_PER_CELL;
+  return 2;
+}
 
 /**
  * @param {Object} state

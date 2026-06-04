@@ -14,6 +14,8 @@ import {
   validateCell,
   puzzleMixesCategoryFamilies,
   sharedPuzzlePairs,
+  WELL_KNOWN_COUNTRIES,
+  OBSCURE_COUNTRIES,
 } from './grid.js';
 import { CONTINENTS } from './group.js';
 import { PUZZLE_1, PUZZLE_2, PUZZLE_3, ARCHIVE } from '../flagGrid/puzzles.js';
@@ -356,4 +358,31 @@ test('generateRandomPuzzle succeeds with the real countries.json under several s
     assert.equal(puzzle.rows.length, 3);
     assert.equal(puzzle.cols.length, 3);
   }
+});
+
+// The country-rarity bonus tiers in flags/grid.js are two hand-curated
+// Sets — the kind of data that drifts silently. The behavior tests in
+// grid.test.js pin "this code returns N", but only these two cross-checks
+// against countries.json can catch the curation bugs themselves:
+//
+//   - a code that ends up in both Sets (well-known wins by check order,
+//     so an obscure country accidentally tagged well-known scores 0
+//     instead of 4 — silent under all other tests)
+//   - a typoed or stale code that doesn't match any real country
+//     (sits dead in the Set forever, scoring nothing)
+test('WELL_KNOWN_COUNTRIES and OBSCURE_COUNTRIES are disjoint', () => {
+  const overlap = [...WELL_KNOWN_COUNTRIES].filter((c) => OBSCURE_COUNTRIES.has(c));
+  assert.deepEqual(overlap, [], `codes in both rarity sets: ${overlap.join(', ')}`);
+});
+
+test('every code in WELL_KNOWN_COUNTRIES / OBSCURE_COUNTRIES exists in countries.json', () => {
+  const known = new Set(COUNTRIES.map((c) => c.code));
+  const missing = [];
+  for (const code of WELL_KNOWN_COUNTRIES) {
+    if (!known.has(code)) missing.push(`${code} (WELL_KNOWN)`);
+  }
+  for (const code of OBSCURE_COUNTRIES) {
+    if (!known.has(code)) missing.push(`${code} (OBSCURE)`);
+  }
+  assert.deepEqual(missing, [], `rarity-set codes not in countries.json: ${missing.join(', ')}`);
 });
