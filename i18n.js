@@ -163,6 +163,15 @@ export function applyStringsToDocument(strings, lang, doc) {
  * current document. Returns the language code that was applied so callers
  * can configure language-toggle UI without re-running resolveLang.
  *
+ * English (DEFAULT_LANG) is loaded just like any other language. Earlier
+ * the function returned early for English on the assumption that HTML
+ * `data-i18n` fallbacks were already in English so no fetch was needed —
+ * but JS-runtime `t()` callers like `t('motif.star-or-moon', 'star-or-moon')`
+ * pass the raw id as a fallback, so an unloaded English table surfaced
+ * the dashed id ("Has star-or-moon") instead of the human-readable form
+ * ("Has star or moon"). Always loading the language file makes the i18n
+ * table the single source of truth in both languages.
+ *
  * @param {string} [base] - URL prefix where the `i18n/` directory lives
  * @returns {Promise<string>}
  */
@@ -170,9 +179,6 @@ export async function bootI18n(base = './') {
   if (!I18N_ENABLED) return DEFAULT_LANG;
   const stored = window.localStorage.getItem(LANG_STORAGE_KEY);
   const lang = resolveLang(stored, window.navigator.language);
-  if (lang === DEFAULT_LANG) {
-    return lang;
-  }
   const res = await fetch(`${base}i18n/${lang}.json`);
   if (!res.ok) return lang;
   const strings = await res.json();
