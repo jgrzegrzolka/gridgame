@@ -26,7 +26,7 @@ const COLORS = [
 export function launchConfetti(options = {}) {
   const {
     doc = document,
-    count = 120,
+    count = 240,
     duration = 11000,
     rng = Math.random,
     prefersReducedMotion = detectPrefersReducedMotion(doc),
@@ -43,8 +43,8 @@ export function launchConfetti(options = {}) {
     const startLeft = rng() * 100;
     const drift = (rng() - 0.5) * 240;
     const rot = rng() * 720 - 360;
-    const dur = 4800 + rng() * 3600;
-    const delay = rng() * 2000;
+    const dur = 2400 + rng() * 1800;
+    const delay = rng() * 6800;
     piece.style.setProperty('--start-left', `${startLeft}vw`);
     piece.style.setProperty('--drift', `${drift}px`);
     piece.style.setProperty('--rot', `${rot}deg`);
