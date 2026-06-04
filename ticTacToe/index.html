@@ -41,11 +41,14 @@
     </nav>
 
     <section id="lobby" class="lobby" hidden>
-      <div class="variant-toggle" role="group" aria-label="Variant">
-        <span class="variant-toggle-btn is-active" aria-current="page" data-i18n="ttt.variant3x3">3×3</span>
-        <a class="variant-toggle-btn" href="9x9/" data-i18n="ttt.variant9x9">9×9</a>
+      <div class="lobby-header">
+        <h1 class="lobby-title" data-i18n="ttt.lobbyTitle">Play with a friend</h1>
+        <a class="variant-switch" href="9x9/" data-active="3x3" aria-label="Switch to 9×9" data-i18n-attr="aria-label:ttt.switchTo9x9">
+          <span class="variant-switch-side" data-i18n="ttt.variant3x3">3×3</span>
+          <span class="variant-switch-track" aria-hidden="true"><span class="variant-switch-thumb"></span></span>
+          <span class="variant-switch-side" data-i18n="ttt.variant9x9">9×9</span>
+        </a>
       </div>
-      <h1 class="lobby-title" data-i18n="ttt.lobbyTitle">Play with a friend</h1>
       <button type="button" class="lobby-btn" id="create-room" data-i18n="ttt.createRoom">Create a new room</button>
       <p class="lobby-or" data-i18n="ttt.or">— or —</p>
       <form id="join-form" class="join-form">

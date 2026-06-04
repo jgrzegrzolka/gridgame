@@ -74,6 +74,8 @@
     "lobbyTitle": "Zagraj ze znajomym",
     "variant3x3": "3×3",
     "variant9x9": "9×9",
+    "switchTo3x3": "Przełącz na 3×3",
+    "switchTo9x9": "Przełącz na 9×9",
     "createRoom": "Utwórz nowy pokój",
     "or": "— lub —",
     "roomCodePlaceholder": "KOD POKOJU",
