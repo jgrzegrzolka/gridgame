@@ -419,3 +419,113 @@ export function filterToCategory(f, translate) {
     predicate: (c) => matchesFilters(c, f),
   };
 }
+
+/**
+ * Weighted pick for "how many pills should a random mix include":
+ * 30% chance of 1, 50% chance of 2, 20% chance of 3. Biased toward 2
+ * because that's where mix mode actually shines — three-way
+ * intersections often collapse to a tiny set, and single-pill plays
+ * are exactly what the user can get by clicking a pill themselves.
+ *
+ * @param {() => number} rng
+ * @returns {1 | 2 | 3}
+ */
+function pickMixSize(rng) {
+  const r = rng();
+  if (r < 0.3) return 1;
+  if (r < 0.8) return 2;
+  return 3;
+}
+
+/**
+ * Pick `n` distinct entries from `arr` without replacement, in random
+ * order. Used to sample group keys for the mix picker; small-n so a
+ * splice-based loop is fine.
+ *
+ * @template T
+ * @param {T[]} arr
+ * @param {number} n
+ * @param {() => number} rng
+ * @returns {T[]}
+ */
+function pickN(arr, n, rng) {
+  const remaining = arr.slice();
+  /** @type {T[]} */
+  const out = [];
+  for (let i = 0; i < n && remaining.length > 0; i++) {
+    const j = Math.floor(rng() * remaining.length);
+    out.push(remaining[j]);
+    remaining.splice(j, 1);
+  }
+  return out;
+}
+
+/**
+ * Generate a random filter for the chooser's "Random" button. Pulls
+ * 1-3 distinct groups from the available pill pool, picks one value
+ * per group, and marks it include — always when only one pill is
+ * chosen (which keeps single-pill randoms ranked, matching the
+ * pre-mix behavior), otherwise mostly include with a small
+ * `excludeProbability` chance of flipping to exclude per pill.
+ *
+ * Retries up to `maxAttempts` times if the resulting intersection is
+ * too small to be fun; falls back to a single-include pill when no
+ * mix above `minIntersection` shows up. The fallback also covers the
+ * degenerate "pillPool is empty" case (returns an empty filter then).
+ *
+ * Why "at most one pill per group": continents are mutually
+ * exclusive (Africa AND Europe = empty), and multi-include within
+ * one group widens (OR-semantics among values) rather than tightens
+ * — neither makes for an interesting random mix. Cross-group AND is
+ * the move.
+ *
+ * @param {Array<{ group: keyof Filters, value: string }>} pillPool
+ * @param {Country[]} all
+ * @param {{
+ *   rng?: () => number,
+ *   minIntersection?: number,
+ *   maxAttempts?: number,
+ *   excludeProbability?: number,
+ * }} [options]
+ * @returns {Filters}
+ */
+export function pickRandomMix(pillPool, all, options = {}) {
+  const {
+    rng = Math.random,
+    minIntersection = 3,
+    maxAttempts = 20,
+    excludeProbability = 0.2,
+  } = options;
+
+  /** @type {Map<keyof Filters, Array<{ group: keyof Filters, value: string }>>} */
+  const byGroup = new Map();
+  for (const p of pillPool) {
+    const bucket = byGroup.get(p.group);
+    if (bucket) bucket.push(p);
+    else byGroup.set(p.group, [p]);
+  }
+  const groups = [...byGroup.keys()];
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const wantN = Math.min(pickMixSize(rng), groups.length);
+    const chosenGroups = pickN(groups, wantN, rng);
+    const f = emptyFilters();
+    for (const g of chosenGroups) {
+      const groupPills = /** @type {Array<{ group: keyof Filters, value: string }>} */ (
+        byGroup.get(g)
+      );
+      const pill = groupPills[Math.floor(rng() * groupPills.length)];
+      const useExclude = wantN >= 2 && rng() < excludeProbability;
+      f[g][useExclude ? 'exclude' : 'include'].add(pill.value);
+    }
+    const count = all.filter((c) => matchesFilters(c, f)).length;
+    if (count >= minIntersection) return f;
+  }
+
+  const fallback = emptyFilters();
+  if (pillPool.length > 0) {
+    const pick = pillPool[Math.floor(rng() * pillPool.length)];
+    fallback[pick.group].include.add(pick.value);
+  }
+  return fallback;
+}

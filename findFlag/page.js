@@ -18,6 +18,7 @@ import {
   rankedCategoryId,
   filterToCategory,
   pillLabel,
+  pickRandomMix,
 } from '../flags/findFlag.js';
 import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
@@ -249,9 +250,11 @@ export function bootFindFlag() {
     if (randomBtn) {
       randomBtn.addEventListener('click', () => {
         if (allPills.length === 0) return;
-        const pick = allPills[Math.floor(Math.random() * allPills.length)];
-        const f = emptyFilters();
-        f[pick.group].include.add(pick.value);
+        // Strip the DOM-bound `btn` field — pickRandomMix only needs the
+        // (group, value) shape, and decoupling here keeps the helper
+        // testable against pure data.
+        const pool = allPills.map(({ group, value }) => ({ group, value }));
+        const f = pickRandomMix(pool, all);
         const params = new URLSearchParams({ f: serializeFilter(f) });
         window.location.search = `?${params.toString()}`;
       });
