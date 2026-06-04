@@ -879,7 +879,7 @@ const OBSCURE_COUNTRIES = new Set([
  *   middle     → +2  (default)
  *   obscure    → +4  ("you had to know this")
  *
- * @param {Country} country
+ * @param {Pick<Country, 'code'>} country
  * @returns {number}
  */
 export function countryRarityBonus(country) {
