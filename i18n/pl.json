@@ -44,6 +44,7 @@
   },
   "findFlag": {
     "title": "Znajdź wszystkie flagi po kategorii — Yet Another Quiz",
+    "heading": "Znajdź flagę",
     "blurb": "Wybierz kategorie i nazwij każdą pasującą flagę.",
     "statsTitle": "Znajdź flagę — Twoje statystyki",
     "statsHeading": "Statystyki Znajdź flagę",
