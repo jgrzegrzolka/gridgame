@@ -227,20 +227,6 @@ body.picker-open {
   border-color: var(--link-color);
   box-shadow: 0 0 0 1px var(--link-color);
 }
-.archive-tile-today {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: var(--link-color);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 999px;
-  line-height: 1;
-}
 .archive-tile-num {
   font-size: 20px;
   font-weight: 500;

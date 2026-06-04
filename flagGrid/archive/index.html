@@ -104,13 +104,6 @@
           a.appendChild(scoreEl);
         }
 
-        if (isToday) {
-          const todayBadge = document.createElement('span');
-          todayBadge.className = 'archive-tile-today';
-          todayBadge.textContent = t('grid.today', 'Today');
-          a.appendChild(todayBadge);
-        }
-
         gridEl.appendChild(a);
       }
       }
