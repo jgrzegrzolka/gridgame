@@ -799,19 +799,40 @@ export function fillEmptyCellsForGiveUp(puzzle, solution, countries, random = Ma
 
 const WRONG_PICK_PENALTY = 3;
 const EMPTY_CELL_PENALTY = 10;
+const FIRST_TRY_BONUS = 2;
+/**
+ * Cap the score at base + the maximum first-try bonus a 9-cell grid can
+ * earn. That ceiling becomes the new "perfect run" target (was a flat 100);
+ * a clean 9/9 with zero mistakes on every cell now lands at 118.
+ */
+const GRID_SCORE_MAX = 100 + 9 * FIRST_TRY_BONUS;
 
 /**
  * @param {Object} state
- * @param {number} state.filledCount
- * @param {number} state.wrongCount
+ * @param {number} state.filledCount  Cells the player committed a valid country to.
+ * @param {number} state.wrongCount   Total wrong picks across the round.
+ * @param {number} [state.firstTryCount]  Cells filled correctly without ever being wrong.
+ *                                        Defaults to 0 for callers/state predating the
+ *                                        first-try field (old localStorage rounds).
  * @returns {number}
  */
-export function computeGridScore({ filledCount, wrongCount }) {
+export function computeGridScore({ filledCount, wrongCount, firstTryCount = 0 }) {
   if (filledCount === 0) return 0;
   const emptyCount = 9 - filledCount;
-  const raw = 100 - WRONG_PICK_PENALTY * wrongCount - EMPTY_CELL_PENALTY * emptyCount;
-  return Math.max(0, Math.min(100, raw));
+  const raw =
+    100
+    - WRONG_PICK_PENALTY * wrongCount
+    - EMPTY_CELL_PENALTY * emptyCount
+    + FIRST_TRY_BONUS * firstTryCount;
+  return Math.max(0, Math.min(GRID_SCORE_MAX, raw));
 }
+
+/**
+ * Top achievable score for a clean run. Exposed so the UI can position
+ * displayed scores against the ceiling (e.g. tinting on a 0..MAX scale)
+ * instead of hard-coding 100.
+ */
+export const GRID_MAX_SCORE = GRID_SCORE_MAX;
 
 /**
  * @typedef {Object} GridState
@@ -819,6 +840,12 @@ export function computeGridScore({ filledCount, wrongCount }) {
  * @property {number} wrongCount
  * @property {boolean} gaveUp
  * @property {Array<string | null>} revealedCodes
+ * @property {boolean[]} [tarnishedCells]  9-cell mask, true at any index where the
+ *                                          player wrong-picked before getting it right.
+ *                                          Used to award the first-try bonus on cells
+ *                                          that stayed clean. Missing on rounds saved
+ *                                          before this field existed; loadGridState
+ *                                          fills it in as all-false.
  */
 
 /**
@@ -859,12 +886,37 @@ export function loadGridState(store, key) {
           Array.isArray(parsed.revealedCodes) && parsed.revealedCodes.length === 9
             ? parsed.revealedCodes.map((/** @type {unknown} */ p) => (typeof p === 'string' ? p : null))
             : Array(9).fill(null),
+        // Pre-first-try saves missed this field; default to "no cell was
+        // tarnished". That under-estimates wrongs on those legacy rounds
+        // but is the only safe default — we can't reconstruct per-cell
+        // wrong history from the wrongCount total.
+        tarnishedCells:
+          Array.isArray(parsed.tarnishedCells) && parsed.tarnishedCells.length === 9
+            ? parsed.tarnishedCells.map((/** @type {unknown} */ b) => b === true)
+            : Array(9).fill(false),
       };
     }
     return null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Count cells the player got right on the first attempt — i.e. filled
+ * cells whose tarnished bit is false. Pure, exported so callers can use
+ * the same number for both score computation and result-screen displays.
+ *
+ * @param {Pick<GridState, 'picks' | 'tarnishedCells'>} state
+ * @returns {number}
+ */
+export function firstTryCount(state) {
+  const tarnished = state.tarnishedCells ?? Array(9).fill(false);
+  let n = 0;
+  for (let i = 0; i < 9; i++) {
+    if (state.picks[i] && !tarnished[i]) n++;
+  }
+  return n;
 }
 
 /**
