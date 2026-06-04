@@ -32,6 +32,10 @@ import {
   obscurityBonus,
   countryRarityBonus,
   pickObscurity,
+  cellScore,
+  CELL_BASE,
+  EMPTY_CELL_PENALTY,
+  FIRST_TRY_BONUS,
   loadGridState,
   saveGridState,
   gridBestKey,
@@ -1246,23 +1250,49 @@ test('solutionState.complete is false when one cell is invalid even if all are f
   assert.equal(state.cells[2][2].valid, false);
 });
 
-test('computeGridScore returns 100 for a clean 9/9 solve with no first-try bonuses claimed', () => {
-  // firstTryCount defaults to 0 — covers legacy callers that don't pass the field.
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0 }), 100);
+test('cellScore: filled first-try sums base + first-try + obscurity', () => {
+  // A first-try cell earns the base, the first-try bonus, and any obscurity
+  // the pick warrants. This is the per-cell ceiling shape.
+  assert.equal(cellScore({ filled: true, firstTry: true, obscurity: 0 }), CELL_BASE + FIRST_TRY_BONUS);
+  assert.equal(cellScore({ filled: true, firstTry: true, obscurity: 7 }), CELL_BASE + FIRST_TRY_BONUS + 7);
 });
 
-test('computeGridScore awards +2 per first-try cell, on top of the 100 base', () => {
-  // Clean run, every cell on first attempt → 100 + 9*2 = 118 (the new max).
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 9 }), 118);
-  // Clean fill but only 4 cells were first-try (other 5 took a wrong then a right).
-  // The 5 wrongs cost 15; the 4 first-try bonuses earn 8; net 100 - 15 + 8 = 93.
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 5, firstTryCount: 4 }), 93);
+test('cellScore: tarnished cell forfeits the first-try bonus (the per-cell wrong penalty)', () => {
+  // A tarnished cell still earns the base and any obscurity bonus, but
+  // misses the +2 first-try kicker. That missing +2 IS the penalty for
+  // guessing — there is no separate aggregate wrong-pick deduction.
+  assert.equal(cellScore({ filled: true, firstTry: false, obscurity: 7 }), CELL_BASE + 7);
 });
 
-test('computeGridScore caps at GRID_MAX_SCORE even when firstTryCount somehow exceeds 9', () => {
-  // Belt-and-braces — there's no path in the engine that produces firstTryCount > 9
-  // but the clamp protects future callers / corrupted save data.
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 99 }), 199);
+test('cellScore: an empty/give-up cell pays -EMPTY_CELL_PENALTY regardless of obscurity', () => {
+  // Obscurity is irrelevant for cells the player didn't actually fill —
+  // only the penalty applies. Same outcome whether firstTry happens to be
+  // true (defensive — empty + tarnished bit doesn't make sense but
+  // shouldn't break).
+  assert.equal(cellScore({ filled: false, firstTry: false, obscurity: 0 }), -EMPTY_CELL_PENALTY);
+  assert.equal(cellScore({ filled: false, firstTry: true, obscurity: 99 }), -EMPTY_CELL_PENALTY);
+});
+
+test('computeGridScore: sums per-cell contributions across the 9 cells', () => {
+  // 3 filled (FR first-try, VA tarnished, JP first-try) + 6 empty.
+  // FR: fit-1 Europe×UN-member, well-known → cellScore = 10 + 2 + 8 + 0 = 20
+  // VA: fit-1 Europe×UN-observer, obscure → cellScore = 10 + 0 + 8 + 12 = 30
+  // JP: fit-1 Asia×UN-member, well-known → cellScore = 10 + 2 + 8 + 0 = 20
+  // Empty cells × 6 → -EMPTY_CELL_PENALTY * 6 = -30
+  // Total: 20 + 30 + 20 - 30 = 40
+  /** @type {(import('./grid.js').Country | null)[]} */
+  const picks = [FR, VA, null, null, JP, null, null, null, null];
+  const tarnishedCells = [false, true, false, false, false, false, false, false, false];
+  assert.equal(computeGridScore({ picks, tarnishedCells, puzzle: PUZZLE }), 40);
+});
+
+test('computeGridScore: clamps a deeply-negative total to 0 (give-up with nothing filled)', () => {
+  // 9 empty cells = -EMPTY_CELL_PENALTY * 9 = -45 before clamp. Player
+  // shouldn't see a negative score; floor at 0.
+  /** @type {(import('./grid.js').Country | null)[]} */
+  const picks = Array(9).fill(null);
+  const tarnishedCells = Array(9).fill(false);
+  assert.equal(computeGridScore({ picks, tarnishedCells, puzzle: PUZZLE }), 0);
 });
 
 test('countryRarityBonus: well-known country pays no bonus — "you knew this"', () => {
@@ -1272,35 +1302,26 @@ test('countryRarityBonus: well-known country pays no bonus — "you knew this"',
   assert.equal(countryRarityBonus({ code: 'jp' }), 0);
 });
 
-test('countryRarityBonus: obscure country pays the max +4 — "you had to know this"', () => {
-  assert.equal(countryRarityBonus({ code: 'va' }), 4); // Vatican
-  assert.equal(countryRarityBonus({ code: 'tv' }), 4); // Tuvalu
-  assert.equal(countryRarityBonus({ code: 'km' }), 4); // Comoros
+test('countryRarityBonus: obscure country pays the max +12 — "you had to know this"', () => {
+  // The 12-point gap between well-known (0) and obscure (12) is the
+  // primary axis of the "clever pick" signal — wide on purpose, so
+  // Poland vs Cocos for the same cell is a clear swing.
+  assert.equal(countryRarityBonus({ code: 'va' }), 12); // Vatican
+  assert.equal(countryRarityBonus({ code: 'tv' }), 12); // Tuvalu
+  assert.equal(countryRarityBonus({ code: 'km' }), 12); // Comoros
 });
 
-test('countryRarityBonus: anything not in either curated set defaults to the +2 middle tier', () => {
+test('countryRarityBonus: anything not in either curated set defaults to the +4 middle tier', () => {
   // A made-up code never appears in either set, so it lands in the
   // default bucket. Same outcome a brand-new country gets when added
   // to countries.json before the curator gets to it.
-  assert.equal(countryRarityBonus({ code: 'xx-not-real' }), 2);
+  assert.equal(countryRarityBonus({ code: 'xx-not-real' }), 4);
 });
 
-test('GRID_MAX_SCORE is 100 base + 9 first-try (×2) + 9 obscurity-per-cell (×(5+4))', () => {
-  // Per-cell obscurity tops out at 5 (puzzle-relative) + 4 (country-rarity) = 9.
-  // 100 + 18 + 81 = 199. The ceiling moves with both bonus dimensions, so this
-  // test pins the ceiling explicitly and the assertion below cross-checks.
-  assert.equal(GRID_MAX_SCORE, 199);
-});
-
-test('computeGridScore adds the obscurityTotal directly, no per-cell math', () => {
-  // The page accumulates obscurityBonus(countValidCells(...)) per pick;
-  // scoring just trusts that sum.
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, obscurityTotal: 20 }), 120);
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 9, obscurityTotal: 20 }), 138);
-});
-
-test('computeGridScore caps obscurityTotal contribution at the GRID_MAX_SCORE ceiling', () => {
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 9, obscurityTotal: 9999 }), 199);
+test('GRID_MAX_SCORE is 9 × (CELL_BASE + FIRST_TRY_BONUS + max puzzle obscurity + max country rarity)', () => {
+  // Per-cell ceiling: 10 + 2 + 8 + 12 = 32. Grid ceiling: 9 × 32 = 288.
+  // Pins the new top of the score scale.
+  assert.equal(GRID_MAX_SCORE, 288);
 });
 
 test('firstTryCount: counts filled cells whose tarnished bit is false', () => {
@@ -1344,17 +1365,18 @@ test('countValidCells: a country with no continent in the puzzle fits 0 cells', 
   assert.equal(countValidCells(PUZZLE, AQ), 0);
 });
 
-test('obscurityBonus: fits-1 cell pays the maximum (+5)', () => {
-  assert.equal(obscurityBonus(1), 5);
+test('obscurityBonus: fits-1 cell pays the maximum (+8)', () => {
+  assert.equal(obscurityBonus(1), 8);
 });
 
 test('obscurityBonus: the table is monotonically non-increasing — rarer cells never pay less', () => {
   // Pin the contract so future tuning preserves the "rarer = higher reward"
   // shape; locks the specific numbers too.
-  assert.equal(obscurityBonus(1), 5);
-  assert.equal(obscurityBonus(2), 3);
-  assert.equal(obscurityBonus(3), 2);
-  assert.equal(obscurityBonus(4), 1);
+  assert.equal(obscurityBonus(1), 8);
+  assert.equal(obscurityBonus(2), 5);
+  assert.equal(obscurityBonus(3), 3);
+  assert.equal(obscurityBonus(4), 2);
+  assert.equal(obscurityBonus(5), 1);
   assert.equal(obscurityBonus(9), 1);
 });
 
@@ -1364,24 +1386,20 @@ test('obscurityBonus: 0 or negative fit-count returns 0 — safe default for the
 });
 
 test('pickObscurity: sums the puzzle-fit bonus and the country-rarity bonus', () => {
-  // France: fits 1 cell of PUZZLE → 5; well-known → 0 → total 5.
-  assert.equal(pickObscurity(PUZZLE, FR), 5);
+  // France: fits 1 cell of PUZZLE → 8; well-known → 0 → total 8.
+  assert.equal(pickObscurity(PUZZLE, FR), 8);
 });
 
-test('pickObscurity: a fits-1, OBSCURE country pays the per-cell maximum (5 + 4 = 9)', () => {
+test('pickObscurity: a fits-1, OBSCURE country pays the per-cell maximum (8 + 12 = 20)', () => {
   // Vatican fits only (Europe × UN observer) and is in OBSCURE_COUNTRIES.
-  // This is the per-cell ceiling that GRID_MAX_SCORE budgets for.
-  assert.equal(pickObscurity(PUZZLE, VA), 9);
+  // This is the per-cell obscurity ceiling that GRID_MAX_SCORE budgets for.
+  assert.equal(pickObscurity(PUZZLE, VA), 20);
 });
 
-test('pickObscurity: a fits-many, middle-tier country pays a modest amount', () => {
-  // A country fitting 4 cells of a hypothetical puzzle pays obscurityBonus(4) = 1;
-  // a middle-tier code adds +2; total 3. Sanity check that low-fit countries
-  // also stack correctly with rarity.
+test('pickObscurity: a fits-1 middle-tier country stacks both bonuses (8 + 4 = 12)', () => {
+  // Middle tier is the default; this pins the layering.
   const middle = country({ code: 'xx', name: 'Middle', continent: 'Europe', statehood: 'un_member' });
-  const fitOne = pickObscurity(PUZZLE, middle); // fits Europe×UN-member only
-  // obscurityBonus(1) = 5, countryRarityBonus(middle) = 2 → 7.
-  assert.equal(fitOne, 7);
+  assert.equal(pickObscurity(PUZZLE, middle), 12);
 });
 
 test('firstTryCount: missing tarnishedCells (legacy save) treats every filled cell as first-try', () => {
@@ -1394,32 +1412,64 @@ test('firstTryCount: missing tarnishedCells (legacy save) treats every filled ce
   assert.equal(firstTryCount(state), 4);
 });
 
-test('computeGridScore deducts 3 points per wrong pick when fully solved', () => {
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 1 }), 97);
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 3 }), 91);
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 10 }), 70);
+test('computeGridScore: a partial fill nets filled-cell payouts against empty-cell penalties', () => {
+  // 5 filled first-try (FR/VA/JP/HK/KE on cells that fit them) + 4 empty.
+  // Each filled-correct cell pays at least CELL_BASE + FIRST_TRY_BONUS = 12,
+  // plus obscurity from the pick. Each empty pays -EMPTY_CELL_PENALTY = -5.
+  // Layout (row-major):
+  //   FR Europe×UN  (fits 1)          → 10 + 2 + 8 + 0 = 20
+  //   VA Europe×UN-observer (fits 1, obscure) → 10 + 2 + 8 + 12 = 32
+  //   GL Europe×territory (fits 1)    → 10 + 2 + 8 + 4 = 24 (middle)
+  //   JP Asia×UN (fits 1)             → 10 + 2 + 8 + 0 = 20 (well-known)
+  //   HK Asia×territory (fits 1)      → 10 + 2 + 8 + 4 = 24 (middle)
+  //   null × 4                        → -5 × 4 = -20
+  // Filled: 20 + 32 + 24 + 20 + 24 = 120; empty: -20; total: 100.
+  /** @type {(import('./grid.js').Country | null)[]} */
+  const picks = [FR, VA, GL, JP, HK, null, null, null, null];
+  const tarnishedCells = Array(9).fill(false);
+  assert.equal(computeGridScore({ picks, tarnishedCells, puzzle: PUZZLE }), 100);
 });
 
-test('computeGridScore deducts 10 points per empty cell — heavier than a wrong', () => {
-  assert.equal(computeGridScore({ filledCount: 8, wrongCount: 0 }), 90);
-  assert.equal(computeGridScore({ filledCount: 5, wrongCount: 0 }), 60);
-  assert.equal(computeGridScore({ filledCount: 1, wrongCount: 0 }), 20);
+test('computeGridScore: tarnished cells lose the first-try bonus but still earn base + obscurity', () => {
+  // Same FR placement, two scenarios.
+  /** @type {(import('./grid.js').Country | null)[]} */
+  const picks = [FR, null, null, null, null, null, null, null, null];
+  const firstTry = computeGridScore({ picks, tarnishedCells: Array(9).fill(false), puzzle: PUZZLE });
+  const tarnishedArr = [true, false, false, false, false, false, false, false, false];
+  const tarnished = computeGridScore({ picks, tarnishedCells: tarnishedArr, puzzle: PUZZLE });
+  // First-try: 10 + 2 + 8 + 0 = 20; 8 empties = -40; clamps to 0.
+  // Tarnished: 10 + 0 + 8 + 0 = 18; 8 empties = -40; clamps to 0.
+  // Both clamp; we want a non-clamped variant to see the gap — fill 8 more
+  // first-try cells with a fits-many country so penalty doesn't eat it.
+  /** @type {(import('./grid.js').Country | null)[]} */
+  const padded = [FR, FR, FR, FR, FR, FR, FR, FR, FR];
+  // All FR for arithmetic — picks-must-be-distinct rule lives elsewhere
+  // (the scoring function doesn't care, just sums per-cell contributions).
+  const allFirstTry = computeGridScore({ picks: padded, tarnishedCells: Array(9).fill(false), puzzle: PUZZLE });
+  const oneTarnished = computeGridScore({ picks: padded, tarnishedCells: tarnishedArr, puzzle: PUZZLE });
+  // 9 × 20 = 180 vs 8 × 20 + 18 = 178. Exactly FIRST_TRY_BONUS apart.
+  assert.equal(allFirstTry - oneTarnished, FIRST_TRY_BONUS);
+  // The original clamp result is still useful to assert.
+  assert.equal(firstTry, 0);
+  assert.equal(tarnished, 0);
 });
 
-test('computeGridScore returns 0 for an untouched board (give-up with nothing filled)', () => {
-  assert.equal(computeGridScore({ filledCount: 0, wrongCount: 0 }), 0);
-  assert.equal(computeGridScore({ filledCount: 0, wrongCount: 1 }), 0);
-  assert.equal(computeGridScore({ filledCount: 0, wrongCount: 20 }), 0);
+test('computeGridScore: 9 well-known clean first-try picks land far below the ceiling', () => {
+  // The whole point of the re-weighting — sweeping well-knowns scores notably
+  // lower than the ceiling because country-rarity contributes 0 each.
+  /** @type {(import('./grid.js').Country | null)[]} */
+  const picks = Array(9).fill(FR);
+  const tarnishedCells = Array(9).fill(false);
+  // 9 × (10 + 2 + 8 + 0) = 9 × 20 = 180. Ceiling is 288.
+  assert.equal(computeGridScore({ picks, tarnishedCells, puzzle: PUZZLE }), 180);
 });
 
-test('computeGridScore combines wrong and empty penalties for partial give-ups', () => {
-  assert.equal(computeGridScore({ filledCount: 5, wrongCount: 2 }), 54);
-  assert.equal(computeGridScore({ filledCount: 2, wrongCount: 5 }), 15);
-});
-
-test('computeGridScore clamps to 0 for absurd wrong counts', () => {
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 999 }), 0);
-  assert.equal(computeGridScore({ filledCount: 0, wrongCount: 999 }), 0);
+test('computeGridScore: 9 fits-1 obscure first-try picks reach GRID_MAX_SCORE', () => {
+  // VA is fits-1 obscure; 9 of those at max-cell-score = 9 × 32 = 288.
+  /** @type {(import('./grid.js').Country | null)[]} */
+  const picks = Array(9).fill(VA);
+  const tarnishedCells = Array(9).fill(false);
+  assert.equal(computeGridScore({ picks, tarnishedCells, puzzle: PUZZLE }), GRID_MAX_SCORE);
 });
 
 /**
