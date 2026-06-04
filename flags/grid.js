@@ -797,23 +797,33 @@ export function fillEmptyCellsForGiveUp(puzzle, solution, countries, random = Ma
   return result;
 }
 
-const WRONG_PICK_PENALTY = 3;
-const EMPTY_CELL_PENALTY = 10;
+/**
+ * Per-cell scoring constants. The score is purely additive across the
+ * 9 cells — each cell contributes its own number and `computeGridScore`
+ * just sums them. No 100-base, no aggregate wrong-pick penalty. That
+ * lets the result-panel breakdown reconcile with the final score by
+ * eye (sum the per-cell numbers; that IS the score).
+ *
+ * The wrong-pick penalty disappears as a separate term — being
+ * tarnished already costs you the FIRST_TRY_BONUS, which is the per-
+ * cell consequence of guessing.
+ */
+export const CELL_BASE = 10;
+export const EMPTY_CELL_PENALTY = 5;
 export const FIRST_TRY_BONUS = 2;
-const MAX_PUZZLE_OBSCURITY_PER_CELL = 5;
-const MAX_COUNTRY_RARITY_PER_CELL = 4;
+const MAX_PUZZLE_OBSCURITY_PER_CELL = 8;
+const MAX_COUNTRY_RARITY_PER_CELL = 12;
 
 /**
- * Cap the score at base + the maximum first-try and obscurity bonus a
- * 9-cell grid can earn. A clean run where every cell is filled on the
- * first try with a maximally-rare country (one that fits this exact
- * cell and no other AND is intrinsically obscure as a flag) reaches
- * the ceiling.
+ * Ceiling on a single cell: the puzzle is so tight that only one country
+ * fits this cell (max puzzle obscurity), the country is in the OBSCURE
+ * set (max country rarity), and it was picked first try.
  */
-const GRID_SCORE_MAX =
-  100
-  + 9 * FIRST_TRY_BONUS
-  + 9 * (MAX_PUZZLE_OBSCURITY_PER_CELL + MAX_COUNTRY_RARITY_PER_CELL);
+const MAX_CELL_SCORE =
+  CELL_BASE
+  + FIRST_TRY_BONUS
+  + MAX_PUZZLE_OBSCURITY_PER_CELL
+  + MAX_COUNTRY_RARITY_PER_CELL;
 
 /**
  * Country-rarity tiers. Two hand-curated sets; everything else falls
@@ -875,9 +885,13 @@ export const OBSCURE_COUNTRIES = new Set([
  * Map a country to its rarity bonus, summed into the per-pick obscurity
  * contribution alongside the puzzle-relative bonus. Three tiers:
  *
- *   well-known → +0  ("you knew this")
- *   middle     → +2  (default)
- *   obscure    → +4  ("you had to know this")
+ *   well-known → +0   ("you knew this" — Poland, France, US)
+ *   middle     → +4   (default)
+ *   obscure    → +12  ("you had to know this" — Cocos, Vatican)
+ *
+ * The gap between well-known and obscure is the primary axis of the
+ * "clever pick" signal — wide on purpose, so Poland vs Cocos for the
+ * same cell is a clear 12-point swing rather than a slight nudge.
  *
  * @param {Pick<Country, 'code'>} country
  * @returns {number}
@@ -885,17 +899,17 @@ export const OBSCURE_COUNTRIES = new Set([
 export function countryRarityBonus(country) {
   if (WELL_KNOWN_COUNTRIES.has(country.code)) return 0;
   if (OBSCURE_COUNTRIES.has(country.code)) return MAX_COUNTRY_RARITY_PER_CELL;
-  return 2;
+  return 4;
 }
 
 /**
  * The full per-pick obscurity contribution — sum of puzzle-relative
  * obscurity (how few cells of THIS puzzle the country fits) and
  * country-rarity (how obscure the country/flag is in general). Two
- * consumers in flagGrid/page.js need this exact sum:
+ * consumers need this exact sum:
  *
- *   - pickCountry() accumulates it into obscurityTotal at pick time
- *   - the per-cell result breakdown displays it after the round
+ *   - `computeGridScore` feeds it into `cellScore` per filled cell
+ *   - the per-cell result breakdown in flagGrid/page.js displays it
  *
  * Keeping the formula here lets both stay in lockstep — change the
  * weighting and the displayed numbers can never drift from the
@@ -911,42 +925,60 @@ export function pickObscurity(puzzle, country) {
 }
 
 /**
- * @param {Object} state
- * @param {number} state.filledCount  Cells the player committed a valid country to.
- * @param {number} state.wrongCount   Total wrong picks across the round.
- * @param {number} [state.firstTryCount]  Cells filled correctly without ever being wrong.
- *                                        Defaults to 0 for callers/state predating the
- *                                        first-try field (old localStorage rounds).
- * @param {number} [state.obscurityTotal] Sum of per-cell obscurity bonuses earned across
- *                                        the round. Each correct placement contributes
- *                                        a bonus based on how many cells of the current
- *                                        puzzle the picked country could have fit — fewer
- *                                        homes → higher reward. Defaults to 0.
+ * Per-cell score contribution. Summed across the 9 cells, this IS the
+ * final score — no separate base, no aggregate penalties. Three shapes:
+ *
+ *   filled, first try   → CELL_BASE + FIRST_TRY_BONUS + obscurity
+ *   filled, tarnished   → CELL_BASE + obscurity  (lost the first-try bonus)
+ *   empty / give-up     → -EMPTY_CELL_PENALTY
+ *
+ * The wrong-pick penalty is implicit: a tarnished cell already pays by
+ * missing FIRST_TRY_BONUS. We don't aggregate -3 per wrong any more —
+ * that didn't fit a per-cell model and the lost bonus already
+ * disciplines guessing.
+ *
+ * @param {Object} cell
+ * @param {boolean} cell.filled    True if the player landed a correct country here.
+ * @param {boolean} cell.firstTry  True if the cell was filled without ever being wrong.
+ *                                 Ignored when !filled.
+ * @param {number} [cell.obscurity] Per-pick obscurity (puzzle-fit + country-rarity).
+ *                                  Ignored when !filled. Defaults to 0.
  * @returns {number}
  */
-export function computeGridScore({
-  filledCount,
-  wrongCount,
-  firstTryCount = 0,
-  obscurityTotal = 0,
-}) {
-  if (filledCount === 0) return 0;
-  const emptyCount = 9 - filledCount;
-  const raw =
-    100
-    - WRONG_PICK_PENALTY * wrongCount
-    - EMPTY_CELL_PENALTY * emptyCount
-    + FIRST_TRY_BONUS * firstTryCount
-    + obscurityTotal;
-  return Math.max(0, Math.min(GRID_SCORE_MAX, raw));
+export function cellScore({ filled, firstTry, obscurity = 0 }) {
+  if (!filled) return -EMPTY_CELL_PENALTY;
+  return CELL_BASE + (firstTry ? FIRST_TRY_BONUS : 0) + obscurity;
 }
 
 /**
- * Top achievable score for a clean run. Exposed so the UI can position
- * displayed scores against the ceiling (e.g. tinting on a 0..MAX scale)
- * instead of hard-coding 100.
+ * Sum of per-cell scores across the 9 cells, clamped to 0 (we don't
+ * show negative scores — a fully-given-up round bottoms at 0).
+ *
+ * @param {Object} state
+ * @param {(Country | null)[]} state.picks  9-array of placed countries, null for empty.
+ * @param {boolean[]} state.tarnishedCells  9-array; true means the cell took a wrong pick.
+ * @param {Puzzle} state.puzzle             Needed to derive per-pick obscurity.
+ * @returns {number}
  */
-export const GRID_MAX_SCORE = GRID_SCORE_MAX;
+export function computeGridScore({ picks, tarnishedCells, puzzle }) {
+  let total = 0;
+  for (let i = 0; i < 9; i++) {
+    const country = picks[i];
+    total += cellScore({
+      filled: !!country,
+      firstTry: !tarnishedCells[i],
+      obscurity: country ? pickObscurity(puzzle, country) : 0,
+    });
+  }
+  return Math.max(0, total);
+}
+
+/**
+ * Top achievable score for a clean run: 9 cells of MAX_CELL_SCORE each.
+ * Exposed so the UI can tint scores against a 0..MAX scale instead of
+ * hard-coding the ceiling.
+ */
+export const GRID_MAX_SCORE = 9 * MAX_CELL_SCORE;
 
 /**
  * How many of the 9 cells in this puzzle the country legally fits (its row +
@@ -975,10 +1007,11 @@ export function countValidCells(puzzle, country) {
  * → maximum reward; fits many cells → near-zero. Exposed so tests pin
  * the contract and tuning lives in one place.
  *
- *   fits 1 cell → +5  (perfectly puzzle-rare)
- *   fits 2      → +3
- *   fits 3      → +2
- *   fits 4..9   → +1  (any-flag-will-do; small thanks for filling)
+ *   fits 1 cell → +8  (perfectly puzzle-rare)
+ *   fits 2      → +5
+ *   fits 3      → +3
+ *   fits 4      → +2
+ *   fits 5..9   → +1  (any-flag-will-do; small thanks for filling)
  *   fits 0      →  0  (unreachable in normal play; safe default)
  *
  * @param {number} fitCount
@@ -986,9 +1019,10 @@ export function countValidCells(puzzle, country) {
  */
 export function obscurityBonus(fitCount) {
   if (fitCount <= 0) return 0;
-  if (fitCount === 1) return 5;
-  if (fitCount === 2) return 3;
-  if (fitCount === 3) return 2;
+  if (fitCount === 1) return 8;
+  if (fitCount === 2) return 5;
+  if (fitCount === 3) return 3;
+  if (fitCount === 4) return 2;
   return 1;
 }
 

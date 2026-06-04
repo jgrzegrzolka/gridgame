@@ -289,3 +289,15 @@ body.picker-open {
   margin-left: auto;
   color: #555;
 }
+/* Give-up revealed cells — the engine answered, the player didn't pick.
+ * Muted so the eye groups the player's actual picks together and the
+ * "−5" penalty rows fade into the background of the list. */
+.cell-breakdown li.revealed {
+  opacity: 0.55;
+}
+.cell-breakdown li.revealed .name {
+  font-style: italic;
+}
+.cell-breakdown li.revealed .points {
+  color: #c5302d;
+}

@@ -3,10 +3,9 @@ import {
   suggest,
   exactSingleMatch,
   computeGridScore,
-  firstTryCount,
   GRID_MAX_SCORE,
   pickObscurity,
-  FIRST_TRY_BONUS,
+  cellScore,
   loadGridState,
   saveGridState,
   recordGridResult,
@@ -74,12 +73,11 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   /** @type {Array<string | null>} */
   let revealedCodes = Array(9).fill(null);
   /** Tarnished-cell mask. A cell flips to `true` the first time the
-   *  player picks a wrong country for it; never flips back. Used both
-   *  for the first-try score bonus and the saved-state contract. */
+   *  player picks a wrong country for it; never flips back. The score
+   *  reads this directly — a tarnished cell forfeits the per-cell
+   *  first-try bonus. */
   /** @type {boolean[]} */
   let tarnishedCells = Array(9).fill(false);
-  /** Running total of obscurity bonuses earned across the round. */
-  let obscurityTotal = 0;
   if (saved) {
     for (let i = 0; i < 9; i++) {
       const code = saved.picks[i];
@@ -92,7 +90,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     tarnishedCells = saved.tarnishedCells
       ? saved.tarnishedCells.slice()
       : Array(9).fill(false);
-    obscurityTotal = saved.obscurityTotal ?? 0;
   }
 
   /** @type {Country[]} */
@@ -315,7 +312,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       return;
     }
     solution = result.solution;
-    obscurityTotal += pickObscurity(puzzle, country);
     closePicker();
     const filled = countFilled();
     renderGrid();
@@ -402,20 +398,16 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       gaveUp,
       revealedCodes,
       tarnishedCells,
-      obscurityTotal,
     });
   }
 
   function finishRound() {
     if (!resultEl) return;
-    const filledCount = countFilled();
-    const picks = solution.flat().map((c) => (c ? c.code : null));
-    const firstTry = firstTryCount({ picks, tarnishedCells });
+    const picksAsCountries = solution.flat();
     const score = computeGridScore({
-      filledCount,
-      wrongCount,
-      firstTryCount: firstTry,
-      obscurityTotal,
+      picks: picksAsCountries,
+      tarnishedCells,
+      puzzle,
     });
     if (finalScoreEl) finalScoreEl.textContent = String(score);
     // Tint relative to GRID_MAX_SCORE so a clean run with full bonuses
@@ -471,34 +463,41 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   }
 
   /**
-   * Per-cell bonus list under the final score: one row per user-picked
-   * cell showing the country, the points earned (obscurity + first-try
-   * if applicable), and a "first try" marker. Replaces the lumped
-   * "+18 first try · +24 obscurity" summary — putting the bonus signal
-   * next to the actual picks makes the score story self-explanatory
-   * (you see WHY each pick was worth what it was).
+   * Per-cell list under the final score showing every cell's contribution
+   * to the score. Three row shapes:
    *
-   * Skipped entirely when no user picks landed (e.g. give-up with an
-   * empty board) so the result panel stays clean.
+   *   filled correctly  → flag + name + "+N"  (cellScore for the pick)
+   *   give-up revealed   → flag + name + "−5" (muted; the engine answered)
+   *   truly empty        → skipped (only reachable defensively — finishRound
+   *                       runs on a full grid or a give-up that revealed all)
    *
-   * Bonuses are re-derived from (puzzle, country) rather than persisted
-   * per-cell — the two helpers are pure, so the displayed numbers can
-   * never drift from the score formula that uses the same helpers.
+   * The per-row numbers sum to the final score by construction (same
+   * cellScore helper). That's the whole point: a player who clicks
+   * around can reconcile "my score = sum of these rows" by eye.
+   *
+   * The breakdown is hidden entirely when no cells qualify (shouldn't
+   * happen in practice but harmless).
    */
   function renderCellBreakdown() {
     if (!resultEl) return;
     /** @type {HTMLElement | null} */
     let listEl = resultEl.querySelector('.cell-breakdown');
 
+    /** @type {Array<{ country: Country, total: number, revealed: boolean }>} */
     const entries = [];
     for (let i = 0; i < 9; i++) {
-      const country = solution[Math.floor(i / 3)][i % 3];
-      // Empty / give-up-revealed cells aren't user picks; nothing earned.
+      const picked = solution[Math.floor(i / 3)][i % 3];
+      const revealedCode = revealedCodes[i];
+      const country = picked
+        ?? (revealedCode ? byCode.get(revealedCode) ?? null : null);
       if (!country) continue;
-      const obscurity = pickObscurity(puzzle, country);
-      const isFirstTry = !tarnishedCells[i];
-      const total = obscurity + (isFirstTry ? FIRST_TRY_BONUS : 0);
-      entries.push({ country, total });
+      const revealed = !picked;
+      const total = cellScore({
+        filled: !!picked,
+        firstTry: !tarnishedCells[i],
+        obscurity: picked ? pickObscurity(puzzle, picked) : 0,
+      });
+      entries.push({ country, total, revealed });
     }
 
     if (entries.length === 0) {
@@ -512,8 +511,9 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       finalScoreLineEl?.after(listEl);
     }
     listEl.replaceChildren();
-    for (const { country, total } of entries) {
+    for (const { country, total, revealed } of entries) {
       const li = document.createElement('li');
+      if (revealed) li.classList.add('revealed');
       const img = document.createElement('img');
       img.src = `../../flags/svg/${country.code}.svg`;
       img.alt = '';
@@ -524,7 +524,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       li.appendChild(name);
       const points = document.createElement('span');
       points.className = 'points';
-      points.textContent = `+${total}`;
+      points.textContent = total >= 0 ? `+${total}` : String(total);
       li.appendChild(points);
       listEl.appendChild(li);
     }
