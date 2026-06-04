@@ -44,11 +44,21 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
       - name: Cache-bust by stamping __BUILD__ with the commit SHA
         # Each ?v=__BUILD__ in HTML imports becomes ?v=<sha> so browsers
         # treat every build as a unique URL and refetch assets after deploy.
         run: |
           find . -name '*.html' -type f -exec sed -i "s/__BUILD__/${GITHUB_SHA}/g" {} +
+      - name: Minify JS / CSS for the artifact
+        # Walks every source .js / .css file (excluding tests, node_modules,
+        # the PartyKit server, and the build scripts themselves) and minifies
+        # them in place with a sourcemap alongside. Local working copies stay
+        # readable — minification only happens in the deploy artifact.
+        run: npm run build:minify
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
