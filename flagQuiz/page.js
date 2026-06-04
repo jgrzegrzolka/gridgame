@@ -75,6 +75,11 @@ export function bootFlagQuiz() {
     const toggleLi = document.createElement('li');
     const toggleLabel = document.createElement('label');
     toggleLabel.className = 'scope-toggle';
+    const textSpan = document.createElement('span');
+    textSpan.className = 'scope-toggle-text';
+    textSpan.textContent = t('menu.includeTerritories', 'Include territories & other flags');
+    const switchSpan = document.createElement('span');
+    switchSpan.className = 'scope-toggle-switch';
     const toggleInput = document.createElement('input');
     toggleInput.type = 'checkbox';
     toggleInput.checked = includeAll;
@@ -82,8 +87,16 @@ export function bootFlagQuiz() {
       setQuizIncludeAll(localStorage, toggleInput.checked);
       window.location.reload();
     });
-    toggleLabel.appendChild(toggleInput);
-    toggleLabel.appendChild(document.createTextNode(' ' + t('menu.includeTerritories', 'Include territories & other flags')));
+    const trackSpan = document.createElement('span');
+    trackSpan.className = 'scope-toggle-track';
+    trackSpan.setAttribute('aria-hidden', 'true');
+    const thumbSpan = document.createElement('span');
+    thumbSpan.className = 'scope-toggle-thumb';
+    trackSpan.appendChild(thumbSpan);
+    switchSpan.appendChild(toggleInput);
+    switchSpan.appendChild(trackSpan);
+    toggleLabel.appendChild(textSpan);
+    toggleLabel.appendChild(switchSpan);
     toggleLi.appendChild(toggleLabel);
     quizMenuEl.appendChild(toggleLi);
 

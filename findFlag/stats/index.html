@@ -37,8 +37,11 @@
       <ul class="menu">
         <li>
           <label class="scope-toggle">
-            <input type="checkbox" id="stats-scope-toggle" />
-            <span data-i18n="menu.includeTerritories">Include territories &amp; other flags</span>
+            <span class="scope-toggle-text" data-i18n="menu.includeTerritories">Include territories &amp; other flags</span>
+            <span class="scope-toggle-switch">
+              <input type="checkbox" id="stats-scope-toggle" />
+              <span class="scope-toggle-track" aria-hidden="true"><span class="scope-toggle-thumb"></span></span>
+            </span>
           </label>
         </li>
       </ul>
