@@ -323,6 +323,23 @@ function runOnline(countries) {
     document.body.classList.remove('picker-open');
   }
 
+  /** Close the picker AND return focus to the cell it was opened from.
+   *  Matches the 9×9 offline page so keyboard users don't lose their
+   *  position in the grid when they back out of the picker. The pick-success
+   *  path stays plain closePicker — focus is irrelevant because the cell
+   *  is now occupied and the next move belongs to the opponent. */
+  function closePickerAndRestoreFocus() {
+    const cell = activeCell;
+    closePicker();
+    if (cell) focusCell(cell.bigRow, cell.bigCol, cell.smallRow, cell.smallCol);
+  }
+
+  /** @param {number} bigRow @param {number} bigCol @param {number} smallRow @param {number} smallCol */
+  function focusCell(bigRow, bigCol, smallRow, smallCol) {
+    const td = findCell(bigRow, bigCol, smallRow, smallCol);
+    if (td) td.focus({ preventScroll: true });
+  }
+
   function updateSuggestions() {
     const { game } = state;
     if (!game) return;
@@ -367,7 +384,7 @@ function runOnline(countries) {
 
   pickerInputEl.addEventListener('input', updateSuggestions);
   pickerInputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); closePicker(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); closePickerAndRestoreFocus(); return; }
     if (e.key === 'Enter') {
       e.preventDefault();
       const picked = currentMatches[selectedIndex];
@@ -389,8 +406,8 @@ function runOnline(countries) {
       return;
     }
   });
-  pickerBackdropEl.addEventListener('click', closePicker);
-  pickerCloseEl.addEventListener('click', closePicker);
+  pickerBackdropEl.addEventListener('click', closePickerAndRestoreFocus);
+  pickerCloseEl.addEventListener('click', closePickerAndRestoreFocus);
 
   /** @param {Country} country */
   function pickCountry(country) {

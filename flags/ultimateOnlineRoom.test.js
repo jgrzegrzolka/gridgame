@@ -192,6 +192,46 @@ test('applyUltimateClaim: ignored once the meta game is over', () => {
   assert.equal(r.broadcasts.length, 0);
 });
 
+test('applyUltimateClaim: ignored when the peer is in roles but disconnected', () => {
+  let room = createUltimateRoom(PUZZLE);
+  room = applyUltimateHello(room, 'alice').room;
+  room = applyUltimateHello(room, 'bob').room;
+  room = applyUltimateDisconnect(room, 'bob').room;
+  // bob's role sticks but he's not present — O (bob) can't sneak in via alice.
+  const r = applyUltimateClaim(room, 'bob', 0, 0, 0, 0, FR, POOL);
+  assert.equal(r.broadcasts.length, 0);
+  assert.equal(r.room.game.boards[0][0].cells[0][0].owner, null);
+});
+
+test('applyUltimateClaim: a claim that completes the meta 3-in-a-row carries the meta winner', () => {
+  // Drive the engine through a claim that simultaneously wins the third
+  // small board AND completes a meta-line of three O wins. Pre-stage two
+  // meta-winners on the board, two pending O marks in the third small
+  // board's winning row, then play the final cell.
+  let room = createUltimateRoom(PUZZLE);
+  room = applyUltimateHello(room, 'alice').room; // X
+  room = applyUltimateHello(room, 'bob').room;   // O — moves first
+  const euGreen = POOL.filter((c) => c.continent === 'Europe' && c.colors?.includes('green'));
+  assert.equal(euGreen.length, 3, 'fixture invariant: 3 Europe+green countries');
+  // Mark small boards (0,0) and (0,1) as already won by O. The engine's
+  // meta-winner check only reads board.winner, so we don't need to make
+  // the sub-cells internally consistent.
+  room.game.boards[0][0].winner = 'O';
+  room.game.boards[0][1].winner = 'O';
+  // Two O marks already placed in row 0 of (0,2) — the final claim completes
+  // the small-board win, which in turn completes the meta line.
+  room.game.boards[0][2].cells[0][0] = { owner: 'O', country: euGreen[0] };
+  room.game.boards[0][2].cells[0][1] = { owner: 'O', country: euGreen[1] };
+
+  const r = applyUltimateClaim(room, 'bob', 0, 2, 0, 2, euGreen[2], POOL);
+  assert.equal(r.broadcasts.length, 1);
+  const msg = /** @type {any} */ (r.broadcasts[0].message);
+  assert.equal(msg.kind, 'claimed');
+  assert.equal(msg.game.boards[0][2].winner, 'O', 'third small board won by O');
+  assert.equal(msg.game.winner, 'O', 'meta winner set');
+  assert.deepEqual(msg.game.winningLine, [[0, 0], [0, 1], [0, 2]], 'meta line is the top row');
+});
+
 // ---- applyUltimateRoomGiveUp ----
 
 test('applyUltimateRoomGiveUp: ignored when sender is not in the room', () => {
@@ -298,6 +338,29 @@ test('applyUltimateStartRematch: alternates the first mover across rematches', (
   assert.equal(r2.room.game.currentPlayer, 'O');
 });
 
+test('applyUltimateStartRematch: enabled after a give-up (gaveUp counts as terminal)', () => {
+  let room = createUltimateRoom(PUZZLE);
+  room = applyUltimateHello(room, 'alice').room;
+  room = applyUltimateHello(room, 'bob').room;
+  room = applyUltimateRoomGiveUp(room, 'bob', POOL).room;
+  const r = applyUltimateStartRematch(room, 'alice', PUZZLE2);
+  assert.equal(r.broadcasts.length, 1);
+  const msg = /** @type {any} */ (r.broadcasts[0].message);
+  assert.equal(msg.game.gaveUp, false, 'fresh game starts without gaveUp');
+  assert.equal(msg.game.winner, null);
+});
+
+test('applyUltimateStartRematch: preserves roles and host across rematches', () => {
+  let room = createUltimateRoom(PUZZLE);
+  room = applyUltimateHello(room, 'alice').room;
+  room = applyUltimateHello(room, 'bob').room;
+  room.game.winner = 'O';
+  const r = applyUltimateStartRematch(room, 'alice', PUZZLE2);
+  assert.equal(r.room.roles.get('alice'), 'X');
+  assert.equal(r.room.roles.get('bob'), 'O');
+  assert.equal(r.room.hostId, 'alice');
+});
+
 // ---- serialize / deserialize ----
 
 test('serializeUltimateRoom + deserializeUltimateRoom round-trip game/roles/hostId', () => {
@@ -322,6 +385,28 @@ test('serializeUltimateRoom strips puzzle category predicates', () => {
   for (const c of snapshot.game.puzzle.rows) {
     assert.equal(c.predicate, undefined);
   }
+});
+
+test('serialize round-trip preserves lastFirstPlayer across eviction', () => {
+  let room = createUltimateRoom(PUZZLE);
+  room = applyUltimateHello(room, 'alice').room;
+  room = applyUltimateHello(room, 'bob').room;
+  room.game.winner = 'X';
+  // First rematch flips lastFirstPlayer from 'O' to 'X'.
+  room = applyUltimateStartRematch(room, 'alice', PUZZLE).room;
+  assert.equal(room.lastFirstPlayer, 'X');
+  // Eviction round-trip through JSON (what party.storage actually does).
+  const restored = deserializeUltimateRoom(JSON.parse(JSON.stringify(serializeUltimateRoom(room))));
+  assert.equal(restored.lastFirstPlayer, 'X', 'eviction must not reset the alternation');
+});
+
+test('serializeUltimateRoom omits the present set (live connections do not survive eviction)', () => {
+  let room = createUltimateRoom(PUZZLE);
+  room = applyUltimateHello(room, 'alice').room;
+  const snapshot = /** @type {any} */ (serializeUltimateRoom(room));
+  assert.equal(snapshot.present, undefined);
+  const restored = deserializeUltimateRoom(snapshot);
+  assert.equal(restored.present.size, 0);
 });
 
 test('deserializeUltimateRoom rebuilds puzzle predicates so the game stays playable', () => {
