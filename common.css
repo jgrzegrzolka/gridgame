@@ -217,7 +217,7 @@ body::before {
 .menu a {
   color: var(--link-color);
   text-decoration: none;
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 500;
 }
 .menu a:hover {
