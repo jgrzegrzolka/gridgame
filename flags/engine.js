@@ -16,19 +16,6 @@
  */
 
 /**
- * @typedef {Object} CellState
- * @property {boolean} filled
- * @property {boolean} valid
- * @property {boolean} duplicate
- */
-
-/**
- * @typedef {Object} SolutionState
- * @property {CellState[][]} cells
- * @property {boolean} complete
- */
-
-/**
  * @param {Puzzle} puzzle
  * @param {number} row
  * @param {number} col
@@ -38,41 +25,6 @@
 export function validateCell(puzzle, row, col, country) {
   if (!country) return false;
   return puzzle.rows[row].predicate(country) && puzzle.cols[col].predicate(country);
-}
-
-/**
- * @param {Puzzle} puzzle
- * @param {(Country | null)[][]} solution
- * @returns {SolutionState}
- */
-export function solutionState(puzzle, solution) {
-  /** @type {Map<string, number>} */
-  const counts = new Map();
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      const country = solution[r][c];
-      if (country) counts.set(country.code, (counts.get(country.code) ?? 0) + 1);
-    }
-  }
-
-  /** @type {CellState[][]} */
-  const cells = [];
-  let complete = true;
-  for (let r = 0; r < 3; r++) {
-    /** @type {CellState[]} */
-    const row = [];
-    for (let c = 0; c < 3; c++) {
-      const country = solution[r][c];
-      const filled = country !== null && country !== undefined;
-      const valid = validateCell(puzzle, r, c, country);
-      const duplicate = filled && (counts.get(/** @type {Country} */ (country).code) ?? 0) > 1;
-      row.push({ filled, valid, duplicate });
-      if (!filled || !valid || duplicate) complete = false;
-    }
-    cells.push(row);
-  }
-
-  return { cells, complete };
 }
 
 /**

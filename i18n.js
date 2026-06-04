@@ -216,7 +216,7 @@ export function countryName(c) {
 
 /**
  * Enrich a list of countries with their localized name appended to each
- * one's aliases. Lets `suggest()` in flags/grid.js match Polish input
+ * one's aliases. Lets `suggest()` in flags/engine.js match Polish input
  * against the Polish name without coupling the engine to i18n — callers
  * just pass `withLocalizedAliases(countries)` instead of the raw list.
  *

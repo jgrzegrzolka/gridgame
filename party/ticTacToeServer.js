@@ -8,7 +8,7 @@ import {
   serializeRoom,
   deserializeRoom,
 } from '../flags/onlineRoom.js';
-import { generateRandomPuzzle } from '../flags/grid.js';
+import { generateRandomPuzzle } from '../flags/engine.js';
 
 /** @typedef {import('../flags/onlineRoom.js').Room} Room */
 /** @typedef {import('../flags/onlineRoom.js').Broadcast} Broadcast */
@@ -36,7 +36,7 @@ export class TicTacToeServer {
   /**
    * @param {any} party
    * @param {Country[]} countries
-   * @param {import('../flags/grid.js').Puzzle} [puzzle]
+   * @param {import('../flags/engine.js').Puzzle} [puzzle]
    */
   constructor(party, countries, puzzle) {
     this.party = party;

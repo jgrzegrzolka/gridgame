@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continent, hasColor } from '../flags/grid.js';
+import { continent, hasColor } from '../flags/engine.js';
 import { TicTacToeServer } from './ticTacToeServer.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */

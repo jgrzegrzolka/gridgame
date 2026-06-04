@@ -4,13 +4,13 @@ import {
   isUltimateGameOver,
   applyUltimateGiveUp,
 } from './ultimateTicTacToe.js';
-import { categoryFromId } from './grid.js';
+import { categoryFromId } from './engine.js';
 
 /** @typedef {import('./ultimateTicTacToe.js').UltimateGameState} UltimateGameState */
 /** @typedef {import('./ticTacToe.js').Player} Player */
 /** @typedef {import('./group.js').Country} Country */
-/** @typedef {import('./grid.js').Puzzle} Puzzle */
-/** @typedef {import('./grid.js').Category} Category */
+/** @typedef {import('./engine.js').Puzzle} Puzzle */
+/** @typedef {import('./engine.js').Category} Category */
 
 /**
  * 9×9 room state. Mirrors the 3×3 Room shape from onlineRoom.js — same

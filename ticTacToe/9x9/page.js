@@ -1,4 +1,4 @@
-import { suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/grid.js';
+import { suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
 import {
   generateCode,
   isValidRoomCode,
@@ -19,7 +19,7 @@ import { launchConfetti } from '../../confetti.js';
 
 const SERVER_URL = serverUrlFor(window.location.hostname, 'ultimate');
 
-/** @param {import('../../flags/grid.js').Category} c */
+/** @param {import('../../flags/engine.js').Category} c */
 function tCat(c) {
   return translateCategoryLabel(c, t);
 }

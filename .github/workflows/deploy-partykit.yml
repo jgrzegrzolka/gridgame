@@ -16,7 +16,7 @@ on:
       - 'party/**'
       - 'flags/onlineRoom.js'
       - 'flags/ticTacToe.js'
-      - 'flags/grid.js'
+      - 'flags/engine.js'
       - 'flags/group.js'
       - 'flags/countries.json'
       - 'partykit.json'
