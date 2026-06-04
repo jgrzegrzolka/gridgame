@@ -218,6 +218,7 @@ export function bootFlagQuiz() {
         choicesEl.appendChild(tile);
       }
       feedbackEl.textContent = '';
+      feedbackEl.classList.remove('shake-wrong');
     }
 
     function onAnswer(chosen, tile) {
@@ -232,6 +233,7 @@ export function bootFlagQuiz() {
           /** @type {HTMLButtonElement} */ (t).disabled = true;
         }
         feedbackEl.textContent = '';
+        feedbackEl.classList.remove('shake-wrong');
         const nextQ = quiz.next();
         if (!nextQ) {
           setTimeout(() => {
@@ -247,6 +249,13 @@ export function bootFlagQuiz() {
         tile.classList.add('wrong');
         tile.disabled = true;
         feedbackEl.textContent = countryName(chosen);
+        // Re-trigger the shake animation on the feedback label. Removing the
+        // class, forcing a reflow, then re-adding it is the standard CSS
+        // trick to restart a one-shot animation when the same wrong-answer
+        // class is added back-to-back.
+        feedbackEl.classList.remove('shake-wrong');
+        void feedbackEl.offsetWidth;
+        feedbackEl.classList.add('shake-wrong');
         wrongCount++;
         if (timed) flashPenalty();
       }
