@@ -107,11 +107,20 @@ export function bootFlagsData() {
     }
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
-    let any = false;
+    let total = 0;
     for (const k of /** @type {Array<keyof typeof filters>} */ (Object.keys(filters))) {
-      if (filters[k].include.size || filters[k].exclude.size) { any = true; break; }
+      total += filters[k].include.size + filters[k].exclude.size;
     }
-    clearBtn.hidden = !any;
+    clearBtn.hidden = total === 0;
+    updateFilterToggle(total);
+  }
+
+  /** @param {number} count */
+  function updateFilterToggle(count) {
+    const badge = document.getElementById('filter-toggle-count');
+    if (!badge) return;
+    badge.textContent = count > 0 ? String(count) : '';
+    badge.hidden = count === 0;
   }
 
   /**
@@ -155,16 +164,40 @@ export function bootFlagsData() {
   }
 
   const filterBar = document.getElementById('filter-bar');
-  filterBar.appendChild(
+
+  // Mobile-only collapse toggle. Hidden on desktop via CSS — there the filter
+  // bar is always visible. On phones the bar would dominate the viewport,
+  // so collapse it by default and reveal on tap. The badge shows how many
+  // include/exclude pills are currently active so the user knows whether
+  // filtering is happening while the panel is closed.
+  const toggleBtn = document.createElement('button');
+  toggleBtn.type = 'button';
+  toggleBtn.id = 'filter-toggle';
+  toggleBtn.className = 'filter-toggle';
+  toggleBtn.setAttribute('aria-expanded', 'false');
+  toggleBtn.setAttribute('aria-controls', 'filter-groups');
+  toggleBtn.innerHTML = `<span>${t('flagsdata.filters', 'Filters')}</span><span id="filter-toggle-count" class="filter-toggle-count" hidden></span><span class="filter-toggle-chevron" aria-hidden="true">▾</span>`;
+  toggleBtn.addEventListener('click', () => {
+    const open = filterBar.classList.toggle('is-open');
+    toggleBtn.setAttribute('aria-expanded', String(open));
+  });
+  filterBar.appendChild(toggleBtn);
+
+  const groupsWrap = document.createElement('div');
+  groupsWrap.id = 'filter-groups';
+  groupsWrap.className = 'filter-groups';
+  filterBar.appendChild(groupsWrap);
+
+  groupsWrap.appendChild(
     buildFilterGroup(t('flagsdata.filterStatus', 'Status'), 'status', STATUS_VALUES.map((v) => ({ value: v, label: statusLabel(v) }))),
   );
-  filterBar.appendChild(
+  groupsWrap.appendChild(
     buildFilterGroup(t('flagsdata.filterContinent', 'Continent'), 'continent', [...CONTINENTS, 'Other'].map((v) => ({ value: v, label: continentLabel(v) }))),
   );
-  filterBar.appendChild(
+  groupsWrap.appendChild(
     buildFilterGroup(t('flagsdata.filterColors', 'Colors'), 'color', COLORS_FOR_RANDOM.map((v) => ({ value: v, label: colorLabel(v) }))),
   );
-  filterBar.appendChild(
+  groupsWrap.appendChild(
     buildFilterGroup(t('flagsdata.filterMotifs', 'Motifs'), 'motif', MOTIFS_FOR_RANDOM.map((v) => ({ value: v, label: motifLabel(v) }))),
   );
 
@@ -184,7 +217,7 @@ export function bootFlagsData() {
     }
     applyFilter();
   });
-  filterBar.appendChild(clearBtn);
+  groupsWrap.appendChild(clearBtn);
 
   fetch('../flags/countries.json')
     .then((r) => r.json())

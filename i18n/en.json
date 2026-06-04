@@ -161,6 +161,7 @@
     "other": "Other"
   },
   "flagsdata": {
+    "filters": "Filters",
     "filterStatus": "Status",
     "filterContinent": "Continent",
     "filterColors": "Colors",

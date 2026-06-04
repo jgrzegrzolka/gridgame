@@ -34,7 +34,7 @@
     <nav id="burger-panel" class="burger-panel" hidden>
       <ul class="menu">
         <li><a href="../4/" data-i18n="menu.today">Today's puzzle</a></li>
-        <li><a href="../archive/" data-i18n="menu.previousGames">Previous games</a></li>
+        <li class="menu-divider"><a href="../archive/" data-i18n="menu.previousGames">Previous games</a></li>
         <li><a href="../rand/" data-i18n="menu.random">Random</a></li>
       </ul>
     </nav>
@@ -61,12 +61,26 @@
         renderArchive();
       });
 
+      // Local-date ISO string (YYYY-MM-DD) — matches the format ARCHIVE
+      // uses. toISOString() would be UTC, which can drift by a day for
+      // users at either end of the day in non-UTC timezones.
+      function localTodayIso() {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
       function renderArchive() {
       const gridEl = document.getElementById('archive-grid');
+      const todayIso = localTodayIso();
       for (const entry of ARCHIVE) {
         const a = document.createElement('a');
         a.href = `../${entry.slug}/`;
         a.className = 'archive-tile';
+        const isToday = entry.date === todayIso;
+        if (isToday) a.classList.add('is-today');
 
         const num = document.createElement('div');
         num.className = 'archive-tile-num';

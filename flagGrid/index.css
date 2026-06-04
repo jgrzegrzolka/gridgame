@@ -210,6 +210,7 @@ body.picker-open {
   gap: 4px;
 }
 .archive-tile {
+  position: relative;
   aspect-ratio: 1;
   border: 1px solid #ddd;
   background: #fff;
@@ -221,6 +222,13 @@ body.picker-open {
 }
 .archive-tile:hover {
   background: #f0f0f0;
+}
+.archive-tile.is-today {
+  /* Inset shadow paints the highlight ring INSIDE the tile so it can't be
+   * clipped by anything outside — the chrome strip (body::before, z-index 10)
+   * was clipping the 1px outer ring for tiles in the first row, making the
+   * top edge look thinner than the rest. */
+  box-shadow: inset 0 0 0 2px var(--link-color);
 }
 .archive-tile-num {
   font-size: 20px;

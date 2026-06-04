@@ -198,4 +198,14 @@ body {
   font-size: 18px;
   min-height: 24px;
   text-align: center;
+  color: #c5302d;
+  font-weight: 500;
+}
+/* shake-wrong is added by the page each time a wrong flag is clicked.
+ * The class restart trick (remove → reflow → add) lets a second wrong
+ * click in the same question replay the animation. cell-shake keyframes
+ * live in common.css — same physical motion as the grid-cell wrong-shake
+ * for consistency. */
+.feedback.shake-wrong {
+  animation: cell-shake 0.5s ease-in-out;
 }

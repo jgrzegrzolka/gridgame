@@ -75,7 +75,11 @@ export function bootFindFlag() {
     scopeToggleEl.checked = includeAll;
     scopeToggleEl.addEventListener('change', () => {
       setFindIncludeAll(localStorage, scopeToggleEl.checked);
-      window.location.reload();
+      // Let the toggle's slide animation finish (CSS transition is 150 ms)
+      // and give the user a beat to register the new position before the
+      // page reloads — without this, the change event triggers an instant
+      // reload and the user never sees the thumb move.
+      setTimeout(() => window.location.reload(), 350);
     });
   }
 

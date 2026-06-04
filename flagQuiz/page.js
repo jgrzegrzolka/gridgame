@@ -75,15 +75,31 @@ export function bootFlagQuiz() {
     const toggleLi = document.createElement('li');
     const toggleLabel = document.createElement('label');
     toggleLabel.className = 'scope-toggle';
+    const textSpan = document.createElement('span');
+    textSpan.className = 'scope-toggle-text';
+    textSpan.textContent = t('menu.includeTerritories', 'Include territories & other flags');
+    const switchSpan = document.createElement('span');
+    switchSpan.className = 'scope-toggle-switch';
     const toggleInput = document.createElement('input');
     toggleInput.type = 'checkbox';
     toggleInput.checked = includeAll;
     toggleInput.addEventListener('change', () => {
       setQuizIncludeAll(localStorage, toggleInput.checked);
-      window.location.reload();
+      // Let the slide animation finish so the user sees the toggle move
+      // before the page reloads. Without this, change fires, the JS reloads
+      // instantly, and the visual transition never paints.
+      setTimeout(() => window.location.reload(), 350);
     });
-    toggleLabel.appendChild(toggleInput);
-    toggleLabel.appendChild(document.createTextNode(' ' + t('menu.includeTerritories', 'Include territories & other flags')));
+    const trackSpan = document.createElement('span');
+    trackSpan.className = 'scope-toggle-track';
+    trackSpan.setAttribute('aria-hidden', 'true');
+    const thumbSpan = document.createElement('span');
+    thumbSpan.className = 'scope-toggle-thumb';
+    trackSpan.appendChild(thumbSpan);
+    switchSpan.appendChild(toggleInput);
+    switchSpan.appendChild(trackSpan);
+    toggleLabel.appendChild(textSpan);
+    toggleLabel.appendChild(switchSpan);
     toggleLi.appendChild(toggleLabel);
     quizMenuEl.appendChild(toggleLi);
 
@@ -218,6 +234,7 @@ export function bootFlagQuiz() {
         choicesEl.appendChild(tile);
       }
       feedbackEl.textContent = '';
+      feedbackEl.classList.remove('shake-wrong');
     }
 
     function onAnswer(chosen, tile) {
@@ -232,6 +249,7 @@ export function bootFlagQuiz() {
           /** @type {HTMLButtonElement} */ (t).disabled = true;
         }
         feedbackEl.textContent = '';
+        feedbackEl.classList.remove('shake-wrong');
         const nextQ = quiz.next();
         if (!nextQ) {
           setTimeout(() => {
@@ -247,6 +265,13 @@ export function bootFlagQuiz() {
         tile.classList.add('wrong');
         tile.disabled = true;
         feedbackEl.textContent = countryName(chosen);
+        // Re-trigger the shake animation on the feedback label. Removing the
+        // class, forcing a reflow, then re-adding it is the standard CSS
+        // trick to restart a one-shot animation when the same wrong-answer
+        // class is added back-to-back.
+        feedbackEl.classList.remove('shake-wrong');
+        void feedbackEl.offsetWidth;
+        feedbackEl.classList.add('shake-wrong');
         wrongCount++;
         if (timed) flashPenalty();
       }

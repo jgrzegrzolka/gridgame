@@ -161,6 +161,7 @@
     "other": "Inne"
   },
   "flagsdata": {
+    "filters": "Filtry",
     "filterStatus": "Status",
     "filterContinent": "Kontynent",
     "filterColors": "Kolory",
