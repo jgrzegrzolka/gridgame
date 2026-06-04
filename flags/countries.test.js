@@ -11,6 +11,7 @@ import {
   generateRandomPuzzle,
 } from './engine.js';
 import { CONTINENTS } from './group.js';
+import { emptyFilters, matchesFilters } from './flagsFilter.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
@@ -217,6 +218,53 @@ test('generateRandomPuzzle succeeds with the real countries.json under several s
     const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
     assert.equal(puzzle.rows.length, 3);
     assert.equal(puzzle.cols.length, 3);
+  }
+});
+
+// Integration tests against the real country pool — these guard the
+// flagsdata page (and findFlag's chooser) against any future regression
+// in either matchesFilters or the dataset itself. The unit tests in
+// flagsFilter.test.js use synthetic countries; these pin the live data.
+
+test('matchesFilters against real data: Asia AND Africa is empty (two scalar continents)', () => {
+  const f = emptyFilters();
+  f.continent.include.add('Asia');
+  f.continent.include.add('Africa');
+  const matches = COUNTRIES.filter((c) => matchesFilters(c, f));
+  assert.equal(matches.length, 0, 'no country can be in both Asia and Africa');
+});
+
+test('matchesFilters against real data: weapon AND animal keeps only flags with both motifs', () => {
+  const f = emptyFilters();
+  f.motif.include.add('weapon');
+  f.motif.include.add('animal');
+  const matches = COUNTRIES.filter((c) => matchesFilters(c, f));
+  // Dataset-dependent: assert the property holds for every survivor
+  // rather than pinning a fragile count.
+  for (const c of matches) {
+    const motifs = c.motifs ?? [];
+    assert.ok(motifs.includes('weapon') && motifs.includes('animal'),
+      `${c.code}: expected both 'weapon' and 'animal' in motifs, got ${JSON.stringify(motifs)}`);
+  }
+  // And confirm at least one country with only 'weapon' (no 'animal')
+  // exists in the dataset — otherwise the AND test is degenerate.
+  const weaponOnly = COUNTRIES.filter((c) => {
+    const m = c.motifs ?? [];
+    return m.includes('weapon') && !m.includes('animal');
+  });
+  assert.ok(weaponOnly.length > 0,
+    'sanity: dataset should contain at least one weapon-only flag, else this test proves nothing');
+});
+
+test('matchesFilters against real data: red AND blue keeps only flags with both colors', () => {
+  const f = emptyFilters();
+  f.color.include.add('red');
+  f.color.include.add('blue');
+  const matches = COUNTRIES.filter((c) => matchesFilters(c, f));
+  for (const c of matches) {
+    const colors = c.colors ?? [];
+    assert.ok(colors.includes('red') && colors.includes('blue'),
+      `${c.code}: expected both 'red' and 'blue' in colors, got ${JSON.stringify(colors)}`);
   }
 });
 
