@@ -1054,10 +1054,17 @@ test('findUltimateAssignment: returns 81 distinct countries on an empty puzzle t
 });
 
 test('findUltimateAssignment: respects preFilled cells and never reuses their countries', () => {
+  // 10 (not 9) per (continent × color) cell so the seeded country never
+  // starves a bottleneck. With perCell=9 a randomly-generated puzzle that
+  // pairs a continent row with a hasColor col makes that one cell strictly
+  // 9-candidate: seeding ANY country from its pool elsewhere drops the
+  // remaining candidates below the demand and the puzzle becomes unsolvable,
+  // not because the solver is broken but because Hall's theorem only
+  // guarantees the empty case. perCell=10 buys one slot of breathing room.
   const countries = denseSquarePool(
     ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
     COLORS_FOR_RANDOM,
-    9,
+    10,
   );
   const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 50 });
   // Seed one cell at (0,0,0,0) with a country that fits its row × col.

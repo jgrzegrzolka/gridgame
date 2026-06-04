@@ -25,9 +25,10 @@ body::before {
 .back {
   position: fixed;
   top: 12px;
-  right: 168px;
+  right: 220px;
   width: 44px;
   height: 44px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,7 +55,7 @@ body::before {
 .lang-toggle {
   position: fixed;
   top: 12px;
-  right: 116px;
+  right: 168px;
   width: 44px;
   height: 44px;
   background-color: #fff;
@@ -79,9 +80,10 @@ body::before {
 .coffee {
   position: fixed;
   top: 12px;
-  right: 64px;
+  right: 116px;
   width: 44px;
   height: 44px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -97,12 +99,43 @@ body::before {
 .coffee:hover {
   background: #f0f0f0;
 }
+.flags-link {
+  position: fixed;
+  top: 12px;
+  right: 64px;
+  width: 44px;
+  height: 44px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  color: var(--link-color);
+  text-decoration: none;
+  font-size: 22px;
+  line-height: 1;
+  z-index: 25;
+}
+.flags-link:hover {
+  background: #f0f0f0;
+}
+.flags-link[aria-disabled="true"] {
+  color: #ccc;
+  cursor: default;
+  pointer-events: none;
+}
+.flags-link[aria-disabled="true"]:hover {
+  background: #fff;
+}
 .burger {
   position: fixed;
   top: 12px;
   right: 12px;
   width: 44px;
   height: 44px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -399,6 +432,16 @@ dialog#zoom p {
   background-color: currentColor;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.9 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z'/%3E%3C/svg%3E") center / contain no-repeat;
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.9 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z'/%3E%3C/svg%3E") center / contain no-repeat;
+  vertical-align: middle;
+}
+
+.flags-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z'/%3E%3C/svg%3E") center / contain no-repeat;
   vertical-align: middle;
 }
 
