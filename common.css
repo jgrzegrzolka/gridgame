@@ -33,6 +33,23 @@ main {
   flex-direction: column;
   align-items: center;
 }
+/* Visually hidden but screen-reader + crawler accessible. Use for
+ * keyword-rich <h1> elements on pages whose visible UI is game state
+ * (flagQuiz, flagsdata) — gives search engines a clear heading
+ * without changing the rendered design. Standard "sr-only" pattern;
+ * the inset(50%) clip + 1px sizing avoids scroll-into-view bugs that
+ * the older `width:0; height:0` recipe could trigger. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 body::before {
   content: "";
   position: fixed;

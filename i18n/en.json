@@ -30,7 +30,7 @@
     "has": "Has {x}"
   },
   "quiz": {
-    "title": "Flag Quiz",
+    "title": "Country Flag Quiz — Yet Another Quiz",
     "statsTitle": "Flag Quiz — Your Stats",
     "loading": "Loading…",
     "finalScore": "Final score:",
@@ -43,7 +43,7 @@
     }
   },
   "findFlag": {
-    "title": "Find Flag",
+    "title": "Find All Country Flags by Category — Yet Another Quiz",
     "blurb": "Pick a category and name every flag that matches.",
     "statsTitle": "Find Flag — Your stats",
     "statsHeading": "Find Flag stats",
@@ -59,7 +59,7 @@
     }
   },
   "ttt": {
-    "title": "Tic Tac Toe",
+    "title": "Tic Tac Toe with Country Flags — Yet Another Quiz",
     "lobbyTitle": "Play with a friend",
     "variant3x3": "3×3",
     "variant9x9": "9×9",
@@ -151,6 +151,7 @@
     "other": "Other"
   },
   "flagsdata": {
+    "title": "All Country Flags — Yet Another Quiz",
     "filters": "Filters",
     "filterStatus": "Status",
     "filterContinent": "Continent",

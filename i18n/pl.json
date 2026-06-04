@@ -30,7 +30,7 @@
     "has": "Ma {x}"
   },
   "quiz": {
-    "title": "Quiz flag",
+    "title": "Quiz flag państw — Yet Another Quiz",
     "statsTitle": "Quiz flag — Twoje statystyki",
     "loading": "Ładowanie…",
     "finalScore": "Wynik końcowy:",
@@ -43,7 +43,7 @@
     }
   },
   "findFlag": {
-    "title": "Znajdź flagę",
+    "title": "Znajdź wszystkie flagi po kategorii — Yet Another Quiz",
     "blurb": "Wybierz kategorię i nazwij każdą pasującą flagę.",
     "statsTitle": "Znajdź flagę — Twoje statystyki",
     "statsHeading": "Statystyki Znajdź flagę",
@@ -59,7 +59,7 @@
     }
   },
   "ttt": {
-    "title": "Kółko i krzyżyk",
+    "title": "Kółko i krzyżyk z flagami państw — Yet Another Quiz",
     "lobbyTitle": "Zagraj ze znajomym",
     "variant3x3": "3×3",
     "variant9x9": "9×9",
@@ -151,6 +151,7 @@
     "other": "Inne"
   },
   "flagsdata": {
+    "title": "Wszystkie flagi państw — Yet Another Quiz",
     "filters": "Filtry",
     "filterStatus": "Status",
     "filterContinent": "Kontynent",

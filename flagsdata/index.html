@@ -3,8 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Every country flag, filterable by status (UN member, observer, territory), continent, colors, and motifs (cross, animal, weapon, star). The full dataset behind the quizzes." />
+    <link rel="canonical" href="https://yetanotherquiz.com/flagsdata/" />
     <link rel="preload" href="../flags/countries.json" as="fetch" type="application/json" crossorigin />
-    <title data-i18n="menu.flagsData">Browse flags</title>
+    <title data-i18n="flagsdata.title">All Country Flags — Yet Another Quiz</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
@@ -15,6 +17,7 @@
     <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee" data-i18n-attr="aria-label:coffee,title:coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
     <span class="flags-link" aria-label="Browse flags" aria-disabled="true" role="link" data-i18n-attr="aria-label:menu.flagsData"><span class="flags-icon" aria-hidden="true"></span></span>
     <span class="burger" aria-label="Open menu" aria-disabled="true" role="button" data-i18n-attr="aria-label:menu.open"><span class="burger-bars" aria-hidden="true"></span></span>
+    <h1 class="sr-only">All country flags</h1>
     <div id="filter-bar"></div>
     <div id="sections"></div>
     <dialog id="zoom">
