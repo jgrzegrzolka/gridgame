@@ -393,6 +393,15 @@ body::before {
   font-weight: 500;
   margin: 0 0 12px;
 }
+/* Below-the-score bonus breakdown — small, muted, kept short ("+18 first
+ * try · +24 obscurity"). Lives between .final-score and .best on the
+ * 3×3 result panel and is removed when no bonuses were earned. */
+.score-breakdown {
+  font-size: 13px;
+  color: #888;
+  margin: -8px 0 12px;
+  font-variant-numeric: tabular-nums;
+}
 .time {
   font-size: 14px;
   color: #666;
