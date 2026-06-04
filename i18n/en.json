@@ -44,6 +44,7 @@
   },
   "findFlag": {
     "title": "Find All Country Flags by Category — Yet Another Quiz",
+    "heading": "Find Flag",
     "blurb": "Pick categories and name every flag that matches.",
     "statsTitle": "Find Flag — Your stats",
     "statsHeading": "Find Flag stats",
