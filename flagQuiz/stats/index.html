@@ -58,6 +58,8 @@
         accuracyRatio,
         isQuizIncludeAll,
         setQuizIncludeAll,
+        shouldShowBestTime,
+        formatBestScoreLabel,
       } from '../../flags/quiz.js';
       import { flagsGamePool } from '../../flags/group.js';
       import { bootI18n, wireLangToggle, t } from '../../i18n.js';
@@ -111,23 +113,19 @@
         if (best) {
           const score = document.createElement('span');
           score.className = 'stats-chip-score';
-          // Per-mode score semantics:
-          //   60s: best.score = flags answered correctly (raw count).
-          //   all: best.score = mistakes count (lower is better).
-          // Tint is always accuracy-based so green stays "clean run"
-          // regardless of which direction the score field reads in.
-          if (isTimedMode(mode)) {
-            score.textContent = String(best.score);
-          } else {
-            const mistakes = best.score;
-            score.textContent = String(mistakes);
-            score.style.color = scoreColor(accuracyRatio(mistakes, target));
-          }
+          score.textContent = formatBestScoreLabel(mode, best, target);
+          // Tint by ratio in both directions: timed mode = correct/total
+          // (higher is greener), untimed = mistakes/total (lower is greener).
+          score.style.color = isTimedMode(mode)
+            ? scoreColor(best.score / target)
+            : scoreColor(accuracyRatio(best.score, target));
           a.appendChild(score);
-          const time = document.createElement('span');
-          time.className = 'stats-chip-time';
-          time.textContent = formatTime(best.time);
-          a.appendChild(time);
+          if (shouldShowBestTime(mode, best)) {
+            const time = document.createElement('span');
+            time.className = 'stats-chip-time';
+            time.textContent = formatTime(best.time);
+            a.appendChild(time);
+          }
         } else {
           a.classList.add('stats-chip-unplayed');
           const cta = document.createElement('span');

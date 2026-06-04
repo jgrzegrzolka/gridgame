@@ -29,6 +29,8 @@ import {
   scoreColor,
   preloadFlags,
   shouldFireQuizConfetti,
+  shouldShowBestTime,
+  formatBestScoreLabel,
 } from './quiz.js';
 
 /**
@@ -213,6 +215,48 @@ test('targetFor("all", pool) returns the full pool length', () => {
 
 test('targetFor throws on an unknown mode', () => {
   assert.throws(() => targetFor('99', countries), /Unknown mode/);
+});
+
+// ---- shouldShowBestTime ----
+
+test('shouldShowBestTime: 60s mode hides the time when the clock ran out (best.time == budgetMs)', () => {
+  // The typical timed-mode ending — the round always stops at the budget,
+  // and showing "1:00.000" tells the player nothing they don't already know.
+  assert.equal(shouldShowBestTime('60s', { time: 60_000 }), false);
+});
+
+test('shouldShowBestTime: 60s mode shows the time when the pool was exhausted under budget', () => {
+  // The brag case — finished every flag before the timer ran out.
+  assert.equal(shouldShowBestTime('60s', { time: 47_000 }), true);
+});
+
+test('shouldShowBestTime: untimed (all) mode always shows the time — every value is meaningful', () => {
+  assert.equal(shouldShowBestTime('all', { time: 30_000 }), true);
+  assert.equal(shouldShowBestTime('all', { time: 600_000 }), true);
+});
+
+test('shouldShowBestTime: unknown mode is false (no defined budget, refuse to render a time we can\'t reason about)', () => {
+  assert.equal(shouldShowBestTime('99', { time: 1_000 }), false);
+});
+
+// ---- formatBestScoreLabel ----
+
+test('formatBestScoreLabel: 60s mode renders "score/target" so the achievement reads against the pool ceiling', () => {
+  assert.equal(formatBestScoreLabel('60s', { score: 22 }, 195), '22/195');
+  assert.equal(formatBestScoreLabel('60s', { score: 45 }, 45), '45/45');
+});
+
+test('formatBestScoreLabel: untimed (all) mode renders the raw mistakes count', () => {
+  // "5 / 195 mistakes" would mislead — target there is pool size, not a
+  // mistakes cap. Keep this column bare in all-mode.
+  assert.equal(formatBestScoreLabel('all', { score: 5 }, 195), '5');
+  assert.equal(formatBestScoreLabel('all', { score: 0 }, 45), '0');
+});
+
+test('formatBestScoreLabel: unknown mode falls back to the raw score string', () => {
+  // Safer than throwing — caller gets *something* to show even if the
+  // mode was decommissioned but old localStorage entries linger.
+  assert.equal(formatBestScoreLabel('99', { score: 7 }, 50), '7');
 });
 
 test('availableModes offers both 60s and all for any pool size — the timed mode never gates on pool size', () => {

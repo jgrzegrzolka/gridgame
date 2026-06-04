@@ -18,6 +18,7 @@ import {
   setQuizIncludeAll,
   preloadFlags,
   shouldFireQuizConfetti,
+  shouldShowBestTime,
 } from '../flags/quiz.js';
 import { flagsGamePool } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
@@ -304,18 +305,16 @@ export function bootFlagQuiz() {
         });
         // Show "Time" only when the pool exhausted under budget — for a
         // time-out the value is always the budget itself, which the
-        // mode label already tells the player. The brag-worthy case is
-        // running out of flags before the budget ends.
-        const poolExhausted = budgetUsed < budgetMs;
-        timeEl.textContent = poolExhausted
+        // mode label already tells the player. shouldShowBestTime is the
+        // shared gate; flagQuiz/stats uses the same function.
+        timeEl.textContent = shouldShowBestTime(mode, { time: budgetUsed })
           ? `${t('game.time', 'Time')}: ${formatTime(budgetUsed)}`
           : '';
 
         const { best, isNew } = recordResult(
           localStorage, key, mode, { score: answeredCount, time: budgetUsed }, includeAll,
         );
-        const bestWasPoolExhaust = best.time < budgetMs;
-        bestEl.textContent = bestWasPoolExhaust
+        bestEl.textContent = shouldShowBestTime(mode, best)
           ? `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`
           : `${t('quiz.yourBestScore', 'Your best score')}: ${best.score}`;
         if (isNew) {

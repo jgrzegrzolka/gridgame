@@ -251,6 +251,51 @@ export function targetFor(modeKey, pool) {
 }
 
 /**
+ * Whether the stored time for a best result is worth displaying for this mode.
+ *
+ *   - Timed (60s) mode: time only matters when the user finished the pool
+ *     before the clock ran out (best.time < budgetMs). Otherwise the time is
+ *     exactly the budget, which the mode label already conveys — showing
+ *     "1:00.000" everywhere is noise.
+ *   - Count modes (all): the user finished when they finished; the time
+ *     always carries information.
+ *
+ * Used by both the end-of-round screen and the stats list so the gating
+ * stays in lockstep — they used to have separate inline `poolExhausted`
+ * checks.
+ *
+ * @param {string} modeKey
+ * @param {{ time: number }} best
+ * @returns {boolean}
+ */
+export function shouldShowBestTime(modeKey, best) {
+  const def = MODES[modeKey];
+  if (!def) return false;
+  if (def.kind !== 'timed') return true;
+  return best.time < def.budgetMs;
+}
+
+/**
+ * Player-facing label for a best score. Different modes encode different
+ * things in `best.score`, so the format has to follow:
+ *
+ *   - Timed mode: score is correct count. Show "score/target" so the player
+ *     reads achievement against the pool ceiling.
+ *   - Count modes: score is mistakes count. Show the raw number — a
+ *     "/target" suffix here would read as "5 out of 195 what?" since target
+ *     is the pool size, not the cap on mistakes.
+ *
+ * @param {string} modeKey
+ * @param {{ score: number }} best
+ * @param {number} target
+ * @returns {string}
+ */
+export function formatBestScoreLabel(modeKey, best, target) {
+  if (isTimedMode(modeKey)) return `${best.score}/${target}`;
+  return String(best.score);
+}
+
+/**
  * @param {number} poolSize
  * @returns {string[]}
  */
