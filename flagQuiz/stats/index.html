@@ -49,7 +49,6 @@
     <script type="module">
       import {
         VARIANTS,
-        MODES,
         availableModes,
         formatTime,
         loadBest,
@@ -59,6 +58,8 @@
         accuracyRatio,
         isQuizIncludeAll,
         setQuizIncludeAll,
+        shouldShowBestTime,
+        formatBestScoreLabel,
       } from '../../flags/quiz.js';
       import { flagsGamePool } from '../../flags/group.js';
       import { bootI18n, wireLangToggle, t } from '../../i18n.js';
@@ -112,34 +113,14 @@
         if (best) {
           const score = document.createElement('span');
           score.className = 'stats-chip-score';
-          // Per-mode score semantics:
-          //   60s: best.score = flags answered correctly. Show as
-          //        score/target with a green→amber tint by ratio, same
-          //        shape findFlag/stats uses for its "found / total".
-          //   all: best.score = mistakes count (lower is better). Show
-          //        the raw mistakes number — a "/target" suffix here
-          //        would read as "5 out of 45 what?" since target is
-          //        the pool size, not the cap on mistakes.
-          if (isTimedMode(mode)) {
-            score.textContent = `${best.score}/${target}`;
-            score.style.color = scoreColor(best.score / target);
-          } else {
-            const mistakes = best.score;
-            score.textContent = String(mistakes);
-            score.style.color = scoreColor(accuracyRatio(mistakes, target));
-          }
+          score.textContent = formatBestScoreLabel(mode, best, target);
+          // Tint by ratio in both directions: timed mode = correct/total
+          // (higher is greener), untimed = mistakes/total (lower is greener).
+          score.style.color = isTimedMode(mode)
+            ? scoreColor(best.score / target)
+            : scoreColor(accuracyRatio(best.score, target));
           a.appendChild(score);
-          // Time policy: for timed modes the budget is almost always
-          // exhausted (round runs out the clock at exactly budgetMs),
-          // so a "1:00.000" time tells the player nothing they don't
-          // already know from the mode label. Show it only on the brag
-          // case where the pool was finished BEFORE the clock ran out —
-          // mirrors flagQuiz/page.js's end-of-round logic. For untimed
-          // (all) mode every time is meaningful.
-          const def = MODES[mode];
-          const budgetMs = def && def.kind === 'timed' ? def.budgetMs : 0;
-          const showTime = !isTimedMode(mode) || best.time < budgetMs;
-          if (showTime) {
+          if (shouldShowBestTime(mode, best)) {
             const time = document.createElement('span');
             time.className = 'stats-chip-time';
             time.textContent = formatTime(best.time);
