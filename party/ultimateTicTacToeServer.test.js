@@ -269,6 +269,44 @@ test('rematch: after a game ends, broadcasts a fresh game to both', async () => 
   assert.equal(aRematch.game.winner, null);
 });
 
+test('rematch: from a sender who is not in the room is silently ignored', async () => {
+  const a = mockConn('a'); const b = mockConn('b'); const c = mockConn('c');
+  const srv = new UltimateTicTacToeServer(mockParty([a, b, c]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+  await srv.onConnect(b, ctxFor('bob',   'join'));
+  /** @type {NonNullable<typeof srv.room>} */ (srv.room).game.winner = 'O';
+  const aBefore = a.sent.length; const bBefore = b.sent.length;
+  // c never went through onConnect, so the server has no playerId for it.
+  await srv.onMessage(JSON.stringify({ type: 'rematch' }), c);
+  assert.equal(a.sent.length, aBefore);
+  assert.equal(b.sent.length, bBefore);
+});
+
+test('give-up: from a sender who is not in the room is silently ignored', async () => {
+  const a = mockConn('a'); const b = mockConn('b'); const c = mockConn('c');
+  const srv = new UltimateTicTacToeServer(mockParty([a, b, c]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+  await srv.onConnect(b, ctxFor('bob',   'join'));
+  const aBefore = a.sent.length; const bBefore = b.sent.length;
+  await srv.onMessage(JSON.stringify({ type: 'give-up' }), c);
+  assert.equal(a.sent.length, aBefore);
+  assert.equal(b.sent.length, bBefore);
+});
+
+test('give-up: ignored once the game is already over', async () => {
+  const a = mockConn('a'); const b = mockConn('b');
+  const srv = new UltimateTicTacToeServer(mockParty([a, b]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+  await srv.onConnect(b, ctxFor('bob',   'join'));
+  /** @type {NonNullable<typeof srv.room>} */ (srv.room).game.winner = 'X';
+  const aBefore = a.sent.length;
+  await srv.onMessage(JSON.stringify({ type: 'give-up' }), a);
+  assert.equal(a.sent.length, aBefore);
+});
+
 test('give-up: broadcasts to both, sets gaveUp, blocks further claims', async () => {
   const a = mockConn('a'); const b = mockConn('b');
   const srv = new UltimateTicTacToeServer(mockParty([a, b]), COUNTRIES, PUZZLE);
