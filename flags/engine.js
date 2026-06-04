@@ -123,7 +123,7 @@ export const MOTIFS_FOR_RANDOM = [
 export function hasColor(color) {
   return {
     id: `hasColor:${color}`,
-    label: `Has ${color}`,
+    label: color,
     predicate: (c) => Array.isArray(c.colors) && c.colors.includes(color),
   };
 }
@@ -135,7 +135,7 @@ export function hasColor(color) {
 export function hasMotif(motif) {
   return {
     id: `hasMotif:${motif}`,
-    label: `Has ${motif}`,
+    label: motif,
     predicate: (c) => Array.isArray(c.motifs) && c.motifs.includes(motif),
   };
 }
@@ -158,18 +158,18 @@ function pickRandom(pool, n, rng) {
 
 /**
  * Translate a category's display label by decoding its `id`. The factories
- * above bake an English label (`"Africa"`, `"Has red"`) onto every Category
- * so the engine stays pure of i18n; this is the boundary helper that page
- * code uses at render time to swap in the active language. Unknown id
- * prefixes fall through to the baked label so a stray category never
- * renders blank.
+ * above bake an English label (`"Africa"`, `"red"`, `"weapon"`) onto every
+ * Category so the engine stays pure of i18n; this is the boundary helper
+ * that page code uses at render time to swap in the active language.
+ * Unknown id prefixes fall through to the baked label so a stray category
+ * never renders blank.
  *
  * Key conventions:
  *   `continent:<Name>` → `variant.<name-lower-kebab>` (reuses the flagQuiz
  *      variant translations — continents are translated as nouns, not as
  *      "Continent: Africa".)
- *   `hasColor:<x>`     → `game.has` interpolated with `color.<x>`.
- *   `hasMotif:<x>`     → `game.has` interpolated with `motif.<x>`.
+ *   `hasColor:<x>`     → `color.<x>` (bare noun, no "Has " wrapper).
+ *   `hasMotif:<x>`     → `motif.<x>` (bare noun, no "Has " wrapper).
  *
  * @param {Category} category
  * @param {(key: string, fallback: string) => string} translate
@@ -185,10 +185,10 @@ export function translateCategoryLabel(category, translate) {
     return translate(`variant.${variantKey}`, category.label);
   }
   if (kind === 'hasColor') {
-    return translate('game.has', 'Has {x}').replace('{x}', translate(`color.${value}`, value));
+    return translate(`color.${value}`, value);
   }
   if (kind === 'hasMotif') {
-    return translate('game.has', 'Has {x}').replace('{x}', translate(`motif.${value}`, value));
+    return translate(`motif.${value}`, value);
   }
   return category.label;
 }

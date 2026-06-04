@@ -26,8 +26,7 @@
     "newRecord": "new record!",
     "failedToLoad": "Failed to load:",
     "cancel": "Cancel",
-    "countryName": "Country name…",
-    "has": "Has {x}"
+    "countryName": "Country name…"
   },
   "quiz": {
     "title": "Country Flag Quiz — Yet Another Quiz",

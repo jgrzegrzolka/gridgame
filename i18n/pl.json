@@ -26,8 +26,7 @@
     "newRecord": "nowy rekord!",
     "failedToLoad": "Nie udało się załadować:",
     "cancel": "Anuluj",
-    "countryName": "Nazwa kraju…",
-    "has": "Ma {x}"
+    "countryName": "Nazwa kraju…"
   },
   "quiz": {
     "title": "Quiz flag państw — Yet Another Quiz",

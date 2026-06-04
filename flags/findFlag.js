@@ -345,9 +345,9 @@ export function rankedCategoryId(f) {
 
 /**
  * Render a single pill's display label in the active language. Includes
- * use the same "Africa" / "Has orange" wording as the existing chooser;
- * excludes are prefixed with the localized "Not " so a multi-pill mix
- * reads naturally — e.g. "Africa · Has orange · Not cross".
+ * render as the bare noun ("Africa", "orange", "cross"); excludes are
+ * prefixed with the localized "Not " so a multi-pill mix reads naturally
+ * — e.g. "Africa · orange · Not cross".
  *
  * @param {keyof Filters} group
  * @param {string} value
@@ -361,17 +361,9 @@ export function pillLabel(group, value, sign, translate) {
   if (group === 'continent') {
     body = translate(`variant.${value.toLowerCase().replace(/ /g, '-')}`, value);
   } else if (group === 'color') {
-    const colorName = translate(`color.${value}`, value);
-    body =
-      sign === 'include'
-        ? translate('game.has', 'Has {x}').replace('{x}', colorName)
-        : colorName;
+    body = translate(`color.${value}`, value);
   } else if (group === 'motif') {
-    const motifName = translate(`motif.${value}`, value);
-    body =
-      sign === 'include'
-        ? translate('game.has', 'Has {x}').replace('{x}', motifName)
-        : motifName;
+    body = translate(`motif.${value}`, value);
   } else {
     body = translate(`status.${value}`, value);
   }
