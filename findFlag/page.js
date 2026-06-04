@@ -450,6 +450,17 @@ export function bootFindFlag() {
       }
       if (shouldFireFindFlagConfetti({ found, total, isNew })) launchConfetti();
 
+      // Found section duplicates the in-game .find-found grid onto the
+      // result screen. Without it the user never sees the flag they
+      // just submitted: clicking the last target auto-finishes, the
+      // game section vanishes, and the result screen would only show
+      // what they missed.
+      const foundFlags = targets.filter((c) => foundCodes.has(c.code));
+      const foundResultEl = document.getElementById('find-result-found');
+      foundResultEl.innerHTML = '';
+      for (const c of foundFlags) foundResultEl.appendChild(flagTile(c));
+      document.getElementById('found-title').hidden = foundFlags.length === 0;
+
       const missed = targets.filter((c) => !foundCodes.has(c.code));
       const missedEl = document.getElementById('find-missed');
       missedEl.innerHTML = '';
