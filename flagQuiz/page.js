@@ -85,7 +85,10 @@ export function bootFlagQuiz() {
     toggleInput.checked = includeAll;
     toggleInput.addEventListener('change', () => {
       setQuizIncludeAll(localStorage, toggleInput.checked);
-      window.location.reload();
+      // Let the slide animation finish so the user sees the toggle move
+      // before the page reloads. Without this, change fires, the JS reloads
+      // instantly, and the visual transition never paints.
+      setTimeout(() => window.location.reload(), 350);
     });
     const trackSpan = document.createElement('span');
     trackSpan.className = 'scope-toggle-track';

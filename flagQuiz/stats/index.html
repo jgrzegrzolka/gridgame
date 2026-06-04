@@ -70,7 +70,9 @@
       toggleEl.checked = includeAll;
       toggleEl.addEventListener('change', () => {
         setQuizIncludeAll(localStorage, toggleEl.checked);
-        window.location.reload();
+        // Let the slide animation finish so the user sees the toggle move
+        // before the page reloads.
+        setTimeout(() => window.location.reload(), 350);
       });
 
       // Wait for i18n so renderStats can use translated variant labels and
