@@ -75,14 +75,19 @@ const PROD_HOSTNAMES = new Set([
  * like 192.168.x.x when you open the dev server from another device)
  * connects to a partykit dev server running on port 1999 on the same host.
  *
+ * `party` selects which PartyKit party class handles the room — 'main'
+ * for the 3×3 server, 'ultimate' for the 9×9 server. Rooms in different
+ * parties don't share state, so the same room code can exist in both.
+ *
  * @param {string} hostname
+ * @param {string} [party]
  * @returns {string}
  */
-export function serverUrlFor(hostname) {
+export function serverUrlFor(hostname, party = 'main') {
   if (PROD_HOSTNAMES.has(hostname)) {
-    return 'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/main/';
+    return `wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/${party}/`;
   }
-  return `ws://${hostname}:1999/parties/main/`;
+  return `ws://${hostname}:1999/parties/${party}/`;
 }
 
 /**
