@@ -216,7 +216,8 @@ body {
   font-size: 14px;
 }
 .find-found,
-.find-missed {
+.find-missed,
+.find-result-found {
   list-style: none;
   padding: 0;
   margin: 0 0 16px;
@@ -264,7 +265,7 @@ body {
   100% { transform: scale(1);   opacity: 1; }
 }
 
-.missed-title {
+.result-section-title {
   font-size: 14px;
   color: #999;
   text-transform: uppercase;
@@ -273,7 +274,8 @@ body {
   margin: 24px 0 12px;
   text-align: left;
 }
-.find-missed {
+.find-missed,
+.find-result-found {
   text-align: left;
 }
 .result-links {
