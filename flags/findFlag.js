@@ -465,11 +465,12 @@ function pickN(arr, n, rng) {
  * mix above `minIntersection` shows up. The fallback also covers the
  * degenerate "pillPool is empty" case (returns an empty filter then).
  *
- * Why "at most one pill per group": continents are mutually
- * exclusive (Africa AND Europe = empty), and multi-include within
- * one group widens (OR-semantics among values) rather than tightens
- * — neither makes for an interesting random mix. Cross-group AND is
- * the move.
+ * Why "at most one pill per group": with AND-within-group semantics
+ * (see matchesFilters), two values in a scalar group like continent
+ * are unsatisfiable (Africa AND Europe = empty), and two values in
+ * an array group (e.g. weapon AND animal) over-constrain to a small
+ * handful of flags. Cross-group AND is where the interesting mixes
+ * live.
  *
  * @param {Array<{ group: keyof Filters, value: string }>} pillPool
  * @param {Country[]} all
