@@ -60,6 +60,7 @@
       import { flagsGamePool } from '../../flags/group.js';
       import { formatTime, scoreColor } from '../../flags/quiz.js';
       import { bootI18n, wireLangToggle, t } from '../../i18n.js';
+      import { wireBurgerDismiss } from '../../common.js?v=__BUILD__';
 
       function continentKey(name) {
         return name.toLowerCase().replace(/ /g, '-');
@@ -79,6 +80,7 @@
       // render in the right language on first paint.
       bootI18n('../../').then((lang) => {
         wireLangToggle(lang);
+        wireBurgerDismiss();
         return fetch('../../flags/countries.json?v=__BUILD__')
           .then((r) => r.json())
           .then((raw) => {

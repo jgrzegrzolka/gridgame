@@ -47,6 +47,7 @@
       import { gridBestKey } from '../../flags/grid.js';
       import { loadBest, scoreColor } from '../../flags/quiz.js';
       import { bootI18n, wireLangToggle, t } from '../../i18n.js';
+      import { wireBurgerDismiss } from '../../common.js?v=__BUILD__';
 
       const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
       const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -59,6 +60,7 @@
       // language on first paint (the archive list is built once).
       bootI18n('../../').then((lang) => {
         wireLangToggle(lang);
+        wireBurgerDismiss();
         renderArchive();
       });
 

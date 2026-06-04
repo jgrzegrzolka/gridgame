@@ -94,9 +94,11 @@
       import { bootFlagGrid } from '../page.js?v=__BUILD__';
       import { generateRandomPuzzle } from '../../flags/grid.js';
       import { bootI18n, wireLangToggle } from '../../i18n.js';
+      import { wireBurgerDismiss } from '../../common.js?v=__BUILD__';
 
       bootI18n('../../').then((lang) => {
         wireLangToggle(lang);
+        wireBurgerDismiss();
         bootFlagGrid((countries) => generateRandomPuzzle(countries), { allowReplay: true });
       });
     </script>

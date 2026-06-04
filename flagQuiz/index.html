@@ -64,10 +64,14 @@
     <script type="module">
       import { bootFlagQuiz } from './page.js?v=__BUILD__';
       import { bootI18n, wireLangToggle } from '../i18n.js';
+      import { wireBurgerDismiss } from '../common.js?v=__BUILD__';
       // bootFlagQuiz uses t() while building the dynamic menu, so we have
       // to wait for i18n to load first. The menu also includes the lang
       // toggle, so wireLangToggle has to run after bootFlagQuiz resolves.
-      bootI18n('../').then((lang) => bootFlagQuiz().then(() => wireLangToggle(lang)));
+      bootI18n('../').then((lang) => bootFlagQuiz().then(() => {
+        wireLangToggle(lang);
+        wireBurgerDismiss();
+      }));
     </script>
   </body>
 </html>

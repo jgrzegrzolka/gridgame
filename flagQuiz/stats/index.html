@@ -60,6 +60,7 @@
       } from '../../flags/quiz.js';
       import { flagsGamePool } from '../../flags/group.js';
       import { bootI18n, wireLangToggle, t } from '../../i18n.js';
+      import { wireBurgerDismiss } from '../../common.js?v=__BUILD__';
 
       const includeAll = isQuizIncludeAll();
       const statsEl = document.getElementById('stats');
@@ -75,6 +76,7 @@
       // the "Play" CTA without a load-order race.
       bootI18n('../../').then((lang) => {
         wireLangToggle(lang);
+        wireBurgerDismiss();
         return fetch('../../flags/countries.json?v=__BUILD__')
           .then((r) => r.json())
           .then(renderStats)
