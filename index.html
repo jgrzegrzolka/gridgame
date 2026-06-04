@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Flag-themed games — a 60-second flag quiz, find-all-flags by category, and tic-tac-toe with flags." />
     <title>gridgame</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="common.css?v=__BUILD__" />
@@ -35,23 +36,25 @@
     <nav id="burger-panel" class="burger-panel" hidden>
       <ul class="menu"></ul>
     </nav>
-    <section class="domain">
-      <h2 class="domain-title" data-i18n="domain.flags">Flags</h2>
-      <div class="game-tiles">
-        <a class="game-tile" href="flagQuiz/?v=countries&amp;n=60s">
-          <span class="game-icon icon-quiz" aria-hidden="true"></span>
-          <span class="game-name" data-i18n="tile.quiz">Quiz</span>
-        </a>
-        <a class="game-tile" href="findFlag/">
-          <span class="game-icon icon-find" aria-hidden="true"></span>
-          <span class="game-name" data-i18n="tile.find">Find all</span>
-        </a>
-        <a class="game-tile" href="ticTacToe/">
-          <span class="game-icon icon-ttt" aria-hidden="true"></span>
-          <span class="game-name" data-i18n="tile.ticTacToe">Tic Tac Toe</span>
-        </a>
-      </div>
-    </section>
+    <main>
+      <section class="domain">
+        <h2 class="domain-title" data-i18n="domain.flags">Flags</h2>
+        <div class="game-tiles">
+          <a class="game-tile" href="flagQuiz/?v=countries&amp;n=60s">
+            <span class="game-icon icon-quiz" aria-hidden="true"></span>
+            <span class="game-name" data-i18n="tile.quiz">Quiz</span>
+          </a>
+          <a class="game-tile" href="findFlag/">
+            <span class="game-icon icon-find" aria-hidden="true"></span>
+            <span class="game-name" data-i18n="tile.find">Find all</span>
+          </a>
+          <a class="game-tile" href="ticTacToe/">
+            <span class="game-icon icon-ttt" aria-hidden="true"></span>
+            <span class="game-name" data-i18n="tile.ticTacToe">Tic Tac Toe</span>
+          </a>
+        </div>
+      </section>
+    </main>
     <script type="module">
       import { bootI18n, wireLangToggle } from './i18n.js';
       import { disableBurgerIfEmpty, wireBurgerDismiss } from './common.js?v=__BUILD__';
