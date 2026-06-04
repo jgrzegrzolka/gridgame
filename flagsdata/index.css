@@ -95,34 +95,6 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.pill {
-  font: inherit;
-  font-size: 12px;
-  background: #fff;
-  color: #1c1c1c;
-  border: 1px solid #ddd;
-  border-radius: 999px;
-  padding: 3px 10px;
-  cursor: pointer;
-  line-height: 1.4;
-}
-.pill:hover {
-  background: #f0f0f0;
-}
-.pill.active {
-  background: #1c1c1c;
-  color: #fff;
-  border-color: #1c1c1c;
-}
-.pill.exclude {
-  background: #fff;
-  color: #c0392b;
-  border-color: #c0392b;
-  text-decoration: line-through;
-}
-.pill.exclude:hover {
-  background: #fdecea;
-}
 #filter-clear {
   font: inherit;
   font-size: 12px;
