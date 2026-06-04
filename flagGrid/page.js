@@ -3,6 +3,8 @@ import {
   suggest,
   exactSingleMatch,
   computeGridScore,
+  firstTryCount,
+  GRID_MAX_SCORE,
   loadGridState,
   saveGridState,
   recordGridResult,
@@ -69,6 +71,11 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   let gaveUp = false;
   /** @type {Array<string | null>} */
   let revealedCodes = Array(9).fill(null);
+  /** Tarnished-cell mask. A cell flips to `true` the first time the
+   *  player picks a wrong country for it; never flips back. Used both
+   *  for the first-try score bonus and the saved-state contract. */
+  /** @type {boolean[]} */
+  let tarnishedCells = Array(9).fill(false);
   if (saved) {
     for (let i = 0; i < 9; i++) {
       const code = saved.picks[i];
@@ -78,6 +85,9 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     wrongCount = saved.wrongCount;
     gaveUp = saved.gaveUp;
     revealedCodes = saved.revealedCodes.slice();
+    tarnishedCells = saved.tarnishedCells
+      ? saved.tarnishedCells.slice()
+      : Array(9).fill(false);
   }
 
   /** @type {Country[]} */
@@ -286,7 +296,13 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     const { row, col } = activeCell;
     const result = tryPick(puzzle, solution, row, col, country);
     if (!result.accepted) {
-      if (!solution[row][col]) wrongCount++;
+      if (!solution[row][col]) {
+        wrongCount++;
+        // A wrong pick on an empty cell tarnishes it — the cell can never
+        // count toward the first-try bonus again, even if the player gets
+        // it right on a later attempt.
+        tarnishedCells[row * 3 + col] = true;
+      }
       closePicker();
       shakeCell(row, col);
       focusCell(row, col);
@@ -379,15 +395,20 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       wrongCount,
       gaveUp,
       revealedCodes,
+      tarnishedCells,
     });
   }
 
   function finishRound() {
     if (!resultEl) return;
     const filledCount = countFilled();
-    const score = computeGridScore({ filledCount, wrongCount });
+    const picks = solution.flat().map((c) => (c ? c.code : null));
+    const firstTry = firstTryCount({ picks, tarnishedCells });
+    const score = computeGridScore({ filledCount, wrongCount, firstTryCount: firstTry });
     if (finalScoreEl) finalScoreEl.textContent = String(score);
-    if (finalScoreLineEl) finalScoreLineEl.style.color = scoreColor(score / 100);
+    // Tint relative to the new ceiling (118) rather than the old 100,
+    // so a clean run with full first-try bonus still reads as green.
+    if (finalScoreLineEl) finalScoreLineEl.style.color = scoreColor(score / GRID_MAX_SCORE);
     if (stateKey && bestEl) {
       const slug = stateKey.replace(/^flaggrid\.state\./, '');
       // The 3x3 no longer tracks time; we pass 0 to satisfy the shared

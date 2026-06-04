@@ -26,6 +26,8 @@ import {
   axesConflict,
   buildRandomCategoryPool,
   computeGridScore,
+  firstTryCount,
+  GRID_MAX_SCORE,
   loadGridState,
   saveGridState,
   gridBestKey,
@@ -1240,8 +1242,64 @@ test('solutionState.complete is false when one cell is invalid even if all are f
   assert.equal(state.cells[2][2].valid, false);
 });
 
-test('computeGridScore returns 100 for a clean 9/9 solve with no mistakes', () => {
+test('computeGridScore returns 100 for a clean 9/9 solve with no first-try bonuses claimed', () => {
+  // firstTryCount defaults to 0 — covers legacy callers that don't pass the field.
   assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0 }), 100);
+});
+
+test('computeGridScore awards +2 per first-try cell, on top of the 100 base', () => {
+  // Clean run, every cell on first attempt → 100 + 9*2 = 118 (the new max).
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 9 }), 118);
+  // Clean fill but only 4 cells were first-try (other 5 took a wrong then a right).
+  // The 5 wrongs cost 15; the 4 first-try bonuses earn 8; net 100 - 15 + 8 = 93.
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 5, firstTryCount: 4 }), 93);
+});
+
+test('computeGridScore caps at 118 even when firstTryCount somehow exceeds 9', () => {
+  // Belt-and-braces — there's no path in the engine that produces firstTryCount > 9
+  // but the clamp protects future callers / corrupted save data.
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 99 }), 118);
+});
+
+test('GRID_MAX_SCORE is the new score ceiling — 100 base + 9 first-try cells × 2', () => {
+  assert.equal(GRID_MAX_SCORE, 118);
+});
+
+test('firstTryCount: counts filled cells whose tarnished bit is false', () => {
+  // 6 filled, 3 of them tarnished (had a wrong pick before being filled).
+  // Result: 3 first-try cells.
+  const state = {
+    picks: ['AA', 'BB', 'CC', 'DD', 'EE', 'FF', null, null, null],
+    tarnishedCells: [false, true, false, true, true, false, false, false, false],
+  };
+  assert.equal(firstTryCount(state), 3);
+});
+
+test('firstTryCount: empty board is 0', () => {
+  assert.equal(firstTryCount({
+    picks: Array(9).fill(null),
+    tarnishedCells: Array(9).fill(false),
+  }), 0);
+});
+
+test('firstTryCount: tarnished cells that are empty are NOT counted (no fill = no bonus)', () => {
+  // Player wrong-picked at index 0 then gave up. The bit is true; the cell
+  // is empty. Should contribute 0, not -1.
+  const state = {
+    picks: [null, null, null, null, null, null, null, null, null],
+    tarnishedCells: [true, false, false, false, false, false, false, false, false],
+  };
+  assert.equal(firstTryCount(state), 0);
+});
+
+test('firstTryCount: missing tarnishedCells (legacy save) treats every filled cell as first-try', () => {
+  // Backward-compat path: states saved before the field existed return the
+  // most generous count. New scoring rewards them rather than punishes —
+  // matches the "we can't reconstruct per-cell wrong history" reality.
+  const state = /** @type {any} */ ({
+    picks: ['AA', 'BB', null, 'DD', null, null, 'GG', null, null],
+  });
+  assert.equal(firstTryCount(state), 4);
 });
 
 test('computeGridScore deducts 3 points per wrong pick when fully solved', () => {
@@ -1320,6 +1378,7 @@ test('loadGridState round-trips a well-formed state', () => {
     wrongCount: 2,
     gaveUp: false,
     revealedCodes: Array(9).fill(null),
+    tarnishedCells: [true, false, false, false, true, false, false, false, false],
   };
   saveGridState(store, 'flaggrid.state.1', state);
   assert.deepEqual(loadGridState(store, 'flaggrid.state.1'), state);
@@ -1356,6 +1415,10 @@ test('loadGridState ignores legacy timer fields (finalTimeMs / startedAtMs) from
     wrongCount: 0,
     gaveUp: false,
     revealedCodes: Array(9).fill(null),
+    // Pre-first-try saves missed tarnishedCells; the loader fills it
+    // with all-false so legacy rounds load without crashing and treat
+    // every filled cell as first-try.
+    tarnishedCells: Array(9).fill(false),
   });
 });
 
@@ -1366,6 +1429,7 @@ test('loadGridState round-trips a give-up state', () => {
     wrongCount: 1,
     gaveUp: true,
     revealedCodes: [null, null, 'us', 'cn', 'br', null, 'eg', null, 'au'],
+    tarnishedCells: [false, true, false, false, false, false, false, false, false],
   };
   saveGridState(store, 'k', state);
   assert.deepEqual(loadGridState(store, 'k'), state);
