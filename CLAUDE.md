@@ -26,6 +26,7 @@ Rule of thumb: keep new code inside its feature folder. Promote something to `fl
 - If you find yourself about to copy a CSS rule from one feature stylesheet into another, **stop** — promote the rule to `common.css` (or a shared module) and delete the source copy too. The exception is feature-specific tweaks (e.g. `.cell.exhausted` for 9×9 only) where the *behavior itself* doesn't exist elsewhere.
 - Prefer the shared rule in `common.css`. If a per-feature stylesheet overrides a shared rule, that override is suspect — confirm it's intentional or remove it.
 - When fixing inconsistency, prefer **deleting the override** over adding more overrides on the other pages.
+- **Chrome buttons** (`.back`, `.coffee`, `.flags-link`, `.lang-toggle`, `.burger`) all use `box-sizing: border-box` so the 44 × 44 px slot stays the same regardless of border width. When adding a new chrome button, set `box-sizing: border-box` and space it 52 px from the next one (44 px slot + 8 px gap). Mixing `content-box` and `border-box` here causes the 2 px discrepancy that's hard to spot until you have several buttons in a row.
 
 ## Type-checking
 

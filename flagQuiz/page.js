@@ -116,14 +116,6 @@ export function bootFlagQuiz() {
     statsA.textContent = t('menu.yourStats', 'Your stats');
     statsLi.appendChild(statsA);
     quizMenuEl.appendChild(statsLi);
-
-    const flagsDataLi = document.createElement('li');
-    flagsDataLi.className = 'menu-divider';
-    const flagsDataA = document.createElement('a');
-    flagsDataA.href = '../flagsdata/';
-    flagsDataA.textContent = t('menu.flagsData', 'Browse flags');
-    flagsDataLi.appendChild(flagsDataA);
-    quizMenuEl.appendChild(flagsDataLi);
   }
 
   function renderModeToggle(key, mode, modes) {

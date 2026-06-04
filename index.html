@@ -15,6 +15,7 @@
     <span class="back" aria-label="Home" data-i18n-attr="aria-label:back" aria-disabled="true" role="link"><span class="home-icon" aria-hidden="true"></span></span>
     <a class="lang-toggle" id="lang-toggle" href="#"></a>
     <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee" data-i18n-attr="aria-label:coffee,title:coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
+    <a class="flags-link" href="flagsdata/" aria-label="Browse flags" title="Browse flags" data-i18n-attr="aria-label:menu.flagsData,title:menu.flagsData"><span class="flags-icon" aria-hidden="true"></span></a>
     <button
       type="button"
       class="burger"
@@ -34,9 +35,7 @@
       <span class="burger-bars" aria-hidden="true"></span>
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
-      <ul class="menu">
-        <li><a href="flagsdata/" data-i18n="menu.flagsData">Browse flags</a></li>
-      </ul>
+      <ul class="menu"></ul>
     </nav>
     <section class="domain">
       <h2 class="domain-title" data-i18n="domain.flags">Flags</h2>
@@ -61,7 +60,14 @@
     </section>
     <script type="module">
       import { bootI18n, wireLangToggle } from './i18n.js';
-      bootI18n().then(wireLangToggle);
+      import { disableBurgerIfEmpty } from './common.js?v=__BUILD__';
+      bootI18n().then((lang) => {
+        wireLangToggle(lang);
+        disableBurgerIfEmpty(
+          document.querySelector('.burger'),
+          document.querySelector('#burger-panel .menu'),
+        );
+      });
     </script>
   </body>
 </html>
