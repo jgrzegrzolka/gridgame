@@ -470,6 +470,24 @@ export function bootFindFlag() {
       /** @type {HTMLAnchorElement} */ (document.getElementById('play-again')).href =
         window.location.pathname + window.location.search;
 
+      /** @type {HTMLAnchorElement} */ (document.getElementById('play-random')).onclick = (e) => {
+        e.preventDefault();
+        // Same pool the chooser's Random button uses — playable
+        // (group, value) pairs across continents, colors, and motifs.
+        /** @type {Array<{ group: 'continent' | 'color' | 'motif', value: string }>} */
+        const pool = [
+          ...CONTINENTS.filter((v) => all.some((c) => c.continent === v))
+            .map((v) => ({ group: /** @type {'continent'} */ ('continent'), value: /** @type {string} */ (v) })),
+          ...COLORS_FOR_RANDOM.filter((v) => all.some((c) => (c.colors ?? []).includes(v)))
+            .map((v) => ({ group: /** @type {'color'} */ ('color'), value: v })),
+          ...MOTIFS_FOR_RANDOM.filter((v) => all.some((c) => (c.motifs ?? []).includes(v)))
+            .map((v) => ({ group: /** @type {'motif'} */ ('motif'), value: v })),
+        ];
+        const f = pickRandomMix(pool, all);
+        const params = new URLSearchParams({ f: serializeFilter(f) });
+        window.location.search = `?${params.toString()}`;
+      };
+
       gameEl.hidden = true;
       resultEl.hidden = false;
     }
