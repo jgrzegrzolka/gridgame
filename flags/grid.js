@@ -831,7 +831,7 @@ const GRID_SCORE_MAX =
  *               had to know this" bucket.
  *   Everything else: middle tier (default +2).
  */
-const WELL_KNOWN_COUNTRIES = new Set([
+export const WELL_KNOWN_COUNTRIES = new Set([
   // Europe
   'gb', 'fr', 'de', 'it', 'es', 'pt', 'nl', 'be', 'ch', 'at',
   'se', 'no', 'dk', 'fi', 'ie', 'gr', 'pl', 'cz', 'hu', 'ru',
@@ -846,7 +846,7 @@ const WELL_KNOWN_COUNTRIES = new Set([
   // Oceania
   'au', 'nz',
 ]);
-const OBSCURE_COUNTRIES = new Set([
+export const OBSCURE_COUNTRIES = new Set([
   // Micro-Europe
   'ad', 'mc', 'sm', 'va', 'li', 'mt', 'gi', 'im', 'je', 'gg',
   'fo', 'ax', 'sj',
