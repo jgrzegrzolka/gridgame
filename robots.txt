@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Stats sub-pages are personal-progress views — useful for the user, not
+# useful in search results.
+Disallow: /flagQuiz/stats/
+Disallow: /findFlag/stats/
+
+Sitemap: https://yetanotherquiz.com/sitemap.xml
