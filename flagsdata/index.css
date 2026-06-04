@@ -1,5 +1,15 @@
 body {
   padding: var(--page-top) 24px 24px;
+  /* Cap content at the same 756 px the chrome buttons align to (the 9×9
+   * tic-tac-toe grid's max width — see common.css --chrome-x-offset).
+   * Without this the flag grid stretched edge-to-edge on wide monitors
+   * while every other page sat centred, which left the burger floating
+   * orphan in the right corner. The filter bar's "margin: 0 -24px" bleed
+   * still works — it extends to the body's edges, which on a wide viewport
+   * is the centred 756 px column, on a phone is the viewport itself. */
+  max-width: 756px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 #filter-bar {
   position: sticky;
