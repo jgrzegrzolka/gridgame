@@ -2,5 +2,8 @@
   "$schema": "https://www.partykit.io/schema.json",
   "name": "gridgame-ttt",
   "main": "party/server.js",
+  "parties": {
+    "ultimate": "party/ultimateServer.js"
+  },
   "compatibilityDate": "2026-06-01"
 }

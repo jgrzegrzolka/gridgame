@@ -69,6 +69,12 @@ test('serverUrlFor: production hostnames go to the deployed Cloudflare PartyKit'
   assert.equal(serverUrlFor('www.yetanotherquiz.com'), prod);
 });
 
+test('serverUrlFor: party arg routes to the ultimate (9×9) party for dev and prod', () => {
+  assert.equal(serverUrlFor('localhost', 'ultimate'), 'ws://localhost:1999/parties/ultimate/');
+  assert.equal(serverUrlFor('jgrzegrzolka.github.io', 'ultimate'),
+    'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/ultimate/');
+});
+
 // ---- Reducer ----
 
 test('reduceServerMessage: welcome sets myRole, game, and peerPresent', () => {
