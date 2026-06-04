@@ -1,8 +1,8 @@
-import { validateCell, findUltimateAssignment } from './grid.js';
+import { validateCell, findUltimateAssignment } from './engine.js';
 import { findWinner } from './ticTacToe.js';
 
 /** @typedef {import('./group.js').Country} Country */
-/** @typedef {import('./grid.js').Puzzle} Puzzle */
+/** @typedef {import('./engine.js').Puzzle} Puzzle */
 /** @typedef {import('./ticTacToe.js').Player} Player */
 /** @typedef {import('./ticTacToe.js').Cell} Cell */
 

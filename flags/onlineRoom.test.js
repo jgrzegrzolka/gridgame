@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continent, hasColor } from './grid.js';
+import { continent, hasColor } from './engine.js';
 import {
   createRoom,
   applyHello,

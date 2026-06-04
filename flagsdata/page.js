@@ -1,5 +1,5 @@
 import { CONTINENTS } from '../flags/group.js';
-import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../flags/grid.js';
+import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../flags/engine.js';
 import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
 import { t, countryName } from '../i18n.js';
 

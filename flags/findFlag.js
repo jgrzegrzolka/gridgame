@@ -1,11 +1,11 @@
 /** @typedef {import('./group.js').Country} Country */
-/** @typedef {import('./grid.js').Category} Category */
+/** @typedef {import('./engine.js').Category} Category */
 
-import { categoryFromId as gridCategoryFromId } from './grid.js';
+import { categoryFromId as gridCategoryFromId } from './engine.js';
 import { readBoolSetting, writeBoolSetting } from './group.js';
 
 // Re-exported so existing findFlag callers don't need to update their import.
-// The implementation lives in grid.js next to the category factories.
+// The implementation lives in engine.js next to the category factories.
 export const categoryFromId = gridCategoryFromId;
 
 const FIND_INCLUDE_ALL_KEY = 'gridgame.flagfind.includeAll';

@@ -5,7 +5,7 @@
 The repo is feature-sliced — each game / explorer owns its folder:
 
 - `flagQuiz/`, `findFlag/`, `flagsdata/`, `/` — one folder per page (HTML + sibling `page.js` + sibling `index.css`). The HTML is markup-only; `page.js` exports a `bootX()` function that the HTML calls inside a tiny `<script type="module">`.
-- `flags/` — shared flag-domain code: country data (`countries.json`, `svg/`) and the game-mode engines (`quiz.js`, `grid.js`, `findFlag.js`, `group.js`). Pure logic — no DOM, no `fetch`. All covered by `flags/*.test.js`. (`grid.js` survives the Flag Grid removal as a shared flag-domain library — its grid-specific scoring/state code was deleted with the game; tic-tac-toe and flagsdata still rely on its category factories, suggest/exactSingleMatch, and random-puzzle generators.)
+- `flags/` — shared flag-domain code: country data (`countries.json`, `svg/`) and the game-mode engines (`quiz.js`, `engine.js`, `findFlag.js`, `group.js`). `engine.js` carries the shared primitives — category factories (`continent` / `hasColor` / `hasMotif` / `statehood`), the `validateCell` / `tryPick` cell mechanics that tic-tac-toe builds on, the 3×3 and 9×9 random-puzzle generators, and the country-search helpers (`suggest`, `exactSingleMatch`, `foldDiacritics`). Pure logic — no DOM, no `fetch`. All covered by `flags/*.test.js`.
 - `common.css` — chrome shared across pages (nav corner cluster, burger panel, body defaults).
 
 Rule of thumb: keep new code inside its feature folder. Promote something to `flags/` (or `common.css`) **only when the second consumer actually arrives** — speculative sharing locks the wrong shape.

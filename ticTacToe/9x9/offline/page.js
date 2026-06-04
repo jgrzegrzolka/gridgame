@@ -1,4 +1,4 @@
-import { generateUltimateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../../flags/grid.js';
+import { generateUltimateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../../flags/engine.js';
 import {
   newUltimateGame,
   attemptUltimateClaim,
@@ -15,7 +15,7 @@ import { launchConfetti } from '../../../confetti.js';
 /** @typedef {import('../../../flags/ultimateTicTacToe.js').UltimateGameState} UltimateGameState */
 /** @typedef {import('../../../flags/ticTacToe.js').Player} Player */
 
-/** @param {import('../../../flags/grid.js').Category} c */
+/** @param {import('../../../flags/engine.js').Category} c */
 function tCat(c) {
   return translateCategoryLabel(c, t);
 }
@@ -40,7 +40,7 @@ export function bootTicTacToe9x9() {
 }
 
 /**
- * @param {{ puzzle: import('../../../flags/grid.js').Puzzle, countries: Country[] }} config
+ * @param {{ puzzle: import('../../../flags/engine.js').Puzzle, countries: Country[] }} config
  */
 function runUltimateTicTacToe({ puzzle, countries }) {
   let state = newUltimateGame(puzzle, 'O');

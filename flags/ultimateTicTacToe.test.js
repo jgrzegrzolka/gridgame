@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continent, hasColor } from './grid.js';
+import { continent, hasColor } from './engine.js';
 import {
   newUltimateGame,
   attemptUltimateClaim,
@@ -34,7 +34,7 @@ const RED = hasColor('red');
 const BLUE = hasColor('blue');
 const GREEN = hasColor('green');
 
-/** @type {import('./grid.js').Puzzle} */
+/** @type {import('./engine.js').Puzzle} */
 const PUZZLE = {
   rows: [EUROPE, ASIA, AFRICA],
   cols: [RED, BLUE, GREEN],

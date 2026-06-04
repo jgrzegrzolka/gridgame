@@ -5,7 +5,7 @@ import {
   suggest,
   exactSingleMatch,
   translateCategoryLabel,
-} from '../flags/grid.js';
+} from '../flags/engine.js';
 import {
   categoryFromId,
   findTargets,

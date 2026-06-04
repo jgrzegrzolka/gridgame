@@ -1,7 +1,7 @@
-import { validateCell } from './grid.js';
+import { validateCell } from './engine.js';
 
 /** @typedef {import('./group.js').Country} Country */
-/** @typedef {import('./grid.js').Puzzle} Puzzle */
+/** @typedef {import('./engine.js').Puzzle} Puzzle */
 
 /** @typedef {'X' | 'O'} Player */
 

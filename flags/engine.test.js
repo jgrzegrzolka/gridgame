@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   validateCell,
-  solutionState,
   tryPick,
   continent,
   statehood,
@@ -26,7 +25,7 @@ import {
   CONTINENTS_FOR_RANDOM,
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
-} from './grid.js';
+} from './engine.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
@@ -59,7 +58,7 @@ const UN = statehood('un_member', 'UN member');
 const OBSERVER = statehood('un_observer', 'UN observer');
 const TERRITORY = statehood('territory', 'Territory');
 
-/** @type {import('./grid.js').Puzzle} */
+/** @type {import('./engine.js').Puzzle} */
 const PUZZLE = {
   rows: [EUROPE, ASIA, AFRICA],
   cols: [UN, OBSERVER, TERRITORY],
@@ -361,74 +360,6 @@ test('validateCell is false when the column predicate fails', () => {
 
 test('validateCell is false for an empty cell (null country)', () => {
   assert.equal(validateCell(PUZZLE, 0, 0, null), false);
-});
-
-test('solutionState marks an empty solution as no-cell-filled and not complete', () => {
-  const empty = [
-    [null, null, null],
-    [null, null, null],
-    [null, null, null],
-  ];
-  const state = solutionState(PUZZLE, empty);
-  assert.equal(state.complete, false);
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      assert.deepEqual(state.cells[r][c], { filled: false, valid: false, duplicate: false });
-    }
-  }
-});
-
-test('solutionState reports filled+valid for a correct pick', () => {
-  const solution = [
-    [FR,   null, null],
-    [null, null, null],
-    [null, null, null],
-  ];
-  const state = solutionState(PUZZLE, solution);
-  assert.deepEqual(state.cells[0][0], { filled: true, valid: true, duplicate: false });
-  assert.equal(state.complete, false);
-});
-
-test('solutionState reports filled-but-invalid when a wrong country is dropped in', () => {
-  const solution = [
-    [JP,   null, null],
-    [null, null, null],
-    [null, null, null],
-  ];
-  const state = solutionState(PUZZLE, solution);
-  assert.deepEqual(state.cells[0][0], { filled: true, valid: false, duplicate: false });
-});
-
-test('solutionState flags duplicates on every cell where the same country appears', () => {
-  const solution = [
-    [FR,   null, null],
-    [null, null, null],
-    [null, null, null],
-  ];
-  solution[0][0] = FR;
-  solution[0][1] = FR;
-  const state = solutionState(PUZZLE, solution);
-  assert.equal(state.cells[0][0].duplicate, true);
-  assert.equal(state.cells[0][1].duplicate, true);
-});
-
-test('solutionState.complete is true when all nine cells are filled, valid, and distinct', () => {
-  const PS = country({ code: 'ps', name: 'Palestine', continent: 'Asia', statehood: 'un_observer' });
-  const AF_OBS = country({ code: 'aob', name: 'AfricaObs', continent: 'Africa', statehood: 'un_observer' });
-  const AF_TER = country({ code: 'ater', name: 'AfricaTer', continent: 'Africa', statehood: 'territory' });
-
-  const solution = [
-    [FR, VA, GL],
-    [JP, PS, HK],
-    [KE, AF_OBS, AF_TER],
-  ];
-  const state = solutionState(PUZZLE, solution);
-  assert.equal(state.complete, true);
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      assert.deepEqual(state.cells[r][c], { filled: true, valid: true, duplicate: false });
-    }
-  }
 });
 
 /** @returns {(Country | null)[][]} */
@@ -1132,20 +1063,5 @@ test('generateRandomPuzzle never produces a puzzle where an exclusiveGroup is sp
       `seed ${s}: produced a puzzle with split exclusive groups — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
     );
   }
-});
-
-test('solutionState.complete is false when one cell is invalid even if all are filled and distinct', () => {
-  const PS = country({ code: 'ps', name: 'Palestine', continent: 'Asia', statehood: 'un_observer' });
-  const AF_OBS = country({ code: 'aob', name: 'AfricaObs', continent: 'Africa', statehood: 'un_observer' });
-  const AF_TER = country({ code: 'ater', name: 'AfricaTer', continent: 'Africa', statehood: 'territory' });
-
-  const solution = [
-    [FR, VA, GL],
-    [JP, PS, HK],
-    [KE, AF_OBS, FR],
-  ];
-  const state = solutionState(PUZZLE, solution);
-  assert.equal(state.complete, false);
-  assert.equal(state.cells[2][2].valid, false);
 });
 

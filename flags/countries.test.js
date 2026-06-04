@@ -9,7 +9,7 @@ import {
   MOTIFS_FOR_RANDOM,
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
-} from './grid.js';
+} from './engine.js';
 import { CONTINENTS } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */

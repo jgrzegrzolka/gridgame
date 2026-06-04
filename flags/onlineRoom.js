@@ -1,11 +1,11 @@
 import { newGame, attemptClaim, isGameOver, applyGiveUp as applyGiveUpEngine } from './ticTacToe.js';
-import { categoryFromId } from './grid.js';
+import { categoryFromId } from './engine.js';
 
 /** @typedef {import('./ticTacToe.js').GameState} GameState */
 /** @typedef {import('./ticTacToe.js').Player} Player */
 /** @typedef {import('./group.js').Country} Country */
-/** @typedef {import('./grid.js').Puzzle} Puzzle */
-/** @typedef {import('./grid.js').Category} Category */
+/** @typedef {import('./engine.js').Puzzle} Puzzle */
+/** @typedef {import('./engine.js').Category} Category */
 
 /**
  * Room state. `roles` is sticky (a playerId keeps its role across refreshes

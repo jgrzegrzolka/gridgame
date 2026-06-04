@@ -8,7 +8,7 @@ import {
   serializeUltimateRoom,
   deserializeUltimateRoom,
 } from '../flags/ultimateOnlineRoom.js';
-import { generateUltimateRandomPuzzle } from '../flags/grid.js';
+import { generateUltimateRandomPuzzle } from '../flags/engine.js';
 
 /** @typedef {import('../flags/ultimateOnlineRoom.js').UltimateRoom} UltimateRoom */
 /** @typedef {import('../flags/ultimateOnlineRoom.js').UltimateBroadcast} UltimateBroadcast */
@@ -28,7 +28,7 @@ export class UltimateTicTacToeServer {
   /**
    * @param {any} party
    * @param {Country[]} countries
-   * @param {import('../flags/grid.js').Puzzle} [puzzle]
+   * @param {import('../flags/engine.js').Puzzle} [puzzle]
    */
   constructor(party, countries, puzzle) {
     this.party = party;
