@@ -19,3 +19,49 @@ export function disableBurgerIfEmpty(burgerEl, menuEl) {
     burgerEl.setAttribute('aria-disabled', 'true');
   }
 }
+
+/**
+ * Add the missing dismissal paths to the burger menu:
+ *   - A click anywhere outside both the burger button and its panel closes
+ *     the panel. Before this, the only way to close was a second click on
+ *     the burger itself, which is the only thing every other modern menu
+ *     UX does NOT expect.
+ *   - Pressing Escape closes the panel and returns focus to the burger so
+ *     a keyboard user lands somewhere predictable.
+ *
+ * The burger button's open/close *toggle* still lives in the inline onclick
+ * on every page — this helper only adds the dismiss-from-elsewhere paths
+ * that the inline onclick can't observe. Safe to call on pages without a
+ * burger: the function exits early if the elements are missing.
+ *
+ * @param {{ doc?: Document }} [options]
+ */
+export function wireBurgerDismiss(options = {}) {
+  const doc = options.doc ?? document;
+  const burger = doc.querySelector('.burger');
+  const panel = /** @type {HTMLElement | null} */ (doc.querySelector('#burger-panel'));
+  if (!burger || !panel) return;
+  doc.addEventListener('click', (e) => {
+    if (panel.hidden) return;
+    const t = /** @type {Node | null} */ (e.target);
+    if (!t) return;
+    if (burger.contains(t) || panel.contains(t)) return;
+    closeBurger(burger, panel);
+  });
+  doc.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || panel.hidden) return;
+    closeBurger(burger, panel);
+    /** @type {HTMLElement} */ (burger).focus?.();
+  });
+}
+
+/**
+ * @param {Element} burgerEl
+ * @param {HTMLElement} panelEl
+ */
+function closeBurger(burgerEl, panelEl) {
+  burgerEl.setAttribute('aria-expanded', 'false');
+  const openLabel = /** @type {HTMLElement} */ (burgerEl).dataset?.labelOpen;
+  if (openLabel) burgerEl.setAttribute('aria-label', openLabel);
+  panelEl.hidden = true;
+}

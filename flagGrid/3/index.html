@@ -94,9 +94,11 @@
       import { bootFlagGrid } from '../page.js?v=__BUILD__';
       import { PUZZLE_3 } from '../puzzles.js?v=__BUILD__';
       import { bootI18n, wireLangToggle } from '../../i18n.js';
+      import { wireBurgerDismiss } from '../../common.js?v=__BUILD__';
 
       bootI18n('../../').then((lang) => {
         wireLangToggle(lang);
+        wireBurgerDismiss();
         bootFlagGrid(() => PUZZLE_3, { stateKey: 'flaggrid.state.3', allowReplay: true });
       });
     </script>

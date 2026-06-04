@@ -130,7 +130,7 @@
 
     <script type="module">
       import { bootTicTacToeOnline } from './page.js?v=__BUILD__';
-      import { disableBurgerIfEmpty } from '../common.js?v=__BUILD__';
+      import { disableBurgerIfEmpty, wireBurgerDismiss } from '../common.js?v=__BUILD__';
       import { bootI18n, wireLangToggle } from '../i18n.js';
       bootI18n('../').then((lang) => {
         wireLangToggle(lang);
@@ -139,6 +139,7 @@
           document.querySelector('.burger'),
           document.querySelector('#burger-panel .menu'),
         );
+        wireBurgerDismiss();
       });
     </script>
   </body>
