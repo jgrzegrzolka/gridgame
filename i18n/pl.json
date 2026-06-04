@@ -50,7 +50,9 @@
     "titleRand": "Siatka — Losowa",
     "yourScore": "Twój wynik:",
     "yourBest": "Twój najlepszy",
-    "retry": "Spróbuj ponownie"
+    "retry": "Spróbuj ponownie",
+    "firstTryBonus": "trafienia od pierwszego razu",
+    "obscurityBonus": "rzadkość"
   },
   "findFlag": {
     "title": "Znajdź flagę",

@@ -800,12 +800,15 @@ export function fillEmptyCellsForGiveUp(puzzle, solution, countries, random = Ma
 const WRONG_PICK_PENALTY = 3;
 const EMPTY_CELL_PENALTY = 10;
 const FIRST_TRY_BONUS = 2;
+const MAX_OBSCURITY_PER_CELL = 5;
+
 /**
- * Cap the score at base + the maximum first-try bonus a 9-cell grid can
- * earn. That ceiling becomes the new "perfect run" target (was a flat 100);
- * a clean 9/9 with zero mistakes on every cell now lands at 118.
+ * Cap the score at base + the maximum first-try and obscurity bonus a
+ * 9-cell grid can earn. A clean run where every cell is filled on the
+ * first try with a maximally-rare country (one that fits this exact
+ * cell and no other) reaches the ceiling.
  */
-const GRID_SCORE_MAX = 100 + 9 * FIRST_TRY_BONUS;
+const GRID_SCORE_MAX = 100 + 9 * FIRST_TRY_BONUS + 9 * MAX_OBSCURITY_PER_CELL;
 
 /**
  * @param {Object} state
@@ -814,16 +817,27 @@ const GRID_SCORE_MAX = 100 + 9 * FIRST_TRY_BONUS;
  * @param {number} [state.firstTryCount]  Cells filled correctly without ever being wrong.
  *                                        Defaults to 0 for callers/state predating the
  *                                        first-try field (old localStorage rounds).
+ * @param {number} [state.obscurityTotal] Sum of per-cell obscurity bonuses earned across
+ *                                        the round. Each correct placement contributes
+ *                                        a bonus based on how many cells of the current
+ *                                        puzzle the picked country could have fit — fewer
+ *                                        homes → higher reward. Defaults to 0.
  * @returns {number}
  */
-export function computeGridScore({ filledCount, wrongCount, firstTryCount = 0 }) {
+export function computeGridScore({
+  filledCount,
+  wrongCount,
+  firstTryCount = 0,
+  obscurityTotal = 0,
+}) {
   if (filledCount === 0) return 0;
   const emptyCount = 9 - filledCount;
   const raw =
     100
     - WRONG_PICK_PENALTY * wrongCount
     - EMPTY_CELL_PENALTY * emptyCount
-    + FIRST_TRY_BONUS * firstTryCount;
+    + FIRST_TRY_BONUS * firstTryCount
+    + obscurityTotal;
   return Math.max(0, Math.min(GRID_SCORE_MAX, raw));
 }
 
@@ -833,6 +847,50 @@ export function computeGridScore({ filledCount, wrongCount, firstTryCount = 0 })
  * instead of hard-coding 100.
  */
 export const GRID_MAX_SCORE = GRID_SCORE_MAX;
+
+/**
+ * How many of the 9 cells in this puzzle the country legally fits (its row +
+ * column predicates both accept the country). Fewer matches = more "obscure"
+ * within this puzzle. Always returns 0..9. A country that fits no cell is
+ * a wrong pick on every cell — never reachable through normal play, but
+ * 0 is the safe lower bound for downstream math.
+ *
+ * @param {Puzzle} puzzle
+ * @param {Country} country
+ * @returns {number}
+ */
+export function countValidCells(puzzle, country) {
+  let n = 0;
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (validateCell(puzzle, r, c, country)) n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * Map a country's fit-count to its obscurity bonus, as a small lookup
+ * table. The shape is monotonically non-increasing — fits one cell only
+ * → maximum reward; fits many cells → near-zero. Exposed so tests pin
+ * the contract and tuning lives in one place.
+ *
+ *   fits 1 cell → +5  (perfectly puzzle-rare)
+ *   fits 2      → +3
+ *   fits 3      → +2
+ *   fits 4..9   → +1  (any-flag-will-do; small thanks for filling)
+ *   fits 0      →  0  (unreachable in normal play; safe default)
+ *
+ * @param {number} fitCount
+ * @returns {number}
+ */
+export function obscurityBonus(fitCount) {
+  if (fitCount <= 0) return 0;
+  if (fitCount === 1) return 5;
+  if (fitCount === 2) return 3;
+  if (fitCount === 3) return 2;
+  return 1;
+}
 
 /**
  * @typedef {Object} GridState
@@ -846,6 +904,11 @@ export const GRID_MAX_SCORE = GRID_SCORE_MAX;
  *                                          that stayed clean. Missing on rounds saved
  *                                          before this field existed; loadGridState
  *                                          fills it in as all-false.
+ * @property {number} [obscurityTotal]      Sum of per-cell obscurity bonuses accumulated
+ *                                          across the round. Incremented on each accepted
+ *                                          pick by `obscurityBonus(countValidCells(...))`.
+ *                                          Missing on rounds saved before this field
+ *                                          existed; loadGridState defaults to 0.
  */
 
 /**
@@ -894,6 +957,11 @@ export function loadGridState(store, key) {
           Array.isArray(parsed.tarnishedCells) && parsed.tarnishedCells.length === 9
             ? parsed.tarnishedCells.map((/** @type {unknown} */ b) => b === true)
             : Array(9).fill(false),
+        // Pre-obscurity saves missed this field; default to 0 (no bonus
+        // accrued for legacy plays). Same back-compat reasoning as
+        // tarnishedCells — the per-pick history isn't recoverable from
+        // a single totaled wrongCount.
+        obscurityTotal: typeof parsed.obscurityTotal === 'number' ? parsed.obscurityTotal : 0,
       };
     }
     return null;

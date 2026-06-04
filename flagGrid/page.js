@@ -5,6 +5,8 @@ import {
   computeGridScore,
   firstTryCount,
   GRID_MAX_SCORE,
+  countValidCells,
+  obscurityBonus,
   loadGridState,
   saveGridState,
   recordGridResult,
@@ -76,6 +78,8 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
    *  for the first-try score bonus and the saved-state contract. */
   /** @type {boolean[]} */
   let tarnishedCells = Array(9).fill(false);
+  /** Running total of obscurity bonuses earned across the round. */
+  let obscurityTotal = 0;
   if (saved) {
     for (let i = 0; i < 9; i++) {
       const code = saved.picks[i];
@@ -88,6 +92,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     tarnishedCells = saved.tarnishedCells
       ? saved.tarnishedCells.slice()
       : Array(9).fill(false);
+    obscurityTotal = saved.obscurityTotal ?? 0;
   }
 
   /** @type {Country[]} */
@@ -310,6 +315,12 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       return;
     }
     solution = result.solution;
+    // Per-pick obscurity reward: how many cells of this puzzle the picked
+    // country could legally have fit. Computed once at the moment of
+    // acceptance so the score doesn't drift if the puzzle data ever
+    // changes after the play (it doesn't today, but the accumulator
+    // pattern is robust to that).
+    obscurityTotal += obscurityBonus(countValidCells(puzzle, country));
     closePicker();
     const filled = countFilled();
     renderGrid();
@@ -396,6 +407,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       gaveUp,
       revealedCodes,
       tarnishedCells,
+      obscurityTotal,
     });
   }
 
@@ -404,11 +416,17 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     const filledCount = countFilled();
     const picks = solution.flat().map((c) => (c ? c.code : null));
     const firstTry = firstTryCount({ picks, tarnishedCells });
-    const score = computeGridScore({ filledCount, wrongCount, firstTryCount: firstTry });
+    const score = computeGridScore({
+      filledCount,
+      wrongCount,
+      firstTryCount: firstTry,
+      obscurityTotal,
+    });
     if (finalScoreEl) finalScoreEl.textContent = String(score);
-    // Tint relative to the new ceiling (118) rather than the old 100,
-    // so a clean run with full first-try bonus still reads as green.
+    // Tint relative to GRID_MAX_SCORE so a clean run with full bonuses
+    // still reads as green even though the ceiling is no longer 100.
     if (finalScoreLineEl) finalScoreLineEl.style.color = scoreColor(score / GRID_MAX_SCORE);
+    renderScoreBreakdown(firstTry, obscurityTotal);
     if (stateKey && bestEl) {
       const slug = stateKey.replace(/^flaggrid\.state\./, '');
       // The 3x3 no longer tracks time; we pass 0 to satisfy the shared
@@ -455,5 +473,35 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
 
   if (isLocked()) {
     finishRound();
+  }
+
+  /**
+   * Inject a "+18 first-try · +24 obscurity" line under the score when
+   * the player earned any bonus. Skipped on a no-bonus run (e.g. give-up
+   * with nothing filled) so the result panel doesn't show clutter
+   * with all zeroes.
+   *
+   * @param {number} firstTry
+   * @param {number} obscurity
+   */
+  function renderScoreBreakdown(firstTry, obscurity) {
+    if (!resultEl) return;
+    /** @type {HTMLElement | null} */
+    let breakdownEl = resultEl.querySelector('.score-breakdown');
+    if (firstTry === 0 && obscurity === 0) {
+      if (breakdownEl) breakdownEl.remove();
+      return;
+    }
+    if (!breakdownEl) {
+      breakdownEl = document.createElement('p');
+      breakdownEl.className = 'score-breakdown';
+      // Slot it directly under the score line so the eye reads
+      // "score → why" without scanning past the Best record.
+      finalScoreLineEl?.after(breakdownEl);
+    }
+    const parts = [];
+    if (firstTry > 0) parts.push(`+${2 * firstTry} ${t('grid.firstTryBonus', 'first try')}`);
+    if (obscurity > 0) parts.push(`+${obscurity} ${t('grid.obscurityBonus', 'obscurity')}`);
+    breakdownEl.textContent = parts.join(' · ');
   }
 }

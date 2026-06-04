@@ -28,6 +28,8 @@ import {
   computeGridScore,
   firstTryCount,
   GRID_MAX_SCORE,
+  countValidCells,
+  obscurityBonus,
   loadGridState,
   saveGridState,
   gridBestKey,
@@ -1255,14 +1257,27 @@ test('computeGridScore awards +2 per first-try cell, on top of the 100 base', ()
   assert.equal(computeGridScore({ filledCount: 9, wrongCount: 5, firstTryCount: 4 }), 93);
 });
 
-test('computeGridScore caps at 118 even when firstTryCount somehow exceeds 9', () => {
+test('computeGridScore caps at GRID_MAX_SCORE even when firstTryCount somehow exceeds 9', () => {
   // Belt-and-braces — there's no path in the engine that produces firstTryCount > 9
   // but the clamp protects future callers / corrupted save data.
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 99 }), 118);
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 99 }), 163);
 });
 
-test('GRID_MAX_SCORE is the new score ceiling — 100 base + 9 first-try cells × 2', () => {
-  assert.equal(GRID_MAX_SCORE, 118);
+test('GRID_MAX_SCORE is the new score ceiling — 100 base + 9 first-try (×2) + 9 obscurity (×5)', () => {
+  // 100 + 18 + 45 = 163. Reached when every cell is filled on the first try
+  // with a country that fits ONLY that cell.
+  assert.equal(GRID_MAX_SCORE, 163);
+});
+
+test('computeGridScore adds the obscurityTotal directly, no per-cell math', () => {
+  // The page accumulates obscurityBonus(countValidCells(...)) per pick;
+  // scoring just trusts that sum.
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, obscurityTotal: 20 }), 120);
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 9, obscurityTotal: 20 }), 138);
+});
+
+test('computeGridScore caps obscurityTotal contribution at the GRID_MAX_SCORE ceiling', () => {
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 9, obscurityTotal: 9999 }), 163);
 });
 
 test('firstTryCount: counts filled cells whose tarnished bit is false', () => {
@@ -1290,6 +1305,39 @@ test('firstTryCount: tarnished cells that are empty are NOT counted (no fill = n
     tarnishedCells: [true, false, false, false, false, false, false, false, false],
   };
   assert.equal(firstTryCount(state), 0);
+});
+
+// ---- obscurity helpers ----
+
+test('countValidCells: France (Europe + UN member) fits exactly 1 cell of the (Continent × Statehood) puzzle', () => {
+  // Only (Europe row, UN-member col) accepts it.
+  assert.equal(countValidCells(PUZZLE, FR), 1);
+});
+
+test('countValidCells: a country with no continent in the puzzle fits 0 cells', () => {
+  // Antarctica isn't in the EUROPE/ASIA/AFRICA puzzle, so no row predicate
+  // matches; the count must be 0 — the unreachable-from-play case.
+  const AQ = country({ code: 'aq', name: 'Antarctica', continent: 'Antarctica', statehood: 'territory' });
+  assert.equal(countValidCells(PUZZLE, AQ), 0);
+});
+
+test('obscurityBonus: fits-1 cell pays the maximum (+5)', () => {
+  assert.equal(obscurityBonus(1), 5);
+});
+
+test('obscurityBonus: the table is monotonically non-increasing — rarer cells never pay less', () => {
+  // Pin the contract so future tuning preserves the "rarer = higher reward"
+  // shape; locks the specific numbers too.
+  assert.equal(obscurityBonus(1), 5);
+  assert.equal(obscurityBonus(2), 3);
+  assert.equal(obscurityBonus(3), 2);
+  assert.equal(obscurityBonus(4), 1);
+  assert.equal(obscurityBonus(9), 1);
+});
+
+test('obscurityBonus: 0 or negative fit-count returns 0 — safe default for the unreachable case', () => {
+  assert.equal(obscurityBonus(0), 0);
+  assert.equal(obscurityBonus(-1), 0);
 });
 
 test('firstTryCount: missing tarnishedCells (legacy save) treats every filled cell as first-try', () => {
@@ -1379,6 +1427,7 @@ test('loadGridState round-trips a well-formed state', () => {
     gaveUp: false,
     revealedCodes: Array(9).fill(null),
     tarnishedCells: [true, false, false, false, true, false, false, false, false],
+    obscurityTotal: 17,
   };
   saveGridState(store, 'flaggrid.state.1', state);
   assert.deepEqual(loadGridState(store, 'flaggrid.state.1'), state);
@@ -1419,6 +1468,9 @@ test('loadGridState ignores legacy timer fields (finalTimeMs / startedAtMs) from
     // with all-false so legacy rounds load without crashing and treat
     // every filled cell as first-try.
     tarnishedCells: Array(9).fill(false),
+    // Pre-obscurity saves missed this field too — default 0 because the
+    // per-pick obscurity history isn't recoverable post-hoc.
+    obscurityTotal: 0,
   });
 });
 
@@ -1430,6 +1482,7 @@ test('loadGridState round-trips a give-up state', () => {
     gaveUp: true,
     revealedCodes: [null, null, 'us', 'cn', 'br', null, 'eg', null, 'au'],
     tarnishedCells: [false, true, false, false, false, false, false, false, false],
+    obscurityTotal: 6,
   };
   saveGridState(store, 'k', state);
   assert.deepEqual(loadGridState(store, 'k'), state);
