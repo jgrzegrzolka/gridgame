@@ -20,8 +20,7 @@
     "quiz": "Quiz",
     "grid": "3x3",
     "find": "Find all",
-    "ticTacToe": "Tic Tac Toe",
-    "ticTacToe9x9": "9×9"
+    "ticTacToe": "Tic Tac Toe"
   },
   "game": {
     "giveUp": "Give up",
@@ -73,11 +72,15 @@
   "ttt": {
     "title": "Tic Tac Toe",
     "lobbyTitle": "Play with a friend",
+    "variant3x3": "3×3",
+    "variant9x9": "9×9",
+    "switchTo3x3": "Switch to 3×3",
+    "switchTo9x9": "Switch to 9×9",
     "createRoom": "Create a new room",
     "or": "— or —",
     "roomCodePlaceholder": "ROOM CODE",
     "join": "Join",
-    "playOffline": "Play offline",
+    "playOffline": "Play on the same device",
     "room": "Room",
     "youAre": "You are",
     "waitingForOpponent": "Waiting for opponent…",

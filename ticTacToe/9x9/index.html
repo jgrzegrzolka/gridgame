@@ -41,7 +41,14 @@
     </nav>
 
     <section id="lobby" class="lobby" hidden>
-      <h1 class="lobby-title" data-i18n="ttt.lobbyTitle">Play with a friend</h1>
+      <div class="lobby-header">
+        <h1 class="lobby-title" data-i18n="ttt.lobbyTitle">Play with a friend</h1>
+        <a class="variant-switch" href="../" data-active="9x9" aria-label="Switch to 3×3" data-i18n-attr="aria-label:ttt.switchTo3x3">
+          <span class="variant-switch-side" data-i18n="ttt.variant3x3">3×3</span>
+          <span class="variant-switch-track" aria-hidden="true"><span class="variant-switch-thumb"></span></span>
+          <span class="variant-switch-side" data-i18n="ttt.variant9x9">9×9</span>
+        </a>
+      </div>
       <button type="button" class="lobby-btn" id="create-room" data-i18n="ttt.createRoom">Create a new room</button>
       <p class="lobby-or" data-i18n="ttt.or">— or —</p>
       <form id="join-form" class="join-form">
@@ -61,7 +68,7 @@
       </form>
       <p class="lobby-error" id="lobby-error" hidden></p>
       <p class="lobby-or" data-i18n="ttt.or">— or —</p>
-      <a class="lobby-btn" href="offline/" data-i18n="ttt.playOffline">Play offline</a>
+      <a class="lobby-btn" href="offline/" data-i18n="ttt.playOffline">Play on the same device</a>
     </section>
 
     <section id="game" class="online-game" hidden>
