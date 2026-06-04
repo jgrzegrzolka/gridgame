@@ -31,9 +31,27 @@ body {
   font-weight: 500;
   font-size: 14px;
   color: #1c1c1c;
+  /* Truncate long header labels with an ellipsis instead of wrapping. Without
+   * this a label like "Has star or moon" used to wrap to a second line and
+   * push the whole grid down — and a rotated row header like "South America"
+   * used to wrap to a second VERTICAL column, fattening the row-header
+   * strip on phones. The full row × col label is still readable when a cell
+   * is opened: the picker header shows it in full. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .grid thead th {
   height: calc(var(--grid-cell) / 2);
+  /* max-width pin: table-layout:fixed alone doesn't stop a nowrap min-content
+   * wider than --grid-cell from pushing the column out (Chrome honours the
+   * unbreakable text width over the declared width). The explicit max-width
+   * keeps the column locked, so the grid stays at the same horizontal
+   * position regardless of how long a label like "Has star or moon" is.
+   * Row headers (tbody th) don't need this — their text is rotated to
+   * writing-mode:vertical-rl, so a long label overflows the cell height,
+   * not the cell width. */
+  max-width: var(--grid-cell);
 }
 .grid .corner,
 .grid tbody th {
