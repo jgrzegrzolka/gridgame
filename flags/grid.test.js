@@ -30,6 +30,7 @@ import {
   GRID_MAX_SCORE,
   countValidCells,
   obscurityBonus,
+  countryRarityBonus,
   loadGridState,
   saveGridState,
   gridBestKey,
@@ -1260,13 +1261,34 @@ test('computeGridScore awards +2 per first-try cell, on top of the 100 base', ()
 test('computeGridScore caps at GRID_MAX_SCORE even when firstTryCount somehow exceeds 9', () => {
   // Belt-and-braces — there's no path in the engine that produces firstTryCount > 9
   // but the clamp protects future callers / corrupted save data.
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 99 }), 163);
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 99 }), 199);
 });
 
-test('GRID_MAX_SCORE is the new score ceiling — 100 base + 9 first-try (×2) + 9 obscurity (×5)', () => {
-  // 100 + 18 + 45 = 163. Reached when every cell is filled on the first try
-  // with a country that fits ONLY that cell.
-  assert.equal(GRID_MAX_SCORE, 163);
+test('countryRarityBonus: well-known country pays no bonus — "you knew this"', () => {
+  // Codes pinned from the curated WELL_KNOWN set; if this breaks, the
+  // curation moved and the test wants updating alongside.
+  assert.equal(countryRarityBonus({ code: 'us' }), 0);
+  assert.equal(countryRarityBonus({ code: 'jp' }), 0);
+});
+
+test('countryRarityBonus: obscure country pays the max +4 — "you had to know this"', () => {
+  assert.equal(countryRarityBonus({ code: 'va' }), 4); // Vatican
+  assert.equal(countryRarityBonus({ code: 'tv' }), 4); // Tuvalu
+  assert.equal(countryRarityBonus({ code: 'km' }), 4); // Comoros
+});
+
+test('countryRarityBonus: anything not in either curated set defaults to the +2 middle tier', () => {
+  // A made-up code never appears in either set, so it lands in the
+  // default bucket. Same outcome a brand-new country gets when added
+  // to countries.json before the curator gets to it.
+  assert.equal(countryRarityBonus({ code: 'xx-not-real' }), 2);
+});
+
+test('GRID_MAX_SCORE is 100 base + 9 first-try (×2) + 9 obscurity-per-cell (×(5+4))', () => {
+  // Per-cell obscurity tops out at 5 (puzzle-relative) + 4 (country-rarity) = 9.
+  // 100 + 18 + 81 = 199. The ceiling moves with both bonus dimensions, so this
+  // test pins the ceiling explicitly and the assertion below cross-checks.
+  assert.equal(GRID_MAX_SCORE, 199);
 });
 
 test('computeGridScore adds the obscurityTotal directly, no per-cell math', () => {
@@ -1277,7 +1299,7 @@ test('computeGridScore adds the obscurityTotal directly, no per-cell math', () =
 });
 
 test('computeGridScore caps obscurityTotal contribution at the GRID_MAX_SCORE ceiling', () => {
-  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 9, obscurityTotal: 9999 }), 163);
+  assert.equal(computeGridScore({ filledCount: 9, wrongCount: 0, firstTryCount: 9, obscurityTotal: 9999 }), 199);
 });
 
 test('firstTryCount: counts filled cells whose tarnished bit is false', () => {

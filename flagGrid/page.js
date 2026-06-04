@@ -7,6 +7,7 @@ import {
   GRID_MAX_SCORE,
   countValidCells,
   obscurityBonus,
+  countryRarityBonus,
   loadGridState,
   saveGridState,
   recordGridResult,
@@ -315,12 +316,16 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       return;
     }
     solution = result.solution;
-    // Per-pick obscurity reward: how many cells of this puzzle the picked
-    // country could legally have fit. Computed once at the moment of
-    // acceptance so the score doesn't drift if the puzzle data ever
-    // changes after the play (it doesn't today, but the accumulator
-    // pattern is robust to that).
-    obscurityTotal += obscurityBonus(countValidCells(puzzle, country));
+    // Per-pick obscurity reward layers two signals:
+    //   - puzzle-relative: how few cells of THIS puzzle the country fits
+    //     (rewards finding a niche fit).
+    //   - country-rarity:  how obscure the country/flag is in general
+    //     (rewards knowing the less-famous picks — picking Burundi for
+    //     "Has cross" instead of Switzerland).
+    // Both summed into a single accumulator the score uses verbatim.
+    obscurityTotal +=
+      obscurityBonus(countValidCells(puzzle, country))
+      + countryRarityBonus(country);
     closePicker();
     const filled = countFilled();
     renderGrid();
