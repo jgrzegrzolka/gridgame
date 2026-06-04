@@ -5,9 +5,8 @@ import {
   computeGridScore,
   firstTryCount,
   GRID_MAX_SCORE,
-  countValidCells,
-  obscurityBonus,
-  countryRarityBonus,
+  pickObscurity,
+  FIRST_TRY_BONUS,
   loadGridState,
   saveGridState,
   recordGridResult,
@@ -316,16 +315,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       return;
     }
     solution = result.solution;
-    // Per-pick obscurity reward layers two signals:
-    //   - puzzle-relative: how few cells of THIS puzzle the country fits
-    //     (rewards finding a niche fit).
-    //   - country-rarity:  how obscure the country/flag is in general
-    //     (rewards knowing the less-famous picks — picking Burundi for
-    //     "Has cross" instead of Switzerland).
-    // Both summed into a single accumulator the score uses verbatim.
-    obscurityTotal +=
-      obscurityBonus(countValidCells(puzzle, country))
-      + countryRarityBonus(country);
+    obscurityTotal += pickObscurity(puzzle, country);
     closePicker();
     const filled = countFilled();
     renderGrid();
@@ -431,7 +421,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
     // Tint relative to GRID_MAX_SCORE so a clean run with full bonuses
     // still reads as green even though the ceiling is no longer 100.
     if (finalScoreLineEl) finalScoreLineEl.style.color = scoreColor(score / GRID_MAX_SCORE);
-    renderScoreBreakdown(firstTry, obscurityTotal);
+    renderCellBreakdown();
     if (stateKey && bestEl) {
       const slug = stateKey.replace(/^flaggrid\.state\./, '');
       // The 3x3 no longer tracks time; we pass 0 to satisfy the shared
@@ -481,32 +471,68 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
   }
 
   /**
-   * Inject a "+18 first-try · +24 obscurity" line under the score when
-   * the player earned any bonus. Skipped on a no-bonus run (e.g. give-up
-   * with nothing filled) so the result panel doesn't show clutter
-   * with all zeroes.
+   * Per-cell bonus list under the final score: one row per user-picked
+   * cell showing the country, the points earned (obscurity + first-try
+   * if applicable), and a "first try" marker. Replaces the lumped
+   * "+18 first try · +24 obscurity" summary — putting the bonus signal
+   * next to the actual picks makes the score story self-explanatory
+   * (you see WHY each pick was worth what it was).
    *
-   * @param {number} firstTry
-   * @param {number} obscurity
+   * Skipped entirely when no user picks landed (e.g. give-up with an
+   * empty board) so the result panel stays clean.
+   *
+   * Bonuses are re-derived from (puzzle, country) rather than persisted
+   * per-cell — the two helpers are pure, so the displayed numbers can
+   * never drift from the score formula that uses the same helpers.
    */
-  function renderScoreBreakdown(firstTry, obscurity) {
+  function renderCellBreakdown() {
     if (!resultEl) return;
     /** @type {HTMLElement | null} */
-    let breakdownEl = resultEl.querySelector('.score-breakdown');
-    if (firstTry === 0 && obscurity === 0) {
-      if (breakdownEl) breakdownEl.remove();
+    let listEl = resultEl.querySelector('.cell-breakdown');
+
+    const entries = [];
+    for (let i = 0; i < 9; i++) {
+      const country = solution[Math.floor(i / 3)][i % 3];
+      // Empty / give-up-revealed cells aren't user picks; nothing earned.
+      if (!country) continue;
+      const obscurity = pickObscurity(puzzle, country);
+      const isFirstTry = !tarnishedCells[i];
+      const total = obscurity + (isFirstTry ? FIRST_TRY_BONUS : 0);
+      entries.push({ country, total, isFirstTry });
+    }
+
+    if (entries.length === 0) {
+      if (listEl) listEl.remove();
       return;
     }
-    if (!breakdownEl) {
-      breakdownEl = document.createElement('p');
-      breakdownEl.className = 'score-breakdown';
-      // Slot it directly under the score line so the eye reads
-      // "score → why" without scanning past the Best record.
-      finalScoreLineEl?.after(breakdownEl);
+
+    if (!listEl) {
+      listEl = document.createElement('ul');
+      listEl.className = 'cell-breakdown';
+      finalScoreLineEl?.after(listEl);
     }
-    const parts = [];
-    if (firstTry > 0) parts.push(`+${2 * firstTry} ${t('grid.firstTryBonus', 'first try')}`);
-    if (obscurity > 0) parts.push(`+${obscurity} ${t('grid.obscurityBonus', 'obscurity')}`);
-    breakdownEl.textContent = parts.join(' · ');
+    listEl.replaceChildren();
+    for (const { country, total, isFirstTry } of entries) {
+      const li = document.createElement('li');
+      const img = document.createElement('img');
+      img.src = `../../flags/svg/${country.code}.svg`;
+      img.alt = '';
+      li.appendChild(img);
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = countryName(country);
+      li.appendChild(name);
+      const points = document.createElement('span');
+      points.className = 'points';
+      points.textContent = `+${total}`;
+      li.appendChild(points);
+      if (isFirstTry) {
+        const tag = document.createElement('span');
+        tag.className = 'first-try';
+        tag.textContent = t('grid.firstTryBonus', 'first try');
+        li.appendChild(tag);
+      }
+      listEl.appendChild(li);
+    }
   }
 }

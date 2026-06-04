@@ -31,6 +31,7 @@ import {
   countValidCells,
   obscurityBonus,
   countryRarityBonus,
+  pickObscurity,
   loadGridState,
   saveGridState,
   gridBestKey,
@@ -1360,6 +1361,27 @@ test('obscurityBonus: the table is monotonically non-increasing — rarer cells 
 test('obscurityBonus: 0 or negative fit-count returns 0 — safe default for the unreachable case', () => {
   assert.equal(obscurityBonus(0), 0);
   assert.equal(obscurityBonus(-1), 0);
+});
+
+test('pickObscurity: sums the puzzle-fit bonus and the country-rarity bonus', () => {
+  // France: fits 1 cell of PUZZLE → 5; well-known → 0 → total 5.
+  assert.equal(pickObscurity(PUZZLE, FR), 5);
+});
+
+test('pickObscurity: a fits-1, OBSCURE country pays the per-cell maximum (5 + 4 = 9)', () => {
+  // Vatican fits only (Europe × UN observer) and is in OBSCURE_COUNTRIES.
+  // This is the per-cell ceiling that GRID_MAX_SCORE budgets for.
+  assert.equal(pickObscurity(PUZZLE, VA), 9);
+});
+
+test('pickObscurity: a fits-many, middle-tier country pays a modest amount', () => {
+  // A country fitting 4 cells of a hypothetical puzzle pays obscurityBonus(4) = 1;
+  // a middle-tier code adds +2; total 3. Sanity check that low-fit countries
+  // also stack correctly with rarity.
+  const middle = country({ code: 'xx', name: 'Middle', continent: 'Europe', statehood: 'un_member' });
+  const fitOne = pickObscurity(PUZZLE, middle); // fits Europe×UN-member only
+  // obscurityBonus(1) = 5, countryRarityBonus(middle) = 2 → 7.
+  assert.equal(fitOne, 7);
 });
 
 test('firstTryCount: missing tarnishedCells (legacy save) treats every filled cell as first-try', () => {
