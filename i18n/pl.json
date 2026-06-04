@@ -17,7 +17,6 @@
   },
   "tile": {
     "quiz": "Quiz",
-    "grid": "3x3",
     "find": "Znajdź wszystkie",
     "ticTacToe": "Kółko i krzyżyk"
   },
@@ -44,15 +43,6 @@
       "60s": "60s",
       "all": "wszystkie"
     }
-  },
-  "grid": {
-    "titleArchive": "Siatka — Poprzednie gry",
-    "titleRand": "Siatka — Losowa",
-    "yourScore": "Twój wynik:",
-    "yourBest": "Twój najlepszy",
-    "retry": "Spróbuj ponownie",
-    "firstTryBonus": "trafienia od pierwszego razu",
-    "obscurityBonus": "rzadkość"
   },
   "findFlag": {
     "title": "Znajdź flagę",
