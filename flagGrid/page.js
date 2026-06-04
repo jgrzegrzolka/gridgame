@@ -498,7 +498,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       const obscurity = pickObscurity(puzzle, country);
       const isFirstTry = !tarnishedCells[i];
       const total = obscurity + (isFirstTry ? FIRST_TRY_BONUS : 0);
-      entries.push({ country, total, isFirstTry });
+      entries.push({ country, total });
     }
 
     if (entries.length === 0) {
@@ -512,7 +512,7 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       finalScoreLineEl?.after(listEl);
     }
     listEl.replaceChildren();
-    for (const { country, total, isFirstTry } of entries) {
+    for (const { country, total } of entries) {
       const li = document.createElement('li');
       const img = document.createElement('img');
       img.src = `../../flags/svg/${country.code}.svg`;
@@ -526,12 +526,6 @@ export function runFlagGrid({ puzzle, countries, options = {} }) {
       points.className = 'points';
       points.textContent = `+${total}`;
       li.appendChild(points);
-      if (isFirstTry) {
-        const tag = document.createElement('span');
-        tag.className = 'first-try';
-        tag.textContent = t('grid.firstTryBonus', 'first try');
-        li.appendChild(tag);
-      }
       listEl.appendChild(li);
     }
   }

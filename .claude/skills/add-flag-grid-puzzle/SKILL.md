@@ -55,6 +55,8 @@ Constraints to apply while designing (mirror the four rules):
 - Pre-compute the 9 candidate pairs. Cross-check each against the union of all earlier ARCHIVE pairs. **Both orientations** count — `A|B` collides with `B|A`.
 - The 6 chosen categories must not all be colors and must not all be continents.
 
+Design taste — not a rule, but worth aiming for: leave at least one cell with a narrow valid pool (1–3 candidates) where the obvious fit is well-known and a niche fit exists (e.g. "Has cross" — obvious: Switzerland; niche: Burundi). That's where the obscurity bonus (`pickObscurity` in `flags/grid.js`) actually has somewhere to shine. A puzzle whose every cell takes 30+ countries hands out tiny obscurity rewards and the bonus dimension barely matters.
+
 ### Step 3 — Verify before writing files
 
 Open a Node REPL or write a small ad-hoc check that imports the candidate puzzle alongside the existing `ARCHIVE` and runs:
