@@ -20,8 +20,7 @@
     "quiz": "Quiz",
     "grid": "3x3",
     "find": "Znajdź wszystkie",
-    "ticTacToe": "Kółko i krzyżyk",
-    "ticTacToe9x9": "9×9"
+    "ticTacToe": "Kółko i krzyżyk"
   },
   "game": {
     "giveUp": "Poddaję się",
@@ -73,6 +72,8 @@
   "ttt": {
     "title": "Kółko i krzyżyk",
     "lobbyTitle": "Zagraj ze znajomym",
+    "variant3x3": "3×3",
+    "variant9x9": "9×9",
     "createRoom": "Utwórz nowy pokój",
     "or": "— lub —",
     "roomCodePlaceholder": "KOD POKOJU",

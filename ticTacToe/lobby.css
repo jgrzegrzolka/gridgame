@@ -13,6 +13,41 @@
   font-weight: 500;
   margin: 0 0 8px;
 }
+
+/* Variant picker — segmented control with two equal-width segments.
+ * Lives at the top of the lobby; the active segment is a non-link span,
+ * the inactive one is a real anchor that navigates to the other variant. */
+.variant-toggle {
+  display: flex;
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+.variant-toggle-btn {
+  flex: 1;
+  padding: 10px 16px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--link-color);
+  text-decoration: none;
+  cursor: pointer;
+  background: transparent;
+  border-right: 1px solid #ddd;
+}
+.variant-toggle-btn:last-child { border-right: none; }
+.variant-toggle-btn:hover:not(.is-active) { background: #f0f0f0; }
+.variant-toggle-btn.is-active {
+  background: var(--link-color);
+  color: #fff;
+  cursor: default;
+  font-weight: 500;
+}
+.variant-toggle-btn:focus-visible {
+  outline: 2px solid var(--link-color);
+  outline-offset: -2px;
+}
 .lobby-btn {
   padding: 12px 20px;
   background: #fff;
