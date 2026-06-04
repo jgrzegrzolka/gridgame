@@ -1,17 +1,15 @@
 :root {
   --link-color: #660033;
   --page-top: 80px;
-  /* Inward push for chrome buttons + burger panel on wide viewports so
-   * they align with the widest content the project ever renders — the
-   * 9×9 tic-tac-toe grid, which maxes at ~756 px (9 × 80 px cells + a
-   * 36 px row-header column). Anchoring there means chrome sits just
-   * inside the grid's right edge on the 9×9 page (Jan's worst case),
-   * and a small distance past content on narrower pages (home tiles at
-   * 720 px, 3×3 grid at ~490 px) — much better than floating at the
-   * viewport corner on a 1920 px monitor. Math: half-viewport minus
-   * half-container = how far inward the container's right edge is from
-   * the viewport right. max(0px, ...) keeps the original right:12px
-   * behaviour on viewports narrower than the container. */
+  /* Inward push for the chrome cluster on wide viewports so the buttons
+   * align with the right edge of the widest content the project ever
+   * renders — the 9×9 tic-tac-toe grid, which maxes at 756 px (9 × 80 px
+   * cells + 36 px row-header column). Anchoring there means chrome sits
+   * at the grid's right edge on the 9×9 page, and a small distance past
+   * content on narrower pages — better than floating at the viewport
+   * corner on a 1920 px monitor. max(0px, ...) clamps to 0 on viewports
+   * narrower than 756 px, so phones keep the original right:12px
+   * behaviour. */
   --chrome-x-offset: max(0px, calc(50vw - 378px));
 }
 html {
@@ -37,7 +35,7 @@ body::before {
 .back {
   position: fixed;
   top: 12px;
-  right: calc(220px + var(--chrome-x-offset));
+  right: calc(64px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -67,7 +65,7 @@ body::before {
 .lang-toggle {
   position: fixed;
   top: 12px;
-  right: calc(168px + var(--chrome-x-offset));
+  right: calc(220px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   background-color: #fff;
@@ -92,7 +90,7 @@ body::before {
 .coffee {
   position: fixed;
   top: 12px;
-  right: calc(116px + var(--chrome-x-offset));
+  right: calc(168px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -114,7 +112,7 @@ body::before {
 .flags-link {
   position: fixed;
   top: 12px;
-  right: calc(64px + var(--chrome-x-offset));
+  right: calc(116px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
