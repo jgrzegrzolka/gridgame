@@ -251,3 +251,46 @@ body.picker-open {
   align-self: start;
   margin-top: 4px;
 }
+
+/* Per-cell bonus list under the final score. Each row: small flag thumb,
+ * country name, points earned (+N), and a green "first try" tag when
+ * applicable. The container is inline-block / margin auto so it sits
+ * centered inside the .result panel while the rows themselves are
+ * left-aligned (a list with center-aligned rows reads badly). */
+.cell-breakdown {
+  list-style: none;
+  padding: 0;
+  margin: -4px auto 16px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+.cell-breakdown li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cell-breakdown img {
+  width: 24px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.cell-breakdown .name {
+  color: #333;
+  min-width: 0;
+}
+.cell-breakdown .points {
+  min-width: 2.5em;
+  text-align: right;
+  margin-left: auto;
+  color: #555;
+}
+.cell-breakdown .first-try {
+  color: #2a9d4a;
+  font-weight: 500;
+  white-space: nowrap;
+}

@@ -799,7 +799,7 @@ export function fillEmptyCellsForGiveUp(puzzle, solution, countries, random = Ma
 
 const WRONG_PICK_PENALTY = 3;
 const EMPTY_CELL_PENALTY = 10;
-const FIRST_TRY_BONUS = 2;
+export const FIRST_TRY_BONUS = 2;
 const MAX_PUZZLE_OBSCURITY_PER_CELL = 5;
 const MAX_COUNTRY_RARITY_PER_CELL = 4;
 
@@ -886,6 +886,28 @@ export function countryRarityBonus(country) {
   if (WELL_KNOWN_COUNTRIES.has(country.code)) return 0;
   if (OBSCURE_COUNTRIES.has(country.code)) return MAX_COUNTRY_RARITY_PER_CELL;
   return 2;
+}
+
+/**
+ * The full per-pick obscurity contribution — sum of puzzle-relative
+ * obscurity (how few cells of THIS puzzle the country fits) and
+ * country-rarity (how obscure the country/flag is in general). Two
+ * consumers in flagGrid/page.js need this exact sum:
+ *
+ *   - pickCountry() accumulates it into obscurityTotal at pick time
+ *   - the per-cell result breakdown displays it after the round
+ *
+ * Keeping the formula here lets both stay in lockstep — change the
+ * weighting and the displayed numbers can never drift from the
+ * scored ones.
+ *
+ * @param {import('./grid.js').Puzzle} puzzle
+ * @param {Country} country
+ * @returns {number}
+ */
+export function pickObscurity(puzzle, country) {
+  return obscurityBonus(countValidCells(puzzle, country))
+    + countryRarityBonus(country);
 }
 
 /**
