@@ -1,6 +1,18 @@
 :root {
   --link-color: #660033;
   --page-top: 80px;
+  /* Inward push for chrome buttons + burger panel on wide viewports so
+   * they align with the widest content the project ever renders — the
+   * 9×9 tic-tac-toe grid, which maxes at ~756 px (9 × 80 px cells + a
+   * 36 px row-header column). Anchoring there means chrome sits just
+   * inside the grid's right edge on the 9×9 page (Jan's worst case),
+   * and a small distance past content on narrower pages (home tiles at
+   * 720 px, 3×3 grid at ~490 px) — much better than floating at the
+   * viewport corner on a 1920 px monitor. Math: half-viewport minus
+   * half-container = how far inward the container's right edge is from
+   * the viewport right. max(0px, ...) keeps the original right:12px
+   * behaviour on viewports narrower than the container. */
+  --chrome-x-offset: max(0px, calc(50vw - 378px));
 }
 html {
   scrollbar-gutter: stable;
@@ -25,7 +37,7 @@ body::before {
 .back {
   position: fixed;
   top: 12px;
-  right: 220px;
+  right: calc(220px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -55,7 +67,7 @@ body::before {
 .lang-toggle {
   position: fixed;
   top: 12px;
-  right: 168px;
+  right: calc(168px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   background-color: #fff;
@@ -80,7 +92,7 @@ body::before {
 .coffee {
   position: fixed;
   top: 12px;
-  right: 116px;
+  right: calc(116px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -102,7 +114,7 @@ body::before {
 .flags-link {
   position: fixed;
   top: 12px;
-  right: 64px;
+  right: calc(64px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -132,7 +144,7 @@ body::before {
 .burger {
   position: fixed;
   top: 12px;
-  right: 12px;
+  right: calc(12px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -188,7 +200,7 @@ body::before {
 .burger-panel {
   position: fixed;
   top: 64px;
-  right: 12px;
+  right: calc(12px + var(--chrome-x-offset));
   min-width: 180px;
   background: #fff;
   border: 1px solid #ddd;
