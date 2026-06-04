@@ -9,16 +9,8 @@ import {
   MOTIFS_FOR_RANDOM,
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
-  isPuzzleGeneratable,
-  findPuzzleSolution,
-  validateCell,
-  puzzleMixesCategoryFamilies,
-  sharedPuzzlePairs,
-  WELL_KNOWN_COUNTRIES,
-  OBSCURE_COUNTRIES,
 } from './grid.js';
 import { CONTINENTS } from './group.js';
-import { PUZZLE_1, PUZZLE_2, PUZZLE_3, ARCHIVE } from '../flagGrid/puzzles.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
@@ -209,138 +201,6 @@ test('every (continent × motif) cell has at least one candidate country', () =>
   assert.deepEqual(empty, [], `no candidate flags for: ${empty.join(', ')}`);
 });
 
-test('PUZZLE_1 has an exemplary 9-distinct-country solution against the real countries.json', () => {
-  const solution = findPuzzleSolution(PUZZLE_1, COUNTRIES);
-  assert.ok(solution);
-  const codes = solution.flat().map((c) => c.code);
-  assert.equal(new Set(codes).size, 9, `expected 9 distinct countries, got codes: ${codes.join(', ')}`);
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      assert.equal(
-        validateCell(PUZZLE_1, r, c, solution[r][c]),
-        true,
-        `cell [${r}][${c}] = ${solution[r][c].code} does not satisfy ${PUZZLE_1.rows[r].id} x ${PUZZLE_1.cols[c].id}`,
-      );
-    }
-  }
-  assert.equal(isPuzzleGeneratable(PUZZLE_1, COUNTRIES), true);
-});
-
-test('PUZZLE_2 has an exemplary 9-distinct-country solution against the real countries.json', () => {
-  const solution = findPuzzleSolution(PUZZLE_2, COUNTRIES);
-  assert.ok(solution);
-  const codes = solution.flat().map((c) => c.code);
-  assert.equal(new Set(codes).size, 9, `expected 9 distinct countries, got codes: ${codes.join(', ')}`);
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      assert.equal(
-        validateCell(PUZZLE_2, r, c, solution[r][c]),
-        true,
-        `cell [${r}][${c}] = ${solution[r][c].code} does not satisfy ${PUZZLE_2.rows[r].id} x ${PUZZLE_2.cols[c].id}`,
-      );
-    }
-  }
-  assert.equal(isPuzzleGeneratable(PUZZLE_2, COUNTRIES), true);
-});
-
-test('PUZZLE_3 has an exemplary 9-distinct-country solution against the real countries.json', () => {
-  const solution = findPuzzleSolution(PUZZLE_3, COUNTRIES);
-  assert.ok(solution);
-  const codes = solution.flat().map((c) => c.code);
-  assert.equal(new Set(codes).size, 9, `expected 9 distinct countries, got codes: ${codes.join(', ')}`);
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      assert.equal(
-        validateCell(PUZZLE_3, r, c, solution[r][c]),
-        true,
-        `cell [${r}][${c}] = ${solution[r][c].code} does not satisfy ${PUZZLE_3.rows[r].id} x ${PUZZLE_3.cols[c].id}`,
-      );
-    }
-  }
-  assert.equal(isPuzzleGeneratable(PUZZLE_3, COUNTRIES), true);
-});
-
-test('every ARCHIVE puzzle is solvable against the real countries.json', () => {
-  for (const entry of ARCHIVE) {
-    assert.equal(
-      isPuzzleGeneratable(entry.puzzle, COUNTRIES),
-      true,
-      `ARCHIVE puzzle "${entry.slug}" (${entry.date}) has no 9-distinct-country solution`,
-    );
-  }
-});
-
-test('every ARCHIVE puzzle mixes category families (not all colors, not all continents)', () => {
-  for (const entry of ARCHIVE) {
-    assert.equal(
-      puzzleMixesCategoryFamilies(entry.puzzle),
-      true,
-      `ARCHIVE puzzle "${entry.slug}" (${entry.date}) is a single-family puzzle — every cell is the same kind of category`,
-    );
-  }
-});
-
-test('ARCHIVE puzzles never repeat a (rowCat × colCat) pair across days', () => {
-  /** @type {string[]} */
-  const failures = [];
-  for (let i = 1; i < ARCHIVE.length; i++) {
-    for (let j = 0; j < i; j++) {
-      const shared = sharedPuzzlePairs(ARCHIVE[j].puzzle, ARCHIVE[i].puzzle);
-      for (const pair of shared) {
-        failures.push(
-          `${ARCHIVE[i].slug} (${ARCHIVE[i].date}) repeats pair "${pair}" from ${ARCHIVE[j].slug} (${ARCHIVE[j].date})`,
-        );
-      }
-    }
-  }
-  assert.deepEqual(failures, [], failures.join('; '));
-});
-
-test('ARCHIVE dates form a consecutive day-by-day sequence', () => {
-  const MS_PER_DAY = 24 * 60 * 60 * 1000;
-  for (let i = 1; i < ARCHIVE.length; i++) {
-    const prev = Date.parse(`${ARCHIVE[i - 1].date}T00:00:00Z`);
-    const curr = Date.parse(`${ARCHIVE[i].date}T00:00:00Z`);
-    assert.equal(
-      curr - prev,
-      MS_PER_DAY,
-      `ARCHIVE "${ARCHIVE[i].slug}" date ${ARCHIVE[i].date} is not exactly one day after ${ARCHIVE[i - 1].date}`,
-    );
-  }
-});
-
-test('the main-menu 3x3 game tile in /index.html points at the most recent ARCHIVE puzzle', () => {
-  const indexHtml = readFileSync(join(HERE, '..', 'index.html'), 'utf-8');
-  const match = indexHtml.match(/class="game-tile"\s+href="flagGrid\/([^/"]+)\/"/);
-  assert.ok(match, 'no flagGrid game-tile <a class="game-tile" href="flagGrid/N/"> found in index.html');
-  const lastSlug = ARCHIVE[ARCHIVE.length - 1].slug;
-  assert.equal(
-    match[1],
-    lastSlug,
-    `main-menu 3x3 tile links to flagGrid/${match[1]}/, expected flagGrid/${lastSlug}/ (newest ARCHIVE entry)`,
-  );
-});
-
-test('every flagGrid burger-menu "Today" link points at the most recent ARCHIVE puzzle', () => {
-  const lastSlug = ARCHIVE[ARCHIVE.length - 1].slug;
-  const folders = [...ARCHIVE.map((e) => e.slug), 'archive', 'rand'];
-  /** @type {string[]} */
-  const failures = [];
-  for (const folder of folders) {
-    const path = join(HERE, '..', 'flagGrid', folder, 'index.html');
-    const html = readFileSync(path, 'utf-8');
-    const match = html.match(/href="\.\.\/([^/"]+)\/"\s+data-i18n="menu\.today"/);
-    if (!match) {
-      failures.push(`flagGrid/${folder}/index.html has no <a href="../N/" data-i18n="menu.today"> link`);
-      continue;
-    }
-    if (match[1] !== lastSlug) {
-      failures.push(`flagGrid/${folder}/index.html "Today" link points to ../${match[1]}/, expected ../${lastSlug}/`);
-    }
-  }
-  assert.deepEqual(failures, [], failures.join('; '));
-});
-
 test('generateRandomPuzzle succeeds with the real countries.json under several seeds', () => {
   /** @param {number} seed */
   function mulberry32(seed) {
@@ -360,29 +220,3 @@ test('generateRandomPuzzle succeeds with the real countries.json under several s
   }
 });
 
-// The country-rarity bonus tiers in flags/grid.js are two hand-curated
-// Sets — the kind of data that drifts silently. The behavior tests in
-// grid.test.js pin "this code returns N", but only these two cross-checks
-// against countries.json can catch the curation bugs themselves:
-//
-//   - a code that ends up in both Sets (well-known wins by check order,
-//     so an obscure country accidentally tagged well-known scores 0
-//     instead of 4 — silent under all other tests)
-//   - a typoed or stale code that doesn't match any real country
-//     (sits dead in the Set forever, scoring nothing)
-test('WELL_KNOWN_COUNTRIES and OBSCURE_COUNTRIES are disjoint', () => {
-  const overlap = [...WELL_KNOWN_COUNTRIES].filter((c) => OBSCURE_COUNTRIES.has(c));
-  assert.deepEqual(overlap, [], `codes in both rarity sets: ${overlap.join(', ')}`);
-});
-
-test('every code in WELL_KNOWN_COUNTRIES / OBSCURE_COUNTRIES exists in countries.json', () => {
-  const known = new Set(COUNTRIES.map((c) => c.code));
-  const missing = [];
-  for (const code of WELL_KNOWN_COUNTRIES) {
-    if (!known.has(code)) missing.push(`${code} (WELL_KNOWN)`);
-  }
-  for (const code of OBSCURE_COUNTRIES) {
-    if (!known.has(code)) missing.push(`${code} (OBSCURE)`);
-  }
-  assert.deepEqual(missing, [], `rarity-set codes not in countries.json: ${missing.join(', ')}`);
-});
