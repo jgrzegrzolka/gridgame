@@ -92,8 +92,8 @@
           const all = flagsGamePool(raw, includeAll);
           const sections = [
             { title: t('findFlag.sections.continents', 'Continents'), ids: CONTINENTS.map((n) => ({ id: `continent:${n}`, label: t(`variant.${continentKey(n)}`, n) })) },
-            { title: t('findFlag.sections.colors', 'Colors'), ids: COLORS_FOR_RANDOM.map((c) => ({ id: `hasColor:${c}`, label: t('findFlag.has', 'Has {x}').replace('{x}', t(`color.${c}`, c)) })) },
-            { title: t('findFlag.sections.motifs', 'Motifs'), ids: MOTIFS_FOR_RANDOM.map((m) => ({ id: `hasMotif:${m}`, label: t('findFlag.has', 'Has {x}').replace('{x}', t(`motif.${m}`, m)) })) },
+            { title: t('findFlag.sections.colors', 'Colors'), ids: COLORS_FOR_RANDOM.map((c) => ({ id: `hasColor:${c}`, label: t(`color.${c}`, c) })) },
+            { title: t('findFlag.sections.motifs', 'Motifs'), ids: MOTIFS_FOR_RANDOM.map((m) => ({ id: `hasMotif:${m}`, label: t(`motif.${m}`, m) })) },
           ];
           for (const s of sections) {
             const sec = document.createElement('section');

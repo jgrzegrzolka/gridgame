@@ -414,23 +414,22 @@ test('rankedCategoryId: returns null for unranked filters', () => {
   assert.equal(rankedCategoryId(mix), null);
 });
 
-test('pillLabel: include uses the same English wording the old chooser did', () => {
+test('pillLabel: include renders as the bare noun — no "Has " wrapper', () => {
   assert.equal(pillLabel('continent', 'Africa', 'include', idTranslate), 'Africa');
-  assert.equal(pillLabel('color', 'orange', 'include', idTranslate), 'Has orange');
-  assert.equal(pillLabel('motif', 'cross', 'include', idTranslate), 'Has cross');
+  assert.equal(pillLabel('color', 'orange', 'include', idTranslate), 'orange');
+  assert.equal(pillLabel('motif', 'cross', 'include', idTranslate), 'cross');
 });
 
-test('pillLabel: exclude prefixes "Not " and drops the "Has " for colors/motifs', () => {
+test('pillLabel: exclude prefixes "Not " on the same bare noun', () => {
   assert.equal(pillLabel('continent', 'Africa', 'exclude', idTranslate), 'Not Africa');
-  assert.equal(pillLabel('color', 'orange', 'exclude', idTranslate), 'Not orange',
-    '"Not Has orange" would read awkwardly — drop the auxiliary');
+  assert.equal(pillLabel('color', 'orange', 'exclude', idTranslate), 'Not orange');
   assert.equal(pillLabel('motif', 'cross', 'exclude', idTranslate), 'Not cross');
 });
 
 test('filterTitle: joins selected pills with the interpunct separator in GROUP_ORDER', () => {
   const f = parseFilterString('continent:Africa,color:orange,motif:!cross');
   assert.ok(f);
-  assert.equal(filterTitle(f, idTranslate), 'Africa · Has orange · Not cross');
+  assert.equal(filterTitle(f, idTranslate), 'Africa · orange · Not cross');
 });
 
 test('filterTitle: empty filter renders to empty string', () => {
@@ -456,7 +455,7 @@ test('filterToCategory: predicate matches matchesFilters exactly', () => {
 test('filterToCategory: label is the human-readable filterTitle', () => {
   const f = parseFilterString('continent:Africa,color:orange');
   assert.ok(f);
-  assert.equal(filterToCategory(f, idTranslate).label, 'Africa · Has orange');
+  assert.equal(filterToCategory(f, idTranslate).label, 'Africa · orange');
 });
 
 test('filterToCategory: id encodes the serialized filter (stable across equal filters)', () => {

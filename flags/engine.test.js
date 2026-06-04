@@ -102,7 +102,7 @@ test('hasColor predicate returns false when colors is missing or empty', () => {
 test('hasColor category has a stable id and label', () => {
   const cat = hasColor('green');
   assert.equal(cat.id, 'hasColor:green');
-  assert.equal(cat.label, 'Has green');
+  assert.equal(cat.label, 'green');
 });
 
 test('hasMotif predicate matches countries whose flag depicts that motif', () => {
@@ -122,7 +122,7 @@ test('hasMotif predicate returns false when motifs is missing or empty', () => {
 test('hasMotif category has a stable id and label', () => {
   const cat = hasMotif('animal');
   assert.equal(cat.id, 'hasMotif:animal');
-  assert.equal(cat.label, 'Has animal');
+  assert.equal(cat.label, 'animal');
 });
 
 test('suggest returns an empty list while the trimmed query is under 3 characters', () => {
@@ -559,14 +559,14 @@ test('translateCategoryLabel kebab-cases multi-word continent ids before looking
   assert.equal(translateCategoryLabel(continent('North America'), t), 'Ameryka Północna');
 });
 
-test('translateCategoryLabel interpolates game.has with the color noun', () => {
-  const t = fakeTranslate({ 'game.has': 'Ma {x}', 'color.red': 'czerwony' });
-  assert.equal(translateCategoryLabel(hasColor('red'), t), 'Ma czerwony');
+test('translateCategoryLabel returns the bare color noun without a "Has " wrapper', () => {
+  const t = fakeTranslate({ 'color.red': 'czerwony' });
+  assert.equal(translateCategoryLabel(hasColor('red'), t), 'czerwony');
 });
 
-test('translateCategoryLabel interpolates game.has with the motif noun, hyphens and all', () => {
-  const t = fakeTranslate({ 'game.has': 'Ma {x}', 'motif.star-or-moon': 'gwiazda lub księżyc' });
-  assert.equal(translateCategoryLabel(hasMotif('star-or-moon'), t), 'Ma gwiazda lub księżyc');
+test('translateCategoryLabel returns the bare motif noun, hyphens and all', () => {
+  const t = fakeTranslate({ 'motif.star-or-moon': 'gwiazda lub księżyc' });
+  assert.equal(translateCategoryLabel(hasMotif('star-or-moon'), t), 'gwiazda lub księżyc');
 });
 
 test('translateCategoryLabel falls back to the baked English label when the variant key is missing', () => {
@@ -576,9 +576,9 @@ test('translateCategoryLabel falls back to the baked English label when the vari
   assert.equal(translateCategoryLabel(continent('Oceania'), t), 'Oceania');
 });
 
-test('translateCategoryLabel falls back to the baked "Has X" label when game.has is missing', () => {
+test('translateCategoryLabel falls back to the bare value when no color translation is available', () => {
   const t = fakeTranslate({});
-  assert.equal(translateCategoryLabel(hasColor('red'), t), 'Has red');
+  assert.equal(translateCategoryLabel(hasColor('red'), t), 'red');
 });
 
 test('translateCategoryLabel returns the raw label for ids it does not recognise', () => {
