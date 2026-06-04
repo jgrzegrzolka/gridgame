@@ -15,7 +15,6 @@ import {
   poolFor,
   targetFor,
   isQuizIncludeAll,
-  setQuizIncludeAll,
   preloadFlags,
   shouldFireQuizConfetti,
   shouldShowBestTime,
@@ -23,6 +22,7 @@ import {
 import { flagsGamePool } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { launchConfetti } from '../confetti.js';
+import { buildQuizMenu } from './menu.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -48,6 +48,9 @@ export function bootFlagQuiz() {
   const params = new URLSearchParams(window.location.search);
   const urlVariant = params.get('v');
   const urlMode = params.get('n');
+  // Compute the effective variant before renderMenu runs so the menu can
+  // mark the matching entry with aria-current="page".
+  const currentVariantKey = urlVariant && VARIANTS[urlVariant] ? urlVariant : DEFAULT_VARIANT;
 
   const includeAll = isQuizIncludeAll();
 
@@ -56,11 +59,13 @@ export function bootFlagQuiz() {
     .then((raw) => {
       const all = flagsGamePool(raw, includeAll);
       preloadFlags(all, (url) => { new Image().src = url; });
-      renderMenu(all);
+      buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), all, {
+        relativeBase: '',
+        currentVariantKey,
+        statsCurrent: false,
+      });
 
-      let variantKey = urlVariant && VARIANTS[urlVariant]
-        ? urlVariant
-        : DEFAULT_VARIANT;
+      const variantKey = currentVariantKey;
       let pool = all.filter(VARIANTS[variantKey].filter);
       let modeKey = urlMode && availableModes(pool.length).includes(urlMode)
         ? urlMode
@@ -71,69 +76,6 @@ export function bootFlagQuiz() {
     .catch((err) => {
       document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
-
-  function renderMenu(all) {
-    const toggleLi = document.createElement('li');
-    const toggleLabel = document.createElement('label');
-    toggleLabel.className = 'scope-toggle';
-    const textSpan = document.createElement('span');
-    textSpan.className = 'scope-toggle-text';
-    textSpan.textContent = t('menu.includeTerritories', 'Include territories & other flags');
-    const switchSpan = document.createElement('span');
-    switchSpan.className = 'scope-toggle-switch';
-    const toggleInput = document.createElement('input');
-    toggleInput.type = 'checkbox';
-    toggleInput.checked = includeAll;
-    toggleInput.addEventListener('change', () => {
-      setQuizIncludeAll(localStorage, toggleInput.checked);
-      // Let the slide animation finish so the user sees the toggle move
-      // before the page reloads. Without this, change fires, the JS reloads
-      // instantly, and the visual transition never paints.
-      setTimeout(() => window.location.reload(), 350);
-    });
-    const trackSpan = document.createElement('span');
-    trackSpan.className = 'scope-toggle-track';
-    trackSpan.setAttribute('aria-hidden', 'true');
-    const thumbSpan = document.createElement('span');
-    thumbSpan.className = 'scope-toggle-thumb';
-    trackSpan.appendChild(thumbSpan);
-    switchSpan.appendChild(toggleInput);
-    switchSpan.appendChild(trackSpan);
-    toggleLabel.appendChild(textSpan);
-    toggleLabel.appendChild(switchSpan);
-    toggleLi.appendChild(toggleLabel);
-    quizMenuEl.appendChild(toggleLi);
-
-    const WIDE_GROUP = new Set(['countries']);
-    let dividerPlaced = false;
-    let firstVariantPlaced = false;
-    for (const [key, variant] of Object.entries(VARIANTS)) {
-      const pool = all.filter(variant.filter);
-      const defaultMode = defaultModeFor(pool.length);
-      if (defaultMode === null) continue;
-      const li = document.createElement('li');
-      if (!firstVariantPlaced) {
-        // Separates the scope toggle from the variant list.
-        li.className = 'menu-divider';
-        firstVariantPlaced = true;
-      } else if (!dividerPlaced && !WIDE_GROUP.has(key)) {
-        li.className = 'menu-divider';
-        dividerPlaced = true;
-      }
-      const a = document.createElement('a');
-      a.href = `?v=${key}&n=${defaultMode}`;
-      a.textContent = t(`variant.${key}`, variant.label);
-      li.appendChild(a);
-      quizMenuEl.appendChild(li);
-    }
-    const statsLi = document.createElement('li');
-    statsLi.className = 'menu-divider';
-    const statsA = document.createElement('a');
-    statsA.href = 'stats/';
-    statsA.textContent = t('menu.yourStats', 'Your stats');
-    statsLi.appendChild(statsA);
-    quizMenuEl.appendChild(statsLi);
-  }
 
   function renderModeToggle(key, mode, modes) {
     modeToggleEl.innerHTML = '';

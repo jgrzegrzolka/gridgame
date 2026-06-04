@@ -33,17 +33,7 @@
       <span class="burger-bars" aria-hidden="true"></span>
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
-      <ul class="menu">
-        <li>
-          <label class="scope-toggle">
-            <span class="scope-toggle-text" data-i18n="menu.includeTerritories">Include territories &amp; other flags</span>
-            <span class="scope-toggle-switch">
-              <input type="checkbox" id="stats-scope-toggle" />
-              <span class="scope-toggle-track" aria-hidden="true"><span class="scope-toggle-thumb"></span></span>
-            </span>
-          </label>
-        </li>
-      </ul>
+      <ul class="menu" id="quiz-menu"></ul>
     </nav>
     <ul class="stats" id="stats"></ul>
     <script type="module">
@@ -57,25 +47,16 @@
         isTimedMode,
         accuracyRatio,
         isQuizIncludeAll,
-        setQuizIncludeAll,
         shouldShowBestTime,
         formatBestScoreLabel,
       } from '../../flags/quiz.js';
       import { flagsGamePool } from '../../flags/group.js';
       import { bootI18n, wireLangToggle, t } from '../../i18n.js';
       import { wireBurgerDismiss } from '../../common.js?v=__BUILD__';
+      import { buildQuizMenu } from '../menu.js';
 
       const includeAll = isQuizIncludeAll();
       const statsEl = document.getElementById('stats');
-
-      const toggleEl = /** @type {HTMLInputElement} */ (document.getElementById('stats-scope-toggle'));
-      toggleEl.checked = includeAll;
-      toggleEl.addEventListener('change', () => {
-        setQuizIncludeAll(localStorage, toggleEl.checked);
-        // Let the slide animation finish so the user sees the toggle move
-        // before the page reloads.
-        setTimeout(() => window.location.reload(), 350);
-      });
 
       // Wait for i18n so renderStats can use translated variant labels and
       // the "Play" CTA without a load-order race.
@@ -84,7 +65,15 @@
         wireBurgerDismiss();
         return fetch('../../flags/countries.json')
           .then((r) => r.json())
-          .then(renderStats)
+          .then((raw) => {
+            const all = flagsGamePool(raw, includeAll);
+            buildQuizMenu(document.getElementById('quiz-menu'), all, {
+              relativeBase: '../',
+              currentVariantKey: null,
+              statsCurrent: true,
+            });
+            renderStats(raw);
+          })
           .catch((err) => {
             document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
           });

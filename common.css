@@ -1,6 +1,16 @@
 :root {
   --link-color: #660033;
   --page-top: 80px;
+  /* Inward push for the chrome cluster on wide viewports so the buttons
+   * align with the right edge of the widest content the project ever
+   * renders — the 9×9 tic-tac-toe grid, which maxes at 756 px (9 × 80 px
+   * cells + 36 px row-header column). Anchoring there means chrome sits
+   * at the grid's right edge on the 9×9 page, and a small distance past
+   * content on narrower pages — better than floating at the viewport
+   * corner on a 1920 px monitor. max(0px, ...) clamps to 0 on viewports
+   * narrower than 756 px, so phones keep the original right:12px
+   * behaviour. */
+  --chrome-x-offset: max(0px, calc(50vw - 378px));
 }
 html {
   scrollbar-gutter: stable;
@@ -25,7 +35,7 @@ body::before {
 .back {
   position: fixed;
   top: 12px;
-  right: 220px;
+  right: calc(64px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -55,7 +65,7 @@ body::before {
 .lang-toggle {
   position: fixed;
   top: 12px;
-  right: 168px;
+  right: calc(220px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   background-color: #fff;
@@ -80,7 +90,7 @@ body::before {
 .coffee {
   position: fixed;
   top: 12px;
-  right: 116px;
+  right: calc(168px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -102,7 +112,7 @@ body::before {
 .flags-link {
   position: fixed;
   top: 12px;
-  right: 64px;
+  right: calc(116px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -132,7 +142,7 @@ body::before {
 .burger {
   position: fixed;
   top: 12px;
-  right: 12px;
+  right: calc(12px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -188,7 +198,7 @@ body::before {
 .burger-panel {
   position: fixed;
   top: 64px;
-  right: 12px;
+  right: calc(12px + var(--chrome-x-offset));
   min-width: 180px;
   background: #fff;
   border: 1px solid #ddd;
@@ -222,6 +232,19 @@ body::before {
 }
 .menu a:hover {
   text-decoration: underline;
+}
+/* "You are here" treatment for navigation menu items. aria-current="page"
+ * is the semantic marker; the same rule paints any menu link that points
+ * at the page the user is already on as grey and non-clickable. Matches
+ * the disabled-back-button pattern at the top of the file — same
+ * visual language for "this is your current location, button is inert". */
+.menu a[aria-current="page"] {
+  color: #999;
+  cursor: default;
+  pointer-events: none;
+}
+.menu a[aria-current="page"]:hover {
+  text-decoration: none;
 }
 
 .give-up-row {
