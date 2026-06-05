@@ -12,23 +12,6 @@ body {
   flex-direction: column;
 }
 
-/* Turn indicator + give-up button share one row. give-up is pushed to the
- * right with margin-left: auto so it stays right-aligned even when the
- * turn-line is hidden (e.g. online lobby state). Both children's own
- * top-margins are zeroed so .turn-bar owns the spacing. */
-.turn-bar {
-  display: flex;
-  align-items: center;
-  margin-top: 24px;
-}
-.turn-bar .turn-line,
-.turn-bar .give-up-row {
-  margin: 0;
-}
-.turn-bar .give-up-row {
-  margin-left: auto;
-}
-
 .turn-line {
   display: flex;
   align-items: center;

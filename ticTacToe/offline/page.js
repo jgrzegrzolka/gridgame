@@ -63,6 +63,9 @@ function runTicTacToe({ puzzle, countries }) {
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
   const playAgainEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('play-again'));
+  const playAgainInlineEl = /** @type {HTMLAnchorElement | null} */ (
+    document.getElementById('play-again-inline')
+  );
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
 
   colHeaderEls.forEach((th, i) => {
@@ -372,6 +375,14 @@ function runTicTacToe({ puzzle, countries }) {
       }, { once: true });
     }
     resultEl.hidden = false;
+  }
+
+  if (playAgainInlineEl) {
+    playAgainInlineEl.href = window.location.pathname + window.location.search;
+    playAgainInlineEl.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.reload();
+    }, { once: true });
   }
 
   if (giveUpEl) {
