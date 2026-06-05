@@ -118,6 +118,35 @@ test('live catalog: every answer code is a known sovereign country', () => {
 // revert the data change for that flag, or to detach the puzzle from
 // the filter (keep answers, drop filter). Don't just regenerate
 // answers — that defeats the test's purpose.
+// Every constraint in a filter must do work — dropping any single
+// token has to change the answer set. The generator already dedupes
+// by answer set and prefers the simpler filter, so it can't produce
+// a redundant-constraint puzzle; this test pins the invariant against
+// a future hand-edit (or a regenerated catalog with weaker dedup)
+// sneaking through a filter that says more than it needs to.
+test('live + backlog: no puzzle filter carries a redundant constraint', () => {
+  const sov = flagsGamePool(COUNTRIES, false);
+  for (const entry of [...CATALOG, ...BACKLOG]) {
+    const tokens = entry.filter.split(',');
+    if (tokens.length < 2) continue;
+    for (let i = 0; i < tokens.length; i++) {
+      const trimmed = tokens.filter((_, j) => j !== i).join(',');
+      const f = parseFilterString(trimmed);
+      assert.ok(f, `#${entry.n}: trimmed filter "${trimmed}" failed to parse`);
+      const without = sov
+        .filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (f)))
+        .map((c) => c.code)
+        .sort();
+      const full = [...entry.answers].sort();
+      assert.notDeepEqual(
+        without,
+        full,
+        `#${entry.n}: constraint "${tokens[i]}" is redundant — dropping it from "${entry.filter}" leaves the same ${full.length}-flag answer set`,
+      );
+    }
+  }
+});
+
 test('live + backlog: answers match what each filter resolves to today', () => {
   const sov = flagsGamePool(COUNTRIES, false);
   for (const entry of [...CATALOG, ...BACKLOG]) {

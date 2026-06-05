@@ -1,26 +1,24 @@
 # Daily-puzzle feature — plan & context
 
-> **Status: paused, waiting on input data.** Don't start implementing yet — see "Resuming" below.
-
-This note hands off the design context for a daily-puzzle feature that's been planned but not yet implemented. Read this before doing any work on `/daily/` or anything that touches `flags/countries.json`'s difficulty model.
+> **Status: phase 1 shipped, mid-review of the first 20 puzzles. Next up: `primaryColors` / `emblemColors` split.** Read this before doing any work on `/daily/` or anything that touches `flags/countries.json`'s difficulty model.
 
 ---
 
-## Where we are
+## Where we are (2026-06-05)
 
-The `/rate/` tool was built (PRs #179 + #180, merged into `main`) so a human can score every sovereign country 1–6 on how well-known it is. The tool exports a JSON map of `{ code: score }` covering all 269 country codes — 195 sovereign rated by hand, 74 non-sovereign provisionally defaulted to `7`.
+- `nameScore` (1–7) merged into `flags/countries.json` for all 269 entries.
+- `/daily/` MVP shipped: tile on the home page, today's puzzle, deep-link `?n=N`, and an archive grid of small numbered squares (one per released puzzle).
+- "Today's puzzle" is the last entry in `daily/daily_puzzles.json` — **no date math anywhere**.
+- 50 puzzles staged total: live catalog has #1–20 (under review), `daily/daily_backlog.json` holds #21–50.
+- The first 20 are being reviewed with Jan. One swap made so far (`#1` is now `Europe · cross`).
 
-**We're waiting for Jan (and friends helping on phones) to actually finish rating.** Until that JSON exists and is merged into `countries.json`, the puzzle generator has no difficulty signal to work with.
+## Open thread we're working on
 
-## Resuming — what to do when the ratings arrive
+Jan reviewed the first 20 puzzles and flagged three concerns:
 
-1. **Merge ratings into `flags/countries.json`.** Add a `nameScore` field (number, 1–7) to every entry from the exported `country-ratings-YYYY-MM-DD.json`. Bump the `Country` typedef in `flags/group.js`. Add tests in `flags/countries.test.js` covering the new field's presence and range.
-2. **Confirm with Jan which implementation phase to start with** (see "Implementation phases" below) — most likely Phase 1 (the smallest viable daily-puzzle MVP), but he may want to skip ahead.
-3. **Do not** start phase 2+ until phase 1 is shipped and used. Each phase is independently valuable.
-
-## The feature in one paragraph
-
-A daily flag puzzle that everyone sees the same on the same day, accessible from a tile on the home page. Like Wordle, but using the existing find-all-flags mechanic. Past days are browsable in an archive. Designed for friends to compare scores. Some puzzles will be auto-generated from filter combinations (continent / color / motif); others will be hand-curated specials that are too weird for the regular `findFlag/` UI ("flags with a triangle on the hoist pointing to the center").
+1. **"Europe · green" includes flags where green is only in the coat of arms** (Portugal, San Marino, Moldova, Montenegro …). Players can't see the green from across the room. The fix is the `primaryColors` / `emblemColors` split that was already deferred to "phase 7" — promoted to be the next thing.
+2. **Sane country sets per puzzle** — the mechanical lever to add is an *anti-overlap cap* in the picker: "no country appears in more than K of the first 20 puzzles." Right now Portugal/San Marino/Moldova/Montenegro show up in 5–6 of the first 11 puzzles, so consecutive plays feel like déjà vu. Other "is this a good puzzle" judgments stay human.
+3. **Redundant constraints inside a single filter** (e.g. `a,b,c` resolves to the same set as `a,b` — `c` adds nothing). The generator already dedupes by answer set and prefers the simpler filter, so this can't happen via the generator. To prevent a hand-edit from sneaking one through, add a test that drops each token of every catalog filter and asserts the answer set changes.
 
 ## Key design decisions (don't re-litigate)
 
@@ -38,13 +36,16 @@ A daily flag puzzle that everyone sees the same on the same day, accessible from
 
 ### Onboarding ramp, then random
 - First ~30 puzzles hand-picked, easy on purpose (small answer sets, mostly famous countries).
+- Concrete bucket rules in use:
+  - Puzzles #1–10: every answer has `nameScore ≤ 3`, size 3–25, no 1-flag puzzles.
+  - Puzzles #11–50: every answer has `nameScore ≤ 4`, size 1–25.
 - After onboarding: random from the catalog, deterministic by N.
 - Rejected: a "difficulty ramps linearly forever" model — doesn't survive puzzle #500.
 
 ### Two-axis difficulty model
 The Spain example shows why these have to be separate dimensions:
-1. **`nameScore` per country (1–6)** — "would a player think to type *Spain* when prompted for European countries?" Wiktoria's ratings drive this.
-2. **`primaryColors` vs `emblemColors` per flag (manual tag, not built yet)** — Spain is red/yellow as primary colors; white/blue/green/gold are only in the coat of arms. By **default**, color/motif puzzles should match `primaryColors` only — otherwise the puzzle "European flags with white" includes Spain and players feel cheated. Strict-mode puzzles (hand-curated only) can match either.
+1. **`nameScore` per country (1–6)** — "would a player think to type *Spain* when prompted for European countries?" Wiktoria's ratings drive this. Merged into `countries.json`.
+2. **`primaryColors` per flag (manual tag, not built yet — next up)** — Spain is red/yellow as primary colors; white/blue/green/gold are only in the coat of arms. By **default**, color/motif puzzles should match `primaryColors` only — otherwise the puzzle "European flags with green" includes Portugal/San Marino/Moldova/Montenegro and players feel cheated. `colors` keeps its existing meaning (everything visible, used by findFlag's "browse" UI). Strict-mode puzzles (hand-curated only) can opt in to the broader `colors` field.
 
 ### Sovereign-only scope (for now)
 - 195 sovereign = 193 UN members + Vatican + Palestine.
@@ -63,41 +64,49 @@ The Spain example shows why these have to be separate dimensions:
 1. **MVP: daily tile + today's puzzle + archive** ✅ shipped
    - Daily tile (first position) on home (`index.html`).
    - `/daily/?n=N` route reuses the findFlag engine with a filter set loaded from JSON.
-   - Seed `daily_puzzles.json` starts with puzzle #1; `daily_backlog.json` holds 49 staged puzzles ready to release.
+   - Seed `daily_puzzles.json` + `daily_backlog.json`.
    - "Today's puzzle" = last entry in the live catalog (no date math).
    - Burger menu in `/daily/` has an Archive link.
-   - Archive shows every released puzzle, last entry highlighted as today.
-2. **Authoring tool for catalog growth.** Enumerates filter combos, dedups by answer-set hash, trims redundant filters (don't include a continent filter that doesn't narrow the result), scores difficulty. Output gets human-reviewed and appended to `daily_puzzles.json`.
-3. **Per-country difficulty integrated.** Use `nameScore` (after merge in step 0) in the catalog dedup and difficulty scoring.
-4. **Onboarding + difficulty-aware selection.** Hand-pick the first ~30 easy ones, then random from the catalog within a sensible band.
-5. **Hand-curated overrides.** A `daily_overrides.json` keyed by N lets us slot in specially-designed puzzles. Generator checks overrides first.
-6. **Score-sharing string.** Decide format after some real play.
-7. **(Later)** Add `primaryColors` / `emblemColors` per flag — manual tag pass on ~15–20 flags with complex emblems (Spain, Portugal, Mexico, Ecuador, Brazil, Croatia, Serbia, Slovakia, Sri Lanka, Saudi Arabia, Iran, Belarus, Turkmenistan, Kyrgyzstan, etc.). Default color/motif puzzles to `primaryColors`.
-8. **(Later)** New game modes (sequence/ordered). Daily can pull from any mode once they exist.
+   - Archive is a grid of small numbered squares, last (= today) highlighted.
+2. **Catalog quality — primaryColors split + anti-overlap + redundant-filter test.** *Next up.*
+   - Add `primaryColors: string[]` field to each country in `countries.json`. For most flags `primaryColors === colors`; the ~15–20 flags with detailed coats of arms (Portugal, Spain, San Marino, Vatican, Croatia, Serbia, Slovakia, Slovenia, Moldova, Montenegro, Andorra, Belarus, Hungary, Sri Lanka, Saudi Arabia, Mexico, Ecuador, Brazil, etc.) get a trimmed `primaryColors` that drops the COA-only colors.
+   - Make `matchesFilters` field-aware: take an optional `{ colorField: 'colors' | 'primaryColors' }` so daily uses `primaryColors` while findFlag stays on `colors`.
+   - Generator gains an *anti-overlap cap*: no country appears in more than K (≈ 4) of any 20-puzzle window.
+   - Redundant-filter test in `flags/daily.test.js`: for every catalog entry, removing any one token from the filter must change the answer set.
+   - Regenerate the 50-puzzle catalog with the new rules, re-do the human review with Jan.
+3. **Authoring tool for catalog growth (formalised).** Today the build script is one-off and deleted after use. Phase 3 keeps it as `scripts/build_daily_catalog.mjs`, with the scoring + dedup + anti-overlap logic exposed for "add the next batch" runs.
+4. **Hand-curated overrides.** A `daily_overrides.json` keyed by N lets us slot in specially-designed puzzles. Generator checks overrides first.
+5. **Score-sharing string.** Decide format after some real play.
+6. **(Later)** New game modes (sequence/ordered). Daily can pull from any mode once they exist.
 
-## Open questions for Jan when resuming
+## Open questions for Jan
 
-- Which phase do you want first? (Default recommendation: phase 1.)
-- Pick a launch date for puzzle #1.
-- Score-share string: text vs emoji-grid? (Defer to phase 6.)
-- Do you want a global leaderboard eventually? (If yes, that changes the architecture in phase 5+.)
+- Score-share string: text vs emoji-grid? (Defer until we've played a few real puzzles.)
+- Do you want a global leaderboard eventually? (If yes, that changes the architecture in later phases.)
 - Should `/rate/` extend its scale to also cover the 74 non-sovereign entries (currently flat 7)?
+- When we do `primaryColors`, should `colors` get renamed to something less ambiguous (`allColors`?) or stay as it is?
 
 ## File map (for orientation)
 
-- `rate/` — the rating tool (merged; the source of the ratings JSON we're waiting on)
-- `flags/countries.json` — country data; needs `nameScore` added when ratings arrive
-- `flags/group.js` — `Country` typedef (will need updating)
-- `flags/engine.js` — filter primitives (`continent` / `hasColor` / `hasMotif` / `statehood`) that puzzles compose
-- `flags/findFlag.js` — find-all game logic, fully tested; daily reuses this
-- `findFlag/` — find-all UI; daily's UI borrows the same engine and most of the same look
-- `CLAUDE.md` — repo conventions (folder structure, tests, UI consistency); read first
-- `i18n.js` + `i18n/{en,pl}.json` — translation system; daily puzzle UI should localize visible strings
+- `flags/countries.json` — country data; has `nameScore`. Will get `primaryColors` next.
+- `flags/group.js` — `Country` typedef.
+- `flags/engine.js` — filter primitives that puzzles compose.
+- `flags/findFlag.js` — find-all game logic + filter serialization. Daily reuses it.
+- `flags/daily.js` — daily catalog helpers (`todayN`, `getPuzzle`, `dailyNFromUrl`). Pure logic, no date math.
+- `flags/flagsFilter.js` — `matchesFilters` resolver. Will gain a `colorField` option in phase 2.
+- `flags/daily.test.js` — covers daily.js + the live and backlog catalogs (drift detector, sequential n, all answer codes resolve to sovereigns).
+- `daily/` — UI: `index.html` (today's puzzle), `archive.html` (grid of past puzzles), `page.js`, `archive.js`, `index.css`, `archive.css`, `daily_puzzles.json` (released), `daily_backlog.json` (staged).
+- `findFlag/` — find-all UI; daily's play page borrows its game styles via the shared `../findFlag/index.css`.
+- `common.css` — chrome (`body::before`, `body { padding: var(--page-top) 24px 24px }`), shared button styles.
+- `i18n.js` + `i18n/{en,pl}.json` — translation system. Daily strings live under the `daily.*` keys.
+- `CLAUDE.md` — repo conventions (folder structure, tests, UI consistency); read first.
 
 ## Things to avoid (lessons from this conversation)
 
 - **Don't conflate "country famous" with "flag colors memorable".** They're orthogonal. Spain is famously known but its coat-of-arms colors are not.
-- **Don't store puzzles by date.** Use numbers.
+- **Don't store puzzles by date.** Use numbers, manually released.
+- **Don't rely on a calendar/clock to decide "today's puzzle".** Miss a day and the displayed history falls out of sync with the puzzle numbers. The file IS the state.
 - **Don't try to design a 1000-puzzle difficulty curve.** It doesn't survive contact with reality.
 - **Don't auto-generate puzzles at request time** — the catalog must be frozen, otherwise puzzle history changes when data changes.
-- **Don't build a backend before you need one.** Everything in phases 1–6 works as a static site.
+- **Don't build a backend before you need one.** Everything in phases 1–5 works as a static site.
+- **Don't put body padding in every page stylesheet.** It belongs in `common.css` (already there). Per-page CSS overrides only what genuinely differs (e.g. ticTacToe's narrower horizontal padding for the 9×9 grid).
