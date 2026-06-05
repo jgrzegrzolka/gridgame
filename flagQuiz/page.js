@@ -19,6 +19,7 @@ import {
   shouldFireQuizConfetti,
   shouldShowBestTime,
   mistakesAfterGiveUp,
+  countModeProgressRatio,
 } from '../flags/quiz.js';
 import { flagsGamePool } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
@@ -208,7 +209,7 @@ export function bootFlagQuiz() {
       if (chosen.code === currentAnswer.code) {
         answeredCount++;
         if (!timed) {
-          progressBarEl.style.width = (answeredCount / target * 100) + '%';
+          progressBarEl.style.width = (countModeProgressRatio(answeredCount, wrongCount, target) * 100) + '%';
         }
         tile.classList.add('correct');
         disableAllTiles();
@@ -237,7 +238,7 @@ export function bootFlagQuiz() {
         const correctTile = choicesEl.querySelector(`[data-code="${currentAnswer.code}"]`);
         if (correctTile) correctTile.classList.add('correct');
         disableAllTiles();
-        progressBarEl.style.width = ((answeredCount + wrongCount) / target * 100) + '%';
+        progressBarEl.style.width = (countModeProgressRatio(answeredCount, wrongCount, target) * 100) + '%';
         feedbackEl.textContent = '';
         feedbackEl.classList.remove('shake-wrong');
         advanceTo(quiz.next(), 1200);
