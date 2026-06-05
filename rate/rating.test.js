@@ -1,106 +1,43 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  emptyState,
-  rate,
-  skip,
-  undo,
-  currentCountry,
-  isDone,
-  progress,
-  jumpToFirstUnrated,
-} from './rating.js';
+import { emptyRatings, setRating, ratedCount } from './rating.js';
 
-const COUNTRIES = [
-  { code: 'af', name: 'Afghanistan' },
-  { code: 'al', name: 'Albania' },
-  { code: 'dz', name: 'Algeria' },
-];
-
-describe('rating state machine', () => {
-  it('starts at index 0 with no ratings', () => {
-    const s = emptyState();
-    assert.equal(s.index, 0);
-    assert.deepEqual(s.ratings, {});
-    assert.equal(currentCountry(s, COUNTRIES)?.code, 'af');
+describe('ratings helpers', () => {
+  it('starts empty', () => {
+    assert.deepEqual(emptyRatings(), {});
+    assert.equal(ratedCount(emptyRatings()), 0);
   });
 
-  it('records a rating and advances', () => {
-    const s = rate(emptyState(), COUNTRIES, 3);
-    assert.equal(s.index, 1);
-    assert.equal(s.ratings.af, 3);
-    assert.equal(currentCountry(s, COUNTRIES)?.code, 'al');
+  it('records a rating', () => {
+    const r = setRating(emptyRatings(), 'us', 1);
+    assert.equal(r.us, 1);
+    assert.equal(ratedCount(r), 1);
   });
 
-  it('ignores invalid scores (out of range, non-integer, NaN)', () => {
-    const s = emptyState();
-    assert.deepEqual(rate(s, COUNTRIES, 0), s);
-    assert.deepEqual(rate(s, COUNTRIES, 6), s);
-    assert.deepEqual(rate(s, COUNTRIES, 2.5), s);
-    assert.deepEqual(rate(s, COUNTRIES, NaN), s);
+  it('overwrites an existing rating without inflating the count', () => {
+    let r = setRating(emptyRatings(), 'us', 1);
+    r = setRating(r, 'us', 4);
+    assert.equal(r.us, 4);
+    assert.equal(ratedCount(r), 1);
   });
 
-  it('skip advances without recording a rating', () => {
-    const s = skip(emptyState(), COUNTRIES);
-    assert.equal(s.index, 1);
-    assert.deepEqual(s.ratings, {});
+  it('ignores out-of-range, non-integer, and NaN scores', () => {
+    const before = setRating(emptyRatings(), 'us', 3);
+    assert.deepEqual(setRating(before, 'pl', 0), before);
+    assert.deepEqual(setRating(before, 'pl', 6), before);
+    assert.deepEqual(setRating(before, 'pl', 2.5), before);
+    assert.deepEqual(setRating(before, 'pl', NaN), before);
   });
 
-  it('undo steps back one but keeps the existing rating', () => {
-    let s = rate(emptyState(), COUNTRIES, 4);
-    s = undo(s);
-    assert.equal(s.index, 0);
-    assert.equal(s.ratings.af, 4);
+  it('ignores empty code', () => {
+    const before = emptyRatings();
+    assert.deepEqual(setRating(before, '', 3), before);
   });
 
-  it('rate at end of list is a no-op', () => {
-    const s = { index: 3, ratings: {} };
-    assert.deepEqual(rate(s, COUNTRIES, 3), s);
-    assert.equal(isDone(s, COUNTRIES), true);
-  });
-
-  it('skip at end of list is a no-op', () => {
-    const s = { index: 3, ratings: {} };
-    assert.deepEqual(skip(s, COUNTRIES), s);
-  });
-
-  it('undo at start is a no-op', () => {
-    const s = emptyState();
-    assert.deepEqual(undo(s), s);
-  });
-
-  it('progress reports position and rated count independently', () => {
-    let s = emptyState();
-    s = rate(s, COUNTRIES, 1);
-    s = skip(s, COUNTRIES);
-    assert.deepEqual(progress(s, COUNTRIES), { position: 2, total: 3, rated: 1 });
-  });
-
-  it('jumpToFirstUnrated finds the first hole', () => {
-    let s = emptyState();
-    s = rate(s, COUNTRIES, 1);
-    s = rate(s, COUNTRIES, 2);
-    s = undo(s);
-    s = undo(s);
-    s = jumpToFirstUnrated(s, COUNTRIES);
-    assert.equal(s.index, 2);
-  });
-
-  it('jumpToFirstUnrated returns end when everything is rated', () => {
-    let s = emptyState();
-    s = rate(s, COUNTRIES, 1);
-    s = rate(s, COUNTRIES, 1);
-    s = rate(s, COUNTRIES, 1);
-    s = jumpToFirstUnrated(s, COUNTRIES);
-    assert.equal(s.index, 3);
-    assert.equal(isDone(s, COUNTRIES), true);
-  });
-
-  it('changing a rating overwrites the previous score', () => {
-    let s = rate(emptyState(), COUNTRIES, 2);
-    s = undo(s);
-    s = rate(s, COUNTRIES, 5);
-    assert.equal(s.ratings.af, 5);
-    assert.equal(s.index, 1);
+  it('returns a new object — does not mutate input', () => {
+    const a = emptyRatings();
+    const b = setRating(a, 'us', 3);
+    assert.notStrictEqual(a, b);
+    assert.deepEqual(a, {});
   });
 });

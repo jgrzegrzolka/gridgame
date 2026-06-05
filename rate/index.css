@@ -1,162 +1,144 @@
 .rate-shell {
-  max-width: 480px;
-  margin: 60px auto 40px;
-  padding: 0 20px;
+  max-width: 1400px;
+  margin: 40px auto 60px;
+  padding: 0 16px;
+}
+
+.rate-top {
   text-align: center;
-}
-
-.rate-flag-wrap {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   margin-bottom: 20px;
-  aspect-ratio: 3 / 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.rate-flag {
-  max-width: 100%;
-  max-height: 100%;
-  height: auto;
-  width: auto;
-  display: block;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-}
-
-.rate-name {
-  font-size: 28px;
-  margin: 0 0 4px;
+.rate-title {
+  font-size: 22px;
+  margin: 0 0 6px;
   font-weight: 600;
 }
 
-.rate-meta {
-  margin: 0 0 24px;
-  color: #666;
+.rate-progress {
+  margin: 0 0 6px;
+  color: #555;
   font-size: 14px;
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
 }
-
-.rate-meta span:not(:empty) + span:not(:empty)::before {
-  content: '·';
-  margin-right: 8px;
-}
-
-.rate-en:empty {
-  display: none;
-}
-
-.rate-buttons {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  margin: 20px 0 12px;
-}
-
-.rate-score {
-  font-size: 24px;
-  font-weight: 600;
-  padding: 18px 0;
-  border: 2px solid #ddd;
-  background: #fff;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: transform 0.05s, border-color 0.1s, background 0.1s;
-  font-family: inherit;
-}
-
-.rate-score:hover {
-  border-color: #888;
-}
-
-.rate-score:active {
-  transform: translateY(1px);
-}
-
-.rate-score.is-current {
-  background: #fff8dc;
-  border-color: #d4a700;
-}
-
-.rate-score[data-score='1'] { color: #1a8800; }
-.rate-score[data-score='2'] { color: #4a8800; }
-.rate-score[data-score='3'] { color: #aa7700; }
-.rate-score[data-score='4'] { color: #aa4400; }
-.rate-score[data-score='5'] { color: #aa0000; }
 
 .rate-help {
+  margin: 0;
   color: #888;
   font-size: 13px;
-  margin: 0 0 24px;
-  min-height: 1.2em;
 }
 
-.rate-aux {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 24px;
+/* Multi-column layout flows items column-first (down col 1, then col 2,
+ * ...) which is the reading order the user asked for. CSS Grid would
+ * have given us row-first by default. */
+.rate-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  column-count: 1;
+  column-gap: 12px;
 }
 
-.rate-aux-btn {
-  flex: 1;
-  padding: 10px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  background: #f8f8f8;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: inherit;
-}
+@media (min-width: 600px) { .rate-grid { column-count: 2; } }
+@media (min-width: 960px) { .rate-grid { column-count: 3; } }
+@media (min-width: 1280px) { .rate-grid { column-count: 4; } }
 
-.rate-aux-btn:hover {
-  background: #ececec;
-}
-
-.rate-progress-row {
-  display: flex;
+.rate-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  margin-bottom: 20px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  background: #fff;
+  /* keep a row from being split across columns mid-content */
+  break-inside: avoid;
 }
 
-.rate-progress-bar {
-  flex: 1;
-  height: 8px;
-  background: #eee;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.rate-progress-fill {
-  height: 100%;
-  background: #4a90e2;
-  width: 0%;
-  transition: width 0.2s ease-out;
-}
-
-.rate-progress-text {
+.rate-section-head {
+  font-weight: 700;
   font-size: 12px;
-  color: #666;
-  white-space: nowrap;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #333;
+  padding: 6px 2px 4px;
+  margin: 14px 0 6px;
+  /* keep header attached to at least one row, and don't split it */
+  break-inside: avoid;
+  break-after: avoid;
 }
 
-.rate-actions {
+.rate-section-head:first-child {
+  margin-top: 0;
+}
+
+.rate-row.is-rated {
+  background: #fafafa;
+}
+
+.rate-row-flag {
+  width: 36px;
+  height: 24px;
+  object-fit: cover;
+  border: 1px solid #ddd;
+}
+
+.rate-row-label {
+  font-size: 13px;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.rate-row-buttons {
+  display: flex;
+  gap: 3px;
+}
+
+.rate-row-btn {
+  min-width: 26px;
+  height: 26px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 4px;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  color: #444;
+}
+
+.rate-row-btn:hover {
+  background: #f0f0f0;
+}
+
+.rate-row-btn[data-score='1'] { color: #1a8800; }
+.rate-row-btn[data-score='2'] { color: #4a8800; }
+.rate-row-btn[data-score='3'] { color: #aa7700; }
+.rate-row-btn[data-score='4'] { color: #aa4400; }
+.rate-row-btn[data-score='5'] { color: #aa0000; }
+
+.rate-row-btn.is-current {
+  color: #fff;
+}
+
+.rate-row-btn.is-current[data-score='1'] { background: #1a8800; border-color: #1a8800; }
+.rate-row-btn.is-current[data-score='2'] { background: #4a8800; border-color: #4a8800; }
+.rate-row-btn.is-current[data-score='3'] { background: #aa7700; border-color: #aa7700; }
+.rate-row-btn.is-current[data-score='4'] { background: #aa4400; border-color: #aa4400; }
+.rate-row-btn.is-current[data-score='5'] { background: #aa0000; border-color: #aa0000; }
+
+.rate-footer {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 24px;
 }
 
 .rate-action-btn {
-  flex: 1;
-  min-width: 100px;
-  padding: 10px;
-  font-size: 13px;
+  padding: 10px 16px;
+  font-size: 14px;
   border: 1px solid #ccc;
   background: #fff;
   border-radius: 8px;
@@ -171,18 +153,4 @@
 .rate-action-danger {
   color: #aa0000;
   border-color: #f0c0c0;
-}
-
-.rate-done {
-  text-align: center;
-  margin-top: 80px;
-}
-
-.rate-done h1 {
-  font-size: 32px;
-}
-
-.rate-done .rate-actions {
-  justify-content: center;
-  margin-top: 24px;
 }
