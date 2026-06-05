@@ -58,14 +58,27 @@
   break-inside: avoid;
 }
 
+/* Author rules at .rate-row specificity override the UA `[hidden]` rule
+ * by source order, so we need our own explicit override for filtering. */
+.rate-row[hidden],
+.rate-section-head[hidden] {
+  display: none;
+}
+
 /* Phones: stack the score buttons under the name within the row so all
  * six buttons fit comfortably even on narrow viewports. Flag spans both
- * inner rows on the left. */
+ * inner rows on the left. Padding / gaps are tightened so the name has
+ * enough horizontal room to fit on a single line for most countries. */
 @media (max-width: 480px) {
+  .rate-shell {
+    padding: 0 8px;
+  }
   .rate-row {
     grid-template-columns: 36px minmax(0, 1fr);
     grid-template-rows: auto auto;
-    row-gap: 6px;
+    column-gap: 8px;
+    row-gap: 4px;
+    padding: 6px 8px;
   }
   .rate-row-flag {
     grid-row: 1 / 3;
