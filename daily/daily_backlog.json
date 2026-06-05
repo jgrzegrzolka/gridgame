@@ -4,6 +4,7 @@
     "filter": "continent:South America,color:blue",
     "answers": [
       "ar",
+      "bo",
       "br",
       "cl",
       "co",
@@ -37,16 +38,9 @@
   },
   {
     "n": 25,
-    "filter": "continent:Europe,color:green",
+    "filter": "motif:coat-of-arms,color:orange",
     "answers": [
-      "bg",
-      "by",
-      "cy",
-      "hu",
-      "ie",
-      "it",
-      "lt",
-      "pt"
+      "lk"
     ]
   },
   {
@@ -63,7 +57,9 @@
     "n": 27,
     "filter": "continent:Africa,motif:weapon,color:white",
     "answers": [
-      "ke"
+      "ke",
+      "mz",
+      "sz"
     ]
   },
   {
@@ -108,13 +104,18 @@
       "be",
       "de",
       "es",
+      "hr",
       "li",
       "lt",
       "md",
       "me",
       "mk",
+      "pt",
       "ro",
+      "rs",
       "se",
+      "si",
+      "sm",
       "ua",
       "va"
     ]
@@ -147,9 +148,19 @@
   },
   {
     "n": 35,
-    "filter": "motif:coat-of-arms,color:orange",
+    "filter": "continent:Europe,color:green",
     "answers": [
-      "lk"
+      "bg",
+      "by",
+      "cy",
+      "hu",
+      "ie",
+      "it",
+      "lt",
+      "md",
+      "me",
+      "pt",
+      "sm"
     ]
   },
   {
@@ -160,7 +171,8 @@
       "be",
       "de",
       "ee",
-      "li"
+      "li",
+      "mt"
     ]
   },
   {
@@ -210,7 +222,8 @@
     "n": 42,
     "filter": "continent:South America,motif:animal,color:green",
     "answers": [
-      "bo"
+      "bo",
+      "ec"
     ]
   },
   {
@@ -218,6 +231,7 @@
     "filter": "continent:Africa,color:red,color:blue,color:black",
     "answers": [
       "ss",
+      "sz",
       "za"
     ]
   },

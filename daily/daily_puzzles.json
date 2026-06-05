@@ -19,9 +19,11 @@
     "filter": "continent:South America,color:blue,color:yellow",
     "answers": [
       "ar",
+      "bo",
       "br",
       "co",
       "ec",
+      "py",
       "uy",
       "ve"
     ]
@@ -49,11 +51,11 @@
   },
   {
     "n": 5,
-    "filter": "continent:Africa,motif:weapon,color:black",
+    "filter": "continent:Africa,motif:weapon,color:yellow",
     "answers": [
       "ao",
-      "ke",
-      "mz"
+      "mz",
+      "sz"
     ]
   },
   {
@@ -99,12 +101,17 @@
       "be",
       "de",
       "es",
+      "hr",
       "li",
       "lt",
       "md",
       "me",
       "mk",
-      "ro"
+      "pt",
+      "ro",
+      "rs",
+      "si",
+      "sm"
     ]
   },
   {
@@ -113,6 +120,7 @@
     "answers": [
       "ar",
       "br",
+      "py",
       "uy",
       "ve"
     ]
@@ -166,7 +174,8 @@
     "filter": "motif:cross,color:black",
     "answers": [
       "dm",
-      "jm"
+      "jm",
+      "mt"
     ]
   },
   {
@@ -199,6 +208,7 @@
       "ba",
       "cz",
       "ee",
+      "es",
       "fi",
       "fr",
       "gb",
@@ -208,8 +218,10 @@
       "li",
       "lu",
       "md",
+      "me",
       "nl",
       "no",
+      "pt",
       "ro",
       "rs",
       "ru",

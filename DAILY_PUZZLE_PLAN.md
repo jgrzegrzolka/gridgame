@@ -40,7 +40,10 @@
 ### Two-axis difficulty model
 The Spain example shows why these have to be separate dimensions:
 1. **`nameScore` per country (1–6)** — "would a player think to type *Spain* when prompted for European countries?" Wiktoria's ratings drive this. Merged into `countries.json`.
-2. **`primaryColors` per flag (manual tag, not built yet — next up)** — Spain is red/yellow as primary colors; white/blue/green/gold are only in the coat of arms. By **default**, color/motif puzzles should match `primaryColors` only — otherwise the puzzle "European flags with green" includes Portugal/San Marino/Moldova/Montenegro and players feel cheated. `colors` keeps its existing meaning (everything visible, used by findFlag's "browse" UI). Strict-mode puzzles (hand-curated only) can opt in to the broader `colors` field.
+2. **`primaryColors` per flag (data quality signal, not the resolver)** — Spain is red/yellow as primary colors; white/blue/green/gold are only in the coat of arms. Tagged on the ~20 flags where this matters. **Currently NOT used as the daily matching rule** — see "Color-match resolution" below for the decision history. Kept as a quality signal for the picker (prefer puzzles where most answers match by primary) and for any future strict-mode puzzle that explicitly opts in.
+
+### Color-match resolution: use `colors`, not `primaryColors`
+First pass had daily resolve color filters against `primaryColors` so e.g. "Europe · green" wouldn't include Portugal-style flags where green is only in the coat of arms. Jan reversed that: a player typing Spain in "Europe · blue" and getting a wrong-flash is worse UX than finishing 8/11 on "Europe · green" and seeing the surprise flags in the missed list. The game telling someone "Spain isn't blue" when they can see the blue in its COA is actively wrong-feeling. So daily reverted to matching against `colors` (the default), accepting that some puzzles have a few "surprise" emblem-colour answers. The `primaryColors` data stays — it'll feed picker quality scoring later (so we don't generate puzzles where most matches are emblem-only).
 
 ### Sovereign-only scope (for now)
 - 195 sovereign = 193 UN members + Vatican + Palestine.

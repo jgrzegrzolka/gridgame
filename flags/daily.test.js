@@ -199,10 +199,12 @@ test('live catalog: every answer code is a known sovereign country', () => {
 // a redundant-constraint puzzle; this test pins the invariant against
 // a future hand-edit (or a regenerated catalog with weaker dedup)
 // sneaking through a filter that says more than it needs to.
-// Daily resolves color filters against primaryColors, not the broader
-// `colors` field, so a puzzle like "European flags with green" doesn't
-// include flags where green only appears in the coat of arms.
-const DAILY_OPTS = /** @type {const} */ ({ colorField: 'primaryColors' });
+// Daily resolves color filters against the full `colors` field — the
+// player should be able to type Spain in "Europe · blue" and have it
+// accepted, even though Spain's blue lives only in its coat of arms.
+// `primaryColors` data stays in countries.json as a quality signal for
+// future picker heuristics / strict-mode puzzles, but the default
+// `colors` matching is what the catalog answers are computed against.
 
 test('live + backlog: no puzzle filter carries a redundant constraint', () => {
   const sov = flagsGamePool(COUNTRIES, false);
@@ -214,7 +216,7 @@ test('live + backlog: no puzzle filter carries a redundant constraint', () => {
       const f = parseFilterString(trimmed);
       assert.ok(f, `#${entry.n}: trimmed filter "${trimmed}" failed to parse`);
       const without = sov
-        .filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (f), DAILY_OPTS))
+        .filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (f)))
         .map((c) => c.code)
         .sort();
       const full = [...entry.answers].sort();
@@ -233,7 +235,7 @@ test('live + backlog: answers match what each filter resolves to today', () => {
     const f = parseFilterString(entry.filter);
     assert.ok(f, `#${entry.n}: failed to parse filter "${entry.filter}"`);
     const computed = sov
-      .filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (f), DAILY_OPTS))
+      .filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (f)))
       .map((c) => c.code)
       .sort();
     const stored = [...entry.answers].sort();
