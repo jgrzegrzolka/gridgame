@@ -246,17 +246,17 @@ test('formatBestScoreLabel: 60s mode renders "score/target" so the achievement r
   assert.equal(formatBestScoreLabel('60s', { score: 45 }, 45), '45/45');
 });
 
-test('formatBestScoreLabel: untimed (all) mode renders the raw mistakes count', () => {
-  // "5 / 195 mistakes" would mislead — target there is pool size, not a
-  // mistakes cap. Keep this column bare in all-mode.
-  assert.equal(formatBestScoreLabel('all', { score: 5 }, 195), '5');
-  assert.equal(formatBestScoreLabel('all', { score: 0 }, 45), '0');
+test('formatBestScoreLabel: untimed (all) mode renders "correct/target" — one-shot per question, so correct = target - mistakes', () => {
+  assert.equal(formatBestScoreLabel('all', { score: 5 }, 195), '190/195');
+  assert.equal(formatBestScoreLabel('all', { score: 0 }, 45), '45/45');
 });
 
-test('formatBestScoreLabel: unknown mode falls back to the raw score string', () => {
-  // Safer than throwing — caller gets *something* to show even if the
-  // mode was decommissioned but old localStorage entries linger.
-  assert.equal(formatBestScoreLabel('99', { score: 7 }, 50), '7');
+test('formatBestScoreLabel: untimed clamps negative correct counts to 0 — protects legacy scores from the multi-attempt era where mistakes could exceed the pool', () => {
+  assert.equal(formatBestScoreLabel('all', { score: 60 }, 45), '0/45');
+});
+
+test('formatBestScoreLabel: unknown mode falls back to "correct/target" — same shape as count mode, safer than throwing for stale localStorage entries', () => {
+  assert.equal(formatBestScoreLabel('99', { score: 7 }, 50), '43/50');
 });
 
 test('availableModes offers both 60s and all for any pool size — the timed mode never gates on pool size', () => {
