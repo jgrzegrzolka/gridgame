@@ -1,51 +1,73 @@
 [
   {
     "n": 21,
-    "filter": "continent:South America,motif:weapon",
+    "filter": "continent:South America,color:blue",
     "answers": [
-      "bo",
-      "ec"
+      "ar",
+      "br",
+      "cl",
+      "co",
+      "ec",
+      "py",
+      "uy",
+      "ve"
     ]
   },
   {
     "n": 22,
-    "filter": "color:yellow,color:orange",
+    "filter": "continent:Africa,motif:coat-of-arms,color:black",
     "answers": [
-      "bt",
-      "lk"
+      "eg",
+      "ke"
     ]
   },
   {
     "n": 23,
-    "filter": "continent:Europe,color:orange",
+    "filter": "color:red,color:blue,color:orange",
     "answers": [
-      "cy",
-      "ie"
+      "am"
     ]
   },
   {
     "n": 24,
-    "filter": "continent:Asia,motif:cross",
+    "filter": "continent:North America,motif:cross,color:blue",
     "answers": [
-      "ge"
+      "do"
     ]
   },
   {
     "n": 25,
-    "filter": "motif:coat-of-arms,color:orange",
+    "filter": "continent:Europe,color:green",
     "answers": [
-      "lk"
+      "bg",
+      "by",
+      "cy",
+      "hu",
+      "ie",
+      "it",
+      "lt",
+      "pt"
     ]
   },
   {
     "n": 26,
-    "filter": "continent:Europe,motif:weapon",
+    "filter": "continent:South America,motif:coat-of-arms",
     "answers": [
-      "mt"
+      "bo",
+      "ec",
+      "pe",
+      "py"
     ]
   },
   {
     "n": 27,
+    "filter": "continent:Africa,motif:weapon,color:white",
+    "answers": [
+      "ke"
+    ]
+  },
+  {
+    "n": 28,
     "filter": "continent:Asia,color:white,color:blue",
     "answers": [
       "az",
@@ -63,84 +85,52 @@
     ]
   },
   {
-    "n": 28,
-    "filter": "continent:South America,color:blue,color:yellow",
-    "answers": [
-      "ar",
-      "bo",
-      "br",
-      "co",
-      "ec",
-      "py",
-      "uy",
-      "ve"
-    ]
-  },
-  {
     "n": 29,
-    "filter": "continent:Europe,motif:union-jack",
+    "filter": "color:blue,color:green,color:orange",
     "answers": [
-      "gb"
+      "in"
     ]
   },
   {
     "n": 30,
-    "filter": "continent:Asia,color:green,color:black",
+    "filter": "continent:North America,motif:cross,color:red",
     "answers": [
-      "ae",
-      "iq",
-      "jo",
-      "kw",
-      "ps",
-      "sy"
+      "dm",
+      "do"
     ]
   },
   {
     "n": 31,
-    "filter": "continent:South America,color:red,color:blue",
+    "filter": "continent:Europe,color:yellow",
     "answers": [
-      "bo",
-      "cl",
-      "co",
-      "ec",
-      "py",
-      "ve"
+      "ad",
+      "ba",
+      "be",
+      "de",
+      "es",
+      "li",
+      "lt",
+      "md",
+      "me",
+      "mk",
+      "ro",
+      "se",
+      "ua",
+      "va"
     ]
   },
   {
     "n": 32,
-    "filter": "continent:Europe,color:red,color:blue",
+    "filter": "continent:Africa,motif:weapon,color:blue",
     "answers": [
-      "ad",
-      "cz",
-      "es",
-      "fr",
-      "gb",
-      "hr",
-      "is",
-      "li",
-      "lu",
-      "md",
-      "me",
-      "nl",
-      "no",
-      "pt",
-      "ro",
-      "rs",
-      "ru",
-      "si",
-      "sk",
-      "sm"
+      "sz"
     ]
   },
   {
     "n": 33,
-    "filter": "continent:Asia,motif:coat-of-arms,color:green",
+    "filter": "continent:Asia,color:blue,color:black",
     "answers": [
-      "ir",
-      "lk",
-      "sa",
-      "tj"
+      "kr"
     ]
   },
   {
@@ -157,71 +147,24 @@
   },
   {
     "n": 35,
-    "filter": "continent:Europe,color:white,color:blue",
+    "filter": "motif:coat-of-arms,color:orange",
     "answers": [
-      "ba",
-      "cz",
-      "ee",
-      "es",
-      "fi",
-      "fr",
-      "gb",
-      "gr",
-      "hr",
-      "is",
-      "lu",
-      "nl",
-      "no",
-      "pt",
-      "rs",
-      "ru",
-      "si",
-      "sk",
-      "sm"
+      "lk"
     ]
   },
   {
     "n": 36,
-    "filter": "continent:Africa,motif:weapon,color:white",
+    "filter": "continent:Europe,color:black",
     "answers": [
-      "ke",
-      "mz",
-      "sz"
+      "al",
+      "be",
+      "de",
+      "ee",
+      "li"
     ]
   },
   {
     "n": 37,
-    "filter": "continent:South America,color:blue,color:green",
-    "answers": [
-      "bo",
-      "br",
-      "ec",
-      "py"
-    ]
-  },
-  {
-    "n": 38,
-    "filter": "continent:Europe,color:red,color:yellow",
-    "answers": [
-      "ad",
-      "be",
-      "de",
-      "es",
-      "hr",
-      "li",
-      "lt",
-      "md",
-      "me",
-      "mk",
-      "pt",
-      "ro",
-      "rs",
-      "si",
-      "sm"
-    ]
-  },
-  {
-    "n": 39,
     "filter": "continent:Africa,motif:weapon,color:yellow",
     "answers": [
       "ao",
@@ -230,125 +173,107 @@
     ]
   },
   {
-    "n": 40,
-    "filter": "continent:South America,motif:star-or-moon,color:blue",
+    "n": 38,
+    "filter": "continent:Asia,color:green,color:black",
     "answers": [
-      "br",
-      "cl",
-      "py",
-      "ve"
+      "ae",
+      "iq",
+      "jo",
+      "kw",
+      "ps",
+      "sy"
+    ]
+  },
+  {
+    "n": 39,
+    "filter": "continent:South America,motif:animal,color:white",
+    "answers": [
+      "pe"
+    ]
+  },
+  {
+    "n": 40,
+    "filter": "continent:Europe,color:orange",
+    "answers": [
+      "cy",
+      "ie"
     ]
   },
   {
     "n": 41,
-    "filter": "continent:Europe,color:blue,color:yellow",
+    "filter": "continent:Asia,motif:animal,color:white",
     "answers": [
-      "ad",
-      "ba",
-      "es",
-      "hr",
-      "li",
-      "md",
-      "me",
-      "pt",
-      "ro",
-      "rs",
-      "se",
-      "si",
-      "sm",
-      "ua"
+      "bt"
     ]
   },
   {
     "n": 42,
-    "filter": "continent:Asia,color:blue,color:green",
+    "filter": "continent:South America,motif:animal,color:green",
     "answers": [
-      "az",
-      "in",
-      "uz"
+      "bo"
     ]
   },
   {
     "n": 43,
-    "filter": "continent:South America,motif:coat-of-arms,color:blue",
+    "filter": "continent:Africa,color:red,color:blue,color:black",
     "answers": [
-      "bo",
-      "ec",
-      "py"
+      "ss",
+      "za"
     ]
   },
   {
     "n": 44,
-    "filter": "continent:Europe,color:white,color:green",
+    "filter": "continent:Europe,motif:weapon",
     "answers": [
-      "bg",
-      "by",
-      "cy",
-      "hu",
-      "ie",
-      "it",
-      "pt",
-      "sm"
+      "mt"
     ]
   },
   {
     "n": 45,
-    "filter": "continent:Africa,color:white,color:orange",
+    "filter": "continent:Asia,motif:animal,color:blue",
     "answers": [
-      "ci",
-      "ne"
+      "kz"
     ]
   },
   {
     "n": 46,
-    "filter": "continent:Asia,color:red,color:orange",
+    "filter": "continent:South America,motif:coat-of-arms,color:white",
     "answers": [
-      "am",
-      "lk"
+      "pe",
+      "py"
     ]
   },
   {
     "n": 47,
-    "filter": "continent:Europe,color:white,color:yellow",
+    "filter": "continent:Africa,motif:weapon,color:green",
     "answers": [
-      "ba",
-      "es",
-      "hr",
-      "pt",
-      "rs",
-      "si",
-      "sm",
-      "va"
+      "ke",
+      "mz"
     ]
   },
   {
     "n": 48,
-    "filter": "continent:Africa,motif:coat-of-arms,color:black",
+    "filter": "continent:Europe,motif:star-or-moon",
     "answers": [
-      "eg",
-      "ke"
+      "ba",
+      "hr",
+      "si"
     ]
   },
   {
     "n": 49,
-    "filter": "continent:Asia,color:white,color:orange",
+    "filter": "continent:Asia,motif:weapon,color:white",
     "answers": [
-      "bt",
-      "in"
+      "om",
+      "sa"
     ]
   },
   {
     "n": 50,
-    "filter": "continent:Europe,motif:coat-of-arms,color:white",
+    "filter": "continent:South America,motif:weapon",
     "answers": [
-      "es",
-      "hr",
-      "pt",
-      "rs",
-      "si",
-      "sk",
-      "sm",
-      "va"
+      "bo",
+      "ec"
     ]
   }
 ]

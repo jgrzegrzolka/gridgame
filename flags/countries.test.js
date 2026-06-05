@@ -82,6 +82,28 @@ test('continent is in CONTINENTS for "country" entries, null for "other" entries
   }
 });
 
+test('primaryColors (when present) is a non-empty subset of colors using the canonical palette', () => {
+  const palette = new Set(COLORS_FOR_RANDOM);
+  const offenders = [];
+  for (const c of COUNTRIES) {
+    if (c.primaryColors === undefined) continue;
+    if (!Array.isArray(c.primaryColors) || c.primaryColors.length === 0) {
+      offenders.push(`${c.code}: primaryColors must be a non-empty array`);
+      continue;
+    }
+    const colors = c.colors ?? [];
+    for (const color of c.primaryColors) {
+      if (!palette.has(color)) {
+        offenders.push(`${c.code}: primaryColors "${color}" not in canonical palette`);
+      }
+      if (!colors.includes(color)) {
+        offenders.push(`${c.code}: primaryColors "${color}" not in colors [${colors.join(', ')}]`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
 test('every entry has a non-empty colors array drawn from COLORS_FOR_RANDOM', () => {
   const palette = new Set(COLORS_FOR_RANDOM);
   const offenders = [];

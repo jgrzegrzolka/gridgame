@@ -133,6 +133,44 @@ test('matchesFilters: include + exclude on different values in the same group bo
   assert.equal(matchesFilters(blueOnly, f), false);
 });
 
+test('matchesFilters: colorField "primaryColors" matches only the primary colors, falling back to colors when absent', () => {
+  // Country with a primaryColors trim — e.g. Portugal: full colors contains green/red/yellow/blue/white,
+  // primaryColors keeps only green/red. A "yellow" filter must reject under primaryColors but accept under colors.
+  const portugal = country({
+    code: 'pt',
+    colors: ['green', 'red', 'yellow', 'blue', 'white'],
+    primaryColors: ['green', 'red'],
+  });
+  // Under default (colorField: 'colors'), all five colors are matchable.
+  assert.equal(matchesFilters(portugal, filters({ color: { include: ['yellow'] } })), true);
+  // Under primaryColors, yellow drops out because it's only in the COA.
+  assert.equal(
+    matchesFilters(portugal, filters({ color: { include: ['yellow'] } }), { colorField: 'primaryColors' }),
+    false,
+  );
+  // Green stays primary; both modes accept.
+  assert.equal(matchesFilters(portugal, filters({ color: { include: ['green'] } })), true);
+  assert.equal(
+    matchesFilters(portugal, filters({ color: { include: ['green'] } }), { colorField: 'primaryColors' }),
+    true,
+  );
+});
+
+test('matchesFilters: colorField "primaryColors" falls back to colors for countries without the field', () => {
+  // Most countries don't have primaryColors set — the function must treat them
+  // as if primaryColors === colors, otherwise daily puzzles would erroneously
+  // exclude every plain-tricolour flag.
+  const italy = country({ code: 'it', colors: ['green', 'white', 'red'] });
+  assert.equal(
+    matchesFilters(italy, filters({ color: { include: ['green'] } }), { colorField: 'primaryColors' }),
+    true,
+  );
+  assert.equal(
+    matchesFilters(italy, filters({ color: { include: ['blue'] } }), { colorField: 'primaryColors' }),
+    false,
+  );
+});
+
 test('emptyFilters returns a fresh Filters with all include/exclude sets empty', () => {
   const f = emptyFilters();
   for (const k of /** @type {Array<keyof Filters>} */ (Object.keys(f))) {

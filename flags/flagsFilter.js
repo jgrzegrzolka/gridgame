@@ -44,11 +44,25 @@ export function emptyFilters() {
  * equal one of them. For array groups (colors, motifs) AND means the
  * country's array must contain every selected value.
  *
+ * `colorField` picks which color list to match against:
+ *   - `'colors'` (default) — every color visible anywhere on the flag,
+ *     including small emblem details. Used by findFlag's "browse" UI
+ *     where the player can examine the flag up close.
+ *   - `'primaryColors'` — only the colors that read from across a room
+ *     (drops COA-only colors). Used by the daily-puzzle generator so
+ *     "European flags with green" doesn't include Portugal-style flags
+ *     where green only appears inside the coat of arms. Countries
+ *     without a primaryColors field fall back to `colors`, so this is
+ *     additive — only the ~20 flags tagged explicitly behave differently.
+ *
  * @param {import('./group.js').Country} country
  * @param {Filters} filters
+ * @param {{ colorField?: 'colors' | 'primaryColors' }} [options]
  * @returns {boolean}
  */
-export function matchesFilters(country, filters) {
+export function matchesFilters(country, filters, options = {}) {
+  const colorField = options.colorField ?? 'colors';
+
   const sov = sovereigntyOf(country);
   if (filters.status.include.size && (filters.status.include.size > 1 || !filters.status.include.has(sov))) return false;
   if (filters.status.exclude.has(sov)) return false;
@@ -57,7 +71,7 @@ export function matchesFilters(country, filters) {
   if (filters.continent.include.size && (filters.continent.include.size > 1 || !filters.continent.include.has(cont))) return false;
   if (filters.continent.exclude.has(cont)) return false;
 
-  const colors = country.colors ?? [];
+  const colors = country[colorField] ?? country.colors ?? [];
   for (const c of filters.color.include) {
     if (!colors.includes(c)) return false;
   }

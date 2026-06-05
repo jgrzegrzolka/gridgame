@@ -11,6 +11,7 @@
  * @property {Continent | null} continent
  * @property {string | null} [statehood]
  * @property {string[]} [colors]
+ * @property {string[]} [primaryColors]
  * @property {string[]} [motifs]
  * @property {string[]} [aliases]
  */
