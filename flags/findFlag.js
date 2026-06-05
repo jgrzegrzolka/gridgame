@@ -414,63 +414,43 @@ export function filterToCategory(f, translate) {
 
 /**
  * Weighted pick for "how many pills should a random mix include":
- * 30% chance of 1, 50% chance of 2, 20% chance of 3. Biased toward 2
- * because that's where mix mode actually shines — three-way
- * intersections often collapse to a tiny set, and single-pill plays
- * are exactly what the user can get by clicking a pill themselves.
+ * 50% chance of 2, 30% chance of 3, 20% chance of 4. Bottom-heavy
+ * because under AND-within-group semantics each extra pill tightens
+ * the result fast — 4-pill mixes often collapse to a single flag.
+ * Never returns 1: single-pill plays are exactly what the user gets
+ * by clicking a pill in the chooser, so Random always delivers a real
+ * mix.
  *
  * @param {() => number} rng
- * @returns {1 | 2 | 3}
+ * @returns {2 | 3 | 4}
  */
 function pickMixSize(rng) {
   const r = rng();
-  if (r < 0.3) return 1;
-  if (r < 0.8) return 2;
-  return 3;
+  if (r < 0.5) return 2;
+  if (r < 0.8) return 3;
+  return 4;
 }
 
-/**
- * Pick `n` distinct entries from `arr` without replacement, in random
- * order. Used to sample group keys for the mix picker; small-n so a
- * splice-based loop is fine.
- *
- * @template T
- * @param {T[]} arr
- * @param {number} n
- * @param {() => number} rng
- * @returns {T[]}
- */
-function pickN(arr, n, rng) {
-  const remaining = arr.slice();
-  /** @type {T[]} */
-  const out = [];
-  for (let i = 0; i < n && remaining.length > 0; i++) {
-    const j = Math.floor(rng() * remaining.length);
-    out.push(remaining[j]);
-    remaining.splice(j, 1);
-  }
-  return out;
-}
+/** Scalar groups — a country has exactly one value, so two distinct
+ * values AND-ed together can never match. The picker enforces "max 1
+ * pill per scalar group" to keep mixes satisfiable. */
+const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent', 'status']));
 
 /**
- * Generate a random filter for the chooser's "Random" button. Pulls
- * 1-3 distinct groups from the available pill pool, picks one value
- * per group, and marks it include — always when only one pill is
- * chosen (which keeps single-pill randoms ranked, matching the
- * pre-mix behavior), otherwise mostly include with a small
- * `excludeProbability` chance of flipping to exclude per pill.
+ * Generate a random filter for the chooser's "Random" button. Picks
+ * 2-4 distinct pills from the pool — never 1, since a single-pill
+ * play is exactly what the user gets by clicking a pill themselves
+ * in the chooser. Scalar groups (continent, status) contribute at
+ * most one pill each (two distinct values AND-ed are unsatisfiable);
+ * array groups (colors, motifs) may contribute several since
+ * AND-within-group just narrows the result.
  *
- * Retries up to `maxAttempts` times if the resulting intersection is
- * too small to be fun; falls back to a single-include pill when no
- * mix above `minIntersection` shows up. The fallback also covers the
- * degenerate "pillPool is empty" case (returns an empty filter then).
- *
- * Why "at most one pill per group": with AND-within-group semantics
- * (see matchesFilters), two values in a scalar group like continent
- * are unsatisfiable (Africa AND Europe = empty), and two values in
- * an array group (e.g. weapon AND animal) over-constrain to a small
- * handful of flags. Cross-group AND is where the interesting mixes
- * live.
+ * Each pill defaults to include, with `excludeProbability` chance of
+ * flipping to exclude. Retries up to `maxAttempts` times until the
+ * mix has at least `minIntersection` matching countries (default 1).
+ * If no attempt meets the threshold, returns the last attempt anyway
+ * — the result page lands on a 0-flag mix, which startGame's
+ * targets.length < 1 guard bounces back to the chooser.
  *
  * @param {Array<{ group: keyof Filters, value: string }>} pillPool
  * @param {Country[]} all
@@ -485,40 +465,41 @@ function pickN(arr, n, rng) {
 export function pickRandomMix(pillPool, all, options = {}) {
   const {
     rng = Math.random,
-    minIntersection = 3,
+    minIntersection = 1,
     maxAttempts = 20,
     excludeProbability = 0.2,
   } = options;
 
-  /** @type {Map<keyof Filters, Array<{ group: keyof Filters, value: string }>>} */
-  const byGroup = new Map();
-  for (const p of pillPool) {
-    const bucket = byGroup.get(p.group);
-    if (bucket) bucket.push(p);
-    else byGroup.set(p.group, [p]);
-  }
-  const groups = [...byGroup.keys()];
+  // A 2+ pill mix needs at least 2 pills to draw from; degenerate
+  // pools fall through to "no filter" so the caller can bounce to
+  // the chooser rather than start a one-pill round dressed as Random.
+  if (pillPool.length < 2) return emptyFilters();
 
+  /** @type {Filters | null} */
+  let lastAttempt = null;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const wantN = Math.min(pickMixSize(rng), groups.length);
-    const chosenGroups = pickN(groups, wantN, rng);
+    const wantN = Math.min(pickMixSize(rng), pillPool.length);
+    /** @type {typeof pillPool} */
+    let remaining = pillPool.slice();
     const f = emptyFilters();
-    for (const g of chosenGroups) {
-      const groupPills = /** @type {Array<{ group: keyof Filters, value: string }>} */ (
-        byGroup.get(g)
+    let picked = 0;
+    while (picked < wantN && remaining.length > 0) {
+      const idx = Math.floor(rng() * remaining.length);
+      const pill = remaining[idx];
+      const useExclude = rng() < excludeProbability;
+      f[pill.group][useExclude ? 'exclude' : 'include'].add(pill.value);
+      picked++;
+      // Drop the picked pill, plus any other pill in the same scalar
+      // group — two continents AND-ed is empty by construction, so we
+      // never want a second scalar pick in the same group.
+      remaining = remaining.filter(
+        (p, i) => i !== idx && !(SCALAR_GROUPS.has(p.group) && p.group === pill.group),
       );
-      const pill = groupPills[Math.floor(rng() * groupPills.length)];
-      const useExclude = wantN >= 2 && rng() < excludeProbability;
-      f[g][useExclude ? 'exclude' : 'include'].add(pill.value);
     }
+    lastAttempt = f;
     const count = all.filter((c) => matchesFilters(c, f)).length;
     if (count >= minIntersection) return f;
   }
 
-  const fallback = emptyFilters();
-  if (pillPool.length > 0) {
-    const pick = pillPool[Math.floor(rng() * pillPool.length)];
-    fallback[pick.group].include.add(pick.value);
-  }
-  return fallback;
+  return lastAttempt ?? emptyFilters();
 }

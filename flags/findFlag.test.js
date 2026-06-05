@@ -506,53 +506,48 @@ function pillCount(f) {
   return n;
 }
 
-test('pickRandomMix: N=1 path always produces a single-include filter (stays ranked)', () => {
-  // rng < 0.3 picks N=1. Single-pill randoms must be ranked so the user
-  // still gets a best-score slot when they spin and play.
-  const rng = rngFromSeq([0.1, 0, 0]);
-  const f = pickRandomMix(PILL_POOL, SAMPLE, { rng, minIntersection: 1 });
-  assert.equal(pillCount(f), 1);
-  assert.equal(isRankedFilter(f), true);
-});
-
-test('pickRandomMix: N=2 path produces two pills in two distinct groups', () => {
-  // 0.5 → N=2; then mid-range values to drive pickN and pill index
-  // selection without dropping into the < 0.2 exclude branch.
-  // minIntersection=0 isolates the test from threshold/retry behavior —
-  // we're checking pill-count + one-per-group invariants here, not
-  // playability.
-  const rng = rngFromSeq([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
-  const f = pickRandomMix(PILL_POOL, SAMPLE, { rng, minIntersection: 0 });
-  assert.equal(pillCount(f), 2);
-  for (const k of /** @type {Array<keyof typeof f>} */ (Object.keys(f))) {
-    assert.ok(
-      f[k].include.size + f[k].exclude.size <= 1,
-      `group ${k} should have at most one pill, got ${f[k].include.size + f[k].exclude.size}`,
-    );
+test('pickRandomMix: always emits 2-4 pills, never 1', () => {
+  // Property check across many seeds — Random should never deliver a
+  // single-pill mix (that's what clicking a pill in the chooser does).
+  // Range cap of 4 is enforced by pickMixSize.
+  for (let seed = 0; seed < 100; seed++) {
+    let i = 0;
+    const rng = () => {
+      const v = ((seed * 7 + i * 13) % 100) / 100;
+      i++;
+      return v;
+    };
+    const f = pickRandomMix(PILL_POOL, SAMPLE, { rng });
+    const n = pillCount(f);
+    assert.ok(n >= 2 && n <= 4,
+      `seed ${seed}: expected 2-4 pills, got ${n}`);
   }
 });
 
-test('pickRandomMix: at most one pill per group across many random seeds (invariant)', () => {
-  // Property check — run the picker against varied RNG seeds and assert
-  // the one-per-group rule holds. Catches a regression where a future
-  // change samples groups *with* replacement and Africa AND Europe
-  // sneak back in.
+test('pickRandomMix: at most one pill per scalar group (continent), arrays may repeat', () => {
+  // Continent/status are scalar — two values AND-ed = unsatisfiable —
+  // so the picker must cap them at 1. Colors and motifs are arrays so
+  // multi-pill within them is fine (and is how 4-pill mixes get built
+  // when the pool only has 3 groups).
   for (let seed = 0; seed < 50; seed++) {
-    const rng = () => Math.sin(seed * 1000 + Math.random() * 1) ** 2;
-    const f = pickRandomMix(PILL_POOL, SAMPLE, { rng, minIntersection: 1 });
-    for (const k of /** @type {Array<keyof typeof f>} */ (Object.keys(f))) {
-      assert.ok(
-        f[k].include.size + f[k].exclude.size <= 1,
-        `seed ${seed} group ${k} should have at most one pill`,
-      );
-    }
+    let i = 0;
+    const rng = () => {
+      const v = ((seed * 11 + i * 17) % 100) / 100;
+      i++;
+      return v;
+    };
+    const f = pickRandomMix(PILL_POOL, SAMPLE, { rng });
+    assert.ok(f.continent.include.size + f.continent.exclude.size <= 1,
+      `seed ${seed}: continent should have at most one pill`);
+    assert.ok(f.status.include.size + f.status.exclude.size <= 1,
+      `seed ${seed}: status should have at most one pill`);
   }
 });
 
 test('pickRandomMix: result intersection is >= minIntersection when achievable', () => {
-  // SAMPLE has 4 red-colored countries (fr, de, ke, jp). With minIntersection=2
-  // and a pool that includes color:red, the picker should land on something
-  // playable on most attempts. We don't pin which mix — we pin the property.
+  // SAMPLE has 4 red-colored countries (fr, de, ke, jp). Default
+  // minIntersection=1 — the picker should land on something playable
+  // on most attempts. We don't pin which mix — we pin the property.
   for (let seed = 0; seed < 30; seed++) {
     let i = 0;
     const rng = () => {
@@ -560,26 +555,25 @@ test('pickRandomMix: result intersection is >= minIntersection when achievable',
       i++;
       return v;
     };
-    const f = pickRandomMix(PILL_POOL, SAMPLE, { rng, minIntersection: 2 });
+    const f = pickRandomMix(PILL_POOL, SAMPLE, { rng });
     const matchCount = SAMPLE.filter((c) => matchesFilters(c, f)).length;
     assert.ok(matchCount >= 1,
       `seed ${seed}: random mix should produce a non-empty intersection (got ${matchCount})`);
   }
 });
 
-test('pickRandomMix: falls back to a single-include pill when no mix meets the threshold', () => {
+test('pickRandomMix: fallback after exhausted attempts still keeps 2+ pills', () => {
   // Force minIntersection above what any filter on SAMPLE can satisfy.
-  // After maxAttempts retries the picker drops to the fallback path:
-  // one random include from pillPool. That guarantees Random never
-  // navigates to an unwinnable URL.
-  const rng = rngFromSeq([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
+  // After maxAttempts retries the picker returns the last attempt as-is
+  // — which by construction had 2+ pills. The "never 1" invariant
+  // survives even the unhappy path.
+  const rng = rngFromSeq([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
   const f = pickRandomMix(PILL_POOL, SAMPLE, {
     rng,
     minIntersection: 999,
     maxAttempts: 3,
   });
-  assert.equal(pillCount(f), 1, 'fallback emits exactly one pill');
-  assert.equal(isRankedFilter(f), true, 'fallback pill is an include, so the play is ranked');
+  assert.ok(pillCount(f) >= 2, `fallback should still have 2+ pills, got ${pillCount(f)}`);
 });
 
 test('pickRandomMix: empty pill pool returns an empty filter (no crash, no random pick)', () => {
@@ -587,35 +581,47 @@ test('pickRandomMix: empty pill pool returns an empty filter (no crash, no rando
   assert.equal(pillCount(f), 0);
 });
 
-test('pickRandomMix: excludeProbability=0 forces include-only even on N>=2', () => {
-  // Disable excludes so the property "every mix is include-only" can be
-  // pinned. N=2 path with mid-range RNG, exclude check would otherwise
-  // sometimes flip a pill — with probability 0 it never does.
-  const rng = rngFromSeq([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
-  const f = pickRandomMix(PILL_POOL, SAMPLE, {
-    rng,
-    minIntersection: 1,
-    excludeProbability: 0,
-  });
-  for (const k of /** @type {Array<keyof typeof f>} */ (Object.keys(f))) {
-    assert.equal(f[k].exclude.size, 0, `group ${k} should have no excludes`);
+test('pickRandomMix: single-pill pool returns empty filter (can\'t form a 2+ mix)', () => {
+  // A pool with only one pill can't satisfy the "never 1" rule — we
+  // return empty so the caller bounces back to the chooser rather
+  // than start a single-pill round dressed as Random.
+  const f = pickRandomMix([{ group: 'color', value: 'red' }], SAMPLE);
+  assert.equal(pillCount(f), 0);
+});
+
+test('pickRandomMix: excludeProbability=0 forces include-only', () => {
+  for (let seed = 0; seed < 30; seed++) {
+    let i = 0;
+    const rng = () => {
+      const v = ((seed * 13 + i * 19) % 100) / 100;
+      i++;
+      return v;
+    };
+    const f = pickRandomMix(PILL_POOL, SAMPLE, { rng, excludeProbability: 0 });
+    for (const k of /** @type {Array<keyof typeof f>} */ (Object.keys(f))) {
+      assert.equal(f[k].exclude.size, 0,
+        `seed ${seed} group ${k}: excludeProbability=0 should produce no excludes`);
+    }
   }
 });
 
-test('pickRandomMix: excludeProbability=1 flips every N>=2 pill to exclude', () => {
-  // 0.5 → N=2; then values that drive the rest. With excludeProbability=1
-  // every pill flips to exclude. Confirms the exclude path is reachable
-  // (and that N=1 still stays include-only — see the N=1 test above).
-  const rng = rngFromSeq([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
-  const f = pickRandomMix(PILL_POOL, SAMPLE, {
-    rng,
-    minIntersection: 0,
-    excludeProbability: 1,
-  });
-  let excludes = 0;
-  for (const k of /** @type {Array<keyof typeof f>} */ (Object.keys(f))) {
-    excludes += f[k].exclude.size;
+test('pickRandomMix: excludeProbability=1 flips every pill to exclude', () => {
+  for (let seed = 0; seed < 30; seed++) {
+    let i = 0;
+    const rng = () => {
+      const v = ((seed * 17 + i * 23) % 100) / 100;
+      i++;
+      return v;
+    };
+    const f = pickRandomMix(PILL_POOL, SAMPLE, {
+      rng,
+      excludeProbability: 1,
+      minIntersection: 0, // exclude-only mixes may still match — but don't require it
+    });
+    for (const k of /** @type {Array<keyof typeof f>} */ (Object.keys(f))) {
+      assert.equal(f[k].include.size, 0,
+        `seed ${seed} group ${k}: excludeProbability=1 should produce no includes`);
+    }
   }
-  assert.equal(excludes, 2, 'both pills should flip to exclude');
 });
 
