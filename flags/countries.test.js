@@ -35,6 +35,20 @@ test('every entry has a non-empty string code and name', () => {
   }
 });
 
+test('every entry has a nameScore integer in [1, 7]', () => {
+  const offenders = [];
+  for (const c of COUNTRIES) {
+    if (typeof c.nameScore !== 'number' || !Number.isInteger(c.nameScore)) {
+      offenders.push(`${c.code}: nameScore ${JSON.stringify(c.nameScore)} must be an integer`);
+      continue;
+    }
+    if (c.nameScore < 1 || c.nameScore > 7) {
+      offenders.push(`${c.code}: nameScore ${c.nameScore} out of range [1, 7]`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
 test('country codes are unique', () => {
   const seen = new Set();
   const dups = [];
