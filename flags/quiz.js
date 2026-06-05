@@ -297,6 +297,28 @@ export function formatBestScoreLabel(modeKey, best, target) {
 }
 
 /**
+ * Fraction of a count-mode round that's been completed. Each click
+ * advances the round (one-shot per question), so progress tracks BOTH
+ * correct and wrong picks — forgetting to count wrongCount here freezes
+ * the visible bar on rounds where the player gets things wrong, which
+ * is exactly the regression this helper is meant to pin.
+ *
+ * Returned value is clamped to [0, 1] so a defensive caller multiplying
+ * by 100 for a CSS width can never produce a percentage outside that
+ * range. Empty pools return 1 ("100% complete") because there's nothing
+ * left to do.
+ *
+ * @param {number} answeredCount
+ * @param {number} wrongCount
+ * @param {number} target
+ * @returns {number}
+ */
+export function countModeProgressRatio(answeredCount, wrongCount, target) {
+  if (target <= 0) return 1;
+  return Math.min(1, (answeredCount + wrongCount) / target);
+}
+
+/**
  * Compute the final mistakes count when the player gives up mid-round.
  *
  *   - Timed mode: nothing to penalise — the round was racing the clock,

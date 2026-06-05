@@ -32,6 +32,7 @@ import {
   shouldShowBestTime,
   formatBestScoreLabel,
   mistakesAfterGiveUp,
+  countModeProgressRatio,
 } from './quiz.js';
 
 /**
@@ -292,6 +293,36 @@ test('mistakesAfterGiveUp: timed mode leaves wrongCount untouched — there is n
     mistakesAfterGiveUp({ modeKey: '60s', target: 195, answeredCount: 20, wrongCount: 4 }),
     4,
   );
+});
+
+// ---- countModeProgressRatio ----
+
+test('countModeProgressRatio: zero clicks is 0% — round just started', () => {
+  assert.equal(countModeProgressRatio(0, 0, 45), 0);
+});
+
+test('countModeProgressRatio: wrong picks count toward progress — guards the bug where a right-after-wrong sequence visually froze the bar', () => {
+  // This is the regression this helper exists to pin. If a future
+  // refactor goes back to "answered only" the test fails immediately.
+  assert.equal(countModeProgressRatio(1, 1, 4), 0.5);
+  assert.equal(countModeProgressRatio(3, 2, 10), 0.5);
+  assert.equal(countModeProgressRatio(0, 5, 10), 0.5);
+});
+
+test('countModeProgressRatio: fully completed round is 100%', () => {
+  assert.equal(countModeProgressRatio(45, 0, 45), 1);
+  assert.equal(countModeProgressRatio(40, 5, 45), 1);
+  assert.equal(countModeProgressRatio(0, 45, 45), 1);
+});
+
+test('countModeProgressRatio: clamps over-counted progress to 100% — defensive against bookkeeping drift', () => {
+  // Shouldn't happen in practice (one-shot bounds answered + wrong <= target)
+  // but the bar's CSS width must never read above 100%.
+  assert.equal(countModeProgressRatio(50, 10, 45), 1);
+});
+
+test('countModeProgressRatio: empty pool returns 100% — nothing left to do', () => {
+  assert.equal(countModeProgressRatio(0, 0, 0), 1);
 });
 
 test('availableModes offers both 60s and all for any pool size — the timed mode never gates on pool size', () => {
