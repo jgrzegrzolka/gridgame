@@ -5,6 +5,9 @@ import { countryName } from '../i18n.js';
 /** @typedef {import('./rating.js').Ratings} Ratings */
 
 const STORAGE_KEY = 'gridgame.rate.v2';
+const FILTER_KEY = 'gridgame.rate.filter.v1';
+const ALL_FILTER = 'all';
+
 // 193 UN member states + 2 UN observers (Vatican, Palestine) = 195. The
 // "non_un" bucket (Cook Islands, Kosovo, Niue, Taiwan, Western Sahara) is
 // excluded here — those are disputed / partially recognized and belong
@@ -16,8 +19,8 @@ const SOVEREIGN = ['un_member', 'un_observer'];
 // scale and rate them properly. Reviewable; placeholder for now.
 const NON_SOVEREIGN_DEFAULT = 7;
 
-// Display order requested by the user (Europe first), with anything not in
-// the list sinking to the end as "other".
+// Display order requested by the user (Europe first), with anything not
+// in the list bucketed at the end as "Other".
 const CONT_ORDER = [
   'Europe',
   'Asia',
@@ -26,6 +29,12 @@ const CONT_ORDER = [
   'Africa',
   'Oceania',
 ];
+const OTHER_BUCKET = 'Other';
+
+/** @param {string} continent */
+function continentBucket(continent) {
+  return CONT_ORDER.includes(continent) ? continent : OTHER_BUCKET;
+}
 
 /** @param {Country} c */
 function continentRank(c) {
@@ -40,12 +49,12 @@ function loadRatings() {
     if (!raw) return emptyRatings();
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      // Only accept entries that look like { code: integer 1..5 }, in case
-      // we ever land on stale data from an older shape.
+      // Defensive parse — only accept integer scores in the supported range
+      // (1..6 from the UI, plus 7 as the non-sovereign default).
       /** @type {Ratings} */
       const clean = {};
       for (const [k, v] of Object.entries(parsed)) {
-        if (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 5) {
+        if (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 7) {
           clean[k] = v;
         }
       }
@@ -63,6 +72,23 @@ function saveRatings(ratings) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ratings));
   } catch {
     /* quota or private mode — silently ignore */
+  }
+}
+
+function loadFilter() {
+  try {
+    return localStorage.getItem(FILTER_KEY) || ALL_FILTER;
+  } catch {
+    return ALL_FILTER;
+  }
+}
+
+/** @param {string} f */
+function saveFilter(f) {
+  try {
+    localStorage.setItem(FILTER_KEY, f);
+  } catch {
+    /* silently ignore */
   }
 }
 
@@ -94,15 +120,30 @@ export async function bootRate() {
     .filter((c) => !SOVEREIGN.includes(/** @type {string} */ (c.statehood)))
     .map((c) => c.code);
 
+  // Totals by continent bucket — used by the filter pills.
+  /** @type {Map<string, number>} */
+  const totalsByBucket = new Map();
+  totalsByBucket.set(ALL_FILTER, countries.length);
+  for (const c of countries) {
+    const b = continentBucket(c.continent);
+    totalsByBucket.set(b, (totalsByBucket.get(b) || 0) + 1);
+  }
+
   let ratings = loadRatings();
+  let currentFilter = loadFilter();
+  if (currentFilter !== ALL_FILTER && !totalsByBucket.has(currentFilter)) {
+    // Stale filter from a previous session — fall back to All.
+    currentFilter = ALL_FILTER;
+  }
 
   const gridEl = /** @type {HTMLElement} */ (document.getElementById('rate-grid'));
+  const filtersEl = /** @type {HTMLElement} */ (document.getElementById('rate-filters'));
   const ratedCountEl = /** @type {HTMLElement} */ (document.getElementById('rate-rated-count'));
   const totalCountEl = /** @type {HTMLElement} */ (document.getElementById('rate-total-count'));
+  const exportBtn = /** @type {HTMLButtonElement} */ (document.getElementById('rate-export'));
   totalCountEl.textContent = String(countries.length);
 
   /**
-   * Mark the row's score buttons + the row itself based on the current score.
    * @param {HTMLElement} row
    * @param {number | undefined} score
    */
@@ -119,6 +160,7 @@ export async function bootRate() {
     const li = document.createElement('li');
     li.className = 'rate-row';
     li.dataset.code = c.code;
+    li.dataset.bucket = continentBucket(c.continent);
 
     const img = document.createElement('img');
     img.src = `../flags/svg/${c.code}.svg`;
@@ -136,7 +178,7 @@ export async function bootRate() {
 
     const buttons = document.createElement('span');
     buttons.className = 'rate-row-buttons';
-    for (let s = 1; s <= 5; s++) {
+    for (let s = 1; s <= 6; s++) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'rate-row-btn';
@@ -150,17 +192,86 @@ export async function bootRate() {
     return li;
   }
 
-  function updateProgress() {
-    ratedCountEl.textContent = String(ratedCount(ratings));
+  function buildFilterPills() {
+    filtersEl.innerHTML = '';
+    /** @type {{key: string, label: string}[]} */
+    const items = [{ key: ALL_FILTER, label: 'All' }];
+    for (const cont of CONT_ORDER) {
+      if ((totalsByBucket.get(cont) || 0) > 0) items.push({ key: cont, label: cont });
+    }
+    if ((totalsByBucket.get(OTHER_BUCKET) || 0) > 0) {
+      items.push({ key: OTHER_BUCKET, label: OTHER_BUCKET });
+    }
+    for (const { key, label } of items) {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'pill rate-filter-pill';
+      pill.dataset.filter = key;
+      if (key === currentFilter) pill.classList.add('active');
+      const labelSpan = document.createElement('span');
+      labelSpan.textContent = label;
+      const countSpan = document.createElement('span');
+      countSpan.className = 'rate-filter-count';
+      countSpan.dataset.total = String(totalsByBucket.get(key) || 0);
+      pill.appendChild(labelSpan);
+      pill.appendChild(countSpan);
+      filtersEl.appendChild(pill);
+    }
   }
 
+  function applyFilter() {
+    const showAll = currentFilter === ALL_FILTER;
+    for (const row of gridEl.querySelectorAll('.rate-row')) {
+      const r = /** @type {HTMLElement} */ (row);
+      r.hidden = !(showAll || r.dataset.bucket === currentFilter);
+    }
+    // Section headers only make sense when showing every continent.
+    for (const head of gridEl.querySelectorAll('.rate-section-head')) {
+      /** @type {HTMLElement} */ (head).hidden = !showAll;
+    }
+  }
+
+  function updateProgress() {
+    const total = countries.length;
+    const ratedTotal = ratedCount(ratings);
+    ratedCountEl.textContent = String(ratedTotal);
+
+    // Per-pill counts: count how many in this bucket are rated.
+    for (const pill of filtersEl.querySelectorAll('.rate-filter-pill')) {
+      const key = /** @type {HTMLElement} */ (pill).dataset.filter;
+      const countSpan = /** @type {HTMLElement | null} */ (
+        pill.querySelector('.rate-filter-count')
+      );
+      if (!key || !countSpan) continue;
+      const t = Number(countSpan.dataset.total);
+      let r = 0;
+      if (key === ALL_FILTER) {
+        r = ratedTotal;
+      } else {
+        for (const c of countries) {
+          if (continentBucket(c.continent) === key && ratings[c.code] != null) r++;
+        }
+      }
+      countSpan.textContent = `${r}/${t}`;
+    }
+
+    // Export only when every sovereign country has a score.
+    const complete = ratedTotal >= total;
+    exportBtn.disabled = !complete;
+    exportBtn.title = complete
+      ? 'Download JSON'
+      : `Rate all ${total} to enable export — ${ratedTotal} / ${total} done`;
+  }
+
+  // Build rows once.
   const fragment = document.createDocumentFragment();
   let lastHeader = '';
   for (const c of countries) {
-    const header = CONT_ORDER.includes(c.continent) ? c.continent : 'Other';
+    const header = continentBucket(c.continent);
     if (header !== lastHeader) {
       const headEl = document.createElement('li');
       headEl.className = 'rate-section-head';
+      headEl.dataset.bucket = header;
       headEl.textContent = header;
       fragment.appendChild(headEl);
       lastHeader = header;
@@ -168,6 +279,9 @@ export async function bootRate() {
     fragment.appendChild(buildRow(c));
   }
   gridEl.appendChild(fragment);
+
+  buildFilterPills();
+  applyFilter();
   updateProgress();
 
   gridEl.addEventListener('click', (e) => {
@@ -185,7 +299,21 @@ export async function bootRate() {
     updateProgress();
   });
 
-  document.getElementById('rate-export')?.addEventListener('click', () => {
+  filtersEl.addEventListener('click', (e) => {
+    const pill = /** @type {HTMLElement | null} */ (
+      /** @type {HTMLElement} */ (e.target).closest('.rate-filter-pill')
+    );
+    if (!pill || !pill.dataset.filter) return;
+    currentFilter = pill.dataset.filter;
+    saveFilter(currentFilter);
+    for (const p of filtersEl.querySelectorAll('.rate-filter-pill')) {
+      p.classList.toggle('active', p === pill);
+    }
+    applyFilter();
+  });
+
+  exportBtn.addEventListener('click', () => {
+    if (exportBtn.disabled) return;
     /** @type {Ratings} */
     const full = {};
     for (const code of nonSovereignCodes) full[code] = NON_SOVEREIGN_DEFAULT;
