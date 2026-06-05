@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Daily country-flag puzzle — one puzzle per day, same for everyone. Sovereign countries only." />
+    <link rel="canonical" href="https://yetanotherquiz.com/daily/" />
+    <link rel="preload" href="../flags/countries.json" as="fetch" type="application/json" crossorigin />
+    <link rel="preload" href="daily_puzzles.json" as="fetch" type="application/json" crossorigin />
+    <title data-i18n="daily.title">Daily Flag Puzzle — Yet Another Quiz</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__" />
+    <link rel="stylesheet" href="../common.css?v=__BUILD__" />
+    <link rel="stylesheet" href="../findFlag/index.css?v=__BUILD__" />
+    <link rel="stylesheet" href="index.css?v=__BUILD__" />
+  </head>
+  <body>
+    <a class="back" href="../" aria-label="Home" data-i18n-attr="aria-label:back"><span class="home-icon" aria-hidden="true"></span></a>
+    <a class="lang-toggle" id="lang-toggle" href="#"></a>
+    <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee" data-i18n-attr="aria-label:coffee,title:coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
+    <a class="flags-link" href="../flagsdata/" aria-label="Browse flags" title="Browse flags" data-i18n-attr="aria-label:menu.flagsData,title:menu.flagsData"><span class="flags-icon" aria-hidden="true"></span></a>
+    <button
+      type="button"
+      class="burger"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="burger-panel"
+      data-label-open="Open menu"
+      data-label-close="Close menu"
+      data-i18n-attr="aria-label:menu.open,data-label-open:menu.open,data-label-close:menu.close"
+      onclick="
+        const open = this.getAttribute('aria-expanded') === 'true';
+        this.setAttribute('aria-expanded', String(!open));
+        this.setAttribute('aria-label', open ? this.dataset.labelOpen : this.dataset.labelClose);
+        document.getElementById('burger-panel').hidden = open;
+      "
+    >
+      <span class="burger-bars" aria-hidden="true"></span>
+    </button>
+    <nav id="burger-panel" class="burger-panel" hidden>
+      <ul class="menu">
+        <li><a href="archive.html" data-i18n="daily.archive">Archive</a></li>
+      </ul>
+    </nav>
+
+    <section id="daily-state" class="daily-state" hidden></section>
+
+    <section id="game" hidden>
+      <header class="find-header daily-header">
+        <span class="daily-n" id="daily-n"></span>
+        <span class="find-cat" id="find-cat"></span>
+        <span class="find-count" id="find-count">0 / 0</span>
+        <span class="find-time" id="find-time">0:00.000</span>
+      </header>
+      <p class="daily-note" data-i18n="daily.sovereignOnly">Sovereign countries only.</p>
+      <div class="find-input-wrap">
+        <input
+          type="text"
+          class="find-input"
+          id="find-input"
+          inputmode="text"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="Type a country name…"
+          data-i18n-attr="placeholder:findFlag.typeCountryName"
+        />
+        <ul class="find-suggestions" id="find-suggestions" hidden></ul>
+      </div>
+      <ul class="find-found" id="find-found"></ul>
+      <div class="give-up-row">
+        <button type="button" class="give-up" id="give-up" data-i18n="game.giveUp">Give up</button>
+      </div>
+    </section>
+
+    <dialog id="zoom">
+      <img alt="" />
+      <p></p>
+    </dialog>
+
+    <section id="result" hidden>
+      <p class="final-score" id="final-score-line">
+        <span data-i18n="findFlag.youFound">You found</span> <span id="final-found">0</span> / <span id="final-total">0</span>
+      </p>
+      <p class="time" id="final-time"></p>
+      <h2 class="result-section-title" id="found-title" hidden data-i18n="findFlag.found">Found:</h2>
+      <ul class="find-result-found" id="find-result-found"></ul>
+      <h2 class="result-section-title" id="missed-title" hidden data-i18n="findFlag.missed">Missed:</h2>
+      <ul class="find-missed" id="find-missed"></ul>
+      <p class="result-links">
+        <a href="archive.html" data-i18n="daily.archive">Archive</a>
+      </p>
+    </section>
+
+    <script type="module">
+      import { bootDaily } from './page.js?v=__BUILD__';
+      import { bootI18n, wireLangToggle } from '../i18n.js';
+      import { wireBurgerDismiss } from '../common.js?v=__BUILD__';
+      bootI18n('../').then((lang) => {
+        wireLangToggle(lang);
+        bootDaily();
+        wireBurgerDismiss();
+      });
+    </script>
+  </body>
+</html>

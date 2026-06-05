@@ -14,6 +14,7 @@
     "flags": "Flags"
   },
   "tile": {
+    "daily": "Daily",
     "quiz": "Quiz",
     "find": "Find all",
     "ticTacToe": "Tic Tac Toe"
@@ -62,6 +63,17 @@
       "colors": "Colors",
       "motifs": "Motifs"
     }
+  },
+  "daily": {
+    "title": "Daily Flag Puzzle — Yet Another Quiz",
+    "back": "Daily",
+    "archive": "Archive",
+    "archiveTitle": "Daily Flag Puzzle — Archive",
+    "archiveHeading": "Daily Archive",
+    "archiveCount": "{n} flags",
+    "beforeLaunch": "Daily #1 starts on {date}.",
+    "comingSoon": "More puzzles coming soon.",
+    "sovereignOnly": "Sovereign countries only."
   },
   "ttt": {
     "title": "Tic Tac Toe with Country Flags — Yet Another Quiz",

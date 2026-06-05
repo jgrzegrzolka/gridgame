@@ -1,0 +1,112 @@
+[
+  {
+    "n": 1,
+    "filter": "continent:Europe,motif:cross",
+    "answers": [
+      "ch",
+      "dk",
+      "fi",
+      "gb",
+      "gr",
+      "is",
+      "mt",
+      "no",
+      "se"
+    ]
+  },
+  {
+    "n": 2,
+    "filter": "continent:South America",
+    "answers": [
+      "ar",
+      "bo",
+      "br",
+      "cl",
+      "co",
+      "ec",
+      "gy",
+      "pe",
+      "py",
+      "sr",
+      "uy",
+      "ve"
+    ]
+  },
+  {
+    "n": 3,
+    "filter": "continent:Asia,motif:star-or-moon",
+    "answers": [
+      "az",
+      "cn",
+      "il",
+      "jo",
+      "kp",
+      "mm",
+      "mn",
+      "mv",
+      "my",
+      "np",
+      "ph",
+      "pk",
+      "sg",
+      "sy",
+      "tj",
+      "tl",
+      "tm",
+      "tr",
+      "uz",
+      "vn"
+    ]
+  },
+  {
+    "n": 4,
+    "filter": "continent:Africa,motif:star-or-moon",
+    "answers": [
+      "ao",
+      "bf",
+      "bi",
+      "cd",
+      "cf",
+      "cm",
+      "cv",
+      "dj",
+      "dz",
+      "et",
+      "gh",
+      "gw",
+      "km",
+      "lr",
+      "ly",
+      "ma",
+      "mr",
+      "mz",
+      "sn",
+      "so",
+      "ss",
+      "st",
+      "tg",
+      "tn",
+      "zw"
+    ]
+  },
+  {
+    "n": 5,
+    "filter": "continent:Europe,color:blue,color:yellow",
+    "answers": [
+      "ad",
+      "ba",
+      "es",
+      "hr",
+      "li",
+      "md",
+      "me",
+      "pt",
+      "ro",
+      "rs",
+      "se",
+      "si",
+      "sm",
+      "ua"
+    ]
+  }
+]
