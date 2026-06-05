@@ -25,6 +25,12 @@ html {
 body {
   font-family: system-ui, sans-serif;
   margin: 0;
+  /* Reserve --page-top vertically so the fixed chrome strip (body::before
+   * below) doesn't sit on top of page content. Every page used to
+   * repeat this rule in its own stylesheet; promoted here so a new
+   * page picks it up automatically. ticTacToe overrides the horizontal
+   * value to fit the 9×9 grid. */
+  padding: var(--page-top) 24px 24px;
   background: #fafafa;
   color: #1c1c1c;
   overflow-x: hidden;

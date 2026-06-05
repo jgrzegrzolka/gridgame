@@ -1,0 +1,38 @@
+/* Daily reuses ../findFlag/index.css for the game UI (input, suggestions,
+   flag tiles, result screen). Only the daily-specific chrome and the
+   pre-launch / coming-soon states live here. */
+
+.daily-state {
+  max-width: 480px;
+  margin: 48px auto 0;
+  padding: 24px;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 16px;
+  color: #444;
+}
+
+.daily-header {
+  /* Daily's header adds the puzzle-number badge on the left; the rest
+   * (category label, count, time) keeps the same .find-header layout
+   * the player already knows from findFlag. */
+  flex-wrap: wrap;
+}
+.daily-n {
+  font-size: 14px;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  background: #f0f0f0;
+  border-radius: 999px;
+  align-self: center;
+}
+
+.daily-note {
+  font-size: 12px;
+  color: #999;
+  margin: -4px 0 16px;
+}

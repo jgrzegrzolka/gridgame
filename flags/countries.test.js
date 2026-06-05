@@ -35,6 +35,20 @@ test('every entry has a non-empty string code and name', () => {
   }
 });
 
+test('every entry has a nameScore integer in [1, 7]', () => {
+  const offenders = [];
+  for (const c of COUNTRIES) {
+    if (typeof c.nameScore !== 'number' || !Number.isInteger(c.nameScore)) {
+      offenders.push(`${c.code}: nameScore ${JSON.stringify(c.nameScore)} must be an integer`);
+      continue;
+    }
+    if (c.nameScore < 1 || c.nameScore > 7) {
+      offenders.push(`${c.code}: nameScore ${c.nameScore} out of range [1, 7]`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
 test('country codes are unique', () => {
   const seen = new Set();
   const dups = [];
@@ -66,6 +80,28 @@ test('continent is in CONTINENTS for "country" entries, null for "other" entries
       assert.equal(c.continent, null, `${c.code}: "other" entry should have null continent`);
     }
   }
+});
+
+test('primaryColors (when present) is a non-empty subset of colors using the canonical palette', () => {
+  const palette = new Set(COLORS_FOR_RANDOM);
+  const offenders = [];
+  for (const c of COUNTRIES) {
+    if (c.primaryColors === undefined) continue;
+    if (!Array.isArray(c.primaryColors) || c.primaryColors.length === 0) {
+      offenders.push(`${c.code}: primaryColors must be a non-empty array`);
+      continue;
+    }
+    const colors = c.colors ?? [];
+    for (const color of c.primaryColors) {
+      if (!palette.has(color)) {
+        offenders.push(`${c.code}: primaryColors "${color}" not in canonical palette`);
+      }
+      if (!colors.includes(color)) {
+        offenders.push(`${c.code}: primaryColors "${color}" not in colors [${colors.join(', ')}]`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('; '));
 });
 
 test('every entry has a non-empty colors array drawn from COLORS_FOR_RANDOM', () => {

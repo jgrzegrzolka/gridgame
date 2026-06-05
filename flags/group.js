@@ -6,10 +6,12 @@
  * @typedef {Object} Country
  * @property {string} code
  * @property {string} name
+ * @property {number} [nameScore]
  * @property {'country' | 'other'} category
  * @property {Continent | null} continent
  * @property {string | null} [statehood]
  * @property {string[]} [colors]
+ * @property {string[]} [primaryColors]
  * @property {string[]} [motifs]
  * @property {string[]} [aliases]
  */

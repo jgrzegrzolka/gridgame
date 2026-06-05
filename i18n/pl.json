@@ -14,6 +14,7 @@
     "flags": "Flagi"
   },
   "tile": {
+    "daily": "Codzienna",
     "quiz": "Quiz",
     "find": "Znajdź wszystkie",
     "ticTacToe": "Kółko i krzyżyk"
@@ -62,6 +63,17 @@
       "colors": "Kolory",
       "motifs": "Motywy"
     }
+  },
+  "daily": {
+    "title": "Codzienna zagadka flagowa — Yet Another Quiz",
+    "back": "Codzienna",
+    "archive": "Archiwum",
+    "archiveTitle": "Codzienna zagadka flagowa — Archiwum",
+    "archiveHeading": "Archiwum codziennych zagadek",
+    "archiveCount": "{n} flag",
+    "notFound": "Nie znaleziono zagadki.",
+    "empty": "Brak zagadek.",
+    "sovereignOnly": "Tylko kraje suwerenne."
   },
   "ttt": {
     "title": "Kółko i krzyżyk z flagami państw — Yet Another Quiz",

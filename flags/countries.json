@@ -2,6 +2,7 @@
   {
     "code": "af",
     "name": "Afghanistan",
+    "nameScore": 2,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -14,6 +15,7 @@
   {
     "code": "ax",
     "name": "Åland Islands",
+    "nameScore": 7,
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
@@ -29,6 +31,7 @@
   {
     "code": "al",
     "name": "Albania",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -43,6 +46,7 @@
   {
     "code": "dz",
     "name": "Algeria",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -58,6 +62,7 @@
   {
     "code": "as",
     "name": "American Samoa",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -76,6 +81,7 @@
   {
     "code": "ad",
     "name": "Andorra",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -92,6 +98,7 @@
   {
     "code": "ao",
     "name": "Angola",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -108,6 +115,7 @@
   {
     "code": "ai",
     "name": "Anguilla",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -126,6 +134,7 @@
   {
     "code": "aq",
     "name": "Antarctica",
+    "nameScore": 7,
     "continent": "Antarctica",
     "category": "country",
     "statehood": "territory",
@@ -138,6 +147,7 @@
   {
     "code": "ag",
     "name": "Antigua and Barbuda",
+    "nameScore": 6,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -153,6 +163,7 @@
   {
     "code": "ar",
     "name": "Argentina",
+    "nameScore": 1,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -166,6 +177,7 @@
   {
     "code": "am",
     "name": "Armenia",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -179,6 +191,7 @@
   {
     "code": "aw",
     "name": "Aruba",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -195,6 +208,7 @@
   {
     "code": "sh-ac",
     "name": "Ascension Island",
+    "nameScore": 7,
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
@@ -215,6 +229,7 @@
   {
     "code": "asean",
     "name": "Association of Southeast Asian Nations",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -229,6 +244,7 @@
   {
     "code": "au",
     "name": "Australia",
+    "nameScore": 1,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -246,6 +262,7 @@
   {
     "code": "at",
     "name": "Austria",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -258,6 +275,7 @@
   {
     "code": "az",
     "name": "Azerbaijan",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -274,6 +292,7 @@
   {
     "code": "bs",
     "name": "Bahamas",
+    "nameScore": 5,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -287,6 +306,7 @@
   {
     "code": "bh",
     "name": "Bahrain",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -299,6 +319,7 @@
   {
     "code": "bd",
     "name": "Bangladesh",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -311,6 +332,7 @@
   {
     "code": "bb",
     "name": "Barbados",
+    "nameScore": 5,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -326,6 +348,7 @@
   {
     "code": "es-pv",
     "name": "Basque Country",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -341,6 +364,7 @@
   {
     "code": "by",
     "name": "Belarus",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -354,6 +378,7 @@
   {
     "code": "be",
     "name": "Belgium",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -367,6 +392,7 @@
   {
     "code": "bz",
     "name": "Belize",
+    "nameScore": 6,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -378,6 +404,11 @@
       "yellow",
       "black"
     ],
+    "primaryColors": [
+      "blue",
+      "red",
+      "white"
+    ],
     "motifs": [
       "coat-of-arms"
     ]
@@ -385,6 +416,7 @@
   {
     "code": "bj",
     "name": "Benin",
+    "nameScore": 4,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -398,6 +430,7 @@
   {
     "code": "bm",
     "name": "Bermuda",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -418,6 +451,7 @@
   {
     "code": "bt",
     "name": "Bhutan",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -433,6 +467,7 @@
   {
     "code": "bo",
     "name": "Bolivia",
+    "nameScore": 3,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -441,6 +476,11 @@
       "yellow",
       "green",
       "blue"
+    ],
+    "primaryColors": [
+      "red",
+      "yellow",
+      "green"
     ],
     "motifs": [
       "animal",
@@ -451,6 +491,7 @@
   {
     "code": "bq",
     "name": "Bonaire, Sint Eustatius and Saba",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -465,6 +506,7 @@
   {
     "code": "ba",
     "name": "Bosnia and Herzegovina",
+    "nameScore": 3,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -480,6 +522,7 @@
   {
     "code": "bw",
     "name": "Botswana",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -493,6 +536,7 @@
   {
     "code": "bv",
     "name": "Bouvet Island",
+    "nameScore": 7,
     "continent": "Antarctica",
     "category": "country",
     "statehood": "territory",
@@ -508,6 +552,7 @@
   {
     "code": "br",
     "name": "Brazil",
+    "nameScore": 1,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -524,6 +569,7 @@
   {
     "code": "io",
     "name": "British Indian Ocean Territory",
+    "nameScore": 7,
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
@@ -545,6 +591,7 @@
   {
     "code": "bn",
     "name": "Brunei Darussalam",
+    "nameScore": 5,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -561,6 +608,7 @@
   {
     "code": "bg",
     "name": "Bulgaria",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -574,6 +622,7 @@
   {
     "code": "bf",
     "name": "Burkina Faso",
+    "nameScore": 4,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -589,6 +638,7 @@
   {
     "code": "bi",
     "name": "Burundi",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -605,6 +655,7 @@
   {
     "code": "cv",
     "name": "Cabo Verde",
+    "nameScore": 6,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -621,6 +672,7 @@
   {
     "code": "kh",
     "name": "Cambodia",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -636,6 +688,7 @@
   {
     "code": "cm",
     "name": "Cameroon",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -651,6 +704,7 @@
   {
     "code": "ca",
     "name": "Canada",
+    "nameScore": 1,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -663,6 +717,7 @@
   {
     "code": "ic",
     "name": "Canary Islands",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -675,6 +730,7 @@
   {
     "code": "es-ct",
     "name": "Catalonia",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -687,6 +743,7 @@
   {
     "code": "ky",
     "name": "Cayman Islands",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -707,6 +764,7 @@
   {
     "code": "cf",
     "name": "Central African Republic",
+    "nameScore": 6,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -724,6 +782,7 @@
   {
     "code": "cefta",
     "name": "Central European Free Trade Agreement",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -736,6 +795,7 @@
   {
     "code": "td",
     "name": "Chad",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -749,6 +809,7 @@
   {
     "code": "cl",
     "name": "Chile",
+    "nameScore": 2,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -764,6 +825,7 @@
   {
     "code": "cn",
     "name": "China",
+    "nameScore": 1,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -778,6 +840,7 @@
   {
     "code": "cx",
     "name": "Christmas Island",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -794,6 +857,7 @@
   {
     "code": "cp",
     "name": "Clipperton Island",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -807,6 +871,7 @@
   {
     "code": "cc",
     "name": "Cocos (Keeling) Islands",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -821,6 +886,7 @@
   {
     "code": "co",
     "name": "Colombia",
+    "nameScore": 2,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -834,6 +900,7 @@
   {
     "code": "km",
     "name": "Comoros",
+    "nameScore": 6,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -851,6 +918,7 @@
   {
     "code": "ck",
     "name": "Cook Islands",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "non_un",
@@ -868,6 +936,7 @@
   {
     "code": "cr",
     "name": "Costa Rica",
+    "nameScore": 3,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -881,6 +950,7 @@
   {
     "code": "hr",
     "name": "Croatia",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -890,6 +960,11 @@
       "blue",
       "yellow"
     ],
+    "primaryColors": [
+      "red",
+      "white",
+      "blue"
+    ],
     "motifs": [
       "coat-of-arms",
       "star-or-moon"
@@ -898,6 +973,7 @@
   {
     "code": "cu",
     "name": "Cuba",
+    "nameScore": 2,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -913,6 +989,7 @@
   {
     "code": "cw",
     "name": "Curaçao",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -928,6 +1005,7 @@
   {
     "code": "cy",
     "name": "Cyprus",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -941,6 +1019,7 @@
   {
     "code": "cz",
     "name": "Czechia",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -954,6 +1033,7 @@
   {
     "code": "ci",
     "name": "Côte d'Ivoire",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -967,6 +1047,7 @@
   {
     "code": "cd",
     "name": "Democratic Republic of the Congo",
+    "nameScore": 6,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -985,6 +1066,7 @@
   {
     "code": "dk",
     "name": "Denmark",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -999,6 +1081,7 @@
   {
     "code": "dj",
     "name": "Djibouti",
+    "nameScore": 6,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1015,6 +1098,7 @@
   {
     "code": "dm",
     "name": "Dominica",
+    "nameScore": 4,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -1034,6 +1118,7 @@
   {
     "code": "do",
     "name": "Dominican Republic",
+    "nameScore": 4,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -1043,6 +1128,11 @@
       "white",
       "green"
     ],
+    "primaryColors": [
+      "blue",
+      "red",
+      "white"
+    ],
     "motifs": [
       "coat-of-arms",
       "cross"
@@ -1051,6 +1141,7 @@
   {
     "code": "eac",
     "name": "East African Community",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -1067,6 +1158,7 @@
   {
     "code": "ec",
     "name": "Ecuador",
+    "nameScore": 3,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -1075,6 +1167,11 @@
       "blue",
       "red",
       "green"
+    ],
+    "primaryColors": [
+      "yellow",
+      "blue",
+      "red"
     ],
     "motifs": [
       "animal",
@@ -1085,6 +1182,7 @@
   {
     "code": "eg",
     "name": "Egypt",
+    "nameScore": 1,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1094,6 +1192,11 @@
       "black",
       "yellow"
     ],
+    "primaryColors": [
+      "red",
+      "white",
+      "black"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms"
@@ -1102,6 +1205,7 @@
   {
     "code": "sv",
     "name": "El Salvador",
+    "nameScore": 5,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -1118,6 +1222,7 @@
   {
     "code": "gb-eng",
     "name": "England",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -1132,6 +1237,7 @@
   {
     "code": "gq",
     "name": "Equatorial Guinea",
+    "nameScore": 6,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1142,6 +1248,12 @@
       "blue",
       "yellow"
     ],
+    "primaryColors": [
+      "green",
+      "white",
+      "red",
+      "blue"
+    ],
     "motifs": [
       "coat-of-arms"
     ]
@@ -1149,6 +1261,7 @@
   {
     "code": "er",
     "name": "Eritrea",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1163,6 +1276,7 @@
   {
     "code": "ee",
     "name": "Estonia",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -1176,6 +1290,7 @@
   {
     "code": "sz",
     "name": "Eswatini",
+    "nameScore": 4,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1186,6 +1301,11 @@
       "black",
       "white"
     ],
+    "primaryColors": [
+      "blue",
+      "yellow",
+      "red"
+    ],
     "motifs": [
       "weapon"
     ]
@@ -1193,6 +1313,7 @@
   {
     "code": "et",
     "name": "Ethiopia",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1209,6 +1330,7 @@
   {
     "code": "eu",
     "name": "European Union",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -1223,6 +1345,7 @@
   {
     "code": "fk",
     "name": "Falkland Islands",
+    "nameScore": 7,
     "continent": "South America",
     "category": "country",
     "statehood": "territory",
@@ -1243,6 +1366,7 @@
   {
     "code": "fo",
     "name": "Faroe Islands",
+    "nameScore": 7,
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
@@ -1258,6 +1382,7 @@
   {
     "code": "fm",
     "name": "Federated States of Micronesia",
+    "nameScore": 6,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -1272,6 +1397,7 @@
   {
     "code": "fj",
     "name": "Fiji",
+    "nameScore": 6,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -1281,6 +1407,11 @@
       "white",
       "yellow",
       "green"
+    ],
+    "primaryColors": [
+      "blue",
+      "red",
+      "white"
     ],
     "motifs": [
       "animal",
@@ -1292,6 +1423,7 @@
   {
     "code": "fi",
     "name": "Finland",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -1306,6 +1438,7 @@
   {
     "code": "fr",
     "name": "France",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -1319,6 +1452,7 @@
   {
     "code": "gf",
     "name": "French Guiana",
+    "nameScore": 7,
     "continent": "South America",
     "category": "country",
     "statehood": "territory",
@@ -1332,6 +1466,7 @@
   {
     "code": "pf",
     "name": "French Polynesia",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -1348,6 +1483,7 @@
   {
     "code": "tf",
     "name": "French Southern Territories",
+    "nameScore": 7,
     "continent": "Antarctica",
     "category": "country",
     "statehood": "territory",
@@ -1363,6 +1499,7 @@
   {
     "code": "ga",
     "name": "Gabon",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1376,6 +1513,7 @@
   {
     "code": "es-ga",
     "name": "Galicia",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -1389,6 +1527,7 @@
   {
     "code": "gm",
     "name": "Gambia",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1403,6 +1542,7 @@
   {
     "code": "ge",
     "name": "Georgia",
+    "nameScore": 2,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1417,6 +1557,7 @@
   {
     "code": "de",
     "name": "Germany",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -1430,6 +1571,7 @@
   {
     "code": "gh",
     "name": "Ghana",
+    "nameScore": 4,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1446,6 +1588,7 @@
   {
     "code": "gi",
     "name": "Gibraltar",
+    "nameScore": 7,
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
@@ -1461,6 +1604,7 @@
   {
     "code": "gr",
     "name": "Greece",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -1475,6 +1619,7 @@
   {
     "code": "gl",
     "name": "Greenland",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -1487,6 +1632,7 @@
   {
     "code": "gd",
     "name": "Grenada",
+    "nameScore": 5,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -1502,6 +1648,7 @@
   {
     "code": "gp",
     "name": "Guadeloupe",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -1515,6 +1662,7 @@
   {
     "code": "gu",
     "name": "Guam",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -1532,6 +1680,7 @@
   {
     "code": "gt",
     "name": "Guatemala",
+    "nameScore": 5,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -1550,6 +1699,7 @@
   {
     "code": "gg",
     "name": "Guernsey",
+    "nameScore": 7,
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
@@ -1565,6 +1715,7 @@
   {
     "code": "gn",
     "name": "Guinea",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1578,6 +1729,7 @@
   {
     "code": "gw",
     "name": "Guinea-Bissau",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1594,6 +1746,7 @@
   {
     "code": "gy",
     "name": "Guyana",
+    "nameScore": 5,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -1609,6 +1762,7 @@
   {
     "code": "ht",
     "name": "Haiti",
+    "nameScore": 5,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -1626,6 +1780,7 @@
   {
     "code": "hm",
     "name": "Heard Island and McDonald Islands",
+    "nameScore": 7,
     "continent": "Antarctica",
     "category": "country",
     "statehood": "territory",
@@ -1643,6 +1798,7 @@
   {
     "code": "hn",
     "name": "Honduras",
+    "nameScore": 5,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -1657,6 +1813,7 @@
   {
     "code": "hk",
     "name": "Hong Kong",
+    "nameScore": 7,
     "continent": "Asia",
     "category": "country",
     "statehood": "territory",
@@ -1671,6 +1828,7 @@
   {
     "code": "hu",
     "name": "Hungary",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -1684,6 +1842,7 @@
   {
     "code": "is",
     "name": "Iceland",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -1699,6 +1858,7 @@
   {
     "code": "in",
     "name": "India",
+    "nameScore": 1,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1713,6 +1873,7 @@
   {
     "code": "id",
     "name": "Indonesia",
+    "nameScore": 2,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1725,6 +1886,7 @@
   {
     "code": "ir",
     "name": "Iran",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1740,6 +1902,7 @@
   {
     "code": "iq",
     "name": "Iraq",
+    "nameScore": 2,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1754,6 +1917,7 @@
   {
     "code": "ie",
     "name": "Ireland",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -1767,6 +1931,7 @@
   {
     "code": "im",
     "name": "Isle of Man",
+    "nameScore": 7,
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
@@ -1780,6 +1945,7 @@
   {
     "code": "il",
     "name": "Israel",
+    "nameScore": 1,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1794,6 +1960,7 @@
   {
     "code": "it",
     "name": "Italy",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -1807,6 +1974,7 @@
   {
     "code": "jm",
     "name": "Jamaica",
+    "nameScore": 2,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -1822,6 +1990,7 @@
   {
     "code": "jp",
     "name": "Japan",
+    "nameScore": 1,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1834,6 +2003,7 @@
   {
     "code": "je",
     "name": "Jersey",
+    "nameScore": 7,
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
@@ -1851,6 +2021,7 @@
   {
     "code": "jo",
     "name": "Jordan",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1867,6 +2038,7 @@
   {
     "code": "kz",
     "name": "Kazakhstan",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1882,6 +2054,7 @@
   {
     "code": "ke",
     "name": "Kenya",
+    "nameScore": 2,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -1899,6 +2072,7 @@
   {
     "code": "ki",
     "name": "Kiribati",
+    "nameScore": 6,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -1915,6 +2089,7 @@
   {
     "code": "xk",
     "name": "Kosovo",
+    "nameScore": 7,
     "continent": "Europe",
     "category": "country",
     "statehood": "non_un",
@@ -1930,6 +2105,7 @@
   {
     "code": "kw",
     "name": "Kuwait",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1944,6 +2120,7 @@
   {
     "code": "kg",
     "name": "Kyrgyzstan",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1956,6 +2133,7 @@
   {
     "code": "la",
     "name": "Laos",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -1969,6 +2147,7 @@
   {
     "code": "lv",
     "name": "Latvia",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -1981,6 +2160,7 @@
   {
     "code": "arab",
     "name": "League of Arab States",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -1994,6 +2174,7 @@
   {
     "code": "lb",
     "name": "Lebanon",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -2007,6 +2188,7 @@
   {
     "code": "ls",
     "name": "Lesotho",
+    "nameScore": 4,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2021,6 +2203,7 @@
   {
     "code": "lr",
     "name": "Liberia",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2036,6 +2219,7 @@
   {
     "code": "ly",
     "name": "Libya",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2052,6 +2236,7 @@
   {
     "code": "li",
     "name": "Liechtenstein",
+    "nameScore": 3,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2066,6 +2251,7 @@
   {
     "code": "lt",
     "name": "Lithuania",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2079,6 +2265,7 @@
   {
     "code": "lu",
     "name": "Luxembourg",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2092,6 +2279,7 @@
   {
     "code": "mo",
     "name": "Macau",
+    "nameScore": 7,
     "continent": "Asia",
     "category": "country",
     "statehood": "territory",
@@ -2107,6 +2295,7 @@
   {
     "code": "mg",
     "name": "Madagascar",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2120,6 +2309,7 @@
   {
     "code": "mw",
     "name": "Malawi",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2133,6 +2323,7 @@
   {
     "code": "my",
     "name": "Malaysia",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -2149,6 +2340,7 @@
   {
     "code": "mv",
     "name": "Maldives",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -2164,6 +2356,7 @@
   {
     "code": "ml",
     "name": "Mali",
+    "nameScore": 4,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2177,6 +2370,7 @@
   {
     "code": "mt",
     "name": "Malta",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2184,6 +2378,10 @@
       "red",
       "white",
       "black"
+    ],
+    "primaryColors": [
+      "red",
+      "white"
     ],
     "motifs": [
       "animal",
@@ -2194,6 +2392,7 @@
   {
     "code": "mh",
     "name": "Marshall Islands",
+    "nameScore": 6,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -2209,6 +2408,7 @@
   {
     "code": "mq",
     "name": "Martinique",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -2222,6 +2422,7 @@
   {
     "code": "mr",
     "name": "Mauritania",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2237,6 +2438,7 @@
   {
     "code": "mu",
     "name": "Mauritius",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2251,6 +2453,7 @@
   {
     "code": "yt",
     "name": "Mayotte",
+    "nameScore": 7,
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
@@ -2264,6 +2467,7 @@
   {
     "code": "mx",
     "name": "Mexico",
+    "nameScore": 1,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -2280,6 +2484,7 @@
   {
     "code": "md",
     "name": "Moldova",
+    "nameScore": 3,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2289,6 +2494,11 @@
       "red",
       "green"
     ],
+    "primaryColors": [
+      "blue",
+      "yellow",
+      "red"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms"
@@ -2297,6 +2507,7 @@
   {
     "code": "mc",
     "name": "Monaco",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2309,6 +2520,7 @@
   {
     "code": "mn",
     "name": "Mongolia",
+    "nameScore": 5,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -2325,6 +2537,7 @@
   {
     "code": "me",
     "name": "Montenegro",
+    "nameScore": 3,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2334,6 +2547,10 @@
       "blue",
       "green"
     ],
+    "primaryColors": [
+      "red",
+      "yellow"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms"
@@ -2342,6 +2559,7 @@
   {
     "code": "ms",
     "name": "Montserrat",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -2361,6 +2579,7 @@
   {
     "code": "ma",
     "name": "Morocco",
+    "nameScore": 2,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2375,12 +2594,19 @@
   {
     "code": "mz",
     "name": "Mozambique",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
     "colors": [
       "green",
       "white",
+      "black",
+      "yellow",
+      "red"
+    ],
+    "primaryColors": [
+      "green",
       "black",
       "yellow",
       "red"
@@ -2393,6 +2619,7 @@
   {
     "code": "mm",
     "name": "Myanmar",
+    "nameScore": 5,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -2409,6 +2636,7 @@
   {
     "code": "na",
     "name": "Namibia",
+    "nameScore": 4,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2419,11 +2647,18 @@
       "white",
       "yellow"
     ],
+    "primaryColors": [
+      "blue",
+      "red",
+      "green",
+      "yellow"
+    ],
     "motifs": []
   },
   {
     "code": "nr",
     "name": "Nauru",
+    "nameScore": 6,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -2439,6 +2674,7 @@
   {
     "code": "np",
     "name": "Nepal",
+    "nameScore": 2,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -2454,6 +2690,7 @@
   {
     "code": "nl",
     "name": "Netherlands",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2467,6 +2704,7 @@
   {
     "code": "nc",
     "name": "New Caledonia",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -2482,6 +2720,7 @@
   {
     "code": "nz",
     "name": "New Zealand",
+    "nameScore": 1,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -2499,6 +2738,7 @@
   {
     "code": "ni",
     "name": "Nicaragua",
+    "nameScore": 4,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -2515,6 +2755,7 @@
   {
     "code": "ne",
     "name": "Niger",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2528,6 +2769,7 @@
   {
     "code": "ng",
     "name": "Nigeria",
+    "nameScore": 1,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2540,6 +2782,7 @@
   {
     "code": "nu",
     "name": "Niue",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "non_un",
@@ -2558,6 +2801,7 @@
   {
     "code": "nf",
     "name": "Norfolk Island",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -2570,6 +2814,7 @@
   {
     "code": "kp",
     "name": "North Korea",
+    "nameScore": 2,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -2588,6 +2833,7 @@
   {
     "code": "mk",
     "name": "North Macedonia",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2600,6 +2846,7 @@
   {
     "code": "gb-nir",
     "name": "Northern Ireland",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -2615,6 +2862,7 @@
   {
     "code": "mp",
     "name": "Northern Mariana Islands",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -2631,6 +2879,7 @@
   {
     "code": "no",
     "name": "Norway",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2646,6 +2895,7 @@
   {
     "code": "om",
     "name": "Oman",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -2661,6 +2911,7 @@
   {
     "code": "pc",
     "name": "Pacific Community",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -2673,6 +2924,7 @@
   {
     "code": "pk",
     "name": "Pakistan",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -2687,6 +2939,7 @@
   {
     "code": "pw",
     "name": "Palau",
+    "nameScore": 5,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -2701,6 +2954,7 @@
   {
     "code": "pa",
     "name": "Panama",
+    "nameScore": 2,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -2716,6 +2970,7 @@
   {
     "code": "pg",
     "name": "Papua New Guinea",
+    "nameScore": 5,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -2736,6 +2991,7 @@
   {
     "code": "py",
     "name": "Paraguay",
+    "nameScore": 4,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -2746,6 +3002,11 @@
       "green",
       "yellow"
     ],
+    "primaryColors": [
+      "red",
+      "white",
+      "blue"
+    ],
     "motifs": [
       "coat-of-arms",
       "star-or-moon"
@@ -2754,6 +3015,7 @@
   {
     "code": "pe",
     "name": "Peru",
+    "nameScore": 3,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -2769,6 +3031,7 @@
   {
     "code": "ph",
     "name": "Philippines",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -2785,6 +3048,7 @@
   {
     "code": "pn",
     "name": "Pitcairn",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -2804,6 +3068,7 @@
   {
     "code": "pl",
     "name": "Poland",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2816,6 +3081,7 @@
   {
     "code": "pt",
     "name": "Portugal",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2826,6 +3092,10 @@
       "blue",
       "white"
     ],
+    "primaryColors": [
+      "green",
+      "red"
+    ],
     "motifs": [
       "coat-of-arms"
     ]
@@ -2833,6 +3103,7 @@
   {
     "code": "pr",
     "name": "Puerto Rico",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -2848,6 +3119,7 @@
   {
     "code": "qa",
     "name": "Qatar",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -2860,6 +3132,7 @@
   {
     "code": "cg",
     "name": "Republic of the Congo",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2873,6 +3146,7 @@
   {
     "code": "ro",
     "name": "Romania",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2886,6 +3160,7 @@
   {
     "code": "ru",
     "name": "Russia",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -2899,6 +3174,7 @@
   {
     "code": "rw",
     "name": "Rwanda",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -2912,6 +3188,7 @@
   {
     "code": "re",
     "name": "Réunion",
+    "nameScore": 7,
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
@@ -2925,6 +3202,7 @@
   {
     "code": "bl",
     "name": "Saint Barthélemy",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -2938,6 +3216,7 @@
   {
     "code": "sh-hl",
     "name": "Saint Helena",
+    "nameScore": 7,
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
@@ -2957,6 +3236,7 @@
   {
     "code": "sh",
     "name": "Saint Helena, Ascension and Tristan da Cunha",
+    "nameScore": 7,
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
@@ -2973,6 +3253,7 @@
   {
     "code": "kn",
     "name": "Saint Kitts and Nevis",
+    "nameScore": 5,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -2990,6 +3271,7 @@
   {
     "code": "lc",
     "name": "Saint Lucia",
+    "nameScore": 5,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -3004,6 +3286,7 @@
   {
     "code": "mf",
     "name": "Saint Martin",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -3017,6 +3300,7 @@
   {
     "code": "pm",
     "name": "Saint Pierre and Miquelon",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -3031,6 +3315,7 @@
   {
     "code": "vc",
     "name": "Saint Vincent and the Grenadines",
+    "nameScore": 6,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -3044,6 +3329,7 @@
   {
     "code": "ws",
     "name": "Samoa",
+    "nameScore": 5,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -3059,6 +3345,7 @@
   {
     "code": "sm",
     "name": "San Marino",
+    "nameScore": 3,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -3069,6 +3356,10 @@
       "yellow",
       "red"
     ],
+    "primaryColors": [
+      "white",
+      "blue"
+    ],
     "motifs": [
       "coat-of-arms"
     ]
@@ -3076,6 +3367,7 @@
   {
     "code": "st",
     "name": "Sao Tome and Principe",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3092,6 +3384,7 @@
   {
     "code": "sa",
     "name": "Saudi Arabia",
+    "nameScore": 2,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3107,6 +3400,7 @@
   {
     "code": "gb-sct",
     "name": "Scotland",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -3121,6 +3415,7 @@
   {
     "code": "sn",
     "name": "Senegal",
+    "nameScore": 4,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3136,6 +3431,7 @@
   {
     "code": "rs",
     "name": "Serbia",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -3145,6 +3441,11 @@
       "white",
       "yellow"
     ],
+    "primaryColors": [
+      "red",
+      "blue",
+      "white"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms"
@@ -3153,6 +3454,7 @@
   {
     "code": "sc",
     "name": "Seychelles",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3168,6 +3470,7 @@
   {
     "code": "sl",
     "name": "Sierra Leone",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3181,6 +3484,7 @@
   {
     "code": "sg",
     "name": "Singapore",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3195,6 +3499,7 @@
   {
     "code": "sx",
     "name": "Sint Maarten",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -3212,6 +3517,7 @@
   {
     "code": "sk",
     "name": "Slovakia",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -3227,6 +3533,7 @@
   {
     "code": "si",
     "name": "Slovenia",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -3236,6 +3543,11 @@
       "red",
       "yellow"
     ],
+    "primaryColors": [
+      "white",
+      "blue",
+      "red"
+    ],
     "motifs": [
       "coat-of-arms",
       "star-or-moon"
@@ -3244,6 +3556,7 @@
   {
     "code": "sb",
     "name": "Solomon Islands",
+    "nameScore": 6,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -3260,6 +3573,7 @@
   {
     "code": "so",
     "name": "Somalia",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3274,6 +3588,7 @@
   {
     "code": "za",
     "name": "South Africa",
+    "nameScore": 1,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3290,6 +3605,7 @@
   {
     "code": "gs",
     "name": "South Georgia and the South Sandwich Islands",
+    "nameScore": 7,
     "continent": "Antarctica",
     "category": "country",
     "statehood": "territory",
@@ -3311,6 +3627,7 @@
   {
     "code": "kr",
     "name": "South Korea",
+    "nameScore": 2,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3328,6 +3645,7 @@
   {
     "code": "ss",
     "name": "South Sudan",
+    "nameScore": 4,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3346,6 +3664,7 @@
   {
     "code": "es",
     "name": "Spain",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -3355,6 +3674,10 @@
       "blue",
       "white"
     ],
+    "primaryColors": [
+      "red",
+      "yellow"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms"
@@ -3363,6 +3686,7 @@
   {
     "code": "lk",
     "name": "Sri Lanka",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3381,6 +3705,7 @@
   {
     "code": "ps",
     "name": "State of Palestine",
+    "nameScore": 2,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_observer",
@@ -3395,6 +3720,7 @@
   {
     "code": "sd",
     "name": "Sudan",
+    "nameScore": 3,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3409,6 +3735,7 @@
   {
     "code": "sr",
     "name": "Suriname",
+    "nameScore": 5,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -3425,6 +3752,7 @@
   {
     "code": "sj",
     "name": "Svalbard and Jan Mayen",
+    "nameScore": 7,
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
@@ -3440,6 +3768,7 @@
   {
     "code": "se",
     "name": "Sweden",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -3454,6 +3783,7 @@
   {
     "code": "ch",
     "name": "Switzerland",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -3468,6 +3798,7 @@
   {
     "code": "sy",
     "name": "Syria",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3484,6 +3815,7 @@
   {
     "code": "tw",
     "name": "Taiwan",
+    "nameScore": 7,
     "continent": "Asia",
     "category": "country",
     "statehood": "non_un",
@@ -3497,6 +3829,7 @@
   {
     "code": "tj",
     "name": "Tajikistan",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3514,6 +3847,7 @@
   {
     "code": "tz",
     "name": "Tanzania",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3528,6 +3862,7 @@
   {
     "code": "th",
     "name": "Thailand",
+    "nameScore": 2,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3541,6 +3876,7 @@
   {
     "code": "tl",
     "name": "Timor-Leste",
+    "nameScore": 5,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3557,6 +3893,7 @@
   {
     "code": "tg",
     "name": "Togo",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3573,6 +3910,7 @@
   {
     "code": "tk",
     "name": "Tokelau",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -3588,6 +3926,7 @@
   {
     "code": "to",
     "name": "Tonga",
+    "nameScore": 6,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -3602,6 +3941,7 @@
   {
     "code": "tt",
     "name": "Trinidad and Tobago",
+    "nameScore": 5,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -3615,6 +3955,7 @@
   {
     "code": "sh-ta",
     "name": "Tristan da Cunha",
+    "nameScore": 7,
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
@@ -3634,6 +3975,7 @@
   {
     "code": "tn",
     "name": "Tunisia",
+    "nameScore": 1,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3648,6 +3990,7 @@
   {
     "code": "tm",
     "name": "Turkmenistan",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3657,6 +4000,10 @@
       "white",
       "yellow"
     ],
+    "primaryColors": [
+      "green",
+      "red"
+    ],
     "motifs": [
       "star-or-moon"
     ]
@@ -3664,6 +4011,7 @@
   {
     "code": "tc",
     "name": "Turks and Caicos Islands",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -3684,6 +4032,7 @@
   {
     "code": "tv",
     "name": "Tuvalu",
+    "nameScore": 6,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -3702,6 +4051,7 @@
   {
     "code": "tr",
     "name": "Türkiye",
+    "nameScore": 1,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3716,6 +4066,7 @@
   {
     "code": "ug",
     "name": "Uganda",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -3732,6 +4083,7 @@
   {
     "code": "ua",
     "name": "Ukraine",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -3744,6 +4096,7 @@
   {
     "code": "ae",
     "name": "United Arab Emirates",
+    "nameScore": 3,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3761,6 +4114,7 @@
   {
     "code": "gb",
     "name": "United Kingdom",
+    "nameScore": 1,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
@@ -3777,6 +4131,7 @@
   {
     "code": "un",
     "name": "United Nations",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -3789,6 +4144,7 @@
   {
     "code": "um",
     "name": "United States Minor Outlying Islands",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -3804,6 +4160,7 @@
   {
     "code": "us",
     "name": "United States of America",
+    "nameScore": 1,
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
@@ -3822,6 +4179,7 @@
   {
     "code": "uy",
     "name": "Uruguay",
+    "nameScore": 2,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -3835,6 +4193,7 @@
   {
     "code": "uz",
     "name": "Uzbekistan",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3851,6 +4210,7 @@
   {
     "code": "vu",
     "name": "Vanuatu",
+    "nameScore": 6,
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
@@ -3867,6 +4227,7 @@
   {
     "code": "va",
     "name": "Vatican City",
+    "nameScore": 2,
     "continent": "Europe",
     "category": "country",
     "statehood": "un_observer",
@@ -3881,6 +4242,7 @@
   {
     "code": "ve",
     "name": "Venezuela",
+    "nameScore": 3,
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
@@ -3897,6 +4259,7 @@
   {
     "code": "vn",
     "name": "Vietnam",
+    "nameScore": 1,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -3911,6 +4274,7 @@
   {
     "code": "vg",
     "name": "Virgin Islands (British)",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -3930,6 +4294,7 @@
   {
     "code": "vi",
     "name": "Virgin Islands (U.S.)",
+    "nameScore": 7,
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
@@ -3948,6 +4313,7 @@
   {
     "code": "gb-wls",
     "name": "Wales",
+    "nameScore": 7,
     "continent": null,
     "category": "other",
     "statehood": null,
@@ -3963,6 +4329,7 @@
   {
     "code": "wf",
     "name": "Wallis and Futuna",
+    "nameScore": 7,
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
@@ -3976,6 +4343,7 @@
   {
     "code": "eh",
     "name": "Western Sahara",
+    "nameScore": 7,
     "continent": "Africa",
     "category": "country",
     "statehood": "non_un",
@@ -3992,6 +4360,7 @@
   {
     "code": "ye",
     "name": "Yemen",
+    "nameScore": 4,
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
@@ -4005,6 +4374,7 @@
   {
     "code": "zm",
     "name": "Zambia",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
@@ -4021,6 +4391,7 @@
   {
     "code": "zw",
     "name": "Zimbabwe",
+    "nameScore": 5,
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
