@@ -73,7 +73,10 @@ const MOTIFS = {
   py: ['coat-of-arms'],                             // Paraguay — coa with star + palm
   rs: ['animal', 'coat-of-arms'],                  // Serbia — eagle + shield coa
   sa: ['coat-of-arms', 'weapon'],                  // Saudi Arabia — sword + shahada national emblem
-  sh:      ['animal', 'coat-of-arms'],             // SH+A+T aggregate — coa depicts wirebird/turtle/albatross
+  // sh (Saint Helena, Ascension and Tristan da Cunha — combined) ships a
+  // plain Union Jack SVG with no coat of arms, so no heraldic motifs
+  // apply to the visible artwork. Tag only via the CROSS / UNION_JACK
+  // sets, which are derived from the UJ itself.
   'sh-hl': ['animal', 'coat-of-arms'],             // Saint Helena — coa with wirebird
   'sh-ac': ['animal', 'coat-of-arms'],             // Ascension Island — coa with turtle
   'sh-ta': ['animal', 'coat-of-arms'],             // Tristan da Cunha — coa with albatross
