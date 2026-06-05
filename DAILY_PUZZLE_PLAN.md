@@ -1,6 +1,6 @@
 # Daily-puzzle feature — plan & context
 
-> **Status: phase 1 + 2 shipped (MVP + primaryColors split). 20 puzzles live, 30 staged in backlog.** Read this before doing any work on `/daily/` or anything that touches `flags/countries.json`'s difficulty model.
+> **Status: phases 1 + 2 shipped to `main` (PR #181, merged `c3a0100`). 20 puzzles live, 30 staged in backlog. Single-user soft launch.** Read this before doing any work on `/daily/` or anything that touches `flags/countries.json`'s difficulty model.
 
 ---
 
@@ -9,11 +9,41 @@
 - `nameScore` (1–7) merged into `flags/countries.json` for all 269 entries.
 - `/daily/` MVP shipped: tile on the home page, today's puzzle, deep-link `?n=N`, and an archive grid of small numbered squares (one per released puzzle).
 - "Today's puzzle" is the last entry in `daily/daily_puzzles.json` — **no date math anywhere**.
-- `primaryColors` field added to 21 flags with complex emblems (Portugal, Spain, San Marino, Vatican, Croatia, Serbia, Slovenia, Moldova, Montenegro, Ecuador, Bolivia, Paraguay, Belize, Dominican Republic, Mozambique, Eswatini, Namibia, Equatorial Guinea, Fiji, Egypt, Turkmenistan, Malta — the ones whose `colors` field includes COA-only colours). Daily resolves filters against `primaryColors`; findFlag / flagsdata keep using `colors`.
-- `matchesFilters` takes an optional `{ colorField }` option (default `'colors'`); daily passes `'primaryColors'`. Falls back to `colors` for untagged countries — additive change.
+- `primaryColors` field added to 21 flags with complex emblems (Portugal, Spain, San Marino, Vatican, Croatia, Serbia, Slovenia, Moldova, Montenegro, Ecuador, Bolivia, Paraguay, Belize, Dominican Republic, Mozambique, Eswatini, Namibia, Equatorial Guinea, Fiji, Egypt, Turkmenistan, Malta — the ones whose `colors` field includes COA-only colours). **It's data, not the resolver** — daily matches against `colors` (the default). See "Color-match resolution" below.
+- `matchesFilters` takes an optional `{ colorField: 'colors' | 'primaryColors' }` option (default `'colors'`). Daily uses the default; findFlag / flagsdata use the default. The option exists for any future opt-in strict-mode puzzle.
 - Generator's anti-overlap cap (`OVERLAP_CAP = 5`) prevents any one country from appearing in more than 5 puzzles across the catalog. Hard-blocked in onboarding; softly penalised in the tail.
 - Redundant-filter test in `flags/daily.test.js`: dropping any token from any catalog filter must change the answer set. Pins the invariant against future hand-edits.
-- 50 puzzles staged: live catalog has #1–20, `daily/daily_backlog.json` holds #21–50. Jan's been reviewing the 20; we're shipping them as the soft launch (single-user audience, will hide-future once a wider audience exists).
+- 50 puzzles staged: live catalog has #1–20, `daily/daily_backlog.json` holds #21–50. The 20 are an intentional soft launch (single user). When wider audience exists we'll trim live back to 1 and pace releases — tracked as phase 4.
+- One-off build scripts (`_build_daily_v2.mjs`, `_build_daily_v3.mjs`, `_build_daily_v4.mjs`, `_apply_primary_colors.mjs`) were deleted after their seed JSON committed. Catalog edits since then have been by-hand JSON tweaks, guarded by the drift detector + redundant-filter test in `flags/daily.test.js`.
+
+## Current live catalog (#1–20)
+
+Hand-tuned after Jan's review. If you regenerate, do not silently overwrite this lineup — diff against it and ask before changing positions. #1 (Europe · cross) is Jan's pinned opener.
+
+| # | Filter | Notes |
+|---|---|---|
+| 1 | `continent:Europe,motif:cross` | Pinned opener — Nordics + Switzerland + UK + Greece + Malta + Iceland |
+| 2 | `continent:South America,color:blue,color:yellow` | |
+| 3 | `continent:Asia,color:orange` | |
+| 4 | `color:white,color:green,color:orange` | Ireland palette (worldwide) |
+| 5 | `continent:Africa,motif:weapon,color:yellow` | Replaces an earlier redundant `Africa · weapon · black`; soft bucket3 violation (Eswatini=4) |
+| 6 | `continent:Europe,motif:coat-of-arms` | |
+| 7 | `continent:Asia,motif:animal` | |
+| 8 | `continent:South America,motif:animal` | |
+| 9 | `continent:Europe,color:red,color:yellow` | |
+| 10 | `continent:South America,color:white,color:blue,color:yellow` | |
+| 11 | `continent:North America,motif:cross` | |
+| 12 | `continent:Africa,motif:weapon` | |
+| 13 | `color:yellow,color:orange` | Worldwide |
+| 14 | `continent:North America,motif:animal,color:red` | |
+| 15 | `continent:Asia,motif:weapon` | |
+| 16 | `motif:cross,color:black` | Worldwide |
+| 17 | `continent:Africa,color:white,color:orange` | |
+| 18 | `continent:North America,motif:animal,color:black` | 1-flag (Dominica) |
+| 19 | `continent:Asia,motif:cross` | 1-flag (Georgia) |
+| 20 | `continent:Europe,color:blue` | 26 flags — tipped over the 25 soft cap when re-resolved under `colors` |
+
+`Europe · color:green` lives at **#35** in the backlog by Jan's call ("much later than first 20" because the COA-green flags read as a surprise — not a wrong-flash but worth easing in).
 
 ## Key design decisions (don't re-litigate)
 
@@ -66,36 +96,45 @@ First pass had daily resolve color filters against `primaryColors` so e.g. "Euro
    - "Today's puzzle" = last entry in the live catalog (no date math).
    - Burger menu in `/daily/` has an Archive link.
    - Archive is a grid of small numbered squares, last (= today) highlighted.
-2. **Catalog quality — primaryColors split + anti-overlap + redundant-filter test.** ✅ shipped
-   - `primaryColors` tagged on 21 flags; resolver supports the new field via `matchesFilters({ colorField })`.
+2. **Catalog quality — primaryColors data + anti-overlap + redundant-filter test.** ✅ shipped (with the colors-vs-primaryColors u-turn described above)
+   - `primaryColors` tagged on 21 flags. **Not the resolver** — kept as a quality signal for the picker and as a knob the future strict-mode puzzle can opt into.
+   - `matchesFilters` takes `{ colorField }` (default `'colors'`); daily uses the default.
    - Generator has the anti-overlap cap baked in (`OVERLAP_CAP = 5`).
    - Redundant-filter test added to `flags/daily.test.js`.
-   - 50-puzzle catalog regenerated under the new rules; #1 pinned to `Europe · cross`.
-3. **Authoring tool for catalog growth (formalised).** Today the build script is one-off and deleted after use. Phase 3 keeps it as `scripts/build_daily_catalog.mjs`, with the scoring + dedup + anti-overlap logic exposed for "add the next batch" runs.
-4. **Hide future puzzles from the audience.** Right now the live catalog publishes the full backlog of 20 because there's only one user. When friends start playing, we'll need a release pacing mechanism — either manual append (move backlog[0] over once a day by hand) or restore a lightweight clock. Defer until "release pacing actually matters."
+   - 50-puzzle catalog generated, then re-resolved under `colors`, then hand-tuned per review.
+3. **Authoring tool for catalog growth (formalised).** Today the build script is one-off and deleted after use. Phase 3 keeps it as `scripts/build_daily_catalog.mjs`, with the scoring + dedup + anti-overlap + primary-share-quality logic exposed for "add the next batch" runs.
+4. **Hide future puzzles from the audience (release pacing).** Right now the live catalog publishes the full backlog of 20 because there's only one user. When friends start playing, we'll need a release pacing mechanism — either manual append (move backlog[0] over once a day by hand) or restore a lightweight clock. Defer until "release pacing actually matters." The 20-live state is intentional, not a bug to fix.
 5. **Hand-curated overrides.** A `daily_overrides.json` keyed by N lets us slot in specially-designed puzzles. Generator checks overrides first.
 6. **Score-sharing string.** Decide format after some real play.
 7. **(Later)** New game modes (sequence/ordered). Daily can pull from any mode once they exist.
+
+## Suggested next step
+
+Per the conversation that shipped phase 2, the natural next thread is **phase 3 (authoring tool)**: move the one-off build logic into `scripts/build_daily_catalog.mjs` with the scoring exposed, so "add the next batch of N puzzles" doesn't mean rewriting the generator from scratch each time. Bake in:
+- Primary-share quality score (prefer filters where ≥70% of answers match by primary, so we don't pump out puzzles where every answer is a COA-only surprise).
+- The pin/blocklist hooks used during the soft launch (e.g. "#1 stays Europe · cross", "Europe · green not in first 20").
+- Output verification: run the same checks `flags/daily.test.js` runs (drift detector, sequential n, redundant filter) before writing.
+
+Alternative threads if Jan wants to skip ahead: phase 4 (release pacing) is what actually matters once a second player joins; phase 6 (score-sharing string) is the next thing to make daily *fun to talk about*.
 
 ## Open questions for Jan
 
 - Score-share string: text vs emoji-grid? (Defer until we've played a few real puzzles.)
 - Do you want a global leaderboard eventually? (If yes, that changes the architecture in later phases.)
 - Should `/rate/` extend its scale to also cover the 74 non-sovereign entries (currently flat 7)?
-- When we do `primaryColors`, should `colors` get renamed to something less ambiguous (`allColors`?) or stay as it is?
 
 ## File map (for orientation)
 
-- `flags/countries.json` — country data; has `nameScore`. Will get `primaryColors` next.
-- `flags/group.js` — `Country` typedef.
+- `flags/countries.json` — country data. Has `nameScore` on every entry; `primaryColors` on 21 entries (the ones where `colors ≠ primaryColors`).
+- `flags/group.js` — `Country` typedef (optional `nameScore`, `primaryColors` declared, runtime tests pin them).
 - `flags/engine.js` — filter primitives that puzzles compose.
 - `flags/findFlag.js` — find-all game logic + filter serialization. Daily reuses it.
-- `flags/daily.js` — daily catalog helpers (`todayN`, `getPuzzle`, `dailyNFromUrl`). Pure logic, no date math.
-- `flags/flagsFilter.js` — `matchesFilters` resolver. Will gain a `colorField` option in phase 2.
-- `flags/daily.test.js` — covers daily.js + the live and backlog catalogs (drift detector, sequential n, all answer codes resolve to sovereigns).
+- `flags/daily.js` — daily catalog helpers: `todayN`, `getPuzzle`, `dailyNFromUrl`, `resolveDailyPuzzle` (the discriminated-union resolver that page.js consumes). Pure logic, no date math.
+- `flags/flagsFilter.js` — `matchesFilters` resolver. Takes optional `{ colorField: 'colors' | 'primaryColors' }`; default `'colors'`. Daily uses the default. The option exists for future opt-in strict-mode puzzles.
+- `flags/daily.test.js` — covers daily.js + the live and backlog catalogs (drift detector under `colors`, sequential n live + backlog, redundant-filter, every answer code resolves to a sovereign, resolveDailyPuzzle's four reason branches).
 - `daily/` — UI: `index.html` (today's puzzle), `archive.html` (grid of past puzzles), `page.js`, `archive.js`, `index.css`, `archive.css`, `daily_puzzles.json` (released), `daily_backlog.json` (staged).
 - `findFlag/` — find-all UI; daily's play page borrows its game styles via the shared `../findFlag/index.css`.
-- `common.css` — chrome (`body::before`, `body { padding: var(--page-top) 24px 24px }`), shared button styles.
+- `common.css` — chrome (`body::before`, `body { padding: var(--page-top) 24px 24px }`), shared button styles. ticTacToe overrides only the horizontal padding for the 9×9 grid.
 - `i18n.js` + `i18n/{en,pl}.json` — translation system. Daily strings live under the `daily.*` keys.
 - `CLAUDE.md` — repo conventions (folder structure, tests, UI consistency); read first.
 
