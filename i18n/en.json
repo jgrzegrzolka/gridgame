@@ -71,8 +71,8 @@
     "archiveTitle": "Daily Flag Puzzle — Archive",
     "archiveHeading": "Daily Archive",
     "archiveCount": "{n} flags",
-    "beforeLaunch": "Daily #1 starts on {date}.",
-    "comingSoon": "More puzzles coming soon.",
+    "notFound": "Puzzle not found.",
+    "empty": "No puzzles yet.",
     "sovereignOnly": "Sovereign countries only."
   },
   "ttt": {

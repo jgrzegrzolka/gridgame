@@ -3,35 +3,28 @@ import {
   parseFilterString,
   filterToCategory,
 } from '../flags/findFlag.js';
-import { dayNumberFor, launchDateIso } from '../flags/daily.js';
+import { todayN } from '../flags/daily.js';
 
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
 
 export function bootArchive() {
   const listEl = /** @type {HTMLElement} */ (document.getElementById('archive-list'));
-  const todayN = dayNumberFor(Date.now());
 
   fetch('./daily_puzzles.json')
     .then((r) => r.json())
     .then((/** @type {DailyPuzzle[]} */ catalog) => {
-      // Only show released puzzles. The newest visible (highest n that
-      // is <= todayN and within the catalog) is "today's". Future
-      // entries from the prepared backlog stay hidden so the player
-      // can't deep-link or see what's coming.
-      const visibleMax = Math.min(catalog.length, Math.max(todayN, 0));
-
-      if (visibleMax < 1) {
+      // The catalog only contains released puzzles, so we render every
+      // entry. The newest (last) is "today's" puzzle — highlighted.
+      const today = todayN(catalog);
+      if (today === 0) {
         const empty = document.createElement('li');
         empty.className = 'archive-empty';
-        empty.textContent = t('daily.beforeLaunch', 'Daily #1 starts on {date}.')
-          .replace('{date}', launchDateIso());
+        empty.textContent = t('daily.empty', 'No puzzles yet.');
         listEl.appendChild(empty);
         return;
       }
-
       for (const entry of catalog) {
-        if (entry.n > visibleMax) break;
-        const isToday = entry.n === visibleMax;
+        const isToday = entry.n === today;
         listEl.appendChild(renderEntry(entry, isToday));
       }
     })

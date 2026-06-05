@@ -24,17 +24,17 @@ A daily flag puzzle that everyone sees the same on the same day, accessible from
 
 ## Key design decisions (don't re-litigate)
 
-### Puzzles are numbered, not dated
+### Puzzles are numbered, manually released
 - URL form: `/daily/?n=47` — **not** `?date=2026-06-04`.
 - Removes timezone ambiguity ("I solved #47" is unambiguous regardless of local midnight).
 - Decouples puzzle identity from the calendar (we can skip a day, do bonus puzzles, etc. without renumbering).
-- `n = floor((now_UTC − launchDate) / 1 day) + 1`. **Launch date is TBD** — pick when phase 1 is ready to ship.
+- **No date math at all.** "Today's puzzle" = the last entry in `daily/daily_puzzles.json`. Releasing puzzle N+1 means appending its entry to the live catalog (typically by moving the next staged entry from `daily/daily_backlog.json`). The UI auto-picks the new last entry on next load.
+- The earlier `n = floor((now_UTC − launchDate) / 1 day) + 1` formula was tried and dropped — the moment we miss a day or want to postpone, the calendar and the displayed history fall out of sync.
 
-### Catalog is a static, append-only JSON
-- Source of truth: a file like `daily/daily_puzzles.json` (path TBD).
-- Runtime is dead-simple array lookup: puzzle #N = `puzzles[N − 1]`.
-- **Critical invariant:** once shipped, puzzle #47 must stay frozen. Adding new flag attributes or fixing country data later must **not** retroactively change historical puzzles. Store *resolved* puzzles, not generation parameters.
-- Each entry shape (sketch): `{ n, filters: { continent?, colors?, motifs?, ... }, title?, notes? }`
+### Catalog is a static, append-only JSON, with a planning backlog
+- Source of truth: `daily/daily_puzzles.json` — only contains *released* puzzles. Runtime is dead-simple array lookup: puzzle #N = `puzzles[N − 1]`.
+- Staging: `daily/daily_backlog.json` — same shape, holds puzzles already designed but not yet released. To release the next puzzle, move `backlog[0]` to the end of the live catalog. Both files stay sequential without renumbering anything.
+- **Critical invariant:** once shipped, puzzle #47 must stay frozen. Adding new flag attributes or fixing country data later must **not** retroactively change historical puzzles. Stored shape is `{ n, filter, answers }` — the filter is the spec (used to display the label and as a drift detector in tests), the answers are the source of truth at game time.
 
 ### Onboarding ramp, then random
 - First ~30 puzzles hand-picked, easy on purpose (small answer sets, mostly famous countries).
@@ -60,13 +60,13 @@ The Spain example shows why these have to be separate dimensions:
 
 ## Implementation phases (each independently shippable)
 
-1. **MVP: daily tile + today's puzzle + archive**
+1. **MVP: daily tile + today's puzzle + archive** ✅ shipped
    - Daily tile (first position) on home (`index.html`).
    - `/daily/?n=N` route reuses the findFlag engine with a filter set loaded from JSON.
-   - Tiny seed `daily_puzzles.json` — 5 hand-picked easy puzzles is fine.
-   - `n = today computation` from a hard-coded launch date.
+   - Seed `daily_puzzles.json` starts with puzzle #1; `daily_backlog.json` holds 49 staged puzzles ready to release.
+   - "Today's puzzle" = last entry in the live catalog (no date math).
    - Burger menu in `/daily/` has an Archive link.
-   - Archive page = calendar grid.
+   - Archive shows every released puzzle, last entry highlighted as today.
 2. **Authoring tool for catalog growth.** Enumerates filter combos, dedups by answer-set hash, trims redundant filters (don't include a continent filter that doesn't narrow the result), scores difficulty. Output gets human-reviewed and appended to `daily_puzzles.json`.
 3. **Per-country difficulty integrated.** Use `nameScore` (after merge in step 0) in the catalog dedup and difficulty scoring.
 4. **Onboarding + difficulty-aware selection.** Hand-pick the first ~30 easy ones, then random from the catalog within a sensible band.

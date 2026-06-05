@@ -4,13 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import {
-  LAUNCH_UTC,
-  dayNumberFor,
-  getPuzzle,
-  dailyNFromUrl,
-  launchDateIso,
-} from './daily.js';
+import { todayN, getPuzzle, dailyNFromUrl } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool } from './group.js';
@@ -25,41 +19,19 @@ const COUNTRIES = JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8')
 const CATALOG = JSON.parse(
   readFileSync(join(HERE, '..', 'daily', 'daily_puzzles.json'), 'utf-8'),
 );
+/** @type {DailyPuzzle[]} */
+const BACKLOG = JSON.parse(
+  readFileSync(join(HERE, '..', 'daily', 'daily_backlog.json'), 'utf-8'),
+);
 
-const DAY = 86_400_000;
-
-test('LAUNCH_UTC is 2026-06-06 at 00:00 UTC', () => {
-  const d = new Date(LAUNCH_UTC);
-  assert.equal(d.getUTCFullYear(), 2026);
-  assert.equal(d.getUTCMonth(), 5, 'June is month index 5');
-  assert.equal(d.getUTCDate(), 6);
-  assert.equal(d.getUTCHours(), 0);
-  assert.equal(d.getUTCMinutes(), 0);
-});
-
-test('launchDateIso renders LAUNCH_UTC as 2026-06-06', () => {
-  assert.equal(launchDateIso(), '2026-06-06');
-});
-
-test('dayNumberFor returns 1 at launch midnight', () => {
-  assert.equal(dayNumberFor(LAUNCH_UTC), 1);
-});
-
-test('dayNumberFor returns 1 throughout launch day in UTC', () => {
-  assert.equal(dayNumberFor(LAUNCH_UTC + 12 * 3600 * 1000), 1);
-  assert.equal(dayNumberFor(LAUNCH_UTC + DAY - 1), 1);
-});
-
-test('dayNumberFor returns 2 the day after launch', () => {
-  assert.equal(dayNumberFor(LAUNCH_UTC + DAY), 2);
-});
-
-test('dayNumberFor returns 0 just before launch midnight', () => {
-  assert.equal(dayNumberFor(LAUNCH_UTC - 1), 0);
-});
-
-test('dayNumberFor returns negative N well before launch', () => {
-  assert.equal(dayNumberFor(LAUNCH_UTC - 10 * DAY), -9);
+test('todayN returns the catalog length (the last released puzzle)', () => {
+  assert.equal(todayN([]), 0);
+  assert.equal(todayN([{ n: 1, filter: 'a', answers: ['x'] }]), 1);
+  assert.equal(todayN([
+    { n: 1, filter: 'a', answers: ['x'] },
+    { n: 2, filter: 'b', answers: ['y'] },
+    { n: 3, filter: 'c', answers: ['z'] },
+  ]), 3);
 });
 
 test('getPuzzle returns the entry at n-1', () => {
@@ -98,25 +70,39 @@ test('dailyNFromUrl falls back to today when ?n= is missing or garbage', () => {
   assert.equal(dailyNFromUrl('?n=abc', 7), 7);
 });
 
-// --- Seed catalog: structural and drift checks ---------------------------
+// --- Catalog: structural + drift checks (live and backlog) ---------------
 
-test('seed catalog: every entry has n matching its index', () => {
-  CATALOG.forEach((entry, i) => {
-    assert.equal(entry.n, i + 1, `index ${i}: n=${entry.n}, expected ${i + 1}`);
+/** @param {DailyPuzzle[]} list @param {string} label */
+function checkShape(list, label) {
+  list.forEach((entry, i) => {
+    assert.equal(entry.n, i + 1, `${label} index ${i}: n=${entry.n}, expected ${i + 1}`);
+    assert.ok(typeof entry.filter === 'string' && entry.filter.length > 0, `${label} #${entry.n}: filter`);
+    assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `${label} #${entry.n}: answers`);
+  });
+}
+
+test('live catalog: every entry has n matching its index, non-empty filter and answers', () => {
+  checkShape(CATALOG, 'live');
+});
+
+test('backlog: numbering picks up where the live catalog leaves off', () => {
+  // The first backlog entry's n must equal live catalog length + 1, and
+  // backlog entries must continue sequentially. This way, releasing a
+  // puzzle is just "move backlog[0] to the end of live" — n stays valid
+  // in both files without renumbering anything.
+  if (BACKLOG.length === 0) return;
+  assert.equal(BACKLOG[0].n, CATALOG.length + 1,
+    `backlog[0].n=${BACKLOG[0].n} but live catalog has ${CATALOG.length} entries — expected backlog to start at ${CATALOG.length + 1}`);
+  BACKLOG.forEach((entry, i) => {
+    const expectedN = CATALOG.length + 1 + i;
+    assert.equal(entry.n, expectedN, `backlog index ${i}: n=${entry.n}, expected ${expectedN}`);
   });
 });
 
-test('seed catalog: every entry has a non-empty filter and non-empty answers', () => {
-  for (const entry of CATALOG) {
-    assert.ok(typeof entry.filter === 'string' && entry.filter.length > 0, `#${entry.n}: filter`);
-    assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `#${entry.n}: answers`);
-  }
-});
-
-test('seed catalog: every answer code is a known sovereign country', () => {
+test('live catalog: every answer code is a known sovereign country', () => {
   const sovCodes = new Set(flagsGamePool(COUNTRIES, false).map((c) => c.code));
   const offenders = [];
-  for (const entry of CATALOG) {
+  for (const entry of [...CATALOG, ...BACKLOG]) {
     for (const code of entry.answers) {
       if (!sovCodes.has(code)) offenders.push(`#${entry.n}: ${code} is not in the sovereign pool`);
     }
@@ -132,9 +118,9 @@ test('seed catalog: every answer code is a known sovereign country', () => {
 // revert the data change for that flag, or to detach the puzzle from
 // the filter (keep answers, drop filter). Don't just regenerate
 // answers — that defeats the test's purpose.
-test('seed catalog: answers match what the filter resolves to today', () => {
+test('live + backlog: answers match what each filter resolves to today', () => {
   const sov = flagsGamePool(COUNTRIES, false);
-  for (const entry of CATALOG) {
+  for (const entry of [...CATALOG, ...BACKLOG]) {
     const f = parseFilterString(entry.filter);
     assert.ok(f, `#${entry.n}: failed to parse filter "${entry.filter}"`);
     const computed = sov

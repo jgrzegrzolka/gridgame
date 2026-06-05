@@ -9,26 +9,16 @@ import {
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti } from '../confetti.js';
-import {
-  LAUNCH_UTC,
-  dayNumberFor,
-  getPuzzle,
-  dailyNFromUrl,
-  launchDateIso,
-} from '../flags/daily.js';
+import { todayN, getPuzzle, dailyNFromUrl } from '../flags/daily.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
 
 export function bootDaily() {
-  const todayN = dayNumberFor(Date.now());
-  const n = dailyNFromUrl(window.location.search, todayN);
-
   const stateEl = /** @type {HTMLElement} */ (document.getElementById('daily-state'));
   const gameEl = /** @type {HTMLElement} */ (document.getElementById('game'));
   const resultEl = /** @type {HTMLElement} */ (document.getElementById('result'));
   const numEl = /** @type {HTMLElement} */ (document.getElementById('daily-n'));
-  numEl.textContent = `#${n}`;
 
   const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
   const zoomImg = /** @type {HTMLImageElement} */ (zoom.querySelector('img'));
@@ -66,26 +56,17 @@ export function bootDaily() {
   ])
     .then(([raw, catalog]) => {
       const all = withLocalizedAliases(flagsGamePool(raw, false));
+      const today = todayN(catalog);
+      const n = dailyNFromUrl(window.location.search, today);
+      numEl.textContent = `#${n}`;
 
-      if (n < 1) {
-        const msg = t('daily.beforeLaunch', 'Daily #1 starts on {date}')
-          .replace('{date}', launchDateIso());
-        showState(msg);
-        return;
-      }
-
-      // Block deep-linking into tomorrow's puzzle — the archive hides
-      // future entries too, so this keeps the experience consistent
-      // regardless of how the URL was constructed.
-      if (n > todayN) {
-        showState(t('daily.comingSoon', 'More puzzles coming soon.'));
-        return;
-      }
-
+      // Out-of-range N can only come from a hand-edited URL — the
+      // archive only links to released entries. Fall back gracefully
+      // with a link back to today's puzzle.
       /** @type {DailyPuzzle | null} */
       const entry = getPuzzle(catalog, n);
       if (!entry) {
-        showState(t('daily.comingSoon', 'More puzzles coming soon.'));
+        showState(t('daily.notFound', 'Puzzle not found.'));
         return;
       }
 
@@ -290,9 +271,6 @@ export function bootDaily() {
         `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
       /** @type {HTMLElement} */ (document.getElementById('final-score-line')).style.color = scoreColor(found / total);
 
-      // Daily mirrors findFlag's confetti rule on a clean sweep; there's
-      // no best-time persistence, so the "new record" branch isn't
-      // applicable here.
       if (found === total) launchConfetti();
 
       const foundFlags = targets.filter((c) => foundCodes.has(c.code));

@@ -71,8 +71,8 @@
     "archiveTitle": "Codzienna zagadka flagowa — Archiwum",
     "archiveHeading": "Archiwum codziennych zagadek",
     "archiveCount": "{n} flag",
-    "beforeLaunch": "Codzienna #1 startuje {date}.",
-    "comingSoon": "Więcej zagadek wkrótce.",
+    "notFound": "Nie znaleziono zagadki.",
+    "empty": "Brak zagadek.",
     "sovereignOnly": "Tylko kraje suwerenne."
   },
   "ttt": {

@@ -1,12 +1,22 @@
 /**
- * Daily-puzzle support: maps "now" to a puzzle number, and looks up
- * entries in the static catalog. Pure logic; no DOM, no fetch.
+ * Daily-puzzle catalog helpers. Pure logic; no DOM, no fetch.
  *
- * The catalog stores *resolved* answers (a list of country codes), not
- * just the filter that produced them, so that fixes to country data
- * later don't retroactively change historical puzzles. The filter is
- * kept alongside for display + the daily.test.js drift check, which
- * fires loud the day the two disagree.
+ * Release model: the catalog is the source of truth for which puzzles
+ * have been released. "Today's puzzle" is the last entry in the catalog
+ * — there is no date math. Releasing puzzle N+1 means manually appending
+ * its entry to daily/daily_puzzles.json (typically by moving the next
+ * staged entry from daily/daily_backlog.json). The UI automatically
+ * picks up the new last entry on next load.
+ *
+ * Why no dates: a calendar-driven counter looks tidy until you miss a
+ * day or want to postpone, at which point the puzzle numbers and the
+ * displayed dates fall out of sync and history looks broken. Manual
+ * release keeps the numbering and the visible state always consistent
+ * regardless of when (or whether) we publish.
+ *
+ * The catalog stores resolved answers (a list of country codes), not
+ * just the filter that produced them — fixes to country data later
+ * don't retroactively change historical puzzles.
  *
  * @typedef {Object} DailyPuzzle
  * @property {number} n
@@ -16,38 +26,19 @@
  */
 
 /**
- * UTC midnight on the day puzzle #1 runs. Tomorrow (2026-06-06) was
- * picked from the conversation we started this in — the exact day a
- * second person (other than the author) could first play.
+ * Puzzle number for "today" — the last entry in the catalog. Returns 0
+ * for an empty catalog (caller decides how to render that edge case).
  *
- * Burned into the bundle on purpose: the day-N math has to be
- * deterministic across devices and timezones. Changing this value
- * after launch renumbers every puzzle in history, so don't.
- */
-export const LAUNCH_UTC = Date.UTC(2026, 5, 6);
-
-const DAY_MS = 86_400_000;
-
-/**
- * Puzzle number for a given moment. Returns 1 at launch midnight,
- * 2 a day later, …; 0 on the day before launch, -1 two days before, …
- *
- * Caller decides what to do with non-positive values — typically the
- * page shows a "starts on …" message rather than trying to render a
- * puzzle that doesn't exist yet.
- *
- * @param {number} nowMs - epoch milliseconds (e.g. Date.now())
- * @param {number} [launchMs] - launch instant in epoch ms
+ * @param {DailyPuzzle[]} catalog
  * @returns {number}
  */
-export function dayNumberFor(nowMs, launchMs = LAUNCH_UTC) {
-  return Math.floor((nowMs - launchMs) / DAY_MS) + 1;
+export function todayN(catalog) {
+  return catalog.length;
 }
 
 /**
- * Look up puzzle #n in the catalog. Returns null when N is before #1
- * or past the catalog's last entry — callers show the appropriate
- * "starts on …" / "coming soon" copy.
+ * Look up puzzle #n in the catalog. Returns null when N is out of range
+ * — callers show a "not found" copy and link back to today's puzzle.
  *
  * Throws on a miscounted catalog (entry.n != position + 1) rather than
  * silently misnumbering — a renumber bug here would corrupt history.
@@ -68,7 +59,7 @@ export function getPuzzle(catalog, n) {
 /**
  * Parse `?n=…` out of a URL search string, falling back to today's
  * puzzle number. Garbage and missing values both fall back — the
- * deep-link form is purely additive.
+ * deep-link form is purely additive over the bare `/daily/` URL.
  *
  * @param {string} search
  * @param {number} fallbackN
@@ -81,21 +72,4 @@ export function dailyNFromUrl(search, fallbackN) {
   const parsed = parseInt(raw, 10);
   if (!Number.isFinite(parsed)) return fallbackN;
   return parsed;
-}
-
-/**
- * Format launchMs as YYYY-MM-DD in UTC. Used to render the
- * pre-launch "Daily #1 starts on …" message — the date the user
- * sees should be the same one that defines puzzle #1, regardless
- * of their local timezone.
- *
- * @param {number} [launchMs]
- * @returns {string}
- */
-export function launchDateIso(launchMs = LAUNCH_UTC) {
-  const d = new Date(launchMs);
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
 }
