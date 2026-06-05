@@ -18,6 +18,7 @@ import {
   preloadFlags,
   shouldFireQuizConfetti,
   shouldShowBestTime,
+  mistakesAfterGiveUp,
 } from '../flags/quiz.js';
 import { flagsGamePool } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
@@ -331,13 +332,7 @@ export function bootFlagQuiz() {
       giveUpEl.addEventListener('click', () => {
         if (gameOver) return;
         gameOver = true;
-        if (!timed) {
-          // Count mode is one-shot, so correct + mistakes = questions seen.
-          // Give-up counts all unanswered as mistakes, leaving the result
-          // page reading "answeredCount/target" — exactly the score the
-          // player walked away with, unattempted questions discounted.
-          wrongCount = target - answeredCount;
-        }
+        wrongCount = mistakesAfterGiveUp({ modeKey: mode, target, answeredCount, wrongCount });
         showResult();
       }, { once: true });
     }
