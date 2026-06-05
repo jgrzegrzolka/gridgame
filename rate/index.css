@@ -1,5 +1,5 @@
 .rate-shell {
-  max-width: 1400px;
+  max-width: 1800px;
   margin: 40px auto 60px;
   padding: 0 16px;
 }
@@ -41,6 +41,8 @@
 @media (min-width: 600px) { .rate-grid { column-count: 2; } }
 @media (min-width: 960px) { .rate-grid { column-count: 3; } }
 @media (min-width: 1280px) { .rate-grid { column-count: 4; } }
+@media (min-width: 1600px) { .rate-grid { column-count: 5; } }
+@media (min-width: 1920px) { .rate-grid { column-count: 6; } }
 
 .rate-row {
   display: grid;
@@ -54,6 +56,29 @@
   background: #fff;
   /* keep a row from being split across columns mid-content */
   break-inside: avoid;
+}
+
+/* Phones: stack the score buttons under the name within the row so all
+ * six buttons fit comfortably even on narrow viewports. Flag spans both
+ * inner rows on the left. */
+@media (max-width: 480px) {
+  .rate-row {
+    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    row-gap: 6px;
+  }
+  .rate-row-flag {
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+  .rate-row-label {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .rate-row-buttons {
+    grid-column: 2;
+    grid-row: 2;
+  }
 }
 
 .rate-section-head {
@@ -118,6 +143,7 @@
 .rate-row-btn[data-score='3'] { color: #aa7700; }
 .rate-row-btn[data-score='4'] { color: #aa4400; }
 .rate-row-btn[data-score='5'] { color: #aa0000; }
+.rate-row-btn[data-score='6'] { color: #6a0033; }
 
 .rate-row-btn.is-current {
   color: #fff;
@@ -128,6 +154,7 @@
 .rate-row-btn.is-current[data-score='3'] { background: #aa7700; border-color: #aa7700; }
 .rate-row-btn.is-current[data-score='4'] { background: #aa4400; border-color: #aa4400; }
 .rate-row-btn.is-current[data-score='5'] { background: #aa0000; border-color: #aa0000; }
+.rate-row-btn.is-current[data-score='6'] { background: #6a0033; border-color: #6a0033; }
 
 .rate-footer {
   display: flex;
@@ -153,4 +180,41 @@
 .rate-action-danger {
   color: #aa0000;
   border-color: #f0c0c0;
+}
+
+.rate-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rate-action-btn:disabled:hover {
+  background: #fff;
+}
+
+/* Continent filter pills — uses the shared .pill from common.css and
+ * adds the per-pill count badge. */
+.rate-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 20px;
+  justify-content: center;
+}
+
+.rate-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 13px;
+}
+
+.rate-filter-count {
+  font-size: 11px;
+  color: #999;
+  font-variant-numeric: tabular-nums;
+}
+
+.rate-filter-pill.active .rate-filter-count {
+  color: #ccc;
 }

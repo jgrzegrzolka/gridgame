@@ -21,10 +21,16 @@ describe('ratings helpers', () => {
     assert.equal(ratedCount(r), 1);
   });
 
+  it('accepts the full 1..6 range', () => {
+    const r = setRating(setRating(emptyRatings(), 'a', 1), 'b', 6);
+    assert.equal(r.a, 1);
+    assert.equal(r.b, 6);
+  });
+
   it('ignores out-of-range, non-integer, and NaN scores', () => {
     const before = setRating(emptyRatings(), 'us', 3);
     assert.deepEqual(setRating(before, 'pl', 0), before);
-    assert.deepEqual(setRating(before, 'pl', 6), before);
+    assert.deepEqual(setRating(before, 'pl', 7), before);
     assert.deepEqual(setRating(before, 'pl', 2.5), before);
     assert.deepEqual(setRating(before, 'pl', NaN), before);
   });

@@ -14,8 +14,10 @@ export function emptyRatings() {
 }
 
 /**
- * Set a 1..5 score for a country code. Invalid scores or empty codes are
- * silently ignored so click handlers don't have to guard.
+ * Set a 1..6 score for a country code. Invalid scores or empty codes are
+ * silently ignored so click handlers don't have to guard. (7 is reserved
+ * as the non-sovereign default, set directly by the export path; the UI
+ * never assigns it.)
  *
  * @param {Ratings} ratings
  * @param {string} code
@@ -24,7 +26,7 @@ export function emptyRatings() {
  */
 export function setRating(ratings, code, score) {
   if (!code) return ratings;
-  if (!Number.isInteger(score) || score < 1 || score > 5) return ratings;
+  if (!Number.isInteger(score) || score < 1 || score > 6) return ratings;
   return { ...ratings, [code]: score };
 }
 
