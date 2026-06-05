@@ -3,13 +3,12 @@ import { suggest, exactSingleMatch } from '../flags/engine.js';
 import {
   findPool,
   classifyGuess,
-  parseFilterString,
   filterToCategory,
 } from '../flags/findFlag.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti } from '../confetti.js';
-import { todayN, getPuzzle, dailyNFromUrl } from '../flags/daily.js';
+import { todayN, dailyNFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
@@ -60,38 +59,14 @@ export function bootDaily() {
       const n = dailyNFromUrl(window.location.search, today);
       numEl.textContent = `#${n}`;
 
-      // Out-of-range N can only come from a hand-edited URL — the
-      // archive only links to released entries. Fall back gracefully
-      // with a link back to today's puzzle.
-      /** @type {DailyPuzzle | null} */
-      const entry = getPuzzle(catalog, n);
-      if (!entry) {
-        showState(t('daily.notFound', 'Puzzle not found.'));
+      const result = resolveDailyPuzzle(catalog, all, n);
+      if (result.ok === false) {
+        showState(reasonMessage(result.reason));
         return;
       }
 
-      const filter = parseFilterString(entry.filter);
-      if (!filter) {
-        showState(`${t('game.failedToLoad', 'Failed to load:')} invalid puzzle filter`);
-        return;
-      }
-
-      const category = filterToCategory(filter, t);
-
-      // Frozen-answers: targets are the stored codes, not what the
-      // filter resolves to today. If the data has drifted, the
-      // daily.test.js drift check will have caught it before this
-      // file even shipped — at runtime, trust the catalog.
-      const byCode = new Map(all.map((c) => [c.code, c]));
-      const targets = /** @type {Country[]} */ (
-        entry.answers.map((code) => byCode.get(code)).filter((c) => c)
-      );
-      if (targets.length === 0) {
-        showState(`${t('game.failedToLoad', 'Failed to load:')} no targets resolved`);
-        return;
-      }
-
-      startGame(category, targets, all);
+      const category = filterToCategory(result.filter, t);
+      startGame(category, result.targets, all);
     })
     .catch((err) => {
       showState(`${t('game.failedToLoad', 'Failed to load:')} ${err.message}`);
@@ -103,6 +78,25 @@ export function bootDaily() {
     stateEl.hidden = false;
     gameEl.hidden = true;
     resultEl.hidden = true;
+  }
+
+  /**
+   * Map a resolveDailyPuzzle failure reason to a localised message. Kept
+   * inline (rather than promoted to the i18n module) so the message
+   * shape stays a per-page concern — daily's pre-launch copy doesn't
+   * leak into other features.
+   *
+   * @param {'not-found' | 'invalid-filter' | 'no-targets'} reason
+   */
+  function reasonMessage(reason) {
+    switch (reason) {
+      case 'not-found':
+        return t('daily.notFound', 'Puzzle not found.');
+      case 'invalid-filter':
+        return `${t('game.failedToLoad', 'Failed to load:')} invalid puzzle filter`;
+      case 'no-targets':
+        return `${t('game.failedToLoad', 'Failed to load:')} no targets resolved`;
+    }
   }
 
   /**

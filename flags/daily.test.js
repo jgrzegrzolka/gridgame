@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { todayN, getPuzzle, dailyNFromUrl } from './daily.js';
+import { todayN, getPuzzle, dailyNFromUrl, resolveDailyPuzzle } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool } from './group.js';
@@ -68,6 +68,81 @@ test('dailyNFromUrl falls back to today when ?n= is missing or garbage', () => {
   assert.equal(dailyNFromUrl('?other=x', 7), 7);
   assert.equal(dailyNFromUrl('?n=', 7), 7);
   assert.equal(dailyNFromUrl('?n=abc', 7), 7);
+});
+
+// --- resolveDailyPuzzle ------------------------------------------------
+
+/**
+ * @param {Partial<Country> & { code: string }} [over]
+ * @returns {Country}
+ */
+function fixtureCountry(over = { code: 'xx' }) {
+  return {
+    name: over.code.toUpperCase(),
+    category: 'country',
+    continent: 'Europe',
+    statehood: 'un_member',
+    ...over,
+  };
+}
+
+test('resolveDailyPuzzle: happy path returns entry, parsed filter, and resolved Country targets', () => {
+  const fr = fixtureCountry({ code: 'fr' });
+  const de = fixtureCountry({ code: 'de' });
+  /** @type {DailyPuzzle[]} */
+  const catalog = [{ n: 1, filter: 'continent:Europe', answers: ['fr', 'de'] }];
+  const r = resolveDailyPuzzle(catalog, [fr, de], 1);
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.entry.n, 1);
+    assert.equal(r.entry.filter, 'continent:Europe');
+    assert.equal(r.targets.length, 2);
+    assert.deepEqual(r.targets.map((c) => c.code), ['fr', 'de']);
+    // filter is a parsed Filters object, not the raw string
+    assert.equal(typeof r.filter, 'object');
+    assert.ok(r.filter.continent.include.has('Europe'));
+  }
+});
+
+test('resolveDailyPuzzle: n outside [1, catalog.length] returns reason "not-found"', () => {
+  const fr = fixtureCountry({ code: 'fr' });
+  /** @type {DailyPuzzle[]} */
+  const catalog = [{ n: 1, filter: 'continent:Europe', answers: ['fr'] }];
+  assert.deepEqual(resolveDailyPuzzle(catalog, [fr], 0), { ok: false, reason: 'not-found' });
+  assert.deepEqual(resolveDailyPuzzle(catalog, [fr], 2), { ok: false, reason: 'not-found' });
+  assert.deepEqual(resolveDailyPuzzle([], [fr], 1), { ok: false, reason: 'not-found' });
+});
+
+test('resolveDailyPuzzle: unparseable filter returns reason "invalid-filter"', () => {
+  // parseFilterString rejects strings with no recognisable <group>:<value>
+  // token — the catalog-shape tests prevent this from ever showing up
+  // in real data, but the runtime branch needs to be exercised.
+  /** @type {DailyPuzzle[]} */
+  const catalog = [{ n: 1, filter: 'garbage', answers: ['fr'] }];
+  assert.deepEqual(resolveDailyPuzzle(catalog, [], 1), { ok: false, reason: 'invalid-filter' });
+});
+
+test('resolveDailyPuzzle: every answer code missing from the pool returns reason "no-targets"', () => {
+  /** @type {DailyPuzzle[]} */
+  const catalog = [{ n: 1, filter: 'continent:Europe', answers: ['fr', 'de'] }];
+  // Pool has none of the answer codes
+  const r = resolveDailyPuzzle(catalog, [fixtureCountry({ code: 'gb' })], 1);
+  assert.deepEqual(r, { ok: false, reason: 'no-targets' });
+});
+
+test('resolveDailyPuzzle: partial pool drift drops missing codes but still succeeds', () => {
+  // If most answer codes resolve, the puzzle still plays — the page
+  // gets the resolvable subset. Full pool drift surfaces as the
+  // catalog test's "every answer code is a known sovereign" failure.
+  const fr = fixtureCountry({ code: 'fr' });
+  /** @type {DailyPuzzle[]} */
+  const catalog = [{ n: 1, filter: 'continent:Europe', answers: ['fr', 'unknown'] }];
+  const r = resolveDailyPuzzle(catalog, [fr], 1);
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.targets.length, 1);
+    assert.equal(r.targets[0].code, 'fr');
+  }
 });
 
 // --- Catalog: structural + drift checks (live and backlog) ---------------

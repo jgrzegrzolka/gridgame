@@ -1,3 +1,5 @@
+import { parseFilterString } from './findFlag.js';
+
 /**
  * Daily-puzzle catalog helpers. Pure logic; no DOM, no fetch.
  *
@@ -72,4 +74,59 @@ export function dailyNFromUrl(search, fallbackN) {
   const parsed = parseInt(raw, 10);
   if (!Number.isFinite(parsed)) return fallbackN;
   return parsed;
+}
+
+/**
+ * Discriminated union: success carries the entry, parsed Filters, and
+ * the resolved Country[] for the game UI; failure carries a reason tag
+ * the page maps to a localised message.
+ *
+ * @typedef {Object} DailyResolutionOk
+ * @property {true} ok
+ * @property {DailyPuzzle} entry
+ * @property {import('./flagsFilter.js').Filters} filter
+ * @property {import('./group.js').Country[]} targets
+ *
+ * @typedef {Object} DailyResolutionFail
+ * @property {false} ok
+ * @property {'not-found' | 'invalid-filter' | 'no-targets'} reason
+ *
+ * @typedef {DailyResolutionOk | DailyResolutionFail} DailyResolution
+ */
+
+/**
+ * Resolve a daily-puzzle entry into the data the game UI needs.
+ *
+ * Pulls every error path out of daily/page.js — so each branch is
+ * testable here against synthetic input instead of via mocked DOM and
+ * fetch. The page glue becomes a switch over `result.reason` plus the
+ * happy-path startGame call.
+ *
+ * Frozen-answers contract: targets are built from `entry.answers`
+ * (the stored codes), never from re-resolving the filter against the
+ * current data. Answer codes missing from `allCountries` are silently
+ * dropped — country-pool drift gets surfaced as `no-targets` only if
+ * *every* code goes missing. Partial drift is caught earlier, at
+ * catalog-validation time, by the "every answer code is a known
+ * sovereign country" test.
+ *
+ * @param {DailyPuzzle[]} catalog
+ * @param {import('./group.js').Country[]} allCountries
+ * @param {number} n
+ * @returns {DailyResolution}
+ */
+export function resolveDailyPuzzle(catalog, allCountries, n) {
+  const entry = getPuzzle(catalog, n);
+  if (!entry) return { ok: false, reason: 'not-found' };
+
+  const filter = parseFilterString(entry.filter);
+  if (!filter) return { ok: false, reason: 'invalid-filter' };
+
+  const byCode = new Map(allCountries.map((c) => [c.code, c]));
+  const targets = /** @type {import('./group.js').Country[]} */ (
+    entry.answers.map((code) => byCode.get(code)).filter((c) => c !== undefined)
+  );
+  if (targets.length === 0) return { ok: false, reason: 'no-targets' };
+
+  return { ok: true, entry, filter, targets };
 }
