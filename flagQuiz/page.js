@@ -18,6 +18,7 @@ import {
   preloadFlags,
   shouldFireQuizConfetti,
   shouldShowBestTime,
+  mistakesAfterGiveUp,
 } from '../flags/quiz.js';
 import { flagsGamePool } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
@@ -183,6 +184,25 @@ export function bootFlagQuiz() {
       feedbackEl.classList.remove('shake-wrong');
     }
 
+    function disableAllTiles() {
+      for (const t of choicesEl.querySelectorAll('.flag-choice')) {
+        /** @type {HTMLButtonElement} */ (t).disabled = true;
+      }
+    }
+
+    function advanceTo(nextQ, delayMs) {
+      if (!nextQ) {
+        setTimeout(() => {
+          if (!gameOver) {
+            gameOver = true;
+            showResult();
+          }
+        }, delayMs);
+      } else {
+        setTimeout(() => { if (!gameOver) render(nextQ); }, delayMs);
+      }
+    }
+
     function onAnswer(chosen, tile) {
       if (gameOver) return;
       if (chosen.code === currentAnswer.code) {
@@ -191,35 +211,36 @@ export function bootFlagQuiz() {
           progressBarEl.style.width = (answeredCount / target * 100) + '%';
         }
         tile.classList.add('correct');
-        for (const t of choicesEl.querySelectorAll('.flag-choice')) {
-          /** @type {HTMLButtonElement} */ (t).disabled = true;
-        }
+        disableAllTiles();
         feedbackEl.textContent = '';
         feedbackEl.classList.remove('shake-wrong');
-        const nextQ = quiz.next();
-        if (!nextQ) {
-          setTimeout(() => {
-            if (!gameOver) {
-              gameOver = true;
-              showResult();
-            }
-          }, 250);
-        } else {
-          setTimeout(() => { if (!gameOver) render(nextQ); }, 250);
-        }
-      } else {
+        advanceTo(quiz.next(), 250);
+      } else if (timed) {
+        // Timed mode keeps the multi-attempt-per-question flow: wrong pick
+        // costs time (via flashPenalty), shake the feedback, let the player
+        // try the remaining tiles until they hit the right one.
         tile.classList.add('wrong');
         tile.disabled = true;
         feedbackEl.textContent = countryName(chosen);
-        // Re-trigger the shake animation on the feedback label. Removing the
-        // class, forcing a reflow, then re-adding it is the standard CSS
-        // trick to restart a one-shot animation when the same wrong-answer
-        // class is added back-to-back.
         feedbackEl.classList.remove('shake-wrong');
         void feedbackEl.offsetWidth;
         feedbackEl.classList.add('shake-wrong');
         wrongCount++;
-        if (timed) flashPenalty();
+        flashPenalty();
+      } else {
+        // Count mode is one-shot: a wrong pick ends the question. We
+        // reveal the correct tile so the player learns what it was, then
+        // advance to a fresh 4-flag set. This keeps mistakes <= target,
+        // which lets the result/stats screens render as "correct/target".
+        wrongCount++;
+        tile.classList.add('wrong');
+        const correctTile = choicesEl.querySelector(`[data-code="${currentAnswer.code}"]`);
+        if (correctTile) correctTile.classList.add('correct');
+        disableAllTiles();
+        progressBarEl.style.width = ((answeredCount + wrongCount) / target * 100) + '%';
+        feedbackEl.textContent = '';
+        feedbackEl.classList.remove('shake-wrong');
+        advanceTo(quiz.next(), 1200);
       }
     }
 
@@ -271,22 +292,22 @@ export function bootFlagQuiz() {
         }
         if (shouldFireQuizConfetti({ timed: true, wrongCount, isNew })) launchConfetti();
       } else {
-        // All-mode scoring is "fewer mistakes wins": store the raw
-        // wrongCount as Result.score (lower = better) and pass
-        // lowerScoreWins to recordResult so nextBest's tiebreaker
-        // (then-faster-time) still works for us. The colour tint stays
-        // accuracy-based so a clean sweep is green and a sloppy run is
-        // red, regardless of the underlying score direction.
-        finalScoreLabelEl.textContent = t('quiz.mistakes', 'Mistakes:');
-        finalScoreEl.textContent = String(wrongCount);
+        // Count mode is one-shot per question, so correct + wrong = target.
+        // We still store wrongCount as best.score (lower-wins) for
+        // backward-compat with nextBest's tiebreaker, but the display is
+        // "correct/target" so the player reads it the same way as a
+        // timed-mode score. Colour tint stays accuracy-based.
+        finalScoreLabelEl.textContent = t('quiz.finalScore', 'Final score:');
+        finalScoreEl.textContent = `${answeredCount}/${target}`;
         finalScoreLineEl.style.color = scoreColor(accuracyRatio(wrongCount, target));
         timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
 
         const { best, isNew } = recordResult(
           localStorage, key, mode, { score: wrongCount, time: elapsed }, includeAll, lowerScoreWins,
         );
+        const bestCorrect = Math.max(0, target - best.score);
         bestEl.textContent =
-          `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`;
+          `${t('quiz.yourBestScore', 'Your best score')}: ${bestCorrect}/${target} ${t('game.in', 'in')} ${formatTime(best.time)}`;
         if (isNew) {
           bestEl.appendChild(document.createTextNode(' '));
           const badge = document.createElement('span');
@@ -311,12 +332,7 @@ export function bootFlagQuiz() {
       giveUpEl.addEventListener('click', () => {
         if (gameOver) return;
         gameOver = true;
-        if (!timed) {
-          // Count-mode give-up: penalise the unanswered remainder so the
-          // score reflects "you walked away with this much" rather than
-          // crediting unattempted questions.
-          wrongCount += target - answeredCount;
-        }
+        wrongCount = mistakesAfterGiveUp({ modeKey: mode, target, answeredCount, wrongCount });
         showResult();
       }, { once: true });
     }

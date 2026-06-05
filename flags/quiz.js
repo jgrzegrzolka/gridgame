@@ -276,14 +276,15 @@ export function shouldShowBestTime(modeKey, best) {
 }
 
 /**
- * Player-facing label for a best score. Different modes encode different
- * things in `best.score`, so the format has to follow:
+ * Player-facing label for a best score. Both modes now render as
+ * `correct/target` so the achievement reads against the pool ceiling
+ * the same way regardless of mode:
  *
- *   - Timed mode: score is correct count. Show "score/target" so the player
- *     reads achievement against the pool ceiling.
- *   - Count modes: score is mistakes count. Show the raw number — a
- *     "/target" suffix here would read as "5 out of 195 what?" since target
- *     is the pool size, not the cap on mistakes.
+ *   - Timed mode: `best.score` is already the correct count.
+ *   - Count modes: `best.score` is mistakes count, so correct = target - score.
+ *     Clamped at 0 to keep old scores from the multi-attempt-per-question
+ *     era (where wrongCount could exceed the pool size) from rendering
+ *     as negative.
  *
  * @param {string} modeKey
  * @param {{ score: number }} best
@@ -292,7 +293,26 @@ export function shouldShowBestTime(modeKey, best) {
  */
 export function formatBestScoreLabel(modeKey, best, target) {
   if (isTimedMode(modeKey)) return `${best.score}/${target}`;
-  return String(best.score);
+  return `${Math.max(0, target - best.score)}/${target}`;
+}
+
+/**
+ * Compute the final mistakes count when the player gives up mid-round.
+ *
+ *   - Timed mode: nothing to penalise — the round was racing the clock,
+ *     not aiming for completion. Return wrongCount unchanged so the
+ *     result still reflects "correct picks in the time you spent".
+ *   - Count mode (one-shot per question, so answered + wrongCount =
+ *     questions seen): everything you didn't answer counts as a mistake,
+ *     leaving the result page reading "answeredCount / target" — exactly
+ *     the score you walked away with, unattempted questions discounted.
+ *
+ * @param {{ modeKey: string, target: number, answeredCount: number, wrongCount: number }} args
+ * @returns {number} the wrongCount to store / display
+ */
+export function mistakesAfterGiveUp({ modeKey, target, answeredCount, wrongCount }) {
+  if (isTimedMode(modeKey)) return wrongCount;
+  return target - answeredCount;
 }
 
 /**

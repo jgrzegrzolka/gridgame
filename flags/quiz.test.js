@@ -31,6 +31,7 @@ import {
   shouldFireQuizConfetti,
   shouldShowBestTime,
   formatBestScoreLabel,
+  mistakesAfterGiveUp,
 } from './quiz.js';
 
 /**
@@ -246,17 +247,51 @@ test('formatBestScoreLabel: 60s mode renders "score/target" so the achievement r
   assert.equal(formatBestScoreLabel('60s', { score: 45 }, 45), '45/45');
 });
 
-test('formatBestScoreLabel: untimed (all) mode renders the raw mistakes count', () => {
-  // "5 / 195 mistakes" would mislead — target there is pool size, not a
-  // mistakes cap. Keep this column bare in all-mode.
-  assert.equal(formatBestScoreLabel('all', { score: 5 }, 195), '5');
-  assert.equal(formatBestScoreLabel('all', { score: 0 }, 45), '0');
+test('formatBestScoreLabel: untimed (all) mode renders "correct/target" — one-shot per question, so correct = target - mistakes', () => {
+  assert.equal(formatBestScoreLabel('all', { score: 5 }, 195), '190/195');
+  assert.equal(formatBestScoreLabel('all', { score: 0 }, 45), '45/45');
 });
 
-test('formatBestScoreLabel: unknown mode falls back to the raw score string', () => {
-  // Safer than throwing — caller gets *something* to show even if the
-  // mode was decommissioned but old localStorage entries linger.
-  assert.equal(formatBestScoreLabel('99', { score: 7 }, 50), '7');
+test('formatBestScoreLabel: untimed clamps negative correct counts to 0 — protects legacy scores from the multi-attempt era where mistakes could exceed the pool', () => {
+  assert.equal(formatBestScoreLabel('all', { score: 60 }, 45), '0/45');
+});
+
+test('formatBestScoreLabel: unknown mode falls back to "correct/target" — same shape as count mode, safer than throwing for stale localStorage entries', () => {
+  assert.equal(formatBestScoreLabel('99', { score: 7 }, 50), '43/50');
+});
+
+// ---- mistakesAfterGiveUp ----
+
+test('mistakesAfterGiveUp: count mode — partial round counts every unanswered flag as a mistake', () => {
+  // Answered 5 right, 3 wrong (one-shot, so 8 questions seen). Pool is 45.
+  // Unanswered 37 must all become mistakes so the result reads 5/45.
+  assert.equal(
+    mistakesAfterGiveUp({ modeKey: 'all', target: 45, answeredCount: 5, wrongCount: 3 }),
+    40,
+  );
+});
+
+test('mistakesAfterGiveUp: count mode — give up immediately scores zero correct, all mistakes', () => {
+  assert.equal(
+    mistakesAfterGiveUp({ modeKey: 'all', target: 45, answeredCount: 0, wrongCount: 0 }),
+    45,
+  );
+});
+
+test('mistakesAfterGiveUp: count mode — give up after sweeping the pool yields zero mistakes', () => {
+  // Pathological — by the time answeredCount === target, the round has
+  // already ended via quiz exhaustion. Tested anyway so the math is total.
+  assert.equal(
+    mistakesAfterGiveUp({ modeKey: 'all', target: 45, answeredCount: 45, wrongCount: 0 }),
+    0,
+  );
+});
+
+test('mistakesAfterGiveUp: timed mode leaves wrongCount untouched — there is nothing to penalise on a clock', () => {
+  assert.equal(
+    mistakesAfterGiveUp({ modeKey: '60s', target: 195, answeredCount: 20, wrongCount: 4 }),
+    4,
+  );
 });
 
 test('availableModes offers both 60s and all for any pool size — the timed mode never gates on pool size', () => {
