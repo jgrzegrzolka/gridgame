@@ -208,7 +208,10 @@ export function bootFlagQuiz() {
       if (chosen.code === currentAnswer.code) {
         answeredCount++;
         if (!timed) {
-          progressBarEl.style.width = (answeredCount / target * 100) + '%';
+          // One-shot per question, so progress tracks questions seen
+          // (answered + wrong), not just correct answers — otherwise the
+          // bar appears to freeze whenever a wrong pick advances the round.
+          progressBarEl.style.width = ((answeredCount + wrongCount) / target * 100) + '%';
         }
         tile.classList.add('correct');
         disableAllTiles();
