@@ -1,7 +1,12 @@
+/* <main> in common.css is align-items: center, so children sit at their
+ * natural width. Force the title and list to fill the column so the
+ * cards don't shrink down to their text content. */
 .archive-title {
   font-size: 22px;
   font-weight: 600;
   margin: 0 0 16px;
+  width: 100%;
+  max-width: 720px;
 }
 
 .archive-list {
@@ -11,6 +16,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  max-width: 720px;
 }
 
 .archive-entry {
