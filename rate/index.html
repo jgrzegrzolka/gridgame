@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Country Rating Tool</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__" />
+    <link rel="stylesheet" href="../common.css?v=__BUILD__" />
+    <link rel="stylesheet" href="index.css?v=__BUILD__" />
+  </head>
+  <body>
+    <a class="back" href="../" aria-label="Home" data-i18n-attr="aria-label:back"><span class="home-icon" aria-hidden="true"></span></a>
+    <a class="lang-toggle" id="lang-toggle" href="#"></a>
+
+    <main class="rate-shell">
+      <section class="rate-card" id="rate-card" hidden>
+        <div class="rate-flag-wrap">
+          <img id="rate-flag" alt="" class="rate-flag" />
+        </div>
+        <h1 id="rate-name" class="rate-name"></h1>
+        <p class="rate-meta">
+          <span id="rate-en" class="rate-en"></span>
+          <span id="rate-continent"></span>
+          <span id="rate-code"></span>
+        </p>
+
+        <div class="rate-buttons">
+          <button type="button" class="rate-score" data-score="1">1</button>
+          <button type="button" class="rate-score" data-score="2">2</button>
+          <button type="button" class="rate-score" data-score="3">3</button>
+          <button type="button" class="rate-score" data-score="4">4</button>
+          <button type="button" class="rate-score" data-score="5">5</button>
+        </div>
+
+        <p class="rate-help" id="rate-help">1 = everyone knows · 5 = almost nobody knows</p>
+
+        <div class="rate-aux">
+          <button type="button" id="rate-undo" class="rate-aux-btn">← Undo</button>
+          <button type="button" id="rate-skip" class="rate-aux-btn">Skip →</button>
+        </div>
+
+        <div class="rate-progress-row">
+          <div class="rate-progress-bar"><div id="rate-progress-fill" class="rate-progress-fill"></div></div>
+          <span id="rate-progress-text" class="rate-progress-text">0 / 0</span>
+        </div>
+
+        <div class="rate-actions">
+          <button type="button" id="rate-export" class="rate-action-btn">Export JSON</button>
+          <button type="button" id="rate-jump" class="rate-action-btn">Jump to first unrated</button>
+          <button type="button" id="rate-reset" class="rate-action-btn rate-action-danger">Reset</button>
+        </div>
+      </section>
+
+      <section class="rate-done" id="rate-done" hidden>
+        <h1>All done!</h1>
+        <p id="rate-done-count"></p>
+        <p>Don't forget to download the JSON file.</p>
+        <div class="rate-actions">
+          <button type="button" id="rate-export-done" class="rate-action-btn">Export JSON</button>
+          <button type="button" id="rate-reset-done" class="rate-action-btn rate-action-danger">Start over</button>
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { bootRate } from './page.js?v=__BUILD__';
+      import { bootI18n, wireLangToggle } from '../i18n.js';
+      bootI18n('../').then((lang) => {
+        wireLangToggle(lang);
+        bootRate();
+      });
+    </script>
+  </body>
+</html>
