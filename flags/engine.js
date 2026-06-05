@@ -108,12 +108,27 @@ export const COLORS_FOR_RANDOM = [
   'orange',
 ];
 
+/** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
+ * to pair with continents on the row / column axes. Every (continent ×
+ * motif) cell must admit at least one country, so motifs that only appear
+ * on flags from a few continents are kept OUT of this list — see
+ * ALL_MOTIFS below for the full UI palette. */
 export const MOTIFS_FOR_RANDOM = [
   'animal',
   'coat-of-arms',
   'weapon',
   'star-or-moon',
   'cross',
+];
+
+/** Every motif key that can appear in `country.motifs`. Used by the
+ * findFlag chooser and the flagsdata filter bar so the UI can offer
+ * every tagged motif as a filter. Superset of MOTIFS_FOR_RANDOM —
+ * adds motifs that work as filters but can't anchor a random puzzle
+ * (e.g. union-jack, which no Asian flag carries). */
+export const ALL_MOTIFS = [
+  ...MOTIFS_FOR_RANDOM,
+  'union-jack',
 ];
 
 /**

@@ -25,6 +25,7 @@ import {
   CONTINENTS_FOR_RANDOM,
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
+  ALL_MOTIFS,
 } from './engine.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -498,8 +499,19 @@ test('COLORS_FOR_RANDOM is the 7-colour canonical palette', () => {
   );
 });
 
-test('MOTIFS_FOR_RANDOM lists every motif key that can be tagged on a flag', () => {
+test('MOTIFS_FOR_RANDOM is the puzzle-feasible motif subset', () => {
+  // Every (continent × motif) pair drawn from this list must admit at
+  // least one country (see countries.test.js). Motifs that no continent
+  // can supply (e.g. union-jack — no Asian flag carries one) live in
+  // ALL_MOTIFS but are excluded from puzzle generation.
   assert.deepEqual(MOTIFS_FOR_RANDOM, ['animal', 'coat-of-arms', 'weapon', 'star-or-moon', 'cross']);
+});
+
+test('ALL_MOTIFS is a superset of MOTIFS_FOR_RANDOM and includes union-jack', () => {
+  for (const m of MOTIFS_FOR_RANDOM) {
+    assert.ok(ALL_MOTIFS.includes(m), `ALL_MOTIFS missing ${m}`);
+  }
+  assert.ok(ALL_MOTIFS.includes('union-jack'), 'ALL_MOTIFS should include union-jack');
 });
 
 test('continent and statehood categories carry their exclusiveGroup', () => {

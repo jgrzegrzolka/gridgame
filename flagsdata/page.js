@@ -1,5 +1,5 @@
 import { CONTINENTS } from '../flags/group.js';
-import { COLORS_FOR_RANDOM, MOTIFS_FOR_RANDOM } from '../flags/engine.js';
+import { COLORS_FOR_RANDOM, ALL_MOTIFS } from '../flags/engine.js';
 import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
 import { t, countryName } from '../i18n.js';
 
@@ -198,7 +198,7 @@ export function bootFlagsData() {
     buildFilterGroup(t('flagsdata.filterColors', 'Colors'), 'color', COLORS_FOR_RANDOM.map((v) => ({ value: v, label: colorLabel(v) }))),
   );
   groupsWrap.appendChild(
-    buildFilterGroup(t('flagsdata.filterMotifs', 'Motifs'), 'motif', MOTIFS_FOR_RANDOM.map((v) => ({ value: v, label: motifLabel(v) }))),
+    buildFilterGroup(t('flagsdata.filterMotifs', 'Motifs'), 'motif', ALL_MOTIFS.map((v) => ({ value: v, label: motifLabel(v) }))),
   );
 
   const clearBtn = document.createElement('button');
