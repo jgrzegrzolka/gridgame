@@ -131,6 +131,13 @@ body.game-over .cell {
 body.game-over .cell:hover::after {
   background: transparent;
 }
+/* Once the game is over the result section takes over with its own
+ * Play again link, so the mid-game give-up row (Give up · Play again
+ * on offline, just Give up on online) is redundant — hide it whole
+ * rather than relying on each child to hide itself. */
+body.game-over .give-up-row {
+  display: none;
+}
 .cell.owned {
   padding: 10px;
   cursor: zoom-in;
