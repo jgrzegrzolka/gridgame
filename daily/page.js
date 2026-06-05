@@ -74,6 +74,14 @@ export function bootDaily() {
         return;
       }
 
+      // Block deep-linking into tomorrow's puzzle — the archive hides
+      // future entries too, so this keeps the experience consistent
+      // regardless of how the URL was constructed.
+      if (n > todayN) {
+        showState(t('daily.comingSoon', 'More puzzles coming soon.'));
+        return;
+      }
+
       /** @type {DailyPuzzle | null} */
       const entry = getPuzzle(catalog, n);
       if (!entry) {

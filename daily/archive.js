@@ -3,14 +3,9 @@ import {
   parseFilterString,
   filterToCategory,
 } from '../flags/findFlag.js';
-import {
-  LAUNCH_UTC,
-  dayNumberFor,
-} from '../flags/daily.js';
+import { dayNumberFor, launchDateIso } from '../flags/daily.js';
 
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
-
-const DAY_MS = 86_400_000;
 
 export function bootArchive() {
   const listEl = /** @type {HTMLElement} */ (document.getElementById('archive-list'));
@@ -19,11 +14,25 @@ export function bootArchive() {
   fetch('./daily_puzzles.json')
     .then((r) => r.json())
     .then((/** @type {DailyPuzzle[]} */ catalog) => {
-      // Render every puzzle in the catalog, oldest first. Past puzzles
-      // (n <= todayN) get a clickable link; future puzzles render as a
-      // greyed-out preview so the player knows what's coming.
+      // Only show released puzzles. The newest visible (highest n that
+      // is <= todayN and within the catalog) is "today's". Future
+      // entries from the prepared backlog stay hidden so the player
+      // can't deep-link or see what's coming.
+      const visibleMax = Math.min(catalog.length, Math.max(todayN, 0));
+
+      if (visibleMax < 1) {
+        const empty = document.createElement('li');
+        empty.className = 'archive-empty';
+        empty.textContent = t('daily.beforeLaunch', 'Daily #1 starts on {date}.')
+          .replace('{date}', launchDateIso());
+        listEl.appendChild(empty);
+        return;
+      }
+
       for (const entry of catalog) {
-        listEl.appendChild(renderEntry(entry, todayN));
+        if (entry.n > visibleMax) break;
+        const isToday = entry.n === visibleMax;
+        listEl.appendChild(renderEntry(entry, isToday));
       }
     })
     .catch((err) => {
@@ -33,17 +42,12 @@ export function bootArchive() {
 
 /**
  * @param {DailyPuzzle} entry
- * @param {number} todayN
+ * @param {boolean} isToday
  */
-function renderEntry(entry, todayN) {
+function renderEntry(entry, isToday) {
   const li = document.createElement('li');
-  li.className = 'archive-entry';
-
-  const isPast = entry.n <= todayN;
-  const isToday = entry.n === todayN;
-
-  const dateMs = LAUNCH_UTC + (entry.n - 1) * DAY_MS;
-  const dateStr = isoDate(dateMs);
+  li.className = 'archive-entry archive-entry--past';
+  if (isToday) li.classList.add('archive-entry--today');
 
   const nBadge = document.createElement('span');
   nBadge.className = 'archive-n';
@@ -53,18 +57,11 @@ function renderEntry(entry, todayN) {
   const body = document.createElement('div');
   body.className = 'archive-body';
 
-  const top = document.createElement('div');
-  top.className = 'archive-row';
   const title = document.createElement('span');
   title.className = 'archive-title-line';
   const filter = parseFilterString(entry.filter);
   title.textContent = filter ? filterToCategory(filter, t).label : entry.filter;
-  const date = document.createElement('span');
-  date.className = 'archive-date';
-  date.textContent = dateStr;
-  top.appendChild(title);
-  top.appendChild(date);
-  body.appendChild(top);
+  body.appendChild(title);
 
   const meta = document.createElement('div');
   meta.className = 'archive-meta';
@@ -73,26 +70,11 @@ function renderEntry(entry, todayN) {
 
   li.appendChild(body);
 
-  if (isPast) {
-    li.classList.add('archive-entry--past');
-    if (isToday) li.classList.add('archive-entry--today');
-    const link = document.createElement('a');
-    link.href = `./?n=${entry.n}`;
-    link.className = 'archive-link';
-    link.setAttribute('aria-label', `Daily #${entry.n}`);
-    li.appendChild(link);
-  } else {
-    li.classList.add('archive-entry--future');
-  }
+  const link = document.createElement('a');
+  link.href = `./?n=${entry.n}`;
+  link.className = 'archive-link';
+  link.setAttribute('aria-label', `Daily #${entry.n}`);
+  li.appendChild(link);
 
   return li;
-}
-
-/** @param {number} ms */
-function isoDate(ms) {
-  const d = new Date(ms);
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
 }
