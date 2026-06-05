@@ -1,24 +1,19 @@
 # Daily-puzzle feature — plan & context
 
-> **Status: phase 1 shipped, mid-review of the first 20 puzzles. Next up: `primaryColors` / `emblemColors` split.** Read this before doing any work on `/daily/` or anything that touches `flags/countries.json`'s difficulty model.
+> **Status: phase 1 + 2 shipped (MVP + primaryColors split). 20 puzzles live, 30 staged in backlog.** Read this before doing any work on `/daily/` or anything that touches `flags/countries.json`'s difficulty model.
 
 ---
 
-## Where we are (2026-06-05)
+## Where we are
 
 - `nameScore` (1–7) merged into `flags/countries.json` for all 269 entries.
 - `/daily/` MVP shipped: tile on the home page, today's puzzle, deep-link `?n=N`, and an archive grid of small numbered squares (one per released puzzle).
 - "Today's puzzle" is the last entry in `daily/daily_puzzles.json` — **no date math anywhere**.
-- 50 puzzles staged total: live catalog has #1–20 (under review), `daily/daily_backlog.json` holds #21–50.
-- The first 20 are being reviewed with Jan. One swap made so far (`#1` is now `Europe · cross`).
-
-## Open thread we're working on
-
-Jan reviewed the first 20 puzzles and flagged three concerns:
-
-1. **"Europe · green" includes flags where green is only in the coat of arms** (Portugal, San Marino, Moldova, Montenegro …). Players can't see the green from across the room. The fix is the `primaryColors` / `emblemColors` split that was already deferred to "phase 7" — promoted to be the next thing.
-2. **Sane country sets per puzzle** — the mechanical lever to add is an *anti-overlap cap* in the picker: "no country appears in more than K of the first 20 puzzles." Right now Portugal/San Marino/Moldova/Montenegro show up in 5–6 of the first 11 puzzles, so consecutive plays feel like déjà vu. Other "is this a good puzzle" judgments stay human.
-3. **Redundant constraints inside a single filter** (e.g. `a,b,c` resolves to the same set as `a,b` — `c` adds nothing). The generator already dedupes by answer set and prefers the simpler filter, so this can't happen via the generator. To prevent a hand-edit from sneaking one through, add a test that drops each token of every catalog filter and asserts the answer set changes.
+- `primaryColors` field added to 21 flags with complex emblems (Portugal, Spain, San Marino, Vatican, Croatia, Serbia, Slovenia, Moldova, Montenegro, Ecuador, Bolivia, Paraguay, Belize, Dominican Republic, Mozambique, Eswatini, Namibia, Equatorial Guinea, Fiji, Egypt, Turkmenistan, Malta — the ones whose `colors` field includes COA-only colours). Daily resolves filters against `primaryColors`; findFlag / flagsdata keep using `colors`.
+- `matchesFilters` takes an optional `{ colorField }` option (default `'colors'`); daily passes `'primaryColors'`. Falls back to `colors` for untagged countries — additive change.
+- Generator's anti-overlap cap (`OVERLAP_CAP = 5`) prevents any one country from appearing in more than 5 puzzles across the catalog. Hard-blocked in onboarding; softly penalised in the tail.
+- Redundant-filter test in `flags/daily.test.js`: dropping any token from any catalog filter must change the answer set. Pins the invariant against future hand-edits.
+- 50 puzzles staged: live catalog has #1–20, `daily/daily_backlog.json` holds #21–50. Jan's been reviewing the 20; we're shipping them as the soft launch (single-user audience, will hide-future once a wider audience exists).
 
 ## Key design decisions (don't re-litigate)
 
@@ -68,16 +63,16 @@ The Spain example shows why these have to be separate dimensions:
    - "Today's puzzle" = last entry in the live catalog (no date math).
    - Burger menu in `/daily/` has an Archive link.
    - Archive is a grid of small numbered squares, last (= today) highlighted.
-2. **Catalog quality — primaryColors split + anti-overlap + redundant-filter test.** *Next up.*
-   - Add `primaryColors: string[]` field to each country in `countries.json`. For most flags `primaryColors === colors`; the ~15–20 flags with detailed coats of arms (Portugal, Spain, San Marino, Vatican, Croatia, Serbia, Slovakia, Slovenia, Moldova, Montenegro, Andorra, Belarus, Hungary, Sri Lanka, Saudi Arabia, Mexico, Ecuador, Brazil, etc.) get a trimmed `primaryColors` that drops the COA-only colors.
-   - Make `matchesFilters` field-aware: take an optional `{ colorField: 'colors' | 'primaryColors' }` so daily uses `primaryColors` while findFlag stays on `colors`.
-   - Generator gains an *anti-overlap cap*: no country appears in more than K (≈ 4) of any 20-puzzle window.
-   - Redundant-filter test in `flags/daily.test.js`: for every catalog entry, removing any one token from the filter must change the answer set.
-   - Regenerate the 50-puzzle catalog with the new rules, re-do the human review with Jan.
+2. **Catalog quality — primaryColors split + anti-overlap + redundant-filter test.** ✅ shipped
+   - `primaryColors` tagged on 21 flags; resolver supports the new field via `matchesFilters({ colorField })`.
+   - Generator has the anti-overlap cap baked in (`OVERLAP_CAP = 5`).
+   - Redundant-filter test added to `flags/daily.test.js`.
+   - 50-puzzle catalog regenerated under the new rules; #1 pinned to `Europe · cross`.
 3. **Authoring tool for catalog growth (formalised).** Today the build script is one-off and deleted after use. Phase 3 keeps it as `scripts/build_daily_catalog.mjs`, with the scoring + dedup + anti-overlap logic exposed for "add the next batch" runs.
-4. **Hand-curated overrides.** A `daily_overrides.json` keyed by N lets us slot in specially-designed puzzles. Generator checks overrides first.
-5. **Score-sharing string.** Decide format after some real play.
-6. **(Later)** New game modes (sequence/ordered). Daily can pull from any mode once they exist.
+4. **Hide future puzzles from the audience.** Right now the live catalog publishes the full backlog of 20 because there's only one user. When friends start playing, we'll need a release pacing mechanism — either manual append (move backlog[0] over once a day by hand) or restore a lightweight clock. Defer until "release pacing actually matters."
+5. **Hand-curated overrides.** A `daily_overrides.json` keyed by N lets us slot in specially-designed puzzles. Generator checks overrides first.
+6. **Score-sharing string.** Decide format after some real play.
+7. **(Later)** New game modes (sequence/ordered). Daily can pull from any mode once they exist.
 
 ## Open questions for Jan
 
