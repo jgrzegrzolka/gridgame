@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path';
 import {
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
+  ALL_MOTIFS,
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
 } from './engine.js';
@@ -106,8 +107,8 @@ test('aliases (when present) are non-empty string arrays with no duplicates', ()
   assert.deepEqual(offenders, [], offenders.join('; '));
 });
 
-test('motifs (when present) are arrays drawn from MOTIFS_FOR_RANDOM', () => {
-  const palette = new Set(MOTIFS_FOR_RANDOM);
+test('motifs (when present) are arrays drawn from ALL_MOTIFS', () => {
+  const palette = new Set(ALL_MOTIFS);
   const offenders = [];
   for (const c of COUNTRIES) {
     if (c.motifs === undefined) continue;

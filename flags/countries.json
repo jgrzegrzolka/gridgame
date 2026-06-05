@@ -119,7 +119,8 @@
     ],
     "motifs": [
       "animal",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -207,7 +208,8 @@
     "motifs": [
       "animal",
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -237,7 +239,8 @@
     ],
     "motifs": [
       "star-or-moon",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -408,7 +411,8 @@
     "motifs": [
       "animal",
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -531,7 +535,8 @@
       "yellow"
     ],
     "motifs": [
-      "cross"
+      "cross",
+      "union-jack"
     ],
     "aliases": [
       "Diego Garcia"
@@ -695,7 +700,8 @@
     "motifs": [
       "animal",
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -855,7 +861,8 @@
     ],
     "motifs": [
       "star-or-moon",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -1229,7 +1236,8 @@
     "motifs": [
       "animal",
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -1277,7 +1285,8 @@
     "motifs": [
       "animal",
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -1627,7 +1636,8 @@
     ],
     "motifs": [
       "star-or-moon",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -2176,9 +2186,9 @@
       "black"
     ],
     "motifs": [
+      "animal",
       "weapon",
-      "cross",
-      "animal"
+      "cross"
     ]
   },
   {
@@ -2344,7 +2354,8 @@
     ],
     "motifs": [
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -2481,7 +2492,8 @@
     ],
     "motifs": [
       "star-or-moon",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -2539,7 +2551,8 @@
     ],
     "motifs": [
       "star-or-moon",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -2784,7 +2797,8 @@
     ],
     "motifs": [
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -2936,7 +2950,8 @@
     "motifs": [
       "animal",
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -2953,7 +2968,8 @@
     "motifs": [
       "animal",
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -3290,7 +3306,8 @@
     "motifs": [
       "animal",
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -3612,7 +3629,8 @@
     "motifs": [
       "animal",
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -3661,7 +3679,8 @@
     "motifs": [
       "animal",
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -3678,7 +3697,8 @@
     ],
     "motifs": [
       "star-or-moon",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -3752,7 +3772,8 @@
       "white"
     ],
     "motifs": [
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {
@@ -3904,7 +3925,8 @@
     ],
     "motifs": [
       "coat-of-arms",
-      "cross"
+      "cross",
+      "union-jack"
     ]
   },
   {

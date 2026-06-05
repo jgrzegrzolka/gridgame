@@ -60,7 +60,7 @@ const MOTIFS = {
   me: ['animal', 'coat-of-arms'],                  // Montenegro — eagle + lion shield
   mn: ['coat-of-arms'],                             // Mongolia — Soyombo national emblem
   ms: ['coat-of-arms'],                             // Montserrat — Erin + harp coa
-  mt: ['weapon'],                                   // Malta — St George's sword in George Cross
+  mt: ['animal', 'weapon'],                         // Malta — George Cross emblem (St. George on horseback slaying a dragon, sword raised)
   mx: ['animal', 'coat-of-arms'],                  // Mexico — eagle/snake coa
   mz: ['weapon'],                                   // Mozambique — AK-47 + hoe
   ni: ['coat-of-arms'],                             // Nicaragua — triangle coa
@@ -95,7 +95,7 @@ const MOTIFS = {
   zw: ['animal'],                                   // Zimbabwe — Zimbabwe Bird
 };
 
-const PALETTE = new Set(['animal', 'coat-of-arms', 'weapon', 'star-or-moon', 'cross']);
+const PALETTE = new Set(['animal', 'coat-of-arms', 'weapon', 'star-or-moon', 'cross', 'union-jack']);
 
 // Flags with a visible star (pentagram, hexagram, Southern Cross, etc.)
 // or a moon (crescent or full disk). Kept as a flat set rather than
@@ -157,6 +157,31 @@ const CROSS = new Set([
   'au', 'nz', 'fj', 'ck', 'nu', 'tv', 'pn', 'to',
 ]);
 
+// Flags whose design includes the Union Jack itself — either as the
+// whole flag (gb) or as a canton on a blue / red ensign. A strict
+// subset of CROSS, since the Union Jack is made of three crosses.
+// Excluded: stand-alone English / Scottish / Northern Irish flags
+// (gb-eng / gb-sct / gb-nir), the Wales dragon (gb-wls), Crown
+// Dependencies whose flags don't use the UJ (Guernsey / Jersey /
+// Isle of Man), Tonga (its canton is a plain red Greek cross, not a
+// UJ), and Bouvet (Norway pattern).
+const UNION_JACK = new Set([
+  // The UK itself
+  'gb',
+  // British Indian Ocean Territory
+  'io',
+  // Caribbean BOTs
+  'ai', 'bm', 'ky', 'ms', 'tc', 'vg',
+  // South Atlantic
+  'fk', 'gs',
+  // Saint Helena, Ascension and Tristan da Cunha (combined + each constituent)
+  'sh', 'sh-hl', 'sh-ac', 'sh-ta',
+  // Oceania — sovereign + Union Jack canton ensigns
+  'au', 'nz', 'fj', 'ck', 'nu', 'tv', 'pn',
+  // Heard Island and McDonald Islands — uses the Australian flag, so inherits the UJ canton
+  'hm',
+]);
+
 const path = 'flags/countries.json';
 const countries = JSON.parse(readFileSync(path, 'utf-8'));
 
@@ -179,6 +204,9 @@ for (const c of countries) {
   if (CROSS.has(c.code) && !seen.has('cross')) {
     filtered.push('cross');
   }
+  if (UNION_JACK.has(c.code) && !seen.has('union-jack')) {
+    filtered.push('union-jack');
+  }
   c.motifs = filtered;
 }
 
@@ -187,6 +215,7 @@ writeFileSync(path, JSON.stringify(countries, null, 2) + '\n');
 const heraldicCount = Object.keys(MOTIFS).length;
 const somCount = STAR_OR_MOON.size;
 const crossCount = CROSS.size;
+const ujCount = UNION_JACK.size;
 console.log(
-  `Tagged heraldic motifs on ${heraldicCount} countries; star-or-moon on ${somCount}; cross on ${crossCount} (others get motifs: []).`,
+  `Tagged heraldic motifs on ${heraldicCount} countries; star-or-moon on ${somCount}; cross on ${crossCount}; union-jack on ${ujCount} (others get motifs: []).`,
 );
