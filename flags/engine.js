@@ -98,6 +98,12 @@ export const CONTINENTS_FOR_RANDOM = [
   'Oceania',
 ];
 
+/**
+ * Colours the random-puzzle generator is allowed to pair with continents.
+ * Every (continent × colour) cell must admit at least one country, so this
+ * is the *narrow* palette — additions need a sanity check that every
+ * continent has at least one flag carrying the new colour.
+ */
 export const COLORS_FOR_RANDOM = [
   'red',
   'white',
@@ -107,6 +113,20 @@ export const COLORS_FOR_RANDOM = [
   'black',
   'orange',
 ];
+
+/**
+ * All colours that may appear on any flag in `countries.json` — the wider
+ * data palette. This is `COLORS_FOR_RANDOM` plus the rare emblem-only
+ * colours that don't have continent-wide coverage (currently just `violet`,
+ * which only shows up on Dominica's sisserou parrot and Northern Mariana
+ * Islands' wreath). Used by the findFlag chooser so the UI can offer a
+ * violet filter (the existing `count > 0` filter keeps it from appearing
+ * on empty continents), and by the palette validator in countries.test.js.
+ * Not used by the random-puzzle generator — that path stays on the narrow
+ * `COLORS_FOR_RANDOM` so it can't pick an unfillable (continent × colour)
+ * pair.
+ */
+export const ALL_FLAG_COLORS = [...COLORS_FOR_RANDOM, 'violet'];
 
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Every (continent ×
