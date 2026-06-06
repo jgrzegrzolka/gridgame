@@ -194,7 +194,15 @@ export function bootFlagsData() {
     nameQuery = foldDiacritics(searchInput.value.trim());
     applyFilter();
   });
-  filterBar.appendChild(searchInput);
+  // Wrap the input in a row-claiming div instead of putting the input
+  // itself in the flex container — flex-basis: 100% on a replaced
+  // element like <input> turned out not to force a row break reliably,
+  // but on a plain block-level wrapper it does. The wrapper takes the
+  // whole row; the input inside sits at its own modest width.
+  const searchWrap = document.createElement('div');
+  searchWrap.className = 'name-search-wrap';
+  searchWrap.appendChild(searchInput);
+  filterBar.appendChild(searchWrap);
 
   // Mobile-only collapse toggle. Hidden on desktop via CSS — there the filter
   // bar is always visible. On phones the bar would dominate the viewport,

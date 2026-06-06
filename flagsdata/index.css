@@ -92,6 +92,14 @@ body {
  * the top (order: -1) so the user can search without scanning past
  * the filter groups — same on desktop and mobile, since the search
  * is a faster path than picking a pill when you know the name. */
+/* The wrapper is what claims the whole row — flex-basis: 100% on a
+ * plain div wraps reliably across browsers, while the same on a
+ * replaced <input> turned out not to. order: -1 puts the search row
+ * at the top of the filter bar regardless of DOM order. */
+.name-search-wrap {
+  flex-basis: 100%;
+  order: -1;
+}
 .name-search {
   font: inherit;
   font-size: 14px;
@@ -99,13 +107,9 @@ body {
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 999px;
-  /* flex-basis: 100% claims the whole row (so the toggle/groups wrap
-   * underneath), but max-width caps the visible size — full-row layout
-   * without a full-row-wide input. */
-  flex-basis: 100%;
+  width: 100%;
   max-width: 240px;
-  min-width: 0;
-  order: -1;
+  box-sizing: border-box;
 }
 /* Tint the existing 1px border on focus rather than overlaying a thicker
  * outline — the colour change is enough for an indicator, and keeping
