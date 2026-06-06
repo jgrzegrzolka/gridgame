@@ -157,7 +157,7 @@ Alternative threads if Jan wants to skip ahead: phase 4 (release pacing) is what
 
 - Score-share string: text vs emoji-grid? (Defer until we've played a few real puzzles.)
 - Do you want a global leaderboard eventually? (If yes, that changes the architecture in later phases.)
-- Should `/rate/` extend its scale to also cover the 74 non-sovereign entries (currently flat 7)?
+- Should the `nameScore` scale extend past 6 to cover the 74 non-sovereign entries (currently flat 7)? The `/rate/` tool that produced the original ratings is gone now — any future re-rate would be a fresh effort.
 
 ## File map (for orientation)
 
