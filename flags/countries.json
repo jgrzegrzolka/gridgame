@@ -1666,11 +1666,13 @@
     "category": "country",
     "statehood": "territory",
     "primaryColors": [
-      "white",
       "red",
-      "yellow"
+      "white"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "yellow",
+      "black"
+    ],
     "motifs": [
       "coat-of-arms"
     ]
@@ -2033,10 +2035,11 @@
     "statehood": "territory",
     "primaryColors": [
       "red",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2112,10 +2115,11 @@
     "statehood": "territory",
     "primaryColors": [
       "white",
-      "red",
+      "red"
+    ],
+    "additionalColors": [
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -2363,12 +2367,13 @@
     "category": "country",
     "statehood": "un_member",
     "primaryColors": [
-      "blue",
       "red",
-      "yellow",
+      "blue",
+      "yellow"
+    ],
+    "additionalColors": [
       "black"
     ],
-    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3243,11 +3248,11 @@
     "category": "country",
     "statehood": "un_member",
     "primaryColors": [
+      "red",
       "green",
-      "red"
+      "yellow"
     ],
     "additionalColors": [
-      "yellow",
       "blue",
       "white"
     ],
@@ -4451,7 +4456,9 @@
       "yellow",
       "white"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "red"
+    ],
     "motifs": [
       "coat-of-arms"
     ]
