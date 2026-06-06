@@ -194,15 +194,22 @@ test('known animal/coat-of-arms flags keep their expected motif tags', () => {
 // a primary colour to additional or vice versa. Add a code here when you
 // hand-audit another flag and want the answer frozen against future drift.
 const KNOWN_PRIMARY_SPLITS = [
+  // --- Europe ---
   { code: 'gi', primary: ['red','white'],          additional: ['yellow','black'], note: 'Gibraltar — castle COA on white-over-red field; yellow castle + black detailing read as emblem-only' },
   { code: 'im', primary: ['red','white'],          additional: ['yellow'],         note: 'Isle of Man — yellow triskelion sits inside the central red disc; the across-the-room palette is red on white' },
   { code: 'je', primary: ['white','red'],          additional: ['yellow'],         note: 'Jersey — yellow Jersey shield in the upper triangle is small; saltire is the dominant feature' },
   { code: 'li', primary: ['red','blue','yellow'],  additional: ['black'],          note: 'Liechtenstein — blue-over-red horizontal with yellow crown in the canton; the crown details bring black that only reads up close' },
   { code: 'pt', primary: ['red','green','yellow'], additional: ['blue','white'],   note: 'Portugal — yellow armillary sphere is large enough to read as primary; blue + white live only in the small inner shield' },
   { code: 'va', primary: ['yellow','white'],       additional: ['red'],            note: 'Vatican — red ribbon binding the crossed keys is emblem-only against the yellow + white field' },
+  // --- Africa ---
+  { code: 'io', primary: ['blue','red','white'],                  additional: ['yellow','green'], note: 'British Indian Ocean Territory — Blue Ensign + palm-tree COA; the wavy white-on-blue field and Union Jack canton are primary, yellow/green from the COA are emblem-only' },
+  { code: 'eg', primary: ['red','white','black','yellow'],        additional: [],                  note: "Egypt — the Eagle of Saladin is the flag's defining feature (same recall logic as Albania's eagle): yellow is primary even though it lives inside the eagle" },
+  { code: 'sz', primary: ['blue','yellow','red','black','white'], additional: [],                  note: "Eswatini — the central Nguni shield is large and its black/white pattern is part of the flag's across-the-room read; all five colours are primary" },
+  { code: 'mz', primary: ['red','black','yellow','green','white'],additional: [],                  note: 'Mozambique — all five colours read at flag-tile size: the green/black/yellow stripes, the red triangle, and the white outlines on the rifle/hoe emblem are all visible' },
+  { code: 'na', primary: ['blue','red','green','yellow','white'], additional: [],                  note: 'Namibia — the diagonal red stripe is white-bordered against blue/green fields; all five colours including the yellow sun and white fimbriations are primary' },
 ];
 
-test('Europe hand-audited primary/additional splits stay pinned', () => {
+test('hand-audited primary/additional splits stay pinned', () => {
   /** @type {string[]} */
   const offenders = [];
   for (const { code, primary, additional, note } of KNOWN_PRIMARY_SPLITS) {
