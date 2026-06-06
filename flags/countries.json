@@ -158,7 +158,9 @@
       "black",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "ar",
@@ -172,7 +174,9 @@
       "white",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "am",
@@ -327,7 +331,9 @@
       "green",
       "red"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "bb",
@@ -1176,7 +1182,8 @@
     "motifs": [
       "animal",
       "coat-of-arms",
-      "weapon"
+      "weapon",
+      "star-or-moon"
     ]
   },
   {
@@ -1477,7 +1484,8 @@
       "orange"
     ],
     "motifs": [
-      "coat-of-arms"
+      "coat-of-arms",
+      "star-or-moon"
     ]
   },
   {
@@ -1998,7 +2006,9 @@
       "white",
       "red"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "je",
@@ -2048,7 +2058,8 @@
     ],
     "motifs": [
       "animal",
-      "coat-of-arms"
+      "coat-of-arms",
+      "star-or-moon"
     ]
   },
   {
@@ -2083,7 +2094,8 @@
       "blue"
     ],
     "motifs": [
-      "animal"
+      "animal",
+      "star-or-moon"
     ]
   },
   {
@@ -2128,7 +2140,9 @@
       "red",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "la",
@@ -2318,7 +2332,9 @@
       "red",
       "green"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "my",
@@ -2653,7 +2669,9 @@
       "green",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "nr",
@@ -2764,7 +2782,9 @@
       "white",
       "green"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "ng",
@@ -2841,7 +2861,9 @@
       "red",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "gb-nir",
@@ -3180,7 +3202,9 @@
       "yellow",
       "green"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "re",
@@ -3821,7 +3845,9 @@
       "blue",
       "white"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "tj",
@@ -4185,7 +4211,9 @@
       "white",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "uz",

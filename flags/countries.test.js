@@ -335,3 +335,38 @@ test('civil-flag-only entries do not carry state-flag motifs (Peru regression pi
   assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
 });
 
+// Regression pin — flags whose visible design carries a sun must be tagged
+// `star-or-moon`, because astronomically the sun is a star and a player
+// reading the SVG sees one celestial body either way. Earlier versions of
+// this catalog deliberately excluded sun emblems from `star-or-moon`,
+// which left Japan, Argentina, Uruguay, Kazakhstan, etc. with no motif
+// even though every other star/moon flag was tagged. This list pins the
+// named cases so the exclusion can't sneak back in.
+const SUN_BEARING = [
+  { code: 'kz', note: 'Kazakhstan — golden sun above steppe eagle' },
+  { code: 'tw', note: 'Taiwan — white sun on blue canton' },
+  { code: 'mw', note: 'Malawi — rising sun in black band' },
+  { code: 'mk', note: 'North Macedonia — sun of liberty' },
+  { code: 'ag', note: 'Antigua and Barbuda — rising sun' },
+  { code: 'ar', note: 'Argentina — Sol de Mayo' },
+  { code: 'uy', note: 'Uruguay — Sol de Mayo in canton' },
+  { code: 'ec', note: 'Ecuador — sun atop coat of arms' },
+  { code: 'pf', note: 'French Polynesia — sun emblem with outrigger canoe' },
+  { code: 'jp', note: 'Japan — red sun disc (Hinomaru)' },
+];
+test('sun-bearing flags carry the star-or-moon motif (sun-is-a-star pin)', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const { code, note } of SUN_BEARING) {
+    const c = COUNTRIES.find((x) => x.code === code);
+    if (!c) {
+      offenders.push(`${code} (${note}): not found in countries.json`);
+      continue;
+    }
+    if (!c.motifs?.includes('star-or-moon')) {
+      offenders.push(`${code} (${note}): expected 'star-or-moon' motif, got ${JSON.stringify(c.motifs)}`);
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
+
