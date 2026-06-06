@@ -12,6 +12,10 @@ The daily catalog is two append-only JSON files:
 
 Each entry is `{ "n": <int>, "filter": "<filterString>", "answers": ["<code>", ...], "description": { "en": "...", "pl": "..." } }`. Numbering is sequential across the two files (live ends at N → backlog starts at N+1).
 
+Plus one parking lot:
+
+- `daily/daily_ideas.json` — unsealed puzzle ideas waiting for a future slot. Entries are `{ "filter", "notes", "parkUntilN" }` — no `n`, no `answers`. Not loaded by the game and not checked by the catalog tests; used when a filter is good but doesn't fit the current onboarding window (e.g. emblem-leaning motifs that need #30+). Promotion = compute answers + assign next `n` + move into `daily_backlog.json`.
+
 ## Workflow
 
 When you author or vet a puzzle, run through the checklist below in order — "fail fast", cheap data checks first, judgment calls last. Hard rules are pinned by `flags/daily.test.js`; failing one means `npm test` will fail. Soft rules need human judgment — failing one isn't a crash, but you need a reason.
@@ -73,10 +77,10 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
 
    When you discover another such pair (intersection under 15 primary-clean), add it here.
 
-11. **No motif-emblem traps (puzzles #1–100).** Until `primaryMotifs` exists, avoid filters whose answer set is dominated by emblem-only motifs:
-    - `continent:South America,motif:animal` and its colour-compound variants (bo/ec/pe are all COA-only fauna)
-    - Most `continent:Europe,motif:animal` filters (Albania is the only primary-visible animal)
-    *Why:* `primaryColors` distinguishes "visible from across a room" colours from "only in the COA"; `motifs` has no equivalent. Peru's animal (vicuña inside its tiny COA) gets weighted the same as Sri Lanka's animal (the entire flag is a lion). Until that asymmetry is fixed in the data, hand-blocklist the emblem-only-dominant filters.
+11. **No motif-emblem traps (puzzles #1–30).** Until `primaryMotifs` exists, avoid filters whose answer set is dominated by emblem-only motifs in early onboarding:
+    - `continent:South America,motif:animal` and its colour-compound variants (bo/ec are COA-only fauna)
+    - `continent:Europe,motif:animal`: al/md/me/rs eagles and ad's heraldic COA read at flag-tile size, but es and mt are emblem-only — the puzzle reads cleanly past #30, not in the trust-fragile early slots.
+    *Why:* `primaryColors` distinguishes "visible from across a room" colours from "only in the COA"; `motifs` has no equivalent. Sri Lanka's lion (the whole flag) gets weighted the same as Spain's eagle (inside the COA). The first 30 puzzles are where player trust is most fragile to "the game is wrong" surprises; past #30 the emblem-leaning filters become acceptable, and the catalog needs more mechanics anyway. Until that asymmetry is fixed in the data, hand-blocklist the emblem-only-dominant filters in early slots.
 
 12. **Country-reuse cap.** No country appears in more than 5 puzzles across the full catalog (live + backlog). When hand-authoring, check the cumulative count.
 
