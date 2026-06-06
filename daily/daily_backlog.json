@@ -1,27 +1,54 @@
 [
   {
     "n": 2,
-    "filter": "continent:Europe,color:red,color:white,color:!blue,motif:!coat-of-arms",
+    "filter": "continent:Europe,color:red,color:white,colorCount:2",
     "answers": [
       "at",
-      "bg",
-      "by",
       "ch",
       "dk",
-      "hu",
-      "it",
       "lv",
       "mc",
-      "mt",
       "pl"
     ],
     "description": {
-      "en": "Find all European flags with red and white but no blue and no coat of arms.",
-      "pl": "Znajdź wszystkie europejskie flagi z czerwienią i bielą, ale bez niebieskiego i bez godła."
+      "en": "Find all European flags using only red and white.",
+      "pl": "Znajdź wszystkie europejskie flagi tylko z czerwienią i bielą."
     }
   },
   {
     "n": 3,
+    "filter": "continent:Asia,motif:animal",
+    "answers": [
+      "bt",
+      "kz",
+      "lk"
+    ],
+    "description": {
+      "en": "Find all Asian flags with an animal.",
+      "pl": "Znajdź wszystkie azjatyckie flagi ze zwierzęciem."
+    }
+  },
+  {
+    "n": 4,
+    "filter": "continent:Europe,color:red,color:white,color:blue,colorCount:3",
+    "answers": [
+      "cz",
+      "fr",
+      "gb",
+      "is",
+      "lu",
+      "nl",
+      "no",
+      "ru",
+      "sk"
+    ],
+    "description": {
+      "en": "Find all European flags using only red, white, and blue.",
+      "pl": "Znajdź wszystkie europejskie flagi tylko z czerwienią, bielą i niebieskim."
+    }
+  },
+  {
+    "n": 5,
     "filter": "continent:South America,color:!green,motif:!coat-of-arms",
     "answers": [
       "ar",
@@ -37,7 +64,46 @@
     }
   },
   {
-    "n": 4,
+    "n": 6,
+    "filter": "continent:Europe,color:red,color:white,color:green,colorCount:3",
+    "answers": [
+      "bg",
+      "by",
+      "hu",
+      "it"
+    ],
+    "description": {
+      "en": "Find all European flags using only red, white, and green.",
+      "pl": "Znajdź wszystkie europejskie flagi tylko z czerwienią, bielą i zielenią."
+    }
+  },
+  {
+    "n": 7,
+    "filter": "continent:North America,motif:cross",
+    "answers": [
+      "dm",
+      "do",
+      "jm"
+    ],
+    "description": {
+      "en": "Find all North American flags with a cross.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi z krzyżem."
+    }
+  },
+  {
+    "n": 8,
+    "filter": "continent:Europe,color:yellow,color:blue,color:red,colorCount:3",
+    "answers": [
+      "ad",
+      "ro"
+    ],
+    "description": {
+      "en": "Find all European flags using only yellow, blue, and red.",
+      "pl": "Znajdź wszystkie europejskie flagi tylko z żółcią, niebieskim i czerwienią."
+    }
+  },
+  {
+    "n": 9,
     "filter": "continent:Europe,motif:coat-of-arms",
     "answers": [
       "ad",
@@ -58,34 +124,7 @@
     }
   },
   {
-    "n": 5,
-    "filter": "continent:Asia,motif:animal",
-    "answers": [
-      "bt",
-      "kz",
-      "lk"
-    ],
-    "description": {
-      "en": "Find all Asian flags with an animal.",
-      "pl": "Znajdź wszystkie azjatyckie flagi ze zwierzęciem."
-    }
-  },
-  {
-    "n": 6,
-    "filter": "continent:Europe,motif:star-or-moon",
-    "answers": [
-      "ba",
-      "hr",
-      "mk",
-      "si"
-    ],
-    "description": {
-      "en": "Find all European flags with a star or moon.",
-      "pl": "Znajdź wszystkie europejskie flagi z gwiazdą lub księżycem."
-    }
-  },
-  {
-    "n": 7,
+    "n": 10,
     "filter": "continent:Asia,color:green,color:black",
     "answers": [
       "ae",
@@ -101,32 +140,21 @@
     }
   },
   {
-    "n": 8,
-    "filter": "continent:Africa,color:black,motif:coat-of-arms",
+    "n": 11,
+    "filter": "continent:Europe,motif:star-or-moon",
     "answers": [
-      "eg",
-      "ke"
+      "ba",
+      "hr",
+      "mk",
+      "si"
     ],
     "description": {
-      "en": "Find all African flags with black and a coat of arms.",
-      "pl": "Znajdź wszystkie afrykańskie flagi z czernią i godłem."
+      "en": "Find all European flags with a star or moon.",
+      "pl": "Znajdź wszystkie europejskie flagi z gwiazdą lub księżycem."
     }
   },
   {
-    "n": 9,
-    "filter": "continent:North America,motif:cross",
-    "answers": [
-      "dm",
-      "do",
-      "jm"
-    ],
-    "description": {
-      "en": "Find all North American flags with a cross.",
-      "pl": "Znajdź wszystkie północnoamerykańskie flagi z krzyżem."
-    }
-  },
-  {
-    "n": 10,
+    "n": 12,
     "filter": "continent:Asia,color:white,color:blue",
     "answers": [
       "az",
@@ -148,7 +176,7 @@
     }
   },
   {
-    "n": 11,
+    "n": 13,
     "filter": "continent:Europe,color:black",
     "answers": [
       "al",
@@ -163,5 +191,17 @@
       "pl": "Znajdź wszystkie europejskie flagi z czernią."
     },
     "primaryCleanExempt": true
+  },
+  {
+    "n": 14,
+    "filter": "continent:Africa,color:black,motif:coat-of-arms",
+    "answers": [
+      "eg",
+      "ke"
+    ],
+    "description": {
+      "en": "Find all African flags with black and a coat of arms.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z czernią i godłem."
+    }
   }
 ]

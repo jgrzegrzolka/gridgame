@@ -16,6 +16,18 @@ Plus one parking lot:
 
 - `daily/daily_ideas.json` — unsealed puzzle ideas waiting for a future slot. Entries are `{ "filter", "notes", "parkUntilN" }` — no `n`, no `answers`. Not loaded by the game and not checked by the catalog tests; used when a filter is good but doesn't fit the current onboarding window (e.g. emblem-leaning motifs that need #30+). Promotion = compute answers + assign next `n` + move into `daily_backlog.json`.
 
+## Filter DSL primitives
+
+Filter strings are comma-separated tokens. Each token is `group:value` (include) or `group:!value` (exclude), plus the scalar `colorCount:N`.
+
+- `continent:<name>` / `continent:!<name>` — scalar, can't AND two continents.
+- `color:<name>` / `color:!<name>` — array, include is AND-among-values (must have every selected colour), exclude is none-of.
+- `motif:<name>` / `motif:!<name>` — same shape as colour.
+- `status:<sovereignty>` / `status:!<sovereignty>` — scalar.
+- `colorCount:N` — integer constraint: the country's full palette (`primaryColors + additionalColors`) must have exactly N entries. Used for "only N colours" puzzles where chaining `color:!<other>` would be brittle (any future palette addition would change the result). `colorCount` always checks the union regardless of `colorField`, so it stays consistent under the primary-clean test.
+
+The "only red+white+blue" pattern is `color:red,color:white,color:blue,colorCount:3` — every listed colour must be present AND the total count locks the rest out. Compare to the chain-of-excludes form `color:red,color:white,color:blue,color:!yellow,color:!green,color:!black,color:!orange,color:!violet`, which silently breaks the moment a new colour enters the palette.
+
 ## Workflow
 
 When you author or vet a puzzle, run through the checklist below in order — "fail fast", cheap data checks first, judgment calls last. Hard rules are pinned by `flags/daily.test.js`; failing one means `npm test` will fail. Soft rules need human judgment — failing one isn't a crash, but you need a reason.

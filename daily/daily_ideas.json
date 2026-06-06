@@ -8,5 +8,10 @@
     "filter": "motif:weapon",
     "notes": "Solo per rule 10 (13 sovereigns). High nameScore set (bb/sz/mz/om push past easier caps). Suitable past #30.",
     "parkUntilN": 30
+  },
+  {
+    "filter": "continent:Europe,color:white,color:blue,colorCount:2",
+    "notes": "Iconic but {fi, gr} is a strict subset of #1 (Europe+cross) — both fi and gr have crosses. Rule 6 blocks until past #100, where subsets are allowed as a recall mechanic.",
+    "parkUntilN": 101
   }
 ]

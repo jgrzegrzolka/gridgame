@@ -18,6 +18,7 @@ export const categoryFromId = gridCategoryFromId;
  *
  * @type {Array<keyof Filters>}
  */
+/** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */
 const GROUP_ORDER = ['continent', 'color', 'motif', 'status'];
 
 const FIND_INCLUDE_ALL_KEY = 'gridgame.flagfind.includeAll';
@@ -109,8 +110,20 @@ export function parseFilterString(s) {
     if (!tok) continue;
     const colon = tok.indexOf(':');
     if (colon < 0) continue;
-    const group = /** @type {keyof Filters} */ (tok.slice(0, colon));
+    const group = tok.slice(0, colon);
     let val = tok.slice(colon + 1);
+    if (!val) continue;
+    // Scalar primitive: `colorCount:N` constrains the country's full
+    // palette size to exactly N. Doesn't take include/exclude — it's a
+    // single integer, null means unconstrained.
+    if (group === 'colorCount') {
+      const n = Number.parseInt(val, 10);
+      if (Number.isInteger(n) && n >= 0) {
+        f.colorCount = n;
+        any = true;
+      }
+      continue;
+    }
     /** @type {'include' | 'exclude'} */
     let sign = 'include';
     if (val.startsWith('!')) {
@@ -119,7 +132,9 @@ export function parseFilterString(s) {
     }
     if (!val) continue;
     if (!(group in f)) continue;
-    f[group][sign].add(val);
+    const set = /** @type {any} */ (f)[group];
+    if (!set || typeof set !== 'object' || !('include' in set)) continue;
+    set[sign].add(val);
     any = true;
   }
   return any ? f : null;
@@ -142,6 +157,7 @@ export function serializeFilter(f) {
     for (const v of f[group].include) tokens.push(`${group}:${v}`);
     for (const v of f[group].exclude) tokens.push(`${group}:!${v}`);
   }
+  if (f.colorCount !== null) tokens.push(`colorCount:${f.colorCount}`);
   return tokens.join(',');
 }
 
@@ -310,7 +326,7 @@ const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent',
  * — the result page lands on a 0-flag mix, which startGame's
  * targets.length < 1 guard bounces back to the chooser.
  *
- * @param {Array<{ group: keyof Filters, value: string }>} pillPool
+ * @param {Array<{ group: 'continent' | 'color' | 'motif' | 'status', value: string }>} pillPool
  * @param {Country[]} all
  * @param {{
  *   rng?: () => number,

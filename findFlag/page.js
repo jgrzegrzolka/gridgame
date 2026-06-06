@@ -182,7 +182,7 @@ export function bootFindFlag() {
 
     function updateBar() {
       let selCount = 0;
-      for (const k of /** @type {Array<keyof typeof filter>} */ (Object.keys(filter))) {
+      for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
         selCount += filter[k].include.size + filter[k].exclude.size;
       }
       if (selCount === 0) {
@@ -229,10 +229,11 @@ export function bootFindFlag() {
     });
 
     clearBtn.addEventListener('click', () => {
-      for (const k of /** @type {Array<keyof typeof filter>} */ (Object.keys(filter))) {
+      for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
         filter[k].include.clear();
         filter[k].exclude.clear();
       }
+      filter.colorCount = null;
       for (const { btn } of allPills) {
         btn.classList.remove('active', 'exclude');
       }
