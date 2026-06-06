@@ -1,5 +1,5 @@
 import { CONTINENTS } from '../flags/group.js';
-import { COLORS_FOR_RANDOM, ALL_MOTIFS } from '../flags/engine.js';
+import { COLORS_FOR_RANDOM, ALL_MOTIFS, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
 import { t, countryName } from '../i18n.js';
 
@@ -72,8 +72,13 @@ export function bootFlagsData() {
   }
 
   const filters = emptyFilters();
+  /** Diacritic-folded substring of the name search input. Empty means the
+   * filter is off. Stored as the folded form so we don't refold per-tile
+   * on every input event — the per-country fold is the same idea, computed
+   * once in renderAll. */
+  let nameQuery = '';
 
-  /** @type {{ items: Country[], tiles: HTMLElement[], count: HTMLElement } | null} */
+  /** @type {{ items: Country[], foldedNames: string[], tiles: HTMLElement[], count: HTMLElement } | null} */
   let state = null;
 
   function renderAll(parent, items) {
@@ -88,31 +93,37 @@ export function bootFlagsData() {
     grid.className = 'grid';
     /** @type {HTMLElement[]} */
     const tiles = [];
+    /** @type {string[]} */
+    const foldedNames = [];
     for (const c of items) {
       const tile = flagTile(c);
       tiles.push(tile);
+      foldedNames.push(foldDiacritics(countryName(c)));
       grid.appendChild(tile);
     }
     parent.appendChild(grid);
-    state = { items, tiles, count: countSpan };
+    state = { items, foldedNames, tiles, count: countSpan };
   }
 
   function applyFilter() {
     if (!state) return;
     let visible = 0;
     for (let i = 0; i < state.items.length; i++) {
-      const show = matchesFilters(state.items[i], filters);
+      const catMatch = matchesFilters(state.items[i], filters);
+      const nameMatch = nameQuery === '' || state.foldedNames[i].includes(nameQuery);
+      const show = catMatch && nameMatch;
       state.tiles[i].hidden = !show;
       if (show) visible++;
     }
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
-    let total = 0;
+    let pillTotal = 0;
     for (const k of /** @type {Array<keyof typeof filters>} */ (Object.keys(filters))) {
-      total += filters[k].include.size + filters[k].exclude.size;
+      pillTotal += filters[k].include.size + filters[k].exclude.size;
     }
-    clearBtn.hidden = total === 0;
-    updateFilterToggle(total);
+    const anyActive = pillTotal > 0 || nameQuery !== '';
+    clearBtn.hidden = !anyActive;
+    updateFilterToggle(pillTotal);
   }
 
   /** @param {number} count */
@@ -165,6 +176,26 @@ export function bootFlagsData() {
 
   const filterBar = document.getElementById('filter-bar');
 
+  // Name search — always visible on both mobile and desktop. Lives at the
+  // top of the filter bar rather than behind the mobile collapse toggle
+  // because "I know the name I'm looking for" is a common case worth
+  // making one tap away on phones. Substring match, diacritic-folded
+  // against the localized country name. ANDed with the category filters.
+  const searchInput = document.createElement('input');
+  searchInput.type = 'search';
+  searchInput.id = 'name-search';
+  searchInput.className = 'name-search';
+  searchInput.autocomplete = 'off';
+  searchInput.setAttribute('autocapitalize', 'off');
+  searchInput.setAttribute('autocorrect', 'off');
+  searchInput.setAttribute('spellcheck', 'false');
+  searchInput.placeholder = t('flagsdata.searchName', 'Search by name…');
+  searchInput.addEventListener('input', () => {
+    nameQuery = foldDiacritics(searchInput.value.trim());
+    applyFilter();
+  });
+  filterBar.appendChild(searchInput);
+
   // Mobile-only collapse toggle. Hidden on desktop via CSS — there the filter
   // bar is always visible. On phones the bar would dominate the viewport,
   // so collapse it by default and reveal on tap. The badge shows how many
@@ -215,6 +246,8 @@ export function bootFlagsData() {
       el.classList.remove('active');
       el.classList.remove('exclude');
     }
+    searchInput.value = '';
+    nameQuery = '';
     applyFilter();
   });
   groupsWrap.appendChild(clearBtn);

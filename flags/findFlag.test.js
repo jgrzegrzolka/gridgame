@@ -420,16 +420,16 @@ test('pillLabel: include renders as the bare noun — no "Has " wrapper', () => 
   assert.equal(pillLabel('motif', 'cross', 'include', idTranslate), 'cross');
 });
 
-test('pillLabel: exclude prefixes "Not " on the same bare noun', () => {
-  assert.equal(pillLabel('continent', 'Africa', 'exclude', idTranslate), 'Not Africa');
-  assert.equal(pillLabel('color', 'orange', 'exclude', idTranslate), 'Not orange');
-  assert.equal(pillLabel('motif', 'cross', 'exclude', idTranslate), 'Not cross');
+test('pillLabel: exclude prefixes a lowercase "not " on the same bare noun', () => {
+  assert.equal(pillLabel('continent', 'Africa', 'exclude', idTranslate), 'not Africa');
+  assert.equal(pillLabel('color', 'orange', 'exclude', idTranslate), 'not orange');
+  assert.equal(pillLabel('motif', 'cross', 'exclude', idTranslate), 'not cross');
 });
 
 test('filterTitle: joins selected pills with the interpunct separator in GROUP_ORDER', () => {
   const f = parseFilterString('continent:Africa,color:orange,motif:!cross');
   assert.ok(f);
-  assert.equal(filterTitle(f, idTranslate), 'Africa · orange · Not cross');
+  assert.equal(filterTitle(f, idTranslate), 'Africa · orange · not cross');
 });
 
 test('filterTitle: empty filter renders to empty string', () => {

@@ -54,7 +54,7 @@
     "play": "Zagraj",
     "clear": "Wyczyść",
     "flagsMatch": "{n} flag",
-    "notPrefix": "Bez ",
+    "notPrefix": "bez ",
     "sections": {
       "continents": "Kontynenty",
       "colors": "Kolory",
@@ -169,6 +169,7 @@
     "filterContinent": "Kontynent",
     "filterColors": "Kolory",
     "filterMotifs": "Motywy",
+    "searchName": "Szukaj po nazwie…",
     "clear": "Wyczyść"
   },
   "country": {

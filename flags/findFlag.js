@@ -346,8 +346,12 @@ export function rankedCategoryId(f) {
 /**
  * Render a single pill's display label in the active language. Includes
  * render as the bare noun ("Africa", "orange", "cross"); excludes are
- * prefixed with the localized "Not " so a multi-pill mix reads naturally
- * — e.g. "Africa · orange · Not cross".
+ * prefixed with the localized lowercase "not " so a multi-pill mix
+ * reads naturally — e.g. "Africa · orange · not cross". Lowercase
+ * matches the lowercase colour / motif nouns the prefix sits next to;
+ * the trade-off is that a standalone exclude filter renders with a
+ * lowercase initial ("not cross"), but the daily catalog never starts
+ * a title with an exclude and the explorer power-user case is rare.
  *
  * @param {keyof Filters} group
  * @param {string} value
@@ -368,7 +372,7 @@ export function pillLabel(group, value, sign, translate) {
     body = translate(`status.${value}`, value);
   }
   if (sign === 'exclude') {
-    return `${translate('findFlag.notPrefix', 'Not ')}${body}`;
+    return `${translate('findFlag.notPrefix', 'not ')}${body}`;
   }
   return body;
 }
