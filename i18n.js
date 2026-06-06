@@ -6,6 +6,8 @@
  * @typedef {Record<string, any>} Strings
  */
 
+import { createCountry } from './flags/group.js';
+
 export const SUPPORTED_LANGS = /** @type {const} */ (['en', 'pl']);
 export const DEFAULT_LANG = 'en';
 export const LANG_STORAGE_KEY = 'gridgame.lang';
@@ -236,7 +238,14 @@ export function withLocalizedAliases(countries) {
     const item = /** @type {any} */ (c);
     const localized = countryName(item);
     if (localized === item.name) return c;
-    return /** @type {any} */ ({ ...item, aliases: [...(item.aliases ?? []), localized] });
+    const cloned = { ...item, aliases: [...(item.aliases ?? []), localized] };
+    // If the input is a full Country (has primaryColors), re-wrap through
+    // createCountry so the cloned object gets a fresh non-enumerable `colors`
+    // getter. A raw spread would copy `colors` as a static enumerable field,
+    // which then leaks into JSON.stringify output. Minimal stubs without
+    // primaryColors (used in some i18n tests) pass through as-is — they're
+    // not Countries, so there's no getter to re-attach.
+    return /** @type {any} */ (Array.isArray(item.primaryColors) ? createCountry(cloned) : cloned);
   });
 }
 

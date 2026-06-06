@@ -23,13 +23,14 @@
  * `additionalColors` (COA-only) — are disjoint by construction; the
  * union is "every colour anywhere on the flag" and is what most callers
  * want (`hasColor` predicates, the findFlag browse UI, etc.). The getter
- * is enumerable so the `{ ...country, override: ... }` spread pattern
- * (used by `withLocalizedAliases` and elsewhere) carries `colors` over
- * to the cloned object — a non-enumerable getter would silently drop on
- * every spread, breaking any consumer that touched a cloned country.
- * Nothing in this codebase serializes whole Country objects (PartyKit
- * messages send `country.code`, not the whole country), so the extra
- * field on JSON.stringify output isn't a practical concern.
+ * is non-enumerable so `JSON.stringify(country)` produces only the two
+ * canonical buckets — no derived data leaking into PartyKit messages,
+ * debug logs, or the countries.json round-trip. That means any clone
+ * pattern (e.g. `withLocalizedAliases`) has to re-run createCountry to
+ * re-attach the getter on the result; a raw spread silently drops it
+ * and breaks downstream `c.colors` reads. We also strip a stale
+ * `colors` field if the input already carries one (e.g. from a prior
+ * stringify-then-parse round), so the result is always canonical.
  *
  * @param {any} raw
  * @returns {Country}
@@ -37,11 +38,12 @@
 export function createCountry(raw) {
   /** @type {any} */
   const c = { ...raw };
+  delete c.colors;
   if (!Array.isArray(c.primaryColors)) c.primaryColors = [];
   if (!Array.isArray(c.additionalColors)) c.additionalColors = [];
   Object.defineProperty(c, 'colors', {
     get() { return [...this.primaryColors, ...this.additionalColors]; },
-    enumerable: true,
+    enumerable: false,
     configurable: false,
   });
   return c;
