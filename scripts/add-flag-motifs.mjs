@@ -15,9 +15,8 @@ const MOTIFS = {
   // 'coat-of-arms' (heraldic shield / national emblem on the flag),
   // 'weapon' (sword, dagger, gun, spear, trident, cannon, etc.),
   // and 'star-or-moon' (any star shape — pentagram, hexagram, Southern
-  // Cross — or any moon — crescent or full disk). Sun emblems do NOT
-  // count as 'star-or-moon' (Japan, Argentina, Uruguay, North Macedonia,
-  // Kazakhstan, etc.). The 'star-or-moon' tag is applied via the
+  // Cross, sun disc/emblem — the sun is a star — or any moon, crescent
+  // or full disk). The 'star-or-moon' tag is applied via the
   // STAR_OR_MOON set below, so this dict stays focused on the heraldic
   // motifs and the diff for star-or-moon stays in one place.
   // A single flag often carries several — e.g. a coat of arms with a
@@ -65,7 +64,11 @@ const MOTIFS = {
   mz: ['weapon'],                                   // Mozambique — AK-47 + hoe
   ni: ['coat-of-arms'],                             // Nicaragua — triangle coa
   om: ['weapon'],                                   // Oman — crossed khanjar daggers
-  pe: ['animal', 'coat-of-arms'],                  // Peru — coa with vicuña
+  // Peru intentionally omitted — svg/pe.svg is the red-white-red civil
+  // flag (no central emblem). State-flag motifs (vicuña, coa) would lie
+  // about what the player sees. Pinned by the Peru regression test in
+  // flags/countries.test.js — this has now regressed twice (17d40fc →
+  // 7df5d95), please leave it dropped.
   pf: ['coat-of-arms'],                             // French Polynesia — outrigger canoe + sun emblem
   pg: ['animal'],                                   // Papua New Guinea — bird of paradise
   pn: ['coat-of-arms'],                             // Pitcairn — coa with anchor + Bible
@@ -100,30 +103,42 @@ const MOTIFS = {
 
 const PALETTE = new Set(['animal', 'coat-of-arms', 'weapon', 'star-or-moon', 'cross', 'union-jack']);
 
-// Flags with a visible star (pentagram, hexagram, Southern Cross, etc.)
-// or a moon (crescent or full disk). Kept as a flat set rather than
-// merged into MOTIFS so a single visual category lives in one place.
-// Sun emblems are NOT included (Japan, Argentina, Uruguay, Bangladesh,
-// Kazakhstan, North Macedonia, Niger, Rwanda, Taiwan, Antigua, etc.).
+// Flags with a visible star (pentagram, hexagram, Southern Cross, sun
+// disc/emblem — astronomically the sun is a star, and players reading the
+// SVG see one celestial body either way) or a moon (crescent or full
+// disk). Kept as a flat set rather than merged into MOTIFS so a single
+// visual category lives in one place.
 const STAR_OR_MOON = new Set([
   // Africa
   'ao', 'dz', 'bf', 'cm', 'cf', 'km', 'cd', 'dj', 'eh', 'gh', 'gw', 'lr',
   'ly', 'ma', 'mr', 'mz', 'sn', 'so', 'ss', 'tg', 'tn', 'cv', 'zw',
   'st', 'et', 'bi',
+  // Africa — sun
+  'mw', 'na', 'ne', 'rw',
   // Asia
   'az', 'cn', 'il', 'jo', 'kp', 'mn', 'mv', 'my', 'np', 'pk', 'ph', 'sg',
   'sy', 'tj', 'tm', 'tr', 'uz', 'vn', 'tl',
   'mm', 'hk', 'mo',
+  // Asia — sun
+  'bd', 'jp', 'kg', 'kz', 'tw',
   // Europe
   'ba', 'si', 'xk', 'hr',
+  // Europe — sun
+  'mk',
   // North America (incl. territories)
   'cu', 'gd', 'hn', 'kn', 'pa', 'pr', 'us', 'aw',
   'cw',
+  // North America — sun
+  'ag',
   // South America
   'br', 'cl', 'py', 'sr', 've',
+  // South America — sun (Sol de Mayo, sun in coa)
+  'ar', 'ec', 'uy',
   // Oceania
   'au', 'ck', 'fm', 'mh', 'mp', 'nr', 'nu', 'nz', 'pg', 'pw', 'sb', 'tv', 'ws',
   'cx', 'tk', 'um', 'cc',
+  // Oceania — sun
+  'ki', 'pf',
   // Antarctica
   'tf', 'hm',
   // Other / supranational
