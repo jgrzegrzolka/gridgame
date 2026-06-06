@@ -123,7 +123,11 @@ export function bootFlagsData() {
     }
     const anyActive = pillTotal > 0 || nameQuery !== '';
     clearBtn.hidden = !anyActive;
-    updateFilterToggle(pillTotal);
+    // Include name search in the toggle badge count — once the search
+    // is hidden behind the mobile Filters toggle, the badge is the
+    // user's only cue that something is filtering. Counting it as one
+    // "active filter" (alongside each pill) matches that mental model.
+    updateFilterToggle(pillTotal + (nameQuery !== '' ? 1 : 0));
   }
 
   /** @param {number} count */
@@ -176,11 +180,14 @@ export function bootFlagsData() {
 
   const filterBar = document.getElementById('filter-bar');
 
-  // Name search — always visible on both mobile and desktop. Lives at the
-  // top of the filter bar rather than behind the mobile collapse toggle
-  // because "I know the name I'm looking for" is a common case worth
-  // making one tap away on phones. Substring match, diacritic-folded
-  // against the localized country name. ANDed with the category filters.
+  // Name search — substring match, diacritic-folded against the
+  // localized country name, ANDed with the category pills. On desktop
+  // it sits in its own row at the top of the filter bar; on mobile
+  // it's appended into .filter-groups so the existing collapse toggle
+  // hides it behind "Filters" along with the pills (rationale: once
+  // it's part of the filter set, it should follow the same show/hide
+  // contract — otherwise the user sees a search box but no pills,
+  // which makes the toggle feel inconsistent).
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
   searchInput.id = 'name-search';
@@ -194,15 +201,13 @@ export function bootFlagsData() {
     nameQuery = foldDiacritics(searchInput.value.trim());
     applyFilter();
   });
-  // Wrap the input in a row-claiming div instead of putting the input
-  // itself in the flex container — flex-basis: 100% on a replaced
-  // element like <input> turned out not to force a row break reliably,
-  // but on a plain block-level wrapper it does. The wrapper takes the
-  // whole row; the input inside sits at its own modest width.
+  // The wrapper does the row-claim on desktop (flex-basis: 100% on a
+  // plain div wraps reliably where the same on an <input> doesn't).
+  // The wrapper gets inserted into groupsWrap further down, so the
+  // mobile collapse toggle covers it too.
   const searchWrap = document.createElement('div');
   searchWrap.className = 'name-search-wrap';
   searchWrap.appendChild(searchInput);
-  filterBar.appendChild(searchWrap);
 
   // Mobile-only collapse toggle. Hidden on desktop via CSS — there the filter
   // bar is always visible. On phones the bar would dominate the viewport,
@@ -226,6 +231,12 @@ export function bootFlagsData() {
   groupsWrap.id = 'filter-groups';
   groupsWrap.className = 'filter-groups';
   filterBar.appendChild(groupsWrap);
+
+  // Search goes first inside the groups — order: -1 then keeps it at
+  // the top on desktop (where groupsWrap is display: contents, so the
+  // wrapper is a direct flex child of #filter-bar) and as the first
+  // column row on mobile-open (where groupsWrap is a column flex).
+  groupsWrap.appendChild(searchWrap);
 
   groupsWrap.appendChild(
     buildFilterGroup(t('flagsdata.filterStatus', 'Status'), 'status', STATUS_VALUES.map((v) => ({ value: v, label: statusLabel(v) }))),

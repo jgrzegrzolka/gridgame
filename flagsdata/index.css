@@ -86,16 +86,24 @@ body {
     gap: 12px;
     margin-top: 4px;
   }
+  /* Column-flex parent: flex-basis: 100% on a child would mean height,
+   * not width — reset so the search wrap is a normal column row. */
+  .name-search-wrap {
+    flex-basis: auto;
+  }
 }
 /* Name search — sits in the filter bar so its presence affects the
  * count and clear-all just like the pills. Always on its own row at
  * the top (order: -1) so the user can search without scanning past
  * the filter groups — same on desktop and mobile, since the search
  * is a faster path than picking a pill when you know the name. */
-/* The wrapper is what claims the whole row — flex-basis: 100% on a
- * plain div wraps reliably across browsers, while the same on a
- * replaced <input> turned out not to. order: -1 puts the search row
- * at the top of the filter bar regardless of DOM order. */
+/* The wrapper claims its own row on desktop — flex-basis: 100% on a
+ * plain div wraps reliably across browsers (the same on a replaced
+ * <input> didn't). order: -1 keeps the search at the top regardless
+ * of DOM order (it's the first child of .filter-groups). On mobile
+ * the row-claim is dropped because .filter-groups becomes a column
+ * flex when open, where flex-basis means height — see the @media
+ * block further down. */
 .name-search-wrap {
   flex-basis: 100%;
   order: -1;
