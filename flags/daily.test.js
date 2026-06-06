@@ -252,24 +252,40 @@ test('live catalog: every answer code is a known sovereign country', () => {
 // `colors` matching is what the catalog answers are computed against.
 
 test('live + backlog: no puzzle filter carries a redundant constraint', () => {
+  // A token is redundant only when dropping it changes neither the
+  // default-`colors` resolution nor — for puzzles bound by the primary-
+  // clean rule — the `primaryColors` resolution. The primary-side check
+  // catches the case where a defensive `motif:!coat-of-arms` looks
+  // redundant against `colors` alone but is what closes the COA-trap
+  // under `primaryColors` (e.g. #3 SA·!green·!COA, where without !COA
+  // Ecuador and Paraguay drift between the two colour models). Skipping
+  // the primary check on `primaryCleanExempt` entries respects their
+  // opt-out — there a primary-only token is genuinely dead weight.
   const sov = flagsGamePool(COUNTRIES, false);
+  /** @param {import('./group.js').Country[]} arr */
+  const codes = (arr) => arr.map((c) => c.code).sort();
   for (const entry of [...CATALOG, ...BACKLOG]) {
     const tokens = entry.filter.split(',');
     if (tokens.length < 2) continue;
+    const fullFilter = parseFilterString(entry.filter);
+    assert.ok(fullFilter, `#${entry.n}: filter "${entry.filter}" failed to parse`);
+    const fullDefault = [...entry.answers].sort();
+    const checkPrimary = entry.primaryCleanExempt !== true;
+    const fullPrimary = checkPrimary
+      ? codes(sov.filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (fullFilter), { colorField: 'primaryColors' })))
+      : [];
     for (let i = 0; i < tokens.length; i++) {
       const trimmed = tokens.filter((_, j) => j !== i).join(',');
       const f = parseFilterString(trimmed);
       assert.ok(f, `#${entry.n}: trimmed filter "${trimmed}" failed to parse`);
-      const without = sov
-        .filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (f)))
-        .map((c) => c.code)
-        .sort();
-      const full = [...entry.answers].sort();
-      assert.notDeepEqual(
-        without,
-        full,
-        `#${entry.n}: constraint "${tokens[i]}" is redundant — dropping it from "${entry.filter}" leaves the same ${full.length}-flag answer set`,
-      );
+      const withoutDefault = codes(sov.filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (f))));
+      const sameDefault = JSON.stringify(withoutDefault) === JSON.stringify(fullDefault);
+      if (!sameDefault) continue;
+      if (checkPrimary) {
+        const withoutPrimary = codes(sov.filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (f), { colorField: 'primaryColors' })));
+        if (JSON.stringify(withoutPrimary) !== JSON.stringify(fullPrimary)) continue;
+      }
+      assert.fail(`#${entry.n}: constraint "${tokens[i]}" is redundant — dropping it from "${entry.filter}" leaves the same ${fullDefault.length}-flag answer set under both colour models`);
     }
   }
 });

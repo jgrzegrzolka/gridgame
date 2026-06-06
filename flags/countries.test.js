@@ -305,3 +305,33 @@ test('matchesFilters against real data: red AND blue keeps only flags with both 
   }
 });
 
+// Regression pin — flags whose SVG renders the civil flag (a colour-only
+// stripe pattern, no central emblem) must NOT carry state-flag motifs
+// like `animal`, `coat-of-arms`, or `weapon`. The motif rule is "describe
+// what the player sees in the SVG"; a state-flag motif on a civil-flag
+// SVG turns the country into a surprise wrong-answer in any motif puzzle.
+// Peru was the original case (vicuña + COA + cornucopia live only on the
+// state flag; svg/pe.svg is the red-white-red civil flag). It was fixed
+// once in 17d40fc and silently regressed in 7df5d95 when the catalog was
+// regenerated — this test pins it so the third repaint can't happen.
+//
+// Add a code here when you discover another civil-flag SVG paired with a
+// state-flag motif. The list is deliberately explicit (no SVG-path-count
+// heuristic) so each entry survives a human eyeball check before landing.
+const CIVIL_FLAG_ONLY = new Set(['pe']);
+const STATE_FLAG_MOTIFS = ['animal', 'coat-of-arms', 'weapon'];
+test('civil-flag-only entries do not carry state-flag motifs (Peru regression pin)', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const c of COUNTRIES) {
+    if (!CIVIL_FLAG_ONLY.has(c.code)) continue;
+    const motifs = c.motifs ?? [];
+    for (const trap of STATE_FLAG_MOTIFS) {
+      if (motifs.includes(trap)) {
+        offenders.push(`${c.code} (${c.name}): has '${trap}' motif but the SVG shows the civil flag — drop it`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
+
