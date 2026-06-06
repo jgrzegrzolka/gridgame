@@ -194,5 +194,501 @@
       "en": "Find all African flags with black and a coat of arms.",
       "pl": "Znajdź wszystkie afrykańskie flagi z czernią i godłem."
     }
+  },
+  {
+    "n": 15,
+    "filter": "color:red,color:green,colorCount:2",
+    "answers": [
+      "bd",
+      "ma"
+    ],
+    "description": {
+      "en": "Find all flags whose only colours are red and green — no others.",
+      "pl": "Znajdź wszystkie flagi, które mają tylko 2 kolory: czerwony i zielony."
+    }
+  },
+  {
+    "n": 16,
+    "filter": "continent:Africa,motif:animal",
+    "answers": [
+      "eg",
+      "ug",
+      "zm",
+      "zw"
+    ],
+    "description": {
+      "en": "Find all African flags with an animal.",
+      "pl": "Znajdź wszystkie afrykańskie flagi ze zwierzęciem."
+    }
+  },
+  {
+    "n": 17,
+    "filter": "color:orange,color:green,colorCount:3",
+    "answers": [
+      "cy",
+      "ci",
+      "ie",
+      "ne"
+    ],
+    "description": {
+      "en": "Find all flags whose only colours are orange, white, and green — no others.",
+      "pl": "Znajdź wszystkie flagi, które mają tylko 3 kolory: pomarańczowy, biały i zielony."
+    }
+  },
+  {
+    "n": 18,
+    "filter": "color:blue,color:yellow,color:black,colorCount:3",
+    "answers": [
+      "bb",
+      "bs"
+    ],
+    "description": {
+      "en": "Find all flags whose only colours are blue, yellow, and black — no others.",
+      "pl": "Znajdź wszystkie flagi, które mają tylko 3 kolory: niebieski, żółty i czarny."
+    }
+  },
+  {
+    "n": 19,
+    "filter": "continent:North America,color:green,motif:star-or-moon",
+    "answers": [
+      "gd",
+      "kn"
+    ],
+    "description": {
+      "en": "Find all North American flags with green and a star or moon.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi z zielenią oraz gwiazdą lub księżycem."
+    }
+  },
+  {
+    "n": 20,
+    "filter": "continent:Africa,color:black,color:!red",
+    "answers": [
+      "bw",
+      "ls",
+      "tz"
+    ],
+    "description": {
+      "en": "Find all African flags with black but without red.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z czernią, ale bez czerwieni."
+    }
+  },
+  {
+    "n": 21,
+    "filter": "continent:Asia,color:green,color:!red",
+    "answers": [
+      "in",
+      "pk",
+      "sa"
+    ],
+    "description": {
+      "en": "Find all Asian flags with green but without red.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z zielenią, ale bez czerwieni."
+    }
+  },
+  {
+    "n": 22,
+    "filter": "continent:North America,color:white,color:!red",
+    "answers": [
+      "gt",
+      "hn",
+      "lc",
+      "ni",
+      "sv"
+    ],
+    "description": {
+      "en": "Find all North American flags with white but without red.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi z bielą, ale bez czerwieni."
+    }
+  },
+  {
+    "n": 23,
+    "filter": "continent:Europe,color:blue,color:yellow,colorCount:2",
+    "answers": [
+      "se",
+      "ua"
+    ],
+    "description": {
+      "en": "Find all European flags whose only colours are blue and yellow — no others.",
+      "pl": "Znajdź wszystkie europejskie flagi, które mają tylko 2 kolory: niebieski i żółty."
+    }
+  },
+  {
+    "n": 24,
+    "filter": "continent:Asia,color:black,motif:star-or-moon",
+    "answers": [
+      "jo",
+      "sy",
+      "tl"
+    ],
+    "description": {
+      "en": "Find all Asian flags with black and a star or moon.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z czernią oraz gwiazdą lub księżycem."
+    }
+  },
+  {
+    "n": 25,
+    "filter": "continent:Asia,color:blue,color:yellow,colorCount:4",
+    "answers": [
+      "my",
+      "ph"
+    ],
+    "description": {
+      "en": "Find all Asian flags whose only colours are red, white, blue, and yellow — no others.",
+      "pl": "Znajdź wszystkie azjatyckie flagi, które mają tylko 4 kolory: czerwony, biały, niebieski i żółty."
+    }
+  },
+  {
+    "n": 26,
+    "filter": "color:white,color:green,colorCount:2",
+    "answers": [
+      "ng",
+      "pk",
+      "sa"
+    ],
+    "description": {
+      "en": "Find all flags whose only colours are white and green — no others.",
+      "pl": "Znajdź wszystkie flagi, które mają tylko 2 kolory: biały i zielony."
+    }
+  },
+  {
+    "n": 27,
+    "filter": "continent:Africa,color:red,color:blue,color:green,color:yellow,colorCount:4",
+    "answers": [
+      "er",
+      "et",
+      "mu"
+    ],
+    "description": {
+      "en": "Find all African flags whose only colours are red, blue, green, and yellow — no others.",
+      "pl": "Znajdź wszystkie afrykańskie flagi, które mają tylko 4 kolory: czerwony, niebieski, zielony i żółty."
+    }
+  },
+  {
+    "n": 28,
+    "filter": "continent:Asia,color:black,color:!green",
+    "answers": [
+      "af",
+      "bn",
+      "kr",
+      "tl",
+      "ye"
+    ],
+    "description": {
+      "en": "Find all Asian flags with black but without green.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z czernią, ale bez zieleni."
+    }
+  },
+  {
+    "n": 29,
+    "filter": "continent:North America,color:red,motif:animal",
+    "answers": [
+      "dm",
+      "mx"
+    ],
+    "description": {
+      "en": "Find all North American flags with red and an animal.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi z czerwienią i zwierzęciem."
+    }
+  },
+  {
+    "n": 30,
+    "filter": "continent:Asia,color:blue,motif:coat-of-arms",
+    "answers": [
+      "kh",
+      "kz",
+      "mn"
+    ],
+    "description": {
+      "en": "Find all Asian flags with blue and a coat of arms.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z błękitem i godłem."
+    }
+  },
+  {
+    "n": 31,
+    "filter": "continent:North America,color:black,color:!blue",
+    "answers": [
+      "dm",
+      "jm",
+      "kn",
+      "tt"
+    ],
+    "description": {
+      "en": "Find all North American flags with black but without blue.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi z czernią, ale bez błękitu."
+    }
+  },
+  {
+    "n": 32,
+    "filter": "continent:Africa,color:black,color:!green",
+    "answers": [
+      "ao",
+      "bw",
+      "eg",
+      "sz",
+      "ug"
+    ],
+    "description": {
+      "en": "Find all African flags with black but without green.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z czernią, ale bez zieleni."
+    }
+  },
+  {
+    "n": 33,
+    "filter": "continent:Africa,color:red,color:green,color:yellow,color:black,colorCount:4",
+    "answers": [
+      "gh",
+      "gw",
+      "st"
+    ],
+    "description": {
+      "en": "Find all African flags whose only colours are red, green, yellow, and black — no others.",
+      "pl": "Znajdź wszystkie afrykańskie flagi, które mają tylko 4 kolory: czerwony, zielony, żółty i czarny."
+    }
+  },
+  {
+    "n": 34,
+    "filter": "continent:Asia,color:red,color:yellow,colorCount:2",
+    "answers": [
+      "cn",
+      "kg",
+      "vn"
+    ],
+    "description": {
+      "en": "Find all Asian flags whose only colours are red and yellow — no others.",
+      "pl": "Znajdź wszystkie azjatyckie flagi, które mają tylko 2 kolory: czerwony i żółty."
+    }
+  },
+  {
+    "n": 35,
+    "filter": "color:white,color:blue,color:black,colorCount:3",
+    "answers": [
+      "bw",
+      "ee"
+    ],
+    "description": {
+      "en": "Find all flags whose only colours are white, blue, and black — no others.",
+      "pl": "Znajdź wszystkie flagi, które mają tylko 3 kolory: biały, niebieski i czarny."
+    }
+  },
+  {
+    "n": 36,
+    "filter": "continent:Asia,color:green,color:!white",
+    "answers": [
+      "bd",
+      "lk"
+    ],
+    "description": {
+      "en": "Find all Asian flags with green but without white.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z zielenią, ale bez bieli."
+    }
+  },
+  {
+    "n": 37,
+    "filter": "continent:Asia,color:green,motif:coat-of-arms",
+    "answers": [
+      "ir",
+      "lk",
+      "sa",
+      "tj"
+    ],
+    "description": {
+      "en": "Find all Asian flags with green and a coat of arms.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z zielenią i godłem."
+    }
+  },
+  {
+    "n": 38,
+    "filter": "continent:Africa,color:red,color:white,color:green,colorCount:3",
+    "answers": [
+      "bi",
+      "dz",
+      "mg"
+    ],
+    "description": {
+      "en": "Find all African flags whose only colours are red, white, and green — no others.",
+      "pl": "Znajdź wszystkie afrykańskie flagi, które mają tylko 3 kolory: czerwony, biały i zielony."
+    }
+  },
+  {
+    "n": 39,
+    "filter": "continent:Asia,color:green,colorCount:3",
+    "answers": [
+      "ir",
+      "lb",
+      "mv",
+      "om"
+    ],
+    "description": {
+      "en": "Find all Asian flags whose only colours are red, white, and green — no others.",
+      "pl": "Znajdź wszystkie azjatyckie flagi, które mają tylko 3 kolory: czerwony, biały i zielony."
+    }
+  },
+  {
+    "n": 40,
+    "filter": "continent:Africa,color:white,color:!red",
+    "answers": [
+      "bw",
+      "ci",
+      "ls",
+      "ne",
+      "ng",
+      "sl",
+      "so"
+    ],
+    "description": {
+      "en": "Find all African flags with white but without red.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z bielą, ale bez czerwieni."
+    }
+  },
+  {
+    "n": 41,
+    "filter": "color:red,color:yellow,color:black,colorCount:3",
+    "answers": [
+      "ao",
+      "be",
+      "de"
+    ],
+    "description": {
+      "en": "Find all flags whose only colours are red, yellow, and black — no others.",
+      "pl": "Znajdź wszystkie flagi, które mają tylko 3 kolory: czerwony, żółty i czarny."
+    }
+  },
+  {
+    "n": 42,
+    "filter": "continent:Asia,color:blue,color:!red",
+    "answers": [
+      "il",
+      "in",
+      "kz"
+    ],
+    "description": {
+      "en": "Find all Asian flags with blue but without red.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z błękitem, ale bez czerwieni."
+    }
+  },
+  {
+    "n": 43,
+    "filter": "continent:Asia,color:white,motif:coat-of-arms",
+    "answers": [
+      "bn",
+      "ir",
+      "kh",
+      "sa",
+      "tj"
+    ],
+    "description": {
+      "en": "Find all Asian flags with white and a coat of arms.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z bielą i godłem."
+    }
+  },
+  {
+    "n": 44,
+    "filter": "continent:Africa,color:red,color:white,color:green,color:black,colorCount:4",
+    "answers": [
+      "ke",
+      "ly",
+      "sd"
+    ],
+    "description": {
+      "en": "Find all African flags whose only colours are red, white, green, and black — no others.",
+      "pl": "Znajdź wszystkie afrykańskie flagi, które mają tylko 4 kolory: czerwony, biały, zielony i czarny."
+    }
+  },
+  {
+    "n": 45,
+    "filter": "continent:Asia,color:blue,color:!white",
+    "answers": [
+      "am",
+      "kz",
+      "mn"
+    ],
+    "description": {
+      "en": "Find all Asian flags with blue but without white.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z błękitem, ale bez bieli."
+    }
+  },
+  {
+    "n": 46,
+    "filter": "continent:Asia,color:red,color:white,colorCount:2",
+    "answers": [
+      "bh",
+      "ge",
+      "id",
+      "jp",
+      "qa",
+      "sg",
+      "tr"
+    ],
+    "description": {
+      "en": "Find all Asian flags whose only colours are red and white — no others.",
+      "pl": "Znajdź wszystkie azjatyckie flagi, które mają tylko 2 kolory: czerwony i biały."
+    }
+  },
+  {
+    "n": 47,
+    "filter": "color:red,color:green,color:yellow,colorCount:3",
+    "answers": [
+      "bf",
+      "bj",
+      "cg",
+      "cm",
+      "gd",
+      "gn",
+      "lt",
+      "ml",
+      "mr",
+      "sn"
+    ],
+    "description": {
+      "en": "Find all flags whose only colours are red, green, and yellow — no others.",
+      "pl": "Znajdź wszystkie flagi, które mają tylko 3 kolory: czerwony, zielony i żółty."
+    }
+  },
+  {
+    "n": 48,
+    "filter": "continent:Asia,color:red,motif:coat-of-arms",
+    "answers": [
+      "bn",
+      "ir",
+      "kh",
+      "lk",
+      "mn",
+      "tj"
+    ],
+    "description": {
+      "en": "Find all Asian flags with red and a coat of arms.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z czerwienią i godłem."
+    }
+  },
+  {
+    "n": 49,
+    "filter": "continent:Europe,motif:animal",
+    "answers": [
+      "ad",
+      "al",
+      "es",
+      "md",
+      "me",
+      "mt",
+      "rs"
+    ],
+    "description": {
+      "en": "Find all European flags with an animal.",
+      "pl": "Znajdź wszystkie europejskie flagi ze zwierzęciem."
+    }
+  },
+  {
+    "n": 50,
+    "filter": "motif:animal,motif:coat-of-arms,motif:weapon",
+    "answers": [
+      "bo",
+      "ec",
+      "gt",
+      "lk"
+    ],
+    "description": {
+      "en": "Find all flags with an animal, a coat of arms, and a weapon.",
+      "pl": "Znajdź wszystkie flagi ze zwierzęciem, godłem i bronią."
+    }
   }
 ]

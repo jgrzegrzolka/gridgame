@@ -1,17 +1,22 @@
 [
   {
-    "filter": "continent:Europe,motif:animal",
-    "notes": "al/md/me/rs eagles and ad's lamb-and-cow COA are large enough to read; es and mt are emblem-only. Suitable past #30 once player trust is built.",
-    "parkUntilN": 30
+    "filter": "color:blue,color:!white,motif:cross",
+    "notes": "Sweden alone (se) — strict-subset of #1 (Europe·cross which includes se). Rule 6 blocks until past #100; would work as recall at #101+.",
+    "parkUntilN": 101
+  },
+  {
+    "filter": "continent:Asia,motif:cross",
+    "notes": "Georgia alone (ge) — strict-subset of #46 (Asia red+white only-2 which includes ge). Rule 6 blocks until past #100; would work as recall at #101+.",
+    "parkUntilN": 101
   },
   {
     "filter": "motif:weapon",
-    "notes": "Solo per rule 10 (13 sovereigns). High nameScore set (bb/sz/mz/om push past easier caps). Suitable past #30.",
-    "parkUntilN": 30
+    "notes": "13 sovereigns (ao, bb, bo, ec, gt, ht, ke, lk, mt, mz, om, sa, sz). Strict-superset of #50 (animal+coa+weapon → bo,ec,gt,lk). Rule 6 blocks until past #100; works as recall at #101+ — 'you saw the 4 with animal+coa+weapon, which 9 other flags have weapons?'.",
+    "parkUntilN": 101
   },
   {
     "filter": "continent:Europe,color:white,color:blue,colorCount:2",
-    "notes": "Iconic but {fi, gr} is a strict subset of #1 (Europe+cross) — both fi and gr have crosses. Rule 6 blocks until past #100, where subsets are allowed as a recall mechanic.",
+    "notes": "Iconic but {fi, gr} is a strict subset of #1 (Europe·cross — both have crosses). Rule 6 blocks until past #100, where subsets are allowed as a recall mechanic.",
     "parkUntilN": 101
   }
 ]
