@@ -88,10 +88,10 @@ body {
   }
 }
 /* Name search — sits in the filter bar so its presence affects the
- * count and clear-all just like the pills. On desktop it shares the
- * row with the filter groups; on mobile it takes a full row above
- * the collapse toggle so the user can search without tapping Filters
- * open first. */
+ * count and clear-all just like the pills. Always on its own row at
+ * the top (order: -1) so the user can search without scanning past
+ * the filter groups — same on desktop and mobile, since the search
+ * is a faster path than picking a pill when you know the name. */
 .name-search {
   font: inherit;
   font-size: 14px;
@@ -99,21 +99,16 @@ body {
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 999px;
-  flex: 1 1 180px;
+  flex-basis: 100%;
   min-width: 0;
-  max-width: 240px;
+  order: -1;
 }
+/* Tint the existing 1px border on focus rather than overlaying a thicker
+ * outline — the colour change is enough for an indicator, and keeping
+ * the border width constant prevents the row from shifting on focus. */
 .name-search:focus {
-  outline: 2px solid var(--link-color);
-  outline-offset: -1px;
-  border-color: transparent;
-}
-@media (max-width: 600px) {
-  .name-search {
-    flex-basis: 100%;
-    max-width: none;
-    order: -1;
-  }
+  outline: none;
+  border-color: var(--link-color);
 }
 .filter-label {
   font-size: 12px;
