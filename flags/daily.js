@@ -25,6 +25,9 @@ import { parseFilterString } from './findFlag.js';
  * @property {string} filter   serialized filter, same form as the
  *                             findFlag chooser's `?f=` URL parameter
  * @property {string[]} answers  country codes the puzzle resolves to
+ * @property {boolean} [primaryCleanExempt]  rare escape hatch — when true,
+ *                             this entry opts out of the #1-100 primary-clean
+ *                             test. Use sparingly; see SKILL.md rule 5.
  */
 
 /**

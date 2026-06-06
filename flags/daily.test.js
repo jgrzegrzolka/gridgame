@@ -334,6 +334,15 @@ test('live + backlog: puzzles #1-100 are primary-clean (no emblem-only colour ma
   const sov = flagsGamePool(COUNTRIES, false);
   for (const entry of [...CATALOG, ...BACKLOG]) {
     if (entry.n > 100) continue;
+    // Per-puzzle escape hatch — when set, the entry's answer set is
+    // allowed to diverge between `colors` and `primaryColors`. Used for
+    // the rare puzzle where excluding a primary-drift flag would gut
+    // the category (e.g. Europe·black, where Malta's COA-only black
+    // would be the only thing the primary-clean rule rejected, and
+    // dropping Malta loses the "famous European black-element" feel).
+    // Treat this flag as expensive — it pokes a hole in the rule's
+    // onboarding-trust guardrail, so each use needs a curator's note.
+    if (entry.primaryCleanExempt === true) continue;
     const f = parseFilterString(entry.filter);
     assert.ok(f, `#${entry.n}: failed to parse filter "${entry.filter}"`);
     const strict = sov

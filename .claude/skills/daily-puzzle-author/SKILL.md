@@ -38,6 +38,9 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
 
 5. **Primary-clean colours (puzzles #1–100).** *(primary-clean test)* The same answer set must resolve under `{ colorField: 'primaryColors' }` as under the default. No emblem-only colour matches in onboarding. *Why:* a player typing Bolivia in "South America · blue" and getting accepted because Bolivia's blue is only in its coat of arms reads as "the game is wrong". First 100 puzzles are where players build trust; surprises here are uniquely expensive. Past #100: still preferred, not enforced.
 
+   **Escape hatch: `primaryCleanExempt: true`.** Add this field on a puzzle entry to opt that single entry out of the test. Use it sparingly — every exempt puzzle is a place a player may type a flag and feel "the game is wrong". Pattern when adding: include a note (in the skill or PLAN.md) explaining *which* flag drifts and *why* keeping it is worth the trust cost. Current exemptions:
+   - `continent:Europe,color:black` (Malta's black is the George Cross detail, COA-only — primary resolves to 5, default colors to 6; the 6th flag is worth keeping because the puzzle reads as "famous European black-element flags").
+
 6. **No strict-subset puzzles (puzzles #1–100).** *(no-subset test)* For any two puzzles in #1–100, neither's answer set may be a strict subset of the other's. *Why:* the player who already met the superset has seen every answer in the subset, so the subset puzzle isn't "find all the X" — it's "remember which of those are also Y". Past #100 allowed as a deliberate recall mechanic.
 
 ### Soft (hand-check)
@@ -62,6 +65,11 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
    *Why:* compounding produces tiny, contrived sets ("Africa, weapon, yellow" = "the African weapon flags that happen to also be yellow") — not a category the player would recognise. "Solo" means worldwide without continent/colour/other-motif. These solo puzzles tend to need higher nameScore caps and live later in onboarding.
 
    *Verify before adding:* run a quick check against `flags/countries.json` — these counts shift when sovereign data changes.
+
+   **Small intersections behave like small properties.** Some pairs are themselves small enough that compounding further produces contrived sets, even when both members are individually large:
+   - `continent:Europe,color:black` — 5 sovereigns primary-clean (al, be, ee, de, li). Don't compound further; if you want a Europe+black puzzle, run it solo.
+
+   When you discover another such pair (intersection under 15 primary-clean), add it here.
 
 10. **No motif-emblem traps (puzzles #1–100).** Until `primaryMotifs` exists, avoid filters whose answer set is dominated by emblem-only motifs:
     - `continent:South America,motif:animal` and its colour-compound variants (bo/ec/pe are all COA-only fauna)
