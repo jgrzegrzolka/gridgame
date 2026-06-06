@@ -26,7 +26,7 @@ function country(over = {}) {
  */
 function filters(spec) {
   const f = emptyFilters();
-  for (const k of /** @type {Array<keyof Filters>} */ (Object.keys(spec))) {
+  for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'>} */ (Object.keys(spec))) {
     const s = spec[k];
     if (!s) continue;
     if (s.include) f[k].include = new Set(s.include);
@@ -174,12 +174,48 @@ test('matchesFilters: a flag with no additionalColors matches the same set under
   assert.equal(matchesFilters(italy, filters({ color: { include: ['blue'] } })), false);
 });
 
-test('emptyFilters returns a fresh Filters with all include/exclude sets empty', () => {
+test('matchesFilters: colorCount:N matches countries whose total palette size equals N', () => {
+  // Slovakia-shape: 3 colours total, all primary (no additional).
+  const sk = country({ code: 'sk', primaryColors: ['white','blue','red'], additionalColors: [] });
+  // Croatia-shape: 3 primary + 1 additional = 4 total.
+  const hr = country({ code: 'hr', primaryColors: ['white','blue','red'], additionalColors: ['yellow'] });
+  // Filter "exactly 3 colours" picks sk, rejects hr — regardless of colorField,
+  // because colorCount always checks the full union.
   const f = emptyFilters();
-  for (const k of /** @type {Array<keyof Filters>} */ (Object.keys(f))) {
+  f.colorCount = 3;
+  assert.equal(matchesFilters(sk, f), true);
+  assert.equal(matchesFilters(hr, f), false);
+  assert.equal(matchesFilters(sk, f, { colorField: 'primaryColors' }), true);
+  assert.equal(matchesFilters(hr, f, { colorField: 'primaryColors' }), false);
+});
+
+test('matchesFilters: colorCount = 0 picks only empty-palette countries (none in real data, but the predicate must work)', () => {
+  const c = country({ code: 'xx', primaryColors: [], additionalColors: [] });
+  const f = emptyFilters();
+  f.colorCount = 0;
+  assert.equal(matchesFilters(c, f), true);
+  const nonEmpty = country({ code: 'yy', primaryColors: ['red'], additionalColors: [] });
+  assert.equal(matchesFilters(nonEmpty, f), false);
+});
+
+test('matchesFilters: colorCount combines with color includes — "only red+white+blue" pattern', () => {
+  const sk = country({ code: 'sk', primaryColors: ['white','blue','red'], additionalColors: [] });
+  const hr = country({ code: 'hr', primaryColors: ['white','blue','red'], additionalColors: ['yellow'] });
+  // Same flags as before, but now testing the realistic puzzle pattern:
+  // include {red,white,blue} AND colorCount:3. sk passes, hr fails on count.
+  const f = filters({ color: { include: ['red','white','blue'] } });
+  f.colorCount = 3;
+  assert.equal(matchesFilters(sk, f), true);
+  assert.equal(matchesFilters(hr, f), false);
+});
+
+test('emptyFilters returns a fresh Filters with all include/exclude sets empty and colorCount null', () => {
+  const f = emptyFilters();
+  for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'>} */ (['status','continent','color','motif'])) {
     assert.equal(f[k].include.size, 0);
     assert.equal(f[k].exclude.size, 0);
   }
+  assert.equal(f.colorCount, null);
   // independence: mutating one instance doesn't affect a fresh one
   f.color.include.add('red');
   assert.equal(emptyFilters().color.include.size, 0);

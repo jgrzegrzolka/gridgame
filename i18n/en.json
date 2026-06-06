@@ -54,6 +54,7 @@
     "clear": "Clear",
     "flagsMatch": "{n} flags",
     "notPrefix": "not ",
+    "noOtherColors": "no other colours",
     "sections": {
       "continents": "Continents",
       "colors": "Colors",
@@ -151,6 +152,14 @@
     "star-or-moon": "star or moon",
     "cross": "cross",
     "union-jack": "Union Jack"
+  },
+  "filter": {
+    "onlyN": {
+      "2": "only 2 colours",
+      "3": "only 3 colours",
+      "4": "only 4 colours",
+      "5": "only 5 colours"
+    }
   },
   "status": {
     "sovereign": "Sovereign",

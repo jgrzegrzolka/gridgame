@@ -143,6 +143,20 @@ export function bootFindFlag() {
     /** @type {Array<{ btn: HTMLButtonElement, group: 'continent' | 'color' | 'motif', value: string }>} */
     const allPills = [];
 
+    // "No other colours" toggle pill — ties colorCount to whatever colours
+    // are currently selected as includes. Adding a colour while on bumps the
+    // count up; removing one bumps it down. Off → colorCount cleared.
+    let onlyColorsMode = false;
+    /** @type {HTMLButtonElement | null} */
+    let onlyColorsBtn = null;
+    function syncOnlyColors() {
+      if (!onlyColorsMode) {
+        filter.colorCount = null;
+        return;
+      }
+      filter.colorCount = filter.color.include.size;
+    }
+
     for (const sec of sections) {
       const secEl = document.createElement('section');
       secEl.className = 'chooser-section';
@@ -169,6 +183,28 @@ export function bootFindFlag() {
         wrap.appendChild(btn);
         allPills.push({ btn, group, value });
       }
+      // After the Colors section render the "no other colours" modifier
+      // pill. Single toggle; when active, filter.colorCount is bound to the
+      // number of include colours. Adding/removing colour pills auto-updates
+      // the count via syncOnlyColors().
+      if (sec.group === 'color') {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'pill pill-modifier';
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'pill-label';
+        labelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');
+        btn.appendChild(labelSpan);
+        btn.addEventListener('click', () => {
+          onlyColorsMode = !onlyColorsMode;
+          if (onlyColorsMode) btn.classList.add('active');
+          else btn.classList.remove('active');
+          syncOnlyColors();
+          updateBar();
+        });
+        wrap.appendChild(btn);
+        onlyColorsBtn = btn;
+      }
       secEl.appendChild(wrap);
       sectionsEl.appendChild(secEl);
     }
@@ -182,9 +218,10 @@ export function bootFindFlag() {
 
     function updateBar() {
       let selCount = 0;
-      for (const k of /** @type {Array<keyof typeof filter>} */ (Object.keys(filter))) {
+      for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
         selCount += filter[k].include.size + filter[k].exclude.size;
       }
+      if (filter.colorCount !== null) selCount++;
       if (selCount === 0) {
         countEl.textContent = '';
         playBtn.disabled = true;
@@ -219,6 +256,9 @@ export function bootFindFlag() {
         g.include.add(value);
         btn.classList.add('active');
       }
+      // Colour-include count may have changed — if "no other colours" is on,
+      // colorCount tracks it. (No-op if onlyColorsMode is false.)
+      if (group === 'color') syncOnlyColors();
       updateBar();
     }
 
@@ -229,10 +269,13 @@ export function bootFindFlag() {
     });
 
     clearBtn.addEventListener('click', () => {
-      for (const k of /** @type {Array<keyof typeof filter>} */ (Object.keys(filter))) {
+      for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
         filter[k].include.clear();
         filter[k].exclude.clear();
       }
+      filter.colorCount = null;
+      onlyColorsMode = false;
+      if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
       for (const { btn } of allPills) {
         btn.classList.remove('active', 'exclude');
       }

@@ -172,6 +172,30 @@ test('serializeFilter: empty filter serializes to empty string', () => {
   assert.equal(serializeFilter(emptyFilters()), '');
 });
 
+test('parseFilterString: colorCount:N parses to a scalar integer constraint', () => {
+  const f = parseFilterString('continent:Europe,color:red,color:white,color:blue,colorCount:3');
+  assert.ok(f);
+  assert.equal(f.colorCount, 3);
+  assert.deepEqual([...f.color.include], ['red','white','blue']);
+});
+
+test('parseFilterString: colorCount with non-integer or negative value is silently dropped', () => {
+  assert.equal(parseFilterString('colorCount:'), null);
+  assert.equal(parseFilterString('colorCount:abc'), null);
+  assert.equal(parseFilterString('colorCount:-1'), null);
+  // colorCount:0 is legal (matches empty-palette entries) — token parses, filter is non-empty
+  const f = parseFilterString('colorCount:0');
+  assert.ok(f);
+  assert.equal(f.colorCount, 0);
+});
+
+test('serializeFilter: round-trips colorCount alongside other tokens', () => {
+  const s = 'continent:Europe,color:red,color:white,color:blue,colorCount:3';
+  const f = parseFilterString(s);
+  assert.ok(f);
+  assert.equal(serializeFilter(f), s);
+});
+
 test('filterFromLegacyCat: continent id maps to single-include filter', () => {
   const f = filterFromLegacyCat('continent:Africa');
   assert.ok(f);
@@ -234,6 +258,26 @@ test('filterTitle: joins selected pills with the interpunct separator in GROUP_O
   const f = parseFilterString('continent:Africa,color:orange,motif:!cross');
   assert.ok(f);
   assert.equal(filterTitle(f, idTranslate), 'Africa · orange · not cross');
+});
+
+test('pillLabel: colorCount renders as "only N colours" with the i18n fallback', () => {
+  assert.equal(pillLabel('colorCount', '2', 'include', idTranslate), 'only 2 colours');
+  assert.equal(pillLabel('colorCount', '3', 'include', idTranslate), 'only 3 colours');
+  // Sign is ignored for colorCount — the primitive is scalar, "exclude" makes
+  // no sense, so the renderer just returns the include form.
+  assert.equal(pillLabel('colorCount', '3', 'exclude', idTranslate), 'only 3 colours');
+});
+
+test('filterTitle: appends "only N colours" when colorCount is set', () => {
+  const f = parseFilterString('continent:Europe,color:red,color:white,color:blue,colorCount:3');
+  assert.ok(f);
+  assert.equal(filterTitle(f, idTranslate), 'Europe · red · white · blue · only 3 colours');
+});
+
+test('filterTitle: colorCount with no other tokens renders as just the count phrase', () => {
+  const f = parseFilterString('colorCount:2');
+  assert.ok(f);
+  assert.equal(filterTitle(f, idTranslate), 'only 2 colours');
 });
 
 test('filterTitle: empty filter renders to empty string', () => {
@@ -304,7 +348,7 @@ const PILL_POOL = /** @type {Array<{ group: 'continent' | 'color' | 'motif', val
 /** @param {ReturnType<typeof emptyFilters>} f */
 function pillCount(f) {
   let n = 0;
-  for (const k of /** @type {Array<keyof typeof f>} */ (Object.keys(f))) {
+  for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'>} */ (['status','continent','color','motif'])) {
     n += f[k].include.size + f[k].exclude.size;
   }
   return n;
@@ -402,7 +446,7 @@ test('pickRandomMix: excludeProbability=0 forces include-only', () => {
       return v;
     };
     const f = pickRandomMix(PILL_POOL, SAMPLE, { rng, excludeProbability: 0 });
-    for (const k of /** @type {Array<keyof typeof f>} */ (Object.keys(f))) {
+    for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'>} */ (['status','continent','color','motif'])) {
       assert.equal(f[k].exclude.size, 0,
         `seed ${seed} group ${k}: excludeProbability=0 should produce no excludes`);
     }
@@ -422,7 +466,7 @@ test('pickRandomMix: excludeProbability=1 flips every pill to exclude', () => {
       excludeProbability: 1,
       minIntersection: 0, // exclude-only mixes may still match — but don't require it
     });
-    for (const k of /** @type {Array<keyof typeof f>} */ (Object.keys(f))) {
+    for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'>} */ (['status','continent','color','motif'])) {
       assert.equal(f[k].include.size, 0,
         `seed ${seed} group ${k}: excludeProbability=1 should produce no includes`);
     }

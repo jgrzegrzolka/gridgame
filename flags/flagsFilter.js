@@ -18,6 +18,7 @@ import { sovereigntyOf } from './group.js';
  *   continent: FilterSet,
  *   color: FilterSet,
  *   motif: FilterSet,
+ *   colorCount: number | null,
  * }} Filters
  */
 
@@ -33,6 +34,7 @@ export function emptyFilters() {
     continent: { include: new Set(), exclude: new Set() },
     color: { include: new Set(), exclude: new Set() },
     motif: { include: new Set(), exclude: new Set() },
+    colorCount: null,
   };
 }
 
@@ -75,6 +77,13 @@ export function matchesFilters(country, filters, options = {}) {
     if (!colors.includes(c)) return false;
   }
   if (filters.color.exclude.size && colors.some((c) => filters.color.exclude.has(c))) return false;
+
+  // colorCount always checks the full palette (c.colors = primary + additional
+  // union), not the colorField-selected view. Semantic: "the flag has exactly
+  // N visible colours" — a player counting colours sees the union regardless
+  // of how the data is split. Primary-clean stays consistent because both
+  // modes resolve colorCount against the same field.
+  if (filters.colorCount !== null && country.colors.length !== filters.colorCount) return false;
 
   const motifs = country.motifs ?? [];
   for (const m of filters.motif.include) {

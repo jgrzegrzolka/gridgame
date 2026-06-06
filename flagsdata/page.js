@@ -118,7 +118,7 @@ export function bootFlagsData() {
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
     let pillTotal = 0;
-    for (const k of /** @type {Array<keyof typeof filters>} */ (Object.keys(filters))) {
+    for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
       pillTotal += filters[k].include.size + filters[k].exclude.size;
     }
     const anyActive = pillTotal > 0 || nameQuery !== '';
@@ -140,7 +140,7 @@ export function bootFlagsData() {
 
   /**
    * @param {string} label
-   * @param {keyof typeof filters} group
+   * @param {'continent' | 'color' | 'motif' | 'status'} group
    * @param {Array<{ value: string, label: string }>} entries
    */
   function buildFilterGroup(label, group, entries) {
@@ -257,7 +257,7 @@ export function bootFlagsData() {
   clearBtn.textContent = t('flagsdata.clear', 'Clear');
   clearBtn.hidden = true;
   clearBtn.addEventListener('click', () => {
-    for (const k of /** @type {Array<keyof typeof filters>} */ (Object.keys(filters))) {
+    for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
       filters[k].include.clear();
       filters[k].exclude.clear();
     }
