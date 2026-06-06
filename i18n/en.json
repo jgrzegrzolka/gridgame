@@ -29,8 +29,8 @@
     "countryName": "Country name…"
   },
   "quiz": {
-    "title": "Country Flag Quiz — Yet Another Quiz",
-    "statsTitle": "Flag Quiz — Your Stats",
+    "title": "Yet Another Quiz — Country Flag Quiz",
+    "statsTitle": "Yet Another Quiz — Flag Quiz Stats",
     "loading": "Loading…",
     "finalScore": "Final score:",
     "mistakes": "Mistakes:",
@@ -42,7 +42,7 @@
     }
   },
   "findFlag": {
-    "title": "Find All Country Flags by Category — Yet Another Quiz",
+    "title": "Yet Another Quiz — Find All Country Flags by Category",
     "heading": "Find Flag",
     "blurb": "Pick categories and name every flag that matches.",
     "typeCountryName": "Type a country name…",
@@ -62,17 +62,18 @@
     }
   },
   "daily": {
-    "title": "Daily Flag Puzzle — Yet Another Quiz",
+    "title": "Yet Another Quiz",
     "todaysPuzzle": "Today's puzzle",
     "archive": "Previous puzzles",
-    "archiveTitle": "Daily Flag Puzzle — Previous puzzles",
+    "archiveTitle": "Yet Another Quiz — Daily Archive",
     "archiveCount": "{n} flags",
     "notFound": "Puzzle not found.",
     "empty": "No puzzles yet.",
     "sovereignOnly": "Sovereign countries only."
   },
   "ttt": {
-    "title": "Tic Tac Toe with Country Flags — Yet Another Quiz",
+    "title": "Yet Another Quiz — Tic Tac Toe with Country Flags",
+    "offlineTitle": "Yet Another Quiz — Offline Tic Tac Toe",
     "lobbyTitle": "Play with a friend",
     "variant3x3": "3×3",
     "variant9x9": "9×9",
@@ -111,7 +112,8 @@
     }
   },
   "ttt9x9": {
-    "title": "9×9"
+    "title": "Yet Another Quiz — 9×9 Flag Tic Tac Toe",
+    "offlineTitle": "Yet Another Quiz — Offline 9×9 Flag Tic Tac Toe"
   },
   "variant": {
     "countries": "All countries",
@@ -171,7 +173,7 @@
     "other": "Other"
   },
   "flagsdata": {
-    "title": "All Country Flags — Yet Another Quiz",
+    "title": "Yet Another Quiz — All Country Flags",
     "filters": "Filters",
     "filterStatus": "Status",
     "filterContinent": "Continent",

@@ -7,10 +7,16 @@
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
   gap: 8px;
   width: 100%;
-  max-width: 720px;
+  /* 732px aligns the grid's right edge with the chrome cluster on
+   * wide viewports: the burger sits at `right: 12px + (50vw - 378px)`
+   * so its right edge lands at `50vw + 366px` from the viewport left,
+   * and a centered 732px grid puts its right edge at the same spot
+   * (732 / 2 = 366). 8 × 84 + 7 × 8 = 728 fits cleanly under that,
+   * with 1fr stretching each tile to ~84.5px to fill the row. */
+  max-width: 732px;
 }
 
 .archive-empty {
@@ -42,7 +48,7 @@
   color: #1c1c1c;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 22px;
   box-sizing: border-box;
   overflow: hidden;
 }
@@ -70,12 +76,12 @@
   font-weight: 500;
 }
 
-/* Hover reveals the puzzle criteria as a full-tile overlay. The
- * archive tiles are too small (56px-ish on mobile) for a bottom-only
- * strip to fit even short labels like "Europe · cross" without
- * ellipsis-eating most of the text. The whole-tile overlay gives the
- * label two lines to breathe. Number + score are temporarily hidden
- * underneath — they're back the moment the cursor leaves. */
+/* Hover reveals the puzzle criteria as a full-tile overlay. Even at
+ * ~84px tiles a bottom-only strip can't fit longer rules like "Europe
+ * · red · white · blue · only 3 colours" without ellipsis-eating most
+ * of the text, so the overlay takes the whole tile and gets several
+ * lines to breathe. Number + score are temporarily hidden underneath
+ * — they're back the moment the cursor leaves. */
 .archive-square-criteria {
   position: absolute;
   inset: 0;
@@ -85,7 +91,7 @@
   padding: 4px;
   background: rgba(28, 28, 28, 0.92);
   color: #fff;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   text-align: center;
   line-height: 1.2;
