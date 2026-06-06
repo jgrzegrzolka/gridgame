@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 
 import {
   COLORS_FOR_RANDOM,
+  ALL_FLAG_COLORS,
   MOTIFS_FOR_RANDOM,
   ALL_MOTIFS,
   CONTINENTS_FOR_RANDOM,
@@ -90,14 +91,13 @@ test('every entry has a non-empty primaryColors and an additionalColors array, b
   // colour anywhere on the flag", which `allColors()` returns.
   //
   // Data palette is wider than `COLORS_FOR_RANDOM`: the random-puzzle
-  // generator and the findFlag UI only deal with the seven canonical
-  // colours, but countries.json can carry rarer emblem colours (e.g.
-  // `violet` for the sisserou parrot on Dominica's COA, the latte-stone
-  // garland on Northern Mariana Islands) so the data stays accurate even
-  // where the UI doesn't expose a filter. Add a colour here when a real
-  // flag uses one outside the canonical palette.
-  const FLAG_COLOR_PALETTE = new Set([...COLORS_FOR_RANDOM, 'violet']);
-  const palette = FLAG_COLOR_PALETTE;
+  // generator stays on the seven canonical colours (every continent ×
+  // colour cell must have candidates), but countries.json can carry rarer
+  // emblem colours (`violet` for Dominica's sisserou parrot and Northern
+  // Mariana Islands' wreath). findFlag's chooser uses `ALL_FLAG_COLORS`
+  // so the wider palette surfaces in the UI even though it's not used by
+  // the random generator.
+  const palette = new Set(ALL_FLAG_COLORS);
   const offenders = [];
   for (const c of COUNTRIES) {
     if (!Array.isArray(c.primaryColors) || c.primaryColors.length === 0) {

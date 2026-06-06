@@ -1,6 +1,6 @@
 import { CONTINENTS, flagsGamePool, loadCountries } from '../flags/group.js';
 import {
-  COLORS_FOR_RANDOM,
+  ALL_FLAG_COLORS,
   ALL_MOTIFS,
   suggest,
   exactSingleMatch,
@@ -125,7 +125,7 @@ export function bootFindFlag() {
       {
         title: t('findFlag.sections.colors', 'Colors'),
         group: /** @type {'color'} */ ('color'),
-        items: COLORS_FOR_RANDOM.map((value) => ({
+        items: ALL_FLAG_COLORS.map((value) => ({
           value,
           count: all.filter((c) => c.colors.includes(value)).length,
         })).filter((it) => it.count > 0),
@@ -457,7 +457,7 @@ export function bootFindFlag() {
         const pool = [
           ...CONTINENTS.filter((v) => all.some((c) => c.continent === v))
             .map((v) => ({ group: /** @type {'continent'} */ ('continent'), value: /** @type {string} */ (v) })),
-          ...COLORS_FOR_RANDOM.filter((v) => all.some((c) => c.colors.includes(v)))
+          ...ALL_FLAG_COLORS.filter((v) => all.some((c) => c.colors.includes(v)))
             .map((v) => ({ group: /** @type {'color'} */ ('color'), value: v })),
           ...ALL_MOTIFS.filter((v) => all.some((c) => (c.motifs ?? []).includes(v)))
             .map((v) => ({ group: /** @type {'motif'} */ ('motif'), value: v })),
