@@ -10,6 +10,7 @@ import {
 } from './onlineClient.js';
 import { newlyWonSmallBoards, isMetaWinNewlyFormed } from '../../flags/ultimateTicTacToe.js';
 import { shouldFireTicTacToeConfetti } from '../../flags/ticTacToe.js';
+import { loadCountries } from '../../flags/group.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 
@@ -27,6 +28,7 @@ function tCat(c) {
 export function bootUltimateTicTacToeOnline() {
   fetch('../../flags/countries.json')
     .then((r) => r.json())
+    .then(loadCountries)
     .then((countries) => runOnline(withLocalizedAliases(countries)))
     .catch((err) => {
       const lobbyEl = document.getElementById('lobby');

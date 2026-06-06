@@ -1,4 +1,4 @@
-import { CONTINENTS } from '../flags/group.js';
+import { CONTINENTS, loadCountries } from '../flags/group.js';
 import { COLORS_FOR_RANDOM, ALL_MOTIFS, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
 import { t, countryName } from '../i18n.js';
@@ -273,6 +273,7 @@ export function bootFlagsData() {
 
   fetch('../flags/countries.json')
     .then((r) => r.json())
+    .then(loadCountries)
     .then((all) => {
       const sections = document.getElementById('sections');
       renderAll(sections, all);

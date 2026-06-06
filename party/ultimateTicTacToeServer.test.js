@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { continent, hasColor } from '../flags/engine.js';
+import { createCountry } from '../flags/group.js';
 import { UltimateTicTacToeServer } from './ultimateTicTacToeServer.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
@@ -10,7 +11,7 @@ import { UltimateTicTacToeServer } from './ultimateTicTacToeServer.js';
  * @returns {Country}
  */
 function country(fields) {
-  return { category: 'country', continent: 'Europe', statehood: 'un_member', ...fields };
+  return createCountry({ category: 'country', continent: 'Europe', statehood: 'un_member', ...fields });
 }
 
 const PUZZLE = {
@@ -18,7 +19,7 @@ const PUZZLE = {
   cols: [hasColor('red'), hasColor('blue'), hasColor('green')],
 };
 
-const FR = country({ code: '00', name: 'France', continent: 'Europe', colors: ['red'] });
+const FR = country({ code: '00', name: 'France', continent: 'Europe', primaryColors: ['red'] });
 const COUNTRIES = [FR];
 
 /** @param {string} id */

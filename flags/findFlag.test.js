@@ -16,6 +16,7 @@ import {
   pickRandomMix,
 } from './findFlag.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
+import { createCountry } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
@@ -24,21 +25,21 @@ import { emptyFilters, matchesFilters } from './flagsFilter.js';
  * @returns {Country}
  */
 function country(fields) {
-  return {
+  return createCountry({
     category: 'country',
     continent: 'Europe',
     statehood: 'un_member',
-    colors: [],
+    primaryColors: [],
     motifs: [],
     ...fields,
-  };
+  });
 }
 
-const FR = country({ code: 'fr', name: 'France', continent: 'Europe', colors: ['red', 'white', 'blue'] });
-const DE = country({ code: 'de', name: 'Germany', continent: 'Europe', colors: ['black', 'red', 'yellow'] });
-const KE = country({ code: 'ke', name: 'Kenya', continent: 'Africa', colors: ['black', 'red', 'green', 'white'], motifs: ['weapon', 'coat-of-arms'] });
-const JP = country({ code: 'jp', name: 'Japan', continent: 'Asia', colors: ['white', 'red'] });
-const EU = country({ code: 'eu', name: 'European Union', category: 'other', continent: null, colors: ['blue', 'yellow'], motifs: ['star-or-moon'] });
+const FR = country({ code: 'fr', name: 'France', continent: 'Europe', primaryColors: ['red', 'white', 'blue'] });
+const DE = country({ code: 'de', name: 'Germany', continent: 'Europe', primaryColors: ['black', 'red', 'yellow'] });
+const KE = country({ code: 'ke', name: 'Kenya', continent: 'Africa', primaryColors: ['black', 'red', 'green', 'white'], motifs: ['weapon', 'coat-of-arms'] });
+const JP = country({ code: 'jp', name: 'Japan', continent: 'Asia', primaryColors: ['white', 'red'] });
+const EU = country({ code: 'eu', name: 'European Union', category: 'other', continent: null, primaryColors: ['blue', 'yellow'], motifs: ['star-or-moon'] });
 
 const SAMPLE = [FR, DE, KE, JP, EU];
 
@@ -56,7 +57,7 @@ test('categoryFromId parses a hasColor id', () => {
   assert.ok(cat);
   assert.equal(cat.id, 'hasColor:red');
   assert.equal(cat.predicate(FR), true);
-  assert.equal(cat.predicate(country({ code: 'xx', name: 'X', colors: ['blue'] })), false);
+  assert.equal(cat.predicate(country({ code: 'xx', name: 'X', primaryColors: ['blue'] })), false);
 });
 
 test('categoryFromId parses a hasMotif id', () => {

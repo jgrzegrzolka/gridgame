@@ -253,6 +253,28 @@ test('withLocalizedAliases: passes entries through unchanged when localized name
   assert.equal(out[0], input[0], 'no allocation when nothing changes');
 });
 
+// Regression pin — withLocalizedAliases clones via `{ ...item, aliases: [...] }`,
+// which only copies enumerable own properties. The `colors` getter on Country
+// (added by createCountry, union of primaryColors + additionalColors) must
+// survive that spread; otherwise downstream readers like engine.js's hasColor
+// predicate (`c.colors.includes(color)`) hit `undefined.includes` at runtime.
+// This blew up the findFlag page once and wasn't caught by any test because
+// no test exercised the full createCountry → withLocalizedAliases → predicate
+// pipeline. Keep this test alongside any change to `colors`-getter enumerability.
+test('withLocalizedAliases: preserves c.colors on cloned Country objects', async () => {
+  const { createCountry } = await import('./flags/group.js');
+  _seedCacheForTests({ country: { pl: 'Polska' } });
+  const pl = createCountry({
+    code: 'pl', name: 'Poland', category: 'country', continent: 'Europe',
+    primaryColors: ['white', 'red'], additionalColors: [],
+  });
+  assert.deepEqual(pl.colors, ['white', 'red'], 'sanity: getter works before clone');
+  const [cloned] = withLocalizedAliases([pl]);
+  assert.deepEqual(cloned.colors, ['white', 'red'],
+    'cloned country lost c.colors — was the getter set to enumerable:false?');
+  _resetCacheForTests();
+});
+
 // ---- JSON file parity ----
 
 /**

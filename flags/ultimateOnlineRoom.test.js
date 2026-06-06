@@ -11,6 +11,7 @@ import {
   serializeUltimateRoom,
   deserializeUltimateRoom,
 } from './ultimateOnlineRoom.js';
+import { createCountry } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
@@ -19,12 +20,12 @@ import {
  * @returns {Country}
  */
 function country(fields) {
-  return {
+  return createCountry({
     category: 'country',
     continent: 'Europe',
     statehood: 'un_member',
     ...fields,
-  };
+  });
 }
 
 const PUZZLE = {
@@ -51,7 +52,7 @@ function makePool() {
           code,
           name: `${c}-${col}-${i}`,
           continent: c,
-          colors: [col],
+          primaryColors: [col],
         }));
       }
     }
@@ -60,8 +61,8 @@ function makePool() {
 }
 
 const POOL = makePool();
-const FR = /** @type {Country} */ (POOL.find((c) => c.continent === 'Europe' && c.colors?.includes('red')));
-const JP = /** @type {Country} */ (POOL.find((c) => c.continent === 'Asia' && c.colors?.includes('red')));
+const FR = /** @type {Country} */ (POOL.find((c) => c.continent === 'Europe' && c.primaryColors?.includes('red')));
+const JP = /** @type {Country} */ (POOL.find((c) => c.continent === 'Asia' && c.primaryColors?.includes('red')));
 
 // ---- createUltimateRoom ----
 
@@ -211,7 +212,7 @@ test('applyUltimateClaim: a claim that completes the meta 3-in-a-row carries the
   let room = createUltimateRoom(PUZZLE);
   room = applyUltimateHello(room, 'alice').room; // X
   room = applyUltimateHello(room, 'bob').room;   // O — moves first
-  const euGreen = POOL.filter((c) => c.continent === 'Europe' && c.colors?.includes('green'));
+  const euGreen = POOL.filter((c) => c.continent === 'Europe' && c.primaryColors?.includes('green'));
   assert.equal(euGreen.length, 3, 'fixture invariant: 3 Europe+green countries');
   // Mark small boards (0,0) and (0,1) as already won by O. The engine's
   // meta-winner check only reads board.winner, so we don't need to make

@@ -1,4 +1,5 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
+import { loadCountries } from '../../flags/group.js';
 import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells } from '../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
@@ -15,6 +16,7 @@ function tCat(c) {
 export function bootTicTacToe() {
   fetch('../../flags/countries.json')
     .then((r) => r.json())
+    .then(loadCountries)
     .then((rawCountries) => {
       const countries = withLocalizedAliases(rawCountries);
       const puzzle = generateRandomPuzzle(countries);

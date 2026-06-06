@@ -1,0 +1,12 @@
+[
+  {
+    "filter": "continent:Europe,motif:animal",
+    "notes": "al/md/me/rs eagles and ad's lamb-and-cow COA are large enough to read; es and mt are emblem-only. Suitable past #30 once player trust is built.",
+    "parkUntilN": 30
+  },
+  {
+    "filter": "motif:weapon",
+    "notes": "Solo per rule 10 (13 sovereigns). High nameScore set (bb/sz/mz/om push past easier caps). Suitable past #30.",
+    "parkUntilN": 30
+  }
+]

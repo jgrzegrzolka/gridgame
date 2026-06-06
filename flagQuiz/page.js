@@ -21,7 +21,7 @@ import {
   mistakesAfterGiveUp,
   countModeProgressRatio,
 } from '../flags/quiz.js';
-import { flagsGamePool } from '../flags/group.js';
+import { flagsGamePool, loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { buildQuizMenu } from './menu.js';
@@ -61,6 +61,7 @@ export function bootFlagQuiz() {
 
   return fetch('../flags/countries.json')
     .then((r) => r.json())
+    .then(loadCountries)
     .then((raw) => {
       const all = flagsGamePool(raw, includeAll);
       preloadFlags(all, (url) => { new Image().src = url; });

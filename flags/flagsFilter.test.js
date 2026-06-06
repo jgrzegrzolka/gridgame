@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
+import { createCountry } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./flagsFilter.js').Filters} Filters */
@@ -10,13 +11,13 @@ import { emptyFilters, matchesFilters } from './flagsFilter.js';
  * @returns {Country}
  */
 function country(over = {}) {
-  return {
+  return createCountry({
     code: 'xx',
     name: 'X',
     category: 'country',
     continent: 'Europe',
     ...over,
-  };
+  });
 }
 
 /**
@@ -69,7 +70,7 @@ test('matchesFilters: continent treats null/missing as "Other"', () => {
 });
 
 test('matchesFilters: color include requires every selected colour to be present (AND)', () => {
-  const c = country({ colors: ['red', 'white'] });
+  const c = country({ primaryColors: ['red', 'white'] });
   assert.equal(matchesFilters(c, filters({ color: { include: ['red', 'white'] } })), true);
   assert.equal(matchesFilters(c, filters({ color: { include: ['red', 'green'] } })), false);
   assert.equal(matchesFilters(c, filters({ color: { include: ['green'] } })), false);
@@ -91,7 +92,7 @@ test('matchesFilters: motif include requires every selected motif to be present 
 });
 
 test('matchesFilters: color exclude rejects when any excluded colour appears', () => {
-  const c = country({ colors: ['red', 'white'] });
+  const c = country({ primaryColors: ['red', 'white'] });
   assert.equal(matchesFilters(c, filters({ color: { exclude: ['red'] } })), false);
   assert.equal(matchesFilters(c, filters({ color: { exclude: ['green'] } })), true);
 });
@@ -111,9 +112,9 @@ test('matchesFilters: motif exclude is exactly the "find missing tag" use case',
 });
 
 test('matchesFilters: groups combine via AND', () => {
-  const sovereignRed = country({ colors: ['red'] });
-  const sovereignBlue = country({ colors: ['blue'] });
-  const territoryRed = country({ statehood: 'territory', colors: ['red'] });
+  const sovereignRed = country({ primaryColors: ['red'] });
+  const sovereignBlue = country({ primaryColors: ['blue'] });
+  const territoryRed = country({ statehood: 'territory', primaryColors: ['red'] });
   const f = filters({
     status: { include: ['sovereign'] },
     color: { include: ['red'] },
@@ -124,24 +125,25 @@ test('matchesFilters: groups combine via AND', () => {
 });
 
 test('matchesFilters: include + exclude on different values in the same group both apply', () => {
-  const redOnly = country({ colors: ['red'] });
-  const redAndBlue = country({ colors: ['red', 'blue'] });
-  const blueOnly = country({ colors: ['blue'] });
+  const redOnly = country({ primaryColors: ['red'] });
+  const redAndBlue = country({ primaryColors: ['red', 'blue'] });
+  const blueOnly = country({ primaryColors: ['blue'] });
   const f = filters({ color: { include: ['red'], exclude: ['blue'] } });
   assert.equal(matchesFilters(redOnly, f), true);
   assert.equal(matchesFilters(redAndBlue, f), false);
   assert.equal(matchesFilters(blueOnly, f), false);
 });
 
-test('matchesFilters: colorField "primaryColors" matches only the primary colors, falling back to colors when absent', () => {
-  // Country with a primaryColors trim — e.g. Portugal: full colors contains green/red/yellow/blue/white,
-  // primaryColors keeps only green/red. A "yellow" filter must reject under primaryColors but accept under colors.
+test('matchesFilters: colorField "primaryColors" reads only the primaryColors bucket, ignoring additionalColors', () => {
+  // Country split into primary + additional — e.g. Portugal: green/red are primary
+  // (visible from across a room), yellow/blue/white are additional (COA-only).
+  // A "yellow" filter must reject under primaryColors but accept under colors (the union).
   const portugal = country({
     code: 'pt',
-    colors: ['green', 'red', 'yellow', 'blue', 'white'],
     primaryColors: ['green', 'red'],
+    additionalColors: ['yellow', 'blue', 'white'],
   });
-  // Under default (colorField: 'colors'), all five colors are matchable.
+  // Under default (colorField: 'colors'), all five colors are matchable via the union.
   assert.equal(matchesFilters(portugal, filters({ color: { include: ['yellow'] } })), true);
   // Under primaryColors, yellow drops out because it's only in the COA.
   assert.equal(
@@ -156,19 +158,20 @@ test('matchesFilters: colorField "primaryColors" matches only the primary colors
   );
 });
 
-test('matchesFilters: colorField "primaryColors" falls back to colors for countries without the field', () => {
-  // Most countries don't have primaryColors set — the function must treat them
-  // as if primaryColors === colors, otherwise daily puzzles would erroneously
-  // exclude every plain-tricolour flag.
-  const italy = country({ code: 'it', colors: ['green', 'white', 'red'] });
+test('matchesFilters: a flag with no additionalColors matches the same set under colors and primaryColors', () => {
+  // Plain tricolours (no COA, no emblem) have additionalColors empty, so the
+  // union equals primaryColors and both colorFields resolve identically.
+  const italy = country({ code: 'it', primaryColors: ['green', 'white', 'red'], additionalColors: [] });
   assert.equal(
     matchesFilters(italy, filters({ color: { include: ['green'] } }), { colorField: 'primaryColors' }),
     true,
   );
+  assert.equal(matchesFilters(italy, filters({ color: { include: ['green'] } })), true);
   assert.equal(
     matchesFilters(italy, filters({ color: { include: ['blue'] } }), { colorField: 'primaryColors' }),
     false,
   );
+  assert.equal(matchesFilters(italy, filters({ color: { include: ['blue'] } })), false);
 });
 
 test('emptyFilters returns a fresh Filters with all include/exclude sets empty', () => {

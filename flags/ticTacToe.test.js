@@ -10,6 +10,7 @@ import {
   shouldFireTicTacToeConfetti,
   newlyWinningCells,
 } from './ticTacToe.js';
+import { createCountry } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./ticTacToe.js').Player} Player */
@@ -21,12 +22,12 @@ import {
  * @returns {Country}
  */
 function country(fields) {
-  return {
+  return createCountry({
     category: 'country',
     continent: 'Europe',
     statehood: 'un_member',
     ...fields,
-  };
+  });
 }
 
 const EUROPE = continent('Europe');
@@ -43,15 +44,15 @@ const PUZZLE = {
 };
 
 // One country for each of the 9 cells in PUZZLE, code = "rc" so it's easy to read.
-const FR = country({ code: '00', name: 'France', continent: 'Europe', colors: ['red'] });
-const DE = country({ code: '01', name: 'Germany', continent: 'Europe', colors: ['blue'] });
-const IT = country({ code: '02', name: 'Italy', continent: 'Europe', colors: ['green'] });
-const JP = country({ code: '10', name: 'Japan', continent: 'Asia', colors: ['red'] });
-const KR = country({ code: '11', name: 'Korea', continent: 'Asia', colors: ['blue'] });
-const PK = country({ code: '12', name: 'Pakistan', continent: 'Asia', colors: ['green'] });
-const KE = country({ code: '20', name: 'Kenya', continent: 'Africa', colors: ['red'] });
-const NA = country({ code: '21', name: 'Namibia', continent: 'Africa', colors: ['blue'] });
-const NG = country({ code: '22', name: 'Nigeria', continent: 'Africa', colors: ['green'] });
+const FR = country({ code: '00', name: 'France', continent: 'Europe', primaryColors: ['red'] });
+const DE = country({ code: '01', name: 'Germany', continent: 'Europe', primaryColors: ['blue'] });
+const IT = country({ code: '02', name: 'Italy', continent: 'Europe', primaryColors: ['green'] });
+const JP = country({ code: '10', name: 'Japan', continent: 'Asia', primaryColors: ['red'] });
+const KR = country({ code: '11', name: 'Korea', continent: 'Asia', primaryColors: ['blue'] });
+const PK = country({ code: '12', name: 'Pakistan', continent: 'Asia', primaryColors: ['green'] });
+const KE = country({ code: '20', name: 'Kenya', continent: 'Africa', primaryColors: ['red'] });
+const NA = country({ code: '21', name: 'Namibia', continent: 'Africa', primaryColors: ['blue'] });
+const NG = country({ code: '22', name: 'Nigeria', continent: 'Africa', primaryColors: ['green'] });
 
 /**
  * @param {(Player | null)[][]} grid
@@ -127,7 +128,7 @@ test('attemptClaim returns miss-duplicate when same country already used elsewhe
   // at the target cell. We need a country valid at two different cells. Build
   // one: a country in both Europe and Asia is impossible (single continent),
   // but colors are arrays — a flag with red AND blue could fit (0,0) and (0,1).
-  const FR2 = country({ code: 'fr2', name: 'France-ish', continent: 'Europe', colors: ['red', 'blue'] });
+  const FR2 = country({ code: 'fr2', name: 'France-ish', continent: 'Europe', primaryColors: ['red', 'blue'] });
   let s2 = newGame(PUZZLE);
   s2 = attemptClaim(s2, 0, 0, FR2).nextState; // claimed at (0,0)
   const out = attemptClaim(s2, 0, 1, FR2); // would satisfy Europe × blue, but duplicate

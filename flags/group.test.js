@@ -11,21 +11,20 @@ import {
   readBoolSetting,
   writeBoolSetting,
   flagsGamePool,
+  loadCountries,
+  createCountry,
 } from './group.js';
 
-/** @typedef {import('./group.js').Country} Country */
-
 const __dirname = dirname(fileURLToPath(import.meta.url));
-/** @type {Country[]} */
-const countries = JSON.parse(
+const countries = loadCountries(JSON.parse(
   readFileSync(join(__dirname, 'countries.json'), 'utf8'),
-);
+));
 
 test('splitByCategory separates countries from other', () => {
   const result = splitByCategory([
-    { code: 'de', name: 'Germany', continent: 'Europe', category: 'country' },
-    { code: 'un', name: 'United Nations', continent: null, category: 'other' },
-    { code: 'br', name: 'Brazil', continent: 'South America', category: 'country' },
+    createCountry({ code: 'de', name: 'Germany', continent: 'Europe', category: 'country' }),
+    createCountry({ code: 'un', name: 'United Nations', continent: null, category: 'other' }),
+    createCountry({ code: 'br', name: 'Brazil', continent: 'South America', category: 'country' }),
   ]);
   assert.equal(result.countries.length, 2);
   assert.equal(result.other.length, 1);
@@ -35,9 +34,9 @@ test('splitByCategory separates countries from other', () => {
 
 test('groupByContinent assigns countries to their continent', () => {
   const groups = groupByContinent([
-    { code: 'de', name: 'Germany', continent: 'Europe', category: 'country' },
-    { code: 'fr', name: 'France', continent: 'Europe', category: 'country' },
-    { code: 'br', name: 'Brazil', continent: 'South America', category: 'country' },
+    createCountry({ code: 'de', name: 'Germany', continent: 'Europe', category: 'country' }),
+    createCountry({ code: 'fr', name: 'France', continent: 'Europe', category: 'country' }),
+    createCountry({ code: 'br', name: 'Brazil', continent: 'South America', category: 'country' }),
   ]);
   assert.deepEqual(groups['Europe'].map((c) => c.code), ['de', 'fr']);
   assert.deepEqual(groups['South America'].map((c) => c.code), ['br']);
@@ -85,14 +84,14 @@ test('real data: 5 widely-recognised non-UN states (Taiwan, Kosovo, Western Saha
 });
 
 test('sovereigntyOf classifies UN members and observers as sovereign', () => {
-  assert.equal(sovereigntyOf({ code: 'de', name: 'Germany', category: 'country', continent: 'Europe', statehood: 'un_member' }), 'sovereign');
-  assert.equal(sovereigntyOf({ code: 'va', name: 'Vatican City', category: 'country', continent: 'Europe', statehood: 'un_observer' }), 'sovereign');
+  assert.equal(sovereigntyOf(createCountry({ code: 'de', name: 'Germany', category: 'country', continent: 'Europe', statehood: 'un_member' })), 'sovereign');
+  assert.equal(sovereigntyOf(createCountry({ code: 'va', name: 'Vatican City', category: 'country', continent: 'Europe', statehood: 'un_observer' })), 'sovereign');
 });
 
 test('sovereigntyOf classifies non_un, territory, and other distinctly', () => {
-  assert.equal(sovereigntyOf({ code: 'tw', name: 'Taiwan', category: 'country', continent: 'Asia', statehood: 'non_un' }), 'non_un');
-  assert.equal(sovereigntyOf({ code: 'gl', name: 'Greenland', category: 'country', continent: 'Europe', statehood: 'territory' }), 'territory');
-  assert.equal(sovereigntyOf({ code: 'un', name: 'United Nations', category: 'other', continent: null }), 'other');
+  assert.equal(sovereigntyOf(createCountry({ code: 'tw', name: 'Taiwan', category: 'country', continent: 'Asia', statehood: 'non_un' })), 'non_un');
+  assert.equal(sovereigntyOf(createCountry({ code: 'gl', name: 'Greenland', category: 'country', continent: 'Europe', statehood: 'territory' })), 'territory');
+  assert.equal(sovereigntyOf(createCountry({ code: 'un', name: 'United Nations', category: 'other', continent: null })), 'other');
 });
 
 test('real data: sovereigntyOf yields the expected 195 / 5 / 54 / 15 split', () => {
@@ -130,9 +129,9 @@ test('writeBoolSetting(true) round-trips through readBoolSetting; (false) remove
 });
 
 test('flagsGamePool drops non-sovereign by default but returns everything when includeAll is true', () => {
-  const fr = { code: 'fr', name: 'France', category: /** @type {'country'} */ ('country'), continent: /** @type {'Europe'} */ ('Europe'), statehood: 'un_member' };
-  const gl = { code: 'gl', name: 'Greenland', category: /** @type {'country'} */ ('country'), continent: /** @type {'Europe'} */ ('Europe'), statehood: 'territory' };
-  const un = { code: 'un', name: 'United Nations', category: /** @type {'other'} */ ('other'), continent: null };
+  const fr = createCountry({ code: 'fr', name: 'France', category: 'country', continent: 'Europe', statehood: 'un_member' });
+  const gl = createCountry({ code: 'gl', name: 'Greenland', category: 'country', continent: 'Europe', statehood: 'territory' });
+  const un = createCountry({ code: 'un', name: 'United Nations', category: 'other', continent: null });
   assert.deepEqual(flagsGamePool([fr, gl, un], false).map((c) => c.code), ['fr']);
   assert.deepEqual(flagsGamePool([fr, gl, un], true).map((c) => c.code), ['fr', 'gl', 'un']);
 });

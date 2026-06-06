@@ -7,14 +7,13 @@ import { dirname, join } from 'node:path';
 import { todayN, getPuzzle, dailyNFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
-import { flagsGamePool } from './group.js';
+import { flagsGamePool, loadCountries, createCountry } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./daily.js').DailyPuzzle} DailyPuzzle */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-/** @type {Country[]} */
-const COUNTRIES = JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'));
+const COUNTRIES = loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8')));
 /** @type {DailyPuzzle[]} */
 const CATALOG = JSON.parse(
   readFileSync(join(HERE, '..', 'daily', 'daily_puzzles.json'), 'utf-8'),
@@ -77,13 +76,13 @@ test('dailyNFromUrl falls back to today when ?n= is missing or garbage', () => {
  * @returns {Country}
  */
 function fixtureCountry(over = { code: 'xx' }) {
-  return {
+  return createCountry({
     name: over.code.toUpperCase(),
     category: 'country',
     continent: 'Europe',
     statehood: 'un_member',
     ...over,
-  };
+  });
 }
 
 test('resolveDailyPuzzle: happy path returns entry, parsed filter, and resolved Country targets', () => {

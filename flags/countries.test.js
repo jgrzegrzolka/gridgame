@@ -11,14 +11,13 @@ import {
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
 } from './engine.js';
-import { CONTINENTS } from './group.js';
+import { CONTINENTS, loadCountries } from './group.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-/** @type {Country[]} */
-const COUNTRIES = JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'));
+const COUNTRIES = loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8')));
 const SVG_DIR = join(HERE, 'svg');
 
 test('countries.json is a non-empty array', () => {
@@ -82,39 +81,35 @@ test('continent is in CONTINENTS for "country" entries, null for "other" entries
   }
 });
 
-test('primaryColors (when present) is a non-empty subset of colors using the canonical palette', () => {
+test('every entry has a non-empty primaryColors and an additionalColors array, both drawn from the palette and disjoint', () => {
+  // Split colour model: every flag's colours live in exactly one of two
+  // buckets. `primaryColors` (non-empty) is what reads across a room — every
+  // flag has at least one. `additionalColors` (possibly empty) is the
+  // emblem-only tail — colours that only appear inside a coat of arms or
+  // small detail. The two are disjoint by construction; the union is "every
+  // colour anywhere on the flag", which `allColors()` returns.
   const palette = new Set(COLORS_FOR_RANDOM);
   const offenders = [];
   for (const c of COUNTRIES) {
-    if (c.primaryColors === undefined) continue;
     if (!Array.isArray(c.primaryColors) || c.primaryColors.length === 0) {
       offenders.push(`${c.code}: primaryColors must be a non-empty array`);
       continue;
     }
-    const colors = c.colors ?? [];
+    if (!Array.isArray(c.additionalColors)) {
+      offenders.push(`${c.code}: additionalColors must be an array (possibly empty)`);
+      continue;
+    }
     for (const color of c.primaryColors) {
       if (!palette.has(color)) {
         offenders.push(`${c.code}: primaryColors "${color}" not in canonical palette`);
       }
-      if (!colors.includes(color)) {
-        offenders.push(`${c.code}: primaryColors "${color}" not in colors [${colors.join(', ')}]`);
-      }
     }
-  }
-  assert.deepEqual(offenders, [], offenders.join('; '));
-});
-
-test('every entry has a non-empty colors array drawn from COLORS_FOR_RANDOM', () => {
-  const palette = new Set(COLORS_FOR_RANDOM);
-  const offenders = [];
-  for (const c of COUNTRIES) {
-    if (!Array.isArray(c.colors) || c.colors.length === 0) {
-      offenders.push(`${c.code}: colors missing or empty`);
-      continue;
-    }
-    for (const color of c.colors) {
+    for (const color of c.additionalColors) {
       if (!palette.has(color)) {
-        offenders.push(`${c.code}: color "${color}" not in canonical palette`);
+        offenders.push(`${c.code}: additionalColors "${color}" not in canonical palette`);
+      }
+      if (c.primaryColors.includes(color)) {
+        offenders.push(`${c.code}: "${color}" appears in both primaryColors and additionalColors — buckets must be disjoint`);
       }
     }
   }
@@ -217,7 +212,7 @@ test('every (continent × color) cell has at least one candidate country', () =>
   for (const cont of CONTINENTS_FOR_RANDOM) {
     for (const color of COLORS_FOR_RANDOM) {
       const n = COUNTRIES.filter(
-        (c) => c.continent === cont && Array.isArray(c.colors) && c.colors.includes(color),
+        (c) => c.continent === cont && c.colors.includes(color),
       ).length;
       const label = `${cont} × ${color}`;
       if (n === 0 && !KNOWN_EMPTY.has(label)) empty.push(label);
@@ -299,9 +294,8 @@ test('matchesFilters against real data: red AND blue keeps only flags with both 
   f.color.include.add('blue');
   const matches = COUNTRIES.filter((c) => matchesFilters(c, f));
   for (const c of matches) {
-    const colors = c.colors ?? [];
-    assert.ok(colors.includes('red') && colors.includes('blue'),
-      `${c.code}: expected both 'red' and 'blue' in colors, got ${JSON.stringify(colors)}`);
+    assert.ok(c.colors.includes('red') && c.colors.includes('blue'),
+      `${c.code}: expected both 'red' and 'blue' in colors, got ${JSON.stringify(c.colors)}`);
   }
 });
 
