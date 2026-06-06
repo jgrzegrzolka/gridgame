@@ -1,5 +1,5 @@
 import { CONTINENTS, loadCountries } from '../flags/group.js';
-import { COLORS_FOR_RANDOM, ALL_MOTIFS, foldDiacritics } from '../flags/engine.js';
+import { ALL_FLAG_COLORS, ALL_MOTIFS, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
 import { t, countryName } from '../i18n.js';
 
@@ -245,7 +245,7 @@ export function bootFlagsData() {
     buildFilterGroup(t('flagsdata.filterContinent', 'Continent'), 'continent', [...CONTINENTS, 'Other'].map((v) => ({ value: v, label: continentLabel(v) }))),
   );
   groupsWrap.appendChild(
-    buildFilterGroup(t('flagsdata.filterColors', 'Colors'), 'color', COLORS_FOR_RANDOM.map((v) => ({ value: v, label: colorLabel(v) }))),
+    buildFilterGroup(t('flagsdata.filterColors', 'Colors'), 'color', ALL_FLAG_COLORS.map((v) => ({ value: v, label: colorLabel(v) }))),
   );
   groupsWrap.appendChild(
     buildFilterGroup(t('flagsdata.filterMotifs', 'Motifs'), 'motif', ALL_MOTIFS.map((v) => ({ value: v, label: motifLabel(v) }))),
