@@ -54,6 +54,7 @@
     "clear": "Wyczyść",
     "flagsMatch": "{n} flag",
     "notPrefix": "bez ",
+    "noOtherColors": "bez innych kolorów",
     "sections": {
       "continents": "Kontynenty",
       "colors": "Kolory",

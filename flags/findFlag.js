@@ -238,6 +238,12 @@ export function pillLabel(group, value, sign, translate) {
     body = translate(`color.${value}`, value);
   } else if (group === 'motif') {
     body = translate(`motif.${value}`, value);
+  } else if (group === 'colorCount') {
+    // colorCount is a scalar; the "value" is the integer N as a string.
+    // Reuse the same `filter.onlyN.<N>` key as filterTitle so chooser and
+    // puzzle-header strings stay aligned. Doesn't support exclude — the
+    // primitive itself is scalar, you either constrain to N or you don't.
+    return translate(`filter.onlyN.${value}`, `only ${value} colours`);
   } else {
     body = translate(`status.${value}`, value);
   }
