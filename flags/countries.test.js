@@ -207,6 +207,16 @@ const KNOWN_PRIMARY_SPLITS = [
   { code: 'sz', primary: ['blue','yellow','red','black','white'], additional: [],                  note: "Eswatini — the central Nguni shield is large and its black/white pattern is part of the flag's across-the-room read; all five colours are primary" },
   { code: 'mz', primary: ['red','black','yellow','green','white'],additional: [],                  note: 'Mozambique — all five colours read at flag-tile size: the green/black/yellow stripes, the red triangle, and the white outlines on the rifle/hoe emblem are all visible' },
   { code: 'na', primary: ['blue','red','green','yellow','white'], additional: [],                  note: 'Namibia — the diagonal red stripe is white-bordered against blue/green fields; all five colours including the yellow sun and white fimbriations are primary' },
+  // --- North America + others ---
+  { code: 'mo', primary: ['green','white'],                       additional: ['yellow'],                  note: 'Macau — green field with white lotus + bridge; the yellow stars above the lotus are small and read as emblem-only' },
+  { code: 'tm', primary: ['green','red','white'],                 additional: ['yellow'],                  note: 'Turkmenistan — revises earlier split: white is in the crescent moon + stars (visible primary), yellow is only in the carpet-pattern hoist stripe details' },
+  { code: 'dm', primary: ['green','yellow','black','white','red'],additional: [],                          note: "Dominica — three crosses (yellow/black/white) cut across the green field and a red disc holds the COA; all five palette colours read as primary. (The sisserou parrot's violet sits outside the canonical palette — tracked separately.)" },
+  { code: 'ht', primary: ['red','blue'],                          additional: ['white','green'],           note: 'Haiti — blue + red horizontal stripes are primary; the central white square is the COA backdrop and the green palm tree only reads up close' },
+  { code: 'mx', primary: ['red','white','green'],                 additional: ['blue','yellow'],           note: 'Mexico — tricolour stripes are primary; the eagle COA introduces blue + yellow that only read at close range' },
+  { code: 'ms', primary: ['blue','red','white'],                  additional: ['yellow','green','black'],  note: 'Montserrat — Blue Ensign + Hibernia COA (woman with harp); yellow/green/black are all COA-only against the Union-Jack-canton palette' },
+  { code: 'sx', primary: ['red','blue','white'],                  additional: ['yellow','green'],          note: 'Sint Maarten — white triangle hoist with the COA, red-over-blue stripes; the rising sun + green palm in the COA are emblem-only. The sun adds the star-or-moon motif (also pinned by SUN_BEARING)' },
+  { code: 'tc', primary: ['red','blue','white','yellow'],         additional: ['green'],                   note: 'Turks and Caicos Islands — revises earlier Ensign batch: the yellow conch in the COA is large enough to read as primary; green cactus stays additional' },
+  { code: 'vi', primary: ['white','yellow'],                      additional: ['blue','green','red'],      note: 'Virgin Islands (U.S.) — white field with golden eagle is the across-the-room read; everything inside the eagle (blue shield, red/white stripes, green branch) is emblem-only' },
 ];
 
 test('hand-audited primary/additional splits stay pinned', () => {
@@ -388,6 +398,7 @@ const SUN_BEARING = [
   { code: 'ec', note: 'Ecuador — sun atop coat of arms' },
   { code: 'pf', note: 'French Polynesia — sun emblem with outrigger canoe' },
   { code: 'jp', note: 'Japan — red sun disc (Hinomaru)' },
+  { code: 'sx', note: 'Sint Maarten — rising sun on the white triangle hoist' },
 ];
 test('sun-bearing flags carry the star-or-moon motif (sun-is-a-star pin)', () => {
   /** @type {string[]} */
