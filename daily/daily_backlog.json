@@ -674,5 +674,21 @@
       "en": "Find all flags with an animal, a coat of arms, and a weapon.",
       "pl": "Znajdź wszystkie flagi ze zwierzęciem, godłem i bronią."
     }
+  },
+  {
+    "n": 51,
+    "filter": "color:white,color:blue,colorCount:2",
+    "answers": [
+      "fi",
+      "fm",
+      "gr",
+      "hn",
+      "il",
+      "so"
+    ],
+    "description": {
+      "en": "Find all flags whose only colours are white and blue — no others.",
+      "pl": "Znajdź wszystkie flagi, które mają tylko 2 kolory: biały i niebieski."
+    }
   }
 ]
