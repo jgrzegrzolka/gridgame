@@ -268,6 +268,15 @@ export function bootDaily() {
     function updateCount() {
       countEl.textContent = `${foundCodes.size} / ${targetCodes.size}`;
     }
+    /* Brief flash on each correct guess. Remove → force reflow → add
+     * is the standard pattern for re-triggering a CSS animation on the
+     * same element. Called from the match branch only — initial
+     * updateCount() at startup shouldn't pulse. */
+    function pulseCount() {
+      countEl.classList.remove('find-count--pulse');
+      void countEl.offsetWidth;
+      countEl.classList.add('find-count--pulse');
+    }
     function tick() {
       timeEl.textContent = formatTime(Date.now() - startMs);
       if (!finished) timerRaf = requestAnimationFrame(tick);
@@ -330,6 +339,7 @@ export function bootDaily() {
         foundCodes.add(c.code);
         appendFound(c);
         updateCount();
+        pulseCount();
         inputEl.value = '';
         matches = [];
         renderSuggestions();

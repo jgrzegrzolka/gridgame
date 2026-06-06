@@ -288,6 +288,14 @@ export function bootFindFlag() {
     function updateCount() {
       countEl.textContent = `${foundCodes.size} / ${targetCodes.size}`;
     }
+    /* Brief flash on each correct guess. Remove → force reflow → add
+     * re-triggers the CSS animation on consecutive matches. Called
+     * from the match branch only, not from the initial updateCount(). */
+    function pulseCount() {
+      countEl.classList.remove('find-count--pulse');
+      void countEl.offsetWidth;
+      countEl.classList.add('find-count--pulse');
+    }
     function tick() {
       timeEl.textContent = formatTime(Date.now() - startMs);
       if (!finished) timerRaf = requestAnimationFrame(tick);
@@ -348,6 +356,7 @@ export function bootFindFlag() {
         foundCodes.add(c.code);
         appendFound(c);
         updateCount();
+        pulseCount();
         inputEl.value = '';
         matches = [];
         renderSuggestions();
