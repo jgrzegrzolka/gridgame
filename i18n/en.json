@@ -152,6 +152,14 @@
     "cross": "cross",
     "union-jack": "Union Jack"
   },
+  "filter": {
+    "onlyN": {
+      "2": "only 2 colours",
+      "3": "only 3 colours",
+      "4": "only 4 colours",
+      "5": "only 5 colours"
+    }
+  },
   "status": {
     "sovereign": "Sovereign",
     "non_un": "Non-UN",

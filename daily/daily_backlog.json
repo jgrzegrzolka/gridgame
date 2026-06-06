@@ -11,8 +11,8 @@
       "pl"
     ],
     "description": {
-      "en": "Find all European flags using only red and white.",
-      "pl": "Znajdź wszystkie europejskie flagi tylko z czerwienią i bielą."
+      "en": "Find all European flags whose only colours are red and white — no others.",
+      "pl": "Znajdź wszystkie europejskie flagi, które mają tylko 2 kolory: czerwony i biały."
     }
   },
   {
@@ -43,8 +43,8 @@
       "sk"
     ],
     "description": {
-      "en": "Find all European flags using only red, white, and blue.",
-      "pl": "Znajdź wszystkie europejskie flagi tylko z czerwienią, bielą i niebieskim."
+      "en": "Find all European flags whose only colours are red, white, and blue — no others.",
+      "pl": "Znajdź wszystkie europejskie flagi, które mają tylko 3 kolory: czerwony, biały i niebieski."
     }
   },
   {
@@ -73,8 +73,8 @@
       "it"
     ],
     "description": {
-      "en": "Find all European flags using only red, white, and green.",
-      "pl": "Znajdź wszystkie europejskie flagi tylko z czerwienią, bielą i zielenią."
+      "en": "Find all European flags whose only colours are red, white, and green — no others.",
+      "pl": "Znajdź wszystkie europejskie flagi, które mają tylko 3 kolory: czerwony, biały i zielony."
     }
   },
   {
@@ -98,8 +98,8 @@
       "ro"
     ],
     "description": {
-      "en": "Find all European flags using only yellow, blue, and red.",
-      "pl": "Znajdź wszystkie europejskie flagi tylko z żółcią, niebieskim i czerwienią."
+      "en": "Find all European flags whose only colours are yellow, blue, and red — no others.",
+      "pl": "Znajdź wszystkie europejskie flagi, które mają tylko 3 kolory: żółty, niebieski i czerwony."
     }
   },
   {

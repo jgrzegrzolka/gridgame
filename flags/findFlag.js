@@ -264,6 +264,9 @@ export function filterTitle(f, translate) {
     for (const v of f[group].include) parts.push(pillLabel(group, v, 'include', translate));
     for (const v of f[group].exclude) parts.push(pillLabel(group, v, 'exclude', translate));
   }
+  if (f.colorCount !== null) {
+    parts.push(translate(`filter.onlyN.${f.colorCount}`, `only ${f.colorCount} colours`));
+  }
   return parts.join(' · ');
 }
 
