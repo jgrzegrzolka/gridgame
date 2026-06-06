@@ -129,10 +129,11 @@
     "primaryColors": [
       "blue",
       "white",
-      "red",
+      "red"
+    ],
+    "additionalColors": [
       "orange"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "cross",
@@ -232,11 +233,12 @@
     "primaryColors": [
       "blue",
       "red",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "yellow",
       "green"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -466,11 +468,12 @@
     "primaryColors": [
       "red",
       "blue",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "green",
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -794,11 +797,12 @@
     "primaryColors": [
       "blue",
       "red",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "yellow",
       "green"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -1267,11 +1271,12 @@
     "statehood": "un_member",
     "primaryColors": [
       "blue",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "green",
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -1407,11 +1412,12 @@
     "primaryColors": [
       "blue",
       "white",
-      "red",
+      "red"
+    ],
+    "additionalColors": [
       "yellow",
       "green"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -1759,11 +1765,12 @@
     "statehood": "un_member",
     "primaryColors": [
       "blue",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "green",
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -2693,11 +2700,12 @@
     "primaryColors": [
       "blue",
       "red",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "yellow",
       "green"
     ],
-    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "cross",
@@ -2873,11 +2881,12 @@
     "statehood": "un_member",
     "primaryColors": [
       "blue",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "green",
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -3200,11 +3209,12 @@
     "primaryColors": [
       "blue",
       "red",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "yellow",
       "green"
     ],
-    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "cross",
@@ -3378,10 +3388,11 @@
     "primaryColors": [
       "blue",
       "red",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -3779,12 +3790,13 @@
     "primaryColors": [
       "blue",
       "red",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "yellow",
       "green",
       "black"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -4149,10 +4161,11 @@
     "primaryColors": [
       "blue",
       "red",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -4205,11 +4218,12 @@
     "primaryColors": [
       "blue",
       "red",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "yellow",
       "green"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -4486,11 +4500,12 @@
     "primaryColors": [
       "blue",
       "red",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "green",
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "cross",
