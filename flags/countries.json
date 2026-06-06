@@ -1853,12 +1853,13 @@
     "category": "country",
     "statehood": "un_member",
     "primaryColors": [
-      "blue",
       "red",
+      "blue"
+    ],
+    "additionalColors": [
       "white",
       "green"
     ],
-    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "weapon"
@@ -2414,10 +2415,11 @@
     "statehood": "territory",
     "primaryColors": [
       "green",
-      "yellow",
       "white"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "yellow"
+    ],
     "motifs": [
       "star-or-moon"
     ]
@@ -2612,11 +2614,14 @@
     "category": "country",
     "statehood": "un_member",
     "primaryColors": [
-      "green",
+      "red",
       "white",
-      "red"
+      "green"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "blue",
+      "yellow"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms"
@@ -2708,7 +2713,8 @@
     ],
     "additionalColors": [
       "yellow",
-      "green"
+      "green",
+      "black"
     ],
     "motifs": [
       "coat-of-arms",
@@ -3683,14 +3689,17 @@
     "statehood": "territory",
     "primaryColors": [
       "red",
-      "white",
       "blue",
-      "yellow"
+      "white"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "yellow",
+      "green"
+    ],
     "motifs": [
       "animal",
-      "coat-of-arms"
+      "coat-of-arms",
+      "star-or-moon"
     ]
   },
   {
@@ -4200,10 +4209,10 @@
     "statehood": "un_member",
     "primaryColors": [
       "green",
-      "red"
+      "red",
+      "white"
     ],
     "additionalColors": [
-      "white",
       "yellow"
     ],
     "motifs": [
@@ -4218,12 +4227,12 @@
     "category": "country",
     "statehood": "territory",
     "primaryColors": [
-      "blue",
       "red",
-      "white"
+      "blue",
+      "white",
+      "yellow"
     ],
     "additionalColors": [
-      "yellow",
       "green"
     ],
     "motifs": [
@@ -4525,12 +4534,13 @@
     "statehood": "territory",
     "primaryColors": [
       "white",
-      "blue",
-      "red",
-      "yellow",
-      "green"
+      "yellow"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "blue",
+      "green",
+      "red"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms"
