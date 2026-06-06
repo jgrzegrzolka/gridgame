@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { todayN, getPuzzle, dailyNFromUrl, resolveDailyPuzzle } from './daily.js';
+import { todayN, getPuzzle, dailyNFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool } from './group.js';
@@ -127,6 +127,51 @@ test('resolveDailyPuzzle: every answer code missing from the pool returns reason
   const catalog = [{ n: 1, filter: 'continent:Europe', answers: ['fr', 'de'] }];
   // Pool has none of the answer codes
   const r = resolveDailyPuzzle(catalog, [fixtureCountry({ code: 'gb' })], 1);
+  assert.deepEqual(r, { ok: false, reason: 'no-targets' });
+});
+
+test('findPuzzle returns the entry matching n, regardless of position', () => {
+  // Backlog catalogs continue numbering from the live catalog, so
+  // entry 0 may have n=11. Array-index lookup would mis-resolve;
+  // findPuzzle scans by `.n`.
+  /** @type {DailyPuzzle[]} */
+  const backlog = [
+    { n: 11, filter: 'a', answers: ['x'] },
+    { n: 12, filter: 'b', answers: ['y'] },
+  ];
+  assert.equal(findPuzzle(backlog, 11), backlog[0]);
+  assert.equal(findPuzzle(backlog, 12), backlog[1]);
+});
+
+test('findPuzzle returns null when no entry matches', () => {
+  /** @type {DailyPuzzle[]} */
+  const backlog = [{ n: 11, filter: 'a', answers: ['x'] }];
+  assert.equal(findPuzzle(backlog, 10), null);
+  assert.equal(findPuzzle(backlog, 12), null);
+  assert.equal(findPuzzle([], 1), null);
+});
+
+test('resolvePuzzleEntry: happy path resolves an entry directly', () => {
+  const fr = fixtureCountry({ code: 'fr' });
+  const de = fixtureCountry({ code: 'de' });
+  const r = resolvePuzzleEntry({ n: 11, filter: 'continent:Europe', answers: ['fr', 'de'] }, [fr, de]);
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.entry.n, 11);
+    assert.deepEqual(r.targets.map((c) => c.code), ['fr', 'de']);
+  }
+});
+
+test('resolvePuzzleEntry: unparseable filter returns reason "invalid-filter"', () => {
+  const r = resolvePuzzleEntry({ n: 1, filter: 'garbage', answers: ['fr'] }, []);
+  assert.deepEqual(r, { ok: false, reason: 'invalid-filter' });
+});
+
+test('resolvePuzzleEntry: every answer code missing from the pool returns reason "no-targets"', () => {
+  const r = resolvePuzzleEntry(
+    { n: 1, filter: 'continent:Europe', answers: ['fr', 'de'] },
+    [fixtureCountry({ code: 'gb' })],
+  );
   assert.deepEqual(r, { ok: false, reason: 'no-targets' });
 });
 

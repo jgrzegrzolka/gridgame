@@ -118,7 +118,36 @@ export function dailyNFromUrl(search, fallbackN) {
 export function resolveDailyPuzzle(catalog, allCountries, n) {
   const entry = getPuzzle(catalog, n);
   if (!entry) return { ok: false, reason: 'not-found' };
+  return resolvePuzzleEntry(entry, allCountries);
+}
 
+/**
+ * Look up a puzzle by its `n` field rather than its array position. The
+ * backlog catalog continues numbering from where the live catalog left
+ * off (e.g. backlog[0].n = 11, not 1), so the array-index lookup in
+ * `getPuzzle` would mis-resolve. Returns null when no entry matches —
+ * caller renders the not-found state.
+ *
+ * @param {DailyPuzzle[]} catalog
+ * @param {number} n
+ * @returns {DailyPuzzle | null}
+ */
+export function findPuzzle(catalog, n) {
+  return catalog.find((e) => e.n === n) ?? null;
+}
+
+/**
+ * Resolve an already-found puzzle entry into the data the game UI
+ * needs. Shared between `resolveDailyPuzzle` (live catalog, sequential
+ * lookup) and the backlog preview path (non-sequential lookup via
+ * `findPuzzle`). See `resolveDailyPuzzle` for the frozen-answers
+ * contract.
+ *
+ * @param {DailyPuzzle} entry
+ * @param {import('./group.js').Country[]} allCountries
+ * @returns {DailyResolution}
+ */
+export function resolvePuzzleEntry(entry, allCountries) {
   const filter = parseFilterString(entry.filter);
   if (!filter) return { ok: false, reason: 'invalid-filter' };
 
