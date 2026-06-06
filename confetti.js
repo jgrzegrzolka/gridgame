@@ -30,12 +30,17 @@ const COLORS = [
 export function launchConfetti(options = {}) {
   const {
     doc = document,
-    count = 480,
+    // Slightly thinner main wave + encore than the previous defaults.
+    // The point of confetti is now to mark "you found something" rather
+    // than carry the whole celebration — the big moments graduated to
+    // fireworks-alone. Less density reads as recognition without
+    // overdoing it.
+    count = 360,
     duration = 14000,
     rng = Math.random,
     prefersReducedMotion = detectPrefersReducedMotion(doc),
     encore = true,
-    encoreCount = 240,
+    encoreCount = 160,
     encoreDelay = 1200,
     encoreDuration = 8000,
   } = options;
@@ -105,7 +110,12 @@ export function launchConfetti(options = {}) {
 export function launchFireworks(options = {}) {
   const {
     doc = document,
-    bursts = 24,
+    // More bursts than the previous pass — fireworks is now the sole
+    // visual for the "big moment" tier, so extending the show duration
+    // lets the climax breathe instead of ending right as it lands.
+    // Particle counts and spread stay the same; longer is the right
+    // dial here, not denser.
+    bursts = 36,
     particlesPerBurst = 80,
     burstInterval = 450,
     particleDuration = 1900,
