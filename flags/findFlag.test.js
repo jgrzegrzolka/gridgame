@@ -260,6 +260,26 @@ test('filterTitle: joins selected pills with the interpunct separator in GROUP_O
   assert.equal(filterTitle(f, idTranslate), 'Africa · orange · not cross');
 });
 
+test('pillLabel: colorCount renders as "only N colours" with the i18n fallback', () => {
+  assert.equal(pillLabel('colorCount', '2', 'include', idTranslate), 'only 2 colours');
+  assert.equal(pillLabel('colorCount', '3', 'include', idTranslate), 'only 3 colours');
+  // Sign is ignored for colorCount — the primitive is scalar, "exclude" makes
+  // no sense, so the renderer just returns the include form.
+  assert.equal(pillLabel('colorCount', '3', 'exclude', idTranslate), 'only 3 colours');
+});
+
+test('filterTitle: appends "only N colours" when colorCount is set', () => {
+  const f = parseFilterString('continent:Europe,color:red,color:white,color:blue,colorCount:3');
+  assert.ok(f);
+  assert.equal(filterTitle(f, idTranslate), 'Europe · red · white · blue · only 3 colours');
+});
+
+test('filterTitle: colorCount with no other tokens renders as just the count phrase', () => {
+  const f = parseFilterString('colorCount:2');
+  assert.ok(f);
+  assert.equal(filterTitle(f, idTranslate), 'only 2 colours');
+});
+
 test('filterTitle: empty filter renders to empty string', () => {
   assert.equal(filterTitle(emptyFilters(), idTranslate), '');
 });

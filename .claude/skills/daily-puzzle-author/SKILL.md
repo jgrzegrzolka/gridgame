@@ -40,7 +40,7 @@ npm run validate
 
 This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing test as the rule speaking — don't suppress it without understanding why.
 
-## The 13 rules
+## The 14 rules
 
 ### Hard (test-pinned)
 
