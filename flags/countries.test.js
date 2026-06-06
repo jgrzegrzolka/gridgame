@@ -88,7 +88,16 @@ test('every entry has a non-empty primaryColors and an additionalColors array, b
   // emblem-only tail — colours that only appear inside a coat of arms or
   // small detail. The two are disjoint by construction; the union is "every
   // colour anywhere on the flag", which `allColors()` returns.
-  const palette = new Set(COLORS_FOR_RANDOM);
+  //
+  // Data palette is wider than `COLORS_FOR_RANDOM`: the random-puzzle
+  // generator and the findFlag UI only deal with the seven canonical
+  // colours, but countries.json can carry rarer emblem colours (e.g.
+  // `violet` for the sisserou parrot on Dominica's COA, the latte-stone
+  // garland on Northern Mariana Islands) so the data stays accurate even
+  // where the UI doesn't expose a filter. Add a colour here when a real
+  // flag uses one outside the canonical palette.
+  const FLAG_COLOR_PALETTE = new Set([...COLORS_FOR_RANDOM, 'violet']);
+  const palette = FLAG_COLOR_PALETTE;
   const offenders = [];
   for (const c of COUNTRIES) {
     if (!Array.isArray(c.primaryColors) || c.primaryColors.length === 0) {
@@ -210,13 +219,23 @@ const KNOWN_PRIMARY_SPLITS = [
   // --- North America + others ---
   { code: 'mo', primary: ['green','white'],                       additional: ['yellow'],                  note: 'Macau — green field with white lotus + bridge; the yellow stars above the lotus are small and read as emblem-only' },
   { code: 'tm', primary: ['green','red','white'],                 additional: ['yellow'],                  note: 'Turkmenistan — revises earlier split: white is in the crescent moon + stars (visible primary), yellow is only in the carpet-pattern hoist stripe details' },
-  { code: 'dm', primary: ['green','yellow','black','white','red'],additional: [],                          note: "Dominica — three crosses (yellow/black/white) cut across the green field and a red disc holds the COA; all five palette colours read as primary. (The sisserou parrot's violet sits outside the canonical palette — tracked separately.)" },
+  { code: 'dm', primary: ['green','yellow','black','white','red'],additional: ['violet'],                  note: "Dominica — three crosses (yellow/black/white) cut across the green field and a red disc holds the COA; the sisserou parrot's violet sits in the COA only. Violet is allowed as a data colour (see FLAG_COLOR_PALETTE) but isn't exposed in the random-puzzle generator or findFlag UI." },
   { code: 'ht', primary: ['red','blue'],                          additional: ['white','green'],           note: 'Haiti — blue + red horizontal stripes are primary; the central white square is the COA backdrop and the green palm tree only reads up close' },
   { code: 'mx', primary: ['red','white','green'],                 additional: ['blue','yellow'],           note: 'Mexico — tricolour stripes are primary; the eagle COA introduces blue + yellow that only read at close range' },
   { code: 'ms', primary: ['blue','red','white'],                  additional: ['yellow','green','black'],  note: 'Montserrat — Blue Ensign + Hibernia COA (woman with harp); yellow/green/black are all COA-only against the Union-Jack-canton palette' },
   { code: 'sx', primary: ['red','blue','white'],                  additional: ['yellow','green'],          note: 'Sint Maarten — white triangle hoist with the COA, red-over-blue stripes; the rising sun + green palm in the COA are emblem-only. The sun adds the star-or-moon motif (also pinned by SUN_BEARING)' },
   { code: 'tc', primary: ['red','blue','white','yellow'],         additional: ['green'],                   note: 'Turks and Caicos Islands — revises earlier Ensign batch: the yellow conch in the COA is large enough to read as primary; green cactus stays additional' },
   { code: 'vi', primary: ['white','yellow'],                      additional: ['blue','green','red'],      note: 'Virgin Islands (U.S.) — white field with golden eagle is the across-the-room read; everything inside the eagle (blue shield, red/white stripes, green branch) is emblem-only' },
+  // --- South America ---
+  { code: 'br', primary: ['blue','yellow','green'],               additional: ['white'],                   note: 'Brazil — green field, yellow diamond, blue celestial sphere are the across-the-room palette; the white stars + Ordem e Progresso banner only read up close' },
+  { code: 'ec', primary: ['yellow','blue','red'],                 additional: ['green','black'],           note: 'Ecuador — tricolour stripes are primary; the COA condor + Andes scene introduces green and black that are emblem-only' },
+  // --- More territories / organisations ---
+  { code: 'as', primary: ['blue','white','red'],                  additional: ['yellow'],                  note: "American Samoa — blue field with a red-bordered white triangle holding the eagle; the eagle's yellow staff is small enough to read as emblem-only" },
+  { code: 'mp', primary: ['blue','white'],                        additional: ['green','violet','yellow'], note: 'Northern Mariana Islands — blue field with white latte stone star; the green/violet wreath garland + yellow rays are emblem-only' },
+  { code: 'asean', primary: ['red','blue','yellow'],              additional: ['white'],                   note: 'ASEAN — red/blue field with central yellow ten-stalk emblem; the white circle behind the stalks is emblem-only' },
+  { code: 'es-ga', primary: ['blue','white'],                     additional: ['red','yellow'],            note: 'Galicia — white field with diagonal blue band; the COA brings red and yellow that only read at close range' },
+  { code: 'arab', primary: ['green','white'],                     additional: ['yellow'],                  note: 'League of Arab States — green field with white emblem ring; the inner yellow crescent is small enough to read as emblem-only' },
+  { code: 'gb-nir', primary: ['white','red'],                     additional: ['yellow'],                  note: 'Northern Ireland (former Ulster Banner) — white field with red cross; the yellow Hand of Ulster + crown details are emblem-only' },
 ];
 
 test('hand-audited primary/additional splits stay pinned', () => {

@@ -71,12 +71,13 @@
     "category": "country",
     "statehood": "territory",
     "primaryColors": [
-      "red",
-      "white",
       "blue",
+      "white",
+      "red"
+    ],
+    "additionalColors": [
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -254,12 +255,13 @@
     "category": "other",
     "statehood": null,
     "primaryColors": [
-      "blue",
       "red",
-      "white",
+      "blue",
       "yellow"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "white"
+    ],
     "motifs": []
   },
   {
@@ -592,12 +594,13 @@
     "category": "country",
     "statehood": "un_member",
     "primaryColors": [
-      "green",
-      "yellow",
       "blue",
+      "yellow",
+      "green"
+    ],
+    "additionalColors": [
       "white"
     ],
-    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1176,7 +1179,9 @@
       "white",
       "red"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "violet"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -1234,7 +1239,8 @@
       "red"
     ],
     "additionalColors": [
-      "green"
+      "green",
+      "black"
     ],
     "motifs": [
       "animal",
@@ -1585,11 +1591,13 @@
     "category": "other",
     "statehood": null,
     "primaryColors": [
-      "white",
       "blue",
-      "red"
+      "white"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "red",
+      "yellow"
+    ],
     "motifs": []
   },
   {
@@ -2287,10 +2295,11 @@
     "statehood": null,
     "primaryColors": [
       "green",
-      "white",
+      "white"
+    ],
+    "additionalColors": [
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3009,10 +3018,11 @@
     "statehood": null,
     "primaryColors": [
       "white",
-      "red",
+      "red"
+    ],
+    "additionalColors": [
       "yellow"
     ],
-    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -3026,11 +3036,13 @@
     "statehood": "territory",
     "primaryColors": [
       "blue",
-      "white",
-      "yellow",
-      "green"
+      "white"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "green",
+      "violet",
+      "yellow"
+    ],
     "motifs": [
       "star-or-moon"
     ]
