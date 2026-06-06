@@ -20,22 +20,6 @@ export const categoryFromId = gridCategoryFromId;
  */
 const GROUP_ORDER = ['continent', 'color', 'motif', 'status'];
 
-/**
- * Maps a Filters group name to the legacy category-id prefix used in
- * stats storage keys and the old `?cat=…` URL form. Keeps best-score
- * persistence stable across the chooser refactor: a single-include
- * filter on `color:red` still saves under `findflag.best.hasColor:red`,
- * not `findflag.best.color:red`.
- *
- * @type {Record<keyof Filters, string>}
- */
-const LEGACY_PREFIX = {
-  continent: 'continent',
-  color: 'hasColor',
-  motif: 'hasMotif',
-  status: 'statehood',
-};
-
 const FIND_INCLUDE_ALL_KEY = 'gridgame.flagfind.includeAll';
 
 /**
@@ -101,95 +85,6 @@ export function classifyGuess(state, country) {
 }
 
 /**
- * @typedef {Object} FindBest
- * @property {number} time
- * @property {number} found
- * @property {number} total
- */
-
-/**
- * @param {string} categoryId
- * @param {boolean} [includeAll]
- * @returns {string}
- */
-export function bestKey(categoryId, includeAll = false) {
-  const base = `findflag.best.${categoryId}`;
-  return includeAll ? `${base}.all` : base;
-}
-
-/**
- * @param {{ getItem(key: string): string | null }} store
- * @param {string} categoryId
- * @param {boolean} [includeAll]
- * @returns {FindBest | null}
- */
-export function loadBest(store, categoryId, includeAll = false) {
-  try {
-    const raw = store.getItem(bestKey(categoryId, includeAll));
-    if (raw === null) return null;
-    const parsed = JSON.parse(raw);
-    if (
-      parsed &&
-      typeof parsed.time === 'number' &&
-      typeof parsed.found === 'number' &&
-      typeof parsed.total === 'number'
-    ) {
-      return { time: parsed.time, found: parsed.found, total: parsed.total };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * @param {{ setItem(key: string, value: string): void }} store
- * @param {string} categoryId
- * @param {FindBest} best
- * @param {boolean} [includeAll]
- */
-export function saveBest(store, categoryId, best, includeAll = false) {
-  try {
-    store.setItem(bestKey(categoryId, includeAll), JSON.stringify(best));
-  } catch {
-    // localStorage may throw in private mode / zero quota; degrade silently.
-  }
-}
-
-/**
- * @param {{
- *   getItem(key: string): string | null,
- *   setItem(key: string, value: string): void,
- * }} store
- * @param {string} categoryId
- * @param {FindBest} current
- * @param {boolean} [includeAll]
- * @returns {{ best: FindBest, isNew: boolean }}
- */
-export function recordFindResult(store, categoryId, current, includeAll = false) {
-  const prev = loadBest(store, categoryId, includeAll);
-  const isNew =
-    !prev ||
-    current.found > prev.found ||
-    (current.found === prev.found && current.time < prev.time);
-  if (isNew) saveBest(store, categoryId, current, includeAll);
-  return { best: isNew ? current : prev ?? current, isNew };
-}
-
-/**
- * Confetti rule for the find-flag page: a clean sweep (found === total)
- * always celebrates, even if a previous faster sweep means there's no
- * new record; a new record (better partial result than before) also
- * fires, so a give-up that still beat your previous best feels rewarded.
- *
- * @param {{ found: number, total: number, isNew: boolean }} params
- * @returns {boolean}
- */
-export function shouldFireFindFlagConfetti({ found, total, isNew }) {
-  return found === total || isNew;
-}
-
-/**
  * Parse a serialized filter token list back into a Filters object.
  *
  * Format: comma-separated tokens of the form `<group>:<value>` (include)
@@ -252,10 +147,10 @@ export function serializeFilter(f) {
 
 /**
  * Translate the legacy `?cat=<id>` URL form into a single-include
- * Filters object. Old shared/bookmarked links (and the stats page's
- * "click to play" rows) keep working unchanged — the parser at the page
- * boundary just normalizes them into the new shape before the game
- * starts. Returns null for ids whose prefix the chooser never emitted.
+ * Filters object. Old shared/bookmarked links keep working unchanged —
+ * the parser at the page boundary just normalizes them into the new
+ * shape before the game starts. Returns null for ids whose prefix the
+ * chooser never emitted.
  *
  * @param {string} cat
  * @returns {Filters | null}
@@ -299,47 +194,6 @@ export function parseFilterFromUrl(search) {
   }
   const cat = params.get('cat');
   if (cat) return filterFromLegacyCat(cat);
-  return null;
-}
-
-/**
- * True iff the filter is a single positive selection — one value
- * included, no excludes, in any group. Defines the boundary between
- * "ranked play" (best-score persisted, the same leaderboard as before
- * the chooser refactor) and "mix play" (no record kept). Mixing or
- * excluding is unranked even with one pill on.
- *
- * @param {Filters} f
- * @returns {boolean}
- */
-export function isRankedFilter(f) {
-  let includes = 0;
-  for (const group of GROUP_ORDER) {
-    if (f[group].exclude.size > 0) return false;
-    includes += f[group].include.size;
-    if (includes > 1) return false;
-  }
-  return includes === 1;
-}
-
-/**
- * Returns the legacy category id (`continent:Africa`, `hasColor:red`,
- * `hasMotif:weapon`, `statehood:sovereign`) for a ranked filter, or null
- * when the filter isn't ranked. Used as the best-score storage key so a
- * ranked play under the new chooser writes to the same slot a pre-
- * refactor play would have.
- *
- * @param {Filters} f
- * @returns {string | null}
- */
-export function rankedCategoryId(f) {
-  if (!isRankedFilter(f)) return null;
-  for (const group of GROUP_ORDER) {
-    if (f[group].include.size === 1) {
-      const [v] = f[group].include;
-      return `${LEGACY_PREFIX[group]}:${v}`;
-    }
-  }
   return null;
 }
 

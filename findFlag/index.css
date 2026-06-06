@@ -147,6 +147,21 @@ body {
   font-size: 14px;
   color: #666;
 }
+/* Brief green-bold flash + small jiggle on the count each time a
+ * correct guess lands. Composes the existing find-shake keyframes
+ * (also used by the input on wrong answers) for the horizontal kick,
+ * plus a colour/weight pulse that fades back to the resting grey.
+ * Triggered by toggling .find-count--pulse from JS (remove → reflow
+ * → add) so consecutive matches re-fire both animations. Same class
+ * reused on the daily page since this stylesheet is shared. */
+@keyframes find-count-pulse {
+  0% { color: #2e7d32; font-weight: 700; }
+  100% { color: #666; font-weight: 400; }
+}
+.find-count--pulse {
+  animation: find-count-pulse 700ms ease-out, find-shake 300ms ease;
+  display: inline-block;
+}
 .find-time {
   font-size: 14px;
   color: #666;

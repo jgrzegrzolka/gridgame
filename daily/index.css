@@ -31,9 +31,17 @@
   align-self: center;
 }
 
+/* Helper sentence + sovereign note share the same subtle right-aligned
+ * styling and sit directly above one another so they read as a single
+ * block of guidance. margin-bottom only on the note (the last of the
+ * pair) so they stay tight together but breathe before the input. */
+.daily-desc,
 .daily-note {
   font-size: 12px;
   color: #999;
-  margin: 0 0 12px;
   text-align: right;
+  margin: 0;
+}
+.daily-note {
+  margin-bottom: 12px;
 }

@@ -9,13 +9,10 @@ import {
   findTargets,
   findPool,
   classifyGuess,
-  recordFindResult,
   isFindIncludeAll,
   setFindIncludeAll,
-  shouldFireFindFlagConfetti,
   parseFilterFromUrl,
   serializeFilter,
-  rankedCategoryId,
   filterToCategory,
   pillLabel,
   pickRandomMix,
@@ -23,7 +20,7 @@ import {
 import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
-import { launchConfetti } from '../confetti.js';
+import { launchConfetti, launchFireworks } from '../confetti.js';
 
 export function bootFindFlag() {
   const chooserEl = document.getElementById('chooser');
@@ -288,6 +285,14 @@ export function bootFindFlag() {
     function updateCount() {
       countEl.textContent = `${foundCodes.size} / ${targetCodes.size}`;
     }
+    /* Brief flash on each correct guess. Remove → force reflow → add
+     * re-triggers the CSS animation on consecutive matches. Called
+     * from the match branch only, not from the initial updateCount(). */
+    function pulseCount() {
+      countEl.classList.remove('find-count--pulse');
+      void countEl.offsetWidth;
+      countEl.classList.add('find-count--pulse');
+    }
     function tick() {
       timeEl.textContent = formatTime(Date.now() - startMs);
       if (!finished) timerRaf = requestAnimationFrame(tick);
@@ -348,6 +353,7 @@ export function bootFindFlag() {
         foundCodes.add(c.code);
         appendFound(c);
         updateCount();
+        pulseCount();
         inputEl.value = '';
         matches = [];
         renderSuggestions();
@@ -412,36 +418,16 @@ export function bootFindFlag() {
       document.getElementById('final-time').textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
       document.getElementById('final-score-line').style.color = scoreColor(found / total);
 
-      // Only ranked plays — exactly one positive tag, no excludes — write
-      // to the best-score store. Mix plays share no leaderboard slot with
-      // each other (the URL encodes infinitely many combinations) so
-      // recording them would clutter the stats page with one-off entries.
-      const rankedId = rankedCategoryId(filter);
-      const bestEl = document.getElementById('best');
-      let isNew = false;
-      if (rankedId !== null) {
-        const result = recordFindResult(
-          localStorage,
-          rankedId,
-          { time: elapsed, found, total },
-          includeAll,
-        );
-        isNew = result.isNew;
-        const best = result.best;
-        bestEl.textContent =
-          `${t('findFlag.yourBest', 'Your best')}: ${best.found} / ${best.total} ${t('game.in', 'in')} ${formatTime(best.time)}`;
-        if (isNew) {
-          bestEl.appendChild(document.createTextNode(' '));
-          const badge = document.createElement('span');
-          badge.className = 'new-badge';
-          badge.textContent = t('game.newRecord', 'new record!');
-          bestEl.appendChild(badge);
-        }
-      } else {
-        // .best:empty { display: none } in common.css hides the line.
-        bestEl.textContent = '';
+      // findFlag is play-and-walk-away now — no per-category best score,
+      // no "Your best" line, no record-tracking. Celebration rule mirrors
+      // the daily page: confetti for "you found something", fireworks
+      // layered on top for a clean sweep. Skipping the celebration when
+      // the player gives up with zero finds (found === 0) is deliberate
+      // — confetti there would feel ironic.
+      if (found > 0) {
+        launchConfetti();
+        if (found === total) launchFireworks();
       }
-      if (shouldFireFindFlagConfetti({ found, total, isNew })) launchConfetti();
 
       // Found section duplicates the in-game .find-found grid onto the
       // result screen. Without it the user never sees the flag they

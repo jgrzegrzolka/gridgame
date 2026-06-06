@@ -25,6 +25,17 @@ import { parseFilterString } from './findFlag.js';
  * @property {string} filter   serialized filter, same form as the
  *                             findFlag chooser's `?f=` URL parameter
  * @property {string[]} answers  country codes the puzzle resolves to
+ * @property {Record<string, string>} [description]  per-language helper
+ *                             sentence shown under the header. Keys are
+ *                             language codes (`en`, `pl`). Lets the player
+ *                             read the pill chain as natural language —
+ *                             "Find all European flags with a cross"
+ *                             rather than parsing "Europe · cross" as a
+ *                             filter spec. Hand-written per puzzle (no
+ *                             auto-gen) so PL grammar lands correctly.
+ *                             Typedef-optional so synthetic test fixtures
+ *                             stay terse; runtime presence is pinned by
+ *                             the description test in flags/daily.test.js.
  * @property {boolean} [primaryCleanExempt]  rare escape hatch — when true,
  *                             this entry opts out of the #1-100 primary-clean
  *                             test. Use sparingly; see SKILL.md rule 5.
