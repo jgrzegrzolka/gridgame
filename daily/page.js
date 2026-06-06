@@ -8,7 +8,7 @@ import {
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
-import { todayN, dailyNFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
+import { todayN, dailyNFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry } from '../flags/daily.js';
 import { loadScores, saveScore, isCompleteRecord } from './scores.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
@@ -50,12 +50,64 @@ export function bootDaily() {
     return li;
   }
 
+  const backlogParam = new URLSearchParams(window.location.search).get('backlog');
+  const backlogN = backlogParam !== null ? parseInt(backlogParam, 10) : NaN;
+  const isBacklog = Number.isFinite(backlogN);
+  // Backlog mode swaps the live catalog for the staged backlog so the
+  // author can play-test the next puzzles without exposing them to
+  // players. URL-only entry point — there's no nav link to backlog.html
+  // and `?backlog=N` isn't surfaced anywhere in the UI.
+  const catalogUrl = isBacklog ? './daily_backlog.json' : './daily_puzzles.json';
+
   return Promise.all([
     fetch('../flags/countries.json').then((r) => r.json()),
-    fetch('./daily_puzzles.json').then((r) => r.json()),
+    fetch(catalogUrl).then((r) => r.json()),
   ])
     .then(([raw, catalog]) => {
       const all = withLocalizedAliases(flagsGamePool(raw, false));
+
+      if (isBacklog) {
+        numEl.textContent = `#${backlogN} · backlog`;
+        // Swap both "Previous puzzles" links to point back at the
+        // backlog index, so giving up / finishing a backlog play lands
+        // you back on the staged list rather than the live archive.
+        // data-i18n is removed so a lang-toggle reload re-runs bootDaily
+        // and reapplies these mutations from scratch.
+        for (const id of ['prev-puzzles-link', 'result-prev-puzzles-link']) {
+          const link = document.getElementById(id);
+          if (link) {
+            link.setAttribute('href', 'backlog.html');
+            link.textContent = 'Back to backlog';
+            link.removeAttribute('data-i18n');
+          }
+        }
+        // Backlog-only "Play again" link on the result page. Live daily
+        // is play-once — your score is saved and replays don't make
+        // sense as a workflow — so this link doesn't exist there. In
+        // backlog mode the whole point is to iterate, so we surface the
+        // re-run path right next to "Back to backlog".
+        const resultLinks = document.querySelector('.result-links');
+        if (resultLinks) {
+          const playAgain = document.createElement('a');
+          playAgain.href = `./?backlog=${backlogN}`;
+          playAgain.textContent = 'Play again';
+          resultLinks.prepend(playAgain, ' · ');
+        }
+        const entry = findPuzzle(catalog, backlogN);
+        if (!entry) {
+          showState(reasonMessage('not-found'));
+          return;
+        }
+        const backlogResult = resolvePuzzleEntry(entry, all);
+        if (backlogResult.ok === false) {
+          showState(reasonMessage(backlogResult.reason));
+          return;
+        }
+        const category = filterToCategory(backlogResult.filter, t);
+        startGame(backlogN, category, backlogResult.targets, all, { backlog: true });
+        return;
+      }
+
       const today = todayN(catalog);
       const n = dailyNFromUrl(window.location.search, today);
       numEl.textContent = `#${n}`;
@@ -156,12 +208,18 @@ export function bootDaily() {
    * a later phase). The final found/total IS persisted (per puzzle
    * number) so the archive can show the player their score.
    *
+   * Backlog mode (`opts.backlog`): play the puzzle exactly the same way
+   * but skip `saveScore` — backlog plays must not pollute the player's
+   * archive, since they're test runs of unreleased puzzles.
+   *
    * @param {number} n
    * @param {import('../flags/engine.js').Category} category
    * @param {Country[]} targets
    * @param {Country[]} all
+   * @param {{ backlog?: boolean }} [opts]
    */
-  function startGame(n, category, targets, all) {
+  function startGame(n, category, targets, all, opts = {}) {
+    const backlog = opts.backlog === true;
     const pool = findPool(all);
     const targetCodes = new Set(targets.map((c) => c.code));
     const foundCodes = new Set();
@@ -309,7 +367,9 @@ export function bootDaily() {
       const elapsed = Date.now() - startMs;
       const found = foundCodes.size;
       const total = targetCodes.size;
-      saveScore(window.localStorage, n, found, total, Array.from(foundCodes), elapsed);
+      if (!backlog) {
+        saveScore(window.localStorage, n, found, total, Array.from(foundCodes), elapsed);
+      }
       if (found > 0) {
         launchConfetti();
         // Clean sweep gets fireworks on top of the confetti — confetti

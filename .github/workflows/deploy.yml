@@ -53,6 +53,17 @@ jobs:
         # treat every build as a unique URL and refetch assets after deploy.
         run: |
           find . -name '*.html' -type f -exec sed -i "s/__BUILD__/${GITHUB_SHA}/g" {} +
+      - name: Strip preview-only files from the artifact
+        # The daily backlog (staged unreleased puzzles) is repo-only — used
+        # by tests and local preview at /daily/backlog.html, never shipped
+        # to prod. Removing the JSON makes the data itself unreachable from
+        # the deployed site; removing the page + module avoids advertising
+        # the preview URL at all. Compatible with the future scheduled
+        # release flow: that job promotes backlog[0] → live and commits,
+        # which triggers this same workflow — the backlog still gets
+        # stripped on its way out the door.
+        run: |
+          rm -f daily/backlog.html daily/backlog.js daily/daily_backlog.json
       - name: Minify JS / CSS for the artifact
         # Walks every source .js / .css file (excluding tests, node_modules,
         # the PartyKit server, and the build scripts themselves) and minifies
