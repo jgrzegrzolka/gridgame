@@ -29,8 +29,8 @@
     "countryName": "Nazwa kraju…"
   },
   "quiz": {
-    "title": "Quiz flag państw — Yet Another Quiz",
-    "statsTitle": "Quiz flag — Twoje statystyki",
+    "title": "Yet Another Quiz — Quiz flag państw",
+    "statsTitle": "Yet Another Quiz — Statystyki quizu flag",
     "loading": "Ładowanie…",
     "finalScore": "Wynik końcowy:",
     "mistakes": "Pomyłki:",
@@ -42,7 +42,7 @@
     }
   },
   "findFlag": {
-    "title": "Znajdź wszystkie flagi po kategorii — Yet Another Quiz",
+    "title": "Yet Another Quiz — Znajdź wszystkie flagi po kategorii",
     "heading": "Znajdź flagę",
     "blurb": "Wybierz kategorie i nazwij każdą pasującą flagę.",
     "typeCountryName": "Wpisz nazwę kraju…",
@@ -62,17 +62,18 @@
     }
   },
   "daily": {
-    "title": "Codzienna zagadka flagowa — Yet Another Quiz",
+    "title": "Yet Another Quiz",
     "todaysPuzzle": "Dzisiejsza zagadka",
     "archive": "Poprzednie zagadki",
-    "archiveTitle": "Codzienna zagadka flagowa — Poprzednie zagadki",
+    "archiveTitle": "Yet Another Quiz — Archiwum codziennych zagadek",
     "archiveCount": "{n} flag",
     "notFound": "Nie znaleziono zagadki.",
     "empty": "Brak zagadek.",
     "sovereignOnly": "Tylko kraje suwerenne."
   },
   "ttt": {
-    "title": "Kółko i krzyżyk z flagami państw — Yet Another Quiz",
+    "title": "Yet Another Quiz — Kółko i krzyżyk z flagami państw",
+    "offlineTitle": "Yet Another Quiz — Kółko i krzyżyk offline",
     "lobbyTitle": "Zagraj ze znajomym",
     "variant3x3": "3×3",
     "variant9x9": "9×9",
@@ -111,7 +112,8 @@
     }
   },
   "ttt9x9": {
-    "title": "9×9"
+    "title": "Yet Another Quiz — 9×9 Kółko i krzyżyk z flagami",
+    "offlineTitle": "Yet Another Quiz — 9×9 Kółko i krzyżyk offline"
   },
   "variant": {
     "countries": "Wszystkie kraje",
@@ -171,7 +173,7 @@
     "other": "Inne"
   },
   "flagsdata": {
-    "title": "Wszystkie flagi państw — Yet Another Quiz",
+    "title": "Yet Another Quiz — Wszystkie flagi państw",
     "filters": "Filtry",
     "filterStatus": "Status",
     "filterContinent": "Kontynent",
