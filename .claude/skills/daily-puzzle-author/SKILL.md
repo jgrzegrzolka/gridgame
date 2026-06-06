@@ -1,6 +1,6 @@
 ---
 name: daily-puzzle-author
-description: Adds or vets entries in the gridgame daily-puzzle catalog (daily/daily_puzzles.json and daily/daily_backlog.json). Use when authoring a new puzzle, refilling the backlog, releasing the next backlog entry to live, or reviewing whether a proposed filter would make a good puzzle. Carries the 13 rules (5 hard / 8 soft) that the catalog and tests enforce — primary-clean colours, small-property compounds, no-subset, etc. Pulls from flags/countries.json so changes to country data don't require re-deriving the rules.
+description: Adds or vets entries in the gridgame daily-puzzle catalog (daily/daily_puzzles.json and daily/daily_backlog.json). Use when authoring a new puzzle, refilling the backlog, releasing the next backlog entry to live, or reviewing whether a proposed filter would make a good puzzle. Carries the 14 rules (7 hard / 7 soft) that the catalog and tests enforce — primary-clean colours, small-property compounds, no-subset, en+pl descriptions, etc. Pulls from flags/countries.json so changes to country data don't require re-deriving the rules.
 ---
 
 # Daily-puzzle author
@@ -10,7 +10,7 @@ The daily catalog is two append-only JSON files:
 - `daily/daily_puzzles.json` — released puzzles, visible to players. "Today's puzzle" = last entry.
 - `daily/daily_backlog.json` — staged, hidden. Releasing = move `backlog[0]` to the end of live.
 
-Each entry is `{ "n": <int>, "filter": "<filterString>", "answers": ["<code>", ...] }`. Numbering is sequential across the two files (live ends at N → backlog starts at N+1).
+Each entry is `{ "n": <int>, "filter": "<filterString>", "answers": ["<code>", ...], "description": { "en": "...", "pl": "..." } }`. Numbering is sequential across the two files (live ends at N → backlog starts at N+1).
 
 ## Workflow
 
@@ -43,21 +43,23 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
 
 6. **No strict-subset puzzles (puzzles #1–100).** *(no-subset test)* For any two puzzles in #1–100, neither's answer set may be a strict subset of the other's. *Why:* the player who already met the superset has seen every answer in the subset, so the subset puzzle isn't "find all the X" — it's "remember which of those are also Y". Past #100 allowed as a deliberate recall mechanic.
 
+7. **Every puzzle has en + pl descriptions.** *(description test)* `entry.description.en` and `entry.description.pl` must both be non-empty strings. The sentence renders under the daily header to turn the pill chain ("Europe · cross") into plain language ("Find all European flags with a cross"). *Why:* a player reported reading "Europe · cross" as the puzzle title rather than the filter spec — they didn't realise they had to find flags that had a cross. The helper sentence closes that gap. Auto-generation was rejected because mixed include/exclude phrasing reads badly in EN and PL grammar needs a human (gendered adjectives, instrumental case). The shape stays narrow ("Find all X flags with/without Y") so it doesn't drift into a paragraph.
+
 ### Soft (hand-check)
 
-7. **`nameScore` cap by N.**
+8. **`nameScore` cap by N.**
    - #1–5: every answer `nameScore ≤ 3`
    - #6–50: every answer `nameScore ≤ 5`
    - #51–100: every answer `nameScore ≤ 6`
    - Past #100: any
    *Why soft:* a few generous puzzles deserve an exception (e.g. a famous-country-only puzzle that includes one nm=4 country).
 
-8. **Answer-set size by N.**
+9. **Answer-set size by N.**
    - #1–50: 2–25 flags
    - Past #50: 1–25 flags
    - 1-flag puzzles allowed only past #50.
 
-9. **No small-property compounds (puzzles #1–100).** If any filter property has under 15 sovereign matches under `primaryColors`, use it solo. Current small properties:
+10. **No small-property compounds (puzzles #1–100).** If any filter property has under 15 sovereign matches under `primaryColors`, use it solo. Current small properties:
    - `motif:weapon` — 13
    - `continent:South America` — 12
    - `continent:Oceania` — 14
@@ -71,21 +73,21 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
 
    When you discover another such pair (intersection under 15 primary-clean), add it here.
 
-10. **No motif-emblem traps (puzzles #1–100).** Until `primaryMotifs` exists, avoid filters whose answer set is dominated by emblem-only motifs:
+11. **No motif-emblem traps (puzzles #1–100).** Until `primaryMotifs` exists, avoid filters whose answer set is dominated by emblem-only motifs:
     - `continent:South America,motif:animal` and its colour-compound variants (bo/ec/pe are all COA-only fauna)
     - Most `continent:Europe,motif:animal` filters (Albania is the only primary-visible animal)
     *Why:* `primaryColors` distinguishes "visible from across a room" colours from "only in the COA"; `motifs` has no equivalent. Peru's animal (vicuña inside its tiny COA) gets weighted the same as Sri Lanka's animal (the entire flag is a lion). Until that asymmetry is fixed in the data, hand-blocklist the emblem-only-dominant filters.
 
-11. **Country-reuse cap.** No country appears in more than 5 puzzles across the full catalog (live + backlog). When hand-authoring, check the cumulative count.
+12. **Country-reuse cap.** No country appears in more than 5 puzzles across the full catalog (live + backlog). When hand-authoring, check the cumulative count.
 
-12. **#1 is pinned.** `continent:Europe,motif:cross` stays at position #1. Regenerations don't touch it without a deliberate decision.
+13. **#1 is pinned.** `continent:Europe,motif:cross` stays at position #1. Regenerations don't touch it without a deliberate decision.
 
-13. **Continent variety in onboarding.** At least 5 of the first 10 are Europe ("start mostly with Europe"); the rest spread across Asia / Africa / NA. Don't try to fit every continent into the first 10 — South America's primary-clean-and-not-small options are essentially zero, so it appears later.
+14. **Continent variety in onboarding.** At least 5 of the first 10 are Europe ("start mostly with Europe"); the rest spread across Asia / Africa / NA. Don't try to fit every continent into the first 10 — South America's primary-clean-and-not-small options are essentially zero, so it appears later.
 
 ## When data changes
 
-The small-property list in rule 8 and the emblem-only list in rule 9 are derived from `flags/countries.json`. If you add countries, change `primaryColors`, or split a continent, the counts shift. Before relying on a rule, re-verify the current state with a quick query against the file. The hard rules (1–5) are always derived live by the test, so they self-correct.
+The small-property list in rule 10 and the emblem-only list in rule 11 are derived from `flags/countries.json`. If you add countries, change `primaryColors`, or split a continent, the counts shift. Before relying on a rule, re-verify the current state with a quick query against the file. The hard rules (1–7) are always derived live by the test, so they self-correct.
 
 ## When a soft rule graduates to hard
 
-E.g. we add `primaryMotifs` and rule 9 becomes a test. Update this SKILL.md AND the test in the same change.
+E.g. we add `primaryMotifs` and rule 10 becomes a test. Update this SKILL.md AND the test in the same change.

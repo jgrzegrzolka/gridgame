@@ -14,7 +14,11 @@
       "mc",
       "mt",
       "pl"
-    ]
+    ],
+    "description": {
+      "en": "Find all European flags with red and white but no blue.",
+      "pl": "Znajdź wszystkie europejskie flagi z czerwienią i bielą, ale bez niebieskiego."
+    }
   },
   {
     "n": 3,
@@ -25,7 +29,11 @@
       "co",
       "uy",
       "ve"
-    ]
+    ],
+    "description": {
+      "en": "Find all South American flags without green and without a coat of arms.",
+      "pl": "Znajdź wszystkie południowoamerykańskie flagi bez zieleni i bez godła."
+    }
   },
   {
     "n": 4,
@@ -42,7 +50,11 @@
       "sk",
       "sm",
       "va"
-    ]
+    ],
+    "description": {
+      "en": "Find all European flags with a coat of arms.",
+      "pl": "Znajdź wszystkie europejskie flagi z godłem."
+    }
   },
   {
     "n": 5,
@@ -51,7 +63,11 @@
       "bt",
       "kz",
       "lk"
-    ]
+    ],
+    "description": {
+      "en": "Find all Asian flags with an animal.",
+      "pl": "Znajdź wszystkie azjatyckie flagi ze zwierzęciem."
+    }
   },
   {
     "n": 6,
@@ -60,7 +76,11 @@
       "ba",
       "hr",
       "si"
-    ]
+    ],
+    "description": {
+      "en": "Find all European flags with a star or moon.",
+      "pl": "Znajdź wszystkie europejskie flagi z gwiazdą lub księżycem."
+    }
   },
   {
     "n": 7,
@@ -72,7 +92,11 @@
       "kw",
       "ps",
       "sy"
-    ]
+    ],
+    "description": {
+      "en": "Find all Asian flags with green and black.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z zielenią i czernią."
+    }
   },
   {
     "n": 8,
@@ -80,7 +104,11 @@
     "answers": [
       "eg",
       "ke"
-    ]
+    ],
+    "description": {
+      "en": "Find all African flags with black and a coat of arms.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z czernią i godłem."
+    }
   },
   {
     "n": 9,
@@ -89,7 +117,11 @@
       "dm",
       "do",
       "jm"
-    ]
+    ],
+    "description": {
+      "en": "Find all North American flags with a cross.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi z krzyżem."
+    }
   },
   {
     "n": 10,
@@ -107,7 +139,11 @@
       "ph",
       "th",
       "uz"
-    ]
+    ],
+    "description": {
+      "en": "Find all Asian flags with white and blue.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z bielą i niebieskim."
+    }
   },
   {
     "n": 11,
@@ -120,6 +156,10 @@
       "li",
       "mt"
     ],
+    "description": {
+      "en": "Find all European flags with black.",
+      "pl": "Znajdź wszystkie europejskie flagi z czernią."
+    },
     "primaryCleanExempt": true
   }
 ]

@@ -19,6 +19,25 @@ export function bootDaily() {
   const gameEl = /** @type {HTMLElement} */ (document.getElementById('game'));
   const resultEl = /** @type {HTMLElement} */ (document.getElementById('result'));
   const numEl = /** @type {HTMLElement} */ (document.getElementById('daily-n'));
+  const descEl = /** @type {HTMLElement} */ (document.getElementById('daily-desc'));
+
+  /**
+   * Paint the puzzle's helper sentence for the current page language.
+   * i18n has already run by the time bootDaily fires (the page-level
+   * script chains via .then(bootI18n)), so documentElement.lang is the
+   * resolved code. Falls back to English if the requested language is
+   * missing from the entry — better to show *some* sentence than to
+   * leak the absence of a translation. Empty/missing description hides
+   * the element so the sovereign note still reads naturally.
+   *
+   * @param {Record<string, string> | undefined} description
+   */
+  function paintDescription(description) {
+    const lang = document.documentElement.lang || 'en';
+    const text = description?.[lang] ?? description?.en ?? '';
+    descEl.textContent = text;
+    descEl.hidden = text === '';
+  }
 
   const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
   const zoomImg = /** @type {HTMLImageElement} */ (zoom.querySelector('img'));
@@ -103,6 +122,7 @@ export function bootDaily() {
           showState(reasonMessage(backlogResult.reason));
           return;
         }
+        paintDescription(backlogResult.entry.description);
         const category = filterToCategory(backlogResult.filter, t);
         startGame(backlogN, category, backlogResult.targets, all, { backlog: true });
         return;
@@ -117,6 +137,8 @@ export function bootDaily() {
         showState(reasonMessage(result.reason));
         return;
       }
+
+      paintDescription(result.entry.description);
 
       // Revisit: if this puzzle has a full saved record, jump
       // straight to the result page without confetti (the player

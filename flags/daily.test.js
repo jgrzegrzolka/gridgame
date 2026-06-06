@@ -324,6 +324,34 @@ test('live + backlog: puzzles #1-100 have no strict-subset relationships', () =>
   assert.deepEqual(unique, [], '\n  ' + unique.join('\n  '));
 });
 
+// Every puzzle carries a hand-written helper sentence in every supported
+// language. The sentence renders under the header to turn the pill chain
+// ("Europe · cross") into a plain instruction ("Find all European flags
+// with a cross") — without it, new players read the pill chain as a
+// title rather than a filter spec and don't realise they need to find
+// matching flags. Auto-generating the sentence from the filter was
+// rejected because mixed include/exclude phrasing gets awkward in EN
+// and the PL grammar (gendered adjectives, instrumental case) needs a
+// human anyway. The test pins "every entry has both en and pl" so a
+// new puzzle can't ship without copy.
+test('live + backlog: every puzzle has en + pl descriptions', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const entry of [...CATALOG, ...BACKLOG]) {
+    const d = /** @type {Record<string, string> | undefined} */ (entry.description);
+    if (!d) {
+      offenders.push(`#${entry.n}: missing description`);
+      continue;
+    }
+    for (const lang of ['en', 'pl']) {
+      if (typeof d[lang] !== 'string' || d[lang].length === 0) {
+        offenders.push(`#${entry.n}: missing or empty description.${lang}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
+
 // Onboarding gate: in puzzles #1-100 every answer must also match under
 // `primaryColors`. "Emblem-only" colour matches (Bolivia is "blue" only
 // because its COA contains blue) read as "the game is wrong" in early

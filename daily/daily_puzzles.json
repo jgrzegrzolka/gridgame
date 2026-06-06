@@ -12,6 +12,10 @@
       "mt",
       "no",
       "se"
-    ]
+    ],
+    "description": {
+      "en": "Find all European flags with a cross.",
+      "pl": "Znajdź wszystkie europejskie flagi z krzyżem."
+    }
   }
 ]
