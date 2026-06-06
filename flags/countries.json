@@ -611,12 +611,13 @@
     "statehood": "territory",
     "primaryColors": [
       "blue",
-      "white",
       "red",
-      "green",
-      "yellow"
+      "white"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "yellow",
+      "green"
+    ],
     "motifs": [
       "cross",
       "union-jack"
@@ -1252,11 +1253,10 @@
     "primaryColors": [
       "red",
       "white",
-      "black"
-    ],
-    "additionalColors": [
+      "black",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms"
@@ -1358,12 +1358,11 @@
     "primaryColors": [
       "blue",
       "yellow",
-      "red"
-    ],
-    "additionalColors": [
+      "red",
       "black",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "weapon"
     ]
@@ -2741,14 +2740,13 @@
     "category": "country",
     "statehood": "un_member",
     "primaryColors": [
-      "green",
+      "red",
       "black",
       "yellow",
-      "red"
-    ],
-    "additionalColors": [
+      "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "weapon",
       "star-or-moon"
@@ -2783,11 +2781,10 @@
       "blue",
       "red",
       "green",
-      "yellow"
-    ],
-    "additionalColors": [
+      "yellow",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
