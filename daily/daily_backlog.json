@@ -1,7 +1,7 @@
 [
   {
     "n": 2,
-    "filter": "continent:Europe,color:red,color:white,color:!blue",
+    "filter": "continent:Europe,color:red,color:white,color:!blue,motif:!coat-of-arms",
     "answers": [
       "at",
       "bg",
@@ -16,8 +16,8 @@
       "pl"
     ],
     "description": {
-      "en": "Find all European flags with red and white but no blue.",
-      "pl": "Znajdź wszystkie europejskie flagi z czerwienią i bielą, ale bez niebieskiego."
+      "en": "Find all European flags with red and white but no blue and no coat of arms.",
+      "pl": "Znajdź wszystkie europejskie flagi z czerwienią i bielą, ale bez niebieskiego i bez godła."
     }
   },
   {

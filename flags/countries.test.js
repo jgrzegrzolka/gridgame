@@ -187,6 +187,40 @@ test('known animal/coat-of-arms flags keep their expected motif tags', () => {
   assert.deepEqual(offenders, [], offenders.join('; '));
 });
 
+// Regression pin — hand-audited primaryColors / additionalColors splits for
+// the European flags Jan ranked by visual inspection. These are the flags
+// where the mechanical migration (#192) needed a specific correction, so
+// pinning them stops a future regeneration / refactor from quietly swapping
+// a primary colour to additional or vice versa. Add a code here when you
+// hand-audit another flag and want the answer frozen against future drift.
+const KNOWN_PRIMARY_SPLITS = [
+  { code: 'gi', primary: ['red','white'],          additional: ['yellow','black'], note: 'Gibraltar — castle COA on white-over-red field; yellow castle + black detailing read as emblem-only' },
+  { code: 'im', primary: ['red','white'],          additional: ['yellow'],         note: 'Isle of Man — yellow triskelion sits inside the central red disc; the across-the-room palette is red on white' },
+  { code: 'je', primary: ['white','red'],          additional: ['yellow'],         note: 'Jersey — yellow Jersey shield in the upper triangle is small; saltire is the dominant feature' },
+  { code: 'li', primary: ['red','blue','yellow'],  additional: ['black'],          note: 'Liechtenstein — blue-over-red horizontal with yellow crown in the canton; the crown details bring black that only reads up close' },
+  { code: 'pt', primary: ['red','green','yellow'], additional: ['blue','white'],   note: 'Portugal — yellow armillary sphere is large enough to read as primary; blue + white live only in the small inner shield' },
+  { code: 'va', primary: ['yellow','white'],       additional: ['red'],            note: 'Vatican — red ribbon binding the crossed keys is emblem-only against the yellow + white field' },
+];
+
+test('Europe hand-audited primary/additional splits stay pinned', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const { code, primary, additional, note } of KNOWN_PRIMARY_SPLITS) {
+    const c = COUNTRIES.find((x) => x.code === code);
+    if (!c) {
+      offenders.push(`${code} (${note}): not found in countries.json`);
+      continue;
+    }
+    if (JSON.stringify(c.primaryColors) !== JSON.stringify(primary)) {
+      offenders.push(`${code} (${note}): primaryColors expected ${JSON.stringify(primary)}, got ${JSON.stringify(c.primaryColors)}`);
+    }
+    if (JSON.stringify(c.additionalColors) !== JSON.stringify(additional)) {
+      offenders.push(`${code} (${note}): additionalColors expected ${JSON.stringify(additional)}, got ${JSON.stringify(c.additionalColors)}`);
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
+
 test('All-countries pool supports the "20" quiz mode (Flag Quiz default)', () => {
   const n = COUNTRIES.filter((c) => c.category === 'country').length;
   assert.ok(
