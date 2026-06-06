@@ -174,6 +174,35 @@ Alternative threads if Jan wants to skip ahead: phase 4 (release pacing) is what
 - `i18n.js` + `i18n/{en,pl}.json` — translation system. Daily strings live under the `daily.*` keys.
 - `CLAUDE.md` — repo conventions (folder structure, tests, UI consistency); read first.
 
+## Follow-up: audit the 49 implicit-primary flags carrying emblem motifs
+
+When `countries.json` was split into `primaryColors` + `additionalColors` (the
+[primary/additional split PR](#)), the 248 flags without an explicit
+`primaryColors` field were migrated mechanically: `primaryColors = colors`,
+`additionalColors = []`. That's exact behaviour preservation, but 49 of those
+248 carry a `coat-of-arms` / `animal` / `weapon` motif — meaning some of their
+colours might *actually* be COA-only and belong in `additionalColors` instead.
+
+The mechanical migration didn't catch those. Known candidates worth a visual
+check:
+
+- **br Brazil** — white appears only in the stars + motto banner, not the main
+  green/yellow/blue body. Likely belongs in `additionalColors`.
+- **mx Mexico** — green/white/red are primary stripes; the eagle's blue/yellow/
+  brown details may have introduced additional non-tricolour colours that
+  were silently absorbed into the `colors` field.
+- Spot-check the rest of the 49: `sh-ac`, `sh-hl`, `sh-ta`, `ad`, `ao`, `ai`,
+  `bb`, `bm`, `bn`, `kh`, `ky`, `dm`, `sv`, `fk`, `pf`, `gi`, `gu`, `gt`, `ht`,
+  `ir`, `je`, `kz`, `ke`, `ki`, `mn`, `ms`, `ni`, `om`, `pg`, `pn`, `sa`, `sx`,
+  `sk`, `gs`, `lk`, `tj`, `tc`, `ug`, `vu`, `va`, `vg`, `vi`, `gb-wls`, `zm`,
+  `zw`, plus `al`, `bt`, `bs`, `mz` if their COA colours got merged into the
+  main palette.
+
+This isn't a correctness blocker — current puzzle behaviour was preserved
+exactly — but every misclassified flag is a future "soft-accept" trap when
+that mechanic ships. Do this as a focused PR that goes country-by-country,
+not bundled with feature work.
+
 ## Things to avoid (lessons from this conversation)
 
 - **Don't conflate "country famous" with "flag colors memorable".** They're orthogonal. Spain is famously known but its coat-of-arms colors are not.

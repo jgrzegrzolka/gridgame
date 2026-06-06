@@ -47,13 +47,12 @@ export function emptyFilters() {
  * `colorField` picks which color list to match against:
  *   - `'colors'` (default) — every color visible anywhere on the flag,
  *     including small emblem details. Used by findFlag's "browse" UI
- *     where the player can examine the flag up close.
+ *     where the player can examine the flag up close. Resolves to the
+ *     union of `primaryColors` and `additionalColors`.
  *   - `'primaryColors'` — only the colors that read from across a room
  *     (drops COA-only colors). Used by the daily-puzzle generator so
  *     "European flags with green" doesn't include Portugal-style flags
- *     where green only appears inside the coat of arms. Countries
- *     without a primaryColors field fall back to `colors`, so this is
- *     additive — only the ~20 flags tagged explicitly behave differently.
+ *     where green only appears inside the coat of arms.
  *
  * @param {import('./group.js').Country} country
  * @param {Filters} filters
@@ -71,7 +70,7 @@ export function matchesFilters(country, filters, options = {}) {
   if (filters.continent.include.size && (filters.continent.include.size > 1 || !filters.continent.include.has(cont))) return false;
   if (filters.continent.exclude.has(cont)) return false;
 
-  const colors = country[colorField] ?? country.colors ?? [];
+  const colors = colorField === 'primaryColors' ? country.primaryColors : country.colors;
   for (const c of filters.color.include) {
     if (!colors.includes(c)) return false;
   }

@@ -1,4 +1,4 @@
-import { flagsGamePool } from '../flags/group.js';
+import { flagsGamePool, loadCountries } from '../flags/group.js';
 import { suggest, exactSingleMatch } from '../flags/engine.js';
 import {
   findPool,
@@ -80,7 +80,7 @@ export function bootDaily() {
   const catalogUrl = isBacklog ? './daily_backlog.json' : './daily_puzzles.json';
 
   return Promise.all([
-    fetch('../flags/countries.json').then((r) => r.json()),
+    fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
     fetch(catalogUrl).then((r) => r.json()),
   ])
     .then(([raw, catalog]) => {

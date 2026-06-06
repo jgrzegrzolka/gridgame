@@ -9,6 +9,7 @@ import {
   canGiveUpOnline,
 } from './onlineClient.js';
 import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
+import { loadCountries } from '../flags/group.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti } from '../confetti.js';
 
@@ -26,6 +27,7 @@ function tCat(c) {
 export function bootTicTacToeOnline() {
   fetch('../flags/countries.json')
     .then((r) => r.json())
+    .then(loadCountries)
     .then((countries) => runOnline(withLocalizedAliases(countries)))
     .catch((err) => {
       const lobbyEl = document.getElementById('lobby');

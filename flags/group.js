@@ -10,11 +10,55 @@
  * @property {'country' | 'other'} category
  * @property {Continent | null} continent
  * @property {string | null} [statehood]
- * @property {string[]} [colors]
- * @property {string[]} [primaryColors]
+ * @property {string[]} primaryColors
+ * @property {string[]} additionalColors
+ * @property {string[]} colors  Computed getter — union of primaryColors + additionalColors. Non-enumerable: hidden from JSON.stringify and Object.keys so it can't accidentally end up in PartyKit messages or serialised state.
  * @property {string[]} [motifs]
  * @property {string[]} [aliases]
  */
+
+/**
+ * Attach the computed `colors` getter to a raw country object. The two
+ * stored buckets — `primaryColors` (visible across a room) and
+ * `additionalColors` (COA-only) — are disjoint by construction; the
+ * union is "every colour anywhere on the flag" and is what most callers
+ * want (`hasColor` predicates, the findFlag browse UI, etc.). The getter
+ * is enumerable so the `{ ...country, override: ... }` spread pattern
+ * (used by `withLocalizedAliases` and elsewhere) carries `colors` over
+ * to the cloned object — a non-enumerable getter would silently drop on
+ * every spread, breaking any consumer that touched a cloned country.
+ * Nothing in this codebase serializes whole Country objects (PartyKit
+ * messages send `country.code`, not the whole country), so the extra
+ * field on JSON.stringify output isn't a practical concern.
+ *
+ * @param {any} raw
+ * @returns {Country}
+ */
+export function createCountry(raw) {
+  /** @type {any} */
+  const c = { ...raw };
+  if (!Array.isArray(c.primaryColors)) c.primaryColors = [];
+  if (!Array.isArray(c.additionalColors)) c.additionalColors = [];
+  Object.defineProperty(c, 'colors', {
+    get() { return [...this.primaryColors, ...this.additionalColors]; },
+    enumerable: true,
+    configurable: false,
+  });
+  return c;
+}
+
+/**
+ * Turn the raw JSON array (parsed from countries.json) into Country
+ * objects with the computed `colors` getter attached. Every load site
+ * goes through here — direct `JSON.parse` of countries.json without
+ * this step yields plain objects where `c.colors` is undefined.
+ *
+ * @param {any[]} rawArray
+ * @returns {Country[]}
+ */
+export function loadCountries(rawArray) {
+  return rawArray.map(createCountry);
+}
 
 /**
  * Single source of truth for how each entry is classified.

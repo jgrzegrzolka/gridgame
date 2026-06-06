@@ -6,10 +6,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "black"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -19,11 +20,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -35,10 +37,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "black"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal"
     ]
@@ -50,11 +53,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "green",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -66,12 +70,13 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -85,11 +90,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms"
@@ -102,11 +108,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "black",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "weapon",
       "star-or-moon"
@@ -119,12 +126,13 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red",
       "orange"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "cross",
@@ -138,10 +146,11 @@
     "continent": "Antarctica",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -151,13 +160,14 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "white",
       "black",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -169,11 +179,12 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -185,11 +196,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "orange"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -199,12 +211,13 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -216,13 +229,14 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -237,12 +251,13 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -252,11 +267,12 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon",
       "cross",
@@ -270,10 +286,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -283,12 +300,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -300,11 +318,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "black",
       "yellow",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -314,10 +333,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -327,10 +347,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -342,11 +363,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "black"
     ],
+    "additionalColors": [],
     "motifs": [
       "weapon"
     ]
@@ -358,11 +380,12 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "red",
       "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -374,11 +397,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -388,11 +412,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "black",
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -402,18 +427,15 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "blue",
-      "red",
-      "white",
-      "green",
-      "yellow",
-      "black"
-    ],
     "primaryColors": [
       "blue",
       "red",
       "white"
+    ],
+    "additionalColors": [
+      "green",
+      "yellow",
+      "black"
     ],
     "motifs": [
       "coat-of-arms"
@@ -426,11 +448,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -440,13 +463,14 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "white",
       "green",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -461,11 +485,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "yellow",
       "orange",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal"
     ]
@@ -477,16 +502,13 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "red",
-      "yellow",
-      "green",
-      "blue"
-    ],
     "primaryColors": [
       "red",
       "yellow",
       "green"
+    ],
+    "additionalColors": [
+      "blue"
     ],
     "motifs": [
       "animal",
@@ -501,12 +523,13 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -516,11 +539,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -532,11 +556,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "black",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -546,11 +571,12 @@
     "continent": "Antarctica",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -562,12 +588,13 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -579,13 +606,14 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red",
       "green",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross",
       "union-jack"
@@ -601,12 +629,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "yellow",
       "white",
       "black",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -618,11 +647,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "green",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -632,11 +662,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "green",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -648,11 +679,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon",
       "cross"
@@ -665,12 +697,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -682,11 +715,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -698,11 +732,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -714,10 +749,11 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -727,10 +763,11 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -740,10 +777,11 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -753,13 +791,14 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -774,13 +813,14 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "green",
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -792,10 +832,11 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -805,11 +846,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -819,11 +861,12 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -835,10 +878,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -850,12 +894,13 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "green",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -867,11 +912,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -881,10 +927,11 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -896,11 +943,12 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "yellow",
       "blue",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -910,13 +958,14 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "yellow",
       "white",
       "red",
       "blue",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -928,11 +977,12 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "non_un",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon",
       "cross",
@@ -946,11 +996,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -960,16 +1011,13 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "red",
-      "white",
-      "blue",
-      "yellow"
-    ],
     "primaryColors": [
       "red",
       "white",
       "blue"
+    ],
+    "additionalColors": [
+      "yellow"
     ],
     "motifs": [
       "coat-of-arms",
@@ -983,11 +1031,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -999,11 +1048,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1015,11 +1065,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "orange",
       "green"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1029,11 +1080,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "red",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1043,11 +1095,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "orange",
       "white",
       "green"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1057,11 +1110,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ],
@@ -1076,10 +1130,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -1091,12 +1146,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "green",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1108,13 +1164,14 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "black",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -1128,16 +1185,13 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "blue",
-      "red",
-      "white",
-      "green"
-    ],
     "primaryColors": [
       "blue",
       "red",
       "white"
+    ],
+    "additionalColors": [
+      "green"
     ],
     "motifs": [
       "coat-of-arms",
@@ -1151,7 +1205,7 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "green",
@@ -1159,6 +1213,7 @@
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1168,16 +1223,13 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "yellow",
-      "blue",
-      "red",
-      "green"
-    ],
     "primaryColors": [
       "yellow",
       "blue",
       "red"
+    ],
+    "additionalColors": [
+      "green"
     ],
     "motifs": [
       "animal",
@@ -1193,16 +1245,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "red",
-      "white",
-      "black",
-      "yellow"
-    ],
     "primaryColors": [
       "red",
       "white",
       "black"
+    ],
+    "additionalColors": [
+      "yellow"
     ],
     "motifs": [
       "animal",
@@ -1216,12 +1265,13 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "green",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -1233,10 +1283,11 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -1248,18 +1299,14 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "green",
-      "white",
-      "red",
-      "blue",
-      "yellow"
-    ],
     "primaryColors": [
       "green",
       "white",
       "red",
       "blue"
+    ],
+    "additionalColors": [
+      "yellow"
     ],
     "motifs": [
       "coat-of-arms"
@@ -1272,12 +1319,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "green",
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1287,11 +1335,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "black",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1301,17 +1350,14 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "blue",
-      "yellow",
-      "red",
-      "black",
-      "white"
-    ],
     "primaryColors": [
       "blue",
       "yellow",
       "red"
+    ],
+    "additionalColors": [
+      "black",
+      "white"
     ],
     "motifs": [
       "weapon"
@@ -1324,12 +1370,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "red",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1341,10 +1388,11 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1356,13 +1404,14 @@
     "continent": "South America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -1377,11 +1426,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "white",
       "red",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -1393,10 +1443,11 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1408,17 +1459,14 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "blue",
-      "red",
-      "white",
-      "yellow",
-      "green"
-    ],
     "primaryColors": [
       "blue",
       "red",
       "white"
+    ],
+    "additionalColors": [
+      "yellow",
+      "green"
     ],
     "motifs": [
       "animal",
@@ -1434,10 +1482,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -1449,11 +1498,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1463,11 +1513,12 @@
     "continent": "South America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1477,12 +1528,13 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue",
       "orange"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "star-or-moon"
@@ -1495,11 +1547,12 @@
     "continent": "Antarctica",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1511,11 +1564,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1525,11 +1579,12 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "white",
       "blue",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1539,12 +1594,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1554,10 +1610,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -1569,11 +1626,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "black",
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1583,12 +1641,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "yellow",
       "green",
       "black"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1600,11 +1659,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "white",
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -1616,10 +1676,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -1631,10 +1692,11 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1644,11 +1706,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1660,11 +1723,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1674,13 +1738,14 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -1692,12 +1757,13 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "green",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -1711,11 +1777,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "white",
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -1727,11 +1794,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1741,12 +1809,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "yellow",
       "green",
       "black"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1758,13 +1827,14 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "red",
       "yellow",
       "black",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1774,12 +1844,13 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "weapon"
@@ -1792,11 +1863,12 @@
     "continent": "Antarctica",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon",
       "cross",
@@ -1810,10 +1882,11 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1825,10 +1898,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1840,11 +1914,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "green"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1854,11 +1929,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -1870,12 +1946,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "orange",
       "white",
       "green",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1885,10 +1962,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1898,11 +1976,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -1914,12 +1993,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "black",
       "green"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1929,11 +2009,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "white",
       "orange"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1943,11 +2024,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1957,10 +2039,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -1972,11 +2055,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -1986,11 +2070,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "black",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -2002,10 +2087,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2017,11 +2103,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "white",
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -2035,12 +2122,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "black",
       "white",
       "green",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2052,10 +2140,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -2069,12 +2158,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "black",
       "red",
       "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "weapon"
@@ -2087,12 +2177,13 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "yellow",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "star-or-moon"
@@ -2105,11 +2196,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "non_un",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2121,12 +2213,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "white",
       "red",
       "black"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2136,10 +2229,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2151,11 +2245,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2165,10 +2260,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2178,11 +2274,12 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "green",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2192,11 +2289,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "green"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2206,12 +2304,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "green",
       "black"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2221,11 +2320,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2237,12 +2337,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "black",
       "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2254,12 +2355,13 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "yellow",
       "black"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2269,11 +2371,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "yellow",
       "green",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2283,11 +2386,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2297,11 +2401,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2313,11 +2418,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "red",
       "green"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2327,11 +2433,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "black",
       "red",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2343,12 +2450,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2360,11 +2468,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2376,11 +2485,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2390,14 +2500,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "red",
-      "white",
-      "black"
-    ],
     "primaryColors": [
       "red",
       "white"
+    ],
+    "additionalColors": [
+      "black"
     ],
     "motifs": [
       "animal",
@@ -2412,11 +2520,12 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "orange"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2428,11 +2537,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2442,11 +2552,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2458,12 +2569,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2473,11 +2585,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2487,11 +2600,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms"
@@ -2504,16 +2618,13 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "blue",
-      "yellow",
-      "red",
-      "green"
-    ],
     "primaryColors": [
       "blue",
       "yellow",
       "red"
+    ],
+    "additionalColors": [
+      "green"
     ],
     "motifs": [
       "animal",
@@ -2527,10 +2638,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2540,11 +2652,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "star-or-moon"
@@ -2557,15 +2670,13 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "red",
-      "yellow",
-      "blue",
-      "green"
-    ],
     "primaryColors": [
       "red",
       "yellow"
+    ],
+    "additionalColors": [
+      "blue",
+      "green"
     ],
     "motifs": [
       "animal",
@@ -2579,13 +2690,14 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "cross",
@@ -2599,10 +2711,11 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2614,18 +2727,14 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "green",
-      "white",
-      "black",
-      "yellow",
-      "red"
-    ],
     "primaryColors": [
       "green",
       "black",
       "yellow",
       "red"
+    ],
+    "additionalColors": [
+      "white"
     ],
     "motifs": [
       "weapon",
@@ -2639,12 +2748,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "yellow",
       "green",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2656,18 +2766,14 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "blue",
-      "red",
-      "green",
-      "white",
-      "yellow"
-    ],
     "primaryColors": [
       "blue",
       "red",
       "green",
       "yellow"
+    ],
+    "additionalColors": [
+      "white"
     ],
     "motifs": [
       "star-or-moon"
@@ -2680,11 +2786,12 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2696,11 +2803,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2712,11 +2820,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2726,13 +2835,14 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "green",
       "yellow",
       "black"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2742,11 +2852,12 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon",
       "cross",
@@ -2760,12 +2871,13 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "green",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -2777,11 +2889,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "orange",
       "white",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2793,10 +2906,11 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2806,12 +2920,13 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "non_un",
-    "colors": [
+    "primaryColors": [
       "yellow",
       "blue",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon",
       "cross",
@@ -2825,10 +2940,11 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2838,11 +2954,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ],
@@ -2857,10 +2974,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2872,11 +2990,12 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "white",
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -2888,12 +3007,13 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2905,11 +3025,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -2921,11 +3042,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "weapon"
     ]
@@ -2937,10 +3059,11 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -2950,10 +3073,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2965,10 +3089,11 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2980,11 +3105,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -2996,12 +3122,13 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "black",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "star-or-moon"
@@ -3017,17 +3144,14 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "red",
-      "white",
-      "blue",
-      "green",
-      "yellow"
-    ],
     "primaryColors": [
       "red",
       "white",
       "blue"
+    ],
+    "additionalColors": [
+      "green",
+      "yellow"
     ],
     "motifs": [
       "coat-of-arms",
@@ -3041,10 +3165,11 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3054,12 +3179,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3071,13 +3197,14 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "cross",
@@ -3091,10 +3218,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3104,16 +3232,14 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "green",
-      "red",
-      "yellow",
-      "blue",
-      "white"
-    ],
     "primaryColors": [
       "green",
       "red"
+    ],
+    "additionalColors": [
+      "yellow",
+      "blue",
+      "white"
     ],
     "motifs": [
       "coat-of-arms"
@@ -3126,11 +3252,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3142,10 +3269,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3155,11 +3283,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3169,11 +3298,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3183,11 +3313,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "blue",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3197,11 +3328,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3213,11 +3345,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3227,11 +3360,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3241,12 +3375,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -3261,11 +3396,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross",
       "union-jack"
@@ -3278,13 +3414,14 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "red",
       "yellow",
       "black",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3296,12 +3433,13 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "black",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3311,11 +3449,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3325,12 +3464,13 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3340,11 +3480,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3354,11 +3495,12 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3370,16 +3512,14 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "white",
-      "blue",
-      "green",
-      "yellow",
-      "red"
-    ],
     "primaryColors": [
       "white",
       "blue"
+    ],
+    "additionalColors": [
+      "green",
+      "yellow",
+      "red"
     ],
     "motifs": [
       "coat-of-arms"
@@ -3392,12 +3532,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "red",
       "black"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3409,10 +3550,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "weapon"
@@ -3425,10 +3567,11 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -3440,11 +3583,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3456,16 +3600,13 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "red",
-      "blue",
-      "white",
-      "yellow"
-    ],
     "primaryColors": [
       "red",
       "blue",
       "white"
+    ],
+    "additionalColors": [
+      "yellow"
     ],
     "motifs": [
       "animal",
@@ -3479,13 +3620,14 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "red",
       "white",
       "green"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3495,11 +3637,12 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3509,10 +3652,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3524,12 +3668,13 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms"
@@ -3542,11 +3687,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "blue",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -3558,16 +3704,13 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "white",
-      "blue",
-      "red",
-      "yellow"
-    ],
     "primaryColors": [
       "white",
       "blue",
       "red"
+    ],
+    "additionalColors": [
+      "yellow"
     ],
     "motifs": [
       "coat-of-arms",
@@ -3581,12 +3724,13 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "green",
       "yellow",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3598,10 +3742,11 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3613,7 +3758,7 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "black",
@@ -3621,6 +3766,7 @@
       "red",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3630,7 +3776,7 @@
     "continent": "Antarctica",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
@@ -3638,6 +3784,7 @@
       "green",
       "black"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -3652,12 +3799,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "white",
       "red",
       "blue",
       "black"
     ],
+    "additionalColors": [],
     "motifs": [],
     "aliases": [
       "ROK"
@@ -3670,7 +3818,7 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "black",
       "red",
       "green",
@@ -3678,6 +3826,7 @@
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3689,15 +3838,13 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "red",
-      "yellow",
-      "blue",
-      "white"
-    ],
     "primaryColors": [
       "red",
       "yellow"
+    ],
+    "additionalColors": [
+      "blue",
+      "white"
     ],
     "motifs": [
       "animal",
@@ -3711,12 +3858,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "yellow",
       "red",
       "green",
       "orange"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -3730,12 +3878,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_observer",
-    "colors": [
+    "primaryColors": [
       "black",
       "white",
       "green",
       "red"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3745,12 +3894,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "black",
       "green"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3760,12 +3910,13 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "white",
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3777,11 +3928,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -3793,10 +3945,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -3808,10 +3961,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -3823,12 +3977,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "black",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3840,11 +3995,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "non_un",
-    "colors": [
+    "primaryColors": [
       "red",
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3856,12 +4012,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "green",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "star-or-moon"
@@ -3874,12 +4031,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "black",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3889,11 +4047,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3903,12 +4062,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "yellow",
       "black",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3920,12 +4080,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3937,11 +4098,12 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -3953,10 +4115,11 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross"
     ]
@@ -3968,11 +4131,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "black"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -3982,12 +4146,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -4002,10 +4167,11 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -4017,15 +4183,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
-      "green",
-      "red",
-      "white",
-      "yellow"
-    ],
     "primaryColors": [
       "green",
       "red"
+    ],
+    "additionalColors": [
+      "white",
+      "yellow"
     ],
     "motifs": [
       "star-or-moon"
@@ -4038,13 +4202,14 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -4059,12 +4224,13 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon",
       "cross",
@@ -4078,10 +4244,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -4093,12 +4260,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "black",
       "yellow",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal"
     ]
@@ -4110,10 +4278,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -4123,12 +4292,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "green",
       "white",
       "black"
     ],
+    "additionalColors": [],
     "motifs": [],
     "aliases": [
       "UAE"
@@ -4141,11 +4311,12 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "cross",
       "union-jack"
@@ -4158,10 +4329,11 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "blue",
       "white"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -4171,11 +4343,12 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -4187,11 +4360,12 @@
     "continent": "North America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ],
@@ -4206,11 +4380,12 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -4222,12 +4397,13 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "blue",
       "white",
       "green",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -4239,12 +4415,13 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "black",
       "red",
       "green",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -4256,10 +4433,11 @@
     "continent": "Europe",
     "category": "country",
     "statehood": "un_observer",
-    "colors": [
+    "primaryColors": [
       "yellow",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms"
     ]
@@ -4271,12 +4449,13 @@
     "continent": "South America",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "yellow",
       "blue",
       "red",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -4288,10 +4467,11 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -4303,13 +4483,14 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "blue",
       "red",
       "white",
       "green",
       "yellow"
     ],
+    "additionalColors": [],
     "motifs": [
       "coat-of-arms",
       "cross",
@@ -4323,13 +4504,14 @@
     "continent": "North America",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "white",
       "blue",
       "red",
       "yellow",
       "green"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "coat-of-arms"
@@ -4342,11 +4524,12 @@
     "continent": null,
     "category": "other",
     "statehood": null,
-    "colors": [
+    "primaryColors": [
       "white",
       "green",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal"
     ]
@@ -4358,11 +4541,12 @@
     "continent": "Oceania",
     "category": "country",
     "statehood": "territory",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "blue"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -4372,12 +4556,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "non_un",
-    "colors": [
+    "primaryColors": [
       "black",
       "white",
       "green",
       "red"
     ],
+    "additionalColors": [],
     "motifs": [
       "star-or-moon"
     ]
@@ -4389,11 +4574,12 @@
     "continent": "Asia",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "red",
       "white",
       "black"
     ],
+    "additionalColors": [],
     "motifs": []
   },
   {
@@ -4403,12 +4589,13 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "red",
       "black",
       "orange"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal"
     ]
@@ -4420,13 +4607,14 @@
     "continent": "Africa",
     "category": "country",
     "statehood": "un_member",
-    "colors": [
+    "primaryColors": [
       "green",
       "yellow",
       "red",
       "black",
       "white"
     ],
+    "additionalColors": [],
     "motifs": [
       "animal",
       "star-or-moon"

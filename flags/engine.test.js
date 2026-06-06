@@ -27,6 +27,7 @@ import {
   MOTIFS_FOR_RANDOM,
   ALL_MOTIFS,
 } from './engine.js';
+import { createCountry } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
@@ -35,12 +36,12 @@ import {
  * @returns {Country}
  */
 function country(fields) {
-  return {
+  return createCountry({
     category: 'country',
     continent: 'Europe',
     statehood: 'un_member',
     ...fields,
-  };
+  });
 }
 
 const FR = country({ code: 'fr', name: 'France', continent: 'Europe', statehood: 'un_member' });
@@ -87,15 +88,15 @@ test('statehood category defaults label to a humanised value', () => {
 });
 
 test('hasColor predicate matches countries whose flag includes that colour', () => {
-  const flagFr = country({ code: 'fr', name: 'France', colors: ['blue', 'white', 'red'] });
-  const flagJp = country({ code: 'jp', name: 'Japan', colors: ['white', 'red'] });
+  const flagFr = country({ code: 'fr', name: 'France', primaryColors: ['blue', 'white', 'red'] });
+  const flagJp = country({ code: 'jp', name: 'Japan', primaryColors: ['white', 'red'] });
   assert.equal(hasColor('blue').predicate(flagFr), true);
   assert.equal(hasColor('blue').predicate(flagJp), false);
 });
 
 test('hasColor predicate returns false when colors is missing or empty', () => {
   const noTag = country({ code: 'xx', name: 'Untagged' });
-  const emptyTag = country({ code: 'yy', name: 'EmptyTag', colors: [] });
+  const emptyTag = country({ code: 'yy', name: 'EmptyTag', primaryColors: [] });
   assert.equal(hasColor('red').predicate(noTag), false);
   assert.equal(hasColor('red').predicate(emptyTag), false);
 });
@@ -619,10 +620,10 @@ test('puzzleCellCounts counts countries satisfying both predicates per cell', ()
     cols: [hasColor('red'), hasColor('blue'), hasColor('yellow')],
   };
   const countries = [
-    country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] }),
-    country({ code: 'gr', name: 'Greece',  continent: 'Europe', colors: ['blue'] }),
-    country({ code: 'jp', name: 'Japan',   continent: 'Asia',   colors: ['red', 'white'] }),
-    country({ code: 'cm', name: 'Cameroon',continent: 'Africa', colors: ['yellow', 'green'] }),
+    country({ code: 'al', name: 'Albania', continent: 'Europe', primaryColors: ['red'] }),
+    country({ code: 'gr', name: 'Greece',  continent: 'Europe', primaryColors: ['blue'] }),
+    country({ code: 'jp', name: 'Japan',   continent: 'Asia',   primaryColors: ['red', 'white'] }),
+    country({ code: 'cm', name: 'Cameroon',continent: 'Africa', primaryColors: ['yellow', 'green'] }),
   ];
   const counts = puzzleCellCounts(puzzle, countries);
   assert.equal(counts[0][0], 1);
@@ -654,8 +655,8 @@ test('isPuzzleGeneratable returns false when any single cell falls below minPerC
     cols: [hasColor('red'), hasColor('red'), hasColor('orange')],
   };
   const countries = [
-    country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] }),
-    country({ code: 'pl', name: 'Poland',  continent: 'Europe', colors: ['red', 'white'] }),
+    country({ code: 'al', name: 'Albania', continent: 'Europe', primaryColors: ['red'] }),
+    country({ code: 'pl', name: 'Poland',  continent: 'Europe', primaryColors: ['red', 'white'] }),
   ];
   assert.equal(isPuzzleGeneratable(puzzle, countries, 2), false);
 });
@@ -665,7 +666,7 @@ test('isPuzzleGeneratable defaults to minPerCell of 2', () => {
     rows: [continent('Europe'), continent('Europe'), continent('Europe')],
     cols: [hasColor('red'), hasColor('red'), hasColor('red')],
   };
-  const oneCountry = [country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] })];
+  const oneCountry = [country({ code: 'al', name: 'Albania', continent: 'Europe', primaryColors: ['red'] })];
   assert.equal(isPuzzleGeneratable(puzzle, oneCountry), false);
 });
 
@@ -675,8 +676,8 @@ test('isPuzzleGeneratable returns false when the no-duplicates rule blocks a glo
     cols: [hasColor('red'), hasColor('red'), hasColor('red')],
   };
   const twoCountries = [
-    country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] }),
-    country({ code: 'pl', name: 'Poland',  continent: 'Europe', colors: ['red', 'white'] }),
+    country({ code: 'al', name: 'Albania', continent: 'Europe', primaryColors: ['red'] }),
+    country({ code: 'pl', name: 'Poland',  continent: 'Europe', primaryColors: ['red', 'white'] }),
   ];
   assert.equal(isPuzzleGeneratable(puzzle, twoCountries, 1), false);
   assert.equal(isPuzzleGeneratable(puzzle, twoCountries, 2), false);
@@ -708,9 +709,9 @@ test('findPuzzleSolution returns null when any cell has zero candidates', () => 
     cols: [hasColor('red'), hasColor('blue'), hasColor('orange')],
   };
   const countries = [
-    country({ code: 'al', name: 'Albania',  continent: 'Europe', colors: ['red'] }),
-    country({ code: 'gr', name: 'Greece',   continent: 'Europe', colors: ['blue'] }),
-    country({ code: 'jp', name: 'Japan',    continent: 'Asia',   colors: ['red'] }),
+    country({ code: 'al', name: 'Albania',  continent: 'Europe', primaryColors: ['red'] }),
+    country({ code: 'gr', name: 'Greece',   continent: 'Europe', primaryColors: ['blue'] }),
+    country({ code: 'jp', name: 'Japan',    continent: 'Asia',   primaryColors: ['red'] }),
   ];
   assert.equal(findPuzzleSolution(puzzle, countries), null);
 });
@@ -721,8 +722,8 @@ test('findPuzzleSolution returns null when the no-duplicate rule prevents any co
     cols: [hasColor('red'), hasColor('red'), hasColor('red')],
   };
   const twoCountries = [
-    country({ code: 'al', name: 'Albania', continent: 'Europe', colors: ['red'] }),
-    country({ code: 'pl', name: 'Poland',  continent: 'Europe', colors: ['red'] }),
+    country({ code: 'al', name: 'Albania', continent: 'Europe', primaryColors: ['red'] }),
+    country({ code: 'pl', name: 'Poland',  continent: 'Europe', primaryColors: ['red'] }),
   ];
   assert.equal(findPuzzleSolution(puzzle, twoCountries), null);
 });
@@ -765,7 +766,7 @@ function denseSquarePool(continents, colors, perCell) {
       for (let n = 0; n < perCell; n++) {
         out.push(country({
           code: `c${idx++}`, name: `${cont}-${color}-${n}`,
-          continent: /** @type {any} */ (cont), colors: [color],
+          continent: /** @type {any} */ (cont), primaryColors: [color],
           motifs: [...MOTIFS_FOR_RANDOM],
         }));
       }
@@ -791,7 +792,7 @@ test('hasUltimatePuzzleSolution: false when any cell falls below 9 candidates', 
   // Every cell gets 9 except (Asia × blue) — remove one of its candidates,
   // leaving 8. The singleton subset {(Asia, blue)} demands 9 but supply is 8.
   const countries = denseSquarePool(['Europe', 'Asia', 'Africa'], ['red', 'blue', 'green'], 9);
-  const oneAsiaBlue = countries.find((c) => c.continent === 'Asia' && c.colors?.includes('blue'));
+  const oneAsiaBlue = countries.find((c) => c.continent === 'Asia' && c.primaryColors?.includes('blue'));
   assert.ok(oneAsiaBlue);
   const filtered = countries.filter((c) => c.code !== oneAsiaBlue.code);
   assert.equal(hasUltimatePuzzleSolution(puzzle, filtered), false);
@@ -810,7 +811,7 @@ test('hasUltimatePuzzleSolution: false when cells share a candidate pool too thi
   for (let i = 0; i < 12; i++) {
     multiMatch.push(country({
       code: `m${i}`, name: `multi-${i}`, continent: 'Europe',
-      colors: ['red', 'white', 'blue'],
+      primaryColors: ['red', 'white', 'blue'],
     }));
   }
   assert.equal(hasUltimatePuzzleSolution(puzzle, multiMatch), false);
@@ -828,7 +829,7 @@ test('hasUltimatePuzzleSolution: perCell=1 reduces it to the regular 9-distinct-
   for (let i = 0; i < 12; i++) {
     multiMatch.push(country({
       code: `m${i}`, name: `multi-${i}`, continent: 'Europe',
-      colors: ['red', 'white', 'blue'],
+      primaryColors: ['red', 'white', 'blue'],
     }));
   }
   assert.equal(hasUltimatePuzzleSolution(puzzle, multiMatch, 1), true);
@@ -1028,7 +1029,7 @@ function syntheticTaggedCountries() {
           code: `c${codeCounter++}`,
           name: `${cont}-${color}-${n}`,
           continent: cont,
-          colors: [color],
+          primaryColors: [color],
           motifs: [...MOTIFS_FOR_RANDOM],
         }));
       }

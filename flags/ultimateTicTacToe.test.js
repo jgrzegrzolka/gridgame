@@ -9,6 +9,7 @@ import {
   newlyWonSmallBoards,
   isMetaWinNewlyFormed,
 } from './ultimateTicTacToe.js';
+import { createCountry } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./ticTacToe.js').Player} Player */
@@ -19,12 +20,12 @@ import {
  * @returns {Country}
  */
 function country(fields) {
-  return {
+  return createCountry({
     category: 'country',
     continent: 'Europe',
     statehood: 'un_member',
     ...fields,
-  };
+  });
 }
 
 const EUROPE = continent('Europe');
@@ -62,7 +63,7 @@ function buildTestPool() {
           code: `${br}${bc}-${i}`,
           name: `Country ${br}${bc}-${i}`,
           continent: /** @type {any} */ (continentName[br]),
-          colors: [colorName[bc]],
+          primaryColors: [colorName[bc]],
         }));
       }
     }
@@ -145,7 +146,7 @@ test('attemptUltimateClaim: global duplicate (same country in another small boar
   // board duplicate rule must reject it.
   const multi = country({
     code: 'multi-eu-rb', name: 'Multi',
-    continent: 'Europe', colors: ['red', 'blue'],
+    continent: 'Europe', primaryColors: ['red', 'blue'],
   });
   const pool = [...POOL, multi];
   let s = newUltimateGame(PUZZLE);
@@ -232,11 +233,11 @@ test('small board exhausts when its (row × col) candidate pool is consumed else
   // ONLY candidate from (Europe × blue), forcing it dead-by-exhaustion.
   const ONLY = country({
     code: 'only-eu-rb', name: 'Only',
-    continent: 'Europe', colors: ['red', 'blue'],
+    continent: 'Europe', primaryColors: ['red', 'blue'],
   });
   const FILLER = country({
     code: 'filler-eu-r', name: 'Filler',
-    continent: 'Europe', colors: ['red'],
+    continent: 'Europe', primaryColors: ['red'],
   });
   // POOL has its own (0,1) — Europe × blue — entries; remove them so the
   // ONLY country is genuinely the last candidate for that small board.
@@ -402,7 +403,7 @@ test('applyUltimateGiveUp: falls back to an already-used country and flags exhau
   /** @type {Country} */
   const ONLY = country({
     code: 'eu-r-only', name: 'OnlyEuropeRed',
-    continent: 'Europe', colors: ['red'],
+    continent: 'Europe', primaryColors: ['red'],
   });
   // Build a pool that:
   //   - has the ONLY Europe×red country,

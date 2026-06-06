@@ -11,6 +11,7 @@ import {
   serializeRoom,
   deserializeRoom,
 } from './onlineRoom.js';
+import { createCountry } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
@@ -19,12 +20,12 @@ import {
  * @returns {Country}
  */
 function country(fields) {
-  return {
+  return createCountry({
     category: 'country',
     continent: 'Europe',
     statehood: 'un_member',
     ...fields,
-  };
+  });
 }
 
 const PUZZLE = {
@@ -32,11 +33,11 @@ const PUZZLE = {
   cols: [hasColor('red'), hasColor('blue'), hasColor('green')],
 };
 
-const FR = country({ code: '00', name: 'France', continent: 'Europe', colors: ['red'] });
-const DE = country({ code: '01', name: 'Germany', continent: 'Europe', colors: ['blue'] });
-const IT = country({ code: '02', name: 'Italy', continent: 'Europe', colors: ['green'] });
-const JP = country({ code: '10', name: 'Japan', continent: 'Asia', colors: ['red'] });
-const KR = country({ code: '11', name: 'Korea', continent: 'Asia', colors: ['blue'] });
+const FR = country({ code: '00', name: 'France', continent: 'Europe', primaryColors: ['red'] });
+const DE = country({ code: '01', name: 'Germany', continent: 'Europe', primaryColors: ['blue'] });
+const IT = country({ code: '02', name: 'Italy', continent: 'Europe', primaryColors: ['green'] });
+const JP = country({ code: '10', name: 'Japan', continent: 'Asia', primaryColors: ['red'] });
+const KR = country({ code: '11', name: 'Korea', continent: 'Asia', primaryColors: ['blue'] });
 
 // ---- createRoom ----
 
@@ -253,10 +254,10 @@ test('applyClaim: ignored once the game is over', () => {
 
 // ---- applyGiveUp ----
 
-const PK = country({ code: '12', name: 'Pakistan', continent: 'Asia', colors: ['green'] });
-const KE = country({ code: '20', name: 'Kenya', continent: 'Africa', colors: ['red'] });
-const NA = country({ code: '21', name: 'Namibia', continent: 'Africa', colors: ['blue'] });
-const NG = country({ code: '22', name: 'Nigeria', continent: 'Africa', colors: ['green'] });
+const PK = country({ code: '12', name: 'Pakistan', continent: 'Asia', primaryColors: ['green'] });
+const KE = country({ code: '20', name: 'Kenya', continent: 'Africa', primaryColors: ['red'] });
+const NA = country({ code: '21', name: 'Namibia', continent: 'Africa', primaryColors: ['blue'] });
+const NG = country({ code: '22', name: 'Nigeria', continent: 'Africa', primaryColors: ['green'] });
 
 const TTT_POOL = [FR, DE, IT, JP, KR, PK, KE, NA, NG];
 

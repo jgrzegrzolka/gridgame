@@ -34,6 +34,7 @@ import {
   mistakesAfterGiveUp,
   countModeProgressRatio,
 } from './quiz.js';
+import { loadCountries } from './group.js';
 
 /**
  * @param {Record<string, string>} [initial]
@@ -50,13 +51,10 @@ function fakeStore(initial = {}) {
   };
 }
 
-/** @typedef {import('./group.js').Country} Country */
-
 const __dirname = dirname(fileURLToPath(import.meta.url));
-/** @type {Country[]} */
-const countries = JSON.parse(
+const countries = loadCountries(JSON.parse(
   readFileSync(join(__dirname, 'countries.json'), 'utf8'),
-);
+));
 
 const sample = Array.from({ length: 10 }, (_, i) => ({
   code: `c${i}`,

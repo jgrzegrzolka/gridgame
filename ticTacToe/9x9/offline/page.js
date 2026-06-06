@@ -8,6 +8,7 @@ import {
   isMetaWinNewlyFormed,
 } from '../../../flags/ultimateTicTacToe.js';
 import { shouldFireTicTacToeConfetti } from '../../../flags/ticTacToe.js';
+import { loadCountries } from '../../../flags/group.js';
 import { t, countryName, withLocalizedAliases } from '../../../i18n.js';
 import { launchConfetti } from '../../../confetti.js';
 
@@ -23,6 +24,7 @@ function tCat(c) {
 export function bootTicTacToe9x9() {
   fetch('../../../flags/countries.json')
     .then((r) => r.json())
+    .then(loadCountries)
     .then((rawCountries) => {
       const countries = withLocalizedAliases(rawCountries);
       // 9×9 requires every (row × col) small board to be filled with 9 distinct

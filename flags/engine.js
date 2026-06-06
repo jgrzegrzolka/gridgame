@@ -139,7 +139,7 @@ export function hasColor(color) {
   return {
     id: `hasColor:${color}`,
     label: color,
-    predicate: (c) => Array.isArray(c.colors) && c.colors.includes(color),
+    predicate: (c) => c.colors.includes(color),
   };
 }
 
