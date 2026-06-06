@@ -99,7 +99,11 @@ body {
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 999px;
+  /* flex-basis: 100% claims the whole row (so the toggle/groups wrap
+   * underneath), but max-width caps the visible size — full-row layout
+   * without a full-row-wide input. */
   flex-basis: 100%;
+  max-width: 240px;
   min-width: 0;
   order: -1;
 }
@@ -109,6 +113,24 @@ body {
 .name-search:focus {
   outline: none;
   border-color: var(--link-color);
+}
+/* Recolour the native clear-X to the project's burgundy link colour
+ * instead of leaving it as the browser/system default (which renders
+ * blueish in most Chromium themes and clashes with the rest of the
+ * page). Mask supplies the X shape, background-color paints it. */
+.name-search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background-color: var(--link-color);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/%3E%3C/svg%3E");
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  cursor: pointer;
 }
 .filter-label {
   font-size: 12px;
