@@ -74,13 +74,6 @@ body {
 .chooser-pills .pill.exclude .pill-count {
   color: #c0392b;
 }
-/* "no other colours" modifier pill — sits at the end of the Colors row but
- * isn't a colour value, it's a meta-constraint. Subtle dashed outline
- * distinguishes it from regular pills. */
-.chooser-pills .pill-modifier {
-  border-style: dashed;
-}
-
 /* Sticky Play bar — stays in view as the user scrolls through pill
  * sections, so the live N-flags count and the commit button are
  * always reachable. The negative horizontal margin bleeds the bar

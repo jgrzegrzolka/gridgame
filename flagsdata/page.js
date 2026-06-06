@@ -78,6 +78,21 @@ export function bootFlagsData() {
    * once in renderAll. */
   let nameQuery = '';
 
+  // "No other colours" toggle pill — mirrors findFlag's chooser. When on,
+  // filters.colorCount tracks the colour include count; adding/removing a
+  // colour pill auto-updates via syncOnlyColors() from cyclePill. Off →
+  // colorCount cleared.
+  let onlyColorsMode = false;
+  /** @type {HTMLButtonElement | null} */
+  let onlyColorsBtn = null;
+  function syncOnlyColors() {
+    if (!onlyColorsMode) {
+      filters.colorCount = null;
+      return;
+    }
+    filters.colorCount = filters.color.include.size;
+  }
+
   /** @type {{ items: Country[], foldedNames: string[], tiles: HTMLElement[], count: HTMLElement } | null} */
   let state = null;
 
@@ -121,6 +136,7 @@ export function bootFlagsData() {
     for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
       pillTotal += filters[k].include.size + filters[k].exclude.size;
     }
+    if (filters.colorCount !== null) pillTotal++;
     const anyActive = pillTotal > 0 || nameQuery !== '';
     clearBtn.hidden = !anyActive;
     // Include name search in the toggle badge count — once the search
@@ -171,6 +187,7 @@ export function bootFlagsData() {
           include.add(value);
           btn.classList.add('active');
         }
+        if (group === 'color') syncOnlyColors();
         applyFilter();
       });
       wrap.appendChild(btn);
@@ -244,9 +261,23 @@ export function bootFlagsData() {
   groupsWrap.appendChild(
     buildFilterGroup(t('flagsdata.filterContinent', 'Continent'), 'continent', [...CONTINENTS, 'Other'].map((v) => ({ value: v, label: continentLabel(v) }))),
   );
-  groupsWrap.appendChild(
-    buildFilterGroup(t('flagsdata.filterColors', 'Colors'), 'color', ALL_FLAG_COLORS.map((v) => ({ value: v, label: colorLabel(v) }))),
-  );
+  const colorGroup = buildFilterGroup(t('flagsdata.filterColors', 'Colors'), 'color', ALL_FLAG_COLORS.map((v) => ({ value: v, label: colorLabel(v) })));
+  // Append the "no other colours" modifier pill at the end of the Colors
+  // row — same placement as findFlag's chooser, same toggle semantics.
+  const onlyBtn = document.createElement('button');
+  onlyBtn.type = 'button';
+  onlyBtn.className = 'pill pill-modifier';
+  onlyBtn.textContent = t('findFlag.noOtherColors', 'no other colours');
+  onlyBtn.addEventListener('click', () => {
+    onlyColorsMode = !onlyColorsMode;
+    if (onlyColorsMode) onlyBtn.classList.add('active');
+    else onlyBtn.classList.remove('active');
+    syncOnlyColors();
+    applyFilter();
+  });
+  colorGroup.appendChild(onlyBtn);
+  onlyColorsBtn = onlyBtn;
+  groupsWrap.appendChild(colorGroup);
   groupsWrap.appendChild(
     buildFilterGroup(t('flagsdata.filterMotifs', 'Motifs'), 'motif', ALL_MOTIFS.map((v) => ({ value: v, label: motifLabel(v) }))),
   );
@@ -261,6 +292,9 @@ export function bootFlagsData() {
       filters[k].include.clear();
       filters[k].exclude.clear();
     }
+    filters.colorCount = null;
+    onlyColorsMode = false;
+    if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
     for (const el of filterBar.querySelectorAll('.pill.active, .pill.exclude')) {
       el.classList.remove('active');
       el.classList.remove('exclude');
