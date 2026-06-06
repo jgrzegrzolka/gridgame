@@ -156,7 +156,11 @@ test('launchFireworks appends a single container that gets populated over the bu
   // First burst happens at delay 0 → fires after the current tick.
   // Wait long enough for all three bursts (3 × 10ms = 30ms) and then some.
   await new Promise((resolve) => setTimeout(resolve, 60));
-  assert.equal(doc.body._children[0]._children.length, 12);
+  // Each burst spawns 1 central flash + N particles, so 3 bursts × (1+4)
+  // = 15 children. The flash is what reads as the "ignition" pulse at
+  // the burst centre; counting it here pins the contract that every
+  // burst gets one.
+  assert.equal(doc.body._children[0]._children.length, 15);
   result.cancel();
 });
 

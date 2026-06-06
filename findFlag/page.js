@@ -21,6 +21,7 @@ import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
+import { pickCelebration } from '../flags/quiz.js';
 
 export function bootFindFlag() {
   const chooserEl = document.getElementById('chooser');
@@ -419,15 +420,13 @@ export function bootFindFlag() {
       document.getElementById('final-score-line').style.color = scoreColor(found / total);
 
       // findFlag is play-and-walk-away now — no per-category best score,
-      // no "Your best" line, no record-tracking. Celebration rule mirrors
-      // the daily page: confetti for "you found something", fireworks
-      // layered on top for a clean sweep. Skipping the celebration when
-      // the player gives up with zero finds (found === 0) is deliberate
-      // — confetti there would feel ironic.
-      if (found > 0) {
-        launchConfetti();
-        if (found === total) launchFireworks();
-      }
+      // no "Your best" line, no record-tracking. Celebration tier comes
+      // from the shared pickCelebration helper so daily / findFlag /
+      // quiz all read the same way: confetti for partial, fireworks
+      // (alone, not stacked) for a clean sweep.
+      const tier = pickCelebration({ found, total });
+      if (tier === 'fireworks') launchFireworks();
+      else if (tier === 'confetti') launchConfetti();
 
       // Found section duplicates the in-game .find-found grid onto the
       // result screen. Without it the user never sees the flag they

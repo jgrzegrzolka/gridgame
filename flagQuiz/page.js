@@ -16,14 +16,14 @@ import {
   targetFor,
   isQuizIncludeAll,
   preloadFlags,
-  shouldFireQuizConfetti,
+  pickCelebration,
   shouldShowBestTime,
   mistakesAfterGiveUp,
   countModeProgressRatio,
 } from '../flags/quiz.js';
 import { flagsGamePool } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
-import { launchConfetti } from '../confetti.js';
+import { launchConfetti, launchFireworks } from '../confetti.js';
 import { buildQuizMenu } from './menu.js';
 
 export function bootFlagQuiz() {
@@ -291,7 +291,18 @@ export function bootFlagQuiz() {
           badge.textContent = t('game.newRecord', 'new record!');
           bestEl.appendChild(badge);
         }
-        if (shouldFireQuizConfetti({ timed: true, wrongCount, isNew })) launchConfetti();
+        const tier = pickCelebration({
+          found: answeredCount,
+          // total isn't meaningful for 60s mode (the round ends when the
+          // budget runs out, not when the pool is exhausted); isTimed
+          // suppresses the sweep branch of pickCelebration so this
+          // value is unused.
+          total: 0,
+          isTimed: true,
+          isNew,
+        });
+        if (tier === 'fireworks') launchFireworks();
+        else if (tier === 'confetti') launchConfetti();
       } else {
         // Count mode is one-shot per question, so correct + wrong = target.
         // We still store wrongCount as best.score (lower-wins) for
@@ -316,7 +327,14 @@ export function bootFlagQuiz() {
           badge.textContent = t('game.newRecord', 'new record!');
           bestEl.appendChild(badge);
         }
-        if (shouldFireQuizConfetti({ timed: false, wrongCount, isNew })) launchConfetti();
+        const tier = pickCelebration({
+          found: answeredCount,
+          total: target,
+          isTimed: false,
+          isNew,
+        });
+        if (tier === 'fireworks') launchFireworks();
+        else if (tier === 'confetti') launchConfetti();
       }
 
       gameEl.hidden = true;
