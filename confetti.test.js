@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { launchConfetti } from './confetti.js';
+import { launchConfetti, launchFireworks } from './confetti.js';
 
 /**
  * Minimal Document stand-in: enough surface area for launchConfetti to
@@ -49,9 +49,11 @@ function fakeDoc({ reducedMotion = false } = {}) {
   };
 }
 
+// `encore: false` on the existing assertions keeps each test in a
+// single tick — the encore wave is verified separately below.
 test('launchConfetti appends a container with the requested number of pieces', () => {
   const doc = fakeDoc();
-  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 17, duration: 0 });
+  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 17, duration: 0, encore: false });
   assert.ok(result);
   assert.equal(doc.body._children.length, 1);
   assert.equal(doc.body._children[0]._children.length, 17);
@@ -59,7 +61,7 @@ test('launchConfetti appends a container with the requested number of pieces', (
 
 test('launchConfetti sets per-piece CSS custom properties and a background color', () => {
   const doc = fakeDoc();
-  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 1, rng: () => 0.5, duration: 0 });
+  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 1, rng: () => 0.5, duration: 0, encore: false });
   assert.ok(result);
   const piece = doc.body._children[0]._children[0];
   // 0.5 RNG keeps the math predictable and lets us assert the wiring is correct.
@@ -73,7 +75,7 @@ test('launchConfetti sets per-piece CSS custom properties and a background color
 
 test('launchConfetti is a no-op when prefersReducedMotion is true', () => {
   const doc = fakeDoc({ reducedMotion: true });
-  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 50 });
+  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 50, encore: false });
   assert.equal(result, null);
   assert.equal(doc.body._children.length, 0);
 });
@@ -81,13 +83,13 @@ test('launchConfetti is a no-op when prefersReducedMotion is true', () => {
 test('launchConfetti also reads the prefers-reduced-motion media query directly', () => {
   const doc = fakeDoc({ reducedMotion: true });
   // No explicit override — should fall through to defaultView.matchMedia.
-  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 1 });
+  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 1, encore: false });
   assert.equal(result, null);
 });
 
 test('launchConfetti removes the container after the duration elapses', async () => {
   const doc = fakeDoc();
-  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 5, duration: 20 });
+  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 5, duration: 20, encore: false });
   assert.ok(result);
   assert.equal(doc.body._children.length, 1);
   await new Promise((resolve) => setTimeout(resolve, 40));
@@ -96,8 +98,87 @@ test('launchConfetti removes the container after the duration elapses', async ()
 
 test('launchConfetti cancel() tears down the container before the timer fires', () => {
   const doc = fakeDoc();
-  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 5, duration: 60_000 });
+  const result = launchConfetti({ doc: /** @type {any} */ (doc), count: 5, duration: 60_000, encore: false });
   assert.ok(result);
   result.cancel();
+  assert.equal(doc.body._children.length, 0);
+});
+
+test('launchConfetti schedules an encore wave after encoreDelay', async () => {
+  const doc = fakeDoc();
+  const result = launchConfetti({
+    doc: /** @type {any} */ (doc),
+    count: 5,
+    duration: 60_000,
+    encoreCount: 3,
+    encoreDelay: 20,
+    encoreDuration: 60_000,
+  });
+  assert.ok(result);
+  // First wave is on body immediately, encore not yet.
+  assert.equal(doc.body._children.length, 1);
+  assert.equal(doc.body._children[0]._children.length, 5);
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  // Encore fired — second container appended with `encoreCount` pieces.
+  assert.equal(doc.body._children.length, 2);
+  assert.equal(doc.body._children[1]._children.length, 3);
+  result.cancel();
+});
+
+test('launchConfetti cancel() also clears the pending encore timer', async () => {
+  const doc = fakeDoc();
+  const result = launchConfetti({
+    doc: /** @type {any} */ (doc),
+    count: 5,
+    duration: 60_000,
+    encoreCount: 3,
+    encoreDelay: 20,
+    encoreDuration: 60_000,
+  });
+  assert.ok(result);
+  result.cancel();
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  // Encore must NOT have fired — cancel cleared the pending timer.
+  assert.equal(doc.body._children.length, 0);
+});
+
+test('launchFireworks appends a single container that gets populated over the burst schedule', async () => {
+  const doc = fakeDoc();
+  const result = launchFireworks({
+    doc: /** @type {any} */ (doc),
+    bursts: 3,
+    particlesPerBurst: 4,
+    burstInterval: 10,
+    particleDuration: 60_000,
+  });
+  assert.ok(result);
+  assert.equal(doc.body._children.length, 1);
+  // First burst happens at delay 0 → fires after the current tick.
+  // Wait long enough for all three bursts (3 × 10ms = 30ms) and then some.
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.equal(doc.body._children[0]._children.length, 12);
+  result.cancel();
+});
+
+test('launchFireworks is a no-op when prefersReducedMotion is true', () => {
+  const doc = fakeDoc({ reducedMotion: true });
+  const result = launchFireworks({ doc: /** @type {any} */ (doc), bursts: 2, particlesPerBurst: 4 });
+  assert.equal(result, null);
+  assert.equal(doc.body._children.length, 0);
+});
+
+test('launchFireworks cancel() stops pending bursts from firing', async () => {
+  const doc = fakeDoc();
+  const result = launchFireworks({
+    doc: /** @type {any} */ (doc),
+    bursts: 3,
+    particlesPerBurst: 4,
+    burstInterval: 20,
+    particleDuration: 60_000,
+  });
+  assert.ok(result);
+  result.cancel();
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  // Container removed; pending bursts never landed particles.
   assert.equal(doc.body._children.length, 0);
 });

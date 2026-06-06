@@ -1,11 +1,3 @@
-.archive-title {
-  font-size: 22px;
-  font-weight: 600;
-  margin: 0 0 16px;
-  width: 100%;
-  max-width: 720px;
-}
-
 /* Grid of numbered squares — one tile per released puzzle. Reuses the
  * auto-fill rhythm from findFlag's flag tiles so the archive feels
  * visually related to the find-all grid even though there are no flag
@@ -37,6 +29,7 @@
 }
 
 .archive-square-link {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,12 +44,57 @@
   font-weight: 600;
   font-size: 18px;
   box-sizing: border-box;
+  overflow: hidden;
 }
 .archive-square-link:hover {
   background: #f0f0f0;
 }
 .archive-square--today .archive-square-link {
-  background: #1c1c1c;
-  border-color: #1c1c1c;
+  border: 2px solid #1c1c1c;
+}
+
+/* The number stays the visual anchor (centered). The score sits as a
+ * small strip at the bottom of the tile so the puzzle number reads
+ * the same whether you've played it or not — no layout shift between
+ * the two states. */
+.archive-square-num {
+  display: block;
+}
+.archive-square-score {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Hover reveals the puzzle criteria as a full-tile overlay. The
+ * archive tiles are too small (56px-ish on mobile) for a bottom-only
+ * strip to fit even short labels like "Europe · cross" without
+ * ellipsis-eating most of the text. The whole-tile overlay gives the
+ * label two lines to breathe. Number + score are temporarily hidden
+ * underneath — they're back the moment the cursor leaves. */
+.archive-square-criteria {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: rgba(28, 28, 28, 0.92);
   color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 80ms;
+}
+.archive-square-link:hover .archive-square-criteria,
+.archive-square-link:focus-visible .archive-square-criteria {
+  opacity: 1;
 }

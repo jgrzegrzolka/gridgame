@@ -1,7 +1,7 @@
 /**
- * Confetti burst for win moments. Pure DOM + CSS — the keyframes live in
- * common.css and read per-particle CSS custom properties for randomized
- * drift, rotation, color, and duration.
+ * Confetti + fireworks bursts for win moments. Pure DOM + CSS — the
+ * keyframes live in common.css and read per-particle CSS custom
+ * properties for randomized drift, rotation, color, and duration.
  *
  * No-op when the user prefers reduced motion: a win celebration that
  * vibrates the screen is exactly the kind of effect that motion-sensitive
@@ -20,23 +20,133 @@ const COLORS = [
  *   duration?: number,
  *   rng?: () => number,
  *   prefersReducedMotion?: boolean,
+ *   encore?: boolean,
+ *   encoreCount?: number,
+ *   encoreDelay?: number,
+ *   encoreDuration?: number,
  * }} [options]
  * @returns {{ container: HTMLElement, cancel: () => void } | null}
  */
 export function launchConfetti(options = {}) {
   const {
     doc = document,
-    count = 240,
-    duration = 11000,
+    count = 480,
+    duration = 14000,
+    rng = Math.random,
+    prefersReducedMotion = detectPrefersReducedMotion(doc),
+    encore = true,
+    encoreCount = 240,
+    encoreDelay = 1200,
+    encoreDuration = 8000,
+  } = options;
+  if (prefersReducedMotion) return null;
+
+  const container = buildConfettiContainer(doc, count, rng);
+  doc.body.appendChild(container);
+  const timer = setTimeout(() => container.remove(), duration);
+
+  /** @type {{ cancel: () => void } | null} */
+  let encoreHandle = null;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let encoreTimer = null;
+  if (encore) {
+    // The encore wave is a smaller, shorter follow-up that fires while
+    // the first wave is still falling — visually reads as "and one
+    // more!" without scheduling overlapping containers manually at
+    // each call site. `encore: false` on the inner call breaks the
+    // recursion so we don't get encores-of-encores.
+    encoreTimer = setTimeout(() => {
+      encoreHandle = launchConfetti({
+        doc,
+        count: encoreCount,
+        duration: encoreDuration,
+        rng,
+        encore: false,
+      });
+    }, encoreDelay);
+  }
+
+  return {
+    container,
+    cancel: () => {
+      clearTimeout(timer);
+      container.remove();
+      if (encoreTimer !== null) clearTimeout(encoreTimer);
+      if (encoreHandle) encoreHandle.cancel();
+    },
+  };
+}
+
+/**
+ * Radial firework bursts for the "you got everything" moment. Fires
+ * several explosions at random screen positions, with each burst
+ * radiating particles outward from its center. Stacks on top of
+ * confetti — the two effects don't fight for the same layer.
+ *
+ * Reduced-motion respects the same gate as confetti.
+ *
+ * @param {{
+ *   doc?: Document,
+ *   bursts?: number,
+ *   particlesPerBurst?: number,
+ *   burstInterval?: number,
+ *   particleDuration?: number,
+ *   rng?: () => number,
+ *   prefersReducedMotion?: boolean,
+ * }} [options]
+ * @returns {{ container: HTMLElement, cancel: () => void } | null}
+ */
+export function launchFireworks(options = {}) {
+  const {
+    doc = document,
+    bursts = 28,
+    particlesPerBurst = 36,
+    burstInterval = 700,
+    particleDuration = 1700,
     rng = Math.random,
     prefersReducedMotion = detectPrefersReducedMotion(doc),
   } = options;
   if (prefersReducedMotion) return null;
 
   const container = doc.createElement('div');
+  container.className = 'fireworks-container';
+  container.setAttribute('aria-hidden', 'true');
+  doc.body.appendChild(container);
+
+  let cancelled = false;
+  /** @type {ReturnType<typeof setTimeout>[]} */
+  const timers = [];
+
+  for (let b = 0; b < bursts; b++) {
+    timers.push(setTimeout(() => {
+      if (cancelled) return;
+      spawnBurst(doc, container, particlesPerBurst, particleDuration, rng);
+    }, b * burstInterval));
+  }
+
+  const totalDuration = (bursts - 1) * burstInterval + particleDuration + 400;
+  const cleanupTimer = setTimeout(() => container.remove(), totalDuration);
+  timers.push(cleanupTimer);
+
+  return {
+    container,
+    cancel: () => {
+      cancelled = true;
+      for (const tt of timers) clearTimeout(tt);
+      container.remove();
+    },
+  };
+}
+
+/**
+ * @param {Document} doc
+ * @param {number} count
+ * @param {() => number} rng
+ */
+function buildConfettiContainer(doc, count, rng) {
+  const container = doc.createElement('div');
   container.className = 'confetti-container';
   container.setAttribute('aria-hidden', 'true');
-
   for (let i = 0; i < count; i++) {
     const piece = doc.createElement('span');
     piece.className = 'confetti-piece';
@@ -53,17 +163,38 @@ export function launchConfetti(options = {}) {
     piece.style.background = COLORS[i % COLORS.length];
     container.appendChild(piece);
   }
+  return container;
+}
 
-  doc.body.appendChild(container);
-
-  const timer = setTimeout(() => container.remove(), duration);
-  return {
-    container,
-    cancel: () => {
-      clearTimeout(timer);
-      container.remove();
-    },
-  };
+/**
+ * @param {Document} doc
+ * @param {HTMLElement} container
+ * @param {number} count
+ * @param {number} duration
+ * @param {() => number} rng
+ */
+function spawnBurst(doc, container, count, duration, rng) {
+  // Center the burst in the upper-middle of the viewport so the
+  // particles spread outward without clipping the top edge or
+  // disappearing below the fold.
+  const cx = 20 + rng() * 60; // 20-80vw
+  const cy = 20 + rng() * 40; // 20-60vh
+  const color = COLORS[Math.floor(rng() * COLORS.length)];
+  for (let i = 0; i < count; i++) {
+    const particle = doc.createElement('span');
+    particle.className = 'firework-particle';
+    // Even angular distribution with a touch of jitter so the ring
+    // doesn't look mechanically perfect.
+    const angle = (i / count) * 360 + (rng() - 0.5) * (360 / count);
+    const distance = 90 + rng() * 70;
+    particle.style.setProperty('--cx', `${cx}vw`);
+    particle.style.setProperty('--cy', `${cy}vh`);
+    particle.style.setProperty('--angle', `${angle}deg`);
+    particle.style.setProperty('--distance', `${distance}px`);
+    particle.style.setProperty('--dur', `${duration}ms`);
+    particle.style.background = color;
+    container.appendChild(particle);
+  }
 }
 
 /** @param {Document} doc */

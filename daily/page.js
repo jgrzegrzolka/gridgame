@@ -7,8 +7,9 @@ import {
 } from '../flags/findFlag.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
-import { launchConfetti } from '../confetti.js';
+import { launchConfetti, launchFireworks } from '../confetti.js';
 import { todayN, dailyNFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
+import { loadScores, saveScore, isCompleteRecord } from './scores.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
@@ -65,8 +66,19 @@ export function bootDaily() {
         return;
       }
 
+      // Revisit: if this puzzle has a full saved record, jump
+      // straight to the result page without confetti (the player
+      // saw confetti the first time around; replaying it on every
+      // revisit would be obnoxious).
+      const stored = loadScores(window.localStorage)[n];
+      if (isCompleteRecord(stored)) {
+        const foundCodes = new Set(stored.c);
+        renderResult(result.targets, foundCodes, stored.ms);
+        return;
+      }
+
       const category = filterToCategory(result.filter, t);
-      startGame(category, result.targets, all);
+      startGame(n, category, result.targets, all);
     })
     .catch((err) => {
       showState(`${t('game.failedToLoad', 'Failed to load:')} ${err.message}`);
@@ -100,18 +112,56 @@ export function bootDaily() {
   }
 
   /**
+   * Paint the result section (final score, time, found grid, missed
+   * grid) from a finished game's state, then swap from #game to
+   * #result. Called from both `finish()` (just-completed play) and
+   * the revisit boot path (restored from localStorage). Confetti is
+   * the caller's responsibility — revisits don't want it.
+   *
+   * @param {Country[]} targets
+   * @param {Set<string>} foundCodes
+   * @param {number} elapsedMs
+   */
+  function renderResult(targets, foundCodes, elapsedMs) {
+    const found = foundCodes.size;
+    const total = targets.length;
+    /** @type {HTMLElement} */ (document.getElementById('final-found')).textContent = String(found);
+    /** @type {HTMLElement} */ (document.getElementById('final-total')).textContent = String(total);
+    /** @type {HTMLElement} */ (document.getElementById('final-time')).textContent =
+      `${t('game.time', 'Time')}: ${formatTime(elapsedMs)}`;
+    /** @type {HTMLElement} */ (document.getElementById('final-score-line')).style.color = scoreColor(found / total);
+
+    const foundFlags = targets.filter((c) => foundCodes.has(c.code));
+    const foundResultEl = /** @type {HTMLElement} */ (document.getElementById('find-result-found'));
+    foundResultEl.innerHTML = '';
+    for (const c of foundFlags) foundResultEl.appendChild(flagTile(c));
+    /** @type {HTMLElement} */ (document.getElementById('found-title')).hidden = foundFlags.length === 0;
+
+    const missed = targets.filter((c) => !foundCodes.has(c.code));
+    const missedEl = /** @type {HTMLElement} */ (document.getElementById('find-missed'));
+    missedEl.innerHTML = '';
+    for (const c of missed) missedEl.appendChild(flagTile(c));
+    /** @type {HTMLElement} */ (document.getElementById('missed-title')).hidden = missed.length === 0;
+
+    gameEl.hidden = true;
+    resultEl.hidden = false;
+  }
+
+  /**
    * Run the find-all game against a fixed target list. This is the
    * non-stats variant of findFlag's startGame — same input mechanics,
    * same shake/wrong-flash, no best-time recording (daily is a
    * "everyone-the-same" puzzle; per-user best times don't add up to
    * something meaningful until we add a shareable score string in
-   * a later phase).
+   * a later phase). The final found/total IS persisted (per puzzle
+   * number) so the archive can show the player their score.
    *
+   * @param {number} n
    * @param {import('../flags/engine.js').Category} category
    * @param {Country[]} targets
    * @param {Country[]} all
    */
-  function startGame(category, targets, all) {
+  function startGame(n, category, targets, all) {
     const pool = findPool(all);
     const targetCodes = new Set(targets.map((c) => c.code));
     const foundCodes = new Set();
@@ -259,28 +309,15 @@ export function bootDaily() {
       const elapsed = Date.now() - startMs;
       const found = foundCodes.size;
       const total = targetCodes.size;
-      /** @type {HTMLElement} */ (document.getElementById('final-found')).textContent = String(found);
-      /** @type {HTMLElement} */ (document.getElementById('final-total')).textContent = String(total);
-      /** @type {HTMLElement} */ (document.getElementById('final-time')).textContent =
-        `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
-      /** @type {HTMLElement} */ (document.getElementById('final-score-line')).style.color = scoreColor(found / total);
-
-      if (found === total) launchConfetti();
-
-      const foundFlags = targets.filter((c) => foundCodes.has(c.code));
-      const foundResultEl = /** @type {HTMLElement} */ (document.getElementById('find-result-found'));
-      foundResultEl.innerHTML = '';
-      for (const c of foundFlags) foundResultEl.appendChild(flagTile(c));
-      /** @type {HTMLElement} */ (document.getElementById('found-title')).hidden = foundFlags.length === 0;
-
-      const missed = targets.filter((c) => !foundCodes.has(c.code));
-      const missedEl = /** @type {HTMLElement} */ (document.getElementById('find-missed'));
-      missedEl.innerHTML = '';
-      for (const c of missed) missedEl.appendChild(flagTile(c));
-      /** @type {HTMLElement} */ (document.getElementById('missed-title')).hidden = missed.length === 0;
-
-      gameEl.hidden = true;
-      resultEl.hidden = false;
+      saveScore(window.localStorage, n, found, total, Array.from(foundCodes), elapsed);
+      if (found > 0) {
+        launchConfetti();
+        // Clean sweep gets fireworks on top of the confetti — confetti
+        // alone is the standard celebration, fireworks mark a perfect
+        // round.
+        if (found === total) launchFireworks();
+      }
+      renderResult(targets, foundCodes, elapsed);
     }
 
     gameEl.hidden = false;
