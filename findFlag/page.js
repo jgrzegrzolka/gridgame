@@ -61,13 +61,6 @@ export function bootFindFlag() {
   const includeAll = isFindIncludeAll();
   const initialFilter = parseFilterFromUrl(window.location.search);
 
-  // "Pick a category" is the chooser; aria-current applies only when the
-  // user is on the chooser itself (no filter in the URL).
-  if (!initialFilter) {
-    const pickLink = document.querySelector('.menu a[href="./"]');
-    if (pickLink) pickLink.setAttribute('aria-current', 'page');
-  }
-
   const scopeToggleEl = /** @type {HTMLInputElement | null} */ (document.getElementById('scope-toggle-input'));
   if (scopeToggleEl) {
     scopeToggleEl.checked = includeAll;

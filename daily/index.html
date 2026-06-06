@@ -38,7 +38,8 @@
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
       <ul class="menu">
-        <li><a href="archive.html" data-i18n="daily.archive">Archive</a></li>
+        <li><a href="./" aria-current="page" data-i18n="daily.todaysPuzzle">Today's puzzle</a></li>
+        <li><a href="archive.html" data-i18n="daily.archive">Previous puzzles</a></li>
       </ul>
     </nav>
 
@@ -69,6 +70,8 @@
       </div>
       <ul class="find-found" id="find-found"></ul>
       <div class="give-up-row">
+        <a class="give-up" href="archive.html" data-i18n="daily.archive">Previous puzzles</a>
+        ·
         <button type="button" class="give-up" id="give-up" data-i18n="game.giveUp">Give up</button>
       </div>
     </section>
@@ -88,16 +91,20 @@
       <h2 class="result-section-title" id="missed-title" hidden data-i18n="findFlag.missed">Missed:</h2>
       <ul class="find-missed" id="find-missed"></ul>
       <p class="result-links">
-        <a href="archive.html" data-i18n="daily.archive">Archive</a>
+        <a href="archive.html" data-i18n="daily.archive">Previous puzzles</a>
       </p>
     </section>
 
     <script type="module">
       import { bootDaily } from './page.js?v=__BUILD__';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { wireBurgerDismiss } from '../common.js?v=__BUILD__';
+      import { disableBurgerIfEmpty, wireBurgerDismiss } from '../common.js?v=__BUILD__';
       bootI18n('../').then((lang) => {
         wireLangToggle(lang);
+        disableBurgerIfEmpty(
+          document.querySelector('.burger'),
+          document.querySelector('#burger-panel .menu'),
+        );
         bootDaily();
         wireBurgerDismiss();
       });

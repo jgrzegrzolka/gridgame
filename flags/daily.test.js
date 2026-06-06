@@ -246,3 +246,66 @@ test('live + backlog: answers match what each filter resolves to today', () => {
     );
   }
 });
+
+// Onboarding gate: in puzzles #1-100 no puzzle's answer set may be a
+// strict subset of another puzzle's. Why: by the time the player meets
+// the subset puzzle they've already seen every answer in the superset
+// one, so the puzzle isn't "find all the X" — it collapses to
+// "remember which of those were also Y", a weaker mechanic for
+// onboarding. The trigger that drove this rule was Europe·blue·cross
+// (fi, gb, gr, is, no, se) being a strict subset of Europe·cross (the
+// same 6 + ch, dk, mt). Allowed past #100 as a deliberate recall
+// mechanic.
+test('live + backlog: puzzles #1-100 have no strict-subset relationships', () => {
+  const entries = [...CATALOG, ...BACKLOG].filter((e) => e.n <= 100);
+  /** @type {string[]} */
+  const offenders = [];
+  for (const a of entries) {
+    const aSet = new Set(a.answers);
+    for (const b of entries) {
+      if (a.n === b.n) continue;
+      if (b.answers.length >= a.answers.length) continue;
+      const isSubset = b.answers.every((c) => aSet.has(c));
+      if (isSubset) {
+        offenders.push(
+          `#${b.n} ("${b.filter}") is a strict subset of #${a.n} ("${a.filter}") — every answer in #${b.n} also appears in #${a.n}`,
+        );
+      }
+    }
+  }
+  // Dedupe — the inner loop reports each subset pair once per direction
+  // already; this just keeps the failure message deterministic.
+  const unique = [...new Set(offenders)];
+  assert.deepEqual(unique, [], '\n  ' + unique.join('\n  '));
+});
+
+// Onboarding gate: in puzzles #1-100 every answer must also match under
+// `primaryColors`. "Emblem-only" colour matches (Bolivia is "blue" only
+// because its COA contains blue) read as "the game is wrong" in early
+// play even when the data is technically correct. Past #100 a player has
+// the muscle memory to read a surprise as trivia rather than a bug, so
+// the rule is bounded.
+test('live + backlog: puzzles #1-100 are primary-clean (no emblem-only colour matches)', () => {
+  const sov = flagsGamePool(COUNTRIES, false);
+  for (const entry of [...CATALOG, ...BACKLOG]) {
+    if (entry.n > 100) continue;
+    const f = parseFilterString(entry.filter);
+    assert.ok(f, `#${entry.n}: failed to parse filter "${entry.filter}"`);
+    const strict = sov
+      .filter((c) =>
+        matchesFilters(
+          c,
+          /** @type {import('./flagsFilter.js').Filters} */ (f),
+          { colorField: 'primaryColors' },
+        ),
+      )
+      .map((c) => c.code)
+      .sort();
+    const stored = [...entry.answers].sort();
+    assert.deepEqual(
+      strict,
+      stored,
+      `#${entry.n}: filter "${entry.filter}" is not primary-clean — under primaryColors it resolves to [${strict.join(', ')}] but answers is [${stored.join(', ')}]. Onboarding (puzzles 1-100) forbids emblem-only colour matches.`,
+    );
+  }
+});
