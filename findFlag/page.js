@@ -424,7 +424,14 @@ export function bootFindFlag() {
       // Only ranked plays — exactly one positive tag, no excludes — write
       // to the best-score store. Mix plays share no leaderboard slot with
       // each other (the URL encodes infinitely many combinations) so
-      // recording them would clutter the stats page with one-off entries.
+      // recording them would just bloat localStorage with one-off entries.
+      //
+      // The "new record!" badge that used to ride along with "Your best"
+      // was removed: with no stats page to view records in, the badge read
+      // as a brag with nothing behind it. The best score still gets
+      // recorded (so confetti still fires on improvement, and "Your best"
+      // still reflects the current device's high), just without the
+      // achievement-flavour callout on the result screen.
       const rankedId = rankedCategoryId(filter);
       const bestEl = document.getElementById('best');
       let isNew = false;
@@ -439,13 +446,6 @@ export function bootFindFlag() {
         const best = result.best;
         bestEl.textContent =
           `${t('findFlag.yourBest', 'Your best')}: ${best.found} / ${best.total} ${t('game.in', 'in')} ${formatTime(best.time)}`;
-        if (isNew) {
-          bestEl.appendChild(document.createTextNode(' '));
-          const badge = document.createElement('span');
-          badge.className = 'new-badge';
-          badge.textContent = t('game.newRecord', 'new record!');
-          bestEl.appendChild(badge);
-        }
       } else {
         // .best:empty { display: none } in common.css hides the line.
         bestEl.textContent = '';
