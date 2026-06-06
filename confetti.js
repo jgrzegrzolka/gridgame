@@ -78,10 +78,14 @@ export function launchConfetti(options = {}) {
 }
 
 /**
- * Radial firework bursts for the "you got everything" moment. Fires
- * several explosions at random screen positions, with each burst
- * radiating particles outward from its center. Stacks on top of
- * confetti — the two effects don't fight for the same layer.
+ * Radial firework bursts for the "you got everything / new record" moment.
+ * Fires several explosions at random screen positions, with each burst
+ * radiating particles outward from its center. Fireworks is now the
+ * standalone celebration tier — confetti is NOT layered underneath, so
+ * the visual has to carry the moment on its own. The spectacle settings
+ * (denser particle count, multi-colour rings, bigger spread, central
+ * white flash, punchier cadence) reflect that: fireworks needs to feel
+ * like the rare event it is.
  *
  * Reduced-motion respects the same gate as confetti.
  *
@@ -91,6 +95,8 @@ export function launchConfetti(options = {}) {
  *   particlesPerBurst?: number,
  *   burstInterval?: number,
  *   particleDuration?: number,
+ *   distanceMin?: number,
+ *   distanceMax?: number,
  *   rng?: () => number,
  *   prefersReducedMotion?: boolean,
  * }} [options]
@@ -99,10 +105,12 @@ export function launchConfetti(options = {}) {
 export function launchFireworks(options = {}) {
   const {
     doc = document,
-    bursts = 28,
-    particlesPerBurst = 36,
-    burstInterval = 700,
-    particleDuration = 1700,
+    bursts = 24,
+    particlesPerBurst = 80,
+    burstInterval = 450,
+    particleDuration = 1900,
+    distanceMin = 150,
+    distanceMax = 280,
     rng = Math.random,
     prefersReducedMotion = detectPrefersReducedMotion(doc),
   } = options;
@@ -120,7 +128,7 @@ export function launchFireworks(options = {}) {
   for (let b = 0; b < bursts; b++) {
     timers.push(setTimeout(() => {
       if (cancelled) return;
-      spawnBurst(doc, container, particlesPerBurst, particleDuration, rng);
+      spawnBurst(doc, container, particlesPerBurst, particleDuration, distanceMin, distanceMax, rng);
     }, b * burstInterval));
   }
 
@@ -171,28 +179,43 @@ function buildConfettiContainer(doc, count, rng) {
  * @param {HTMLElement} container
  * @param {number} count
  * @param {number} duration
+ * @param {number} distanceMin
+ * @param {number} distanceMax
  * @param {() => number} rng
  */
-function spawnBurst(doc, container, count, duration, rng) {
+function spawnBurst(doc, container, count, duration, distanceMin, distanceMax, rng) {
   // Center the burst in the upper-middle of the viewport so the
   // particles spread outward without clipping the top edge or
   // disappearing below the fold.
   const cx = 20 + rng() * 60; // 20-80vw
   const cy = 20 + rng() * 40; // 20-60vh
-  const color = COLORS[Math.floor(rng() * COLORS.length)];
+
+  // Central "ignition" flash — quick white circle that scales out and
+  // fades. Reads as the explosion's point of origin and lifts the burst
+  // from "ring of particles" to "thing that just went off".
+  const flash = doc.createElement('span');
+  flash.className = 'firework-flash';
+  flash.style.setProperty('--cx', `${cx}vw`);
+  flash.style.setProperty('--cy', `${cy}vh`);
+  container.appendChild(flash);
+
+  // Multi-colour rings — each particle picks its own colour from the
+  // palette rather than the whole burst being a single hue. Visually
+  // reads as a richer explosion at the same DOM cost.
+  const distSpread = Math.max(0, distanceMax - distanceMin);
   for (let i = 0; i < count; i++) {
     const particle = doc.createElement('span');
     particle.className = 'firework-particle';
     // Even angular distribution with a touch of jitter so the ring
     // doesn't look mechanically perfect.
     const angle = (i / count) * 360 + (rng() - 0.5) * (360 / count);
-    const distance = 90 + rng() * 70;
+    const distance = distanceMin + rng() * distSpread;
     particle.style.setProperty('--cx', `${cx}vw`);
     particle.style.setProperty('--cy', `${cy}vh`);
     particle.style.setProperty('--angle', `${angle}deg`);
     particle.style.setProperty('--distance', `${distance}px`);
     particle.style.setProperty('--dur', `${duration}ms`);
-    particle.style.background = color;
+    particle.style.background = COLORS[Math.floor(rng() * COLORS.length)];
     container.appendChild(particle);
   }
 }

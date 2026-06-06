@@ -640,10 +640,14 @@ dialog#zoom p {
   position: absolute;
   left: var(--cx);
   top: var(--cy);
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   opacity: 0;
+  /* A faint same-colour halo lifts the particle from "small dot" to
+   * "spark" without doubling the DOM cost. currentColor would need a
+   * fill — sticking to a constant alpha keeps every particle hot. */
+  box-shadow: 0 0 6px 2px rgba(255, 255, 255, 0.35);
   animation: firework-burst var(--dur) ease-out forwards;
 }
 @keyframes firework-burst {
@@ -658,6 +662,31 @@ dialog#zoom p {
     transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(-1 * var(--distance)));
     opacity: 0;
   }
+}
+
+/* Central "ignition" flash on each burst — a quick white pulse at the
+ * burst centre that scales up and fades. Reads as the impulse driving
+ * the ring of particles outward; without it the bursts feel like rings
+ * appearing rather than going off. */
+.firework-flash {
+  position: absolute;
+  left: var(--cx);
+  top: var(--cy);
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  margin-top: -12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 32px 12px rgba(255, 255, 255, 0.65);
+  opacity: 0;
+  animation: firework-flash 360ms ease-out forwards;
+  pointer-events: none;
+}
+@keyframes firework-flash {
+  0%   { transform: scale(0.4); opacity: 0; }
+  20%  { transform: scale(1.6); opacity: 1; }
+  100% { transform: scale(2.4); opacity: 0; }
 }
 
 @media (max-width: 600px) {

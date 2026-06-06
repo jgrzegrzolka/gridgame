@@ -531,19 +531,34 @@ export function recordResult(store, variantKey, modeKey, current, includeAll = f
 }
 
 /**
- * Confetti rule for the quiz page.
- * - timed (60s) mode: only on a new record, since every finished run is
- *   inherently "complete" (the budget runs out) and the brag-worthy event
- *   is beating your previous best.
- * - untimed (all) mode: a clean sweep (wrongCount === 0) deserves the
- *   reward on its own merits even if a previous run was equally clean
- *   and faster; otherwise a new record (fewer mistakes than before, or
- *   same mistakes but faster) also fires.
+ * Pick a celebration tier from a game-end state. Shared across daily,
+ * findFlag, and both quiz modes so every "you finished" moment reads
+ * the same way to the player.
  *
- * @param {{ timed: boolean, wrongCount: number, isNew: boolean }} params
- * @returns {boolean}
+ * The rule:
+ * - `none`      — you found nothing. Celebrating zero would feel ironic.
+ * - `confetti`  — you found something, but neither a clean sweep nor a
+ *                 personal best. Recognises effort without overselling.
+ * - `fireworks` — clean sweep OR new personal best. The big-moment cue;
+ *                 confetti is *not* layered on top, so the rare event
+ *                 has its own distinct visual.
+ *
+ * Modes:
+ * - Daily / findFlag pass `isNew: false` (no record tracking) and
+ *   `isTimed: false` — sweep → fireworks, partial → confetti.
+ * - Quiz untimed passes the actual `isNew` plus `isTimed: false` —
+ *   sweep OR record → fireworks.
+ * - Quiz 60s passes `isTimed: true` so the sweep branch is suppressed
+ *   (every timed run is inherently "complete" when the budget runs out;
+ *   the brag-worthy event there is beating your prior best, not
+ *   answering all the questions).
+ *
+ * @param {{ found: number, total: number, isNew?: boolean, isTimed?: boolean }} params
+ * @returns {'none' | 'confetti' | 'fireworks'}
  */
-export function shouldFireQuizConfetti({ timed, wrongCount, isNew }) {
-  if (timed) return isNew;
-  return wrongCount === 0 || isNew;
+export function pickCelebration({ found, total, isNew = false, isTimed = false }) {
+  if (found === 0) return 'none';
+  if (isNew) return 'fireworks';
+  if (!isTimed && found === total) return 'fireworks';
+  return 'confetti';
 }

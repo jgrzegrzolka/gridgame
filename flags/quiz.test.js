@@ -28,7 +28,7 @@ import {
   recordResult,
   scoreColor,
   preloadFlags,
-  shouldFireQuizConfetti,
+  pickCelebration,
   shouldShowBestTime,
   formatBestScoreLabel,
   mistakesAfterGiveUp,
@@ -807,30 +807,36 @@ test('preloadFlags handles an empty pool without calling the loader', () => {
   assert.equal(calls, 0);
 });
 
-// shouldFireQuizConfetti
-// Encodes the rule: timed (60s) celebrates only new records; untimed (all)
-// also celebrates a clean sweep on its own merits.
+// pickCelebration — unified tier picker shared across all four games.
+// Rule: 0 → none, sweep OR record → fireworks, anything else > 0 → confetti.
+// Timed mode (quiz 60s) suppresses the sweep branch because every finished
+// timed run is "complete" by construction; only records earn fireworks there.
 
-test('shouldFireQuizConfetti: timed mode fires only on a new record', () => {
-  assert.equal(shouldFireQuizConfetti({ timed: true, wrongCount: 0, isNew: true }), true);
-  assert.equal(shouldFireQuizConfetti({ timed: true, wrongCount: 5, isNew: true }), true);
-  assert.equal(shouldFireQuizConfetti({ timed: true, wrongCount: 0, isNew: false }), false,
-    'timed mode does not reward a clean sweep on its own — only beating the prior best');
-  assert.equal(shouldFireQuizConfetti({ timed: true, wrongCount: 5, isNew: false }), false);
+test('pickCelebration: nothing found returns "none" regardless of other flags', () => {
+  assert.equal(pickCelebration({ found: 0, total: 10 }), 'none');
+  assert.equal(pickCelebration({ found: 0, total: 10, isNew: true }), 'none',
+    'a record claim with zero finds is incoherent — none beats it');
+  assert.equal(pickCelebration({ found: 0, total: 10, isTimed: true, isNew: true }), 'none');
 });
 
-test('shouldFireQuizConfetti: untimed mode fires on a clean sweep (wrongCount === 0) even without a new record', () => {
-  assert.equal(shouldFireQuizConfetti({ timed: false, wrongCount: 0, isNew: false }), true,
-    'clean sweep gets confetti even if a prior run was equally clean and faster');
-  assert.equal(shouldFireQuizConfetti({ timed: false, wrongCount: 0, isNew: true }), true);
+test('pickCelebration: a clean sweep is "fireworks" (untimed games)', () => {
+  assert.equal(pickCelebration({ found: 10, total: 10 }), 'fireworks');
+  assert.equal(pickCelebration({ found: 10, total: 10, isNew: true }), 'fireworks',
+    'no double-stack: sweep+record still resolves to a single fireworks');
 });
 
-test('shouldFireQuizConfetti: untimed mode fires on a new record even with mistakes', () => {
-  assert.equal(shouldFireQuizConfetti({ timed: false, wrongCount: 3, isNew: true }), true,
-    'fewer mistakes than before still earns confetti even if not a clean sweep');
+test('pickCelebration: a new record is "fireworks" even on a partial finish', () => {
+  assert.equal(pickCelebration({ found: 7, total: 10, isNew: true }), 'fireworks');
 });
 
-test('shouldFireQuizConfetti: untimed mode does NOT fire when there are mistakes and no new record', () => {
-  assert.equal(shouldFireQuizConfetti({ timed: false, wrongCount: 3, isNew: false }), false);
-  assert.equal(shouldFireQuizConfetti({ timed: false, wrongCount: 1, isNew: false }), false);
+test('pickCelebration: timed mode suppresses the sweep branch', () => {
+  assert.equal(pickCelebration({ found: 10, total: 10, isTimed: true, isNew: false }), 'confetti',
+    'every 60s run "completes" when the budget runs out — the brag is the record, not the sweep');
+  assert.equal(pickCelebration({ found: 10, total: 10, isTimed: true, isNew: true }), 'fireworks');
+});
+
+test('pickCelebration: partial finish without a record is "confetti"', () => {
+  assert.equal(pickCelebration({ found: 7, total: 10 }), 'confetti');
+  assert.equal(pickCelebration({ found: 1, total: 10 }), 'confetti',
+    'even a single find earns confetti — recognising the effort');
 });

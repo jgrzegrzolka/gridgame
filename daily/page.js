@@ -8,6 +8,7 @@ import {
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
+import { pickCelebration } from '../flags/quiz.js';
 import { todayN, dailyNFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry } from '../flags/daily.js';
 import { loadScores, saveScore, isCompleteRecord } from './scores.js';
 
@@ -402,13 +403,9 @@ export function bootDaily() {
       if (!backlog) {
         saveScore(window.localStorage, n, found, total, Array.from(foundCodes), elapsed);
       }
-      if (found > 0) {
-        launchConfetti();
-        // Clean sweep gets fireworks on top of the confetti — confetti
-        // alone is the standard celebration, fireworks mark a perfect
-        // round.
-        if (found === total) launchFireworks();
-      }
+      const tier = pickCelebration({ found, total });
+      if (tier === 'fireworks') launchFireworks();
+      else if (tier === 'confetti') launchConfetti();
       renderResult(targets, foundCodes, elapsed);
     }
 
