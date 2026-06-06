@@ -1,5 +1,5 @@
 import { CONTINENTS } from '../flags/group.js';
-import { COLORS_FOR_RANDOM, ALL_MOTIFS } from '../flags/engine.js';
+import { COLORS_FOR_RANDOM, ALL_MOTIFS, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
 import { t, countryName } from '../i18n.js';
 
@@ -72,8 +72,13 @@ export function bootFlagsData() {
   }
 
   const filters = emptyFilters();
+  /** Diacritic-folded substring of the name search input. Empty means the
+   * filter is off. Stored as the folded form so we don't refold per-tile
+   * on every input event — the per-country fold is the same idea, computed
+   * once in renderAll. */
+  let nameQuery = '';
 
-  /** @type {{ items: Country[], tiles: HTMLElement[], count: HTMLElement } | null} */
+  /** @type {{ items: Country[], foldedNames: string[], tiles: HTMLElement[], count: HTMLElement } | null} */
   let state = null;
 
   function renderAll(parent, items) {
@@ -88,31 +93,41 @@ export function bootFlagsData() {
     grid.className = 'grid';
     /** @type {HTMLElement[]} */
     const tiles = [];
+    /** @type {string[]} */
+    const foldedNames = [];
     for (const c of items) {
       const tile = flagTile(c);
       tiles.push(tile);
+      foldedNames.push(foldDiacritics(countryName(c)));
       grid.appendChild(tile);
     }
     parent.appendChild(grid);
-    state = { items, tiles, count: countSpan };
+    state = { items, foldedNames, tiles, count: countSpan };
   }
 
   function applyFilter() {
     if (!state) return;
     let visible = 0;
     for (let i = 0; i < state.items.length; i++) {
-      const show = matchesFilters(state.items[i], filters);
+      const catMatch = matchesFilters(state.items[i], filters);
+      const nameMatch = nameQuery === '' || state.foldedNames[i].includes(nameQuery);
+      const show = catMatch && nameMatch;
       state.tiles[i].hidden = !show;
       if (show) visible++;
     }
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
-    let total = 0;
+    let pillTotal = 0;
     for (const k of /** @type {Array<keyof typeof filters>} */ (Object.keys(filters))) {
-      total += filters[k].include.size + filters[k].exclude.size;
+      pillTotal += filters[k].include.size + filters[k].exclude.size;
     }
-    clearBtn.hidden = total === 0;
-    updateFilterToggle(total);
+    const anyActive = pillTotal > 0 || nameQuery !== '';
+    clearBtn.hidden = !anyActive;
+    // Include name search in the toggle badge count — once the search
+    // is hidden behind the mobile Filters toggle, the badge is the
+    // user's only cue that something is filtering. Counting it as one
+    // "active filter" (alongside each pill) matches that mental model.
+    updateFilterToggle(pillTotal + (nameQuery !== '' ? 1 : 0));
   }
 
   /** @param {number} count */
@@ -165,6 +180,35 @@ export function bootFlagsData() {
 
   const filterBar = document.getElementById('filter-bar');
 
+  // Name search — substring match, diacritic-folded against the
+  // localized country name, ANDed with the category pills. On desktop
+  // it sits in its own row at the top of the filter bar; on mobile
+  // it's appended into .filter-groups so the existing collapse toggle
+  // hides it behind "Filters" along with the pills (rationale: once
+  // it's part of the filter set, it should follow the same show/hide
+  // contract — otherwise the user sees a search box but no pills,
+  // which makes the toggle feel inconsistent).
+  const searchInput = document.createElement('input');
+  searchInput.type = 'search';
+  searchInput.id = 'name-search';
+  searchInput.className = 'name-search';
+  searchInput.autocomplete = 'off';
+  searchInput.setAttribute('autocapitalize', 'off');
+  searchInput.setAttribute('autocorrect', 'off');
+  searchInput.setAttribute('spellcheck', 'false');
+  searchInput.placeholder = t('flagsdata.searchName', 'Search by name…');
+  searchInput.addEventListener('input', () => {
+    nameQuery = foldDiacritics(searchInput.value.trim());
+    applyFilter();
+  });
+  // The wrapper does the row-claim on desktop (flex-basis: 100% on a
+  // plain div wraps reliably where the same on an <input> doesn't).
+  // The wrapper gets inserted into groupsWrap further down, so the
+  // mobile collapse toggle covers it too.
+  const searchWrap = document.createElement('div');
+  searchWrap.className = 'name-search-wrap';
+  searchWrap.appendChild(searchInput);
+
   // Mobile-only collapse toggle. Hidden on desktop via CSS — there the filter
   // bar is always visible. On phones the bar would dominate the viewport,
   // so collapse it by default and reveal on tap. The badge shows how many
@@ -187,6 +231,12 @@ export function bootFlagsData() {
   groupsWrap.id = 'filter-groups';
   groupsWrap.className = 'filter-groups';
   filterBar.appendChild(groupsWrap);
+
+  // Search goes first inside the groups — order: -1 then keeps it at
+  // the top on desktop (where groupsWrap is display: contents, so the
+  // wrapper is a direct flex child of #filter-bar) and as the first
+  // column row on mobile-open (where groupsWrap is a column flex).
+  groupsWrap.appendChild(searchWrap);
 
   groupsWrap.appendChild(
     buildFilterGroup(t('flagsdata.filterStatus', 'Status'), 'status', STATUS_VALUES.map((v) => ({ value: v, label: statusLabel(v) }))),
@@ -215,6 +265,8 @@ export function bootFlagsData() {
       el.classList.remove('active');
       el.classList.remove('exclude');
     }
+    searchInput.value = '';
+    nameQuery = '';
     applyFilter();
   });
   groupsWrap.appendChild(clearBtn);
