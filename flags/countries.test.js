@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 
 import {
   COLORS_FOR_RANDOM,
+  ALL_FLAG_COLORS,
   MOTIFS_FOR_RANDOM,
   ALL_MOTIFS,
   CONTINENTS_FOR_RANDOM,
@@ -88,7 +89,15 @@ test('every entry has a non-empty primaryColors and an additionalColors array, b
   // emblem-only tail — colours that only appear inside a coat of arms or
   // small detail. The two are disjoint by construction; the union is "every
   // colour anywhere on the flag", which `allColors()` returns.
-  const palette = new Set(COLORS_FOR_RANDOM);
+  //
+  // Data palette is wider than `COLORS_FOR_RANDOM`: the random-puzzle
+  // generator stays on the seven canonical colours (every continent ×
+  // colour cell must have candidates), but countries.json can carry rarer
+  // emblem colours (`violet` for Dominica's sisserou parrot and Northern
+  // Mariana Islands' wreath). findFlag's chooser uses `ALL_FLAG_COLORS`
+  // so the wider palette surfaces in the UI even though it's not used by
+  // the random generator.
+  const palette = new Set(ALL_FLAG_COLORS);
   const offenders = [];
   for (const c of COUNTRIES) {
     if (!Array.isArray(c.primaryColors) || c.primaryColors.length === 0) {
@@ -185,6 +194,67 @@ test('known animal/coat-of-arms flags keep their expected motif tags', () => {
     }
   }
   assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
+// Regression pin — hand-audited primaryColors / additionalColors splits for
+// the European flags Jan ranked by visual inspection. These are the flags
+// where the mechanical migration (#192) needed a specific correction, so
+// pinning them stops a future regeneration / refactor from quietly swapping
+// a primary colour to additional or vice versa. Add a code here when you
+// hand-audit another flag and want the answer frozen against future drift.
+const KNOWN_PRIMARY_SPLITS = [
+  // --- Europe ---
+  { code: 'gi', primary: ['red','white'],          additional: ['yellow','black'], note: 'Gibraltar — castle COA on white-over-red field; yellow castle + black detailing read as emblem-only' },
+  { code: 'im', primary: ['red','white'],          additional: ['yellow'],         note: 'Isle of Man — yellow triskelion sits inside the central red disc; the across-the-room palette is red on white' },
+  { code: 'je', primary: ['white','red'],          additional: ['yellow'],         note: 'Jersey — yellow Jersey shield in the upper triangle is small; saltire is the dominant feature' },
+  { code: 'li', primary: ['red','blue','yellow'],  additional: ['black'],          note: 'Liechtenstein — blue-over-red horizontal with yellow crown in the canton; the crown details bring black that only reads up close' },
+  { code: 'pt', primary: ['red','green','yellow'], additional: ['blue','white'],   note: 'Portugal — yellow armillary sphere is large enough to read as primary; blue + white live only in the small inner shield' },
+  { code: 'va', primary: ['yellow','white'],       additional: ['red'],            note: 'Vatican — red ribbon binding the crossed keys is emblem-only against the yellow + white field' },
+  // --- Africa ---
+  { code: 'io', primary: ['blue','red','white'],                  additional: ['yellow','green'], note: 'British Indian Ocean Territory — Blue Ensign + palm-tree COA; the wavy white-on-blue field and Union Jack canton are primary, yellow/green from the COA are emblem-only' },
+  { code: 'eg', primary: ['red','white','black','yellow'],        additional: [],                  note: "Egypt — the Eagle of Saladin is the flag's defining feature (same recall logic as Albania's eagle): yellow is primary even though it lives inside the eagle" },
+  { code: 'sz', primary: ['blue','yellow','red','black','white'], additional: [],                  note: "Eswatini — the central Nguni shield is large and its black/white pattern is part of the flag's across-the-room read; all five colours are primary" },
+  { code: 'mz', primary: ['red','black','yellow','green','white'],additional: [],                  note: 'Mozambique — all five colours read at flag-tile size: the green/black/yellow stripes, the red triangle, and the white outlines on the rifle/hoe emblem are all visible' },
+  { code: 'na', primary: ['blue','red','green','yellow','white'], additional: [],                  note: 'Namibia — the diagonal red stripe is white-bordered against blue/green fields; all five colours including the yellow sun and white fimbriations are primary' },
+  // --- North America + others ---
+  { code: 'mo', primary: ['green','white'],                       additional: ['yellow'],                  note: 'Macau — green field with white lotus + bridge; the yellow stars above the lotus are small and read as emblem-only' },
+  { code: 'tm', primary: ['green','red','white'],                 additional: ['yellow'],                  note: 'Turkmenistan — revises earlier split: white is in the crescent moon + stars (visible primary), yellow is only in the carpet-pattern hoist stripe details' },
+  { code: 'dm', primary: ['green','yellow','black','white','red'],additional: ['violet'],                  note: "Dominica — three crosses (yellow/black/white) cut across the green field and a red disc holds the COA; the sisserou parrot's violet sits in the COA only. Violet is allowed as a data colour (see FLAG_COLOR_PALETTE) but isn't exposed in the random-puzzle generator or findFlag UI." },
+  { code: 'ht', primary: ['red','blue'],                          additional: ['white','green'],           note: 'Haiti — blue + red horizontal stripes are primary; the central white square is the COA backdrop and the green palm tree only reads up close' },
+  { code: 'mx', primary: ['red','white','green'],                 additional: ['blue','yellow'],           note: 'Mexico — tricolour stripes are primary; the eagle COA introduces blue + yellow that only read at close range' },
+  { code: 'ms', primary: ['blue','red','white'],                  additional: ['yellow','green','black'],  note: 'Montserrat — Blue Ensign + Hibernia COA (woman with harp); yellow/green/black are all COA-only against the Union-Jack-canton palette' },
+  { code: 'sx', primary: ['red','blue','white'],                  additional: ['yellow','green'],          note: 'Sint Maarten — white triangle hoist with the COA, red-over-blue stripes; the rising sun + green palm in the COA are emblem-only. The sun adds the star-or-moon motif (also pinned by SUN_BEARING)' },
+  { code: 'tc', primary: ['red','blue','white','yellow'],         additional: ['green'],                   note: 'Turks and Caicos Islands — revises earlier Ensign batch: the yellow conch in the COA is large enough to read as primary; green cactus stays additional' },
+  { code: 'vi', primary: ['white','yellow'],                      additional: ['blue','green','red'],      note: 'Virgin Islands (U.S.) — white field with golden eagle is the across-the-room read; everything inside the eagle (blue shield, red/white stripes, green branch) is emblem-only' },
+  // --- South America ---
+  { code: 'br', primary: ['blue','yellow','green'],               additional: ['white'],                   note: 'Brazil — green field, yellow diamond, blue celestial sphere are the across-the-room palette; the white stars + Ordem e Progresso banner only read up close' },
+  { code: 'ec', primary: ['yellow','blue','red'],                 additional: ['green','black'],           note: 'Ecuador — tricolour stripes are primary; the COA condor + Andes scene introduces green and black that are emblem-only' },
+  // --- More territories / organisations ---
+  { code: 'as', primary: ['blue','white','red'],                  additional: ['yellow'],                  note: "American Samoa — blue field with a red-bordered white triangle holding the eagle; the eagle's yellow staff is small enough to read as emblem-only" },
+  { code: 'mp', primary: ['blue','white'],                        additional: ['green','violet','yellow'], note: 'Northern Mariana Islands — blue field with white latte stone star; the green/violet wreath garland + yellow rays are emblem-only' },
+  { code: 'asean', primary: ['red','blue','yellow'],              additional: ['white'],                   note: 'ASEAN — red/blue field with central yellow ten-stalk emblem; the white circle behind the stalks is emblem-only' },
+  { code: 'es-ga', primary: ['blue','white'],                     additional: ['red','yellow'],            note: 'Galicia — white field with diagonal blue band; the COA brings red and yellow that only read at close range' },
+  { code: 'arab', primary: ['green','white'],                     additional: ['yellow'],                  note: 'League of Arab States — green field with white emblem ring; the inner yellow crescent is small enough to read as emblem-only' },
+  { code: 'gb-nir', primary: ['white','red'],                     additional: ['yellow'],                  note: 'Northern Ireland (former Ulster Banner) — white field with red cross; the yellow Hand of Ulster + crown details are emblem-only' },
+];
+
+test('hand-audited primary/additional splits stay pinned', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const { code, primary, additional, note } of KNOWN_PRIMARY_SPLITS) {
+    const c = COUNTRIES.find((x) => x.code === code);
+    if (!c) {
+      offenders.push(`${code} (${note}): not found in countries.json`);
+      continue;
+    }
+    if (JSON.stringify(c.primaryColors) !== JSON.stringify(primary)) {
+      offenders.push(`${code} (${note}): primaryColors expected ${JSON.stringify(primary)}, got ${JSON.stringify(c.primaryColors)}`);
+    }
+    if (JSON.stringify(c.additionalColors) !== JSON.stringify(additional)) {
+      offenders.push(`${code} (${note}): additionalColors expected ${JSON.stringify(additional)}, got ${JSON.stringify(c.additionalColors)}`);
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
 });
 
 test('All-countries pool supports the "20" quiz mode (Flag Quiz default)', () => {
@@ -347,6 +417,7 @@ const SUN_BEARING = [
   { code: 'ec', note: 'Ecuador — sun atop coat of arms' },
   { code: 'pf', note: 'French Polynesia — sun emblem with outrigger canoe' },
   { code: 'jp', note: 'Japan — red sun disc (Hinomaru)' },
+  { code: 'sx', note: 'Sint Maarten — rising sun on the white triangle hoist' },
 ];
 test('sun-bearing flags carry the star-or-moon motif (sun-is-a-star pin)', () => {
   /** @type {string[]} */
