@@ -49,18 +49,16 @@
   },
   {
     "n": 5,
-    "filter": "continent:South America,color:!green,motif:!coat-of-arms",
+    "filter": "continent:North America,color:white,color:blue,colorCount:3",
     "answers": [
-      "ar",
-      "cl",
-      "co",
-      "pe",
-      "uy",
-      "ve"
+      "cr",
+      "cu",
+      "pa",
+      "us"
     ],
     "description": {
-      "en": "Find all South American flags without green and without a coat of arms.",
-      "pl": "Znajdź wszystkie południowoamerykańskie flagi bez zieleni i bez godła."
+      "en": "Find all North American flags whose only colours are red, white, and blue — no others.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi, które mają tylko 3 kolory: czerwony, biały i niebieski."
     }
   },
   {
@@ -155,24 +153,17 @@
   },
   {
     "n": 12,
-    "filter": "continent:Asia,color:white,color:blue",
+    "filter": "continent:Asia,color:white,color:blue,colorCount:3",
     "answers": [
-      "az",
-      "il",
-      "in",
       "kh",
       "kp",
-      "kr",
       "la",
-      "my",
       "np",
-      "ph",
-      "th",
-      "uz"
+      "th"
     ],
     "description": {
-      "en": "Find all Asian flags with white and blue.",
-      "pl": "Znajdź wszystkie azjatyckie flagi z bielą i niebieskim."
+      "en": "Find all Asian flags whose only colours are red, white, and blue — no others.",
+      "pl": "Znajdź wszystkie azjatyckie flagi, które mają tylko 3 kolory: czerwony, biały i niebieski."
     }
   },
   {
