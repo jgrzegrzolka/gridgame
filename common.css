@@ -412,6 +412,13 @@ body::before {
 .pill.exclude:hover {
   background: #fdecea;
 }
+/* Modifier pill — meta-constraint that isn't an include/exclude value
+ * (e.g. findFlag and flagsdata's "no other colours" toggle that binds
+ * colorCount to the include-set size). Dashed outline distinguishes it
+ * from regular pills. */
+.pill-modifier {
+  border-style: dashed;
+}
 
 /* Give-up reveal — applied identically to every grid-based game so the
  * "this answer was shown to you, not earned" signal reads the same: red wash,
