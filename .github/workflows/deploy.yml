@@ -57,6 +57,17 @@ jobs:
         # treat every build as a unique URL and refetch assets after deploy.
         run: |
           find . -name '*.html' -type f -exec sed -i "s/__BUILD__/${GITHUB_SHA}/g" {} +
+      - name: Cache-bust JS imports and JSON fetches with the commit SHA
+        # The HTML __BUILD__ pass only covers entry-point page.js, CSS,
+        # and JSON preload hints. The shared modules that page.js then
+        # imports (e.g. ../flags/quiz.js) and the JSON it fetches
+        # (countries.json, daily_puzzles.json) carry no version in source.
+        # Without this pass, a fresh page.js?v=<sha> would static-import
+        # the OLD cached quiz.js after a shared-module edit, masking the
+        # deploy. Walks every shipped .js file and appends ?v=<sha> to
+        # string-literal and template-literal paths — see
+        # scripts/cache-bust.mjs for the rewrite contract.
+        run: node scripts/cache-bust.mjs ${GITHUB_SHA}
       - name: Strip preview-only files from the artifact
         # The daily backlog (staged unreleased puzzles) is repo-only — used
         # by tests and local preview at /daily/backlog.html, never shipped
