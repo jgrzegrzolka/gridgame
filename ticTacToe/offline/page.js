@@ -3,7 +3,7 @@ import { loadCountries } from '../../flags/group.js';
 import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells } from '../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
-import { lockBodyScroll, unlockBodyScroll } from '../bodyScrollLock.js';
+import { trapPicker, releasePicker } from '../pickerLock.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 /** @typedef {import('../../flags/ticTacToe.js').GameState} GameState */
@@ -137,7 +137,7 @@ function runTicTacToe({ puzzle, countries }) {
     renderSuggestions();
     pickerEl.hidden = false;
     document.body.classList.add('picker-open');
-    lockBodyScroll();
+    trapPicker(pickerEl);
     pickerInputEl.focus();
   }
 
@@ -150,7 +150,7 @@ function runTicTacToe({ puzzle, countries }) {
     pickerSuggestionsEl.innerHTML = '';
     pickerEl.hidden = true;
     document.body.classList.remove('picker-open');
-    unlockBodyScroll();
+    releasePicker();
   }
 
   function updateSuggestions() {

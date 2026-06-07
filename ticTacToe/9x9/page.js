@@ -13,7 +13,7 @@ import { shouldFireTicTacToeConfetti } from '../../flags/ticTacToe.js';
 import { loadCountries } from '../../flags/group.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
-import { lockBodyScroll, unlockBodyScroll } from '../bodyScrollLock.js';
+import { trapPicker, releasePicker } from '../pickerLock.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 /** @typedef {import('../../flags/ultimateTicTacToe.js').UltimateGameState} UltimateGameState */
@@ -312,7 +312,7 @@ function runOnline(countries) {
     renderSuggestions();
     pickerEl.hidden = false;
     document.body.classList.add('picker-open');
-    lockBodyScroll();
+    trapPicker(pickerEl);
     pickerInputEl.focus();
   }
 
@@ -325,7 +325,7 @@ function runOnline(countries) {
     pickerSuggestionsEl.innerHTML = '';
     pickerEl.hidden = true;
     document.body.classList.remove('picker-open');
-    unlockBodyScroll();
+    releasePicker();
   }
 
   /** Close the picker AND return focus to the cell it was opened from.
