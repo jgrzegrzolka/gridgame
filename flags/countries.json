@@ -295,7 +295,9 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "az",
@@ -422,7 +424,9 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "bz",
@@ -660,7 +664,9 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "bf",
@@ -1029,7 +1035,8 @@
     ],
     "motifs": [
       "coat-of-arms",
-      "star-or-moon"
+      "star-or-moon",
+      "eu-member"
     ]
   },
   {
@@ -1079,7 +1086,9 @@
       "green"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "cz",
@@ -1094,7 +1103,9 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "ci",
@@ -1144,7 +1155,8 @@
     ],
     "additionalColors": [],
     "motifs": [
-      "cross"
+      "cross",
+      "eu-member"
     ]
   },
   {
@@ -1352,7 +1364,9 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "sz",
@@ -1499,7 +1513,8 @@
     ],
     "additionalColors": [],
     "motifs": [
-      "cross"
+      "cross",
+      "eu-member"
     ]
   },
   {
@@ -1515,7 +1530,9 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "gf",
@@ -1645,7 +1662,9 @@
       "yellow"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "gh",
@@ -1697,7 +1716,8 @@
     ],
     "additionalColors": [],
     "motifs": [
-      "cross"
+      "cross",
+      "eu-member"
     ]
   },
   {
@@ -1937,7 +1957,9 @@
       "green"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "is",
@@ -2032,7 +2054,9 @@
       "orange"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "im",
@@ -2079,7 +2103,9 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "jm",
@@ -2284,7 +2310,9 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "arab",
@@ -2398,7 +2426,9 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "lu",
@@ -2413,7 +2443,9 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "mo",
@@ -2532,7 +2564,8 @@
     "motifs": [
       "animal",
       "weapon",
-      "cross"
+      "cross",
+      "eu-member"
     ]
   },
   {
@@ -2851,7 +2884,9 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "nc",
@@ -3253,7 +3288,9 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "pt",
@@ -3272,7 +3309,8 @@
       "white"
     ],
     "motifs": [
-      "coat-of-arms"
+      "coat-of-arms",
+      "eu-member"
     ]
   },
   {
@@ -3334,7 +3372,9 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [
+      "eu-member"
+    ]
   },
   {
     "code": "ru",
@@ -3728,7 +3768,8 @@
     ],
     "additionalColors": [],
     "motifs": [
-      "coat-of-arms"
+      "coat-of-arms",
+      "eu-member"
     ]
   },
   {
@@ -3748,7 +3789,8 @@
     ],
     "motifs": [
       "coat-of-arms",
-      "star-or-moon"
+      "star-or-moon",
+      "eu-member"
     ]
   },
   {
@@ -3883,7 +3925,8 @@
     ],
     "motifs": [
       "animal",
-      "coat-of-arms"
+      "coat-of-arms",
+      "eu-member"
     ]
   },
   {
@@ -3986,7 +4029,8 @@
     ],
     "additionalColors": [],
     "motifs": [
-      "cross"
+      "cross",
+      "eu-member"
     ]
   },
   {

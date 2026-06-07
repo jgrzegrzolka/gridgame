@@ -129,16 +129,23 @@ export const COLORS_FOR_RANDOM = [
 export const ALL_FLAG_COLORS = [...COLORS_FOR_RANDOM, 'violet'];
 
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
- * to pair with continents on the row / column axes. Every (continent ×
- * motif) cell must admit at least one country, so motifs that only appear
- * on flags from a few continents are kept OUT of this list — see
- * ALL_MOTIFS below for the full UI palette. */
+ * to pair with continents on the row / column axes. Some motifs appear on
+ * flags from only one continent (e.g. `eu-member` is Europe-only) — those
+ * are still allowed in the pool because `generateRandomPuzzle` retries up
+ * to 200 times when an attempted puzzle has an unfillable cell. The
+ * seed-success test in countries.test.js guards the retry headroom: if
+ * the pool ever drifts to where 30+ seeds can't yield a valid puzzle, the
+ * test fails. See ALL_MOTIFS below for motifs that can be filtered on
+ * (findFlag / flagsdata) but aren't suitable for random pairing — today
+ * that's just `union-jack` which has narrow coverage and no compelling
+ * puzzle hook. */
 export const MOTIFS_FOR_RANDOM = [
   'animal',
   'coat-of-arms',
   'weapon',
   'star-or-moon',
   'cross',
+  'eu-member',
 ];
 
 /** Every motif key that can appear in `country.motifs`. Used by the
