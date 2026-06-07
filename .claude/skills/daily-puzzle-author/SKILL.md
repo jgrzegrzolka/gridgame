@@ -18,13 +18,13 @@ Plus one parking lot:
 
 ## Filter DSL primitives
 
-Filter strings are comma-separated tokens. Each token is `group:value` (include) or `group:!value` (exclude), plus the scalar `colorCount:N`.
+Filter strings are comma-separated tokens. Each token is `group:value` (include) or `group:!value` (exclude), plus the scalar `colorCount:N` (or `colorCount:>=N`).
 
 - `continent:<name>` / `continent:!<name>` — scalar, can't AND two continents.
 - `color:<name>` / `color:!<name>` — array, include is AND-among-values (must have every selected colour), exclude is none-of.
 - `motif:<name>` / `motif:!<name>` — same shape as colour.
 - `status:<sovereignty>` / `status:!<sovereignty>` — scalar.
-- `colorCount:N` — integer constraint: the country's full palette (`primaryColors + additionalColors`) must have exactly N entries. Used for "only N colours" puzzles where chaining `color:!<other>` would be brittle (any future palette addition would change the result). `colorCount` always checks the union regardless of `colorField`, so it stays consistent under the primary-clean test.
+- `colorCount:N` / `colorCount:>=N` — integer constraint on the country's full palette (`primaryColors + additionalColors`) size. Bare `colorCount:N` is exact (same as `colorCount:=N` — bare form preserved for back-compat with existing entries); `colorCount:>=N` matches "N or more". Used for "only N colours" or "busy flags" puzzles where chaining `color:!<other>` would be brittle. Always checks the union regardless of `colorField`, so it stays consistent under the primary-clean test.
 
 The "only red+white+blue" pattern is `color:red,color:white,color:blue,colorCount:3` — every listed colour must be present AND the total count locks the rest out. Compare to the chain-of-excludes form `color:red,color:white,color:blue,color:!yellow,color:!green,color:!black,color:!orange,color:!violet`, which silently breaks the moment a new colour enters the palette.
 
@@ -109,4 +109,4 @@ E.g. we add `primaryMotifs` and rule 10 becomes a test. Update this SKILL.md AND
 
 Ideas that need a new filter primitive before they become puzzles:
 
-- **`colorCountMin:N` / `colorCountMax:N`** — "at least N colours" or "at most N colours". The current `colorCount:N` is exact-match only. Adding a min/max variant unlocks puzzles like "flags with at least 4 colours" or "flags with at most 2 colours" without enumerating every palette combination.
+- **`colorCount:<=N`** — "at most N colours". The current grammar has `colorCount:N` (exact) and `colorCount:>=N` (at least). `<=` is the symmetric add — wire it through `parseFilterString`, `serializeFilter`, `matchesFilters`, and `pillLabel` / `filterTitle` at the same time, mirroring how `>=` was handled.

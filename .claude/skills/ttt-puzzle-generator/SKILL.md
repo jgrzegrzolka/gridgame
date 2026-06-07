@@ -16,7 +16,7 @@ The pool is built from `buildRandomCategoryPool()`:
 - `CONTINENTS_FOR_RANDOM` — 6 continents (Antarctica excluded).
 - `COLORS_FOR_RANDOM` — 7 canonical colours (no violet — too narrow).
 - `MOTIFS_FOR_RANDOM` — 6 motifs (`animal`, `coat-of-arms`, `weapon`, `star-or-moon`, `cross`, `eu-member`).
-- `COLOR_COUNTS_FOR_RANDOM` — `[2, 3]`. Exact-N colour-count categories; share `exclusiveGroup: 'colorCount'` so two different N values can't pair. N=1 has zero coverage; N≥5 has zero coverage on at least one continent. N=4 is plausible but blurs into "many colours" without a `>=4` neighbour — left out until a future PR adds `>=`.
+- `COLOR_COUNTS_FOR_RANDOM` — `[['=',2], ['=',3], ['=',4], ['>=',4]]`. Colour-count categories; share `exclusiveGroup: 'colorCount'` so any two of them can't pair (including `=4` × `>=4`, which overlap). `=1` has zero coverage and `>=5` has zero on Asia, so neither is in the pool. `<=N` isn't implemented; symmetric add when a use case lands.
 
 `ALL_MOTIFS` is a superset that adds `union-jack` for the findFlag / flagsdata UI — union-jack isn't in the random pool because it has no compelling puzzle hook and very narrow continent coverage.
 

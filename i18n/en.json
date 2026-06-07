@@ -162,6 +162,9 @@
       "3": "only 3 colours",
       "4": "only 4 colours",
       "5": "only 5 colours"
+    },
+    "atLeastN": {
+      "4": "4 or more colours"
     }
   },
   "status": {

@@ -172,28 +172,48 @@ test('serializeFilter: empty filter serializes to empty string', () => {
   assert.equal(serializeFilter(emptyFilters()), '');
 });
 
-test('parseFilterString: colorCount:N parses to a scalar integer constraint', () => {
+test('parseFilterString: bare colorCount:N parses as op=, n:N (back-compat with pre-op daily entries)', () => {
   const f = parseFilterString('continent:Europe,color:red,color:white,color:blue,colorCount:3');
   assert.ok(f);
-  assert.equal(f.colorCount, 3);
+  assert.deepEqual(f.colorCount, { op: '=', n: 3 });
   assert.deepEqual([...f.color.include], ['red','white','blue']);
+});
+
+test('parseFilterString: colorCount:=N parses as op=, n:N (explicit form)', () => {
+  const f = parseFilterString('colorCount:=3');
+  assert.ok(f);
+  assert.deepEqual(f.colorCount, { op: '=', n: 3 });
+});
+
+test('parseFilterString: colorCount:>=N parses as op:>=, n:N', () => {
+  const f = parseFilterString('colorCount:>=4');
+  assert.ok(f);
+  assert.deepEqual(f.colorCount, { op: '>=', n: 4 });
 });
 
 test('parseFilterString: colorCount with non-integer or negative value is silently dropped', () => {
   assert.equal(parseFilterString('colorCount:'), null);
   assert.equal(parseFilterString('colorCount:abc'), null);
   assert.equal(parseFilterString('colorCount:-1'), null);
+  assert.equal(parseFilterString('colorCount:>='), null);
+  assert.equal(parseFilterString('colorCount:>=abc'), null);
   // colorCount:0 is legal (matches empty-palette entries) — token parses, filter is non-empty
   const f = parseFilterString('colorCount:0');
   assert.ok(f);
-  assert.equal(f.colorCount, 0);
+  assert.deepEqual(f.colorCount, { op: '=', n: 0 });
 });
 
-test('serializeFilter: round-trips colorCount alongside other tokens', () => {
+test('serializeFilter: round-trips bare colorCount form (= op emits bare for URL stability)', () => {
   const s = 'continent:Europe,color:red,color:white,color:blue,colorCount:3';
   const f = parseFilterString(s);
   assert.ok(f);
   assert.equal(serializeFilter(f), s);
+});
+
+test('serializeFilter: emits explicit colorCount:>=N form', () => {
+  const f = parseFilterString('continent:Africa,colorCount:>=4');
+  assert.ok(f);
+  assert.equal(serializeFilter(f), 'continent:Africa,colorCount:>=4');
 });
 
 test('filterFromLegacyCat: continent id maps to single-include filter', () => {
@@ -260,18 +280,29 @@ test('filterTitle: joins selected pills with the interpunct separator in GROUP_O
   assert.equal(filterTitle(f, idTranslate), 'Africa · orange · not cross');
 });
 
-test('pillLabel: colorCount renders as "only N colours" with the i18n fallback', () => {
+test('pillLabel: colorCount value "N" or "=N" renders as "only N colours"', () => {
   assert.equal(pillLabel('colorCount', '2', 'include', idTranslate), 'only 2 colours');
-  assert.equal(pillLabel('colorCount', '3', 'include', idTranslate), 'only 3 colours');
+  assert.equal(pillLabel('colorCount', '=3', 'include', idTranslate), 'only 3 colours');
   // Sign is ignored for colorCount — the primitive is scalar, "exclude" makes
   // no sense, so the renderer just returns the include form.
   assert.equal(pillLabel('colorCount', '3', 'exclude', idTranslate), 'only 3 colours');
 });
 
-test('filterTitle: appends "only N colours" when colorCount is set', () => {
+test('pillLabel: colorCount value ">=N" renders as "N or more colours"', () => {
+  assert.equal(pillLabel('colorCount', '>=4', 'include', idTranslate), '4 or more colours');
+  assert.equal(pillLabel('colorCount', '>=5', 'exclude', idTranslate), '5 or more colours');
+});
+
+test('filterTitle: appends "only N colours" when colorCount is set with op =', () => {
   const f = parseFilterString('continent:Europe,color:red,color:white,color:blue,colorCount:3');
   assert.ok(f);
   assert.equal(filterTitle(f, idTranslate), 'Europe · red · white · blue · only 3 colours');
+});
+
+test('filterTitle: appends "N or more colours" when colorCount is set with op >=', () => {
+  const f = parseFilterString('continent:Africa,colorCount:>=4');
+  assert.ok(f);
+  assert.equal(filterTitle(f, idTranslate), 'Africa · 4 or more colours');
 });
 
 test('filterTitle: colorCount with no other tokens renders as just the count phrase', () => {

@@ -476,8 +476,14 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const motif = cat.id.slice('hasMotif:'.length);
       assert.ok(MOTIFS_FOR_RANDOM.includes(motif), `motif ${motif} not in palette`);
     } else if (cat.id.startsWith('colorCount:')) {
-      const n = Number.parseInt(cat.id.slice('colorCount:'.length), 10);
-      assert.ok(COLOR_COUNTS_FOR_RANDOM.includes(n), `colorCount ${n} not in pool`);
+      const suffix = cat.id.slice('colorCount:'.length);
+      /** @type {'=' | '>='} */
+      let op = '=';
+      let nStr = suffix;
+      if (suffix.startsWith('>=')) { op = '>='; nStr = suffix.slice(2); }
+      const n = Number.parseInt(nStr, 10);
+      const inPool = COLOR_COUNTS_FOR_RANDOM.some(([o, m]) => o === op && m === n);
+      assert.ok(inPool, `colorCount ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -703,8 +709,8 @@ test('translateCategoryLabel returns the raw label for ids without a colon', () 
   assert.equal(translateCategoryLabel(noColon, t), 'whatever-label');
 });
 
-test('colorCount predicate matches countries whose full palette is exactly N', () => {
-  const cat = colorCount(2);
+test('colorCount(=, N) predicate matches countries whose full palette is exactly N', () => {
+  const cat = colorCount('=', 2);
   const twoColour = country({ code: 'jp', name: 'Japan', primaryColors: ['white', 'red'] });
   const threeColour = country({ code: 'pl2', name: 'X', primaryColors: ['white', 'red', 'blue'] });
   const twoPlusOneCOA = country({ code: 'mx', name: 'Mexico', primaryColors: ['green', 'red'], additionalColors: ['white'] });
@@ -715,33 +721,60 @@ test('colorCount predicate matches countries whose full palette is exactly N', (
   assert.equal(cat.predicate(twoPlusOneCOA), false);
 });
 
-test('colorCount carries exclusiveGroup so axesConflict rejects two different N values', () => {
+test('colorCount(>=, N) predicate matches countries with N or more colours', () => {
+  const cat = colorCount('>=', 4);
+  const three = country({ code: 'pl2', name: 'X', primaryColors: ['white', 'red', 'blue'] });
+  const four = country({ code: 'hr', name: 'X', primaryColors: ['white', 'red', 'blue'], additionalColors: ['yellow'] });
+  const five = country({ code: 'xx', name: 'X', primaryColors: ['white', 'red', 'blue', 'yellow', 'green'] });
+  assert.equal(cat.predicate(three), false);
+  assert.equal(cat.predicate(four), true);
+  assert.equal(cat.predicate(five), true);
+});
+
+test('colorCount carries exclusiveGroup so axesConflict rejects two different constraints', () => {
   const conflict = axesConflict(
-    [continent('Africa'), hasColor('red'), colorCount(2)],
-    [continent('Europe'), hasColor('blue'), colorCount(3)],
+    [continent('Africa'), hasColor('red'), colorCount('=', 2)],
+    [continent('Europe'), hasColor('blue'), colorCount('=', 3)],
   );
   assert.equal(conflict, true);
 });
 
-test('colorCount with the same N on both axes is not a conflict (axesConflict is about *different* values within the group)', () => {
+test('colorCount: exclusiveGroup catches an =N vs >=N cross-axis pair too', () => {
+  // (= 4) × (>= 4) overlap but have distinct ids, so axesConflict rejects them
+  // as different members of the same exclusiveGroup. Without this, the cell
+  // would be effectively "= 4" twice over (every =4 satisfies >=4).
   const conflict = axesConflict(
-    [colorCount(2), hasColor('red'), hasMotif('animal')],
-    [colorCount(2), hasColor('blue'), hasMotif('weapon')],
+    [colorCount('=', 4), hasColor('red'), hasMotif('animal')],
+    [colorCount('>=', 4), hasColor('blue'), hasMotif('weapon')],
+  );
+  assert.equal(conflict, true);
+});
+
+test('colorCount with the same id on both axes is not a conflict (axesConflict is about *different* values within the group)', () => {
+  const conflict = axesConflict(
+    [colorCount('=', 2), hasColor('red'), hasMotif('animal')],
+    [colorCount('=', 2), hasColor('blue'), hasMotif('weapon')],
   );
   assert.equal(conflict, false);
 });
 
-test('translateCategoryLabel uses the filter.onlyN.<n> key for colorCount categories', () => {
+test('translateCategoryLabel uses the filter.onlyN.<n> key for colorCount = N', () => {
   const t = fakeTranslate({ 'filter.onlyN.2': 'tylko 2 kolory' });
-  assert.equal(translateCategoryLabel(colorCount(2), t), 'tylko 2 kolory');
+  assert.equal(translateCategoryLabel(colorCount('=', 2), t), 'tylko 2 kolory');
 });
 
-test('translateCategoryLabel falls back to the baked English label when the onlyN key is missing', () => {
+test('translateCategoryLabel uses the filter.atLeastN.<n> key for colorCount >= N', () => {
+  const t = fakeTranslate({ 'filter.atLeastN.4': '4 lub więcej kolorów' });
+  assert.equal(translateCategoryLabel(colorCount('>=', 4), t), '4 lub więcej kolorów');
+});
+
+test('translateCategoryLabel falls back to the baked English label when the colorCount key is missing', () => {
   const t = fakeTranslate({});
-  assert.equal(translateCategoryLabel(colorCount(3), t), 'only 3 colours');
+  assert.equal(translateCategoryLabel(colorCount('=', 3), t), 'only 3 colours');
+  assert.equal(translateCategoryLabel(colorCount('>=', 4), t), '4 or more colours');
 });
 
-test('categoryFromId round-trips a colorCount id', () => {
+test('categoryFromId round-trips a bare colorCount id as op =', () => {
   const cat = categoryFromId('colorCount:2');
   assert.ok(cat);
   assert.equal(cat.id, 'colorCount:2');
@@ -753,9 +786,23 @@ test('categoryFromId round-trips a colorCount id', () => {
   assert.equal(cat.predicate(fr), false);
 });
 
-test('categoryFromId returns null for a non-integer colorCount id', () => {
+test('categoryFromId round-trips a colorCount:>=N id', () => {
+  const cat = categoryFromId('colorCount:>=4');
+  assert.ok(cat);
+  assert.equal(cat.id, 'colorCount:>=4');
+  assert.equal(cat.label, '4 or more colours');
+  assert.equal(cat.exclusiveGroup, 'colorCount');
+  const three = country({ code: 'pl2', name: 'X', primaryColors: ['white', 'red', 'blue'] });
+  const four = country({ code: 'hr', name: 'X', primaryColors: ['w','b','r'], additionalColors: ['y'] });
+  assert.equal(cat.predicate(three), false);
+  assert.equal(cat.predicate(four), true);
+});
+
+test('categoryFromId returns null for a non-integer or malformed colorCount id', () => {
   assert.equal(categoryFromId('colorCount:abc'), null);
   assert.equal(categoryFromId('colorCount:'), null);
+  assert.equal(categoryFromId('colorCount:>='), null);
+  assert.equal(categoryFromId('colorCount:>=abc'), null);
 });
 
 test('axesConflict returns false for different exclusiveGroups (continent vs statehood)', () => {
@@ -1210,15 +1257,37 @@ function syntheticTaggedCountries() {
   // of every motif axis, tripping axesImpliedPair on almost every
   // generator attempt once that guard was added.
   const motifPool = MOTIFS_FOR_RANDOM.filter((m) => m !== 'eu-member');
+  // Each (continent × colour × n) triple becomes one country. n controls
+  // palette size — n=0 keeps the base 1-colour shape, n=1/n=2 layer in
+  // distinct neighbour colours so the country has 2 / 3 colours total.
+  // That gives colorCount('=',1/2/3) Categories ≥7 candidates per
+  // continent, enough for `minPerCell` to clear in any pairing.
   for (const cont of CONTINENTS_FOR_RANDOM) {
     for (const color of COLORS_FOR_RANDOM) {
       for (let n = 0; n < 3; n++) {
         const motif = motifPool[codeCounter % motifPool.length];
+        const extras = COLORS_FOR_RANDOM.filter((c) => c !== color).slice(0, n);
         out.push(country({
           code: `c${codeCounter++}`,
           name: `${cont}-${color}-${n}`,
           continent: cont,
-          primaryColors: [color],
+          primaryColors: [color, ...extras],
+          motifs: [motif],
+        }));
+      }
+    }
+    // Extra ladder per continent so the `=4` and `>=4` colour-count
+    // Categories have candidates everywhere. Two of each variant keeps
+    // every (continent × colorCount≥4) cell at the minPerCell=2 floor.
+    for (const target of [4, 5]) {
+      for (let i = 0; i < 2; i++) {
+        const motif = motifPool[codeCounter % motifPool.length];
+        const palette = COLORS_FOR_RANDOM.slice(i, i + target);
+        out.push(country({
+          code: `c${codeCounter++}`,
+          name: `${cont}-multi${target}-${i}`,
+          continent: cont,
+          primaryColors: palette,
           motifs: [motif],
         }));
       }

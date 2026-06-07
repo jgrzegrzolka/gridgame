@@ -174,7 +174,7 @@ test('matchesFilters: a flag with no additionalColors matches the same set under
   assert.equal(matchesFilters(italy, filters({ color: { include: ['blue'] } })), false);
 });
 
-test('matchesFilters: colorCount:N matches countries whose total palette size equals N', () => {
+test('matchesFilters: colorCount {op:=, n:3} matches countries whose total palette size equals 3', () => {
   // Slovakia-shape: 3 colours total, all primary (no additional).
   const sk = country({ code: 'sk', primaryColors: ['white','blue','red'], additionalColors: [] });
   // Croatia-shape: 3 primary + 1 additional = 4 total.
@@ -182,17 +182,28 @@ test('matchesFilters: colorCount:N matches countries whose total palette size eq
   // Filter "exactly 3 colours" picks sk, rejects hr — regardless of colorField,
   // because colorCount always checks the full union.
   const f = emptyFilters();
-  f.colorCount = 3;
+  f.colorCount = { op: '=', n: 3 };
   assert.equal(matchesFilters(sk, f), true);
   assert.equal(matchesFilters(hr, f), false);
   assert.equal(matchesFilters(sk, f, { colorField: 'primaryColors' }), true);
   assert.equal(matchesFilters(hr, f, { colorField: 'primaryColors' }), false);
 });
 
-test('matchesFilters: colorCount = 0 picks only empty-palette countries (none in real data, but the predicate must work)', () => {
+test('matchesFilters: colorCount {op:>=, n:4} matches countries with 4 or more colours', () => {
+  const three = country({ code: 'sk', primaryColors: ['white','blue','red'], additionalColors: [] });
+  const four = country({ code: 'hr', primaryColors: ['white','blue','red'], additionalColors: ['yellow'] });
+  const five = country({ code: 'xx', primaryColors: ['white','blue','red','yellow','green'], additionalColors: [] });
+  const f = emptyFilters();
+  f.colorCount = { op: '>=', n: 4 };
+  assert.equal(matchesFilters(three, f), false);
+  assert.equal(matchesFilters(four, f), true);
+  assert.equal(matchesFilters(five, f), true);
+});
+
+test('matchesFilters: colorCount {op:=, n:0} picks only empty-palette countries (none in real data, but the predicate must work)', () => {
   const c = country({ code: 'xx', primaryColors: [], additionalColors: [] });
   const f = emptyFilters();
-  f.colorCount = 0;
+  f.colorCount = { op: '=', n: 0 };
   assert.equal(matchesFilters(c, f), true);
   const nonEmpty = country({ code: 'yy', primaryColors: ['red'], additionalColors: [] });
   assert.equal(matchesFilters(nonEmpty, f), false);
@@ -202,9 +213,9 @@ test('matchesFilters: colorCount combines with color includes — "only red+whit
   const sk = country({ code: 'sk', primaryColors: ['white','blue','red'], additionalColors: [] });
   const hr = country({ code: 'hr', primaryColors: ['white','blue','red'], additionalColors: ['yellow'] });
   // Same flags as before, but now testing the realistic puzzle pattern:
-  // include {red,white,blue} AND colorCount:3. sk passes, hr fails on count.
+  // include {red,white,blue} AND colorCount {op:=, n:3}. sk passes, hr fails on count.
   const f = filters({ color: { include: ['red','white','blue'] } });
-  f.colorCount = 3;
+  f.colorCount = { op: '=', n: 3 };
   assert.equal(matchesFilters(sk, f), true);
   assert.equal(matchesFilters(hr, f), false);
 });
@@ -233,14 +244,14 @@ test('createColorCountLock: starts off — isOn false, colorCount untouched', ()
   assert.equal(f.colorCount, null);
 });
 
-test('createColorCountLock: toggle() flips on and binds colorCount to include set size', () => {
+test('createColorCountLock: toggle() flips on and binds colorCount to include set size with op =', () => {
   const f = emptyFilters();
   f.color.include.add('red');
   f.color.include.add('white');
   const lock = createColorCountLock(f);
   assert.equal(lock.toggle(), true);
   assert.equal(lock.isOn, true);
-  assert.equal(f.colorCount, 2);
+  assert.deepEqual(f.colorCount, { op: '=', n: 2 });
 });
 
 test('createColorCountLock: second toggle() flips off and clears colorCount', () => {
@@ -258,15 +269,15 @@ test('createColorCountLock: sync() while on tracks include-set growth and shrink
   f.color.include.add('red');
   const lock = createColorCountLock(f);
   lock.toggle();
-  assert.equal(f.colorCount, 1);
+  assert.deepEqual(f.colorCount, { op: '=', n: 1 });
   // page added another colour pill — sync picks up the new size
   f.color.include.add('white');
   lock.sync();
-  assert.equal(f.colorCount, 2);
+  assert.deepEqual(f.colorCount, { op: '=', n: 2 });
   // and shrinks back when a pill is removed
   f.color.include.delete('red');
   lock.sync();
-  assert.equal(f.colorCount, 1);
+  assert.deepEqual(f.colorCount, { op: '=', n: 1 });
 });
 
 test('createColorCountLock: sync() while off is a no-op — colorCount stays null', () => {
@@ -283,7 +294,7 @@ test('createColorCountLock: reset() turns off and clears, regardless of prior st
   f.color.include.add('red');
   const lock = createColorCountLock(f);
   lock.toggle();
-  assert.equal(f.colorCount, 1);
+  assert.deepEqual(f.colorCount, { op: '=', n: 1 });
   lock.reset();
   assert.equal(lock.isOn, false);
   assert.equal(f.colorCount, null);
