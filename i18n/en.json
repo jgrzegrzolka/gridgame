@@ -1,9 +1,9 @@
 {
-  "back": "Home",
   "coffee": "Buy me a coffee",
   "menu": {
     "open": "Open menu",
     "close": "Close menu",
+    "home": "Home",
     "flagsData": "Browse flags",
     "random": "Random",
     "yourStats": "Your stats",
@@ -52,8 +52,7 @@
     "missed": "Missed:",
     "pickAnotherCategory": "Pick another category",
     "play": "Play",
-    "clear": "Clear",
-    "flagsMatch": "{n} flags",
+    "clear": "Clear all",
     "notPrefix": "not ",
     "noOtherColors": "no other colours",
     "sections": {

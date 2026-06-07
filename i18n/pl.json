@@ -1,9 +1,9 @@
 {
-  "back": "Strona główna",
   "coffee": "Postaw mi kawę",
   "menu": {
     "open": "Otwórz menu",
     "close": "Zamknij menu",
+    "home": "Strona główna",
     "flagsData": "Przeglądaj flagi",
     "random": "Losowa",
     "yourStats": "Twoje statystyki",
@@ -52,8 +52,7 @@
     "missed": "Pominięte:",
     "pickAnotherCategory": "Wybierz inną kategorię",
     "play": "Zagraj",
-    "clear": "Wyczyść",
-    "flagsMatch": "{n} flag",
+    "clear": "Wyczyść wszystko",
     "notPrefix": "bez ",
     "noOtherColors": "bez innych kolorów",
     "sections": {

@@ -92,20 +92,24 @@ export function bootDaily() {
       const all = withLocalizedAliases(flagsGamePool(raw, false));
 
       if (isBacklog) {
-        // Backlog has its own dynamic "Play again" prepend below; hide the
-        // static one from index.html so we don't render two side-by-side.
-        const staticPlayAgain = document.getElementById('play-again');
-        if (staticPlayAgain) staticPlayAgain.hidden = true;
         numEl.textContent = `#${backlogN} · backlog`;
         // Tab title carries the puzzle number so multiple ?backlog=N tabs
         // are tellable apart at a glance during catalog review. Set after
         // bootI18n's data-i18n pass so this override is final.
         document.title = `Yet Another Quiz #${backlogN}`;
-        // Swap both "Previous puzzles" links to point back at the
-        // backlog index, so giving up / finishing a backlog play lands
-        // you back on the staged list rather than the live archive.
+        // Rewrite the existing result-links in place:
+        //   - #play-again → ./?backlog=N (no replay flag needed; backlog
+        //     plays already skip saveScore unconditionally)
+        //   - both "Previous puzzles" links → backlog.html so giving up
+        //     or finishing lands on the staged list, not the live archive
         // data-i18n is removed so a lang-toggle reload re-runs bootDaily
         // and reapplies these mutations from scratch.
+        const playAgainLink = document.getElementById('play-again');
+        if (playAgainLink) {
+          playAgainLink.setAttribute('href', `./?backlog=${backlogN}`);
+          playAgainLink.textContent = 'Play again';
+          playAgainLink.removeAttribute('data-i18n');
+        }
         for (const id of ['prev-puzzles-link', 'result-prev-puzzles-link']) {
           const link = document.getElementById(id);
           if (link) {
@@ -113,18 +117,6 @@ export function bootDaily() {
             link.textContent = 'Back to backlog';
             link.removeAttribute('data-i18n');
           }
-        }
-        // Backlog's own "Play again" link. Live daily uses the static
-        // #play-again in index.html (wired to ?n=N&replay=1) — backlog
-        // keeps this dynamic prepend because its href shape is
-        // different (?backlog=N) and it doesn't need the replay flag
-        // (backlog plays already skip saveScore unconditionally).
-        const resultLinks = document.querySelector('.result-links');
-        if (resultLinks) {
-          const playAgain = document.createElement('a');
-          playAgain.href = `./?backlog=${backlogN}`;
-          playAgain.textContent = 'Play again';
-          resultLinks.prepend(playAgain, ' · ');
         }
         const entry = findPuzzle(catalog, backlogN);
         if (!entry) {

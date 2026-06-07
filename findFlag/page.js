@@ -266,12 +266,11 @@ export function bootFindFlag() {
       sectionsEl.appendChild(secEl);
     }
 
-    const playBar = document.getElementById('find-play-bar');
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
     const clearBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-clear'));
-    const countEl = document.getElementById('find-play-count');
     const randomBtn = document.getElementById('find-random');
-    if (playBar) playBar.hidden = false;
+
+    const playLabel = () => t('findFlag.play', 'Play');
 
     function updateBar() {
       let selCount = 0;
@@ -280,16 +279,18 @@ export function bootFindFlag() {
       }
       if (filter.colorCount !== null) selCount++;
       if (selCount === 0) {
-        countEl.textContent = '';
+        // Nothing selected — bare "Play" (no zero-count to read as a sad
+        // empty result; the user hasn't picked anything yet).
+        playBtn.textContent = playLabel();
         playBtn.disabled = true;
         clearBtn.hidden = true;
         return;
       }
       const matchCount = all.filter((c) => matchesFilters(c, filter)).length;
-      countEl.textContent = t('findFlag.flagsMatch', '{n} flags').replace('{n}', String(matchCount));
-      // Min playable size is 1 — a single-flag mix is allowed (trivial
-      // but the user explicitly chose it). 0 disables Play so the user
-      // adjusts the selection rather than starting an unwinnable game.
+      // Once anything is selected, show the live match count IN the
+      // button — "Play (83)" or "Play (0)". The 0 case stays informative:
+      // "your filter matches nothing, adjust it." Min playable size is 1.
+      playBtn.textContent = `${playLabel()} (${matchCount})`;
       playBtn.disabled = matchCount < 1;
       clearBtn.hidden = false;
     }

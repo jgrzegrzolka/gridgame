@@ -73,40 +73,10 @@ body::before {
   background: #fafafa;
   z-index: 10;
 }
-.back {
-  position: fixed;
-  top: 12px;
-  right: calc(64px + var(--chrome-x-offset));
-  width: 44px;
-  height: 44px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  color: var(--link-color);
-  text-decoration: none;
-  font-size: 22px;
-  line-height: 1;
-  z-index: 25;
-}
-.back:hover {
-  background: #f0f0f0;
-}
-.back[aria-disabled="true"] {
-  color: #ccc;
-  cursor: default;
-  pointer-events: none;
-}
-.back[aria-disabled="true"]:hover {
-  background: #fff;
-}
 .lang-toggle {
   position: fixed;
   top: 12px;
-  right: calc(220px + var(--chrome-x-offset));
+  right: calc(168px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   background-color: #fff;
@@ -131,7 +101,7 @@ body::before {
 .coffee {
   position: fixed;
   top: 12px;
-  right: calc(168px + var(--chrome-x-offset));
+  right: calc(116px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -153,7 +123,7 @@ body::before {
 .flags-link {
   position: fixed;
   top: 12px;
-  right: calc(116px + var(--chrome-x-offset));
+  right: calc(64px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -291,6 +261,15 @@ body::before {
 .give-up-row {
   margin-top: 16px;
   text-align: center;
+}
+/* `·` separator that hides itself when the action right before it is
+ * hidden. Used in the online ticTacToe give-up-row, where `#give-up`
+ * starts `hidden` until both players are connected — without this rule
+ * the row would render as " · Home" with a leading dot. The literal `·`
+ * text nodes elsewhere don't need this because their neighbours are
+ * always visible. */
+.give-up[hidden] + .give-up-sep {
+  display: none;
 }
 
 /* Scope toggle — iOS-style on/off switch with a text label. The real
