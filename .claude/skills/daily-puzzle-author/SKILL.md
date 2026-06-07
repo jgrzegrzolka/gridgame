@@ -71,9 +71,11 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
    *Why soft:* a few generous puzzles deserve an exception (e.g. a famous-country-only puzzle that includes one nm=4 country).
 
 9. **Answer-set size by N.**
-   - #1–50: 2–25 flags
-   - Past #50: 1–25 flags
+   - #1–50: 2–30 flags
+   - Past #50: 1–30 flags
    - 1-flag puzzles allowed only past #50.
+
+   *Why 30 (was 25):* membership-shaped puzzles ("all EU members", "all Schengen", "all G20") naturally land in the high 20s. Capping at 25 forced an arbitrary "which 2 do you drop?" question for those puzzles. 30 keeps the autocomplete UX manageable while accepting the common membership sizes whole. NATO (32) and other rare large groups still need to be hand-judged.
 
 10. **No small-property compounds (puzzles #1–100).** If any filter property has under 15 sovereign matches under `primaryColors`, use it solo. Current small properties:
    - `motif:weapon` — 13
