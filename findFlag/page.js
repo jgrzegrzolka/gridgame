@@ -23,6 +23,25 @@ import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.j
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 
+/**
+ * Options the Random button (and the result page's "Random next" link)
+ * pass to pickRandomMix. Keeps the modifier probabilities one knob:
+ *   - onlyColorsProbability: 0.25 — when colour pills end up in the
+ *     mix, attach the "no other colours" modifier ~1 in 4 times. Makes
+ *     "find every flag whose colours are exactly red + white" mixes
+ *     reachable from Random, not just from manual chooser play.
+ *   - colorCountProbability: 0.10 — independently, attach a random
+ *     colorCount picker constraint (any of =/>=/<= × 2..5). Less
+ *     frequent because it's a less natural puzzle shape than the
+ *     "only these colours" framing.
+ * Tune these here; flags/findFlag.js's pickRandomMix is a pure
+ * generator and stays opt-in.
+ */
+const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
+  onlyColorsProbability: 0.25,
+  colorCountProbability: 0.10,
+});
+
 export function bootFindFlag() {
   const chooserEl = document.getElementById('chooser');
   const gameEl = document.getElementById('game');
@@ -303,7 +322,7 @@ export function bootFindFlag() {
         // (group, value) shape, and decoupling here keeps the helper
         // testable against pure data.
         const pool = allPills.map(({ group, value }) => ({ group, value }));
-        const f = pickRandomMix(pool, all);
+        const f = pickRandomMix(pool, all, RANDOM_MIX_OPTIONS);
         const params = new URLSearchParams({ f: serializeFilter(f) });
         window.location.search = `?${params.toString()}`;
       });
@@ -514,7 +533,7 @@ export function bootFindFlag() {
           ...ALL_MOTIFS.filter((v) => all.some((c) => (c.motifs ?? []).includes(v)))
             .map((v) => ({ group: /** @type {'motif'} */ ('motif'), value: v })),
         ];
-        const f = pickRandomMix(pool, all);
+        const f = pickRandomMix(pool, all, RANDOM_MIX_OPTIONS);
         const params = new URLSearchParams({ f: serializeFilter(f) });
         window.location.search = `?${params.toString()}`;
       };

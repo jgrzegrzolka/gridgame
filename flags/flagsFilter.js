@@ -27,6 +27,24 @@ import { sovereigntyOf } from './group.js';
  */
 
 /**
+ * Valid colorCount constraint shapes — the same triple of operators
+ * and N values surfaced by the colorCount picker UI in findFlag and
+ * flagsdata. Hosting these here (next to the ColorCountConstraint
+ * typedef) keeps the random-mix generator in `findFlag.js` and the
+ * picker widget in `colorCountPicker.js` from drifting on what's
+ * valid; both import from this one source of truth.
+ *
+ * If new ops or N values are added later (e.g. ">7"), update the
+ * picker UI, the random-mix coverage tests, and the findflag-random-
+ * coverage skill at .claude/skills/.
+ *
+ * @type {Array<'=' | '>=' | '<='>}
+ */
+export const COLOR_COUNT_OPS = ['=', '>=', '<='];
+/** @type {number[]} */
+export const COLOR_COUNT_NS = [2, 3, 4, 5];
+
+/**
  * Build an empty Filters object so callers (page glue + tests) agree
  * on the shape without each hand-rolling its own.
  *

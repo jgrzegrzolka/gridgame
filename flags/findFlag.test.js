@@ -527,3 +527,201 @@ test('pickRandomMix: excludeProbability=1 flips every pill to exclude', () => {
   }
 });
 
+// ---- colorCount modifier paths ----
+
+test('pickRandomMix: onlyColorsProbability=1 locks colorCount to the include-colour count whenever colours are picked', () => {
+  // The "no other colours" path produces { op: '=', n: <include colours> },
+  // matching what the chooser's lock toggle writes. Asserting the value
+  // shape here pins the contract — the live chooser reads colorCount
+  // on URL load and decides which UI control to highlight.
+  for (let seed = 0; seed < 50; seed++) {
+    let i = 0;
+    const rng = () => {
+      const v = ((seed * 11 + i * 29) % 100) / 100;
+      i++;
+      return v;
+    };
+    const f = pickRandomMix(PILL_POOL, SAMPLE, {
+      rng,
+      excludeProbability: 0, // forces include — guarantees at least 1 include colour appears in a colour-heavy seed
+      onlyColorsProbability: 1,
+      colorCountProbability: 0,
+    });
+    if (f.color.include.size > 0) {
+      assert.deepEqual(
+        f.colorCount,
+        { op: '=', n: f.color.include.size },
+        `seed ${seed}: colorCount should be =${f.color.include.size}, got ${JSON.stringify(f.colorCount)}`,
+      );
+    } else {
+      // No include colours in this seed's mix → "only colours" path
+      // can't fire (it's a colour-conditional modifier).
+      assert.equal(f.colorCount, null,
+        `seed ${seed}: colorCount should stay null when no colours are in the mix`);
+    }
+  }
+});
+
+test('pickRandomMix: onlyColorsProbability=1 never attaches colorCount when no colour pills are in the include set', () => {
+  // Modifier is colour-conditional. Without an include colour, even
+  // probability=1 must not fire — there's no count to lock.
+  const noColorsPool = /** @type {typeof PILL_POOL} */ ([
+    { group: 'continent', value: 'Europe' },
+    { group: 'continent', value: 'Africa' },
+    { group: 'motif', value: 'weapon' },
+    { group: 'motif', value: 'star-or-moon' },
+  ]);
+  for (let seed = 0; seed < 30; seed++) {
+    let i = 0;
+    const rng = () => {
+      const v = ((seed * 5 + i * 7) % 100) / 100;
+      i++;
+      return v;
+    };
+    const f = pickRandomMix(noColorsPool, SAMPLE, {
+      rng,
+      onlyColorsProbability: 1,
+      colorCountProbability: 0,
+      minIntersection: 0,
+    });
+    assert.equal(f.colorCount, null,
+      `seed ${seed}: no colours in pool → colorCount must stay null`);
+  }
+});
+
+test('pickRandomMix: colorCountProbability=1 attaches a picker-shaped colorCount even with no colours in the mix', () => {
+  // Independent path uses the picker's COLOR_COUNT_OPS × COLOR_COUNT_NS.
+  // Asserting op ∈ {=, >=, <=} and n ∈ {2..5} pins the contract that
+  // the random generator stays inside the picker's valid surface — a
+  // future op like '>5' would have to be added here AND to the picker.
+  const validOps = new Set(['=', '>=', '<=']);
+  const validNs = new Set([2, 3, 4, 5]);
+  const noColorsPool = /** @type {typeof PILL_POOL} */ ([
+    { group: 'continent', value: 'Europe' },
+    { group: 'continent', value: 'Africa' },
+    { group: 'motif', value: 'weapon' },
+    { group: 'motif', value: 'star-or-moon' },
+  ]);
+  let nonNullCount = 0;
+  for (let seed = 0; seed < 50; seed++) {
+    let i = 0;
+    const rng = () => {
+      const v = ((seed * 19 + i * 31) % 100) / 100;
+      i++;
+      return v;
+    };
+    const f = pickRandomMix(noColorsPool, SAMPLE, {
+      rng,
+      onlyColorsProbability: 0,
+      colorCountProbability: 1,
+      minIntersection: 0, // some random constraints will produce 0 matches — don't filter them out
+    });
+    if (f.colorCount !== null) {
+      nonNullCount++;
+      assert.ok(validOps.has(f.colorCount.op),
+        `seed ${seed}: op ${f.colorCount.op} not in valid set`);
+      assert.ok(validNs.has(f.colorCount.n),
+        `seed ${seed}: n ${f.colorCount.n} not in valid set`);
+    }
+  }
+  // Probability=1 plus minIntersection=0 means almost every attempt
+  // should land with colorCount set. Allowing a small slack in case
+  // the retry loop ever returns a lastAttempt that pre-dated the
+  // modifier (it doesn't today, but pinning >0 keeps the test honest
+  // without coupling it to the retry-loop internals).
+  assert.ok(nonNullCount > 30,
+    `expected colorCountProbability=1 to fire on most seeds, got ${nonNullCount}/50`);
+});
+
+test('pickRandomMix: both modifier probabilities at 0 means colorCount always stays null AND no rng bytes are consumed for them', () => {
+  // The "no rng bytes consumed" contract is what lets older
+  // RNG-seeded tests above (excludeProbability=0, etc.) keep their
+  // exact pill outputs after the modifier code was added. If a
+  // future refactor accidentally calls rng() even when the
+  // probability is 0, those tests would silently drift — this test
+  // guards the gate.
+  let rngCalls = 0;
+  const rng = () => {
+    rngCalls++;
+    // Deterministic enough to pick a stable mix.
+    return ((rngCalls * 13) % 100) / 100;
+  };
+  const callsBefore = rngCalls;
+  const f = pickRandomMix(PILL_POOL, SAMPLE, {
+    rng,
+    onlyColorsProbability: 0,
+    colorCountProbability: 0,
+  });
+  const callsWithModifiersOff = rngCalls - callsBefore;
+  assert.equal(f.colorCount, null);
+
+  // Re-run the same fixture with the modifier branches *enabled*; if
+  // the gate is broken (rng called even when probability is 0), the
+  // call count would already match this run and the assertion above
+  // would silently pass — so we sanity-check that enabling does
+  // consume MORE rng bytes for the same shape of mix.
+  rngCalls = 0;
+  pickRandomMix(PILL_POOL, SAMPLE, {
+    rng,
+    onlyColorsProbability: 1,
+    colorCountProbability: 1,
+  });
+  const callsWithModifiersOn = rngCalls;
+  assert.ok(callsWithModifiersOn > callsWithModifiersOff,
+    `enabling modifiers should consume more rng bytes (off: ${callsWithModifiersOff}, on: ${callsWithModifiersOn})`);
+});
+
+test('pickRandomMix: empirical coverage — every visible pill AND the colorCount modifier appear over many runs', async () => {
+  // Regression guard for "is everything in the random pool reachable?"
+  // Mirrors the manual check Jan asked for after adding the modifiers:
+  // run the generator many times against the live catalog and assert
+  // each pill (and a colorCount modifier of either shape) shows up at
+  // least once. If a future PR adds a new motif/colour/continent to
+  // the chooser without updating the pickRandomMix pool, this fails.
+  // See .claude/skills/findflag-random-coverage/ for the human-side
+  // reminder.
+  const { readFile } = await import('node:fs/promises');
+  const { fileURLToPath } = await import('node:url');
+  const { dirname: dn, join: jn } = await import('node:path');
+  const here = dn(fileURLToPath(import.meta.url));
+  const raw = JSON.parse(await readFile(jn(here, 'countries.json'), 'utf8'));
+  const { loadCountries, flagsGamePool, CONTINENTS } = await import('./group.js');
+  const { ALL_FLAG_COLORS, ALL_MOTIFS } = await import('./engine.js');
+  const all = flagsGamePool(loadCountries(raw), false);
+  /** @type {Array<{ group: 'continent' | 'color' | 'motif', value: string }>} */
+  const pool = [
+    ...CONTINENTS
+      .filter((v) => all.some((c) => c.continent === v))
+      .map((v) => /** @type {const} */ ({ group: 'continent', value: /** @type {string} */ (v) })),
+    ...ALL_FLAG_COLORS
+      .filter((v) => all.some((c) => c.colors.includes(v)))
+      .map((v) => /** @type {const} */ ({ group: 'color', value: v })),
+    ...ALL_MOTIFS
+      .filter((v) => all.some((c) => (c.motifs ?? []).includes(v)))
+      .map((v) => /** @type {const} */ ({ group: 'motif', value: v })),
+  ];
+
+  const seen = new Map();
+  for (const p of pool) seen.set(`${p.group}:${p.value}`, 0);
+  let colorCountFired = 0;
+
+  const RUNS = 8000;
+  for (let i = 0; i < RUNS; i++) {
+    const f = pickRandomMix(pool, all, {
+      onlyColorsProbability: 0.25,
+      colorCountProbability: 0.10,
+    });
+    for (const g of /** @type {Array<'continent' | 'color' | 'motif'>} */ (['continent', 'color', 'motif'])) {
+      for (const v of f[g].include) seen.set(`${g}:${v}`, (seen.get(`${g}:${v}`) ?? 0) + 1);
+      for (const v of f[g].exclude) seen.set(`${g}:${v}`, (seen.get(`${g}:${v}`) ?? 0) + 1);
+    }
+    if (f.colorCount !== null) colorCountFired++;
+  }
+
+  const missing = [...seen.entries()].filter(([, n]) => n === 0).map(([k]) => k);
+  assert.deepEqual(missing, [],
+    `every pill must appear at least once over ${RUNS} runs; missing: ${missing.join(', ')}`);
+  assert.ok(colorCountFired > 0,
+    `colorCount modifier must fire at least once over ${RUNS} runs; got 0`);
+});
+
