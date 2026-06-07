@@ -91,6 +91,24 @@ export function dailyNFromUrl(search, fallbackN) {
 }
 
 /**
+ * Parse `?replay=1` out of a URL search string. Any other value (or no
+ * value at all) means "not a replay". Lives next to `dailyNFromUrl`
+ * because both are pure URL-shape helpers used by daily/page.js.
+ *
+ * Replay mode is a read-only flag on the live daily page: it lets the
+ * player retry a finished puzzle without overwriting the archive
+ * score. The page wires this into two things — skipping the
+ * "complete record → jump to result" shortcut, and skipping
+ * `saveScore` in `finish()`.
+ *
+ * @param {string} search
+ * @returns {boolean}
+ */
+export function isReplayFromUrl(search) {
+  return new URLSearchParams(search).get('replay') === '1';
+}
+
+/**
  * Discriminated union: success carries the entry, parsed Filters, and
  * the resolved Country[] for the game UI; failure carries a reason tag
  * the page maps to a localised message.
