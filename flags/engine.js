@@ -433,13 +433,24 @@ export function findPuzzleSolution(puzzle, countries) {
  * the player has steered the puzzle into an infeasible state — callers
  * must handle that.
  *
+ * Bounded by `maxBacktracks`. The solver is plain DFS with MRV ordering
+ * and no constraint propagation, so adversarial candidate orderings can
+ * still trigger long search trees on tight pools (the synthetic
+ * denseSquarePool tests hit this). The cap turns "could hang for
+ * minutes" into "returns null after a fixed amount of work" — give-up
+ * callers already fall back to a greedy reveal on null, so this never
+ * loses the player the reveal, just trades a slow exact answer for a
+ * fast best-effort one. Default headroom is far above what any healthy
+ * production puzzle needs.
+ *
  * @param {Puzzle} puzzle
  * @param {(Country | null)[][][][]} preFilled 3×3×3×3 of claimed countries (or null when empty).
  * @param {Country[]} countries
  * @param {() => number} [rng]
+ * @param {number} [maxBacktracks] Cap on backtrack-tree nodes visited; returns null if exceeded.
  * @returns {Country[][][][] | null}
  */
-export function findUltimateAssignment(puzzle, preFilled, countries, rng = Math.random) {
+export function findUltimateAssignment(puzzle, preFilled, countries, rng = Math.random, maxBacktracks = 100_000) {
   /** @type {(Country | null)[][][][]} */
   const result = preFilled.map((bigRow) =>
     bigRow.map((board) => board.map((row) => row.slice())),
@@ -482,8 +493,10 @@ export function findUltimateAssignment(puzzle, preFilled, countries, rng = Math.
   }
   empties.sort((a, b) => a.candidates.length - b.candidates.length);
 
+  let steps = 0;
   /** @param {number} i */
   function backtrack(i) {
+    if (++steps > maxBacktracks) return false;
     if (i === empties.length) return true;
     const { br, bc, r, c, candidates } = empties[i];
     for (const co of candidates) {

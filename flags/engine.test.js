@@ -1108,6 +1108,23 @@ test('findUltimateAssignment: returns null when preFilled has burned the candida
   }
 });
 
+test('findUltimateAssignment: returns null when maxBacktracks is exceeded instead of running unbounded', () => {
+  // The solver has no constraint propagation, so adversarial candidate
+  // orderings can balloon into long search trees. The cap defends the
+  // give-up reveal path: instead of hanging the UI, the solver returns
+  // null and the caller falls back to a greedy fill. Pin the contract
+  // by passing a 1-step budget against an otherwise-solvable puzzle —
+  // the solver can't possibly finish in 1 step, so it must return null.
+  const countries = denseSquarePool(
+    ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
+    COLORS_FOR_RANDOM,
+    10,
+  );
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 500 });
+  const out = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(7), 1);
+  assert.equal(out, null, 'cap=1 must abandon the search and return null');
+});
+
 // TODO: a real-countries.json regression test for findUltimateAssignment
 // belongs here, but the only obvious shape (generate a few random
 // puzzles and assert 81 distinct outputs) is dominated by puzzle
