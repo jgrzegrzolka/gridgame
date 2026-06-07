@@ -153,7 +153,8 @@
     "weapon": "weapon",
     "star-or-moon": "star or moon",
     "cross": "cross",
-    "union-jack": "Union Jack"
+    "union-jack": "Union Jack",
+    "eu-member": "EU member"
   },
   "filter": {
     "onlyN": {

@@ -500,12 +500,14 @@ test('COLORS_FOR_RANDOM is the 7-colour canonical palette', () => {
   );
 });
 
-test('MOTIFS_FOR_RANDOM is the puzzle-feasible motif subset', () => {
-  // Every (continent × motif) pair drawn from this list must admit at
-  // least one country (see countries.test.js). Motifs that no continent
-  // can supply (e.g. union-jack — no Asian flag carries one) live in
-  // ALL_MOTIFS but are excluded from puzzle generation.
-  assert.deepEqual(MOTIFS_FOR_RANDOM, ['animal', 'coat-of-arms', 'weapon', 'star-or-moon', 'cross']);
+test('MOTIFS_FOR_RANDOM is the random-puzzle pool', () => {
+  // The pool no longer requires full (continent × motif) coverage —
+  // `generateRandomPuzzle` retries when a proposed puzzle has an
+  // unfillable cell, so continent-narrow motifs like `eu-member`
+  // (Europe-only) are allowed. ALL_MOTIFS still carries extras that
+  // aren't worth pairing randomly even with retries — currently just
+  // `union-jack` (narrow coverage + no compelling puzzle hook).
+  assert.deepEqual(MOTIFS_FOR_RANDOM, ['animal', 'coat-of-arms', 'weapon', 'star-or-moon', 'cross', 'eu-member']);
 });
 
 test('ALL_MOTIFS is a superset of MOTIFS_FOR_RANDOM and includes union-jack', () => {

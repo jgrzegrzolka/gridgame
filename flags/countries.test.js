@@ -196,6 +196,25 @@ test('known animal/coat-of-arms flags keep their expected motif tags', () => {
   assert.deepEqual(offenders, [], offenders.join('; '));
 });
 
+// EU member roll-call as of 2026 — 27 countries. The motif is metadata
+// rather than a visual element on the flag (cf. cross / weapon / animal),
+// but it earns its keep as a puzzle hook: "European Union member states"
+// is one of the most common ways people group flags. Pin both the count
+// and the exact code set so a bulk re-tag of motifs can't silently
+// add Croatia twice or drop Cyprus.
+const EU_MEMBER_CODES = [
+  'at', 'be', 'bg', 'hr', 'cy', 'cz', 'dk', 'ee', 'fi', 'fr', 'de', 'gr', 'hu',
+  'ie', 'it', 'lv', 'lt', 'lu', 'mt', 'nl', 'pl', 'pt', 'ro', 'sk', 'si', 'es', 'se',
+];
+
+test('eu-member motif is carried by exactly the 27 EU member states', () => {
+  const carriers = COUNTRIES.filter(
+    (c) => Array.isArray(c.motifs) && c.motifs.includes('eu-member'),
+  ).map((c) => c.code).sort();
+  assert.deepEqual(carriers, [...EU_MEMBER_CODES].sort(),
+    'eu-member motif should be on exactly the 27 EU members — no more, no less');
+});
+
 // Regression pin — hand-audited primaryColors / additionalColors splits for
 // the European flags Jan ranked by visual inspection. These are the flags
 // where the mechanical migration (#192) needed a specific correction, so
@@ -292,20 +311,16 @@ test('every (continent × color) cell has at least one candidate country', () =>
   assert.deepEqual(empty, [], `unexpected empty cells: ${empty.join(', ')}`);
 });
 
-test('every (continent × motif) cell has at least one candidate country', () => {
-  const empty = [];
-  for (const cont of CONTINENTS_FOR_RANDOM) {
-    for (const motif of MOTIFS_FOR_RANDOM) {
-      const n = COUNTRIES.filter(
-        (c) => c.continent === cont && Array.isArray(c.motifs) && c.motifs.includes(motif),
-      ).length;
-      if (n === 0) empty.push(`${cont} × ${motif}`);
-    }
-  }
-  assert.deepEqual(empty, [], `no candidate flags for: ${empty.join(', ')}`);
-});
+// The previous test enforced "every (continent × motif) cell has ≥1
+// candidate country" — a stricter invariant than the generator actually
+// needs. `generateRandomPuzzle` retries up to 200 times per call when a
+// proposed puzzle has an unfillable cell, so a motif that only appears
+// on one continent (e.g. `eu-member`) is fine in the pool: the retries
+// absorb the misses. The seed-success test below is the real guard —
+// if the pool ever drifts to where many seeds in a row can't yield a
+// valid puzzle, that test fails first.
 
-test('generateRandomPuzzle succeeds with the real countries.json under several seeds', () => {
+test('generateRandomPuzzle succeeds with the real countries.json under many seeds', () => {
   /** @param {number} seed */
   function mulberry32(seed) {
     let a = seed | 0;
@@ -317,7 +332,14 @@ test('generateRandomPuzzle succeeds with the real countries.json under several s
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   }
-  for (const seed of [1, 42, 1337, 9001]) {
+  // 30 seeds (was 4) gives more retry-headroom signal. Some motifs in
+  // the pool are continent-narrow — eu-member is Europe-only — so the
+  // generator burns extra retries on (Asia × eu-member)-style cells
+  // before landing on a valid puzzle. Today there's plenty of slack;
+  // this test fails first if a future addition tightens the pool past
+  // the 200-attempt budget.
+  const SEEDS = Array.from({ length: 30 }, (_, i) => (i + 1) * 9973);
+  for (const seed of SEEDS) {
     const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
     assert.equal(puzzle.rows.length, 3);
     assert.equal(puzzle.cols.length, 3);
