@@ -13,12 +13,17 @@ import { sovereigntyOf } from './group.js';
  *
  * @typedef {{ include: Set<string>, exclude: Set<string> }} FilterSet
  *
+ * @typedef {{ op: '=' | '>=', n: number }} ColorCountConstraint
+ *   `=` constrains the full palette size to exactly N; `>=` to N or more.
+ *   The `<=` op is not implemented yet — symmetric add when a real use
+ *   case surfaces.
+ *
  * @typedef {{
  *   status: FilterSet,
  *   continent: FilterSet,
  *   color: FilterSet,
  *   motif: FilterSet,
- *   colorCount: number | null,
+ *   colorCount: ColorCountConstraint | null,
  * }} Filters
  */
 
@@ -45,6 +50,10 @@ export function emptyFilters() {
  * bumps the locked count up, removing one bumps it down. When off,
  * `colorCount` stays null and the constraint is inactive.
  *
+ * The lock always produces the `=` op (exactly N) — that's what the
+ * "no other colours" toggle means semantically. `>=` is reachable via
+ * URL / daily catalog authoring, not via the chooser UI.
+ *
  * Pages own the DOM (button creation, classList toggling) — the helper
  * just keeps the boolean flag and the colorCount field in sync so both
  * pages can't drift on what "only these colours" means. Use the returned
@@ -63,7 +72,7 @@ export function emptyFilters() {
 export function createColorCountLock(filter) {
   let on = false;
   function sync() {
-    filter.colorCount = on ? filter.color.include.size : null;
+    filter.colorCount = on ? { op: '=', n: filter.color.include.size } : null;
   }
   return {
     get isOn() { return on; },
@@ -121,11 +130,16 @@ export function matchesFilters(country, filters, options = {}) {
   if (filters.color.exclude.size && colors.some((c) => filters.color.exclude.has(c))) return false;
 
   // colorCount always checks the full palette (c.colors = primary + additional
-  // union), not the colorField-selected view. Semantic: "the flag has exactly
-  // N visible colours" — a player counting colours sees the union regardless
-  // of how the data is split. Primary-clean stays consistent because both
-  // modes resolve colorCount against the same field.
-  if (filters.colorCount !== null && country.colors.length !== filters.colorCount) return false;
+  // union), not the colorField-selected view. Semantic: "the flag has N visible
+  // colours" — a player counting colours sees the union regardless of how the
+  // data is split. Primary-clean stays consistent because both modes resolve
+  // colorCount against the same field.
+  if (filters.colorCount !== null) {
+    const len = country.colors.length;
+    const { op, n } = filters.colorCount;
+    if (op === '=' && len !== n) return false;
+    if (op === '>=' && len < n) return false;
+  }
 
   const motifs = country.motifs ?? [];
   for (const m of filters.motif.include) {

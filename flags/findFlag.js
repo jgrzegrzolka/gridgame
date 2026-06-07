@@ -107,13 +107,22 @@ export function parseFilterString(s) {
     const group = tok.slice(0, colon);
     let val = tok.slice(colon + 1);
     if (!val) continue;
-    // Scalar primitive: `colorCount:N` constrains the country's full
-    // palette size to exactly N. Doesn't take include/exclude — it's a
-    // single integer, null means unconstrained.
+    // Scalar primitive: constrains the country's full palette size.
+    //   colorCount:N    → exactly N (bare form, back-compat with daily
+    //                     catalog entries that pre-date the op syntax)
+    //   colorCount:=N   → exactly N (explicit)
+    //   colorCount:>=N  → N or more
+    // Doesn't take include/exclude — `!` prefix is meaningless on a
+    // scalar comparison and is silently dropped.
     if (group === 'colorCount') {
-      const n = Number.parseInt(val, 10);
-      if (Number.isInteger(n) && n >= 0) {
-        f.colorCount = n;
+      /** @type {'=' | '>='} */
+      let op = '=';
+      let nStr = val;
+      if (val.startsWith('>=')) { op = '>='; nStr = val.slice(2); }
+      else if (val.startsWith('=')) { nStr = val.slice(1); }
+      const n = Number.parseInt(nStr, 10);
+      if (Number.isInteger(n) && n >= 0 && String(n) === nStr) {
+        f.colorCount = { op, n };
         any = true;
       }
       continue;
@@ -151,7 +160,13 @@ export function serializeFilter(f) {
     for (const v of f[group].include) tokens.push(`${group}:${v}`);
     for (const v of f[group].exclude) tokens.push(`${group}:!${v}`);
   }
-  if (f.colorCount !== null) tokens.push(`colorCount:${f.colorCount}`);
+  if (f.colorCount !== null) {
+    // Emit the bare form `colorCount:N` for the `=` op so existing
+    // shareable URLs and the 23 daily catalog entries that pre-date the
+    // op syntax round-trip byte-identical. `>=` always emits explicit.
+    const { op, n } = f.colorCount;
+    tokens.push(op === '=' ? `colorCount:${n}` : `colorCount:${op}${n}`);
+  }
   return tokens.join(',');
 }
 
@@ -233,11 +248,17 @@ export function pillLabel(group, value, sign, translate) {
   } else if (group === 'motif') {
     body = translate(`motif.${value}`, value);
   } else if (group === 'colorCount') {
-    // colorCount is a scalar; the "value" is the integer N as a string.
-    // Reuse the same `filter.onlyN.<N>` key as filterTitle so chooser and
-    // puzzle-header strings stay aligned. Doesn't support exclude — the
-    // primitive itself is scalar, you either constrain to N or you don't.
-    return translate(`filter.onlyN.${value}`, `only ${value} colours`);
+    // colorCount is a scalar; the "value" echoes the URL-suffix form:
+    //   "N" or "=N" → exactly N, via filter.onlyN.<n>
+    //   ">=N"       → N or more, via filter.atLeastN.<n>
+    // Doesn't support exclude — the primitive itself is scalar, you
+    // either constrain to N or you don't.
+    if (value.startsWith('>=')) {
+      const n = value.slice(2);
+      return translate(`filter.atLeastN.${n}`, `${n} or more colours`);
+    }
+    const n = value.startsWith('=') ? value.slice(1) : value;
+    return translate(`filter.onlyN.${n}`, `only ${n} colours`);
   } else {
     body = translate(`status.${value}`, value);
   }
@@ -265,7 +286,9 @@ export function filterTitle(f, translate) {
     for (const v of f[group].exclude) parts.push(pillLabel(group, v, 'exclude', translate));
   }
   if (f.colorCount !== null) {
-    parts.push(translate(`filter.onlyN.${f.colorCount}`, `only ${f.colorCount} colours`));
+    const { op, n } = f.colorCount;
+    if (op === '>=') parts.push(translate(`filter.atLeastN.${n}`, `${n} or more colours`));
+    else parts.push(translate(`filter.onlyN.${n}`, `only ${n} colours`));
   }
   return parts.join(' · ');
 }

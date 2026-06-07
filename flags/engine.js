@@ -129,19 +129,26 @@ export const COLORS_FOR_RANDOM = [
 export const ALL_FLAG_COLORS = [...COLORS_FOR_RANDOM, 'violet'];
 
 /**
- * Exact-N colour-count Categories the random puzzle generator is allowed to
- * pair with continents / colours / motifs on the row / column axes. Members
- * share `exclusiveGroup: 'colorCount'` so two different N values can never
- * appear on the same axis or across axes (axesConflict catches it). N=2 and
- * N=3 cover the distinctive cases — every continent in `flagsGamePool` has
- * at least one flag for each (South America has just 1 at N=2, which is
- * tight but `isPuzzleGeneratable`'s minPerCell already screens that). N=4
- * is plausible too but not as readable as a category ("exactly 4 colours"
- * blurs into "many colours"); a future PR can add `>=4` and reconsider.
- * N=1 has 0 candidates in the pool and N≥5 has 0 candidates on at least
- * one continent (Asia), so both stay out.
+ * Colour-count Categories the random puzzle generator is allowed to pair
+ * with continents / colours / motifs on the row / column axes. Members
+ * share `exclusiveGroup: 'colorCount'` so two different colour-count
+ * constraints can never appear on the same axis or across axes
+ * (axesConflict catches it). Tuples are [op, n]:
+ *
+ *   ['=', 2]  — exactly 2 colours (Japan-style minimalist)
+ *   ['=', 3]  — exactly 3 colours (most tricolours)
+ *   ['=', 4]  — exactly 4 colours
+ *   ['>=', 4] — 4 or more colours (busy / coat-of-arms-heavy flags)
+ *
+ * The `=` members of N=2/3 every continent in `flagsGamePool` has at least
+ * one flag for; South America has just 1 at N=2 which is tight but
+ * `isPuzzleGeneratable`'s minPerCell already screens that. `>=4` has
+ * comfortable coverage everywhere. `=1` is empty in the pool and `>=5`
+ * is empty on Asia, so neither makes it in.
+ *
+ * @type {Array<['=' | '>=', number]>}
  */
-export const COLOR_COUNTS_FOR_RANDOM = [2, 3];
+export const COLOR_COUNTS_FOR_RANDOM = [['=', 2], ['=', 3], ['=', 4], ['>=', 4]];
 
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
@@ -186,14 +193,24 @@ export function hasColor(color) {
 }
 
 /**
+ * "Colour-count" Category — `op:'='` matches exactly N colours, `op:'>='`
+ * matches N or more. The id encodes the op in URL-suffix form: bare `N`
+ * for `=` (keeps daily catalog entries and shareable URLs stable), `>=N`
+ * for the at-least variant.
+ *
+ * @param {'=' | '>='} op
  * @param {number} n
  * @returns {Category}
  */
-export function colorCount(n) {
+export function colorCount(op, n) {
+  const idSuffix = op === '=' ? String(n) : `${op}${n}`;
+  const label = op === '=' ? `only ${n} colours` : `${n} or more colours`;
   return {
-    id: `colorCount:${n}`,
-    label: `only ${n} colours`,
-    predicate: (c) => c.colors.length === n,
+    id: `colorCount:${idSuffix}`,
+    label,
+    predicate: op === '='
+      ? (c) => c.colors.length === n
+      : (c) => c.colors.length >= n,
     exclusiveGroup: 'colorCount',
   };
 }
@@ -261,6 +278,12 @@ export function translateCategoryLabel(category, translate) {
     return translate(`motif.${value}`, value);
   }
   if (kind === 'colorCount') {
+    // The id suffix is the URL-suffix form: bare "N" → `filter.onlyN.N`,
+    // ">=N" → `filter.atLeastN.N`. Keeps the i18n keys aligned with what
+    // findFlag's pillLabel / filterTitle use.
+    if (value.startsWith('>=')) {
+      return translate(`filter.atLeastN.${value.slice(2)}`, category.label);
+    }
     return translate(`filter.onlyN.${value}`, category.label);
   }
   return category.label;
@@ -282,8 +305,13 @@ export function categoryFromId(id) {
   if (id.startsWith('hasMotif:')) return hasMotif(id.slice('hasMotif:'.length));
   if (id.startsWith('statehood:')) return statehood(id.slice('statehood:'.length));
   if (id.startsWith('colorCount:')) {
-    const n = Number.parseInt(id.slice('colorCount:'.length), 10);
-    if (Number.isInteger(n) && n >= 0) return colorCount(n);
+    const suffix = id.slice('colorCount:'.length);
+    /** @type {'=' | '>='} */
+    let op = '=';
+    let nStr = suffix;
+    if (suffix.startsWith('>=')) { op = '>='; nStr = suffix.slice(2); }
+    const n = Number.parseInt(nStr, 10);
+    if (Number.isInteger(n) && n >= 0 && String(n) === nStr) return colorCount(op, n);
     return null;
   }
   return null;
@@ -295,7 +323,7 @@ export function buildRandomCategoryPool() {
     ...CONTINENTS_FOR_RANDOM.map(continent),
     ...COLORS_FOR_RANDOM.map(hasColor),
     ...MOTIFS_FOR_RANDOM.map(hasMotif),
-    ...COLOR_COUNTS_FOR_RANDOM.map(colorCount),
+    ...COLOR_COUNTS_FOR_RANDOM.map(([op, n]) => colorCount(op, n)),
   ];
 }
 
