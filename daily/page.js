@@ -69,9 +69,16 @@ export function bootDaily() {
     return li;
   }
 
-  const backlogParam = new URLSearchParams(window.location.search).get('backlog');
+  const urlParams = new URLSearchParams(window.location.search);
+  const backlogParam = urlParams.get('backlog');
   const backlogN = backlogParam !== null ? parseInt(backlogParam, 10) : NaN;
   const isBacklog = Number.isFinite(backlogN);
+  // Replay mode: live daily lets the player retry a finished puzzle
+  // without overwriting the archive's recorded score. ?replay=1 both
+  // bypasses the "complete record → jump straight to result" shortcut
+  // and skips saveScore in finish(). The first real play stays the
+  // canonical result; replays are practice runs.
+  const isReplay = urlParams.get('replay') === '1';
   // Backlog mode swaps the live catalog for the staged backlog so the
   // author can play-test the next puzzles without exposing them to
   // players. URL-only entry point — there's no nav link to backlog.html
@@ -86,6 +93,10 @@ export function bootDaily() {
       const all = withLocalizedAliases(flagsGamePool(raw, false));
 
       if (isBacklog) {
+        // Backlog has its own dynamic "Play again" prepend below; hide the
+        // static one from index.html so we don't render two side-by-side.
+        const staticPlayAgain = document.getElementById('play-again');
+        if (staticPlayAgain) staticPlayAgain.hidden = true;
         numEl.textContent = `#${backlogN} · backlog`;
         // Tab title carries the puzzle number so multiple ?backlog=N tabs
         // are tellable apart at a glance during catalog review. Set after
@@ -104,11 +115,11 @@ export function bootDaily() {
             link.removeAttribute('data-i18n');
           }
         }
-        // Backlog-only "Play again" link on the result page. Live daily
-        // is play-once — your score is saved and replays don't make
-        // sense as a workflow — so this link doesn't exist there. In
-        // backlog mode the whole point is to iterate, so we surface the
-        // re-run path right next to "Back to backlog".
+        // Backlog's own "Play again" link. Live daily uses the static
+        // #play-again in index.html (wired to ?n=N&replay=1) — backlog
+        // keeps this dynamic prepend because its href shape is
+        // different (?backlog=N) and it doesn't need the replay flag
+        // (backlog plays already skip saveScore unconditionally).
         const resultLinks = document.querySelector('.result-links');
         if (resultLinks) {
           const playAgain = document.createElement('a');
@@ -140,6 +151,14 @@ export function bootDaily() {
       // runs after bootI18n's data-i18n pass.
       document.title = `Yet Another Quiz #${n}`;
 
+      // Point the static "Play again" link at this same puzzle with the
+      // replay flag set, so clicking it re-runs the game without
+      // touching the archive score. Pinning N in the href (rather than
+      // relying on "today") keeps the link stable if the catalog rolls
+      // over while the result page is open.
+      const playAgainLink = document.getElementById('play-again');
+      if (playAgainLink) playAgainLink.setAttribute('href', `./?n=${n}&replay=1`);
+
       const result = resolveDailyPuzzle(catalog, all, n);
       if (result.ok === false) {
         showState(reasonMessage(result.reason));
@@ -151,16 +170,17 @@ export function bootDaily() {
       // Revisit: if this puzzle has a full saved record, jump
       // straight to the result page without confetti (the player
       // saw confetti the first time around; replaying it on every
-      // revisit would be obnoxious).
+      // revisit would be obnoxious). Replay mode skips this shortcut
+      // — the whole point of ?replay=1 is to actually replay.
       const stored = loadScores(window.localStorage)[n];
-      if (isCompleteRecord(stored)) {
+      if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
         return;
       }
 
       const category = filterToCategory(result.filter, t);
-      startGame(n, category, result.targets, all);
+      startGame(n, category, result.targets, all, { replay: isReplay });
     })
     .catch((err) => {
       showState(`${t('game.failedToLoad', 'Failed to load:')} ${err.message}`);
@@ -244,14 +264,18 @@ export function bootDaily() {
    * but skip `saveScore` — backlog plays must not pollute the player's
    * archive, since they're test runs of unreleased puzzles.
    *
+   * Replay mode (`opts.replay`): same skip-save behaviour, but in the
+   * live catalog. The player has finished this puzzle before and just
+   * wants another go without overwriting their archive score.
+   *
    * @param {number} n
    * @param {import('../flags/engine.js').Category} category
    * @param {Country[]} targets
    * @param {Country[]} all
-   * @param {{ backlog?: boolean }} [opts]
+   * @param {{ backlog?: boolean, replay?: boolean }} [opts]
    */
   function startGame(n, category, targets, all, opts = {}) {
-    const backlog = opts.backlog === true;
+    const skipSave = opts.backlog === true || opts.replay === true;
     const pool = findPool(all);
     const targetCodes = new Set(targets.map((c) => c.code));
     const foundCodes = new Set();
@@ -400,7 +424,7 @@ export function bootDaily() {
       finished = true;
       const found = foundCodes.size;
       const total = targetCodes.size;
-      if (!backlog) {
+      if (!skipSave) {
         saveScore(window.localStorage, n, found, total, Array.from(foundCodes));
       }
       const tier = pickCelebration({ found, total });
