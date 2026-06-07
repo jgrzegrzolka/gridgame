@@ -164,7 +164,22 @@
       "5": "only 5 colours"
     },
     "atLeastN": {
-      "4": "4 or more colours"
+      "2": "2 or more colours",
+      "3": "3 or more colours",
+      "4": "4 or more colours",
+      "5": "5 or more colours"
+    },
+    "atMostN": {
+      "2": "2 or fewer colours",
+      "3": "3 or fewer colours",
+      "4": "4 or fewer colours",
+      "5": "5 or fewer colours"
+    }
+  },
+  "colorCountPicker": {
+    "aria": {
+      "label": "colour count",
+      "clear": "clear"
     }
   },
   "status": {

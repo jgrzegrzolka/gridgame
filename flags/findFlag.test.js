@@ -191,6 +191,12 @@ test('parseFilterString: colorCount:>=N parses as op:>=, n:N', () => {
   assert.deepEqual(f.colorCount, { op: '>=', n: 4 });
 });
 
+test('parseFilterString: colorCount:<=N parses as op:<=, n:N', () => {
+  const f = parseFilterString('colorCount:<=2');
+  assert.ok(f);
+  assert.deepEqual(f.colorCount, { op: '<=', n: 2 });
+});
+
 test('parseFilterString: colorCount with non-integer or negative value is silently dropped', () => {
   assert.equal(parseFilterString('colorCount:'), null);
   assert.equal(parseFilterString('colorCount:abc'), null);
@@ -214,6 +220,12 @@ test('serializeFilter: emits explicit colorCount:>=N form', () => {
   const f = parseFilterString('continent:Africa,colorCount:>=4');
   assert.ok(f);
   assert.equal(serializeFilter(f), 'continent:Africa,colorCount:>=4');
+});
+
+test('serializeFilter: emits explicit colorCount:<=N form', () => {
+  const f = parseFilterString('continent:Europe,colorCount:<=2');
+  assert.ok(f);
+  assert.equal(serializeFilter(f), 'continent:Europe,colorCount:<=2');
 });
 
 test('filterFromLegacyCat: continent id maps to single-include filter', () => {
@@ -293,6 +305,11 @@ test('pillLabel: colorCount value ">=N" renders as "N or more colours"', () => {
   assert.equal(pillLabel('colorCount', '>=5', 'exclude', idTranslate), '5 or more colours');
 });
 
+test('pillLabel: colorCount value "<=N" renders as "N or fewer colours"', () => {
+  assert.equal(pillLabel('colorCount', '<=2', 'include', idTranslate), '2 or fewer colours');
+  assert.equal(pillLabel('colorCount', '<=3', 'exclude', idTranslate), '3 or fewer colours');
+});
+
 test('filterTitle: appends "only N colours" when colorCount is set with op =', () => {
   const f = parseFilterString('continent:Europe,color:red,color:white,color:blue,colorCount:3');
   assert.ok(f);
@@ -303,6 +320,12 @@ test('filterTitle: appends "N or more colours" when colorCount is set with op >=
   const f = parseFilterString('continent:Africa,colorCount:>=4');
   assert.ok(f);
   assert.equal(filterTitle(f, idTranslate), 'Africa · 4 or more colours');
+});
+
+test('filterTitle: appends "N or fewer colours" when colorCount is set with op <=', () => {
+  const f = parseFilterString('continent:Europe,colorCount:<=2');
+  assert.ok(f);
+  assert.equal(filterTitle(f, idTranslate), 'Europe · 2 or fewer colours');
 });
 
 test('filterTitle: colorCount with no other tokens renders as just the count phrase', () => {

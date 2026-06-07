@@ -200,6 +200,17 @@ test('matchesFilters: colorCount {op:>=, n:4} matches countries with 4 or more c
   assert.equal(matchesFilters(five, f), true);
 });
 
+test('matchesFilters: colorCount {op:<=, n:2} matches countries with 2 or fewer colours', () => {
+  const one = country({ code: 'aa', primaryColors: ['red'] });
+  const two = country({ code: 'jp', primaryColors: ['white','red'] });
+  const three = country({ code: 'sk', primaryColors: ['white','blue','red'] });
+  const f = emptyFilters();
+  f.colorCount = { op: '<=', n: 2 };
+  assert.equal(matchesFilters(one, f), true);
+  assert.equal(matchesFilters(two, f), true);
+  assert.equal(matchesFilters(three, f), false);
+});
+
 test('matchesFilters: colorCount {op:=, n:0} picks only empty-palette countries (none in real data, but the predicate must work)', () => {
   const c = country({ code: 'xx', primaryColors: [], additionalColors: [] });
   const f = emptyFilters();
@@ -287,6 +298,37 @@ test('createColorCountLock: sync() while off is a no-op — colorCount stays nul
   lock.sync();
   assert.equal(f.colorCount, null,
     'sync without ever toggling on must not flip the lock — it just re-applies current state');
+});
+
+test('createColorCountLock: sync() while off does NOT clobber an externally-set filter (e.g. picker pill)', () => {
+  // Pinning the live contention bug: picker engages with =3, then
+  // user toggles a colour pill → cyclePill calls colorCountLock.sync()
+  // → sync MUST leave filter.colorCount alone. Old behaviour set it
+  // to null, silently disabling the picker's filter mid-flow.
+  const f = emptyFilters();
+  const lock = createColorCountLock(f);
+  // Simulate the picker writing the primitive
+  f.colorCount = { op: '=', n: 3 };
+  lock.sync();
+  assert.deepEqual(f.colorCount, { op: '=', n: 3 },
+    'sync (lock off) must not clobber the picker\'s value');
+});
+
+test('createColorCountLock: disengage() flips off without touching filter.colorCount', () => {
+  // Used when the colour-count picker takes over the shared primitive:
+  // the lock has to disengage cosmetically, but blowing away
+  // filter.colorCount would clobber what the picker just wrote.
+  const f = emptyFilters();
+  f.color.include.add('red');
+  const lock = createColorCountLock(f);
+  lock.toggle();
+  assert.deepEqual(f.colorCount, { op: '=', n: 1 });
+  // Simulate the picker taking over with a different value
+  f.colorCount = { op: '>=', n: 4 };
+  lock.disengage();
+  assert.equal(lock.isOn, false);
+  assert.deepEqual(f.colorCount, { op: '>=', n: 4 },
+    'disengage must NOT clobber the picker\'s value');
 });
 
 test('createColorCountLock: reset() turns off and clears, regardless of prior state', () => {

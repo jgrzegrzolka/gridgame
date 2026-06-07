@@ -420,6 +420,97 @@ body::before {
   border-style: dashed;
 }
 
+/* Colour-count compound pill — ONE pill rendered in the Colors row of
+ * findFlag's chooser and flagsdata's filter bar. Visually `[= 2]` (or
+ * `[= —]` when inactive). Each side has a "current" chip plus a tiny
+ * floating options strip; tapping the current chip pops the options
+ * out below it as an absolute-positioned dropdown so the pill itself
+ * stays the same width — no surrounding pill is pushed around.
+ *
+ * Inactive (n is the `—` placeholder): dashed border. Active (n
+ * picked): solid border + dark background — matches .pill.active so
+ * the picker reads consistently with the other active pills. */
+.color-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-style: dashed;
+  font-variant-numeric: tabular-nums;
+}
+.color-count-pill.active {
+  border-style: solid;
+  background: #1c1c1c;
+  color: #fff;
+  border-color: #1c1c1c;
+}
+.color-count-side {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+/* Options strip is absolute so it never widens the pill. Floats
+ * 4px below the current chip, with its own pill-like background so
+ * it reads as a small dropdown menu. z-index keeps it above any
+ * following sibling pills on the same row. */
+.color-count-side .color-count-options {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  gap: 2px;
+  padding: 4px;
+  background: #fff;
+  color: #1c1c1c;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.color-count-side.is-expanded .color-count-options {
+  display: inline-flex;
+}
+.color-count-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+.color-count-chip:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+.color-count-pill.active .color-count-chip--current:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+/* Hover state for the floating options is always on the light
+ * background, even when the pill itself is dark/active. */
+.color-count-options .color-count-chip:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+/* × clear button — only visible when the picker is active. Explicit
+ * affordance for disabling the filter (the `—` entry in the N
+ * dropdown does the same thing, but isn't discoverable from outside
+ * the dropdown). */
+.color-count-clear {
+  cursor: pointer;
+  user-select: none;
+  margin-left: 4px;
+  padding: 0 4px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+.color-count-clear[hidden] {
+  display: none;
+}
+.color-count-pill.active .color-count-clear:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
 /* Give-up reveal — applied identically to every grid-based game so the
  * "this answer was shown to you, not earned" signal reads the same: red wash,
  * red outline, and 3 bounces. Requires .cell { position: relative } on the host. */
