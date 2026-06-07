@@ -57,6 +57,24 @@ test('chrome: the legacy `.back` button is gone from every page', () => {
   assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
 });
 
+// "Buy me a coffee" was a corner chrome button on every page until we
+// moved it into the burger menu (last item) site-wide. The move freed
+// up a chrome slot AND activated the home burger, which previously had
+// no items and rendered greyed-out as the first impression. Pin that
+// it stays out of the chrome cluster.
+test('chrome: the legacy `.coffee` chrome button is gone from every page', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const file of findHtmlFiles(HERE)) {
+    const rel = relative(HERE, file).split(sep).join('/');
+    const html = readFileSync(file, 'utf-8');
+    if (/<(?:a|span|button)[^>]*\bclass="coffee"/.test(html)) {
+      offenders.push(`${rel}: still has a class="coffee" element — should have been removed`);
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
+
 // Every page except the root must give the player a way home — an inline
 // link in an action row, with the correct relative href and the shared
 // `menu.home` i18n key. One page going to "the wrong home" feels like

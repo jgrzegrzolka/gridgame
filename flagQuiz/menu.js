@@ -64,6 +64,15 @@ export function buildQuizMenu(menuEl, all, opts) {
   if (statsCurrent) statsA.setAttribute('aria-current', 'page');
   statsLi.appendChild(statsA);
   menuEl.appendChild(statsLi);
+
+  const coffeeLi = document.createElement('li');
+  const coffeeA = document.createElement('a');
+  coffeeA.href = 'https://suppi.pl/jgrzegrzolka';
+  coffeeA.target = '_blank';
+  coffeeA.rel = 'noopener noreferrer';
+  coffeeA.textContent = t('coffee', 'Buy me a coffee');
+  coffeeLi.appendChild(coffeeA);
+  menuEl.appendChild(coffeeLi);
 }
 
 /**

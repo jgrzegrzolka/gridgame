@@ -76,7 +76,7 @@ body::before {
 .lang-toggle {
   position: fixed;
   top: 12px;
-  right: calc(168px + var(--chrome-x-offset));
+  right: calc(116px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   background-color: #fff;
@@ -97,28 +97,6 @@ body::before {
 }
 .lang-toggle[data-current="pl"] {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 480'%3E%3Cpath fill='%23fff' d='M0 0h640v240H0z'/%3E%3Cpath fill='%23dc143c' d='M0 240h640v240H0z'/%3E%3C/svg%3E");
-}
-.coffee {
-  position: fixed;
-  top: 12px;
-  right: calc(116px + var(--chrome-x-offset));
-  width: 44px;
-  height: 44px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  color: var(--link-color);
-  text-decoration: none;
-  font-size: 22px;
-  line-height: 1;
-  z-index: 25;
-}
-.coffee:hover {
-  background: #f0f0f0;
 }
 .flags-link {
   position: fixed;
@@ -654,16 +632,6 @@ dialog#zoom p {
   background-color: currentColor;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/%3E%3C/svg%3E") center / contain no-repeat;
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/%3E%3C/svg%3E") center / contain no-repeat;
-  vertical-align: middle;
-}
-
-.coffee-icon {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  background-color: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.9 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z'/%3E%3C/svg%3E") center / contain no-repeat;
-          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.9 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z'/%3E%3C/svg%3E") center / contain no-repeat;
   vertical-align: middle;
 }
 
