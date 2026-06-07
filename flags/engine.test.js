@@ -20,6 +20,7 @@ import {
   findUltimateAssignment,
   generateUltimateRandomPuzzle,
   axesConflict,
+  axesImpliedPair,
   buildRandomCategoryPool,
   pulseShake,
   CONTINENTS_FOR_RANDOM,
@@ -556,6 +557,91 @@ test('axesConflict returns false when no categories share an exclusiveGroup', ()
   assert.equal(conflict, false);
 });
 
+// axesImpliedPair — guards the (Europe × eu-member) class of degenerate cell
+// where one axis's matching set is fully contained in another's, so the
+// constraint on the implied side does no work inside the cell.
+
+test('axesImpliedPair: motif:eu-member × continent:Europe is implied (every EU member is European)', () => {
+  // Synthetic mini-dataset where two countries carry eu-member and both are
+  // European — eu-member ⊂ Europe by construction.
+  const cs = [
+    country({ code: 'fr', name: 'France',  continent: 'Europe', motifs: ['eu-member'] }),
+    country({ code: 'de', name: 'Germany', continent: 'Europe', motifs: ['eu-member'] }),
+    country({ code: 'no', name: 'Norway',  continent: 'Europe', motifs: [] }),
+    country({ code: 'jp', name: 'Japan',   continent: 'Asia',   motifs: [] }),
+  ];
+  // eu-member as a row, Europe as a col → implied
+  assert.equal(
+    axesImpliedPair([hasMotif('eu-member')], [continent('Europe')], cs),
+    true,
+  );
+  // Swap axes — should still flag (symmetric)
+  assert.equal(
+    axesImpliedPair([continent('Europe')], [hasMotif('eu-member')], cs),
+    true,
+  );
+});
+
+test('axesImpliedPair: returns false when neither axis is contained in the other', () => {
+  // hasColor('red') and continent('Europe') intersect (FR, DE) but neither
+  // is a subset of the other — JP is red+Asia, NO is non-red+Europe.
+  const cs = [
+    country({ code: 'fr', name: 'France',  continent: 'Europe', primaryColors: ['red'] }),
+    country({ code: 'de', name: 'Germany', continent: 'Europe', primaryColors: ['red', 'black'] }),
+    country({ code: 'no', name: 'Norway',  continent: 'Europe', primaryColors: ['blue'] }),
+    country({ code: 'jp', name: 'Japan',   continent: 'Asia',   primaryColors: ['red'] }),
+  ];
+  assert.equal(
+    axesImpliedPair([continent('Europe')], [hasColor('red')], cs),
+    false,
+  );
+});
+
+test('axesImpliedPair: empty match-set is not treated as implied (caught by minPerCell instead)', () => {
+  // motif:union-jack with a dataset where no country carries it — the set
+  // is trivially a subset of everything, but we don't want this path
+  // muddying the failure signal that's already owned by isPuzzleGeneratable.
+  const cs = [
+    country({ code: 'fr', name: 'France', continent: 'Europe', motifs: ['eu-member'] }),
+    country({ code: 'de', name: 'Germany', continent: 'Europe', motifs: ['eu-member'] }),
+  ];
+  assert.equal(
+    axesImpliedPair([hasMotif('union-jack')], [continent('Europe')], cs),
+    false,
+  );
+});
+
+test('axesImpliedPair: same-id category on both axes is skipped (no self-implication)', () => {
+  // The category pool builder picks 6 distinct items so this can't happen
+  // in production, but the helper should still tolerate it for safety.
+  const cs = [
+    country({ code: 'fr', name: 'France', continent: 'Europe', primaryColors: ['red'] }),
+    country({ code: 'jp', name: 'Japan', continent: 'Asia', primaryColors: ['red'] }),
+  ];
+  assert.equal(
+    axesImpliedPair([hasColor('red')], [hasColor('red')], cs),
+    false,
+  );
+});
+
+test('axesImpliedPair: ignores intra-axis subset (only cross-axis pairs count)', () => {
+  // eu-member and Europe both on the rows axis — the generator's job
+  // is to detect implied pairs across the row/col split, not within
+  // a single axis (axesConflict handles same-axis scalar issues).
+  const cs = [
+    country({ code: 'fr', name: 'France', continent: 'Europe', motifs: ['eu-member'] }),
+    country({ code: 'jp', name: 'Japan', continent: 'Asia', motifs: [] }),
+  ];
+  assert.equal(
+    axesImpliedPair(
+      [hasMotif('eu-member'), continent('Europe'), hasColor('red')],
+      [hasMotif('weapon'), hasMotif('cross'), hasMotif('animal')],
+      cs,
+    ),
+    false,
+  );
+});
+
 /**
  * @param {Record<string, string>} table
  * @returns {(key: string, fallback: string) => string}
@@ -763,13 +849,19 @@ function denseSquarePool(continents, colors, perCell) {
   /** @type {Country[]} */
   const out = [];
   let idx = 0;
+  // Same eu-member-drop + 1-motif-per-country distribution as
+  // syntheticTaggedCountries — see that helper's comment for why.
+  // Universally-tagged motifs would make every continent/colour axis a
+  // strict subset of every motif axis under axesImpliedPair.
+  const motifPool = MOTIFS_FOR_RANDOM.filter((m) => m !== 'eu-member');
   for (const cont of continents) {
     for (const color of colors) {
       for (let n = 0; n < perCell; n++) {
+        const motif = motifPool[idx % motifPool.length];
         out.push(country({
           code: `c${idx++}`, name: `${cont}-${color}-${n}`,
           continent: /** @type {any} */ (cont), primaryColors: [color],
-          motifs: [...MOTIFS_FOR_RANDOM],
+          motifs: [motif],
         }));
       }
     }
@@ -841,9 +933,12 @@ test('hasUltimatePuzzleSolution: perCell=1 reduces it to the regular 9-distinct-
 
 test('generateUltimateRandomPuzzle returns a puzzle that passes hasUltimatePuzzleSolution', () => {
   // Saturated synthetic pool — every (continent × color) cell has 9 flags of
-  // its own. Any combination the generator picks must pass the Hall check.
+  // its own. Any combination the generator survives must pass the Hall check.
+  // Deterministic mulberry32 seed + production-default 500-attempt budget so
+  // CI doesn't flake when axesImpliedPair narrows the success window past
+  // the prior 50-attempt headroom on certain Math.random sequences.
   const countries = denseSquarePool(['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'], COLORS_FOR_RANDOM, 9);
-  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 50 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 500 });
   assert.equal(hasUltimatePuzzleSolution(puzzle, countries), true);
 });
 
@@ -1024,15 +1119,26 @@ function syntheticTaggedCountries() {
   /** @type {Country[]} */
   const out = [];
   let codeCounter = 0;
+  // eu-member is dropped (Europe-only in reality, would need a coverage
+  // model the synthetic data doesn't have). Remaining motifs are
+  // distributed sparsely: each country gets one motif cycling through
+  // the pool, so a motif's match-set is ~1/5 of all synthetic countries
+  // — small enough that it isn't a superset of any single continent or
+  // colour. The OLD synthetic design assigned every motif to every
+  // country, which made every continent / colour axis a strict subset
+  // of every motif axis, tripping axesImpliedPair on almost every
+  // generator attempt once that guard was added.
+  const motifPool = MOTIFS_FOR_RANDOM.filter((m) => m !== 'eu-member');
   for (const cont of CONTINENTS_FOR_RANDOM) {
     for (const color of COLORS_FOR_RANDOM) {
       for (let n = 0; n < 3; n++) {
+        const motif = motifPool[codeCounter % motifPool.length];
         out.push(country({
           code: `c${codeCounter++}`,
           name: `${cont}-${color}-${n}`,
           continent: cont,
           primaryColors: [color],
-          motifs: [...MOTIFS_FOR_RANDOM],
+          motifs: [motif],
         }));
       }
     }
@@ -1042,9 +1148,11 @@ function syntheticTaggedCountries() {
 
 test('generateRandomPuzzle returns a puzzle where every cell has at least 2 valid countries', () => {
   const countries = syntheticTaggedCountries();
-  const puzzle = generateRandomPuzzle(countries, {
-    rng: sequenceRng([0.1, 0.5, 0.9, 0.2, 0.7, 0.3, 0.4, 0.6, 0.8]),
-  });
+  // mulberry32 (period 2^32) gives a fresh distribution each attempt,
+  // so the generator's retry loop can land on a valid puzzle within the
+  // 200-attempt budget. The original sequenceRng with 9 fixed values
+  // cycled too tightly once axesImpliedPair narrowed the success space.
+  const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(7) });
   const counts = puzzleCellCounts(puzzle, countries);
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
@@ -1076,6 +1184,23 @@ test('generateRandomPuzzle never produces a puzzle where an exclusiveGroup is sp
       axesConflict(puzzle.rows, puzzle.cols),
       false,
       `seed ${s}: produced a puzzle with split exclusive groups — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
+    );
+  }
+});
+
+test('generateRandomPuzzle never produces an implied (subset) cross-axis pair', () => {
+  // Companion to the axesConflict assertion above — the implied-pair guard
+  // is the other thing the generator rejects before returning. With the
+  // synthetic pool (which doesn't include eu-member), this mostly proves
+  // the guard is wired up without false-rejecting normal puzzles. Real-
+  // data coverage with eu-member lives in countries.test.js.
+  const countries = syntheticTaggedCountries();
+  for (let s = 1; s <= 10; s++) {
+    const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(s) });
+    assert.equal(
+      axesImpliedPair(puzzle.rows, puzzle.cols, countries),
+      false,
+      `seed ${s}: produced a puzzle with an implied axis pair — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
     );
   }
 });

@@ -11,6 +11,7 @@ import {
   ALL_MOTIFS,
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
+  axesImpliedPair,
 } from './engine.js';
 import { CONTINENTS, loadCountries } from './group.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
@@ -343,6 +344,15 @@ test('generateRandomPuzzle succeeds with the real countries.json under many seed
     const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
     assert.equal(puzzle.rows.length, 3);
     assert.equal(puzzle.cols.length, 3);
+    // No degenerate (Europe × eu-member)-style pair should slip through —
+    // axesImpliedPair is the live guard, this assertion pins the
+    // contract under real data so a future engine tweak that bypasses
+    // the guard surfaces here.
+    assert.equal(
+      axesImpliedPair(puzzle.rows, puzzle.cols, COUNTRIES),
+      false,
+      `seed ${seed}: produced an implied axis pair — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
+    );
   }
 });
 
