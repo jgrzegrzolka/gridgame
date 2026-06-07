@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyFilters, matchesFilters } from './flagsFilter.js';
+import { emptyFilters, matchesFilters, createColorCountLock } from './flagsFilter.js';
 import { createCountry } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -219,4 +219,99 @@ test('emptyFilters returns a fresh Filters with all include/exclude sets empty a
   // independence: mutating one instance doesn't affect a fresh one
   f.color.include.add('red');
   assert.equal(emptyFilters().color.include.size, 0);
+});
+
+// createColorCountLock — the state machine behind the "no other colours"
+// toggle pill on both findFlag and flagsdata. Pages drove their own copies
+// of this until the second consumer arrived; tests pin the contract so
+// drift between the two pages is impossible.
+
+test('createColorCountLock: starts off — isOn false, colorCount untouched', () => {
+  const f = emptyFilters();
+  const lock = createColorCountLock(f);
+  assert.equal(lock.isOn, false);
+  assert.equal(f.colorCount, null);
+});
+
+test('createColorCountLock: toggle() flips on and binds colorCount to include set size', () => {
+  const f = emptyFilters();
+  f.color.include.add('red');
+  f.color.include.add('white');
+  const lock = createColorCountLock(f);
+  assert.equal(lock.toggle(), true);
+  assert.equal(lock.isOn, true);
+  assert.equal(f.colorCount, 2);
+});
+
+test('createColorCountLock: second toggle() flips off and clears colorCount', () => {
+  const f = emptyFilters();
+  f.color.include.add('red');
+  const lock = createColorCountLock(f);
+  lock.toggle();
+  assert.equal(lock.toggle(), false);
+  assert.equal(lock.isOn, false);
+  assert.equal(f.colorCount, null);
+});
+
+test('createColorCountLock: sync() while on tracks include-set growth and shrinkage', () => {
+  const f = emptyFilters();
+  f.color.include.add('red');
+  const lock = createColorCountLock(f);
+  lock.toggle();
+  assert.equal(f.colorCount, 1);
+  // page added another colour pill — sync picks up the new size
+  f.color.include.add('white');
+  lock.sync();
+  assert.equal(f.colorCount, 2);
+  // and shrinks back when a pill is removed
+  f.color.include.delete('red');
+  lock.sync();
+  assert.equal(f.colorCount, 1);
+});
+
+test('createColorCountLock: sync() while off is a no-op — colorCount stays null', () => {
+  const f = emptyFilters();
+  f.color.include.add('red');
+  const lock = createColorCountLock(f);
+  lock.sync();
+  assert.equal(f.colorCount, null,
+    'sync without ever toggling on must not flip the lock — it just re-applies current state');
+});
+
+test('createColorCountLock: reset() turns off and clears, regardless of prior state', () => {
+  const f = emptyFilters();
+  f.color.include.add('red');
+  const lock = createColorCountLock(f);
+  lock.toggle();
+  assert.equal(f.colorCount, 1);
+  lock.reset();
+  assert.equal(lock.isOn, false);
+  assert.equal(f.colorCount, null);
+  // reset on an already-off lock is also fine — pages call it from Clear
+  // unconditionally without checking isOn first.
+  lock.reset();
+  assert.equal(lock.isOn, false);
+  assert.equal(f.colorCount, null);
+});
+
+test('createColorCountLock: matchesFilters honours the locked colorCount on a realistic Slovakia/Croatia pair', () => {
+  // End-to-end pin so a future refactor of the lock can't silently break
+  // the "only red+white+blue, 3 colours total" puzzle pattern that the
+  // backlog leans on.
+  const sk = createCountry({ code: 'sk', name: 'Slovakia', category: 'country', continent: 'Europe',
+    primaryColors: ['white','blue','red'], additionalColors: [] });
+  const hr = createCountry({ code: 'hr', name: 'Croatia', category: 'country', continent: 'Europe',
+    primaryColors: ['white','blue','red'], additionalColors: ['yellow'] });
+  const f = emptyFilters();
+  f.color.include.add('red');
+  f.color.include.add('white');
+  f.color.include.add('blue');
+  const lock = createColorCountLock(f);
+  // Without the lock, both pass the colour-include check
+  assert.equal(matchesFilters(sk, f), true);
+  assert.equal(matchesFilters(hr, f), true);
+  // Engage the lock — Croatia's 4-colour palette fails the count
+  lock.toggle();
+  assert.equal(matchesFilters(sk, f), true);
+  assert.equal(matchesFilters(hr, f), false);
 });

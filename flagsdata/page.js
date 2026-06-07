@@ -1,6 +1,6 @@
 import { CONTINENTS, loadCountries } from '../flags/group.js';
 import { ALL_FLAG_COLORS, ALL_MOTIFS, foldDiacritics } from '../flags/engine.js';
-import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
+import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
 import { t, countryName } from '../i18n.js';
 
 /** @param {string} v */
@@ -78,20 +78,14 @@ export function bootFlagsData() {
    * once in renderAll. */
   let nameQuery = '';
 
-  // "No other colours" toggle pill — mirrors findFlag's chooser. When on,
-  // filters.colorCount tracks the colour include count; adding/removing a
-  // colour pill auto-updates via syncOnlyColors() from cyclePill. Off →
-  // colorCount cleared.
-  let onlyColorsMode = false;
+  // "No other colours" toggle pill — state lives in the shared
+  // createColorCountLock so findFlag and flagsdata can't drift on what
+  // "only these colours" means. Page owns the DOM (button below) and
+  // calls into the lock from three places: the toggle click, every
+  // color pill click (sync), and Clear (reset).
+  const colorCountLock = createColorCountLock(filters);
   /** @type {HTMLButtonElement | null} */
   let onlyColorsBtn = null;
-  function syncOnlyColors() {
-    if (!onlyColorsMode) {
-      filters.colorCount = null;
-      return;
-    }
-    filters.colorCount = filters.color.include.size;
-  }
 
   /** @type {{ items: Country[], foldedNames: string[], tiles: HTMLElement[], count: HTMLElement } | null} */
   let state = null;
@@ -187,7 +181,7 @@ export function bootFlagsData() {
           include.add(value);
           btn.classList.add('active');
         }
-        if (group === 'color') syncOnlyColors();
+        if (group === 'color') colorCountLock.sync();
         applyFilter();
       });
       wrap.appendChild(btn);
@@ -269,10 +263,8 @@ export function bootFlagsData() {
   onlyBtn.className = 'pill pill-modifier';
   onlyBtn.textContent = t('findFlag.noOtherColors', 'no other colours');
   onlyBtn.addEventListener('click', () => {
-    onlyColorsMode = !onlyColorsMode;
-    if (onlyColorsMode) onlyBtn.classList.add('active');
-    else onlyBtn.classList.remove('active');
-    syncOnlyColors();
+    const on = colorCountLock.toggle();
+    onlyBtn.classList.toggle('active', on);
     applyFilter();
   });
   colorGroup.appendChild(onlyBtn);
@@ -292,8 +284,7 @@ export function bootFlagsData() {
       filters[k].include.clear();
       filters[k].exclude.clear();
     }
-    filters.colorCount = null;
-    onlyColorsMode = false;
+    colorCountLock.reset();
     if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
     for (const el of filterBar.querySelectorAll('.pill.active, .pill.exclude')) {
       el.classList.remove('active');
