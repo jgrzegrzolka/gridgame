@@ -433,7 +433,8 @@ body::before {
 .color-count-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 3px;
+  padding: 3px 6px;
   border-style: dashed;
   font-variant-numeric: tabular-nums;
 }
@@ -475,9 +476,8 @@ body::before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  padding: 0 4px;
-  border-radius: 4px;
+  padding: 0 2px;
+  border-radius: 3px;
   cursor: pointer;
   user-select: none;
 }
@@ -493,22 +493,23 @@ body::before {
   background: rgba(0, 0, 0, 0.08);
 }
 /* × clear button — only visible when the picker is active. Explicit
- * affordance for disabling the filter (the `—` entry in the N
- * dropdown does the same thing, but isn't discoverable from outside
- * the dropdown). */
+ * affordance for disabling the filter. Sits flush against the N chip
+ * so toggling active doesn't visibly widen the pill — the chip-zone
+ * padding already gives it breathing room. */
 .color-count-clear {
   cursor: pointer;
   user-select: none;
-  margin-left: 4px;
-  padding: 0 4px;
+  padding: 0 2px;
   font-weight: 600;
-  border-radius: 4px;
+  border-radius: 3px;
+  opacity: 0.7;
 }
 .color-count-clear[hidden] {
   display: none;
 }
 .color-count-pill.active .color-count-clear:hover {
   background: rgba(255, 255, 255, 0.18);
+  opacity: 1;
 }
 
 /* Give-up reveal — applied identically to every grid-based game so the
