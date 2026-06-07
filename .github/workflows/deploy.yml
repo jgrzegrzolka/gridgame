@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Hand-cranked deploys and the trigger that release-daily.yml uses to
+  # re-deploy after the bot pushes a release commit. Direct pushes to
+  # main by GITHUB_TOKEN (which is what release-daily uses) deliberately
+  # do NOT trigger downstream workflows — without this dispatch trigger,
+  # the auto-release would land on main but never ship to Pages.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -41,7 +47,9 @@ jobs:
 
   deploy:
     needs: [test, typecheck]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     environment:
       name: github-pages
