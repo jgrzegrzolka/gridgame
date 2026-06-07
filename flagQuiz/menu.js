@@ -66,7 +66,9 @@ export function buildQuizMenu(menuEl, all, opts) {
   menuEl.appendChild(statsLi);
 
   const coffeeLi = document.createElement('li');
+  coffeeLi.className = 'menu-divider';
   const coffeeA = document.createElement('a');
+  coffeeA.className = 'menu-coffee';
   coffeeA.href = 'https://suppi.pl/jgrzegrzolka';
   coffeeA.target = '_blank';
   coffeeA.rel = 'noopener noreferrer';

@@ -213,6 +213,14 @@ body::before {
   padding-top: 12px;
   border-top: 1px solid #eee;
 }
+/* The "Buy me a coffee" item sits at the end of every burger menu —
+ * give it a softer treatment so it reads as ambient support rather
+ * than competing with the page-action items above it. */
+.menu a.menu-coffee {
+  color: #888;
+  font-size: 12px;
+  font-weight: 400;
+}
 .menu a {
   color: var(--link-color);
   text-decoration: none;
