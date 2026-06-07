@@ -1,4 +1,4 @@
-import { VARIANTS, defaultModeFor, availableModes, isQuizIncludeAll, setQuizIncludeAll } from '../flags/quiz.js';
+import { VARIANTS, defaultModeFor, resolveMode, isQuizIncludeAll, setQuizIncludeAll } from '../flags/quiz.js';
 import { t } from '../i18n.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
@@ -97,11 +97,8 @@ export function buildVariantPicker(pickerListEl, all, opts) {
   pickerListEl.innerHTML = '';
   for (const [key, variant] of Object.entries(VARIANTS)) {
     const pool = all.filter(variant.filter);
-    const defaultMode = defaultModeFor(pool.length);
-    if (defaultMode === null) continue;
-    const mode = urlMode && availableModes(pool.length).includes(urlMode)
-      ? urlMode
-      : defaultMode;
+    const mode = resolveMode(urlMode, pool.length);
+    if (mode === null) continue;
     const li = document.createElement('li');
     const a = document.createElement('a');
     a.href = `?v=${key}&n=${mode}`;

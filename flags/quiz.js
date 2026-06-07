@@ -391,6 +391,29 @@ export function defaultModeFor(poolSize) {
 }
 
 /**
+ * Resolve which mode to play given an optional URL hint and a pool
+ * size. Returns the URL hint when it names a mode that's actually
+ * available for the variant's pool — otherwise falls back to the
+ * variant's default. Returns null when the pool is too small for any
+ * mode at all (matching defaultModeFor's "no viable mode" signal).
+ *
+ * Used in two places that previously duplicated the expression:
+ * `flagQuiz/page.js` (deciding the mode for the about-to-start game)
+ * and `flagQuiz/menu.js`'s first-visit picker (building the href on
+ * each tile). De-duplicating the rule keeps both call sites
+ * trivially in sync — e.g. the picker preserving `?n=60s` from the
+ * home tile when the pool supports it.
+ *
+ * @param {string | null} urlMode
+ * @param {number} poolSize
+ * @returns {string | null}
+ */
+export function resolveMode(urlMode, poolSize) {
+  if (urlMode && availableModes(poolSize).includes(urlMode)) return urlMode;
+  return defaultModeFor(poolSize);
+}
+
+/**
  * Remaining budget in milliseconds. Wall-clock burn plus the per-wrong
  * penalty is subtracted from the budget; result is clamped at zero so
  * callers can render and compare without branching.

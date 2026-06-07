@@ -3,7 +3,7 @@ import {
   VARIANTS,
   MODES,
   availableModes,
-  defaultModeFor,
+  resolveMode,
   isTimedMode,
   timedRemainingMs,
   timedBudgetUsedMs,
@@ -109,9 +109,7 @@ export function bootFlagQuiz() {
 
       const variantKey = currentVariantKey;
       let pool = all.filter(VARIANTS[variantKey].filter);
-      let modeKey = urlMode && availableModes(pool.length).includes(urlMode)
-        ? urlMode
-        : defaultModeFor(pool.length);
+      let modeKey = resolveMode(urlMode, pool.length);
 
       startGame(variantKey, modeKey, all);
     })
