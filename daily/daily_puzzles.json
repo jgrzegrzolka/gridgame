@@ -33,5 +33,42 @@
       "en": "Find all European flags whose only colours are red and white — no others.",
       "pl": "Znajdź wszystkie europejskie flagi, które mają tylko 2 kolory: czerwony i biały."
     }
+  },
+  {
+    "n": 3,
+    "filter": "motif:eu-member",
+    "answers": [
+      "at",
+      "be",
+      "bg",
+      "cy",
+      "cz",
+      "de",
+      "dk",
+      "ee",
+      "es",
+      "fi",
+      "fr",
+      "gr",
+      "hr",
+      "hu",
+      "ie",
+      "it",
+      "lt",
+      "lu",
+      "lv",
+      "mt",
+      "nl",
+      "pl",
+      "pt",
+      "ro",
+      "se",
+      "si",
+      "sk"
+    ],
+    "description": {
+      "en": "Find the flag of every European Union member state.",
+      "pl": "Znajdź flagę każdego państwa członkowskiego Unii Europejskiej."
+    }
   }
 ]

@@ -1,42 +1,5 @@
 [
   {
-    "n": 3,
-    "filter": "motif:eu-member",
-    "answers": [
-      "at",
-      "be",
-      "bg",
-      "cy",
-      "cz",
-      "de",
-      "dk",
-      "ee",
-      "es",
-      "fi",
-      "fr",
-      "gr",
-      "hr",
-      "hu",
-      "ie",
-      "it",
-      "lt",
-      "lu",
-      "lv",
-      "mt",
-      "nl",
-      "pl",
-      "pt",
-      "ro",
-      "se",
-      "si",
-      "sk"
-    ],
-    "description": {
-      "en": "Find the flag of every European Union member state.",
-      "pl": "Znajdź flagę każdego państwa członkowskiego Unii Europejskiej."
-    }
-  },
-  {
     "n": 4,
     "filter": "continent:Europe,color:red,color:white,color:blue,colorCount:3",
     "answers": [
