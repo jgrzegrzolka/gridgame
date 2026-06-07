@@ -42,6 +42,30 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   colorCountProbability: 0.10,
 });
 
+/**
+ * Pick a fresh random mix from the full (continent + color + motif)
+ * tag inventory and navigate to it. Used by the in-game "Random" link
+ * and the result page's "Random next" link — both want the same
+ * "give me a new puzzle" jump, so the pool-build and navigation live
+ * in one place. (The chooser's Random button uses its own narrower
+ * pool — only pills that are actually visible there.)
+ * @param {import('../flags/group.js').Country[]} all
+ */
+function goRandom(all) {
+  /** @type {Array<{ group: 'continent' | 'color' | 'motif', value: string }>} */
+  const pool = [
+    ...CONTINENTS.filter((v) => all.some((c) => c.continent === v))
+      .map((v) => ({ group: /** @type {'continent'} */ ('continent'), value: /** @type {string} */ (v) })),
+    ...ALL_FLAG_COLORS.filter((v) => all.some((c) => c.colors.includes(v)))
+      .map((v) => ({ group: /** @type {'color'} */ ('color'), value: v })),
+    ...ALL_MOTIFS.filter((v) => all.some((c) => (c.motifs ?? []).includes(v)))
+      .map((v) => ({ group: /** @type {'motif'} */ ('motif'), value: v })),
+  ];
+  const f = pickRandomMix(pool, all, RANDOM_MIX_OPTIONS);
+  const params = new URLSearchParams({ f: serializeFilter(f) });
+  window.location.search = `?${params.toString()}`;
+}
+
 export function bootFindFlag() {
   const chooserEl = document.getElementById('chooser');
   const gameEl = document.getElementById('game');
@@ -349,6 +373,7 @@ export function bootFindFlag() {
     const sugEl = document.getElementById('find-suggestions');
     const foundEl = document.getElementById('find-found');
     const giveUpEl = document.getElementById('give-up');
+    const gameRandomEl = /** @type {HTMLAnchorElement} */ (document.getElementById('game-random'));
 
     catEl.textContent = category.label;
     updateCount();
@@ -477,6 +502,11 @@ export function bootFindFlag() {
 
     giveUpEl.addEventListener('click', () => finish());
 
+    gameRandomEl.addEventListener('click', (e) => {
+      e.preventDefault();
+      goRandom(all);
+    });
+
     function finish() {
       if (finished) return;
       finished = true;
@@ -522,20 +552,7 @@ export function bootFindFlag() {
 
       /** @type {HTMLAnchorElement} */ (document.getElementById('play-random')).onclick = (e) => {
         e.preventDefault();
-        // Same pool the chooser's Random button uses — playable
-        // (group, value) pairs across continents, colors, and motifs.
-        /** @type {Array<{ group: 'continent' | 'color' | 'motif', value: string }>} */
-        const pool = [
-          ...CONTINENTS.filter((v) => all.some((c) => c.continent === v))
-            .map((v) => ({ group: /** @type {'continent'} */ ('continent'), value: /** @type {string} */ (v) })),
-          ...ALL_FLAG_COLORS.filter((v) => all.some((c) => c.colors.includes(v)))
-            .map((v) => ({ group: /** @type {'color'} */ ('color'), value: v })),
-          ...ALL_MOTIFS.filter((v) => all.some((c) => (c.motifs ?? []).includes(v)))
-            .map((v) => ({ group: /** @type {'motif'} */ ('motif'), value: v })),
-        ];
-        const f = pickRandomMix(pool, all, RANDOM_MIX_OPTIONS);
-        const params = new URLSearchParams({ f: serializeFilter(f) });
-        window.location.search = `?${params.toString()}`;
+        goRandom(all);
       };
 
       gameEl.hidden = true;
