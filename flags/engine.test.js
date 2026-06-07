@@ -983,9 +983,9 @@ test('findUltimateAssignment: returns 81 distinct countries on an empty puzzle t
     COLORS_FOR_RANDOM,
     10,
   );
-  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 500 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 500 });
   /** @type {Country[][][][] | null} */
-  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries);
+  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(7));
   if (!assignment) throw new Error('a solvable puzzle must yield a non-null assignment');
   /** @type {Set<string>} */
   const seen = new Set();
@@ -1021,7 +1021,7 @@ test('findUltimateAssignment: respects preFilled cells and never reuses their co
     COLORS_FOR_RANDOM,
     10,
   );
-  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 50 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 500 });
   // Seed one cell at (0,0,0,0) with a country that fits its row × col.
   const seedCandidates = countries.filter(
     (co) => puzzle.rows[0].predicate(co) && puzzle.cols[0].predicate(co),
@@ -1031,7 +1031,7 @@ test('findUltimateAssignment: respects preFilled cells and never reuses their co
   const preFilled = emptyPreFilled();
   preFilled[0][0][0][0] = seed;
 
-  const assignment = findUltimateAssignment(puzzle, preFilled, countries);
+  const assignment = findUltimateAssignment(puzzle, preFilled, countries, mulberry32(7));
   if (!assignment) throw new Error('expected an assignment');
   // Seeded cell unchanged.
   assert.equal(assignment[0][0][0][0].code, seed.code);
@@ -1070,7 +1070,7 @@ test('findUltimateAssignment: returns null when preFilled has burned the candida
   // perCell stays at 9 here — the test deliberately exploits the tight
   // pool — but maxAttempts is generous so the puzzle generator itself
   // doesn't flake out on an unlucky axis roll.
-  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 500 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 500 });
   // Find a (br, bc) and steal all of its candidates into other cells'
   // preFilled slots whose row × col happens to also accept them.
   const target = { br: 0, bc: 0 };
@@ -1103,7 +1103,7 @@ test('findUltimateAssignment: returns null when preFilled has burned the candida
   // solver must return null. If not, this test's premise didn't hold
   // for this puzzle — skip the assertion rather than fail spuriously.
   if (seededCount === targetCandidates.length) {
-    const out = findUltimateAssignment(puzzle, preFilled, countries);
+    const out = findUltimateAssignment(puzzle, preFilled, countries, mulberry32(7));
     assert.equal(out, null, 'no completion possible when target small board has zero candidates left');
   }
 });
