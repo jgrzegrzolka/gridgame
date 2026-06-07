@@ -18,5 +18,15 @@
     "filter": "continent:Europe,color:white,color:blue,colorCount:2",
     "notes": "Iconic but {fi, gr} is a strict subset of #1 (Europe·cross — both have crosses). Rule 6 blocks until past #100, where subsets are allowed as a recall mechanic.",
     "parkUntilN": 101
+  },
+  {
+    "filter": "continent:Europe,color:yellow",
+    "notes": "19 default / 15 primary — NOT primary-clean (hr, sm, va, rs have yellow only in COA). Strict-superset of #8 (Europe RBY only-3 → ad,ro), #11 (Europe·star/moon → ba,hr,mk,si), and #23 (Europe BY only-2 → se,ua). Rule 5 (primary-clean) and rule 6 (no-subset) both block until #101+; would need primaryCleanExempt to ever ship before then.",
+    "parkUntilN": 101
+  },
+  {
+    "filter": "continent:!Oceania,color:orange",
+    "notes": "9 flags: am, bt, cy, ci, in, ie, ne, lk, zm. Primary-clean ✓. The !Oceania exclusion only drops Marshall Islands (mh, ns=6) — essentially 'orange flags worldwide minus the obscure one'. Strict-superset of #17 (OWG only-3 → cy,ci,ie,ne) blocks until #101+ (rule 6). Soft rule 10 also flags it: color:orange is a small property (10 sovereigns) and the technically-correct phrasing should be solo. Works as recall at #101+.",
+    "parkUntilN": 101
   }
 ]
