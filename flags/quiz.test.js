@@ -29,6 +29,7 @@ import {
   scoreColor,
   preloadFlags,
   pickCelebration,
+  pickFinalScoreLine,
   shouldShowBestTime,
   formatBestScoreLabel,
   mistakesAfterGiveUp,
@@ -837,4 +838,37 @@ test('pickCelebration: partial finish without a record is "confetti"', () => {
   assert.equal(pickCelebration({ found: 7, total: 10 }), 'confetti');
   assert.equal(pickCelebration({ found: 1, total: 10 }), 'confetti',
     'even a single find earns confetti — recognising the effort');
+});
+
+// pickFinalScoreLine — clean sweep collapses to "You found all"; everything
+// else keeps the fraction so the player sees what they accomplished.
+
+test('pickFinalScoreLine: clean sweep hides the fraction and uses the "all" key', () => {
+  assert.deepEqual(pickFinalScoreLine(124, 124), {
+    prefixKey: 'findFlag.youFoundAll',
+    showFraction: false,
+  });
+});
+
+test('pickFinalScoreLine: partial finish keeps the fraction', () => {
+  assert.deepEqual(pickFinalScoreLine(7, 10), {
+    prefixKey: 'findFlag.youFound',
+    showFraction: true,
+  });
+});
+
+test('pickFinalScoreLine: zero finds keep the fraction (0 / N is still a result)', () => {
+  assert.deepEqual(pickFinalScoreLine(0, 10), {
+    prefixKey: 'findFlag.youFound',
+    showFraction: true,
+  });
+});
+
+test('pickFinalScoreLine: degenerate total=0 does not claim "all"', () => {
+  // No targets shouldn't celebrate as a sweep — guard against the
+  // off-nominal case where a filter resolves to an empty set.
+  assert.deepEqual(pickFinalScoreLine(0, 0), {
+    prefixKey: 'findFlag.youFound',
+    showFraction: true,
+  });
 });

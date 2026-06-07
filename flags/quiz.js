@@ -562,3 +562,25 @@ export function pickCelebration({ found, total, isNew = false, isTimed = false }
   if (!isTimed && found === total) return 'fireworks';
   return 'confetti';
 }
+
+/**
+ * Decide how the "You found X / Y" result line should render. On a clean
+ * sweep we collapse to "You found all" and hide the count — at 124/124
+ * the fraction is redundant noise. Any other outcome (including 0) keeps
+ * the count so the player sees what they accomplished.
+ *
+ * Shared by findFlag and daily, which both render the same line over the
+ * same markup; tic-tac-toe and quiz use different score semantics and
+ * don't go through this helper.
+ *
+ * @param {number} found
+ * @param {number} total
+ * @returns {{ prefixKey: 'findFlag.youFoundAll' | 'findFlag.youFound', showFraction: boolean }}
+ */
+export function pickFinalScoreLine(found, total) {
+  const allFound = total > 0 && found === total;
+  return {
+    prefixKey: allFound ? 'findFlag.youFoundAll' : 'findFlag.youFound',
+    showFraction: !allFound,
+  };
+}
