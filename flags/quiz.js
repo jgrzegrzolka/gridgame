@@ -1,6 +1,7 @@
 import { readBoolSetting, writeBoolSetting } from './group.js';
 
 const QUIZ_INCLUDE_ALL_KEY = 'gridgame.flagquiz.includeAll';
+const QUIZ_LAST_VARIANT_KEY = 'gridgame.flagquiz.lastVariant';
 
 /**
  * @param {{ getItem(key: string): string | null } | null | undefined} [store]
@@ -15,6 +16,38 @@ export function isQuizIncludeAll(store) {
  */
 export function setQuizIncludeAll(store, value) {
   writeBoolSetting(store, QUIZ_INCLUDE_ALL_KEY, value);
+}
+
+/**
+ * Last variant the player started a quiz with. Returned only when the
+ * stored key still names a known variant — if VARIANTS is later renamed
+ * or pruned, a stale key returns null and the caller falls back to its
+ * own default. Returning null (rather than 'countries') keeps "is there
+ * a saved pick?" answerable by the caller, which the first-visit
+ * onboarding work in phase 2 will need.
+ *
+ * @param {{ getItem(key: string): string | null } | null | undefined} [store]
+ * @returns {string | null}
+ */
+export function getQuizLastVariant(store) {
+  const s = store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null);
+  if (!s) return null;
+  const raw = s.getItem(QUIZ_LAST_VARIANT_KEY);
+  if (raw === null) return null;
+  return Object.prototype.hasOwnProperty.call(VARIANTS, raw) ? raw : null;
+}
+
+/**
+ * Persist the player's current variant pick so the next visit lands on
+ * it. Silently ignores unknown keys — better than poisoning localStorage
+ * with a value that getQuizLastVariant would then reject every load.
+ *
+ * @param {{ setItem(key: string, value: string): void }} store
+ * @param {string} key
+ */
+export function setQuizLastVariant(store, key) {
+  if (!Object.prototype.hasOwnProperty.call(VARIANTS, key)) return;
+  store.setItem(QUIZ_LAST_VARIANT_KEY, key);
 }
 
 /**

@@ -15,6 +15,8 @@ import {
   poolFor,
   targetFor,
   isQuizIncludeAll,
+  getQuizLastVariant,
+  setQuizLastVariant,
   preloadFlags,
   pickCelebration,
   shouldShowBestTime,
@@ -53,9 +55,19 @@ export function bootFlagQuiz() {
   const params = new URLSearchParams(window.location.search);
   const urlVariant = params.get('v');
   const urlMode = params.get('n');
-  // Compute the effective variant before renderMenu runs so the menu can
-  // mark the matching entry with aria-current="page".
-  const currentVariantKey = urlVariant && VARIANTS[urlVariant] ? urlVariant : DEFAULT_VARIANT;
+  // Resolution order: explicit ?v= deep-link → player's last saved
+  // pick → DEFAULT_VARIANT for first-time visitors. Last-pick memory
+  // means returning players land on the category they actually play,
+  // not "All countries" every time. Computed before renderMenu so the
+  // menu can mark the matching entry with aria-current="page".
+  const savedVariant = getQuizLastVariant(window.localStorage);
+  const currentVariantKey = urlVariant && VARIANTS[urlVariant]
+    ? urlVariant
+    : (savedVariant ?? DEFAULT_VARIANT);
+  // Persist the resolved variant so the next bare-/flagQuiz/ visit
+  // lands here. Deep-link visits write through too — if a friend
+  // shares ?v=africa and you play it, that becomes your last pick.
+  setQuizLastVariant(window.localStorage, currentVariantKey);
 
   const includeAll = isQuizIncludeAll();
 

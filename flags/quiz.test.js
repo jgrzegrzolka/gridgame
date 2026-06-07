@@ -34,6 +34,8 @@ import {
   formatBestScoreLabel,
   mistakesAfterGiveUp,
   countModeProgressRatio,
+  getQuizLastVariant,
+  setQuizLastVariant,
 } from './quiz.js';
 import { loadCountries } from './group.js';
 
@@ -871,4 +873,40 @@ test('pickFinalScoreLine: degenerate total=0 does not claim "all"', () => {
     prefixKey: 'findFlag.youFound',
     showFraction: true,
   });
+});
+
+// ---- getQuizLastVariant / setQuizLastVariant ----
+
+test('getQuizLastVariant returns null when no value is stored — first-time visitor', () => {
+  assert.equal(getQuizLastVariant(fakeStore()), null);
+});
+
+test('getQuizLastVariant returns the stored key when it names a known variant', () => {
+  const store = fakeStore({ 'gridgame.flagquiz.lastVariant': 'europe' });
+  assert.equal(getQuizLastVariant(store), 'europe');
+});
+
+test('getQuizLastVariant returns null when the stored key no longer names a known variant', () => {
+  // Defends against future VARIANTS renames / removals — a stale
+  // localStorage entry shouldn't crash the page or strand the player
+  // on a variant that no longer exists. Caller falls back to its
+  // own default.
+  const store = fakeStore({ 'gridgame.flagquiz.lastVariant': 'atlantis' });
+  assert.equal(getQuizLastVariant(store), null);
+});
+
+test('setQuizLastVariant + getQuizLastVariant round-trips a known variant', () => {
+  const store = fakeStore();
+  setQuizLastVariant(store, 'asia');
+  assert.equal(getQuizLastVariant(store), 'asia');
+});
+
+test('setQuizLastVariant silently drops an unknown variant key', () => {
+  // Better to no-op than poison localStorage with a value that
+  // getQuizLastVariant would then reject on every load. Existing value
+  // (if any) survives — guarantees a stable saved pick across releases
+  // where the URL might briefly carry a typo from an external link.
+  const store = fakeStore({ 'gridgame.flagquiz.lastVariant': 'africa' });
+  setQuizLastVariant(store, 'atlantis');
+  assert.equal(getQuizLastVariant(store), 'africa');
 });
