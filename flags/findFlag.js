@@ -112,13 +112,15 @@ export function parseFilterString(s) {
     //                     catalog entries that pre-date the op syntax)
     //   colorCount:=N   → exactly N (explicit)
     //   colorCount:>=N  → N or more
+    //   colorCount:<=N  → N or fewer
     // Doesn't take include/exclude — `!` prefix is meaningless on a
     // scalar comparison and is silently dropped.
     if (group === 'colorCount') {
-      /** @type {'=' | '>='} */
+      /** @type {'=' | '>=' | '<='} */
       let op = '=';
       let nStr = val;
       if (val.startsWith('>=')) { op = '>='; nStr = val.slice(2); }
+      else if (val.startsWith('<=')) { op = '<='; nStr = val.slice(2); }
       else if (val.startsWith('=')) { nStr = val.slice(1); }
       const n = Number.parseInt(nStr, 10);
       if (Number.isInteger(n) && n >= 0 && String(n) === nStr) {
@@ -163,7 +165,8 @@ export function serializeFilter(f) {
   if (f.colorCount !== null) {
     // Emit the bare form `colorCount:N` for the `=` op so existing
     // shareable URLs and the 23 daily catalog entries that pre-date the
-    // op syntax round-trip byte-identical. `>=` always emits explicit.
+    // op syntax round-trip byte-identical. `>=` and `<=` always emit
+    // the explicit form.
     const { op, n } = f.colorCount;
     tokens.push(op === '=' ? `colorCount:${n}` : `colorCount:${op}${n}`);
   }
@@ -251,11 +254,16 @@ export function pillLabel(group, value, sign, translate) {
     // colorCount is a scalar; the "value" echoes the URL-suffix form:
     //   "N" or "=N" → exactly N, via filter.onlyN.<n>
     //   ">=N"       → N or more, via filter.atLeastN.<n>
+    //   "<=N"       → N or fewer, via filter.atMostN.<n>
     // Doesn't support exclude — the primitive itself is scalar, you
     // either constrain to N or you don't.
     if (value.startsWith('>=')) {
       const n = value.slice(2);
       return translate(`filter.atLeastN.${n}`, `${n} or more colours`);
+    }
+    if (value.startsWith('<=')) {
+      const n = value.slice(2);
+      return translate(`filter.atMostN.${n}`, `${n} or fewer colours`);
     }
     const n = value.startsWith('=') ? value.slice(1) : value;
     return translate(`filter.onlyN.${n}`, `only ${n} colours`);
@@ -288,6 +296,7 @@ export function filterTitle(f, translate) {
   if (f.colorCount !== null) {
     const { op, n } = f.colorCount;
     if (op === '>=') parts.push(translate(`filter.atLeastN.${n}`, `${n} or more colours`));
+    else if (op === '<=') parts.push(translate(`filter.atMostN.${n}`, `${n} or fewer colours`));
     else parts.push(translate(`filter.onlyN.${n}`, `only ${n} colours`));
   }
   return parts.join(' · ');

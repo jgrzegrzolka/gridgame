@@ -18,6 +18,7 @@ import {
   pickRandomMix,
 } from '../flags/findFlag.js';
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
+import { createColorCountPicker } from '../colorCountPicker.js';
 import { scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
@@ -152,6 +153,20 @@ export function bootFindFlag() {
     /** @type {HTMLButtonElement | null} */
     let onlyColorsBtn = null;
 
+    // "Colour count" widget — segmented op + N picker shared with the
+    // flagsdata filter bar. Both surfaces write to `filter.colorCount`,
+    // so engaging the picker resets the lock and vice versa.
+    const colorCountPicker = createColorCountPicker(filter, t, {
+      onChange: () => updateBar(),
+      onPicked: () => {
+        // Picker just took over `filter.colorCount`. Disengage the lock
+        // *cosmetically* — DON'T call lock.reset() here, because that
+        // would clobber the value the picker just wrote.
+        colorCountLock.disengage();
+        if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
+      },
+    });
+
     for (const sec of sections) {
       const secEl = document.createElement('section');
       secEl.className = 'chooser-section';
@@ -193,10 +208,17 @@ export function bootFindFlag() {
         btn.addEventListener('click', () => {
           const on = colorCountLock.toggle();
           btn.classList.toggle('active', on);
+          // Lock just took over the colour-count primitive — tell the
+          // picker pill to disengage cosmetically (drops its op/n to
+          // defaults, paints inactive). Doesn't touch `filter.colorCount`.
+          colorCountPicker.disengage();
           updateBar();
         });
         wrap.appendChild(btn);
         onlyColorsBtn = btn;
+        // Colour-count compound pill — sits next to "no other colours"
+        // since both drive the same `filter.colorCount` primitive.
+        wrap.appendChild(colorCountPicker.el);
       }
       secEl.appendChild(wrap);
       sectionsEl.appendChild(secEl);
@@ -268,6 +290,7 @@ export function bootFindFlag() {
       }
       colorCountLock.reset();
       if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
+      colorCountPicker.reset();
       for (const { btn } of allPills) {
         btn.classList.remove('active', 'exclude');
       }

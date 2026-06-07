@@ -25,6 +25,8 @@
     "common.test.js",
     "confetti.js",
     "confetti.test.js",
+    "colorCountPicker.js",
+    "colorCountPicker.test.js",
     "i18n.js",
     "i18n.test.js"
   ]

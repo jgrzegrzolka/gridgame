@@ -1,6 +1,7 @@
 import { CONTINENTS, loadCountries } from '../flags/group.js';
 import { ALL_FLAG_COLORS, ALL_MOTIFS, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
+import { createColorCountPicker } from '../colorCountPicker.js';
 import { t, countryName } from '../i18n.js';
 
 /** @param {string} v */
@@ -86,6 +87,20 @@ export function bootFlagsData() {
   const colorCountLock = createColorCountLock(filters);
   /** @type {HTMLButtonElement | null} */
   let onlyColorsBtn = null;
+
+  // "Colour count" widget — segmented op + N picker shared with the
+  // findFlag chooser. Both surfaces write to `filters.colorCount`, so
+  // engaging the picker resets the lock and vice versa.
+  const colorCountPicker = createColorCountPicker(filters, t, {
+    onChange: () => applyFilter(),
+    onPicked: () => {
+      // Picker just took over `filters.colorCount`. Disengage the lock
+      // *cosmetically* — DON'T call lock.reset() here, because that
+      // would clobber the value the picker just wrote.
+      colorCountLock.disengage();
+      if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
+    },
+  });
 
   /** @type {{ items: Country[], foldedNames: string[], tiles: HTMLElement[], count: HTMLElement } | null} */
   let state = null;
@@ -265,11 +280,20 @@ export function bootFlagsData() {
   onlyBtn.addEventListener('click', () => {
     const on = colorCountLock.toggle();
     onlyBtn.classList.toggle('active', on);
+    // Lock just took over the colour-count primitive — tell the
+    // picker pill to disengage cosmetically (drops its op/n to
+    // defaults, paints inactive). Doesn't touch `filters.colorCount`.
+    colorCountPicker.disengage();
     applyFilter();
   });
   colorGroup.appendChild(onlyBtn);
   onlyColorsBtn = onlyBtn;
+  // Colour-count compound pill — sits next to "no other colours" since
+  // both drive the same `filters.colorCount` primitive. Single pill
+  // with three click zones (op cycles =/≥/≤, N cycles 2/3/4/5, × clears).
+  colorGroup.appendChild(colorCountPicker.el);
   groupsWrap.appendChild(colorGroup);
+
   groupsWrap.appendChild(
     buildFilterGroup(t('flagsdata.filterMotifs', 'Motifs'), 'motif', ALL_MOTIFS.map((v) => ({ value: v, label: motifLabel(v) }))),
   );
@@ -286,6 +310,7 @@ export function bootFlagsData() {
     }
     colorCountLock.reset();
     if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
+    colorCountPicker.reset();
     for (const el of filterBar.querySelectorAll('.pill.active, .pill.exclude')) {
       el.classList.remove('active');
       el.classList.remove('exclude');

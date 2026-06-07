@@ -731,6 +731,16 @@ test('colorCount(>=, N) predicate matches countries with N or more colours', () 
   assert.equal(cat.predicate(five), true);
 });
 
+test('colorCount(<=, N) predicate matches countries with N or fewer colours', () => {
+  const cat = colorCount('<=', 2);
+  const one = country({ code: 'aa', name: 'X', primaryColors: ['red'] });
+  const two = country({ code: 'jp', name: 'X', primaryColors: ['white', 'red'] });
+  const three = country({ code: 'sk', name: 'X', primaryColors: ['white', 'blue', 'red'] });
+  assert.equal(cat.predicate(one), true);
+  assert.equal(cat.predicate(two), true);
+  assert.equal(cat.predicate(three), false);
+});
+
 test('colorCount carries exclusiveGroup so axesConflict rejects two different constraints', () => {
   const conflict = axesConflict(
     [continent('Africa'), hasColor('red'), colorCount('=', 2)],
@@ -768,6 +778,11 @@ test('translateCategoryLabel uses the filter.atLeastN.<n> key for colorCount >= 
   assert.equal(translateCategoryLabel(colorCount('>=', 4), t), '4 lub więcej kolorów');
 });
 
+test('translateCategoryLabel uses the filter.atMostN.<n> key for colorCount <= N', () => {
+  const t = fakeTranslate({ 'filter.atMostN.2': 'co najwyżej 2 kolory' });
+  assert.equal(translateCategoryLabel(colorCount('<=', 2), t), 'co najwyżej 2 kolory');
+});
+
 test('translateCategoryLabel falls back to the baked English label when the colorCount key is missing', () => {
   const t = fakeTranslate({});
   assert.equal(translateCategoryLabel(colorCount('=', 3), t), 'only 3 colours');
@@ -796,6 +811,18 @@ test('categoryFromId round-trips a colorCount:>=N id', () => {
   const four = country({ code: 'hr', name: 'X', primaryColors: ['w','b','r'], additionalColors: ['y'] });
   assert.equal(cat.predicate(three), false);
   assert.equal(cat.predicate(four), true);
+});
+
+test('categoryFromId round-trips a colorCount:<=N id', () => {
+  const cat = categoryFromId('colorCount:<=2');
+  assert.ok(cat);
+  assert.equal(cat.id, 'colorCount:<=2');
+  assert.equal(cat.label, '2 or fewer colours');
+  assert.equal(cat.exclusiveGroup, 'colorCount');
+  const two = country({ code: 'jp', name: 'X', primaryColors: ['white', 'red'] });
+  const three = country({ code: 'sk', name: 'X', primaryColors: ['white', 'blue', 'red'] });
+  assert.equal(cat.predicate(two), true);
+  assert.equal(cat.predicate(three), false);
 });
 
 test('categoryFromId returns null for a non-integer or malformed colorCount id', () => {

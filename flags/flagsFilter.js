@@ -13,10 +13,9 @@ import { sovereigntyOf } from './group.js';
  *
  * @typedef {{ include: Set<string>, exclude: Set<string> }} FilterSet
  *
- * @typedef {{ op: '=' | '>=', n: number }} ColorCountConstraint
- *   `=` constrains the full palette size to exactly N; `>=` to N or more.
- *   The `<=` op is not implemented yet — symmetric add when a real use
- *   case surfaces.
+ * @typedef {{ op: '=' | '>=' | '<=', n: number }} ColorCountConstraint
+ *   `=` constrains the full palette size to exactly N; `>=` to N or
+ *   more; `<=` to N or fewer.
  *
  * @typedef {{
  *   status: FilterSet,
@@ -72,16 +71,42 @@ export function emptyFilters() {
 export function createColorCountLock(filter) {
   let on = false;
   function sync() {
-    filter.colorCount = on ? { op: '=', n: filter.color.include.size } : null;
+    // Off → no-op. Critical: the picker pill may have written
+    // `filter.colorCount` while the lock is off; if sync also reset
+    // the primitive here, every colour-pill click (which calls sync)
+    // would clobber the picker's filter. Behaviour the user sees
+    // when this is wrong: pick =2 on the picker, then toggle any
+    // colour pill, and the count filter silently disappears.
+    if (!on) return;
+    filter.colorCount = { op: '=', n: filter.color.include.size };
   }
   return {
     get isOn() { return on; },
     toggle() {
       on = !on;
-      sync();
+      if (on) {
+        sync();
+      } else {
+        // User explicitly toggled the lock off — relinquish the
+        // primitive. Sync no longer does this on its own (so colour-
+        // pill clicks don't clobber the picker), so toggle-off has
+        // to clear explicitly.
+        filter.colorCount = null;
+      }
       return on;
     },
     sync,
+    /**
+     * Cosmetic disengage — flips the lock off without touching
+     * `filter.colorCount`. Called when another UI surface (the
+     * colour-count picker pill) takes over the shared primitive: the
+     * lock's `on` flag has to clear so the next user toggle starts
+     * fresh, but blowing away `filter.colorCount` here would wipe what
+     * the picker just set.
+     */
+    disengage() {
+      on = false;
+    },
     reset() {
       on = false;
       filter.colorCount = null;
@@ -139,6 +164,7 @@ export function matchesFilters(country, filters, options = {}) {
     const { op, n } = filters.colorCount;
     if (op === '=' && len !== n) return false;
     if (op === '>=' && len < n) return false;
+    if (op === '<=' && len > n) return false;
   }
 
   const motifs = country.motifs ?? [];

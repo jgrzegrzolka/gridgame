@@ -194,23 +194,30 @@ export function hasColor(color) {
 
 /**
  * "Colour-count" Category — `op:'='` matches exactly N colours, `op:'>='`
- * matches N or more. The id encodes the op in URL-suffix form: bare `N`
- * for `=` (keeps daily catalog entries and shareable URLs stable), `>=N`
- * for the at-least variant.
+ * matches N or more, `op:'<='` matches N or fewer. The id encodes the op
+ * in URL-suffix form: bare `N` for `=` (keeps daily catalog entries and
+ * shareable URLs stable), `>=N` / `<=N` for the inequality variants.
  *
- * @param {'=' | '>='} op
+ * @param {'=' | '>=' | '<='} op
  * @param {number} n
  * @returns {Category}
  */
 export function colorCount(op, n) {
   const idSuffix = op === '=' ? String(n) : `${op}${n}`;
-  const label = op === '=' ? `only ${n} colours` : `${n} or more colours`;
+  let label = `only ${n} colours`;
+  /** @type {(c: Country) => boolean} */
+  let predicate = (c) => c.colors.length === n;
+  if (op === '>=') {
+    label = `${n} or more colours`;
+    predicate = (c) => c.colors.length >= n;
+  } else if (op === '<=') {
+    label = `${n} or fewer colours`;
+    predicate = (c) => c.colors.length <= n;
+  }
   return {
     id: `colorCount:${idSuffix}`,
     label,
-    predicate: op === '='
-      ? (c) => c.colors.length === n
-      : (c) => c.colors.length >= n,
+    predicate,
     exclusiveGroup: 'colorCount',
   };
 }
@@ -279,10 +286,13 @@ export function translateCategoryLabel(category, translate) {
   }
   if (kind === 'colorCount') {
     // The id suffix is the URL-suffix form: bare "N" → `filter.onlyN.N`,
-    // ">=N" → `filter.atLeastN.N`. Keeps the i18n keys aligned with what
-    // findFlag's pillLabel / filterTitle use.
+    // ">=N" → `filter.atLeastN.N`, "<=N" → `filter.atMostN.N`. Keeps the
+    // i18n keys aligned with what findFlag's pillLabel / filterTitle use.
     if (value.startsWith('>=')) {
       return translate(`filter.atLeastN.${value.slice(2)}`, category.label);
+    }
+    if (value.startsWith('<=')) {
+      return translate(`filter.atMostN.${value.slice(2)}`, category.label);
     }
     return translate(`filter.onlyN.${value}`, category.label);
   }
@@ -306,10 +316,11 @@ export function categoryFromId(id) {
   if (id.startsWith('statehood:')) return statehood(id.slice('statehood:'.length));
   if (id.startsWith('colorCount:')) {
     const suffix = id.slice('colorCount:'.length);
-    /** @type {'=' | '>='} */
+    /** @type {'=' | '>=' | '<='} */
     let op = '=';
     let nStr = suffix;
     if (suffix.startsWith('>=')) { op = '>='; nStr = suffix.slice(2); }
+    else if (suffix.startsWith('<=')) { op = '<='; nStr = suffix.slice(2); }
     const n = Number.parseInt(nStr, 10);
     if (Number.isInteger(n) && n >= 0 && String(n) === nStr) return colorCount(op, n);
     return null;
