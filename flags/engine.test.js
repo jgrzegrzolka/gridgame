@@ -933,9 +933,12 @@ test('hasUltimatePuzzleSolution: perCell=1 reduces it to the regular 9-distinct-
 
 test('generateUltimateRandomPuzzle returns a puzzle that passes hasUltimatePuzzleSolution', () => {
   // Saturated synthetic pool — every (continent × color) cell has 9 flags of
-  // its own. Any combination the generator picks must pass the Hall check.
+  // its own. Any combination the generator survives must pass the Hall check.
+  // Deterministic mulberry32 seed + production-default 500-attempt budget so
+  // CI doesn't flake when axesImpliedPair narrows the success window past
+  // the prior 50-attempt headroom on certain Math.random sequences.
   const countries = denseSquarePool(['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'], COLORS_FOR_RANDOM, 9);
-  const puzzle = generateUltimateRandomPuzzle(countries, { maxAttempts: 50 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 500 });
   assert.equal(hasUltimatePuzzleSolution(puzzle, countries), true);
 });
 
