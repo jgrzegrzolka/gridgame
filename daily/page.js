@@ -5,10 +5,9 @@ import {
   classifyGuess,
   filterToCategory,
 } from '../flags/findFlag.js';
-import { scoreColor } from '../flags/quiz.js';
+import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
-import { pickCelebration } from '../flags/quiz.js';
 import { todayN, dailyNFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry } from '../flags/daily.js';
 import { loadScores, saveScore, isCompleteRecord } from './scores.js';
 
@@ -207,6 +206,11 @@ export function bootDaily() {
   function renderResult(targets, foundCodes) {
     const found = foundCodes.size;
     const total = targets.length;
+    const { prefixKey, showFraction } = pickFinalScoreLine(found, total);
+    const prefixEl = /** @type {HTMLElement} */ (document.getElementById('final-score-prefix'));
+    prefixEl.setAttribute('data-i18n', prefixKey);
+    prefixEl.textContent = t(prefixKey, prefixKey === 'findFlag.youFoundAll' ? 'You found all' : 'You found');
+    /** @type {HTMLElement} */ (document.getElementById('final-score-fraction')).hidden = !showFraction;
     /** @type {HTMLElement} */ (document.getElementById('final-found')).textContent = String(found);
     /** @type {HTMLElement} */ (document.getElementById('final-total')).textContent = String(total);
     /** @type {HTMLElement} */ (document.getElementById('final-score-line')).style.color = scoreColor(found / total);

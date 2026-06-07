@@ -19,10 +19,9 @@ import {
 } from '../flags/findFlag.js';
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
-import { scoreColor } from '../flags/quiz.js';
+import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
-import { pickCelebration } from '../flags/quiz.js';
 
 export function bootFindFlag() {
   const chooserEl = document.getElementById('chooser');
@@ -464,6 +463,11 @@ export function bootFindFlag() {
       finished = true;
       const found = foundCodes.size;
       const total = targetCodes.size;
+      const { prefixKey, showFraction } = pickFinalScoreLine(found, total);
+      const prefixEl = document.getElementById('final-score-prefix');
+      prefixEl.setAttribute('data-i18n', prefixKey);
+      prefixEl.textContent = t(prefixKey, prefixKey === 'findFlag.youFoundAll' ? 'You found all' : 'You found');
+      document.getElementById('final-score-fraction').hidden = !showFraction;
       document.getElementById('final-found').textContent = String(found);
       document.getElementById('final-total').textContent = String(total);
       document.getElementById('final-score-line').style.color = scoreColor(found / total);

@@ -568,7 +568,7 @@ body::before {
   100% { opacity: 1; transform: translateY(0); }
 }
 .final-score {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 500;
   margin: 0 0 12px;
 }
