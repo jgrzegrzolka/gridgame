@@ -8,13 +8,26 @@ description: Adds or vets entries in the gridgame daily-puzzle catalog (daily/da
 The daily catalog is two append-only JSON files:
 
 - `daily/daily_puzzles.json` — released puzzles, visible to players. "Today's puzzle" = last entry.
-- `daily/daily_backlog.json` — staged, hidden. Releasing = move `backlog[0]` to the end of live.
+- `daily/daily_backlog.json` — staged, hidden. Releasing = move `backlog[0]` to the end of live (see **Releasing** below — the bot does this nightly).
 
 Each entry is `{ "n": <int>, "filter": "<filterString>", "answers": ["<code>", ...], "description": { "en": "...", "pl": "..." } }`. Numbering is sequential across the two files (live ends at N → backlog starts at N+1).
 
 Plus one parking lot:
 
 - `daily/daily_ideas.json` — unsealed puzzle ideas waiting for a future slot. Entries are `{ "filter", "notes", "parkUntilN" }` — no `n`, no `answers`. Not loaded by the game and not checked by the catalog tests; used when a filter is good but doesn't fit the current onboarding window (e.g. emblem-leaning motifs that need #30+). Promotion = compute answers + assign next `n` + move into `daily_backlog.json`.
+
+## Releasing
+
+A scheduled GitHub Actions workflow (`.github/workflows/release-daily.yml`) promotes `daily_backlog.json[0]` to `daily_puzzles.json` at **Polish midnight** every day, then commits and pushes to `main` as `github-actions[bot]`. The existing `deploy.yml` picks up the push and ships the new live catalog. The move logic is `promote()` in `scripts/release-next.mjs`, covered by `scripts/release-next.test.mjs`.
+
+After the move, the workflow runs `npm run validate` — if any hard rule (1–7) fails, the workflow fails and **nothing is pushed**. So country-data drift or a bad backlog entry surfaces as a workflow failure email instead of a bad puzzle going live.
+
+What this changes for you as author:
+
+- **Day-to-day work shifts from "release today's puzzle" to "keep the backlog full."** The bot handles the daily move; your job is to make sure `backlog` doesn't run dry.
+- **Manual release is still possible** — running `node scripts/release-next.mjs` locally (or hitting "Run workflow" on the Actions tab via `workflow_dispatch`) does the same move. Useful if you want to skip ahead, or if the cron firing got eaten.
+- **Empty backlog = failure email.** The script throws non-zero when there's nothing to promote, so you get notified instead of a silent miss. That's the cue to author the next batch.
+- **Cron is best-effort** — GitHub Actions schedules typically fire 5–30 min late, so expect the auto-commit to land between ~00:00 and ~00:30 Warsaw time, not on the dot.
 
 ## Filter DSL primitives
 
