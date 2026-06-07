@@ -280,6 +280,53 @@ export function axesConflict(rows, cols) {
 }
 
 /**
+ * Detect a degenerate (row × col) pair where one axis's predicate is fully
+ * implied by the other's. The classic case is `motif:eu-member` × `continent:Europe`
+ * — every EU member is European, so the cell reduces to "EU member" and the
+ * continent constraint does no work. The player sees a 3×3 where one cell
+ * reads "EU member" twice over, breaking the implied-conjunction model that
+ * makes the rest of the grid feel like progress.
+ *
+ * The check is set-subset: for each cross-axis (r, c) pair, if
+ * {countries matching r} ⊆ {countries matching c} (or vice versa), one
+ * predicate implies the other and the puzzle should be retried with a
+ * different category mix. Note: an empty match-set is trivially a subset
+ * of everything — we exclude that case here because empty cells are
+ * already caught by `isPuzzleGeneratable`'s minPerCell threshold, and
+ * treating them as "implied" would muddy the failure signal.
+ *
+ * @param {Category[]} rows
+ * @param {Category[]} cols
+ * @param {Country[]} countries
+ * @returns {boolean}
+ */
+export function axesImpliedPair(rows, cols, countries) {
+  /** @type {Map<string, Set<string>>} */
+  const matchCodes = new Map();
+  for (const cat of [...rows, ...cols]) {
+    if (matchCodes.has(cat.id)) continue;
+    const codes = new Set();
+    for (const c of countries) if (cat.predicate(c)) codes.add(c.code);
+    matchCodes.set(cat.id, codes);
+  }
+  for (const r of rows) {
+    const rs = /** @type {Set<string>} */ (matchCodes.get(r.id));
+    if (rs.size === 0) continue;
+    for (const c of cols) {
+      if (r.id === c.id) continue;
+      const cs = /** @type {Set<string>} */ (matchCodes.get(c.id));
+      if (cs.size === 0) continue;
+      // r ⊆ c — every flag matching r also matches c, so the c constraint
+      // is no-op inside the (r, c) cell.
+      if (rs.size <= cs.size && [...rs].every((code) => cs.has(code))) return true;
+      // c ⊆ r — symmetric case.
+      if (cs.size <= rs.size && [...cs].every((code) => rs.has(code))) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * @param {() => number} [rng]
  * @returns {Puzzle}
  */
@@ -499,6 +546,7 @@ export function generateRandomPuzzle(countries, options = {}) {
   for (let i = 0; i < maxAttempts; i++) {
     const puzzle = randomPuzzle(rng);
     if (axesConflict(puzzle.rows, puzzle.cols)) continue;
+    if (axesImpliedPair(puzzle.rows, puzzle.cols, countries)) continue;
     if (isPuzzleGeneratable(puzzle, countries, minPerCell)) {
       return puzzle;
     }
@@ -573,6 +621,7 @@ export function generateUltimateRandomPuzzle(countries, options = {}) {
   for (let i = 0; i < maxAttempts; i++) {
     const puzzle = randomPuzzle(rng);
     if (axesConflict(puzzle.rows, puzzle.cols)) continue;
+    if (axesImpliedPair(puzzle.rows, puzzle.cols, countries)) continue;
     if (hasUltimatePuzzleSolution(puzzle, countries)) {
       return puzzle;
     }
