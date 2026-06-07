@@ -2,13 +2,8 @@
 /** @typedef {import('./engine.js').Category} Category */
 /** @typedef {import('./flagsFilter.js').Filters} Filters */
 
-import { categoryFromId as gridCategoryFromId } from './engine.js';
 import { readBoolSetting, writeBoolSetting } from './group.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
-
-// Re-exported so existing findFlag callers don't need to update their import.
-// The implementation lives in engine.js next to the category factories.
-export const categoryFromId = gridCategoryFromId;
 
 /**
  * Filter-group names in the order they should appear in titles and URLs.
@@ -16,9 +11,8 @@ export const categoryFromId = gridCategoryFromId;
  * surface it, but legacy rehydration via `?cat=statehood:…` still maps
  * through this list to keep round-trips total.
  *
- * @type {Array<keyof Filters>}
+ * @type {Array<'continent' | 'color' | 'motif' | 'status'>}
  */
-/** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */
 const GROUP_ORDER = ['continent', 'color', 'motif', 'status'];
 
 const FIND_INCLUDE_ALL_KEY = 'gridgame.flagfind.includeAll';
