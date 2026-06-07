@@ -3,6 +3,18 @@ body {
   flex-direction: column;
   align-items: center;
 }
+
+/* First-visit category picker. Replaces the auto-started game on a
+ * player's very first /flagQuiz/ visit (no ?v= URL, no saved variant).
+ * After their first pick, the resulting page load sets lastVariant
+ * and the picker is never shown again for that player. The inner
+ * <ul class="menu"> reuses the burger-menu link styling from
+ * common.css, so picker and burger always look identical — the
+ * burger remains a parallel access path. */
+.quiz-picker {
+  margin-top: 32px;
+}
+
 .progress-bar {
   position: fixed;
   top: 0;

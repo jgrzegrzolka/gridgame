@@ -3,7 +3,7 @@ import {
   VARIANTS,
   MODES,
   availableModes,
-  defaultModeFor,
+  resolveMode,
   isTimedMode,
   timedRemainingMs,
   timedBudgetUsedMs,
@@ -26,7 +26,7 @@ import {
 import { flagsGamePool, loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
-import { buildQuizMenu } from './menu.js';
+import { buildQuizMenu, buildVariantPicker } from './menu.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -56,18 +56,27 @@ export function bootFlagQuiz() {
   const urlVariant = params.get('v');
   const urlMode = params.get('n');
   // Resolution order: explicit ?v= deep-link → player's last saved
-  // pick → DEFAULT_VARIANT for first-time visitors. Last-pick memory
-  // means returning players land on the category they actually play,
-  // not "All countries" every time. Computed before renderMenu so the
-  // menu can mark the matching entry with aria-current="page".
+  // pick → first-visit picker. Last-pick memory means returning
+  // players land on the category they actually play, not "All
+  // countries" every time.
   const savedVariant = getQuizLastVariant(window.localStorage);
+  // First-visit signal: no URL override AND no saved pick. The
+  // picker becomes the landing state instead of forcing a default
+  // start. As soon as the player clicks a picker tile, the next
+  // page load sets savedVariant and this branch goes quiet forever.
+  const isFirstVisit = !urlVariant && !savedVariant;
   const currentVariantKey = urlVariant && VARIANTS[urlVariant]
     ? urlVariant
     : (savedVariant ?? DEFAULT_VARIANT);
   // Persist the resolved variant so the next bare-/flagQuiz/ visit
   // lands here. Deep-link visits write through too — if a friend
   // shares ?v=africa and you play it, that becomes your last pick.
-  setQuizLastVariant(window.localStorage, currentVariantKey);
+  // Skipped on first visit so "I haven't picked yet" stays true
+  // until the player actually picks — otherwise we'd save the
+  // DEFAULT_VARIANT fallback and suppress the picker forever.
+  if (!isFirstVisit) {
+    setQuizLastVariant(window.localStorage, currentVariantKey);
+  }
 
   const includeAll = isQuizIncludeAll();
 
@@ -79,15 +88,28 @@ export function bootFlagQuiz() {
       preloadFlags(all, (url) => { new Image().src = url; });
       buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), all, {
         relativeBase: '',
-        currentVariantKey,
+        // No "current variant" on first visit — nothing is highlighted
+        // in the burger menu because the player hasn't chosen anything
+        // yet. Returning players keep their normal aria-current marker.
+        currentVariantKey: isFirstVisit ? null : currentVariantKey,
         statsCurrent: false,
       });
 
+      // First visit → show the picker instead of starting a game.
+      // Each picker tile is a navigation link, so the click is what
+      // actually starts the game (via the resulting page load that
+      // then takes the explicit-?v= branch above).
+      if (isFirstVisit) {
+        const pickerEl = /** @type {HTMLElement} */ (document.getElementById('quiz-picker'));
+        const pickerListEl = /** @type {HTMLUListElement} */ (document.getElementById('quiz-picker-list'));
+        buildVariantPicker(pickerListEl, all, { urlMode });
+        pickerEl.hidden = false;
+        return;
+      }
+
       const variantKey = currentVariantKey;
       let pool = all.filter(VARIANTS[variantKey].filter);
-      let modeKey = urlMode && availableModes(pool.length).includes(urlMode)
-        ? urlMode
-        : defaultModeFor(pool.length);
+      let modeKey = resolveMode(urlMode, pool.length);
 
       startGame(variantKey, modeKey, all);
     })

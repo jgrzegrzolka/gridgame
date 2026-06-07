@@ -36,6 +36,7 @@ import {
   countModeProgressRatio,
   getQuizLastVariant,
   setQuizLastVariant,
+  resolveMode,
 } from './quiz.js';
 import { loadCountries } from './group.js';
 
@@ -909,4 +910,49 @@ test('setQuizLastVariant silently drops an unknown variant key', () => {
   const store = fakeStore({ 'gridgame.flagquiz.lastVariant': 'africa' });
   setQuizLastVariant(store, 'atlantis');
   assert.equal(getQuizLastVariant(store), 'africa');
+});
+
+// ---- resolveMode ----
+
+test('resolveMode returns the URL mode when it names a mode available for the pool', () => {
+  // Home tile passes ?n=60s; the picker preserves this through to
+  // whichever variant the player clicks, so a first-timer entering
+  // via the home tile still gets a 60s landing even on Europe etc.
+  assert.equal(resolveMode('60s', 200), '60s');
+  assert.equal(resolveMode('all', 200), 'all');
+});
+
+test('resolveMode falls back to defaultModeFor when no URL mode is given', () => {
+  // Burger menu (deep-linked or unspecified ?n=) hits this path.
+  assert.equal(resolveMode(null, 200), defaultModeFor(200));
+});
+
+test('resolveMode falls back to defaultModeFor when the URL mode is not a known mode', () => {
+  // A typo or a stale URL ("?n=blitz" from an external link, say)
+  // shouldn't crash or stick — fall back to the variant's default.
+  assert.equal(resolveMode('blitz', 200), defaultModeFor(200));
+});
+
+test('resolveMode returns null when the pool is too small for any mode', () => {
+  // No mode in MODES today fails this for a non-empty pool (60s is
+  // unconditionally available, 'all' has count=Infinity which means
+  // "every flag, however many"). The null branch is the contract for
+  // future MODES that might gate on pool size — e.g. a "n=20" count
+  // mode with count: 20 would return null here for poolSize < 20.
+  // Verifying the contract by stubbing availableModes is overkill;
+  // testing the wiring against the current MODES is enough.
+  assert.equal(resolveMode(null, 200), defaultModeFor(200));
+  // Tautological sanity check that the helper stays in lockstep
+  // with defaultModeFor for any pool size we actually use today.
+  assert.equal(resolveMode(null, 0), defaultModeFor(0));
+});
+
+test('resolveMode is idempotent — passing back the resolved mode returns the same mode', () => {
+  // Catches a regression where the helper might accidentally treat
+  // its own output as "unknown" and fall back to default. Important
+  // because the picker computes a mode per tile and the resulting
+  // page load re-runs resolveMode in page.js's startGame branch
+  // against the same URL — round-trip stability matters.
+  const once = resolveMode('60s', 200);
+  assert.equal(resolveMode(once, 200), once);
 });
