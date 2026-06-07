@@ -11,6 +11,8 @@ import {
   ALL_MOTIFS,
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
+  generateUltimateRandomPuzzle,
+  hasUltimatePuzzleSolution,
   axesImpliedPair,
 } from './engine.js';
 import { CONTINENTS, loadCountries } from './group.js';
@@ -321,18 +323,19 @@ test('every (continent × color) cell has at least one candidate country', () =>
 // if the pool ever drifts to where many seeds in a row can't yield a
 // valid puzzle, that test fails first.
 
+/** @param {number} seed */
+function mulberry32(seed) {
+  let a = seed | 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 test('generateRandomPuzzle succeeds with the real countries.json under many seeds', () => {
-  /** @param {number} seed */
-  function mulberry32(seed) {
-    let a = seed | 0;
-    return () => {
-      a = (a + 0x6d2b79f5) | 0;
-      let t = a;
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
   // 30 seeds (was 4) gives more retry-headroom signal. Some motifs in
   // the pool are continent-narrow — eu-member is Europe-only — so the
   // generator burns extra retries on (Asia × eu-member)-style cells
@@ -352,6 +355,26 @@ test('generateRandomPuzzle succeeds with the real countries.json under many seed
       axesImpliedPair(puzzle.rows, puzzle.cols, COUNTRIES),
       false,
       `seed ${seed}: produced an implied axis pair — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
+    );
+  }
+});
+
+test('generateUltimateRandomPuzzle succeeds with the real countries.json under many seeds', () => {
+  // Mirrors the 30-seed 3×3 sweep above, but with the stronger 9×9
+  // Hall-marriage feasibility gate. The synthetic Ultimate tests in
+  // engine.test.js use a saturated denseSquarePool; this one pins the
+  // real-data retry budget so pool additions that tighten the search
+  // (e.g. colorCount:2, where SA has only 1 candidate) surface as a
+  // sweep failure rather than as intermittent throws in production.
+  const SEEDS = Array.from({ length: 30 }, (_, i) => (i + 1) * 9973);
+  for (const seed of SEEDS) {
+    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    assert.equal(puzzle.rows.length, 3);
+    assert.equal(puzzle.cols.length, 3);
+    assert.equal(
+      hasUltimatePuzzleSolution(puzzle, COUNTRIES),
+      true,
+      `seed ${seed}: produced a puzzle that fails the Hall feasibility check`,
     );
   }
 });

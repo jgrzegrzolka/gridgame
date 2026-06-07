@@ -128,6 +128,21 @@ export const COLORS_FOR_RANDOM = [
  */
 export const ALL_FLAG_COLORS = [...COLORS_FOR_RANDOM, 'violet'];
 
+/**
+ * Exact-N colour-count Categories the random puzzle generator is allowed to
+ * pair with continents / colours / motifs on the row / column axes. Members
+ * share `exclusiveGroup: 'colorCount'` so two different N values can never
+ * appear on the same axis or across axes (axesConflict catches it). N=2 and
+ * N=3 cover the distinctive cases — every continent in `flagsGamePool` has
+ * at least one flag for each (South America has just 1 at N=2, which is
+ * tight but `isPuzzleGeneratable`'s minPerCell already screens that). N=4
+ * is plausible too but not as readable as a category ("exactly 4 colours"
+ * blurs into "many colours"); a future PR can add `>=4` and reconsider.
+ * N=1 has 0 candidates in the pool and N≥5 has 0 candidates on at least
+ * one continent (Asia), so both stay out.
+ */
+export const COLOR_COUNTS_FOR_RANDOM = [2, 3];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -167,6 +182,19 @@ export function hasColor(color) {
     id: `hasColor:${color}`,
     label: color,
     predicate: (c) => c.colors.includes(color),
+  };
+}
+
+/**
+ * @param {number} n
+ * @returns {Category}
+ */
+export function colorCount(n) {
+  return {
+    id: `colorCount:${n}`,
+    label: `only ${n} colours`,
+    predicate: (c) => c.colors.length === n,
+    exclusiveGroup: 'colorCount',
   };
 }
 
@@ -232,6 +260,9 @@ export function translateCategoryLabel(category, translate) {
   if (kind === 'hasMotif') {
     return translate(`motif.${value}`, value);
   }
+  if (kind === 'colorCount') {
+    return translate(`filter.onlyN.${value}`, category.label);
+  }
   return category.label;
 }
 
@@ -250,6 +281,11 @@ export function categoryFromId(id) {
   if (id.startsWith('hasColor:')) return hasColor(id.slice('hasColor:'.length));
   if (id.startsWith('hasMotif:')) return hasMotif(id.slice('hasMotif:'.length));
   if (id.startsWith('statehood:')) return statehood(id.slice('statehood:'.length));
+  if (id.startsWith('colorCount:')) {
+    const n = Number.parseInt(id.slice('colorCount:'.length), 10);
+    if (Number.isInteger(n) && n >= 0) return colorCount(n);
+    return null;
+  }
   return null;
 }
 
@@ -259,6 +295,7 @@ export function buildRandomCategoryPool() {
     ...CONTINENTS_FOR_RANDOM.map(continent),
     ...COLORS_FOR_RANDOM.map(hasColor),
     ...MOTIFS_FOR_RANDOM.map(hasMotif),
+    ...COLOR_COUNTS_FOR_RANDOM.map(colorCount),
   ];
 }
 

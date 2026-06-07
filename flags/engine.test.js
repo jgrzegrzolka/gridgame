@@ -26,7 +26,10 @@ import {
   CONTINENTS_FOR_RANDOM,
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
+  COLOR_COUNTS_FOR_RANDOM,
   ALL_MOTIFS,
+  colorCount,
+  categoryFromId,
 } from './engine.js';
 import { createCountry } from './group.js';
 
@@ -461,7 +464,7 @@ test('randomPuzzle yields 3 row categories and 3 column categories', () => {
   assert.equal(p.cols.length, 3);
 });
 
-test('randomPuzzle categories come from the unified pool (continent / colour / motif)', () => {
+test('randomPuzzle categories come from the unified pool (continent / colour / motif / colorCount)', () => {
   const p = randomPuzzle(mulberry32(1));
   for (const cat of [...p.rows, ...p.cols]) {
     if (cat.id.startsWith('continent:')) {
@@ -472,6 +475,9 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
     } else if (cat.id.startsWith('hasMotif:')) {
       const motif = cat.id.slice('hasMotif:'.length);
       assert.ok(MOTIFS_FOR_RANDOM.includes(motif), `motif ${motif} not in palette`);
+    } else if (cat.id.startsWith('colorCount:')) {
+      const n = Number.parseInt(cat.id.slice('colorCount:'.length), 10);
+      assert.ok(COLOR_COUNTS_FOR_RANDOM.includes(n), `colorCount ${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -525,10 +531,13 @@ test('continent and statehood categories carry their exclusiveGroup', () => {
   assert.equal(hasMotif('animal').exclusiveGroup, undefined);
 });
 
-test('buildRandomCategoryPool returns one entry per continent + colour + motif', () => {
+test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount', () => {
   const pool = buildRandomCategoryPool();
   const expected =
-    CONTINENTS_FOR_RANDOM.length + COLORS_FOR_RANDOM.length + MOTIFS_FOR_RANDOM.length;
+    CONTINENTS_FOR_RANDOM.length
+    + COLORS_FOR_RANDOM.length
+    + MOTIFS_FOR_RANDOM.length
+    + COLOR_COUNTS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -692,6 +701,61 @@ test('translateCategoryLabel returns the raw label for ids without a colon', () 
   const t = fakeTranslate({});
   const noColon = { id: 'whatever', label: 'whatever-label', predicate: () => true };
   assert.equal(translateCategoryLabel(noColon, t), 'whatever-label');
+});
+
+test('colorCount predicate matches countries whose full palette is exactly N', () => {
+  const cat = colorCount(2);
+  const twoColour = country({ code: 'jp', name: 'Japan', primaryColors: ['white', 'red'] });
+  const threeColour = country({ code: 'pl2', name: 'X', primaryColors: ['white', 'red', 'blue'] });
+  const twoPlusOneCOA = country({ code: 'mx', name: 'Mexico', primaryColors: ['green', 'red'], additionalColors: ['white'] });
+  assert.equal(cat.predicate(twoColour), true);
+  assert.equal(cat.predicate(threeColour), false);
+  // `colors` is the union of primary + additional — the player counts everything
+  // visible, so a 2-primary flag with one COA-only colour counts as 3.
+  assert.equal(cat.predicate(twoPlusOneCOA), false);
+});
+
+test('colorCount carries exclusiveGroup so axesConflict rejects two different N values', () => {
+  const conflict = axesConflict(
+    [continent('Africa'), hasColor('red'), colorCount(2)],
+    [continent('Europe'), hasColor('blue'), colorCount(3)],
+  );
+  assert.equal(conflict, true);
+});
+
+test('colorCount with the same N on both axes is not a conflict (axesConflict is about *different* values within the group)', () => {
+  const conflict = axesConflict(
+    [colorCount(2), hasColor('red'), hasMotif('animal')],
+    [colorCount(2), hasColor('blue'), hasMotif('weapon')],
+  );
+  assert.equal(conflict, false);
+});
+
+test('translateCategoryLabel uses the filter.onlyN.<n> key for colorCount categories', () => {
+  const t = fakeTranslate({ 'filter.onlyN.2': 'tylko 2 kolory' });
+  assert.equal(translateCategoryLabel(colorCount(2), t), 'tylko 2 kolory');
+});
+
+test('translateCategoryLabel falls back to the baked English label when the onlyN key is missing', () => {
+  const t = fakeTranslate({});
+  assert.equal(translateCategoryLabel(colorCount(3), t), 'only 3 colours');
+});
+
+test('categoryFromId round-trips a colorCount id', () => {
+  const cat = categoryFromId('colorCount:2');
+  assert.ok(cat);
+  assert.equal(cat.id, 'colorCount:2');
+  assert.equal(cat.label, 'only 2 colours');
+  assert.equal(cat.exclusiveGroup, 'colorCount');
+  const jp = country({ code: 'jp', name: 'Japan', primaryColors: ['white', 'red'] });
+  const fr = country({ code: 'fr2', name: 'France', primaryColors: ['blue', 'white', 'red'] });
+  assert.equal(cat.predicate(jp), true);
+  assert.equal(cat.predicate(fr), false);
+});
+
+test('categoryFromId returns null for a non-integer colorCount id', () => {
+  assert.equal(categoryFromId('colorCount:abc'), null);
+  assert.equal(categoryFromId('colorCount:'), null);
 });
 
 test('axesConflict returns false for different exclusiveGroups (continent vs statehood)', () => {
