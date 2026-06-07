@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  categoryFromId,
   findTargets,
   findPool,
   classifyGuess,
@@ -15,6 +14,7 @@ import {
   filterToCategory,
   pickRandomMix,
 } from './findFlag.js';
+import { categoryFromId } from './engine.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 import { createCountry } from './group.js';
 

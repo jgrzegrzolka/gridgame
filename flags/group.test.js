@@ -140,3 +140,43 @@ test('real data: flagsGamePool returns 195 by default, 270 with includeAll', () 
   assert.equal(flagsGamePool(countries, false).length, 195);
   assert.equal(flagsGamePool(countries, true).length, countries.length);
 });
+
+// Regression pin for the `colors` getter being non-enumerable. The getter
+// is the union of primaryColors + additionalColors — convenient for in-memory
+// reads but not something we want serialised: a stringified Country round-
+// tripped through PartyKit / localStorage / debug logs should carry only
+// the two canonical buckets, otherwise readers see three colour fields and
+// can't tell which is the source of truth. Flipping the getter to
+// enumerable would silently regress that contract, and the failure mode
+// (extra `colors` field in messages) is the kind that only shows up in
+// production traffic.
+test('JSON.stringify(country) omits the computed colors field', () => {
+  const pl = createCountry({
+    code: 'pl', name: 'Poland', category: 'country', continent: 'Europe',
+    primaryColors: ['white', 'red'], additionalColors: [],
+  });
+  const parsed = JSON.parse(JSON.stringify(pl));
+  assert.equal('colors' in parsed, false,
+    '`colors` getter must be non-enumerable so it stays out of JSON output');
+  assert.deepEqual(parsed.primaryColors, ['white', 'red']);
+  assert.deepEqual(parsed.additionalColors, []);
+});
+
+// Round-trip pin: a Country that's been stringified-then-parsed loses the
+// getter (parse produces a plain object). Re-running createCountry on the
+// parsed result must strip any leaked `colors` field that earlier code
+// might have written, then re-attach the getter — otherwise the second-
+// generation object carries a stale colors array that no longer reflects
+// primary/additional edits.
+test('createCountry strips a stale colors field from the input before re-attaching the getter', () => {
+  const stale = {
+    code: 'xx', name: 'X', category: 'country', continent: 'Europe',
+    primaryColors: ['red'], additionalColors: ['blue'],
+    colors: ['green'], // pretend a prior round-trip wrote this
+  };
+  const c = createCountry(stale);
+  assert.deepEqual(c.colors, ['red', 'blue'],
+    'getter must override the stale stored field');
+  assert.equal(Object.getOwnPropertyDescriptor(c, 'colors')?.enumerable, false,
+    'colors must be the non-enumerable getter, not the stale data field');
+});
