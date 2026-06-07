@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { todayN, getPuzzle, dailyNFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry } from './daily.js';
+import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries, createCountry } from './group.js';
@@ -67,6 +67,23 @@ test('dailyNFromUrl falls back to today when ?n= is missing or garbage', () => {
   assert.equal(dailyNFromUrl('?other=x', 7), 7);
   assert.equal(dailyNFromUrl('?n=', 7), 7);
   assert.equal(dailyNFromUrl('?n=abc', 7), 7);
+});
+
+test('isReplayFromUrl is true only on the literal ?replay=1', () => {
+  assert.equal(isReplayFromUrl('?replay=1'), true);
+  assert.equal(isReplayFromUrl('?n=42&replay=1'), true);
+});
+
+test('isReplayFromUrl is false on missing, empty, or unrelated values', () => {
+  // The page treats any non-"1" value as "play normally" so that
+  // ?replay=0 / ?replay=true / a stray ?replay= can't accidentally
+  // suppress saveScore on a player's first real play.
+  assert.equal(isReplayFromUrl(''), false);
+  assert.equal(isReplayFromUrl('?n=42'), false);
+  assert.equal(isReplayFromUrl('?replay='), false);
+  assert.equal(isReplayFromUrl('?replay=0'), false);
+  assert.equal(isReplayFromUrl('?replay=true'), false);
+  assert.equal(isReplayFromUrl('?replay=yes'), false);
 });
 
 // --- resolveDailyPuzzle ------------------------------------------------

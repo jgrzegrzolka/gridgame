@@ -8,7 +8,7 @@ import {
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
-import { todayN, dailyNFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry } from '../flags/daily.js';
+import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry } from '../flags/daily.js';
 import { loadScores, saveScore, isCompleteRecord } from './scores.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
@@ -69,8 +69,7 @@ export function bootDaily() {
     return li;
   }
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const backlogParam = urlParams.get('backlog');
+  const backlogParam = new URLSearchParams(window.location.search).get('backlog');
   const backlogN = backlogParam !== null ? parseInt(backlogParam, 10) : NaN;
   const isBacklog = Number.isFinite(backlogN);
   // Replay mode: live daily lets the player retry a finished puzzle
@@ -78,7 +77,7 @@ export function bootDaily() {
   // bypasses the "complete record → jump straight to result" shortcut
   // and skips saveScore in finish(). The first real play stays the
   // canonical result; replays are practice runs.
-  const isReplay = urlParams.get('replay') === '1';
+  const isReplay = isReplayFromUrl(window.location.search);
   // Backlog mode swaps the live catalog for the staged backlog so the
   // author can play-test the next puzzles without exposing them to
   // players. URL-only entry point — there's no nav link to backlog.html
