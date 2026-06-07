@@ -101,8 +101,8 @@ export function bootFlagQuiz() {
       // then takes the explicit-?v= branch above).
       if (isFirstVisit) {
         const pickerEl = /** @type {HTMLElement} */ (document.getElementById('quiz-picker'));
-        const pickerTilesEl = /** @type {HTMLElement} */ (document.getElementById('quiz-picker-tiles'));
-        buildVariantPicker(pickerTilesEl, all, { urlMode });
+        const pickerListEl = /** @type {HTMLUListElement} */ (document.getElementById('quiz-picker-list'));
+        buildVariantPicker(pickerListEl, all, { urlMode });
         pickerEl.hidden = false;
         return;
       }

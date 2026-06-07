@@ -67,9 +67,12 @@ export function buildQuizMenu(menuEl, all, opts) {
 }
 
 /**
- * Build the first-visit category picker. Same variant list shape as
- * the burger menu, but presented as the page's landing state — the
- * burger menu remains a parallel access path.
+ * Build the first-visit category picker. Renders the same variant
+ * list as the burger menu (same `.menu` class, same link shape) as
+ * the page's landing state — the burger menu remains a parallel
+ * access path, so the picker and burger always carry identical
+ * options. No headline: the chrome buttons (back, lang, burger) set
+ * the context, and a list of categories doesn't need an instruction.
  *
  * Each option is a navigation link to `?v=<key>&n=<mode>`. The next
  * page load is what triggers `setQuizLastVariant` in page.js, so a
@@ -83,15 +86,15 @@ export function buildQuizMenu(menuEl, all, opts) {
  * the picker — first-timers entering via that tile still get a 60s
  * landing once they pick a category.
  *
- * @param {HTMLElement} pickerTilesEl
+ * @param {HTMLUListElement} pickerListEl
  * @param {Country[]} all
  * @param {{ urlMode: string | null }} opts
  */
-export function buildVariantPicker(pickerTilesEl, all, opts) {
+export function buildVariantPicker(pickerListEl, all, opts) {
   const { urlMode } = opts;
   // Empty before re-populating so a lang-toggle reload doesn't double
   // up the variant list.
-  pickerTilesEl.innerHTML = '';
+  pickerListEl.innerHTML = '';
   for (const [key, variant] of Object.entries(VARIANTS)) {
     const pool = all.filter(variant.filter);
     const defaultMode = defaultModeFor(pool.length);
@@ -99,11 +102,12 @@ export function buildVariantPicker(pickerTilesEl, all, opts) {
     const mode = urlMode && availableModes(pool.length).includes(urlMode)
       ? urlMode
       : defaultMode;
+    const li = document.createElement('li');
     const a = document.createElement('a');
-    a.className = 'quiz-picker-tile';
     a.href = `?v=${key}&n=${mode}`;
     a.textContent = t(`variant.${key}`, variant.label);
-    pickerTilesEl.appendChild(a);
+    li.appendChild(a);
+    pickerListEl.appendChild(li);
   }
 }
 
