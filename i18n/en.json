@@ -39,6 +39,9 @@
     "mode": {
       "60s": "60s",
       "all": "all"
+    },
+    "firstVisit": {
+      "title": "Pick a category to start"
     }
   },
   "findFlag": {

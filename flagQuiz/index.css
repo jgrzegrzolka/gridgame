@@ -3,6 +3,45 @@ body {
   flex-direction: column;
   align-items: center;
 }
+
+/* First-visit category picker. Replaces the auto-started game on
+ * a player's very first /flagQuiz/ visit (no ?v= URL, no saved
+ * variant). After their first pick, the resulting page load sets
+ * lastVariant and the picker is never shown again for that player. */
+.quiz-picker {
+  width: 100%;
+  max-width: 480px;
+  margin: 32px auto 0;
+  padding: 0 16px;
+  box-sizing: border-box;
+  text-align: center;
+}
+.quiz-picker-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #444;
+  margin: 0 0 20px;
+}
+.quiz-picker-tiles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quiz-picker-tile {
+  padding: 16px 20px;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #1c1c1c;
+  font-size: 17px;
+  transition: background 150ms ease;
+}
+.quiz-picker-tile:hover,
+.quiz-picker-tile:focus {
+  background: #f0f0f0;
+}
+
 .progress-bar {
   position: fixed;
   top: 0;
