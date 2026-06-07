@@ -1,9 +1,10 @@
+import { COLOR_COUNT_OPS, COLOR_COUNT_NS } from './flags/flagsFilter.js';
+
 /** @typedef {import('./flags/flagsFilter.js').Filters} Filters */
 /** @typedef {'=' | '>=' | '<='} Op */
 
-/** @type {Op[]} */
-const OPS = ['=', '>=', '<='];
-const NS = [2, 3, 4, 5];
+const OPS = COLOR_COUNT_OPS;
+const NS = COLOR_COUNT_NS;
 
 /**
  * Pure state machine for the colour-count compound pill. Lives

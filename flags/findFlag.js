@@ -3,7 +3,7 @@
 /** @typedef {import('./flagsFilter.js').Filters} Filters */
 
 import { readBoolSetting, writeBoolSetting } from './group.js';
-import { emptyFilters, matchesFilters } from './flagsFilter.js';
+import { emptyFilters, matchesFilters, COLOR_COUNT_OPS, COLOR_COUNT_NS } from './flagsFilter.js';
 
 /**
  * Filter-group names in the order they should appear in titles and URLs.
@@ -355,10 +355,25 @@ const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent',
  * AND-within-group just narrows the result.
  *
  * Each pill defaults to include, with `excludeProbability` chance of
- * flipping to exclude. Retries up to `maxAttempts` times until the
- * mix has at least `minIntersection` matching countries (default 1).
- * If no attempt meets the threshold, returns the last attempt anyway
- * — the result page lands on a 0-flag mix, which startGame's
+ * flipping to exclude. After picking pills, two further modifiers
+ * may attach a `colorCount` constraint:
+ *   - `onlyColorsProbability`: when at least one colour pill is in
+ *     the include set, this is the chance of locking colorCount to
+ *     exactly that count — i.e. "only these colours". Matches what
+ *     the chooser's "no other colours" toggle produces.
+ *   - `colorCountProbability`: independent chance of attaching a
+ *     random colorCount constraint (any op + N from the picker's
+ *     valid set), regardless of how many colours are in the mix.
+ *     Only checked when the "only colours" modifier didn't fire.
+ *
+ * Both modifier probabilities default to 0 so existing callers
+ * (and tests) get the pre-existing pill-only behaviour without
+ * change. findFlag/page.js opts in for the live Random button.
+ *
+ * Retries up to `maxAttempts` times until the mix has at least
+ * `minIntersection` matching countries (default 1). If no attempt
+ * meets the threshold, returns the last attempt anyway — the
+ * result page lands on a 0-flag mix, which startGame's
  * targets.length < 1 guard bounces back to the chooser.
  *
  * @param {Array<{ group: 'continent' | 'color' | 'motif' | 'status', value: string }>} pillPool
@@ -368,6 +383,8 @@ const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent',
  *   minIntersection?: number,
  *   maxAttempts?: number,
  *   excludeProbability?: number,
+ *   onlyColorsProbability?: number,
+ *   colorCountProbability?: number,
  * }} [options]
  * @returns {Filters}
  */
@@ -377,6 +394,8 @@ export function pickRandomMix(pillPool, all, options = {}) {
     minIntersection = 1,
     maxAttempts = 20,
     excludeProbability = 0.2,
+    onlyColorsProbability = 0,
+    colorCountProbability = 0,
   } = options;
 
   // A 2+ pill mix needs at least 2 pills to draw from; degenerate
@@ -405,10 +424,38 @@ export function pickRandomMix(pillPool, all, options = {}) {
         (p, i) => i !== idx && !(SCALAR_GROUPS.has(p.group) && p.group === pill.group),
       );
     }
+    maybeAttachColorCount(f, rng, onlyColorsProbability, colorCountProbability);
     lastAttempt = f;
     const count = all.filter((c) => matchesFilters(c, f)).length;
     if (count >= minIntersection) return f;
   }
 
   return lastAttempt ?? emptyFilters();
+}
+
+/**
+ * Mutate `f` to attach a `colorCount` constraint with the given
+ * probabilities. The two paths are mutually exclusive: the
+ * "no other colours" path runs first and short-circuits when it
+ * fires. Each path is gated on its probability being > 0 BEFORE the
+ * rng() call so a caller that opts out (probability 0) consumes
+ * exactly zero rng bytes — keeping the pre-existing pill-only tests
+ * deterministic against their seeded RNGs.
+ *
+ * @param {Filters} f
+ * @param {() => number} rng
+ * @param {number} onlyColorsProbability
+ * @param {number} colorCountProbability
+ */
+function maybeAttachColorCount(f, rng, onlyColorsProbability, colorCountProbability) {
+  const includeColors = f.color.include.size;
+  if (includeColors > 0 && onlyColorsProbability > 0 && rng() < onlyColorsProbability) {
+    f.colorCount = { op: '=', n: includeColors };
+    return;
+  }
+  if (colorCountProbability > 0 && rng() < colorCountProbability) {
+    const op = COLOR_COUNT_OPS[Math.floor(rng() * COLOR_COUNT_OPS.length)];
+    const n = COLOR_COUNT_NS[Math.floor(rng() * COLOR_COUNT_NS.length)];
+    f.colorCount = { op, n };
+  }
 }
