@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve, relative } from 'node:path';
+import { dirname, join, resolve, relative, sep } from 'node:path';
 import {
   resolveLang,
   lookupString,
@@ -317,56 +317,64 @@ async function collectSourceFiles(dir, out) {
   }
 }
 
-test('module imports of shared files use a single URL form repo-wide (no ?v= / bare splits)', async () => {
+test('module imports of shared files use the URL form their cache-bust pipeline expects', async () => {
   // Why this test exists: shared modules like i18n.js are imported from
-  // both HTML (cache-busted with ?v=__BUILD__) and page.js (bare). The
-  // browser keys ES modules by URL, so a mismatch produces two module
-  // instances with independent module-level state — bootI18n populates
-  // cachedStrings in one, JS-side t() calls read the empty other and
-  // every dynamic translation silently falls through to the English
-  // fallback. The fix is to standardise on a single URL form; this
-  // test pins that contract so the next time someone adds a shared
-  // import they cannot reintroduce the split.
+  // BOTH HTML inline <script type="module"> blocks AND from sibling
+  // .js files. Both pipelines must produce the SAME deploy-time URL
+  // (`<path>?v=<sha>`) so the browser dedups to one module instance —
+  // otherwise the module's top-level state diverges (e.g. bootI18n
+  // populates cachedStrings in one instance, page.js's t() reads the
+  // empty other, and every dynamic translation silently falls through
+  // to the English fallback).
+  //
+  // The two pipelines bust differently and require OPPOSITE source forms:
+  //   - HTML inline imports: must carry `?v=__BUILD__` literally — the
+  //     HTML __BUILD__ sed in deploy.yml is the only thing that touches
+  //     HTML, and bare imports here would ship as `<path>` (no version).
+  //   - JS file imports: must be BARE — cache-bust.mjs's regex appends
+  //     `?v=<sha>` only to paths with no existing `?`. A literal
+  //     `?v=__BUILD__` in a JS source would survive deploy unchanged
+  //     (cache-bust skips it; HTML sed doesn't process .js), so the
+  //     deployed URL would carry the placeholder string itself.
+  //
+  // This test was originally pinned to "either all bare OR all
+  // ?v=__BUILD__" — a textual symmetry that missed the asymmetric
+  // pipeline reality and silently passed when every site was bare,
+  // even though cache-bust.mjs was about to introduce the split at
+  // deploy. The new contract pins the right invariant: each call site
+  // uses the form its own pipeline expects.
   const root = dirname(fileURLToPath(import.meta.url));
   /** @type {string[]} */
   const files = [];
   await collectSourceFiles(root, files);
 
   const importRe = /from\s+['"]([^'"]*?\.js)(\?v=__BUILD__)?['"]/g;
-  /** @type {Map<string, { with: Set<string>, without: Set<string> }>} */
-  const byResolved = new Map();
+  /** @type {string[]} */
+  const failures = [];
   for (const f of files) {
+    const rel = relative(root, f);
+    // Server-side files don't run in a browser, so neither pipeline
+    // applies — PartyKit code is deployed via `partykit deploy`, not
+    // GitHub Pages. Test files run in Node and import directly via
+    // node:fs, no cache-bust at all.
+    if (rel.startsWith(`party${sep}`) || rel.startsWith('party/')) continue;
+    if (f.endsWith('.test.js')) continue;
     const text = await readFile(f, 'utf-8');
     for (const m of text.matchAll(importRe)) {
       const importPath = m[1];
-      // Skip bare specifiers (node built-ins, node_modules); we only
-      // care about local file-graph imports where the URL form matters.
+      // Bare specifiers (node built-ins, node_modules) don't go through
+      // either pipeline — skip them.
       if (!importPath.startsWith('.')) continue;
-      const resolved = resolve(dirname(f), importPath);
-      let bucket = byResolved.get(resolved);
-      if (!bucket) {
-        bucket = { with: new Set(), without: new Set() };
-        byResolved.set(resolved, bucket);
+      const hasToken = !!m[2];
+      if (f.endsWith('.html') && !hasToken) {
+        failures.push(
+          `${rel}: HTML inline import of '${importPath}' is bare; expected '${importPath}?v=__BUILD__' so the HTML sed busts it to match cache-bust.mjs's rewrite of the same module on the JS side`,
+        );
+      } else if (f.endsWith('.js') && hasToken) {
+        failures.push(
+          `${rel}: JS import of '${importPath}' carries '?v=__BUILD__'; expected bare. The HTML sed doesn't process .js files, so this placeholder would ship as a literal string. cache-bust.mjs handles JS imports.`,
+        );
       }
-      const rel = relative(root, f);
-      if (m[2]) bucket.with.add(rel);
-      else bucket.without.add(rel);
-    }
-  }
-
-  /** @type {string[]} */
-  const failures = [];
-  for (const [resolvedPath, { with: withQ, without }] of byResolved) {
-    // Test files run in Node, never in a browser — they're allowed to
-    // import bare even when production HTML uses ?v=__BUILD__, because
-    // the browser-side dedup contract doesn't apply to them. Strip them
-    // from both sides before checking the split.
-    const withoutNonTest = [...without].filter((p) => !p.endsWith('.test.js'));
-    const withNonTest = [...withQ].filter((p) => !p.endsWith('.test.js'));
-    if (withNonTest.length > 0 && withoutNonTest.length > 0) {
-      failures.push(
-        `${relative(root, resolvedPath)}: with ?v=__BUILD__ in [${withNonTest.join(', ')}], bare in [${withoutNonTest.join(', ')}]`,
-      );
     }
   }
   assert.deepEqual(failures, [], failures.join('\n'));

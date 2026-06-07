@@ -74,9 +74,9 @@
       </section>
     </main>
     <script type="module">
-      import { bootI18n, wireLangToggle } from './i18n.js';
+      import { bootI18n, wireLangToggle } from './i18n.js?v=__BUILD__';
       import { disableBurgerIfEmpty, wireBurgerDismiss } from './common.js?v=__BUILD__';
-      import { preloadFlags } from './flags/quiz.js';
+      import { preloadFlags } from './flags/quiz.js?v=__BUILD__';
       bootI18n().then((lang) => {
         wireLangToggle(lang);
         disableBurgerIfEmpty(
