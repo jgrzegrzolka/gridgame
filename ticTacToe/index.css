@@ -333,24 +333,3 @@ body.game-over .give-up-row {
 body.picker-open {
   overflow: hidden;
 }
-
-/* Mobile: convert the centered picker into a full-screen sheet anchored to
- * the top. The soft keyboard otherwise fights the centered position and
- * scrolls the layout to keep the focused input visible, dragging the board
- * up/down behind the backdrop. Top-anchored + 100dvh means the sheet is
- * already where the keyboard isn't, and the suggestions list (flex:1 with
- * overflow-y:auto) takes whatever space the keyboard leaves. */
-@media (max-width: 600px) {
-  .picker-sheet {
-    top: 0;
-    left: 0;
-    right: 0;
-    transform: none;
-    width: auto;
-    max-width: none;
-    height: 100dvh;
-    max-height: none;
-    border-radius: 0;
-    padding-top: calc(12px + env(safe-area-inset-top));
-  }
-}
