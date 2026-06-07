@@ -13,7 +13,6 @@
   </head>
   <body>
     <div class="progress-bar" id="progress-bar"></div>
-    <a class="back" id="back" href="../" aria-label="Home" data-i18n-attr="aria-label:back"><span class="home-icon" aria-hidden="true"></span></a>
     <a class="lang-toggle" id="lang-toggle" href="#"></a>
     <a class="coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee" data-i18n-attr="aria-label:coffee,title:coffee"><span class="coffee-icon" aria-hidden="true"></span></a>
     <a class="flags-link" href="../flagsdata/" aria-label="Browse flags" title="Browse flags" data-i18n-attr="aria-label:menu.flagsData,title:menu.flagsData"><span class="flags-icon" aria-hidden="true"></span></a>
@@ -41,6 +40,9 @@
     <h1 class="sr-only">Country flag quiz</h1>
     <section id="quiz-picker" class="quiz-picker" hidden>
       <ul class="menu" id="quiz-picker-list"></ul>
+      <div class="give-up-row">
+        <a class="give-up" href="../" data-i18n="menu.home">Home</a>
+      </div>
     </section>
     <div id="game" hidden>
       <p class="play-timer">
@@ -55,6 +57,8 @@
         <a class="give-up" id="play-again-inline" href="#" data-i18n="game.playAgain">Play again</a>
         ·
         <button type="button" class="give-up" id="give-up" data-i18n="game.giveUp">Give up</button>
+        ·
+        <a class="give-up" href="../" data-i18n="menu.home">Home</a>
       </div>
     </div>
     <section id="result" hidden>
@@ -65,6 +69,8 @@
       <p class="best" id="best"></p>
       <p class="result-links">
         <a id="play-again" href="#" data-i18n="game.playAgain">Play again</a>
+        ·
+        <a href="../" data-i18n="menu.home">Home</a>
       </p>
     </section>
     <script type="module">

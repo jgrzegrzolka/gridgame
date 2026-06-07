@@ -3,24 +3,17 @@ body {
   margin: 0 auto;
 }
 
-.find-title {
-  font-size: 28px;
-  font-weight: 600;
-  margin: 0 0 4px;
-  text-align: center;
-}
 .find-blurb {
   font-size: 14px;
   color: #666;
   margin: 0 0 20px;
   text-align: center;
 }
-/* Random is now a secondary shortcut next to the primary Play button
- * in the sticky bar, so it stays text-link-sized rather than the big
- * black pill it used to be. */
-.find-random {
-  display: block;
-  margin: 4px auto 12px;
+/* Random and Home are text-link siblings flanking the primary Play
+ * button in the sticky bar. Same text-link sizing so neither pulls
+ * focus from the prominent Play CTA in the middle. */
+.find-random,
+.find-home {
   background: none;
   border: none;
   color: var(--link-color);
@@ -30,9 +23,18 @@ body {
   text-decoration: underline;
   padding: 4px 8px;
 }
-.find-random:hover {
+.find-random:hover,
+.find-home:hover {
   background: #f0f0f0;
   border-radius: 4px;
+}
+/* Clear all sits above the chooser sections, right-aligned, only
+ * visible when there's anything to clear. The reserved row height
+ * avoids layout shift between "nothing selected" and "something
+ * selected" states. */
+.find-clear-row {
+  text-align: right;
+  min-height: 28px;
 }
 .chooser-section {
   margin-bottom: 24px;
@@ -75,13 +77,18 @@ body {
   color: #c0392b;
 }
 /* Sticky Play bar — stays in view as the user scrolls through pill
- * sections, so the live N-flags count and the commit button are
- * always reachable. The negative horizontal margin bleeds the bar
- * to the body's content edge (matches flagsdata's filter-bar bleed). */
+ * sections, so Play (with its embedded match count) is always within
+ * reach. Three-column grid: left spacer, Random·Home pair (truly
+ * centred), and Play anchored to the right. Equal-width side columns
+ * keep the middle group centred even as Play's width changes with the
+ * embedded count. The negative horizontal margin bleeds the bar to the
+ * body's content edge (matches flagsdata's filter-bar bleed). */
 .find-play-bar {
   position: sticky;
   bottom: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-areas: ". mid play";
   align-items: center;
   gap: 12px;
   margin: 16px -24px 0;
@@ -89,6 +96,25 @@ body {
   background: #fafafa;
   border-top: 1px solid #eee;
   z-index: 5;
+}
+.find-play-mid {
+  grid-area: mid;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.find-play-bar > .find-play {
+  grid-area: play;
+  justify-self: end;
+}
+/* Phone: drop the left spacer so the Random · Home pair anchors to the
+ * left edge instead of getting squeezed in a too-narrow middle column.
+ * Play stays right-anchored via its existing justify-self. */
+@media (max-width: 600px) {
+  .find-play-bar {
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "mid play";
+  }
 }
 .find-clear {
   font: inherit;
@@ -103,13 +129,6 @@ body {
 .find-clear:hover {
   background: #f0f0f0;
   border-radius: 4px;
-}
-.find-play-count {
-  flex: 1;
-  text-align: right;
-  font-size: 14px;
-  color: #666;
-  font-variant-numeric: tabular-nums;
 }
 .find-play {
   background: #1c1c1c;

@@ -38,58 +38,62 @@ function depthFromRoot(relPath) {
   return relPath.split('/').length - 1;
 }
 
-/**
- * Pull each occurrence of `<a class="back" ...>` (or `<span class="back" ...>`
- * for the disabled-on-root case) as a flat tag string. The chrome-button
- * markup is single-line in every page, which keeps a regex enough — no
- * HTML parser dependency for one tag.
- *
- * @param {string} html
- * @returns {string[]}
- */
-function backTags(html) {
-  return html.match(/<(?:a|span|button)[^>]*\bclass="back"[^>]*>/g) ?? [];
-}
-
-// The back/home button is THE most-touched piece of chrome — there's one
-// on nearly every page in the repo and players hit it after every game.
-// One page going to "the wrong home" (e.g. archive sending you back to
-// the daily landing instead of the site root) feels like the menu is
-// broken, not like a fix-on-this-page deal. Pin the convention so a
-// future page can't quietly drift again.
-test('back button: every page-level chrome "Home" affordance lands on the site root with the canonical aria-label', () => {
+// The chrome `.back` button was the most-touched piece of chrome and lived
+// in the corner of every page — until we replaced it with an inline
+// "Home" link inside the existing action rows (give-up-row / result-links).
+// The replacement removed the disabled-on-home oddity and the menu-cluster
+// shift between pages. Pin the new shape so a future page can't quietly
+// reintroduce `.back` or ship a non-root Home href.
+test('chrome: the legacy `.back` button is gone from every page', () => {
   /** @type {string[]} */
   const offenders = [];
   for (const file of findHtmlFiles(HERE)) {
     const rel = relative(HERE, file).split(sep).join('/');
     const html = readFileSync(file, 'utf-8');
-    for (const tag of backTags(html)) {
-      const expectedHref = depthFromRoot(rel) === 0 ? null : '../'.repeat(depthFromRoot(rel));
-      const ariaDisabled = /\baria-disabled="true"/.test(tag);
+    if (/<(?:a|span|button)[^>]*\bclass="back"/.test(html)) {
+      offenders.push(`${rel}: still has a class="back" element — should have been removed`);
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
 
-      if (!/\baria-label="Home"/.test(tag)) {
-        offenders.push(`${rel}: back is missing aria-label="Home" — got: ${tag}`);
-      }
-      if (!/\bdata-i18n-attr="aria-label:back"/.test(tag)) {
-        offenders.push(`${rel}: back is missing data-i18n-attr="aria-label:back" — got: ${tag}`);
-      }
+// Every page except the root must give the player a way home — an inline
+// link in an action row, with the correct relative href and the shared
+// `menu.home` i18n key. One page going to "the wrong home" feels like
+// the menu is broken, not like a fix-on-this-page deal.
+test('chrome: every non-root page has at least one Home link pointing at the site root', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const file of findHtmlFiles(HERE)) {
+    const rel = relative(HERE, file).split(sep).join('/');
+    const depth = depthFromRoot(rel);
+    if (depth === 0) continue;
+    const html = readFileSync(file, 'utf-8');
+    const expectedHref = '../'.repeat(depth);
 
-      // Root has a static disabled span (no href, can't navigate from
-      // home to home). Everywhere else must navigate to the root.
-      if (ariaDisabled) {
-        if (expectedHref !== null) {
-          offenders.push(`${rel}: back is aria-disabled but page isn't the root — got: ${tag}`);
-        }
-        continue;
-      }
+    const homeLinks = html.match(/<a[^>]*\bdata-i18n="menu\.home"[^>]*>/g) ?? [];
+    if (homeLinks.length === 0) {
+      offenders.push(`${rel}: no <a data-i18n="menu.home"> link found`);
+      continue;
+    }
+    for (const tag of homeLinks) {
       const hrefMatch = tag.match(/\bhref="([^"]*)"/);
       const href = hrefMatch ? hrefMatch[1] : null;
       if (href !== expectedHref) {
         offenders.push(
-          `${rel}: back href is "${href}", expected "${expectedHref}" (page is ${depthFromRoot(rel)} folder${depthFromRoot(rel) === 1 ? '' : 's'} deep)`,
+          `${rel}: Home link href is "${href}", expected "${expectedHref}" (page is ${depth} folder${depth === 1 ? '' : 's'} deep) — got: ${tag}`,
         );
       }
     }
   }
   assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
+
+// Symmetric guard: the root must NOT carry a Home link in its content
+// rows. The whole point of the rewrite was to drop the no-op affordance
+// on home itself.
+test('chrome: the root index.html does NOT carry a Home link', () => {
+  const html = readFileSync(join(HERE, 'index.html'), 'utf-8');
+  const homeLinks = html.match(/<a[^>]*\bdata-i18n="menu\.home"[^>]*>/g) ?? [];
+  assert.equal(homeLinks.length, 0, `root index.html unexpectedly has ${homeLinks.length} Home link(s)`);
 });
