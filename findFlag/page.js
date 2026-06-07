@@ -18,7 +18,7 @@ import {
   pickRandomMix,
 } from '../flags/findFlag.js';
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
-import { formatTime, scoreColor } from '../flags/quiz.js';
+import { scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { pickCelebration } from '../flags/quiz.js';
@@ -304,7 +304,6 @@ export function bootFindFlag() {
 
     const catEl = document.getElementById('find-cat');
     const countEl = document.getElementById('find-count');
-    const timeEl = document.getElementById('find-time');
     const inputEl = /** @type {HTMLInputElement} */ (document.getElementById('find-input'));
     const sugEl = document.getElementById('find-suggestions');
     const foundEl = document.getElementById('find-found');
@@ -315,8 +314,6 @@ export function bootFindFlag() {
 
     let matches = [];
     let selected = 0;
-    const startMs = Date.now();
-    let timerRaf = 0;
     let finished = false;
 
     function updateCount() {
@@ -329,10 +326,6 @@ export function bootFindFlag() {
       countEl.classList.remove('find-count--pulse');
       void countEl.offsetWidth;
       countEl.classList.add('find-count--pulse');
-    }
-    function tick() {
-      timeEl.textContent = formatTime(Date.now() - startMs);
-      if (!finished) timerRaf = requestAnimationFrame(tick);
     }
 
     function renderSuggestions() {
@@ -446,13 +439,10 @@ export function bootFindFlag() {
     function finish() {
       if (finished) return;
       finished = true;
-      cancelAnimationFrame(timerRaf);
-      const elapsed = Date.now() - startMs;
       const found = foundCodes.size;
       const total = targetCodes.size;
       document.getElementById('final-found').textContent = String(found);
       document.getElementById('final-total').textContent = String(total);
-      document.getElementById('final-time').textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
       document.getElementById('final-score-line').style.color = scoreColor(found / total);
 
       // findFlag is play-and-walk-away now — no per-category best score,
@@ -507,7 +497,6 @@ export function bootFindFlag() {
     }
 
     gameEl.hidden = false;
-    tick();
     if (!('ontouchstart' in window)) inputEl.focus();
   }
 }

@@ -161,10 +161,6 @@ body {
   animation: find-count-pulse 700ms ease-out, find-shake 300ms ease;
   display: inline-block;
 }
-.find-time {
-  font-size: 14px;
-  color: #666;
-}
 .find-input-wrap {
   position: relative;
   margin-bottom: 12px;
