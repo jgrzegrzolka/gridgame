@@ -17,7 +17,7 @@ import {
   pillLabel,
   pickRandomMix,
 } from '../flags/findFlag.js';
-import { emptyFilters, matchesFilters } from '../flags/flagsFilter.js';
+import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
 import { formatTime, scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
@@ -143,19 +143,14 @@ export function bootFindFlag() {
     /** @type {Array<{ btn: HTMLButtonElement, group: 'continent' | 'color' | 'motif', value: string }>} */
     const allPills = [];
 
-    // "No other colours" toggle pill — ties colorCount to whatever colours
-    // are currently selected as includes. Adding a colour while on bumps the
-    // count up; removing one bumps it down. Off → colorCount cleared.
-    let onlyColorsMode = false;
+    // "No other colours" toggle pill — state lives in the shared
+    // createColorCountLock so flagsdata and findFlag can't drift on what
+    // "only these colours" means. Page owns the DOM (button below) and
+    // calls into the lock from three places: the toggle click, every
+    // color-include pill click (sync), and Clear (reset).
+    const colorCountLock = createColorCountLock(filter);
     /** @type {HTMLButtonElement | null} */
     let onlyColorsBtn = null;
-    function syncOnlyColors() {
-      if (!onlyColorsMode) {
-        filter.colorCount = null;
-        return;
-      }
-      filter.colorCount = filter.color.include.size;
-    }
 
     for (const sec of sections) {
       const secEl = document.createElement('section');
@@ -186,7 +181,7 @@ export function bootFindFlag() {
       // After the Colors section render the "no other colours" modifier
       // pill. Single toggle; when active, filter.colorCount is bound to the
       // number of include colours. Adding/removing colour pills auto-updates
-      // the count via syncOnlyColors().
+      // the count via the lock's sync() call in cyclePill.
       if (sec.group === 'color') {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -196,10 +191,8 @@ export function bootFindFlag() {
         labelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');
         btn.appendChild(labelSpan);
         btn.addEventListener('click', () => {
-          onlyColorsMode = !onlyColorsMode;
-          if (onlyColorsMode) btn.classList.add('active');
-          else btn.classList.remove('active');
-          syncOnlyColors();
+          const on = colorCountLock.toggle();
+          btn.classList.toggle('active', on);
           updateBar();
         });
         wrap.appendChild(btn);
@@ -257,8 +250,8 @@ export function bootFindFlag() {
         btn.classList.add('active');
       }
       // Colour-include count may have changed — if "no other colours" is on,
-      // colorCount tracks it. (No-op if onlyColorsMode is false.)
-      if (group === 'color') syncOnlyColors();
+      // colorCount tracks it. (No-op if the lock is off.)
+      if (group === 'color') colorCountLock.sync();
       updateBar();
     }
 
@@ -273,8 +266,7 @@ export function bootFindFlag() {
         filter[k].include.clear();
         filter[k].exclude.clear();
       }
-      filter.colorCount = null;
-      onlyColorsMode = false;
+      colorCountLock.reset();
       if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
       for (const { btn } of allPills) {
         btn.classList.remove('active', 'exclude');

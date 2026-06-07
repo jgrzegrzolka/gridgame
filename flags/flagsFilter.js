@@ -39,6 +39,48 @@ export function emptyFilters() {
 }
 
 /**
+ * State machine behind the "no other colours" toggle pill shared by
+ * findFlag's chooser and flagsdata's filter bar. When on, the filter's
+ * `colorCount` tracks the size of `color.include` — adding a colour pill
+ * bumps the locked count up, removing one bumps it down. When off,
+ * `colorCount` stays null and the constraint is inactive.
+ *
+ * Pages own the DOM (button creation, classList toggling) — the helper
+ * just keeps the boolean flag and the colorCount field in sync so both
+ * pages can't drift on what "only these colours" means. Use the returned
+ * methods at three points:
+ *
+ *   - `toggle()` from the toggle button's click handler. Returns the
+ *     new on/off state so the page can reflect it in the button's
+ *     `.active` class.
+ *   - `sync()` from every colour-include pill click, so adding/removing
+ *     a colour while the lock is on adjusts the count immediately.
+ *   - `reset()` from the page's Clear button, so the lock flips off
+ *     and the count clears in one call.
+ *
+ * @param {Filters} filter
+ */
+export function createColorCountLock(filter) {
+  let on = false;
+  function sync() {
+    filter.colorCount = on ? filter.color.include.size : null;
+  }
+  return {
+    get isOn() { return on; },
+    toggle() {
+      on = !on;
+      sync();
+      return on;
+    },
+    sync,
+    reset() {
+      on = false;
+      filter.colorCount = null;
+    },
+  };
+}
+
+/**
  * Decide whether a country survives the current filter selection.
  * Groups combine via AND; within a group, includes are AND-among-values
  * and excludes are none-of. For scalar groups (status, continent) AND
