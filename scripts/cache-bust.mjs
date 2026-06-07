@@ -1,23 +1,40 @@
 /**
- * Deploy-time JS cache-bust pass.
+ * Deploy-time cache-bust pass.
  *
- * Walks every shipped .js file and appends `?v=<sha>` to relative
- * .js / .json paths inside string and template literals. Covers static
- * imports, dynamic imports, export-froms, JSON fetches, and the
- * `const url = './foo.json'; fetch(url)` indirection.
+ * Walks every shipped .js AND .html file and appends `?v=<sha>` to
+ * relative .js / .json paths inside string and template literals.
+ * Covers static imports, dynamic imports, export-froms, JSON fetches,
+ * the `const url = './foo.json'; fetch(url)` indirection, AND HTML
+ * inline `<script type="module">` imports of shared modules.
  *
  * Why a separate pass (not the HTML sed): the HTML sed only versions
- * <script>/<link> hrefs. Sub-modules imported by a fresh page.js
+ * `<script>` / `<link>` hrefs that carry `?v=__BUILD__` literally in
+ * source. Sub-modules imported by a fresh page.js
  * (e.g. `import '../flags/quiz.js'`) and JSON fetches
  * (`fetch('../flags/countries.json')`) carry no version in source —
  * without this pass, a fresh page.js?v=<sha> would static-import the
  * OLD cached quiz.js after a shared-module edit, masking the deploy.
+ *
+ * Why HTML too: HTML inline `<script type="module">` blocks contain
+ * import statements for shared modules (e.g. `import '../i18n.js'`)
+ * that need the same `?v=<sha>` suffix the cache-bust adds on the JS
+ * side. Without versioning HTML inline imports, the browser fetches
+ * two different URLs for the same module (HTML side bare, JS side
+ * versioned) and ends up with two module instances → split top-level
+ * state (e.g. bootI18n populates cachedStrings in instance A,
+ * page.js's t() reads instance B's empty cache). Keeping HTML inline
+ * imports BARE in source — instead of carrying `?v=__BUILD__` — also
+ * means dev (where neither pipeline runs) produces matching URLs on
+ * both sides.
  *
  * Why not just bundle: see scripts/minify.mjs's header for the
  * "one module instance per URL" rationale that bundling would break.
  *
  * Order in the deploy workflow: runs AFTER the HTML __BUILD__ sed and
  * BEFORE minify, so minify's source maps reflect the rewritten URLs.
+ * The __BUILD__ sed handles `<script src>`, `<link href>` (CSS/SVG/
+ * JSON preloads) — anything that already carries the placeholder.
+ * This pass handles everything else.
  */
 
 import { readdir, readFile, writeFile } from 'node:fs/promises';
@@ -67,7 +84,7 @@ async function walk(dir, out = []) {
       const name = entry.name;
       if (name.endsWith('.test.js')) continue;
       if (name.endsWith('.js.map')) continue;
-      if (name.endsWith('.js')) out.push(join(dir, name));
+      if (name.endsWith('.js') || name.endsWith('.html')) out.push(join(dir, name));
     }
   }
   return out;

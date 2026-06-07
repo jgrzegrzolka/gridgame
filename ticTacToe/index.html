@@ -123,9 +123,9 @@
     </div>
 
     <script type="module">
-      import { bootTicTacToeOnline } from './page.js?v=__BUILD__';
-      import { disableBurgerIfEmpty, wireBurgerDismiss } from '../common.js?v=__BUILD__';
-      import { bootI18n, wireLangToggle } from '../i18n.js?v=__BUILD__';
+      import { bootTicTacToeOnline } from './page.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss } from '../common.js';
+      import { bootI18n, wireLangToggle } from '../i18n.js';
       bootI18n('../').then((lang) => {
         wireLangToggle(lang);
         bootTicTacToeOnline();

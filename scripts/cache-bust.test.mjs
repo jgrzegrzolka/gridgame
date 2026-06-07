@@ -97,6 +97,33 @@ test('cache-bust is idempotent — a second pass over already-rewritten source i
   assert.equal(twice, once);
 });
 
+test('cache-bust rewrites an HTML inline `import … from` (.html files go through the same regex as .js)', () => {
+  // Why this matters: HTML inline <script type="module"> blocks import
+  // shared modules like '../i18n.js'. If cache-bust didn't walk .html,
+  // those would ship bare while the JS-side imports of the same module
+  // ship versioned — two URLs, two ES module instances, split top-level
+  // state (e.g. bootI18n's cachedStrings would not be visible to
+  // page.js's t()).
+  const src = `<script type="module">
+    import { bootI18n } from '../i18n.js';
+    import { bootFindFlag } from './page.js';
+  </script>`;
+  const out = applyCacheBust(src, SUFFIX);
+  assert.match(out, /\.\.\/i18n\.js\?v=abc123/);
+  assert.match(out, /\.\/page\.js\?v=abc123/);
+});
+
+test('cache-bust leaves HTML elements that already carry `?v=__BUILD__` alone (the HTML sed handles those)', () => {
+  // `<script src="./page.js?v=__BUILD__">` and `<link href="../common.css?v=__BUILD__">`
+  // ship with the placeholder so the HTML __BUILD__ sed (in deploy.yml)
+  // can swap it for the SHA. Cache-bust's STRING_PATH regex excludes
+  // anything with a `?`, so these fall through untouched.
+  const src = `<script type="module" src="./page.js?v=__BUILD__"></script>
+<link rel="stylesheet" href="../common.css?v=__BUILD__">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__">`;
+  assert.equal(applyCacheBust(src, SUFFIX), src);
+});
+
 test('cache-bust rewrites multiple paths in the same source', () => {
   const src = `
     import { a } from './a.js';
