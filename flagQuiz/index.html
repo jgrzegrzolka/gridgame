@@ -68,9 +68,9 @@
       </p>
     </section>
     <script type="module">
-      import { bootFlagQuiz } from './page.js?v=__BUILD__';
-      import { bootI18n, wireLangToggle } from '../i18n.js?v=__BUILD__';
-      import { wireBurgerDismiss } from '../common.js?v=__BUILD__';
+      import { bootFlagQuiz } from './page.js';
+      import { bootI18n, wireLangToggle } from '../i18n.js';
+      import { wireBurgerDismiss } from '../common.js';
       // bootFlagQuiz uses t() while building the dynamic menu, so we have
       // to wait for i18n to load first. The menu also includes the lang
       // toggle, so wireLangToggle has to run after bootFlagQuiz resolves.
