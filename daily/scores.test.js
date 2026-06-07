@@ -44,20 +44,20 @@ test('saveScore + loadScores roundtrips minimal {f, t}', () => {
   });
 });
 
-test('saveScore + loadScores roundtrips full {f, t, c, ms}', () => {
+test('saveScore + loadScores roundtrips full {f, t, c}', () => {
   const store = fakeStore();
-  saveScore(store, 1, 3, 9, ['fi', 'no', 'se'], 42500);
+  saveScore(store, 1, 3, 9, ['fi', 'no', 'se']);
   assert.deepEqual(loadScores(store), {
-    1: { f: 3, t: 9, c: ['fi', 'no', 'se'], ms: 42500 },
+    1: { f: 3, t: 9, c: ['fi', 'no', 'se'] },
   });
 });
 
 test('saveScore overwrites an existing entry for the same N', () => {
   const store = fakeStore();
   saveScore(store, 1, 3, 9);
-  saveScore(store, 1, 7, 9, ['a', 'b', 'c', 'd', 'e', 'f', 'g'], 90000);
+  saveScore(store, 1, 7, 9, ['a', 'b', 'c', 'd', 'e', 'f', 'g']);
   assert.deepEqual(loadScores(store), {
-    1: { f: 7, t: 9, c: ['a', 'b', 'c', 'd', 'e', 'f', 'g'], ms: 90000 },
+    1: { f: 7, t: 9, c: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] },
   });
 });
 
@@ -74,21 +74,31 @@ test('loadScores drops entries with missing or wrong-typed core fields', () => {
   assert.deepEqual(loadScores(store), { 1: { f: 4, t: 9 } });
 });
 
-test('loadScores keeps core fields but drops malformed c / ms', () => {
+test('loadScores keeps core fields but drops a malformed c', () => {
   const store = fakeStore({
     'daily.scores': JSON.stringify({
-      1: { f: 3, t: 9, c: 'not-an-array', ms: 1000 },
-      2: { f: 3, t: 9, c: ['fi', 5], ms: 1000 }, // wrong element type
-      3: { f: 3, t: 9, c: ['fi'], ms: 'slow' }, // wrong ms type
-      4: { f: 3, t: 9, c: ['fi'], ms: -1 }, // negative ms
+      1: { f: 3, t: 9, c: 'not-an-array' },
+      2: { f: 3, t: 9, c: ['fi', 5] }, // wrong element type
     }),
   });
-  // c and ms get individually dropped; f/t survive in each case.
+  // c gets dropped; f/t survive in each case.
   assert.deepEqual(loadScores(store), {
-    1: { f: 3, t: 9, ms: 1000 },
-    2: { f: 3, t: 9, ms: 1000 },
-    3: { f: 3, t: 9, c: ['fi'] },
-    4: { f: 3, t: 9, c: ['fi'] },
+    1: { f: 3, t: 9 },
+    2: { f: 3, t: 9 },
+  });
+});
+
+test('loadScores ignores legacy ms field on stored records', () => {
+  // Records written before the timer was removed (2026-06-07) carried an
+  // `ms` (elapsed milliseconds) field. The new loader simply doesn't read
+  // it — old records still load cleanly; ms is dropped on next save.
+  const store = fakeStore({
+    'daily.scores': JSON.stringify({
+      1: { f: 3, t: 9, c: ['fi'], ms: 42500 },
+    }),
+  });
+  assert.deepEqual(loadScores(store), {
+    1: { f: 3, t: 9, c: ['fi'] },
   });
 });
 
@@ -98,10 +108,8 @@ test('formatScore renders "f/t" or null', () => {
   assert.equal(formatScore(undefined), null);
 });
 
-test('isCompleteRecord is true only when both c and ms are present', () => {
+test('isCompleteRecord is true when c is present', () => {
   assert.equal(isCompleteRecord(undefined), false);
   assert.equal(isCompleteRecord({ f: 3, t: 9 }), false);
-  assert.equal(isCompleteRecord({ f: 3, t: 9, c: ['fi'] }), false);
-  assert.equal(isCompleteRecord({ f: 3, t: 9, ms: 1000 }), false);
-  assert.equal(isCompleteRecord({ f: 3, t: 9, c: ['fi'], ms: 1000 }), true);
+  assert.equal(isCompleteRecord({ f: 3, t: 9, c: ['fi'] }), true);
 });

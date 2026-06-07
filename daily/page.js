@@ -5,7 +5,7 @@ import {
   classifyGuess,
   filterToCategory,
 } from '../flags/findFlag.js';
-import { formatTime, scoreColor } from '../flags/quiz.js';
+import { scoreColor } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { pickCelebration } from '../flags/quiz.js';
@@ -156,7 +156,7 @@ export function bootDaily() {
       const stored = loadScores(window.localStorage)[n];
       if (isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
-        renderResult(result.targets, foundCodes, stored.ms);
+        renderResult(result.targets, foundCodes);
         return;
       }
 
@@ -203,15 +203,12 @@ export function bootDaily() {
    *
    * @param {Country[]} targets
    * @param {Set<string>} foundCodes
-   * @param {number} elapsedMs
    */
-  function renderResult(targets, foundCodes, elapsedMs) {
+  function renderResult(targets, foundCodes) {
     const found = foundCodes.size;
     const total = targets.length;
     /** @type {HTMLElement} */ (document.getElementById('final-found')).textContent = String(found);
     /** @type {HTMLElement} */ (document.getElementById('final-total')).textContent = String(total);
-    /** @type {HTMLElement} */ (document.getElementById('final-time')).textContent =
-      `${t('game.time', 'Time')}: ${formatTime(elapsedMs)}`;
     /** @type {HTMLElement} */ (document.getElementById('final-score-line')).style.color = scoreColor(found / total);
 
     const foundFlags = targets.filter((c) => foundCodes.has(c.code));
@@ -258,7 +255,6 @@ export function bootDaily() {
 
     const catEl = /** @type {HTMLElement} */ (document.getElementById('find-cat'));
     const countEl = /** @type {HTMLElement} */ (document.getElementById('find-count'));
-    const timeEl = /** @type {HTMLElement} */ (document.getElementById('find-time'));
     const inputEl = /** @type {HTMLInputElement} */ (document.getElementById('find-input'));
     const sugEl = /** @type {HTMLElement} */ (document.getElementById('find-suggestions'));
     const foundEl = /** @type {HTMLElement} */ (document.getElementById('find-found'));
@@ -270,8 +266,6 @@ export function bootDaily() {
     /** @type {Country[]} */
     let matches = [];
     let selected = 0;
-    const startMs = Date.now();
-    let timerRaf = 0;
     let finished = false;
 
     function updateCount() {
@@ -285,10 +279,6 @@ export function bootDaily() {
       countEl.classList.remove('find-count--pulse');
       void countEl.offsetWidth;
       countEl.classList.add('find-count--pulse');
-    }
-    function tick() {
-      timeEl.textContent = formatTime(Date.now() - startMs);
-      if (!finished) timerRaf = requestAnimationFrame(tick);
     }
 
     function renderSuggestions() {
@@ -404,21 +394,18 @@ export function bootDaily() {
     function finish() {
       if (finished) return;
       finished = true;
-      cancelAnimationFrame(timerRaf);
-      const elapsed = Date.now() - startMs;
       const found = foundCodes.size;
       const total = targetCodes.size;
       if (!backlog) {
-        saveScore(window.localStorage, n, found, total, Array.from(foundCodes), elapsed);
+        saveScore(window.localStorage, n, found, total, Array.from(foundCodes));
       }
       const tier = pickCelebration({ found, total });
       if (tier === 'fireworks') launchFireworks();
       else if (tier === 'confetti') launchConfetti();
-      renderResult(targets, foundCodes, elapsed);
+      renderResult(targets, foundCodes);
     }
 
     gameEl.hidden = false;
-    tick();
     if (!('ontouchstart' in window)) inputEl.focus();
   }
 }
