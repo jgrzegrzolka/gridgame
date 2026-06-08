@@ -16,6 +16,9 @@ export function bootArchive() {
       if (today === 0) {
         const empty = document.createElement('li');
         empty.className = 'archive-empty';
+        // data-i18n re-translates on a soft language switch via
+        // applyStringsToDocument — no per-call listener needed.
+        empty.setAttribute('data-i18n', 'daily.empty');
         empty.textContent = t('daily.empty', 'No puzzles yet.');
         listEl.appendChild(empty);
         return;

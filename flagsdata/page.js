@@ -3,6 +3,7 @@ import { ALL_FLAG_COLORS, ALL_MOTIFS, foldDiacritics } from '../flags/engine.js'
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
 import { t, countryName } from '../i18n.js';
+import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 
 /** @param {string} v */
 function statusLabel(v) {
@@ -63,6 +64,7 @@ export function bootFlagsData() {
     const wrap = document.createElement('div');
     wrap.className = 'flag';
     wrap.dataset.name = displayName;
+    bindTileCountry(wrap, c);
     wrap.addEventListener('click', () => openZoom(c));
     const img = document.createElement('img');
     img.src = `../flags/svg/${c.code}.svg`;
@@ -107,7 +109,15 @@ export function bootFlagsData() {
 
   function renderAll(parent, items) {
     const h2 = document.createElement('h2');
-    h2.textContent = t('domain.flags', 'Flags');
+    // Use data-i18n so applyStringsToDocument re-translates the heading
+    // on a soft language switch without a manual listener. The count
+    // span is appended as a child so the text-only re-application from
+    // applyTextContent doesn't clobber it: we keep the title inside its
+    // own span and put the count outside that.
+    const h2Title = document.createElement('span');
+    h2Title.setAttribute('data-i18n', 'domain.flags');
+    h2Title.textContent = t('domain.flags', 'Flags');
+    h2.appendChild(h2Title);
     const countSpan = document.createElement('span');
     countSpan.className = 'section-count';
     countSpan.textContent = String(items.length);
@@ -164,16 +174,20 @@ export function bootFlagsData() {
   }
 
   /**
-   * @param {string} label
+   * @param {string} labelKey
+   * @param {string} labelFallback
    * @param {'continent' | 'color' | 'motif' | 'status'} group
    * @param {Array<{ value: string, label: string }>} entries
    */
-  function buildFilterGroup(label, group, entries) {
+  function buildFilterGroup(labelKey, labelFallback, group, entries) {
     const wrap = document.createElement('div');
     wrap.className = 'filter-group';
     const labelEl = document.createElement('span');
     labelEl.className = 'filter-label';
-    labelEl.textContent = label;
+    // data-i18n hooks the section title into applyStringsToDocument so a
+    // soft language switch re-translates it for free.
+    labelEl.setAttribute('data-i18n', labelKey);
+    labelEl.textContent = t(labelKey, labelFallback);
     wrap.appendChild(labelEl);
     for (const { value, label: pillLabel } of entries) {
       const btn = document.createElement('button');
@@ -223,6 +237,9 @@ export function bootFlagsData() {
   searchInput.setAttribute('autocorrect', 'off');
   searchInput.setAttribute('spellcheck', 'false');
   searchInput.placeholder = t('flagsdata.searchName', 'Search by name…');
+  // data-i18n-attr re-translates the placeholder on a soft language
+  // switch — applyStringsToDocument handles it for free.
+  searchInput.setAttribute('data-i18n-attr', 'placeholder:flagsdata.searchName');
   searchInput.addEventListener('input', () => {
     nameQuery = foldDiacritics(searchInput.value.trim());
     applyFilter();
@@ -255,7 +272,9 @@ export function bootFlagsData() {
   toggleBtn.id = 'filter-toggle';
   toggleBtn.className = 'filter-toggle';
   toggleBtn.setAttribute('aria-controls', 'filter-groups');
-  toggleBtn.innerHTML = `<span>${t('flagsdata.filters', 'Filters')}</span><span id="filter-toggle-count" class="filter-toggle-count" hidden></span><span class="filter-toggle-chevron" aria-hidden="true">▾</span>`;
+  // data-i18n on the inner title span re-translates the "Filters" label
+  // for free on soft language switches; count and chevron stay siblings.
+  toggleBtn.innerHTML = `<span data-i18n="flagsdata.filters">${t('flagsdata.filters', 'Filters')}</span><span id="filter-toggle-count" class="filter-toggle-count" hidden></span><span class="filter-toggle-chevron" aria-hidden="true">▾</span>`;
   const startOpen = window.matchMedia('(min-width: 601px)').matches;
   filterBar.classList.toggle('is-open', startOpen);
   toggleBtn.setAttribute('aria-expanded', String(startOpen));
@@ -278,17 +297,18 @@ export function bootFlagsData() {
   filterBar.appendChild(groupsWrap);
 
   groupsWrap.appendChild(
-    buildFilterGroup(t('flagsdata.filterStatus', 'Status'), 'status', STATUS_VALUES.map((v) => ({ value: v, label: statusLabel(v) }))),
+    buildFilterGroup('flagsdata.filterStatus', 'Status', 'status', STATUS_VALUES.map((v) => ({ value: v, label: statusLabel(v) }))),
   );
   groupsWrap.appendChild(
-    buildFilterGroup(t('flagsdata.filterContinent', 'Continent'), 'continent', [...CONTINENTS, 'Other'].map((v) => ({ value: v, label: continentLabel(v) }))),
+    buildFilterGroup('flagsdata.filterContinent', 'Continent', 'continent', [...CONTINENTS, 'Other'].map((v) => ({ value: v, label: continentLabel(v) }))),
   );
-  const colorGroup = buildFilterGroup(t('flagsdata.filterColors', 'Colors'), 'color', ALL_FLAG_COLORS.map((v) => ({ value: v, label: colorLabel(v) })));
+  const colorGroup = buildFilterGroup('flagsdata.filterColors', 'Colors', 'color', ALL_FLAG_COLORS.map((v) => ({ value: v, label: colorLabel(v) })));
   // Append the "no other colours" modifier pill at the end of the Colors
   // row — same placement as findFlag's chooser, same toggle semantics.
   const onlyBtn = document.createElement('button');
   onlyBtn.type = 'button';
   onlyBtn.className = 'pill pill-modifier';
+  onlyBtn.setAttribute('data-i18n', 'findFlag.noOtherColors');
   onlyBtn.textContent = t('findFlag.noOtherColors', 'no other colours');
   onlyBtn.addEventListener('click', () => {
     const on = colorCountLock.toggle();
@@ -308,12 +328,13 @@ export function bootFlagsData() {
   groupsWrap.appendChild(colorGroup);
 
   groupsWrap.appendChild(
-    buildFilterGroup(t('flagsdata.filterMotifs', 'Motifs'), 'motif', ALL_MOTIFS.map((v) => ({ value: v, label: motifLabel(v) }))),
+    buildFilterGroup('flagsdata.filterMotifs', 'Motifs', 'motif', ALL_MOTIFS.map((v) => ({ value: v, label: motifLabel(v) }))),
   );
 
   const clearBtn = document.createElement('button');
   clearBtn.type = 'button';
   clearBtn.id = 'filter-clear';
+  clearBtn.setAttribute('data-i18n', 'flagsdata.clear');
   clearBtn.textContent = t('flagsdata.clear', 'Clear');
   clearBtn.hidden = true;
   clearBtn.addEventListener('click', () => {
@@ -348,4 +369,25 @@ export function bootFlagsData() {
     .catch((err) => {
       document.getElementById('sections').textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
+
+  // Soft language switch: tile hover labels + `<img>.alt` re-translate
+  // via the shared refreshTileNames walk; the dynamic pill labels (whose
+  // text depends on group + value, not on a fixed i18n key) re-translate
+  // here. Static labels (section headings, search placeholder, Clear,
+  // Filters, no-other-colours) carry `data-i18n` / `data-i18n-attr` and
+  // are handled upstream by `applyStringsToDocument`.
+  document.addEventListener('langchanged', () => {
+    refreshTileNames();
+    const pills = /** @type {NodeListOf<HTMLButtonElement>} */ (
+      filterBar.querySelectorAll('.pill[data-group][data-value]')
+    );
+    for (const btn of pills) {
+      const group = btn.dataset.group;
+      const value = btn.dataset.value ?? '';
+      if (group === 'status') btn.textContent = statusLabel(value);
+      else if (group === 'continent') btn.textContent = continentLabel(value);
+      else if (group === 'color') btn.textContent = colorLabel(value);
+      else if (group === 'motif') btn.textContent = motifLabel(value);
+    }
+  });
 }

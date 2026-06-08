@@ -63,7 +63,9 @@
       import { bootI18n, wireLangToggle } from '../../i18n.js';
       import { disableBurgerIfEmpty, wireBurgerDismiss } from '../../common.js';
       bootI18n('../../').then((lang) => {
-        wireLangToggle(lang);
+        // Author-only browse page; soft-reload keeps scroll position
+        // and verdict toggles intact across language switches.
+        wireLangToggle(lang, undefined, { softReload: true, base: '../../' });
         disableBurgerIfEmpty(
           document.querySelector('.burger'),
           document.querySelector('#burger-panel .menu'),

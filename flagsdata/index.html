@@ -55,7 +55,11 @@
       // Filter labels are built synchronously inside bootFlagsData, so we
       // chain after bootI18n to make sure t() sees the loaded strings.
       bootI18n('../').then((lang) => {
-        wireLangToggle(lang);
+        // Soft-reload keeps filter selections, scroll position, and the
+        // open zoom dialog intact across a language switch. Pill labels
+        // re-translate via a `langchanged` listener inside bootFlagsData;
+        // static labels carry `data-i18n` and re-translate upstream.
+        wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         wireBurgerDismiss();
         bootFlagsData();
       });

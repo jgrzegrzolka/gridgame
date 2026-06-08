@@ -158,7 +158,10 @@ function fakeTileDoc(tilesSpec) {
       return t ? t.tile : null;
     },
     querySelectorAll: (/** @type {string} */ sel) => {
-      if (sel !== '.find-tile') return [];
+      // refreshTileNames passes `.find-tile, .flag` so the walk covers
+      // both daily/findFlag's tiles and flagsdata's browse tiles. The
+      // fake matches either form.
+      if (sel !== '.find-tile' && sel !== '.find-tile, .flag') return [];
       return allTiles.map((x) => x.tile);
     },
   };
