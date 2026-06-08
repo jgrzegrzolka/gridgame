@@ -112,14 +112,14 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
 
 ### Hard, added later
 
-14. **Single-use tokens.** *(single-use test)* Each token in `SINGLE_USE_TOKENS` (defined in `flags/daily.test.js`) must appear in **at most one** entry across `daily_puzzles.json` + `daily_backlog.json` combined. Current list:
-    - `motif:weapon` — 13 sovereigns; once "find all weapon flags" runs, every weapon flag has been seen
-    - `motif:union-jack` — 5 sovereigns; tiny enough that even the solo puzzle is borderline, never compound
-    - `color:orange` — 10 sovereigns; same exhaustion logic
+14. **Single-use tokens.** *(single-use test)* Each token listed in `daily/daily_policy.json` (`singleUseTokens[]`) must appear in **at most one** entry across `daily_puzzles.json` + `daily_backlog.json` combined. Initial list (see the JSON for current state and per-token rationale):
+    - `motif:weapon` — 13 sovereigns
+    - `motif:union-jack` — 5 sovereigns
+    - `color:orange` — 10 sovereigns
 
     *Why:* once a property's full set has been exposed by a single "find all X" puzzle, the player has seen every X flag. Future puzzles compounding X (`Africa + X`, `X + animal`, etc.) ask "of those flags you already met, which are also Y" — that's a recall puzzle dressed as a find puzzle, and it feels redundant. Small properties are most prone to this because their compounds are tiny and contrived anyway.
 
-    *How to add a token:* if a new motif or colour tag lands with under ~15 sovereigns and you ship the "find all X" puzzle, add the token to `SINGLE_USE_TOKENS` in the same change. *Don't* add continent tokens — continents subdivide into recognizable subgroups (Europe + cross is a natural puzzle even though "find all Europe" exists), so the exhaustion logic doesn't apply.
+    *How to add a token:* edit `daily/daily_policy.json` and add an entry to `singleUseTokens` with `token`, `sovs`, and `reason`. Leave the existing canonical "find all X" puzzle in place — the test enforces no-recurrence going forward. *Don't* add continent tokens — continents subdivide into recognizable subgroups (Europe + cross is a natural puzzle even though "find all Europe" exists), so the exhaustion logic doesn't apply.
 
     *Numbered 14 rather than 8* to avoid renumbering rules 8-13 (and the cross-references to them in this file plus `daily_ideas.json` notes). The Hard / Soft split is now: hard = **1-7 + 14**, soft = 8-13.
 

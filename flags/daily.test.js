@@ -424,32 +424,33 @@ test('live + backlog: puzzles #1-100 are primary-clean (no emblem-only colour ma
   }
 });
 
-// Rule 14 (hard) — once a token in SINGLE_USE_TOKENS has been used in a
-// "find all X" puzzle, the player has seen every X flag. Future puzzles
-// compounding X ("Africa + X", "X + animal") play as a recall puzzle
-// dressed as a find puzzle and feel redundant. Small motif/colour
-// properties are most prone to this because their compounds are tiny
-// and contrived anyway. Continent tokens are deliberately NOT in the
-// list — continents subdivide into recognizable subgroups (Europe +
-// cross stays interesting even though "find all European flags" would
-// also work as a puzzle).
+// Rule 14 (hard) — once a token listed in `daily/daily_policy.json`
+// has been used in a "find all X" puzzle, the player has seen every X
+// flag. Future puzzles compounding X ("Africa + X", "X + animal") play
+// as a recall puzzle dressed as a find puzzle and feel redundant.
+// Small motif/colour properties are most prone to this because their
+// compounds are tiny and contrived anyway. Continent tokens are
+// deliberately NOT in the list — continents subdivide into
+// recognizable subgroups (Europe + cross stays interesting even though
+// "find all European flags" would also work as a puzzle).
 //
-// To add a token: bump SINGLE_USE_TOKENS, leave the existing single use
-// in place (it's the canonical "find all X" puzzle), and the test
-// will enforce the no-recurrence rule going forward.
-const SINGLE_USE_TOKENS = [
-  'motif:weapon',     // 13 sovereigns
-  'motif:union-jack', // 5 sovereigns
-  'color:orange',     // 10 sovereigns
-];
+// The list lives in `daily/daily_policy.json` rather than inline here
+// so the author can add tokens by editing a data file with the same
+// shape as the catalog files, no test-code edit required. Each entry
+// carries the sovereign count + the rationale so the file is
+// self-documenting.
+/** @type {{ singleUseTokens: { token: string, sovs: number, reason: string }[] }} */
+const POLICY = JSON.parse(
+  readFileSync(join(HERE, '..', 'daily', 'daily_policy.json'), 'utf-8'),
+);
 
 test('live + backlog: single-use tokens appear in at most one entry', () => {
   const all = [...CATALOG, ...BACKLOG];
-  for (const tok of SINGLE_USE_TOKENS) {
-    const uses = all.filter((e) => e.filter.split(',').includes(tok));
+  for (const { token } of POLICY.singleUseTokens) {
+    const uses = all.filter((e) => e.filter.split(',').includes(token));
     assert.ok(
       uses.length <= 1,
-      `single-use token "${tok}" appears in ${uses.length} entries (${uses.map((e) => '#' + e.n).join(', ')}); limit is 1 — see rule 14`,
+      `single-use token "${token}" appears in ${uses.length} entries (${uses.map((e) => '#' + e.n).join(', ')}); limit is 1 — see rule 14 / daily/daily_policy.json`,
     );
   }
 });
