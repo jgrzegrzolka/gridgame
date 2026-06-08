@@ -110,6 +110,36 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
 
 13. **Continent variety in onboarding.** At least 5 of the first 10 are Europe ("start mostly with Europe"); the rest spread across Asia / Africa / NA. Don't try to fit every continent into the first 10 — South America's primary-clean-and-not-small options are essentially zero, so it appears later.
 
+## Difficulty scoring
+
+Author-facing sort signal — **advisory, not a rule.** Used to order the backlog so easier puzzles come earlier and the player has a learning curve. Hard caps by N (rule 8) still own the rule-level constraints.
+
+**Implementation:** `daily/difficulty.js`. Pure function `scoreEntry(entry, byCode) → { score, mean, max, outlier, sizeAdjust, tokenAdjust, setSize, tokens }`. Tests + calibration anchors pinned in `daily/difficulty.test.js`. The code is the source of truth — if the math changes, update the test anchors AND this section in the same change.
+
+**Formula:**
+
+```
+score = mean(nameScore)                       // primary: typical country fame
+      + 0.4 × max(0, max − mean − 1.5)        // outlier bump
+      + sizeAdjust                            // U-shape (n=1 +2; 2-3 +0.3; 4-15 0; 16-25 +0.2; 26-30 +0.5)
+      + 0.1 × max(0, tokenCount − 2)          // compound friction
+```
+
+**Philosophy:**
+
+- **Mean (not max) is primary.** The typical country drives the player's experience. A puzzle of 5 famous + 1 Vatican plays mostly easy — the player gets 5/6 and feels fine; Vatican adds *some* drag (the outlier bump) but doesn't dominate.
+- **Size is U-shaped.** 1-flag puzzles are categorically hard (no margin — wrong guesses give nothing). The 4-15 range is the sweet spot. Large sets (16+) grow harder because *recall* load grows even when each country is famous: "list all 27 EU members" is harder than "list 9 European cross flags," same individual fame.
+- **Small absolute differences are intentional.** Most puzzles cluster between 1.5 and 6.0 — the rank order matters, the absolute numbers are not a measurement.
+
+**Calibration anchors** (catalog at time of writing — drift = test failure):
+- Live #1 Europe + cross (9 flags, 7×nm=1 + 2×nm=2) ≈ **1.2**
+- Live #3 EU members (27 flags, all famous) ≈ **1.8** — the size penalty (+0.5 for n=27) pushes the membership puzzle *above* the smaller Europe + cross puzzle, even though every EU member is famous individually
+- Backlog Sweden + Ukraine (Europe + blue+yellow + 2 colors, 2 flags both nm=1) ≈ **1.5**
+- Backlog white+blue 2-color (6 flags including Vatican, nm6 outlier) ≈ **3.6**
+- Backlog Africa RGYK-only-4 (3 small-nation flags) ≈ **5.4**
+
+**When to use:** sort the backlog after a generation pass, decide where to slot a new idea, decide whether a puzzle belongs earlier or later. Author can override — if the formula says "rank 2" but rule 12 says "#1 is pinned to Europe + cross," rule 12 wins.
+
 ## When data changes
 
 The small-property list in rule 10 is derived from `flags/countries.json`. If you add countries, change `primaryColors`, or split a continent, the counts shift. Before relying on a rule, re-verify the current state with a quick query against the file. The hard rules (1–7) are always derived live by the test, so they self-correct.
