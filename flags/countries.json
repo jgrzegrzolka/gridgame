@@ -43,7 +43,8 @@
     ],
     "additionalColors": [],
     "motifs": [
-      "animal"
+      "animal",
+      "bird"
     ]
   },
   {
@@ -99,6 +100,7 @@
     "additionalColors": [],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms"
     ]
   },
@@ -521,6 +523,7 @@
     ],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms",
       "weapon"
     ]
@@ -1196,6 +1199,7 @@
     ],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms",
       "cross"
     ]
@@ -1256,6 +1260,7 @@
     ],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms",
       "weapon",
       "star-or-moon"
@@ -1277,6 +1282,7 @@
     "additionalColors": [],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms"
     ]
   },
@@ -1495,6 +1501,7 @@
     ],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms",
       "cross",
       "union-jack"
@@ -1802,6 +1809,7 @@
     ],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms",
       "weapon"
     ]
@@ -2192,6 +2200,7 @@
     "additionalColors": [],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms",
       "star-or-moon"
     ]
@@ -2231,6 +2240,7 @@
     "additionalColors": [],
     "motifs": [
       "animal",
+      "bird",
       "star-or-moon"
     ]
   },
@@ -2666,6 +2676,7 @@
     ],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms"
     ]
   },
@@ -2686,6 +2697,7 @@
     ],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms"
     ]
   },
@@ -2738,6 +2750,7 @@
     ],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms"
     ]
   },
@@ -3195,6 +3208,7 @@
     "additionalColors": [],
     "motifs": [
       "animal",
+      "bird",
       "star-or-moon"
     ],
     "aliases": [
@@ -3681,6 +3695,7 @@
     ],
     "motifs": [
       "animal",
+      "bird",
       "coat-of-arms"
     ]
   },
@@ -4349,7 +4364,8 @@
     ],
     "additionalColors": [],
     "motifs": [
-      "animal"
+      "animal",
+      "bird"
     ]
   },
   {
@@ -4682,7 +4698,8 @@
     ],
     "additionalColors": [],
     "motifs": [
-      "animal"
+      "animal",
+      "bird"
     ]
   },
   {
@@ -4702,6 +4719,7 @@
     "additionalColors": [],
     "motifs": [
       "animal",
+      "bird",
       "star-or-moon"
     ]
   }
