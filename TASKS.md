@@ -26,11 +26,11 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 Plus `withLocalizedAliases(countries)` in `i18n.js` must be re-run on lang change wherever a country-name picker is in scope (daily, findFlag, flagQuiz, ttt) — the suggestion matcher's Polish aliases are otherwise stale.
 
-#### Phase 0 — i18n re-render infrastructure  [pending]
-Foundation for every later phase. Standalone PR.
-- [ ] Add `reloadI18n(lang)` to `i18n.js`: re-fetch `i18n/{lang}.json`, swap `cachedStrings`, re-run `applyStringsToDocument`, dispatch a `langchanged` `CustomEvent` on `document` (detail: `{ lang }`).
-- [ ] Add an opt-in flag to `wireLangToggle` (e.g. `{ softReload: true }`), default false. Unmigrated pages stay on the current `window.location.reload()` path.
-- [ ] Tests in `i18n.test.js` covering: cache swap, event dispatch, `<html lang>` update, opt-in flag routing.
+#### Phase 0 — i18n re-render infrastructure  [in PR #263]
+Foundation for every later phase.
+- [x] Add `reloadI18n(lang, options)` to `i18n.js`: re-fetch `i18n/{lang}.json`, swap `cachedStrings`, re-run `applyStringsToDocument`, dispatch a `langchanged` `CustomEvent` on `document` (detail: `{ lang }`). `fetchImpl` + `doc` are injectable so tests don't need to mock globals.
+- [x] Add `softReload` + `base` + `doc` + `reload` options to `wireLangToggle` (all default to the legacy behaviour). Soft mode also registers a `langchanged` listener that keeps `data-current` in sync so a second click flips back correctly.
+- [x] Tests in `i18n.test.js`: cache swap, `<html lang>` update, event dispatch with `{ detail: { lang } }`, non-ok fetch is a silent no-op, base-prefix honoured, soft-mode listener registration, soft-mode click delegates to injected reload + persists language.
 
 #### Phase 1 — daily quiz  [pending]  ← *user-stated priority*
 - [ ] Flip daily's `wireLangToggle` call to `{ softReload: true }`.
