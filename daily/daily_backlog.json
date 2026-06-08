@@ -690,5 +690,33 @@
       "en": "Find all flags whose only colours are white and blue — no others.",
       "pl": "Znajdź wszystkie flagi, które mają tylko 2 kolory: biały i niebieski."
     }
+  },
+  {
+    "n": 53,
+    "filter": "motif:bird",
+    "answers": [
+      "ad",
+      "al",
+      "bo",
+      "dm",
+      "ec",
+      "eg",
+      "fj",
+      "gt",
+      "ki",
+      "kz",
+      "md",
+      "me",
+      "mx",
+      "pg",
+      "rs",
+      "ug",
+      "zm",
+      "zw"
+    ],
+    "description": {
+      "en": "Find all flags with a bird.",
+      "pl": "Znajdź wszystkie flagi z ptakiem."
+    }
   }
 ]

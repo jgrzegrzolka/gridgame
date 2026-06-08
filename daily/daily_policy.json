@@ -14,6 +14,11 @@
       "token": "color:orange",
       "sovs": 10,
       "reason": "Same exhaustion logic as weapon — solo puzzle covers everything, compounds get contrived."
+    },
+    {
+      "token": "motif:bird",
+      "sovs": 18,
+      "reason": "Treated as single-use by author intent — the solo 'find all bird flags' puzzle exhausts the property, and compounds like 'Africa + bird' produce tiny contrived sets even though 18 sovs sits above rule 10's hard-compound threshold."
     }
   ]
 }
