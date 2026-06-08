@@ -1,5 +1,5 @@
 import { t } from '../../i18n.js';
-import { renderArchiveSquare } from '../squares.js';
+import { renderArchiveSquare, refreshSquareCriteria } from '../squares.js';
 
 /**
  * @typedef {Object} Idea
@@ -198,6 +198,7 @@ export function bootIdeas() {
 
         listEl.appendChild(tile);
       });
+      document.addEventListener('langchanged', () => refreshSquareCriteria());
     })
     .catch((err) => {
       listEl.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;

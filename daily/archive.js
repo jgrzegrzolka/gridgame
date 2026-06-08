@@ -1,7 +1,7 @@
 import { t } from '../i18n.js';
 import { todayN } from '../flags/daily.js';
 import { loadScores } from './scores.js';
-import { renderArchiveSquare } from './squares.js';
+import { renderArchiveSquare, refreshSquareCriteria } from './squares.js';
 
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
 
@@ -31,6 +31,9 @@ export function bootArchive() {
           score: scores[entry.n],
         }));
       }
+      // Soft language switch — re-translate each square's hover overlay
+      // (and aria-label) so the criteria label tracks the active lang.
+      document.addEventListener('langchanged', () => refreshSquareCriteria());
     })
     .catch((err) => {
       listEl.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
