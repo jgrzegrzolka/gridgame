@@ -8,12 +8,6 @@
   max-width: 360px;
 }
 .lobby[hidden] { display: none; }
-.lobby-title {
-  font-size: 22px;
-  font-weight: 500;
-  margin: 0;
-  text-align: center;
-}
 .lobby-btn {
   padding: 12px 20px;
   background: #fff;
