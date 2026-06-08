@@ -92,7 +92,7 @@ export function bootDaily() {
       const all = withLocalizedAliases(flagsGamePool(raw, false));
 
       if (isBacklog) {
-        numEl.textContent = `#${backlogN} · backlog`;
+        numEl.textContent = `${backlogN} · backlog`;
         // Tab title carries the puzzle number so multiple ?backlog=N tabs
         // are tellable apart at a glance during catalog review. Set after
         // bootI18n's data-i18n pass so this override is final.
@@ -136,7 +136,7 @@ export function bootDaily() {
 
       const today = todayN(catalog);
       const n = dailyNFromUrl(window.location.search, today);
-      numEl.textContent = `#${n}`;
+      numEl.textContent = `${n}`;
       // Same rationale as the backlog branch — tab title carries #N so
       // archived puzzles open in separate tabs read distinctly. Override
       // runs after bootI18n's data-i18n pass.
