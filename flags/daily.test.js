@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry } from './daily.js';
+import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries, createCountry } from './group.js';
@@ -191,6 +191,34 @@ test('resolvePuzzleEntry: every answer code missing from the pool returns reason
   assert.deepEqual(r, { ok: false, reason: 'no-targets' });
 });
 
+test('isFilterRefinement: refined has strictly more tokens including all base tokens', () => {
+  // Classic case — the player-experience canary.
+  assert.equal(
+    isFilterRefinement('continent:Europe,motif:cross,color:blue', 'continent:Europe,motif:cross'),
+    true,
+  );
+});
+
+test('isFilterRefinement: identical filters are NOT refinements', () => {
+  assert.equal(isFilterRefinement('continent:Europe,motif:cross', 'continent:Europe,motif:cross'), false);
+});
+
+test('isFilterRefinement: same token set in different order is NOT a refinement', () => {
+  // Same filter, different presentation — same token set, not a refinement.
+  assert.equal(isFilterRefinement('motif:cross,continent:Europe', 'continent:Europe,motif:cross'), false);
+});
+
+test('isFilterRefinement: divergent framings are NOT refinements', () => {
+  // cross+!UJ vs NA+cross — neither's tokens are a subset of the other's.
+  assert.equal(isFilterRefinement('motif:cross,motif:!union-jack', 'continent:North America,motif:cross'), false);
+  assert.equal(isFilterRefinement('continent:North America,motif:cross', 'motif:cross,motif:!union-jack'), false);
+});
+
+test('isFilterRefinement: include and exclude variants are distinct tokens', () => {
+  // motif:union-jack vs motif:!union-jack — different tokens, neither subset.
+  assert.equal(isFilterRefinement('motif:cross,motif:union-jack', 'motif:cross,motif:!union-jack'), false);
+});
+
 test('resolveDailyPuzzle: partial pool drift drops missing codes but still succeeds', () => {
   // If most answer codes resolve, the puzzle still plays — the page
   // gets the resolvable subset. Full pool drift surfaces as the
@@ -333,7 +361,13 @@ test('live + backlog: answers match what each filter resolves to today', () => {
 // (fi, gb, gr, is, no, se) being a strict subset of Europe·cross (the
 // same 6 + ch, dk, mt). Allowed past #100 as a deliberate recall
 // mechanic.
-test('live + backlog: puzzles #1-100 have no strict-subset relationships', () => {
+test('live + backlog: puzzles #1-100 have no filter-refinement subsets', () => {
+  // Refined rule 6: strict-violation only when answer-set subset AND
+  // filter-token subset coincide (`Europe+cross+blue` vs `Europe+cross`
+  // — the smaller answer set's filter literally adds tokens to the
+  // larger). Pure answer-set overlap with different filter framings is
+  // allowed (`cross+!UJ` and `NA+cross` share 3 flags but neither
+  // filter is a refinement of the other — different puzzles).
   const entries = [...CATALOG, ...BACKLOG].filter((e) => e.n <= 100);
   /** @type {string[]} */
   const offenders = [];
@@ -341,17 +375,24 @@ test('live + backlog: puzzles #1-100 have no strict-subset relationships', () =>
     const aSet = new Set(a.answers);
     for (const b of entries) {
       if (a.n === b.n) continue;
-      if (b.answers.length >= a.answers.length) continue;
-      const isSubset = b.answers.every((c) => aSet.has(c));
-      if (isSubset) {
+      if (b.answers.length > a.answers.length) continue;
+      const isAnswerSubset = b.answers.every((c) => aSet.has(c));
+      if (!isAnswerSubset) continue;
+      // b's answers are a subset (possibly equal) of a's.
+      // Two sub-cases:
+      //   - Equal sets: same puzzle, different filter — always a violation
+      //   - Strict subset: only a violation if b's filter is a refinement of a's
+      if (b.answers.length === a.answers.length) {
         offenders.push(
-          `#${b.n} ("${b.filter}") is a strict subset of #${a.n} ("${a.filter}") — every answer in #${b.n} also appears in #${a.n}`,
+          `#${b.n} ("${b.filter}") and #${a.n} ("${a.filter}") resolve to the same answer set — same puzzle, different filter`,
+        );
+      } else if (isFilterRefinement(b.filter, a.filter)) {
+        offenders.push(
+          `#${b.n} ("${b.filter}") is a filter-refinement of #${a.n} ("${a.filter}") — the smaller set's filter literally adds tokens to the larger`,
         );
       }
     }
   }
-  // Dedupe — the inner loop reports each subset pair once per direction
-  // already; this just keeps the failure message deterministic.
   const unique = [...new Set(offenders)];
   assert.deepEqual(unique, [], '\n  ' + unique.join('\n  '));
 });
@@ -369,8 +410,13 @@ test('live + backlog: puzzles #1-100 have no strict-subset relationships', () =>
 // only line of defense, and a hand-edit to daily_ideas.json could
 // reintroduce duplicates silently. This puts teeth at the test level
 // so `npm test` catches drift the moment it happens.
-test('ideas: no strict-subset relationships against catalog or other non-parked ideas', () => {
-  /** @type {{ filter: string, answers?: string[], parkUntilN?: number, _label: string }[]} */
+test('ideas: no filter-refinement relationships against catalog or other ideas', () => {
+  // Refined rule 6 (see `live + backlog` test above for the rationale):
+  // ideas can have answer-set overlap with catalog or other ideas as
+  // long as the filters aren't structural refinements of each other.
+  // Parked filters live in daily/daily_parked.json — intentional rule-6
+  // violators kept as a waiting room — and aren't loaded here.
+  /** @type {{ filter: string, answers?: string[], _label: string }[]} */
   const IDEAS = JSON.parse(
     readFileSync(join(HERE, '..', 'daily', 'daily_ideas.json'), 'utf-8'),
   ).map((/** @type {any} */ e, /** @type {number} */ i) => ({ ...e, _label: `idea#${i + 1}` }));
@@ -379,43 +425,53 @@ test('ideas: no strict-subset relationships against catalog or other non-parked 
 
   const fixed = [...liveLabeled, ...backlogLabeled];
   const candidates = IDEAS.filter(
-    (e) => e.parkUntilN == null && Array.isArray(e.answers) && e.answers.length > 0,
+    (e) => Array.isArray(e.answers) && e.answers.length > 0,
   );
 
   /** @type {string[]} */
   const offenders = [];
 
-  /** @param {{answers?: string[]}} a @param {{answers?: string[]}} b */
-  const relation = (a, b) => {
+  /**
+   * Pair check. Returns a violation string when one of:
+   *   - answer sets are equal (same puzzle, different filter)
+   *   - one's filter is a strict refinement of the other AND its
+   *     answer set is a strict subset of the other's
+   *
+   * @param {{filter: string, answers?: string[], _label: string}} a
+   * @param {{filter: string, answers?: string[], _label: string}} b
+   */
+  const checkPair = (a, b) => {
     const aA = a.answers || [];
     const bA = b.answers || [];
+    if (aA.length === 0 || bA.length === 0) return null;
     const aSet = new Set(aA);
     if (aA.length === bA.length) {
-      return bA.every((c) => aSet.has(c)) ? 'equal' : null;
+      return bA.every((c) => aSet.has(c))
+        ? `${a._label} ("${a.filter}") and ${b._label} ("${b.filter}") resolve to the same answer set`
+        : null;
     }
-    if (aA.length > bA.length) {
-      return bA.every((c) => aSet.has(c)) ? 'superset' : null;
-    }
-    return null;
+    const [smaller, larger] = aA.length < bA.length ? [a, b] : [b, a];
+    const smallerA = smaller.answers || [];
+    const largerA = larger.answers || [];
+    const largerSet = new Set(largerA);
+    const isAnswerSubset = smallerA.every((c) => largerSet.has(c));
+    if (!isAnswerSubset) return null;
+    if (!isFilterRefinement(smaller.filter, larger.filter)) return null;
+    return `${smaller._label} ("${smaller.filter}") is a filter-refinement of ${larger._label} ("${larger.filter}")`;
   };
 
-  // candidates vs fixed (live + backlog) — pair direction normalised
+  // candidates vs fixed (live + backlog)
   for (const cand of candidates) {
     for (const fix of fixed) {
-      const rel = relation(cand, fix) || relation(fix, cand);
-      if (rel) {
-        offenders.push(`${cand._label} ("${cand.filter}") ${rel} relationship with ${fix._label} ("${fix.filter}")`);
-      }
+      const msg = checkPair(cand, fix);
+      if (msg) offenders.push(msg);
     }
   }
-  // candidates vs each other — only report each unordered pair once
+  // candidates vs each other — each unordered pair once
   for (let i = 0; i < candidates.length; i++) {
     for (let j = i + 1; j < candidates.length; j++) {
-      const a = candidates[i], b = candidates[j];
-      const rel = relation(a, b) || relation(b, a);
-      if (rel) {
-        offenders.push(`${a._label} ("${a.filter}") ${rel} relationship with ${b._label} ("${b.filter}")`);
-      }
+      const msg = checkPair(candidates[i], candidates[j]);
+      if (msg) offenders.push(msg);
     }
   }
 

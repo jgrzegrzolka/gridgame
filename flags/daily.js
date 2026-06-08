@@ -191,3 +191,44 @@ export function resolvePuzzleEntry(entry, allCountries) {
 
   return { ok: true, entry, filter, targets };
 }
+
+/**
+ * Detect whether `refined` is a strict filter-refinement of `base` —
+ * i.e. `refined`'s tokens are a strict superset of `base`'s tokens.
+ * Used by rule 6's enforcement layers to distinguish two cases:
+ *
+ *   - "Filter refinement": `Europe + cross + blue` adds `blue` to
+ *     `Europe + cross`. The player reads this as "you just added blue
+ *     to the puzzle you already solved" — clearly repetitive.
+ *
+ *   - "Answer-incidental overlap": `cross + !union-jack` and
+ *     `NA + cross` share 3 flags but neither filter is a refinement
+ *     of the other. The player reads these as two different puzzles
+ *     that happen to overlap.
+ *
+ * Rule 6 strict-violates only when answer-set subset AND filter
+ * refinement coincide. Pure answer-set overlap is allowed because the
+ * framings differ enough that the player doesn't feel repetition.
+ *
+ * Tokens are compared as plain strings after a comma split — order
+ * is irrelevant (set comparison), but exact spelling matters (so
+ * `motif:union-jack` and `motif:!union-jack` are distinct tokens,
+ * which is the correct semantic).
+ *
+ * Returns `false` for identical filters (a filter isn't a strict
+ * refinement of itself) and for equal token sets in different
+ * orders (same filter, different presentation).
+ *
+ * @param {string} refined
+ * @param {string} base
+ * @returns {boolean}
+ */
+export function isFilterRefinement(refined, base) {
+  const r = new Set(refined.split(','));
+  const b = new Set(base.split(','));
+  if (r.size <= b.size) return false; // refined needs MORE tokens than base
+  for (const t of b) {
+    if (!r.has(t)) return false;
+  }
+  return true;
+}

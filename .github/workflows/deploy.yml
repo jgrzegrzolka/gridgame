@@ -88,7 +88,7 @@ jobs:
         # same workflow — both pools still get stripped on the way out.
         run: |
           rm -rf daily/backlog daily/ideas
-          rm -f daily/daily_backlog.json daily/daily_ideas.json
+          rm -f daily/daily_backlog.json daily/daily_ideas.json daily/daily_parked.json
       - name: Minify JS / CSS for the artifact
         # Walks every source .js / .css file (excluding tests, node_modules,
         # the PartyKit server, and the build scripts themselves) and minifies
