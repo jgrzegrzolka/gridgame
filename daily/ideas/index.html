@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="Preview of brainstormed puzzle ideas — author-only." />
+    <link rel="preload" href="../daily_ideas.json?v=__BUILD__" as="fetch" type="application/json" crossorigin />
+    <title>Yet Another Quiz — Daily Ideas (preview)</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=__BUILD__" />
+    <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
+    <link rel="stylesheet" href="../index.css?v=__BUILD__" />
+    <link rel="stylesheet" href="../archive.css?v=__BUILD__" />
+  </head>
+  <body>
+    <a class="lang-toggle" id="lang-toggle" href="#"></a>
+    <a class="flags-link" href="../../flagsdata/" aria-label="Browse flags" title="Browse flags" data-i18n-attr="aria-label:menu.flagsData,title:menu.flagsData"><span class="flags-icon" aria-hidden="true"></span></a>
+    <button
+      type="button"
+      class="burger"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="burger-panel"
+      data-label-open="Open menu"
+      data-label-close="Close menu"
+      data-i18n-attr="aria-label:menu.open,data-label-open:menu.open,data-label-close:menu.close"
+      onclick="
+        const open = this.getAttribute('aria-expanded') === 'true';
+        this.setAttribute('aria-expanded', String(!open));
+        this.setAttribute('aria-label', open ? this.dataset.labelOpen : this.dataset.labelClose);
+        document.getElementById('burger-panel').hidden = open;
+      "
+    >
+      <span class="burger-bars" aria-hidden="true"></span>
+    </button>
+    <nav id="burger-panel" class="burger-panel" hidden>
+      <ul class="menu">
+        <li><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
+      </ul>
+    </nav>
+
+    <main>
+      <h1 class="sr-only">Daily ideas (preview)</h1>
+      <ul id="ideas-list" class="archive-list"></ul>
+      <div class="give-up-row">
+        <a class="give-up" href="../../" data-i18n="menu.home">Home</a>
+      </div>
+    </main>
+
+    <script type="module">
+      import { bootIdeas } from './page.js';
+      import { bootI18n, wireLangToggle } from '../../i18n.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss } from '../../common.js';
+      bootI18n('../../').then((lang) => {
+        wireLangToggle(lang);
+        disableBurgerIfEmpty(
+          document.querySelector('.burger'),
+          document.querySelector('#burger-panel .menu'),
+        );
+        bootIdeas();
+        wireBurgerDismiss();
+      });
+    </script>
+  </body>
+</html>
