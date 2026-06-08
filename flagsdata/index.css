@@ -52,9 +52,14 @@ body {
 }
 /* Wrapper claims a full row so the toggle button doesn't share row 2
  * with whatever pill group flows in beside it. The toggle's natural
- * width alone isn't enough — it'd let the pills wrap in next to it. */
+ * width alone isn't enough — it'd let the pills wrap in next to it.
+ * space-between pushes the toggle to the left and the Clear button
+ * (when visible) to the right. */
 .filter-toggle-row {
   flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .filter-toggle:hover { background: #f0f0f0; }
 .filter-toggle-count {

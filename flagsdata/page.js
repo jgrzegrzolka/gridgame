@@ -332,7 +332,11 @@ export function bootFlagsData() {
     nameQuery = '';
     applyFilter();
   });
-  groupsWrap.appendChild(clearBtn);
+  // Clear sits on the same row as the toggle (right-aligned), not inside
+  // the collapsible groups. It only renders when at least one filter is
+  // active, so the user can reset without expanding the bar — particularly
+  // useful when filters are collapsed but the count badge says "3".
+  toggleRow.appendChild(clearBtn);
 
   fetch('../flags/countries.json')
     .then((r) => r.json())
