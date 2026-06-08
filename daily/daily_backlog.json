@@ -1,24 +1,5 @@
 [
   {
-    "n": 4,
-    "filter": "continent:Europe,color:red,color:white,color:blue,colorCount:3",
-    "answers": [
-      "cz",
-      "fr",
-      "gb",
-      "is",
-      "lu",
-      "nl",
-      "no",
-      "ru",
-      "sk"
-    ],
-    "description": {
-      "en": "Find all European flags whose only colours are red, white, and blue — no others.",
-      "pl": "Znajdź wszystkie europejskie flagi, które mają tylko 3 kolory: czerwony, biały i niebieski."
-    }
-  },
-  {
     "n": 5,
     "filter": "continent:Asia,motif:animal",
     "answers": [
