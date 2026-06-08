@@ -39,6 +39,11 @@ on:
     # Warsaw midnight in winter (UTC+1): every 5 min for first 30 min
     - cron: '0,5,10,15,20,25,30 23 * * *'
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Release even if today already released (double-release override)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -68,8 +73,8 @@ jobs:
       - name: Skip if already released today in Warsaw
         id: guard
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manual dispatch — proceeding regardless of prior release."
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" = "true" ]; then
+            echo "Forced manual dispatch (inputs.force=true) — proceeding regardless of prior release."
             echo "proceed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
