@@ -30,5 +30,13 @@
   {
     "filter": "continent:Africa,geometry:hoist-triangle",
     "notes": "9 African flags with the same hoist-triangle shape: km, dj, gq, er, mz, st, ss, sd, zw. Mean nm≈4.8 (three nm=6: Comoros, Djibouti, Equatorial Guinea) — categorically harder than the non-Africa pair and definitively a past-#100 puzzle. Same status as the non-Africa entry above: explicitly NOT a motif (author intent), the `geometry:hoist-triangle` placeholder is a wishlist marker, will only ship via a future hand-curated-quiz mechanism. Parked indefinitely until that exists. Author intent if it ever ships: non-Africa first as a stepping stone, this one rewards players who've internalised the African flag palette."
+  },
+  {
+    "filter": "color:violet",
+    "notes": "Blocked by data — only 1 sovereign carries violet at all (Dominica, dm), and only in additionalColors (the sisserou parrot's purple body). Primary-clean count is 0, so rule 5 blocks. Even ignoring rule 5, rule 9 forbids 1-flag puzzles before #50. Will unblock when ≥2 more violet-bearing flags exist OR a flag adopts violet as a primary colour. Until then, parked as a 'watch this list' candidate so we remember the option."
+  },
+  {
+    "filter": "motif:bird,motif:weapon",
+    "notes": "3 flags — bo, ec, gt (all South/Central American coat-of-arms with condor/quetzal + crossed weapons). Acknowledged rule violations, parked on author intent: (1) rule 14 — BOTH motif:bird and motif:weapon are single-use, already used in the live/backlog catalog; (2) rule 6 — strict subset of the existing animal+coa+weapon backlog entry (bo, ec, gt, lk). Kept as a curiosity because the bird+weapon overlap is a real thematic category (Andean/Maya iconography). Will never ship as written unless the single-use rule is relaxed for parked-recall puzzles past #100."
   }
 ]
