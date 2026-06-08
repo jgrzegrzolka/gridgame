@@ -53,7 +53,14 @@ export function bootDaily() {
 
       const result = resolveDailyPuzzle(catalog, all, n);
       if (result.ok === false) {
-        showState(reasonMessage(result.reason));
+        const reason = result.reason;
+        showState(reasonMessage(reason));
+        // Stay reactive to soft language switches even on the error
+        // branch — otherwise "Puzzle not found." would freeze in the
+        // language it was rendered in.
+        document.addEventListener('langchanged', () => {
+          showState(reasonMessage(reason));
+        });
         return;
       }
 
@@ -68,13 +75,36 @@ export function bootDaily() {
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
+        // Re-paint on a soft language switch so found/missed tile hover
+        // labels + the description re-translate without a page reload.
+        document.addEventListener('langchanged', () => {
+          paintDescription(result.entry.description);
+          renderResult(result.targets, foundCodes);
+        });
         return;
       }
 
       const category = filterToCategory(result.filter, t);
-      startGame(n, category, result.targets, all, { skipSave: isReplay });
+      const game = startGame(n, category, result.targets, all, { skipSave: isReplay });
+
+      // Soft language switch: re-paint description, re-run
+      // `withLocalizedAliases` so the suggestion matcher accepts the
+      // new language, re-resolve targets against the freshly-aliased
+      // country list, and hand the new data to the running game.
+      document.addEventListener('langchanged', () => {
+        paintDescription(result.entry.description);
+        const newAll = withLocalizedAliases(flagsGamePool(raw, false));
+        const targetCodeSet = new Set(result.targets.map((c) => c.code));
+        const newTargets = newAll.filter((c) => targetCodeSet.has(c.code));
+        const newLabel = filterToCategory(result.filter, t).label;
+        game.refreshI18n({ all: newAll, targets: newTargets, label: newLabel });
+      });
     })
     .catch((err) => {
+      // Fetch / parse errors freeze the message in the page's language
+      // at error time. Re-translation on `langchanged` would require
+      // localising the error.message half too — out of scope for the
+      // soft-reload work, and this is a rare path anyway.
       showState(`${t('game.failedToLoad', 'Failed to load:')} ${err.message}`);
     });
 }

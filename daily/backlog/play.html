@@ -77,7 +77,7 @@
       import { bootBacklogPlay } from './play.js';
       import { bootI18n, wireLangToggle } from '../../i18n.js';
       bootI18n('../../').then((lang) => {
-        wireLangToggle(lang);
+        wireLangToggle(lang, undefined, { softReload: true, base: '../../' });
         bootBacklogPlay();
       });
     </script>

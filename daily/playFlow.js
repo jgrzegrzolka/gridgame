@@ -35,6 +35,38 @@ import { saveScore } from './scores.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 
+// Each `.find-tile` is built once and rendered with the country's display
+// name baked into `dataset.name` (for the CSS hover label) and the inner
+// `<img>`'s `alt`. On a soft language switch we need to re-paint those
+// strings without rebuilding the tile (rebuilding would lose animations
+// and tile order). The WeakMap holds the Country reference for each tile
+// so `refreshTileNames` can call `countryName(c)` again against the new
+// language cache. WeakMap (not a plain Map) so a removed tile is
+// garbage-collected normally.
+/** @type {WeakMap<HTMLElement, Country>} */
+const tileCountries = new WeakMap();
+
+/**
+ * Walk every `.find-tile` currently in the document and re-apply the
+ * display name to `dataset.name` + `<img>.alt`. Pure DOM walk — no
+ * dependency on which game is active, so the live page's in-game found
+ * list, the result-screen found list, and the result-screen missed list
+ * all refresh together.
+ */
+function refreshTileNames() {
+  const tiles = /** @type {NodeListOf<HTMLElement>} */ (
+    document.querySelectorAll('.find-tile')
+  );
+  for (const tile of tiles) {
+    const c = tileCountries.get(tile);
+    if (!c) continue;
+    const displayName = countryName(c);
+    tile.dataset.name = displayName;
+    const img = /** @type {HTMLImageElement | null} */ (tile.querySelector('img'));
+    if (img) img.alt = displayName;
+  }
+}
+
 // Flag SVGs are resolved against this module's URL — not against the
 // HTML page that loaded a wrapping `play.js`. The live `daily/index.html`
 // and the subfolder `backlog/play.html` / `ideas/play.html` live at
@@ -89,6 +121,7 @@ function flagTile(c) {
   const li = document.createElement('li');
   li.className = 'find-tile';
   li.dataset.name = displayName;
+  tileCountries.set(li, c);
   li.addEventListener('click', () => openZoom(c));
   const img = document.createElement('img');
   img.src = `${SVG_BASE}${c.code}.svg`;
@@ -208,6 +241,14 @@ export function renderResult(targets, foundCodes) {
  * ideas preview) and live-daily replay set `skipSave: true` — those
  * runs must not pollute the player's archive.
  *
+ * Returns a handle with `refreshI18n({ all, targets, label })` so the
+ * caller can swap in re-localized country data (fresh `aliases` from a
+ * second `withLocalizedAliases` pass — needed because the suggestion
+ * matcher reads `aliases`, which are baked at boot time) and a fresh
+ * category label on a soft language switch, without rebuilding the
+ * game state. Found-tile display names (read from `countryName`) and
+ * suggestion items re-paint as part of the same call.
+ *
  * @param {number} n  puzzle number for `saveScore`; ignored when
  *                    `skipSave` is true, but always required so the
  *                    function signature stays uniform across callers.
@@ -215,10 +256,15 @@ export function renderResult(targets, foundCodes) {
  * @param {Country[]} targets
  * @param {Country[]} all
  * @param {{ skipSave?: boolean }} [opts]
+ * @returns {{ refreshI18n: (next: { all: Country[], targets: Country[], label: string }) => void }}
  */
 export function startGame(n, category, targets, all, opts = {}) {
   const skipSave = opts.skipSave === true;
-  const pool = findPool(all);
+  // pool is rebuilt on a soft language switch (the suggestion matcher reads
+  // each Country's `aliases`, which are baked at withLocalizedAliases time
+  // and stale after the language flips). targetCodes is mutated in place
+  // so the `state` object below keeps pointing at the same Set instance.
+  let pool = findPool(all);
   const targetCodes = new Set(targets.map((c) => c.code));
   const foundCodes = new Set();
   const state = { targetCodes, foundCodes };
@@ -378,4 +424,27 @@ export function startGame(n, category, targets, all, opts = {}) {
 
   gameEl.hidden = false;
   if (!('ontouchstart' in window)) inputEl.focus();
+
+  return {
+    /**
+     * Apply a fresh language to the live game. Caller (page boot file)
+     * re-runs `withLocalizedAliases` against the raw country list and
+     * re-derives `targets` + the category label, then hands them in here.
+     * The targetCodes Set is mutated in place so the closure-captured
+     * `state` object stays valid.
+     *
+     * @param {{ all: Country[], targets: Country[], label: string }} next
+     */
+    refreshI18n(next) {
+      targets = next.targets;
+      all = next.all;
+      pool = findPool(all);
+      targetCodes.clear();
+      for (const c of targets) targetCodes.add(c.code);
+      catEl.textContent = next.label;
+      refreshTileNames();
+      renderSuggestions();
+      if (finished) renderResult(targets, foundCodes);
+    },
+  };
 }

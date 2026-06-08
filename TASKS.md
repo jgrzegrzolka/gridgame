@@ -32,11 +32,11 @@ Foundation for every later phase.
 - [x] Add `softReload` + `base` + `doc` + `reload` options to `wireLangToggle` (all default to the legacy behaviour). Soft mode also registers a `langchanged` listener that keeps `data-current` in sync so a second click flips back correctly.
 - [x] Tests in `i18n.test.js`: cache swap, `<html lang>` update, event dispatch with `{ detail: { lang } }`, non-ok fetch is a silent no-op, base-prefix honoured, soft-mode listener registration, soft-mode click delegates to injected reload + persists language.
 
-#### Phase 1 — daily quiz  [pending]  ← *user-stated priority*
-- [ ] Flip daily's `wireLangToggle` call to `{ softReload: true }`.
-- [ ] Wrap every `t()` site outside `data-i18n` markup in a `langchanged` listener so it re-runs: description, result strings, suggestion items, status messages. Files: `daily/page.js`, `daily/playFlow.js`, `daily/backlog/page.js`, `daily/backlog/play.js`, `daily/ideas/page.js`, `daily/ideas/play.js`.
-- [ ] Re-run `withLocalizedAliases(rawCountries)` on `langchanged` so the suggestion matcher accepts the new language.
-- [ ] Manual check: type 3 guesses, switch language → picks + input + scroll all survive; suggestion matcher accepts both languages immediately after switch.
+#### Phase 1 — daily quiz  [in PR #263]  ← *user-stated priority*
+- [x] Flip `daily/index.html`, `daily/backlog/play.html`, `daily/ideas/play.html` to `wireLangToggle(lang, undefined, { softReload: true, base })`. Browse-only daily pages (archive, backlog/ideas index) intentionally stay on hard reload — no game state to preserve there.
+- [x] `playFlow.js` returns a `{ refreshI18n({ all, targets, label }) }` handle. Tile display names are kept fresh via a module-level `WeakMap<HTMLElement, Country>` + a `refreshTileNames` walk that hits both in-game found and result-screen found/missed lists.
+- [x] `daily/page.js`, `daily/backlog/play.js`, `daily/ideas/play.js` each register a `langchanged` listener that re-paints description (where applicable), re-runs `withLocalizedAliases(flagsGamePool(raw, false))` against the cached raw country list, re-derives targets, recomputes the category label via `filterToCategory`, and calls `game.refreshI18n`. Revisit / error branches register their own listeners so static state-screen messages stay in sync too.
+- [ ] Manual smoke: open `/daily/`, type 3 guesses, switch language → picks + input text + scroll survive, hover labels in new language, suggestion matcher accepts both languages.
 
 #### Phase 2 — findFlag  [pending]
 Same shape as daily, smaller surface (6 sites). Mostly a copy of phase 1's pattern.
