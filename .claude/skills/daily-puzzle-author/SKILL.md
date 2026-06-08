@@ -179,13 +179,13 @@ Tool: `node scripts/generate-candidates.mjs`. The script enumerates filter templ
 - Rule 2: no redundant filter tokens
 - Rule 3: every answer is a sovereign code
 - Rule 5: primary-clean
+- Rule 6: candidate's answer set is neither a strict subset nor a strict superset of any LIVE or BACKLOG entry's set (and is not exactly equal either — "same puzzle, different filter syntax" is also rejected). Checked against the released + staged catalog, NOT against the parked entries in `daily_ideas.json` (those are `parkUntilN: 101` precisely because they're rule-6 violators meant for past-#100 use). Strict-enforcement is correct as long as every catalog entry sits in #1-100 — when a backlog entry first crosses #100 we'll need to relax this for past-#100 candidates.
 - Rule 9: answer set size in [2, 30]
 - Rule 14: no single-use token reuse
 - Dedup: filter string not already in the catalog or ideas
 
 **What the author still decides at promote time** (when moving from ideas → backlog):
 - Rule 4: numbering — `n` is assigned at promote, not generation
-- Rule 6: no strict-subset relationships — depends on the chosen `n` slot
 - Rule 7: en/pl descriptions — hand-written per puzzle
 - Rule 8: nameScore caps by N — `suggestedN` is advisory only
 - Rule 10: small-property compounds — script avoids by template choice
