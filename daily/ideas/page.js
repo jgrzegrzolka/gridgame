@@ -6,6 +6,8 @@ import { renderArchiveSquare } from '../squares.js';
  * @property {string} filter
  * @property {string} [notes]
  * @property {number} [parkUntilN]
+ *
+ * @typedef {'approved' | 'rejected'} Verdict
  */
 
 /** @typedef {import('../../flags/daily.js').DailyPuzzle} DailyPuzzle */
@@ -13,28 +15,43 @@ import { renderArchiveSquare } from '../squares.js';
 // Review state is per-browser, persisted in localStorage. Keyed by the
 // idea's filter string (NOT the file position) so re-running the
 // generator preserves the review state for unchanged ideas — author
-// flow is "review fresh ideas only, leave already-OK'd ones alone."
+// flow is "review fresh ideas only, leave already-judged ones alone."
 //
-// Storage shape: JSON array of filter strings. Empty array on first run.
+// Storage shape: JSON object `{ "<filterString>": "approved" | "rejected" }`.
+// Backward-compat with the v1 array-of-approved-filters from the first
+// version of this UI: arrays are migrated to objects on read.
+//
 // Orphan entries (filters that no longer exist in daily_ideas.json) are
-// harmless — they just sit there. We don't prune; the cost is bytes and
-// the benefit is bug-free idempotency.
+// harmless — they just sit there. We don't prune; cost is bytes, benefit
+// is bug-free idempotency when the generator re-runs.
 const REVIEW_KEY = 'gridgame.ideas.reviewed';
 
-function loadReviewed() {
+/** @returns {Map<string, Verdict>} */
+function loadReviewState() {
   try {
     const raw = window.localStorage.getItem(REVIEW_KEY);
-    if (!raw) return new Set();
+    if (!raw) return new Map();
     const parsed = JSON.parse(raw);
-    return new Set(Array.isArray(parsed) ? parsed : []);
+    // v1 stored an array of "approved" filter strings.
+    if (Array.isArray(parsed)) {
+      return new Map(parsed.map((f) => [String(f), /** @type {Verdict} */ ('approved')]));
+    }
+    if (parsed && typeof parsed === 'object') {
+      const m = new Map();
+      for (const [k, v] of Object.entries(parsed)) {
+        if (v === 'approved' || v === 'rejected') m.set(k, v);
+      }
+      return m;
+    }
+    return new Map();
   } catch {
-    return new Set();
+    return new Map();
   }
 }
 
-/** @param {Set<string>} set */
-function saveReviewed(set) {
-  window.localStorage.setItem(REVIEW_KEY, JSON.stringify([...set]));
+/** @param {Map<string, Verdict>} map */
+function saveReviewState(map) {
+  window.localStorage.setItem(REVIEW_KEY, JSON.stringify(Object.fromEntries(map)));
 }
 
 /**
@@ -54,17 +71,19 @@ function saveReviewed(set) {
  * keeping notes here avoids touching the shared `squares.js` /
  * `archive.css` rendering that the live archive page also depends on.
  *
- * Per-tile review button (✓) lets the author mark an idea as "fine to
- * promote." State is per-browser localStorage keyed by filter string;
- * "Hide reviewed" toggle filters the list down to the unreviewed pool.
- * The counter at the top tracks progress.
+ * Per-tile review buttons: ✓ (approve) top-right and ✗ (reject)
+ * top-left. Three states per idea: approved, rejected, or unmarked
+ * (default). State is per-browser localStorage keyed by filter string.
+ * "Hide reviewed" toggle hides everything with a verdict so the
+ * remaining pool is "what I haven't looked at yet." Counter shows
+ * `✓ X · ✗ Y · Z pending` so progress is glanceable.
  */
 export function bootIdeas() {
   const listEl = /** @type {HTMLElement} */ (document.getElementById('ideas-list'));
   const counterEl = /** @type {HTMLElement} */ (document.getElementById('review-counter'));
   const hideToggleEl = /** @type {HTMLInputElement} */ (document.getElementById('hide-reviewed'));
 
-  const reviewed = loadReviewed();
+  const state = loadReviewState();
 
   hideToggleEl.addEventListener('change', () => {
     document.body.classList.toggle('hide-reviewed', hideToggleEl.checked);
@@ -82,9 +101,15 @@ export function bootIdeas() {
       }
 
       const updateCounter = () => {
-        let n = 0;
-        for (const idea of ideas) if (reviewed.has(idea.filter)) n++;
-        counterEl.textContent = `Reviewed: ${n} / ${ideas.length}`;
+        let approved = 0;
+        let rejected = 0;
+        for (const idea of ideas) {
+          const v = state.get(idea.filter);
+          if (v === 'approved') approved++;
+          else if (v === 'rejected') rejected++;
+        }
+        const pending = ideas.length - approved - rejected;
+        counterEl.textContent = `✓ ${approved} · ✗ ${rejected} · ${pending} pending`;
       };
       updateCounter();
 
@@ -103,33 +128,41 @@ export function bootIdeas() {
           const link = tile.querySelector('a');
           if (link) link.title = idea.notes;
         }
-        if (reviewed.has(idea.filter)) {
-          tile.classList.add('archive-square--reviewed');
-        }
 
-        // Review button — sibling of the play link, NOT inside it, so
-        // clicks on the button stay on the button. preventDefault is
-        // still belt-and-braces against any future containing <a>.
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'review-button';
-        btn.title = 'Toggle reviewed (click ✓ to mark as fine)';
-        btn.setAttribute('aria-label', 'Toggle reviewed');
-        btn.textContent = '✓';
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (reviewed.has(idea.filter)) {
-            reviewed.delete(idea.filter);
-            tile.classList.remove('archive-square--reviewed');
-          } else {
-            reviewed.add(idea.filter);
-            tile.classList.add('archive-square--reviewed');
-          }
-          saveReviewed(reviewed);
-          updateCounter();
-        });
-        tile.appendChild(btn);
+        const paintVerdictClass = () => {
+          const v = state.get(idea.filter);
+          tile.classList.toggle('archive-square--approved', v === 'approved');
+          tile.classList.toggle('archive-square--rejected', v === 'rejected');
+        };
+        paintVerdictClass();
+
+        // Verdict button factory — handles the shared click logic for
+        // both ✓ and ✗: toggling the verdict to/from this button's
+        // target state. Pressing the opposite button when one verdict
+        // is active flips to the other (no need to clear first).
+        /** @param {'approved' | 'rejected'} target @param {string} symbol @param {string} label */
+        const makeBtn = (target, symbol, label) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `review-button review-button--${target === 'approved' ? 'approve' : 'reject'}`;
+          btn.title = label;
+          btn.setAttribute('aria-label', label);
+          btn.textContent = symbol;
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const current = state.get(idea.filter);
+            if (current === target) state.delete(idea.filter); // toggle off
+            else state.set(idea.filter, target);               // set or switch
+            saveReviewState(state);
+            paintVerdictClass();
+            updateCounter();
+          });
+          return btn;
+        };
+
+        tile.appendChild(makeBtn('approved', '✓', 'Approve (mark as fine to promote)'));
+        tile.appendChild(makeBtn('rejected', '✗', 'Reject (mark as not interested)'));
 
         listEl.appendChild(tile);
       });

@@ -29,14 +29,15 @@
   cursor: pointer;
 }
 
-/* Per-tile review button, top-right corner of the .archive-square <li>.
- * Sits *outside* the .archive-square-link <a> so clicking it doesn't
- * navigate — the link still covers everything else, but pointer events
- * on the button win because it's a sibling DOM node with higher z. */
+/* Per-tile review buttons, anchored to the corners of the
+ * .archive-square <li>. They sit *outside* the .archive-square-link <a>
+ * so clicking them doesn't navigate — the link still covers everything
+ * else, but pointer events on the buttons win because they're sibling
+ * DOM nodes with higher z. Approve ✓ in the top-right, reject ✗ in the
+ * top-left — symmetry communicates "two verdicts available." */
 .review-button {
   position: absolute;
   top: 2px;
-  right: 2px;
   width: 22px;
   height: 22px;
   padding: 0;
@@ -54,35 +55,61 @@
   justify-content: center;
   transition: background 80ms, color 80ms, border-color 80ms;
 }
-.review-button:hover {
-  background: #eef;
-  color: #444;
-  border-color: #99c;
+.review-button--approve { right: 2px; }
+.review-button--reject  { left: 2px; }
+
+.review-button--approve:hover {
+  background: #e8f5ea;
+  color: #1c1c1c;
+  border-color: #6cc079;
+}
+.review-button--reject:hover {
+  background: #fbeaea;
+  color: #1c1c1c;
+  border-color: #d57979;
 }
 
 /* Need position:relative on the <li> so the absolutely-positioned
- * review button anchors to the tile, not to the page. `.archive-square`
+ * review buttons anchor to the tile, not to the page. `.archive-square`
  * styles in the shared archive.css don't set this, so add it here for
  * the ideas-page tiles only (scoped via .ideas-page on <body>). */
 .ideas-page .archive-square {
   position: relative;
 }
 
-/* Reviewed state: tile fades, button turns green-checked. */
-.archive-square--reviewed .archive-square-link {
+/* Approved tile: dims + the ✓ button turns solid green. */
+.archive-square--approved .archive-square-link {
   opacity: 0.45;
 }
-.archive-square--reviewed .review-button {
+.archive-square--approved .review-button--approve {
   background: #2a9d3f;
   color: #fff;
   border-color: #2a9d3f;
 }
-.archive-square--reviewed .review-button:hover {
+.archive-square--approved .review-button--approve:hover {
   background: #248234;
   border-color: #248234;
 }
 
-/* "Hide reviewed" mode — toggle on <body> hides the reviewed tiles. */
-body.hide-reviewed .archive-square--reviewed {
+/* Rejected tile: dims + the ✗ button turns solid red. */
+.archive-square--rejected .archive-square-link {
+  opacity: 0.35;
+  filter: grayscale(0.4);
+}
+.archive-square--rejected .review-button--reject {
+  background: #c63838;
+  color: #fff;
+  border-color: #c63838;
+}
+.archive-square--rejected .review-button--reject:hover {
+  background: #a82d2d;
+  border-color: #a82d2d;
+}
+
+/* "Hide reviewed" mode hides anything with a verdict (approved OR
+ * rejected) — what's left is the unmarked-pending pool, which is the
+ * point of the toggle ("where did I stop?"). */
+body.hide-reviewed .archive-square--approved,
+body.hide-reviewed .archive-square--rejected {
   display: none;
 }
