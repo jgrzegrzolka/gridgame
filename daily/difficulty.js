@@ -43,7 +43,7 @@
  */
 
 /**
- * @typedef {{ nameScore: number }} CountryLike
+ * @typedef {{ nameScore?: number }} CountryLike
  *
  * @typedef {Object} DifficultyScore
  * @property {number} score             the composite difficulty (sort key)

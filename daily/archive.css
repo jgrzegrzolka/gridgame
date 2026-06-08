@@ -76,6 +76,23 @@
   font-weight: 500;
 }
 
+/* Difficulty badge — author-only signal on the backlog + ideas preview
+ * grids. Shares the bottom-strip slot with .archive-square-score but
+ * the two never coexist (score is live archive only, difficulty is
+ * author pages only), so they can share the layout. Subtle grey to
+ * read as info, not gameplay state. */
+.archive-square-difficulty {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Hover reveals the puzzle criteria as a full-tile overlay. Even at
  * ~84px tiles a bottom-only strip can't fit longer rules like "Europe
  * · red · white · blue · only 3 colours" without ellipsis-eating most

@@ -6,6 +6,7 @@ import { renderArchiveSquare } from '../squares.js';
  * @property {string} filter
  * @property {string} [notes]
  * @property {number} [parkUntilN]
+ * @property {number} [difficulty]
  *
  * @typedef {'approved' | 'rejected'} Verdict
  */
@@ -153,6 +154,7 @@ export function bootIdeas() {
         const tile = renderArchiveSquare(synthetic, {
           href: `./play.html?k=${k}`,
           ariaPrefix: 'Idea',
+          difficulty: idea.difficulty,
         });
         if (idea.notes) {
           const link = tile.querySelector('a');

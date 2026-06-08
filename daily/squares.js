@@ -13,16 +13,22 @@ import { formatScore } from './scores.js';
  * no score). Keeping the render in one place means hover overlay,
  * dimensions, and the "today" frame stay aligned across both pages.
  *
+ * `difficulty` is an author-only signal surfaced on the backlog + ideas
+ * preview grids — never on the live archive — so it shares the
+ * bottom-strip slot with the play score (the two never coexist by
+ * design, but `score` wins if both are accidentally passed).
+ *
  * @param {DailyPuzzle} entry
  * @param {{
  *   href: string,
  *   ariaPrefix: string,
  *   isToday?: boolean,
  *   score?: DailyScore,
+ *   difficulty?: number,
  * }} opts
  */
 export function renderArchiveSquare(entry, opts) {
-  const { href, ariaPrefix, isToday = false, score } = opts;
+  const { href, ariaPrefix, isToday = false, score, difficulty } = opts;
 
   const li = document.createElement('li');
   li.className = 'archive-square';
@@ -48,6 +54,13 @@ export function renderArchiveSquare(entry, opts) {
     scoreEl.textContent = scoreText;
     scoreEl.style.color = scoreColor(score.f / score.t);
     link.appendChild(scoreEl);
+  } else if (typeof difficulty === 'number' && Number.isFinite(difficulty)) {
+    const diffEl = document.createElement('span');
+    diffEl.className = 'archive-square-difficulty';
+    // Round to the nearest 0.5 so the badge reads as a bucket (1.0 / 1.5 /
+    // 2.0…) rather than implying precision the formula doesn't claim.
+    diffEl.textContent = (Math.round(difficulty * 2) / 2).toFixed(1);
+    link.appendChild(diffEl);
   }
 
   const criteriaEl = document.createElement('span');
