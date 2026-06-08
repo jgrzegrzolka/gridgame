@@ -1,6 +1,6 @@
 ---
 name: daily-puzzle-author
-description: Adds or vets entries in the gridgame daily-puzzle catalog (daily/daily_puzzles.json and daily/daily_backlog.json). Use when authoring a new puzzle, refilling the backlog, releasing the next backlog entry to live, or reviewing whether a proposed filter would make a good puzzle. Carries the 13 rules (7 hard / 6 soft) that the catalog and tests enforce — primary-clean colours, small-property compounds, no-subset, en+pl descriptions, etc. Pulls from flags/countries.json so changes to country data don't require re-deriving the rules.
+description: Adds or vets entries in the gridgame daily-puzzle catalog (daily/daily_puzzles.json and daily/daily_backlog.json). Use when authoring a new puzzle, refilling the backlog, releasing the next backlog entry to live, or reviewing whether a proposed filter would make a good puzzle. Carries the 14 rules (8 hard / 6 soft) that the catalog and tests enforce — primary-clean colours, small-property compounds, no-subset, single-use tokens, en+pl descriptions, etc. Pulls from flags/countries.json so changes to country data don't require re-deriving the rules.
 ---
 
 # Daily-puzzle author
@@ -110,6 +110,19 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
 
 13. **Continent variety in onboarding.** At least 5 of the first 10 are Europe ("start mostly with Europe"); the rest spread across Asia / Africa / NA. Don't try to fit every continent into the first 10 — South America's primary-clean-and-not-small options are essentially zero, so it appears later.
 
+### Hard, added later
+
+14. **Single-use tokens.** *(single-use test)* Each token listed in `daily/daily_policy.json` (`singleUseTokens[]`) must appear in **at most one** entry across `daily_puzzles.json` + `daily_backlog.json` combined. Initial list (see the JSON for current state and per-token rationale):
+    - `motif:weapon` — 13 sovereigns
+    - `motif:union-jack` — 5 sovereigns
+    - `color:orange` — 10 sovereigns
+
+    *Why:* once a property's full set has been exposed by a single "find all X" puzzle, the player has seen every X flag. Future puzzles compounding X (`Africa + X`, `X + animal`, etc.) ask "of those flags you already met, which are also Y" — that's a recall puzzle dressed as a find puzzle, and it feels redundant. Small properties are most prone to this because their compounds are tiny and contrived anyway.
+
+    *How to add a token:* edit `daily/daily_policy.json` and add an entry to `singleUseTokens` with `token`, `sovs`, and `reason`. Leave the existing canonical "find all X" puzzle in place — the test enforces no-recurrence going forward. *Don't* add continent tokens — continents subdivide into recognizable subgroups (Europe + cross is a natural puzzle even though "find all Europe" exists), so the exhaustion logic doesn't apply.
+
+    *Numbered 14 rather than 8* to avoid renumbering rules 8-13 (and the cross-references to them in this file plus `daily_ideas.json` notes). The Hard / Soft split is now: hard = **1-7 + 14**, soft = 8-13.
+
 ## Difficulty scoring
 
 Author-facing sort signal — **advisory, not a rule.** Used to order the backlog so easier puzzles come earlier and the player has a learning curve. Hard caps by N (rule 8) still own the rule-level constraints.
@@ -147,6 +160,21 @@ The small-property list in rule 10 is derived from `flags/countries.json`. If yo
 ## When a soft rule graduates to hard
 
 E.g. we add `primaryMotifs` and rule 10 becomes a test. Update this SKILL.md AND the test in the same change.
+
+## When a new mechanic ships
+
+When a new filter primitive lands (new DSL token like `colorCount:<=N`, a new motif/colour tag, a continent split, a new statehood category, etc.), the catalog needs a sweep — append-only doesn't give the new style enough early exposure, and existing entries may become rewritable into a cleaner form.
+
+Prompt: **"new mechanic landed: `<name>`"** or **"revisit catalog for `<mechanic>`"**. The workflow:
+
+1. **Sweep existing entries.** Does any live or backlog filter get *cleaner, more accurate, or less brittle* when rewritten with the new mechanic? Flag those for possible replacement. (Example: the chain-of-excludes form `color:red,color:white,color:!yellow,color:!green,...` becomes a one-token `colorCount:N` rewrite.) Live entries are frozen (rule 1's drift detector); only backlog is editable in place.
+2. **Generate candidates** the mechanic enables — puzzles that were impossible or contrived without it. Aim for variety, not volume.
+3. **Score with `daily/difficulty.js`** and slot into the order. Append if the new style is niche; insert (renumbering backlog `n` is allowed per rule 4) if it should appear earlier for variety.
+4. **Update the small-property list (rule 10)** if the new mechanic changes how compound counts behave.
+5. **Update calibration anchors (`daily/difficulty.test.js`)** only if the formula's input distribution actually shifted — usually a no-op, but worth a glance.
+6. **Update `SINGLE_USE_TOKENS` (rule 14)** if the new mechanic exposes a small-property motif/colour where the "find all X" puzzle now fully exhausts X.
+
+If steps 1-2 produce nothing useful, stop — not every mechanic earns a sweep, and adding noise isn't free.
 
 ## Future DSL extensions
 

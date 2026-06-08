@@ -1,0 +1,19 @@
+{
+  "singleUseTokens": [
+    {
+      "token": "motif:weapon",
+      "sovs": 13,
+      "reason": "Exhausted by 'find all weapon flags' — only 13 sovereigns means every weapon flag has been seen after the solo puzzle, and compounds like 'Africa + weapon' produce tiny contrived sets."
+    },
+    {
+      "token": "motif:union-jack",
+      "sovs": 5,
+      "reason": "Tiny enough (5 sovereigns) that even the solo puzzle is borderline; compounds would be 1-2 flags and play as trivia, not 'find all'."
+    },
+    {
+      "token": "color:orange",
+      "sovs": 10,
+      "reason": "Same exhaustion logic as weapon — solo puzzle covers everything, compounds get contrived."
+    }
+  ]
+}
