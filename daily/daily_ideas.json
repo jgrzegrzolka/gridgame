@@ -467,14 +467,14 @@
     ]
   },
   {
-    "filter": "motif:cross,motif:union-jack",
-    "notes": "hand-curated: Commonwealth cross flags — the UJ + cross combo (au, fj, nz, tv, gb). Burns the single-use motif:union-jack token in a focused, iconic puzzle • d=4.60 (mean=3.00, max=6, n=5, worldwide) • suggest #80-150",
+    "filter": "motif:union-jack",
+    "notes": "hand-curated: All flags carrying the Union Jack (au, fj, nz, tv, gb). Iconic 'find all' puzzle for the Commonwealth heritage. Burns the single-use motif:union-jack token. • d=4.60 (mean=3.00, max=6, n=5, worldwide) • suggest #80-150",
     "answers": [
       "au",
       "fj",
+      "gb",
       "nz",
-      "tv",
-      "gb"
+      "tv"
     ],
     "difficulty": 4.6,
     "suggestedN": [

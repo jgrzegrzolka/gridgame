@@ -334,6 +334,41 @@ test('live + backlog: no puzzle filter carries a redundant constraint', () => {
   }
 });
 
+test('ideas: no filter carries a redundant token', () => {
+  // Mirror of the catalog rule-2 test, but for `daily/daily_ideas.json`.
+  // Without this, hand-curated entries can sneak through with redundant
+  // tokens (e.g. `motif:cross,motif:union-jack` — the union jack already
+  // contains crosses, so the `motif:cross` token adds nothing). Default-
+  // colours check only, since ideas don't currently use
+  // `primaryCleanExempt`; if that changes, mirror the primary-side
+  // check from the catalog version above.
+  const sov = flagsGamePool(COUNTRIES, false);
+  /** @type {{ filter: string, answers: string[] }[]} */
+  const IDEAS = JSON.parse(
+    readFileSync(join(HERE, '..', 'daily', 'daily_ideas.json'), 'utf-8'),
+  );
+  for (const entry of IDEAS) {
+    if (!Array.isArray(entry.answers) || entry.answers.length === 0) continue;
+    const tokens = entry.filter.split(',');
+    if (tokens.length < 2) continue;
+    const full = [...entry.answers].sort();
+    for (let i = 0; i < tokens.length; i++) {
+      const trimmed = tokens.filter((_, j) => j !== i).join(',');
+      const f = parseFilterString(trimmed);
+      if (!f) continue;
+      const without = sov
+        .filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (f)))
+        .map((c) => c.code)
+        .sort();
+      if (JSON.stringify(without) === JSON.stringify(full)) {
+        assert.fail(
+          `idea "${entry.filter}": token "${tokens[i]}" is redundant — dropping it leaves the same ${full.length}-flag answer set`,
+        );
+      }
+    }
+  }
+});
+
 test('live + backlog: answers match what each filter resolves to today', () => {
   const sov = flagsGamePool(COUNTRIES, false);
   for (const entry of [...CATALOG, ...BACKLOG]) {
