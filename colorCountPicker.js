@@ -113,6 +113,10 @@ export function createColorCountPicker(filters, translate, hooks) {
   el.className = 'pill color-count-pill';
   el.setAttribute('role', 'group');
   el.setAttribute('aria-label', translate('colorCountPicker.aria.label', 'colour count'));
+  // data-i18n-attr re-translates the aria-label on a soft language switch
+  // (findFlag chooser + flagsdata filter bar both mount this picker;
+  // applyStringsToDocument re-applies it for both via reloadI18n).
+  el.setAttribute('data-i18n-attr', 'aria-label:colorCountPicker.aria.label');
 
   // Op side container — holds the single "current op" chip AND the
   // expanded `= ≥ ≤` row. Only one is visible at a time.
@@ -213,6 +217,7 @@ export function createColorCountPicker(filters, translate, hooks) {
   clearBtn.setAttribute('role', 'button');
   clearBtn.setAttribute('tabindex', '0');
   clearBtn.setAttribute('aria-label', translate('colorCountPicker.aria.clear', 'clear'));
+  clearBtn.setAttribute('data-i18n-attr', 'aria-label:colorCountPicker.aria.clear');
   clearBtn.textContent = '×';
   clearBtn.addEventListener('click', (e) => {
     e.stopPropagation();
