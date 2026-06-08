@@ -86,14 +86,21 @@ export function bootFlagQuiz() {
     .then((raw) => {
       const all = flagsGamePool(raw, includeAll);
       preloadFlags(all, (url) => { new Image().src = url; });
-      buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), all, {
-        relativeBase: '',
-        // No "current variant" on first visit — nothing is highlighted
-        // in the burger menu because the player hasn't chosen anything
-        // yet. Returning players keep their normal aria-current marker.
-        currentVariantKey: isFirstVisit ? null : currentVariantKey,
-        statsCurrent: false,
-      });
+
+      // Re-buildable menu — rebuilds clear `menuEl.innerHTML` first so
+      // a soft language switch doesn't double the variant list.
+      const rebuildMenu = () => {
+        /** @type {HTMLUListElement} */ (quizMenuEl).innerHTML = '';
+        buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), all, {
+          relativeBase: '',
+          // No "current variant" on first visit — nothing is highlighted
+          // in the burger menu because the player hasn't chosen anything
+          // yet. Returning players keep their normal aria-current marker.
+          currentVariantKey: isFirstVisit ? null : currentVariantKey,
+          statsCurrent: false,
+        });
+      };
+      rebuildMenu();
 
       // First visit → show the picker instead of starting a game.
       // Each picker tile is a navigation link, so the click is what
@@ -104,6 +111,10 @@ export function bootFlagQuiz() {
         const pickerListEl = /** @type {HTMLUListElement} */ (document.getElementById('quiz-picker-list'));
         buildVariantPicker(pickerListEl, all, { urlMode });
         pickerEl.hidden = false;
+        document.addEventListener('langchanged', () => {
+          rebuildMenu();
+          buildVariantPicker(pickerListEl, all, { urlMode });
+        });
         return;
       }
 
@@ -111,7 +122,11 @@ export function bootFlagQuiz() {
       let pool = all.filter(VARIANTS[variantKey].filter);
       let modeKey = resolveMode(urlMode, pool.length);
 
-      startGame(variantKey, modeKey, all);
+      const game = startGame(variantKey, modeKey, all);
+      document.addEventListener('langchanged', () => {
+        rebuildMenu();
+        game.refreshI18n();
+      });
     })
     .catch((err) => {
       document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
@@ -150,8 +165,9 @@ export function bootFlagQuiz() {
     const modeDef = MODES[mode];
     const budgetMs = timed && modeDef.kind === 'timed' ? modeDef.budgetMs : 0;
     const penaltyMs = timed && modeDef.kind === 'timed' ? modeDef.penaltyMs : 0;
+    const modes = availableModes(pool.length);
     playModeEl.textContent = t(`variant.${key}`, VARIANTS[key].label);
-    renderModeToggle(key, mode, availableModes(pool.length));
+    renderModeToggle(key, mode, modes);
 
     let currentAnswer = null;
     let wrongCount = 0;
@@ -160,6 +176,14 @@ export function bootFlagQuiz() {
     let gaveUp = false;
     const startTime = Date.now();
     let timerRaf = 0;
+
+    // Result-screen data is captured once when showResult fires so a
+    // soft language switch can re-paint the localized labels (Final
+    // score, Your best score, Time, new record) without re-running
+    // recordResult or re-firing the celebration. Null until the game
+    // ends; refreshI18n's `paintResultLabels` no-ops until then.
+    /** @type {{ timed: boolean, isNew: boolean, best: { score: number, time: number }, elapsed: number, budgetUsed: number } | null} */
+    let resultLabelData = null;
 
     // For timed mode the progress bar is the countdown — we widen it from
     // 0% to 100% as the budget burns down, so the visual matches the
@@ -281,6 +305,43 @@ export function bootFlagQuiz() {
       }
     }
 
+    /**
+     * Paint the result screen's localized strings from `resultLabelData`.
+     * No-op until showResult has populated the data. Idempotent —
+     * `bestEl.textContent = …` wipes any prior "new record!" badge, and
+     * the badge is re-appended on each call so a soft language switch
+     * mid-result re-translates correctly.
+     */
+    function paintResultLabels() {
+      if (!resultLabelData) return;
+      const { timed: t_, isNew, best, elapsed, budgetUsed } = resultLabelData;
+      finalScoreLabelEl.textContent = t('quiz.finalScore', 'Final score:');
+      if (t_) {
+        // Show "Time" only when the pool exhausted under budget — for a
+        // time-out the value is always the budget itself, which the mode
+        // label already tells the player. shouldShowBestTime is the
+        // shared gate; flagQuiz/stats uses the same function.
+        timeEl.textContent = shouldShowBestTime(mode, { time: budgetUsed })
+          ? `${t('game.time', 'Time')}: ${formatTime(budgetUsed)}`
+          : '';
+        bestEl.textContent = shouldShowBestTime(mode, best)
+          ? `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`
+          : `${t('quiz.yourBestScore', 'Your best score')}: ${best.score}`;
+      } else {
+        timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
+        const bestCorrect = Math.max(0, target - best.score);
+        bestEl.textContent =
+          `${t('quiz.yourBestScore', 'Your best score')}: ${bestCorrect}/${target} ${t('game.in', 'in')} ${formatTime(best.time)}`;
+      }
+      if (isNew) {
+        bestEl.appendChild(document.createTextNode(' '));
+        const badge = document.createElement('span');
+        badge.className = 'new-badge';
+        badge.textContent = t('game.newRecord', 'new record!');
+        bestEl.appendChild(badge);
+      }
+    }
+
     function showResult() {
       cancelAnimationFrame(timerRaf);
       const elapsed = Date.now() - startTime;
@@ -291,9 +352,6 @@ export function bootFlagQuiz() {
         // a clean sweep is green, a 50/50 round is amber, all-wrong is red.
         const totalPicks = answeredCount + wrongCount;
         const ratio = totalPicks === 0 ? 0 : answeredCount / totalPicks;
-        // Reset the label in case a prior all-mode round overwrote it
-        // with "Mistakes:". 60s mode keeps the original "Final score:".
-        finalScoreLabelEl.textContent = t('quiz.finalScore', 'Final score:');
         finalScoreEl.textContent = String(answeredCount);
         finalScoreLineEl.style.color = scoreColor(ratio);
 
@@ -306,27 +364,12 @@ export function bootFlagQuiz() {
         const budgetUsed = timedBudgetUsedMs({
           budgetMs, penaltyMs, elapsedMs: elapsed, wrongCount,
         });
-        // Show "Time" only when the pool exhausted under budget — for a
-        // time-out the value is always the budget itself, which the
-        // mode label already tells the player. shouldShowBestTime is the
-        // shared gate; flagQuiz/stats uses the same function.
-        timeEl.textContent = shouldShowBestTime(mode, { time: budgetUsed })
-          ? `${t('game.time', 'Time')}: ${formatTime(budgetUsed)}`
-          : '';
 
         const { best, isNew } = recordResult(
           localStorage, key, mode, { score: answeredCount, time: budgetUsed }, includeAll,
         );
-        bestEl.textContent = shouldShowBestTime(mode, best)
-          ? `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`
-          : `${t('quiz.yourBestScore', 'Your best score')}: ${best.score}`;
-        if (isNew) {
-          bestEl.appendChild(document.createTextNode(' '));
-          const badge = document.createElement('span');
-          badge.className = 'new-badge';
-          badge.textContent = t('game.newRecord', 'new record!');
-          bestEl.appendChild(badge);
-        }
+        resultLabelData = { timed: true, isNew, best, elapsed, budgetUsed };
+        paintResultLabels();
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           // total isn't meaningful for 60s mode (the round ends when the
@@ -346,24 +389,14 @@ export function bootFlagQuiz() {
         // backward-compat with nextBest's tiebreaker, but the display is
         // "correct/target" so the player reads it the same way as a
         // timed-mode score. Colour tint stays accuracy-based.
-        finalScoreLabelEl.textContent = t('quiz.finalScore', 'Final score:');
         finalScoreEl.textContent = `${answeredCount}/${target}`;
         finalScoreLineEl.style.color = scoreColor(accuracyRatio(wrongCount, target));
-        timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
 
         const { best, isNew } = recordResult(
           localStorage, key, mode, { score: wrongCount, time: elapsed }, includeAll, lowerScoreWins,
         );
-        const bestCorrect = Math.max(0, target - best.score);
-        bestEl.textContent =
-          `${t('quiz.yourBestScore', 'Your best score')}: ${bestCorrect}/${target} ${t('game.in', 'in')} ${formatTime(best.time)}`;
-        if (isNew) {
-          bestEl.appendChild(document.createTextNode(' '));
-          const badge = document.createElement('span');
-          badge.className = 'new-badge';
-          badge.textContent = t('game.newRecord', 'new record!');
-          bestEl.appendChild(badge);
-        }
+        resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0 };
+        paintResultLabels();
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           total: target,
@@ -398,5 +431,22 @@ export function bootFlagQuiz() {
     gameEl.hidden = false;
     tickTimer();
     render(quiz.next());
+
+    return {
+      /**
+       * Soft language switch: re-translate every text surface this
+       * game owns. Mid-round → play-mode label + mode-toggle links +
+       * the current country prompt re-paint. Post-round → result
+       * screen labels re-paint from the captured `resultLabelData`.
+       * The timer keeps running (in 60s mode this is the intended
+       * behaviour — the lang flip doesn't pause the budget).
+       */
+      refreshI18n() {
+        playModeEl.textContent = t(`variant.${key}`, VARIANTS[key].label);
+        renderModeToggle(key, mode, modes);
+        if (currentAnswer) countryNameEl.textContent = countryName(currentAnswer);
+        paintResultLabels();
+      },
+    };
   }
 }
