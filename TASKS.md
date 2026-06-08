@@ -39,12 +39,10 @@ Foundation for every later phase.
 - [x] Extract `computeLangRefreshPayload({ raw, targetCodes, filter })` as the pure half, with unit tests in `daily/playFlow.test.js` pinning the matcher-gets-new-aliases + targets-resolve-by-code + label-re-translates contracts.
 - [ ] Manual smoke: open `/daily/`, type 3 guesses, switch language → picks + input text + scroll survive, hover labels in new language, suggestion matcher accepts both languages.
 
-**Deferred (noted explicitly so we don't lose them):**
-- Tests for the soft-mode fetch-failure → `window.location.reload()` fallback in `wireLangToggle`. Edge case (network drop mid-toggle); the code path is one line.
-
 **Resolved:**
 - ~~Tests for `refreshTileNames`~~ — landed in Phase 2 (`langRefresh.test.js` covers registered tile rename, unregistered passthrough, missing-translation fallback).
 - ~~Lift `attachLangRefresh` + `computeLangRefreshPayload`~~ — landed in Phase 2 (`langRefresh.js`).
+- ~~Tests for the soft-mode fetch-failure fallback~~ — `i18n.test.js` now pins that a rejected `reload` triggers `window.location.reload()` as the recovery path.
 
 #### Phase 2 — findFlag  [in progress]
 - [x] Lift `computeLangRefreshPayload` + the tile-name refresh (`bindTileCountry` / `refreshTileNames` over a module-private `WeakMap<HTMLElement, Country>`) out of `daily/playFlow.js` into the new shared `langRefresh.js`. Tests moved to `langRefresh.test.js` and gained coverage for `bindTileCountry` / `refreshTileNames` (registered tile renames, unregistered tile passthrough, missing-translation fallback).
@@ -53,11 +51,9 @@ Foundation for every later phase.
 - [x] A single boot-level `langchanged` listener swaps `all`, calls `refreshTileNames`, and forwards to whichever surface (chooser or game) is active.
 - [ ] Manual smoke: open `/findFlag/`, pick 2 pills, switch language → pill labels re-translate, selections intact; start a game, type 2 guesses, switch language → input + tiles + suggestion matcher all carry over to the new language.
 
-**Deferred:**
-- Tests for the chooser's `refreshI18n` (DOM-heavy walk; would need a substantial fake document).
-
 **Resolved:**
 - ~~`colorCountPicker` aria-labels~~ — `createColorCountPicker` now sets `data-i18n-attr` on the pill + clear button so `applyStringsToDocument` re-translates them upstream. Applies to both findFlag chooser and flagsdata filter bar.
+- ~~Tests for the chooser's `refreshI18n`~~ — `refreshChooserI18n` extracted to `findFlag/chooserI18n.js`; six unit tests pin the section-header re-translate, pill `group→namespace` routing, missing-key fallback, "no other colours" branch, null tolerance, and single `updateBar()` call.
 
 #### Phase 3 — flagQuiz  [in progress]
 - [x] `flagQuiz/index.html` + `flagQuiz/stats/index.html`: `wireLangToggle(lang, undefined, { softReload: true, base })`.
