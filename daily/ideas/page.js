@@ -82,11 +82,41 @@ export function bootIdeas() {
   const listEl = /** @type {HTMLElement} */ (document.getElementById('ideas-list'));
   const counterEl = /** @type {HTMLElement} */ (document.getElementById('review-counter'));
   const hideToggleEl = /** @type {HTMLInputElement} */ (document.getElementById('hide-reviewed'));
+  const exportBtn = /** @type {HTMLButtonElement} */ (document.getElementById('export-approved'));
 
   const state = loadReviewState();
 
   hideToggleEl.addEventListener('change', () => {
     document.body.classList.toggle('hide-reviewed', hideToggleEl.checked);
+  });
+
+  // Export approved filter list to clipboard so the author can paste it
+  // into chat (or a script) to promote ideas. JSON array form — easiest
+  // to pipe into the next workflow step. Brief visual confirmation by
+  // flipping the button's colour for ~1.2s; resets on its own.
+  exportBtn.addEventListener('click', async () => {
+    const approved = [];
+    for (const [filter, verdict] of state) {
+      if (verdict === 'approved') approved.push(filter);
+    }
+    const payload = JSON.stringify(approved, null, 2);
+    try {
+      await navigator.clipboard.writeText(payload);
+      const originalText = exportBtn.textContent;
+      exportBtn.textContent = `Copied ${approved.length} ✓`;
+      exportBtn.classList.add('export-button--copied');
+      setTimeout(() => {
+        exportBtn.textContent = originalText;
+        exportBtn.classList.remove('export-button--copied');
+      }, 1200);
+    } catch {
+      // Clipboard write can fail in some browsers/contexts (e.g. non-HTTPS,
+      // permissions denied). Fall back to logging so the author can grab
+      // the list from the DevTools console.
+      // eslint-disable-next-line no-console
+      console.log('Approved filters (clipboard write failed; copy from here):\n' + payload);
+      exportBtn.textContent = 'See console';
+    }
   });
 
   fetch('../daily_ideas.json')

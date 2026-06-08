@@ -141,12 +141,14 @@ score = mean(nameScore)                       // primary: typical country fame
       + 0.4 × max(0, max − mean − 1.5)        // outlier bump
       + sizeAdjust                            // U-shape (n=1 +2; 2-3 +0.3; 4-15 0; 16-25 +0.2; 26-30 +0.5)
       + 0.1 × max(0, tokenCount − 2)          // compound friction
+      + worldwideBump                         // +1.0 if no continent:X include token
 ```
 
 **Philosophy:**
 
 - **Mean (not max) is primary.** The typical country drives the player's experience. A puzzle of 5 famous + 1 Vatican plays mostly easy — the player gets 5/6 and feels fine; Vatican adds *some* drag (the outlier bump) but doesn't dominate.
 - **Size is U-shaped.** 1-flag puzzles are categorically hard (no margin — wrong guesses give nothing). The 4-15 range is the sweet spot. Large sets (16+) grow harder because *recall* load grows even when each country is famous: "list all 27 EU members" is harder than "list 9 European cross flags," same individual fame.
+- **Worldwide search is harder than regional.** When the filter has no `continent:X` include token, the player must mentally search ~200 countries instead of a known region (~12-54). `motif:cross + color:red` (any cross flag globally that's also red) plays much harder than `continent:Europe + motif:cross` even when the sets are similar size. Exempt: single-token `motif:eu-member` (and any other motifs added to `MEMBERSHIP_MOTIFS` in `daily/difficulty.js`) — those ask the player to *recall* a discrete known list, not search.
 - **Small absolute differences are intentional.** Most puzzles cluster between 1.5 and 6.0 — the rank order matters, the absolute numbers are not a measurement.
 
 **Calibration anchors** (catalog at time of writing — drift = test failure):

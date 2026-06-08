@@ -11,6 +11,7 @@
  *         + 0.4 × max(0, max − mean − 1.5)          // outlier bump
  *         + sizeAdjust                              // U-shape
  *         + 0.1 × max(0, tokenCount − 2)            // compound friction
+ *         + worldwideBump                           // global search penalty
  *
  * `mean` (not `max`) is the primary signal because the *typical*
  * country drives the player's experience. A puzzle of 5 famous + 1
@@ -24,6 +25,15 @@
  * when each country is famous — "list all 27 EU members" is genuinely
  * harder than "list 9 European cross flags," same individual fame.
  *
+ * `worldwideBump` (+1.0) fires when the filter has no `continent:`
+ * include token at all — the player has to search the whole globe
+ * rather than a known region. "Find all cross + red flags" is much
+ * harder than "find all European cross flags" because the mental
+ * search space is ~200 countries instead of ~44. Exempt: single-token
+ * filters using a "membership" motif (currently just `motif:eu-member`)
+ * — those puzzles ask the player to recall a discrete known list
+ * (which countries are in the EU), not to search.
+ *
  * The formula intentionally has small absolute differences (most
  * puzzles cluster between 1.5 and 6.0) — the rank order matters, the
  * absolute numbers are not a measurement.
@@ -36,14 +46,15 @@
  * @typedef {{ nameScore: number }} CountryLike
  *
  * @typedef {Object} DifficultyScore
- * @property {number} score        the composite difficulty (sort key)
- * @property {number} mean         mean nameScore across answers
- * @property {number} max          max nameScore across answers
- * @property {number} outlier      the outlier-bump contribution
- * @property {number} sizeAdjust   the size-bucket adjustment
- * @property {number} tokenAdjust  the compound-complexity adjustment
- * @property {number} setSize      answers.length
- * @property {number} tokens       token count in the filter string
+ * @property {number} score             the composite difficulty (sort key)
+ * @property {number} mean              mean nameScore across answers
+ * @property {number} max               max nameScore across answers
+ * @property {number} outlier           the outlier-bump contribution
+ * @property {number} sizeAdjust        the size-bucket adjustment
+ * @property {number} tokenAdjust       the compound-complexity adjustment
+ * @property {number} worldwideAdjust   the global-search bump (0 or 1.0)
+ * @property {number} setSize           answers.length
+ * @property {number} tokens            token count in the filter string
  */
 
 /**
@@ -59,6 +70,43 @@ function sizeAdjustFor(n) {
   if (n <= 15) return 0;
   if (n <= 25) return 0.2;
   return 0.5;
+}
+
+// Motifs that act as membership-style filters — the player is asked
+// to recall a discrete known list (e.g. "which countries are EU
+// members") rather than to search by visual property. These don't
+// get the worldwide bump even when they appear without a continent
+// token, because the search isn't really global — the player either
+// knows the list or doesn't.
+const MEMBERSHIP_MOTIFS = new Set(['eu-member']);
+
+/**
+ * Worldwide bump: +1.0 when the filter forces the player to think
+ * across the whole globe instead of a known region. Fires whenever
+ * the filter has no `continent:X` include token. Single-token
+ * membership filters are exempt — see `MEMBERSHIP_MOTIFS`.
+ *
+ * Why an include-only check (not `continent:!X` too): excluding a
+ * single continent still leaves ~150-180 countries in scope and feels
+ * worldwide to the player, so a partial half-credit was tempting —
+ * but in practice authors using `continent:!X` tend to want it scored
+ * like "worldwide minus a niche corner," so the simpler flat bump
+ * matches behaviour better. Revisit if `!continent` puzzles start
+ * landing too easy.
+ *
+ * @param {string} filter
+ * @returns {number}
+ */
+function worldwideBumpFor(filter) {
+  const tokens = filter.split(',');
+  // Any include-form continent token disables the bump.
+  if (tokens.some((t) => /^continent:[^!]/.test(t))) return 0;
+  // Single-token membership motif → discrete recall puzzle, no bump.
+  if (tokens.length === 1) {
+    const m = tokens[0].match(/^motif:(.+)$/);
+    if (m && MEMBERSHIP_MOTIFS.has(m[1])) return 0;
+  }
+  return 1.0;
 }
 
 /**
@@ -88,7 +136,8 @@ export function scoreEntry(entry, byCode) {
   const sizeAdjust = sizeAdjustFor(setSize);
   const tokens = entry.filter.split(',').length;
   const tokenAdjust = 0.1 * Math.max(0, tokens - 2);
-  const score = mean + outlier + sizeAdjust + tokenAdjust;
+  const worldwideAdjust = worldwideBumpFor(entry.filter);
+  const score = mean + outlier + sizeAdjust + tokenAdjust + worldwideAdjust;
 
-  return { score, mean, max, outlier, sizeAdjust, tokenAdjust, setSize, tokens };
+  return { score, mean, max, outlier, sizeAdjust, tokenAdjust, worldwideAdjust, setSize, tokens };
 }
