@@ -130,18 +130,35 @@ function rule2NoRedundant(filter, answers) {
 }
 
 /**
- * Per-candidate rule-6 check runs against this list. Seeded with live
- * + backlog; each accepted candidate is appended too, so a fresh
- * candidate is checked against (live ∪ backlog ∪ everything already
- * accepted in this run). Prevents within-batch subset chains like
- * "SA + cross + blue" ⊂ "SA + cross" ⊂ "SA" — the previous version of
- * the script let those through because it only seeded from the catalog.
+ * Per-candidate rule-6 check runs against this list. Seeded with:
+ *   - live + backlog (catalog entries)
+ *   - existing non-parked ideas (so re-running the generator doesn't
+ *     produce candidates that would shadow ideas already in the file)
+ * Each accepted candidate is appended too, so a fresh candidate is
+ * checked against (catalog ∪ existing ideas ∪ everything already
+ * accepted in this run). Prevents within-batch subset chains AND
+ * makes re-runs idempotent — running the script twice in a row never
+ * adds a candidate that's a subset of one written by the first run.
  */
-const RULE6_GUARD = [...LIVE, ...BACKLOG].map((e) => ({
-  ref: `${e.n}`,
-  filter: e.filter,
-  set: new Set(e.answers),
-}));
+const RULE6_GUARD = [
+  ...LIVE.map((e) => ({
+    ref: `live#${e.n}`,
+    filter: e.filter,
+    set: new Set(e.answers),
+  })),
+  ...BACKLOG.map((e) => ({
+    ref: `backlog#${e.n}`,
+    filter: e.filter,
+    set: new Set(e.answers),
+  })),
+  ...IDEAS
+    .filter((e) => e.parkUntilN == null && Array.isArray(e.answers) && e.answers.length > 0)
+    .map((e) => ({
+      ref: `existing-idea`,
+      filter: e.filter,
+      set: new Set(e.answers),
+    })),
+];
 
 /**
  * Check rule 6: candidate's answer set must not be a strict subset or
@@ -355,6 +372,124 @@ for (const cont of CONTINENTS) {
 for (const m of MOTIFS) {
   for (const col of COLORS) {
     tryCandidate(`motif:${m},color:${col}`);
+  }
+}
+
+// T12: !continent + 1 color (exclude one continent, pick a color)
+for (const cont of CONTINENTS) {
+  for (const col of COLORS) {
+    tryCandidate(`continent:!${cont},color:${col}`);
+  }
+}
+
+// T13: !continent + 1 motif (exclude one continent, pick a motif)
+for (const cont of CONTINENTS) {
+  for (const m of MOTIFS) {
+    tryCandidate(`continent:!${cont},motif:${m}`);
+  }
+}
+
+// T14: motif + colorCount:>=N (worldwide motif-anchored busy flags)
+for (const m of MOTIFS) {
+  for (let n = 3; n <= 4; n++) {
+    tryCandidate(`motif:${m},colorCount:>=${n}`);
+  }
+}
+
+// T15: continent + motif + colorCount:>=N (motif-anchored busy in region)
+for (const cont of CONTINENTS) {
+  for (const m of MOTIFS) {
+    for (let n = 3; n <= 4; n++) {
+      tryCandidate(`continent:${cont},motif:${m},colorCount:>=${n}`);
+    }
+  }
+}
+
+// T16: continent + 2 motifs (motif intersection within region)
+for (const cont of CONTINENTS) {
+  for (let i = 0; i < MOTIFS.length; i++) {
+    for (let j = i + 1; j < MOTIFS.length; j++) {
+      tryCandidate(`continent:${cont},motif:${MOTIFS[i]},motif:${MOTIFS[j]}`);
+    }
+  }
+}
+
+// T17: motif + colorCount:N (worldwide motif with exact color count)
+for (const m of MOTIFS) {
+  for (let n = 2; n <= 4; n++) {
+    tryCandidate(`motif:${m},colorCount:${n}`);
+  }
+}
+
+// T18: continent + colorCount:N (exact — "only N colours" regional)
+for (const cont of CONTINENTS) {
+  for (let n = 2; n <= 5; n++) {
+    tryCandidate(`continent:${cont},colorCount:${n}`);
+  }
+}
+
+// T19: continent + 1 color + colorCount:N (color-anchored exact count)
+for (const cont of CONTINENTS) {
+  for (const col of COLORS) {
+    for (let n = 2; n <= 4; n++) {
+      tryCandidate(`continent:${cont},color:${col},colorCount:${n}`);
+    }
+  }
+}
+
+// T20: 1 color + colorCount:N (worldwide single-color anchored)
+for (const col of COLORS) {
+  for (let n = 2; n <= 4; n++) {
+    tryCandidate(`color:${col},colorCount:${n}`);
+  }
+}
+
+// T21: 1 color + colorCount:>=N (worldwide single-color busy)
+for (const col of COLORS) {
+  for (let n = 3; n <= 5; n++) {
+    tryCandidate(`color:${col},colorCount:>=${n}`);
+  }
+}
+
+// T22: motif + motif worldwide (two-motif intersection)
+for (let i = 0; i < MOTIFS.length; i++) {
+  for (let j = i + 1; j < MOTIFS.length; j++) {
+    tryCandidate(`motif:${MOTIFS[i]},motif:${MOTIFS[j]}`);
+  }
+}
+
+// T23: motif + 2 colors + colorCount:2 (worldwide "X-motif flags with only Y and Z")
+for (const m of MOTIFS) {
+  for (let i = 0; i < COLORS.length; i++) {
+    for (let j = i + 1; j < COLORS.length; j++) {
+      tryCandidate(`motif:${m},color:${COLORS[i]},color:${COLORS[j]},colorCount:2`);
+    }
+  }
+}
+
+// T24: continent + 1 color + !1 color (color include + exclude)
+for (const cont of CONTINENTS) {
+  for (const inc of COLORS) {
+    for (const exc of COLORS) {
+      if (inc === exc) continue;
+      tryCandidate(`continent:${cont},color:${inc},color:!${exc}`);
+    }
+  }
+}
+
+// T25: 2 colors worldwide (AND, no count constraint)
+for (let i = 0; i < COLORS.length; i++) {
+  for (let j = i + 1; j < COLORS.length; j++) {
+    tryCandidate(`color:${COLORS[i]},color:${COLORS[j]}`);
+  }
+}
+
+// T26: motif + 1 color + colorCount:N (motif + color anchored exact count)
+for (const m of MOTIFS) {
+  for (const col of COLORS) {
+    for (let n = 2; n <= 4; n++) {
+      tryCandidate(`motif:${m},color:${col},colorCount:${n}`);
+    }
   }
 }
 
