@@ -78,7 +78,10 @@
       import { disableBurgerIfEmpty, wireBurgerDismiss } from './common.js';
       import { preloadFlags } from './flags/quiz.js';
       bootI18n().then((lang) => {
-        wireLangToggle(lang);
+        // Home page is `data-i18n`-only — applyStringsToDocument covers
+        // every translated surface, so soft-reload is essentially free
+        // here (no per-page langchanged listener needed).
+        wireLangToggle(lang, undefined, { softReload: true, base: './' });
         disableBurgerIfEmpty(
           document.querySelector('.burger'),
           document.querySelector('#burger-panel .menu'),

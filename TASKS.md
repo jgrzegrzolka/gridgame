@@ -75,8 +75,17 @@ Foundation for every later phase.
 - `showError(t('ttt.codeMustBe5'))` on the join form leaves the validation message stale across a lang flip while the user is still on the lobby. Small edge.
 - The four page.js files duplicate near-identical `paintFinalScore` + `refreshI18nForGame` + `setStatusKey` + `repaintStatusForLang` shapes. The 3×3 / 9×9 split predates this work; a future refactor could lift the shared bits into a `ticTacToe/sharedClient.js`.
 
-#### Phase 5 — flagsdata + archive/ideas/backlog  [pending]
-Mop-up. ~6 sites total.
+#### Phase 5 — flagsdata + archive/ideas/backlog + root  [in progress]
+- [x] `langRefresh.js` `refreshTileNames` now also walks `.flag` (flagsdata's browse tiles). Single contract covers daily / findFlag / flagsdata tile-hover labels.
+- [x] `flagsdata/page.js`: every JS-built static label (the "Flags" h2 title, "Status / Continent / Colors / Motifs" group headings, search placeholder, "Filters" toggle, "no other colours", "Clear") now carries `data-i18n` / `data-i18n-attr` so `applyStringsToDocument` re-translates them upstream. Pill labels (dynamic — depend on group + value) re-translate via a `langchanged` listener that walks `.pill[data-group][data-value]`. Browse tiles register via `bindTileCountry` so the shared `refreshTileNames` walk re-paints their hover labels.
+- [x] `daily/archive.js`: the "No puzzles yet." empty line now carries `data-i18n`.
+- [x] `daily/archive.html`, `daily/backlog/index.html`, `daily/ideas/index.html`, `flagsdata/index.html`, `index.html` (root) all opt into `softReload`.
+- [ ] Manual smoke: open `/flagsdata/`, activate 3 pill filters + a colour-count + name search, switch language → pill labels + section titles + search placeholder + Clear + count badge all re-translate; selections and result tiles intact.
+
+**Deferred:**
+- `colorCountPicker` aria-labels still stale in this page (same module Phase 2 deferred; lift would apply to findFlag + flagsdata at once).
+- Catch-path error messages (`document.getElementById('sections').textContent = '...'`) replace the page body once; no soft refresh.
+- Author-only backlog/ideas browse pages keep their "Backlog is empty." / "No ideas yet." in English (unchanged convention; no prior `t()` call).
 
 ---
 

@@ -29,6 +29,8 @@ export function bootBacklog() {
       if (backlog.length === 0) {
         const empty = document.createElement('li');
         empty.className = 'archive-empty';
+        // Author-only page — leaving the message hard-coded in English
+        // is the established convention here (no `t()` call previously).
         empty.textContent = 'Backlog is empty.';
         listEl.appendChild(empty);
         return;

@@ -66,20 +66,23 @@ export function bindTileCountry(el, c) {
 }
 
 /**
- * Walk every `.find-tile` currently in `doc` and re-paint its display
- * name (`dataset.name` + `<img>.alt`) against the freshly-loaded i18n
- * cache. No-op for tiles that weren't registered via `bindTileCountry`.
+ * Walk every flag-tile element currently in `doc` and re-paint its
+ * display name (`dataset.name` + `<img>.alt`) against the freshly-
+ * loaded i18n cache. No-op for tiles that weren't registered via
+ * `bindTileCountry`.
  *
- * The selector is page-agnostic: daily's in-game found list, the
- * result-screen found/missed lists, and findFlag's in-game / result
- * lists all share the `find-tile` class (CSS in `findFlag/index.css`),
- * so one walk covers every visible tile.
+ * The selector covers both visual variants: `.find-tile` (daily +
+ * findFlag — in-game / result-screen found / result-screen missed
+ * lists, all CSS-coupled via `findFlag/index.css`) and `.flag`
+ * (flagsdata's browse grid). Both classes use the same
+ * `content: attr(data-name)` hover overlay, so one walk re-paints
+ * every visible tile on every page.
  *
  * @param {Document} [doc]
  */
 export function refreshTileNames(doc = document) {
   const tiles = /** @type {NodeListOf<HTMLElement>} */ (
-    doc.querySelectorAll('.find-tile')
+    doc.querySelectorAll('.find-tile, .flag')
   );
   for (const tile of tiles) {
     const c = tileCountries.get(tile);
