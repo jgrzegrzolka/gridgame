@@ -163,6 +163,7 @@ export const COLOR_COUNTS_FOR_RANDOM = [['=', 2], ['=', 3], ['=', 4], ['>=', 4]]
  * puzzle hook. */
 export const MOTIFS_FOR_RANDOM = [
   'animal',
+  'bird',
   'coat-of-arms',
   'weapon',
   'star-or-moon',

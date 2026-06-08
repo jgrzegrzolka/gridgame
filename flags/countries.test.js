@@ -491,3 +491,53 @@ test('sun-bearing flags carry the star-or-moon motif (sun-is-a-star pin)', () =>
   assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
 });
 
+// `bird` is taxonomically a subset of `animal` — the engine's
+// `axesImpliedPair` rule relies on that to reject degenerate
+// (animal × bird) random puzzles. Pin both the named coverage and
+// the subset invariant in one shot: every flag listed here must
+// carry `bird`, and every flag carrying `bird` must also carry
+// `animal`.
+const BIRD_BEARING = [
+  { code: 'al', note: 'Albania — black double-headed eagle' },
+  { code: 'ad', note: 'Andorra — eagles on the arms quarters' },
+  { code: 'bo', note: 'Bolivia — Andean condor atop the arms' },
+  { code: 'dm', note: 'Dominica — sisserou parrot at centre' },
+  { code: 'ec', note: 'Ecuador — Andean condor atop the arms' },
+  { code: 'eg', note: 'Egypt — Eagle of Saladin' },
+  { code: 'fj', note: 'Fiji — dove of peace on the shield' },
+  { code: 'gt', note: 'Guatemala — resplendent quetzal on the scroll' },
+  { code: 'kz', note: 'Kazakhstan — golden steppe eagle below sun' },
+  { code: 'ki', note: 'Kiribati — frigatebird above sun' },
+  { code: 'mx', note: 'Mexico — golden eagle eating a serpent' },
+  { code: 'md', note: 'Moldova — aurochs head flanked by Roman eagle' },
+  { code: 'me', note: 'Montenegro — double-headed golden eagle' },
+  { code: 'pg', note: 'Papua New Guinea — Raggiana bird-of-paradise' },
+  { code: 'rs', note: 'Serbia — white double-headed eagle' },
+  { code: 'ug', note: 'Uganda — grey crowned crane in the centre' },
+  { code: 'zm', note: 'Zambia — African fish eagle in flight' },
+  { code: 'zw', note: 'Zimbabwe — soapstone Zimbabwe Bird on red star' },
+];
+test('bird-bearing flags carry the bird motif AND the animal motif (subset pin)', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const { code, note } of BIRD_BEARING) {
+    const c = COUNTRIES.find((x) => x.code === code);
+    if (!c) {
+      offenders.push(`${code} (${note}): not found in countries.json`);
+      continue;
+    }
+    if (!c.motifs?.includes('bird')) {
+      offenders.push(`${code} (${note}): expected 'bird' motif, got ${JSON.stringify(c.motifs)}`);
+    }
+    if (!c.motifs?.includes('animal')) {
+      offenders.push(`${code} (${note}): has 'bird' but missing 'animal' — bird ⊂ animal must hold`);
+    }
+  }
+  for (const c of COUNTRIES) {
+    if (c.motifs?.includes('bird') && !c.motifs.includes('animal')) {
+      offenders.push(`${c.code} (${c.name}): carries 'bird' without 'animal' — bird ⊂ animal must hold`);
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
+
