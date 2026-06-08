@@ -13,6 +13,7 @@ import {
   t,
   countryName,
   withLocalizedAliases,
+  reloadI18n,
   _resetCacheForTests,
   _seedCacheForTests,
   DEFAULT_LANG,
@@ -192,6 +193,187 @@ test('wireLangToggle: tags current=pl (so CSS shows Polish flag) and aria-labels
 test('wireLangToggle: is a no-op when no element is found', () => {
   // Just ensures no throw; passing null is the "couldn't find lang-toggle" path.
   wireLangToggle('en', null);
+});
+
+// ---- wireLangToggle soft-reload mode ----
+//
+// In soft mode the click handler delegates to a reload function (injected
+// for tests, defaults to reloadI18n in production) instead of calling
+// `window.location.reload()`. The toggle also subscribes to the
+// `langchanged` event so a successful soft reload flips the data-current
+// attribute, keeping the click handler's "next" computation correct.
+
+function fakeSoftDoc() {
+  /** @type {Array<(e: any) => void>} */
+  const handlers = [];
+  return {
+    /** @param {string} _type @param {(e: any) => void} h */
+    addEventListener(_type, h) { handlers.push(h); },
+    /** @param {any} e */
+    _fireLangChanged(e) { for (const h of handlers) h(e); },
+    _handlerCount() { return handlers.length; },
+  };
+}
+
+test('wireLangToggle soft mode: registers a langchanged listener on the supplied doc', () => {
+  const toggle = fakeToggle();
+  const doc = fakeSoftDoc();
+  wireLangToggle('en', /** @type {any} */ (toggle), {
+    softReload: true,
+    doc: /** @type {any} */ (doc),
+    reload: async () => {},
+  });
+  assert.equal(doc._handlerCount(), 1);
+});
+
+test('wireLangToggle soft mode: a langchanged event flips data-current and re-renders aria-label', () => {
+  const toggle = fakeToggle();
+  const doc = fakeSoftDoc();
+  wireLangToggle('en', /** @type {any} */ (toggle), {
+    softReload: true,
+    doc: /** @type {any} */ (doc),
+    reload: async () => {},
+  });
+  assert.equal(toggle._attrs['data-current'], 'en');
+  doc._fireLangChanged({ detail: { lang: 'pl' } });
+  assert.equal(toggle._attrs['data-current'], 'pl',
+    'langchanged listener must update the toggle so the next click flips back to en');
+  assert.equal(toggle._attrs['aria-label'], 'Przełącz na angielski');
+});
+
+test('wireLangToggle soft mode: click invokes the injected reload with the next lang', () => {
+  const toggle = fakeToggle();
+  const doc = fakeSoftDoc();
+  /** @type {string[]} */
+  const reloadCalls = [];
+  const fakeWindow = { localStorage: fakeStore() };
+  const prevWindow = /** @type {any} */ (globalThis).window;
+  /** @type {any} */ (globalThis).window = fakeWindow;
+  try {
+    wireLangToggle('en', /** @type {any} */ (toggle), {
+      softReload: true,
+      doc: /** @type {any} */ (doc),
+      reload: async (lang) => { reloadCalls.push(lang); },
+    });
+    // Simulate the click that the real DOM would dispatch.
+    toggle._handlers[0]({ preventDefault() {} });
+    assert.deepEqual(reloadCalls, ['pl'],
+      'click on an "en" toggle in soft mode reloads with pl');
+    assert.equal(fakeWindow.localStorage._dump()[LANG_STORAGE_KEY], 'pl',
+      'click still persists the new language so a future hard reload would pick it up');
+  } finally {
+    if (prevWindow === undefined) {
+      delete /** @type {any} */ (globalThis).window;
+    } else {
+      /** @type {any} */ (globalThis).window = prevWindow;
+    }
+  }
+});
+
+// ---- reloadI18n ----
+//
+// Re-fetches the language file, swaps the cache, re-applies markup, and
+// dispatches `langchanged` on the doc. Used by soft-reload mode to swap
+// languages without losing partial game progress to a full page reload.
+
+function fakeReloadDoc() {
+  /** @type {any[]} */
+  const events = [];
+  return {
+    documentElement: {
+      /** @type {string | null} */
+      _lang: null,
+      /** @param {string} name @param {string} value */
+      setAttribute(name, value) { if (name === 'lang') this._lang = value; },
+    },
+    /** @returns {any[]} */
+    querySelectorAll() { return []; },
+    /** @param {any} e */
+    dispatchEvent(e) { events.push(e); return true; },
+    _events: events,
+  };
+}
+
+function fakeFetch(/** @type {Record<string, any>} */ table) {
+  /** @param {any} url */
+  return async (url) => {
+    const path = String(url);
+    if (path in table) {
+      const body = table[path];
+      return /** @type {any} */ ({ ok: true, status: 200, json: async () => body });
+    }
+    return /** @type {any} */ ({ ok: false, status: 404, json: async () => null });
+  };
+}
+
+test('reloadI18n: swaps cachedStrings so subsequent t() calls return the new language', async () => {
+  _seedCacheForTests({ quiz: { giveUp: 'Give up' } });
+  await reloadI18n('pl', {
+    base: './',
+    doc: /** @type {any} */ (fakeReloadDoc()),
+    fetchImpl: fakeFetch({ './i18n/pl.json': { quiz: { giveUp: 'Poddaję się' } } }),
+  });
+  assert.equal(t('quiz.giveUp', 'Give up'), 'Poddaję się');
+  _resetCacheForTests();
+});
+
+test('reloadI18n: updates <html lang>', async () => {
+  _resetCacheForTests();
+  const doc = fakeReloadDoc();
+  await reloadI18n('pl', {
+    base: './',
+    doc: /** @type {any} */ (doc),
+    fetchImpl: fakeFetch({ './i18n/pl.json': {} }),
+  });
+  assert.equal(doc.documentElement._lang, 'pl');
+  _resetCacheForTests();
+});
+
+test('reloadI18n: dispatches langchanged with { detail: { lang } }', async () => {
+  _resetCacheForTests();
+  const doc = fakeReloadDoc();
+  await reloadI18n('pl', {
+    base: './',
+    doc: /** @type {any} */ (doc),
+    fetchImpl: fakeFetch({ './i18n/pl.json': {} }),
+  });
+  assert.equal(doc._events.length, 1);
+  assert.equal(doc._events[0].type, 'langchanged');
+  assert.deepEqual(doc._events[0].detail, { lang: 'pl' });
+  _resetCacheForTests();
+});
+
+test('reloadI18n: non-ok fetch is a silent no-op — cache stays put, no event fires', async () => {
+  _seedCacheForTests({ quiz: { giveUp: 'Give up' } });
+  const doc = fakeReloadDoc();
+  await reloadI18n('pl', {
+    base: './',
+    doc: /** @type {any} */ (doc),
+    fetchImpl: fakeFetch({}),
+  });
+  assert.equal(t('quiz.giveUp', 'fallback'), 'Give up',
+    'cache untouched after a failed re-fetch');
+  assert.equal(doc._events.length, 0, 'no langchanged when nothing changed');
+  _resetCacheForTests();
+});
+
+test('reloadI18n: respects the base prefix when building the i18n URL', async () => {
+  // Pages under nested directories (e.g. daily/) boot with `base: '../'`.
+  // The reload path must honour the same base so the second fetch hits
+  // the same `i18n/<lang>.json` file the first boot loaded.
+  _resetCacheForTests();
+  /** @type {string[]} */
+  const seen = [];
+  await reloadI18n('pl', {
+    base: '../',
+    doc: /** @type {any} */ (fakeReloadDoc()),
+    fetchImpl: /** @type {any} */ (async (/** @type {any} */ url) => {
+      seen.push(String(url));
+      return { ok: true, status: 200, json: async () => ({}) };
+    }),
+  });
+  assert.deepEqual(seen, ['../i18n/pl.json']);
+  _resetCacheForTests();
 });
 
 // ---- t() ----

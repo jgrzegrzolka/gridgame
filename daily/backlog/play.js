@@ -6,8 +6,9 @@ import {
   wireZoom,
   showState,
   paintDescription,
-  reasonMessage,
   startGame,
+  attachLangRefresh,
+  showReason,
 } from '../playFlow.js';
 
 /** @typedef {import('../../flags/daily.js').DailyPuzzle} DailyPuzzle */
@@ -50,18 +51,24 @@ export function bootBacklogPlay() {
 
       const entry = findPuzzle(catalog, n);
       if (!entry) {
-        showState(reasonMessage('not-found'));
+        showReason('not-found');
         return;
       }
       const result = resolvePuzzleEntry(entry, all);
       if (result.ok === false) {
-        showState(reasonMessage(result.reason));
+        showReason(result.reason);
         return;
       }
 
       paintDescription(result.entry.description);
       const category = filterToCategory(result.filter, t);
-      startGame(n, category, result.targets, all, { skipSave: true });
+      const game = startGame(n, category, result.targets, all, { skipSave: true });
+      attachLangRefresh(game, {
+        raw,
+        targets: result.targets,
+        filter: result.filter,
+        description: result.entry.description,
+      });
     })
     .catch((err) => {
       showState(`${t('game.failedToLoad', 'Failed to load:')} ${err.message}`);

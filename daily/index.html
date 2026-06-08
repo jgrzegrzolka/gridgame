@@ -104,7 +104,12 @@
       import { bootI18n, wireLangToggle } from '../i18n.js';
       import { disableBurgerIfEmpty, wireBurgerDismiss } from '../common.js';
       bootI18n('../').then((lang) => {
-        wireLangToggle(lang);
+        // Soft-reload mode keeps partial game progress (typed guesses,
+        // input text, scroll, found tiles) intact across a language
+        // switch. bootDaily() registers a `langchanged` listener that
+        // re-localizes the suggestion matcher and re-paints the running
+        // game on each switch.
+        wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         disableBurgerIfEmpty(
           document.querySelector('.burger'),
           document.querySelector('#burger-panel .menu'),

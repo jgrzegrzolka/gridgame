@@ -1,15 +1,16 @@
-import { flagsGamePool, loadCountries } from '../flags/group.js';
-import { filterToCategory } from '../flags/findFlag.js';
+import { loadCountries, flagsGamePool } from '../flags/group.js';
 import { t, withLocalizedAliases } from '../i18n.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
 import { loadScores, isCompleteRecord } from './scores.js';
+import { filterToCategory } from '../flags/findFlag.js';
 import {
   wireZoom,
   showState,
   paintDescription,
-  reasonMessage,
   renderResult,
   startGame,
+  attachLangRefresh,
+  showReason,
 } from './playFlow.js';
 
 /**
@@ -53,7 +54,7 @@ export function bootDaily() {
 
       const result = resolveDailyPuzzle(catalog, all, n);
       if (result.ok === false) {
-        showState(reasonMessage(result.reason));
+        showReason(result.reason);
         return;
       }
 
@@ -68,13 +69,29 @@ export function bootDaily() {
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
+        // Re-paint on a soft language switch so found/missed tile hover
+        // labels + the description re-translate without a page reload.
+        document.addEventListener('langchanged', () => {
+          paintDescription(result.entry.description);
+          renderResult(result.targets, foundCodes);
+        });
         return;
       }
 
       const category = filterToCategory(result.filter, t);
-      startGame(n, category, result.targets, all, { skipSave: isReplay });
+      const game = startGame(n, category, result.targets, all, { skipSave: isReplay });
+      attachLangRefresh(game, {
+        raw,
+        targets: result.targets,
+        filter: result.filter,
+        description: result.entry.description,
+      });
     })
     .catch((err) => {
+      // Fetch / parse errors freeze the message in the page's language
+      // at error time. Re-translation on `langchanged` would require
+      // localising the error.message half too — out of scope for the
+      // soft-reload work, and this is a rare path anyway.
       showState(`${t('game.failedToLoad', 'Failed to load:')} ${err.message}`);
     });
 }

@@ -124,19 +124,59 @@ export function setStoredLang(lang, store) {
  * language so a screen-reader user announcing the page in their language
  * hears the action in the same language.
  *
+ * Soft-reload mode (`options.softReload = true`) swaps the language in place
+ * via `reloadI18n` instead of a full page reload. Pages that opt in must
+ * also register `document.addEventListener('langchanged', ...)` listeners
+ * for every text surface they paint outside `data-i18n` markup — otherwise
+ * those surfaces stay stuck in the old language. Default is the legacy
+ * full-reload path so unmigrated pages keep working unchanged.
+ *
  * @param {string} currentLang
  * @param {{ setAttribute(name: string, value: string): void, addEventListener(type: 'click', handler: (e: Event) => void): void } | null} [toggleEl]
+ * @param {{
+ *   softReload?: boolean,
+ *   base?: string,
+ *   doc?: { addEventListener(type: 'langchanged', handler: (e: any) => void): void },
+ *   reload?: (lang: string, options?: { base?: string }) => Promise<unknown>,
+ * }} [options]
  */
-export function wireLangToggle(currentLang, toggleEl) {
+export function wireLangToggle(currentLang, toggleEl, options = {}) {
+  const {
+    softReload = false,
+    base = './',
+    doc = typeof document !== 'undefined' ? document : null,
+    reload = reloadI18n,
+  } = options;
   const el = toggleEl === undefined ? document.getElementById('lang-toggle') : toggleEl;
   if (!el) return;
-  const next = currentLang === 'pl' ? 'en' : 'pl';
-  el.setAttribute('data-current', currentLang);
-  el.setAttribute('aria-label', currentLang === 'pl' ? 'Przełącz na angielski' : 'Switch to Polish');
+  // Track current in a closure so a second click in soft mode flips back
+  // to the language we started in. The langchanged listener (registered
+  // only in soft mode) keeps this in sync after each successful reload.
+  let current = currentLang;
+  const renderToggleState = (/** @type {string} */ lang) => {
+    el.setAttribute('data-current', lang);
+    el.setAttribute('aria-label', lang === 'pl' ? 'Przełącz na angielski' : 'Switch to Polish');
+  };
+  renderToggleState(current);
+  if (softReload && doc) {
+    doc.addEventListener('langchanged', (e) => {
+      current = e.detail.lang;
+      renderToggleState(current);
+    });
+  }
   el.addEventListener('click', (e) => {
     e.preventDefault();
+    const next = current === 'pl' ? 'en' : 'pl';
     setStoredLang(next);
-    window.location.reload();
+    if (softReload) {
+      // Fire-and-forget: any listener that needs to wait for the new
+      // strings registers on `langchanged`. A failed re-fetch falls
+      // back to a hard reload so the user still gets the language
+      // they asked for instead of a half-translated page.
+      reload(next, { base }).catch(() => window.location.reload());
+    } else {
+      window.location.reload();
+    }
   });
 }
 
@@ -202,6 +242,44 @@ export async function bootI18n(base = './') {
  */
 export function t(key, fallback) {
   return lookupString(cachedStrings, key) ?? fallback;
+}
+
+/**
+ * Re-fetch the i18n file for `lang`, swap the in-memory cache, re-apply
+ * `data-i18n` / `data-i18n-attr` markup over the document, and dispatch a
+ * `langchanged` CustomEvent on `doc` so per-page renderers can re-paint
+ * the text surfaces they own (strings set via `t()` in JS — status lines,
+ * suggestion items, result messages, etc.). The whole point is to avoid
+ * the `window.location.reload()` path so partial game progress, focus,
+ * scroll position, and in-flight input all survive a language switch.
+ *
+ * Returns a promise that resolves once the new strings are applied and
+ * the event has fired. Rejects only on `fetch` failure — non-ok responses
+ * resolve as a no-op (the caller has nothing to do; the existing language
+ * stays in place). `fetchImpl` is injectable so tests don't need to mock
+ * the global.
+ *
+ * @param {string} lang
+ * @param {{
+ *   base?: string,
+ *   doc?: Document,
+ *   fetchImpl?: typeof fetch,
+ * }} [options]
+ * @returns {Promise<void>}
+ */
+export async function reloadI18n(lang, options = {}) {
+  const {
+    base = './',
+    doc = typeof document !== 'undefined' ? /** @type {any} */ (document) : null,
+    fetchImpl = typeof fetch !== 'undefined' ? fetch : null,
+  } = options;
+  if (!I18N_ENABLED || !doc || !fetchImpl) return;
+  const res = await fetchImpl(`${base}i18n/${lang}.json`);
+  if (!res.ok) return;
+  const strings = await res.json();
+  cachedStrings = strings;
+  applyStringsToDocument(strings, lang, doc);
+  doc.dispatchEvent(new CustomEvent('langchanged', { detail: { lang } }));
 }
 
 /**
