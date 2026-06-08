@@ -718,5 +718,556 @@
       "en": "Find all flags with a bird.",
       "pl": "Znajdź wszystkie flagi z ptakiem."
     }
+  },
+  {
+    "n": 54,
+    "filter": "continent:Africa,colorCount:2",
+    "answers": [
+      "ma",
+      "ng",
+      "so",
+      "tn"
+    ],
+    "description": {
+      "en": "Find all African flags with only 2 colours.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z tylko 2 kolorami."
+    }
+  },
+  {
+    "n": 55,
+    "filter": "continent:Europe,colorCount:>=4",
+    "answers": [
+      "es",
+      "hr",
+      "li",
+      "md",
+      "me",
+      "pt",
+      "rs",
+      "si",
+      "sm"
+    ],
+    "description": {
+      "en": "Find all European flags with 4 or more colours.",
+      "pl": "Znajdź wszystkie europejskie flagi z 4 lub więcej kolorami."
+    }
+  },
+  {
+    "n": 56,
+    "filter": "motif:star-or-moon,color:red,color:white,colorCount:2",
+    "answers": [
+      "jp",
+      "sg",
+      "tn",
+      "tr"
+    ],
+    "description": {
+      "en": "Find all flags with a star or moon whose only colours are red and white — no others.",
+      "pl": "Znajdź wszystkie flagi z gwiazdą lub księżycem, które mają tylko 2 kolory: czerwony i biały."
+    }
+  },
+  {
+    "n": 57,
+    "filter": "continent:South America,motif:star-or-moon",
+    "answers": [
+      "ar",
+      "br",
+      "cl",
+      "ec",
+      "py",
+      "sr",
+      "uy",
+      "ve"
+    ],
+    "description": {
+      "en": "Find all South American flags with a star or moon.",
+      "pl": "Znajdź wszystkie południowoamerykańskie flagi z gwiazdą lub księżycem."
+    }
+  },
+  {
+    "n": 58,
+    "filter": "continent:Asia,color:green,colorCount:2",
+    "answers": [
+      "bd",
+      "pk",
+      "sa"
+    ],
+    "description": {
+      "en": "Find all 2-colour Asian flags featuring green.",
+      "pl": "Znajdź wszystkie 2-kolorowe azjatyckie flagi z zielonym."
+    }
+  },
+  {
+    "n": 59,
+    "filter": "color:black,colorCount:2",
+    "answers": [
+      "af",
+      "al"
+    ],
+    "description": {
+      "en": "Find all 2-colour flags featuring black.",
+      "pl": "Znajdź wszystkie 2-kolorowe flagi z czernią."
+    }
+  },
+  {
+    "n": 60,
+    "filter": "continent:South America,color:red",
+    "answers": [
+      "bo",
+      "cl",
+      "co",
+      "ec",
+      "gy",
+      "pe",
+      "py",
+      "sr",
+      "ve"
+    ],
+    "description": {
+      "en": "Find all South American flags with red.",
+      "pl": "Znajdź wszystkie południowoamerykańskie flagi z czerwonym."
+    }
+  },
+  {
+    "n": 61,
+    "filter": "continent:North America,colorCount:2",
+    "answers": [
+      "ca",
+      "hn"
+    ],
+    "description": {
+      "en": "Find all North American flags with only 2 colours.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi z tylko 2 kolorami."
+    }
+  },
+  {
+    "n": 62,
+    "filter": "continent:Asia,motif:star-or-moon,color:green",
+    "answers": [
+      "az",
+      "bd",
+      "jo",
+      "mm",
+      "mv",
+      "pk",
+      "sy",
+      "tj",
+      "tm",
+      "uz"
+    ],
+    "description": {
+      "en": "Find all Asian flags with green and a star or moon.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z zielonym oraz gwiazdą lub księżycem."
+    }
+  },
+  {
+    "n": 63,
+    "filter": "continent:North America,motif:star-or-moon,color:white",
+    "answers": [
+      "ag",
+      "cu",
+      "hn",
+      "kn",
+      "pa",
+      "us"
+    ],
+    "description": {
+      "en": "Find all North American flags with white and a star or moon.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi z bielą oraz gwiazdą lub księżycem."
+    }
+  },
+  {
+    "n": 64,
+    "filter": "continent:Africa,motif:star-or-moon,color:!yellow",
+    "answers": [
+      "bi",
+      "dj",
+      "dz",
+      "lr",
+      "ly",
+      "ma",
+      "mw",
+      "ne",
+      "so",
+      "tn"
+    ],
+    "description": {
+      "en": "Find all African flags with a star or moon but no yellow.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z gwiazdą lub księżycem, ale bez żółtego."
+    }
+  },
+  {
+    "n": 65,
+    "filter": "continent:Africa,color:white,color:!green",
+    "answers": [
+      "bw",
+      "cv",
+      "eg",
+      "lr",
+      "so",
+      "sz",
+      "tn",
+      "ug"
+    ],
+    "description": {
+      "en": "Find all African flags with white but no green.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z bielą, ale bez zielonego."
+    }
+  },
+  {
+    "n": 66,
+    "filter": "motif:cross,motif:!union-jack",
+    "answers": [
+      "bi",
+      "ch",
+      "dk",
+      "dm",
+      "do",
+      "fi",
+      "ge",
+      "gr",
+      "is",
+      "jm",
+      "mt",
+      "no",
+      "se",
+      "to"
+    ],
+    "description": {
+      "en": "Find all flags with a cross but no Union Jack.",
+      "pl": "Znajdź wszystkie flagi z krzyżem, ale bez Union Jacka."
+    }
+  },
+  {
+    "n": 67,
+    "filter": "continent:Asia,color:yellow,colorCount:3",
+    "answers": [
+      "bt",
+      "mn"
+    ],
+    "description": {
+      "en": "Find all 3-colour Asian flags featuring yellow.",
+      "pl": "Znajdź wszystkie 3-kolorowe azjatyckie flagi z żółtym."
+    }
+  },
+  {
+    "n": 68,
+    "filter": "continent:Africa,colorCount:>=5",
+    "answers": [
+      "cf",
+      "gq",
+      "km",
+      "mz",
+      "na",
+      "sc",
+      "ss",
+      "sz",
+      "za",
+      "zw"
+    ],
+    "description": {
+      "en": "Find all African flags with 5 or more colours.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z 5 lub więcej kolorami."
+    }
+  },
+  {
+    "n": 69,
+    "filter": "motif:union-jack",
+    "answers": [
+      "au",
+      "fj",
+      "gb",
+      "nz",
+      "tv"
+    ],
+    "description": {
+      "en": "Find all flags with a Union Jack.",
+      "pl": "Znajdź wszystkie flagi z Union Jackiem."
+    }
+  },
+  {
+    "n": 70,
+    "filter": "continent:Oceania,color:red",
+    "answers": [
+      "au",
+      "fj",
+      "ki",
+      "nz",
+      "pg",
+      "to",
+      "tv",
+      "vu",
+      "ws"
+    ],
+    "description": {
+      "en": "Find all Oceanian flags with red.",
+      "pl": "Znajdź wszystkie oceaniczne flagi z czerwonym."
+    }
+  },
+  {
+    "n": 71,
+    "filter": "continent:North America,colorCount:4",
+    "answers": [
+      "do",
+      "gt",
+      "ht",
+      "lc",
+      "ni",
+      "sv"
+    ],
+    "description": {
+      "en": "Find all North American flags with exactly 4 colours.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi z dokładnie 4 kolorami."
+    }
+  },
+  {
+    "n": 72,
+    "filter": "continent:Africa,color:black,colorCount:3",
+    "answers": [
+      "ao",
+      "bw",
+      "mw"
+    ],
+    "description": {
+      "en": "Find all 3-colour African flags featuring black.",
+      "pl": "Znajdź wszystkie 3-kolorowe afrykańskie flagi z czernią."
+    }
+  },
+  {
+    "n": 73,
+    "filter": "continent:North America,color:green,colorCount:3",
+    "answers": [
+      "gd",
+      "jm",
+      "vc"
+    ],
+    "description": {
+      "en": "Find all 3-colour North American flags featuring green.",
+      "pl": "Znajdź wszystkie 3-kolorowe północnoamerykańskie flagi z zielonym."
+    }
+  },
+  {
+    "n": 74,
+    "filter": "color:white,color:blue,color:yellow,colorCount:3",
+    "answers": [
+      "ar",
+      "ba",
+      "nr",
+      "uy"
+    ],
+    "description": {
+      "en": "Find all flags whose only colours are white, blue and yellow — no others.",
+      "pl": "Znajdź wszystkie flagi, które mają tylko 3 kolory: biały, niebieski i żółty."
+    }
+  },
+  {
+    "n": 75,
+    "filter": "continent:Oceania,motif:star-or-moon",
+    "answers": [
+      "au",
+      "fm",
+      "ki",
+      "mh",
+      "nr",
+      "nz",
+      "pg",
+      "pw",
+      "sb",
+      "tv",
+      "ws"
+    ],
+    "description": {
+      "en": "Find all Oceanian flags with a star or moon.",
+      "pl": "Znajdź wszystkie oceaniczne flagi z gwiazdą lub księżycem."
+    }
+  },
+  {
+    "n": 76,
+    "filter": "continent:Oceania,colorCount:>=3",
+    "answers": [
+      "au",
+      "fj",
+      "ki",
+      "mh",
+      "nr",
+      "nz",
+      "pg",
+      "sb",
+      "tv",
+      "vu",
+      "ws"
+    ],
+    "description": {
+      "en": "Find all Oceanian flags with 3 or more colours.",
+      "pl": "Znajdź wszystkie oceaniczne flagi z 3 lub więcej kolorami."
+    }
+  },
+  {
+    "n": 77,
+    "filter": "continent:Africa,motif:star-or-moon,color:blue",
+    "answers": [
+      "cd",
+      "cf",
+      "cv",
+      "dj",
+      "et",
+      "km",
+      "lr",
+      "na",
+      "rw",
+      "so",
+      "ss"
+    ],
+    "description": {
+      "en": "Find all African flags with blue and a star or moon.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z niebieskim oraz gwiazdą lub księżycem."
+    }
+  },
+  {
+    "n": 78,
+    "filter": "continent:Africa,color:red,color:blue,color:yellow,colorCount:3",
+    "answers": [
+      "cd",
+      "td"
+    ],
+    "description": {
+      "en": "Find all African flags whose only colours are red, blue and yellow — no others.",
+      "pl": "Znajdź wszystkie afrykańskie flagi, które mają tylko 3 kolory: czerwony, niebieski i żółty."
+    }
+  },
+  {
+    "n": 79,
+    "filter": "motif:star-or-moon,color:red,colorCount:3",
+    "answers": [
+      "ao",
+      "au",
+      "bf",
+      "bi",
+      "cd",
+      "cl",
+      "cm",
+      "cu",
+      "dz",
+      "gd",
+      "kp",
+      "lr",
+      "mn",
+      "mr",
+      "mv",
+      "mw",
+      "np",
+      "nz",
+      "pa",
+      "sn",
+      "us",
+      "ws"
+    ],
+    "description": {
+      "en": "Find all 3-colour flags with red and a star or moon.",
+      "pl": "Znajdź wszystkie 3-kolorowe flagi z czerwonym oraz gwiazdą lub księżycem."
+    }
+  },
+  {
+    "n": 80,
+    "filter": "motif:animal,motif:!coat-of-arms",
+    "answers": [
+      "al",
+      "bt",
+      "ki",
+      "mt",
+      "pg",
+      "ug",
+      "zm",
+      "zw"
+    ],
+    "description": {
+      "en": "Find all flags with an animal but no coat of arms.",
+      "pl": "Znajdź wszystkie flagi ze zwierzęciem, ale bez godła."
+    }
+  },
+  {
+    "n": 81,
+    "filter": "motif:star-or-moon,color:green,colorCount:3",
+    "answers": [
+      "bf",
+      "bi",
+      "cm",
+      "dz",
+      "gd",
+      "mr",
+      "mv",
+      "mw",
+      "ne",
+      "rw",
+      "sn"
+    ],
+    "description": {
+      "en": "Find all 3-colour flags with green and a star or moon.",
+      "pl": "Znajdź wszystkie 3-kolorowe flagi z zielonym oraz gwiazdą lub księżycem."
+    }
+  },
+  {
+    "n": 82,
+    "filter": "motif:star-or-moon,color:blue,color:yellow,colorCount:2",
+    "answers": [
+      "kz",
+      "pw"
+    ],
+    "description": {
+      "en": "Find all flags with a star or moon whose only colours are blue and yellow — no others.",
+      "pl": "Znajdź wszystkie flagi z gwiazdą lub księżycem, które mają tylko 2 kolory: niebieski i żółty."
+    }
+  },
+  {
+    "n": 83,
+    "filter": "colorCount:5",
+    "answers": [
+      "ag",
+      "cf",
+      "ec",
+      "fj",
+      "gq",
+      "gy",
+      "km",
+      "kn",
+      "mx",
+      "mz",
+      "na",
+      "pt",
+      "py",
+      "sc",
+      "sm",
+      "sz",
+      "zw"
+    ],
+    "description": {
+      "en": "Find all flags with exactly 5 colours.",
+      "pl": "Znajdź wszystkie flagi z dokładnie 5 kolorami."
+    }
+  },
+  {
+    "n": 84,
+    "filter": "continent:Africa,color:blue,color:green,color:yellow,colorCount:3",
+    "answers": [
+      "ga",
+      "rw"
+    ],
+    "description": {
+      "en": "Find all African flags whose only colours are blue, green and yellow — no others.",
+      "pl": "Znajdź wszystkie afrykańskie flagi, które mają tylko 3 kolory: niebieski, zielony i żółty."
+    }
+  },
+  {
+    "n": 85,
+    "filter": "continent:Oceania,colorCount:2",
+    "answers": [
+      "fm",
+      "pw",
+      "to"
+    ],
+    "description": {
+      "en": "Find all Oceanian 2-colour flags.",
+      "pl": "Znajdź wszystkie 2-kolorowe oceaniczne flagi."
+    }
   }
 ]
