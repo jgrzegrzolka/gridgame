@@ -80,7 +80,12 @@
       // to wait for i18n to load first. The menu also includes the lang
       // toggle, so wireLangToggle has to run after bootFlagQuiz resolves.
       bootI18n('../').then((lang) => bootFlagQuiz().then(() => {
-        wireLangToggle(lang);
+        // Soft-reload mode keeps the running game (current question,
+        // timer, score) and the result screen intact across a language
+        // switch. bootFlagQuiz registers a `langchanged` listener that
+        // re-translates the burger menu, the in-game labels, and the
+        // result strings.
+        wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         wireBurgerDismiss();
       }));
     </script>

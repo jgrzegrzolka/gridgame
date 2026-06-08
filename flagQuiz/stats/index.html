@@ -62,18 +62,31 @@
       // Wait for i18n so renderStats can use translated variant labels and
       // the "Play" CTA without a load-order race.
       bootI18n('../../').then((lang) => {
-        wireLangToggle(lang);
+        // Soft-reload mode keeps the stats grid in place across a
+        // language switch — the langchanged listener below rebuilds
+        // the menu + stats chips with fresh translations.
+        wireLangToggle(lang, undefined, { softReload: true, base: '../../' });
         wireBurgerDismiss();
         return fetch('../../flags/countries.json')
           .then((r) => r.json())
           .then((raw) => {
             const all = flagsGamePool(raw, includeAll);
-            buildQuizMenu(document.getElementById('quiz-menu'), all, {
-              relativeBase: '../',
-              currentVariantKey: null,
-              statsCurrent: true,
-            });
+            const menuEl = document.getElementById('quiz-menu');
+            const rebuildMenu = () => {
+              menuEl.innerHTML = '';
+              buildQuizMenu(menuEl, all, {
+                relativeBase: '../',
+                currentVariantKey: null,
+                statsCurrent: true,
+              });
+            };
+            rebuildMenu();
             renderStats(raw);
+            document.addEventListener('langchanged', () => {
+              rebuildMenu();
+              statsEl.innerHTML = '';
+              renderStats(raw);
+            });
           })
           .catch((err) => {
             document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;

@@ -55,8 +55,15 @@ Foundation for every later phase.
 - `colorCountPicker` aria-labels stay in the boot-time language (only screen-reader audible; visible chip symbols `= ≥ ≤ × 2..5` don't need translation). Add a `refreshI18n` exit on `createColorCountPicker` when this becomes a real complaint.
 - Tests for the chooser's `refreshI18n` (DOM-heavy walk; would need a substantial fake document).
 
-#### Phase 3 — flagQuiz  [pending]
-21 sites. 60s mode: clock keeps running through the lang swap — that's the intended behaviour in soft mode, not a bug.
+#### Phase 3 — flagQuiz  [in progress]
+- [x] `flagQuiz/index.html` + `flagQuiz/stats/index.html`: `wireLangToggle(lang, undefined, { softReload: true, base })`.
+- [x] `flagQuiz/page.js`: `startGame` returns `{ refreshI18n() }`. Mid-round refresh re-translates the play-mode label, the mode-toggle links, and the current country prompt. Post-round refresh re-paints the result strings (Final score, Time, Your best score, "new record!") from a captured `resultLabelData` so we don't re-run `recordResult` or re-fire the celebration.
+- [x] Burger menu and first-visit picker rebuild via clear-and-reappend (`buildQuizMenu` / `buildVariantPicker`) so variant labels, "Your stats", "Buy me a coffee", and the include-territories toggle text all re-translate. Same pattern in the stats page's inline script.
+- [x] 60s mode: timer keeps running through the lang swap (intended — the budget shouldn't pause).
+- [ ] Manual smoke: start a 60s round, answer a few, switch language → mode toggle + current prompt re-translate, timer keeps counting; finish the round, switch language on result → "Final score / Your best score / Time / new record!" all re-translate.
+
+**Deferred:**
+- Mid-flash feedback text (the wrong-answer country name in `feedbackEl`) stays in the boot-time language for the ~1s window before the next render clears it. Tiny edge.
 
 #### Phase 4 — ticTacToe  [pending]
 Largest single area: 42 sites across `ticTacToe/{page,offline}.js` × `{3x3,9x9}`. Server-pushed strings (status lines on the online client) stay server-driven; only the locally-rendered strings need re-running on `langchanged`.
