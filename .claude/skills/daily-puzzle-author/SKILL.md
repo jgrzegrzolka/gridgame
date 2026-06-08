@@ -109,6 +109,7 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
 
    **Small intersections behave like small properties.** Some pairs are themselves small enough that compounding further produces contrived sets, even when both members are individually large:
    - `continent:Europe,color:black` — 5 sovereigns primary-clean (al, be, ee, de, li). Don't compound further; if you want a Europe+black puzzle, run it solo.
+   - `continent:Africa,motif:coat-of-arms` — 3 sovereigns primary-clean (eg, gq, ke). Don't compound; the "African coat-of-arms" set is also a category where the player can't reliably tell what's a coat of arms across the continent, so worldwide-COA compounds are usually a better framing.
 
    When you discover another such pair (intersection under 15 primary-clean), add it here.
 
