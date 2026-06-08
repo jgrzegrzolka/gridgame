@@ -843,6 +843,18 @@ test('pickCelebration: partial finish without a record is "confetti"', () => {
     'even a single find earns confetti — recognising the effort');
 });
 
+test('pickCelebration: prematurelyGaveUp short-circuits to "none" even when finds would otherwise celebrate', () => {
+  // Walking away from a quiz round mid-pool isn't a finish to celebrate,
+  // however many flags you got. findFlag/daily don't set this flag — there
+  // give-up IS the natural finish, so a partial-but-walked-away result
+  // still earns its confetti via the normal partial-finish branch.
+  assert.equal(pickCelebration({ found: 7, total: 10, prematurelyGaveUp: true }), 'none');
+  assert.equal(pickCelebration({ found: 10, total: 10, prematurelyGaveUp: true }), 'none',
+    'even a coincidental sweep at give-up time stays silent — the player chose to stop, not finish');
+  assert.equal(pickCelebration({ found: 7, total: 10, isNew: true, prematurelyGaveUp: true }), 'none',
+    'a record claim is moot when the player abandoned the round');
+});
+
 // pickFinalScoreLine — clean sweep collapses to "You found all"; everything
 // else keeps the fraction so the player sees what they accomplished.
 

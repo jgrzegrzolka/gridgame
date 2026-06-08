@@ -32,12 +32,13 @@ body {
   align-items: center;
   gap: 4px;
 }
-/* Mobile collapse toggle — hidden by default; the @media block below
- * shows it on narrow viewports. The whole filter bar takes 4-5 wrapped
- * rows of pills on a phone, eating most of the viewport for users who
- * usually want to scan flags first and filter later. */
+/* Collapse toggle — shown on every viewport so desktop users can also
+ * hide the filter bar (which on a busy page eats sticky vertical space
+ * once the dataset grows). The initial state differs by viewport: open
+ * on desktop, closed on mobile — set by page.js on boot. The CSS rule
+ * for hiding the groups is also viewport-agnostic (further down). */
 .filter-toggle {
-  display: none;
+  display: inline-flex;
   font: inherit;
   font-size: 13px;
   padding: 6px 12px;
@@ -48,6 +49,17 @@ body {
   cursor: pointer;
   align-items: center;
   gap: 6px;
+}
+/* Wrapper claims a full row so the toggle button doesn't share row 2
+ * with whatever pill group flows in beside it. The toggle's natural
+ * width alone isn't enough — it'd let the pills wrap in next to it.
+ * space-between pushes the toggle to the left and the Clear button
+ * (when visible) to the right. */
+.filter-toggle-row {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .filter-toggle:hover { background: #f0f0f0; }
 .filter-toggle-count {
@@ -72,10 +84,12 @@ body {
   transform: rotate(180deg);
 }
 
+/* Closed state hides every group on every viewport. page.js sets
+ * .is-open on boot when the viewport is wider than 600 px so desktop
+ * users still land on the open state by default. */
+#filter-bar:not(.is-open) .filter-groups { display: none; }
+
 @media (max-width: 600px) {
-  .filter-toggle { display: inline-flex; }
-  /* Collapse the entire group tree by default. .is-open re-shows it. */
-  #filter-bar:not(.is-open) .filter-groups { display: none; }
   /* When open on mobile, the groups stack as block-level rows so the
    * collapsed toggle stays the only thing on its row. display: contents
    * (the desktop default) doesn't allow per-row treatment. */
@@ -86,27 +100,15 @@ body {
     gap: 12px;
     margin-top: 4px;
   }
-  /* Column-flex parent: flex-basis: 100% on a child would mean height,
-   * not width — reset so the search wrap is a normal column row. */
-  .name-search-wrap {
-    flex-basis: auto;
-  }
 }
-/* Name search — sits in the filter bar so its presence affects the
- * count and clear-all just like the pills. Always on its own row at
- * the top (order: -1) so the user can search without scanning past
- * the filter groups — same on desktop and mobile, since the search
- * is a faster path than picking a pill when you know the name. */
-/* The wrapper claims its own row on desktop — flex-basis: 100% on a
- * plain div wraps reliably across browsers (the same on a replaced
- * <input> didn't). order: -1 keeps the search at the top regardless
- * of DOM order (it's the first child of .filter-groups). On mobile
- * the row-claim is dropped because .filter-groups becomes a column
- * flex when open, where flex-basis means height — see the @media
- * block further down. */
+/* Name search — sits at the top of the filter bar, OUTSIDE the
+ * collapsible groups, so it's reachable even when filters are closed.
+ * Search and filter serve different jobs: search is "take me to the
+ * thing I know the name of", filter is "narrow by category". The
+ * wrapper claims a full row via flex-basis (a plain div wraps reliably
+ * where a replaced <input> didn't). */
 .name-search-wrap {
   flex-basis: 100%;
-  order: -1;
 }
 .name-search {
   font: inherit;

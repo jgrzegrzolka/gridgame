@@ -7,12 +7,53 @@ body {
 /* First-visit category picker. Replaces the auto-started game on a
  * player's very first /flagQuiz/ visit (no ?v= URL, no saved variant).
  * After their first pick, the resulting page load sets lastVariant
- * and the picker is never shown again for that player. The inner
- * <ul class="menu"> reuses the burger-menu link styling from
- * common.css, so picker and burger always look identical — the
- * burger remains a parallel access path. */
+ * and the picker is never shown again for that player.
+ *
+ * Picker tiles diverge from the burger menu's compact text list —
+ * the picker is the landing experience, so each tile pairs a continent
+ * silhouette with the label. The burger keeps its tight text-only
+ * format because it's a navigation aid, not the centerpiece. The
+ * "identical options" contract still holds: every variant the burger
+ * lists, the picker lists. */
 .quiz-picker {
   margin-top: 32px;
+}
+.quiz-picker .menu li.picker-tile {
+  margin-bottom: 8px;
+}
+.quiz-picker .menu li.picker-tile a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background: #fff;
+  transition: background-color 120ms, border-color 120ms;
+}
+.quiz-picker .menu li.picker-tile a:hover {
+  background: #f6f6f6;
+  border-color: #ddd;
+  text-decoration: none;
+}
+.picker-tile-icon {
+  width: 36px;
+  height: 36px;
+  display: block;
+  flex-shrink: 0;
+  /* SVG mask + solid background → icon inherits the brand colour.
+   * mask-image is set inline per-tile by buildVariantPicker. */
+  background-color: var(--link-color);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+.picker-tile-label {
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .progress-bar {

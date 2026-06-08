@@ -8,12 +8,6 @@
   max-width: 360px;
 }
 .lobby[hidden] { display: none; }
-.lobby-title {
-  font-size: 22px;
-  font-weight: 500;
-  margin: 0;
-  text-align: center;
-}
 .lobby-btn {
   padding: 12px 20px;
   background: #fff;
@@ -121,6 +115,17 @@
 }
 .status-line.peer-missing { color: #c5302d; }
 .status-line.your-turn { color: var(--link-color); font-weight: 500; }
+/* Pulse on meaningful state transitions (e.g. your-turn ↔ opponents-turn).
+ * Replaces the bouncy turn-badge that used to live below the grid — now
+ * the cue happens on the same line that already names whose turn it is. */
+.status-line.pulse {
+  animation: status-pulse 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes status-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
 
 /* Online rematch lives behind a real <button> (sends a server message,
    doesn't navigate) but should read like the link-styled "Play again" on

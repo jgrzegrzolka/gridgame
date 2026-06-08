@@ -235,34 +235,47 @@ export function bootFlagsData() {
   searchWrap.className = 'name-search-wrap';
   searchWrap.appendChild(searchInput);
 
-  // Mobile-only collapse toggle. Hidden on desktop via CSS — there the filter
-  // bar is always visible. On phones the bar would dominate the viewport,
-  // so collapse it by default and reveal on tap. The badge shows how many
-  // include/exclude pills are currently active so the user knows whether
-  // filtering is happening while the panel is closed.
+  // Search sits OUTSIDE the collapsible groups so it's always reachable —
+  // search and filter are different mental models: search is "I know what
+  // I want, take me there", filter is "narrow the population to a
+  // category". Hiding search behind the toggle would put a click in front
+  // of the faster path.
+  filterBar.appendChild(searchWrap);
+
+  // Collapse toggle on every viewport. Default initial state differs:
+  //   - mobile (≤600 px): closed — the filter bar would otherwise eat
+  //     half the viewport on a phone
+  //   - desktop: open — preserves what desktop users used to get
+  //     unconditionally, so today's landing experience is unchanged.
+  // The badge shows how many include/exclude pills are currently active
+  // so the user knows whether filtering is happening while the panel is
+  // closed.
   const toggleBtn = document.createElement('button');
   toggleBtn.type = 'button';
   toggleBtn.id = 'filter-toggle';
   toggleBtn.className = 'filter-toggle';
-  toggleBtn.setAttribute('aria-expanded', 'false');
   toggleBtn.setAttribute('aria-controls', 'filter-groups');
   toggleBtn.innerHTML = `<span>${t('flagsdata.filters', 'Filters')}</span><span id="filter-toggle-count" class="filter-toggle-count" hidden></span><span class="filter-toggle-chevron" aria-hidden="true">▾</span>`;
+  const startOpen = window.matchMedia('(min-width: 601px)').matches;
+  filterBar.classList.toggle('is-open', startOpen);
+  toggleBtn.setAttribute('aria-expanded', String(startOpen));
   toggleBtn.addEventListener('click', () => {
     const open = filterBar.classList.toggle('is-open');
     toggleBtn.setAttribute('aria-expanded', String(open));
   });
-  filterBar.appendChild(toggleBtn);
+  // Wrap the toggle in a full-width row so it sits alone above the pill
+  // groups. Without this it would share row 2 with the first pill group
+  // (toggle is a natural-width inline-flex; the pills would just flow in
+  // beside it).
+  const toggleRow = document.createElement('div');
+  toggleRow.className = 'filter-toggle-row';
+  toggleRow.appendChild(toggleBtn);
+  filterBar.appendChild(toggleRow);
 
   const groupsWrap = document.createElement('div');
   groupsWrap.id = 'filter-groups';
   groupsWrap.className = 'filter-groups';
   filterBar.appendChild(groupsWrap);
-
-  // Search goes first inside the groups — order: -1 then keeps it at
-  // the top on desktop (where groupsWrap is display: contents, so the
-  // wrapper is a direct flex child of #filter-bar) and as the first
-  // column row on mobile-open (where groupsWrap is a column flex).
-  groupsWrap.appendChild(searchWrap);
 
   groupsWrap.appendChild(
     buildFilterGroup(t('flagsdata.filterStatus', 'Status'), 'status', STATUS_VALUES.map((v) => ({ value: v, label: statusLabel(v) }))),
@@ -319,7 +332,11 @@ export function bootFlagsData() {
     nameQuery = '';
     applyFilter();
   });
-  groupsWrap.appendChild(clearBtn);
+  // Clear sits on the same row as the toggle (right-aligned), not inside
+  // the collapsible groups. It only renders when at least one filter is
+  // active, so the user can reset without expanding the bar — particularly
+  // useful when filters are collapsed but the count badge says "3".
+  toggleRow.appendChild(clearBtn);
 
   fetch('../flags/countries.json')
     .then((r) => r.json())

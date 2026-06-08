@@ -157,6 +157,7 @@ export function bootFlagQuiz() {
     let wrongCount = 0;
     let answeredCount = 0;
     let gameOver = false;
+    let gaveUp = false;
     const startTime = Date.now();
     let timerRaf = 0;
 
@@ -335,6 +336,7 @@ export function bootFlagQuiz() {
           total: 0,
           isTimed: true,
           isNew,
+          prematurelyGaveUp: gaveUp,
         });
         if (tier === 'fireworks') launchFireworks();
         else if (tier === 'confetti') launchConfetti();
@@ -367,6 +369,7 @@ export function bootFlagQuiz() {
           total: target,
           isTimed: false,
           isNew,
+          prematurelyGaveUp: gaveUp,
         });
         if (tier === 'fireworks') launchFireworks();
         else if (tier === 'confetti') launchConfetti();
@@ -386,6 +389,7 @@ export function bootFlagQuiz() {
       giveUpEl.addEventListener('click', () => {
         if (gameOver) return;
         gameOver = true;
+        gaveUp = true;
         wrongCount = mistakesAfterGiveUp({ modeKey: mode, target, answeredCount, wrongCount });
         showResult();
       }, { once: true });
