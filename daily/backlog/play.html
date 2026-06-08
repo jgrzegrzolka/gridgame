@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="Play-test a staged daily puzzle — author-only." />
+    <link rel="preload" href="../../flags/countries.json?v=__BUILD__" as="fetch" type="application/json" crossorigin />
+    <link rel="preload" href="../daily_backlog.json?v=__BUILD__" as="fetch" type="application/json" crossorigin />
+    <title>Yet Another Quiz — Backlog play (preview)</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=__BUILD__" />
+    <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
+    <link rel="stylesheet" href="../../findFlag/index.css?v=__BUILD__" />
+    <link rel="stylesheet" href="../index.css?v=__BUILD__" />
+  </head>
+  <body>
+    <a class="lang-toggle" id="lang-toggle" href="#"></a>
+
+    <section id="daily-state" class="daily-state" hidden></section>
+
+    <section id="game" hidden>
+      <header class="find-header daily-header">
+        <span class="daily-n" id="daily-n"></span>
+        <span class="find-cat" id="find-cat"></span>
+        <span class="find-count" id="find-count">0 / 0</span>
+      </header>
+      <div class="find-input-wrap">
+        <input
+          type="text"
+          class="find-input"
+          id="find-input"
+          inputmode="text"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="Type a country name…"
+          data-i18n-attr="placeholder:findFlag.typeCountryName"
+        />
+        <ul class="find-suggestions" id="find-suggestions" hidden></ul>
+      </div>
+      <p class="daily-desc" id="daily-desc" hidden></p>
+      <p class="daily-note" data-i18n="daily.sovereignOnly">Sovereign countries only.</p>
+      <ul class="find-found" id="find-found"></ul>
+      <div class="give-up-row">
+        <a class="give-up" id="prev-puzzles-link" href="./">Back to backlog</a>
+        ·
+        <button type="button" class="give-up" id="give-up" data-i18n="game.giveUp">Give up</button>
+        ·
+        <a class="give-up" href="../../" data-i18n="menu.home">Home</a>
+      </div>
+    </section>
+
+    <dialog id="zoom">
+      <img alt="" />
+      <p></p>
+    </dialog>
+
+    <section id="result" hidden>
+      <p class="final-score" id="final-score-line">
+        <span id="final-score-prefix" data-i18n="findFlag.youFound">You found</span><span id="final-score-fraction"> <span id="final-found">0</span> / <span id="final-total">0</span></span>
+      </p>
+      <h2 class="result-section-title" id="found-title" hidden data-i18n="findFlag.found">Found:</h2>
+      <ul class="find-result-found" id="find-result-found"></ul>
+      <h2 class="result-section-title" id="missed-title" hidden data-i18n="findFlag.missed">Missed:</h2>
+      <ul class="find-missed" id="find-missed"></ul>
+      <p class="result-links">
+        <a id="play-again" href="#">Play again</a>
+        ·
+        <a id="result-prev-puzzles-link" href="./">Back to backlog</a>
+        ·
+        <a href="../../" data-i18n="menu.home">Home</a>
+      </p>
+    </section>
+
+    <script type="module">
+      import { bootBacklogPlay } from './play.js';
+      import { bootI18n, wireLangToggle } from '../../i18n.js';
+      bootI18n('../../').then((lang) => {
+        wireLangToggle(lang);
+        bootBacklogPlay();
+      });
+    </script>
+  </body>
+</html>

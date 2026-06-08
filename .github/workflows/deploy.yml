@@ -78,15 +78,17 @@ jobs:
         run: node scripts/cache-bust.mjs ${GITHUB_SHA}
       - name: Strip preview-only files from the artifact
         # The daily backlog (staged unreleased puzzles) is repo-only — used
-        # by tests and local preview at /daily/backlog.html, never shipped
-        # to prod. Removing the JSON makes the data itself unreachable from
-        # the deployed site; removing the page + module avoids advertising
-        # the preview URL at all. Compatible with the future scheduled
-        # release flow: that job promotes backlog[0] → live and commits,
-        # which triggers this same workflow — the backlog still gets
-        # stripped on its way out the door.
+        # by tests and local preview at /daily/backlog/, never shipped to
+        # prod. Removing the JSON makes the data itself unreachable from
+        # the deployed site; removing the whole `daily/backlog/` folder
+        # takes the index, the play page, and their JS with it so the
+        # author URLs aren't advertised either. Compatible with the
+        # scheduled release flow: that job promotes backlog[0] → live and
+        # commits, which triggers this same workflow — the backlog still
+        # gets stripped on its way out the door.
         run: |
-          rm -f daily/backlog.html daily/backlog.js daily/daily_backlog.json
+          rm -rf daily/backlog
+          rm -f daily/daily_backlog.json
       - name: Minify JS / CSS for the artifact
         # Walks every source .js / .css file (excluding tests, node_modules,
         # the PartyKit server, and the build scripts themselves) and minifies
