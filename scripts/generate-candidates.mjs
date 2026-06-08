@@ -130,26 +130,30 @@ function rule2NoRedundant(filter, answers) {
 }
 
 /**
- * Pre-compute sorted answer sets for each live + backlog entry so the
- * per-candidate rule-6 check is just O(n × m) integer comparisons
- * rather than re-sorting on every comparison.
+ * Per-candidate rule-6 check runs against this list. Seeded with live
+ * + backlog; each accepted candidate is appended too, so a fresh
+ * candidate is checked against (live ∪ backlog ∪ everything already
+ * accepted in this run). Prevents within-batch subset chains like
+ * "SA + cross + blue" ⊂ "SA + cross" ⊂ "SA" — the previous version of
+ * the script let those through because it only seeded from the catalog.
  */
-const EXISTING_SETS = [...LIVE, ...BACKLOG].map((e) => ({
-  n: e.n,
+const RULE6_GUARD = [...LIVE, ...BACKLOG].map((e) => ({
+  ref: `${e.n}`,
   filter: e.filter,
   set: new Set(e.answers),
 }));
 
 /**
  * Check rule 6: candidate's answer set must not be a strict subset or
- * strict superset of any existing live/backlog entry's answer set, and
- * must not be exactly equal either (same puzzle, different filter).
+ * strict superset of anything already in `RULE6_GUARD` (live + backlog
+ * + earlier accepted candidates in this run), and must not be exactly
+ * equal either (same puzzle, different filter).
  *
  * @param {string[]} answers
  */
 function rule6NoSubset(answers) {
   const candSet = new Set(answers);
-  for (const existing of EXISTING_SETS) {
+  for (const existing of RULE6_GUARD) {
     // Equal sets → "same puzzle, different filter" — reject as dedup.
     if (candSet.size === existing.set.size) {
       let allMatch = true;
@@ -203,10 +207,11 @@ function passesHardRules(filter, answers, parsed) {
   if (!rule2NoRedundant(filter, answers)) {
     return { ok: false, reason: 'redundant-token' };
   }
-  // Rule 6: no strict subset/superset/equal-set vs live + backlog
+  // Rule 6: no strict subset/superset/equal-set vs live + backlog +
+  // earlier accepted candidates in this run
   const r6 = rule6NoSubset(answers);
   if (!r6.ok) {
-    return { ok: false, reason: `subset-of-#${r6.conflict.n} (${r6.conflict.filter})` };
+    return { ok: false, reason: `subset-of-${r6.conflict.ref} (${r6.conflict.filter})` };
   }
   return { ok: true };
 }
@@ -260,6 +265,9 @@ function tryCandidate(filter) {
     suggestedN: slot,
   });
   USED_FILTERS.add(filter); // dedup within this run too
+  // Seed the next candidate's rule-6 check with this one — that's how
+  // within-batch subset chains get caught.
+  RULE6_GUARD.push({ ref: `cand:${filter}`, filter, set: new Set(r.answers) });
 }
 
 // T1: continent + 1 color

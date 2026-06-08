@@ -50,24 +50,6 @@
     ]
   },
   {
-    "filter": "continent:South America,motif:star-or-moon,color:blue",
-    "notes": "auto-generated • d=2.47 (mean=2.29, max=4, n=7) • suggest #25-60",
-    "answers": [
-      "ar",
-      "br",
-      "cl",
-      "ec",
-      "py",
-      "uy",
-      "ve"
-    ],
-    "difficulty": 2.47,
-    "suggestedN": [
-      25,
-      60
-    ]
-  },
-  {
     "filter": "continent:South America,motif:star-or-moon",
     "notes": "auto-generated • d=2.98 (mean=2.63, max=5, n=8) • suggest #25-60",
     "answers": [
@@ -84,28 +66,6 @@
     "suggestedN": [
       25,
       60
-    ]
-  },
-  {
-    "filter": "continent:South America,colorCount:>=3",
-    "notes": "auto-generated • d=3.09 (mean=2.82, max=5, n=11) • suggest #50-100",
-    "answers": [
-      "ar",
-      "bo",
-      "br",
-      "cl",
-      "co",
-      "ec",
-      "gy",
-      "py",
-      "sr",
-      "uy",
-      "ve"
-    ],
-    "difficulty": 3.09,
-    "suggestedN": [
-      50,
-      100
     ]
   },
   {
@@ -169,25 +129,6 @@
     ]
   },
   {
-    "filter": "continent:South America,color:red,colorCount:>=3",
-    "notes": "auto-generated • d=3.52 (mean=3.38, max=5, n=8) • suggest #50-100",
-    "answers": [
-      "bo",
-      "cl",
-      "co",
-      "ec",
-      "gy",
-      "py",
-      "sr",
-      "ve"
-    ],
-    "difficulty": 3.52,
-    "suggestedN": [
-      50,
-      100
-    ]
-  },
-  {
     "filter": "motif:cross,color:red",
     "notes": "auto-generated • d=3.52 (mean=2.87, max=6, n=15) • suggest #50-100",
     "answers": [
@@ -208,64 +149,6 @@
       "gb"
     ],
     "difficulty": 3.52,
-    "suggestedN": [
-      50,
-      100
-    ]
-  },
-  {
-    "filter": "continent:South America,motif:star-or-moon,color:red",
-    "notes": "auto-generated • d=3.54 (mean=3.40, max=5, n=5) • suggest #50-100",
-    "answers": [
-      "cl",
-      "ec",
-      "py",
-      "sr",
-      "ve"
-    ],
-    "difficulty": 3.54,
-    "suggestedN": [
-      50,
-      100
-    ]
-  },
-  {
-    "filter": "motif:cross,color:white",
-    "notes": "auto-generated • d=3.59 (mean=2.65, max=6, n=17) • suggest #50-100",
-    "answers": [
-      "au",
-      "bi",
-      "dk",
-      "dm",
-      "do",
-      "fj",
-      "fi",
-      "ge",
-      "gr",
-      "is",
-      "mt",
-      "nz",
-      "no",
-      "ch",
-      "to",
-      "tv",
-      "gb"
-    ],
-    "difficulty": 3.59,
-    "suggestedN": [
-      50,
-      100
-    ]
-  },
-  {
-    "filter": "continent:South America,motif:coat-of-arms",
-    "notes": "auto-generated • d=3.63 (mean=3.33, max=4, n=3) • suggest #50-100",
-    "answers": [
-      "bo",
-      "ec",
-      "py"
-    ],
-    "difficulty": 3.63,
     "suggestedN": [
       50,
       100
@@ -308,39 +191,6 @@
     ]
   },
   {
-    "filter": "continent:North America,motif:star-or-moon,color:blue",
-    "notes": "auto-generated • d=3.82 (mean=3.20, max=6, n=5) • suggest #50-100",
-    "answers": [
-      "ag",
-      "cu",
-      "hn",
-      "pa",
-      "us"
-    ],
-    "difficulty": 3.82,
-    "suggestedN": [
-      50,
-      100
-    ]
-  },
-  {
-    "filter": "continent:South America,color:red,colorCount:>=4",
-    "notes": "auto-generated • d=3.93 (mean=3.83, max=5, n=6) • suggest #50-100",
-    "answers": [
-      "bo",
-      "ec",
-      "gy",
-      "py",
-      "sr",
-      "ve"
-    ],
-    "difficulty": 3.93,
-    "suggestedN": [
-      50,
-      100
-    ]
-  },
-  {
     "filter": "continent:North America,motif:star-or-moon,color:white",
     "notes": "auto-generated • d=4.00 (mean=3.50, max=6, n=6) • suggest #80-150",
     "answers": [
@@ -350,21 +200,6 @@
       "pa",
       "kn",
       "us"
-    ],
-    "difficulty": 4,
-    "suggestedN": [
-      80,
-      150
-    ]
-  },
-  {
-    "filter": "continent:Oceania,motif:cross,color:blue",
-    "notes": "auto-generated • d=4.00 (mean=3.50, max=6, n=4) • suggest #80-150",
-    "answers": [
-      "au",
-      "fj",
-      "nz",
-      "tv"
     ],
     "difficulty": 4,
     "suggestedN": [
@@ -383,53 +218,6 @@
       "tj"
     ],
     "difficulty": 4.1,
-    "suggestedN": [
-      80,
-      150
-    ]
-  },
-  {
-    "filter": "continent:Oceania,motif:cross",
-    "notes": "auto-generated • d=4.20 (mean=4.00, max=6, n=5) • suggest #80-150",
-    "answers": [
-      "au",
-      "fj",
-      "nz",
-      "to",
-      "tv"
-    ],
-    "difficulty": 4.2,
-    "suggestedN": [
-      80,
-      150
-    ]
-  },
-  {
-    "filter": "continent:South America,colorCount:>=5",
-    "notes": "auto-generated • d=4.30 (mean=4.00, max=5, n=3) • suggest #80-150",
-    "answers": [
-      "ec",
-      "gy",
-      "py"
-    ],
-    "difficulty": 4.3,
-    "suggestedN": [
-      80,
-      150
-    ]
-  },
-  {
-    "filter": "continent:Oceania,motif:star-or-moon,color:red",
-    "notes": "auto-generated • d=4.30 (mean=4.00, max=6, n=6) • suggest #80-150",
-    "answers": [
-      "au",
-      "ki",
-      "nz",
-      "pg",
-      "ws",
-      "tv"
-    ],
-    "difficulty": 4.3,
     "suggestedN": [
       80,
       150
@@ -479,25 +267,6 @@
       "zw"
     ],
     "difficulty": 4.58,
-    "suggestedN": [
-      80,
-      150
-    ]
-  },
-  {
-    "filter": "continent:Oceania,color:red,colorCount:>=3",
-    "notes": "auto-generated • d=4.60 (mean=4.50, max=6, n=8) • suggest #80-150",
-    "answers": [
-      "au",
-      "fj",
-      "ki",
-      "nz",
-      "pg",
-      "ws",
-      "tv",
-      "vu"
-    ],
-    "difficulty": 4.6,
     "suggestedN": [
       80,
       150
@@ -580,89 +349,6 @@
       "tv"
     ],
     "difficulty": 4.82,
-    "suggestedN": [
-      80,
-      150
-    ]
-  },
-  {
-    "filter": "continent:Oceania,color:blue,colorCount:>=3",
-    "notes": "auto-generated • d=4.88 (mean=4.78, max=6, n=9) • suggest #80-150",
-    "answers": [
-      "au",
-      "fj",
-      "ki",
-      "mh",
-      "nr",
-      "nz",
-      "ws",
-      "sb",
-      "tv"
-    ],
-    "difficulty": 4.88,
-    "suggestedN": [
-      80,
-      150
-    ]
-  },
-  {
-    "filter": "continent:Oceania,color:white,colorCount:>=3",
-    "notes": "auto-generated • d=4.90 (mean=4.80, max=6, n=10) • suggest #80-150",
-    "answers": [
-      "au",
-      "fj",
-      "ki",
-      "mh",
-      "nr",
-      "nz",
-      "pg",
-      "ws",
-      "sb",
-      "tv"
-    ],
-    "difficulty": 4.9,
-    "suggestedN": [
-      80,
-      150
-    ]
-  },
-  {
-    "filter": "continent:Oceania,motif:star-or-moon,color:white",
-    "notes": "auto-generated • d=4.90 (mean=4.80, max=6, n=10) • suggest #80-150",
-    "answers": [
-      "au",
-      "fm",
-      "ki",
-      "mh",
-      "nr",
-      "nz",
-      "pg",
-      "ws",
-      "sb",
-      "tv"
-    ],
-    "difficulty": 4.9,
-    "suggestedN": [
-      80,
-      150
-    ]
-  },
-  {
-    "filter": "continent:Oceania,motif:star-or-moon,color:blue",
-    "notes": "auto-generated • d=4.90 (mean=4.80, max=6, n=10) • suggest #80-150",
-    "answers": [
-      "au",
-      "fm",
-      "ki",
-      "mh",
-      "nr",
-      "nz",
-      "pw",
-      "ws",
-      "sb",
-      "tv"
-    ],
-    "difficulty": 4.9,
     "suggestedN": [
       80,
       150
@@ -778,167 +464,6 @@
       "rw"
     ],
     "difficulty": 5.6,
-    "suggestedN": [
-      120,
-      200
-    ]
-  },
-  {
-    "filter": "continent:Oceania,motif:star-or-moon,color:yellow",
-    "notes": "auto-generated • d=5.77 (mean=5.67, max=6, n=6) • suggest #120-200",
-    "answers": [
-      "ki",
-      "nr",
-      "pw",
-      "pg",
-      "sb",
-      "tv"
-    ],
-    "difficulty": 5.77,
-    "suggestedN": [
-      120,
-      200
-    ]
-  },
-  {
-    "filter": "continent:Oceania,color:black",
-    "notes": "auto-generated • d=5.80 (mean=5.50, max=6, n=2) • suggest #120-200",
-    "answers": [
-      "pg",
-      "vu"
-    ],
-    "difficulty": 5.8,
-    "suggestedN": [
-      120,
-      200
-    ]
-  },
-  {
-    "filter": "continent:Oceania,colorCount:>=4",
-    "notes": "auto-generated • d=5.83 (mean=5.83, max=6, n=6) • suggest #120-200",
-    "answers": [
-      "fj",
-      "ki",
-      "pg",
-      "sb",
-      "tv",
-      "vu"
-    ],
-    "difficulty": 5.83,
-    "suggestedN": [
-      120,
-      200
-    ]
-  },
-  {
-    "filter": "color:blue,color:green,color:yellow,colorCount:3",
-    "notes": "auto-generated • d=5.83 (mean=5.33, max=6, n=3) • suggest #120-200",
-    "answers": [
-      "ga",
-      "rw",
-      "vc"
-    ],
-    "difficulty": 5.83,
-    "suggestedN": [
-      120,
-      200
-    ]
-  },
-  {
-    "filter": "continent:Oceania,color:red,colorCount:>=4",
-    "notes": "auto-generated • d=5.90 (mean=5.80, max=6, n=5) • suggest #120-200",
-    "answers": [
-      "fj",
-      "ki",
-      "pg",
-      "tv",
-      "vu"
-    ],
-    "difficulty": 5.9,
-    "suggestedN": [
-      120,
-      200
-    ]
-  },
-  {
-    "filter": "continent:Oceania,color:white,colorCount:>=4",
-    "notes": "auto-generated • d=5.90 (mean=5.80, max=6, n=5) • suggest #120-200",
-    "answers": [
-      "fj",
-      "ki",
-      "pg",
-      "sb",
-      "tv"
-    ],
-    "difficulty": 5.9,
-    "suggestedN": [
-      120,
-      200
-    ]
-  },
-  {
-    "filter": "continent:North America,motif:star-or-moon,color:black",
-    "notes": "auto-generated • d=5.90 (mean=5.50, max=6, n=2) • suggest #120-200",
-    "answers": [
-      "ag",
-      "kn"
-    ],
-    "difficulty": 5.9,
-    "suggestedN": [
-      120,
-      200
-    ]
-  },
-  {
-    "filter": "continent:Oceania,motif:animal",
-    "notes": "auto-generated • d=5.97 (mean=5.67, max=6, n=3) • suggest #120-200",
-    "answers": [
-      "fj",
-      "ki",
-      "pg"
-    ],
-    "difficulty": 5.97,
-    "suggestedN": [
-      120,
-      200
-    ]
-  },
-  {
-    "filter": "continent:Oceania,color:blue,colorCount:>=4",
-    "notes": "auto-generated • d=6.10 (mean=6.00, max=6, n=4) • suggest #120-200",
-    "answers": [
-      "fj",
-      "ki",
-      "sb",
-      "tv"
-    ],
-    "difficulty": 6.1,
-    "suggestedN": [
-      120,
-      200
-    ]
-  },
-  {
-    "filter": "continent:Oceania,motif:coat-of-arms",
-    "notes": "auto-generated • d=6.30 (mean=6.00, max=6, n=2) • suggest #120-200",
-    "answers": [
-      "fj",
-      "vu"
-    ],
-    "difficulty": 6.3,
-    "suggestedN": [
-      120,
-      200
-    ]
-  },
-  {
-    "filter": "continent:Oceania,motif:animal,color:blue",
-    "notes": "auto-generated • d=6.40 (mean=6.00, max=6, n=2) • suggest #120-200",
-    "answers": [
-      "fj",
-      "ki"
-    ],
-    "difficulty": 6.4,
     "suggestedN": [
       120,
       200
