@@ -40,9 +40,11 @@ Foundation for every later phase.
 - [ ] Manual smoke: open `/daily/`, type 3 guesses, switch language → picks + input text + scroll survive, hover labels in new language, suggestion matcher accepts both languages.
 
 **Deferred (noted explicitly so we don't lose them):**
-- Tests for `refreshTileNames` (DOM walk + WeakMap lookup). Low-risk function but pinning the data-name/img.alt contract would be nice. Worth adding when Phase 2 needs to lift the helper out of `playFlow.js`.
 - Tests for the soft-mode fetch-failure → `window.location.reload()` fallback in `wireLangToggle`. Edge case (network drop mid-toggle); the code path is one line.
-- Lift `attachLangRefresh` + `computeLangRefreshPayload` out of `daily/playFlow.js` once Phase 2 needs them. Per CLAUDE.md "promote when the second consumer arrives."
+
+**Resolved:**
+- ~~Tests for `refreshTileNames`~~ — landed in Phase 2 (`langRefresh.test.js` covers registered tile rename, unregistered passthrough, missing-translation fallback).
+- ~~Lift `attachLangRefresh` + `computeLangRefreshPayload`~~ — landed in Phase 2 (`langRefresh.js`).
 
 #### Phase 2 — findFlag  [in progress]
 - [x] Lift `computeLangRefreshPayload` + the tile-name refresh (`bindTileCountry` / `refreshTileNames` over a module-private `WeakMap<HTMLElement, Country>`) out of `daily/playFlow.js` into the new shared `langRefresh.js`. Tests moved to `langRefresh.test.js` and gained coverage for `bindTileCountry` / `refreshTileNames` (registered tile renames, unregistered tile passthrough, missing-translation fallback).
@@ -52,8 +54,10 @@ Foundation for every later phase.
 - [ ] Manual smoke: open `/findFlag/`, pick 2 pills, switch language → pill labels re-translate, selections intact; start a game, type 2 guesses, switch language → input + tiles + suggestion matcher all carry over to the new language.
 
 **Deferred:**
-- `colorCountPicker` aria-labels stay in the boot-time language (only screen-reader audible; visible chip symbols `= ≥ ≤ × 2..5` don't need translation). Add a `refreshI18n` exit on `createColorCountPicker` when this becomes a real complaint.
 - Tests for the chooser's `refreshI18n` (DOM-heavy walk; would need a substantial fake document).
+
+**Resolved:**
+- ~~`colorCountPicker` aria-labels~~ — `createColorCountPicker` now sets `data-i18n-attr` on the pill + clear button so `applyStringsToDocument` re-translates them upstream. Applies to both findFlag chooser and flagsdata filter bar.
 
 #### Phase 3 — flagQuiz  [in progress]
 - [x] `flagQuiz/index.html` + `flagQuiz/stats/index.html`: `wireLangToggle(lang, undefined, { softReload: true, base })`.
@@ -83,9 +87,11 @@ Foundation for every later phase.
 - [ ] Manual smoke: open `/flagsdata/`, activate 3 pill filters + a colour-count + name search, switch language → pill labels + section titles + search placeholder + Clear + count badge all re-translate; selections and result tiles intact.
 
 **Deferred:**
-- `colorCountPicker` aria-labels still stale in this page (same module Phase 2 deferred; lift would apply to findFlag + flagsdata at once).
 - Catch-path error messages (`document.getElementById('sections').textContent = '...'`) replace the page body once; no soft refresh.
 - Author-only backlog/ideas browse pages keep their "Backlog is empty." / "No ideas yet." in English (unchanged convention; no prior `t()` call).
+
+**Resolved:**
+- ~~`colorCountPicker` aria-labels~~ — fixed at the picker module (see Phase 2 resolved list).
 
 ---
 
