@@ -161,6 +161,40 @@ The small-property list in rule 10 is derived from `flags/countries.json`. If yo
 
 E.g. we add `primaryMotifs` and rule 10 becomes a test. Update this SKILL.md AND the test in the same change.
 
+## Batch generation
+
+Pump candidates into `daily/daily_ideas.json` for author review before they're promoted to backlog with handwritten descriptions.
+
+Prompt: **"generate N candidates"** (with optional qualifiers). Examples:
+
+- `"generate 100 candidates"` — default broad sweep across all templates and mechanics
+- `"generate 30 targeting #100+"` — harder tier, ignores early-N nameScore caps
+- `"generate 20 exploiting `colorCount:>=N`"` — focused on one mechanic
+- `"fill the backlog to #200"` — compute how many needed, generate that many
+
+Tool: `node scripts/generate-candidates.mjs`. The script enumerates filter templates (continent×color, continent×motif, `colorCount:N` and `colorCount:>=N` combos, exclude patterns), validates each against the hard rules + the size band of rule 9, scores with `daily/difficulty.js`, and writes survivors as `{ filter, notes, answers, difficulty, suggestedN }` entries **appended** to `daily/daily_ideas.json` — existing entries (including the parked `parkUntilN: 101` ones) stay at the top of the file.
+
+**What the script checks programmatically** (no manual review needed):
+- Rule 1: filter parses + non-empty answer set
+- Rule 2: no redundant filter tokens
+- Rule 3: every answer is a sovereign code
+- Rule 5: primary-clean
+- Rule 9: answer set size in [2, 30]
+- Rule 14: no single-use token reuse
+- Dedup: filter string not already in the catalog or ideas
+
+**What the author still decides at promote time** (when moving from ideas → backlog):
+- Rule 4: numbering — `n` is assigned at promote, not generation
+- Rule 6: no strict-subset relationships — depends on the chosen `n` slot
+- Rule 7: en/pl descriptions — hand-written per puzzle
+- Rule 8: nameScore caps by N — `suggestedN` is advisory only
+- Rule 10: small-property compounds — script avoids by template choice
+- Rule 11: country-reuse cap — checked across the whole catalog at promote
+- Rule 12: #1 is pinned
+- Rule 13: continent variety in onboarding
+
+After generation: open `/daily/ideas/` to play-test the most interesting ones, then promote selected entries to `daily_backlog.json` with handwritten descriptions and a chosen `n`.
+
 ## When a new mechanic ships
 
 When a new filter primitive lands (new DSL token like `colorCount:<=N`, a new motif/colour tag, a continent split, a new statehood category, etc.), the catalog needs a sweep — append-only doesn't give the new style enough early exposure, and existing entries may become rewritable into a cleaner form.
