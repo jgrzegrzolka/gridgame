@@ -6,8 +6,9 @@ import {
   wireZoom,
   showState,
   paintDescription,
-  reasonMessage,
   startGame,
+  attachLangRefresh,
+  showReason,
 } from '../playFlow.js';
 
 /** @typedef {import('../../flags/daily.js').DailyPuzzle} DailyPuzzle */
@@ -50,33 +51,23 @@ export function bootBacklogPlay() {
 
       const entry = findPuzzle(catalog, n);
       if (!entry) {
-        showState(reasonMessage('not-found'));
-        document.addEventListener('langchanged', () => {
-          showState(reasonMessage('not-found'));
-        });
+        showReason('not-found');
         return;
       }
       const result = resolvePuzzleEntry(entry, all);
       if (result.ok === false) {
-        const reason = result.reason;
-        showState(reasonMessage(reason));
-        document.addEventListener('langchanged', () => {
-          showState(reasonMessage(reason));
-        });
+        showReason(result.reason);
         return;
       }
 
       paintDescription(result.entry.description);
       const category = filterToCategory(result.filter, t);
       const game = startGame(n, category, result.targets, all, { skipSave: true });
-
-      document.addEventListener('langchanged', () => {
-        paintDescription(result.entry.description);
-        const newAll = withLocalizedAliases(flagsGamePool(raw, false));
-        const targetCodeSet = new Set(result.targets.map((c) => c.code));
-        const newTargets = newAll.filter((c) => targetCodeSet.has(c.code));
-        const newLabel = filterToCategory(result.filter, t).label;
-        game.refreshI18n({ all: newAll, targets: newTargets, label: newLabel });
+      attachLangRefresh(game, {
+        raw,
+        targets: result.targets,
+        filter: result.filter,
+        description: result.entry.description,
       });
     })
     .catch((err) => {

@@ -5,8 +5,9 @@ import { t, withLocalizedAliases } from '../../i18n.js';
 import {
   wireZoom,
   showState,
-  reasonMessage,
   startGame,
+  attachLangRefresh,
+  showReason,
 } from '../playFlow.js';
 
 /**
@@ -63,40 +64,25 @@ export function bootIdeasPlay() {
 
       const idea = ideas[k - 1];
       if (!idea) {
-        showState(reasonMessage('not-found'));
-        document.addEventListener('langchanged', () => {
-          showState(reasonMessage('not-found'));
-        });
+        showReason('not-found');
         return;
       }
       const filter = parseFilterString(idea.filter);
       if (!filter) {
-        showState(reasonMessage('invalid-filter'));
-        document.addEventListener('langchanged', () => {
-          showState(reasonMessage('invalid-filter'));
-        });
+        showReason('invalid-filter');
         return;
       }
       const targets = all.filter((c) => matchesFilters(c, filter));
       if (targets.length === 0) {
-        showState(reasonMessage('no-targets'));
-        document.addEventListener('langchanged', () => {
-          showState(reasonMessage('no-targets'));
-        });
+        showReason('no-targets');
         return;
       }
 
       const category = filterToCategory(filter, t);
       const game = startGame(k, category, targets, all, { skipSave: true });
-
-      document.addEventListener('langchanged', () => {
-        // Ideas have no description; nothing extra to repaint.
-        const newAll = withLocalizedAliases(flagsGamePool(raw, false));
-        const targetCodeSet = new Set(targets.map((c) => c.code));
-        const newTargets = newAll.filter((c) => targetCodeSet.has(c.code));
-        const newLabel = filterToCategory(filter, t).label;
-        game.refreshI18n({ all: newAll, targets: newTargets, label: newLabel });
-      });
+      // Ideas have no description; omit it from the deps so the
+      // helper skips the paintDescription branch on each langchange.
+      attachLangRefresh(game, { raw, targets, filter });
     })
     .catch((err) => {
       showState(`${t('game.failedToLoad', 'Failed to load:')} ${err.message}`);

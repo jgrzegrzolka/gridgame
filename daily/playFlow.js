@@ -27,13 +27,15 @@
  */
 
 import { suggest, exactSingleMatch } from '../flags/engine.js';
-import { findPool, classifyGuess } from '../flags/findFlag.js';
+import { findPool, classifyGuess, filterToCategory } from '../flags/findFlag.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
-import { t, countryName } from '../i18n.js';
+import { flagsGamePool } from '../flags/group.js';
+import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { saveScore } from './scores.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
+/** @typedef {import('../flags/flagsFilter.js').Filters} Filters */
 
 // Each `.find-tile` is built once and rendered with the country's display
 // name baked into `dataset.name` (for the CSS hover label) and the inner
@@ -45,6 +47,74 @@ import { saveScore } from './scores.js';
 // garbage-collected normally.
 /** @type {WeakMap<HTMLElement, Country>} */
 const tileCountries = new WeakMap();
+
+/**
+ * Pure half of the soft-language-switch payload: re-runs
+ * `withLocalizedAliases` so the suggestion matcher accepts the new
+ * language's aliases, then derives the puzzle's targets in the new
+ * country list by matching on `code` (the only stable identity across
+ * a re-alias pass) and re-computes the category label via
+ * `filterToCategory`.
+ *
+ * Exported separately from the DOM-glue `attachLangRefresh` so a unit
+ * test can exercise the "matcher gets new aliases, targets stay
+ * pinned to their codes" contract without standing up a document.
+ *
+ * @param {{ raw: any[], targetCodes: Set<string>, filter: Filters }} deps
+ * @returns {{ all: Country[], targets: Country[], label: string }}
+ */
+export function computeLangRefreshPayload({ raw, targetCodes, filter }) {
+  const all = withLocalizedAliases(flagsGamePool(raw, false));
+  const targets = all.filter((c) => targetCodes.has(c.code));
+  const label = filterToCategory(filter, t).label;
+  return { all, targets, label };
+}
+
+/**
+ * Wire the game handle returned by `startGame` to soft language
+ * switches. On each `langchanged` event: re-paint the description
+ * (if the page has one), recompute the localized country list +
+ * targets + category label via `computeLangRefreshPayload`, and hand
+ * the result to `game.refreshI18n`. Returns the listener function so
+ * a future caller (or test) can `removeEventListener` it.
+ *
+ * Three pages were copy-pasting this block; consolidating it here
+ * keeps the live daily and the author preview pages in lockstep so a
+ * fix to one is a fix to all.
+ *
+ * @param {{ refreshI18n: (next: { all: Country[], targets: Country[], label: string }) => void }} game
+ * @param {{ raw: any[], targets: Country[], filter: Filters, description?: Record<string, string> }} deps
+ * @returns {() => void}
+ */
+export function attachLangRefresh(game, { raw, targets, filter, description }) {
+  // Pre-compute the code set once — the targets array doesn't change
+  // for the lifetime of a round, only the Country objects backing
+  // their entries do (when withLocalizedAliases produces a fresh array
+  // with new aliases). Pinning on codes lets us re-find the same
+  // logical targets in the new array.
+  const targetCodes = new Set(targets.map((c) => c.code));
+  const listener = () => {
+    if (description !== undefined) paintDescription(description);
+    game.refreshI18n(computeLangRefreshPayload({ raw, targetCodes, filter }));
+  };
+  document.addEventListener('langchanged', listener);
+  return listener;
+}
+
+/**
+ * Render a state-screen message (e.g. "Puzzle not found.") and keep it
+ * in the active language across a soft language switch by re-rendering
+ * on `langchanged`. The error / not-found branches across daily,
+ * backlog, and ideas all need this — wrapping it once removes six
+ * copies of the same listener-on-langchanged boilerplate.
+ *
+ * @param {'not-found' | 'invalid-filter' | 'no-targets'} reason
+ */
+export function showReason(reason) {
+  const paint = () => showState(reasonMessage(reason));
+  paint();
+  document.addEventListener('langchanged', paint);
+}
 
 /**
  * Walk every `.find-tile` currently in the document and re-apply the

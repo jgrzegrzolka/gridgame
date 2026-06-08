@@ -35,8 +35,14 @@ Foundation for every later phase.
 #### Phase 1 — daily quiz  [in PR #263]  ← *user-stated priority*
 - [x] Flip `daily/index.html`, `daily/backlog/play.html`, `daily/ideas/play.html` to `wireLangToggle(lang, undefined, { softReload: true, base })`. Browse-only daily pages (archive, backlog/ideas index) intentionally stay on hard reload — no game state to preserve there.
 - [x] `playFlow.js` returns a `{ refreshI18n({ all, targets, label }) }` handle. Tile display names are kept fresh via a module-level `WeakMap<HTMLElement, Country>` + a `refreshTileNames` walk that hits both in-game found and result-screen found/missed lists.
-- [x] `daily/page.js`, `daily/backlog/play.js`, `daily/ideas/play.js` each register a `langchanged` listener that re-paints description (where applicable), re-runs `withLocalizedAliases(flagsGamePool(raw, false))` against the cached raw country list, re-derives targets, recomputes the category label via `filterToCategory`, and calls `game.refreshI18n`. Revisit / error branches register their own listeners so static state-screen messages stay in sync too.
+- [x] Extract `attachLangRefresh(game, deps)` + `showReason(reason)` into `playFlow.js` so the three play pages (and six error branches) call shared helpers instead of copying listener boilerplate.
+- [x] Extract `computeLangRefreshPayload({ raw, targetCodes, filter })` as the pure half, with unit tests in `daily/playFlow.test.js` pinning the matcher-gets-new-aliases + targets-resolve-by-code + label-re-translates contracts.
 - [ ] Manual smoke: open `/daily/`, type 3 guesses, switch language → picks + input text + scroll survive, hover labels in new language, suggestion matcher accepts both languages.
+
+**Deferred (noted explicitly so we don't lose them):**
+- Tests for `refreshTileNames` (DOM walk + WeakMap lookup). Low-risk function but pinning the data-name/img.alt contract would be nice. Worth adding when Phase 2 needs to lift the helper out of `playFlow.js`.
+- Tests for the soft-mode fetch-failure → `window.location.reload()` fallback in `wireLangToggle`. Edge case (network drop mid-toggle); the code path is one line.
+- Lift `attachLangRefresh` + `computeLangRefreshPayload` out of `daily/playFlow.js` once Phase 2 needs them. Per CLAUDE.md "promote when the second consumer arrives."
 
 #### Phase 2 — findFlag  [pending]
 Same shape as daily, smaller surface (6 sites). Mostly a copy of phase 1's pattern.

@@ -1,15 +1,16 @@
-import { flagsGamePool, loadCountries } from '../flags/group.js';
-import { filterToCategory } from '../flags/findFlag.js';
+import { loadCountries, flagsGamePool } from '../flags/group.js';
 import { t, withLocalizedAliases } from '../i18n.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
 import { loadScores, isCompleteRecord } from './scores.js';
+import { filterToCategory } from '../flags/findFlag.js';
 import {
   wireZoom,
   showState,
   paintDescription,
-  reasonMessage,
   renderResult,
   startGame,
+  attachLangRefresh,
+  showReason,
 } from './playFlow.js';
 
 /**
@@ -53,14 +54,7 @@ export function bootDaily() {
 
       const result = resolveDailyPuzzle(catalog, all, n);
       if (result.ok === false) {
-        const reason = result.reason;
-        showState(reasonMessage(reason));
-        // Stay reactive to soft language switches even on the error
-        // branch — otherwise "Puzzle not found." would freeze in the
-        // language it was rendered in.
-        document.addEventListener('langchanged', () => {
-          showState(reasonMessage(reason));
-        });
+        showReason(result.reason);
         return;
       }
 
@@ -86,18 +80,11 @@ export function bootDaily() {
 
       const category = filterToCategory(result.filter, t);
       const game = startGame(n, category, result.targets, all, { skipSave: isReplay });
-
-      // Soft language switch: re-paint description, re-run
-      // `withLocalizedAliases` so the suggestion matcher accepts the
-      // new language, re-resolve targets against the freshly-aliased
-      // country list, and hand the new data to the running game.
-      document.addEventListener('langchanged', () => {
-        paintDescription(result.entry.description);
-        const newAll = withLocalizedAliases(flagsGamePool(raw, false));
-        const targetCodeSet = new Set(result.targets.map((c) => c.code));
-        const newTargets = newAll.filter((c) => targetCodeSet.has(c.code));
-        const newLabel = filterToCategory(result.filter, t).label;
-        game.refreshI18n({ all: newAll, targets: newTargets, label: newLabel });
+      attachLangRefresh(game, {
+        raw,
+        targets: result.targets,
+        filter: result.filter,
+        description: result.entry.description,
       });
     })
     .catch((err) => {
