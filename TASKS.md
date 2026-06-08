@@ -75,9 +75,11 @@ Foundation for every later phase.
 - [x] Online pages introduce `setStatusKey(key, fallback, params)` for transient status (connecting / connection-error / disconnected-reconnecting) plus a `repaintStatusForLang` closure tracker so renderStatus (state-derived) re-installs itself while transient paints replay their stored key + template params.
 
 **Deferred (in TASKS.md so not lost):**
-- `state.statusOverride` rejection strings are translated at reducer time and stored already-translated, so a lang flip after a rejection leaves the lobby error stale. Fix would require returning `{ key, fallback }` from the reducer and translating at paint time — touches `ticTacToe/onlineClient.js` + `ticTacToe/9x9/onlineClient.js`.
-- `showError(t('ttt.codeMustBe5'))` on the join form leaves the validation message stale across a lang flip while the user is still on the lobby. Small edge.
 - The four page.js files duplicate near-identical `paintFinalScore` + `refreshI18nForGame` + `setStatusKey` + `repaintStatusForLang` shapes. The 3×3 / 9×9 split predates this work; a future refactor could lift the shared bits into a `ticTacToe/sharedClient.js`.
+
+**Resolved:**
+- ~~`state.statusOverride` rejection strings stay stale~~ — both reducers (`ticTacToe/onlineClient.js` + `ticTacToe/9x9/onlineClient.js`) now return `{ key, fallback, params? }` instead of a translated string. The page translates at paint time via `setStatusKey`, so a soft lang flip re-translates rejection messages live.
+- ~~`showError(t('ttt.codeMustBe5'))` validation stays stale~~ — `showError` now takes `(key, fallback, params?)`, stashes them in a closure, and re-paints from `paintError()` which is wired into `refreshI18nForGame` so visible lobby errors re-translate on each lang flip.
 
 #### Phase 5 — flagsdata + archive/ideas/backlog + root  [in progress]
 - [x] `langRefresh.js` `refreshTileNames` now also walks `.flag` (flagsdata's browse tiles). Single contract covers daily / findFlag / flagsdata tile-hover labels.
