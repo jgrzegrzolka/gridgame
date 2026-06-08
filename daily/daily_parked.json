@@ -22,5 +22,13 @@
   {
     "filter": "continent:!Oceania,color:orange",
     "notes": "9 flags: am, bt, cy, ci, in, ie, ne, lk, zm. Primary-clean ✓. The !Oceania exclusion only drops Marshall Islands (mh, ns=6) — essentially 'orange flags worldwide minus the obscure one'. Strict-superset of #17 (OWG only-3 → cy,ci,ie,ne); refined rule allows since filter isn't a refinement. But color:orange is single-use (rule 14) and already used in backlog #18 — this puzzle can't ship. Past-#100 recall candidate."
+  },
+  {
+    "filter": "continent:!Africa,motif:hoist-triangle",
+    "notes": "9 non-African flags whose design features a triangle based on the hoist with apex pointing toward the fly: jo, ph, ps, tl, cz, bs, jm, gy, vu. (Jamaica is the structural odd one out — a saltire with four triangles converging on the centre rather than a single hoist triangle; included on author intent because all four triangles point centre-ward.) Needs a NEW filter primitive — there's no `motif:hoist-triangle` tag today, so `parseFilterString` rejects this filter outright. Requires either (a) adding `hoist-triangle` to ALL_MOTIFS + tagging the 18 sovereigns across both regions, or (b) a richer geometry DSL. Past-#100 hard puzzle (mean nm≈3.6; Vanuatu at nm=6 is the outlier). Pair with the Africa entry below."
+  },
+  {
+    "filter": "continent:Africa,motif:hoist-triangle",
+    "notes": "9 African flags with the same hoist-triangle motif: km, dj, gq, er, mz, st, ss, sd, zw. Mean nm≈4.8 (three nm=6: Comoros, Djibouti, Equatorial Guinea) — categorically harder than the non-Africa pair and definitively a past-#100 puzzle. Same future-DSL dependency as the non-Africa entry above (no `motif:hoist-triangle` tag today). Author intent: ship the non-Africa version first as a stepping stone; this one rewards players who've internalised the African flag palette."
   }
 ]
