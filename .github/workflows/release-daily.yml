@@ -15,13 +15,17 @@ name: Release next daily puzzle
 #
 # Current design:
 #
-# * **Multiple cron firings** spread across the Warsaw night/morning
-#   (22:00, 01:00, 04:00, 08:00 UTC) — a single skip is no longer
-#   fatal.
+# * **Tight burst of firings** — every 5 min for the first 30 min
+#   after Warsaw midnight (7 attempts). Both DST states covered:
+#   22:00 UTC = Warsaw midnight in summer (UTC+2), 23:00 UTC =
+#   Warsaw midnight in winter (UTC+1). 7 + 7 = 14 firings/night
+#   total, but only one corresponds to the current DST state and
+#   most are absorbed by the dedup guard.
 # * **"Already released today" guard** — instead of checking the
 #   wallclock hour, we ask "has a `daily: release #` commit landed
 #   today in Warsaw time?". If yes, skip; if no, proceed. Removes the
-#   dependency on cron firing punctually.
+#   dependency on cron firing punctually — late firings still proceed
+#   as long as today hasn't released yet.
 #
 # Net effect: the first firing of the Warsaw day wins; later firings
 # observe "already released" and bail. If the first is skipped, the
@@ -30,10 +34,10 @@ name: Release next daily puzzle
 
 on:
   schedule:
-    - cron: '0 22 * * *'  # 00:00 Warsaw summer / 23:00 Warsaw winter
-    - cron: '0 1 * * *'   # 03:00 Warsaw summer / 02:00 Warsaw winter
-    - cron: '0 4 * * *'   # 06:00 Warsaw summer / 05:00 Warsaw winter
-    - cron: '0 8 * * *'   # 10:00 Warsaw summer / 09:00 Warsaw winter
+    # Warsaw midnight in summer (UTC+2): every 5 min for first 30 min
+    - cron: '0,5,10,15,20,25,30 22 * * *'
+    # Warsaw midnight in winter (UTC+1): every 5 min for first 30 min
+    - cron: '0,5,10,15,20,25,30 23 * * *'
   workflow_dispatch:
 
 permissions:
