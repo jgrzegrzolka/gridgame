@@ -1,10 +1,5 @@
 [
   {
-    "filter": "color:blue,color:!white,motif:cross",
-    "notes": "Sweden alone (se) — strict-subset of #1 (Europe·cross which includes se). Rule 6 blocks until past #100; would work as recall at #101+.",
-    "parkUntilN": 101
-  },
-  {
     "filter": "continent:Asia,motif:cross",
     "notes": "Georgia alone (ge) — strict-subset of #46 (Asia red+white only-2 which includes ge). Rule 6 blocks until past #100; would work as recall at #101+.",
     "parkUntilN": 101
@@ -467,6 +462,401 @@
     "suggestedN": [
       120,
       200
+    ]
+  },
+  {
+    "filter": "motif:cross,colorCount:3",
+    "notes": "auto-generated • d=2.52 (mean=1.88, max=5, n=8) • suggest #25-60",
+    "answers": [
+      "au",
+      "bi",
+      "is",
+      "jm",
+      "mt",
+      "nz",
+      "no",
+      "gb"
+    ],
+    "difficulty": 2.52,
+    "suggestedN": [
+      25,
+      60
+    ]
+  },
+  {
+    "filter": "motif:animal,colorCount:3",
+    "notes": "auto-generated • d=2.63 (mean=2.33, max=3, n=3) • suggest #25-60",
+    "answers": [
+      "ad",
+      "bt",
+      "mt"
+    ],
+    "difficulty": 2.63,
+    "suggestedN": [
+      25,
+      60
+    ]
+  },
+  {
+    "filter": "motif:animal,colorCount:2",
+    "notes": "auto-generated • d=2.80 (mean=2.50, max=3, n=2) • suggest #25-60",
+    "answers": [
+      "al",
+      "kz"
+    ],
+    "difficulty": 2.8,
+    "suggestedN": [
+      25,
+      60
+    ]
+  },
+  {
+    "filter": "motif:coat-of-arms,colorCount:2",
+    "notes": "auto-generated • d=2.80 (mean=2.50, max=3, n=2) • suggest #25-60",
+    "answers": [
+      "kz",
+      "sa"
+    ],
+    "difficulty": 2.8,
+    "suggestedN": [
+      25,
+      60
+    ]
+  },
+  {
+    "filter": "motif:cross,colorCount:2",
+    "notes": "auto-generated • d=2.91 (mean=1.86, max=6, n=7) • suggest #25-60",
+    "answers": [
+      "dk",
+      "fi",
+      "ge",
+      "gr",
+      "se",
+      "ch",
+      "to"
+    ],
+    "difficulty": 2.91,
+    "suggestedN": [
+      25,
+      60
+    ]
+  },
+  {
+    "filter": "motif:coat-of-arms,colorCount:3",
+    "notes": "auto-generated • d=3.20 (mean=3.00, max=5, n=6) • suggest #50-100",
+    "answers": [
+      "ad",
+      "kh",
+      "ir",
+      "mn",
+      "sk",
+      "va"
+    ],
+    "difficulty": 3.2,
+    "suggestedN": [
+      50,
+      100
+    ]
+  },
+  {
+    "filter": "motif:animal,colorCount:4",
+    "notes": "auto-generated • d=3.90 (mean=3.50, max=6, n=12) • suggest #50-100",
+    "answers": [
+      "bo",
+      "eg",
+      "gt",
+      "ki",
+      "md",
+      "me",
+      "pg",
+      "rs",
+      "es",
+      "lk",
+      "ug",
+      "zm"
+    ],
+    "difficulty": 3.9,
+    "suggestedN": [
+      50,
+      100
+    ]
+  },
+  {
+    "filter": "motif:star-or-moon,color:red,color:white,colorCount:2",
+    "notes": "auto-generated • d=1.70 (mean=1.50, max=3, n=4) • suggest #10-40",
+    "answers": [
+      "jp",
+      "sg",
+      "tn",
+      "tr"
+    ],
+    "difficulty": 1.7,
+    "suggestedN": [
+      10,
+      40
+    ]
+  },
+  {
+    "filter": "continent:Africa,colorCount:2",
+    "notes": "auto-generated • d=1.75 (mean=1.75, max=3, n=4) • suggest #10-40",
+    "answers": [
+      "ma",
+      "ng",
+      "so",
+      "tn"
+    ],
+    "difficulty": 1.75,
+    "suggestedN": [
+      10,
+      40
+    ]
+  },
+  {
+    "filter": "continent:South America,colorCount:3",
+    "notes": "auto-generated • d=1.75 (mean=1.75, max=2, n=4) • suggest #10-40",
+    "answers": [
+      "ar",
+      "cl",
+      "co",
+      "uy"
+    ],
+    "difficulty": 1.75,
+    "suggestedN": [
+      10,
+      40
+    ]
+  },
+  {
+    "filter": "color:black,colorCount:2",
+    "notes": "auto-generated • d=2.30 (mean=2.00, max=2, n=2) • suggest #25-60",
+    "answers": [
+      "af",
+      "al"
+    ],
+    "difficulty": 2.3,
+    "suggestedN": [
+      25,
+      60
+    ]
+  },
+  {
+    "filter": "continent:Asia,color:green,colorCount:2",
+    "notes": "auto-generated • d=3.07 (mean=2.67, max=3, n=3) • suggest #50-100",
+    "answers": [
+      "bd",
+      "pk",
+      "sa"
+    ],
+    "difficulty": 3.07,
+    "suggestedN": [
+      50,
+      100
+    ]
+  },
+  {
+    "filter": "motif:coat-of-arms,motif:star-or-moon",
+    "notes": "auto-generated • d=3.37 (mean=3.29, max=5, n=7) • suggest #50-100",
+    "answers": [
+      "hr",
+      "ec",
+      "kz",
+      "mn",
+      "py",
+      "si",
+      "tj"
+    ],
+    "difficulty": 3.37,
+    "suggestedN": [
+      50,
+      100
+    ]
+  },
+  {
+    "filter": "continent:North America,colorCount:2",
+    "notes": "auto-generated • d=3.50 (mean=3.00, max=5, n=2) • suggest #50-100",
+    "answers": [
+      "ca",
+      "hn"
+    ],
+    "difficulty": 3.5,
+    "suggestedN": [
+      50,
+      100
+    ]
+  },
+  {
+    "filter": "continent:Africa,color:white,color:!green",
+    "notes": "auto-generated • d=4.15 (mean=3.75, max=6, n=8) • suggest #80-150",
+    "answers": [
+      "bw",
+      "cv",
+      "eg",
+      "sz",
+      "lr",
+      "so",
+      "tn",
+      "ug"
+    ],
+    "difficulty": 4.15,
+    "suggestedN": [
+      80,
+      150
+    ]
+  },
+  {
+    "filter": "continent:Asia,color:yellow,colorCount:3",
+    "notes": "auto-generated • d=4.40 (mean=4.00, max=5, n=2) • suggest #80-150",
+    "answers": [
+      "bt",
+      "mn"
+    ],
+    "difficulty": 4.4,
+    "suggestedN": [
+      80,
+      150
+    ]
+  },
+  {
+    "filter": "motif:animal,motif:star-or-moon",
+    "notes": "auto-generated • d=4.44 (mean=4.40, max=6, n=5) • suggest #80-150",
+    "answers": [
+      "ec",
+      "kz",
+      "ki",
+      "pg",
+      "zw"
+    ],
+    "difficulty": 4.44,
+    "suggestedN": [
+      80,
+      150
+    ]
+  },
+  {
+    "filter": "motif:star-or-moon,color:blue,color:yellow,colorCount:2",
+    "notes": "auto-generated • d=4.50 (mean=4.00, max=5, n=2) • suggest #80-150",
+    "answers": [
+      "kz",
+      "pw"
+    ],
+    "difficulty": 4.5,
+    "suggestedN": [
+      80,
+      150
+    ]
+  },
+  {
+    "filter": "continent:North America,colorCount:4",
+    "notes": "auto-generated • d=4.67 (mean=4.67, max=5, n=6) • suggest #80-150",
+    "answers": [
+      "do",
+      "sv",
+      "gt",
+      "ht",
+      "ni",
+      "lc"
+    ],
+    "difficulty": 4.67,
+    "suggestedN": [
+      80,
+      150
+    ]
+  },
+  {
+    "filter": "continent:Africa,color:black,colorCount:3",
+    "notes": "auto-generated • d=4.73 (mean=4.33, max=5, n=3) • suggest #80-150",
+    "answers": [
+      "ao",
+      "bw",
+      "mw"
+    ],
+    "difficulty": 4.73,
+    "suggestedN": [
+      80,
+      150
+    ]
+  },
+  {
+    "filter": "continent:North America,color:green,colorCount:3",
+    "notes": "auto-generated • d=4.80 (mean=4.33, max=6, n=3) • suggest #80-150",
+    "answers": [
+      "gd",
+      "jm",
+      "vc"
+    ],
+    "difficulty": 4.8,
+    "suggestedN": [
+      80,
+      150
+    ]
+  },
+  {
+    "filter": "continent:Oceania,colorCount:2",
+    "notes": "auto-generated • d=5.97 (mean=5.67, max=6, n=3) • suggest #120-200",
+    "answers": [
+      "fm",
+      "pw",
+      "to"
+    ],
+    "difficulty": 5.97,
+    "suggestedN": [
+      120,
+      200
+    ]
+  },
+  {
+    "filter": "motif:star-or-moon,color:red,colorCount:3",
+    "notes": "auto-generated • d=4.15 (mean=3.41, max=6, n=22) • suggest #80-150",
+    "answers": [
+      "dz",
+      "ao",
+      "au",
+      "bf",
+      "bi",
+      "cm",
+      "cl",
+      "cu",
+      "cd",
+      "gd",
+      "lr",
+      "mw",
+      "mv",
+      "mr",
+      "mn",
+      "np",
+      "nz",
+      "kp",
+      "pa",
+      "ws",
+      "sn",
+      "us"
+    ],
+    "difficulty": 4.15,
+    "suggestedN": [
+      80,
+      150
+    ]
+  },
+  {
+    "filter": "motif:star-or-moon,color:green,colorCount:3",
+    "notes": "auto-generated • d=4.28 (mean=4.18, max=5, n=11) • suggest #80-150",
+    "answers": [
+      "dz",
+      "bf",
+      "bi",
+      "cm",
+      "gd",
+      "mw",
+      "mv",
+      "mr",
+      "ne",
+      "rw",
+      "sn"
+    ],
+    "difficulty": 4.28,
+    "suggestedN": [
+      80,
+      150
     ]
   }
 ]
