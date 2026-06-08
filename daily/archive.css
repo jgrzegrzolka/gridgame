@@ -7,15 +7,19 @@
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 8px;
   width: 100%;
   /* 732px aligns the grid's right edge with the chrome cluster on
    * wide viewports: the burger sits at `right: 12px + (50vw - 378px)`
    * so its right edge lands at `50vw + 366px` from the viewport left,
    * and a centered 732px grid puts its right edge at the same spot
-   * (732 / 2 = 366). 8 × 84 + 7 × 8 = 728 fits cleanly under that,
-   * with 1fr stretching each tile to ~84.5px to fill the row. */
+   * (732 / 2 = 366). At 120px min track size, auto-fill resolves to 5
+   * columns at ~140.8px each (5 × 140.8 + 4 × 8 = 736 stretched into
+   * 732 — slight under-fill is fine), giving the criteria overlay
+   * enough room to render the longer PL strings ("Europa · czerwony
+   * · biały · niebieski · tylko 3 kolory") in a few lines rather
+   * than chopping mid-word. */
   max-width: 732px;
 }
 
