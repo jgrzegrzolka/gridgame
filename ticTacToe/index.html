@@ -131,7 +131,12 @@
       import { disableBurgerIfEmpty, wireBurgerDismiss } from '../common.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
       bootI18n('../').then((lang) => {
-        wireLangToggle(lang);
+        // Soft-reload mode keeps the room state (room code, role badge,
+        // grid, picker, scroll) intact across a language switch. The
+        // page wires a `langchanged` listener that re-translates the
+        // grid headers, status line, picker, and result text without
+        // touching the WebSocket connection.
+        wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         bootTicTacToeOnline();
         disableBurgerIfEmpty(
           document.querySelector('.burger'),

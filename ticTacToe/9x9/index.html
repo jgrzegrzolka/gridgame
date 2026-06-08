@@ -129,7 +129,10 @@
       import { disableBurgerIfEmpty, wireBurgerDismiss } from '../../common.js';
       import { bootI18n, wireLangToggle } from '../../i18n.js';
       bootI18n('../../').then((lang) => {
-        wireLangToggle(lang);
+        // Soft-reload mode keeps room/grid/picker/result intact across
+        // a language switch; bootUltimateTicTacToeOnline wires a
+        // `langchanged` listener that re-translates everything.
+        wireLangToggle(lang, undefined, { softReload: true, base: '../../' });
         bootUltimateTicTacToeOnline();
         disableBurgerIfEmpty(
           document.querySelector('.burger'),

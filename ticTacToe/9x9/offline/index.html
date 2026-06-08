@@ -99,7 +99,9 @@
       import { disableBurgerIfEmpty, wireBurgerDismiss } from '../../../common.js';
       import { bootI18n, wireLangToggle } from '../../../i18n.js';
       bootI18n('../../../').then((lang) => {
-        wireLangToggle(lang);
+        // Soft-reload mode preserves the offline 9×9 game state across
+        // a language switch.
+        wireLangToggle(lang, undefined, { softReload: true, base: '../../../' });
         bootTicTacToe9x9();
         disableBurgerIfEmpty(
           document.querySelector('.burger'),

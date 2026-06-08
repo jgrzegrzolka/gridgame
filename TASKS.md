@@ -65,8 +65,15 @@ Foundation for every later phase.
 **Deferred:**
 - Mid-flash feedback text (the wrong-answer country name in `feedbackEl`) stays in the boot-time language for the ~1s window before the next render clears it. Tiny edge.
 
-#### Phase 4 — ticTacToe  [pending]
-Largest single area: 42 sites across `ticTacToe/{page,offline}.js` × `{3x3,9x9}`. Server-pushed strings (status lines on the online client) stay server-driven; only the locally-rendered strings need re-running on `langchanged`.
+#### Phase 4 — ticTacToe  [in progress]
+- [x] All four ttt HTMLs opt into `softReload`: `ticTacToe/index.html`, `ticTacToe/9x9/index.html`, `ticTacToe/offline/index.html`, `ticTacToe/9x9/offline/index.html`.
+- [x] Each `page.js` registers a `refreshI18nForGame()` listener that re-translates the column + row headers from the puzzle's categories, re-runs `renderGrid` (refreshes cell `<img>.alt` via `countryName`) + `renderStatus`/`renderTurn`, re-translates the picker's "row × col" line when the picker is open, and re-paints the final-score text from a side-effect-free `paintFinalScore()` so a langchanged event never re-fires confetti.
+- [x] Online pages introduce `setStatusKey(key, fallback, params)` for transient status (connecting / connection-error / disconnected-reconnecting) plus a `repaintStatusForLang` closure tracker so renderStatus (state-derived) re-installs itself while transient paints replay their stored key + template params.
+
+**Deferred (in TASKS.md so not lost):**
+- `state.statusOverride` rejection strings are translated at reducer time and stored already-translated, so a lang flip after a rejection leaves the lobby error stale. Fix would require returning `{ key, fallback }` from the reducer and translating at paint time — touches `ticTacToe/onlineClient.js` + `ticTacToe/9x9/onlineClient.js`.
+- `showError(t('ttt.codeMustBe5'))` on the join form leaves the validation message stale across a lang flip while the user is still on the lobby. Small edge.
+- The four page.js files duplicate near-identical `paintFinalScore` + `refreshI18nForGame` + `setStatusKey` + `repaintStatusForLang` shapes. The 3×3 / 9×9 split predates this work; a future refactor could lift the shared bits into a `ticTacToe/sharedClient.js`.
 
 #### Phase 5 — flagsdata + archive/ideas/backlog  [pending]
 Mop-up. ~6 sites total.

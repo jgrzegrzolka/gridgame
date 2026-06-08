@@ -84,6 +84,16 @@ function runOnline(countries) {
   let currentMatches = [];
   let selectedIndex = 0;
 
+  // Soft language switch: whichever path last painted the status line
+  // installs a closure here so a langchanged event can replay it. State-
+  // derived paints (renderStatus) re-install themselves so a future flip
+  // re-derives from the latest `state`; transient paints (setStatusKey
+  // for connecting / disconnected / connection-error) install closures
+  // that re-translate against the new cache while preserving any
+  // template params (e.g. seconds left to retry).
+  /** @type {(() => void) | null} */
+  let repaintStatusForLang = null;
+
   const lobbyEl = document.getElementById('lobby');
   const gameEl = document.getElementById('game');
   const createBtn = document.getElementById('create-room');
@@ -168,7 +178,7 @@ function runOnline(countries) {
     if (gameEl) gameEl.hidden = false;
     if (roomCodeEl) roomCodeEl.textContent = code;
     renderShareButton();
-    setStatus(t('ttt.connecting', 'Connecting…'));
+    setStatusKey('ttt.connecting', 'Connecting…');
     connect();
   }
 
@@ -179,7 +189,7 @@ function runOnline(countries) {
     ws = new WebSocket(wsUrl);
     ws.addEventListener('message', (ev) => onServerMessage(JSON.parse(ev.data)));
     ws.addEventListener('close', onSocketClose);
-    ws.addEventListener('error', () => setStatus(t('ttt.connectionError', 'Connection error')));
+    ws.addEventListener('error', () => setStatusKey('ttt.connectionError', 'Connection error'));
   }
 
   function onSocketClose() {
@@ -193,7 +203,7 @@ function runOnline(countries) {
     activeRoom = { ...activeRoom, intent: 'join' };
     reconnectAttempts++;
     const delayMs = Math.min(30000, 1000 * 2 ** (reconnectAttempts - 1));
-    setStatus(t('ttt.disconnectedReconnecting', 'Disconnected. Reconnecting in {seconds}s…').replace('{seconds}', String(Math.round(delayMs / 1000))));
+    setStatusKey('ttt.disconnectedReconnecting', 'Disconnected. Reconnecting in {seconds}s…', { seconds: Math.round(delayMs / 1000) });
     clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(connect, delayMs);
   }
@@ -507,6 +517,10 @@ function runOnline(countries) {
       statusEl.classList.add('pulse');
     }
     lastStatusKey = key;
+    // State took over the status line — point repaintStatusForLang at
+    // ourselves so a future lang flip re-derives from state instead of
+    // re-painting whatever transient text was last shown.
+    repaintStatusForLang = renderStatus;
   }
 
   // ---- Share link ----
@@ -586,6 +600,26 @@ function runOnline(countries) {
     }
   }
 
+  /**
+   * Set a transient (non-state-derived) status line via an i18n key.
+   * Records a closure so a soft language switch re-translates the
+   * stored key + template params instead of leaving stale text.
+   *
+   * @param {string} key
+   * @param {string} fallback
+   * @param {Record<string, string | number>} [params]
+   */
+  function setStatusKey(key, fallback, params) {
+    let msg = t(key, fallback);
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        msg = msg.replace(`{${k}}`, String(v));
+      }
+    }
+    setStatus(msg);
+    repaintStatusForLang = () => setStatusKey(key, fallback, params);
+  }
+
   /** @param {number} r @param {number} c */
   function shakeCell(r, c) {
     const td = /** @type {HTMLTableCellElement} */ (
@@ -597,9 +631,15 @@ function runOnline(countries) {
     pulseShake(td);
   }
 
-  function finishRound() {
+  /**
+   * Paint the final-score text from state. Idempotent + side-effect-free —
+   * a langchanged event can re-call it without re-firing confetti or
+   * un-disabling Play again. The reveal + confetti happen in finishRound,
+   * which calls into this for the actual textContent / colour.
+   */
+  function paintFinalScore() {
     const { game, myRole } = state;
-    if (!resultEl || !finalScoreEl || !game) return;
+    if (!finalScoreEl || !game) return;
     if (game.gaveUp) {
       finalScoreEl.textContent = lastGaveUpByMe
         ? t('ttt.youGaveUp', 'You gave up')
@@ -611,14 +651,52 @@ function runOnline(countries) {
         ? t('ttt.youWin', 'You win!')
         : t('ttt.opponentWins', 'Opponent wins');
       finalScoreEl.style.color = game.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
-      if (shouldFireTicTacToeConfetti({ winner: game.winner, myRole })) launchConfetti();
     } else {
       finalScoreEl.textContent = t('ttt.draw', 'Draw');
       finalScoreEl.style.color = '#1c1c1c';
     }
+  }
+
+  function finishRound() {
+    const { game, myRole } = state;
+    if (!resultEl || !game) return;
+    paintFinalScore();
+    if (!game.gaveUp && game.winner && shouldFireTicTacToeConfetti({ winner: game.winner, myRole })) {
+      launchConfetti();
+    }
     if (playAgainEl) playAgainEl.disabled = false;
     resultEl.hidden = false;
   }
+
+  /**
+   * Soft language switch: re-translate every text surface this game
+   * owns without rebuilding game state. The grid headers (from
+   * tCat-translated categories), in-cell `<img>.alt` (countryName),
+   * status line (state-derived or transient — repaintStatusForLang
+   * tracks which), picker category line if open, and result final
+   * score all re-translate from the current cache.
+   */
+  function refreshI18nForGame() {
+    const { game } = state;
+    if (game && gridBuilt) {
+      colHeaderEls.forEach((th, i) => {
+        th.textContent = tCat(/** @type {GameState} */ (game).puzzle.cols[i]);
+      });
+      const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
+      rowHeaders.forEach((th, i) => {
+        th.textContent = tCat(/** @type {GameState} */ (game).puzzle.rows[i]);
+      });
+      renderGrid();
+    }
+    if (repaintStatusForLang) repaintStatusForLang();
+    if (!pickerEl.hidden && activeCell && game) {
+      const { row, col } = activeCell;
+      pickerCatsEl.textContent = `${tCat(/** @type {GameState} */ (game).puzzle.rows[row])} × ${tCat(/** @type {GameState} */ (game).puzzle.cols[col])}`;
+    }
+    if (resultEl && !resultEl.hidden) paintFinalScore();
+  }
+
+  document.addEventListener('langchanged', refreshI18nForGame);
 
   // The server-broadcast rematch state arrived: the grid headers need to be
   // rebuilt for the new puzzle, the finished overlay needs to go away, and
