@@ -29,6 +29,29 @@
   cursor: pointer;
 }
 
+/* "Export ✓" button — copies the approved filter list to the
+ * clipboard so the author can paste it into chat for promotion. */
+.export-button {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  color: #444;
+  font-size: 13px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: background 80ms, border-color 80ms;
+}
+.export-button:hover {
+  background: #f4f4f4;
+  border-color: #999;
+}
+.export-button--copied {
+  background: #2a9d3f;
+  color: #fff;
+  border-color: #2a9d3f;
+}
+
 /* Per-tile review buttons, anchored to the corners of the
  * .archive-square <li>. They sit *outside* the .archive-square-link <a>
  * so clicking them doesn't navigate — the link still covers everything

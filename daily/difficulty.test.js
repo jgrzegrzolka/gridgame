@@ -96,13 +96,46 @@ test('scoreEntry: token adjust adds 0.1 per token past 2', () => {
   assert.equal(+scoreEntry({ filter: 'a,b,c,d,e', answers: ['x'] }, mk({ x: 1 })).tokenAdjust.toFixed(4), 0.3);
 });
 
+// --- worldwide bump ---
+
+test('scoreEntry: regional filter (has continent:X include) gets no worldwide bump', () => {
+  const r = scoreEntry({ filter: 'continent:Europe,motif:cross', answers: ['a','b','c'] }, mk({ a:1, b:1, c:1 }));
+  assert.equal(r.worldwideAdjust, 0);
+});
+
+test('scoreEntry: filter with no continent token gets +1.0 worldwide bump', () => {
+  const r = scoreEntry({ filter: 'motif:cross,color:red', answers: ['a','b','c'] }, mk({ a:1, b:1, c:1 }));
+  assert.equal(r.worldwideAdjust, 1.0);
+});
+
+test('scoreEntry: continent:!X (exclude only) still counts as worldwide → +1.0', () => {
+  // continent:!Oceania,color:orange is essentially "orange flags worldwide minus
+  // one obscure Oceania flag" — still a global search for the player.
+  const r = scoreEntry({ filter: 'continent:!Oceania,color:orange', answers: ['a','b'] }, mk({ a:1, b:2 }));
+  assert.equal(r.worldwideAdjust, 1.0);
+});
+
+test('scoreEntry: single-token motif:eu-member exempt from worldwide bump', () => {
+  // Discrete-recall membership puzzle, not a global search.
+  const r = scoreEntry({ filter: 'motif:eu-member', answers: ['fr','de','it'] }, mk({ fr:1, de:1, it:1 }));
+  assert.equal(r.worldwideAdjust, 0);
+});
+
+test('scoreEntry: motif:eu-member compounded loses the exemption', () => {
+  // If somehow combined with another worldwide token, treat as a real
+  // worldwide search again — the eu-member exemption is narrow on purpose.
+  const r = scoreEntry({ filter: 'motif:eu-member,color:red', answers: ['fr','de'] }, mk({ fr:1, de:1 }));
+  assert.equal(r.worldwideAdjust, 1.0);
+});
+
 // --- robustness ---
 
 test('scoreEntry: missing country code falls back to nameScore 3', () => {
-  // 1-flag, mean=3, sizeAdjust=2.0, no outlier, no token bump (1 token)
+  // 1-flag, mean=3, sizeAdjust=2.0, no outlier, no token bump (1 token),
+  // worldwide bump +1.0 (filter has no continent token), score = 6.
   const r = scoreEntry({ filter: 'x', answers: ['xx'] }, mk({}));
   assert.equal(r.mean, 3);
-  assert.equal(r.score, 5);
+  assert.equal(r.score, 6);
 });
 
 test('scoreEntry: accepts Map or plain object as byCode', () => {

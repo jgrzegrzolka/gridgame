@@ -65,7 +65,7 @@
   },
   {
     "filter": "motif:cross,color:blue",
-    "notes": "auto-generated • d=3.16 (mean=2.27, max=6, n=11) • suggest #50-100",
+    "notes": "auto-generated • d=4.16 (mean=2.27, max=6, n=11, worldwide) • suggest #80-150",
     "answers": [
       "au",
       "do",
@@ -79,10 +79,10 @@
       "tv",
       "gb"
     ],
-    "difficulty": 3.16,
+    "difficulty": 4.16,
     "suggestedN": [
-      50,
-      100
+      80,
+      150
     ]
   },
   {
@@ -125,7 +125,7 @@
   },
   {
     "filter": "motif:cross,color:red",
-    "notes": "auto-generated • d=3.52 (mean=2.87, max=6, n=15) • suggest #50-100",
+    "notes": "auto-generated • d=4.52 (mean=2.87, max=6, n=15, worldwide) • suggest #80-150",
     "answers": [
       "au",
       "bi",
@@ -143,25 +143,25 @@
       "tv",
       "gb"
     ],
-    "difficulty": 3.52,
+    "difficulty": 4.52,
     "suggestedN": [
-      50,
-      100
+      80,
+      150
     ]
   },
   {
     "filter": "color:white,color:blue,color:yellow,colorCount:3",
-    "notes": "auto-generated • d=3.80 (mean=3.00, max=6, n=4) • suggest #50-100",
+    "notes": "auto-generated • d=4.80 (mean=3.00, max=6, n=4, worldwide) • suggest #80-150",
     "answers": [
       "ar",
       "ba",
       "nr",
       "uy"
     ],
-    "difficulty": 3.8,
+    "difficulty": 4.8,
     "suggestedN": [
-      50,
-      100
+      80,
+      150
     ]
   },
   {
@@ -241,7 +241,7 @@
   },
   {
     "filter": "colorCount:5",
-    "notes": "auto-generated • d=4.58 (mean=4.29, max=6, n=17) • suggest #80-150",
+    "notes": "auto-generated • d=5.58 (mean=4.29, max=6, n=17, worldwide) • suggest #120-200",
     "answers": [
       "ag",
       "cf",
@@ -261,10 +261,10 @@
       "sc",
       "zw"
     ],
-    "difficulty": 4.58,
+    "difficulty": 5.58,
     "suggestedN": [
-      80,
-      150
+      120,
+      200
     ]
   },
   {
@@ -466,7 +466,7 @@
   },
   {
     "filter": "motif:cross,colorCount:3",
-    "notes": "auto-generated • d=2.52 (mean=1.88, max=5, n=8) • suggest #25-60",
+    "notes": "auto-generated • d=3.52 (mean=1.88, max=5, n=8, worldwide) • suggest #50-100",
     "answers": [
       "au",
       "bi",
@@ -477,55 +477,55 @@
       "no",
       "gb"
     ],
-    "difficulty": 2.52,
+    "difficulty": 3.52,
     "suggestedN": [
-      25,
-      60
+      50,
+      100
     ]
   },
   {
     "filter": "motif:animal,colorCount:3",
-    "notes": "auto-generated • d=2.63 (mean=2.33, max=3, n=3) • suggest #25-60",
+    "notes": "auto-generated • d=3.63 (mean=2.33, max=3, n=3, worldwide) • suggest #50-100",
     "answers": [
       "ad",
       "bt",
       "mt"
     ],
-    "difficulty": 2.63,
+    "difficulty": 3.63,
     "suggestedN": [
-      25,
-      60
+      50,
+      100
     ]
   },
   {
     "filter": "motif:animal,colorCount:2",
-    "notes": "auto-generated • d=2.80 (mean=2.50, max=3, n=2) • suggest #25-60",
+    "notes": "auto-generated • d=3.80 (mean=2.50, max=3, n=2, worldwide) • suggest #50-100",
     "answers": [
       "al",
       "kz"
     ],
-    "difficulty": 2.8,
+    "difficulty": 3.8,
     "suggestedN": [
-      25,
-      60
+      50,
+      100
     ]
   },
   {
     "filter": "motif:coat-of-arms,colorCount:2",
-    "notes": "auto-generated • d=2.80 (mean=2.50, max=3, n=2) • suggest #25-60",
+    "notes": "auto-generated • d=3.80 (mean=2.50, max=3, n=2, worldwide) • suggest #50-100",
     "answers": [
       "kz",
       "sa"
     ],
-    "difficulty": 2.8,
+    "difficulty": 3.8,
     "suggestedN": [
-      25,
-      60
+      50,
+      100
     ]
   },
   {
     "filter": "motif:cross,colorCount:2",
-    "notes": "auto-generated • d=2.91 (mean=1.86, max=6, n=7) • suggest #25-60",
+    "notes": "auto-generated • d=3.91 (mean=1.86, max=6, n=7, worldwide) • suggest #50-100",
     "answers": [
       "dk",
       "fi",
@@ -535,15 +535,15 @@
       "ch",
       "to"
     ],
-    "difficulty": 2.91,
+    "difficulty": 3.91,
     "suggestedN": [
-      25,
-      60
+      50,
+      100
     ]
   },
   {
     "filter": "motif:coat-of-arms,colorCount:3",
-    "notes": "auto-generated • d=3.20 (mean=3.00, max=5, n=6) • suggest #50-100",
+    "notes": "auto-generated • d=4.20 (mean=3.00, max=5, n=6, worldwide) • suggest #80-150",
     "answers": [
       "ad",
       "kh",
@@ -552,15 +552,15 @@
       "sk",
       "va"
     ],
-    "difficulty": 3.2,
+    "difficulty": 4.2,
     "suggestedN": [
-      50,
-      100
+      80,
+      150
     ]
   },
   {
     "filter": "motif:animal,colorCount:4",
-    "notes": "auto-generated • d=3.90 (mean=3.50, max=6, n=12) • suggest #50-100",
+    "notes": "auto-generated • d=4.90 (mean=3.50, max=6, n=12, worldwide) • suggest #80-150",
     "answers": [
       "bo",
       "eg",
@@ -575,25 +575,25 @@
       "ug",
       "zm"
     ],
-    "difficulty": 3.9,
+    "difficulty": 4.9,
     "suggestedN": [
-      50,
-      100
+      80,
+      150
     ]
   },
   {
     "filter": "motif:star-or-moon,color:red,color:white,colorCount:2",
-    "notes": "auto-generated • d=1.70 (mean=1.50, max=3, n=4) • suggest #10-40",
+    "notes": "auto-generated • d=2.70 (mean=1.50, max=3, n=4, worldwide) • suggest #25-60",
     "answers": [
       "jp",
       "sg",
       "tn",
       "tr"
     ],
-    "difficulty": 1.7,
+    "difficulty": 2.7,
     "suggestedN": [
-      10,
-      40
+      25,
+      60
     ]
   },
   {
@@ -628,15 +628,15 @@
   },
   {
     "filter": "color:black,colorCount:2",
-    "notes": "auto-generated • d=2.30 (mean=2.00, max=2, n=2) • suggest #25-60",
+    "notes": "auto-generated • d=3.30 (mean=2.00, max=2, n=2, worldwide) • suggest #50-100",
     "answers": [
       "af",
       "al"
     ],
-    "difficulty": 2.3,
+    "difficulty": 3.3,
     "suggestedN": [
-      25,
-      60
+      50,
+      100
     ]
   },
   {
@@ -655,7 +655,7 @@
   },
   {
     "filter": "motif:coat-of-arms,motif:star-or-moon",
-    "notes": "auto-generated • d=3.37 (mean=3.29, max=5, n=7) • suggest #50-100",
+    "notes": "auto-generated • d=4.37 (mean=3.29, max=5, n=7, worldwide) • suggest #80-150",
     "answers": [
       "hr",
       "ec",
@@ -665,10 +665,10 @@
       "si",
       "tj"
     ],
-    "difficulty": 3.37,
+    "difficulty": 4.37,
     "suggestedN": [
-      50,
-      100
+      80,
+      150
     ]
   },
   {
@@ -718,7 +718,7 @@
   },
   {
     "filter": "motif:animal,motif:star-or-moon",
-    "notes": "auto-generated • d=4.44 (mean=4.40, max=6, n=5) • suggest #80-150",
+    "notes": "auto-generated • d=5.44 (mean=4.40, max=6, n=5, worldwide) • suggest #120-200",
     "answers": [
       "ec",
       "kz",
@@ -726,23 +726,23 @@
       "pg",
       "zw"
     ],
-    "difficulty": 4.44,
+    "difficulty": 5.44,
     "suggestedN": [
-      80,
-      150
+      120,
+      200
     ]
   },
   {
     "filter": "motif:star-or-moon,color:blue,color:yellow,colorCount:2",
-    "notes": "auto-generated • d=4.50 (mean=4.00, max=5, n=2) • suggest #80-150",
+    "notes": "auto-generated • d=5.50 (mean=4.00, max=5, n=2, worldwide) • suggest #120-200",
     "answers": [
       "kz",
       "pw"
     ],
-    "difficulty": 4.5,
+    "difficulty": 5.5,
     "suggestedN": [
-      80,
-      150
+      120,
+      200
     ]
   },
   {
@@ -806,7 +806,7 @@
   },
   {
     "filter": "motif:star-or-moon,color:red,colorCount:3",
-    "notes": "auto-generated • d=4.15 (mean=3.41, max=6, n=22) • suggest #80-150",
+    "notes": "auto-generated • d=5.15 (mean=3.41, max=6, n=22, worldwide) • suggest #120-200",
     "answers": [
       "dz",
       "ao",
@@ -831,15 +831,15 @@
       "sn",
       "us"
     ],
-    "difficulty": 4.15,
+    "difficulty": 5.15,
     "suggestedN": [
-      80,
-      150
+      120,
+      200
     ]
   },
   {
     "filter": "motif:star-or-moon,color:green,colorCount:3",
-    "notes": "auto-generated • d=4.28 (mean=4.18, max=5, n=11) • suggest #80-150",
+    "notes": "auto-generated • d=5.28 (mean=4.18, max=5, n=11, worldwide) • suggest #120-200",
     "answers": [
       "dz",
       "bf",
@@ -853,10 +853,10 @@
       "rw",
       "sn"
     ],
-    "difficulty": 4.28,
+    "difficulty": 5.28,
     "suggestedN": [
-      80,
-      150
+      120,
+      200
     ]
   }
 ]
