@@ -106,14 +106,43 @@ export function buildVariantPicker(pickerListEl, all, opts) {
   // Empty before re-populating so a lang-toggle reload doesn't double
   // up the variant list.
   pickerListEl.innerHTML = '';
+  // Variant key → continent silhouette filename. 'countries' (All) gets
+  // a wireframe globe. Files live in flagQuiz/continents/ — rendered as
+  // CSS masks (not <img>) so they inherit the brand colour from
+  // --link-color and get smooth hover transitions for free.
+  const ICONS = /** @type {Record<string, string>} */ ({
+    countries: 'world.svg',
+    europe: 'europe.svg',
+    asia: 'asia.svg',
+    africa: 'africa.svg',
+    'north-america': 'north-america.svg',
+    'south-america': 'south-america.svg',
+    oceania: 'oceania.svg',
+  });
   for (const [key, variant] of Object.entries(VARIANTS)) {
     const pool = all.filter(variant.filter);
     const mode = resolveMode(urlMode, pool.length);
     if (mode === null) continue;
     const li = document.createElement('li');
+    li.className = 'picker-tile';
     const a = document.createElement('a');
     a.href = `?v=${key}&n=${mode}`;
-    a.textContent = t(`variant.${key}`, variant.label);
+    const iconFile = ICONS[key];
+    if (iconFile) {
+      const icon = document.createElement('span');
+      icon.className = 'picker-tile-icon';
+      // mask-image points at the SVG; the background-color from CSS shows
+      // through wherever the mask is opaque. -webkit-mask-image for older
+      // Safari builds that haven't aliased the unprefixed property yet.
+      const url = `url('continents/${iconFile}')`;
+      icon.style.maskImage = url;
+      icon.style.webkitMaskImage = url;
+      a.appendChild(icon);
+    }
+    const label = document.createElement('span');
+    label.className = 'picker-tile-label';
+    label.textContent = t(`variant.${key}`, variant.label);
+    a.appendChild(label);
     li.appendChild(a);
     pickerListEl.appendChild(li);
   }
