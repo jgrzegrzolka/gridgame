@@ -18,13 +18,24 @@
  *   - Rule 2: no redundant filter tokens
  *   - Rule 3: every answer is a sovereign code (using flagsGamePool)
  *   - Rule 5: primary-clean (same answer set under primaryColors)
+ *   - Rule 6: candidate's answer set is neither a strict subset nor
+ *            a strict superset of any LIVE or BACKLOG entry's answer
+ *            set. Past-#100 candidates would be exempt from rule 6, but
+ *            since every catalog entry today is in #1-100 and a fresh
+ *            backlog promotion lands somewhere in that window too, the
+ *            generator stays strict. Also rejects exact answer-set
+ *            equality (same puzzle, different filter syntax).
  *   - Rule 9: 2 <= answers.length <= 30
  *   - Rule 14: no single-use token recurrence (against catalog + ideas)
  *   - Dedup: filter string not already in catalog or ideas
  *
+ * Note rule 6 is checked against LIVE + BACKLOG only, not against the
+ * parked entries in `daily_ideas.json` — those parked filters are
+ * `parkUntilN: 101` precisely because they're rule-6 violators kept for
+ * past-#100 use, so they're not a constraint on new generation.
+ *
  * What the script does NOT check (left to author at merge time):
  *   - Rule 4: numbering is decided at merge, not generation
- *   - Rule 6: no-subset is a per-#N-slot decision, not a per-candidate one
  *   - Rule 7: en/pl descriptions are hand-written when promoting to backlog
  *   - Rule 8 / 13: nameScore caps and continent variety are slot decisions
  *   - Rule 10: small-property compounds — script avoids them by construction
@@ -119,7 +130,56 @@ function rule2NoRedundant(filter, answers) {
 }
 
 /**
- * Check rule 5 (primary-clean) and rule 14 (single-use).
+ * Pre-compute sorted answer sets for each live + backlog entry so the
+ * per-candidate rule-6 check is just O(n × m) integer comparisons
+ * rather than re-sorting on every comparison.
+ */
+const EXISTING_SETS = [...LIVE, ...BACKLOG].map((e) => ({
+  n: e.n,
+  filter: e.filter,
+  set: new Set(e.answers),
+}));
+
+/**
+ * Check rule 6: candidate's answer set must not be a strict subset or
+ * strict superset of any existing live/backlog entry's answer set, and
+ * must not be exactly equal either (same puzzle, different filter).
+ *
+ * @param {string[]} answers
+ */
+function rule6NoSubset(answers) {
+  const candSet = new Set(answers);
+  for (const existing of EXISTING_SETS) {
+    // Equal sets → "same puzzle, different filter" — reject as dedup.
+    if (candSet.size === existing.set.size) {
+      let allMatch = true;
+      for (const c of candSet) {
+        if (!existing.set.has(c)) { allMatch = false; break; }
+      }
+      if (allMatch) return { ok: false, conflict: existing };
+      continue;
+    }
+    // Candidate smaller → could be strict subset
+    if (candSet.size < existing.set.size) {
+      let isSubset = true;
+      for (const c of candSet) {
+        if (!existing.set.has(c)) { isSubset = false; break; }
+      }
+      if (isSubset) return { ok: false, conflict: existing };
+    } else {
+      // Candidate larger → could be strict superset
+      let isSuperset = true;
+      for (const c of existing.set) {
+        if (!candSet.has(c)) { isSuperset = false; break; }
+      }
+      if (isSuperset) return { ok: false, conflict: existing };
+    }
+  }
+  return { ok: true };
+}
+
+/**
+ * Check hard rules: 2, 5, 6, 14.
  *
  * @param {string} filter
  * @param {string[]} answers
@@ -142,6 +202,11 @@ function passesHardRules(filter, answers, parsed) {
   // Rule 2: no redundant tokens
   if (!rule2NoRedundant(filter, answers)) {
     return { ok: false, reason: 'redundant-token' };
+  }
+  // Rule 6: no strict subset/superset/equal-set vs live + backlog
+  const r6 = rule6NoSubset(answers);
+  if (!r6.ok) {
+    return { ok: false, reason: `subset-of-#${r6.conflict.n} (${r6.conflict.filter})` };
   }
   return { ok: true };
 }
