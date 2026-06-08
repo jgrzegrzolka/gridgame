@@ -18,10 +18,15 @@ body {
   gap: 8px;
   font-size: 16px;
   color: #1c1c1c;
-  margin: 24px 0 0;
+  /* Sits above the grid so the action row directly under the grid is the
+   * stable visual footer. Margin reserves a small gap before the grid. */
+  margin: 0 0 12px;
 }
 .turn-line[hidden] {
-  display: none;
+  /* Reserve the slot when hidden so the grid doesn't jump up at game end.
+   * Override the default `display: none` from the [hidden] attribute. */
+  display: flex;
+  visibility: hidden;
 }
 .turn-badge {
   display: inline-flex;

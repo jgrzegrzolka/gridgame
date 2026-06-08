@@ -16,7 +16,6 @@ import { trapPicker, releasePicker } from './pickerLock.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/ticTacToe.js').GameState} GameState */
-/** @typedef {import('../flags/ticTacToe.js').Player} Player */
 
 const SERVER_URL = serverUrlFor(window.location.hostname);
 
@@ -52,7 +51,13 @@ function runOnline(countries) {
   // declaration site, which would hit a TDZ.
   /** @type {[number, number][] | null} */
   let lastSeenWinningLine = null;
-  let lastRenderedTurn = /** @type {Player | null} */ (null);
+  /** Tracks the rendered status-line state ('your-turn' / 'opponents-turn' /
+   * 'waiting' / 'empty') so we can pulse the line on transitions between
+   * meaningful states — opponent moved, you moved, opponent joined, etc.
+   * Skipping the pulse on the initial render keeps the page from flashing
+   * when the user just arrived. */
+  /** @type {string | null} */
+  let lastStatusKey = null;
 
   /** Current room context — needed by the auto-reconnect path. */
   /** @type {{ code: string, intent: 'create' | 'join' } | null} */
@@ -89,9 +94,6 @@ function runOnline(countries) {
   const shareBtnEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('share-link'));
   const roleBadgeEl = document.getElementById('role-badge');
   const statusEl = document.getElementById('status-line');
-  const turnLineEl = document.getElementById('turn-line');
-  const turnBadgeEl = document.getElementById('turn-badge');
-  const turnTextEl = document.getElementById('turn-text');
   const gridBodyEl = document.getElementById('grid-body');
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
@@ -208,7 +210,6 @@ function runOnline(countries) {
     } else {
       renderRole();
       renderGrid();
-      renderTurn();
       renderStatus();
     }
     for (const effect of effects) {
@@ -244,7 +245,7 @@ function runOnline(countries) {
     if (gridBodyEl) gridBodyEl.innerHTML = '';
     if (roomCodeEl) roomCodeEl.textContent = '-----';
     renderShareButton();
-    lastRenderedTurn = null;
+    lastStatusKey = null;
   }
 
   // ---- Grid (built once, on welcome) ----
@@ -470,45 +471,42 @@ function runOnline(countries) {
     giveUpEl.hidden = !canGiveUpOnline(state);
   }
 
-  function renderTurn() {
-    if (!turnLineEl || !turnBadgeEl || !turnTextEl) return;
-    const { game, peerPresent } = state;
-    if (!game || !peerPresent || game.winner || game.draw || game.gaveUp) {
-      turnLineEl.hidden = true;
-      lastRenderedTurn = null;
-      return;
-    }
-    turnLineEl.hidden = false;
-    turnBadgeEl.textContent = game.currentPlayer;
-    const changed = lastRenderedTurn !== game.currentPlayer;
-    turnBadgeEl.className = 'turn-badge ' + game.currentPlayer.toLowerCase();
-    turnTextEl.textContent = t('ttt.toMove', 'to move');
-    if (changed) {
-      void turnBadgeEl.offsetWidth; // restart the bounce animation on every turn change
-      turnBadgeEl.classList.add('bounce');
-      lastRenderedTurn = game.currentPlayer;
-    }
-  }
-
   function renderStatus() {
     renderShareButton();
     renderGiveUpButton();
     if (!statusEl) return;
     const { game, myRole, peerPresent } = state;
     statusEl.className = 'status-line';
-    if (!game) { statusEl.textContent = t('ttt.connecting', 'Connecting…'); return; }
-    if (game.winner || game.draw || game.gaveUp) { statusEl.textContent = ''; return; }
-    if (!peerPresent) {
+    /** @type {string} */
+    let key;
+    if (!game) {
+      statusEl.textContent = t('ttt.connecting', 'Connecting…');
+      key = 'connecting';
+    } else if (game.winner || game.draw || game.gaveUp) {
+      statusEl.textContent = '';
+      key = 'empty';
+    } else if (!peerPresent) {
       statusEl.textContent = t('ttt.waitingShareCode', 'Waiting for opponent… share the code above');
       statusEl.classList.add('peer-missing');
-      return;
-    }
-    if (game.currentPlayer === myRole) {
+      key = 'waiting';
+    } else if (game.currentPlayer === myRole) {
       statusEl.textContent = t('ttt.yourTurn', 'Your turn');
       statusEl.classList.add('your-turn');
+      key = 'your-turn';
     } else {
       statusEl.textContent = t('ttt.opponentsTurn', "Opponent's turn");
+      key = 'opponents-turn';
     }
+    // Pulse on meaningful state transitions — your-turn ↔ opponents-turn is
+    // the main case (replaces the bounce the old turn-badge gave us below
+    // the grid). Skip the initial render (lastStatusKey === null) and any
+    // transition into 'empty' so the line doesn't pulse at game-end.
+    if (lastStatusKey !== null && key !== 'empty' && key !== lastStatusKey) {
+      statusEl.classList.remove('pulse');
+      void statusEl.offsetWidth;
+      statusEl.classList.add('pulse');
+    }
+    lastStatusKey = key;
   }
 
   // ---- Share link ----
@@ -632,12 +630,11 @@ function runOnline(countries) {
     if (resultEl) resultEl.hidden = true;
     if (gridBodyEl) gridBodyEl.innerHTML = '';
     gridBuilt = false;
-    lastRenderedTurn = null;
+    lastStatusKey = null;
     lastGaveUpByMe = null;
     document.body.classList.remove('game-over');
     buildGridIfNeeded();
     renderGrid();
-    renderTurn();
     renderStatus();
   }
 
