@@ -11,8 +11,9 @@
     <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="../index.css?v=__BUILD__" />
     <link rel="stylesheet" href="../archive.css?v=__BUILD__" />
+    <link rel="stylesheet" href="./ideas.css?v=__BUILD__" />
   </head>
-  <body>
+  <body class="ideas-page">
     <a class="lang-toggle" id="lang-toggle" href="#"></a>
     <a class="flags-link" href="../../flagsdata/" aria-label="Browse flags" title="Browse flags" data-i18n-attr="aria-label:menu.flagsData,title:menu.flagsData"><span class="flags-icon" aria-hidden="true"></span></a>
     <button
@@ -41,6 +42,13 @@
 
     <main>
       <h1 class="sr-only">Daily ideas (preview)</h1>
+      <div class="review-bar">
+        <label class="hide-reviewed-toggle">
+          <input type="checkbox" id="hide-reviewed" />
+          Hide reviewed
+        </label>
+        <span id="review-counter" class="review-counter">Reviewed: 0 / 0</span>
+      </div>
       <ul id="ideas-list" class="archive-list"></ul>
       <div class="give-up-row">
         <a class="give-up" href="../../" data-i18n="menu.home">Home</a>
