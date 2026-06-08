@@ -527,9 +527,9 @@ export function bootFindFlag() {
       // from the shared pickCelebration helper so daily / findFlag /
       // quiz all read the same way: confetti for partial, fireworks
       // (alone, not stacked) for a clean sweep.
-      const tier = pickCelebration({ found, total });
+      const { tier, intensity } = pickCelebration({ found, total });
       if (tier === 'fireworks') launchFireworks();
-      else if (tier === 'confetti') launchConfetti();
+      else if (tier === 'confetti') launchConfetti({ intensity });
 
       // Found section duplicates the in-game .find-found grid onto the
       // result screen. Without it the user never sees the flag they

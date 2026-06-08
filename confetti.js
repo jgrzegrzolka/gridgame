@@ -14,6 +14,12 @@ const COLORS = [
 ];
 
 /**
+ * `intensity` (default 1) scales BOTH the main wave and the encore wave
+ * linearly between a floor and the caller-supplied ceiling, so a "you
+ * found 1/10" finish gets a noticeably thinner shower than a "you found
+ * 9/10". Floor exists so even a 10%-found result still reads as a
+ * celebration, not a sad little puff of two particles.
+ *
  * @param {{
  *   doc?: Document,
  *   count?: number,
@@ -24,6 +30,9 @@ const COLORS = [
  *   encoreCount?: number,
  *   encoreDelay?: number,
  *   encoreDuration?: number,
+ *   intensity?: number,
+ *   minCount?: number,
+ *   minEncoreCount?: number,
  * }} [options]
  * @returns {{ container: HTMLElement, cancel: () => void } | null}
  */
@@ -42,10 +51,16 @@ export function launchConfetti(options = {}) {
     encoreCount = 60,
     encoreDelay = 1200,
     encoreDuration = 8000,
+    intensity = 1,
+    minCount = 30,
+    minEncoreCount = 15,
   } = options;
   if (prefersReducedMotion) return null;
 
-  const container = buildConfettiContainer(doc, count, rng);
+  const effectiveCount = scaleByIntensity(count, minCount, intensity);
+  const effectiveEncoreCount = scaleByIntensity(encoreCount, minEncoreCount, intensity);
+
+  const container = buildConfettiContainer(doc, effectiveCount, rng);
   doc.body.appendChild(container);
   const timer = setTimeout(() => container.remove(), duration);
 
@@ -58,11 +73,13 @@ export function launchConfetti(options = {}) {
     // the first wave is still falling — visually reads as "and one
     // more!" without scheduling overlapping containers manually at
     // each call site. `encore: false` on the inner call breaks the
-    // recursion so we don't get encores-of-encores.
+    // recursion so we don't get encores-of-encores. The encore count is
+    // pre-scaled here so the inner call uses the default intensity (1)
+    // and we don't double-apply scaling.
     encoreTimer = setTimeout(() => {
       encoreHandle = launchConfetti({
         doc,
-        count: encoreCount,
+        count: effectiveEncoreCount,
         duration: encoreDuration,
         rng,
         encore: false,
@@ -227,6 +244,21 @@ function spawnBurst(doc, container, count, duration, distanceMin, distanceMax, r
     particle.style.background = COLORS[Math.floor(rng() * COLORS.length)];
     container.appendChild(particle);
   }
+}
+
+/**
+ * Linear interpolation between `floor` and `target` driven by `intensity`
+ * in [0, 1]. At intensity=1 the result is exactly `target` (so callers
+ * who don't pass intensity see no behavior change); at intensity=0 the
+ * result is `floor`.
+ *
+ * @param {number} target
+ * @param {number} floor
+ * @param {number} intensity
+ */
+function scaleByIntensity(target, floor, intensity) {
+  const clamped = Math.max(0, Math.min(1, intensity));
+  return Math.max(0, Math.round(floor + clamped * (target - floor)));
 }
 
 /** @param {Document} doc */
