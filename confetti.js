@@ -30,17 +30,16 @@ const COLORS = [
 export function launchConfetti(options = {}) {
   const {
     doc = document,
-    // Slightly thinner main wave + encore than the previous defaults.
-    // The point of confetti is now to mark "you found something" rather
-    // than carry the whole celebration — the big moments graduated to
-    // fireworks-alone. Less density reads as recognition without
-    // overdoing it.
-    count = 360,
+    // Thin main wave + encore. Confetti marks "you found something" — the
+    // recognition tier — and must visually rank BELOW fireworks (the
+    // big-moment tier). A dense confetti shower competes with fireworks
+    // for attention; a sparser one reads as a quiet "nice" instead.
+    count = 140,
     duration = 14000,
     rng = Math.random,
     prefersReducedMotion = detectPrefersReducedMotion(doc),
     encore = true,
-    encoreCount = 160,
+    encoreCount = 60,
     encoreDelay = 1200,
     encoreDuration = 8000,
   } = options;
