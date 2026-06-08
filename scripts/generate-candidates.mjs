@@ -493,6 +493,20 @@ for (const m of MOTIFS) {
   }
 }
 
+// T27: motif + !motif (exclusion-based — e.g. "cross flags that aren't
+// based on the Union Jack"). Includes the single-use motifs as the
+// EXCLUSION side too — we can't include weapon/union-jack as compounds
+// (rule 14), but excluding them as a refinement of another motif is
+// fine and produces the clever "X but not Y" shape that Jan flagged
+// as worth hand-curating.
+const ALL_MOTIFS = [...MOTIFS, 'weapon', 'union-jack', 'eu-member'];
+for (const inc of MOTIFS) {
+  for (const exc of ALL_MOTIFS) {
+    if (inc === exc) continue;
+    tryCandidate(`motif:${inc},motif:!${exc}`);
+  }
+}
+
 // --- Sort + write --------------------------------------------------------
 
 candidates.sort((a, b) => a.difficulty - b.difficulty);

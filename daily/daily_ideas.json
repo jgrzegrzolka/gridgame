@@ -1,5 +1,20 @@
 [
   {
+    "filter": "motif:cross,motif:!union-jack",
+    "notes": "Christian-cross flags excluding Union Jack derivatives — 14 worldwide. Strict superset of backlog #8 (NA + cross, 3 flags) and of live #1 (Europe + cross, 9 flags), which is why it's parked. Clever exclusion — teaches the player that the Union Jack itself contains crosses. Worth shipping at #101+ as recall, OR replace backlog #8 with this for broader discovery at the cost of the NA-specific puzzle.",
+    "parkUntilN": 101
+  },
+  {
+    "filter": "motif:cross,continent:!Europe",
+    "notes": "Cross flags outside Europe — 10 worldwide. Strict superset of backlog #8 (NA + cross). Less novel than the !union-jack variant; the exclusion adds less. Park.",
+    "parkUntilN": 101
+  },
+  {
+    "filter": "color:red,color:white,color:green,colorCount:3",
+    "notes": "Italian-style tricolour worldwide — 11 flags (it, hu, mx, bg, ir, ...). Strict superset of backlog #7 (Europe-only RWG-3, 4 flags). Iconic palette puzzle — Mexico and Iran are the non-European entries that make this worldwide-interesting. Park; consider replacing backlog #7 to broaden the discovery.",
+    "parkUntilN": 101
+  },
+  {
     "filter": "continent:Asia,motif:cross",
     "notes": "Georgia alone (ge) — strict-subset of #46 (Asia red+white only-2 which includes ge). Rule 6 blocks until past #100; would work as recall at #101+.",
     "parkUntilN": 101
@@ -852,6 +867,25 @@
       "ne",
       "rw",
       "sn"
+    ],
+    "difficulty": 5.28,
+    "suggestedN": [
+      120,
+      200
+    ]
+  },
+  {
+    "filter": "motif:animal,motif:!coat-of-arms",
+    "notes": "auto-generated • d=5.28 (mean=4.13, max=6, n=8) • suggest #120-200",
+    "answers": [
+      "al",
+      "bt",
+      "ki",
+      "mt",
+      "pg",
+      "ug",
+      "zm",
+      "zw"
     ],
     "difficulty": 5.28,
     "suggestedN": [
