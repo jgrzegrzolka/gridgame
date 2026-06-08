@@ -18,21 +18,19 @@
  *   - Rule 2: no redundant filter tokens
  *   - Rule 3: every answer is a sovereign code (using flagsGamePool)
  *   - Rule 5: primary-clean (same answer set under primaryColors)
- *   - Rule 6: candidate's answer set is neither a strict subset nor
- *            a strict superset of any LIVE or BACKLOG entry's answer
- *            set. Past-#100 candidates would be exempt from rule 6, but
- *            since every catalog entry today is in #1-100 and a fresh
- *            backlog promotion lands somewhere in that window too, the
- *            generator stays strict. Also rejects exact answer-set
- *            equality (same puzzle, different filter syntax).
+ *   - Rule 6 (refined): rejects only when answer-set subset/equality
+ *            coincides with filter-token refinement (a smaller-answers
+ *            filter that literally adds tokens to a larger-answers
+ *            filter). Pure answer-set overlap with different filter
+ *            framings is allowed — see `isFilterRefinement` in
+ *            `flags/daily.js`.
  *   - Rule 9: 2 <= answers.length <= 30
  *   - Rule 14: no single-use token recurrence (against catalog + ideas)
- *   - Dedup: filter string not already in catalog or ideas
+ *   - Dedup: filter string not already in catalog, ideas, or parked
  *
- * Note rule 6 is checked against LIVE + BACKLOG only, not against the
- * parked entries in `daily_ideas.json` — those parked filters are
- * `parkUntilN: 101` precisely because they're rule-6 violators kept for
- * past-#100 use, so they're not a constraint on new generation.
+ * Rule 6 guard is seeded from LIVE + BACKLOG + existing fresh IDEAS.
+ * Parked entries (`daily/daily_parked.json`) are deliberately NOT in
+ * the guard — they're documented rule-6 violators in a waiting room.
  *
  * What the script does NOT check (left to author at merge time):
  *   - Rule 4: numbering is decided at merge, not generation
@@ -55,6 +53,7 @@ import { dirname, join } from 'node:path';
 import { parseFilterString, serializeFilter } from '../flags/findFlag.js';
 import { matchesFilters } from '../flags/flagsFilter.js';
 import { flagsGamePool, loadCountries } from '../flags/group.js';
+import { isFilterRefinement } from '../flags/daily.js';
 import { scoreEntry } from '../daily/difficulty.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -67,10 +66,14 @@ const BY_CODE = Object.fromEntries(SOV.map((c) => [c.code, c]));
 const LIVE = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_puzzles.json'), 'utf-8'));
 const BACKLOG = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_backlog.json'), 'utf-8'));
 const IDEAS = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_ideas.json'), 'utf-8'));
+const PARKED = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_parked.json'), 'utf-8'));
 const POLICY = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_policy.json'), 'utf-8'));
 
 const CATALOG = [...LIVE, ...BACKLOG];
-const USED_FILTERS = new Set([...CATALOG, ...IDEAS].map((e) => e.filter));
+// Dedup against every known filter — catalog + active ideas + parked
+// waiting-room. Re-running shouldn't propose a candidate that already
+// exists anywhere.
+const USED_FILTERS = new Set([...CATALOG, ...IDEAS, ...PARKED].map((e) => e.filter));
 const SINGLE_USE = new Set(POLICY.singleUseTokens.map((t) => t.token));
 
 const CONTINENTS = ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'];
@@ -132,13 +135,17 @@ function rule2NoRedundant(filter, answers) {
 /**
  * Per-candidate rule-6 check runs against this list. Seeded with:
  *   - live + backlog (catalog entries)
- *   - existing non-parked ideas (so re-running the generator doesn't
- *     produce candidates that would shadow ideas already in the file)
+ *   - existing ideas (so re-running the generator never proposes a
+ *     candidate that would shadow one already in the file)
  * Each accepted candidate is appended too, so a fresh candidate is
  * checked against (catalog ∪ existing ideas ∪ everything already
  * accepted in this run). Prevents within-batch subset chains AND
- * makes re-runs idempotent — running the script twice in a row never
- * adds a candidate that's a subset of one written by the first run.
+ * makes re-runs idempotent.
+ *
+ * Parked entries (`daily/daily_parked.json`) are deliberately NOT in
+ * the guard — they're already-known rule-6 violators kept in the
+ * waiting room. Including them would block any new candidate that
+ * happens to overlap with a parked one, which is too strict.
  */
 const RULE6_GUARD = [
   ...LIVE.map((e) => ({
@@ -152,7 +159,7 @@ const RULE6_GUARD = [
     set: new Set(e.answers),
   })),
   ...IDEAS
-    .filter((e) => e.parkUntilN == null && Array.isArray(e.answers) && e.answers.length > 0)
+    .filter((e) => Array.isArray(e.answers) && e.answers.length > 0)
     .map((e) => ({
       ref: `existing-idea`,
       filter: e.filter,
@@ -161,39 +168,57 @@ const RULE6_GUARD = [
 ];
 
 /**
- * Check rule 6: candidate's answer set must not be a strict subset or
- * strict superset of anything already in `RULE6_GUARD` (live + backlog
- * + earlier accepted candidates in this run), and must not be exactly
- * equal either (same puzzle, different filter).
+ * Refined rule 6 check: the candidate is rejected only when an
+ * existing entry shares a filter-refinement relationship with it AND
+ * the answer sets are in a subset/superset/equal relationship.
  *
+ * Equal sets → "same puzzle, different filter" → always reject (dedup).
+ * Strict subset/superset → only reject if the smaller-answers filter
+ * is a refinement (token superset) of the larger-answers filter.
+ *
+ * Answer-incidental overlap (e.g. `cross + !UJ` ⊃ `NA + cross` but the
+ * filters frame the puzzle differently) is allowed — see flags/daily.js
+ * `isFilterRefinement` for the rationale.
+ *
+ * @param {string} filter
  * @param {string[]} answers
  */
-function rule6NoSubset(answers) {
+function rule6NoSubset(filter, answers) {
   const candSet = new Set(answers);
   for (const existing of RULE6_GUARD) {
-    // Equal sets → "same puzzle, different filter" — reject as dedup.
     if (candSet.size === existing.set.size) {
+      // Equal answer sets — same puzzle, different filter syntax.
       let allMatch = true;
       for (const c of candSet) {
         if (!existing.set.has(c)) { allMatch = false; break; }
       }
-      if (allMatch) return { ok: false, conflict: existing };
+      if (allMatch) return { ok: false, conflict: existing, reason: 'same-answer-set' };
       continue;
     }
-    // Candidate smaller → could be strict subset
     if (candSet.size < existing.set.size) {
+      // Candidate smaller → check if it's a strict subset of existing.
       let isSubset = true;
       for (const c of candSet) {
         if (!existing.set.has(c)) { isSubset = false; break; }
       }
-      if (isSubset) return { ok: false, conflict: existing };
+      if (!isSubset) continue;
+      // Refined rule: subset-of allowed unless candidate's filter is
+      // also a refinement of existing's filter.
+      if (isFilterRefinement(filter, existing.filter)) {
+        return { ok: false, conflict: existing, reason: 'filter-refines-existing' };
+      }
     } else {
-      // Candidate larger → could be strict superset
+      // Candidate larger → check if existing is a strict subset of it.
       let isSuperset = true;
       for (const c of existing.set) {
         if (!candSet.has(c)) { isSuperset = false; break; }
       }
-      if (isSuperset) return { ok: false, conflict: existing };
+      if (!isSuperset) continue;
+      // Refined rule: superset-of allowed unless existing's filter is
+      // a refinement of candidate's filter.
+      if (isFilterRefinement(existing.filter, filter)) {
+        return { ok: false, conflict: existing, reason: 'existing-refines-filter' };
+      }
     }
   }
   return { ok: true };
@@ -224,11 +249,11 @@ function passesHardRules(filter, answers, parsed) {
   if (!rule2NoRedundant(filter, answers)) {
     return { ok: false, reason: 'redundant-token' };
   }
-  // Rule 6: no strict subset/superset/equal-set vs live + backlog +
-  // earlier accepted candidates in this run
-  const r6 = rule6NoSubset(answers);
+  // Rule 6 (refined): only reject if filter-refinement coincides with
+  // answer-set subset/superset, or answer sets are exactly equal.
+  const r6 = rule6NoSubset(filter, answers);
   if (!r6.ok) {
-    return { ok: false, reason: `subset-of-${r6.conflict.ref} (${r6.conflict.filter})` };
+    return { ok: false, reason: `${r6.reason} ${r6.conflict.ref} (${r6.conflict.filter})` };
   }
   return { ok: true };
 }
@@ -490,6 +515,20 @@ for (const m of MOTIFS) {
     for (let n = 2; n <= 4; n++) {
       tryCandidate(`motif:${m},color:${col},colorCount:${n}`);
     }
+  }
+}
+
+// T27: motif + !motif (exclusion-based — e.g. "cross flags that aren't
+// based on the Union Jack"). Includes the single-use motifs as the
+// EXCLUSION side too — we can't include weapon/union-jack as compounds
+// (rule 14), but excluding them as a refinement of another motif is
+// fine and produces the clever "X but not Y" shape that Jan flagged
+// as worth hand-curating.
+const ALL_MOTIFS = [...MOTIFS, 'weapon', 'union-jack', 'eu-member'];
+for (const inc of MOTIFS) {
+  for (const exc of ALL_MOTIFS) {
+    if (inc === exc) continue;
+    tryCandidate(`motif:${inc},motif:!${exc}`);
   }
 }
 

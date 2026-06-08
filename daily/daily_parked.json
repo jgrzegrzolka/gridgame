@@ -1,0 +1,26 @@
+[
+  {
+    "filter": "color:red,color:white,color:green,colorCount:3",
+    "notes": "Italian-style tricolour worldwide — 11 flags (it, hu, mx, bg, ir, lb, dz, by, mg, mv, bi). Iconic palette puzzle (Mexico and Iran are the non-European entries that make this worldwide-interesting), but it's a filter-refinement of backlog #7 (continent:Europe + same colour pattern) so rule 6 blocks until past #100, OR until we decide to replace backlog #7 with this broader version."
+  },
+  {
+    "filter": "continent:Asia,motif:cross",
+    "notes": "Georgia alone (ge) — answer-incidental subset of backlog #46 (Asia red+white only-2 which includes ge). Refined rule 6 doesn't block this on filter grounds (different framing), but the puzzle is 1 flag and rule 9 forbids 1-flag puzzles before #50. Past-#100 candidate."
+  },
+  {
+    "filter": "motif:weapon",
+    "notes": "13 sovereigns (ao, bb, bo, ec, gt, ht, ke, lk, mt, mz, om, sa, sz). Strict-superset of backlog #50 (animal+coa+weapon → bo,ec,gt,lk). Works as recall at #101+ — 'you saw the 4 with animal+coa+weapon, which 9 other flags have weapons?'. Also burns the single-use motif:weapon token, but backlog #50 already does, so this can't ship."
+  },
+  {
+    "filter": "continent:Europe,color:white,color:blue,colorCount:2",
+    "notes": "Iconic but {fi, gr} is a strict subset of live #1 (Europe·cross — both have crosses). Refined rule 6: filter is NOT a refinement of live #1's filter (different tokens), so technically allowed under refined rule. But park anyway — 2-flag puzzles with answer-incidental overlap of an iconic earlier puzzle still read as 'wait I already saw these' to the player."
+  },
+  {
+    "filter": "continent:Europe,color:yellow",
+    "notes": "19 default / 15 primary — NOT primary-clean (hr, sm, va, rs have yellow only in COA). Strict-superset of #8 (Europe RBY only-3 → ad,ro), #11 (Europe·star/moon → ba,hr,mk,si), and #23 (Europe BY only-2 → se,ua). Rule 5 (primary-clean) blocks until #101+; would need primaryCleanExempt to ever ship before then."
+  },
+  {
+    "filter": "continent:!Oceania,color:orange",
+    "notes": "9 flags: am, bt, cy, ci, in, ie, ne, lk, zm. Primary-clean ✓. The !Oceania exclusion only drops Marshall Islands (mh, ns=6) — essentially 'orange flags worldwide minus the obscure one'. Strict-superset of #17 (OWG only-3 → cy,ci,ie,ne); refined rule allows since filter isn't a refinement. But color:orange is single-use (rule 14) and already used in backlog #18 — this puzzle can't ship. Past-#100 recall candidate."
+  }
+]
