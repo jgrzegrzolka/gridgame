@@ -1,7 +1,6 @@
 /** @typedef {import('../flags/ticTacToe.js').GameState} GameState */
 /** @typedef {import('../flags/ticTacToe.js').Player} Player */
 
-import { t } from '../i18n.js';
 
 /** Alphabet for room codes — no ambiguous characters (no I/O/L/0/1). */
 export const ROOM_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -91,11 +90,20 @@ export function serverUrlFor(hostname, party = 'main') {
 }
 
 /**
+ * Reject-reason payload: an i18n key + English fallback, plus optional
+ * template params for the `{reason}` substitution used by the generic
+ * fallback. Stored unresolved so the page can re-translate on a soft
+ * language switch instead of carrying a frozen boot-time string.
+ *
+ * @typedef {{ key: string, fallback: string, params?: Record<string, string> }} StatusOverride
+ */
+
+/**
  * @typedef {Object} ClientState
  * @property {GameState | null} game
  * @property {Player | null} myRole
  * @property {boolean} peerPresent
- * @property {string | null} statusOverride  - non-null when the server sent a 'rejected' or the socket died; takes precedence over the derived status.
+ * @property {StatusOverride | null} statusOverride  - non-null when the server sent a 'rejected' or the socket died; takes precedence over the derived status. Stored as `{ key, fallback, params? }` so the page can re-translate on a soft language switch.
  */
 
 /** @returns {ClientState} */
@@ -193,11 +201,12 @@ export function reduceServerMessage(state, message) {
     }
     case 'rejected': {
       const mapped = REJECT_MESSAGES[message.reason];
-      const reason = mapped
-        ? t(mapped.key, mapped.fallback)
-        : t('ttt.reject.fallback', 'Rejected: {reason}').replace('{reason}', message.reason);
+      /** @type {StatusOverride} */
+      const statusOverride = mapped
+        ? { key: mapped.key, fallback: mapped.fallback }
+        : { key: 'ttt.reject.fallback', fallback: 'Rejected: {reason}', params: { reason: String(message.reason) } };
       return {
-        state: { ...state, statusOverride: reason },
+        state: { ...state, statusOverride },
         effects: [{ type: 'close' }],
       };
     }

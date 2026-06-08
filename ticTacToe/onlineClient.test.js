@@ -164,28 +164,42 @@ test('reduceServerMessage: peer-left flips peerPresent back to false', () => {
   assert.deepEqual(r.effects, []);
 });
 
+// statusOverride is now an unresolved `{ key, fallback, params? }` so a
+// soft language switch can re-translate it. The reducer's job is to
+// route the wire-protocol reason code to the right key + fallback; the
+// page picks the language at paint time via `setStatusKey`.
+
 test('reduceServerMessage: rejected sets a statusOverride and emits "close"', () => {
   const state = initialClientState();
   const r = reduceServerMessage(state, { type: 'rejected', reason: 'room-full' });
-  assert.equal(r.state.statusOverride, 'Room is full');
+  assert.deepEqual(r.state.statusOverride, { key: 'ttt.reject.roomFull', fallback: 'Room is full' });
   assert.deepEqual(r.effects, [{ type: 'close' }]);
 });
 
 test('reduceServerMessage: rejected with room-not-found gets a guiding message', () => {
   const r = reduceServerMessage(initialClientState(), { type: 'rejected', reason: 'room-not-found' });
-  assert.match(/** @type {string} */ (r.state.statusOverride), /not found/i);
+  assert.equal(r.state.statusOverride?.key, 'ttt.reject.roomNotFound');
+  assert.match(/** @type {string} */ (r.state.statusOverride?.fallback), /not found/i);
   assert.deepEqual(r.effects, [{ type: 'close' }]);
 });
 
 test('reduceServerMessage: rejected with code-collision gets a clear message', () => {
   const r = reduceServerMessage(initialClientState(), { type: 'rejected', reason: 'code-collision' });
-  assert.match(/** @type {string} */ (r.state.statusOverride), /already taken/i);
+  assert.equal(r.state.statusOverride?.key, 'ttt.reject.codeCollision');
+  assert.match(/** @type {string} */ (r.state.statusOverride?.fallback), /already taken/i);
   assert.deepEqual(r.effects, [{ type: 'close' }]);
 });
 
-test('reduceServerMessage: rejected with an unknown reason falls back to a generic message', () => {
+test('reduceServerMessage: rejected with an unknown reason carries the raw reason as a template param', () => {
+  // The generic fallback's `{reason}` placeholder is substituted by the
+  // page at paint time, so the reducer pins it in `params` to keep the
+  // language-agnostic raw reason available for the substitution.
   const r = reduceServerMessage(initialClientState(), { type: 'rejected', reason: 'mystery' });
-  assert.equal(r.state.statusOverride, 'Rejected: mystery');
+  assert.deepEqual(r.state.statusOverride, {
+    key: 'ttt.reject.fallback',
+    fallback: 'Rejected: {reason}',
+    params: { reason: 'mystery' },
+  });
 });
 
 test('reduceServerMessage: unknown message type is a no-op', () => {

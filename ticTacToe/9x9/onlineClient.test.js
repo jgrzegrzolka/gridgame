@@ -96,8 +96,11 @@ test('reduceUltimateServerMessage: peer-joined / peer-left flip peerPresent', ()
 });
 
 test('reduceUltimateServerMessage: rejected sets statusOverride and emits "close"', () => {
+  // statusOverride is unresolved `{ key, fallback, params? }` so the
+  // page can re-translate on a soft language switch. Mirrors the 3×3
+  // reducer's shape.
   const r = reduceUltimateServerMessage(initialUltimateClientState(), { type: 'rejected', reason: 'room-full' });
-  assert.equal(r.state.statusOverride, 'Room is full');
+  assert.deepEqual(r.state.statusOverride, { key: 'ttt.reject.roomFull', fallback: 'Room is full' });
   assert.deepEqual(r.effects, [{ type: 'close' }]);
 });
 

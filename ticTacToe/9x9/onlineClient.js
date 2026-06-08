@@ -1,7 +1,6 @@
 /** @typedef {import('../../flags/ultimateTicTacToe.js').UltimateGameState} UltimateGameState */
 /** @typedef {import('../../flags/ticTacToe.js').Player} Player */
-
-import { t } from '../../i18n.js';
+/** @typedef {import('../onlineClient.js').StatusOverride} StatusOverride */
 
 // Generic identity / lobby helpers are domain-agnostic — re-export from the
 // 3×3 client so the 9×9 lobby uses the same room-code alphabet, validation,
@@ -20,7 +19,7 @@ export {
  * @property {UltimateGameState | null} game
  * @property {Player | null} myRole
  * @property {boolean} peerPresent
- * @property {string | null} statusOverride
+ * @property {StatusOverride | null} statusOverride - stored unresolved so the page can re-translate on a soft language switch (see ../onlineClient.js).
  */
 
 /** @returns {UltimateClientState} */
@@ -109,11 +108,12 @@ export function reduceUltimateServerMessage(state, message) {
     }
     case 'rejected': {
       const mapped = REJECT_MESSAGES[message.reason];
-      const reason = mapped
-        ? t(mapped.key, mapped.fallback)
-        : t('ttt.reject.fallback', 'Rejected: {reason}').replace('{reason}', message.reason);
+      /** @type {StatusOverride} */
+      const statusOverride = mapped
+        ? { key: mapped.key, fallback: mapped.fallback }
+        : { key: 'ttt.reject.fallback', fallback: 'Rejected: {reason}', params: { reason: String(message.reason) } };
       return {
-        state: { ...state, statusOverride: reason },
+        state: { ...state, statusOverride },
         effects: [{ type: 'close' }],
       };
     }

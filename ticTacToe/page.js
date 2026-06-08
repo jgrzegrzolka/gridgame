@@ -150,18 +150,41 @@ function runOnline(countries) {
       e.preventDefault();
       const code = joinCodeEl.value.toUpperCase().trim();
       if (!isValidRoomCode(code)) {
-        showError(t('ttt.codeMustBe5', 'Code must be 5 characters'));
+        showError('ttt.codeMustBe5', 'Code must be 5 characters');
         return;
       }
       enterRoom(code, 'join');
     });
   }
 
-  /** @param {string} message */
-  function showError(message) {
+  // Stash the last error's i18n key + fallback so a soft language switch
+  // re-translates the visible lobby error without re-running the click
+  // handler. Cleared by clearError().
+  /** @type {{ key: string, fallback: string, params?: Record<string, string> } | null} */
+  let lastErrorKey = null;
+
+  /**
+   * @param {string} key
+   * @param {string} fallback
+   * @param {Record<string, string>} [params]
+   */
+  function showError(key, fallback, params) {
     if (!errorEl) return;
+    lastErrorKey = { key, fallback, params };
     errorEl.hidden = false;
-    errorEl.textContent = message;
+    paintError();
+  }
+
+  function paintError() {
+    if (!errorEl || !lastErrorKey) return;
+    let msg = t(lastErrorKey.key, lastErrorKey.fallback);
+    const params = lastErrorKey.params;
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        msg = msg.replace(`{${k}}`, String(v));
+      }
+    }
+    errorEl.textContent = msg;
   }
 
   // ---- Room join ----
@@ -216,7 +239,11 @@ function runOnline(countries) {
 
     if (msg.type === 'welcome') buildGridIfNeeded();
     if (state.statusOverride && state.statusOverride !== before.statusOverride) {
-      setStatus(state.statusOverride);
+      setStatusKey(
+        state.statusOverride.key,
+        state.statusOverride.fallback,
+        state.statusOverride.params,
+      );
     } else {
       renderRole();
       renderGrid();
@@ -239,11 +266,11 @@ function runOnline(countries) {
     }
   }
 
-  /** @param {string | null} errorMessage */
-  function returnToLobbyWithError(errorMessage) {
+  /** @param {{ key: string, fallback: string, params?: Record<string, string> } | null} errorOverride */
+  function returnToLobbyWithError(errorOverride) {
     if (gameEl) gameEl.hidden = true;
     if (lobbyEl) lobbyEl.hidden = false;
-    if (errorMessage) showError(errorMessage);
+    if (errorOverride) showError(errorOverride.key, errorOverride.fallback, errorOverride.params);
     // Clear ?room=… so reloading doesn't re-attempt the same dead room.
     const url = new URL(window.location.href);
     url.searchParams.delete('room');
@@ -694,6 +721,7 @@ function runOnline(countries) {
       pickerCatsEl.textContent = `${tCat(/** @type {GameState} */ (game).puzzle.rows[row])} × ${tCat(/** @type {GameState} */ (game).puzzle.cols[col])}`;
     }
     if (resultEl && !resultEl.hidden) paintFinalScore();
+    paintError();
   }
 
   document.addEventListener('langchanged', refreshI18nForGame);
