@@ -241,6 +241,41 @@ test('wireLangToggle soft mode: a langchanged event flips data-current and re-re
   assert.equal(toggle._attrs['aria-label'], 'Przełącz na angielski');
 });
 
+test('wireLangToggle soft mode: a failed reload falls back to a full window.location.reload so the user still gets the language they asked for', async () => {
+  // Network drop mid-toggle is the realistic case: the fetch in the
+  // injected `reload` rejects. Soft mode catches the rejection and
+  // triggers a hard reload as the recovery path; if that path were
+  // missing, the click would silently drop the user's language choice.
+  const toggle = fakeToggle();
+  const doc = fakeSoftDoc();
+  let hardReloadCalls = 0;
+  const fakeWindow = {
+    localStorage: fakeStore(),
+    location: { reload: () => { hardReloadCalls++; } },
+  };
+  const prevWindow = /** @type {any} */ (globalThis).window;
+  /** @type {any} */ (globalThis).window = fakeWindow;
+  try {
+    wireLangToggle('en', /** @type {any} */ (toggle), {
+      softReload: true,
+      doc: /** @type {any} */ (doc),
+      reload: () => Promise.reject(new Error('network down')),
+    });
+    toggle._handlers[0]({ preventDefault() {} });
+    // The .catch fires in a microtask after the click handler returns;
+    // awaiting any resolved promise lets it run before we assert.
+    await Promise.resolve();
+    assert.equal(hardReloadCalls, 1,
+      'a rejected soft reload must fall back to window.location.reload');
+  } finally {
+    if (prevWindow === undefined) {
+      delete /** @type {any} */ (globalThis).window;
+    } else {
+      /** @type {any} */ (globalThis).window = prevWindow;
+    }
+  }
+});
+
 test('wireLangToggle soft mode: click invokes the injected reload with the next lang', () => {
   const toggle = fakeToggle();
   const doc = fakeSoftDoc();

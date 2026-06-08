@@ -23,6 +23,7 @@ import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.j
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
+import { refreshChooserI18n } from './chooserI18n.js';
 
 /**
  * Options the Random button (and the result page's "Random next" link)
@@ -387,30 +388,18 @@ export function bootFindFlag() {
     return {
       /**
        * Re-translate every chooser surface that was painted with `t()`
-       * at render time. `data-i18n`-marked elements (Clear button,
-       * static Random label, etc.) are handled upstream by
-       * `applyStringsToDocument` before this fires. `newAll` is unused
-       * today (pill counts don't shift on a re-alias) but kept in the
-       * signature so a future "live count refresh" can plug in without
-       * a contract change.
+       * at render time. Delegates to the pure helper in `chooserI18n.js`
+       * so the repaint contract is unit-tested without a fake document.
+       * `data-i18n`-marked elements (Clear button, static Random label,
+       * etc.) are handled upstream by `applyStringsToDocument` before
+       * this fires. `newAll` is unused today (pill counts don't shift
+       * on a re-alias) but kept in the signature so a future "live
+       * count refresh" can plug in without a contract change.
        *
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        for (const sh of sectionHeaders) {
-          sh.h.textContent = t(sh.key, sh.fallback);
-        }
-        for (const p of allPills) {
-          p.labelSpan.textContent = pillLabel(p.group, p.value, 'include', t);
-        }
-        if (onlyColorsLabelSpan) {
-          onlyColorsLabelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');
-        }
-        // updateBar rewrites the Play button label ("Play (N)" or "Play")
-        // programmatically, so its data-i18n was already overwritten
-        // at boot. Calling it here re-applies the current-language
-        // `playLabel()` over whatever applyStringsToDocument restored.
-        updateBar();
+        refreshChooserI18n({ sectionHeaders, allPills, onlyColorsLabelSpan, updateBar });
       },
     };
   }
