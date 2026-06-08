@@ -27,48 +27,19 @@
  */
 
 import { suggest, exactSingleMatch } from '../flags/engine.js';
-import { findPool, classifyGuess, filterToCategory } from '../flags/findFlag.js';
+import { findPool, classifyGuess } from '../flags/findFlag.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
-import { flagsGamePool } from '../flags/group.js';
-import { t, countryName, withLocalizedAliases } from '../i18n.js';
+import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { saveScore } from './scores.js';
+import {
+  computeLangRefreshPayload,
+  bindTileCountry,
+  refreshTileNames,
+} from '../langRefresh.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 /** @typedef {import('../flags/flagsFilter.js').Filters} Filters */
-
-// Each `.find-tile` is built once and rendered with the country's display
-// name baked into `dataset.name` (for the CSS hover label) and the inner
-// `<img>`'s `alt`. On a soft language switch we need to re-paint those
-// strings without rebuilding the tile (rebuilding would lose animations
-// and tile order). The WeakMap holds the Country reference for each tile
-// so `refreshTileNames` can call `countryName(c)` again against the new
-// language cache. WeakMap (not a plain Map) so a removed tile is
-// garbage-collected normally.
-/** @type {WeakMap<HTMLElement, Country>} */
-const tileCountries = new WeakMap();
-
-/**
- * Pure half of the soft-language-switch payload: re-runs
- * `withLocalizedAliases` so the suggestion matcher accepts the new
- * language's aliases, then derives the puzzle's targets in the new
- * country list by matching on `code` (the only stable identity across
- * a re-alias pass) and re-computes the category label via
- * `filterToCategory`.
- *
- * Exported separately from the DOM-glue `attachLangRefresh` so a unit
- * test can exercise the "matcher gets new aliases, targets stay
- * pinned to their codes" contract without standing up a document.
- *
- * @param {{ raw: any[], targetCodes: Set<string>, filter: Filters }} deps
- * @returns {{ all: Country[], targets: Country[], label: string }}
- */
-export function computeLangRefreshPayload({ raw, targetCodes, filter }) {
-  const all = withLocalizedAliases(flagsGamePool(raw, false));
-  const targets = all.filter((c) => targetCodes.has(c.code));
-  const label = filterToCategory(filter, t).label;
-  return { all, targets, label };
-}
 
 /**
  * Wire the game handle returned by `startGame` to soft language
@@ -78,9 +49,9 @@ export function computeLangRefreshPayload({ raw, targetCodes, filter }) {
  * the result to `game.refreshI18n`. Returns the listener function so
  * a future caller (or test) can `removeEventListener` it.
  *
- * Three pages were copy-pasting this block; consolidating it here
- * keeps the live daily and the author preview pages in lockstep so a
- * fix to one is a fix to all.
+ * The three daily play surfaces (live + backlog/ideas preview) all
+ * share this shape; findFlag's listener is structurally different
+ * (three states: chooser / game / result) and stays page-local.
  *
  * @param {{ refreshI18n: (next: { all: Country[], targets: Country[], label: string }) => void }} game
  * @param {{ raw: any[], targets: Country[], filter: Filters, description?: Record<string, string> }} deps
@@ -114,27 +85,6 @@ export function showReason(reason) {
   const paint = () => showState(reasonMessage(reason));
   paint();
   document.addEventListener('langchanged', paint);
-}
-
-/**
- * Walk every `.find-tile` currently in the document and re-apply the
- * display name to `dataset.name` + `<img>.alt`. Pure DOM walk — no
- * dependency on which game is active, so the live page's in-game found
- * list, the result-screen found list, and the result-screen missed list
- * all refresh together.
- */
-function refreshTileNames() {
-  const tiles = /** @type {NodeListOf<HTMLElement>} */ (
-    document.querySelectorAll('.find-tile')
-  );
-  for (const tile of tiles) {
-    const c = tileCountries.get(tile);
-    if (!c) continue;
-    const displayName = countryName(c);
-    tile.dataset.name = displayName;
-    const img = /** @type {HTMLImageElement | null} */ (tile.querySelector('img'));
-    if (img) img.alt = displayName;
-  }
 }
 
 // Flag SVGs are resolved against this module's URL — not against the
@@ -191,7 +141,7 @@ function flagTile(c) {
   const li = document.createElement('li');
   li.className = 'find-tile';
   li.dataset.name = displayName;
-  tileCountries.set(li, c);
+  bindTileCountry(li, c);
   li.addEventListener('click', () => openZoom(c));
   const img = document.createElement('img');
   img.src = `${SVG_BASE}${c.code}.svg`;

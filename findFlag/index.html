@@ -123,7 +123,12 @@
       import { bootI18n, wireLangToggle } from '../i18n.js';
       import { wireBurgerDismiss } from '../common.js';
       bootI18n('../').then((lang) => {
-        wireLangToggle(lang);
+        // Soft-reload mode keeps the chooser's pill selections, a
+        // running game's typed input + scroll + found tiles, and the
+        // result screen all intact across a language switch.
+        // bootFindFlag() registers a `langchanged` listener that
+        // re-translates pill labels, the running game, and tile names.
+        wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         bootFindFlag();
         wireBurgerDismiss();
       });
