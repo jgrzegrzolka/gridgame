@@ -1,5 +1,5 @@
 import { t } from '../../i18n.js';
-import { renderArchiveSquare } from '../squares.js';
+import { renderArchiveSquare, refreshSquareCriteria } from '../squares.js';
 import { scoreEntry } from '../difficulty.js';
 
 /** @typedef {import('../../flags/daily.js').DailyPuzzle} DailyPuzzle */
@@ -46,6 +46,7 @@ export function bootBacklog() {
           difficulty: score,
         }));
       }
+      document.addEventListener('langchanged', () => refreshSquareCriteria());
     })
     .catch((err) => {
       listEl.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
