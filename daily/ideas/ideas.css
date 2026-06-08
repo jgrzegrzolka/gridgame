@@ -1,0 +1,88 @@
+/* Author-only styles for the ideas review page. Lives in
+ * `daily/ideas/` so the file (and the folder) is stripped by deploy.yml
+ * before shipping — keeps the shared `archive.css` untouched. */
+
+.review-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 16px;
+  margin: 0 auto 12px;
+  max-width: 732px;
+  font-size: 14px;
+  color: #444;
+}
+
+.review-counter {
+  font-variant-numeric: tabular-nums;
+}
+
+.hide-reviewed-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.hide-reviewed-toggle input {
+  cursor: pointer;
+}
+
+/* Per-tile review button, top-right corner of the .archive-square <li>.
+ * Sits *outside* the .archive-square-link <a> so clicking it doesn't
+ * navigate — the link still covers everything else, but pointer events
+ * on the button win because it's a sibling DOM node with higher z. */
+.review-button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  background: #fff;
+  color: #aaa;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 80ms, color 80ms, border-color 80ms;
+}
+.review-button:hover {
+  background: #eef;
+  color: #444;
+  border-color: #99c;
+}
+
+/* Need position:relative on the <li> so the absolutely-positioned
+ * review button anchors to the tile, not to the page. `.archive-square`
+ * styles in the shared archive.css don't set this, so add it here for
+ * the ideas-page tiles only (scoped via .ideas-page on <body>). */
+.ideas-page .archive-square {
+  position: relative;
+}
+
+/* Reviewed state: tile fades, button turns green-checked. */
+.archive-square--reviewed .archive-square-link {
+  opacity: 0.45;
+}
+.archive-square--reviewed .review-button {
+  background: #2a9d3f;
+  color: #fff;
+  border-color: #2a9d3f;
+}
+.archive-square--reviewed .review-button:hover {
+  background: #248234;
+  border-color: #248234;
+}
+
+/* "Hide reviewed" mode — toggle on <body> hides the reviewed tiles. */
+body.hide-reviewed .archive-square--reviewed {
+  display: none;
+}
