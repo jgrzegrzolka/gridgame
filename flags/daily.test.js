@@ -356,6 +356,72 @@ test('live + backlog: puzzles #1-100 have no strict-subset relationships', () =>
   assert.deepEqual(unique, [], '\n  ' + unique.join('\n  '));
 });
 
+// Rule 6, forward-looking: ideas are pre-promotion candidates. Each
+// non-parked idea should be promote-eligible at any time — meaning its
+// answer set must not be a strict subset/superset/equal of anything
+// in live + backlog OR of any other non-parked idea. If it is, only
+// one of the pair could ever become a puzzle without breaking rule 6,
+// and keeping both in the ideas pool just hides the duplication.
+// Parked ideas (parkUntilN set) are exempt — they're documented rule-6
+// violators meant for past-#100 use.
+//
+// Without this test, the generator's within-batch rule-6 check is the
+// only line of defense, and a hand-edit to daily_ideas.json could
+// reintroduce duplicates silently. This puts teeth at the test level
+// so `npm test` catches drift the moment it happens.
+test('ideas: no strict-subset relationships against catalog or other non-parked ideas', () => {
+  /** @type {{ filter: string, answers?: string[], parkUntilN?: number, _label: string }[]} */
+  const IDEAS = JSON.parse(
+    readFileSync(join(HERE, '..', 'daily', 'daily_ideas.json'), 'utf-8'),
+  ).map((/** @type {any} */ e, /** @type {number} */ i) => ({ ...e, _label: `idea#${i + 1}` }));
+  const liveLabeled = CATALOG.map((e) => ({ ...e, _label: `live#${e.n}` }));
+  const backlogLabeled = BACKLOG.map((e) => ({ ...e, _label: `backlog#${e.n}` }));
+
+  const fixed = [...liveLabeled, ...backlogLabeled];
+  const candidates = IDEAS.filter(
+    (e) => e.parkUntilN == null && Array.isArray(e.answers) && e.answers.length > 0,
+  );
+
+  /** @type {string[]} */
+  const offenders = [];
+
+  /** @param {{answers?: string[]}} a @param {{answers?: string[]}} b */
+  const relation = (a, b) => {
+    const aA = a.answers || [];
+    const bA = b.answers || [];
+    const aSet = new Set(aA);
+    if (aA.length === bA.length) {
+      return bA.every((c) => aSet.has(c)) ? 'equal' : null;
+    }
+    if (aA.length > bA.length) {
+      return bA.every((c) => aSet.has(c)) ? 'superset' : null;
+    }
+    return null;
+  };
+
+  // candidates vs fixed (live + backlog) — pair direction normalised
+  for (const cand of candidates) {
+    for (const fix of fixed) {
+      const rel = relation(cand, fix) || relation(fix, cand);
+      if (rel) {
+        offenders.push(`${cand._label} ("${cand.filter}") ${rel} relationship with ${fix._label} ("${fix.filter}")`);
+      }
+    }
+  }
+  // candidates vs each other — only report each unordered pair once
+  for (let i = 0; i < candidates.length; i++) {
+    for (let j = i + 1; j < candidates.length; j++) {
+      const a = candidates[i], b = candidates[j];
+      const rel = relation(a, b) || relation(b, a);
+      if (rel) {
+        offenders.push(`${a._label} ("${a.filter}") ${rel} relationship with ${b._label} ("${b.filter}")`);
+      }
+    }
+  }
+
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
+
 // Every puzzle carries a hand-written helper sentence in every supported
 // language. The sentence renders under the header to turn the pill chain
 // ("Europe · cross") into a plain instruction ("Find all European flags
