@@ -370,9 +370,9 @@ export function startGame(n, category, targets, all, opts = {}) {
     if (!skipSave) {
       saveScore(window.localStorage, n, found, total, Array.from(foundCodes));
     }
-    const tier = pickCelebration({ found, total });
+    const { tier, intensity } = pickCelebration({ found, total });
     if (tier === 'fireworks') launchFireworks();
-    else if (tier === 'confetti') launchConfetti();
+    else if (tier === 'confetti') launchConfetti({ intensity });
     renderResult(targets, foundCodes);
   }
 

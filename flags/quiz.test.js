@@ -813,34 +813,46 @@ test('preloadFlags handles an empty pool without calling the loader', () => {
 // Rule: 0 → none, sweep OR record → fireworks, anything else > 0 → confetti.
 // Timed mode (quiz 60s) suppresses the sweep branch because every finished
 // timed run is "complete" by construction; only records earn fireworks there.
+// Intensity scales the confetti burst by found/total so 1/10 reads
+// noticeably thinner than 9/10; fireworks always runs at full intensity.
 
 test('pickCelebration: nothing found returns "none" regardless of other flags', () => {
-  assert.equal(pickCelebration({ found: 0, total: 10 }), 'none');
-  assert.equal(pickCelebration({ found: 0, total: 10, isNew: true }), 'none',
+  assert.deepEqual(pickCelebration({ found: 0, total: 10 }), { tier: 'none', intensity: 0 });
+  assert.deepEqual(pickCelebration({ found: 0, total: 10, isNew: true }), { tier: 'none', intensity: 0 },
     'a record claim with zero finds is incoherent — none beats it');
-  assert.equal(pickCelebration({ found: 0, total: 10, isTimed: true, isNew: true }), 'none');
+  assert.deepEqual(pickCelebration({ found: 0, total: 10, isTimed: true, isNew: true }), { tier: 'none', intensity: 0 });
 });
 
 test('pickCelebration: a clean sweep is "fireworks" (untimed games)', () => {
-  assert.equal(pickCelebration({ found: 10, total: 10 }), 'fireworks');
-  assert.equal(pickCelebration({ found: 10, total: 10, isNew: true }), 'fireworks',
+  assert.deepEqual(pickCelebration({ found: 10, total: 10 }), { tier: 'fireworks', intensity: 1 });
+  assert.deepEqual(pickCelebration({ found: 10, total: 10, isNew: true }), { tier: 'fireworks', intensity: 1 },
     'no double-stack: sweep+record still resolves to a single fireworks');
 });
 
 test('pickCelebration: a new record is "fireworks" even on a partial finish', () => {
-  assert.equal(pickCelebration({ found: 7, total: 10, isNew: true }), 'fireworks');
+  assert.deepEqual(pickCelebration({ found: 7, total: 10, isNew: true }), { tier: 'fireworks', intensity: 1 });
 });
 
 test('pickCelebration: timed mode suppresses the sweep branch', () => {
-  assert.equal(pickCelebration({ found: 10, total: 10, isTimed: true, isNew: false }), 'confetti',
+  assert.deepEqual(pickCelebration({ found: 10, total: 10, isTimed: true, isNew: false }), { tier: 'confetti', intensity: 1 },
     'every 60s run "completes" when the budget runs out — the brag is the record, not the sweep');
-  assert.equal(pickCelebration({ found: 10, total: 10, isTimed: true, isNew: true }), 'fireworks');
+  assert.deepEqual(pickCelebration({ found: 10, total: 10, isTimed: true, isNew: true }), { tier: 'fireworks', intensity: 1 });
 });
 
-test('pickCelebration: partial finish without a record is "confetti"', () => {
-  assert.equal(pickCelebration({ found: 7, total: 10 }), 'confetti');
-  assert.equal(pickCelebration({ found: 1, total: 10 }), 'confetti',
-    'even a single find earns confetti — recognising the effort');
+test('pickCelebration: partial finish without a record is "confetti" scaled by found/total', () => {
+  assert.deepEqual(pickCelebration({ found: 7, total: 10 }), { tier: 'confetti', intensity: 0.7 });
+  assert.deepEqual(pickCelebration({ found: 1, total: 10 }), { tier: 'confetti', intensity: 0.1 },
+    'even a single find earns confetti — recognising the effort, just with a thinner burst');
+  assert.deepEqual(pickCelebration({ found: 9, total: 10 }), { tier: 'confetti', intensity: 0.9 },
+    'near-sweep gets a near-full confetti burst');
+});
+
+test('pickCelebration: timed-mode confetti uses full intensity (total has no meaning there)', () => {
+  // 60s quiz passes total: 0; the round ends on the clock, not on the
+  // pool. Scaling to found/0 would be nonsense, so the partial branch
+  // gives full intensity and lets the record-vs-not distinction carry
+  // the brag-worthy signal instead.
+  assert.deepEqual(pickCelebration({ found: 7, total: 0, isTimed: true }), { tier: 'confetti', intensity: 1 });
 });
 
 test('pickCelebration: prematurelyGaveUp short-circuits to "none" even when finds would otherwise celebrate', () => {
@@ -848,10 +860,10 @@ test('pickCelebration: prematurelyGaveUp short-circuits to "none" even when find
   // however many flags you got. findFlag/daily don't set this flag — there
   // give-up IS the natural finish, so a partial-but-walked-away result
   // still earns its confetti via the normal partial-finish branch.
-  assert.equal(pickCelebration({ found: 7, total: 10, prematurelyGaveUp: true }), 'none');
-  assert.equal(pickCelebration({ found: 10, total: 10, prematurelyGaveUp: true }), 'none',
+  assert.deepEqual(pickCelebration({ found: 7, total: 10, prematurelyGaveUp: true }), { tier: 'none', intensity: 0 });
+  assert.deepEqual(pickCelebration({ found: 10, total: 10, prematurelyGaveUp: true }), { tier: 'none', intensity: 0 },
     'even a coincidental sweep at give-up time stays silent — the player chose to stop, not finish');
-  assert.equal(pickCelebration({ found: 7, total: 10, isNew: true, prematurelyGaveUp: true }), 'none',
+  assert.deepEqual(pickCelebration({ found: 7, total: 10, isNew: true, prematurelyGaveUp: true }), { tier: 'none', intensity: 0 },
     'a record claim is moot when the player abandoned the round');
 });
 

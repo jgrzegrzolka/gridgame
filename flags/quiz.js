@@ -616,15 +616,25 @@ export function recordResult(store, variantKey, modeKey, current, includeAll = f
  *   answering all the questions). Also passes `prematurelyGaveUp` for
  *   the same reason as untimed quiz.
  *
+ * Returns both the tier and an `intensity` in [0, 1]. Intensity is what
+ * scales the confetti burst so 1/10 found feels noticeably smaller than
+ * 9/10 — the percentage-of-found maps directly onto particle density. For
+ * `fireworks` (and the timed-mode `confetti` branch, where `total` isn't
+ * meaningful) intensity is 1 so the spectacle stays at its full size.
+ *
  * @param {{ found: number, total: number, isNew?: boolean, isTimed?: boolean, prematurelyGaveUp?: boolean }} params
- * @returns {'none' | 'confetti' | 'fireworks'}
+ * @returns {{ tier: 'none' | 'confetti' | 'fireworks', intensity: number }}
  */
 export function pickCelebration({ found, total, isNew = false, isTimed = false, prematurelyGaveUp = false }) {
-  if (prematurelyGaveUp) return 'none';
-  if (found === 0) return 'none';
-  if (isNew) return 'fireworks';
-  if (!isTimed && found === total) return 'fireworks';
-  return 'confetti';
+  if (prematurelyGaveUp) return { tier: 'none', intensity: 0 };
+  if (found === 0) return { tier: 'none', intensity: 0 };
+  if (isNew) return { tier: 'fireworks', intensity: 1 };
+  if (!isTimed && found === total) return { tier: 'fireworks', intensity: 1 };
+  // Partial confetti: ratio of found/total, clamped. Timed mode has no
+  // meaningful `total` so it gets the full burst — the brag-worthy
+  // event there is the record, not the count.
+  const intensity = isTimed || total <= 0 ? 1 : Math.max(0, Math.min(1, found / total));
+  return { tier: 'confetti', intensity };
 }
 
 /**

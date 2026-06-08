@@ -142,6 +142,62 @@ test('launchConfetti cancel() also clears the pending encore timer', async () =>
   assert.equal(doc.body._children.length, 0);
 });
 
+test('launchConfetti scales main + encore counts by intensity between floor and ceiling', async () => {
+  const doc = fakeDoc();
+  // intensity 0.5 with count=100/floor=20 → 20 + 0.5*(100-20) = 60.
+  // encoreCount=40/floor=10 → 10 + 0.5*(40-10) = 25.
+  const result = launchConfetti({
+    doc: /** @type {any} */ (doc),
+    count: 100,
+    minCount: 20,
+    encoreCount: 40,
+    minEncoreCount: 10,
+    encoreDelay: 20,
+    duration: 60_000,
+    encoreDuration: 60_000,
+    intensity: 0.5,
+  });
+  assert.ok(result);
+  assert.equal(doc.body._children[0]._children.length, 60,
+    'main wave halfway between floor (20) and ceiling (100) at intensity 0.5');
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  assert.equal(doc.body._children[1]._children.length, 25,
+    'encore halfway between floor (10) and ceiling (40) at intensity 0.5');
+  result.cancel();
+});
+
+test('launchConfetti at intensity 0 collapses to the floor, not zero particles', () => {
+  // A 1/50 finish still deserves *some* visible recognition — the floor
+  // is what guarantees that, instead of the celebration silently
+  // shrinking to a single sad piece of confetti.
+  const doc = fakeDoc();
+  const result = launchConfetti({
+    doc: /** @type {any} */ (doc),
+    count: 100,
+    minCount: 20,
+    duration: 0,
+    encore: false,
+    intensity: 0,
+  });
+  assert.ok(result);
+  assert.equal(doc.body._children[0]._children.length, 20);
+});
+
+test('launchConfetti at intensity 1 (default) honours the caller-supplied count exactly', () => {
+  // Default intensity must be a true no-op vs. the pre-intensity behavior,
+  // so existing callers (and tests) don't pick up an unexpected floor.
+  const doc = fakeDoc();
+  const result = launchConfetti({
+    doc: /** @type {any} */ (doc),
+    count: 100,
+    minCount: 20,
+    duration: 0,
+    encore: false,
+  });
+  assert.ok(result);
+  assert.equal(doc.body._children[0]._children.length, 100);
+});
+
 test('launchFireworks appends a single container that gets populated over the burst schedule', async () => {
   const doc = fakeDoc();
   const result = launchFireworks({

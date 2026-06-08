@@ -327,7 +327,7 @@ export function bootFlagQuiz() {
           badge.textContent = t('game.newRecord', 'new record!');
           bestEl.appendChild(badge);
         }
-        const tier = pickCelebration({
+        const { tier, intensity } = pickCelebration({
           found: answeredCount,
           // total isn't meaningful for 60s mode (the round ends when the
           // budget runs out, not when the pool is exhausted); isTimed
@@ -339,7 +339,7 @@ export function bootFlagQuiz() {
           prematurelyGaveUp: gaveUp,
         });
         if (tier === 'fireworks') launchFireworks();
-        else if (tier === 'confetti') launchConfetti();
+        else if (tier === 'confetti') launchConfetti({ intensity });
       } else {
         // Count mode is one-shot per question, so correct + wrong = target.
         // We still store wrongCount as best.score (lower-wins) for
@@ -364,7 +364,7 @@ export function bootFlagQuiz() {
           badge.textContent = t('game.newRecord', 'new record!');
           bestEl.appendChild(badge);
         }
-        const tier = pickCelebration({
+        const { tier, intensity } = pickCelebration({
           found: answeredCount,
           total: target,
           isTimed: false,
@@ -372,7 +372,7 @@ export function bootFlagQuiz() {
           prematurelyGaveUp: gaveUp,
         });
         if (tier === 'fireworks') launchFireworks();
-        else if (tier === 'confetti') launchConfetti();
+        else if (tier === 'confetti') launchConfetti({ intensity });
       }
 
       gameEl.hidden = true;
