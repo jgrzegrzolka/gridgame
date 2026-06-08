@@ -428,6 +428,24 @@ function runUltimateTicTacToe({ puzzle, countries }) {
     renderTurn();
   }
 
+  /**
+   * Paint the final-score text from state. Idempotent — a langchanged
+   * event can call it without re-firing confetti or re-binding the
+   * Play again handler.
+   */
+  function paintFinalScore() {
+    if (!finalScoreEl) return;
+    if (state.gaveUp) return; // line hidden by finishRound; nothing to paint.
+    if (state.winner) {
+      finalScoreEl.textContent =
+        t('ttt.playerWins', '{player} wins!').replace('{player}', state.winner);
+      finalScoreEl.style.color = state.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
+    } else {
+      finalScoreEl.textContent = t('ttt.draw', 'Draw');
+      finalScoreEl.style.color = '#1c1c1c';
+    }
+  }
+
   function finishRound() {
     if (!resultEl || !finalScoreEl) return;
     if (state.gaveUp) {
@@ -436,14 +454,9 @@ function runUltimateTicTacToe({ puzzle, countries }) {
       // "You/Opponent gave up" actually conveys information.
       const finalScoreLineEl = document.getElementById('final-score-line');
       if (finalScoreLineEl) finalScoreLineEl.hidden = true;
-    } else if (state.winner) {
-      finalScoreEl.textContent =
-        t('ttt.playerWins', '{player} wins!').replace('{player}', state.winner);
-      finalScoreEl.style.color = state.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
-      if (shouldFireTicTacToeConfetti({ winner: state.winner })) launchConfetti();
     } else {
-      finalScoreEl.textContent = t('ttt.draw', 'Draw');
-      finalScoreEl.style.color = '#1c1c1c';
+      paintFinalScore();
+      if (state.winner && shouldFireTicTacToeConfetti({ winner: state.winner })) launchConfetti();
     }
     if (playAgainEl) {
       playAgainEl.href = window.location.pathname + window.location.search;
@@ -472,4 +485,28 @@ function runUltimateTicTacToe({ puzzle, countries }) {
       finishRound();
     });
   }
+
+  /**
+   * Soft language switch: re-translate grid headers, the "to move"
+   * line + cell `<img>.alt` (via renderGrid), the picker categories
+   * if open, and the result text if showing.
+   */
+  function refreshI18nForGame() {
+    colHeaderEls.forEach((th, i) => {
+      th.textContent = tCat(puzzle.cols[i]);
+    });
+    const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
+    rowHeaders.forEach((th, i) => {
+      th.textContent = tCat(puzzle.rows[i]);
+    });
+    renderGrid();
+    renderTurn();
+    if (!pickerEl.hidden && activeCell) {
+      const { bigRow, bigCol } = activeCell;
+      pickerCatsEl.textContent = `${tCat(puzzle.rows[bigRow])} × ${tCat(puzzle.cols[bigCol])}`;
+    }
+    if (resultEl && !resultEl.hidden) paintFinalScore();
+  }
+
+  document.addEventListener('langchanged', refreshI18nForGame);
 }

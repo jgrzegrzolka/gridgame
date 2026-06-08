@@ -73,6 +73,8 @@ function runOnline(countries) {
   let activeCell = null;
   /** @type {Country[]} */
   let currentMatches = [];
+  /** @type {(() => void) | null} */
+  let repaintStatusForLang = null;
   let selectedIndex = 0;
 
   const lobbyEl = document.getElementById('lobby');
@@ -155,7 +157,7 @@ function runOnline(countries) {
     if (gameEl) gameEl.hidden = false;
     if (roomCodeEl) roomCodeEl.textContent = code;
     renderShareButton();
-    setStatus(t('ttt.connecting', 'Connecting…'));
+    setStatusKey('ttt.connecting', 'Connecting…');
     connect();
   }
 
@@ -166,7 +168,7 @@ function runOnline(countries) {
     ws = new WebSocket(wsUrl);
     ws.addEventListener('message', (ev) => onServerMessage(JSON.parse(ev.data)));
     ws.addEventListener('close', onSocketClose);
-    ws.addEventListener('error', () => setStatus(t('ttt.connectionError', 'Connection error')));
+    ws.addEventListener('error', () => setStatusKey('ttt.connectionError', 'Connection error'));
   }
 
   function onSocketClose() {
@@ -174,7 +176,7 @@ function runOnline(countries) {
     activeRoom = { ...activeRoom, intent: 'join' };
     reconnectAttempts++;
     const delayMs = Math.min(30000, 1000 * 2 ** (reconnectAttempts - 1));
-    setStatus(t('ttt.disconnectedReconnecting', 'Disconnected. Reconnecting in {seconds}s…').replace('{seconds}', String(Math.round(delayMs / 1000))));
+    setStatusKey('ttt.disconnectedReconnecting', 'Disconnected. Reconnecting in {seconds}s…', { seconds: Math.round(delayMs / 1000) });
     clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(connect, delayMs);
   }
@@ -565,6 +567,7 @@ function runOnline(countries) {
       statusEl.classList.add('pulse');
     }
     lastStatusKey = key;
+    repaintStatusForLang = renderStatus;
   }
 
   // ---- Share link ----
@@ -636,6 +639,26 @@ function runOnline(countries) {
     }
   }
 
+  /**
+   * Set a transient (non-state-derived) status line via an i18n key.
+   * Records a closure so a soft language switch re-translates the
+   * stored key + template params instead of leaving stale text.
+   *
+   * @param {string} key
+   * @param {string} fallback
+   * @param {Record<string, string | number>} [params]
+   */
+  function setStatusKey(key, fallback, params) {
+    let msg = t(key, fallback);
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        msg = msg.replace(`{${k}}`, String(v));
+      }
+    }
+    setStatus(msg);
+    repaintStatusForLang = () => setStatusKey(key, fallback, params);
+  }
+
   /** @param {number} bigRow @param {number} bigCol @param {number} smallRow @param {number} smallCol */
   function shakeCell(bigRow, bigCol, smallRow, smallCol) {
     const td = findCell(bigRow, bigCol, smallRow, smallCol);
@@ -645,9 +668,14 @@ function runOnline(countries) {
     pulseShake(td);
   }
 
-  function finishRound() {
+  /**
+   * Paint the final-score text from state. Idempotent + side-effect-free —
+   * a langchanged event can re-call it without re-firing confetti or
+   * un-disabling Play again.
+   */
+  function paintFinalScore() {
     const { game, myRole } = state;
-    if (!resultEl || !finalScoreEl || !game) return;
+    if (!finalScoreEl || !game) return;
     if (game.gaveUp) {
       finalScoreEl.textContent = lastGaveUpByMe
         ? t('ttt.youGaveUp', 'You gave up')
@@ -659,14 +687,53 @@ function runOnline(countries) {
         ? t('ttt.youWin', 'You win!')
         : t('ttt.opponentWins', 'Opponent wins');
       finalScoreEl.style.color = game.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
-      if (shouldFireTicTacToeConfetti({ winner: game.winner, myRole })) launchConfetti();
     } else {
       finalScoreEl.textContent = t('ttt.draw', 'Draw');
       finalScoreEl.style.color = '#1c1c1c';
     }
+  }
+
+  function finishRound() {
+    const { game, myRole } = state;
+    if (!resultEl || !game) return;
+    paintFinalScore();
+    if (!game.gaveUp && game.winner && shouldFireTicTacToeConfetti({ winner: game.winner, myRole })) {
+      launchConfetti();
+    }
     if (playAgainEl) playAgainEl.disabled = false;
     resultEl.hidden = false;
   }
+
+  /**
+   * Soft language switch: re-translate every text surface this game
+   * owns. The 9×9 grid headers + every cell `<img>.alt` + status line +
+   * picker categories (if open) + final score (if showing) all re-derive
+   * from the current cache.
+   */
+  function refreshI18nForGame() {
+    const { game } = state;
+    if (game && gridBuilt) {
+      colHeaderEls.forEach((th, i) => {
+        th.textContent = tCat(/** @type {UltimateGameState} */ (game).puzzle.cols[i]);
+      });
+      // Row headers live on every 3rd <tr> (rowspan=3 cells) inside
+      // tbody — querySelectorAll('tr > th') is enough to find all three
+      // in order without coupling to a class name.
+      const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
+      rowHeaders.forEach((th, i) => {
+        th.textContent = tCat(/** @type {UltimateGameState} */ (game).puzzle.rows[i]);
+      });
+      renderGrid();
+    }
+    if (repaintStatusForLang) repaintStatusForLang();
+    if (!pickerEl.hidden && activeCell && game) {
+      const { bigRow, bigCol } = activeCell;
+      pickerCatsEl.textContent = `${tCat(/** @type {UltimateGameState} */ (game).puzzle.rows[bigRow])} × ${tCat(/** @type {UltimateGameState} */ (game).puzzle.cols[bigCol])}`;
+    }
+    if (resultEl && !resultEl.hidden) paintFinalScore();
+  }
+
+  document.addEventListener('langchanged', refreshI18nForGame);
 
   function startFreshRound() {
     if (resultEl) resultEl.hidden = true;
