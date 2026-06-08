@@ -44,8 +44,16 @@ Foundation for every later phase.
 - Tests for the soft-mode fetch-failure → `window.location.reload()` fallback in `wireLangToggle`. Edge case (network drop mid-toggle); the code path is one line.
 - Lift `attachLangRefresh` + `computeLangRefreshPayload` out of `daily/playFlow.js` once Phase 2 needs them. Per CLAUDE.md "promote when the second consumer arrives."
 
-#### Phase 2 — findFlag  [pending]
-Same shape as daily, smaller surface (6 sites). Mostly a copy of phase 1's pattern.
+#### Phase 2 — findFlag  [in progress]
+- [x] Lift `computeLangRefreshPayload` + the tile-name refresh (`bindTileCountry` / `refreshTileNames` over a module-private `WeakMap<HTMLElement, Country>`) out of `daily/playFlow.js` into the new shared `langRefresh.js`. Tests moved to `langRefresh.test.js` and gained coverage for `bindTileCountry` / `refreshTileNames` (registered tile renames, unregistered tile passthrough, missing-translation fallback).
+- [x] `findFlag/page.js`: `flagTile` now calls `bindTileCountry`. `renderChooser` and `startGame` both return `{ refreshI18n(newAll) }` handles. The chooser tracks section h2s (key + fallback), pill label spans (with group + value), and the "no other colours" label span so each can be re-translated in place without rebuilding the chooser DOM (preserves the user's pill selections). The game re-derives targets + category label from the stored filter on each lang flip.
+- [x] `findFlag/index.html`: `wireLangToggle(lang, undefined, { softReload: true, base: '../' })`.
+- [x] A single boot-level `langchanged` listener swaps `all`, calls `refreshTileNames`, and forwards to whichever surface (chooser or game) is active.
+- [ ] Manual smoke: open `/findFlag/`, pick 2 pills, switch language → pill labels re-translate, selections intact; start a game, type 2 guesses, switch language → input + tiles + suggestion matcher all carry over to the new language.
+
+**Deferred:**
+- `colorCountPicker` aria-labels stay in the boot-time language (only screen-reader audible; visible chip symbols `= ≥ ≤ × 2..5` don't need translation). Add a `refreshI18n` exit on `createColorCountPicker` when this becomes a real complaint.
+- Tests for the chooser's `refreshI18n` (DOM-heavy walk; would need a substantial fake document).
 
 #### Phase 3 — flagQuiz  [pending]
 21 sites. 60s mode: clock keeps running through the lang swap — that's the intended behaviour in soft mode, not a bug.

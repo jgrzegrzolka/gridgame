@@ -22,6 +22,7 @@ import { createColorCountPicker } from '../colorCountPicker.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
+import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 
 /**
  * Options the Random button (and the result page's "Random next" link)
@@ -90,6 +91,7 @@ export function bootFindFlag() {
     const li = document.createElement('li');
     li.className = 'find-tile';
     li.dataset.name = displayName;
+    bindTileCountry(li, c);
     li.addEventListener('click', () => openZoom(c));
     const img = document.createElement('img');
     img.src = `../flags/svg/${c.code}.svg`;
@@ -120,23 +122,38 @@ export function bootFindFlag() {
     .then(loadCountries)
     .then((raw) => {
       const all = withLocalizedAliases(flagsGamePool(raw, includeAll));
+      /** @type {{ refreshI18n: (newAll: import('../flags/group.js').Country[]) => void } | null} */
+      let activeHandle = null;
       if (!initialFilter) {
-        renderChooser(all);
+        activeHandle = renderChooser(all);
         chooserEl.hidden = false;
-        return;
+      } else {
+        const category = filterToCategory(initialFilter, t);
+        const targets = findTargets(all, category);
+        if (targets.length < 1) {
+          // The user landed on a URL whose intersection is empty (only
+          // possible via hand-edited `?f=…` mixes — the chooser disables
+          // Play when the live total is 0). Fall back to the chooser
+          // instead of starting a 0/0 game that can only end in give-up.
+          activeHandle = renderChooser(all);
+          chooserEl.hidden = false;
+        } else {
+          activeHandle = startGame(category, initialFilter, all);
+        }
       }
-      const category = filterToCategory(initialFilter, t);
-      const targets = findTargets(all, category);
-      if (targets.length < 1) {
-        // The user landed on a URL whose intersection is empty (only
-        // possible via hand-edited `?f=…` mixes — the chooser disables
-        // Play when the live total is 0). Fall back to the chooser
-        // instead of starting a 0/0 game that can only end in give-up.
-        renderChooser(all);
-        chooserEl.hidden = false;
-        return;
-      }
-      startGame(category, initialFilter, all);
+
+      // Soft language switch: re-run withLocalizedAliases so any new
+      // suggestion matching honours the new language's aliases, then
+      // hand the fresh pool to whichever surface is active (chooser or
+      // game). Tile names re-paint via refreshTileNames — that covers
+      // both in-game and result tiles in one walk. data-i18n surfaces
+      // (button labels, section titles with attributes, the result
+      // prefix span) re-translate upstream in applyStringsToDocument.
+      document.addEventListener('langchanged', () => {
+        const newAll = withLocalizedAliases(flagsGamePool(raw, includeAll));
+        refreshTileNames();
+        if (activeHandle) activeHandle.refreshI18n(newAll);
+      });
     })
     .catch((err) => {
       document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
@@ -144,6 +161,7 @@ export function bootFindFlag() {
 
   /**
    * @param {import('../flags/group.js').Country[]} all
+   * @returns {{ refreshI18n: (newAll: import('../flags/group.js').Country[]) => void }}
    */
   function renderChooser(all) {
     const sectionsEl = document.getElementById('chooser-sections');
@@ -156,9 +174,12 @@ export function bootFindFlag() {
     // 0-count entries dropped so the chooser only ever offers playable
     // tags. Status / "Other continent" deliberately stay out: keeping
     // the chooser's tag inventory the same as before the refactor.
+    // titleKey + fallback (not the resolved string) so refreshI18n can
+    // re-translate on a soft language switch.
     const sections = /** @type {const} */ ([
       {
-        title: t('findFlag.sections.continents', 'Continents'),
+        titleKey: 'findFlag.sections.continents',
+        titleFallback: 'Continents',
         group: /** @type {'continent'} */ ('continent'),
         items: CONTINENTS.map((value) => ({
           value: /** @type {string} */ (value),
@@ -166,7 +187,8 @@ export function bootFindFlag() {
         })).filter((it) => it.count > 0),
       },
       {
-        title: t('findFlag.sections.colors', 'Colors'),
+        titleKey: 'findFlag.sections.colors',
+        titleFallback: 'Colors',
         group: /** @type {'color'} */ ('color'),
         items: ALL_FLAG_COLORS.map((value) => ({
           value,
@@ -174,7 +196,8 @@ export function bootFindFlag() {
         })).filter((it) => it.count > 0),
       },
       {
-        title: t('findFlag.sections.motifs', 'Motifs'),
+        titleKey: 'findFlag.sections.motifs',
+        titleFallback: 'Motifs',
         group: /** @type {'motif'} */ ('motif'),
         items: ALL_MOTIFS.map((value) => ({
           value,
@@ -183,8 +206,12 @@ export function bootFindFlag() {
       },
     ]);
 
-    /** @type {Array<{ btn: HTMLButtonElement, group: 'continent' | 'color' | 'motif', value: string }>} */
+    /** @type {Array<{ btn: HTMLButtonElement, group: 'continent' | 'color' | 'motif', value: string, labelSpan: HTMLSpanElement }>} */
     const allPills = [];
+    /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
+    const sectionHeaders = [];
+    /** @type {HTMLSpanElement | null} */
+    let onlyColorsLabelSpan = null;
 
     // "No other colours" toggle pill — state lives in the shared
     // createColorCountLock so flagsdata and findFlag can't drift on what
@@ -213,7 +240,8 @@ export function bootFindFlag() {
       const secEl = document.createElement('section');
       secEl.className = 'chooser-section';
       const h = document.createElement('h2');
-      h.textContent = sec.title;
+      h.textContent = t(sec.titleKey, sec.titleFallback);
+      sectionHeaders.push({ h, key: sec.titleKey, fallback: sec.titleFallback });
       secEl.appendChild(h);
       const wrap = document.createElement('div');
       wrap.className = 'chooser-pills';
@@ -233,7 +261,7 @@ export function bootFindFlag() {
         const value = it.value;
         btn.addEventListener('click', () => cyclePill(group, value, btn));
         wrap.appendChild(btn);
-        allPills.push({ btn, group, value });
+        allPills.push({ btn, group, value, labelSpan });
       }
       // After the Colors section render the "no other colours" modifier
       // pill. Single toggle; when active, filter.colorCount is bound to the
@@ -246,6 +274,7 @@ export function bootFindFlag() {
         const labelSpan = document.createElement('span');
         labelSpan.className = 'pill-label';
         labelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');
+        onlyColorsLabelSpan = labelSpan;
         btn.appendChild(labelSpan);
         btn.addEventListener('click', () => {
           const on = colorCountLock.toggle();
@@ -354,16 +383,51 @@ export function bootFindFlag() {
     }
 
     updateBar();
+
+    return {
+      /**
+       * Re-translate every chooser surface that was painted with `t()`
+       * at render time. `data-i18n`-marked elements (Clear button,
+       * static Random label, etc.) are handled upstream by
+       * `applyStringsToDocument` before this fires. `newAll` is unused
+       * today (pill counts don't shift on a re-alias) but kept in the
+       * signature so a future "live count refresh" can plug in without
+       * a contract change.
+       *
+       * @param {import('../flags/group.js').Country[]} _newAll
+       */
+      refreshI18n(_newAll) {
+        for (const sh of sectionHeaders) {
+          sh.h.textContent = t(sh.key, sh.fallback);
+        }
+        for (const p of allPills) {
+          p.labelSpan.textContent = pillLabel(p.group, p.value, 'include', t);
+        }
+        if (onlyColorsLabelSpan) {
+          onlyColorsLabelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');
+        }
+        // updateBar rewrites the Play button label ("Play (N)" or "Play")
+        // programmatically, so its data-i18n was already overwritten
+        // at boot. Calling it here re-applies the current-language
+        // `playLabel()` over whatever applyStringsToDocument restored.
+        updateBar();
+      },
+    };
   }
 
   /**
    * @param {import('../flags/engine.js').Category} category
    * @param {import('../flags/flagsFilter.js').Filters} filter
    * @param {import('../flags/group.js').Country[]} all
+   * @returns {{ refreshI18n: (newAll: import('../flags/group.js').Country[]) => void }}
    */
   function startGame(category, filter, all) {
-    const targets = findTargets(all, category);
-    const pool = findPool(all);
+    let targets = findTargets(all, category);
+    // pool is rebuilt on a soft language switch — the suggestion matcher
+    // reads each Country's `aliases`, which are baked at
+    // withLocalizedAliases time. targetCodes is mutated in place so the
+    // `state` object captured below keeps pointing at the same Set.
+    let pool = findPool(all);
     const targetCodes = new Set(targets.map((c) => c.code));
     const foundCodes = new Set();
     const state = { targetCodes, foundCodes };
@@ -562,5 +626,35 @@ export function bootFindFlag() {
 
     gameEl.hidden = false;
     if (!('ontouchstart' in window)) inputEl.focus();
+
+    return {
+      /**
+       * Soft language switch: swap in the re-aliased country list (so
+       * the suggestion matcher accepts the new language's names),
+       * re-derive targets in the new pool by code, re-translate the
+       * category label, and re-paint the tiles + suggestion list. The
+       * result section's `data-i18n` strings (prefix, found-title,
+       * missed-title) re-translate upstream via
+       * `applyStringsToDocument`; only the tile names (read from
+       * `countryName`) need page-local work, and `refreshTileNames`
+       * already covers both the in-game and result lists.
+       *
+       * @param {import('../flags/group.js').Country[]} newAll
+       */
+      refreshI18n(newAll) {
+        all = newAll;
+        pool = findPool(all);
+        // Re-translate the category label by re-deriving it from the
+        // stored filter — `category.label` was baked at first render
+        // and would otherwise read in the boot-time language.
+        const fresh = filterToCategory(filter, t);
+        targets = findTargets(all, fresh);
+        targetCodes.clear();
+        for (const c of targets) targetCodes.add(c.code);
+        catEl.textContent = fresh.label;
+        refreshTileNames();
+        renderSuggestions();
+      },
+    };
   }
 }

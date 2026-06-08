@@ -1,13 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeLangRefreshPayload } from './playFlow.js';
-import { createCountry } from '../flags/group.js';
-import { emptyFilters } from '../flags/flagsFilter.js';
-import { _seedCacheForTests, _resetCacheForTests } from '../i18n.js';
+import {
+  computeLangRefreshPayload,
+  bindTileCountry,
+  refreshTileNames,
+} from './langRefresh.js';
+import { createCountry } from './flags/group.js';
+import { emptyFilters } from './flags/flagsFilter.js';
+import { _seedCacheForTests, _resetCacheForTests } from './i18n.js';
 
 // computeLangRefreshPayload is the pure half of the soft-language-switch
-// handler. The rest of playFlow.js is DOM glue. Tests pin the two
-// invariants the call sites depend on:
+// handler. Tests pin two invariants the call sites depend on:
 //
 //  1. the produced `all` carries the new language's name as an alias on
 //     every translated country — that's what the suggestion matcher
@@ -117,4 +120,92 @@ test('computeLangRefreshPayload: label comes from filterToCategory(filter, t) so
   assert.ok(payload.label.includes('Europa'),
     `expected label to include the Polish "Europa"; got: ${payload.label}`);
   _resetCacheForTests();
+});
+
+// ---- bindTileCountry + refreshTileNames ----
+//
+// Tile name refresh is what keeps the CSS hover overlay
+// (`.find-tile::after { content: attr(data-name) }`) and the screen-
+// reader `<img>.alt` in the active language after a soft language
+// switch. The contract is: every tile created via `bindTileCountry`
+// re-translates its display name on `refreshTileNames(doc)`; tiles
+// that weren't registered (e.g. result-screen placeholders) pass
+// through untouched.
+
+function fakeTileDoc(tilesSpec) {
+  /** @type {any[]} */
+  const allTiles = [];
+  for (const spec of tilesSpec) {
+    const img = {
+      alt: spec.initialAlt ?? '',
+    };
+    const tile = {
+      _attrs: { class: 'find-tile' },
+      dataset: { name: spec.initialName ?? '' },
+      querySelector: (/** @type {string} */ sel) => (sel === 'img' ? img : null),
+      classList: { contains: (/** @type {string} */ k) => k === 'find-tile' },
+    };
+    allTiles.push({ tile, img, code: spec.code });
+  }
+  return {
+    body: allTiles,
+    img: (/** @type {string} */ code) => {
+      const t = allTiles.find((x) => x.code === code);
+      return t ? t.img : null;
+    },
+    tile: (/** @type {string} */ code) => {
+      const t = allTiles.find((x) => x.code === code);
+      return t ? t.tile : null;
+    },
+    querySelectorAll: (/** @type {string} */ sel) => {
+      if (sel !== '.find-tile') return [];
+      return allTiles.map((x) => x.tile);
+    },
+  };
+}
+
+test('refreshTileNames: re-applies countryName to every registered tile', () => {
+  _seedCacheForTests({ country: { pl: 'Polska', de: 'Niemcy' } });
+  const doc = fakeTileDoc([
+    { code: 'pl', initialName: 'Poland', initialAlt: 'Poland' },
+    { code: 'de', initialName: 'Germany', initialAlt: 'Germany' },
+  ]);
+  bindTileCountry(doc.tile('pl'), sovereign('pl', 'Poland'));
+  bindTileCountry(doc.tile('de'), sovereign('de', 'Germany'));
+
+  refreshTileNames(/** @type {any} */ (doc));
+
+  assert.equal(doc.tile('pl').dataset.name, 'Polska');
+  assert.equal(doc.img('pl').alt, 'Polska');
+  assert.equal(doc.tile('de').dataset.name, 'Niemcy');
+  assert.equal(doc.img('de').alt, 'Niemcy');
+  _resetCacheForTests();
+});
+
+test('refreshTileNames: skips tiles that were never registered via bindTileCountry', () => {
+  // Tiles outside of game scope (e.g. injected by a future feature)
+  // pass through unchanged — the WeakMap lookup misses, so we leave
+  // them alone instead of clobbering with countryName({undefined}).
+  _seedCacheForTests({ country: { pl: 'Polska' } });
+  const doc = fakeTileDoc([
+    { code: 'unregistered', initialName: 'Custom Label', initialAlt: 'Custom Alt' },
+  ]);
+  refreshTileNames(/** @type {any} */ (doc));
+  assert.equal(doc.tile('unregistered').dataset.name, 'Custom Label',
+    'unregistered tile name must survive the refresh');
+  assert.equal(doc.img('unregistered').alt, 'Custom Alt');
+  _resetCacheForTests();
+});
+
+test('refreshTileNames: falls back to the country.name when the cache has no translation', () => {
+  // Mid-boot or after a failed reloadI18n the cache may not have a
+  // translation for every country. countryName falls back to c.name,
+  // so the tile's existing English name re-asserts itself rather than
+  // displaying a broken empty hover.
+  _resetCacheForTests();
+  const doc = fakeTileDoc([{ code: 'pl', initialName: 'stale', initialAlt: 'stale' }]);
+  bindTileCountry(doc.tile('pl'), sovereign('pl', 'Poland'));
+  refreshTileNames(/** @type {any} */ (doc));
+  assert.equal(doc.tile('pl').dataset.name, 'Poland');
+  assert.equal(doc.img('pl').alt, 'Poland');
 });
