@@ -592,7 +592,8 @@ export function recordResult(store, variantKey, modeKey, current, includeAll = f
  * the same way to the player.
  *
  * The rule:
- * - `none`      — you found nothing. Celebrating zero would feel ironic.
+ * - `none`      — you found nothing, OR you walked away mid-round
+ *                 (prematurelyGaveUp). Celebrating either feels wrong.
  * - `confetti`  — you found something, but neither a clean sweep nor a
  *                 personal best. Recognises effort without overselling.
  * - `fireworks` — clean sweep OR new personal best. The big-moment cue;
@@ -601,18 +602,25 @@ export function recordResult(store, variantKey, modeKey, current, includeAll = f
  *
  * Modes:
  * - Daily / findFlag pass `isNew: false` (no record tracking) and
- *   `isTimed: false` — sweep → fireworks, partial → confetti.
+ *   `isTimed: false` — sweep → fireworks, partial → confetti. They
+ *   do NOT set `prematurelyGaveUp` because give-up is the normal way
+ *   to finish a round there ("I'm done looking, count what I have"),
+ *   not a premature exit.
  * - Quiz untimed passes the actual `isNew` plus `isTimed: false` —
- *   sweep OR record → fireworks.
+ *   sweep OR record → fireworks. Sets `prematurelyGaveUp: true` when
+ *   the player clicks Give up before the pool is exhausted, because in
+ *   quiz the natural end is finishing the round; walking away is.
  * - Quiz 60s passes `isTimed: true` so the sweep branch is suppressed
  *   (every timed run is inherently "complete" when the budget runs out;
  *   the brag-worthy event there is beating your prior best, not
- *   answering all the questions).
+ *   answering all the questions). Also passes `prematurelyGaveUp` for
+ *   the same reason as untimed quiz.
  *
- * @param {{ found: number, total: number, isNew?: boolean, isTimed?: boolean }} params
+ * @param {{ found: number, total: number, isNew?: boolean, isTimed?: boolean, prematurelyGaveUp?: boolean }} params
  * @returns {'none' | 'confetti' | 'fireworks'}
  */
-export function pickCelebration({ found, total, isNew = false, isTimed = false }) {
+export function pickCelebration({ found, total, isNew = false, isTimed = false, prematurelyGaveUp = false }) {
+  if (prematurelyGaveUp) return 'none';
   if (found === 0) return 'none';
   if (isNew) return 'fireworks';
   if (!isTimed && found === total) return 'fireworks';
