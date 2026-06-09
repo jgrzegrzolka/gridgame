@@ -92,7 +92,7 @@ async function renderStatsForPuzzle(n, targets, opts = {}) {
  *
  * @param {number} n
  * @param {import('../flags/group.js').Country[]} targets
- * @param {{ foundCodes: string[], totalCount: number, durationMs: number }} info
+ * @param {{ foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }} info
  */
 async function handleFinish(n, targets, info) {
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
@@ -117,6 +117,7 @@ async function handleFinish(n, targets, info) {
     store: window.localStorage,
     n,
     foundCodes: info.foundCodes,
+    wrongCodes: info.wrongCodes,
     totalCount: info.totalCount,
     durationMs: info.durationMs,
     deviceId,

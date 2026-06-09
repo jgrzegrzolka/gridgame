@@ -107,6 +107,59 @@ test('duplicate codes are rejected', () => {
   assert.deepEqual(validateResult(b), { ok: false, error: 'duplicate_codes' });
 });
 
+test('wrongCodes is optional — absent passes', () => {
+  const b = validBody();
+  delete b.wrongCodes;
+  assert.deepEqual(validateResult(b), { ok: true });
+});
+
+test('wrongCodes empty array passes', () => {
+  const b = validBody();
+  b.wrongCodes = [];
+  assert.deepEqual(validateResult(b), { ok: true });
+});
+
+test('wrongCodes valid codes pass', () => {
+  const b = validBody();
+  b.wrongCodes = ['de', 'fr', 'us'];
+  assert.deepEqual(validateResult(b), { ok: true });
+});
+
+test('wrongCodes non-array (e.g. string) is rejected', () => {
+  const b = validBody();
+  b.wrongCodes = 'de,fr';
+  assert.deepEqual(validateResult(b), { ok: false, error: 'invalid_wrongCodes' });
+});
+
+test('wrongCodes containing a malformed code is rejected', () => {
+  const b = validBody();
+  b.wrongCodes = ['de', 'XYZ'];
+  assert.deepEqual(validateResult(b), { ok: false, error: 'invalid_wrong_code' });
+});
+
+test('wrongCodes containing a non-string entry is rejected', () => {
+  const b = validBody();
+  b.wrongCodes = ['de', 42];
+  assert.deepEqual(validateResult(b), { ok: false, error: 'invalid_wrong_code' });
+});
+
+test('wrongCodes with duplicates rejected', () => {
+  const b = validBody();
+  b.wrongCodes = ['de', 'fr', 'de'];
+  assert.deepEqual(validateResult(b), { ok: false, error: 'duplicate_wrong_codes' });
+});
+
+test('foundCodes and wrongCodes can share a code (different semantics — found vs wrong-attempted)', () => {
+  // This shouldn't happen in normal play (a code goes to one or the
+  // other), but the validator should not impose cross-list uniqueness.
+  // Each list is deduped on its own; the *server* trusts the client's
+  // semantics.
+  const b = validBody();
+  b.foundCodes = ['ch'];
+  b.wrongCodes = ['ch'];
+  assert.deepEqual(validateResult(b), { ok: true });
+});
+
 const { validatePuzzleIdParam } = require('./validate');
 
 test('validatePuzzleIdParam accepts a numeric string within range', () => {
