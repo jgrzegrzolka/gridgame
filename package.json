@@ -7,10 +7,13 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.ui.json",
     "validate": "npm test && npm run typecheck",
     "dev": "partykit dev --serve .",
+    "dev:swa": "swa start ./ --api-location ./api",
+    "dev:api": "cd api && func start",
     "party:deploy": "partykit deploy",
     "build:minify": "node scripts/minify.mjs"
   },
   "devDependencies": {
+    "@azure/static-web-apps-cli": "^2.0.9",
     "@types/node": "^25.9.1",
     "esbuild": "^0.21.5",
     "partykit": "^0.0.114",

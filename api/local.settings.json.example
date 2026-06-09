@@ -1,0 +1,23 @@
+{
+  "_comment_": "Copy this file to local.settings.json (gitignored) and fill in the real values. The Functions runtime reads from local.settings.json automatically when you run `func start` or `swa start`.",
+
+  "IsEncrypted": false,
+
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+
+    "_comment_COSMOS_CONN": "Cosmos connection string. Get the current value from Azure Portal -> swa-yetanotherquiz -> Environment variables, or via: az staticwebapp appsettings list -n swa-yetanotherquiz -g rg-yetanotherquiz --query properties.COSMOS_CONN -o tsv. WARNING: this hits PROD Cosmos by default - writes you make locally land in the real container. See CLAUDE.md 'Local development' for the trade-off.",
+    "COSMOS_CONN": "AccountEndpoint=https://cosmos-yetanotherquiz-jg.documents.azure.com:443/;AccountKey=...;",
+
+    "_comment_TURNSTILE_SECRET": "Cloudflare Turnstile secret. Same source as COSMOS_CONN. Leave UNSET to skip Turnstile verification locally - the handler's `missing_secret` branch logs a warning and accepts any token. Recommended for local dev.",
+    "TURNSTILE_SECRET": "",
+
+    "_comment_DAILY_RESULT_UPSERT": "Set to \"true\" for testing-mode replays (server upserts instead of 409'ing on duplicate). Same toggle as the prod env var.",
+    "DAILY_RESULT_UPSERT": "true"
+  },
+
+  "Host": {
+    "_comment_CORS": "CORS allows the SWA emulator (localhost:4280) to reach the Functions runtime (localhost:7071). swa start sets this up for you; only matters if you run `func start` standalone.",
+    "CORS": "*"
+  }
+}
