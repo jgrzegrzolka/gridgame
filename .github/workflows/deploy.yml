@@ -87,6 +87,17 @@ jobs:
         # them in place with a sourcemap alongside. Local working copies stay
         # readable — minification only happens in the deploy artifact.
         run: npm run build:minify
+      - name: Drop dev-only artifacts before SWA upload
+        # SWA Free SKU caps app content at 250 MB. Without this, node_modules
+        # alone pushes us over. None of these are needed at runtime:
+        # node_modules and scripts/ are build-time only; party/ is the PartyKit
+        # server (deploys separately via deploy-partykit.yml); .github/ holds
+        # workflow metadata. Tests and config files are stripped as a bonus —
+        # the static site never references them.
+        run: |
+          rm -rf node_modules party scripts .github .git
+          find . -name '*.test.js' -delete
+          rm -f tsconfig*.json package*.json partykit.json *.md
       - name: Deploy to Azure Static Web Apps
         # Free SKU uses a deployment token (stored as repo secret) rather
         # than OIDC. skip_app_build keeps Azure Oryx out of the way since
