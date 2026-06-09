@@ -121,9 +121,19 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 
 **Phase B4 — Client integration on finish screen** *(feature first visible)*
 
-- [ ] `daily/identity.js`: generate UUID, store as `localStorage.gridgame.deviceId`. Tests.
+**Retry contract (read this before writing code — it's the part the server-side already enforces):**
+
+- **The server stores first-attempt only.** `dailyResult` Function 409s on duplicate `(puzzleId, deviceId)`. This is by design — stats are honest only if "12% got 5/5" means "12% solved it on their *first* try." If we upserted, everyone would replay until 5/5 and the top percentile would saturate.
+- **Local replay still works exactly like today.** `daily/scores.js` already overwrites the localStorage record on replay (see the comment at the top of that file). Don't change that — players replay to learn, their personal archive should show their latest attempt.
+- **The client must gate the POST.** Don't POST on every finish — only on the first finish for that puzzle. Track "submitted to server" separately from the score itself. Suggested storage shape: either piggyback an `s: true` flag on the existing scores.js record, or a separate `localStorage.gridgame.submittedPuzzles` set keyed by `n`.
+- **Treat 204 and 409 as equivalent locally.** If we ever do POST a duplicate (e.g. user cleared the submitted-flag but not the deviceId), 409 means "the server already has this" — same as success for our purposes. Mark it submitted and move on.
+
+**Tasks:**
+
+- [ ] `daily/identity.js`: generate UUID (`crypto.randomUUID()`), store as `localStorage.gridgame.deviceId` (sticky after first call). Tests.
+- [ ] Track "submitted to server" per puzzle in localStorage. Extract to a sibling module with tests so the gate is one place, not scattered.
 - [ ] Embed Turnstile widget in `daily/index.html` (managed/invisible mode). Site key in HTML.
-- [ ] On finish (in `daily/playFlow.js` or wherever the finish screen renders): POST to `/api/v1/daily/result` with Turnstile token. Fire-and-forget on failure — never block the finish screen.
+- [ ] On finish (in `daily/playFlow.js` or wherever the finish screen renders): if not yet submitted, POST to `/api/v1/daily/result` with Turnstile token. Fire-and-forget on failure — never block the finish screen. On 204 or 409, mark submitted.
 - [ ] Fetch `/api/v1/daily/stats/{puzzleId}`. Render per-flag table below found/missed lists. Match existing daily list styling — grep `daily/index.css` and sibling pages first per CLAUDE.md UI-consistency rule.
 - [ ] Loading + failure states: skeleton row while fetching, table just doesn't render on error.
 - [ ] Extract pure render logic to a sibling module + tests (per "proactive testing" feedback).
