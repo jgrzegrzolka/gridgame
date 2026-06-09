@@ -57,6 +57,29 @@ function validateResult(body) {
   if (new Set(body.foundCodes).size !== body.foundCodes.length) {
     return { ok: false, error: 'duplicate_codes' };
   }
+
+  // wrongCodes is OPTIONAL — older cached clients during a deploy
+  // window won't send it. New clients always send (empty array if
+  // the player gave up without typing anything wrong). When present,
+  // same shape rules as foundCodes: 2-letter codes, deduped. No
+  // length cap — a determined player could type many wrong real
+  // countries (~250 sovereign + territories), but the body validator
+  // doesn't need an explicit upper bound because the foundCodes
+  // total cap (50) doesn't apply here.
+  if (body.wrongCodes !== undefined) {
+    if (!Array.isArray(body.wrongCodes)) {
+      return { ok: false, error: 'invalid_wrongCodes' };
+    }
+    for (const code of body.wrongCodes) {
+      if (typeof code !== 'string' || !CODE_RE.test(code)) {
+        return { ok: false, error: 'invalid_wrong_code' };
+      }
+    }
+    if (new Set(body.wrongCodes).size !== body.wrongCodes.length) {
+      return { ok: false, error: 'duplicate_wrong_codes' };
+    }
+  }
+
   return { ok: true };
 }
 

@@ -285,7 +285,7 @@ export function renderResult(targets, foundCodes) {
  * @param {import('../flags/engine.js').Category} category
  * @param {Country[]} targets
  * @param {Country[]} all
- * @param {{ skipSave?: boolean, onFinish?: (info: { foundCodes: string[], totalCount: number, durationMs: number }) => void }} [opts]
+ * @param {{ skipSave?: boolean, onFinish?: (info: { foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }) => void }} [opts]
  * @returns {{ refreshI18n: (next: { all: Country[], targets: Country[], label: string }) => void }}
  */
 export function startGame(n, category, targets, all, opts = {}) {
@@ -299,6 +299,13 @@ export function startGame(n, category, targets, all, opts = {}) {
   let pool = findPool(all);
   const targetCodes = new Set(targets.map((c) => c.code));
   const foundCodes = new Set();
+  // Captures every real-country guess that isn't in the target set
+  // (the `wrong-category` branch of classifyGuess). Dedup'd by Set so
+  // typing the same wrong country twice is recorded once. Reported
+  // in the onFinish payload for the stats API — not displayed in-game.
+  // Future stats UIs ("most-wrong-guessed today", "your distractors")
+  // depend on this data being captured per submission from day one.
+  const wrongCodes = new Set();
   const state = { targetCodes, foundCodes };
 
   const gameEl = /** @type {HTMLElement} */ (document.getElementById('game'));
@@ -399,6 +406,7 @@ export function startGame(n, category, targets, all, opts = {}) {
       return;
     }
     if (outcome.kind === 'wrong-category') {
+      wrongCodes.add(c.code);
       flashWrong();
       inputEl.value = '';
       matches = [];
@@ -455,6 +463,7 @@ export function startGame(n, category, targets, all, opts = {}) {
     if (onFinish) {
       onFinish({
         foundCodes: Array.from(foundCodes),
+        wrongCodes: Array.from(wrongCodes),
         totalCount: total,
         durationMs: Date.now() - startTime,
       });

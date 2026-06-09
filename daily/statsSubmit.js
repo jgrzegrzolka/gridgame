@@ -36,6 +36,7 @@ const ENDPOINT = '/api/v1/daily/result';
  *   store: { getItem(k: string): string | null, setItem(k: string, v: string): void },
  *   n: number,
  *   foundCodes: string[],
+ *   wrongCodes?: string[],
  *   totalCount: number,
  *   durationMs: number,
  *   deviceId: string,
@@ -45,12 +46,13 @@ const ENDPOINT = '/api/v1/daily/result';
  * @returns {Promise<{ outcome: 'ok' } | { outcome: 'failed', reason: string }>}
  */
 export async function submitResult({
-  store, n, foundCodes, totalCount, durationMs, deviceId, turnstileToken,
+  store, n, foundCodes, wrongCodes = [], totalCount, durationMs, deviceId, turnstileToken,
   fetchImpl = globalThis.fetch,
 }) {
   const body = {
     puzzleId: n,
     foundCodes,
+    wrongCodes,
     totalCount,
     durationMs,
     deviceId,

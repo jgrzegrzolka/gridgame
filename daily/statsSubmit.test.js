@@ -18,6 +18,7 @@ function fakeStore(initial = {}) {
 const baseArgs = {
   n: 7,
   foundCodes: ['ch', 'dk'],
+  wrongCodes: ['de', 'fr'],
   totalCount: 9,
   durationMs: 87_000,
   deviceId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
@@ -119,11 +120,28 @@ test('POSTs to /api/v1/daily/result with the right body', async () => {
   assert.deepEqual(body, {
     puzzleId: 7,
     foundCodes: ['ch', 'dk'],
+    wrongCodes: ['de', 'fr'],
     totalCount: 9,
     durationMs: 87000,
     deviceId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
     turnstileToken: 'fake-cf-token',
   });
+});
+
+test('wrongCodes defaults to [] when not supplied', async () => {
+  const store = fakeStore();
+  let captured;
+  // eslint-disable-next-line no-unused-vars
+  const { wrongCodes: _wrong, ...withoutWrong } = baseArgs;
+  await submitResult({
+    ...withoutWrong, store,
+    fetchImpl: async (url, init) => {
+      captured = { url, init };
+      return fakeRes(204, null);
+    },
+  });
+  const body = JSON.parse(captured.init.body);
+  assert.deepEqual(body.wrongCodes, []);
 });
 
 test('failure does NOT mark submitted (so a retry on the next visit is possible)', async () => {

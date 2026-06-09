@@ -6,6 +6,7 @@ const input = {
   puzzleId: 7,
   deviceId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
   foundCodes: ['ch', 'dk', 'gb'],
+  wrongCodes: ['de', 'fr'],
   totalCount: 9,
   durationMs: 87_000,
   now: 1_717_920_000_000,
@@ -21,6 +22,7 @@ test('all input fields round-trip onto the doc', () => {
   assert.equal(doc.puzzleId, 7);
   assert.equal(doc.deviceId, 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
   assert.deepEqual(doc.foundCodes, ['ch', 'dk', 'gb']);
+  assert.deepEqual(doc.wrongCodes, ['de', 'fr']);
   assert.equal(doc.totalCount, 9);
   assert.equal(doc.durationMs, 87_000);
 });
@@ -35,9 +37,21 @@ test('empty foundCodes is preserved (zero-find / give-up case)', () => {
   assert.deepEqual(doc.foundCodes, []);
 });
 
+test('empty wrongCodes is preserved (player who never typed a wrong country)', () => {
+  const doc = buildDailyResultDoc({ ...input, wrongCodes: [] });
+  assert.deepEqual(doc.wrongCodes, []);
+});
+
+test('missing wrongCodes defaults to [] (forward-compat with older clients)', () => {
+  const { wrongCodes, ...withoutWrong } = input;
+  void wrongCodes;
+  const doc = buildDailyResultDoc(withoutWrong);
+  assert.deepEqual(doc.wrongCodes, []);
+});
+
 test('does NOT add fields the schema does not expect', () => {
   const doc = buildDailyResultDoc(input);
-  const expected = ['id', 'puzzleId', 'deviceId', 'foundCodes', 'totalCount', 'durationMs', 'submittedAt'];
+  const expected = ['id', 'puzzleId', 'deviceId', 'foundCodes', 'wrongCodes', 'totalCount', 'durationMs', 'submittedAt'];
   assert.deepEqual(Object.keys(doc).sort(), expected.sort());
 });
 

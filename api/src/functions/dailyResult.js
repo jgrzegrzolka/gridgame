@@ -58,6 +58,7 @@ app.http('dailyResult', {
       puzzleId: body.puzzleId,
       deviceId: body.deviceId,
       foundCodes: body.foundCodes,
+      wrongCodes: body.wrongCodes,
       totalCount: body.totalCount,
       durationMs: body.durationMs,
       now: Date.now(),
