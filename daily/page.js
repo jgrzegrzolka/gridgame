@@ -59,9 +59,28 @@ function renderStatsPanel(n, targets) {
 }
 
 /**
+ * Show a small one-liner inside the #daily-stats container. Used as a
+ * visible diagnostic while we're debugging why POSTs don't always land
+ * in production — replaces what used to be silent return paths. Once
+ * the flow is reliable, this can revert to fully silent.
+ *
+ * @param {string} text
+ */
+function showStatusMessage(text) {
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
+  container.hidden = false;
+  container.innerHTML = '';
+  const p = document.createElement('p');
+  p.className = 'find-stats-loading';
+  p.textContent = text;
+  container.appendChild(p);
+}
+
+/**
  * Post-finish hook: get a Turnstile token, submit the result, and
  * (on 204 / 409 / already-submitted) render the community-stats panel.
- * Failures are silent — the rest of the finish screen still works.
+ * Each step that can fail surfaces a visible message so the user (and
+ * we) can see where the flow broke without DevTools.
  *
  * @param {number} n
  * @param {Country[]} targets
@@ -71,16 +90,18 @@ async function handleFinish(n, targets, info) {
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
 
+  showStatusMessage('Verifying…');
+
   let turnstileToken = '';
   try {
     await ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY });
     turnstileToken = await getTurnstileToken();
-  } catch {
-    // Turnstile failed (script blocked, no network, etc) — without a
-    // token the server will 403. Skip the POST; the player keeps their
-    // local score and just doesn't see stats this time.
+  } catch (err) {
+    showStatusMessage(`[debug] turnstile failed: ${(err && err.message) || err}`);
     return;
   }
+
+  showStatusMessage('Submitting…');
 
   const r = await submitResult({
     store: window.localStorage,
@@ -92,9 +113,11 @@ async function handleFinish(n, targets, info) {
     turnstileToken,
   });
 
-  if (r.outcome === 'ok' || r.outcome === 'already') {
+  if (r.outcome !== 'failed') {
     renderStatsPanel(n, targets);
+    return;
   }
+  showStatusMessage(`[debug] submit failed: ${r.reason}`);
 }
 
 /**
