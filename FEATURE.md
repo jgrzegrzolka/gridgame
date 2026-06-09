@@ -37,8 +37,10 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 **Endpoints (v1):**
 
-- `POST /api/v1/daily/result` — body `{puzzleId, foundMask, durationMs, deviceId, turnstileToken}`. Response 204 on success, 409 on duplicate, 400 on bad input, 429 on rate-limited.
-- `GET  /api/v1/daily/stats/{puzzleId}` — response `{totalAttempts, perFlagFinds: number[], median, topPct}`. (`median` and `topPct` populated in Phase B3 even though they're not rendered until Phase B5.)
+- `POST /api/v1/daily/result` — body `{puzzleId, foundCodes, totalCount, durationMs, deviceId, turnstileToken}`. Response 204 on success, 409 on duplicate, 400 on bad input, 429 on rate-limited.
+  - `puzzleId` is the integer `n` from `daily/daily_puzzles.json` (the catalog key — *not* a date).
+  - `foundCodes` is `string[]` of 2-letter country codes — mirrors what `daily/scores.js` already keeps in `c`. Earlier plan said `foundMask` (a bitmask over a canonical answer order); switched to codes because codes are self-describing and don't break when a puzzle's answer list changes.
+- `GET  /api/v1/daily/stats/{puzzleId}` — response `{totalAttempts, perCodeFinds: {[code]: count}, median, topPct}`. (`median` = median total-found, `topPct` = % of submissions that found everything. Populated in Phase B3 even though only rendered in Phase B5.)
 
 **Azure resources for Feature B** (pre-created 2026-06-09):
 
@@ -53,16 +55,17 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ```json
 {
-  "id": "2026-06-09:c8f3...uuid",
-  "puzzleId": "2026-06-09",
+  "id": "7:c8f3...uuid",
+  "puzzleId": 7,
   "deviceId": "c8f3...uuid",
-  "foundMask": 13,
+  "foundCodes": ["ch", "dk", "gb"],
+  "totalCount": 9,
   "durationMs": 87000,
   "submittedAt": 1717920000000
 }
 ```
 
-Aggregation query (single-partition, cheap): `SELECT VALUE c.foundMask FROM c WHERE c.puzzleId = @pid` — reduce in code.
+Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c WHERE c.puzzleId = @pid` — reduce in Function code to `{[code]: count}` + `totalAttempts` + `median` + `topPct`.
 
 **Phase B1 — Cosmos infra**
 
@@ -70,20 +73,28 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundMask FROM c WH
 - [x] Create database `yetanotherquiz` + container `dailyResults` (PK `/puzzleId`, 400 RU/s).
 - [x] Set `COSMOS_CONN` in SWA app settings.
 
-**Phase B2 — Submit endpoint + abuse defenses**
+**Phase B2 — Submit endpoint (split across multiple PRs after the SWA Functions plumbing fought us)**
 
-- [ ] Add `api/dailyResult/` Function (POST /api/v1/daily/result).
-- [ ] Pure-function module `api/lib/validate.js` for body schema + sanity bounds (puzzle-id regex confirmed by reading `daily/scores.js` / `daily/playFlow.js`, foundMask < `1 << numFlags`, durationMs between 1s and 6h). Add `validate.test.js`.
-- [ ] Cosmos client via `@azure/cosmos`. Connection string from `process.env.COSMOS_CONN`.
-- [ ] Verify Turnstile token server-side. Add `TURNSTILE_SECRET` to SWA app settings (don't commit).
-- [ ] Insert doc with `id = "{puzzleId}:{deviceId}"`. Cosmos 409 on duplicate → translate to HTTP 409.
-- [ ] In-memory per-IP rate limit in the Function (5 req/min). Reset on cold start is fine at this traffic.
+*Phase B2a — `api/` skeleton + `/api/health`* (#284). Done. Validated the SWA-bundled Functions deploy path.
+
+*Phase B2b — `POST /api/v1/daily/result`, validate-only* (#285 → #290 → #292 → #293). Done after a long debug saga — see "Lessons from B2b" below. Currently lands a 204 on a valid body and a 400 (with stable `error` code) otherwise. No Cosmos call yet.
+
+*Phase B2c — Restore the Cosmos insert.* Next up. Re-adds `@azure/cosmos` and replaces the 204 with an insert into `dailyResults`. 409 on duplicate `(puzzleId, deviceId)`. Module-scoped client cache for warm invocations.
+
+*Phase B2d — Abuse defenses.* After B2c lands:
+- Verify Cloudflare Turnstile token server-side. `TURNSTILE_SECRET` in SWA app settings.
+- In-memory per-IP rate limit in the Function (5 req/min). Reset-on-cold-start is fine at this traffic.
+
+**Lessons from B2b (don't relearn these):**
+1. **`api/package.json` must pin `"type": "commonjs"`.** Without it the Azure runtime inherits the root package.json's `"type": "module"` and starts treating `require()` as ESM-interop. Symptom: `require(...)` returns `{ __esModule, default }` instead of named exports.
+2. **`scripts/minify.mjs` skips `api/`.** It runs esbuild with `format: 'esm'` on every `.js` it finds. If it touches api/ Function code, it mangles the requires into invalid ESM and the Function host fails to load anything. Symptom (after CommonJS pin is in place): every `/api/*` route 404s.
+3. **`lib/` belongs under `api/src/lib/`, not `api/lib/`.** Oryx's v4 packaging walks from `package.json` `main` and drops anything outside the resolved set.
 
 **Phase B3 — Fetch endpoint + caching**
 
-- [ ] Add `api/dailyStats/` Function (GET /api/v1/daily/stats/{puzzleId}).
-- [ ] Query: `SELECT VALUE c.foundMask FROM c WHERE c.puzzleId = @pid` — single-partition, cheap.
-- [ ] Pure aggregator `api/lib/aggregate.js`: `aggregate(masks, numFlags) → {totalAttempts, perFlagFinds, median, topPct}`. Add tests.
+- [ ] Add `api/src/functions/dailyStats.js` (GET /api/v1/daily/stats/{puzzleId}).
+- [ ] Query: `SELECT VALUE c.foundCodes FROM c WHERE c.puzzleId = @pid` — single-partition, cheap.
+- [ ] Pure aggregator `api/src/lib/aggregate.js`: `aggregate(rows) → {totalAttempts, perCodeFinds, median, topPct}`. Add tests.
 - [ ] In-memory cache per Function instance, keyed by puzzleId, TTL 60s.
 - [ ] Verify with `curl` after seeding test rows.
 
@@ -107,7 +118,7 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundMask FROM c WH
 
 - [ ] On `daily/archive.html`, when opening a past puzzle the device already submitted, fetch and render the same stats table.
 - [ ] Skip the table for puzzles never submitted (keeps the play-to-see-stats incentive).
-- [ ] Open question for Jan: should archive also show the device's own found_mask alongside the new stats?
+- [ ] Open question for Jan: should archive also show the device's own foundCodes alongside the new stats?
 
 ---
 
