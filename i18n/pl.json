@@ -72,8 +72,6 @@
     "sovereignOnly": "Tylko kraje suwerenne.",
     "stats": {
       "headline": "Średnio dziś: {average}/{total}",
-      "plays": "{n} prób",
-      "hardest": "Najtrudniejsza: {name} ({pct}% znalazło)",
       "caption": "% pokazuje ilu innych graczy odgadło każdą flagę.",
       "loading": "Wczytuję statystyki…",
       "noSubmissions": "Jesteś jednym z pierwszych graczy."

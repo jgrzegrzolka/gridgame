@@ -1,5 +1,5 @@
 import { loadCountries, flagsGamePool } from '../flags/group.js';
-import { t, countryName, withLocalizedAliases } from '../i18n.js';
+import { t, withLocalizedAliases } from '../i18n.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
 import { loadScores, isCompleteRecord } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
@@ -17,7 +17,7 @@ import { hasSubmitted } from './submitted.js';
 import { submitResult } from './statsSubmit.js';
 import { fetchStats } from './statsClient.js';
 import { applyFindRatesToTiles } from './statsOverlay.js';
-import { formatStatsLines } from './distributionSummary.js';
+import { formatStatsHeadline } from './distributionSummary.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 
 // Public site key for our Turnstile widget — fine to ship in source.
@@ -37,8 +37,6 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADhdZ-XDzVHaLk9R';
 function statsLabels() {
   return {
     headline: t('daily.stats.headline', 'Average today: {average}/{total}'),
-    plays: t('daily.stats.plays', '{n} plays'),
-    hardest: t('daily.stats.hardest', 'Hardest: {name} ({pct}% found)'),
     caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
     loading: t('daily.stats.loading', 'Loading stats…'),
   };
@@ -70,25 +68,19 @@ async function renderStatsForPuzzle(n, targets, opts = {}) {
     return;
   }
   const labels = statsLabels();
-  const lines = formatStatsLines({
+  const headline = formatStatsHeadline({
     stats,
     totalCount: targets.length,
-    targets,
-    getCountryName: countryName,
-    templates: {
-      headline: labels.headline,
-      plays: labels.plays,
-      hardest: labels.hardest,
-    },
+    template: labels.headline,
   });
-  if (lines === null) {
+  if (headline === null) {
     // No meaningful population yet (totalAttempts === 0). Hide the
     // panel entirely rather than show "Average today: 0/N" with no
     // population behind it.
     hideStatsPanel();
     return;
   }
-  paintStatsPanel(lines.headline, lines.detail, labels.caption);
+  paintStatsPanel(headline, labels.caption);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
 }
@@ -155,14 +147,13 @@ function showStatsLoading() {
 }
 
 /**
- * Paint the two-line stats summary + caption into #daily-stats,
- * overwriting any loading placeholder.
+ * Paint the stats headline + caption into #daily-stats, overwriting
+ * any loading placeholder.
  *
  * @param {string} headlineText
- * @param {string} detailText
  * @param {string} captionText
  */
-function paintStatsPanel(headlineText, detailText, captionText) {
+function paintStatsPanel(headlineText, captionText) {
   const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
   container.hidden = false;
   container.innerHTML = '';
@@ -170,10 +161,6 @@ function paintStatsPanel(headlineText, detailText, captionText) {
   h.className = 'daily-stats-headline';
   h.textContent = headlineText;
   container.appendChild(h);
-  const d = document.createElement('p');
-  d.className = 'daily-stats-detail';
-  d.textContent = detailText;
-  container.appendChild(d);
   const c = document.createElement('p');
   c.className = 'daily-stats-caption';
   c.textContent = captionText;

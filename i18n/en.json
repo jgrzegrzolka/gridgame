@@ -72,8 +72,6 @@
     "sovereignOnly": "Sovereign countries only.",
     "stats": {
       "headline": "Average today: {average}/{total}",
-      "plays": "{n} plays",
-      "hardest": "Hardest: {name} ({pct}% found)",
       "caption": "% shows how many other players found each flag.",
       "loading": "Loading stats…",
       "noSubmissions": "You're one of the first to play this puzzle."

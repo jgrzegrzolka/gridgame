@@ -1,12 +1,11 @@
 /**
- * Format the two-line community-stats panel shown below the
+ * Format the single-line community-stats headline shown below the
  * found/missed lists.
  *
- *   line 1 (headline): "Average today: 2.5/6"
- *   line 2 (detail):   "3 plays · Hardest: Kazakhstan (12% found)"
+ *   "Average today: 2.5/6"
  *
- * Returns `{ headline, detail }` or null when there's nothing
- * meaningful to display (no submissions yet).
+ * Returns the formatted string or null when there's nothing meaningful
+ * to display (no submissions yet).
  *
  * **Wording note:** we label the median value as "Average" because
  * that's the plain-English word most players reach for. The code
@@ -14,71 +13,29 @@
  * better "typical value" measure for this kind of data — one perfect
  * attempt or one give-up doesn't distort it the way a mean would.
  *
- * `targets` and `getCountryName` are needed to compute and localize
- * the "hardest" flag. When `perCodeFinds` is empty (nobody has found
- * anything yet — typical when the player is the first submitter with
- * a give-up), the hardest piece is dropped from the detail line.
+ * Earlier shipped a second "detail" line ("X plays · Hardest: …") but
+ * at low N (typical for an early-traffic puzzle) both pieces felt
+ * awkward: "3 plays" is a low-traffic admission, and "12% found" at
+ * N=3 is misleadingly precise (only 0/33/67/100% are possible). The
+ * per-tile overlays still carry the per-flag detail, so the headline
+ * + per-tile %s are enough. A proper percentile line ("you're in the
+ * top X%") is the future replacement — see FEATURE.md for the plan.
  */
-
-/** @typedef {import('../flags/group.js').Country} Country */
 
 /**
  * @param {{
- *   stats: { totalAttempts: number, median: number, perCodeFinds: Record<string, number> } | null | undefined,
+ *   stats: { totalAttempts: number, median: number } | null | undefined,
  *   totalCount: number,
- *   targets: Country[],
- *   getCountryName: (c: Country) => string,
- *   templates: { headline: string, plays: string, hardest: string, separator?: string },
+ *   template: string,
  * }} args
- * @returns {{ headline: string, detail: string } | null}
+ * @returns {string | null}
  */
-export function formatStatsLines({ stats, totalCount, targets, getCountryName, templates }) {
+export function formatStatsHeadline({ stats, totalCount, template }) {
   if (!stats || stats.totalAttempts === 0) return null;
-
-  const headline = interpolate(templates.headline, {
+  return interpolate(template, {
     average: stats.median,
     total: totalCount,
   });
-
-  const detailParts = [
-    interpolate(templates.plays, { n: stats.totalAttempts }),
-  ];
-  const hardest = findHardest(stats.perCodeFinds, stats.totalAttempts, targets);
-  if (hardest) {
-    detailParts.push(interpolate(templates.hardest, {
-      name: getCountryName(hardest.country),
-      pct: hardest.pct,
-    }));
-  }
-  const separator = templates.separator ?? ' · ';
-  const detail = detailParts.join(separator);
-
-  return { headline, detail };
-}
-
-/**
- * Pick the flag with the lowest find rate. Tie-break by country code
- * (alphabetical) so renders are deterministic.
- *
- * Returns null when `perCodeFinds` is empty — when literally nobody
- * has found anything, "hardest" is meaningless (every flag is equally
- * hard at 0%) and the piece is better dropped than misleading.
- */
-function findHardest(perCodeFinds, totalAttempts, targets) {
-  if (!perCodeFinds || Object.keys(perCodeFinds).length === 0) return null;
-  if (!Array.isArray(targets) || targets.length === 0) return null;
-
-  let hardest = null;
-  for (const c of targets) {
-    const finds = perCodeFinds[c.code] || 0;
-    const pct = Math.round((finds / totalAttempts) * 100);
-    if (hardest === null
-        || pct < hardest.pct
-        || (pct === hardest.pct && c.code < hardest.country.code)) {
-      hardest = { country: c, pct };
-    }
-  }
-  return hardest;
 }
 
 /**
