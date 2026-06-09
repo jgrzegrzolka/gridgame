@@ -27,6 +27,9 @@ import { flagsGamePool, loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
+import { getOrCreateDeviceId } from '../flags/identity.js';
+import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
+import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -51,6 +54,12 @@ export function bootFlagQuiz() {
   );
 
   const DEFAULT_VARIANT = 'countries';
+
+  // Anonymous per-device ID used to address this player's row in the
+  // cloud quiz-records doc. Same key as daily-puzzle submissions —
+  // clearing localStorage resets both at once, which is the intended
+  // identity model (zero PII, zero account).
+  const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
 
   const params = new URLSearchParams(window.location.search);
   const urlVariant = params.get('v');
@@ -370,6 +379,19 @@ export function bootFlagQuiz() {
         );
         resultLabelData = { timed: true, isNew, best, elapsed, budgetUsed };
         paintResultLabels();
+        // Cloud-PB write: fire only on a local-PB hit (saves writes on
+        // every replay) — server runs its own merge so a fresh-localStorage
+        // device can't clobber a real cloud PB. Fire-and-forget; failures
+        // are silently swallowed so the result screen never blocks.
+        if (isNew) {
+          void submitQuizRecord({
+            deviceId,
+            configKey: quizRecordConfigKey(key, mode, includeAll),
+            score: answeredCount,
+            durationMs: budgetUsed,
+            lowerWins: false,
+          });
+        }
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           // total isn't meaningful for 60s mode (the round ends when the
@@ -397,6 +419,15 @@ export function bootFlagQuiz() {
         );
         resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0 };
         paintResultLabels();
+        if (isNew) {
+          void submitQuizRecord({
+            deviceId,
+            configKey: quizRecordConfigKey(key, mode, includeAll),
+            score: wrongCount,
+            durationMs: elapsed,
+            lowerWins: true,
+          });
+        }
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           total: target,

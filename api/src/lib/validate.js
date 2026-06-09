@@ -7,6 +7,8 @@
  * codes are stable strings so the client can localize if it ever needs to.
  */
 
+const { CONFIG_KEY_RE, CONFIG_KEY_MAX } = require('./quizRecordKey');
+
 const CODE_RE = /^[a-z]{2}$/;
 
 const LIMITS = {
@@ -18,6 +20,17 @@ const LIMITS = {
   DURATION_MS_MAX: 6 * 60 * 60 * 1000,
   DEVICE_ID_MIN: 8,
   DEVICE_ID_MAX: 64,
+  // Quiz-record bounds. Score-min of 0 covers "60s round, zero correct"
+  // and "endurance round, zero mistakes" — both legitimate end states.
+  // Score-max of 1000 leaves headroom past any plausible pool size
+  // (largest variant is ~250 sovereign countries; ~500 with territories).
+  QUIZ_SCORE_MIN: 0,
+  QUIZ_SCORE_MAX: 1000,
+  // 60s mode caps the round at ~60s of wall clock; endurance "all" mode
+  // can in theory run longer. 6h matches the daily-result cap and keeps
+  // a single human-plausible upper bound across endpoints.
+  QUIZ_DURATION_MS_MIN: 0,
+  QUIZ_DURATION_MS_MAX: 6 * 60 * 60 * 1000,
 };
 
 function isInt(x, min, max) {
@@ -102,4 +115,49 @@ function validatePuzzleIdParam(raw) {
   return { ok: true, value: n };
 }
 
-module.exports = { validateResult, validatePuzzleIdParam, LIMITS };
+/**
+ * Validate the body posted to /api/v1/quiz/record. Shape:
+ *
+ *   {
+ *     deviceId:      string (8..64),
+ *     configKey:     string (matches CONFIG_KEY_RE, length ≤ CONFIG_KEY_MAX),
+ *     score:         int (0..1000),
+ *     durationMs:    int (0..6h),
+ *     lowerWins:     boolean,
+ *   }
+ *
+ * `lowerWins` is sent by the client (it already knows the mode) so the
+ * server doesn't have to maintain its own mode-to-comparator table. The
+ * tradeoff is a malicious caller can flip the comparator to write a worse
+ * score over a better one — acceptable because (a) only that one device's
+ * record is affected, (b) there's no leaderboard reading this yet.
+ *
+ * `turnstileToken` is NOT required here (see CLAUDE.md: rate limiter alone
+ * for v1 of this endpoint; revisit if abuse shows up).
+ */
+function validateQuizRecord(body) {
+  if (!body || typeof body !== 'object') return { ok: false, error: 'body_required' };
+
+  if (!isString(body.deviceId, LIMITS.DEVICE_ID_MIN, LIMITS.DEVICE_ID_MAX)) {
+    return { ok: false, error: 'invalid_deviceId' };
+  }
+  if (
+    typeof body.configKey !== 'string' ||
+    body.configKey.length > CONFIG_KEY_MAX ||
+    !CONFIG_KEY_RE.test(body.configKey)
+  ) {
+    return { ok: false, error: 'invalid_configKey' };
+  }
+  if (!isInt(body.score, LIMITS.QUIZ_SCORE_MIN, LIMITS.QUIZ_SCORE_MAX)) {
+    return { ok: false, error: 'invalid_score' };
+  }
+  if (!isInt(body.durationMs, LIMITS.QUIZ_DURATION_MS_MIN, LIMITS.QUIZ_DURATION_MS_MAX)) {
+    return { ok: false, error: 'invalid_durationMs' };
+  }
+  if (typeof body.lowerWins !== 'boolean') {
+    return { ok: false, error: 'invalid_lowerWins' };
+  }
+  return { ok: true };
+}
+
+module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, LIMITS };

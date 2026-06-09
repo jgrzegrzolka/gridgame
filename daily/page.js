@@ -12,7 +12,7 @@ import {
   attachLangRefresh,
   showReason,
 } from './playFlow.js';
-import { getOrCreateDeviceId } from './identity.js';
+import { getOrCreateDeviceId } from '../flags/identity.js';
 import { hasSubmitted } from './submitted.js';
 import { submitResult } from './statsSubmit.js';
 import { fetchStats } from './statsClient.js';
