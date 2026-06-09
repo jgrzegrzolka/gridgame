@@ -46,15 +46,22 @@ function statsLabels() {
  * lands). The submitted gate is enforced by the caller — this helper
  * just paints.
  *
+ * `bypassCache` defaults to false (revisit path uses the 60s server
+ * cache, which is fine for stats the player has seen before). The
+ * finish path passes `true` so the player sees their just-submitted
+ * result reflected immediately instead of cached pre-submit data.
+ *
  * @param {number} n
  * @param {Country[]} targets
+ * @param {{ bypassCache?: boolean }} [opts]
  */
-function renderStatsPanel(n, targets) {
+function renderStatsPanel(n, targets, opts = {}) {
   const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
   return loadAndRenderStats({
     n, container, targets,
     displayName: countryName,
     labels: statsLabels(),
+    bypassCache: opts.bypassCache === true,
   });
 }
 
@@ -101,7 +108,7 @@ async function handleFinish(n, targets, info) {
   });
 
   if (r.outcome === 'ok') {
-    renderStatsPanel(n, targets);
+    renderStatsPanel(n, targets, { bypassCache: true });
     return;
   }
   // Submit failed (rate-limited, server error, etc) — hide the

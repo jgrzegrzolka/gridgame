@@ -119,7 +119,7 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 - [x] In-memory cache per Function instance (`api/src/lib/ttlCache.js`), keyed by puzzleId, TTL 60s. Also sets `Cache-Control: public, max-age=60` so browser/edge cache the same window.
 - [ ] Verify with `curl` after seeding test rows.
 
-**Caching trade-off (acknowledged):** a player who just submitted their result may see stats lagging their own submission by up to 60s. Invalidate-on-write isn't reliable because insert and query may run on different Function instances. Acceptable for v1.
+**Caching:** 60s server-side cache + matching `Cache-Control: public, max-age=60` so browser/edge cache the same window. **Bypass after own submit:** the client sends `?fresh=1` on the GET fired by `handleFinish` (immediately after a 204 POST), the server skips the cache lookup, then writes the fresh result back so subsequent GETs (from other players, this player's revisits) get the up-to-date snapshot without their own bypass. `?fresh=1` responses are `Cache-Control: no-store` so the browser doesn't memoize the bypass. Revisits use the default cached path.
 
 **Temporary testing toggle: `DAILY_RESULT_UPSERT`.** When this env var is `true` on the SWA, `dailyResult` upserts into Cosmos instead of insert-only — replays update the stored row rather than 409'ing. **Currently ON for testing** so the stats panel reflects each player's latest replay, keeping localStorage and Cosmos in sync per device. **Plan to flip OFF** to lock in first-attempt-only stats once the feature feels right (no code change needed — just unset the env var in the Azure portal).
 
