@@ -113,11 +113,15 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 
 **Phase B3 — Fetch endpoint + caching**
 
-- [ ] Add `api/src/functions/dailyStats.js` (GET /api/v1/daily/stats/{puzzleId}).
-- [ ] Query: `SELECT VALUE c.foundCodes FROM c WHERE c.puzzleId = @pid` — single-partition, cheap.
-- [ ] Pure aggregator `api/src/lib/aggregate.js`: `aggregate(rows) → {totalAttempts, perCodeFinds, median, topPct}`. Add tests.
-- [ ] In-memory cache per Function instance, keyed by puzzleId, TTL 60s.
+- [x] Add `api/src/functions/dailyStats.js` (GET /api/v1/daily/stats/{puzzleId}).
+- [x] Query: `SELECT c.foundCodes, c.totalCount FROM c WHERE c.puzzleId = @pid` — single-partition, cheap. (Pulls `totalCount` too so the aggregator can compute `topPct` without a second round-trip; `SELECT VALUE c.foundCodes` from the original plan would have lost it.)
+- [x] Pure aggregator `api/src/lib/aggregate.js`: `aggregate(rows) → {totalAttempts, perCodeFinds, median, topPct}`. 12 tests.
+- [x] In-memory cache per Function instance (`api/src/lib/ttlCache.js`), keyed by puzzleId, TTL 60s. Also sets `Cache-Control: public, max-age=60` so browser/edge cache the same window.
 - [ ] Verify with `curl` after seeding test rows.
+
+**Caching trade-off (acknowledged):** a player who just submitted their result may see stats lagging their own submission by up to 60s. Invalidate-on-write isn't reliable because insert and query may run on different Function instances. Acceptable for v1.
+
+**Cosmos REST query support:** `queryDocs` added to `api/src/lib/cosmos.js`. Pagination via `x-ms-continuation` handled (accumulates all pages). Single-partition only — cross-partition isn't exposed because we don't need it.
 
 **Phase B4 — Client integration on finish screen** *(feature first visible)*
 
