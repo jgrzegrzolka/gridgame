@@ -71,6 +71,13 @@ function mount(container, siteKey) {
   widgetId = ts.render(container, {
     sitekey: siteKey,
     size: 'invisible',
+    // 'execute' tells the widget NOT to run a challenge until we call
+    // turnstile.execute(). Without this option, CF auto-runs at render
+    // time and turnstile.execute() becomes a no-op — which silently
+    // leaves the getTurnstileToken() promise hanging forever when no
+    // prior token is sitting around. See the previous bug: PR #305
+    // shipped without this and POSTs never fired in production.
+    execution: 'execute',
     callback: (/** @type {string} */ token) => {
       const p = pending;
       pending = null;

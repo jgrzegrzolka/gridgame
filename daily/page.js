@@ -20,7 +20,10 @@ import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 
 // Public site key for our Turnstile widget — fine to ship in source.
 // The secret stays in SWA env vars.
-const TURNSTILE_SITE_KEY = '0x4AAAAAAAhdZ-XDzVHaLk9R';
+// NOTE: Cloudflare reissues the site key when you rotate the secret —
+// both must be updated together. If POSTs start 400'ing at the CF
+// challenge endpoint with the site key in the URL, that's the symptom.
+const TURNSTILE_SITE_KEY = '0x4AAAAAADhdZ-XDzVHaLk9R';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 

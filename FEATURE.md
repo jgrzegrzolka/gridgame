@@ -103,7 +103,7 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 
 *Phase B2d — Abuse defenses.*
 - [x] In-memory per-IP rate limit in the Function (5 req/min, fixed window). Module-scope `Map` keyed by `x-forwarded-for` first entry. 429 + `Retry-After` header on breach. Reset-on-cold-start is fine at this traffic. (`api/src/lib/rateLimit.js`)
-- [x] Verify Cloudflare Turnstile token server-side. Pure `verifyTurnstile({secret, token, remoteIp, fetchImpl})` in `api/src/lib/turnstile.js` (fetch injected for tests). Handler returns 403 `turnstile_failed` on a bad token. **Skip-when-unset:** if `TURNSTILE_SECRET` isn't configured, verification is skipped with a warning log — lets local dev work; production has it set. Site key for the HTML widget (B4): `0x4AAAAAAAhdZ-XDzVHaLk9R`.
+- [x] Verify Cloudflare Turnstile token server-side. Pure `verifyTurnstile({secret, token, remoteIp, fetchImpl})` in `api/src/lib/turnstile.js` (fetch injected for tests). Handler returns 403 `turnstile_failed` on a bad token. **Skip-when-unset:** if `TURNSTILE_SECRET` isn't configured, verification is skipped with a warning log — lets local dev work; production has it set. Site key for the HTML widget (B4): `0x4AAAAAADhdZ-XDzVHaLk9R`. ⚠️ When rotating the **secret** in Cloudflare, the **site key also changes** — both must be updated in lockstep (lesson from B4 hotfix).
 
 **Lessons from B2 (don't relearn these):**
 1. **`api/package.json` must pin `"type": "commonjs"`.** Without it the Azure runtime inherits the root package.json's `"type": "module"` and starts treating `require()` as ESM-interop. Symptom: `require(...)` returns `{ __esModule, default }` instead of named exports.
