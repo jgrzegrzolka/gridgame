@@ -245,8 +245,7 @@ body {
 }
 .find-found,
 .find-missed,
-.find-result-found,
-.find-stats {
+.find-result-found {
   list-style: none;
   padding: 0;
   margin: 0 0 16px;
@@ -304,8 +303,7 @@ body {
   text-align: left;
 }
 .find-missed,
-.find-result-found,
-.find-stats {
+.find-result-found {
   text-align: left;
 }
 .result-links {

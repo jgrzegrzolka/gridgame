@@ -71,7 +71,8 @@
     "empty": "No puzzles yet.",
     "sovereignOnly": "Sovereign countries only.",
     "stats": {
-      "title": "How others did",
+      "headline": "Median today: {median}/{total} — {topPct}% got everything",
+      "caption": "% shows how many other players found each flag.",
       "loading": "Loading stats…",
       "noSubmissions": "You're one of the first to play this puzzle."
     }
