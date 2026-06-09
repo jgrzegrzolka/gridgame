@@ -2,25 +2,32 @@
  * POST a finished daily attempt to /api/v1/daily/result. Implements the
  * retry contract from FEATURE.md:
  *
- *   - Don't POST if this device already submitted this puzzle. The local
- *     gate (submitted.js) is an optimization; the server enforces the
- *     same invariant by 409'ing on duplicate `(puzzleId, deviceId)`.
- *   - Treat 204 and 409 as equivalent locally. Both mean "the server
- *     has this result" — mark submitted in both cases.
+ *   - The server is the source of truth for dedup. In default
+ *     (insert-only) mode it 409s on duplicate (puzzleId, deviceId);
+ *     in upsert mode (DAILY_RESULT_UPSERT=true env var) it replaces
+ *     the existing row. Either way the client just hands the result
+ *     over and treats 204 and 409 as equivalent.
+ *   - There is NO client-side gate on hasSubmitted(). An earlier
+ *     version added one as a "don't waste a round-trip" optimization,
+ *     but it actively prevented the server's upsert path from doing
+ *     its job — replays never reached the server because the client
+ *     short-circuited. The marginal cost of one extra POST per replay
+ *     is negligible; correctness wins.
+ *   - markSubmitted() is still called on success so the revisit branch
+ *     in page.js can decide whether to render the stats panel without
+ *     attempting a fresh submit.
  *   - Fire-and-forget: callers should not block the finish screen on
  *     this promise. The function never throws — every failure path
  *     resolves with an outcome string.
  *
- * `fetchImpl` is injected so tests can run offline. `store` is the
- * localStorage instance used by the gate.
+ * `fetchImpl` is injected so tests can run offline.
  *
  * Returns:
- *   { outcome: 'already' }                        — gate said no, no POST sent
  *   { outcome: 'ok' }                             — 204 or 409 from the server
  *   { outcome: 'failed', reason: <string> }       — anything else
  */
 
-import { hasSubmitted, markSubmitted } from './submitted.js';
+import { markSubmitted } from './submitted.js';
 
 const ENDPOINT = '/api/v1/daily/result';
 
@@ -35,16 +42,12 @@ const ENDPOINT = '/api/v1/daily/result';
  *   turnstileToken: string,
  *   fetchImpl?: typeof fetch,
  * }} args
- * @returns {Promise<{ outcome: 'already' | 'ok' } | { outcome: 'failed', reason: string }>}
+ * @returns {Promise<{ outcome: 'ok' } | { outcome: 'failed', reason: string }>}
  */
 export async function submitResult({
   store, n, foundCodes, totalCount, durationMs, deviceId, turnstileToken,
   fetchImpl = globalThis.fetch,
 }) {
-  if (hasSubmitted(store, n)) {
-    return { outcome: 'already' };
-  }
-
   const body = {
     puzzleId: n,
     foundCodes,
@@ -66,8 +69,9 @@ export async function submitResult({
   }
 
   // 204 = first-time success; 409 = server already has this attempt
-  // (likely a race or a previous POST whose response we missed). Both
-  // mean "the server's stored record is locked in" → mark submitted.
+  // in insert-only mode (replays in upsert mode get 204 too because
+  // Cosmos returns 201 on create and 200 on replace, both mapped to
+  // 204 by the handler). All three end-state-equivalent for the client.
   if (res.status === 204 || res.status === 409) {
     markSubmitted(store, n);
     return { outcome: 'ok' };

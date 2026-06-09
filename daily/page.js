@@ -100,7 +100,7 @@ async function handleFinish(n, targets, info) {
     turnstileToken,
   });
 
-  if (r.outcome === 'ok' || r.outcome === 'already') {
+  if (r.outcome === 'ok') {
     renderStatsPanel(n, targets);
     return;
   }
