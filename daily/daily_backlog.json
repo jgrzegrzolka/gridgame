@@ -1,18 +1,5 @@
 [
   {
-    "n": 5,
-    "filter": "continent:Asia,motif:animal",
-    "answers": [
-      "bt",
-      "kz",
-      "lk"
-    ],
-    "description": {
-      "en": "Find all Asian flags with an animal.",
-      "pl": "Znajdź wszystkie azjatyckie flagi ze zwierzęciem."
-    }
-  },
-  {
     "n": 6,
     "filter": "continent:Asia,color:red,color:white,colorCount:2",
     "answers": [
