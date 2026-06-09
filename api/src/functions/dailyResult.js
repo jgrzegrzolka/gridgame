@@ -1,27 +1,21 @@
 const { app } = require('@azure/functions');
+const { validateResult } = require('../lib/validate');
 
-// Diagnostic probe — surface what require('../lib/validate') actually
-// returns in production so we can see why the previous handler 500'd
-// on every code path that touched validateResult.
-let resolveError = null;
-let validateModule = null;
-try {
-  validateModule = require('../lib/validate');
-} catch (e) {
-  resolveError = { message: e.message, code: e.code, stack: e.stack };
-}
-
+// Validate-only build. Cosmos insert returns in the next PR once we
+// confirm this round-trip works end-to-end.
 app.http('dailyResult', {
   route: 'v1/daily/result',
   methods: ['POST'],
   authLevel: 'anonymous',
-  handler: async () => ({
-    status: 200,
-    jsonBody: {
-      resolveError,
-      moduleType: typeof validateModule,
-      moduleKeys: validateModule ? Object.keys(validateModule) : null,
-      validateResultType: validateModule ? typeof validateModule.validateResult : null,
-    },
-  }),
+  handler: async (req) => {
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return { status: 400, jsonBody: { error: 'invalid_json' } };
+    }
+    const v = validateResult(body);
+    if (!v.ok) return { status: 400, jsonBody: { error: v.error } };
+    return { status: 204 };
+  },
 });

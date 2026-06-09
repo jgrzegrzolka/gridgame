@@ -2,6 +2,7 @@
   "name": "yetanotherquiz-api",
   "version": "1.0.0",
   "description": "SWA-bundled Azure Functions for yetanotherquiz",
+  "type": "commonjs",
   "main": "src/index.js",
   "scripts": {
     "start": "func start",
