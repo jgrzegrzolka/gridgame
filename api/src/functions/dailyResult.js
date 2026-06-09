@@ -3,6 +3,8 @@ const { validateResult } = require('../lib/validate');
 const { insertDoc } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { verifyTurnstile } = require('../lib/turnstile');
+const { buildDailyResultDoc } = require('../lib/dailyResultDoc');
+const { isTrueFlag } = require('../lib/envFlags');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
@@ -52,15 +54,14 @@ app.http('dailyResult', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    const doc = {
-      id: `${body.puzzleId}:${body.deviceId}`,
+    const doc = buildDailyResultDoc({
       puzzleId: body.puzzleId,
       deviceId: body.deviceId,
       foundCodes: body.foundCodes,
       totalCount: body.totalCount,
       durationMs: body.durationMs,
-      submittedAt: Date.now(),
-    };
+      now: Date.now(),
+    });
 
     // TEMPORARY: DAILY_RESULT_UPSERT=true makes Cosmos replace an
     // existing row for the same (puzzleId, deviceId) instead of 409'ing.
@@ -69,7 +70,7 @@ app.http('dailyResult', {
     // attempt (which is the long-term intended honesty rule). To go
     // back to first-attempt-only, unset this env var via the Azure
     // portal — no redeploy needed.
-    const upsert = process.env.DAILY_RESULT_UPSERT === 'true';
+    const upsert = isTrueFlag(process.env.DAILY_RESULT_UPSERT);
 
     let result;
     try {

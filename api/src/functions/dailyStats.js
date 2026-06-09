@@ -1,9 +1,10 @@
 const { app } = require('@azure/functions');
-const { LIMITS } = require('../lib/validate');
+const { validatePuzzleIdParam } = require('../lib/validate');
 const { queryDocs } = require('../lib/cosmos');
 const { aggregate } = require('../lib/aggregate');
 const { createTtlCache } = require('../lib/ttlCache');
 const { readFreshFlag } = require('../lib/queryParams');
+const { statsCacheHeaders } = require('../lib/cacheHeaders');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
@@ -20,10 +21,9 @@ app.http('dailyStats', {
   methods: ['GET'],
   authLevel: 'anonymous',
   handler: async (req, context) => {
-    const id = Number(req.params.puzzleId);
-    if (!Number.isInteger(id) || id < LIMITS.PUZZLE_ID_MIN || id > LIMITS.PUZZLE_ID_MAX) {
-      return { status: 400, jsonBody: { error: 'invalid_puzzleId' } };
-    }
+    const v = validatePuzzleIdParam(req.params.puzzleId);
+    if (!v.ok) return { status: 400, jsonBody: { error: v.error } };
+    const id = v.value;
 
     const now = Date.now();
     // `?fresh=1` is set by the client immediately after a POST so the
@@ -35,7 +35,7 @@ app.http('dailyStats', {
     if (!fresh) {
       const cached = cache.get(id, now);
       if (cached) {
-        return { status: 200, headers: cacheHeaders(fresh), jsonBody: cached };
+        return { status: 200, headers: statsCacheHeaders({ fresh, ttlMs: CACHE_TTL_MS }), jsonBody: cached };
       }
     }
 
@@ -67,18 +67,6 @@ app.http('dailyStats', {
 
     const stats = aggregate(result.docs);
     cache.set(id, stats, now);
-    return { status: 200, headers: cacheHeaders(fresh), jsonBody: stats };
+    return { status: 200, headers: statsCacheHeaders({ fresh, ttlMs: CACHE_TTL_MS }), jsonBody: stats };
   },
 });
-
-/**
- * Tell the browser / edge to cache the response for the same window
- * the server caches it. When the request is `?fresh=1` we don't want
- * the browser to remember this response (it's a one-off bypass), so
- * we send `no-store` instead.
- */
-function cacheHeaders(fresh) {
-  return fresh
-    ? { 'Cache-Control': 'no-store' }
-    : { 'Cache-Control': `public, max-age=${CACHE_TTL_MS / 1000}` };
-}

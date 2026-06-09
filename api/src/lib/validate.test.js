@@ -106,3 +106,37 @@ test('duplicate codes are rejected', () => {
   b.foundCodes = ['ch', 'dk', 'ch'];
   assert.deepEqual(validateResult(b), { ok: false, error: 'duplicate_codes' });
 });
+
+const { validatePuzzleIdParam } = require('./validate');
+
+test('validatePuzzleIdParam accepts a numeric string within range', () => {
+  assert.deepEqual(validatePuzzleIdParam('7'), { ok: true, value: 7 });
+  assert.deepEqual(validatePuzzleIdParam('1'), { ok: true, value: 1 });
+  assert.deepEqual(validatePuzzleIdParam('9999'), { ok: true, value: 9999 });
+});
+
+test('validatePuzzleIdParam rejects 0 and negatives', () => {
+  assert.deepEqual(validatePuzzleIdParam('0'), { ok: false, error: 'invalid_puzzleId' });
+  assert.deepEqual(validatePuzzleIdParam('-3'), { ok: false, error: 'invalid_puzzleId' });
+});
+
+test('validatePuzzleIdParam rejects values over the cap', () => {
+  assert.deepEqual(validatePuzzleIdParam('10000'), { ok: false, error: 'invalid_puzzleId' });
+});
+
+test('validatePuzzleIdParam rejects non-integer strings', () => {
+  assert.deepEqual(validatePuzzleIdParam('1.5'), { ok: false, error: 'invalid_puzzleId' });
+  assert.deepEqual(validatePuzzleIdParam('1e3'), { ok: true, value: 1000 }); // Number('1e3') === 1000, an integer
+  assert.deepEqual(validatePuzzleIdParam('abc'), { ok: false, error: 'invalid_puzzleId' });
+});
+
+test('validatePuzzleIdParam rejects empty / missing input', () => {
+  assert.deepEqual(validatePuzzleIdParam(''), { ok: false, error: 'invalid_puzzleId' });
+  assert.deepEqual(validatePuzzleIdParam(/** @type {any} */ (undefined)), { ok: false, error: 'invalid_puzzleId' });
+  assert.deepEqual(validatePuzzleIdParam(/** @type {any} */ (null)), { ok: false, error: 'invalid_puzzleId' });
+});
+
+test('validatePuzzleIdParam rejects non-string inputs (defensive)', () => {
+  assert.deepEqual(validatePuzzleIdParam(/** @type {any} */ (7)), { ok: false, error: 'invalid_puzzleId' });
+  assert.deepEqual(validatePuzzleIdParam(/** @type {any} */ ({})), { ok: false, error: 'invalid_puzzleId' });
+});
