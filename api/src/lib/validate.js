@@ -60,4 +60,23 @@ function validateResult(body) {
   return { ok: true };
 }
 
-module.exports = { validateResult, LIMITS };
+/**
+ * Parse + validate the `{puzzleId}` URL path param for the stats GET.
+ * Returns `{ ok: true, value: <int> }` or `{ ok: false, error: <code> }`.
+ * The error code is stable for the client (matches the body validator
+ * style) so the handler can pass it straight through to the response.
+ *
+ * @param {unknown} raw
+ */
+function validatePuzzleIdParam(raw) {
+  if (typeof raw !== 'string' || raw.length === 0) {
+    return { ok: false, error: 'invalid_puzzleId' };
+  }
+  const n = Number(raw);
+  if (!isInt(n, LIMITS.PUZZLE_ID_MIN, LIMITS.PUZZLE_ID_MAX)) {
+    return { ok: false, error: 'invalid_puzzleId' };
+  }
+  return { ok: true, value: n };
+}
+
+module.exports = { validateResult, validatePuzzleIdParam, LIMITS };
