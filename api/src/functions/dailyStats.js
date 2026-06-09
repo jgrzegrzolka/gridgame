@@ -73,7 +73,7 @@ app.http('dailyStats', {
 /**
  * Read `?fresh=1` from the request URL. Returns true only on the
  * exact string "1" to avoid surprises (no truthy URL params, no
- * accidental cache-busting from typos).
+ * accidental cache-busting from typos). Exported for unit tests.
  */
 function readFreshFlag(req) {
   try {
@@ -82,6 +82,8 @@ function readFreshFlag(req) {
     return false;
   }
 }
+
+module.exports = { readFreshFlag };
 
 /**
  * Tell the browser / edge to cache the response for the same window
