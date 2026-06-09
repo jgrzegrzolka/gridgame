@@ -20,48 +20,9 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-### Feature A: Migrate site hosting to Azure SWA
-
-**Goal:** the existing gridgame site (currently on GitHub Pages) is deployed to and served by Azure Static Web Apps. GitHub Pages deploy is retired. No new game features; this ships on its own as "site is now on Azure."
-
-**Why this comes first:** before adding API + Cosmos features (Feature B), prove SWA hosts the existing static site correctly. Smaller change, isolated risk, builds Azure muscle memory.
-
-**Azure resources for Feature A:**
-
-| Resource | Name | SKU | Notes |
-|---|---|---|---|
-| Resource group | `rg-yetanotherquiz` | — | West Europe |
-| Static Web App | `swa-yetanotherquiz` | Free | Hostname: `black-dune-0ebd24603.7.azurestaticapps.net`. Unlinked from GitHub for now — Phase A2 wires it. |
-
-**Phase A1 — Azure infra** *(no app changes; site keeps serving from GitHub Pages)*
-
-- [x] Create resource group `rg-yetanotherquiz` (West Europe).
-- [x] Create SWA `swa-yetanotherquiz` (Free SKU) — unlinked.
-
-**Phase A2 — Deploy pipeline migration** *(this is where the site actually moves)*
-
-- [ ] Branch off `main` (run `git checkout main && git pull` first).
-- [ ] Get SWA deployment token: `az staticwebapp secrets list -n swa-yetanotherquiz -g rg-yetanotherquiz --query "properties.apiKey" -o tsv`. Add to GitHub repo secrets as `AZURE_STATIC_WEB_APPS_API_TOKEN` (Jan does this in the GitHub UI).
-- [ ] Rewrite `.github/workflows/deploy.yml`:
-  - Keep `test` and `typecheck` jobs as-is.
-  - In `deploy` job: keep cache-bust, strip-preview-files, and minify steps as-is.
-  - Replace `actions/upload-pages-artifact` + `actions/deploy-pages` with `Azure/static-web-apps-deploy@v1`. Inputs: `app_location: "."`, `api_location: ""` (no API yet in Feature A), `output_location: ""`, `skip_app_build: true`.
-  - Remove `concurrency: pages` group (no longer applicable).
-- [ ] Push branch, open PR. CI runs test + typecheck. Once merged to `main`, the workflow runs against `main` and deploys to SWA.
-- [ ] Verify: visit `https://black-dune-0ebd24603.7.azurestaticapps.net` — every page (`/`, `/daily/`, `/flagQuiz/`, `/findFlag/`, `/flagsdata/`) loads, daily puzzle works end-to-end, PartyKit-backed games still connect.
-- [ ] Decide with Jan: cut over `github.io` immediately (remove the old workflow path) or run both for a week as fallback. Default: cut over.
-- [ ] Update `CLAUDE.md` "Where things live" with the SWA hosting note + naming convention.
-
-**Phase A3 — Cleanup**
-
-- [ ] If the GitHub Pages path stays disabled cleanly after a week, delete the leftover `upload-pages-artifact` / `deploy-pages` references and the `pages` permissions in the workflow.
-- [ ] Repoint custom domain (if/when one is added).
-
----
-
 ### Feature B: Daily challenge — global stats ("compare with other users")
 
-**Status:** parked until Feature A merges. Cosmos resources have been pre-created (see below) but are unused until then.
+**Status:** ready to start. Feature A (hosting migration) shipped 2026-06-09 — site is live on Azure SWA at `https://www.yetanotherquiz.com`. Cosmos resources for Feature B were pre-created during Feature A and are sitting idle.
 
 **Goal:** after a player finishes their daily challenge, show per-flag find rates aggregated from everyone who attempted the same puzzle. Primary UI is a table below the existing found / missed lists.
 
@@ -152,4 +113,6 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundMask FROM c WH
 
 ## Done
 
-(empty)
+### Feature A: Migrate site hosting to Azure SWA — *shipped 2026-06-09*
+
+GitHub Pages → Azure Static Web Apps (Free SKU). Public URL `https://www.yetanotherquiz.com` (apex 301-redirects to www via Cloudflare). Resources: `rg-yetanotherquiz`, `swa-yetanotherquiz`. Permanent hosting facts moved to `CLAUDE.md` "Hosting" section; PR #281 + #282 + the wrap-up PR have the implementation history.
