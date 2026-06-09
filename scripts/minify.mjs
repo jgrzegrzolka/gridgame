@@ -23,6 +23,9 @@ const SKIP_DIRS = new Set([
   'node_modules',
   'party',     // PartyKit server, deployed via `partykit deploy` not Pages
   'scripts',   // build scripts themselves
+  'api',       // SWA-bundled Functions — CommonJS, Oryx packages it separately,
+               // and `format: 'esm'` here corrupts the require() calls. Server-side
+               // code gains nothing from minification anyway.
 ]);
 
 /**
