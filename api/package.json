@@ -1,0 +1,16 @@
+{
+  "name": "yetanotherquiz-api",
+  "version": "1.0.0",
+  "description": "SWA-bundled Azure Functions for yetanotherquiz",
+  "main": "src/{index.js,functions/*.js}",
+  "scripts": {
+    "start": "func start",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.5.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
