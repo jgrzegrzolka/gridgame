@@ -126,6 +126,30 @@ test('hits the correct endpoint with the puzzle number in the path', async () =>
   assert.equal(calledUrl, '/api/v1/daily/stats/42');
 });
 
+test('bypassCache=true appends ?fresh=1 to the URL', async () => {
+  const doc = makeDoc();
+  const container = makeContainer(doc);
+  let calledUrl = '';
+  await loadAndRenderStats({
+    n: 42, container, targets, displayName, labels, bypassCache: true,
+    fetchImpl: async (url) => { calledUrl = url; return fakeRes(200, { totalAttempts: 0, perCodeFinds: {}, median: 0, topPct: 0 }); },
+    render: () => {},
+  });
+  assert.equal(calledUrl, '/api/v1/daily/stats/42?fresh=1');
+});
+
+test('bypassCache=false (default) sends the bare URL', async () => {
+  const doc = makeDoc();
+  const container = makeContainer(doc);
+  let calledUrl = '';
+  await loadAndRenderStats({
+    n: 42, container, targets, displayName, labels, bypassCache: false,
+    fetchImpl: async (url) => { calledUrl = url; return fakeRes(200, { totalAttempts: 0, perCodeFinds: {}, median: 0, topPct: 0 }); },
+    render: () => {},
+  });
+  assert.equal(calledUrl, '/api/v1/daily/stats/42');
+});
+
 test('shows loading text in the container before the fetch resolves', async () => {
   const doc = makeDoc();
   const container = makeContainer(doc);

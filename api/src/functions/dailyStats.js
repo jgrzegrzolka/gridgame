@@ -25,9 +25,17 @@ app.http('dailyStats', {
     }
 
     const now = Date.now();
-    const cached = cache.get(id, now);
-    if (cached) {
-      return { status: 200, headers: cacheHeaders(), jsonBody: cached };
+    // `?fresh=1` is set by the client immediately after a POST so the
+    // player sees their own just-submitted result reflected. Skips the
+    // cache lookup, then writes the fresh result back so subsequent
+    // GETs (other players, this player's revisits) get the new data
+    // without their own bypass.
+    const fresh = readFreshFlag(req);
+    if (!fresh) {
+      const cached = cache.get(id, now);
+      if (cached) {
+        return { status: 200, headers: cacheHeaders(fresh), jsonBody: cached };
+      }
     }
 
     const conn = process.env.COSMOS_CONN;
@@ -58,10 +66,31 @@ app.http('dailyStats', {
 
     const stats = aggregate(result.docs);
     cache.set(id, stats, now);
-    return { status: 200, headers: cacheHeaders(), jsonBody: stats };
+    return { status: 200, headers: cacheHeaders(fresh), jsonBody: stats };
   },
 });
 
-function cacheHeaders() {
-  return { 'Cache-Control': `public, max-age=${CACHE_TTL_MS / 1000}` };
+/**
+ * Read `?fresh=1` from the request URL. Returns true only on the
+ * exact string "1" to avoid surprises (no truthy URL params, no
+ * accidental cache-busting from typos).
+ */
+function readFreshFlag(req) {
+  try {
+    return new URL(req.url).searchParams.get('fresh') === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Tell the browser / edge to cache the response for the same window
+ * the server caches it. When the request is `?fresh=1` we don't want
+ * the browser to remember this response (it's a one-off bypass), so
+ * we send `no-store` instead.
+ */
+function cacheHeaders(fresh) {
+  return fresh
+    ? { 'Cache-Control': 'no-store' }
+    : { 'Cache-Control': `public, max-age=${CACHE_TTL_MS / 1000}` };
 }
