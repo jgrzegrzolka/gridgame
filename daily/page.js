@@ -36,17 +36,17 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADhdZ-XDzVHaLk9R';
  */
 function statsLabels() {
   return {
-    headline: t('daily.stats.headline', 'Median today: {median}/{total} — {topPct}% got everything'),
+    headline: t('daily.stats.headline', 'Average today: {average}/{total}'),
     caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
     loading: t('daily.stats.loading', 'Loading stats…'),
   };
 }
 
 /**
- * Fetch stats for puzzle N and render them as: a one-line headline
- * + a caption in the #daily-stats slot, plus a per-tile percentage
- * overlay on the existing Found / Missed flag lists. Used by both
- * the post-finish path (handleFinish) and the revisit path.
+ * Fetch stats for puzzle N and render them as: a two-line summary
+ * (headline + detail) plus a caption in the #daily-stats slot, plus
+ * a per-tile percentage overlay on the existing Found / Missed flag
+ * lists. Used by both the post-finish path and the revisit path.
  *
  * `bypassCache` defaults to false (revisit path uses the 60s server
  * cache, which is fine for stats the player has seen before). The
@@ -57,10 +57,10 @@ function statsLabels() {
  * screen still works (player has their score, found/missed tiles).
  *
  * @param {number} n
- * @param {number} totalCount  puzzle's answer-set size; needed to format the median fraction
+ * @param {import('../flags/group.js').Country[]} targets  puzzle's full target list, used for both the fraction denominator and the "hardest" lookup
  * @param {{ bypassCache?: boolean }} [opts]
  */
-async function renderStatsForPuzzle(n, totalCount, opts = {}) {
+async function renderStatsForPuzzle(n, targets, opts = {}) {
   showStatsLoading();
   const stats = await fetchStats(n, { bypassCache: opts.bypassCache === true });
   if (!stats) {
@@ -68,15 +68,19 @@ async function renderStatsForPuzzle(n, totalCount, opts = {}) {
     return;
   }
   const labels = statsLabels();
-  const headlineText = formatStatsHeadline({ stats, totalCount, template: labels.headline });
-  if (headlineText === null) {
+  const headline = formatStatsHeadline({
+    stats,
+    totalCount: targets.length,
+    template: labels.headline,
+  });
+  if (headline === null) {
     // No meaningful population yet (totalAttempts === 0). Hide the
-    // panel entirely rather than show "Median today: 0/N — 0% got
-    // everything" which is technically true but misleading.
+    // panel entirely rather than show "Average today: 0/N" with no
+    // population behind it.
     hideStatsPanel();
     return;
   }
-  paintStatsHeadline(headlineText, labels.caption);
+  paintStatsPanel(headline, labels.caption);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
 }
@@ -87,10 +91,10 @@ async function renderStatsForPuzzle(n, totalCount, opts = {}) {
  * of the finish screen still works.
  *
  * @param {number} n
- * @param {number} totalCount
+ * @param {import('../flags/group.js').Country[]} targets
  * @param {{ foundCodes: string[], totalCount: number, durationMs: number }} info
  */
-async function handleFinish(n, totalCount, info) {
+async function handleFinish(n, targets, info) {
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
 
@@ -120,7 +124,7 @@ async function handleFinish(n, totalCount, info) {
   });
 
   if (r.outcome === 'ok') {
-    await renderStatsForPuzzle(n, totalCount, { bypassCache: true });
+    await renderStatsForPuzzle(n, targets, { bypassCache: true });
     return;
   }
   hideStatsPanel();
@@ -143,13 +147,13 @@ function showStatsLoading() {
 }
 
 /**
- * Paint the headline + caption into #daily-stats, overwriting any
- * loading placeholder.
+ * Paint the stats headline + caption into #daily-stats, overwriting
+ * any loading placeholder.
  *
  * @param {string} headlineText
  * @param {string} captionText
  */
-function paintStatsHeadline(headlineText, captionText) {
+function paintStatsPanel(headlineText, captionText) {
   const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
   container.hidden = false;
   container.innerHTML = '';
@@ -231,7 +235,7 @@ export function bootDaily() {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
         if (hasSubmitted(window.localStorage, n)) {
-          renderStatsForPuzzle(n, result.targets.length);
+          renderStatsForPuzzle(n, result.targets);
         }
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
@@ -239,7 +243,7 @@ export function bootDaily() {
           paintDescription(result.entry.description);
           renderResult(result.targets, foundCodes);
           if (hasSubmitted(window.localStorage, n)) {
-            renderStatsForPuzzle(n, result.targets.length);
+            renderStatsForPuzzle(n, result.targets);
           }
         });
         return;
@@ -255,7 +259,7 @@ export function bootDaily() {
       // glitch, network drop, etc) — the player can replay and
       // finally get their result counted.
       const game = startGame(n, category, result.targets, all, {
-        onFinish: (info) => handleFinish(n, result.targets.length, info),
+        onFinish: (info) => handleFinish(n, result.targets, info),
       });
       attachLangRefresh(game, {
         raw,

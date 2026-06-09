@@ -150,11 +150,23 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 - Stats panel only renders when the player has submitted (or just attempted to and got 204/409). The revisit branch in `page.js` checks `hasSubmitted` directly; the finish branch in `handleFinish` checks `submitResult`'s outcome — keeps the play-to-see-stats incentive intact.
 - Turnstile token fetched at finish time (not page-load), via `getTurnstileToken()` which reuses an unexpired token if present or runs `execute()` for a fresh one. The widget is rendered with `execution: 'execute'` so it does *not* auto-challenge at render time (lesson from B4 hotfix: default mode + manual execute is a silent-hang trap). Token failure (script blocked, CF rejected) silently skips the POST and the stats render — the player keeps their local score.
 
-**Phase B5 — Distribution one-liner**
+**Phase B5 — Distribution one-liner** *(partial — see B7 for the planned upgrade)*
 
-- [ ] Render `You: X/N — median today: M, top: P% got N/N` above the per-flag table. Data already in `/stats` from Phase B3.
-- [ ] i18n: en + pl strings, match existing daily i18n approach.
-- [ ] Pure-function formatter + tests.
+- [x] Pure-function formatter + tests (`daily/distributionSummary.js`).
+- [x] i18n: en + pl strings.
+- [x] Render headline below the per-flag overlays: **`Average today: 2.5/6`** (one line, plus the caption explaining the per-tile %s).
+- **Departures from the original FEATURE.md sketch:**
+  - Word "Median" → "Average" (plain-English; the value is still the median internally, the better robust-typical measure).
+  - Dropped the "X% got everything" trailer entirely. At low N, `topPct = 0` was noise; even at higher N it was buried at the end of a long line.
+  - Dropped the originally-shipped "X plays · Hardest: <country> (Y% found)" second line. At early-traffic N values (1-10) both pieces felt awkward: "3 plays" admits low traffic, and "12% found" with N=3 is misleadingly precise (only 0/33/67/100% are possible).
+  - The per-tile percentage overlays still carry per-flag detail.
+
+**Phase B7 — Player-percentile headline** *(future, when traffic justifies it)*
+
+- [ ] Replace / supplement the headline with `You're in the top X% of players today` — meaningful at any N once the distribution exists. Player's percentile based on found-count rank.
+- [ ] Server change: extend the stats endpoint to return a small distribution (count of submissions at each found-count: `{ "0": 3, "1": 5, "2": 12, ... }`). Cheap query (`SELECT COUNT(*) GROUP BY ...`); no schema change; existing rows are sufficient (no replays needed — every row already has `foundCodes + totalCount`).
+- [ ] Client: aggregate to percentile given the player's own score + the distribution.
+- [ ] Decide when to show plain "Average today" vs the percentile (probably percentile from N ≥ ~10, average always).
 
 **Phase B6 — Archive integration** *(optional — confirm with Jan before starting)*
 

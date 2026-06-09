@@ -71,7 +71,7 @@
     "empty": "Brak zagadek.",
     "sovereignOnly": "Tylko kraje suwerenne.",
     "stats": {
-      "headline": "Mediana dziś: {median}/{total} — {topPct}% zdobyło wszystko",
+      "headline": "Średnio dziś: {average}/{total}",
       "caption": "% pokazuje ilu innych graczy odgadło każdą flagę.",
       "loading": "Wczytuję statystyki…",
       "noSubmissions": "Jesteś jednym z pierwszych graczy."

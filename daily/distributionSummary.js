@@ -1,28 +1,30 @@
 /**
- * Format the one-line community-stats headline shown above the
- * found/missed lists. Pure: takes raw numbers + a localized template
- * with `{median}` `{total}` `{topPct}` `{attempts}` placeholders,
- * returns a string (or null when there's nothing meaningful to show).
+ * Format the single-line community-stats headline shown below the
+ * found/missed lists.
  *
- * Returns null when:
- *   - stats is null/undefined (fetch failed)
- *   - totalAttempts === 0 (player is the first to submit — no
- *     comparison to make, no honest median, no "top X%" to report)
+ *   "Average today: 2.5/6"
  *
- * Template placeholders supported:
- *   {median}    e.g. 3
- *   {total}     e.g. 9  (the puzzle's answer count)
- *   {topPct}    e.g. 12 (percent who got everything)
- *   {attempts}  e.g. 47 (total submissions so far)
+ * Returns the formatted string or null when there's nothing meaningful
+ * to display (no submissions yet).
  *
- * Caller looks up the template via i18n.t() and passes it in. Keeps
- * this module decoupled from i18n's lookup mechanism + makes the
- * interpolation directly testable without a fake t().
+ * **Wording note:** we label the median value as "Average" because
+ * that's the plain-English word most players reach for. The code
+ * still computes the median (sees `stats.median`) because it's the
+ * better "typical value" measure for this kind of data — one perfect
+ * attempt or one give-up doesn't distort it the way a mean would.
+ *
+ * Earlier shipped a second "detail" line ("X plays · Hardest: …") but
+ * at low N (typical for an early-traffic puzzle) both pieces felt
+ * awkward: "3 plays" is a low-traffic admission, and "12% found" at
+ * N=3 is misleadingly precise (only 0/33/67/100% are possible). The
+ * per-tile overlays still carry the per-flag detail, so the headline
+ * + per-tile %s are enough. A proper percentile line ("you're in the
+ * top X%") is the future replacement — see FEATURE.md for the plan.
  */
 
 /**
  * @param {{
- *   stats: { totalAttempts: number, median: number, topPct: number } | null | undefined,
+ *   stats: { totalAttempts: number, median: number } | null | undefined,
  *   totalCount: number,
  *   template: string,
  * }} args
@@ -31,10 +33,8 @@
 export function formatStatsHeadline({ stats, totalCount, template }) {
   if (!stats || stats.totalAttempts === 0) return null;
   return interpolate(template, {
-    median: stats.median,
+    average: stats.median,
     total: totalCount,
-    topPct: stats.topPct,
-    attempts: stats.totalAttempts,
   });
 }
 
@@ -42,9 +42,6 @@ export function formatStatsHeadline({ stats, totalCount, template }) {
  * Replace `{key}` placeholders in `s` with the corresponding value
  * from `vars`. Unknown keys are left as-is (so a typo in the template
  * is visible rather than silently dropped).
- *
- * @param {string} s
- * @param {Record<string, number | string>} vars
  */
 function interpolate(s, vars) {
   return s.replace(/\{(\w+)\}/g, (_, k) => (k in vars ? String(vars[k]) : `{${k}}`));
