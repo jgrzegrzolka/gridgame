@@ -31,6 +31,21 @@ The site's HTTP API lives in `api/` and ships as part of the SWA deploy (no sepa
 - **Azure quirk:** the underlying Function App is **managed by SWA** — it does not appear as a discrete resource in `rg-yetanotherquiz`. To view it: portal → `swa-yetanotherquiz` → **APIs** → click `(managed)`. Free SKU has no Premium plan / no warm instances; first request after ~20 min idle = ~1-2 s cold start. For a flag game this is fine.
 - **Adding a new endpoint:** (1) drop a new file in `api/src/functions/<name>.js` that calls `app.http('name', ...)`; (2) add `require('./functions/<name>');` to `api/src/index.js`. Push, deploy, done. **If you skip step 2, the function deploys but never registers** — the route 404s in prod while the file sits there unused (caught us in PR #301 → fix #302).
 
+## Local development
+
+You can run the whole stack locally — static site + Functions API + Cosmos round-trips — without deploying. Two npm scripts:
+
+- `npm run dev:swa` — full stack via Azure SWA CLI emulator. Static at `http://localhost:4280`, API proxied at `http://localhost:4280/api/*`. Closest to production behavior. Use this for end-to-end testing.
+- `npm run dev:api` — Functions only, at `http://localhost:7071/api/*`. Useful for backend-only work without static-site overhead.
+
+**One-time setup:**
+
+1. Install **Azure Functions Core Tools v4** (system tool, not npm). On Windows: `npm install -g azure-functions-core-tools@4 --unsafe-perm true` or via `winget install Microsoft.Azure.FunctionsCoreTools`. Required by both scripts.
+2. Install api/ deps: `cd api && npm install`. (Root `npm install` already covers SWA CLI as a devDep.)
+3. Create your local env file: `cp api/local.settings.json.example api/local.settings.json`, then fill in `COSMOS_CONN` from `az staticwebapp appsettings list -n swa-yetanotherquiz -g rg-yetanotherquiz --query properties.COSMOS_CONN -o tsv`. `local.settings.json` is gitignored. Leave `TURNSTILE_SECRET` empty for local dev — the handler's skip-when-unset branch accepts any token.
+
+**Trade-off to know:** the local Functions runtime hits the **real prod Cosmos** (we don't have a separate dev container, see FEATURE.md). Writes you make locally land in the same `dailyResults` rows other users / your own prod sessions share. Acceptable today because traffic is tiny; revisit when scale or testing matters.
+
 ## Tests
 
 - **Anything that can be tested should be tested.** Pure logic — game engines, reducers, validators, puzzle generators — must have unit tests. If you find yourself writing logic that isn't covered, either add a test or move the logic somewhere it can be tested.

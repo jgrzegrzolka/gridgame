@@ -3,3 +3,9 @@
 .DS_Store
 node_modules/
 .partykit/
+
+# Azure Functions / SWA local dev — local.settings.json holds real
+# Cosmos + Turnstile secrets. Copy local.settings.json.example to
+# local.settings.json and fill in.
+api/local.settings.json
+.swa/
