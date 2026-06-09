@@ -30,15 +30,18 @@ const fakeRes = (status, body) => ({
   json: async () => body,
 });
 
-test('returns "already" without POSTing when gate says so', async () => {
+test('always POSTs even when locally marked submitted (server handles dedup)', async () => {
+  // Earlier implementation gated on hasSubmitted to avoid the round-trip,
+  // but that broke server-side upsert (replays never reached the server).
+  // The gate is gone — server is the source of truth for dedup.
   const store = fakeStore({ 'gridgame.submittedPuzzles': '[7]' });
   let called = false;
   const r = await submitResult({
     ...baseArgs, store,
     fetchImpl: async () => { called = true; return fakeRes(204, null); },
   });
-  assert.deepEqual(r, { outcome: 'already' });
-  assert.equal(called, false);
+  assert.deepEqual(r, { outcome: 'ok' });
+  assert.equal(called, true);
 });
 
 test('returns "ok" and marks submitted on 204', async () => {
