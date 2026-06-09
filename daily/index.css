@@ -46,10 +46,21 @@
   margin-bottom: 12px;
 }
 
-/* Community stats: a two-line summary (headline + detail) plus a
- * small caption below, sitting below the Missed list. The per-tile
- * bottom-strip percentage that overlays the flag tiles themselves
- * is the per-flag breakdown — no separate flag grid. */
+/* The shared playFlow renders a big celebratory "You found all" /
+ * "You found N/N" paragraph at the top of the result section. On the
+ * daily page we replace that with the consolidated stats line below
+ * (".daily-stats-headline" with the player's score AND the community
+ * average). The playFlow paragraph still renders for findFlag's
+ * standalone page; we hide it here and only here. */
+#result > .final-score {
+  display: none;
+}
+
+/* Community stats: one-line headline (player's score, plus the
+ * community average once stats arrive) + a caption explaining the
+ * per-tile %s. The per-tile bottom-strip percentage that overlays
+ * the flag tiles themselves is the per-flag breakdown — no separate
+ * flag grid. Sits below the Missed list. */
 .daily-stats {
   margin: 32px 0 0;
 }
@@ -65,12 +76,6 @@
   color: #888;
   margin: 8px 0 0;
   text-align: left;
-}
-.find-stats-loading {
-  color: #888;
-  font-size: 14px;
-  text-align: left;
-  margin: 8px 0;
 }
 
 /* Always-visible bottom-strip percentage on a found/missed flag tile.
