@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { readFreshFlag } = require('./dailyStats');
+const { readFreshFlag } = require('./queryParams');
 
 const reqFromUrl = (url) => ({ url });
 

@@ -3,6 +3,7 @@ const { LIMITS } = require('../lib/validate');
 const { queryDocs } = require('../lib/cosmos');
 const { aggregate } = require('../lib/aggregate');
 const { createTtlCache } = require('../lib/ttlCache');
+const { readFreshFlag } = require('../lib/queryParams');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
@@ -69,21 +70,6 @@ app.http('dailyStats', {
     return { status: 200, headers: cacheHeaders(fresh), jsonBody: stats };
   },
 });
-
-/**
- * Read `?fresh=1` from the request URL. Returns true only on the
- * exact string "1" to avoid surprises (no truthy URL params, no
- * accidental cache-busting from typos). Exported for unit tests.
- */
-function readFreshFlag(req) {
-  try {
-    return new URL(req.url).searchParams.get('fresh') === '1';
-  } catch {
-    return false;
-  }
-}
-
-module.exports = { readFreshFlag };
 
 /**
  * Tell the browser / edge to cache the response for the same window
