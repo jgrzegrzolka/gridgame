@@ -121,6 +121,8 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 
 **Caching trade-off (acknowledged):** a player who just submitted their result may see stats lagging their own submission by up to 60s. Invalidate-on-write isn't reliable because insert and query may run on different Function instances. Acceptable for v1.
 
+**Temporary testing toggle: `DAILY_RESULT_UPSERT`.** When this env var is `true` on the SWA, `dailyResult` upserts into Cosmos instead of insert-only — replays update the stored row rather than 409'ing. **Currently ON for testing** so the stats panel reflects each player's latest replay, keeping localStorage and Cosmos in sync per device. **Plan to flip OFF** to lock in first-attempt-only stats once the feature feels right (no code change needed — just unset the env var in the Azure portal).
+
 **Cosmos REST query support:** `queryDocs` added to `api/src/lib/cosmos.js`. Pagination via `x-ms-continuation` handled (accumulates all pages). Single-partition only — cross-partition isn't exposed because we don't need it.
 
 **Phase B4 — Client integration on finish screen** *(feature first visible)*

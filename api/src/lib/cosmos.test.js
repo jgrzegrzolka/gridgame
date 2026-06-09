@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const { parseConnString, signRequest, queryDocs } = require('./cosmos');
+const { parseConnString, signRequest, queryDocs, insertDoc } = require('./cosmos');
 
 const CONN = 'AccountEndpoint=https://x.documents.azure.com:443/;AccountKey=YWJjZA==;';
 
@@ -165,4 +165,59 @@ test('queryDocs returns empty docs when Documents is absent', async () => {
     }),
   });
   assert.deepEqual(r, { ok: true, docs: [] });
+});
+
+const insertRes = (status) => ({
+  status,
+  text: async () => '',
+});
+
+test('insertDoc without upsert: 201 → ok, no upsert header sent', async () => {
+  let sentHeaders;
+  const r = await insertDoc({
+    connString: CONN, dbName: 'db', containerName: 'c',
+    partitionKey: 7, doc: { id: '7:x' },
+    fetchImpl: async (_url, init) => { sentHeaders = init.headers; return insertRes(201); },
+  });
+  assert.deepEqual(r, { ok: true });
+  assert.equal(sentHeaders['x-ms-documentdb-is-upsert'], undefined);
+});
+
+test('insertDoc without upsert: 409 → conflict', async () => {
+  const r = await insertDoc({
+    connString: CONN, dbName: 'db', containerName: 'c',
+    partitionKey: 7, doc: { id: '7:x' },
+    fetchImpl: async () => insertRes(409),
+  });
+  assert.deepEqual(r, { ok: false, error: 'conflict' });
+});
+
+test('insertDoc with upsert: 201 → ok, upsert header IS sent', async () => {
+  let sentHeaders;
+  const r = await insertDoc({
+    connString: CONN, dbName: 'db', containerName: 'c',
+    partitionKey: 7, doc: { id: '7:x' }, upsert: true,
+    fetchImpl: async (_url, init) => { sentHeaders = init.headers; return insertRes(201); },
+  });
+  assert.deepEqual(r, { ok: true });
+  assert.equal(sentHeaders['x-ms-documentdb-is-upsert'], 'True');
+});
+
+test('insertDoc with upsert: 200 (existing doc replaced) → ok', async () => {
+  const r = await insertDoc({
+    connString: CONN, dbName: 'db', containerName: 'c',
+    partitionKey: 7, doc: { id: '7:x' }, upsert: true,
+    fetchImpl: async () => insertRes(200),
+  });
+  assert.deepEqual(r, { ok: true });
+});
+
+test('insertDoc without upsert: 200 is NOT treated as ok (insert path expects only 201)', async () => {
+  const r = await insertDoc({
+    connString: CONN, dbName: 'db', containerName: 'c',
+    partitionKey: 7, doc: { id: '7:x' },
+    fetchImpl: async () => insertRes(200),
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.error, 'cosmos_error');
 });

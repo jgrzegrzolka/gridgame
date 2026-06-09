@@ -64,28 +64,36 @@ function signRequest(verb, resourceType, resourceLink, date, masterKey) {
  *
  * Network errors throw — callers can decide whether to surface as 500.
  */
-async function insertDoc({ connString, dbName, containerName, partitionKey, doc }) {
+async function insertDoc({ connString, dbName, containerName, partitionKey, doc, upsert = false, fetchImpl = globalThis.fetch }) {
   const { endpoint, key } = parseConnString(connString);
   const resourceLink = `dbs/${dbName}/colls/${containerName}`;
   const url = `${endpoint.replace(/\/$/, '')}/${resourceLink}/docs`;
   const date = new Date().toUTCString();
   const authorization = signRequest('POST', 'docs', resourceLink, date, key);
 
-  const res = await fetch(url, {
+  const headers = {
+    Authorization: authorization,
+    'x-ms-date': date,
+    'x-ms-version': COSMOS_API_VERSION,
+    'Content-Type': 'application/json',
+    // Cosmos wants the partition key as a JSON-encoded array (even though
+    // there's only ever one value).
+    'x-ms-documentdb-partitionkey': JSON.stringify([partitionKey]),
+  };
+  // Upsert mode: Cosmos replaces an existing doc with the same id
+  // instead of returning 409. Used by the daily-results endpoint when
+  // DAILY_RESULT_UPSERT=true (temporary testing toggle). Cosmos returns
+  // 200 on replace, 201 on create — both count as success.
+  if (upsert) headers['x-ms-documentdb-is-upsert'] = 'True';
+
+  const res = await fetchImpl(url, {
     method: 'POST',
-    headers: {
-      Authorization: authorization,
-      'x-ms-date': date,
-      'x-ms-version': COSMOS_API_VERSION,
-      'Content-Type': 'application/json',
-      // Cosmos wants the partition key as a JSON-encoded array (even though
-      // there's only ever one value).
-      'x-ms-documentdb-partitionkey': JSON.stringify([partitionKey]),
-    },
+    headers,
     body: JSON.stringify(doc),
   });
 
   if (res.status === 201) return { ok: true };
+  if (upsert && res.status === 200) return { ok: true };
   if (res.status === 409) return { ok: false, error: 'conflict' };
 
   let body = '';
