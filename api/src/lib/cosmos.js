@@ -97,4 +97,76 @@ async function insertDoc({ connString, dbName, containerName, partitionKey, doc 
   return { ok: false, error: 'cosmos_error', status: res.status, body };
 }
 
-module.exports = { parseConnString, signRequest, insertDoc, COSMOS_API_VERSION };
+/**
+ * Run a parameterized SQL query against a container and accumulate
+ * every result page (Cosmos pages via the `x-ms-continuation` header).
+ * Returns:
+ *   - { ok: true, docs: [...] }
+ *   - { ok: false, error: 'cosmos_error', status, body }
+ *
+ * `fetchImpl` is injected so tests don't have to touch the network.
+ * `partitionKey` is required for single-partition queries (the common
+ * cheap path); cross-partition isn't exposed because we don't need it.
+ *
+ * Example:
+ *   queryDocs({
+ *     connString, dbName: 'yetanotherquiz', containerName: 'dailyResults',
+ *     query: 'SELECT c.foundCodes, c.totalCount FROM c WHERE c.puzzleId = @pid',
+ *     parameters: [{ name: '@pid', value: 7 }],
+ *     partitionKey: 7,
+ *   });
+ */
+async function queryDocs({
+  connString,
+  dbName,
+  containerName,
+  query,
+  parameters = [],
+  partitionKey,
+  fetchImpl = globalThis.fetch,
+}) {
+  const { endpoint, key } = parseConnString(connString);
+  const resourceLink = `dbs/${dbName}/colls/${containerName}`;
+  const url = `${endpoint.replace(/\/$/, '')}/${resourceLink}/docs`;
+
+  const docs = [];
+  let continuation = null;
+
+  // Loop fetches additional pages while Cosmos returns x-ms-continuation.
+  // Each iteration re-signs because the x-ms-date changes per request.
+  do {
+    const date = new Date().toUTCString();
+    const authorization = signRequest('POST', 'docs', resourceLink, date, key);
+    const headers = {
+      Authorization: authorization,
+      'x-ms-date': date,
+      'x-ms-version': COSMOS_API_VERSION,
+      'Content-Type': 'application/query+json',
+      'x-ms-documentdb-isquery': 'True',
+      'x-ms-documentdb-partitionkey': JSON.stringify([partitionKey]),
+    };
+    if (continuation) headers['x-ms-continuation'] = continuation;
+
+    const res = await fetchImpl(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ query, parameters }),
+    });
+
+    if (!res.ok) {
+      let body = '';
+      try { body = await res.text(); } catch { /* ignore */ }
+      return { ok: false, error: 'cosmos_error', status: res.status, body };
+    }
+
+    const json = await res.json();
+    if (Array.isArray(json.Documents)) docs.push(...json.Documents);
+    continuation = typeof res.headers.get === 'function'
+      ? res.headers.get('x-ms-continuation')
+      : res.headers['x-ms-continuation'];
+  } while (continuation);
+
+  return { ok: true, docs };
+}
+
+module.exports = { parseConnString, signRequest, insertDoc, queryDocs, COSMOS_API_VERSION };
