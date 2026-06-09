@@ -2,6 +2,7 @@ const { app } = require('@azure/functions');
 const { validateResult } = require('../lib/validate');
 const { insertDoc } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
+const { verifyTurnstile } = require('../lib/turnstile');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
@@ -30,6 +31,20 @@ app.http('dailyResult', {
     }
     const v = validateResult(body);
     if (!v.ok) return { status: 400, jsonBody: { error: v.error } };
+
+    const ts = await verifyTurnstile({
+      secret: process.env.TURNSTILE_SECRET,
+      token: body.turnstileToken,
+      remoteIp: clientIp(req),
+    });
+    if (!ts.ok) {
+      if (ts.reason === 'missing_secret') {
+        context.warn('TURNSTILE_SECRET not set — skipping verification (dev mode)');
+      } else {
+        context.warn('turnstile verification failed', { reason: ts.reason });
+        return { status: 403, jsonBody: { error: 'turnstile_failed' } };
+      }
+    }
 
     const conn = process.env.COSMOS_CONN;
     if (!conn) {
