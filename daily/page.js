@@ -1,5 +1,5 @@
 import { loadCountries, flagsGamePool } from '../flags/group.js';
-import { t, withLocalizedAliases } from '../i18n.js';
+import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
 import { loadScores, isCompleteRecord } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
@@ -12,6 +12,87 @@ import {
   attachLangRefresh,
   showReason,
 } from './playFlow.js';
+import { getOrCreateDeviceId } from './identity.js';
+import { hasSubmitted } from './submitted.js';
+import { submitResult } from './statsSubmit.js';
+import { loadAndRenderStats } from './statsView.js';
+import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
+
+// Public site key for our Turnstile widget — fine to ship in source.
+// The secret stays in SWA env vars.
+const TURNSTILE_SITE_KEY = '0x4AAAAAAAhdZ-XDzVHaLk9R';
+
+/** @typedef {import('../flags/group.js').Country} Country */
+
+/**
+ * Localized labels for the community-stats panel. Resolved at the call
+ * site (not at module-load) so a soft language switch picks up fresh
+ * strings the next time it renders.
+ */
+function statsLabels() {
+  return {
+    sectionTitle: t('daily.stats.title', 'How others did'),
+    loading: t('daily.stats.loading', 'Loading stats…'),
+    noSubmissions: t('daily.stats.noSubmissions', "You're one of the first to play this puzzle."),
+  };
+}
+
+/**
+ * Fetch + render the community-stats panel for puzzle N. Used by the
+ * revisit path (already-submitted) and by handleFinish (after the POST
+ * lands). The submitted gate is enforced by the caller — this helper
+ * just paints.
+ *
+ * @param {number} n
+ * @param {Country[]} targets
+ */
+function renderStatsPanel(n, targets) {
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
+  return loadAndRenderStats({
+    n, container, targets,
+    displayName: countryName,
+    labels: statsLabels(),
+  });
+}
+
+/**
+ * Post-finish hook: get a Turnstile token, submit the result, and
+ * (on 204 / 409 / already-submitted) render the community-stats panel.
+ * Failures are silent — the rest of the finish screen still works.
+ *
+ * @param {number} n
+ * @param {Country[]} targets
+ * @param {{ foundCodes: string[], totalCount: number, durationMs: number }} info
+ */
+async function handleFinish(n, targets, info) {
+  const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
+  const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
+
+  let turnstileToken = '';
+  try {
+    await ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY });
+    turnstileToken = await getTurnstileToken();
+  } catch {
+    // Turnstile failed (script blocked, no network, etc) — without a
+    // token the server will 403. Skip the POST; the player keeps their
+    // local score and just doesn't see stats this time.
+    return;
+  }
+
+  const r = await submitResult({
+    store: window.localStorage,
+    n,
+    foundCodes: info.foundCodes,
+    totalCount: info.totalCount,
+    durationMs: info.durationMs,
+    deviceId,
+    turnstileToken,
+  });
+
+  if (r.outcome === 'ok' || r.outcome === 'already') {
+    renderStatsPanel(n, targets);
+  }
+}
 
 /**
  * Live `/daily/` boot. Loads today's puzzle (or `?n=N` from the URL),
@@ -69,17 +150,28 @@ export function bootDaily() {
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
+        if (hasSubmitted(window.localStorage, n)) {
+          renderStatsPanel(n, result.targets);
+        }
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
           paintDescription(result.entry.description);
           renderResult(result.targets, foundCodes);
+          if (hasSubmitted(window.localStorage, n)) {
+            renderStatsPanel(n, result.targets);
+          }
         });
         return;
       }
 
       const category = filterToCategory(result.filter, t);
-      const game = startGame(n, category, result.targets, all, { skipSave: isReplay });
+      const game = startGame(n, category, result.targets, all, {
+        skipSave: isReplay,
+        // Replays don't POST (per FEATURE.md retry contract: first-attempt
+        // only). Author preview pages don't load page.js at all.
+        onFinish: isReplay ? undefined : (info) => handleFinish(n, result.targets, info),
+      });
       attachLangRefresh(game, {
         raw,
         targets: result.targets,

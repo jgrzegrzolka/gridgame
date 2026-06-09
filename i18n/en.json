@@ -69,7 +69,12 @@
     "archiveCount": "{n} flags",
     "notFound": "Puzzle not found.",
     "empty": "No puzzles yet.",
-    "sovereignOnly": "Sovereign countries only."
+    "sovereignOnly": "Sovereign countries only.",
+    "stats": {
+      "title": "How others did",
+      "loading": "Loading stats…",
+      "noSubmissions": "You're one of the first to play this puzzle."
+    }
   },
   "ttt": {
     "title": "Yet Another Quiz — Tic Tac Toe with Country Flags",

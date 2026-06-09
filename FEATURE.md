@@ -134,14 +134,19 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 
 **Tasks:**
 
-- [ ] `daily/identity.js`: generate UUID (`crypto.randomUUID()`), store as `localStorage.gridgame.deviceId` (sticky after first call). Tests.
-- [ ] Track "submitted to server" per puzzle in localStorage. Extract to a sibling module with tests so the gate is one place, not scattered.
-- [ ] Embed Turnstile widget in `daily/index.html` (managed/invisible mode). Site key in HTML.
-- [ ] On finish (in `daily/playFlow.js` or wherever the finish screen renders): if not yet submitted, POST to `/api/v1/daily/result` with Turnstile token. Fire-and-forget on failure — never block the finish screen. On 204 or 409, mark submitted.
-- [ ] Fetch `/api/v1/daily/stats/{puzzleId}`. Render per-flag table below found/missed lists. Match existing daily list styling — grep `daily/index.css` and sibling pages first per CLAUDE.md UI-consistency rule.
-- [ ] Loading + failure states: skeleton row while fetching, table just doesn't render on error.
-- [ ] Extract pure render logic to a sibling module + tests (per "proactive testing" feedback).
-- [ ] Browser-test E2E. `npm run validate`.
+- [x] `daily/identity.js`: generate UUID (`crypto.randomUUID()`), store as `localStorage.gridgame.deviceId` (sticky after first call). Tests. (PR #304)
+- [x] Track "submitted to server" per puzzle in localStorage. `daily/submitted.js` — separate `localStorage.gridgame.submittedPuzzles` set. Tests. (PR #304)
+- [x] Embed Turnstile widget in `daily/index.html` (size: invisible). Site key `0x4AAAAAAAhdZ-XDzVHaLk9R` in `daily/page.js` as a public const. CF SDK lazy-loaded by `daily/turnstileClient.js` only when needed.
+- [x] On finish: `daily/statsSubmit.js` POSTs to `/api/v1/daily/result` with Turnstile token + body. Treats 204 and 409 as success → marks submitted. Fire-and-forget on failure — never blocks the finish screen.
+- [x] Fetch `/api/v1/daily/stats/{puzzleId}` and render per-flag table. Reuses `.find-stats` (added to the shared grid rule in `findFlag/index.css` next to `.find-result-found` / `.find-missed`). Each tile carries a bottom-strip percentage. Sorted hardest first.
+- [x] Loading + failure states: small "Loading stats…" placeholder while fetching; container hides silently on any error so the rest of the result page still works.
+- [x] Pure render extracted to `daily/statsRender.js` with 10 tests (uses `container.ownerDocument` so a fake-doc test rig has no globals to set up).
+- [x] `npm run validate` — 870 tests, all green; typecheck clean. Browser E2E in production after merge (no SWA preview env wired up).
+
+**Retry contract as implemented:**
+- POST gated by `hasSubmitted(n)` (`submitted.js`). 204/409 → mark submitted. Replays don't POST (handled in `page.js`: `onFinish` not wired when `isReplay`).
+- Stats panel only renders when `hasSubmitted(n)` is true. The revisit branch in `page.js` and the finish branch in `handleFinish` both check before rendering — keeps the play-to-see-stats incentive intact.
+- Turnstile token fetched at finish time (not page-load), via `getTurnstileToken()` which reuses an unexpired token if present or runs `execute()` for a fresh one. Token failure (script blocked, network) silently skips the POST and the stats render — the player keeps their local score.
 
 **Phase B5 — Distribution one-liner**
 

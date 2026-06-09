@@ -82,6 +82,10 @@
       <p></p>
     </dialog>
 
+    <!-- Invisible Cloudflare Turnstile widget. Mounted lazily by
+         daily/turnstileClient.js at finish time. Site key is public. -->
+    <div id="turnstile-widget" aria-hidden="true"></div>
+
     <section id="result" hidden>
       <p class="final-score" id="final-score-line">
         <span id="final-score-prefix" data-i18n="findFlag.youFound">You found</span><span id="final-score-fraction"> <span id="final-found">0</span> / <span id="final-total">0</span></span>
@@ -90,6 +94,7 @@
       <ul class="find-result-found" id="find-result-found"></ul>
       <h2 class="result-section-title" id="missed-title" hidden data-i18n="findFlag.missed">Missed:</h2>
       <ul class="find-missed" id="find-missed"></ul>
+      <section id="daily-stats" class="daily-stats" hidden></section>
       <p class="result-links">
         <a id="play-again" href="#" data-i18n="game.playAgain">Play again</a>
         ·
