@@ -70,13 +70,17 @@ function mount(container, siteKey) {
   /** @type {any} */ const ts = /** @type {any} */ (window).turnstile;
   widgetId = ts.render(container, {
     sitekey: siteKey,
-    size: 'invisible',
-    // 'execute' tells the widget NOT to run a challenge until we call
-    // turnstile.execute(). Without this option, CF auto-runs at render
-    // time and turnstile.execute() becomes a no-op — which silently
-    // leaves the getTurnstileToken() promise hanging forever when no
-    // prior token is sitting around. See the previous bug: PR #305
-    // shipped without this and POSTs never fired in production.
+    // appearance: 'execute' keeps the widget hidden until we call
+    // turnstile.execute(); if CF then decides interaction is needed,
+    // it pops a small challenge UI. Replaces the deprecated
+    // `size: 'invisible'` which CF still accepts as input but logs
+    // an error and falls back to a default visible size — causing
+    // a rogue "challenge widget" to leak out from our 0x0 wrapper
+    // when the user interacted with the page.
+    appearance: 'execute',
+    // execution: 'execute' defers the actual challenge until we call
+    // turnstile.execute(). Pair with appearance:'execute' so the
+    // widget is both invisible AND not auto-challenging at render.
     execution: 'execute',
     callback: (/** @type {string} */ token) => {
       const p = pending;
