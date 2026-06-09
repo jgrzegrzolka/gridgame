@@ -1,20 +1,9 @@
 const { app } = require('@azure/functions');
-const { CosmosClient } = require('@azure/cosmos');
 const { validateResult } = require('../lib/validate');
+const { insertDoc } = require('../lib/cosmos');
 
-// Cached across warm invocations on the same Function instance — the
-// CosmosClient holds a connection pool, recreating it per request would
-// negate the warm path. On cold start it's null and we create one.
-let containerCache = null;
-
-function getContainer() {
-  if (containerCache) return containerCache;
-  const conn = process.env.COSMOS_CONN;
-  if (!conn) throw new Error('COSMOS_CONN env var is not set');
-  const client = new CosmosClient(conn);
-  containerCache = client.database('yetanotherquiz').container('dailyResults');
-  return containerCache;
-}
+const DB_NAME = 'yetanotherquiz';
+const CONTAINER_NAME = 'dailyResults';
 
 app.http('dailyResult', {
   route: 'v1/daily/result',
@@ -30,6 +19,12 @@ app.http('dailyResult', {
     const v = validateResult(body);
     if (!v.ok) return { status: 400, jsonBody: { error: v.error } };
 
+    const conn = process.env.COSMOS_CONN;
+    if (!conn) {
+      context.error('COSMOS_CONN env var is not set');
+      return { status: 500, jsonBody: { error: 'server_error' } };
+    }
+
     const doc = {
       id: `${body.puzzleId}:${body.deviceId}`,
       puzzleId: body.puzzleId,
@@ -39,16 +34,26 @@ app.http('dailyResult', {
       durationMs: body.durationMs,
       submittedAt: Date.now(),
     };
+
+    let result;
     try {
-      await getContainer().items.create(doc);
-      return { status: 204 };
+      result = await insertDoc({
+        connString: conn,
+        dbName: DB_NAME,
+        containerName: CONTAINER_NAME,
+        partitionKey: body.puzzleId,
+        doc,
+      });
     } catch (err) {
-      // Cosmos throws on UNIQUE-key violation with .code === 409.
-      if (err && err.code === 409) {
-        return { status: 409, jsonBody: { error: 'already_submitted' } };
-      }
-      context.error('cosmos insert failed', err);
+      context.error('cosmos request threw', err);
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
+
+    if (result.ok) return { status: 204 };
+    if (result.error === 'conflict') {
+      return { status: 409, jsonBody: { error: 'already_submitted' } };
+    }
+    context.error('cosmos insert failed', result);
+    return { status: 500, jsonBody: { error: 'server_error' } };
   },
 });
