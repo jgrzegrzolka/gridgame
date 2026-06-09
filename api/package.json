@@ -9,6 +9,7 @@
     "test": "node --test"
   },
   "dependencies": {
+    "@azure/cosmos": "^4.1.0",
     "@azure/functions": "^4.5.0"
   }
 }
