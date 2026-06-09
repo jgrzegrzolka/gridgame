@@ -1,62 +1,107 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { formatStatsHeadline } from './distributionSummary.js';
+import { formatScoreLine } from './distributionSummary.js';
 
-const template = 'Average today: {average}/{total}';
+const templates = {
+  scoreOnly: 'Your score: {found}/{total}',
+  scoreWithAverage: 'Your score: {found}/{total} · Average score: {average}/{total}',
+};
 
-test('null stats → null', () => {
-  assert.equal(formatStatsHeadline({ stats: null, totalCount: 9, template }), null);
-});
-
-test('undefined stats → null', () => {
-  assert.equal(formatStatsHeadline({ stats: undefined, totalCount: 9, template }), null);
-});
-
-test('totalAttempts === 0 → null (no honest comparison yet)', () => {
-  const stats = { totalAttempts: 0, median: 0 };
-  assert.equal(formatStatsHeadline({ stats, totalCount: 9, template }), null);
-});
-
-test('interpolates {average} {total} into the template', () => {
-  const stats = { totalAttempts: 10, median: 3 };
+test('no stats → score-only template', () => {
   assert.equal(
-    formatStatsHeadline({ stats, totalCount: 9, template }),
-    'Average today: 3/9',
+    formatScoreLine({ found: 5, total: 9, templates }),
+    'Your score: 5/9',
+  );
+});
+
+test('null stats → score-only template', () => {
+  assert.equal(
+    formatScoreLine({ found: 5, total: 9, stats: null, templates }),
+    'Your score: 5/9',
+  );
+});
+
+test('stats with zero attempts → score-only (no honest comparison yet)', () => {
+  assert.equal(
+    formatScoreLine({
+      found: 5, total: 9, templates,
+      stats: { totalAttempts: 0, median: 0 },
+    }),
+    'Your score: 5/9',
+  );
+});
+
+test('stats with attempts → score-with-average template', () => {
+  assert.equal(
+    formatScoreLine({
+      found: 5, total: 9, templates,
+      stats: { totalAttempts: 47, median: 3 },
+    }),
+    'Your score: 5/9 · Average score: 3/9',
   );
 });
 
 test('non-integer median (e.g. 2.5) renders verbatim', () => {
-  const stats = { totalAttempts: 4, median: 2.5 };
   assert.equal(
-    formatStatsHeadline({ stats, totalCount: 6, template }),
-    'Average today: 2.5/6',
+    formatScoreLine({
+      found: 4, total: 6, templates,
+      stats: { totalAttempts: 4, median: 2.5 },
+    }),
+    'Your score: 4/6 · Average score: 2.5/6',
   );
 });
 
-test('totalAttempts >= 1 still produces output (single-row case after own submission)', () => {
-  const stats = { totalAttempts: 1, median: 0 };
+test('zero score is rendered (give-up case)', () => {
   assert.equal(
-    formatStatsHeadline({ stats, totalCount: 9, template }),
-    'Average today: 0/9',
+    formatScoreLine({
+      found: 0, total: 9, templates,
+      stats: { totalAttempts: 10, median: 3 },
+    }),
+    'Your score: 0/9 · Average score: 3/9',
   );
 });
 
-test('unknown {placeholder} in template is left intact (typo visibility)', () => {
-  const stats = { totalAttempts: 5, median: 2 };
+test('perfect score is rendered', () => {
   assert.equal(
-    formatStatsHeadline({ stats, totalCount: 9, template: 'wat {nope}/{average}' }),
-    'wat {nope}/2',
+    formatScoreLine({
+      found: 9, total: 9, templates,
+      stats: { totalAttempts: 10, median: 7 },
+    }),
+    'Your score: 9/9 · Average score: 7/9',
+  );
+});
+
+test('single attempt still produces with-average line (median == own score)', () => {
+  assert.equal(
+    formatScoreLine({
+      found: 3, total: 9, templates,
+      stats: { totalAttempts: 1, median: 3 },
+    }),
+    'Your score: 3/9 · Average score: 3/9',
+  );
+});
+
+test('unknown {placeholder} is left intact (typo visibility)', () => {
+  assert.equal(
+    formatScoreLine({
+      found: 5, total: 9,
+      templates: { scoreOnly: 'wat {nope}/{found}', scoreWithAverage: '' },
+    }),
+    'wat {nope}/5',
   );
 });
 
 test('respects Polish-shaped templates', () => {
-  const stats = { totalAttempts: 47, median: 3 };
   assert.equal(
-    formatStatsHeadline({
-      stats, totalCount: 9,
-      template: 'Średnio dziś: {average}/{total}',
+    formatScoreLine({
+      found: 5, total: 9,
+      stats: { totalAttempts: 47, median: 3 },
+      templates: {
+        scoreOnly: 'Twój wynik: {found}/{total}',
+        scoreWithAverage: 'Twój wynik: {found}/{total} · Średni wynik: {average}/{total}',
+      },
     }),
-    'Średnio dziś: 3/9',
+    'Twój wynik: 5/9 · Średni wynik: 3/9',
   );
 });

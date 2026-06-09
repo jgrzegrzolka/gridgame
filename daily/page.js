@@ -17,7 +17,7 @@ import { hasSubmitted } from './submitted.js';
 import { submitResult } from './statsSubmit.js';
 import { fetchStats } from './statsClient.js';
 import { applyFindRatesToTiles } from './statsOverlay.js';
-import { formatStatsHeadline } from './distributionSummary.js';
+import { formatScoreLine } from './distributionSummary.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 
 // Public site key for our Turnstile widget — fine to ship in source.
@@ -36,81 +36,103 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADhdZ-XDzVHaLk9R';
  */
 function statsLabels() {
   return {
-    headline: t('daily.stats.headline', 'Average today: {average}/{total}'),
+    scoreOnly: t('daily.stats.scoreOnly', 'Your score: {found}/{total}'),
+    scoreWithAverage: t('daily.stats.scoreWithAverage', 'Your score: {found}/{total} · Average score: {average}/{total}'),
     caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
-    loading: t('daily.stats.loading', 'Loading stats…'),
   };
 }
 
 /**
- * Fetch stats for puzzle N and render them as: a two-line summary
- * (headline + detail) plus a caption in the #daily-stats slot, plus
- * a per-tile percentage overlay on the existing Found / Missed flag
- * lists. Used by both the post-finish path and the revisit path.
+ * Paint the stats panel: a one-line headline (player score, optionally
+ * with the community average) + a caption explaining the per-tile %s
+ * (only when stats are present, since the overlays only render then).
  *
- * `bypassCache` defaults to false (revisit path uses the 60s server
- * cache, which is fine for stats the player has seen before). The
- * finish path passes `true` so the player sees their just-submitted
- * result reflected immediately instead of cached pre-submit data.
+ * Called twice in the happy path:
+ *   1. immediately on finish/revisit with `stats: null` → shows just
+ *      "Your score: X/N" so the player sees their own number instantly.
+ *   2. after the stats fetch resolves → repaints with "Your score:
+ *      X/N · Average score: M/N" + caption + tile overlays.
  *
- * On any failure the panel hides silently and the rest of the result
- * screen still works (player has their score, found/missed tiles).
+ * On any stats fetch failure the first paint stays put — the player
+ * still has their own score even if the community comparison can't load.
+ *
+ * @param {number} found
+ * @param {number} total
+ * @param {{ totalAttempts: number, median: number, perCodeFinds: Record<string, number> } | null} stats
+ */
+function paintStatsPanel(found, total, stats) {
+  const labels = statsLabels();
+  const headlineText = formatScoreLine({
+    found, total, stats,
+    templates: { scoreOnly: labels.scoreOnly, scoreWithAverage: labels.scoreWithAverage },
+  });
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
+  container.hidden = false;
+  container.innerHTML = '';
+  const h = document.createElement('p');
+  h.className = 'daily-stats-headline';
+  h.textContent = headlineText;
+  container.appendChild(h);
+  // Caption only when stats arrived AND we have per-tile overlays to
+  // explain. The score-only state doesn't need it (no %s anywhere).
+  if (stats && stats.totalAttempts > 0) {
+    const c = document.createElement('p');
+    c.className = 'daily-stats-caption';
+    c.textContent = labels.caption;
+    container.appendChild(c);
+  }
+}
+
+/**
+ * Fetch stats for puzzle N and repaint the panel with the community
+ * average + apply per-tile overlays. The score-only paint must
+ * already have happened (by the caller, before await'ing here) so
+ * the player sees their own number while the network is in flight.
+ *
+ * `bypassCache: true` is used by the post-finish path so the player
+ * sees their just-submitted result reflected immediately; revisits
+ * use the default (cached) path.
  *
  * @param {number} n
- * @param {import('../flags/group.js').Country[]} targets  puzzle's full target list, used for both the fraction denominator and the "hardest" lookup
+ * @param {Country[]} targets
+ * @param {number} found
  * @param {{ bypassCache?: boolean }} [opts]
  */
-async function renderStatsForPuzzle(n, targets, opts = {}) {
-  showStatsLoading();
+async function loadAndPaintStats(n, targets, found, opts = {}) {
   const stats = await fetchStats(n, { bypassCache: opts.bypassCache === true });
-  if (!stats) {
-    hideStatsPanel();
-    return;
-  }
-  const labels = statsLabels();
-  const headline = formatStatsHeadline({
-    stats,
-    totalCount: targets.length,
-    template: labels.headline,
-  });
-  if (headline === null) {
-    // No meaningful population yet (totalAttempts === 0). Hide the
-    // panel entirely rather than show "Average today: 0/N" with no
-    // population behind it.
-    hideStatsPanel();
-    return;
-  }
-  paintStatsPanel(headline, labels.caption);
+  if (!stats) return; // fetch failed — leave the score-only paint in place
+  paintStatsPanel(found, targets.length, stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
 }
 
 /**
- * Post-finish hook: get a Turnstile token, submit the result, and
- * (on 204 / 409) render the stats UI. Failures are silent — the rest
- * of the finish screen still works.
+ * Post-finish hook: paint the player's score immediately, get a
+ * Turnstile token, submit the result, then repaint with stats once
+ * they arrive. Each failure mode leaves the player at least with
+ * their own score visible.
  *
  * @param {number} n
- * @param {import('../flags/group.js').Country[]} targets
+ * @param {Country[]} targets
  * @param {{ foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }} info
  */
 async function handleFinish(n, targets, info) {
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
+  const found = info.foundCodes.length;
 
-  // Show a loading placeholder immediately so the user sees the panel
-  // *will* appear. Turnstile + POST + stats fetch take ~1-2s together,
-  // which feels broken without any visible cue. The eventual render
-  // overwrites this placeholder.
-  showStatsLoading();
+  // Score-only paint — same tick as renderResult so the player never
+  // sees the big celebratory "You found all" text the shared playFlow
+  // sets (it's hidden via CSS, but synchronous overwrite is belt-and-
+  // braces against any future layout flash).
+  paintStatsPanel(found, info.totalCount, null);
 
   let turnstileToken = '';
   try {
     await ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY });
     turnstileToken = await getTurnstileToken();
   } catch {
-    hideStatsPanel();
-    return;
+    return; // score-only paint stays
   }
 
   const r = await submitResult({
@@ -125,58 +147,9 @@ async function handleFinish(n, targets, info) {
   });
 
   if (r.outcome === 'ok') {
-    await renderStatsForPuzzle(n, targets, { bypassCache: true });
-    return;
+    await loadAndPaintStats(n, targets, found, { bypassCache: true });
   }
-  hideStatsPanel();
-}
-
-/**
- * Render the small "Loading stats…" placeholder inside #daily-stats
- * and reveal the section. Used as the very first thing in both the
- * finish and revisit paths so the user sees something during the
- * Turnstile + POST + GET delay.
- */
-function showStatsLoading() {
-  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
-  container.hidden = false;
-  container.innerHTML = '';
-  const p = document.createElement('p');
-  p.className = 'find-stats-loading';
-  p.textContent = statsLabels().loading;
-  container.appendChild(p);
-}
-
-/**
- * Paint the stats headline + caption into #daily-stats, overwriting
- * any loading placeholder.
- *
- * @param {string} headlineText
- * @param {string} captionText
- */
-function paintStatsPanel(headlineText, captionText) {
-  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
-  container.hidden = false;
-  container.innerHTML = '';
-  const h = document.createElement('p');
-  h.className = 'daily-stats-headline';
-  h.textContent = headlineText;
-  container.appendChild(h);
-  const c = document.createElement('p');
-  c.className = 'daily-stats-caption';
-  c.textContent = captionText;
-  container.appendChild(c);
-}
-
-/**
- * Hide the panel entirely. Used on submit/turnstile/fetch failure —
- * the rest of the result screen (found, missed, action links) still
- * works fine on its own; we don't want a stranded loading message.
- */
-function hideStatsPanel() {
-  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
-  container.innerHTML = '';
-  container.hidden = true;
+  // else: submit failed — score-only paint stays
 }
 
 /**
@@ -235,16 +208,18 @@ export function bootDaily() {
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
+        paintStatsPanel(foundCodes.size, result.targets.length, null);
         if (hasSubmitted(window.localStorage, n)) {
-          renderStatsForPuzzle(n, result.targets);
+          loadAndPaintStats(n, result.targets, foundCodes.size);
         }
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
           paintDescription(result.entry.description);
           renderResult(result.targets, foundCodes);
+          paintStatsPanel(foundCodes.size, result.targets.length, null);
           if (hasSubmitted(window.localStorage, n)) {
-            renderStatsForPuzzle(n, result.targets);
+            loadAndPaintStats(n, result.targets, foundCodes.size);
           }
         });
         return;

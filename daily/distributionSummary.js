@@ -1,41 +1,38 @@
 /**
- * Format the single-line community-stats headline shown below the
- * found/missed lists.
+ * Format the stats-panel headline for a finished daily puzzle.
  *
- *   "Average today: 2.5/6"
+ * Two shapes:
+ *   - score-only ("Your score: 5/9") — paint immediately on finish/revisit;
+ *     stats may not have arrived (or may never arrive — failed fetch).
+ *   - score-with-average ("Your score: 5/9 · Average score: 3/9") — paint
+ *     once stats are in and totalAttempts > 0.
  *
- * Returns the formatted string or null when there's nothing meaningful
- * to display (no submissions yet).
+ * **Wording note:** the "Average" value is actually the median (more
+ * robust to outliers — one zero-finder + one perfect player don't skew
+ * it). The label says Average because that's the plain-English word
+ * people reach for.
  *
- * **Wording note:** we label the median value as "Average" because
- * that's the plain-English word most players reach for. The code
- * still computes the median (sees `stats.median`) because it's the
- * better "typical value" measure for this kind of data — one perfect
- * attempt or one give-up doesn't distort it the way a mean would.
- *
- * Earlier shipped a second "detail" line ("X plays · Hardest: …") but
- * at low N (typical for an early-traffic puzzle) both pieces felt
- * awkward: "3 plays" is a low-traffic admission, and "12% found" at
- * N=3 is misleadingly precise (only 0/33/67/100% are possible). The
- * per-tile overlays still carry the per-flag detail, so the headline
- * + per-tile %s are enough. A proper percentile line ("you're in the
- * top X%") is the future replacement — see FEATURE.md for the plan.
+ * Caller looks up the templates via i18n.t() and passes them in. Keeps
+ * the module decoupled from i18n's lookup mechanism and the templates
+ * directly testable.
  */
 
 /**
  * @param {{
- *   stats: { totalAttempts: number, median: number } | null | undefined,
- *   totalCount: number,
- *   template: string,
+ *   found: number,
+ *   total: number,
+ *   stats?: { totalAttempts: number, median: number } | null,
+ *   templates: { scoreOnly: string, scoreWithAverage: string },
  * }} args
- * @returns {string | null}
+ * @returns {string}
  */
-export function formatStatsHeadline({ stats, totalCount, template }) {
-  if (!stats || stats.totalAttempts === 0) return null;
-  return interpolate(template, {
-    average: stats.median,
-    total: totalCount,
-  });
+export function formatScoreLine({ found, total, stats, templates }) {
+  if (stats && stats.totalAttempts > 0) {
+    return interpolate(templates.scoreWithAverage, {
+      found, total, average: stats.median,
+    });
+  }
+  return interpolate(templates.scoreOnly, { found, total });
 }
 
 /**
