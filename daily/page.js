@@ -169,11 +169,16 @@ export function bootDaily() {
       }
 
       const category = filterToCategory(result.filter, t);
+      // Replays treated identically to first finishes: local archive
+      // overwrites with the latest attempt, and we re-POST to the
+      // server. The server enforces first-attempt-only via 409 on
+      // duplicate (puzzleId, deviceId); the client just hands the
+      // result over and treats 204 / 409 as equivalent. This makes
+      // replays self-healing when the first POST failed (Turnstile
+      // glitch, network drop, etc) — the player can replay and
+      // finally get their result counted.
       const game = startGame(n, category, result.targets, all, {
-        skipSave: isReplay,
-        // Replays don't POST (per FEATURE.md retry contract: first-attempt
-        // only). Author preview pages don't load page.js at all.
-        onFinish: isReplay ? undefined : (info) => handleFinish(n, result.targets, info),
+        onFinish: (info) => handleFinish(n, result.targets, info),
       });
       attachLangRefresh(game, {
         raw,

@@ -129,8 +129,8 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 
 - **The server stores first-attempt only.** `dailyResult` Function 409s on duplicate `(puzzleId, deviceId)`. This is by design — stats are honest only if "12% got 5/5" means "12% solved it on their *first* try." If we upserted, everyone would replay until 5/5 and the top percentile would saturate.
 - **Local replay still works exactly like today.** `daily/scores.js` already overwrites the localStorage record on replay (see the comment at the top of that file). Don't change that — players replay to learn, their personal archive should show their latest attempt.
-- **The client must gate the POST.** Don't POST on every finish — only on the first finish for that puzzle. Track "submitted to server" separately from the score itself. Suggested storage shape: either piggyback an `s: true` flag on the existing scores.js record, or a separate `localStorage.gridgame.submittedPuzzles` set keyed by `n`.
-- **Treat 204 and 409 as equivalent locally.** If we ever do POST a duplicate (e.g. user cleared the submitted-flag but not the deviceId), 409 means "the server already has this" — same as success for our purposes. Mark it submitted and move on.
+- **The client may POST on every finish — including replays.** The "don't waste a round-trip when we know it'll 409" optimization lives in `submitted.js` via `hasSubmitted(n)` and is enforced inside `statsSubmit.js`, not at the call site. Replays are *not* suppressed at the page level: that turned out to be a bug because it prevented self-healing when the first POST failed (Turnstile glitch, network drop) — the user could replay and the data would still never land. Stored under `localStorage.gridgame.submittedPuzzles` (sorted JSON array, separate from scores so submission state isn't entangled with score schema changes).
+- **Treat 204 and 409 as equivalent locally.** If we POST a duplicate (replay, or user cleared the submitted-flag but kept the deviceId), 409 means "the server already has this" — same end state as 204 for the client. Mark submitted and render stats.
 
 **Tasks:**
 
@@ -144,9 +144,9 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 - [x] `npm run validate` — 870 tests, all green; typecheck clean. Browser E2E in production after merge (no SWA preview env wired up).
 
 **Retry contract as implemented:**
-- POST gated by `hasSubmitted(n)` (`submitted.js`). 204/409 → mark submitted. Replays don't POST (handled in `page.js`: `onFinish` not wired when `isReplay`).
-- Stats panel only renders when `hasSubmitted(n)` is true. The revisit branch in `page.js` and the finish branch in `handleFinish` both check before rendering — keeps the play-to-see-stats incentive intact.
-- Turnstile token fetched at finish time (not page-load), via `getTurnstileToken()` which reuses an unexpired token if present or runs `execute()` for a fresh one. Token failure (script blocked, network) silently skips the POST and the stats render — the player keeps their local score.
+- POST gated by `hasSubmitted(n)` *inside* `submitResult` (the gate is in one place, not scattered at call sites). 204/409 → mark submitted. The `isReplay` check used to gate `onFinish` in `page.js` — removed because it suppressed self-healing retries when the first POST failed.
+- Stats panel only renders when the player has submitted (or just attempted to and got 204/409). The revisit branch in `page.js` checks `hasSubmitted` directly; the finish branch in `handleFinish` checks `submitResult`'s outcome — keeps the play-to-see-stats incentive intact.
+- Turnstile token fetched at finish time (not page-load), via `getTurnstileToken()` which reuses an unexpired token if present or runs `execute()` for a fresh one. The widget is rendered with `execution: 'execute'` so it does *not* auto-challenge at render time (lesson from B4 hotfix: default mode + manual execute is a silent-hang trap). Token failure (script blocked, CF rejected) silently skips the POST and the stats render — the player keeps their local score.
 
 **Phase B5 — Distribution one-liner**
 
