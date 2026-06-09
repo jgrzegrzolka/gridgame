@@ -255,11 +255,16 @@ export function renderResult(targets, foundCodes) {
  * something meaningful until we add a shareable score string in a
  * later phase).
  *
- * `opts.skipSave` is the only switch. Live daily's normal play path
- * persists the final found/total per puzzle number so the archive can
- * show the player their score. All author-only play (backlog preview,
- * ideas preview) and live-daily replay set `skipSave: true` — those
- * runs must not pollute the player's archive.
+ * `opts.skipSave` controls local persistence. Live daily's normal play
+ * path persists the final found/total per puzzle number so the archive
+ * can show the player their score. All author-only play (backlog
+ * preview, ideas preview) and live-daily replay set `skipSave: true` —
+ * those runs must not pollute the player's archive.
+ *
+ * `opts.onFinish({ foundCodes, totalCount, durationMs })` is an optional
+ * post-finish hook called once after `renderResult`. Live daily uses
+ * this to submit to the stats API + render the community panel; author
+ * pages don't pass it. Hook fires for both real finishes and give-ups.
  *
  * Returns a handle with `refreshI18n({ all, targets, label })` so the
  * caller can swap in re-localized country data (fresh `aliases` from a
@@ -275,11 +280,13 @@ export function renderResult(targets, foundCodes) {
  * @param {import('../flags/engine.js').Category} category
  * @param {Country[]} targets
  * @param {Country[]} all
- * @param {{ skipSave?: boolean }} [opts]
+ * @param {{ skipSave?: boolean, onFinish?: (info: { foundCodes: string[], totalCount: number, durationMs: number }) => void }} [opts]
  * @returns {{ refreshI18n: (next: { all: Country[], targets: Country[], label: string }) => void }}
  */
 export function startGame(n, category, targets, all, opts = {}) {
   const skipSave = opts.skipSave === true;
+  const onFinish = typeof opts.onFinish === 'function' ? opts.onFinish : null;
+  const startTime = Date.now();
   // pool is rebuilt on a soft language switch (the suggestion matcher reads
   // each Country's `aliases`, which are baked at withLocalizedAliases time
   // and stale after the language flips). targetCodes is mutated in place
@@ -440,6 +447,13 @@ export function startGame(n, category, targets, all, opts = {}) {
     if (tier === 'fireworks') launchFireworks();
     else if (tier === 'confetti') launchConfetti({ intensity });
     renderResult(targets, foundCodes);
+    if (onFinish) {
+      onFinish({
+        foundCodes: Array.from(foundCodes),
+        totalCount: total,
+        durationMs: Date.now() - startTime,
+      });
+    }
   }
 
   gameEl.hidden = false;
