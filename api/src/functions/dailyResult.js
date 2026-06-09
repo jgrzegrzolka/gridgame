@@ -62,6 +62,15 @@ app.http('dailyResult', {
       submittedAt: Date.now(),
     };
 
+    // TEMPORARY: DAILY_RESULT_UPSERT=true makes Cosmos replace an
+    // existing row for the same (puzzleId, deviceId) instead of 409'ing.
+    // Used during early-feature testing so a replay updates the stats
+    // panel — without it the panel forever shows the player's first
+    // attempt (which is the long-term intended honesty rule). To go
+    // back to first-attempt-only, unset this env var via the Azure
+    // portal — no redeploy needed.
+    const upsert = process.env.DAILY_RESULT_UPSERT === 'true';
+
     let result;
     try {
       result = await insertDoc({
@@ -70,6 +79,7 @@ app.http('dailyResult', {
         containerName: CONTAINER_NAME,
         partitionKey: body.puzzleId,
         doc,
+        upsert,
       });
     } catch (err) {
       context.error('cosmos request threw', err);
