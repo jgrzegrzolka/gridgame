@@ -5,3 +5,4 @@
 // predictable and easier to debug when something goes wrong at deploy.
 require('./functions/health');
 require('./functions/dailyResult');
+require('./functions/dailyStats');
