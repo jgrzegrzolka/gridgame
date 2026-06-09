@@ -1,5 +1,5 @@
 import { loadCountries, flagsGamePool } from '../flags/group.js';
-import { t, countryName, withLocalizedAliases } from '../i18n.js';
+import { t, withLocalizedAliases } from '../i18n.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
 import { loadScores, isCompleteRecord } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
@@ -15,7 +15,9 @@ import {
 import { getOrCreateDeviceId } from './identity.js';
 import { hasSubmitted } from './submitted.js';
 import { submitResult } from './statsSubmit.js';
-import { loadAndRenderStats } from './statsView.js';
+import { fetchStats } from './statsClient.js';
+import { applyFindRatesToTiles } from './statsOverlay.js';
+import { formatStatsHeadline } from './distributionSummary.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 
 // Public site key for our Turnstile widget — fine to ship in source.
@@ -28,53 +30,67 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADhdZ-XDzVHaLk9R';
 /** @typedef {import('../flags/group.js').Country} Country */
 
 /**
- * Localized labels for the community-stats panel. Resolved at the call
+ * Localized labels for the community-stats UI. Resolved at the call
  * site (not at module-load) so a soft language switch picks up fresh
  * strings the next time it renders.
  */
 function statsLabels() {
   return {
-    sectionTitle: t('daily.stats.title', 'How others did'),
+    headline: t('daily.stats.headline', 'Median today: {median}/{total} — {topPct}% got everything'),
+    caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
     loading: t('daily.stats.loading', 'Loading stats…'),
-    noSubmissions: t('daily.stats.noSubmissions', "You're one of the first to play this puzzle."),
   };
 }
 
 /**
- * Fetch + render the community-stats panel for puzzle N. Used by the
- * revisit path (already-submitted) and by handleFinish (after the POST
- * lands). The submitted gate is enforced by the caller — this helper
- * just paints.
+ * Fetch stats for puzzle N and render them as: a one-line headline
+ * + a caption in the #daily-stats slot, plus a per-tile percentage
+ * overlay on the existing Found / Missed flag lists. Used by both
+ * the post-finish path (handleFinish) and the revisit path.
  *
  * `bypassCache` defaults to false (revisit path uses the 60s server
  * cache, which is fine for stats the player has seen before). The
  * finish path passes `true` so the player sees their just-submitted
  * result reflected immediately instead of cached pre-submit data.
  *
+ * On any failure the panel hides silently and the rest of the result
+ * screen still works (player has their score, found/missed tiles).
+ *
  * @param {number} n
- * @param {Country[]} targets
+ * @param {number} totalCount  puzzle's answer-set size; needed to format the median fraction
  * @param {{ bypassCache?: boolean }} [opts]
  */
-function renderStatsPanel(n, targets, opts = {}) {
-  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
-  return loadAndRenderStats({
-    n, container, targets,
-    displayName: countryName,
-    labels: statsLabels(),
-    bypassCache: opts.bypassCache === true,
-  });
+async function renderStatsForPuzzle(n, totalCount, opts = {}) {
+  showStatsLoading();
+  const stats = await fetchStats(n, { bypassCache: opts.bypassCache === true });
+  if (!stats) {
+    hideStatsPanel();
+    return;
+  }
+  const labels = statsLabels();
+  const headlineText = formatStatsHeadline({ stats, totalCount, template: labels.headline });
+  if (headlineText === null) {
+    // No meaningful population yet (totalAttempts === 0). Hide the
+    // panel entirely rather than show "Median today: 0/N — 0% got
+    // everything" which is technically true but misleading.
+    hideStatsPanel();
+    return;
+  }
+  paintStatsHeadline(headlineText, labels.caption);
+  applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
+  applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
 }
 
 /**
  * Post-finish hook: get a Turnstile token, submit the result, and
- * (on 204 / 409 / already-submitted) render the community-stats panel.
- * Failures are silent — the rest of the finish screen still works.
+ * (on 204 / 409) render the stats UI. Failures are silent — the rest
+ * of the finish screen still works.
  *
  * @param {number} n
- * @param {Country[]} targets
+ * @param {number} totalCount
  * @param {{ foundCodes: string[], totalCount: number, durationMs: number }} info
  */
-async function handleFinish(n, targets, info) {
+async function handleFinish(n, totalCount, info) {
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
 
@@ -89,10 +105,6 @@ async function handleFinish(n, targets, info) {
     await ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY });
     turnstileToken = await getTurnstileToken();
   } catch {
-    // Turnstile failed (script blocked, no network, etc) — without a
-    // token the server will 403. Hide the loading placeholder and
-    // skip the POST. The player keeps their local score and just
-    // doesn't see stats this time.
     hideStatsPanel();
     return;
   }
@@ -108,18 +120,17 @@ async function handleFinish(n, targets, info) {
   });
 
   if (r.outcome === 'ok') {
-    renderStatsPanel(n, targets, { bypassCache: true });
+    await renderStatsForPuzzle(n, totalCount, { bypassCache: true });
     return;
   }
-  // Submit failed (rate-limited, server error, etc) — hide the
-  // loading placeholder so the user doesn't sit looking at it.
   hideStatsPanel();
 }
 
 /**
  * Render the small "Loading stats…" placeholder inside #daily-stats
- * and reveal the section. Used as the very first thing in handleFinish
- * so the user sees something during the Turnstile + POST + GET delay.
+ * and reveal the section. Used as the very first thing in both the
+ * finish and revisit paths so the user sees something during the
+ * Turnstile + POST + GET delay.
  */
 function showStatsLoading() {
   const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
@@ -132,9 +143,30 @@ function showStatsLoading() {
 }
 
 /**
- * Hide the panel entirely. Used on submit/turnstile failure — the rest
- * of the result screen (found, missed, action links) still works fine
- * on its own; we don't want a stranded loading message left behind.
+ * Paint the headline + caption into #daily-stats, overwriting any
+ * loading placeholder.
+ *
+ * @param {string} headlineText
+ * @param {string} captionText
+ */
+function paintStatsHeadline(headlineText, captionText) {
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
+  container.hidden = false;
+  container.innerHTML = '';
+  const h = document.createElement('p');
+  h.className = 'daily-stats-headline';
+  h.textContent = headlineText;
+  container.appendChild(h);
+  const c = document.createElement('p');
+  c.className = 'daily-stats-caption';
+  c.textContent = captionText;
+  container.appendChild(c);
+}
+
+/**
+ * Hide the panel entirely. Used on submit/turnstile/fetch failure —
+ * the rest of the result screen (found, missed, action links) still
+ * works fine on its own; we don't want a stranded loading message.
  */
 function hideStatsPanel() {
   const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
@@ -199,7 +231,7 @@ export function bootDaily() {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
         if (hasSubmitted(window.localStorage, n)) {
-          renderStatsPanel(n, result.targets);
+          renderStatsForPuzzle(n, result.targets.length);
         }
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
@@ -207,7 +239,7 @@ export function bootDaily() {
           paintDescription(result.entry.description);
           renderResult(result.targets, foundCodes);
           if (hasSubmitted(window.localStorage, n)) {
-            renderStatsPanel(n, result.targets);
+            renderStatsForPuzzle(n, result.targets.length);
           }
         });
         return;
@@ -223,7 +255,7 @@ export function bootDaily() {
       // glitch, network drop, etc) — the player can replay and
       // finally get their result counted.
       const game = startGame(n, category, result.targets, all, {
-        onFinish: (info) => handleFinish(n, result.targets, info),
+        onFinish: (info) => handleFinish(n, result.targets.length, info),
       });
       attachLangRefresh(game, {
         raw,

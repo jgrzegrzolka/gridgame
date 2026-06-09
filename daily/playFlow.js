@@ -141,6 +141,11 @@ function flagTile(c) {
   const li = document.createElement('li');
   li.className = 'find-tile';
   li.dataset.name = displayName;
+  // dataset.code lets the post-finish stats overlay (statsOverlay.js)
+  // look up the community find rate for this tile without rebuilding
+  // the whole result page. countryName() is language-dependent and
+  // mutates on a soft language switch; the code is stable.
+  li.dataset.code = c.code;
   bindTileCountry(li, c);
   li.addEventListener('click', () => openZoom(c));
   const img = document.createElement('img');

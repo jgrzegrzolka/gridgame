@@ -46,15 +46,36 @@
   margin-bottom: 12px;
 }
 
-/* Community stats panel: heading + grid of flag tiles each with an
- * always-visible bottom-strip percentage. The grid itself reuses the
- * .find-stats layout shared in ../findFlag/index.css alongside found /
- * missed (CLAUDE.md: same UI mechanism → same source). Only the
- * percentage overlay and the loading/empty placeholders are
- * stats-specific and live here. */
+/* Community stats: a headline + caption block above the existing
+ * Found / Missed lists, plus a per-tile bottom-strip percentage that
+ * overlays the flag tiles themselves. No separate flag grid — the
+ * stats live on the tiles the player already sees. */
 .daily-stats {
-  margin: 0;
+  margin: 16px 0 0;
 }
+.daily-stats-headline {
+  font-size: 15px;
+  color: #333;
+  font-weight: 600;
+  margin: 0;
+  text-align: left;
+}
+.daily-stats-caption {
+  font-size: 12px;
+  color: #888;
+  margin: 4px 0 0;
+  text-align: left;
+}
+.find-stats-loading {
+  color: #888;
+  font-size: 14px;
+  text-align: left;
+  margin: 8px 0;
+}
+
+/* Always-visible bottom-strip percentage on a found/missed flag tile.
+ * Tile has position: relative (set in ../findFlag/index.css alongside
+ * the hover-name tooltip), so this absolute box sits inside it. */
 .find-stats-pct {
   position: absolute;
   bottom: 0;
@@ -68,13 +89,6 @@
   padding: 2px 4px;
   letter-spacing: 0.04em;
   pointer-events: none;
-}
-.find-stats-loading,
-.find-stats-empty {
-  color: #888;
-  font-size: 14px;
-  text-align: left;
-  margin: 8px 0;
 }
 
 /* Turnstile widget container is invisible by design (size: 'invisible'
