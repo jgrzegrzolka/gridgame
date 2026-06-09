@@ -164,6 +164,22 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 
 ---
 
+### Local development setup — *parked mid-install (2026-06-10)*
+
+Scaffolding shipped in PR #315 (`npm run dev:swa` / `npm run dev:api`, `local.settings.json.example`, CLAUDE.md "Local development" section). Jan is mid-install of Azure Functions Core Tools v4 via `winget install Microsoft.Azure.FunctionsCoreTools` (the npm package install fails on Node 20+ with ESM/CJS incompatibility — winget is the reliable path).
+
+**Resume when:** `func --version` works in a fresh PowerShell. Then:
+
+1. `git pull`
+2. `cp api/local.settings.json.example api/local.settings.json`
+3. Fill in `COSMOS_CONN` from `az staticwebapp appsettings list -n swa-yetanotherquiz -g rg-yetanotherquiz --query "properties.COSMOS_CONN" -o tsv` (paste into the file, not into chat)
+4. Leave `TURNSTILE_SECRET` empty — handler's skip-when-unset path accepts any token locally
+5. `npm run dev:swa` → http://localhost:4280
+
+**Not blocking anything** — only blocks the convenience of running locally instead of deploy-to-test.
+
+---
+
 ### Feature C: Cross-device identity via WebAuthn passkey
 
 **Status:** parked. Don't start until Feature B is fully shipped and there's actual demand for cross-device stats.
