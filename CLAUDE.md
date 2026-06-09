@@ -19,6 +19,18 @@ Rule of thumb: keep new code inside its feature folder. Promote something to `fl
 - **Naming convention:** code, pages, repo name, and `gridgame.*` `localStorage` keys all stay `gridgame` (historical). Azure resources (subscription, resource group, SWA name, Cosmos account, etc.) use `yetanotherquiz` because that's the public product framing. When wiring Azure-side things, pick `yetanotherquiz-...`; when editing code, leave `gridgame` alone.
 - See `FEATURE.md` for in-progress hosting / Azure work and the full Azure resource inventory.
 
+## API / Azure Functions
+
+The site's HTTP API lives in `api/` and ships as part of the SWA deploy (no separate Function App resource).
+
+- **Programming model:** Azure Functions **v4** programmatic. Each endpoint is a single file under `api/src/functions/<name>.js` that calls `app.http('name', { route, methods, authLevel, handler })`. No `function.json`, no central registry — files are auto-discovered via the glob in `api/package.json`'s `main`.
+- **File layout:** `api/src/functions/` for endpoint files (thin handlers), `api/lib/` for pure logic + tests. Same rule as the rest of the repo: anything testable lives in a pure module with a `*.test.js` sibling. The handler is a shell that parses input, calls into `lib/`, and translates results to HTTP responses.
+- **Module system:** `api/` is CommonJS (`require` / `module.exports`) — `api/package.json` has no `"type": "module"` field, which keeps it consistent with most Azure Functions samples. The repo root is ESM; the two coexist via Node's per-directory `package.json` resolution.
+- **Secrets:** SWA **app settings** (env vars at runtime — `process.env.NAME`). Set via `az staticwebapp appsettings set -n swa-yetanotherquiz -g rg-yetanotherquiz --setting-names NAME=value`. Never commit; local dev would use `api/local.settings.json` (gitignored).
+- **Cosmos client:** cache it across warm invocations on the same instance (module-scoped `let` initialized lazily). Recreating the client per request blows away the connection pool. See `api/src/functions/dailyResult.js` for the pattern.
+- **Azure quirk:** the underlying Function App is **managed by SWA** — it does not appear as a discrete resource in `rg-yetanotherquiz`. To view it: portal → `swa-yetanotherquiz` → **APIs** → click `(managed)`. Free SKU has no Premium plan / no warm instances; first request after ~20 min idle = ~1-2 s cold start. For a flag game this is fine.
+- **Adding a new endpoint:** drop a new file in `api/src/functions/`, call `app.http(...)`. Push, deploy, done. No changes elsewhere.
+
 ## Tests
 
 - **Anything that can be tested should be tested.** Pure logic — game engines, reducers, validators, puzzle generators — must have unit tests. If you find yourself writing logic that isn't covered, either add a test or move the logic somewhere it can be tested.
