@@ -71,14 +71,22 @@ async function handleFinish(n, targets, info) {
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
 
+  // Show a loading placeholder immediately so the user sees the panel
+  // *will* appear. Turnstile + POST + stats fetch take ~1-2s together,
+  // which feels broken without any visible cue. The eventual render
+  // overwrites this placeholder.
+  showStatsLoading();
+
   let turnstileToken = '';
   try {
     await ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY });
     turnstileToken = await getTurnstileToken();
   } catch {
     // Turnstile failed (script blocked, no network, etc) — without a
-    // token the server will 403. Skip the POST; the player keeps their
-    // local score and just doesn't see stats this time.
+    // token the server will 403. Hide the loading placeholder and
+    // skip the POST. The player keeps their local score and just
+    // doesn't see stats this time.
+    hideStatsPanel();
     return;
   }
 
@@ -94,7 +102,37 @@ async function handleFinish(n, targets, info) {
 
   if (r.outcome === 'ok' || r.outcome === 'already') {
     renderStatsPanel(n, targets);
+    return;
   }
+  // Submit failed (rate-limited, server error, etc) — hide the
+  // loading placeholder so the user doesn't sit looking at it.
+  hideStatsPanel();
+}
+
+/**
+ * Render the small "Loading stats…" placeholder inside #daily-stats
+ * and reveal the section. Used as the very first thing in handleFinish
+ * so the user sees something during the Turnstile + POST + GET delay.
+ */
+function showStatsLoading() {
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
+  container.hidden = false;
+  container.innerHTML = '';
+  const p = document.createElement('p');
+  p.className = 'find-stats-loading';
+  p.textContent = statsLabels().loading;
+  container.appendChild(p);
+}
+
+/**
+ * Hide the panel entirely. Used on submit/turnstile failure — the rest
+ * of the result screen (found, missed, action links) still works fine
+ * on its own; we don't want a stranded loading message left behind.
+ */
+function hideStatsPanel() {
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
+  container.innerHTML = '';
+  container.hidden = true;
 }
 
 /**
