@@ -101,9 +101,9 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 
 *Phase B2c — Cosmos insert via REST* (#296). Done. Replaced the `@azure/cosmos` SDK with a small REST client in `api/src/lib/cosmos.js` because the SDK reliably triggered SWA's "Failure during content distribution" at deploy time (see Lessons #4). 9 unit tests cover connection-string parsing and signature determinism. End-to-end verified: 204 on success, 409 on duplicate, 400 on bad bodies.
 
-*Phase B2d — Abuse defenses.* Next up:
-- Verify Cloudflare Turnstile token server-side. `TURNSTILE_SECRET` in SWA app settings.
-- In-memory per-IP rate limit in the Function (5 req/min). Reset-on-cold-start is fine at this traffic.
+*Phase B2d — Abuse defenses.*
+- [x] In-memory per-IP rate limit in the Function (5 req/min, fixed window). Module-scope `Map` keyed by `x-forwarded-for` first entry. 429 + `Retry-After` header on breach. Reset-on-cold-start is fine at this traffic. (`api/src/lib/rateLimit.js`)
+- [ ] Verify Cloudflare Turnstile token server-side. `TURNSTILE_SECRET` in SWA app settings.
 
 **Lessons from B2 (don't relearn these):**
 1. **`api/package.json` must pin `"type": "commonjs"`.** Without it the Azure runtime inherits the root package.json's `"type": "module"` and starts treating `require()` as ESM-interop. Symptom: `require(...)` returns `{ __esModule, default }` instead of named exports.

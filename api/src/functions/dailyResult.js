@@ -1,15 +1,27 @@
 const { app } = require('@azure/functions');
 const { validateResult } = require('../lib/validate');
 const { insertDoc } = require('../lib/cosmos');
+const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
+
+const limiter = createRateLimiter({ limit: 5, windowMs: 60_000 });
 
 app.http('dailyResult', {
   route: 'v1/daily/result',
   methods: ['POST'],
   authLevel: 'anonymous',
   handler: async (req, context) => {
+    const rl = limiter.check(clientIp(req), Date.now());
+    if (!rl.allowed) {
+      return {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) },
+        jsonBody: { error: 'rate_limited' },
+      };
+    }
+
     let body;
     try {
       body = await req.json();
