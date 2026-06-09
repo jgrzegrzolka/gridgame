@@ -1,17 +1,21 @@
 /**
- * Anonymous browser identity for daily-puzzle submissions.
+ * Anonymous browser identity for any feature that needs a stable per-device
+ * key to talk to the API (daily-puzzle submissions, flagQuiz personal-best
+ * tracking, etc.).
  *
  * On first call this generates a UUID and persists it under
  * `localStorage.gridgame.deviceId`. Every subsequent call returns
- * the same string. Same browser = same identity = at most one
- * accepted submission per puzzle (the server enforces uniqueness
- * via `id = "{puzzleId}:{deviceId}"` and 409s on duplicate).
+ * the same string — same browser = same identity. The server validates
+ * the deviceId is a sane 8–64 char string and otherwise trusts it.
  *
  * Per FEATURE.md's identity model (v1): zero PII, zero account, zero
- * third party. The server validates the deviceId is a sane 8–64 char
- * string and otherwise trusts it — cross-device sync, spoof-proofing,
- * and tied-to-person semantics are explicitly out of scope until
- * the Feature C passkey upgrade.
+ * third party. Cross-device sync, spoof-proofing, and tied-to-person
+ * semantics are explicitly out of scope until the Feature C passkey
+ * upgrade.
+ *
+ * Lives in flags/ (not daily/) so flagQuiz and any future game-mode can
+ * import from one place — clearing localStorage gives the same fresh ID
+ * to every feature at once, which is exactly the desired identity model.
  *
  * `store` and `randomUUID` are injected so this is unit-testable
  * without a real localStorage or `globalThis.crypto`.

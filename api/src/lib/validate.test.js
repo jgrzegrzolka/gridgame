@@ -193,3 +193,93 @@ test('validatePuzzleIdParam rejects non-string inputs (defensive)', () => {
   assert.deepEqual(validatePuzzleIdParam(/** @type {any} */ (7)), { ok: false, error: 'invalid_puzzleId' });
   assert.deepEqual(validatePuzzleIdParam(/** @type {any} */ ({})), { ok: false, error: 'invalid_puzzleId' });
 });
+
+// ---------------------------------------------------------------------------
+// validateQuizRecord
+// ---------------------------------------------------------------------------
+
+const { validateQuizRecord } = require('./validate');
+
+const validQuizBody = () => ({
+  deviceId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  configKey: 'countries:60s:sov',
+  score: 50,
+  durationMs: 60_000,
+  lowerWins: false,
+});
+
+test('validateQuizRecord: valid body passes', () => {
+  assert.deepEqual(validateQuizRecord(validQuizBody()), { ok: true });
+});
+
+test('validateQuizRecord: null body → body_required', () => {
+  assert.deepEqual(validateQuizRecord(null), { ok: false, error: 'body_required' });
+});
+
+test('validateQuizRecord: short deviceId → invalid_deviceId', () => {
+  const b = validQuizBody();
+  b.deviceId = 'short';
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_deviceId' });
+});
+
+test('validateQuizRecord: malformed configKey → invalid_configKey', () => {
+  const b = validQuizBody();
+  b.configKey = 'countries:60s';
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_configKey' });
+  b.configKey = 'countries:60s:wat';
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_configKey' });
+  b.configKey = '';
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_configKey' });
+});
+
+test('validateQuizRecord: oversize configKey → invalid_configKey', () => {
+  const b = validQuizBody();
+  b.configKey = `${'x'.repeat(50)}:60s:sov`;
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_configKey' });
+});
+
+test('validateQuizRecord: score 0 is allowed (zero-correct, zero-mistake edge cases)', () => {
+  const b = validQuizBody();
+  b.score = 0;
+  assert.deepEqual(validateQuizRecord(b), { ok: true });
+});
+
+test('validateQuizRecord: negative score → invalid_score', () => {
+  const b = validQuizBody();
+  b.score = -1;
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_score' });
+});
+
+test('validateQuizRecord: non-integer score → invalid_score', () => {
+  const b = validQuizBody();
+  b.score = 1.5;
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_score' });
+});
+
+test('validateQuizRecord: score over 1000 → invalid_score', () => {
+  const b = validQuizBody();
+  b.score = 1001;
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_score' });
+});
+
+test('validateQuizRecord: negative durationMs → invalid_durationMs', () => {
+  const b = validQuizBody();
+  b.durationMs = -1;
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_durationMs' });
+});
+
+test('validateQuizRecord: durationMs over 6h → invalid_durationMs', () => {
+  const b = validQuizBody();
+  b.durationMs = 6 * 60 * 60 * 1000 + 1;
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_durationMs' });
+});
+
+test('validateQuizRecord: lowerWins non-boolean → invalid_lowerWins', () => {
+  const b = validQuizBody();
+  /** @type {any} */ (b).lowerWins = 'true';
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_lowerWins' });
+  /** @type {any} */ (b).lowerWins = 1;
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_lowerWins' });
+  delete b.lowerWins;
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_lowerWins' });
+});
