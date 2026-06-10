@@ -13,8 +13,9 @@ Rule of thumb: keep new code inside its feature folder. Promote something to `fl
 ## Hosting
 
 - Production URL: **`https://www.yetanotherquiz.com`**. Apex `yetanotherquiz.com` 301-redirects to www via a Cloudflare Redirect Rule.
-- Hosted on **Azure Static Web Apps** (Free SKU). Deployed by `.github/workflows/deploy.yml` on push to `main`; SWA-hosted hostname is `black-dune-0ebd24603.7.azurestaticapps.net` (don't link externally — use the custom domain).
-- DNS sits on **Cloudflare**. The `www` CNAME (DNS only / grey cloud) points at SWA; apex A records are proxied (orange) so the apex→www Redirect Rule can fire.
+- Hosted on **Azure Static Web Apps** (Free SKU), resource name `swa-yetanotherquiz-v3`, region **West US 2**, SWA-hosted hostname `wonderful-ground-01bf3091e.7.azurestaticapps.net` (don't link externally — use the custom domain). Deployed by `.github/workflows/deploy.yml` on push to `main`.
+- **Why West US 2 instead of West Europe?** The original SWA (`swa-yetanotherquiz`, West Europe) was lost in the 2026-06-10 Azure WE content-distribution outage — deploys hung in "Uploading" indefinitely, the custom-domain unbind got stuck, and we cut over to a fresh WUS2 instance to ship a critical fix. Currently single-region. **TODO when WE recovers:** recreate a West Europe sibling for hot-standby + lower latency on the API path (Cosmos is still in WE; today every API call crosses regions, ~300ms extra round-trip). See FEATURE.md Feature D for the full history and the recovery playbook.
+- DNS sits on **Cloudflare**. The `www` CNAME (DNS only / grey cloud) points at the SWA hostname above; apex A records are proxied (orange) so the apex→www Redirect Rule can fire.
 - PartyKit's tic-tac-toe WebSocket server (`gridgame-ttt.jgrzegrzolka.partykit.dev`) is unrelated to SWA — its own deploy workflow (`deploy-partykit.yml`) sends it to Cloudflare. Don't conflate.
 - **Naming convention:** code, pages, repo name, and `gridgame.*` `localStorage` keys all stay `gridgame` (historical). Azure resources (subscription, resource group, SWA name, Cosmos account, etc.) use `yetanotherquiz` because that's the public product framing. When wiring Azure-side things, pick `yetanotherquiz-...`; when editing code, leave `gridgame` alone.
 - See `FEATURE.md` for in-progress hosting / Azure work and the full Azure resource inventory.
