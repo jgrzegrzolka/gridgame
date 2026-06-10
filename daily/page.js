@@ -19,13 +19,13 @@ import { applyFindRatesToTiles } from './statsOverlay.js';
 import { formatScoreLine } from './distributionSummary.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 import { runFinishFlow } from './finishFlow.js';
+import { PROD_SITE_KEY, isLocalHostname } from './turnstileSiteKey.js';
 
-// Public site key for our Turnstile widget — fine to ship in source.
-// The secret stays in SWA env vars.
-// NOTE: Cloudflare reissues the site key when you rotate the secret —
-// both must be updated together. If POSTs start 400'ing at the CF
-// challenge endpoint with the site key in the URL, that's the symptom.
-const TURNSTILE_SITE_KEY = '0x4AAAAAADhdZ-XDzVHaLk9R';
+// Public site key — fine to ship in source. The secret stays in SWA
+// env vars. Rotation note + the localhost-bypass rationale live in
+// turnstileSiteKey.js.
+const TURNSTILE_SITE_KEY = PROD_SITE_KEY;
+const SKIP_TURNSTILE = isLocalHostname(window.location.hostname);
 
 /** @typedef {import('../flags/group.js').Country} Country */
 
@@ -148,6 +148,17 @@ async function handleFinish(n, targets, info) {
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
   const found = info.foundCodes.length;
 
+  // On localhost we skip the CF Turnstile SDK entirely — see
+  // turnstileSiteKey.js for the rationale. Server-side accepts an
+  // empty token when TURNSTILE_SECRET is unset (local.settings.json
+  // default), so the no-op functions round-trip cleanly.
+  const ensureTurnstileFn = SKIP_TURNSTILE
+    ? () => Promise.resolve()
+    : () => ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY });
+  const getTurnstileTokenFn = SKIP_TURNSTILE
+    ? () => Promise.resolve('')
+    : getTurnstileToken;
+
   await runFinishFlow({
     n,
     found,
@@ -157,8 +168,8 @@ async function handleFinish(n, targets, info) {
     durationMs: info.durationMs,
     deviceId,
     store: window.localStorage,
-    ensureTurnstile: () => ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY }),
-    getTurnstileToken,
+    ensureTurnstile: ensureTurnstileFn,
+    getTurnstileToken: getTurnstileTokenFn,
     submitResult,
     fetchStats,
     onLoading: () => paintStatsPanel(found, info.totalCount, null, { loading: true }),
@@ -252,9 +263,12 @@ export function bootDaily() {
       // mobile cold path this shaves 1-3s off the post-finish wait;
       // ensureTurnstile() is idempotent so the call inside handleFinish
       // still works (it short-circuits to Promise.resolve()).
-      const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
-      ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY })
-        .catch(() => { /* preload failure is silent — handleFinish retries */ });
+      // Skipped on localhost — see SKIP_TURNSTILE above.
+      if (!SKIP_TURNSTILE) {
+        const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
+        ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY })
+          .catch(() => { /* preload failure is silent — handleFinish retries */ });
+      }
 
       const category = filterToCategory(result.filter, t);
       // Replays treated identically to first finishes: local archive
