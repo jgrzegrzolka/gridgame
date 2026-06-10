@@ -19,6 +19,7 @@ import { fetchStats } from './statsClient.js';
 import { applyFindRatesToTiles } from './statsOverlay.js';
 import { formatScoreLine } from './distributionSummary.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
+import { runFinishFlow } from './finishFlow.js';
 
 // Public site key for our Turnstile widget — fine to ship in source.
 // The secret stays in SWA env vars.
@@ -39,6 +40,7 @@ function statsLabels() {
     scoreOnly: t('daily.stats.scoreOnly', 'Your score: {found}/{total}'),
     scoreWithAverage: t('daily.stats.scoreWithAverage', 'Your score: {found}/{total} · Average score: {average}/{total}'),
     caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
+    loading: t('daily.stats.loading', 'Loading community stats'),
   };
 }
 
@@ -56,11 +58,17 @@ function statsLabels() {
  * On any stats fetch failure the first paint stays put — the player
  * still has their own score even if the community comparison can't load.
  *
+ * `loading: true` shows an animated "Loading community stats…" line
+ * below the score while the post-finish POST + stats GET pipeline runs
+ * (mobile cold path can take several seconds, otherwise the player just
+ * sees their score and wonders if anything else is coming).
+ *
  * @param {number} found
  * @param {number} total
  * @param {{ totalAttempts: number, median: number, perCodeFinds: Record<string, number> } | null} stats
+ * @param {{ loading?: boolean }} [opts]
  */
-function paintStatsPanel(found, total, stats) {
+function paintStatsPanel(found, total, stats, opts = {}) {
   const labels = statsLabels();
   const headlineText = formatScoreLine({
     found, total, stats,
@@ -73,6 +81,20 @@ function paintStatsPanel(found, total, stats) {
   h.className = 'daily-stats-headline';
   h.textContent = headlineText;
   container.appendChild(h);
+  if (opts.loading) {
+    // Three pulsing dots after the label — CSS animates them in a wave
+    // so the player can tell something is happening across the long
+    // mobile path (Turnstile execute → POST → stats GET).
+    const l = document.createElement('p');
+    l.className = 'daily-stats-loading';
+    l.textContent = labels.loading;
+    const dots = document.createElement('span');
+    dots.className = 'daily-stats-loading-dots';
+    dots.setAttribute('aria-hidden', 'true');
+    dots.innerHTML = '<span></span><span></span><span></span>';
+    l.appendChild(dots);
+    container.appendChild(l);
+  }
   // Caption only when stats arrived AND we have per-tile overlays to
   // explain. The score-only state doesn't need it (no %s anywhere).
   if (stats && stats.totalAttempts > 0) {
@@ -100,17 +122,23 @@ function paintStatsPanel(found, total, stats) {
  */
 async function loadAndPaintStats(n, targets, found, opts = {}) {
   const stats = await fetchStats(n, { bypassCache: opts.bypassCache === true });
-  if (!stats) return; // fetch failed — leave the score-only paint in place
+  if (!stats) {
+    // Fetch failed — drop back to score-only (clears any loading
+    // spinner the caller painted while we were in flight).
+    paintStatsPanel(found, targets.length, null);
+    return;
+  }
   paintStatsPanel(found, targets.length, stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
 }
 
 /**
- * Post-finish hook: paint the player's score immediately, get a
- * Turnstile token, submit the result, then repaint with stats once
- * they arrive. Each failure mode leaves the player at least with
- * their own score visible.
+ * Post-finish hook: thin DOM/network wrapper around the testable
+ * `runFinishFlow` orchestrator. Wires the loading spinner, score-only
+ * fallback, and stats-with-overlays paint callbacks; everything else
+ * (Turnstile + submit + fetch + failure handling) lives in finishFlow.js
+ * where it can be unit-tested with fake deps.
  *
  * @param {number} n
  * @param {Country[]} targets
@@ -121,35 +149,27 @@ async function handleFinish(n, targets, info) {
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
   const found = info.foundCodes.length;
 
-  // Score-only paint — same tick as renderResult so the player never
-  // sees the big celebratory "You found all" text the shared playFlow
-  // sets (it's hidden via CSS, but synchronous overwrite is belt-and-
-  // braces against any future layout flash).
-  paintStatsPanel(found, info.totalCount, null);
-
-  let turnstileToken = '';
-  try {
-    await ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY });
-    turnstileToken = await getTurnstileToken();
-  } catch {
-    return; // score-only paint stays
-  }
-
-  const r = await submitResult({
-    store: window.localStorage,
+  await runFinishFlow({
     n,
+    found,
+    totalCount: info.totalCount,
     foundCodes: info.foundCodes,
     wrongCodes: info.wrongCodes,
-    totalCount: info.totalCount,
     durationMs: info.durationMs,
     deviceId,
-    turnstileToken,
+    store: window.localStorage,
+    ensureTurnstile: () => ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY }),
+    getTurnstileToken,
+    submitResult,
+    fetchStats,
+    onLoading: () => paintStatsPanel(found, info.totalCount, null, { loading: true }),
+    onCleared: () => paintStatsPanel(found, info.totalCount, null),
+    onStats: (stats) => {
+      paintStatsPanel(found, targets.length, stats);
+      applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
+      applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
+    },
   });
-
-  if (r.outcome === 'ok') {
-    await loadAndPaintStats(n, targets, found, { bypassCache: true });
-  }
-  // else: submit failed — score-only paint stays
 }
 
 /**
@@ -224,6 +244,17 @@ export function bootDaily() {
         });
         return;
       }
+
+      // Pre-warm Turnstile during gameplay so the slow first-time
+      // script download + iframe render is paid while the player is
+      // already busy guessing flags, not while they're staring at the
+      // result screen wondering why their stats haven't appeared. On
+      // mobile cold path this shaves 1-3s off the post-finish wait;
+      // ensureTurnstile() is idempotent so the call inside handleFinish
+      // still works (it short-circuits to Promise.resolve()).
+      const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
+      ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY })
+        .catch(() => { /* preload failure is silent — handleFinish retries */ });
 
       const category = filterToCategory(result.filter, t);
       // Replays treated identically to first finishes: local archive
