@@ -115,7 +115,7 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 
 - [x] Add `api/src/functions/dailyStats.js` (GET /api/v1/daily/stats/{puzzleId}).
 - [x] Query: `SELECT c.foundCodes, c.totalCount FROM c WHERE c.puzzleId = @pid` — single-partition, cheap. (Pulls `totalCount` too so the aggregator can compute `topPct` without a second round-trip; `SELECT VALUE c.foundCodes` from the original plan would have lost it.)
-- [x] Pure aggregator `api/src/lib/aggregate.js`: `aggregate(rows) → {totalAttempts, perCodeFinds, median, topPct}`. 12 tests.
+- [x] Pure aggregator `api/src/lib/aggregate.js`: `aggregate(rows) → {totalAttempts, perCodeFinds, mean, topPct}`. (Originally returned `median`; switched to arithmetic mean in PR #322 — see API spec above for why.)
 - [x] In-memory cache per Function instance (`api/src/lib/ttlCache.js`), keyed by puzzleId, TTL 60s. Also sets `Cache-Control: public, max-age=60` so browser/edge cache the same window.
 - [ ] Verify with `curl` after seeding test rows.
 
