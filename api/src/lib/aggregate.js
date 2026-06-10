@@ -14,14 +14,20 @@
  *   {
  *     totalAttempts: number,                  // rows.length
  *     perCodeFinds: { [code]: number },       // count per code across all rows
- *     median: number,                         // median of foundCodes.length
+ *     mean: number,                           // arithmetic mean of foundCodes.length, rounded to nearest int
  *     topPct: number,                         // % of rows where they got everything (0–100, int)
  *   }
+ *
+ * We use the arithmetic mean (not the median) so the headline number
+ * matches what the per-tile %s already imply. An earlier version used
+ * median for outlier-robustness, but at low traffic that produced
+ * "Average score: 9/9" alongside per-tile rates of 67% — mathematically
+ * coherent (median of [1, 9, 9] is 9) but indistinguishable from a bug.
  */
 
 function aggregate(rows) {
   if (!Array.isArray(rows) || rows.length === 0) {
-    return { totalAttempts: 0, perCodeFinds: {}, median: 0, topPct: 0 };
+    return { totalAttempts: 0, perCodeFinds: {}, mean: 0, topPct: 0 };
   }
 
   const perCodeFinds = {};
@@ -43,18 +49,17 @@ function aggregate(rows) {
     }
   }
 
-  lengths.sort((a, b) => a - b);
-  const mid = Math.floor(lengths.length / 2);
-  const median = lengths.length % 2 === 0
-    ? (lengths[mid - 1] + lengths[mid]) / 2
-    : lengths[mid];
+  const sum = lengths.reduce((a, b) => a + b, 0);
+  // Round to nearest integer so the headline reads "Average score: 6/9"
+  // instead of "6.33/9" — matches the X/N score format alongside it.
+  const mean = Math.round(sum / lengths.length);
 
   const perfect = totalCount > 0
     ? lengths.filter((l) => l === totalCount).length
     : 0;
   const topPct = Math.round((perfect / rows.length) * 100);
 
-  return { totalAttempts: rows.length, perCodeFinds, median, topPct };
+  return { totalAttempts: rows.length, perCodeFinds, mean, topPct };
 }
 
 module.exports = { aggregate };

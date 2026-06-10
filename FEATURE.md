@@ -60,7 +60,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 - `POST /api/v1/daily/result` — body `{puzzleId, foundCodes, totalCount, durationMs, deviceId, turnstileToken}`. Response 204 on success, 409 on duplicate, 400 on bad input, 429 on rate-limited.
   - `puzzleId` is the integer `n` from `daily/daily_puzzles.json` (the catalog key — *not* a date).
   - `foundCodes` is `string[]` of 2-letter country codes — mirrors what `daily/scores.js` already keeps in `c`. Earlier plan said `foundMask` (a bitmask over a canonical answer order); switched to codes because codes are self-describing and don't break when a puzzle's answer list changes.
-- `GET  /api/v1/daily/stats/{puzzleId}` — response `{totalAttempts, perCodeFinds: {[code]: count}, median, topPct}`. (`median` = median total-found, `topPct` = % of submissions that found everything. Populated in Phase B3 even though only rendered in Phase B5.)
+- `GET  /api/v1/daily/stats/{puzzleId}` — response `{totalAttempts, perCodeFinds: {[code]: count}, mean, topPct}`. (`mean` = arithmetic mean of total-found, rounded to int; `topPct` = % of submissions that found everything. Originally shipped as `median`; switched to `mean` in PR #322 because median produced "Average score: 9/9" alongside per-tile rates of 67% when one give-up rower landed in a small sample — mathematically coherent but indistinguishable from a bug to the player.)
 
 **Azure resources for Feature B** (pre-created 2026-06-09):
 
@@ -85,7 +85,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 }
 ```
 
-Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c WHERE c.puzzleId = @pid` — reduce in Function code to `{[code]: count}` + `totalAttempts` + `median` + `topPct`.
+Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c WHERE c.puzzleId = @pid` — reduce in Function code to `{[code]: count}` + `totalAttempts` + `mean` + `topPct`.
 
 **Phase B1 — Cosmos infra**
 
@@ -156,7 +156,7 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 - [x] i18n: en + pl strings.
 - [x] Render headline below the per-flag overlays: **`Average today: 2.5/6`** (one line, plus the caption explaining the per-tile %s).
 - **Departures from the original FEATURE.md sketch:**
-  - Word "Median" → "Average" (plain-English; the value is still the median internally, the better robust-typical measure).
+  - Word "Median" → "Average" (plain-English; the value was originally median internally for outlier-robustness, switched to arithmetic mean in PR #322 — see API spec above for why).
   - Dropped the "X% got everything" trailer entirely. At low N, `topPct = 0` was noise; even at higher N it was buried at the end of a long line.
   - Dropped the originally-shipped "X plays · Hardest: <country> (Y% found)" second line. At early-traffic N values (1-10) both pieces felt awkward: "3 plays" admits low traffic, and "12% found" with N=3 is misleadingly precise (only 0/33/67/100% are possible).
   - The per-tile percentage overlays still carry per-flag detail.

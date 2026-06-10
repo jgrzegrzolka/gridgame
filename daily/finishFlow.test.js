@@ -28,7 +28,7 @@ function harness(outcomes = {}) {
   let ensureCalls = 0;
   let tokenCalls = 0;
 
-  const happyStats = { totalAttempts: 4, perCodeFinds: { ch: 3 }, median: 2, topPct: 50 };
+  const happyStats = { totalAttempts: 4, perCodeFinds: { ch: 3 }, mean: 2, topPct: 50 };
 
   const deps = {
     ensureTurnstile: async () => {

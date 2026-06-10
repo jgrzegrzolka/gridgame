@@ -6,7 +6,7 @@ test('empty input returns empty stats', () => {
   assert.deepEqual(aggregate([]), {
     totalAttempts: 0,
     perCodeFinds: {},
-    median: 0,
+    mean: 0,
     topPct: 0,
   });
 });
@@ -15,25 +15,25 @@ test('non-array input is treated as empty', () => {
   assert.deepEqual(aggregate(null), {
     totalAttempts: 0,
     perCodeFinds: {},
-    median: 0,
+    mean: 0,
     topPct: 0,
   });
 });
 
-test('single perfect row → 100% top, median = totalCount', () => {
+test('single perfect row → 100% top, mean = totalCount', () => {
   const r = aggregate([{ foundCodes: ['ch', 'dk', 'gb'], totalCount: 3 }]);
   assert.deepEqual(r, {
     totalAttempts: 1,
     perCodeFinds: { ch: 1, dk: 1, gb: 1 },
-    median: 3,
+    mean: 3,
     topPct: 100,
   });
 });
 
-test('single non-perfect row → 0% top', () => {
+test('single non-perfect row → 0% top, mean = own score', () => {
   const r = aggregate([{ foundCodes: ['ch'], totalCount: 3 }]);
   assert.equal(r.topPct, 0);
-  assert.equal(r.median, 1);
+  assert.equal(r.mean, 1);
 });
 
 test('perCodeFinds counts each code across all rows', () => {
@@ -67,7 +67,7 @@ test('topPct rounds to nearest integer', () => {
   assert.equal(aggregate(rows).topPct, 29);
 });
 
-test('median of odd count is the middle value', () => {
+test('mean is the arithmetic average of foundCodes lengths', () => {
   const rows = [
     { foundCodes: ['a'],                totalCount: 5 },
     { foundCodes: ['a', 'b'],           totalCount: 5 },
@@ -75,31 +75,45 @@ test('median of odd count is the middle value', () => {
     { foundCodes: ['a', 'b', 'c', 'd'], totalCount: 5 },
     { foundCodes: ['a', 'b', 'c', 'd', 'e'], totalCount: 5 },
   ];
-  assert.equal(aggregate(rows).median, 3);
+  // (1 + 2 + 3 + 4 + 5) / 5 = 3
+  assert.equal(aggregate(rows).mean, 3);
 });
 
-test('median of even count is the average of the two middles', () => {
+test('mean rounds to nearest integer (.5 rounds up by Math.round)', () => {
   const rows = [
     { foundCodes: ['a'],                totalCount: 4 },
     { foundCodes: ['a', 'b'],           totalCount: 4 },
     { foundCodes: ['a', 'b', 'c'],      totalCount: 4 },
     { foundCodes: ['a', 'b', 'c', 'd'], totalCount: 4 },
   ];
-  // sorted lengths [1,2,3,4] → (2+3)/2 = 2.5
-  assert.equal(aggregate(rows).median, 2.5);
+  // (1 + 2 + 3 + 4) / 4 = 2.5 → 3
+  assert.equal(aggregate(rows).mean, 3);
 });
 
-test('median tolerates unsorted input lengths', () => {
+test('mean: the screenshot case — 9/9, 9/9, 1/9 now reads as 6, not 9', () => {
+  // Regression protection: previously the median was 9 (middle of
+  // sorted [1, 9, 9]) so the headline said "Average score: 9/9" while
+  // tile overlays showed 67%. Players read that as a bug. Mean = 19/3
+  // ≈ 6.33 → 6, which lines up with the per-tile rates.
+  const rows = [
+    { foundCodes: Array.from({ length: 9 }, (_, i) => `c${i}`), totalCount: 9 },
+    { foundCodes: Array.from({ length: 9 }, (_, i) => `c${i}`), totalCount: 9 },
+    { foundCodes: ['c0'], totalCount: 9 },
+  ];
+  assert.equal(aggregate(rows).mean, 6);
+});
+
+test('mean tolerates unsorted input lengths', () => {
   const rows = [
     { foundCodes: ['a', 'b', 'c', 'd', 'e'], totalCount: 5 },
     { foundCodes: ['a'], totalCount: 5 },
     { foundCodes: ['a', 'b'], totalCount: 5 },
   ];
-  // sorted [1, 2, 5] → 2
-  assert.equal(aggregate(rows).median, 2);
+  // (5 + 1 + 2) / 3 = 2.67 → 3
+  assert.equal(aggregate(rows).mean, 3);
 });
 
-test('row with missing totalCount still contributes to counts and median', () => {
+test('row with missing totalCount still contributes to counts and mean', () => {
   const rows = [
     { foundCodes: ['a', 'b'] }, // no totalCount
     { foundCodes: ['a'], totalCount: 2 },
@@ -107,6 +121,8 @@ test('row with missing totalCount still contributes to counts and median', () =>
   const r = aggregate(rows);
   assert.equal(r.totalAttempts, 2);
   assert.deepEqual(r.perCodeFinds, { a: 2, b: 1 });
+  // (2 + 1) / 2 = 1.5 → 2
+  assert.equal(r.mean, 2);
   // totalCount inherited from later row = 2; row 1 with length 2 counts as perfect
   assert.equal(r.topPct, 50);
 });
@@ -119,6 +135,7 @@ test('row with missing foundCodes is tolerated as zero-find', () => {
   const r = aggregate(rows);
   assert.equal(r.totalAttempts, 2);
   assert.deepEqual(r.perCodeFinds, { a: 1, b: 1, c: 1 });
-  assert.equal(r.median, 1.5);
+  // (0 + 3) / 2 = 1.5 → 2
+  assert.equal(r.mean, 2);
   assert.equal(r.topPct, 50);
 });

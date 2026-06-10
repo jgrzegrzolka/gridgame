@@ -64,7 +64,7 @@ function statsLabels() {
  *
  * @param {number} found
  * @param {number} total
- * @param {{ totalAttempts: number, median: number, perCodeFinds: Record<string, number> } | null} stats
+ * @param {{ totalAttempts: number, mean: number, perCodeFinds: Record<string, number> } | null} stats
  * @param {{ loading?: boolean }} [opts]
  */
 function paintStatsPanel(found, total, stats, opts = {}) {
