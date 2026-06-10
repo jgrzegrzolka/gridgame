@@ -19,7 +19,6 @@ import { applyFindRatesToTiles } from './statsOverlay.js';
 import { formatScoreLine } from './distributionSummary.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 import { runFinishFlow } from './finishFlow.js';
-import { detectIncognito } from './incognitoDetect.js';
 
 // Public site key for our Turnstile widget — fine to ship in source.
 // The secret stays in SWA env vars.
@@ -148,11 +147,6 @@ async function handleFinish(n, targets, info) {
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
   const found = info.foundCodes.length;
-  // Heuristic — diagnostic only. Resolved before the POST so the body
-  // can carry the value. Storage.estimate() is a quota lookup, not I/O,
-  // so the wait is negligible. Failures silently resolve to `false`
-  // (see detectIncognito()), so the result is always a boolean.
-  const incognito = await detectIncognito();
 
   await runFinishFlow({
     n,
@@ -163,7 +157,6 @@ async function handleFinish(n, targets, info) {
     durationMs: info.durationMs,
     deviceId,
     store: window.localStorage,
-    incognito,
     ensureTurnstile: () => ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY }),
     getTurnstileToken,
     submitResult,

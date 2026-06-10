@@ -93,15 +93,6 @@ function validateResult(body) {
     }
   }
 
-  // incognito is OPTIONAL — the client sends a boolean from a heuristic
-  // (storage-quota-based) when it can compute one, omits it otherwise.
-  // Diagnostic only: stored on the row so the owner can spot incognito-
-  // test pollution and delete it manually; aggregator does NOT filter
-  // on this value.
-  if (body.incognito !== undefined && typeof body.incognito !== 'boolean') {
-    return { ok: false, error: 'invalid_incognito' };
-  }
-
   return { ok: true };
 }
 

@@ -55,25 +55,6 @@ test('does NOT add fields the schema does not expect', () => {
   assert.deepEqual(Object.keys(doc).sort(), expected.sort());
 });
 
-test('incognito=true is stored on the doc', () => {
-  const doc = buildDailyResultDoc({ ...input, incognito: true });
-  assert.equal(doc.incognito, true);
-});
-
-test('incognito=false is stored on the doc', () => {
-  // Important: false is a real signal ("client checked the heuristic
-  // and the session looked regular"). Don't accidentally drop it.
-  const doc = buildDailyResultDoc({ ...input, incognito: false });
-  assert.equal(doc.incognito, false);
-});
-
-test('incognito is omitted from the doc when caller does not supply it', () => {
-  // Distinguishes "client didn't compute it" (absent) from "client
-  // computed false" (present). Lets diagnostic queries skip legacy/
-  // unknown rows cleanly.
-  const doc = buildDailyResultDoc(input);
-  assert.equal('incognito' in doc, false);
-});
 
 test('id is deterministic for the same (puzzleId, deviceId) regardless of other fields', () => {
   const a = buildDailyResultDoc(input);

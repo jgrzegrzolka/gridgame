@@ -149,36 +149,6 @@ test('wrongCodes with duplicates rejected', () => {
   assert.deepEqual(validateResult(b), { ok: false, error: 'duplicate_wrong_codes' });
 });
 
-test('incognito is optional — absent passes', () => {
-  const b = validBody();
-  delete b.incognito;
-  assert.deepEqual(validateResult(b), { ok: true });
-});
-
-test('incognito=true passes', () => {
-  const b = validBody();
-  b.incognito = true;
-  assert.deepEqual(validateResult(b), { ok: true });
-});
-
-test('incognito=false passes', () => {
-  const b = validBody();
-  b.incognito = false;
-  assert.deepEqual(validateResult(b), { ok: true });
-});
-
-test('incognito non-boolean (e.g. "yes" / 1 / null) is rejected', () => {
-  // The field is a diagnostic — accepting truthy/falsy coercions would
-  // silently let bad clients pollute the data. Strict-boolean only.
-  const b = validBody();
-  b.incognito = 'yes';
-  assert.deepEqual(validateResult(b), { ok: false, error: 'invalid_incognito' });
-  b.incognito = 1;
-  assert.deepEqual(validateResult(b), { ok: false, error: 'invalid_incognito' });
-  b.incognito = null;
-  assert.deepEqual(validateResult(b), { ok: false, error: 'invalid_incognito' });
-});
-
 test('foundCodes and wrongCodes can share a code (different semantics — found vs wrong-attempted)', () => {
   // This shouldn't happen in normal play (a code goes to one or the
   // other), but the validator should not impose cross-list uniqueness.
