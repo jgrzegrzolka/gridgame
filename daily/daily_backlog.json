@@ -1,22 +1,5 @@
 [
   {
-    "n": 6,
-    "filter": "continent:Asia,color:red,color:white,colorCount:2",
-    "answers": [
-      "bh",
-      "ge",
-      "id",
-      "jp",
-      "qa",
-      "sg",
-      "tr"
-    ],
-    "description": {
-      "en": "Find all Asian flags whose only colours are red and white — no others.",
-      "pl": "Znajdź wszystkie azjatyckie flagi, które mają tylko 2 kolory: czerwony i biały."
-    }
-  },
-  {
     "n": 7,
     "filter": "continent:Europe,color:black",
     "answers": [
