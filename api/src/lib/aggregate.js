@@ -30,6 +30,15 @@ function aggregate(rows) {
     return { totalAttempts: 0, perCodeFinds: {}, mean: 0, topPct: 0 };
   }
 
+  // Drop local-dev rows before counting anything. They're tagged
+  // server-side (see api/src/lib/requestHost.js) so the owner's local
+  // testing never pollutes community stats. Prod rows never have the
+  // field, so this is a no-op for real traffic.
+  rows = rows.filter((r) => r && r.local !== true);
+  if (rows.length === 0) {
+    return { totalAttempts: 0, perCodeFinds: {}, mean: 0, topPct: 0 };
+  }
+
   const perCodeFinds = {};
   const lengths = [];
   let totalCount = 0;

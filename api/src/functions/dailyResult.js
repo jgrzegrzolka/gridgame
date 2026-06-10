@@ -4,6 +4,7 @@ const { insertDoc } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { verifyTurnstile } = require('../lib/turnstile');
 const { buildDailyResultDoc } = require('../lib/dailyResultDoc');
+const { isLocalRequestUrl } = require('../lib/requestHost');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
@@ -53,6 +54,12 @@ app.http('dailyResult', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
+    // Server-trusted local-dev marker. Reading the host from req.url
+    // (not a body field) so a malicious client can't spoof it to opt
+    // their submissions out of community stats. Prod traffic never
+    // hits a localhost host — see api/src/lib/requestHost.js.
+    const local = isLocalRequestUrl(req.url);
+
     const doc = buildDailyResultDoc({
       puzzleId: body.puzzleId,
       deviceId: body.deviceId,
@@ -60,6 +67,7 @@ app.http('dailyResult', {
       wrongCodes: body.wrongCodes,
       totalCount: body.totalCount,
       durationMs: body.durationMs,
+      local,
       now: Date.now(),
     });
 

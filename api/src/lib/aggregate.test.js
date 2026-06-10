@@ -150,6 +150,49 @@ test('row with missing foundCodes is tolerated as zero-find', () => {
   assert.equal(r.topPct, 50);
 });
 
+test('rows with local: true are filtered out before aggregation', () => {
+  // Server-side dev marker — local-dev rows must never reach
+  // community stats. Filter happens before any counting, so
+  // perCodeFinds, mean, totalAttempts, and topPct all reflect prod
+  // rows only.
+  const rows = [
+    { foundCodes: ['a', 'b', 'c'], totalCount: 3 },                // prod, perfect
+    { foundCodes: ['a'],            totalCount: 3, local: true },  // dev, ignored
+    { foundCodes: ['a', 'b'],       totalCount: 3 },               // prod
+  ];
+  const r = aggregate(rows);
+  assert.equal(r.totalAttempts, 2);
+  assert.deepEqual(r.perCodeFinds, { a: 2, b: 2, c: 1 });
+  // (3 + 2) / 2 = 2.5 — dev row doesn't drag the mean down
+  assert.equal(r.mean, 2.5);
+  assert.equal(r.topPct, 50);
+});
+
+test('all rows are local → empty stats (matches empty-input behaviour)', () => {
+  const rows = [
+    { foundCodes: ['a', 'b'], totalCount: 3, local: true },
+    { foundCodes: ['a'],      totalCount: 3, local: true },
+  ];
+  assert.deepEqual(aggregate(rows), {
+    totalAttempts: 0,
+    perCodeFinds: {},
+    mean: 0,
+    topPct: 0,
+  });
+});
+
+test('local: false (defensive) is NOT filtered — only true triggers the drop', () => {
+  // Strict equality on `=== true` (not truthiness). A row with
+  // local: false survives, in case future code ever sets the field
+  // explicitly to false on a real row.
+  const rows = [
+    { foundCodes: ['a', 'b', 'c'], totalCount: 3, local: false },
+  ];
+  const r = aggregate(rows);
+  assert.equal(r.totalAttempts, 1);
+  assert.equal(r.mean, 3);
+});
+
 test('whole-number means stay whole (no trailing ".0")', () => {
   // Important UX detail: when the mean is exactly N, the headline
   // should read "N/total" not "N.0/total". Math.round(N*10)/10 = N
