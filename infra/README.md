@@ -40,6 +40,16 @@ az resource show -g rg-yetanotherquiz -n logic-yetanotherquiz-release-daily --re
 # Expect: "Enabled"
 ```
 
+## Quirk: Recurrence trigger fires on registration
+
+When `az deployment group create` **creates** the Logic App (first deploy), the Recurrence trigger fires once immediately as part of registration, then settles into its 00:05 Warsaw schedule for subsequent runs. This is documented Logic Apps behaviour, not a bug.
+
+In practice:
+
+- **First deploy:** doubles as a free end-to-end smoke test — the HTTP action hits GitHub, `release-daily.yml` runs, the `already released today` guard catches it (because we're not actually at 00:05 Warsaw), workflow exits clean.
+- **Future redeploys** (e.g. PAT rotation): one extra `workflow_dispatch` fires at redeploy time. The guard handles it. No action needed; just don't be surprised by the run in `gh run list`.
+- **Pure update deploys** that don't recreate the resource (e.g. tag changes): do *not* trigger this — only resource creation does.
+
 ## Rotating the PAT
 
 When the PAT expires (90 days; GitHub sends an email 7 days before), mint a new one with the same scope and redeploy with the new value — same `az deployment group create` command as above. The Logic App parameter is re-supplied; no other change.

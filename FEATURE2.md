@@ -83,16 +83,16 @@ Expected cost: $0/month. Logic App Consumption free grant covers thousands of ex
 
 ---
 
-## Phase D1 — mint PAT + scaffold Bicep
+## Phase D1 — mint PAT + scaffold Bicep ✅
 
-- [ ] Mint a GitHub fine-grained PAT:
+- [x] Mint a GitHub fine-grained PAT:
   - GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.
   - Resource owner: `jgrzegrzolka` (personal account).
   - Repository access: only select repositories → `jgrzegrzolka/gridgame`.
   - Repository permissions: **Actions: Read and write** (the only thing checked). Everything else stays at default "No access".
   - Expiration: 90 days.
   - Copy the token immediately — GitHub only shows it once.
-- [ ] Verify the PAT works locally before putting it in Azure:
+- [x] Verify the PAT works locally before putting it in Azure:
   ```
   curl -X POST -H "Authorization: Bearer $PAT" \
     -H "Accept: application/vnd.github+json" \
@@ -101,9 +101,9 @@ Expected cost: $0/month. Logic App Consumption free grant covers thousands of ex
     -d '{"ref":"main"}'
   ```
   Expect HTTP 204 No Content. A new workflow run should appear in `gh run list --workflow=release-daily.yml`. (It'll hit the "already released today" guard if you've already manually released that day — that's fine, it confirms the PAT works.)
-- [ ] Create `infra/` directory and `infra/logicapp-release-daily.bicep` (template — see Phase D2 for the contents).
+- [x] Create `infra/` directory and `infra/logicapp-release-daily.bicep` (template — see Phase D2 for the contents).
 
-## Phase D2 — write the Bicep template
+## Phase D2 — write the Bicep template ✅
 
 `infra/logicapp-release-daily.bicep` should define:
 
@@ -127,20 +127,17 @@ Expected cost: $0/month. Logic App Consumption free grant covers thousands of ex
 
 Use the Bicep file as the single source of truth. Don't click-edit the Logic App in the portal after deploy; round-trip changes through the template.
 
-## Phase D3 — deploy + smoke test
+## Phase D3 — deploy + smoke test ✅
 
-- [ ] Deploy:
+- [x] Deploy:
   ```
   az deployment group create \
     -g rg-yetanotherquiz \
     -f infra/logicapp-release-daily.bicep \
     -p githubPat=<paste PAT>
   ```
-- [ ] Use the Logic App designer's "Run Trigger" → "Run" to fire it on demand. Expect:
-  - Logic App run succeeds, HTTP action returns 204.
-  - A new `release-daily.yml` workflow run appears in `gh run list`, triggered by `workflow_dispatch`.
-  - Workflow either promotes the next puzzle, or skips with "already released today" — both are correct outcomes depending on state.
-- [ ] If the on-demand run works, leave the recurrence trigger to fire at 00:05 Warsaw the next 3 nights without touching anything.
+- [x] Smoke test — happened **automatically at deploy time** because Logic App Recurrence triggers fire once on registration (documented behaviour). Observed at 16:16:29Z 2026-06-10: Logic App run succeeded, HTTP action returned 204, `release-daily.yml` run 27289674634 appeared with `event: workflow_dispatch`, completed in 14s, exited cleanly on the "already released today" guard. End-to-end verified without using the portal designer's "Run Trigger" button. See `infra/README.md` for the redeploy implications.
+- [x] First scheduled fire confirmed via trigger metadata: `nextExecutionTime: 2026-06-10T22:05:29Z` = **00:05 Warsaw on 2026-06-11**.
 
 ## Phase D4 — soak + verification
 
@@ -176,3 +173,40 @@ If the Logic App misfires or starts spamming workflow runs:
 - **Time zone identifier:** Logic App Recurrence uses **Windows time-zone identifiers** (`Central European Standard Time`), not IANA (`Europe/Warsaw`). Double-check the spelling against an authoritative list when writing the Bicep — typos here silently UTC-default.
 - **Soak window length:** 3 nights feels light for "real fix" confidence. Worth 7? Jan to decide.
 - **Should the Logic App also trigger `deploy.yml` on success?** No — the existing `release-daily.yml`'s last step already does `gh workflow run deploy.yml --ref main`. Don't add a second path.
+
+---
+
+## Future considerations — vacation-proofing the PAT
+
+The current architecture authenticates to GitHub with a **fine-grained PAT**, which GitHub caps at a 1-year expiry. Rotation is ~5 min/year (mint, redeploy). Captured here so the question doesn't need to be re-derived from scratch next time it comes up — e.g. before an extended absence.
+
+### Option 1 — 1-year PAT cycle (status quo, **chosen today**)
+
+- Mint a 1-year PAT, redeploy with `az deployment group create`, calendar reminder 7 days before expiry (GitHub also emails at T-7).
+- Friction: ~5 min/year.
+- Cost: $0, zero architectural change.
+- Recommended unless rotation becomes actively annoying or extended absence (>1 year) is planned.
+
+### Option 2 — GitHub App + OIDC federation
+
+- Replace the PAT with: Logic App's managed identity → OIDC ID token → GitHub App installation token → `workflow_dispatch`.
+- **Zero secrets stored anywhere. Zero rotation ever.** The trust chain is Microsoft Entra ↔ GitHub federated credential, no Jan-managed lifecycle.
+- Cost: a few hours of plumbing (create a GitHub App, install it on the repo, configure a federated credential on the Logic App's managed identity, swap the HTTP action's auth header for a token-fetch action).
+- Re-examine if Option 1's rotation cycle becomes the friction it was meant to avoid, or if a >1-year absence is planned.
+
+### Option 3 — move backlog to Cosmos + new `/api/daily/today` endpoint
+
+- Frontend reads today's puzzle from a Function App endpoint instead of the static `daily/daily_puzzles.json`. Backlog becomes a Cosmos container; "today's puzzle" is a server-side lookup by `effectiveDate`, no daily promotion step at all.
+- Kills GitHub from the runtime path entirely — no PAT, no daily release commit, no Logic App.
+- **Loses two values explicitly captured elsewhere in this project:**
+  - "The file is the released state" (`feedback_prefer_manual_release.md` in user memory).
+  - Git history of each release as a built-in audit trail.
+- Plus a `daily/page.js` rewrite, a new tested API endpoint, and the operational surface that comes with it (Cosmos backup/restore for the backlog, etc.).
+- Re-examine only if those two values stop being load-bearing — i.e. you actively want puzzle state to live outside the git tree.
+
+### Triggers to revisit
+
+- PAT rotation hits more than once a year (it shouldn't — 1-year is the GitHub max).
+- Planned absence longer than the remaining PAT lifetime.
+- Daily commits in `main` start to feel like noise (today they're informative — one commit per release is an explicit audit trail).
+- A second consumer wants the daily puzzle programmatically (then an API endpoint pays for itself).
