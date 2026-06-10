@@ -109,6 +109,25 @@ export function isReplayFromUrl(search) {
 }
 
 /**
+ * Author/owner test mode — `?test=1`. When set, the daily page plays
+ * the puzzle exactly as a real finish would *except* it skips the
+ * server POST. Used to walk through give-up flows and result screens
+ * without writing pollution rows to Cosmos (one such row from a 6-second
+ * incognito give-up made puzzle #1's tile %s look like a bug — see
+ * PR #322 background).
+ *
+ * Real players never get the flag (no UI surface mentions it). Same
+ * strict-"1" check as `isReplayFromUrl` so a stray `?test=` or
+ * `?test=true` can't accidentally suppress real submissions.
+ *
+ * @param {string} search
+ * @returns {boolean}
+ */
+export function isTestModeFromUrl(search) {
+  return new URLSearchParams(search).get('test') === '1';
+}
+
+/**
  * Discriminated union: success carries the entry, parsed Filters, and
  * the resolved Country[] for the game UI; failure carries a reason tag
  * the page maps to a localised message.

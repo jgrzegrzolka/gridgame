@@ -1,6 +1,6 @@
 import { loadCountries, flagsGamePool } from '../flags/group.js';
 import { t, withLocalizedAliases } from '../i18n.js';
-import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
+import { todayN, dailyNFromUrl, isReplayFromUrl, isTestModeFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
 import { loadScores, isCompleteRecord } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
 import {
@@ -139,14 +139,32 @@ async function loadAndPaintStats(n, targets, found, opts = {}) {
  * (Turnstile + submit + fetch + failure handling) lives in finishFlow.js
  * where it can be unit-tested with fake deps.
  *
+ * Test-mode short-circuit: when called with `testMode: true` (from a
+ * `?test=1` URL) the entire Turnstile + submit pipeline is skipped —
+ * we paint the player's score, fetch stats, and paint them. Lets the
+ * owner walk through give-up flows without writing pollution rows
+ * into prod Cosmos (see PR #322 background for the 1/9 row that
+ * accidentally landed there from an incognito give-up test).
+ *
  * @param {number} n
  * @param {Country[]} targets
  * @param {{ foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }} info
+ * @param {{ testMode?: boolean }} [opts]
  */
-async function handleFinish(n, targets, info) {
+async function handleFinish(n, targets, info, opts = {}) {
+  const found = info.foundCodes.length;
+
+  if (opts.testMode) {
+    // No Turnstile, no submit. Just paint the score, then fetch +
+    // paint stats — reuses the revisit-style helper which already
+    // handles the null-on-failure repaint.
+    paintStatsPanel(found, info.totalCount, null, { loading: true });
+    await loadAndPaintStats(n, targets, found);
+    return;
+  }
+
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
-  const found = info.foundCodes.length;
 
   await runFinishFlow({
     n,
@@ -187,6 +205,17 @@ export function bootDaily() {
 
   const numEl = /** @type {HTMLElement} */ (document.getElementById('daily-n'));
   const isReplay = isReplayFromUrl(window.location.search);
+  const isTestMode = isTestModeFromUrl(window.location.search);
+
+  // ?test=1 is an admin-only flag (no UI surface promotes it). Renders
+  // a fixed amber banner so the owner can't forget submissions are
+  // suppressed. Hardcoded English on purpose — only Jan sees it.
+  if (isTestMode) {
+    const banner = document.createElement('div');
+    banner.className = 'test-mode-banner';
+    banner.textContent = 'TEST MODE — submissions disabled';
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
 
   return Promise.all([
     fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
@@ -208,7 +237,12 @@ export function bootDaily() {
       // relying on "today") keeps the link stable if the catalog rolls
       // over while the result page is open.
       const playAgainLink = document.getElementById('play-again');
-      if (playAgainLink) playAgainLink.setAttribute('href', `./?n=${n}&replay=1`);
+      if (playAgainLink) {
+        // Carry test=1 through "Play again" so a test session can chain
+        // without manually re-appending the flag each round.
+        const testSuffix = isTestMode ? '&test=1' : '';
+        playAgainLink.setAttribute('href', `./?n=${n}&replay=1${testSuffix}`);
+      }
 
       const result = resolveDailyPuzzle(catalog, all, n);
       if (result.ok === false) {
@@ -222,9 +256,12 @@ export function bootDaily() {
       // to the result page without confetti (the player saw confetti
       // the first time around; replaying it on every revisit would be
       // obnoxious). Replay mode skips this shortcut — the whole point
-      // of ?replay=1 is to actually replay.
+      // of ?replay=1 is to actually replay. Test mode also skips it,
+      // since the owner using ?test=1 wants to actually walk through
+      // the game (typically to test give-up UX), not jump to the
+      // existing result.
       const stored = loadScores(window.localStorage)[n];
-      if (!isReplay && isCompleteRecord(stored)) {
+      if (!isReplay && !isTestMode && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
         paintStatsPanel(foundCodes.size, result.targets.length, null);
@@ -252,9 +289,13 @@ export function bootDaily() {
       // mobile cold path this shaves 1-3s off the post-finish wait;
       // ensureTurnstile() is idempotent so the call inside handleFinish
       // still works (it short-circuits to Promise.resolve()).
-      const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
-      ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY })
-        .catch(() => { /* preload failure is silent — handleFinish retries */ });
+      // Test mode skips this — no submission means no CF challenge,
+      // no reason to load the SDK.
+      if (!isTestMode) {
+        const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
+        ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY })
+          .catch(() => { /* preload failure is silent — handleFinish retries */ });
+      }
 
       const category = filterToCategory(result.filter, t);
       // Replays treated identically to first finishes: local archive
@@ -265,8 +306,12 @@ export function bootDaily() {
       // replays self-healing when the first POST failed (Turnstile
       // glitch, network drop, etc) — the player can replay and
       // finally get their result counted.
+      //
+      // skipSave: true in test mode so the localStorage archive isn't
+      // touched either — keeps test sessions truly read-only end-to-end.
       const game = startGame(n, category, result.targets, all, {
-        onFinish: (info) => handleFinish(n, result.targets, info),
+        skipSave: isTestMode,
+        onFinish: (info) => handleFinish(n, result.targets, info, { testMode: isTestMode }),
       });
       attachLangRefresh(game, {
         raw,

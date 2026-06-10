@@ -148,3 +148,24 @@
   height: 0;
   overflow: hidden;
 }
+
+/* Admin-only ?test=1 banner. Pinned to the top so it's visible during
+ * gameplay and on the result screen — without it the only signal that
+ * test mode is on is the URL, which is easy to forget about after
+ * scrolling. Amber palette (Tailwind amber-100/800) reads as a warning,
+ * not an error. Sits above all chrome via z-index. */
+.test-mode-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #fef3c7;
+  color: #92400e;
+  text-align: center;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  z-index: 100;
+  border-bottom: 1px solid #fcd34d;
+}

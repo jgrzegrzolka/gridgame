@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement } from './daily.js';
+import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, isTestModeFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries, createCountry } from './group.js';
@@ -84,6 +84,23 @@ test('isReplayFromUrl is false on missing, empty, or unrelated values', () => {
   assert.equal(isReplayFromUrl('?replay=0'), false);
   assert.equal(isReplayFromUrl('?replay=true'), false);
   assert.equal(isReplayFromUrl('?replay=yes'), false);
+});
+
+test('isTestModeFromUrl is true only on the literal ?test=1', () => {
+  assert.equal(isTestModeFromUrl('?test=1'), true);
+  assert.equal(isTestModeFromUrl('?n=42&test=1'), true);
+  assert.equal(isTestModeFromUrl('?test=1&replay=1'), true);
+});
+
+test('isTestModeFromUrl is false on missing, empty, or unrelated values', () => {
+  // Strict "1" check (same shape as isReplayFromUrl) so a stray
+  // ?test= / ?test=true can't accidentally suppress real submissions.
+  assert.equal(isTestModeFromUrl(''), false);
+  assert.equal(isTestModeFromUrl('?n=42'), false);
+  assert.equal(isTestModeFromUrl('?test='), false);
+  assert.equal(isTestModeFromUrl('?test=0'), false);
+  assert.equal(isTestModeFromUrl('?test=true'), false);
+  assert.equal(isTestModeFromUrl('?test=yes'), false);
 });
 
 // --- resolveDailyPuzzle ------------------------------------------------
