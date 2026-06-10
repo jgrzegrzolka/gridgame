@@ -11,9 +11,17 @@
  *   puzzles finished after the schema was extended (2026-06-06).
  *   Required to re-render the found/missed flag grids on revisit.
  *
- * Daily is play-once: replaying an old puzzle overwrites that N's
- * record rather than tracking a best-of. The archive shows "your
- * last result", which is what the player remembers.
+ * **First-attempt-only:** `saveScore` is a no-op when a record already
+ * exists for that N. The archive shows "your first attempt" — replays
+ * can't overwrite it. Mirrors the server-side rule (`DAILY_RESULT_UPSERT`
+ * off → 409 on duplicate (puzzleId, deviceId)) so local and Cosmos stay
+ * in lockstep on the same "first attempt wins" promise.
+ *
+ * Previous behavior (before this change): last-result-wins — replays
+ * overwrote the archive entry. Flipped to first-attempt because the
+ * server-side rule is the long-term intended honesty rule, and a
+ * mismatch between client and server semantics confused players in
+ * testing (Cosmos kept their first attempt; local showed their replay).
  */
 
 const STORAGE_KEY = 'daily.scores';
@@ -52,10 +60,15 @@ export function loadScores(store) {
 }
 
 /**
- * Save a score for puzzle N. Always overwrites. The optional
- * `foundCodes` argument makes the saved record "full" — without it
- * only the {f, t} headline is kept, which is enough for the archive's
- * score column but not enough to re-render the result page on revisit.
+ * Save a score for puzzle N — but only if there's no existing record
+ * for that N. Replays are silently dropped so the archive locks in the
+ * player's first attempt (see the file header for the first-attempt
+ * rule and why it's there).
+ *
+ * The optional `foundCodes` argument makes the saved record "full" —
+ * without it only the {f, t} headline is kept, which is enough for the
+ * archive's score column but not enough to re-render the result page
+ * on revisit.
  *
  * @param {{ getItem(key: string): string | null, setItem(key: string, value: string): void }} store
  * @param {number} n
@@ -66,6 +79,7 @@ export function loadScores(store) {
 export function saveScore(store, n, found, total, foundCodes) {
   try {
     const scores = loadScores(store);
+    if (scores[n]) return; // first-attempt-only: never overwrite
     /** @type {DailyScore} */
     const score = { f: found, t: total };
     if (Array.isArray(foundCodes)) score.c = [...foundCodes];
