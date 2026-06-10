@@ -95,11 +95,12 @@ export function dailyNFromUrl(search, fallbackN) {
  * value at all) means "not a replay". Lives next to `dailyNFromUrl`
  * because both are pure URL-shape helpers used by daily/page.js.
  *
- * Replay mode is a read-only flag on the live daily page: it lets the
- * player retry a finished puzzle without overwriting the archive
- * score. The page wires this into two things — skipping the
- * "complete record → jump to result" shortcut, and skipping
- * `saveScore` in `finish()`.
+ * Replay mode lets the player retry a finished puzzle. The page wires
+ * it into one thing: skipping the "complete record → jump to result"
+ * shortcut so the game actually plays. The archive is protected by
+ * `saveScore`'s first-attempt-only rule (see daily/scores.js header)
+ * and the Cosmos row by the server's insert-only mode — replays don't
+ * need an extra client-side gate to be data-safe.
  *
  * @param {string} search
  * @returns {boolean}

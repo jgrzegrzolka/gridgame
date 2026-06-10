@@ -52,12 +52,31 @@ test('saveScore + loadScores roundtrips full {f, t, c}', () => {
   });
 });
 
-test('saveScore overwrites an existing entry for the same N', () => {
+test('saveScore does NOT overwrite an existing entry (first-attempt-only)', () => {
+  // The archive locks in the player's first attempt — replays are
+  // silently dropped. Mirrors the server-side rule (insert-only Cosmos
+  // 409s on duplicate (puzzleId, deviceId)) so a replay can't make
+  // local and Cosmos disagree about which attempt counts.
   const store = fakeStore();
-  saveScore(store, 1, 3, 9);
+  saveScore(store, 1, 3, 9, ['a', 'b', 'c']);
   saveScore(store, 1, 7, 9, ['a', 'b', 'c', 'd', 'e', 'f', 'g']);
   assert.deepEqual(loadScores(store), {
-    1: { f: 7, t: 9, c: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] },
+    1: { f: 3, t: 9, c: ['a', 'b', 'c'] },
+  });
+});
+
+test('saveScore does NOT overwrite even a minimal {f, t} record', () => {
+  // Legacy records from before 2026-06-06 don't have `c`. The rule is
+  // strict — first save wins regardless of completeness. The cost is
+  // that those legacy records can't be upgraded to {f, t, c} by a
+  // replay; revisits of legacy puzzles will play through instead of
+  // jumping to the result page. Acceptable: any player who replays
+  // will pin a new full record from then on for new puzzles.
+  const store = fakeStore();
+  saveScore(store, 1, 3, 9); // legacy shape: no codes
+  saveScore(store, 1, 7, 9, ['a', 'b', 'c', 'd', 'e', 'f', 'g']);
+  assert.deepEqual(loadScores(store), {
+    1: { f: 3, t: 9 },
   });
 });
 
