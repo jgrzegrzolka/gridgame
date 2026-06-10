@@ -11,9 +11,9 @@ const fakeRes = (status, body) => ({
 
 test('successful fetch returns parsed JSON', async () => {
   const stats = await fetchStats(7, {
-    fetchImpl: async () => fakeRes(200, { totalAttempts: 10, perCodeFinds: { ch: 8 }, median: 2, topPct: 12 }),
+    fetchImpl: async () => fakeRes(200, { totalAttempts: 10, perCodeFinds: { ch: 8 }, mean: 2, topPct: 12 }),
   });
-  assert.deepEqual(stats, { totalAttempts: 10, perCodeFinds: { ch: 8 }, median: 2, topPct: 12 });
+  assert.deepEqual(stats, { totalAttempts: 10, perCodeFinds: { ch: 8 }, mean: 2, topPct: 12 });
 });
 
 test('non-2xx response returns null', async () => {

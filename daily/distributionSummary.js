@@ -7,10 +7,10 @@
  *   - score-with-average ("Your score: 5/9 · Average score: 3/9") — paint
  *     once stats are in and totalAttempts > 0.
  *
- * **Wording note:** the "Average" value is actually the median (more
- * robust to outliers — one zero-finder + one perfect player don't skew
- * it). The label says Average because that's the plain-English word
- * people reach for.
+ * The "Average" value is the arithmetic mean of foundCodes.length across
+ * all submissions, pre-rounded to an integer on the server. We compute
+ * mean (not median) so the headline lines up with the per-tile %s
+ * rendered alongside it — see aggregate.js for why.
  *
  * Caller looks up the templates via i18n.t() and passes them in. Keeps
  * the module decoupled from i18n's lookup mechanism and the templates
@@ -21,7 +21,7 @@
  * @param {{
  *   found: number,
  *   total: number,
- *   stats?: { totalAttempts: number, median: number } | null,
+ *   stats?: { totalAttempts: number, mean: number } | null,
  *   templates: { scoreOnly: string, scoreWithAverage: string },
  * }} args
  * @returns {string}
@@ -29,7 +29,7 @@
 export function formatScoreLine({ found, total, stats, templates }) {
   if (stats && stats.totalAttempts > 0) {
     return interpolate(templates.scoreWithAverage, {
-      found, total, average: stats.median,
+      found, total, average: stats.mean,
     });
   }
   return interpolate(templates.scoreOnly, { found, total });
