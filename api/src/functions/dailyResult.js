@@ -60,10 +60,6 @@ app.http('dailyResult', {
       wrongCodes: body.wrongCodes,
       totalCount: body.totalCount,
       durationMs: body.durationMs,
-      // Forwarded only when present — validate.js leaves undefined as
-      // "client didn't compute the heuristic", which we mirror onto
-      // the row by omitting the field entirely (see dailyResultDoc.js).
-      incognito: body.incognito,
       now: Date.now(),
     });
 

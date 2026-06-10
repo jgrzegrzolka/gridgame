@@ -37,14 +37,12 @@ const ENDPOINT = '/api/v1/daily/result';
  *   durationMs: number,
  *   deviceId: string,
  *   turnstileToken: string,
- *   incognito?: boolean,
  *   fetchImpl?: typeof fetch,
  * }} args
  * @returns {Promise<{ outcome: 'ok' } | { outcome: 'failed', reason: string }>}
  */
 export async function submitResult({
   store, n, foundCodes, wrongCodes = [], totalCount, durationMs, deviceId, turnstileToken,
-  incognito,
   fetchImpl = globalThis.fetch,
 }) {
   const body = {
@@ -56,10 +54,6 @@ export async function submitResult({
     deviceId,
     turnstileToken,
   };
-  // Forward the incognito heuristic only when the caller supplied it.
-  // The server side accepts the field as optional so older cached
-  // clients that don't send it still validate.
-  if (typeof incognito === 'boolean') body.incognito = incognito;
 
   let res;
   try {

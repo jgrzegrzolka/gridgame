@@ -131,18 +131,6 @@ test('submit payload carries the result fields the server expects', async () => 
   assert.equal(call.deviceId, 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
 });
 
-test('incognito flag forwards to submit when supplied', async () => {
-  const h = harness();
-  await runFinishFlow({ ...h.args, incognito: true });
-  assert.equal(h.submitCalls[0].incognito, true);
-});
-
-test('incognito flag is undefined-passed-through when caller does not set it', async () => {
-  const h = harness();
-  await runFinishFlow(h.args);
-  assert.equal(h.submitCalls[0].incognito, undefined);
-});
-
 test('onLoading fires synchronously before any async dep runs', async () => {
   // Guarantees the player gets the spinner immediately on finish, not
   // after the first microtask of Turnstile script-load. Regression
