@@ -1,0 +1,50 @@
+name: Deploy to swa-yetanotherquiz-v3 (West US 2 diagnostic)
+
+# Temporary workflow — sibling of deploy-v2.yml. Deploys to a fresh
+# SWA in West US 2 to test whether the stuck-Uploading issue we're
+# seeing in West Europe is regional or service-wide.
+#
+# Deletes alongside deploy-v2.yml once the cutover/recovery is done.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: swa-deploy-v3
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Cache-bust by stamping __BUILD__ with the commit SHA
+        run: |
+          find . -name '*.html' -type f -exec sed -i "s/__BUILD__/${GITHUB_SHA}/g" {} +
+      - name: Cache-bust JS imports and JSON fetches with the commit SHA
+        run: node scripts/cache-bust.mjs ${GITHUB_SHA}
+      - name: Strip preview-only files from the artifact
+        run: |
+          rm -rf daily/backlog daily/ideas
+          rm -f daily/daily_backlog.json daily/daily_ideas.json daily/daily_parked.json
+      - name: Minify JS / CSS for the artifact
+        run: npm run build:minify
+      - name: Drop dev-only artifacts before SWA upload
+        run: |
+          rm -rf node_modules party scripts .github .git
+          find . -name '*.test.js' -delete
+          rm -f tsconfig*.json package*.json partykit.json *.md
+      - name: Deploy to Azure Static Web Apps (V3, West US 2)
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_V3 }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: "."
+          api_location: "api"
+          output_location: ""
+          skip_app_build: true
