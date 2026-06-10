@@ -2,16 +2,38 @@
 
 Static-site country-flag puzzles (daily, find-all, quiz, tic-tac-toe) with a small Azure Functions API for daily-puzzle stats. Lives at <https://www.yetanotherquiz.com>.
 
-## Run locally
+## Setup (one-time)
 
-Full stack — static site + Functions API + Cosmos round-trips — via the Azure Static Web Apps emulator:
+1. Install **Azure Functions Core Tools v4** as a system tool (npm install is unreliable on Node 20+; use winget):
+   ```powershell
+   winget install Microsoft.Azure.FunctionsCoreTools
+   ```
+   Verify in a fresh PowerShell: `func --version` should print `4.x`.
+2. Install npm deps at the repo root **and** inside `api/`:
+   ```powershell
+   npm install
+   cd api
+   npm install
+   cd ..
+   ```
+3. Create your local env file:
+   ```powershell
+   cp api/local.settings.json.example api/local.settings.json
+   ```
+   Fill in `COSMOS_CONN` from the Azure Portal → `swa-yetanotherquiz` → Environment variables (or `az staticwebapp appsettings list -n swa-yetanotherquiz -g rg-yetanotherquiz --query properties.COSMOS_CONN -o tsv`). Leave `TURNSTILE_SECRET` empty — the handler's skip-when-unset branch accepts any token locally. Keep `AzureWebJobsStorage` as the example ships it (`UseDevelopmentStorage=true`) — it points the runtime at Azurite, which `npm run dev:swa` boots for you. `local.settings.json` is gitignored.
+
+> **Heads up:** the local Functions runtime talks to **real prod Cosmos** by default — writes you make locally land in shared rows. Fine for tiny traffic; see [CLAUDE.md](CLAUDE.md) for the longer trade-off.
+
+## Run locally
 
 ```powershell
 npm run dev:swa
 ```
 
-Then open <http://localhost:4280/>. Ctrl+C to stop.
+Opens at <http://localhost:4280/>. Boots the SWA emulator + Azurite (local Azure Storage emulator) together via `concurrently`; log lines are prefixed `[swa]` / `[azurite]`. Ctrl+C stops both.
 
 Opening the HTML files via `file://` won't work — `fetch()` needs HTTP.
 
-First-time setup (Azure Functions Core Tools install, `api/local.settings.json` with `COSMOS_CONN`, etc.) is in [CLAUDE.md → "Local development"](CLAUDE.md).
+Backend-only alternative: `npm run dev:api` — Functions at `http://localhost:7071/api/*`. This script does **not** start Azurite; run `npm run dev:azurite` in another terminal first if you want quiet logs.
+
+For deeper notes (Azurite trade-offs, why we don't use `@azure/cosmos`, how routes register, etc.) see [CLAUDE.md → "Local development"](CLAUDE.md) and the "API / Azure Functions" section above it.

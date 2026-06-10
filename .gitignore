@@ -9,3 +9,4 @@ node_modules/
 # local.settings.json and fill in.
 api/local.settings.json
 .swa/
+.azurite/
