@@ -4,7 +4,6 @@ const { insertDoc } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { verifyTurnstile } = require('../lib/turnstile');
 const { buildDailyResultDoc } = require('../lib/dailyResultDoc');
-const { isTrueFlag } = require('../lib/envFlags');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
@@ -68,15 +67,6 @@ app.http('dailyResult', {
       now: Date.now(),
     });
 
-    // TEMPORARY: DAILY_RESULT_UPSERT=true makes Cosmos replace an
-    // existing row for the same (puzzleId, deviceId) instead of 409'ing.
-    // Used during early-feature testing so a replay updates the stats
-    // panel — without it the panel forever shows the player's first
-    // attempt (which is the long-term intended honesty rule). To go
-    // back to first-attempt-only, unset this env var via the Azure
-    // portal — no redeploy needed.
-    const upsert = isTrueFlag(process.env.DAILY_RESULT_UPSERT);
-
     let result;
     try {
       result = await insertDoc({
@@ -85,7 +75,6 @@ app.http('dailyResult', {
         containerName: CONTAINER_NAME,
         partitionKey: body.puzzleId,
         doc,
-        upsert,
       });
     } catch (err) {
       context.error('cosmos request threw', err);
