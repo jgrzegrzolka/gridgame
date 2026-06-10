@@ -128,6 +128,39 @@ test('POSTs to /api/v1/daily/result with the right body', async () => {
   });
 });
 
+test('incognito boolean is forwarded onto the POST body when supplied', async () => {
+  const store = fakeStore();
+  let captured;
+  await submitResult({
+    ...baseArgs, store, incognito: true,
+    fetchImpl: async (url, init) => { captured = { url, init }; return fakeRes(204, null); },
+  });
+  const body = JSON.parse(captured.init.body);
+  assert.equal(body.incognito, true);
+});
+
+test('incognito=false is forwarded (distinct from "client did not compute it")', async () => {
+  const store = fakeStore();
+  let captured;
+  await submitResult({
+    ...baseArgs, store, incognito: false,
+    fetchImpl: async (url, init) => { captured = { url, init }; return fakeRes(204, null); },
+  });
+  const body = JSON.parse(captured.init.body);
+  assert.equal(body.incognito, false);
+});
+
+test('incognito is omitted from the body when caller does not supply it', async () => {
+  const store = fakeStore();
+  let captured;
+  await submitResult({
+    ...baseArgs, store,
+    fetchImpl: async (url, init) => { captured = { url, init }; return fakeRes(204, null); },
+  });
+  const body = JSON.parse(captured.init.body);
+  assert.equal('incognito' in body, false);
+});
+
 test('wrongCodes defaults to [] when not supplied', async () => {
   const store = fakeStore();
   let captured;

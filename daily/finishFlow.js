@@ -35,6 +35,7 @@
  *   n: number, foundCodes: string[], wrongCodes: string[],
  *   totalCount: number, durationMs: number, deviceId: string,
  *   turnstileToken: string,
+ *   incognito?: boolean,
  * }} SubmitArgs
  */
 
@@ -48,6 +49,7 @@
  *   durationMs: number,
  *   deviceId: string,
  *   store: { getItem(k: string): string | null, setItem(k: string, v: string): void },
+ *   incognito?: boolean,
  *   ensureTurnstile: () => Promise<void>,
  *   getTurnstileToken: () => Promise<string>,
  *   submitResult: (args: SubmitArgs) => Promise<{ outcome: 'ok' } | { outcome: 'failed', reason: string }>,
@@ -59,6 +61,7 @@
  */
 export async function runFinishFlow({
   n, found, totalCount, foundCodes, wrongCodes, durationMs, deviceId, store,
+  incognito,
   ensureTurnstile, getTurnstileToken, submitResult, fetchStats,
   onLoading, onCleared, onStats,
 }) {
@@ -80,6 +83,7 @@ export async function runFinishFlow({
   const r = await submitResult({
     store, n, foundCodes, wrongCodes, totalCount, durationMs, deviceId,
     turnstileToken: token,
+    incognito,
   });
   if (r.outcome !== 'ok') {
     onCleared();
