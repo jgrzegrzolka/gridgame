@@ -11,9 +11,10 @@
 GitHub Actions `schedule:` cron is best-effort and on this repo has been failing badly:
 
 - `release-daily.yml` defines 14 firings/night (every 5 min × 30 min, both DST states). Documented in the workflow header as a defensive burst against late/skipped firings.
-- Across the first 3 nights since the workflow shipped (2026-06-07 → 2026-06-10), the *only* successful releases were manual `workflow_dispatch` calls by Jan or Claude. The 4 scheduled firings that *did* run all hit the "already released today" guard because they were beaten to the punch.
-- Since `2026-06-09T00:07:07Z` (~46h before this doc was written), **zero scheduled runs of any workflow** have fired on this repo. Cron is just not firing.
-- Workflow is `state: active`, not disabled. Repo is highly active. Likely cause: GitHub-side dispatch unreliability under load — the workflow's own docstring already calls this out.
+- Across the first 3 nights since the workflow shipped (2026-06-07 → 2026-06-10), the *only* successful releases were manual `workflow_dispatch` calls by Jan or Claude.
+- When GH cron *does* fire it runs **late** — observed `schedule:` firings on the night of 2026-06-09→10 (run IDs 27242130968, 27244311244, both event=schedule per GH's own record) landed at ~01:19 and ~02:15 Warsaw, i.e. 75–135 min after the nominal 00:00 target. The manual morning dispatch always wins the race, so every scheduled firing lands on the "already released today" guard and exits as a no-op.
+- Net effect: from a user's point of view the puzzle never auto-releases. The defensive 14-firing burst is masking the lateness, not curing it.
+- Workflow is `state: active`, not disabled. Likely cause: GitHub-side `schedule:` cron is best-effort and on a busy minute can defer firings by an unbounded amount — the workflow's own docstring already calls this out.
 
 **Decision (2026-06-10):** stop trying to make GitHub cron reliable. Move the *trigger* to Azure (the platform we just moved onto for hosting). Keep the `release-daily.yml` workflow exactly as-is — only swap what fires it. `workflow_dispatch` has been 100% reliable across 6/6 successful invocations; only `schedule:` is broken.
 
