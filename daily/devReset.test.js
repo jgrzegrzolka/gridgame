@@ -8,6 +8,10 @@ import {
   mountDevReset,
 } from './devReset.js';
 
+/** A fetch stub that returns a happy empty response. Used by tests that
+ * only care about the mount/click flow, not the network shape. */
+const okFetch = /** @type {any} */ (async () => ({ ok: true, json: async () => ({}) }));
+
 function fakeStorage(initial = {}) {
   const m = new Map(Object.entries(initial));
   return {
@@ -102,7 +106,7 @@ test('mountDevReset is a no-op on a non-localhost hostname', () => {
     hostname: 'www.yetanotherquiz.com',
     doc,
     storage: fakeStorage(),
-    fetchImpl: /** @type {any} */ (async () => ({ ok: true, json: async () => ({}) })),
+    fetchImpl: okFetch,
     reload: () => {},
     confirmFn: () => true,
   });
@@ -118,7 +122,7 @@ test('mountDevReset injects a toolbar with two buttons on localhost', () => {
     hostname: 'localhost',
     doc,
     storage: fakeStorage(),
-    fetchImpl: /** @type {any} */ (async () => ({ ok: true, json: async () => ({}) })),
+    fetchImpl: okFetch,
     reload: () => {},
     confirmFn: () => true,
   });
@@ -137,7 +141,7 @@ test('mountDevReset matches 127.0.0.1 and ::1 (matches the Turnstile bypass set)
     const wrap = mountDevReset({
       rootEl: root, hostname: host, doc,
       storage: fakeStorage(),
-      fetchImpl: /** @type {any} */ (async () => ({ ok: true, json: async () => ({}) })),
+      fetchImpl: okFetch,
       reload: () => {}, confirmFn: () => true,
     });
     assert.ok(wrap, `should mount on ${host}`);
@@ -154,7 +158,7 @@ test('Reset-browser click clears storage and triggers reload (after confirm)', (
   let reloaded = 0;
   const wrap = mountDevReset({
     rootEl: root, hostname: 'localhost', doc, storage,
-    fetchImpl: /** @type {any} */ (async () => ({ ok: true, json: async () => ({}) })),
+    fetchImpl: okFetch,
     reload: () => { reloaded++; },
     confirmFn: () => true,
   });
@@ -171,7 +175,7 @@ test('Reset-browser click is a no-op when confirm() returns false', () => {
   let reloaded = 0;
   const wrap = mountDevReset({
     rootEl: root, hostname: 'localhost', doc, storage,
-    fetchImpl: /** @type {any} */ (async () => ({ ok: true, json: async () => ({}) })),
+    fetchImpl: okFetch,
     reload: () => { reloaded++; },
     confirmFn: () => false,
   });

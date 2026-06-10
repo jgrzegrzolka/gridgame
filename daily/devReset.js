@@ -20,13 +20,25 @@
  */
 
 import { isLocalHostname } from './turnstileSiteKey.js';
+import { STORAGE_KEY as DEVICE_ID_KEY } from '../flags/identity.js';
+import { STORAGE_KEY as SUBMITTED_KEY } from './submitted.js';
+import { STORAGE_KEY as SCORES_KEY } from './scores.js';
+
+// `gridgame.ideas.reviewed` is owned by `daily/ideas/page.js` — a page-boot
+// module, not a library. Hardcoded here to avoid exporting from a page
+// bootstrapper; if the ideas key is ever renamed, this list silently
+// stops clearing it (annoying for the dev, not catastrophic).
+const IDEAS_REVIEWED_KEY = 'gridgame.ideas.reviewed';
 
 export const DEV_RESET_STORAGE_KEYS = Object.freeze([
-  'gridgame.deviceId',
-  'gridgame.submittedPuzzles',
-  'daily.scores',
-  'gridgame.ideas.reviewed',
+  DEVICE_ID_KEY,
+  SUBMITTED_KEY,
+  SCORES_KEY,
+  IDEAS_REVIEWED_KEY,
 ]);
+
+const BROWSER_RESET_ACTION = 'Clear deviceId, submittedPuzzles, scores, ideas-reviewed and reload';
+const COSMOS_RESET_ACTION = 'Delete every dailyResults doc with local=true';
 
 /**
  * Remove the daily-flow keys from a storage. Swallows errors (private
@@ -91,24 +103,16 @@ export function mountDevReset(opts = {}) {
   wrap.className = 'dev-reset';
   wrap.setAttribute('aria-label', 'Dev reset tools (localhost only)');
 
-  const browserBtn = makeBtn(
-    doc,
-    'Reset browser',
-    'Clear gridgame.* + daily.scores localStorage and reload',
-  );
+  const browserBtn = makeBtn(doc, 'Reset browser', BROWSER_RESET_ACTION);
   browserBtn.addEventListener('click', () => {
-    if (!confirmFn('Clear deviceId, submittedPuzzles, scores, ideas-reviewed and reload?')) return;
+    if (!confirmFn(`${BROWSER_RESET_ACTION}?`)) return;
     clearBrowserState(storage);
     reload();
   });
 
-  const cosmosBtn = makeBtn(
-    doc,
-    'Clear Cosmos local rows',
-    'DELETE every dailyResults doc with local=true (localhost-only endpoint)',
-  );
+  const cosmosBtn = makeBtn(doc, 'Clear Cosmos local rows', `${COSMOS_RESET_ACTION} (localhost-only endpoint)`);
   cosmosBtn.addEventListener('click', async () => {
-    if (!confirmFn('Delete every dailyResults doc with local=true?')) return;
+    if (!confirmFn(`${COSMOS_RESET_ACTION}?`)) return;
     const original = cosmosBtn.textContent;
     cosmosBtn.disabled = true;
     cosmosBtn.textContent = 'Deleting…';

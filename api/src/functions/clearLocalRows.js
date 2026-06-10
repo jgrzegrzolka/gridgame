@@ -35,9 +35,8 @@ app.http('clearLocalRows', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    // Cross-partition scan: rows tagged `local: true` can sit in any
-    // puzzleId partition, and we don't know which ones up-front.
-    // Projecting just id + puzzleId keeps the response small.
+    // Cross-partition because we don't know which puzzleId partitions
+    // hold the local rows up-front.
     const queryResult = await queryDocs({
       connString: conn,
       dbName: DB_NAME,
@@ -51,10 +50,10 @@ app.http('clearLocalRows', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    let deleted = 0;
-    /** @type {{ id: string, reason: string }[]} */
-    const failed = [];
-    for (const row of queryResult.docs) {
+    // Parallel deletes — each one targets its own puzzleId partition, so
+    // they don't contend on a single partition's RU budget. Dev sessions
+    // realistically produce ≤ 20 local rows, so we don't bother chunking.
+    const results = await Promise.all(queryResult.docs.map(async (row) => {
       try {
         const r = await deleteDoc({
           connString: conn,
@@ -63,15 +62,18 @@ app.http('clearLocalRows', {
           partitionKey: row.puzzleId,
           id: row.id,
         });
-        if (r.ok || r.error === 'not_found') {
-          deleted++;
-        } else {
-          failed.push({ id: row.id, reason: `${r.error}${r.status ? `:${r.status}` : ''}` });
-        }
+        if (r.ok || r.error === 'not_found') return { ok: /** @type {true} */ (true) };
+        return { ok: /** @type {false} */ (false), id: row.id, reason: `${r.error}${r.status ? `:${r.status}` : ''}` };
       } catch (err) {
-        failed.push({ id: row.id, reason: err instanceof Error ? err.message : String(err) });
+        return { ok: /** @type {false} */ (false), id: row.id, reason: err instanceof Error ? err.message : String(err) };
       }
-    }
+    }));
+
+    const deleted = results.filter((r) => r.ok).length;
+    /** @type {{ id: string, reason: string }[]} */
+    const failed = results
+      .filter(/** @returns {r is { ok: false, id: string, reason: string }} */ (r) => !r.ok)
+      .map(({ id, reason }) => ({ id, reason }));
 
     return {
       status: 200,

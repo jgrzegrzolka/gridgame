@@ -19,7 +19,7 @@
  * time we extend the score schema.
  */
 
-const STORAGE_KEY = 'gridgame.submittedPuzzles';
+export const STORAGE_KEY = 'gridgame.submittedPuzzles';
 
 /**
  * @param {{ getItem(key: string): string | null }} store
