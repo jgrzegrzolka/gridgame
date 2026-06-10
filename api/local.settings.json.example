@@ -10,7 +10,10 @@
     "COSMOS_CONN": "AccountEndpoint=https://cosmos-yetanotherquiz-jg.documents.azure.com:443/;AccountKey=...;",
 
     "_comment_TURNSTILE_SECRET": "Cloudflare Turnstile secret. Same source as COSMOS_CONN. Leave UNSET to skip Turnstile verification locally - the handler's `missing_secret` branch logs a warning and accepts any token. Recommended for local dev.",
-    "TURNSTILE_SECRET": ""
+    "TURNSTILE_SECRET": "",
+
+    "_comment_healthMonitor": "Local-only override of host.json's healthMonitor.enabled. The Functions runtime expects AzureWebJobsStorage for internal bookkeeping; this app is HTTP-only and doesn't use Storage, so the runtime spams 'Unable to create client for AzureWebJobsStorage' every 30s. Disabling the health monitor silences it. Prod is unaffected (local.settings.json is gitignored, and SWA-managed Functions have a real AzureWebJobsStorage there anyway).",
+    "AzureFunctionsJobHost__healthMonitor__enabled": "false"
   },
 
   "Host": {
