@@ -117,7 +117,7 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
 - [x] Query: `SELECT c.foundCodes, c.totalCount FROM c WHERE c.puzzleId = @pid` — single-partition, cheap. (Pulls `totalCount` too so the aggregator can compute `topPct` without a second round-trip; `SELECT VALUE c.foundCodes` from the original plan would have lost it.)
 - [x] Pure aggregator `api/src/lib/aggregate.js`: `aggregate(rows) → {totalAttempts, perCodeFinds, mean, topPct}`. (Originally returned `median`; switched to arithmetic mean in PR #322 — see API spec above for why.)
 - [x] In-memory cache per Function instance (`api/src/lib/ttlCache.js`), keyed by puzzleId, TTL 60s. Also sets `Cache-Control: public, max-age=60` so browser/edge cache the same window.
-- [ ] Verify with `curl` after seeding test rows.
+- [x] Validated end-to-end in production via B4/B5 client integration (the original "seed test rows + curl" step was overtaken by real traffic).
 
 **Caching:** 60s server-side cache + matching `Cache-Control: public, max-age=60` so browser/edge cache the same window. **Bypass after own submit:** the client sends `?fresh=1` on the GET fired by `handleFinish` (immediately after a 204 POST), the server skips the cache lookup, then writes the fresh result back so subsequent GETs (from other players, this player's revisits) get the up-to-date snapshot without their own bypass. `?fresh=1` responses are `Cache-Control: no-store` so the browser doesn't memoize the bypass. Revisits use the default cached path.
 
@@ -159,18 +159,13 @@ Aggregation query (single-partition, cheap): `SELECT VALUE c.foundCodes FROM c W
   - Dropped the originally-shipped "X plays · Hardest: <country> (Y% found)" second line. At early-traffic N values (1-10) both pieces felt awkward: "3 plays" admits low traffic, and "12% found" with N=3 is misleadingly precise (only 0/33/67/100% are possible).
   - The per-tile percentage overlays still carry per-flag detail.
 
-**Phase B7 — Player-percentile headline** *(future, when traffic justifies it)*
+**Phase B7 — Player-percentile headline** *(closed 2026-06-10 — not wanted yet)*
 
-- [ ] Replace / supplement the headline with `You're in the top X% of players today` — meaningful at any N once the distribution exists. Player's percentile based on found-count rank.
-- [ ] Server change: extend the stats endpoint to return a small distribution (count of submissions at each found-count: `{ "0": 3, "1": 5, "2": 12, ... }`). Cheap query (`SELECT COUNT(*) GROUP BY ...`); no schema change; existing rows are sufficient (no replays needed — every row already has `foundCodes + totalCount`).
-- [ ] Client: aggregate to percentile given the player's own score + the distribution.
-- [ ] Decide when to show plain "Average today" vs the percentile (probably percentile from N ≥ ~10, average always).
+Idea was to replace / supplement the "Average today" headline with `You're in the top X% of players today`. Server change would extend the stats endpoint to return a small per-found-count distribution (`{ "0": 3, "1": 5, "2": 12, ... }`) via a cheap `SELECT COUNT(*) GROUP BY ...`; no schema change, existing rows are sufficient. Client aggregates to percentile from player's own score + the distribution. Closed because the existing "Average today" line already does the job at current traffic and we don't want to add server/client complexity for a headline that isn't yet a felt need. Re-open as a fresh feature when traffic + product instinct say it's worth it.
 
-**Phase B6 — Archive integration** *(optional — confirm with Jan before starting)*
+**Phase B6 — Archive integration** *(closed 2026-06-10 — delivered indirectly by B4)*
 
-- [ ] On `daily/archive.html`, when opening a past puzzle the device already submitted, fetch and render the same stats table.
-- [ ] Skip the table for puzzles never submitted (keeps the play-to-see-stats incentive).
-- [ ] Open question for Jan: should archive also show the device's own foundCodes alongside the new stats?
+Clicking an archive square routes through `daily/?n=N`, whose revisit branch already GETs `/api/v1/daily/stats/{n}` and renders the per-flag table + "Average today" line (see B4's "Retry contract as implemented" note). The originally-planned "skip stats when never submitted" gate was deliberately removed in B4 — the play-to-see-stats incentive wasn't worth excluding cross-device players. The one remaining idea — surface aggregate hints **inline on the archive grid itself** (e.g. "Avg: 4/6" on each square) — was judged not worth doing at current per-puzzle N (numbers too noisy to be informative). Re-open as a fresh feature if archive-grid UX needs this later.
 
 ---
 
