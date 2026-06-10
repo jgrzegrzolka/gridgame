@@ -40,7 +40,7 @@ function statsLabels() {
     scoreOnly: t('daily.stats.scoreOnly', 'Your score: {found}/{total}'),
     scoreWithAverage: t('daily.stats.scoreWithAverage', 'Your score: {found}/{total} · Average score: {average}/{total}'),
     caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
-    loading: t('daily.stats.loading', 'Loading community stats'),
+    loading: t('daily.stats.loading', 'Loading stats'),
   };
 }
 
@@ -58,10 +58,10 @@ function statsLabels() {
  * On any stats fetch failure the first paint stays put — the player
  * still has their own score even if the community comparison can't load.
  *
- * `loading: true` shows an animated "Loading community stats…" line
- * below the score while the post-finish POST + stats GET pipeline runs
- * (mobile cold path can take several seconds, otherwise the player just
- * sees their score and wonders if anything else is coming).
+ * `loading: true` shows an animated "Loading stats…" line below the
+ * score while the post-finish POST + stats GET pipeline runs (mobile
+ * cold path can take several seconds, otherwise the player just sees
+ * their score and wonders if anything else is coming).
  *
  * @param {number} found
  * @param {number} total

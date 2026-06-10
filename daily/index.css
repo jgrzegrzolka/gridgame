@@ -78,7 +78,7 @@
   text-align: left;
 }
 
-/* "Loading community stats" + three pulsing dots after the label. The
+/* "Loading stats" + three pulsing dots after the label. The
  * dots wave in sequence (each one offset by 200ms) so it reads as a
  * single dot crawling across — gives the player a clear "something is
  * happening" signal across the multi-second post-finish pipeline. */
