@@ -13,6 +13,11 @@
  *     totalCount:  int                       // size of puzzle's answer set
  *     durationMs:  int
  *     submittedAt: int                       // unix ms
+ *     local?:      true                      // OPTIONAL — present only when the server detected a
+ *                                            //   localhost request (npm run dev:swa). Aggregator
+ *                                            //   filters these out of community stats. Owner-side
+ *                                            //   `SELECT * FROM c WHERE c.local = true` query
+ *                                            //   finds dev pollution for manual cleanup.
  *   }
  *
  * Time is injected (not Date.now()-inside) so callers can pin
@@ -22,6 +27,10 @@
  * (older cached clients during a deploy window). Stored unconditionally
  * so future analytics ("most-wrong-guessed today", "your distractors")
  * have data from every submission instead of having to backfill.
+ *
+ * `local` is added to the doc ONLY when the caller passes `true`. Prod
+ * traffic never has the field; local-dev traffic always does. Absence
+ * = "prod or pre-feature"; presence = "definitely a dev row".
  */
 
 /**
@@ -33,10 +42,12 @@
  *   totalCount: number,
  *   durationMs: number,
  *   now: number,
+ *   local?: boolean,
  * }} input
  */
-function buildDailyResultDoc({ puzzleId, deviceId, foundCodes, wrongCodes = [], totalCount, durationMs, now }) {
-  return {
+function buildDailyResultDoc({ puzzleId, deviceId, foundCodes, wrongCodes = [], totalCount, durationMs, now, local }) {
+  /** @type {Record<string, unknown>} */
+  const doc = {
     id: `${puzzleId}:${deviceId}`,
     puzzleId,
     deviceId,
@@ -46,6 +57,8 @@ function buildDailyResultDoc({ puzzleId, deviceId, foundCodes, wrongCodes = [], 
     durationMs,
     submittedAt: now,
   };
+  if (local === true) doc.local = true;
+  return doc;
 }
 
 module.exports = { buildDailyResultDoc };

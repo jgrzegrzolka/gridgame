@@ -55,6 +55,24 @@ test('does NOT add fields the schema does not expect', () => {
   assert.deepEqual(Object.keys(doc).sort(), expected.sort());
 });
 
+test('local: true is stored on the doc', () => {
+  const doc = buildDailyResultDoc({ ...input, local: true });
+  assert.equal(doc.local, true);
+});
+
+test('local: false is NOT stored on the doc (prod rows stay field-free)', () => {
+  // Asymmetric on purpose: presence of the field means "this is dev",
+  // absence means "prod or legacy". Storing `local: false` would
+  // bloat every prod row with a useless field forever.
+  const doc = buildDailyResultDoc({ ...input, local: false });
+  assert.equal('local' in doc, false);
+});
+
+test('local omitted from input → field absent on doc', () => {
+  const doc = buildDailyResultDoc(input);
+  assert.equal('local' in doc, false);
+});
+
 
 test('id is deterministic for the same (puzzleId, deviceId) regardless of other fields', () => {
   const a = buildDailyResultDoc(input);
