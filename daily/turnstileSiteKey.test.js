@@ -1,40 +1,44 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { pickTurnstileSiteKey } from './turnstileSiteKey.js';
+import { isLocalHostname, PROD_SITE_KEY } from './turnstileSiteKey.js';
 
-const PROD = '0x4AAAAAADhdZ-XDzVHaLk9R';
-const TEST = '2x00000000000000000000AB';
-
-test('prod hostname → prod key', () => {
-  assert.equal(pickTurnstileSiteKey('www.yetanotherquiz.com'), PROD);
-  assert.equal(pickTurnstileSiteKey('yetanotherquiz.com'), PROD);
+test('PROD_SITE_KEY exports the registered yetanotherquiz.com key', () => {
+  // Pinned so a stray edit (typo, accidental rotate-without-update)
+  // is caught before it ships. Update this test alongside any real
+  // CF dashboard rotation.
+  assert.equal(PROD_SITE_KEY, '0x4AAAAAADhdZ-XDzVHaLk9R');
 });
 
-test('localhost → CF test key', () => {
-  assert.equal(pickTurnstileSiteKey('localhost'), TEST);
+test('isLocalHostname is true for localhost', () => {
+  assert.equal(isLocalHostname('localhost'), true);
 });
 
-test('127.0.0.1 → CF test key', () => {
-  assert.equal(pickTurnstileSiteKey('127.0.0.1'), TEST);
+test('isLocalHostname is true for 127.0.0.1', () => {
+  assert.equal(isLocalHostname('127.0.0.1'), true);
 });
 
-test('IPv6 loopback (::1) → CF test key', () => {
-  assert.equal(pickTurnstileSiteKey('::1'), TEST);
+test('isLocalHostname is true for IPv6 loopback (::1)', () => {
+  assert.equal(isLocalHostname('::1'), true);
 });
 
-test('lookalike hostnames are NOT treated as local', () => {
+test('isLocalHostname is false for prod hostnames', () => {
+  assert.equal(isLocalHostname('www.yetanotherquiz.com'), false);
+  assert.equal(isLocalHostname('yetanotherquiz.com'), false);
+});
+
+test('isLocalHostname is false for lookalike hostnames', () => {
   // 'localhost.com' is a real registered domain — must NOT match.
   // Substring/heuristic matching here would let an attacker host a
   // page on localhost.example.com and bypass real Turnstile checks.
-  assert.equal(pickTurnstileSiteKey('localhost.com'), PROD);
-  assert.equal(pickTurnstileSiteKey('mylocalhost'), PROD);
-  assert.equal(pickTurnstileSiteKey('127.0.0.10'), PROD);
+  assert.equal(isLocalHostname('localhost.com'), false);
+  assert.equal(isLocalHostname('mylocalhost'), false);
+  assert.equal(isLocalHostname('127.0.0.10'), false);
 });
 
-test('empty / unknown hostname falls back to prod key', () => {
-  // Defensive default — better to load the prod key (which fails
-  // visibly on an unrecognised origin) than silently use the test
-  // key in some unexpected environment.
-  assert.equal(pickTurnstileSiteKey(''), PROD);
+test('isLocalHostname is false for empty / unknown hostnames (fail-safe)', () => {
+  // Defensive default — better to attempt real Turnstile (which fails
+  // visibly on an unrecognised origin) than silently bypass in some
+  // unexpected environment.
+  assert.equal(isLocalHostname(''), false);
 });
