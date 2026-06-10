@@ -13,28 +13,12 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 - **Backend stack:** Azure Static Web Apps (Free SKU) + bundled Azure Functions (Node) + Azure Cosmos DB NoSQL with **Free Tier toggle ON**. Reason: Jan is a C# Azure dev — personal-project portfolio + learning value. Stays $0/month on always-free quotas indefinitely. (Cloudflare Workers + D1 was equally valid technically; Jan opted into Azure on 2026-06-09.)
 - **Naming convention:** code, pages, repo stay `gridgame` (historical). Azure resources use `yetanotherquiz` (matches subscription, current product framing). Don't mix.
-- **Subscription:** `yetanotherquiz` / `6da299d6-bdfe-4277-a544-ae8ef68f99a0`, all resources in West Europe.
+- **Subscription:** `yetanotherquiz` / `6da299d6-bdfe-4277-a544-ae8ef68f99a0`. Resource group is in West Europe and most resources live there (Cosmos, RG metadata); the SWA itself is `swa-yetanotherquiz-v3` in **West US 2** after the 2026-06-10 WE failover — see Done / Feature D for the why and the recovery playbook.
 - **Cost protection in place:** €5/month budget on the subscription, email alerts at 50% / 80% / 100% to `jangrzegrzolka@gmail.com`. Don't re-add. Created via `az rest` on `Microsoft.Consumption/budgets/monthly-5eur`.
 
 ---
 
 ## Now
-
-### Local development setup — *parked mid-install (2026-06-10)*
-
-Scaffolding shipped in PR #315 (`npm run dev:swa` / `npm run dev:api`, `local.settings.json.example`, CLAUDE.md "Local development" section). Jan is mid-install of Azure Functions Core Tools v4 via `winget install Microsoft.Azure.FunctionsCoreTools` (the npm package install fails on Node 20+ with ESM/CJS incompatibility — winget is the reliable path).
-
-**Resume when:** `func --version` works in a fresh PowerShell. Then:
-
-1. `git pull`
-2. `cp api/local.settings.json.example api/local.settings.json`
-3. Fill in `COSMOS_CONN` from `az staticwebapp appsettings list -n swa-yetanotherquiz -g rg-yetanotherquiz --query "properties.COSMOS_CONN" -o tsv` (paste into the file, not into chat)
-4. Leave `TURNSTILE_SECRET` empty — handler's skip-when-unset path accepts any token locally
-5. `npm run dev:swa` → http://localhost:4280
-
-**Not blocking anything** — only blocks the convenience of running locally instead of deploy-to-test.
-
----
 
 ### Feature C: Cross-device identity via WebAuthn passkey
 
@@ -112,6 +96,10 @@ Per-flag find rates aggregated across everyone who attempted the same daily puzz
 
 Key PR milestones: #284 (api skeleton), #293 (validate-only POST), #296 (Cosmos REST insert), #304 (identity + submitted tracking), #315 (local dev scaffolding), #322 (median → mean).
 
+### Local development setup — *shipped 2026-06-10*
+
+Full local stack runs via `npm run dev:swa` (static site + Functions API + Cosmos round-trips against real prod Cosmos + Azurite for the Storage health check). Permanent setup/run docs live in `README.md` (setup + run sections) and `CLAUDE.md` "Local development" (Azurite trade-offs, deeper notes). Dev reset toolbar mounts localhost-only on the daily + archive pages for one-click localStorage + Cosmos-local-rows cleanup. Key PR milestones: #315 (scaffolding), #335 (Azurite + dev reset toolbar + `/api/v1/dev/clear-local-rows`).
+
 ### Feature A: Migrate site hosting to Azure SWA — *shipped 2026-06-09*
 
-GitHub Pages → Azure Static Web Apps (Free SKU). Public URL `https://www.yetanotherquiz.com` (apex 301-redirects to www via Cloudflare). Resources: `rg-yetanotherquiz`, `swa-yetanotherquiz`. Permanent hosting facts moved to `CLAUDE.md` "Hosting" section; PR #281 + #282 + the wrap-up PR have the implementation history.
+GitHub Pages → Azure Static Web Apps (Free SKU). Public URL `https://www.yetanotherquiz.com` (apex 301-redirects to www via Cloudflare). Resources: `rg-yetanotherquiz`, `swa-yetanotherquiz` (the original WE instance — replaced by `swa-yetanotherquiz-v3` in West US 2 during Feature D's failover the next day). Permanent hosting facts moved to `CLAUDE.md` "Hosting" section; PR #281 + #282 + the wrap-up PR have the implementation history.
