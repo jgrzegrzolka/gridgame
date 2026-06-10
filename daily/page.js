@@ -19,14 +19,23 @@ import { applyFindRatesToTiles } from './statsOverlay.js';
 import { formatScoreLine } from './distributionSummary.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 import { runFinishFlow } from './finishFlow.js';
-import { PROD_SITE_KEY, isLocalHostname } from './turnstileSiteKey.js';
+import { PROD_SITE_KEY } from './turnstileSiteKey.js';
 import { mountDevReset } from './devReset.js';
 
-// Public site key — fine to ship in source. The secret stays in SWA
-// env vars. Rotation note + the localhost-bypass rationale live in
-// turnstileSiteKey.js.
+// Turnstile is soft-disabled across all environments (2026-06-10) after
+// a real user's challenge was rejected by Cloudflare with a 401 on
+// `/cdn-cgi/challenge-platform/h/g/pat/…` — her submission was silently
+// dropped (by Phase B4 design) and the abuse defence Turnstile provides
+// was judged not worth blocking legitimate plays in a tiny hobby app.
+// Existing protections still in force: rate limit (5/min/IP), server-side
+// validation, and one-submission-per-(puzzle, deviceId) via the Cosmos
+// id. The SDK + widget + verifyTurnstile code is kept as scaffolding so
+// flipping back is a one-line change here + setting TURNSTILE_SECRET to
+// a real value in SWA. Server side: TURNSTILE_SECRET is set to "" in SWA
+// so the existing skip-when-unset branch in dailyResult.js logs a warning
+// and accepts every token.
 const TURNSTILE_SITE_KEY = PROD_SITE_KEY;
-const SKIP_TURNSTILE = isLocalHostname(window.location.hostname);
+const SKIP_TURNSTILE = true;
 
 /** @typedef {import('../flags/group.js').Country} Country */
 
