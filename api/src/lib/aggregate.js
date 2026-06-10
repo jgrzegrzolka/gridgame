@@ -33,12 +33,12 @@ function emptyStats() {
 function aggregate(rows) {
   if (!Array.isArray(rows) || rows.length === 0) return emptyStats();
 
-  // Drop local-dev rows before counting anything. They're tagged
-  // server-side (see api/src/lib/requestHost.js) so the owner's local
-  // testing never pollutes community stats. Prod rows never have the
-  // field, so this is a no-op for real traffic.
-  rows = rows.filter((r) => r && r.local !== true);
-  if (rows.length === 0) return emptyStats();
+  // Local-dev rows (tagged server-side via requestHost.js) are counted
+  // alongside prod rows so the owner can see how their own submissions
+  // affect the rail while testing. Cleanup is manual: the dev-reset
+  // toolbar's "Clear Cosmos local rows" button hits
+  // /api/v1/dev/clear-local-rows. The tag itself is still useful as
+  // the cleanup selector — don't drop it.
 
   const perCodeFinds = {};
   const perWrongCode = {};

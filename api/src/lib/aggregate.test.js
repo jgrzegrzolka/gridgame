@@ -153,36 +153,34 @@ test('row with missing foundCodes is tolerated as zero-find', () => {
   assert.equal(r.topPct, 50);
 });
 
-test('rows with local: true are filtered out before aggregation', () => {
-  // Server-side dev marker — local-dev rows must never reach
-  // community stats. Filter happens before any counting, so
-  // perCodeFinds, mean, totalAttempts, and topPct all reflect prod
-  // rows only.
+test('rows with local: true are counted alongside prod rows', () => {
+  // Local-dev rows participate in aggregation so the site owner can
+  // see how their own submissions affect the rail while testing.
+  // Cleanup is manual (dev-toolbar "Clear Cosmos local rows" button).
   const rows = [
     { foundCodes: ['a', 'b', 'c'], totalCount: 3 },                // prod, perfect
-    { foundCodes: ['a'],            totalCount: 3, local: true },  // dev, ignored
+    { foundCodes: ['a'],            totalCount: 3, local: true },  // dev, now counts
     { foundCodes: ['a', 'b'],       totalCount: 3 },               // prod
   ];
   const r = aggregate(rows);
-  assert.equal(r.totalAttempts, 2);
-  assert.deepEqual(r.perCodeFinds, { a: 2, b: 2, c: 1 });
-  // (3 + 2) / 2 = 2.5 — dev row doesn't drag the mean down
-  assert.equal(r.mean, 2.5);
-  assert.equal(r.topPct, 50);
+  assert.equal(r.totalAttempts, 3);
+  assert.deepEqual(r.perCodeFinds, { a: 3, b: 2, c: 1 });
+  // (3 + 1 + 2) / 3 = 2.0 — dev row pulls the mean down as expected
+  assert.equal(r.mean, 2);
+  // 1 of 3 perfect
+  assert.equal(r.topPct, 33);
 });
 
-test('all rows are local → empty stats (matches empty-input behaviour)', () => {
+test('all rows are local → still aggregated normally', () => {
   const rows = [
     { foundCodes: ['a', 'b'], totalCount: 3, local: true },
     { foundCodes: ['a'],      totalCount: 3, local: true },
   ];
-  assert.deepEqual(aggregate(rows), {
-    totalAttempts: 0,
-    perCodeFinds: {},
-    perWrongCode: {},
-    mean: 0,
-    topPct: 0,
-  });
+  const r = aggregate(rows);
+  assert.equal(r.totalAttempts, 2);
+  assert.deepEqual(r.perCodeFinds, { a: 2, b: 1 });
+  assert.equal(r.mean, 1.5);
+  assert.equal(r.topPct, 0);
 });
 
 test('perWrongCode counts wrongCodes across all rows', () => {
@@ -204,27 +202,16 @@ test('row with missing wrongCodes is tolerated as zero-wrong', () => {
   assert.deepEqual(r.perWrongCode, { x: 1 });
 });
 
-test('local rows wrongCodes are filtered out alongside foundCodes', () => {
+test('local rows wrongCodes are counted alongside prod rows', () => {
   const rows = [
     { foundCodes: ['a'], wrongCodes: ['x'], totalCount: 3 },
     { foundCodes: ['a'], wrongCodes: ['x', 'y'], totalCount: 3, local: true },
     { foundCodes: ['b'], wrongCodes: ['x'], totalCount: 3 },
   ];
   const r = aggregate(rows);
-  // y was only in the local row, so it must not appear
-  assert.deepEqual(r.perWrongCode, { x: 2 });
-});
-
-test('local: false (defensive) is NOT filtered — only true triggers the drop', () => {
-  // Strict equality on `=== true` (not truthiness). A row with
-  // local: false survives, in case future code ever sets the field
-  // explicitly to false on a real row.
-  const rows = [
-    { foundCodes: ['a', 'b', 'c'], totalCount: 3, local: false },
-  ];
-  const r = aggregate(rows);
-  assert.equal(r.totalAttempts, 1);
-  assert.equal(r.mean, 3);
+  // y came in via the local row and must be visible — that's the
+  // whole point of letting the owner see their own submissions.
+  assert.deepEqual(r.perWrongCode, { x: 3, y: 1 });
 });
 
 test('whole-number means stay whole (no trailing ".0")', () => {

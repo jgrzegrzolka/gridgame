@@ -76,10 +76,9 @@
       "caption": "% shows how many other players found each flag.",
       "loading": "Loading stats",
       "noSubmissions": "You're one of the first to play this puzzle.",
-      "smart": {
-        "bestKnown": "Best known",
-        "mostMissed": "Most missed",
-        "topMistake": "Most common mistake"
+      "extra": {
+        "ranking": "Most recognised:",
+        "topMistake": "Most common mistake:"
       }
     }
   },

@@ -96,12 +96,14 @@ export function showReason(reason) {
 const SVG_BASE = new URL('../flags/svg/', import.meta.url).href;
 
 /**
- * Open the flag-zoom dialog for a single country. Internal; reached via
- * a click on any `flagTile`.
+ * Open the flag-zoom dialog for a single country. Wired by `flagTile`
+ * for the in-progress + result grids, and reused by `daily/page.js` for
+ * the extra-stats rail tiles so a click on any flag — wherever it
+ * appears on the result page — opens the same dialog.
  *
  * @param {Country} c
  */
-function openZoom(c) {
+export function openZoom(c) {
   const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
   const zoomImg = /** @type {HTMLImageElement} */ (zoom.querySelector('img'));
   const zoomName = /** @type {HTMLParagraphElement} */ (zoom.querySelector('p'));
