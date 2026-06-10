@@ -148,3 +148,36 @@
   height: 0;
   overflow: hidden;
 }
+
+/* Dev-only reset toolbar — only mounted on localhost by daily/devReset.js.
+ * Fixed at bottom-left so it stays out of the burger / lang-toggle / coffee
+ * chrome up top and the give-up row at the bottom-centre. The yellow
+ * background screams "developer tool" so it can never be mistaken for
+ * production UI if the gate ever broke. */
+.dev-reset {
+  position: fixed;
+  bottom: 12px;
+  left: 12px;
+  z-index: 1000;
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+.dev-reset-btn {
+  background: #fff3b0;
+  color: #1d3557;
+  border: 1px solid #1d3557;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  cursor: pointer;
+  line-height: 1.2;
+}
+.dev-reset-btn:hover:not(:disabled) {
+  background: #ffe066;
+}
+.dev-reset-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

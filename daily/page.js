@@ -20,6 +20,7 @@ import { formatScoreLine } from './distributionSummary.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 import { runFinishFlow } from './finishFlow.js';
 import { PROD_SITE_KEY, isLocalHostname } from './turnstileSiteKey.js';
+import { mountDevReset } from './devReset.js';
 
 // Public site key — fine to ship in source. The secret stays in SWA
 // env vars. Rotation note + the localhost-bypass rationale live in
@@ -195,6 +196,7 @@ async function handleFinish(n, targets, info) {
  */
 export function bootDaily() {
   wireZoom();
+  mountDevReset();
 
   const numEl = /** @type {HTMLElement} */ (document.getElementById('daily-n'));
   const isReplay = isReplayFromUrl(window.location.search);
