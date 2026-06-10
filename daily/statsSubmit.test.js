@@ -33,8 +33,9 @@ const fakeRes = (status, body) => ({
 
 test('always POSTs even when locally marked submitted (server handles dedup)', async () => {
   // Earlier implementation gated on hasSubmitted to avoid the round-trip,
-  // but that broke server-side upsert (replays never reached the server).
-  // The gate is gone — server is the source of truth for dedup.
+  // but that gate created a footgun: legitimate re-sends (lost-token
+  // retries, etc.) never reached the server. Server-side is the only
+  // correct source of truth for dedup.
   const store = fakeStore({ 'gridgame.submittedPuzzles': '[7]' });
   let called = false;
   const r = await submitResult({

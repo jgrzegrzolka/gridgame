@@ -81,9 +81,10 @@ async function insertDoc({ connString, dbName, containerName, partitionKey, doc,
     'x-ms-documentdb-partitionkey': JSON.stringify([partitionKey]),
   };
   // Upsert mode: Cosmos replaces an existing doc with the same id
-  // instead of returning 409. Used by the daily-results endpoint when
-  // DAILY_RESULT_UPSERT=true (temporary testing toggle). Cosmos returns
-  // 200 on replace, 201 on create — both count as success.
+  // instead of returning 409. Used by callers that want replace-on-
+  // duplicate semantics (e.g. quizRecord persisting a player's
+  // personal best — improvements overwrite the stored row). Cosmos
+  // returns 200 on replace, 201 on create — both count as success.
   if (upsert) headers['x-ms-documentdb-is-upsert'] = 'True';
 
   const res = await fetchImpl(url, {

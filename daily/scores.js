@@ -13,9 +13,9 @@
  *
  * **First-attempt-only:** `saveScore` is a no-op when a record already
  * exists for that N. The archive shows "your first attempt" — replays
- * can't overwrite it. Mirrors the server-side rule (`DAILY_RESULT_UPSERT`
- * off → 409 on duplicate (puzzleId, deviceId)) so local and Cosmos stay
- * in lockstep on the same "first attempt wins" promise.
+ * can't overwrite it. Mirrors the server-side rule (insert-only Cosmos,
+ * 409 on duplicate (puzzleId, deviceId)) so local and Cosmos stay in
+ * lockstep on the same "first attempt wins" promise.
  *
  * Previous behavior (before this change): last-result-wins — replays
  * overwrote the archive entry. Flipped to first-attempt because the

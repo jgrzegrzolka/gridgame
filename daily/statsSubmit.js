@@ -1,18 +1,14 @@
 /**
- * POST a finished daily attempt to /api/v1/daily/result. Implements the
- * retry contract from FEATURE.md:
+ * POST a finished daily attempt to /api/v1/daily/result.
  *
- *   - The server is the source of truth for dedup. In default
- *     (insert-only) mode it 409s on duplicate (puzzleId, deviceId);
- *     in upsert mode (DAILY_RESULT_UPSERT=true env var) it replaces
- *     the existing row. Either way the client just hands the result
- *     over and treats 204 and 409 as equivalent.
- *   - There is NO client-side gate on hasSubmitted(). An earlier
- *     version added one as a "don't waste a round-trip" optimization,
- *     but it actively prevented the server's upsert path from doing
- *     its job — replays never reached the server because the client
- *     short-circuited. The marginal cost of one extra POST per replay
- *     is negligible; correctness wins.
+ *   - The server is the source of truth for dedup: it 409s on duplicate
+ *     (puzzleId, deviceId). The client treats 204 and 409 as equivalent
+ *     end states (first-attempt landed; replay that fired again was
+ *     rejected — same outcome from the player's POV).
+ *   - There is NO client-side gate on hasSubmitted(). The marginal cost
+ *     of one extra POST per replay is negligible, and the gate created
+ *     a footgun in earlier UPSERT testing where it suppressed legitimate
+ *     re-sends — server-as-source-of-truth is the only correct shape.
  *   - markSubmitted() is still called on success so the revisit branch
  *     in page.js can decide whether to render the stats panel without
  *     attempting a fresh submit.
@@ -77,9 +73,8 @@ export async function submitResult({
   }
 
   // 204 = first-time success; 409 = server already has this attempt
-  // in insert-only mode (replays in upsert mode get 204 too because
-  // Cosmos returns 201 on create and 200 on replace, both mapped to
-  // 204 by the handler). All three end-state-equivalent for the client.
+  // (replay against insert-only Cosmos). End-state-equivalent for the
+  // client — both mean "the stats panel can render this player's row".
   if (res.status === 204 || res.status === 409) {
     markSubmitted(store, n);
     return { outcome: 'ok' };

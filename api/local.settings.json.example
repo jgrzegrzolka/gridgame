@@ -10,10 +10,7 @@
     "COSMOS_CONN": "AccountEndpoint=https://cosmos-yetanotherquiz-jg.documents.azure.com:443/;AccountKey=...;",
 
     "_comment_TURNSTILE_SECRET": "Cloudflare Turnstile secret. Same source as COSMOS_CONN. Leave UNSET to skip Turnstile verification locally - the handler's `missing_secret` branch logs a warning and accepts any token. Recommended for local dev.",
-    "TURNSTILE_SECRET": "",
-
-    "_comment_DAILY_RESULT_UPSERT": "Set to \"true\" for testing-mode replays (server upserts instead of 409'ing on duplicate). Same toggle as the prod env var.",
-    "DAILY_RESULT_UPSERT": "true"
+    "TURNSTILE_SECRET": ""
   },
 
   "Host": {
