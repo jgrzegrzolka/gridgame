@@ -114,8 +114,12 @@ async function insertDoc({ connString, dbName, containerName, partitionKey, doc,
  *   - { ok: false, error: 'cosmos_error', status, body }
  *
  * `fetchImpl` is injected so tests don't have to touch the network.
- * `partitionKey` is required for single-partition queries (the common
- * cheap path); cross-partition isn't exposed because we don't need it.
+ *
+ * Pass `partitionKey` for the common single-partition path (cheap, no
+ * fan-out). Pass `enableCrossPartition: true` instead when you genuinely
+ * need to scan every partition — currently only used by the dev-only
+ * clear-local-rows endpoint, which selects `WHERE c.local = true` and
+ * doesn't know which puzzleId partitions hold local rows.
  *
  * Example:
  *   queryDocs({
@@ -132,6 +136,7 @@ async function queryDocs({
   query,
   parameters = [],
   partitionKey,
+  enableCrossPartition = false,
   fetchImpl = globalThis.fetch,
 }) {
   const { endpoint, key } = parseConnString(connString);
@@ -152,8 +157,12 @@ async function queryDocs({
       'x-ms-version': COSMOS_API_VERSION,
       'Content-Type': 'application/query+json',
       'x-ms-documentdb-isquery': 'True',
-      'x-ms-documentdb-partitionkey': JSON.stringify([partitionKey]),
     };
+    if (enableCrossPartition) {
+      headers['x-ms-documentdb-query-enablecrosspartition'] = 'True';
+    } else {
+      headers['x-ms-documentdb-partitionkey'] = JSON.stringify([partitionKey]);
+    }
     if (continuation) headers['x-ms-continuation'] = continuation;
 
     const res = await fetchImpl(url, {
@@ -178,4 +187,38 @@ async function queryDocs({
   return { ok: true, docs };
 }
 
-module.exports = { parseConnString, signRequest, insertDoc, queryDocs, COSMOS_API_VERSION };
+/**
+ * Delete a single document by `id` + `partitionKey`. Returns:
+ *   - { ok: true }                                            on 204 No Content
+ *   - { ok: false, error: 'not_found' }                       on 404
+ *   - { ok: false, error: 'cosmos_error', status, body }      otherwise
+ *
+ * Currently only used by the dev-only clear-local-rows endpoint; the
+ * production write path (dailyResult) is insert-only by design.
+ */
+async function deleteDoc({ connString, dbName, containerName, partitionKey, id, fetchImpl = globalThis.fetch }) {
+  const { endpoint, key } = parseConnString(connString);
+  const resourceLink = `dbs/${dbName}/colls/${containerName}/docs/${id}`;
+  const url = `${endpoint.replace(/\/$/, '')}/${resourceLink}`;
+  const date = new Date().toUTCString();
+  const authorization = signRequest('DELETE', 'docs', resourceLink, date, key);
+
+  const res = await fetchImpl(url, {
+    method: 'DELETE',
+    headers: {
+      Authorization: authorization,
+      'x-ms-date': date,
+      'x-ms-version': COSMOS_API_VERSION,
+      'x-ms-documentdb-partitionkey': JSON.stringify([partitionKey]),
+    },
+  });
+
+  if (res.status === 204) return { ok: true };
+  if (res.status === 404) return { ok: false, error: 'not_found' };
+
+  let body = '';
+  try { body = await res.text(); } catch { /* ignore */ }
+  return { ok: false, error: 'cosmos_error', status: res.status, body };
+}
+
+module.exports = { parseConnString, signRequest, insertDoc, queryDocs, deleteDoc, COSMOS_API_VERSION };

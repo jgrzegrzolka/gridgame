@@ -24,7 +24,7 @@
  * testing (Cosmos kept their first attempt; local showed their replay).
  */
 
-const STORAGE_KEY = 'daily.scores';
+export const STORAGE_KEY = 'daily.scores';
 
 /** @typedef {{ f: number, t: number, c?: string[] }} DailyScore */
 /** @typedef {Record<number, DailyScore>} DailyScores */

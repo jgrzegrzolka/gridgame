@@ -6,6 +6,9 @@
   "Values": {
     "FUNCTIONS_WORKER_RUNTIME": "node",
 
+    "_comment_AzureWebJobsStorage": "Points the Functions runtime at the local Azurite emulator (started automatically by `npm run dev:swa`). Without this, the runtime spams 'Process reporting unhealthy / Unable to create client for AzureWebJobsStorage' every 30s. Prod ignores this value - SWA sets a real AzureWebJobsStorage server-side.",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+
     "_comment_COSMOS_CONN": "Cosmos connection string. Get the current value from Azure Portal -> swa-yetanotherquiz -> Environment variables, or via: az staticwebapp appsettings list -n swa-yetanotherquiz -g rg-yetanotherquiz --query properties.COSMOS_CONN -o tsv. WARNING: this hits PROD Cosmos by default - writes you make locally land in the real container. See CLAUDE.md 'Local development' for the trade-off.",
     "COSMOS_CONN": "AccountEndpoint=https://cosmos-yetanotherquiz-jg.documents.azure.com:443/;AccountKey=...;",
 

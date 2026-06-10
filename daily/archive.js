@@ -2,10 +2,12 @@ import { t } from '../i18n.js';
 import { todayN } from '../flags/daily.js';
 import { loadScores } from './scores.js';
 import { renderArchiveSquare, refreshSquareCriteria } from './squares.js';
+import { mountDevReset } from './devReset.js';
 
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
 
 export function bootArchive() {
+  mountDevReset();
   const listEl = /** @type {HTMLElement} */ (document.getElementById('archive-list'));
   const scores = loadScores(window.localStorage);
 

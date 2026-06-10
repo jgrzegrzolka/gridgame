@@ -7,3 +7,4 @@ require('./functions/health');
 require('./functions/dailyResult');
 require('./functions/dailyStats');
 require('./functions/quizRecord');
+require('./functions/clearLocalRows');

@@ -21,7 +21,7 @@
  * without a real localStorage or `globalThis.crypto`.
  */
 
-const STORAGE_KEY = 'gridgame.deviceId';
+export const STORAGE_KEY = 'gridgame.deviceId';
 const MIN_LEN = 8;
 const MAX_LEN = 64;
 

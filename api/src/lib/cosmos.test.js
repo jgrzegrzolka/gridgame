@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const { parseConnString, signRequest, queryDocs, insertDoc } = require('./cosmos');
+const { parseConnString, signRequest, queryDocs, insertDoc, deleteDoc } = require('./cosmos');
 
 const CONN = 'AccountEndpoint=https://x.documents.azure.com:443/;AccountKey=YWJjZA==;';
 
@@ -220,4 +220,101 @@ test('insertDoc without upsert: 200 is NOT treated as ok (insert path expects on
   });
   assert.equal(r.ok, false);
   assert.equal(r.error, 'cosmos_error');
+});
+
+// ---- queryDocs cross-partition mode --------------------------------------
+
+test('queryDocs in cross-partition mode sends the enable-crosspartition header and NO partition-key header', async () => {
+  let captured;
+  await queryDocs({
+    connString: CONN, dbName: 'db', containerName: 'c',
+    query: 'SELECT c.id FROM c WHERE c.local = true',
+    parameters: [],
+    enableCrossPartition: true,
+    fetchImpl: async (_url, init) => {
+      captured = init;
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ Documents: [] }) };
+    },
+  });
+  assert.equal(captured.headers['x-ms-documentdb-query-enablecrosspartition'], 'True');
+  assert.equal(captured.headers['x-ms-documentdb-partitionkey'], undefined);
+});
+
+test('queryDocs single-partition mode still sends the partition-key header (no regression)', async () => {
+  let captured;
+  await queryDocs({
+    connString: CONN, dbName: 'db', containerName: 'c',
+    query: 'SELECT * FROM c', parameters: [], partitionKey: 7,
+    fetchImpl: async (_url, init) => {
+      captured = init;
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ Documents: [] }) };
+    },
+  });
+  assert.equal(captured.headers['x-ms-documentdb-partitionkey'], '[7]');
+  assert.equal(captured.headers['x-ms-documentdb-query-enablecrosspartition'], undefined);
+});
+
+// ---- deleteDoc -----------------------------------------------------------
+
+test('deleteDoc on 204 → ok, partition-key header sent as JSON array', async () => {
+  let captured;
+  const r = await deleteDoc({
+    connString: CONN, dbName: 'db', containerName: 'c',
+    partitionKey: 7, id: '7:abc',
+    fetchImpl: async (url, init) => {
+      captured = { url, init };
+      return { status: 204, text: async () => '' };
+    },
+  });
+  assert.deepEqual(r, { ok: true });
+  assert.equal(captured.url, 'https://x.documents.azure.com:443/dbs/db/colls/c/docs/7:abc');
+  assert.equal(captured.init.method, 'DELETE');
+  assert.equal(captured.init.headers['x-ms-documentdb-partitionkey'], '[7]');
+  assert.match(captured.init.headers['Authorization'], /^type%3Dmaster/);
+});
+
+test('deleteDoc on 404 → not_found (idempotent: already-deleted is not an error)', async () => {
+  const r = await deleteDoc({
+    connString: CONN, dbName: 'db', containerName: 'c',
+    partitionKey: 7, id: '7:gone',
+    fetchImpl: async () => ({ status: 404, text: async () => '' }),
+  });
+  assert.deepEqual(r, { ok: false, error: 'not_found' });
+});
+
+test('deleteDoc on other non-2xx → cosmos_error with status + body', async () => {
+  const r = await deleteDoc({
+    connString: CONN, dbName: 'db', containerName: 'c',
+    partitionKey: 7, id: '7:x',
+    fetchImpl: async () => ({ status: 429, text: async () => 'throttled' }),
+  });
+  assert.deepEqual(r, { ok: false, error: 'cosmos_error', status: 429, body: 'throttled' });
+});
+
+test('deleteDoc signs with the doc-level resourceLink (includes /docs/{id})', async () => {
+  // If the signature were computed against the collection-level link the
+  // server would reject with 401 — this test asserts the verb + resource
+  // link reach signRequest in the right shape by matching what
+  // signRequest produces independently.
+  const date = 'Tue, 09 Jun 2026 15:00:00 GMT';
+  // Freeze Date so the captured Authorization can be recomputed.
+  const RealDate = Date;
+  global.Date = /** @type {any} */ (class extends RealDate {
+    toUTCString() { return date; }
+  });
+  try {
+    let captured;
+    await deleteDoc({
+      connString: CONN, dbName: 'db', containerName: 'c',
+      partitionKey: 7, id: '7:abc',
+      fetchImpl: async (_url, init) => {
+        captured = init;
+        return { status: 204, text: async () => '' };
+      },
+    });
+    const expected = signRequest('DELETE', 'docs', 'dbs/db/colls/c/docs/7:abc', date, 'YWJjZA==');
+    assert.equal(captured.headers['Authorization'], expected);
+  } finally {
+    global.Date = RealDate;
+  }
 });
