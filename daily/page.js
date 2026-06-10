@@ -19,13 +19,13 @@ import { applyFindRatesToTiles } from './statsOverlay.js';
 import { formatScoreLine } from './distributionSummary.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 import { runFinishFlow } from './finishFlow.js';
+import { pickTurnstileSiteKey } from './turnstileSiteKey.js';
 
-// Public site key for our Turnstile widget — fine to ship in source.
-// The secret stays in SWA env vars.
-// NOTE: Cloudflare reissues the site key when you rotate the secret —
-// both must be updated together. If POSTs start 400'ing at the CF
-// challenge endpoint with the site key in the URL, that's the symptom.
-const TURNSTILE_SITE_KEY = '0x4AAAAAADhdZ-XDzVHaLk9R';
+// Public site key — fine to ship in source. Picked per hostname so
+// `npm run dev:swa` uses Cloudflare's invisible always-pass test key
+// (the prod key is domain-bound and throws CF error 110200 on
+// localhost). Lookup table + rotation notes live in turnstileSiteKey.js.
+const TURNSTILE_SITE_KEY = pickTurnstileSiteKey(window.location.hostname);
 
 /** @typedef {import('../flags/group.js').Country} Country */
 
