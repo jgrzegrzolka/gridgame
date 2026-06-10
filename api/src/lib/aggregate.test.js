@@ -6,6 +6,7 @@ test('empty input returns empty stats', () => {
   assert.deepEqual(aggregate([]), {
     totalAttempts: 0,
     perCodeFinds: {},
+    perWrongCode: {},
     mean: 0,
     topPct: 0,
   });
@@ -15,6 +16,7 @@ test('non-array input is treated as empty', () => {
   assert.deepEqual(aggregate(null), {
     totalAttempts: 0,
     perCodeFinds: {},
+    perWrongCode: {},
     mean: 0,
     topPct: 0,
   });
@@ -25,6 +27,7 @@ test('single perfect row → 100% top, mean = totalCount', () => {
   assert.deepEqual(r, {
     totalAttempts: 1,
     perCodeFinds: { ch: 1, dk: 1, gb: 1 },
+    perWrongCode: {},
     mean: 3,
     topPct: 100,
   });
@@ -176,9 +179,40 @@ test('all rows are local → empty stats (matches empty-input behaviour)', () =>
   assert.deepEqual(aggregate(rows), {
     totalAttempts: 0,
     perCodeFinds: {},
+    perWrongCode: {},
     mean: 0,
     topPct: 0,
   });
+});
+
+test('perWrongCode counts wrongCodes across all rows', () => {
+  const rows = [
+    { foundCodes: ['a'], wrongCodes: ['x', 'y'], totalCount: 3 },
+    { foundCodes: ['a', 'b'], wrongCodes: ['x'], totalCount: 3 },
+    { foundCodes: ['a', 'b', 'c'], wrongCodes: [], totalCount: 3 },
+  ];
+  const r = aggregate(rows);
+  assert.deepEqual(r.perWrongCode, { x: 2, y: 1 });
+});
+
+test('row with missing wrongCodes is tolerated as zero-wrong', () => {
+  const rows = [
+    { foundCodes: ['a'], totalCount: 3 }, // no wrongCodes field at all
+    { foundCodes: ['a', 'b'], wrongCodes: ['x'], totalCount: 3 },
+  ];
+  const r = aggregate(rows);
+  assert.deepEqual(r.perWrongCode, { x: 1 });
+});
+
+test('local rows wrongCodes are filtered out alongside foundCodes', () => {
+  const rows = [
+    { foundCodes: ['a'], wrongCodes: ['x'], totalCount: 3 },
+    { foundCodes: ['a'], wrongCodes: ['x', 'y'], totalCount: 3, local: true },
+    { foundCodes: ['b'], wrongCodes: ['x'], totalCount: 3 },
+  ];
+  const r = aggregate(rows);
+  // y was only in the local row, so it must not appear
+  assert.deepEqual(r.perWrongCode, { x: 2 });
 });
 
 test('local: false (defensive) is NOT filtered — only true triggers the drop', () => {

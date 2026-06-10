@@ -1,5 +1,5 @@
 import { loadCountries, flagsGamePool } from '../flags/group.js';
-import { t, withLocalizedAliases } from '../i18n.js';
+import { t, withLocalizedAliases, countryName } from '../i18n.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
 import { loadScores, isCompleteRecord } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
@@ -21,6 +21,7 @@ import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 import { runFinishFlow } from './finishFlow.js';
 import { PROD_SITE_KEY } from './turnstileSiteKey.js';
 import { mountDevReset } from './devReset.js';
+import { pickSmartStats, hasAnySmartStats } from './smartStats.js';
 
 // Turnstile is soft-disabled across all environments (2026-06-10) after
 // a real user's challenge was rejected by Cloudflare with a 401 on
@@ -50,7 +51,106 @@ function statsLabels() {
     scoreWithAverage: t('daily.stats.scoreWithAverage', 'Your score: {found}/{total} · Average score: {average}/{total}'),
     caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
     loading: t('daily.stats.loading', 'Loading stats'),
+    smartBestKnown: t('daily.stats.smart.bestKnown', 'Best known'),
+    smartMostMissed: t('daily.stats.smart.mostMissed', 'Most missed'),
+    smartTopMistake: t('daily.stats.smart.topMistake', 'Most common mistake'),
   };
+}
+
+/**
+ * Look up a country by 2-letter code in the loaded list. Used by the
+ * smart-stats rail to resolve the flag's localized name for the hover
+ * tooltip. Returns null when the code isn't in our dataset (defensive
+ * — should never fire in practice, since both targets and any wrong
+ * guess come from the same list).
+ *
+ * @param {Country[]} all
+ * @param {string} code
+ */
+function findCountry(all, code) {
+  return all.find((c) => c.code === code) || null;
+}
+
+/**
+ * Build one mini flag tile for the smart-stats rail. Same `.find-tile`
+ * structure as the result-page tiles (so it inherits the hover-name
+ * tooltip + zoom rules), with a bottom strip badge that shows either
+ * a percentage (find rate) or a count (×N players for the mistake).
+ *
+ * @param {{ code: string, pct?: number, count?: number }} item
+ * @param {Country | null} country
+ */
+function buildSmartTile(item, country) {
+  const li = document.createElement('li');
+  li.className = 'find-tile daily-smart-tile';
+  li.dataset.code = item.code;
+  li.dataset.name = country ? countryName(country) : item.code.toUpperCase();
+  const img = document.createElement('img');
+  img.src = `../flags/svg/${item.code}.svg`;
+  img.alt = li.dataset.name;
+  img.loading = 'lazy';
+  li.appendChild(img);
+  const badge = document.createElement('span');
+  badge.className = 'daily-smart-badge';
+  badge.textContent = item.pct !== undefined ? `${item.pct}%` : `×${item.count}`;
+  li.appendChild(badge);
+  return li;
+}
+
+/**
+ * Mount the "Best known / Most missed / Most common mistake" rail
+ * below the existing caption. Idempotent — wipes any prior rail first
+ * so a stats refetch (post-finish, language switch) doesn't stack.
+ *
+ * Each row only renders when its picks list is non-empty, and the
+ * whole rail is skipped when all three are empty (so a perfect-streak
+ * puzzle or sub-threshold puzzle shows no awkward empty container).
+ *
+ * @param {{ totalAttempts: number, perCodeFinds: Record<string, number>, perWrongCode?: Record<string, number> } | null} stats
+ * @param {Country[]} targets
+ * @param {Country[]} all
+ */
+function renderSmartStats(stats, targets, all) {
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
+  const existing = container.querySelector('.daily-smart-stats');
+  if (existing) existing.remove();
+
+  if (!stats) return;
+  const picks = pickSmartStats({ stats, targetCodes: targets.map((c) => c.code) });
+  if (!hasAnySmartStats(picks)) return;
+
+  const labels = statsLabels();
+  const block = document.createElement('section');
+  block.className = 'daily-smart-stats';
+
+  appendSmartRow(block, labels.smartBestKnown, picks.bestKnown, all);
+  appendSmartRow(block, labels.smartMostMissed, picks.mostMissed, all);
+  appendSmartRow(block, labels.smartTopMistake, picks.topMistake, all);
+
+  container.appendChild(block);
+}
+
+/**
+ * @param {HTMLElement} parent
+ * @param {string} label
+ * @param {Array<{ code: string, pct?: number, count?: number }>} items
+ * @param {Country[]} all
+ */
+function appendSmartRow(parent, label, items, all) {
+  if (items.length === 0) return;
+  const row = document.createElement('div');
+  row.className = 'daily-smart-row';
+  const lbl = document.createElement('span');
+  lbl.className = 'daily-smart-label';
+  lbl.textContent = label;
+  row.appendChild(lbl);
+  const ul = document.createElement('ul');
+  ul.className = 'daily-smart-tiles';
+  for (const item of items) {
+    ul.appendChild(buildSmartTile(item, findCountry(all, item.code)));
+  }
+  row.appendChild(ul);
+  parent.appendChild(row);
 }
 
 /**
@@ -129,7 +229,7 @@ function paintStatsPanel(found, total, stats, opts = {}) {
  * @param {number} found
  * @param {{ bypassCache?: boolean }} [opts]
  */
-async function loadAndPaintStats(n, targets, found, opts = {}) {
+async function loadAndPaintStats(n, targets, found, all, opts = {}) {
   const stats = await fetchStats(n, { bypassCache: opts.bypassCache === true });
   if (!stats) {
     // Fetch failed — drop back to score-only (clears any loading
@@ -140,6 +240,7 @@ async function loadAndPaintStats(n, targets, found, opts = {}) {
   paintStatsPanel(found, targets.length, stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
+  renderSmartStats(stats, targets, all);
 }
 
 /**
@@ -153,7 +254,7 @@ async function loadAndPaintStats(n, targets, found, opts = {}) {
  * @param {Country[]} targets
  * @param {{ foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }} info
  */
-async function handleFinish(n, targets, info) {
+async function handleFinish(n, targets, all, info) {
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
   const found = info.foundCodes.length;
@@ -188,6 +289,7 @@ async function handleFinish(n, targets, info) {
       paintStatsPanel(found, targets.length, stats);
       applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
       applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
+      renderSmartStats(stats, targets, all);
     },
   });
 }
@@ -249,20 +351,20 @@ export function bootDaily() {
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
-        paintStatsPanel(foundCodes.size, result.targets.length, null);
+        paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
         // Stats panel is gated on Cosmos, not this device's localStorage:
         // always GET, and let the response decide (totalAttempts === 0 →
         // formatScoreLine falls back to score-only, paintStatsPanel skips
         // the caption). This way puzzles you finished on a different
         // device — or before submit-tracking shipped — still show stats.
-        loadAndPaintStats(n, result.targets, foundCodes.size);
+        loadAndPaintStats(n, result.targets, foundCodes.size, all);
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
           paintDescription(result.entry.description);
           renderResult(result.targets, foundCodes);
-          paintStatsPanel(foundCodes.size, result.targets.length, null);
-          loadAndPaintStats(n, result.targets, foundCodes.size);
+          paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
+          loadAndPaintStats(n, result.targets, foundCodes.size, all);
         });
         return;
       }
@@ -291,7 +393,7 @@ export function bootDaily() {
       // glitch, network drop, etc) — the player can replay and
       // finally get their result counted.
       const game = startGame(n, category, result.targets, all, {
-        onFinish: (info) => handleFinish(n, result.targets, info),
+        onFinish: (info) => handleFinish(n, result.targets, all, info),
       });
       attachLangRefresh(game, {
         raw,

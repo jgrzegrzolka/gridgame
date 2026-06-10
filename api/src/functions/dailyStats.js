@@ -51,7 +51,7 @@ app.http('dailyStats', {
         connString: conn,
         dbName: DB_NAME,
         containerName: CONTAINER_NAME,
-        query: 'SELECT c.foundCodes, c.totalCount FROM c WHERE c.puzzleId = @pid',
+        query: 'SELECT c.foundCodes, c.wrongCodes, c.totalCount, c.local FROM c WHERE c.puzzleId = @pid',
         parameters: [{ name: '@pid', value: id }],
         partitionKey: id,
       });
