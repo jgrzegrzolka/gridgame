@@ -79,28 +79,38 @@ test('mean is the arithmetic average of foundCodes lengths', () => {
   assert.equal(aggregate(rows).mean, 3);
 });
 
-test('mean rounds to nearest integer (.5 rounds up by Math.round)', () => {
+test('mean rounds to one decimal place — .5 stays .5 (no integer rounding)', () => {
   const rows = [
     { foundCodes: ['a'],                totalCount: 4 },
     { foundCodes: ['a', 'b'],           totalCount: 4 },
     { foundCodes: ['a', 'b', 'c'],      totalCount: 4 },
     { foundCodes: ['a', 'b', 'c', 'd'], totalCount: 4 },
   ];
-  // (1 + 2 + 3 + 4) / 4 = 2.5 → 3
-  assert.equal(aggregate(rows).mean, 3);
+  // (1 + 2 + 3 + 4) / 4 = 2.5 → 2.5
+  assert.equal(aggregate(rows).mean, 2.5);
 });
 
-test('mean: the screenshot case — 9/9, 9/9, 1/9 now reads as 6, not 9', () => {
-  // Regression protection: previously the median was 9 (middle of
-  // sorted [1, 9, 9]) so the headline said "Average score: 9/9" while
-  // tile overlays showed 67%. Players read that as a bug. Mean = 19/3
-  // ≈ 6.33 → 6, which lines up with the per-tile rates.
+test('mean: two rows 2/3 and 3/3 reads as 2.5/3 (the puzzle 5 case)', () => {
+  // Regression protection from a real prod case: with two submissions
+  // (one perfect, one one-short), integer rounding of 2.5 bumped the
+  // headline to 3/3 while one tile clearly showed 50%. One-decimal
+  // rounding gives 2.5, which lines up with the tiles.
+  const rows = [
+    { foundCodes: ['a', 'b'], totalCount: 3 },
+    { foundCodes: ['a', 'b', 'c'], totalCount: 3 },
+  ];
+  assert.equal(aggregate(rows).mean, 2.5);
+});
+
+test('mean: 9/9, 9/9, 1/9 reads as 6.3 (formerly 6 under integer rounding)', () => {
+  // Same screenshot regression we previously pinned at 6 with integer
+  // rounding — now reports the fractional value. 19/3 = 6.333… → 6.3.
   const rows = [
     { foundCodes: Array.from({ length: 9 }, (_, i) => `c${i}`), totalCount: 9 },
     { foundCodes: Array.from({ length: 9 }, (_, i) => `c${i}`), totalCount: 9 },
     { foundCodes: ['c0'], totalCount: 9 },
   ];
-  assert.equal(aggregate(rows).mean, 6);
+  assert.equal(aggregate(rows).mean, 6.3);
 });
 
 test('mean tolerates unsorted input lengths', () => {
@@ -109,8 +119,8 @@ test('mean tolerates unsorted input lengths', () => {
     { foundCodes: ['a'], totalCount: 5 },
     { foundCodes: ['a', 'b'], totalCount: 5 },
   ];
-  // (5 + 1 + 2) / 3 = 2.67 → 3
-  assert.equal(aggregate(rows).mean, 3);
+  // (5 + 1 + 2) / 3 = 2.666… → 2.7
+  assert.equal(aggregate(rows).mean, 2.7);
 });
 
 test('row with missing totalCount still contributes to counts and mean', () => {
@@ -121,8 +131,8 @@ test('row with missing totalCount still contributes to counts and mean', () => {
   const r = aggregate(rows);
   assert.equal(r.totalAttempts, 2);
   assert.deepEqual(r.perCodeFinds, { a: 2, b: 1 });
-  // (2 + 1) / 2 = 1.5 → 2
-  assert.equal(r.mean, 2);
+  // (2 + 1) / 2 = 1.5
+  assert.equal(r.mean, 1.5);
   // totalCount inherited from later row = 2; row 1 with length 2 counts as perfect
   assert.equal(r.topPct, 50);
 });
@@ -135,7 +145,21 @@ test('row with missing foundCodes is tolerated as zero-find', () => {
   const r = aggregate(rows);
   assert.equal(r.totalAttempts, 2);
   assert.deepEqual(r.perCodeFinds, { a: 1, b: 1, c: 1 });
-  // (0 + 3) / 2 = 1.5 → 2
-  assert.equal(r.mean, 2);
+  // (0 + 3) / 2 = 1.5
+  assert.equal(r.mean, 1.5);
   assert.equal(r.topPct, 50);
+});
+
+test('whole-number means stay whole (no trailing ".0")', () => {
+  // Important UX detail: when the mean is exactly N, the headline
+  // should read "N/total" not "N.0/total". Math.round(N*10)/10 = N
+  // preserves the integer when it's clean.
+  const rows = [
+    { foundCodes: ['a', 'b', 'c'], totalCount: 3 },
+    { foundCodes: ['a', 'b', 'c'], totalCount: 3 },
+  ];
+  const r = aggregate(rows);
+  assert.equal(r.mean, 3);
+  // Sanity: this is the literal number 3, not 3.0 — String(3) === '3'.
+  assert.equal(String(r.mean), '3');
 });

@@ -14,7 +14,7 @@
  *   {
  *     totalAttempts: number,                  // rows.length
  *     perCodeFinds: { [code]: number },       // count per code across all rows
- *     mean: number,                           // arithmetic mean of foundCodes.length, rounded to nearest int
+ *     mean: number,                           // arithmetic mean of foundCodes.length, rounded to one decimal place
  *     topPct: number,                         // % of rows where they got everything (0–100, int)
  *   }
  *
@@ -50,9 +50,13 @@ function aggregate(rows) {
   }
 
   const sum = lengths.reduce((a, b) => a + b, 0);
-  // Round to nearest integer so the headline reads "Average score: 6/9"
-  // instead of "6.33/9" — matches the X/N score format alongside it.
-  const mean = Math.round(sum / lengths.length);
+  // Round to one decimal place. Integer rounding was too lossy at
+  // low N — with two submissions (2/3 and 3/3) the mean is 2.5,
+  // which Math.round bumps up to 3, so the headline reads "Average
+  // score: 3/3" while the per-tile %s clearly show one player missed
+  // a tile. One decimal is honest about the half ("2.5/3") and still
+  // collapses to an integer ("3" / "6" / "9") when the mean is whole.
+  const mean = Math.round(sum / lengths.length * 10) / 10;
 
   const perfect = totalCount > 0
     ? lengths.filter((l) => l === totalCount).length
