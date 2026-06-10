@@ -3,7 +3,7 @@
  * client. Pure: no I/O, no time, no globals.
  *
  * Each row is the subset of a Cosmos doc we query for:
- *   { foundCodes: string[], totalCount: number }
+ *   { foundCodes: string[], wrongCodes: string[], totalCount: number }
  *
  * The server only stores the player's *first* submission per puzzle
  * (the insert handler 409s on duplicates), so these rows already
@@ -14,6 +14,7 @@
  *   {
  *     totalAttempts: number,                  // rows.length
  *     perCodeFinds: { [code]: number },       // count per code across all rows
+ *     perWrongCode: { [code]: number },       // count of how many submissions clicked this wrong (non-target) flag
  *     mean: number,                           // arithmetic mean of foundCodes.length, rounded to one decimal place
  *     topPct: number,                         // % of rows where they got everything (0–100, int)
  *   }
@@ -25,21 +26,22 @@
  * coherent (median of [1, 9, 9] is 9) but indistinguishable from a bug.
  */
 
-function aggregate(rows) {
-  if (!Array.isArray(rows) || rows.length === 0) {
-    return { totalAttempts: 0, perCodeFinds: {}, mean: 0, topPct: 0 };
-  }
+function emptyStats() {
+  return { totalAttempts: 0, perCodeFinds: {}, perWrongCode: {}, mean: 0, topPct: 0 };
+}
 
-  // Drop local-dev rows before counting anything. They're tagged
-  // server-side (see api/src/lib/requestHost.js) so the owner's local
-  // testing never pollutes community stats. Prod rows never have the
-  // field, so this is a no-op for real traffic.
-  rows = rows.filter((r) => r && r.local !== true);
-  if (rows.length === 0) {
-    return { totalAttempts: 0, perCodeFinds: {}, mean: 0, topPct: 0 };
-  }
+function aggregate(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return emptyStats();
+
+  // Local-dev rows (tagged server-side via requestHost.js) are counted
+  // alongside prod rows so the owner can see how their own submissions
+  // affect the rail while testing. Cleanup is manual: the dev-reset
+  // toolbar's "Clear Cosmos local rows" button hits
+  // /api/v1/dev/clear-local-rows. The tag itself is still useful as
+  // the cleanup selector — don't drop it.
 
   const perCodeFinds = {};
+  const perWrongCode = {};
   const lengths = [];
   let totalCount = 0;
 
@@ -47,6 +49,10 @@ function aggregate(rows) {
     const codes = row.foundCodes || [];
     for (const code of codes) {
       perCodeFinds[code] = (perCodeFinds[code] || 0) + 1;
+    }
+    const wrong = row.wrongCodes || [];
+    for (const code of wrong) {
+      perWrongCode[code] = (perWrongCode[code] || 0) + 1;
     }
     lengths.push(codes.length);
     // Every row for one puzzle should report the same totalCount; we
@@ -72,7 +78,7 @@ function aggregate(rows) {
     : 0;
   const topPct = Math.round((perfect / rows.length) * 100);
 
-  return { totalAttempts: rows.length, perCodeFinds, mean, topPct };
+  return { totalAttempts: rows.length, perCodeFinds, perWrongCode, mean, topPct };
 }
 
 module.exports = { aggregate };

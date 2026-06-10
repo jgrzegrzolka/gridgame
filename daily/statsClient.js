@@ -17,6 +17,7 @@ const ENDPOINT_BASE = '/api/v1/daily/stats/';
  * @typedef {{
  *   totalAttempts: number,
  *   perCodeFinds: Record<string, number>,
+ *   perWrongCode?: Record<string, number>,
  *   mean: number,
  *   topPct: number,
  * }} Stats

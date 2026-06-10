@@ -1,10 +1,11 @@
 import { loadCountries, flagsGamePool } from '../flags/group.js';
-import { t, withLocalizedAliases } from '../i18n.js';
+import { t, withLocalizedAliases, countryName } from '../i18n.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
 import { loadScores, isCompleteRecord } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
 import {
   wireZoom,
+  openZoom,
   showState,
   paintDescription,
   renderResult,
@@ -21,6 +22,7 @@ import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 import { runFinishFlow } from './finishFlow.js';
 import { PROD_SITE_KEY } from './turnstileSiteKey.js';
 import { mountDevReset } from './devReset.js';
+import { pickExtraStats, hasAnyExtraStats, pickMarkerKind } from './extraStats.js';
 
 // Turnstile is soft-disabled across all environments (2026-06-10) after
 // a real user's challenge was rejected by Cloudflare with a 401 on
@@ -50,7 +52,111 @@ function statsLabels() {
     scoreWithAverage: t('daily.stats.scoreWithAverage', 'Your score: {found}/{total} · Average score: {average}/{total}'),
     caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
     loading: t('daily.stats.loading', 'Loading stats'),
+    extraRanking: t('daily.stats.extra.ranking', 'Most recognised:'),
+    extraTopMistake: t('daily.stats.extra.topMistake', 'Most common mistake:'),
   };
+}
+
+/**
+ * Look up a country by 2-letter code in the loaded list. Used by the
+ * extra-stats rail to resolve the flag's localized name for the hover
+ * tooltip. Returns null when the code isn't in our dataset (defensive
+ * — should never fire in practice, since both targets and any wrong
+ * guess come from the same list).
+ *
+ * @param {Country[]} all
+ * @param {string} code
+ */
+function findCountry(all, code) {
+  return all.find((c) => c.code === code) || null;
+}
+
+/**
+ * Build one flag tile for the extra-stats rail. Mirrors the result-page
+ * tile structure (`.find-tile` + `.find-stats-pct` bottom badge) so the
+ * three rail sections render with identical sizing, borders, hover
+ * tooltips and percentage strip as the Znalezione/Pominięte grids above.
+ *
+ * `markerKind` adds a small top-right corner dot — green when the player
+ * found this flag, red when they missed it. null skips the dot.
+ *
+ * @param {{ code: string, pct?: number, count?: number }} item
+ * @param {Country | null} country
+ * @param {'found' | 'missed' | null} markerKind
+ */
+function buildExtraTile(item, country, markerKind) {
+  const li = document.createElement('li');
+  li.className = 'find-tile';
+  if (markerKind === 'found') li.classList.add('is-user-found');
+  else if (markerKind === 'missed') li.classList.add('is-user-missed');
+  li.dataset.code = item.code;
+  li.dataset.name = country ? countryName(country) : item.code.toUpperCase();
+  if (country) li.addEventListener('click', () => openZoom(country));
+  const img = document.createElement('img');
+  img.src = `../flags/svg/${item.code}.svg`;
+  img.alt = li.dataset.name;
+  img.loading = 'lazy';
+  li.appendChild(img);
+  const badge = document.createElement('span');
+  badge.className = 'find-stats-pct';
+  badge.textContent = item.pct !== undefined ? `${item.pct}%` : `×${item.count}`;
+  li.appendChild(badge);
+  return li;
+}
+
+/**
+ * Mount the "Mostly guessed / Most missed / Most common mistake" rail
+ * under the Znalezione/Pominięte sections, matching their h2 + grid
+ * visual pattern. Idempotent — clears the container first so a stats
+ * refetch (post-finish, language switch) doesn't stack rows.
+ *
+ * Each row only renders when its picks list is non-empty; the whole
+ * rail is skipped when all three are empty (no submissions yet, or a
+ * legacy cached response without perWrongCode).
+ *
+ * @param {{ totalAttempts: number, perCodeFinds: Record<string, number>, perWrongCode?: Record<string, number> } | null} stats
+ * @param {Country[]} targets
+ * @param {Country[]} all
+ * @param {Set<string>} userFoundCodes
+ */
+function renderExtraStats(stats, targets, all, userFoundCodes) {
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-extra-stats'));
+  container.innerHTML = '';
+  container.hidden = true;
+
+  if (!stats) return;
+  const targetCodes = new Set(targets.map((c) => c.code));
+  const picks = pickExtraStats({ stats, targetCodes: targets.map((c) => c.code) });
+  if (!hasAnyExtraStats(picks)) return;
+
+  const labels = statsLabels();
+  appendExtraRow(container, labels.extraRanking, picks.ranking, all, targetCodes, userFoundCodes);
+  appendExtraRow(container, labels.extraTopMistake, picks.topMistake, all, targetCodes, userFoundCodes);
+
+  container.hidden = false;
+}
+
+/**
+ * @param {HTMLElement} parent
+ * @param {string} label
+ * @param {Array<{ code: string, pct?: number, count?: number }>} items
+ * @param {Country[]} all
+ * @param {Set<string>} targetCodes
+ * @param {Set<string>} userFoundCodes
+ */
+function appendExtraRow(parent, label, items, all, targetCodes, userFoundCodes) {
+  if (items.length === 0) return;
+  const title = document.createElement('h2');
+  title.className = 'result-section-title';
+  title.textContent = label;
+  parent.appendChild(title);
+  const ul = document.createElement('ul');
+  ul.className = 'find-result-found';
+  for (const item of items) {
+    const marker = pickMarkerKind({ code: item.code, targetCodes, userFoundCodes });
+    ul.appendChild(buildExtraTile(item, findCountry(all, item.code), marker));
+  }
+  parent.appendChild(ul);
 }
 
 /**
@@ -129,7 +235,7 @@ function paintStatsPanel(found, total, stats, opts = {}) {
  * @param {number} found
  * @param {{ bypassCache?: boolean }} [opts]
  */
-async function loadAndPaintStats(n, targets, found, opts = {}) {
+async function loadAndPaintStats(n, targets, found, all, userFoundCodes, opts = {}) {
   const stats = await fetchStats(n, { bypassCache: opts.bypassCache === true });
   if (!stats) {
     // Fetch failed — drop back to score-only (clears any loading
@@ -140,6 +246,7 @@ async function loadAndPaintStats(n, targets, found, opts = {}) {
   paintStatsPanel(found, targets.length, stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
+  renderExtraStats(stats, targets, all, userFoundCodes);
 }
 
 /**
@@ -153,7 +260,7 @@ async function loadAndPaintStats(n, targets, found, opts = {}) {
  * @param {Country[]} targets
  * @param {{ foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }} info
  */
-async function handleFinish(n, targets, info) {
+async function handleFinish(n, targets, all, info) {
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
   const found = info.foundCodes.length;
@@ -188,6 +295,7 @@ async function handleFinish(n, targets, info) {
       paintStatsPanel(found, targets.length, stats);
       applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
       applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
+      renderExtraStats(stats, targets, all, new Set(info.foundCodes));
     },
   });
 }
@@ -249,20 +357,20 @@ export function bootDaily() {
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
-        paintStatsPanel(foundCodes.size, result.targets.length, null);
+        paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
         // Stats panel is gated on Cosmos, not this device's localStorage:
         // always GET, and let the response decide (totalAttempts === 0 →
         // formatScoreLine falls back to score-only, paintStatsPanel skips
         // the caption). This way puzzles you finished on a different
         // device — or before submit-tracking shipped — still show stats.
-        loadAndPaintStats(n, result.targets, foundCodes.size);
+        loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
           paintDescription(result.entry.description);
           renderResult(result.targets, foundCodes);
-          paintStatsPanel(foundCodes.size, result.targets.length, null);
-          loadAndPaintStats(n, result.targets, foundCodes.size);
+          paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
+          loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
         });
         return;
       }
@@ -291,7 +399,7 @@ export function bootDaily() {
       // glitch, network drop, etc) — the player can replay and
       // finally get their result counted.
       const game = startGame(n, category, result.targets, all, {
-        onFinish: (info) => handleFinish(n, result.targets, info),
+        onFinish: (info) => handleFinish(n, result.targets, all, info),
       });
       attachLangRefresh(game, {
         raw,

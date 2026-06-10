@@ -62,7 +62,7 @@
  * the flag tiles themselves is the per-flag breakdown — no separate
  * flag grid. Sits below the Missed list. */
 .daily-stats {
-  margin: 32px 0 0;
+  margin: 52px 0 0;
 }
 .daily-stats-headline {
   font-size: 16px;
@@ -137,6 +137,53 @@
   padding: 2px 4px;
   letter-spacing: 0.04em;
   pointer-events: none;
+}
+
+/* Extra-stats rail sits below the score caption and renders smaller
+ * than the main Znalezione/Pominięte grids — it's secondary signal,
+ * not a third copy of the result. The generous top margin separates
+ * it from the caption, and the smaller grid minmax pulls the tile
+ * size down from 64px to ~48px so the visual weight matches its role. */
+.daily-extra-stats {
+  display: block;
+  margin-top: 16px;
+}
+.daily-extra-stats .find-result-found {
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+}
+.daily-extra-stats .result-section-title {
+  font-size: 12px;
+  margin-top: 18px;
+}
+.daily-extra-stats .result-section-title:first-child {
+  margin-top: 0;
+}
+
+/* Per-player corner marker on the extra-stats rail tiles. The rail
+ * mixes "you got this" and "you missed this" flags across all three
+ * rows — without this dot the player has to scroll back up to the
+ * Znalezione/Pominięte grids to cross-reference each tile. Small
+ * coloured circle in the top-right corner, drawn via the tile's
+ * ::before so we don't need an extra DOM node. The 1px white outline
+ * keeps the dot legible on top of any flag colour. */
+.find-tile.is-user-found::before,
+.find-tile.is-user-missed::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border: 1px solid #000;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 5;
+}
+.find-tile.is-user-found::before {
+  background: #2a8a3a;
+}
+.find-tile.is-user-missed::before {
+  background: #c0392b;
 }
 
 /* Turnstile widget container is invisible by design (size: 'invisible'

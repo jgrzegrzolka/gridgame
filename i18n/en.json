@@ -75,7 +75,11 @@
       "scoreWithAverage": "Your score: {found}/{total} · Average score: {average}/{total}",
       "caption": "% shows how many other players found each flag.",
       "loading": "Loading stats",
-      "noSubmissions": "You're one of the first to play this puzzle."
+      "noSubmissions": "You're one of the first to play this puzzle.",
+      "extra": {
+        "ranking": "Most recognised:",
+        "topMistake": "Most common mistake:"
+      }
     }
   },
   "ttt": {

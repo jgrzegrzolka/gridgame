@@ -75,7 +75,11 @@
       "scoreWithAverage": "Twój wynik: {found}/{total} · Średni wynik: {average}/{total}",
       "caption": "% pokazuje ilu innych graczy odgadło każdą flagę.",
       "loading": "Ładowanie statystyk",
-      "noSubmissions": "Jesteś jednym z pierwszych graczy."
+      "noSubmissions": "Jesteś jednym z pierwszych graczy.",
+      "extra": {
+        "ranking": "Najczęściej rozpoznane:",
+        "topMistake": "Najczęstszy błąd:"
+      }
     }
   },
   "ttt": {
