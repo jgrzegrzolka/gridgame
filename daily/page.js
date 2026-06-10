@@ -13,7 +13,6 @@ import {
   showReason,
 } from './playFlow.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
-import { hasSubmitted } from './submitted.js';
 import { submitResult } from './statsSubmit.js';
 import { fetchStats } from './statsClient.js';
 import { applyFindRatesToTiles } from './statsOverlay.js';
@@ -209,18 +208,19 @@ export function bootDaily() {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
         paintStatsPanel(foundCodes.size, result.targets.length, null);
-        if (hasSubmitted(window.localStorage, n)) {
-          loadAndPaintStats(n, result.targets, foundCodes.size);
-        }
+        // Stats panel is gated on Cosmos, not this device's localStorage:
+        // always GET, and let the response decide (totalAttempts === 0 →
+        // formatScoreLine falls back to score-only, paintStatsPanel skips
+        // the caption). This way puzzles you finished on a different
+        // device — or before submit-tracking shipped — still show stats.
+        loadAndPaintStats(n, result.targets, foundCodes.size);
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
           paintDescription(result.entry.description);
           renderResult(result.targets, foundCodes);
           paintStatsPanel(foundCodes.size, result.targets.length, null);
-          if (hasSubmitted(window.localStorage, n)) {
-            loadAndPaintStats(n, result.targets, foundCodes.size);
-          }
+          loadAndPaintStats(n, result.targets, foundCodes.size);
         });
         return;
       }
