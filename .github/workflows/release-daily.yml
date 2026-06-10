@@ -5,39 +5,27 @@ name: Release next daily puzzle
 # deploy.yml workflow then ships the new live catalog as part of its
 # normal push-to-main run.
 #
-# Reliability model:
+# Trigger source:
 #
-# GitHub Actions cron is best-effort — firings can be 30+ min late,
-# and the platform sometimes skips firings entirely under load. The
-# original design (single 22:00/23:00 UTC firing + strict hour=00
-# Warsaw guard) suffered from both modes: late firings missed the
-# guard window, and skipped firings missed the day entirely.
+# Fired daily at 00:05 Warsaw by an Azure Logic App
+# (logic-yetanotherquiz-release-daily, defined in
+# infra/logicapp-release-daily.bicep) via workflow_dispatch. The
+# Recurrence trigger uses Windows TZ identifier "Central European
+# Standard Time" so it auto-follows DST.
 #
-# Current design:
+# Manual override: `gh workflow run release-daily.yml -f force=true`
+# bypasses the "already released today" guard for double-releases.
 #
-# * **Tight burst of firings** — every 5 min for the first 30 min
-#   after Warsaw midnight (7 attempts). Both DST states covered:
-#   22:00 UTC = Warsaw midnight in summer (UTC+2), 23:00 UTC =
-#   Warsaw midnight in winter (UTC+1). 7 + 7 = 14 firings/night
-#   total, but only one corresponds to the current DST state and
-#   most are absorbed by the dedup guard.
-# * **"Already released today" guard** — instead of checking the
-#   wallclock hour, we ask "has a `daily: release #` commit landed
-#   today in Warsaw time?". If yes, skip; if no, proceed. Removes the
-#   dependency on cron firing punctually — late firings still proceed
-#   as long as today hasn't released yet.
+# The "already released today" guard below stays defensive — re-deploys
+# of the Logic App fire one extra workflow_dispatch at registration time
+# (documented Logic Apps quirk), and the guard catches those cleanly.
 #
-# Net effect: the first firing of the Warsaw day wins; later firings
-# observe "already released" and bail. If the first is skipped, the
-# next catches up. Worst case (all firings skipped) the workflow can
-# still be triggered manually via workflow_dispatch.
+# History: this workflow was originally triggered by GitHub's own
+# `schedule:` cron, which proved unreliable (firings 75–135 min late
+# under load). Moved to an Azure Logic App on 2026-06-10. See
+# FEATURE.md "Feature E" for the full migration story.
 
 on:
-  schedule:
-    # Warsaw midnight in summer (UTC+2): every 5 min for first 30 min
-    - cron: '0,5,10,15,20,25,30 22 * * *'
-    # Warsaw midnight in winter (UTC+1): every 5 min for first 30 min
-    - cron: '0,5,10,15,20,25,30 23 * * *'
   workflow_dispatch:
     inputs:
       force:
