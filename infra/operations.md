@@ -98,6 +98,28 @@ History: FEATURE.md Feature D "2026-06-11 follow-up — redirect rule hardening 
 
 **What to do.** Don't retry endlessly. Cut over to a sibling SWA in a different region per the **recovery playbook in FEATURE.md Feature D** (create the sibling, copy app settings, swap GH deploy token, rebind `www.yetanotherquiz.com`, flip the Cloudflare CNAME).
 
+## Cosmos data migration policy
+
+Every native write into `dailyResults` carries a numeric schema-version field `v` (today `v: 1`, set unconditionally in `api/src/lib/dailyResultDoc.js`). The same policy will extend to every other container we add (`quizRecords`, future `profiles`, `tttResults`, etc.) as Feature F's phases land.
+
+**The contract for any future shape change to `dailyResults`:**
+
+1. Bump the writer's `v` to the new version. Native writes now include the new field with its real value.
+2. Ship a one-off backfill script that reads every row where `v < newVersion`, sets the new field(s) to a sensible default (same default the aggregator already returns on absence, so no behaviour change), sets `backfilled: true` on the touched rows, and bumps the row's `v` to the new version.
+3. The backfill is the F4 pattern — same shape every time, just different default values.
+
+**Why a separate `backfilled: true` marker** (and not just relying on `v`):
+
+A default value (e.g. `wrongCodes: []`) on a backfilled row is structurally indistinguishable from the same value on a native row where the user genuinely had nothing to record. The `backfilled: true` flag preserves that distinction forever — future analytics can choose to include or exclude these rows from any computation where the difference matters (e.g. a "no-wrong-picks rate" probably shouldn't count backfilled rows as confirmed-no-wrong-picks). Asymmetric like `local`: only present on backfilled rows; absence means "native at the row's `v`".
+
+**Aggregator discipline (defense in depth):**
+
+Even with the version field, aggregators should default missing fields rather than assume presence. `v` is for write-side migrations and analytic provenance — not a read-side gate. `api/src/lib/aggregate.js` already follows this: `const wrong = row.wrongCodes || [];` works the same whether the field is absent (pre-#317), `[]` (post-#317 native), or `[]` from a backfill.
+
+**Worked example — what F4 does:**
+
+Three docs from puzzleId=1 predate PR #317 (`feat: capture wrongCodes on every submission`) and have no `wrongCodes` field. They also predate `v: 1` so they have no `v` field at all. F4 backfills them as `wrongCodes: [], backfilled: true, v: 1`. Read-side behaviour doesn't change; the doc shape becomes uniform; the marker tells any future analytic "this `wrongCodes: []` is not a confirmed-no-wrong-picks signal."
+
 ## Where to look for what
 
 - **`../CLAUDE.md`** — project rules and high-level "Hosting" intro for someone new to the repo.

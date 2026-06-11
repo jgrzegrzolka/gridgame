@@ -13,6 +13,12 @@
  *     totalCount:  int                       // size of puzzle's answer set
  *     durationMs:  int
  *     submittedAt: int                       // unix ms
+ *     v:           1                         // schema version — set unconditionally on every native
+ *                                            //   write. Migration playbook: when the shape changes,
+ *                                            //   ship a backfill that fills the new field with a
+ *                                            //   sensible default on prior rows AND sets
+ *                                            //   `backfilled: true` on touched rows. See
+ *                                            //   infra/operations.md "Cosmos data migration policy".
  *     local?:      true                      // OPTIONAL — present only when the server detected a
  *                                            //   localhost request (npm run dev:swa). Aggregator
  *                                            //   filters these out of community stats. Owner-side
@@ -56,6 +62,7 @@ function buildDailyResultDoc({ puzzleId, deviceId, foundCodes, wrongCodes = [], 
     totalCount,
     durationMs,
     submittedAt: now,
+    v: 1,
   };
   if (local === true) doc.local = true;
   return doc;

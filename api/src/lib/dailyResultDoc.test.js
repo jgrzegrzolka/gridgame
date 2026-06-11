@@ -51,8 +51,18 @@ test('missing wrongCodes defaults to [] (forward-compat with older clients)', ()
 
 test('does NOT add fields the schema does not expect', () => {
   const doc = buildDailyResultDoc(input);
-  const expected = ['id', 'puzzleId', 'deviceId', 'foundCodes', 'wrongCodes', 'totalCount', 'durationMs', 'submittedAt'];
+  const expected = ['id', 'puzzleId', 'deviceId', 'foundCodes', 'wrongCodes', 'totalCount', 'durationMs', 'submittedAt', 'v'];
   assert.deepEqual(Object.keys(doc).sort(), expected.sort());
+});
+
+test('schema version v: 1 is set unconditionally on every native write', () => {
+  const doc = buildDailyResultDoc(input);
+  assert.equal(doc.v, 1);
+});
+
+test('schema version is on dev rows too (the v field is independent of the `local` provenance marker)', () => {
+  const doc = buildDailyResultDoc({ ...input, local: true });
+  assert.equal(doc.v, 1);
 });
 
 test('local: true is stored on the doc', () => {
