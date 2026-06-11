@@ -21,30 +21,6 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-### Feature F: Cosmos data discipline + analytics readiness
-
-**Status:** ready to start; no dependencies. Each phase is independently shippable in its own PR.
-
-**Goal:** tighten the Cosmos data hygiene we've accumulated over Features A/B/E, and start capturing a few analytic signals we'd otherwise lose forever — without adding new containers or breaking the "storage scales with users, not engagement" property. Sets the standing migration playbook for every future shape change.
-
-**Why this is a separate feature, not part of B:** Feature B shipped the v1 community-stats data path. This feature is the second-pass cleanup once we've seen real data — none of these items is load-bearing for current UX, but each is cheap now and expensive (or impossible) to do later.
-
-**Phases:**
-
-1. **Bump `dailyResults` throughput 400 → 1000 RU/s.** One `az cosmosdb sql container throughput update` command. Free Tier covers it (account-wide quota is 1000 RU/s; today we provision only 400). Buys headroom before any of the read-RU concerns in `infra/operations.md` start to bite. Zero cost, zero downtime.
-2. **Set `defaultTtl` on `dailyResults` to 1 year** (`31_536_000` seconds). Auto-purges old puzzle data so the container doesn't grow forever. At 10K plays/day × ~500 B/row = ~1.8 GB/year — under the 25 GB Free Tier ceiling for years, no rush, but the policy is cheaper to set now than to retrofit when 8 years of stats are sitting in the way.
-3. **Schema-version policy + `v: 1` on the daily writer.** Add `v: 1` to `buildDailyResultDoc()` so every new row is self-describing. Document the standing migration playbook in `infra/operations.md`: every future `dailyResults` shape change ships a backfill script that fills the new field with a sensible default on prior rows AND sets `backfilled: true` on touched rows. Standing contract becomes "every row has every current field"; provenance stays recoverable forever.
-4. **One-off backfill of pre-v:1 daily rows.** When F4 ran (2026-06-11) 20 rows existed without `v`. Split into two groups by the script: 1 row on puzzleId=1 (deviceId `7012d6ba…`) predates PR #317 and has no `wrongCodes` — backfilled as `wrongCodes: [], backfilled: true, v: 1`. The other 19 rows have `wrongCodes` natively but predate `v: 1` — patched to add `v: 1` only, no `backfilled` marker (no analytical default was filled, so the provenance flag would be misleading). See `scripts/backfill-daily-v1.cjs` and the worked example in `infra/operations.md`.
-5. **Quiz: `attempts` + `lastPlayedAt` per `records[configKey]` in `quizRecords`.** Bump on every finish, PB or not. Switch the `quizRecord` handler from "write only on PB" to "write on every finish". Unlocks future engagement features ("you've played 47 times", "haven't touched south-america:all:sov in 6 weeks") and gives the denominator for "PB on attempt 3 vs PB on attempt 80" — neither reconstructible from current data. RU cost rises ~3× per finish but stays tiny in absolute terms (~10 RU/finish, ~20-30 RU/sec average at 10K users × 20 finishes/day). When F5 ran (2026-06-11) 5 docs (10 sub-entries) existed without `v` — all backfilled with `attempts: 1, lastPlayedAt: submittedAt` per sub-entry, plus doc-level `backfilled: true, v: 1`. See `scripts/backfill-quiz-v1.cjs`.
-
-**Out of scope for Feature F** (each has a reason, deliberately not done):
-
-- **Pre-aggregated `stats:{puzzleId}` doc per puzzle for read performance.** Tempting at scale but premature for that purpose — the 60 s in-process cache on `dailyStats.js` + matching `Cache-Control: max-age=60` keeps the aggregate query to ~once per minute per warm Function instance. Revisit if Free Tier RU pressure shows up. (Note: a per-puzzle snapshot doc *is* planned, but under **Feature I** for long-term retention under F2's TTL — not for read performance. Different motivation, same mechanism.)
-- **Per-pick timestamps on daily.** Discussed and declined — total `durationMs` is fine for now.
-- **`openedFlagsdataDuringPlay` honesty signal.** Detectable via `BroadcastChannel`, but only catches the laziest cheat path (same-browser tabs), so the data isn't trustworthy enough to be useful. Per-play loss is small and bounded. Defer until there's a feature that needs it.
-- **Lifetime totals on `quizRecords`** (`totalAttempts`, `totalScore` at the top level). Derivable as `sum(records[*].attempts)` once F5 lands; don't duplicate.
-- **Per-finish quiz event-log container.** Would break the "one row per device" property and start storage scaling with engagement.
-
 ### Feature H: Identity unification + device profiles
 
 **Status:** ready to start. Phase H1 is a prerequisite for Feature G; H2/H3 can ship independently.
@@ -209,6 +185,27 @@ Items here are not blocking current work but deserve durable memory — the next
 ---
 
 ## Done
+
+### Feature F: Cosmos data discipline + analytics readiness — *shipped 2026-06-11*
+
+**Goal.** Tighten the Cosmos data hygiene we'd accumulated over Features A/B/E, capture a handful of analytic signals we'd otherwise lose forever, and lock in a standing migration playbook for every future shape change — without adding new containers or breaking the "storage scales with users, not engagement" property. Sets the precedent every future Cosmos-touching feature (G/H/Feature I) inherits.
+
+**What shipped (five phases, all 2026-06-11):**
+
+1. **F1 — `dailyResults` throughput 400 → 1000 RU/s.** Free Tier covers it via the account-wide 1000 RU/s quota. Headroom for the read-RU concern flagged in `infra/operations.md`.
+2. **F2 — `dailyResults` `defaultTtl: 31_536_000` (1 year).** Rows auto-purge from `_ts + 1y`. Earliest auto-deletion lands **2027-06-09**; Feature I (parked) must ship before then to preserve per-puzzle aggregates past the TTL.
+3. **F3 — `v: 1` on the daily writer + migration playbook in `infra/operations.md`.** Every native write now self-describes its schema version. The standing migration playbook documents: every future shape change ships a backfill that (a) fills missing analytical fields with sensible defaults, (b) sets `backfilled: true` ONLY when an analytical field was defaulted (not on metadata-only patches), (c) bumps `v`.
+4. **F4 — first exercise of the policy: 20 pre-v:1 `dailyResults` rows backfilled.** 1 row pre-PR-#317 (missing `wrongCodes`) got group-A treatment (`wrongCodes: [], backfilled: true, v: 1`); 19 rows had `wrongCodes` natively → group B (added `v: 1` only, no `backfilled` marker). F4 surfaced the "metadata-only patches don't get `backfilled`" nuance that the policy now captures explicitly.
+5. **F5 — `attempts` + `lastPlayedAt` per `records[configKey]` in `quizRecords`; write-on-every-finish.** Server-side `mergeQuizRecord` no longer short-circuits on non-PB; the `flagQuiz/page.js` client lost its mirroring `if (isNew)` gate (caught during local verification, not by tests — see "honest gaps" in #356). 5 docs / 10 sub-entries backfilled with `attempts: 1, lastPlayedAt: submittedAt`, doc-level `backfilled: true, v: 1`.
+
+**Standing artifacts** (these are the load-bearing outputs future work inherits):
+
+- `infra/operations.md` "Cosmos data migration policy" — the contract every future migration follows.
+- `scripts/backfill-daily-v1.cjs` and `scripts/backfill-quiz-v1.cjs` — the template shape for future backfills: pure `planRow()` exported for testability, idempotent dry-run by default, system fields stripped before upsert.
+
+**Key PRs.** #350 (F1+F2 prod config), #351 (F3 writer + policy doc), #352 (parked **Feature I** — per-puzzle snapshots, hard deadline 2027-06-09 to outlive F2's TTL), #355 (F4 backfill + policy nuance), #356 (F5 writer + handler + client + backfill).
+
+**Out of scope, intentionally deferred** (captured here so they don't drift back in): pre-aggregated `stats:{puzzleId}` for read performance (cache covers it; the retention-driven version is Feature I, different motivation), per-pick timestamps on daily, `openedFlagsdataDuringPlay` honesty signal (BroadcastChannel-based; partial coverage gives illusion of detection), lifetime totals on `quizRecords` (derivable from `sum(records[*].attempts)`), per-finish quiz event-log container (would break the "1 row per device" property).
 
 ### Feature E: Reliable daily-puzzle auto-release via Azure Logic App — *shipped 2026-06-10*
 
