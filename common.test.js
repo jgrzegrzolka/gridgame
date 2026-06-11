@@ -143,7 +143,7 @@ test('wireBurgerDismiss: pages without a burger panel are safe (no-op, no throw)
 });
 
 // ---------------------------------------------------------------------------
-// mountNicknameMenuItem — Feature H2.5 "Your name: ..." link into the burger
+// mountNicknameMenuItem — Feature H2.5 "Nick: ..." link into the burger
 // ---------------------------------------------------------------------------
 
 /**

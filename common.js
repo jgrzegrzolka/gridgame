@@ -134,7 +134,7 @@ export function mountNicknameMenuItem(opts) {
   const label = doc.createElement('span');
   label.className = 'menu-nickname-label';
   label.setAttribute('data-i18n', 'nickname.yourName');
-  label.textContent = 'Your name';
+  label.textContent = 'Nick';
 
   const value = doc.createElement('strong');
   value.className = 'menu-nickname-value';
