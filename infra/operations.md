@@ -37,7 +37,7 @@ All in subscription **`yetanotherquiz`** (`6da299d6-bdfe-4277-a544-ae8ef68f99a0`
 | Name | Type | Region | Role |
 |---|---|---|---|
 | `swa-yetanotherquiz-v3` | Static Web App (Free) | West US 2 | Serves the site + bundled Functions. Hostname `wonderful-ground-01bf3091e.7.azurestaticapps.net`. |
-| `cosmos-yetanotherquiz-jg` | Cosmos DB NoSQL (Free tier ON) | West Europe | `dailyResults` container — one row per (puzzle, deviceId) submission. |
+| `cosmos-yetanotherquiz-jg` | Cosmos DB NoSQL (Free tier ON) | West Europe | `dailyResults` container — one row per (puzzle, deviceId) submission. Provisioned at **1000 RU/s manual** (Free Tier covers it via the account-wide 1000 RU/s quota). `defaultTtl: 31_536_000` (1 year) — rows auto-purge from `_ts + 1y`, set 2026-06-11 per FEATURE.md Feature F. |
 | `logic-yetanotherquiz-release-daily` | Logic App (Consumption) | West Europe | 00:05 Warsaw daily cron that POSTs `workflow_dispatch` to `release-daily.yml`. Replaces flaky GH cron. Template: `logicapp-release-daily.bicep`. |
 
 Outside Azure:
