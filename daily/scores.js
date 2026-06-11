@@ -112,3 +112,46 @@ export function formatScore(score) {
 export function isCompleteRecord(score) {
   return !!score && Array.isArray(score.c);
 }
+
+/**
+ * One-shot migrations applied to a loaded scores blob. Pure — returns
+ * a new object and a `changed` flag; the store wrapper below persists.
+ *
+ * Current migrations:
+ * - puzzle1_add_li (2026-06-11): puzzle #1 grew from 9 to 10 answers
+ *   when Liechtenstein joined (filter refined with `motif:!coat-of-arms`
+ *   after we tagged the 8 European COA-cross flags with `cross`). Past
+ *   players' records have `t: 9` and `c` without `"li"` — credit them
+ *   with the bonus answer so their archive score doesn't appear to
+ *   regress. Trigger `t === 9` is itself the idempotency marker: a
+ *   migrated record has `t === 10` and never matches again.
+ *
+ * @param {DailyScores} scores
+ * @returns {{ scores: DailyScores, changed: boolean }}
+ */
+export function applyScoreMigrations(scores) {
+  let changed = false;
+  const next = { ...scores };
+  const p1 = next[1];
+  if (p1 && p1.t === 9) {
+    const c = Array.isArray(p1.c) ? [...p1.c] : [];
+    if (!c.includes('li')) c.push('li');
+    next[1] = { f: p1.f + 1, t: 10, c };
+    changed = true;
+  }
+  return { scores: next, changed };
+}
+
+/**
+ * Load, migrate, persist if anything changed. Call once at page boot.
+ *
+ * @param {{ getItem(key: string): string | null, setItem(key: string, value: string): void }} store
+ */
+export function migrateScores(store) {
+  try {
+    const { scores, changed } = applyScoreMigrations(loadScores(store));
+    if (changed) store.setItem(STORAGE_KEY, JSON.stringify(scores));
+  } catch {
+    // localStorage may throw in private mode / zero quota; degrade silently.
+  }
+}

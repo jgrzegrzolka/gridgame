@@ -1,7 +1,7 @@
 import { loadCountries, flagsGamePool } from '../flags/group.js';
 import { t, withLocalizedAliases, countryName } from '../i18n.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
-import { loadScores, isCompleteRecord } from './scores.js';
+import { loadScores, isCompleteRecord, migrateScores } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
 import {
   wireZoom,
@@ -314,6 +314,7 @@ async function handleFinish(n, targets, all, info) {
 export function bootDaily() {
   wireZoom();
   mountDevReset();
+  migrateScores(window.localStorage);
 
   const numEl = /** @type {HTMLElement} */ (document.getElementById('daily-n'));
   const isReplay = isReplayFromUrl(window.location.search);

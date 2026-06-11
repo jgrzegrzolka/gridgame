@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadScores, saveScore, formatScore, isCompleteRecord } from './scores.js';
+import { loadScores, saveScore, formatScore, isCompleteRecord, applyScoreMigrations, migrateScores } from './scores.js';
 
 function fakeStore(initial = {}) {
   /** @type {Map<string, string>} */
@@ -131,4 +131,58 @@ test('isCompleteRecord is true when c is present', () => {
   assert.equal(isCompleteRecord(undefined), false);
   assert.equal(isCompleteRecord({ f: 3, t: 9 }), false);
   assert.equal(isCompleteRecord({ f: 3, t: 9, c: ['fi'] }), true);
+});
+
+test('applyScoreMigrations: puzzle1_add_li credits past 9/9 finishers with li', () => {
+  const { scores, changed } = applyScoreMigrations({
+    1: { f: 9, t: 9, c: ['ch', 'dk', 'fi', 'gb', 'gr', 'is', 'mt', 'no', 'se'] },
+  });
+  assert.equal(changed, true);
+  assert.equal(scores[1].f, 10);
+  assert.equal(scores[1].t, 10);
+  assert.ok(scores[1].c.includes('li'));
+});
+
+test('applyScoreMigrations: puzzle1_add_li credits partial finishers too (7/9 → 8/10)', () => {
+  const { scores } = applyScoreMigrations({
+    1: { f: 7, t: 9, c: ['ch', 'dk', 'fi', 'gb', 'gr', 'is', 'mt'] },
+  });
+  assert.equal(scores[1].f, 8);
+  assert.equal(scores[1].t, 10);
+  assert.ok(scores[1].c.includes('li'));
+});
+
+test('applyScoreMigrations: skipped record without c still gets credit', () => {
+  const { scores, changed } = applyScoreMigrations({ 1: { f: 5, t: 9 } });
+  assert.equal(changed, true);
+  assert.equal(scores[1].t, 10);
+  assert.deepEqual(scores[1].c, ['li']);
+});
+
+test('applyScoreMigrations: already-migrated record is left alone', () => {
+  const before = { 1: { f: 10, t: 10, c: ['ch', 'dk', 'fi', 'gb', 'gr', 'is', 'li', 'mt', 'no', 'se'] } };
+  const { changed } = applyScoreMigrations(before);
+  assert.equal(changed, false);
+});
+
+test('applyScoreMigrations: no #1 record → no-op', () => {
+  const { changed } = applyScoreMigrations({ 5: { f: 3, t: 7 } });
+  assert.equal(changed, false);
+});
+
+test('migrateScores persists when migration applies', () => {
+  const store = fakeStore({
+    'daily.scores': JSON.stringify({ 1: { f: 9, t: 9, c: ['ch', 'dk', 'fi', 'gb', 'gr', 'is', 'mt', 'no', 'se'] } }),
+  });
+  migrateScores(store);
+  const after = loadScores(store);
+  assert.equal(after[1].t, 10);
+  assert.ok(after[1].c.includes('li'));
+});
+
+test('migrateScores does not write when nothing changed', () => {
+  const store = fakeStore({ 'daily.scores': JSON.stringify({ 5: { f: 3, t: 7 } }) });
+  const before = store._map.get('daily.scores');
+  migrateScores(store);
+  assert.equal(store._map.get('daily.scores'), before);
 });

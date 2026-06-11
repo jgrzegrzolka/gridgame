@@ -166,13 +166,14 @@ function find(catalog, n) {
   return e;
 }
 
-test('calibration: live #1 Europe + cross lands very easy (≈1.2, range 1.0-1.4)', () => {
-  // 9 European flags, 7 at nm=1 (incl. Greece), 2 at nm=2 (Iceland, Malta).
-  // mean = 1.22, no outlier (max-mean = 0.78 < 1.5 threshold),
-  // size 9 → bucket 4-15 → +0, tokens=2 → +0. Score == mean.
+test('calibration: live #1 Europe + cross lands easy (≈1.5, range 1.3-1.7)', () => {
+  // 10 European flags: 7 at nm=1, 2 at nm=2 (Iceland, Malta), 1 at nm=3
+  // (Liechtenstein — added 2026-06-11 when we tagged li with `cross` and
+  // refined the filter with `motif:!coat-of-arms`). mean = 1.4, outlier
+  // bump from max=3 (li) above mean. Range widened from [1.0, 1.4].
   const r = scoreEntry(find(LIVE, 1), BY_CODE);
-  assert.ok(r.score >= 1.0 && r.score <= 1.4,
-    `Europe + cross score ${r.score.toFixed(2)} outside [1.0, 1.4] — formula or country data drifted`);
+  assert.ok(r.score >= 1.3 && r.score <= 1.7,
+    `Europe + cross score ${r.score.toFixed(2)} outside [1.3, 1.7] — formula or country data drifted`);
 });
 
 test('calibration: live #3 EU members lands easy-but-big (≈1.8, range 1.5-2.2)', () => {

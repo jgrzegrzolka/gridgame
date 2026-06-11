@@ -1,6 +1,6 @@
 import { t } from '../i18n.js';
 import { todayN } from '../flags/daily.js';
-import { loadScores } from './scores.js';
+import { loadScores, migrateScores } from './scores.js';
 import { renderArchiveSquare, refreshSquareCriteria } from './squares.js';
 import { mountDevReset } from './devReset.js';
 
@@ -8,6 +8,7 @@ import { mountDevReset } from './devReset.js';
 
 export function bootArchive() {
   mountDevReset();
+  migrateScores(window.localStorage);
   const listEl = /** @type {HTMLElement} */ (document.getElementById('archive-list'));
   const scores = loadScores(window.localStorage);
 

@@ -1,7 +1,7 @@
 [
   {
     "n": 1,
-    "filter": "continent:Europe,motif:cross",
+    "filter": "continent:Europe,motif:cross,motif:!coat-of-arms",
     "answers": [
       "ch",
       "dk",
@@ -9,6 +9,7 @@
       "gb",
       "gr",
       "is",
+      "li",
       "mt",
       "no",
       "se"

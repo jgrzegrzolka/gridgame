@@ -87,6 +87,19 @@ Items here are not blocking current work but deserve durable memory — the next
 
 **Out of scope even for Feature C:** usernames, email, profile pages, social features. The passkey is the only piece of identity.
 
+### Cleanup: remove the puzzle #1 → Liechtenstein migration
+
+**Status:** parked until ~2026-07-11. **Trigger to act:** ~30 days after 2026-06-11, once every active player has loaded the daily page at least once and had their `daily.scores` patched by `migrateScores()`.
+
+**What to remove:**
+- `applyScoreMigrations` + `migrateScores` in `daily/scores.js` (and the calls from `daily/page.js` + `daily/archive.js`).
+- The associated tests in `daily/scores.test.js`.
+- `scripts/backfill-puzzle1-add-li.cjs` + its test (one-shot Cosmos script that should already have been run with `--apply` by the time this cleanup happens).
+
+**What stays:** the puzzle data itself — `daily/daily_puzzles.json` #1 (10 answers including `li`), the `cross` motif on the 8 European COA-cross flags in `flags/countries.json`, and the `motif:!coat-of-arms` token on the #1 filter. Those are the durable change; the migration is just scaffolding for the trust transition.
+
+**Why parked:** a player who hasn't visited in a month is unlikely to come back and notice their score regress from "9/9" to "9/10". The migration is cheap to keep around but adds boot-time overhead and a test surface we don't need forever. Removing in a month gives long-tail returners a window without leaving the code permanently fatter.
+
 ### Feature J: Platform decision — keep SWA Free, upgrade SWA, or migrate to CF Pages
 
 **Status:** decision pending. Worker proxy (`infra/edge-proxy/`) keeps SWA Free usable in the meantime — this isn't blocking, but the question keeps re-surfacing every time SWA misbehaves.
