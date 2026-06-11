@@ -20,11 +20,114 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
+### Feature F: Cosmos data discipline + analytics readiness
+
+**Status:** ready to start; no dependencies. Each phase is independently shippable in its own PR.
+
+**Goal:** tighten the Cosmos data hygiene we've accumulated over Features A/B/E, and start capturing a few analytic signals we'd otherwise lose forever — without adding new containers or breaking the "storage scales with users, not engagement" property. Sets the standing migration playbook for every future shape change.
+
+**Why this is a separate feature, not part of B:** Feature B shipped the v1 community-stats data path. This feature is the second-pass cleanup once we've seen real data — none of these items is load-bearing for current UX, but each is cheap now and expensive (or impossible) to do later.
+
+**Phases:**
+
+1. **Bump `dailyResults` throughput 400 → 1000 RU/s.** One `az cosmosdb sql container throughput update` command. Free Tier covers it (account-wide quota is 1000 RU/s; today we provision only 400). Buys headroom before any of the read-RU concerns in `infra/operations.md` start to bite. Zero cost, zero downtime.
+2. **Set `defaultTtl` on `dailyResults` to 1 year** (`31_536_000` seconds). Auto-purges old puzzle data so the container doesn't grow forever. At 10K plays/day × ~500 B/row = ~1.8 GB/year — under the 25 GB Free Tier ceiling for years, no rush, but the policy is cheaper to set now than to retrofit when 8 years of stats are sitting in the way.
+3. **Schema-version policy + `v: 1` on the daily writer.** Add `v: 1` to `buildDailyResultDoc()` so every new row is self-describing. Document the standing migration playbook in `infra/operations.md`: every future `dailyResults` shape change ships a backfill script that fills the new field with a sensible default on prior rows AND sets `backfilled: true` on touched rows. Standing contract becomes "every row has every current field"; provenance stays recoverable forever.
+4. **One-off backfill of 3 pre-#317 daily rows.** Three submissions on puzzleId=1 predate PR #317 (`feat: capture wrongCodes on every submission`) and have no `wrongCodes` field at all. Backfill with `wrongCodes: []` + `backfilled: true` per the policy from F3. Validates the playbook on the smallest possible migration.
+5. **Quiz: `attempts` + `lastPlayedAt` per `records[configKey]` in `quizRecords`.** Bump on every finish, PB or not. Switch the `quizRecord` handler from "write only on PB" to "write on every finish". Unlocks future engagement features ("you've played 47 times", "haven't touched south-america:all:sov in 6 weeks") and gives the denominator for "PB on attempt 3 vs PB on attempt 80" — neither reconstructible from current data. RU cost rises ~3× per finish but stays tiny in absolute terms (~10 RU/finish, ~20-30 RU/sec average at 10K users × 20 finishes/day).
+
+**Out of scope for Feature F** (each has a reason, deliberately not done):
+
+- **Pre-aggregated `stats:{puzzleId}` doc per puzzle.** Tempting at scale but premature — the 60 s in-process cache on `dailyStats.js` + matching `Cache-Control: max-age=60` keeps the aggregate query to ~once per minute per warm Function instance. Revisit if Free Tier RU pressure shows up.
+- **Per-pick timestamps on daily.** Discussed and declined — total `durationMs` is fine for now.
+- **`openedFlagsdataDuringPlay` honesty signal.** Detectable via `BroadcastChannel`, but only catches the laziest cheat path (same-browser tabs), so the data isn't trustworthy enough to be useful. Per-play loss is small and bounded. Defer until there's a feature that needs it.
+- **Lifetime totals on `quizRecords`** (`totalAttempts`, `totalScore` at the top level). Derivable as `sum(records[*].attempts)` once F5 lands; don't duplicate.
+- **Per-finish quiz event-log container.** Would break the "one row per device" property and start storage scaling with engagement.
+
+### Feature H: Identity unification + device profiles
+
+**Status:** ready to start. Phase H1 is a prerequisite for Feature G; H2/H3 can ship independently.
+
+**Goal:** one stable identity per browser (today there are two — `gridgame.deviceId` for daily, `gridgame.player.id` for TTT online), with the option to self-attach a nickname stored server-side. Still anonymous — no account, no cross-device link. That's Feature C's job.
+
+**Three-layer identity model** (defines what's in which feature):
+
+- **Layer 0 — anonymous deviceId.** One UUID per browser in localStorage. The today's-state baseline.
+- **Layer 1 — device profile** *(this feature)*. The deviceId gains a nickname + maybe metadata, stored server-side keyed by deviceId. The user can set "Alice" on their browser and the daily community stats or the TTT lobby can surface it. Still anonymous, no account.
+- **Layer 2 — user account** *(Feature C)*. Multiple deviceIds linked under one userId via passkey (or alternative). Cross-device merge.
+
+Each layer is additive. Users can stay at L0, opt up to L1, opt up further to L2 — none of it forced.
+
+**Why this is a separate feature, not part of C:** Feature C is the *account / linking* piece — the "this phone and this laptop are the same person" mechanism. Feature H is the *device-level personalisation* piece that exists at L1 regardless of whether the user ever takes the L2 step. C will graft accounts onto the profile that H ships.
+
+**Phases:**
+
+1. **H1 — unify `gridgame.player.id` → `gridgame.deviceId` in the client.** One-time migration on first load post-deploy. If both keys exist, drop `gridgame.player.id`, keep `gridgame.deviceId` as canonical. If only player.id exists, copy its value into `gridgame.deviceId` and drop player.id. PartyKit server-side code already takes `?pid=` from the URL and doesn't care what the value represents, just that it's stable — no PartyKit code change needed. Unblocks Feature G.
+2. **H2 — `profiles` Cosmos container + nickname UI.** New container, partition key `/deviceId`, doc `{ id: deviceId, deviceId, nickname, createdAt, updatedAt, v: 1 }`. New endpoint `PUT /api/v1/profile` (anonymous, rate-limited, Turnstile-gated like daily). Client UI: small "set nickname" affordance in the burger panel. Nickname is optional and editable — null = "anonymous device".
+3. **H3 — surface nicknames downstream.** Daily community-stats panel shows "Alice scored 67%" instead of just "67%". TTT online lobby shows "waiting for Bob". `extraStats.js` and `ticTacToe/page.js` are the touch points.
+
+**Out of scope for Feature H** (each declined deliberately):
+
+- **UA / browser / screen / locale fingerprint storage.** Privacy hygiene — collecting fingerprintable data on anonymous users without a feature that needs it is a smell. The Function App access logs already capture UA for debug purposes. Re-add the field when a feature genuinely needs it, not preemptively.
+- **Cross-device linking.** That's Feature C, fundamentally a different layer.
+- **Username uniqueness / display-name moderation.** Nicknames are display-only and may collide. If two devices both pick "Alice", both can have it. Worry about uniqueness only if profanity / impersonation become real problems.
+
+### Feature G: TTT online — capture game results in Cosmos
+
+**Status:** ready to start *after* Feature H1 lands (deviceId unification). Can be sketched in parallel.
+
+**Goal:** persist every online TTT game outcome so we can later compute per-player matchup stats, leaderboards, head-to-head records, and other "device-to-device scoring" features. Today nothing about an online TTT game is persisted server-side once the PartyKit Durable Object is evicted.
+
+**Storage decision:** Cosmos via the existing SWA backend (new `POST /api/v1/ttt/result` endpoint), client-POST after the `finished` effect arrives. Considered and rejected: PartyKit storage (would fragment analytic surface), server-POST from PartyKit → SWA (couples deploys, needs auth). Client-POST matches the daily pattern and stays inside Free Tier.
+
+**Doc shape — `tttResults` container, partition key `/deviceId`, two rows per game:**
+
+```
+{
+  id:           "<gameId>:<deviceId>",   // unique per (game, perspective)
+  gameId:       string,                  // UUID minted server-side at game start, broadcast to both clients
+  deviceId:     string,                  // partition key — THIS player's id
+  opponentId:   string,                  // the other player's deviceId
+  mode:         "3x3" | "9x9",
+  role:         "X" | "O",
+  outcome:      "win" | "loss" | "draw" | "gave_up" | "opponent_gave_up",
+  movesCount:   int,
+  durationMs:   int,
+  startedAt:    int,                     // unix ms
+  finishedAt:   int,
+  v:            1,
+}
+```
+
+**Why two rows per game (one per perspective):** the use case is per-device aggregation ("all of A's games", "A's head-to-head record vs. B"). Partitioning by `deviceId` and duplicating gives single-partition queries for both. 2× the writes and storage, but at ~200 B/row and low TTT volume the cost is rounding noise. Single-row-per-game partitioned by `gameId` would make every per-device query cross-partition; not worth optimizing storage at the cost of query RU.
+
+**Plan:**
+
+1. PartyKit server mints a `gameId` (UUID) when a fresh room starts and broadcasts it in the initial state so both clients know it.
+2. Both clients POST their perspective to `/api/v1/ttt/result` after the `finished` effect arrives in `onlineClient.js`. Fire-and-forget; failures don't block the UI.
+3. New `api/src/functions/tttResult.js` validates the payload, dedupes by `id`, inserts into `tttResults`. Rate-limited + Turnstile-gated like `dailyResult`.
+4. Container provisioned at 400 RU/s (same as other containers) on Free Tier.
+
+**Server-side trust:** the two clients independently report the same outcome. Mismatches (Alice says "win" while Bob also says "win") are detectable but not initially blocked — store both, log mismatches for analysis. If cheating becomes visible later, escalate to a PartyKit-signed `finished` payload that the SWA endpoint validates against PartyKit's public key.
+
+**Out of scope for Feature G** (each declined deliberately):
+
+- **Per-move sequence / board state.** Game replay/analysis is a feature that doesn't exist; defer. Reconstructible from move sequence the day we want it, until then skip the bytes.
+- **Rematch chain** (whether this game was a rematch of game X). Interesting but defer.
+- **Spectator / observer roles.** Not currently a feature.
+- **Anti-cheat hardening beyond rate limit.** See "Server-side trust" above.
+
+---
+
 ### Feature C: Cross-device identity via WebAuthn passkey
 
 **Status:** parked. Don't start until Feature B is fully shipped and there's actual demand for cross-device stats.
 
 **Goal:** an existing user can opt-in to "save my progress across devices" with one click + Face ID / Touch ID / Windows Hello. From that point on, their stats follow them between phone, laptop, and any other browser-connected device — without registering, without a password, without an email field.
+
+**Relationship to Feature H:** Feature H ships the device-profile layer (L1 — anonymous deviceId + nickname). Feature C is the user-account layer (L2 — multiple deviceIds linked under one userId). When C comes off the parking brake, H's `profiles` container and unified deviceId already exist; C grafts accounts on top via a separate `users` container that links N profiles together. The auth mechanism (passkey vs. recovery code vs. QR handshake vs. magic link) is the open design call to be made when C starts; see the discussion below.
+
+**Partition-key flag for when C lands:** `dailyResults` is partitioned by `/puzzleId`, not by `/deviceId`. The current per-puzzle community-stats query is single-partition and cheap. The "lifetime stats per linked identity" query C implies ("show me my stats across every puzzle I've ever played, merged across my linked devices") is fundamentally cross-partition — it needs every `puzzleId` partition scanned and filtered by the device's identityId. This is acceptable for cache-friendly aggregates but worth designing for explicitly when C lands: either a pre-aggregated `lifetime:{identityId}` doc maintained on each submission, or accepting a one-time cross-partition scan + edge cache. Don't try to change the `dailyResults` partition key retroactively — keep the lifetime view as a separate read path.
 
 **Why this is a separate feature, not part of B:** identity is not the value prop of the daily stats. v1's anonymous UUID covers ~95% of what the stats UX needs. Passkeys are the right answer the day cross-device starts mattering — but doing them at the same time as the stats feature would balloon both the scope and the risk.
 
