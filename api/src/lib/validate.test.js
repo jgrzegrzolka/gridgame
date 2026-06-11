@@ -437,3 +437,37 @@ test('validateTttResultBody: outcome must be win / loss / draw — anything else
     assert.equal(validateTttResultBody(b).ok, true, `expected ${good} accepted`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// validateDeviceIdParam — used by GET /api/v1/profile + GET /api/v1/ttt/result
+// ---------------------------------------------------------------------------
+
+const { validateDeviceIdParam } = require('./validate');
+
+test('validateDeviceIdParam: accepts a length-in-range string and echoes it as value', () => {
+  const r = validateDeviceIdParam('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'invalid_id');
+  assert.deepEqual(r, { ok: true, value: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' });
+});
+
+test('validateDeviceIdParam: returns the caller-supplied error code on failure', () => {
+  // The caller picks the field name (`invalid_id`, `invalid_deviceId`,
+  // `invalid_opponentId`) so the same validator can serve every endpoint.
+  assert.deepEqual(validateDeviceIdParam('short', 'invalid_id'),
+    { ok: false, error: 'invalid_id' });
+  assert.deepEqual(validateDeviceIdParam('short', 'invalid_opponentId'),
+    { ok: false, error: 'invalid_opponentId' });
+});
+
+test('validateDeviceIdParam: rejects null / undefined / non-string inputs', () => {
+  for (const bad of [null, undefined, 42, {}, []]) {
+    assert.deepEqual(validateDeviceIdParam(/** @type {any} */ (bad), 'invalid_id'),
+      { ok: false, error: 'invalid_id' });
+  }
+});
+
+test('validateDeviceIdParam: enforces both length bounds', () => {
+  assert.equal(validateDeviceIdParam('a'.repeat(7), 'invalid_id').ok, false);
+  assert.equal(validateDeviceIdParam('a'.repeat(8), 'invalid_id').ok, true);
+  assert.equal(validateDeviceIdParam('a'.repeat(64), 'invalid_id').ok, true);
+  assert.equal(validateDeviceIdParam('a'.repeat(65), 'invalid_id').ok, false);
+});

@@ -91,6 +91,7 @@
     }
   },
   "ttt": {
+    "matchupVs": "vs",
     "title": "Yet Another Quiz — Kółko i krzyżyk z flagami państw",
     "offlineTitle": "Yet Another Quiz — Kółko i krzyżyk offline",
     "variant3x3": "3×3",
