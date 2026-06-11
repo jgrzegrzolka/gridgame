@@ -107,21 +107,16 @@
   margin: 0 0 4px;
 }
 .role-line .muted { color: #666; }
-/* Matchup line — "vs <Opponent>" optionally followed by the running
- * head-to-head score "· 3 — 2". Populated client-side once peerId is
- * known (welcome / peer-joined) and refreshed after each finished
- * result. Sits between the role badge and the status line so it reads
- * as "this is who I'm playing" context. Hidden when there's no peer
- * yet (lobby state). */
-.matchup-line {
-  font-size: 14px;
-  color: #666;
-  margin: 0 0 4px;
-  min-height: 18px;
-}
-.matchup-line .matchup-name { color: var(--link-color); font-weight: 500; }
-.matchup-line .matchup-score { color: #1c1c1c; font-weight: 500; }
-.matchup-line .matchup-sep { margin: 0 6px; color: #aaa; }
+/* Inline matchup affordance — "· vs <Opponent>" sits right next to
+ * the role badge, so the role line reads "You are O · vs Alice".
+ * Populated client-side once peerId is known (welcome / peer-joined);
+ * empty content (no peer yet, or fetch still pending) means the span
+ * collapses and the role line reads as it always did. The head-to-head
+ * score that would naturally live here is intentionally not rendered
+ * yet — see FEATURE.md Feature H3 status. */
+.matchup-opponent { color: #666; }
+.matchup-opponent .matchup-sep { margin: 0 6px; color: #aaa; }
+.matchup-opponent .matchup-name { color: var(--link-color); font-weight: 500; }
 .status-line {
   font-size: 14px;
   color: #666;

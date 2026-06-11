@@ -23,7 +23,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ### Feature H: Identity unification + device profiles
 
-**Status:** H1 shipped 2026-06-11 (#359). H2 shipped 2026-06-11 (#360, soft-disabled). H2.5 shipped (#361 — `/profile/` page + deterministic defaults). **H3 in flight (TTT side only)** — TTT online room shows the opponent's name and a running head-to-head score in a new "matchup line" between the role badge and the status line; powered by new `GET /api/v1/profile?id=…` (one device's nickname) + `GET /api/v1/ttt/result?deviceId=…&opponentId=…` (one head-to-head row). Daily side of H3 deliberately deferred — no per-player surface exists today, would need a new UI element (leaderboard or similar); revisit when the demand is felt.
+**Status:** H1 shipped 2026-06-11 (#359). H2 shipped 2026-06-11 (#360, soft-disabled). H2.5 shipped (#361 — `/profile/` page + deterministic defaults). **H3 in flight (TTT side only)** — TTT online room shows "· vs <opponent>" inline next to the role badge once `peerId` is known. Powered by new `GET /api/v1/profile?id=…` (one device's nickname). The head-to-head **score** display ("3 — 2") is deliberately not rendered yet — backend is fully wired (`GET /api/v1/ttt/result?deviceId=…&opponentId=…` returns the row; `fetchTttPair` helper + tests in place) but the UI is on hold until the design is signed off. Daily side of H3 also deferred — no per-player surface exists today.
 
 **Goal:** one stable identity per browser (today there are two — `gridgame.deviceId` for daily, `gridgame.player.id` for TTT online), with the option to self-attach a nickname stored server-side. Still anonymous — no account, no cross-device link. That's Feature C's job.
 

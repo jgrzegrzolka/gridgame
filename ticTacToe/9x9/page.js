@@ -16,7 +16,6 @@ import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
 import { submitTttResult } from '../../flags/tttResultSubmit.js';
 import { fetchProfile } from '../../flags/profileFetch.js';
-import { fetchTttPair } from '../../flags/tttPairFetch.js';
 import { displayNickname } from '../../flags/nickname.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
@@ -91,7 +90,7 @@ function runOnline(countries) {
   const shareBtnEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('share-link'));
   const roleBadgeEl = document.getElementById('role-badge');
   const statusEl = document.getElementById('status-line');
-  const matchupLineEl = document.getElementById('matchup-line');
+  const matchupOpponentEl = document.getElementById('matchup-opponent');
   const gridBodyEl = document.getElementById('grid-body');
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
@@ -111,9 +110,6 @@ function runOnline(countries) {
   /** @type {string | null | undefined} */
   let opponentNickname;
   let opponentFetchInFlight = false;
-  /** @type {import('../../flags/tttPairFetch.js').TttPairRow | null} */
-  let headToHead = null;
-  let pairFetchInFlight = false;
   const colHeaderEls = document.querySelectorAll('.col-header');
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
   const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
@@ -240,8 +236,8 @@ function runOnline(countries) {
       renderGrid();
       renderStatus();
     }
-    maybeFetchOpponentAndPair();
-    renderMatchupLine();
+    maybeFetchOpponent();
+    renderMatchupOpponent();
     for (const effect of effects) {
       if (effect.type === 'shake') shakeCell(effect.bigRow, effect.bigCol, effect.smallRow, effect.smallCol);
       else if (effect.type === 'gave-up') lastGaveUpByMe = effect.byMe;
@@ -274,9 +270,8 @@ function runOnline(countries) {
     lastStatusKey = null;
     prevGame = null;
     opponentNickname = undefined;
-    headToHead = null;
     resultSubmittedForGame = false;
-    if (matchupLineEl) { matchupLineEl.replaceChildren(); matchupLineEl.hidden = true; }
+    if (matchupOpponentEl) matchupOpponentEl.replaceChildren();
   }
 
   // ---- Grid (built once, on welcome) ----
@@ -772,66 +767,36 @@ function runOnline(countries) {
     else if (game.winner) outcome = 'loss';
     if (!outcome) return;
     resultSubmittedForGame = true;
-    submitTttResult({ deviceId, opponentId: peerId, mode: '9x9', outcome })
-      .then((r) => { void r; refreshHeadToHead(); });
+    void submitTttResult({ deviceId, opponentId: peerId, mode: '9x9', outcome });
   }
 
-  /** Mirror of the 3×3 page's matchup wiring — see ../page.js. */
-  function maybeFetchOpponentAndPair() {
+  /** Mirror of the 3×3 page — see ../page.js. */
+  function maybeFetchOpponent() {
     if (!state.peerId) return;
-    if (opponentNickname === undefined && !opponentFetchInFlight) {
-      opponentFetchInFlight = true;
-      fetchProfile({ deviceId: state.peerId }).then((r) => {
-        opponentNickname = r.ok ? r.nickname : null;
-        opponentFetchInFlight = false;
-        renderMatchupLine();
-      });
-    }
-    if (headToHead === null && !pairFetchInFlight) refreshHeadToHead();
-  }
-
-  function refreshHeadToHead() {
-    if (!state.peerId || pairFetchInFlight) return;
-    pairFetchInFlight = true;
-    fetchTttPair({ deviceId, opponentId: state.peerId }).then((r) => {
-      if (r.ok) headToHead = r.row;
-      pairFetchInFlight = false;
-      renderMatchupLine();
+    if (opponentNickname !== undefined || opponentFetchInFlight) return;
+    opponentFetchInFlight = true;
+    fetchProfile({ deviceId: state.peerId }).then((r) => {
+      opponentNickname = r.ok ? r.nickname : null;
+      opponentFetchInFlight = false;
+      renderMatchupOpponent();
     });
   }
 
-  function renderMatchupLine() {
-    if (!matchupLineEl) return;
-    matchupLineEl.replaceChildren();
-    if (!state.peerId) { matchupLineEl.hidden = true; return; }
+  function renderMatchupOpponent() {
+    if (!matchupOpponentEl) return;
+    matchupOpponentEl.replaceChildren();
+    if (!state.peerId) return;
 
+    const sep = document.createElement('span');
+    sep.className = 'matchup-sep';
+    sep.textContent = '·';
     const vs = document.createElement('span');
     vs.className = 'muted';
     vs.textContent = t('ttt.matchupVs', 'vs');
     const name = document.createElement('span');
     name.className = 'matchup-name';
     name.textContent = displayNickname(state.peerId, opponentNickname);
-    matchupLineEl.append(vs, ' ', name);
-
-    if (headToHead) {
-      const { wins, losses, draws } = headToHead.m9x9;
-      if (wins + losses + draws > 0) {
-        const sep = document.createElement('span');
-        sep.className = 'matchup-sep';
-        sep.textContent = '·';
-        const score = document.createElement('span');
-        score.className = 'matchup-score';
-        score.textContent = `${wins} — ${losses}`;
-        matchupLineEl.append(sep, score);
-        if (draws > 0) {
-          const drawsSpan = document.createElement('span');
-          drawsSpan.className = 'muted';
-          drawsSpan.textContent = ` ·${draws}`;
-          matchupLineEl.append(drawsSpan);
-        }
-      }
-    }
-    matchupLineEl.hidden = false;
+    matchupOpponentEl.append(sep, vs, ' ', name);
   }
 
   /**
