@@ -111,7 +111,7 @@ test('small puzzle (<5 targets) is fine: ranking surfaces all of them', () => {
   assert.deepEqual(r.topMistake, [{ code: 'ua', count: 6 }]);
 });
 
-test('top mistake: highest-count wrong-clicked flag', () => {
+test('top mistake: highest-count wrong-clicked flag leads the list', () => {
   const r = pickExtraStats({
     stats: statsOf({
       attempts: 10,
@@ -120,10 +120,14 @@ test('top mistake: highest-count wrong-clicked flag', () => {
     }),
     targetCodes: T,
   });
-  assert.deepEqual(r.topMistake, [{ code: 'ru', count: 7 }]);
+  assert.deepEqual(r.topMistake, [
+    { code: 'ru', count: 7 },
+    { code: 'ua', count: 4 },
+    { code: 'by', count: 2 },
+  ]);
 });
 
-test('top mistake: surfaces even on a single-click wrong guess', () => {
+test('top mistake: surfaces even on single-click wrong guesses', () => {
   const r = pickExtraStats({
     stats: statsOf({
       attempts: 10,
@@ -132,7 +136,10 @@ test('top mistake: surfaces even on a single-click wrong guess', () => {
     }),
     targetCodes: T,
   });
-  assert.deepEqual(r.topMistake, [{ code: 'ru', count: 1 }]);
+  assert.deepEqual(r.topMistake, [
+    { code: 'ru', count: 1 },
+    { code: 'ua', count: 1 },
+  ]);
 });
 
 test('top mistake: hidden when perWrongCode is missing entirely (old cached response)', () => {
@@ -141,7 +148,7 @@ test('top mistake: hidden when perWrongCode is missing entirely (old cached resp
   assert.deepEqual(r.topMistake, []);
 });
 
-test('top mistake: ties broken by code, ascending', () => {
+test('top mistake: tied entries all surface, alphabetical within the tie', () => {
   const r = pickExtraStats({
     stats: statsOf({
       attempts: 10,
@@ -150,7 +157,106 @@ test('top mistake: ties broken by code, ascending', () => {
     }),
     targetCodes: T,
   });
-  assert.deepEqual(r.topMistake, [{ code: 'by', count: 5 }]);
+  assert.deepEqual(r.topMistake, [
+    { code: 'by', count: 5 },
+    { code: 'ru', count: 5 },
+    { code: 'ua', count: 5 },
+  ]);
+});
+
+test('top mistake: 7 distinct counts, no ties → clean top 5', () => {
+  const r = pickExtraStats({
+    stats: statsOf({
+      attempts: 20,
+      finds: {},
+      wrong: { aa: 10, bb: 9, cc: 8, dd: 7, ee: 6, ff: 5, gg: 4 },
+    }),
+    targetCodes: T,
+  });
+  assert.deepEqual(
+    r.topMistake.map((e) => e.code),
+    ['aa', 'bb', 'cc', 'dd', 'ee'],
+  );
+});
+
+test('top mistake: tie at the cutoff (positions 5 and 6 share count) → both included', () => {
+  const r = pickExtraStats({
+    stats: statsOf({
+      attempts: 20,
+      finds: {},
+      wrong: { aa: 10, bb: 9, cc: 8, dd: 7, ee: 6, ff: 6, gg: 5 },
+    }),
+    targetCodes: T,
+  });
+  assert.deepEqual(r.topMistake.map((e) => e.code), ['aa', 'bb', 'cc', 'dd', 'ee', 'ff']);
+});
+
+test('top mistake: big tie at the cutoff → all tied entries surface (well under cap)', () => {
+  const wrong = { aa: 10, bb: 9, cc: 8, dd: 7 };
+  // 10 codes all tied at count 6 — codes e0..e9 chosen so they sort after dd.
+  for (let i = 0; i < 10; i++) wrong[`e${i}`] = 6;
+  const r = pickExtraStats({
+    stats: statsOf({ attempts: 20, finds: {}, wrong }),
+    targetCodes: T,
+  });
+  assert.equal(r.topMistake.length, 14);
+  assert.deepEqual(r.topMistake.slice(0, 4).map((e) => e.code), ['aa', 'bb', 'cc', 'dd']);
+  assert.ok(r.topMistake.slice(4).every((e) => e.count === 6));
+});
+
+test('top mistake: tie at cutoff would exceed cap → cap at 15, alphabetical wins inside the tie', () => {
+  const wrong = { aa: 10 };
+  // 25 codes all tied at count 5. Use t00..t24 — they sort after aa.
+  for (let i = 0; i < 25; i++) wrong[`t${String(i).padStart(2, '0')}`] = 5;
+  const r = pickExtraStats({
+    stats: statsOf({ attempts: 30, finds: {}, wrong }),
+    targetCodes: T,
+  });
+  assert.equal(r.topMistake.length, 15);
+  assert.equal(r.topMistake[0].code, 'aa');
+  // The 14 fives that survive are the alphabetically-first ones: t00..t13.
+  const survivors = r.topMistake.slice(1).map((e) => e.code);
+  const expected = Array.from({ length: 14 }, (_, i) => `t${String(i).padStart(2, '0')}`);
+  assert.deepEqual(survivors, expected);
+});
+
+test('top mistake: everything tied (30 codes at count 1) → 15 alphabetical entries', () => {
+  const wrong = {};
+  for (let i = 0; i < 30; i++) wrong[`c${String(i).padStart(2, '0')}`] = 1;
+  const r = pickExtraStats({
+    stats: statsOf({ attempts: 30, finds: {}, wrong }),
+    targetCodes: T,
+  });
+  assert.equal(r.topMistake.length, 15);
+  assert.deepEqual(
+    r.topMistake.map((e) => e.code),
+    Array.from({ length: 15 }, (_, i) => `c${String(i).padStart(2, '0')}`),
+  );
+});
+
+test('top mistake: ties above the cutoff don\'t extend the list — still strict top 5', () => {
+  // Top three share count 10 (above the cutoff). No tie at positions 5/6.
+  const r = pickExtraStats({
+    stats: statsOf({
+      attempts: 20,
+      finds: {},
+      wrong: { aa: 10, bb: 10, cc: 10, dd: 8, ee: 7, ff: 5 },
+    }),
+    targetCodes: T,
+  });
+  assert.deepEqual(r.topMistake.map((e) => e.code), ['aa', 'bb', 'cc', 'dd', 'ee']);
+});
+
+test('top mistake: count-0 entries are filtered out before counting', () => {
+  const r = pickExtraStats({
+    stats: statsOf({
+      attempts: 10,
+      finds: {},
+      wrong: { aa: 0, bb: 3, cc: 0 },
+    }),
+    targetCodes: T,
+  });
+  assert.deepEqual(r.topMistake, [{ code: 'bb', count: 3 }]);
 });
 
 test('pickMarkerKind: user found the flag → green', () => {
