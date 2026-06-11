@@ -1,6 +1,20 @@
 [
   {
     "n": 7,
+    "filter": "continent:Europe,color:red,color:white,color:green,colorCount:3",
+    "answers": [
+      "bg",
+      "by",
+      "hu",
+      "it"
+    ],
+    "description": {
+      "en": "Find all European flags whose only colours are red, white, and green — no others.",
+      "pl": "Znajdź wszystkie europejskie flagi, które mają tylko 3 kolory: czerwony, biały i zielony."
+    }
+  },
+  {
+    "n": 8,
     "filter": "continent:Europe,color:black",
     "answers": [
       "al",
@@ -17,7 +31,7 @@
     "primaryCleanExempt": true
   },
   {
-    "n": 8,
+    "n": 9,
     "filter": "continent:Africa,color:black,motif:coat-of-arms",
     "answers": [
       "eg",
@@ -26,20 +40,6 @@
     "description": {
       "en": "Find all African flags with black and a coat of arms.",
       "pl": "Znajdź wszystkie afrykańskie flagi z czernią i godłem."
-    }
-  },
-  {
-    "n": 9,
-    "filter": "continent:Europe,color:red,color:white,color:green,colorCount:3",
-    "answers": [
-      "bg",
-      "by",
-      "hu",
-      "it"
-    ],
-    "description": {
-      "en": "Find all European flags whose only colours are red, white, and green — no others.",
-      "pl": "Znajdź wszystkie europejskie flagi, które mają tylko 3 kolory: czerwony, biały i zielony."
     }
   },
   {
