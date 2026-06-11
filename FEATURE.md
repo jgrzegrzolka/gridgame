@@ -38,7 +38,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 **Out of scope for Feature F** (each has a reason, deliberately not done):
 
-- **Pre-aggregated `stats:{puzzleId}` doc per puzzle.** Tempting at scale but premature — the 60 s in-process cache on `dailyStats.js` + matching `Cache-Control: max-age=60` keeps the aggregate query to ~once per minute per warm Function instance. Revisit if Free Tier RU pressure shows up.
+- **Pre-aggregated `stats:{puzzleId}` doc per puzzle for read performance.** Tempting at scale but premature for that purpose — the 60 s in-process cache on `dailyStats.js` + matching `Cache-Control: max-age=60` keeps the aggregate query to ~once per minute per warm Function instance. Revisit if Free Tier RU pressure shows up. (Note: a per-puzzle snapshot doc *is* planned, but under **Feature I** for long-term retention under F2's TTL — not for read performance. Different motivation, same mechanism.)
 - **Per-pick timestamps on daily.** Discussed and declined — total `durationMs` is fine for now.
 - **`openedFlagsdataDuringPlay` honesty signal.** Detectable via `BroadcastChannel`, but only catches the laziest cheat path (same-browser tabs), so the data isn't trustworthy enough to be useful. Per-play loss is small and bounded. Defer until there's a feature that needs it.
 - **Lifetime totals on `quizRecords`** (`totalAttempts`, `totalScore` at the top level). Derivable as `sum(records[*].attempts)` once F5 lands; don't duplicate.
@@ -118,6 +118,34 @@ Each layer is additive. Users can stay at L0, opt up to L1, opt up further to L2
 - **Anti-cheat hardening beyond rate limit.** See "Server-side trust" above.
 
 ---
+
+### Feature I: Per-puzzle stats snapshots for long-term retention
+
+**Status:** parked until ~2027-05. **Hard deadline: must ship before 2027-06-09** — that's when the oldest `dailyResults` row (a puzzleId=1 submission from 2026-06-09 20:33 UTC) reaches its 1-year TTL set in Feature F phase 2. After that date, the row auto-purges from Cosmos, and from then on every puzzle's data ages off one day at a time. Missing the deadline means losing per-flag find-rate aggregates for those puzzles forever, with no way to reconstruct them.
+
+**Goal:** survive the 1-year `defaultTtl` on `dailyResults` (Feature F2) without losing historical per-puzzle community stats. Once raw submission rows age off, the daily-stats endpoint should fall back to a frozen snapshot of "what the aggregate looked like when this puzzle was retired" instead of returning empty.
+
+**Why this is a separate feature, not part of F:** F2 set the TTL because storage discipline is the right policy for a Free Tier hobby site, but it traded raw-row analyzability for storage cleanliness. Feature I restores the analytic value at a fraction of the storage cost (~1 KB per puzzle instead of 5 MB of raw rows at 10K plays). Decoupled from F because (a) the deadline is ~6 months out, no rush, (b) the trigger/read-path design needs more thought than F's near-term phases, and (c) F can finish and move to `## Done` without waiting on this.
+
+**Likely shape when this comes off the parking brake:**
+
+- New Cosmos container `puzzleSnapshots`, partition key `/puzzleId`, one row per puzzle (~1 KB).
+- Row contents mirror the aggregator's return shape: `{ id: puzzleId, puzzleId, snapshotAt, totalAttempts, perCodeFinds, perWrongCode, mean, topPct, v: 1 }`.
+- `dailyStats.js` checks the snapshot first; if present, returns it. Falls through to scanning raw rows only when no snapshot exists. (Net effect: a puzzle has live stats from raw rows for its first year, then frozen stats from the snapshot forever after.)
+
+**Open design calls (settle when work starts, not now):**
+
+- **Trigger.** Three options: (a) snapshot every puzzle when the *next* one is released — `release-daily.yml` writes the previous puzzle's snapshot alongside the promotion commit; (b) snapshot lazily on the first `dailyStats` request after rows start aging out; (c) a periodic background job (Logic App?) walks puzzles ageing out within N days. Option (a) is simplest and aligns with the puzzle-release cadence we already have via Feature E's Logic App.
+- **Re-snapshot policy.** Freeze at first snapshot, or re-take as more submissions arrive before rows fully expire? "Freeze early" is simpler; "re-snapshot until rows expire" is more accurate. Probably "snapshot once when puzzle ages out, after that the snapshot is final."
+- **Local-dev rows.** Snapshot should exclude `local: true` rows, same as the live aggregator does today (see `daily/extraStats.js`). Same exclusion logic, just frozen in time.
+
+**Storage cost at long horizons:** ~1 KB × 365 puzzles/year × 10 years = ~3.6 MB total. Rounding noise vs. the 25 GB Free Tier ceiling. The deadline is the constraint, not storage.
+
+**Out of scope even for Feature I:**
+
+- **Snapshot of per-row data.** Would defeat F2's TTL policy — the whole point is to keep aggregates without keeping raw rows.
+- **Cross-puzzle aggregates** (lifetime per-flag rates across every puzzle ever). Could be added later as a different snapshot type, but not load-bearing for the 2027-06-09 deadline.
+- **Re-snapshot on every new submission.** The point is to capture a final aggregate when the raw data is about to age out, not maintain a live materialised view.
 
 ### Feature C: Cross-device identity via WebAuthn passkey
 
