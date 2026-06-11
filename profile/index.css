@@ -3,35 +3,13 @@
 .profile-main {
   max-width: 480px;
   margin: 0 auto;
-  padding: 60px 20px 20px;
-}
-
-.profile-title {
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0 0 24px;
-  text-align: center;
-  color: var(--link-color);
+  padding: 24px 20px 20px;
 }
 
 .profile-form {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.profile-label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  color: #666;
-  font-weight: 500;
 }
 
 .profile-input {
@@ -50,43 +28,23 @@
   border-color: var(--link-color);
 }
 
-.profile-hint {
-  font-size: 12px;
-  color: #888;
-  margin: 0;
-}
-
-.profile-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .profile-save,
 .profile-reset {
   font: inherit;
   font-size: 14px;
-  font-weight: 500;
-  padding: 8px 16px;
-  border-radius: 6px;
+  color: var(--link-color);
+  background: none;
+  border: none;
+  padding: 0;
   cursor: pointer;
-  box-sizing: border-box;
+  text-decoration: none;
 }
 .profile-save {
-  color: #fff;
-  background: var(--link-color);
-  border: 1px solid var(--link-color);
+  font-weight: 500;
 }
-.profile-save:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-.profile-reset {
-  color: var(--link-color);
-  background: #fff;
-  border: 1px solid #ddd;
-}
+.profile-save:hover:not(:disabled),
 .profile-reset:hover:not(:disabled) {
-  background: #f6f6f6;
+  text-decoration: underline;
 }
 .profile-save:disabled,
 .profile-reset:disabled {
@@ -98,9 +56,6 @@
   font-size: 13px;
   min-height: 1.2em;
   margin: 0;
-}
-.profile-status.is-saved {
-  color: #2e8b57;
 }
 .profile-status.is-error {
   color: #c44;
