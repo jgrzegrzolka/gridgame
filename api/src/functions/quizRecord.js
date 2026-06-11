@@ -75,11 +75,10 @@ app.http('quizRecord', {
       now,
     });
 
-    // Not a PB → nothing to do. Returning 204 (rather than a "rejected"
-    // signal) keeps the client side dumb: it always fires after every
-    // round and never has to interpret the response.
-    if (!merge.changed) return { status: 204 };
-
+    // F5 — every finish writes: attempts + lastPlayedAt change on every
+    // call, PB-or-not, so the prior "skip on non-PB" short-circuit is
+    // gone. The 204 contract for the client is unchanged: it always
+    // fires after every round and never has to interpret the response.
     let insertRes;
     try {
       insertRes = await insertDoc({
