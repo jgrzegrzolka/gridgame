@@ -9,6 +9,16 @@ export const NICKNAME_STORAGE_KEY = 'gridgame.nickname';
 const NICKNAME_MAX = 24;
 
 /**
+ * Hostnames where the nickname affordance renders. Soft-disabled in prod
+ * until the H2 UX is signed off — the backend (PUT /api/v1/profile + the
+ * `profiles` Cosmos container) is already live, but real users won't see
+ * the burger-panel form until we re-enable. Same set turnstileSiteKey.js
+ * uses for its bypass; promote to a shared module if a third consumer
+ * appears.
+ */
+const NICKNAME_UI_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+
+/**
  * Disable the burger menu button when its menu has no items. Empty-menu pages
  * still render the burger for visual consistency with every other page, but
  * with no destinations to offer the button should be inert.
@@ -82,6 +92,12 @@ function closeBurger(burgerEl, panelEl) {
  * HTML; this helper fills it with a small inline form and wires the save
  * round-trip to `PUT /api/v1/profile`.
  *
+ * **Soft-disabled in prod** (Feature H2): the helper bails out and renders
+ * nothing unless `hostname` is in `NICKNAME_UI_HOSTS` (localhost / 127.0.0.1
+ * / ::1). Backend is live for both prod and dev — the gate only hides the
+ * setting UI while we iterate on the UX. Re-enable by widening the host set
+ * or removing the gate.
+ *
  * Behaviour:
  *   - On mount, pre-fill the input from `localStorage.gridgame.nickname` if set.
  *   - On submit, validate length client-side, then PUT the deviceId + new
@@ -91,9 +107,10 @@ function closeBurger(burgerEl, panelEl) {
  *     surface an error state and leave localStorage untouched so the
  *     server is the only source of disagreement.
  *
- * Anything Node-side (DOM, storage, fetch, deviceId, clock) is injectable so
- * tests don't need a real browser. Returns the created `<form>` element (or
- * `null` if `rootEl` was missing — pages without the placeholder are a no-op).
+ * Anything Node-side (DOM, storage, fetch, deviceId, clock, hostname) is
+ * injectable so tests don't need a real browser. Returns the created
+ * `<form>` element, or `null` if the helper was skipped (missing rootEl,
+ * or a non-localhost hostname).
  *
  * @param {{
  *   rootEl: HTMLElement | null,
@@ -101,6 +118,7 @@ function closeBurger(burgerEl, panelEl) {
  *   storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>,
  *   fetchImpl?: typeof fetch,
  *   getDeviceId?: () => string,
+ *   hostname?: string,
  *   now?: () => number,
  *   savedFlashMs?: number,
  *   setTimeoutImpl?: (cb: () => void, ms: number) => any,
@@ -109,6 +127,9 @@ function closeBurger(burgerEl, panelEl) {
  */
 export function mountNicknameField(opts) {
   if (!opts || !opts.rootEl) return null;
+  const hostname = opts.hostname
+    ?? (typeof window !== 'undefined' ? window.location.hostname : '');
+  if (!NICKNAME_UI_HOSTS.has(hostname)) return null;
   const doc = opts.doc ?? document;
   const storage = opts.storage ?? window.localStorage;
   const fetchImpl = opts.fetchImpl ?? window.fetch.bind(window);

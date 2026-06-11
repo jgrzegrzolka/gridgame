@@ -257,9 +257,43 @@ test('mountNicknameField: returns null and is a no-op when rootEl is missing', (
   assert.equal(result, null);
 });
 
+test('mountNicknameField: soft-disabled in prod — returns null and writes no DOM on non-local hostname', () => {
+  // Backend (PUT /api/v1/profile + the `profiles` Cosmos container) is live
+  // for both prod and dev. The UI is gated to localhost while H2's UX is
+  // iterated on. Without this gate, real users would see the half-baked
+  // form in the burger panel on every page.
+  const env = fakeNicknameDom();
+  const result = mountNicknameField(/** @type {any} */ ({
+    hostname: 'www.yetanotherquiz.com',
+    rootEl: env.rootEl,
+    doc: env.doc,
+    storage: env.storage,
+    fetchImpl: fakeFetch().impl,
+    getDeviceId: () => 'device-aaaaaaaa',
+  }));
+  assert.equal(result, null);
+  assert.equal(env.rootEl.children.length, 0, 'no DOM written under rootEl');
+});
+
+test('mountNicknameField: renders on each of the recognised local hostnames', () => {
+  for (const hostname of ['localhost', '127.0.0.1', '::1']) {
+    const env = fakeNicknameDom();
+    const form = mountNicknameField(/** @type {any} */ ({
+      hostname,
+      rootEl: env.rootEl,
+      doc: env.doc,
+      storage: env.storage,
+      fetchImpl: fakeFetch().impl,
+      getDeviceId: () => 'device-aaaaaaaa',
+    }));
+    assert.ok(form, `expected mount on ${hostname}`);
+  }
+});
+
 test('mountNicknameField: builds form, label, input, button and status into rootEl', () => {
   const env = fakeNicknameDom();
   const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    hostname: 'localhost',
     rootEl: env.rootEl,
     doc: env.doc,
     storage: env.storage,
@@ -287,6 +321,7 @@ test('mountNicknameField: builds form, label, input, button and status into root
 test('mountNicknameField: pre-fills input from cached nickname in localStorage', () => {
   const env = fakeNicknameDom({ cachedNickname: 'Alice' });
   const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    hostname: 'localhost',
     rootEl: env.rootEl,
     doc: env.doc,
     storage: env.storage,
@@ -300,6 +335,7 @@ test('mountNicknameField: pre-fills input from cached nickname in localStorage',
 test('mountNicknameField: no cache → input stays empty (placeholder visible)', () => {
   const env = fakeNicknameDom();
   const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    hostname: 'localhost',
     rootEl: env.rootEl,
     doc: env.doc,
     storage: env.storage,
@@ -316,6 +352,7 @@ test('mountNicknameField: submit PUTs trimmed nickname + deviceId, writes cache,
   /** @type {Array<() => void>} */
   const flashes = [];
   const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    hostname: 'localhost',
     rootEl: env.rootEl,
     doc: env.doc,
     storage: env.storage,
@@ -349,6 +386,7 @@ test('mountNicknameField: empty input submits nickname: null and removes the cac
   const env = fakeNicknameDom({ cachedNickname: 'Alice' });
   const fetcher = fakeFetch({ status: 204 });
   const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    hostname: 'localhost',
     rootEl: env.rootEl,
     doc: env.doc,
     storage: env.storage,
@@ -373,6 +411,7 @@ test('mountNicknameField: non-2xx response shows error and does NOT write the ca
   const env = fakeNicknameDom();
   const fetcher = fakeFetch({ status: 500, ok: false });
   const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    hostname: 'localhost',
     rootEl: env.rootEl,
     doc: env.doc,
     storage: env.storage,
@@ -397,6 +436,7 @@ test('mountNicknameField: network throw is treated as error (no unhandled reject
   const env = fakeNicknameDom();
   const fetcher = fakeFetch({ throws: true });
   const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    hostname: 'localhost',
     rootEl: env.rootEl,
     doc: env.doc,
     storage: env.storage,
@@ -418,6 +458,7 @@ test('mountNicknameField: button is re-enabled after the round-trip (success and
   const env = fakeNicknameDom();
   const fetcher = fakeFetch({ status: 204 });
   const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    hostname: 'localhost',
     rootEl: env.rootEl,
     doc: env.doc,
     storage: env.storage,
