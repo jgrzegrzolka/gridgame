@@ -35,7 +35,6 @@
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
       <ul class="menu" id="quiz-menu"></ul>
-      <section id="burger-nickname" class="burger-nickname"></section>
     </nav>
     <h1 class="sr-only">Country flag quiz</h1>
     <section id="quiz-picker" class="quiz-picker" hidden>
@@ -76,10 +75,13 @@
     <script type="module">
       import { bootFlagQuiz } from './page.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { wireBurgerDismiss, mountNicknameField } from '../common.js';
+      import { wireBurgerDismiss } from '../common.js';
       // bootFlagQuiz uses t() while building the dynamic menu, so we have
       // to wait for i18n to load first. The menu also includes the lang
       // toggle, so wireLangToggle has to run after bootFlagQuiz resolves.
+      // The nickname menu item is mounted inside `rebuildMenu` in page.js
+      // (the menu wipes itself on every language switch — mounting it
+      // here once would leak after the first rebuild).
       bootI18n('../').then((lang) => bootFlagQuiz().then(() => {
         // Soft-reload mode keeps the running game (current question,
         // timer, score) and the result screen intact across a language
@@ -88,7 +90,6 @@
         // result strings.
         wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         wireBurgerDismiss();
-        mountNicknameField({ rootEl: document.getElementById('burger-nickname') });
       }));
     </script>
   </body>

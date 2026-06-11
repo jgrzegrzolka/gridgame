@@ -11,7 +11,10 @@
   },
   "nickname": {
     "label": "Nickname",
-    "placeholder": "optional",
+    "yourName": "Your name",
+    "editTitle": "Set your nickname",
+    "defaultHint": "Default name",
+    "resetToDefault": "Reset to default",
     "save": "Save",
     "saved": "Saved",
     "error": "Could not save"

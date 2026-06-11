@@ -23,7 +23,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ### Feature H: Identity unification + device profiles
 
-**Status:** H1 shipped 2026-06-11 (#359). H2 backend in flight — `profiles` container provisioned, `PUT /api/v1/profile` live, `mountNicknameField` shipped but **soft-disabled on prod hostnames pending UX review** (the burger-panel form renders on localhost only, controlled by the host gate at the top of `common.js`). To re-enable for everyone: widen `NICKNAME_UI_HOSTS` or remove the gate. H3 still pending (surface nicknames downstream). Feature G also unblocked.
+**Status:** H1 shipped 2026-06-11 (#359). H2 shipped 2026-06-11 (#360) but with the burger-panel form soft-disabled on prod. **H2.5 in flight** — replaces the soft-disabled inline form with a `/profile/` page reached via a "Your name: <deterministic friendly default>" link in the burger; default name is computed client-side from the deviceId by `flags/nickname.js`, so unedited users still show a friendly name in stats/lobby. Lifts the H2 hostname gate (the UI is fit for prod now). H3 still pending (surface nicknames downstream). Feature G also unblocked.
 
 **Goal:** one stable identity per browser (today there are two — `gridgame.deviceId` for daily, `gridgame.player.id` for TTT online), with the option to self-attach a nickname stored server-side. Still anonymous — no account, no cross-device link. That's Feature C's job.
 

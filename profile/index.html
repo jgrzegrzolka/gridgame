@@ -3,14 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Browse past daily flag puzzles." />
-    <link rel="canonical" href="https://yetanotherquiz.com/daily/archive.html" />
-    <link rel="preload" href="daily_puzzles.json?v=__BUILD__" as="fetch" type="application/json" crossorigin />
-    <title data-i18n="daily.archiveTitle">Yet Another Quiz — Daily Archive</title>
+    <meta name="description" content="Set your display name on Yet Another Quiz." />
+    <link rel="canonical" href="https://yetanotherquiz.com/profile/" />
+    <title data-i18n="nickname.editTitle">Set your nickname — Yet Another Quiz</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
-    <link rel="stylesheet" href="archive.css?v=__BUILD__" />
   </head>
   <body>
     <a class="lang-toggle" id="lang-toggle" href="#"></a>
@@ -34,39 +32,51 @@
       <span class="burger-bars" aria-hidden="true"></span>
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
-      <ul class="menu">
-        <li><a href="./" data-i18n="daily.todaysPuzzle">Today's puzzle</a></li>
-        <li><a href="archive.html" aria-current="page" data-i18n="daily.archive">Previous puzzles</a></li>
-        <li class="menu-divider"><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
-      </ul>
+      <ul class="menu" id="burger-menu"></ul>
     </nav>
 
-    <main>
-      <ul id="archive-list" class="archive-list"></ul>
+    <main class="profile-main">
+      <h1 class="profile-title" data-i18n="nickname.editTitle">Set your nickname</h1>
+      <form class="profile-form" id="profile-form">
+        <label class="profile-label">
+          <span data-i18n="nickname.label">Nickname</span>
+          <input
+            type="text"
+            class="profile-input"
+            id="profile-input"
+            maxlength="24"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </label>
+        <p class="profile-hint" id="profile-hint"></p>
+        <div class="profile-actions">
+          <button type="submit" class="profile-save" data-i18n="nickname.save">Save</button>
+          <button type="button" class="profile-reset" id="profile-reset" data-i18n="nickname.resetToDefault">Reset to default</button>
+        </div>
+        <p class="profile-status" id="profile-status" role="status" aria-live="polite"></p>
+      </form>
       <div class="give-up-row">
         <a class="give-up" href="../" data-i18n="menu.home">Home</a>
       </div>
     </main>
 
     <script type="module">
-      import { bootArchive } from './archive.js';
+      import { bootProfile } from './page.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
       import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from '../common.js';
       bootI18n('../').then((lang) => {
-        // Soft-reload keeps scroll position on the archive grid intact.
-        // The dynamic "No puzzles yet." line carries `data-i18n` so it
-        // re-translates upstream.
         wireLangToggle(lang, undefined, { softReload: true, base: '../' });
+        bootProfile();
+        mountNicknameMenuItem({
+          rootEl: document.getElementById('burger-menu'),
+          profileHref: './',
+        });
         disableBurgerIfEmpty(
           document.querySelector('.burger'),
           document.querySelector('#burger-panel .menu'),
         );
-        bootArchive();
         wireBurgerDismiss();
-        mountNicknameMenuItem({
-          rootEl: document.querySelector('#burger-panel .menu'),
-          profileHref: '../profile/',
-        });
       });
     </script>
   </body>

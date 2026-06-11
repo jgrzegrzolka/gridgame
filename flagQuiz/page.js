@@ -27,6 +27,7 @@ import { flagsGamePool, loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
+import { mountNicknameMenuItem } from '../common.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
 import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
@@ -97,7 +98,10 @@ export function bootFlagQuiz() {
       preloadFlags(all, (url) => { new Image().src = url; });
 
       // Re-buildable menu — rebuilds clear `menuEl.innerHTML` first so
-      // a soft language switch doesn't double the variant list.
+      // a soft language switch doesn't double the variant list. The
+      // nickname "Your name: …" item is re-inserted after each rebuild
+      // for the same reason; without that, the first langchanged would
+      // wipe it.
       const rebuildMenu = () => {
         /** @type {HTMLUListElement} */ (quizMenuEl).innerHTML = '';
         buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), all, {
@@ -107,6 +111,10 @@ export function bootFlagQuiz() {
           // yet. Returning players keep their normal aria-current marker.
           currentVariantKey: isFirstVisit ? null : currentVariantKey,
           statsCurrent: false,
+        });
+        mountNicknameMenuItem({
+          rootEl: quizMenuEl,
+          profileHref: '../profile/',
         });
       };
       rebuildMenu();

@@ -11,7 +11,10 @@
   },
   "nickname": {
     "label": "Pseudonim",
-    "placeholder": "opcjonalnie",
+    "yourName": "Twoja nazwa",
+    "editTitle": "Ustaw swoją nazwę",
+    "defaultHint": "Domyślna nazwa",
+    "resetToDefault": "Przywróć domyślną",
     "save": "Zapisz",
     "saved": "Zapisano",
     "error": "Nie udało się zapisać"

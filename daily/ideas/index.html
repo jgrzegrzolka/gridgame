@@ -38,7 +38,6 @@
       <ul class="menu">
         <li><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
       </ul>
-      <section id="burger-nickname" class="burger-nickname"></section>
     </nav>
 
     <main>
@@ -62,7 +61,7 @@
     <script type="module">
       import { bootIdeas } from './page.js';
       import { bootI18n, wireLangToggle } from '../../i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameField } from '../../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from '../../common.js';
       bootI18n('../../').then((lang) => {
         // Author-only browse page; soft-reload keeps scroll position
         // and verdict toggles intact across language switches.
@@ -73,7 +72,10 @@
         );
         bootIdeas();
         wireBurgerDismiss();
-        mountNicknameField({ rootEl: document.getElementById('burger-nickname') });
+        mountNicknameMenuItem({
+          rootEl: document.querySelector('#burger-panel .menu'),
+          profileHref: '../../profile/',
+        });
       });
     </script>
   </body>
