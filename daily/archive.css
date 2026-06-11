@@ -66,9 +66,22 @@
 /* The number stays the visual anchor (centered). The score sits as a
  * small strip at the bottom of the tile so the puzzle number reads
  * the same whether you've played it or not — no layout shift between
- * the two states. */
+ * the two states. The release date sits as a matching strip at the
+ * top — same dimensions, same colour family as the bottom strip, so
+ * the tile has symmetric chrome around the number. */
 .archive-square-num {
   display: block;
+}
+.archive-square-date {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #888;
+  font-variant-numeric: tabular-nums;
 }
 .archive-square-score {
   position: absolute;

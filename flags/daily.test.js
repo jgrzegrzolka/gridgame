@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement } from './daily.js';
+import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement, puzzleDate, formatPuzzleDate, LAUNCH_DATE } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries, createCountry } from './group.js';
@@ -610,4 +610,33 @@ test('live + backlog: single-use tokens appear in at most one entry', () => {
       `single-use token "${token}" appears in ${uses.length} entries (${uses.map((e) => '#' + e.n).join(', ')}); limit is 1 — see rule 14 / daily/daily_policy.json`,
     );
   }
+});
+
+test('LAUNCH_DATE: puzzle #1 anchored at 2026-06-06', () => {
+  assert.equal(LAUNCH_DATE, '2026-06-06');
+});
+
+test('puzzleDate: n=1 is the launch day; n=N is launch + (N-1) days', () => {
+  assert.equal(puzzleDate(1).toISOString(), '2026-06-06T00:00:00.000Z');
+  assert.equal(puzzleDate(2).toISOString(), '2026-06-07T00:00:00.000Z');
+  assert.equal(puzzleDate(6).toISOString(), '2026-06-11T00:00:00.000Z');
+  // Crosses month boundary cleanly.
+  assert.equal(puzzleDate(26).toISOString(), '2026-07-01T00:00:00.000Z');
+});
+
+test('puzzleDate: injectable launchDate (for fixtures that anchor elsewhere)', () => {
+  assert.equal(puzzleDate(1, '2027-01-15').toISOString(), '2027-01-15T00:00:00.000Z');
+  assert.equal(puzzleDate(10, '2027-01-15').toISOString(), '2027-01-24T00:00:00.000Z');
+});
+
+test('puzzleDate: throws for n < 1 (no zeroth puzzle)', () => {
+  assert.throws(() => puzzleDate(0), /expected n ≥ 1/);
+  assert.throws(() => puzzleDate(-3), /expected n ≥ 1/);
+  assert.throws(() => puzzleDate(1.5), /expected n ≥ 1/);
+});
+
+test('formatPuzzleDate: DD.MM.YYYY format', () => {
+  assert.equal(formatPuzzleDate(new Date('2026-06-06T00:00:00Z')), '06.06.2026');
+  assert.equal(formatPuzzleDate(new Date('2026-12-31T00:00:00Z')), '31.12.2026');
+  assert.equal(formatPuzzleDate(new Date('2027-01-01T00:00:00Z')), '01.01.2027');
 });

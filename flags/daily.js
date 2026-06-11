@@ -5,16 +5,17 @@ import { parseFilterString } from './findFlag.js';
  *
  * Release model: the catalog is the source of truth for which puzzles
  * have been released. "Today's puzzle" is the last entry in the catalog
- * — there is no date math. Releasing puzzle N+1 means manually appending
- * its entry to daily/daily_puzzles.json (typically by moving the next
- * staged entry from daily/daily_backlog.json). The UI automatically
- * picks up the new last entry on next load.
+ * — the resolver uses `catalog.length`, not date math. Releasing
+ * puzzle N+1 means appending its entry to daily/daily_puzzles.json
+ * (the Azure Logic App promotes the next staged entry from
+ * daily/daily_backlog.json each Polish midnight; see FEATURE.md).
  *
- * Why no dates: a calendar-driven counter looks tidy until you miss a
- * day or want to postpone, at which point the puzzle numbers and the
- * displayed dates fall out of sync and history looks broken. Manual
- * release keeps the numbering and the visible state always consistent
- * regardless of when (or whether) we publish.
+ * Dates: the archive renders each tile's release date as a presentation
+ * derivation — `puzzleDate(n) = LAUNCH_DATE + (n - 1) days`. The data
+ * model still has no `releaseDate` field. This works as long as the
+ * Logic App reliably promotes one puzzle per day; if a release ever
+ * misses, the derived dates drift relative to reality and we'd switch
+ * to stored dates per entry.
  *
  * The catalog stores resolved answers (a list of country codes), not
  * just the filter that produced them — fixes to country data later
@@ -50,6 +51,54 @@ import { parseFilterString } from './findFlag.js';
  */
 export function todayN(catalog) {
   return catalog.length;
+}
+
+/**
+ * Anchor: puzzle #1 went live on 2026-06-06. Subsequent puzzles release
+ * one per day, promoted by the Azure Logic App at Polish midnight. The
+ * archive uses this to show each tile's release date (`puzzleDate(n)`).
+ *
+ * `puzzleDate(n) = LAUNCH_DATE + (n - 1) days`. This relies on the
+ * "exactly one puzzle promoted per day" invariant. If we ever miss a
+ * day (or deliberately skip), the formula drifts and tile dates no
+ * longer match reality. The mitigation is operational, not structural:
+ * Logic App reliability (see FEATURE.md "Reliable daily-puzzle
+ * auto-release"). If misses ever happen in practice, switch to a
+ * stored `releaseDate` field per entry.
+ */
+export const LAUNCH_DATE = '2026-06-06';
+
+/**
+ * Release date for puzzle N, derived from `LAUNCH_DATE`. Returns a Date
+ * pinned to midnight UTC for the corresponding calendar day — callers
+ * format it however the UI needs.
+ *
+ * Throws for `n < 1` (no zeroth puzzle).
+ *
+ * @param {number} n
+ * @param {string} [launchDate]  injectable for tests; defaults to LAUNCH_DATE.
+ * @returns {Date}
+ */
+export function puzzleDate(n, launchDate = LAUNCH_DATE) {
+  if (!Number.isInteger(n) || n < 1) {
+    throw new Error(`puzzleDate: expected n ≥ 1, got ${n}`);
+  }
+  const base = new Date(`${launchDate}T00:00:00Z`);
+  base.setUTCDate(base.getUTCDate() + (n - 1));
+  return base;
+}
+
+/**
+ * "DD.MM.YYYY" rendering for a puzzle-release Date.
+ *
+ * @param {Date} d
+ * @returns {string}
+ */
+export function formatPuzzleDate(d) {
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = String(d.getUTCFullYear());
+  return `${dd}.${mm}.${yyyy}`;
 }
 
 /**
