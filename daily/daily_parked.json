@@ -1,5 +1,9 @@
 [
   {
+    "filter": "continent:Europe,color:yellow,color:blue,color:red,colorCount:3",
+    "notes": "Romanian-style tricolour — Europe + blue/yellow/red + only 3 colours. Originally backlog #13; pulled 2026-06-11 when we tagged Andorra with `white` in additionalColors (the COA white). Andorra's full palette is now 4 colours so it fails colorCount:3, leaving Romania alone (1-flag, fails rule 9 size minimum). Will unblock if a second European flag adopts blue/yellow/red as exactly 3 primary colours; otherwise past-#100 recall candidate where 1-flag is allowed."
+  },
+  {
     "filter": "color:red,color:white,color:green,colorCount:3",
     "notes": "Italian-style tricolour worldwide — 11 flags (it, hu, mx, bg, ir, lb, dz, by, mg, mv, bi). Iconic palette puzzle (Mexico and Iran are the non-European entries that make this worldwide-interesting), but it's a filter-refinement of backlog #7 (continent:Europe + same colour pattern) so rule 6 blocks until past #100, OR until we decide to replace backlog #7 with this broader version."
   },

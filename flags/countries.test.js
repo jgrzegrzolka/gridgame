@@ -499,7 +499,6 @@ test('sun-bearing flags carry the star-or-moon motif (sun-is-a-star pin)', () =>
 // `animal`.
 const BIRD_BEARING = [
   { code: 'al', note: 'Albania — black double-headed eagle' },
-  { code: 'ad', note: 'Andorra — eagles on the arms quarters' },
   { code: 'bo', note: 'Bolivia — Andean condor atop the arms' },
   { code: 'dm', note: 'Dominica — sisserou parrot at centre' },
   { code: 'ec', note: 'Ecuador — Andean condor atop the arms' },

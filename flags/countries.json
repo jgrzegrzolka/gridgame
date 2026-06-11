@@ -98,10 +98,11 @@
       "yellow",
       "red"
     ],
-    "additionalColors": [],
+    "additionalColors": [
+      "white"
+    ],
     "motifs": [
       "animal",
-      "bird",
       "coat-of-arms"
     ]
   },
@@ -140,6 +141,7 @@
     ],
     "motifs": [
       "animal",
+      "coat-of-arms",
       "cross",
       "union-jack"
     ]
@@ -527,6 +529,7 @@
       "animal",
       "bird",
       "coat-of-arms",
+      "star-or-moon",
       "weapon"
     ]
   },
@@ -543,8 +546,12 @@
       "yellow",
       "red"
     ],
-    "additionalColors": [],
-    "motifs": []
+    "additionalColors": [
+      "black"
+    ],
+    "motifs": [
+      "star-or-moon"
+    ]
   },
   {
     "code": "ba",
@@ -921,6 +928,8 @@
     ],
     "additionalColors": [],
     "motifs": [
+      "animal",
+      "bird",
       "star-or-moon"
     ]
   },
@@ -1039,6 +1048,7 @@
       "yellow"
     ],
     "motifs": [
+      "animal",
       "coat-of-arms",
       "star-or-moon",
       "eu-member"
@@ -3235,7 +3245,8 @@
     ],
     "additionalColors": [
       "green",
-      "yellow"
+      "yellow",
+      "black"
     ],
     "motifs": [
       "coat-of-arms",
@@ -3288,7 +3299,8 @@
     ],
     "additionalColors": [
       "yellow",
-      "green"
+      "green",
+      "black"
     ],
     "motifs": [
       "coat-of-arms",
@@ -3559,8 +3571,7 @@
     "primaryColors": [
       "blue",
       "white",
-      "red",
-      "yellow"
+      "red"
     ],
     "additionalColors": [],
     "motifs": []
@@ -3611,7 +3622,8 @@
     "additionalColors": [
       "green",
       "yellow",
-      "red"
+      "red",
+      "black"
     ],
     "motifs": [
       "coat-of-arms",
