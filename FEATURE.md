@@ -21,78 +21,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-### Feature H: Identity unification + device profiles
-
-**Status:** H1 shipped 2026-06-11 (#359). H2 shipped 2026-06-11 (#360, soft-disabled). H2.5 shipped (#361 — `/profile/` page + deterministic defaults). **H3 in flight (TTT side only)** — TTT online room shows "· vs <opponent>" inline next to the role badge once `peerId` is known. Powered by new `GET /api/v1/profile?id=…` (one device's nickname). The head-to-head **score** display ("3 — 2") is deliberately not rendered yet — backend is fully wired (`GET /api/v1/ttt/result?deviceId=…&opponentId=…` returns the row; `fetchTttPair` helper + tests in place) but the UI is on hold until the design is signed off. Daily side of H3 also deferred — no per-player surface exists today.
-
-**Goal:** one stable identity per browser (today there are two — `gridgame.deviceId` for daily, `gridgame.player.id` for TTT online), with the option to self-attach a nickname stored server-side. Still anonymous — no account, no cross-device link. That's Feature C's job.
-
-**Three-layer identity model** (defines what's in which feature):
-
-- **Layer 0 — anonymous deviceId.** One UUID per browser in localStorage. The today's-state baseline.
-- **Layer 1 — device profile** *(this feature)*. The deviceId gains a nickname + maybe metadata, stored server-side keyed by deviceId. The user can set "Alice" on their browser and the daily community stats or the TTT lobby can surface it. Still anonymous, no account.
-- **Layer 2 — user account** *(Feature C)*. Multiple deviceIds linked under one userId via passkey (or alternative). Cross-device merge.
-
-Each layer is additive. Users can stay at L0, opt up to L1, opt up further to L2 — none of it forced.
-
-**Why this is a separate feature, not part of C:** Feature C is the *account / linking* piece — the "this phone and this laptop are the same person" mechanism. Feature H is the *device-level personalisation* piece that exists at L1 regardless of whether the user ever takes the L2 step. C will graft accounts onto the profile that H ships.
-
-**Phases:**
-
-1. **H1 — unify `gridgame.player.id` → `gridgame.deviceId` in the client.** One-time migration on first load post-deploy. If both keys exist, drop `gridgame.player.id`, keep `gridgame.deviceId` as canonical. If only player.id exists, copy its value into `gridgame.deviceId` and drop player.id. PartyKit server-side code already takes `?pid=` from the URL and doesn't care what the value represents, just that it's stable — no PartyKit code change needed. Unblocks Feature G.
-2. **H2 — `profiles` Cosmos container + nickname UI.** New container, partition key `/deviceId`, doc `{ id: deviceId, deviceId, nickname, createdAt, updatedAt, v: 1 }`. New endpoint `PUT /api/v1/profile` (anonymous, rate-limited, Turnstile-gated like daily). Client UI: small "set nickname" affordance in the burger panel. Nickname is optional and editable — null = "anonymous device".
-3. **H3 — surface nicknames downstream.** Daily community-stats panel shows "Alice scored 67%" instead of just "67%". TTT online lobby shows "waiting for Bob". `extraStats.js` and `ticTacToe/page.js` are the touch points.
-
-**Out of scope for Feature H** (each declined deliberately):
-
-- **UA / browser / screen / locale fingerprint storage.** Privacy hygiene — collecting fingerprintable data on anonymous users without a feature that needs it is a smell. The Function App access logs already capture UA for debug purposes. Re-add the field when a feature genuinely needs it, not preemptively.
-- **Cross-device linking.** That's Feature C, fundamentally a different layer.
-- **Username uniqueness / display-name moderation.** Nicknames are display-only and may collide. If two devices both pick "Alice", both can have it. Worry about uniqueness only if profanity / impersonation become real problems.
-
-### Feature G: TTT online — head-to-head score per device pair
-
-**Status:** in flight. Pivoted from the original "one row per game" design to a much leaner **one row per (deviceA, deviceB) pair, per perspective** — only the rolling head-to-head score is kept (wins/losses/draws per mode), not the games themselves. Justification: the only planned read surface is "Alice vs Bob: 3-2 in 3×3, 1-1 in 9×9"; storing every game would bloat Cosmos for analytics nobody will run. Trade-off accepted: no replay, no movesCount/duration, give-up squashed into win/loss, refresh-after-finish can double-count once (no gameId minting).
-
-**Goal:** persist every online TTT game outcome so we can later compute per-player matchup stats, leaderboards, head-to-head records, and other "device-to-device scoring" features. Today nothing about an online TTT game is persisted server-side once the PartyKit Durable Object is evicted.
-
-**Storage decision:** Cosmos via the existing SWA backend (new `POST /api/v1/ttt/result` endpoint), client-POST after the `finished` effect arrives. Considered and rejected: PartyKit storage (would fragment analytic surface), server-POST from PartyKit → SWA (couples deploys, needs auth). Client-POST matches the daily pattern and stays inside Free Tier.
-
-**Doc shape — `tttResults` container, partition key `/deviceId`, two rows per game:**
-
-```
-{
-  id:           "<gameId>:<deviceId>",   // unique per (game, perspective)
-  gameId:       string,                  // UUID minted server-side at game start, broadcast to both clients
-  deviceId:     string,                  // partition key — THIS player's id
-  opponentId:   string,                  // the other player's deviceId
-  mode:         "3x3" | "9x9",
-  role:         "X" | "O",
-  outcome:      "win" | "loss" | "draw" | "gave_up" | "opponent_gave_up",
-  movesCount:   int,
-  durationMs:   int,
-  startedAt:    int,                     // unix ms
-  finishedAt:   int,
-  v:            1,
-}
-```
-
-**Why two rows per game (one per perspective):** the use case is per-device aggregation ("all of A's games", "A's head-to-head record vs. B"). Partitioning by `deviceId` and duplicating gives single-partition queries for both. 2× the writes and storage, but at ~200 B/row and low TTT volume the cost is rounding noise. Single-row-per-game partitioned by `gameId` would make every per-device query cross-partition; not worth optimizing storage at the cost of query RU.
-
-**Plan:**
-
-1. PartyKit server mints a `gameId` (UUID) when a fresh room starts and broadcasts it in the initial state so both clients know it.
-2. Both clients POST their perspective to `/api/v1/ttt/result` after the `finished` effect arrives in `onlineClient.js`. Fire-and-forget; failures don't block the UI.
-3. New `api/src/functions/tttResult.js` validates the payload, dedupes by `id`, inserts into `tttResults`. Rate-limited + Turnstile-gated like `dailyResult`.
-4. Container provisioned at 400 RU/s (same as other containers) on Free Tier.
-
-**Server-side trust:** the two clients independently report the same outcome. Mismatches (Alice says "win" while Bob also says "win") are detectable but not initially blocked — store both, log mismatches for analysis. If cheating becomes visible later, escalate to a PartyKit-signed `finished` payload that the SWA endpoint validates against PartyKit's public key.
-
-**Out of scope for Feature G** (each declined deliberately):
-
-- **Per-move sequence / board state.** Game replay/analysis is a feature that doesn't exist; defer. Reconstructible from move sequence the day we want it, until then skip the bytes.
-- **Rematch chain** (whether this game was a rematch of game X). Interesting but defer.
-- **Spectator / observer roles.** Not currently a feature.
-- **Anti-cheat hardening beyond rate limit.** See "Server-side trust" above.
+*(nothing in flight — pick the next feature from `## Backlog` or open a new one)*
 
 ---
 
@@ -181,6 +110,48 @@ Items here are not blocking current work but deserve durable memory — the next
 ---
 
 ## Done
+
+### Feature H: Identity unification + device profiles — *shipped 2026-06-11*
+
+**Goal.** Collapse the two device-identity keys (`gridgame.player.id` for TTT online, `gridgame.deviceId` for daily) into one canonical deviceId, then layer an optional server-stored nickname on top so the daily community stats and the TTT online room can surface "Alice" instead of an anonymous device. This is Layer 1 (device profile) in the three-layer identity model — Layer 0 is the anonymous deviceId we already had, Layer 2 (account-level cross-device linking via passkey) stays parked as Feature C. Each layer is additive: users can stay anonymous, opt up to a nickname, opt up further to a linked account — none of it forced.
+
+**What shipped (four phases, all 2026-06-11):**
+
+1. **H1 — client-side key unification.** One-time migration on first load: if `gridgame.player.id` exists alongside `gridgame.deviceId`, drop player.id; if only player.id exists, copy its value into deviceId and drop player.id. PartyKit took no change — it already accepts the id via `?pid=` and doesn't care what the value represents. Unblocked Feature G's per-device aggregation.
+2. **H2 — `profiles` container + nickname UI.** New Cosmos container partitioned by `/deviceId`, doc shape `{ id: deviceId, deviceId, nickname, createdAt, updatedAt, v: 1 }`. New `PUT /api/v1/profile` endpoint (anonymous, rate-limited, Turnstile-gated like daily — currently soft-disabled in prod, same as the other endpoints). Burger-panel "set nickname" affordance.
+3. **H2.5 — `/profile/` page + deterministic default nicknames.** Promoted nickname editing from a burger control to a dedicated `/profile/` page. Devices that haven't customised their nickname render a deterministic default derived from the deviceId, so unedited opponents still see a legible name instead of a UUID.
+4. **H3 (TTT side) — inline opponent name in the online room.** New `GET /api/v1/profile?id=…` returns one device's nickname (or null). TTT online room renders `vs <Opponent>` inline next to the role badge once `peerId` is known, via `flags/profileFetch.js` (injectable fetch, defensive shape normalisation, never throws). Built with `createElement`, not `innerHTML`, so a malicious nickname like `<script>` can't escape into the page.
+
+**Standing artifacts.**
+
+- `flags/profileFetch.js` + tests — the contract for the read side of the profile container; reused by anything that wants to display "this device's chosen name".
+- `flags/tttPairFetch.js` + tests + `GET /api/v1/ttt/result` — head-to-head **score** UI is deliberately not rendered yet (design on hold), but the read-path backend and client helper shipped as scaffolding so re-enabling it is a single page.js change. Data is already accumulating in Cosmos via Feature G.
+- Deterministic-default-nickname helper — every "what name does this deviceId display as?" answer flows through one function.
+
+**Key PRs.** #359 (H1), #360 (H2 — soft-disabled Turnstile), #361 (H2.5), #363 (H3 TTT side).
+
+**Out of scope, intentionally deferred** (captured here so they don't drift back in): H3 daily-side surfacing ("Alice scored 67%") — no per-player surface exists in the daily UI today; needs a new leaderboard or row-list element, pick up when the demand is felt. Head-to-head score display in the TTT room — backend ready, UI on hold pending design sign-off. UA / browser / locale fingerprint storage — privacy hygiene; don't collect what no feature reads. Nickname uniqueness / moderation — display-only and collisions allowed; revisit if profanity or impersonation become real problems. Cross-device linking — Feature C's job, fundamentally a different layer.
+
+### Feature G: TTT online — head-to-head score per device pair — *shipped 2026-06-11*
+
+**Goal.** Persist online TTT outcomes so per-device matchup stats become possible. Before this, the PartyKit Durable Object held the room state and evicted it once the game ended — no head-to-head history existed at all. **Design pivot during build:** abandoned the original "one row per game, two perspectives" shape in favour of a much leaner **one row per (deviceA, deviceB) pair** holding both modes' rolling counters. Justification: the only planned read surface is "Alice vs Bob: 3-2 in 3×3, 1-1 in 9×9"; storing every game would bloat Cosmos for analytics nobody will run. Trade-offs accepted (and explicit so they're not re-litigated): no replay, no `movesCount`/`durationMs`, give-up squashed into win/loss client-side, refresh-after-finish can double-count once (no gameId minting).
+
+**What shipped (one phase, 2026-06-11):**
+
+- **`tttPairs` Cosmos container.** Partition key `/deviceId`, 400 RU/s manual, no TTL. Doc shape: `{ id: "<deviceId>:<opponentId>", deviceId, opponentId, m3x3: { wins, losses, draws }, m9x9: { wins, losses, draws }, lastPlayedAt, v: 1 }`. One row per (this device, that opponent) holding both modes — storage grows with distinct opponents, not games played.
+- **`POST /api/v1/ttt/result`.** Anonymous, 10/min/IP rate limit, Turnstile-scaffolded (soft-disabled in prod alongside the other endpoints). Read-then-upsert via `api/src/lib/tttPairDoc.js`'s pure `mergePairResult({ existing, deviceId, opponentId, mode, outcome, now })` — tolerant of partial/garbage existing rows (missing or malformed counter buckets normalise to 0). Validation enforces `deviceId !== opponentId`, mode ∈ {"3x3","9x9"}, outcome ∈ {"win","loss","draw"}.
+- **Client wiring.** Both TTT clients fire-and-forget `submitTttResult` after the `finished` effect arrives in `onlineClient.js`. Failures don't block the UI. The deviceId unification from H1 was a hard prerequisite — pre-H1, the TTT side used `gridgame.player.id` and the daily side used `gridgame.deviceId`, so the same browser would have shown up as two different identities to the `tttPairs` writer.
+
+**Standing artifacts.**
+
+- `api/src/lib/tttPairDoc.js` `mergePairResult` (pure) + tests — every future per-pair counter mutation routes through this; the defensive normalisation of partial existing rows is the load-bearing piece.
+- `flags/tttResultSubmit.js` — the fire-and-forget submit contract; matches the daily-submit shape.
+
+**Server-side trust note.** Both clients independently report the same outcome (Alice's "win" and Bob's "loss"). Mismatches are detectable but not currently blocked — store both, log if cheating becomes visible later. The escalation path is a PartyKit-signed `finished` payload the SWA endpoint validates against PartyKit's public key.
+
+**Key PR.** #362.
+
+**Out of scope, intentionally deferred:** gameId minting + server-side dedupe of refresh-after-finish double-counts (revisit if it shows in data), per-game rows with `movesCount`/`startedAt`/`finishedAt` (the only read surface is the aggregate — game-level data would be bytes with no consumer), `gave_up`/`opponent_gave_up` distinction (squashed into win/loss at the client; revisit when the read surface wants it), spectator/observer roles, anti-cheat hardening beyond rate limit.
 
 ### Feature F: Cosmos data discipline + analytics readiness — *shipped 2026-06-11*
 
