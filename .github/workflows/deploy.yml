@@ -119,3 +119,46 @@ jobs:
           api_location: "api"
           output_location: ""
           skip_app_build: true
+
+      - name: Smoke-check the custom domain after deploy
+        # SWA reports "Succeeded" the moment its raw `*.azurestaticapps.net`
+        # hostname has the new artifact, but the custom-domain edge can lag by
+        # 15+ minutes — during the gap users hit www/ and get an Azure SWA 404
+        # while raw-hostname serves 200 fine. Confirmed 2026-06-11 after #345:
+        # deploy 07:21 UTC, www/ still 404 at 07:38, www/ 200 by 07:41.
+        #
+        # First sanity-check the raw hostname so we can tell artifact-broken
+        # apart from edge-lag. Then poll the custom domain on a budget; if it
+        # doesn't pick up the new content within the budget, fail loud so we
+        # see the propagation window in the GH Actions history and can decide
+        # whether to escalate (staticwebapp.config.json, CF-proxied www, etc).
+        #
+        # Cache-bust query string per attempt to keep the CDN edge from
+        # answering from a stale per-URL cache entry.
+        env:
+          SWA_URL: https://wonderful-ground-01bf3091e.7.azurestaticapps.net/
+          CUSTOM_URL: https://www.yetanotherquiz.com/
+          BUDGET_SECONDS: 300
+          POLL_INTERVAL: 5
+        run: |
+          set -euo pipefail
+          swa_status=$(curl -sS -o /dev/null -w '%{http_code}' "${SWA_URL}?_=${GITHUB_SHA}")
+          echo "raw SWA hostname /: ${swa_status}"
+          if [ "$swa_status" != "200" ]; then
+            echo "FAIL: artifact is broken — raw SWA hostname does not serve /"
+            exit 1
+          fi
+          deadline=$((SECONDS + BUDGET_SECONDS))
+          attempt=0
+          while [ $SECONDS -lt $deadline ]; do
+            attempt=$((attempt + 1))
+            status=$(curl -sS -o /dev/null -w '%{http_code}' "${CUSTOM_URL}?_=${GITHUB_SHA}-${attempt}")
+            echo "www attempt ${attempt}: ${status} (t=${SECONDS}s)"
+            if [ "$status" = "200" ]; then
+              echo "OK: www warmed up after ${SECONDS}s and ${attempt} attempts"
+              exit 0
+            fi
+            sleep ${POLL_INTERVAL}
+          done
+          echo "FAIL: www/ still not 200 after ${BUDGET_SECONDS}s — propagation gap exceeded budget"
+          exit 1

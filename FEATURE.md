@@ -113,6 +113,8 @@ Key PRs: #341 (Bicep template scaffolded, no deploy), #342 (`schedule:` removal 
 
 Key PRs from the day: #336 (Turnstile soft-disable, the fix that needed to ship), #337 (deploy-v2.yml diagnostic, deleted in #339), #338 (deploy-v3.yml diagnostic, repurposed into the new `deploy.yml` in #339), #339 (this cleanup).
 
+Current-state reference for what's deployed and the runbook for these symptoms: [`infra/operations.md`](infra/operations.md).
+
 ### Feature B: Daily challenge — global stats — *shipped 2026-06-10*
 
 Per-flag find rates aggregated across everyone who attempted the same daily puzzle, plus an "Average today: X/Y" headline below the result. Live in production.

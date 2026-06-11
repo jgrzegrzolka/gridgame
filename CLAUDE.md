@@ -18,7 +18,7 @@ Rule of thumb: keep new code inside its feature folder. Promote something to `fl
 - DNS sits on **Cloudflare**. The `www` CNAME (DNS only / grey cloud) points at the SWA hostname above; apex A records are proxied (orange) so the apex→www Redirect Rule can fire.
 - PartyKit's tic-tac-toe WebSocket server (`gridgame-ttt.jgrzegrzolka.partykit.dev`) is unrelated to SWA — its own deploy workflow (`deploy-partykit.yml`) sends it to Cloudflare. Don't conflate.
 - **Naming convention:** code, pages, repo name, and `gridgame.*` `localStorage` keys all stay `gridgame` (historical). Azure resources (subscription, resource group, SWA name, Cosmos account, etc.) use `yetanotherquiz` because that's the public product framing. When wiring Azure-side things, pick `yetanotherquiz-...`; when editing code, leave `gridgame` alone.
-- See `FEATURE.md` for in-progress hosting / Azure work and the full Azure resource inventory.
+- See `infra/operations.md` for the live topology, resource inventory, and runbook for recurring symptoms (post-deploy 404, apex Redirect Rule misfire, deploy hang). See `FEATURE.md` for in-progress hosting / Azure work and the time-ordered history behind those symptoms.
 
 ## API / Azure Functions
 
