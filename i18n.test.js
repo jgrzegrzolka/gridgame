@@ -611,3 +611,24 @@ test('i18n: en.json and pl.json have identical key trees', async () => {
     { missingInPl: [], missingInEn: [] },
   );
 });
+
+test('i18n: every flag colour in ALL_FLAG_COLORS has a translation in every language', async () => {
+  // Catches the next time a new colour enters the data without a matching
+  // i18n key — the chooser would otherwise render the raw English token
+  // (e.g. "violet") in Polish. The en/pl-symmetry test above doesn't
+  // catch this when BOTH languages miss the key (which is how we shipped
+  // for a while before noticing).
+  const { ALL_FLAG_COLORS } = await import('./flags/engine.js');
+  const enJson = JSON.parse(await readFile(new URL('./i18n/en.json', import.meta.url), 'utf8'));
+  const plJson = JSON.parse(await readFile(new URL('./i18n/pl.json', import.meta.url), 'utf8'));
+  const missing = [];
+  for (const color of ALL_FLAG_COLORS) {
+    if (!enJson.color || typeof enJson.color[color] !== 'string' || enJson.color[color].length === 0) {
+      missing.push(`en.color.${color}`);
+    }
+    if (!plJson.color || typeof plJson.color[color] !== 'string' || plJson.color[color].length === 0) {
+      missing.push(`pl.color.${color}`);
+    }
+  }
+  assert.deepEqual(missing, []);
+});

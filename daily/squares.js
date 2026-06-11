@@ -1,5 +1,6 @@
 import { t } from '../i18n.js';
 import { parseFilterString, filterTitle } from '../flags/findFlag.js';
+import { puzzleDate, formatPuzzleDate } from '../flags/daily.js';
 import { scoreColor } from '../flags/quiz.js';
 import { formatScore } from './scores.js';
 
@@ -49,6 +50,11 @@ export function renderArchiveSquare(entry, opts, doc = document) {
   link.dataset.filter = entry.filter;
   link.dataset.ariaPrefix = ariaPrefix;
   link.dataset.n = String(entry.n);
+
+  const dateEl = doc.createElement('span');
+  dateEl.className = 'archive-square-date';
+  dateEl.textContent = formatPuzzleDate(puzzleDate(entry.n));
+  link.appendChild(dateEl);
 
   const numEl = doc.createElement('span');
   numEl.className = 'archive-square-num';
