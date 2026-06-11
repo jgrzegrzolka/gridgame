@@ -5,7 +5,8 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 1. Read `CLAUDE.md` (project rules).
 2. Read this file.
 3. Find the **first uncompleted feature** under `## Now`, locate its **next step**, and continue.
-4. Update this file as each step completes (check off boxes, move finished features to `## Done`).
+4. **`## Backlog` is off-limits to agents** — items there are deferred-but-not-forgotten, not next-up. Jan promotes a backlog item to `## Now` when he decides to ship it.
+5. Update this file as each step completes (check off boxes, move finished features to `## Done`).
 
 **Branching:** each phase = one branch off `main` + one PR. Run `git checkout main && git pull` *before* `git checkout -b ...`. Don't auto-merge — Jan merges each PR himself.
 
@@ -178,6 +179,32 @@ Each layer is additive. Users can stay at L0, opt up to L1, opt up further to L2
 5. Optional later: stats UI surfaces "verified player" vs "anonymous browser" so users can tell whether their cross-device merge actually happened.
 
 **Out of scope even for Feature C:** usernames, email, profile pages, social features. The passkey is the only piece of identity.
+
+---
+
+## Backlog
+
+Items here are not blocking current work but deserve durable memory — the next-time-this-comes-up question, the deferred fix that would otherwise vanish into PR archeology. Agents reading FEATURE.md to find their next task should **not** pick from this section; Jan promotes a backlog item to `## Now` when he decides to actually ship it.
+
+### Feature J: Platform decision — keep SWA Free, upgrade SWA, or migrate to CF Pages
+
+**Status:** decision pending. Worker proxy (`infra/edge-proxy/`) keeps SWA Free usable in the meantime — this isn't blocking, but the question keeps re-surfacing every time SWA misbehaves.
+
+**Why this question exists.** SWA Free SKU has burned us twice in 36 hours: the 2026-06-10 West Europe content-distribution outage (forced V3 failover, see Done / Feature D) and the 2026-06-11 custom-domain-edge flap that needed the Worker workaround (see PR #353 and `infra/operations.md` "Known issues"). The Worker insulates users from the specific 404-flap symptom but doesn't insulate from the next SWA Free issue, whatever it is.
+
+**Three options on the table:**
+
+1. **Stay on SWA Free + Worker proxy.** Status quo as of #353. $0/month. Vulnerable to whatever Azure-side issue hits next. Worker only covers the custom-domain-edge symptom; the WE-outage-class problem still requires hand-cranked failover per Feature D's playbook.
+2. **Upgrade to SWA Standard SKU.** ~$9/month. Real SLA (99.95%), Microsoft support tickets, possibly different edge infrastructure. *Uncertain* whether the custom-domain edge issue is fixed by tier upgrade or shared with Free — would need to test by upgrading and temporarily removing the Worker.
+3. **Migrate to Cloudflare Pages + Workers.** Free for our traffic. Already deep in CF ecosystem (DNS, Turnstile, PartyKit, edge proxy). The Cosmos client is plain-HTTPS (see CLAUDE.md "API / Azure Functions") so it ports to Workers without the `@azure/cosmos` SDK headache that bit B2b. Loses "Azure as portfolio/learning" reason from the original 2026-06-09 stack decision (see Shared decisions at top of this file). Migration: ~1–3 focused sessions.
+
+**Decision criteria worth deciding on cold:**
+
+- How much does "Azure as portfolio/learning" still matter? (Original reason for the stack — Shared decisions at top.)
+- How much does the next SWA Free flap cost in Jan's time vs $9/month?
+- Is migrating to CF Pages also re-opening the original stack decision, or separable from it?
+
+**Out of scope here:** the second-region (WE sibling) plan in Feature D. That helps if we stay on SWA Standard, but is unnecessary on CF Pages. Decide platform first.
 
 ---
 
