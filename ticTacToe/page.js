@@ -769,16 +769,13 @@ function runOnline(countries) {
     matchupOpponentEl.replaceChildren();
     if (!state.peerId) return;
 
-    const sep = document.createElement('span');
-    sep.className = 'matchup-sep';
-    sep.textContent = '·';
     const vs = document.createElement('span');
     vs.className = 'muted';
     vs.textContent = t('ttt.matchupVs', 'vs');
     const name = document.createElement('span');
     name.className = 'matchup-name';
     name.textContent = displayNickname(state.peerId, opponentNickname);
-    matchupOpponentEl.append(sep, vs, ' ', name);
+    matchupOpponentEl.append(vs, name);
   }
 
   /**
