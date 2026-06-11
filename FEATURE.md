@@ -96,6 +96,10 @@ Each layer is additive. Users can stay at L0, opt up to L1, opt up further to L2
 
 ---
 
+## Backlog
+
+Items here are not blocking current work but deserve durable memory — the next-time-this-comes-up question, the deferred fix that would otherwise vanish into PR archeology. Agents reading FEATURE.md to find their next task should **not** pick from this section; Jan promotes a backlog item to `## Now` when he decides to actually ship it.
+
 ### Feature I: Per-puzzle stats snapshots for long-term retention
 
 **Status:** parked until ~2027-05. **Hard deadline: must ship before 2027-06-09** — that's when the oldest `dailyResults` row (a puzzleId=1 submission from 2026-06-09 20:33 UTC) reaches its 1-year TTL set in Feature F phase 2. After that date, the row auto-purges from Cosmos, and from then on every puzzle's data ages off one day at a time. Missing the deadline means losing per-flag find-rate aggregates for those puzzles forever, with no way to reconstruct them.
@@ -126,15 +130,13 @@ Each layer is additive. Users can stay at L0, opt up to L1, opt up further to L2
 
 ### Feature C: Cross-device identity via WebAuthn passkey
 
-**Status:** parked. Don't start until Feature B is fully shipped and there's actual demand for cross-device stats.
+**Status:** parked. Don't start until there's actual demand for cross-device stats. Feature B (the daily community-stats data path) is shipped; this is the cross-device identity layer that turns "stats per browser" into "stats per person across all their browsers."
 
 **Goal:** an existing user can opt-in to "save my progress across devices" with one click + Face ID / Touch ID / Windows Hello. From that point on, their stats follow them between phone, laptop, and any other browser-connected device — without registering, without a password, without an email field.
 
 **Relationship to Feature H:** Feature H ships the device-profile layer (L1 — anonymous deviceId + nickname). Feature C is the user-account layer (L2 — multiple deviceIds linked under one userId). When C comes off the parking brake, H's `profiles` container and unified deviceId already exist; C grafts accounts on top via a separate `users` container that links N profiles together. The auth mechanism (passkey vs. recovery code vs. QR handshake vs. magic link) is the open design call to be made when C starts; see the discussion below.
 
 **Partition-key flag for when C lands:** `dailyResults` is partitioned by `/puzzleId`, not by `/deviceId`. The current per-puzzle community-stats query is single-partition and cheap. The "lifetime stats per linked identity" query C implies ("show me my stats across every puzzle I've ever played, merged across my linked devices") is fundamentally cross-partition — it needs every `puzzleId` partition scanned and filtered by the device's identityId. This is acceptable for cache-friendly aggregates but worth designing for explicitly when C lands: either a pre-aggregated `lifetime:{identityId}` doc maintained on each submission, or accepting a one-time cross-partition scan + edge cache. Don't try to change the `dailyResults` partition key retroactively — keep the lifetime view as a separate read path.
-
-**Why this is a separate feature, not part of B:** identity is not the value prop of the daily stats. v1's anonymous UUID covers ~95% of what the stats UX needs. Passkeys are the right answer the day cross-device starts mattering — but doing them at the same time as the stats feature would balloon both the scope and the risk.
 
 **Why not OAuth / magic-link / fingerprinting:**
 - **Browser fingerprinting** (UA + canvas + screen) — GDPR risk, breaks on Safari/Brave, ~70% accurate.
@@ -155,12 +157,6 @@ Each layer is additive. Users can stay at L0, opt up to L1, opt up further to L2
 5. Optional later: stats UI surfaces "verified player" vs "anonymous browser" so users can tell whether their cross-device merge actually happened.
 
 **Out of scope even for Feature C:** usernames, email, profile pages, social features. The passkey is the only piece of identity.
-
----
-
-## Backlog
-
-Items here are not blocking current work but deserve durable memory — the next-time-this-comes-up question, the deferred fix that would otherwise vanish into PR archeology. Agents reading FEATURE.md to find their next task should **not** pick from this section; Jan promotes a backlog item to `## Now` when he decides to actually ship it.
 
 ### Feature J: Platform decision — keep SWA Free, upgrade SWA, or migrate to CF Pages
 
