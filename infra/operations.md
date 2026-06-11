@@ -114,8 +114,11 @@ Every native write into `dailyResults` carries a numeric schema-version field `v
 **The contract for any future shape change to `dailyResults`:**
 
 1. Bump the writer's `v` to the new version. Native writes now include the new field with its real value.
-2. Ship a one-off backfill script that reads every row where `v < newVersion`, sets the new field(s) to a sensible default (same default the aggregator already returns on absence, so no behaviour change), sets `backfilled: true` on the touched rows, and bumps the row's `v` to the new version.
-3. The backfill is the F4 pattern — same shape every time, just different default values.
+2. Ship a one-off backfill script that reads every row where `v < newVersion`. For each row:
+   - **(a)** add any missing **analytical** fields with a sensible default — same default the aggregator already returns on absence, so no behaviour change.
+   - **(b)** set `backfilled: true` on the row **only if** an analytical field was defaulted in (a). Do *not* set it on rows where only the `v` field is being patched in — `backfilled` exists to flag analytical-value provenance ("treat this `wrongCodes: []` as 'we never asked' rather than 'user confirmed nothing'"), not migration touches. Marking metadata-only patches as `backfilled` would poison every future "exclude backfilled rows" analytic with rows whose analytical values are perfectly native.
+   - **(c)** bump the row's `v` to the new version.
+3. The backfill is the F4 pattern — same shape every time, just different default values and field names. See `scripts/backfill-daily-v1.cjs` as the reference template (pure `planRow()` exported for testability, idempotent dry-run by default, system fields stripped before upsert).
 
 **Why a separate `backfilled: true` marker** (and not just relying on `v`):
 
@@ -125,9 +128,14 @@ A default value (e.g. `wrongCodes: []`) on a backfilled row is structurally indi
 
 Even with the version field, aggregators should default missing fields rather than assume presence. `v` is for write-side migrations and analytic provenance — not a read-side gate. `api/src/lib/aggregate.js` already follows this: `const wrong = row.wrongCodes || [];` works the same whether the field is absent (pre-#317), `[]` (post-#317 native), or `[]` from a backfill.
 
-**Worked example — what F4 does:**
+**Worked example — what F4 did (applied 2026-06-11):**
 
-Three docs from puzzleId=1 predate PR #317 (`feat: capture wrongCodes on every submission`) and have no `wrongCodes` field. They also predate `v: 1` so they have no `v` field at all. F4 backfills them as `wrongCodes: [], backfilled: true, v: 1`. Read-side behaviour doesn't change; the doc shape becomes uniform; the marker tells any future analytic "this `wrongCodes: []` is not a confirmed-no-wrong-picks signal."
+20 dailyResults rows existed at the time F4 ran, all without `v`. The script split them into two groups:
+
+- **Group A — 1 row** (puzzleId=1, deviceId `7012d6ba…`): predates PR #317 (`feat: capture wrongCodes on every submission`) and has no `wrongCodes` field. Backfilled as `wrongCodes: [], backfilled: true, v: 1`. The `backfilled` marker tells any future analytic "this `[]` is not a confirmed-no-wrong-picks signal."
+- **Group B — 19 rows**: have `wrongCodes` as written by the native client, but predate `v: 1`. Patched to add `v: 1` only — no `backfilled` marker, since no analytical field was defaulted. Their `wrongCodes` arrays are native player data.
+
+One row (the dev-tagged puzzleId=6 submission from the F3 deploy verification) was already at `v: 1` and was skipped. Idempotent re-run after the apply showed 0 changes, 21 skipped — the contract holds.
 
 ## Where to look for what
 
