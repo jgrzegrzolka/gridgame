@@ -109,8 +109,9 @@ Key PRs: #341 (Bicep template scaffolded, no deploy), #342 (`schedule:` removal 
 4. Add `www.yetanotherquiz.com` as a custom domain on the new WE SWA via TXT validation while V3 is still serving (Azure requires the source SWA to release first — same conflict we hit today; remove from V3 before adding to WE).
 5. Flip Cloudflare CNAME back to the WE hostname. Validate. Done — V3 stays as hot-standby for next time.
 
+**2026-06-11 follow-up — redirect rule hardening + apex A-record cleanup.** The CF apex→www redirect "Redirect from root to WWW [Template]" was firing intermittently. Its wildcard `https://yetanotherquiz.com/*` only matched HTTPS with a trailing path — plain-HTTP requests and edge cases fell through to the 4 stale GH Pages A records (`185.199.108-111.153`), surfacing as unstyled stale content or Azure 404s on apex. The "functionally irrelevant" rationale in the original cleanup list was wrong: those records were one rule-misfire away from being the actual origin. Rewrote the rule to match by host header instead — Match: `(http.host eq "yetanotherquiz.com")`, Target (Dynamic): `concat("https://www.yetanotherquiz.com", http.request.uri.path)`, 301, preserve query string. Then deleted all 4 GH Pages A records and replaced with a single placeholder A record (`192.0.2.1`, TEST-NET-1, proxied) so apex stays resolvable for the rule to fire on, but any future rule misfire falls through to an unroutable IP rather than a real stale server.
+
 **Open cleanup (Cloudflare, manual):**
-- 4 stale apex A records pointing at GitHub Pages IPs (`185.199.108-111.153`) from before the original SWA migration. Functionally irrelevant (Cloudflare redirect rule fires before origin contact) but worth cleaning up.
 - Stale apex TXT `_9n7yl364eeo06i0bnmr5hyuxtpcpff2` — the original SWA's hostname validation token, no longer used.
 
 Key PRs from the day: #336 (Turnstile soft-disable, the fix that needed to ship), #337 (deploy-v2.yml diagnostic, deleted in #339), #338 (deploy-v3.yml diagnostic, repurposed into the new `deploy.yml` in #339), #339 (this cleanup).
