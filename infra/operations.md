@@ -47,6 +47,21 @@ Outside Azure:
 
 Cost guardrail: €5/month subscription budget with email alerts at 50/80/100% to `jangrzegrzolka@gmail.com` (`Microsoft.Consumption/budgets/monthly-5eur`). Don't re-add.
 
+## Secrets and tokens
+
+Four secrets keep the runtime working. Rotation expectations differ — only one expires on a clock.
+
+| Secret | Lives in | Used by | Expires | How to rotate |
+|---|---|---|---|---|
+| `AZURE_STATIC_WEB_APPS_API_TOKEN_V3` | GitHub repo secret | `.github/workflows/deploy.yml` (SWA upload) | Never — rotate only if compromised | Portal → `swa-yetanotherquiz-v3` → **Manage deployment token** → **Reset** → copy → update repo secret |
+| `CLOUDFLARE_API_TOKEN` | GitHub repo secret | `.github/workflows/deploy.yml` (cache-purge step) | Never (no TTL set on the token) | CF dash → My Profile → API Tokens → `gridgame deploy — cache purge` → **Roll** → copy → update repo secret |
+| `PARTYKIT_TOKEN` | GitHub repo secret | `.github/workflows/deploy-partykit.yml` | No documented expiry; rotate only if compromised | Local `partykit token` CLI → copy → update repo secret |
+| GitHub fine-grained PAT (Logic App caller) | Azure Bicep parameter on `logic-yetanotherquiz-release-daily` | Logic App HTTP action that POSTs `workflow_dispatch` to `release-daily.yml` | **2026-09-08** (initial 90-day mint 2026-06-10; future rotations use GitHub's 1-year max) | Mint new fine-grained PAT (Actions:write, scoped to `jgrzegrzolka/gridgame`) → `az deployment group create` against `infra/logicapp-release-daily.bicep` with the new value |
+
+**The PAT is the only secret with a hard expiry.** GitHub emails 7 days before the date — that's the actionable reminder; no other tracking needed.
+
+**Compromise response.** Revoke at source first (SWA portal / CF dash / PartyKit CLI / GitHub Developer settings), then mint a fresh value and update wherever it lives.
+
 ## Known issues
 
 ### Azure SWA 404 on www `/` right after a deploy
