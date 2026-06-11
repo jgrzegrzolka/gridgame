@@ -66,3 +66,31 @@ test('row with li but old totalCount=9 still gets patched (totalCount-only fix)'
   assert.deepEqual(plan.next.foundCodes, ['ch', 'li']); // no duplicate li
   assert.equal(plan.next.totalCount, NEW_TOTAL);
 });
+
+test('li in wrongCodes is stripped (past guesses now correct)', () => {
+  const row = {
+    ...FULL_SOLVE_ROW,
+    foundCodes: ['ch', 'dk'],
+    wrongCodes: ['fr', 'li', 'de'],
+  };
+  const plan = planRow(row);
+  assert.equal(plan.action, 'patch');
+  assert.deepEqual(plan.next.wrongCodes, ['fr', 'de']);
+  assert.ok(plan.next.foundCodes.includes('li'));
+});
+
+test('already-migrated row but with stale li in wrongCodes is re-patched', () => {
+  const row = {
+    ...ALREADY_MIGRATED_ROW,
+    wrongCodes: ['fr', 'li'],
+  };
+  const plan = planRow(row);
+  assert.equal(plan.action, 'patch');
+  assert.deepEqual(plan.next.wrongCodes, ['fr']);
+});
+
+test('fully clean row (li in found, not in wrong, totalCount=10) is skipped', () => {
+  const row = { ...ALREADY_MIGRATED_ROW, wrongCodes: ['fr', 'de'] };
+  const plan = planRow(row);
+  assert.equal(plan.action, 'skip');
+});

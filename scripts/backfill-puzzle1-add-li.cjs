@@ -6,7 +6,9 @@
 // Their archive score would otherwise appear to regress ("9/10 — missed
 // Liechtenstein") even though they finished a puzzle that didn't include
 // li at the time. This script credits every existing row with li and
-// bumps totalCount to 10.
+// bumps totalCount to 10. It also strips "li" from `wrongCodes` — past
+// guesses that were wrong then but are correct now shouldn't count
+// against the player in any analytics over wrongCodes.
 //
 // Mirrors the client-side `applyScoreMigrations` in daily/scores.js
 // (which patches localStorage on next visit). Server-side patch keeps
@@ -42,13 +44,20 @@ function stripSystemFields(doc) {
 }
 
 function planRow(row) {
-  const codes = Array.isArray(row.foundCodes) ? row.foundCodes : [];
-  const hasLi = codes.includes(ADD_CODE);
-  if (hasLi && row.totalCount === NEW_TOTAL) {
+  const found = Array.isArray(row.foundCodes) ? row.foundCodes : [];
+  const wrong = Array.isArray(row.wrongCodes) ? row.wrongCodes : [];
+  const hasLiInFound = found.includes(ADD_CODE);
+  const hasLiInWrong = wrong.includes(ADD_CODE);
+  const totalIsNew = row.totalCount === NEW_TOTAL;
+  // li now a correct answer → must be in found, must NOT be in wrong.
+  if (hasLiInFound && totalIsNew && !hasLiInWrong) {
     return { action: 'skip', reason: 'already migrated' };
   }
   const next = stripSystemFields(row);
-  next.foundCodes = hasLi ? [...codes] : [...codes, ADD_CODE];
+  next.foundCodes = hasLiInFound ? [...found] : [...found, ADD_CODE];
+  // Strip "li" from wrongCodes — past guesses that were wrong at the
+  // time but are now correct shouldn't count against the player.
+  next.wrongCodes = wrong.filter((c) => c !== ADD_CODE);
   next.totalCount = NEW_TOTAL;
   next.backfilled = true;
   return { action: 'patch', next };
