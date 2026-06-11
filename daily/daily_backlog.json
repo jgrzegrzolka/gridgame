@@ -230,6 +230,7 @@
     "filter": "continent:South America,motif:star-or-moon",
     "answers": [
       "ar",
+      "bo",
       "br",
       "cl",
       "ec",
@@ -1159,7 +1160,6 @@
       "mz",
       "na",
       "pt",
-      "py",
       "sc",
       "sz",
       "zw"

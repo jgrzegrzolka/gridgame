@@ -529,6 +529,7 @@
       "animal",
       "bird",
       "coat-of-arms",
+      "star-or-moon",
       "weapon"
     ]
   },
@@ -927,6 +928,8 @@
     ],
     "additionalColors": [],
     "motifs": [
+      "animal",
+      "bird",
       "star-or-moon"
     ]
   },
@@ -3242,7 +3245,8 @@
     ],
     "additionalColors": [
       "green",
-      "yellow"
+      "yellow",
+      "black"
     ],
     "motifs": [
       "coat-of-arms",
@@ -3295,7 +3299,8 @@
     ],
     "additionalColors": [
       "yellow",
-      "green"
+      "green",
+      "black"
     ],
     "motifs": [
       "coat-of-arms",
@@ -3566,8 +3571,7 @@
     "primaryColors": [
       "blue",
       "white",
-      "red",
-      "yellow"
+      "red"
     ],
     "additionalColors": [],
     "motifs": []
