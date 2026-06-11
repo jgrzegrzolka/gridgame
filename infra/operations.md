@@ -43,7 +43,7 @@ All in subscription **`yetanotherquiz`** (`6da299d6-bdfe-4277-a544-ae8ef68f99a0`
 | Name | Type | Region | Role |
 |---|---|---|---|
 | `swa-yetanotherquiz-v3` | Static Web App (Free) | West US 2 | Serves the site + bundled Functions. Hostname `wonderful-ground-01bf3091e.7.azurestaticapps.net`. |
-| `cosmos-yetanotherquiz-jg` | Cosmos DB NoSQL (Free tier ON) | West Europe | Containers under db `yetanotherquiz`: **`dailyResults`** — one row per (puzzle, deviceId) submission, **1000 RU/s manual**, `defaultTtl: 31_536_000` (1 year, set 2026-06-11 per FEATURE.md Feature F). **`quizRecords`** — one row per deviceId carrying every quiz config's PB + engagement counters (Feature F5), **400 RU/s manual**, no TTL. **`profiles`** — one row per deviceId carrying the optional nickname (Feature H2), **400 RU/s manual**, no TTL. The €5/month budget catches drift if any container goes paid past the Free Tier 1000 RU/s account quota. |
+| `cosmos-yetanotherquiz-jg` | Cosmos DB NoSQL (Free tier ON) | West Europe | Containers under db `yetanotherquiz`: **`dailyResults`** — one row per (puzzle, deviceId) submission, **1000 RU/s manual**, `defaultTtl: 31_536_000` (1 year, set 2026-06-11 per FEATURE.md Feature F). **`quizRecords`** — one row per deviceId carrying every quiz config's PB + engagement counters (Feature F5), **400 RU/s manual**, no TTL. **`profiles`** — one row per deviceId carrying the optional nickname (Feature H2), **400 RU/s manual**, no TTL. **`tttPairs`** — one row per (deviceId, opponentId) per perspective carrying running head-to-head wins/losses/draws for both TTT modes (Feature G), **400 RU/s manual**, no TTL. The €5/month budget catches drift if any container goes paid past the Free Tier 1000 RU/s account quota. |
 | `logic-yetanotherquiz-release-daily` | Logic App (Consumption) | West Europe | 00:05 Warsaw daily cron that POSTs `workflow_dispatch` to `release-daily.yml`. Replaces flaky GH cron. Template: `logicapp-release-daily.bicep`. |
 
 Outside Azure:
@@ -109,7 +109,7 @@ History: FEATURE.md Feature D "2026-06-11 follow-up — redirect rule hardening 
 
 ## Cosmos data migration policy
 
-Every native write into `dailyResults` (`api/src/lib/dailyResultDoc.js`), `quizRecords` (`api/src/lib/quizRecordDoc.js`) and `profiles` (`api/src/lib/profileDoc.js`) carries a numeric schema-version field `v` (today `v: 1`). The same policy will extend to every other container we add (future `tttResults`, etc.).
+Every native write into `dailyResults` (`api/src/lib/dailyResultDoc.js`), `quizRecords` (`api/src/lib/quizRecordDoc.js`), `profiles` (`api/src/lib/profileDoc.js`), and `tttPairs` (`api/src/lib/tttPairDoc.js`) carries a numeric schema-version field `v` (today `v: 1`).
 
 **The contract for any future shape change to `dailyResults`:**
 

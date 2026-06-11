@@ -49,9 +49,9 @@ Each layer is additive. Users can stay at L0, opt up to L1, opt up further to L2
 - **Cross-device linking.** That's Feature C, fundamentally a different layer.
 - **Username uniqueness / display-name moderation.** Nicknames are display-only and may collide. If two devices both pick "Alice", both can have it. Worry about uniqueness only if profanity / impersonation become real problems.
 
-### Feature G: TTT online — capture game results in Cosmos
+### Feature G: TTT online — head-to-head score per device pair
 
-**Status:** ready to start *after* Feature H1 lands (deviceId unification). Can be sketched in parallel.
+**Status:** in flight. Pivoted from the original "one row per game" design to a much leaner **one row per (deviceA, deviceB) pair, per perspective** — only the rolling head-to-head score is kept (wins/losses/draws per mode), not the games themselves. Justification: the only planned read surface is "Alice vs Bob: 3-2 in 3×3, 1-1 in 9×9"; storing every game would bloat Cosmos for analytics nobody will run. Trade-off accepted: no replay, no movesCount/duration, give-up squashed into win/loss, refresh-after-finish can double-count once (no gameId minting).
 
 **Goal:** persist every online TTT game outcome so we can later compute per-player matchup stats, leaderboards, head-to-head records, and other "device-to-device scoring" features. Today nothing about an online TTT game is persisted server-side once the PartyKit Durable Object is evicted.
 

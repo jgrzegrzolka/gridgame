@@ -96,10 +96,13 @@ export function applyHello(room, playerId) {
   const broadcasts = [welcomeFor(nextRoom, playerId)];
   // Tell the OTHER present player(s) that the peer is here. We notify on
   // every fresh connect AND reconnect, since the other side cares about
-  // "peer's socket is live" — they don't know it's a refresh.
+  // "peer's socket is live" — they don't know it's a refresh. The peer's
+  // playerId rides along so the receiver can address Cosmos writes to
+  // them (head-to-head score row keyed by both deviceIds) without an
+  // extra round-trip.
   for (const id of present) {
     if (id !== playerId) {
-      broadcasts.push({ to: id, message: { type: 'peer-joined' } });
+      broadcasts.push({ to: id, message: { type: 'peer-joined', peerId: playerId } });
     }
   }
   return { room: nextRoom, broadcasts };
@@ -288,11 +291,17 @@ function rehydrateCategory(c) {
 function welcomeFor(room, playerId) {
   const you = room.roles.get(playerId);
   let peerPresent = false;
-  for (const id of room.present) {
-    if (id !== playerId) { peerPresent = true; break; }
+  /** @type {string | null} */
+  let peerId = null;
+  for (const id of room.roles.keys()) {
+    if (id !== playerId) {
+      peerId = id;
+      if (room.present.has(id)) peerPresent = true;
+      break;
+    }
   }
   return {
     to: playerId,
-    message: { type: 'welcome', you, game: room.game, peerPresent },
+    message: { type: 'welcome', you, game: room.game, peerPresent, peerId },
   };
 }

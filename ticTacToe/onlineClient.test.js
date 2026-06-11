@@ -76,14 +76,22 @@ test('serverUrlFor: party arg routes to the ultimate (9×9) party for dev and pr
 
 // ---- Reducer ----
 
-test('reduceServerMessage: welcome sets myRole, game, and peerPresent', () => {
+test('reduceServerMessage: welcome sets myRole, game, peerPresent, peerId', () => {
   const state = initialClientState();
   const game = /** @type {any} */ ({ currentPlayer: 'O', winner: null, draw: false });
-  const r = reduceServerMessage(state, { type: 'welcome', you: 'O', game, peerPresent: false });
+  const r = reduceServerMessage(state, { type: 'welcome', you: 'O', game, peerPresent: true, peerId: 'alice' });
   assert.equal(r.state.myRole, 'O');
   assert.equal(r.state.game, game);
-  assert.equal(r.state.peerPresent, false);
+  assert.equal(r.state.peerPresent, true);
+  assert.equal(r.state.peerId, 'alice');
   assert.deepEqual(r.effects, []);
+});
+
+test('reduceServerMessage: welcome with no peer yet leaves peerId null', () => {
+  const r = reduceServerMessage(initialClientState(), {
+    type: 'welcome', you: 'X', game: /** @type {any} */ ({}), peerPresent: false, peerId: null,
+  });
+  assert.equal(r.state.peerId, null);
 });
 
 test('reduceServerMessage: state with kind=claimed updates game and emits no effects', () => {
@@ -145,6 +153,20 @@ test('reduceServerMessage: state with kind=rematch emits the "rematch-started" e
   const r = reduceServerMessage(state, { type: 'state', kind: 'rematch', game });
   assert.ok(r.effects.some((e) => e.type === 'rematch-started'));
   assert.equal(r.state.game, game);
+});
+
+test('reduceServerMessage: peer-joined carries peerId — alice learns about bob', () => {
+  const state = { ...initialClientState(), myRole: /** @type {const} */ ('X') };
+  const r = reduceServerMessage(state, { type: 'peer-joined', peerId: 'bob' });
+  assert.equal(r.state.peerPresent, true);
+  assert.equal(r.state.peerId, 'bob');
+});
+
+test('reduceServerMessage: peer-left keeps peerId sticky so a late result still has an opponent id', () => {
+  const state = { ...initialClientState(), peerPresent: true, peerId: 'bob' };
+  const r = reduceServerMessage(state, { type: 'peer-left' });
+  assert.equal(r.state.peerPresent, false);
+  assert.equal(r.state.peerId, 'bob');
 });
 
 test('reduceServerMessage: peer-joined toggles peerPresent without touching game state', () => {

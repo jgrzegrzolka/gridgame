@@ -207,4 +207,52 @@ function validateProfileBody(body) {
   return { ok: true, value: { deviceId: body.deviceId, nickname: trimmed } };
 }
 
-module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, LIMITS };
+/**
+ * Validate the body posted to `POST /api/v1/ttt/result`. Shape:
+ *
+ *   {
+ *     deviceId:   string (8..64),
+ *     opponentId: string (8..64),
+ *     mode:       "3x3" | "9x9",
+ *     outcome:    "win" | "loss" | "draw",
+ *   }
+ *
+ * Squashes give-up cases into win/loss at the client — Feature G doesn't
+ * track the give-up distinction (intentional simplification). `deviceId`
+ * must differ from `opponentId` since a player can't play themselves online.
+ *
+ * Returns `{ ok: true, value: { deviceId, opponentId, mode, outcome } }`
+ * on success so the handler doesn't have to re-extract the trusted fields.
+ */
+const TTT_MODES = new Set(['3x3', '9x9']);
+const TTT_OUTCOMES = new Set(['win', 'loss', 'draw']);
+
+function validateTttResultBody(body) {
+  if (!body || typeof body !== 'object') return { ok: false, error: 'body_required' };
+  if (!isString(body.deviceId, LIMITS.DEVICE_ID_MIN, LIMITS.DEVICE_ID_MAX)) {
+    return { ok: false, error: 'invalid_deviceId' };
+  }
+  if (!isString(body.opponentId, LIMITS.DEVICE_ID_MIN, LIMITS.DEVICE_ID_MAX)) {
+    return { ok: false, error: 'invalid_opponentId' };
+  }
+  if (body.deviceId === body.opponentId) {
+    return { ok: false, error: 'self_match' };
+  }
+  if (typeof body.mode !== 'string' || !TTT_MODES.has(body.mode)) {
+    return { ok: false, error: 'invalid_mode' };
+  }
+  if (typeof body.outcome !== 'string' || !TTT_OUTCOMES.has(body.outcome)) {
+    return { ok: false, error: 'invalid_outcome' };
+  }
+  return {
+    ok: true,
+    value: {
+      deviceId: body.deviceId,
+      opponentId: body.opponentId,
+      mode: body.mode,
+      outcome: body.outcome,
+    },
+  };
+}
+
+module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, validateTttResultBody, LIMITS };

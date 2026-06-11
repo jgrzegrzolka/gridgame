@@ -8,6 +8,7 @@ import {
   canGiveUpOnline,
 } from './onlineClient.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
+import { submitTttResult } from '../flags/tttResultSubmit.js';
 import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
 import { loadCountries } from '../flags/group.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
@@ -114,6 +115,11 @@ function runOnline(countries) {
    * it from the game state. */
   /** @type {boolean | null} */
   let lastGaveUpByMe = null;
+  /** Once-per-game guard so a noisy welcome / multiple state messages
+   * carrying the finished game can't multi-submit the same head-to-head
+   * row. Reset on rematch. Refresh-after-finish still re-fires (no gameId
+   * tracking by design — see FEATURE.md Feature G). */
+  let resultSubmittedForGame = false;
   const colHeaderEls = document.querySelectorAll('.col-header');
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
   const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
@@ -252,8 +258,8 @@ function runOnline(countries) {
     for (const effect of effects) {
       if (effect.type === 'shake') shakeCell(effect.row, effect.col);
       else if (effect.type === 'gave-up') lastGaveUpByMe = effect.byMe;
-      else if (effect.type === 'finished') finishRound();
-      else if (effect.type === 'rematch-started') startFreshRound();
+      else if (effect.type === 'finished') { finishRound(); reportFinishedResult(); }
+      else if (effect.type === 'rematch-started') { resultSubmittedForGame = false; startFreshRound(); }
       else if (effect.type === 'close') {
         // Server-side rejection — don't auto-reconnect, snap back to the
         // lobby with the reason visible so the user understands why their
@@ -693,6 +699,27 @@ function runOnline(countries) {
     }
     if (playAgainEl) playAgainEl.disabled = false;
     resultEl.hidden = false;
+  }
+
+  /**
+   * POST a single head-to-head row update to /api/v1/ttt/result. Fire-and-
+   * forget — failures don't block the UI, and a server-side 5xx just means
+   * the pair row didn't tick this time. Outcome is derived purely from the
+   * final game state (winner / draw / gaveUp + winner), so it works the
+   * same whether finished was triggered live or by a refresh-restore.
+   */
+  function reportFinishedResult() {
+    if (resultSubmittedForGame) return;
+    const { game, myRole, peerId } = state;
+    if (!game || !myRole || !peerId) return;
+    /** @type {'win' | 'loss' | 'draw' | null} */
+    let outcome = null;
+    if (game.draw) outcome = 'draw';
+    else if (game.winner === myRole) outcome = 'win';
+    else if (game.winner) outcome = 'loss';
+    if (!outcome) return;
+    resultSubmittedForGame = true;
+    void submitTttResult({ deviceId, opponentId: peerId, mode: '3x3', outcome });
   }
 
   /**

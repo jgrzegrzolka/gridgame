@@ -86,9 +86,12 @@ export function applyUltimateHello(room, playerId) {
   const nextRoom = { ...room, hostId, roles, present };
   /** @type {UltimateBroadcast[]} */
   const broadcasts = [welcomeFor(nextRoom, playerId)];
+  // Peer's playerId rides along so the receiver can address Cosmos writes
+  // to them (head-to-head score row keyed by both deviceIds) without an
+  // extra round-trip — same shape as the 3×3 path.
   for (const id of present) {
     if (id !== playerId) {
-      broadcasts.push({ to: id, message: { type: 'peer-joined' } });
+      broadcasts.push({ to: id, message: { type: 'peer-joined', peerId: playerId } });
     }
   }
   return { room: nextRoom, broadcasts };
@@ -254,11 +257,17 @@ function rehydrateCategory(c) {
 function welcomeFor(room, playerId) {
   const you = room.roles.get(playerId);
   let peerPresent = false;
-  for (const id of room.present) {
-    if (id !== playerId) { peerPresent = true; break; }
+  /** @type {string | null} */
+  let peerId = null;
+  for (const id of room.roles.keys()) {
+    if (id !== playerId) {
+      peerId = id;
+      if (room.present.has(id)) peerPresent = true;
+      break;
+    }
   }
   return {
     to: playerId,
-    message: { type: 'welcome', you, game: room.game, peerPresent },
+    message: { type: 'welcome', you, game: room.game, peerPresent, peerId },
   };
 }

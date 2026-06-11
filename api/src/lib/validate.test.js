@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { validateResult, validateProfileBody, LIMITS } = require('./validate');
+const { validateResult, validateProfileBody, validateTttResultBody, LIMITS } = require('./validate');
 
 const validBody = () => ({
   puzzleId: 7,
@@ -369,4 +369,71 @@ test('validateProfileBody: nickname can contain any unicode (emoji, RTL, etc.) �
   assert.equal(r.ok, true, 'emoji accepted');
   b.nickname = 'مرحبا';
   assert.equal(validateProfileBody(b).ok, true, 'RTL script accepted');
+});
+
+
+// ---------------------------------------------------------------------------
+// validateTttResultBody — Feature G
+// ---------------------------------------------------------------------------
+
+const validTttBody = () => ({
+  deviceId:   'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  opponentId: '11111111-2222-3333-4444-555555555555',
+  mode:       '3x3',
+  outcome:    'win',
+});
+
+test('validateTttResultBody: valid body returns trimmed value', () => {
+  const r = validateTttResultBody(validTttBody());
+  assert.equal(r.ok, true);
+  assert.equal(r.value?.deviceId, 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+  assert.equal(r.value?.outcome, 'win');
+});
+
+test('validateTttResultBody: null body fails body_required', () => {
+  assert.deepEqual(validateTttResultBody(null), { ok: false, error: 'body_required' });
+});
+
+test('validateTttResultBody: invalid deviceId / opponentId surface the right error code', () => {
+  const tooShort = validTttBody();
+  tooShort.deviceId = 'short';
+  assert.deepEqual(validateTttResultBody(tooShort), { ok: false, error: 'invalid_deviceId' });
+  const oppShort = validTttBody();
+  oppShort.opponentId = 'x';
+  assert.deepEqual(validateTttResultBody(oppShort), { ok: false, error: 'invalid_opponentId' });
+});
+
+test('validateTttResultBody: deviceId === opponentId is self_match', () => {
+  const b = validTttBody();
+  b.opponentId = b.deviceId;
+  assert.deepEqual(validateTttResultBody(b), { ok: false, error: 'self_match' });
+});
+
+test('validateTttResultBody: mode must be exactly 3x3 or 9x9', () => {
+  for (const bad of ['3X3', '4x4', '', 'three-by-three', null, undefined]) {
+    const b = validTttBody();
+    /** @type {any} */ (b).mode = bad;
+    assert.deepEqual(validateTttResultBody(b), { ok: false, error: 'invalid_mode' });
+  }
+  for (const good of ['3x3', '9x9']) {
+    const b = validTttBody();
+    b.mode = good;
+    assert.equal(validateTttResultBody(b).ok, true, `expected ${good} accepted`);
+  }
+});
+
+test('validateTttResultBody: outcome must be win / loss / draw — anything else is rejected', () => {
+  // Note: "gave_up" and "opponent_gave_up" from the original Feature G design
+  // are NOT accepted — the client squashes them into win/loss before sending.
+  // This is a deliberate v1 simplification.
+  for (const bad of ['gave_up', 'opponent_gave_up', 'WIN', '', null, 1]) {
+    const b = validTttBody();
+    /** @type {any} */ (b).outcome = bad;
+    assert.deepEqual(validateTttResultBody(b), { ok: false, error: 'invalid_outcome' });
+  }
+  for (const good of ['win', 'loss', 'draw']) {
+    const b = validTttBody();
+    b.outcome = good;
+    assert.equal(validateTttResultBody(b).ok, true, `expected ${good} accepted`);
+  }
 });
