@@ -1,5 +1,13 @@
 [
   {
+    "filter": "continent:Europe,color:black",
+    "notes": "7 sovereigns (al, be, de, ee, li, mt, sm). Pulled 2026-06-11 on author intent: too many answers come from COA-internal black rather than the primary flag design — sm (San Marino) is a fresh example, plus Malta whose black-only-via-George-Cross drove the primaryCleanExempt: true escape hatch when this puzzle existed. Player who sees 'Europe + black' reasonably expects flags with visible black panels (be, de, ee) and gets confused by COA-only matches. Will unblock if the data convention shifts to tag emblem-internal colours distinctly, or if a future puzzle frames the COA dimension explicitly (e.g. 'Europe + coat-of-arms with black')."
+  },
+  {
+    "filter": "continent:Africa,color:black,motif:coat-of-arms",
+    "notes": "2 sovereigns (eg, ke). Pulled 2026-06-11 alongside Europe+black for the same reason — Egypt's black-via-Eagle-of-Saladin and Kenya's black-via-shield-decoration are both COA-internal, so 'Africa + black + COA' reads to the player as 'where does the black actually live?'. The puzzle's filter is internally consistent (it asks for both colour and COA) but the answer set is so small AND both flags lean on the COA for the black that the framing isn't clarified by the AND. Will unblock if a future Africa COA flag has visible black panels independently, OR if we author a clearer framing."
+  },
+  {
     "filter": "continent:Europe,color:yellow,color:blue,color:red,colorCount:3",
     "notes": "Romanian-style tricolour — Europe + blue/yellow/red + only 3 colours. Originally backlog #13; pulled 2026-06-11 when we tagged Andorra with `white` in additionalColors (the COA white). Andorra's full palette is now 4 colours so it fails colorCount:3, leaving Romania alone (1-flag, fails rule 9 size minimum). Will unblock if a second European flag adopts blue/yellow/red as exactly 3 primary colours; otherwise past-#100 recall candidate where 1-flag is allowed."
   },
