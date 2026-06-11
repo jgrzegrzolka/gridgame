@@ -156,7 +156,7 @@ score = mean(nameScore)                       // primary: typical country fame
 - **Small absolute differences are intentional.** Most puzzles cluster between 1.5 and 6.0 — the rank order matters, the absolute numbers are not a measurement.
 
 **Calibration anchors** (catalog at time of writing — drift = test failure):
-- Live #1 Europe + cross (9 flags, 7×nm=1 + 2×nm=2) ≈ **1.2**
+- Live #1 Europe + cross (10 flags, 7×nm=1 + 2×nm=2 + 1×nm=3) ≈ **1.5**
 - Live #3 EU members (27 flags, all famous) ≈ **1.8** — the size penalty (+0.5 for n=27) pushes the membership puzzle *above* the smaller Europe + cross puzzle, even though every EU member is famous individually
 - Backlog Sweden + Ukraine (Europe + blue+yellow + 2 colors, 2 flags both nm=1) ≈ **1.5**
 - Backlog white+blue 2-color (6 flags including Vatican, nm6 outlier) ≈ **3.6**
