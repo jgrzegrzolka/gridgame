@@ -22,15 +22,26 @@
  */
 
 export const STORAGE_KEY = 'gridgame.deviceId';
+/**
+ * Pre-Feature-H key that ticTacToe online used as its own identity. Swept
+ * into `STORAGE_KEY` on first read after deploy so the two layers reuse one
+ * UUID per browser instead of two; the legacy key is then removed.
+ */
+export const LEGACY_PLAYER_ID_KEY = 'gridgame.player.id';
 const MIN_LEN = 8;
 const MAX_LEN = 64;
 
 /**
- * @param {{ getItem(key: string): string | null, setItem(key: string, value: string): void }} store
+ * @param {{
+ *   getItem(key: string): string | null,
+ *   setItem(key: string, value: string): void,
+ *   removeItem(key: string): void,
+ * }} store
  * @param {() => string} randomUUID
  * @returns {string}
  */
 export function getOrCreateDeviceId(store, randomUUID) {
+  migrateLegacyPlayerId(store);
   try {
     const existing = store.getItem(STORAGE_KEY);
     if (typeof existing === 'string' && existing.length >= MIN_LEN && existing.length <= MAX_LEN) {
@@ -47,4 +58,27 @@ export function getOrCreateDeviceId(store, randomUUID) {
     // for this session. Next page-load will mint another one.
   }
   return fresh;
+}
+
+/**
+ * @param {{
+ *   getItem(key: string): string | null,
+ *   setItem(key: string, value: string): void,
+ *   removeItem(key: string): void,
+ * }} store
+ */
+function migrateLegacyPlayerId(store) {
+  try {
+    const legacy = store.getItem(LEGACY_PLAYER_ID_KEY);
+    if (typeof legacy !== 'string') return;
+    const current = store.getItem(STORAGE_KEY);
+    if (typeof current !== 'string') {
+      store.setItem(STORAGE_KEY, legacy);
+    }
+    store.removeItem(LEGACY_PLAYER_ID_KEY);
+  } catch {
+    // Best-effort — next call retries. Worst case the legacy key lingers
+    // and the player gets a separate fresh deviceId; identity is anonymous
+    // so a duplicate is harmless.
+  }
 }

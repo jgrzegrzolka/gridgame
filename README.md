@@ -20,21 +20,25 @@ Static-site country-flag puzzles (daily, find-all, quiz, tic-tac-toe) with a sma
    ```powershell
    cp api/local.settings.json.example api/local.settings.json
    ```
-   Fill in `COSMOS_CONN` from the Azure Portal → `swa-yetanotherquiz` → Environment variables (or `az staticwebapp appsettings list -n swa-yetanotherquiz -g rg-yetanotherquiz --query properties.COSMOS_CONN -o tsv`). Leave `TURNSTILE_SECRET` empty — the handler's skip-when-unset branch accepts any token locally. Keep `AzureWebJobsStorage` as the example ships it (`UseDevelopmentStorage=true`) — it points the runtime at Azurite, which `npm run dev:swa` boots for you. `local.settings.json` is gitignored.
+   Fill in `COSMOS_CONN` from the Azure Portal → `swa-yetanotherquiz` → Environment variables (or `az staticwebapp appsettings list -n swa-yetanotherquiz -g rg-yetanotherquiz --query properties.COSMOS_CONN -o tsv`). Leave `TURNSTILE_SECRET` empty — the handler's skip-when-unset branch accepts any token locally. Keep `AzureWebJobsStorage` as the example ships it (`UseDevelopmentStorage=true`) — it points the runtime at Azurite, which `npm run dev` boots for you. `local.settings.json` is gitignored.
 
 > **Heads up:** the local Functions runtime talks to **real prod Cosmos** by default — writes you make locally land in shared rows (they're tagged `local: true` server-side so the stats aggregator filters them out, but they still take up space). Fine for tiny traffic; see [CLAUDE.md](CLAUDE.md) for the longer trade-off. The dev reset toolbar (below) cleans them up.
 
 ## Run locally
 
 ```powershell
-npm run dev:swa
+npm run dev
 ```
 
-Opens at <http://localhost:4280/>. Boots the SWA emulator + Azurite (local Azure Storage emulator) together via `concurrently`; log lines are prefixed `[swa]` / `[azurite]`. Ctrl+C stops both.
+Opens at <http://localhost:4280/>. Boots SWA emulator + Azurite (local Azure Storage emulator) + the PartyKit dev server (`ws://localhost:1999/`, used by tic-tac-toe online) together via `concurrently`; log lines are prefixed `[swa]` / `[azurite]` / `[party]`. Ctrl+C stops all three.
 
 Opening the HTML files via `file://` won't work — `fetch()` needs HTTP.
 
-Backend-only alternative: `npm run dev:api` — Functions at `http://localhost:7071/api/*`. This script does **not** start Azurite; run `npm run dev:azurite` in another terminal first if you want quiet logs.
+Narrower modes if you don't need everything:
+
+- `npm run dev:swa` — site + API + Azurite, no PartyKit. Use this for daily/flagQuiz work; saves the partykit-dev memory.
+- `npm run dev:api` — Functions only at `http://localhost:7071/api/*`. Does **not** start Azurite; run `npm run dev:azurite` in another terminal first if you want quiet logs.
+- `npm run dev:party` — PartyKit only at `ws://localhost:1999/`. Use this for TTT-server-only work.
 
 ### Dev reset toolbar
 

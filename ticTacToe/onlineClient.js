@@ -32,34 +32,6 @@ export function isValidRoomCode(code) {
   return ROOM_CODE_RE.test(code);
 }
 
-const PLAYER_ID_KEY = 'gridgame.player.id';
-
-/**
- * Returns the browser's stable playerId, generating + persisting one on the
- * first call. Used as the identity the server keys roles by, so refreshes
- * keep the same X/O assignment instead of getting shuffled.
- *
- * @param {{ getItem(key: string): string | null, setItem(key: string, value: string): void }} store
- * @param {() => string} [generate]
- * @returns {string}
- */
-export function getOrCreatePlayerId(store, generate = defaultGeneratePlayerId) {
-  const existing = store.getItem(PLAYER_ID_KEY);
-  if (existing) return existing;
-  const fresh = generate();
-  store.setItem(PLAYER_ID_KEY, fresh);
-  return fresh;
-}
-
-function defaultGeneratePlayerId() {
-  if (typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function') {
-    return globalThis.crypto.randomUUID();
-  }
-  // Very-old-browser fallback: timestamp + random tail. Not RFC-4122 but
-  // unique enough for room identity.
-  return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
 /** Production hostnames that should hit the deployed PartyKit. */
 const PROD_HOSTNAMES = new Set([
   'jgrzegrzolka.github.io',

@@ -2,16 +2,16 @@
 /** @typedef {import('../../flags/ticTacToe.js').Player} Player */
 /** @typedef {import('../onlineClient.js').StatusOverride} StatusOverride */
 
-// Generic identity / lobby helpers are domain-agnostic — re-export from the
-// 3×3 client so the 9×9 lobby uses the same room-code alphabet, validation,
-// player-id persistence, and server URL routing (just with party='ultimate').
+// Generic lobby helpers are domain-agnostic — re-export from the 3×3 client
+// so the 9×9 lobby uses the same room-code alphabet, validation, and server
+// URL routing (just with party='ultimate'). Device-id persistence comes from
+// flags/identity.js, imported directly by the 9×9 page.
 export {
   ROOM_ALPHABET,
   ROOM_LEN,
   generateCode,
   isValidRoomCode,
   serverUrlFor,
-  getOrCreatePlayerId,
 } from '../onlineClient.js';
 
 /**
