@@ -10,23 +10,29 @@ A single page load follows:
 browser
   └─ DNS  (Cloudflare-hosted zone for yetanotherquiz.com)
        ├─ apex  →  Cloudflare proxy (orange cloud)  →  Redirect Rule: 301 to https://www.…
-       └─ www   →  CNAME (grey cloud, DNS-only)  →  SWA-hosted hostname
-                                                       │
-                                                       ▼
-                                            Azure Static Web App
-                                            swa-yetanotherquiz-v3 (West US 2)
-                                              ├─ static content (this repo, app_location=".")
-                                              └─ managed Function App (api/, not a discrete resource)
-                                                       │
-                                                       ▼
-                                            Azure Cosmos DB NoSQL
-                                            cosmos-yetanotherquiz-jg (West Europe)
+       └─ www   →  Cloudflare proxy (orange cloud)
+                       │
+                       ▼
+                  CF Worker  yetanotherquiz-edge-proxy
+                  (route www.yetanotherquiz.com/* → Worker)
+                       │   rewrites Host to raw SWA hostname
+                       ▼
+                  Azure Static Web App
+                  swa-yetanotherquiz-v3 (West US 2)
+                  reached via wonderful-ground-01bf3091e.7.azurestaticapps.net
+                    ├─ static content (this repo, app_location=".")
+                    └─ managed Function App (api/, not a discrete resource)
+                       │
+                       ▼
+                  Azure Cosmos DB NoSQL
+                  cosmos-yetanotherquiz-jg (West Europe)
 ```
 
 Notes:
 
 - **Apex is Cloudflare-proxied** so the Redirect Rule can intercept before any origin contact. The apex A record points at `192.0.2.1` (TEST-NET-1, unrouteable) on purpose: if the rule ever misfires, the fall-through is unreachable rather than a real stale server. **Never restore real apex A records** (e.g. old GitHub Pages IPs `185.199.108-111.153`) — see FEATURE.md Feature D 2026-06-11 follow-up for why.
-- **www is grey-cloud** (DNS only) — requests go directly to Azure SWA without Cloudflare on the path. There's no CF cache in front of www today.
+- **www is orange-cloud** since 2026-06-11. Requests hit a Cloudflare Worker (`yetanotherquiz-edge-proxy`) that forwards them to the *raw* SWA hostname instead of letting CF route them via SWA's custom-domain edge. The custom-domain edge has been flaky on the Free SKU — see "Known issues" below. Worker source lives at `infra/edge-proxy/index.js`.
+- **CF caches HTML on www** with a Cache Rule (2 h Edge TTL, 4xx no-store, query-string-ignored cache key). `deploy.yml` purges the zone after every SWA deploy so the worst-case staleness window is the time between deploy completion and the post-deploy `Purge Cloudflare cache` step (single seconds in practice). With the Worker giving us a stable origin, this cache actually works — before the Worker, CF could pin a 14400 s 404 from the flapping custom-domain edge.
 - **Functions are managed by SWA**, not a discrete resource. In the Azure portal they appear under `swa-yetanotherquiz-v3 → APIs → (managed)`.
 - **Cross-region API hop:** the SWA lives in West US 2 but Cosmos is in West Europe, so every API call eats ~300 ms cross-region. Acceptable at current volume. The recovery playbook in FEATURE.md Feature D removes this by re-creating a WE sibling when WE recovers.
 
@@ -42,7 +48,11 @@ All in subscription **`yetanotherquiz`** (`6da299d6-bdfe-4277-a544-ae8ef68f99a0`
 
 Outside Azure:
 
-- **Cloudflare:** DNS zone for `yetanotherquiz.com`. The Redirect Rule "Redirect from root to WWW [Template]" matches `http.host eq "yetanotherquiz.com"` and 301s to `concat("https://www.yetanotherquiz.com", http.request.uri.path)`.
+- **Cloudflare:** DNS zone for `yetanotherquiz.com`, plus:
+  - Redirect Rule "Redirect from root to WWW [Template]" — matches `http.host eq "yetanotherquiz.com"` and 301s to `concat("https://www.yetanotherquiz.com", http.request.uri.path)`.
+  - Worker `yetanotherquiz-edge-proxy` (account `jangrzegrzolka`, route `www.yetanotherquiz.com/*`) — forwards www requests to the raw SWA hostname so the flaky custom-domain edge is out of the path. Source: `infra/edge-proxy/index.js`. Deployed manually via the CF dashboard (no CI today).
+  - Cache Rule "Cache HTML for Always Online" — `(http.host eq "www.yetanotherquiz.com") and (ends_with(http.request.uri.path, "/") or ends_with(http.request.uri.path, ".html"))`. Edge TTL 2 h (override origin), 4xx (single-code 404) → No store, cache key ignores all query strings. Purged on every deploy by `deploy.yml`.
+  - Always Online — enabled, serves cached HTML if origin is unreachable.
 - **PartyKit:** `gridgame-ttt.jgrzegrzolka.partykit.dev` (Cloudflare-hosted), the tic-tac-toe WebSocket server. Deployed by `deploy-partykit.yml`. Unrelated to the SWA path — don't conflate.
 
 Cost guardrail: €5/month subscription budget with email alerts at 50/80/100% to `jangrzegrzolka@gmail.com` (`Microsoft.Consumption/budgets/monthly-5eur`). Don't re-add.
@@ -64,18 +74,17 @@ Four secrets keep the runtime working. Rotation expectations differ — only one
 
 ## Known issues
 
-### Azure SWA 404 on www `/` right after a deploy
+### Azure SWA 404 on www `/` (mitigated by the edge proxy Worker)
 
-**Symptom.** Within ~20 minutes after a successful deploy, hitting `https://www.yetanotherquiz.com/` (or following the apex→www redirect) returns the blue **"Azure Static Web Apps — 404: Not Found"** page. The raw SWA hostname `https://wonderful-ground-01bf3091e.7.azurestaticapps.net/` returns 200 with fresh content the whole time. Chrome hides the `www.` prefix in the URL bar, so the browser may *look* like it's still on apex when it's actually on www after the redirect.
+**Symptom — historic.** Hitting `https://www.yetanotherquiz.com/` returned the blue **"Azure Static Web Apps — 404: Not Found"** page on a fraction of requests, sometimes for hours after a deploy. The raw SWA hostname `https://wonderful-ground-01bf3091e.7.azurestaticapps.net/` served 200 the whole time. Chrome hides the `www.` prefix in the URL bar, so the browser may *look* like it's still on apex when it's actually on www after the redirect.
 
-**Cause.** SWA's custom-domain edge propagation lags the SWA-hosted hostname's distribution. The deploy reports "Succeeded" the moment the raw hostname is serving new content — the custom-domain edge can take many more minutes to catch up. Not a Cloudflare issue, not an artifact issue.
+**Cause.** SWA Free SKU's custom-domain edge propagation is unreliable. The deploy reports "Succeeded" the moment the raw hostname is serving new content — the custom-domain edge can take many more minutes (we've observed up to several hours) to catch up. Not a Cloudflare issue, not an artifact issue, not something we can fix from outside SWA. On 2026-06-11 the window stretched to ~30 % of requests still 404ing 3 + hours post-deploy and refused to settle without a fresh deploy to shake it loose.
 
-**Confirmation that it's this and not something else.** Curl the raw SWA hostname — if `/` returns 200 there, the artifact is fine and you're in the propagation window. If the raw hostname also 404s, the deploy artifact is genuinely broken (very rare; look at the Oryx logs in the GH Actions run).
+**Current mitigation.** The custom-domain edge is now bypassed entirely. Since 2026-06-11 the topology routes www requests through Cloudflare Worker `yetanotherquiz-edge-proxy`, which proxies to the *raw* SWA hostname (the one that doesn't lag). The custom domain remains configured on SWA but no production traffic reaches it. See the Topology section above.
 
-**What to do.**
-- **Real users:** wait. Single-digit-minute windows are typical; we've observed up to ~20 min once.
-- **Diagnostic:** `deploy.yml` runs a smoke-check after each deploy that polls www `/` for up to 5 minutes and logs the propagation curve. If a run fails the smoke-check, the timing is in the Actions log.
-- **If this becomes chronic** (smoke-check failing repeatedly): escalate to one of (a) add a `staticwebapp.config.json` with `navigationFallback: { rewrite: "/index.html" }` so SWA serves index for any unmatched path, or (b) flip www to Cloudflare-proxied (orange cloud) with cache-bypass on 404 so CF normalises responses. Both are tracked as follow-ups, neither is shipped yet.
+**Confirmation it's still the same underlying SWA bug** (i.e. test whether the Worker is still earning its keep, e.g. when considering removal): probe the custom-domain edge directly with `curl -H 'Host: www.yetanotherquiz.com' https://wonderful-ground-01bf3091e.7.azurestaticapps.net/` in a loop — if it flaps between 200 and 404, the SWA-side bug is still there and the Worker is still pulling its weight.
+
+**If the Worker itself breaks** (CF Workers outage, code error, route binding lost), the fallback is to flip the www CNAME from orange (CF proxy → Worker) back to grey (DNS-only → SWA directly). Real users will see the SWA flap symptom again, but at least the path is shorter and the failure mode is the known one. To roll back: CF dashboard → DNS → click orange cloud on `www` row → flips to grey.
 
 ### Apex serves unstyled/stale content or a non-Azure 404
 
