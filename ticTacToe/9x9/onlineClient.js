@@ -19,12 +19,13 @@ export {
  * @property {UltimateGameState | null} game
  * @property {Player | null} myRole
  * @property {boolean} peerPresent
+ * @property {string | null} peerId - opponent's playerId once known (Feature G).
  * @property {StatusOverride | null} statusOverride - stored unresolved so the page can re-translate on a soft language switch (see ../onlineClient.js).
  */
 
 /** @returns {UltimateClientState} */
 export function initialUltimateClientState() {
-  return { game: null, myRole: null, peerPresent: false, statusOverride: null };
+  return { game: null, myRole: null, peerPresent: false, peerId: null, statusOverride: null };
 }
 
 /**
@@ -73,6 +74,7 @@ export function reduceUltimateServerMessage(state, message) {
           myRole: message.you,
           game: message.game,
           peerPresent: message.peerPresent,
+          peerId: typeof message.peerId === 'string' ? message.peerId : null,
         },
         effects: [],
       };
@@ -101,9 +103,11 @@ export function reduceUltimateServerMessage(state, message) {
       return { state: { ...state, game: message.game }, effects };
     }
     case 'peer-joined': {
-      return { state: { ...state, peerPresent: true }, effects: [] };
+      const peerId = typeof message.peerId === 'string' ? message.peerId : state.peerId;
+      return { state: { ...state, peerPresent: true, peerId }, effects: [] };
     }
     case 'peer-left': {
+      // peerId is sticky — see the 3×3 reducer in ../onlineClient.js.
       return { state: { ...state, peerPresent: false }, effects: [] };
     }
     case 'rejected': {

@@ -75,12 +75,13 @@ export function serverUrlFor(hostname, party = 'main') {
  * @property {GameState | null} game
  * @property {Player | null} myRole
  * @property {boolean} peerPresent
+ * @property {string | null} peerId  - opponent's playerId once known. Welcome / peer-joined fill it in. Used by the Feature G head-to-head row that keys writes by both deviceIds.
  * @property {StatusOverride | null} statusOverride  - non-null when the server sent a 'rejected' or the socket died; takes precedence over the derived status. Stored as `{ key, fallback, params? }` so the page can re-translate on a soft language switch.
  */
 
 /** @returns {ClientState} */
 export function initialClientState() {
-  return { game: null, myRole: null, peerPresent: false, statusOverride: null };
+  return { game: null, myRole: null, peerPresent: false, peerId: null, statusOverride: null };
 }
 
 /**
@@ -140,6 +141,7 @@ export function reduceServerMessage(state, message) {
           myRole: message.you,
           game: message.game,
           peerPresent: message.peerPresent,
+          peerId: typeof message.peerId === 'string' ? message.peerId : null,
         },
         effects: [],
       };
@@ -166,9 +168,17 @@ export function reduceServerMessage(state, message) {
       return { state: { ...state, game: message.game }, effects };
     }
     case 'peer-joined': {
-      return { state: { ...state, peerPresent: true }, effects: [] };
+      // peerId arrives on the first peer-joined (when the room learns who
+      // the second player is) — earlier we only knew our own role. Keep
+      // any prior value if the server omitted it (shouldn't happen post-G).
+      const peerId = typeof message.peerId === 'string' ? message.peerId : state.peerId;
+      return { state: { ...state, peerPresent: true, peerId }, effects: [] };
     }
     case 'peer-left': {
+      // peerId is sticky — the opponent's identity doesn't change when
+      // their socket drops; only `peerPresent` flips. Keeping `peerId`
+      // means a result that lands a moment later still knows who to
+      // attribute the head-to-head row to.
       return { state: { ...state, peerPresent: false }, effects: [] };
     }
     case 'rejected': {

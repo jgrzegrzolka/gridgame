@@ -8,4 +8,5 @@ require('./functions/dailyResult');
 require('./functions/dailyStats');
 require('./functions/quizRecord');
 require('./functions/profile');
+require('./functions/tttResult');
 require('./functions/clearLocalRows');

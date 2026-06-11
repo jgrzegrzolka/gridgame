@@ -8,14 +8,25 @@ import {
 
 // ---- Reducer ----
 
-test('reduceUltimateServerMessage: welcome sets myRole, game, peerPresent', () => {
+test('reduceUltimateServerMessage: welcome sets myRole, game, peerPresent, peerId', () => {
   const state = initialUltimateClientState();
   const game = /** @type {any} */ ({ currentPlayer: 'O', winner: null, draw: false, boards: [] });
-  const r = reduceUltimateServerMessage(state, { type: 'welcome', you: 'O', game, peerPresent: false });
+  const r = reduceUltimateServerMessage(state, { type: 'welcome', you: 'O', game, peerPresent: true, peerId: 'alice' });
   assert.equal(r.state.myRole, 'O');
   assert.equal(r.state.game, game);
-  assert.equal(r.state.peerPresent, false);
+  assert.equal(r.state.peerPresent, true);
+  assert.equal(r.state.peerId, 'alice');
   assert.deepEqual(r.effects, []);
+});
+
+test('reduceUltimateServerMessage: peer-joined carries peerId; peer-left keeps it sticky', () => {
+  let state = initialUltimateClientState();
+  state = reduceUltimateServerMessage(state, { type: 'peer-joined', peerId: 'bob' }).state;
+  assert.equal(state.peerPresent, true);
+  assert.equal(state.peerId, 'bob');
+  state = reduceUltimateServerMessage(state, { type: 'peer-left' }).state;
+  assert.equal(state.peerPresent, false);
+  assert.equal(state.peerId, 'bob', 'peerId survives a disconnect so a late result has an opponent id');
 });
 
 test('reduceUltimateServerMessage: kind=claimed updates game and emits no effects', () => {

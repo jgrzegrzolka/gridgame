@@ -90,6 +90,7 @@ test('applyUltimateHello: first player becomes host and is assigned X', () => {
   assert.equal(msg.type, 'welcome');
   assert.equal(msg.you, 'X');
   assert.equal(msg.peerPresent, false);
+  assert.equal(msg.peerId, null);
 });
 
 test('applyUltimateHello: second player is assigned O and both sides learn the peer arrived', () => {
@@ -105,8 +106,10 @@ test('applyUltimateHello: second player is assigned O and both sides learn the p
   const welcome = /** @type {any} */ (welcomeBc.message);
   assert.equal(welcome.you, 'O');
   assert.equal(welcome.peerPresent, true);
+  assert.equal(welcome.peerId, 'alice');
   const peerJoined = /** @type {any} */ (peerJoinedBc.message);
   assert.equal(peerJoined.type, 'peer-joined');
+  assert.equal(peerJoined.peerId, 'bob');
 });
 
 test('applyUltimateHello: third stranger is rejected as room-full', () => {

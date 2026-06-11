@@ -63,6 +63,7 @@ test('applyHello: first player becomes host and is assigned X', () => {
   assert.equal(msg.type, 'welcome');
   assert.equal(msg.you, 'X');
   assert.equal(msg.peerPresent, false);
+  assert.equal(msg.peerId, null, 'lone host has no peer yet');
 });
 
 test('applyHello: second player is assigned O and both sides learn the peer arrived', () => {
@@ -79,8 +80,10 @@ test('applyHello: second player is assigned O and both sides learn the peer arri
   const welcome = /** @type {any} */ (welcomeBc.message);
   assert.equal(welcome.you, 'O');
   assert.equal(welcome.peerPresent, true);
+  assert.equal(welcome.peerId, 'alice', 'bob learns about alice in his welcome');
   const peerJoined = /** @type {any} */ (peerJoinedBc.message);
   assert.equal(peerJoined.type, 'peer-joined');
+  assert.equal(peerJoined.peerId, 'bob', 'alice learns about bob via peer-joined');
 });
 
 test('applyHello: stranger arrives when room has two distinct players — rejected', () => {
@@ -110,6 +113,7 @@ test('applyHello: known playerId reconnecting keeps the same role (idempotent)',
   const welcome = /** @type {any} */ (welcomeBc.message);
   assert.equal(welcome.you, 'X');
   assert.equal(welcome.peerPresent, true);
+  assert.equal(welcome.peerId, 'bob', 'reconnecting host learns who their opponent is');
 });
 
 test('applyHello: reconnect also pings the still-present peer with peer-joined', () => {
@@ -122,6 +126,7 @@ test('applyHello: reconnect also pings the still-present peer with peer-joined',
   if (!peerJoinedBc) throw new Error('expected bob to get peer-joined');
   const msg = /** @type {any} */ (peerJoinedBc.message);
   assert.equal(msg.type, 'peer-joined');
+  assert.equal(msg.peerId, 'alice', 'reconnect carries the same peerId');
 });
 
 test('applyHello: host can refresh repeatedly without losing the X role', () => {
