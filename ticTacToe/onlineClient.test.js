@@ -8,7 +8,6 @@ import {
   serverUrlFor,
   initialClientState,
   reduceServerMessage,
-  getOrCreatePlayerId,
   canGiveUpOnline,
 } from './onlineClient.js';
 
@@ -274,34 +273,3 @@ test('canGiveUpOnline: false once either side has already conceded', () => {
   assert.equal(canGiveUpOnline(state), false);
 });
 
-// ---- getOrCreatePlayerId ----
-
-/**
- * @param {Record<string, string>} [initial]
- */
-function fakeStore(initial = {}) {
-  /** @type {Map<string, string>} */
-  const data = new Map(Object.entries(initial));
-  return {
-    /** @param {string} k */
-    getItem: (k) => (data.has(k) ? /** @type {string} */ (data.get(k)) : null),
-    /** @param {string} k @param {string} v */
-    setItem: (k, v) => { data.set(k, v); },
-    _dump: () => Object.fromEntries(data),
-  };
-}
-
-test('getOrCreatePlayerId: generates a fresh id on first call and persists it', () => {
-  const store = fakeStore();
-  const id = getOrCreatePlayerId(store, () => 'uuid-1');
-  assert.equal(id, 'uuid-1');
-  assert.equal(store._dump()['gridgame.player.id'], 'uuid-1');
-});
-
-test('getOrCreatePlayerId: returns the existing id on subsequent calls without regenerating', () => {
-  const store = fakeStore({ 'gridgame.player.id': 'existing-id' });
-  let generated = 0;
-  const id = getOrCreatePlayerId(store, () => { generated++; return 'new-id'; });
-  assert.equal(id, 'existing-id');
-  assert.equal(generated, 0, 'must not call the generator when an id already exists');
-});

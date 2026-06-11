@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getOrCreateDeviceId } from './identity.js';
+import { getOrCreateDeviceId, LEGACY_PLAYER_ID_KEY } from './identity.js';
 
 function fakeStore(initial = {}) {
   /** @type {Map<string, string>} */
@@ -15,6 +15,10 @@ function fakeStore(initial = {}) {
     setItem(k, v) {
       m.set(k, v);
     },
+    /** @param {string} k */
+    removeItem(k) {
+      m.delete(k);
+    },
     _map: m,
   };
 }
@@ -25,6 +29,8 @@ function throwingStore() {
     getItem(_k) { throw new Error('private mode'); },
     /** @param {string} _k @param {string} _v */
     setItem(_k, _v) { throw new Error('quota'); },
+    /** @param {string} _k */
+    removeItem(_k) { throw new Error('private mode'); },
   };
 }
 
@@ -69,7 +75,54 @@ test('store.setItem throwing (quota exceeded) still returns the fresh id', () =>
     getItem(_k) { return null; },
     /** @param {string} _k @param {string} _v */
     setItem(_k, _v) { throw new Error('quota'); },
+    /** @param {string} _k */
+    removeItem(_k) { /* no-op */ },
   };
+  const id = getOrCreateDeviceId(store, () => 'session-only-uuid');
+  assert.equal(id, 'session-only-uuid');
+});
+
+// ---- Feature H1: legacy gridgame.player.id migration ----
+
+test('migration: legacy player.id is adopted as deviceId when none exists, and the legacy key is removed', () => {
+  const store = fakeStore({ [LEGACY_PLAYER_ID_KEY]: 'legacy-player-id-uuid' });
+  const id = getOrCreateDeviceId(store, () => 'fresh-should-not-be-used');
+  assert.equal(id, 'legacy-player-id-uuid');
+  assert.equal(store._map.get('gridgame.deviceId'), 'legacy-player-id-uuid');
+  assert.equal(store._map.has(LEGACY_PLAYER_ID_KEY), false);
+});
+
+test('migration: when both keys exist, deviceId wins and the legacy key is removed', () => {
+  const store = fakeStore({
+    'gridgame.deviceId': 'existing-device-id',
+    [LEGACY_PLAYER_ID_KEY]: 'legacy-player-id-uuid',
+  });
+  const id = getOrCreateDeviceId(store, () => 'fresh-should-not-be-used');
+  assert.equal(id, 'existing-device-id');
+  assert.equal(store._map.get('gridgame.deviceId'), 'existing-device-id');
+  assert.equal(store._map.has(LEGACY_PLAYER_ID_KEY), false);
+});
+
+test('migration: no legacy key is a no-op (does not touch deviceId)', () => {
+  const store = fakeStore({ 'gridgame.deviceId': 'existing-device-id' });
+  const id = getOrCreateDeviceId(store, () => 'fresh-should-not-be-used');
+  assert.equal(id, 'existing-device-id');
+  assert.equal(store._map.size, 1);
+});
+
+test('migration: legacy value too short gets adopted then immediately re-minted by the length validator', () => {
+  // The migration is intentionally trusting — it copies the legacy value
+  // verbatim. The existing 8-64 validator then rejects it and mints a fresh
+  // one. End result: a too-short legacy id can never survive into deviceId.
+  const store = fakeStore({ [LEGACY_PLAYER_ID_KEY]: 'short' });
+  const id = getOrCreateDeviceId(store, () => 'fresh-uuid-aaaaaaaa');
+  assert.equal(id, 'fresh-uuid-aaaaaaaa');
+  assert.equal(store._map.get('gridgame.deviceId'), 'fresh-uuid-aaaaaaaa');
+  assert.equal(store._map.has(LEGACY_PLAYER_ID_KEY), false);
+});
+
+test('migration: storage throwing during migration is swallowed; a fresh id is still returned', () => {
+  const store = throwingStore();
   const id = getOrCreateDeviceId(store, () => 'session-only-uuid');
   assert.equal(id, 'session-only-uuid');
 });

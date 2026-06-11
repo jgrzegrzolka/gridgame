@@ -30,10 +30,12 @@ The site's HTTP API lives in `api/` and ships as part of the SWA deploy (no sepa
 
 ## Local development
 
-You can run the whole stack locally — static site + Functions API + Cosmos round-trips — without deploying. Two npm scripts:
+You can run the whole stack locally — static site + Functions API + PartyKit (for TTT online) + Cosmos round-trips — without deploying. Four npm scripts:
 
-- `npm run dev:swa` — full stack via Azure SWA CLI emulator. Static at `http://localhost:4280`, API proxied at `http://localhost:4280/api/*`. Closest to production behavior. Use this for end-to-end testing.
-- `npm run dev:api` — Functions only, at `http://localhost:7071/api/*`. Useful for backend-only work without static-site overhead.
+- `npm run dev` — everything. Boots Azurite + SWA emulator (static at `http://localhost:4280`, API proxied at `http://localhost:4280/api/*`) + PartyKit dev server (`ws://localhost:1999/`) via `concurrently`. Closest to production behavior. Use this for end-to-end testing, especially anything that touches `ticTacToe/` online.
+- `npm run dev:swa` — site + API + Azurite, no PartyKit. Use when you're working on daily / flagQuiz / static-only pages and don't want PartyKit's footprint.
+- `npm run dev:api` — Functions only, at `http://localhost:7071/api/*`. Useful for backend-only work without static-site overhead. Doesn't start Azurite — run `npm run dev:azurite` separately if you want quiet logs.
+- `npm run dev:party` — PartyKit only, at `ws://localhost:1999/`. Useful when iterating on `party/*.js` without booting the SWA emulator.
 
 **One-time setup:**
 
@@ -43,7 +45,7 @@ You can run the whole stack locally — static site + Functions API + Cosmos rou
 
 **Turnstile is currently soft-disabled (2026-06-10).** A real user's challenge was rejected by Cloudflare with a 401 on `/cdn-cgi/challenge-platform/h/g/pat/…` (her browser or extensions tripped CF's heuristics), and her submission was silently dropped — the abuse defence wasn't worth blocking legitimate plays for a tiny hobby site. Soft-disable = `SKIP_TURNSTILE = true` in `daily/page.js` and `TURNSTILE_SECRET=""` in SWA. The SDK, widget, and `verifyTurnstile` lib are kept as scaffolding so flipping back to "enabled" is a one-line client change + setting the SWA secret. Remaining defences: rate limit (5/min/IP), `validate.js` server-side bounds, one-submission-per-(puzzle, deviceId) via the Cosmos `id`. The `local: true` tag + dev-reset toolbar handle any deliberate pollution.
 
-**Azurite (local Azure Storage emulator):** the Functions runtime expects an `AzureWebJobsStorage` connection for its own internal bookkeeping. Without one it spams "Process reporting unhealthy / Unable to create client for AzureWebJobsStorage" every 30 s and drowns out real log output. `npm run dev:swa` now boots **Azurite** alongside the SWA emulator (via `concurrently`, prefixed `[azurite]` / `[swa]` in the output) so the health check passes. Azurite's data lives in `.azurite/` (gitignored); delete that folder anytime to reset state. `npm run dev:api` doesn't start Azurite — if you use that script standalone, run `npm run dev:azurite` in another terminal first (or accept the noise). The configurable `healthMonitor` block in `host.json` is **not** the right knob — that controls function-level monitoring, not the internal storage health reporter that emits this log. Verified empirically.
+**Azurite (local Azure Storage emulator):** the Functions runtime expects an `AzureWebJobsStorage` connection for its own internal bookkeeping. Without one it spams "Process reporting unhealthy / Unable to create client for AzureWebJobsStorage" every 30 s and drowns out real log output. `npm run dev` and `npm run dev:swa` both boot **Azurite** alongside the SWA emulator (via `concurrently`, prefixed `[azurite]` / `[swa]` / `[party]` in the output) so the health check passes. Azurite's data lives in `.azurite/` (gitignored); delete that folder anytime to reset state. `npm run dev:api` and `npm run dev:party` don't start Azurite — if you use either standalone, run `npm run dev:azurite` in another terminal first (or accept the noise). The configurable `healthMonitor` block in `host.json` is **not** the right knob — that controls function-level monitoring, not the internal storage health reporter that emits this log. Verified empirically.
 
 **Trade-off to know:** the local Functions runtime hits the **real prod Cosmos** (we don't have a separate dev container, see FEATURE.md). Writes you make locally land in the same `dailyResults` rows other users / your own prod sessions share. Acceptable today because traffic is tiny; revisit when scale or testing matters. Dev rows get tagged `local: true` server-side (`api/src/lib/requestHost.js` decides — based on the request hostname, not a client field) and the stats aggregator filters them out, so they don't pollute the community averages while they sit there.
 

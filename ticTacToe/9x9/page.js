@@ -5,9 +5,9 @@ import {
   serverUrlFor,
   initialUltimateClientState,
   reduceUltimateServerMessage,
-  getOrCreatePlayerId,
   canGiveUpUltimateOnline,
 } from './onlineClient.js';
+import { getOrCreateDeviceId } from '../../flags/identity.js';
 import { newlyWonSmallBoards, isMetaWinNewlyFormed } from '../../flags/ultimateTicTacToe.js';
 import { shouldFireTicTacToeConfetti } from '../../flags/ticTacToe.js';
 import { loadCountries } from '../../flags/group.js';
@@ -40,7 +40,7 @@ export function bootUltimateTicTacToeOnline() {
 
 /** @param {Country[]} countries */
 function runOnline(countries) {
-  const playerId = getOrCreatePlayerId(window.localStorage);
+  const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
 
   /** @type {WebSocket | null} */
   let ws = null;
@@ -187,7 +187,7 @@ function runOnline(countries) {
   function connect() {
     if (!activeRoom) return;
     const { code, intent } = activeRoom;
-    const wsUrl = `${SERVER_URL}${encodeURIComponent(code)}?pid=${encodeURIComponent(playerId)}&intent=${intent}`;
+    const wsUrl = `${SERVER_URL}${encodeURIComponent(code)}?pid=${encodeURIComponent(deviceId)}&intent=${intent}`;
     ws = new WebSocket(wsUrl);
     ws.addEventListener('message', (ev) => onServerMessage(JSON.parse(ev.data)));
     ws.addEventListener('close', onSocketClose);

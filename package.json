@@ -6,10 +6,11 @@
     "test": "node --test",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.ui.json",
     "validate": "npm test && npm run typecheck",
-    "dev": "partykit dev --serve .",
+    "dev": "concurrently -k -n azurite,swa,party -c blue,green,magenta \"npm:dev:azurite\" \"swa start ./ --api-location ./api\" \"npm:dev:party\"",
     "dev:swa": "concurrently -k -n azurite,swa -c blue,green \"npm:dev:azurite\" \"swa start ./ --api-location ./api\"",
     "dev:azurite": "azurite --silent --location ./.azurite --skipApiVersionCheck",
     "dev:api": "cd api && func start",
+    "dev:party": "partykit dev",
     "party:deploy": "partykit deploy",
     "build:minify": "node scripts/minify.mjs"
   },
