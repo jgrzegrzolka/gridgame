@@ -244,75 +244,31 @@ body::before {
   text-decoration: none;
 }
 
-/* Nickname affordance (Feature H2). Sits at the bottom of the burger
- * panel as a small inline form: label+input on row 1, save button on
- * row 2, transient status on row 3. Visually separated from the
- * navigation list by a thin top border — same vocabulary as menu-divider.
- * Mounted by common.js::mountNicknameField into a <section id="burger-nickname">
- * placeholder that every page's burger panel ships. */
-.burger-nickname {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #eee;
-}
-.burger-nickname-form {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-}
-.burger-nickname-label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+/* "Your name: <Brave Falcon>" menu item — top of the burger panel on every
+ * page (Feature H2.5). The link routes to /profile/ where the user can
+ * change the saved nickname; the value resolves via flags/nickname.js so
+ * a user who never visits /profile/ still sees a friendly deterministic
+ * default. Mounted by common.js::mountNicknameMenuItem. */
+.menu li.menu-nickname {
   font-size: 12px;
   color: #888;
+  /* Divider line below — same visual vocabulary as `.menu-divider`,
+   * just flipped to a bottom border so the nickname sits in its own
+   * top region separated from the page-specific nav links below. */
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+.menu li.menu-nickname a {
   font-weight: 400;
 }
-.burger-nickname-input {
-  font: inherit;
-  font-size: 14px;
+.menu li.menu-nickname .menu-nickname-value {
   color: var(--link-color);
-  padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: #fff;
-  box-sizing: border-box;
-  width: 100%;
-}
-.burger-nickname-input:focus {
-  outline: none;
-  border-color: var(--link-color);
-}
-.burger-nickname-save {
-  align-self: flex-start;
-  font: inherit;
-  font-size: 12px;
   font-weight: 500;
-  color: var(--link-color);
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 4px 10px;
-  cursor: pointer;
 }
-.burger-nickname-save:hover:not(:disabled) {
-  background: #f6f6f6;
-}
-.burger-nickname-save:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-.burger-nickname-status {
-  font-size: 12px;
-  min-height: 1em;
-}
-.burger-nickname-status.is-saved {
-  color: #2e8b57;
-}
-.burger-nickname-status.is-error {
-  color: #c44;
-}
+/* When the user is already on /profile/, the link styles as the existing
+ * aria-current="page" treatment (greyed-out, non-clickable) — same
+ * vocabulary as the other "you are here" menu items, no per-page rule. */
 
 .give-up-row {
   margin-top: 16px;

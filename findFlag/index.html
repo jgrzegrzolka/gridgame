@@ -45,7 +45,6 @@
         </li>
         <li class="menu-divider"><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
       </ul>
-      <section id="burger-nickname" class="burger-nickname"></section>
     </nav>
 
     <section id="chooser" hidden>
@@ -122,7 +121,7 @@
     <script type="module">
       import { bootFindFlag } from './page.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { wireBurgerDismiss, mountNicknameField } from '../common.js';
+      import { wireBurgerDismiss, mountNicknameMenuItem } from '../common.js';
       bootI18n('../').then((lang) => {
         // Soft-reload mode keeps the chooser's pill selections, a
         // running game's typed input + scroll + found tiles, and the
@@ -132,7 +131,10 @@
         wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         bootFindFlag();
         wireBurgerDismiss();
-        mountNicknameField({ rootEl: document.getElementById('burger-nickname') });
+        mountNicknameMenuItem({
+          rootEl: document.querySelector('#burger-panel .menu'),
+          profileHref: '../profile/',
+        });
       });
     </script>
   </body>

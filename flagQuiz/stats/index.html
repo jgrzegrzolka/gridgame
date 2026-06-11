@@ -32,7 +32,6 @@
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
       <ul class="menu" id="quiz-menu"></ul>
-      <section id="burger-nickname" class="burger-nickname"></section>
     </nav>
     <ul class="stats" id="stats"></ul>
     <div class="give-up-row">
@@ -54,7 +53,7 @@
       } from '../../flags/quiz.js';
       import { flagsGamePool } from '../../flags/group.js';
       import { bootI18n, wireLangToggle, t } from '../../i18n.js';
-      import { wireBurgerDismiss, mountNicknameField } from '../../common.js';
+      import { wireBurgerDismiss, mountNicknameMenuItem } from '../../common.js';
       import { buildQuizMenu } from '../menu.js';
 
       const includeAll = isQuizIncludeAll();
@@ -68,7 +67,6 @@
         // the menu + stats chips with fresh translations.
         wireLangToggle(lang, undefined, { softReload: true, base: '../../' });
         wireBurgerDismiss();
-        mountNicknameField({ rootEl: document.getElementById('burger-nickname') });
         return fetch('../../flags/countries.json')
           .then((r) => r.json())
           .then((raw) => {
@@ -80,6 +78,13 @@
                 relativeBase: '../',
                 currentVariantKey: null,
                 statsCurrent: true,
+              });
+              // The nickname menu item is re-inserted after every rebuild —
+              // `buildQuizMenu` wipes innerHTML first, so an earlier mount
+              // would be lost on the first langchanged.
+              mountNicknameMenuItem({
+                rootEl: menuEl,
+                profileHref: '../../profile/',
               });
             };
             rebuildMenu();

@@ -36,7 +36,6 @@
       <ul class="menu">
         <li><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
       </ul>
-      <section id="burger-nickname" class="burger-nickname"></section>
     </nav>
     <h1 class="sr-only">All country flags</h1>
     <div id="filter-bar"></div>
@@ -52,7 +51,7 @@
     <script type="module">
       import { bootFlagsData } from './page.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { wireBurgerDismiss, mountNicknameField } from '../common.js';
+      import { wireBurgerDismiss, mountNicknameMenuItem } from '../common.js';
       // Filter labels are built synchronously inside bootFlagsData, so we
       // chain after bootI18n to make sure t() sees the loaded strings.
       bootI18n('../').then((lang) => {
@@ -62,7 +61,10 @@
         // static labels carry `data-i18n` and re-translate upstream.
         wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         wireBurgerDismiss();
-        mountNicknameField({ rootEl: document.getElementById('burger-nickname') });
+        mountNicknameMenuItem({
+          rootEl: document.querySelector('#burger-panel .menu'),
+          profileHref: '../profile/',
+        });
         bootFlagsData();
       });
     </script>

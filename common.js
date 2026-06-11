@@ -1,22 +1,12 @@
 import { getOrCreateDeviceId } from './flags/identity.js';
+import { displayNickname } from './flags/nickname.js';
 
-/** Display nickname cache key. Read on burger-panel mount; written when the
- *  user successfully saves a new value. Cleared (`removeItem`) when the
- *  user empties the field — the matching server-side state for "anonymous
- *  device" is `nickname: null`. */
+/** Display nickname cache key. Written when the user successfully saves a
+ *  new value on the /profile/ page. Cleared (`removeItem`) when the user
+ *  resets or clears their nickname — the matching server-side state is
+ *  `nickname: null`, which means "fall back to the deterministic default
+ *  from `flags/nickname.js`". */
 export const NICKNAME_STORAGE_KEY = 'gridgame.nickname';
-
-const NICKNAME_MAX = 24;
-
-/**
- * Hostnames where the nickname affordance renders. Soft-disabled in prod
- * until the H2 UX is signed off — the backend (PUT /api/v1/profile + the
- * `profiles` Cosmos container) is already live, but real users won't see
- * the burger-panel form until we re-enable. Same set turnstileSiteKey.js
- * uses for its bypass; promote to a shared module if a third consumer
- * appears.
- */
-const NICKNAME_UI_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 /**
  * Disable the burger menu button when its menu has no items. Empty-menu pages
@@ -87,144 +77,78 @@ function closeBurger(burgerEl, panelEl) {
 }
 
 /**
- * Mount the device-profile nickname field into a `<section id="burger-nickname">`
- * placeholder inside the burger panel. The placeholder lives in every page's
- * HTML; this helper fills it with a small inline form and wires the save
- * round-trip to `PUT /api/v1/profile`.
+ * Mount the "Your name: <display-name>" link into the burger panel's `<ul>`.
+ * The link points at `/profile/` so the user can change their nickname on
+ * a dedicated page; this helper only renders the menu surface.
  *
- * **Soft-disabled in prod** (Feature H2): the helper bails out and renders
- * nothing unless `hostname` is in `NICKNAME_UI_HOSTS` (localhost / 127.0.0.1
- * / ::1). Backend is live for both prod and dev — the gate only hides the
- * setting UI while we iterate on the UX. Re-enable by widening the host set
- * or removing the gate.
+ * The displayed name resolves via `flags/nickname.js::displayNickname`:
+ * the cached `gridgame.nickname` wins if present; otherwise a deterministic
+ * two-word default is derived from the deviceId. Same deviceId → same
+ * default for every viewer, with no server fetch required.
  *
- * Behaviour:
- *   - On mount, pre-fill the input from `localStorage.gridgame.nickname` if set.
- *   - On submit, validate length client-side, then PUT the deviceId + new
- *     nickname (or `null` for "clear my nickname" when the field is empty).
- *   - On success (any 2xx), write the new value back to localStorage and
- *     show a short "Saved" flash. On failure (non-2xx / network error),
- *     surface an error state and leave localStorage untouched so the
- *     server is the only source of disagreement.
+ * Inserted as the FIRST child of the menu so the "this is you" affordance
+ * is the most prominent item. `aria-current="page"` is set automatically
+ * when the page hosting the menu is `/profile/` itself.
  *
- * Anything Node-side (DOM, storage, fetch, deviceId, clock, hostname) is
- * injectable so tests don't need a real browser. Returns the created
- * `<form>` element, or `null` if the helper was skipped (missing rootEl,
- * or a non-localhost hostname).
+ * Anything DOM-side (storage, deviceId, doc, location) is injectable so
+ * tests don't need a real browser.
  *
  * @param {{
  *   rootEl: HTMLElement | null,
+ *   profileHref: string,
  *   doc?: Document,
- *   storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>,
- *   fetchImpl?: typeof fetch,
+ *   storage?: Pick<Storage, 'getItem'>,
  *   getDeviceId?: () => string,
- *   hostname?: string,
- *   now?: () => number,
- *   savedFlashMs?: number,
- *   setTimeoutImpl?: (cb: () => void, ms: number) => any,
- *   clearTimeoutImpl?: (id: any) => void,
+ *   pageIsProfile?: boolean,
  * }} opts
  */
-export function mountNicknameField(opts) {
+export function mountNicknameMenuItem(opts) {
   if (!opts || !opts.rootEl) return null;
-  const hostname = opts.hostname
-    ?? (typeof window !== 'undefined' ? window.location.hostname : '');
-  if (!NICKNAME_UI_HOSTS.has(hostname)) return null;
   const doc = opts.doc ?? document;
   const storage = opts.storage ?? window.localStorage;
-  const fetchImpl = opts.fetchImpl ?? window.fetch.bind(window);
+  // Default deviceId resolution reads from window.localStorage directly,
+  // not from `storage` — in prod they're the same object, but tests
+  // inject `storage` as a read-only fake and override `getDeviceId`.
+  // Keeping the default path off `storage` lets the `storage` param's
+  // type stay `Pick<Storage, 'getItem'>` instead of dragging in
+  // setItem/removeItem (needed by getOrCreateDeviceId on first run).
   const getDeviceId = opts.getDeviceId
-    ?? (() => getOrCreateDeviceId(storage, () => window.crypto.randomUUID()));
-  const setTimeoutImpl = opts.setTimeoutImpl ?? setTimeout;
-  const clearTimeoutImpl = opts.clearTimeoutImpl ?? clearTimeout;
-  const savedFlashMs = typeof opts.savedFlashMs === 'number' ? opts.savedFlashMs : 1500;
+    ?? (() => getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID()));
 
-  const form = doc.createElement('form');
-  form.className = 'burger-nickname-form';
-
-  const label = doc.createElement('label');
-  label.className = 'burger-nickname-label';
-  const labelText = doc.createElement('span');
-  labelText.setAttribute('data-i18n', 'nickname.label');
-  labelText.textContent = 'Nickname';
-  label.appendChild(labelText);
-
-  const input = doc.createElement('input');
-  input.type = 'text';
-  input.className = 'burger-nickname-input';
-  input.maxLength = NICKNAME_MAX;
-  input.setAttribute('data-i18n-attr', 'placeholder:nickname.placeholder');
-  input.placeholder = 'optional';
-  label.appendChild(input);
-
-  const button = doc.createElement('button');
-  button.type = 'submit';
-  button.className = 'burger-nickname-save';
-  button.setAttribute('data-i18n', 'nickname.save');
-  button.textContent = 'Save';
-
-  const status = doc.createElement('span');
-  status.className = 'burger-nickname-status';
-  status.setAttribute('role', 'status');
-  status.setAttribute('aria-live', 'polite');
-
-  form.appendChild(label);
-  form.appendChild(button);
-  form.appendChild(status);
-
-  // Pre-fill from cache. Read defensively so a private-mode-throwing
-  // storage doesn't break the mount.
+  /** @type {string | null} */
+  let cached = null;
   try {
-    const cached = storage.getItem(NICKNAME_STORAGE_KEY);
-    if (typeof cached === 'string' && cached.length > 0) input.value = cached;
+    cached = storage.getItem(NICKNAME_STORAGE_KEY);
   } catch {
-    // Ignore — leave the field blank, the user can still type a fresh value.
+    /* private mode / no quota — fall through to the default */
   }
+  const name = displayNickname(getDeviceId(), cached);
 
-  /** @type {any} */
-  let flashTimer = 0;
+  const li = doc.createElement('li');
+  li.className = 'menu-nickname';
 
-  form.addEventListener('submit', async (ev) => {
-    if (typeof ev.preventDefault === 'function') ev.preventDefault();
-    const raw = input.value.trim();
-    const nickname = raw.length === 0 ? null : raw.slice(0, NICKNAME_MAX);
+  const a = doc.createElement('a');
+  a.setAttribute('href', opts.profileHref);
+  if (opts.pageIsProfile) a.setAttribute('aria-current', 'page');
 
-    button.disabled = true;
-    status.textContent = '';
-    status.classList.remove('is-saved', 'is-error');
+  const label = doc.createElement('span');
+  label.className = 'menu-nickname-label';
+  label.setAttribute('data-i18n', 'nickname.yourName');
+  label.textContent = 'Your name';
 
-    try {
-      const res = await fetchImpl('/api/v1/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deviceId: getDeviceId(), nickname }),
-      });
-      if (!res.ok) throw new Error(`http_${res.status}`);
-      try {
-        if (nickname === null) storage.removeItem(NICKNAME_STORAGE_KEY);
-        else storage.setItem(NICKNAME_STORAGE_KEY, nickname);
-      } catch {
-        // Cache miss on save is harmless — the server is the source of truth
-        // and the next mount will fall back to "empty" until the user retypes.
-      }
-      status.setAttribute('data-i18n', 'nickname.saved');
-      status.textContent = 'Saved';
-      status.classList.add('is-saved');
-    } catch {
-      status.setAttribute('data-i18n', 'nickname.error');
-      status.textContent = 'Could not save';
-      status.classList.add('is-error');
-    } finally {
-      button.disabled = false;
-      if (flashTimer) clearTimeoutImpl(flashTimer);
-      flashTimer = setTimeoutImpl(() => {
-        status.textContent = '';
-        status.removeAttribute('data-i18n');
-        status.classList.remove('is-saved', 'is-error');
-      }, savedFlashMs);
-    }
-  });
+  const value = doc.createElement('strong');
+  value.className = 'menu-nickname-value';
+  value.textContent = name;
 
-  opts.rootEl.appendChild(form);
-  return form;
+  a.appendChild(label);
+  a.appendChild(doc.createTextNode(': '));
+  a.appendChild(value);
+  li.appendChild(a);
+
+  // Insert as the first menu item — "you" deserves top placement above any
+  // navigation links the page added below.
+  const firstChild = opts.rootEl.firstChild;
+  if (firstChild) opts.rootEl.insertBefore(li, firstChild);
+  else opts.rootEl.appendChild(li);
+  return li;
 }

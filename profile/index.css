@@ -1,0 +1,62 @@
+/* /profile/ — set your display nickname. Form-centric page, no game grid. */
+
+.profile-main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 20px 20px;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-input {
+  font: inherit;
+  font-size: 16px;
+  color: var(--link-color);
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  box-sizing: border-box;
+  width: 100%;
+}
+.profile-input:focus {
+  outline: none;
+  border-color: var(--link-color);
+}
+
+.profile-save,
+.profile-reset {
+  font: inherit;
+  font-size: 14px;
+  color: var(--link-color);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+.profile-save {
+  font-weight: 500;
+}
+.profile-save:hover:not(:disabled),
+.profile-reset:hover:not(:disabled) {
+  text-decoration: underline;
+}
+.profile-save:disabled,
+.profile-reset:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.profile-status {
+  font-size: 13px;
+  min-height: 1.2em;
+  margin: 0;
+}
+.profile-status.is-error {
+  color: #c44;
+}

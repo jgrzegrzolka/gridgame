@@ -1,0 +1,154 @@
+import { getOrCreateDeviceId } from '../flags/identity.js';
+import { defaultNickname, displayNickname } from '../flags/nickname.js';
+import { NICKNAME_STORAGE_KEY } from '../common.js';
+import { t } from '../i18n.js';
+
+const ENDPOINT = '/api/v1/profile';
+const FLASH_MS = 1500;
+
+export function bootProfile() {
+  const input = /** @type {HTMLInputElement | null} */ (document.getElementById('profile-input'));
+  const status = document.getElementById('profile-status');
+  const form = /** @type {HTMLFormElement | null} */ (document.getElementById('profile-form'));
+  const saveBtn = /** @type {HTMLButtonElement | null} */ (form?.querySelector('.profile-save'));
+  const resetBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('profile-reset'));
+  if (!input || !status || !form || !saveBtn || !resetBtn) return;
+
+  const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+  const defaultName = defaultNickname(deviceId);
+
+  let cached;
+  try {
+    cached = window.localStorage.getItem(NICKNAME_STORAGE_KEY);
+  } catch {
+    cached = null;
+  }
+  input.value = displayNickname(deviceId, cached);
+
+  /**
+   * What the server is believed to currently hold for this device. Starts
+   * at whatever the cache says (string for a saved nickname, null for the
+   * default/unedited state). Every successful save updates this. A Save
+   * click whose payload equals `persisted` skips the network round-trip
+   * entirely — three layers of throttle (this + the in-flight button
+   * disable + the 5/min/IP server rate limit) stop a stuck-Save-button
+   * scenario from ever reaching Cosmos in volume.
+   *
+   * @type {string | null}
+   */
+  let persisted = typeof cached === 'string' && cached.length > 0 ? cached : null;
+
+  let inFlight = false;
+  /** @type {any} */
+  let flashTimer = 0;
+
+  /**
+   * Translate the live input value into the payload the server would receive.
+   * Whitespace-only or default-matching input collapses to `null` (the lazy-
+   * storage signal). Used by both the save path and the button-enable check.
+   *
+   * @returns {string | null}
+   */
+  function currentPayload() {
+    const trimmed = input.value.trim();
+    if (trimmed.length === 0 || trimmed === defaultName) return null;
+    return trimmed.slice(0, 24);
+  }
+
+  /**
+   * Toggle the Save and Reset buttons to match "does this action have any
+   * effect right now?". Save is disabled when the payload already equals
+   * what the server holds; Reset is disabled when the input is already the
+   * default and the server has no custom value to clear. Either way the
+   * page only invites clicks that would actually change something. Both
+   * remain disabled while a request is in flight, regardless of state.
+   */
+  function refreshButtons() {
+    if (inFlight) {
+      saveBtn.disabled = true;
+      resetBtn.disabled = true;
+      return;
+    }
+    saveBtn.disabled = currentPayload() === persisted;
+    resetBtn.disabled = input.value === defaultName && persisted === null;
+  }
+
+  refreshButtons();
+  input.addEventListener('input', refreshButtons);
+
+  /**
+   * Push the resolved-and-trimmed `nickname` payload to the server, then
+   * mirror it into localStorage. The "lazy storage" rule lives here: if
+   * the user is saving exactly the default, send `null` to the server so
+   * we don't write a row that holds the same string the deterministic
+   * default would produce anyway.
+   *
+   * The success path is intentionally silent — no "Saved" confirmation
+   * is shown. The Save button going disabled (because input now matches
+   * `persisted`) is signal enough. Errors still surface via the status
+   * line so the user knows when something didn't take.
+   *
+   * @param {string | null} nickname
+   */
+  async function save(nickname) {
+    const payload = nickname !== null && nickname === defaultName ? null : nickname;
+    // Idempotent skip — the server already holds this value, no point
+    // PUTing it again. The button-enable logic already prevents this for
+    // a Save click; Reset can still land here if the user is already in
+    // the default state. Refresh the buttons in case Reset just snapped
+    // the input back to default and Reset itself should now disable.
+    if (payload === persisted) {
+      refreshButtons();
+      return;
+    }
+    inFlight = true;
+    refreshButtons();
+    setStatus(status, '', null);
+    try {
+      const res = await fetch(ENDPOINT, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId, nickname: payload }),
+      });
+      if (!res.ok) throw new Error(`http_${res.status}`);
+      persisted = payload;
+      try {
+        if (payload === null) window.localStorage.removeItem(NICKNAME_STORAGE_KEY);
+        else window.localStorage.setItem(NICKNAME_STORAGE_KEY, payload);
+      } catch {
+        /* cache failure is non-fatal — server is the source of truth */
+      }
+    } catch {
+      setStatus(status, t('nickname.error', 'Could not save'), 'is-error', 'nickname.error');
+      if (flashTimer) clearTimeout(flashTimer);
+      flashTimer = setTimeout(() => setStatus(status, '', null), FLASH_MS);
+    } finally {
+      inFlight = false;
+      refreshButtons();
+    }
+  }
+
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    void save(currentPayload());
+  });
+
+  resetBtn.addEventListener('click', () => {
+    input.value = defaultName;
+    void save(null);
+  });
+}
+
+/**
+ * @param {HTMLElement} statusEl
+ * @param {string} text
+ * @param {'is-error' | null} cls
+ * @param {string} [i18nKey]
+ */
+function setStatus(statusEl, text, cls, i18nKey) {
+  statusEl.textContent = text;
+  statusEl.classList.remove('is-error');
+  if (cls) statusEl.classList.add(cls);
+  if (i18nKey) statusEl.setAttribute('data-i18n', i18nKey);
+  else statusEl.removeAttribute('data-i18n');
+}
