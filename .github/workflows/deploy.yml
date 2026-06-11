@@ -120,6 +120,32 @@ jobs:
           output_location: ""
           skip_app_build: true
 
+      - name: Purge Cloudflare cache
+        # Once www is Cloudflare-proxied (orange cloud), CF caches HTML up to
+        # the 2 h Edge TTL set by the "Cache HTML for Always Online" rule —
+        # without this purge, users would see up to 2 h of stale content after
+        # a deploy. Safe to run while www is still grey-cloud too: the API
+        # call clears an effectively-empty zone cache and reports success, so
+        # this step can land ahead of the orange-cloud flip without churn.
+        # Zone ID is a public identifier, not a credential — hardcoded so the
+        # workflow is self-documenting; only the API token is a secret.
+        env:
+          CLOUDFLARE_ZONE_ID: ea6c33138d6fe232e2505f35e233c98a
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          response=$(curl -sS -X POST \
+            "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}')
+          echo "${response}"
+          if ! echo "${response}" | grep -q '"success":true'; then
+            echo "FAIL: CF purge did not report success"
+            exit 1
+          fi
+          echo "OK: CF cache purged"
+
       - name: Smoke-check the custom domain after deploy
         # SWA reports "Succeeded" the moment its raw `*.azurestaticapps.net`
         # hostname has the new artifact, but the custom-domain edge can lag by
