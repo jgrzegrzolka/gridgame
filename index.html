@@ -48,6 +48,7 @@
       <ul class="menu">
         <li><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
       </ul>
+      <section id="burger-nickname" class="burger-nickname"></section>
     </nav>
     <main>
       <h1 class="sr-only">Yet Another Quiz — country flag games</h1>
@@ -75,7 +76,7 @@
     </main>
     <script type="module">
       import { bootI18n, wireLangToggle } from './i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss } from './common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameField } from './common.js';
       import { preloadFlags } from './flags/quiz.js';
       bootI18n().then((lang) => {
         // Home page is `data-i18n`-only — applyStringsToDocument covers
@@ -87,6 +88,7 @@
           document.querySelector('#burger-panel .menu'),
         );
         wireBurgerDismiss();
+        mountNicknameField({ rootEl: document.getElementById('burger-nickname') });
       });
       // Warm the flag-SVG cache while the user reads the menu. By the
       // time they click a game tile, the first round's flags are

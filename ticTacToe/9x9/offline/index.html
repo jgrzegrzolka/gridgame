@@ -36,6 +36,7 @@
         <li><a href="./" aria-current="page" data-i18n="ttt.variant9x9">9×9</a></li>
         <li class="menu-divider"><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
       </ul>
+      <section id="burger-nickname" class="burger-nickname"></section>
     </nav>
     <div class="game">
       <p class="turn-line" id="turn-line"><span class="turn-badge o" id="turn-badge">O</span><span id="turn-text" data-i18n="ttt.toMove">to move</span></p>
@@ -96,7 +97,7 @@
     </div>
     <script type="module">
       import { bootTicTacToe9x9 } from './page.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss } from '../../../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameField } from '../../../common.js';
       import { bootI18n, wireLangToggle } from '../../../i18n.js';
       bootI18n('../../../').then((lang) => {
         // Soft-reload mode preserves the offline 9×9 game state across
@@ -108,6 +109,7 @@
           document.querySelector('#burger-panel .menu'),
         );
         wireBurgerDismiss();
+        mountNicknameField({ rootEl: document.getElementById('burger-nickname') });
       });
     </script>
   </body>

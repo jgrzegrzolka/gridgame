@@ -23,7 +23,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ### Feature H: Identity unification + device profiles
 
-**Status:** ready to start. Phase H1 is a prerequisite for Feature G; H2/H3 can ship independently.
+**Status:** H1 shipped 2026-06-11 (#359) — `gridgame.deviceId` is now the single canonical browser identity, with the legacy `gridgame.player.id` swept on first read. H2 in flight (profiles container + nickname UI). H3 still pending (surface nicknames downstream). Feature G also unblocked (can ship independently of H2/H3).
 
 **Goal:** one stable identity per browser (today there are two — `gridgame.deviceId` for daily, `gridgame.player.id` for TTT online), with the option to self-attach a nickname stored server-side. Still anonymous — no account, no cross-device link. That's Feature C's job.
 

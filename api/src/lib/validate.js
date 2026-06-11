@@ -31,6 +31,12 @@ const LIMITS = {
   // a single human-plausible upper bound across endpoints.
   QUIZ_DURATION_MS_MIN: 0,
   QUIZ_DURATION_MS_MAX: 6 * 60 * 60 * 1000,
+  // Nickname display bounds (Feature H2). 1 chars after trim because empty
+  // strings should be sent as `null` (the "clear my nickname" signal).
+  // 24 chars upper because that's enough for a real name + a short tag
+  // and still fits the burger panel layout without wrapping.
+  NICKNAME_MIN: 1,
+  NICKNAME_MAX: 24,
 };
 
 function isInt(x, min, max) {
@@ -160,4 +166,45 @@ function validateQuizRecord(body) {
   return { ok: true };
 }
 
-module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, LIMITS };
+/**
+ * Validate the body posted to `PUT /api/v1/profile`. Shape:
+ *
+ *   {
+ *     deviceId: string (8..64),
+ *     nickname: null | string (1..NICKNAME_MAX after trim),
+ *   }
+ *
+ * `null` is the explicit "clear my nickname" signal — the row stays in
+ * Cosmos (so createdAt is preserved across a clear/set cycle), but the
+ * stored value goes back to null. Display-side code already treats
+ * `nickname == null` as "anonymous device".
+ *
+ * The trimmed string is returned in `value` so the handler doesn't have
+ * to re-trim before writing; reduces the risk of "validated against the
+ * trimmed length but stored the untrimmed value" drift.
+ *
+ * Per FEATURE.md: no character / charset / uniqueness restrictions —
+ * nicknames are display-only and may collide. Moderation is out of
+ * scope until profanity / impersonation become real problems.
+ */
+function validateProfileBody(body) {
+  if (!body || typeof body !== 'object') return { ok: false, error: 'body_required' };
+
+  if (!isString(body.deviceId, LIMITS.DEVICE_ID_MIN, LIMITS.DEVICE_ID_MAX)) {
+    return { ok: false, error: 'invalid_deviceId' };
+  }
+
+  if (body.nickname === null) {
+    return { ok: true, value: { deviceId: body.deviceId, nickname: null } };
+  }
+  if (typeof body.nickname !== 'string') {
+    return { ok: false, error: 'invalid_nickname' };
+  }
+  const trimmed = body.nickname.trim();
+  if (trimmed.length < LIMITS.NICKNAME_MIN || trimmed.length > LIMITS.NICKNAME_MAX) {
+    return { ok: false, error: 'invalid_nickname' };
+  }
+  return { ok: true, value: { deviceId: body.deviceId, nickname: trimmed } };
+}
+
+module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, LIMITS };

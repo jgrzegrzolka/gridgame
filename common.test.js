@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { disableBurgerIfEmpty, wireBurgerDismiss } from './common.js';
+import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameField, NICKNAME_STORAGE_KEY } from './common.js';
 
 /**
  * Fake burger element that tracks both the native `disabled` property and the
@@ -139,4 +139,297 @@ test('wireBurgerDismiss: pages without a burger panel are safe (no-op, no throw)
   };
   // Must not throw and must not register listeners.
   wireBurgerDismiss({ doc: /** @type {any} */ (doc) });
+});
+
+// ---------------------------------------------------------------------------
+// mountNicknameField — Feature H2 nickname affordance in the burger panel
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the minimal DOM + storage fakes the helper needs. The element shape
+ * mirrors only the surface mountNicknameField touches — same convention as
+ * the burger tests above. Element tagName is captured so the assertions can
+ * read it without `el.tagName` semantics needing to match the browser.
+ *
+ * @param {{ cachedNickname?: string | null }} [opts]
+ */
+function fakeNicknameDom(opts = {}) {
+  const cachedNickname = opts.cachedNickname ?? null;
+  /** @type {Map<string, string>} */
+  const data = new Map();
+  if (cachedNickname !== null) data.set(NICKNAME_STORAGE_KEY, cachedNickname);
+  const storage = {
+    /** @param {string} k */
+    getItem: (k) => (data.has(k) ? /** @type {string} */ (data.get(k)) : null),
+    /** @param {string} k @param {string} v */
+    setItem: (k, v) => { data.set(k, v); },
+    /** @param {string} k */
+    removeItem: (k) => { data.delete(k); },
+    _dump: () => Object.fromEntries(data),
+  };
+
+  /**
+   * @param {string} tag
+   * @returns {any}
+   */
+  function makeElement(tag) {
+    /** @type {any[]} */
+    const children = [];
+    /** @type {Record<string, string>} */
+    const attrs = {};
+    /** @type {Set<string>} */
+    const classes = new Set();
+    /** @type {Record<string, Array<(e: any) => void>>} */
+    const listeners = {};
+    const el = {
+      tagName: tag.toUpperCase(),
+      children,
+      get childNodes() { return children; },
+      attributes: attrs,
+      _listeners: listeners,
+      classList: {
+        add: /** @param {string[]} cls */ (...cls) => cls.forEach((c) => classes.add(c)),
+        remove: /** @param {string[]} cls */ (...cls) => cls.forEach((c) => classes.delete(c)),
+        contains: /** @param {string} c */ (c) => classes.has(c),
+        _all: () => Array.from(classes),
+      },
+      textContent: '',
+      type: '',
+      value: '',
+      maxLength: 0,
+      placeholder: '',
+      className: '',
+      disabled: false,
+      /** @param {string} k @param {string} v */
+      setAttribute(k, v) { attrs[k] = v; },
+      /** @param {string} k */
+      getAttribute(k) { return attrs[k] ?? null; },
+      /** @param {string} k */
+      removeAttribute(k) { delete attrs[k]; },
+      /** @param {any} child */
+      appendChild(child) { children.push(child); return child; },
+      /**
+       * @param {string} type @param {(e: any) => void} fn
+       */
+      addEventListener(type, fn) {
+        (listeners[type] = listeners[type] ?? []).push(fn);
+      },
+      /**
+       * @param {string} type @param {any} evt
+       */
+      _fire(type, evt) {
+        for (const fn of listeners[type] ?? []) fn(evt);
+      },
+    };
+    return el;
+  }
+
+  const doc = {
+    /** @param {string} tag */
+    createElement: makeElement,
+  };
+  const rootEl = makeElement('section');
+  return { doc, rootEl, storage };
+}
+
+/**
+ * @param {{ status?: number, ok?: boolean, throws?: boolean }} [opts]
+ */
+function fakeFetch(opts = {}) {
+  /** @type {Array<{ url: string, init: any }>} */
+  const calls = [];
+  /** @type {(url: string, init: any) => Promise<any>} */
+  const impl = async (url, init) => {
+    calls.push({ url, init });
+    if (opts.throws) throw new Error('network');
+    const status = opts.status ?? 204;
+    return { ok: opts.ok ?? (status >= 200 && status < 300), status };
+  };
+  return { impl, calls };
+}
+
+function flushMicrotasks() {
+  return new Promise((r) => setImmediate(r));
+}
+
+test('mountNicknameField: returns null and is a no-op when rootEl is missing', () => {
+  const result = mountNicknameField(/** @type {any} */ ({ rootEl: null }));
+  assert.equal(result, null);
+});
+
+test('mountNicknameField: builds form, label, input, button and status into rootEl', () => {
+  const env = fakeNicknameDom();
+  const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    storage: env.storage,
+    fetchImpl: fakeFetch().impl,
+    getDeviceId: () => 'device-aaaaaaaa',
+  })));
+  assert.ok(form);
+  assert.equal(env.rootEl.children.length, 1, 'one form mounted under rootEl');
+  // form > [label, button, status]
+  assert.equal(form.tagName, 'FORM');
+  assert.equal(form.children.length, 3);
+  const [label, button, status] = form.children;
+  assert.equal(label.tagName, 'LABEL');
+  // label > [span, input]
+  assert.equal(label.children[0].tagName, 'SPAN');
+  assert.equal(label.children[0].getAttribute('data-i18n'), 'nickname.label');
+  assert.equal(label.children[1].tagName, 'INPUT');
+  assert.equal(label.children[1].maxLength, 24);
+  assert.equal(button.tagName, 'BUTTON');
+  assert.equal(button.type, 'submit');
+  assert.equal(button.getAttribute('data-i18n'), 'nickname.save');
+  assert.equal(status.getAttribute('aria-live'), 'polite');
+});
+
+test('mountNicknameField: pre-fills input from cached nickname in localStorage', () => {
+  const env = fakeNicknameDom({ cachedNickname: 'Alice' });
+  const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    storage: env.storage,
+    fetchImpl: fakeFetch().impl,
+    getDeviceId: () => 'device-aaaaaaaa',
+  })));
+  const input = form.children[0].children[1];
+  assert.equal(input.value, 'Alice');
+});
+
+test('mountNicknameField: no cache → input stays empty (placeholder visible)', () => {
+  const env = fakeNicknameDom();
+  const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    storage: env.storage,
+    fetchImpl: fakeFetch().impl,
+    getDeviceId: () => 'device-aaaaaaaa',
+  })));
+  const input = form.children[0].children[1];
+  assert.equal(input.value, '');
+});
+
+test('mountNicknameField: submit PUTs trimmed nickname + deviceId, writes cache, shows Saved', async () => {
+  const env = fakeNicknameDom();
+  const fetcher = fakeFetch({ status: 204 });
+  /** @type {Array<() => void>} */
+  const flashes = [];
+  const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    storage: env.storage,
+    fetchImpl: fetcher.impl,
+    getDeviceId: () => 'device-aaaaaaaa',
+    setTimeoutImpl: /** @param {() => void} cb */ (cb) => { flashes.push(cb); return 1; },
+    clearTimeoutImpl: () => {},
+  })));
+  const input = form.children[0].children[1];
+  const status = form.children[2];
+  input.value = '  Alice  ';
+
+  form._fire('submit', { preventDefault: () => {} });
+  await flushMicrotasks();
+
+  assert.equal(fetcher.calls.length, 1);
+  assert.equal(fetcher.calls[0].url, '/api/v1/profile');
+  assert.equal(fetcher.calls[0].init.method, 'PUT');
+  assert.equal(fetcher.calls[0].init.headers['Content-Type'], 'application/json');
+  assert.deepEqual(JSON.parse(fetcher.calls[0].init.body), {
+    deviceId: 'device-aaaaaaaa',
+    nickname: 'Alice',
+  });
+  assert.equal(env.storage._dump()[NICKNAME_STORAGE_KEY], 'Alice');
+  assert.equal(status.textContent, 'Saved');
+  assert.equal(status.classList.contains('is-saved'), true);
+  assert.equal(flashes.length, 1, 'flash timer scheduled to clear the status');
+});
+
+test('mountNicknameField: empty input submits nickname: null and removes the cache key', async () => {
+  const env = fakeNicknameDom({ cachedNickname: 'Alice' });
+  const fetcher = fakeFetch({ status: 204 });
+  const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    storage: env.storage,
+    fetchImpl: fetcher.impl,
+    getDeviceId: () => 'device-aaaaaaaa',
+    setTimeoutImpl: () => 1,
+    clearTimeoutImpl: () => {},
+  })));
+  const input = form.children[0].children[1];
+  input.value = '   ';  // whitespace-only → null after trim
+  form._fire('submit', { preventDefault: () => {} });
+  await flushMicrotasks();
+
+  assert.deepEqual(JSON.parse(fetcher.calls[0].init.body), {
+    deviceId: 'device-aaaaaaaa',
+    nickname: null,
+  });
+  assert.equal(env.storage._dump()[NICKNAME_STORAGE_KEY], undefined, 'cache cleared');
+});
+
+test('mountNicknameField: non-2xx response shows error and does NOT write the cache', async () => {
+  const env = fakeNicknameDom();
+  const fetcher = fakeFetch({ status: 500, ok: false });
+  const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    storage: env.storage,
+    fetchImpl: fetcher.impl,
+    getDeviceId: () => 'device-aaaaaaaa',
+    setTimeoutImpl: () => 1,
+    clearTimeoutImpl: () => {},
+  })));
+  const input = form.children[0].children[1];
+  const status = form.children[2];
+  input.value = 'Alice';
+  form._fire('submit', { preventDefault: () => {} });
+  await flushMicrotasks();
+
+  assert.equal(env.storage._dump()[NICKNAME_STORAGE_KEY], undefined, 'cache untouched on failure');
+  assert.equal(status.textContent, 'Could not save');
+  assert.equal(status.classList.contains('is-error'), true);
+  assert.equal(status.classList.contains('is-saved'), false);
+});
+
+test('mountNicknameField: network throw is treated as error (no unhandled rejection)', async () => {
+  const env = fakeNicknameDom();
+  const fetcher = fakeFetch({ throws: true });
+  const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    storage: env.storage,
+    fetchImpl: fetcher.impl,
+    getDeviceId: () => 'device-aaaaaaaa',
+    setTimeoutImpl: () => 1,
+    clearTimeoutImpl: () => {},
+  })));
+  const input = form.children[0].children[1];
+  const status = form.children[2];
+  input.value = 'Alice';
+  form._fire('submit', { preventDefault: () => {} });
+  await flushMicrotasks();
+
+  assert.equal(status.classList.contains('is-error'), true);
+});
+
+test('mountNicknameField: button is re-enabled after the round-trip (success and failure)', async () => {
+  const env = fakeNicknameDom();
+  const fetcher = fakeFetch({ status: 204 });
+  const form = /** @type {any} */ (mountNicknameField(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    storage: env.storage,
+    fetchImpl: fetcher.impl,
+    getDeviceId: () => 'device-aaaaaaaa',
+    setTimeoutImpl: () => 1,
+    clearTimeoutImpl: () => {},
+  })));
+  const button = form.children[1];
+  const input = form.children[0].children[1];
+  input.value = 'Alice';
+  form._fire('submit', { preventDefault: () => {} });
+  await flushMicrotasks();
+  assert.equal(button.disabled, false);
 });

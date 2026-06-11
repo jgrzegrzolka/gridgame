@@ -50,12 +50,13 @@ function makeDoc() {
   return doc;
 }
 
-test('clearBrowserState removes the four known keys and leaves others alone', () => {
+test('clearBrowserState removes every key in DEV_RESET_STORAGE_KEYS and leaves others alone', () => {
   const s = fakeStorage({
     'gridgame.deviceId': 'abc',
     'gridgame.submittedPuzzles': '[1,2]',
     'daily.scores': '{}',
     'gridgame.ideas.reviewed': '[5]',
+    'gridgame.nickname': 'Alice',
     'unrelated.key': 'keep',
   });
   clearBrowserState(s);

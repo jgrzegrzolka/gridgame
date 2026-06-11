@@ -44,7 +44,7 @@ Narrower modes if you don't need everything:
 
 On the daily + archive pages a small yellow toolbar appears bottom-left **only when the hostname is `localhost` / `127.0.0.1` / `::1`**. Two buttons:
 
-- **Reset browser** — clears the four daily-flow localStorage keys (`gridgame.deviceId`, `gridgame.submittedPuzzles`, `daily.scores`, `gridgame.ideas.reviewed`) and reloads. Use it to replay puzzles cleanly without 409s.
+- **Reset browser** — clears the five daily-flow localStorage keys (`gridgame.deviceId`, `gridgame.submittedPuzzles`, `daily.scores`, `gridgame.ideas.reviewed`, `gridgame.nickname`) and reloads. Use it to replay puzzles cleanly without 409s.
 - **Clear Cosmos local rows** — deletes every `dailyResults` doc tagged `local: true` from prod Cosmos. The endpoint is server-gated to localhost-only (refuses 403 elsewhere), so the button is safe.
 
 Both are no-ops in prod — the hostname gate ensures the toolbar never renders, and the endpoint refuses even if hit directly.

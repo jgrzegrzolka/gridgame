@@ -9,6 +9,13 @@
     "yourStats": "Twoje statystyki",
     "includeTerritories": "Uwzględnij terytoria i inne flagi"
   },
+  "nickname": {
+    "label": "Pseudonim",
+    "placeholder": "opcjonalnie",
+    "save": "Zapisz",
+    "saved": "Zapisano",
+    "error": "Nie udało się zapisać"
+  },
   "domain": {
     "flags": "Flagi"
   },
