@@ -12,13 +12,9 @@ Rule of thumb: keep new code inside its feature folder. Promote something to `fl
 
 ## Hosting
 
-- Production URL: **`https://www.yetanotherquiz.com`**. Apex `yetanotherquiz.com` 301-redirects to www via a Cloudflare Redirect Rule.
-- Hosted on **Azure Static Web Apps** (Free SKU), resource name `swa-yetanotherquiz-v3`, region **West US 2**, SWA-hosted hostname `wonderful-ground-01bf3091e.7.azurestaticapps.net` (don't link externally — use the custom domain). Deployed by `.github/workflows/deploy.yml` on push to `main`.
-- **Why West US 2 instead of West Europe?** The original SWA (`swa-yetanotherquiz`, West Europe) was lost in the 2026-06-10 Azure WE content-distribution outage — deploys hung in "Uploading" indefinitely, the custom-domain unbind got stuck, and we cut over to a fresh WUS2 instance to ship a critical fix. Currently single-region. **TODO when WE recovers:** recreate a West Europe sibling for hot-standby + lower latency on the API path (Cosmos is still in WE; today every API call crosses regions, ~300ms extra round-trip). See FEATURE.md Feature D for the full history and the recovery playbook.
-- DNS sits on **Cloudflare**. The `www` CNAME (DNS only / grey cloud) points at the SWA hostname above; apex A records are proxied (orange) so the apex→www Redirect Rule can fire.
-- PartyKit's tic-tac-toe WebSocket server (`gridgame-ttt.jgrzegrzolka.partykit.dev`) is unrelated to SWA — its own deploy workflow (`deploy-partykit.yml`) sends it to Cloudflare. Don't conflate.
+- Production at **`https://www.yetanotherquiz.com`**, on Azure Static Web Apps (Free SKU), deployed by `.github/workflows/deploy.yml` on push to `main`. See `infra/operations.md` for the live topology, resource inventory, and runbook for recurring symptoms (post-deploy 404, apex Redirect Rule misfire, deploy hang). See `FEATURE.md` for in-progress hosting / Azure work and the time-ordered history behind those symptoms.
 - **Naming convention:** code, pages, repo name, and `gridgame.*` `localStorage` keys all stay `gridgame` (historical). Azure resources (subscription, resource group, SWA name, Cosmos account, etc.) use `yetanotherquiz` because that's the public product framing. When wiring Azure-side things, pick `yetanotherquiz-...`; when editing code, leave `gridgame` alone.
-- See `infra/operations.md` for the live topology, resource inventory, and runbook for recurring symptoms (post-deploy 404, apex Redirect Rule misfire, deploy hang). See `FEATURE.md` for in-progress hosting / Azure work and the time-ordered history behind those symptoms.
+- PartyKit's tic-tac-toe WebSocket server (`gridgame-ttt.jgrzegrzolka.partykit.dev`) is unrelated to SWA — its own workflow (`deploy-partykit.yml`) deploys it to Cloudflare. Don't conflate when editing workflow files.
 
 ## API / Azure Functions
 
