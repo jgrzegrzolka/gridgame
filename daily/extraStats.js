@@ -1,7 +1,7 @@
 /**
  * Pure picker logic for the two rail sections that sit below the
  * stats caption: a single ranking of every puzzle flag by find rate,
- * plus the most common wrong-click. No DOM, no network — `daily/page.js`
+ * plus the most common wrong-clicks. No DOM, no network — `daily/page.js`
  * consumes the result and renders.
  *
  * The ranking shows every target code with its community find pct,
@@ -10,9 +10,17 @@
  * read the difficulty gradient across the whole puzzle at a glance.
  * The green/red corner marker (set in page.js via pickMarkerKind) tells
  * them which flags they personally got vs. missed.
+ *
+ * The mistakes row aims for the TARGET top wrong-clicked flags but
+ * grows past it whenever the count at position TARGET ties with the
+ * next entries — otherwise a single shared count would arbitrarily
+ * hide every tied flag except the alphabetically-first. The MAX cap
+ * keeps a pathological all-tied puzzle (e.g. 30 distractors each
+ * clicked once) from blowing out the rail.
  */
 
-export const MISTAKE_TOP_N = 1;
+export const MISTAKE_TARGET = 5;
+export const MISTAKE_MAX = 15;
 
 /**
  * @typedef {{ totalAttempts: number, perCodeFinds: Record<string, number>, perWrongCode?: Record<string, number> }} StatsInput
@@ -94,12 +102,18 @@ export function pickMarkerKind({ code, targetCodes, userFoundCodes }) {
 function pickTopMistake({ stats }) {
   const perWrongCode = stats.perWrongCode;
   if (!perWrongCode) return [];
-  return Object.entries(perWrongCode)
+  const sorted = Object.entries(perWrongCode)
     .map(([code, count]) => ({ code, count: /** @type {number} */ (count) }))
     .filter((e) => e.count > 0)
     .sort((a, b) => {
       if (a.count !== b.count) return b.count - a.count;
       return a.code < b.code ? -1 : 1;
-    })
-    .slice(0, MISTAKE_TOP_N);
+    });
+  if (sorted.length <= MISTAKE_TARGET) return sorted.slice(0, MISTAKE_MAX);
+  const cutoffCount = sorted[MISTAKE_TARGET - 1].count;
+  let end = MISTAKE_TARGET;
+  while (end < sorted.length && end < MISTAKE_MAX && sorted[end].count === cutoffCount) {
+    end++;
+  }
+  return sorted.slice(0, end);
 }
