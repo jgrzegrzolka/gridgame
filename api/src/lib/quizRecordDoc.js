@@ -8,18 +8,28 @@
  *     id:        string,                  // same as deviceId — partition key + id
  *     deviceId:  string,
  *     records: {
- *       "countries:60s:sov": { score, durationMs, submittedAt },
- *       "africa:all:sov":    { score, durationMs, submittedAt },
+ *       "countries:60s:sov": { score, durationMs, submittedAt, attempts, lastPlayedAt },
+ *       "africa:all:sov":    { score, durationMs, submittedAt, attempts, lastPlayedAt },
  *       ...
  *     },
  *     updatedAt: number,                  // unix ms — when this doc last changed
+ *     v:         1,                       // schema version, set unconditionally on every write.
+ *                                         //   See infra/operations.md "Cosmos data migration policy".
  *   }
+ *
+ * Sub-entry fields:
+ *   - score / durationMs / submittedAt:  the personal best. Only updated when this finish
+ *                                        beats the incumbent (isPersonalBest=true).
+ *   - attempts:                          total finishes ever recorded for this configKey,
+ *                                        including non-PB finishes. Bumps on every finish.
+ *   - lastPlayedAt:                      most recent finish time, PB or not. Different from
+ *                                        `submittedAt` (which freezes at the PB's set time).
  *
  * Why one-doc-per-device:
  *   - PB check needs the previous entry anyway → one read returns
  *     everything we need to decide and the merged write.
- *   - 7 variants × 2 modes × 2 includeAll = 28 max entries, each ~80
- *     bytes — well under 2KB. Single-partition reads/writes stay cheap.
+ *   - 7 variants × 2 modes × 2 includeAll = 28 max entries, each ~120
+ *     bytes (with attempts + lastPlayedAt) — still well under 2KB.
  *   - Future "show me all my records" is one read, no fan-out.
  *
  * Why the merge logic lives here (and not in flags/quiz.js's `nextBest`):
@@ -39,9 +49,16 @@ function buildQuizRecordDoc({ deviceId, configKey, entry, now }) {
     id: deviceId,
     deviceId,
     records: {
-      [configKey]: { score: entry.score, durationMs: entry.durationMs, submittedAt: now },
+      [configKey]: {
+        score: entry.score,
+        durationMs: entry.durationMs,
+        submittedAt: now,
+        attempts: 1,
+        lastPlayedAt: now,
+      },
     },
     updatedAt: now,
+    v: 1,
   };
 }
 
@@ -100,12 +117,26 @@ function mergeQuizRecord({ existing, deviceId, configKey, entry, lowerWins, now 
   }
 
   const incumbent = existing.records ? existing.records[configKey] : null;
-  if (!isPersonalBest(incumbent, entry, lowerWins)) {
-    return { changed: false, doc: existing };
-  }
+  const isPb = isPersonalBest(incumbent, entry, lowerWins);
+
+  // `attempts` defaults to 0 when the sub-entry doesn't have the field yet
+  // (pre-F5 docs encountered between deploy and backfill). The backfill
+  // script raises stale sub-entries to `attempts: 1` to avoid the off-by-one.
+  const prevAttempts = (incumbent && typeof incumbent.attempts === 'number') ? incumbent.attempts : 0;
 
   const records = { ...(existing.records || {}) };
-  records[configKey] = { score: entry.score, durationMs: entry.durationMs, submittedAt: now };
+  records[configKey] = {
+    // PB fields: keep incumbent's unless this finish beats them.
+    score:       isPb ? entry.score      : (incumbent ? incumbent.score      : entry.score),
+    durationMs:  isPb ? entry.durationMs : (incumbent ? incumbent.durationMs : entry.durationMs),
+    submittedAt: isPb ? now              : (incumbent ? incumbent.submittedAt : now),
+    // Engagement fields: bumped on every finish, PB or not.
+    attempts:    prevAttempts + 1,
+    lastPlayedAt: now,
+  };
+  // `changed` is now always `true` because attempts/lastPlayedAt change on
+  // every finish. Kept on the return shape for API stability — callers can
+  // ignore it and always upsert.
   return {
     changed: true,
     doc: {
@@ -114,6 +145,7 @@ function mergeQuizRecord({ existing, deviceId, configKey, entry, lowerWins, now 
       deviceId,
       records,
       updatedAt: now,
+      v: 1,
     },
   };
 }

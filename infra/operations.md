@@ -109,7 +109,7 @@ History: FEATURE.md Feature D "2026-06-11 follow-up — redirect rule hardening 
 
 ## Cosmos data migration policy
 
-Every native write into `dailyResults` carries a numeric schema-version field `v` (today `v: 1`, set unconditionally in `api/src/lib/dailyResultDoc.js`). The same policy will extend to every other container we add (`quizRecords`, future `profiles`, `tttResults`, etc.) as Feature F's phases land.
+Every native write into `dailyResults` (`api/src/lib/dailyResultDoc.js`) and `quizRecords` (`api/src/lib/quizRecordDoc.js`) carries a numeric schema-version field `v` (today `v: 1`). The same policy will extend to every other container we add (future `profiles`, `tttResults`, etc.).
 
 **The contract for any future shape change to `dailyResults`:**
 

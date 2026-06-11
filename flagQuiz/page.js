@@ -379,19 +379,20 @@ export function bootFlagQuiz() {
         );
         resultLabelData = { timed: true, isNew, best, elapsed, budgetUsed };
         paintResultLabels();
-        // Cloud-PB write: fire only on a local-PB hit (saves writes on
-        // every replay) — server runs its own merge so a fresh-localStorage
-        // device can't clobber a real cloud PB. Fire-and-forget; failures
-        // are silently swallowed so the result screen never blocks.
-        if (isNew) {
-          void submitQuizRecord({
-            deviceId,
-            configKey: quizRecordConfigKey(key, mode, includeAll),
-            score: answeredCount,
-            durationMs: budgetUsed,
-            lowerWins: false,
-          });
-        }
+        // Cloud write: fire on every finish, PB or not. Pre-F5 we gated
+        // on isNew to save writes on replays, but Feature F phase 5 added
+        // server-side `attempts` + `lastPlayedAt` per configKey — both
+        // depend on the server seeing every finish, not just the ones
+        // that beat the local PB. The server's own merge still protects
+        // against fresh-localStorage devices clobbering a real cloud PB.
+        // Fire-and-forget; failures are silently swallowed.
+        void submitQuizRecord({
+          deviceId,
+          configKey: quizRecordConfigKey(key, mode, includeAll),
+          score: answeredCount,
+          durationMs: budgetUsed,
+          lowerWins: false,
+        });
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           // total isn't meaningful for 60s mode (the round ends when the
@@ -419,15 +420,15 @@ export function bootFlagQuiz() {
         );
         resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0 };
         paintResultLabels();
-        if (isNew) {
-          void submitQuizRecord({
-            deviceId,
-            configKey: quizRecordConfigKey(key, mode, includeAll),
-            score: wrongCount,
-            durationMs: elapsed,
-            lowerWins: true,
-          });
-        }
+        // Cloud write: fire on every finish, PB or not (see F5 rationale
+        // in the timed-mode branch above).
+        void submitQuizRecord({
+          deviceId,
+          configKey: quizRecordConfigKey(key, mode, includeAll),
+          score: wrongCount,
+          durationMs: elapsed,
+          lowerWins: true,
+        });
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           total: target,
