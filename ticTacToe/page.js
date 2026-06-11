@@ -9,6 +9,8 @@ import {
 } from './onlineClient.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { submitTttResult } from '../flags/tttResultSubmit.js';
+import { fetchProfile } from '../flags/profileFetch.js';
+import { displayNickname } from '../flags/nickname.js';
 import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
 import { loadCountries } from '../flags/group.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
@@ -105,6 +107,7 @@ function runOnline(countries) {
   const shareBtnEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('share-link'));
   const roleBadgeEl = document.getElementById('role-badge');
   const statusEl = document.getElementById('status-line');
+  const matchupOpponentEl = document.getElementById('matchup-opponent');
   const gridBodyEl = document.getElementById('grid-body');
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
@@ -120,6 +123,13 @@ function runOnline(countries) {
    * row. Reset on rematch. Refresh-after-finish still re-fires (no gameId
    * tracking by design — see FEATURE.md Feature G). */
   let resultSubmittedForGame = false;
+  /** Opponent's saved nickname. `undefined` = not yet fetched, `null` =
+   *  fetch resolved but the opponent never set a nickname (so the
+   *  deterministic default applies via `displayNickname`), `string` =
+   *  their actual saved value. One fetch per peer per room session. */
+  /** @type {string | null | undefined} */
+  let opponentNickname;
+  let opponentFetchInFlight = false;
   const colHeaderEls = document.querySelectorAll('.col-header');
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
   const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
@@ -255,6 +265,8 @@ function runOnline(countries) {
       renderGrid();
       renderStatus();
     }
+    maybeFetchOpponent();
+    renderMatchupOpponent();
     for (const effect of effects) {
       if (effect.type === 'shake') shakeCell(effect.row, effect.col);
       else if (effect.type === 'gave-up') lastGaveUpByMe = effect.byMe;
@@ -289,6 +301,12 @@ function runOnline(countries) {
     if (roomCodeEl) roomCodeEl.textContent = '-----';
     renderShareButton();
     lastStatusKey = null;
+    // Wipe the opponent context so the next room starts with a clean
+    // slate; otherwise a stale name would briefly leak into a fresh
+    // join while the new fetch is in flight.
+    opponentNickname = undefined;
+    resultSubmittedForGame = false;
+    if (matchupOpponentEl) matchupOpponentEl.replaceChildren();
   }
 
   // ---- Grid (built once, on welcome) ----
@@ -720,6 +738,44 @@ function runOnline(countries) {
     if (!outcome) return;
     resultSubmittedForGame = true;
     void submitTttResult({ deviceId, opponentId: peerId, mode: '3x3', outcome });
+  }
+
+  /**
+   * Spawn a one-time fetch for the opponent's saved nickname the first
+   * time we know who the opponent is. No-op on subsequent calls until
+   * `returnToLobbyWithError` wipes the state.
+   */
+  function maybeFetchOpponent() {
+    if (!state.peerId) return;
+    if (opponentNickname !== undefined || opponentFetchInFlight) return;
+    opponentFetchInFlight = true;
+    fetchProfile({ deviceId: state.peerId }).then((r) => {
+      opponentNickname = r.ok ? r.nickname : null;
+      opponentFetchInFlight = false;
+      renderMatchupOpponent();
+    });
+  }
+
+  /**
+   * Paint "· vs <Opponent>" inline next to the role badge. Empty when
+   * no peer is known yet (lobby / pre-welcome state) — the span just
+   * collapses and the role line reads as it always did.
+   *
+   * Built via createElement (not innerHTML) so an opponent nickname like
+   * `<script>` can't escape into the page.
+   */
+  function renderMatchupOpponent() {
+    if (!matchupOpponentEl) return;
+    matchupOpponentEl.replaceChildren();
+    if (!state.peerId) return;
+
+    const vs = document.createElement('span');
+    vs.className = 'muted';
+    vs.textContent = t('ttt.matchupVs', 'vs');
+    const name = document.createElement('span');
+    name.className = 'matchup-name';
+    name.textContent = displayNickname(state.peerId, opponentNickname);
+    matchupOpponentEl.append(vs, name);
   }
 
   /**

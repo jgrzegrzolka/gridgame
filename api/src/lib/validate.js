@@ -103,6 +103,25 @@ function validateResult(body) {
 }
 
 /**
+ * Validate a single `deviceId`-shaped query parameter (8..64 char string).
+ * Used by the read endpoints (`GET /api/v1/profile`, `GET /api/v1/ttt/result`)
+ * to check the `id`, `deviceId`, or `opponentId` query before issuing a
+ * point read against Cosmos. Returns `{ ok: true, value: <string> }` or
+ * `{ ok: false, error: <code> }`.
+ *
+ * @param {unknown} raw
+ * @param {string} fieldErrorCode  - what to return as `error` on failure
+ *   (e.g. 'invalid_id', 'invalid_deviceId', 'invalid_opponentId') so the
+ *   handler doesn't need to remap codes.
+ */
+function validateDeviceIdParam(raw, fieldErrorCode) {
+  if (!isString(raw, LIMITS.DEVICE_ID_MIN, LIMITS.DEVICE_ID_MAX)) {
+    return { ok: false, error: fieldErrorCode };
+  }
+  return { ok: true, value: raw };
+}
+
+/**
  * Parse + validate the `{puzzleId}` URL path param for the stats GET.
  * Returns `{ ok: true, value: <int> }` or `{ ok: false, error: <code> }`.
  * The error code is stable for the client (matches the body validator
@@ -255,4 +274,4 @@ function validateTttResultBody(body) {
   };
 }
 
-module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, validateTttResultBody, LIMITS };
+module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, validateTttResultBody, validateDeviceIdParam, LIMITS };

@@ -15,6 +15,8 @@ import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
 import { submitTttResult } from '../../flags/tttResultSubmit.js';
+import { fetchProfile } from '../../flags/profileFetch.js';
+import { displayNickname } from '../../flags/nickname.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 /** @typedef {import('../../flags/ultimateTicTacToe.js').UltimateGameState} UltimateGameState */
@@ -88,6 +90,7 @@ function runOnline(countries) {
   const shareBtnEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('share-link'));
   const roleBadgeEl = document.getElementById('role-badge');
   const statusEl = document.getElementById('status-line');
+  const matchupOpponentEl = document.getElementById('matchup-opponent');
   const gridBodyEl = document.getElementById('grid-body');
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
@@ -101,6 +104,12 @@ function runOnline(countries) {
    * carrying the finished game can't multi-submit the same head-to-head
    * row. Reset on rematch. See ../page.js for the same pattern. */
   let resultSubmittedForGame = false;
+  /** Opponent's saved nickname; `undefined` = not yet fetched, `null` =
+   *  no nickname stored (falls back to deterministic default). Mirrors
+   *  the 3×3 page's state. */
+  /** @type {string | null | undefined} */
+  let opponentNickname;
+  let opponentFetchInFlight = false;
   const colHeaderEls = document.querySelectorAll('.col-header');
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
   const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
@@ -227,6 +236,8 @@ function runOnline(countries) {
       renderGrid();
       renderStatus();
     }
+    maybeFetchOpponent();
+    renderMatchupOpponent();
     for (const effect of effects) {
       if (effect.type === 'shake') shakeCell(effect.bigRow, effect.bigCol, effect.smallRow, effect.smallCol);
       else if (effect.type === 'gave-up') lastGaveUpByMe = effect.byMe;
@@ -258,6 +269,9 @@ function runOnline(countries) {
     renderShareButton();
     lastStatusKey = null;
     prevGame = null;
+    opponentNickname = undefined;
+    resultSubmittedForGame = false;
+    if (matchupOpponentEl) matchupOpponentEl.replaceChildren();
   }
 
   // ---- Grid (built once, on welcome) ----
@@ -754,6 +768,32 @@ function runOnline(countries) {
     if (!outcome) return;
     resultSubmittedForGame = true;
     void submitTttResult({ deviceId, opponentId: peerId, mode: '9x9', outcome });
+  }
+
+  /** Mirror of the 3×3 page — see ../page.js. */
+  function maybeFetchOpponent() {
+    if (!state.peerId) return;
+    if (opponentNickname !== undefined || opponentFetchInFlight) return;
+    opponentFetchInFlight = true;
+    fetchProfile({ deviceId: state.peerId }).then((r) => {
+      opponentNickname = r.ok ? r.nickname : null;
+      opponentFetchInFlight = false;
+      renderMatchupOpponent();
+    });
+  }
+
+  function renderMatchupOpponent() {
+    if (!matchupOpponentEl) return;
+    matchupOpponentEl.replaceChildren();
+    if (!state.peerId) return;
+
+    const vs = document.createElement('span');
+    vs.className = 'muted';
+    vs.textContent = t('ttt.matchupVs', 'vs');
+    const name = document.createElement('span');
+    name.className = 'matchup-name';
+    name.textContent = displayNickname(state.peerId, opponentNickname);
+    matchupOpponentEl.append(vs, name);
   }
 
   /**

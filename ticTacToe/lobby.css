@@ -107,6 +107,23 @@
   margin: 0 0 4px;
 }
 .role-line .muted { color: #666; }
+/* Inline matchup affordance — "vs <Opponent>" sits right next to the
+ * role badge, so the role line reads "You are O vs Alice".
+ * Populated client-side once peerId is known (welcome / peer-joined);
+ * empty content (no peer yet, or fetch still pending) means the span
+ * collapses and the role line reads as it always did. The head-to-head
+ * score that would naturally live here is intentionally not rendered
+ * yet — see FEATURE.md Feature H3 status. */
+.matchup-opponent {
+  /* inline-flex + align-items center keeps the text vertically centred
+   * with the 28×28 badge — plain inline text sits on its own baseline,
+   * which lands a few pixels below the badge's centre. */
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #666;
+}
+.matchup-opponent .matchup-name { color: var(--link-color); font-weight: 500; }
 .status-line {
   font-size: 14px;
   color: #666;
