@@ -9,6 +9,13 @@
     "yourStats": "Your stats",
     "includeTerritories": "Include territories & other flags"
   },
+  "nickname": {
+    "label": "Nickname",
+    "placeholder": "optional",
+    "save": "Save",
+    "saved": "Saved",
+    "error": "Could not save"
+  },
   "domain": {
     "flags": "Flags"
   },

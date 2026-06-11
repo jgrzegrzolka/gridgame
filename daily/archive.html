@@ -39,6 +39,7 @@
         <li><a href="archive.html" aria-current="page" data-i18n="daily.archive">Previous puzzles</a></li>
         <li class="menu-divider"><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
       </ul>
+      <section id="burger-nickname" class="burger-nickname"></section>
     </nav>
 
     <main>
@@ -51,7 +52,7 @@
     <script type="module">
       import { bootArchive } from './archive.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss } from '../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameField } from '../common.js';
       bootI18n('../').then((lang) => {
         // Soft-reload keeps scroll position on the archive grid intact.
         // The dynamic "No puzzles yet." line carries `data-i18n` so it
@@ -63,6 +64,7 @@
         );
         bootArchive();
         wireBurgerDismiss();
+        mountNicknameField({ rootEl: document.getElementById('burger-nickname') });
       });
     </script>
   </body>

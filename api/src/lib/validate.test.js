@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { validateResult } = require('./validate');
+const { validateResult, validateProfileBody, LIMITS } = require('./validate');
 
 const validBody = () => ({
   puzzleId: 7,
@@ -282,4 +282,91 @@ test('validateQuizRecord: lowerWins non-boolean → invalid_lowerWins', () => {
   assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_lowerWins' });
   delete b.lowerWins;
   assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_lowerWins' });
+});
+
+// ---------------------------------------------------------------------------
+// validateProfileBody
+// ---------------------------------------------------------------------------
+
+const validProfileBody = () => ({
+  deviceId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  nickname: 'Alice',
+});
+
+test('validateProfileBody: valid body returns the trimmed nickname in `value`', () => {
+  assert.deepEqual(validateProfileBody(validProfileBody()), {
+    ok: true,
+    value: { deviceId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', nickname: 'Alice' },
+  });
+});
+
+test('validateProfileBody: null body fails body_required', () => {
+  assert.deepEqual(validateProfileBody(null), { ok: false, error: 'body_required' });
+});
+
+test('validateProfileBody: deviceId too short / too long → invalid_deviceId', () => {
+  const short = validProfileBody();
+  short.deviceId = 'short';
+  assert.deepEqual(validateProfileBody(short), { ok: false, error: 'invalid_deviceId' });
+  const long = validProfileBody();
+  long.deviceId = 'x'.repeat(LIMITS.DEVICE_ID_MAX + 1);
+  assert.deepEqual(validateProfileBody(long), { ok: false, error: 'invalid_deviceId' });
+});
+
+test('validateProfileBody: nickname null is the explicit clear signal', () => {
+  const b = validProfileBody();
+  /** @type {any} */ (b).nickname = null;
+  assert.deepEqual(validateProfileBody(b), {
+    ok: true,
+    value: { deviceId: b.deviceId, nickname: null },
+  });
+});
+
+test('validateProfileBody: nickname is trimmed before length check', () => {
+  const b = validProfileBody();
+  b.nickname = '  Alice  ';
+  const r = validateProfileBody(b);
+  assert.equal(r.ok, true);
+  assert.equal(r.value?.nickname, 'Alice');
+});
+
+test('validateProfileBody: empty string (and whitespace-only) → invalid_nickname (use null to clear)', () => {
+  const b = validProfileBody();
+  b.nickname = '';
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'invalid_nickname' });
+  b.nickname = '   ';
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'invalid_nickname' });
+});
+
+test('validateProfileBody: nickname over NICKNAME_MAX → invalid_nickname', () => {
+  const b = validProfileBody();
+  b.nickname = 'x'.repeat(LIMITS.NICKNAME_MAX + 1);
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'invalid_nickname' });
+});
+
+test('validateProfileBody: nickname at exactly NICKNAME_MAX is accepted (boundary)', () => {
+  const b = validProfileBody();
+  b.nickname = 'x'.repeat(LIMITS.NICKNAME_MAX);
+  const r = validateProfileBody(b);
+  assert.equal(r.ok, true);
+  assert.equal(r.value?.nickname.length, LIMITS.NICKNAME_MAX);
+});
+
+test('validateProfileBody: non-string nickname (other than null) → invalid_nickname', () => {
+  const b = validProfileBody();
+  /** @type {any} */ (b).nickname = 42;
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'invalid_nickname' });
+  /** @type {any} */ (b).nickname = ['Alice'];
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'invalid_nickname' });
+  /** @type {any} */ (b).nickname = undefined;
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'invalid_nickname' });
+});
+
+test('validateProfileBody: nickname can contain any unicode (emoji, RTL, etc.) — moderation out of scope per FEATURE.md', () => {
+  const b = validProfileBody();
+  b.nickname = '🌍🇵🇱';
+  const r = validateProfileBody(b);
+  assert.equal(r.ok, true, 'emoji accepted');
+  b.nickname = 'مرحبا';
+  assert.equal(validateProfileBody(b).ok, true, 'RTL script accepted');
 });

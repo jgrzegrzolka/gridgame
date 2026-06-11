@@ -244,6 +244,76 @@ body::before {
   text-decoration: none;
 }
 
+/* Nickname affordance (Feature H2). Sits at the bottom of the burger
+ * panel as a small inline form: label+input on row 1, save button on
+ * row 2, transient status on row 3. Visually separated from the
+ * navigation list by a thin top border — same vocabulary as menu-divider.
+ * Mounted by common.js::mountNicknameField into a <section id="burger-nickname">
+ * placeholder that every page's burger panel ships. */
+.burger-nickname {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+.burger-nickname-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+.burger-nickname-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #888;
+  font-weight: 400;
+}
+.burger-nickname-input {
+  font: inherit;
+  font-size: 14px;
+  color: var(--link-color);
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  box-sizing: border-box;
+  width: 100%;
+}
+.burger-nickname-input:focus {
+  outline: none;
+  border-color: var(--link-color);
+}
+.burger-nickname-save {
+  align-self: flex-start;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--link-color);
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.burger-nickname-save:hover:not(:disabled) {
+  background: #f6f6f6;
+}
+.burger-nickname-save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.burger-nickname-status {
+  font-size: 12px;
+  min-height: 1em;
+}
+.burger-nickname-status.is-saved {
+  color: #2e8b57;
+}
+.burger-nickname-status.is-error {
+  color: #c44;
+}
+
 .give-up-row {
   margin-top: 16px;
   text-align: center;

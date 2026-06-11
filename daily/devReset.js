@@ -3,10 +3,11 @@
  *
  * Two reset paths, both painfully manual without it:
  *
- * 1. **Reset browser** — wipe the four daily-flow localStorage keys
+ * 1. **Reset browser** — wipe the five daily-flow localStorage keys
  *    (`gridgame.deviceId`, `gridgame.submittedPuzzles`, `daily.scores`,
- *    `gridgame.ideas.reviewed`) and reload. Lets the dev replay puzzles
- *    cleanly without poking around DevTools → Application → Storage.
+ *    `gridgame.ideas.reviewed`, `gridgame.nickname`) and reload. Lets the
+ *    dev replay puzzles cleanly without poking around DevTools → Application
+ *    → Storage.
  *
  * 2. **Clear Cosmos local rows** — POST to `/api/v1/dev/clear-local-rows`,
  *    which deletes every `dailyResults` doc with `local: true`. The
@@ -23,6 +24,7 @@ import { isLocalHostname } from './turnstileSiteKey.js';
 import { STORAGE_KEY as DEVICE_ID_KEY } from '../flags/identity.js';
 import { STORAGE_KEY as SUBMITTED_KEY } from './submitted.js';
 import { STORAGE_KEY as SCORES_KEY } from './scores.js';
+import { NICKNAME_STORAGE_KEY } from '../common.js';
 
 // `gridgame.ideas.reviewed` is owned by `daily/ideas/page.js` — a page-boot
 // module, not a library. Hardcoded here to avoid exporting from a page
@@ -35,9 +37,10 @@ export const DEV_RESET_STORAGE_KEYS = Object.freeze([
   SUBMITTED_KEY,
   SCORES_KEY,
   IDEAS_REVIEWED_KEY,
+  NICKNAME_STORAGE_KEY,
 ]);
 
-const BROWSER_RESET_ACTION = 'Clear deviceId, submittedPuzzles, scores, ideas-reviewed and reload';
+const BROWSER_RESET_ACTION = 'Clear deviceId, submittedPuzzles, scores, ideas-reviewed, nickname and reload';
 const COSMOS_RESET_ACTION = 'Delete every dailyResults doc with local=true';
 
 /**

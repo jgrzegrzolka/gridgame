@@ -38,6 +38,7 @@
         <li><a href="./" aria-current="page" data-i18n="ttt.variant9x9">9×9</a></li>
         <li class="menu-divider"><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
       </ul>
+      <section id="burger-nickname" class="burger-nickname"></section>
     </nav>
 
     <section id="lobby" class="lobby" hidden>
@@ -126,7 +127,7 @@
 
     <script type="module">
       import { bootUltimateTicTacToeOnline } from './page.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss } from '../../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameField } from '../../common.js';
       import { bootI18n, wireLangToggle } from '../../i18n.js';
       bootI18n('../../').then((lang) => {
         // Soft-reload mode keeps room/grid/picker/result intact across
@@ -139,6 +140,7 @@
           document.querySelector('#burger-panel .menu'),
         );
         wireBurgerDismiss();
+        mountNicknameField({ rootEl: document.getElementById('burger-nickname') });
       });
     </script>
   </body>
