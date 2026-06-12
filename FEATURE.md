@@ -21,47 +21,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-### Feature K: Daily leaderboard on flag-quiz finish screen
-
-**Goal.** After a player finishes a flag-quiz round (e.g. Europe 60s, All endurance), the result screen shows their score *and* today's top-10 leaderboard for that exact configKey, plus the player's own rank if they aren't in the top 10. Today = UTC date. The leaderboard is per-configKey (one for `europe:60s:sov`, one for `africa:all:sov`, etc.) — that's what the existing quiz-record key already represents, so no new taxonomy.
-
-**Why this fits cleanly on top of what already shipped.** `flagQuiz/page.js` already POSTs every finish to `POST /api/v1/quiz/record`, which read-then-upserts a per-device row in the `quizRecords` Cosmos container (`api/src/functions/quizRecord.js` + `api/src/lib/quizRecordDoc.js`). Nicknames already exist as a Layer-1 device profile from Feature H (`profiles` container, partitioned by `/deviceId`). Adding a leaderboard is one new container + one extra read + one conditional extra write per finish + one new GET endpoint — no new client identity, no new auth, no new UI primitives beyond a strip below the existing result block.
-
-**Architecture.**
-
-- **New Cosmos container `dailyLeaderboards`**, partition key `/pk` where `pk = "<configKey>|<UTC-YYYY-MM-DD>"` (e.g. `"europe:60s:sov|2026-06-12"`). One doc per (device, config, day): `{ id: deviceId, pk, deviceId, nickname, score, durationMs, submittedAt, v: 1 }`. Container `DefaultTtl = 172_800` (48h) so yesterday's rows auto-purge — keeps storage effectively zero on Free Tier and means the "today" filter is just "the rows that still exist in this partition", no date comparison needed in the leaderboard query.
-- **Writer (extends `quizRecord.js`).** After the existing `quizRecords` upsert, if this finish beats the device's previous today-best for the same configKey (deciding with the same `isPersonalBest` helper, applied against the doc we already have in hand), then (a) point-read `profiles` for this device's nickname, (b) upsert one row into `dailyLeaderboards` with `pk = <configKey>|<UTC-today>`, `id = deviceId`. PB-only writes mean a player spamming replays only writes once per day per configKey — keeps RU/finish cheap.
-- **Reader (`GET /api/v1/quiz/leaderboard/{configKey}?deviceId=…&date=YYYY-MM-DD` — date optional, defaults to today UTC).** Two single-partition queries: (1) top 10 ordered by score then durationMs (direction flips on `lowerWins` — derived from the mode in the configKey, no client say), (2) `COUNT(1) FROM c WHERE c.score > @s OR (c.score = @s AND c.durationMs < @d)` for the caller's rank when `deviceId` is supplied. Returns `{ top: [{ nickname, score, durationMs, deviceId, submittedAt }, …], you: { rank: int, score, durationMs } | null, totalToday: int }`. 60s TTL cache, `?fresh=1` bypass, same pattern as `dailyStats.js`.
-- **Frontend.** New `#daily-leaderboard` panel inside `#result`, below the existing "Final score / Your best" lines. Renders top 10 as `1. Alice — 18 (32.4s)`. If `you.rank > 10`, append `…<br>{rank}. You — {score} ({time})`. Highlight the row when `top[i].deviceId === own deviceId`. Use `createElement` (not `innerHTML`) for the nickname — same XSS rule as Feature H3.
-
-**Why these specific shape choices.**
-
-- **`pk = configKey|date` instead of partitioning by `/configKey` and filtering on date.** Per-day partitions = each leaderboard query touches only one day's data; the partition itself answers "today" so the WHERE clause stays one trivial condition. Combined with TTL=48h, the partitions stay tiny (max one row per active device) and storage caps at ~2 days' worth.
-- **Denormalize nickname at write time, not at read time.** Read path stays a single-partition query — no N-fanout into `profiles` per leaderboard render. The trade-off (a nickname change after submitting today doesn't update today's leaderboard row) is acceptable for an ephemeral surface that resets nightly.
-- **PB-only writes.** Cuts leaderboard writes to ~1/day/configKey/device even for replayers. The decision is made server-side from the read-anyway `quizRecords` doc, so no extra read just to check.
-- **`lowerWins` derived from the mode token in configKey, not sent by client.** The existing `quizRecord` validator already accepts a client-supplied `lowerWins`; for the leaderboard endpoint we don't trust the caller (rank-flipping would distort other players' ranks). Derive from `configKey` using `quizRecordKey.js`'s parser.
-
-**Free-tier cost envelope.**
-
-- Per finish (already happening): 1 read + 1 upsert on `quizRecords` ≈ 6–10 RU.
-- Per *today-PB* finish (added): +1 point-read on `profiles` (~1 RU) + 1 upsert on `dailyLeaderboards` (~5 RU). Most finishes won't be PBs.
-- Per leaderboard view: 2 single-partition queries ≈ 6–10 RU, then 60s cached.
-- Storage worst case: ~28 configKeys × ~1000 active devices × 2 days × ~200 B ≈ ~11 MB. Negligible vs. 25 GB Free Tier.
-
-Comfortably under 1000 RU/s and 25 GB Free Tier ceilings.
-
-**Phases (each = its own branch off `main` + one PR; Jan merges).**
-
-- [x] **K1 — backend.** Provisioned `dailyLeaderboards` container (`/pk` partition, autoscale 100–1000 RU/s, `defaultTtl: 172_800`, composite indexes both ORDER BY directions per `infra/dailyLeaderboards-index-policy.json`). New pure lib `api/src/lib/dailyLeaderboardDoc.js` (build/merge reusing `quizRecordDoc.isPersonalBest` for tiebreak parity). Extended `api/src/functions/quizRecord.js` to fire a best-effort today-PB write after the existing upsert — parallel point-reads of `profiles` (nickname denorm) + today's leaderboard row, upsert only on PB, `local: true` stamp in dev so the read path can exclude. New endpoint `api/src/functions/quizLeaderboard.js` at `GET /api/v1/quiz/leaderboard/{configKey}` (registered in `index.js`) — 60s TTL cache on top-10 per partition, per-request rank query, `?fresh=1` bypass. Path validated via `validateConfigKeyParam`; `lowerWins` derived server-side via `lowerWinsFromConfigKey` so a malicious caller can't flip the ranking direction. Operations.md table updated.
-- [x] **K2 — frontend + i18n + tests.** New `#daily-leaderboard` section in `flagQuiz/index.html` under `#result`. New `flags/dailyLeaderboardFetch.js` helper (injectable fetch, defensive shape normalisation, never throws — same contract as `flags/profileFetch.js`). New pure renderer `flags/dailyLeaderboardRender.js` — `createElement`-only (XSS-safe), handles loading/failed/empty states + own-row highlight + "…N. You" suffix when the caller's rank is past top-10. Wired into `flagQuiz/page.js`'s `showResult`: paints `state='loading'` immediately so the panel isn't blank, then chains a `?fresh=1` fetch onto `submitQuizRecord` (the leaderboard write is part of the same server handler, so the fetch lands after the row is durable). Soft-i18n re-paints the panel on `langchanged`. CSS in `flagQuiz/index.css` (tabular nums, subtle dividers, `#fff8e1` accent on the self row). i18n strings added to `i18n/en.json` + `i18n/pl.json` under `quiz.leaderboard.*`.
-
-**Open knobs to settle if they come up.**
-
-- **UTC vs Europe/Warsaw cutoff.** Starting with UTC for simplicity and because "today" matches the rest of the site. If players grumble about the leaderboard resetting at 02:00 Warsaw (or 01:00 in winter) we can switch — it's a server-side derivation, no schema change.
-- **Show `you.rank` when in top 10?** Currently the plan is to just highlight the row; we don't render the "…87. You" line if the player is already visible above. Easy to flip if Jan wants the rank shown explicitly.
-- **Min-result threshold to be ranked.** None initially — every finished round qualifies. If griefing shows up (a player intentionally posting bad scores to spam the bottom), we can require `score > 0` or similar later.
-
-**Out of scope (so it doesn't drift back in).** Lifetime / weekly / all-time leaderboards (each is a different aggregation surface — pick when felt). Per-country leaderboards. "Friends only" / linked-account filtering (Feature C territory). Pre-submission live leaderboard while mid-round. Pagination past 10 (the "your rank" suffix is the only escape from top-N). Anti-cheat beyond the existing rate limiter.
+*(nothing in flight — pick the next feature from `## Backlog` or open a new one)*
 
 ---
 
@@ -163,6 +123,30 @@ Items here are not blocking current work but deserve durable memory — the next
 ---
 
 ## Done
+
+### Feature K: Daily leaderboard on flag-quiz finish screen — *shipped 2026-06-12*
+
+**Goal.** After a flag-quiz round (Europe 60s, All endurance, etc.) the result screen shows the player's own score *and* today's top-10 leaderboard for that exact configKey, with the caller's row highlighted when visible and a "…N. You" suffix when their rank is past the top 10. Today = UTC, auto-resets nightly via the container's 48 h TTL. Per-configKey (one for `europe:60s:sov`, one for `africa:all:sov`, etc.) — reuses the existing quiz-record key, no new taxonomy.
+
+**What shipped (two phases, both 2026-06-12):**
+
+1. **K1 — backend.** New Cosmos container `dailyLeaderboards` partitioned by `/pk = "<configKey>|<UTC-date>"`, autoscale 100–1000 RU/s, `defaultTtl: 172_800` (48 h — yesterday's rows auto-purge), composite indexes on `(score, durationMs)` both directions for higher-wins (timed) and lower-wins (endurance) modes. Indexing policy frozen in `infra/dailyLeaderboards-index-policy.json` and provisioned via `az`. Extended `api/src/functions/quizRecord.js` to fire a best-effort today-PB write after the existing upsert — parallel point-reads of `profiles` (nickname denorm) + today's leaderboard row, upsert only on PB, `local: true` stamp in dev so the public read excludes them. New endpoint `api/src/functions/quizLeaderboard.js` at `GET /api/v1/quiz/leaderboard/{configKey}?deviceId=…` — 60 s TTL cache on top-10 per partition (cache key includes order so a future direction flip can't serve a wrong-direction list), per-request rank query, `?fresh=1` bypass.
+2. **K2 — frontend + i18n + audit fixes + UX polish.** `flags/dailyLeaderboardFetch.js` (defensive shape-normalising GET helper, never throws), `flags/dailyLeaderboardRender.js` (pure `createElement`-only renderer, XSS-safe), `flags/leaderboardLifecycle.js` (pure submit-then-fetch lifecycle, lifted out of `page.js` for testability), wiring in `flagQuiz/page.js`'s `showResult` (paints loading state immediately, then chains the fresh fetch onto `submitQuizRecord`). i18n strings under `quiz.leaderboard.*` in `en.json` + `pl.json`. CSS keeps the result-screen aesthetic; a 56 px / 20 px / 1 px-hairline section break separates the player's own block from the community list.
+
+**Notable mid-flight finds (real audit catches, not nits):**
+
+- **Security fix during K2 review:** the K1 leaderboard writer trusted the client-supplied `body.lowerWins`, letting a caller post a worse score with `lowerWins:true` and overwrite the today-PB row. K2 fixed it by deriving `lowerWins` server-side from the configKey via `lowerWinsFromConfigKey`; unknown mode skips the write rather than guessing direction. The personal-record write still trusts the body (unchanged trade-off — only that one device's row is affected). Updated the stale "no leaderboard reads this yet" comment in `validate.js`.
+- **Handler-extraction precedent.** Two new pure libs (`api/src/lib/leaderboardRank.js` for the cmp/find/compute logic and `flags/leaderboardLifecycle.js` for the submit-then-fetch wiring) demonstrate the pattern for lifting non-trivial logic out of handlers/`page.js` glue so it can be unit-tested. Apply the same pattern when future features grow their own untested handler tails.
+
+**Standing artifacts** (the load-bearing outputs future work inherits):
+
+- `api/src/lib/leaderboardRank.js` + tests — pure `rankCmpClause` + `findMineInTop` + `computeYou`. Any future ranking surface should compose these; cmp-flip on `lowerWins` is pinned to a regression test so a refactor that conflates the two branches gets caught.
+- `flags/leaderboardLifecycle.js` + tests — pure `runLeaderboardCycle` for "paint loading → submit → fetch → paint result". Locks the ordering invariant (fetch lands after submit) and the resolve/reject/contract-drift paths.
+- `infra/dailyLeaderboards-index-policy.json` — the composite indexing spec is now a tracked file, not a one-shot `az` argument, so future container migrations have the source of truth.
+
+**Key PRs.** #385 (K1 backend + container provisioning), #386 (K2 frontend + audit fixes + UX polish + spacing iterations, squashed).
+
+**Out of scope, intentionally deferred** (captured here so they don't drift back in): lifetime / weekly / all-time leaderboards (each is a different aggregation surface — pick when felt). Per-country leaderboards. "Friends only" / linked-account filtering (Feature C territory). Pre-submission live leaderboard while mid-round. Pagination past 10 (the "…N. You" suffix is the only escape from top-N). UTC vs Europe/Warsaw cutoff (UTC for now; pure server-side derivation, easy to flip if players grumble). **Score-cap per configKey variant** (audit M1) — the leaderboard validates `score ≤ 1000` regardless of variant, so a determined caller could post `score: 1000` on `europe:60s:sov` (real cap ~50) and own #1. Acceptable griefing surface at current scale; revisit if it actually shows up in the wild.
 
 ### Feature H: Identity unification + device profiles — *shipped 2026-06-11*
 
