@@ -90,6 +90,37 @@ body::before {
   background: #fafafa;
   z-index: 10;
 }
+/* Top-left wordmark — pairs with the chrome cluster (lang / flag /
+ * burger) on the top-right. Vertically centred on the 44 × 44 chrome
+ * buttons (chrome top:12 + 22 = 34; logo top:18 + 16 = 34). Clicking
+ * the logo always returns to the site root, so the link is `aria-
+ * current="page"` only on `/` itself — same pattern the burger
+ * nickname uses for the profile page. */
+.site-logo {
+  position: fixed;
+  top: 18px;
+  /* Mirror of the chrome cluster on the right: same `--chrome-x-offset`
+   * math, just anchored to the left edge. On narrow viewports the
+   * offset clamps to 0 (logo flush with the 12 px body padding); on
+   * wide viewports it shifts the logo inward by the same amount the
+   * burger shifts inward, so both end up aligned with the page's
+   * content margins. */
+  left: calc(12px + var(--chrome-x-offset));
+  z-index: 25;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.site-logo img {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+.site-logo[aria-current="page"] {
+  cursor: default;
+  pointer-events: none;
+}
 .lang-toggle {
   position: fixed;
   top: 12px;

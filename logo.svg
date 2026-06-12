@@ -1,0 +1,6 @@
+<svg viewBox="0 0 232 40" xmlns="http://www.w3.org/2000/svg" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <!-- transparent bg; sits on #FAFAFA -->
+  <text x="0" y="28" font-size="22" font-weight="600" letter-spacing="-0.3">
+    <tspan fill="#C2899F">yetanother</tspan><tspan fill="#5E0D33" font-weight="700">quiz</tspan>
+  </text>
+</svg>
