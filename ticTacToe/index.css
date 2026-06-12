@@ -199,28 +199,46 @@ body.game-over .actions-row {
 
 /* ---- 9x9 variant ---- */
 
-/* Cell size is the smallest of three constraints:
- *   - 80px cap (anything larger is silly even on big monitors)
- *   - viewport-width fit: 9 cells + corner column + buffer = 10.5 units
- *   - viewport-height fit: 9 cells + headers + page chrome reserved as 200px
- * The vh constraint matters on shorter laptops (e.g. 1366×768) where the
- * width would otherwise push the grid past the bottom of the viewport. */
+/* 9x9 reads as a true 4×4 outer structure on top of the 9×9 game grid:
+ * the corner, three column-headers (each colspan=3), and three row-headers
+ * (each rowspan=3) are bigblock-sized (3 game cells per side), so the
+ * grid has four equal bigblock-sized "outer cells" per side — same shape
+ * language as the 3×3 grid, just with each outer cell containing nine
+ * game cells instead of one.
+ *
+ * Cell-size constraints (now all in "12 game cells per side" units —
+ * 3 outer cells × 3 game cells + 3 game cells for the actual game area):
+ *   - 28px cap (kept small because a 12-units-wide grid still has to fit
+ *     the viewport horizontally)
+ *   - viewport-width fit: 12 game cells across, minus body 24px padding
+ *   - viewport-height fit: 12 game cells tall, minus 200px reserved for
+ *     chrome / actions-row / page padding */
 .grid.is-9x9 {
-  --grid-cell: min(80px, calc((100vw - 4px) / 10.5), calc((100vh - 200px) / 10));
+  --grid-cell: min(28px, calc((100vw - 24px) / 12), calc((100vh - 200px) / 12));
 }
+/* Row headers: horizontal text in a 3-game-cell-wide column (matching
+ * the bigblock width). Drops the rotated-narrow-column treatment used
+ * before the 4×4 redesign — labels like "South America" now read on
+ * one or two horizontal lines instead of bottom-up. */
 .grid.is-9x9 tbody th {
-  width: 36px;
-  font-size: 11px;
-  /* 9×9 keeps the rotated-narrow-column row header — at 36px wide there
-   * isn't room for the horizontal-text layout the 3×3 grid uses, and
-   * 9×9's row labels (continent names etc.) read cleanly enough rotated
-   * because the cell column is taller than wide. */
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  white-space: nowrap;
+  width: calc(var(--grid-cell) * 3);
+  font-size: 12px;
+  writing-mode: horizontal-tb;
+  transform: none;
+  white-space: normal;
+  line-height: 1.2;
+}
+/* Column headers stretch to a full bigblock height too — so the thead
+ * row matches the height of one bigblock and the 4×4 outer structure
+ * reads as four equal bigblock-sized cells per side. */
+.grid.is-9x9 thead th {
+  height: calc(var(--grid-cell) * 3);
+  max-width: none;
+  white-space: normal;
+  line-height: 1.2;
 }
 .grid.is-9x9 .corner {
-  width: 36px;
+  width: calc(var(--grid-cell) * 3);
 }
 .grid.is-9x9 .cell {
   padding: 2px;
