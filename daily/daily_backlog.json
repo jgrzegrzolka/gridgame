@@ -14,6 +14,35 @@
   },
   {
     "n": 9,
+    "filter": "continent:North America,color:white,color:blue,colorCount:3",
+    "answers": [
+      "cr",
+      "cu",
+      "pa",
+      "us"
+    ],
+    "description": {
+      "en": "Find all North American flags whose only colours are red, white, and blue — no others.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi, które mają tylko 3 kolory: czerwony, biały i niebieski."
+    }
+  },
+  {
+    "n": 10,
+    "filter": "continent:Asia,color:white,color:blue,colorCount:3",
+    "answers": [
+      "kh",
+      "kp",
+      "la",
+      "np",
+      "th"
+    ],
+    "description": {
+      "en": "Find all Asian flags whose only colours are red, white, and blue — no others.",
+      "pl": "Znajdź wszystkie azjatyckie flagi, które mają tylko 3 kolory: czerwony, biały i niebieski."
+    }
+  },
+  {
+    "n": 11,
     "filter": "continent:Africa,color:yellow,color:red,color:green,motif:star-or-moon",
     "answers": [
       "bf",
@@ -38,7 +67,7 @@
     }
   },
   {
-    "n": 10,
+    "n": 12,
     "filter": "continent:Africa,colorCount:2",
     "answers": [
       "ma",
@@ -52,7 +81,7 @@
     }
   },
   {
-    "n": 11,
+    "n": 13,
     "filter": "continent:Europe,motif:coat-of-arms",
     "answers": [
       "ad",
@@ -73,7 +102,7 @@
     }
   },
   {
-    "n": 12,
+    "n": 14,
     "filter": "continent:Europe,motif:animal",
     "answers": [
       "ad",
@@ -91,21 +120,7 @@
     }
   },
   {
-    "n": 13,
-    "filter": "continent:North America,color:white,color:blue,colorCount:3",
-    "answers": [
-      "cr",
-      "cu",
-      "pa",
-      "us"
-    ],
-    "description": {
-      "en": "Find all North American flags whose only colours are red, white, and blue — no others.",
-      "pl": "Znajdź wszystkie północnoamerykańskie flagi, które mają tylko 3 kolory: czerwony, biały i niebieski."
-    }
-  },
-  {
-    "n": 14,
+    "n": 15,
     "filter": "continent:Europe,colorCount:>=4",
     "answers": [
       "ad",
@@ -125,7 +140,7 @@
     }
   },
   {
-    "n": 15,
+    "n": 16,
     "filter": "continent:Europe,motif:star-or-moon",
     "answers": [
       "ba",
@@ -139,7 +154,7 @@
     }
   },
   {
-    "n": 16,
+    "n": 17,
     "filter": "continent:Asia,color:green,color:!red",
     "answers": [
       "in",
@@ -152,7 +167,7 @@
     }
   },
   {
-    "n": 17,
+    "n": 18,
     "filter": "motif:star-or-moon,color:red,color:white,colorCount:2",
     "answers": [
       "jp",
@@ -166,7 +181,7 @@
     }
   },
   {
-    "n": 18,
+    "n": 19,
     "filter": "continent:Asia,color:red,color:yellow,colorCount:2",
     "answers": [
       "cn",
@@ -179,7 +194,7 @@
     }
   },
   {
-    "n": 19,
+    "n": 20,
     "filter": "continent:North America,color:red,motif:animal",
     "answers": [
       "dm",
@@ -191,7 +206,7 @@
     }
   },
   {
-    "n": 20,
+    "n": 21,
     "filter": "continent:Asia,color:green,color:black",
     "answers": [
       "ae",
@@ -207,7 +222,7 @@
     }
   },
   {
-    "n": 21,
+    "n": 22,
     "filter": "continent:South America,motif:star-or-moon",
     "answers": [
       "ar",
@@ -223,21 +238,6 @@
     "description": {
       "en": "Find all South American flags with a star or moon.",
       "pl": "Znajdź wszystkie południowoamerykańskie flagi z gwiazdą lub księżycem."
-    }
-  },
-  {
-    "n": 22,
-    "filter": "continent:Asia,color:white,color:blue,colorCount:3",
-    "answers": [
-      "kh",
-      "kp",
-      "la",
-      "np",
-      "th"
-    ],
-    "description": {
-      "en": "Find all Asian flags whose only colours are red, white, and blue — no others.",
-      "pl": "Znajdź wszystkie azjatyckie flagi, które mają tylko 3 kolory: czerwony, biały i niebieski."
     }
   },
   {
