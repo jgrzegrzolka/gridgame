@@ -244,11 +244,12 @@ body::before {
   text-decoration: none;
 }
 
-/* "Your name: <Brave Falcon>" menu item — top of the burger panel on every
+/* "[avatar] Brave Falcon" menu item — top of the burger panel on every
  * page (Feature H2.5). The link routes to /profile/ where the user can
- * change the saved nickname; the value resolves via flags/nickname.js so
- * a user who never visits /profile/ still sees a friendly deterministic
- * default. Mounted by common.js::mountNicknameMenuItem. */
+ * change the saved nickname; the value resolves via flags/nickname.js
+ * and the avatar via flags/avatar.js (both deterministic from deviceId)
+ * so a user who never visits /profile/ still sees a friendly default.
+ * Mounted by common.js::mountNicknameMenuItem. */
 .menu li.menu-nickname {
   font-size: 12px;
   color: #888;
@@ -260,7 +261,24 @@ body::before {
   border-bottom: 1px solid #eee;
 }
 .menu li.menu-nickname a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 400;
+}
+.menu li.menu-nickname .menu-nickname-avatar {
+  display: inline-flex;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f3f3f3;
+}
+.menu li.menu-nickname .menu-nickname-avatar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .menu li.menu-nickname .menu-nickname-value {
   color: var(--link-color);
@@ -366,6 +384,16 @@ body::before {
 }
 .give-up[hidden] {
   display: none;
+}
+/* Opt-in emphasis for ONE item in a `.give-up-row` / `.result-links` row
+ * of dot-separated text actions, so the primary call-to-action reads
+ * heavier than its siblings. Per-page decision — daily wants its give-up
+ * + "Previous puzzles" links bolded, flagQuiz / findFlag / TTT keep
+ * everything at normal weight. Match this weight to `.profile-save` on
+ * the profile form so the "primary action in a · row" feels the same
+ * wherever a page opts in. */
+.row-cta {
+  font-weight: 500;
 }
 
 /* Tristate filter pill — neutral / .active (include) / .exclude (none-of).

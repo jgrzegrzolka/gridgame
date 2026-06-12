@@ -212,7 +212,7 @@ test('mountNicknameMenuItem: no-op when rootEl is missing', () => {
   assert.equal(result, null);
 });
 
-test('mountNicknameMenuItem: renders a single <li> with <a href={profileHref}> containing label + value', () => {
+test('mountNicknameMenuItem: renders a single <li> with <a href={profileHref}> containing avatar + value', () => {
   const env = fakeMenuDom();
   const li = /** @type {any} */ (mountNicknameMenuItem(/** @type {any} */ ({
     rootEl: env.rootEl,
@@ -227,10 +227,10 @@ test('mountNicknameMenuItem: renders a single <li> with <a href={profileHref}> c
   const a = li.children[0];
   assert.equal(a.tagName, 'A');
   assert.equal(a.getAttribute('href'), 'profile/');
-  // [label, ': ' textNode, strong]
-  assert.equal(a.children.length, 3);
-  assert.equal(a.children[0].getAttribute('data-i18n'), 'nickname.yourName');
-  assert.equal(a.children[2].tagName, 'STRONG');
+  // [avatar span, strong]
+  assert.equal(a.children.length, 2);
+  assert.equal(a.children[0].className, 'menu-nickname-avatar');
+  assert.equal(a.children[1].tagName, 'STRONG');
 });
 
 test('mountNicknameMenuItem: cached nickname wins over the default', () => {
@@ -242,7 +242,7 @@ test('mountNicknameMenuItem: cached nickname wins over the default', () => {
     profileHref: 'profile/',
     getDeviceId: () => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
   })));
-  const strong = li.children[0].children[2];
+  const strong = li.children[0].children[1];
   assert.equal(strong.textContent, 'Alice');
 });
 
@@ -256,7 +256,7 @@ test('mountNicknameMenuItem: no cache → renders the deterministic default (mat
     profileHref: 'profile/',
     getDeviceId: () => id,
   })));
-  const strong = li.children[0].children[2];
+  const strong = li.children[0].children[1];
   assert.equal(strong.textContent, defaultNickname(id));
 });
 
@@ -305,5 +305,5 @@ test('mountNicknameMenuItem: storage.getItem throwing (private mode) falls back 
     profileHref: 'profile/',
     getDeviceId: () => id,
   })));
-  assert.equal(li.children[0].children[2].textContent, defaultNickname(id));
+  assert.equal(li.children[0].children[1].textContent, defaultNickname(id));
 });

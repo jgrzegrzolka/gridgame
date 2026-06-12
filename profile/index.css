@@ -1,6 +1,11 @@
 /* /profile/ — set your display nickname. Form-centric page, no game grid. */
 
 .profile-main {
+  /* `main` is `width: 100%` from common.css. Without border-box the 20px
+   * horizontal padding here would add to that 100%, pushing the page 40px
+   * wider than the viewport on mobile and shoving the fixed chrome cluster
+   * off the right edge. */
+  box-sizing: border-box;
   max-width: 480px;
   margin: 0 auto;
   padding: 24px 20px 20px;
@@ -10,6 +15,21 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.profile-avatar {
+  align-self: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f3f3f3;
+  margin-bottom: 4px;
+}
+.profile-avatar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .profile-input {

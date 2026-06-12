@@ -1,5 +1,6 @@
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { defaultNickname, displayNickname } from '../flags/nickname.js';
+import { avatarSvg } from '../flags/avatar.js';
 import { NICKNAME_STORAGE_KEY } from '../common.js';
 import { t } from '../i18n.js';
 
@@ -16,6 +17,13 @@ export function bootProfile() {
 
   const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
   const defaultName = defaultNickname(deviceId);
+
+  // Identity tile — same hash-of-deviceId identicon used in the burger menu,
+  // sized up for the dedicated profile context. It does NOT change when the
+  // user edits or resets their nickname: the visual identity is keyed by
+  // deviceId, the textual identity (nickname) is the editable layer on top.
+  const avatarEl = document.getElementById('profile-avatar');
+  if (avatarEl) avatarEl.innerHTML = avatarSvg(deviceId, { size: 64 });
 
   let cached;
   try {
