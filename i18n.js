@@ -12,8 +12,6 @@ export const SUPPORTED_LANGS = /** @type {const} */ (['en', 'pl']);
 export const DEFAULT_LANG = 'en';
 export const LANG_STORAGE_KEY = 'gridgame.lang';
 
-export const I18N_ENABLED = true;
-
 /**
  * The most recently loaded strings, cached so JS that runs after bootI18n
  * resolves can translate dynamically-created content via t(). Empty by
@@ -218,7 +216,6 @@ export function applyStringsToDocument(strings, lang, doc) {
  * @returns {Promise<string>}
  */
 export async function bootI18n(base = './') {
-  if (!I18N_ENABLED) return DEFAULT_LANG;
   const stored = window.localStorage.getItem(LANG_STORAGE_KEY);
   const lang = resolveLang(stored, window.navigator.language);
   const res = await fetch(`${base}i18n/${lang}.json`);
@@ -273,7 +270,7 @@ export async function reloadI18n(lang, options = {}) {
     doc = typeof document !== 'undefined' ? /** @type {any} */ (document) : null,
     fetchImpl = typeof fetch !== 'undefined' ? fetch : null,
   } = options;
-  if (!I18N_ENABLED || !doc || !fetchImpl) return;
+  if (!doc || !fetchImpl) return;
   const res = await fetchImpl(`${base}i18n/${lang}.json`);
   if (!res.ok) return;
   const strings = await res.json();
