@@ -51,7 +51,7 @@
     },
     "rights": {
       "title": "Your rights",
-      "delete": "Delete everything: visit the profile page and use the Delete button (coming soon — until it ships, email the address at the bottom and your data will be purged within a few days).",
+      "delete": "Delete everything: visit the profile page and use the Delete button (coming soon).",
       "profileLink": "profile page",
       "clear": "Clearing your browser's storage for this domain wipes your device ID locally; server-side rows stay until deleted via the above method."
     },

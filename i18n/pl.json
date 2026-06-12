@@ -51,7 +51,7 @@
     },
     "rights": {
       "title": "Twoje prawa",
-      "delete": "Usuń wszystko: odwiedź stronę profilu i użyj przycisku Usuń (wkrótce — zanim to zaimplementujemy, napisz na adres na dole, a Twoje dane zostaną wyczyszczone w ciągu kilku dni).",
+      "delete": "Usuń wszystko: odwiedź stronę profilu i użyj przycisku Usuń (wkrótce).",
       "profileLink": "strona profilu",
       "clear": "Wyczyszczenie pamięci przeglądarki dla tej domeny usunie Twoje ID urządzenia lokalnie; wiersze po stronie serwera zostają do momentu usunięcia powyższą metodą."
     },

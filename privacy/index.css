@@ -68,7 +68,10 @@
   color: var(--link-color);
 }
 
-.privacy-back {
-  margin: 32px 0 0;
-  text-align: center;
+/* The footer Home link uses the shared .actions-row chrome from
+ * common.css so it matches the other in-app footers (Save · Home,
+ * Play again · Home, etc). Just give it the same top-margin we'd
+ * give the old custom .privacy-back. */
+.privacy-main .actions-row {
+  margin-top: 32px;
 }
