@@ -62,13 +62,17 @@
     <script type="module">
       import { bootProfile } from './page.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from '../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from '../common.js';
       bootI18n('../').then((lang) => {
         wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         bootProfile();
         mountNicknameMenuItem({
           rootEl: document.getElementById('burger-menu'),
           profileHref: './',
+        });
+        mountPrivacyMenuItem({
+          rootEl: document.getElementById('burger-menu'),
+          privacyHref: '../privacy/',
         });
         disableBurgerIfEmpty(
           document.querySelector('.burger'),

@@ -186,3 +186,36 @@ export function mountNicknameMenuItem(opts) {
   else opts.rootEl.appendChild(li);
   return li;
 }
+
+/**
+ * Mount a "Privacy" link at the BOTTOM of the burger menu. Mirrors
+ * `mountNicknameMenuItem` in shape but does no DOM-state work — it's just
+ * a navigation link. Kept here so every page wires it the same way.
+ *
+ * Inserted last so the menu reads: you (nickname) → feature links →
+ * coffee → privacy. Privacy is meta-navigation, not a game surface.
+ *
+ * @param {{
+ *   rootEl: HTMLElement | null,
+ *   privacyHref: string,
+ *   doc?: Document,
+ *   pageIsPrivacy?: boolean,
+ * }} opts
+ */
+export function mountPrivacyMenuItem(opts) {
+  if (!opts || !opts.rootEl) return null;
+  const doc = opts.doc ?? document;
+
+  const li = doc.createElement('li');
+  li.className = 'menu-privacy';
+
+  const a = doc.createElement('a');
+  a.setAttribute('href', opts.privacyHref);
+  if (opts.pageIsPrivacy) a.setAttribute('aria-current', 'page');
+  a.setAttribute('data-i18n', 'privacy.menuLink');
+  a.textContent = 'Privacy';
+
+  li.appendChild(a);
+  opts.rootEl.appendChild(li);
+  return li;
+}

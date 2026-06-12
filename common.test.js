@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, NICKNAME_STORAGE_KEY } from './common.js';
+import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem, NICKNAME_STORAGE_KEY } from './common.js';
 import { defaultNickname } from './flags/nickname.js';
 
 /**
@@ -306,4 +306,53 @@ test('mountNicknameMenuItem: storage.getItem throwing (private mode) falls back 
     getDeviceId: () => id,
   })));
   assert.equal(li.children[0].children[1].textContent, defaultNickname(id));
+});
+
+// ---------------------------------------------------------------------------
+// mountPrivacyMenuItem
+// ---------------------------------------------------------------------------
+
+test('mountPrivacyMenuItem: no-op when rootEl is missing', () => {
+  const result = mountPrivacyMenuItem(/** @type {any} */ ({ rootEl: null, privacyHref: '/privacy/' }));
+  assert.equal(result, null);
+});
+
+test('mountPrivacyMenuItem: renders a single <li> with <a href={privacyHref}>', () => {
+  const env = fakeMenuDom();
+  const li = /** @type {any} */ (mountPrivacyMenuItem(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    privacyHref: '../privacy/',
+  })));
+  assert.ok(li);
+  assert.equal(li.tagName, 'LI');
+  assert.equal(li.className, 'menu-privacy');
+  const a = li.children[0];
+  assert.equal(a.tagName, 'A');
+  assert.equal(a.attrs.href, '../privacy/');
+  assert.equal(a.attrs['data-i18n'], 'privacy.menuLink');
+  assert.equal(a.textContent, 'Privacy');
+});
+
+test('mountPrivacyMenuItem: appended as the LAST child of the menu (below feature links + coffee)', () => {
+  const env = fakeMenuDom({ existingItems: 3 });
+  mountPrivacyMenuItem(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    privacyHref: '../privacy/',
+  }));
+  // 3 existing + 1 appended at end
+  assert.equal(env.rootEl.children.length, 4);
+  assert.equal(env.rootEl.children[3].className, 'menu-privacy');
+});
+
+test('mountPrivacyMenuItem: pageIsPrivacy adds aria-current="page" to the link', () => {
+  const env = fakeMenuDom();
+  const li = /** @type {any} */ (mountPrivacyMenuItem(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    privacyHref: './',
+    pageIsPrivacy: true,
+  })));
+  assert.equal(li.children[0].attrs['aria-current'], 'page');
 });

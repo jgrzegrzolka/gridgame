@@ -74,7 +74,7 @@
     </main>
     <script type="module">
       import { bootI18n, wireLangToggle } from './i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from './common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from './common.js';
       bootI18n().then((lang) => {
         // Home page is `data-i18n`-only — applyStringsToDocument covers
         // every translated surface, so soft-reload is essentially free
@@ -88,6 +88,10 @@
         mountNicknameMenuItem({
           rootEl: document.querySelector('#burger-panel .menu'),
           profileHref: 'profile/',
+        });
+        mountPrivacyMenuItem({
+          rootEl: document.querySelector('#burger-panel .menu'),
+          privacyHref: 'privacy/',
         });
       });
     </script>
