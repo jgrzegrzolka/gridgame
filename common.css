@@ -327,6 +327,14 @@ body::before {
   margin-right: -24px;
   padding: 12px 24px;
   text-align: center;
+  /* Pages whose body is a flex column with `align-items: center`
+   * (ticTacToe, flagQuiz, stats) would otherwise shrink-fit this row
+   * to its content width — making the background strip too narrow to
+   * cover sibling content beneath when sticky-pinned. `align-self:
+   * stretch` overrides the parent's centring so the row fills its
+   * parent's content box width, and the -24px horizontal margin then
+   * extends it the rest of the way to the viewport edge. */
+  align-self: stretch;
 }
 /* `·` separator that hides itself when the action right before it is
  * hidden. Used in the online ticTacToe actions-row, where `#give-up`
@@ -676,6 +684,10 @@ body::before {
   margin: 16px -24px 0;
   padding: 12px 24px;
   text-align: center;
+  /* Same flex-parent compensation as `.actions-row` — without this the
+   * row shrink-fits on pages whose body is a flex column with
+   * `align-items: center`. */
+  align-self: stretch;
 }
 .result-links a {
   color: var(--link-color);

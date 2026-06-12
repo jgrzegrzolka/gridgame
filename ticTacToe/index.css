@@ -1,5 +1,8 @@
 body {
-  --grid-cell: min(140px, calc((100vw - 4px) / 3.5));
+  /* True 4×4: 3 game cells + 1 header cell across, all the same width. The
+   * 9×9 page overrides this further down. Cap at 140px so cells stay
+   * tappable but never huge on tablets. */
+  --grid-cell: min(140px, calc((100vw - 4px) / 4));
   padding: var(--page-top) 2px 24px;
   display: flex;
   flex-direction: column;
@@ -62,7 +65,6 @@ body {
 .grid {
   border-collapse: collapse;
   table-layout: fixed;
-  margin-left: calc(var(--grid-cell) / -4);
 }
 .grid th, .grid td {
   width: var(--grid-cell);
@@ -90,25 +92,28 @@ body {
   text-overflow: ellipsis;
 }
 .grid thead th {
-  height: calc(var(--grid-cell) / 2);
+  height: var(--grid-cell);
   /* max-width pin: table-layout:fixed alone doesn't stop a nowrap min-content
    * wider than --grid-cell from pushing the column out (Chrome honours the
    * unbreakable text width over the declared width). The explicit max-width
    * keeps the column locked, so the grid stays at the same horizontal
-   * position regardless of how long a label like "Has star or moon" is.
-   * Row headers (tbody th) don't need this — their text is rotated to
-   * writing-mode:vertical-rl, so a long label overflows the cell height,
-   * not the cell width. */
+   * position regardless of how long a label like "Has star or moon" is. */
   max-width: var(--grid-cell);
 }
 .grid .corner,
 .grid tbody th {
-  width: calc(var(--grid-cell) / 2);
+  width: var(--grid-cell);
 }
+/* Row headers: horizontal text in their own full-size cell. Long labels
+ * (e.g. "South America", "tylko 4 kolory") wrap to two lines instead of
+ * truncating — vertical space is no longer a constraint now that header
+ * cells are the same height as game cells. The full label is still
+ * shown in the picker header when a cell is opened. The 9×9 grid keeps
+ * the rotated-narrow-column treatment further down. */
 .grid tbody th {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
   font-size: 12px;
+  white-space: normal;
+  line-height: 1.2;
 }
 .cell {
   position: relative;
@@ -189,6 +194,13 @@ body.game-over .actions-row {
 .grid.is-9x9 tbody th {
   width: 36px;
   font-size: 11px;
+  /* 9×9 keeps the rotated-narrow-column row header — at 36px wide there
+   * isn't room for the horizontal-text layout the 3×3 grid uses, and
+   * 9×9's row labels (continent names etc.) read cleanly enough rotated
+   * because the cell column is taller than wide. */
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
 }
 .grid.is-9x9 .corner {
   width: 36px;
