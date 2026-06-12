@@ -21,7 +21,6 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="common.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
-    <link rel="preload" href="flags/countries.json?v=__BUILD__" as="fetch" type="application/json" crossorigin />
   </head>
   <body>
     <a class="lang-toggle" id="lang-toggle" href="#"></a>
@@ -76,7 +75,6 @@
     <script type="module">
       import { bootI18n, wireLangToggle } from './i18n.js';
       import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from './common.js';
-      import { preloadFlags } from './flags/quiz.js';
       bootI18n().then((lang) => {
         // Home page is `data-i18n`-only — applyStringsToDocument covers
         // every translated surface, so soft-reload is essentially free
@@ -92,17 +90,6 @@
           profileHref: 'profile/',
         });
       });
-      // Warm the flag-SVG cache while the user reads the menu. By the
-      // time they click a game tile, the first round's flags are
-      // already in the browser cache — fixes the cold-start flicker
-      // that all three games share (quiz, find-flag, tic-tac-toe).
-      // Best-effort; ignore failures silently.
-      fetch('flags/countries.json')
-        .then((r) => r.json())
-        .then((countries) => {
-          preloadFlags(countries, (url) => { new Image().src = url; }, 'flags/svg/');
-        })
-        .catch(() => {});
     </script>
   </body>
 </html>

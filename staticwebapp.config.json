@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/staticwebapp.config.json",
+  "routes": [
+    {
+      "route": "/*.{js,css,json,svg}",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    }
+  ]
+}
