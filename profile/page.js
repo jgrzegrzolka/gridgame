@@ -12,8 +12,7 @@ export function bootProfile() {
   const status = document.getElementById('profile-status');
   const form = /** @type {HTMLFormElement | null} */ (document.getElementById('profile-form'));
   const saveBtn = /** @type {HTMLButtonElement | null} */ (form?.querySelector('.profile-save'));
-  const resetBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('profile-reset'));
-  if (!input || !status || !form || !saveBtn || !resetBtn) return;
+  if (!input || !status || !form || !saveBtn) return;
 
   const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
   const defaultName = defaultNickname(deviceId);
@@ -64,21 +63,16 @@ export function bootProfile() {
   }
 
   /**
-   * Toggle the Save and Reset buttons to match "does this action have any
-   * effect right now?". Save is disabled when the payload already equals
-   * what the server holds; Reset is disabled when the input is already the
-   * default and the server has no custom value to clear. Either way the
-   * page only invites clicks that would actually change something. Both
-   * remain disabled while a request is in flight, regardless of state.
+   * Disable Save when the payload already equals what the server holds, so
+   * the page only invites clicks that would actually change something.
+   * Stays disabled while a request is in flight, regardless of state.
    */
   function refreshButtons() {
     if (inFlight) {
       saveBtn.disabled = true;
-      resetBtn.disabled = true;
       return;
     }
     saveBtn.disabled = currentPayload() === persisted;
-    resetBtn.disabled = input.value === defaultName && persisted === null;
   }
 
   refreshButtons();
@@ -100,11 +94,9 @@ export function bootProfile() {
    */
   async function save(nickname) {
     const payload = nickname !== null && nickname === defaultName ? null : nickname;
-    // Idempotent skip — the server already holds this value, no point
-    // PUTing it again. The button-enable logic already prevents this for
-    // a Save click; Reset can still land here if the user is already in
-    // the default state. Refresh the buttons in case Reset just snapped
-    // the input back to default and Reset itself should now disable.
+    // Idempotent skip — the button-enable logic already prevents this for
+    // a normal Save click, but defence-in-depth so a race in the disabled
+    // state can't ever PUT a no-op.
     if (payload === persisted) {
       refreshButtons();
       return;
@@ -139,11 +131,6 @@ export function bootProfile() {
   form.addEventListener('submit', (ev) => {
     ev.preventDefault();
     void save(currentPayload());
-  });
-
-  resetBtn.addEventListener('click', () => {
-    input.value = defaultName;
-    void save(null);
   });
 }
 

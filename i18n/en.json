@@ -12,7 +12,6 @@
   "nickname": {
     "label": "Nickname",
     "editTitle": "Set your nickname",
-    "resetToDefault": "Reset to default",
     "save": "Save",
     "error": "Could not save"
   },

@@ -48,10 +48,10 @@
   border-color: var(--link-color);
 }
 
-.profile-save,
-.profile-reset {
+.profile-save {
   font: inherit;
   font-size: 14px;
+  font-weight: 500;
   color: var(--link-color);
   background: none;
   border: none;
@@ -59,15 +59,10 @@
   cursor: pointer;
   text-decoration: none;
 }
-.profile-save {
-  font-weight: 500;
-}
-.profile-save:hover:not(:disabled),
-.profile-reset:hover:not(:disabled) {
+.profile-save:hover:not(:disabled) {
   text-decoration: underline;
 }
-.profile-save:disabled,
-.profile-reset:disabled {
+.profile-save:disabled {
   opacity: 0.5;
   cursor: default;
 }

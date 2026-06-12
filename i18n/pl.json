@@ -12,7 +12,6 @@
   "nickname": {
     "label": "Pseudonim",
     "editTitle": "Ustaw swoją nazwę",
-    "resetToDefault": "Przywróć domyślną",
     "save": "Zapisz",
     "error": "Nie udało się zapisać"
   },
