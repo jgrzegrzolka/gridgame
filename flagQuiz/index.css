@@ -268,7 +268,14 @@ body {
  * player spots themselves without hunting; the trailing "…You" row
  * shares the same accent because it's the same player. */
 .leaderboard {
-  margin: 24px auto 16px;
+  /* Larger top margin + a hairline divider make the visual break between
+   * "your result" (final score / best score) and "today's community"
+   * unmistakable. Without it the two blocks blur into one column of
+   * numbers and the leaderboard reads like a continuation of the
+   * player's own stats. */
+  margin: 48px auto 16px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
   width: min(90vw, 480px);
   text-align: left;
 }
