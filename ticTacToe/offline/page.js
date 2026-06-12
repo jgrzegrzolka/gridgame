@@ -15,6 +15,15 @@ function tCat(c) {
 }
 
 export function bootTicTacToe() {
+  // Build the empty 3×3 grid structure synchronously, before the
+  // countries.json fetch resolves. On slow connections the fetch +
+  // localised-alias pass + puzzle generation can take a couple of
+  // seconds, and during that window the user used to see only the
+  // (empty) thead row of the table — "half a grid". Pre-building the
+  // skeleton means the full layout is on-screen from page-load; the
+  // header text and per-cell click handlers get wired up later inside
+  // runTicTacToe once the data is ready.
+  buildGridSkeleton();
   fetch('../../flags/countries.json')
     .then((r) => r.json())
     .then(loadCountries)
@@ -27,6 +36,24 @@ export function bootTicTacToe() {
       const turnText = document.getElementById('turn-text');
       if (turnText) turnText.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
+}
+
+function buildGridSkeleton() {
+  const gridBodyEl = document.getElementById('grid-body');
+  if (!gridBodyEl) return;
+  for (let r = 0; r < 3; r++) {
+    const tr = document.createElement('tr');
+    const rowHeader = document.createElement('th');
+    tr.appendChild(rowHeader);
+    for (let c = 0; c < 3; c++) {
+      const td = document.createElement('td');
+      td.className = 'cell';
+      td.dataset.row = String(r);
+      td.dataset.col = String(c);
+      tr.appendChild(td);
+    }
+    gridBodyEl.appendChild(tr);
+  }
 }
 
 /**
@@ -71,21 +98,20 @@ function runTicTacToe({ puzzle, countries }) {
   );
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
 
+  // The grid skeleton is already in the DOM (buildGridSkeleton ran in
+  // bootTicTacToe before the fetch). Enrich it: paint the row/col
+  // header text from the freshly generated puzzle, then wire each
+  // cell's click + keydown handlers — these need to close over the
+  // local `state` and the picker functions, which only exist now.
   colHeaderEls.forEach((th, i) => {
     th.textContent = tCat(puzzle.cols[i]);
   });
-
-  for (let r = 0; r < 3; r++) {
-    const tr = document.createElement('tr');
-    const rowHeader = document.createElement('th');
-    rowHeader.textContent = tCat(puzzle.rows[r]);
-    tr.appendChild(rowHeader);
-    for (let c = 0; c < 3; c++) {
-      const td = document.createElement('td');
-      td.className = 'cell';
-      td.dataset.row = String(r);
-      td.dataset.col = String(c);
-      td.tabIndex = 0;
+  const trs = gridBodyEl.querySelectorAll('tr');
+  trs.forEach((tr, r) => {
+    const rowHeader = tr.querySelector('th');
+    if (rowHeader) rowHeader.textContent = tCat(puzzle.rows[r]);
+    tr.querySelectorAll('td').forEach((td, c) => {
+      /** @type {HTMLTableCellElement} */ (td).tabIndex = 0;
       td.addEventListener('click', () => onCellActivate(r, c));
       td.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -93,10 +119,8 @@ function runTicTacToe({ puzzle, countries }) {
           onCellActivate(r, c);
         }
       });
-      tr.appendChild(td);
-    }
-    gridBodyEl.appendChild(tr);
-  }
+    });
+  });
 
   renderAll();
 
