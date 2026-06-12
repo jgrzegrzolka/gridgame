@@ -1,6 +1,11 @@
 body {
-  --grid-cell: min(140px, calc((100vw - 4px) / 3.5));
-  padding: var(--page-top) 2px 24px;
+  /* True 4×4: 3 game cells + 1 header cell across, all the same width.
+   * 189px cap = 756px / 4 — keeps the grid's max width at 756 so it
+   * lines up with the fixed chrome cluster's `--chrome-x-offset` (which
+   * is calibrated for a 756-wide right edge). The 9×9 page overrides
+   * the cap with 63px (756 / 12) for the same alignment reason. */
+  --grid-cell: min(189px, calc((100vw - 24px) / 4));
+  padding: var(--page-top) 12px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -62,7 +67,6 @@ body {
 .grid {
   border-collapse: collapse;
   table-layout: fixed;
-  margin-left: calc(var(--grid-cell) / -4);
 }
 .grid th, .grid td {
   width: var(--grid-cell);
@@ -73,6 +77,14 @@ body {
   vertical-align: middle;
 }
 .grid td {
+  border: 1px solid #ddd;
+}
+/* Column headers, row headers, and game cells get a 1px outline so the
+ * grid reads as one consistent structure. The top-left corner stays
+ * borderless — it's not a content cell, just an empty spacer where the
+ * column-header row meets the row-header column, and a border there
+ * would visually claim "this is a cell" when it isn't. */
+.grid th:not(.corner) {
   border: 1px solid #ddd;
 }
 .grid th {
@@ -90,25 +102,37 @@ body {
   text-overflow: ellipsis;
 }
 .grid thead th {
-  height: calc(var(--grid-cell) / 2);
+  height: var(--grid-cell);
   /* max-width pin: table-layout:fixed alone doesn't stop a nowrap min-content
    * wider than --grid-cell from pushing the column out (Chrome honours the
    * unbreakable text width over the declared width). The explicit max-width
    * keeps the column locked, so the grid stays at the same horizontal
-   * position regardless of how long a label like "Has star or moon" is.
-   * Row headers (tbody th) don't need this — their text is rotated to
-   * writing-mode:vertical-rl, so a long label overflows the cell height,
-   * not the cell width. */
+   * position regardless of how long a label like "Has star or moon" is. */
   max-width: var(--grid-cell);
+}
+/* Non-9×9 thead headers are now in full-cell-sized boxes — let long
+ * labels like "coat of arms" or "star or moon" wrap onto two lines
+ * instead of truncating with `…`. Row headers already wrap below; this
+ * gives the column row the same treatment so the whole 4×4 reads
+ * symmetrically. 9×9 keeps the nowrap + ellipsis from `.grid th`. */
+.grid:not(.is-9x9) thead th {
+  white-space: normal;
+  line-height: 1.2;
 }
 .grid .corner,
 .grid tbody th {
-  width: calc(var(--grid-cell) / 2);
+  width: var(--grid-cell);
 }
+/* Row headers: horizontal text in their own full-size cell. Long labels
+ * (e.g. "South America", "tylko 4 kolory") wrap to two lines instead of
+ * truncating — vertical space is no longer a constraint now that header
+ * cells are the same height as game cells. The full label is still
+ * shown in the picker header when a cell is opened. The 9×9 grid keeps
+ * the rotated-narrow-column treatment further down. */
 .grid tbody th {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
   font-size: 12px;
+  white-space: normal;
+  line-height: 1.2;
 }
 .cell {
   position: relative;
@@ -177,21 +201,46 @@ body.game-over .actions-row {
 
 /* ---- 9x9 variant ---- */
 
-/* Cell size is the smallest of three constraints:
- *   - 80px cap (anything larger is silly even on big monitors)
- *   - viewport-width fit: 9 cells + corner column + buffer = 10.5 units
- *   - viewport-height fit: 9 cells + headers + page chrome reserved as 200px
- * The vh constraint matters on shorter laptops (e.g. 1366×768) where the
- * width would otherwise push the grid past the bottom of the viewport. */
+/* 9x9 reads as a true 4×4 outer structure on top of the 9×9 game grid:
+ * the corner, three column-headers (each colspan=3), and three row-headers
+ * (each rowspan=3) are bigblock-sized (3 game cells per side), so the
+ * grid has four equal bigblock-sized "outer cells" per side — same shape
+ * language as the 3×3 grid, just with each outer cell containing nine
+ * game cells instead of one.
+ *
+ * Cell-size constraints (now all in "12 game cells per side" units —
+ * 3 outer cells × 3 game cells + 3 game cells for the actual game area):
+ *   - 63px cap (= 756 / 12) — keeps the grid's max width at 756 so it
+ *     lines up with the fixed chrome cluster's `--chrome-x-offset`
+ *   - viewport-width fit: 12 game cells across, minus body 24px padding
+ *   - viewport-height fit: 12 game cells tall, minus 200px reserved for
+ *     chrome / actions-row / page padding */
 .grid.is-9x9 {
-  --grid-cell: min(80px, calc((100vw - 4px) / 10.5), calc((100vh - 200px) / 10));
+  --grid-cell: min(63px, calc((100vw - 24px) / 12), calc((100vh - 200px) / 12));
 }
+/* Row headers: horizontal text in a 3-game-cell-wide column (matching
+ * the bigblock width). Drops the rotated-narrow-column treatment used
+ * before the 4×4 redesign — labels like "South America" now read on
+ * one or two horizontal lines instead of bottom-up. */
 .grid.is-9x9 tbody th {
-  width: 36px;
-  font-size: 11px;
+  width: calc(var(--grid-cell) * 3);
+  font-size: 12px;
+  writing-mode: horizontal-tb;
+  transform: none;
+  white-space: normal;
+  line-height: 1.2;
+}
+/* Column headers stretch to a full bigblock height too — so the thead
+ * row matches the height of one bigblock and the 4×4 outer structure
+ * reads as four equal bigblock-sized cells per side. */
+.grid.is-9x9 thead th {
+  height: calc(var(--grid-cell) * 3);
+  max-width: none;
+  white-space: normal;
+  line-height: 1.2;
 }
 .grid.is-9x9 .corner {
-  width: 36px;
+  width: calc(var(--grid-cell) * 3);
 }
 .grid.is-9x9 .cell {
   padding: 2px;
