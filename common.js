@@ -1,5 +1,6 @@
 import { getOrCreateDeviceId } from './flags/identity.js';
 import { displayNickname } from './flags/nickname.js';
+import { avatarSvg } from './flags/avatar.js';
 
 /** Display nickname cache key. Written when the user successfully saves a
  *  new value on the /profile/ page. Cleared (`removeItem`) when the user
@@ -122,7 +123,8 @@ export function mountNicknameMenuItem(opts) {
   } catch {
     /* private mode / no quota — fall through to the default */
   }
-  const name = displayNickname(getDeviceId(), cached);
+  const deviceId = getDeviceId();
+  const name = displayNickname(deviceId, cached);
 
   const li = doc.createElement('li');
   li.className = 'menu-nickname';
@@ -131,17 +133,19 @@ export function mountNicknameMenuItem(opts) {
   a.setAttribute('href', opts.profileHref);
   if (opts.pageIsProfile) a.setAttribute('aria-current', 'page');
 
-  const label = doc.createElement('span');
-  label.className = 'menu-nickname-label';
-  label.setAttribute('data-i18n', 'nickname.yourName');
-  label.textContent = 'Nick';
+  // Avatar tile: a deterministic identicon derived from deviceId. The
+  // SVG markup is self-contained and built entirely from the hash + a
+  // fixed palette, so dropping it into `innerHTML` is safe — no path
+  // for user-supplied content to enter the SVG string.
+  const avatar = doc.createElement('span');
+  avatar.className = 'menu-nickname-avatar';
+  avatar.innerHTML = avatarSvg(deviceId);
 
   const value = doc.createElement('strong');
   value.className = 'menu-nickname-value';
   value.textContent = name;
 
-  a.appendChild(label);
-  a.appendChild(doc.createTextNode(': '));
+  a.appendChild(avatar);
   a.appendChild(value);
   li.appendChild(a);
 

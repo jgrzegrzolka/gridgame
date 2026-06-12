@@ -11,7 +11,6 @@
   },
   "nickname": {
     "label": "Pseudonim",
-    "yourName": "Nick",
     "editTitle": "Ustaw swoją nazwę",
     "resetToDefault": "Przywróć domyślną",
     "save": "Zapisz",
