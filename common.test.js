@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, NICKNAME_STORAGE_KEY } from './common.js';
+import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem, NICKNAME_STORAGE_KEY } from './common.js';
 import { defaultNickname } from './flags/nickname.js';
 
 /**
@@ -175,6 +175,8 @@ function makeMenuElement(tag) {
     },
     setAttribute(/** @type {string} */ k, /** @type {string} */ v) { attrs[k] = v; },
     getAttribute(/** @type {string} */ k) { return attrs[k] ?? null; },
+    /** Default: nothing matches. Tests that need a hit override per-instance. */
+    querySelector(/** @type {string} */ _sel) { return null; },
   };
 }
 
@@ -306,4 +308,84 @@ test('mountNicknameMenuItem: storage.getItem throwing (private mode) falls back 
     getDeviceId: () => id,
   })));
   assert.equal(li.children[0].children[1].textContent, defaultNickname(id));
+});
+
+// ---------------------------------------------------------------------------
+// mountPrivacyMenuItem
+// ---------------------------------------------------------------------------
+
+test('mountPrivacyMenuItem: no-op when rootEl is missing', () => {
+  const result = mountPrivacyMenuItem(/** @type {any} */ ({ rootEl: null, privacyHref: '/privacy/' }));
+  assert.equal(result, null);
+});
+
+test('mountPrivacyMenuItem: renders a single <li> with <a href={privacyHref}>', () => {
+  const env = fakeMenuDom();
+  const li = /** @type {any} */ (mountPrivacyMenuItem(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    privacyHref: '../privacy/',
+  })));
+  assert.ok(li);
+  assert.equal(li.tagName, 'LI');
+  assert.equal(li.className, 'menu-privacy');
+  const a = li.children[0];
+  assert.equal(a.tagName, 'A');
+  assert.equal(a.attrs.href, '../privacy/');
+  assert.equal(a.attrs['data-i18n'], 'privacy.menuLink');
+  assert.equal(a.textContent, 'Privacy');
+});
+
+test('mountPrivacyMenuItem: inserted IMMEDIATELY BEFORE the coffee link', () => {
+  // Real-page layout: coffee link is the bottom item of the static menu.
+  // Privacy should slot in right above it so the meta-nav reads
+  // [feature links] → privacy → coffee.
+  const env = fakeMenuDom({ existingItems: 2 });
+  // Append a fake coffee <li><a class="menu-coffee"/></li> at the end.
+  const coffeeLi = makeMenuElement('li');
+  const coffeeA = makeMenuElement('a');
+  coffeeA.className = 'menu-coffee';
+  coffeeLi.appendChild(coffeeA);
+  env.rootEl.appendChild(coffeeLi);
+  // The fake doc's querySelector + closest need to find the coffee link.
+  env.rootEl.querySelector = (/** @type {string} */ sel) =>
+    sel === '.menu-coffee' ? coffeeA : null;
+  coffeeA.closest = (/** @type {string} */ sel) => sel === 'li' ? coffeeLi : null;
+
+  mountPrivacyMenuItem(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    privacyHref: '../privacy/',
+  }));
+
+  // Order is: 2 existing + privacy + coffee (privacy is at index 2).
+  assert.equal(env.rootEl.children.length, 4);
+  assert.equal(env.rootEl.children[2].className, 'menu-privacy');
+  assert.equal(env.rootEl.children[3], coffeeLi);
+});
+
+test('mountPrivacyMenuItem: falls back to appendChild when no coffee link is present', () => {
+  const env = fakeMenuDom({ existingItems: 2 });
+  // No coffee anchor — defensive fallback.
+  env.rootEl.querySelector = () => null;
+
+  mountPrivacyMenuItem(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    privacyHref: '../privacy/',
+  }));
+
+  assert.equal(env.rootEl.children.length, 3);
+  assert.equal(env.rootEl.children[2].className, 'menu-privacy');
+});
+
+test('mountPrivacyMenuItem: pageIsPrivacy adds aria-current="page" to the link', () => {
+  const env = fakeMenuDom();
+  const li = /** @type {any} */ (mountPrivacyMenuItem(/** @type {any} */ ({
+    rootEl: env.rootEl,
+    doc: env.doc,
+    privacyHref: './',
+    pageIsPrivacy: true,
+  })));
+  assert.equal(li.children[0].attrs['aria-current'], 'page');
 });

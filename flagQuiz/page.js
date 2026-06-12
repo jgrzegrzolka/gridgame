@@ -26,7 +26,7 @@ import { flagsGamePool, loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
-import { mountNicknameMenuItem } from '../common.js';
+import { mountNicknameMenuItem, mountPrivacyMenuItem } from '../common.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
 import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
@@ -119,6 +119,10 @@ export function bootFlagQuiz() {
         mountNicknameMenuItem({
           rootEl: quizMenuEl,
           profileHref: '../profile/',
+        });
+        mountPrivacyMenuItem({
+          rootEl: quizMenuEl,
+          privacyHref: '../privacy/',
         });
       };
       rebuildMenu();

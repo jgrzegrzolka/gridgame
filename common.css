@@ -264,7 +264,10 @@ body::before {
 /* The "Buy me a coffee" item sits at the end of every burger menu —
  * give it a softer treatment so it reads as ambient support rather
  * than competing with the page-action items above it. */
-.menu a.menu-coffee {
+.menu a.menu-coffee,
+.menu li.menu-privacy a {
+  /* Both are meta-nav at the bottom of the menu — softer than the
+   * page-action links above them so they don't compete for attention. */
   color: #888;
   font-size: 12px;
   font-weight: 400;

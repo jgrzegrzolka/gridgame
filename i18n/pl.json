@@ -17,6 +17,49 @@
     "errorOffensive": "To obraźliwe słowo — wybierz inny pseudonim",
     "errorInvalid": "Pseudonim zawiera niedozwolone znaki"
   },
+  "privacy": {
+    "menuLink": "Prywatność",
+    "title": "Prywatność — Yet Another Quiz",
+    "heading": "Prywatność",
+    "intro": "Yet Another Quiz to darmowa strona-hobby. Zbieramy tylko minimum danych potrzebnych do działania funkcji — żadnego śledzenia, reklam, ani kont.",
+    "stored": {
+      "title": "Co przechowujemy",
+      "deviceId": {
+        "title": "ID urządzenia",
+        "body": "Losowy identyfikator wygenerowany przez Twoją przeglądarkę przy pierwszym uruchomieniu funkcji, która go potrzebuje (przesłanie codziennej zagadki, zapisanie rekordu w quizie, dołączenie do sieciowego pokoju kółka i krzyżyka, ustawienie pseudonimu). Żyje w localStorage Twojej przeglądarki jako `gridgame.deviceId` i na naszym serwerze obok wszelkich zapisanych wyników. Nie jest powiązany z Twoim imieniem, e-mailem ani żadną prawdziwą tożsamością."
+      },
+      "nickname": {
+        "title": "Pseudonim (opcjonalny)",
+        "body": "Tylko jeśli ustawisz go na stronie profilu. Pokazywany publicznie na codziennym rankingu, jeśli zdobędziesz dobry wynik tego dnia, oraz w sieciowych pokojach kółka i krzyżyka obok Twojej roli."
+      },
+      "scores": {
+        "title": "Wyniki gier",
+        "body": "Twoje zgłoszenia codziennych zagadek, rekordy quizu flag + liczby rozgrywek, oraz wyniki sieciowego kółka i krzyżyka per przeciwnik. Powiązane z Twoim ID urządzenia, nie z Tobą."
+      }
+    },
+    "retention": {
+      "title": "Jak długo to przechowujemy",
+      "leaderboard": "Wiersze codziennego rankingu: 48 godzin, potem automatycznie usuwane.",
+      "daily": "Zgłoszenia codziennych zagadek: 1 rok, potem automatycznie usuwane.",
+      "profile": "Profil, rekordy quizu, historia kółka i krzyżyka: przechowywane do momentu usunięcia."
+    },
+    "notDo": {
+      "title": "Czego nie robimy",
+      "tracking": "Brak śledzenia, analityki, sieci reklamowych, fingerprinting'u przeglądarki.",
+      "thirdParty": "Brak udostępniania osobom trzecim. Twoje dane zostają na naszej infrastrukturze.",
+      "accounts": "Brak e-maili, kont, haseł — ID urządzenia jest jedynym identyfikatorem."
+    },
+    "rights": {
+      "title": "Twoje prawa",
+      "delete": "Usuń wszystko: odwiedź stronę profilu i użyj przycisku Usuń (wkrótce).",
+      "profileLink": "strona profilu",
+      "clear": "Wyczyszczenie pamięci przeglądarki dla tej domeny usunie Twoje ID urządzenia lokalnie; wiersze po stronie serwera zostają do momentu usunięcia powyższą metodą."
+    },
+    "cookies": {
+      "title": "Ciasteczka",
+      "body": "Nie używamy ciasteczek. Strona przechowuje kilka preferencji w localStorage Twojej przeglądarki (Twoje ID urządzenia, wybór języka, cache pseudonimu, ostatnio grany wariant quizu), żeby pamiętać, co robisz między wizytami. Nic z tego nie jest wysyłane do żadnej trzeciej strony."
+    }
+  },
   "domain": {
     "flags": "Flagi"
   },

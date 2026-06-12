@@ -186,3 +186,49 @@ export function mountNicknameMenuItem(opts) {
   else opts.rootEl.appendChild(li);
   return li;
 }
+
+/**
+ * Mount a "Privacy" link into the burger menu, positioned RIGHT ABOVE the
+ * "Buy me a coffee" link. Both are meta-navigation that sits at the
+ * bottom of the menu; privacy goes first because it's the more important
+ * of the two (a user looking for "where's my data" should find it before
+ * the coffee CTA).
+ *
+ * Lookup is `.menu-coffee` (its parent `<li>`). If no coffee link is
+ * present we fall back to appending at the bottom — defensive against
+ * future pages whose menu happens to omit the coffee CTA.
+ *
+ * @param {{
+ *   rootEl: HTMLElement | null,
+ *   privacyHref: string,
+ *   doc?: Document,
+ *   pageIsPrivacy?: boolean,
+ * }} opts
+ */
+export function mountPrivacyMenuItem(opts) {
+  if (!opts || !opts.rootEl) return null;
+  const doc = opts.doc ?? document;
+
+  const li = doc.createElement('li');
+  li.className = 'menu-privacy';
+
+  const a = doc.createElement('a');
+  a.setAttribute('href', opts.privacyHref);
+  if (opts.pageIsPrivacy) a.setAttribute('aria-current', 'page');
+  a.setAttribute('data-i18n', 'privacy.menuLink');
+  a.textContent = 'Privacy';
+
+  li.appendChild(a);
+
+  // Anchor: the coffee link's <li>. Insert before it so the menu reads
+  // … → privacy → coffee. Falls back to append-at-end if the page has
+  // no coffee link to anchor on.
+  const coffeeLink = opts.rootEl.querySelector('.menu-coffee');
+  const coffeeLi = coffeeLink ? coffeeLink.closest('li') : null;
+  if (coffeeLi) {
+    opts.rootEl.insertBefore(li, coffeeLi);
+  } else {
+    opts.rootEl.appendChild(li);
+  }
+  return li;
+}
