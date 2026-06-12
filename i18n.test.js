@@ -305,6 +305,48 @@ test('wireLangToggle soft mode: click invokes the injected reload with the next 
   }
 });
 
+test('wireLangToggle soft mode: click flips data-current synchronously, before the reload promise resolves', () => {
+  // The whole point of the optimistic synchronous paint: a click should
+  // flip the flag *now*, not after the i18n JSON has been re-fetched.
+  // Without this, a slow connection would leave the user staring at the
+  // old flag (and aria-label) for the duration of the network round-trip.
+  const toggle = fakeToggle();
+  const doc = fakeSoftDoc();
+  const fakeWindow = { localStorage: fakeStore() };
+  const prevWindow = /** @type {any} */ (globalThis).window;
+  /** @type {any} */ (globalThis).window = fakeWindow;
+  try {
+    wireLangToggle('en', /** @type {any} */ (toggle), {
+      softReload: true,
+      doc: /** @type {any} */ (doc),
+      // The reload promise stays pending — simulates a slow network. If the
+      // toggle waited for it, the post-click assertions below would still
+      // see data-current="en". The pending promise is harmless once the
+      // test scope ends.
+      reload: () => new Promise(() => {}),
+    });
+    assert.equal(toggle._attrs['data-current'], 'en',
+      'pre-click state: flag matches the resolved language');
+    toggle._handlers[0]({ preventDefault() {} });
+    assert.equal(toggle._attrs['data-current'], 'pl',
+      'click must paint the new flag synchronously, without awaiting reload');
+    assert.equal(toggle._attrs['aria-label'], 'Przełącz na angielski',
+      'click must update aria-label synchronously too — screen readers need the new action label immediately');
+    // A second click before reload resolves should flip back to en —
+    // `current` must have been updated locally on the first click so the
+    // `next` computation isn't stuck on the stale value.
+    toggle._handlers[0]({ preventDefault() {} });
+    assert.equal(toggle._attrs['data-current'], 'en',
+      'second click during in-flight reload must flip back, proving `current` was updated locally on the first click');
+  } finally {
+    if (prevWindow === undefined) {
+      delete /** @type {any} */ (globalThis).window;
+    } else {
+      /** @type {any} */ (globalThis).window = prevWindow;
+    }
+  }
+});
+
 // ---- reloadI18n ----
 //
 // Re-fetches the language file, swaps the cache, re-applies markup, and

@@ -167,6 +167,13 @@ export function wireLangToggle(currentLang, toggleEl, options = {}) {
     const next = current === 'pl' ? 'en' : 'pl';
     setStoredLang(next);
     if (softReload) {
+      // Flip the flag + aria-label synchronously so the click feels
+      // instant, instead of waiting for the i18n JSON fetch below to
+      // resolve and dispatch langchanged. `current` is updated locally
+      // for the same reason — a double-click during the in-flight reload
+      // would otherwise re-compute `next` from the stale value.
+      renderToggleState(next);
+      current = next;
       // Fire-and-forget: any listener that needs to wait for the new
       // strings registers on `langchanged`. A failed re-fetch falls
       // back to a hard reload so the user still gets the language
@@ -218,6 +225,15 @@ export function applyStringsToDocument(strings, lang, doc) {
 export async function bootI18n(base = './') {
   const stored = window.localStorage.getItem(LANG_STORAGE_KEY);
   const lang = resolveLang(stored, window.navigator.language);
+  // Paint the lang-toggle flag immediately, before the i18n JSON fetch
+  // below. The flag is determined by localStorage + navigator alone and
+  // doesn't need the strings, but the existing `wireLangToggle` call
+  // only runs in the bootI18n().then() callback — i.e. after the fetch
+  // resolves. On a cold connection that's 100-500ms of blank-button time.
+  if (typeof document !== 'undefined') {
+    const toggleEl = document.getElementById('lang-toggle');
+    if (toggleEl) toggleEl.setAttribute('data-current', lang);
+  }
   const res = await fetch(`${base}i18n/${lang}.json`);
   if (!res.ok) return lang;
   const strings = await res.json();
