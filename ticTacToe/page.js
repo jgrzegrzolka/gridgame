@@ -218,6 +218,12 @@ function runOnline(countries) {
     if (roomCodeEl) roomCodeEl.textContent = code;
     renderShareButton();
     setStatusKey('ttt.connecting', 'Connecting…');
+    // Build the empty grid structure now so the user sees the full
+    // 3×3 layout immediately, instead of just the (empty) thead row
+    // while the WebSocket connects and the server responds with
+    // `welcome`. Header text gets filled in by populateGridLabels()
+    // once the game state arrives.
+    buildGridStructure();
     connect();
   }
 
@@ -253,7 +259,7 @@ function runOnline(countries) {
     const { state: nextState, effects } = reduceServerMessage(state, msg);
     state = nextState;
 
-    if (msg.type === 'welcome') buildGridIfNeeded();
+    if (msg.type === 'welcome') populateGridLabels();
     if (state.statusOverride && state.statusOverride !== before.statusOverride) {
       setStatusKey(
         state.statusOverride.key,
@@ -309,17 +315,20 @@ function runOnline(countries) {
     if (matchupOpponentEl) matchupOpponentEl.replaceChildren();
   }
 
-  // ---- Grid (built once, on welcome) ----
+  // ---- Grid ----
+  // Built in two passes: enterRoom() runs buildGridStructure() so the
+  // 3×3 layout is on-screen before the WebSocket connects, then the
+  // 'welcome' handler runs populateGridLabels() to fill in row/col
+  // header text from the server's puzzle. Splitting these eliminates
+  // the "half-grid for some seconds" gap users were seeing between
+  // joining a room and the first server message arriving.
   let gridBuilt = false;
-  function buildGridIfNeeded() {
-    const { game } = state;
-    if (gridBuilt || !game) return;
+  function buildGridStructure() {
+    if (gridBuilt) return;
     gridBuilt = true;
-    colHeaderEls.forEach((th, i) => { th.textContent = tCat(/** @type {GameState} */ (game).puzzle.cols[i]); });
     for (let r = 0; r < 3; r++) {
       const tr = document.createElement('tr');
       const rowHeader = document.createElement('th');
-      rowHeader.textContent = tCat(/** @type {GameState} */ (game).puzzle.rows[r]);
       tr.appendChild(rowHeader);
       for (let c = 0; c < 3; c++) {
         const td = document.createElement('td');
@@ -335,6 +344,13 @@ function runOnline(countries) {
       }
       gridBodyEl.appendChild(tr);
     }
+  }
+  function populateGridLabels() {
+    const { game } = state;
+    if (!game) return;
+    colHeaderEls.forEach((th, i) => { th.textContent = tCat(/** @type {GameState} */ (game).puzzle.cols[i]); });
+    const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
+    rowHeaders.forEach((th, i) => { th.textContent = tCat(/** @type {GameState} */ (game).puzzle.rows[i]); });
   }
 
   /** @param {number} r @param {number} c */
@@ -789,13 +805,7 @@ function runOnline(countries) {
   function refreshI18nForGame() {
     const { game } = state;
     if (game && gridBuilt) {
-      colHeaderEls.forEach((th, i) => {
-        th.textContent = tCat(/** @type {GameState} */ (game).puzzle.cols[i]);
-      });
-      const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
-      rowHeaders.forEach((th, i) => {
-        th.textContent = tCat(/** @type {GameState} */ (game).puzzle.rows[i]);
-      });
+      populateGridLabels();
       renderGrid();
     }
     if (repaintStatusForLang) repaintStatusForLang();
@@ -822,7 +832,8 @@ function runOnline(countries) {
     lastStatusKey = null;
     lastGaveUpByMe = null;
     document.body.classList.remove('game-over');
-    buildGridIfNeeded();
+    buildGridStructure();
+    populateGridLabels();
     renderGrid();
     renderStatus();
   }
