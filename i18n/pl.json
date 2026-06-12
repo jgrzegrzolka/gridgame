@@ -13,7 +13,9 @@
     "label": "Pseudonim",
     "editTitle": "Ustaw swoją nazwę",
     "save": "Zapisz",
-    "error": "Nie udało się zapisać"
+    "error": "Nie udało się zapisać",
+    "errorOffensive": "Wybierz inny pseudonim",
+    "errorInvalid": "Pseudonim zawiera niedozwolone znaki"
   },
   "domain": {
     "flags": "Flagi"

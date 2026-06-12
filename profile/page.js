@@ -59,7 +59,7 @@ export function bootProfile() {
   function currentPayload() {
     const trimmed = input.value.trim();
     if (trimmed.length === 0 || trimmed === defaultName) return null;
-    return trimmed.slice(0, 24);
+    return trimmed.slice(0, 16);
   }
 
   /**
@@ -110,7 +110,17 @@ export function bootProfile() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ deviceId, nickname: payload }),
       });
-      if (!res.ok) throw new Error(`http_${res.status}`);
+      if (!res.ok) {
+        // Read the server's structured error code so we can show the
+        // user *why* their nickname didn't save — "Could not save" alone
+        // makes a moderation reject feel like a server error.
+        let code = `http_${res.status}`;
+        try {
+          const body = await res.json();
+          if (body && typeof body.error === 'string') code = body.error;
+        } catch { /* leave as http_<status> */ }
+        throw new Error(code);
+      }
       persisted = payload;
       try {
         if (payload === null) window.localStorage.removeItem(NICKNAME_STORAGE_KEY);
@@ -118,8 +128,10 @@ export function bootProfile() {
       } catch {
         /* cache failure is non-fatal — server is the source of truth */
       }
-    } catch {
-      setStatus(status, t('nickname.error', 'Could not save'), 'is-error', 'nickname.error');
+    } catch (err) {
+      const code = err instanceof Error ? err.message : 'unknown';
+      const { i18nKey, fallback } = errorMessageFor(code);
+      setStatus(status, t(i18nKey, fallback), 'is-error', i18nKey);
       if (flashTimer) clearTimeout(flashTimer);
       flashTimer = setTimeout(() => setStatus(status, '', null), FLASH_MS);
     } finally {
@@ -132,6 +144,24 @@ export function bootProfile() {
     ev.preventDefault();
     void save(currentPayload());
   });
+}
+
+/**
+ * Map a server error code (or local network code) to the i18n key + fallback
+ * the user should see. `offensive_nickname` and `invalid_nickname` get
+ * specific feedback so the user knows what to change; anything else is
+ * "Could not save" because there's nothing actionable for them to fix.
+ *
+ * @param {string} code
+ */
+function errorMessageFor(code) {
+  if (code === 'offensive_nickname') {
+    return { i18nKey: 'nickname.errorOffensive', fallback: 'Please choose a different nickname' };
+  }
+  if (code === 'invalid_nickname') {
+    return { i18nKey: 'nickname.errorInvalid', fallback: 'That nickname contains characters that aren’t allowed' };
+  }
+  return { i18nKey: 'nickname.error', fallback: 'Could not save' };
 }
 
 /**

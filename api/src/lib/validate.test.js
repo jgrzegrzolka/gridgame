@@ -362,13 +362,55 @@ test('validateProfileBody: non-string nickname (other than null) → invalid_nic
   assert.deepEqual(validateProfileBody(b), { ok: false, error: 'invalid_nickname' });
 });
 
-test('validateProfileBody: nickname can contain any unicode (emoji, RTL, etc.) — moderation out of scope per FEATURE.md', () => {
+test('validateProfileBody: nickname accepts safe unicode — emoji, RTL letters, CJK', () => {
   const b = validProfileBody();
-  b.nickname = '🌍🇵🇱';
-  const r = validateProfileBody(b);
-  assert.equal(r.ok, true, 'emoji accepted');
+  b.nickname = '🌍🎉';
+  assert.equal(validateProfileBody(b).ok, true, 'emoji accepted');
   b.nickname = 'مرحبا';
   assert.equal(validateProfileBody(b).ok, true, 'RTL script accepted');
+  b.nickname = '日本';
+  assert.equal(validateProfileBody(b).ok, true, 'CJK accepted');
+  b.nickname = 'Łukasz';
+  assert.equal(validateProfileBody(b).ok, true, 'Polish accepted');
+});
+
+test('validateProfileBody: rejects bidi override chars (sanitiser gate)', () => {
+  // U+202E RLO would render "OlleH" as "Hello" — spoofing vector. The
+  // sanitiser rejects the whole submission rather than stripping silently
+  // so the user sees that something needs editing.
+  const b = validProfileBody();
+  b.nickname = `${String.fromCodePoint(0x202E)}OlleH`;
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'invalid_nickname' });
+});
+
+test('validateProfileBody: rejects zero-width chars (sanitiser gate)', () => {
+  const b = validProfileBody();
+  b.nickname = `Alice${String.fromCodePoint(0x200B)}Bob`;
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'invalid_nickname' });
+});
+
+test('validateProfileBody: rejects control chars (sanitiser gate)', () => {
+  const b = validProfileBody();
+  b.nickname = `Alice${String.fromCodePoint(0x07)}Bob`;
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'invalid_nickname' });
+});
+
+test('validateProfileBody: internal whitespace collapses (sanitiser allows)', () => {
+  const b = validProfileBody();
+  b.nickname = 'Alice\nBob';
+  const r = validateProfileBody(b);
+  assert.equal(r.ok, true);
+  assert.equal(r.value?.nickname, 'Alice Bob');
+});
+
+test('validateProfileBody: rejects offensive nicknames with distinct error', () => {
+  const b = validProfileBody();
+  b.nickname = 'fuck';
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'offensive_nickname' });
+  b.nickname = 'Kurwa';
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'offensive_nickname' });
+  b.nickname = 'Admin';
+  assert.deepEqual(validateProfileBody(b), { ok: false, error: 'offensive_nickname' });
 });
 
 
