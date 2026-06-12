@@ -54,13 +54,12 @@
         <button type="button" class="find-clear" id="find-clear" data-i18n="findFlag.clear" hidden>Clear all</button>
       </div>
       <div id="chooser-sections"></div>
-      <div class="find-play-bar" id="find-play-bar">
-        <span class="find-play-mid">
-          <button type="button" class="find-random" id="find-random" data-i18n="menu.random">Random</button>
-          ·
-          <a class="find-home" href="../" data-i18n="menu.home">Home</a>
-        </span>
-        <button type="button" class="find-play" id="find-play" data-i18n="findFlag.play" disabled>Play</button>
+      <div class="actions-row">
+        <button type="button" class="row-cta" id="find-play" data-i18n="findFlag.play" disabled>Play</button>
+        ·
+        <button type="button" id="find-random" data-i18n="menu.random">Random</button>
+        ·
+        <a href="../" data-i18n="menu.home">Home</a>
       </div>
     </section>
 
@@ -85,12 +84,12 @@
         <ul class="find-suggestions" id="find-suggestions" hidden></ul>
       </div>
       <ul class="find-found" id="find-found"></ul>
-      <div class="give-up-row">
-        <a class="give-up" id="game-random" href="#" data-i18n="menu.random">Random</a>
+      <div class="actions-row">
+        <a id="game-random" href="#" data-i18n="menu.random">Random</a>
         ·
-        <button type="button" class="give-up" id="give-up" data-i18n="game.giveUp">Give up</button>
+        <button type="button" id="give-up" data-i18n="game.giveUp">Give up</button>
         ·
-        <a class="give-up" href="../" data-i18n="menu.home">Home</a>
+        <a href="../" data-i18n="menu.home">Home</a>
       </div>
     </section>
 

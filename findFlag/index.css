@@ -9,25 +9,6 @@ body {
   margin: 0 0 20px;
   text-align: center;
 }
-/* Random and Home are text-link siblings flanking the primary Play
- * button in the sticky bar. Same text-link sizing so neither pulls
- * focus from the prominent Play CTA in the middle. */
-.find-random,
-.find-home {
-  background: none;
-  border: none;
-  color: var(--link-color);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 4px 8px;
-}
-.find-random:hover,
-.find-home:hover {
-  background: #f0f0f0;
-  border-radius: 4px;
-}
 /* Clear all sits above the chooser sections, right-aligned, only
  * visible when there's anything to clear. The reserved row height
  * avoids layout shift between "nothing selected" and "something
@@ -76,46 +57,6 @@ body {
 .chooser-pills .pill.exclude .pill-count {
   color: #c0392b;
 }
-/* Sticky Play bar — stays in view as the user scrolls through pill
- * sections, so Play (with its embedded match count) is always within
- * reach. Three-column grid: left spacer, Random·Home pair (truly
- * centred), and Play anchored to the right. Equal-width side columns
- * keep the middle group centred even as Play's width changes with the
- * embedded count. The negative horizontal margin bleeds the bar to the
- * body's content edge (matches flagsdata's filter-bar bleed). */
-.find-play-bar {
-  position: sticky;
-  bottom: 0;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  grid-template-areas: ". mid play";
-  align-items: center;
-  gap: 12px;
-  margin: 16px -24px 0;
-  padding: 12px 24px;
-  background: #fafafa;
-  border-top: 1px solid #eee;
-  z-index: 5;
-}
-.find-play-mid {
-  grid-area: mid;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.find-play-bar > .find-play {
-  grid-area: play;
-  justify-self: end;
-}
-/* Phone: drop the left spacer so the Random · Home pair anchors to the
- * left edge instead of getting squeezed in a too-narrow middle column.
- * Play stays right-anchored via its existing justify-self. */
-@media (max-width: 600px) {
-  .find-play-bar {
-    grid-template-columns: auto 1fr;
-    grid-template-areas: "mid play";
-  }
-}
 .find-clear {
   font: inherit;
   font-size: 13px;
@@ -129,23 +70,6 @@ body {
 .find-clear:hover {
   background: #f0f0f0;
   border-radius: 4px;
-}
-.find-play {
-  background: #1c1c1c;
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  padding: 10px 22px;
-  font: inherit;
-  font-size: 16px;
-  cursor: pointer;
-}
-.find-play:hover:not(:disabled) {
-  background: #333;
-}
-.find-play:disabled {
-  background: #ccc;
-  cursor: not-allowed;
 }
 
 .find-header {
@@ -307,7 +231,9 @@ body {
   text-align: left;
 }
 .result-links {
-  margin: 24px 0 0;
+  /* Only override the top margin — common.css's sticky-bar rule sets
+   * the horizontal bleed (margin-left/right: -24px) that we want to keep. */
+  margin-top: 24px;
 }
 .result-links a {
   text-decoration: none;
