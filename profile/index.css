@@ -47,6 +47,14 @@
   outline: none;
   border-color: var(--link-color);
 }
+/* `.shake-wrong` reuses the cell-shake keyframes from common.css for
+ * consistency with the flagQuiz wrong-answer flash. The class is added on
+ * a failed save, then dropped after the animation finishes so a second
+ * failure can replay it via the offsetWidth-reflow trick. */
+.profile-input.shake-wrong {
+  animation: cell-shake 0.5s ease-in-out;
+  border-color: #c44;
+}
 
 .profile-save {
   font: inherit;

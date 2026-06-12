@@ -14,7 +14,7 @@
     "editTitle": "Ustaw swoją nazwę",
     "save": "Zapisz",
     "error": "Nie udało się zapisać",
-    "errorOffensive": "Wybierz inny pseudonim",
+    "errorOffensive": "To obraźliwe słowo — wybierz inny pseudonim",
     "errorInvalid": "Pseudonim zawiera niedozwolone znaki"
   },
   "domain": {

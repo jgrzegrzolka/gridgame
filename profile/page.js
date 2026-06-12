@@ -77,6 +77,11 @@ export function bootProfile() {
 
   refreshButtons();
   input.addEventListener('input', refreshButtons);
+  // Drop the shake-wrong class once its animation ends so a subsequent
+  // failure can re-add it cleanly via the reflow restart trick.
+  input.addEventListener('animationend', () => {
+    input.classList.remove('shake-wrong');
+  });
 
   /**
    * Push the resolved-and-trimmed `nickname` payload to the server, then
@@ -132,6 +137,13 @@ export function bootProfile() {
       const code = err instanceof Error ? err.message : 'unknown';
       const { i18nKey, fallback } = errorMessageFor(code);
       setStatus(status, t(i18nKey, fallback), 'is-error', i18nKey);
+      // Shake the input so the error registers visually even if the user
+      // wasn't looking at the status line. Reflow-restart trick lets a
+      // repeated failure replay the animation cleanly. Same pattern as
+      // the flagQuiz wrong-answer flash.
+      input.classList.remove('shake-wrong');
+      void input.offsetWidth;
+      input.classList.add('shake-wrong');
       if (flashTimer) clearTimeout(flashTimer);
       flashTimer = setTimeout(() => setStatus(status, '', null), FLASH_MS);
     } finally {
