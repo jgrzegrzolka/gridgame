@@ -121,6 +121,10 @@
     "playerWins": "Wygrał {player}!",
     "youGaveUp": "Poddajesz się",
     "opponentGaveUp": "Przeciwnik się poddał",
+    "rulesBtn": "Jak grać",
+    "rulesTitle": "Jak grać",
+    "rulesBody": "Każde pole leży na przecięciu wiersza i kolumny. Wybierz państwo, którego flaga pasuje do obu — na przykład wiersz „Azja\" i kolumna „czerwony\" wymagają flagi, która jest jednocześnie azjatycka i czerwona. Wygrywa ten, kto pierwszy ułoży trzy w rzędzie.",
+    "rulesClose": "Rozumiem",
     "reject": {
       "roomFull": "Pokój jest pełny",
       "roomNotFound": "Pokój nie znaleziony — poproś znajomego o kod lub utwórz nowy pokój",
@@ -131,7 +135,8 @@
   },
   "ttt9x9": {
     "title": "Yet Another Quiz — 9×9 Kółko i krzyżyk z flagami",
-    "offlineTitle": "Yet Another Quiz — 9×9 Kółko i krzyżyk offline"
+    "offlineTitle": "Yet Another Quiz — 9×9 Kółko i krzyżyk offline",
+    "rulesBody": "Dziewięć małych plansz kółko-i-krzyżyk ułożonych w wielką planszę 3×3. Każde pole leży na przecięciu wiersza i kolumny — wybierz państwo, którego flaga pasuje do obu. Wygranie małej planszy daje ci kontrolę nad nią; ułóż trzy zdobyte plansze w rzędzie na wielkiej planszy, by wygrać."
   },
   "variant": {
     "countries": "Wszystkie kraje",

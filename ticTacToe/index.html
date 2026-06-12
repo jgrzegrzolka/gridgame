@@ -75,7 +75,16 @@
       <table class="grid">
         <thead>
           <tr>
-            <th class="corner"></th>
+            <th class="corner">
+              <button
+                type="button"
+                class="rules-btn"
+                id="rules-btn"
+                aria-label="How to play"
+                title="How to play"
+                data-i18n-attr="aria-label:ttt.rulesBtn,title:ttt.rulesBtn"
+              >?</button>
+            </th>
             <th class="col-header" data-col="0"></th>
             <th class="col-header" data-col="1"></th>
             <th class="col-header" data-col="2"></th>
@@ -101,6 +110,12 @@
     <dialog id="zoom">
       <img alt="" />
       <p></p>
+    </dialog>
+
+    <dialog id="rules-help" class="rules-help">
+      <h2 data-i18n="ttt.rulesTitle">How to play</h2>
+      <p data-i18n="ttt.rulesBody">Each cell sits on a row and a column. Pick a country whose flag matches both — for example, an "Asia" row and a "red" column needs a flag that is both Asian and red. First to line up three wins.</p>
+      <button type="button" class="rules-close" id="rules-close" data-i18n="ttt.rulesClose">Got it</button>
     </dialog>
 
     <div class="picker" id="picker" hidden>
