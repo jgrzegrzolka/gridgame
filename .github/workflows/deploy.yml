@@ -212,3 +212,45 @@ jobs:
           done
           echo "FAIL: www/ still not 200 after ${BUDGET_SECONDS}s — propagation gap exceeded budget"
           exit 1
+
+      - name: Warm Cloudflare HTML cache
+        # Each deploy purges CF's HTML cache for the 12 entry-point URLs
+        # (see "Purge Cloudflare cache" above). Until those URLs are
+        # re-fetched, the next visitor pays a cold-edge fetch against the
+        # SWA Free SKU origin in West US 2 — observed ~2 s on a 3 KB HTML
+        # doc from Poland on 2026-06-12. This step pre-fetches each URL
+        # so CF caches it before real traffic arrives.
+        #
+        # No `?_=…` cache-buster here — we want the bare URLs that real
+        # visitors hit. The earlier smoke-check uses `?_=<sha>` precisely
+        # to avoid caching (it's verifying SWA serves fresh), so it does
+        # not double as warming.
+        #
+        # CF caches per-POP, so warming from GitHub's runner POP only
+        # primes that one. Users in other regions still cold-fetch on
+        # first hit. If that becomes noticeable, enable CF Tiered Cache
+        # (free) so lower-tier POPs can pull from the warmed upper-tier
+        # instead of going all the way to SWA.
+        #
+        # URL list MUST stay in sync with the purge step above. Warming
+        # failures are non-fatal (the next real visitor warms it anyway)
+        # so we don't `set -e` on the loop and swallow curl errors with
+        # `|| true`.
+        run: |
+          set -uo pipefail
+          for url in \
+            https://www.yetanotherquiz.com/ \
+            https://www.yetanotherquiz.com/flagQuiz/ \
+            https://www.yetanotherquiz.com/flagQuiz/stats/ \
+            https://www.yetanotherquiz.com/findFlag/ \
+            https://www.yetanotherquiz.com/daily/ \
+            https://www.yetanotherquiz.com/daily/archive.html \
+            https://www.yetanotherquiz.com/flagsdata/ \
+            https://www.yetanotherquiz.com/profile/ \
+            https://www.yetanotherquiz.com/ticTacToe/ \
+            https://www.yetanotherquiz.com/ticTacToe/offline/ \
+            https://www.yetanotherquiz.com/ticTacToe/9x9/ \
+            https://www.yetanotherquiz.com/ticTacToe/9x9/offline/
+          do
+            curl -sS -o /dev/null -w "  ${url}: %{http_code} (%{time_total}s)\n" "${url}" || true
+          done

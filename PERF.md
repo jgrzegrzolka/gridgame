@@ -1,0 +1,73 @@
+# Performance journal
+
+A running log of performance problems observed on `yetanotherquiz.com` and what was done about each one. Read this before adding the next perf fix — many of these are interlinked, and several "obvious" fixes have already been tried, ruled out, or reversed.
+
+For the live topology see `infra/operations.md`. For the time-ordered story of architecture decisions across all features see `FEATURE.md`. This file is the narrower perf-only thread.
+
+## Background characteristics
+
+The constraints that shape every fix below:
+
+- **SWA Free SKU origin in West US 2.** Static-content fetches take ~150–200 ms TTFB from Europe even when fast. Cold-fetches against this origin have been observed as slow as **2 s for 3 KB HTML** and **21 s for individual flag SVGs**. No warm pool on Free SKU.
+- **Cosmos in West Europe + SWA in West US 2.** ~300 ms cross-region hop on every API call (Free Tier locked to a single region; see operations.md). Treat the API as inherently slow — pre-cache where it matters.
+- **Cloudflare in front of `www`.** HTML cached up to 2 h via Cache Rule, assets cached forever per-URL once seen. **CF caches per-POP**, so the first visitor in each region pays the cold-edge fetch independently.
+- **Static assets are URL-versioned** (`?v=<sha>` from `scripts/cache-bust.mjs`) and served `Cache-Control: public, max-age=31536000, immutable` via `staticwebapp.config.json`. Once a versioned URL is fetched, the browser never re-validates.
+
+## Journal (newest first)
+
+### 2026-06-12 — CF HTML cold on first post-deploy visit (~2 s)
+
+**Symptom.** After every deploy, the first visit to any of the 12 entry-point HTML pages took ~2 s TTFB to serve 3 KB of HTML; the same page on hard reload was instant. Pattern visible to Jan personally on every deploy. Real users would not hard-reload.
+
+**Diagnosis.** `deploy.yml` purges CF's HTML cache for the 12 URLs after each deploy (necessary so users don't see up to 2 h of stale HTML referencing old `?v=<sha>` assets). The next visitor cold-fetches from CF → SWA Free SKU origin (WUS2 → Europe is slow). Hard reload "fixes" it because CF's edge has been warmed by the slow first attempt. The existing smoke-check step does NOT double as warming because it deliberately uses `?_=<sha>` to bust the cache (it's verifying SWA serves *fresh*, not CF *warm*).
+
+**Fix.** Added a "Warm Cloudflare HTML cache" step in `deploy.yml` after the smoke check that curls each of the 12 entry-point URLs *without* a query string. Populates CF's edge cache at the keys real visitors hit.
+
+**Open caveat.** CF caches per-POP — warming from GitHub's runner POP only primes that one POP. Users in other regions still cold-fetch on first visit. If the symptom persists for Jan in Poland after this lands, the next step is enabling **CF Tiered Cache** (free feature) so lower-tier POPs pull from the warmed upper-tier POP instead of going all the way back to SWA.
+
+### 2026-06-12 — Parallel SVG fetch storm exposed by `purge_everything` (a6884da)
+
+**Symptom.** Post-deploy, quizzes loaded with only some flag tiles rendered. Network panel showed many SVG requests stuck pending; CF returned 524s on individual flag SVGs; one flag SVG observed at 21 s.
+
+**Diagnosis.** Deploy was calling Cloudflare `purge_everything`, wiping the edge cache for every flag SVG along with the HTML. The next visitor fired off ~200 parallel SVG fetches against a fully-cold CF edge → all hit SWA origin simultaneously, hitting Free SKU's per-file latency spikes and CF's 524 gateway-timeout threshold.
+
+**Fix.** Now only the 12 HTML URLs are purged. SVG/JS/CSS asset caches survive deploys because: JS/CSS/JSON references are URL-versioned (new HTML points at URLs CF has never seen → old entries orphan and evict naturally); SVG filenames are stable, and on the rare occasion one changes a targeted manual purge is acceptable.
+
+### 2026-06-12 — Versioned assets weren't actually being long-cached (438c834)
+
+**Symptom.** Returning visitors revalidated every JS/CSS/JSON file every 4 h despite all URLs being versioned. Network showed `CF-Cache-Status: MISS` on assets that should have been hot.
+
+**Diagnosis.** SWA's default for these files was `max-age=14400, must-revalidate`. CF respects origin Cache-Control, so it wasn't holding them longer either. Effectively no edge cache benefit even though every URL was versioned.
+
+**Fix.** Added `staticwebapp.config.json` route applying `Cache-Control: public, max-age=31536000, immutable` to `*.{js,css,json,svg}`. URLs are versioned by `scripts/cache-bust.mjs` so they're inherently immutable; SVG filenames are stable.
+
+**Side fix in the same commit.** Removed the home-page block (`8d72fb0`, *Home page: preload all flag SVGs while the user reads the menu*) that fetched `countries.json` and fired `new Image()` for every flag in the pool — ~2.2 MB of speculative SVG fetches on landing for zero first-paint benefit. The home page shows zero flags; the four game tiles are CSS icons. This was a previously-shipped "perf win" that turned out to be cost without benefit once each game preloaded its own pool on entry.
+
+### 2026-06-12 — Quiz: dropped preload-everything for just-in-time prefetch (583a6e8)
+
+**Trajectory.** `f69491c` (*Flag Quiz: preload SVGs on start so questions render instantly*) shipped a "preload the whole pool up front" approach. Reversed here: prefetch only the *next* round's flags as the current round resolves, so bandwidth tracks engagement instead of being paid up front.
+
+### 2026-06-12 — TTT: half-grid render gap on room entry (7e4c431, 00bf422)
+
+**Symptom.** Entering a TTT room (online or offline) flashed a half-built grid for a frame before fully rendering.
+
+**Fix.** Build the empty grid skeleton immediately on `enterRoom`, populate cells as data arrives. Done for both online and offline modes.
+
+### Earlier (history, terse)
+
+Pull commit messages for full context with `git show <sha>`.
+
+- `6b16914` — *ops: purge Cloudflare cache after each deploy*. Initial purge step. Refined later to HTML-only (a6884da, above) once parallel-fetch storm was understood.
+- `13b550e` — *fix: B4 — bypass server cache on the post-finish GET (`?fresh=1`)*. Daily-stats GET needs fresh data immediately after submit; default cache hides the user's own submission from themselves.
+- `8bf2fd1` — *feat: B3 — GET /api/v1/daily/stats/{puzzleId} with 60s cache*. 60 s server-side cache on the stats endpoint to keep RU/s low on hot puzzles.
+- `8cf6bb5` — *feat: daily stats — loading indicator + Turnstile preload*. Visual loader for the inherently-slow cross-region API hop; preloading Turnstile so the widget isn't a finish-time bottleneck.
+- `494fb48` — *deploy: cache-bust shared JS modules and JSON fetches too*. Extended `__BUILD__` HTML rewrite with a JS-walk pass to version sub-imports and runtime `fetch()` paths — without this, a fresh `page.js?v=<sha>` would static-import the OLD cached `quiz.js`.
+- `db3eaca` — *Cache-bust HTML imports with `__BUILD__` → commit SHA at deploy time*. The original cache-bust mechanism.
+- `19b8b97` — *Perf quick wins: drop no-cache, preload countries, dns-prefetch, deploy-minify*. Foundational batch.
+
+## Open / next-likely fixes
+
+- **CF Tiered Cache** (free feature). Would let the post-deploy warming step prime an upper-tier POP that other POPs pull from on miss, instead of every cold POP going all the way to SWA. Try this if "~2 s on first visit from my region" persists for Jan after the 2026-06-12 warming step lands.
+- **Short HTML TTL + no purge** as an alternative shape. Set HTML to `Cache-Control: s-maxage=300, max-age=0` and stop purging CF on deploy. Trades ~5 min of post-deploy staleness for never paying the cold-fetch penalty on entry-point HTML. Daily puzzle release runs on a Logic App at 00:05 Warsaw, not on demand, so a 5-minute staleness window is acceptable.
+- **SWA Standard SKU** ($9/mo). Last resort. The Free SKU's lack of warm instances is the origin floor; a paid tier would remove the 2-s cold-fetch penalty at the source. Not justified until traffic does.
+- **`findFlag` fetch storm at game start.** Even with `loading="lazy"` on `<img>` tiles, once the user scrolls (or many tiles are in the initial viewport on desktop) the page fires off hundreds of SVG fetches in parallel. Not currently broken given the warm CF asset cache, but architecturally fragile — if CF cold for any reason, this is the failure mode that bites first. Possible mitigations if it ever resurfaces: sprite-sheet the flags, batch the preloads, or render placeholder shapes until the user actually focuses a tile.
