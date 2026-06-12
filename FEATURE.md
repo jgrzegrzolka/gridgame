@@ -29,6 +29,51 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 Items here are not blocking current work but deserve durable memory — the next-time-this-comes-up question, the deferred fix that would otherwise vanish into PR archeology. Agents reading FEATURE.md to find their next task should **not** pick from this section; Jan promotes a backlog item to `## Now` when he decides to actually ship it.
 
+### Feature L: Delete-my-data endpoint + button on /profile/
+
+**Status:** parked after the privacy page (Feature K-adjacent housekeeping) shipped via PR #390. The privacy page promises a Delete button on `/profile/` "coming soon" — Feature L is the work that retires that "(coming soon)" parenthetical and gives users the right-to-erasure path GDPR Article 17 expects.
+
+**Goal:** a user on `/profile/` can click a button, confirm, and have every server-side trace of their deviceId purged. Their browser localStorage is wiped at the same time so the next visit starts fresh with no leftover ID. The page returns to its "anonymous device" state. No email, no support ticket, no waiting.
+
+**Why this is a separate feature, not part of the privacy-page PR:** PR #390 was a content + chrome change (one new page, one menu link, ~20 small wires). Feature L is a real backend change with cross-partition cosmos queries and a destructive-write path that deserves its own scoped audit. They were intentionally split so the privacy page could ship without holding it back; the page's `(coming soon)` text is the bridge.
+
+**Likely shape when this comes off the parking brake:**
+
+- **New endpoint `DELETE /api/v1/profile?id=<deviceId>`** (or `POST /api/v1/profile/delete` if DELETE-with-query feels weird). Auth = the client knowing its own deviceId (a 122-bit UUID — not guessable). Rate limit 5/min/IP, mirroring the existing profile PUT.
+- **Pure orchestrator lib** `api/src/lib/deleteProfileFanout.js` — takes a `deviceId` and the four container-specific delete callbacks, returns a per-container `{ deleted: N, error?: string }` shape. Pure so the fan-out semantics (continue on partial failure? abort on first error? report partial success?) is unit-tested without touching Cosmos.
+- **Container coverage:**
+  - `profiles` — single point delete by `id = deviceId, pk = deviceId`. Cheap.
+  - `quizRecords` — same shape. Cheap.
+  - `tttPairs` — partition `/deviceId`, multiple rows (one per opponent). Single-partition query `WHERE c.deviceId = @id` → delete each. Bounded by distinct opponents.
+  - `dailyLeaderboards` — partition `/pk = configKey|date`, multiple rows possible (one per configKey per day this device played, max 2 days due to TTL). Cross-partition query `WHERE c.deviceId = @id` → delete each. Cheap because TTL keeps it small.
+  - `dailyResults` — partition `/puzzleId`, one row per (puzzle, deviceId). Cross-partition query `WHERE c.deviceId = @id` → delete each. Cost scales with puzzles played.
+- **Client wiring** in `profile/page.js`: a "Delete my data" button below the Save row. Click → inline confirm step (`Are you sure? This cannot be undone.` with `Delete · Cancel`). On confirm, fire the DELETE, then on success wipe localStorage keys (`gridgame.deviceId`, `gridgame.nickname`, `daily.scores`, `gridgame.submittedPuzzles`, etc.) and redirect to `/` so a fresh deviceId is generated on the next visit if the user comes back. On failure, show inline error like the existing nickname save flow.
+- **i18n** under `nickname.delete*` or a new `delete.*` namespace in `en` + `pl`. Strings: button label, confirm prompt, working state, success, error.
+
+**Update the privacy page copy when this ships:**
+
+- `quiz.leaderboard` — none of these
+- `privacy.rights.delete` currently reads "Delete everything: visit the profile page and use the Delete button (coming soon)." → drop the `(coming soon)` parenthetical in both `en.json` and `pl.json`.
+
+**Open design calls to settle when work starts:**
+
+- **Fan-out failure mode.** If 4/5 containers delete cleanly but `dailyResults` fails halfway through, do we report partial success or roll back? Realistically: report partial success with a remediation hint, because rollback across containers without transactions is its own problem.
+- **Confirmation pattern.** Inline confirm vs `window.confirm()` modal vs a typed-out-deviceId stop word. Inline is the lightest and matches the rest of the site's no-dialog style. Real risk of accidental clicks is small (deviceId is anonymous, regenerable, and the deletion is the user's stated intent).
+- **Idempotency.** A user who clicks Delete twice while the first request is in flight shouldn't get a 500 on the second. Either disable the button while in-flight (matches the existing nickname save inFlight pattern) or make the server-side fan-out tolerant of "row already gone" responses. Both. The client-side disable is enough in practice.
+
+**Free-tier envelope:**
+
+- Per delete request: ~5 single-row deletes (profiles + quizRecords + a few tttPairs) + 2 cross-partition queries + their per-row deletes ≈ 20–50 RU total, very occasional. Negligible.
+
+**Out of scope (so it doesn't drift back in):**
+
+- An audit log of deletions ("user with deviceId X requested deletion at time T"). Defeats the point of the deletion. If we ever need analytics on "deletion rate", aggregate it without keeping the IDs.
+- A "soft delete" / 30-day grace period. Just delete. The user can email if they regret it; we don't owe them a recovery path.
+- A confirmation email. We don't have email.
+- Cross-device deletion (delete every device this person ever used). That's Feature C territory; without a passkey-linked identity, "every device" is undefined.
+
+---
+
 ### Feature I: Per-puzzle stats snapshots for long-term retention
 
 **Status:** parked until ~2027-05. **Hard deadline: must ship before 2027-06-09** — that's when the oldest `dailyResults` row (a puzzleId=1 submission from 2026-06-09 20:33 UTC) reaches its 1-year TTL set in Feature F phase 2. After that date, the row auto-purges from Cosmos, and from then on every puzzle's data ages off one day at a time. Missing the deadline means losing per-flag find-rate aggregates for those puzzles forever, with no way to reconstruct them.
