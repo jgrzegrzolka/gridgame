@@ -274,4 +274,52 @@ function validateTttResultBody(body) {
   };
 }
 
-module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, validateTttResultBody, validateDeviceIdParam, LIMITS };
+/**
+ * Validate the `{configKey}` URL path param for the leaderboard GET. Uses
+ * the same shape gate as the quizRecord writer (CONFIG_KEY_RE) so a
+ * malicious caller can't ask for "../../" or a 10KB key. Returns
+ * `{ ok: true, value: <string> }` or `{ ok: false, error: <code> }`.
+ *
+ * @param {unknown} raw
+ */
+function validateConfigKeyParam(raw) {
+  if (
+    typeof raw !== 'string' ||
+    raw.length === 0 ||
+    raw.length > CONFIG_KEY_MAX ||
+    !CONFIG_KEY_RE.test(raw)
+  ) {
+    return { ok: false, error: 'invalid_configKey' };
+  }
+  return { ok: true, value: raw };
+}
+
+/**
+ * Validate a `?date=YYYY-MM-DD` query param. Optional on the leaderboard
+ * GET — when omitted, the handler defaults to today UTC. Tightly bounded
+ * to "looks like a real ISO date" so a caller can't probe arbitrary
+ * partition strings via the date suffix.
+ *
+ * Returns `{ ok: true, value: <string> }` or `{ ok: false, error: <code> }`.
+ *
+ * @param {unknown} raw
+ */
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+function validateDateKeyParam(raw) {
+  if (typeof raw !== 'string' || !DATE_KEY_RE.test(raw)) {
+    return { ok: false, error: 'invalid_date' };
+  }
+  // Reject calendar nonsense like 2026-13-40 by round-tripping through Date.
+  const [y, m, d] = raw.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (
+    dt.getUTCFullYear() !== y ||
+    dt.getUTCMonth() !== m - 1 ||
+    dt.getUTCDate() !== d
+  ) {
+    return { ok: false, error: 'invalid_date' };
+  }
+  return { ok: true, value: raw };
+}
+
+module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, validateTttResultBody, validateDeviceIdParam, validateConfigKeyParam, validateDateKeyParam, LIMITS };

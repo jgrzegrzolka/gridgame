@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { CONFIG_KEY_RE, CONFIG_KEY_MAX } = require('./quizRecordKey');
+const { CONFIG_KEY_RE, CONFIG_KEY_MAX, lowerWinsFromConfigKey } = require('./quizRecordKey');
 
 test('accepts every real (variant, mode, includeAll) combo the client produces', () => {
   const variants = ['countries', 'europe', 'asia', 'africa', 'north-america', 'south-america', 'oceania'];
@@ -41,4 +41,24 @@ test('rejects oversized variant segment', () => {
 
 test('CONFIG_KEY_MAX leaves headroom past current keys', () => {
   assert.ok(CONFIG_KEY_MAX >= 'south-america:60s:sov'.length);
+});
+
+test('lowerWinsFromConfigKey: 60s mode → false (higher score wins)', () => {
+  assert.equal(lowerWinsFromConfigKey('countries:60s:sov'), false);
+  assert.equal(lowerWinsFromConfigKey('europe:60s:all'), false);
+});
+
+test('lowerWinsFromConfigKey: all mode → true (fewer mistakes wins)', () => {
+  assert.equal(lowerWinsFromConfigKey('countries:all:sov'), true);
+  assert.equal(lowerWinsFromConfigKey('africa:all:all'), true);
+});
+
+test('lowerWinsFromConfigKey: unknown mode → null', () => {
+  assert.equal(lowerWinsFromConfigKey('countries:newmode:sov'), null);
+});
+
+test('lowerWinsFromConfigKey: malformed key → null', () => {
+  assert.equal(lowerWinsFromConfigKey(''), null);
+  assert.equal(lowerWinsFromConfigKey('countries:60s'), null);
+  assert.equal(lowerWinsFromConfigKey('countries::sov'), null);
 });

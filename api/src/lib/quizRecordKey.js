@@ -18,4 +18,31 @@
 const CONFIG_KEY_RE = /^[a-z0-9-]{1,20}:[a-z0-9-]{1,10}:(sov|all)$/;
 const CONFIG_KEY_MAX = 40;
 
-module.exports = { CONFIG_KEY_RE, CONFIG_KEY_MAX };
+/**
+ * Derive `lowerWins` (the comparator direction) from a configKey's mode
+ * segment. This is the server-trusted derivation: the leaderboard read
+ * endpoint can't accept `lowerWins` from a query param without letting a
+ * caller flip a competitor's ranking, so we re-derive from the configKey
+ * the client already used to write.
+ *
+ *   '60s' (timed)      → false  // more correct wins
+ *   'all' (endurance)  → true   // fewer mistakes wins
+ *
+ * Returns `null` for any other mode token — defensive against a new mode
+ * shipping client-side without this map being updated. The endpoint
+ * rejects null as `unknown_mode` so the missed wiring is caught loudly
+ * rather than silently ranking the wrong direction.
+ *
+ * @param {string} configKey
+ * @returns {boolean | null}
+ */
+function lowerWinsFromConfigKey(configKey) {
+  const parts = String(configKey).split(':');
+  if (parts.length !== 3) return null;
+  const mode = parts[1];
+  if (mode === '60s') return false;
+  if (mode === 'all') return true;
+  return null;
+}
+
+module.exports = { CONFIG_KEY_RE, CONFIG_KEY_MAX, lowerWinsFromConfigKey };
