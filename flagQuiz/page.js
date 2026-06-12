@@ -30,6 +30,9 @@ import { mountNicknameMenuItem } from '../common.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
 import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
+import { fetchLeaderboard } from '../flags/dailyLeaderboardFetch.js';
+import { renderLeaderboard } from '../flags/dailyLeaderboardRender.js';
+import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -43,6 +46,9 @@ export function bootFlagQuiz() {
   const finalScoreEl = document.getElementById('final-score');
   const timeEl = document.getElementById('time');
   const bestEl = document.getElementById('best');
+  const leaderboardEl = document.getElementById('daily-leaderboard');
+  const leaderboardTitleEl = document.getElementById('leaderboard-title');
+  const leaderboardBodyEl = document.getElementById('leaderboard-body');
   const playTimerEl = document.getElementById('play-time');
   const playModeEl = document.getElementById('play-mode');
   const playAgainEl = /** @type {HTMLAnchorElement} */ (document.getElementById('play-again'));
@@ -197,8 +203,30 @@ export function bootFlagQuiz() {
     // score, Your best score, Time, new record) without re-running
     // recordResult or re-firing the celebration. Null until the game
     // ends; refreshI18n's `paintResultLabels` no-ops until then.
-    /** @type {{ timed: boolean, isNew: boolean, best: { score: number, time: number }, elapsed: number, budgetUsed: number } | null} */
+    /** @type {{ timed: boolean, isNew: boolean, best: { score: number, time: number }, elapsed: number, budgetUsed: number, gaveUp: boolean } | null} */
     let resultLabelData = null;
+
+    // Captured by `runLeaderboardCycle`'s paint callback so a soft language
+    // switch can re-render translated labels without re-issuing the fetch.
+    /** @type {{ state: 'loading' | 'ready' | 'failed', data?: { top: any[], you: any } } | null} */
+    let leaderboardState = null;
+
+    function paintLeaderboard() {
+      if (!leaderboardState) return;
+      leaderboardEl.hidden = false;
+      // The "Today's leaderboard" header is for the populated panel —
+      // showing it above a "Loading…" spinner reads as a promise the
+      // page hasn't kept yet. Reveals on first non-loading paint.
+      leaderboardTitleEl.hidden = leaderboardState.state === 'loading';
+      const subtree = renderLeaderboard({
+        state: leaderboardState.state,
+        data: leaderboardState.data,
+        ownDeviceId: deviceId,
+        t,
+      });
+      leaderboardBodyEl.innerHTML = '';
+      leaderboardBodyEl.appendChild(subtree);
+    }
 
     // For timed mode the progress bar is the countdown — we widen it from
     // 0% to 100% as the budget burns down, so the visual matches the
@@ -339,21 +367,27 @@ export function bootFlagQuiz() {
      */
     function paintResultLabels() {
       if (!resultLabelData) return;
-      const { timed: t_, isNew, best, elapsed, budgetUsed } = resultLabelData;
+      const { timed: t_, isNew, best, elapsed, budgetUsed, gaveUp: rgaveUp } = resultLabelData;
       finalScoreLabelEl.textContent = t('quiz.finalScore', 'Final score:');
       if (t_) {
         // Show "Time" only when the pool exhausted under budget — for a
         // time-out the value is always the budget itself, which the mode
         // label already tells the player. shouldShowBestTime is the
-        // shared gate; flagQuiz/stats uses the same function.
-        timeEl.textContent = shouldShowBestTime(mode, { time: budgetUsed })
+        // shared gate; flagQuiz/stats uses the same function. Also
+        // suppressed on give-up: the elapsed time before quitting isn't
+        // a meaningful result.
+        timeEl.textContent = !rgaveUp && shouldShowBestTime(mode, { time: budgetUsed })
           ? `${t('game.time', 'Time')}: ${formatTime(budgetUsed)}`
           : '';
         bestEl.textContent = shouldShowBestTime(mode, best)
           ? `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`
           : `${t('quiz.yourBestScore', 'Your best score')}: ${best.score}`;
       } else {
-        timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
+        // Same give-up suppression in count mode — the elapsed time of a
+        // give-up round (often < 2s) is misleading next to the score.
+        timeEl.textContent = rgaveUp
+          ? ''
+          : `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
         const bestCorrect = Math.max(0, target - best.score);
         bestEl.textContent =
           `${t('quiz.yourBestScore', 'Your best score')}: ${bestCorrect}/${target} ${t('game.in', 'in')} ${formatTime(best.time)}`;
@@ -393,21 +427,20 @@ export function bootFlagQuiz() {
         const { best, isNew } = recordResult(
           localStorage, key, mode, { score: answeredCount, time: budgetUsed }, includeAll,
         );
-        resultLabelData = { timed: true, isNew, best, elapsed, budgetUsed };
+        resultLabelData = { timed: true, isNew, best, elapsed, budgetUsed, gaveUp };
         paintResultLabels();
-        // Cloud write: fire on every finish, PB or not. Pre-F5 we gated
-        // on isNew to save writes on replays, but Feature F phase 5 added
-        // server-side `attempts` + `lastPlayedAt` per configKey — both
-        // depend on the server seeing every finish, not just the ones
-        // that beat the local PB. The server's own merge still protects
-        // against fresh-localStorage devices clobbering a real cloud PB.
-        // Fire-and-forget; failures are silently swallowed.
-        void submitQuizRecord({
-          deviceId,
-          configKey: quizRecordConfigKey(key, mode, includeAll),
-          score: answeredCount,
-          durationMs: budgetUsed,
-          lowerWins: false,
+        // Cloud write on every finish (not just PBs): F5 added server-side
+        // attempts + lastPlayedAt counters that depend on it. The chained
+        // leaderboard fetch lands after the server's leaderboard write
+        // completes so the just-played row is visible on this paint.
+        const configKey = quizRecordConfigKey(key, mode, includeAll);
+        void runLeaderboardCycle({
+          submitImpl: () => submitQuizRecord({
+            deviceId, configKey,
+            score: answeredCount, durationMs: budgetUsed, lowerWins: false,
+          }),
+          fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
+          paint: (s) => { leaderboardState = s; paintLeaderboard(); },
         });
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
@@ -434,16 +467,16 @@ export function bootFlagQuiz() {
         const { best, isNew } = recordResult(
           localStorage, key, mode, { score: wrongCount, time: elapsed }, includeAll, lowerScoreWins,
         );
-        resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0 };
+        resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0, gaveUp };
         paintResultLabels();
-        // Cloud write: fire on every finish, PB or not (see F5 rationale
-        // in the timed-mode branch above).
-        void submitQuizRecord({
-          deviceId,
-          configKey: quizRecordConfigKey(key, mode, includeAll),
-          score: wrongCount,
-          durationMs: elapsed,
-          lowerWins: true,
+        const configKey = quizRecordConfigKey(key, mode, includeAll);
+        void runLeaderboardCycle({
+          submitImpl: () => submitQuizRecord({
+            deviceId, configKey,
+            score: wrongCount, durationMs: elapsed, lowerWins: true,
+          }),
+          fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
+          paint: (s) => { leaderboardState = s; paintLeaderboard(); },
         });
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
@@ -494,6 +527,11 @@ export function bootFlagQuiz() {
         renderModeToggle(key, mode, modes);
         if (currentAnswer) countryNameEl.textContent = countryName(currentAnswer);
         paintResultLabels();
+        // Re-paint the leaderboard panel so its labels ("Loading…",
+        // empty-state copy, "You" suffix) come back in the new language.
+        // Bails out if no leaderboard render has happened yet (refreshI18n
+        // can fire mid-game before showResult sets leaderboardState).
+        paintLeaderboard();
       },
     };
   }

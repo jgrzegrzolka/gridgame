@@ -113,6 +113,18 @@ test('mergeDailyLeaderboard: count mode (lowerWins) — fewer mistakes replaces 
   assert.equal(out.doc.score, 4);
 });
 
+test('mergeDailyLeaderboard: endurance mode tiebreak — equal mistakes, faster duration wins', () => {
+  const out = mergeDailyLeaderboard({
+    existing: { score: 4, durationMs: 100_000 },
+    deviceId: DEVICE, configKey: 'europe:all:sov',
+    dateKey: '2026-06-12', nickname: 'Bob',
+    entry: { score: 4, durationMs: 90_000 },
+    lowerWins: true, now: NOW,
+  });
+  assert.equal(out.changed, true);
+  assert.equal(out.doc.durationMs, 90_000);
+});
+
 test('mergeDailyLeaderboard: tiebreak — equal score, faster duration wins', () => {
   const out = mergeDailyLeaderboard({
     existing: { score: 10, durationMs: 60_000 },

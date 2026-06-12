@@ -261,3 +261,95 @@ body {
 .feedback.shake-wrong {
   animation: cell-shake 0.5s ease-in-out;
 }
+
+/* Today's leaderboard panel — shown inside #result, below the existing
+ * "Final score / Your best" lines. Tabular-nums on the score and time
+ * columns so rows align. The is-self row gets a subtle accent so the
+ * player spots themselves without hunting; the trailing "…You" row
+ * shares the same accent because it's the same player. */
+.leaderboard {
+  /* Larger top margin + a hairline divider make the visual break between
+   * "your result" (final score / best score) and "today's community"
+   * unmistakable. Without it the two blocks blur into one column of
+   * numbers and the leaderboard reads like a continuation of the
+   * player's own stats. */
+  margin: 56px auto 16px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+  width: min(90vw, 480px);
+  text-align: left;
+}
+.leaderboard-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+  text-align: center;
+}
+.leaderboard-status {
+  color: #666;
+  font-size: 14px;
+  text-align: center;
+  margin: 0;
+  padding: 8px 0;
+}
+.leaderboard-status-failed {
+  color: #c5302d;
+}
+.leaderboard-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.leaderboard-row {
+  display: grid;
+  /* Rank | name (shrinks to content, ellipsises long ones) | score.
+   * minmax(0, max-content) lets the name take its content width but
+   * shrink for very long nicknames so score never falls off the row. */
+  grid-template-columns: 28px minmax(0, max-content) auto;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+  font-variant-numeric: tabular-nums;
+}
+.leaderboard-row:last-child {
+  border-bottom: none;
+}
+.leaderboard-rank {
+  color: #999;
+  font-size: 13px;
+  text-align: right;
+}
+.leaderboard-name {
+  color: #1c1c1c;
+  font-size: 15px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.leaderboard-score {
+  color: #1c1c1c;
+  font-size: 15px;
+  font-weight: 600;
+}
+.leaderboard-row.is-self {
+  background: #fff8e1;
+  border-radius: 4px;
+}
+.leaderboard-row.is-self .leaderboard-name {
+  font-weight: 600;
+}
+.leaderboard-sep {
+  color: #999;
+  text-align: center;
+  margin: 4px 0 0;
+  letter-spacing: 2px;
+}
+.leaderboard-list-you {
+  margin: 0;
+  padding: 0;
+}
