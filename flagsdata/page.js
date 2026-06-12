@@ -44,14 +44,20 @@ export function bootFlagsData() {
   const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
   const zoomImg = zoom.querySelector('img');
   const zoomName = zoom.querySelector('p');
-  const zoomData = zoom.querySelector('.country-data');
+  const zoomData = /** @type {HTMLElement} */ (zoom.querySelector('.country-data'));
+  // The full JSON dump under the zoomed flag is a data-audit tool for
+  // local dev (checking colour/motif/status fields against the SVG) —
+  // not something a regular visitor needs. Gate on the same localhost
+  // set the rest of the client uses (devReset toolbar, Turnstile bypass).
+  const IS_LOCAL = new Set(['localhost', '127.0.0.1', '::1']).has(window.location.hostname);
+  if (!IS_LOCAL) zoomData.hidden = true;
   /** @param {Country} c */
   function openZoom(c) {
     const displayName = countryName(c);
     zoomImg.src = `../flags/svg/${c.code}.svg`;
     zoomImg.alt = displayName;
     zoomName.textContent = displayName;
-    zoomData.textContent = JSON.stringify(c, null, 2);
+    if (IS_LOCAL) zoomData.textContent = JSON.stringify(c, null, 2);
     zoom.showModal();
   }
   zoom.addEventListener('click', (e) => {
