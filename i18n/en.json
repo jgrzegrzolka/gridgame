@@ -45,6 +45,13 @@
     "mode": {
       "60s": "60s",
       "all": "all"
+    },
+    "leaderboard": {
+      "title": "Today's leaderboard",
+      "loading": "Loading leaderboard…",
+      "failed": "Couldn't load today's leaderboard.",
+      "empty": "Be the first today!",
+      "you": "You"
     }
   },
   "findFlag": {

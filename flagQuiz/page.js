@@ -30,6 +30,8 @@ import { mountNicknameMenuItem } from '../common.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
 import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
+import { fetchLeaderboard } from '../flags/dailyLeaderboardFetch.js';
+import { renderLeaderboard } from '../flags/dailyLeaderboardRender.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -43,6 +45,8 @@ export function bootFlagQuiz() {
   const finalScoreEl = document.getElementById('final-score');
   const timeEl = document.getElementById('time');
   const bestEl = document.getElementById('best');
+  const leaderboardEl = document.getElementById('daily-leaderboard');
+  const leaderboardBodyEl = document.getElementById('leaderboard-body');
   const playTimerEl = document.getElementById('play-time');
   const playModeEl = document.getElementById('play-mode');
   const playAgainEl = /** @type {HTMLAnchorElement} */ (document.getElementById('play-again'));
@@ -199,6 +203,52 @@ export function bootFlagQuiz() {
     // ends; refreshI18n's `paintResultLabels` no-ops until then.
     /** @type {{ timed: boolean, isNew: boolean, best: { score: number, time: number }, elapsed: number, budgetUsed: number } | null} */
     let resultLabelData = null;
+
+    // Leaderboard state — captured when showResult fires so a soft language
+    // switch can re-render the panel with translated labels without re-
+    // issuing the fetch. Sits at three states matching the renderer's
+    // contract: 'loading' (fetch in flight), 'ready' (data present),
+    // 'failed' (fetch error / shape rejection). The configKey is held too
+    // so the renderer can stay pure.
+    /** @type {{ state: 'loading' | 'ready' | 'failed', data?: { top: any[], you: any } } | null} */
+    let leaderboardState = null;
+
+    function paintLeaderboard() {
+      if (!leaderboardState || !leaderboardEl || !leaderboardBodyEl) return;
+      leaderboardEl.hidden = false;
+      const subtree = renderLeaderboard({
+        state: leaderboardState.state,
+        data: leaderboardState.data,
+        ownDeviceId: deviceId,
+        t,
+      });
+      leaderboardBodyEl.innerHTML = '';
+      leaderboardBodyEl.appendChild(subtree);
+    }
+
+    // Two-phase leaderboard lifecycle so the panel isn't blank while the
+    // submit round-trip is in flight:
+    //   1. showLeaderboardLoading() runs at the top of showResult — panel
+    //      reveals with a "Loading…" state immediately.
+    //   2. fetchAndPaintLeaderboard() runs after submitQuizRecord resolves
+    //      — the server's leaderboard write is part of the same handler,
+    //      so by then today's just-submitted row is durable and the fetch
+    //      sees it. ?fresh=1 bypasses the 60s server-side cache for this
+    //      one render so we don't read a stale snapshot.
+    function showLeaderboardLoading() {
+      leaderboardState = { state: 'loading' };
+      paintLeaderboard();
+    }
+    function fetchAndPaintLeaderboard() {
+      const configKey = quizRecordConfigKey(key, mode, includeAll);
+      return fetchLeaderboard({ configKey, deviceId, fresh: true })
+        .then((res) => {
+          leaderboardState = res.ok
+            ? { state: 'ready', data: { top: res.top, you: res.you } }
+            : { state: 'failed' };
+          paintLeaderboard();
+        });
+    }
 
     // For timed mode the progress bar is the countdown — we widen it from
     // 0% to 100% as the budget burns down, so the visual matches the
@@ -370,6 +420,10 @@ export function bootFlagQuiz() {
     function showResult() {
       cancelAnimationFrame(timerRaf);
       const elapsed = Date.now() - startTime;
+      // Reveal the leaderboard panel in a loading state right away — the
+      // submit + fetch round-trip below takes a beat and a blank panel
+      // would look broken.
+      showLeaderboardLoading();
 
       if (timed) {
         // Score = flags answered correctly. There's no "out of target"
@@ -408,7 +462,7 @@ export function bootFlagQuiz() {
           score: answeredCount,
           durationMs: budgetUsed,
           lowerWins: false,
-        });
+        }).then(fetchAndPaintLeaderboard);
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           // total isn't meaningful for 60s mode (the round ends when the
@@ -444,7 +498,7 @@ export function bootFlagQuiz() {
           score: wrongCount,
           durationMs: elapsed,
           lowerWins: true,
-        });
+        }).then(fetchAndPaintLeaderboard);
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           total: target,
@@ -494,6 +548,11 @@ export function bootFlagQuiz() {
         renderModeToggle(key, mode, modes);
         if (currentAnswer) countryNameEl.textContent = countryName(currentAnswer);
         paintResultLabels();
+        // Re-paint the leaderboard panel so its labels ("Loading…",
+        // empty-state copy, "You" suffix) come back in the new language.
+        // Bails out if no leaderboard render has happened yet (refreshI18n
+        // can fire mid-game before showResult sets leaderboardState).
+        paintLeaderboard();
       },
     };
   }

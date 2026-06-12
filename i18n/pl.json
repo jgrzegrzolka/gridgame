@@ -45,6 +45,13 @@
     "mode": {
       "60s": "60s",
       "all": "wszystkie"
+    },
+    "leaderboard": {
+      "title": "Dzisiejszy ranking",
+      "loading": "Ładowanie rankingu…",
+      "failed": "Nie udało się załadować dzisiejszego rankingu.",
+      "empty": "Bądź dziś pierwszy!",
+      "you": "Ty"
     }
   },
   "findFlag": {
