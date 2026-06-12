@@ -1,10 +1,10 @@
 body {
-  /* True 4×4: 3 game cells + 1 header cell across, all the same width. The
-   * 9×9 page overrides this further down. Cap at 140px so cells stay
-   * tappable but never huge on tablets. The subtracted value matches
-   * 2 × body horizontal padding so the grid + side gutters fit the
-   * viewport exactly. */
-  --grid-cell: min(140px, calc((100vw - 24px) / 4));
+  /* True 4×4: 3 game cells + 1 header cell across, all the same width.
+   * 189px cap = 756px / 4 — keeps the grid's max width at 756 so it
+   * lines up with the fixed chrome cluster's `--chrome-x-offset` (which
+   * is calibrated for a 756-wide right edge). The 9×9 page overrides
+   * the cap with 63px (756 / 12) for the same alignment reason. */
+  --grid-cell: min(189px, calc((100vw - 24px) / 4));
   padding: var(--page-top) 12px 24px;
   display: flex;
   flex-direction: column;
@@ -79,10 +79,12 @@ body {
 .grid td {
   border: 1px solid #ddd;
 }
-/* Every cell — corner, column headers, row headers, game cells — gets
- * the same outline so the grid reads as one consistent structure
- * (3×3 as a true 4×4, 9×9 as a 10×10 with bigblock separators on top). */
-.grid th {
+/* Column headers, row headers, and game cells get a 1px outline so the
+ * grid reads as one consistent structure. The top-left corner stays
+ * borderless — it's not a content cell, just an empty spacer where the
+ * column-header row meets the row-header column, and a border there
+ * would visually claim "this is a cell" when it isn't. */
+.grid th:not(.corner) {
   border: 1px solid #ddd;
 }
 .grid th {
@@ -208,16 +210,13 @@ body.game-over .actions-row {
  *
  * Cell-size constraints (now all in "12 game cells per side" units —
  * 3 outer cells × 3 game cells + 3 game cells for the actual game area):
- *   - 80px cap (anything larger looks silly on huge monitors — and
- *     keeps the grid from going over ~960px wide)
+ *   - 63px cap (= 756 / 12) — keeps the grid's max width at 756 so it
+ *     lines up with the fixed chrome cluster's `--chrome-x-offset`
  *   - viewport-width fit: 12 game cells across, minus body 24px padding
  *   - viewport-height fit: 12 game cells tall, minus 200px reserved for
- *     chrome / actions-row / page padding
- * Phones land on the width constraint (~25–30px cells); desktops land
- * on the height constraint (~60–75px cells); the 80px cap only bites
- * on giant monitors. */
+ *     chrome / actions-row / page padding */
 .grid.is-9x9 {
-  --grid-cell: min(80px, calc((100vw - 24px) / 12), calc((100vh - 200px) / 12));
+  --grid-cell: min(63px, calc((100vw - 24px) / 12), calc((100vh - 200px) / 12));
 }
 /* Row headers: horizontal text in a 3-game-cell-wide column (matching
  * the bigblock width). Drops the rotated-narrow-column treatment used
