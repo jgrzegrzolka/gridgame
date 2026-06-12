@@ -8,6 +8,8 @@
  */
 
 const { CONFIG_KEY_RE, CONFIG_KEY_MAX } = require('./quizRecordKey');
+const { sanitizeNickname } = require('./sanitizeNickname');
+const { isOffensiveNickname } = require('./blockedNicknames');
 
 const CODE_RE = /^[a-z]{2}$/;
 
@@ -33,10 +35,13 @@ const LIMITS = {
   QUIZ_DURATION_MS_MAX: 6 * 60 * 60 * 1000,
   // Nickname display bounds (Feature H2). 1 chars after trim because empty
   // strings should be sent as `null` (the "clear my nickname" signal).
-  // 24 chars upper because that's enough for a real name + a short tag
-  // and still fits the burger panel layout without wrapping.
+  // 32 chars upper: a wink at the programmer crowd (matches the Discord cap
+  // and lots of common SQL VARCHAR conventions). Roomy enough for a name +
+  // a tag. The leaderboard row ellipsises long names via `text-overflow:
+  // ellipsis; white-space: nowrap` so even a max-length name renders
+  // without busting the layout.
   NICKNAME_MIN: 1,
-  NICKNAME_MAX: 24,
+  NICKNAME_MAX: 32,
 };
 
 function isInt(x, min, max) {
@@ -222,11 +227,31 @@ function validateProfileBody(body) {
   if (typeof body.nickname !== 'string') {
     return { ok: false, error: 'invalid_nickname' };
   }
-  const trimmed = body.nickname.trim();
-  if (trimmed.length < LIMITS.NICKNAME_MIN || trimmed.length > LIMITS.NICKNAME_MAX) {
+
+  // Step 1: strip / reject characters that have no display-name use.
+  // Bidi overrides, zero-width chars, and control characters get
+  // rejected outright; internal whitespace collapses to single spaces.
+  const sanitised = sanitizeNickname(body.nickname);
+  if (!sanitised.ok) {
+    return { ok: false, error: sanitised.error };
+  }
+  const cleaned = sanitised.value;
+
+  // Step 2: length on the cleaned string (collapsing might have shrunk
+  // it; rejecting now means the client sees the same length the server
+  // would have stored).
+  if (cleaned.length < LIMITS.NICKNAME_MIN || cleaned.length > LIMITS.NICKNAME_MAX) {
     return { ok: false, error: 'invalid_nickname' };
   }
-  return { ok: true, value: { deviceId: body.deviceId, nickname: trimmed } };
+
+  // Step 3: soft moderation. Substring match against a curated EN + PL
+  // blocklist; catches the common casual asshat, not a real anti-abuse
+  // system. See blockedNicknames.js for documented limits.
+  if (isOffensiveNickname(cleaned)) {
+    return { ok: false, error: 'offensive_nickname' };
+  }
+
+  return { ok: true, value: { deviceId: body.deviceId, nickname: cleaned } };
 }
 
 /**

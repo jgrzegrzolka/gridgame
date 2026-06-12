@@ -13,7 +13,9 @@
     "label": "Nickname",
     "editTitle": "Set your nickname",
     "save": "Save",
-    "error": "Could not save"
+    "error": "Could not save",
+    "errorOffensive": "That’s an offensive word — please choose another",
+    "errorInvalid": "That nickname contains characters that aren’t allowed"
   },
   "domain": {
     "flags": "Flags"
