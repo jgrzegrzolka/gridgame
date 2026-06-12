@@ -77,8 +77,15 @@
 
 .profile-status {
   font-size: 13px;
-  min-height: 1.2em;
   margin: 0;
+}
+/* Collapse the slot when there's no message so the empty state doesn't
+ * leave ~20px of dead space between input and the Save · Home row. The
+ * trade-off is a small downward shift of the actions row when an error
+ * pops in — acceptable because the input also shakes, drawing the eye
+ * to the change. */
+.profile-status:empty {
+  display: none;
 }
 .profile-status.is-error {
   color: #c44;
