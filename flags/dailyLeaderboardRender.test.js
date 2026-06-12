@@ -47,7 +47,6 @@ function findAllByClass(/** @type {any} */ el, /** @type {string} */ cls) {
 test('renderLeaderboard: loading state shows status text only', () => {
   const doc = makeDoc();
   const root = renderLeaderboard({ state: 'loading', t, doc });
-  assert.equal(root.className, 'leaderboard-body');
   const statuses = findAllByClass(root, 'leaderboard-status');
   assert.equal(statuses.length, 1);
   assert.match(statuses[0].textContent, /Loading/);
@@ -164,6 +163,42 @@ test('renderLeaderboard: when ownDeviceId not supplied — never highlight, neve
   const rows = findAllByClass(root, 'leaderboard-row');
   assert.equal(rows[0].className.includes('is-self'), false);
   assert.equal(findAllByClass(root, 'leaderboard-list-you').length, 0);
+});
+
+test('renderLeaderboard: caller-in-top + you=null still highlights the self row', () => {
+  // Caller's row is in top; the `you` block returning null is allowed
+  // (e.g. the rank query failed silently). Highlight must still happen
+  // off the top match alone — `you` shouldn't be load-bearing for that.
+  const doc = makeDoc();
+  const top = [
+    { deviceId: 'd1', nickname: 'Alice', score: 20, durationMs: 30_000 },
+    { deviceId: ME,   nickname: 'Me',    score: 18, durationMs: 41_000 },
+  ];
+  const root = renderLeaderboard({
+    state: 'ready', data: { top, you: null }, ownDeviceId: ME, t, doc,
+  });
+  const rows = findAllByClass(root, 'leaderboard-row');
+  assert.equal(rows[1].className.includes('is-self'), true);
+});
+
+test('renderLeaderboard: you.rank ≤ TOP_N but caller NOT in top (cache/server mismatch) — render top, no you-row appended', () => {
+  // Documents the chosen behaviour for a data-inconsistency edge case so
+  // anyone touching the renderer notices it. We don't fake a you-row when
+  // we can't anchor it to a real top entry; better to show top only than
+  // to invent a position.
+  const doc = makeDoc();
+  const top = [
+    { deviceId: 'd1', nickname: 'Alice', score: 20, durationMs: 30_000 },
+    { deviceId: 'd2', nickname: 'Bob',   score: 18, durationMs: 41_000 },
+  ];
+  const root = renderLeaderboard({
+    state: 'ready',
+    data: { top, you: { rank: 5, score: 14, durationMs: 60_000 } },
+    ownDeviceId: ME, t, doc,
+  });
+  assert.equal(findAllByClass(root, 'leaderboard-row').length, 2);
+  assert.equal(findAllByClass(root, 'leaderboard-list-you').length, 0);
+  assert.equal(findAllByClass(root, 'leaderboard-sep').length, 0);
 });
 
 test('renderLeaderboard: malicious nickname is set via textContent, not innerHTML', () => {

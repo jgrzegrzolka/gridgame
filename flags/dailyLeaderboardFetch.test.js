@@ -27,7 +27,7 @@ function fakeFetch(opts = {}) {
 }
 
 test('fetchLeaderboard: builds URL with deviceId + fresh=1', async () => {
-  const f = fakeFetch({ status: 200, json: { configKey: CONFIG, date: '2026-06-12', top: [], you: null } });
+  const f = fakeFetch({ status: 200, json: { top: [], you: null } });
   await fetchLeaderboard({ configKey: CONFIG, deviceId: DEVICE, fresh: true, fetchImpl: f.impl });
   assert.equal(
     f.calls[0].url,
@@ -35,21 +35,17 @@ test('fetchLeaderboard: builds URL with deviceId + fresh=1', async () => {
   );
 });
 
-test('fetchLeaderboard: URL omits deviceId when not supplied', async () => {
-  const f = fakeFetch({ status: 200, json: { configKey: CONFIG, date: '2026-06-12', top: [], you: null } });
-  await fetchLeaderboard({ configKey: CONFIG, fetchImpl: f.impl });
-  assert.equal(f.calls[0].url, `/api/v1/quiz/leaderboard/${encodeURIComponent(CONFIG)}`);
-});
-
-test('fetchLeaderboard: URL includes ?date= when supplied', async () => {
-  const f = fakeFetch({ status: 200, json: { configKey: CONFIG, date: '2026-06-10', top: [], you: null } });
-  await fetchLeaderboard({ configKey: CONFIG, date: '2026-06-10', fetchImpl: f.impl });
-  assert.match(f.calls[0].url, /date=2026-06-10/);
+test('fetchLeaderboard: omits fresh when not requested', async () => {
+  const f = fakeFetch({ status: 200, json: { top: [], you: null } });
+  await fetchLeaderboard({ configKey: CONFIG, deviceId: DEVICE, fetchImpl: f.impl });
+  assert.equal(
+    f.calls[0].url,
+    `/api/v1/quiz/leaderboard/${encodeURIComponent(CONFIG)}?deviceId=${encodeURIComponent(DEVICE)}`,
+  );
 });
 
 test('fetchLeaderboard: normalises top entries — drops malformed rows, defaults missing fields', async () => {
   const json = {
-    configKey: CONFIG, date: '2026-06-12',
     top: [
       { deviceId: 'd1', nickname: 'Alice', score: 18, durationMs: 32_400, submittedAt: 123 },
       { deviceId: 'd2', nickname: null, score: 17, durationMs: 40_000 }, // no submittedAt
@@ -60,7 +56,7 @@ test('fetchLeaderboard: normalises top entries — drops malformed rows, default
     you: null,
   };
   const f = fakeFetch({ status: 200, json });
-  const r = await fetchLeaderboard({ configKey: CONFIG, fetchImpl: f.impl });
+  const r = await fetchLeaderboard({ configKey: CONFIG, deviceId: DEVICE, fetchImpl: f.impl });
   assert.equal(r.ok, true);
   if (!r.ok) throw new Error('unreachable');
   assert.equal(r.top.length, 3);
@@ -70,15 +66,23 @@ test('fetchLeaderboard: normalises top entries — drops malformed rows, default
   assert.equal(r.top[2].nickname, null);   // coerced
 });
 
+test('fetchLeaderboard: payload with no top key → top: []', async () => {
+  // Server-contract violation handled defensively so the renderer never
+  // sees an undefined .top.
+  const f = fakeFetch({ status: 200, json: {} });
+  const r = await fetchLeaderboard({ configKey: CONFIG, deviceId: DEVICE, fetchImpl: f.impl });
+  assert.equal(r.ok, true);
+  if (!r.ok) throw new Error('unreachable');
+  assert.deepEqual(r.top, []);
+  assert.equal(r.you, null);
+});
+
 test('fetchLeaderboard: normalises you — drops malformed shape', async () => {
   const f = fakeFetch({
     status: 200,
-    json: {
-      configKey: CONFIG, date: '2026-06-12', top: [],
-      you: { rank: 'not a number', score: 5, durationMs: 30_000 },
-    },
+    json: { top: [], you: { rank: 'not a number', score: 5, durationMs: 30_000 } },
   });
-  const r = await fetchLeaderboard({ configKey: CONFIG, fetchImpl: f.impl });
+  const r = await fetchLeaderboard({ configKey: CONFIG, deviceId: DEVICE, fetchImpl: f.impl });
   assert.equal(r.ok, true);
   if (!r.ok) throw new Error('unreachable');
   assert.equal(r.you, null);
@@ -86,24 +90,24 @@ test('fetchLeaderboard: normalises you — drops malformed shape', async () => {
 
 test('fetchLeaderboard: network error → { ok: false, reason: "network_error" }', async () => {
   const f = fakeFetch({ throws: true });
-  const r = await fetchLeaderboard({ configKey: CONFIG, fetchImpl: f.impl });
+  const r = await fetchLeaderboard({ configKey: CONFIG, deviceId: DEVICE, fetchImpl: f.impl });
   assert.deepEqual(r, { ok: false, reason: 'network_error' });
 });
 
 test('fetchLeaderboard: non-200 with server error code propagates', async () => {
   const f = fakeFetch({ status: 400, json: { error: 'invalid_configKey' } });
-  const r = await fetchLeaderboard({ configKey: 'BAD', fetchImpl: f.impl });
+  const r = await fetchLeaderboard({ configKey: 'BAD', deviceId: DEVICE, fetchImpl: f.impl });
   assert.deepEqual(r, { ok: false, reason: 'invalid_configKey' });
 });
 
 test('fetchLeaderboard: 200 with non-JSON body → invalid_json', async () => {
   const f = fakeFetch({ status: 200, invalidJson: true });
-  const r = await fetchLeaderboard({ configKey: CONFIG, fetchImpl: f.impl });
+  const r = await fetchLeaderboard({ configKey: CONFIG, deviceId: DEVICE, fetchImpl: f.impl });
   assert.deepEqual(r, { ok: false, reason: 'invalid_json' });
 });
 
 test('fetchLeaderboard: never throws — all paths resolve with an outcome', async () => {
-  await assert.doesNotReject(fetchLeaderboard({ configKey: CONFIG, fetchImpl: fakeFetch({ throws: true }).impl }));
-  await assert.doesNotReject(fetchLeaderboard({ configKey: CONFIG, fetchImpl: fakeFetch({ status: 500 }).impl }));
-  await assert.doesNotReject(fetchLeaderboard({ configKey: CONFIG, fetchImpl: fakeFetch({ status: 200, invalidJson: true }).impl }));
+  await assert.doesNotReject(fetchLeaderboard({ configKey: CONFIG, deviceId: DEVICE, fetchImpl: fakeFetch({ throws: true }).impl }));
+  await assert.doesNotReject(fetchLeaderboard({ configKey: CONFIG, deviceId: DEVICE, fetchImpl: fakeFetch({ status: 500 }).impl }));
+  await assert.doesNotReject(fetchLeaderboard({ configKey: CONFIG, deviceId: DEVICE, fetchImpl: fakeFetch({ status: 200, invalidJson: true }).impl }));
 });

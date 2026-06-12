@@ -154,8 +154,11 @@ function validatePuzzleIdParam(raw) {
  * `lowerWins` is sent by the client (it already knows the mode) so the
  * server doesn't have to maintain its own mode-to-comparator table. The
  * tradeoff is a malicious caller can flip the comparator to write a worse
- * score over a better one — acceptable because (a) only that one device's
- * record is affected, (b) there's no leaderboard reading this yet.
+ * score over their personal-record row. Acceptable because only that one
+ * device's record is affected. The Feature K daily-leaderboard write path
+ * (`quizRecord.js`'s `writeDailyLeaderboardIfPb`) ignores this body field
+ * and derives `lowerWins` from the configKey itself, so a flipped client
+ * can't poison anyone else's ranking.
  *
  * `turnstileToken` is NOT required here (see CLAUDE.md: rate limiter alone
  * for v1 of this endpoint; revisit if abuse shows up).
@@ -294,32 +297,4 @@ function validateConfigKeyParam(raw) {
   return { ok: true, value: raw };
 }
 
-/**
- * Validate a `?date=YYYY-MM-DD` query param. Optional on the leaderboard
- * GET — when omitted, the handler defaults to today UTC. Tightly bounded
- * to "looks like a real ISO date" so a caller can't probe arbitrary
- * partition strings via the date suffix.
- *
- * Returns `{ ok: true, value: <string> }` or `{ ok: false, error: <code> }`.
- *
- * @param {unknown} raw
- */
-const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
-function validateDateKeyParam(raw) {
-  if (typeof raw !== 'string' || !DATE_KEY_RE.test(raw)) {
-    return { ok: false, error: 'invalid_date' };
-  }
-  // Reject calendar nonsense like 2026-13-40 by round-tripping through Date.
-  const [y, m, d] = raw.split('-').map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  if (
-    dt.getUTCFullYear() !== y ||
-    dt.getUTCMonth() !== m - 1 ||
-    dt.getUTCDate() !== d
-  ) {
-    return { ok: false, error: 'invalid_date' };
-  }
-  return { ok: true, value: raw };
-}
-
-module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, validateTttResultBody, validateDeviceIdParam, validateConfigKeyParam, validateDateKeyParam, LIMITS };
+module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, validateTttResultBody, validateDeviceIdParam, validateConfigKeyParam, LIMITS };

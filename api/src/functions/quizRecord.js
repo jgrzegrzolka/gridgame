@@ -8,6 +8,7 @@ const {
   makePk,
   mergeDailyLeaderboard,
 } = require('../lib/dailyLeaderboardDoc');
+const { lowerWinsFromConfigKey } = require('../lib/quizRecordKey');
 const { isLocalRequestUrl } = require('../lib/requestHost');
 
 const DB_NAME = 'yetanotherquiz';
@@ -83,10 +84,8 @@ app.http('quizRecord', {
       now,
     });
 
-    // F5 — every finish writes: attempts + lastPlayedAt change on every
-    // call, PB-or-not, so the prior "skip on non-PB" short-circuit is
-    // gone. The 204 contract for the client is unchanged: it always
-    // fires after every round and never has to interpret the response.
+    // F5: every finish writes, PB or not — attempts + lastPlayedAt bump
+    // every call and depend on the server seeing all of them.
     let insertRes;
     try {
       insertRes = await insertDoc({
@@ -107,20 +106,15 @@ app.http('quizRecord', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    // Feature K: best-effort daily-leaderboard write. Only happens when
-    // the finish is a today-PB for this (device, configKey), so a player
-    // spamming replays writes at most once per day per configKey. Failures
-    // here are logged and swallowed — the player's personal record was
-    // already saved above, the leaderboard is the extra surface. The
-    // `local` flag mirrors the dailyResult convention so dev rows never
-    // appear in the public top-10 (the reader filters them out).
+    // Feature K: best-effort daily-leaderboard write. PB-only, so a
+    // replayer writes at most once per day per configKey. Failures are
+    // swallowed — the player's personal record is already saved.
     try {
       await writeDailyLeaderboardIfPb({
         conn,
         deviceId: body.deviceId,
         configKey: body.configKey,
         entry: { score: body.score, durationMs: body.durationMs },
-        lowerWins: body.lowerWins,
         now,
         local: isLocalRequestUrl(req.url),
       });
@@ -133,19 +127,21 @@ app.http('quizRecord', {
 });
 
 /**
- * Side-effect helper: read this device's profile (for nickname denorm)
- * and today's leaderboard row for (configKey, today) in parallel, decide
- * if the finish is a today-PB via `mergeDailyLeaderboard`, and upsert
- * only on PB. All Cosmos failures inside are best-effort: caller swallows
- * any thrown error and the main response stays 204.
+ * Best-effort helper: parallel reads of profile + today's leaderboard row,
+ * upsert only on today-PB. `lowerWins` is server-derived from the configKey
+ * so a malicious caller can't post a worse score with `lowerWins:true` and
+ * overwrite a real top score (the body's `lowerWins` controls only the
+ * personal-record write that the main handler already did).
  */
-async function writeDailyLeaderboardIfPb({ conn, deviceId, configKey, entry, lowerWins, now, local }) {
+async function writeDailyLeaderboardIfPb({ conn, deviceId, configKey, entry, now, local }) {
+  const lowerWins = lowerWinsFromConfigKey(configKey);
+  // Unknown mode → skip the leaderboard write rather than guess a direction
+  // that could disadvantage the player or skew ranks.
+  if (lowerWins === null) return;
+
   const dateKey = todayDateKey(now);
   const pk = makePk(configKey, dateKey);
 
-  // Two cheap point-reads in parallel:
-  //  - profile by id+pk (deviceId is both)
-  //  - today's leaderboard row by id+pk (id=deviceId, pk=configKey|date)
   const [profileRes, leaderboardRes] = await Promise.all([
     queryDocs({
       connString: conn,
@@ -165,9 +161,6 @@ async function writeDailyLeaderboardIfPb({ conn, deviceId, configKey, entry, low
     }),
   ]);
 
-  // If either read failed (e.g. container missing in a dev run), skip the
-  // PB-or-not decision entirely — we'd rather drop the leaderboard write
-  // than misclassify the row.
   if (!profileRes.ok || !leaderboardRes.ok) return;
 
   const profile = profileRes.docs[0];
@@ -179,8 +172,8 @@ async function writeDailyLeaderboardIfPb({ conn, deviceId, configKey, entry, low
   });
   if (!merge.changed) return;
 
-  // Stamp the `local` flag so the read-side aggregator can exclude dev
-  // submissions from the public top-10 — same convention as dailyResult.js.
+  // `local: true` tags dev-host writes so the reader can exclude them; same
+  // convention as dailyResult.
   const doc = local ? { ...merge.doc, local: true } : merge.doc;
 
   await insertDoc({

@@ -1,20 +1,8 @@
 /**
- * GET today's daily-leaderboard for a flag-quiz configKey from
- * /api/v1/quiz/leaderboard/{configKey}.
- *
- * Returns:
- *   { ok: true, configKey, date, top: [...], you: { rank, score, durationMs } | null }
- *   { ok: false, reason: <string> }
- *
- * Never throws — callers fire-and-forget; the renderer shows a polite
- * empty/failed state on the panel rather than blowing up the result
- * screen.
- *
- * `fetchImpl` is injected so tests run offline.
- *
- * Defensive: the response shape is normalised here (missing arrays
- * become [], non-string nicknames become null) so the renderer doesn't
- * have to guard every field.
+ * GET today's daily-leaderboard for a flag-quiz configKey. Never throws —
+ * callers fire-and-forget and the renderer shows a polite failed state.
+ * Drops malformed `top` rows and `you` so the renderer doesn't have to
+ * re-guard every field.
  */
 
 const ENDPOINT = '/api/v1/quiz/leaderboard';
@@ -22,26 +10,23 @@ const ENDPOINT = '/api/v1/quiz/leaderboard';
 /**
  * @param {{
  *   configKey: string,
- *   deviceId?: string | null,
- *   date?: string,         // optional YYYY-MM-DD override
- *   fresh?: boolean,       // append ?fresh=1 to bypass the 60s server cache
+ *   deviceId: string,
+ *   fresh?: boolean,
  *   fetchImpl?: typeof fetch,
  * }} args
  * @returns {Promise<
- *   | { ok: true, configKey: string, date: string, top: Array<{ deviceId: string, nickname: string|null, score: number, durationMs: number, submittedAt: number }>, you: { rank: number, score: number, durationMs: number } | null }
+ *   | { ok: true, top: Array<{ deviceId: string, nickname: string|null, score: number, durationMs: number, submittedAt: number }>, you: { rank: number, score: number, durationMs: number } | null }
  *   | { ok: false, reason: string }
  * >}
  */
 export async function fetchLeaderboard({
-  configKey, deviceId = null, date, fresh = false,
+  configKey, deviceId, fresh = false,
   fetchImpl = globalThis.fetch,
 }) {
   const params = new URLSearchParams();
-  if (deviceId) params.set('deviceId', deviceId);
-  if (date) params.set('date', date);
+  params.set('deviceId', deviceId);
   if (fresh) params.set('fresh', '1');
-  const qs = params.toString();
-  const url = `${ENDPOINT}/${encodeURIComponent(configKey)}${qs ? `?${qs}` : ''}`;
+  const url = `${ENDPOINT}/${encodeURIComponent(configKey)}?${params.toString()}`;
 
   let res;
   try {
@@ -100,11 +85,5 @@ export async function fetchLeaderboard({
     };
   }
 
-  return {
-    ok: true,
-    configKey: typeof payload.configKey === 'string' ? payload.configKey : configKey,
-    date: typeof payload.date === 'string' ? payload.date : '',
-    top,
-    you,
-  };
+  return { ok: true, top, you };
 }

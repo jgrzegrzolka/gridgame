@@ -1,7 +1,6 @@
 const { app } = require('@azure/functions');
 const {
   validateConfigKeyParam,
-  validateDateKeyParam,
   validateDeviceIdParam,
 } = require('../lib/validate');
 const { lowerWinsFromConfigKey } = require('../lib/quizRecordKey');
@@ -11,20 +10,19 @@ const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { createTtlCache } = require('../lib/ttlCache');
 const { readFreshFlag } = require('../lib/queryParams');
 const { statsCacheHeaders } = require('../lib/cacheHeaders');
+const { rankCmpClause, findMineInTop, computeYou } = require('../lib/leaderboardRank');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyLeaderboards';
 const CACHE_TTL_MS = 60_000;
+// Must equal TOP_N in flags/dailyLeaderboardRender.js — server/client mismatch
+// would silently drop visible rows or fall short of the rendered slot count.
 const TOP_N = 10;
 
-// 60 reads/min/IP — same envelope as getProfile. A player viewing the
-// finish screen does one read; quick replay → one more. Tight enough to
-// stop an enumeration script reading every (configKey, date) combo in
-// the wild.
 const limiter = createRateLimiter({ limit: 60, windowMs: 60_000 });
 
-// Top-N is cached by partition (configKey + date). The caller's rank is
-// per-deviceId and always recomputed — it's a single COUNT(1), cheap.
+// Cached top-N keyed by (pk, order). Order is included so a future
+// `?order=` override or third mode can't serve a wrong-direction list.
 const topCache = createTtlCache({ ttlMs: CACHE_TTL_MS });
 
 app.http('quizLeaderboard', {
@@ -45,38 +43,19 @@ app.http('quizLeaderboard', {
     if (!v.ok) return { status: 400, jsonBody: { error: v.error } };
     const configKey = v.value;
 
-    // Derived server-side from the configKey's mode token. Refused as a
-    // client field because flipping it would let a caller invert the
-    // ranking direction and distort competitors' positions.
     const lowerWins = lowerWinsFromConfigKey(configKey);
     if (lowerWins === null) {
       return { status: 400, jsonBody: { error: 'unknown_mode' } };
     }
 
-    // Optional ?date=YYYY-MM-DD — defaults to today UTC. Same UTC cutoff
-    // as the writer so caller and writer always agree on "today".
-    const rawDate = req.query.get('date');
-    let dateKey;
-    if (rawDate === null || rawDate === undefined) {
-      dateKey = todayDateKey(Date.now());
-    } else {
-      const dv = validateDateKeyParam(rawDate);
-      if (!dv.ok) return { status: 400, jsonBody: { error: dv.error } };
-      dateKey = dv.value;
-    }
+    const dv = validateDeviceIdParam(req.query.get('deviceId'), 'invalid_deviceId');
+    if (!dv.ok) return { status: 400, jsonBody: { error: dv.error } };
+    const deviceId = dv.value;
 
-    // Optional ?deviceId=… — when supplied, the response includes the
-    // caller's row and rank. When omitted, the endpoint still returns
-    // the top-N (e.g. for a non-player viewer or a server-side renderer).
-    const rawDevice = req.query.get('deviceId');
-    let deviceId = null;
-    if (rawDevice !== null && rawDevice !== undefined && rawDevice !== '') {
-      const dv = validateDeviceIdParam(rawDevice, 'invalid_deviceId');
-      if (!dv.ok) return { status: 400, jsonBody: { error: dv.error } };
-      deviceId = dv.value;
-    }
-
+    const dateKey = todayDateKey(Date.now());
     const pk = makePk(configKey, dateKey);
+    const order = lowerWins ? 'ASC' : 'DESC';
+    const cacheKey = `${pk}|${order}`;
     const fresh = readFreshFlag(req);
 
     const conn = process.env.COSMOS_CONN;
@@ -86,18 +65,17 @@ app.http('quizLeaderboard', {
     }
 
     const now = Date.now();
-    let top = fresh ? undefined : topCache.get(pk, now);
+    let top = fresh ? undefined : topCache.get(cacheKey, now);
 
     if (!top) {
-      // Multi-field ORDER BY requires a composite index on (score,
-      // durationMs) — provisioned at container-create time. The local
-      // exclusion uses `NOT IS_DEFINED(c.local)` so prod rows (no flag)
-      // pass and dev rows (`local: true`) are filtered out.
-      const order = lowerWins ? 'ASC' : 'DESC';
+      // Composite index on (score, durationMs) provisioned at create time.
+      // `NOT IS_DEFINED(c.local)` rejects any local row regardless of value
+      // — writer only sets `true`, never `false`, so a future stray `false`
+      // shouldn't sneak past.
       const topQuery =
         `SELECT TOP ${TOP_N} c.deviceId, c.nickname, c.score, c.durationMs, c.submittedAt ` +
         'FROM c ' +
-        'WHERE (NOT IS_DEFINED(c.local) OR c.local = false) ' +
+        'WHERE NOT IS_DEFINED(c.local) ' +
         `ORDER BY c.score ${order}, c.durationMs ASC`;
       let topRes;
       try {
@@ -118,64 +96,47 @@ app.http('quizLeaderboard', {
         return { status: 500, jsonBody: { error: 'server_error' } };
       }
       top = topRes.docs;
-      topCache.set(pk, top, now);
+      topCache.set(cacheKey, top, now);
     }
 
-    // Caller's row + rank — only computed when deviceId is supplied.
-    let you = null;
-    if (deviceId !== null) {
-      // Re-use the cached top-N if the caller is already in it; avoids
-      // an extra Cosmos read for the common "I made the top 10" case.
-      let mine = top.find((r) => r.deviceId === deviceId) || null;
-      if (!mine) {
-        try {
-          const meRes = await queryDocs({
-            connString: conn,
-            dbName: DB_NAME,
-            containerName: CONTAINER_NAME,
-            query: 'SELECT c.score, c.durationMs FROM c WHERE c.id = @id',
-            parameters: [{ name: '@id', value: deviceId }],
-            partitionKey: pk,
-          });
-          if (meRes.ok) mine = meRes.docs[0] || null;
-        } catch (err) {
-          context.warn('cosmos me query threw (rank skipped)', err);
-        }
+    // Cached top may already hold the caller's row — avoids an extra read.
+    let mine = findMineInTop(top, deviceId);
+    if (!mine) {
+      try {
+        const meRes = await queryDocs({
+          connString: conn,
+          dbName: DB_NAME,
+          containerName: CONTAINER_NAME,
+          query: 'SELECT c.score, c.durationMs FROM c WHERE c.id = @id',
+          parameters: [{ name: '@id', value: deviceId }],
+          partitionKey: pk,
+        });
+        if (meRes.ok) mine = meRes.docs[0] || null;
+      } catch (err) {
+        context.warn('cosmos me query threw (rank skipped)', err);
       }
+    }
 
-      if (mine) {
-        // Players ahead = strictly better score, or equal score + faster
-        // duration. Equal score + equal duration share the same rank (we
-        // don't fractionally rank).
-        const cmp = lowerWins
-          ? '(c.score < @s OR (c.score = @s AND c.durationMs < @d))'
-          : '(c.score > @s OR (c.score = @s AND c.durationMs < @d))';
-        const rankQuery =
-          'SELECT VALUE COUNT(1) FROM c ' +
-          `WHERE ${cmp} AND (NOT IS_DEFINED(c.local) OR c.local = false)`;
-        try {
-          const rankRes = await queryDocs({
-            connString: conn,
-            dbName: DB_NAME,
-            containerName: CONTAINER_NAME,
-            query: rankQuery,
-            parameters: [
-              { name: '@s', value: mine.score },
-              { name: '@d', value: mine.durationMs },
-            ],
-            partitionKey: pk,
-          });
-          if (rankRes.ok) {
-            const ahead = rankRes.docs[0] ?? 0;
-            you = {
-              rank: ahead + 1,
-              score: mine.score,
-              durationMs: mine.durationMs,
-            };
-          }
-        } catch (err) {
-          context.warn('cosmos rank query threw (rank skipped)', err);
-        }
+    let ahead = null;
+    if (mine) {
+      const rankQuery =
+        'SELECT VALUE COUNT(1) FROM c ' +
+        `WHERE ${rankCmpClause(lowerWins)} AND NOT IS_DEFINED(c.local)`;
+      try {
+        const rankRes = await queryDocs({
+          connString: conn,
+          dbName: DB_NAME,
+          containerName: CONTAINER_NAME,
+          query: rankQuery,
+          parameters: [
+            { name: '@s', value: mine.score },
+            { name: '@d', value: mine.durationMs },
+          ],
+          partitionKey: pk,
+        });
+        if (rankRes.ok) ahead = rankRes.docs[0] ?? 0;
+      } catch (err) {
+        context.warn('cosmos rank query threw (rank skipped)', err);
       }
     }
 
@@ -192,7 +153,7 @@ app.http('quizLeaderboard', {
           durationMs: r.durationMs,
           submittedAt: r.submittedAt,
         })),
-        you,
+        you: computeYou({ mine, ahead }),
       },
     };
   },

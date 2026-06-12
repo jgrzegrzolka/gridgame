@@ -32,6 +32,7 @@ import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
 import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
 import { fetchLeaderboard } from '../flags/dailyLeaderboardFetch.js';
 import { renderLeaderboard } from '../flags/dailyLeaderboardRender.js';
+import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -204,17 +205,13 @@ export function bootFlagQuiz() {
     /** @type {{ timed: boolean, isNew: boolean, best: { score: number, time: number }, elapsed: number, budgetUsed: number } | null} */
     let resultLabelData = null;
 
-    // Leaderboard state — captured when showResult fires so a soft language
-    // switch can re-render the panel with translated labels without re-
-    // issuing the fetch. Sits at three states matching the renderer's
-    // contract: 'loading' (fetch in flight), 'ready' (data present),
-    // 'failed' (fetch error / shape rejection). The configKey is held too
-    // so the renderer can stay pure.
+    // Captured by `runLeaderboardCycle`'s paint callback so a soft language
+    // switch can re-render translated labels without re-issuing the fetch.
     /** @type {{ state: 'loading' | 'ready' | 'failed', data?: { top: any[], you: any } } | null} */
     let leaderboardState = null;
 
     function paintLeaderboard() {
-      if (!leaderboardState || !leaderboardEl || !leaderboardBodyEl) return;
+      if (!leaderboardState) return;
       leaderboardEl.hidden = false;
       const subtree = renderLeaderboard({
         state: leaderboardState.state,
@@ -224,30 +221,6 @@ export function bootFlagQuiz() {
       });
       leaderboardBodyEl.innerHTML = '';
       leaderboardBodyEl.appendChild(subtree);
-    }
-
-    // Two-phase leaderboard lifecycle so the panel isn't blank while the
-    // submit round-trip is in flight:
-    //   1. showLeaderboardLoading() runs at the top of showResult — panel
-    //      reveals with a "Loading…" state immediately.
-    //   2. fetchAndPaintLeaderboard() runs after submitQuizRecord resolves
-    //      — the server's leaderboard write is part of the same handler,
-    //      so by then today's just-submitted row is durable and the fetch
-    //      sees it. ?fresh=1 bypasses the 60s server-side cache for this
-    //      one render so we don't read a stale snapshot.
-    function showLeaderboardLoading() {
-      leaderboardState = { state: 'loading' };
-      paintLeaderboard();
-    }
-    function fetchAndPaintLeaderboard() {
-      const configKey = quizRecordConfigKey(key, mode, includeAll);
-      return fetchLeaderboard({ configKey, deviceId, fresh: true })
-        .then((res) => {
-          leaderboardState = res.ok
-            ? { state: 'ready', data: { top: res.top, you: res.you } }
-            : { state: 'failed' };
-          paintLeaderboard();
-        });
     }
 
     // For timed mode the progress bar is the countdown — we widen it from
@@ -420,10 +393,6 @@ export function bootFlagQuiz() {
     function showResult() {
       cancelAnimationFrame(timerRaf);
       const elapsed = Date.now() - startTime;
-      // Reveal the leaderboard panel in a loading state right away — the
-      // submit + fetch round-trip below takes a beat and a blank panel
-      // would look broken.
-      showLeaderboardLoading();
 
       if (timed) {
         // Score = flags answered correctly. There's no "out of target"
@@ -449,20 +418,19 @@ export function bootFlagQuiz() {
         );
         resultLabelData = { timed: true, isNew, best, elapsed, budgetUsed };
         paintResultLabels();
-        // Cloud write: fire on every finish, PB or not. Pre-F5 we gated
-        // on isNew to save writes on replays, but Feature F phase 5 added
-        // server-side `attempts` + `lastPlayedAt` per configKey — both
-        // depend on the server seeing every finish, not just the ones
-        // that beat the local PB. The server's own merge still protects
-        // against fresh-localStorage devices clobbering a real cloud PB.
-        // Fire-and-forget; failures are silently swallowed.
-        void submitQuizRecord({
-          deviceId,
-          configKey: quizRecordConfigKey(key, mode, includeAll),
-          score: answeredCount,
-          durationMs: budgetUsed,
-          lowerWins: false,
-        }).then(fetchAndPaintLeaderboard);
+        // Cloud write on every finish (not just PBs): F5 added server-side
+        // attempts + lastPlayedAt counters that depend on it. The chained
+        // leaderboard fetch lands after the server's leaderboard write
+        // completes so the just-played row is visible on this paint.
+        const configKey = quizRecordConfigKey(key, mode, includeAll);
+        void runLeaderboardCycle({
+          submitImpl: () => submitQuizRecord({
+            deviceId, configKey,
+            score: answeredCount, durationMs: budgetUsed, lowerWins: false,
+          }),
+          fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
+          paint: (s) => { leaderboardState = s; paintLeaderboard(); },
+        });
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           // total isn't meaningful for 60s mode (the round ends when the
@@ -490,15 +458,15 @@ export function bootFlagQuiz() {
         );
         resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0 };
         paintResultLabels();
-        // Cloud write: fire on every finish, PB or not (see F5 rationale
-        // in the timed-mode branch above).
-        void submitQuizRecord({
-          deviceId,
-          configKey: quizRecordConfigKey(key, mode, includeAll),
-          score: wrongCount,
-          durationMs: elapsed,
-          lowerWins: true,
-        }).then(fetchAndPaintLeaderboard);
+        const configKey = quizRecordConfigKey(key, mode, includeAll);
+        void runLeaderboardCycle({
+          submitImpl: () => submitQuizRecord({
+            deviceId, configKey,
+            score: wrongCount, durationMs: elapsed, lowerWins: true,
+          }),
+          fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
+          paint: (s) => { leaderboardState = s; paintLeaderboard(); },
+        });
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           total: target,

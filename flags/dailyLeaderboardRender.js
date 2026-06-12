@@ -53,8 +53,10 @@ const TOP_N = 10;
  * @returns {HTMLElement}
  */
 export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = globalThis.document }) {
+  // No className on the root: it's appended into a host with id="leaderboard-body"
+  // already, so adding a class with the same intent would just nest two
+  // equivalent wrappers.
   const root = doc.createElement('div');
-  root.className = 'leaderboard-body';
 
   if (state === 'loading') {
     const p = doc.createElement('p');
@@ -136,9 +138,6 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
 function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride }) {
   const li = doc.createElement('li');
   const isSelf = ownDeviceId !== null && entry.deviceId === ownDeviceId;
-  // String concat instead of classList.add so the className stays a single
-  // assignment — keeps the test stub (which only mirrors className) in sync
-  // with real DOM behaviour.
   li.className = isSelf ? 'leaderboard-row is-self' : 'leaderboard-row';
 
   const rankEl = doc.createElement('span');
