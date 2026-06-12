@@ -77,6 +77,14 @@ body {
 .grid td {
   border: 1px solid #ddd;
 }
+/* Non-9x9 grids render as a true 4×4 with every cell — including the
+ * corner, column headers, and row headers — outlined. Reads visually
+ * as a single 4×4 grid rather than a 3×3 game grid with floating
+ * labels next to it. 9x9 keeps its existing borderless headers (its
+ * thick bigblock separators do the visual structuring instead). */
+.grid:not(.is-9x9) th {
+  border: 1px solid #ddd;
+}
 .grid th {
   font-weight: 500;
   font-size: 14px;
