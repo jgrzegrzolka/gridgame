@@ -10,7 +10,7 @@ const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { createTtlCache } = require('../lib/ttlCache');
 const { readFreshFlag } = require('../lib/queryParams');
 const { statsCacheHeaders } = require('../lib/cacheHeaders');
-const { rankCmpClause, findMineInTop, computeYou } = require('../lib/leaderboardRank');
+const { rankCmpClause, findMineInTop, computeYou, qualifiesForLeaderboard } = require('../lib/leaderboardRank');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyLeaderboards';
@@ -67,6 +67,13 @@ app.http('quizLeaderboard', {
     const now = Date.now();
     let top = fresh ? undefined : topCache.get(cacheKey, now);
 
+    // In timed mode (higherWins) we exclude score=0 — see
+    // `qualifiesForLeaderboard` for the rationale. In endurance mode
+    // (lowerWins) the same gate lets perfect rounds through. Inlined
+    // here as a SQL fragment because both the top query and the rank
+    // query need it.
+    const excludeZero = lowerWins ? '' : ' AND c.score > 0';
+
     if (!top) {
       // Composite index on (score, durationMs) provisioned at create time.
       // `NOT IS_DEFINED(c.local)` rejects any local row regardless of value
@@ -75,7 +82,7 @@ app.http('quizLeaderboard', {
       const topQuery =
         `SELECT TOP ${TOP_N} c.deviceId, c.nickname, c.score, c.durationMs, c.submittedAt ` +
         'FROM c ' +
-        'WHERE NOT IS_DEFINED(c.local) ' +
+        `WHERE NOT IS_DEFINED(c.local)${excludeZero} ` +
         `ORDER BY c.score ${order}, c.durationMs ASC`;
       let topRes;
       try {
@@ -117,11 +124,17 @@ app.http('quizLeaderboard', {
       }
     }
 
+    // Gate the caller too: a timed-mode score=0 caller doesn't get
+    // computed in/out of the rank — they're excluded from the board and
+    // `you` will be null, so the renderer doesn't append a "…N. You" row.
+    const mineQualifies =
+      mine !== null && qualifiesForLeaderboard({ score: mine.score, lowerWins });
+
     let ahead = null;
-    if (mine) {
+    if (mine && mineQualifies) {
       const rankQuery =
         'SELECT VALUE COUNT(1) FROM c ' +
-        `WHERE ${rankCmpClause(lowerWins)} AND NOT IS_DEFINED(c.local)`;
+        `WHERE ${rankCmpClause(lowerWins)} AND NOT IS_DEFINED(c.local)${excludeZero}`;
       try {
         const rankRes = await queryDocs({
           connString: conn,
@@ -153,7 +166,10 @@ app.http('quizLeaderboard', {
           durationMs: r.durationMs,
           submittedAt: r.submittedAt,
         })),
-        you: computeYou({ mine, ahead }),
+        // Pass `mine` only if the caller qualifies — a disqualified caller
+        // (timed mode + score=0) gets `you: null` so the renderer doesn't
+        // append a trailing self-row.
+        you: computeYou({ mine: mineQualifies ? mine : null, ahead }),
       },
     };
   },

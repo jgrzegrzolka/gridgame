@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { rankCmpClause, findMineInTop, computeYou } = require('./leaderboardRank');
+const { rankCmpClause, findMineInTop, computeYou, qualifiesForLeaderboard } = require('./leaderboardRank');
 
 test('rankCmpClause: timed mode → strictly higher score OR equal-faster wins', () => {
   const clause = rankCmpClause(false);
@@ -57,4 +57,18 @@ test('computeYou: COUNT returned null/undefined → treated as 0 ahead → rank 
 
 test('computeYou: no mine → null (caller has no row today, e.g. submit failed)', () => {
   assert.equal(computeYou({ mine: null, ahead: 5 }), null);
+});
+
+test('qualifiesForLeaderboard: timed mode (higherWins) excludes score=0', () => {
+  // 0 correct in 60s is the worst possible — keep it off the board.
+  assert.equal(qualifiesForLeaderboard({ score: 0, lowerWins: false }), false);
+  assert.equal(qualifiesForLeaderboard({ score: 1, lowerWins: false }), true);
+  assert.equal(qualifiesForLeaderboard({ score: 50, lowerWins: false }), true);
+});
+
+test('qualifiesForLeaderboard: count mode (lowerWins) keeps score=0 — perfect round', () => {
+  // 0 mistakes in endurance/count mode is the IDEAL result. Keep it.
+  assert.equal(qualifiesForLeaderboard({ score: 0, lowerWins: true }), true);
+  assert.equal(qualifiesForLeaderboard({ score: 1, lowerWins: true }), true);
+  assert.equal(qualifiesForLeaderboard({ score: 50, lowerWins: true }), true);
 });
