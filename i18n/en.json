@@ -121,6 +121,10 @@
     "playerWins": "{player} wins!",
     "youGaveUp": "You gave up",
     "opponentGaveUp": "Opponent gave up",
+    "rulesBtn": "How to play",
+    "rulesTitle": "How to play",
+    "rulesBody": "Each cell sits on a row and a column. Pick a country whose flag matches both — for example, an \"Asia\" row and a \"red\" column needs a flag that is both Asian and red. First to line up three wins.",
+    "rulesClose": "Got it",
     "reject": {
       "roomFull": "Room is full",
       "roomNotFound": "Room not found — ask your friend for the code or create a new room",
@@ -131,7 +135,8 @@
   },
   "ttt9x9": {
     "title": "Yet Another Quiz — 9×9 Flag Tic Tac Toe",
-    "offlineTitle": "Yet Another Quiz — Offline 9×9 Flag Tic Tac Toe"
+    "offlineTitle": "Yet Another Quiz — Offline 9×9 Flag Tic Tac Toe",
+    "rulesBody": "Nine small tic-tac-toe boards forming a big 3×3 board. Each cell sits on a row and a column — pick a country whose flag matches both. Win a small board to claim it; line up three claimed boards on the big board to win."
   },
   "variant": {
     "countries": "All countries",

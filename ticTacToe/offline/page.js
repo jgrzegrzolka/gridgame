@@ -151,6 +151,20 @@ function runTicTacToe({ puzzle, countries }) {
     });
   }
 
+  // ---- Rules help ----
+  const rulesBtnEl = document.getElementById('rules-btn');
+  const rulesHelpEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('rules-help'));
+  const rulesCloseEl = document.getElementById('rules-close');
+  if (rulesBtnEl && rulesHelpEl) {
+    rulesBtnEl.addEventListener('click', () => rulesHelpEl.showModal());
+    rulesHelpEl.addEventListener('click', (e) => {
+      if (e.target === rulesHelpEl) rulesHelpEl.close();
+    });
+  }
+  if (rulesCloseEl && rulesHelpEl) {
+    rulesCloseEl.addEventListener('click', () => rulesHelpEl.close());
+  }
+
   /** @param {number} row @param {number} col */
   function openPicker(row, col) {
     activeCell = { row, col };

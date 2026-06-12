@@ -364,6 +364,20 @@ function runOnline(countries) {
     });
   }
 
+  // ---- Rules help ----
+  const rulesBtnEl = document.getElementById('rules-btn');
+  const rulesHelpEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('rules-help'));
+  const rulesCloseEl = document.getElementById('rules-close');
+  if (rulesBtnEl && rulesHelpEl) {
+    rulesBtnEl.addEventListener('click', () => rulesHelpEl.showModal());
+    rulesHelpEl.addEventListener('click', (e) => {
+      if (e.target === rulesHelpEl) rulesHelpEl.close();
+    });
+  }
+  if (rulesCloseEl && rulesHelpEl) {
+    rulesCloseEl.addEventListener('click', () => rulesHelpEl.close());
+  }
+
   // ---- Picker ----
   /** @param {number} bigRow @param {number} bigCol @param {number} smallRow @param {number} smallCol */
   function openPicker(bigRow, bigCol, smallRow, smallCol) {
