@@ -134,5 +134,18 @@
       "en": "Find all European flags whose only colours are red, white, and green — no others.",
       "pl": "Znajdź wszystkie europejskie flagi, które mają tylko 3 kolory: czerwony, biały i zielony."
     }
+  },
+  {
+    "n": 8,
+    "filter": "continent:Asia,color:blue,color:!red",
+    "answers": [
+      "il",
+      "in",
+      "kz"
+    ],
+    "description": {
+      "en": "Find all Asian flags with blue but without red.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z błękitem, ale bez czerwieni."
+    }
   }
 ]
