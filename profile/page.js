@@ -59,7 +59,7 @@ export function bootProfile() {
   function currentPayload() {
     const trimmed = input.value.trim();
     if (trimmed.length === 0 || trimmed === defaultName) return null;
-    return trimmed.slice(0, 16);
+    return trimmed.slice(0, 32);
   }
 
   /**

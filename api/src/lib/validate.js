@@ -35,12 +35,13 @@ const LIMITS = {
   QUIZ_DURATION_MS_MAX: 6 * 60 * 60 * 1000,
   // Nickname display bounds (Feature H2). 1 chars after trim because empty
   // strings should be sent as `null` (the "clear my nickname" signal).
-  // 16 chars upper: feels right for a leaderboard-row label (modern
-  // display-name convention), and the burger-panel layout absorbs it
-  // without wrapping. Was 24 pre-K hardening — reduced when nicknames
-  // started appearing in the public leaderboard row.
+  // 32 chars upper: a wink at the programmer crowd (matches the Discord cap
+  // and lots of common SQL VARCHAR conventions). Roomy enough for a name +
+  // a tag. The leaderboard row ellipsises long names via `text-overflow:
+  // ellipsis; white-space: nowrap` so even a max-length name renders
+  // without busting the layout.
   NICKNAME_MIN: 1,
-  NICKNAME_MAX: 16,
+  NICKNAME_MAX: 32,
 };
 
 function isInt(x, min, max) {
