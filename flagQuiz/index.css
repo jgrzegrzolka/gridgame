@@ -298,9 +298,12 @@ body {
 }
 .leaderboard-row {
   display: grid;
-  grid-template-columns: 28px 1fr auto auto;
+  /* Rank | name (shrinks to content, ellipsises long ones) | score.
+   * minmax(0, max-content) lets the name take its content width but
+   * shrink for very long nicknames so score never falls off the row. */
+  grid-template-columns: 28px minmax(0, max-content) auto;
   align-items: baseline;
-  gap: 12px;
+  gap: 10px;
   padding: 6px 8px;
   border-bottom: 1px solid #eee;
   font-variant-numeric: tabular-nums;
@@ -317,7 +320,6 @@ body {
   color: #1c1c1c;
   font-size: 15px;
   font-weight: 500;
-  /* Long nicknames don't shove the score column off-screen. */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -326,10 +328,6 @@ body {
   color: #1c1c1c;
   font-size: 15px;
   font-weight: 600;
-}
-.leaderboard-time {
-  color: #666;
-  font-size: 13px;
 }
 .leaderboard-row.is-self {
   background: #fff8e1;

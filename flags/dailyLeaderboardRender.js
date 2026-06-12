@@ -17,7 +17,6 @@
  */
 
 import { displayNickname } from './nickname.js';
-import { formatTime } from './quiz.js';
 
 const TOP_N = 10;
 
@@ -154,13 +153,8 @@ function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride }) {
   scoreEl.className = 'leaderboard-score';
   scoreEl.textContent = String(entry.score);
 
-  const timeEl = doc.createElement('span');
-  timeEl.className = 'leaderboard-time';
-  timeEl.textContent = formatTime(entry.durationMs);
-
   li.appendChild(rankEl);
   li.appendChild(nameEl);
   li.appendChild(scoreEl);
-  li.appendChild(timeEl);
   return li;
 }

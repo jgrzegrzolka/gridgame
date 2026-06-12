@@ -47,6 +47,7 @@ export function bootFlagQuiz() {
   const timeEl = document.getElementById('time');
   const bestEl = document.getElementById('best');
   const leaderboardEl = document.getElementById('daily-leaderboard');
+  const leaderboardTitleEl = document.getElementById('leaderboard-title');
   const leaderboardBodyEl = document.getElementById('leaderboard-body');
   const playTimerEl = document.getElementById('play-time');
   const playModeEl = document.getElementById('play-mode');
@@ -202,7 +203,7 @@ export function bootFlagQuiz() {
     // score, Your best score, Time, new record) without re-running
     // recordResult or re-firing the celebration. Null until the game
     // ends; refreshI18n's `paintResultLabels` no-ops until then.
-    /** @type {{ timed: boolean, isNew: boolean, best: { score: number, time: number }, elapsed: number, budgetUsed: number } | null} */
+    /** @type {{ timed: boolean, isNew: boolean, best: { score: number, time: number }, elapsed: number, budgetUsed: number, gaveUp: boolean } | null} */
     let resultLabelData = null;
 
     // Captured by `runLeaderboardCycle`'s paint callback so a soft language
@@ -213,6 +214,10 @@ export function bootFlagQuiz() {
     function paintLeaderboard() {
       if (!leaderboardState) return;
       leaderboardEl.hidden = false;
+      // The "Today's leaderboard" header is for the populated panel —
+      // showing it above a "Loading…" spinner reads as a promise the
+      // page hasn't kept yet. Reveals on first non-loading paint.
+      leaderboardTitleEl.hidden = leaderboardState.state === 'loading';
       const subtree = renderLeaderboard({
         state: leaderboardState.state,
         data: leaderboardState.data,
@@ -362,21 +367,27 @@ export function bootFlagQuiz() {
      */
     function paintResultLabels() {
       if (!resultLabelData) return;
-      const { timed: t_, isNew, best, elapsed, budgetUsed } = resultLabelData;
+      const { timed: t_, isNew, best, elapsed, budgetUsed, gaveUp: rgaveUp } = resultLabelData;
       finalScoreLabelEl.textContent = t('quiz.finalScore', 'Final score:');
       if (t_) {
         // Show "Time" only when the pool exhausted under budget — for a
         // time-out the value is always the budget itself, which the mode
         // label already tells the player. shouldShowBestTime is the
-        // shared gate; flagQuiz/stats uses the same function.
-        timeEl.textContent = shouldShowBestTime(mode, { time: budgetUsed })
+        // shared gate; flagQuiz/stats uses the same function. Also
+        // suppressed on give-up: the elapsed time before quitting isn't
+        // a meaningful result.
+        timeEl.textContent = !rgaveUp && shouldShowBestTime(mode, { time: budgetUsed })
           ? `${t('game.time', 'Time')}: ${formatTime(budgetUsed)}`
           : '';
         bestEl.textContent = shouldShowBestTime(mode, best)
           ? `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`
           : `${t('quiz.yourBestScore', 'Your best score')}: ${best.score}`;
       } else {
-        timeEl.textContent = `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
+        // Same give-up suppression in count mode — the elapsed time of a
+        // give-up round (often < 2s) is misleading next to the score.
+        timeEl.textContent = rgaveUp
+          ? ''
+          : `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
         const bestCorrect = Math.max(0, target - best.score);
         bestEl.textContent =
           `${t('quiz.yourBestScore', 'Your best score')}: ${bestCorrect}/${target} ${t('game.in', 'in')} ${formatTime(best.time)}`;
@@ -416,7 +427,7 @@ export function bootFlagQuiz() {
         const { best, isNew } = recordResult(
           localStorage, key, mode, { score: answeredCount, time: budgetUsed }, includeAll,
         );
-        resultLabelData = { timed: true, isNew, best, elapsed, budgetUsed };
+        resultLabelData = { timed: true, isNew, best, elapsed, budgetUsed, gaveUp };
         paintResultLabels();
         // Cloud write on every finish (not just PBs): F5 added server-side
         // attempts + lastPlayedAt counters that depend on it. The chained
@@ -456,7 +467,7 @@ export function bootFlagQuiz() {
         const { best, isNew } = recordResult(
           localStorage, key, mode, { score: wrongCount, time: elapsed }, includeAll, lowerScoreWins,
         );
-        resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0 };
+        resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0, gaveUp };
         paintResultLabels();
         const configKey = quizRecordConfigKey(key, mode, includeAll);
         void runLeaderboardCycle({
