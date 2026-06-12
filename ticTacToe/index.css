@@ -44,6 +44,14 @@ body {
   font-size: 16px;
   color: #fff;
   background: var(--x-color);
+  /* Sit above the body::before chrome veil (z:10) so the turn-bounce
+   * animation (translateY -10px) stays fully visible — without this,
+   * the top of the badge ducks behind the veil at the peak of the
+   * jump. Still well below the chrome buttons (z:20+), and the badge
+   * physically can't reach the button row anyway (peak top y≈70 vs
+   * button bottom y≈64). */
+  position: relative;
+  z-index: 11;
 }
 .turn-badge.o {
   background: var(--o-color);

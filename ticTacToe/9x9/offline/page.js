@@ -23,6 +23,12 @@ function tCat(c) {
 }
 
 export function bootTicTacToe9x9() {
+  // Build the empty 9×9 grid synchronously before the countries.json
+  // fetch resolves — see ticTacToe/offline/page.js for the rationale.
+  // The Hall's-marriage puzzle generation can be noticeably slower than
+  // the 3×3 case too, so on slow connections + slow devices the gap
+  // compounds; pre-building keeps the full layout on-screen throughout.
+  buildGridSkeleton();
   fetch('../../../flags/countries.json')
     .then((r) => r.json())
     .then(loadCountries)
@@ -40,6 +46,33 @@ export function bootTicTacToe9x9() {
       const turnText = document.getElementById('turn-text');
       if (turnText) turnText.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
+}
+
+function buildGridSkeleton() {
+  const gridBodyEl = document.getElementById('grid-body');
+  if (!gridBodyEl) return;
+  for (let r = 0; r < 9; r++) {
+    const tr = document.createElement('tr');
+    if (r % 3 === 0) {
+      const rowHeader = document.createElement('th');
+      rowHeader.rowSpan = 3;
+      tr.appendChild(rowHeader);
+    }
+    for (let c = 0; c < 9; c++) {
+      const td = document.createElement('td');
+      td.className = 'cell';
+      const bigRow = Math.floor(r / 3);
+      const bigCol = Math.floor(c / 3);
+      const smallRow = r % 3;
+      const smallCol = c % 3;
+      td.dataset.bigrow = String(bigRow);
+      td.dataset.bigcol = String(bigCol);
+      td.dataset.row = String(smallRow);
+      td.dataset.col = String(smallCol);
+      tr.appendChild(td);
+    }
+    gridBodyEl.appendChild(tr);
+  }
 }
 
 /**
@@ -84,44 +117,33 @@ function runUltimateTicTacToe({ puzzle, countries }) {
   );
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
 
+  // The grid skeleton (9 rows × cells + rowspan=3 row headers) was
+  // built synchronously by buildGridSkeleton() in bootTicTacToe9x9
+  // before the fetch resolved. Enrich it here: paint the row/col
+  // header text from the freshly generated puzzle and wire each cell's
+  // click + keydown handlers — those need to close over the local
+  // `state` + picker, which only exist now.
   colHeaderEls.forEach((th, i) => {
     th.textContent = tCat(puzzle.cols[i]);
   });
-
-  // Build 9 grid rows. The first row of each meta-row band (grid rows 0, 3, 6)
-  // carries a rowspan=3 row header on its left so the original 3 row labels
-  // stay readable above their full vertical band.
-  for (let r = 0; r < 9; r++) {
-    const tr = document.createElement('tr');
-    if (r % 3 === 0) {
-      const rowHeader = document.createElement('th');
-      rowHeader.rowSpan = 3;
-      rowHeader.textContent = tCat(puzzle.rows[r / 3]);
-      tr.appendChild(rowHeader);
-    }
-    for (let c = 0; c < 9; c++) {
-      const td = document.createElement('td');
-      td.className = 'cell';
-      const bigRow = Math.floor(r / 3);
-      const bigCol = Math.floor(c / 3);
-      const smallRow = r % 3;
-      const smallCol = c % 3;
-      td.dataset.bigrow = String(bigRow);
-      td.dataset.bigcol = String(bigCol);
-      td.dataset.row = String(smallRow);
-      td.dataset.col = String(smallCol);
-      td.tabIndex = 0;
-      td.addEventListener('click', () => onCellActivate(bigRow, bigCol, smallRow, smallCol));
-      td.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onCellActivate(bigRow, bigCol, smallRow, smallCol);
-        }
-      });
-      tr.appendChild(td);
-    }
-    gridBodyEl.appendChild(tr);
-  }
+  const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
+  rowHeaders.forEach((th, i) => {
+    th.textContent = tCat(puzzle.rows[i]);
+  });
+  gridBodyEl.querySelectorAll('td').forEach((td) => {
+    const bigRow = Number(/** @type {HTMLTableCellElement} */ (td).dataset.bigrow);
+    const bigCol = Number(/** @type {HTMLTableCellElement} */ (td).dataset.bigcol);
+    const smallRow = Number(/** @type {HTMLTableCellElement} */ (td).dataset.row);
+    const smallCol = Number(/** @type {HTMLTableCellElement} */ (td).dataset.col);
+    /** @type {HTMLTableCellElement} */ (td).tabIndex = 0;
+    td.addEventListener('click', () => onCellActivate(bigRow, bigCol, smallRow, smallCol));
+    td.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onCellActivate(bigRow, bigCol, smallRow, smallCol);
+      }
+    });
+  });
 
   renderAll();
 
