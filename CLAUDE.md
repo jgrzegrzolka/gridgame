@@ -12,7 +12,7 @@ Rule of thumb: keep new code inside its feature folder. Promote something to `fl
 
 ## Hosting
 
-- Production at **`https://www.yetanotherquiz.com`**, on Azure Static Web Apps (Free SKU), deployed by `.github/workflows/deploy.yml` on push to `main`. See `infra/operations.md` for the live topology, resource inventory, and runbook for recurring symptoms (post-deploy 404, apex Redirect Rule misfire, deploy hang). See `FEATURE.md` for in-progress hosting / Azure work and the time-ordered history behind those symptoms.
+- Production at **`https://www.yetanotherquiz.com`**, on Azure Static Web Apps (Free SKU), deployed by `.github/workflows/deploy.yml` on push to `main`. See `infra/operations.md` for the live topology, resource inventory, and runbook for recurring symptoms (post-deploy 404, apex Redirect Rule misfire, deploy hang). See `FEATURE.md` for in-progress hosting / Azure work and the time-ordered history behind those symptoms. See `PERF.md` for the perf-fix journal — what's been tried, what worked, what got reversed.
 - **Naming convention:** code, pages, repo name, and `gridgame.*` `localStorage` keys all stay `gridgame` (historical). Azure resources (subscription, resource group, SWA name, Cosmos account, etc.) use `yetanotherquiz` because that's the public product framing. When wiring Azure-side things, pick `yetanotherquiz-...`; when editing code, leave `gridgame` alone.
 - PartyKit's tic-tac-toe WebSocket server (`gridgame-ttt.jgrzegrzolka.partykit.dev`) is unrelated to SWA — its own workflow (`deploy-partykit.yml`) deploys it to Cloudflare. Don't conflate when editing workflow files.
 
