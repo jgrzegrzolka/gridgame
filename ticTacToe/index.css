@@ -1,9 +1,11 @@
 body {
   /* True 4×4: 3 game cells + 1 header cell across, all the same width. The
    * 9×9 page overrides this further down. Cap at 140px so cells stay
-   * tappable but never huge on tablets. */
-  --grid-cell: min(140px, calc((100vw - 4px) / 4));
-  padding: var(--page-top) 2px 24px;
+   * tappable but never huge on tablets. The subtracted value matches
+   * 2 × body horizontal padding so the grid + side gutters fit the
+   * viewport exactly. */
+  --grid-cell: min(140px, calc((100vw - 24px) / 4));
+  padding: var(--page-top) 12px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
