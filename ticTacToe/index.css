@@ -110,6 +110,15 @@ body {
    * position regardless of how long a label like "Has star or moon" is. */
   max-width: var(--grid-cell);
 }
+/* Non-9×9 thead headers are now in full-cell-sized boxes — let long
+ * labels like "coat of arms" or "star or moon" wrap onto two lines
+ * instead of truncating with `…`. Row headers already wrap below; this
+ * gives the column row the same treatment so the whole 4×4 reads
+ * symmetrically. 9×9 keeps the nowrap + ellipsis from `.grid th`. */
+.grid:not(.is-9x9) thead th {
+  white-space: normal;
+  line-height: 1.2;
+}
 .grid .corner,
 .grid tbody th {
   width: var(--grid-cell);
