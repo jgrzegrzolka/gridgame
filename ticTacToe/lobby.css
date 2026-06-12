@@ -56,16 +56,15 @@
   margin: 0 0 4px;
 }
 /* When the share button is showing, stretch the row to reach the grid's
-   visual right edge. The grid is 3.5 × cell wide but uses margin-left: -cell/4
-   to shift left inside .online-game, so its right edge lands at 3.25 × cell
-   from .online-game's left. We match that width here so the share icon is
-   flush with the grid's right edge, while still leaving room-line's left edge
-   inside .online-game (not off-screen on narrow viewports). */
+   visual right edge. The grid is a true 4×4 (4 × cell wide) anchored at
+   .online-game's left edge, so we match that width here — the room code
+   sits at the left edge, the share icon at the right edge, both flush
+   with the grid columns. */
 .room-line:has(.share-link:not([hidden])) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: calc(var(--grid-cell) * 3.25);
+  width: calc(var(--grid-cell) * 4);
 }
 .room-line strong {
   font-family: 'Courier New', monospace;
