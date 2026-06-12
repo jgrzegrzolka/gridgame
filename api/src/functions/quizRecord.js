@@ -9,6 +9,7 @@ const {
   mergeDailyLeaderboard,
 } = require('../lib/dailyLeaderboardDoc');
 const { lowerWinsFromConfigKey } = require('../lib/quizRecordKey');
+const { qualifiesForLeaderboard } = require('../lib/leaderboardRank');
 const { isLocalRequestUrl } = require('../lib/requestHost');
 
 const DB_NAME = 'yetanotherquiz';
@@ -138,6 +139,13 @@ async function writeDailyLeaderboardIfPb({ conn, deviceId, configKey, entry, now
   // Unknown mode → skip the leaderboard write rather than guess a direction
   // that could disadvantage the player or skew ranks.
   if (lowerWins === null) return;
+
+  // Disqualified scores (timed mode + score=0) are filtered out at read
+  // time anyway. Skipping the write up front saves ~12 RU per such finish
+  // — two cheap reads + one upsert — and keeps the container's storage
+  // footprint smaller. The quizRecord upsert above still ran, so the
+  // player's `attempts` + `lastPlayedAt` counters still bump.
+  if (!qualifiesForLeaderboard({ score: entry.score, lowerWins })) return;
 
   const dateKey = todayDateKey(now);
   const pk = makePk(configKey, dateKey);
