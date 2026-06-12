@@ -188,12 +188,15 @@ export function mountNicknameMenuItem(opts) {
 }
 
 /**
- * Mount a "Privacy" link at the BOTTOM of the burger menu. Mirrors
- * `mountNicknameMenuItem` in shape but does no DOM-state work — it's just
- * a navigation link. Kept here so every page wires it the same way.
+ * Mount a "Privacy" link into the burger menu, positioned RIGHT ABOVE the
+ * "Buy me a coffee" link. Both are meta-navigation that sits at the
+ * bottom of the menu; privacy goes first because it's the more important
+ * of the two (a user looking for "where's my data" should find it before
+ * the coffee CTA).
  *
- * Inserted last so the menu reads: you (nickname) → feature links →
- * coffee → privacy. Privacy is meta-navigation, not a game surface.
+ * Lookup is `.menu-coffee` (its parent `<li>`). If no coffee link is
+ * present we fall back to appending at the bottom — defensive against
+ * future pages whose menu happens to omit the coffee CTA.
  *
  * @param {{
  *   rootEl: HTMLElement | null,
@@ -216,6 +219,16 @@ export function mountPrivacyMenuItem(opts) {
   a.textContent = 'Privacy';
 
   li.appendChild(a);
-  opts.rootEl.appendChild(li);
+
+  // Anchor: the coffee link's <li>. Insert before it so the menu reads
+  // … → privacy → coffee. Falls back to append-at-end if the page has
+  // no coffee link to anchor on.
+  const coffeeLink = opts.rootEl.querySelector('.menu-coffee');
+  const coffeeLi = coffeeLink ? coffeeLink.closest('li') : null;
+  if (coffeeLi) {
+    opts.rootEl.insertBefore(li, coffeeLi);
+  } else {
+    opts.rootEl.appendChild(li);
+  }
   return li;
 }

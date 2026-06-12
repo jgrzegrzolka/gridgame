@@ -37,10 +37,6 @@
         "body": "Your daily-puzzle submissions, flag-quiz personal bests + play counts, and online tic-tac-toe outcomes per opponent. Linked to your device ID, not to you."
       }
     },
-    "where": {
-      "title": "Where it lives",
-      "body": "Azure Cosmos DB in West Europe (Microsoft's Amsterdam region). Static HTML and JavaScript are served from Cloudflare's global CDN, which sees standard HTTP request metadata (IP, user agent) for routing but doesn't receive your device ID or scores."
-    },
     "retention": {
       "title": "How long we keep it",
       "leaderboard": "Daily leaderboard rows: 48 hours, then automatically purged.",
@@ -62,10 +58,6 @@
     "cookies": {
       "title": "Cookies",
       "body": "We don't use cookies. The site stores a couple of preferences in your browser's localStorage (your device ID, language pick, nickname cache, last-played quiz variant) so the site remembers what you're doing between visits. None of it is sent to any third party."
-    },
-    "contact": {
-      "title": "Questions",
-      "body": "Email jangrzegrzolka@gmail.com. Last updated: 2026-06-13."
     }
   },
   "domain": {

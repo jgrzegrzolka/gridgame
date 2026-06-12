@@ -37,10 +37,6 @@
         "body": "Twoje zgłoszenia codziennych zagadek, rekordy quizu flag + liczby rozgrywek, oraz wyniki sieciowego kółka i krzyżyka per przeciwnik. Powiązane z Twoim ID urządzenia, nie z Tobą."
       }
     },
-    "where": {
-      "title": "Gdzie to żyje",
-      "body": "Azure Cosmos DB w Europie Zachodniej (region Amsterdam Microsoftu). Statyczny HTML i JavaScript są serwowane przez globalny CDN Cloudflare, który widzi standardowe metadane żądań HTTP (IP, user agent) do routingu, ale nie otrzymuje Twojego ID urządzenia ani wyników."
-    },
     "retention": {
       "title": "Jak długo to przechowujemy",
       "leaderboard": "Wiersze codziennego rankingu: 48 godzin, potem automatycznie usuwane.",
@@ -62,10 +58,6 @@
     "cookies": {
       "title": "Ciasteczka",
       "body": "Nie używamy ciasteczek. Strona przechowuje kilka preferencji w localStorage Twojej przeglądarki (Twoje ID urządzenia, wybór języka, cache pseudonimu, ostatnio grany wariant quizu), żeby pamiętać, co robisz między wizytami. Nic z tego nie jest wysyłane do żadnej trzeciej strony."
-    },
-    "contact": {
-      "title": "Pytania",
-      "body": "Napisz na jangrzegrzolka@gmail.com. Ostatnia aktualizacja: 2026-06-13."
     }
   },
   "domain": {
