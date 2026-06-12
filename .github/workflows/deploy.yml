@@ -120,13 +120,24 @@ jobs:
           output_location: ""
           skip_app_build: true
 
-      - name: Purge Cloudflare cache
-        # Once www is Cloudflare-proxied (orange cloud), CF caches HTML up to
-        # the 2 h Edge TTL set by the "Cache HTML for Always Online" rule —
-        # without this purge, users would see up to 2 h of stale content after
-        # a deploy. Safe to run while www is still grey-cloud too: the API
-        # call clears an effectively-empty zone cache and reports success, so
-        # this step can land ahead of the orange-cloud flip without churn.
+      - name: Purge Cloudflare cache (HTML pages only)
+        # Targeted purge by URL instead of `purge_everything`. Once www is
+        # Cloudflare-proxied (orange cloud), CF caches HTML up to the 2 h
+        # Edge TTL set by the "Cache HTML for Always Online" rule — without
+        # this purge, users would see up to 2 h of stale HTML after a deploy.
+        #
+        # Why not purge_everything anymore: a full purge wiped the SVG/JS/CSS
+        # edge cache too, exposing every visitor to a cold-edge fetch against
+        # the SWA Free SKU origin — which has erratic per-file latency spikes
+        # (observed 10–20 s on individual flag SVGs after a deploy on
+        # 2026-06-12). The asset cache doesn't need busting:
+        #   - JS / CSS / JSON references are versioned with `?v=<sha>` by
+        #     scripts/cache-bust.mjs, so the post-deploy HTML points at
+        #     URLs CF has never seen — old cache entries are simply orphaned.
+        #   - SVG filenames are stable; a flag image essentially never
+        #     changes, and on the rare occasion one does, an explicit
+        #     manual purge is acceptable.
+        #
         # Zone ID is a public identifier, not a credential — hardcoded so the
         # workflow is self-documenting; only the API token is a secret.
         env:
@@ -138,13 +149,26 @@ jobs:
             "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H "Content-Type: application/json" \
-            --data '{"purge_everything":true}')
+            --data '{"files":[
+              "https://www.yetanotherquiz.com/",
+              "https://www.yetanotherquiz.com/flagQuiz/",
+              "https://www.yetanotherquiz.com/flagQuiz/stats/",
+              "https://www.yetanotherquiz.com/findFlag/",
+              "https://www.yetanotherquiz.com/daily/",
+              "https://www.yetanotherquiz.com/daily/archive.html",
+              "https://www.yetanotherquiz.com/flagsdata/",
+              "https://www.yetanotherquiz.com/profile/",
+              "https://www.yetanotherquiz.com/ticTacToe/",
+              "https://www.yetanotherquiz.com/ticTacToe/offline/",
+              "https://www.yetanotherquiz.com/ticTacToe/9x9/",
+              "https://www.yetanotherquiz.com/ticTacToe/9x9/offline/"
+            ]}')
           echo "${response}"
           if ! echo "${response}" | grep -q '"success":true'; then
             echo "FAIL: CF purge did not report success"
             exit 1
           fi
-          echo "OK: CF cache purged"
+          echo "OK: CF HTML cache purged"
 
       - name: Smoke-check the custom domain after deploy
         # SWA reports "Succeeded" the moment its raw `*.azurestaticapps.net`
