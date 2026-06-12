@@ -471,3 +471,42 @@ test('validateDeviceIdParam: enforces both length bounds', () => {
   assert.equal(validateDeviceIdParam('a'.repeat(64), 'invalid_id').ok, true);
   assert.equal(validateDeviceIdParam('a'.repeat(65), 'invalid_id').ok, false);
 });
+
+const { validateConfigKeyParam, validateDateKeyParam } = require('./validate');
+
+test('validateConfigKeyParam: accepts real configKeys', () => {
+  assert.deepEqual(validateConfigKeyParam('countries:60s:sov'), { ok: true, value: 'countries:60s:sov' });
+  assert.deepEqual(validateConfigKeyParam('africa:all:all'), { ok: true, value: 'africa:all:all' });
+});
+
+test('validateConfigKeyParam: rejects non-string / empty / oversized', () => {
+  assert.deepEqual(validateConfigKeyParam(null), { ok: false, error: 'invalid_configKey' });
+  assert.deepEqual(validateConfigKeyParam(''), { ok: false, error: 'invalid_configKey' });
+  assert.deepEqual(validateConfigKeyParam('a'.repeat(41)), { ok: false, error: 'invalid_configKey' });
+});
+
+test('validateConfigKeyParam: rejects shape-violating strings', () => {
+  assert.deepEqual(validateConfigKeyParam('countries:60s'), { ok: false, error: 'invalid_configKey' });
+  assert.deepEqual(validateConfigKeyParam('Countries:60s:sov'), { ok: false, error: 'invalid_configKey' });
+  assert.deepEqual(validateConfigKeyParam('countries:60s:wat'), { ok: false, error: 'invalid_configKey' });
+});
+
+test('validateDateKeyParam: accepts real YYYY-MM-DD', () => {
+  assert.deepEqual(validateDateKeyParam('2026-06-12'), { ok: true, value: '2026-06-12' });
+  assert.deepEqual(validateDateKeyParam('2020-01-01'), { ok: true, value: '2020-01-01' });
+});
+
+test('validateDateKeyParam: rejects wrong format', () => {
+  assert.equal(validateDateKeyParam('2026-6-12').ok, false);
+  assert.equal(validateDateKeyParam('26-06-12').ok, false);
+  assert.equal(validateDateKeyParam('2026/06/12').ok, false);
+  assert.equal(validateDateKeyParam('not-a-date').ok, false);
+  assert.equal(validateDateKeyParam(20260612).ok, false);
+  assert.equal(validateDateKeyParam(null).ok, false);
+});
+
+test('validateDateKeyParam: rejects calendar nonsense', () => {
+  assert.equal(validateDateKeyParam('2026-13-01').ok, false);
+  assert.equal(validateDateKeyParam('2026-02-30').ok, false);
+  assert.equal(validateDateKeyParam('2026-06-00').ok, false);
+});

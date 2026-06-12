@@ -1,0 +1,17 @@
+{
+  "_comment": "Indexing policy for the dailyLeaderboards Cosmos container (Feature K). Two composite indexes cover both ORDER BY directions: timed-mode leaderboards sort score DESC then durationMs ASC; endurance-mode leaderboards sort score ASC then durationMs ASC (fewer mistakes wins). Without composite indexes, multi-field ORDER BY raises a 400 at query time.",
+  "indexingMode": "consistent",
+  "automatic": true,
+  "includedPaths": [{ "path": "/*" }],
+  "excludedPaths": [{ "path": "/\"_etag\"/?" }],
+  "compositeIndexes": [
+    [
+      { "path": "/score", "order": "descending" },
+      { "path": "/durationMs", "order": "ascending" }
+    ],
+    [
+      { "path": "/score", "order": "ascending" },
+      { "path": "/durationMs", "order": "ascending" }
+    ]
+  ]
+}
