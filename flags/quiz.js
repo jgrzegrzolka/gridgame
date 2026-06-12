@@ -145,7 +145,11 @@ export function pickQuestion(countries, choiceCount = 4) {
  * @param {T[]} pool
  * @param {number} count
  * @param {number} [choiceCount]
- * @returns {{ total: number, next: () => { answer: T, choices: T[] } | null }}
+ * @returns {{
+ *   total: number,
+ *   next: () => { answer: T, choices: T[] } | null,
+ *   peek: () => { answer: T, choices: T[] } | null,
+ * }}
  */
 export function createQuiz(pool, count, choiceCount = 4) {
   if (pool.length < choiceCount) {
@@ -158,14 +162,22 @@ export function createQuiz(pool, count, choiceCount = 4) {
       `Cannot ask ${count} unique questions from a pool of ${pool.length}`,
     );
   }
-  const queue = shuffle(pool).slice(0, count);
+  // Eagerly materialise every question up front so peek() can return
+  // the next one without consuming. The page uses peek() to warm the
+  // next round's flag SVGs while the player is still answering the
+  // current question, replacing the old "fire 200 requests at game
+  // start" strategy with just-in-time prefetch.
+  const queue = shuffle(pool).slice(0, count).map((answer) => ({
+    answer,
+    choices: buildChoices(pool, answer, choiceCount),
+  }));
   return {
     total: count,
     next() {
-      if (queue.length === 0) return null;
-      const answer = queue.shift();
-      if (!answer) return null;
-      return { answer, choices: buildChoices(pool, answer, choiceCount) };
+      return queue.shift() ?? null;
+    },
+    peek() {
+      return queue[0] ?? null;
     },
   };
 }
@@ -208,21 +220,6 @@ export const VARIANTS = {
     filter: (c) => c.continent === 'Oceania',
   },
 };
-
-/**
- * Warms the browser HTTP cache for every flag in the pool by handing each
- * SVG URL to the supplied loader (typically `new Image().src = url`). Lets
- * the first question render off the wire while later questions hit cache.
- *
- * @param {{ code: string }[]} pool
- * @param {(url: string) => void} load
- * @param {string} [base]
- */
-export function preloadFlags(pool, load, base = '../flags/svg/') {
-  for (const c of pool) {
-    load(`${base}${c.code}.svg`);
-  }
-}
 
 /**
  * @param {string} variantKey

@@ -17,7 +17,6 @@ import {
   isQuizIncludeAll,
   getQuizLastVariant,
   setQuizLastVariant,
-  preloadFlags,
   pickCelebration,
   shouldShowBestTime,
   mistakesAfterGiveUp,
@@ -95,7 +94,6 @@ export function bootFlagQuiz() {
     .then(loadCountries)
     .then((raw) => {
       const all = flagsGamePool(raw, includeAll);
-      preloadFlags(all, (url) => { new Image().src = url; });
 
       // Re-buildable menu — rebuilds clear `menuEl.innerHTML` first so
       // a soft language switch doesn't double the variant list. The
@@ -260,6 +258,16 @@ export function bootFlagQuiz() {
       }
       feedbackEl.textContent = '';
       feedbackEl.classList.remove('shake-wrong');
+      // Warm the next round's flags while the player reads the current
+      // one, so render(quiz.next()) hits the browser cache. Replaces the
+      // old preload-everything-at-start strategy that queued the first
+      // visible flags behind ~200 background prefetches.
+      const upcoming = quiz.peek();
+      if (upcoming) {
+        for (const c of upcoming.choices) {
+          new Image().src = `../flags/svg/${c.code}.svg`;
+        }
+      }
     }
 
     function disableAllTiles() {

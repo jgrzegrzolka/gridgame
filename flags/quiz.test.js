@@ -27,7 +27,6 @@ import {
   bestKey,
   recordResult,
   scoreColor,
-  preloadFlags,
   pickCelebration,
   pickFinalScoreLine,
   shouldShowBestTime,
@@ -191,6 +190,25 @@ test('createQuiz throws if count exceeds pool size', () => {
     () => createQuiz(sample, sample.length + 1),
     /Cannot ask/,
   );
+});
+
+test('createQuiz.peek returns the next question without consuming it', () => {
+  const quiz = createQuiz(sample, 3);
+  const peeked = quiz.peek();
+  assert.ok(peeked, 'peek should return a question when one is queued');
+  // next() returns the same instance the peek surfaced — same answer,
+  // same choices. The page uses this to prefetch the next round's
+  // flag SVGs while the player is still answering the current one.
+  const taken = quiz.next();
+  assert.strictEqual(taken, peeked);
+});
+
+test('createQuiz.peek returns null after the queue exhausts', () => {
+  const quiz = createQuiz(sample, 2);
+  quiz.next();
+  quiz.next();
+  assert.equal(quiz.peek(), null);
+  assert.equal(quiz.next(), null);
 });
 
 test('MODES contains "60s" and "all" in that display order', () => {
@@ -782,31 +800,6 @@ test('scoreColor anchors: 0 = red, 0.5 = yellow, 1 = green', () => {
 test('scoreColor clamps ratios outside [0, 1]', () => {
   assert.equal(scoreColor(-0.5), 'hsl(0, 65%, 38%)');
   assert.equal(scoreColor(2), 'hsl(120, 65%, 38%)');
-});
-
-test('preloadFlags invokes the loader once per pool entry with the SVG URL', () => {
-  const pool = [{ code: 'pl' }, { code: 'de' }, { code: 'us' }];
-  /** @type {string[]} */
-  const seen = [];
-  preloadFlags(pool, (url) => seen.push(url));
-  assert.deepEqual(seen, [
-    '../flags/svg/pl.svg',
-    '../flags/svg/de.svg',
-    '../flags/svg/us.svg',
-  ]);
-});
-
-test('preloadFlags accepts a custom base path', () => {
-  /** @type {string[]} */
-  const seen = [];
-  preloadFlags([{ code: 'fr' }], (url) => seen.push(url), '/static/flags/');
-  assert.deepEqual(seen, ['/static/flags/fr.svg']);
-});
-
-test('preloadFlags handles an empty pool without calling the loader', () => {
-  let calls = 0;
-  preloadFlags([], () => { calls++; });
-  assert.equal(calls, 0);
 });
 
 // pickCelebration — unified tier picker shared across all four games.
