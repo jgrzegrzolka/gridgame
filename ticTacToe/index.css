@@ -1,10 +1,12 @@
 body {
   /* True 4×4: 3 game cells + 1 header cell across, all the same width.
-   * 189px cap = 756px / 4 — keeps the grid's max width at 756 so it
-   * lines up with the fixed chrome cluster's `--chrome-x-offset` (which
-   * is calibrated for a 756-wide right edge). The 9×9 page overrides
-   * the cap with 63px (756 / 12) for the same alignment reason. */
-  --grid-cell: min(189px, calc((100vw - 24px) / 4));
+   * 179px cap (= 716 / 4) — keeps the grid's max width at 716 so it
+   * fits inside the chrome frame on wide viewports. The chrome frame
+   * width on viewports ≥ 796 px is 100vw - 2 × (20 + (50vw - 378)) =
+   * 716 px (constant), and 4 × 179 = 716 aligns the grid edges with
+   * the logo and burger pixel-for-pixel. The 9×9 page overrides the
+   * cap with 59 px (≈ 716 / 12) for the same alignment reason. */
+  --grid-cell: min(179px, calc((100vw - 24px) / 4));
   padding: var(--page-top) 12px 24px;
   display: flex;
   flex-direction: column;
@@ -210,13 +212,20 @@ body.game-over .actions-row {
  *
  * Cell-size constraints (now all in "12 game cells per side" units —
  * 3 outer cells × 3 game cells + 3 game cells for the actual game area):
- *   - 63px cap (= 756 / 12) — keeps the grid's max width at 756 so it
- *     lines up with the fixed chrome cluster's `--chrome-x-offset`
+ *   - 59px cap (≈ 716 / 12) — keeps the grid's max width at 708 so it
+ *     fits between the logo and chrome cluster on wide viewports. The
+ *     chrome frame on viewports ≥ 796 px is 716 px wide (constant),
+ *     and 12 × 59 = 708 leaves a ~4 px breathing gap on each side
+ *     (716 / 12 isn't an integer, so we round down rather than ship
+ *     sub-pixel cell widths). Previous 63 px cap made the grid 756 px
+ *     wide — 20 px wider than the chrome frame on each side, so the
+ *     grid spilled past the logo and burger on standard desktop
+ *     resolutions.
  *   - viewport-width fit: 12 game cells across, minus body 24px padding
  *   - viewport-height fit: 12 game cells tall, minus 200px reserved for
  *     chrome / actions-row / page padding */
 .grid.is-9x9 {
-  --grid-cell: min(63px, calc((100vw - 24px) / 12), calc((100vh - 200px) / 12));
+  --grid-cell: min(59px, calc((100vw - 24px) / 12), calc((100vh - 200px) / 12));
 }
 /* Row headers: horizontal text in a 3-game-cell-wide column (matching
  * the bigblock width). Drops the rotated-narrow-column treatment used
