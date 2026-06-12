@@ -24,6 +24,8 @@ test('isOffensiveNickname: catches plain Polish slurs (accent-folded)', () => {
   assert.equal(isOffensiveNickname('kurwa'), true);
   assert.equal(isOffensiveNickname('chuj'), true);
   assert.equal(isOffensiveNickname('pierdol'), true);
+  assert.equal(isOffensiveNickname('piczka'), true);
+  assert.equal(isOffensiveNickname('fiut'), true);
 });
 
 test('isOffensiveNickname: case-insensitive', () => {
