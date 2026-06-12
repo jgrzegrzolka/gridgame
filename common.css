@@ -105,7 +105,7 @@ body::before {
    * wide viewports it shifts the logo inward by the same amount the
    * burger shifts inward, so both end up aligned with the page's
    * content margins. */
-  left: calc(12px + var(--chrome-x-offset));
+  left: calc(20px + var(--chrome-x-offset));
   z-index: 25;
   height: 32px;
   display: inline-flex;
@@ -124,7 +124,7 @@ body::before {
 .lang-toggle {
   position: fixed;
   top: 12px;
-  right: calc(116px + var(--chrome-x-offset));
+  right: calc(124px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   background-color: #fff;
@@ -149,7 +149,7 @@ body::before {
 .flags-link {
   position: fixed;
   top: 12px;
-  right: calc(64px + var(--chrome-x-offset));
+  right: calc(72px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -179,7 +179,7 @@ body::before {
 .burger {
   position: fixed;
   top: 12px;
-  right: calc(12px + var(--chrome-x-offset));
+  right: calc(20px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
   box-sizing: border-box;
@@ -235,7 +235,7 @@ body::before {
 .burger-panel {
   position: fixed;
   top: 64px;
-  right: calc(12px + var(--chrome-x-offset));
+  right: calc(20px + var(--chrome-x-offset));
   min-width: 180px;
   background: #fff;
   border: 1px solid #ddd;
