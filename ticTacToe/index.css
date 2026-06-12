@@ -208,13 +208,16 @@ body.game-over .actions-row {
  *
  * Cell-size constraints (now all in "12 game cells per side" units —
  * 3 outer cells × 3 game cells + 3 game cells for the actual game area):
- *   - 28px cap (kept small because a 12-units-wide grid still has to fit
- *     the viewport horizontally)
+ *   - 80px cap (anything larger looks silly on huge monitors — and
+ *     keeps the grid from going over ~960px wide)
  *   - viewport-width fit: 12 game cells across, minus body 24px padding
  *   - viewport-height fit: 12 game cells tall, minus 200px reserved for
- *     chrome / actions-row / page padding */
+ *     chrome / actions-row / page padding
+ * Phones land on the width constraint (~25–30px cells); desktops land
+ * on the height constraint (~60–75px cells); the 80px cap only bites
+ * on giant monitors. */
 .grid.is-9x9 {
-  --grid-cell: min(28px, calc((100vw - 24px) / 12), calc((100vh - 200px) / 12));
+  --grid-cell: min(80px, calc((100vw - 24px) / 12), calc((100vh - 200px) / 12));
 }
 /* Row headers: horizontal text in a 3-game-cell-wide column (matching
  * the bigblock width). Drops the rotated-narrow-column treatment used
