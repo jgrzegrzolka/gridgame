@@ -273,8 +273,8 @@ body {
    * unmistakable. Without it the two blocks blur into one column of
    * numbers and the leaderboard reads like a continuation of the
    * player's own stats. */
-  margin: 64px auto 16px;
-  padding-top: 24px;
+  margin: 56px auto 16px;
+  padding-top: 20px;
   border-top: 1px solid #eee;
   width: min(90vw, 480px);
   text-align: left;
