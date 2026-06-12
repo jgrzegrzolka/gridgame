@@ -20,7 +20,21 @@
   --chrome-x-offset: max(0px, calc(50vw - 378px));
 }
 html {
+  /* `overflow-y: scroll` forces `<html>` to be a scroll container at all
+   * times. Without it, `scrollbar-gutter: stable` does nothing on pages
+   * whose content fits in the viewport (the property only applies to
+   * scroll containers per spec), and the fixed chrome cluster ends up
+   * 15 px further right on those pages than on pages that overflow.
+   *
+   * Pairs with `overflow-x: clip` on `<body>` below: `clip` clips
+   * horizontal overflow without turning body into a scroll container
+   * (the way `overflow-x: hidden` would, via the spec quirk that forces
+   * the other axis to `auto`). With body NOT a scroll container, sticky
+   * elements inside body resolve their sticking context to html — so
+   * `position: sticky; bottom: 0` on `.actions-row` pins to the viewport
+   * bottom instead of body's natural bottom (= end of content). */
   scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 body {
   font-family: system-ui, sans-serif;
@@ -33,7 +47,10 @@ body {
   padding: var(--page-top) 24px 24px;
   background: #fafafa;
   color: #1c1c1c;
-  overflow-x: hidden;
+  /* `overflow: clip` clips horizontal overflow without making body a
+   * scroll container (`overflow-x: hidden` would). See the `html`
+   * comment above for why that matters for sticky positioning. */
+  overflow-x: clip;
 }
 /* When a page wraps its content in <main> for the a11y landmark,
  * <main> becomes the flex child that body's `align-items: center`
@@ -288,17 +305,36 @@ body::before {
  * aria-current="page" treatment (greyed-out, non-clickable) — same
  * vocabulary as the other "you are here" menu items, no per-page rule. */
 
-.give-up-row {
+/* Horizontal row of dot-separated text actions — sits below the page
+ * content on game / form / list pages. Children are plain `<a>` /
+ * `<button>` elements with literal `·` text nodes between them; the
+ * row styles them itself so each consumer's markup stays clean
+ * (no per-item class spam).
+ *
+ * Sticky-to-bottom: when content fits the viewport the row sits at
+ * its natural position (end of content); when content overflows the
+ * row pins to the viewport bottom and stays visible while the user
+ * scrolls. Background + bleed-to-edge (-24px = cancel body's 24px
+ * horizontal padding) makes the bar a solid strip across the viewport
+ * so scrolling content doesn't show through. */
+.actions-row {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: #fafafa;
   margin-top: 16px;
+  margin-left: -24px;
+  margin-right: -24px;
+  padding: 12px 24px;
   text-align: center;
 }
 /* `·` separator that hides itself when the action right before it is
- * hidden. Used in the online ticTacToe give-up-row, where `#give-up`
+ * hidden. Used in the online ticTacToe actions-row, where `#give-up`
  * starts `hidden` until both players are connected — without this rule
  * the row would render as " · Home" with a leading dot. The literal `·`
  * text nodes elsewhere don't need this because their neighbours are
  * always visible. */
-.give-up[hidden] + .give-up-sep {
+.actions-row > [hidden] + .actions-sep {
   display: none;
 }
 
@@ -365,27 +401,45 @@ body::before {
   outline: 2px solid var(--link-color);
   outline-offset: 2px;
 }
-/* Visually a text link — matches `.result-links a` so "Give up" feels
- * like a sibling of "Play again" / "Random". Still a <button> because
- * it triggers an action, not navigation; the styling just sheds the
- * default button chrome. */
-.give-up {
+/* Visually a text link — children of `.actions-row` (any `<a>` or
+ * `<button>`) read as siblings of the row's `·`-separated text actions
+ * (e.g. "Give up", "Play again", "Random", "Home"). Buttons keep their
+ * semantics for action triggers; the styling just sheds the default
+ * button chrome so they look like the neighbouring anchors.
+ *
+ * NOTE: per-property reset, not `font: inherit` shorthand. The shorthand
+ * would also reset `font-weight`, and since this selector (`0,1,1`)
+ * beats a bare `.row-cta` (`0,1,0`), opt-in bolding would silently lose.
+ * Leaving `font-weight` alone keeps `.row-cta` working. */
+.actions-row > a,
+.actions-row > button {
   background: none;
   border: 0;
   padding: 0;
-  font: inherit;
+  font-family: inherit;
   font-size: 14px;
+  line-height: inherit;
   color: var(--link-color);
   text-decoration: none;
   cursor: pointer;
 }
-.give-up:hover {
+.actions-row > a:hover,
+.actions-row > button:hover:not(:disabled) {
   text-decoration: underline;
 }
-.give-up[hidden] {
+/* Disabled action — faded + non-clickable cursor. Matches the
+ * `.profile-save:disabled` treatment on the profile form so a
+ * disabled action in any `.actions-row` reads the same wherever
+ * it appears (e.g. findFlag's `Play` while the filter is empty
+ * or matches 0 flags). */
+.actions-row > button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.actions-row > [hidden] {
   display: none;
 }
-/* Opt-in emphasis for ONE item in a `.give-up-row` / `.result-links` row
+/* Opt-in emphasis for ONE item in an `.actions-row` / `.result-links` row
  * of dot-separated text actions, so the primary call-to-action reads
  * heavier than its siblings. Per-page decision — daily wants its give-up
  * + "Previous puzzles" links bolded, flagQuiz / findFlag / TTT keep
@@ -606,10 +660,22 @@ body::before {
 .best:empty {
   display: none;
 }
+/* Result-screen sibling of `.actions-row` — same sticky-to-bottom
+ * treatment so a result panel that overflows the viewport still keeps
+ * its action links (Play again / Previous puzzles / Home) visible. The
+ * visuals stay subtler than `.actions-row` (smaller, muted colour) since
+ * this row sits below a heavy result panel; the sticky behaviour is the
+ * only shared mechanism. */
 .result-links {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: #fafafa;
   font-size: 14px;
   color: #666;
-  margin: 0;
+  margin: 16px -24px 0;
+  padding: 12px 24px;
+  text-align: center;
 }
 .result-links a {
   color: var(--link-color);
