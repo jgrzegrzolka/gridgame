@@ -2,6 +2,36 @@ import { getOrCreateDeviceId } from './flags/identity.js';
 import { displayNickname } from './flags/nickname.js';
 import { avatarSvg } from './flags/avatar.js';
 
+/**
+ * Site wordmark in the top-left, pairing with the chrome cluster
+ * on the top-right. Auto-mounts as a side effect of importing this
+ * module — every page already imports common.js for the burger /
+ * nickname helpers, so no per-page wiring is needed. The logo always
+ * links to the site root via absolute `/`, with `aria-current="page"`
+ * applied when the user is already on the home page (same vocabulary
+ * the burger menu uses for the profile link).
+ */
+function mountSiteLogo() {
+  if (document.querySelector('.site-logo')) return;
+  const a = document.createElement('a');
+  a.className = 'site-logo';
+  a.href = '/';
+  a.setAttribute('aria-label', 'Yet Another Quiz home');
+  const isHome = window.location.pathname === '/'
+    || window.location.pathname === '/index.html';
+  if (isHome) a.setAttribute('aria-current', 'page');
+  const img = document.createElement('img');
+  img.src = '/logo.svg';
+  img.alt = 'Yet Another Quiz';
+  a.appendChild(img);
+  document.body.insertBefore(a, document.body.firstChild);
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState !== 'loading') mountSiteLogo();
+  else document.addEventListener('DOMContentLoaded', mountSiteLogo, { once: true });
+}
+
 /** Display nickname cache key. Written when the user successfully saves a
  *  new value on the /profile/ page. Cleared (`removeItem`) when the user
  *  resets or clears their nickname — the matching server-side state is
