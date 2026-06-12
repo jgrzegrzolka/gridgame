@@ -195,6 +195,10 @@ function runOnline(countries) {
     if (roomCodeEl) roomCodeEl.textContent = code;
     renderShareButton();
     setStatusKey('ttt.connecting', 'Connecting…');
+    // Build the empty 9×9 grid structure now so the full layout is
+    // on-screen before the WebSocket connects — header text is filled
+    // in by populateGridLabels() once the server responds with welcome.
+    buildGridStructure();
     connect();
   }
 
@@ -224,7 +228,7 @@ function runOnline(countries) {
     const { state: nextState, effects } = reduceUltimateServerMessage(state, msg);
     state = nextState;
 
-    if (msg.type === 'welcome') buildGridIfNeeded();
+    if (msg.type === 'welcome') populateGridLabels();
     if (state.statusOverride && state.statusOverride !== before.statusOverride) {
       setStatusKey(
         state.statusOverride.key,
@@ -274,19 +278,22 @@ function runOnline(countries) {
     if (matchupOpponentEl) matchupOpponentEl.replaceChildren();
   }
 
-  // ---- Grid (built once, on welcome) ----
+  // ---- Grid ----
+  // Built in two passes: enterRoom() runs buildGridStructure() so the
+  // 9×9 layout is on-screen before the WebSocket connects, then the
+  // 'welcome' handler runs populateGridLabels() to fill in row/col
+  // header text from the server's puzzle. Splitting these eliminates
+  // the gap users were seeing between joining a room and the first
+  // server message arriving.
   let gridBuilt = false;
-  function buildGridIfNeeded() {
-    const { game } = state;
-    if (gridBuilt || !game) return;
+  function buildGridStructure() {
+    if (gridBuilt) return;
     gridBuilt = true;
-    colHeaderEls.forEach((th, i) => { th.textContent = tCat(/** @type {UltimateGameState} */ (game).puzzle.cols[i]); });
     for (let r = 0; r < 9; r++) {
       const tr = document.createElement('tr');
       if (r % 3 === 0) {
         const rowHeader = document.createElement('th');
         rowHeader.rowSpan = 3;
-        rowHeader.textContent = tCat(/** @type {UltimateGameState} */ (game).puzzle.rows[r / 3]);
         tr.appendChild(rowHeader);
       }
       for (let c = 0; c < 9; c++) {
@@ -312,6 +319,15 @@ function runOnline(countries) {
       }
       gridBodyEl.appendChild(tr);
     }
+  }
+  function populateGridLabels() {
+    const { game } = state;
+    if (!game) return;
+    colHeaderEls.forEach((th, i) => { th.textContent = tCat(/** @type {UltimateGameState} */ (game).puzzle.cols[i]); });
+    // Row headers live on every 3rd <tr> (rowspan=3 cells) inside tbody —
+    // querySelectorAll('tr > th') finds all three in row order.
+    const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
+    rowHeaders.forEach((th, i) => { th.textContent = tCat(/** @type {UltimateGameState} */ (game).puzzle.rows[i]); });
   }
 
   /** @param {number} bigRow @param {number} bigCol @param {number} smallRow @param {number} smallCol */
@@ -805,16 +821,7 @@ function runOnline(countries) {
   function refreshI18nForGame() {
     const { game } = state;
     if (game && gridBuilt) {
-      colHeaderEls.forEach((th, i) => {
-        th.textContent = tCat(/** @type {UltimateGameState} */ (game).puzzle.cols[i]);
-      });
-      // Row headers live on every 3rd <tr> (rowspan=3 cells) inside
-      // tbody — querySelectorAll('tr > th') is enough to find all three
-      // in order without coupling to a class name.
-      const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
-      rowHeaders.forEach((th, i) => {
-        th.textContent = tCat(/** @type {UltimateGameState} */ (game).puzzle.rows[i]);
-      });
+      populateGridLabels();
       renderGrid();
     }
     if (repaintStatusForLang) repaintStatusForLang();
@@ -836,7 +843,8 @@ function runOnline(countries) {
     lastGaveUpByMe = null;
     prevGame = null;
     document.body.classList.remove('game-over');
-    buildGridIfNeeded();
+    buildGridStructure();
+    populateGridLabels();
     renderGrid();
     renderStatus();
   }
