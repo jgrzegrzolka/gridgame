@@ -194,6 +194,8 @@
       "yellow"
     ],
     "additionalColors": [],
+    "ambiguousColorCount": [3, 4, 5],
+    "ambiguousColors": ["brown", "orange"],
     "motifs": [
       "star-or-moon"
     ]
@@ -532,6 +534,8 @@
     "additionalColors": [
       "blue"
     ],
+    "ambiguousColorCount": [4, 5, 6, 7, 8, 9, 10],
+    "ambiguousColors": ["brown", "black", "white"],
     "motifs": [
       "animal",
       "bird",
@@ -1284,6 +1288,8 @@
       "green",
       "black"
     ],
+    "ambiguousColorCount": [4, 5, 6, 7, 8, 9],
+    "ambiguousColors": ["brown", "black", "gray"],
     "motifs": [
       "animal",
       "bird",
@@ -1528,6 +1534,8 @@
       "yellow",
       "green"
     ],
+    "ambiguousColorCount": [5, 6, 7],
+    "ambiguousColors": ["black", "brown"],
     "motifs": [
       "animal",
       "bird",
@@ -2273,6 +2281,8 @@
       "blue"
     ],
     "additionalColors": [],
+    "ambiguousColorCount": [4, 5],
+    "ambiguousColors": ["black"],
     "motifs": [
       "animal",
       "bird",
@@ -4547,6 +4557,8 @@
       "yellow"
     ],
     "additionalColors": [],
+    "ambiguousColorCount": [3, 4],
+    "ambiguousColors": ["black"],
     "motifs": [
       "star-or-moon"
     ]
