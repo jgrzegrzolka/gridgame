@@ -694,20 +694,6 @@
   },
   {
     "n": 54,
-    "filter": "color:white,color:blue,color:yellow,colorCount:3",
-    "answers": [
-      "ar",
-      "ba",
-      "nr",
-      "uy"
-    ],
-    "description": {
-      "en": "Find all flags whose only colours are white, blue and yellow — no others.",
-      "pl": "Znajdź wszystkie flagi, które mają tylko 3 kolory: biały, niebieski i żółty."
-    }
-  },
-  {
-    "n": 55,
     "filter": "continent:Oceania,motif:star-or-moon",
     "answers": [
       "au",
@@ -728,7 +714,7 @@
     }
   },
   {
-    "n": 56,
+    "n": 55,
     "filter": "continent:Oceania,colorCount:>=3",
     "answers": [
       "au",
@@ -749,7 +735,7 @@
     }
   },
   {
-    "n": 57,
+    "n": 56,
     "filter": "color:white,color:blue,color:black,colorCount:3",
     "answers": [
       "bw",
@@ -761,7 +747,7 @@
     }
   },
   {
-    "n": 58,
+    "n": 57,
     "filter": "continent:Africa,motif:star-or-moon,color:blue",
     "answers": [
       "cd",
@@ -782,7 +768,7 @@
     }
   },
   {
-    "n": 59,
+    "n": 58,
     "filter": "continent:Africa,color:red,color:blue,color:green,color:yellow,colorCount:4",
     "answers": [
       "er",
@@ -795,7 +781,7 @@
     }
   },
   {
-    "n": 60,
+    "n": 59,
     "filter": "continent:Africa,color:black,color:!red",
     "answers": [
       "bw",
@@ -808,7 +794,7 @@
     }
   },
   {
-    "n": 61,
+    "n": 60,
     "filter": "continent:Africa,color:red,color:blue,color:yellow,colorCount:3",
     "answers": [
       "cd",
@@ -820,7 +806,7 @@
     }
   },
   {
-    "n": 62,
+    "n": 61,
     "filter": "motif:bird",
     "answers": [
       "al",
@@ -847,7 +833,7 @@
     }
   },
   {
-    "n": 63,
+    "n": 62,
     "filter": "motif:star-or-moon,color:red,colorCount:3",
     "answers": [
       "ao",
@@ -879,7 +865,7 @@
     }
   },
   {
-    "n": 64,
+    "n": 63,
     "filter": "motif:animal,motif:!coat-of-arms",
     "answers": [
       "al",
@@ -897,7 +883,7 @@
     }
   },
   {
-    "n": 65,
+    "n": 64,
     "filter": "motif:star-or-moon,color:green,colorCount:3",
     "answers": [
       "bf",
@@ -918,7 +904,7 @@
     }
   },
   {
-    "n": 66,
+    "n": 65,
     "filter": "color:red,color:green,color:yellow,colorCount:3",
     "answers": [
       "bf",
@@ -938,7 +924,7 @@
     }
   },
   {
-    "n": 67,
+    "n": 66,
     "filter": "continent:Africa,color:red,color:green,color:yellow,color:black,colorCount:4",
     "answers": [
       "gh",
@@ -951,7 +937,7 @@
     }
   },
   {
-    "n": 68,
+    "n": 67,
     "filter": "continent:North America,color:green,motif:star-or-moon",
     "answers": [
       "gd",
@@ -963,7 +949,7 @@
     }
   },
   {
-    "n": 69,
+    "n": 68,
     "filter": "motif:star-or-moon,color:blue,color:yellow,colorCount:2",
     "answers": [
       "kz",
@@ -975,7 +961,7 @@
     }
   },
   {
-    "n": 70,
+    "n": 69,
     "filter": "continent:Africa,color:blue,color:green,color:yellow,colorCount:3",
     "answers": [
       "ga",
@@ -987,7 +973,7 @@
     }
   },
   {
-    "n": 71,
+    "n": 70,
     "filter": "continent:Oceania,colorCount:2",
     "answers": [
       "fm",
@@ -1000,7 +986,7 @@
     }
   },
   {
-    "n": 72,
+    "n": 71,
     "filter": "color:blue,color:yellow,color:black,colorCount:3",
     "answers": [
       "bb",
