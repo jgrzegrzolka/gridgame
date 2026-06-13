@@ -53,7 +53,7 @@
       } from '../../flags/quiz.js';
       import { flagsGamePool } from '../../flags/group.js';
       import { bootI18n, wireLangToggle, t } from '../../i18n.js';
-      import { wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from '../../common.js';
+      import { wireBurgerDismiss, mountNicknameMenuItem } from '../../common.js';
       import { buildQuizMenu } from '../menu.js';
 
       const includeAll = isQuizIncludeAll();
@@ -85,10 +85,6 @@
               mountNicknameMenuItem({
                 rootEl: menuEl,
                 profileHref: '../../profile/',
-              });
-              mountPrivacyMenuItem({
-                rootEl: menuEl,
-                privacyHref: '../../privacy/',
               });
             };
             rebuildMenu();

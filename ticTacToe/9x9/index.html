@@ -141,7 +141,7 @@
 
     <script type="module">
       import { bootUltimateTicTacToeOnline } from './page.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from '../../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from '../../common.js';
       import { bootI18n, wireLangToggle } from '../../i18n.js';
       bootI18n('../../').then((lang) => {
         // Soft-reload mode keeps room/grid/picker/result intact across
@@ -157,10 +157,6 @@
         mountNicknameMenuItem({
           rootEl: document.querySelector('#burger-panel .menu'),
           profileHref: '../../profile/',
-        });
-        mountPrivacyMenuItem({
-          rootEl: document.querySelector('#burger-panel .menu'),
-          privacyHref: '../../privacy/',
         });
       });
     </script>

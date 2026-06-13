@@ -50,7 +50,7 @@
     <script type="module">
       import { bootBacklog } from './page.js';
       import { bootI18n, wireLangToggle } from '../../i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from '../../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from '../../common.js';
       bootI18n('../../').then((lang) => {
         // Author-only browse page; soft-reload keeps scroll position.
         wireLangToggle(lang, undefined, { softReload: true, base: '../../' });
@@ -63,10 +63,6 @@
         mountNicknameMenuItem({
           rootEl: document.querySelector('#burger-panel .menu'),
           profileHref: '../../profile/',
-        });
-        mountPrivacyMenuItem({
-          rootEl: document.querySelector('#burger-panel .menu'),
-          privacyHref: '../../privacy/',
         });
       });
     </script>

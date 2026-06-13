@@ -322,4 +322,23 @@ function validateConfigKeyParam(raw) {
   return { ok: true, value: raw };
 }
 
-module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, validateTttResultBody, validateDeviceIdParam, validateConfigKeyParam, LIMITS };
+/**
+ * Validate the body posted to `POST /api/v1/profile/requestDeletion`. Shape:
+ *
+ *   {
+ *     deviceId: string (8..64),
+ *   }
+ *
+ * The endpoint just sets `deletionRequestedAt` on the profile row — no
+ * nickname, no other fields. Keeping the body minimal so a future "this
+ * isn't actually my deviceId" check can be slotted in cleanly.
+ */
+function validateProfileDeletionBody(body) {
+  if (!body || typeof body !== 'object') return { ok: false, error: 'body_required' };
+  if (!isString(body.deviceId, LIMITS.DEVICE_ID_MIN, LIMITS.DEVICE_ID_MAX)) {
+    return { ok: false, error: 'invalid_deviceId' };
+  }
+  return { ok: true, value: { deviceId: body.deviceId } };
+}
+
+module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, validateProfileDeletionBody, validateTttResultBody, validateDeviceIdParam, validateConfigKeyParam, LIMITS };

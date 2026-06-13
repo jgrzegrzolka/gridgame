@@ -120,7 +120,7 @@
     <script type="module">
       import { bootFindFlag } from './page.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from '../common.js';
+      import { wireBurgerDismiss, mountNicknameMenuItem } from '../common.js';
       bootI18n('../').then((lang) => {
         // Soft-reload mode keeps the chooser's pill selections, a
         // running game's typed input + scroll + found tiles, and the
@@ -133,10 +133,6 @@
         mountNicknameMenuItem({
           rootEl: document.querySelector('#burger-panel .menu'),
           profileHref: '../profile/',
-        });
-        mountPrivacyMenuItem({
-          rootEl: document.querySelector('#burger-panel .menu'),
-          privacyHref: '../privacy/',
         });
       });
     </script>

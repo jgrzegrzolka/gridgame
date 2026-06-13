@@ -110,7 +110,7 @@
     </div>
     <script type="module">
       import { bootTicTacToe9x9 } from './page.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from '../../../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from '../../../common.js';
       import { bootI18n, wireLangToggle } from '../../../i18n.js';
       bootI18n('../../../').then((lang) => {
         // Soft-reload mode preserves the offline 9×9 game state across
@@ -125,10 +125,6 @@
         mountNicknameMenuItem({
           rootEl: document.querySelector('#burger-panel .menu'),
           profileHref: '../../../profile/',
-        });
-        mountPrivacyMenuItem({
-          rootEl: document.querySelector('#burger-panel .menu'),
-          privacyHref: '../../../privacy/',
         });
       });
     </script>

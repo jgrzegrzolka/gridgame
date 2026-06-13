@@ -532,3 +532,24 @@ test('validateConfigKeyParam: rejects shape-violating strings', () => {
   assert.deepEqual(validateConfigKeyParam('Countries:60s:sov'), { ok: false, error: 'invalid_configKey' });
   assert.deepEqual(validateConfigKeyParam('countries:60s:wat'), { ok: false, error: 'invalid_configKey' });
 });
+
+const { validateProfileDeletionBody } = require('./validate');
+
+test('validateProfileDeletionBody: accepts a well-formed body and returns the trusted deviceId', () => {
+  const body = { deviceId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' };
+  assert.deepEqual(validateProfileDeletionBody(body), {
+    ok: true,
+    value: { deviceId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' },
+  });
+});
+
+test('validateProfileDeletionBody: rejects null / non-object', () => {
+  assert.deepEqual(validateProfileDeletionBody(null), { ok: false, error: 'body_required' });
+  assert.deepEqual(validateProfileDeletionBody('hi'), { ok: false, error: 'body_required' });
+});
+
+test('validateProfileDeletionBody: rejects missing / undersized / oversized deviceId', () => {
+  assert.deepEqual(validateProfileDeletionBody({}), { ok: false, error: 'invalid_deviceId' });
+  assert.deepEqual(validateProfileDeletionBody({ deviceId: 'a'.repeat(7) }), { ok: false, error: 'invalid_deviceId' });
+  assert.deepEqual(validateProfileDeletionBody({ deviceId: 'a'.repeat(65) }), { ok: false, error: 'invalid_deviceId' });
+});
