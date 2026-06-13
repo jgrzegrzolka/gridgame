@@ -79,6 +79,7 @@
     "additionalColors": [
       "yellow"
     ],
+    "ambiguousColorCount": [4, 5, 6, 7],
     "motifs": [
       "animal",
       "bird",
@@ -506,6 +507,8 @@
       "white"
     ],
     "additionalColors": [],
+    "ambiguousColorCount": [3, 4],
+    "ambiguousColors": ["white"],
     "motifs": [
       "animal"
     ]
