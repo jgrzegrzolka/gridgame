@@ -79,6 +79,20 @@ body {
   margin-bottom: 16px;
   font-variant-numeric: tabular-nums;
 }
+/* Parallel to .find-header — the result screen's score line gets the
+ * same [text | share-icon] horizontal layout as the in-game header. The
+ * inner `.final-score` rule (common.css) keeps its own font sizing; we
+ * just zero its margin-bottom because the row provides the spacing. */
+.final-score-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.final-score-row .final-score {
+  margin: 0;
+}
 .find-cat {
   font-size: 22px;
   font-weight: 600;
