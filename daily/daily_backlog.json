@@ -668,22 +668,6 @@
   },
   {
     "n": 52,
-    "filter": "continent:North America,colorCount:4",
-    "answers": [
-      "do",
-      "gt",
-      "ht",
-      "lc",
-      "ni",
-      "sv"
-    ],
-    "description": {
-      "en": "Find all North American flags with exactly 4 colours.",
-      "pl": "Znajdź wszystkie północnoamerykańskie flagi z dokładnie 4 kolorami."
-    }
-  },
-  {
-    "n": 53,
     "filter": "continent:Africa,color:black,colorCount:3",
     "answers": [
       "ao",
@@ -696,7 +680,7 @@
     }
   },
   {
-    "n": 54,
+    "n": 53,
     "filter": "continent:North America,color:green,colorCount:3",
     "answers": [
       "gd",
@@ -709,7 +693,7 @@
     }
   },
   {
-    "n": 55,
+    "n": 54,
     "filter": "color:white,color:blue,color:yellow,colorCount:3",
     "answers": [
       "ar",
@@ -723,7 +707,7 @@
     }
   },
   {
-    "n": 56,
+    "n": 55,
     "filter": "continent:Oceania,motif:star-or-moon",
     "answers": [
       "au",
@@ -744,22 +728,7 @@
     }
   },
   {
-    "n": 57,
-    "filter": "continent:North America,color:white,color:!red",
-    "answers": [
-      "gt",
-      "hn",
-      "lc",
-      "ni",
-      "sv"
-    ],
-    "description": {
-      "en": "Find all North American flags with white but without red.",
-      "pl": "Znajdź wszystkie północnoamerykańskie flagi z bielą, ale bez czerwieni."
-    }
-  },
-  {
-    "n": 58,
+    "n": 56,
     "filter": "continent:Oceania,colorCount:>=3",
     "answers": [
       "au",
@@ -780,7 +749,7 @@
     }
   },
   {
-    "n": 59,
+    "n": 57,
     "filter": "color:white,color:blue,color:black,colorCount:3",
     "answers": [
       "bw",
@@ -792,7 +761,7 @@
     }
   },
   {
-    "n": 60,
+    "n": 58,
     "filter": "continent:Africa,motif:star-or-moon,color:blue",
     "answers": [
       "cd",
@@ -813,7 +782,7 @@
     }
   },
   {
-    "n": 61,
+    "n": 59,
     "filter": "continent:Africa,color:red,color:blue,color:green,color:yellow,colorCount:4",
     "answers": [
       "er",
@@ -826,7 +795,7 @@
     }
   },
   {
-    "n": 62,
+    "n": 60,
     "filter": "continent:Africa,color:black,color:!red",
     "answers": [
       "bw",
@@ -839,7 +808,7 @@
     }
   },
   {
-    "n": 63,
+    "n": 61,
     "filter": "continent:Africa,color:red,color:blue,color:yellow,colorCount:3",
     "answers": [
       "cd",
@@ -851,7 +820,7 @@
     }
   },
   {
-    "n": 64,
+    "n": 62,
     "filter": "motif:bird",
     "answers": [
       "al",
@@ -878,7 +847,7 @@
     }
   },
   {
-    "n": 65,
+    "n": 63,
     "filter": "motif:star-or-moon,color:red,colorCount:3",
     "answers": [
       "ao",
@@ -910,7 +879,7 @@
     }
   },
   {
-    "n": 66,
+    "n": 64,
     "filter": "motif:animal,motif:!coat-of-arms",
     "answers": [
       "al",
@@ -928,7 +897,7 @@
     }
   },
   {
-    "n": 67,
+    "n": 65,
     "filter": "motif:star-or-moon,color:green,colorCount:3",
     "answers": [
       "bf",
@@ -949,7 +918,7 @@
     }
   },
   {
-    "n": 68,
+    "n": 66,
     "filter": "color:red,color:green,color:yellow,colorCount:3",
     "answers": [
       "bf",
@@ -969,7 +938,7 @@
     }
   },
   {
-    "n": 69,
+    "n": 67,
     "filter": "continent:Africa,color:red,color:green,color:yellow,color:black,colorCount:4",
     "answers": [
       "gh",
@@ -982,7 +951,7 @@
     }
   },
   {
-    "n": 70,
+    "n": 68,
     "filter": "continent:North America,color:green,motif:star-or-moon",
     "answers": [
       "gd",
@@ -994,7 +963,7 @@
     }
   },
   {
-    "n": 71,
+    "n": 69,
     "filter": "motif:star-or-moon,color:blue,color:yellow,colorCount:2",
     "answers": [
       "kz",
@@ -1006,7 +975,7 @@
     }
   },
   {
-    "n": 72,
+    "n": 70,
     "filter": "continent:Africa,color:blue,color:green,color:yellow,colorCount:3",
     "answers": [
       "ga",
@@ -1018,7 +987,7 @@
     }
   },
   {
-    "n": 73,
+    "n": 71,
     "filter": "continent:Oceania,colorCount:2",
     "answers": [
       "fm",
@@ -1031,7 +1000,7 @@
     }
   },
   {
-    "n": 74,
+    "n": 72,
     "filter": "color:blue,color:yellow,color:black,colorCount:3",
     "answers": [
       "bb",

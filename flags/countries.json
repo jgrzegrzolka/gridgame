@@ -140,6 +140,7 @@
     "additionalColors": [
       "orange"
     ],
+    "ambiguousColorCount": [3, 4],
     "motifs": [
       "animal",
       "coat-of-arms",
@@ -453,6 +454,8 @@
       "yellow",
       "black"
     ],
+    "ambiguousColorCount": [5, 6, 7, 8, 9],
+    "ambiguousColors": ["brown", "black"],
     "motifs": [
       "coat-of-arms"
     ]
@@ -1240,6 +1243,8 @@
     "additionalColors": [
       "green"
     ],
+    "ambiguousColorCount": [4, 5, 6],
+    "ambiguousColors": ["yellow", "black"],
     "motifs": [
       "coat-of-arms",
       "cross"
@@ -1322,6 +1327,8 @@
       "green",
       "yellow"
     ],
+    "ambiguousColorCount": [4, 5],
+    "ambiguousColors": ["red"],
     "motifs": [
       "coat-of-arms"
     ]
@@ -1829,6 +1836,8 @@
       "green",
       "yellow"
     ],
+    "ambiguousColorCount": [4, 5],
+    "ambiguousColors": ["brown"],
     "motifs": [
       "animal",
       "bird",
@@ -2702,6 +2711,8 @@
       "blue",
       "yellow"
     ],
+    "ambiguousColorCount": [4, 5, 6, 7, 8],
+    "ambiguousColors": ["brown", "black"],
     "motifs": [
       "animal",
       "bird",
@@ -2984,6 +2995,8 @@
       "green",
       "yellow"
     ],
+    "ambiguousColorCount": [4, 5],
+    "ambiguousColors": ["red"],
     "motifs": [
       "coat-of-arms"
     ]
