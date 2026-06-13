@@ -38,7 +38,7 @@
   "tile": {
     "daily": "Daily puzzle",
     "quiz": "Quiz",
-    "find": "Find all",
+    "find": "Make a puzzle",
     "ticTacToe": "Tic Tac Toe"
   },
   "game": {
@@ -72,16 +72,19 @@
     }
   },
   "findFlag": {
-    "title": "Yet Another Quiz — Find All Country Flags by Category",
-    "heading": "Find Flag",
-    "blurb": "Pick categories and name every flag that matches.",
+    "title": "Yet Another Quiz — Make a Custom Flag Puzzle",
+    "heading": "Make a puzzle",
+    "blurb": "Pick filters to build your puzzle, then play it or share the link.",
     "typeCountryName": "Type a country name…",
     "youFound": "You found",
     "youFoundAll": "You found all",
     "found": "Found:",
     "missed": "Missed:",
-    "pickAnotherCategory": "Pick another category",
+    "pickAnotherCategory": "Make another puzzle",
     "play": "Play",
+    "share": "Share",
+    "shareCopied": "Copied ✓",
+    "shareFailed": "Could not copy",
     "clear": "Clear all",
     "notPrefix": "not ",
     "noOtherColors": "no other colours",

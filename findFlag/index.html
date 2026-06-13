@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Find all country flags matching a category — continent, flag color, or motif (cross, star, animal…). Built-in autocomplete with diacritic tolerance." />
+    <meta name="description" content="Build a custom country-flag puzzle from continent, colour, and motif filters — then share the link or play it yourself." />
     <link rel="canonical" href="https://yetanotherquiz.com/findFlag/" />
     <link rel="preload" href="../flags/countries.json?v=__BUILD__" as="fetch" type="application/json" crossorigin />
-    <title data-i18n="findFlag.title">Yet Another Quiz — Find All Country Flags by Category</title>
+    <title data-i18n="findFlag.title">Yet Another Quiz — Make a Custom Flag Puzzle</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
@@ -48,14 +48,16 @@
     </nav>
 
     <section id="chooser" hidden>
-      <h1 class="sr-only" data-i18n="findFlag.heading">Find Flag</h1>
-      <p class="find-blurb" data-i18n="findFlag.blurb">Pick a category and name every flag that matches.</p>
+      <h1 class="sr-only" data-i18n="findFlag.heading">Make a puzzle</h1>
+      <p class="find-blurb" data-i18n="findFlag.blurb">Pick filters to build your puzzle, then play it or share the link.</p>
       <div class="find-clear-row">
         <button type="button" class="find-clear" id="find-clear" data-i18n="findFlag.clear" hidden>Clear all</button>
       </div>
       <div id="chooser-sections"></div>
       <div class="actions-row">
         <button type="button" class="row-cta" id="find-play" data-i18n="findFlag.play" disabled>Play</button>
+        ·
+        <button type="button" id="find-share" data-i18n="findFlag.share" disabled>Share</button>
         ·
         <button type="button" id="find-random" data-i18n="menu.random">Random</button>
         ·
@@ -109,9 +111,11 @@
       <p class="result-links">
         <a id="play-again" href="#" data-i18n="game.playAgain">Play again</a>
         ·
+        <a id="result-share" href="#" data-i18n="findFlag.share">Share</a>
+        ·
         <a id="play-random" href="#" data-i18n="menu.random">Random</a>
         ·
-        <a href="./" data-i18n="findFlag.pickAnotherCategory">Pick another category</a>
+        <a href="./" data-i18n="findFlag.pickAnotherCategory">Make another puzzle</a>
         ·
         <a href="../" data-i18n="menu.home">Home</a>
       </p>
