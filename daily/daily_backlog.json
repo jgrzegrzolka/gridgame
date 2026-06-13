@@ -15,6 +15,59 @@
   },
   {
     "n": 10,
+    "filter": "continent:Africa,colorCount:2",
+    "answers": [
+      "ma",
+      "ng",
+      "so",
+      "tn"
+    ],
+    "description": {
+      "en": "Find all African flags with only 2 colours.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z tylko 2 kolorami."
+    }
+  },
+  {
+    "n": 11,
+    "filter": "continent:Europe,motif:coat-of-arms",
+    "answers": [
+      "ad",
+      "es",
+      "hr",
+      "md",
+      "me",
+      "pt",
+      "rs",
+      "si",
+      "sk",
+      "sm",
+      "va"
+    ],
+    "description": {
+      "en": "Find all European flags with a coat of arms.",
+      "pl": "Znajdź wszystkie europejskie flagi z godłem."
+    }
+  },
+  {
+    "n": 12,
+    "filter": "continent:Europe,motif:animal",
+    "answers": [
+      "ad",
+      "al",
+      "es",
+      "hr",
+      "md",
+      "me",
+      "mt",
+      "rs"
+    ],
+    "description": {
+      "en": "Find all European flags with an animal.",
+      "pl": "Znajdź wszystkie europejskie flagi ze zwierzęciem."
+    }
+  },
+  {
+    "n": 13,
     "filter": "continent:Africa,color:yellow,color:red,color:green,motif:star-or-moon",
     "answers": [
       "bf",
@@ -36,59 +89,6 @@
     "description": {
       "en": "Find all African flags with red, yellow, green, and a star or moon.",
       "pl": "Znajdź wszystkie afrykańskie flagi z czerwienią, żółcią, zielenią oraz gwiazdą lub księżycem."
-    }
-  },
-  {
-    "n": 11,
-    "filter": "continent:Africa,colorCount:2",
-    "answers": [
-      "ma",
-      "ng",
-      "so",
-      "tn"
-    ],
-    "description": {
-      "en": "Find all African flags with only 2 colours.",
-      "pl": "Znajdź wszystkie afrykańskie flagi z tylko 2 kolorami."
-    }
-  },
-  {
-    "n": 12,
-    "filter": "continent:Europe,motif:coat-of-arms",
-    "answers": [
-      "ad",
-      "es",
-      "hr",
-      "md",
-      "me",
-      "pt",
-      "rs",
-      "si",
-      "sk",
-      "sm",
-      "va"
-    ],
-    "description": {
-      "en": "Find all European flags with a coat of arms.",
-      "pl": "Znajdź wszystkie europejskie flagi z godłem."
-    }
-  },
-  {
-    "n": 13,
-    "filter": "continent:Europe,motif:animal",
-    "answers": [
-      "ad",
-      "al",
-      "es",
-      "hr",
-      "md",
-      "me",
-      "mt",
-      "rs"
-    ],
-    "description": {
-      "en": "Find all European flags with an animal.",
-      "pl": "Znajdź wszystkie europejskie flagi ze zwierzęciem."
     }
   },
   {
@@ -604,16 +604,25 @@
   },
   {
     "n": 48,
-    "filter": "motif:animal,motif:coat-of-arms,motif:weapon",
+    "filter": "motif:weapon",
     "answers": [
+      "ao",
+      "bb",
       "bo",
       "ec",
       "gt",
-      "lk"
+      "ht",
+      "ke",
+      "lk",
+      "mt",
+      "mz",
+      "om",
+      "sa",
+      "sz"
     ],
     "description": {
-      "en": "Find all flags with an animal, a coat of arms, and a weapon.",
-      "pl": "Znajdź wszystkie flagi ze zwierzęciem, godłem i bronią."
+      "en": "Find all flags with a weapon.",
+      "pl": "Znajdź wszystkie flagi z bronią."
     }
   },
   {

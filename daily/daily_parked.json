@@ -20,10 +20,6 @@
     "notes": "Georgia alone (ge) — answer-incidental subset of backlog #46 (Asia red+white only-2 which includes ge). Refined rule 6 doesn't block this on filter grounds (different framing), but the puzzle is 1 flag and rule 9 forbids 1-flag puzzles before #50. Past-#100 candidate."
   },
   {
-    "filter": "motif:weapon",
-    "notes": "13 sovereigns (ao, bb, bo, ec, gt, ht, ke, lk, mt, mz, om, sa, sz). Strict-superset of backlog #50 (animal+coa+weapon → bo,ec,gt,lk). Works as recall at #101+ — 'you saw the 4 with animal+coa+weapon, which 9 other flags have weapons?'. Also burns the single-use motif:weapon token, but backlog #50 already does, so this can't ship."
-  },
-  {
     "filter": "continent:Europe,color:white,color:blue,colorCount:2",
     "notes": "Iconic but {fi, gr} is a strict subset of live #1 (Europe·cross — both have crosses). Refined rule 6: filter is NOT a refinement of live #1's filter (different tokens), so technically allowed under refined rule. But park anyway — 2-flag puzzles with answer-incidental overlap of an iconic earlier puzzle still read as 'wait I already saw these' to the player."
   },
@@ -49,6 +45,6 @@
   },
   {
     "filter": "motif:bird,motif:weapon",
-    "notes": "3 flags — bo, ec, gt (all South/Central American coat-of-arms with condor/quetzal + crossed weapons). Acknowledged rule violations, parked on author intent: (1) rule 14 — BOTH motif:bird and motif:weapon are single-use, already used in the live/backlog catalog; (2) rule 6 — strict subset of the existing animal+coa+weapon backlog entry (bo, ec, gt, lk). Kept as a curiosity because the bird+weapon overlap is a real thematic category (Andean/Maya iconography). Will never ship as written unless the single-use rule is relaxed for parked-recall puzzles past #100."
+    "notes": "3 flags — bo, ec, gt (all South/Central American coat-of-arms with condor/quetzal + crossed weapons). Acknowledged rule violations, parked on author intent: (1) rule 14 — BOTH motif:bird and motif:weapon are single-use, already used in the live/backlog catalog (motif:weapon now used by the standalone 'all flags with weapons' puzzle at backlog #48 since 2026-06-13). Kept as a curiosity because the bird+weapon overlap is a real thematic category (Andean/Maya iconography). Will never ship as written unless the single-use rule is relaxed for parked-recall puzzles past #100."
   }
 ]
