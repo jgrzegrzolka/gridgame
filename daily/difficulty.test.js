@@ -145,6 +145,48 @@ test('scoreEntry: accepts Map or plain object as byCode', () => {
   assert.equal(scoreEntry(entry, asMap).score, scoreEntry(entry, asObj).score);
 });
 
+// --- manual entries (regression pin) ---
+//
+// Before #413's follow-up fix, `scoreEntry` did `entry.filter.split(',')`
+// unconditionally. The backlog index page loads `scoreEntry` for every
+// entry to render the difficulty badge — so a manual entry threw and
+// killed the whole grid. These tests pin the no-throw contract.
+
+test('scoreEntry: manual entry (no filter) does not throw — tokens = 0, worldwide bump applies', () => {
+  // The crash shape was `entry.filter.split(',')` on undefined. First
+  // assertion: no throw. Then pin the behaviour: tokens = 0 (manual
+  // entries have no DSL tokens to add friction), worldwide = +1.0
+  // (a hand-curated list has no continent scoping, so the player has
+  // to search globally — same shape as a filter without continent:X).
+  const entry = /** @type {any} */ ({
+    kind: 'manual',
+    answers: ['a', 'b', 'c'],
+    title: { en: 'X', pl: 'X' },
+  });
+  const r = scoreEntry(entry, mk({ a: 2, b: 2, c: 2 }));
+  assert.equal(r.tokens, 0);
+  assert.equal(r.tokenAdjust, 0);
+  assert.equal(r.worldwideAdjust, 1.0);
+  // mean=2 + outlier=0 + sizeAdjust(3)=0.3 + tokenAdjust=0 + worldwide=1.0 = 3.3
+  assert.equal(r.score, 3.3);
+});
+
+test('scoreEntry: manual entry composes the rest of the formula normally', () => {
+  // Size bucket + nameScore mean still feed through — the only thing
+  // a manual entry skips is the filter-derived token + worldwide
+  // adjustments. This pins that the size / mean / outlier code path
+  // didn't accidentally also get switched off.
+  const entry = /** @type {any} */ ({
+    kind: 'manual',
+    answers: ['a'],  // size bucket 1 → +2.0
+    title: { en: 'X', pl: 'X' },
+  });
+  const r = scoreEntry(entry, mk({ a: 4 }));
+  // mean=4, outlier=0 (single entry), sizeAdjust=2.0, tokenAdjust=0, worldwide=1.0 → 7.0
+  assert.equal(r.sizeAdjust, 2.0);
+  assert.equal(r.score, 7.0);
+});
+
 // --- calibration anchors against real catalog data ---
 //
 // These pin the formula's behaviour on actual entries from the live
