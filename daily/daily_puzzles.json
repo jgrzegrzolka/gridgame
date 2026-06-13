@@ -147,5 +147,19 @@
       "en": "Find all Asian flags with blue but without red.",
       "pl": "Znajdź wszystkie azjatyckie flagi z błękitem, ale bez czerwieni."
     }
+  },
+  {
+    "n": 9,
+    "filter": "continent:North America,color:white,color:blue,colorCount:3",
+    "answers": [
+      "cr",
+      "cu",
+      "pa",
+      "us"
+    ],
+    "description": {
+      "en": "Find all North American flags whose only colours are red, white, and blue — no others.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi, które mają tylko 3 kolory: czerwony, biały i niebieski."
+    }
   }
 ]
