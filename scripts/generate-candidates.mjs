@@ -26,6 +26,14 @@
  *            `flags/daily.js`.
  *   - Rule 9: 2 <= answers.length <= 30
  *   - Rule 14: no single-use token recurrence (against catalog + ideas)
+ *   - Feature DA ambiguity audit: rejects candidates where a flag's
+ *            `ambiguousColorCount` straddles the filter's `colorCount`,
+ *            or its `ambiguousColors` flips its membership under the
+ *            filter's `color:X` / `color:!X` tokens. Same gate as
+ *            `flags/daily.test.js` enforces on the live catalog — adding
+ *            it here means brainstorm batches never propose ambig-broken
+ *            candidates in the first place. See `flags/ambiguityAudit.js`
+ *            and DATA_FEATURE.md Feature DA.
  *   - Dedup: filter string not already in catalog, ideas, or parked
  *
  * Rule 6 guard is seeded from LIVE + BACKLOG + existing fresh IDEAS.
@@ -54,6 +62,7 @@ import { parseFilterString, serializeFilter } from '../flags/findFlag.js';
 import { matchesFilters } from '../flags/flagsFilter.js';
 import { flagsGamePool, loadCountries } from '../flags/group.js';
 import { isFilterRefinement } from '../flags/daily.js';
+import { auditFilter } from '../flags/ambiguityAudit.js';
 import { scoreEntry } from '../daily/difficulty.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -254,6 +263,13 @@ function passesHardRules(filter, answers, parsed) {
   const r6 = rule6NoSubset(filter, answers);
   if (!r6.ok) {
     return { ok: false, reason: `${r6.reason} ${r6.conflict.ref} (${r6.conflict.filter})` };
+  }
+  // Feature DA: skip combinations where a flag's count or membership
+  // ambiguity puts a plausible-counting player into the disagreement
+  // zone. Silent skip (rule-6 style) — no rescue by adding more tokens.
+  const ambig = auditFilter(filter, COUNTRIES);
+  if (ambig.length > 0) {
+    return { ok: false, reason: `ambiguity ${ambig.map((v) => `${v.country}/${v.kind}`).join(',')}` };
   }
   return { ok: true };
 }
