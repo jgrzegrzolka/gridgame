@@ -51,7 +51,7 @@
     <script type="module">
       import { bootArchive } from './archive.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from '../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from '../common.js';
       bootI18n('../').then((lang) => {
         // Soft-reload keeps scroll position on the archive grid intact.
         // The dynamic "No puzzles yet." line carries `data-i18n` so it
@@ -66,10 +66,6 @@
         mountNicknameMenuItem({
           rootEl: document.querySelector('#burger-panel .menu'),
           profileHref: '../profile/',
-        });
-        mountPrivacyMenuItem({
-          rootEl: document.querySelector('#burger-panel .menu'),
-          privacyHref: '../privacy/',
         });
       });
     </script>

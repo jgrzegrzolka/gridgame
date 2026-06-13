@@ -17,6 +17,7 @@ test('first write (no existing row): createdAt = updatedAt = now, nickname store
     nickname: 'Alice',
     createdAt: 1_700_000_000_000,
     updatedAt: 1_700_000_000_000,
+    deletionRequestedAt: null,
     v: 1,
   });
 });
@@ -73,4 +74,42 @@ test('v is always 1 on a fresh writer — schema-version contract per infra/oper
   const update = buildProfileDoc({ existing: { createdAt: 1 }, deviceId: DEVICE_ID, nickname: 'A', now: 2 });
   assert.equal(fresh.v, 1);
   assert.equal(update.v, 1);
+});
+
+test('requestDeletion=true on a fresh row stamps deletionRequestedAt to now', () => {
+  const doc = buildProfileDoc({
+    existing: null,
+    deviceId: DEVICE_ID,
+    nickname: null,
+    now: 1_700_000_000_000,
+    requestDeletion: true,
+  });
+  assert.equal(doc.deletionRequestedAt, 1_700_000_000_000);
+});
+
+test('a normal nickname write preserves an existing deletionRequestedAt — only playing again clears it', () => {
+  // Cancel-on-return is decided at manual purge time (any newer game-data
+  // write wins over the flag), NOT inside this builder. So even a nickname
+  // save while a deletion is pending must NOT silently clear the flag.
+  const doc = buildProfileDoc({
+    existing: { createdAt: 1_600_000_000_000, deletionRequestedAt: 1_650_000_000_000 },
+    deviceId: DEVICE_ID,
+    nickname: 'New name',
+    now: 1_700_000_000_000,
+  });
+  assert.equal(doc.deletionRequestedAt, 1_650_000_000_000);
+});
+
+test('requestDeletion=true re-stamps the flag even if one was already set', () => {
+  // Idempotent re-request: user clicks Request data removal again. The
+  // updatedAt and deletionRequestedAt both move forward, so the "is the
+  // flag still the latest write?" check at purge time stays meaningful.
+  const doc = buildProfileDoc({
+    existing: { createdAt: 1_600_000_000_000, deletionRequestedAt: 1_650_000_000_000 },
+    deviceId: DEVICE_ID,
+    nickname: 'Alice',
+    now: 1_700_000_000_000,
+    requestDeletion: true,
+  });
+  assert.equal(doc.deletionRequestedAt, 1_700_000_000_000);
 });

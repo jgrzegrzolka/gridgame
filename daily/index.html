@@ -108,7 +108,7 @@
     <script type="module">
       import { bootDaily } from './page.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from '../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from '../common.js';
       bootI18n('../').then((lang) => {
         // Soft-reload mode keeps partial game progress (typed guesses,
         // input text, scroll, found tiles) intact across a language
@@ -125,10 +125,6 @@
         mountNicknameMenuItem({
           rootEl: document.querySelector('#burger-panel .menu'),
           profileHref: '../profile/',
-        });
-        mountPrivacyMenuItem({
-          rootEl: document.querySelector('#burger-panel .menu'),
-          privacyHref: '../privacy/',
         });
       });
     </script>

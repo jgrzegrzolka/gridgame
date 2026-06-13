@@ -9,6 +9,7 @@ require('./functions/dailyStats');
 require('./functions/quizRecord');
 require('./functions/quizLeaderboard');
 require('./functions/profile');
+require('./functions/profileDeletion');
 require('./functions/getProfile');
 require('./functions/tttResult');
 require('./functions/getTttResult');
