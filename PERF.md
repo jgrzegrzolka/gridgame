@@ -15,6 +15,18 @@ The constraints that shape every fix below:
 
 ## Journal (newest first)
 
+### 2026-06-13 — Lang-toggle flag blank on cold load until module graph resolves
+
+**Symptom.** On a cold visit after deploy the `#lang-toggle` button paints empty for several hundred ms after CSS arrives; the flag fills in only once the deferred `i18n.js` module graph (transitively pulling `flags/group.js`, etc.) has finished cold-fetching and `bootI18n()` runs. Visible to Jan on every deploy as "the pl/eng button loads slowly."
+
+**Diagnosis.** The flag is CSS-driven from the `data-current` attribute, and `data-current` was previously set inside `bootI18n()` — which lives inside `<script type="module">`, auto-deferred so it only runs after every imported module fetches and parses. The synchronous paint that already existed inside `bootI18n` was already too late by the time it ran.
+
+**Fix.** Inline non-module `<script>` immediately after the `<a id="lang-toggle">` element on every page (17 files). Runs synchronously while the parser passes by — before any module imports start — so the flag is set as soon as CSS paints the button. Removed the now-redundant synchronous block inside `bootI18n()`. Pinned the contract with a `chrome.test.js` assertion so a new page that adds `#lang-toggle` can't silently regress by forgetting the script.
+
+**Trade-off.** ~17 lines of HTML duplicated 17 times. Sharing via a module would defeat the purpose (modules are deferred). A synchronous external `<script src>` would block parsing on its own cold fetch, paying the round-trip we're trying to skip. The duplication is intentional; the chrome guard prevents drift.
+
+**Open follow-ups.** Lang-toggle was the visible symptom but the same waterfall (HTML → CSS → modules → bootI18n → first useful action) shapes every other first-paint element on cold load. Next-likely is `<link rel="modulepreload">` for each page's known import graph so the modules fetch in parallel with CSS instead of after `i18n.js` parses; then CF Tiered Cache for the per-POP cold tail (see below).
+
 ### 2026-06-12 — CF HTML cold on first post-deploy visit (~2 s)
 
 **Symptom.** After every deploy, the first visit to any of the 12 entry-point HTML pages took ~2 s TTFB to serve 3 KB of HTML; the same page on hard reload was instant. Pattern visible to Jan personally on every deploy. Real users would not hard-reload.
