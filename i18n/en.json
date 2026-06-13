@@ -85,8 +85,6 @@
     "share": "Share",
     "shareTitle": "Yet Another Quiz — flag puzzle",
     "shareText": "I built a flag puzzle. Can you find them all?",
-    "shareCopied": "Copied ✓",
-    "shareFailed": "Could not copy",
     "clear": "Clear all",
     "notPrefix": "not ",
     "noOtherColors": "no other colours",
