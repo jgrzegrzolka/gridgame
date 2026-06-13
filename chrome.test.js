@@ -123,22 +123,46 @@ test('chrome: the root index.html does NOT carry a Home link', () => {
 // edge that's hundreds of ms of empty-button time on the first visit
 // after deploy. The inline paint replaces the synchronous paint that
 // used to live inside `bootI18n()`; if a new page adds `#lang-toggle`
-// but forgets the inline script, the regression would be silent
-// without this guard.
-test('chrome: every page with #lang-toggle ships the synchronous paint script', () => {
+// but forgets the inline script (or — worse — copy-edits one copy out
+// of sync with the others), the regression would be silent without
+// this guard.
+//
+// The canonical block is embedded here as a single source of truth.
+// Pages are checked by exact substring match against this block —
+// any drift in any copy fails the test. Updating the block here is
+// the single point of change; the pre-existing "every page has it"
+// shape means a one-place edit + a sed across the HTML keeps them
+// in lockstep.
+const LANG_TOGGLE_SYNC_PAINT = `    <script>
+      // Sync lang-flag paint — sets data-current before any module imports
+      // start, so the toggle shows the flag with first paint instead of
+      // after the i18n.js graph resolves. Pinned by chrome.test.js.
+      (function () {
+        var lang = null;
+        try {
+          var s = localStorage.getItem('gridgame.lang');
+          if (s === 'en' || s === 'pl') lang = s;
+        } catch (e) {}
+        if (!lang) {
+          var n = (navigator.language || '').toLowerCase().split('-')[0];
+          lang = n === 'pl' ? 'pl' : 'en';
+        }
+        document.getElementById('lang-toggle').setAttribute('data-current', lang);
+      })();
+    </script>`;
+
+test('chrome: every page with #lang-toggle ships the canonical synchronous paint script', () => {
   /** @type {string[]} */
   const offenders = [];
   for (const file of findHtmlFiles(HERE)) {
-    const html = readFileSync(file, 'utf-8');
+    // Normalize CRLF → LF so the test isn't sensitive to line-ending
+    // style on Windows checkouts (the repo holds these as CRLF; the
+    // canonical literal below is LF).
+    const html = readFileSync(file, 'utf-8').replace(/\r\n/g, '\n');
     if (!html.includes('id="lang-toggle"')) continue;
-    // Specific markers — the literal storage key the inline script
-    // reads, AND the setAttribute call on #lang-toggle. Both have to
-    // be present so a future page can't half-port the script and pass.
-    const hasStorageRead = html.includes("localStorage.getItem('gridgame.lang')");
-    const hasFlagPaint = html.includes("getElementById('lang-toggle').setAttribute('data-current'");
-    if (!hasStorageRead || !hasFlagPaint) {
+    if (!html.includes(LANG_TOGGLE_SYNC_PAINT)) {
       const rel = relative(HERE, file).split(sep).join('/');
-      offenders.push(`${rel}: missing inline sync paint for #lang-toggle`);
+      offenders.push(`${rel}: inline sync paint missing or drifted from the canonical block in chrome.test.js`);
     }
   }
   assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
