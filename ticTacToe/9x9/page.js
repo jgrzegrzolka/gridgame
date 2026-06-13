@@ -11,6 +11,7 @@ import { getOrCreateDeviceId } from '../../flags/identity.js';
 import { newlyWonSmallBoards, isMetaWinNewlyFormed } from '../../flags/ultimateTicTacToe.js';
 import { shouldFireTicTacToeConfetti } from '../../flags/ticTacToe.js';
 import { loadCountries } from '../../flags/group.js';
+import { shareUrl } from '../../common.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
@@ -654,47 +655,13 @@ function runOnline(countries) {
 
   async function onShareClick() {
     if (!activeRoom) return;
-    const url = window.location.href;
-    const title = t('ttt.shareTitle', 'Tic-Tac-Toe room');
-    const text = t('ttt.shareText', "Let's play! Join my room:");
-    if (typeof navigator.share === 'function') {
-      try {
-        await navigator.share({ title, text, url });
-        return;
-      } catch (err) {
-        if (err && /** @type {{ name?: string }} */ (err).name === 'AbortError') return;
-      }
-    }
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-      try {
-        await navigator.clipboard.writeText(url);
-        flashCopied();
-        return;
-      } catch {
-        // try legacy fallback
-      }
-    }
-    if (legacyCopyToClipboard(url)) flashCopied();
-  }
-
-  /** @param {string} text @returns {boolean} */
-  function legacyCopyToClipboard(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    ta.style.pointerEvents = 'none';
-    document.body.appendChild(ta);
-    ta.select();
-    let ok = false;
-    try {
-      ok = document.execCommand('copy');
-    } catch {
-      ok = false;
-    }
-    document.body.removeChild(ta);
-    return ok;
+    const result = await shareUrl(window.location.href, {
+      title: t('ttt.shareTitle', 'Tic-Tac-Toe room'),
+      text: t('ttt.shareText', "Let's play! Join my room:"),
+    });
+    if (result === 'copied') flashCopied();
+    // 'shared' / 'dismissed' / 'failed' — see ticTacToe/page.js for why
+    // each of those stays silent here.
   }
 
   function flashCopied() {

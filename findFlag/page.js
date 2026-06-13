@@ -24,6 +24,7 @@ import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { refreshChooserI18n } from './chooserI18n.js';
+import { shareUrl } from '../common.js';
 
 /**
  * Options the Random button (and the result page's "Random next" link)
@@ -54,47 +55,11 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
  * @param {import('../flags/group.js').Country[]} all
  */
 /**
- * Build the absolute URL that, when opened, drops the visitor straight
- * into a game with `filter` applied. Pulled out so both the chooser's
- * Share button (which holds the filter in JS memory before navigation)
- * and any future "share-from-other-surface" caller can reach it. The
- * result-page Share uses `window.location.href` instead — see the
- * comment at that call site for why.
+ * Swap `el`'s label to `text` for 1.5 s, then restore the original.
+ * The `data-i18n` attribute is snapshotted and restored so a language
+ * switch during the flash window doesn't immediately rewrite the label
+ * back, and a later `langchanged` still re-translates correctly.
  *
- * @param {import('../flags/flagsFilter.js').Filters} filter
- * @returns {string}
- */
-function buildShareUrl(filter) {
-  const params = new URLSearchParams({ f: serializeFilter(filter) });
-  return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-}
-
-/**
- * Copy `url` to the clipboard and flash the trigger element's label to
- * "Copied ✓" for 1.5 s. Used by both the chooser-page <button> and the
- * result-page <a> — the contract is just "has a textContent we can
- * temporarily swap". The `data-i18n` attribute is removed during the
- * flash so a language switch in those 1.5 s doesn't immediately rewrite
- * the label back; we restore the attribute when the flash ends so any
- * later `langchanged` event picks up correctly.
- *
- * @param {HTMLElement} el
- * @param {string} url
- */
-async function copyShareUrl(el, url) {
-  try {
-    await navigator.clipboard.writeText(url);
-  } catch {
-    // Clipboard API can refuse in non-secure contexts or when the
-    // browser hasn't granted permission. Surface "couldn't copy" via
-    // the same text-swap path so the user sees something happened.
-    flashLabel(el, t('findFlag.shareFailed', 'Could not copy'), 'findFlag.shareFailed');
-    return;
-  }
-  flashLabel(el, t('findFlag.shareCopied', 'Copied ✓'), 'findFlag.shareCopied');
-}
-
-/**
  * @param {HTMLElement} el
  * @param {string} text
  * @param {string} i18nKey
@@ -355,7 +320,6 @@ export function bootFindFlag() {
     }
 
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
-    const shareBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('find-share'));
     const clearBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-clear'));
     const randomBtn = document.getElementById('find-random');
 
@@ -373,7 +337,6 @@ export function bootFindFlag() {
         playBtn.textContent = playLabel();
         playBtn.disabled = true;
         clearBtn.hidden = true;
-        if (shareBtn) shareBtn.disabled = true;
         return;
       }
       const matchCount = all.filter((c) => matchesFilters(c, filter)).length;
@@ -383,9 +346,6 @@ export function bootFindFlag() {
       playBtn.textContent = `${playLabel()} (${matchCount})`;
       playBtn.disabled = matchCount < 1;
       clearBtn.hidden = false;
-      // Share follows Play's enabled state — a 0-match puzzle isn't worth
-      // sending to anyone, and a no-filter share would just be `/findFlag/`.
-      if (shareBtn) shareBtn.disabled = matchCount < 1;
     }
 
     /**
@@ -418,13 +378,6 @@ export function bootFindFlag() {
       const params = new URLSearchParams({ f: serializeFilter(filter) });
       window.location.search = `?${params.toString()}`;
     });
-
-    if (shareBtn) {
-      shareBtn.addEventListener('click', () => {
-        if (shareBtn.disabled) return;
-        void copyShareUrl(shareBtn, buildShareUrl(filter));
-      });
-    }
 
     clearBtn.addEventListener('click', () => {
       for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
@@ -498,6 +451,7 @@ export function bootFindFlag() {
     const foundEl = document.getElementById('find-found');
     const giveUpEl = document.getElementById('give-up');
     const gameRandomEl = /** @type {HTMLAnchorElement} */ (document.getElementById('game-random'));
+    const gameShareEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('game-share'));
 
     catEl.textContent = category.label;
     updateCount();
@@ -631,6 +585,24 @@ export function bootFindFlag() {
       goRandom(all);
     });
 
+    if (gameShareEl) {
+      gameShareEl.addEventListener('click', async () => {
+        // We're in a live game — `window.location.href` already encodes
+        // the filter via `?f=`. No need to re-serialize.
+        const result = await shareUrl(window.location.href, {
+          title: t('findFlag.shareTitle', 'Yet Another Quiz — flag puzzle'),
+          text: t('findFlag.shareText', "I built a flag puzzle. Can you find them all?"),
+        });
+        if (result === 'copied') {
+          flashLabel(gameShareEl, t('findFlag.shareCopied', 'Copied ✓'), 'findFlag.shareCopied');
+        } else if (result === 'failed') {
+          flashLabel(gameShareEl, t('findFlag.shareFailed', 'Could not copy'), 'findFlag.shareFailed');
+        }
+        // 'shared' = system sheet handled it; 'dismissed' = user backed
+        // out. No flash in either case.
+      });
+    }
+
     function finish() {
       if (finished) return;
       finished = true;
@@ -673,19 +645,6 @@ export function bootFindFlag() {
 
       /** @type {HTMLAnchorElement} */ (document.getElementById('play-again')).href =
         window.location.pathname + window.location.search;
-
-      const resultShareEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('result-share'));
-      if (resultShareEl) {
-        // Already in a game — `window.location.href` IS the share URL,
-        // so we don't have to re-serialize the filter. Skipping the
-        // builder also means the result-page link survives the
-        // (currently unused) future where chooser state and game state
-        // could diverge.
-        resultShareEl.onclick = (e) => {
-          e.preventDefault();
-          void copyShareUrl(resultShareEl, window.location.href);
-        };
-      }
 
       /** @type {HTMLAnchorElement} */ (document.getElementById('play-random')).onclick = (e) => {
         e.preventDefault();

@@ -32,6 +32,96 @@ if (typeof document !== 'undefined') {
   else document.addEventListener('DOMContentLoaded', mountSiteLogo, { once: true });
 }
 
+/**
+ * @typedef {'shared' | 'copied' | 'dismissed' | 'failed'} ShareResult
+ */
+
+/**
+ * Share `url` via the best available platform mechanism. Tries the
+ * native share sheet first (`navigator.share` — picks Messages /
+ * WhatsApp / etc. on mobile), then the Async Clipboard API, then a
+ * legacy `execCommand('copy')` via a hidden textarea for non-secure
+ * contexts (LAN-IP dev). Returns a discriminated status so the caller
+ * can decide what feedback (if any) to show:
+ *
+ *   - 'shared'    — system share sheet completed. No caller feedback
+ *                   needed; the sheet itself was the affordance.
+ *   - 'copied'    — URL landed in the clipboard. Caller should flash
+ *                   a "Copied" indicator since there was no visible
+ *                   confirmation otherwise.
+ *   - 'dismissed' — user opened and dismissed the share sheet. Caller
+ *                   should do nothing — falling through to clipboard
+ *                   would silently overwrite their clipboard.
+ *   - 'failed'    — all three mechanisms refused or threw. Caller may
+ *                   choose to surface an error message.
+ *
+ * Deps are injectable so tests don't need to monkey-patch globals; in
+ * prod they default to `globalThis.navigator` and `globalThis.document`.
+ *
+ * @param {string} url
+ * @param {{ title?: string, text?: string }} [meta]
+ * @param {{ navigator?: any, document?: any }} [deps]
+ * @returns {Promise<ShareResult>}
+ */
+export async function shareUrl(url, meta = {}, deps = {}) {
+  const nav = deps.navigator ?? (typeof navigator !== 'undefined' ? navigator : null);
+  const doc = deps.document ?? (typeof document !== 'undefined' ? document : null);
+
+  if (nav && typeof nav.share === 'function') {
+    try {
+      await nav.share({ ...meta, url });
+      return 'shared';
+    } catch (err) {
+      // User dismissed the share sheet — don't silently fall through
+      // and overwrite their clipboard. Anything else (share unsupported
+      // for this payload, permissions error) falls through to clipboard
+      // as a best-effort recovery.
+      const name = err && /** @type {{ name?: string }} */ (err).name;
+      if (name === 'AbortError') return 'dismissed';
+    }
+  }
+  if (nav && nav.clipboard && typeof nav.clipboard.writeText === 'function') {
+    try {
+      await nav.clipboard.writeText(url);
+      return 'copied';
+    } catch {
+      // Permission denied or focus lost mid-call — try the legacy path.
+    }
+  }
+  if (doc && legacyCopyToClipboard(url, doc)) return 'copied';
+  return 'failed';
+}
+
+/**
+ * Last-resort copy via a hidden, off-screen textarea and the legacy
+ * `document.execCommand('copy')` path. Async Clipboard API needs a
+ * secure context (HTTPS or localhost); on a bare LAN-IP URL — common
+ * when testing from a phone against the dev server — it's undefined,
+ * so we keep this around.
+ *
+ * @param {string} text
+ * @param {any} doc
+ * @returns {boolean}
+ */
+function legacyCopyToClipboard(text, doc) {
+  const ta = doc.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  ta.style.pointerEvents = 'none';
+  doc.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try {
+    ok = doc.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  doc.body.removeChild(ta);
+  return ok;
+}
+
 /** Display nickname cache key. Written when the user successfully saves a
  *  new value on the /profile/ page. Cleared (`removeItem`) when the user
  *  resets or clears their nickname — the matching server-side state is
