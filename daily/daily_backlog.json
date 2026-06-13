@@ -679,14 +679,14 @@
   },
   {
     "n": 53,
-    "filter": "continent:Asia,color:yellow,colorCount:3",
+    "filter": "continent:Asia,color:yellow,color:black",
     "answers": [
-      "bt",
-      "mn"
+      "bn",
+      "tl"
     ],
     "description": {
-      "en": "Find all 3-colour Asian flags featuring yellow.",
-      "pl": "Znajdź wszystkie 3-kolorowe azjatyckie flagi z żółtym."
+      "en": "Find all Asian flags with yellow and black.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z żółtym i czarnym."
     }
   },
   {
@@ -1114,12 +1114,11 @@
   },
   {
     "n": 79,
-    "filter": "colorCount:5",
+    "filter": "continent:!Oceania,colorCount:5",
     "answers": [
       "ag",
       "cf",
       "ec",
-      "fj",
       "gq",
       "gy",
       "km",
@@ -1133,8 +1132,8 @@
       "zw"
     ],
     "description": {
-      "en": "Find all flags with exactly 5 colours.",
-      "pl": "Znajdź wszystkie flagi z dokładnie 5 kolorami."
+      "en": "Find all 5-colour flags outside Oceania.",
+      "pl": "Znajdź wszystkie 5-kolorowe flagi spoza Oceanii."
     }
   },
   {
