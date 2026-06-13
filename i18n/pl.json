@@ -38,7 +38,7 @@
   "tile": {
     "daily": "Codzienna zagadka",
     "quiz": "Quiz",
-    "find": "Znajdź wszystkie",
+    "find": "Stwórz łamigłówkę",
     "ticTacToe": "Kółko i krzyżyk"
   },
   "game": {
@@ -72,16 +72,19 @@
     }
   },
   "findFlag": {
-    "title": "Yet Another Quiz — Znajdź wszystkie flagi po kategorii",
-    "heading": "Znajdź flagę",
-    "blurb": "Wybierz kategorie i nazwij każdą pasującą flagę.",
+    "title": "Yet Another Quiz — Stwórz własną łamigłówkę flag",
+    "heading": "Stwórz łamigłówkę",
+    "blurb": "Wybierz filtry, by stworzyć łamigłówkę. Zagraj sam lub udostępnij link.",
     "typeCountryName": "Wpisz nazwę kraju…",
     "youFound": "Znaleziono",
     "youFoundAll": "Znaleziono wszystkie",
     "found": "Znalezione:",
     "missed": "Pominięte:",
-    "pickAnotherCategory": "Wybierz inną kategorię",
+    "pickAnotherCategory": "Stwórz nową łamigłówkę",
     "play": "Zagraj",
+    "share": "Udostępnij",
+    "shareCopied": "Skopiowano ✓",
+    "shareFailed": "Nie udało się skopiować",
     "clear": "Wyczyść wszystko",
     "notPrefix": "bez ",
     "noOtherColors": "bez innych kolorów",
