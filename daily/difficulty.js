@@ -118,7 +118,7 @@ function worldwideBumpFor(filter) {
  * `byCode` accepts either a `Map<string, CountryLike>` or a plain
  * `Record<string, CountryLike>` so callers don't have to convert.
  *
- * @param {{ filter: string, answers: string[] }} entry
+ * @param {{ kind?: string, filter?: string, answers: string[] }} entry
  * @param {Map<string, CountryLike> | Record<string, CountryLike>} byCode
  * @returns {DifficultyScore}
  */
@@ -134,9 +134,14 @@ export function scoreEntry(entry, byCode) {
   const outlier = 0.4 * Math.max(0, max - mean - 1.5);
   const setSize = entry.answers.length;
   const sizeAdjust = sizeAdjustFor(setSize);
-  const tokens = entry.filter.split(',').length;
+  // Manual entries have no filter — no token-count friction, and the
+  // worldwide bump applies (a hand-curated list with no continent
+  // scoping forces the same global recall as a filter without a
+  // continent token does).
+  const isManual = entry.kind === 'manual' || typeof entry.filter !== 'string';
+  const tokens = isManual ? 0 : entry.filter.split(',').length;
   const tokenAdjust = 0.1 * Math.max(0, tokens - 2);
-  const worldwideAdjust = worldwideBumpFor(entry.filter);
+  const worldwideAdjust = isManual ? 1.0 : worldwideBumpFor(entry.filter);
   const score = mean + outlier + sizeAdjust + tokenAdjust + worldwideAdjust;
 
   return { score, mean, max, outlier, sizeAdjust, tokenAdjust, worldwideAdjust, setSize, tokens };

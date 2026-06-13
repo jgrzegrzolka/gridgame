@@ -1,6 +1,26 @@
 import { t } from '../i18n.js';
 import { parseFilterString, filterTitle } from '../flags/findFlag.js';
 import { puzzleDate, formatPuzzleDate } from '../flags/daily.js';
+
+/**
+ * Resolve a square's criteria label. Filter entries: parse the stored
+ * filter and render the pill chain via `filterTitle`. Manual entries:
+ * read `title[currentLang]` (the hand-written per-language label).
+ * Falls back to `title.en` for missing translations and to an empty
+ * string for malformed input (the catalog tests forbid both, this is
+ * defence in depth so a broken entry doesn't crash the archive grid).
+ *
+ * @param {{ kind?: string, filter?: string, title?: Record<string, string> }} entry
+ * @returns {string}
+ */
+function criteriaLabelFor(entry) {
+  if (entry.kind === 'manual') {
+    const lang = typeof document !== 'undefined' ? (document.documentElement.lang || 'en') : 'en';
+    return entry.title?.[lang] ?? entry.title?.en ?? '';
+  }
+  const parsed = parseFilterString(entry.filter ?? '');
+  return parsed ? filterTitle(parsed, t) : (entry.filter ?? '');
+}
 import { scoreColor } from '../flags/quiz.js';
 import { formatScore } from './scores.js';
 
@@ -40,14 +60,19 @@ export function renderArchiveSquare(entry, opts, doc = document) {
   link.href = href;
   link.className = 'archive-square-link';
 
-  const parsed = parseFilterString(entry.filter);
-  const criteriaLabel = parsed ? filterTitle(parsed, t) : entry.filter;
+  const criteriaLabel = criteriaLabelFor(entry);
   link.setAttribute('aria-label', `${ariaPrefix} #${entry.n} — ${criteriaLabel}`);
   // Stash the inputs `refreshSquareCriteria` needs to re-translate this
-  // link's criteria label + aria-label on a soft language switch. Both
-  // are read by the walker; the filter is re-parsed each time so the
-  // current-language `filterTitle(parsed, t)` lands cleanly.
-  link.dataset.filter = entry.filter;
+  // link's criteria label + aria-label on a soft language switch. Filter
+  // entries store the filter string and re-parse each time; manual
+  // entries store the JSON-encoded title map and look up the active
+  // language each time. Mutually exclusive — the walker picks the path
+  // by which attribute is present.
+  if (entry.kind === 'manual') {
+    link.dataset.title = JSON.stringify(entry.title ?? {});
+  } else {
+    link.dataset.filter = entry.filter ?? '';
+  }
   link.dataset.ariaPrefix = ariaPrefix;
   link.dataset.n = String(entry.n);
 
@@ -104,14 +129,29 @@ export function renderArchiveSquare(entry, opts, doc = document) {
  */
 export function refreshSquareCriteria(doc = document) {
   const links = /** @type {NodeListOf<HTMLAnchorElement>} */ (
-    doc.querySelectorAll('.archive-square-link[data-filter]')
+    doc.querySelectorAll('.archive-square-link[data-filter], .archive-square-link[data-title]')
   );
+  const lang = doc.documentElement.lang || 'en';
   for (const link of links) {
-    const filter = link.dataset.filter ?? '';
     const ariaPrefix = link.dataset.ariaPrefix ?? '';
     const n = link.dataset.n ?? '';
-    const parsed = parseFilterString(filter);
-    const criteriaLabel = parsed ? filterTitle(parsed, t) : filter;
+    /** @type {string} */
+    let criteriaLabel;
+    if (link.dataset.title !== undefined) {
+      // Manual entry — look up entry.title[lang] from the JSON-encoded
+      // map on every refresh so a soft language switch picks up the
+      // right translation without re-rendering the whole grid.
+      try {
+        const titles = /** @type {Record<string, string>} */ (JSON.parse(link.dataset.title));
+        criteriaLabel = titles[lang] ?? titles.en ?? '';
+      } catch {
+        criteriaLabel = '';
+      }
+    } else {
+      const filter = link.dataset.filter ?? '';
+      const parsed = parseFilterString(filter);
+      criteriaLabel = parsed ? filterTitle(parsed, t) : filter;
+    }
     link.setAttribute('aria-label', `${ariaPrefix} #${n} — ${criteriaLabel}`);
     const criteriaEl = link.querySelector('.archive-square-criteria');
     if (criteriaEl) criteriaEl.textContent = criteriaLabel;

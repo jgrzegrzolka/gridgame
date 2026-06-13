@@ -42,11 +42,15 @@ function fakeDoc() {
     return el;
   }
   return {
+    documentElement: { lang: 'en' },
     createElement: (/** @type {string} */ tag) => makeEl(tag),
     querySelectorAll: (/** @type {string} */ sel) => {
-      // Only the selector refreshSquareCriteria uses is supported.
-      if (sel !== '.archive-square-link[data-filter]') return [];
-      return allElements.filter((e) => e.className.includes('archive-square-link') && e.dataset.filter);
+      // Selector mirrors the one in refreshSquareCriteria. Filter entries
+      // are matched by data-filter; manual entries by data-title.
+      if (sel !== '.archive-square-link[data-filter], .archive-square-link[data-title]') return [];
+      return allElements.filter(
+        (e) => e.className.includes('archive-square-link') && (e.dataset.filter !== undefined || e.dataset.title !== undefined),
+      );
     },
   };
 }
@@ -58,19 +62,22 @@ function fakeDoc() {
 // `/daily/backlog/`, or `/daily/ideas/`. Without it, both stay frozen
 // in the page's boot-time language and Jan sees stale text on hover.
 
-function fakeSquareDoc(squareSpecs) {
+function fakeSquareDoc(squareSpecs, lang = 'en') {
   /** @type {any[]} */
   const allLinks = [];
   for (const spec of squareSpecs) {
     const criteriaEl = {
       textContent: spec.initialCriteria ?? '',
     };
+    /** @type {Record<string,string>} */
+    const dataset = {
+      ariaPrefix: spec.ariaPrefix ?? '',
+      n: spec.n ?? '',
+    };
+    if (spec.title !== undefined) dataset.title = JSON.stringify(spec.title);
+    else dataset.filter = spec.filter ?? '';
     const link = {
-      dataset: {
-        filter: spec.filter ?? '',
-        ariaPrefix: spec.ariaPrefix ?? '',
-        n: spec.n ?? '',
-      },
+      dataset,
       _attrs: { 'aria-label': spec.initialAriaLabel ?? '' },
       setAttribute(/** @type {string} */ k, /** @type {string} */ v) {
         this._attrs[k] = v;
@@ -80,13 +87,14 @@ function fakeSquareDoc(squareSpecs) {
       },
       querySelector: (/** @type {string} */ sel) => (sel === '.archive-square-criteria' ? criteriaEl : null),
     };
-    allLinks.push({ link, criteriaEl, filter: spec.filter });
+    allLinks.push({ link, criteriaEl, key: spec.filter ?? spec.title });
   }
   return {
-    link: (/** @type {string} */ filter) => allLinks.find((x) => x.filter === filter)?.link,
-    criteria: (/** @type {string} */ filter) => allLinks.find((x) => x.filter === filter)?.criteriaEl,
+    documentElement: { lang },
+    link: (/** @type {any} */ key) => allLinks.find((x) => JSON.stringify(x.key) === JSON.stringify(key))?.link,
+    criteria: (/** @type {any} */ key) => allLinks.find((x) => JSON.stringify(x.key) === JSON.stringify(key))?.criteriaEl,
     querySelectorAll: (/** @type {string} */ sel) => {
-      if (sel !== '.archive-square-link[data-filter]') return [];
+      if (sel !== '.archive-square-link[data-filter], .archive-square-link[data-title]') return [];
       return allLinks.map((x) => x.link);
     },
   };
@@ -183,14 +191,103 @@ test('renderArchiveSquare + refreshSquareCriteria round-trip: lang switch repain
   _resetCacheForTests();
 });
 
-test('refreshSquareCriteria: ignores links without data-filter (foreign / unregistered)', () => {
-  // The selector `.archive-square-link[data-filter]` is what scopes
-  // the walk; this is a smoke-test that the selector matters — if
-  // someone ever adds an unrelated link with that class, it should
-  // be left alone unless it carries the data attribute too.
+// --- Manual entries (kind: 'manual') -----------------------------------
+//
+// Regression pin. Before #413's follow-up fix, renderArchiveSquare
+// called `parseFilterString(entry.filter)` unconditionally — passing
+// undefined to a function whose first line is `s.split(',')`. The whole
+// backlog index page (`/daily/backlog/`) crashed the moment a manual
+// entry landed in the list. Same shape regression in
+// `daily/difficulty.js`'s `scoreEntry` (covered in difficulty.test.js).
+// These tests prove the renderer + walker tolerate a missing filter.
+
+test('renderArchiveSquare: manual entry renders title as criteria label (no throw on missing filter)', () => {
+  // The bug was a hard throw inside parseFilterString — so the
+  // first-order assertion is "renderArchiveSquare does not throw on a
+  // manual entry." We also pin the user-visible part: the title text
+  // lands in the criteria span + aria-label.
+  _seedCacheForTests({});
+  const doc = fakeDoc();
+  doc.documentElement.lang = 'en';
+  const entry = /** @type {any} */ ({
+    n: 72,
+    kind: 'manual',
+    answers: ['cu', 'cz'],
+    title: { en: 'Triangle from hoist', pl: 'Trójkąt z drzewca' },
+  });
+  const li = renderArchiveSquare(entry, { href: './play.html?n=72', ariaPrefix: 'Backlog' }, /** @type {any} */ (doc));
+  const link = li._children[0];
+  // Filter attr must NOT be set on a manual entry — that's how the
+  // walker tells the two paths apart.
+  assert.equal(link.dataset.filter, undefined);
+  // Title attr is stashed as JSON so refreshSquareCriteria can re-look
+  // up the active language on a soft language switch.
+  assert.equal(link.dataset.title, JSON.stringify({ en: 'Triangle from hoist', pl: 'Trójkąt z drzewca' }));
+  const criteriaEl = link.querySelector('.archive-square-criteria');
+  assert.equal(criteriaEl.textContent, 'Triangle from hoist');
+  assert.match(link.getAttribute('aria-label'), /Backlog #72 — Triangle from hoist/);
+  _resetCacheForTests();
+});
+
+test('renderArchiveSquare: a backlog list mixing filter + manual entries renders both without throwing', () => {
+  // End-to-end regression — the actual failure mode was the backlog
+  // index iterating its entries and crashing on the manual one. This
+  // test runs the same shape: a mixed list, no throws, both squares
+  // emerge with their correct criteria label.
+  const doc = fakeDoc();
+  const filterEntry = /** @type {any} */ ({ n: 71, filter: 'continent:Asia,color:red', answers: ['jp'] });
+  const manualEntry = /** @type {any} */ ({
+    n: 72,
+    kind: 'manual',
+    answers: ['cu', 'cz'],
+    title: { en: 'Triangle from hoist', pl: 'X' },
+  });
+  // The bug: if either of these threw, the page boot died at the for-loop.
+  assert.doesNotThrow(() => renderArchiveSquare(filterEntry, { href: './a', ariaPrefix: 'A' }, /** @type {any} */ (doc)));
+  assert.doesNotThrow(() => renderArchiveSquare(manualEntry, { href: './b', ariaPrefix: 'B' }, /** @type {any} */ (doc)));
+});
+
+test('refreshSquareCriteria: re-translates manual-entry title via entry.title[lang]', () => {
+  // Manual entries also need the soft-language-switch path — their
+  // title is per-language too. The walker reads documentElement.lang
+  // and looks up the matching key in the stashed JSON map.
+  const doc = fakeSquareDoc(
+    [
+      {
+        title: { en: 'Triangle from hoist', pl: 'Trójkąt z drzewca' },
+        ariaPrefix: 'Backlog',
+        n: '72',
+      },
+    ],
+    'pl',
+  );
+  refreshSquareCriteria(/** @type {any} */ (doc));
+  const key = { en: 'Triangle from hoist', pl: 'Trójkąt z drzewca' };
+  const criteria = doc.criteria(key);
+  const link = doc.link(key);
+  assert.equal(criteria.textContent, 'Trójkąt z drzewca');
+  assert.match(link.getAttribute('aria-label'), /Backlog #72 — Trójkąt z drzewca/);
+});
+
+test('refreshSquareCriteria: manual entry falls back to en when active lang has no title', () => {
+  const doc = fakeSquareDoc(
+    [{ title: { en: 'Triangle from hoist' }, ariaPrefix: 'Backlog', n: '72' }],
+    'de',
+  );
+  refreshSquareCriteria(/** @type {any} */ (doc));
+  const criteria = doc.criteria({ en: 'Triangle from hoist' });
+  assert.equal(criteria.textContent, 'Triangle from hoist');
+});
+
+test('refreshSquareCriteria: ignores links without data-filter or data-title (foreign / unregistered)', () => {
+  // The selector scopes the walk to links that carry one of the two
+  // recognised data attributes (data-filter for filter entries,
+  // data-title for manual entries). This smoke-tests that an unrelated
+  // link with the class but neither attribute is left alone.
   const doc = {
+    documentElement: { lang: 'en' },
     querySelectorAll: (/** @type {string} */ sel) =>
-      sel === '.archive-square-link[data-filter]' ? [] : ['DO NOT WALK ME'],
+      sel === '.archive-square-link[data-filter], .archive-square-link[data-title]' ? [] : ['DO NOT WALK ME'],
   };
   // Just asserting it doesn't throw on an empty list.
   refreshSquareCriteria(/** @type {any} */ (doc));
