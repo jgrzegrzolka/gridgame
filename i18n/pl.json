@@ -20,14 +20,14 @@
   "privacy": {
     "menuLink": "Prywatność",
     "title": "Prywatność — Yet Another Quiz",
-    "heading": "Prywatność (w skrócie)",
-    "intro": "Yet Another Quiz to darmowa strona-hobby. Przechowujemy losowe ID urządzenia, które Twoja przeglądarka generuje przy pierwszej potrzebie, oraz dane gier powiązane z tym ID — zgłoszenia codziennych zagadek, rekordy quizu, wyniki kółka i krzyżyka, opcjonalny pseudonim. Czas przechowywania od 48 godzin (wiersze rankingu) do 1 roku (zgłoszenia codzienne); profil i rekordy zostają do momentu, aż poprosisz o usunięcie. Bez śledzenia, reklam, kont, ciasteczek, osób trzecich.",
+    "heading": "Prywatność",
+    "intro": "Przechowujemy losowe ID urządzenia, które Twoja przeglądarka generuje przy pierwszej potrzebie, oraz dane gier powiązane z tym ID — zgłoszenia codziennych zagadek, rekordy quizu, wyniki kółka i krzyżyka, opcjonalny pseudonim. Czas przechowywania od 48 godzin (wiersze rankingu) do 1 roku (zgłoszenia codzienne); profil i rekordy zostają do momentu, aż poprosisz o usunięcie. Bez śledzenia, reklam, kont, ciasteczek.",
     "removal": {
       "title": "Chcesz, żeby Twoje dane zniknęły? Masz trzy opcje.",
       "bomb": "Zrzuć bombę na centrum danych Azure Cosmos DB w Amsterdamie.",
       "invade": "Najedź i przejmij wszystkie georepliki Cosmos DB na świecie.",
-      "request": "Kliknij przycisk poniżej. Twój profil zostanie oznaczony do usunięcia, a my ręcznie wymażemy go w ciągu 30 dni (maksymalny termin prawny). Jeśli w międzyczasie wrócisz i zagrasz, uznamy, że zmieniłeś zdanie i anulujemy prośbę.",
-      "button": "Poproś o usunięcie danych",
+      "request": "Twój profil zostanie oznaczony do usunięcia, a my ręcznie wymażemy go w ciągu 30 dni. Jeśli w międzyczasie wrócisz i zagrasz, uznamy, że zmieniłeś zdanie i anulujemy prośbę.",
+      "link": "Poproś o usunięcie danych",
       "confirmed": "Załatwione — Twoje dane zostały oznaczone do usunięcia. Powrót i zagranie anuluje prośbę.",
       "error": "Nie udało się wysłać prośby. Spróbuj ponownie później."
     }
