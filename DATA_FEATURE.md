@@ -56,12 +56,12 @@ Semantics — two veto rules, same mechanism:
 
 Both checks apply to the candidate generator (`scripts/generate-candidates.mjs` rejects such filters before they reach `daily_ideas.json`) and to a new catalog validation rule that fires `npm test`.
 
-Existing puzzles that violate the new rule (per the phase-2 audit script):
+Existing puzzles that violated the new rule (per the phase-2 audit script) — **all resolved in phase 2b/3:**
 
-- **BACKLOG #53** — `continent:Asia,color:yellow,colorCount:3` → bt, mn. Bhutan's ambig count `[3,4]` straddles. Needs replacement / rework. *(The Bhutan trap the doc called out.)*
-- **BACKLOG #79** — `colorCount:5` worldwide → 15 answers. American Samoa's ambig count `[4,5,6,7]` straddles 5 (canonical 4 misses, but a player counting 5 of those browns would expect AS to be in). Needs replacement / rework.
+- ~~**BACKLOG #53**~~ — was `continent:Asia,color:yellow,colorCount:3` → bt, mn. Reworked to `continent:Asia,color:yellow,color:black` → bn, tl. Different angle on the same Asia+yellow base; Bhutan now out under any plausible counting.
+- ~~**BACKLOG #79**~~ — was `colorCount:5` worldwide → 15 answers. Reworked to `continent:!Oceania,colorCount:5` → 14 answers. Drops Fiji; the `continent:!Oceania` clause keeps American Samoa out before count even matters.
 
-No LIVE entries are affected. No `color:white` puzzles tripped membership veto because none of them place Bhutan in scope (membership check correctly skips when continent or other filters already exclude the ambig flag).
+No LIVE entries were affected. No `color:white` puzzles tripped membership veto because none of them place Bhutan in scope (membership check correctly skips when continent or other filters already exclude the ambig flag).
 
 **Open design calls (settle before tagging):**
 
@@ -74,7 +74,7 @@ Marker key: ✓ = settled with Jan, ◯ = still open (proposed leaning shown; ne
 5. ✓ **Generator behaviour — silent skip** *(settled 2026-06-13)*. When a candidate combination is vetoed, the generator silently skips it and tries another template (same as today's rule-6 enforcement). No "rescue by adding filters" — compounding to escape an ambiguity ban is exactly the contrived-set behaviour rule 10 prevents.
 6. ✓ **Scope** *(settled 2026-06-12)*. Phase 1 covers two dimensions: `colorCount:N` (via `ambiguousColorCount`) and `color:X` membership (via `ambiguousColors`). Both use the same veto pattern; tagging one flag for both fields is fine and common (Bhutan needs both). **Does not** cover motifs in phase 1 — even though e.g. Albania's eagle (is it a coat-of-arms or just an animal?) or Mexico's emblem are borderline at look-time, motif data is already a defensible classification in `countries.json` and the player-disagreement frequency there feels lower than for colours. If empirical evidence shows otherwise once the color side ships, a parallel `ambiguousMotifs: ['coat-of-arms']` field would slot in cleanly using the exact same veto mechanism. Defer, don't bend.
 
-**Next step for a fresh agent picking this up:** all 6 design calls are ✓, phase 1 has merged, and phase 2a (audit infrastructure — pure module `flags/ambiguityAudit.js`, unit tests, CLI wrapper `scripts/audit-flag-ambiguity.mjs`) is in flight on branch `data/ambiguity-audit-script`. The audit reveals 2 BACKLOG violators (#53, #79). **Phase 2b/3** picks up next: rework those two entries AND add the matching hard rule in `flags/daily.test.js` in the same PR (so the rule lands green, not red).
+**Next step for a fresh agent picking this up:** phases 1, 2a, and 2b/3 have shipped — countries.json carries the seed tags, `flags/ambiguityAudit.js` + CLI + unit tests are in, BACKLOG #53 and #79 are reworked clean, and `flags/daily.test.js` enforces the gate against live + backlog + ideas. **Phase 4** is next: wire both vetoes into `scripts/generate-candidates.mjs` so future brainstorm batches automatically skip ambig-broken candidates instead of leaning on the post-hoc audit. **Phase 5** is the SKILL.md update (one-liner + field-shape sentence + "run the audit before authoring" cue).
 
 **Phases:**
 

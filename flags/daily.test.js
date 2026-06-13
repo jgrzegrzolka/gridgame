@@ -8,6 +8,7 @@ import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, 
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries, createCountry } from './group.js';
+import { auditPuzzle } from './ambiguityAudit.js';
 
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./daily.js').DailyPuzzle} DailyPuzzle */
@@ -639,4 +640,53 @@ test('formatPuzzleDate: DD.MM.YYYY format', () => {
   assert.equal(formatPuzzleDate(new Date('2026-06-06T00:00:00Z')), '06.06.2026');
   assert.equal(formatPuzzleDate(new Date('2026-12-31T00:00:00Z')), '31.12.2026');
   assert.equal(formatPuzzleDate(new Date('2027-01-01T00:00:00Z')), '01.01.2027');
+});
+
+// Feature DA hard rule: no live or backlog entry may contain a flag whose
+// ambiguousColorCount or ambiguousColors tagging puts a player into the
+// disagreement zone (their plausible count/membership call would flip
+// answer-set membership). See flags/ambiguityAudit.js and DATA_FEATURE.md.
+test('no live puzzle has a flag-data ambiguity violation', () => {
+  for (const entry of CATALOG) {
+    const violations = auditPuzzle(entry, COUNTRIES);
+    assert.equal(
+      violations.length,
+      0,
+      `LIVE #${entry.n} (${entry.filter}) has ambiguity violations:\n` +
+        violations.map((v) => `  [${v.kind}] ${v.country}: ${v.detail}`).join('\n'),
+    );
+  }
+});
+
+test('no backlog puzzle has a flag-data ambiguity violation', () => {
+  for (const entry of BACKLOG) {
+    const violations = auditPuzzle(entry, COUNTRIES);
+    assert.equal(
+      violations.length,
+      0,
+      `BACKLOG #${entry.n} (${entry.filter}) has ambiguity violations:\n` +
+        violations.map((v) => `  [${v.kind}] ${v.country}: ${v.detail}`).join('\n'),
+    );
+  }
+});
+
+test('no idea has a flag-data ambiguity violation', () => {
+  // Mirrors the catalog/backlog checks against daily_ideas.json so the
+  // batch generator's output also has to pass this gate — otherwise a
+  // hand-promote from ideas → backlog could carry an ambig-broken
+  // candidate that only the audit script would catch.
+  /** @type {{ filter: string, answers?: string[] }[]} */
+  const IDEAS = JSON.parse(
+    readFileSync(join(HERE, '..', 'daily', 'daily_ideas.json'), 'utf-8'),
+  );
+  for (const entry of IDEAS) {
+    if (!Array.isArray(entry.answers) || entry.answers.length === 0) continue;
+    const violations = auditPuzzle(entry, COUNTRIES);
+    assert.equal(
+      violations.length,
+      0,
+      `IDEA (${entry.filter}) has ambiguity violations:\n` +
+        violations.map((v) => `  [${v.kind}] ${v.country}: ${v.detail}`).join('\n'),
+    );
+  }
 });
