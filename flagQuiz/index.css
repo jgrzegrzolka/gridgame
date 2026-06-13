@@ -337,7 +337,11 @@ body {
   font-weight: 600;
 }
 .leaderboard-row.is-self {
-  background: #fff8e1;
+  /* Pale rose tint that echoes the logo's light pink (#C2899F) at row-
+   * highlight weight — paled the same way the previous #fff8e1 was a
+   * row-tint of yellow. Stays subtle enough that dark row text reads
+   * unchanged. */
+  background: #fbeef3;
   border-radius: 4px;
 }
 .leaderboard-row.is-self .leaderboard-name {
