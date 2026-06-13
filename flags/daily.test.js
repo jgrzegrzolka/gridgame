@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement, puzzleDate, formatPuzzleDate, LAUNCH_DATE } from './daily.js';
+import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement, manualToCategory, puzzleDate, formatPuzzleDate, LAUNCH_DATE } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries, createCountry } from './group.js';
@@ -117,7 +117,7 @@ test('resolveDailyPuzzle: happy path returns entry, parsed filter, and resolved 
     assert.deepEqual(r.targets.map((c) => c.code), ['fr', 'de']);
     // filter is a parsed Filters object, not the raw string
     assert.equal(typeof r.filter, 'object');
-    assert.ok(r.filter.continent.include.has('Europe'));
+    assert.ok(r.filter && r.filter.continent.include.has('Europe'));
   }
 });
 
@@ -192,6 +192,92 @@ test('resolvePuzzleEntry: every answer code missing from the pool returns reason
   assert.deepEqual(r, { ok: false, reason: 'no-targets' });
 });
 
+test('resolvePuzzleEntry: manual entry skips parseFilterString and returns filter: null', () => {
+  // Manual entries are filter-less by design. The resolver must NOT
+  // try to parse a (missing) filter — that would return invalid-filter
+  // and reject the puzzle in the live flow. The page renders the
+  // category label from `entry.title` via manualToCategory; filter is
+  // null so callers know to take the manual branch.
+  const fr = fixtureCountry({ code: 'fr' });
+  const de = fixtureCountry({ code: 'de' });
+  const r = resolvePuzzleEntry(
+    {
+      n: 51,
+      kind: 'manual',
+      answers: ['fr', 'de'],
+      title: { en: 'Triangles from the hoist', pl: 'Trójkąty z drzewca' },
+    },
+    [fr, de],
+  );
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.filter, null);
+    assert.deepEqual(r.targets.map((c) => c.code), ['fr', 'de']);
+    assert.equal(r.entry.kind, 'manual');
+  }
+});
+
+test('resolvePuzzleEntry: manual entry with no resolvable codes still returns "no-targets"', () => {
+  // Same end state as a filter entry whose answers all drifted out of
+  // the country pool — the page renders the not-found / no-targets
+  // screen rather than launching an empty game.
+  const r = resolvePuzzleEntry(
+    {
+      n: 51,
+      kind: 'manual',
+      answers: ['fr', 'de'],
+      title: { en: 'Triangles from the hoist', pl: 'Trójkąty z drzewca' },
+    },
+    [fixtureCountry({ code: 'gb' })],
+  );
+  assert.deepEqual(r, { ok: false, reason: 'no-targets' });
+});
+
+test('manualToCategory: label comes from entry.title[lang]', () => {
+  const category = manualToCategory(
+    {
+      n: 51,
+      kind: 'manual',
+      answers: ['fr', 'de'],
+      title: { en: 'Triangles from the hoist', pl: 'Trójkąty z drzewca' },
+    },
+    'pl',
+  );
+  assert.equal(category.label, 'Trójkąty z drzewca');
+  // id includes the puzzle number so two manual puzzles with the same
+  // title don't collide in any future id-keyed lookup.
+  assert.match(category.id, /51/);
+});
+
+test('manualToCategory: falls back to en when the requested language is missing', () => {
+  const category = manualToCategory(
+    {
+      n: 51,
+      kind: 'manual',
+      answers: ['fr'],
+      title: { en: 'Triangles from the hoist' },
+    },
+    'de',
+  );
+  assert.equal(category.label, 'Triangles from the hoist');
+});
+
+test('manualToCategory: predicate is code-membership against the frozen answer list', () => {
+  const category = manualToCategory(
+    {
+      n: 51,
+      kind: 'manual',
+      answers: ['fr', 'de'],
+      title: { en: 'X', pl: 'X' },
+    },
+    'en',
+  );
+  const fr = fixtureCountry({ code: 'fr' });
+  const us = fixtureCountry({ code: 'us' });
+  assert.equal(category.predicate(fr), true);
+  assert.equal(category.predicate(us), false);
+});
+
 test('isFilterRefinement: refined has strictly more tokens including all base tokens', () => {
   // Classic case — the player-experience canary.
   assert.equal(
@@ -241,8 +327,16 @@ test('resolveDailyPuzzle: partial pool drift drops missing codes but still succe
 function checkShape(list, label) {
   list.forEach((entry, i) => {
     assert.equal(entry.n, i + 1, `${label} index ${i}: n=${entry.n}, expected ${i + 1}`);
-    assert.ok(typeof entry.filter === 'string' && entry.filter.length > 0, `${label} #${entry.n}: filter`);
-    assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `${label} #${entry.n}: answers`);
+    if (entry.kind === 'manual') {
+      // Manual entries have a title (per-language) and answers — no
+      // filter to parse. Title presence + content shape is pinned by
+      // the dedicated `manual entries have en + pl title` test below.
+      assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `${label} #${entry.n}: answers`);
+      assert.equal(entry.filter, undefined, `${label} #${entry.n}: manual entry must not carry a filter field`);
+    } else {
+      assert.ok(typeof entry.filter === 'string' && entry.filter.length > 0, `${label} #${entry.n}: filter`);
+      assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `${label} #${entry.n}: answers`);
+    }
   });
 }
 
@@ -310,10 +404,13 @@ test('live + backlog: no puzzle filter carries a redundant constraint', () => {
   /** @param {import('./group.js').Country[]} arr */
   const codes = (arr) => arr.map((c) => c.code).sort();
   for (const entry of [...CATALOG, ...BACKLOG]) {
-    const tokens = entry.filter.split(',');
+    // Manual entries have no filter to check for redundancy.
+    if (entry.kind === 'manual') continue;
+    const filterStr = /** @type {string} */ (entry.filter);
+    const tokens = filterStr.split(',');
     if (tokens.length < 2) continue;
-    const fullFilter = parseFilterString(entry.filter);
-    assert.ok(fullFilter, `#${entry.n}: filter "${entry.filter}" failed to parse`);
+    const fullFilter = parseFilterString(filterStr);
+    assert.ok(fullFilter, `#${entry.n}: filter "${filterStr}" failed to parse`);
     const fullDefault = [...entry.answers].sort();
     const checkPrimary = entry.primaryCleanExempt !== true;
     const fullPrimary = checkPrimary
@@ -330,7 +427,7 @@ test('live + backlog: no puzzle filter carries a redundant constraint', () => {
         const withoutPrimary = codes(sov.filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (f), { colorField: 'primaryColors' })));
         if (JSON.stringify(withoutPrimary) !== JSON.stringify(fullPrimary)) continue;
       }
-      assert.fail(`#${entry.n}: constraint "${tokens[i]}" is redundant — dropping it from "${entry.filter}" leaves the same ${fullDefault.length}-flag answer set under both colour models`);
+      assert.fail(`#${entry.n}: constraint "${tokens[i]}" is redundant — dropping it from "${filterStr}" leaves the same ${fullDefault.length}-flag answer set under both colour models`);
     }
   }
 });
@@ -373,8 +470,12 @@ test('ideas: no filter carries a redundant token', () => {
 test('live + backlog: answers match what each filter resolves to today', () => {
   const sov = flagsGamePool(COUNTRIES, false);
   for (const entry of [...CATALOG, ...BACKLOG]) {
-    const f = parseFilterString(entry.filter);
-    assert.ok(f, `#${entry.n}: failed to parse filter "${entry.filter}"`);
+    // Manual entries have no filter — the drift detector is filter-only.
+    // Curating completeness of the answer list is on the author.
+    if (entry.kind === 'manual') continue;
+    const filterStr = /** @type {string} */ (entry.filter);
+    const f = parseFilterString(filterStr);
+    assert.ok(f, `#${entry.n}: failed to parse filter "${filterStr}"`);
     const computed = sov
       .filter((c) => matchesFilters(c, /** @type {import('./flagsFilter.js').Filters} */ (f)))
       .map((c) => c.code)
@@ -383,7 +484,7 @@ test('live + backlog: answers match what each filter resolves to today', () => {
     assert.deepEqual(
       computed,
       stored,
-      `#${entry.n}: filter "${entry.filter}" resolves to [${computed.join(', ')}] but answers is [${stored.join(', ')}]`,
+      `#${entry.n}: filter "${filterStr}" resolves to [${computed.join(', ')}] but answers is [${stored.join(', ')}]`,
     );
   }
 });
@@ -416,15 +517,28 @@ test('live + backlog: puzzles #1-100 have no filter-refinement subsets', () => {
       if (!isAnswerSubset) continue;
       // b's answers are a subset (possibly equal) of a's.
       // Two sub-cases:
-      //   - Equal sets: same puzzle, different filter — always a violation
-      //   - Strict subset: only a violation if b's filter is a refinement of a's
+      //   - Equal sets: same puzzle, different filter — always a
+      //     violation. Applies cross-kind too: a manual entry whose
+      //     answers match a filter entry's answers is the same puzzle
+      //     just framed differently.
+      //   - Strict subset: only a violation when both sides are filter
+      //     entries AND b's filter is a token-refinement of a's. Manual
+      //     entries have no filter to refine, so a strict-subset that
+      //     touches a manual entry isn't reachable by the refinement
+      //     mechanic (the player reads the framings as distinct).
+      const aFilter = a.filter ?? '<manual>';
+      const bFilter = b.filter ?? '<manual>';
       if (b.answers.length === a.answers.length) {
         offenders.push(
-          `#${b.n} ("${b.filter}") and #${a.n} ("${a.filter}") resolve to the same answer set — same puzzle, different filter`,
+          `#${b.n} ("${bFilter}") and #${a.n} ("${aFilter}") resolve to the same answer set — same puzzle, different filter`,
         );
-      } else if (isFilterRefinement(b.filter, a.filter)) {
+      } else if (
+        a.kind !== 'manual' &&
+        b.kind !== 'manual' &&
+        isFilterRefinement(/** @type {string} */ (b.filter), /** @type {string} */ (a.filter))
+      ) {
         offenders.push(
-          `#${b.n} ("${b.filter}") is a filter-refinement of #${a.n} ("${a.filter}") — the smaller set's filter literally adds tokens to the larger`,
+          `#${b.n} ("${bFilter}") is a filter-refinement of #${a.n} ("${aFilter}") — the smaller set's filter literally adds tokens to the larger`,
         );
       }
     }
@@ -456,8 +570,18 @@ test('ideas: no filter-refinement relationships against catalog or other ideas',
   const IDEAS = JSON.parse(
     readFileSync(join(HERE, '..', 'daily', 'daily_ideas.json'), 'utf-8'),
   ).map((/** @type {any} */ e, /** @type {number} */ i) => ({ ...e, _label: `idea#${i + 1}` }));
-  const liveLabeled = CATALOG.map((e) => ({ ...e, _label: `live#${e.n}` }));
-  const backlogLabeled = BACKLOG.map((e) => ({ ...e, _label: `backlog#${e.n}` }));
+  // Ideas are filter-only (the funnel for manual entries skips ideas),
+  // and filter-refinement against a manual entry isn't a meaningful
+  // relationship — the manual entry has no token vocabulary to be a
+  // refinement of. Filter manuals out of the fixed set; equality
+  // collisions between an idea and a manual remain an author judgment
+  // call surfaced at promote time.
+  const liveLabeled = CATALOG
+    .filter((e) => e.kind !== 'manual')
+    .map((e) => ({ ...e, filter: /** @type {string} */ (e.filter), _label: `live#${e.n}` }));
+  const backlogLabeled = BACKLOG
+    .filter((e) => e.kind !== 'manual')
+    .map((e) => ({ ...e, filter: /** @type {string} */ (e.filter), _label: `backlog#${e.n}` }));
 
   const fixed = [...liveLabeled, ...backlogLabeled];
   const candidates = IDEAS.filter(
@@ -524,6 +648,30 @@ test('ideas: no filter-refinement relationships against catalog or other ideas',
 // and the PL grammar (gendered adjectives, instrumental case) needs a
 // human anyway. The test pins "every entry has both en and pl" so a
 // new puzzle can't ship without copy.
+// Manual entries pay an extra documentation tax — they're the only
+// puzzles where the player has nothing else to read the framing from.
+// Filter entries render a pill chain ("Europe · cross"); manual entries
+// render only `entry.title[lang]`, so it has to be present in every
+// supported language and non-empty.
+test('live + backlog: every manual entry has en + pl title', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const entry of [...CATALOG, ...BACKLOG]) {
+    if (entry.kind !== 'manual') continue;
+    const tt = /** @type {Record<string, string> | undefined} */ (entry.title);
+    if (!tt) {
+      offenders.push(`#${entry.n}: missing title`);
+      continue;
+    }
+    for (const lang of ['en', 'pl']) {
+      if (typeof tt[lang] !== 'string' || tt[lang].length === 0) {
+        offenders.push(`#${entry.n}: missing or empty title.${lang}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
+
 test('live + backlog: every puzzle has en + pl descriptions', () => {
   /** @type {string[]} */
   const offenders = [];
@@ -552,6 +700,12 @@ test('live + backlog: puzzles #1-100 are primary-clean (no emblem-only colour ma
   const sov = flagsGamePool(COUNTRIES, false);
   for (const entry of [...CATALOG, ...BACKLOG]) {
     if (entry.n > 100) continue;
+    // Manual entries are filter-free, so the primary-clean rule (which
+    // resolves the filter under a stricter colour model) doesn't apply.
+    // The author owns trust: a poorly-curated manual answer list reads
+    // as "the game is wrong" the same way an emblem-only colour match
+    // does, so the SKILL.md warning about no-completeness-check stands.
+    if (entry.kind === 'manual') continue;
     // Per-puzzle escape hatch — when set, the entry's answer set is
     // allowed to diverge between `colors` and `primaryColors`. Used for
     // the rare puzzle where excluding a primary-drift flag would gut
@@ -561,8 +715,9 @@ test('live + backlog: puzzles #1-100 are primary-clean (no emblem-only colour ma
     // Treat this flag as expensive — it pokes a hole in the rule's
     // onboarding-trust guardrail, so each use needs a curator's note.
     if (entry.primaryCleanExempt === true) continue;
-    const f = parseFilterString(entry.filter);
-    assert.ok(f, `#${entry.n}: failed to parse filter "${entry.filter}"`);
+    const filterStr = /** @type {string} */ (entry.filter);
+    const f = parseFilterString(filterStr);
+    assert.ok(f, `#${entry.n}: failed to parse filter "${filterStr}"`);
     const strict = sov
       .filter((c) =>
         matchesFilters(
@@ -577,7 +732,7 @@ test('live + backlog: puzzles #1-100 are primary-clean (no emblem-only colour ma
     assert.deepEqual(
       strict,
       stored,
-      `#${entry.n}: filter "${entry.filter}" is not primary-clean — under primaryColors it resolves to [${strict.join(', ')}] but answers is [${stored.join(', ')}]. Onboarding (puzzles 1-100) forbids emblem-only colour matches.`,
+      `#${entry.n}: filter "${filterStr}" is not primary-clean — under primaryColors it resolves to [${strict.join(', ')}] but answers is [${stored.join(', ')}]. Onboarding (puzzles 1-100) forbids emblem-only colour matches.`,
     );
   }
 });
@@ -605,7 +760,10 @@ const POLICY = JSON.parse(
 test('live + backlog: single-use tokens appear in at most one entry', () => {
   const all = [...CATALOG, ...BACKLOG];
   for (const { token } of POLICY.singleUseTokens) {
-    const uses = all.filter((e) => e.filter.split(',').includes(token));
+    // Manual entries have no filter tokens; they can't burn a
+    // single-use token even if their answer list happens to be the
+    // same flags as the canonical "find all X" puzzle.
+    const uses = all.filter((e) => e.kind !== 'manual' && e.filter?.split(',').includes(token));
     assert.ok(
       uses.length <= 1,
       `single-use token "${token}" appears in ${uses.length} entries (${uses.map((e) => '#' + e.n).join(', ')}); limit is 1 — see rule 14 / daily/daily_policy.json`,
@@ -654,11 +812,16 @@ const SOV_FOR_AUDIT = flagsGamePool(COUNTRIES, false);
 
 test('no live puzzle has a flag-data ambiguity violation', () => {
   for (const entry of CATALOG) {
-    const violations = auditPuzzle(entry, SOV_FOR_AUDIT);
+    // Manual entries have no filter — the audit's "plausible count
+    // flips filter membership" logic doesn't apply. Author still owns
+    // judgment about ambiguous flags appearing in the answer list.
+    if (entry.kind === 'manual') continue;
+    const filterStr = /** @type {string} */ (entry.filter);
+    const violations = auditPuzzle({ filter: filterStr }, SOV_FOR_AUDIT);
     assert.equal(
       violations.length,
       0,
-      `LIVE #${entry.n} (${entry.filter}) has ambiguity violations:\n` +
+      `LIVE #${entry.n} (${filterStr}) has ambiguity violations:\n` +
         violations.map((v) => `  [${v.kind}] ${v.country}: ${v.detail}`).join('\n'),
     );
   }
@@ -666,11 +829,13 @@ test('no live puzzle has a flag-data ambiguity violation', () => {
 
 test('no backlog puzzle has a flag-data ambiguity violation', () => {
   for (const entry of BACKLOG) {
-    const violations = auditPuzzle(entry, SOV_FOR_AUDIT);
+    if (entry.kind === 'manual') continue;
+    const filterStr = /** @type {string} */ (entry.filter);
+    const violations = auditPuzzle({ filter: filterStr }, SOV_FOR_AUDIT);
     assert.equal(
       violations.length,
       0,
-      `BACKLOG #${entry.n} (${entry.filter}) has ambiguity violations:\n` +
+      `BACKLOG #${entry.n} (${filterStr}) has ambiguity violations:\n` +
         violations.map((v) => `  [${v.kind}] ${v.country}: ${v.detail}`).join('\n'),
     );
   }

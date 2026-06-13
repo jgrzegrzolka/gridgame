@@ -39,7 +39,6 @@ import {
 } from '../langRefresh.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
-/** @typedef {import('../flags/flagsFilter.js').Filters} Filters */
 
 /**
  * Wire the game handle returned by `startGame` to soft language
@@ -53,11 +52,16 @@ import {
  * share this shape; findFlag's listener is structurally different
  * (three states: chooser / game / result) and stays page-local.
  *
+ * `labelFor` is supplied by the caller because filter-derived and
+ * manual entries source the category label differently — filter
+ * entries call `filterToCategory(filter, t).label`, manual entries
+ * read `entry.title[lang]`. Keeps this helper agnostic.
+ *
  * @param {{ refreshI18n: (next: { all: Country[], targets: Country[], label: string }) => void }} game
- * @param {{ raw: any[], targets: Country[], filter: Filters, description?: Record<string, string> }} deps
+ * @param {{ raw: any[], targets: Country[], labelFor: () => string, description?: Record<string, string> }} deps
  * @returns {() => void}
  */
-export function attachLangRefresh(game, { raw, targets, filter, description }) {
+export function attachLangRefresh(game, { raw, targets, labelFor, description }) {
   // Pre-compute the code set once — the targets array doesn't change
   // for the lifetime of a round, only the Country objects backing
   // their entries do (when withLocalizedAliases produces a fresh array
@@ -66,7 +70,7 @@ export function attachLangRefresh(game, { raw, targets, filter, description }) {
   const targetCodes = new Set(targets.map((c) => c.code));
   const listener = () => {
     if (description !== undefined) paintDescription(description);
-    game.refreshI18n(computeLangRefreshPayload({ raw, targetCodes, filter }));
+    game.refreshI18n(computeLangRefreshPayload({ raw, targetCodes, labelFor }));
   };
   document.addEventListener('langchanged', listener);
   return listener;

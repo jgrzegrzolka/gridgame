@@ -82,7 +82,13 @@ export function bootIdeasPlay() {
       const game = startGame(k, category, targets, all, { skipSave: true });
       // Ideas have no description; omit it from the deps so the
       // helper skips the paintDescription branch on each langchange.
-      attachLangRefresh(game, { raw, targets, filter });
+      // Ideas are filter-only (no manual variant — the funnel for
+      // manual entries is backlog or parked, never ideas).
+      attachLangRefresh(game, {
+        raw,
+        targets,
+        labelFor: () => filterToCategory(filter, t).label,
+      });
     })
     .catch((err) => {
       showState(`${t('game.failedToLoad', 'Failed to load:')} ${err.message}`);

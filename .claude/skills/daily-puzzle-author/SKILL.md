@@ -30,6 +30,41 @@ What this changes for you as author:
 - **Empty backlog = failure email.** The script throws non-zero when there's nothing to promote, so you get notified instead of a silent miss. That's the cue to author the next batch.
 - **Cron is best-effort** — GitHub Actions schedules typically fire 5–30 min late, so expect the auto-commit to land between ~00:00 and ~00:30 Warsaw time, not on the dot.
 
+## Two kinds of entries
+
+Most puzzles are **filter** entries — `{ filter, answers, description }` — where the filter string drives the answer set and the catalog tests pin the link. The rest of this file calls these "filter entries" or just "entries."
+
+**Manual entries** are the escape hatch for puzzles whose criterion can't be expressed in the filter DSL — ad-hoc visual patterns ("triangles pointing inward from the hoist"), non-flag-data facts ("countries that legalised X"), curated-list themes ("the original Schengen six"), or anything else the DSL doesn't reach. Shape:
+
+```jsonc
+{
+  "n": 51,
+  "kind": "manual",                        // discriminator
+  "answers": ["co", "py", "uy", "ve"],     // hand-curated, sovereign codes only
+  "title": {                               // replaces the pill chain in the header
+    "en": "Triangles pointing inward from the hoist",
+    "pl": "Trójkąty wskazujące do środka z drzewca"
+  },
+  "description": {                         // same as filter entries
+    "en": "Find all flags whose left edge has a triangle pointing toward the centre.",
+    "pl": "Znajdź wszystkie flagi, których lewa krawędź ma trójkąt skierowany ku środkowi."
+  }
+}
+```
+
+No `filter` field on a manual entry — `kind` is the discriminator. The page picks `entry.title` for the header instead of `filterToCategory(...)`.
+
+**When to reach for one.** Visual criteria the DSL can't capture (triangle direction, charge placement, motif orientation). Non-flag-data facts you don't want to bake into `countries.json` for one puzzle. One-off curiosities. If the criterion is going to come back in compounds ("Asia + has-X"), tag the data instead.
+
+**The cost.** The catalog tests can't validate completeness — there's no `parseFilterString` against which "your answer list is missing Estonia" would surface. Curation is on you. Run the puzzle yourself; check sibling flags ("does my framing accept this one too?"); review at least one peer's eye before promoting from backlog.
+
+**Funnel.** Manual entries go straight to **`daily_backlog.json`** (with `n`) or **`daily_parked.json`** (without `n`, while you're still working out the answer list). Manual entries do NOT go through `daily_ideas.json` — the ideas pipeline is generator-fed and the generator can't produce manual entries.
+
+**Which rules apply.** Manual entries skip the filter-only rules (1, 2, 5, 6's filter-refinement half, 10, 14, 15) and keep the rest. Specifically:
+- **Apply**: 3 (sovereign codes), 4 (sequential `n`), 6 (no two entries — any kind — share an identical answer set), 7 (description), 8 (nameScore by N), 9 (answer-set size), 11 (country-reuse cap), 12/13 (onboarding shape).
+- **Skip**: 1 (drift detector — no filter to resolve), 2 (no tokens), 5 (no colours to be primary-clean against), 6's strict-subset-via-refinement half (a manual entry can't be a "refinement" of a filter entry — no shared token vocabulary), 10 (no compounds), 14 (no tokens), 15 (no filter-membership-flipping flag to flag).
+- **Extra**: manual entries need `title.en` and `title.pl`, both non-empty. Pinned by the `every manual entry has en + pl title` test.
+
 ## Filter DSL primitives
 
 Filter strings are comma-separated tokens. Each token is `group:value` (include) or `group:!value` (exclude), plus the scalar `colorCount:N` (or `colorCount:>=N`).
