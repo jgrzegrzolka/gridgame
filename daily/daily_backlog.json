@@ -420,17 +420,22 @@
   },
   {
     "n": 37,
-    "filter": "continent:Asia,color:black,color:!green",
+    "filter": "continent:Asia,color:black,color:red",
     "answers": [
-      "af",
+      "ae",
       "bn",
+      "iq",
+      "jo",
       "kr",
+      "kw",
+      "ps",
+      "sy",
       "tl",
       "ye"
     ],
     "description": {
-      "en": "Find all Asian flags with black but without green.",
-      "pl": "Znajdź wszystkie azjatyckie flagi z czernią, ale bez zieleni."
+      "en": "Find all Asian flags with black and red.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z czarnym i czerwonym."
     }
   },
   {
@@ -679,14 +684,14 @@
   },
   {
     "n": 53,
-    "filter": "continent:Asia,color:yellow,color:black",
+    "filter": "continent:Asia,color:yellow,color:!red",
     "answers": [
-      "bn",
-      "tl"
+      "bt",
+      "kz"
     ],
     "description": {
-      "en": "Find all Asian flags with yellow and black.",
-      "pl": "Znajdź wszystkie azjatyckie flagi z żółtym i czarnym."
+      "en": "Find all Asian flags with yellow but without red.",
+      "pl": "Znajdź wszystkie azjatyckie flagi z żółtym, ale bez czerwonego."
     }
   },
   {

@@ -13,7 +13,9 @@ import { createCountry } from './group.js';
  * future tagging changes to real flags.
  */
 const FIXTURES = [
-  // Canonical 3 colours, plausible 3 OR 4 (Bhutan-shaped).
+  // Canonical 3 colours, plausible 3 OR 4 (Bhutan-shaped). The
+  // contested colour is the dragon's black outline — canonically not in
+  // primary, but a player counting the outline could read it as present.
   createCountry({
     code: 'bt',
     name: 'Bhutan',
@@ -22,7 +24,7 @@ const FIXTURES = [
     primaryColors: ['yellow', 'orange', 'white'],
     additionalColors: [],
     ambiguousColorCount: [3, 4],
-    ambiguousColors: ['white'],
+    ambiguousColors: ['black'],
     motifs: ['animal'],
   }),
   // Canonical 4 colours, plausible 4..7 (American-Samoa-shaped).
@@ -77,25 +79,25 @@ test('auditFilter flags American Samoa for colorCount:>=5 (canonical 4 misses, a
   assert.equal(as.kind, 'count');
 });
 
-test('auditFilter flags Bhutan for color:white membership (canonical in, flip out)', () => {
-  const v = auditFilter('continent:Asia,color:white', FIXTURES);
+test('auditFilter flags Bhutan for color:black membership (canonical out, flip in)', () => {
+  const v = auditFilter('continent:Asia,color:black', FIXTURES);
   const bt = v.find((x) => x.country === 'bt');
   assert.ok(bt, 'expected a membership violation on bt');
   assert.equal(bt.kind, 'membership');
-  assert.match(bt.detail, /color:white contested/);
+  assert.match(bt.detail, /color:black contested/);
 });
 
-test('auditFilter flags Bhutan for color:!white (canonical out, flip in)', () => {
-  const v = auditFilter('continent:Asia,color:!white', FIXTURES);
+test('auditFilter flags Bhutan for color:!black (canonical in, flip out)', () => {
+  const v = auditFilter('continent:Asia,color:!black', FIXTURES);
   const bt = v.find((x) => x.country === 'bt');
-  assert.ok(bt, 'expected a membership violation on bt under color:!white');
+  assert.ok(bt, 'expected a membership violation on bt under color:!black');
   assert.equal(bt.kind, 'membership');
 });
 
-test('auditFilter does not flag Bhutan for color:white when the continent excludes it', () => {
-  const v = auditFilter('continent:Africa,color:white', FIXTURES);
+test('auditFilter does not flag Bhutan for color:black when the continent excludes it', () => {
+  const v = auditFilter('continent:Africa,color:black', FIXTURES);
   const bt = v.find((x) => x.country === 'bt');
-  assert.equal(bt, undefined, 'continent:Africa filters Bhutan out regardless of white-flip');
+  assert.equal(bt, undefined, 'continent:Africa filters Bhutan out regardless of black-flip');
 });
 
 test('auditFilter does not flag Bhutan for colorCount:3 when continent excludes it', () => {
