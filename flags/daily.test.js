@@ -645,10 +645,16 @@ test('formatPuzzleDate: DD.MM.YYYY format', () => {
 // Feature DA hard rule: no live or backlog entry may contain a flag whose
 // ambiguousColorCount or ambiguousColors tagging puts a player into the
 // disagreement zone (their plausible count/membership call would flip
-// answer-set membership). See flags/ambiguityAudit.js and DATA_FEATURE.md.
+// answer-set membership). Scoped to the sovereign pool because daily
+// puzzles only accept sovereign answers (rule 3) — a territory whose
+// tagging would straddle a filter can't actually be offered as an
+// answer, so it shouldn't false-positive. See flags/ambiguityAudit.js
+// and DATA_FEATURE.md.
+const SOV_FOR_AUDIT = flagsGamePool(COUNTRIES, false);
+
 test('no live puzzle has a flag-data ambiguity violation', () => {
   for (const entry of CATALOG) {
-    const violations = auditPuzzle(entry, COUNTRIES);
+    const violations = auditPuzzle(entry, SOV_FOR_AUDIT);
     assert.equal(
       violations.length,
       0,
@@ -660,7 +666,7 @@ test('no live puzzle has a flag-data ambiguity violation', () => {
 
 test('no backlog puzzle has a flag-data ambiguity violation', () => {
   for (const entry of BACKLOG) {
-    const violations = auditPuzzle(entry, COUNTRIES);
+    const violations = auditPuzzle(entry, SOV_FOR_AUDIT);
     assert.equal(
       violations.length,
       0,
@@ -681,7 +687,7 @@ test('no idea has a flag-data ambiguity violation', () => {
   );
   for (const entry of IDEAS) {
     if (!Array.isArray(entry.answers) || entry.answers.length === 0) continue;
-    const violations = auditPuzzle(entry, COUNTRIES);
+    const violations = auditPuzzle(entry, SOV_FOR_AUDIT);
     assert.equal(
       violations.length,
       0,

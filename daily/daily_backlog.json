@@ -15,21 +15,6 @@
   },
   {
     "n": 10,
-    "filter": "continent:Asia,color:white,color:blue,colorCount:3",
-    "answers": [
-      "kh",
-      "kp",
-      "la",
-      "np",
-      "th"
-    ],
-    "description": {
-      "en": "Find all Asian flags whose only colours are red, white, and blue — no others.",
-      "pl": "Znajdź wszystkie azjatyckie flagi, które mają tylko 3 kolory: czerwony, biały i niebieski."
-    }
-  },
-  {
-    "n": 11,
     "filter": "continent:Africa,color:yellow,color:red,color:green,motif:star-or-moon",
     "answers": [
       "bf",
@@ -54,7 +39,7 @@
     }
   },
   {
-    "n": 12,
+    "n": 11,
     "filter": "continent:Africa,colorCount:2",
     "answers": [
       "ma",
@@ -68,7 +53,7 @@
     }
   },
   {
-    "n": 13,
+    "n": 12,
     "filter": "continent:Europe,motif:coat-of-arms",
     "answers": [
       "ad",
@@ -89,7 +74,7 @@
     }
   },
   {
-    "n": 14,
+    "n": 13,
     "filter": "continent:Europe,motif:animal",
     "answers": [
       "ad",
@@ -107,27 +92,7 @@
     }
   },
   {
-    "n": 15,
-    "filter": "continent:Europe,colorCount:>=4",
-    "answers": [
-      "ad",
-      "es",
-      "hr",
-      "li",
-      "md",
-      "me",
-      "pt",
-      "rs",
-      "si",
-      "sm"
-    ],
-    "description": {
-      "en": "Find all European flags with 4 or more colours.",
-      "pl": "Znajdź wszystkie europejskie flagi z 4 lub więcej kolorami."
-    }
-  },
-  {
-    "n": 16,
+    "n": 14,
     "filter": "continent:Europe,motif:star-or-moon",
     "answers": [
       "ba",
@@ -141,20 +106,7 @@
     }
   },
   {
-    "n": 17,
-    "filter": "continent:Asia,color:green,color:!red",
-    "answers": [
-      "in",
-      "pk",
-      "sa"
-    ],
-    "description": {
-      "en": "Find all Asian flags with green but without red.",
-      "pl": "Znajdź wszystkie azjatyckie flagi z zielenią, ale bez czerwieni."
-    }
-  },
-  {
-    "n": 18,
+    "n": 15,
     "filter": "motif:star-or-moon,color:red,color:white,colorCount:2",
     "answers": [
       "jp",
@@ -168,7 +120,7 @@
     }
   },
   {
-    "n": 19,
+    "n": 16,
     "filter": "continent:Asia,color:red,color:yellow,colorCount:2",
     "answers": [
       "cn",
@@ -181,7 +133,7 @@
     }
   },
   {
-    "n": 20,
+    "n": 17,
     "filter": "continent:North America,color:red,motif:animal",
     "answers": [
       "dm",
@@ -193,23 +145,7 @@
     }
   },
   {
-    "n": 21,
-    "filter": "continent:Asia,color:green,color:black",
-    "answers": [
-      "ae",
-      "iq",
-      "jo",
-      "kw",
-      "ps",
-      "sy"
-    ],
-    "description": {
-      "en": "Find all Asian flags with green and black.",
-      "pl": "Znajdź wszystkie azjatyckie flagi z zielenią i czernią."
-    }
-  },
-  {
-    "n": 22,
+    "n": 18,
     "filter": "continent:South America,motif:star-or-moon",
     "answers": [
       "ar",
@@ -228,7 +164,7 @@
     }
   },
   {
-    "n": 23,
+    "n": 19,
     "filter": "continent:Asia,color:green,colorCount:2",
     "answers": [
       "bd",
@@ -241,7 +177,7 @@
     }
   },
   {
-    "n": 24,
+    "n": 20,
     "filter": "color:orange,color:green,colorCount:3",
     "answers": [
       "cy",
@@ -255,7 +191,7 @@
     }
   },
   {
-    "n": 25,
+    "n": 21,
     "filter": "continent:Asia,color:green,motif:coat-of-arms",
     "answers": [
       "ir",
@@ -269,7 +205,7 @@
     }
   },
   {
-    "n": 26,
+    "n": 22,
     "filter": "color:red,color:yellow,color:black,colorCount:3",
     "answers": [
       "ao",
@@ -282,7 +218,7 @@
     }
   },
   {
-    "n": 27,
+    "n": 23,
     "filter": "color:black,colorCount:2",
     "answers": [
       "af",
@@ -294,7 +230,7 @@
     }
   },
   {
-    "n": 28,
+    "n": 24,
     "filter": "continent:Africa,color:red,color:white,color:green,color:black,colorCount:4",
     "answers": [
       "ke",
@@ -307,7 +243,7 @@
     }
   },
   {
-    "n": 29,
+    "n": 25,
     "filter": "color:white,color:green,colorCount:2",
     "answers": [
       "ng",
@@ -320,7 +256,7 @@
     }
   },
   {
-    "n": 30,
+    "n": 26,
     "filter": "continent:Asia,color:green,color:!white",
     "answers": [
       "bd",
@@ -332,7 +268,7 @@
     }
   },
   {
-    "n": 31,
+    "n": 27,
     "filter": "continent:South America,color:red",
     "answers": [
       "bo",
@@ -351,7 +287,7 @@
     }
   },
   {
-    "n": 32,
+    "n": 28,
     "filter": "continent:Asia,color:blue,color:yellow,colorCount:4",
     "answers": [
       "my",
@@ -363,7 +299,7 @@
     }
   },
   {
-    "n": 33,
+    "n": 29,
     "filter": "continent:North America,colorCount:2",
     "answers": [
       "ca",
@@ -375,7 +311,7 @@
     }
   },
   {
-    "n": 34,
+    "n": 30,
     "filter": "continent:Africa,color:white,color:!red",
     "answers": [
       "bw",
@@ -392,7 +328,7 @@
     }
   },
   {
-    "n": 35,
+    "n": 31,
     "filter": "continent:Asia,color:green,colorCount:3",
     "answers": [
       "ir",
@@ -406,7 +342,7 @@
     }
   },
   {
-    "n": 36,
+    "n": 32,
     "filter": "continent:North America,motif:cross",
     "answers": [
       "dm",
@@ -419,27 +355,7 @@
     }
   },
   {
-    "n": 37,
-    "filter": "continent:Asia,color:black,color:red",
-    "answers": [
-      "ae",
-      "bn",
-      "iq",
-      "jo",
-      "kr",
-      "kw",
-      "ps",
-      "sy",
-      "tl",
-      "ye"
-    ],
-    "description": {
-      "en": "Find all Asian flags with black and red.",
-      "pl": "Znajdź wszystkie azjatyckie flagi z czarnym i czerwonym."
-    }
-  },
-  {
-    "n": 38,
+    "n": 33,
     "filter": "continent:Africa,color:black,color:!green",
     "answers": [
       "ao",
@@ -454,7 +370,7 @@
     }
   },
   {
-    "n": 39,
+    "n": 34,
     "filter": "continent:Asia,color:white,motif:coat-of-arms",
     "answers": [
       "bn",
@@ -469,7 +385,7 @@
     }
   },
   {
-    "n": 40,
+    "n": 35,
     "filter": "continent:Asia,motif:star-or-moon,color:green",
     "answers": [
       "az",
@@ -489,7 +405,7 @@
     }
   },
   {
-    "n": 41,
+    "n": 36,
     "filter": "color:red,color:green,colorCount:2",
     "answers": [
       "bd",
@@ -501,7 +417,7 @@
     }
   },
   {
-    "n": 42,
+    "n": 37,
     "filter": "continent:Africa,motif:animal",
     "answers": [
       "eg",
@@ -515,7 +431,7 @@
     }
   },
   {
-    "n": 43,
+    "n": 38,
     "filter": "continent:Asia,color:black,motif:star-or-moon",
     "answers": [
       "jo",
@@ -528,7 +444,7 @@
     }
   },
   {
-    "n": 44,
+    "n": 39,
     "filter": "continent:Asia,color:blue,color:!white",
     "answers": [
       "am",
@@ -541,7 +457,7 @@
     }
   },
   {
-    "n": 45,
+    "n": 40,
     "filter": "continent:North America,color:black,color:!blue",
     "answers": [
       "dm",
@@ -555,23 +471,7 @@
     }
   },
   {
-    "n": 46,
-    "filter": "continent:Asia,color:red,motif:coat-of-arms",
-    "answers": [
-      "bn",
-      "ir",
-      "kh",
-      "lk",
-      "mn",
-      "tj"
-    ],
-    "description": {
-      "en": "Find all Asian flags with red and a coat of arms.",
-      "pl": "Znajdź wszystkie azjatyckie flagi z czerwienią i godłem."
-    }
-  },
-  {
-    "n": 47,
+    "n": 41,
     "filter": "continent:Africa,color:red,color:white,color:green,colorCount:3",
     "answers": [
       "bi",
@@ -584,7 +484,7 @@
     }
   },
   {
-    "n": 48,
+    "n": 42,
     "filter": "continent:North America,motif:star-or-moon,color:white",
     "answers": [
       "ag",
@@ -600,7 +500,7 @@
     }
   },
   {
-    "n": 49,
+    "n": 43,
     "filter": "continent:Africa,motif:star-or-moon,color:!yellow",
     "answers": [
       "bi",
@@ -620,7 +520,7 @@
     }
   },
   {
-    "n": 50,
+    "n": 44,
     "filter": "continent:Africa,color:white,color:!green",
     "answers": [
       "bw",
@@ -638,7 +538,7 @@
     }
   },
   {
-    "n": 51,
+    "n": 45,
     "filter": "motif:cross,motif:!union-jack",
     "answers": [
       "bi",
@@ -670,7 +570,7 @@
     }
   },
   {
-    "n": 52,
+    "n": 46,
     "filter": "continent:Asia,color:blue,motif:coat-of-arms",
     "answers": [
       "kh",
@@ -683,19 +583,7 @@
     }
   },
   {
-    "n": 53,
-    "filter": "continent:Asia,color:yellow,color:!red",
-    "answers": [
-      "bt",
-      "kz"
-    ],
-    "description": {
-      "en": "Find all Asian flags with yellow but without red.",
-      "pl": "Znajdź wszystkie azjatyckie flagi z żółtym, ale bez czerwonego."
-    }
-  },
-  {
-    "n": 54,
+    "n": 47,
     "filter": "continent:Africa,colorCount:>=5",
     "answers": [
       "cf",
@@ -715,7 +603,7 @@
     }
   },
   {
-    "n": 55,
+    "n": 48,
     "filter": "motif:animal,motif:coat-of-arms,motif:weapon",
     "answers": [
       "bo",
@@ -729,7 +617,7 @@
     }
   },
   {
-    "n": 56,
+    "n": 49,
     "filter": "color:white,color:blue,colorCount:2",
     "answers": [
       "fi",
@@ -745,7 +633,7 @@
     }
   },
   {
-    "n": 57,
+    "n": 50,
     "filter": "motif:union-jack",
     "answers": [
       "au",
@@ -760,7 +648,7 @@
     }
   },
   {
-    "n": 58,
+    "n": 51,
     "filter": "continent:Oceania,color:red",
     "answers": [
       "au",
@@ -779,7 +667,7 @@
     }
   },
   {
-    "n": 59,
+    "n": 52,
     "filter": "continent:North America,colorCount:4",
     "answers": [
       "do",
@@ -795,7 +683,7 @@
     }
   },
   {
-    "n": 60,
+    "n": 53,
     "filter": "continent:Africa,color:black,colorCount:3",
     "answers": [
       "ao",
@@ -808,7 +696,7 @@
     }
   },
   {
-    "n": 61,
+    "n": 54,
     "filter": "continent:North America,color:green,colorCount:3",
     "answers": [
       "gd",
@@ -821,7 +709,7 @@
     }
   },
   {
-    "n": 62,
+    "n": 55,
     "filter": "color:white,color:blue,color:yellow,colorCount:3",
     "answers": [
       "ar",
@@ -835,7 +723,7 @@
     }
   },
   {
-    "n": 63,
+    "n": 56,
     "filter": "continent:Oceania,motif:star-or-moon",
     "answers": [
       "au",
@@ -856,7 +744,7 @@
     }
   },
   {
-    "n": 64,
+    "n": 57,
     "filter": "continent:North America,color:white,color:!red",
     "answers": [
       "gt",
@@ -871,7 +759,7 @@
     }
   },
   {
-    "n": 65,
+    "n": 58,
     "filter": "continent:Oceania,colorCount:>=3",
     "answers": [
       "au",
@@ -892,7 +780,7 @@
     }
   },
   {
-    "n": 66,
+    "n": 59,
     "filter": "color:white,color:blue,color:black,colorCount:3",
     "answers": [
       "bw",
@@ -904,7 +792,7 @@
     }
   },
   {
-    "n": 67,
+    "n": 60,
     "filter": "continent:Africa,motif:star-or-moon,color:blue",
     "answers": [
       "cd",
@@ -925,7 +813,7 @@
     }
   },
   {
-    "n": 68,
+    "n": 61,
     "filter": "continent:Africa,color:red,color:blue,color:green,color:yellow,colorCount:4",
     "answers": [
       "er",
@@ -938,7 +826,7 @@
     }
   },
   {
-    "n": 69,
+    "n": 62,
     "filter": "continent:Africa,color:black,color:!red",
     "answers": [
       "bw",
@@ -951,7 +839,7 @@
     }
   },
   {
-    "n": 70,
+    "n": 63,
     "filter": "continent:Africa,color:red,color:blue,color:yellow,colorCount:3",
     "answers": [
       "cd",
@@ -963,7 +851,7 @@
     }
   },
   {
-    "n": 71,
+    "n": 64,
     "filter": "motif:bird",
     "answers": [
       "al",
@@ -990,7 +878,7 @@
     }
   },
   {
-    "n": 72,
+    "n": 65,
     "filter": "motif:star-or-moon,color:red,colorCount:3",
     "answers": [
       "ao",
@@ -1022,7 +910,7 @@
     }
   },
   {
-    "n": 73,
+    "n": 66,
     "filter": "motif:animal,motif:!coat-of-arms",
     "answers": [
       "al",
@@ -1040,7 +928,7 @@
     }
   },
   {
-    "n": 74,
+    "n": 67,
     "filter": "motif:star-or-moon,color:green,colorCount:3",
     "answers": [
       "bf",
@@ -1061,7 +949,7 @@
     }
   },
   {
-    "n": 75,
+    "n": 68,
     "filter": "color:red,color:green,color:yellow,colorCount:3",
     "answers": [
       "bf",
@@ -1081,7 +969,7 @@
     }
   },
   {
-    "n": 76,
+    "n": 69,
     "filter": "continent:Africa,color:red,color:green,color:yellow,color:black,colorCount:4",
     "answers": [
       "gh",
@@ -1094,7 +982,7 @@
     }
   },
   {
-    "n": 77,
+    "n": 70,
     "filter": "continent:North America,color:green,motif:star-or-moon",
     "answers": [
       "gd",
@@ -1106,7 +994,7 @@
     }
   },
   {
-    "n": 78,
+    "n": 71,
     "filter": "motif:star-or-moon,color:blue,color:yellow,colorCount:2",
     "answers": [
       "kz",
@@ -1118,31 +1006,7 @@
     }
   },
   {
-    "n": 79,
-    "filter": "continent:!Oceania,colorCount:5",
-    "answers": [
-      "ag",
-      "cf",
-      "ec",
-      "gq",
-      "gy",
-      "km",
-      "kn",
-      "mx",
-      "mz",
-      "na",
-      "pt",
-      "sc",
-      "sz",
-      "zw"
-    ],
-    "description": {
-      "en": "Find all 5-colour flags outside Oceania.",
-      "pl": "Znajdź wszystkie 5-kolorowe flagi spoza Oceanii."
-    }
-  },
-  {
-    "n": 80,
+    "n": 72,
     "filter": "continent:Africa,color:blue,color:green,color:yellow,colorCount:3",
     "answers": [
       "ga",
@@ -1154,7 +1018,7 @@
     }
   },
   {
-    "n": 81,
+    "n": 73,
     "filter": "continent:Oceania,colorCount:2",
     "answers": [
       "fm",
@@ -1167,7 +1031,7 @@
     }
   },
   {
-    "n": 82,
+    "n": 74,
     "filter": "color:blue,color:yellow,color:black,colorCount:3",
     "answers": [
       "bb",

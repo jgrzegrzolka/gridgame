@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { loadCountries } from '../flags/group.js';
+import { flagsGamePool, loadCountries } from '../flags/group.js';
 import { auditPuzzle } from '../flags/ambiguityAudit.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -28,6 +28,13 @@ const ROOT = join(HERE, '..');
 const COUNTRIES = loadCountries(
   JSON.parse(readFileSync(join(ROOT, 'flags', 'countries.json'), 'utf-8')),
 );
+// Audit against the sovereign pool only — daily puzzles only accept
+// sovereign answers (rule 3), so a territory like sh-ac that visually
+// straddles a colorCount filter can't actually be offered as a "wrong"
+// answer. Tagging territories with ambig fields is still useful as
+// flag-data documentation, but the daily-side audit shouldn't false-
+// positive on them.
+const SOV = flagsGamePool(COUNTRIES, false);
 
 const LIVE = JSON.parse(
   readFileSync(join(ROOT, 'daily', 'daily_puzzles.json'), 'utf-8'),
@@ -49,7 +56,7 @@ let total = 0;
 for (const [label, list] of BUCKETS) {
   let bucketHits = 0;
   for (const puzzle of list) {
-    const v = auditPuzzle(puzzle, COUNTRIES);
+    const v = auditPuzzle(puzzle, SOV);
     if (v.length === 0) continue;
     if (bucketHits === 0) {
       console.log(`\n--- ${label} (${list.length} entries) ---`);

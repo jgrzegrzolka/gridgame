@@ -267,7 +267,10 @@ function passesHardRules(filter, answers, parsed) {
   // Feature DA: skip combinations where a flag's count or membership
   // ambiguity puts a plausible-counting player into the disagreement
   // zone. Silent skip (rule-6 style) — no rescue by adding more tokens.
-  const ambig = auditFilter(filter, COUNTRIES);
+  // Scoped to SOV (the sovereign pool) because only sovereigns can be
+  // valid daily-puzzle answers — a tagged territory can't actually be
+  // offered as a wrong answer regardless of how its visual count reads.
+  const ambig = auditFilter(filter, SOV);
   if (ambig.length > 0) {
     return { ok: false, reason: `ambiguity ${ambig.map((v) => `${v.country}/${v.kind}`).join(',')}` };
   }
