@@ -54,6 +54,29 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
  * pool — only pills that are actually visible there.)
  * @param {import('../flags/group.js').Country[]} all
  */
+/**
+ * Wire `el` so a click shares the current page URL (in-game or result —
+ * both already have `?f=<filter>` in the address bar so we don't need
+ * to re-serialize). On the 'copied' branch, toggles `.copied` for 1.5 s
+ * to swap the share-icon glyph for the green checkmark (see common.css).
+ * 'shared' / 'dismissed' / 'failed' all stay silent — same reasoning as
+ * TTT's onShareClick. See `common.js::shareUrl` for the full state model.
+ *
+ * @param {HTMLElement} el
+ */
+function attachShareHandler(el) {
+  el.addEventListener('click', async () => {
+    const result = await shareUrl(window.location.href, {
+      title: t('findFlag.shareTitle', 'Yet Another Quiz — flag puzzle'),
+      text: t('findFlag.shareText', "I built a flag puzzle. Can you find them all?"),
+    });
+    if (result === 'copied') {
+      el.classList.add('copied');
+      setTimeout(() => el.classList.remove('copied'), 1500);
+    }
+  });
+}
+
 function goRandom(all) {
   /** @type {Array<{ group: 'continent' | 'color' | 'motif', value: string }>} */
   const pool = [
@@ -563,26 +586,9 @@ export function bootFindFlag() {
       goRandom(all);
     });
 
-    if (gameShareEl) {
-      gameShareEl.addEventListener('click', async () => {
-        // We're in a live game — `window.location.href` already encodes
-        // the filter via `?f=`. No need to re-serialize.
-        const result = await shareUrl(window.location.href, {
-          title: t('findFlag.shareTitle', 'Yet Another Quiz — flag puzzle'),
-          text: t('findFlag.shareText', "I built a flag puzzle. Can you find them all?"),
-        });
-        // 'copied' → morph the icon to a green checkmark for 1.5 s via
-        // the shared `.copied` class (defined in common.css alongside
-        // `.share-link`/`.share-icon`). 'shared' = system sheet was the
-        // feedback; 'dismissed' = user backed out; 'failed' = silent so
-        // we don't lie about the URL being available somewhere. Same
-        // pattern as TTT's onShareClick.
-        if (result === 'copied') {
-          gameShareEl.classList.add('copied');
-          setTimeout(() => gameShareEl.classList.remove('copied'), 1500);
-        }
-      });
-    }
+    if (gameShareEl) attachShareHandler(gameShareEl);
+    const resultShareEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('result-share'));
+    if (resultShareEl) attachShareHandler(resultShareEl);
 
     function finish() {
       if (finished) return;

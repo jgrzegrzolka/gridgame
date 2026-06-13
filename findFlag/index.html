@@ -100,9 +100,12 @@
     </dialog>
 
     <section id="result" hidden>
-      <p class="final-score" id="final-score-line">
-        <span id="final-score-prefix" data-i18n="findFlag.youFound">You found</span><span id="final-score-fraction"> <span id="final-found">0</span> / <span id="final-total">0</span></span>
-      </p>
+      <div class="final-score-row">
+        <p class="final-score" id="final-score-line">
+          <span id="final-score-prefix" data-i18n="findFlag.youFound">You found</span><span id="final-score-fraction"> <span id="final-found">0</span> / <span id="final-total">0</span></span>
+        </p>
+        <button type="button" class="share-link" id="result-share" aria-label="Share" data-i18n-attr="aria-label:findFlag.share"><span class="share-icon" aria-hidden="true"></span></button>
+      </div>
       <h2 class="result-section-title" id="found-title" hidden data-i18n="findFlag.found">Found:</h2>
       <ul class="find-result-found" id="find-result-found"></ul>
       <h2 class="result-section-title" id="missed-title" hidden data-i18n="findFlag.missed">Missed:</h2>
