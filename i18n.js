@@ -225,15 +225,11 @@ export function applyStringsToDocument(strings, lang, doc) {
 export async function bootI18n(base = './') {
   const stored = window.localStorage.getItem(LANG_STORAGE_KEY);
   const lang = resolveLang(stored, window.navigator.language);
-  // Paint the lang-toggle flag immediately, before the i18n JSON fetch
-  // below. The flag is determined by localStorage + navigator alone and
-  // doesn't need the strings, but the existing `wireLangToggle` call
-  // only runs in the bootI18n().then() callback — i.e. after the fetch
-  // resolves. On a cold connection that's 100-500ms of blank-button time.
-  if (typeof document !== 'undefined') {
-    const toggleEl = document.getElementById('lang-toggle');
-    if (toggleEl) toggleEl.setAttribute('data-current', lang);
-  }
+  // The lang-toggle flag is already painted by an inline non-module
+  // <script> in every HTML page (right after the `#lang-toggle` element),
+  // which runs before this module is even fetched. Pinned by the
+  // "every page with #lang-toggle has the sync paint" test in
+  // chrome.test.js. No need to re-paint here.
   const res = await fetch(`${base}i18n/${lang}.json`);
   if (!res.ok) return lang;
   const strings = await res.json();

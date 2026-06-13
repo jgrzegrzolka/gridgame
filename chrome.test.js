@@ -115,3 +115,31 @@ test('chrome: the root index.html does NOT carry a Home link', () => {
   const homeLinks = html.match(/<a[^>]*\bdata-i18n="menu\.home"[^>]*>/g) ?? [];
   assert.equal(homeLinks.length, 0, `root index.html unexpectedly has ${homeLinks.length} Home link(s)`);
 });
+
+// Every HTML page that ships the `#lang-toggle` element must also ship
+// the inline non-module <script> that paints `data-current` from
+// localStorage + navigator.language. Without it, the lang flag is blank
+// until the deferred i18n.js module graph resolves — on a cold CF→SWA
+// edge that's hundreds of ms of empty-button time on the first visit
+// after deploy. The inline paint replaces the synchronous paint that
+// used to live inside `bootI18n()`; if a new page adds `#lang-toggle`
+// but forgets the inline script, the regression would be silent
+// without this guard.
+test('chrome: every page with #lang-toggle ships the synchronous paint script', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const file of findHtmlFiles(HERE)) {
+    const html = readFileSync(file, 'utf-8');
+    if (!html.includes('id="lang-toggle"')) continue;
+    // Specific markers — the literal storage key the inline script
+    // reads, AND the setAttribute call on #lang-toggle. Both have to
+    // be present so a future page can't half-port the script and pass.
+    const hasStorageRead = html.includes("localStorage.getItem('gridgame.lang')");
+    const hasFlagPaint = html.includes("getElementById('lang-toggle').setAttribute('data-current'");
+    if (!hasStorageRead || !hasFlagPaint) {
+      const rel = relative(HERE, file).split(sep).join('/');
+      offenders.push(`${rel}: missing inline sync paint for #lang-toggle`);
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
