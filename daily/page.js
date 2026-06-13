@@ -1,6 +1,6 @@
 import { loadCountries, flagsGamePool } from '../flags/group.js';
 import { t, withLocalizedAliases, countryName } from '../i18n.js';
-import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle } from '../flags/daily.js';
+import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, manualToCategory } from '../flags/daily.js';
 import { loadScores, isCompleteRecord, migrateScores } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
 import {
@@ -390,7 +390,17 @@ export function bootDaily() {
           .catch(() => { /* preload failure is silent — handleFinish retries */ });
       }
 
-      const category = filterToCategory(result.filter, t);
+      // Filter entries derive the category label from the parsed
+      // Filters object (re-translated on every langchange so pill
+      // labels follow the active language). Manual entries skip that
+      // pipeline — there's no filter — and pull the label from the
+      // hand-written `entry.title` map keyed by language.
+      const labelFor = result.entry.kind === 'manual'
+        ? () => manualToCategory(result.entry, document.documentElement.lang || 'en').label
+        : () => filterToCategory(/** @type {import('../flags/flagsFilter.js').Filters} */ (result.filter), t).label;
+      const category = result.entry.kind === 'manual'
+        ? manualToCategory(result.entry, document.documentElement.lang || 'en')
+        : filterToCategory(/** @type {import('../flags/flagsFilter.js').Filters} */ (result.filter), t);
       // Replays treated identically to first finishes: local archive
       // overwrites with the latest attempt, and we re-POST to the
       // server. The server enforces first-attempt-only via 409 on
@@ -405,7 +415,7 @@ export function bootDaily() {
       attachLangRefresh(game, {
         raw,
         targets: result.targets,
-        filter: result.filter,
+        labelFor,
         description: result.entry.description,
       });
     })

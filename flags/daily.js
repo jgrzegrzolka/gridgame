@@ -23,8 +23,22 @@ import { parseFilterString } from './findFlag.js';
  *
  * @typedef {Object} DailyPuzzle
  * @property {number} n
- * @property {string} filter   serialized filter, same form as the
- *                             findFlag chooser's `?f=` URL parameter
+ * @property {'filter' | 'manual'} [kind]  discriminator. Absent or
+ *                             `'filter'`: traditional filter-derived
+ *                             entry (the original shape). `'manual'`:
+ *                             hand-curated answer list with no filter —
+ *                             used for criteria that don't fit the DSL
+ *                             (ad-hoc visual patterns, non-flag-data
+ *                             facts). See SKILL.md "Manual entries".
+ * @property {string} [filter]   serialized filter, same form as the
+ *                             findFlag chooser's `?f=` URL parameter.
+ *                             Required for `kind: 'filter'` (default),
+ *                             absent for `kind: 'manual'`.
+ * @property {Record<string, string>} [title]  per-language category
+ *                             label shown where the filter-pill chain
+ *                             would render. Required for manual entries
+ *                             (the player has no filter to read), absent
+ *                             for filter entries (built from the filter).
  * @property {string[]} answers  country codes the puzzle resolves to
  * @property {Record<string, string>} [description]  per-language helper
  *                             sentence shown under the header. Keys are
@@ -166,7 +180,9 @@ export function isReplayFromUrl(search) {
  * @typedef {Object} DailyResolutionOk
  * @property {true} ok
  * @property {DailyPuzzle} entry
- * @property {import('./flagsFilter.js').Filters} filter
+ * @property {import('./flagsFilter.js').Filters | null} filter  parsed
+ *           filter for `kind: 'filter'` entries; `null` for `kind: 'manual'`
+ *           (there's nothing to parse — the answers are the puzzle).
  * @property {import('./group.js').Country[]} targets
  *
  * @typedef {Object} DailyResolutionFail
@@ -230,8 +246,17 @@ export function findPuzzle(catalog, n) {
  * @returns {DailyResolution}
  */
 export function resolvePuzzleEntry(entry, allCountries) {
-  const filter = parseFilterString(entry.filter);
-  if (!filter) return { ok: false, reason: 'invalid-filter' };
+  // Manual entries: no filter to parse — the hand-curated answer list
+  // IS the puzzle. Skip parseFilterString entirely so the resolver
+  // doesn't reject them as "invalid-filter", and return filter: null
+  // so callers (page.js, backlog/play.js) know to take the
+  // kind === 'manual' branch when building the category label.
+  /** @type {import('./flagsFilter.js').Filters | null} */
+  let filter = null;
+  if (entry.kind !== 'manual') {
+    filter = parseFilterString(entry.filter ?? '');
+    if (!filter) return { ok: false, reason: 'invalid-filter' };
+  }
 
   const byCode = new Map(allCountries.map((c) => [c.code, c]));
   const targets = /** @type {import('./group.js').Country[]} */ (
@@ -240,6 +265,31 @@ export function resolvePuzzleEntry(entry, allCountries) {
   if (targets.length === 0) return { ok: false, reason: 'no-targets' };
 
   return { ok: true, entry, filter, targets };
+}
+
+/**
+ * Build a synthetic Category for a manual entry. The label comes from
+ * `entry.title[lang]` (per-language, hand-written); the predicate is
+ * code-membership against the frozen answer list. The id includes the
+ * puzzle number so two manual puzzles with the same title don't collide.
+ *
+ * Falls back to `entry.title.en` when the requested language is missing,
+ * and to an empty string when `title` itself is absent (the catalog test
+ * forbids this in real entries; the fallback only matters for synthetic
+ * fixtures).
+ *
+ * @param {DailyPuzzle} entry
+ * @param {string} lang
+ * @returns {import('./engine.js').Category}
+ */
+export function manualToCategory(entry, lang) {
+  const label = entry.title?.[lang] ?? entry.title?.en ?? '';
+  const codes = new Set(entry.answers);
+  return {
+    id: `daily:${entry.n}:manual`,
+    label,
+    predicate: (c) => codes.has(c.code),
+  };
 }
 
 /**

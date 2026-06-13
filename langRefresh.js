@@ -24,25 +24,28 @@
  * tile helpers) keeps the pure half unit-testable without a document.
  */
 
-import { withLocalizedAliases, countryName, t } from './i18n.js';
+import { withLocalizedAliases, countryName } from './i18n.js';
 import { flagsGamePool } from './flags/group.js';
-import { filterToCategory } from './flags/findFlag.js';
 
 /** @typedef {import('./flags/group.js').Country} Country */
-/** @typedef {import('./flags/flagsFilter.js').Filters} Filters */
 
 /**
  * Pure half of the soft language-switch payload. Callers (daily,
  * findFlag) call this from a `langchanged` listener and hand the
  * result to whichever in-page renderer needs it.
  *
- * @param {{ raw: any[], targetCodes: Set<string>, filter: Filters }} deps
+ * `labelFor` is a callback so this helper stays agnostic about how the
+ * label is produced. Filter-derived puzzles close over a `Filters`
+ * object and call `filterToCategory(filter, t).label`; manual daily
+ * puzzles close over `entry.title` and look up the current language.
+ *
+ * @param {{ raw: any[], targetCodes: Set<string>, labelFor: () => string }} deps
  * @returns {{ all: Country[], targets: Country[], label: string }}
  */
-export function computeLangRefreshPayload({ raw, targetCodes, filter }) {
+export function computeLangRefreshPayload({ raw, targetCodes, labelFor }) {
   const all = withLocalizedAliases(flagsGamePool(raw, false));
   const targets = all.filter((c) => targetCodes.has(c.code));
-  const label = filterToCategory(filter, t).label;
+  const label = labelFor();
   return { all, targets, label };
 }
 

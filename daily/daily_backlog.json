@@ -1005,5 +1005,33 @@
       "en": "Find all flags whose only colours are blue, yellow, and black — no others.",
       "pl": "Znajdź wszystkie flagi, które mają tylko 3 kolory: niebieski, żółty i czarny."
     }
+  },
+  {
+    "n": 72,
+    "kind": "manual",
+    "answers": [
+      "bs",
+      "cu",
+      "cz",
+      "dj",
+      "gy",
+      "jo",
+      "km",
+      "mz",
+      "ph",
+      "sd",
+      "ss",
+      "tl",
+      "vu",
+      "zw"
+    ],
+    "title": {
+      "en": "Triangles from the left edge",
+      "pl": "Trójkąty wychodzące z lewej krawędzi"
+    },
+    "description": {
+      "en": "Find all flags where a triangle starts at the hoist (left edge) and points toward the centre or fly.",
+      "pl": "Znajdź wszystkie flagi, w których trójkąt wychodzi z drzewca (lewej krawędzi) i wskazuje w stronę środka lub przeciwnej krawędzi."
+    }
   }
 ]

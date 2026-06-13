@@ -7,7 +7,8 @@ import {
 } from './langRefresh.js';
 import { createCountry } from './flags/group.js';
 import { emptyFilters } from './flags/flagsFilter.js';
-import { _seedCacheForTests, _resetCacheForTests } from './i18n.js';
+import { filterToCategory } from './flags/findFlag.js';
+import { t, _seedCacheForTests, _resetCacheForTests } from './i18n.js';
 
 // computeLangRefreshPayload is the pure half of the soft-language-switch
 // handler. Tests pin two invariants the call sites depend on:
@@ -40,7 +41,7 @@ test('computeLangRefreshPayload: re-aliases every translated country so the matc
   const payload = computeLangRefreshPayload({
     raw,
     targetCodes,
-    filter: emptyFilters(),
+    labelFor: () => '',
   });
 
   const byCode = new Map(payload.all.map((c) => [c.code, c]));
@@ -61,7 +62,7 @@ test('computeLangRefreshPayload: targets are the rebuilt Country objects matched
   const payload = computeLangRefreshPayload({
     raw,
     targetCodes,
-    filter: emptyFilters(),
+    labelFor: () => '',
   });
 
   // The targets must be from `all` (not the raw input) — they have to
@@ -92,7 +93,7 @@ test('computeLangRefreshPayload: filters out non-sovereign entries before re-ali
   const payload = computeLangRefreshPayload({
     raw,
     targetCodes: new Set(['pl', 'gi']),
-    filter: emptyFilters(),
+    labelFor: () => '',
   });
   assert.deepEqual(payload.all.map((c) => c.code), ['pl'],
     'gi is a territory — flagsGamePool(_, false) must drop it');
@@ -100,12 +101,11 @@ test('computeLangRefreshPayload: filters out non-sovereign entries before re-ali
     'a targetCode that no longer resolves in the sovereign pool is silently skipped');
 });
 
-test('computeLangRefreshPayload: label comes from filterToCategory(filter, t) so it re-translates on each call', () => {
-  // Pillabel uses variant.<lowercase-with-dashes>; pinning that here
-  // proves the t() lookup is being invoked at compute time, not baked
-  // in at boot. The exact phrasing is filterToCategory's contract; what
-  // we care about is that the *current* cache (not the boot-time cache)
-  // is what feeds the label.
+test('computeLangRefreshPayload: label comes from the labelFor callback so it re-translates on each call', () => {
+  // The callback is invoked at compute time, not baked in at boot.
+  // Pinning a filter-driven callback here proves that the *current*
+  // cache (not the boot-time cache) is what feeds the label — same
+  // invariant as before, expressed at one layer up.
   _seedCacheForTests({ variant: { europe: 'Europa' } });
   const raw = [sovereign('pl', 'Poland')];
   const filter = emptyFilters();
@@ -114,12 +114,25 @@ test('computeLangRefreshPayload: label comes from filterToCategory(filter, t) so
   const payload = computeLangRefreshPayload({
     raw,
     targetCodes: new Set(['pl']),
-    filter,
+    labelFor: () => filterToCategory(filter, t).label,
   });
 
   assert.ok(payload.label.includes('Europa'),
     `expected label to include the Polish "Europa"; got: ${payload.label}`);
   _resetCacheForTests();
+});
+
+test('computeLangRefreshPayload: labelFor receives no args — callers close over their own state', () => {
+  // Manual daily puzzles use a labelFor that looks up entry.title[lang]
+  // rather than running filterToCategory. The helper doesn't care
+  // which form the callback takes as long as it returns a string.
+  const raw = [sovereign('pl', 'Poland')];
+  const payload = computeLangRefreshPayload({
+    raw,
+    targetCodes: new Set(['pl']),
+    labelFor: () => 'Triangles from the hoist',
+  });
+  assert.equal(payload.label, 'Triangles from the hoist');
 });
 
 // ---- bindTileCountry + refreshTileNames ----
