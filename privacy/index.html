@@ -38,20 +38,21 @@
     </nav>
 
     <main class="privacy-main">
-      <h1 class="privacy-heading" data-i18n="privacy.heading">Privacy (the short version)</h1>
-      <p class="privacy-intro" data-i18n="privacy.intro">Yet Another Quiz is a free hobby site. We store a random device ID your browser makes the first time it needs one, plus the game data linked to that ID — daily submissions, quiz personal bests, tic-tac-toe outcomes, an optional nickname. Retention runs from 48 hours (leaderboard rows) to 1 year (daily submissions); profile + records stay until you ask us to delete them. No tracking, no ads, no accounts, no cookies, no third parties.</p>
+      <h1 class="privacy-heading" data-i18n="privacy.heading">Privacy</h1>
+      <p class="privacy-intro" data-i18n="privacy.intro">We store a random device ID your browser makes the first time it needs one, plus the game data linked to that ID — daily submissions, quiz personal bests, tic-tac-toe outcomes, an optional nickname. Retention runs from 48 hours (leaderboard rows) to 1 year (daily submissions); profile + records stay until you ask us to delete them. No tracking, no ads, no accounts, no cookies.</p>
 
       <section class="privacy-section">
         <h2 data-i18n="privacy.removal.title">Want your data gone? You have three options.</h2>
         <ol class="privacy-removal">
           <li data-i18n="privacy.removal.bomb">Drop a bomb on the Azure Cosmos DB datacenter in Amsterdam.</li>
           <li data-i18n="privacy.removal.invade">Invade and seize every Cosmos DB geo-replica on the planet.</li>
-          <li data-i18n="privacy.removal.request">Click the button below. Your profile gets flagged for removal and we wipe it manually within 30 days (the legal max). If you come back and play in the meantime, we'll assume you changed your mind and cancel the request.</li>
+          <li>
+            <span data-i18n="privacy.removal.request">Your profile gets flagged for removal and we wipe it manually within 30 days. If you come back and play in the meantime, we'll assume you changed your mind and cancel it.</span>
+            —
+            <a href="#" class="privacy-request-link" id="privacy-request-link" data-i18n="privacy.removal.link">Request data removal</a>.
+          </li>
         </ol>
-        <div class="privacy-request">
-          <button type="button" class="privacy-request-btn" id="privacy-request-btn" data-i18n="privacy.removal.button">Request data removal</button>
-          <p class="privacy-request-status" id="privacy-request-status" role="status" aria-live="polite"></p>
-        </div>
+        <p class="privacy-request-status" id="privacy-request-status" role="status" aria-live="polite"></p>
       </section>
 
       <div class="actions-row">

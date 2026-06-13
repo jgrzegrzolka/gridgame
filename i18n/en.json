@@ -20,14 +20,14 @@
   "privacy": {
     "menuLink": "Privacy",
     "title": "Privacy — Yet Another Quiz",
-    "heading": "Privacy (the short version)",
-    "intro": "Yet Another Quiz is a free hobby site. We store a random device ID your browser makes the first time it needs one, plus the game data linked to that ID — daily submissions, quiz personal bests, tic-tac-toe outcomes, an optional nickname. Retention runs from 48 hours (leaderboard rows) to 1 year (daily submissions); profile + records stay until you ask us to delete them. No tracking, no ads, no accounts, no cookies, no third parties.",
+    "heading": "Privacy",
+    "intro": "We store a random device ID your browser makes the first time it needs one, plus the game data linked to that ID — daily submissions, quiz personal bests, tic-tac-toe outcomes, an optional nickname. Retention runs from 48 hours (leaderboard rows) to 1 year (daily submissions); profile + records stay until you ask us to delete them. No tracking, no ads, no accounts, no cookies.",
     "removal": {
       "title": "Want your data gone? You have three options.",
       "bomb": "Drop a bomb on the Azure Cosmos DB datacenter in Amsterdam.",
       "invade": "Invade and seize every Cosmos DB geo-replica on the planet.",
-      "request": "Click the button below. Your profile gets flagged for removal and we wipe it manually within 30 days (the legal max). If you come back and play in the meantime, we'll assume you changed your mind and cancel the request.",
-      "button": "Request data removal",
+      "request": "Your profile gets flagged for removal and we wipe it manually within 30 days. If you come back and play in the meantime, we'll assume you changed your mind and cancel it.",
+      "link": "Request data removal",
       "confirmed": "Got it — your data is flagged for removal. Coming back to play will cancel the request.",
       "error": "Could not send the request. Please try again later."
     }
