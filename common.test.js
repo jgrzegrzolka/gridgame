@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem, NICKNAME_STORAGE_KEY } from './common.js';
+import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem, shareUrl, NICKNAME_STORAGE_KEY } from './common.js';
 import { defaultNickname } from './flags/nickname.js';
 
 /**
@@ -389,3 +389,105 @@ test('mountPrivacyMenuItem: pageIsPrivacy adds aria-current="page" to the link',
   })));
   assert.equal(li.children[0].attrs['aria-current'], 'page');
 });
+
+
+// ---------------------------------------------------------------------------
+// shareUrl
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a fake document that satisfies `legacyCopyToClipboard` — needs
+ * createElement, body.{appendChild,removeChild}, and execCommand. Tracks
+ * whether the textarea was inserted and removed so tests can assert no
+ * cleanup leak.
+ */
+function fakeDoc({ execCommandReturns = true, execCommandThrows = false } = {}) {
+  /** @type {any[]} */
+  const inserted = [];
+  return /** @type {any} */ ({
+    createElement: () => ({
+      value: "",
+      setAttribute: () => {},
+      style: {},
+      select: () => {},
+    }),
+    body: {
+      /** @param {any} el */
+      appendChild: (el) => { inserted.push(el); },
+      /** @param {any} el */
+      removeChild: (el) => { const i = inserted.indexOf(el); if (i >= 0) inserted.splice(i, 1); },
+    },
+    execCommand: () => {
+      if (execCommandThrows) throw new Error("execCommand blocked");
+      return execCommandReturns;
+    },
+    get _inserted() { return inserted; },
+  });
+}
+
+test("shareUrl: navigator.share success returns shared", async () => {
+  /** @type {any[]} */
+  const calls = [];
+  const nav = /** @type {any} */ ({ share: async (/** @type {any} */ payload) => { calls.push(payload); } });
+  const result = await shareUrl("https://example.com/?f=red", { title: "T", text: "X" }, { navigator: nav });
+  assert.equal(result, "shared");
+  assert.deepEqual(calls, [{ title: "T", text: "X", url: "https://example.com/?f=red" }]);
+});
+
+test("shareUrl: navigator.share AbortError returns dismissed without falling through", async () => {
+  // Critical: a dismissed share sheet must NOT trigger a silent clipboard
+  // overwrite. The user opened the sheet, decided not to share, the URL
+  // should stay out of their clipboard.
+  let clipboardCalled = false;
+  const nav = {
+    share: async () => { const e = /** @type {any} */ (new Error("abort")); e.name = "AbortError"; throw e; },
+    clipboard: { writeText: async () => { clipboardCalled = true; } },
+  };
+  const result = await shareUrl("https://example.com/", {}, { navigator: nav });
+  assert.equal(result, "dismissed");
+  assert.equal(clipboardCalled, false, "clipboard must not be touched after dismiss");
+});
+
+test("shareUrl: navigator.share non-Abort error falls through to clipboard", async () => {
+  const nav = /** @type {any} */ ({
+    share: async () => { throw new Error("share unsupported for payload"); },
+    clipboard: { writeText: async (/** @type {string} */ s) => { assert.equal(s, "https://example.com/"); } },
+  });
+  const result = await shareUrl("https://example.com/", {}, { navigator: nav });
+  assert.equal(result, "copied");
+});
+
+test("shareUrl: no navigator.share but clipboard succeeds returns copied", async () => {
+  const nav = { clipboard: { writeText: async () => {} } };
+  const result = await shareUrl("https://example.com/", {}, { navigator: nav });
+  assert.equal(result, "copied");
+});
+
+test("shareUrl: clipboard rejection falls through to legacy execCommand", async () => {
+  const nav = { clipboard: { writeText: async () => { throw new Error("denied"); } } };
+  const doc = fakeDoc({ execCommandReturns: true });
+  const result = await shareUrl("https://example.com/", {}, { navigator: nav, document: doc });
+  assert.equal(result, "copied");
+  assert.deepEqual(doc._inserted, [], "textarea must be cleaned up");
+});
+
+test("shareUrl: legacy execCommand returning false yields failed", async () => {
+  const nav = {};
+  const doc = fakeDoc({ execCommandReturns: false });
+  const result = await shareUrl("https://example.com/", {}, { navigator: nav, document: doc });
+  assert.equal(result, "failed");
+});
+
+test("shareUrl: legacy execCommand throwing yields failed (and still cleans up the textarea)", async () => {
+  const nav = {};
+  const doc = fakeDoc({ execCommandThrows: true });
+  const result = await shareUrl("https://example.com/", {}, { navigator: nav, document: doc });
+  assert.equal(result, "failed");
+  assert.deepEqual(doc._inserted, [], "textarea must be removed even when execCommand throws");
+});
+
+test("shareUrl: no navigator and no document yields failed", async () => {
+  const result = await shareUrl("https://example.com/", {}, { navigator: null, document: null });
+  assert.equal(result, "failed");
+});
+

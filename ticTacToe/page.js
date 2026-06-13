@@ -13,6 +13,7 @@ import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
 import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
 import { loadCountries } from '../flags/group.js';
+import { shareUrl } from '../common.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti } from '../confetti.js';
 import { trapPicker, releasePicker } from './pickerLock.js';
@@ -612,55 +613,15 @@ function runOnline(countries) {
 
   async function onShareClick() {
     if (!activeRoom) return;
-    const url = window.location.href;
-    const title = t('ttt.shareTitle', 'Tic-Tac-Toe room');
-    const text = t('ttt.shareText', "Let's play! Join my room:");
-    if (typeof navigator.share === 'function') {
-      try {
-        await navigator.share({ title, text, url });
-        return;
-      } catch (err) {
-        // User dismissed the share sheet — leave the link unshared, don't fall
-        // through to clipboard (we'd silently overwrite their clipboard).
-        if (err && /** @type {{ name?: string }} */ (err).name === 'AbortError') return;
-        // Anything else (share unsupported for this payload, permissions, etc.):
-        // fall through to clipboard as a best-effort recovery.
-      }
-    }
-    // Async Clipboard API needs a secure context (HTTPS or localhost). On a
-    // bare LAN-IP URL — common when testing from a phone against the dev
-    // server — it's undefined, so we keep the legacy execCommand path as a
-    // last resort.
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-      try {
-        await navigator.clipboard.writeText(url);
-        flashCopied();
-        return;
-      } catch {
-        // Permission denied or focus lost mid-call — try the legacy path.
-      }
-    }
-    if (legacyCopyToClipboard(url)) flashCopied();
-  }
-
-  /** @param {string} text @returns {boolean} */
-  function legacyCopyToClipboard(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    ta.style.pointerEvents = 'none';
-    document.body.appendChild(ta);
-    ta.select();
-    let ok = false;
-    try {
-      ok = document.execCommand('copy');
-    } catch {
-      ok = false;
-    }
-    document.body.removeChild(ta);
-    return ok;
+    const result = await shareUrl(window.location.href, {
+      title: t('ttt.shareTitle', 'Tic-Tac-Toe room'),
+      text: t('ttt.shareText', "Let's play! Join my room:"),
+    });
+    if (result === 'copied') flashCopied();
+    // 'shared': system sheet handled the feedback.
+    // 'dismissed': user backed out — leaving the URL unshared is the point.
+    // 'failed': all three mechanisms refused; staying silent matches the
+    //   pre-extraction behaviour.
   }
 
   function flashCopied() {

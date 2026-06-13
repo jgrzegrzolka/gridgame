@@ -83,6 +83,8 @@
     "pickAnotherCategory": "Make another puzzle",
     "play": "Play",
     "share": "Share",
+    "shareTitle": "Yet Another Quiz — flag puzzle",
+    "shareText": "I built a flag puzzle. Can you find them all?",
     "shareCopied": "Copied ✓",
     "shareFailed": "Could not copy",
     "clear": "Clear all",
