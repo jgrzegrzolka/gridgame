@@ -54,28 +54,6 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
  * pool — only pills that are actually visible there.)
  * @param {import('../flags/group.js').Country[]} all
  */
-/**
- * Swap `el`'s label to `text` for 1.5 s, then restore the original.
- * The `data-i18n` attribute is snapshotted and restored so a language
- * switch during the flash window doesn't immediately rewrite the label
- * back, and a later `langchanged` still re-translates correctly.
- *
- * @param {HTMLElement} el
- * @param {string} text
- * @param {string} i18nKey
- */
-function flashLabel(el, text, i18nKey) {
-  const originalKey = el.getAttribute('data-i18n');
-  const originalText = el.textContent;
-  el.textContent = text;
-  el.setAttribute('data-i18n', i18nKey);
-  setTimeout(() => {
-    el.textContent = originalText ?? '';
-    if (originalKey) el.setAttribute('data-i18n', originalKey);
-    else el.removeAttribute('data-i18n');
-  }, 1500);
-}
-
 function goRandom(all) {
   /** @type {Array<{ group: 'continent' | 'color' | 'motif', value: string }>} */
   const pool = [
@@ -593,13 +571,16 @@ export function bootFindFlag() {
           title: t('findFlag.shareTitle', 'Yet Another Quiz — flag puzzle'),
           text: t('findFlag.shareText', "I built a flag puzzle. Can you find them all?"),
         });
+        // 'copied' → morph the icon to a green checkmark for 1.5 s via
+        // the shared `.copied` class (defined in common.css alongside
+        // `.share-link`/`.share-icon`). 'shared' = system sheet was the
+        // feedback; 'dismissed' = user backed out; 'failed' = silent so
+        // we don't lie about the URL being available somewhere. Same
+        // pattern as TTT's onShareClick.
         if (result === 'copied') {
-          flashLabel(gameShareEl, t('findFlag.shareCopied', 'Copied ✓'), 'findFlag.shareCopied');
-        } else if (result === 'failed') {
-          flashLabel(gameShareEl, t('findFlag.shareFailed', 'Could not copy'), 'findFlag.shareFailed');
+          gameShareEl.classList.add('copied');
+          setTimeout(() => gameShareEl.classList.remove('copied'), 1500);
         }
-        // 'shared' = system sheet handled it; 'dismissed' = user backed
-        // out. No flash in either case.
       });
     }
 

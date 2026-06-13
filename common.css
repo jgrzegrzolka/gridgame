@@ -483,13 +483,46 @@ body::before {
 }
 /* Opt-in emphasis for ONE item in an `.actions-row` / `.result-links` row
  * of dot-separated text actions, so the primary call-to-action reads
- * heavier than its siblings. Per-page decision — daily wants its give-up
- * + "Previous puzzles" links bolded, flagQuiz / findFlag / TTT keep
- * everything at normal weight. Match this weight to `.profile-save` on
- * the profile form so the "primary action in a · row" feels the same
+ * heavier than its siblings. Per-page decision — daily and findFlag bold
+ * their give-up (the "I'm done" exit from a live game state), flagQuiz /
+ * TTT keep everything at normal weight. Match this weight to `.profile-save`
+ * on the profile form so the "primary action in a · row" feels the same
  * wherever a page opts in. */
 .row-cta {
   font-weight: 500;
+}
+
+/* Iconic "share this thing" button — a 20×20 share glyph that morphs to a
+ * green checkmark for 1.5 s when the trigger toggles `.copied` on the
+ * button. Used by ticTacToe's room line (next to the room code) and by
+ * findFlag's in-game header (next to the count). Same visual idiom, one
+ * place to keep them in sync. Pairs with the `shareUrl()` helper in
+ * common.js, which returns 'copied' as the signal to add `.copied`. */
+.share-link {
+  padding: 4px 0 4px 6px;
+  background: none;
+  border: none;
+  color: var(--link-color);
+  cursor: pointer;
+  border-radius: 6px;
+  vertical-align: middle;
+  line-height: 0;
+}
+.share-link:hover { background: rgba(0, 0, 0, 0.05); }
+.share-link[hidden] { display: none; }
+.share-icon {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z'/%3E%3C/svg%3E") center / contain no-repeat;
+  vertical-align: middle;
+}
+.share-link.copied .share-icon {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+          mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+  color: #1f8a3a;
 }
 
 /* Tristate filter pill — neutral / .active (include) / .exclude (none-of).
