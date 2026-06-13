@@ -40,11 +40,69 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
 
+  changes:
+    # Decide whether the deploy job should actually run.
+    #
+    # The deploy artifact strips author-only files before upload (see the
+    # "Strip preview-only files" and "Drop dev-only artifacts" steps in
+    # the `deploy` job). If a push to main only touched paths that get
+    # stripped, the artifact is byte-identical to last build — the upload,
+    # the CF purge, and the smoke-check are all no-ops, so we skip them.
+    #
+    # CRITICAL: the ignore-list regex below MUST stay in sync with the
+    # strip steps in `deploy`. Adding a new author-only file? Add it both
+    # to the strip step AND here. Adding a new SHIPPED asset? Do NOT add
+    # it here, or genuine deploys will get skipped.
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      should_deploy: ${{ steps.filter.outputs.should_deploy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need both sides of the push range to diff against
+          # github.event.before. Repo is small, full history is cheap.
+          fetch-depth: 0
+      - id: filter
+        run: |
+          set -euo pipefail
+          # workflow_dispatch is the manual "ship it" button — always deploy.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "workflow_dispatch: forcing deploy."
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # PRs and non-main pushes don't reach the deploy job anyway (its
+          # own `if:` excludes them); report true so this gate never blocks
+          # anything unexpected.
+          if [ "${{ github.event_name }}" != "push" ] || [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "Not a push to main: gate is a no-op (deploy job will skip via its own if:)."
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          echo "Changed paths:"
+          echo "${changed}"
+          # Strip-list — paths whose changes never reach the deployed
+          # artifact. Keep in sync with the strip steps in `deploy`.
+          shipped=$(echo "${changed}" | grep -vE '^(\.github/|infra/|scripts/|party/|daily/backlog/|daily/ideas/|daily/daily_backlog\.json$|daily/daily_ideas\.json$|daily/daily_parked\.json$|.*\.md$|.*\.test\.js$|tsconfig.*\.json$|package.*\.json$|partykit\.json$)' || true)
+          if [ -z "${shipped}" ]; then
+            echo "No shipped paths changed — skipping deploy + CF purge."
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Shipped paths changed:"
+            echo "${shipped}"
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy:
-    needs: [test, typecheck]
+    needs: [test, typecheck, changes]
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      needs.changes.outputs.should_deploy == 'true' &&
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
