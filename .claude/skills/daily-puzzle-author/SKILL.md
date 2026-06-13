@@ -1,6 +1,6 @@
 ---
 name: daily-puzzle-author
-description: Adds or vets entries in the gridgame daily-puzzle catalog (daily/daily_puzzles.json and daily/daily_backlog.json). Use when authoring a new puzzle, refilling the backlog, releasing the next backlog entry to live, or reviewing whether a proposed filter would make a good puzzle. Carries the 14 rules (8 hard / 6 soft) that the catalog and tests enforce — primary-clean colours, small-property compounds, no-subset, single-use tokens, en+pl descriptions, etc. Pulls from flags/countries.json so changes to country data don't require re-deriving the rules.
+description: Adds or vets entries in the gridgame daily-puzzle catalog (daily/daily_puzzles.json and daily/daily_backlog.json). Use when authoring a new puzzle, refilling the backlog, releasing the next backlog entry to live, or reviewing whether a proposed filter would make a good puzzle. Carries the 15 rules (9 hard / 6 soft) that the catalog and tests enforce — primary-clean colours, small-property compounds, no-subset, single-use tokens, en+pl descriptions, flag-data ambiguity, etc. Pulls from flags/countries.json so changes to country data don't require re-deriving the rules.
 ---
 
 # Daily-puzzle author
@@ -130,7 +130,13 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
 
     *How to add a token:* edit `daily/daily_policy.json` and add an entry to `singleUseTokens` with `token`, `sovs`, and `reason`. Leave the existing canonical "find all X" puzzle in place — the test enforces no-recurrence going forward. *Don't* add continent tokens — continents subdivide into recognizable subgroups (Europe + cross is a natural puzzle even though "find all Europe" exists), so the exhaustion logic doesn't apply.
 
-    *Numbered 14 rather than 8* to avoid renumbering rules 8-13 (and the cross-references to them in this file plus `daily_ideas.json` notes). The Hard / Soft split is now: hard = **1-7 + 14**, soft = 8-13.
+    *Numbered 14 rather than 8* to avoid renumbering rules 8-13 (and the cross-references to them in this file plus `daily_ideas.json` notes). The Hard / Soft split is now: hard = **1-7 + 14-15**, soft = 8-13.
+
+15. **No flag-data ambiguity.** *(audit tests in `flags/daily.test.js`)* No live, backlog, or idea entry may put a flag with `ambiguousColorCount` or `ambiguousColors` into the disagreement zone — where a player's plausible-counting or plausible-membership call would flip its answer-set membership. Currently tagged in `flags/countries.json`: Bhutan (`ambiguousColorCount: [3, 4]`, `ambiguousColors: ["white"]`) and American Samoa (`ambiguousColorCount: [4, 5, 6, 7]`). `ambiguousColorCount` is the list of counts a reasonable player could give — it always includes the canonical count plus the contested neighbours; `ambiguousColors` is the list of colours whose presence on the flag is itself disputed. See `DATA_FEATURE.md` Feature DA for the rationale and the seed-tag list.
+
+    *Why:* same failure shape as rule 5 (primary-clean) — a flag the game "judges" against a player's plausible count reads as "the game is wrong." Bhutan in `Asia + yellow + colorCount:3` was the poster-child: the dragon outline is the only white, and reasonable players land on 3 or 4 colours.
+
+    *Authoring cue:* `node scripts/audit-flag-ambiguity.mjs` reports any violation across live + backlog + ideas with the offending flag and constraint — same gate as the test enforces, friendlier output. Run it after hand-editing a puzzle to surface the case the test would catch anyway, with a more readable message. `scripts/generate-candidates.mjs` applies the audit inline so brainstorm batches never propose ambig-broken candidates in the first place.
 
 ## Difficulty scoring
 
@@ -193,6 +199,7 @@ Tool: `node scripts/generate-candidates.mjs`. The script enumerates filter templ
 - Rule 6: candidate's answer set is neither a strict subset nor a strict superset of any LIVE or BACKLOG entry's set (and is not exactly equal either — "same puzzle, different filter syntax" is also rejected). Checked against the released + staged catalog, NOT against the parked entries in `daily_ideas.json` (those are `parkUntilN: 101` precisely because they're rule-6 violators meant for past-#100 use). Strict-enforcement is correct as long as every catalog entry sits in #1-100 — when a backlog entry first crosses #100 we'll need to relax this for past-#100 candidates.
 - Rule 9: answer set size in [2, 30]
 - Rule 14: no single-use token reuse
+- Rule 15: no flag-data ambiguity (count or membership straddle on `ambiguousColorCount` / `ambiguousColors`)
 - Dedup: filter string not already in the catalog or ideas
 
 **What the author still decides at promote time** (when moving from ideas → backlog):
