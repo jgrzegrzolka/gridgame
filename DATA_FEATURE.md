@@ -56,11 +56,12 @@ Semantics — two veto rules, same mechanism:
 
 Both checks apply to the candidate generator (`scripts/generate-candidates.mjs` rejects such filters before they reach `daily_ideas.json`) and to a new catalog validation rule that fires `npm test`.
 
-Existing puzzles that violate the new rule:
+Existing puzzles that violate the new rule (per the phase-2 audit script):
 
-- **#53** — Asia + yellow + colorCount:3 contains Bhutan (Bhutan's count range includes 3). Needs replacement / rework.
+- **BACKLOG #53** — `continent:Asia,color:yellow,colorCount:3` → bt, mn. Bhutan's ambig count `[3,4]` straddles. Needs replacement / rework. *(The Bhutan trap the doc called out.)*
+- **BACKLOG #79** — `colorCount:5` worldwide → 15 answers. American Samoa's ambig count `[4,5,6,7]` straddles 5 (canonical 4 misses, but a player counting 5 of those browns would expect AS to be in). Needs replacement / rework.
 
-(Will surface more — including any `color:white` puzzles that include Bhutan — by running the audit script once the fields are tagged. That's step 2.)
+No LIVE entries are affected. No `color:white` puzzles tripped membership veto because none of them place Bhutan in scope (membership check correctly skips when continent or other filters already exclude the ambig flag).
 
 **Open design calls (settle before tagging):**
 
@@ -73,7 +74,7 @@ Marker key: ✓ = settled with Jan, ◯ = still open (proposed leaning shown; ne
 5. ✓ **Generator behaviour — silent skip** *(settled 2026-06-13)*. When a candidate combination is vetoed, the generator silently skips it and tries another template (same as today's rule-6 enforcement). No "rescue by adding filters" — compounding to escape an ambiguity ban is exactly the contrived-set behaviour rule 10 prevents.
 6. ✓ **Scope** *(settled 2026-06-12)*. Phase 1 covers two dimensions: `colorCount:N` (via `ambiguousColorCount`) and `color:X` membership (via `ambiguousColors`). Both use the same veto pattern; tagging one flag for both fields is fine and common (Bhutan needs both). **Does not** cover motifs in phase 1 — even though e.g. Albania's eagle (is it a coat-of-arms or just an animal?) or Mexico's emblem are borderline at look-time, motif data is already a defensible classification in `countries.json` and the player-disagreement frequency there feels lower than for colours. If empirical evidence shows otherwise once the color side ships, a parallel `ambiguousMotifs: ['coat-of-arms']` field would slot in cleanly using the exact same veto mechanism. Defer, don't bend.
 
-**Next step for a fresh agent picking this up:** all 6 design calls are ✓ and phase 1 is in flight on branch `data/ambiguity-tag-seed-flags` (seed tags landed on Bhutan + American Samoa). Once that PR merges, start **phase 2** — `scripts/audit-flag-ambiguity.mjs` + the matching hard rule in `flags/daily.test.js`.
+**Next step for a fresh agent picking this up:** all 6 design calls are ✓, phase 1 has merged, and phase 2a (audit infrastructure — pure module `flags/ambiguityAudit.js`, unit tests, CLI wrapper `scripts/audit-flag-ambiguity.mjs`) is in flight on branch `data/ambiguity-audit-script`. The audit reveals 2 BACKLOG violators (#53, #79). **Phase 2b/3** picks up next: rework those two entries AND add the matching hard rule in `flags/daily.test.js` in the same PR (so the rule lands green, not red).
 
 **Phases:**
 
@@ -81,8 +82,8 @@ Marker key: ✓ = settled with Jan, ◯ = still open (proposed leaning shown; ne
    - Bhutan: `ambiguousColorCount: [3, 4]`, `ambiguousColors: ["white"]` (dragon outline)
    - American Samoa: `ambiguousColorCount: [4, 5, 6, 7]` (no membership ambiguity worth tagging yet — the multi-brown question is purely a count thing)
    - No code changes yet. One PR.
-2. **Audit script + hard rule.** Write `scripts/audit-flag-ambiguity.mjs` and a matching test in `flags/daily.test.js` that fires on live + backlog + ideas. The script reports both kinds of violation (count and membership) in one report. Run it; surface every offending puzzle. One PR (or split into "script first, then test" if the audit reveals a lot to fix).
-3. **Fix the offenders.** Replace / rework each flagged puzzle in the backlog. Live entries are frozen (rule 1's drift detector) — if #53 had already gone live we'd be stuck with it, but it's still in the backlog so we can edit in place. One PR per batch.
+2. **Audit script + hard rule.** Write `scripts/audit-flag-ambiguity.mjs` and a matching test in `flags/daily.test.js` that fires on live + backlog + ideas. The script reports both kinds of violation (count and membership) in one report. *Split decision (2026-06-13):* phase 2a ships the audit machinery alone (pure module `flags/ambiguityAudit.js`, unit tests, CLI wrapper); phase 2b/3 ships the offender fixes and turns on the daily.test.js hard rule together so the rule lands green.
+3. **Fix the offenders + add hard rule.** Rework BACKLOG #53 and #79 (the two violators the audit revealed) and add the `flags/daily.test.js` hard rule in the same PR — that way the test passes on first land. Live entries are frozen (rule 1's drift detector) — neither offender is live, so we can edit in place. Add an in-doc note (rule 6 area of the daily-puzzle-author SKILL.md, in phase 5) so future puzzle authors know the audit gate exists.
 4. **Wire into the generator.** Add both vetoes to `scripts/generate-candidates.mjs` so any future batch automatically respects the new constraints. One PR.
 5. **Update the skill.** Once the script is live, the daily-puzzle-author skill should reference it: "before authoring a new puzzle, run `node scripts/audit-flag-ambiguity.mjs`." Update `SKILL.md` with a one-liner and a sentence about the field shape.
 6. **(Deferred) Motif ambiguity.** If empirical complaints arrive after color-side ships, add `ambiguousMotifs` using the same mechanism. Not in this feature; track as a follow-up.
