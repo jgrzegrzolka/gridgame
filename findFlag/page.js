@@ -586,9 +586,24 @@ export function bootFindFlag() {
       goRandom(all);
     });
 
-    if (gameShareEl) attachShareHandler(gameShareEl);
+    // Touch-only reveal — matches TTT's `matchMedia('(pointer: coarse)')`
+    // pattern (ticTacToe/page.js, line 76). Desktop users have the URL
+    // already in the address bar; reserving the share-icon for phones
+    // where it actually triggers the native share sheet keeps the
+    // chrome-button cluster lighter on the surface where it adds
+    // less value. The click handler is still wired in both modes so
+    // a future "reveal on desktop too" toggle wouldn't need rewiring.
+    const isTouchDevice = typeof window.matchMedia === 'function'
+      && window.matchMedia('(pointer: coarse)').matches;
+    if (gameShareEl) {
+      attachShareHandler(gameShareEl);
+      if (isTouchDevice) gameShareEl.hidden = false;
+    }
     const resultShareEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('result-share'));
-    if (resultShareEl) attachShareHandler(resultShareEl);
+    if (resultShareEl) {
+      attachShareHandler(resultShareEl);
+      if (isTouchDevice) resultShareEl.hidden = false;
+    }
 
     function finish() {
       if (finished) return;
