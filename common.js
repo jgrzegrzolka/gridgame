@@ -93,6 +93,55 @@ export async function shareUrl(url, meta = {}, deps = {}) {
 }
 
 /**
+ * Share an arbitrary multi-line text payload via the same three-tier
+ * fallback as shareUrl(): navigator.share (mobile share sheet), then
+ * navigator.clipboard.writeText, then the legacy textarea path.
+ * Returns the same ShareResult shape so callers can route the UI
+ * feedback identically (e.g. flash a "copied" indicator on 'copied').
+ *
+ * Use this when the payload is a multi-line block — a Wordle-style
+ * share grid, etc. For a bare URL prefer shareUrl(): it puts the URL
+ * on the share-sheet's `url` slot, which on iOS produces a richer
+ * preview card than text-only.
+ *
+ * Callers that don't want the share-sheet on desktop should gate the
+ * button itself (e.g. `matchMedia('(pointer: coarse)')`), not this
+ * function — see daily/page.js createShareButton and the findFlag /
+ * TTT touch-only reveals. The function intentionally stays
+ * platform-agnostic so it works in any context where it's actually
+ * called.
+ *
+ * @param {string} text
+ * @param {{ title?: string }} [meta]
+ * @param {{ navigator?: any, document?: any }} [deps]
+ * @returns {Promise<ShareResult>}
+ */
+export async function shareText(text, meta = {}, deps = {}) {
+  const nav = deps.navigator ?? (typeof navigator !== 'undefined' ? navigator : null);
+  const doc = deps.document ?? (typeof document !== 'undefined' ? document : null);
+
+  if (nav && typeof nav.share === 'function') {
+    try {
+      await nav.share({ ...meta, text });
+      return 'shared';
+    } catch (err) {
+      const name = err && /** @type {{ name?: string }} */ (err).name;
+      if (name === 'AbortError') return 'dismissed';
+    }
+  }
+  if (nav && nav.clipboard && typeof nav.clipboard.writeText === 'function') {
+    try {
+      await nav.clipboard.writeText(text);
+      return 'copied';
+    } catch {
+      // Permission denied or focus lost — fall through to legacy path.
+    }
+  }
+  if (doc && legacyCopyToClipboard(text, doc)) return 'copied';
+  return 'failed';
+}
+
+/**
  * Last-resort copy via a hidden, off-screen textarea and the legacy
  * `document.execCommand('copy')` path. Async Clipboard API needs a
  * secure context (HTTPS or localhost); on a bare LAN-IP URL — common

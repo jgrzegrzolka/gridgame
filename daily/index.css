@@ -70,6 +70,24 @@
   font-weight: 600;
   margin: 0;
   text-align: left;
+  /* Flex so the inline share icon (appended by paintStatsPanel) sits
+   * vertically centered with the text, the same way findFlag's
+   * .final-score-row and TTT's .room-line position theirs. Without
+   * flex the icon's asymmetric box + vertical-align: middle resolve
+   * just below the text baseline and look mis-aligned. No gap —
+   * the trailing " · " in the text span carries the visual
+   * spacing, and the share-link's own 6px left padding handles the
+   * gap to the icon glyph. */
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+/* Match the share-icon color to the headline text (#333) instead of
+ * the default link colour. The inline icon next to the score reads
+ * as part of the same "result info" line, not as a chrome link, so
+ * the contrast pop of the brand link colour is the wrong cue here. */
+.daily-stats-headline .share-link {
+  color: inherit;
 }
 .daily-stats-caption {
   font-size: 12px;
