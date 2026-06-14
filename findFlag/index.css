@@ -5,7 +5,7 @@ body {
 
 .find-blurb {
   font-size: 14px;
-  color: #666;
+  color: var(--muted-color);
   margin: 0 0 20px;
   text-align: center;
 }
@@ -24,7 +24,7 @@ body {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #999;
+  color: var(--muted-color);
   margin: 0 0 10px;
   font-weight: 600;
 }
@@ -83,25 +83,23 @@ body {
  * same [text | share-icon] horizontal layout as the in-game header. The
  * inner `.final-score` rule (common.css) keeps its own font sizing; we
  * just zero its margin-bottom because the row provides the spacing. */
-.final-score-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.final-score-row .final-score {
-  margin: 0;
+/* No "You found X / Y" headline on the findFlag result page — the per-flag
+ * Found / Missed sections below already make the score self-evident, and
+ * the daily page set the precedent. The standalone share button gets
+ * floated to the right so it sits above the result sections like a small
+ * affordance, without needing a wrapping row. */
+#result > .share-link {
+  float: right;
 }
 .find-cat {
   font-size: 22px;
   font-weight: 600;
-  color: #1c1c1c;
+  color: var(--primary-color);
   flex: 1;
 }
 .find-count {
   font-size: 14px;
-  color: #666;
+  color: var(--muted-color);
 }
 /* Brief green-bold flash + small jiggle on the count each time a
  * correct guess lands. Composes the existing find-shake keyframes
@@ -112,7 +110,7 @@ body {
  * reused on the daily page since this stylesheet is shared. */
 @keyframes find-count-pulse {
   0% { color: #2e7d32; font-weight: 700; }
-  100% { color: #666; font-weight: 400; }
+  100% { color: var(--muted-color); font-weight: 400; }
 }
 .find-count--pulse {
   animation: find-count-pulse 700ms ease-out, find-shake 300ms ease;
@@ -131,6 +129,9 @@ body {
   font: inherit;
   font-size: 16px;
   background: #fff;
+}
+.find-input::placeholder {
+  color: var(--muted-color);
 }
 .find-input:focus {
   outline: none;
@@ -233,7 +234,7 @@ body {
 
 .result-section-title {
   font-size: 14px;
-  color: #999;
+  color: var(--muted-color);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;

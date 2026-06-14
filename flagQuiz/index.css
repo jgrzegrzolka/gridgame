@@ -28,6 +28,10 @@ body {
   padding: 8px 12px;
   border: 1px solid #eee;
   border-radius: 8px;
+  /* Pin to --primary-color explicitly so the icon (mask-image painted via
+   * currentColor) + label both track the brand palette directly, not
+   * indirectly through `.menu a`'s --link-color alias. */
+  color: var(--primary-color);
   background: #fff;
   transition: background-color 120ms, border-color 120ms;
 }
@@ -60,9 +64,9 @@ body {
   position: fixed;
   top: 0;
   left: 0;
-  height: 3px;
+  height: 6px;
   width: 0;
-  background: #c5302d;
+  background: var(--secondary-color);
   transition: width 300ms ease;
   z-index: 30;
 }
@@ -87,7 +91,7 @@ body {
   flex: 1;
   font-size: 17px;
   font-weight: 500;
-  color: #1c1c1c;
+  color: var(--primary-color);
 }
 .stats-chips {
   display: flex;
@@ -113,7 +117,7 @@ body {
 }
 .stats-chip-mode {
   font-size: 12px;
-  color: #999;
+  color: var(--muted-color);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -124,7 +128,7 @@ body {
 }
 .stats-chip-time {
   font-size: 12px;
-  color: #666;
+  color: var(--muted-color);
   margin-left: auto;
 }
 .stats-chip-cta {
@@ -155,7 +159,7 @@ body {
 }
 .play-timer {
   font-size: 14px;
-  color: #666;
+  color: var(--muted-color);
   margin: 0 0 12px;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -190,7 +194,7 @@ body {
   text-decoration: underline;
 }
 .mode-toggle .mode-current {
-  color: #1c1c1c;
+  color: var(--primary-color);
   font-weight: 500;
 }
 .mode-toggle .mode-sep {
@@ -200,6 +204,7 @@ body {
 .country-name {
   font-size: 28px;
   font-weight: 500;
+  color: var(--primary-color);
   margin: 0 0 40px;
   text-align: center;
 }
@@ -250,7 +255,7 @@ body {
   font-size: 18px;
   min-height: 24px;
   text-align: center;
-  color: #c5302d;
+  color: var(--secondary-color);
   font-weight: 500;
 }
 /* shake-wrong is added by the page each time a wrong flag is clicked.
@@ -282,14 +287,14 @@ body {
 .leaderboard-title {
   font-size: 14px;
   font-weight: 600;
-  color: #666;
+  color: var(--muted-color);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 0 0 8px;
   text-align: center;
 }
 .leaderboard-status {
-  color: #666;
+  color: var(--muted-color);
   font-size: 14px;
   text-align: center;
   margin: 0;
@@ -319,12 +324,12 @@ body {
   border-bottom: none;
 }
 .leaderboard-rank {
-  color: #999;
+  color: var(--muted-color);
   font-size: 13px;
   text-align: right;
 }
 .leaderboard-name {
-  color: #1c1c1c;
+  color: var(--primary-color);
   font-size: 15px;
   font-weight: 500;
   overflow: hidden;
@@ -332,23 +337,23 @@ body {
   white-space: nowrap;
 }
 .leaderboard-score {
-  color: #1c1c1c;
+  color: var(--primary-color);
   font-size: 15px;
   font-weight: 600;
 }
 .leaderboard-row.is-self {
-  /* Pale rose tint that echoes the logo's light pink (#C2899F) at row-
-   * highlight weight — paled the same way the previous #fff8e1 was a
-   * row-tint of yellow. Stays subtle enough that dark row text reads
-   * unchanged. */
-  background: #fbeef3;
+  /* Brand secondary (shady pink) — paints the player's own row full-
+   * saturation so they spot themselves immediately on a busy board.
+   * Dark row text (#1c1c1c) on #C2899F clears WCAG AA at body-text
+   * weight, so legibility holds. */
+  background: var(--secondary-color);
   border-radius: 4px;
 }
 .leaderboard-row.is-self .leaderboard-name {
   font-weight: 600;
 }
 .leaderboard-sep {
-  color: #999;
+  color: var(--muted-color);
   text-align: center;
   margin: 4px 0 0;
   letter-spacing: 2px;

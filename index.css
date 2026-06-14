@@ -13,9 +13,7 @@ body {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  /* #666 on white = 5.74:1, passes WCAG AA. #999 (the previous value)
-   * was 2.85:1 — flagged by Lighthouse. */
-  color: #666;
+  color: var(--muted-color);
   margin: 0 0 10px;
   font-weight: 600;
 }

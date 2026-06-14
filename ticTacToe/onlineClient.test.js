@@ -94,6 +94,53 @@ test('reduceServerMessage: welcome with no peer yet leaves peerId null', () => {
   assert.equal(r.state.peerId, null);
 });
 
+test('reduceServerMessage: welcome with a finished (winner) game emits "finished" so refresh re-paints the result UI', () => {
+  const game = /** @type {any} */ ({ currentPlayer: 'O', winner: 'X', draw: false });
+  const r = reduceServerMessage(initialClientState(), {
+    type: 'welcome', you: 'X', game, peerPresent: true, peerId: 'bob',
+  });
+  assert.ok(r.effects.some((e) => e.type === 'finished'),
+    'without this, refresh-after-win leaves #result hidden and no action links');
+});
+
+test('reduceServerMessage: welcome with a drawn game also emits "finished"', () => {
+  const game = /** @type {any} */ ({ currentPlayer: 'X', winner: null, draw: true });
+  const r = reduceServerMessage(initialClientState(), {
+    type: 'welcome', you: 'O', game, peerPresent: true, peerId: 'alice',
+  });
+  assert.ok(r.effects.some((e) => e.type === 'finished'));
+});
+
+test('reduceServerMessage: welcome with gaveUp=true emits gave-up with byMe=true when the persisted gaveUpBy matches us', () => {
+  const game = /** @type {any} */ ({ currentPlayer: 'O', winner: null, draw: false, gaveUp: true, gaveUpBy: 'O' });
+  const r = reduceServerMessage(initialClientState(), {
+    type: 'welcome', you: 'O', game, peerPresent: true, peerId: 'bob',
+  });
+  assert.ok(r.effects.some((e) => e.type === 'gave-up' && /** @type {any} */ (e).byMe === true),
+    'refresh-after-self-give-up should still say "You gave up", not "Opponent gave up"');
+  assert.ok(r.effects.some((e) => e.type === 'finished'));
+});
+
+test('reduceServerMessage: welcome with gaveUp=true emits gave-up with byMe=false when the opponent resigned', () => {
+  const game = /** @type {any} */ ({ currentPlayer: 'O', winner: null, draw: false, gaveUp: true, gaveUpBy: 'X' });
+  const r = reduceServerMessage(initialClientState(), {
+    type: 'welcome', you: 'O', game, peerPresent: true, peerId: 'alice',
+  });
+  assert.ok(r.effects.some((e) => e.type === 'gave-up' && /** @type {any} */ (e).byMe === false));
+  assert.ok(r.effects.some((e) => e.type === 'finished'));
+});
+
+test('reduceServerMessage: welcome with gaveUp but no gaveUpBy (legacy snapshot) emits finished but skips gave-up — guards against stale persisted rooms', () => {
+  const game = /** @type {any} */ ({ currentPlayer: 'O', winner: null, draw: false, gaveUp: true });
+  const r = reduceServerMessage(initialClientState(), {
+    type: 'welcome', you: 'X', game, peerPresent: true, peerId: 'bob',
+  });
+  assert.ok(r.effects.some((e) => e.type === 'finished'),
+    'still finish the game so the result UI shows');
+  assert.equal(r.effects.some((e) => e.type === 'gave-up'), false,
+    'no gaveUpBy means we can\'t honestly attribute the resign — better to default than guess');
+});
+
 test('reduceServerMessage: state with kind=claimed updates game and emits no effects', () => {
   const state = { ...initialClientState(), myRole: /** @type {const} */ ('O') };
   const game = /** @type {any} */ ({ currentPlayer: 'X', winner: null, draw: false });

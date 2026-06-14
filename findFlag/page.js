@@ -19,7 +19,7 @@ import {
 } from '../flags/findFlag.js';
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
-import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
+import { pickCelebration } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
@@ -610,20 +610,14 @@ export function bootFindFlag() {
       finished = true;
       const found = foundCodes.size;
       const total = targetCodes.size;
-      const { prefixKey, showFraction } = pickFinalScoreLine(found, total);
-      const prefixEl = document.getElementById('final-score-prefix');
-      prefixEl.setAttribute('data-i18n', prefixKey);
-      prefixEl.textContent = t(prefixKey, prefixKey === 'findFlag.youFoundAll' ? 'You found all' : 'You found');
-      document.getElementById('final-score-fraction').hidden = !showFraction;
-      document.getElementById('final-found').textContent = String(found);
-      document.getElementById('final-total').textContent = String(total);
-      document.getElementById('final-score-line').style.color = scoreColor(found / total);
 
       // findFlag is play-and-walk-away now — no per-category best score,
-      // no "Your best" line, no record-tracking. Celebration tier comes
-      // from the shared pickCelebration helper so daily / findFlag /
-      // quiz all read the same way: confetti for partial, fireworks
-      // (alone, not stacked) for a clean sweep.
+      // no "Your best" line, no record-tracking. No "You found X / Y"
+      // headline either: the Found / Missed grids below already make the
+      // score self-evident. Celebration tier comes from the shared
+      // pickCelebration helper so daily / findFlag / quiz all read the
+      // same way: confetti for partial, fireworks (alone, not stacked)
+      // for a clean sweep.
       const { tier, intensity } = pickCelebration({ found, total });
       if (tier === 'fireworks') launchFireworks();
       else if (tier === 'confetti') launchConfetti({ intensity });

@@ -135,6 +135,22 @@ const REJECT_MESSAGES = {
 export function reduceServerMessage(state, message) {
   switch (message.type) {
     case 'welcome': {
+      /** @type {Effect[]} */
+      const effects = [];
+      // Refresh-restore: if the server replays an already-finished game
+      // via welcome, the page needs `finishRound` to unhide #result and
+      // show the action links — same condition the `state` case below
+      // checks. Without this, refreshing after give-up / win / draw
+      // leaves the user staring at a frozen grid with no links.
+      // Also recover `gave-up` so the result line picks the right
+      // "You gave up" vs "Opponent gave up" string — the persisted
+      // `game.gaveUpBy` tells us who resigned.
+      if (message.game && message.game.gaveUp && message.game.gaveUpBy) {
+        effects.push({ type: 'gave-up', byMe: message.game.gaveUpBy === message.you });
+      }
+      if (message.game && (message.game.winner || message.game.draw || message.game.gaveUp)) {
+        effects.push({ type: 'finished' });
+      }
       return {
         state: {
           ...state,
@@ -143,7 +159,7 @@ export function reduceServerMessage(state, message) {
           peerPresent: message.peerPresent,
           peerId: typeof message.peerId === 'string' ? message.peerId : null,
         },
-        effects: [],
+        effects,
       };
     }
     case 'state': {

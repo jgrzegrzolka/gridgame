@@ -38,7 +38,7 @@
 .daily-desc,
 .daily-note {
   font-size: 12px;
-  color: #999;
+  color: var(--muted-color);
   text-align: right;
   margin: 0;
 }
@@ -55,6 +55,14 @@
 #result > .final-score {
   display: none;
 }
+/* With .final-score hidden, the first .result-section-title (Found: in
+ * the happy path) becomes the first visible element in the panel. The
+ * shared 24px top margin was sized to sit above the final-score line —
+ * here it just stacks on top of the body's page-top padding. Cancelling
+ * it tightens the panel to the top chrome strip. */
+#result > .result-section-title:first-of-type {
+  margin-top: 0;
+}
 
 /* Community stats: one-line headline (player's score, plus the
  * community average once stats arrive) + a caption explaining the
@@ -66,7 +74,7 @@
 }
 .daily-stats-headline {
   font-size: 16px;
-  color: #333;
+  color: var(--primary-color);
   font-weight: 600;
   margin: 0;
   text-align: left;
@@ -82,16 +90,9 @@
   align-items: center;
   flex-wrap: wrap;
 }
-/* Match the share-icon color to the headline text (#333) instead of
- * the default link colour. The inline icon next to the score reads
- * as part of the same "result info" line, not as a chrome link, so
- * the contrast pop of the brand link colour is the wrong cue here. */
-.daily-stats-headline .share-link {
-  color: inherit;
-}
 .daily-stats-caption {
   font-size: 12px;
-  color: #888;
+  color: var(--muted-color);
   margin: 8px 0 0;
   text-align: left;
 }
@@ -102,7 +103,7 @@
  * happening" signal across the multi-second post-finish pipeline. */
 .daily-stats-loading {
   font-size: 13px;
-  color: #888;
+  color: var(--muted-color);
   margin: 6px 0 0;
   text-align: left;
   font-style: italic;
