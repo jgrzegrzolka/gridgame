@@ -74,9 +74,16 @@ export async function clearCosmosLocalRows(fetchImpl) {
 }
 
 /**
+/**
  * Inject a fixed-position toolbar with the two reset buttons. No-op
- * when not on a localhost hostname. Returns the wrapper element it
- * mounted (or `null` if it didn't).
+ * when not on a localhost hostname OR when running on a touch device
+ * (mobile). The toolbar is a desktop-only dev affordance — its two
+ * actions (clear localStorage, delete Cosmos local rows) are the
+ * kind of thing a dev runs while debugging at a keyboard, not while
+ * on the phone smoke-testing UI. On mobile it just takes up scarce
+ * screen real estate.
+ *
+ * Returns the wrapper element it mounted (or `null` if it didn't).
  *
  * All side-effecting collaborators are injectable so tests can run
  * without a real DOM or network.
@@ -89,11 +96,17 @@ export async function clearCosmosLocalRows(fetchImpl) {
  *   fetchImpl?: typeof fetch,
  *   reload?: () => void,
  *   confirmFn?: (msg: string) => boolean,
+ *   isTouchDevice?: boolean,
  * }} [opts]
  */
 export function mountDevReset(opts = {}) {
   const hostname = opts.hostname ?? window.location.hostname;
   if (!isLocalHostname(hostname)) return null;
+  const isTouchDevice = opts.isTouchDevice
+    ?? (typeof window !== 'undefined'
+        && typeof window.matchMedia === 'function'
+        && window.matchMedia('(pointer: coarse)').matches);
+  if (isTouchDevice) return null;
 
   const doc = opts.doc ?? document;
   const rootEl = opts.rootEl ?? doc.body;

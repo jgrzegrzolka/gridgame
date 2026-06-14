@@ -135,6 +135,26 @@ test('mountDevReset injects a toolbar with two buttons on localhost', () => {
   assert.equal(root.children[0], wrap);
 });
 
+test('mountDevReset is a no-op on a touch device even when on localhost', () => {
+  // The toolbar is a desktop-only dev affordance — its buttons (clear
+  // localStorage, delete Cosmos local rows) are for keyboard-debug use,
+  // not mobile smoke-testing where the buttons just steal real estate.
+  const doc = makeDoc();
+  const root = doc.createElement('div');
+  const result = mountDevReset({
+    rootEl: root,
+    hostname: 'localhost',
+    doc,
+    storage: fakeStorage(),
+    fetchImpl: okFetch,
+    reload: () => {},
+    confirmFn: () => true,
+    isTouchDevice: true,
+  });
+  assert.equal(result, null);
+  assert.equal(root.children.length, 0);
+});
+
 test('mountDevReset matches 127.0.0.1 and ::1 (matches the Turnstile bypass set)', () => {
   for (const host of ['localhost', '127.0.0.1', '::1']) {
     const doc = makeDoc();

@@ -11,6 +11,7 @@ const { createTtlCache } = require('../lib/ttlCache');
 const { readFreshFlag } = require('../lib/queryParams');
 const { statsCacheHeaders } = require('../lib/cacheHeaders');
 const { rankCmpClause, findMineInTop, computeYou, qualifiesForLeaderboard } = require('../lib/leaderboardRank');
+const { isLocalRequestUrl } = require('../lib/requestHost');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyLeaderboards';
@@ -55,7 +56,14 @@ app.http('quizLeaderboard', {
     const dateKey = todayDateKey(Date.now());
     const pk = makePk(configKey, dateKey);
     const order = lowerWins ? 'ASC' : 'DESC';
-    const cacheKey = `${pk}|${order}`;
+    // Localhost-served requests include `local: true` rows so a dev can
+    // play locally and see their own submission appear on the
+    // leaderboard. Prod requests still filter them out via the same
+    // server-trusted host check used by dailyResult.js. The flag is
+    // part of the cache key so a localhost-served response can't leak
+    // into prod through the shared module-scope cache.
+    const includeLocal = isLocalRequestUrl(req.url);
+    const cacheKey = `${pk}|${order}|${includeLocal ? 'L' : 'P'}`;
     const fresh = readFreshFlag(req);
 
     const conn = process.env.COSMOS_CONN;
@@ -67,22 +75,27 @@ app.http('quizLeaderboard', {
     const now = Date.now();
     let top = fresh ? undefined : topCache.get(cacheKey, now);
 
-    // In timed mode (higherWins) we exclude score=0 — see
-    // `qualifiesForLeaderboard` for the rationale. In endurance mode
-    // (lowerWins) the same gate lets perfect rounds through. Inlined
-    // here as a SQL fragment because both the top query and the rank
-    // query need it.
-    const excludeZero = lowerWins ? '' : ' AND c.score > 0';
+    // Build the WHERE clauses from two independent gates:
+    //   - `NOT IS_DEFINED(c.local)` excludes local-dev rows from prod
+    //     responses. Localhost callers skip this so a dev playing
+    //     locally sees their own submission in the rendered list.
+    //   - `c.score > 0` only fires in timed (higher-wins) mode — see
+    //     qualifiesForLeaderboard for the rationale. Endurance
+    //     (lower-wins) lets a perfect round through.
+    // Both the top query and the rank-count query need the same gates,
+    // so factor them once.
+    const filters = [];
+    if (!includeLocal) filters.push('NOT IS_DEFINED(c.local)');
+    if (!lowerWins) filters.push('c.score > 0');
+    const whereCommon = filters.length ? `WHERE ${filters.join(' AND ')} ` : '';
+    const andCommon = filters.length ? ` AND ${filters.join(' AND ')}` : '';
 
     if (!top) {
       // Composite index on (score, durationMs) provisioned at create time.
-      // `NOT IS_DEFINED(c.local)` rejects any local row regardless of value
-      // — writer only sets `true`, never `false`, so a future stray `false`
-      // shouldn't sneak past.
       const topQuery =
         `SELECT TOP ${TOP_N} c.deviceId, c.nickname, c.score, c.durationMs, c.submittedAt ` +
         'FROM c ' +
-        `WHERE NOT IS_DEFINED(c.local)${excludeZero} ` +
+        whereCommon +
         `ORDER BY c.score ${order}, c.durationMs ASC`;
       let topRes;
       try {
@@ -134,7 +147,7 @@ app.http('quizLeaderboard', {
     if (mine && mineQualifies) {
       const rankQuery =
         'SELECT VALUE COUNT(1) FROM c ' +
-        `WHERE ${rankCmpClause(lowerWins)} AND NOT IS_DEFINED(c.local)${excludeZero}`;
+        `WHERE ${rankCmpClause(lowerWins)}${andCommon}`;
       try {
         const rankRes = await queryDocs({
           connString: conn,
