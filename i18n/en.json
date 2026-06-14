@@ -21,7 +21,7 @@
     "menuLink": "Privacy",
     "title": "Privacy — Yet Another Quiz",
     "heading": "Privacy",
-    "intro": "We store a random device ID your browser makes the first time it needs one, plus the game data linked to that ID — daily submissions, quiz personal bests, tic-tac-toe outcomes, an optional nickname. Retention runs from 48 hours (leaderboard rows) to 1 year (daily submissions); profile + records stay until you ask us to delete them. No tracking, no ads, no accounts, no cookies.",
+    "intro": "We store a random device ID your browser makes the first time it needs one, plus the game data linked to that ID — daily submissions, quiz personal bests, tic-tac-toe outcomes, an optional nickname. Retention runs from 48 hours (leaderboard rows) to 1 year (daily submissions); profile + records stay until you ask us to delete them. We also use Cloudflare Web Analytics — anonymous, cookieless traffic counts only (page views, country, browser) — to see how many people visit. No ads, no accounts, no cookies.",
     "removal": {
       "title": "Want your data gone? You have three options.",
       "bomb": "Drop a bomb on the Azure Cosmos DB datacenter in Amsterdam.",
