@@ -27,6 +27,11 @@ import { validateCell } from './engine.js';
  * @property {boolean} [gaveUp] - true when a player invoked give-up. The
  *   board is then frozen (no further claims) and any empty cells have
  *   been filled by applyGiveUp with revealed: true.
+ * @property {Player | null} [gaveUpBy] - the role that called give-up.
+ *   Set by onlineRoom.js so a refresh-restore can paint "You gave up"
+ *   vs "Opponent gave up" without depending on a live `state` effect.
+ *   Engine's applyGiveUp leaves this undefined — the room layer stamps
+ *   it because that's where the role lives.
  */
 
 /**

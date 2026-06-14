@@ -359,6 +359,30 @@ test('give-up: ignored once the game is already over', async () => {
   assert.equal(a.sent.length, aBefore);
 });
 
+test('give-up: gaveUpBy is stamped onto the game so a refresh-restore can pick "You gave up" vs "Opponent gave up"', async () => {
+  const a1 = mockConn('a1'); const b = mockConn('b'); const a2 = mockConn('a2');
+  const conns = [a1, b];
+  const srv = new TicTacToeServer(mockParty(conns), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a1, ctxFor('alice', 'create'));   // alice = X
+  await srv.onConnect(b,  ctxFor('bob',   'join'));     // bob = O
+  await srv.onMessage(JSON.stringify({ type: 'give-up' }), a1);
+  // Confirm the live broadcast records the resigner role on the game.
+  const live = a1.sent.map((s) => JSON.parse(s)).find((m) => m.type === 'state' && m.kind === 'give-up');
+  assert.equal(live.game.gaveUpBy, 'X', 'live state carries gaveUpBy=X (alice)');
+
+  // Now alice refreshes — the welcome must replay the finished game with
+  // gaveUpBy intact, otherwise the page can't distinguish self-resign
+  // from opponent-resign on reload (the bug this test pins).
+  await srv.onClose(a1);
+  conns.splice(conns.indexOf(a1), 1, a2);
+  await srv.onConnect(a2, ctxFor('alice', 'join'));
+  const welcome = JSON.parse(a2.sent[0]);
+  assert.equal(welcome.type, 'welcome');
+  assert.equal(welcome.game.gaveUp, true, 'refresh replays the finished game');
+  assert.equal(welcome.game.gaveUpBy, 'X', 'and the resigner role survives the round-trip through persistence');
+});
+
 test('onClose: broadcasts peer-left and keeps the role for reconnect', async () => {
   const a = mockConn('a'); const b = mockConn('b');
   const conns = [a, b];

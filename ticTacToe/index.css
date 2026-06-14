@@ -24,7 +24,7 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 16px;
-  color: #1c1c1c;
+  color: var(--primary-color);
   /* Sits above the grid so the action row directly under the grid is the
    * stable visual footer. Margin reserves a small gap before the grid. */
   margin: 0 0 12px;
@@ -100,7 +100,7 @@ body {
 .grid th {
   font-weight: 500;
   font-size: 14px;
-  color: #1c1c1c;
+  color: var(--primary-color);
   /* Truncate long header labels with an ellipsis instead of wrapping. Without
    * this a label like "Has star or moon" used to wrap to a second line and
    * push the whole grid down — and a rotated row header like "South America"
@@ -343,7 +343,7 @@ body.game-over .actions-row {
   flex: 1;
   font-weight: 500;
   font-size: 14px;
-  color: #1c1c1c;
+  color: var(--primary-color);
 }
 .picker-close {
   padding: 6px 12px;
@@ -368,6 +368,9 @@ body.game-over .actions-row {
   border-radius: 6px;
   margin-bottom: 8px;
 }
+.picker-input::placeholder {
+  color: var(--muted-color);
+}
 .picker-input:focus {
   outline: 2px solid var(--link-color);
   outline-offset: -2px;
@@ -391,7 +394,11 @@ body.game-over .actions-row {
 }
 .picker-suggestions li.selected,
 .picker-suggestions li:hover {
-  background: rgba(102, 0, 51, 0.16);
+  /* Transparent flavour of --primary-color (#2B1D24) so the hover tint
+   * tracks the palette. Kept at 16% to match the previous burgundy
+   * version's weight; the suggestion still reads as a hover state, not
+   * a full selection. */
+  background: rgba(43, 29, 36, 0.16);
 }
 .picker-suggestions span {
   flex: 1;
@@ -441,12 +448,13 @@ body.picker-open {
 .rules-help h2 {
   margin: 0 0 8px;
   font-size: 17px;
+  color: var(--primary-color);
 }
 .rules-help p {
   margin: 0 0 14px;
   font-size: 14px;
   line-height: 1.4;
-  color: #1c1c1c;
+  color: var(--primary-color);
 }
 .rules-close {
   padding: 6px 14px;

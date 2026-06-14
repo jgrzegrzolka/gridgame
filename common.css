@@ -6,14 +6,18 @@
    * users see an "ugly" half-dark UI. We don't ship a dark theme, so
    * forcing light keeps everything consistent. */
   color-scheme: light;
-  /* Site palette. Swap these two values to re-skin the whole site:
-   * --primary drives interactive text/icons via --link-color (game tiles,
-   * burger bars, flags-link, menu links, etc.); --secondary is the brand
-   * accent (the pink in the wordmark / favicon). The brand SVGs hardcode
-   * these hex values today since external SVGs can't read CSS vars —
-   * keep all three in sync when changing the palette. */
-  --primary-color: #660033;
+  /* Site palette. Swap these values to re-skin the whole site:
+   * --primary  drives interactive text/icons via --link-color (game tiles,
+   *            burger bars, flags-link, menu links, etc.);
+   * --secondary is the brand accent (the pink in the wordmark / favicon);
+   * --muted    is the canonical "quiet text" gray for captions and
+   *            section labels (e.g. daily stats caption, "Most recognised:").
+   * The brand SVGs hardcode primary/secondary hex values today since
+   * external SVGs can't read CSS vars — keep them in sync on a palette
+   * swap. */
+  --primary-color: #2B1D24;
   --secondary-color: #C2899F;
+  --muted-color: #999;
   --link-color: var(--primary-color);
   --page-top: 80px;
   /* Inward push for the chrome cluster on wide viewports so the buttons
@@ -269,16 +273,21 @@ body::before {
   padding-top: 12px;
   border-top: 1px solid #eee;
 }
-/* The "Buy me a coffee" item sits at the end of every burger menu —
- * give it a softer treatment so it reads as ambient support rather
- * than competing with the page-action items above it. */
-.menu a.menu-coffee,
-.menu li.menu-privacy a {
-  /* Both are meta-nav at the bottom of the menu — softer than the
-   * page-action links above them so they don't compete for attention. */
-  color: #888;
-  font-size: 12px;
-  font-weight: 400;
+/* Privacy reads as a regular menu link (same size / weight / primary
+ * colour as siblings, inherited from `.menu a` above), bracketed by a
+ * top border (nickname's `border-bottom`) and its own `border-bottom`
+ * below — so it sits in its own band between the pink nickname row
+ * above and the pink coffee CTA below. */
+.menu li.menu-privacy {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+/* "Buy me a coffee" — paint it in the brand secondary (shady pink) as
+ * the accent CTA. Inherits the regular menu size + weight from `.menu a`
+ * above so it sits at the same visual rank as the other menu items. */
+.menu a.menu-coffee {
+  color: var(--secondary-color);
 }
 .menu a {
   color: var(--link-color);
@@ -295,7 +304,7 @@ body::before {
  * the disabled-back-button pattern at the top of the file — same
  * visual language for "this is your current location, button is inert". */
 .menu a[aria-current="page"] {
-  color: #999;
+  color: var(--muted-color);
   cursor: default;
   pointer-events: none;
 }
@@ -340,8 +349,16 @@ body::before {
   height: 100%;
 }
 .menu li.menu-nickname .menu-nickname-value {
-  color: var(--link-color);
+  color: var(--secondary-color);
   font-weight: 500;
+}
+/* Hover-underline (from `.menu a:hover`) would otherwise paint in the
+ * anchor's `color: var(--link-color)` (primary/dark) because the inner
+ * .menu-nickname-value's pink only colours its text node, not the
+ * underline applied to the wrapping <a>. Pin the underline colour to
+ * the brand secondary so it matches the visible nickname text. */
+.menu li.menu-nickname a {
+  text-decoration-color: var(--secondary-color);
 }
 /* When the user is already on /profile/, the link styles as the existing
  * aria-current="page" treatment (greyed-out, non-clickable) — same
@@ -544,7 +561,7 @@ body::before {
   font: inherit;
   font-size: 12px;
   background: #fff;
-  color: #1c1c1c;
+  color: var(--primary-color);
   border: 1px solid #ddd;
   border-radius: 999px;
   padding: 3px 10px;
@@ -555,9 +572,9 @@ body::before {
   background: #f0f0f0;
 }
 .pill.active {
-  background: #1c1c1c;
+  background: var(--primary-color);
   color: #fff;
-  border-color: #1c1c1c;
+  border-color: var(--primary-color);
 }
 .pill.exclude {
   background: #fff;
@@ -669,16 +686,18 @@ body::before {
 }
 
 /* Give-up reveal — applied identically to every grid-based game so the
- * "this answer was shown to you, not earned" signal reads the same: red wash,
- * red outline, and 3 bounces. Requires .cell { position: relative } on the host. */
+ * "this answer was shown to you, not earned" signal reads the same: secondary
+ * wash, secondary outline, and 3 bounces. Requires .cell { position: relative }
+ * on the host. Background uses the explicit rgb of --secondary-color (#C2899F)
+ * because CSS alpha-on-a-CSS-var still needs a JS or color-mix() detour. */
 .cell.revealed img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  outline: 2px solid #c5302d;
+  outline: 2px solid var(--secondary-color);
   outline-offset: -2px;
-  background: rgba(197, 48, 45, 0.2);
+  background: rgba(194, 137, 159, 0.2);
   animation: revealed-bounce 0.55s ease-in-out 3;
 }
 @keyframes revealed-bounce {
@@ -736,7 +755,7 @@ body::before {
 }
 .best {
   font-size: 14px;
-  color: #666;
+  color: var(--muted-color);
   margin: 0 0 20px;
   font-variant-numeric: tabular-nums;
 }

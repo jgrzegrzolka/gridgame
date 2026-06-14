@@ -131,6 +131,12 @@ function runOnline(countries) {
   /** @type {string | null | undefined} */
   let opponentNickname;
   let opponentFetchInFlight = false;
+  /** Set true by `buildGridStructure` the first time it builds the 3×3 DOM,
+   * so subsequent calls (e.g. revisits across rematches) early-return. The
+   * declaration sits up here with the other module-scoped state because the
+   * top-level `?room=` auto-join below reaches `buildGridStructure` during
+   * module init — declaring `gridBuilt` further down would TDZ on refresh. */
+  let gridBuilt = false;
   const colHeaderEls = document.querySelectorAll('.col-header');
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
   const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
@@ -323,7 +329,8 @@ function runOnline(countries) {
   // header text from the server's puzzle. Splitting these eliminates
   // the "half-grid for some seconds" gap users were seeing between
   // joining a room and the first server message arriving.
-  let gridBuilt = false;
+  // (`gridBuilt` is declared up with the other module-scoped state — see
+  // the TDZ note there.)
   function buildGridStructure() {
     if (gridBuilt) return;
     gridBuilt = true;
@@ -686,17 +693,19 @@ function runOnline(countries) {
       finalScoreEl.textContent = lastGaveUpByMe
         ? t('ttt.youGaveUp', 'You gave up')
         : t('ttt.opponentGaveUp', 'Opponent gave up');
-      finalScoreEl.style.color = '#1c1c1c';
     } else if (game.winner) {
       const youWon = game.winner === myRole;
       finalScoreEl.textContent = youWon
         ? t('ttt.youWin', 'You win!')
         : t('ttt.opponentWins', 'Opponent wins');
-      finalScoreEl.style.color = game.winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
     } else {
       finalScoreEl.textContent = t('ttt.draw', 'Draw');
-      finalScoreEl.style.color = '#1c1c1c';
     }
+    // Brand secondary on every outcome — trades the X/O winner-colour
+    // encoding for a unified accent treatment. Inline (not CSS) because
+    // the previous code set this inline and we can't override it from
+    // the stylesheet without `!important`.
+    finalScoreEl.style.color = 'var(--secondary-color)';
   }
 
   function finishRound() {

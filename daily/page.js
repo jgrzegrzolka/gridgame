@@ -229,11 +229,17 @@ function paintStatsPanel(found, total, stats, opts = {}) {
   }
   // Caption only when stats arrived AND we have per-tile overlays to
   // explain. The score-only state doesn't need it (no %s anywhere).
+  // The caption itself lives in a dedicated #daily-caption slot just
+  // above the action links — see daily/index.html — so the legend
+  // appears beneath all the flags it describes, not stuck to the
+  // headline at the top of the result panel.
+  const captionEl = /** @type {HTMLElement} */ (document.getElementById('daily-caption'));
   if (stats && stats.totalAttempts > 0) {
-    const c = document.createElement('p');
-    c.className = 'daily-stats-caption';
-    c.textContent = labels.caption;
-    container.appendChild(c);
+    captionEl.textContent = labels.caption;
+    captionEl.hidden = false;
+  } else {
+    captionEl.textContent = '';
+    captionEl.hidden = true;
   }
 }
 

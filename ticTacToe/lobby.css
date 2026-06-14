@@ -22,7 +22,7 @@
 .lobby-btn:hover { background: #f0f0f0; }
 .lobby-or {
   margin: 4px 0;
-  color: #888;
+  color: var(--muted-color);
   font-size: 13px;
 }
 .join-form {
@@ -42,9 +42,12 @@
   border: 1px solid #ccc;
   border-radius: 6px;
 }
+.join-code::placeholder {
+  color: var(--muted-color);
+}
 .join-code:focus { outline: 2px solid var(--link-color); outline-offset: -2px; }
 .lobby-error {
-  color: #c5302d;
+  color: var(--secondary-color);
   font-size: 14px;
   margin: 4px 0 0;
 }
@@ -52,7 +55,7 @@
 .online-game[hidden] { display: none; }
 .room-line {
   font-size: 14px;
-  color: #666;
+  color: var(--muted-color);
   margin: 0 0 4px;
 }
 /* When the share button is showing, stretch the row to reach the grid's
@@ -83,7 +86,7 @@
   font-size: 15px;
   margin: 0 0 4px;
 }
-.role-line .muted { color: #666; }
+.role-line .muted { color: var(--muted-color); }
 /* Inline matchup affordance — "vs <Opponent>" sits right next to the
  * role badge, so the role line reads "You are O vs Alice".
  * Populated client-side once peerId is known (welcome / peer-joined);
@@ -98,16 +101,19 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #666;
+  color: var(--muted-color);
 }
 .matchup-opponent .matchup-name { color: var(--link-color); font-weight: 500; }
 .status-line {
   font-size: 14px;
-  color: #666;
+  /* Brand secondary so the neutral "Waiting for opponent… share the code
+   * above" / "Connecting…" / "Opponent's turn" messages read as an
+   * accent. State-specific overrides below (.peer-missing → red,
+   * .your-turn → primary) still win on their respective states. */
+  color: var(--secondary-color);
   margin: 0 0 12px;
   min-height: 20px;
 }
-.status-line.peer-missing { color: #c5302d; }
 .status-line.your-turn { color: var(--link-color); font-weight: 500; }
 /* Pulse on meaningful state transitions (e.g. your-turn ↔ opponents-turn).
  * Replaces the bouncy turn-badge that used to live below the grid — now
@@ -134,4 +140,4 @@
   cursor: pointer;
 }
 .result-link:hover { text-decoration: none; }
-.result-link[disabled] { color: #888; cursor: default; text-decoration: none; }
+.result-link[disabled] { color: var(--muted-color); cursor: default; text-decoration: none; }

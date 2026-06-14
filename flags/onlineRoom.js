@@ -178,7 +178,10 @@ export function applyGiveUp(room, playerId, countries) {
   const role = room.roles.get(playerId);
   if (!role) return { room, broadcasts: [] };
   if (isGameOver(room.game)) return { room, broadcasts: [] };
-  const nextGame = applyGiveUpEngine(room.game, countries);
+  // Stamp `gaveUpBy: role` onto the game so a refresh-restore (welcome
+  // replays the persisted game) can recover who gave up. The engine itself
+  // doesn't know about roles — that's a room-layer concern.
+  const nextGame = { ...applyGiveUpEngine(room.game, countries), gaveUpBy: role };
   const nextRoom = { ...room, game: nextGame };
   return {
     room: nextRoom,
