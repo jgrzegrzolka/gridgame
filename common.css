@@ -6,7 +6,15 @@
    * users see an "ugly" half-dark UI. We don't ship a dark theme, so
    * forcing light keeps everything consistent. */
   color-scheme: light;
-  --link-color: #660033;
+  /* Site palette. Swap these two values to re-skin the whole site:
+   * --primary drives interactive text/icons via --link-color (game tiles,
+   * burger bars, flags-link, menu links, etc.); --secondary is the brand
+   * accent (the pink in the wordmark / favicon). The brand SVGs hardcode
+   * these hex values today since external SVGs can't read CSS vars —
+   * keep all three in sync when changing the palette. */
+  --primary-color: #660033;
+  --secondary-color: #C2899F;
+  --link-color: var(--primary-color);
   --page-top: 80px;
   /* Inward push for the chrome cluster on wide viewports so the buttons
    * align with the right edge of the widest content the project ever
