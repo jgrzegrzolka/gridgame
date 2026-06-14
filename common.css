@@ -561,12 +561,7 @@ body::before {
   font: inherit;
   font-size: 12px;
   background: #fff;
-  /* Inactive pill paints in --secondary-color so the unselected state
-   * reads as "available option, not yet applied". `.active` below flips
-   * it to a filled primary chip ("applied include"), `.exclude` flips it
-   * to red ("applied negation"). The colour separates the three states
-   * at a glance: secondary = neutral, primary = chosen, red = negated. */
-  color: var(--secondary-color);
+  color: var(--primary-color);
   border: 1px solid #ddd;
   border-radius: 999px;
   padding: 3px 10px;
@@ -583,12 +578,18 @@ body::before {
 }
 .pill.exclude {
   background: #fff;
-  color: #c0392b;
-  border-color: #c0392b;
+  /* "NOT this filter" — paint in brand secondary instead of the old red.
+   * Strikethrough still carries the "negated" semantic; colour shifts
+   * from alarming-red to brand-pink so the chooser reads as palette-
+   * native rather than error-state. */
+  color: var(--secondary-color);
+  border-color: var(--secondary-color);
   text-decoration: line-through;
 }
 .pill.exclude:hover {
-  background: #fdecea;
+  /* Paled secondary (~12% of #C2899F over white) — same wash idiom the
+   * old red `#fdecea` used, just on the pink hue. */
+  background: #fbeef3;
 }
 /* Modifier pill — meta-constraint that isn't an include/exclude value
  * (e.g. findFlag and flagsdata's "no other colours" toggle that binds
