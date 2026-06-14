@@ -1,11 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#660033">
-  <rect x="2" y="2" width="6" height="6"/>
-  <rect x="9" y="2" width="6" height="6"/>
-  <rect x="16" y="2" width="6" height="6"/>
-  <rect x="2" y="9" width="6" height="6"/>
-  <rect x="9" y="9" width="6" height="6"/>
-  <rect x="16" y="9" width="6" height="6"/>
-  <rect x="2" y="16" width="6" height="6"/>
-  <rect x="9" y="16" width="6" height="6"/>
-  <rect x="16" y="16" width="6" height="6"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- First column + center cell paint in --primary-color (#2B1D24);
+       the remaining 5 cells paint in --secondary-color (#C2899F). -->
+  <g fill="#2B1D24">
+    <rect x="2" y="2" width="6" height="6"/>
+    <rect x="2" y="9" width="6" height="6"/>
+    <rect x="2" y="16" width="6" height="6"/>
+    <rect x="9" y="9" width="6" height="6"/>
+  </g>
+  <g fill="#C2899F">
+    <rect x="9" y="2" width="6" height="6"/>
+    <rect x="16" y="2" width="6" height="6"/>
+    <rect x="16" y="9" width="6" height="6"/>
+    <rect x="9" y="16" width="6" height="6"/>
+    <rect x="16" y="16" width="6" height="6"/>
+  </g>
 </svg>
