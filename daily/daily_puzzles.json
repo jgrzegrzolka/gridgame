@@ -161,5 +161,19 @@
       "en": "Find all North American flags with white, blue, and only 3 colours.",
       "pl": "Znajdź wszystkie północnoamerykańskie flagi z bielą, niebieskim i tylko 3 kolorami."
     }
+  },
+  {
+    "n": 10,
+    "filter": "continent:Africa,colorCount:2",
+    "answers": [
+      "ma",
+      "ng",
+      "so",
+      "tn"
+    ],
+    "description": {
+      "en": "Find all African flags with only 2 colours.",
+      "pl": "Znajdź wszystkie afrykańskie flagi z tylko 2 kolorami."
+    }
   }
 ]

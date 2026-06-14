@@ -1,19 +1,5 @@
 [
   {
-    "n": 10,
-    "filter": "continent:Africa,colorCount:2",
-    "answers": [
-      "ma",
-      "ng",
-      "so",
-      "tn"
-    ],
-    "description": {
-      "en": "Find all African flags with only 2 colours.",
-      "pl": "Znajdź wszystkie afrykańskie flagi z tylko 2 kolorami."
-    }
-  },
-  {
     "n": 11,
     "filter": "continent:Europe,motif:coat-of-arms",
     "answers": [
