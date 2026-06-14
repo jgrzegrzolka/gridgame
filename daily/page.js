@@ -23,6 +23,8 @@ import { runFinishFlow } from './finishFlow.js';
 import { PROD_SITE_KEY } from './turnstileSiteKey.js';
 import { mountDevReset } from './devReset.js';
 import { pickExtraStats, hasAnyExtraStats, pickMarkerKind } from './extraStats.js';
+import { shareText } from '../common.js';
+import { buildShareText } from '../flags/shareGrid.js';
 
 // Turnstile is soft-disabled across all environments (2026-06-10) after
 // a real user's challenge was rejected by Cloudflare with a 401 on
@@ -250,6 +252,44 @@ async function loadAndPaintStats(n, targets, found, all, userFoundCodes, opts = 
 }
 
 /**
+ * Wire the result-screen Share button to copy a Wordle-style emoji
+ * grid + score line + URL to the clipboard (or trigger the mobile
+ * share sheet). Pure-DOM glue; the text-build is in
+ * `flags/shareGrid.js` (tested separately).
+ *
+ * Set unconditionally on every result paint — natural finish, revisit,
+ * and post-language-switch re-paint. `btn.onclick = ...` overwrites
+ * the prior handler so there's no listener accumulation across calls.
+ *
+ * @param {number} n
+ * @param {Country[]} targets
+ * @param {string[] | Set<string>} foundCodes
+ */
+function wireShareButton(n, targets, foundCodes) {
+  const btn = /** @type {HTMLButtonElement | null} */ (document.getElementById('result-share'));
+  if (!btn) return;
+  const answerCodes = targets.map((c) => c.code);
+  const foundArr = Array.isArray(foundCodes) ? foundCodes : Array.from(foundCodes);
+  btn.onclick = async () => {
+    const titleLine = t('daily.share.title', 'Yet Another Quiz — Daily #{n} — {score}/{total}')
+      .replace('{n}', String(n))
+      .replace('{score}', String(foundArr.length))
+      .replace('{total}', String(answerCodes.length));
+    const text = buildShareText({
+      titleLine,
+      answerCodes,
+      foundCodes: foundArr,
+      url: window.location.origin + '/daily/',
+    });
+    const r = await shareText(text);
+    if (r === 'copied') {
+      btn.classList.add('copied');
+      setTimeout(() => btn.classList.remove('copied'), 1500);
+    }
+  };
+}
+
+/**
  * Post-finish hook: thin DOM/network wrapper around the testable
  * `runFinishFlow` orchestrator. Wires the loading spinner, score-only
  * fallback, and stats-with-overlays paint callbacks; everything else
@@ -258,9 +298,11 @@ async function loadAndPaintStats(n, targets, found, all, userFoundCodes, opts = 
  *
  * @param {number} n
  * @param {Country[]} targets
+ * @param {Country[]} all
  * @param {{ foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }} info
  */
 async function handleFinish(n, targets, all, info) {
+  wireShareButton(n, targets, info.foundCodes);
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
   const found = info.foundCodes.length;
@@ -358,6 +400,7 @@ export function bootDaily() {
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
+        wireShareButton(n, result.targets, foundCodes);
         paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
         // Stats panel is gated on Cosmos, not this device's localStorage:
         // always GET, and let the response decide (totalAttempts === 0 →
@@ -370,6 +413,7 @@ export function bootDaily() {
         document.addEventListener('langchanged', () => {
           paintDescription(result.entry.description);
           renderResult(result.targets, foundCodes);
+          wireShareButton(n, result.targets, foundCodes);
           paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
           loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
         });

@@ -113,6 +113,10 @@
         "ranking": "Najczęściej rozpoznane:",
         "topMistake": "Najczęstszy błąd:"
       }
+    },
+    "share": {
+      "aria": "Udostępnij wynik",
+      "title": "Yet Another Quiz — Daily #{n} — {score}/{total}"
     }
   },
   "ttt": {

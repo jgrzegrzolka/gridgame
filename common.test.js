@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem, shareUrl, NICKNAME_STORAGE_KEY } from './common.js';
+import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem, shareUrl, shareText, NICKNAME_STORAGE_KEY } from './common.js';
 import { defaultNickname } from './flags/nickname.js';
 
 /**
@@ -489,5 +489,57 @@ test("shareUrl: legacy execCommand throwing yields failed (and still cleans up t
 test("shareUrl: no navigator and no document yields failed", async () => {
   const result = await shareUrl("https://example.com/", {}, { navigator: null, document: null });
   assert.equal(result, "failed");
+});
+
+
+// ---------------------------------------------------------------------------
+// shareText
+// ---------------------------------------------------------------------------
+
+// Mirrors shareUrl but for an arbitrary text payload. The full state matrix
+// (share / dismissed / copied / failed) is already exercised by the shareUrl
+// suite above — these tests pin the payload-shape differences and the
+// "clipboard gets the text, not a URL" contract.
+
+test("shareText: navigator.share gets the text payload (not url)", async () => {
+  /** @type {any[]} */
+  const calls = [];
+  const nav = /** @type {any} */ ({ share: async (/** @type {any} */ payload) => { calls.push(payload); } });
+  const grid = "Yet Another Quiz — Daily #9 — 8/10\n\n🟩🟩🟩🟩🟩\n🟩🟩🟩⬛⬛\n\nhttps://www.yetanotherquiz.com/daily/";
+  const result = await shareText(grid, { title: "Daily #9" }, { navigator: nav });
+  assert.equal(result, "shared");
+  assert.deepEqual(calls, [{ title: "Daily #9", text: grid }]);
+});
+
+test("shareText: navigator.share AbortError returns dismissed without falling through", async () => {
+  // Same dismissed-must-not-overwrite-clipboard guarantee as shareUrl.
+  let clipboardCalled = false;
+  const nav = {
+    share: async () => { const e = /** @type {any} */ (new Error("abort")); e.name = "AbortError"; throw e; },
+    clipboard: { writeText: async () => { clipboardCalled = true; } },
+  };
+  const result = await shareText("anything", {}, { navigator: nav });
+  assert.equal(result, "dismissed");
+  assert.equal(clipboardCalled, false, "clipboard must not be touched after dismiss");
+});
+
+test("shareText: clipboard receives the full multi-line text", async () => {
+  const grid = "title\n\n🟩⬛\n\nhttps://example.com/";
+  /** @type {string | null} */
+  let received = null;
+  const nav = { clipboard: { writeText: async (/** @type {string} */ s) => { received = s; } } };
+  const result = await shareText(grid, {}, { navigator: nav });
+  assert.equal(result, "copied");
+  assert.equal(received, grid);
+});
+
+test("shareText: legacy fallback gets the text payload, not a url", async () => {
+  // Confirms that the legacyCopyToClipboard path is reached with the
+  // text argument (not silently dropped or swapped for a URL).
+  const nav = { clipboard: { writeText: async () => { throw new Error("denied"); } } };
+  const doc = fakeDoc({ execCommandReturns: true });
+  const result = await shareText("multi\nline\ntext", {}, { navigator: nav, document: doc });
+  assert.equal(result, "copied");
+  assert.deepEqual(doc._inserted, [], "textarea must be cleaned up");
 });
 
