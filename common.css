@@ -561,7 +561,12 @@ body::before {
   font: inherit;
   font-size: 12px;
   background: #fff;
-  color: var(--primary-color);
+  /* Inactive pill paints in --secondary-color so the unselected state
+   * reads as "available option, not yet applied". `.active` below flips
+   * it to a filled primary chip ("applied include"), `.exclude` flips it
+   * to red ("applied negation"). The colour separates the three states
+   * at a glance: secondary = neutral, primary = chosen, red = negated. */
+  color: var(--secondary-color);
   border: 1px solid #ddd;
   border-radius: 999px;
   padding: 3px 10px;
