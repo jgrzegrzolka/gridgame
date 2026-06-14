@@ -120,39 +120,15 @@ Items here are not blocking current work but deserve durable memory — the next
 
 **Out of scope here:** the second-region (WE sibling) plan in Feature D. That helps if we stay on SWA Standard, but is unnecessary on CF Pages. Decide platform first.
 
-### Feature L: Shareable result grid
-
-**Status:** backlog. Pick up before any distribution push (r/geography, r/vexillology, geography Discords) — distribution without the share loop is wasted traffic. If the share button doesn't exist when the first redditor visits, the traffic doesn't stick.
-
-**Goal:** after finishing the daily puzzle, the player can copy a Wordle-style emoji grid of their result to the clipboard with one button. Shape: title line + grid + URL. The grid renders the answer set as 🟩 for correctly-found flags and ⬛ for missed (or 🟥 for wrong picks — `dailyResults` already stores `wrongCodes`). No flag emojis, no country names — the grid is teaser-only, the URL is the payoff.
-
-**Why this is its own feature, sequenced first among L/M/N.** Pure client, no backend, no Cosmos cost. Fits the daily-puzzle grid nature naturally. Highest impact-per-effort item on the entire analytics/growth list per the framing in CLAUDE-side discussion 2026-06-14. Sequenced before Feature M (analytics) because it doesn't depend on any new instrumentation, and you want it live before the analytics start showing what would-have-been-viral days looked like.
-
-**Likely shape when this comes off the parking brake:**
-
-1. Pure renderer in `flags/shareGrid.js` (sibling to other shared flag helpers). Takes `{foundCodes, wrongCodes, totalCount, puzzleId, dateUtc}` and returns the multi-line emoji string. Pure function, unit-tested — no DOM, no clipboard.
-2. Daily finish-screen wiring in `daily/page.js`: a single "Share result" button beside the existing finish-screen elements, calls `navigator.clipboard.writeText(...)`, flashes a "Copied!" confirmation. Match chrome-button conventions in CLAUDE.md ("UI consistency between pages").
-3. i18n strings in `en.json` + `pl.json` under `daily.share.*`.
-4. Tests for the renderer: various found/wrong combinations + all-found / all-missed edges.
-
-**Open design calls (settle when work starts):**
-
-- **Grid layout.** Square grid (5×5 for a 25-flag puzzle) or row-per-found (1 emoji per slot, in answer order)? Wordle's appeal is the *shape* — needs to be visually scannable in ≤200 chars.
-- **Wrong vs missed.** Two distinct emojis (🟥 wrong + ⬛ missed) or just 🟩/⬛? More signal = more spoilers; less signal = less shareable hook.
-- **URL.** Plain `https://www.yetanotherquiz.com/daily/` or with the puzzle date encoded so the recipient sees the same puzzle on click-through? `daily/` currently always serves today's — either decide "share is for today's puzzle, the URL is today's URL" (simplest) or thread `?d=2026-06-14` through the daily entrypoint.
-- **Mobile clipboard.** Safari + some Android browsers gate `navigator.clipboard` behind a user gesture and HTTPS. Already HTTPS via SWA; test the gesture path.
-
-**Out of scope even for Feature L:** image rendering (SVG-to-PNG canvas), Open Graph / Twitter Card preview on the puzzle URL, Web Share API path on supporting browsers (nice-to-have, can layer after clipboard ships), share-count tracking (a Cosmos write per share — wait for Feature M's instrumentation).
-
 ### Feature M: Analytics + start-event instrumentation
 
-**Status:** backlog. Pick up after Feature L is live so the share loop has data to flow into.
+**Status:** Part A (Cloudflare Web Analytics) shipped 2026-06-14, dashboard-only setup, no PR. Part B (`dailyStarts` Cosmos container + admin read path) remains in backlog — pick up when DAU / completion-rate / D1 / D7 retention become felt needs that CF Analytics doesn't already answer.
 
 **Goal:** make the four metrics that actually matter for a daily game visible: DAU (unique humans starting today), completion rate (started ÷ finished), D1 retention (% of yesterday's players who came back today), D7 retention (% of last-week's players who came back this week). All bot-filtered, all queryable without leaving the Azure portal / a small admin page. The current state is partial — `dailyResults` gives finished-count and lets you derive returning-finishers across puzzles, but nothing measures *started-and-bounced* or *visited-without-starting*. Without the start event, you can't separate "puzzle is too hard" from "nobody clicked into the daily page today."
 
 **Two-part shape — independent, ship in either order:**
 
-**Part A: Cloudflare Web Analytics.** Drop-in JS beacon, free, bot-filtered server-side. One `<script>` line added to the page chrome. CF already owns DNS / Turnstile / the apex redirect / the edge proxy worker — adding Web Analytics is a single dashboard toggle. Cost: 30 minutes. Gives bot-filtered visit + DAU on the entire site today, before any Cosmos work.
+**Part A: Cloudflare Web Analytics — SHIPPED 2026-06-14.** Zero code; CF auto-injects the beacon at the edge for proxied zones. First setup pass left the EU-exclude default on, which silently dropped all Polish (and other EU) traffic — the dashboard showed only US/Canada visits despite Jan's known PL user base. Flipped to "Enable" (no EU exclusion); CF Web Analytics is cookieless and hashes IPs, so the GDPR posture is acceptable for the hobby-site use case. Privacy page disclosure shipped in PR #421. Dashboard now shows DAU + visit count + Top Pages + per-country geographic breakdown, bot-filtered server-side. Defends the "are we even seeing humans" question that prompted the whole L/M/N framing.
 
 **Part B: `dailyStarts` Cosmos container + admin read path.** New container partitioned by `/dateUtc`. Doc shape: `{ id: "{dateUtc}:{deviceId}:{puzzleId}", deviceId, puzzleId, dateUtc, startedAt, local?, v: 1 }`. Deterministic id = idempotent (same browser firing twice in a day is a 409, ignored client-side). `POST /api/v1/daily/start` endpoint, anonymous, same rate-limit pattern as `dailyResult.js`. Client wiring: fire-and-forget from `daily/page.js` after first interaction (first click into a cell), **not** on page-mount — that way bots / preview-renderers / curious-but-bouncing visitors don't count as "started". Server filters `local: true` the same way `dailyResults` does.
 
@@ -204,6 +180,37 @@ The pure-SQL option is by far the cheapest and probably enough for the first six
 ---
 
 ## Done
+
+### Feature L: Wordle-style shareable result grid + touch-only share alignment — *shipped 2026-06-14*
+
+**Goal.** After finishing the daily puzzle, the player taps a small share icon inline at the end of the stats headline ("Your score: 2/4 · Average score: 3.4/4 · ⌬") to copy a Wordle-style teaser to their clipboard or fire the OS share sheet. Payload: title line + emoji grid (🟩 found / ⬛ missed, canonical answer-set order, 5 cells per row) + the daily URL. No country names, no flag emojis — the grid is a structural teaser, share-safe.
+
+**What shipped (one PR, six-commit branch, 2026-06-14):**
+
+1. **Pure renderer** `flags/shareGrid.js` `buildShareText()` + 8 unit tests covering all-found / all-missed / ragged-tail / canonical-order / off-set inputs.
+2. **`shareText()`** added to `common.js` as a sibling of `shareUrl()` with the same three-tier fallback (`navigator.share` → `navigator.clipboard.writeText` → legacy textarea + `execCommand('copy')`). 4 tests pin the payload-shape difference vs `shareUrl`.
+3. **Daily wiring** in `daily/page.js` — `setShareCtx` + `createShareButton` pair. `paintStatsPanel` appends the button inline at the end of `.daily-stats-headline` on every repaint (loading → score-only → score-with-stats). Module-ref state so the panel-paint code stays oblivious to puzzle details.
+4. **i18n** EN + PL: `daily.share.aria` (button label) + `daily.share.title` template `"Yet Another Quiz — Daily #{n} — {score}/{total}"`.
+5. **Touch-only share-icon rule, site-wide.** Daily, findFlag (`#game-share` + `#result-share`), and TTT's `#share-link` are all gated behind `matchMedia('(pointer: coarse)')`. The findFlag side was previously always-on; brought into line in the same PR (briefly its own PR #423, folded in during consolidation). Single rule across the whole site now: share-icons are touch-only.
+
+**Why touch-only.** On desktop, `navigator.share()` opens the OS share sheet (Windows Share dialog with Teams / Outlook / Copilot tiles, macOS share menu) which is visually heavy for what is conceptually "copy this string somewhere." A silent clipboard-only path was the alternative but proved too quiet to be discoverable. Hiding the icon on desktop where the share-loop audience isn't anyway is cleaner than introducing a bespoke desktop feedback affordance.
+
+**Mid-flight finds captured in commits (real lessons, not nits):**
+
+- First wiring wrapped `#final-score-line` in a new `.final-score-row` div to host the button. That broke `#result > .final-score { display: none }` (selector no longer matched the now-grand-child) and the historically-hidden "You found 2 / 4" line came back big and ugly above the panel. Revert the wrapper; move the icon into the stats headline.
+- Vertical alignment was off because the headline `<p>` was inline + `vertical-align: middle` on the share-link. Switch the headline to `display: flex; align-items: center` — same pattern findFlag's `.final-score-row` and TTT's `.room-line` already use.
+- Separator spacing was asymmetric (text-internal `·` vs flex-gap `·`). Fold the trailing " · " into the text span so the rhythm matches `"score: 7/9 · Average"`.
+- Icon colour clashed (brand red link colour vs `#333` headline). `color: inherit` inside the headline.
+
+**Standing artifacts** (the load-bearing outputs future work inherits):
+
+- `flags/shareGrid.js` + tests — the contract for "render an emoji grid from a found/answer set". Future game modes that want a similar share grid compose the same module.
+- `common.js` `shareText()` — the three-tier fallback for any future multi-line share payload (sibling to the existing `shareUrl()` for bare URLs).
+- The "share-icons are touch-only across the site" rule — pinned in TTT, findFlag, and daily via the same `matchMedia('(pointer: coarse)')` check. Apply the same gate when adding share affordances to any future surface.
+
+**Key PR.** #422 (six commits; folded in the touch-only alignment work that was briefly #423 before consolidation).
+
+**Out of scope, intentionally deferred** (captured here so they don't drift back in): **Open Graph / Twitter Card meta** on `daily/index.html` so the chat-app link-preview card shows something puzzle-specific instead of the generic site favicon (~10-line follow-up; consider as a quick win to amplify the share loop). **Canvas-to-PNG image rendering** for visually-rich shares. **`?d=YYYY-MM-DD` deep-link routing** so a recipient sees the same puzzle on click-through (currently `daily/` always serves today's). **Share-count tracking** — would need a Cosmos write per share; wait for Feature M Part B's event-counter infrastructure.
 
 ### Feature K: Daily leaderboard on flag-quiz finish screen — *shipped 2026-06-12*
 
