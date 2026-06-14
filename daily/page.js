@@ -197,6 +197,16 @@ function paintStatsPanel(found, total, stats, opts = {}) {
   const h = document.createElement('p');
   h.className = 'daily-stats-headline';
   h.textContent = headlineText;
+  // Inline share button at the end of the headline — "Your score:
+  // 2/4 · Average score: 3.4/4 [share]". createShareButton returns
+  // null when no shareCtx is set (e.g. mid-game stats panel
+  // pre-finish), so this is a no-op until a result is actually in
+  // view.
+  const shareBtn = createShareButton();
+  if (shareBtn) {
+    h.appendChild(document.createTextNode(' '));
+    h.appendChild(shareBtn);
+  }
   container.appendChild(h);
   if (opts.loading) {
     // Three pulsing dots after the label — CSS animates them in a wave
@@ -252,33 +262,64 @@ async function loadAndPaintStats(n, targets, found, all, userFoundCodes, opts = 
 }
 
 /**
- * Wire the result-screen Share button to copy a Wordle-style emoji
- * grid + score line + URL to the clipboard (or trigger the mobile
- * share sheet). Pure-DOM glue; the text-build is in
- * `flags/shareGrid.js` (tested separately).
+ * Module-scope share context. Set whenever a fresh result is in view
+ * (natural finish, revisit, post-langchange re-paint). Read by the
+ * share button's onclick, which is created inside paintStatsPanel so
+ * it lives inline at the end of `.daily-stats-headline`
+ * ("Your score: 2/4 · Average score: 3.4/4 [share]"). Storing in a
+ * module ref keeps paintStatsPanel from threading wire-data through
+ * every caller — the headline gets rebuilt on each panel paint
+ * (loading → score-only → score-with-stats), so a static button-
+ * in-HTML wouldn't survive `container.innerHTML = ''`.
  *
- * Set unconditionally on every result paint — natural finish, revisit,
- * and post-language-switch re-paint. `btn.onclick = ...` overwrites
- * the prior handler so there's no listener accumulation across calls.
- *
+ * @type {{ n: number, answerCodes: string[], foundCodes: string[] } | null}
+ */
+let shareCtx = null;
+
+/**
  * @param {number} n
  * @param {Country[]} targets
  * @param {string[] | Set<string>} foundCodes
  */
-function wireShareButton(n, targets, foundCodes) {
-  const btn = /** @type {HTMLButtonElement | null} */ (document.getElementById('result-share'));
-  if (!btn) return;
-  const answerCodes = targets.map((c) => c.code);
+function setShareCtx(n, targets, foundCodes) {
   const foundArr = Array.isArray(foundCodes) ? foundCodes : Array.from(foundCodes);
+  shareCtx = { n, answerCodes: targets.map((c) => c.code), foundCodes: foundArr };
+}
+
+/**
+ * Build the inline share button that sits at the end of the daily
+ * stats headline. Click → builds the Wordle-style text via
+ * `buildShareText` and pushes it through `shareText` (mobile share
+ * sheet → clipboard → legacy textarea fallback). On `copied`, flash
+ * `.copied` on the button for 1.5 s (CSS handles the icon swap).
+ *
+ * Reads from the module-level `shareCtx` so the panel-paint code
+ * doesn't need to know any of the puzzle details.
+ *
+ * @returns {HTMLButtonElement | null}
+ */
+function createShareButton() {
+  if (!shareCtx) return null;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'share-link';
+  btn.id = 'result-share';
+  btn.setAttribute('aria-label', t('daily.share.aria', 'Share result'));
+  const icon = document.createElement('span');
+  icon.className = 'share-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  btn.appendChild(icon);
   btn.onclick = async () => {
+    if (!shareCtx) return;
+    const { n, answerCodes, foundCodes } = shareCtx;
     const titleLine = t('daily.share.title', 'Yet Another Quiz — Daily #{n} — {score}/{total}')
       .replace('{n}', String(n))
-      .replace('{score}', String(foundArr.length))
+      .replace('{score}', String(foundCodes.length))
       .replace('{total}', String(answerCodes.length));
     const text = buildShareText({
       titleLine,
       answerCodes,
-      foundCodes: foundArr,
+      foundCodes,
       url: window.location.origin + '/daily/',
     });
     const r = await shareText(text);
@@ -287,6 +328,7 @@ function wireShareButton(n, targets, foundCodes) {
       setTimeout(() => btn.classList.remove('copied'), 1500);
     }
   };
+  return btn;
 }
 
 /**
@@ -302,7 +344,7 @@ function wireShareButton(n, targets, foundCodes) {
  * @param {{ foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }} info
  */
 async function handleFinish(n, targets, all, info) {
-  wireShareButton(n, targets, info.foundCodes);
+  setShareCtx(n, targets, info.foundCodes);
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
   const found = info.foundCodes.length;
@@ -400,7 +442,7 @@ export function bootDaily() {
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         renderResult(result.targets, foundCodes);
-        wireShareButton(n, result.targets, foundCodes);
+        setShareCtx(n, result.targets, foundCodes);
         paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
         // Stats panel is gated on Cosmos, not this device's localStorage:
         // always GET, and let the response decide (totalAttempts === 0 →
@@ -413,7 +455,7 @@ export function bootDaily() {
         document.addEventListener('langchanged', () => {
           paintDescription(result.entry.description);
           renderResult(result.targets, foundCodes);
-          wireShareButton(n, result.targets, foundCodes);
+          setShareCtx(n, result.targets, foundCodes);
           paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
           loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
         });
