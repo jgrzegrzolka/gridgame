@@ -61,6 +61,15 @@ export async function submitResult({
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
+      // `keepalive: true` lets the browser flush this POST even if the
+      // user immediately closes the tab after pressing "Give up" — the
+      // exact failure mode that would otherwise drop the row from
+      // community stats. Without it, browsers cancel the in-flight
+      // fetch on document destruction. The payload (~200 bytes) sits
+      // well under the 64 KB keepalive ceiling, and we don't depend on
+      // the response in the close-the-tab case, so the flag is pure
+      // win — no behaviour change in the page-stays-open path.
+      keepalive: true,
     });
   } catch {
     return { outcome: 'failed', reason: 'network_error' };

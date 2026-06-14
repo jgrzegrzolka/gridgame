@@ -129,6 +129,22 @@ test('POSTs to /api/v1/daily/result with the right body', async () => {
   });
 });
 
+test('keepalive flag is set so the POST survives a fast tab-close', async () => {
+  // Pinned because the give-up-and-close-immediately path is the whole
+  // reason this function uses keepalive. A refactor that silently drops
+  // the flag would re-open the lost-submission window.
+  const store = fakeStore();
+  let captured;
+  await submitResult({
+    ...baseArgs, store,
+    fetchImpl: async (url, init) => {
+      captured = init;
+      return fakeRes(204, null);
+    },
+  });
+  assert.equal(captured.keepalive, true);
+});
+
 test('wrongCodes defaults to [] when not supplied', async () => {
   const store = fakeStore();
   let captured;
