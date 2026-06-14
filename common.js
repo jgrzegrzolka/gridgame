@@ -104,6 +104,13 @@ export async function shareUrl(url, meta = {}, deps = {}) {
  * on the share-sheet's `url` slot, which on iOS produces a richer
  * preview card than text-only.
  *
+ * Callers that don't want the share-sheet on desktop should gate the
+ * button itself (e.g. `matchMedia('(pointer: coarse)')`), not this
+ * function — see daily/page.js createShareButton and the findFlag /
+ * TTT touch-only reveals. The function intentionally stays
+ * platform-agnostic so it works in any context where it's actually
+ * called.
+ *
  * @param {string} text
  * @param {{ title?: string }} [meta]
  * @param {{ navigator?: any, document?: any }} [deps]

@@ -196,17 +196,21 @@ function paintStatsPanel(found, total, stats, opts = {}) {
   container.innerHTML = '';
   const h = document.createElement('p');
   h.className = 'daily-stats-headline';
-  h.textContent = headlineText;
+  // Wrap the score string in its own span so the headline is a
+  // clean two-flex-item layout (text-span + share-button) instead
+  // of loose text nodes — the headline's `display: flex` would
+  // otherwise turn each text node into a separate anonymous flex
+  // item and the gap wouldn't apply cleanly.
+  const textEl = document.createElement('span');
+  textEl.textContent = headlineText;
+  h.appendChild(textEl);
   // Inline share button at the end of the headline — "Your score:
   // 2/4 · Average score: 3.4/4 [share]". createShareButton returns
   // null when no shareCtx is set (e.g. mid-game stats panel
   // pre-finish), so this is a no-op until a result is actually in
   // view.
   const shareBtn = createShareButton();
-  if (shareBtn) {
-    h.appendChild(document.createTextNode(' '));
-    h.appendChild(shareBtn);
-  }
+  if (shareBtn) h.appendChild(shareBtn);
   container.appendChild(h);
   if (opts.loading) {
     // Three pulsing dots after the label — CSS animates them in a wave
@@ -293,6 +297,13 @@ function setShareCtx(n, targets, foundCodes) {
  * sheet → clipboard → legacy textarea fallback). On `copied`, flash
  * `.copied` on the button for 1.5 s (CSS handles the icon swap).
  *
+ * Touch-only: matches TTT (`ticTacToe/page.js:76`) and findFlag's
+ * `#game-share` / `#result-share` reveals. On desktop the OS share
+ * sheet is heavy (Windows Share dialog with contacts; macOS share
+ * menu) and clipboard-only feedback is too quiet to be discoverable
+ * — both wrong for the surface, so we just don't render the icon
+ * there. One rule across the whole site: share-icons are touch-only.
+ *
  * Reads from the module-level `shareCtx` so the panel-paint code
  * doesn't need to know any of the puzzle details.
  *
@@ -300,6 +311,9 @@ function setShareCtx(n, targets, foundCodes) {
  */
 function createShareButton() {
   if (!shareCtx) return null;
+  const isTouchDevice = typeof window.matchMedia === 'function'
+    && window.matchMedia('(pointer: coarse)').matches;
+  if (!isTouchDevice) return null;
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'share-link';
