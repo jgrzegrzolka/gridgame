@@ -205,12 +205,20 @@ function paintStatsPanel(found, total, stats, opts = {}) {
   textEl.textContent = headlineText;
   h.appendChild(textEl);
   // Inline share button at the end of the headline — "Your score:
-  // 2/4 · Average score: 3.4/4 [share]". createShareButton returns
-  // null when no shareCtx is set (e.g. mid-game stats panel
-  // pre-finish), so this is a no-op until a result is actually in
-  // view.
+  // 2/4 · Average score: 3.4/4 · [share]". createShareButton
+  // returns null on desktop (touch-only — see its docstring) and
+  // pre-finish (no shareCtx yet), so the separator + button block
+  // is a no-op except on a touch device viewing a real result. The
+  // `·` reuses the same separator the headline text already uses
+  // between the score and the average — visual continuity.
   const shareBtn = createShareButton();
-  if (shareBtn) h.appendChild(shareBtn);
+  if (shareBtn) {
+    const sep = document.createElement('span');
+    sep.textContent = '·';
+    sep.setAttribute('aria-hidden', 'true');
+    h.appendChild(sep);
+    h.appendChild(shareBtn);
+  }
   container.appendChild(h);
   if (opts.loading) {
     // Three pulsing dots after the label — CSS animates them in a wave
