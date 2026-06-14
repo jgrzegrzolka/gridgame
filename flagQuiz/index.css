@@ -234,7 +234,12 @@ body {
   animation: pulse-correct 1.1s ease-out infinite;
 }
 .flag-choice.wrong {
-  border-color: #c5302d;
+  /* Brand secondary instead of the old red so the chosen-flag pulse
+   * matches the rest of the "this didn't go your way" affordances on
+   * other pages (TTT cell shake, give-up reveal, .feedback text). The
+   * `.correct` rule above stays green — that's a positive signal
+   * orthogonal to the brand palette. */
+  border-color: var(--secondary-color);
   animation: pulse-wrong 1.1s ease-out infinite;
 }
 @keyframes pulse-correct {
@@ -242,8 +247,11 @@ body {
   100% { box-shadow: 0 0 0 14px rgba(42, 157, 74, 0); }
 }
 @keyframes pulse-wrong {
-  0%   { box-shadow: 0 0 0 0 rgba(197, 48, 45, 0.7); }
-  100% { box-shadow: 0 0 0 14px rgba(197, 48, 45, 0); }
+  /* rgb of --secondary-color (#C2899F) — CSS alpha-on-a-CSS-var still
+   * needs a color-mix() / JS detour, so we hardcode the channels and
+   * vary alpha across keyframes. */
+  0%   { box-shadow: 0 0 0 0 rgba(194, 137, 159, 0.7); }
+  100% { box-shadow: 0 0 0 14px rgba(194, 137, 159, 0); }
 }
 .flag-choice img {
   width: 100%;
