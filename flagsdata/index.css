@@ -45,7 +45,7 @@ body {
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 999px;
-  color: #1c1c1c;
+  color: var(--primary-color);
   cursor: pointer;
   align-items: center;
   gap: 6px;
@@ -148,7 +148,7 @@ body {
 }
 .filter-label {
   font-size: 12px;
-  color: #666;
+  color: var(--muted-color);
   margin-right: 4px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -171,10 +171,10 @@ body {
   font-size: 16px;
   font-weight: 500;
   margin: 0 0 12px;
-  color: #1c1c1c;
+  color: var(--primary-color);
 }
 .section-count {
-  color: #999;
+  color: var(--muted-color);
   font-weight: 400;
   font-size: 14px;
   margin-left: 6px;
@@ -225,7 +225,7 @@ dialog#zoom .country-data {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 1.4;
-  color: #1c1c1c;
+  color: var(--primary-color);
   max-height: 40vh;
   overflow: auto;
   white-space: pre;
