@@ -69,6 +69,11 @@
       "failed": "Couldn't load today's leaderboard.",
       "empty": "Be the first today!",
       "you": "You"
+    },
+    "share": {
+      "aria": "Share result",
+      "title": "Yet Another Quiz — {variant} {mode} — {score}",
+      "text": "Can you beat me?"
     }
   },
   "findFlag": {

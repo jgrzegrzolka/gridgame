@@ -275,6 +275,22 @@ body {
   animation: cell-shake 0.5s ease-in-out;
 }
 
+/* Touch-only share icon sits at the end of the final-score line
+ * ("Final score: 23 [icon]"). Flex layout when the button is present
+ * keeps text + 20px icon vertically centered against the 28px score
+ * (vertical-align: middle alone resolves below the baseline at this
+ * type size). gap: 0.3em restores the whitespace that flex would
+ * otherwise collapse between the label and score spans, and
+ * justify-content: center preserves the page-centered look. Mirrors
+ * the daily-stats-headline pattern. */
+#final-score-line:has(.share-link) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+  flex-wrap: wrap;
+}
+
 /* Today's leaderboard panel — shown inside #result, below the existing
  * "Final score / Your best" lines. Tabular-nums on the score and time
  * columns so rows align. The is-self row gets a subtle accent so the

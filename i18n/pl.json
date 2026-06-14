@@ -69,6 +69,11 @@
       "failed": "Nie udało się załadować dzisiejszego rankingu.",
       "empty": "Bądź dziś pierwszy!",
       "you": "Ty"
+    },
+    "share": {
+      "aria": "Udostępnij wynik",
+      "title": "Yet Another Quiz — {variant} {mode} — {score}",
+      "text": "Pobijesz mnie?"
     }
   },
   "findFlag": {

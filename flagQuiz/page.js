@@ -26,13 +26,14 @@ import { flagsGamePool, loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
-import { mountNicknameMenuItem } from '../common.js';
+import { mountNicknameMenuItem, shareUrl } from '../common.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
 import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
 import { fetchLeaderboard } from '../flags/dailyLeaderboardFetch.js';
 import { renderLeaderboard } from '../flags/dailyLeaderboardRender.js';
 import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
+import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -401,6 +402,56 @@ export function bootFlagQuiz() {
       }
     }
 
+    /**
+     * Mount the inline share button at the end of the final-score line.
+     * Touch-only (matches daily / findFlag / TTT) — desktop's OS share
+     * sheet is heavy for what's conceptually "copy this URL", and a
+     * silent clipboard path is too quiet to be discoverable, so we just
+     * don't render the icon there. Click → shareUrl(currentURL, title +
+     * "Can you beat me?"), with a 1.5 s `.copied` flash on clipboard
+     * success.
+     *
+     * The current URL already encodes variant + mode (?v=…&n=…) so a
+     * recipient lands on the exact same configuration.
+     *
+     * Idempotent — bails if the button already exists, so a hot re-paint
+     * (lang switch) doesn't double-mount.
+     *
+     * @param {number} correct  Correct-answer count for this round.
+     */
+    function mountShareButton(correct) {
+      const isTouchDevice = typeof window.matchMedia === 'function'
+        && window.matchMedia('(pointer: coarse)').matches;
+      if (!isTouchDevice) return;
+      if (document.getElementById('result-share')) return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'share-link';
+      btn.id = 'result-share';
+      btn.setAttribute('aria-label', t('quiz.share.aria', 'Share result'));
+      const iconEl = document.createElement('span');
+      iconEl.className = 'share-icon';
+      iconEl.setAttribute('aria-hidden', 'true');
+      btn.appendChild(iconEl);
+      btn.onclick = async () => {
+        const title = buildQuizShareTitle({
+          template: t('quiz.share.title', 'Yet Another Quiz — {variant} {mode} — {score}'),
+          variant: t(`variant.${key}`, VARIANTS[key].label),
+          mode: t(`quiz.mode.${mode}`, mode),
+          timed,
+          correct,
+          target,
+        });
+        const text = t('quiz.share.text', 'Can you beat me?');
+        const r = await shareUrl(window.location.href, { title, text });
+        if (r === 'copied') {
+          btn.classList.add('copied');
+          setTimeout(() => btn.classList.remove('copied'), 1500);
+        }
+      };
+      finalScoreLineEl.appendChild(btn);
+    }
+
     function showResult() {
       cancelAnimationFrame(timerRaf);
       const elapsed = Date.now() - startTime;
@@ -489,6 +540,8 @@ export function bootFlagQuiz() {
         else if (tier === 'confetti') launchConfetti({ intensity });
       }
 
+      mountShareButton(answeredCount);
+
       gameEl.hidden = true;
       progressBarEl.hidden = true;
       resultEl.hidden = false;
@@ -527,6 +580,13 @@ export function bootFlagQuiz() {
         renderModeToggle(key, mode, modes);
         if (currentAnswer) countryNameEl.textContent = countryName(currentAnswer);
         paintResultLabels();
+        // The share button itself stays mounted across a lang switch —
+        // re-rendering it would clear any in-flight `.copied` flash and
+        // the click handler reads t(…) fresh on each click anyway, so
+        // the title/text already follow the live language. Only the
+        // static aria-label needs an explicit re-paint.
+        const shareBtn = document.getElementById('result-share');
+        if (shareBtn) shareBtn.setAttribute('aria-label', t('quiz.share.aria', 'Share result'));
         // Re-paint the leaderboard panel so its labels ("Loading…",
         // empty-state copy, "You" suffix) come back in the new language.
         // Bails out if no leaderboard render has happened yet (refreshI18n
