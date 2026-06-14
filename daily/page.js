@@ -331,11 +331,16 @@ function createShareButton() {
       .replace('{n}', String(n))
       .replace('{score}', String(foundCodes.length))
       .replace('{total}', String(answerCodes.length));
+    // Always include the puzzle number in the share URL — `/daily/`
+    // alone always serves *today's* puzzle, so a recipient clicking
+    // a share for a past-day puzzle would land on the wrong one.
+    // Including `?n=${n}` makes the recipient see the exact puzzle
+    // the sharer played, whether it's today's or from the archive.
     const text = buildShareText({
       titleLine,
       answerCodes,
       foundCodes,
-      url: window.location.origin + '/daily/',
+      url: `${window.location.origin}/daily/?n=${n}`,
     });
     const r = await shareText(text);
     if (r === 'copied') {
