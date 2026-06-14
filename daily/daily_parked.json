@@ -46,5 +46,21 @@
   {
     "filter": "motif:bird,motif:weapon",
     "notes": "3 flags — bo, ec, gt (all South/Central American coat-of-arms with condor/quetzal + crossed weapons). Acknowledged rule violations, parked on author intent: (1) rule 14 — BOTH motif:bird and motif:weapon are single-use, already used in the live/backlog catalog (motif:weapon now used by the standalone 'all flags with weapons' puzzle at backlog #48 since 2026-06-13). Kept as a curiosity because the bird+weapon overlap is a real thematic category (Andean/Maya iconography). Will never ship as written unless the single-use rule is relaxed for parked-recall puzzles past #100."
+  },
+  {
+    "filter": "continent:North America,motif:star-or-moon,color:!black",
+    "notes": "5 sovereigns (cu, gd, hn, pa, us). Primary-clean ✓. Two reasons to park: (1) rule 11 — Grenada (gd) already sits at the cap of 5 puzzles (#53/#62/#64/#65/#67), three of which are star-or-moon framings; a 6th appearance leans further on the same flag. (2) High overlap with backlog #42 (NA·star-or-moon·color:white → {ag, cu, hn, kn, pa, us}): 4 of our 5 flags also appear in #42 (cu, hn, pa, us). Refined rule 6 technically allows it (different colour tokens, not a refinement), but the framings are functionally adjacent and the NA star-or-moon pool (7 sovs total: ag, cu, gd, hn, kn, pa, us) is small enough that #42 plus this would saturate it. Past-#100 candidate."
+  },
+  {
+    "filter": "continent:Oceania,motif:union-jack",
+    "notes": "4 sovereigns (au, fj, nz, tv). Blocked on three rules: (1) Rule 14 single-use — motif:union-jack is already burned by backlog #50 (the solo 'find all union-jack flags' puzzle → au, fj, gb, nz, tv). (2) Rule 6 refinement — this filter literally adds continent:Oceania to #50's filter, and {au, fj, nz, tv} is a strict subset of {au, fj, gb, nz, tv} (missing only gb). Textbook 'you just filtered more' — player who saw #50 has met all 4 of these. (3) Rule 10 small × small — Oceania (14 sovs) compounded with union-jack (5 sovs) → contrived 4-flag set. Will never ship unless the single-use policy relaxes or #50's framing is reworked."
+  },
+  {
+    "filter": "continent:Africa,colorCount:3,color:!yellow",
+    "notes": "9 sovereigns (bi, bw, ci, dz, lr, mg, mw, ne, sl). Primary-clean ✓. Hard rules pass; parked on rule 11 (country-reuse cap). Botswana (bw) already sits at 6 puzzles — over the cap of 5 — across backlog #30/#33/#44/#52/#56/#59 (bw is rare as a primary-clean African flag with many colour-presence combos). Burundi (bi) is at the cap (5: #41/#43/#45/#62/#64). Adding this puzzle pushes bw to 7 and bi to 6, doubling down on already over-leaned flags. Will unblock if one of bw's existing entries is reworked, or past-#100 if reuse cap relaxes."
+  },
+  {
+    "filter": "continent:North America,color:blue,color:!red",
+    "notes": "8 sovereigns (bb, bs, gt, hn, lc, ni, sv, vc). Primary-clean ✓ (no drift). Reads as the symmetric sibling of live #8 (Asia·blue·!red) — passed rules 1-14 cleanly. Blocked on rule 15 (flag-data ambiguity): El Salvador (sv) and Nicaragua (ni) are both tagged `ambiguousColors: [\"red\"]` because their coats of arms contain disputed-red elements. A player who reads sv or ni as 'has red' would expect the game to exclude them from `color:!red`, but the canonical reading keeps them in — that's the textbook membership-flip Rule 15 was created to catch. Will unblock if the sv/ni red ambiguity is resolved in flags/countries.json (either confirmed red → drop the !red exclusion, or confirmed not red → remove the ambig tag)."
   }
 ]
