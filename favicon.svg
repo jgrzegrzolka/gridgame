@@ -1,6 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <!-- First column + center cell paint in --primary-color (#2B1D24);
-       the remaining 5 cells paint in --secondary-color (#C2899F). -->
+  <!-- First column + center cell paint in the brand primary (#2B1D24);
+       the remaining 5 cells paint in the brand secondary (#C2899F).
+       Hex literals, not CSS vars, because comments inside an SVG can't
+       contain a double-hyphen sequence (XML rule) — the previous version
+       wrote "var(- -primary-color)" inline and tripped the parser, leaving
+       the icon unparseable. -->
   <g fill="#2B1D24">
     <rect x="2" y="2" width="6" height="6"/>
     <rect x="2" y="9" width="6" height="6"/>
