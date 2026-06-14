@@ -945,14 +945,16 @@
   },
   {
     "n": 68,
-    "filter": "motif:star-or-moon,color:blue,color:yellow,colorCount:2",
+    "filter": "color:blue,color:yellow,colorCount:2",
     "answers": [
       "kz",
-      "pw"
+      "pw",
+      "se",
+      "ua"
     ],
     "description": {
-      "en": "Find all flags with a star or moon whose only colours are blue and yellow — no others.",
-      "pl": "Znajdź wszystkie flagi z gwiazdą lub księżycem, które mają tylko 2 kolory: niebieski i żółty."
+      "en": "Find all flags whose only colours are blue and yellow — no others.",
+      "pl": "Znajdź wszystkie flagi, które mają tylko 2 kolory: niebieski i żółty."
     }
   },
   {
