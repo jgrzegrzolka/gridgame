@@ -196,29 +196,22 @@ function paintStatsPanel(found, total, stats, opts = {}) {
   container.innerHTML = '';
   const h = document.createElement('p');
   h.className = 'daily-stats-headline';
-  // Wrap the score string in its own span so the headline is a
-  // clean two-flex-item layout (text-span + share-button) instead
-  // of loose text nodes — the headline's `display: flex` would
-  // otherwise turn each text node into a separate anonymous flex
-  // item and the gap wouldn't apply cleanly.
-  const textEl = document.createElement('span');
-  textEl.textContent = headlineText;
-  h.appendChild(textEl);
   // Inline share button at the end of the headline — "Your score:
   // 2/4 · Average score: 3.4/4 · [share]". createShareButton
   // returns null on desktop (touch-only — see its docstring) and
-  // pre-finish (no shareCtx yet), so the separator + button block
-  // is a no-op except on a touch device viewing a real result. The
-  // `·` reuses the same separator the headline text already uses
-  // between the score and the average — visual continuity.
+  // pre-finish (no shareCtx yet), so the trailing " · " + button
+  // is a no-op except on a touch device viewing a real result.
+  //
+  // The " · " is baked into the text node (not its own flex item)
+  // so the spacing matches the existing inline rhythm between
+  // "score: 2/4" and "Average". A flex-gap separator would
+  // produce double-padding (flex gap on each side of the dot)
+  // that read as too generous on mobile.
   const shareBtn = createShareButton();
-  if (shareBtn) {
-    const sep = document.createElement('span');
-    sep.textContent = '·';
-    sep.setAttribute('aria-hidden', 'true');
-    h.appendChild(sep);
-    h.appendChild(shareBtn);
-  }
+  const textEl = document.createElement('span');
+  textEl.textContent = shareBtn ? `${headlineText} · ` : headlineText;
+  h.appendChild(textEl);
+  if (shareBtn) h.appendChild(shareBtn);
   container.appendChild(h);
   if (opts.loading) {
     // Three pulsing dots after the label — CSS animates them in a wave
