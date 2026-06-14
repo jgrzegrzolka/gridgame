@@ -158,8 +158,8 @@
       "us"
     ],
     "description": {
-      "en": "Find all North American flags whose only colours are red, white, and blue — no others.",
-      "pl": "Znajdź wszystkie północnoamerykańskie flagi, które mają tylko 3 kolory: czerwony, biały i niebieski."
+      "en": "Find all North American flags with white, blue, and only 3 colours.",
+      "pl": "Znajdź wszystkie północnoamerykańskie flagi z bielą, niebieskim i tylko 3 kolorami."
     }
   }
 ]
