@@ -9,6 +9,7 @@ import {
 } from './onlineClient.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { submitTttResult } from '../flags/tttResultSubmit.js';
+import { submitEngagementEvent } from '../flags/eventSubmit.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
 import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
@@ -629,6 +630,12 @@ function runOnline(countries) {
     // 'dismissed': user backed out — leaving the URL unshared is the point.
     // 'failed': all three mechanisms refused; staying silent matches the
     //   pre-extraction behaviour.
+    if (result === 'shared' || result === 'copied') {
+      void submitEngagementEvent(deviceId, {
+        kind: 'share',
+        payload: { surface: 'ttt', contextHint: activeRoom.code },
+      });
+    }
   }
 
   function flashCopied() {

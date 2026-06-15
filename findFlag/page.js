@@ -25,6 +25,8 @@ import { launchConfetti, launchFireworks } from '../confetti.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { refreshChooserI18n } from './chooserI18n.js';
 import { shareUrl } from '../common.js';
+import { getOrCreateDeviceId } from '../flags/identity.js';
+import { submitEngagementEvent } from '../flags/eventSubmit.js';
 
 /**
  * Options the Random button (and the result page's "Random next" link)
@@ -73,6 +75,23 @@ function attachShareHandler(el) {
     if (result === 'copied') {
       el.classList.add('copied');
       setTimeout(() => el.classList.remove('copied'), 1500);
+    }
+    // Engagement event: log shares of a custom puzzle. contextHint is
+    // the raw `?f=…` filter string so the "shared 5 different filters"
+    // achievement (Feature O) can count distinct payloads. Falls
+    // through to a generic "no filter" hint if for some reason the
+    // URL doesn't carry one — defensive only, the share affordance is
+    // gated to filter-set states.
+    if (result === 'shared' || result === 'copied') {
+      const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+      const filterRaw = new URLSearchParams(window.location.search).get('f') ?? '';
+      void submitEngagementEvent(deviceId, {
+        kind: 'share',
+        payload: {
+          surface: 'findflag',
+          ...(filterRaw ? { contextHint: filterRaw } : {}),
+        },
+      });
     }
   });
 }

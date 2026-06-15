@@ -15,3 +15,4 @@ require('./functions/getProfile');
 require('./functions/tttResult');
 require('./functions/getTttResult');
 require('./functions/clearLocalRows');
+require('./functions/engagementEvent');

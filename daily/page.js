@@ -25,6 +25,7 @@ import { pickExtraStats, hasAnyExtraStats, pickMarkerKind } from './extraStats.j
 import { shareText } from '../common.js';
 import { buildShareText } from '../flags/shareGrid.js';
 import { fetchDailyMe } from './streakClient.js';
+import { submitEngagementEvent } from '../flags/eventSubmit.js';
 
 // Turnstile is soft-disabled across all environments (2026-06-10) after
 // a real user's challenge was rejected by Cloudflare with a 401 on
@@ -458,6 +459,18 @@ function createShareButton() {
     if (r === 'copied') {
       btn.classList.add('copied');
       setTimeout(() => btn.classList.remove('copied'), 1500);
+    }
+    // Engagement event: log only when the share actually resolved to
+    // a system action. 'shared' = OS share sheet completed; 'copied' =
+    // landed on the clipboard. 'dismissed' / 'failed' = no share
+    // occurred, no event. Fire-and-forget — failure here mustn't
+    // block the UI.
+    if (r === 'shared' || r === 'copied') {
+      const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+      void submitEngagementEvent(deviceId, {
+        kind: 'share',
+        payload: { surface: 'daily', contextHint: String(n) },
+      });
     }
   };
   return btn;
