@@ -90,3 +90,11 @@
 .profile-status.is-error {
   color: var(--secondary-color);
 }
+/* Shake on transition into an offensive name. Reuses the same
+ * cell-shake keyframes the input uses on a save failure (per CLAUDE.md
+ * "Same mechanism = same code"). JS fires the class once when the
+ * input first becomes offensive and drops it on animationend so a
+ * later re-entry can replay via the reflow-restart trick. */
+.profile-status.shake-wrong {
+  animation: cell-shake 0.5s ease-in-out;
+}

@@ -49,6 +49,12 @@ export function bootProfile() {
   let inFlight = false;
   /** @type {any} */
   let flashTimer = 0;
+  /** Tracks whether the previous refreshButtons pass found the input
+   * to be offensive. Used to fire the status shake only on the
+   * transition false → true — not on every subsequent keystroke while
+   * the input stays offensive (that'd shake on every character typed
+   * inside a blocked word, which reads as nervous, not informative). */
+  let wasOffensive = false;
 
   /**
    * Translate the live input value into the payload the server would receive.
@@ -87,8 +93,19 @@ export function bootProfile() {
     if (offensive) {
       saveBtn.disabled = true;
       setStatus(status, t('nickname.errorOffensive', 'Please choose a different nickname'), 'is-error', 'nickname.errorOffensive');
+      if (!wasOffensive) {
+        // Transition into offensive — shake the status line once via
+        // the reflow-restart trick so the user notices the message
+        // even if their eye was on the input. Subsequent keystrokes
+        // that keep the input offensive don't re-trigger.
+        status.classList.remove('shake-wrong');
+        void status.offsetWidth;
+        status.classList.add('shake-wrong');
+      }
+      wasOffensive = true;
       return;
     }
+    wasOffensive = false;
     // Clear the moderation error when the user edits back into a
     // valid range. Other error types (network / server) clear on their
     // own timers; the live-offensive branch is sticky while offensive.
@@ -101,9 +118,14 @@ export function bootProfile() {
   refreshButtons();
   input.addEventListener('input', refreshButtons);
   // Drop the shake-wrong class once its animation ends so a subsequent
-  // failure can re-add it cleanly via the reflow restart trick.
+  // failure can re-add it cleanly via the reflow restart trick. Same
+  // pattern for the status element when it shakes on transition into
+  // an offensive name.
   input.addEventListener('animationend', () => {
     input.classList.remove('shake-wrong');
+  });
+  status.addEventListener('animationend', () => {
+    status.classList.remove('shake-wrong');
   });
 
   /**
