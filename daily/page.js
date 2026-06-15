@@ -252,7 +252,11 @@ function paintStatsPanel(found, total, stats, opts = {}) {
   if (showStreak) {
     inlineText += ` · ${labels.streakLine.replace('{n}', String(streakState.currentStreak))}`;
   }
-  if (shareBtn) inlineText += ' · ';
+  // No trailing space after the dot — the share-link button has 6px
+  // left padding (common.css .share-link) which gives the gap to the
+  // icon glyph. Adding a trailing space stacks on top of the padding
+  // and breaks the rhythm vs the "2 · " separator before this one.
+  if (shareBtn) inlineText += ' ·';
   const textEl = document.createElement('span');
   textEl.textContent = inlineText;
   h.appendChild(textEl);
