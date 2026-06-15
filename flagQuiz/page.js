@@ -27,6 +27,7 @@ import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
+import { submitEngagementEvent } from '../flags/eventSubmit.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
 import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
@@ -447,6 +448,15 @@ export function bootFlagQuiz() {
         if (r === 'copied') {
           btn.classList.add('copied');
           setTimeout(() => btn.classList.remove('copied'), 1500);
+        }
+        if (r === 'shared' || r === 'copied') {
+          void submitEngagementEvent(deviceId, {
+            kind: 'share',
+            payload: {
+              surface: 'flagquiz',
+              contextHint: quizRecordConfigKey(key, mode, includeAll),
+            },
+          });
         }
       };
       finalScoreLineEl.appendChild(btn);

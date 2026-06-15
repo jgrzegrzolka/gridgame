@@ -16,6 +16,7 @@ import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
 import { submitTttResult } from '../../flags/tttResultSubmit.js';
+import { submitEngagementEvent } from '../../flags/eventSubmit.js';
 import { fetchProfile } from '../../flags/profileFetch.js';
 import { displayNickname } from '../../flags/nickname.js';
 
@@ -662,6 +663,12 @@ function runOnline(countries) {
     if (result === 'copied') flashCopied();
     // 'shared' / 'dismissed' / 'failed' — see ticTacToe/page.js for why
     // each of those stays silent here.
+    if (result === 'shared' || result === 'copied') {
+      void submitEngagementEvent(deviceId, {
+        kind: 'share',
+        payload: { surface: 'ttt', contextHint: activeRoom.code },
+      });
+    }
   }
 
   function flashCopied() {
