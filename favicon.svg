@@ -1,21 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <!-- First column + center cell paint in the brand primary (#2B1D24);
-       the remaining 5 cells paint in the brand secondary (#C2899F).
-       Hex literals, not CSS vars, because comments inside an SVG can't
-       contain a double-hyphen sequence (XML rule) — the previous version
-       wrote "var(- -primary-color)" inline and tripped the parser, leaving
-       the icon unparseable. -->
-  <g fill="#2B1D24">
-    <rect x="2" y="2" width="6" height="6"/>
-    <rect x="2" y="9" width="6" height="6"/>
-    <rect x="2" y="16" width="6" height="6"/>
-    <rect x="9" y="9" width="6" height="6"/>
-  </g>
-  <g fill="#C2899F">
-    <rect x="9" y="2" width="6" height="6"/>
-    <rect x="16" y="2" width="6" height="6"/>
-    <rect x="16" y="9" width="6" height="6"/>
-    <rect x="9" y="16" width="6" height="6"/>
-    <rect x="16" y="16" width="6" height="6"/>
-  </g>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- brand surface background -->
+  <rect width="100" height="100" fill="#FAFAFA"/>
+  <!-- grid mark inverted (v3): P D P / P P D / P D D -->
+  <!-- row 1 (y=14) -->
+  <rect x="14" y="14" width="20" height="20" fill="#C2899F"/>
+  <rect x="40" y="14" width="20" height="20" fill="#2B1D24"/>
+  <rect x="66" y="14" width="20" height="20" fill="#C2899F"/>
+  <!-- row 2 (y=40) -->
+  <rect x="14" y="40" width="20" height="20" fill="#C2899F"/>
+  <rect x="40" y="40" width="20" height="20" fill="#C2899F"/>
+  <rect x="66" y="40" width="20" height="20" fill="#2B1D24"/>
+  <!-- row 3 (y=66) -->
+  <rect x="14" y="66" width="20" height="20" fill="#C2899F"/>
+  <rect x="40" y="66" width="20" height="20" fill="#2B1D24"/>
+  <rect x="66" y="66" width="20" height="20" fill="#2B1D24"/>
 </svg>
