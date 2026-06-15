@@ -21,39 +21,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-### Feature N: Streaks + win% — finish screen + profile page
-
-**Goal.** Surface a returning-player number on the daily finish screen that makes coming back tomorrow feel like it matters. All three numbers (current streak, max streak, win %) derived server-side from existing `dailyResults` rows — no new container, no migration.
-
-**Shape (decided 2026-06-15, kept deliberately calm):**
-
-- **Finish screen** splits "your stats" from "community stats" by position: a personal block **above Found** ("Your score: 2/4 · Streak: 3 · ⌬") and a community block **below Missed** ("Average score: 3.4/4" + caption). Personal paints instantly (no fetch); community shows a loading spinner while stats are in flight, then the average / caption / extra rails. Hidden entirely when `currentStreak < 2` (no signal yet, just clutter).
-- **`/profile/` page** (already exists from Feature H) shows **all three**: current streak, max streak, win %. This is the "I want my numbers" surface — the finish screen stays a celebration, the profile page is the dashboard.
-
-**Why this split:** the finish screen runs on every completion and must stay calm. The profile page runs only when the player goes looking, so breadth belongs there. Lets us add more columns later (D7 streak, perfect-day count, …) on the profile page without re-tightening the finish layout each time.
-
-**Phases (one PR each, off main, don't auto-merge):**
-
-- [x] **N1 — pure compute + tests.** `api/src/lib/streakCompute.js` exports `computeStreak({rows, latestId?})` (rows are `{id, completed}` keyed on any consecutivity axis — for daily streaks the caller passes Warsaw day-numbers) and `submissionsToStreakRows(docs, dayFn)` (the dedupe layer that maps `dailyResults` rows to streak rows; multiple submissions on the same day collapse to one entry). 22 unit tests. *(Originally landed at `flags/streakCompute.js` in PR #438; relocated to `api/src/lib/` during N2. The N1 spec originally said "consecutive puzzleIds" — corrected during N3 to "consecutive Warsaw days" after Jan caught that doing archive puzzles #1, #2, #3 in one sitting would incorrectly show streak = 3.)*
-- [x] **N2 — read endpoint.** `GET /api/v1/daily/me?deviceId=…` in `api/src/functions/dailyMe.js`. Cross-partition `SELECT c.submittedAt FROM c WHERE c.deviceId = @did` against `dailyResults`, maps each row to a Warsaw day-number via `warsawDayNumber`, dedupes via `submissionsToStreakRows`, calls `computeStreak` with `latestId = today` so a player whose latest submission predates today gets `currentStreak: 0`. 60s in-Function cache keyed by `deviceId`, `?fresh=1` bypass, 60/min/IP rate limit, `local:true` rows included. No new container, no Cosmos schema change. *(N2 originally selected `puzzleId` and accepted a `latestPuzzleId` query param — corrected during N3 to use Warsaw days. Server computes "today" itself; client doesn't pass it.)*
-- [x] **N3 — finish screen wiring.** New `daily/streakClient.js` (`fetchDailyMe`, never-throws, defensive shape normalisation, 11 tests). `daily/page.js` fires the fetch after both the natural-finish pipeline and the revisit paint, but **only when `n === todayN(catalog)`** — an archive finish / revisit doesn't extend the streak counter, so surfacing the line there would falsely suggest the archive play just bumped it. `paintStatsPanel` composes the streak inline into the headline ("Twój wynik: 2/27 · Średni wynik: 20.6/27 · Seria dni: 2 · ⌬") only when `currentStreak ≥ 2`; on narrow viewports the line wraps as inline text and the share button stays glued (no flex-row orphan). i18n strings under `daily.streak.line` in `en.json` + `pl.json`. Soft language switch re-renders correctly because the label resolves at paint time. **N3 also corrected the N1/N2 puzzleId → Warsaw-day semantics:** added `api/src/lib/warsawDay.js` (DST-safe via `Intl.DateTimeFormat`, 8 tests) and renamed the StreakRow field `puzzleId` → `id` to keep the pure compute honestly generic.
-- [ ] **N4 — profile page wiring.** `/profile/` reads the same endpoint, renders all three numbers.
-
-**Open design calls (settled now to avoid mid-flight re-debate):**
-
-- **Win = completion** (any score). Score-threshold definition creates a "what counts as a win" debate every time a puzzle gets harder.
-- **Streak break = missed day OR played-but-didn't-finish.** Otherwise half-trying every day keeps the streak alive, which dilutes the badge.
-- **Identity scope: per-deviceId today.** After Feature C lands, dedupe by identityId where present, deviceId otherwise (same pattern Feature C already calls out).
-- **Cross-partition cost:** today ~10 puzzles × 1-2 RU per fan-out = rounding noise against the 1000 RU/s Free Tier ceiling. The query touches every puzzleId partition (Cosmos partition key is `/puzzleId`); each partition returns 0 or 1 doc for the given deviceId. 60s in-Function cache keyed by deviceId absorbs most repeat hits.
-- **When to materialize a per-device aggregate doc** (the mitigation, deferred until felt): ship a new container `dailyStreaks` partitioned by `/deviceId`, doc shape `{ id: deviceId, currentStreak, maxStreak, totalPlayed, totalCompleted, daysSet, lastUpdatedAt, v }`, upserted from `dailyResult.js` on every finish. `dailyMe.js` becomes a point-read (~1 RU). Same pattern Feature G uses for `tttPairs`. **Trigger any one of:**
-  - Cosmos account total RU/s consumption sits sustained above **800 RU/s** (80% of Free Tier 1000) — visible in `cosmos-yetanotherquiz-jg` portal metrics.
-  - `/api/v1/daily/me` p95 latency creeps above **500ms** (today ~50-100ms warm, ~1-2s cold) — Application Insights `dependencies` panel filtered to `dailyMe`.
-  - Puzzle count crosses **~300** (~10 months of daily releases from 2026-06-15) — at that fan-out, ~10-15 RU per uncached fetch starts being felt.
-
-  Don't ship before any of these fire — the write amplification (every `dailyResult` insert gains a second Cosmos round-trip) buys nothing until the read path actually hurts.
-- **Why not localStorage caching:** the explicit reason for server-side compute was "streaks survive browser cache clears." LocalStorage caching reintroduces the staleness / cross-device-drift problem we're avoiding. The 60s in-Function cache covers the same RU concern without that downside.
-
-**Out of scope** (captured so they don't drift back in): streak freezes / makeup days, weekly streaks, public streak leaderboards (Feature K territory), retroactive push notification, in-grid "your streak" badge on the archive page, per-mode streaks if the daily ever forks.
+*(Nothing in flight. Promote a backlog item below when ready to ship it.)*
 
 ---
 
@@ -185,6 +153,44 @@ The pure-SQL option is by far the cheapest and probably enough for the first six
 ---
 
 ## Done
+
+### Feature N: Daily streaks — finish screen + profile page — *shipped 2026-06-15*
+
+**Goal.** Surface a returning-player number on the daily finish screen that makes coming back tomorrow feel like it matters, and a dashboard view of the same numbers on `/profile/` for the "I want my stats" surface. Derived server-side from existing `dailyResults` rows — no new container, no migration.
+
+**Shape that shipped.** Finish screen splits "your stats" from "community stats" by position: personal block inline in the headline (only when `currentStreak ≥ 2` — no signal, no clutter), community block below. Profile page reads the same endpoint and renders Current streak + Best streak (hidden until `totalPlayed ≥ 1`). Win-rate row deliberately omitted on the profile page — by construction every `dailyResults` row is a completion, so `winPercent` is always 100% until Feature M Part B emits start events with a `totalStarts > totalCompleted` denominator. The endpoint still returns the field for when M Part B lands.
+
+**What shipped (four phases):**
+
+1. **N1 — pure compute + tests.** `api/src/lib/streakCompute.js` exports `computeStreak({rows, latestId?})` (rows are `{id, completed}` keyed on any consecutivity axis — for daily streaks the caller passes Warsaw day-numbers) and `submissionsToStreakRows(docs, dayFn)` (the dedupe layer; multiple submissions on the same calendar day collapse to one entry). 22 unit tests. *(Originally landed at `flags/streakCompute.js` in PR #438; relocated to `api/src/lib/` during N2. N1 spec originally said "consecutive puzzleIds" — corrected during N3 to "consecutive Warsaw days" after Jan caught that doing archive puzzles #1, #2, #3 in one sitting would incorrectly show streak = 3.)*
+2. **N2 — read endpoint.** `GET /api/v1/daily/me?deviceId=…` in `api/src/functions/dailyMe.js`. Cross-partition `SELECT c.submittedAt FROM c WHERE c.deviceId = @did` against `dailyResults`, maps to Warsaw day-numbers via `warsawDayNumber`, dedupes, calls `computeStreak` with `latestId = today` (server computes "today" itself so a player who skipped today gets `currentStreak: 0`). 60s in-Function cache keyed by `deviceId`, `?fresh=1` bypass, 60/min/IP rate limit, `local:true` rows included.
+3. **N3 — finish screen wiring.** New `daily/streakClient.js` (`fetchDailyMe`, never-throws, defensive shape normalisation, 11 tests). `daily/page.js` fires the fetch after both natural-finish and revisit paint, but **only when `n === todayN(catalog)`** — an archive finish doesn't extend the streak counter, so surfacing the line there would falsely suggest the archive play bumped it. `paintStatsPanel` composes the streak inline ("Twój wynik: 2/27 · Średni wynik: 20.6/27 · Seria dni: 2 · ⌬") only when `currentStreak ≥ 2`. i18n strings under `daily.streak.line`. **N3 also corrected the puzzleId → Warsaw-day semantics from N1/N2:** added `api/src/lib/warsawDay.js` (DST-safe via `Intl.DateTimeFormat`, 8 tests) and renamed the StreakRow field `puzzleId` → `id`.
+4. **N4 — profile page wiring + adjacent palette cleanups.** `/profile/` imports `fetchDailyMe` and renders Current streak + Best streak; form re-orders so Save · Home stays anchored at the bottom whether stats are shown or not. Title key renamed `nickname.editTitle` → `profile.title` (page is no longer nickname-only). Folded into the same PR per the "UI polish iterates on one branch" rule: `findFlag/index.css` `.find-input.wrong` red border + red wash → pink border via `var(--secondary-color)`, no wash (fixes both findFlag and daily since daily includes findFlag/index.css); `flagQuiz/index.css` `@keyframes penalty-flash` red `#c5302d` → `#666` swapped to `var(--secondary-color)` → `var(--muted-color)` so the timer's penalty pulse uses brand pink and lands back on the same muted colour `.play-timer` declares at rest.
+
+**Open design calls settled in flight (preserved for forward reference):**
+
+- **Win = completion** (any score). Score-threshold definition creates a "what counts as a win" debate every time a puzzle gets harder.
+- **Streak break = missed day OR played-but-didn't-finish.** Otherwise half-trying every day keeps the streak alive, which dilutes the badge. (Today no source produces a `completed:false` row — `submissionsToStreakRows` always emits `completed:true`. The shape stays open for Feature M Part B's start-event signal.)
+- **Identity scope: per-deviceId today.** After Feature C lands, dedupe by identityId where present, deviceId otherwise.
+- **Why not localStorage caching:** the explicit reason for server-side compute was "streaks survive browser cache clears." LocalStorage caching reintroduces the staleness / cross-device-drift problem we're avoiding. The 60s in-Function cache covers the same RU concern without that downside.
+
+**When to materialize a per-device aggregate doc** (deferred until felt): ship a new container `dailyStreaks` partitioned by `/deviceId`, doc shape `{ id: deviceId, currentStreak, maxStreak, totalPlayed, totalCompleted, daysSet, lastUpdatedAt, v }`, upserted from `dailyResult.js` on every finish. `dailyMe.js` becomes a point-read (~1 RU). Same pattern Feature G uses for `tttPairs`. **Trigger any one of:**
+
+- Cosmos account total RU/s consumption sits sustained above **800 RU/s** (80% of Free Tier 1000) — visible in `cosmos-yetanotherquiz-jg` portal metrics.
+- `/api/v1/daily/me` p95 latency creeps above **500ms** (today ~50-100ms warm, ~1-2s cold) — Application Insights `dependencies` panel filtered to `dailyMe`.
+- Puzzle count crosses **~300** (~10 months of daily releases from 2026-06-15) — at that fan-out, ~10-15 RU per uncached fetch starts being felt.
+
+Don't ship before any of these fire — the write amplification (every `dailyResult` insert gains a second Cosmos round-trip) buys nothing until the read path actually hurts.
+
+**Standing artifacts** (the load-bearing outputs future work inherits):
+
+- `api/src/lib/streakCompute.js` `computeStreak` + `submissionsToStreakRows` — pure, generic, keyed on any consecutivity axis. Any future "streak counter on X" reuses these.
+- `api/src/lib/warsawDay.js` `warsawDayNumber` — DST-safe Warsaw-day mapping via `Intl.DateTimeFormat`. Reusable for any feature that needs "did these two events fall on the same Warsaw calendar day?".
+- `daily/streakClient.js` `fetchDailyMe` — the contract for reading `/api/v1/daily/me`. Both the finish screen and the profile page compose this; future surfaces (archive grid badge, etc.) do the same.
+
+**Key PRs.** #438 (N1), #439 (N2), #440 (N3), #441 (N3 follow-up: live offensive-nickname check + pink moderation colours), #442 (N4 + red→pink palette fixes).
+
+**Out of scope, intentionally deferred** (captured so they don't drift back in): streak freezes / makeup days, weekly streaks, public streak leaderboards (Feature K territory — already shipped for *daily* leaderboards), retroactive push notification, in-grid "your streak" badge on the archive page, per-mode streaks if the daily ever forks, the win-rate row on the profile page until Feature M Part B gives the denominator real meaning.
 
 ### Feature L: Wordle-style shareable result grid + touch-only share alignment — *shipped 2026-06-14*
 
