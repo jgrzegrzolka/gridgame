@@ -678,6 +678,19 @@ export function bootDaily() {
       // finally get their result counted.
       const game = startGame(n, category, result.targets, all, {
         onFinish: (info) => handleFinish(n, result.targets, all, info, isToday),
+        // First focus on the search input fires `daily_start` — the
+        // "intent to play" signal for Feature M Part B analytics.
+        // Server-side `id` is deterministic per (dayId, puzzleId) so
+        // refresh + click within the same Warsaw day for the same
+        // puzzle dedupes via the 409 path. Captures archive replays
+        // too (engagement counts regardless of which puzzle).
+        onFirstInteraction: () => {
+          const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+          void submitEngagementEvent(deviceId, {
+            kind: 'daily_start',
+            payload: { puzzleId: n },
+          });
+        },
       });
       attachLangRefresh(game, {
         raw,

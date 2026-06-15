@@ -291,12 +291,22 @@ export function renderResult(targets, foundCodes) {
  * @param {import('../flags/engine.js').Category} category
  * @param {Country[]} targets
  * @param {Country[]} all
- * @param {{ skipSave?: boolean, onFinish?: (info: { foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }) => void }} [opts]
+ * `onFirstInteraction` (optional) fires once, on the first focus of
+ * the country-search input — the clearest "intent to play" signal we
+ * have without a cell-click grid. One-shot via `{ once: true }`, so
+ * the listener self-removes after fire; refocusing later in the same
+ * round doesn't re-emit. Used by `daily/page.js` to fire the
+ * `daily_start` engagement event (Feature M Part B); the author-only
+ * sister pages (`daily/ideas/`, `daily/backlog/`) don't pass it, so
+ * preview-renders stay event-free.
+ *
+ * @param {{ skipSave?: boolean, onFinish?: (info: { foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }) => void, onFirstInteraction?: () => void }} [opts]
  * @returns {{ refreshI18n: (next: { all: Country[], targets: Country[], label: string }) => void }}
  */
 export function startGame(n, category, targets, all, opts = {}) {
   const skipSave = opts.skipSave === true;
   const onFinish = typeof opts.onFinish === 'function' ? opts.onFinish : null;
+  const onFirstInteraction = typeof opts.onFirstInteraction === 'function' ? opts.onFirstInteraction : null;
   const startTime = Date.now();
   // pool is rebuilt on a soft language switch (the suggestion matcher reads
   // each Country's `aliases`, which are baked at withLocalizedAliases time
@@ -423,6 +433,14 @@ export function startGame(n, category, targets, all, opts = {}) {
   }
 
   inputEl.addEventListener('input', updateSuggestions);
+  if (onFirstInteraction) {
+    // First focus on the search input = clearest "intent to play"
+    // signal we have on a text-input flow. `{ once: true }` removes
+    // the listener after fire so a later refocus mid-round doesn't
+    // re-emit. Daily's caller fires `daily_start` from here; the
+    // author-only preview pages skip this opt-in.
+    inputEl.addEventListener('focus', onFirstInteraction, { once: true });
+  }
   inputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
