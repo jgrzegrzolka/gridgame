@@ -166,7 +166,9 @@ body {
 }
 /* Wrong-pick penalty flash in the 60s mode — the -3s jump on the
    countdown is too subtle without it. inline-block lets the transform
-   take hold; the keyframes hold red+big at the start then ease back. */
+   take hold; the keyframes hold pink+big at the start then ease back
+   to the muted rest colour. Brand secondary (pink), not red, per the
+   palette rule of only --primary / --secondary / --muted. */
 #play-time {
   display: inline-block;
 }
@@ -174,9 +176,9 @@ body {
   animation: penalty-flash 600ms ease-out;
 }
 @keyframes penalty-flash {
-  0%   { color: #c5302d; transform: scale(1.5); }
-  35%  { color: #c5302d; transform: scale(1.5); }
-  100% { color: #666;    transform: scale(1); }
+  0%   { color: var(--secondary-color); transform: scale(1.5); }
+  35%  { color: var(--secondary-color); transform: scale(1.5); }
+  100% { color: var(--muted-color);     transform: scale(1); }
 }
 .play-mode:not(:empty)::after {
   content: "·";

@@ -98,3 +98,44 @@
 .profile-status.shake-wrong {
   animation: cell-shake 0.5s ease-in-out;
 }
+
+/* Stats rows — current streak + best streak. One label/value flex row
+ * per stat. Hidden via [hidden] when there's no signal yet (no plays).
+ * Extra top margin (on top of the form's 12px column gap) puts a
+ * deliberate breath between the nickname input/status row above and
+ * the stats block — they're conceptually two different surfaces (edit
+ * your name vs. read your numbers), so they shouldn't read as one
+ * tight stack.
+ *
+ * No win-rate row yet — `winPercent` is always 100% by construction
+ * until Feature M Part B adds start events with a real
+ * totalStarts > totalCompleted denominator. */
+.profile-stats {
+  margin-top: 16px;
+}
+
+.profile-stats-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-stats-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-stats-row dt {
+  font-size: 14px;
+  color: var(--muted-color);
+}
+
+.profile-stats-row dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-color);
+}

@@ -11,11 +11,17 @@
   },
   "nickname": {
     "label": "Pseudonim",
-    "editTitle": "Ustaw swoją nazwę",
     "save": "Zapisz",
     "error": "Nie udało się zapisać",
     "errorOffensive": "To obraźliwe słowo — wybierz inny pseudonim",
     "errorInvalid": "Pseudonim zawiera niedozwolone znaki"
+  },
+  "profile": {
+    "title": "Twój profil — Yet Another Quiz",
+    "stats": {
+      "currentStreak": "Aktualna seria",
+      "maxStreak": "Najdłuższa seria"
+    }
   },
   "privacy": {
     "menuLink": "Prywatność",

@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Set your display name on Yet Another Quiz." />
+    <meta name="description" content="Your profile and stats on Yet Another Quiz." />
     <link rel="canonical" href="https://yetanotherquiz.com/profile/" />
-    <title data-i18n="nickname.editTitle">Set your nickname — Yet Another Quiz</title>
+    <title data-i18n="profile.title">Your profile — Yet Another Quiz</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
@@ -68,6 +68,20 @@
           data-i18n-attr="aria-label:nickname.label"
         />
         <p class="profile-status" id="profile-status" role="status" aria-live="polite"></p>
+
+        <section class="profile-stats" id="profile-stats" hidden aria-live="polite">
+          <dl class="profile-stats-list">
+            <div class="profile-stats-row">
+              <dt data-i18n="profile.stats.currentStreak">Current streak</dt>
+              <dd id="profile-stats-current">0</dd>
+            </div>
+            <div class="profile-stats-row">
+              <dt data-i18n="profile.stats.maxStreak">Best streak</dt>
+              <dd id="profile-stats-max">0</dd>
+            </div>
+          </dl>
+        </section>
+
         <div class="actions-row">
           <button type="submit" class="profile-save" data-i18n="nickname.save">Save</button>
           ·

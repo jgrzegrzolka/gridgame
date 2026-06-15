@@ -138,8 +138,13 @@ body {
   border-color: #1c1c1c;
 }
 .find-input.wrong {
-  border-color: #c5302d;
-  background: #fff5f5;
+  /* Pink border matches the brand secondary — same idiom as
+   * flagQuiz's `.feedback.shake-wrong` and profile's
+   * `.profile-input.shake-wrong` (per CLAUDE.md "same mechanism =
+   * same code" and the palette rule of only --primary / --secondary
+   * / --muted). Used by both findFlag and the daily game — the daily
+   * page loads this stylesheet too. */
+  border-color: var(--secondary-color);
 }
 .find-input.shake {
   animation: find-shake 200ms ease;
