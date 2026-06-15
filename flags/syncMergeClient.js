@@ -7,7 +7,7 @@
  * `/profile/sync/page.js` which orchestrates the full flow:
  *
  *   1. complete passkey link via `linkDevice(deviceId)` →
- *      identityId + targetDeviceId + mergeToken
+ *      identityId + targetDeviceId + claimToken
  *   2. if `sourceDeviceId !== targetDeviceId`, call `syncPreview` to
  *      learn whether daily / profile conflicts exist
  *   3. if conflicts: show wizard (1–2 questions), gather resolutions
@@ -35,14 +35,14 @@ const MERGE_ENDPOINT = '/api/v1/sync/merge';
 
 /**
  * @param {{
- *   mergeToken: string,
+ *   claimToken: string,
  *   sourceDeviceId: string,
  *   fetchImpl?: typeof fetch,
  * }} args
  * @returns {Promise<PreviewResult>}
  */
-export async function syncPreview({ mergeToken, sourceDeviceId, fetchImpl = globalThis.fetch }) {
-  if (!mergeToken || !sourceDeviceId) {
+export async function syncPreview({ claimToken, sourceDeviceId, fetchImpl = globalThis.fetch }) {
+  if (!claimToken || !sourceDeviceId) {
     return { ok: false, reason: 'preview_failed' };
   }
   let res;
@@ -50,7 +50,7 @@ export async function syncPreview({ mergeToken, sourceDeviceId, fetchImpl = glob
     res = await fetchImpl(PREVIEW_ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ mergeToken, sourceDeviceId }),
+      body: JSON.stringify({ claimToken, sourceDeviceId }),
     });
   } catch {
     return { ok: false, reason: 'network_error' };
@@ -73,15 +73,15 @@ export async function syncPreview({ mergeToken, sourceDeviceId, fetchImpl = glob
 
 /**
  * @param {{
- *   mergeToken: string,
+ *   claimToken: string,
  *   sourceDeviceId: string,
  *   resolutions?: { nickname?: 'target' | 'source', daily?: 'target' | 'source' },
  *   fetchImpl?: typeof fetch,
  * }} args
  * @returns {Promise<MergeResult>}
  */
-export async function syncMerge({ mergeToken, sourceDeviceId, resolutions = {}, fetchImpl = globalThis.fetch }) {
-  if (!mergeToken || !sourceDeviceId) {
+export async function syncMerge({ claimToken, sourceDeviceId, resolutions = {}, fetchImpl = globalThis.fetch }) {
+  if (!claimToken || !sourceDeviceId) {
     return { ok: false, reason: 'merge_failed' };
   }
   let res;
@@ -89,7 +89,7 @@ export async function syncMerge({ mergeToken, sourceDeviceId, resolutions = {}, 
     res = await fetchImpl(MERGE_ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ mergeToken, sourceDeviceId, resolutions }),
+      body: JSON.stringify({ claimToken, sourceDeviceId, resolutions }),
     });
   } catch {
     return { ok: false, reason: 'network_error' };

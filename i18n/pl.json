@@ -30,14 +30,16 @@
     "heading": "Grasz na więcej niż jednym urządzeniu?",
     "intro": "Połącz telefon, laptop lub dowolną przeglądarkę, żeby Twoja seria, wyniki i statystyki były wszędzie.",
     "howItWorksTitle": "Jak to działa",
-    "howItWorksStep1": "1. Na tym urządzeniu kliknij „Połącz to urządzenie”. Użyjesz odcisku palca lub Face ID, żeby zapisać profil.",
-    "howItWorksStep2": "2. Na każdym innym urządzeniu otwórz tę samą stronę i kliknij ten sam przycisk — potwierdź odciskiem palca lub Face ID i profil przeniesie się.",
-    "howItWorksStep3": "3. Gotowe — wszystkie urządzenia, na których to zrobisz, dzielą jeden profil.",
+    "howItWorksStep1": "1. Na urządzeniu, które ma być głównym, otwórz tę stronę i kliknij „Pokaż QR dla drugiego urządzenia”.",
+    "howItWorksStep2": "2. Na drugim urządzeniu (telefon, laptop itd.) otwórz aparat i zeskanuj ten QR. Otworzy się link, który uruchomi scalanie za Ciebie.",
+    "howItWorksStep3": "3. Gotowe — oba urządzenia dzielą teraz jeden profil.",
     "back": "Profil",
     "helpClose": "OK",
-    "link": {
-      "button": "Połącz to urządzenie"
+    "showQr": {
+      "button": "Pokaż QR dla drugiego urządzenia",
+      "hint": "Otwórz aparat na drugim urządzeniu i zeskanuj ten kod. Link wygasa za 5 minut."
     },
+    "redeeming": "Łączenie tego urządzenia z drugim…",
     "linked": {
       "title": "✓ To urządzenie jest połączone.",
       "explain": "Aby połączyć kolejne urządzenie, otwórz tę samą stronę na nim i kliknij „Połącz to urządzenie”."
@@ -50,14 +52,16 @@
       "profileQ": "Której nazwy powinno używać to urządzenie?",
       "dailyQ": "Które urządzenie wygrywa przy nakładających się dziennych zagadkach?",
       "dailyNote": "Nakładające się: {count} zagadek. Pozostałe zostaną zachowane.",
-      "dailyTarget": "Mój połączony profil",
+      "dailyTarget": "Moje drugie urządzenie",
       "dailySource": "To urządzenie",
       "cancel": "Anuluj",
       "confirm": "Połącz urządzenia"
     },
     "error": {
       "browser": "Twoja przeglądarka jeszcze tego nie obsługuje — spróbuj nowego Chrome, Safari lub Edge.",
-      "generic": "Nie udało się połączyć — spróbuj jeszcze raz."
+      "generic": "Nie udało się połączyć — spróbuj jeszcze raz.",
+      "expired": "Ten kod QR wygasł — wygeneruj nowy na drugim urządzeniu.",
+      "invalidToken": "Ten link jest nieprawidłowy. Wygeneruj nowy QR na drugim urządzeniu."
     }
   },
   "privacy": {
