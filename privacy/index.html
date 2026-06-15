@@ -80,13 +80,17 @@
     <script type="module">
       import { bootPrivacy } from './page.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from '../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountSyncMenuItem, mountPrivacyMenuItem } from '../common.js';
       bootI18n('../').then((lang) => {
         wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         bootPrivacy();
         mountNicknameMenuItem({
           rootEl: document.getElementById('burger-menu'),
           profileHref: '../profile/',
+        });
+        mountSyncMenuItem({
+          rootEl: document.getElementById('burger-menu'),
+          syncHref: '../profile/sync/',
         });
         mountPrivacyMenuItem({
           rootEl: document.getElementById('burger-menu'),

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Sync your Yet Another Quiz profile across devices." />
+    <link rel="canonical" href="https://yetanotherquiz.com/profile/sync/" />
+    <title data-i18n="sync.title">Sync across devices — Yet Another Quiz</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=__BUILD__" />
+    <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
+    <link rel="stylesheet" href="index.css?v=__BUILD__" />
+  </head>
+  <body>
+    <a class="lang-toggle" id="lang-toggle" href="#"></a>
+    <script>
+      // Sync lang-flag paint — sets data-current before any module imports
+      // start, so the toggle shows the flag with first paint instead of
+      // after the i18n.js graph resolves. Pinned by chrome.test.js.
+      (function () {
+        var lang = null;
+        try {
+          var s = localStorage.getItem('gridgame.lang');
+          if (s === 'en' || s === 'pl') lang = s;
+        } catch (e) {}
+        if (!lang) {
+          var n = (navigator.language || '').toLowerCase().split('-')[0];
+          lang = n === 'pl' ? 'pl' : 'en';
+        }
+        document.getElementById('lang-toggle').setAttribute('data-current', lang);
+      })();
+    </script>
+    <a class="flags-link" href="../../flagsdata/" aria-label="Browse flags" title="Browse flags" data-i18n-attr="aria-label:menu.flagsData,title:menu.flagsData"><span class="flags-icon" aria-hidden="true"></span></a>
+    <button
+      type="button"
+      class="burger"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="burger-panel"
+      data-label-open="Open menu"
+      data-label-close="Close menu"
+      data-i18n-attr="aria-label:menu.open,data-label-open:menu.open,data-label-close:menu.close"
+      onclick="
+        const open = this.getAttribute('aria-expanded') === 'true';
+        this.setAttribute('aria-expanded', String(!open));
+        this.setAttribute('aria-label', open ? this.dataset.labelOpen : this.dataset.labelClose);
+        document.getElementById('burger-panel').hidden = open;
+      "
+    >
+      <span class="burger-bars" aria-hidden="true"></span>
+    </button>
+    <nav id="burger-panel" class="burger-panel" hidden>
+      <ul class="menu" id="burger-menu">
+        <li><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
+      </ul>
+    </nav>
+
+    <main class="sync-main">
+      <div class="sync-heading-row">
+        <h1 class="sync-heading" data-i18n="sync.heading">Play on more than one device?</h1>
+        <button
+          type="button"
+          class="help-btn"
+          id="sync-help-btn"
+          aria-label="How it works"
+          title="How it works"
+          data-i18n-attr="aria-label:sync.howItWorksTitle,title:sync.howItWorksTitle"
+        >?</button>
+      </div>
+
+      <section class="sync-unlinked" id="sync-unlinked">
+        <p class="sync-intro" data-i18n="sync.intro">
+          Link your phone, laptop, or any browser so your streak, scores, and stats follow you everywhere.
+        </p>
+
+        <div class="sync-option">
+          <button type="button" class="sync-action sync-action--primary" id="sync-link" data-i18n="sync.link.button">Link this device</button>
+        </div>
+      </section>
+
+      <section class="sync-linked" id="sync-linked" hidden>
+        <p class="sync-linked-check" data-i18n="sync.linked.title">✓ This device is linked.</p>
+        <p class="sync-linked-explain" data-i18n="sync.linked.explain">
+          Your progress will sync across every device where you sign in with the same passkey.
+        </p>
+      </section>
+
+      <p class="sync-status" id="sync-status" role="status" aria-live="polite"></p>
+
+      <div class="sync-back">
+        <a href="../" data-i18n="sync.back">Profile</a>
+        ·
+        <a href="../../" data-i18n="menu.home">Home</a>
+      </div>
+    </main>
+
+    <dialog id="sync-wizard" class="help-dialog sync-wizard"></dialog>
+
+    <dialog id="sync-help" class="help-dialog">
+      <h2 data-i18n="sync.howItWorksTitle">How it works</h2>
+      <ol class="sync-help-steps">
+        <li data-i18n="sync.howItWorksStep1">1. On this device, tap “Link this device”. You’ll use your fingerprint or Face ID to save your profile.</li>
+        <li data-i18n="sync.howItWorksStep2">2. On every other device, open this same page and tap the same button — confirm with your fingerprint or Face ID and the profile carries over.</li>
+        <li data-i18n="sync.howItWorksStep3">3. That’s it — every device you do this on shares one profile.</li>
+      </ol>
+      <button type="button" class="help-close" id="sync-help-close" data-i18n="sync.helpClose">Got it</button>
+    </dialog>
+
+    <script type="module">
+      import { bootSync } from './page.js';
+      import { bootI18n, wireLangToggle } from '../../i18n.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountSyncMenuItem, mountPrivacyMenuItem } from '../../common.js';
+      bootI18n('../../').then((lang) => {
+        wireLangToggle(lang, undefined, { softReload: true, base: '../../' });
+        bootSync();
+        mountNicknameMenuItem({
+          rootEl: document.getElementById('burger-menu'),
+          profileHref: '../',
+        });
+        mountSyncMenuItem({
+          rootEl: document.getElementById('burger-menu'),
+          syncHref: './',
+          pageIsSync: true,
+        });
+        mountPrivacyMenuItem({
+          rootEl: document.getElementById('burger-menu'),
+          privacyHref: '../../privacy/',
+        });
+        disableBurgerIfEmpty(
+          document.querySelector('.burger'),
+          document.querySelector('#burger-panel .menu'),
+        );
+        wireBurgerDismiss();
+      });
+    </script>
+  </body>
+</html>

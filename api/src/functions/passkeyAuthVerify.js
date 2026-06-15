@@ -1,8 +1,9 @@
 const { app } = require('@azure/functions');
 const { verifyAuthenticationResponse } = require('@simplewebauthn/server');
+const crypto = require('node:crypto');
 const { insertDoc, queryDocs } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
-const { verifyToken } = require('../lib/passkeyToken');
+const { verifyToken, signToken } = require('../lib/passkeyToken');
 const { getRpId, getExpectedOrigin } = require('../lib/passkeyRpId');
 
 const DB_NAME = 'yetanotherquiz';
@@ -148,9 +149,23 @@ app.http('passkeyAuthVerify', {
       context.warn('cosmos counter-update threw — auth still succeeds', err);
     }
 
+    const targetDeviceId = typeof stored.deviceIdHint === 'string' ? stored.deviceIdHint : null;
+    const mergeToken = targetDeviceId
+      ? signToken({
+          secret,
+          payload: {
+            challenge: crypto.randomUUID(),
+            scope: 'merge',
+            identityId: stored.identityId,
+            targetDeviceId,
+          },
+          now: Date.now(),
+        })
+      : null;
+
     return {
       status: 200,
-      jsonBody: { identityId: stored.identityId, credentialID },
+      jsonBody: { identityId: stored.identityId, credentialID, targetDeviceId, mergeToken },
     };
   },
 });

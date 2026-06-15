@@ -31,7 +31,7 @@ const AUTH_BEGIN = '/api/v1/passkey/auth/begin';
 const AUTH_VERIFY = '/api/v1/passkey/auth/verify';
 
 /**
- * @typedef {| { ok: true, identityId: string }
+ * @typedef {| { ok: true, identityId: string, targetDeviceId: string | null, mergeToken: string | null }
  *           | { ok: false, reason: 'no_webauthn' | 'cancelled' | 'begin_failed' | 'verify_failed' | 'network_error' | 'unknown' }
  *          } PasskeyResult
  *
@@ -107,7 +107,66 @@ export async function registerPasskey(deviceId, opts = {}) {
   if (!verifyJson || typeof verifyJson.identityId !== 'string' || verifyJson.identityId.length === 0) {
     return { ok: false, reason: 'verify_failed' };
   }
-  return { ok: true, identityId: verifyJson.identityId };
+  return {
+    ok: true,
+    identityId: verifyJson.identityId,
+    targetDeviceId: typeof verifyJson.targetDeviceId === 'string' ? verifyJson.targetDeviceId : null,
+    mergeToken: typeof verifyJson.mergeToken === 'string' ? verifyJson.mergeToken : null,
+  };
+}
+
+/**
+ * Unified "link this device" flow — tries auth first; if no
+ * credential exists (or the user has a synced passkey from another
+ * device, which is the happy second-device case), the auth call
+ * picks it up in one click. If auth fails with anything other than
+ * an explicit user-cancel, falls through to register so the same
+ * click sets up a fresh identity. The caller gets one of:
+ *
+ *   { ok: true, mode: 'linked', identityId } — auth path, existing identity loaded
+ *   { ok: true, mode: 'saved', identityId }  — register path, new identity minted
+ *   { ok: false, reason: 'cancelled' }       — user backed out of the platform prompt
+ *   { ok: false, reason: <other> }           — propagated from the failing inner call
+ *
+ * Explicit cancellations are NOT auto-pivoted to register — if the
+ * user dismissed the picker on purpose, they meant "not now", not
+ * "create a new one". The page should treat cancel as a soft no-op
+ * with a "tap to try again" hint.
+ *
+ * @typedef {| { ok: true, mode: 'linked' | 'saved', identityId: string, targetDeviceId: string | null, mergeToken: string | null }
+ *           | { ok: false, reason: 'no_webauthn' | 'cancelled' | 'begin_failed' | 'verify_failed' | 'network_error' | 'unknown' }
+ *          } LinkResult
+ *
+ * @param {string} deviceId
+ * @param {CommonOpts} [opts]
+ * @returns {Promise<LinkResult>}
+ */
+export async function linkDevice(deviceId, opts = {}) {
+  const authResult = await authenticatePasskey(opts);
+  if (authResult.ok) {
+    return {
+      ok: true, mode: 'linked', identityId: authResult.identityId,
+      targetDeviceId: authResult.targetDeviceId, mergeToken: authResult.mergeToken,
+    };
+  }
+  // authResult is the failure branch here; narrow via the `in` guard
+  // so the typed union resolves cleanly.
+  const authReason = 'reason' in authResult ? authResult.reason : 'unknown';
+  if (authReason === 'cancelled' || authReason === 'no_webauthn') {
+    // Respect explicit cancel + surface browser-support gap without
+    // auto-pivoting to register (which would prompt biometric again
+    // / wouldn't work anyway).
+    return { ok: false, reason: authReason };
+  }
+  const regResult = await registerPasskey(deviceId, opts);
+  if (regResult.ok) {
+    return {
+      ok: true, mode: 'saved', identityId: regResult.identityId,
+      targetDeviceId: regResult.targetDeviceId, mergeToken: regResult.mergeToken,
+    };
+  }
+  const regReason = 'reason' in regResult ? regResult.reason : 'unknown';
+  return { ok: false, reason: regReason };
 }
 
 /**
@@ -175,7 +234,12 @@ export async function authenticatePasskey(opts = {}) {
   if (!verifyJson || typeof verifyJson.identityId !== 'string' || verifyJson.identityId.length === 0) {
     return { ok: false, reason: 'verify_failed' };
   }
-  return { ok: true, identityId: verifyJson.identityId };
+  return {
+    ok: true,
+    identityId: verifyJson.identityId,
+    targetDeviceId: typeof verifyJson.targetDeviceId === 'string' ? verifyJson.targetDeviceId : null,
+    mergeToken: typeof verifyJson.mergeToken === 'string' ? verifyJson.mergeToken : null,
+  };
 }
 
 // ---- ArrayBuffer ↔ base64url --------------------------------------------

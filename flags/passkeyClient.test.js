@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   registerPasskey,
   authenticatePasskey,
+  linkDevice,
   bufferToBase64url,
   base64urlToBuffer,
 } from './passkeyClient.js';
@@ -100,7 +101,14 @@ test('registerPasskey: happy path returns identityId from verify', async () => {
   const { fetchImpl, calls } = makeRegFetch();
   const credentialsImpl = makeRegCredentials();
   const r = await registerPasskey(DEV_ID, { fetchImpl, credentialsImpl });
-  assert.deepEqual(r, { ok: true, identityId: IDENTITY_ID });
+  assert.equal(r.ok, true);
+  if (!r.ok) throw new Error('unreachable');
+  assert.equal(r.identityId, IDENTITY_ID);
+  // targetDeviceId + mergeToken are absent in the default fake response body
+  // (the makeRegFetch helper returns only { identityId, credentialID }),
+  // so the client coerces them to null. Real prod returns strings.
+  assert.equal(r.targetDeviceId, null);
+  assert.equal(r.mergeToken, null);
   // Two fetch calls: begin, verify
   assert.equal(calls.length, 2);
   assert.ok(calls[0].url.endsWith('/register/begin'));
@@ -218,7 +226,11 @@ test('authenticatePasskey: happy path returns identityId', async () => {
   const { fetchImpl, calls } = makeAuthFetch();
   const credentialsImpl = makeAuthCredentials();
   const r = await authenticatePasskey({ fetchImpl, credentialsImpl });
-  assert.deepEqual(r, { ok: true, identityId: IDENTITY_ID });
+  assert.equal(r.ok, true);
+  if (!r.ok) throw new Error('unreachable');
+  assert.equal(r.identityId, IDENTITY_ID);
+  assert.equal(r.targetDeviceId, null);
+  assert.equal(r.mergeToken, null);
   assert.equal(calls.length, 2);
   assert.ok(calls[0].url.endsWith('/auth/begin'));
   assert.ok(calls[1].url.endsWith('/auth/verify'));
@@ -254,4 +266,115 @@ test('authenticatePasskey: returns verify_failed when identityId absent in verif
   const credentialsImpl = makeAuthCredentials();
   const r = await authenticatePasskey({ fetchImpl, credentialsImpl });
   assert.deepEqual(r, { ok: false, reason: 'verify_failed' });
+});
+
+// ---- linkDevice (unified register-or-auth) -------------------------------
+
+/**
+ * Builds a fetch that routes register/* vs auth/* to separate config
+ * branches so linkDevice's try-auth-then-fallback-to-register flow
+ * can be exercised end-to-end. Returns a {fetchImpl, calls} pair.
+ *
+ * @param {{ authOk?: boolean, authStatus?: number, regOk?: boolean, regStatus?: number, authVerifyBody?: any, regVerifyBody?: any }} [cfg]
+ */
+function makeUnifiedFetch(cfg = {}) {
+  const {
+    authOk = true,
+    authStatus = 200,
+    regOk = true,
+    regStatus = 201,
+    authVerifyBody,
+    regVerifyBody,
+  } = cfg;
+  /** @type {Array<{ url: string }>} */
+  const calls = [];
+  /** @param {any} url @param {any} init */
+  const impl = async (url, init) => {
+    calls.push({ url: String(url) });
+    const isAuth = url.includes('/auth/');
+    if (url.includes('/begin')) {
+      const ok = isAuth ? authOk : regOk;
+      return {
+        ok,
+        status: ok ? 200 : (isAuth ? authStatus : regStatus),
+        async json() {
+          return {
+            options: { challenge: 'YWJjMTIz', rpId: 'localhost' },
+            signedToken: 'tok.sig',
+          };
+        },
+      };
+    }
+    const ok = isAuth ? authOk : regOk;
+    return {
+      ok,
+      status: ok ? (isAuth ? 200 : 201) : (isAuth ? authStatus : regStatus),
+      async json() {
+        if (isAuth) return authVerifyBody ?? { identityId: IDENTITY_ID, credentialID: 'cred-1' };
+        return regVerifyBody ?? { identityId: IDENTITY_ID, credentialID: 'cred-1' };
+      },
+    };
+  };
+  return { fetchImpl: /** @type {typeof fetch} */ (/** @type {any} */ (impl)), calls };
+}
+
+test('linkDevice: existing passkey present → auth succeeds → mode "linked"', async () => {
+  const { fetchImpl, calls } = makeUnifiedFetch();
+  const credentialsImpl = makeAuthCredentials();
+  const r = await linkDevice(DEV_ID, { fetchImpl, credentialsImpl });
+  assert.equal(r.ok, true);
+  if (!r.ok) throw new Error('unreachable');
+  assert.equal(r.mode, 'linked');
+  assert.equal(r.identityId, IDENTITY_ID);
+  assert.equal(r.targetDeviceId, null);
+  assert.equal(r.mergeToken, null);
+  // Only auth flow ran — no register calls.
+  assert.equal(calls.filter((c) => c.url.includes('/register/')).length, 0);
+});
+
+test('linkDevice: no credential (auth verify_failed) → falls through to register → mode "saved"', async () => {
+  // auth begin returns OK, but credentialsImpl.get throws (typical
+  // browser behavior on a device with no passkey for the site).
+  const { fetchImpl } = makeUnifiedFetch();
+  const credentialsImpl = /** @type {any} */ ({
+    get: async () => { const e = new Error('not found'); /** @type {any} */(e).name = 'UnknownError'; throw e; },
+    create: makeRegCredentials().create,
+  });
+  const r = await linkDevice(DEV_ID, { fetchImpl, credentialsImpl });
+  assert.equal(r.ok, true);
+  if (!r.ok) throw new Error('unreachable');
+  assert.equal(r.mode, 'saved');
+  assert.equal(r.identityId, IDENTITY_ID);
+});
+
+test('linkDevice: explicit user cancel on auth → returns cancelled, does NOT fall through to register', async () => {
+  const { fetchImpl, calls } = makeUnifiedFetch();
+  const credentialsImpl = /** @type {any} */ ({
+    get: async () => { const e = new Error('user cancelled'); /** @type {any} */(e).name = 'NotAllowedError'; throw e; },
+    create: makeRegCredentials().create,
+  });
+  const r = await linkDevice(DEV_ID, { fetchImpl, credentialsImpl });
+  assert.deepEqual(r, { ok: false, reason: 'cancelled' });
+  // Register branch must NOT have run — respecting the user's intent.
+  assert.equal(calls.filter((c) => c.url.includes('/register/')).length, 0);
+});
+
+test('linkDevice: browser without WebAuthn → returns no_webauthn, no register fallback', async () => {
+  const { fetchImpl, calls } = makeUnifiedFetch();
+  const r = await linkDevice(DEV_ID, { fetchImpl, credentialsImpl: /** @type {any} */ (null) });
+  assert.deepEqual(r, { ok: false, reason: 'no_webauthn' });
+  assert.equal(calls.length, 0);
+});
+
+test('linkDevice: register fallback failure surfaces the register reason', async () => {
+  const { fetchImpl } = makeUnifiedFetch({ regOk: false });
+  const credentialsImpl = /** @type {any} */ ({
+    get: async () => { const e = new Error('no creds'); /** @type {any} */(e).name = 'UnknownError'; throw e; },
+    create: makeRegCredentials().create,
+  });
+  const r = await linkDevice(DEV_ID, { fetchImpl, credentialsImpl });
+  assert.equal(r.ok, false);
+  if (r.ok) throw new Error('unreachable');
+  // The register flow's begin returned non-OK → reason is begin_failed.
+  assert.equal(r.reason, 'begin_failed');
 });

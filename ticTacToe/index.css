@@ -412,60 +412,6 @@ body.picker-open {
   overflow: hidden;
 }
 
-/* "?" button living in the top-left corner of the grid header — opens the
- * #rules-help dialog. Sized to a touch-friendly tap target but visually
- * understated so it doesn't compete with the row/column labels. */
-.rules-btn {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid #bbb;
-  border-radius: 50%;
-  background: #fff;
-  font: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  color: #555;
-  cursor: pointer;
-  line-height: 1;
-}
-.rules-btn:hover {
-  background: #f0f0f0;
-  color: #1c1c1c;
-}
-
-.rules-help {
-  max-width: 380px;
-  width: calc(100vw - 32px);
-  padding: 16px 18px 14px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
-}
-.rules-help::backdrop {
-  background: rgba(0, 0, 0, 0.4);
-}
-.rules-help h2 {
-  margin: 0 0 8px;
-  font-size: 17px;
-  color: var(--primary-color);
-}
-.rules-help p {
-  margin: 0 0 14px;
-  font-size: 14px;
-  line-height: 1.4;
-  color: var(--primary-color);
-}
-.rules-close {
-  padding: 6px 14px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  color: var(--link-color);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-.rules-close:hover {
-  background: #f0f0f0;
-}
+/* The "?" rules button and rules-help modal styles live in
+ * common.css — shared with /profile/sync/'s `.help-btn` +
+ * `.help-dialog`. */

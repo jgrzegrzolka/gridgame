@@ -1,8 +1,9 @@
 const { app } = require('@azure/functions');
 const { verifyRegistrationResponse } = require('@simplewebauthn/server');
+const crypto = require('node:crypto');
 const { insertDoc } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
-const { verifyToken } = require('../lib/passkeyToken');
+const { verifyToken, signToken } = require('../lib/passkeyToken');
 const { getRpId, getExpectedOrigin } = require('../lib/passkeyRpId');
 const { buildPasskeyDoc } = require('../lib/passkeyDoc');
 
@@ -132,6 +133,27 @@ app.http('passkeyRegisterVerify', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    return { status: 201, jsonBody: { identityId, credentialID } };
+    // Issue a merge-scope token so the client can call /sync/preview
+    // and /sync/merge with proof that this user just successfully
+    // registered for the identity. targetDeviceId here equals the
+    // registering deviceId — on first registration that's the only
+    // device; the client only invokes the merge endpoints when a
+    // *different* localStorage deviceId needs to be folded in (which
+    // is the auth-on-second-device flow, not register).
+    const mergeToken = signToken({
+      secret,
+      payload: {
+        challenge: crypto.randomUUID(),
+        scope: 'merge',
+        identityId,
+        targetDeviceId: deviceIdHint,
+      },
+      now: Date.now(),
+    });
+
+    return {
+      status: 201,
+      jsonBody: { identityId, credentialID, targetDeviceId: deviceIdHint, mergeToken },
+    };
   },
 });

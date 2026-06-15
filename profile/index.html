@@ -82,23 +82,10 @@
           </dl>
         </section>
 
-        <section class="profile-passkey" id="profile-passkey" aria-live="polite">
-          <h2 class="profile-passkey-title" data-i18n="profile.passkey.title">Sync across devices</h2>
-          <p class="profile-passkey-explain" data-i18n="profile.passkey.explain">
-            Save your progress so it follows you to every device — no password, just your fingerprint or Face ID.
-          </p>
-          <div class="profile-passkey-actions" id="profile-passkey-actions">
-            <button type="button" class="profile-passkey-btn" id="profile-passkey-register" data-i18n="profile.passkey.register">Sync to other devices</button>
-            <button type="button" class="profile-passkey-btn profile-passkey-btn--secondary" id="profile-passkey-signin" data-i18n="profile.passkey.signin">I have a profile on another device</button>
-          </div>
-          <p class="profile-passkey-linked" id="profile-passkey-linked" hidden data-i18n="profile.passkey.linked">
-            ✓ Linked — your progress syncs across your devices.
-          </p>
-          <p class="profile-passkey-status" id="profile-passkey-status" role="status" aria-live="polite"></p>
-        </section>
-
         <div class="actions-row">
           <button type="submit" class="profile-save" data-i18n="nickname.save">Save</button>
+          ·
+          <a class="profile-sync-link" id="profile-sync-link" href="./sync/" data-i18n="menu.sync">Sync across devices</a>
           ·
           <a href="../" data-i18n="menu.home">Home</a>
         </div>
@@ -108,13 +95,17 @@
     <script type="module">
       import { bootProfile } from './page.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from '../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountSyncMenuItem, mountPrivacyMenuItem } from '../common.js';
       bootI18n('../').then((lang) => {
         wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         bootProfile();
         mountNicknameMenuItem({
           rootEl: document.getElementById('burger-menu'),
           profileHref: './',
+        });
+        mountSyncMenuItem({
+          rootEl: document.getElementById('burger-menu'),
+          syncHref: './sync/',
         });
         mountPrivacyMenuItem({
           rootEl: document.getElementById('burger-menu'),

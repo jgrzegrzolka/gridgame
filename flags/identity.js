@@ -42,6 +42,36 @@ export const STORAGE_KEY = 'gridgame.deviceId';
  * UUID per browser instead of two; the legacy key is then removed.
  */
 export const LEGACY_PLAYER_ID_KEY = 'gridgame.player.id';
+
+/**
+ * Cross-device identity (Feature C). Present once the user has
+ * completed a passkey register/auth via /profile/sync/. Every write
+ * helper that knows about it adds it to its POST body so the server
+ * can stamp matching `identityId` on the row. Reads (`daily/me`
+ * streak compute) take it as an optional query param and merge
+ * across deviceIds.
+ *
+ * Lives in the same module as `STORAGE_KEY` so the deviceId/identityId
+ * pair has one source of truth.
+ */
+export const IDENTITY_STORAGE_KEY = 'gridgame.identityId';
+
+/**
+ * Read the current identityId from localStorage, or null if the user
+ * hasn't linked their devices yet. Never throws.
+ *
+ * @param {Store} store
+ * @returns {string | null}
+ */
+export function readIdentityId(store) {
+  try {
+    const v = store.getItem(IDENTITY_STORAGE_KEY);
+    return typeof v === 'string' && v.length > 0 ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 const MIN_LEN = 8;
 const MAX_LEN = 64;
 

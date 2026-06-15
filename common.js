@@ -1,4 +1,4 @@
-import { getOrCreateDeviceId } from './flags/identity.js';
+import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from './flags/identity.js';
 import { displayNickname } from './flags/nickname.js';
 import { avatarSvg } from './flags/avatar.js';
 
@@ -177,7 +177,10 @@ function legacyCopyToClipboard(text, doc) {
  *  `nickname: null`, which means "fall back to the deterministic default
  *  from `flags/nickname.js`". */
 export const NICKNAME_STORAGE_KEY = 'gridgame.nickname';
-export const IDENTITY_STORAGE_KEY = 'gridgame.identityId';
+// Re-export so existing consumers that import IDENTITY_STORAGE_KEY
+// from common.js keep working. The source of truth lives in
+// flags/identity.js alongside STORAGE_KEY (deviceId).
+export { IDENTITY_STORAGE_KEY };
 
 /**
  * Disable the burger menu button when its menu has no items. Empty-menu pages
@@ -337,6 +340,83 @@ export function mountNicknameMenuItem(opts) {
  * Lookup is `.menu-coffee` (its parent `<li>`). If no coffee link is
  * present we fall back to appending at the bottom — defensive against
  * future pages whose menu happens to omit the coffee CTA.
+ *
+ * @param {{
+ *   rootEl: HTMLElement | null,
+ *   privacyHref: string,
+ *   doc?: Document,
+ *   pageIsPrivacy?: boolean,
+ * }} opts
+ */
+/**
+ * Mount a "Sync across devices" link into the burger menu,
+ * positioned ABOVE the Privacy entry (same insert-above-anchor
+ * pattern). When `localStorage.gridgame.identityId` is already set,
+ * the link reads "✓ Synced" instead — both states link to the same
+ * `/profile/sync/` page where the actual flow lives.
+ *
+ * Anchor order on the canonical menu, top to bottom:
+ *   nickname → … → SYNC → privacy → coffee
+ *
+ * Falls back to inserting before `.menu-coffee` if no privacy link
+ * is present (e.g. a page that omits privacy but wants sync), and
+ * to appending if neither is present.
+ *
+ * @param {{
+ *   rootEl: HTMLElement | null,
+ *   syncHref: string,
+ *   doc?: Document,
+ *   storage?: Pick<Storage, 'getItem'>,
+ *   pageIsSync?: boolean,
+ * }} opts
+ */
+export function mountSyncMenuItem(opts) {
+  if (!opts || !opts.rootEl) return null;
+  const doc = opts.doc ?? document;
+  const storage = opts.storage ?? window.localStorage;
+
+  let stored = null;
+  try {
+    stored = storage.getItem(IDENTITY_STORAGE_KEY);
+  } catch {
+    /* private mode / no quota — fall through to the unlinked state */
+  }
+  const isLinked = typeof stored === 'string' && stored.length > 0;
+  const i18nKey = isLinked ? 'menu.synced' : 'menu.sync';
+  const fallback = isLinked ? '✓ Synced' : 'Sync across devices';
+
+  const li = doc.createElement('li');
+  li.className = 'menu-sync';
+
+  const a = doc.createElement('a');
+  a.setAttribute('href', opts.syncHref);
+  if (opts.pageIsSync) a.setAttribute('aria-current', 'page');
+  a.setAttribute('data-i18n', i18nKey);
+  a.textContent = fallback;
+
+  li.appendChild(a);
+
+  // Anchor: prefer the privacy link's <li>; fall back to coffee's;
+  // append at end if neither is present.
+  const privacyLink = opts.rootEl.querySelector('.menu-privacy');
+  const privacyLi = privacyLink ? privacyLink.closest('li') : null;
+  if (privacyLi) {
+    opts.rootEl.insertBefore(li, privacyLi);
+    return li;
+  }
+  const coffeeLink = opts.rootEl.querySelector('.menu-coffee');
+  const coffeeLi = coffeeLink ? coffeeLink.closest('li') : null;
+  if (coffeeLi) {
+    opts.rootEl.insertBefore(li, coffeeLi);
+  } else {
+    opts.rootEl.appendChild(li);
+  }
+  return li;
+}
+
+/**
+ * Mount a "Privacy" link into the burger menu, positioned RIGHT
+ * ABOVE the "Buy me a coffee" link.
  *
  * @param {{
  *   rootEl: HTMLElement | null,

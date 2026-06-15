@@ -127,6 +127,26 @@ function validateDeviceIdParam(raw, fieldErrorCode) {
 }
 
 /**
+ * Optional identityId: when absent (undefined / null / empty) returns
+ * `{ ok: true, value: null }` so callers can use the same `if (!v.ok)`
+ * branch. When present, must match the deviceId shape (same length
+ * bounds — both are UUID-or-similar opaque strings). Used by the
+ * write endpoints that gained identityId support in Feature C phase 3.
+ *
+ * @param {unknown} raw
+ * @param {string} fieldErrorCode
+ */
+function validateOptionalIdentityId(raw, fieldErrorCode) {
+  if (raw === undefined || raw === null || raw === '') {
+    return { ok: true, value: null };
+  }
+  if (!isString(raw, LIMITS.DEVICE_ID_MIN, LIMITS.DEVICE_ID_MAX)) {
+    return { ok: false, error: fieldErrorCode };
+  }
+  return { ok: true, value: raw };
+}
+
+/**
  * Parse + validate the `{puzzleId}` URL path param for the stats GET.
  * Returns `{ ok: true, value: <int> }` or `{ ok: false, error: <code> }`.
  * The error code is stable for the client (matches the body validator
@@ -341,4 +361,4 @@ function validateProfileDeletionBody(body) {
   return { ok: true, value: { deviceId: body.deviceId } };
 }
 
-module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, validateProfileDeletionBody, validateTttResultBody, validateDeviceIdParam, validateConfigKeyParam, LIMITS };
+module.exports = { validateResult, validatePuzzleIdParam, validateQuizRecord, validateProfileBody, validateProfileDeletionBody, validateTttResultBody, validateDeviceIdParam, validateOptionalIdentityId, validateConfigKeyParam, LIMITS };
