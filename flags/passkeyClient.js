@@ -152,11 +152,18 @@ export async function linkDevice(deviceId, opts = {}) {
   // authResult is the failure branch here; narrow via the `in` guard
   // so the typed union resolves cleanly.
   const authReason = 'reason' in authResult ? authResult.reason : 'unknown';
-  if (authReason === 'cancelled' || authReason === 'no_webauthn') {
-    // Respect explicit cancel + surface browser-support gap without
-    // auto-pivoting to register (which would prompt biometric again
-    // / wouldn't work anyway).
-    return { ok: false, reason: authReason };
+  // Only refuse to fall through when WebAuthn isn't supported at
+  // all — register can't work either. On every other failure
+  // (including the user cancelling the auth picker when no
+  // credential exists yet for this rpID — the typical first-link
+  // case), fall through to register. The cost of a slightly
+  // surprising "want to save a passkey?" prompt for a user who
+  // genuinely meant to cancel is offset by the much more common
+  // "I'm new here and the auth picker showed me dead-end options"
+  // case finally working. User can dismiss the register prompt too
+  // if they really want out.
+  if (authReason === 'no_webauthn') {
+    return { ok: false, reason: 'no_webauthn' };
   }
   const regResult = await registerPasskey(deviceId, opts);
   if (regResult.ok) {
