@@ -96,6 +96,14 @@ function attachShareHandler(el) {
   });
 }
 
+// sessionStorage key for the one-shot `mode` hint that survives a
+// `window.location.search = …` navigation. Random click sites set it
+// to 'random' before navigating; bootFindFlag reads + clears it on
+// mount and falls back to 'custom' when absent (which covers the Play
+// button + any externally-shared `?f=…` link). Used only by the
+// `findflag_play` engagement event payload (Feature M Part B).
+const MODE_HINT_KEY = 'findFlag.mode';
+
 function goRandom(all) {
   /** @type {Array<{ group: 'continent' | 'color' | 'motif', value: string }>} */
   const pool = [
@@ -108,6 +116,7 @@ function goRandom(all) {
   ];
   const f = pickRandomMix(pool, all, RANDOM_MIX_OPTIONS);
   const params = new URLSearchParams({ f: serializeFilter(f) });
+  try { sessionStorage.setItem(MODE_HINT_KEY, 'random'); } catch {}
   window.location.search = `?${params.toString()}`;
 }
 
@@ -183,6 +192,29 @@ export function bootFindFlag() {
           chooserEl.hidden = false;
         } else {
           activeHandle = startGame(category, initialFilter, all);
+          // Engagement event: a custom-puzzle play just started.
+          // Captures the raw `?f=…` filter (so achievements can count
+          // distinct payloads) and a mode hint derived from a
+          // sessionStorage flag the Random buttons set before
+          // navigating. Absent flag → 'custom' (Play-button click or
+          // externally-shared link). One-shot: the flag clears so a
+          // subsequent in-tab navigation defaults back to 'custom'.
+          const filterRaw = new URLSearchParams(window.location.search).get('f') ?? '';
+          if (filterRaw) {
+            /** @type {'random' | 'custom'} */
+            let mode = 'custom';
+            try {
+              if (sessionStorage.getItem(MODE_HINT_KEY) === 'random') mode = 'random';
+              sessionStorage.removeItem(MODE_HINT_KEY);
+            } catch {
+              /* sessionStorage unavailable — default mode is fine */
+            }
+            const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+            void submitEngagementEvent(deviceId, {
+              kind: 'findflag_play',
+              payload: { filter: filterRaw, mode },
+            });
+          }
         }
       }
 
@@ -422,6 +454,7 @@ export function bootFindFlag() {
         const pool = allPills.map(({ group, value }) => ({ group, value }));
         const f = pickRandomMix(pool, all, RANDOM_MIX_OPTIONS);
         const params = new URLSearchParams({ f: serializeFilter(f) });
+        try { sessionStorage.setItem(MODE_HINT_KEY, 'random'); } catch {}
         window.location.search = `?${params.toString()}`;
       });
     }
