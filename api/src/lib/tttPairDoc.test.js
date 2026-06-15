@@ -21,6 +21,7 @@ test('first write (no existing): all counters 0 except the bumped slot, v: 1', (
     opponentId: OPP,
     m3x3: { wins: 1, losses: 0, draws: 0 },
     m9x9: { wins: 0, losses: 0, draws: 0 },
+    lastOutcome: 'win',
     lastPlayedAt: NOW,
     v: 1,
   });
@@ -124,4 +125,53 @@ test('v is always 1 — schema-version contract per infra/operations.md', () => 
   });
   assert.equal(fresh.v, 1);
   assert.equal(update.v, 1);
+});
+
+test('lastOutcome reflects this game only — overwrites prior value', () => {
+  const first = mergePairResult({
+    existing: null, deviceId: DEVICE, opponentId: OPP,
+    mode: '3x3', outcome: 'loss', now: 1,
+  });
+  assert.equal(first.lastOutcome, 'loss');
+  const rematch = mergePairResult({
+    existing: first,
+    deviceId: DEVICE, opponentId: OPP,
+    mode: '3x3', outcome: 'win', now: 2,
+  });
+  // The revenge case: lost first, won second. Future achievement
+  // reader detects (existing.lastOutcome === 'loss' && new outcome === 'win').
+  assert.equal(rematch.lastOutcome, 'win');
+});
+
+test('lastOutcome reflects the most recent game across modes (3x3 then 9x9)', () => {
+  const first = mergePairResult({
+    existing: null, deviceId: DEVICE, opponentId: OPP,
+    mode: '3x3', outcome: 'win', now: 1,
+  });
+  const second = mergePairResult({
+    existing: first,
+    deviceId: DEVICE, opponentId: OPP,
+    mode: '9x9', outcome: 'draw', now: 2,
+  });
+  assert.equal(second.lastOutcome, 'draw');
+});
+
+test('pre-Feature-MB4 row without lastOutcome upgrades cleanly on next merge', () => {
+  // Legacy doc from before this PR — counters present, no lastOutcome
+  // field. Merge tolerates the absence (default normalisedCounters
+  // path) and the result row gains lastOutcome from the new game.
+  const legacy = {
+    id: `${DEVICE}:${OPP}`,
+    deviceId: DEVICE, opponentId: OPP,
+    m3x3: { wins: 2, losses: 1, draws: 0 },
+    m9x9: { wins: 0, losses: 0, draws: 0 },
+    lastPlayedAt: 1, v: 1,
+  };
+  const next = mergePairResult({
+    existing: legacy,
+    deviceId: DEVICE, opponentId: OPP,
+    mode: '3x3', outcome: 'win', now: 5,
+  });
+  assert.equal(next.lastOutcome, 'win');
+  assert.equal(next.m3x3.wins, 3);
 });
