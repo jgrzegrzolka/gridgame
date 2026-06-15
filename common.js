@@ -370,8 +370,43 @@ export function mountNicknameMenuItem(opts) {
  *   pageIsSync?: boolean,
  * }} opts
  */
+/**
+ * Cross-device sync (Feature C) is gated behind `?test` in the URL
+ * until the multi-device flow has been validated end-to-end. Anyone
+ * not visiting with the flag sees no sync link in the actions row,
+ * no menu item, and gets redirected away from `/profile/sync/`. This
+ * lets the code ship while the UI stays out of the way of regular
+ * users.
+ *
+ * @returns {boolean}
+ */
+export function isSyncTestMode() {
+  try {
+    return new URLSearchParams(window.location.search).has('test');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Mount a "Sync across devices" link into the burger menu, above
+ * the Privacy entry. Hidden behind `?test` until the multi-device
+ * flow is validated.
+ *
+ * @param {{
+ *   rootEl: HTMLElement | null,
+ *   syncHref: string,
+ *   doc?: Document,
+ *   storage?: Pick<Storage, 'getItem'>,
+ *   pageIsSync?: boolean,
+ * }} opts
+ */
 export function mountSyncMenuItem(opts) {
   if (!opts || !opts.rootEl) return null;
+  // Test-gate: don't even mount the menu entry unless ?test is on
+  // the URL. The function returning null is the same shape as the
+  // "missing rootEl" guard, so call sites don't need to change.
+  if (!isSyncTestMode()) return null;
   const doc = opts.doc ?? document;
   const storage = opts.storage ?? window.localStorage;
 
@@ -388,8 +423,14 @@ export function mountSyncMenuItem(opts) {
   const li = doc.createElement('li');
   li.className = 'menu-sync';
 
+  // Preserve `?test` across navigations so the sync surface stays
+  // visible everywhere a test-mode visitor lands.
+  const hrefWithFlag = opts.syncHref.includes('?')
+    ? `${opts.syncHref}&test`
+    : `${opts.syncHref}?test`;
+
   const a = doc.createElement('a');
-  a.setAttribute('href', opts.syncHref);
+  a.setAttribute('href', hrefWithFlag);
   if (opts.pageIsSync) a.setAttribute('aria-current', 'page');
   a.setAttribute('data-i18n', i18nKey);
   a.textContent = fallback;

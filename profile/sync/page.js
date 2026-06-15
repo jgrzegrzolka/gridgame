@@ -1,6 +1,7 @@
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY, STORAGE_KEY as DEVICE_STORAGE_KEY } from '../../flags/identity.js';
 import { linkDevice } from '../../flags/passkeyClient.js';
 import { syncPreview, syncMerge } from '../../flags/syncMergeClient.js';
+import { isSyncTestMode } from '../../common.js';
 import { t } from '../../i18n.js';
 
 /**
@@ -24,6 +25,15 @@ import { t } from '../../i18n.js';
  *               V2 work.
  */
 export function bootSync() {
+  // Test-gate: the sync surface is only visible to ?test visitors
+  // until the multi-device flow has been validated. Direct hits to
+  // /profile/sync/ without the flag redirect back to /profile/ so
+  // there's no public entry point.
+  if (!isSyncTestMode()) {
+    try { window.location.replace('../'); } catch {}
+    return;
+  }
+
   const unlinkedEl = document.getElementById('sync-unlinked');
   const linkedEl = document.getElementById('sync-linked');
   const linkBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('sync-link'));
