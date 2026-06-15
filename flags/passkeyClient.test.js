@@ -347,16 +347,22 @@ test('linkDevice: no credential (auth verify_failed) → falls through to regist
   assert.equal(r.identityId, IDENTITY_ID);
 });
 
-test('linkDevice: explicit user cancel on auth → returns cancelled, does NOT fall through to register', async () => {
-  const { fetchImpl, calls } = makeUnifiedFetch();
+test('linkDevice: user cancel on auth → falls through to register (typical first-link case)', async () => {
+  // Background: a fresh device with no credential for this rpID will
+  // show the auth picker with dead-end options (hybrid QR with no
+  // other device having a passkey either). User has to cancel —
+  // and we want that to lead into the register flow so the
+  // first-link UX actually works. The original "respect cancel"
+  // behaviour blocked the very first registration on a fresh rpID.
+  const { fetchImpl } = makeUnifiedFetch();
   const credentialsImpl = /** @type {any} */ ({
     get: async () => { const e = new Error('user cancelled'); /** @type {any} */(e).name = 'NotAllowedError'; throw e; },
     create: makeRegCredentials().create,
   });
   const r = await linkDevice(DEV_ID, { fetchImpl, credentialsImpl });
-  assert.deepEqual(r, { ok: false, reason: 'cancelled' });
-  // Register branch must NOT have run — respecting the user's intent.
-  assert.equal(calls.filter((c) => c.url.includes('/register/')).length, 0);
+  assert.equal(r.ok, true);
+  if (!r.ok) throw new Error('unreachable');
+  assert.equal(r.mode, 'saved', 'fell through to register after cancel');
 });
 
 test('linkDevice: browser without WebAuthn → returns no_webauthn, no register fallback', async () => {
