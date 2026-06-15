@@ -6,6 +6,7 @@
 require('./functions/health');
 require('./functions/dailyResult');
 require('./functions/dailyStats');
+require('./functions/dailyMe');
 require('./functions/quizRecord');
 require('./functions/quizLeaderboard');
 require('./functions/profile');
