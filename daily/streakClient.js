@@ -12,10 +12,9 @@
  * player's just-submitted result lands in their streak immediately.
  * Revisits and profile-page reads use the default (cached) path.
  *
- * `latestPuzzleId` lets the server's compute layer reset currentStreak
- * to 0 when the player's most recent row is older than today (i.e.
- * they skipped today). Optional — without it, the streak is "trailing
- * run ending at most recent row," which is fine right after a submit.
+ * The server computes "today" (Warsaw) itself — clients don't pass it.
+ * Keeps the streak math anchored to one clock instead of trusting the
+ * caller's, and lets the cache key stay just the deviceId.
  */
 
 const ENDPOINT_BASE = '/api/v1/daily/me';
@@ -33,7 +32,6 @@ const ENDPOINT_BASE = '/api/v1/daily/me';
 /**
  * @param {string} deviceId
  * @param {{
- *   latestPuzzleId?: number,
  *   bypassCache?: boolean,
  *   fetchImpl?: typeof fetch,
  * }} [opts]
@@ -41,12 +39,9 @@ const ENDPOINT_BASE = '/api/v1/daily/me';
  */
 export async function fetchDailyMe(deviceId, opts = {}) {
   if (typeof deviceId !== 'string' || deviceId.length === 0) return null;
-  const { latestPuzzleId, bypassCache = false, fetchImpl = globalThis.fetch } = opts;
+  const { bypassCache = false, fetchImpl = globalThis.fetch } = opts;
 
   const params = new URLSearchParams({ deviceId });
-  if (Number.isInteger(latestPuzzleId)) {
-    params.set('latestPuzzleId', String(latestPuzzleId));
-  }
   if (bypassCache) params.set('fresh', '1');
 
   try {

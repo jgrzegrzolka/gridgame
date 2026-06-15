@@ -328,14 +328,12 @@ async function loadAndPaintStats(n, targets, found, all, userFoundCodes, opts = 
  * would otherwise hide it until the next minute).
  *
  * @param {string} deviceId
- * @param {number} n
  * @param {number} found
  * @param {number} totalCount
  * @param {{ bypassCache?: boolean }} [opts]
  */
-async function loadAndPaintStreak(deviceId, n, found, totalCount, opts = {}) {
+async function loadAndPaintStreak(deviceId, found, totalCount, opts = {}) {
   const streak = await fetchDailyMe(deviceId, {
-    latestPuzzleId: n,
     bypassCache: opts.bypassCache === true,
   });
   if (!streak) return;
@@ -489,7 +487,7 @@ async function handleFinish(n, targets, all, info) {
   // submitted result is reflected (bypassCache → server skips its
   // 60s cache). Failure is silent — the streak sub-line just doesn't
   // appear; the score + community stats remain on screen unchanged.
-  loadAndPaintStreak(deviceId, n, found, info.totalCount, { bypassCache: true });
+  loadAndPaintStreak(deviceId, found, info.totalCount, { bypassCache: true });
 }
 
 /**
@@ -561,7 +559,7 @@ export function bootDaily() {
         loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
         // Streak fires alongside stats. Cached (no bypass) — revisits
         // don't have a fresh submit to chase past the 60s cache window.
-        loadAndPaintStreak(revisitDeviceId, n, foundCodes.size, result.targets.length);
+        loadAndPaintStreak(revisitDeviceId, foundCodes.size, result.targets.length);
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
@@ -570,7 +568,7 @@ export function bootDaily() {
           setShareCtx(n, result.targets, foundCodes);
           paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
           loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
-          loadAndPaintStreak(revisitDeviceId, n, foundCodes.size, result.targets.length);
+          loadAndPaintStreak(revisitDeviceId, foundCodes.size, result.targets.length);
         });
         return;
       }

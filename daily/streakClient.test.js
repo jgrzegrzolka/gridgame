@@ -34,25 +34,12 @@ test('fetchDailyMe: happy path — passes deviceId, returns shape', async () => 
   assert.deepEqual(out, FULL);
   assert.ok(f.calls[0].includes('deviceId=dev-abc-123'));
   assert.ok(!f.calls[0].includes('fresh=1'));
-  assert.ok(!f.calls[0].includes('latestPuzzleId='));
 });
 
 test('fetchDailyMe: bypassCache appends ?fresh=1', async () => {
   const f = fakeFetch({ body: FULL });
   await fetchDailyMe('dev-abc', { bypassCache: true, fetchImpl: f });
   assert.ok(f.calls[0].includes('fresh=1'));
-});
-
-test('fetchDailyMe: latestPuzzleId is appended when an integer', async () => {
-  const f = fakeFetch({ body: FULL });
-  await fetchDailyMe('dev-abc', { latestPuzzleId: 42, fetchImpl: f });
-  assert.ok(f.calls[0].includes('latestPuzzleId=42'));
-});
-
-test('fetchDailyMe: non-integer latestPuzzleId is dropped', async () => {
-  const f = fakeFetch({ body: FULL });
-  await fetchDailyMe('dev-abc', { latestPuzzleId: /** @type {any} */ ('not-a-number'), fetchImpl: f });
-  assert.ok(!f.calls[0].includes('latestPuzzleId='));
 });
 
 test('fetchDailyMe: missing deviceId returns null without calling fetch', async () => {
