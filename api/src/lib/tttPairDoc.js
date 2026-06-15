@@ -6,11 +6,19 @@
  * Doc shape:
  *   {
  *     id:           "{deviceId}:{opponentId}",
- *     deviceId:     string,    // partition key — this device's id
+ *     deviceId:     string,            // partition key — this device's id
  *     opponentId:   string,
  *     m3x3:         { wins, losses, draws },
  *     m9x9:         { wins, losses, draws },
- *     lastPlayedAt: number,    // unix ms
+ *     lastOutcome:  'win' | 'loss' | 'draw',  // outcome of the most recent
+ *                                              //   game vs. this opponent
+ *                                              //   (any mode). Set on every
+ *                                              //   merge; pre-Feature-MB4
+ *                                              //   rows have no field, which
+ *                                              //   future revenge-achievement
+ *                                              //   readers treat as "no
+ *                                              //   prior history".
+ *     lastPlayedAt: number,            // unix ms
  *     v:            1,
  *   }
  *
@@ -74,6 +82,7 @@ function mergePairResult({ existing, deviceId, opponentId, mode, outcome, now })
     opponentId,
     m3x3,
     m9x9,
+    lastOutcome: outcome,
     lastPlayedAt: now,
     v: 1,
   };
