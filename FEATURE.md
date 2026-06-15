@@ -120,35 +120,78 @@ Items here are not blocking current work but deserve durable memory — the next
 
 **Out of scope here:** the second-region (WE sibling) plan in Feature D. That helps if we stay on SWA Standard, but is unnecessary on CF Pages. Decide platform first.
 
-### Feature M: Analytics + start-event instrumentation
+### Feature M: Analytics + engagement-event instrumentation
 
-**Status:** Part A (Cloudflare Web Analytics) shipped 2026-06-14, dashboard-only setup, no PR. Part B (`dailyStarts` Cosmos container + admin read path) remains in backlog — pick up when DAU / completion-rate / D1 / D7 retention become felt needs that CF Analytics doesn't already answer.
+**Status:** Part A (Cloudflare Web Analytics) shipped 2026-06-14, dashboard-only setup, no PR. Part B (the engagement-event substrate — `dailyStarts` + `shareEvents` + a `lastOutcome` field on `tttPairs`) remains in backlog. **Promote when ready** — the scope is the data-gathering substrate that future Feature O (achievements) consumes, plus Jan's own DAU / completion-rate / D1 / D7 retention analytics.
 
-**Goal:** make the four metrics that actually matter for a daily game visible: DAU (unique humans starting today), completion rate (started ÷ finished), D1 retention (% of yesterday's players who came back today), D7 retention (% of last-week's players who came back this week). All bot-filtered, all queryable without leaving the Azure portal / a small admin page. The current state is partial — `dailyResults` gives finished-count and lets you derive returning-finishers across puzzles, but nothing measures *started-and-bounced* or *visited-without-starting*. Without the start event, you can't separate "puzzle is too hard" from "nobody clicked into the daily page today."
+**Goal:** capture the engagement signals that are cheap to write but irretrievable if not captured — the rule Jan settled on 2026-06-15 ("if we don't start gathering what we think we'll want, there's no going back"). Two consumers, same writes: Feature O reads the events to award achievements (e.g. "played 10 custom findFlag puzzles", "shared 10 daily scores", "won a TTT revenge match"); Jan reads them himself for DAU / completion-rate / D1 / D7 retention. The bar for what's worth instrumenting now is "cheap to write today, clearly useful to ≥ 1 consumer." Note `/findFlag/` is the **make-a-puzzle surface** — when a player clicks Play with a custom filter, that *is* them creating and playing their own puzzle; it just wasn't renamed when the framing shifted. So findFlag-play tracking and make-a-puzzle tracking are the same thing.
 
 **Two-part shape — independent, ship in either order:**
 
 **Part A: Cloudflare Web Analytics — SHIPPED 2026-06-14.** Zero code; CF auto-injects the beacon at the edge for proxied zones. First setup pass left the EU-exclude default on, which silently dropped all Polish (and other EU) traffic — the dashboard showed only US/Canada visits despite Jan's known PL user base. Flipped to "Enable" (no EU exclusion); CF Web Analytics is cookieless and hashes IPs, so the GDPR posture is acceptable for the hobby-site use case. Privacy page disclosure shipped in PR #421. Dashboard now shows DAU + visit count + Top Pages + per-country geographic breakdown, bot-filtered server-side. Defends the "are we even seeing humans" question that prompted the whole L/M/N framing.
 
-**Part B: `dailyStarts` Cosmos container + admin read path.** New container partitioned by `/dateUtc`. Doc shape: `{ id: "{dateUtc}:{deviceId}:{puzzleId}", deviceId, puzzleId, dateUtc, startedAt, local?, v: 1 }`. Deterministic id = idempotent (same browser firing twice in a day is a 409, ignored client-side). `POST /api/v1/daily/start` endpoint, anonymous, same rate-limit pattern as `dailyResult.js`. Client wiring: fire-and-forget from `daily/page.js` after first interaction (first click into a cell), **not** on page-mount — that way bots / preview-renderers / curious-but-bouncing visitors don't count as "started". Server filters `local: true` the same way `dailyResults` does.
+**Part B: Four engagement signals — one feature, four small additions:**
 
-From there, the four metrics derive from `dailyStarts` + `dailyResults` joins by `(deviceId, puzzleId)` and date math. Pick a surface:
-- A small `/admin/metrics` page gated by Jan's deviceId being in an env-var allow-list (cheap, ugly, works).
-- A scheduled Logic App that recomputes daily and writes to a `metrics:{dateUtc}` doc for read-anywhere.
-- Pure Cosmos SQL queries Jan runs in the Data Explorer.
+1. **`dailyStarts` Cosmos container.** Partitioned by `/dateUtc`. Doc shape: `{ id: "{dateUtc}:{deviceId}:{puzzleId}", deviceId, puzzleId, dateUtc, startedAt, local?, v: 1 }`. Deterministic id = idempotent (same browser firing twice in a day is a 409, ignored client-side). `POST /api/v1/daily/start` endpoint, anonymous, same rate-limit pattern as `dailyResult.js`. Client wiring: fire-and-forget from `daily/page.js` after first interaction (first click into a cell), **not** on page-mount — that way bots / preview-renderers / curious-but-bouncing visitors don't count as "started". Server filters `local: true` the same way `dailyResults` does. Consumers: DAU / completion-rate / D1 / D7 (Jan's analytics); future "daily play streak" / "showed up but didn't finish" achievements.
+2. **`findFlagPlays` Cosmos container.** Partitioned by `/dateUtc`. Doc shape: `{ id: "{dateUtc}:{deviceId}:{startedAt}", deviceId, filter, mode: "random" | "custom", dateUtc, startedAt, local?, v: 1 }`. `filter` is the query string the player chose (e.g. `motif:bird,continent:Asia`), captured verbatim — that's what makes findFlag the **make-a-puzzle surface**. Non-deterministic id (`startedAt` participates) so multiple plays per day are distinct rows. `POST /api/v1/findFlag/play` endpoint, fire-and-forget from `findFlag/page.js` on the Play button click (not on `?f=…` deep-link mount — only count active play). Consumers: future "played 10 custom puzzles" / "tried 5 different continents" achievements; "is /findFlag/ actually used" analytics.
+3. **`shareEvents` Cosmos container.** Partitioned by `/dateUtc`. Doc shape: `{ id: "{shareId}", deviceId, surface: "daily" | "findFlag" | "flagQuiz" | "ttt", contextHint?, sharedAt, local?, v: 1 }`. `contextHint` carries the surface-specific identity — `puzzleId` for daily, the findFlag filter string for findFlag, the quiz `configKey` for flagQuiz (e.g. `"60s"` for `/flagQuiz/?n=60s`), the room id for TTT. `POST /api/v1/share/event` endpoint, anonymous, same rate-limit pattern. Client wiring: fire-and-forget from `common.js` `shareText()` / `shareUrl()` right *after* the share/copy resolves (don't track abandoned dialogs). Consumers: future "share daily score N times" / "share a custom findFlag puzzle" / "share a flagQuiz result" achievements + Jan's share-loop analytics ("does the share button get used at all?"). Cost: ≤ a few writes per day at current scale.
+4. **`tttPairs.lastOutcome` field.** Single field add — no new container. `api/src/lib/tttPairDoc.js` `mergePairResult` reads the *existing* row's `lastOutcome`, computes the new outcome, then writes both the updated counters AND `lastOutcome: <new outcome>` atomically. Enables "revenge win" achievement detection ("you lost to Alice last time and won this time") without adding a per-game container — the existing row gains one field, that's it. Zero migration: pre-existing rows without the field get `lastOutcome: undefined`, which a future achievement checker treats as "no prior history with this opponent."
 
-The pure-SQL option is by far the cheapest and probably enough for the first six months; gate-decisions on whether a real dashboard is felt.
+From there, the analytics surface (DAU / completion-rate / D1 / D7) is still pure-SQL via the Cosmos Data Explorer for the first six months — gate the decision on a real `/admin/metrics` page until the SQL-pasting friction is actually felt.
 
 **Open design calls:**
 
-- **Fire-trigger for `puzzleStarted`.** First interaction (cell click) vs daily-page-mount-with-puzzle-loaded vs after a 5s dwell timer. First interaction gives the cleanest "intended to play" signal; mount counts curious visitors who bounce — also a metric worth having, but CF Analytics in Part A already covers the broader visit-count side.
-- **Cosmos write volume.** Today's writes are ~1 per device per day (completion). Adding starts roughly doubles that. At Free Tier 1000 RU/s this is rounding noise — revisit only if the daily-puzzle forks into multi-puzzle-per-day modes.
+- **Fire-trigger for `dailyStarts`.** First cell click vs daily-page-mount-with-puzzle-loaded vs after a 5s dwell timer. First interaction gives the cleanest "intended to play" signal; mount counts curious visitors who bounce — also a metric worth having, but CF Analytics in Part A already covers the broader visit-count side.
+- **Should `shareEvents` track failed shares?** Today the share API has a three-tier fallback (`navigator.share` → `clipboard.writeText` → legacy textarea + `execCommand`). All three can fail silently. Track success only (the share/copy resolved) vs track every attempt — leaning toward success-only so the count reflects "shares that actually happened."
+- **Cosmos write volume.** Today's writes are ~1 per device per day (completion). Adding `dailyStarts` doubles that; `shareEvents` adds 0–N more (rare events, mostly 0). At Free Tier 1000 RU/s this is rounding noise — revisit only if the daily-puzzle forks into multi-puzzle-per-day modes.
 - **D1/D7 cutoff.** UTC or Europe/Warsaw? Daily release is Warsaw (Logic App, 00:05 Warsaw per Feature E). For consistency with the puzzle's identity, probably Warsaw — but UTC simplifies cross-puzzle queries.
 - **Admin gate.** Hardcoded deviceId allow-list (simplest, breaks if Jan ever device-resets), env-var secret query param (`?key=xxx`), or full passkey via Feature C (overkill until C ships anyway).
 
-**Storage cost.** ~200 bytes × 365 days × ~50 DAU = ~3.6 MB/year. Rounding noise vs 25 GB Free Tier. Add `defaultTtl: 31_536_000` (1 year, matching `dailyResults`) on creation. Survives Feature I's snapshot logic the same way `dailyResults` will.
+**Storage cost.** `dailyStarts`: ~200 bytes × 365 days × ~50 DAU = ~3.6 MB/year. `findFlagPlays`: ~250 bytes × maybe 20/day = ~1.8 MB/year. `shareEvents`: ~150 bytes × maybe 5/day = ~270 KB/year. Rounding noise vs 25 GB Free Tier. Add `defaultTtl: 31_536_000` (1 year, matching `dailyResults`) on all three containers at creation. They survive Feature I's snapshot logic the same way `dailyResults` will.
 
-**Out of scope even for Feature M:** per-puzzle heat-map of where players drop (which cell got the most starts-but-never-clicked), partial-completion analytics (started 10 cells, finished 3), A/B testing infra, public stats page, GA4 / Plausible / self-hosted Umami (CF Analytics covers the visit-count half; a second analytics provider is just maintenance), per-flag-quiz event tracking (different container, different feature when felt).
+**Out of scope even for Feature M Part B** (deliberately skipped per the 2026-06-15 audit): per-cell heat-map of where players drop, partial-completion analytics (started 10 cells, finished 3), per-game TTT history rows (`lastOutcome` field handles the only achievement that asked for ordering), A/B testing infra, public stats page, GA4 / Plausible / self-hosted Umami (CF Analytics covers the visit-count half), findFlag *result* events (a findFlag round has no fixed end — Play-start is the only meaningful trigger), flagQuiz *play-start* events (every flagQuiz play eventually writes `quizRecords` with `attempts+1` per F5, so the start is already captured downstream — only the share is new data).
+
+### Feature O: Profile-page achievements (replaces the "stats dashboard" direction)
+
+**Status:** parked. Pivot decided 2026-06-15 — the profile page becomes a collection of earned achievements ("Cartographer", "First daily", "Perfect week", "All-Europe", "Revenge win") instead of a raw-numbers dashboard. Streak + best-streak from Feature N stay; everything else on the profile page becomes achievement-driven.
+
+**Why this exists, not "win rate" / extended stats:** the win-rate concept settled in Feature N ("win = completion, any score") collapsed under the 2026-06-15 audit — a 1/4 finish and a 4/4 finish both count as 100%, which doesn't match any natural reading of "win rate" on a quiz site. Score-weighted "average accuracy" would be conceptually cleaner but still adds up to a single number that's hard to make playful. Achievements turn the same underlying data into something with a story — "you've cleaned-swept 5 different Europe puzzles" reads better than "your average score is 73%."
+
+**Achievement inventory (audited 2026-06-15) — what's already in the data vs what needs Feature M Part B first:**
+
+| Achievement | Data status | Source when promoted |
+|---|---|---|
+| 2 / 10 / N day streaks | ✓ ready | `dailyResults` → `computeStreak.maxStreak` |
+| Daily clean sweep (4/4, 9/9, etc.) | ✓ ready | `dailyResults.foundCodes.length === totalCount` |
+| Daily zero-score finish | ✓ ready | `dailyResults.foundCodes.length === 0` |
+| Play quiz N times (total / per mode) | ✓ ready | `quizRecords.records[configKey].attempts` (Feature F5) |
+| Play quiz Europe / All / Africa / etc. | ✓ ready | Same — `configKey` encodes the mode |
+| Play TTT (count of games) | ✓ ready | Sum of `m3x3.{w,l,d} + m9x9.{w,l,d}` across `tttPairs` rows |
+| Win / Lose / Draw TTT | ✓ ready | Same, broken out per counter |
+| Share daily score N times | ✗ needs Feature M Part B `shareEvents` | New container, instrumented at `shareText()` resolve |
+| Share a custom findFlag puzzle (the `?f=…` deep-link case) | ✗ needs Feature M Part B `shareEvents` | Same container, `surface: "findFlag"`, `contextHint = filter` |
+| Share a flagQuiz result (e.g. `/flagQuiz/?n=60s`) | ✗ needs Feature M Part B `shareEvents` | Same container, `surface: "flagQuiz"`, `contextHint = configKey` |
+| TTT revenge win (lost before, won now) | ✗ needs Feature M Part B `tttPairs.lastOutcome` | Single field on the existing pair row |
+| Play a custom findFlag puzzle (make-a-puzzle) | ✗ needs Feature M Part B `findFlagPlays` | New container, instrumented on the Play button click |
+| Try N distinct findFlag filters | ✗ needs `findFlagPlays` | Same container, distinct-`filter` count per `deviceId` |
+
+**Why the inventory matters:** seven achievement categories ship data-ready today; six more unlock when Feature M Part B lands. Lets a Feature O v1 ship without waiting on M Part B, and v2 add the share / revenge / custom-puzzle achievements once the events are flowing. Also makes the cost-benefit case for each M Part B addition concrete — every line item in the table maps to ≥ 1 achievement consumer.
+
+**Likely shape when this comes off the parking brake:**
+
+- Pure achievement-rule library (`flags/achievements.js` or `api/src/lib/achievements.js` depending on where the compute lives) — each rule is a `{ id, predicate(snapshot) => boolean, tier? }`. Snapshot is the union of streak / daily / quiz / TTT data the page already fetches.
+- Profile page renders the earned set as a grid of badges + a locked set as silhouettes. Hidden until the player has at least one earned achievement (same "no signal, no clutter" rule the finish screen uses).
+- Compute path: client-side derivation from already-fetched data for v1 (zero new endpoint), OR server-side denormalised `userAchievements:{deviceId}` doc updated on each submission (point-read pattern from Feature G). v1 client-side is the cheaper start; promote to server-side denorm if the achievement set grows past ~30 rules or the client compute starts visibly delaying paint.
+
+**Open design calls (settle when work starts, not now):**
+
+- **Achievement *naming* and the storytelling layer.** "Cartographer" vs "Continental Master"? Each achievement needs a name, description, icon. Bigger writing task than the implementation. EN + PL.
+- **Tiered vs binary.** "Played 10 daily puzzles" / "100" / "1000" as one tiered achievement with bronze/silver/gold, or three separate achievements? Tiered is denser; flat is simpler to design and easier to read.
+- **Locked-state visibility.** Show silhouettes with hints ("Win a TTT match against someone you previously lost to") or hide entirely until earned (pure-surprise model)? Hints encourage replay; surprise feels rewarding.
+- **Retroactivity.** Existing `dailyResults` / `quizRecords` / `tttPairs` rows mean v1 ships with many players already qualifying for streak / play-count achievements. Award them silently on first profile-page visit after Feature O launches, or run a one-time backfill notification? Silent is cheaper and matches the "calm" Feature N tone.
+- **Animation on earn.** When an achievement is earned mid-session (player finishes a daily that crosses the 10-streak threshold), show a small celebration inline? Or only surface it the next time the player opens `/profile/`? Inline celebration is more delightful but adds wiring everywhere achievements can be earned.
+
+**Out of scope even for Feature O:** point/XP system, achievement leaderboards (Feature K territory), social sharing of individual achievements (achievement-specific share grids), hidden / "secret" achievements ("play at 3am"), time-limited / seasonal achievements (Christmas badges etc.), missing-data backfill for events that aren't being tracked today (e.g. there's no way to retroactively award "shared 10 daily scores" for shares that happened before `shareEvents` started recording — that's the irretrievable-data argument for promoting Feature M Part B sooner rather than later).
 
 ---
 
@@ -158,7 +201,7 @@ The pure-SQL option is by far the cheapest and probably enough for the first six
 
 **Goal.** Surface a returning-player number on the daily finish screen that makes coming back tomorrow feel like it matters, and a dashboard view of the same numbers on `/profile/` for the "I want my stats" surface. Derived server-side from existing `dailyResults` rows — no new container, no migration.
 
-**Shape that shipped.** Finish screen splits "your stats" from "community stats" by position: personal block inline in the headline (only when `currentStreak ≥ 2` — no signal, no clutter), community block below. Profile page reads the same endpoint and renders Current streak + Best streak (hidden until `totalPlayed ≥ 1`). Win-rate row deliberately omitted on the profile page — by construction every `dailyResults` row is a completion, so `winPercent` is always 100% until Feature M Part B emits start events with a `totalStarts > totalCompleted` denominator. The endpoint still returns the field for when M Part B lands.
+**Shape that shipped.** Finish screen splits "your stats" from "community stats" by position: personal block inline in the headline (only when `currentStreak ≥ 2` — no signal, no clutter), community block below. Profile page reads the same endpoint and renders Current streak + Best streak (hidden until `totalPlayed ≥ 1`). Win-rate row deliberately omitted on the profile page — by construction every `dailyResults` row is a completion, so even with the M Part B start-event denominator the resulting "submitted ÷ started" ratio doesn't measure what a player would intuit from "win rate" (a 1/4 finish and a 4/4 finish both count as 100%). Profile direction pivots from "stats dashboard" to "achievements" — see Feature O. The endpoint still returns `winPercent` in case a future surface wants it, but no user-facing UI plans to render it.
 
 **What shipped (four phases):**
 
@@ -190,7 +233,7 @@ Don't ship before any of these fire — the write amplification (every `dailyRes
 
 **Key PRs.** #438 (N1), #439 (N2), #440 (N3), #441 (N3 follow-up: live offensive-nickname check + pink moderation colours), #442 (N4 + red→pink palette fixes).
 
-**Out of scope, intentionally deferred** (captured so they don't drift back in): streak freezes / makeup days, weekly streaks, public streak leaderboards (Feature K territory — already shipped for *daily* leaderboards), retroactive push notification, in-grid "your streak" badge on the archive page, per-mode streaks if the daily ever forks, the win-rate row on the profile page until Feature M Part B gives the denominator real meaning.
+**Out of scope, intentionally deferred** (captured so they don't drift back in): streak freezes / makeup days, weekly streaks, public streak leaderboards (Feature K territory — already shipped for *daily* leaderboards), retroactive push notification, in-grid "your streak" badge on the archive page, per-mode streaks if the daily ever forks, the win-rate row on the profile page (concept dropped permanently — see the Shape note above; profile direction moves to Feature O achievements).
 
 ### Feature L: Wordle-style shareable result grid + touch-only share alignment — *shipped 2026-06-14*
 
