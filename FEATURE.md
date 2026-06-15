@@ -21,7 +21,32 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-*(nothing in flight — pick the next feature from `## Backlog` or open a new one)*
+### Feature N: Streaks + win% — finish screen + profile page
+
+**Goal.** Surface a returning-player number on the daily finish screen that makes coming back tomorrow feel like it matters. All three numbers (current streak, max streak, win %) derived server-side from existing `dailyResults` rows — no new container, no migration.
+
+**Shape (decided 2026-06-15, kept deliberately calm):**
+
+- **Finish screen** shows **only the current streak**, as one inline text line under the existing stats headline ("Your score: 2/4 · Average score: 3.4/4 · ⌬"). Same typographic rhythm — text, not a badge / card / box. Hidden entirely when `currentStreak < 2` (no signal yet, just clutter).
+- **`/profile/` page** (already exists from Feature H) shows **all three**: current streak, max streak, win %. This is the "I want my numbers" surface — the finish screen stays a celebration, the profile page is the dashboard.
+
+**Why this split:** the finish screen runs on every completion and must stay calm. The profile page runs only when the player goes looking, so breadth belongs there. Lets us add more columns later (D7 streak, perfect-day count, …) on the profile page without re-tightening the finish layout each time.
+
+**Phases (one PR each, off main, don't auto-merge):**
+
+- [ ] **N1 — pure compute + tests.** `flags/streakCompute.js`: takes a sorted `[{puzzleId, completed}]` array, returns `{currentStreak, maxStreak, winPercent, totalPlayed, totalCompleted}`. Unit-test for: empty, all-completed, all-missed, streak-broken-yesterday, streak-still-alive-today, single-puzzle, single completion.
+- [ ] **N2 — read endpoint.** `GET /api/v1/daily/me?deviceId=…` — point-query into `dailyResults` filtered to `c.deviceId = @deviceId` (cross-partition; bounded by deviceId selectivity, fine at current scale). 60s edge cache, `?fresh=1` bypass — same pattern as `dailyStats.js`.
+- [ ] **N3 — finish screen wiring.** `daily/page.js` reads the endpoint after submission, renders the one-line current-streak text under the stats headline when ≥ 2. i18n strings under `daily.streak.*` in `en.json` + `pl.json`.
+- [ ] **N4 — profile page wiring.** `/profile/` reads the same endpoint, renders all three numbers.
+
+**Open design calls (settled now to avoid mid-flight re-debate):**
+
+- **Win = completion** (any score). Score-threshold definition creates a "what counts as a win" debate every time a puzzle gets harder.
+- **Streak break = missed day OR played-but-didn't-finish.** Otherwise half-trying every day keeps the streak alive, which dilutes the badge.
+- **Identity scope: per-deviceId today.** After Feature C lands, dedupe by identityId where present, deviceId otherwise (same pattern Feature C already calls out).
+- **Cross-partition cost:** ~50 puzzles × ~50 results/puzzle = ~2.5K docs scanned per call, well below pain threshold. If it ever grows: cache a per-device `streak:{deviceId}` doc updated on each `dailyResult.js` write (Feature G's `tttPairs` pattern transposed).
+
+**Out of scope** (captured so they don't drift back in): streak freezes / makeup days, weekly streaks, public streak leaderboards (Feature K territory), retroactive push notification, in-grid "your streak" badge on the archive page, per-mode streaks if the daily ever forks.
 
 ---
 
@@ -149,33 +174,6 @@ The pure-SQL option is by far the cheapest and probably enough for the first six
 **Storage cost.** ~200 bytes × 365 days × ~50 DAU = ~3.6 MB/year. Rounding noise vs 25 GB Free Tier. Add `defaultTtl: 31_536_000` (1 year, matching `dailyResults`) on creation. Survives Feature I's snapshot logic the same way `dailyResults` will.
 
 **Out of scope even for Feature M:** per-puzzle heat-map of where players drop (which cell got the most starts-but-never-clicked), partial-completion analytics (started 10 cells, finished 3), A/B testing infra, public stats page, GA4 / Plausible / self-hosted Umami (CF Analytics covers the visit-count half; a second analytics provider is just maintenance), per-flag-quiz event tracking (different container, different feature when felt).
-
-### Feature N: Streaks + win% on the daily finish screen
-
-**Status:** backlog. Cheapest "retention lever" per the analytics framing — surfaces a number that makes returning matter.
-
-**Goal:** finish-screen shows the player their **current streak**, **max streak**, and **win %** (puzzles completed ÷ puzzles played), derived server-side from existing `dailyResults` data. Server-truth so streaks survive browser cache clears (today's `daily.scores` in localStorage doesn't). Optional subtle UX cue ("Come back tomorrow to extend your 7-day streak") nudges the return-tomorrow behaviour D1 retention actually measures.
-
-**Why server-side and no migration needed.** `dailyResults` already has 1 row per (deviceId, puzzleId) for every completion since 2026-06-09. The streak/max/win% numbers are *derived* from those rows — no new write path, no new container, no Feature F-style shape change. Just a new read endpoint.
-
-**Why this is a separate feature, not part of Feature M.** M instruments the platform side (DAU / retention as Jan sees in a dashboard); N surfaces a personalised number to the *player*. Overlapping data, different audiences, different code paths. Could ship in either order; N depends on nothing from M.
-
-**Likely shape when this comes off the parking brake:**
-
-1. Pure derivation in `flags/streakCompute.js`: takes a sorted array of `{puzzleId, completed: true|false}` rows, returns `{currentStreak, maxStreak, winPercent, totalPlayed, totalCompleted}`. Unit-tested for: empty, all-completed, all-missed, streak-broken-yesterday, streak-still-alive-today, single-puzzle.
-2. New endpoint `GET /api/v1/daily/me?deviceId=…` — point-query into `dailyResults` filtered to `c.deviceId = @deviceId` (cross-partition since `dailyResults` is partitioned by `/puzzleId`, but bounded by deviceId selectivity — fine at current scale). 60s edge-cache on the response per the existing `dailyStats.js` pattern.
-3. Daily finish-screen wiring in `daily/page.js`: render the three badges below the existing per-puzzle result. Hide the streak badge entirely when `totalPlayed < 2` (no signal yet, just clutter).
-4. i18n strings in `en.json` + `pl.json` under `daily.streak.*`.
-5. Optional copy: a one-line "Come back tomorrow to extend your streak" message when current streak ≥ 3.
-
-**Open design calls:**
-
-- **Win definition.** "Win = completed the puzzle" (any score) or "win = score ≥ threshold"? Simplest is the former; the latter creates a "what counts as a win" debate every time a puzzle gets harder. Default: completion = win.
-- **Streak break rule.** Daily cadence is one puzzle per day. Missed day = streak resets. "Played today, didn't finish" → does that break the streak? Probably yes; otherwise you can keep streak alive by half-trying every day, which dilutes the badge.
-- **Whose streak when Feature C ships.** Today: per-deviceId. After Feature C: per-identityId across linked devices. Derive at read time from whichever identity layer is highest available — the dedupe pattern Feature C already calls out.
-- **Cross-partition query cost.** Querying `dailyResults` by `c.deviceId` scans every `puzzleId` partition. At ~50 puzzles × ~50 results/puzzle = ~2500 docs scanned per call, well below the cross-partition pain threshold. If it ever grows: cache the per-device aggregate as a `streak:{deviceId}` doc updated on each `dailyResult.js` write — Feature G's `tttPairs` pattern transposed onto daily.
-
-**Out of scope even for Feature N:** streak freezes / makeup days, weekly streaks, public leaderboards of streaks (Feature K's territory if it ever stretches there), retroactive push notification ("you broke your record"), in-grid "your streak" badge on the archive page (separate surface), per-mode streaks if the daily ever forks into multiple modes (defer to mode-fork-decision day).
 
 ---
 
