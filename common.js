@@ -177,6 +177,7 @@ function legacyCopyToClipboard(text, doc) {
  *  `nickname: null`, which means "fall back to the deterministic default
  *  from `flags/nickname.js`". */
 export const NICKNAME_STORAGE_KEY = 'gridgame.nickname';
+export const IDENTITY_STORAGE_KEY = 'gridgame.identityId';
 
 /**
  * Disable the burger menu button when its menu has no items. Empty-menu pages

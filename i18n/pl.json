@@ -21,6 +21,17 @@
     "stats": {
       "currentStreak": "Aktualna seria",
       "maxStreak": "Najdłuższa seria"
+    },
+    "passkey": {
+      "title": "Synchronizuj między urządzeniami",
+      "explain": "Zachowaj swój postęp, żeby był z Tobą na każdym urządzeniu — bez hasła, tylko odcisk palca lub Face ID.",
+      "register": "Synchronizuj z innymi urządzeniami",
+      "signin": "Mam profil na innym urządzeniu",
+      "linked": "✓ Połączono — Twój postęp synchronizuje się między urządzeniami.",
+      "savedConfirm": "Zapisano! Zaloguj się tym samym kluczem na innych urządzeniach.",
+      "signedinConfirm": "Witaj z powrotem — Twój postęp jest połączony na tym urządzeniu.",
+      "errorBrowser": "Twoja przeglądarka jeszcze nie obsługuje kluczy passkey.",
+      "errorGeneric": "Nie udało się połączyć tego urządzenia — spróbuj jeszcze raz."
     }
   },
   "privacy": {

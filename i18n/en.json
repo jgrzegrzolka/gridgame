@@ -21,6 +21,17 @@
     "stats": {
       "currentStreak": "Current streak",
       "maxStreak": "Best streak"
+    },
+    "passkey": {
+      "title": "Sync across devices",
+      "explain": "Save your progress so it follows you to every device — no password, just your fingerprint or Face ID.",
+      "register": "Sync to other devices",
+      "signin": "I have a profile on another device",
+      "linked": "✓ Linked — your progress syncs across your devices.",
+      "savedConfirm": "Saved! Sign in with the same passkey on your other devices.",
+      "signedinConfirm": "Welcome back — your progress is linked on this device.",
+      "errorBrowser": "Your browser doesn’t support passkeys yet.",
+      "errorGeneric": "Couldn’t link this device — try again."
     }
   },
   "privacy": {

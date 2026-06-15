@@ -2,9 +2,10 @@ import { getOrCreateDeviceId } from '../flags/identity.js';
 import { defaultNickname, displayNickname } from '../flags/nickname.js';
 import { avatarSvg } from '../flags/avatar.js';
 import { isOffensiveNickname } from '../flags/nicknameModeration.js';
-import { NICKNAME_STORAGE_KEY } from '../common.js';
+import { NICKNAME_STORAGE_KEY, IDENTITY_STORAGE_KEY } from '../common.js';
 import { t } from '../i18n.js';
 import { fetchDailyMe } from '../daily/streakClient.js';
+import { registerPasskey, authenticatePasskey } from '../flags/passkeyClient.js';
 
 const ENDPOINT = '/api/v1/profile';
 const FLASH_MS = 1500;
@@ -204,6 +205,106 @@ export function bootProfile() {
   });
 
   void loadAndPaintStats(deviceId);
+  wirePasskey(deviceId);
+}
+
+/**
+ * Wire the passkey section: paint the "linked" state if an
+ * identityId is already in localStorage, otherwise show the two
+ * action buttons and bind their click handlers. Both flows
+ * fire-and-forget through the pure client helper; on success we
+ * persist identityId locally and flip the section into the linked
+ * state.
+ *
+ * @param {string} deviceId
+ */
+function wirePasskey(deviceId) {
+  const registerBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('profile-passkey-register'));
+  const signinBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('profile-passkey-signin'));
+  const actions = document.getElementById('profile-passkey-actions');
+  const linked = document.getElementById('profile-passkey-linked');
+  const status = document.getElementById('profile-passkey-status');
+  if (!registerBtn || !signinBtn || !actions || !linked || !status) return;
+
+  function paintState() {
+    let stored = null;
+    try { stored = window.localStorage.getItem(IDENTITY_STORAGE_KEY); } catch {}
+    const isLinked = typeof stored === 'string' && stored.length > 0;
+    actions.hidden = isLinked;
+    linked.hidden = !isLinked;
+  }
+  paintState();
+
+  document.addEventListener('langchanged', () => {
+    // i18n.js re-applies data-i18n on the labels itself; we just
+    // re-evaluate which container is visible in case a future
+    // language change changes the textual length and we want to
+    // re-position. No-op today, future-proof.
+    paintState();
+  });
+
+  function setBusy(busy) {
+    registerBtn.disabled = busy;
+    signinBtn.disabled = busy;
+  }
+
+  /** @param {string} key @param {string} fallback */
+  function showStatus(key, fallback) {
+    status.textContent = t(key, fallback);
+    status.setAttribute('data-i18n', key);
+    status.classList.add('is-active');
+  }
+  function clearStatus() {
+    status.textContent = '';
+    status.removeAttribute('data-i18n');
+    status.classList.remove('is-active');
+  }
+
+  /** @param {string} reason */
+  function statusForFailure(reason) {
+    if (reason === 'no_webauthn') {
+      showStatus('profile.passkey.errorBrowser', 'Your browser doesn’t support passkeys yet.');
+    } else if (reason === 'cancelled') {
+      // Soft cancel — user backed out. Don't shout; just clear.
+      clearStatus();
+    } else {
+      showStatus('profile.passkey.errorGeneric', 'Couldn’t link this device — try again.');
+    }
+  }
+
+  registerBtn.addEventListener('click', async () => {
+    clearStatus();
+    setBusy(true);
+    try {
+      const result = await registerPasskey(deviceId);
+      if (!result.ok) {
+        statusForFailure('reason' in result ? result.reason : 'unknown');
+        return;
+      }
+      try { window.localStorage.setItem(IDENTITY_STORAGE_KEY, result.identityId); } catch {}
+      paintState();
+      showStatus('profile.passkey.savedConfirm', 'Saved! Sign in with the same passkey on your other devices.');
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  signinBtn.addEventListener('click', async () => {
+    clearStatus();
+    setBusy(true);
+    try {
+      const result = await authenticatePasskey();
+      if (!result.ok) {
+        statusForFailure('reason' in result ? result.reason : 'unknown');
+        return;
+      }
+      try { window.localStorage.setItem(IDENTITY_STORAGE_KEY, result.identityId); } catch {}
+      paintState();
+      showStatus('profile.passkey.signedinConfirm', 'Welcome back — your progress is linked on this device.');
+    } finally {
+      setBusy(false);
+    }
+  });
 }
 
 /**

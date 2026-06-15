@@ -139,3 +139,91 @@
   font-weight: 600;
   color: var(--primary-color);
 }
+
+/* Passkey section — sync-across-devices. Sits below the stats block
+ * with deliberate breathing room so it doesn't read as a stats row.
+ * Two states: unlinked (two action buttons) and linked (confirmation
+ * line + collapsed buttons). The buttons use the same brand pink as
+ * other action affordances per CLAUDE.md's palette rule. */
+.profile-passkey {
+  margin-top: 16px;
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-passkey-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.profile-passkey-explain {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted-color);
+  line-height: 1.4;
+}
+
+.profile-passkey-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.profile-passkey-actions[hidden] {
+  display: none;
+}
+
+.profile-passkey-btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--secondary-color);
+  background: none;
+  border: 1px solid var(--secondary-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: center;
+}
+.profile-passkey-btn:hover:not(:disabled) {
+  background: var(--secondary-color);
+  color: #fff;
+}
+.profile-passkey-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.profile-passkey-btn--secondary {
+  /* Same shape, lighter visual weight via the muted-color border —
+   * the secondary action ("I have a profile on another device") is
+   * the rarer path of the two. */
+  color: var(--muted-color);
+  border-color: var(--muted-color);
+}
+.profile-passkey-btn--secondary:hover:not(:disabled) {
+  background: var(--muted-color);
+  color: #fff;
+}
+
+.profile-passkey-linked {
+  margin: 0;
+  font-size: 13px;
+  color: var(--primary-color);
+}
+
+.profile-passkey-status {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted-color);
+  min-height: 0;
+}
+.profile-passkey-status:empty {
+  display: none;
+}
+.profile-passkey-status.is-active {
+  color: var(--secondary-color);
+}
