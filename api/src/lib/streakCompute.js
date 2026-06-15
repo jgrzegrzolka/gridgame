@@ -23,6 +23,11 @@
  * Win definition is "completion = win" (decision settled in FEATURE.md
  * Feature N). `winPercent` is integer-rounded; callers wanting decimals
  * can recompute from `totalCompleted / totalPlayed`.
+ *
+ * Lives in api/src/lib/ rather than flags/ because every caller is
+ * server-side — the endpoint computes, the frontend just renders. The
+ * `flags/` folder is browser-side ESM only and (per CLAUDE.md) wouldn't
+ * be packaged into the deployed Functions app anyway.
  */
 
 /**
@@ -49,7 +54,7 @@ const EMPTY = {
  * @param {{ rows: StreakRow[], latestPuzzleId?: number }} args
  * @returns {StreakResult}
  */
-export function computeStreak({ rows, latestPuzzleId }) {
+function computeStreak({ rows, latestPuzzleId }) {
   if (!rows || rows.length === 0) return { ...EMPTY };
 
   const sorted = [...rows].sort((a, b) => a.puzzleId - b.puzzleId);
@@ -89,3 +94,5 @@ export function computeStreak({ rows, latestPuzzleId }) {
 
   return { currentStreak, maxStreak, winPercent, totalPlayed, totalCompleted };
 }
+
+module.exports = { computeStreak };

@@ -1,8 +1,8 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { computeStreak } from './streakCompute.js';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { computeStreak } = require('./streakCompute');
 
-test('empty rows — all zeros', () => {
+test('streakCompute: empty rows — all zeros', () => {
   assert.deepEqual(computeStreak({ rows: [] }), {
     currentStreak: 0,
     maxStreak: 0,
@@ -12,7 +12,7 @@ test('empty rows — all zeros', () => {
   });
 });
 
-test('single completed row — streak 1, win 100%', () => {
+test('streakCompute: single completed row — streak 1, win 100%', () => {
   assert.deepEqual(computeStreak({ rows: [{ puzzleId: 5, completed: true }] }), {
     currentStreak: 1,
     maxStreak: 1,
@@ -22,7 +22,7 @@ test('single completed row — streak 1, win 100%', () => {
   });
 });
 
-test('single uncompleted row — streak 0, win 0%', () => {
+test('streakCompute: single uncompleted row — streak 0, win 0%', () => {
   assert.deepEqual(computeStreak({ rows: [{ puzzleId: 5, completed: false }] }), {
     currentStreak: 0,
     maxStreak: 0,
@@ -32,7 +32,7 @@ test('single uncompleted row — streak 0, win 0%', () => {
   });
 });
 
-test('all completed, consecutive — current = max = total', () => {
+test('streakCompute: all completed, consecutive — current = max = total', () => {
   const rows = [1, 2, 3, 4, 5].map((puzzleId) => ({ puzzleId, completed: true }));
   assert.deepEqual(computeStreak({ rows }), {
     currentStreak: 5,
@@ -43,7 +43,7 @@ test('all completed, consecutive — current = max = total', () => {
   });
 });
 
-test('all missed — streak 0, win 0%', () => {
+test('streakCompute: all missed — streak 0, win 0%', () => {
   const rows = [1, 2, 3].map((puzzleId) => ({ puzzleId, completed: false }));
   assert.deepEqual(computeStreak({ rows }), {
     currentStreak: 0,
@@ -54,7 +54,7 @@ test('all missed — streak 0, win 0%', () => {
   });
 });
 
-test('completed streak broken by a failed row in the middle', () => {
+test('streakCompute: completed streak broken by a failed row in the middle', () => {
   // ✓ ✓ ✗ ✓ ✓ — max=2 (first or last pair), current=2 (trailing pair)
   const rows = [
     { puzzleId: 1, completed: true },
@@ -72,7 +72,7 @@ test('completed streak broken by a failed row in the middle', () => {
   });
 });
 
-test('streak broken by a missing puzzleId (gap, no failed row)', () => {
+test('streakCompute: streak broken by a missing puzzleId (gap, no failed row)', () => {
   // ✓ ✓ _ ✓ — skipped #3 entirely; current=1, max=2
   const rows = [
     { puzzleId: 1, completed: true },
@@ -88,7 +88,7 @@ test('streak broken by a missing puzzleId (gap, no failed row)', () => {
   });
 });
 
-test('trailing failed row — current 0, max preserved from earlier run', () => {
+test('streakCompute: trailing failed row — current 0, max preserved from earlier run', () => {
   // ✓ ✓ ✓ ✗ — current=0, max=3
   const rows = [
     { puzzleId: 1, completed: true },
@@ -105,7 +105,7 @@ test('trailing failed row — current 0, max preserved from earlier run', () => 
   });
 });
 
-test('latestPuzzleId ahead of last row — current resets to 0 (missed today)', () => {
+test('streakCompute: latestPuzzleId ahead of last row — current resets to 0 (missed today)', () => {
   // Last played row is #3, but #5 is live → player skipped #4 and #5.
   const rows = [
     { puzzleId: 1, completed: true },
@@ -117,7 +117,7 @@ test('latestPuzzleId ahead of last row — current resets to 0 (missed today)', 
   assert.equal(out.maxStreak, 3);
 });
 
-test('latestPuzzleId equals last row — streak counts normally', () => {
+test('streakCompute: latestPuzzleId equals last row — streak counts normally', () => {
   // Player just finished today's puzzle — streak alive.
   const rows = [
     { puzzleId: 8, completed: true },
@@ -128,7 +128,7 @@ test('latestPuzzleId equals last row — streak counts normally', () => {
   assert.equal(out.currentStreak, 3);
 });
 
-test('unsorted input — sorts internally', () => {
+test('streakCompute: unsorted input — sorts internally', () => {
   const rows = [
     { puzzleId: 3, completed: true },
     { puzzleId: 1, completed: true },
@@ -139,7 +139,7 @@ test('unsorted input — sorts internally', () => {
   assert.equal(out.maxStreak, 3);
 });
 
-test('winPercent rounds — 2 of 3 = 67%', () => {
+test('streakCompute: winPercent rounds — 2 of 3 = 67%', () => {
   const rows = [
     { puzzleId: 1, completed: true },
     { puzzleId: 2, completed: true },
@@ -148,7 +148,7 @@ test('winPercent rounds — 2 of 3 = 67%', () => {
   assert.equal(computeStreak({ rows }).winPercent, 67);
 });
 
-test('does not mutate the input array', () => {
+test('streakCompute: does not mutate the input array', () => {
   const rows = [
     { puzzleId: 3, completed: true },
     { puzzleId: 1, completed: true },
