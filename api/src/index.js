@@ -16,3 +16,7 @@ require('./functions/tttResult');
 require('./functions/getTttResult');
 require('./functions/clearLocalRows');
 require('./functions/engagementEvent');
+require('./functions/passkeyRegisterBegin');
+require('./functions/passkeyRegisterVerify');
+require('./functions/passkeyAuthBegin');
+require('./functions/passkeyAuthVerify');
