@@ -90,6 +90,34 @@
 .daily-stats-headline .share-link {
   vertical-align: middle;
 }
+/* Streak segment in the headline. inline-block so the entry
+ * animation's transform applies cleanly (transforms on raw inline
+ * elements don't render) and so the streak text stays as one unit
+ * if the headline wraps. Plain state inherits the headline's
+ * primary-colour family — the personal counter sits in the same
+ * weight / size as the score it sits next to. */
+.daily-stats-streak {
+  display: inline-block;
+}
+/* First-appearance attention grab: cell-shake's existing motion
+ * curve (common.css, ±4px) plus a quick secondary → primary colour
+ * flash so the streak announces itself the first time the player
+ * sees it, then settles into the calm primary colour. Reuses
+ * cell-shake (per CLAUDE.md "same mechanism = same code") rather
+ * than inventing a second shake keyframe. JS adds this class on the
+ * first render where the streak appears and removes it on
+ * animationend; subsequent repaints (stats arriving, language
+ * switch) render the streak in its plain state. */
+.daily-stats-streak-enter {
+  animation: cell-shake 0.4s ease-in-out, daily-streak-colour 0.9s ease-out;
+}
+@keyframes daily-streak-colour {
+  0%, 60% { color: var(--secondary-color); }
+  100% { color: var(--primary-color); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .daily-stats-streak-enter { animation: none; }
+}
 .daily-stats-caption {
   font-size: 12px;
   color: var(--muted-color);

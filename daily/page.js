@@ -74,6 +74,12 @@ function statsLabels() {
  */
 let streakState = null;
 
+/** Has the entry animation played for the streak yet this page load?
+ * The shake + pink-to-primary colour flash should fire exactly once —
+ * subsequent repaints (stats arriving after streak, language switch,
+ * revisit re-paints) all reuse the same final-state styling. */
+let streakAnimated = false;
+
 /**
  * Module-scope cache of the most recent community-stats object so
  * `loadAndPaintStreak` can repaint the panel without losing the stats
@@ -246,21 +252,42 @@ function paintStatsPanel(found, total, stats, opts = {}) {
   // share button stays glued to its preceding text when a narrow
   // viewport wraps the line — otherwise flex-wrap puts the button on
   // its own row, which is uglier than a natural mid-text wrap.
+  //
+  // Streak is its own span (rather than concatenated into the score
+  // text) so the entry animation can target just the streak — first-
+  // time appearance shakes + flashes secondary-pink, then settles to
+  // inherit the headline's primary colour.
   const shareBtn = createShareButton();
-  let inlineText = headlineText;
   const showStreak = streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW;
+  const textEl = document.createElement('span');
+  textEl.textContent = headlineText;
+  h.appendChild(textEl);
   if (showStreak) {
-    inlineText += ` · ${labels.streakLine.replace('{n}', String(streakState.currentStreak))}`;
+    h.appendChild(document.createTextNode(' · '));
+    const streakSpan = document.createElement('span');
+    streakSpan.className = streakAnimated
+      ? 'daily-stats-streak'
+      : 'daily-stats-streak daily-stats-streak-enter';
+    streakSpan.textContent = labels.streakLine.replace('{n}', String(streakState.currentStreak));
+    if (!streakAnimated) {
+      streakAnimated = true;
+      // Drop the entry class after the animation completes so the
+      // span is back to a plain inline-block — keeps the DOM honest
+      // about its current visual state (no leftover animation hook).
+      streakSpan.addEventListener('animationend', () => {
+        streakSpan.classList.remove('daily-stats-streak-enter');
+      }, { once: true });
+    }
+    h.appendChild(streakSpan);
   }
   // No trailing space after the dot — the share-link button has 6px
   // left padding (common.css .share-link) which gives the gap to the
   // icon glyph. Adding a trailing space stacks on top of the padding
   // and breaks the rhythm vs the "2 · " separator before this one.
-  if (shareBtn) inlineText += ' ·';
-  const textEl = document.createElement('span');
-  textEl.textContent = inlineText;
-  h.appendChild(textEl);
-  if (shareBtn) h.appendChild(shareBtn);
+  if (shareBtn) {
+    h.appendChild(document.createTextNode(' ·'));
+    h.appendChild(shareBtn);
+  }
   container.appendChild(h);
   if (opts.loading) {
     // Three pulsing dots after the label — CSS animates them in a wave
