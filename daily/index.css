@@ -90,6 +90,18 @@
   align-items: center;
   flex-wrap: wrap;
 }
+/* Personal streak sub-line under the headline. Uses --muted-color
+ * (one of the three palette vars; see CLAUDE.md "UI consistency")
+ * so it sits in the same quiet-text family as .daily-stats-caption
+ * and .daily-stats-loading without inventing a fourth shade. JS-gated
+ * at currentStreak < 2 so a first completion doesn't surface
+ * "Day streak: 1" as clutter. */
+.daily-stats-streak {
+  font-size: 14px;
+  color: var(--muted-color);
+  margin: 4px 0 0;
+  text-align: left;
+}
 .daily-stats-caption {
   font-size: 12px;
   color: var(--muted-color);
