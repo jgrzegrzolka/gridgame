@@ -73,7 +73,14 @@
         </p>
 
         <div class="sync-option">
-          <button type="button" class="sync-action sync-action--primary" id="sync-link" data-i18n="sync.link.button">Link this device</button>
+          <button type="button" class="sync-action sync-action--primary" id="sync-show-qr" data-i18n="sync.showQr.button">Show QR for another device</button>
+        </div>
+
+        <div class="sync-qr-container" id="sync-qr-container" hidden>
+          <div class="sync-qr" id="sync-qr-svg" aria-hidden="true"></div>
+          <p class="sync-qr-hint" id="sync-qr-hint" hidden data-i18n="sync.showQr.hint">
+            Open the camera on your other device and scan this code. The link expires in 5 minutes.
+          </p>
         </div>
       </section>
 

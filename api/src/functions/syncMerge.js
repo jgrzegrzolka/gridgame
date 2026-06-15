@@ -1,7 +1,7 @@
 const { app } = require('@azure/functions');
 const { queryDocs, insertDoc, deleteDoc } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
-const { verifyToken } = require('../lib/passkeyToken');
+const { verifyToken } = require('../lib/syncToken');
 const { validateDeviceIdParam } = require('../lib/validate');
 const {
   planDailyMerge,
@@ -46,11 +46,10 @@ app.http('syncMerge', {
     }
 
     const tokenCheck = verifyToken({
-      secret, token: body.mergeToken, now: Date.now(), expectedScope: 'merge',
+      secret, token: body.claimToken, now: Date.now(), expectedScope: 'claim',
     });
     if (!tokenCheck.ok) return { status: 400, jsonBody: { error: tokenCheck.error } };
-    const { targetDeviceId } = tokenCheck.payload;
-    if (!targetDeviceId) return { status: 400, jsonBody: { error: 'invalid_token' } };
+    const targetDeviceId = tokenCheck.payload.deviceId;
 
     const sourceCheck = validateDeviceIdParam(body.sourceDeviceId, 'invalid_sourceDeviceId');
     if (!sourceCheck.ok) return { status: 400, jsonBody: { error: sourceCheck.error } };
