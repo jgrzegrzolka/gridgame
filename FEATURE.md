@@ -21,45 +21,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-### Feature C: Cross-device identity via WebAuthn passkey
-
-**Why now.** Promoted from backlog 2026-06-15. Cross-device need is real (Jan plays on phone + laptop; future Feature O achievements should merge across both); learning value is the other half (real WebAuthn integration is portfolio-worthy in a way claim-code-paste isn't). Picked passkey over the lighter alternative (deviceId-as-claim-code) explicitly for the learning + future-proof angle.
-
-**Goal.** An existing user opts in to "save my progress across devices" with one tap + Face ID / Touch ID / Windows Hello. From that point on, their stats follow them between phone, laptop, and any other browser — without registering, without a password, without an email field. Existing rows from this device get retroactively tagged with the new `identityId` so the merged history is real, not just forward-looking.
-
-**Design (settled 2026-06-15):**
-
-- **Container:** `passkeys` — partition `/credentialID`, no TTL (credentials live until the user revokes them).
-  - One row per registered credential (one device may have one credential; the same user across N devices has N rows).
-  - Doc shape: `{ id: credentialID, credentialID, identityId, publicKey, counter, deviceIdHint, createdAt, v: 1 }`. `publicKey` is base64-encoded COSE; `counter` is the signature counter for replay protection; `deviceIdHint` is the registering device's deviceId (advisory only — for "which device's credential is this?" surfaces later).
-  - **No separate `users` container** in V1: `identityId` is just a UUID that links credentials. If we later need per-user metadata, add `users` then.
-- **Auth endpoints** (`@simplewebauthn/server` integrated into `api/`):
-  - `POST /api/v1/passkey/register/begin` → returns WebAuthn `PublicKeyCredentialCreationOptionsJSON` + a `signedToken` (HMAC-wrapped challenge + deviceId + expiresAt).
-  - `POST /api/v1/passkey/register/verify` → receives `{ response, signedToken }`. Verifies HMAC + timestamp, then `verifyRegistrationResponse` from simplewebauthn. On success, mints `identityId` (UUID), inserts the `passkeys` row, returns `{ identityId }`.
-  - `POST /api/v1/passkey/auth/begin` → returns `PublicKeyCredentialRequestOptionsJSON` + `signedToken` (HMAC-wrapped challenge + expiresAt).
-  - `POST /api/v1/passkey/auth/verify` → receives `{ response, signedToken }`. Verifies HMAC, point-reads the credential by `credentialID` (the assertion carries it), validates signature against stored `publicKey`, bumps `counter`, returns `{ identityId }`.
-- **Stateless challenges via HMAC.** No transient-session container. Server wraps `{ challenge, deviceId?, expiresAt }` in an HMAC tag using a new app setting `PASSKEY_HMAC_SECRET`; the client returns the opaque blob with the verify call. 5-minute expiry. Saves a Cosmos container for transient state.
-- **Lib:** `api/src/lib/passkeyDoc.js` (pure builder for the `passkeys` row + `signedToken` wrap/unwrap). `api/src/lib/passkeyVerify.js` (thin wrapper around simplewebauthn so the handlers stay shells).
-- **Client:** `flags/passkeyClient.js` — single helper that wraps `navigator.credentials.create()` / `.get()` + the begin/verify round-trips. Fire-and-handle: returns `{ ok: true, identityId }` or `{ ok: false, reason }`.
-- **`identityId` storage on the client.** `localStorage.gridgame.identityId` once the user has either registered (first device) or authenticated (second device). All future writes from that device carry it alongside `deviceId`.
-- **`identityId` on existing write endpoints.** `dailyResult`, `quizRecord`, `tttResult`, `engagementEvent` accept an optional `identityId` body field; persist it on the row unconditionally. Pre-Feature-C rows have no field. Validators accept it as a UUID string when present.
-- **Read-path dedupe.** `GET /api/v1/daily/me` (streak compute) gains an optional `identityId=…` query param. When present, query becomes `WHERE c.identityId = @iid` (cross-partition — see partition-key warning below) and returns merged streak across all linked devices. When absent, falls back to today's `deviceId=…` path.
-- **Backfill on first registration.** On register/verify success, server-side does a cross-partition update of every existing row in `dailyResults` / `quizRecords` / `tttPairs` / `engagementEvents` matching the registering deviceId, stamping `identityId` on each. One-shot, idempotent (re-running is a no-op because rows already have the field).
-- **Partition-key flag (preserved from backlog).** `dailyResults` is partitioned by `/puzzleId`, not `/deviceId`. The "lifetime stats per identityId" query is fundamentally cross-partition — every `puzzleId` partition gets scanned, filtered by identityId. At current scale (~10 puzzles × ~50 rows) this is rounding noise. If it grows, mitigate via a pre-aggregated `lifetime:{identityId}` doc maintained on write (same pattern as Feature G's `tttPairs`). Don't repartition `dailyResults` retroactively.
-
-**Phases (one PR each, off main, don't auto-merge):**
-
-- [ ] **C.1 — backend.** `passkeys` container provisioned via `az`. `@simplewebauthn/server` added to `api/package.json`. New `PASSKEY_HMAC_SECRET` app setting. Pure libs (`passkeyDoc.js` + `passkeyVerify.js`) + tests. Four endpoints (register-begin, register-verify, auth-begin, auth-verify) registered in `api/src/index.js`. Not user-visible yet — verify via curl with a recorded WebAuthn fixture.
-- [ ] **C.2 — frontend.** `flags/passkeyClient.js` helper + tests (fake `navigator.credentials.{create,get}` in tests). New UI on `/profile/`: "Save across devices" button → register flow; "Claim from another device" button → auth flow. Both store `identityId` in localStorage on success and surface a confirmation. i18n EN + PL. After this lands, registering / claiming works end-to-end but `identityId` doesn't yet affect any reads or writes.
-- [ ] **C.3 — propagation + backfill.** Update `dailyResult`, `quizRecord`, `tttResult`, `engagementEvent` write handlers + clients to send + persist `identityId` when present. `GET /api/v1/daily/me?identityId=…` reads cross-partition and dedupes. One-shot backfill kicks off automatically inside register/verify on first registration — touches every row matching the registering deviceId.
-
-**Open design calls** (settle if/when they come up — none load-bearing for V1):
-
-- **Cross-ecosystem claim.** Synced passkeys (iCloud Keychain, Google Password Manager) auto-port within an ecosystem. Cross-ecosystem (iOS phone → Android laptop) means the user explicitly registers a *new* passkey on device B under the same `identityId` — which the auth flow already handles (it's just a second registration after auth on device B fails, but with the existing identityId rather than minting a new one). UX wrinkle deferred to V2; V1 just says "register passkey on each device."
-- **Revocation / management.** "Remove this device's passkey" UI. Out of scope for V1.
-- **Conflict resolution.** Two devices with the same identityId race to write the same daily result row (same deterministic id). 409 dedups already. No additional handling needed.
-
-**Out of scope, intentionally** (captured so they don't drift back in): usernames, email, profile pages beyond the existing `/profile/` (Feature H already shipped that), social features, public list of "verified players", recovery codes (passkey + ecosystem sync = the recovery mechanism), revocation UI (V1 deferral), changing `dailyResults` partition key (don't — keep the lifetime view as a separate read path), forcing identityId on every player (always opt-in — the anonymous deviceId path stays valid forever).
+*(Nothing in flight. Feature C just landed — `?test`-gated pending real-device validation; gate-removal is the next-up bit of follow-up work.)*
 
 ---
 
@@ -173,6 +135,49 @@ Items here are not blocking current work but deserve durable memory — the next
 ---
 
 ## Done
+
+### Feature C: Cross-device identity via WebAuthn passkey — *shipped 2026-06-15 (UI gated behind `?test` pending validation)*
+
+**Goal.** An existing user opts in to "save my progress across devices" with one tap + Face ID / Touch ID / Windows Hello. From that point on, their stats follow them between phone, laptop, and any other browser — without registering, without a password, without an email field. Existing rows from the second-linked device get folded into the first device's namespace so the merged history is real, not just forward-looking.
+
+**Shape that shipped (after one mid-flight rethink — see "Course corrections" below):**
+
+- **`passkeys` Cosmos container** — partition `/credentialID`, 400 RU/s manual, no TTL. One row per registered credential; many credentials share an `identityId` (the cross-device link). Server stores `{ credentialID, identityId, publicKey, counter, transports, deviceIdHint, createdAt, v }`. No separate `users` container — `identityId` is just a UUID.
+- **`@simplewebauthn/server` v13** (CJS dual-package, fits api/'s commonjs pin) wired into four anonymous endpoints, all rate-limited:
+  - `POST /api/v1/passkey/register/begin` / `verify` — mints `identityId` on success; returns `targetDeviceId` + `mergeToken` for the subsequent sync call.
+  - `POST /api/v1/passkey/auth/begin` / `verify` — discoverable-credential auth (no `allowCredentials` — relies on the platform passkey picker). Returns the originally-registered `targetDeviceId` so a second device knows which deviceId it should adopt.
+  - `POST /api/v1/sync/preview` — reads target + source device data, returns conflict report `{ profile?, daily? }`.
+  - `POST /api/v1/sync/merge` — performs the auto-merge using user-resolved choices + the deterministic rules below.
+- **Stateless challenges via HMAC.** New SWA app setting `PASSKEY_HMAC_SECRET`. Server wraps `{ challenge, scope, expiresAt, identityId?, targetDeviceId? }` into an opaque token; client returns it on the verify step; no transient Cosmos container needed.
+- **Adopt-deviceId + auto-merge.** After successful link, the client *replaces* its own `gridgame.deviceId` with the registered device's deviceId. Every existing per-device container (`dailyResults` / `quizRecords` / `tttPairs` / `engagementEvents` / `profiles`) gets a server-side merge so the second device's data folds into the first's:
+  - **dailyResults**: primary device wins on overlap (user picks which); non-overlap rows transfer with rewritten id.
+  - **quizRecords**: per configKey, better PB wins, attempts sum, latest `lastPlayedAt`. Auto, no user input.
+  - **tttPairs**: per opponent, counters sum, newer outcome wins. Auto.
+  - **engagementEvents**: rows transfer to target partition; dedupe on id (relevant for deterministic `daily_start` id). Auto.
+  - **profiles**: nickname conflict resolved by user choice; absent conflict, source transfers.
+- **Wizard, at most two questions.** Detected at /sync/preview: "which nickname should this device use?" + "which device wins on overlapping daily puzzles?". Auto-mergeable cases (quiz/TTT/events) skip the wizard entirely. No-conflict cases show no wizard at all.
+- **No `identityId` propagation through write endpoints.** Adopt-deviceId means every device writes under one shared deviceId post-link, so existing read/write paths Just Work without changes. This was the key simplification — the alternative ("identityId on every row + cross-partition reads + backfill of historical rows") was abandoned mid-feature after a 25-file diff exposed double-counting and merge-conflict landmines.
+
+**`?test` gate.** The entry points (`/profile/` sync link, burger menu entry, `/profile/sync/` page) only surface when `?test` is on the URL. Direct hits without the flag redirect to `/profile/`. Removal is the next follow-up — keep gated until the multi-device path is verified on real hardware (Windows Hello + Google Password Manager + an Android phone, etc.).
+
+**Course corrections during the build:**
+
+- **Mid-flight scope reversal.** Started building `identityId` propagation through every write endpoint + cross-partition reads + backfill of historical rows (C.3 in the original phase plan). After ~25 files of diff, the cost-benefit hit a wall: same-day-different-device plays would double-count, profiles would have ambiguous merges, and the data model wasn't designed for retroactive identityId. Rolled back to the *adopt-deviceId + one-shot server-side merge* design, which keeps the runtime simple (no per-write changes anywhere except the new sync endpoints).
+- **Mental-model simplification.** Initial UI had two buttons ("Set up here first" / "Sign in with passkey"); landed on a single "Link this device" button that tries auth first and falls through to register on failure. The button itself doesn't need to know which path it's on — the platform passkey picker + server resolution handle it.
+- **Help affordance promoted.** A `?` button + modal on `/profile/sync/` mirrors TTT's "How to play" idiom. Shared styles moved to `common.css` as generic `.help-btn` / `.help-dialog` + selectors, with TTT's existing `.rules-btn` / `.rules-help` retargeted to inherit. One source of truth across both pages.
+
+**Standing artifacts** (the load-bearing outputs future work inherits):
+
+- `api/src/lib/syncMerge.js` + 26 unit tests — pure per-container merge functions. Any future "merge two device-keyed namespaces into one" surface composes these.
+- `api/src/lib/passkeyToken.js` — stateless HMAC token with scope discrimination. Reusable for any future short-lived authorization need.
+- `flags/passkeyClient.js` `linkDevice()` — unified "try auth, fall through to register" flow with a stable result shape (`{ ok, mode: 'linked' | 'saved' }`).
+- The shared `.help-btn` / `.help-dialog` chrome in `common.css` — any future "tap ? for an explainer modal" pattern uses this directly.
+
+**Cosmos cost.** One additional container (`passkeys`, ~1 row per credential per user — currently a handful). Backfill happens only at link time (one merge per device claim), so the steady-state RU cost is unchanged from pre-Feature-C. Storage is rounding noise.
+
+**Key PRs.** #452 (C.1 backend — passkey container + 4 endpoints + libs), #453 (C end-to-end — frontend + auto-merge + sync wizard + `?test` gate).
+
+**Out of scope, intentionally deferred** (captured so they don't drift back in): revocation / management UI ("remove this device's passkey"), per-puzzle daily-conflict resolution (one "primary device wins" choice covers all overlaps), `identityId` on write endpoints (rejected; adopt-deviceId obviates it), `users` container for per-identity metadata (no consumer yet), cross-ecosystem hybrid QR flow (V2 when felt), forcing identityId on every player (always opt-in — anonymous deviceId path stays valid forever), Feature O achievements (separate backlog item — will compose syncMerge's outputs once promoted), removing the `?test` gate (intentional follow-up after multi-device validation).
 
 ### Feature M Part B: Engagement-event substrate — *shipped 2026-06-15*
 
