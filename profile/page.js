@@ -1,6 +1,7 @@
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { defaultNickname, displayNickname } from '../flags/nickname.js';
 import { avatarSvg } from '../flags/avatar.js';
+import { isOffensiveNickname } from '../flags/nicknameModeration.js';
 import { NICKNAME_STORAGE_KEY } from '../common.js';
 import { t } from '../i18n.js';
 
@@ -63,14 +64,36 @@ export function bootProfile() {
   }
 
   /**
-   * Disable Save when the payload already equals what the server holds, so
-   * the page only invites clicks that would actually change something.
-   * Stays disabled while a request is in flight, regardless of state.
+   * Refresh Save enablement + live moderation feedback in one pass.
+   * Save is disabled when:
+   *   - a request is in flight, OR
+   *   - the payload already equals what the server holds (no-op), OR
+   *   - the current input matches the offensive-nickname blocklist.
+   *
+   * The third branch mirrors `api/src/lib/blockedNicknames.js` so the
+   * user can't even *try* to submit an offensive name — no round-trip,
+   * no rate-limit risk from repeated rejected Saves. The server still
+   * validates as defence-in-depth, but the common case never leaves
+   * the browser. The inline error renders the moment the input lands
+   * in the blocked zone, with no clear-timer so it persists while the
+   * input is still offensive.
    */
   function refreshButtons() {
     if (inFlight) {
       saveBtn.disabled = true;
       return;
+    }
+    const offensive = isOffensiveNickname(input.value);
+    if (offensive) {
+      saveBtn.disabled = true;
+      setStatus(status, t('nickname.errorOffensive', 'Please choose a different nickname'), 'is-error', 'nickname.errorOffensive');
+      return;
+    }
+    // Clear the moderation error when the user edits back into a
+    // valid range. Other error types (network / server) clear on their
+    // own timers; the live-offensive branch is sticky while offensive.
+    if (status.getAttribute('data-i18n') === 'nickname.errorOffensive') {
+      setStatus(status, '', null);
     }
     saveBtn.disabled = currentPayload() === persisted;
   }

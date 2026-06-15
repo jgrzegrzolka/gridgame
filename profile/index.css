@@ -53,7 +53,7 @@
  * failure can replay it via the offsetWidth-reflow trick. */
 .profile-input.shake-wrong {
   animation: cell-shake 0.5s ease-in-out;
-  border-color: #c44;
+  border-color: var(--secondary-color);
 }
 
 .profile-save {
@@ -88,5 +88,5 @@
   display: none;
 }
 .profile-status.is-error {
-  color: #c44;
+  color: var(--secondary-color);
 }
