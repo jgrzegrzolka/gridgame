@@ -21,7 +21,67 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-*(Nothing in flight. Promote a backlog item below when ready to ship it.)*
+### Feature M Part B: Engagement-event substrate (achievements + analytics)
+
+**Why now.** Engagement signals (shares, custom-puzzle plays, daily starts, TTT outcome ordering) are cheap to write but irretrievable if not captured — every day we wait, those events happen and are gone. Promoted from backlog 2026-06-15 with a **globally-designed shape** so the Cosmos container layout lands coherent in one decision instead of growing four containers feature-by-feature.
+
+**Goal.** One Cosmos container holds three event kinds; one field tweak on the existing `tttPairs` container handles outcome ordering. Two consumers, same writes: Feature O reads to award achievements; Jan reads for DAU / completion-rate / D1 / D7 retention.
+
+**Design (settled 2026-06-15):**
+
+- **Container:** `engagementEvents`
+  - **Partition:** `/deviceId` — the dominant read is achievement compute per player (one partition read returns all their events). DAU/D1/D7 admin queries cross-partition; rare and fine at that frequency.
+  - **Throughput:** autoscale 100–1000 RU/s (same pattern as `dailyLeaderboards` from Feature K1).
+  - **TTL:** 31_536_000 (1 year, matching `dailyResults`).
+- **Doc shape:**
+
+  ```
+  {
+    id,            // per-kind scheme below
+    deviceId,      // partition key
+    kind,          // 'daily_start' | 'findflag_play' | 'share'
+    dayId,         // warsawDayNumber — integer; consistent with streakCompute's internal axis
+    occurredAt,    // ms since epoch
+    payload,       // tagged union per kind, validated server-side
+    local?,        // localhost test rows, excluded from analytics + achievements
+    v: 1
+  }
+  ```
+
+- **Per-kind id schemes:**
+  - `daily_start:{dayId}:{puzzleId}` — **deterministic**; one fire per device/day/puzzle. 409 is the natural "already started" guard the client ignores.
+  - `findflag_play:{uuid}` — non-deterministic; multiple plays per day are distinct rows.
+  - `share:{uuid}` — non-deterministic; multiple shares are distinct rows.
+- **Per-kind payload contract:**
+  - `daily_start`: `{ puzzleId: number }`
+  - `findflag_play`: `{ filter: string, mode: 'random' | 'custom' }`
+  - `share`: `{ surface: 'daily' | 'findflag' | 'flagquiz' | 'ttt', contextHint?: string }` — `contextHint` carries surface-specific identity (puzzleId / filter / configKey / roomId).
+- **Endpoint:** `POST /api/v1/event` — anonymous, rate-limited (60/min/IP), validates kind + payload via the lib. 201 on insert, 409 on duplicate (relevant for `daily_start` only), 400 on validation errors.
+- **Lib:** `api/src/lib/engagementDoc.js` exports `buildEngagementDoc({ deviceId, kind, payload, occurredAt, local })` — pure, per-kind validation, returns the Cosmos doc.
+- **Client:** `flags/eventSubmit.js` — single fire-and-forget helper used by all three call sites. Never throws.
+
+**Plus one separate field add (not in `engagementEvents`):**
+
+- **`tttPairs.lastOutcome` field.** `lastOutcome` is per-pair *state* (helps detect revenge), not an event-stream item, so it belongs on the existing pair row. `mergePairResult` in `api/src/lib/tttPairDoc.js` reads the existing row's `lastOutcome`, sets the new one on every upsert. Zero migration: pre-existing rows treat missing field as "no prior history with this opponent."
+
+**Phases (one PR each, off main, don't auto-merge):**
+
+- [ ] **M.B.1 — substrate + first wiring (`share`).** Provision the container via `az`. Add `api/src/lib/engagementDoc.js` + tests. Add `api/src/functions/engagementEvent.js` with the endpoint. Add `flags/eventSubmit.js` + tests. Wire `common.js` `shareText()` / `shareUrl()` to fire after the share/copy resolves. Highest irretrievability priority — every share since 2026-06-15 is already gone; stop the bleed first.
+- [ ] **M.B.2 — `findflag_play` wiring.** New kind in the lib's per-kind dispatcher (+ tests), new wire in `findFlag/page.js` on Play-button click. No new container, no new endpoint — same substrate.
+- [ ] **M.B.3 — `daily_start` wiring.** Third kind (+ tests), wire on first cell click in `daily/page.js` (not page-mount — bots/preview-renderers/curious-bouncers don't count as "started"). Server filters `local: true` the same way `dailyResults` does.
+- [ ] **M.B.4 — `tttPairs.lastOutcome` field add.** Independent of the events container. Ride alongside whichever phase is convenient or ship as its own small PR.
+
+**Open design calls (settled now to avoid mid-flight re-debate):**
+
+- **`dayId` semantics.** `warsawDayNumber` integer for consistency with `streakCompute`. Warsaw because that's the daily-puzzle clock (Logic App at 00:05 Warsaw per Feature E).
+- **Fire-trigger for `daily_start`.** First cell click, not page-mount.
+- **Should `share` track failed shares?** Track success-only — after the share/copy resolves. Three-tier fallback (`navigator.share` → `clipboard.writeText` → legacy textarea) can fail silently; only the success branch fires the event so the count reflects shares that actually happened.
+- **Cosmos write volume.** Worst case ~1 daily_start + a few findflag_plays + 0–1 share per device per day. At Free Tier 1000 RU/s this is rounding noise.
+- **Admin gate for DAU/D1/D7 reads.** Out of scope for M Part B — pure-SQL via Cosmos Data Explorer covers the first six months. Real `/admin/metrics` page deferred until SQL-pasting friction is felt.
+
+**Storage cost.** ~200 bytes × (~5 events) × ~50 DAU × 365 days ≈ **~18 MB/year**. Rounding noise vs the 25 GB Free Tier ceiling.
+
+**Out of scope** (deliberately): per-cell heat-map, partial-completion analytics (started 10 cells, finished 3), per-game TTT history rows (`lastOutcome` field handles ordering), A/B testing infra, public stats page, GA4 / Plausible / self-hosted Umami (CF Analytics covers visit counts), findFlag *result* events (no fixed round end — Play-start is the only meaningful trigger), flagQuiz *play-start* events (every flagQuiz play eventually writes `quizRecords` with `attempts+1` per F5, so start is already captured downstream — only share is new data here), make-a-puzzle as a *separate* event kind (findFlag custom-play IS make-a-puzzle — same wire).
 
 ---
 
@@ -120,37 +180,6 @@ Items here are not blocking current work but deserve durable memory — the next
 
 **Out of scope here:** the second-region (WE sibling) plan in Feature D. That helps if we stay on SWA Standard, but is unnecessary on CF Pages. Decide platform first.
 
-### Feature M: Analytics + engagement-event instrumentation
-
-**Status:** Part A (Cloudflare Web Analytics) shipped 2026-06-14, dashboard-only setup, no PR. Part B (the engagement-event substrate — `dailyStarts` + `shareEvents` + a `lastOutcome` field on `tttPairs`) remains in backlog. **Promote when ready** — the scope is the data-gathering substrate that future Feature O (achievements) consumes, plus Jan's own DAU / completion-rate / D1 / D7 retention analytics.
-
-**Goal:** capture the engagement signals that are cheap to write but irretrievable if not captured — the rule Jan settled on 2026-06-15 ("if we don't start gathering what we think we'll want, there's no going back"). Two consumers, same writes: Feature O reads the events to award achievements (e.g. "played 10 custom findFlag puzzles", "shared 10 daily scores", "won a TTT revenge match"); Jan reads them himself for DAU / completion-rate / D1 / D7 retention. The bar for what's worth instrumenting now is "cheap to write today, clearly useful to ≥ 1 consumer." Note `/findFlag/` is the **make-a-puzzle surface** — when a player clicks Play with a custom filter, that *is* them creating and playing their own puzzle; it just wasn't renamed when the framing shifted. So findFlag-play tracking and make-a-puzzle tracking are the same thing.
-
-**Two-part shape — independent, ship in either order:**
-
-**Part A: Cloudflare Web Analytics — SHIPPED 2026-06-14.** Zero code; CF auto-injects the beacon at the edge for proxied zones. First setup pass left the EU-exclude default on, which silently dropped all Polish (and other EU) traffic — the dashboard showed only US/Canada visits despite Jan's known PL user base. Flipped to "Enable" (no EU exclusion); CF Web Analytics is cookieless and hashes IPs, so the GDPR posture is acceptable for the hobby-site use case. Privacy page disclosure shipped in PR #421. Dashboard now shows DAU + visit count + Top Pages + per-country geographic breakdown, bot-filtered server-side. Defends the "are we even seeing humans" question that prompted the whole L/M/N framing.
-
-**Part B: Four engagement signals — one feature, four small additions:**
-
-1. **`dailyStarts` Cosmos container.** Partitioned by `/dateUtc`. Doc shape: `{ id: "{dateUtc}:{deviceId}:{puzzleId}", deviceId, puzzleId, dateUtc, startedAt, local?, v: 1 }`. Deterministic id = idempotent (same browser firing twice in a day is a 409, ignored client-side). `POST /api/v1/daily/start` endpoint, anonymous, same rate-limit pattern as `dailyResult.js`. Client wiring: fire-and-forget from `daily/page.js` after first interaction (first click into a cell), **not** on page-mount — that way bots / preview-renderers / curious-but-bouncing visitors don't count as "started". Server filters `local: true` the same way `dailyResults` does. Consumers: DAU / completion-rate / D1 / D7 (Jan's analytics); future "daily play streak" / "showed up but didn't finish" achievements.
-2. **`findFlagPlays` Cosmos container.** Partitioned by `/dateUtc`. Doc shape: `{ id: "{dateUtc}:{deviceId}:{startedAt}", deviceId, filter, mode: "random" | "custom", dateUtc, startedAt, local?, v: 1 }`. `filter` is the query string the player chose (e.g. `motif:bird,continent:Asia`), captured verbatim — that's what makes findFlag the **make-a-puzzle surface**. Non-deterministic id (`startedAt` participates) so multiple plays per day are distinct rows. `POST /api/v1/findFlag/play` endpoint, fire-and-forget from `findFlag/page.js` on the Play button click (not on `?f=…` deep-link mount — only count active play). Consumers: future "played 10 custom puzzles" / "tried 5 different continents" achievements; "is /findFlag/ actually used" analytics.
-3. **`shareEvents` Cosmos container.** Partitioned by `/dateUtc`. Doc shape: `{ id: "{shareId}", deviceId, surface: "daily" | "findFlag" | "flagQuiz" | "ttt", contextHint?, sharedAt, local?, v: 1 }`. `contextHint` carries the surface-specific identity — `puzzleId` for daily, the findFlag filter string for findFlag, the quiz `configKey` for flagQuiz (e.g. `"60s"` for `/flagQuiz/?n=60s`), the room id for TTT. `POST /api/v1/share/event` endpoint, anonymous, same rate-limit pattern. Client wiring: fire-and-forget from `common.js` `shareText()` / `shareUrl()` right *after* the share/copy resolves (don't track abandoned dialogs). Consumers: future "share daily score N times" / "share a custom findFlag puzzle" / "share a flagQuiz result" achievements + Jan's share-loop analytics ("does the share button get used at all?"). Cost: ≤ a few writes per day at current scale.
-4. **`tttPairs.lastOutcome` field.** Single field add — no new container. `api/src/lib/tttPairDoc.js` `mergePairResult` reads the *existing* row's `lastOutcome`, computes the new outcome, then writes both the updated counters AND `lastOutcome: <new outcome>` atomically. Enables "revenge win" achievement detection ("you lost to Alice last time and won this time") without adding a per-game container — the existing row gains one field, that's it. Zero migration: pre-existing rows without the field get `lastOutcome: undefined`, which a future achievement checker treats as "no prior history with this opponent."
-
-From there, the analytics surface (DAU / completion-rate / D1 / D7) is still pure-SQL via the Cosmos Data Explorer for the first six months — gate the decision on a real `/admin/metrics` page until the SQL-pasting friction is actually felt.
-
-**Open design calls:**
-
-- **Fire-trigger for `dailyStarts`.** First cell click vs daily-page-mount-with-puzzle-loaded vs after a 5s dwell timer. First interaction gives the cleanest "intended to play" signal; mount counts curious visitors who bounce — also a metric worth having, but CF Analytics in Part A already covers the broader visit-count side.
-- **Should `shareEvents` track failed shares?** Today the share API has a three-tier fallback (`navigator.share` → `clipboard.writeText` → legacy textarea + `execCommand`). All three can fail silently. Track success only (the share/copy resolved) vs track every attempt — leaning toward success-only so the count reflects "shares that actually happened."
-- **Cosmos write volume.** Today's writes are ~1 per device per day (completion). Adding `dailyStarts` doubles that; `shareEvents` adds 0–N more (rare events, mostly 0). At Free Tier 1000 RU/s this is rounding noise — revisit only if the daily-puzzle forks into multi-puzzle-per-day modes.
-- **D1/D7 cutoff.** UTC or Europe/Warsaw? Daily release is Warsaw (Logic App, 00:05 Warsaw per Feature E). For consistency with the puzzle's identity, probably Warsaw — but UTC simplifies cross-puzzle queries.
-- **Admin gate.** Hardcoded deviceId allow-list (simplest, breaks if Jan ever device-resets), env-var secret query param (`?key=xxx`), or full passkey via Feature C (overkill until C ships anyway).
-
-**Storage cost.** `dailyStarts`: ~200 bytes × 365 days × ~50 DAU = ~3.6 MB/year. `findFlagPlays`: ~250 bytes × maybe 20/day = ~1.8 MB/year. `shareEvents`: ~150 bytes × maybe 5/day = ~270 KB/year. Rounding noise vs 25 GB Free Tier. Add `defaultTtl: 31_536_000` (1 year, matching `dailyResults`) on all three containers at creation. They survive Feature I's snapshot logic the same way `dailyResults` will.
-
-**Out of scope even for Feature M Part B** (deliberately skipped per the 2026-06-15 audit): per-cell heat-map of where players drop, partial-completion analytics (started 10 cells, finished 3), per-game TTT history rows (`lastOutcome` field handles the only achievement that asked for ordering), A/B testing infra, public stats page, GA4 / Plausible / self-hosted Umami (CF Analytics covers the visit-count half), findFlag *result* events (a findFlag round has no fixed end — Play-start is the only meaningful trigger), flagQuiz *play-start* events (every flagQuiz play eventually writes `quizRecords` with `attempts+1` per F5, so the start is already captured downstream — only the share is new data).
-
 ### Feature O: Profile-page achievements (replaces the "stats dashboard" direction)
 
 **Status:** parked. Pivot decided 2026-06-15 — the profile page becomes a collection of earned achievements ("Cartographer", "First daily", "Perfect week", "All-Europe", "Revenge win") instead of a raw-numbers dashboard. Streak + best-streak from Feature N stay; everything else on the profile page becomes achievement-driven.
@@ -168,12 +197,12 @@ From there, the analytics surface (DAU / completion-rate / D1 / D7) is still pur
 | Play quiz Europe / All / Africa / etc. | ✓ ready | Same — `configKey` encodes the mode |
 | Play TTT (count of games) | ✓ ready | Sum of `m3x3.{w,l,d} + m9x9.{w,l,d}` across `tttPairs` rows |
 | Win / Lose / Draw TTT | ✓ ready | Same, broken out per counter |
-| Share daily score N times | ✗ needs Feature M Part B `shareEvents` | New container, instrumented at `shareText()` resolve |
-| Share a custom findFlag puzzle (the `?f=…` deep-link case) | ✗ needs Feature M Part B `shareEvents` | Same container, `surface: "findFlag"`, `contextHint = filter` |
-| Share a flagQuiz result (e.g. `/flagQuiz/?n=60s`) | ✗ needs Feature M Part B `shareEvents` | Same container, `surface: "flagQuiz"`, `contextHint = configKey` |
-| TTT revenge win (lost before, won now) | ✗ needs Feature M Part B `tttPairs.lastOutcome` | Single field on the existing pair row |
-| Play a custom findFlag puzzle (make-a-puzzle) | ✗ needs Feature M Part B `findFlagPlays` | New container, instrumented on the Play button click |
-| Try N distinct findFlag filters | ✗ needs `findFlagPlays` | Same container, distinct-`filter` count per `deviceId` |
+| Share daily score N times | ✗ needs Feature M Part B `engagementEvents` `share` | One container with `kind` discriminator, instrumented at `shareText()` resolve |
+| Share a custom findFlag puzzle (the `?f=…` deep-link case) | ✗ needs Feature M Part B `engagementEvents` `share` | Same container, `kind:'share'`, `payload.surface:'findflag'`, `payload.contextHint = filter` |
+| Share a flagQuiz result (e.g. `/flagQuiz/?n=60s`) | ✗ needs Feature M Part B `engagementEvents` `share` | Same container, `kind:'share'`, `payload.surface:'flagquiz'`, `payload.contextHint = configKey` |
+| TTT revenge win (lost before, won now) | ✗ needs Feature M Part B `tttPairs.lastOutcome` | Single field on the existing pair row — separate from `engagementEvents` |
+| Play a custom findFlag puzzle (make-a-puzzle) | ✗ needs Feature M Part B `engagementEvents` `findflag_play` | Same container, `kind:'findflag_play'`, instrumented on the Play button click |
+| Try N distinct findFlag filters | ✗ needs `engagementEvents` `findflag_play` | Same container, distinct-`payload.filter` count per `deviceId` |
 
 **Why the inventory matters:** seven achievement categories ship data-ready today; six more unlock when Feature M Part B lands. Lets a Feature O v1 ship without waiting on M Part B, and v2 add the share / revenge / custom-puzzle achievements once the events are flowing. Also makes the cost-benefit case for each M Part B addition concrete — every line item in the table maps to ≥ 1 achievement consumer.
 
@@ -196,6 +225,10 @@ From there, the analytics surface (DAU / completion-rate / D1 / D7) is still pur
 ---
 
 ## Done
+
+### Feature M Part A: Cloudflare Web Analytics — *shipped 2026-06-14*
+
+Zero code; CF auto-injects the beacon at the edge for proxied zones. First setup pass left the EU-exclude default on, which silently dropped all Polish (and other EU) traffic — the dashboard showed only US/Canada visits despite Jan's known PL user base. Flipped to "Enable" (no EU exclusion); CF Web Analytics is cookieless and hashes IPs, so the GDPR posture is acceptable for the hobby-site use case. Privacy page disclosure shipped in PR #421. Dashboard now shows DAU + visit count + Top Pages + per-country geographic breakdown, bot-filtered server-side. Defends the "are we even seeing humans" question that prompted the whole L/M/N framing. **Part B** (engagement-event substrate for achievements + analytics) is now in `## Now` — promoted 2026-06-15 with a globally-designed single-container shape (`engagementEvents`) instead of the originally-spec'd three-container split.
 
 ### Feature N: Daily streaks — finish screen + profile page — *shipped 2026-06-15*
 
