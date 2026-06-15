@@ -7,7 +7,9 @@
     "flagsData": "Przeglądaj flagi",
     "random": "Losowa",
     "yourStats": "Twoje statystyki",
-    "includeTerritories": "Uwzględnij terytoria i inne flagi"
+    "includeTerritories": "Uwzględnij terytoria i inne flagi",
+    "sync": "Synchronizuj urządzenia",
+    "synced": "✓ Zsynchronizowano"
   },
   "nickname": {
     "label": "Pseudonim",
@@ -21,6 +23,41 @@
     "stats": {
       "currentStreak": "Aktualna seria",
       "maxStreak": "Najdłuższa seria"
+    }
+  },
+  "sync": {
+    "title": "Synchronizuj między urządzeniami — Yet Another Quiz",
+    "heading": "Grasz na więcej niż jednym urządzeniu?",
+    "intro": "Połącz telefon, laptop lub dowolną przeglądarkę, żeby Twoja seria, wyniki i statystyki były wszędzie.",
+    "howItWorksTitle": "Jak to działa",
+    "howItWorksStep1": "1. Na tym urządzeniu kliknij „Połącz to urządzenie”. Użyjesz odcisku palca lub Face ID, żeby zapisać profil.",
+    "howItWorksStep2": "2. Na każdym innym urządzeniu otwórz tę samą stronę i kliknij ten sam przycisk — potwierdź odciskiem palca lub Face ID i profil przeniesie się.",
+    "howItWorksStep3": "3. Gotowe — wszystkie urządzenia, na których to zrobisz, dzielą jeden profil.",
+    "back": "Profil",
+    "helpClose": "OK",
+    "link": {
+      "button": "Połącz to urządzenie"
+    },
+    "linked": {
+      "title": "✓ To urządzenie jest połączone.",
+      "explain": "Aby połączyć kolejne urządzenie, otwórz tę samą stronę na nim i kliknij „Połącz to urządzenie”."
+    },
+    "savedConfirm": "Gotowe. Teraz otwórz tę stronę na drugim urządzeniu i kliknij „Połącz to urządzenie”.",
+    "signedinConfirm": "Połączono — Twój postęp synchronizuje się teraz z tym urządzeniem.",
+    "merging": "Łączenie urządzeń…",
+    "wizard": {
+      "title": "Dwa krótkie pytania",
+      "profileQ": "Której nazwy powinno używać to urządzenie?",
+      "dailyQ": "Które urządzenie wygrywa przy nakładających się dziennych zagadkach?",
+      "dailyNote": "Nakładające się: {count} zagadek. Pozostałe zostaną zachowane.",
+      "dailyTarget": "Mój połączony profil",
+      "dailySource": "To urządzenie",
+      "cancel": "Anuluj",
+      "confirm": "Połącz urządzenia"
+    },
+    "error": {
+      "browser": "Twoja przeglądarka jeszcze tego nie obsługuje — spróbuj nowego Chrome, Safari lub Edge.",
+      "generic": "Nie udało się połączyć — spróbuj jeszcze raz."
     }
   },
   "privacy": {

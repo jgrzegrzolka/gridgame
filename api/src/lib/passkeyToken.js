@@ -36,11 +36,22 @@ const TTL_MS = 5 * 60 * 1000;
 /**
  * @typedef {{
  *   challenge: string,
- *   scope: 'register' | 'auth',
+ *   scope: 'register' | 'auth' | 'merge',
  *   deviceIdHint?: string,
  *   identityId?: string,
+ *   targetDeviceId?: string,
  *   expiresAt: number,
  * }} TokenPayload
+ *
+ * Scopes:
+ *   - 'register' / 'auth': WebAuthn challenge tokens, issued by
+ *     /passkey/register/begin and /passkey/auth/begin
+ *   - 'merge': authorization token for /sync/preview + /sync/merge,
+ *     issued by passkey verify endpoints on successful auth. Carries
+ *     identityId + targetDeviceId, both server-trusted. `challenge`
+ *     is filled with a random nonce so the HMAC is non-deterministic
+ *     per issue. Client returns the opaque token; sync endpoints
+ *     verify HMAC + expiry and trust the embedded ids.
  */
 
 /**
@@ -67,7 +78,7 @@ function signToken({ secret, payload, now, ttlMs = TTL_MS }) {
  *   secret: string,
  *   token: unknown,
  *   now: number,
- *   expectedScope: 'register' | 'auth',
+ *   expectedScope: 'register' | 'auth' | 'merge',
  * }} args
  * @returns {| { ok: true, payload: TokenPayload }
  *            | { ok: false, error: 'invalid_token' | 'expired_token' | 'scope_mismatch' }}

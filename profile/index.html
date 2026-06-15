@@ -84,6 +84,10 @@
 
         <div class="actions-row">
           <button type="submit" class="profile-save" data-i18n="nickname.save">Save</button>
+          <span class="profile-sync-wrap" id="profile-sync-wrap" hidden>
+            ·
+            <a class="profile-sync-link" id="profile-sync-link" href="./sync/" data-i18n="menu.sync">Sync across devices</a>
+          </span>
           ·
           <a href="../" data-i18n="menu.home">Home</a>
         </div>
@@ -93,13 +97,17 @@
     <script type="module">
       import { bootProfile } from './page.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem } from '../common.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountSyncMenuItem, mountPrivacyMenuItem } from '../common.js';
       bootI18n('../').then((lang) => {
         wireLangToggle(lang, undefined, { softReload: true, base: '../' });
         bootProfile();
         mountNicknameMenuItem({
           rootEl: document.getElementById('burger-menu'),
           profileHref: './',
+        });
+        mountSyncMenuItem({
+          rootEl: document.getElementById('burger-menu'),
+          syncHref: './sync/',
         });
         mountPrivacyMenuItem({
           rootEl: document.getElementById('burger-menu'),

@@ -13,7 +13,10 @@
     "COSMOS_CONN": "AccountEndpoint=https://cosmos-yetanotherquiz-jg.documents.azure.com:443/;AccountKey=...;",
 
     "_comment_TURNSTILE_SECRET": "Cloudflare Turnstile secret. Same source as COSMOS_CONN. Leave UNSET to skip Turnstile verification locally - the handler's `missing_secret` branch logs a warning and accepts any token. Recommended for local dev.",
-    "TURNSTILE_SECRET": ""
+    "TURNSTILE_SECRET": "",
+
+    "_comment_PASSKEY_HMAC_SECRET": "HMAC secret for WebAuthn challenge tokens (Feature C). Fetch with: az staticwebapp appsettings list -n swa-yetanotherquiz-v3 -g rg-yetanotherquiz --query properties.PASSKEY_HMAC_SECRET -o tsv. Required for the passkey/register and passkey/auth endpoints to work locally.",
+    "PASSKEY_HMAC_SECRET": ""
   },
 
   "Host": {

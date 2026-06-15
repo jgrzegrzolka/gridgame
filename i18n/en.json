@@ -7,7 +7,9 @@
     "flagsData": "Browse flags",
     "random": "Random",
     "yourStats": "Your stats",
-    "includeTerritories": "Include territories & other flags"
+    "includeTerritories": "Include territories & other flags",
+    "sync": "Sync across devices",
+    "synced": "✓ Synced"
   },
   "nickname": {
     "label": "Nickname",
@@ -21,6 +23,41 @@
     "stats": {
       "currentStreak": "Current streak",
       "maxStreak": "Best streak"
+    }
+  },
+  "sync": {
+    "title": "Sync across devices — Yet Another Quiz",
+    "heading": "Play on more than one device?",
+    "intro": "Link your phone, laptop, or any browser so your streak, scores, and stats follow you everywhere.",
+    "howItWorksTitle": "How it works",
+    "howItWorksStep1": "1. On this device, tap “Link this device”. You’ll use your fingerprint or Face ID to save your profile.",
+    "howItWorksStep2": "2. On every other device, open this same page and tap the same button — confirm with your fingerprint or Face ID and the profile carries over.",
+    "howItWorksStep3": "3. That’s it — every device you do this on shares one profile.",
+    "back": "Profile",
+    "helpClose": "Got it",
+    "link": {
+      "button": "Link this device"
+    },
+    "linked": {
+      "title": "✓ This device is linked.",
+      "explain": "To link another device, open this same page on it and tap “Link this device”."
+    },
+    "savedConfirm": "Done. Now open this page on your other device and tap “Link this device”.",
+    "signedinConfirm": "Linked — your progress now syncs to this device.",
+    "merging": "Linking your devices…",
+    "wizard": {
+      "title": "Two quick questions",
+      "profileQ": "Which nickname should this device use?",
+      "dailyQ": "Which device should win on overlapping daily puzzles?",
+      "dailyNote": "Overlap: {count} puzzles. Non-overlapping plays keep regardless.",
+      "dailyTarget": "My linked profile",
+      "dailySource": "This device",
+      "cancel": "Cancel",
+      "confirm": "Link devices"
+    },
+    "error": {
+      "browser": "Your browser doesn’t support this yet — try a recent Chrome, Safari, or Edge.",
+      "generic": "Couldn’t link this device — try again."
     }
   },
   "privacy": {

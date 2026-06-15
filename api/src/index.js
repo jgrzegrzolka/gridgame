@@ -20,3 +20,5 @@ require('./functions/passkeyRegisterBegin');
 require('./functions/passkeyRegisterVerify');
 require('./functions/passkeyAuthBegin');
 require('./functions/passkeyAuthVerify');
+require('./functions/syncPreview');
+require('./functions/syncMerge');

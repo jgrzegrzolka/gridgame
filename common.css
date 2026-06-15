@@ -998,3 +998,84 @@ dialog#zoom p {
     min-width: 0;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────
+ * Help "?" button + modal dialog — shared chrome
+ *
+ * Two consumers today: TTT's "How to play" affordance
+ * (`.rules-btn` + `.rules-help` + `.rules-close`, top-left corner of
+ * the game grid) and the /profile/sync/ "How it works" affordance
+ * (`.help-btn` + `.help-dialog` + `.help-close`, next to the page
+ * heading). Same physical mechanism — a `?` button opening a modal
+ * with a tight title + body + dismiss button — so the rules live
+ * here in `common.css` rather than getting copy-pasted across
+ * feature stylesheets (per CLAUDE.md "Same mechanism = same code").
+ *
+ * The off-palette greys (#bbb / #ddd / #f0f0f0 / #555 / #1c1c1c)
+ * are pre-existing TTT visuals lifted verbatim — touching them
+ * would change TTT's look out of scope. Palette cleanup is a
+ * separate concern.
+ * ──────────────────────────────────────────────────────────── */
+
+.rules-btn,
+.help-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #bbb;
+  border-radius: 50%;
+  background: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  line-height: 1;
+}
+.rules-btn:hover,
+.help-btn:hover {
+  background: #f0f0f0;
+  color: #1c1c1c;
+}
+
+.rules-help,
+.help-dialog {
+  max-width: 380px;
+  width: calc(100vw - 32px);
+  padding: 16px 18px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
+}
+.rules-help::backdrop,
+.help-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+.rules-help h2,
+.help-dialog h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  color: var(--primary-color);
+}
+.rules-help p,
+.help-dialog p {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--primary-color);
+}
+.rules-close,
+.help-close {
+  padding: 6px 14px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  color: var(--link-color);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.rules-close:hover,
+.help-close:hover {
+  background: #f0f0f0;
+}
