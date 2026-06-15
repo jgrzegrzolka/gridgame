@@ -11,11 +11,17 @@
   },
   "nickname": {
     "label": "Nickname",
-    "editTitle": "Set your nickname",
     "save": "Save",
     "error": "Could not save",
     "errorOffensive": "That’s an offensive word — please choose another",
     "errorInvalid": "That nickname contains characters that aren’t allowed"
+  },
+  "profile": {
+    "title": "Your profile — Yet Another Quiz",
+    "stats": {
+      "currentStreak": "Current streak",
+      "maxStreak": "Best streak"
+    }
   },
   "privacy": {
     "menuLink": "Privacy",
