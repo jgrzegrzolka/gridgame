@@ -175,5 +175,26 @@
       "en": "Find all African flags with only 2 colours.",
       "pl": "Znajdź wszystkie afrykańskie flagi z tylko 2 kolorami."
     }
+  },
+  {
+    "n": 11,
+    "filter": "continent:Europe,motif:coat-of-arms",
+    "answers": [
+      "ad",
+      "es",
+      "hr",
+      "md",
+      "me",
+      "pt",
+      "rs",
+      "si",
+      "sk",
+      "sm",
+      "va"
+    ],
+    "description": {
+      "en": "Find all European flags with a coat of arms.",
+      "pl": "Znajdź wszystkie europejskie flagi z godłem."
+    }
   }
 ]

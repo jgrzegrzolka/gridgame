@@ -1,26 +1,5 @@
 [
   {
-    "n": 11,
-    "filter": "continent:Europe,motif:coat-of-arms",
-    "answers": [
-      "ad",
-      "es",
-      "hr",
-      "md",
-      "me",
-      "pt",
-      "rs",
-      "si",
-      "sk",
-      "sm",
-      "va"
-    ],
-    "description": {
-      "en": "Find all European flags with a coat of arms.",
-      "pl": "Znajdź wszystkie europejskie flagi z godłem."
-    }
-  },
-  {
     "n": 12,
     "filter": "continent:Europe,motif:animal",
     "answers": [
