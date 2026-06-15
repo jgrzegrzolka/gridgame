@@ -110,7 +110,7 @@
     "sovereignOnly": "Sovereign countries only.",
     "stats": {
       "scoreOnly": "Your score: {found}/{total}",
-      "scoreWithAverage": "Your score: {found}/{total} · Average score: {average}/{total}",
+      "averageOnly": "Average score: {average}/{total}",
       "caption": "% shows how many other players found each flag.",
       "loading": "Loading stats",
       "noSubmissions": "You're one of the first to play this puzzle.",

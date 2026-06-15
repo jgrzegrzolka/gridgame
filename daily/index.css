@@ -72,6 +72,14 @@
 .daily-stats {
   margin: 52px 0 0;
 }
+/* Personal stats sit at the top of #result (above Found:); the 52px
+ * top margin that separates the community block from the Missed list
+ * above it would just create a big empty wedge at the top of the
+ * panel. Same shared .daily-stats-headline styling — only the spacing
+ * differs. */
+#daily-personal-stats {
+  margin-top: 0;
+}
 .daily-stats-headline {
   font-size: 16px;
   color: var(--primary-color);

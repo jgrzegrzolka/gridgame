@@ -27,7 +27,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 **Shape (decided 2026-06-15, kept deliberately calm):**
 
-- **Finish screen** shows **only the current streak**, as one inline text line under the existing stats headline ("Your score: 2/4 · Average score: 3.4/4 · ⌬"). Same typographic rhythm — text, not a badge / card / box. Hidden entirely when `currentStreak < 2` (no signal yet, just clutter).
+- **Finish screen** splits "your stats" from "community stats" by position: a personal block **above Found** ("Your score: 2/4 · Streak: 3 · ⌬") and a community block **below Missed** ("Average score: 3.4/4" + caption). Personal paints instantly (no fetch); community shows a loading spinner while stats are in flight, then the average / caption / extra rails. Hidden entirely when `currentStreak < 2` (no signal yet, just clutter).
 - **`/profile/` page** (already exists from Feature H) shows **all three**: current streak, max streak, win %. This is the "I want my numbers" surface — the finish screen stays a celebration, the profile page is the dashboard.
 
 **Why this split:** the finish screen runs on every completion and must stay calm. The profile page runs only when the player goes looking, so breadth belongs there. Lets us add more columns later (D7 streak, perfect-day count, …) on the profile page without re-tightening the finish layout each time.
