@@ -241,24 +241,23 @@ function paintStatsPanel(found, total, stats, opts = {}) {
   // "score: 2/4" and "Average". A flex-gap separator would
   // produce double-padding (flex gap on each side of the dot)
   // that read as too generous on mobile.
+  // Inline composition: score → (· streak when ≥ 2) → (· share icon
+  // when on touch). The headline runs as inline text (no flex) so the
+  // share button stays glued to its preceding text when a narrow
+  // viewport wraps the line — otherwise flex-wrap puts the button on
+  // its own row, which is uglier than a natural mid-text wrap.
   const shareBtn = createShareButton();
+  let inlineText = headlineText;
+  const showStreak = streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW;
+  if (showStreak) {
+    inlineText += ` · ${labels.streakLine.replace('{n}', String(streakState.currentStreak))}`;
+  }
+  if (shareBtn) inlineText += ' · ';
   const textEl = document.createElement('span');
-  textEl.textContent = shareBtn ? `${headlineText} · ` : headlineText;
+  textEl.textContent = inlineText;
   h.appendChild(textEl);
   if (shareBtn) h.appendChild(shareBtn);
   container.appendChild(h);
-  // Streak sub-line — separate <p> under the headline. Tried inline in
-  // the headline (commit 99ba925) but a narrow viewport wraps the
-  // score+average to two lines and leaves the " · " separators
-  // orphaned at line breaks. The separate-line layout is robust at
-  // any width. JS gate at < 2 hides the first-completion case so
-  // the headline doesn't get noisy.
-  if (streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW) {
-    const s = document.createElement('p');
-    s.className = 'daily-stats-streak';
-    s.textContent = labels.streakLine.replace('{n}', String(streakState.currentStreak));
-    container.appendChild(s);
-  }
   if (opts.loading) {
     // Three pulsing dots after the label — CSS animates them in a wave
     // so the player can tell something is happening across the long
