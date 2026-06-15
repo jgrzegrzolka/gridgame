@@ -44,7 +44,14 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 - **Win = completion** (any score). Score-threshold definition creates a "what counts as a win" debate every time a puzzle gets harder.
 - **Streak break = missed day OR played-but-didn't-finish.** Otherwise half-trying every day keeps the streak alive, which dilutes the badge.
 - **Identity scope: per-deviceId today.** After Feature C lands, dedupe by identityId where present, deviceId otherwise (same pattern Feature C already calls out).
-- **Cross-partition cost:** ~50 puzzles × ~50 results/puzzle = ~2.5K docs scanned per call, well below pain threshold. If it ever grows: cache a per-device `streak:{deviceId}` doc updated on each `dailyResult.js` write (Feature G's `tttPairs` pattern transposed).
+- **Cross-partition cost:** today ~10 puzzles × 1-2 RU per fan-out = rounding noise against the 1000 RU/s Free Tier ceiling. The query touches every puzzleId partition (Cosmos partition key is `/puzzleId`); each partition returns 0 or 1 doc for the given deviceId. 60s in-Function cache keyed by deviceId absorbs most repeat hits.
+- **When to materialize a per-device aggregate doc** (the mitigation, deferred until felt): ship a new container `dailyStreaks` partitioned by `/deviceId`, doc shape `{ id: deviceId, currentStreak, maxStreak, totalPlayed, totalCompleted, daysSet, lastUpdatedAt, v }`, upserted from `dailyResult.js` on every finish. `dailyMe.js` becomes a point-read (~1 RU). Same pattern Feature G uses for `tttPairs`. **Trigger any one of:**
+  - Cosmos account total RU/s consumption sits sustained above **800 RU/s** (80% of Free Tier 1000) — visible in `cosmos-yetanotherquiz-jg` portal metrics.
+  - `/api/v1/daily/me` p95 latency creeps above **500ms** (today ~50-100ms warm, ~1-2s cold) — Application Insights `dependencies` panel filtered to `dailyMe`.
+  - Puzzle count crosses **~300** (~10 months of daily releases from 2026-06-15) — at that fan-out, ~10-15 RU per uncached fetch starts being felt.
+
+  Don't ship before any of these fire — the write amplification (every `dailyResult` insert gains a second Cosmos round-trip) buys nothing until the read path actually hurts.
+- **Why not localStorage caching:** the explicit reason for server-side compute was "streaks survive browser cache clears." LocalStorage caching reintroduces the staleness / cross-device-drift problem we're avoiding. The 60s in-Function cache covers the same RU concern without that downside.
 
 **Out of scope** (captured so they don't drift back in): streak freezes / makeup days, weekly streaks, public streak leaderboards (Feature K territory), retroactive push notification, in-grid "your streak" badge on the archive page, per-mode streaks if the daily ever forks.
 
