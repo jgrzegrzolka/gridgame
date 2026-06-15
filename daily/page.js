@@ -242,22 +242,21 @@ function paintStatsPanel(found, total, stats, opts = {}) {
   // produce double-padding (flex gap on each side of the dot)
   // that read as too generous on mobile.
   const shareBtn = createShareButton();
+  // Inline composition: score → (· streak when ≥ 2) → (· share icon when
+  // on touch). Order is fixed so the rhythm reads "your numbers, then
+  // share." Streak gate at < 2 hides the first-completion case so the
+  // headline doesn't get noisy.
+  let inlineText = headlineText;
+  const showStreak = streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW;
+  if (showStreak) {
+    inlineText += ` · ${labels.streakLine.replace('{n}', String(streakState.currentStreak))}`;
+  }
+  if (shareBtn) inlineText += ' · ';
   const textEl = document.createElement('span');
-  textEl.textContent = shareBtn ? `${headlineText} · ` : headlineText;
+  textEl.textContent = inlineText;
   h.appendChild(textEl);
   if (shareBtn) h.appendChild(shareBtn);
   container.appendChild(h);
-  // Streak sub-line — one calm secondary line under the headline, only
-  // when the player actually has a streak going. Hidden at < 2 so the
-  // first-completion case doesn't read as noise. Personal signal (this
-  // device's count), distinct from the community-stats headline above
-  // and the per-tile %s below.
-  if (streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW) {
-    const s = document.createElement('p');
-    s.className = 'daily-stats-streak';
-    s.textContent = labels.streakLine.replace('{n}', String(streakState.currentStreak));
-    container.appendChild(s);
-  }
   if (opts.loading) {
     // Three pulsing dots after the label — CSS animates them in a wave
     // so the player can tell something is happening across the long
