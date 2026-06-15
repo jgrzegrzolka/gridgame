@@ -59,7 +59,7 @@ app.http('syncClaimToken', {
     const origin = isLocalRequestUrl(req.url)
       ? new URL(req.url).origin
       : 'https://www.yetanotherquiz.com';
-    const claimUrl = `${origin}/profile/sync/?test&claim=${encodeURIComponent(token)}`;
+    const claimUrl = `${origin}/profile/sync/?claim=${encodeURIComponent(token)}`;
 
     const qr = new QRCode({
       content: claimUrl,

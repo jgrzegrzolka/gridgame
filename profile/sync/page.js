@@ -1,7 +1,6 @@
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY, STORAGE_KEY as DEVICE_STORAGE_KEY } from '../../flags/identity.js';
 import { mintClaimToken, redeemClaimToken } from '../../flags/syncClaimClient.js';
 import { syncPreview, syncMerge } from '../../flags/syncMergeClient.js';
-import { isSyncTestMode } from '../../common.js';
 import { t } from '../../i18n.js';
 
 /**
@@ -24,36 +23,15 @@ import { t } from '../../i18n.js';
  * redirects to /profile/.
  */
 export function bootSync() {
-  if (!isSyncTestMode()) {
-    try { window.location.replace('../'); } catch {}
-    return;
-  }
-
   const unlinkedEl = document.getElementById('sync-unlinked');
   const linkedEl = document.getElementById('sync-linked');
-  const showQrBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('sync-show-qr'));
   const qrContainerEl = document.getElementById('sync-qr-container');
   const qrSvgEl = document.getElementById('sync-qr-svg');
-  const qrHintEl = document.getElementById('sync-qr-hint');
   const statusEl = document.getElementById('sync-status');
   const wizardEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('sync-wizard'));
-  if (!unlinkedEl || !linkedEl || !showQrBtn || !qrContainerEl || !qrSvgEl || !qrHintEl || !statusEl || !wizardEl) return;
+  if (!unlinkedEl || !linkedEl || !qrContainerEl || !qrSvgEl || !statusEl || !wizardEl) return;
 
   const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
-
-  // ---- How-it-works help dialog ----
-  const helpBtn = document.getElementById('sync-help-btn');
-  const helpDialog = /** @type {HTMLDialogElement | null} */ (document.getElementById('sync-help'));
-  const helpClose = document.getElementById('sync-help-close');
-  if (helpBtn && helpDialog) {
-    helpBtn.addEventListener('click', () => helpDialog.showModal());
-    helpDialog.addEventListener('click', (e) => {
-      if (e.target === helpDialog) helpDialog.close();
-    });
-  }
-  if (helpClose && helpDialog) {
-    helpClose.addEventListener('click', () => helpDialog.close());
-  }
 
   /** @param {string} key @param {string} fallback */
   function showStatus(key, fallback) {
@@ -83,14 +61,31 @@ export function bootSync() {
     return;
   }
 
+  // ---- Preview-only: ?wizard-preview shows the conflict wizard
+  // with mocked data so the UI can be iterated on without two real
+  // devices + matching localStorage state. Pure UI: never calls
+  // /sync/merge, never swaps deviceId. ---
+  if (params.has('wizard-preview')) {
+    void showWizard({
+      profile: { target: 'Nimble Forest', source: 'Curious Otter' },
+      daily: { count: 3, samplePuzzleIds: [3, 4, 7] },
+    });
+    return;
+  }
+
   // ---- Path 2 / 3: unlinked or linked ----
   paintLinkedState();
   document.addEventListener('langchanged', paintLinkedState);
 
-  showQrBtn.addEventListener('click', async () => {
-    clearStatus();
-    showQrBtn.disabled = true;
-    try {
+  // Auto-mint the QR on page load when the user is unlinked — the
+  // page exists to show one specific affordance, no reason to gate
+  // it behind a button click. Token expires in 5 min; user can
+  // reload to get a fresh one.
+  let stored = null;
+  try { stored = window.localStorage.getItem(IDENTITY_STORAGE_KEY); } catch {}
+  const isAlreadyLinked = typeof stored === 'string' && stored.length > 0;
+  if (!isAlreadyLinked) {
+    void (async () => {
       const mint = await mintClaimToken({ deviceId });
       if (!mint.ok) {
         showStatus('sync.error.generic', 'Couldn’t prepare the link — try again.');
@@ -100,12 +95,8 @@ export function bootSync() {
       // <svg>…</svg> string with no scripts.
       qrSvgEl.innerHTML = mint.qrSvg;
       qrContainerEl.hidden = false;
-      qrHintEl.hidden = false;
-      showQrBtn.hidden = true;
-    } finally {
-      showQrBtn.disabled = false;
-    }
-  });
+    })();
+  }
 
   /**
    * Redeem the claim, preview merge, optionally show wizard, run
@@ -152,7 +143,15 @@ export function bootSync() {
     let resolutions = {};
     if (preview.daily || preview.profile) {
       const w = await showWizard({ profile: preview.profile, daily: preview.daily });
-      if (!w) { clearStatus(); return; }
+      if (!w) {
+        // User cancelled the wizard — bail without merging. Tell
+        // them clearly so the page doesn't look broken. Nothing
+        // was changed server-side; the claim token has effectively
+        // burned its 5-min window but localStorage and Cosmos are
+        // untouched.
+        showStatus('sync.cancelled', 'Cancelled — nothing was changed.');
+        return;
+      }
       resolutions = w;
     }
 
@@ -204,10 +203,6 @@ export function bootSync() {
  */
 function paintWizard(dialog, conflicts, onResolve) {
   dialog.innerHTML = '';
-  const heading = document.createElement('h2');
-  heading.setAttribute('data-i18n', 'sync.wizard.title');
-  heading.textContent = t('sync.wizard.title', 'Two quick questions');
-  dialog.appendChild(heading);
 
   /** @type {'target' | 'source'} */
   let nicknameChoice = 'target';
@@ -220,10 +215,9 @@ function paintWizard(dialog, conflicts, onResolve) {
     const q = document.createElement('p');
     q.className = 'sync-wizard-question';
     q.setAttribute('data-i18n', 'sync.wizard.profileQ');
-    q.textContent = t('sync.wizard.profileQ', 'Which nickname should this device use?');
+    q.textContent = t('sync.wizard.profileQ', 'Nickname');
     section.appendChild(q);
-    section.appendChild(makeRadioRow('nickname', 'target', conflicts.profile.target, true, (v) => { nicknameChoice = v; }));
-    section.appendChild(makeRadioRow('nickname', 'source', conflicts.profile.source, false, (v) => { nicknameChoice = v; }));
+    section.appendChild(makeToggleRow(conflicts.profile.target, conflicts.profile.source, (v) => { nicknameChoice = v; }));
     dialog.appendChild(section);
   }
 
@@ -233,15 +227,15 @@ function paintWizard(dialog, conflicts, onResolve) {
     const q = document.createElement('p');
     q.className = 'sync-wizard-question';
     q.setAttribute('data-i18n', 'sync.wizard.dailyQ');
-    q.textContent = t('sync.wizard.dailyQ', 'Which device should win on overlapping daily puzzles?');
+    // Inline the conflict count into the label — saves the dedicated
+    // note paragraph and still tells the user how big the overlap is.
+    q.textContent = t('sync.wizard.dailyQ', 'Daily — {count} overlap').replace('{count}', String(conflicts.daily.count));
     section.appendChild(q);
-    const note = document.createElement('p');
-    note.className = 'sync-wizard-note';
-    note.textContent = t('sync.wizard.dailyNote', 'Overlap: {count} puzzles. Non-overlapping plays keep regardless.')
-      .replace('{count}', String(conflicts.daily.count));
-    section.appendChild(note);
-    section.appendChild(makeRadioRow('daily', 'target', t('sync.wizard.dailyTarget', 'My other device'), true, (v) => { dailyChoice = v; }));
-    section.appendChild(makeRadioRow('daily', 'source', t('sync.wizard.dailySource', 'This device'), false, (v) => { dailyChoice = v; }));
+    section.appendChild(makeToggleRow(
+      t('sync.wizard.dailyTarget', 'My other device'),
+      t('sync.wizard.dailySource', 'This device'),
+      (v) => { dailyChoice = v; },
+    ));
     dialog.appendChild(section);
   }
 
@@ -265,24 +259,53 @@ function paintWizard(dialog, conflicts, onResolve) {
 }
 
 /**
- * @param {string} group
- * @param {'target' | 'source'} value
- * @param {string} label
- * @param {boolean} checked
+ * Two-label iOS-style toggle: the target label sits on the left,
+ * the source label on the right, and the switch in between. The
+ * active side bolds. Default state = target (matches the
+ * conservative-merge default everywhere else in the wizard).
+ *
+ * Reuses the existing `.scope-toggle-switch / -track / -thumb`
+ * chrome from common.css so the visual idiom matches the burger
+ * menu's include-territories toggle.
+ *
+ * @param {string} targetLabel
+ * @param {string} sourceLabel
  * @param {(v: 'target' | 'source') => void} onChange
  */
-function makeRadioRow(group, value, label, checked, onChange) {
-  const wrap = document.createElement('label');
-  wrap.className = 'sync-wizard-radio';
+function makeToggleRow(targetLabel, sourceLabel, onChange) {
+  const row = document.createElement('div');
+  row.className = 'sync-wizard-toggle';
+
+  const left = document.createElement('span');
+  left.className = 'sync-wizard-toggle-label is-active';
+  left.textContent = targetLabel;
+  row.appendChild(left);
+
+  const switchEl = document.createElement('label');
+  switchEl.className = 'scope-toggle-switch';
   const input = document.createElement('input');
-  input.type = 'radio';
-  input.name = group;
-  input.value = value;
-  input.checked = checked;
-  input.addEventListener('change', () => { if (input.checked) onChange(value); });
-  wrap.appendChild(input);
-  const span = document.createElement('span');
-  span.textContent = label;
-  wrap.appendChild(span);
-  return wrap;
+  input.type = 'checkbox';
+  const track = document.createElement('span');
+  track.className = 'scope-toggle-track';
+  track.setAttribute('aria-hidden', 'true');
+  const thumb = document.createElement('span');
+  thumb.className = 'scope-toggle-thumb';
+  track.appendChild(thumb);
+  switchEl.appendChild(input);
+  switchEl.appendChild(track);
+  row.appendChild(switchEl);
+
+  const right = document.createElement('span');
+  right.className = 'sync-wizard-toggle-label';
+  right.textContent = sourceLabel;
+  row.appendChild(right);
+
+  input.addEventListener('change', () => {
+    const useSource = input.checked;
+    left.classList.toggle('is-active', !useSource);
+    right.classList.toggle('is-active', useSource);
+    onChange(useSource ? 'source' : 'target');
+  });
+
+  return row;
 }
