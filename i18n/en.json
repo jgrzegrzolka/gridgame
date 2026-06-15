@@ -124,7 +124,7 @@
       "title": "Yet Another Quiz — Daily #{n} — {score}/{total}"
     },
     "streak": {
-      "line": "Day streak: {n}"
+      "line": "Streak: {n}"
     }
   },
   "ttt": {
