@@ -20,18 +20,6 @@
   gap: 20px;
 }
 
-/* Heading + adjacent `?` help button on one row. The button sits to
- * the right of the heading text on a flex baseline so the heading
- * stays centred when the button is hidden via aria-hidden during
- * tests, and so the (?) affords its meaning ("info about the
- * heading") by adjacency. */
-.sync-heading-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
 .sync-heading {
   margin: 0;
   font-size: 22px;
@@ -66,6 +54,12 @@
   align-items: center;
   gap: 12px;
 }
+.sync-qr-container[hidden] {
+  /* `display: flex` overrides the HTML `[hidden]` default — pin the
+   * override so the container is genuinely hidden until the QR has
+   * actually been rendered. */
+  display: none;
+}
 .sync-qr {
   background: #fff;
   padding: 12px;
@@ -97,22 +91,36 @@
 }
 .sync-wizard-question {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--primary-color);
-}
-.sync-wizard-note {
-  margin: 0 0 4px;
   font-size: 13px;
   color: var(--muted-color);
 }
-.sync-wizard-radio {
+/* Two-label iOS-style toggle for the wizard's binary choices.
+ * `.scope-toggle-switch` / `-track` / `-thumb` chrome lives in
+ * common.css (shared with the burger menu's include-territories
+ * toggle). Here we just add the surrounding row layout + the
+ * active/inactive label styling. */
+.sync-wizard-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 12px;
   font-size: 14px;
+}
+.sync-wizard-toggle-label {
+  color: var(--muted-color);
+  transition: color 0.15s, font-weight 0.15s;
+  min-width: 0;
+  text-align: center;
+}
+.sync-wizard-toggle-label.is-active {
   color: var(--primary-color);
-  cursor: pointer;
+  font-weight: 600;
+}
+/* Override the shared toggle's track colour — common.css uses
+ * --link-color (primary near-black); the wizard reads better in
+ * brand pink when toggled on. */
+.sync-wizard-toggle .scope-toggle-switch input:checked ~ .scope-toggle-track {
+  background: var(--secondary-color);
 }
 .sync-wizard-actions {
   display: flex;

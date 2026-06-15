@@ -75,6 +75,20 @@
   cursor: default;
 }
 
+/* Sync link in the actions row — same idiom as `.profile-save`
+ * (link-coloured text, no border, underline on hover) so the three
+ * actions read as one family. */
+.profile-sync-link {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--link-color);
+  text-decoration: none;
+}
+.profile-sync-link:hover {
+  text-decoration: underline;
+}
+
 .profile-status {
   font-size: 13px;
   margin: 0;

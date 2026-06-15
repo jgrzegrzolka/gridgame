@@ -2,7 +2,7 @@ import { getOrCreateDeviceId } from '../flags/identity.js';
 import { defaultNickname, displayNickname } from '../flags/nickname.js';
 import { avatarSvg } from '../flags/avatar.js';
 import { isOffensiveNickname } from '../flags/nicknameModeration.js';
-import { NICKNAME_STORAGE_KEY, IDENTITY_STORAGE_KEY, isSyncTestMode } from '../common.js';
+import { NICKNAME_STORAGE_KEY, IDENTITY_STORAGE_KEY } from '../common.js';
 import { t } from '../i18n.js';
 import { fetchDailyMe } from '../daily/streakClient.js';
 
@@ -211,23 +211,14 @@ export function bootProfile() {
 /**
  * Paint the sync link in the actions row: swap the label between
  * "Sync across devices" (unlinked) and "✓ Synced" (linked). Both
- * states still link to `/profile/sync/` — the linked state lets the
- * user see the confirmation page; future revoke / manage actions
- * would live there too.
- *
- * Gated behind `?test` in the URL (see `isSyncTestMode` in common.js)
- * until the multi-device flow has been validated end-to-end. When
- * the gate is off, the wrapping `.profile-sync-wrap` stays `hidden`
- * so neither the link nor its preceding "·" separator surface.
+ * states link to `/profile/sync/` — the linked state lets the user
+ * see the confirmation page; future revoke / manage actions would
+ * live there too.
  */
 function paintSyncState() {
   const wrap = document.getElementById('profile-sync-wrap');
   const link = document.getElementById('profile-sync-link');
   if (!wrap || !link) return;
-  if (!isSyncTestMode()) {
-    wrap.hidden = true;
-    return;
-  }
   wrap.hidden = false;
   let stored = null;
   try { stored = window.localStorage.getItem(IDENTITY_STORAGE_KEY); } catch {}
@@ -236,8 +227,6 @@ function paintSyncState() {
   const fallback = isLinked ? '✓ Synced' : 'Sync across devices';
   link.setAttribute('data-i18n', key);
   link.textContent = t(key, fallback);
-  // Preserve ?test across navigations so the sync page also unlocks.
-  link.setAttribute('href', './sync/?test');
 }
 
 /**

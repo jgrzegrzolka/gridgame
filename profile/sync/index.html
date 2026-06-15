@@ -55,30 +55,12 @@
     </nav>
 
     <main class="sync-main">
-      <div class="sync-heading-row">
-        <h1 class="sync-heading" data-i18n="sync.heading">Play on more than one device?</h1>
-        <button
-          type="button"
-          class="help-btn"
-          id="sync-help-btn"
-          aria-label="How it works"
-          title="How it works"
-          data-i18n-attr="aria-label:sync.howItWorksTitle,title:sync.howItWorksTitle"
-        >?</button>
-      </div>
+      <h1 class="sync-heading" data-i18n="sync.heading">Play on more than one device?</h1>
 
       <section class="sync-unlinked" id="sync-unlinked">
-        <p class="sync-intro" data-i18n="sync.intro">
-          Link your phone, laptop, or any browser so your streak, scores, and stats follow you everywhere.
-        </p>
-
-        <div class="sync-option">
-          <button type="button" class="sync-action sync-action--primary" id="sync-show-qr" data-i18n="sync.showQr.button">Show QR for another device</button>
-        </div>
-
         <div class="sync-qr-container" id="sync-qr-container" hidden>
           <div class="sync-qr" id="sync-qr-svg" aria-hidden="true"></div>
-          <p class="sync-qr-hint" id="sync-qr-hint" hidden data-i18n="sync.showQr.hint">
+          <p class="sync-qr-hint" id="sync-qr-hint" data-i18n="sync.showQr.hint">
             Open the camera on your other device and scan this code. The link expires in 5 minutes.
           </p>
         </div>
@@ -101,16 +83,6 @@
     </main>
 
     <dialog id="sync-wizard" class="help-dialog sync-wizard"></dialog>
-
-    <dialog id="sync-help" class="help-dialog">
-      <h2 data-i18n="sync.howItWorksTitle">How it works</h2>
-      <ol class="sync-help-steps">
-        <li data-i18n="sync.howItWorksStep1">1. On this device, tap “Link this device”. You’ll use your fingerprint or Face ID to save your profile.</li>
-        <li data-i18n="sync.howItWorksStep2">2. On every other device, open this same page and tap the same button — confirm with your fingerprint or Face ID and the profile carries over.</li>
-        <li data-i18n="sync.howItWorksStep3">3. That’s it — every device you do this on shares one profile.</li>
-      </ol>
-      <button type="button" class="help-close" id="sync-help-close" data-i18n="sync.helpClose">Got it</button>
-    </dialog>
 
     <script type="module">
       import { bootSync } from './page.js';

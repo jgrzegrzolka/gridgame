@@ -28,18 +28,12 @@
   "sync": {
     "title": "Synchronizuj między urządzeniami — Yet Another Quiz",
     "heading": "Grasz na więcej niż jednym urządzeniu?",
-    "intro": "Połącz telefon, laptop lub dowolną przeglądarkę, żeby Twoja seria, wyniki i statystyki były wszędzie.",
-    "howItWorksTitle": "Jak to działa",
-    "howItWorksStep1": "1. Na urządzeniu, które ma być głównym, otwórz tę stronę i kliknij „Pokaż QR dla drugiego urządzenia”.",
-    "howItWorksStep2": "2. Na drugim urządzeniu (telefon, laptop itd.) otwórz aparat i zeskanuj ten QR. Otworzy się link, który uruchomi scalanie za Ciebie.",
-    "howItWorksStep3": "3. Gotowe — oba urządzenia dzielą teraz jeden profil.",
     "back": "Profil",
-    "helpClose": "OK",
     "showQr": {
-      "button": "Pokaż QR dla drugiego urządzenia",
       "hint": "Otwórz aparat na drugim urządzeniu i zeskanuj ten kod. Link wygasa za 5 minut."
     },
     "redeeming": "Łączenie tego urządzenia z drugim…",
+    "cancelled": "Anulowano — nic nie zostało zmienione.",
     "linked": {
       "title": "✓ To urządzenie jest połączone.",
       "explain": "Aby połączyć kolejne urządzenie, otwórz tę samą stronę na nim i kliknij „Połącz to urządzenie”."
@@ -48,10 +42,8 @@
     "signedinConfirm": "Połączono — Twój postęp synchronizuje się teraz z tym urządzeniem.",
     "merging": "Łączenie urządzeń…",
     "wizard": {
-      "title": "Dwa krótkie pytania",
-      "profileQ": "Której nazwy powinno używać to urządzenie?",
-      "dailyQ": "Które urządzenie wygrywa przy nakładających się dziennych zagadkach?",
-      "dailyNote": "Nakładające się: {count} zagadek. Pozostałe zostaną zachowane.",
+      "profileQ": "Pseudonim",
+      "dailyQ": "Wynik dzienny przy nakładaniu ({count} zagadek)",
       "dailyTarget": "Moje drugie urządzenie",
       "dailySource": "To urządzenie",
       "cancel": "Anuluj",
