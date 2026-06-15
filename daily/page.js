@@ -446,8 +446,12 @@ function createShareButton() {
  * @param {Country[]} targets
  * @param {Country[]} all
  * @param {{ foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }} info
+ * @param {boolean} isToday — true when `n` is the live daily puzzle.
+ *   Streak only renders for today's puzzle: archive finishes don't
+ *   extend the streak counter, so surfacing "Seria dni: 2" on an
+ *   archive replay would falsely suggest the replay just bumped it.
  */
-async function handleFinish(n, targets, all, info) {
+async function handleFinish(n, targets, all, info, isToday) {
   setShareCtx(n, targets, info.foundCodes);
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
@@ -491,7 +495,11 @@ async function handleFinish(n, targets, all, info) {
   // submitted result is reflected (bypassCache → server skips its
   // 60s cache). Failure is silent — the streak sub-line just doesn't
   // appear; the score + community stats remain on screen unchanged.
-  loadAndPaintStreak(deviceId, found, info.totalCount, { bypassCache: true });
+  // Today-only: an archive finish doesn't extend the streak counter,
+  // so we don't render it on those pages.
+  if (isToday) {
+    loadAndPaintStreak(deviceId, found, info.totalCount, { bypassCache: true });
+  }
 }
 
 /**
@@ -522,6 +530,12 @@ export function bootDaily() {
 
       const today = todayN(catalog);
       const n = dailyNFromUrl(window.location.search, today);
+      // Streak only renders for today's puzzle. Archive finishes /
+      // revisits don't extend the streak counter — surfacing the
+      // sub-line there would falsely suggest the archive play just
+      // bumped it. Computed once at boot, threaded into the revisit
+      // branch and handleFinish.
+      const isToday = n === today;
       numEl.textContent = `${n}`;
       // Tab title carries #N so archived puzzles open in separate tabs
       // read distinctly. Override runs after bootI18n's data-i18n pass.
@@ -563,7 +577,10 @@ export function bootDaily() {
         loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
         // Streak fires alongside stats. Cached (no bypass) — revisits
         // don't have a fresh submit to chase past the 60s cache window.
-        loadAndPaintStreak(revisitDeviceId, foundCodes.size, result.targets.length);
+        // Today-only: archive revisits don't show the streak.
+        if (isToday) {
+          loadAndPaintStreak(revisitDeviceId, foundCodes.size, result.targets.length);
+        }
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
@@ -572,7 +589,9 @@ export function bootDaily() {
           setShareCtx(n, result.targets, foundCodes);
           paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
           loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
-          loadAndPaintStreak(revisitDeviceId, foundCodes.size, result.targets.length);
+          if (isToday) {
+            loadAndPaintStreak(revisitDeviceId, foundCodes.size, result.targets.length);
+          }
         });
         return;
       }
@@ -611,7 +630,7 @@ export function bootDaily() {
       // glitch, network drop, etc) — the player can replay and
       // finally get their result counted.
       const game = startGame(n, category, result.targets, all, {
-        onFinish: (info) => handleFinish(n, result.targets, all, info),
+        onFinish: (info) => handleFinish(n, result.targets, all, info, isToday),
       });
       attachLangRefresh(game, {
         raw,
