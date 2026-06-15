@@ -90,16 +90,15 @@
   align-items: center;
   flex-wrap: wrap;
 }
-/* Personal streak sub-line under the headline. Quiet by design: same
- * primary colour family so it reads as part of the result panel,
- * lighter weight + smaller size + opacity so it's clearly the
- * player's personal counter rather than community stats. Hidden by
- * the JS gate at currentStreak < 2. */
+/* Personal streak sub-line under the headline. Uses --muted-color
+ * (one of the three palette vars; see CLAUDE.md "UI consistency")
+ * so it sits in the same quiet-text family as .daily-stats-caption
+ * and .daily-stats-loading without inventing a fourth shade. Smaller
+ * than the headline and JS-gated at currentStreak < 2 so a first
+ * completion doesn't surface "Day streak: 1" as clutter. */
 .daily-stats-streak {
   font-size: 14px;
-  color: var(--primary-color);
-  font-weight: 500;
-  opacity: 0.75;
+  color: var(--muted-color);
   margin: 4px 0 0;
   text-align: left;
 }
