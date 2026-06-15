@@ -90,6 +90,19 @@
   align-items: center;
   flex-wrap: wrap;
 }
+/* Personal streak sub-line under the headline. Quiet by design: same
+ * primary colour family so it reads as part of the result panel,
+ * lighter weight + smaller size + opacity so it's clearly the
+ * player's personal counter rather than community stats. Hidden by
+ * the JS gate at currentStreak < 2. */
+.daily-stats-streak {
+  font-size: 14px;
+  color: var(--primary-color);
+  font-weight: 500;
+  opacity: 0.75;
+  margin: 4px 0 0;
+  text-align: left;
+}
 .daily-stats-caption {
   font-size: 12px;
   color: var(--muted-color);

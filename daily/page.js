@@ -25,6 +25,7 @@ import { mountDevReset } from './devReset.js';
 import { pickExtraStats, hasAnyExtraStats, pickMarkerKind } from './extraStats.js';
 import { shareText } from '../common.js';
 import { buildShareText } from '../flags/shareGrid.js';
+import { fetchDailyMe } from './streakClient.js';
 
 // Turnstile is soft-disabled across all environments (2026-06-10) after
 // a real user's challenge was rejected by Cloudflare with a 401 on
@@ -56,8 +57,40 @@ function statsLabels() {
     loading: t('daily.stats.loading', 'Loading stats'),
     extraRanking: t('daily.stats.extra.ranking', 'Most recognised:'),
     extraTopMistake: t('daily.stats.extra.topMistake', 'Most common mistake:'),
+    streakLine: t('daily.streak.line', 'Day streak: {n}'),
   };
 }
+
+/**
+ * Module-scope streak state. Set when the GET /api/v1/daily/me response
+ * lands (post-finish or revisit). Read by `paintStatsPanel` so the
+ * streak sub-line follows the same rebuild-on-each-paint pattern as
+ * the share button: no static HTML to survive `container.innerHTML = ''`,
+ * and a soft language switch re-renders with the active locale's label.
+ * `null` means "not loaded yet or failed"; the gate (currentStreak >= 2)
+ * hides the line in any case where it would render as noise.
+ *
+ * @type {{ currentStreak: number } | null}
+ */
+let streakState = null;
+
+/**
+ * Module-scope cache of the most recent community-stats object so
+ * `loadAndPaintStreak` can repaint the panel without losing the stats
+ * that already loaded. Each `paintStatsPanel` call updates it; a
+ * separate streak-driven repaint can replay the same stats and add
+ * the streak sub-line in one render. Same loose shape as
+ * paintStatsPanel's stats param — the panel only reads totalAttempts
+ * + mean + perCodeFinds, so the wider Stats type isn't needed here.
+ *
+ * @type {{ totalAttempts: number, mean: number, perCodeFinds: Record<string, number> } | null}
+ */
+let lastStats = null;
+
+/** Threshold for showing the finish-screen streak line. Settled in
+ * FEATURE.md: a single completion isn't a "streak", and surfacing
+ * "Day streak: 1" the first time someone finishes is just clutter. */
+const STREAK_MIN_TO_SHOW = 2;
 
 /**
  * Look up a country by 2-letter code in the loaded list. Used by the
@@ -186,6 +219,7 @@ function appendExtraRow(parent, label, items, all, targetCodes, userFoundCodes) 
  * @param {{ loading?: boolean }} [opts]
  */
 function paintStatsPanel(found, total, stats, opts = {}) {
+  lastStats = stats;
   const labels = statsLabels();
   const headlineText = formatScoreLine({
     found, total, stats,
@@ -213,6 +247,17 @@ function paintStatsPanel(found, total, stats, opts = {}) {
   h.appendChild(textEl);
   if (shareBtn) h.appendChild(shareBtn);
   container.appendChild(h);
+  // Streak sub-line — one calm secondary line under the headline, only
+  // when the player actually has a streak going. Hidden at < 2 so the
+  // first-completion case doesn't read as noise. Personal signal (this
+  // device's count), distinct from the community-stats headline above
+  // and the per-tile %s below.
+  if (streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW) {
+    const s = document.createElement('p');
+    s.className = 'daily-stats-streak';
+    s.textContent = labels.streakLine.replace('{n}', String(streakState.currentStreak));
+    container.appendChild(s);
+  }
   if (opts.loading) {
     // Three pulsing dots after the label — CSS animates them in a wave
     // so the player can tell something is happening across the long
@@ -270,6 +315,37 @@ async function loadAndPaintStats(n, targets, found, all, userFoundCodes, opts = 
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
   renderExtraStats(stats, targets, all, userFoundCodes);
+}
+
+/**
+ * Fetch this device's streak / win-% numbers and repaint the panel so
+ * the streak sub-line lands without waiting on a follow-up event.
+ * Failures resolve to null and leave streakState untouched — the
+ * existing panel keeps showing without a streak line, no error UI.
+ *
+ * `bypassCache: true` on the post-finish path so the just-submitted
+ * result lands in the streak immediately (the endpoint's 60s cache
+ * would otherwise hide it until the next minute).
+ *
+ * @param {string} deviceId
+ * @param {number} n
+ * @param {number} found
+ * @param {number} totalCount
+ * @param {{ bypassCache?: boolean }} [opts]
+ */
+async function loadAndPaintStreak(deviceId, n, found, totalCount, opts = {}) {
+  const streak = await fetchDailyMe(deviceId, {
+    latestPuzzleId: n,
+    bypassCache: opts.bypassCache === true,
+  });
+  if (!streak) return;
+  streakState = streak;
+  // Repaint the panel with whatever community stats are currently
+  // displayed (lastStats) so the streak line lands without clobbering
+  // the "Average score:" headline or the per-tile caption. lastStats
+  // is null if stats haven't arrived yet — in that case the score-only
+  // headline repaints, which is also fine.
+  paintStatsPanel(found, totalCount, lastStats);
 }
 
 /**
@@ -408,6 +484,12 @@ async function handleFinish(n, targets, all, info) {
       renderExtraStats(stats, targets, all, new Set(info.foundCodes));
     },
   });
+
+  // Fire the streak fetch after the submit pipeline so the just-
+  // submitted result is reflected (bypassCache → server skips its
+  // 60s cache). Failure is silent — the streak sub-line just doesn't
+  // appear; the score + community stats remain on screen unchanged.
+  loadAndPaintStreak(deviceId, n, found, info.totalCount, { bypassCache: true });
 }
 
 /**
@@ -467,6 +549,7 @@ export function bootDaily() {
       const stored = loadScores(window.localStorage)[n];
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
+        const revisitDeviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
         renderResult(result.targets, foundCodes);
         setShareCtx(n, result.targets, foundCodes);
         paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
@@ -476,6 +559,9 @@ export function bootDaily() {
         // the caption). This way puzzles you finished on a different
         // device — or before submit-tracking shipped — still show stats.
         loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
+        // Streak fires alongside stats. Cached (no bypass) — revisits
+        // don't have a fresh submit to chase past the 60s cache window.
+        loadAndPaintStreak(revisitDeviceId, n, foundCodes.size, result.targets.length);
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
@@ -484,6 +570,7 @@ export function bootDaily() {
           setShareCtx(n, result.targets, foundCodes);
           paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
           loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
+          loadAndPaintStreak(revisitDeviceId, n, foundCodes.size, result.targets.length);
         });
         return;
       }
