@@ -1,11 +1,12 @@
 const { app } = require('@azure/functions');
-const { validateDeviceIdParam, validatePuzzleIdParam } = require('../lib/validate');
+const { validateDeviceIdParam } = require('../lib/validate');
 const { queryDocs } = require('../lib/cosmos');
 const { createTtlCache } = require('../lib/ttlCache');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { readFreshFlag } = require('../lib/queryParams');
 const { statsCacheHeaders } = require('../lib/cacheHeaders');
-const { computeStreak } = require('../lib/streakCompute');
+const { computeStreak, submissionsToStreakRows } = require('../lib/streakCompute');
+const { warsawDayNumber } = require('../lib/warsawDay');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
@@ -39,28 +40,10 @@ app.http('dailyMe', {
     if (!v.ok) return { status: 400, jsonBody: { error: v.error } };
     const deviceId = v.value;
 
-    // `latestPuzzleId` is optional. When present, it tells computeStreak
-    // "what's today's puzzle id" so a player whose most recent row is
-    // older returns currentStreak=0 instead of yesterday's stale value.
-    // The client knows it (the daily page already has the puzzle
-    // loaded); the server doesn't, and asking Cosmos for max(puzzleId)
-    // would add a second cross-partition query per request.
-    let latestPuzzleId;
-    const rawLatest = req.query.get('latestPuzzleId');
-    if (rawLatest !== null) {
-      const lp = validatePuzzleIdParam(rawLatest);
-      if (!lp.ok) return { status: 400, jsonBody: { error: 'invalid_latestPuzzleId' } };
-      latestPuzzleId = lp.value;
-    }
-
     const now = Date.now();
     const fresh = readFreshFlag(req);
-    // Cache key folds latestPuzzleId in: the same deviceId with two
-    // different "today" values produces two different currentStreak
-    // results, so they must not share a cache slot.
-    const cacheKey = `${deviceId}|${latestPuzzleId ?? ''}`;
     if (!fresh) {
-      const cached = cache.get(cacheKey, now);
+      const cached = cache.get(deviceId, now);
       if (cached) {
         return {
           status: 200,
@@ -82,6 +65,11 @@ app.http('dailyMe', {
     // grows we'll cache a per-device `streak:{deviceId}` doc updated
     // on each dailyResult.js write (Feature N's tail-cost mitigation).
     //
+    // We select `submittedAt`, not `puzzleId`: streaks count consecutive
+    // *Warsaw days* the player submitted something, not consecutive
+    // puzzleIds. Doing archive puzzles #1, #2, #3 in one sitting today
+    // gives streak = 1 (one day with plays), not streak = 3.
+    //
     // local:true rows are included — for the player's own streak, the
     // owner's localhost plays are their own plays, same as the daily
     // aggregator's policy. Cleanup uses the dev-reset toolbar.
@@ -91,7 +79,7 @@ app.http('dailyMe', {
         connString: conn,
         dbName: DB_NAME,
         containerName: CONTAINER_NAME,
-        query: 'SELECT c.puzzleId FROM c WHERE c.deviceId = @did',
+        query: 'SELECT c.submittedAt FROM c WHERE c.deviceId = @did',
         parameters: [{ name: '@did', value: deviceId }],
         enableCrossPartition: true,
       });
@@ -104,16 +92,15 @@ app.http('dailyMe', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    // Every row in dailyResults is a finished submission today, so
-    // every row maps to completed:true. The shape stays open for a
-    // future Feature M start-event signal where some rows are
-    // started-but-not-finished.
-    const rows = queryRes.docs
-      .filter((d) => Number.isInteger(d.puzzleId))
-      .map((d) => ({ puzzleId: d.puzzleId, completed: true }));
-
-    const result = computeStreak({ rows, latestPuzzleId });
-    cache.set(cacheKey, result, now);
+    const rows = submissionsToStreakRows(queryRes.docs, warsawDayNumber);
+    // Compute "today" server-side so currentStreak resets to 0 when
+    // the player's most recent submission is older than today (they
+    // skipped at least today). Defends the profile-page revisit case
+    // — without it, a player who hasn't shown up in three days would
+    // still see their old streak count.
+    const today = warsawDayNumber(now);
+    const result = computeStreak({ rows, latestId: today ?? undefined });
+    cache.set(deviceId, result, now);
     return {
       status: 200,
       headers: statsCacheHeaders({ fresh, ttlMs: CACHE_TTL_MS }),

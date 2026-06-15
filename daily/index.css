@@ -72,23 +72,70 @@
 .daily-stats {
   margin: 52px 0 0;
 }
+/* Personal stats sit at the top of #result (above Found:); spacing
+ * differs from the community block in two ways:
+ *
+ *  - Negative top margin pulls the score up closer to the chrome.
+ *    Body has `padding-top: var(--page-top)` (80px) reserved for the
+ *    fixed chrome strip. With the lighter uppercase "FOUND:" used to
+ *    sit at y=80 and read as breathing room; the heavier "Your score"
+ *    in the same slot reads as too far down. -24px closes the gap to
+ *    ~56px from the top edge (~12px below the chrome bottom).
+ *
+ *  - 16px bottom margin matches the gap between the community block
+ *    and its sibling extras rail (`.daily-extra-stats { margin-top:
+ *    16px }`). Without it, the personal block would sit flush against
+ *    the "Found:" h2 (which itself has margin-top: 0 via the
+ *    `:first-of-type` override below).
+ */
+#daily-personal-stats {
+  margin: -24px 0 16px;
+}
 .daily-stats-headline {
   font-size: 16px;
   color: var(--primary-color);
   font-weight: 600;
   margin: 0;
   text-align: left;
-  /* Flex so the inline share icon (appended by paintStatsPanel) sits
-   * vertically centered with the text, the same way findFlag's
-   * .final-score-row and TTT's .room-line position theirs. Without
-   * flex the icon's asymmetric box + vertical-align: middle resolve
-   * just below the text baseline and look mis-aligned. No gap —
-   * the trailing " · " in the text span carries the visual
-   * spacing, and the share-link's own 6px left padding handles the
-   * gap to the icon glyph. */
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  /* Inline flow (not flex) so the share button stays glued to its
+   * preceding text when a narrow viewport wraps the line. Flex with
+   * flex-wrap: wrap split text and button into separate flex rows,
+   * orphaning the button below the wrapped score line. With inline
+   * flow the wrap happens between words and the button rides along
+   * at the end. vertical-align on the share-link handles the icon
+   * baseline so the glyph centres against the cap-height of the
+   * surrounding text instead of sitting on the baseline. */
+}
+.daily-stats-headline .share-link {
+  vertical-align: middle;
+}
+/* Streak segment in the headline. inline-block so the entry
+ * animation's transform applies cleanly (transforms on raw inline
+ * elements don't render) and so the streak text stays as one unit
+ * if the headline wraps. Plain state inherits the headline's
+ * primary-colour family — the personal counter sits in the same
+ * weight / size as the score it sits next to. */
+.daily-stats-streak {
+  display: inline-block;
+}
+/* First-appearance attention grab: cell-shake's existing motion
+ * curve (common.css, ±4px) plus a quick secondary → primary colour
+ * flash so the streak announces itself the first time the player
+ * sees it, then settles into the calm primary colour. Reuses
+ * cell-shake (per CLAUDE.md "same mechanism = same code") rather
+ * than inventing a second shake keyframe. JS adds this class on the
+ * first render where the streak appears and removes it on
+ * animationend; subsequent repaints (stats arriving, language
+ * switch) render the streak in its plain state. */
+.daily-stats-streak-enter {
+  animation: cell-shake 0.4s ease-in-out, daily-streak-colour 0.9s ease-out;
+}
+@keyframes daily-streak-colour {
+  0%, 60% { color: var(--secondary-color); }
+  100% { color: var(--primary-color); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .daily-stats-streak-enter { animation: none; }
 }
 .daily-stats-caption {
   font-size: 12px;

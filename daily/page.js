@@ -17,7 +17,6 @@ import { getOrCreateDeviceId } from '../flags/identity.js';
 import { submitResult } from './statsSubmit.js';
 import { fetchStats } from './statsClient.js';
 import { applyFindRatesToTiles } from './statsOverlay.js';
-import { formatScoreLine } from './distributionSummary.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 import { runFinishFlow } from './finishFlow.js';
 import { PROD_SITE_KEY } from './turnstileSiteKey.js';
@@ -25,6 +24,7 @@ import { mountDevReset } from './devReset.js';
 import { pickExtraStats, hasAnyExtraStats, pickMarkerKind } from './extraStats.js';
 import { shareText } from '../common.js';
 import { buildShareText } from '../flags/shareGrid.js';
+import { fetchDailyMe } from './streakClient.js';
 
 // Turnstile is soft-disabled across all environments (2026-06-10) after
 // a real user's challenge was rejected by Cloudflare with a 401 on
@@ -51,13 +51,39 @@ const SKIP_TURNSTILE = true;
 function statsLabels() {
   return {
     scoreOnly: t('daily.stats.scoreOnly', 'Your score: {found}/{total}'),
-    scoreWithAverage: t('daily.stats.scoreWithAverage', 'Your score: {found}/{total} · Average score: {average}/{total}'),
+    averageOnly: t('daily.stats.averageOnly', 'Average score: {average}/{total}'),
     caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
     loading: t('daily.stats.loading', 'Loading stats'),
     extraRanking: t('daily.stats.extra.ranking', 'Most recognised:'),
     extraTopMistake: t('daily.stats.extra.topMistake', 'Most common mistake:'),
+    streakLine: t('daily.streak.line', 'Streak: {n}'),
   };
 }
+
+/**
+ * Module-scope streak state. Set when the GET /api/v1/daily/me response
+ * lands (post-finish or revisit). Read by `paintStatsPanel` so the
+ * streak sub-line follows the same rebuild-on-each-paint pattern as
+ * the share button: no static HTML to survive `container.innerHTML = ''`,
+ * and a soft language switch re-renders with the active locale's label.
+ * `null` means "not loaded yet or failed"; the gate (currentStreak >= 2)
+ * hides the line in any case where it would render as noise.
+ *
+ * @type {{ currentStreak: number } | null}
+ */
+let streakState = null;
+
+/** Has the entry animation played for the streak yet this page load?
+ * The shake + pink-to-primary colour flash should fire exactly once —
+ * subsequent repaints (stats arriving after streak, language switch,
+ * revisit re-paints) all reuse the same final-state styling. */
+let streakAnimated = false;
+
+
+/** Threshold for showing the finish-screen streak line. Settled in
+ * FEATURE.md: a single completion isn't a "streak", and surfacing
+ * "Day streak: 1" the first time someone finishes is just clutter. */
+const STREAK_MIN_TO_SHOW = 2;
 
 /**
  * Look up a country by 2-letter code in the loaded list. Used by the
@@ -162,57 +188,112 @@ function appendExtraRow(parent, label, items, all, targetCodes, userFoundCodes) 
 }
 
 /**
- * Paint the stats panel: a one-line headline (player score, optionally
- * with the community average) + a caption explaining the per-tile %s
- * (only when stats are present, since the overlays only render then).
+ * Paint the **personal stats** slot (above Found): the player's score,
+ * an optional streak segment when `currentStreak ≥ 2`, and an inline
+ * share button on touch devices. Always renders the moment a result is
+ * in view — no network fetch needed, so the score is visible instantly.
  *
- * Called twice in the happy path:
- *   1. immediately on finish/revisit with `stats: null` → shows just
- *      "Your score: X/N" so the player sees their own number instantly.
- *   2. after the stats fetch resolves → repaints with "Your score:
- *      X/N · Average score: M/N" + caption + tile overlays.
- *
- * On any stats fetch failure the first paint stays put — the player
- * still has their own score even if the community comparison can't load.
- *
- * `loading: true` shows an animated "Loading stats…" line below the
- * score while the post-finish POST + stats GET pipeline runs (mobile
- * cold path can take several seconds, otherwise the player just sees
- * their score and wonders if anything else is coming).
+ * Repainted on every change to module-scope state (streak resolves,
+ * language switch) — share button, streak entry animation, and DOM
+ * cleanup all rebuild from scratch via createShareButton and the
+ * streakAnimated flag.
  *
  * @param {number} found
  * @param {number} total
- * @param {{ totalAttempts: number, mean: number, perCodeFinds: Record<string, number> } | null} stats
- * @param {{ loading?: boolean }} [opts]
  */
-function paintStatsPanel(found, total, stats, opts = {}) {
+function paintPersonalStats(found, total) {
   const labels = statsLabels();
-  const headlineText = formatScoreLine({
-    found, total, stats,
-    templates: { scoreOnly: labels.scoreOnly, scoreWithAverage: labels.scoreWithAverage },
-  });
-  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-personal-stats'));
   container.hidden = false;
   container.innerHTML = '';
   const h = document.createElement('p');
   h.className = 'daily-stats-headline';
-  // Inline share button at the end of the headline — "Your score:
-  // 2/4 · Average score: 3.4/4 · [share]". createShareButton
-  // returns null on desktop (touch-only — see its docstring) and
-  // pre-finish (no shareCtx yet), so the trailing " · " + button
-  // is a no-op except on a touch device viewing a real result.
+
+  // Inline composition: score → (· streak when ≥ 2) → (· share icon
+  // when on touch). The headline runs as inline text (no flex) so the
+  // share button stays glued to its preceding text when a narrow
+  // viewport wraps the line — otherwise flex-wrap puts the button on
+  // its own row, which is uglier than a natural mid-text wrap.
   //
-  // The " · " is baked into the text node (not its own flex item)
-  // so the spacing matches the existing inline rhythm between
-  // "score: 2/4" and "Average". A flex-gap separator would
-  // produce double-padding (flex gap on each side of the dot)
-  // that read as too generous on mobile.
+  // Streak is its own span (rather than concatenated into the score
+  // text) so the entry animation can target just the streak — first-
+  // time appearance shakes + flashes secondary-pink, then settles to
+  // inherit the headline's primary colour.
   const shareBtn = createShareButton();
+  const showStreak = streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW;
   const textEl = document.createElement('span');
-  textEl.textContent = shareBtn ? `${headlineText} · ` : headlineText;
+  textEl.textContent = labels.scoreOnly
+    .replace('{found}', String(found))
+    .replace('{total}', String(total));
   h.appendChild(textEl);
-  if (shareBtn) h.appendChild(shareBtn);
+  if (showStreak) {
+    h.appendChild(document.createTextNode(' · '));
+    const streakSpan = document.createElement('span');
+    streakSpan.className = streakAnimated
+      ? 'daily-stats-streak'
+      : 'daily-stats-streak daily-stats-streak-enter';
+    streakSpan.textContent = labels.streakLine.replace('{n}', String(streakState.currentStreak));
+    if (!streakAnimated) {
+      streakAnimated = true;
+      // Drop the entry class after the animation completes so the
+      // span is back to a plain inline-block — keeps the DOM honest
+      // about its current visual state (no leftover animation hook).
+      streakSpan.addEventListener('animationend', () => {
+        streakSpan.classList.remove('daily-stats-streak-enter');
+      }, { once: true });
+    }
+    h.appendChild(streakSpan);
+  }
+  // No trailing space after the dot — the share-link button has 6px
+  // left padding (common.css .share-link) which gives the gap to the
+  // icon glyph. Adding a trailing space stacks on top of the padding
+  // and breaks the rhythm vs the "2 · " separator before this one.
+  if (shareBtn) {
+    h.appendChild(document.createTextNode(' ·'));
+    h.appendChild(shareBtn);
+  }
   container.appendChild(h);
+}
+
+/**
+ * Paint the **community stats** slot (below Missed): the community
+ * average + the caption explaining per-tile %s, or an animated
+ * "Loading stats…" placeholder while the fetch pipeline runs.
+ *
+ * Hidden entirely (along with the caption) when no community data
+ * exists and we're not loading — keeps the result panel from showing
+ * an empty section on fetch failure or "be the first" puzzles. The
+ * personal slot at the top still shows the score, so the player
+ * always has their own number even when community is silent.
+ *
+ * @param {{ totalAttempts: number, mean: number, perCodeFinds: Record<string, number> } | null} stats
+ * @param {number} total
+ * @param {{ loading?: boolean }} [opts]
+ */
+function paintCommunityStats(stats, total, opts = {}) {
+  const labels = statsLabels();
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
+  container.innerHTML = '';
+  const captionEl = /** @type {HTMLElement} */ (document.getElementById('daily-caption'));
+
+  const hasAverage = stats && stats.totalAttempts > 0;
+  const showCommunity = hasAverage || opts.loading === true;
+  container.hidden = !showCommunity;
+
+  if (!showCommunity) {
+    captionEl.textContent = '';
+    captionEl.hidden = true;
+    return;
+  }
+
+  if (hasAverage) {
+    const h = document.createElement('p');
+    h.className = 'daily-stats-headline';
+    h.textContent = labels.averageOnly
+      .replace('{average}', String(stats.mean))
+      .replace('{total}', String(total));
+    container.appendChild(h);
+  }
   if (opts.loading) {
     // Three pulsing dots after the label — CSS animates them in a wave
     // so the player can tell something is happening across the long
@@ -228,13 +309,10 @@ function paintStatsPanel(found, total, stats, opts = {}) {
     container.appendChild(l);
   }
   // Caption only when stats arrived AND we have per-tile overlays to
-  // explain. The score-only state doesn't need it (no %s anywhere).
-  // The caption itself lives in a dedicated #daily-caption slot just
-  // above the action links — see daily/index.html — so the legend
-  // appears beneath all the flags it describes, not stuck to the
-  // headline at the top of the result panel.
-  const captionEl = /** @type {HTMLElement} */ (document.getElementById('daily-caption'));
-  if (stats && stats.totalAttempts > 0) {
+  // explain. The score-only / loading states don't need it.
+  // Lives in #daily-caption (separate slot) so the legend appears
+  // beneath all the flags it describes, not stuck to the headline.
+  if (hasAverage) {
     captionEl.textContent = labels.caption;
     captionEl.hidden = false;
   } else {
@@ -261,15 +339,43 @@ function paintStatsPanel(found, total, stats, opts = {}) {
 async function loadAndPaintStats(n, targets, found, all, userFoundCodes, opts = {}) {
   const stats = await fetchStats(n, { bypassCache: opts.bypassCache === true });
   if (!stats) {
-    // Fetch failed — drop back to score-only (clears any loading
-    // spinner the caller painted while we were in flight).
-    paintStatsPanel(found, targets.length, null);
+    // Fetch failed — hide the community slot (the personal slot at
+    // top still shows the score). Clears any loading dots the caller
+    // painted while we were in flight.
+    paintCommunityStats(null, targets.length);
     return;
   }
-  paintStatsPanel(found, targets.length, stats);
+  paintCommunityStats(stats, targets.length);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
   renderExtraStats(stats, targets, all, userFoundCodes);
+}
+
+/**
+ * Fetch this device's streak / win-% numbers and repaint the panel so
+ * the streak sub-line lands without waiting on a follow-up event.
+ * Failures resolve to null and leave streakState untouched — the
+ * existing panel keeps showing without a streak line, no error UI.
+ *
+ * `bypassCache: true` on the post-finish path so the just-submitted
+ * result lands in the streak immediately (the endpoint's 60s cache
+ * would otherwise hide it until the next minute).
+ *
+ * @param {string} deviceId
+ * @param {number} found
+ * @param {number} totalCount
+ * @param {{ bypassCache?: boolean }} [opts]
+ */
+async function loadAndPaintStreak(deviceId, found, totalCount, opts = {}) {
+  const streak = await fetchDailyMe(deviceId, {
+    bypassCache: opts.bypassCache === true,
+  });
+  if (!streak) return;
+  streakState = streak;
+  // Repaint just the personal slot — streak lives there and the
+  // community slot is independent (its state was already painted by
+  // loadAndPaintStats / handleFinish.onStats).
+  paintPersonalStats(found, totalCount);
 }
 
 /**
@@ -368,8 +474,12 @@ function createShareButton() {
  * @param {Country[]} targets
  * @param {Country[]} all
  * @param {{ foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }} info
+ * @param {boolean} isToday — true when `n` is the live daily puzzle.
+ *   Streak only renders for today's puzzle: archive finishes don't
+ *   extend the streak counter, so surfacing "Seria dni: 2" on an
+ *   archive replay would falsely suggest the replay just bumped it.
  */
-async function handleFinish(n, targets, all, info) {
+async function handleFinish(n, targets, all, info, isToday) {
   setShareCtx(n, targets, info.foundCodes);
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
@@ -399,15 +509,28 @@ async function handleFinish(n, targets, all, info) {
     getTurnstileToken: getTurnstileTokenFn,
     submitResult,
     fetchStats,
-    onLoading: () => paintStatsPanel(found, info.totalCount, null, { loading: true }),
-    onCleared: () => paintStatsPanel(found, info.totalCount, null),
+    onLoading: () => {
+      paintPersonalStats(found, info.totalCount);
+      paintCommunityStats(null, info.totalCount, { loading: true });
+    },
+    onCleared: () => paintCommunityStats(null, info.totalCount),
     onStats: (stats) => {
-      paintStatsPanel(found, targets.length, stats);
+      paintCommunityStats(stats, targets.length);
       applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
       applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
       renderExtraStats(stats, targets, all, new Set(info.foundCodes));
     },
   });
+
+  // Fire the streak fetch after the submit pipeline so the just-
+  // submitted result is reflected (bypassCache → server skips its
+  // 60s cache). Failure is silent — the streak sub-line just doesn't
+  // appear; the score + community stats remain on screen unchanged.
+  // Today-only: an archive finish doesn't extend the streak counter,
+  // so we don't render it on those pages.
+  if (isToday) {
+    loadAndPaintStreak(deviceId, found, info.totalCount, { bypassCache: true });
+  }
 }
 
 /**
@@ -438,6 +561,12 @@ export function bootDaily() {
 
       const today = todayN(catalog);
       const n = dailyNFromUrl(window.location.search, today);
+      // Streak only renders for today's puzzle. Archive finishes /
+      // revisits don't extend the streak counter — surfacing the
+      // sub-line there would falsely suggest the archive play just
+      // bumped it. Computed once at boot, threaded into the revisit
+      // branch and handleFinish.
+      const isToday = n === today;
       numEl.textContent = `${n}`;
       // Tab title carries #N so archived puzzles open in separate tabs
       // read distinctly. Override runs after bootI18n's data-i18n pass.
@@ -467,23 +596,36 @@ export function bootDaily() {
       const stored = loadScores(window.localStorage)[n];
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
+        const revisitDeviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
         renderResult(result.targets, foundCodes);
         setShareCtx(n, result.targets, foundCodes);
-        paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
-        // Stats panel is gated on Cosmos, not this device's localStorage:
-        // always GET, and let the response decide (totalAttempts === 0 →
-        // formatScoreLine falls back to score-only, paintStatsPanel skips
-        // the caption). This way puzzles you finished on a different
-        // device — or before submit-tracking shipped — still show stats.
+        paintPersonalStats(foundCodes.size, result.targets.length);
+        paintCommunityStats(null, result.targets.length, { loading: true });
+        // Community stats are gated on Cosmos, not this device's
+        // localStorage: always GET, and let the response decide
+        // (totalAttempts === 0 → paintCommunityStats hides the
+        // section). This way puzzles you finished on a different
+        // device — or before submit-tracking shipped — still show
+        // stats if the server has them.
         loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
+        // Streak fires alongside stats. Cached (no bypass) — revisits
+        // don't have a fresh submit to chase past the 60s cache window.
+        // Today-only: archive revisits don't show the streak.
+        if (isToday) {
+          loadAndPaintStreak(revisitDeviceId, foundCodes.size, result.targets.length);
+        }
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
           paintDescription(result.entry.description);
           renderResult(result.targets, foundCodes);
           setShareCtx(n, result.targets, foundCodes);
-          paintStatsPanel(foundCodes.size, result.targets.length, null, { loading: true });
+          paintPersonalStats(foundCodes.size, result.targets.length);
+          paintCommunityStats(null, result.targets.length, { loading: true });
           loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
+          if (isToday) {
+            loadAndPaintStreak(revisitDeviceId, foundCodes.size, result.targets.length);
+          }
         });
         return;
       }
@@ -522,7 +664,7 @@ export function bootDaily() {
       // glitch, network drop, etc) — the player can replay and
       // finally get their result counted.
       const game = startGame(n, category, result.targets, all, {
-        onFinish: (info) => handleFinish(n, result.targets, all, info),
+        onFinish: (info) => handleFinish(n, result.targets, all, info, isToday),
       });
       attachLangRefresh(game, {
         raw,
