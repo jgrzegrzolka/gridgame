@@ -70,13 +70,10 @@
         <p class="sync-qr-hint" id="sync-qr-hint" data-i18n="sync.showQr.hint">
           Open the camera on your other device and scan this code. The link expires in 5 minutes.
         </p>
-        <details class="sync-qr-link-details">
-          <summary data-i18n="sync.showQr.copyLabel">Or copy a link to open on another browser</summary>
-          <div class="sync-qr-link-row">
-            <input class="sync-qr-link-input" id="sync-qr-link-input" type="text" readonly />
-            <button class="sync-qr-copy-btn" id="sync-qr-copy-btn" type="button" data-i18n="sync.showQr.copyBtn">Copy</button>
-          </div>
-        </details>
+        <p class="sync-qr-link-line">
+          <span data-i18n="sync.showQr.linkLabel">Or open this link on another device:</span>
+          <a class="sync-qr-link" id="sync-qr-link" href=""></a>
+        </p>
       </div>
 
       <p class="sync-status" id="sync-status" role="status" aria-live="polite"></p>

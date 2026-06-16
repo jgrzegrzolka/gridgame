@@ -32,12 +32,11 @@ export function bootSync() {
   const linkedDeviceIdEl = document.getElementById('sync-linked-deviceid');
   const qrContainerEl = document.getElementById('sync-qr-container');
   const qrSvgEl = document.getElementById('sync-qr-svg');
-  const qrLinkInputEl = /** @type {HTMLInputElement | null} */ (document.getElementById('sync-qr-link-input'));
-  const qrCopyBtnEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('sync-qr-copy-btn'));
+  const qrLinkEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('sync-qr-link'));
   const statusEl = document.getElementById('sync-status');
   const progressEl = document.getElementById('sync-progress');
   const wizardEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('sync-wizard'));
-  if (!linkedEl || !linkedDeviceIdEl || !qrContainerEl || !qrSvgEl || !qrLinkInputEl || !qrCopyBtnEl || !statusEl || !progressEl || !wizardEl) return;
+  if (!linkedEl || !linkedDeviceIdEl || !qrContainerEl || !qrSvgEl || !qrLinkEl || !statusEl || !progressEl || !wizardEl) return;
 
   const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
 
@@ -114,47 +113,14 @@ export function bootSync() {
     // Inline the SVG. qrcode-svg's output is a self-contained
     // <svg>…</svg> string with no scripts.
     qrSvgEl.innerHTML = mint.qrSvg;
-    // Same URL the QR encodes — exposed as a copyable text input
-    // under a <details> for the desktop-to-desktop case where neither
-    // side has a camera. Click selects the whole URL; Copy uses the
-    // clipboard API with a brief "Copied!" flash.
-    qrLinkInputEl.value = mint.claimUrl;
+    // Same URL the QR encodes, exposed as a plain link for the
+    // desktop-to-desktop case where neither side has a camera.
+    // Right-click → Copy link works in every browser; clicking
+    // opens it (handy when pasted into a second browser).
+    qrLinkEl.href = mint.claimUrl;
+    qrLinkEl.textContent = mint.claimUrl;
     qrContainerEl.hidden = false;
   })();
-
-  // Click the readonly input → select the full URL so a plain
-  // ctrl-c works as a fallback when the clipboard API is blocked.
-  qrLinkInputEl.addEventListener('focus', () => qrLinkInputEl.select());
-  qrLinkInputEl.addEventListener('click', () => qrLinkInputEl.select());
-
-  // Copy button → clipboard API with a 1.5s "Copied!" flash so the
-  // user knows it worked. Falls back to selecting the input text on
-  // any failure (private mode, permissions, non-secure context) —
-  // the user can then ctrl-c manually.
-  /** @type {any} */
-  let copyFlashTimer = 0;
-  qrCopyBtnEl.addEventListener('click', async () => {
-    const url = qrLinkInputEl.value;
-    if (!url) return;
-    let copied = false;
-    try {
-      await navigator.clipboard.writeText(url);
-      copied = true;
-    } catch {
-      qrLinkInputEl.select();
-    }
-    if (copied) {
-      qrCopyBtnEl.textContent = t('sync.showQr.copiedBtn', 'Copied!');
-      qrCopyBtnEl.setAttribute('data-i18n', 'sync.showQr.copiedBtn');
-      qrCopyBtnEl.classList.add('is-copied');
-      if (copyFlashTimer) clearTimeout(copyFlashTimer);
-      copyFlashTimer = setTimeout(() => {
-        qrCopyBtnEl.textContent = t('sync.showQr.copyBtn', 'Copy');
-        qrCopyBtnEl.setAttribute('data-i18n', 'sync.showQr.copyBtn');
-        qrCopyBtnEl.classList.remove('is-copied');
-      }, 1500);
-    }
-  });
 
   /**
    * Ask the server whether this deviceId has been claimed (which

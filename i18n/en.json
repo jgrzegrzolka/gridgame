@@ -30,9 +30,7 @@
     "back": "Profile",
     "showQr": {
       "hint": "Open the camera on your other device and scan this code. The link expires in 5 minutes.",
-      "copyLabel": "Or copy a link to open on another browser",
-      "copyBtn": "Copy",
-      "copiedBtn": "Copied!"
+      "linkLabel": "Or open this link on another device:"
     },
     "linking": "Linking devices",
     "cancelled": "Cancelled — nothing was changed.",

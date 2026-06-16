@@ -80,67 +80,28 @@
   line-height: 1.4;
 }
 
-/* Desktop-to-desktop fallback: a collapsed <details> under the QR
- * that expands to a read-only input + Copy button holding the same
- * claimUrl the QR encodes. Lets the user paste the link into a second
- * browser when neither side has a camera. Collapsed by default
- * because the QR is the primary path; this is the second-class
- * affordance. */
-.sync-qr-link-details {
-  width: 100%;
-  max-width: 360px;
+/* Desktop-to-desktop fallback: the same claimUrl the QR encodes,
+ * shown as a plain text link beneath the QR. Right-click → Copy
+ * link works in every browser; clicking opens it (useful when the
+ * link is pasted into a second browser). */
+.sync-qr-link-line {
+  margin: 0;
   font-size: 12px;
   color: var(--muted-color);
-}
-.sync-qr-link-details > summary {
-  cursor: pointer;
   text-align: center;
+  max-width: 360px;
+  line-height: 1.5;
+}
+.sync-qr-link {
+  display: inline-block;
+  margin-left: 4px;
   color: var(--link-color);
-  list-style: none;
-}
-.sync-qr-link-details > summary::-webkit-details-marker {
-  display: none;
-}
-.sync-qr-link-details > summary:hover {
-  text-decoration: underline;
-}
-.sync-qr-link-row {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-  align-items: stretch;
-}
-.sync-qr-link-input {
-  flex: 1 1 auto;
-  min-width: 0;
-  font: inherit;
-  font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  padding: 6px 8px;
-  border: 1px solid var(--muted-color);
-  border-radius: 6px;
-  color: var(--primary-color);
-  background: #fff;
+  font-size: 11px;
+  word-break: break-all;
 }
-.sync-qr-copy-btn {
-  flex: 0 0 auto;
-  font: inherit;
-  font-size: 12px;
-  padding: 6px 12px;
-  border: 1px solid var(--secondary-color);
-  border-radius: 6px;
-  background: none;
-  color: var(--secondary-color);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.sync-qr-copy-btn:hover {
-  background: var(--secondary-color);
-  color: #fff;
-}
-.sync-qr-copy-btn.is-copied {
-  background: var(--secondary-color);
-  color: #fff;
+.sync-qr-link:hover {
+  text-decoration: underline;
 }
 
 /* Merge-conflict wizard — same .help-dialog chrome, but the body is
