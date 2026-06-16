@@ -14,6 +14,7 @@
  * @property {string[]} additionalColors
  * @property {string[]} colors  Computed getter — union of primaryColors + additionalColors. Non-enumerable: hidden from JSON.stringify and Object.keys so it can't accidentally end up in PartyKit messages or serialised state.
  * @property {string[]} [motifs]
+ * @property {'horizontal' | 'vertical' | null} [stripesOnly]
  * @property {string[]} [aliases]
  */
 

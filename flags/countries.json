@@ -11,7 +11,8 @@
       "black"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "ax",
@@ -28,7 +29,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "al",
@@ -45,7 +47,8 @@
     "motifs": [
       "animal",
       "bird"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "dz",
@@ -62,7 +65,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "as",
@@ -79,13 +83,19 @@
     "additionalColors": [
       "yellow"
     ],
-    "ambiguousColorCount": [4, 5, 6, 7],
+    "ambiguousColorCount": [
+      4,
+      5,
+      6,
+      7
+    ],
     "motifs": [
       "animal",
       "bird",
       "coat-of-arms",
       "weapon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ad",
@@ -105,7 +115,8 @@
     "motifs": [
       "animal",
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ao",
@@ -123,7 +134,8 @@
     "motifs": [
       "weapon",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ai",
@@ -140,13 +152,17 @@
     "additionalColors": [
       "orange"
     ],
-    "ambiguousColorCount": [3, 4],
+    "ambiguousColorCount": [
+      3,
+      4
+    ],
     "motifs": [
       "animal",
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "aq",
@@ -160,7 +176,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "ag",
@@ -179,7 +196,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ar",
@@ -194,11 +212,19 @@
       "yellow"
     ],
     "additionalColors": [],
-    "ambiguousColorCount": [3, 4, 5],
-    "ambiguousColors": ["brown", "orange"],
+    "ambiguousColorCount": [
+      3,
+      4,
+      5
+    ],
+    "ambiguousColors": [
+      "brown",
+      "orange"
+    ],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "am",
@@ -213,7 +239,8 @@
       "orange"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "aw",
@@ -231,7 +258,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sh-ac",
@@ -249,14 +277,19 @@
       "yellow",
       "green"
     ],
-    "ambiguousColorCount": [5, 6, 7],
+    "ambiguousColorCount": [
+      5,
+      6,
+      7
+    ],
     "motifs": [
       "animal",
       "bird",
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "asean",
@@ -273,7 +306,8 @@
     "additionalColors": [
       "white"
     ],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "au",
@@ -292,7 +326,8 @@
       "star-or-moon",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "at",
@@ -308,7 +343,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "az",
@@ -326,7 +362,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "bs",
@@ -341,7 +378,8 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "bh",
@@ -355,7 +393,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "bd",
@@ -371,7 +410,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "bb",
@@ -388,7 +428,8 @@
     "additionalColors": [],
     "motifs": [
       "weapon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "es-pv",
@@ -405,7 +446,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "by",
@@ -420,7 +462,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "be",
@@ -437,7 +480,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "vertical"
   },
   {
     "code": "bz",
@@ -456,11 +500,21 @@
       "yellow",
       "black"
     ],
-    "ambiguousColorCount": [5, 6, 7, 8, 9],
-    "ambiguousColors": ["brown", "black"],
+    "ambiguousColorCount": [
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "ambiguousColors": [
+      "brown",
+      "black"
+    ],
     "motifs": [
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "bj",
@@ -475,7 +529,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "bm",
@@ -498,7 +553,8 @@
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "bt",
@@ -513,11 +569,17 @@
       "white"
     ],
     "additionalColors": [],
-    "ambiguousColorCount": [3, 4],
-    "ambiguousColors": ["black"],
+    "ambiguousColorCount": [
+      3,
+      4
+    ],
+    "ambiguousColors": [
+      "black"
+    ],
     "motifs": [
       "animal"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "bo",
@@ -534,15 +596,28 @@
     "additionalColors": [
       "blue"
     ],
-    "ambiguousColorCount": [4, 5, 6, 7, 8, 9, 10],
-    "ambiguousColors": ["brown", "black", "white"],
+    "ambiguousColorCount": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "ambiguousColors": [
+      "brown",
+      "black",
+      "white"
+    ],
     "motifs": [
       "animal",
       "bird",
       "coat-of-arms",
       "star-or-moon",
       "weapon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "bq",
@@ -562,7 +637,8 @@
     ],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ba",
@@ -579,7 +655,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "bw",
@@ -594,7 +671,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "bv",
@@ -611,7 +689,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "br",
@@ -630,7 +709,8 @@
     ],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "io",
@@ -648,14 +728,19 @@
       "yellow",
       "green"
     ],
-    "ambiguousColorCount": [5, 6, 7],
+    "ambiguousColorCount": [
+      5,
+      6,
+      7
+    ],
     "motifs": [
       "cross",
       "union-jack"
     ],
     "aliases": [
       "Diego Garcia"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "bn",
@@ -673,7 +758,8 @@
     "additionalColors": [],
     "motifs": [
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "bg",
@@ -690,7 +776,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "bf",
@@ -707,7 +794,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "bi",
@@ -725,7 +813,8 @@
     "motifs": [
       "star-or-moon",
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cv",
@@ -743,7 +832,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "kh",
@@ -758,11 +848,17 @@
       "white"
     ],
     "additionalColors": [],
-    "ambiguousColorCount": [3, 4],
-    "ambiguousColors": ["black"],
+    "ambiguousColorCount": [
+      3,
+      4
+    ],
+    "ambiguousColors": [
+      "black"
+    ],
     "motifs": [
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cm",
@@ -779,7 +875,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ca",
@@ -793,7 +890,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "ic",
@@ -807,7 +905,8 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "es-ct",
@@ -821,7 +920,8 @@
       "yellow"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "ky",
@@ -844,7 +944,8 @@
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cf",
@@ -863,7 +964,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cefta",
@@ -877,7 +979,8 @@
       "yellow"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "td",
@@ -892,7 +995,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "cl",
@@ -909,7 +1013,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cn",
@@ -925,7 +1030,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cx",
@@ -945,7 +1051,8 @@
       "animal",
       "bird",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cp",
@@ -960,7 +1067,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "cc",
@@ -976,7 +1084,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "co",
@@ -991,7 +1100,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "km",
@@ -1010,7 +1120,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ck",
@@ -1029,7 +1140,8 @@
       "star-or-moon",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cr",
@@ -1044,7 +1156,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "hr",
@@ -1061,14 +1174,20 @@
     "additionalColors": [
       "yellow"
     ],
-    "ambiguousColorCount": [4, 5],
-    "ambiguousColors": ["black"],
+    "ambiguousColorCount": [
+      4,
+      5
+    ],
+    "ambiguousColors": [
+      "black"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms",
       "star-or-moon",
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cu",
@@ -1085,7 +1204,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cw",
@@ -1102,7 +1222,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cy",
@@ -1119,7 +1240,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "cz",
@@ -1136,7 +1258,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ci",
@@ -1151,7 +1274,8 @@
       "green"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "cd",
@@ -1171,7 +1295,8 @@
     ],
     "aliases": [
       "DRC"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "dk",
@@ -1188,7 +1313,8 @@
     "motifs": [
       "cross",
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "dj",
@@ -1206,7 +1332,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "dm",
@@ -1230,7 +1357,8 @@
       "bird",
       "coat-of-arms",
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "do",
@@ -1247,12 +1375,20 @@
     "additionalColors": [
       "green"
     ],
-    "ambiguousColorCount": [4, 5, 6],
-    "ambiguousColors": ["yellow", "black"],
+    "ambiguousColorCount": [
+      4,
+      5,
+      6
+    ],
+    "ambiguousColors": [
+      "yellow",
+      "black"
+    ],
     "motifs": [
       "coat-of-arms",
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "eac",
@@ -1270,7 +1406,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "ec",
@@ -1288,15 +1425,27 @@
       "green",
       "black"
     ],
-    "ambiguousColorCount": [4, 5, 6, 7, 8, 9],
-    "ambiguousColors": ["brown", "black", "gray"],
+    "ambiguousColorCount": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "ambiguousColors": [
+      "brown",
+      "black",
+      "gray"
+    ],
     "motifs": [
       "animal",
       "bird",
       "coat-of-arms",
       "weapon",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "eg",
@@ -1316,7 +1465,8 @@
       "animal",
       "bird",
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sv",
@@ -1333,11 +1483,17 @@
       "green",
       "yellow"
     ],
-    "ambiguousColorCount": [4, 5],
-    "ambiguousColors": ["red"],
+    "ambiguousColorCount": [
+      4,
+      5
+    ],
+    "ambiguousColors": [
+      "red"
+    ],
     "motifs": [
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gb-eng",
@@ -1353,7 +1509,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gq",
@@ -1371,10 +1528,13 @@
     "additionalColors": [
       "yellow"
     ],
-    "ambiguousColors": ["black"],
+    "ambiguousColors": [
+      "black"
+    ],
     "motifs": [
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "er",
@@ -1390,7 +1550,8 @@
       "yellow"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "ee",
@@ -1407,7 +1568,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "sz",
@@ -1426,7 +1588,8 @@
     "additionalColors": [],
     "motifs": [
       "weapon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "et",
@@ -1444,7 +1607,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "eu",
@@ -1460,7 +1624,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "fk",
@@ -1483,7 +1648,8 @@
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "fo",
@@ -1500,7 +1666,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "fm",
@@ -1516,7 +1683,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "fj",
@@ -1534,15 +1702,23 @@
       "yellow",
       "green"
     ],
-    "ambiguousColorCount": [5, 6, 7],
-    "ambiguousColors": ["black", "brown"],
+    "ambiguousColorCount": [
+      5,
+      6,
+      7
+    ],
+    "ambiguousColors": [
+      "black",
+      "brown"
+    ],
     "motifs": [
       "animal",
       "bird",
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "fi",
@@ -1559,7 +1735,8 @@
     "motifs": [
       "cross",
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "fr",
@@ -1576,7 +1753,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "vertical"
   },
   {
     "code": "gf",
@@ -1591,7 +1769,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "pf",
@@ -1610,7 +1789,8 @@
     "motifs": [
       "coat-of-arms",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tf",
@@ -1627,7 +1807,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ga",
@@ -1642,7 +1823,8 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "es-ga",
@@ -1659,7 +1841,8 @@
       "red",
       "yellow"
     ],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "gm",
@@ -1675,7 +1858,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "ge",
@@ -1691,7 +1875,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "de",
@@ -1708,7 +1893,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "gh",
@@ -1726,7 +1912,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gi",
@@ -1745,7 +1932,8 @@
     ],
     "motifs": [
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gr",
@@ -1762,7 +1950,8 @@
     "motifs": [
       "cross",
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gl",
@@ -1776,7 +1965,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "gd",
@@ -1793,7 +1983,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gp",
@@ -1808,7 +1999,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "gu",
@@ -1827,7 +2019,8 @@
     "additionalColors": [],
     "motifs": [
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gt",
@@ -1844,14 +2037,20 @@
       "green",
       "yellow"
     ],
-    "ambiguousColorCount": [4, 5],
-    "ambiguousColors": ["brown"],
+    "ambiguousColorCount": [
+      4,
+      5
+    ],
+    "ambiguousColors": [
+      "brown"
+    ],
     "motifs": [
       "animal",
       "bird",
       "coat-of-arms",
       "weapon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gg",
@@ -1868,7 +2067,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gn",
@@ -1883,7 +2083,8 @@
       "green"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "gw",
@@ -1901,7 +2102,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gy",
@@ -1918,7 +2120,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "ht",
@@ -1938,7 +2141,8 @@
     "motifs": [
       "coat-of-arms",
       "weapon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "hm",
@@ -1957,7 +2161,8 @@
       "star-or-moon",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "hn",
@@ -1973,7 +2178,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "hk",
@@ -1989,7 +2195,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "hu",
@@ -2006,7 +2213,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "is",
@@ -2023,7 +2231,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "in",
@@ -2039,7 +2248,8 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "id",
@@ -2053,7 +2263,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "ir",
@@ -2070,7 +2281,8 @@
     "additionalColors": [],
     "motifs": [
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "iq",
@@ -2086,7 +2298,8 @@
       "green"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "ie",
@@ -2103,7 +2316,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "vertical"
   },
   {
     "code": "im",
@@ -2119,9 +2333,15 @@
     "additionalColors": [
       "yellow"
     ],
-    "ambiguousColorCount": [3, 4],
-    "ambiguousColors": ["black"],
-    "motifs": []
+    "ambiguousColorCount": [
+      3,
+      4
+    ],
+    "ambiguousColors": [
+      "black"
+    ],
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "il",
@@ -2137,7 +2357,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "it",
@@ -2154,7 +2375,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "vertical"
   },
   {
     "code": "jm",
@@ -2171,7 +2393,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "jp",
@@ -2187,7 +2410,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "je",
@@ -2203,13 +2427,20 @@
     "additionalColors": [
       "yellow"
     ],
-    "ambiguousColorCount": [3, 4],
-    "ambiguousColors": ["blue", "green"],
+    "ambiguousColorCount": [
+      3,
+      4
+    ],
+    "ambiguousColors": [
+      "blue",
+      "green"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms",
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "jo",
@@ -2227,7 +2458,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "kz",
@@ -2246,7 +2478,8 @@
       "bird",
       "coat-of-arms",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ke",
@@ -2265,7 +2498,8 @@
     "motifs": [
       "coat-of-arms",
       "weapon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ki",
@@ -2281,13 +2515,19 @@
       "blue"
     ],
     "additionalColors": [],
-    "ambiguousColorCount": [4, 5],
-    "ambiguousColors": ["black"],
+    "ambiguousColorCount": [
+      4,
+      5
+    ],
+    "ambiguousColors": [
+      "black"
+    ],
     "motifs": [
       "animal",
       "bird",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "xk",
@@ -2304,7 +2544,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "kw",
@@ -2320,7 +2561,8 @@
       "black"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "kg",
@@ -2336,7 +2578,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "la",
@@ -2351,7 +2594,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "lv",
@@ -2367,7 +2611,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "arab",
@@ -2383,7 +2628,8 @@
     "additionalColors": [
       "yellow"
     ],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "lb",
@@ -2398,7 +2644,8 @@
       "green"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "ls",
@@ -2414,7 +2661,8 @@
       "black"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "lr",
@@ -2431,7 +2679,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ly",
@@ -2449,7 +2698,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "li",
@@ -2468,7 +2718,8 @@
     ],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "lt",
@@ -2485,7 +2736,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "lu",
@@ -2502,7 +2754,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "mo",
@@ -2520,7 +2773,8 @@
     ],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "mg",
@@ -2535,7 +2789,8 @@
       "green"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "mw",
@@ -2552,7 +2807,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "my",
@@ -2570,7 +2826,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "mv",
@@ -2587,7 +2844,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ml",
@@ -2602,7 +2860,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "mt",
@@ -2623,7 +2882,8 @@
       "weapon",
       "cross",
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "mh",
@@ -2640,7 +2900,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "mq",
@@ -2655,7 +2916,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "mr",
@@ -2672,7 +2934,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "mu",
@@ -2688,7 +2951,8 @@
       "green"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "yt",
@@ -2703,7 +2967,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "mx",
@@ -2721,13 +2986,23 @@
       "blue",
       "yellow"
     ],
-    "ambiguousColorCount": [4, 5, 6, 7, 8],
-    "ambiguousColors": ["brown", "black"],
+    "ambiguousColorCount": [
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "ambiguousColors": [
+      "brown",
+      "black"
+    ],
     "motifs": [
       "animal",
       "bird",
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "md",
@@ -2744,14 +3019,20 @@
     "additionalColors": [
       "green"
     ],
-    "ambiguousColorCount": [4, 5],
-    "ambiguousColors": ["black"],
+    "ambiguousColorCount": [
+      4,
+      5
+    ],
+    "ambiguousColors": [
+      "black"
+    ],
     "motifs": [
       "animal",
       "bird",
       "coat-of-arms",
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "mc",
@@ -2765,7 +3046,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "mn",
@@ -2783,7 +3065,8 @@
     "motifs": [
       "coat-of-arms",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "me",
@@ -2805,7 +3088,8 @@
       "bird",
       "coat-of-arms",
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ms",
@@ -2828,7 +3112,8 @@
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ma",
@@ -2844,7 +3129,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "mz",
@@ -2864,7 +3150,8 @@
     "motifs": [
       "weapon",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "mm",
@@ -2882,7 +3169,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "na",
@@ -2901,7 +3189,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "nr",
@@ -2918,7 +3207,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "np",
@@ -2935,7 +3225,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "nl",
@@ -2952,7 +3243,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "nc",
@@ -2969,7 +3261,8 @@
       "black"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "nz",
@@ -2988,7 +3281,8 @@
       "star-or-moon",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ni",
@@ -3005,11 +3299,17 @@
       "green",
       "yellow"
     ],
-    "ambiguousColorCount": [4, 5],
-    "ambiguousColors": ["red"],
+    "ambiguousColorCount": [
+      4,
+      5
+    ],
+    "ambiguousColors": [
+      "red"
+    ],
     "motifs": [
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ne",
@@ -3026,7 +3326,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ng",
@@ -3040,7 +3341,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "nu",
@@ -3060,7 +3362,8 @@
       "star-or-moon",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "nf",
@@ -3074,7 +3377,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "kp",
@@ -3094,7 +3398,8 @@
     ],
     "aliases": [
       "DPRK"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "mk",
@@ -3110,7 +3415,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gb-nir",
@@ -3128,7 +3434,8 @@
     ],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "mp",
@@ -3148,7 +3455,8 @@
     ],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "no",
@@ -3165,7 +3473,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "om",
@@ -3182,7 +3491,8 @@
     "additionalColors": [],
     "motifs": [
       "weapon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "pc",
@@ -3196,7 +3506,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "pk",
@@ -3212,7 +3523,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "pw",
@@ -3228,7 +3540,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "pa",
@@ -3245,7 +3558,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "pg",
@@ -3268,7 +3582,8 @@
     ],
     "aliases": [
       "PNG"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "py",
@@ -3290,7 +3605,8 @@
     "motifs": [
       "coat-of-arms",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "pe",
@@ -3304,7 +3620,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "ph",
@@ -3322,7 +3639,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "pn",
@@ -3345,7 +3663,8 @@
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "pl",
@@ -3361,7 +3680,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "pt",
@@ -3379,12 +3699,18 @@
       "blue",
       "white"
     ],
-    "ambiguousColorCount": [5, 6],
-    "ambiguousColors": ["black"],
+    "ambiguousColorCount": [
+      5,
+      6
+    ],
+    "ambiguousColors": [
+      "black"
+    ],
     "motifs": [
       "coat-of-arms",
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "pr",
@@ -3401,7 +3727,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "qa",
@@ -3415,7 +3742,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "cg",
@@ -3430,7 +3758,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "ro",
@@ -3447,7 +3776,8 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
-    ]
+    ],
+    "stripesOnly": "vertical"
   },
   {
     "code": "ru",
@@ -3462,7 +3792,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "rw",
@@ -3479,7 +3810,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "re",
@@ -3494,7 +3826,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "bl",
@@ -3509,7 +3842,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "sh-hl",
@@ -3532,7 +3866,8 @@
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sh",
@@ -3550,7 +3885,8 @@
     "motifs": [
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "kn",
@@ -3569,7 +3905,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "lc",
@@ -3585,7 +3922,8 @@
       "yellow"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "mf",
@@ -3600,7 +3938,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "pm",
@@ -3615,7 +3954,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "vc",
@@ -3630,7 +3970,8 @@
       "green"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "ws",
@@ -3647,7 +3988,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sm",
@@ -3666,12 +4008,20 @@
       "red",
       "black"
     ],
-    "ambiguousColorCount": [5, 6, 7],
-    "ambiguousColors": ["black", "brown"],
+    "ambiguousColorCount": [
+      5,
+      6,
+      7
+    ],
+    "ambiguousColors": [
+      "black",
+      "brown"
+    ],
     "motifs": [
       "coat-of-arms",
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "st",
@@ -3689,7 +4039,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sa",
@@ -3706,7 +4057,8 @@
     "motifs": [
       "coat-of-arms",
       "weapon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gb-sct",
@@ -3722,7 +4074,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sn",
@@ -3739,7 +4092,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "rs",
@@ -3756,14 +4110,20 @@
     "additionalColors": [
       "yellow"
     ],
-    "ambiguousColorCount": [4, 5],
-    "ambiguousColors": ["black"],
+    "ambiguousColorCount": [
+      4,
+      5
+    ],
+    "ambiguousColors": [
+      "black"
+    ],
     "motifs": [
       "animal",
       "bird",
       "coat-of-arms",
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sc",
@@ -3780,7 +4140,8 @@
       "green"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "sl",
@@ -3795,7 +4156,8 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "sg",
@@ -3811,7 +4173,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sx",
@@ -3833,7 +4196,8 @@
       "animal",
       "coat-of-arms",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sk",
@@ -3852,7 +4216,8 @@
       "coat-of-arms",
       "cross",
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "si",
@@ -3873,7 +4238,8 @@
       "coat-of-arms",
       "star-or-moon",
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sb",
@@ -3891,7 +4257,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "so",
@@ -3907,7 +4274,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "za",
@@ -3925,7 +4293,8 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "gs",
@@ -3950,7 +4319,8 @@
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "kr",
@@ -3969,7 +4339,8 @@
     "motifs": [],
     "aliases": [
       "ROK"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ss",
@@ -3989,7 +4360,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "es",
@@ -4006,14 +4378,22 @@
       "blue",
       "white"
     ],
-    "ambiguousColorCount": [4, 5, 6],
-    "ambiguousColors": ["black", "pink"],
+    "ambiguousColorCount": [
+      4,
+      5,
+      6
+    ],
+    "ambiguousColors": [
+      "black",
+      "pink"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms",
       "cross",
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "lk",
@@ -4029,13 +4409,20 @@
       "orange"
     ],
     "additionalColors": [],
-    "ambiguousColorCount": [4, 5],
-    "ambiguousColors": ["black", "red"],
+    "ambiguousColorCount": [
+      4,
+      5
+    ],
+    "ambiguousColors": [
+      "black",
+      "red"
+    ],
     "motifs": [
       "animal",
       "coat-of-arms",
       "weapon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ps",
@@ -4051,7 +4438,8 @@
       "red"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "sd",
@@ -4067,7 +4455,8 @@
       "green"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "sr",
@@ -4085,7 +4474,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sj",
@@ -4102,7 +4492,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "se",
@@ -4119,7 +4510,8 @@
     "motifs": [
       "cross",
       "eu-member"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ch",
@@ -4135,7 +4527,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "sy",
@@ -4153,7 +4546,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tw",
@@ -4170,7 +4564,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tj",
@@ -4189,7 +4584,8 @@
     "motifs": [
       "coat-of-arms",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tz",
@@ -4205,7 +4601,8 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "th",
@@ -4220,7 +4617,8 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "tl",
@@ -4238,7 +4636,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tg",
@@ -4256,7 +4655,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tk",
@@ -4273,7 +4673,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "to",
@@ -4289,7 +4690,8 @@
     "additionalColors": [],
     "motifs": [
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tt",
@@ -4304,7 +4706,8 @@
       "black"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "sh-ta",
@@ -4327,7 +4730,8 @@
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tn",
@@ -4343,7 +4747,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tm",
@@ -4362,7 +4767,8 @@
     ],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tc",
@@ -4385,7 +4791,8 @@
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tv",
@@ -4405,7 +4812,8 @@
       "star-or-moon",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "tr",
@@ -4421,7 +4829,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ug",
@@ -4440,7 +4849,8 @@
     "motifs": [
       "animal",
       "bird"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ua",
@@ -4454,7 +4864,8 @@
       "yellow"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "ae",
@@ -4473,7 +4884,8 @@
     "motifs": [],
     "aliases": [
       "UAE"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gb",
@@ -4491,7 +4903,8 @@
     "motifs": [
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "un",
@@ -4505,7 +4918,8 @@
       "white"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": null
   },
   {
     "code": "um",
@@ -4522,7 +4936,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "us",
@@ -4542,7 +4957,8 @@
     ],
     "aliases": [
       "USA"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "uy",
@@ -4557,11 +4973,17 @@
       "yellow"
     ],
     "additionalColors": [],
-    "ambiguousColorCount": [3, 4],
-    "ambiguousColors": ["black"],
+    "ambiguousColorCount": [
+      3,
+      4
+    ],
+    "ambiguousColors": [
+      "black"
+    ],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "uz",
@@ -4579,7 +5001,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "vu",
@@ -4597,7 +5020,8 @@
     "additionalColors": [],
     "motifs": [
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "va",
@@ -4613,12 +5037,20 @@
     "additionalColors": [
       "red"
     ],
-    "ambiguousColorCount": [3, 4, 5],
-    "ambiguousColors": ["black", "gray"],
+    "ambiguousColorCount": [
+      3,
+      4,
+      5
+    ],
+    "ambiguousColors": [
+      "black",
+      "gray"
+    ],
     "motifs": [
       "coat-of-arms",
       "cross"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ve",
@@ -4636,7 +5068,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "vn",
@@ -4652,7 +5085,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "vg",
@@ -4674,7 +5108,8 @@
       "coat-of-arms",
       "cross",
       "union-jack"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "vi",
@@ -4696,7 +5131,8 @@
       "animal",
       "bird",
       "coat-of-arms"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "gb-wls",
@@ -4713,7 +5149,8 @@
     "additionalColors": [],
     "motifs": [
       "animal"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "wf",
@@ -4728,7 +5165,8 @@
       "blue"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "vertical"
   },
   {
     "code": "eh",
@@ -4746,7 +5184,8 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "ye",
@@ -4761,7 +5200,8 @@
       "black"
     ],
     "additionalColors": [],
-    "motifs": []
+    "motifs": [],
+    "stripesOnly": "horizontal"
   },
   {
     "code": "zm",
@@ -4780,7 +5220,8 @@
     "motifs": [
       "animal",
       "bird"
-    ]
+    ],
+    "stripesOnly": null
   },
   {
     "code": "zw",
@@ -4801,6 +5242,7 @@
       "animal",
       "bird",
       "star-or-moon"
-    ]
+    ],
+    "stripesOnly": null
   }
 ]

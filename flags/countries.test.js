@@ -218,6 +218,67 @@ test('eu-member motif is carried by exactly the 27 EU member states', () => {
     'eu-member motif should be on exactly the 27 EU members — no more, no less');
 });
 
+// stripesOnly — encodes "the flag is pure equal-band stripes in this
+// orientation, with no overlay/charge/canton". null means the flag isn't
+// pure stripes (a charge, a canton, a non-stripe layout, or just no stripes
+// at all). The field is the data backbone for the stripesOnly:* filter
+// surfaced in flagsdata, findFlag, daily puzzles, and the TTT random pool.
+// Schema (presence + valid value) is checked here; consistency-with-motifs
+// is checked by authoring/audit-stripe-orientation.mjs (it would be
+// over-strict to gate at test time — see Lebanon's cedar, untagged).
+test('every entry has stripesOnly: "horizontal" | "vertical" | null', () => {
+  const offenders = [];
+  for (const c of COUNTRIES) {
+    if (!('stripesOnly' in c)) {
+      offenders.push(`${c.code}: missing stripesOnly`);
+      continue;
+    }
+    if (c.stripesOnly !== 'horizontal' && c.stripesOnly !== 'vertical' && c.stripesOnly !== null) {
+      offenders.push(`${c.code}: stripesOnly ${JSON.stringify(c.stripesOnly)} — must be 'horizontal' | 'vertical' | null`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
+// Pinned tags — the obvious cases. A bulk re-tag (or a hasty regeneration
+// of countries.json) that flips France to horizontal or drops Germany's
+// stripesOnly entirely is exactly what this test protects against.
+const KNOWN_STRIPES_ONLY = [
+  // Pure horizontal tricolours
+  { code: 'de', expected: 'horizontal', note: 'Germany — black/red/yellow' },
+  { code: 'ru', expected: 'horizontal', note: 'Russia — white/blue/red' },
+  { code: 'nl', expected: 'horizontal', note: 'Netherlands — red/white/blue' },
+  // Pure vertical tricolours
+  { code: 'fr', expected: 'vertical',   note: 'France — blue/white/red' },
+  { code: 'it', expected: 'vertical',   note: 'Italy — green/white/red' },
+  { code: 'ie', expected: 'vertical',   note: 'Ireland — green/white/orange' },
+  // Pure 2-stripe
+  { code: 'id', expected: 'horizontal', note: 'Indonesia — red/white' },
+  { code: 'pl', expected: 'horizontal', note: 'Poland — white/red' },
+  // Charged flags — must stay null because the charge breaks "pure stripes"
+  { code: 'mx', expected: null,         note: 'Mexico — vertical tricolour BUT centre eagle (COA motif)' },
+  { code: 'es', expected: null,         note: 'Spain — horizontal stripes BUT centre COA' },
+  { code: 'us', expected: null,         note: 'US — 13 horizontal stripes BUT canton' },
+  { code: 'gb', expected: null,         note: 'UK — cross overlay, not stripes' },
+  { code: 'eg', expected: null,         note: 'Egypt — horizontal stripes BUT Eagle of Saladin' },
+  { code: 'ch', expected: null,         note: 'Switzerland — cross, not stripes' },
+];
+
+test('known stripesOnly classifications stay pinned', () => {
+  const offenders = [];
+  for (const { code, expected, note } of KNOWN_STRIPES_ONLY) {
+    const c = COUNTRIES.find((x) => x.code === code);
+    if (!c) {
+      offenders.push(`${code} (${note}): not found in countries.json`);
+      continue;
+    }
+    if (c.stripesOnly !== expected) {
+      offenders.push(`${code} (${note}): expected stripesOnly=${JSON.stringify(expected)}, got ${JSON.stringify(c.stripesOnly)}`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
 // Regression pin — hand-audited primaryColors / additionalColors splits for
 // the European flags Jan ranked by visual inspection. These are the flags
 // where the mechanical migration (#192) needed a specific correction, so

@@ -19,23 +19,35 @@ A fresh agent picking this up should:
 
 ## Now
 
-*(nothing in flight — pick the next feature from `## Backlog` or open a new one)*
+### Feature DB: Stripes-only orientation tag
+
+**Goal.** New field `stripesOnly: 'horizontal' | 'vertical' | null` on each country. Enables clean puzzles like "European vertical-stripe flags" (France, Italy, Belgium, Ireland, Romania) or "European horizontal-stripe flags" (Germany, Russia, Bulgaria, Netherlands, Hungary, Estonia, Lithuania, Luxembourg). Surfaces in flagsdata filters, findFlag "make a puzzle" chooser, TTT random pool, and daily-puzzle authoring.
+
+**Design decisions (settled 2026-06-16):**
+
+- **Embedded purity ("Design X").** `stripesOnly` is set only for pure tricolours — flags whose visual is *just* equal stripes, no overlaid emblem/charge/canton. Mexico, Spain, Andorra, Egypt, US, UK all get `null` even though they have stripes. This conflates "orientation" and "purity" into one field deliberately: the player experience for "European horizontal stripes" wants Spain (COA) *out*, and the embedded shape gives that automatically.
+- **Sharp definition of "pure":** equal-width N-band (N≥2), no overlaid emblem, no canton, no charge, no cross/saltire overlay. Includes Indonesia/Poland (2 stripes pure). Excludes US (canton), UK (cross), Greece (canton-equivalent), Mexico/Spain/Egypt/Iran/Libya (charge).
+- **Token name `stripesOnly:horizontal` / `stripesOnly:vertical`.** Field name matches. The "only" in the token carries the purity constraint into the filter DSL so authors reading a backlog filter string aren't surprised that Egypt is excluded.
+- **Single-stripe flags** (Japan, Bangladesh, Palau, Vietnam) → `null`. "Orientation" doesn't mean anything at n=1.
+- **TTT integration via two complementary mechanisms:**
+  - *Structural disjointness* — per-category `incompatibleWith: string[]` annotation declares pairs that produce empty cells by construction. `hasStripesOnly` factory lists every charge motif (`hasMotif:cross`, `coat-of-arms`, `animal`, `bird`, `weapon`, `star-or-moon`). One small extension to `axesConflict` picks the field up. Pattern is co-located with the factory it describes; auditable via a test that "every incompatibleWith entry produces 0 matches in current data."
+  - *Size tightness for 9×9* — `ultimateEligible: false` annotation on stripesOnly factories. `generateUltimateRandomPuzzle` filters the pool to ultimate-eligible cats. Reason: Europe has 8 pure-horizontals (< 9) and 5 pure-verticals (< 9); other continents tighter. Pure stripes can't reliably back a 9×9 cell.
+- **TTT random pool** (3×3 only) gets the two stripesOnly cats; daily-puzzle generator (`authoring/generate-candidates.mjs`) respects them too.
+
+**Phasing.** Each phase = one branch off `main` + one PR. Don't auto-merge.
+
+1. **Seed data + audit script + schema test.** Add `stripesOnly` to every country in `countries.json`. Build `authoring/audit-stripe-orientation.mjs` (mirrors `audit-ambiguity.mjs`) — prints classification per continent for human review. Schema test in `flags/countries.test.js` enforces the field exists with valid values everywhere.
+2. **Engine + filter wiring + tests.** `hasStripesOnly(orientation)` factory in `flags/engine.js` (with `exclusiveGroup: 'stripesOnly'`, `incompatibleWith`, `ultimateEligible: false`). Add `stripesOnly` to the `Filters` typedef in `flags/flagsFilter.js`, `emptyFilters()`, `matchesFilters()`. Parse/serialize `stripesOnly:horizontal` in `flags/findFlag.js` (`GROUP_ORDER`, `parseFilterString`, `serializeFilter`, legacy `?cat=`, `pillLabel`, `translateCategoryLabel`). Extend `axesConflict` for `incompatibleWith`. Split `buildRandomCategoryPool()` so `generateUltimateRandomPuzzle` skips non-ultimate-eligible cats. Tests for everything.
+3. **flagsdata surface.** New "Stripes" pill group in `flagsdata/page.js`, added to the include/exclude bookkeeping arrays + Clear, language switch re-translates labels.
+4. **findFlag chooser surface + random pool.** New section in `findFlag/page.js` with two pills. Include in chooser's Random pool. Update `findflag-random-coverage` skill note.
+5. **TTT random pool.** Wire `hasStripesOnly` into `buildRandomCategoryPool()` (already done in Phase 2 effectively — confirm + add an integration test that 3×3 generation stays inside the retry budget with the new cats).
+6. **First puzzle ideas.** Draft 3–4 backlog daily-puzzle ideas using the new dimension via `daily-puzzle-author` skill (`continent:Europe,stripesOnly:horizontal`, etc.).
+
+**Currently in:** Phase 1 — branch `feature/db-stripes-only-phase-1-seed`.
 
 ---
 
 ## Backlog
-
-### Feature DB: Stripes-only orientation tag
-
-**Status:** unblocked (DA shipped 2026-06-13). Additive feature — opens new puzzle dimensions without fixing any existing problem.
-
-**Goal:** new field `stripeOrientation: 'horizontal' | 'vertical' | null` on each country. Enables clean puzzles like "all European flags that are vertical tricolour" (France, Italy, Belgium, Ireland, ...) or "all European flags that are horizontal tricolour" (Germany, Russia, Bulgaria, Netherlands, Hungary, ...). Both are visually crisp categories players will read confidently.
-
-**Open design call when this comes off the parking brake:**
-
-- **Definition: pure tricolour only, or tricolour-with-emblem too?** Recommend starting pure-only (`null` for Mexico, Slovakia, Spain — they have stripes *and* a charge). Loosen later if the pure pool runs out of puzzle ideas.
-- **Single-stripe flags** (e.g. Japan, Bangladesh — one stripe plus a disc). Probably also `null` — "stripe orientation" loses meaning at n=1.
-- **Token name.** `stripeOrientation` for the field, but the filter DSL token can stay terse, e.g. `stripes:horizontal` / `stripes:vertical`.
 
 ---
 
