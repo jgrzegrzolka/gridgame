@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyHydratePayload, maybeHydrate } from './syncHydrate.js';
+import { applyHydratePayload, trySyncDevices } from './syncHydrate.js';
 
 /** Map-backed Storage stand-in — same shape getItem/setItem the real
  * localStorage exposes for our purposes. */
@@ -172,7 +172,7 @@ test('applyHydratePayload: skips quiz entries missing score/durationMs', () => {
   assert.equal(counts.quizWritten, 0);
 });
 
-// ---- maybeHydrate ---------------------------------------------------
+// ---- trySyncDevices ---------------------------------------------------
 
 /**
  * Build a fetch double that resolves to a successful hydrate payload
@@ -196,23 +196,23 @@ function makeFetchDouble(payload = { daily: [], records: {} }) {
   return { fetchImpl, calls };
 }
 
-test('maybeHydrate: unlinked device returns { ran: false, reason: unlinked } — no network', async () => {
+test('trySyncDevices: unlinked device returns { ran: false, reason: unlinked } — no network', async () => {
   const store = makeStore(); // empty: no identityId
   const { fetchImpl, calls } = makeFetchDouble();
-  const res = await maybeHydrate({
+  const res = await trySyncDevices({
     deviceId: 'd1', store, identityKey: 'gridgame.identityId', fetchImpl, now: 1_000_000,
   });
   assert.deepEqual(res, { ran: false, reason: 'unlinked' });
   assert.equal(calls.length, 0, 'no fetch fires for unlinked users');
 });
 
-test('maybeHydrate: linked but within minInterval returns { ran: false, reason: fresh } — no network', async () => {
+test('trySyncDevices: linked but within minInterval returns { ran: false, reason: fresh } — no network', async () => {
   const store = makeStore({
     'gridgame.identityId': 'd1',
     'gridgame.lastHydrateAt': String(1_000_000 - 30 * 1000), // 30 s ago
   });
   const { fetchImpl, calls } = makeFetchDouble();
-  const res = await maybeHydrate({
+  const res = await trySyncDevices({
     deviceId: 'd1', store, identityKey: 'gridgame.identityId',
     minIntervalMs: 60 * 1000, // 1 minute window
     now: 1_000_000, fetchImpl,
@@ -221,7 +221,7 @@ test('maybeHydrate: linked but within minInterval returns { ran: false, reason: 
   assert.equal(calls.length, 0);
 });
 
-test('maybeHydrate: linked + stale fires the GET and stamps the timestamp', async () => {
+test('trySyncDevices: linked + stale fires the GET and stamps the timestamp', async () => {
   const store = makeStore({
     'gridgame.identityId': 'd1',
     'gridgame.lastHydrateAt': String(1_000_000 - 2 * 60 * 60 * 1000), // 2h ago
@@ -230,7 +230,7 @@ test('maybeHydrate: linked + stale fires the GET and stamps the timestamp', asyn
     daily: [{ puzzleId: 1, foundCodes: ['fr'], totalCount: 2 }],
     records: {},
   });
-  const res = await maybeHydrate({
+  const res = await trySyncDevices({
     deviceId: 'd1', store, identityKey: 'gridgame.identityId',
     minIntervalMs: 60 * 60 * 1000, // 1h
     now: 1_000_000, fetchImpl,
@@ -244,10 +244,10 @@ test('maybeHydrate: linked + stale fires the GET and stamps the timestamp', asyn
   assert.equal(scores[1].f, 1);
 });
 
-test('maybeHydrate: no prior timestamp on a linked device fires the GET on first call', async () => {
+test('trySyncDevices: no prior timestamp on a linked device fires the GET on first call', async () => {
   const store = makeStore({ 'gridgame.identityId': 'd1' });
   const { fetchImpl, calls } = makeFetchDouble();
-  const res = await maybeHydrate({
+  const res = await trySyncDevices({
     deviceId: 'd1', store, identityKey: 'gridgame.identityId',
     minIntervalMs: 60 * 60 * 1000, now: 1_000_000, fetchImpl,
   });
@@ -255,7 +255,7 @@ test('maybeHydrate: no prior timestamp on a linked device fires the GET on first
   assert.equal(calls.length, 1);
 });
 
-test('maybeHydrate: stamps the timestamp BEFORE awaiting the fetch (de-races concurrent tabs)', async () => {
+test('trySyncDevices: stamps the timestamp BEFORE awaiting the fetch (de-races concurrent tabs)', async () => {
   // Two simultaneous calls — only the first should hit the network if
   // the timestamp is stamped synchronously before the await. We model
   // "simultaneous" by giving both calls the same `now` and inspecting
@@ -269,8 +269,8 @@ test('maybeHydrate: stamps the timestamp BEFORE awaiting the fetch (de-races con
     return fetchImpl(url);
   });
   await Promise.all([
-    maybeHydrate({ deviceId: 'd1', store, identityKey: 'gridgame.identityId', minIntervalMs: 60_000, now: 1_000_000, fetchImpl: wrapped }),
-    maybeHydrate({ deviceId: 'd1', store, identityKey: 'gridgame.identityId', minIntervalMs: 60_000, now: 1_000_000, fetchImpl: wrapped }),
+    trySyncDevices({ deviceId: 'd1', store, identityKey: 'gridgame.identityId', minIntervalMs: 60_000, now: 1_000_000, fetchImpl: wrapped }),
+    trySyncDevices({ deviceId: 'd1', store, identityKey: 'gridgame.identityId', minIntervalMs: 60_000, now: 1_000_000, fetchImpl: wrapped }),
   ]);
   assert.equal(calls.length, 1, 'second concurrent call hit the fresh gate after the first stamped');
 });

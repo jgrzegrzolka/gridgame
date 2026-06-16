@@ -4,7 +4,7 @@ import { loadScores, migrateScores } from './scores.js';
 import { renderArchiveSquare, refreshSquareCriteria } from './squares.js';
 import { mountDevReset } from './devReset.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
-import { maybeHydrate } from '../flags/syncHydrate.js';
+import { trySyncDevices } from '../flags/syncHydrate.js';
 
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
 
@@ -15,7 +15,7 @@ export function bootArchive() {
   // from the server at most once per hour so the archive grid
   // reflects plays the other linked device made elsewhere. Unlinked
   // users exit on the identity gate without any network call.
-  void maybeHydrate({
+  void trySyncDevices({
     deviceId: getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID()),
     store: window.localStorage,
     identityKey: IDENTITY_STORAGE_KEY,

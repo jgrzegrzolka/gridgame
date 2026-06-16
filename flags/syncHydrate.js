@@ -144,8 +144,9 @@ const ENDPOINT = '/api/v1/sync/hydrate';
 /**
  * Background-safe ambient sync. Called on page boots that read local
  * cache (daily archive, today's daily, flagQuiz picker) to refresh
- * from the server when the data the user is about to see might be
- * stale.
+ * the local view of "what plays exist for this deviceId" from the
+ * server — picking up anything the OTHER linked browser may have
+ * submitted in the meantime.
  *
  * Two gates, both designed to keep this free for the vast majority
  * of players who never link a second device:
@@ -179,7 +180,7 @@ const ENDPOINT = '/api/v1/sync/hydrate';
  *   | { ran: true, ok: false }
  * >}
  */
-export async function maybeHydrate({
+export async function trySyncDevices({
   deviceId, store, identityKey,
   minIntervalMs = DEFAULT_MIN_INTERVAL_MS,
   now = Date.now(),

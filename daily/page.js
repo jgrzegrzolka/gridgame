@@ -14,7 +14,7 @@ import {
   showReason,
 } from './playFlow.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
-import { maybeHydrate } from '../flags/syncHydrate.js';
+import { trySyncDevices } from '../flags/syncHydrate.js';
 import { submitResult } from './statsSubmit.js';
 import { fetchStats } from './statsClient.js';
 import { applyFindRatesToTiles } from './statsOverlay.js';
@@ -568,7 +568,7 @@ export function bootDaily() {
   // most once per hour — enough to keep "today already played?"
   // and the archive grid honest after the other linked device
   // submitted something elsewhere.
-  void maybeHydrate({
+  void trySyncDevices({
     deviceId: getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID()),
     store: window.localStorage,
     identityKey: IDENTITY_STORAGE_KEY,
