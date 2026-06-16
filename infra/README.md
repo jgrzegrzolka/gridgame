@@ -2,58 +2,78 @@
 
 Infrastructure-as-code for Azure resources that sit *outside* the Static Web App's managed Function App.
 
-Right now there is exactly one template here, and it backs Feature D from `../FEATURE2.md`.
-
 ## Files
 
 | File | Purpose |
 |---|---|
-| `logicapp-release-daily.bicep` | Logic App (Consumption) that POSTs `workflow_dispatch` to `release-daily.yml` at 00:05 Warsaw daily, replacing flaky GH cron. |
+| `funcapp-release-daily.bicep` | Standalone Function App (`func-yetanotherquiz-release`, Linux Consumption Y1, Node 22) that owns midnight puzzle promotion. Replaces the GitHub Actions release workflow + Logic App pair retired in Feature P Phase 2. |
+| `release-fn/` | Source for the Function App above. Bundled into a deployable zip by `scripts/build-release-fn.mjs` (esbuild). |
+| `dailyLeaderboards-index-policy.json` | Cosmos container index policy applied at create time (Feature K). |
+| `edge-proxy/` | Cloudflare Worker that proxies www to the raw SWA hostname (mitigates the custom-domain edge flap — Feature D 2026-06-11). |
+| `operations.md` | Live-system reference: resource inventory, secrets, recurring symptoms + runbook. Read this when something looks wrong in prod. |
 
 ## Conventions
 
-- **Single source of truth:** these `.bicep` files are authoritative. **Don't click-edit the deployed Logic App in the portal** — round-trip every change through the template and `az deployment group create`.
+- **Single source of truth:** these `.bicep` files are authoritative. **Don't click-edit deployed resources in the portal** — round-trip every change through the template and `az deployment group create`.
 - **Names follow `yetanotherquiz-*`** to match the rest of the Azure-side naming (the `gridgame` name stays in code/pages/localStorage; Azure resources use the product framing).
-- **No secrets committed.** Anything sensitive is a `@secure()` Bicep param, supplied at deploy time.
+- **No secrets committed.** Anything sensitive is a `@secure()` Bicep param or a managed identity.
 
-## Deploying `logicapp-release-daily.bicep`
+## Deploying `funcapp-release-daily.bicep`
 
-Prerequisite: a GitHub fine-grained PAT scoped to `jgrzegrzolka/gridgame` with `Actions: write` (see `../FEATURE2.md` Phase D1 for mint steps).
+Provisions the Function App, Consumption plan, App Insights, runtime storage, and the role assignment that gives the Function's managed identity `Storage Blob Data Contributor` on `styetanotherquiz`.
 
 ```powershell
 az deployment group create `
   -g rg-yetanotherquiz `
-  -f infra/logicapp-release-daily.bicep `
-  -p githubPat=<paste PAT>
+  -f infra/funcapp-release-daily.bicep
 ```
 
-What this creates / updates:
-
-- `Microsoft.Logic/workflows` resource named `logic-yetanotherquiz-release-daily` in `rg-yetanotherquiz`, region inherited from the resource group (West Europe).
-- Recurrence trigger at 00:05 Warsaw (`Central European Standard Time`, follows DST).
-- HTTP action that POSTs to GitHub's `workflow_dispatch` endpoint for `release-daily.yml`.
-
-Verify after deploy:
+To ship code changes after a `src/` edit:
 
 ```powershell
-az resource show -g rg-yetanotherquiz -n logic-yetanotherquiz-release-daily --resource-type Microsoft.Logic/workflows --query "properties.state"
-# Expect: "Enabled"
+node scripts/build-release-fn.mjs
+# zip the dist/ folder, forward slashes inside (PowerShell's Compress-Archive
+# uses backslashes which break on Linux Consumption) — use Python:
+python -c "import os,zipfile; src='infra/release-fn/dist'; out='infra/release-fn/release-fn.zip'; z=zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED); [z.write(os.path.join(r,f), os.path.relpath(os.path.join(r,f), src).replace(os.sep,'/')) for r,_,fs in os.walk(src) for f in fs]; z.close()"
+az functionapp deployment source config-zip `
+  -g rg-yetanotherquiz `
+  -n func-yetanotherquiz-release `
+  --src infra/release-fn/release-fn.zip
 ```
 
-## Quirk: Recurrence trigger fires on registration
+After upload, the Function App needs ~30–60s to re-index. Verify with:
 
-When `az deployment group create` **creates** the Logic App (first deploy), the Recurrence trigger fires once immediately as part of registration, then settles into its 00:05 Warsaw schedule for subsequent runs. This is documented Logic Apps behaviour, not a bug.
+```powershell
+$key = az functionapp keys list -g rg-yetanotherquiz -n func-yetanotherquiz-release --query masterKey -o tsv
+curl -H "x-functions-key: $key" https://func-yetanotherquiz-release.azurewebsites.net/admin/functions
+# Expect: a JSON array with one entry named "releaseDaily" and schedule "0 5 22,23 * * *"
+```
 
-In practice:
+## Manual invocation (smoke test)
 
-- **First deploy:** doubles as a free end-to-end smoke test — the HTTP action hits GitHub, `release-daily.yml` runs, the `already released today` guard catches it (because we're not actually at 00:05 Warsaw), workflow exits clean.
-- **Future redeploys** (e.g. PAT rotation): one extra `workflow_dispatch` fires at redeploy time. The guard handles it. No action needed; just don't be surprised by the run in `gh run list`.
-- **Pure update deploys** that don't recreate the resource (e.g. tag changes): do *not* trigger this — only resource creation does.
+To run the promotion immediately without waiting for the cron — useful when verifying a code change. **The handler will short-circuit if Warsaw isn't midnight or today's puzzle is already in `live`**, so a midday invocation returns without mutating blob:
 
-## Rotating the PAT
+```powershell
+$key = az functionapp keys list -g rg-yetanotherquiz -n func-yetanotherquiz-release --query masterKey -o tsv
+curl -X POST -H "x-functions-key: $key" -H "Content-Type: application/json" -d '{}' `
+  https://func-yetanotherquiz-release.azurewebsites.net/admin/functions/releaseDaily
+```
 
-When the PAT expires (90 days; GitHub sends an email 7 days before), mint a new one with the same scope and redeploy with the new value — same `az deployment group create` command as above. The Logic App parameter is re-supplied; no other change.
+To actually exercise the promote path mid-day, snapshot live + backlog blobs first, then re-upload them after the test:
+
+```powershell
+curl -o live.bak.json  https://styetanotherquiz.blob.core.windows.net/catalog/live.json
+curl -o bl.bak.json    https://styetanotherquiz.blob.core.windows.net/catalog/backlog.json
+# ...invoke and verify...
+$key2 = az storage account keys list -n styetanotherquiz -g rg-yetanotherquiz --query "[0].value" -o tsv
+az storage blob upload --account-name styetanotherquiz --account-key $key2 -c catalog -n live.json    -f live.bak.json --overwrite
+az storage blob upload --account-name styetanotherquiz --account-key $key2 -c catalog -n backlog.json -f bl.bak.json   --overwrite
+```
+
+## DST resilience
+
+`WEBSITE_TIME_ZONE` is silently ignored on Linux Consumption and the `CRON_TZ=Europe/Warsaw` prefix is rejected by the indexer. The schedule is therefore expressed in UTC: `0 5 22,23 * * *` fires at both 22:05 and 23:05 UTC every day. Exactly one of those is Warsaw midnight under either CEST (22:05) or CET (23:05); the handler computes `warsawClock(now)` and runs only when `hour === 0`. No manual bumps at DST boundaries — pinned by `infra/release-fn/src/lib/warsawTime.test.js`.
 
 ## Disabling temporarily
 
-Portal: open the Logic App → **Overview** → **Disable**. Stops future runs immediately. Re-enable the same way. This is the rollback knob from `../FEATURE2.md`.
+Portal: open the Function App → **Overview** → **Stop**, or via CLI: `az functionapp stop -g rg-yetanotherquiz -n func-yetanotherquiz-release`. The next cron fire will not run. Re-enable with `start`.

@@ -5,11 +5,10 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  # Hand-cranked deploys and the trigger that release-daily.yml uses to
-  # re-deploy after the bot pushes a release commit. Direct pushes to
-  # main by GITHUB_TOKEN (which is what release-daily uses) deliberately
-  # do NOT trigger downstream workflows — without this dispatch trigger,
-  # the auto-release would land on main but never ship.
+  # Hand-cranked deploys. (Up to Feature P Phase 2, this also served the
+  # release-daily.yml bot's re-deploy after a release commit — that
+  # workflow is gone now; the catalog is served directly from blob and
+  # never needs an SWA redeploy to ship a puzzle.)
   workflow_dispatch:
 
 concurrency:
