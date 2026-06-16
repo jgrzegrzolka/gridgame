@@ -262,6 +262,11 @@ const KNOWN_STRIPES_ONLY = [
   { code: 'gb', expected: null,         note: 'UK — cross overlay, not stripes' },
   { code: 'eg', expected: null,         note: 'Egypt — horizontal stripes BUT Eagle of Saladin' },
   { code: 'ch', expected: null,         note: 'Switzerland — cross, not stripes' },
+  // Non-sovereign sweep (Phase 1 follow-on) — only sub-national / "other"
+  // entries that the original sweep missed. Pinned because both are
+  // surprising calls a future bulk re-tag could easily flip.
+  { code: 'es-ct', expected: 'horizontal', note: 'Catalonia (Senyera) — 9 alternating yellow/red horizontal stripes, no charge' },
+  { code: 'ic',    expected: 'horizontal', note: "Canary Islands — SVG in this dataset ships pure 2-band white-over-blue (COA omitted); classify what the player sees" },
 ];
 
 test('known stripesOnly classifications stay pinned', () => {
