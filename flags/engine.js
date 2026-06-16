@@ -108,17 +108,25 @@ export function statehood(value, label) {
 /**
  * Charge motifs — any visual element overlaid on a flag's field. A flag
  * whose `motifs` carries any of these can never be pure equal-band stripes
- * by definition, so `stripesOnly:*` declares every entry here as
- * `incompatibleWith` — the generator skips the pair before testing cells.
+ * by definition. The single source of truth: `hasStripesOnly` reads it to
+ * declare `incompatibleWith` so the generator skips the pair before testing
+ * cells; `authoring/audit-stripe-orientation.mjs` reads it to surface
+ * `stripesOnly`-tagged countries that contradict it.
+ *
  * Kept narrow: `eu-member` is a *political* tag, not a visual element, so
  * it stays out (most pure tricolours are EU members).
  *
  * @type {string[]}
  */
-const CHARGE_MOTIFS = [
+export const CHARGE_MOTIFS = [
   'cross', 'coat-of-arms', 'animal', 'bird',
   'weapon', 'star-or-moon', 'union-jack',
 ];
+
+/** Pre-resolved category ids for stripesOnly's `incompatibleWith`. Hoisted
+ * out of the factory body so the list is computed once at module load,
+ * not once per `hasStripesOnly()` call (every pool build triggers two). */
+const STRIPES_ONLY_INCOMPATIBLE = CHARGE_MOTIFS.map((m) => `hasMotif:${m}`);
 
 /**
  * "Pure stripes" Category — matches when the country's `stripesOnly` field
@@ -143,7 +151,7 @@ export function hasStripesOnly(orientation) {
     label: `${orientation} stripes only`,
     predicate: (c) => c.stripesOnly === orientation,
     exclusiveGroup: 'stripesOnly',
-    incompatibleWith: CHARGE_MOTIFS.map((m) => `hasMotif:${m}`),
+    incompatibleWith: STRIPES_ONLY_INCOMPATIBLE,
     ultimateEligible: false,
   };
 }

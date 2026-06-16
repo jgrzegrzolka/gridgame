@@ -798,6 +798,14 @@ test('translateCategoryLabel returns the raw label for ids without a colon', () 
   assert.equal(translateCategoryLabel(noColon, t), 'whatever-label');
 });
 
+test('translateCategoryLabel maps stripesOnly:<orientation> to the stripesOnly.* key, falling back to the baked label', () => {
+  const t = fakeTranslate({ 'stripesOnly.horizontal': 'tylko poziome pasy' });
+  assert.equal(translateCategoryLabel(hasStripesOnly('horizontal'), t), 'tylko poziome pasy');
+  // Missing key → baked English label ("vertical stripes only") surfaces,
+  // not blank.
+  assert.equal(translateCategoryLabel(hasStripesOnly('vertical'), fakeTranslate({})), 'vertical stripes only');
+});
+
 test('colorCount(=, N) predicate matches countries whose full palette is exactly N', () => {
   const cat = colorCount('=', 2);
   const twoColour = country({ code: 'jp', name: 'Japan', primaryColors: ['white', 'red'] });

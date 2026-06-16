@@ -311,6 +311,13 @@ test('pillLabel: exclude prefixes a lowercase "not " on the same bare noun', () 
   assert.equal(pillLabel('motif', 'cross', 'exclude', idTranslate), 'not cross');
 });
 
+test('pillLabel: stripesOnly renders the baked English fallback when no translation is supplied', () => {
+  // No translation table → idTranslate returns the fallback the renderer
+  // hands it (`"<orientation> stripes only"`).
+  assert.equal(pillLabel('stripesOnly', 'horizontal', 'include', idTranslate), 'horizontal stripes only');
+  assert.equal(pillLabel('stripesOnly', 'vertical', 'exclude', idTranslate), 'not vertical stripes only');
+});
+
 test('filterTitle: joins selected pills with the interpunct separator in GROUP_ORDER', () => {
   const f = parseFilterString('continent:Africa,color:orange,motif:!cross');
   assert.ok(f);

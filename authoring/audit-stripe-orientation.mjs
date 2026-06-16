@@ -11,11 +11,9 @@
 // (Mirrors authoring/audit-ambiguity.mjs in shape.)
 
 import { readFileSync } from 'node:fs';
+import { CHARGE_MOTIFS as CHARGE_MOTIFS_LIST } from '../flags/engine.js';
 
-const CHARGE_MOTIFS = new Set([
-  'cross', 'coat-of-arms', 'animal', 'bird',
-  'weapon', 'star-or-moon', 'union-jack',
-]);
+const CHARGE_MOTIFS = new Set(CHARGE_MOTIFS_LIST);
 
 const VALID = new Set(['horizontal', 'vertical', null]);
 
