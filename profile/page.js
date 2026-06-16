@@ -261,6 +261,11 @@ let lastStats = null;
  */
 async function loadAndPaintStats(deviceId) {
   const stats = await fetchDailyMe(deviceId);
+  // Either branch hides the loading line: success-with-stats paints
+  // them, success-without-stats (totalPlayed === 0) and failure both
+  // collapse to the empty state. The loading line never lingers.
+  const loadingEl = document.getElementById('profile-stats-loading');
+  if (loadingEl) loadingEl.hidden = true;
   if (stats && stats.totalPlayed > 0) {
     lastStats = stats;
     paintStats(stats);

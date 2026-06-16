@@ -28,15 +28,17 @@ import { t } from '../../i18n.js';
  *                        real devices.
  */
 export function bootSync() {
+  const headingEl = document.getElementById('sync-heading');
   const linkedEl = document.getElementById('sync-linked');
   const linkedDeviceIdEl = document.getElementById('sync-linked-deviceid');
   const qrContainerEl = document.getElementById('sync-qr-container');
   const qrSvgEl = document.getElementById('sync-qr-svg');
   const qrLinkEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('sync-qr-link'));
+  const loadingEl = document.getElementById('sync-loading');
   const statusEl = document.getElementById('sync-status');
   const progressEl = document.getElementById('sync-progress');
   const wizardEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('sync-wizard'));
-  if (!linkedEl || !linkedDeviceIdEl || !qrContainerEl || !qrSvgEl || !qrLinkEl || !statusEl || !progressEl || !wizardEl) return;
+  if (!headingEl || !linkedEl || !linkedDeviceIdEl || !qrContainerEl || !qrSvgEl || !qrLinkEl || !loadingEl || !statusEl || !progressEl || !wizardEl) return;
 
   const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
 
@@ -67,15 +69,49 @@ export function bootSync() {
     } catch {}
     const isLinked = typeof storedIdentity === 'string' && storedIdentity.length > 0;
     linkedEl.hidden = !isLinked;
+    // The "Play on more than one device?" heading is a CTA for the
+    // unlinked state. Once a device is linked it just reads as
+    // noise above the "Device is linked." pane — hide it.
+    headingEl.hidden = isLinked;
     if (isLinked && storedDeviceId) {
       linkedDeviceIdEl.textContent = storedDeviceId;
     }
+  }
+
+  /**
+   * Pulse the "Device is linked." title with a 3× pink shake to mark
+   * the moment of transition. Caller fires this exactly on the
+   * unlinked → linked edge — NOT on every paintLinkedState() pass
+   * (which also runs on plain page reload of an already-linked
+   * browser, where re-celebrating would feel jumpy).
+   *
+   * Remove-then-reflow-then-add lets a second consecutive transition
+   * replay the animation cleanly. animationend listener drops the
+   * class so the colour fades back to primary via the CSS transition.
+   */
+  function celebrateLinked() {
+    const title = linkedEl.querySelector('.sync-linked-title');
+    if (!title) return;
+    title.classList.remove('shake-celebrate');
+    void (/** @type {HTMLElement} */ (title)).offsetWidth;
+    title.classList.add('shake-celebrate');
+  }
+  const titleEl = linkedEl.querySelector('.sync-linked-title');
+  if (titleEl) {
+    titleEl.addEventListener('animationend', () => {
+      titleEl.classList.remove('shake-celebrate');
+    });
   }
 
   // ---- Path 1: arriving with ?claim=<token> ----
   const params = new URLSearchParams(window.location.search);
   const claimToken = params.get('claim');
   if (claimToken) {
+    // The runClaimFlow path uses .sync-progress for its in-flight
+    // indicator (redeem → preview → merge). The .sync-loading line
+    // is for the QR-mint path only — hide it here so the user
+    // doesn't see two competing "loading" messages.
+    loadingEl.hidden = true;
     void runClaimFlow(claimToken);
     return;
   }
@@ -85,6 +121,7 @@ export function bootSync() {
   // devices + matching localStorage state. Pure UI: never calls
   // /sync/merge, never swaps deviceId. ---
   if (params.has('wizard-preview')) {
+    loadingEl.hidden = true;
     void showWizard({
       profile: { target: 'Nimble Forest', source: 'Curious Otter' },
       daily: { count: 3, samplePuzzleIds: [3, 4, 7] },
@@ -106,6 +143,10 @@ export function bootSync() {
   // 5 min; reloading mints a fresh one.
   void (async () => {
     const mint = await mintClaimToken({ deviceId });
+    // Either branch hides the loading line — success swaps to the
+    // QR container, failure to the status text. The loading line
+    // never lingers.
+    loadingEl.hidden = true;
     if (!mint.ok) {
       showStatus('sync.error.generic', 'Couldn’t prepare the link — try again.');
       return;
@@ -139,6 +180,7 @@ export function bootSync() {
     if (!linked) return;
     try { window.localStorage.setItem(IDENTITY_STORAGE_KEY, deviceId); } catch {}
     paintLinkedState();
+    celebrateLinked();
     // Now that we know this browser is the target of a link, pull
     // every server-side row (daily history + quiz personal-bests) into
     // local storage so /daily/archive and the quiz picker show the
@@ -184,6 +226,7 @@ export function bootSync() {
       hideProgress();
       clearStatus();
       paintLinkedState();
+      celebrateLinked();
       return;
     }
 
@@ -234,6 +277,7 @@ export function bootSync() {
     hideProgress();
     clearStatus();
     paintLinkedState();
+    celebrateLinked();
     // Pull every server-side row (post-merge daily history + quiz
     // PBs) into this browser's localStorage. Source's local cache
     // up to this point was just source's own pre-link plays; after

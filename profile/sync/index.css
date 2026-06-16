@@ -80,21 +80,31 @@
   line-height: 1.4;
 }
 
-/* Desktop-to-desktop fallback: the same claimUrl the QR encodes,
- * shown as a plain text link beneath the QR. Right-click → Copy
- * link works in every browser; clicking opens it (useful when the
- * link is pasted into a second browser). */
-.sync-qr-link-line {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted-color);
-  text-align: center;
+/* Desktop-to-desktop fallback: a collapsed <details> beneath the QR.
+ * The QR is the primary path; this opens only when the user can't
+ * scan it (no camera, same-machine testing). Default disclosure
+ * triangle is dropped and the summary styled as a plain link so the
+ * affordance reads as "click for the alternative" instead of a
+ * filesystem-style folder toggle. */
+.sync-qr-link-details {
   max-width: 360px;
-  line-height: 1.5;
+  text-align: center;
+}
+.sync-qr-link-details > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--link-color);
+  list-style: none;
+}
+.sync-qr-link-details > summary::-webkit-details-marker {
+  display: none;
+}
+.sync-qr-link-details > summary:hover {
+  text-decoration: underline;
 }
 .sync-qr-link {
   display: inline-block;
-  margin-left: 4px;
+  margin-top: 8px;
   color: var(--link-color);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
@@ -195,6 +205,22 @@
   font-weight: 600;
   color: var(--primary-color);
   text-align: center;
+  /* Smooth the post-celebration colour revert from brand pink back
+   * to primary so it fades instead of snapping when the
+   * .shake-celebrate class is removed. */
+  transition: color 0.3s ease-out;
+}
+/* Celebrate the just-linked moment: 3× cell-shake (1.2s) in brand
+ * pink, fired once when this browser transitions from unlinked →
+ * linked (either via runClaimFlow's post-merge success branch or
+ * discoverLinkedFromServer's first-time discovery). NOT fired on
+ * a plain page reload of an already-linked browser — that would
+ * make the linked state feel jumpy on every visit. The shake-cell
+ * keyframes graduate from common.css (same wobble as the cell
+ * wrong-answer + win-celebration animations). */
+.sync-linked-title.shake-celebrate {
+  animation: cell-shake 0.4s ease-in-out 3;
+  color: var(--secondary-color);
 }
 .sync-linked-id {
   margin: 0;
@@ -223,15 +249,23 @@
   color: var(--secondary-color);
 }
 
-/* In-flight "linking devices …" line — wraps the shared `.loading-dots`
- * (common.css) with sync's centred italic muted styling. Shown while
- * the redeem / preview / merge round-trips are in progress. */
+/* In-flight loading lines:
+ *   .sync-loading — initial mint (QR + claim link being prepared).
+ *   .sync-progress — redeem / preview / merge round-trips during
+ *     the post-scan link flow.
+ * Both wrap the shared `.loading-dots` (common.css) with sync's
+ * centred italic muted styling, so the page reads as "something is
+ * loading" with one visual idiom regardless of which stage. */
+.sync-loading,
 .sync-progress {
   margin: 0;
   font-size: 13px;
   color: var(--muted-color);
   text-align: center;
   font-style: italic;
+}
+.sync-loading[hidden] {
+  display: none;
 }
 
 .sync-back {
