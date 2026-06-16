@@ -169,4 +169,5 @@ One row (the dev-tagged puzzleId=6 submission from the F3 deploy verification) w
 - **`../CLAUDE.md`** — project rules and high-level "Hosting" intro for someone new to the repo.
 - **`../FEATURE.md`** — time-ordered narrative: in-progress work under `## Now`, completed work under `## Done`. The discovery stories behind everything in this doc live there (Features A, D, E).
 - **`./README.md`** — IaC reference (Bicep templates).
+- **`./release-incidents.md`** — per-incident journal for the daily-release path. Newer than this runbook; look here when a known runbook entry doesn't quite match the symptom you're seeing.
 - **`../api/src/functions/`** — endpoint code. Adding a new endpoint requires *both* a file here and a matching `require()` in `api/src/index.js` (CLAUDE.md "API / Azure Functions" has the contract).
