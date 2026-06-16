@@ -29,7 +29,10 @@
     "heading": "Grasz na więcej niż jednym urządzeniu?",
     "back": "Profil",
     "showQr": {
-      "hint": "Otwórz aparat na drugim urządzeniu i zeskanuj ten kod. Link wygasa za 5 minut."
+      "hint": "Otwórz aparat na drugim urządzeniu i zeskanuj ten kod. Link wygasa za 5 minut.",
+      "copyLabel": "Lub skopiuj link, żeby otworzyć w innej przeglądarce",
+      "copyBtn": "Kopiuj",
+      "copiedBtn": "Skopiowano!"
     },
     "linking": "Łączenie urządzeń",
     "cancelled": "Anulowano — nic nie zostało zmienione.",
