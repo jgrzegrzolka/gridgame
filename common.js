@@ -349,11 +349,11 @@ export function mountNicknameMenuItem(opts) {
  * }} opts
  */
 /**
- * Mount a "Sync across devices" link into the burger menu,
- * positioned ABOVE the Privacy entry (same insert-above-anchor
- * pattern). When `localStorage.gridgame.identityId` is already set,
- * the link reads "✓ Synced" instead — both states link to the same
- * `/profile/sync/` page where the actual flow lives.
+ * Mount a "Sync across devices" link into the burger menu, above
+ * the Privacy entry. The label stays the same whether or not the
+ * device is already linked — visiting the page itself is how the
+ * user manages the link, so the menu doesn't need to advertise
+ * link state.
  *
  * Anchor order on the canonical menu, top to bottom:
  *   nickname → … → SYNC → privacy → coffee
@@ -366,36 +366,12 @@ export function mountNicknameMenuItem(opts) {
  *   rootEl: HTMLElement | null,
  *   syncHref: string,
  *   doc?: Document,
- *   storage?: Pick<Storage, 'getItem'>,
- *   pageIsSync?: boolean,
- * }} opts
- */
-/**
- * Mount a "Sync across devices" link into the burger menu, above
- * the Privacy entry.
- *
- * @param {{
- *   rootEl: HTMLElement | null,
- *   syncHref: string,
- *   doc?: Document,
- *   storage?: Pick<Storage, 'getItem'>,
  *   pageIsSync?: boolean,
  * }} opts
  */
 export function mountSyncMenuItem(opts) {
   if (!opts || !opts.rootEl) return null;
   const doc = opts.doc ?? document;
-  const storage = opts.storage ?? window.localStorage;
-
-  let stored = null;
-  try {
-    stored = storage.getItem(IDENTITY_STORAGE_KEY);
-  } catch {
-    /* private mode / no quota — fall through to the unlinked state */
-  }
-  const isLinked = typeof stored === 'string' && stored.length > 0;
-  const i18nKey = isLinked ? 'menu.synced' : 'menu.sync';
-  const fallback = isLinked ? '✓ Synced' : 'Sync across devices';
 
   const li = doc.createElement('li');
   li.className = 'menu-sync';
@@ -403,8 +379,8 @@ export function mountSyncMenuItem(opts) {
   const a = doc.createElement('a');
   a.setAttribute('href', opts.syncHref);
   if (opts.pageIsSync) a.setAttribute('aria-current', 'page');
-  a.setAttribute('data-i18n', i18nKey);
-  a.textContent = fallback;
+  a.setAttribute('data-i18n', 'menu.sync');
+  a.textContent = 'Sync across devices';
 
   li.appendChild(a);
 
