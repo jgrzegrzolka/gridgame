@@ -5,6 +5,7 @@ import { renderArchiveSquare, refreshSquareCriteria } from './squares.js';
 import { mountDevReset } from './devReset.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
 import { trySyncDevices } from '../flags/syncHydrate.js';
+import { fetchCatalog } from './catalogSource.js';
 
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
 
@@ -23,8 +24,7 @@ export function bootArchive() {
   const listEl = /** @type {HTMLElement} */ (document.getElementById('archive-list'));
   const scores = loadScores(window.localStorage);
 
-  fetch('./daily_puzzles.json')
-    .then((r) => r.json())
+  fetchCatalog('live', './daily_puzzles.json')
     .then((/** @type {DailyPuzzle[]} */ catalog) => {
       const today = todayN(catalog);
       if (today === 0) {

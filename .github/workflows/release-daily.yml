@@ -41,6 +41,11 @@ permissions:
   # safeguard) — so we explicitly kick deploy via workflow_dispatch
   # instead. Without `actions: write`, the gh API call gets 403.
   actions: write
+  # OIDC token for `azure/login@v2` — used by the blob-upload step
+  # to publish the promoted catalog to `styetanotherquiz/catalog` so
+  # players see the new puzzle without waiting on the SWA deploy.
+  # See FEATURE.md Feature P, Phase 1.
+  id-token: write
 
 concurrency:
   group: release-daily
@@ -109,6 +114,28 @@ jobs:
           git add daily/daily_puzzles.json daily/daily_backlog.json
           git commit -m "daily: release #${N} — auto-promoted from backlog"
           git push
+
+      # Phase 1 of Feature P: publish the promoted catalog directly to
+      # the public blob (`styetanotherquiz/catalog/live.json` +
+      # `backlog.json`) so players see the new puzzle within ~60s (the
+      # blob's Cache-Control), independent of the SWA deploy. If MCR
+      # throttles or any other deploy step flakes, the puzzle has
+      # already shipped via blob. Auth via OIDC federated credential —
+      # no storage keys in repo or secrets.
+      - name: Azure login (OIDC)
+        if: steps.guard.outputs.proceed == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Publish catalog to blob
+        if: steps.guard.outputs.proceed == 'true'
+        run: |
+          az storage blob upload --account-name styetanotherquiz --container-name catalog --name live.json --file daily/daily_puzzles.json --content-type application/json --content-cache-control "max-age=60" --overwrite --auth-mode login --only-show-errors
+          az storage blob upload --account-name styetanotherquiz --container-name catalog --name backlog.json --file daily/daily_backlog.json --content-type application/json --content-cache-control "max-age=60" --overwrite --auth-mode login --only-show-errors
+          echo "Published live.json + backlog.json to styetanotherquiz/catalog"
 
       - name: Kick deploy
         # GITHUB_TOKEN pushes don't trigger downstream `push`-event

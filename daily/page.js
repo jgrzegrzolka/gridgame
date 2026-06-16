@@ -27,6 +27,7 @@ import { shareText } from '../common.js';
 import { buildShareText } from '../flags/shareGrid.js';
 import { fetchDailyMe } from './streakClient.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
+import { fetchCatalog } from './catalogSource.js';
 
 // Turnstile is soft-disabled across all environments (2026-06-10) after
 // a real user's challenge was rejected by Cloudflare with a 401 on
@@ -579,7 +580,7 @@ export function bootDaily() {
 
   return Promise.all([
     fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
-    fetch('./daily_puzzles.json').then((r) => r.json()),
+    fetchCatalog('live', './daily_puzzles.json'),
   ])
     .then(([raw, catalog]) => {
       const all = withLocalizedAliases(flagsGamePool(raw, false));
