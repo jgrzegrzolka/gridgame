@@ -151,7 +151,7 @@ jobs:
         # workflow metadata. Tests and config files are stripped as a bonus —
         # the static site never references them.
         run: |
-          rm -rf node_modules party scripts .github .git
+          rm -rf node_modules party scripts authoring .github .git
           find . -name '*.test.js' -delete
           rm -f tsconfig*.json package*.json partykit.json *.md
       - name: Deploy to Azure Static Web Apps (swa-yetanotherquiz-v3, West US 2)

@@ -145,6 +145,18 @@ Both stages land within the 5 GB/month free tier at our traffic.
 - **Cross-puzzle aggregates** (lifetime per-flag rates across every puzzle ever). Could be added later as a different snapshot type, but not load-bearing for the 2027-06-09 deadline.
 - **Re-snapshot on every new submission.** The point is to capture a final aggregate when the raw data is about to age out, not maintain a live materialised view.
 
+### Cleanup: rename `PASSKEY_HMAC_SECRET` → `SYNC_HMAC_SECRET`
+
+**Status:** parked, no deadline. Cosmetic — the secret is load-bearing for QR-claim sync token signing, but it's misnamed after the **passkey** approach that was replaced by QR-claim in Feature C (shipped 2026-06-16). `api/src/functions/syncClaimToken.js:41-44` already carries an apologetic comment about the legacy name.
+
+**What to do when this comes off the parking brake:**
+1. Add new SWA app setting `SYNC_HMAC_SECRET` with the same value as `PASSKEY_HMAC_SECRET` (zero-downtime overlap).
+2. Update the 4 api/ readers to fall through `process.env.SYNC_HMAC_SECRET ?? process.env.PASSKEY_HMAC_SECRET`. Deploy.
+3. Confirm signing/verification still works end-to-end (one round-trip suffices).
+4. Remove the fallback line + the `PASSKEY_HMAC_SECRET` app setting. Deploy.
+
+**Why parked:** the secret is functionally correct under either name; the rename is pure hygiene. Real cost is one careful SWA deploy + a brief overlap window; real benefit is "future-me reading `syncClaimToken.js` doesn't have to think 'what's passkey doing here?'". Not urgent.
+
 ### Cleanup: remove the puzzle #1 → Liechtenstein migration
 
 **Status:** parked until ~2026-07-11. **Trigger to act:** ~30 days after 2026-06-11, once every active player has loaded the daily page at least once and had their `daily.scores` patched by `migrateScores()`.
