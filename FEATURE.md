@@ -21,7 +21,66 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-*(Nothing in flight. Feature C just landed 2026-06-16 — see Done. Next promotion candidates documented in the backlog: Feature O achievements, Feature J platform decision, puzzle-#1 migration cleanup, Feature I snapshots.)*
+### Feature P: Decouple daily-puzzle release from the SWA deploy — blob-served catalog
+
+**Problem.** On 2026-06-15 the SWA deploy step kept failing with `mcr.microsoft.com/appsvc/staticappsclient:stable: 429 Too Many Requests` (Microsoft Container Registry throttling the runner pulling the SWA-deploy action's base image). The release workflow successfully committed the promoted entry to git, but the deploy that ships it to players kept erroring. Manual workflow re-dispatch hit the "already released today" guard and no-op'd, so even when MCR recovered the deploy didn't auto-retry. Net effect: today's puzzle didn't reach players for hours despite the catalog file being correct in `main`.
+
+**Root cause to remove.** Player-facing puzzle release is currently coupled to "ship the whole static site." Any SWA-deploy flake (Docker pull throttle, content-distribution flap, regional outage) blocks the puzzle. We control the trigger (Feature E's Logic App is reliable) but not the downstream deploy chain.
+
+**Goal.** Promotion writes to a public-read Azure blob; the daily page reads its catalog from blob. The full SWA deploy can lag, retry, or fail without affecting tonight's puzzle. End state drops both the `release-daily.yml` workflow and the Logic App — the midnight runner becomes a single timer-triggered Azure Function that mutates blob in place.
+
+**Why this revisits Feature E's "ruled out" Cosmos option.** Feature E preserved git as source-of-truth because authoring + audit trail + per-puzzle PR locality were worth more than the runtime simplicity Cosmos offered. That tradeoff still holds for **authoring** (local edit → validate → push CLI is the same DX as edit-and-commit), but the *runtime path* — what gets served at midnight — doesn't need git. Splitting authoring (git/repo-adjacent CLI) from serving (blob) gets both: structural locality where it matters AND zero deploy dependency on the release path.
+
+**End-state architecture:**
+- **Storage:** new account `styetanotherquiz` (Standard LRS, West Europe), container `catalog`, anonymous public read at container level, blob versioning ON. CORS allows GET from `https://www.yetanotherquiz.com`, `https://yetanotherquiz.com`, and localhost dev origins. Cache-Control `max-age=60` on each blob.
+- **Blobs:** `live.json`, `backlog.json`, `ideas.json`, `parked.json`, `policy.json` — replacing the current `daily/*.json` files in the repo.
+- **Midnight runner:** standalone Function App `func-yetanotherquiz-release` (Consumption tier, $0 at our volume), Node 22, **timer trigger** at `0 5 0 * * *` Warsaw TZ (`WEBSITE_TIME_ZONE=Central European Standard Time`). The Function reads live + backlog from blob, runs the shared `promote()` + `validateCatalog()`, writes back. Failures throw → App Insights → existing budget-alert email. (Standalone Function App because SWA-managed Functions don't expose timer triggers.)
+- **Authoring:** local CLI tools `npm run catalog:pull` (download all blobs to `.catalog/`, gitignored) and `npm run catalog:push` (validate locally with hard rules, refuse on failure, upload). Generator + `/daily/ideas/` work against the local `.catalog/` copy.
+- **Drift detector:** CI step pulls live + backlog blobs and runs `validateCatalog()` against the repo's `flags/countries.json`. Catches data drift that would otherwise only surface at the next midnight Function run.
+
+**Decisions taken (override before Phase 1 if any are wrong):**
+- Storage account name `styetanotherquiz`. Raw blob URL for now (`https://styetanotherquiz.blob.core.windows.net/catalog/live.json`) — defer custom domain `data.yetanotherquiz.com` until everything else works.
+- Anonymous public-read at the container level (catalog is published-state, no secrets). Writes via OIDC federated credentials from GitHub Actions + Azure RBAC `Storage Blob Data Contributor` on the Function's managed identity. No storage keys in secrets.
+- Cache-Control `max-age=60` — players see new puzzles within 1 min of midnight rollover; old puzzles stay in CDN cache up to 60 s.
+
+**Phase 1 — blob exists, page reads from blob, workflow uploads (tonight's test).** *(One branch + PR.)*
+- [ ] Create storage account + container + CORS + versioning via `az storage` (capture commands in `infra/operations.md`).
+- [ ] Seed blobs by uploading current `daily/*.json` from the repo.
+- [ ] `daily/page.js`, `daily/archive.js`, `daily/ideas/page.js` fetch from blob URL. Fallback to repo `/daily/*.json` on fetch failure (transitional belt-and-braces; remove in Phase 3). In dev (hostname is localhost), read from repo unchanged.
+- [ ] Add a step to `release-daily.yml`: after `git push` succeeds, `az storage blob upload --overwrite` the two mutated files (live + backlog) to blob. OIDC auth via `azure/login@v2` against a federated credential on a new service principal.
+- [ ] Verify the blob endpoint serves correctly with CORS from prod origin (browser network tab).
+- [ ] **Midnight smoke test:** Logic App fires → workflow promotes → git push lands → blob upload lands → page loads new puzzle from blob. If the deploy step itself fails, prove that players still see the new puzzle.
+
+*After Phase 1 the deploy can fail and tonight's puzzle still ships.* Phases 2 + 3 then drop the workflow + Logic App entirely for the simplicity win.
+
+**Phase 2 — timer-triggered Function replaces the workflow + Logic App.** *(One branch + PR.)*
+- [ ] Port `promote()` + the catalog hard rules (rules 1–7, 14–15 from the daily-puzzle-author skill) into `flags/daily.js` as `validateCatalog({live, backlog, ideas, parked, countries})` — pure, throws on failure with a typed reason.
+- [ ] Refactor `flags/daily.test.js` to drive `validateCatalog()` against fixture data instead of repo files.
+- [ ] Provision `func-yetanotherquiz-release` (Consumption, Node 22, West Europe), App Insights wired up, managed identity with `Storage Blob Data Contributor` on the catalog container. Bicep template in `infra/`.
+- [ ] Function `releaseDaily.js` with timer binding `0 5 0 * * *` + `WEBSITE_TIME_ZONE`. Reads live + backlog from blob via `@azure/storage-blob` + DefaultAzureCredential, calls `promote()` + `validateCatalog()`, writes back. Idempotent at the blob level (overwrite same key). Empty backlog throws (same "refill" cue as today).
+- [ ] One-off invocation verifies end-to-end.
+- [ ] Disable Logic App (`az logic workflow update --state Disabled`); delete `.github/workflows/release-daily.yml`; delete `scripts/release-next.mjs`. Keep Logic App resource for one week as rollback before deleting.
+
+**Phase 3 — repo files out, CLI tools in, drift detector live.** *(One branch + PR.)*
+- [ ] `scripts/catalog-pull.mjs` + `scripts/catalog-push.mjs`. `catalog:push` runs `validateCatalog()` locally and refuses upload on failure.
+- [ ] `scripts/generate-candidates.mjs` reads/writes `.catalog/daily_ideas.json` instead of `daily/daily_ideas.json`.
+- [ ] `/daily/ideas/` fetches from blob.
+- [ ] Delete `daily/daily_puzzles.json`, `daily/daily_backlog.json`, `daily/daily_ideas.json`, `daily/daily_parked.json`, `daily/daily_policy.json` from the repo.
+- [ ] Remove the Phase 1 fallback to repo files in `daily/page.js` etc.
+- [ ] New CI step: `npm run catalog:drift-check` pulls live + backlog blobs, runs `validateCatalog()` against `flags/countries.json` in the PR. Fails on rule-1 drift.
+- [ ] `.gitignore` adds `.catalog/`.
+- [ ] Update `.claude/skills/daily-puzzle-author/SKILL.md` — author workflow now `catalog:pull` → edit → `catalog:push`, not commit + push.
+- [ ] Delete the Logic App resource (rollback window elapsed).
+
+**Rollback playbook (any phase):**
+- Phase 1 broken — revert PR; page's fallback already reads from repo; no urgency.
+- Phase 2 Function not firing — re-enable Logic App + revert workflow deletion in one cherry-pick; back to Phase 1 state.
+- Phase 3 broken authoring — restore deleted JSON files from git history, point page back at repo, redeploy. Blob still works as backup serving path during recovery.
+
+**Out of scope:**
+- Custom domain `data.yetanotherquiz.com` (defer; can be added without app changes once everything else is stable).
+- Migrating ideas/parked authoring to a web UI (CLI is sufficient; the rendered `/daily/ideas/` page is the review surface).
+- Per-blob versioning UI / catalog history viewer (blob versioning gives us the durable history; nice-to-have surface for later).
 
 ---
 
