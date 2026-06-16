@@ -1,33 +1,26 @@
 /**
- * Hard-rule catalog validation, run after `promote()` and before the
- * blob write. If any rule throws, the Function App marks the run as
- * Failed, the catalog is unchanged in blob, and Jan gets an App
- * Insights alert in the morning.
+ * Hard-rule catalog validation, shared by the midnight Function App
+ * (`infra/release-fn/src/releaseDaily.js`) and the author-side CLI
+ * (`scripts/catalog-push.mjs`). Throws on the first rule violation;
+ * returns nothing on success.
  *
- * Scope of enforcement at this step (rules from the daily-puzzle-author
- * skill):
+ * Scope of enforcement (rules from `.claude/skills/daily-puzzle-author/SKILL.md`):
  *
  *   Rule 1 — drift detector: stored answers == filter resolution today
  *   Rule 3 — every answer code is a sovereign country
  *   Rule 4 — sequential `n` across live + backlog
  *   Rule 7 — en + pl description present
  *
- * The other hard rules (2, 5, 6, 14, 15) are author-time concerns —
- * they fail at the moment an entry is added to the backlog, not as a
- * consequence of promotion. Phase 3's drift-detector CI step runs the
- * full validation against every PR, so authoring-time bugs are still
- * caught before the entry can ever reach backlog. Promoting the next
- * already-authored entry doesn't re-create those failure modes.
- *
- * If a follow-up audit makes us want to harden this further, port the
- * remaining rules into this file — the test in `flags/daily.test.js`
- * already has the reference shape for each.
+ * The other hard rules (2, 5, 6, 14, 15) are author-time concerns
+ * already gated by the test suite (`flags/daily.test.js`) on every PR.
+ * A backlog entry that violates any of them couldn't have got there
+ * in the first place, so re-checking at promote time is redundant.
  */
 
-import { parseFilterString } from '../../../../flags/findFlag.js';
-import { matchesFilters } from '../../../../flags/flagsFilter.js';
-import { flagsGamePool, loadCountries } from '../../../../flags/group.js';
-import RAW_COUNTRIES from '../../../../flags/countries.json' with { type: 'json' };
+import { parseFilterString } from './findFlag.js';
+import { matchesFilters } from './flagsFilter.js';
+import { flagsGamePool, loadCountries } from './group.js';
+import RAW_COUNTRIES from './countries.json' with { type: 'json' };
 
 // flagsGamePool expects loadCountries-processed objects (normalized
 // fields, derived arrays). Skipping loadCountries leaves the country
@@ -38,8 +31,6 @@ const SOV = flagsGamePool(COUNTRIES, false);
 const SOV_CODES = new Set(SOV.map((c) => c.code));
 
 /**
- * Throws on the first rule violation. Returns nothing on success.
- *
  * @param {{ live: any[], backlog: any[] }} state
  */
 export function validateCatalog({ live, backlog }) {
@@ -55,6 +46,11 @@ export function validateCatalog({ live, backlog }) {
   checkDriftFree(backlog, 'backlog');
 }
 
+/**
+ * @param {any[]} entries
+ * @param {string} label
+ * @param {number} startN
+ */
 function checkSequential(entries, label, startN) {
   for (let i = 0; i < entries.length; i++) {
     const expected = startN + i;
@@ -66,6 +62,10 @@ function checkSequential(entries, label, startN) {
   }
 }
 
+/**
+ * @param {any[]} entries
+ * @param {string} label
+ */
 function checkAnswerShape(entries, label) {
   for (const entry of entries) {
     if (!Array.isArray(entry.answers) || entry.answers.length === 0) {
@@ -81,6 +81,10 @@ function checkAnswerShape(entries, label) {
   }
 }
 
+/**
+ * @param {any[]} entries
+ * @param {string} label
+ */
 function checkSovereignCodes(entries, label) {
   for (const entry of entries) {
     for (const code of entry.answers) {
@@ -93,6 +97,10 @@ function checkSovereignCodes(entries, label) {
   }
 }
 
+/**
+ * @param {any[]} entries
+ * @param {string} label
+ */
 function checkDescriptions(entries, label) {
   for (const entry of entries) {
     const d = entry.description;
@@ -105,6 +113,10 @@ function checkDescriptions(entries, label) {
   }
 }
 
+/**
+ * @param {any[]} entries
+ * @param {string} label
+ */
 function checkDriftFree(entries, label) {
   for (const entry of entries) {
     if (entry.kind === 'manual') continue;

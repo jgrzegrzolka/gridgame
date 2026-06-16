@@ -10,6 +10,7 @@ import {
   attachLangRefresh,
   showReason,
 } from '../playFlow.js';
+import { fetchCatalog } from '../catalogSource.js';
 
 /** @typedef {import('../../flags/daily.js').DailyPuzzle} DailyPuzzle */
 
@@ -44,7 +45,7 @@ export function bootBacklogPlay() {
 
   return Promise.all([
     fetch('../../flags/countries.json').then((r) => r.json()).then(loadCountries),
-    fetch('../daily_backlog.json').then((r) => r.json()),
+    fetchCatalog('backlog'),
   ])
     .then(([raw, /** @type {DailyPuzzle[]} */ catalog]) => {
       const all = withLocalizedAliases(flagsGamePool(raw, false));

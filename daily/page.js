@@ -580,7 +580,7 @@ export function bootDaily() {
 
   return Promise.all([
     fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
-    fetchCatalog('live', './daily_puzzles.json'),
+    fetchCatalog('live'),
   ])
     .then(([raw, catalog]) => {
       const all = withLocalizedAliases(flagsGamePool(raw, false));

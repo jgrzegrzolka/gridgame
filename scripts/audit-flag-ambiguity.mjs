@@ -36,15 +36,10 @@ const COUNTRIES = loadCountries(
 // positive on them.
 const SOV = flagsGamePool(COUNTRIES, false);
 
-const LIVE = JSON.parse(
-  readFileSync(join(ROOT, 'daily', 'daily_puzzles.json'), 'utf-8'),
-);
-const BACKLOG = JSON.parse(
-  readFileSync(join(ROOT, 'daily', 'daily_backlog.json'), 'utf-8'),
-);
-const IDEAS = JSON.parse(
-  readFileSync(join(ROOT, 'daily', 'daily_ideas.json'), 'utf-8'),
-);
+const CATALOG_DIR = join(ROOT, '.catalog');
+const LIVE = JSON.parse(readFileSync(join(CATALOG_DIR, 'live.json'), 'utf-8'));
+const BACKLOG = JSON.parse(readFileSync(join(CATALOG_DIR, 'backlog.json'), 'utf-8'));
+const IDEAS = JSON.parse(readFileSync(join(CATALOG_DIR, 'ideas.json'), 'utf-8'));
 
 const BUCKETS = /** @type {const} */ ([
   ['LIVE', LIVE],

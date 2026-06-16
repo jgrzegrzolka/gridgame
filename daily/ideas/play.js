@@ -9,6 +9,7 @@ import {
   attachLangRefresh,
   showReason,
 } from '../playFlow.js';
+import { fetchCatalog } from '../catalogSource.js';
 
 /**
  * @typedef {Object} Idea
@@ -57,7 +58,7 @@ export function bootIdeasPlay() {
 
   return Promise.all([
     fetch('../../flags/countries.json').then((r) => r.json()).then(loadCountries),
-    fetch('../daily_ideas.json').then((r) => r.json()),
+    fetchCatalog('ideas'),
   ])
     .then(([raw, /** @type {Idea[]} */ ideas]) => {
       const all = withLocalizedAliases(flagsGamePool(raw, false));

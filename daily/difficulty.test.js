@@ -200,7 +200,7 @@ test('scoreEntry: manual entry composes the rest of the formula normally', () =>
 const COUNTRIES = JSON.parse(readFileSync(join(HERE, '..', 'flags', 'countries.json'), 'utf-8'));
 const BY_CODE = Object.fromEntries(COUNTRIES.map((c) => [c.code, c]));
 /** @type {{ n: number, filter: string, answers: string[] }[]} */
-const LIVE = JSON.parse(readFileSync(join(HERE, 'daily_puzzles.json'), 'utf-8'));
+const LIVE = JSON.parse(readFileSync(join(HERE, '..', '.catalog', 'live.json'), 'utf-8'));
 
 function find(catalog, n) {
   const e = catalog.find((x) => x.n === n);

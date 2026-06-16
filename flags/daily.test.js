@@ -15,14 +15,15 @@ import { auditPuzzle } from './ambiguityAudit.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const COUNTRIES = loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8')));
+// Catalog files live in `.catalog/` (Phase 3 of Feature P — blob is the
+// source of truth, no committed copies in the repo). Run `npm run
+// catalog:pull` once before invoking the test suite; CI does this as a
+// pre-test step in deploy.yml.
+const CATALOG_DIR = join(HERE, '..', '.catalog');
 /** @type {DailyPuzzle[]} */
-const CATALOG = JSON.parse(
-  readFileSync(join(HERE, '..', 'daily', 'daily_puzzles.json'), 'utf-8'),
-);
+const CATALOG = JSON.parse(readFileSync(join(CATALOG_DIR, 'live.json'), 'utf-8'));
 /** @type {DailyPuzzle[]} */
-const BACKLOG = JSON.parse(
-  readFileSync(join(HERE, '..', 'daily', 'daily_backlog.json'), 'utf-8'),
-);
+const BACKLOG = JSON.parse(readFileSync(join(CATALOG_DIR, 'backlog.json'), 'utf-8'));
 
 test('todayN returns the catalog length (the last released puzzle)', () => {
   assert.equal(todayN([]), 0);
@@ -443,7 +444,7 @@ test('ideas: no filter carries a redundant token', () => {
   const sov = flagsGamePool(COUNTRIES, false);
   /** @type {{ filter: string, answers: string[] }[]} */
   const IDEAS = JSON.parse(
-    readFileSync(join(HERE, '..', 'daily', 'daily_ideas.json'), 'utf-8'),
+    readFileSync(join(CATALOG_DIR, 'ideas.json'), 'utf-8'),
   );
   for (const entry of IDEAS) {
     if (!Array.isArray(entry.answers) || entry.answers.length === 0) continue;
@@ -568,7 +569,7 @@ test('ideas: no filter-refinement relationships against catalog or other ideas',
   // violators kept as a waiting room — and aren't loaded here.
   /** @type {{ filter: string, answers?: string[], _label: string }[]} */
   const IDEAS = JSON.parse(
-    readFileSync(join(HERE, '..', 'daily', 'daily_ideas.json'), 'utf-8'),
+    readFileSync(join(CATALOG_DIR, 'ideas.json'), 'utf-8'),
   ).map((/** @type {any} */ e, /** @type {number} */ i) => ({ ...e, _label: `idea#${i + 1}` }));
   // Ideas are filter-only (the funnel for manual entries skips ideas),
   // and filter-refinement against a manual entry isn't a meaningful
@@ -754,7 +755,7 @@ test('live + backlog: puzzles #1-100 are primary-clean (no emblem-only colour ma
 // self-documenting.
 /** @type {{ singleUseTokens: { token: string, sovs: number, reason: string }[] }} */
 const POLICY = JSON.parse(
-  readFileSync(join(HERE, '..', 'daily', 'daily_policy.json'), 'utf-8'),
+  readFileSync(join(CATALOG_DIR, 'policy.json'), 'utf-8'),
 );
 
 test('live + backlog: single-use tokens appear in at most one entry', () => {
@@ -848,7 +849,7 @@ test('no idea has a flag-data ambiguity violation', () => {
   // candidate that only the audit script would catch.
   /** @type {{ filter: string, answers?: string[] }[]} */
   const IDEAS = JSON.parse(
-    readFileSync(join(HERE, '..', 'daily', 'daily_ideas.json'), 'utf-8'),
+    readFileSync(join(CATALOG_DIR, 'ideas.json'), 'utf-8'),
   );
   for (const entry of IDEAS) {
     if (!Array.isArray(entry.answers) || entry.answers.length === 0) continue;
