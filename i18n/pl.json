@@ -34,7 +34,8 @@
     "linking": "Łączenie urządzeń",
     "cancelled": "Anulowano — nic nie zostało zmienione.",
     "linked": {
-      "title": "Urządzenie jest teraz połączone."
+      "title": "Urządzenie jest połączone.",
+      "idLabel": "ID urządzenia:"
     },
     "wizard": {
       "profileQ": "Pseudonim",

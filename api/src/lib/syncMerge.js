@@ -428,17 +428,12 @@ function planProfileMerge({ targetRow, sourceRow, targetDeviceId, sourceDeviceId
     nickname = tgtNick || srcNick;
   }
 
-  // No-op upsert if target already carries the chosen nickname (no
-  // material change). Source row, if present, still gets deleted —
-  // that branch is in `deletes` already.
-  if (targetRow && targetRow.nickname === nickname) {
-    return { upserts, deletes };
-  }
-  // No-op if neither row exists.
-  if (!targetRow && !sourceRow) {
-    return { upserts, deletes };
-  }
-
+  // Always upsert the target profile — even when nickname is unchanged
+  // and even when no profile existed before. The point of the upsert
+  // here is to write `linkedAt: now`, which is how target browsers
+  // discover the linked state via GET /api/v1/sync/link (the only
+  // information that crosses devices, since neither localStorage nor
+  // the deviceId swap can reach the device that showed the QR).
   /** @type {Record<string, unknown>} */
   const doc = {
     ...(targetRow ? stripSystem(targetRow) : {}),
@@ -446,9 +441,15 @@ function planProfileMerge({ targetRow, sourceRow, targetDeviceId, sourceDeviceId
     deviceId: targetDeviceId,
     nickname,
     updatedAt: now,
+    linkedAt: now,
     v: 1,
   };
   if (!targetRow && !doc.createdAt) doc.createdAt = now;
+  // Preserve existing deletionRequestedAt on the target row, if any.
+  // stripSystem above already carries forward any field that was on
+  // the row; explicit guard keeps the shape stable when the source
+  // row had a deletionRequestedAt that we don't want to import.
+  if (!targetRow) doc.deletionRequestedAt = null;
 
   upserts.push({
     container: 'profiles',

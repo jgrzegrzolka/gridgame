@@ -20,3 +20,5 @@ require('./functions/syncClaimToken');
 require('./functions/syncClaimRedeem');
 require('./functions/syncPreview');
 require('./functions/syncMerge');
+require('./functions/syncLink');
+require('./functions/syncHydrate');

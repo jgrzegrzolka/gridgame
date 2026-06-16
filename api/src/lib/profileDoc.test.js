@@ -18,6 +18,7 @@ test('first write (no existing row): createdAt = updatedAt = now, nickname store
     createdAt: 1_700_000_000_000,
     updatedAt: 1_700_000_000_000,
     deletionRequestedAt: null,
+    linkedAt: null,
     v: 1,
   });
 });
@@ -112,4 +113,22 @@ test('requestDeletion=true re-stamps the flag even if one was already set', () =
     requestDeletion: true,
   });
   assert.equal(doc.deletionRequestedAt, 1_700_000_000_000);
+});
+
+test('linkedAt is preserved from existing — a nickname edit must not erase the link marker', () => {
+  // linkedAt is written by syncMerge (sync.linked container of truth on
+  // the server). Editing nickname must not silently clear it, or the
+  // user could "lose" their link state by changing display name.
+  const doc = buildProfileDoc({
+    existing: { createdAt: 1_600_000_000_000, linkedAt: 1_680_000_000_000 },
+    deviceId: DEVICE_ID,
+    nickname: 'New name',
+    now: 1_700_000_000_000,
+  });
+  assert.equal(doc.linkedAt, 1_680_000_000_000);
+});
+
+test('linkedAt defaults to null when neither existing nor input provides it', () => {
+  const fresh = buildProfileDoc({ existing: null, deviceId: DEVICE_ID, nickname: 'A', now: 1 });
+  assert.equal(fresh.linkedAt, null);
 });

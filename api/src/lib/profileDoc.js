@@ -18,6 +18,13 @@
  *                                          //   have arrived since (the "cancel on return" promise
  *                                          //   in the privacy page). Preserved across nickname
  *                                          //   edits; the only way to clear it is to play again.
+ *     linkedAt:            number | null,  // unix ms — stamped by syncMerge when a second device
+ *                                          //   was linked to this deviceId. Both the device that
+ *                                          //   showed the QR (target) and the one that scanned
+ *                                          //   (source, post-deviceId-swap) share this deviceId
+ *                                          //   afterwards, so the linkedAt marker is what either
+ *                                          //   browser uses to discover the linked state.
+ *                                          //   Preserved across nickname edits.
  *     v:                   1,              // schema version. See infra/operations.md "Cosmos data migration policy".
  *   }
  *
@@ -42,8 +49,11 @@
  * to clear it through this builder — cancel-on-return is decided at manual
  * purge time, not by client writes.
  *
+ * `linkedAt` is preserved from `existing` so a nickname edit doesn't erase
+ * the link marker (which is written by syncMerge, not by this endpoint).
+ *
  * @param {{
- *   existing: { createdAt?: number, deletionRequestedAt?: number | null } | null,
+ *   existing: { createdAt?: number, deletionRequestedAt?: number | null, linkedAt?: number | null } | null,
  *   deviceId: string,
  *   nickname: string | null,
  *   now: number,
@@ -58,6 +68,9 @@ function buildProfileDoc({ existing, deviceId, nickname, now, requestDeletion = 
     ? existing.deletionRequestedAt
     : null;
   const deletionRequestedAt = requestDeletion ? now : existingDeletion;
+  const linkedAt = (existing && typeof existing.linkedAt === 'number')
+    ? existing.linkedAt
+    : null;
   return {
     id: deviceId,
     deviceId,
@@ -65,6 +78,7 @@ function buildProfileDoc({ existing, deviceId, nickname, now, requestDeletion = 
     createdAt,
     updatedAt: now,
     deletionRequestedAt,
+    linkedAt,
     v: 1,
   };
 }

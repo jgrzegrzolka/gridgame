@@ -57,18 +57,20 @@
     <main class="sync-main">
       <h1 class="sync-heading" data-i18n="sync.heading">Play on more than one device?</h1>
 
-      <section class="sync-unlinked" id="sync-unlinked">
-        <div class="sync-qr-container" id="sync-qr-container" hidden>
-          <div class="sync-qr" id="sync-qr-svg" aria-hidden="true"></div>
-          <p class="sync-qr-hint" id="sync-qr-hint" data-i18n="sync.showQr.hint">
-            Open the camera on your other device and scan this code. The link expires in 5 minutes.
-          </p>
-        </div>
+      <section class="sync-linked" id="sync-linked" hidden>
+        <p class="sync-linked-title" data-i18n="sync.linked.title">Device is linked.</p>
+        <p class="sync-linked-id">
+          <span data-i18n="sync.linked.idLabel">Device ID:</span>
+          <code class="sync-linked-deviceid" id="sync-linked-deviceid"></code>
+        </p>
       </section>
 
-      <section class="sync-linked" id="sync-linked" hidden>
-        <p class="sync-linked-title" data-i18n="sync.linked.title">Device is linked now.</p>
-      </section>
+      <div class="sync-qr-container" id="sync-qr-container" hidden>
+        <div class="sync-qr" id="sync-qr-svg" aria-hidden="true"></div>
+        <p class="sync-qr-hint" id="sync-qr-hint" data-i18n="sync.showQr.hint">
+          Open the camera on your other device and scan this code. The link expires in 5 minutes.
+        </p>
+      </div>
 
       <p class="sync-status" id="sync-status" role="status" aria-live="polite"></p>
       <p class="sync-progress" id="sync-progress" role="status" aria-live="polite" hidden>

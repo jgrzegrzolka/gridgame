@@ -34,7 +34,8 @@
     "linking": "Linking devices",
     "cancelled": "Cancelled — nothing was changed.",
     "linked": {
-      "title": "Device is linked now."
+      "title": "Device is linked.",
+      "idLabel": "Device ID:"
     },
     "wizard": {
       "profileQ": "Nickname",
