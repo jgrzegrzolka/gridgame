@@ -85,7 +85,7 @@ jobs:
           echo "${changed}"
           # Strip-list — paths whose changes never reach the deployed
           # artifact. Keep in sync with the strip steps in `deploy`.
-          shipped=$(echo "${changed}" | grep -vE '^(\.github/|infra/|scripts/|party/|daily/backlog/|daily/ideas/|.*\.md$|.*\.test\.js$|tsconfig.*\.json$|package.*\.json$|partykit\.json$)' || true)
+          shipped=$(echo "${changed}" | grep -vE '^(\.github/|infra/|scripts/|authoring/|party/|daily/backlog/|daily/ideas/|.*\.md$|.*\.test\.js$|tsconfig.*\.json$|package.*\.json$|partykit\.json$)' || true)
           if [ -z "${shipped}" ]; then
             echo "No shipped paths changed — skipping deploy + CF purge."
             echo "should_deploy=false" >> "$GITHUB_OUTPUT"
