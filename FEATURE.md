@@ -35,7 +35,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 - **Storage:** new account `styetanotherquiz` (Standard LRS, West Europe), container `catalog`, anonymous public read at container level, blob versioning ON. CORS allows GET from `https://www.yetanotherquiz.com`, `https://yetanotherquiz.com`, and localhost dev origins. Cache-Control `max-age=60` on each blob.
 - **Blobs:** `live.json`, `backlog.json`, `ideas.json`, `parked.json`, `policy.json` — replacing the current `daily/*.json` files in the repo.
 - **Midnight runner:** standalone Function App `func-yetanotherquiz-release` (Consumption tier, $0 at our volume), Node 22, **timer trigger** at `0 5 0 * * *` Warsaw TZ (`WEBSITE_TIME_ZONE=Central European Standard Time`). The Function reads live + backlog from blob, runs the shared `promote()` + `validateCatalog()`, writes back. Failures throw → App Insights → existing budget-alert email. (Standalone Function App because SWA-managed Functions don't expose timer triggers.)
-- **Authoring:** local CLI tools `npm run catalog:pull` (download all blobs to `.catalog/`, gitignored) and `npm run catalog:push` (validate locally with hard rules, refuse on failure, upload). Generator + `/daily/ideas/` work against the local `.catalog/` copy.
+- **Authoring:** local CLI tools `node authoring/pull.mjs` (download all blobs to `.catalog/`, gitignored) and `node authoring/push.mjs` (validate locally with hard rules, refuse on failure, upload). Generator + `/daily/ideas/` work against the local `.catalog/` copy.
 - **Drift detector:** CI step pulls live + backlog blobs and runs `validateCatalog()` against the repo's `flags/countries.json`. Catches data drift that would otherwise only surface at the next midnight Function run.
 
 **Decisions taken (override before Phase 1 if any are wrong):**
@@ -69,12 +69,12 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 - [x] Removed the Phase 1 repo-fallback in `daily/catalogSource.js` — API simplifies from `fetchCatalog(name, devPath)` to `fetchCatalog(name)`. Tests cover the prod URL mapping.
 - [x] `.gitignore` adds `.catalog/`.
 - [x] Shared validation extracted from `infra/release-fn/src/lib/validate.js` to `flags/dailyValidate.js`. Function imports it via the esbuild bundle; CLI imports it directly. **Function must be redeployed after merge** to pick up the new import path — bundled logic is byte-identical, no behaviour change, only the source-of-truth file moves.
-- [x] Updated `.claude/skills/daily-puzzle-author/SKILL.md` — author workflow now `catalog:pull` → edit → `catalog:push`.
-- [ ] **Deferred:** `npm run catalog:drift-check` as a CI step that runs `validateCatalog()` against `flags/countries.json`. Today, `npm test` already runs the same rule checks against `.catalog/` (populated by `catalog:pull` in CI per `deploy.yml`), so the drift detector is *already* enforced — a separate `drift-check` script is redundant. Resurrect if the test suite ever diverges from the rule set.
+- [x] Updated `.claude/skills/daily-puzzle-author/SKILL.md` — author workflow now `pull → edit → test → push` against the blob, all via the agent skill.
+- [ ] **Deferred:** a dedicated CI drift-check step. Today, `npm test` already runs the rule suite against `.catalog/` (populated by `node authoring/pull.mjs` in CI per `deploy.yml`), so the drift detector is *already* enforced — a separate `drift-check` script would be redundant. Resurrect if the test suite ever diverges from the rule set.
 
 **Rollback playbook (any phase):**
 - Phase 1 broken — page no longer has a repo fallback after Phase 3 deleted the repo files, so the rollback path is `git revert` the Phase 1+3 commits to bring back `daily/*.json` and the dev-vs-blob switch in `catalogSource.js`. Or just hand-fix the offending blob with `az storage blob upload`.
-- Phase 2 Function not firing — `git revert` the Phase 2 cleanup commit to bring back `release-daily.yml` + `scripts/release-next.mjs` + `infra/logicapp-release-daily.bicep`, then `az deployment group create` re-provisions the Logic App. Stop-gap before that: `npm run catalog:pull`, hand-edit `.catalog/live.json` + `.catalog/backlog.json` to do the promote, `npm run catalog:push` to ship.
+- Phase 2 Function not firing — `git revert` the Phase 2 cleanup commit to bring back `release-daily.yml` + `scripts/release-next.mjs` + `infra/logicapp-release-daily.bicep`, then `az deployment group create` re-provisions the Logic App. Stop-gap before that: `node authoring/pull.mjs`, hand-edit `.catalog/live.json` + `.catalog/backlog.json` to do the promote, `node authoring/push.mjs` to ship.
 - Phase 3 broken authoring — the storage account key is still the auth path (no role assignment to roll back), `az storage blob upload` works as the manual escape hatch. Restoring deleted JSON files from git history rebuilds the previous DX if needed.
 
 **Out of scope:**
