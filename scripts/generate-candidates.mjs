@@ -72,11 +72,12 @@ const COUNTRIES = loadCountries(JSON.parse(readFileSync(join(ROOT, 'flags', 'cou
 const SOV = flagsGamePool(COUNTRIES, false);
 const BY_CODE = Object.fromEntries(SOV.map((c) => [c.code, c]));
 
-const LIVE = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_puzzles.json'), 'utf-8'));
-const BACKLOG = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_backlog.json'), 'utf-8'));
-const IDEAS = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_ideas.json'), 'utf-8'));
-const PARKED = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_parked.json'), 'utf-8'));
-const POLICY = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_policy.json'), 'utf-8'));
+const CATALOG_DIR = join(ROOT, '.catalog');
+const LIVE = JSON.parse(readFileSync(join(CATALOG_DIR, 'live.json'), 'utf-8'));
+const BACKLOG = JSON.parse(readFileSync(join(CATALOG_DIR, 'backlog.json'), 'utf-8'));
+const IDEAS = JSON.parse(readFileSync(join(CATALOG_DIR, 'ideas.json'), 'utf-8'));
+const PARKED = JSON.parse(readFileSync(join(CATALOG_DIR, 'parked.json'), 'utf-8'));
+const POLICY = JSON.parse(readFileSync(join(CATALOG_DIR, 'policy.json'), 'utf-8'));
 
 const CATALOG = [...LIVE, ...BACKLOG];
 // Dedup against every known filter — catalog + active ideas + parked
@@ -570,8 +571,8 @@ console.log(buckets);
 // Append candidates after the existing parked ideas (preserve them at top).
 const merged = [...IDEAS, ...candidates];
 writeFileSync(
-  join(ROOT, 'daily', 'daily_ideas.json'),
+  join(CATALOG_DIR, 'ideas.json'),
   JSON.stringify(merged, null, 2) + '\n',
   'utf-8',
 );
-console.log(`wrote ${merged.length} entries to daily/daily_ideas.json (${IDEAS.length} pre-existing + ${candidates.length} new)`);
+console.log(`wrote ${merged.length} entries to .catalog/ideas.json (${IDEAS.length} pre-existing + ${candidates.length} new). Run 'npm run catalog:push' to upload.`);

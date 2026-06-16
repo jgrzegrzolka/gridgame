@@ -1,6 +1,7 @@
 import { t } from '../../i18n.js';
 import { renderArchiveSquare, refreshSquareCriteria } from '../squares.js';
 import { scoreEntry } from '../difficulty.js';
+import { fetchCatalog } from '../catalogSource.js';
 
 /** @typedef {import('../../flags/daily.js').DailyPuzzle} DailyPuzzle */
 /** @typedef {import('../../flags/group.js').Country} Country */
@@ -22,7 +23,7 @@ export function bootBacklog() {
   const listEl = /** @type {HTMLElement} */ (document.getElementById('backlog-list'));
 
   Promise.all([
-    fetch('../daily_backlog.json').then((r) => r.json()),
+    fetchCatalog('backlog'),
     fetch('../../flags/countries.json').then((r) => r.json()),
   ])
     .then(([/** @type {DailyPuzzle[]} */ backlog, /** @type {Country[]} */ countries]) => {

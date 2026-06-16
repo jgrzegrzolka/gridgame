@@ -26,6 +26,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      # Tests read the daily catalog from `.catalog/` (Phase 3 of Feature
+      # P — blob is the source of truth, no committed copies in the repo).
+      # catalog-pull.mjs is built-in-only (`node:fs/promises` + `fetch`),
+      # so no `npm ci` needed.
+      - run: npm run catalog:pull
       - run: npm test
 
   typecheck:
@@ -84,7 +89,7 @@ jobs:
           echo "${changed}"
           # Strip-list — paths whose changes never reach the deployed
           # artifact. Keep in sync with the strip steps in `deploy`.
-          shipped=$(echo "${changed}" | grep -vE '^(\.github/|infra/|scripts/|party/|daily/backlog/|daily/ideas/|daily/daily_backlog\.json$|daily/daily_ideas\.json$|daily/daily_parked\.json$|.*\.md$|.*\.test\.js$|tsconfig.*\.json$|package.*\.json$|partykit\.json$)' || true)
+          shipped=$(echo "${changed}" | grep -vE '^(\.github/|infra/|scripts/|party/|daily/backlog/|daily/ideas/|.*\.md$|.*\.test\.js$|tsconfig.*\.json$|package.*\.json$|partykit\.json$)' || true)
           if [ -z "${shipped}" ]; then
             echo "No shipped paths changed — skipping deploy + CF purge."
             echo "should_deploy=false" >> "$GITHUB_OUTPUT"
@@ -118,26 +123,24 @@ jobs:
         # The HTML __BUILD__ pass only covers entry-point page.js, CSS,
         # and JSON preload hints. The shared modules that page.js then
         # imports (e.g. ../flags/quiz.js) and the JSON it fetches
-        # (countries.json, daily_puzzles.json) carry no version in source.
-        # Without this pass, a fresh page.js?v=<sha> would static-import
-        # the OLD cached quiz.js after a shared-module edit, masking the
-        # deploy. Walks every shipped .js file and appends ?v=<sha> to
-        # string-literal and template-literal paths — see
-        # scripts/cache-bust.mjs for the rewrite contract.
+        # (countries.json) carry no version in source. Without this
+        # pass, a fresh page.js?v=<sha> would static-import the OLD
+        # cached quiz.js after a shared-module edit, masking the deploy.
+        # Walks every shipped .js file and appends ?v=<sha> to string-
+        # literal and template-literal paths — see scripts/cache-bust.mjs
+        # for the rewrite contract. (Catalog JSON now lives in blob with
+        # its own Cache-Control: max-age=60 — out of scope for this pass.)
         run: node scripts/cache-bust.mjs ${GITHUB_SHA}
-      - name: Strip preview-only files from the artifact
-        # Author-only previews are repo-only — used locally at
-        # /daily/backlog/ (staged unreleased puzzles) and /daily/ideas/
-        # (brainstorm pool). Never shipped to prod. Removing the JSON
-        # makes the data itself unreachable from the deployed site;
-        # removing each preview folder takes the index, the play page,
-        # and their JS with it so the author URLs aren't advertised
-        # either. Compatible with the scheduled release flow: that job
-        # promotes backlog[0] → live and commits, which triggers this
-        # same workflow — both pools still get stripped on the way out.
+      - name: Strip preview-only folders from the artifact
+        # Author-only previews live at /daily/backlog/ (staged unreleased
+        # puzzles) and /daily/ideas/ (brainstorm pool). Both fetch their
+        # data directly from the public-read catalog blob, so stripping
+        # the folder removes the index + play page + their JS so the
+        # author URLs aren't advertised on the deployed site.
+        # (No `rm -f` for daily/daily_*.json — those files were deleted
+        # in Phase 3 of Feature P; the catalog lives only in blob now.)
         run: |
           rm -rf daily/backlog daily/ideas
-          rm -f daily/daily_backlog.json daily/daily_ideas.json daily/daily_parked.json
       - name: Minify JS / CSS for the artifact
         # Walks every source .js / .css file (excluding tests, node_modules,
         # the PartyKit server, and the build scripts themselves) and minifies

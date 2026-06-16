@@ -1,5 +1,6 @@
 import { t } from '../../i18n.js';
 import { renderArchiveSquare, refreshSquareCriteria } from '../squares.js';
+import { fetchCatalog } from '../catalogSource.js';
 
 /**
  * @typedef {Object} Idea
@@ -120,8 +121,7 @@ export function bootIdeas() {
     }
   });
 
-  fetch('../daily_ideas.json')
-    .then((r) => r.json())
+  fetchCatalog('ideas')
     .then((/** @type {Idea[]} */ ideas) => {
       if (ideas.length === 0) {
         const empty = document.createElement('li');

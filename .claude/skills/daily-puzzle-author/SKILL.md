@@ -5,17 +5,26 @@ description: Adds or vets entries in the gridgame daily-puzzle catalog (daily/da
 
 # Daily-puzzle author
 
-The daily catalog is two append-only JSON files:
+The daily catalog lives in the public-read Azure blob `styetanotherquiz/catalog/` — five files, **not in the repo**. The working copy lives at `.catalog/` (gitignored), populated by `npm run catalog:pull`. After edits, `npm run catalog:push` validates locally and uploads.
 
-- `daily/daily_puzzles.json` — released puzzles, visible to players. "Today's puzzle" = last entry.
-- `daily/daily_backlog.json` — staged, hidden. Releasing = move `backlog[0]` to the end of live (see **Releasing** below — the bot does this nightly).
+- `.catalog/live.json` — released puzzles, visible to players. "Today's puzzle" = last entry.
+- `.catalog/backlog.json` — staged, hidden. Releasing = move `backlog[0]` to the end of live (see **Releasing** below — the Function does this nightly).
 
 Each entry is `{ "n": <int>, "filter": "<filterString>", "answers": ["<code>", ...], "description": { "en": "...", "pl": "..." } }`. Numbering is sequential across the two files (live ends at N → backlog starts at N+1).
 
-Plus two author-only files:
+Plus three author-only files:
 
-- `daily/daily_ideas.json` — **active review pipeline**. Fresh brainstorm candidates the author reviews on `/daily/ideas/` and promotes to the backlog. Each entry: `{ "filter", "notes", "answers", "difficulty", "suggestedN" }`. The ideas-no-subset test enforces rule 6 against these.
-- `daily/daily_parked.json` — **waiting room** for filters that don't fit the current rules but are worth keeping for past-#100 use or until a constraint changes (rule 5 needs primaryCleanExempt, rule 14 single-use already burned, etc.). Each entry: `{ "filter", "notes" }` only — no `answers`, no `difficulty` (they're not active candidates). Not rendered on `/daily/ideas/`, not checked by the catalog tests. Ask explicitly ("what's parked", "promote some parked") to consult this file.
+- `.catalog/ideas.json` — **active review pipeline**. Fresh brainstorm candidates the author reviews on `/daily/ideas/` and promotes to the backlog. Each entry: `{ "filter", "notes", "answers", "difficulty", "suggestedN" }`. The ideas-no-subset test enforces rule 6 against these.
+- `.catalog/parked.json` — **waiting room** for filters that don't fit the current rules but are worth keeping for past-#100 use or until a constraint changes (rule 5 needs primaryCleanExempt, rule 14 single-use already burned, etc.). Each entry: `{ "filter", "notes" }` only — no `answers`, no `difficulty` (they're not active candidates). Not rendered on `/daily/ideas/`, not checked by the catalog tests. Ask explicitly ("what's parked", "promote some parked") to consult this file.
+- `.catalog/policy.json` — single-use-token policy (rule 14). Lists each token and its rationale.
+
+**Authoring loop (Phase 3 of Feature P, 2026-06-16):**
+1. `npm run catalog:pull` — fetch the current state of all five files from blob.
+2. Edit `.catalog/*.json` as needed (hand-edit, or `node scripts/generate-candidates.mjs` to brainstorm).
+3. `npm test` — runs the rule suite against `.catalog/`.
+4. `npm run catalog:push` — validates, shows diff + asks `y/N` if `live.json` or `backlog.json` changed, uploads.
+
+`catalog:push` refuses to overwrite a remote that moved since the last pull (e.g. the midnight Function promoted while you were editing) — it'll point you back at `catalog:pull`. Pass `--yes` to skip the diff/confirm prompt (e.g. after a generator run you've already reviewed via `/daily/ideas/`).
 
 ## Releasing
 
@@ -23,7 +32,7 @@ A timer-triggered Azure Function (`func-yetanotherquiz-release`, source at `infr
 
 The handler short-circuits if Warsaw time isn't `hour=0` or if today's puzzle is already in `live`. The schedule fires twice per UTC day (`0 5 22,23 * * *`) so DST shifts don't need any manual bump — see `infra/README.md` for the why.
 
-Validation at promote time is intentionally narrow: rule 1 (drift), 3 (sovereign codes), 4 (sequential `n`), 7 (en/pl description). The remaining hard rules (2 redundant, 5 primary-clean, 6 no-subset, 14 single-use tokens, 15 ambiguity) are author-time concerns enforced by `flags/daily.test.js` on every PR — they cannot fail at promote time unless they failed at author time too, and at that point the entry would never have reached the backlog. If you ever find one that *does* slip, port it into `infra/release-fn/src/lib/validate.js`.
+Validation at promote time is intentionally narrow: rule 1 (drift), 3 (sovereign codes), 4 (sequential `n`), 7 (en/pl description). The remaining hard rules (2 redundant, 5 primary-clean, 6 no-subset, 14 single-use tokens, 15 ambiguity) are author-time concerns — caught by `npm test` on every push, and by `catalog:push` before upload (both run the same `flags/daily.test.js` rule suite). If a real bug ever slips through that surface, port it into `flags/dailyValidate.js` (which is shared between the Function and the CLI).
 
 What this changes for you as author:
 

@@ -34,8 +34,9 @@ const ROOT = join(HERE, '..');
 const COUNTRIES = loadCountries(JSON.parse(readFileSync(join(ROOT, 'flags', 'countries.json'), 'utf-8')));
 const SOV = flagsGamePool(COUNTRIES, false);
 
-const LIVE = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_puzzles.json'), 'utf-8'));
-const BACKLOG = JSON.parse(readFileSync(join(ROOT, 'daily', 'daily_backlog.json'), 'utf-8'));
+const CATALOG_DIR = join(ROOT, '.catalog');
+const LIVE = JSON.parse(readFileSync(join(CATALOG_DIR, 'live.json'), 'utf-8'));
+const BACKLOG = JSON.parse(readFileSync(join(CATALOG_DIR, 'backlog.json'), 'utf-8'));
 const USED_FILTERS = new Set([...LIVE, ...BACKLOG].map((e) => e.filter));
 
 const CONTINENTS = ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'];

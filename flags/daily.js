@@ -4,16 +4,17 @@ import { parseFilterString } from './findFlag.js';
  * Daily-puzzle catalog helpers. Pure logic; no DOM, no fetch.
  *
  * Release model: the catalog is the source of truth for which puzzles
- * have been released. "Today's puzzle" is the last entry in the catalog
- * — the resolver uses `catalog.length`, not date math. Releasing
- * puzzle N+1 means appending its entry to daily/daily_puzzles.json
- * (the Azure Logic App promotes the next staged entry from
- * daily/daily_backlog.json each Polish midnight; see FEATURE.md).
+ * have been released. "Today's puzzle" is the last entry in the
+ * catalog — the resolver uses `catalog.length`, not date math.
+ * Releasing puzzle N+1 means appending its entry to `live.json` in the
+ * `styetanotherquiz/catalog` blob; a timer-triggered Function App
+ * (`func-yetanotherquiz-release`) moves `backlog[0]` to the end of
+ * `live.json` each Polish midnight (see FEATURE.md Feature P).
  *
  * Dates: the archive renders each tile's release date as a presentation
  * derivation — `puzzleDate(n) = LAUNCH_DATE + (n - 1) days`. The data
  * model still has no `releaseDate` field. This works as long as the
- * Logic App reliably promotes one puzzle per day; if a release ever
+ * Function reliably promotes one puzzle per day; if a release ever
  * misses, the derived dates drift relative to reality and we'd switch
  * to stored dates per entry.
  *

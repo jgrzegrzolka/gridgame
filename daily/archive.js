@@ -24,7 +24,7 @@ export function bootArchive() {
   const listEl = /** @type {HTMLElement} */ (document.getElementById('archive-list'));
   const scores = loadScores(window.localStorage);
 
-  fetchCatalog('live', './daily_puzzles.json')
+  fetchCatalog('live')
     .then((/** @type {DailyPuzzle[]} */ catalog) => {
       const today = todayN(catalog);
       if (today === 0) {

@@ -10,3 +10,10 @@ node_modules/
 api/local.settings.json
 .swa/
 .azurite/
+
+# Phase 3 of Feature P: catalog working copy. Blob is the source of
+# truth; `.catalog/` is populated by `npm run catalog:pull` and
+# consumed by tests + the generator script. `.catalog/.snapshot/`
+# tracks the last-pulled state so `npm run catalog:push` can detect
+# remote drift before overwriting.
+.catalog/

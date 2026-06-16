@@ -33,7 +33,7 @@
 import { app } from '@azure/functions';
 import { readJsonBlob, writeJsonBlob } from './lib/blob.js';
 import { promote } from './lib/promote.js';
-import { validateCatalog } from './lib/validate.js';
+import { validateCatalog } from '../../../flags/dailyValidate.js';
 import { shouldRun } from './lib/warsawTime.js';
 
 const ACCOUNT = 'styetanotherquiz';
