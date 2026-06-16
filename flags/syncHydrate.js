@@ -29,10 +29,15 @@
  */
 
 /**
- * @typedef {{ getItem(key: string): string | null, setItem(key: string, value: string): void }} HydrateStore
+ * @typedef {{
+ *   getItem(key: string): string | null,
+ *   setItem(key: string, value: string): void,
+ *   removeItem(key: string): void,
+ * }} HydrateStore
  */
 
 const DAILY_SCORES_KEY = 'daily.scores';
+const NICKNAME_KEY = 'gridgame.nickname';
 
 /**
  * Build a quiz-PB localStorage key from a configKey. Mirrors
@@ -71,13 +76,15 @@ function bestKeyFromConfigKey(configKey) {
  *   payload: {
  *     daily: Array<{ puzzleId: number, foundCodes: string[], totalCount: number }>,
  *     records: Record<string, { score: number, durationMs: number }>,
+ *     nickname?: string | null,
  *   },
  * }} args
- * @returns {{ dailyWritten: number, quizWritten: number }}
+ * @returns {{ dailyWritten: number, quizWritten: number, nicknameWritten: boolean }}
  */
 export function applyHydratePayload({ store, payload }) {
   let dailyWritten = 0;
   let quizWritten = 0;
+  let nicknameWritten = false;
 
   // Daily: read the existing scores blob, write each server row into
   // the map, persist once. One read/write per call instead of N writes
@@ -133,7 +140,27 @@ export function applyHydratePayload({ store, payload }) {
     }
   }
 
-  return { dailyWritten, quizWritten };
+  // Nickname: write the server's value to the cache so /profile/
+  // shows the chosen name instead of the deterministic default. A
+  // server-side `null` (no nickname ever saved) clears any stale
+  // local cache so display falls back to the default cleanly.
+  // `undefined` (key not in payload) is a no-op — keeps backward
+  // compat with any caller that omits the field.
+  if ('nickname' in payload) {
+    try {
+      if (typeof payload.nickname === 'string' && payload.nickname.length > 0) {
+        store.setItem(NICKNAME_KEY, payload.nickname);
+        nicknameWritten = true;
+      } else if (payload.nickname === null) {
+        store.removeItem(NICKNAME_KEY);
+        nicknameWritten = true;
+      }
+    } catch {
+      // Cache failure is non-fatal — server is the source of truth.
+    }
+  }
+
+  return { dailyWritten, quizWritten, nicknameWritten };
 }
 
 const LAST_HYDRATE_KEY = 'gridgame.lastHydrateAt';
@@ -176,7 +203,7 @@ const ENDPOINT = '/api/v1/sync/hydrate';
  * }} args
  * @returns {Promise<
  *   | { ran: false, reason: 'unlinked' | 'fresh' }
- *   | { ran: true, ok: true, dailyWritten: number, quizWritten: number }
+ *   | { ran: true, ok: true, dailyWritten: number, quizWritten: number, nicknameWritten: boolean }
  *   | { ran: true, ok: false }
  * >}
  */
@@ -214,7 +241,7 @@ export async function trySyncDevices({
   try { store.setItem(LAST_HYDRATE_KEY, String(now)); } catch {}
 
   const res = await hydrateFromServer({ deviceId, store, fetchImpl });
-  if (res.ok) return { ran: true, ok: true, dailyWritten: res.dailyWritten, quizWritten: res.quizWritten };
+  if (res.ok) return { ran: true, ok: true, dailyWritten: res.dailyWritten, quizWritten: res.quizWritten, nicknameWritten: res.nicknameWritten };
   return { ran: true, ok: false };
 }
 
@@ -227,7 +254,7 @@ export async function trySyncDevices({
  *   store: HydrateStore,
  *   fetchImpl?: typeof fetch,
  * }} args
- * @returns {Promise<{ ok: true, dailyWritten: number, quizWritten: number } | { ok: false }>}
+ * @returns {Promise<{ ok: true, dailyWritten: number, quizWritten: number, nicknameWritten: boolean } | { ok: false }>}
  */
 export async function hydrateFromServer({ deviceId, store, fetchImpl = globalThis.fetch }) {
   if (!deviceId) return { ok: false };
