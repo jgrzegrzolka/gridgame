@@ -43,7 +43,7 @@ A fresh agent picking this up should:
 5. **TTT random pool.** Wire `hasStripesOnly` into `buildRandomCategoryPool()` (already done in Phase 2 effectively — confirm + add an integration test that 3×3 generation stays inside the retry budget with the new cats).
 6. **First puzzle ideas.** Draft 3–4 backlog daily-puzzle ideas using the new dimension via `daily-puzzle-author` skill (`continent:Europe,stripesOnly:horizontal`, etc.).
 
-**Currently in:** Phase 1 — branch `feature/db-stripes-only-phase-1-seed`.
+**Currently in:** Phase 5 — branch `feature/db-stripes-only-phase-5-ttt-integration`. Phases 1-4 shipped (PRs #473, #474, #475, #476).
 
 ---
 
