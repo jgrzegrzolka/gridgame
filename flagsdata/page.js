@@ -1,5 +1,5 @@
 import { CONTINENTS, loadCountries } from '../flags/group.js';
-import { ALL_FLAG_COLORS, ALL_MOTIFS, foldDiacritics } from '../flags/engine.js';
+import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
 import { t, countryName } from '../i18n.js';
@@ -25,6 +25,11 @@ function colorLabel(v) {
 /** @param {string} v */
 function motifLabel(v) {
   return t(`motif.${v}`, v);
+}
+
+/** @param {string} v */
+function stripesOnlyLabel(v) {
+  return t(`stripesOnly.${v}`, `${v} stripes only`);
 }
 
 /** @typedef {import('../flags/group.js').Country} Country */
@@ -161,7 +166,7 @@ export function bootFlagsData() {
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
     let pillTotal = 0;
-    for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
+    for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'>} */ (['continent','color','motif','status','stripesOnly'])) {
       pillTotal += filters[k].include.size + filters[k].exclude.size;
     }
     if (filters.colorCount !== null) pillTotal++;
@@ -185,7 +190,7 @@ export function bootFlagsData() {
   /**
    * @param {string} labelKey
    * @param {string} labelFallback
-   * @param {'continent' | 'color' | 'motif' | 'status'} group
+   * @param {'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'} group
    * @param {Array<{ value: string, label: string }>} entries
    */
   function buildFilterGroup(labelKey, labelFallback, group, entries) {
@@ -339,6 +344,13 @@ export function bootFlagsData() {
   groupsWrap.appendChild(
     buildFilterGroup('flagsdata.filterMotifs', 'Motifs', 'motif', ALL_MOTIFS.map((v) => ({ value: v, label: motifLabel(v) }))),
   );
+  // Two pills: "horizontal stripes only" + "vertical stripes only". Selects
+  // pure-stripe flags (no overlay/charge/canton) — the field is null for
+  // anything else, so charged tricolours (Mexico, Spain, Egypt) and
+  // non-stripe layouts (Canada, Switzerland, UK) are excluded by design.
+  groupsWrap.appendChild(
+    buildFilterGroup('flagsdata.filterStripes', 'Stripes', 'stripesOnly', STRIPES_ORIENTATIONS_FOR_RANDOM.map((v) => ({ value: v, label: stripesOnlyLabel(v) }))),
+  );
 
   const clearBtn = document.createElement('button');
   clearBtn.type = 'button';
@@ -347,7 +359,7 @@ export function bootFlagsData() {
   clearBtn.textContent = t('flagsdata.clear', 'Clear');
   clearBtn.hidden = true;
   clearBtn.addEventListener('click', () => {
-    for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
+    for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'>} */ (['continent','color','motif','status','stripesOnly'])) {
       filters[k].include.clear();
       filters[k].exclude.clear();
     }
@@ -397,6 +409,7 @@ export function bootFlagsData() {
       else if (group === 'continent') btn.textContent = continentLabel(value);
       else if (group === 'color') btn.textContent = colorLabel(value);
       else if (group === 'motif') btn.textContent = motifLabel(value);
+      else if (group === 'stripesOnly') btn.textContent = stripesOnlyLabel(value);
     }
   });
 }

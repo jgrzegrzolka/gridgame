@@ -252,6 +252,10 @@
     "union-jack": "Union Jack",
     "eu-member": "EU member"
   },
+  "stripesOnly": {
+    "horizontal": "horizontal stripes only",
+    "vertical": "vertical stripes only"
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",
@@ -294,6 +298,7 @@
     "filterContinent": "Continent",
     "filterColors": "Colors",
     "filterMotifs": "Motifs",
+    "filterStripes": "Stripes",
     "searchName": "Search by name…",
     "clear": "Clear"
   },
