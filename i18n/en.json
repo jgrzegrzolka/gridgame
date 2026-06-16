@@ -18,11 +18,7 @@
     "errorInvalid": "That nickname contains characters that aren’t allowed"
   },
   "profile": {
-    "title": "Your profile — Yet Another Quiz",
-    "stats": {
-      "currentStreak": "Current streak",
-      "maxStreak": "Best streak"
-    }
+    "title": "Your profile — Yet Another Quiz"
   },
   "sync": {
     "title": "Sync across devices — Yet Another Quiz",
@@ -40,8 +36,8 @@
       "idLabel": "Device ID:"
     },
     "wizard": {
-      "profileQ": "Nickname",
-      "dailyQ": "Daily result on overlap ({count} puzzles)",
+      "profileQ": "Keep nick from:",
+      "dailyQ": "Keep overlapping daily puzzles from:",
       "dailyTarget": "My other device",
       "dailySource": "This device",
       "cancel": "Cancel",

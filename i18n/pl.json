@@ -18,11 +18,7 @@
     "errorInvalid": "Pseudonim zawiera niedozwolone znaki"
   },
   "profile": {
-    "title": "Twój profil — Yet Another Quiz",
-    "stats": {
-      "currentStreak": "Aktualna seria",
-      "maxStreak": "Najdłuższa seria"
-    }
+    "title": "Twój profil — Yet Another Quiz"
   },
   "sync": {
     "title": "Synchronizuj między urządzeniami — Yet Another Quiz",
@@ -40,10 +36,10 @@
       "idLabel": "ID urządzenia:"
     },
     "wizard": {
-      "profileQ": "Pseudonim",
-      "dailyQ": "Wynik dzienny przy nakładaniu ({count} zagadek)",
-      "dailyTarget": "Moje drugie urządzenie",
-      "dailySource": "To urządzenie",
+      "profileQ": "Zachowaj pseudonim z:",
+      "dailyQ": "Zachowaj nakładające się dzienne zagadki z:",
+      "dailyTarget": "Mojego drugiego urządzenia",
+      "dailySource": "Tego urządzenia",
       "cancel": "Anuluj",
       "confirm": "Połącz urządzenia"
     },

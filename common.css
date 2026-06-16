@@ -283,12 +283,6 @@ body::before {
   padding-bottom: 12px;
   border-bottom: 1px solid #eee;
 }
-/* "Buy me a coffee" — paint it in the brand secondary (shady pink) as
- * the accent CTA. Inherits the regular menu size + weight from `.menu a`
- * above so it sits at the same visual rank as the other menu items. */
-.menu a.menu-coffee {
-  color: var(--secondary-color);
-}
 .menu a {
   color: var(--link-color);
   text-decoration: none;
