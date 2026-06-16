@@ -17,7 +17,7 @@ import { pillLabel } from '../flags/findFlag.js';
  * objects.
  *
  * @typedef {{ h: { textContent: string }, key: string, fallback: string }} SectionHeader
- * @typedef {{ labelSpan: { textContent: string }, group: 'continent' | 'color' | 'motif', value: string }} PillRef
+ * @typedef {{ labelSpan: { textContent: string }, group: 'continent' | 'color' | 'motif' | 'stripesOnly', value: string }} PillRef
  *
  * @param {{
  *   sectionHeaders: SectionHeader[],

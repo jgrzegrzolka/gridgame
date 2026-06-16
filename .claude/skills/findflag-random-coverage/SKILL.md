@@ -17,6 +17,7 @@ Built in `findFlag/page.js#renderChooser` from three `engine.js` constants:
 - **Continents** — `CONTINENTS` filtered to those with ≥1 country.
 - **Colours** — `ALL_FLAG_COLORS` filtered to those with ≥1 country.
 - **Motifs** — `ALL_MOTIFS` filtered to those with ≥1 country.
+- **Stripes** — `STRIPES_ORIENTATIONS_FOR_RANDOM` (`horizontal`, `vertical`) filtered to those with ≥1 country. Scalar group — `SCALAR_GROUPS` enforces at most one stripesOnly pill per mix. When a stripesOnly pill lands in a mix, the colorCount modifier paths are **skipped** — pure stripes already carry a tight palette, layering colorCount on top either restates the palette or collapses the answer set to a single flag.
 
 Each pill becomes a `{ group, value }` entry in the `allPills` array. The Random click strips the DOM-bound `btn` and passes the rest as `pillPool` to `pickRandomMix`.
 
@@ -48,6 +49,14 @@ Modifiers ride the parallel paths in `pickRandomMix`, not the pill pool. Two spe
 ### 3. New status pill in the chooser
 
 If the chooser starts surfacing status pills, add them to `allPills`. `pickRandomMix` already treats `status` as scalar (max one status pill per mix, like continent).
+
+### 4. New scalar-group dimension (parallel to stripesOnly)
+
+If you add a new scalar dimension to `countries.json` (something where each country has exactly one value or null), three coordinated edits:
+
+- Add it to `SCALAR_GROUPS` in `flags/findFlag.js` so two-value AND is impossible per mix.
+- Decide whether it should be mutually exclusive with `colorCount` (like stripesOnly is) and gate the modifier accordingly inside `maybeAttachColorCount`. Rule of thumb: skip the modifier if the dimension already implies a tight palette.
+- Update the empirical coverage test if the new pool entries are very narrow (a single country or two), or accept that the assertion remains "≥1 over 8000 runs" — narrow tags are still reachable, just under-represented.
 
 ## Liveness — "Random must land on ≥1 flag"
 
