@@ -1,7 +1,7 @@
 /**
  * Hard-rule catalog validation, shared by the midnight Function App
- * (`infra/release-fn/src/releaseDaily.js`) and the author-side CLI
- * (`scripts/catalog-push.mjs`). Throws on the first rule violation;
+ * (`infra/release-fn/src/releaseDaily.js`) and the agent-side push
+ * tool (`authoring/push.mjs`). Throws on the first rule violation;
  * returns nothing on success.
  *
  * Scope of enforcement (rules from `.claude/skills/daily-puzzle-author/SKILL.md`):

@@ -1,9 +1,9 @@
 /**
- * Batch-generate brainstorm candidates into daily/daily_ideas.json.
+ * Batch-generate brainstorm candidates into `.catalog/ideas.json`.
  *
  * Runs locally:
  *
- *   node scripts/generate-candidates.mjs
+ *   node authoring/generate-candidates.mjs
  *
  * Enumerates filter templates (continent + color, continent + motif,
  * colorCount-driven combos, etc.), validates each candidate against the

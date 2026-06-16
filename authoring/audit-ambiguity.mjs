@@ -2,7 +2,7 @@
  * Audit live + backlog + ideas puzzles for flag-data ambiguity
  * violations. Runs locally:
  *
- *   node scripts/audit-flag-ambiguity.mjs
+ *   node authoring/audit-ambiguity.mjs
  *
  * For each puzzle that triggers a violation, prints the list-bucket
  * label, puzzle number, filter, answers, and one or more offending

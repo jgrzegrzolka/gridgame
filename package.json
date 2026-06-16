@@ -12,9 +12,7 @@
     "dev:api": "cd api && func start",
     "dev:party": "partykit dev",
     "party:deploy": "partykit deploy",
-    "build:minify": "node scripts/minify.mjs",
-    "catalog:pull": "node scripts/catalog-pull.mjs",
-    "catalog:push": "node scripts/catalog-push.mjs"
+    "build:minify": "node scripts/minify.mjs"
   },
   "devDependencies": {
     "@azure/static-web-apps-cli": "^2.0.9",
