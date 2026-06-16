@@ -21,45 +21,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-### Feature C: Cross-device identity via WebAuthn passkey
-
-**Why now.** Promoted from backlog 2026-06-15. Cross-device need is real (Jan plays on phone + laptop; future Feature O achievements should merge across both); learning value is the other half (real WebAuthn integration is portfolio-worthy in a way claim-code-paste isn't). Picked passkey over the lighter alternative (deviceId-as-claim-code) explicitly for the learning + future-proof angle.
-
-**Goal.** An existing user opts in to "save my progress across devices" with one tap + Face ID / Touch ID / Windows Hello. From that point on, their stats follow them between phone, laptop, and any other browser — without registering, without a password, without an email field. Existing rows from this device get retroactively tagged with the new `identityId` so the merged history is real, not just forward-looking.
-
-**Design (settled 2026-06-15):**
-
-- **Container:** `passkeys` — partition `/credentialID`, no TTL (credentials live until the user revokes them).
-  - One row per registered credential (one device may have one credential; the same user across N devices has N rows).
-  - Doc shape: `{ id: credentialID, credentialID, identityId, publicKey, counter, deviceIdHint, createdAt, v: 1 }`. `publicKey` is base64-encoded COSE; `counter` is the signature counter for replay protection; `deviceIdHint` is the registering device's deviceId (advisory only — for "which device's credential is this?" surfaces later).
-  - **No separate `users` container** in V1: `identityId` is just a UUID that links credentials. If we later need per-user metadata, add `users` then.
-- **Auth endpoints** (`@simplewebauthn/server` integrated into `api/`):
-  - `POST /api/v1/passkey/register/begin` → returns WebAuthn `PublicKeyCredentialCreationOptionsJSON` + a `signedToken` (HMAC-wrapped challenge + deviceId + expiresAt).
-  - `POST /api/v1/passkey/register/verify` → receives `{ response, signedToken }`. Verifies HMAC + timestamp, then `verifyRegistrationResponse` from simplewebauthn. On success, mints `identityId` (UUID), inserts the `passkeys` row, returns `{ identityId }`.
-  - `POST /api/v1/passkey/auth/begin` → returns `PublicKeyCredentialRequestOptionsJSON` + `signedToken` (HMAC-wrapped challenge + expiresAt).
-  - `POST /api/v1/passkey/auth/verify` → receives `{ response, signedToken }`. Verifies HMAC, point-reads the credential by `credentialID` (the assertion carries it), validates signature against stored `publicKey`, bumps `counter`, returns `{ identityId }`.
-- **Stateless challenges via HMAC.** No transient-session container. Server wraps `{ challenge, deviceId?, expiresAt }` in an HMAC tag using a new app setting `PASSKEY_HMAC_SECRET`; the client returns the opaque blob with the verify call. 5-minute expiry. Saves a Cosmos container for transient state.
-- **Lib:** `api/src/lib/passkeyDoc.js` (pure builder for the `passkeys` row + `signedToken` wrap/unwrap). `api/src/lib/passkeyVerify.js` (thin wrapper around simplewebauthn so the handlers stay shells).
-- **Client:** `flags/passkeyClient.js` — single helper that wraps `navigator.credentials.create()` / `.get()` + the begin/verify round-trips. Fire-and-handle: returns `{ ok: true, identityId }` or `{ ok: false, reason }`.
-- **`identityId` storage on the client.** `localStorage.gridgame.identityId` once the user has either registered (first device) or authenticated (second device). All future writes from that device carry it alongside `deviceId`.
-- **`identityId` on existing write endpoints.** `dailyResult`, `quizRecord`, `tttResult`, `engagementEvent` accept an optional `identityId` body field; persist it on the row unconditionally. Pre-Feature-C rows have no field. Validators accept it as a UUID string when present.
-- **Read-path dedupe.** `GET /api/v1/daily/me` (streak compute) gains an optional `identityId=…` query param. When present, query becomes `WHERE c.identityId = @iid` (cross-partition — see partition-key warning below) and returns merged streak across all linked devices. When absent, falls back to today's `deviceId=…` path.
-- **Backfill on first registration.** On register/verify success, server-side does a cross-partition update of every existing row in `dailyResults` / `quizRecords` / `tttPairs` / `engagementEvents` matching the registering deviceId, stamping `identityId` on each. One-shot, idempotent (re-running is a no-op because rows already have the field).
-- **Partition-key flag (preserved from backlog).** `dailyResults` is partitioned by `/puzzleId`, not `/deviceId`. The "lifetime stats per identityId" query is fundamentally cross-partition — every `puzzleId` partition gets scanned, filtered by identityId. At current scale (~10 puzzles × ~50 rows) this is rounding noise. If it grows, mitigate via a pre-aggregated `lifetime:{identityId}` doc maintained on write (same pattern as Feature G's `tttPairs`). Don't repartition `dailyResults` retroactively.
-
-**Phases (one PR each, off main, don't auto-merge):**
-
-- [ ] **C.1 — backend.** `passkeys` container provisioned via `az`. `@simplewebauthn/server` added to `api/package.json`. New `PASSKEY_HMAC_SECRET` app setting. Pure libs (`passkeyDoc.js` + `passkeyVerify.js`) + tests. Four endpoints (register-begin, register-verify, auth-begin, auth-verify) registered in `api/src/index.js`. Not user-visible yet — verify via curl with a recorded WebAuthn fixture.
-- [ ] **C.2 — frontend.** `flags/passkeyClient.js` helper + tests (fake `navigator.credentials.{create,get}` in tests). New UI on `/profile/`: "Save across devices" button → register flow; "Claim from another device" button → auth flow. Both store `identityId` in localStorage on success and surface a confirmation. i18n EN + PL. After this lands, registering / claiming works end-to-end but `identityId` doesn't yet affect any reads or writes.
-- [ ] **C.3 — propagation + backfill.** Update `dailyResult`, `quizRecord`, `tttResult`, `engagementEvent` write handlers + clients to send + persist `identityId` when present. `GET /api/v1/daily/me?identityId=…` reads cross-partition and dedupes. One-shot backfill kicks off automatically inside register/verify on first registration — touches every row matching the registering deviceId.
-
-**Open design calls** (settle if/when they come up — none load-bearing for V1):
-
-- **Cross-ecosystem claim.** Synced passkeys (iCloud Keychain, Google Password Manager) auto-port within an ecosystem. Cross-ecosystem (iOS phone → Android laptop) means the user explicitly registers a *new* passkey on device B under the same `identityId` — which the auth flow already handles (it's just a second registration after auth on device B fails, but with the existing identityId rather than minting a new one). UX wrinkle deferred to V2; V1 just says "register passkey on each device."
-- **Revocation / management.** "Remove this device's passkey" UI. Out of scope for V1.
-- **Conflict resolution.** Two devices with the same identityId race to write the same daily result row (same deterministic id). 409 dedups already. No additional handling needed.
-
-**Out of scope, intentionally** (captured so they don't drift back in): usernames, email, profile pages beyond the existing `/profile/` (Feature H already shipped that), social features, public list of "verified players", recovery codes (passkey + ecosystem sync = the recovery mechanism), revocation UI (V1 deferral), changing `dailyResults` partition key (don't — keep the lifetime view as a separate read path), forcing identityId on every player (always opt-in — the anonymous deviceId path stays valid forever).
+*(Nothing in flight. Feature C just landed 2026-06-16 — see Done. Next promotion candidates documented in the backlog: Feature O achievements, Feature J platform decision, puzzle-#1 migration cleanup, Feature I snapshots.)*
 
 ---
 
@@ -173,6 +135,57 @@ Items here are not blocking current work but deserve durable memory — the next
 ---
 
 ## Done
+
+### Feature C: Cross-device link via QR-claim — *shipped 2026-06-16*
+
+**Goal.** A user playing on phone + laptop links the two browsers in one round-trip so daily streaks, archive PBs, quiz records, and nickname follow them across both. No accounts, no passwords, no email. Existing rows from the "joining" device migrate into the "host" device's namespace so history is real, not just forward-looking.
+
+**Design that shipped (QR-claim, *not* passkey — see "Notable journey" below):**
+
+- **No new Cosmos container.** Original plan added `passkeys`; the QR pivot deleted it. The merge writes into existing rows (`dailyResults`, `quizRecords`, `tttPairs`, `engagementEvents`, `profiles`) by rewriting their `deviceId` to the target's.
+- **Two new HMAC-signed-token endpoints (stateless, no transient container):**
+  - `POST /api/v1/sync/claim/token` — Device A mints a 5-min claim token + claim URL + inlineable SVG QR. Token wraps `{ deviceId, expiresAt }` under `PASSKEY_HMAC_SECRET` (name preserved across the pivot — the secret's job, HMAC over short-lived tokens, didn't change).
+  - `POST /api/v1/sync/claim/redeem` — Device B posts the token. Server validates HMAC + expiry and returns Device A's `deviceId`.
+- **Merge pipeline (four endpoints — `syncMerge` + `syncPreview` survived the pivot; `syncLink` + `syncHydrate` added in #458):** `sync/preview` (server-side conflict diff: nickname mismatch + overlapping daily puzzles), `sync/merge` (atomic per-row deviceId rewrite), `sync/link` (target's self-discovery: GET checks `profiles[deviceId].linkedAt`), `sync/hydrate` (post-merge pull of `dailyResults` + `quizRecords` + `nickname`).
+- **Flow.**
+  1. Device A: `/profile/` → "Sync across devices" → `/profile/sync/` → auto-mints QR on boot.
+  2. Device B: scans QR (or opens the fallback link) → `/profile/sync/?claim=<token>` → server redeems → server-side preview.
+  3. If conflicts: two-question wizard (nickname source, daily-overlap source) with iOS-toggle UI; if no conflicts: silent merge.
+  4. Server rewrites Device B's rows into Device A's `deviceId`, stamps `linkedAt` on the target profile row, both clients now share one deviceId.
+  5. Client hydrates: overwrites `localStorage.daily.scores` + `flagquiz.best.*` + `gridgame.nickname` from server.
+- **Ambient background sync.** `trySyncDevices()` fires on the boots of `daily/page.js`, `daily/archive.js`, `flagQuiz/page.js`. Two gates: (1) no `localStorage.gridgame.identityId` → immediate return, zero network — **the 99% of unlinked players pay one localStorage read per page load**; (2) 1h staleness gate, stamped before the await so concurrent tabs don't double-fire. Worst case for linked players: 24 hydrates/day.
+- **Burger-menu integration.** Static "Sync across devices" item mounted by `common.js` `mountSyncMenuItem` + `paintSyncState` — single source of truth across daily / archive / flagQuiz / findFlag / profile. No "✓ Synced" toggle (was misleading — the link still goes somewhere actionable).
+
+**What shipped (seven PRs, no clean phase numbering because the design pivoted mid-feature):**
+
+1. **C.1 — passkey backend (#452).** `passkeys` container provisioned. `@simplewebauthn/server` integrated. Four endpoints (register/auth × begin/verify). HMAC-signed stateless challenges via `PASSKEY_HMAC_SECRET`. Pure libs (`passkeyDoc.js`, `passkeyVerify.js`) + tests. **All ripped out in #456.**
+2. **C.2 — passkey UI behind `?test` (#453).** `flags/passkeyClient.js` + `/profile/`-mounted "Save across devices" / "Claim from another device" buttons. `syncMerge.js` engine + 26 tests landed here and survived the pivot. Gated behind `?test` for real-device validation. (#455 patched a first-link auth-cancel fallthrough.)
+3. **The pivot — QR-claim (#456).** Real-device validation surfaced cross-ecosystem friction: rpID scoping (`yetanotherquiz.com` vs. `www.yetanotherquiz.com`), TPM-bound credentials that wouldn't sync, hybrid-QR chicken-and-egg on iOS↔Android. Replaced WebAuthn entirely with a QR-displaying-a-signed-token. **Net diff: −1500 lines.** Deleted: 4 passkey endpoints, 5 passkey libs, `flags/passkeyClient.js`, `@simplewebauthn/server` + 23 transitive deps, the `passkeys` Cosmos container (via `az`). Added: `syncToken.js` (HMAC), `syncClaimToken` + `syncClaimRedeem` endpoints, `syncClaimClient.js`, `qrcode-svg` in `api/package.json`. The merge engine + wizard + `?test` gate carried over unchanged.
+4. **Gate removal + wizard iteration (#457).** Dropped `?test` — sync went GA. Wizard radios → iOS-style two-label toggle; compacter copy; auto-mint QR on `/profile/sync/` boot (dropped intro paragraph, "Show QR" button, help dialog). Kept `?wizard-preview` URL helper for future iteration.
+5. **Four-bug triage + ambient background sync (#458).** (a) Burger menu no longer flips to "✓ Synced" after link. (b) Target device now self-discovers linked state via the new `linkedAt` field on its profile row + boot poll. (c) QR stays visible after linking (was gated behind "not yet linked"). (d) Archive / quiz PBs hydrate post-merge via new `sync/hydrate` endpoint. Plus `trySyncDevices()` ambient hook on daily / archive / flagQuiz boots. Shared `.loading-dots` graduated to `common.css`.
+6. **Nickname hydration + linked-state polish (#460).** Hydrate endpoint extended with `nickname`; client writes to `localStorage.gridgame.nickname`; `profile/page.js` self-heals on first visit after link (bypasses staleness gate). Loading states for profile-stats + sync-mint reuse `.loading-dots`. QR fallback URL collapsed into `<details>`. "Device is linked." pane pulses 3× via the shared `cell-shake` keyframes (per CLAUDE.md "same mechanism = same code") on the unlinked→linked transition only.
+7. **Profile cleanup + wizard rewrite + menu colour (#461).** Streak block dropped from `/profile/` (concept moved to Feature O achievements per the 2026-06-15 pivot). "Buy me a coffee" reverted to primary near-black (was overridden to pink). Wizard buttons restyled to text-link idiom matching `/profile/` actions-row; question labels collapsed to two short lines; `?wizard-preview` now switches between all three real shapes (`=both` / `=profile` / `=daily`).
+
+**Standing artifacts** (the load-bearing outputs future work inherits):
+
+- `api/src/lib/syncToken.js` — generic HMAC-signed short-lived token wrap/unwrap (5-min default). Any future "device A hands a one-time capability to device B" reuses this verbatim — same pattern would work for, e.g., transferring a custom puzzle without going through the share-link surface.
+- `api/src/lib/syncMerge.js` — pure merge engine: nickname/daily/quiz/tttPairs row-rewriting under a single `targetDeviceId`. 26 tests pin the merge semantics. Survived the pivot intact.
+- `api/src/functions/syncHydrate.js` + `flags/syncHydrate.js` — server contract + client hydrator. The server-side "pull every row this device owns into one payload" shape is the canonical mechanism for "linked device just opened a stale browser" recovery.
+- `flags/syncHydrate.js` `trySyncDevices()` — the ambient background-sync substrate. Identity-gated (free for unlinked) + staleness-gated (1h default) + concurrent-tab-safe. Any future per-device cross-tab freshness check uses this pattern.
+- `linkedAt` field on profile rows — target's self-discovery hook. Pattern: write a field on the target when the source mutates state, target polls cheaply on boot, client back-fills `identityId` locally to short-circuit subsequent loads.
+- `mountSyncMenuItem` + `paintSyncState` in `common.js` — single source of truth for the menu's sync entry across every page. New pages with chrome pick it up by calling these.
+- Shared `.loading-dots` in `common.css` — pulsing-dots loading idiom, originated on daily-stats, now consumed by sync-mint + profile-stats + post-scan progress.
+
+**Notable journey, preserved for posterity** (so the next "why don't we just use passkeys?" comes with built-in context):
+
+- Original plan (2026-06-15 promotion, PR #451) was identityId-propagation: every write-path endpoint gains an optional `identityId`, all existing rows get cross-partition-backfilled on first passkey registration. The C.3 mega-diff (25 files) was rolled back mid-flight — too much surface area, too many partition-key implications, too much retroactive write amplification on top of an unsettled identity model.
+- Pivoted to **adopt-deviceId + auto-merge**: the joining device adopts the host's deviceId on first link, all subsequent writes naturally land in the right partition with zero per-write identityId plumbing. Shipped as #453 (UI behind `?test`).
+- Real-device validation immediately surfaced WebAuthn cross-ecosystem friction (see #456 description). The signed-token-in-a-QR replacement was both simpler and trivially cross-ecosystem — the QR is just bytes; any browser camera resolves it. Passkey deletion was net-zero infra impact and −1500 lines.
+- **Takeaway pinned for future feature design:** when a cross-platform UX touchpoint is the load-bearing path, prototype on the *actual* second platform before locking in the protocol. WebAuthn's spec looks clean on paper; the rpID scoping, TPM-bound-credentials, and hybrid-QR realities only show up under real-device validation.
+
+**Out of scope, intentionally** (captured so they don't drift back in): unlink / revocation UI ("remove this device's link" — V1 deferral, possibly never if the rare-case feedback is "just clear my localStorage"); recovery if both linked devices are lost simultaneously (passkey ecosystem-sync was supposed to be the recovery story; with QR-claim the answer is "nothing automatic — re-bootstrap from server-side rows tagged with the lost deviceId" which today means contacting Jan); >2 devices in a link chain (today: any third device that scans the QR adopts the same deviceId, which works but isn't a designed UX); cross-link transfer ("merge two existing pairs into one identity"); usernames / emails / login forms; `dailyResults` partition-key change (Feature C-era plan that became moot once the model dropped identityId-propagation).
+
+**Key PRs.** #451 (promotion — passkey-era plan, now historical), #452 (C.1 passkey backend, ripped out), #453 (C.2 passkey UI behind `?test`, partially ripped out — `syncMerge.js` + wizard survived), #455 (auth-cancel fallthrough, removed with #456), #456 (the pivot — passkey → QR-claim, −1500 LOC), #457 (`?test` gate removal + wizard iteration), #458 (four-bug triage + ambient background sync), #460 (nickname hydration + linked-state polish), #461 (profile streak drop + wizard rewrite + menu colour).
 
 ### Feature M Part B: Engagement-event substrate — *shipped 2026-06-15*
 
