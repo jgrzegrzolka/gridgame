@@ -10,9 +10,6 @@ param location string = 'westeurope'
 @description('Name of the existing catalog storage account holding live.json / backlog.json.')
 param catalogStorageName string = 'styetanotherquiz'
 
-@description('Time zone the timer trigger fires in. Use Windows TZ identifier.')
-param timeZone string = 'Central European Standard Time'
-
 var funcAppName = 'func-yetanotherquiz-release'
 // Function-runtime storage. Separate from the catalog blob so churn
 // (locks, queues, logs) doesn't share an account with public-read data.
@@ -63,15 +60,10 @@ resource funcApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${funcStorage.name};AccountKey=${funcStorage.listKeys().keys[0].value};EndpointSuffix=core.windows.net' }
         { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
         { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'node' }
-        { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~22' }
-        { name: 'WEBSITE_TIME_ZONE', value: timeZone }
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: ai.properties.ConnectionString }
         // Enable Functions v4 programmatic model worker indexing so
         // `app.timer(...)` registrations in src/index.js are picked up.
         { name: 'AzureWebJobsFeatureFlags', value: 'EnableWorkerIndexing' }
-        // Let Oryx install the bundled package.json's deps on deploy.
-        { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'true' }
-        { name: 'ENABLE_ORYX_BUILD', value: 'true' }
       ]
     }
   }

@@ -1,9 +1,6 @@
 /**
  * Move the first entry of `backlog` to the end of `live`. Pure — inputs
- * are not mutated. Mirrors the logic that lived in
- * `scripts/release-next.mjs` during Phase 1 (which still exists at the
- * time of writing but is unreached: the Logic App is disabled and the
- * Function below is the only midnight runner).
+ * are not mutated.
  *
  * @param {{ n: number }[]} live
  * @param {{ n: number }[]} backlog
