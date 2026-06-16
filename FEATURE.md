@@ -88,6 +88,35 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 Items here are not blocking current work but deserve durable memory — the next-time-this-comes-up question, the deferred fix that would otherwise vanish into PR archeology. Agents reading FEATURE.md to find their next task should **not** pick from this section; Jan promotes a backlog item to `## Now` when he decides to actually ship it.
 
+### Feature Q: Observability for the player-facing site (Application Insights)
+
+**Status:** parked 2026-06-16. Jan plans to revisit ~next session. Gap surfaced during the Feature P cleanup audit.
+
+**Problem.** Today the only Application Insights instance in `rg-yetanotherquiz` is `ai-yetanotherquiz-release`, wired exclusively to the timer Function App that owns midnight promotion. **The player-facing site has no telemetry at all.** Specifically:
+
+- The SWA-managed Function App (which runs `api/dailyResult`, `api/dailyStats`, `api/engagementEvent`, etc.) has `APPLICATIONINSIGHTS_CONNECTION_STRING = null`. Exceptions thrown inside any of those handlers go to /dev/null. When a player's submission fails, Jan doesn't know.
+- The frontend ships no App Insights JS SDK. Page views, JS exceptions, network errors, slow page loads — all invisible.
+- The only signal that prod is broken today is "Jan or someone tells me" or "Cosmos rows look wrong."
+
+Cloudflare Web Analytics (Feature M Part A, shipped 2026-06-14) covers some of the pageview gap but not application errors.
+
+**Likely shape when this comes off the parking brake:**
+
+1. **App Insights on the SWA-managed Function App.** Either reuse `ai-yetanotherquiz-release` (rename to `ai-yetanotherquiz`) or create `ai-yetanotherquiz-api`. Bicep addition + one `az staticwebapp appsettings set` call. Captures every `api/*` exception, dependency call, and latency distribution. ~10 min of work, no code change in `api/`.
+2. **App Insights JS SDK on the frontend.** One inline script in the shared HTML chrome, plus an `Application Insights Connection String` config. Captures page views, JS errors, performance timings, and (optionally) custom events for user funnels. ~5 min of work; adds ~30 KB to the page bundle (deferred load — no first-paint cost).
+
+Both stages land within the 5 GB/month free tier at our traffic.
+
+**Open design calls (settle when work starts, not now):**
+- **Single AI instance or split?** Function App vs SWA Function App vs frontend — three workload types. A single shared instance is cheaper to manage and cross-correlates traces; splitting is cleaner per-workload reporting. Probably one instance with `cloud_RoleName` tagging per source.
+- **Sampling.** Free tier is 5 GB/month — likely fine at current scale, but if traffic grows the JS SDK's default sampling (100%) becomes the first thing to tune.
+- **Alerts.** Wire failure-rate or `requests | where success == false` alert to Jan's email (`jangrzegrzolka@gmail.com`)? The €5/mo budget already alerts at 50/80/100% — observability alerts would complement that.
+
+**Out of scope even for Feature Q:**
+- Full APM with distributed tracing across PartyKit + Cosmos + SWA hops (overkill for traffic).
+- Custom dashboards / workbooks (start with the default Failures + Performance blades).
+- Sensitive data filtering — none of our paths log PII today, but worth a one-time grep before turning on `enableAutoRouteTracking` in the JS SDK.
+
 ### Feature I: Per-puzzle stats snapshots for long-term retention
 
 **Status:** parked until ~2027-05. **Hard deadline: must ship before 2027-06-09** — that's when the oldest `dailyResults` row (a puzzleId=1 submission from 2026-06-09 20:33 UTC) reaches its 1-year TTL set in Feature F phase 2. After that date, the row auto-purges from Cosmos, and from then on every puzzle's data ages off one day at a time. Missing the deadline means losing per-flag find-rate aggregates for those puzzles forever, with no way to reconstruct them.

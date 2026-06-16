@@ -47,7 +47,8 @@ All in subscription **`yetanotherquiz`** (`6da299d6-bdfe-4277-a544-ae8ef68f99a0`
 | `func-yetanotherquiz-release` | Function App (Consumption Y1, Linux Node 22) | West Europe | Timer-triggered daily-puzzle promoter. Fires at both 22:05 and 23:05 UTC every day (schedule `0 5 22,23 * * *`); the handler runs only when `warsawClock(now).hour === 0`, so exactly one of those fires per day is Warsaw midnight under either CEST or CET. DST resilient with no manual bumps — see `infra/README.md`. Reads `catalog/live.json` + `catalog/backlog.json` from `styetanotherquiz` via managed identity, moves `backlog[0]` to the end of `live`, runs `validateCatalog()` (drift detector + sovereign codes + sequential `n` + en/pl description), writes both blobs back. Idempotent — a re-invoke on the same Warsaw day short-circuits with "already promoted today". Failures surface in App Insights `ai-yetanotherquiz-release`. Source: `infra/release-fn/src/` (bundled via `node scripts/build-release-fn.mjs`). Template: `infra/funcapp-release-daily.bicep`. Manual invoke for smoke test: `curl -X POST -H "x-functions-key: <master>" -H "Content-Type: application/json" -d '{}' https://func-yetanotherquiz-release.azurewebsites.net/admin/functions/releaseDaily` — a midday invoke is safe (logs "Warsaw hour is X, not 0 — skipping" and exits without touching blob). |
 | `stfuncyetanotherquiz` | Storage account (Standard LRS, StorageV2) | West Europe | Function runtime storage for `func-yetanotherquiz-release` (lock files, queues, logs). Internal use only — not for app data. Created by the Bicep template as part of the Function App. |
 | `plan-yetanotherquiz-release` | App Service plan (Y1 Dynamic) | West Europe | Consumption-tier plan hosting `func-yetanotherquiz-release`. Free grant covers our ~62 invocations/month (2/day under the dual-cron schedule). |
-| `ai-yetanotherquiz-release` | Application Insights | West Europe | Failure + invocation telemetry for `func-yetanotherquiz-release`. |
+| `ai-yetanotherquiz-release` | Application Insights | West Europe | Failure + invocation telemetry endpoint for `func-yetanotherquiz-release`. Workspace-based, backed by `log-yetanotherquiz-release`. |
+| `log-yetanotherquiz-release` | Log Analytics workspace | West Europe | Storage backend for `ai-yetanotherquiz-release` (PerGB2018 SKU, 30-day retention). Explicit so the AI doesn't auto-provision into a separate `ai_<…>_managed` resource group. |
 | `styetanotherquiz` | Storage account (Standard LRS, StorageV2) | West Europe | Hosts the public-read **`catalog`** container — `live.json` + `backlog.json` + `ideas.json` + `parked.json` + `policy.json`. Anonymous blob-level read, blob versioning ON, `Cache-Control: max-age=60`. CORS allows GET from `https://www.yetanotherquiz.com`, `https://yetanotherquiz.com`, `http://localhost:4280`, `http://localhost:7071`. Mutated only by `func-yetanotherquiz-release`'s managed identity (`Storage Blob Data Contributor`). |
 
 Outside Azure:
@@ -101,6 +102,25 @@ Three secrets keep the runtime working — none expire on a clock since Feature 
 3. In Cloudflare → DNS, the apex A record should be exactly **one** entry: `192.0.2.1` (TEST-NET-1), proxied (orange). If you see GitHub Pages IPs back, delete them.
 
 History: FEATURE.md Feature D "2026-06-11 follow-up — redirect rule hardening + Cloudflare cleanup".
+
+### Re-deploying `funcapp-release-daily.bicep` silently breaks the Function
+
+**Symptom.** After running `az deployment group create -f infra/funcapp-release-daily.bicep`, `az functionapp function list` returns empty for `func-yetanotherquiz-release` and any POST to `/admin/functions/releaseDaily` returns HTTP 404. The Function App's host shows `Running`, but no functions are registered.
+
+**Cause.** The Bicep template's `siteConfig.appSettings` block is a **replace-all** operation. `WEBSITE_RUN_FROM_PACKAGE` — the setting that points the runtime at the deployed zip — is set by `az functionapp deployment source config-zip`, not by the template, so a template redeploy strips it. The runtime then has no idea where the code lives and silently registers zero functions.
+
+**What to do.** Always re-run the zip deploy after the Bicep deploy:
+
+```powershell
+node scripts/build-release-fn.mjs
+# (re-zip dist/ via Python — see infra/README.md "Deploying" section for the command)
+az functionapp deployment source config-zip `
+  -g rg-yetanotherquiz `
+  -n func-yetanotherquiz-release `
+  --src infra/release-fn/release-fn.zip
+```
+
+After ~30 s the `releaseDaily` function reappears in `/admin/functions` and the timer rebinds. (Warning is also in the Bicep file's own header.)
 
 ### Deploys hang at "Uploading" indefinitely
 
