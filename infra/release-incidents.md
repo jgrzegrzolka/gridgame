@@ -103,11 +103,21 @@ That theory has one inconsistency: the 14:33 UTC smoke-test promoted N=12 cleanl
 - Whatever Jan did between 12:51 UTC (the manual N=11 promote) and 14:33 UTC (the smoke test) revived the host temporarily, and the 17:39 UTC Bicep redeploy then broke it again, **or**
 - The host had been intermittent — fine for the 14:33 UTC manual fire, silent at the 2026-06-15→16 midnight fire, and silent again from 17:47 UTC onward.
 
+### Additional context — GH workflow fallback also failed
+
+Per Jan during the 2026-06-17 incident: **last night's release was being driven by a GitHub Actions workflow as a fallback, and that workflow was also failing.** So the picture is not "Function silently missed midnight" — it's "Function had already been failing, the GH workflow was put back in front of it as a stop-gap, and the stop-gap was also broken." Two release paths down, manual promote was the only way N=11 reached players.
+
+Open questions for tomorrow's investigation:
+
+- **Which workflow.** FEATURE.md Phase 2 marks `.github/workflows/release-daily.yml` as deleted on completion. Either that workflow was re-introduced (check `git log -- .github/workflows/` and `gh run list --limit 50`) or a different workflow is the autoreleaser now. Find the YAML before assuming anything.
+- **What failed.** Pull the most recent failed run's logs (`gh run view <run-id> --log-failed`). Capture whether it failed at auth, blob upload, validate, or somewhere else — that decides whether the workflow is salvageable or whether tomorrow's job is "pick one autoreleaser path and commit to it."
+
 Carry into tomorrow's investigation:
 
 - When poking at `funcapp-release-daily.bicep` and the runtime, also check whether the App Insights workspace ever recorded a successful invocation in the last 7 days. If AI has been silent for longer than today, the underlying breakage started before today's redeploy attempt.
 - If the version-history truncation is from a blob lifecycle policy, get that policy set wider so the next incident has more data to work from. Storage account is `styetanotherquiz` / container `catalog`.
+- Decide which of {Function timer, GH workflow, something new} is the durable autoreleaser. Currently the picture is "both broken simultaneously" — keeping both as half-working hedges is worse than picking one and getting it to actually work. The 2026-06-11 memory note claiming "Logic App is the auto-trigger" is also stale; whatever decision lands tomorrow should overwrite all three.
 
 ### What was done in the moment
 
-Jan ran a manual promote of N=11 at **12:51 UTC on 2026-06-16** — most likely via the `daily-puzzle-author` skill (`authoring/pull.mjs` → edit `.catalog/live.json` → `authoring/push.mjs`). Player-facing recovery latency: ~13 hours past Warsaw midnight, mitigated by the manual promote.
+Jan ran a manual promote of N=11 at **12:51 UTC on 2026-06-16** — most likely via the `daily-puzzle-author` skill (`authoring/pull.mjs` → edit `.catalog/live.json` → `authoring/push.mjs`), once both the Function and the GH-workflow paths had been confirmed broken. Player-facing recovery latency: ~13 hours past Warsaw midnight, mitigated by the manual promote.
