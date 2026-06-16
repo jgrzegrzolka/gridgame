@@ -3,6 +3,19 @@
 // App pair — see FEATURE.md Feature P Phase 2. Single source of truth:
 // every change to this Function App's infra goes through this template
 // and `az deployment group create`. No portal click-edits.
+//
+// **After every deploy of this template, redeploy the code zip:**
+//   node scripts/build-release-fn.mjs
+//   python3 -c "... zip dist/* into infra/release-fn/release-fn.zip ..."
+//   az functionapp deployment source config-zip \
+//     --resource-group rg-yetanotherquiz \
+//     --name func-yetanotherquiz-release \
+//     --src infra/release-fn/release-fn.zip
+//
+// Reason: `siteConfig.appSettings` below is a replace-all operation in
+// Bicep, so it strips `WEBSITE_RUN_FROM_PACKAGE` (which the zip-deploy
+// sets at runtime). Without that setting the runtime can't find the
+// code zip and silently registers zero functions.
 
 @description('Azure region for all resources.')
 param location string = 'westeurope'
@@ -16,6 +29,7 @@ var funcAppName = 'func-yetanotherquiz-release'
 var funcStorageName = 'stfuncyetanotherquiz'
 var planName = 'plan-yetanotherquiz-release'
 var aiName = 'ai-yetanotherquiz-release'
+var workspaceName = 'log-yetanotherquiz-release'
 
 resource funcStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: funcStorageName
@@ -36,6 +50,20 @@ resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   kind: 'functionapp'
 }
 
+// Log Analytics workspace explicitly created in `rg-yetanotherquiz` so
+// the App Insights component below isn't auto-provisioned into a separate
+// `ai_<...>_managed` resource group that Azure would otherwise hide
+// outside our inventory. PerGB2018 SKU is the default workspace-based
+// tier; ingestion stays in the AI free grant at our volume.
+resource workspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
+  name: workspaceName
+  location: location
+  properties: {
+    sku: { name: 'PerGB2018' }
+    retentionInDays: 30
+  }
+}
+
 resource ai 'Microsoft.Insights/components@2020-02-02' = {
   name: aiName
   location: location
@@ -43,6 +71,7 @@ resource ai 'Microsoft.Insights/components@2020-02-02' = {
   properties: {
     Application_Type: 'web'
     Request_Source: 'rest'
+    WorkspaceResourceId: workspace.id
   }
 }
 
