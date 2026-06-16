@@ -48,10 +48,10 @@ A fresh agent picking this up should:
 **What shipped (six phases collapsed into a one-day sprint, 2026-06-13):**
 
 1. **Seed data.** `flags/countries.json` gained `ambiguousColorCount` and `ambiguousColors` fields on Bhutan and American Samoa. Conservative tag list — other candidates (Vatican, Sri Lanka, Mexico, Guatemala, Ecuador) deferred pending audit-driven evidence rather than over-tagging upfront.
-2. **Audit module + CLI.** Pure module `flags/ambiguityAudit.js` (unit-tested) plus `scripts/audit-flag-ambiguity.mjs` CLI wrapper. Same module powers both the human-friendly ad-hoc report and the hard test gate.
+2. **Audit module + CLI.** Pure module `flags/ambiguityAudit.js` (unit-tested) plus `authoring/audit-ambiguity.mjs` CLI wrapper. Same module powers both the human-friendly ad-hoc report and the hard test gate.
 3. **Hard rule + offender fixes.** New test in `flags/daily.test.js` fires on live + backlog + ideas, ensuring no authored puzzle slips past `npm test`. Backlog #53 (`continent:Asia,color:yellow,colorCount:3`) reworked to `continent:Asia,color:yellow,color:black`; #79 reworked from worldwide `colorCount:5` to `continent:!Oceania,colorCount:5`.
-4. **Generator wiring.** `scripts/generate-candidates.mjs` applies the audit during batch candidate generation — vetoed combinations are silently skipped, no "rescue by adding filters" (compounding to escape an ambiguity ban is exactly the contrived-set behaviour rule 10 prevents).
-5. **Skill docs.** Daily-puzzle-author skill `SKILL.md` gained **rule 15** for flag-data ambiguity, with the authoring cue ("before authoring, run `node scripts/audit-flag-ambiguity.mjs`") and a field-shape note.
+4. **Generator wiring.** `authoring/generate-candidates.mjs` applies the audit during batch candidate generation — vetoed combinations are silently skipped, no "rescue by adding filters" (compounding to escape an ambiguity ban is exactly the contrived-set behaviour rule 10 prevents).
+5. **Skill docs.** Daily-puzzle-author skill `SKILL.md` gained **rule 15** for flag-data ambiguity, with the authoring cue ("before authoring, run `node authoring/audit-ambiguity.mjs`") and a field-shape note.
 6. **Bhutan pin correction.** Mid-flight find: the original tag had `ambiguousColors: ["white"]`, but the actually-contested colour is the dragon outline (black) — the dragon body is unambiguously white. Re-pinned; backlog #37 and #53 reworked accordingly. The "Bhutan ambiguousColors is black not white" memory was added during this fix.
 
 **Mid-flight sweep:** the audit, once turned on, surfaced more violators than the original two — Africa/Asia/Europe sweep dropped 8 broken puzzles (#407), Americas sweep dropped #52 and #57 (#408), SA + Oceania sweep dropped #54 (#409). All caught before they could ship.
@@ -59,9 +59,9 @@ A fresh agent picking this up should:
 **Standing artifacts** (load-bearing outputs future data work inherits):
 
 - `flags/ambiguityAudit.js` + tests — the pure veto logic. Any future ambiguity dimension (motifs, statehood?) composes the same module.
-- `scripts/audit-flag-ambiguity.mjs` — the author-side CLI; cited in skill rule 15.
+- `authoring/audit-ambiguity.mjs` — the author-side CLI; cited in skill rule 15.
 - `flags/daily.test.js` ambiguity gate — locks the rule against silent regression in live + backlog + ideas.
-- `scripts/generate-candidates.mjs` integration — every batch run respects the new constraint without remembering to.
+- `authoring/generate-candidates.mjs` integration — every batch run respects the new constraint without remembering to.
 - Memory pin "Bhutan ambiguousColors is black not white" — protects the contested-colour identity against re-derivation.
 
 **Key PRs.** #381 (DATA_FEATURE.md proposal), #400 (seed data), #401 (audit module + CLI), #402 (offender rework + hard rule), #403 (generator wiring), #404 (rule 15 in skill), #406 (Bhutan pin correction), #407–#409 (sweeps).

@@ -28,9 +28,9 @@ jobs:
           node-version: '22'
       # Tests read the daily catalog from `.catalog/` (Phase 3 of Feature
       # P — blob is the source of truth, no committed copies in the repo).
-      # catalog-pull.mjs is built-in-only (`node:fs/promises` + `fetch`),
+      # authoring/pull.mjs is built-in-only (`node:fs/promises` + `fetch`),
       # so no `npm ci` needed.
-      - run: npm run catalog:pull
+      - run: node authoring/pull.mjs
       - run: npm test
 
   typecheck:

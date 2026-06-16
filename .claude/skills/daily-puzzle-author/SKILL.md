@@ -1,30 +1,37 @@
 ---
 name: daily-puzzle-author
-description: Adds or vets entries in the gridgame daily-puzzle catalog (daily/daily_puzzles.json and daily/daily_backlog.json). Use when authoring a new puzzle, refilling the backlog, releasing the next backlog entry to live, or reviewing whether a proposed filter would make a good puzzle. Carries the 15 rules (9 hard / 6 soft) that the catalog and tests enforce — primary-clean colours, small-property compounds, no-subset, single-use tokens, en+pl descriptions, flag-data ambiguity, etc. Pulls from flags/countries.json so changes to country data don't require re-deriving the rules.
+description: Owns the daily-puzzle catalog end-to-end. Use when Jan asks to add a puzzle, refill the backlog, generate candidate ideas, promote an idea to backlog, review what's currently in backlog or ideas, audit flag-data ambiguity, or anything else that touches the catalog. The agent pulls the current state from blob, edits in `.catalog/`, runs `npm test`, shows Jan the diff for player-affecting changes, and pushes to blob. Carries the 15 rules (9 hard / 6 soft) that the catalog and tests enforce — primary-clean colours, small-property compounds, no-subset, single-use tokens, en+pl descriptions, flag-data ambiguity, etc.
 ---
 
 # Daily-puzzle author
 
-The daily catalog lives in the public-read Azure blob `styetanotherquiz/catalog/` — five files, **not in the repo**. The working copy lives at `.catalog/` (gitignored), populated by `npm run catalog:pull`. After edits, `npm run catalog:push` validates locally and uploads.
+The daily catalog lives in the public-read Azure blob `styetanotherquiz/catalog/` — five files, **not in the repo**. Everything in this skill operates against blob (via the `.catalog/` working copy the agent maintains).
 
-- `.catalog/live.json` — released puzzles, visible to players. "Today's puzzle" = last entry.
-- `.catalog/backlog.json` — staged, hidden. Releasing = move `backlog[0]` to the end of live (see **Releasing** below — the Function does this nightly).
+- `live.json` — released puzzles, visible to players. "Today's puzzle" = last entry.
+- `backlog.json` — staged, hidden. Releasing = move `backlog[0]` to the end of live (the Function does this nightly — see **Releasing** below).
+- `ideas.json` — **active review pipeline**. Fresh brainstorm candidates Jan reviews on `/daily/ideas/` and promotes to the backlog. Each entry: `{ "filter", "notes", "answers", "difficulty", "suggestedN" }`.
+- `parked.json` — **waiting room** for filters that don't fit current rules but are worth keeping for past-#100 use or until a constraint changes. Each entry: `{ "filter", "notes" }` only — no `answers`, no `difficulty`. Not rendered on `/daily/ideas/`, not checked by tests. Ask explicitly ("what's parked", "promote some parked") to consult this file.
+- `policy.json` — single-use-token policy (rule 14). Lists each token and its rationale.
 
-Each entry is `{ "n": <int>, "filter": "<filterString>", "answers": ["<code>", ...], "description": { "en": "...", "pl": "..." } }`. Numbering is sequential across the two files (live ends at N → backlog starts at N+1).
+Each `live` / `backlog` entry is `{ "n": <int>, "filter": "<filterString>", "answers": ["<code>", ...], "description": { "en": "...", "pl": "..." } }`. Numbering is sequential across the two files (live ends at N → backlog starts at N+1).
 
-Plus three author-only files:
+## Agent workflow
 
-- `.catalog/ideas.json` — **active review pipeline**. Fresh brainstorm candidates the author reviews on `/daily/ideas/` and promotes to the backlog. Each entry: `{ "filter", "notes", "answers", "difficulty", "suggestedN" }`. The ideas-no-subset test enforces rule 6 against these.
-- `.catalog/parked.json` — **waiting room** for filters that don't fit the current rules but are worth keeping for past-#100 use or until a constraint changes (rule 5 needs primaryCleanExempt, rule 14 single-use already burned, etc.). Each entry: `{ "filter", "notes" }` only — no `answers`, no `difficulty` (they're not active candidates). Not rendered on `/daily/ideas/`, not checked by the catalog tests. Ask explicitly ("what's parked", "promote some parked") to consult this file.
-- `.catalog/policy.json` — single-use-token policy (rule 14). Lists each token and its rationale.
+Jan does not run pull/push/test himself. The agent owns the loop and runs the primitives in `authoring/` directly on every catalog operation. For any request that *changes* the catalog (add, promote, refill, generate, edit), follow this loop:
 
-**Authoring loop (Phase 3 of Feature P, 2026-06-16):**
-1. `npm run catalog:pull` — fetch the current state of all five files from blob.
-2. Edit `.catalog/*.json` as needed (hand-edit, or `node scripts/generate-candidates.mjs` to brainstorm).
-3. `npm test` — runs the rule suite against `.catalog/`.
-4. `npm run catalog:push` — validates, shows diff + asks `y/N` if `live.json` or `backlog.json` changed, uploads.
+1. **Pull** — `node authoring/pull.mjs` to sync `.catalog/` with blob. Always pull at the start of any session that will mutate, even if `.catalog/` exists from a prior run — between sessions, the midnight Function may have promoted, or Jan may have edited elsewhere.
+2. **Edit** — apply the change in `.catalog/*.json`. Hand-write the en + pl description for new entries. For brainstorm batches, `node authoring/generate-candidates.mjs`.
+3. **Test** — `npm test`. The full rule suite drives off `.catalog/`; this is the same gate `authoring/push.mjs` runs internally, but running it explicitly surfaces failure messages cleanly.
+4. **Show + confirm** — for any change to `live.json` or `backlog.json`, show Jan the diff (`git diff --no-index .catalog/.snapshot/<file>.json .catalog/<file>.json`) and ask for confirmation before pushing. For changes to `ideas.json` / `parked.json` / `policy.json`, push silently — these are author-state, not player-facing.
+5. **Push** — `node authoring/push.mjs` (add `--yes` to skip the internal prompt; the agent already confirmed in step 4). Push validates against the hard rules a second time and uploads.
 
-`catalog:push` refuses to overwrite a remote that moved since the last pull (e.g. the midnight Function promoted while you were editing) — it'll point you back at `catalog:pull`. Pass `--yes` to skip the diff/confirm prompt (e.g. after a generator run you've already reviewed via `/daily/ideas/`).
+Read-only operations (review what's in backlog, count entries, etc.) only need step 1 (pull) and then read from `.catalog/`.
+
+For brainstorm review Jan can open `/daily/ideas/` in his browser — it reads blob directly, so after step 5 (push) the page reflects the new ideas immediately. Same for `/daily/backlog/`.
+
+## Conflict handling
+
+`authoring/push.mjs` refuses to overwrite blob if the remote moved since the last pull (e.g. the midnight Function promoted while we were editing). On conflict: re-pull, re-apply the user's edits on top of the new state, re-test, push again. Tell Jan a conflict happened — don't silently re-do the edits, because the new state may have changed what counts as "next" entry numbering.
 
 ## Releasing
 
@@ -124,7 +131,7 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
    *Enforcement is three-layered, all of it test-pinned or generator-enforced:*
    - **Catalog test** — fires on live + backlog pairs at `npm test` time.
    - **Ideas test** — fires on every entry in `daily_ideas.json`, against (live ∪ backlog ∪ other ideas). Parked filters live in a separate `daily_parked.json` and aren't loaded by this test.
-   - **Generator** (`scripts/generate-candidates.mjs`) enforces refined rule 6 within each batch — every new candidate is checked against (live ∪ backlog ∪ everything already accepted in the current run).
+   - **Generator** (`authoring/generate-candidates.mjs`) enforces refined rule 6 within each batch — every new candidate is checked against (live ∪ backlog ∪ everything already accepted in the current run).
 
 7. **Every puzzle has en + pl descriptions.** *(description test)* `entry.description.en` and `entry.description.pl` must both be non-empty strings. The sentence renders under the daily header to turn the pill chain ("Europe · cross") into plain language ("Find all European flags with a cross"). *Why:* a player reported reading "Europe · cross" as the puzzle title rather than the filter spec — they didn't realise they had to find flags that had a cross. The helper sentence closes that gap. Auto-generation was rejected because mixed include/exclude phrasing reads badly in EN and PL grammar needs a human (gendered adjectives, instrumental case). The shape stays narrow ("Find all X flags with/without Y") so it doesn't drift into a paragraph.
 
@@ -182,7 +189,7 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
 
     *Why:* same failure shape as rule 5 (primary-clean) — a flag the game "judges" against a player's plausible count reads as "the game is wrong." Bhutan in `Asia + yellow + colorCount:3` was the poster-child: the dragon outline is the only white, and reasonable players land on 3 or 4 colours.
 
-    *Authoring cue:* `node scripts/audit-flag-ambiguity.mjs` reports any violation across live + backlog + ideas with the offending flag and constraint — same gate as the test enforces, friendlier output. Run it after hand-editing a puzzle to surface the case the test would catch anyway, with a more readable message. `scripts/generate-candidates.mjs` applies the audit inline so brainstorm batches never propose ambig-broken candidates in the first place.
+    *Authoring cue:* `node authoring/audit-ambiguity.mjs` reports any violation across live + backlog + ideas with the offending flag and constraint — same gate as the test enforces, friendlier output. Run it after hand-editing a puzzle to surface the case the test would catch anyway, with a more readable message. `authoring/generate-candidates.mjs` applies the audit inline so brainstorm batches never propose ambig-broken candidates in the first place.
 
 ## Difficulty scoring
 
@@ -235,7 +242,7 @@ Prompt: **"generate N candidates"** (with optional qualifiers). Examples:
 - `"generate 20 exploiting `colorCount:>=N`"` — focused on one mechanic
 - `"fill the backlog to #200"` — compute how many needed, generate that many
 
-Tool: `node scripts/generate-candidates.mjs`. The script enumerates filter templates (continent×color, continent×motif, `colorCount:N` and `colorCount:>=N` combos, exclude patterns), validates each against the hard rules + the size band of rule 9, scores with `daily/difficulty.js`, and writes survivors as `{ filter, notes, answers, difficulty, suggestedN }` entries **appended** to `daily/daily_ideas.json` — existing entries (including the parked `parkUntilN: 101` ones) stay at the top of the file.
+Tool: `node authoring/generate-candidates.mjs`. The script enumerates filter templates (continent×color, continent×motif, `colorCount:N` and `colorCount:>=N` combos, exclude patterns), validates each against the hard rules + the size band of rule 9, scores with `daily/difficulty.js`, and writes survivors as `{ filter, notes, answers, difficulty, suggestedN }` entries **appended** to `.catalog/ideas.json` — existing entries (including the parked `parkUntilN: 101` ones) stay at the top of the file.
 
 **What the script checks programmatically** (no manual review needed):
 - Rule 1: filter parses + non-empty answer set
