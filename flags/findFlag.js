@@ -11,9 +11,9 @@ import { emptyFilters, matchesFilters, COLOR_COUNT_OPS, COLOR_COUNT_NS } from '.
  * surface it, but legacy rehydration via `?cat=statehood:…` still maps
  * through this list to keep round-trips total.
  *
- * @type {Array<'continent' | 'color' | 'motif' | 'status'>}
+ * @type {Array<'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'>}
  */
-const GROUP_ORDER = ['continent', 'color', 'motif', 'status'];
+const GROUP_ORDER = ['continent', 'color', 'motif', 'status', 'stripesOnly'];
 
 const FIND_INCLUDE_ALL_KEY = 'gridgame.flagfind.includeAll';
 
@@ -201,6 +201,10 @@ export function filterFromLegacyCat(cat) {
     f.status.include.add(cat.slice('statehood:'.length));
     return f;
   }
+  if (cat.startsWith('stripesOnly:')) {
+    f.stripesOnly.include.add(cat.slice('stripesOnly:'.length));
+    return f;
+  }
   return null;
 }
 
@@ -250,6 +254,8 @@ export function pillLabel(group, value, sign, translate) {
     body = translate(`color.${value}`, value);
   } else if (group === 'motif') {
     body = translate(`motif.${value}`, value);
+  } else if (group === 'stripesOnly') {
+    body = translate(`stripesOnly.${value}`, `${value} stripes only`);
   } else if (group === 'colorCount') {
     // colorCount is a scalar; the "value" echoes the URL-suffix form:
     //   "N" or "=N" → exactly N, via filter.onlyN.<n>

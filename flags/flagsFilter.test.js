@@ -26,7 +26,7 @@ function country(over = {}) {
  */
 function filters(spec) {
   const f = emptyFilters();
-  for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'>} */ (Object.keys(spec))) {
+  for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'|'stripesOnly'>} */ (Object.keys(spec))) {
     const s = spec[k];
     if (!s) continue;
     if (s.include) f[k].include = new Set(s.include);
@@ -233,7 +233,7 @@ test('matchesFilters: colorCount combines with color includes — "only red+whit
 
 test('emptyFilters returns a fresh Filters with all include/exclude sets empty and colorCount null', () => {
   const f = emptyFilters();
-  for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'>} */ (['status','continent','color','motif'])) {
+  for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'|'stripesOnly'>} */ (['status','continent','color','motif','stripesOnly'])) {
     assert.equal(f[k].include.size, 0);
     assert.equal(f[k].exclude.size, 0);
   }
@@ -241,6 +241,61 @@ test('emptyFilters returns a fresh Filters with all include/exclude sets empty a
   // independence: mutating one instance doesn't affect a fresh one
   f.color.include.add('red');
   assert.equal(emptyFilters().color.include.size, 0);
+});
+
+// stripesOnly — scalar group: a flag has exactly one orientation, or null
+// (not pure stripes). Two-value AND is unsatisfiable; excluding a value
+// lets null-stripes flags through (`!horizontal` includes vertical AND null).
+
+test('matchesFilters: stripesOnly include matches the flag with that exact orientation', () => {
+  const fr = country({ code: 'fr', stripesOnly: 'vertical' });
+  const de = country({ code: 'de', stripesOnly: 'horizontal' });
+  const mx = country({ code: 'mx', stripesOnly: null });
+  const f = filters({ stripesOnly: { include: ['vertical'] } });
+  assert.equal(matchesFilters(fr, f), true);
+  assert.equal(matchesFilters(de, f), false);
+  assert.equal(matchesFilters(mx, f), false);
+});
+
+test('matchesFilters: stripesOnly include with two values is unsatisfiable (scalar AND)', () => {
+  const f = filters({ stripesOnly: { include: ['horizontal', 'vertical'] } });
+  assert.equal(matchesFilters(country({ stripesOnly: 'horizontal' }), f), false);
+  assert.equal(matchesFilters(country({ stripesOnly: 'vertical' }), f), false);
+  assert.equal(matchesFilters(country({ stripesOnly: null }), f), false);
+});
+
+test('matchesFilters: stripesOnly exclude rejects the excluded orientation and lets null through', () => {
+  const f = filters({ stripesOnly: { exclude: ['horizontal'] } });
+  assert.equal(matchesFilters(country({ stripesOnly: 'horizontal' }), f), false);
+  assert.equal(matchesFilters(country({ stripesOnly: 'vertical' }), f), true);
+  // null-stripes flags must pass — "not horizontal stripes" includes flags
+  // that aren't pure stripes at all (Mexico, US, UK, Switzerland, …).
+  assert.equal(matchesFilters(country({ stripesOnly: null }), f), true);
+});
+
+test('matchesFilters: stripesOnly defaults missing field to null and rejects positive include', () => {
+  // Country object with no stripesOnly property — should behave like null.
+  const c = country({});
+  const inc = filters({ stripesOnly: { include: ['horizontal'] } });
+  assert.equal(matchesFilters(c, inc), false);
+  const exc = filters({ stripesOnly: { exclude: ['horizontal'] } });
+  assert.equal(matchesFilters(c, exc), true);
+});
+
+test('matchesFilters: stripesOnly composes with continent (the daily-puzzle use case)', () => {
+  // "European horizontal-stripe flags" — the canonical puzzle filter shape.
+  const f = filters({
+    continent: { include: ['Europe'] },
+    stripesOnly: { include: ['horizontal'] },
+  });
+  const de = country({ code: 'de', continent: 'Europe', stripesOnly: 'horizontal' });
+  const fr = country({ code: 'fr', continent: 'Europe', stripesOnly: 'vertical' });
+  const ng = country({ code: 'ng', continent: 'Africa', stripesOnly: 'vertical' });
+  const eg = country({ code: 'eg', continent: 'Africa', stripesOnly: null });
+  assert.equal(matchesFilters(de, f), true);
+  assert.equal(matchesFilters(fr, f), false);
+  assert.equal(matchesFilters(ng, f), false);
+  assert.equal(matchesFilters(eg, f), false);
 });
 
 // createColorCountLock — the state machine behind the "no other colours"

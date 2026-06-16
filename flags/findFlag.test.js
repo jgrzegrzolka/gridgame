@@ -172,6 +172,31 @@ test('serializeFilter: empty filter serializes to empty string', () => {
   assert.equal(serializeFilter(emptyFilters()), '');
 });
 
+test('parseFilterString: stripesOnly include/exclude tokens land in the right group', () => {
+  const f = parseFilterString('continent:Europe,stripesOnly:horizontal');
+  assert.ok(f);
+  assert.deepEqual([...f.stripesOnly.include], ['horizontal']);
+  assert.equal(f.stripesOnly.exclude.size, 0);
+
+  const g = parseFilterString('stripesOnly:!vertical');
+  assert.ok(g);
+  assert.deepEqual([...g.stripesOnly.exclude], ['vertical']);
+  assert.equal(g.stripesOnly.include.size, 0);
+});
+
+test('serializeFilter: round-trips a stripesOnly filter deterministically', () => {
+  const s = 'continent:Europe,stripesOnly:horizontal';
+  const f = parseFilterString(s);
+  assert.ok(f);
+  assert.equal(serializeFilter(f), s);
+});
+
+test('filterFromLegacyCat: stripesOnly:<orientation> hydrates to a single-include filter', () => {
+  const f = filterFromLegacyCat('stripesOnly:vertical');
+  assert.ok(f);
+  assert.deepEqual([...f.stripesOnly.include], ['vertical']);
+});
+
 test('parseFilterString: bare colorCount:N parses as op=, n:N (back-compat with pre-op daily entries)', () => {
   const f = parseFilterString('continent:Europe,color:red,color:white,color:blue,colorCount:3');
   assert.ok(f);
@@ -284,6 +309,13 @@ test('pillLabel: exclude prefixes a lowercase "not " on the same bare noun', () 
   assert.equal(pillLabel('continent', 'Africa', 'exclude', idTranslate), 'not Africa');
   assert.equal(pillLabel('color', 'orange', 'exclude', idTranslate), 'not orange');
   assert.equal(pillLabel('motif', 'cross', 'exclude', idTranslate), 'not cross');
+});
+
+test('pillLabel: stripesOnly renders the baked English fallback when no translation is supplied', () => {
+  // No translation table → idTranslate returns the fallback the renderer
+  // hands it (`"<orientation> stripes only"`).
+  assert.equal(pillLabel('stripesOnly', 'horizontal', 'include', idTranslate), 'horizontal stripes only');
+  assert.equal(pillLabel('stripesOnly', 'vertical', 'exclude', idTranslate), 'not vertical stripes only');
 });
 
 test('filterTitle: joins selected pills with the interpunct separator in GROUP_ORDER', () => {

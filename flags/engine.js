@@ -7,6 +7,23 @@
  * @property {string} label
  * @property {(country: Country) => boolean} predicate
  * @property {string} [exclusiveGroup]
+ *   When set, two categories with the same `exclusiveGroup` but different
+ *   `id` can never coexist on opposite axes (axesConflict catches it).
+ *   Handles same-dimension impossibilities — `Europe × Asia`,
+ *   `colorCount:=2 × colorCount:=3`.
+ * @property {string[]} [incompatibleWith]
+ *   List of category ids this one must never pair with across axes.
+ *   Handles cross-dimension structural disjointness — `stripesOnly:*` lists
+ *   every charge motif (`hasMotif:cross`, `coat-of-arms`, etc.) because a
+ *   pure-stripes flag has no overlay by definition, so those cells are
+ *   always empty. Symmetric — axesConflict checks both directions.
+ * @property {boolean} [ultimateEligible]
+ *   When explicitly `false`, the category is excluded from the 9×9 random
+ *   pool. Used for categories whose answer pools are too narrow to back
+ *   9-per-cell Hall-marriage solvability — e.g. stripesOnly:vertical has
+ *   only 5 European flags. 3×3 (`generateRandomPuzzle`) still includes
+ *   them because minPerCell=2 is achievable. Default behaviour
+ *   (undefined / true) keeps the category in both pools.
  */
 
 /**
@@ -87,6 +104,60 @@ export function statehood(value, label) {
     exclusiveGroup: 'statehood',
   };
 }
+
+/**
+ * Charge motifs — any visual element overlaid on a flag's field. A flag
+ * whose `motifs` carries any of these can never be pure equal-band stripes
+ * by definition. The single source of truth: `hasStripesOnly` reads it to
+ * declare `incompatibleWith` so the generator skips the pair before testing
+ * cells; `authoring/audit-stripe-orientation.mjs` reads it to surface
+ * `stripesOnly`-tagged countries that contradict it.
+ *
+ * Kept narrow: `eu-member` is a *political* tag, not a visual element, so
+ * it stays out (most pure tricolours are EU members).
+ *
+ * @type {string[]}
+ */
+export const CHARGE_MOTIFS = [
+  'cross', 'coat-of-arms', 'animal', 'bird',
+  'weapon', 'star-or-moon', 'union-jack',
+];
+
+/** Pre-resolved category ids for stripesOnly's `incompatibleWith`. Hoisted
+ * out of the factory body so the list is computed once at module load,
+ * not once per `hasStripesOnly()` call (every pool build triggers two). */
+const STRIPES_ONLY_INCOMPATIBLE = CHARGE_MOTIFS.map((m) => `hasMotif:${m}`);
+
+/**
+ * "Pure stripes" Category — matches when the country's `stripesOnly` field
+ * equals the orientation. The factory wires three pieces of behaviour:
+ *
+ *   - `exclusiveGroup: 'stripesOnly'` — `horizontal` and `vertical` can
+ *     never appear on opposite axes (a flag can't be both).
+ *   - `incompatibleWith` lists every charge motif id, so the generator
+ *     never tries to pair stripesOnly with a charge — the resulting cell
+ *     is empty by construction.
+ *   - `ultimateEligible: false` keeps stripesOnly out of the 9×9 pool:
+ *     European horizontals (8) and verticals (5) are both under 9, and
+ *     other continents are tighter, so Hall-marriage solvability fails.
+ *     Daily-puzzle authoring (which hand-picks compounds) is unaffected.
+ *
+ * @param {'horizontal' | 'vertical'} orientation
+ * @returns {Category}
+ */
+export function hasStripesOnly(orientation) {
+  return {
+    id: `stripesOnly:${orientation}`,
+    label: `${orientation} stripes only`,
+    predicate: (c) => c.stripesOnly === orientation,
+    exclusiveGroup: 'stripesOnly',
+    incompatibleWith: STRIPES_ONLY_INCOMPATIBLE,
+    ultimateEligible: false,
+  };
+}
+
+/** @type {Array<'horizontal' | 'vertical'>} */
+export const STRIPES_ORIENTATIONS_FOR_RANDOM = ['horizontal', 'vertical'];
 
 /** @type {Continent[]} */
 export const CONTINENTS_FOR_RANDOM = [
@@ -265,6 +336,7 @@ function pickRandom(pool, n, rng) {
  *      "Continent: Africa".)
  *   `hasColor:<x>`     → `color.<x>` (bare noun, no "Has " wrapper).
  *   `hasMotif:<x>`     → `motif.<x>` (bare noun, no "Has " wrapper).
+ *   `stripesOnly:<o>`  → `stripesOnly.<o>` (e.g. "horizontal stripes only").
  *
  * @param {Category} category
  * @param {(key: string, fallback: string) => string} translate
@@ -284,6 +356,9 @@ export function translateCategoryLabel(category, translate) {
   }
   if (kind === 'hasMotif') {
     return translate(`motif.${value}`, value);
+  }
+  if (kind === 'stripesOnly') {
+    return translate(`stripesOnly.${value}`, category.label);
   }
   if (kind === 'colorCount') {
     // The id suffix is the URL-suffix form: bare "N" → `filter.onlyN.N`,
@@ -315,6 +390,11 @@ export function categoryFromId(id) {
   if (id.startsWith('hasColor:')) return hasColor(id.slice('hasColor:'.length));
   if (id.startsWith('hasMotif:')) return hasMotif(id.slice('hasMotif:'.length));
   if (id.startsWith('statehood:')) return statehood(id.slice('statehood:'.length));
+  if (id.startsWith('stripesOnly:')) {
+    const v = id.slice('stripesOnly:'.length);
+    if (v === 'horizontal' || v === 'vertical') return hasStripesOnly(v);
+    return null;
+  }
   if (id.startsWith('colorCount:')) {
     const suffix = id.slice('colorCount:'.length);
     /** @type {'=' | '>=' | '<='} */
@@ -336,7 +416,19 @@ export function buildRandomCategoryPool() {
     ...COLORS_FOR_RANDOM.map(hasColor),
     ...MOTIFS_FOR_RANDOM.map(hasMotif),
     ...COLOR_COUNTS_FOR_RANDOM.map(([op, n]) => colorCount(op, n)),
+    ...STRIPES_ORIENTATIONS_FOR_RANDOM.map(hasStripesOnly),
   ];
+}
+
+/**
+ * Subset of the 3×3 pool that can back a 9×9 Ultimate puzzle. Drops any
+ * category marked `ultimateEligible: false` — currently the stripesOnly
+ * pair, whose answer sets are too narrow to satisfy 9-distinct-per-cell.
+ *
+ * @returns {Category[]}
+ */
+export function buildUltimateCategoryPool() {
+  return buildRandomCategoryPool().filter((cat) => cat.ultimateEligible !== false);
 }
 
 /**
@@ -346,9 +438,15 @@ export function buildRandomCategoryPool() {
  */
 export function axesConflict(rows, cols) {
   for (const r of rows) {
-    if (!r.exclusiveGroup) continue;
     for (const c of cols) {
-      if (r.exclusiveGroup === c.exclusiveGroup && r.id !== c.id) {
+      if (r.exclusiveGroup && r.exclusiveGroup === c.exclusiveGroup && r.id !== c.id) {
+        return true;
+      }
+      // Cross-dimension structural disjointness — both directions checked
+      // so the declaration only needs to live on one side. stripesOnly's
+      // factory lists its incompatible charge-motif ids; the symmetric
+      // check means `hasMotif:cross` doesn't need a reciprocal entry.
+      if (r.incompatibleWith?.includes(c.id) || c.incompatibleWith?.includes(r.id)) {
         return true;
       }
     }
@@ -405,10 +503,13 @@ export function axesImpliedPair(rows, cols, countries) {
 
 /**
  * @param {() => number} [rng]
+ * @param {Category[]} [pool] Defaults to the full 3×3 random pool. Pass
+ *   `buildUltimateCategoryPool()` to draw only from categories whose
+ *   answer set can support 9-per-cell.
  * @returns {Puzzle}
  */
-export function randomPuzzle(rng = Math.random) {
-  const six = pickRandom(buildRandomCategoryPool(), 6, rng);
+export function randomPuzzle(rng = Math.random, pool = buildRandomCategoryPool()) {
+  const six = pickRandom(pool, 6, rng);
   return {
     rows: six.slice(0, 3),
     cols: six.slice(3, 6),
@@ -708,8 +809,9 @@ export function hasUltimatePuzzleSolution(puzzle, countries, perCell = 9) {
  */
 export function generateUltimateRandomPuzzle(countries, options = {}) {
   const { rng = Math.random, maxAttempts = 500 } = options;
+  const pool = buildUltimateCategoryPool();
   for (let i = 0; i < maxAttempts; i++) {
-    const puzzle = randomPuzzle(rng);
+    const puzzle = randomPuzzle(rng, pool);
     if (axesConflict(puzzle.rows, puzzle.cols)) continue;
     if (axesImpliedPair(puzzle.rows, puzzle.cols, countries)) continue;
     if (hasUltimatePuzzleSolution(puzzle, countries)) {

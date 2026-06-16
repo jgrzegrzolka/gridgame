@@ -22,6 +22,7 @@ import { sovereigntyOf } from './group.js';
  *   continent: FilterSet,
  *   color: FilterSet,
  *   motif: FilterSet,
+ *   stripesOnly: FilterSet,
  *   colorCount: ColorCountConstraint | null,
  * }} Filters
  */
@@ -56,6 +57,7 @@ export function emptyFilters() {
     continent: { include: new Set(), exclude: new Set() },
     color: { include: new Set(), exclude: new Set() },
     motif: { include: new Set(), exclude: new Set() },
+    stripesOnly: { include: new Set(), exclude: new Set() },
     colorCount: null,
   };
 }
@@ -190,6 +192,18 @@ export function matchesFilters(country, filters, options = {}) {
     if (!motifs.includes(m)) return false;
   }
   if (filters.motif.exclude.size && motifs.some((m) => filters.motif.exclude.has(m))) return false;
+
+  // stripesOnly is scalar like continent / status: a country has exactly one
+  // value (or null). Two-value AND is unsatisfiable. Excluding a value lets
+  // null-stripes flags through — `stripesOnly:!horizontal` reads as "anything
+  // not pure-horizontal", which includes both vertical and the null cases.
+  const stripes = country.stripesOnly ?? null;
+  if (filters.stripesOnly.include.size) {
+    if (filters.stripesOnly.include.size > 1) return false;
+    if (stripes === null) return false;
+    if (!filters.stripesOnly.include.has(stripes)) return false;
+  }
+  if (stripes !== null && filters.stripesOnly.exclude.has(stripes)) return false;
 
   return true;
 }
