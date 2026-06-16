@@ -27,9 +27,12 @@ import {
   COLORS_FOR_RANDOM,
   MOTIFS_FOR_RANDOM,
   COLOR_COUNTS_FOR_RANDOM,
+  STRIPES_ORIENTATIONS_FOR_RANDOM,
   ALL_MOTIFS,
   colorCount,
   categoryFromId,
+  hasStripesOnly,
+  buildUltimateCategoryPool,
 } from './engine.js';
 import { createCountry } from './group.js';
 
@@ -464,7 +467,7 @@ test('randomPuzzle yields 3 row categories and 3 column categories', () => {
   assert.equal(p.cols.length, 3);
 });
 
-test('randomPuzzle categories come from the unified pool (continent / colour / motif / colorCount)', () => {
+test('randomPuzzle categories come from the unified pool (continent / colour / motif / colorCount / stripesOnly)', () => {
   const p = randomPuzzle(mulberry32(1));
   for (const cat of [...p.rows, ...p.cols]) {
     if (cat.id.startsWith('continent:')) {
@@ -475,6 +478,9 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
     } else if (cat.id.startsWith('hasMotif:')) {
       const motif = cat.id.slice('hasMotif:'.length);
       assert.ok(MOTIFS_FOR_RANDOM.includes(motif), `motif ${motif} not in palette`);
+    } else if (cat.id.startsWith('stripesOnly:')) {
+      const orientation = cat.id.slice('stripesOnly:'.length);
+      assert.ok(STRIPES_ORIENTATIONS_FOR_RANDOM.includes(/** @type {any} */ (orientation)), `stripesOnly ${orientation} not in palette`);
     } else if (cat.id.startsWith('colorCount:')) {
       const suffix = cat.id.slice('colorCount:'.length);
       /** @type {'=' | '>='} */
@@ -537,13 +543,14 @@ test('continent and statehood categories carry their exclusiveGroup', () => {
   assert.equal(hasMotif('animal').exclusiveGroup, undefined);
 });
 
-test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount', () => {
+test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly', () => {
   const pool = buildRandomCategoryPool();
   const expected =
     CONTINENTS_FOR_RANDOM.length
     + COLORS_FOR_RANDOM.length
     + MOTIFS_FOR_RANDOM.length
-    + COLOR_COUNTS_FOR_RANDOM.length;
+    + COLOR_COUNTS_FOR_RANDOM.length
+    + STRIPES_ORIENTATIONS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -570,6 +577,88 @@ test('axesConflict returns false when no categories share an exclusiveGroup', ()
     [hasColor('green'), hasMotif('weapon'), hasMotif('coat-of-arms')],
   );
   assert.equal(conflict, false);
+});
+
+test('hasStripesOnly factory wires id, predicate, exclusiveGroup, incompatibleWith, ultimateEligible', () => {
+  const h = hasStripesOnly('horizontal');
+  assert.equal(h.id, 'stripesOnly:horizontal');
+  assert.equal(h.exclusiveGroup, 'stripesOnly');
+  assert.equal(h.ultimateEligible, false);
+  assert.ok(h.incompatibleWith?.includes('hasMotif:cross'));
+  assert.ok(h.incompatibleWith?.includes('hasMotif:coat-of-arms'));
+  assert.ok(h.incompatibleWith?.includes('hasMotif:animal'));
+  // eu-member is a political tag, not a visual charge — must NOT be on the list
+  assert.ok(!h.incompatibleWith?.includes('hasMotif:eu-member'));
+
+  const v = hasStripesOnly('vertical');
+  assert.equal(v.id, 'stripesOnly:vertical');
+  assert.equal(v.exclusiveGroup, 'stripesOnly');
+
+  // predicate keys on the country's stripesOnly field
+  const fr = country({ code: 'fr', name: 'France', stripesOnly: 'vertical' });
+  const de = country({ code: 'de', name: 'Germany', stripesOnly: 'horizontal' });
+  const mx = country({ code: 'mx', name: 'Mexico', stripesOnly: null });
+  assert.equal(v.predicate(fr), true);
+  assert.equal(h.predicate(de), true);
+  assert.equal(h.predicate(fr), false);
+  assert.equal(v.predicate(mx), false);
+});
+
+test('axesConflict catches stripesOnly:horizontal × stripesOnly:vertical (same exclusiveGroup)', () => {
+  const conflict = axesConflict(
+    [hasStripesOnly('horizontal'), hasColor('red'), continent('Europe')],
+    [hasStripesOnly('vertical'),   hasColor('blue'), hasMotif('eu-member')],
+  );
+  assert.equal(conflict, true);
+});
+
+test('axesConflict catches stripesOnly × charge motif via incompatibleWith (cross-dimension)', () => {
+  // A pure-stripes flag can have no overlaid charge by definition, so the
+  // cell stripesOnly × hasMotif:cross is structurally empty. The generator
+  // must skip the pair before testing cells.
+  const conflict = axesConflict(
+    [hasStripesOnly('horizontal'), continent('Europe'), hasColor('red')],
+    [hasMotif('cross'), hasColor('blue'), hasMotif('eu-member')],
+  );
+  assert.equal(conflict, true);
+});
+
+test('axesConflict checks incompatibleWith symmetrically (charge motif as row, stripesOnly as col)', () => {
+  const conflict = axesConflict(
+    [hasMotif('coat-of-arms'), continent('Africa'), hasColor('green')],
+    [hasStripesOnly('vertical'), hasColor('red'), hasColor('yellow')],
+  );
+  assert.equal(conflict, true);
+});
+
+test('axesConflict allows stripesOnly × eu-member (eu-member is not a visual charge)', () => {
+  const conflict = axesConflict(
+    [hasStripesOnly('horizontal'), continent('Europe'), hasColor('red')],
+    [hasMotif('eu-member'), hasColor('blue'), hasColor('white')],
+  );
+  assert.equal(conflict, false);
+});
+
+test('buildUltimateCategoryPool excludes stripesOnly categories (their answer sets are too narrow for 9×9)', () => {
+  const ultPool = buildUltimateCategoryPool();
+  const stripes = ultPool.filter((c) => c.id.startsWith('stripesOnly:'));
+  assert.equal(stripes.length, 0, 'stripesOnly cats must not appear in the 9×9 pool');
+  // Sanity check — the non-stripesOnly cats survive
+  assert.equal(ultPool.length, buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length);
+});
+
+test('categoryFromId round-trips stripesOnly:horizontal and stripesOnly:vertical', () => {
+  const h = categoryFromId('stripesOnly:horizontal');
+  assert.ok(h);
+  assert.equal(h?.id, 'stripesOnly:horizontal');
+  assert.equal(h?.exclusiveGroup, 'stripesOnly');
+
+  const v = categoryFromId('stripesOnly:vertical');
+  assert.ok(v);
+  assert.equal(v?.id, 'stripesOnly:vertical');
+
+  // Garbage orientation → null, not a broken Category
+  assert.equal(categoryFromId('stripesOnly:diagonal'), null);
 });
 
 // axesImpliedPair — guards the (Europe × eu-member) class of degenerate cell
