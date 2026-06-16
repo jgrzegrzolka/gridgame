@@ -8,8 +8,7 @@
     "random": "Random",
     "yourStats": "Your stats",
     "includeTerritories": "Include territories & other flags",
-    "sync": "Sync across devices",
-    "synced": "✓ Synced"
+    "sync": "Sync across devices"
   },
   "nickname": {
     "label": "Nickname",
