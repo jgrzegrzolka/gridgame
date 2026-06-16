@@ -1,35 +1,42 @@
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY, STORAGE_KEY as DEVICE_STORAGE_KEY } from '../../flags/identity.js';
 import { mintClaimToken, redeemClaimToken } from '../../flags/syncClaimClient.js';
 import { syncPreview, syncMerge } from '../../flags/syncMergeClient.js';
+import { fetchSyncLink } from '../../flags/syncLinkClient.js';
+import { hydrateFromServer } from '../../flags/syncHydrate.js';
 import { t } from '../../i18n.js';
 
 /**
- * /profile/sync/ has three states:
+ * /profile/sync/ layout: a QR (always visible, lets any device link
+ * to this one) above an optional "Device is linked." pane that paints
+ * the shared post-merge deviceId. The pane is shown when:
  *
- *   1. Landed via `?claim=<token>` — the user just scanned a QR from
- *      another device. Auto-redeem the token, run preview, possibly
- *      show the merge wizard, run merge, swap localStorage.deviceId,
- *      flip to ✓ Linked.
+ *   - `localStorage.gridgame.identityId` is set (source device — it
+ *     was the one that scanned the QR; the merge handler set this
+ *     itself), OR
+ *   - the server-side `GET /api/v1/sync/link` says this deviceId is
+ *     in a link record (target device — discovered on visit; the
+ *     identityId is then back-filled into localStorage so subsequent
+ *     loads short-circuit the round-trip).
  *
- *   2. No `?claim=`, no identityId yet — "Show QR" affordance. Click
- *      mints a claim token, displays the QR inline. Other device
- *      scans the QR with its camera → lands on /profile/sync/?claim=…
- *      on that device → flow (1) runs there.
+ * Special URL params:
  *
- *   3. No `?claim=`, identityId already set — ✓ This device is linked.
- *      Re-link is V2 work; for now the linked state is terminal.
- *
- * Test-gate still applies — without `?test` on the URL, the page
- * redirects to /profile/.
+ *   ?claim=<token>     — landed from a QR scan. Auto-redeem → preview
+ *                        → maybe wizard → merge → swap deviceId →
+ *                        paint linked.
+ *   ?wizard-preview    — UI-only: opens the conflict wizard with mock
+ *                        data so layout can be iterated without two
+ *                        real devices.
  */
 export function bootSync() {
-  const unlinkedEl = document.getElementById('sync-unlinked');
   const linkedEl = document.getElementById('sync-linked');
+  const linkedDeviceIdEl = document.getElementById('sync-linked-deviceid');
   const qrContainerEl = document.getElementById('sync-qr-container');
   const qrSvgEl = document.getElementById('sync-qr-svg');
+  const qrLinkEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('sync-qr-link'));
   const statusEl = document.getElementById('sync-status');
+  const progressEl = document.getElementById('sync-progress');
   const wizardEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('sync-wizard'));
-  if (!unlinkedEl || !linkedEl || !qrContainerEl || !qrSvgEl || !statusEl || !wizardEl) return;
+  if (!linkedEl || !linkedDeviceIdEl || !qrContainerEl || !qrSvgEl || !qrLinkEl || !statusEl || !progressEl || !wizardEl) return;
 
   const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
 
@@ -44,13 +51,25 @@ export function bootSync() {
     statusEl.removeAttribute('data-i18n');
     statusEl.classList.remove('is-active');
   }
+  function showProgress() {
+    progressEl.hidden = false;
+  }
+  function hideProgress() {
+    progressEl.hidden = true;
+  }
 
   function paintLinkedState() {
-    let stored = null;
-    try { stored = window.localStorage.getItem(IDENTITY_STORAGE_KEY); } catch {}
-    const isLinked = typeof stored === 'string' && stored.length > 0;
-    unlinkedEl.hidden = isLinked;
+    let storedIdentity = null;
+    let storedDeviceId = null;
+    try {
+      storedIdentity = window.localStorage.getItem(IDENTITY_STORAGE_KEY);
+      storedDeviceId = window.localStorage.getItem(DEVICE_STORAGE_KEY);
+    } catch {}
+    const isLinked = typeof storedIdentity === 'string' && storedIdentity.length > 0;
     linkedEl.hidden = !isLinked;
+    if (isLinked && storedDeviceId) {
+      linkedDeviceIdEl.textContent = storedDeviceId;
+    }
   }
 
   // ---- Path 1: arriving with ?claim=<token> ----
@@ -73,29 +92,60 @@ export function bootSync() {
     return;
   }
 
-  // ---- Path 2 / 3: unlinked or linked ----
+  // Paint linked state from whatever localStorage knows right now,
+  // then kick off the server-side discovery in parallel for the
+  // target-device case (where only the server knows we're linked).
   paintLinkedState();
   document.addEventListener('langchanged', paintLinkedState);
+  void discoverLinkedFromServer();
 
-  // Auto-mint the QR on page load when the user is unlinked — the
-  // page exists to show one specific affordance, no reason to gate
-  // it behind a button click. Token expires in 5 min; user can
-  // reload to get a fresh one.
-  let stored = null;
-  try { stored = window.localStorage.getItem(IDENTITY_STORAGE_KEY); } catch {}
-  const isAlreadyLinked = typeof stored === 'string' && stored.length > 0;
-  if (!isAlreadyLinked) {
-    void (async () => {
-      const mint = await mintClaimToken({ deviceId });
-      if (!mint.ok) {
-        showStatus('sync.error.generic', 'Couldn’t prepare the link — try again.');
-        return;
-      }
-      // Inline the SVG. qrcode-svg's output is a self-contained
-      // <svg>…</svg> string with no scripts.
-      qrSvgEl.innerHTML = mint.qrSvg;
-      qrContainerEl.hidden = false;
-    })();
+  // Auto-mint a QR on every page load — even when already linked.
+  // The QR is the affordance for "let another device join the link",
+  // and post-merge that's a perfectly normal thing to want (the
+  // existing pair just absorbs a third browser). Tokens expire in
+  // 5 min; reloading mints a fresh one.
+  void (async () => {
+    const mint = await mintClaimToken({ deviceId });
+    if (!mint.ok) {
+      showStatus('sync.error.generic', 'Couldn’t prepare the link — try again.');
+      return;
+    }
+    // Inline the SVG. qrcode-svg's output is a self-contained
+    // <svg>…</svg> string with no scripts.
+    qrSvgEl.innerHTML = mint.qrSvg;
+    // Same URL the QR encodes, exposed as a plain link for the
+    // desktop-to-desktop case where neither side has a camera.
+    // Right-click → Copy link works in every browser; clicking
+    // opens it (handy when pasted into a second browser).
+    qrLinkEl.href = mint.claimUrl;
+    qrLinkEl.textContent = mint.claimUrl;
+    qrContainerEl.hidden = false;
+  })();
+
+  /**
+   * Ask the server whether this deviceId has been claimed (which
+   * means at some point another browser scanned a QR minted by this
+   * one and the merge stamped `linkedAt` on the profile row). Only
+   * the target browser needs this — the source browser already set
+   * its own identityId post-merge — but it's safe and cheap to run
+   * either way: a never-throw GET that no-ops when the cached
+   * identityId is already present.
+   */
+  async function discoverLinkedFromServer() {
+    let stored = null;
+    try { stored = window.localStorage.getItem(IDENTITY_STORAGE_KEY); } catch {}
+    if (typeof stored === 'string' && stored.length > 0) return;
+    const { linked } = await fetchSyncLink({ deviceId });
+    if (!linked) return;
+    try { window.localStorage.setItem(IDENTITY_STORAGE_KEY, deviceId); } catch {}
+    paintLinkedState();
+    // Now that we know this browser is the target of a link, pull
+    // every server-side row (daily history + quiz personal-bests) into
+    // local storage so /daily/archive and the quiz picker show the
+    // post-merge view, not just the plays this particular browser
+    // happened to make. Best-effort: a network failure leaves the
+    // page correctly painted as "linked" and the user can reload.
+    void hydrateFromServer({ deviceId, store: window.localStorage });
   }
 
   /**
@@ -105,11 +155,14 @@ export function bootSync() {
    * @param {string} token
    */
   async function runClaimFlow(token) {
-    // Use Path-2 hidden state during the redeem so the user sees
-    // *something* in the meantime.
-    showStatus('sync.redeeming', 'Linking this device to your other one…');
+    // Pulsing-dots progress line while the redeem / preview / merge
+    // round-trips are in flight, so the user sees *something* during
+    // the multi-second pipeline. Hidden again on success (linked-state
+    // section takes over) or replaced by an error string on failure.
+    showProgress();
     const redeem = await redeemClaimToken({ token });
     if (!redeem.ok) {
+      hideProgress();
       const reason = 'reason' in redeem ? redeem.reason : 'unknown';
       if (reason === 'expired_token') {
         showStatus('sync.error.expired', 'That QR has expired — generate a new one on your other device.');
@@ -128,13 +181,15 @@ export function bootSync() {
       try {
         window.localStorage.setItem(IDENTITY_STORAGE_KEY, targetDeviceId);
       } catch {}
+      hideProgress();
+      clearStatus();
       paintLinkedState();
-      showStatus('sync.signedinConfirm', 'Linked — your progress now syncs to this device.');
       return;
     }
 
     const preview = await syncPreview({ claimToken: token, sourceDeviceId: deviceId });
     if (!preview.ok) {
+      hideProgress();
       showStatus('sync.error.generic', 'Couldn’t link this device — try again.');
       return;
     }
@@ -142,6 +197,10 @@ export function bootSync() {
     /** @type {{ nickname?: 'target' | 'source', daily?: 'target' | 'source' }} */
     let resolutions = {};
     if (preview.daily || preview.profile) {
+      // Hide the progress line while the wizard is up — the dialog is
+      // the user's active surface, the dots underneath would just
+      // read as still-loading.
+      hideProgress();
       const w = await showWizard({ profile: preview.profile, daily: preview.daily });
       if (!w) {
         // User cancelled the wizard — bail without merging. Tell
@@ -153,10 +212,12 @@ export function bootSync() {
         return;
       }
       resolutions = w;
+      showProgress();
     }
 
     const mergeRes = await syncMerge({ claimToken: token, sourceDeviceId: deviceId, resolutions });
     if (!mergeRes.ok) {
+      hideProgress();
       showStatus('sync.error.generic', 'Couldn’t link this device — try again.');
       return;
     }
@@ -165,12 +226,21 @@ export function bootSync() {
       window.localStorage.setItem(DEVICE_STORAGE_KEY, targetDeviceId);
       window.localStorage.setItem(IDENTITY_STORAGE_KEY, targetDeviceId);
     } catch {
+      hideProgress();
       showStatus('sync.error.generic', 'Couldn’t link this device — try again.');
       return;
     }
 
+    hideProgress();
+    clearStatus();
     paintLinkedState();
-    showStatus('sync.signedinConfirm', 'Linked — your progress now syncs to this device.');
+    // Pull every server-side row (post-merge daily history + quiz
+    // PBs) into this browser's localStorage. Source's local cache
+    // up to this point was just source's own pre-link plays; after
+    // hydrate, /daily/archive and the quiz picker reflect the merged
+    // pool the user expects from "linked". Uses the NEW deviceId
+    // (targetDeviceId) since we just swapped.
+    void hydrateFromServer({ deviceId: targetDeviceId, store: window.localStorage });
   }
 
   /**

@@ -238,16 +238,21 @@ test('planEventsMerge: source events transfer to target partition, target dedupe
 
 // ---- planProfileMerge --------------------------------------------------
 
-test('planProfileMerge: no source row, target unchanged → no upsert/delete', () => {
+test('planProfileMerge: no source row, target unchanged nickname → still upserts to stamp linkedAt', () => {
+  // Pre-link-marker behaviour was "no-op when nothing material to merge".
+  // Post-marker we always upsert so the target row carries `linkedAt: now`,
+  // which is how the QR-shower device discovers that it was claimed.
   const r = planProfileMerge({
     targetRow: { id: TGT, deviceId: TGT, nickname: 'Alice', updatedAt: 100 },
     sourceRow: null, targetDeviceId: TGT, sourceDeviceId: SRC, nicknameChoice: 'target', now: NOW,
   });
-  assert.equal(r.upserts.length, 0);
+  assert.equal(r.upserts.length, 1);
+  assert.equal(r.upserts[0].doc.nickname, 'Alice');
+  assert.equal(r.upserts[0].doc.linkedAt, NOW);
   assert.equal(r.deletes.length, 0);
 });
 
-test('planProfileMerge: source has nickname, target does not → transfer to target', () => {
+test('planProfileMerge: source has nickname, target does not → transfer to target with linkedAt', () => {
   const r = planProfileMerge({
     targetRow: null,
     sourceRow: { id: SRC, deviceId: SRC, nickname: 'Bob', updatedAt: 200 },
@@ -257,21 +262,24 @@ test('planProfileMerge: source has nickname, target does not → transfer to tar
   assert.equal(r.upserts[0].doc.nickname, 'Bob');
   assert.equal(r.upserts[0].doc.id, TGT);
   assert.equal(r.upserts[0].doc.deviceId, TGT);
+  assert.equal(r.upserts[0].doc.linkedAt, NOW);
   assert.equal(r.deletes.length, 1);
   assert.equal(r.deletes[0].id, SRC);
 });
 
-test('planProfileMerge: both have nickname, choice=target → target wins, source deleted', () => {
+test('planProfileMerge: both have nickname, choice=target → target wins, source deleted, linkedAt stamped', () => {
   const r = planProfileMerge({
     targetRow: { id: TGT, deviceId: TGT, nickname: 'Alice' },
     sourceRow: { id: SRC, deviceId: SRC, nickname: 'Bob' },
     targetDeviceId: TGT, sourceDeviceId: SRC, nicknameChoice: 'target', now: NOW,
   });
-  assert.equal(r.upserts.length, 0, 'target already has the chosen nickname; no rewrite needed (source still deleted)');
+  assert.equal(r.upserts.length, 1, 'always upsert target — even with unchanged nickname — so linkedAt lands');
+  assert.equal(r.upserts[0].doc.nickname, 'Alice');
+  assert.equal(r.upserts[0].doc.linkedAt, NOW);
   assert.equal(r.deletes.length, 1);
 });
 
-test('planProfileMerge: both have nickname, choice=source → target rewritten with source nickname', () => {
+test('planProfileMerge: both have nickname, choice=source → target rewritten with source nickname + linkedAt', () => {
   const r = planProfileMerge({
     targetRow: { id: TGT, deviceId: TGT, nickname: 'Alice' },
     sourceRow: { id: SRC, deviceId: SRC, nickname: 'Bob' },
@@ -280,7 +288,23 @@ test('planProfileMerge: both have nickname, choice=source → target rewritten w
   assert.equal(r.upserts.length, 1);
   assert.equal(r.upserts[0].doc.nickname, 'Bob');
   assert.equal(r.upserts[0].doc.id, TGT);
+  assert.equal(r.upserts[0].doc.linkedAt, NOW);
   assert.equal(r.deletes.length, 1);
+});
+
+test('planProfileMerge: neither row exists → still upserts a barebones target row with linkedAt', () => {
+  // Two never-played-before devices can still link. The target needs a
+  // profile row anyway so its sync page learns about the link, even
+  // though both sides have nickname: null.
+  const r = planProfileMerge({
+    targetRow: null, sourceRow: null,
+    targetDeviceId: TGT, sourceDeviceId: SRC, nicknameChoice: 'target', now: NOW,
+  });
+  assert.equal(r.upserts.length, 1);
+  assert.equal(r.upserts[0].doc.nickname, null);
+  assert.equal(r.upserts[0].doc.linkedAt, NOW);
+  assert.equal(r.upserts[0].doc.createdAt, NOW);
+  assert.equal(r.deletes.length, 0);
 });
 
 // ---- detectProfileConflict ---------------------------------------------

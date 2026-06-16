@@ -75,13 +75,13 @@
   cursor: default;
 }
 
-/* Sync link in the actions row — same idiom as `.profile-save`
- * (link-coloured text, no border, underline on hover) so the three
- * actions read as one family. */
+/* Sync link in the actions row — lighter weight than the adjacent
+ * Save action since this is navigation, not a primary action.
+ * Inherits the body weight; matches the privacy link beside it.
+ * Underline on hover for the usual link affordance. */
 .profile-sync-link {
   font: inherit;
   font-size: 14px;
-  font-weight: 500;
   color: var(--link-color);
   text-decoration: none;
 }

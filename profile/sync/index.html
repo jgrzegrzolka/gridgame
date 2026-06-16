@@ -57,23 +57,29 @@
     <main class="sync-main">
       <h1 class="sync-heading" data-i18n="sync.heading">Play on more than one device?</h1>
 
-      <section class="sync-unlinked" id="sync-unlinked">
-        <div class="sync-qr-container" id="sync-qr-container" hidden>
-          <div class="sync-qr" id="sync-qr-svg" aria-hidden="true"></div>
-          <p class="sync-qr-hint" id="sync-qr-hint" data-i18n="sync.showQr.hint">
-            Open the camera on your other device and scan this code. The link expires in 5 minutes.
-          </p>
-        </div>
-      </section>
-
       <section class="sync-linked" id="sync-linked" hidden>
-        <p class="sync-linked-check" data-i18n="sync.linked.title">✓ This device is linked.</p>
-        <p class="sync-linked-explain" data-i18n="sync.linked.explain">
-          Your progress will sync across every device where you sign in with the same passkey.
+        <p class="sync-linked-title" data-i18n="sync.linked.title">Device is linked.</p>
+        <p class="sync-linked-id">
+          <span data-i18n="sync.linked.idLabel">Device ID:</span>
+          <code class="sync-linked-deviceid" id="sync-linked-deviceid"></code>
         </p>
       </section>
 
+      <div class="sync-qr-container" id="sync-qr-container" hidden>
+        <div class="sync-qr" id="sync-qr-svg" aria-hidden="true"></div>
+        <p class="sync-qr-link-line">
+          <span data-i18n="sync.showQr.linkLabel">Or open this link on another device:</span>
+          <a class="sync-qr-link" id="sync-qr-link" href=""></a>
+        </p>
+        <p class="sync-qr-hint" id="sync-qr-hint" data-i18n="sync.showQr.expires">
+          The link expires in 5 minutes.
+        </p>
+      </div>
+
       <p class="sync-status" id="sync-status" role="status" aria-live="polite"></p>
+      <p class="sync-progress" id="sync-progress" role="status" aria-live="polite" hidden>
+        <span data-i18n="sync.linking">Linking devices</span><span class="loading-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+      </p>
 
       <div class="sync-back">
         <a href="../" data-i18n="sync.back">Profile</a>

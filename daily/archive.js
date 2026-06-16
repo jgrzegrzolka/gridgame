@@ -3,12 +3,23 @@ import { todayN } from '../flags/daily.js';
 import { loadScores, migrateScores } from './scores.js';
 import { renderArchiveSquare, refreshSquareCriteria } from './squares.js';
 import { mountDevReset } from './devReset.js';
+import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
+import { trySyncDevices } from '../flags/syncHydrate.js';
 
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
 
 export function bootArchive() {
   mountDevReset();
   migrateScores(window.localStorage);
+  // Background sync for linked devices — refreshes `daily.scores`
+  // from the server at most once per hour so the archive grid
+  // reflects plays the other linked device made elsewhere. Unlinked
+  // users exit on the identity gate without any network call.
+  void trySyncDevices({
+    deviceId: getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID()),
+    store: window.localStorage,
+    identityKey: IDENTITY_STORAGE_KEY,
+  });
   const listEl = /** @type {HTMLElement} */ (document.getElementById('archive-list'));
   const scores = loadScores(window.localStorage);
 

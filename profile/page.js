@@ -2,7 +2,7 @@ import { getOrCreateDeviceId } from '../flags/identity.js';
 import { defaultNickname, displayNickname } from '../flags/nickname.js';
 import { avatarSvg } from '../flags/avatar.js';
 import { isOffensiveNickname } from '../flags/nicknameModeration.js';
-import { NICKNAME_STORAGE_KEY, IDENTITY_STORAGE_KEY } from '../common.js';
+import { NICKNAME_STORAGE_KEY } from '../common.js';
 import { t } from '../i18n.js';
 import { fetchDailyMe } from '../daily/streakClient.js';
 
@@ -204,29 +204,6 @@ export function bootProfile() {
   });
 
   void loadAndPaintStats(deviceId);
-  paintSyncState();
-  document.addEventListener('langchanged', paintSyncState);
-}
-
-/**
- * Paint the sync link in the actions row: swap the label between
- * "Sync across devices" (unlinked) and "✓ Synced" (linked). Both
- * states link to `/profile/sync/` — the linked state lets the user
- * see the confirmation page; future revoke / manage actions would
- * live there too.
- */
-function paintSyncState() {
-  const wrap = document.getElementById('profile-sync-wrap');
-  const link = document.getElementById('profile-sync-link');
-  if (!wrap || !link) return;
-  wrap.hidden = false;
-  let stored = null;
-  try { stored = window.localStorage.getItem(IDENTITY_STORAGE_KEY); } catch {}
-  const isLinked = typeof stored === 'string' && stored.length > 0;
-  const key = isLinked ? 'menu.synced' : 'menu.sync';
-  const fallback = isLinked ? '✓ Synced' : 'Sync across devices';
-  link.setAttribute('data-i18n', key);
-  link.textContent = t(key, fallback);
 }
 
 /**

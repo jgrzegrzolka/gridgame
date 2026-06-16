@@ -28,7 +28,8 @@ import { launchConfetti, launchFireworks } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
-import { getOrCreateDeviceId } from '../flags/identity.js';
+import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
+import { trySyncDevices } from '../flags/syncHydrate.js';
 import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
 import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
 import { fetchLeaderboard } from '../flags/dailyLeaderboardFetch.js';
@@ -68,6 +69,14 @@ export function bootFlagQuiz() {
   // clearing localStorage resets both at once, which is the intended
   // identity model (zero PII, zero account).
   const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+
+  // Background sync for linked devices — refreshes `flagquiz.best.*`
+  // from the server at most once per hour so the picker shows
+  // personal-bests that include plays from the other linked device.
+  // Unlinked users exit on the identity gate without any network.
+  void trySyncDevices({
+    deviceId, store: window.localStorage, identityKey: IDENTITY_STORAGE_KEY,
+  });
 
   const params = new URLSearchParams(window.location.search);
   const urlVariant = params.get('v');

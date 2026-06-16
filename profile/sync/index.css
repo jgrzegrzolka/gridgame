@@ -80,6 +80,30 @@
   line-height: 1.4;
 }
 
+/* Desktop-to-desktop fallback: the same claimUrl the QR encodes,
+ * shown as a plain text link beneath the QR. Right-click → Copy
+ * link works in every browser; clicking opens it (useful when the
+ * link is pasted into a second browser). */
+.sync-qr-link-line {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted-color);
+  text-align: center;
+  max-width: 360px;
+  line-height: 1.5;
+}
+.sync-qr-link {
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--link-color);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  word-break: break-all;
+}
+.sync-qr-link:hover {
+  text-decoration: underline;
+}
+
 /* Merge-conflict wizard — same .help-dialog chrome, but the body is
  * built dynamically from `paintWizard` in page.js. The wizard reuses
  * the shared dialog frame plus its own internal layout. */
@@ -151,85 +175,38 @@
   border-color: var(--primary-color);
 }
 
-.sync-unlinked,
+/* Linked-state pane — shown above the QR when this browser has been
+ * linked (locally via the source's post-merge swap, or remotely via
+ * the GET /api/v1/sync/link discovery for the target). Both devices
+ * share the same deviceId after merge, so the same code displays the
+ * same string on both, which is the whole point of the indicator. */
 .sync-linked {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  gap: 4px;
 }
-.sync-unlinked[hidden],
 .sync-linked[hidden] {
-  /* The HTML `hidden` attribute is supposed to default to `display:
-   * none`, but a more specific `display: flex` rule (above) wins.
-   * Pin the override here so both states are genuinely
-   * mutually-exclusive. */
   display: none;
 }
-
-.sync-intro {
-  margin: 0;
-  font-size: 14px;
-  color: var(--muted-color);
-  line-height: 1.5;
-  text-align: center;
-}
-
-.sync-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.sync-action {
-  font: inherit;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--secondary-color);
-  background: none;
-  border: 1px solid var(--secondary-color);
-  border-radius: 8px;
-  padding: 10px 18px;
-  cursor: pointer;
-  min-width: 220px;
-}
-.sync-action:hover:not(:disabled) {
-  background: var(--secondary-color);
-  color: #fff;
-}
-.sync-action:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-/* The primary action ("Save my profile" — first-device setup) gets
- * the filled style; secondary ("Sign in with passkey" — second-device
- * claim) gets the outlined style. The visual hierarchy nudges
- * first-time visitors toward the right path without making the other
- * option feel hidden. */
-.sync-action--primary {
-  background: var(--secondary-color);
-  color: #fff;
-}
-.sync-action--primary:hover:not(:disabled) {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-
-.sync-linked-check {
+.sync-linked-title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--primary-color);
   text-align: center;
 }
-
-.sync-linked-explain {
+.sync-linked-id {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   color: var(--muted-color);
   text-align: center;
-  line-height: 1.5;
+}
+.sync-linked-deviceid {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--primary-color);
+  word-break: break-all;
 }
 
 .sync-status {
@@ -244,6 +221,17 @@
 }
 .sync-status.is-active {
   color: var(--secondary-color);
+}
+
+/* In-flight "linking devices …" line — wraps the shared `.loading-dots`
+ * (common.css) with sync's centred italic muted styling. Shown while
+ * the redeem / preview / merge round-trips are in progress. */
+.sync-progress {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted-color);
+  text-align: center;
+  font-style: italic;
 }
 
 .sync-back {

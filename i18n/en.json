@@ -8,8 +8,7 @@
     "random": "Random",
     "yourStats": "Your stats",
     "includeTerritories": "Include territories & other flags",
-    "sync": "Sync across devices",
-    "synced": "✓ Synced"
+    "sync": "Sync across devices"
   },
   "nickname": {
     "label": "Nickname",
@@ -30,17 +29,15 @@
     "heading": "Play on more than one device?",
     "back": "Profile",
     "showQr": {
-      "hint": "Open the camera on your other device and scan this code. The link expires in 5 minutes."
+      "expires": "The link expires in 5 minutes.",
+      "linkLabel": "Or open this link on another device:"
     },
-    "redeeming": "Linking this device to your other one…",
+    "linking": "Linking devices",
     "cancelled": "Cancelled — nothing was changed.",
     "linked": {
-      "title": "✓ This device is linked.",
-      "explain": "To link another device, open this same page on it and tap “Link this device”."
+      "title": "Device is linked.",
+      "idLabel": "Device ID:"
     },
-    "savedConfirm": "Done. Now open this page on your other device and tap “Link this device”.",
-    "signedinConfirm": "Linked — your progress now syncs to this device.",
-    "merging": "Linking your devices…",
     "wizard": {
       "profileQ": "Nickname",
       "dailyQ": "Daily result on overlap ({count} puzzles)",

@@ -13,7 +13,8 @@ import {
   attachLangRefresh,
   showReason,
 } from './playFlow.js';
-import { getOrCreateDeviceId } from '../flags/identity.js';
+import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
+import { trySyncDevices } from '../flags/syncHydrate.js';
 import { submitResult } from './statsSubmit.js';
 import { fetchStats } from './statsClient.js';
 import { applyFindRatesToTiles } from './statsOverlay.js';
@@ -303,7 +304,7 @@ function paintCommunityStats(stats, total, opts = {}) {
     l.className = 'daily-stats-loading';
     l.textContent = labels.loading;
     const dots = document.createElement('span');
-    dots.className = 'daily-stats-loading-dots';
+    dots.className = 'loading-dots';
     dots.setAttribute('aria-hidden', 'true');
     dots.innerHTML = '<span></span><span></span><span></span>';
     l.appendChild(dots);
@@ -561,6 +562,17 @@ export function bootDaily() {
   wireZoom();
   mountDevReset();
   migrateScores(window.localStorage);
+  // Background sync for linked devices only. Unlinked users pay
+  // zero (a single localStorage read returns null and the helper
+  // exits). Linked users refresh local cache from the server at
+  // most once per hour — enough to keep "today already played?"
+  // and the archive grid honest after the other linked device
+  // submitted something elsewhere.
+  void trySyncDevices({
+    deviceId: getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID()),
+    store: window.localStorage,
+    identityKey: IDENTITY_STORAGE_KEY,
+  });
 
   const numEl = /** @type {HTMLElement} */ (document.getElementById('daily-n'));
   const isReplay = isReplayFromUrl(window.location.search);

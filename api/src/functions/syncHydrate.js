@@ -1,0 +1,101 @@
+const { app } = require('@azure/functions');
+const { validateDeviceIdParam } = require('../lib/validate');
+const { queryDocs } = require('../lib/cosmos');
+const { createRateLimiter, clientIp } = require('../lib/rateLimit');
+
+const DB_NAME = 'yetanotherquiz';
+
+// 10 reads/min/IP. Each call fans out across two containers (cross-
+// partition on dailyResults) so we don't want the same IP hammering
+// this endpoint. The sync page calls it at most once per visit.
+const limiter = createRateLimiter({ limit: 10, windowMs: 60_000 });
+
+/**
+ * Hand the requesting browser everything it needs to rebuild its
+ * per-device localStorage caches after a link:
+ *
+ *   - daily: every dailyResult row for this deviceId (puzzleId +
+ *     foundCodes + totalCount), to rebuild `daily.scores` so the
+ *     archive shows every puzzle ever played by any browser sharing
+ *     this deviceId, not just the ones this particular browser
+ *     played locally.
+ *   - quiz: the records map from quizRecords[deviceId], to rebuild
+ *     each `flagquiz.best.<variant>.<mode>[.v2][.all]` localStorage
+ *     entry so the quiz picker shows the merged personal-best, not
+ *     this browser's pre-link local best.
+ *
+ * Read-only; safe to call repeatedly. The "linked" gate (only the
+ * source browser ever holds source's local data; the target browser
+ * only ever sees post-merge data) is enforced by the rest of the
+ * sync flow stamping linkedAt + the client only calling this after
+ * identityId is set.
+ */
+app.http('syncHydrate', {
+  route: 'v1/sync/hydrate',
+  methods: ['GET'],
+  authLevel: 'anonymous',
+  handler: async (req, context) => {
+    const rl = limiter.check(clientIp(req), Date.now());
+    if (!rl.allowed) {
+      return {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) },
+        jsonBody: { error: 'rate_limited' },
+      };
+    }
+
+    const v = validateDeviceIdParam(req.query.get('deviceId'), 'invalid_deviceId');
+    if (!v.ok) return { status: 400, jsonBody: { error: v.error } };
+    const deviceId = v.value;
+
+    const conn = process.env.COSMOS_CONN;
+    if (!conn) {
+      context.error('COSMOS_CONN env var is not set');
+      return { status: 500, jsonBody: { error: 'server_error' } };
+    }
+
+    let dailyRes, quizRes;
+    try {
+      [dailyRes, quizRes] = await Promise.all([
+        queryDocs({
+          connString: conn, dbName: DB_NAME, containerName: 'dailyResults',
+          query: 'SELECT c.puzzleId, c.foundCodes, c.totalCount FROM c WHERE c.deviceId = @did',
+          parameters: [{ name: '@did', value: deviceId }],
+          enableCrossPartition: true,
+        }),
+        queryDocs({
+          connString: conn, dbName: DB_NAME, containerName: 'quizRecords',
+          query: 'SELECT c.records FROM c WHERE c.id = @id',
+          parameters: [{ name: '@id', value: deviceId }],
+          partitionKey: deviceId,
+        }),
+      ]);
+    } catch (err) {
+      context.error('cosmos query threw', err);
+      return { status: 500, jsonBody: { error: 'server_error' } };
+    }
+    if (!dailyRes.ok || !quizRes.ok) {
+      context.error('cosmos query failed', dailyRes, quizRes);
+      return { status: 500, jsonBody: { error: 'server_error' } };
+    }
+
+    /** @type {Array<{ puzzleId: number, foundCodes: string[], totalCount: number }>} */
+    const daily = [];
+    for (const row of dailyRes.docs) {
+      if (typeof row.puzzleId !== 'number') continue;
+      const foundCodes = Array.isArray(row.foundCodes)
+        ? row.foundCodes.filter((/** @type {unknown} */ x) => typeof x === 'string')
+        : [];
+      const totalCount = typeof row.totalCount === 'number' ? row.totalCount : foundCodes.length;
+      daily.push({ puzzleId: row.puzzleId, foundCodes, totalCount });
+    }
+
+    const quizRow = quizRes.docs[0];
+    const records = (quizRow && typeof quizRow.records === 'object' && quizRow.records) || {};
+
+    return {
+      status: 200,
+      jsonBody: { daily, records },
+    };
+  },
+});
