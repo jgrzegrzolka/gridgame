@@ -43,7 +43,9 @@ A fresh agent picking this up should:
 5. **TTT random pool.** Wire `hasStripesOnly` into `buildRandomCategoryPool()` (already done in Phase 2 effectively — confirm + add an integration test that 3×3 generation stays inside the retry budget with the new cats).
 6. **First puzzle ideas.** Draft 3–4 backlog daily-puzzle ideas using the new dimension via `daily-puzzle-author` skill (`continent:Europe,stripesOnly:horizontal`, etc.).
 
-**Currently in:** Phase 5 — branch `feature/db-stripes-only-phase-5-ttt-integration`. Phases 1-4 shipped (PRs #473, #474, #475, #476).
+**Currently in:** Phase 6 parked for 2026-06-18 — engineering done, content authoring pending. Phases 1-5 shipped (PRs #473, #474, #475, #476, #477). Follow-on PR `feature/db-stripes-only-non-sovereign` extended the seed data to non-sovereign entries that the Phase 1 sweep missed (Catalonia → horizontal, Canary Islands → horizontal); KNOWN_STRIPES_ONLY pins updated.
+
+**Phase 6 (deferred):** draft 3-4 backlog daily-puzzle ideas using the new dimension via `/daily-puzzle-author`. Suggested seeds: `continent:Europe,stripesOnly:horizontal` (Germany/Russia/Bulgaria/Netherlands/Hungary/Estonia/Lithuania/Luxembourg/Austria), `continent:Europe,stripesOnly:vertical` (France/Italy/Belgium/Ireland/Romania), `continent:Africa,stripesOnly:vertical` (Mali/Guinea/Côte d'Ivoire/Chad/Nigeria + the FR territories), plus one mixed worldwide. The author flow handles the en+pl descriptions and the catalog rules — don't author manually.
 
 ---
 
