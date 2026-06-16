@@ -19,16 +19,18 @@ Plus two author-only files:
 
 ## Releasing
 
-A scheduled GitHub Actions workflow (`.github/workflows/release-daily.yml`) promotes `daily_backlog.json[0]` to `daily_puzzles.json` at **Polish midnight** every day, then commits and pushes to `main` as `github-actions[bot]`. The existing `deploy.yml` picks up the push and ships the new live catalog. The move logic is `promote()` in `scripts/release-next.mjs`, covered by `scripts/release-next.test.mjs`.
+A timer-triggered Azure Function (`func-yetanotherquiz-release`, source at `infra/release-fn/src/`) reads `live.json` + `backlog.json` from the public-read `styetanotherquiz/catalog` blob at Polish midnight, moves `backlog[0]` to the end of `live`, runs `validateCatalog()` (rules 1 + 3 + 4 + 7), and writes both blobs back. Players hit the blob directly — no SWA deploy is on the release path.
 
-After the move, the workflow runs `npm run validate` — if any hard rule (1–7) fails, the workflow fails and **nothing is pushed**. So country-data drift or a bad backlog entry surfaces as a workflow failure email instead of a bad puzzle going live.
+The handler short-circuits if Warsaw time isn't `hour=0` or if today's puzzle is already in `live`. The schedule fires twice per UTC day (`0 5 22,23 * * *`) so DST shifts don't need any manual bump — see `infra/README.md` for the why.
+
+Validation at promote time is intentionally narrow: rule 1 (drift), 3 (sovereign codes), 4 (sequential `n`), 7 (en/pl description). The remaining hard rules (2 redundant, 5 primary-clean, 6 no-subset, 14 single-use tokens, 15 ambiguity) are author-time concerns enforced by `flags/daily.test.js` on every PR — they cannot fail at promote time unless they failed at author time too, and at that point the entry would never have reached the backlog. If you ever find one that *does* slip, port it into `infra/release-fn/src/lib/validate.js`.
 
 What this changes for you as author:
 
-- **Day-to-day work shifts from "release today's puzzle" to "keep the backlog full."** The bot handles the daily move; your job is to make sure `backlog` doesn't run dry.
-- **Manual release is still possible** — running `node scripts/release-next.mjs` locally (or hitting "Run workflow" on the Actions tab via `workflow_dispatch`) does the same move. Useful if you want to skip ahead, or if the cron firing got eaten.
-- **Empty backlog = failure email.** The script throws non-zero when there's nothing to promote, so you get notified instead of a silent miss. That's the cue to author the next batch.
-- **Cron is best-effort** — GitHub Actions schedules typically fire 5–30 min late, so expect the auto-commit to land between ~00:00 and ~00:30 Warsaw time, not on the dot.
+- **Day-to-day work is "keep the backlog full."** The Function handles the daily move; your job is to make sure `backlog` doesn't run dry.
+- **Manual release** — POST to `/admin/functions/releaseDaily` with the master key (see `infra/README.md`). The handler's "not midnight" / "already promoted today" guards mean a midday invocation returns without mutating blob, which makes it safe to invoke as a smoke test. To actually exercise the promote path mid-day, snapshot the blobs first and restore them after.
+- **Empty backlog = exception** — surfaces in App Insights `ai-yetanotherquiz-release`. Wire up an alert on `requests | where success == false` if you want an email.
+- **Catalog drift = exception** — if `flags/countries.json` changes break a stored answer set, `validateCatalog()` throws and the blob stays at yesterday's state. Refresh the offending entry or revert the country-data change.
 
 ## Two kinds of entries
 
