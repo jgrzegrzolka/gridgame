@@ -29,7 +29,7 @@
     "heading": "Play on more than one device?",
     "back": "Profile",
     "showQr": {
-      "hint": "Open the camera on your other device and scan this code. The link expires in 5 minutes.",
+      "expires": "The link expires in 5 minutes.",
       "linkLabel": "Or open this link on another device:"
     },
     "linking": "Linking devices",
