@@ -116,15 +116,19 @@
 
 /* Merge-conflict wizard — same .help-dialog chrome, but the body is
  * built dynamically from `paintWizard` in page.js. The wizard reuses
- * the shared dialog frame plus its own internal layout. */
+ * the shared dialog frame plus its own internal layout.
+ *
+ * Each question stacks vertically: label on its own line, toggle
+ * on the next. Both flush-left so the whole wizard reads as a
+ * single left-aligned column with the actions row below. */
 .sync-wizard-q {
-  margin: 0 0 16px;
+  margin: 0 0 20px;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 6px;
 }
 .sync-wizard-question {
-  margin: 0;
   font-size: 13px;
   color: var(--muted-color);
 }
@@ -136,7 +140,7 @@
 .sync-wizard-toggle {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
   font-size: 14px;
 }
@@ -156,33 +160,39 @@
 .sync-wizard-toggle .scope-toggle-switch input:checked ~ .scope-toggle-track {
   background: var(--secondary-color);
 }
+/* Wizard actions — text-link style to match the /profile/ actions
+ * row idiom (Save · Sync · Home). Same recipe as `.profile-save`:
+ * no border, no fill, link-coloured text, underline on hover.
+ * "Link devices" gets the heavier 500 weight as the primary action;
+ * "Cancel" stays muted so the visual hierarchy nudges toward the
+ * affirmative without making Cancel feel disabled. */
 .sync-wizard-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 24px;
+  margin-top: 24px;
 }
 .sync-wizard-cancel,
 .sync-wizard-confirm {
   font: inherit;
   font-size: 14px;
-  padding: 6px 14px;
-  border-radius: 6px;
+  background: none;
+  border: none;
+  padding: 0;
   cursor: pointer;
+  text-decoration: none;
 }
 .sync-wizard-cancel {
-  background: none;
-  border: 1px solid var(--muted-color);
   color: var(--muted-color);
 }
 .sync-wizard-confirm {
-  background: var(--secondary-color);
-  border: 1px solid var(--secondary-color);
-  color: #fff;
+  color: var(--link-color);
+  font-weight: 500;
 }
+.sync-wizard-cancel:hover,
 .sync-wizard-confirm:hover {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
+  text-decoration: underline;
 }
 
 /* Linked-state pane — shown above the QR when this browser has been

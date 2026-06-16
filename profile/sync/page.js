@@ -119,12 +119,22 @@ export function bootSync() {
   // ---- Preview-only: ?wizard-preview shows the conflict wizard
   // with mocked data so the UI can be iterated on without two real
   // devices + matching localStorage state. Pure UI: never calls
-  // /sync/merge, never swaps deviceId. ---
+  // /sync/merge, never swaps deviceId.
+  //
+  // Three variants so the three real-world shapes are all locally
+  // inspectable:
+  //   ?wizard-preview            both conflicts (default)
+  //   ?wizard-preview=both       both conflicts (explicit)
+  //   ?wizard-preview=profile    nickname-only conflict
+  //   ?wizard-preview=daily      daily-only conflict
   if (params.has('wizard-preview')) {
     loadingEl.hidden = true;
+    const variant = params.get('wizard-preview') || 'both';
+    const profileMock = { target: 'Nimble Forest', source: 'Curious Otter' };
+    const dailyMock = { count: 3, samplePuzzleIds: [3, 4, 7] };
     void showWizard({
-      profile: { target: 'Nimble Forest', source: 'Curious Otter' },
-      daily: { count: 3, samplePuzzleIds: [3, 4, 7] },
+      profile: variant === 'daily' ? null : profileMock,
+      daily: variant === 'profile' ? null : dailyMock,
     });
     return;
   }
@@ -326,10 +336,10 @@ function paintWizard(dialog, conflicts, onResolve) {
   if (conflicts.profile) {
     const section = document.createElement('section');
     section.className = 'sync-wizard-q';
-    const q = document.createElement('p');
+    const q = document.createElement('span');
     q.className = 'sync-wizard-question';
     q.setAttribute('data-i18n', 'sync.wizard.profileQ');
-    q.textContent = t('sync.wizard.profileQ', 'Nickname');
+    q.textContent = t('sync.wizard.profileQ', 'Keep nick from:');
     section.appendChild(q);
     section.appendChild(makeToggleRow(conflicts.profile.target, conflicts.profile.source, (v) => { nicknameChoice = v; }));
     dialog.appendChild(section);
@@ -338,12 +348,10 @@ function paintWizard(dialog, conflicts, onResolve) {
   if (conflicts.daily) {
     const section = document.createElement('section');
     section.className = 'sync-wizard-q';
-    const q = document.createElement('p');
+    const q = document.createElement('span');
     q.className = 'sync-wizard-question';
     q.setAttribute('data-i18n', 'sync.wizard.dailyQ');
-    // Inline the conflict count into the label — saves the dedicated
-    // note paragraph and still tells the user how big the overlap is.
-    q.textContent = t('sync.wizard.dailyQ', 'Daily — {count} overlap').replace('{count}', String(conflicts.daily.count));
+    q.textContent = t('sync.wizard.dailyQ', 'Keep overlapping daily puzzles from:');
     section.appendChild(q);
     section.appendChild(makeToggleRow(
       t('sync.wizard.dailyTarget', 'My other device'),
@@ -353,15 +361,11 @@ function paintWizard(dialog, conflicts, onResolve) {
     dialog.appendChild(section);
   }
 
+  // Action order: primary (Link devices) first, Cancel after. Matches
+  // the rest of the site's actions-row idiom where the affirmative
+  // sits at the start.
   const actions = document.createElement('div');
   actions.className = 'sync-wizard-actions';
-  const cancel = document.createElement('button');
-  cancel.type = 'button';
-  cancel.className = 'sync-wizard-cancel';
-  cancel.setAttribute('data-i18n', 'sync.wizard.cancel');
-  cancel.textContent = t('sync.wizard.cancel', 'Cancel');
-  cancel.addEventListener('click', () => onResolve(null));
-  actions.appendChild(cancel);
   const confirm = document.createElement('button');
   confirm.type = 'button';
   confirm.className = 'sync-wizard-confirm';
@@ -369,6 +373,13 @@ function paintWizard(dialog, conflicts, onResolve) {
   confirm.textContent = t('sync.wizard.confirm', 'Link devices');
   confirm.addEventListener('click', () => onResolve({ nickname: nicknameChoice, daily: dailyChoice }));
   actions.appendChild(confirm);
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'sync-wizard-cancel';
+  cancel.setAttribute('data-i18n', 'sync.wizard.cancel');
+  cancel.textContent = t('sync.wizard.cancel', 'Cancel');
+  cancel.addEventListener('click', () => onResolve(null));
+  actions.appendChild(cancel);
   dialog.appendChild(actions);
 }
 

@@ -5,7 +5,6 @@ import { isOffensiveNickname } from '../flags/nicknameModeration.js';
 import { NICKNAME_STORAGE_KEY } from '../common.js';
 import { hydrateFromServer } from '../flags/syncHydrate.js';
 import { t } from '../i18n.js';
-import { fetchDailyMe } from '../daily/streakClient.js';
 
 const ENDPOINT = '/api/v1/profile';
 const FLASH_MS = 1500;
@@ -232,65 +231,6 @@ export function bootProfile() {
     ev.preventDefault();
     void save(currentPayload());
   });
-
-  void loadAndPaintStats(deviceId);
-}
-
-/**
- * Module-scope cache of the last successful GET /api/v1/daily/me result.
- * Held so a soft language switch can repaint the stats labels (the
- * numbers don't change, the surrounding text does) without re-fetching.
- * Null until the initial fetch resolves — and stays null on fetch
- * failure or zero plays, which is also the gate for hiding the section.
- *
- * @type {import('../daily/streakClient.js').StreakResult | null}
- */
-let lastStats = null;
-
-/**
- * Fetch the player's streak / win-% numbers from the same endpoint the
- * daily finish screen uses (`GET /api/v1/daily/me`) and paint them into
- * the three slots. Hidden entirely when there's no signal yet
- * (totalPlayed === 0, fetch failed, or no deviceId) — same calm
- * principle as the finish screen's `currentStreak >= 2` gate, scaled
- * to "show the dashboard once there's something to dashboard". Listens
- * for `langchanged` once on boot so a soft language switch re-paints
- * the labels without re-fetching.
- *
- * @param {string} deviceId
- */
-async function loadAndPaintStats(deviceId) {
-  const stats = await fetchDailyMe(deviceId);
-  // Either branch hides the loading line: success-with-stats paints
-  // them, success-without-stats (totalPlayed === 0) and failure both
-  // collapse to the empty state. The loading line never lingers.
-  const loadingEl = document.getElementById('profile-stats-loading');
-  if (loadingEl) loadingEl.hidden = true;
-  if (stats && stats.totalPlayed > 0) {
-    lastStats = stats;
-    paintStats(stats);
-  }
-  // Re-paint on soft language switch. The numbers don't change but
-  // labels are pulled via data-i18n on the static <dt>s and applied by
-  // i18n.js itself — this listener exists for the case where future
-  // labels include the value inline (e.g. "Win rate: {n}%") and need
-  // the value substituted by JS rather than by `data-i18n` alone.
-  document.addEventListener('langchanged', () => {
-    if (lastStats) paintStats(lastStats);
-  });
-}
-
-/**
- * @param {import('../daily/streakClient.js').StreakResult} stats
- */
-function paintStats(stats) {
-  const section = document.getElementById('profile-stats');
-  const current = document.getElementById('profile-stats-current');
-  const max = document.getElementById('profile-stats-max');
-  if (!section || !current || !max) return;
-  current.textContent = String(stats.currentStreak);
-  max.textContent = String(stats.maxStreak);
-  section.hidden = false;
 }
 
 /**
