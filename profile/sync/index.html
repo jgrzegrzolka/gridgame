@@ -55,7 +55,7 @@
     </nav>
 
     <main class="sync-main">
-      <h1 class="sync-heading" data-i18n="sync.heading">Play on more than one device?</h1>
+      <h1 class="sync-heading" id="sync-heading" data-i18n="sync.heading">Play on more than one device?</h1>
 
       <section class="sync-linked" id="sync-linked" hidden>
         <p class="sync-linked-title" data-i18n="sync.linked.title">Device is linked.</p>
@@ -65,12 +65,16 @@
         </p>
       </section>
 
+      <p class="sync-loading" id="sync-loading" aria-live="polite">
+        <span data-i18n="sync.preparing">Preparing link</span><span class="loading-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+      </p>
+
       <div class="sync-qr-container" id="sync-qr-container" hidden>
         <div class="sync-qr" id="sync-qr-svg" aria-hidden="true"></div>
-        <p class="sync-qr-link-line">
-          <span data-i18n="sync.showQr.linkLabel">Or open this link on another device:</span>
+        <details class="sync-qr-link-details">
+          <summary data-i18n="sync.showQr.cantScan">Could not scan QR?</summary>
           <a class="sync-qr-link" id="sync-qr-link" href=""></a>
-        </p>
+        </details>
         <p class="sync-qr-hint" id="sync-qr-hint" data-i18n="sync.showQr.expires">
           The link expires in 5 minutes.
         </p>

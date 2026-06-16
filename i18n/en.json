@@ -30,8 +30,9 @@
     "back": "Profile",
     "showQr": {
       "expires": "The link expires in 5 minutes.",
-      "linkLabel": "Or open this link on another device:"
+      "cantScan": "Could not scan QR?"
     },
+    "preparing": "Preparing link",
     "linking": "Linking devices",
     "cancelled": "Cancelled — nothing was changed.",
     "linked": {

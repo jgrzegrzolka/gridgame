@@ -23,6 +23,10 @@ const limiter = createRateLimiter({ limit: 10, windowMs: 60_000 });
  *     each `flagquiz.best.<variant>.<mode>[.v2][.all]` localStorage
  *     entry so the quiz picker shows the merged personal-best, not
  *     this browser's pre-link local best.
+ *   - nickname: the saved nickname from profiles[deviceId], so the
+ *     /profile/ page shows the chosen name on a freshly-linked
+ *     browser instead of falling back to the deterministic default
+ *     ("Pensive Dolphin"-style adjective+animal pair).
  *
  * Read-only; safe to call repeatedly. The "linked" gate (only the
  * source browser ever holds source's local data; the target browser
@@ -54,9 +58,9 @@ app.http('syncHydrate', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    let dailyRes, quizRes;
+    let dailyRes, quizRes, profileRes;
     try {
-      [dailyRes, quizRes] = await Promise.all([
+      [dailyRes, quizRes, profileRes] = await Promise.all([
         queryDocs({
           connString: conn, dbName: DB_NAME, containerName: 'dailyResults',
           query: 'SELECT c.puzzleId, c.foundCodes, c.totalCount FROM c WHERE c.deviceId = @did',
@@ -69,13 +73,19 @@ app.http('syncHydrate', {
           parameters: [{ name: '@id', value: deviceId }],
           partitionKey: deviceId,
         }),
+        queryDocs({
+          connString: conn, dbName: DB_NAME, containerName: 'profiles',
+          query: 'SELECT c.nickname FROM c WHERE c.id = @id',
+          parameters: [{ name: '@id', value: deviceId }],
+          partitionKey: deviceId,
+        }),
       ]);
     } catch (err) {
       context.error('cosmos query threw', err);
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
-    if (!dailyRes.ok || !quizRes.ok) {
-      context.error('cosmos query failed', dailyRes, quizRes);
+    if (!dailyRes.ok || !quizRes.ok || !profileRes.ok) {
+      context.error('cosmos query failed', dailyRes, quizRes, profileRes);
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
@@ -93,9 +103,12 @@ app.http('syncHydrate', {
     const quizRow = quizRes.docs[0];
     const records = (quizRow && typeof quizRow.records === 'object' && quizRow.records) || {};
 
+    const profileRow = profileRes.docs[0];
+    const nickname = profileRow && typeof profileRow.nickname === 'string' ? profileRow.nickname : null;
+
     return {
       status: 200,
-      jsonBody: { daily, records },
+      jsonBody: { daily, records, nickname },
     };
   },
 });

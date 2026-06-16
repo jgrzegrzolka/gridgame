@@ -128,6 +128,23 @@
   margin-top: 16px;
 }
 
+/* Pulsing-dots loading line shown while `GET /api/v1/daily/me` is in
+ * flight. Replaced by either the stats section or nothing (zero plays
+ * / fetch failure) once the call resolves. Same `.loading-dots` chrome
+ * common.css ships, same idiom as the daily-stats finish-screen
+ * loader — kept text-align center here to match the profile column
+ * layout. */
+.profile-stats-loading {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: var(--muted-color);
+  text-align: center;
+  font-style: italic;
+}
+.profile-stats-loading[hidden] {
+  display: none;
+}
+
 .profile-stats-list {
   margin: 0;
   display: flex;

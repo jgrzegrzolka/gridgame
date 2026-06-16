@@ -1,8 +1,9 @@
-import { getOrCreateDeviceId } from '../flags/identity.js';
+import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
 import { defaultNickname, displayNickname } from '../flags/nickname.js';
 import { avatarSvg } from '../flags/avatar.js';
 import { isOffensiveNickname } from '../flags/nicknameModeration.js';
 import { NICKNAME_STORAGE_KEY } from '../common.js';
+import { hydrateFromServer } from '../flags/syncHydrate.js';
 import { t } from '../i18n.js';
 import { fetchDailyMe } from '../daily/streakClient.js';
 
@@ -46,6 +47,35 @@ export function bootProfile() {
    * @type {string | null}
    */
   let persisted = typeof cached === 'string' && cached.length > 0 ? cached : null;
+
+  // Self-heal for a freshly-linked browser: this device shares its
+  // deviceId with another browser that DID save a nickname, but the
+  // hydrate that should have populated our local cache never ran (the
+  // link happened on an older deploy, or the user cleared
+  // localStorage). Fire one hydrate to pull the server's truth, then
+  // patch the input + persisted state if the user hasn't typed yet.
+  // Bypasses the trySyncDevices staleness gate on purpose — the
+  // "no local nickname despite being linked" condition is the signal
+  // that something needs refreshing now, not in an hour.
+  let identityId = null;
+  try { identityId = window.localStorage.getItem(IDENTITY_STORAGE_KEY); } catch {}
+  if (typeof identityId === 'string' && identityId.length > 0 && !cached) {
+    void (async () => {
+      const res = await hydrateFromServer({ deviceId, store: window.localStorage });
+      if (!res.ok) return;
+      let refreshed = null;
+      try { refreshed = window.localStorage.getItem(NICKNAME_STORAGE_KEY); } catch {}
+      // Only overwrite the input if the user hasn't started editing —
+      // input.value === defaultName means they're still looking at the
+      // initial default-paint state. Any user keystroke moves it away
+      // from that, and we leave it alone.
+      if (typeof refreshed === 'string' && refreshed.length > 0 && input.value === defaultName) {
+        input.value = refreshed;
+        persisted = refreshed;
+        refreshButtons();
+      }
+    })();
+  }
 
   let inFlight = false;
   /** @type {any} */
@@ -231,6 +261,11 @@ let lastStats = null;
  */
 async function loadAndPaintStats(deviceId) {
   const stats = await fetchDailyMe(deviceId);
+  // Either branch hides the loading line: success-with-stats paints
+  // them, success-without-stats (totalPlayed === 0) and failure both
+  // collapse to the empty state. The loading line never lingers.
+  const loadingEl = document.getElementById('profile-stats-loading');
+  if (loadingEl) loadingEl.hidden = true;
   if (stats && stats.totalPlayed > 0) {
     lastStats = stats;
     paintStats(stats);

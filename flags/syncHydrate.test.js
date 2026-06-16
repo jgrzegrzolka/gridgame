@@ -2,21 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applyHydratePayload, trySyncDevices } from './syncHydrate.js';
 
-/** Map-backed Storage stand-in — same shape getItem/setItem the real
- * localStorage exposes for our purposes. */
+/** Map-backed Storage stand-in — same shape getItem/setItem/removeItem
+ * the real localStorage exposes for our purposes. */
 function makeStore(initial = {}) {
   const map = new Map(Object.entries(initial));
   return {
     map,
     getItem: (/** @type {string} */ k) => (map.has(k) ? /** @type {string} */ (map.get(k)) : null),
     setItem: (/** @type {string} */ k, /** @type {string} */ v) => { map.set(k, v); },
+    removeItem: (/** @type {string} */ k) => { map.delete(k); },
   };
 }
 
 test('applyHydratePayload: empty payload is a no-op (no writes, returns zero counts)', () => {
   const store = makeStore();
   const counts = applyHydratePayload({ store, payload: { daily: [], records: {} } });
-  assert.deepEqual(counts, { dailyWritten: 0, quizWritten: 0 });
+  assert.deepEqual(counts, { dailyWritten: 0, quizWritten: 0, nicknameWritten: false });
   assert.equal(store.map.size, 0);
 });
 
@@ -154,6 +155,66 @@ test('applyHydratePayload: skips quiz entries with malformed configKey shape', (
   });
   assert.equal(counts.quizWritten, 1);
   assert.equal(store.map.size, 1);
+});
+
+test('applyHydratePayload: nickname string writes to gridgame.nickname', () => {
+  const store = makeStore();
+  const counts = applyHydratePayload({
+    store,
+    payload: { daily: [], records: {}, nickname: 'Janko' },
+  });
+  assert.equal(counts.nicknameWritten, true);
+  assert.equal(store.getItem('gridgame.nickname'), 'Janko');
+});
+
+test('applyHydratePayload: nickname overwrites a stale local cache (linked-device truth)', () => {
+  // Source of truth is the server post-merge. If local cache has an
+  // old or different nickname, the server value wins — same rule as
+  // daily.scores and the quiz PBs.
+  const store = makeStore({ 'gridgame.nickname': 'Stale Name' });
+  applyHydratePayload({
+    store,
+    payload: { daily: [], records: {}, nickname: 'Janko' },
+  });
+  assert.equal(store.getItem('gridgame.nickname'), 'Janko');
+});
+
+test('applyHydratePayload: nickname null removes the local cache (falls back to default)', () => {
+  // Server explicitly has no nickname → the local cache must clear so
+  // displayNickname falls through to the deterministic default. A
+  // stale local nickname would otherwise read as "I have a name" on
+  // every page load.
+  const store = makeStore({ 'gridgame.nickname': 'Old Name' });
+  const counts = applyHydratePayload({
+    store,
+    payload: { daily: [], records: {}, nickname: null },
+  });
+  assert.equal(counts.nicknameWritten, true);
+  assert.equal(store.getItem('gridgame.nickname'), null);
+});
+
+test('applyHydratePayload: missing `nickname` key is a no-op (back-compat with older callers)', () => {
+  const store = makeStore({ 'gridgame.nickname': 'Keep Me' });
+  const counts = applyHydratePayload({
+    store,
+    payload: { daily: [], records: {} }, // no nickname field
+  });
+  assert.equal(counts.nicknameWritten, false);
+  assert.equal(store.getItem('gridgame.nickname'), 'Keep Me');
+});
+
+test('applyHydratePayload: empty-string nickname is treated as "no nickname" — neither writes nor clears', () => {
+  // Defensive: server should never return an empty string (nickname:
+  // null is the "no nickname" wire value), but if a deploy ever does,
+  // don't pollute the cache with "" and don't silently wipe a local
+  // value either.
+  const store = makeStore({ 'gridgame.nickname': 'Existing' });
+  const counts = applyHydratePayload({
+    store,
+    payload: { daily: [], records: {}, nickname: '' },
+  });
+  assert.equal(counts.nicknameWritten, false);
+  assert.equal(store.getItem('gridgame.nickname'), 'Existing');
 });
 
 test('applyHydratePayload: skips quiz entries missing score/durationMs', () => {
