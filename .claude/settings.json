@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(az deployment *)",
+      "Bash(az ad *)",
+      "Bash(az functionapp deployment *)",
+      "Bash(az functionapp keys *)",
+      "Bash(az functionapp function *)",
+      "Bash(az functionapp config *)",
+      "Bash(az functionapp restart *)",
+      "Bash(az functionapp show *)",
+      "Bash(az monitor app-insights *)",
+      "Bash(az webapp log *)",
+      "Bash(curl -sS *)",
+      "Bash(curl -sI *)",
+      "Bash(curl -sSI *)",
+      "Bash(node scripts/build-release-fn.mjs)",
+      "mcp__azure__monitor",
+      "mcp__azure__cosmos"
+    ]
+  }
+}
