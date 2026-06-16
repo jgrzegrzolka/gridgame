@@ -31,6 +31,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      # Same as deploy.yml: the daily catalog lives in blob, not the repo.
+      # `npm test` reads `.catalog/*.json` to drive daily/difficulty.test.js
+      # and flags/daily.test.js; without this pull those two suites fail
+      # before any PartyKit-relevant test gets a chance to run.
+      - run: node authoring/pull.mjs
       - run: npm test
 
   typecheck:
