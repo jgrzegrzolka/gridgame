@@ -216,20 +216,12 @@
 }
 
 
-.sync-linked-check {
+.sync-linked-title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--primary-color);
   text-align: center;
-}
-
-.sync-linked-explain {
-  margin: 0;
-  font-size: 14px;
-  color: var(--muted-color);
-  text-align: center;
-  line-height: 1.5;
 }
 
 .sync-status {
@@ -244,6 +236,17 @@
 }
 .sync-status.is-active {
   color: var(--secondary-color);
+}
+
+/* In-flight "linking devices …" line — wraps the shared `.loading-dots`
+ * (common.css) with sync's centred italic muted styling. Shown while
+ * the redeem / preview / merge round-trips are in progress. */
+.sync-progress {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted-color);
+  text-align: center;
+  font-style: italic;
 }
 
 .sync-back {

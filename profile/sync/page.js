@@ -28,8 +28,9 @@ export function bootSync() {
   const qrContainerEl = document.getElementById('sync-qr-container');
   const qrSvgEl = document.getElementById('sync-qr-svg');
   const statusEl = document.getElementById('sync-status');
+  const progressEl = document.getElementById('sync-progress');
   const wizardEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('sync-wizard'));
-  if (!unlinkedEl || !linkedEl || !qrContainerEl || !qrSvgEl || !statusEl || !wizardEl) return;
+  if (!unlinkedEl || !linkedEl || !qrContainerEl || !qrSvgEl || !statusEl || !progressEl || !wizardEl) return;
 
   const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
 
@@ -43,6 +44,12 @@ export function bootSync() {
     statusEl.textContent = '';
     statusEl.removeAttribute('data-i18n');
     statusEl.classList.remove('is-active');
+  }
+  function showProgress() {
+    progressEl.hidden = false;
+  }
+  function hideProgress() {
+    progressEl.hidden = true;
   }
 
   function paintLinkedState() {
@@ -105,11 +112,14 @@ export function bootSync() {
    * @param {string} token
    */
   async function runClaimFlow(token) {
-    // Use Path-2 hidden state during the redeem so the user sees
-    // *something* in the meantime.
-    showStatus('sync.redeeming', 'Linking this device to your other one…');
+    // Pulsing-dots progress line while the redeem / preview / merge
+    // round-trips are in flight, so the user sees *something* during
+    // the multi-second pipeline. Hidden again on success (linked-state
+    // section takes over) or replaced by an error string on failure.
+    showProgress();
     const redeem = await redeemClaimToken({ token });
     if (!redeem.ok) {
+      hideProgress();
       const reason = 'reason' in redeem ? redeem.reason : 'unknown';
       if (reason === 'expired_token') {
         showStatus('sync.error.expired', 'That QR has expired — generate a new one on your other device.');
@@ -128,13 +138,15 @@ export function bootSync() {
       try {
         window.localStorage.setItem(IDENTITY_STORAGE_KEY, targetDeviceId);
       } catch {}
+      hideProgress();
+      clearStatus();
       paintLinkedState();
-      showStatus('sync.signedinConfirm', 'Linked — your progress now syncs to this device.');
       return;
     }
 
     const preview = await syncPreview({ claimToken: token, sourceDeviceId: deviceId });
     if (!preview.ok) {
+      hideProgress();
       showStatus('sync.error.generic', 'Couldn’t link this device — try again.');
       return;
     }
@@ -142,6 +154,10 @@ export function bootSync() {
     /** @type {{ nickname?: 'target' | 'source', daily?: 'target' | 'source' }} */
     let resolutions = {};
     if (preview.daily || preview.profile) {
+      // Hide the progress line while the wizard is up — the dialog is
+      // the user's active surface, the dots underneath would just
+      // read as still-loading.
+      hideProgress();
       const w = await showWizard({ profile: preview.profile, daily: preview.daily });
       if (!w) {
         // User cancelled the wizard — bail without merging. Tell
@@ -153,10 +169,12 @@ export function bootSync() {
         return;
       }
       resolutions = w;
+      showProgress();
     }
 
     const mergeRes = await syncMerge({ claimToken: token, sourceDeviceId: deviceId, resolutions });
     if (!mergeRes.ok) {
+      hideProgress();
       showStatus('sync.error.generic', 'Couldn’t link this device — try again.');
       return;
     }
@@ -165,12 +183,14 @@ export function bootSync() {
       window.localStorage.setItem(DEVICE_STORAGE_KEY, targetDeviceId);
       window.localStorage.setItem(IDENTITY_STORAGE_KEY, targetDeviceId);
     } catch {
+      hideProgress();
       showStatus('sync.error.generic', 'Couldn’t link this device — try again.');
       return;
     }
 
+    hideProgress();
+    clearStatus();
     paintLinkedState();
-    showStatus('sync.signedinConfirm', 'Linked — your progress now syncs to this device.');
   }
 
   /**

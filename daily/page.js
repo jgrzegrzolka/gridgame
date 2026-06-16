@@ -303,7 +303,7 @@ function paintCommunityStats(stats, total, opts = {}) {
     l.className = 'daily-stats-loading';
     l.textContent = labels.loading;
     const dots = document.createElement('span');
-    dots.className = 'daily-stats-loading-dots';
+    dots.className = 'loading-dots';
     dots.setAttribute('aria-hidden', 'true');
     dots.innerHTML = '<span></span><span></span><span></span>';
     l.appendChild(dots);

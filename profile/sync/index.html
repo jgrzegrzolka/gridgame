@@ -67,13 +67,13 @@
       </section>
 
       <section class="sync-linked" id="sync-linked" hidden>
-        <p class="sync-linked-check" data-i18n="sync.linked.title">✓ This device is linked.</p>
-        <p class="sync-linked-explain" data-i18n="sync.linked.explain">
-          Your progress will sync across every device where you sign in with the same passkey.
-        </p>
+        <p class="sync-linked-title" data-i18n="sync.linked.title">Device is linked now.</p>
       </section>
 
       <p class="sync-status" id="sync-status" role="status" aria-live="polite"></p>
+      <p class="sync-progress" id="sync-progress" role="status" aria-live="polite" hidden>
+        <span data-i18n="sync.linking">Linking devices</span><span class="loading-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+      </p>
 
       <div class="sync-back">
         <a href="../" data-i18n="sync.back">Profile</a>

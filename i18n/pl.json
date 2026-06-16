@@ -32,15 +32,11 @@
     "showQr": {
       "hint": "Otwórz aparat na drugim urządzeniu i zeskanuj ten kod. Link wygasa za 5 minut."
     },
-    "redeeming": "Łączenie tego urządzenia z drugim…",
+    "linking": "Łączenie urządzeń",
     "cancelled": "Anulowano — nic nie zostało zmienione.",
     "linked": {
-      "title": "✓ To urządzenie jest połączone.",
-      "explain": "Aby połączyć kolejne urządzenie, otwórz tę samą stronę na nim i kliknij „Połącz to urządzenie”."
+      "title": "Urządzenie jest teraz połączone."
     },
-    "savedConfirm": "Gotowe. Teraz otwórz tę stronę na drugim urządzeniu i kliknij „Połącz to urządzenie”.",
-    "signedinConfirm": "Połączono — Twój postęp synchronizuje się teraz z tym urządzeniem.",
-    "merging": "Łączenie urządzeń…",
     "wizard": {
       "profileQ": "Pseudonim",
       "dailyQ": "Wynik dzienny przy nakładaniu ({count} zagadek)",
