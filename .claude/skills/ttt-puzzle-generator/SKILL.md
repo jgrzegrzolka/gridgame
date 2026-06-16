@@ -17,6 +17,7 @@ The pool is built from `buildRandomCategoryPool()`:
 - `COLORS_FOR_RANDOM` — 7 canonical colours (no violet — too narrow).
 - `MOTIFS_FOR_RANDOM` — 6 motifs (`animal`, `coat-of-arms`, `weapon`, `star-or-moon`, `cross`, `eu-member`).
 - `COLOR_COUNTS_FOR_RANDOM` — `[['=',2], ['=',3], ['=',4], ['>=',4]]`. Colour-count categories; share `exclusiveGroup: 'colorCount'` so any two of them can't pair (including `=4` × `>=4`, which overlap). `=1` has zero coverage and `>=5` has zero on Asia, so neither is in the pool. `<=N` isn't implemented; symmetric add when a use case lands.
+- `STRIPES_ORIENTATIONS_FOR_RANDOM` — `['horizontal', 'vertical']`. The `hasStripesOnly` factory carries `incompatibleWith` listing every charge motif id (rule 4 below) and `ultimateEligible: false` (so `buildUltimateCategoryPool()` drops it for 9×9 — pure-stripe answer pools are too narrow to back 9-per-cell Hall feasibility).
 
 `ALL_MOTIFS` is a superset that adds `union-jack` for the findFlag / flagsdata UI — union-jack isn't in the random pool because it has no compelling puzzle hook and very narrow continent coverage.
 
@@ -24,11 +25,15 @@ The pool is built from `buildRandomCategoryPool()`:
 
 The generator rejects a candidate puzzle if **any** of these fire. Each rule has a runtime check in the engine and a test that pins the behaviour against real data.
 
-### 1. `axesConflict` — same exclusiveGroup on opposite axes
+### 1. `axesConflict` — same exclusiveGroup OR explicit incompatibleWith on opposite axes
 
-Categories with an `exclusiveGroup` (`continent`, `statehood`) can only contribute one value per country. Two continents on opposite axes (`Europe` row × `Asia` col) creates a cell that asks for "European AND Asian" — unsatisfiable by construction.
+Two flavours, both checked in the same function:
+
+**Same exclusiveGroup, different ids.** Categories with an `exclusiveGroup` (`continent`, `statehood`, `colorCount`, `stripesOnly`) can only contribute one value per country. Two continents on opposite axes (`Europe` row × `Asia` col) asks for "European AND Asian" — unsatisfiable by construction. Two stripesOnly cats (`horizontal` × `vertical`) likewise can't co-occur.
 
 The check only fires across axes — multiple continents *on the same axis* are fine (that's just three continent rows, normal).
+
+**Explicit incompatibleWith.** A category can declare cross-dimension pairs it must never appear with. `hasStripesOnly` lists every charge motif id (`hasMotif:cross`, `coat-of-arms`, `animal`, `bird`, `weapon`, `star-or-moon`, `union-jack`) because a pure-stripes flag has no overlay by definition — the cell would be structurally empty. Checked symmetrically so the declaration only lives on one side. Use this lever when "the math will reject it anyway" is true but burning retries on it would thin the puzzle space.
 
 ### 2. `axesImpliedPair` — one axis's matching set is a subset of another's
 
@@ -45,6 +50,10 @@ Default `minPerCell = 2` so the player has a real choice in each cell. The backt
 ### 3b. `hasUltimatePuzzleSolution` (9×9) — Hall-marriage check
 
 For the 9×9 board, each of the 9 cells needs `perCell = 9` distinct countries with no overlap. The check enumerates all 2^9 − 1 = 511 non-empty subsets of cells and verifies the union of their candidate countries is large enough (Hall's defect theorem). Cheap enough to run inside the loop.
+
+### 4. `ultimateEligible: false` — pool-level filter for 9×9
+
+Some categories work for 3×3 (min 2 candidates per cell) but can't back 9×9 (need 9 distinct). Rather than burn 500 retries discovering this via `hasUltimatePuzzleSolution`, mark the category `ultimateEligible: false` and `buildUltimateCategoryPool()` drops it before `randomPuzzle` ever sees it. Current users: both `hasStripesOnly` categories (Europe has 8 pure-horizontals and 5 pure-verticals — both under 9). Default (undefined / true) keeps the category in both pools.
 
 ## When to add a new rejection rule
 

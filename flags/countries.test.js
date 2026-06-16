@@ -440,6 +440,79 @@ test('generateUltimateRandomPuzzle succeeds with the real countries.json under m
   }
 });
 
+// stripesOnly integration pins — Phase 5 of Feature DB. The unit tests in
+// engine.test.js already cover the factory wiring and pool composition;
+// these three pin the end-to-end behaviour against real data so a
+// regression in the pool builder, axesConflict, or buildUltimateCategoryPool
+// surfaces here rather than as a player-visible weird puzzle.
+
+const CHARGE_MOTIF_IDS = [
+  'hasMotif:cross', 'hasMotif:coat-of-arms', 'hasMotif:animal',
+  'hasMotif:bird', 'hasMotif:weapon', 'hasMotif:star-or-moon',
+  'hasMotif:union-jack',
+];
+
+test('generateRandomPuzzle actually produces stripesOnly puzzles in the 3×3 pool (not just generation succeeds)', () => {
+  // Phase 2 added hasStripesOnly to buildRandomCategoryPool. The 30-seed
+  // sweep above proves generation doesn't crash, but a pool that *never*
+  // picks stripesOnly would pass that test too. This one pins that
+  // stripesOnly cats actually surface — over 100 seeds at minPerCell:2,
+  // we expect to land on at least one stripesOnly mix. Asymptotically a
+  // stripesOnly cat is in ~40% of 6-pick samples from the ~26-entry pool;
+  // 100 seeds * minimum 1 hit is a wide guard.
+  const SEEDS = Array.from({ length: 100 }, (_, i) => (i + 1) * 17);
+  let stripesHits = 0;
+  for (const seed of SEEDS) {
+    const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    const ids = [...puzzle.rows, ...puzzle.cols].map((c) => c.id);
+    if (ids.some((id) => id.startsWith('stripesOnly:'))) stripesHits++;
+  }
+  assert.ok(stripesHits > 0,
+    `expected stripesOnly to appear in some 3×3 puzzles over 100 seeds, got ${stripesHits}`);
+});
+
+test('generateUltimateRandomPuzzle never picks stripesOnly (ultimateEligible: false on the factory)', () => {
+  // Phase 2 set hasStripesOnly { ultimateEligible: false } so 9×9 random
+  // can't draw it (pure-stripe answer pools are too narrow to back
+  // 9-distinct-per-cell). Engine-level test already pins
+  // buildUltimateCategoryPool excludes it; this pins the contract
+  // end-to-end through 50 seeded generations against real data — a
+  // regression in the buildUltimateCategoryPool wiring would surface
+  // here even if the filter helper itself looked correct.
+  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 9973);
+  for (const seed of SEEDS) {
+    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    for (const cat of [...puzzle.rows, ...puzzle.cols]) {
+      assert.ok(!cat.id.startsWith('stripesOnly:'),
+        `seed ${seed}: 9×9 puzzle picked ${cat.id}, but stripesOnly is ultimateEligible:false`);
+    }
+  }
+});
+
+test('generateRandomPuzzle never places stripesOnly opposite a charge motif (incompatibleWith end-to-end)', () => {
+  // Phase 2 declared every charge motif on hasStripesOnly's
+  // incompatibleWith list and extended axesConflict to honour it.
+  // Engine-level tests pin the helper in isolation; this pins the
+  // generator-level contract against real data over 100 seeds —
+  // independent of which path the rejection takes (axesConflict
+  // upfront vs. isPuzzleGeneratable downstream as a 0-cell), the
+  // structural pair should never appear in a returned puzzle.
+  const SEEDS = Array.from({ length: 100 }, (_, i) => (i + 1) * 17);
+  for (const seed of SEEDS) {
+    const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    const rowIds = puzzle.rows.map((c) => c.id);
+    const colIds = puzzle.cols.map((c) => c.id);
+    const hasStripesRow = rowIds.some((id) => id.startsWith('stripesOnly:'));
+    const hasStripesCol = colIds.some((id) => id.startsWith('stripesOnly:'));
+    const hasChargeRow = rowIds.some((id) => CHARGE_MOTIF_IDS.includes(id));
+    const hasChargeCol = colIds.some((id) => CHARGE_MOTIF_IDS.includes(id));
+    assert.ok(!(hasStripesRow && hasChargeCol),
+      `seed ${seed}: stripesOnly on row + charge motif on col — rows=[${rowIds.join(',')}] cols=[${colIds.join(',')}]`);
+    assert.ok(!(hasStripesCol && hasChargeRow),
+      `seed ${seed}: stripesOnly on col + charge motif on row — rows=[${rowIds.join(',')}] cols=[${colIds.join(',')}]`);
+  }
+});
+
 // Integration tests against the real country pool — these guard the
 // flagsdata page (and findFlag's chooser) against any future regression
 // in either matchesFilters or the dataset itself. The unit tests in
