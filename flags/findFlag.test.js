@@ -35,8 +35,8 @@ function country(fields) {
   });
 }
 
-const FR = country({ code: 'fr', name: 'France', continent: 'Europe', primaryColors: ['red', 'white', 'blue'] });
-const DE = country({ code: 'de', name: 'Germany', continent: 'Europe', primaryColors: ['black', 'red', 'yellow'] });
+const FR = country({ code: 'fr', name: 'France', continent: 'Europe', primaryColors: ['red', 'white', 'blue'], stripesOnly: 'vertical' });
+const DE = country({ code: 'de', name: 'Germany', continent: 'Europe', primaryColors: ['black', 'red', 'yellow'], stripesOnly: 'horizontal' });
 const KE = country({ code: 'ke', name: 'Kenya', continent: 'Africa', primaryColors: ['black', 'red', 'green', 'white'], motifs: ['weapon', 'coat-of-arms'] });
 const JP = country({ code: 'jp', name: 'Japan', continent: 'Asia', primaryColors: ['white', 'red'] });
 const EU = country({ code: 'eu', name: 'European Union', category: 'other', continent: null, primaryColors: ['blue', 'yellow'], motifs: ['star-or-moon'] });
@@ -420,7 +420,7 @@ function rngFromSeq(seq) {
   };
 }
 
-const PILL_POOL = /** @type {Array<{ group: 'continent' | 'color' | 'motif', value: string }>} */ ([
+const PILL_POOL = /** @type {Array<{ group: 'continent' | 'color' | 'motif' | 'stripesOnly', value: string }>} */ ([
   { group: 'continent', value: 'Europe' },
   { group: 'continent', value: 'Africa' },
   { group: 'continent', value: 'Asia' },
@@ -429,12 +429,14 @@ const PILL_POOL = /** @type {Array<{ group: 'continent' | 'color' | 'motif', val
   { group: 'color', value: 'blue' },
   { group: 'motif', value: 'weapon' },
   { group: 'motif', value: 'star-or-moon' },
+  { group: 'stripesOnly', value: 'horizontal' },
+  { group: 'stripesOnly', value: 'vertical' },
 ]);
 
 /** @param {ReturnType<typeof emptyFilters>} f */
 function pillCount(f) {
   let n = 0;
-  for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'>} */ (['status','continent','color','motif'])) {
+  for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'|'stripesOnly'>} */ (['status','continent','color','motif','stripesOnly'])) {
     n += f[k].include.size + f[k].exclude.size;
   }
   return n;
@@ -458,11 +460,11 @@ test('pickRandomMix: always emits 2-4 pills, never 1', () => {
   }
 });
 
-test('pickRandomMix: at most one pill per scalar group (continent), arrays may repeat', () => {
-  // Continent/status are scalar — two values AND-ed = unsatisfiable —
-  // so the picker must cap them at 1. Colors and motifs are arrays so
-  // multi-pill within them is fine (and is how 4-pill mixes get built
-  // when the pool only has 3 groups).
+test('pickRandomMix: at most one pill per scalar group (continent / stripesOnly), arrays may repeat', () => {
+  // Continent/status/stripesOnly are scalar — two values AND-ed =
+  // unsatisfiable — so the picker must cap them at 1. Colors and motifs
+  // are arrays so multi-pill within them is fine (and is how 4-pill mixes
+  // get built when the pool only has a few scalar groups).
   for (let seed = 0; seed < 50; seed++) {
     let i = 0;
     const rng = () => {
@@ -475,7 +477,54 @@ test('pickRandomMix: at most one pill per scalar group (continent), arrays may r
       `seed ${seed}: continent should have at most one pill`);
     assert.ok(f.status.include.size + f.status.exclude.size <= 1,
       `seed ${seed}: status should have at most one pill`);
+    assert.ok(f.stripesOnly.include.size + f.stripesOnly.exclude.size <= 1,
+      `seed ${seed}: stripesOnly should have at most one pill`);
   }
+});
+
+test('pickRandomMix: stripesOnly + colorCount are mutually exclusive — colorCount stays null when a stripesOnly pill lands in the mix', () => {
+  // A pure-stripes flag has a tight palette (usually 2 or 3 colours), so
+  // layering colorCount on top either restates the palette or collapses
+  // the answer set. The picker skips the colorCount paths entirely when
+  // the mix already constrains stripesOnly, even at probability=1.
+  //
+  // Force stripesOnly into every mix by passing a pool that has nothing
+  // ELSE but stripesOnly + continents (so picks always include stripes).
+  // Run 50 seeds with both modifier probabilities pinned at 1.
+  const POOL_FORCING_STRIPES = /** @type {Array<{ group: 'continent' | 'stripesOnly', value: string }>} */ ([
+    { group: 'continent', value: 'Europe' },
+    { group: 'continent', value: 'Africa' },
+    { group: 'stripesOnly', value: 'horizontal' },
+    { group: 'stripesOnly', value: 'vertical' },
+  ]);
+  let mixesWithStripes = 0;
+  for (let seed = 0; seed < 50; seed++) {
+    let i = 0;
+    const rng = () => {
+      const v = ((seed * 11 + i * 17) % 100) / 100;
+      i++;
+      return v;
+    };
+    const f = pickRandomMix(POOL_FORCING_STRIPES, SAMPLE, {
+      rng,
+      onlyColorsProbability: 1,
+      colorCountProbability: 1,
+      excludeProbability: 0,
+    });
+    const hasStripes = f.stripesOnly.include.size + f.stripesOnly.exclude.size > 0;
+    if (hasStripes) {
+      mixesWithStripes++;
+      assert.equal(f.colorCount, null,
+        `seed ${seed}: stripesOnly + colorCount must be mutually exclusive — got colorCount=${JSON.stringify(f.colorCount)}`);
+    }
+  }
+  // Pool is 4 entries (2 continents + 2 stripes) and pickMixSize picks
+  // 2-4 pills with scalar deduplication — every mix lands on a stripes
+  // pill. If this ever stops being true the assertion above goes
+  // vacuous, so guard the test by requiring the path was actually
+  // exercised.
+  assert.ok(mixesWithStripes >= 30,
+    `expected most of 50 seeds to land on a stripes pill — only got ${mixesWithStripes}`);
 });
 
 test('pickRandomMix: result intersection is >= minIntersection when achievable', () => {
@@ -579,7 +628,14 @@ test('pickRandomMix: onlyColorsProbability=1 locks colorCount to the include-col
       onlyColorsProbability: 1,
       colorCountProbability: 0,
     });
-    if (f.color.include.size > 0) {
+    const hasStripes = f.stripesOnly.include.size + f.stripesOnly.exclude.size > 0;
+    if (hasStripes) {
+      // stripesOnly + colorCount are mutually exclusive (Phase 4) — the
+      // modifier paths are skipped entirely when the mix already carries
+      // a stripesOnly pill, regardless of whether colours are present.
+      assert.equal(f.colorCount, null,
+        `seed ${seed}: stripesOnly in mix should skip colorCount, got ${JSON.stringify(f.colorCount)}`);
+    } else if (f.color.include.size > 0) {
       assert.deepEqual(
         f.colorCount,
         { op: '=', n: f.color.include.size },

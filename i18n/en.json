@@ -129,7 +129,8 @@
     "sections": {
       "continents": "Continents",
       "colors": "Colors",
-      "motifs": "Motifs"
+      "motifs": "Motifs",
+      "stripes": "Stripes"
     }
   },
   "daily": {

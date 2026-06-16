@@ -349,7 +349,7 @@ function pickMixSize(rng) {
 /** Scalar groups — a country has exactly one value, so two distinct
  * values AND-ed together can never match. The picker enforces "max 1
  * pill per scalar group" to keep mixes satisfiable. */
-const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent', 'status']));
+const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent', 'status', 'stripesOnly']));
 
 /**
  * Generate a random filter for the chooser's "Random" button. Picks
@@ -382,7 +382,7 @@ const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent',
  * result page lands on a 0-flag mix, which startGame's
  * targets.length < 1 guard bounces back to the chooser.
  *
- * @param {Array<{ group: 'continent' | 'color' | 'motif' | 'status', value: string }>} pillPool
+ * @param {Array<{ group: 'continent' | 'color' | 'motif' | 'status' | 'stripesOnly', value: string }>} pillPool
  * @param {Country[]} all
  * @param {{
  *   rng?: () => number,
@@ -448,12 +448,21 @@ export function pickRandomMix(pillPool, all, options = {}) {
  * exactly zero rng bytes — keeping the pre-existing pill-only tests
  * deterministic against their seeded RNGs.
  *
+ * Skipped entirely when the mix already constrains `stripesOnly`. A
+ * pure-stripes flag has a tightly-determined palette (usually 2 or 3
+ * colours), so layering a colorCount constraint on top almost always
+ * either restates that fact ("horizontal stripes only" + "exactly 3
+ * colours" → most pure tricolours already match) or breaks the mix
+ * down to a single flag. The simpler shape reads better in the puzzle
+ * title and matches more flags.
+ *
  * @param {Filters} f
  * @param {() => number} rng
  * @param {number} onlyColorsProbability
  * @param {number} colorCountProbability
  */
 function maybeAttachColorCount(f, rng, onlyColorsProbability, colorCountProbability) {
+  if (f.stripesOnly.include.size > 0 || f.stripesOnly.exclude.size > 0) return;
   const includeColors = f.color.include.size;
   if (includeColors > 0 && onlyColorsProbability > 0 && rng() < onlyColorsProbability) {
     f.colorCount = { op: '=', n: includeColors };

@@ -2,6 +2,7 @@ import { CONTINENTS, flagsGamePool, loadCountries } from '../flags/group.js';
 import {
   ALL_FLAG_COLORS,
   ALL_MOTIFS,
+  STRIPES_ORIENTATIONS_FOR_RANDOM,
   suggest,
   exactSingleMatch,
 } from '../flags/engine.js';
@@ -105,7 +106,7 @@ function attachShareHandler(el) {
 const MODE_HINT_KEY = 'findFlag.mode';
 
 function goRandom(all) {
-  /** @type {Array<{ group: 'continent' | 'color' | 'motif', value: string }>} */
+  /** @type {Array<{ group: 'continent' | 'color' | 'motif' | 'stripesOnly', value: string }>} */
   const pool = [
     ...CONTINENTS.filter((v) => all.some((c) => c.continent === v))
       .map((v) => ({ group: /** @type {'continent'} */ ('continent'), value: /** @type {string} */ (v) })),
@@ -113,6 +114,8 @@ function goRandom(all) {
       .map((v) => ({ group: /** @type {'color'} */ ('color'), value: v })),
     ...ALL_MOTIFS.filter((v) => all.some((c) => (c.motifs ?? []).includes(v)))
       .map((v) => ({ group: /** @type {'motif'} */ ('motif'), value: v })),
+    ...STRIPES_ORIENTATIONS_FOR_RANDOM.filter((v) => all.some((c) => c.stripesOnly === v))
+      .map((v) => ({ group: /** @type {'stripesOnly'} */ ('stripesOnly'), value: /** @type {string} */ (v) })),
   ];
   const f = pickRandomMix(pool, all, RANDOM_MIX_OPTIONS);
   const params = new URLSearchParams({ f: serializeFilter(f) });
@@ -280,9 +283,18 @@ export function bootFindFlag() {
           count: all.filter((c) => (c.motifs ?? []).includes(value)).length,
         })).filter((it) => it.count > 0),
       },
+      {
+        titleKey: 'findFlag.sections.stripes',
+        titleFallback: 'Stripes',
+        group: /** @type {'stripesOnly'} */ ('stripesOnly'),
+        items: STRIPES_ORIENTATIONS_FOR_RANDOM.map((value) => ({
+          value: /** @type {string} */ (value),
+          count: all.filter((c) => c.stripesOnly === value).length,
+        })).filter((it) => it.count > 0),
+      },
     ]);
 
-    /** @type {Array<{ btn: HTMLButtonElement, group: 'continent' | 'color' | 'motif', value: string, labelSpan: HTMLSpanElement }>} */
+    /** @type {Array<{ btn: HTMLButtonElement, group: 'continent' | 'color' | 'motif' | 'stripesOnly', value: string, labelSpan: HTMLSpanElement }>} */
     const allPills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
     const sectionHeaders = [];
@@ -379,7 +391,7 @@ export function bootFindFlag() {
 
     function updateBar() {
       let selCount = 0;
-      for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
+      for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'>} */ (['continent','color','motif','status','stripesOnly'])) {
         selCount += filter[k].include.size + filter[k].exclude.size;
       }
       if (filter.colorCount !== null) selCount++;
@@ -401,7 +413,7 @@ export function bootFindFlag() {
     }
 
     /**
-     * @param {'continent' | 'color' | 'motif'} group
+     * @param {'continent' | 'color' | 'motif' | 'stripesOnly'} group
      * @param {string} value
      * @param {HTMLButtonElement} btn
      */
@@ -432,7 +444,7 @@ export function bootFindFlag() {
     });
 
     clearBtn.addEventListener('click', () => {
-      for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status'>} */ (['continent','color','motif','status'])) {
+      for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'>} */ (['continent','color','motif','status','stripesOnly'])) {
         filter[k].include.clear();
         filter[k].exclude.clear();
       }
