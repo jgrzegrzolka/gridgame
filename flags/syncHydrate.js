@@ -136,7 +136,86 @@ export function applyHydratePayload({ store, payload }) {
   return { dailyWritten, quizWritten };
 }
 
+const LAST_HYDRATE_KEY = 'gridgame.lastHydrateAt';
+const DEFAULT_MIN_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+
 const ENDPOINT = '/api/v1/sync/hydrate';
+
+/**
+ * Background-safe ambient sync. Called on page boots that read local
+ * cache (daily archive, today's daily, flagQuiz picker) to refresh
+ * from the server when the data the user is about to see might be
+ * stale.
+ *
+ * Two gates, both designed to keep this free for the vast majority
+ * of players who never link a second device:
+ *
+ *   1. **Identity gate.** No `localStorage[identityKey]` → return
+ *      immediately. Zero network, zero work for unlinked users. The
+ *      cost on every page load for a fresh player is one localStorage
+ *      read.
+ *   2. **Staleness gate.** `lastHydrateAt` from a previous run inside
+ *      the last `minIntervalMs` → return immediately. Default
+ *      interval is 1 hour, which is more than enough for a daily
+ *      puzzle game where the archive doesn't change every minute.
+ *
+ * The timestamp gets stamped BEFORE the network call so concurrent
+ * tabs (the user has both /daily/ and /daily/archive open) don't
+ * both fire the GET. On failure we still skip until next window —
+ * better than hammering a broken endpoint, and the next legitimate
+ * page load will retry once the interval rolls over.
+ *
+ * @param {{
+ *   deviceId: string,
+ *   store: HydrateStore & { removeItem?: (k: string) => void },
+ *   identityKey: string,
+ *   minIntervalMs?: number,
+ *   now?: number,
+ *   fetchImpl?: typeof fetch,
+ * }} args
+ * @returns {Promise<
+ *   | { ran: false, reason: 'unlinked' | 'fresh' }
+ *   | { ran: true, ok: true, dailyWritten: number, quizWritten: number }
+ *   | { ran: true, ok: false }
+ * >}
+ */
+export async function maybeHydrate({
+  deviceId, store, identityKey,
+  minIntervalMs = DEFAULT_MIN_INTERVAL_MS,
+  now = Date.now(),
+  fetchImpl,
+}) {
+  let identity = null;
+  try { identity = store.getItem(identityKey); } catch {}
+  if (typeof identity !== 'string' || identity.length === 0) {
+    return { ran: false, reason: 'unlinked' };
+  }
+
+  let last = 0;
+  try {
+    const raw = store.getItem(LAST_HYDRATE_KEY);
+    if (typeof raw === 'string') {
+      const n = Number.parseInt(raw, 10);
+      if (Number.isFinite(n) && n > 0) last = n;
+    }
+  } catch {}
+  // `last === 0` = never run on this browser → always proceed.
+  // Otherwise gate on the interval. The explicit `last > 0` check
+  // means tests can use small `now` values without spuriously
+  // tripping the fresh gate.
+  if (last > 0 && now - last < minIntervalMs) {
+    return { ran: false, reason: 'fresh' };
+  }
+
+  // Stamp BEFORE the await so a second tab navigating at the same
+  // millisecond won't also enter the GET branch. A failed GET still
+  // burns the window; that's intentional.
+  try { store.setItem(LAST_HYDRATE_KEY, String(now)); } catch {}
+
+  const res = await hydrateFromServer({ deviceId, store, fetchImpl });
+  if (res.ok) return { ran: true, ok: true, dailyWritten: res.dailyWritten, quizWritten: res.quizWritten };
+  return { ran: true, ok: false };
+}
 
 /**
  * Fetch + apply in one call. Never-throws — every failure mode
