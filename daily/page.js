@@ -28,6 +28,8 @@ import { pickExtraStats, hasAnyExtraStats, pickMarkerKind } from './extraStats.j
 import { shareText } from '../common.js';
 import { buildShareText } from '../flags/shareGrid.js';
 import { fetchDailyMe } from './streakClient.js';
+import { evaluateAchievements } from '../flags/achievements.js';
+import { celebrate } from '../flags/achievementCelebrate.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
 import { fetchCatalog } from './catalogSource.js';
 
@@ -546,7 +548,24 @@ async function handleFinish(n, targets, all, info, isToday) {
   // Today-only: an archive finish doesn't extend the streak counter,
   // so we don't render it on those pages.
   if (isToday) {
-    loadAndPaintStreak(deviceId, found, info.totalCount, { bypassCache: true });
+    // Snapshot the earned-achievement set BEFORE the fresh fetch so
+    // we can diff and fire the drop-and-bounce celebration for
+    // anything newly unlocked by this submit. `streakState` here
+    // holds whatever the page-load fetch returned; the post-submit
+    // fetchDailyMe call below overwrites it with the fresh numbers
+    // that reflect the just-submitted row.
+    const beforeStatuses = streakState ? evaluateAchievements(streakState) : [];
+    const beforeEarnedIds = new Set(
+      beforeStatuses.filter((s) => s.earned).map((s) => s.rule.id),
+    );
+    await loadAndPaintStreak(deviceId, found, info.totalCount, { bypassCache: true });
+    if (streakState) {
+      const afterStatuses = evaluateAchievements(streakState);
+      const newlyEarned = afterStatuses
+        .filter((s) => s.earned && !beforeEarnedIds.has(s.rule.id))
+        .map((s) => s.rule);
+      if (newlyEarned.length > 0) void celebrate(newlyEarned);
+    }
   }
 }
 
