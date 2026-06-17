@@ -159,7 +159,7 @@
   transition: border-color 80ms, opacity 80ms, filter 80ms;
 }
 .achievement-badge--earned {
-  border-color: var(--muted-color);
+  border-color: var(--secondary-color);
 }
 .achievement-badge--locked {
   opacity: 0.4;
@@ -175,7 +175,7 @@
   color: var(--muted-color);
 }
 .achievement-badge--earned .achievement-icon {
-  color: var(--primary-color);
+  color: var(--secondary-color);
 }
 .achievement-icon svg {
   width: 100%;
