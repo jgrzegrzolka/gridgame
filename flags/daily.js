@@ -59,6 +59,11 @@ import { parseFilterString } from './findFlag.js';
  * @property {boolean} [primaryCleanExempt]  rare escape hatch — when true,
  *                             this entry opts out of the #1-100 primary-clean
  *                             test. Use sparingly; see SKILL.md rule 5.
+ * @property {boolean} [sizeFloorExempt]  grandfather flag for puzzles that
+ *                             predate the rule-9 4-flag floor. Opts the entry
+ *                             out of the 4–30 answer-set-size test. Only set
+ *                             on shipped puzzles in the immutable past; new
+ *                             entries should be reworked instead. See SKILL.md rule 9.
  */
 
 /**

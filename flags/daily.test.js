@@ -368,6 +368,42 @@ test('puzzles: every entry has a YYYY-MM-DD date and dates are contiguous', () =
   }
 });
 
+// Rule 9 (hard): every entry — filter or manual — must have between 4
+// and 30 answers inclusive. The 4-floor was tightened from the old
+// banded "≥2 in #1–50, ≥1 past #50" because tiny answer sets read as
+// gotchas — "find all of them" needs enough flags to feel like a
+// category. The 30-cap is autocomplete-UX bound (huge sets become
+// "remember every member" rather than "discover the pattern").
+//
+// `sizeFloorExempt: true` grandfathers shipped puzzles that predate the
+// rule tightening — they're in the immutable past, can't be reworked.
+// Don't set this on new entries.
+test('puzzles: every entry has 4–30 answers', () => {
+  const offenders = [];
+  for (const entry of PUZZLES) {
+    if (entry.sizeFloorExempt) continue;
+    const len = Array.isArray(entry.answers) ? entry.answers.length : 0;
+    if (len < 4 || len > 30) {
+      offenders.push(`#${entry.n} (${entry.filter ?? 'manual'}): ${len} answers`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
+test('ideas: every entry has 4–30 answers', () => {
+  const IDEAS = JSON.parse(
+    readFileSync(join(CATALOG_DIR, 'ideas.json'), 'utf-8'),
+  );
+  const offenders = [];
+  for (const entry of IDEAS) {
+    const len = Array.isArray(entry.answers) ? entry.answers.length : 0;
+    if (len < 4 || len > 30) {
+      offenders.push(`idea (${entry.filter ?? 'manual'}): ${len} answers`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
 test('puzzles: every answer code is a known sovereign country', () => {
   const sovCodes = new Set(flagsGamePool(COUNTRIES, false).map((c) => c.code));
   const offenders = [];
