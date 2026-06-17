@@ -24,7 +24,7 @@
  *            filter). Pure answer-set overlap with different filter
  *            framings is allowed — see `isFilterRefinement` in
  *            `flags/daily.js`.
- *   - Rule 9: 2 <= answers.length <= 30
+ *   - Rule 9: 4 <= answers.length <= 30
  *   - Rule 14: no single-use token recurrence (against catalog + ideas)
  *   - Feature DA ambiguity audit: rejects candidates where a flag's
  *            `ambiguousColorCount` straddles the filter's `colorCount`,
@@ -307,7 +307,7 @@ function tryCandidate(filter) {
   const r = resolve(filter);
   if (!r) return;
   // Rule 9 size band
-  if (r.answers.length < 2 || r.answers.length > 30) return;
+  if (r.answers.length < 4 || r.answers.length > 30) return;
   const hard = passesHardRules(filter, r.answers, r.parsed);
   if (!hard.ok) return;
   const score = scoreEntry({ filter, answers: r.answers }, BY_CODE);
@@ -542,6 +542,36 @@ for (const inc of MOTIFS) {
   for (const exc of ALL_MOTIFS) {
     if (inc === exc) continue;
     tryCandidate(`motif:${inc},motif:!${exc}`);
+  }
+}
+
+// T28: continent + stripesOnly (regional pure-stripe puzzles, the
+// canonical Phase 6 framings). New dimension shipped in Feature DB.
+// Europe vertical: France/Italy/Belgium/Ireland/Romania (5). Europe
+// horizontal: Germany/Russia/Bulgaria/Netherlands/Hungary/Estonia/
+// Lithuania/Luxembourg/Austria/+ (9+). Africa vertical: Mali/Guinea/
+// Chad/Nigeria/Côte d'Ivoire (5).
+//
+// Solo `stripesOnly:X` worldwide is deliberately *not* a template: the
+// solo set is a strict superset of every regional set + the regional
+// filter is literally a refinement of solo, so rule 6 would force a
+// choice. Regional framings win — they're concrete (named countries,
+// not "every pure-stripe flag everywhere") and tighter difficulty.
+// Park solo worldwide for past-#100 if you want the exhausted-set
+// finale puzzle.
+for (const cont of CONTINENTS) {
+  for (const o of ['horizontal', 'vertical']) {
+    tryCandidate(`continent:${cont},stripesOnly:${o}`);
+  }
+}
+
+// T29: stripesOnly + 1 color (worldwide pure-stripe flags with a given
+// colour). e.g. horizontal+green, vertical+red. Different framing
+// shape than the regional (no continent token), so the rule 6
+// refinement check treats this as parallel rather than nested.
+for (const o of ['horizontal', 'vertical']) {
+  for (const col of COLORS) {
+    tryCandidate(`stripesOnly:${o},color:${col}`);
   }
 }
 

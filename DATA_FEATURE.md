@@ -19,7 +19,15 @@ A fresh agent picking this up should:
 
 ## Now
 
-### Feature DB: Stripes-only orientation tag
+---
+
+## Backlog
+
+---
+
+## Done
+
+### Feature DB: Stripes-only orientation tag — *shipped 2026-06-18*
 
 **Goal.** New field `stripesOnly: 'horizontal' | 'vertical' | null` on each country. Enables clean puzzles like "European vertical-stripe flags" (France, Italy, Belgium, Ireland, Romania) or "European horizontal-stripe flags" (Germany, Russia, Bulgaria, Netherlands, Hungary, Estonia, Lithuania, Luxembourg). Surfaces in flagsdata filters, findFlag "make a puzzle" chooser, TTT random pool, and daily-puzzle authoring.
 
@@ -43,9 +51,19 @@ A fresh agent picking this up should:
 5. **TTT random pool.** Wire `hasStripesOnly` into `buildRandomCategoryPool()` (already done in Phase 2 effectively — confirm + add an integration test that 3×3 generation stays inside the retry budget with the new cats).
 6. **First puzzle ideas.** Draft 3–4 backlog daily-puzzle ideas using the new dimension via `daily-puzzle-author` skill (`continent:Europe,stripesOnly:horizontal`, etc.).
 
-**Currently in:** Phase 6 parked for 2026-06-18 — engineering done, content authoring pending. Phases 1-5 shipped (PRs #473, #474, #475, #476, #477). Follow-on PR `feature/db-stripes-only-non-sovereign` extended the seed data to non-sovereign entries that the Phase 1 sweep missed (Catalonia → horizontal, Canary Islands → horizontal); KNOWN_STRIPES_ONLY pins updated.
+**What shipped.** All six phases. PRs #473, #474, #475, #476, #477 (Phases 1-5) + the non-sovereign follow-on `feature/db-stripes-only-non-sovereign` (Catalonia → horizontal, Canary Islands → horizontal). Phase 6 closed 2026-06-18 by extending `authoring/generate-candidates.mjs` with two stripes-aware templates (T28 continent + stripesOnly, T29 stripesOnly + colour). The generator emitted 15 stripes candidates into the new backlog; the two flagship Europe entries (`continent:Europe,stripesOnly:vertical` = 5 famous flags / difficulty 1.0; `continent:Europe,stripesOnly:horizontal` = 13 flags / difficulty 1.5) are the easiest puzzles in the whole batch.
 
-**Phase 6 (deferred):** draft 3-4 backlog daily-puzzle ideas using the new dimension via `/daily-puzzle-author`. Suggested seeds: `continent:Europe,stripesOnly:horizontal` (Germany/Russia/Bulgaria/Netherlands/Hungary/Estonia/Lithuania/Luxembourg/Austria), `continent:Europe,stripesOnly:vertical` (France/Italy/Belgium/Ireland/Romania), `continent:Africa,stripesOnly:vertical` (Mali/Guinea/Côte d'Ivoire/Chad/Nigeria + the FR territories), plus one mixed worldwide. The author flow handles the en+pl descriptions and the catalog rules — don't author manually.
+**Phase 6 framing decision.** Solo worldwide `stripesOnly:X` was *not* added as a template — under rule 6 the regional and solo framings can't coexist (regional is a strict subset + literal token-refinement of solo). Regional wins because the named country sets are more concrete and the difficulty stays tighter. Solo worldwide is available for past-#100 (park manually if Jan wants the "exhausted set" finale puzzle).
+
+**Standing artifacts:**
+
+- `flags/countries.json` `stripesOnly` field on every country (sovereign + non-sovereign).
+- `flags/engine.js` `hasStripesOnly(orientation)` factory with `incompatibleWith` + `ultimateEligible: false` (3×3 only).
+- `flags/flagsFilter.js` + `flags/findFlag.js` parse/serialise `stripesOnly:horizontal` / `stripesOnly:vertical` end-to-end.
+- `flagsdata/page.js` "Stripes" pill group; `findFlag/page.js` chooser section + random pool.
+- `authoring/audit-stripe-orientation.mjs` per-continent classification report.
+- `authoring/generate-candidates.mjs` T28 + T29 stripes templates (shipped Phase 6).
+- TTT 3×3 random pool includes the two stripesOnly cats; 9×9 deliberately skips them.
 
 ---
 

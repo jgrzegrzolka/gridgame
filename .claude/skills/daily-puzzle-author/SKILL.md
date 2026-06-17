@@ -247,7 +247,7 @@ Tool: `node authoring/generate-candidates.mjs`. The script enumerates filter tem
 - Rule 3: every answer is a sovereign code
 - Rule 5: primary-clean
 - Rule 6: candidate's answer set is neither a strict subset nor a strict superset of any existing `puzzles.json` entry's set (and is not exactly equal either — "same puzzle, different filter syntax" is also rejected). Checked against `puzzles.json` only, NOT against the parked entries in `ideas.json` (those are `parkUntilN: 101` precisely because they're rule-6 violators meant for past-#100 use). Strict-enforcement is correct as long as every catalog entry sits in #1-100 — when an entry first crosses #100 we'll need to relax this for past-#100 candidates.
-- Rule 9: answer set size in [2, 30]
+- Rule 9: answer set size in [4, 30]
 - Rule 14: no single-use token reuse
 - Rule 15: no flag-data ambiguity (count or membership straddle on `ambiguousColorCount` / `ambiguousColors`)
 - Dedup: filter string not already in the catalog or ideas
