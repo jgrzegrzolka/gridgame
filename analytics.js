@@ -72,3 +72,21 @@ export function initAppInsights() {
   };
   document.head.appendChild(script);
 }
+
+/**
+ * Emit a custom event. No-op if the SDK hasn't loaded yet (CDN slow,
+ * ad blocker, etc.) — caller doesn't have to gate. Use for signals
+ * that aren't already auto-captured (TTT-online WebSocket lifecycle
+ * is the canonical case — PartyKit's WebSocket server runs on
+ * Cloudflare, separate from AI's reach, so the client side is the
+ * only surface where these events are observable).
+ *
+ * @param {string} name
+ * @param {Record<string, string | number | boolean>} [properties]
+ */
+export function trackEvent(name, properties) {
+  /** @type {any} */
+  const ai = typeof window !== 'undefined' ? /** @type {any} */ (window).appInsights : null;
+  if (!ai || typeof ai.trackEvent !== 'function') return;
+  ai.trackEvent({ name, properties: properties ?? {} });
+}

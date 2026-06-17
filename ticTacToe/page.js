@@ -13,6 +13,7 @@ import { submitEngagementEvent } from '../flags/eventSubmit.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
 import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
+import { trackEvent } from '../analytics.js';
 import { loadCountries } from '../flags/group.js';
 import { shareUrl } from '../common.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
@@ -246,6 +247,19 @@ function runOnline(countries) {
   }
 
   function onSocketClose() {
+    // Feature Q: net new signal — PartyKit (the WS server) runs on
+    // Cloudflare, not Azure, so AI sees nothing about disconnects from
+    // the server side. Tracking the client-side close gives us
+    // observability into "did someone drop mid-game" from the only
+    // surface we can reach.
+    trackEvent('ttt-disconnect', {
+      mode: '3x3',
+      role: state.myRole ?? 'unknown',
+      peerPresent: state.peerPresent === true,
+      hadWinner: typeof state.game?.winner === 'string',
+      stopReconnecting,
+      reconnectAttempts,
+    });
     if (stopReconnecting || !activeRoom) {
       // Either the server rejected us (rejected -> close in the reducer)
       // or we never had a room. Leave the status whatever the reducer set.
