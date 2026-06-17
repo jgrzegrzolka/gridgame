@@ -10,6 +10,44 @@ import {
   showReason,
 } from '../playFlow.js';
 import { fetchCatalog } from '../catalogSource.js';
+import { loadReviewState, saveReviewState } from './reviewState.js';
+
+/**
+ * Wires up a verdict bar (the ✓ / ✗ pair) to the same localStorage
+ * the tile grid uses. The bar shape is two buttons with
+ * `data-verdict-target="approved" | "rejected"` plus a wrapper that
+ * receives the `--approved` / `--rejected` modifier class for the
+ * solid-fill paint. Toggling the active verdict clears it.
+ *
+ * @param {HTMLElement} barEl
+ * @param {string} filter
+ */
+function wireVerdictBar(barEl, filter) {
+  const state = loadReviewState();
+  const paint = () => {
+    const v = state.get(filter);
+    barEl.classList.toggle('ideas-play-verdict--approved', v === 'approved');
+    barEl.classList.toggle('ideas-play-verdict--rejected', v === 'rejected');
+  };
+  paint();
+  barEl.hidden = false;
+  for (const btn of barEl.querySelectorAll('[data-verdict-target]')) {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = /** @type {HTMLElement} */ (btn).dataset.verdictTarget;
+      if (target !== 'approved' && target !== 'rejected') return;
+      const fresh = loadReviewState(); // re-read in case the tile grid changed it in another tab
+      if (fresh.get(filter) === target) fresh.delete(filter);
+      else fresh.set(filter, target);
+      saveReviewState(fresh);
+      // Mirror the change into the local state map so subsequent
+      // toggles in this tab see consistent state without re-reading.
+      if (fresh.get(filter)) state.set(filter, /** @type {'approved' | 'rejected'} */ (fresh.get(filter)));
+      else state.delete(filter);
+      paint();
+    });
+  }
+}
 
 /**
  * @typedef {Object} Idea
@@ -90,6 +128,11 @@ export function bootIdeasPlay() {
         targets,
         labelFor: () => filterToCategory(filter, t).label,
       });
+
+      const gameBar = document.getElementById('ideas-play-verdict-game');
+      const resultBar = document.getElementById('ideas-play-verdict-result');
+      if (gameBar) wireVerdictBar(gameBar, idea.filter);
+      if (resultBar) wireVerdictBar(resultBar, idea.filter);
     })
     .catch((err) => {
       showState(`${t('game.failedToLoad', 'Failed to load:')} ${err.message}`);

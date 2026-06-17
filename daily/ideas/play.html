@@ -12,8 +12,9 @@
     <link rel="stylesheet" href="../../common.css?v=__BUILD__" />
     <link rel="stylesheet" href="../../findFlag/index.css?v=__BUILD__" />
     <link rel="stylesheet" href="../index.css?v=__BUILD__" />
+    <link rel="stylesheet" href="./ideas.css?v=__BUILD__" />
   </head>
-  <body>
+  <body class="ideas-page">
     <a class="lang-toggle" id="lang-toggle" href="#"></a>
     <script>
       // Sync lang-flag paint — sets data-current before any module imports
@@ -66,6 +67,11 @@
         ·
         <a href="../../" data-i18n="menu.home">Home</a>
       </div>
+      <div class="ideas-play-verdict" id="ideas-play-verdict-game" hidden>
+        <span class="ideas-play-verdict-label">Verdict:</span>
+        <button type="button" class="review-button review-button--approve" data-verdict-target="approved" title="Approve (mark as fine to promote)" aria-label="Approve">✓</button>
+        <button type="button" class="review-button review-button--reject" data-verdict-target="rejected" title="Reject (mark as not interested)" aria-label="Reject">✗</button>
+      </div>
     </section>
 
     <dialog id="zoom">
@@ -88,6 +94,11 @@
         ·
         <a href="../../" data-i18n="menu.home">Home</a>
       </p>
+      <div class="ideas-play-verdict" id="ideas-play-verdict-result" hidden>
+        <span class="ideas-play-verdict-label">Verdict:</span>
+        <button type="button" class="review-button review-button--approve" data-verdict-target="approved" title="Approve (mark as fine to promote)" aria-label="Approve">✓</button>
+        <button type="button" class="review-button review-button--reject" data-verdict-target="rejected" title="Reject (mark as not interested)" aria-label="Reject">✗</button>
+      </div>
     </section>
 
     <script type="module">
