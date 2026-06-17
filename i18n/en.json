@@ -159,6 +159,10 @@
     },
     "streak": {
       "line": "Streak: {n}"
+    },
+    "nextPuzzle": {
+      "in": "Next puzzle in {countdown}",
+      "ghostLabel": "Next puzzle"
     }
   },
   "ttt": {

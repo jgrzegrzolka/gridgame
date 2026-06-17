@@ -112,6 +112,51 @@ export function renderArchiveSquare(entry, opts, doc = document) {
 }
 
 /**
+ * Non-clickable "next puzzle" tile placed at the tail of the archive
+ * grid. Shows the upcoming entry's release date + a countdown to the
+ * next Warsaw midnight. Caller is responsible for updating the
+ * countdown text on a tick (see `daily/archive.js`).
+ *
+ * @param {DailyPuzzle} entry        the next-dated entry from puzzles.json
+ * @param {{ countdown: string, ghostLabel: string, dateText: string }} opts
+ * @param {Document} [doc]
+ */
+export function renderGhostSquare(entry, opts, doc = document) {
+  const { countdown, ghostLabel, dateText } = opts;
+  const li = doc.createElement('li');
+  li.className = 'archive-square archive-square--ghost';
+  li.setAttribute('aria-label', `${ghostLabel} — ${countdown}`);
+
+  const wrap = doc.createElement('div');
+  wrap.className = 'archive-square-link';
+
+  // Top strip: release date — same slot the regular tile uses.
+  const dateEl = doc.createElement('span');
+  dateEl.className = 'archive-square-date';
+  dateEl.textContent = dateText;
+  wrap.appendChild(dateEl);
+
+  // Center: the countdown text — sits where the puzzle number would
+  // render on a played tile, keeping the visual centre-of-attention
+  // consistent. `data-role` marks it so the tick updater can find it.
+  const countdownEl = doc.createElement('span');
+  countdownEl.className = 'archive-square-num archive-square-ghost-countdown';
+  countdownEl.dataset.role = 'ghost-countdown';
+  countdownEl.textContent = countdown;
+  wrap.appendChild(countdownEl);
+
+  // Bottom strip: "Next puzzle" label — same slot the score uses on
+  // a played tile, but unhidden and styled muted.
+  const labelEl = doc.createElement('span');
+  labelEl.className = 'archive-square-score archive-square-ghost-label';
+  labelEl.textContent = ghostLabel;
+  wrap.appendChild(labelEl);
+
+  li.appendChild(wrap);
+  return li;
+}
+
+/**
  * Re-translate every archive square currently in `doc` against the
  * active language. Walks every `.archive-square-link` that was
  * rendered via `renderArchiveSquare` (identified by the `data-filter`
