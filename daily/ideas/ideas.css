@@ -136,3 +136,45 @@ body.hide-reviewed .archive-square--approved,
 body.hide-reviewed .archive-square--rejected {
   display: none;
 }
+
+/* Inline verdict bar on the play page — same buttons as on the tile,
+ * but laid out as a row instead of corner-anchored. Sits below the
+ * actions row (during play) and below the result links (after play)
+ * so the author can mark a verdict from either state without going
+ * back to the full grid. The wrapper receives `--approved` /
+ * `--rejected` modifier classes that paint the active button solid,
+ * mirroring how `.archive-square--approved` works on the tile. */
+.ideas-play-verdict {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 12px auto 0;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #444;
+}
+.ideas-play-verdict-label {
+  margin-right: 4px;
+}
+.ideas-play-verdict .review-button {
+  position: static; /* override the tile's absolute positioning */
+}
+.ideas-play-verdict--approved .review-button--approve {
+  background: #2a9d3f;
+  color: #fff;
+  border-color: #2a9d3f;
+}
+.ideas-play-verdict--approved .review-button--approve:hover {
+  background: #248234;
+  border-color: #248234;
+}
+.ideas-play-verdict--rejected .review-button--reject {
+  background: #c63838;
+  color: #fff;
+  border-color: #c63838;
+}
+.ideas-play-verdict--rejected .review-button--reject:hover {
+  background: #a82d2d;
+  border-color: #a82d2d;
+}

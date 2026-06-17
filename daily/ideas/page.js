@@ -1,6 +1,7 @@
 import { t } from '../../i18n.js';
 import { renderArchiveSquare, refreshSquareCriteria } from '../squares.js';
 import { fetchCatalog } from '../catalogSource.js';
+import { loadReviewState, saveReviewState } from './reviewState.js';
 
 /**
  * @typedef {Object} Idea
@@ -8,53 +9,10 @@ import { fetchCatalog } from '../catalogSource.js';
  * @property {string} [notes]
  * @property {number} [parkUntilN]
  * @property {number} [difficulty]
- *
- * @typedef {'approved' | 'rejected'} Verdict
  */
 
 /** @typedef {import('../../flags/daily.js').DailyPuzzle} DailyPuzzle */
-
-// Review state is per-browser, persisted in localStorage. Keyed by the
-// idea's filter string (NOT the file position) so re-running the
-// generator preserves the review state for unchanged ideas — author
-// flow is "review fresh ideas only, leave already-judged ones alone."
-//
-// Storage shape: JSON object `{ "<filterString>": "approved" | "rejected" }`.
-// Backward-compat with the v1 array-of-approved-filters from the first
-// version of this UI: arrays are migrated to objects on read.
-//
-// Orphan entries (filters that no longer exist in daily_ideas.json) are
-// harmless — they just sit there. We don't prune; cost is bytes, benefit
-// is bug-free idempotency when the generator re-runs.
-const REVIEW_KEY = 'gridgame.ideas.reviewed';
-
-/** @returns {Map<string, Verdict>} */
-function loadReviewState() {
-  try {
-    const raw = window.localStorage.getItem(REVIEW_KEY);
-    if (!raw) return new Map();
-    const parsed = JSON.parse(raw);
-    // v1 stored an array of "approved" filter strings.
-    if (Array.isArray(parsed)) {
-      return new Map(parsed.map((f) => [String(f), /** @type {Verdict} */ ('approved')]));
-    }
-    if (parsed && typeof parsed === 'object') {
-      const m = new Map();
-      for (const [k, v] of Object.entries(parsed)) {
-        if (v === 'approved' || v === 'rejected') m.set(k, v);
-      }
-      return m;
-    }
-    return new Map();
-  } catch {
-    return new Map();
-  }
-}
-
-/** @param {Map<string, Verdict>} map */
-function saveReviewState(map) {
-  window.localStorage.setItem(REVIEW_KEY, JSON.stringify(Object.fromEntries(map)));
-}
+/** @typedef {import('./reviewState.js').Verdict} Verdict */
 
 /**
  * Render the brainstorm ideas pool as a grid of preview cards. Hidden
