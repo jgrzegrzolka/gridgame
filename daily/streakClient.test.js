@@ -26,6 +26,8 @@ const FULL = {
   winPercent: 82,
   totalPlayed: 11,
   totalCompleted: 9,
+  cleanSweeps: 3,
+  zeroScoreFinishes: 1,
 };
 
 test('fetchDailyMe: happy path — passes deviceId, returns shape', async () => {
@@ -89,6 +91,8 @@ test('fetchDailyMe: missing fields collapse to 0 (defensive shape)', async () =>
     winPercent: 0,
     totalPlayed: 0,
     totalCompleted: 0,
+    cleanSweeps: 0,
+    zeroScoreFinishes: 0,
   });
 });
 
@@ -109,6 +113,8 @@ test('fetchDailyMe: non-numeric field values collapse to 0', async () => {
     winPercent: 0,
     totalPlayed: 0,
     totalCompleted: 4,
+    cleanSweeps: 0,
+    zeroScoreFinishes: 0,
   });
 });
 
