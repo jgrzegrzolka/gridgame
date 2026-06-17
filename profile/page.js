@@ -265,11 +265,19 @@ async function renderAchievements(deviceId) {
   grid.replaceChildren();
   for (const { rule, earned } of statuses) {
     const li = document.createElement('li');
-    li.className = `achievement-badge achievement-badge--${earned ? 'earned' : 'locked'}`;
     li.dataset.achievementId = rule.id;
+
+    // Tile is a <button> so a tap or keyboard Enter opens the info
+    // dialog. The button itself takes the badge styling — the <li>
+    // is just a grid cell.
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `achievement-badge achievement-badge--${earned ? 'earned' : 'locked'}`;
+    button.setAttribute('aria-label', `${rule.name} — ${earned ? 'earned' : 'locked'}`);
     // Tooltip carries the description (earned) or hint (locked) —
     // keeps the tile itself compact, only one line of name + icon.
-    li.title = earned ? rule.description : rule.hint;
+    button.title = earned ? rule.description : rule.hint;
+    button.addEventListener('click', () => openAchievementInfo(rule, earned));
 
     const icon = document.createElement('span');
     icon.className = 'achievement-icon';
@@ -278,16 +286,72 @@ async function renderAchievements(deviceId) {
     // (no player data inside), so innerHTML is safe here — no
     // user-controlled content reaches this branch.
     icon.innerHTML = rule.icon;
-    li.appendChild(icon);
+    button.appendChild(icon);
 
     const name = document.createElement('span');
     name.className = 'achievement-name';
     name.textContent = rule.name;
-    li.appendChild(name);
+    button.appendChild(name);
 
+    li.appendChild(button);
     grid.appendChild(li);
   }
+  wireAchievementInfoDismiss();
   section.hidden = false;
+}
+
+/**
+ * Show the info dialog for a tapped achievement. Reuses one
+ * `<dialog>` for every tile — content is repopulated each open.
+ * `<dialog>` gives us Esc-to-close + focus management for free; the
+ * sibling `wireAchievementInfoDismiss` adds backdrop-click dismiss.
+ *
+ * @param {import('../flags/achievements.js').AchievementRule} rule
+ * @param {boolean} earned
+ */
+function openAchievementInfo(rule, earned) {
+  const dialog = /** @type {HTMLDialogElement | null} */ (
+    document.getElementById('achievement-info')
+  );
+  if (!dialog) return;
+  dialog.classList.toggle('achievement-info--earned', earned);
+  dialog.classList.toggle('achievement-info--locked', !earned);
+
+  const iconEl = document.getElementById('achievement-info-icon');
+  if (iconEl) iconEl.innerHTML = rule.icon;
+
+  const nameEl = document.getElementById('achievement-info-name');
+  if (nameEl) nameEl.textContent = rule.name;
+
+  const statusEl = document.getElementById('achievement-info-status');
+  if (statusEl) statusEl.textContent = earned ? 'Earned' : 'Locked';
+
+  const bodyEl = document.getElementById('achievement-info-body');
+  if (bodyEl) bodyEl.textContent = earned ? rule.description : rule.hint;
+
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+}
+
+/**
+ * Idempotent — only wires the dialog backdrop-click listener once,
+ * even when re-render fires (currently re-render happens at most
+ * once per page load, but defensive against a future "refresh after
+ * earn" hook).
+ */
+let achievementInfoDismissWired = false;
+function wireAchievementInfoDismiss() {
+  if (achievementInfoDismissWired) return;
+  const dialog = /** @type {HTMLDialogElement | null} */ (
+    document.getElementById('achievement-info')
+  );
+  if (!dialog) return;
+  dialog.addEventListener('click', (ev) => {
+    // `<dialog>` fires click on the dialog element when the backdrop
+    // is clicked (the dialog's own children consume their own click).
+    if (ev.target === dialog) dialog.close();
+  });
+  achievementInfoDismissWired = true;
 }
 
 /**
