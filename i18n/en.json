@@ -97,10 +97,10 @@
       "all": "all"
     },
     "leaderboard": {
-      "title": "Today's leaderboard",
+      "title": "Top 10 — last 24h",
       "loading": "Loading leaderboard…",
-      "failed": "Couldn't load today's leaderboard.",
-      "empty": "Be the first today!",
+      "failed": "Couldn't load the leaderboard.",
+      "empty": "Be the first!",
       "you": "You"
     },
     "share": {

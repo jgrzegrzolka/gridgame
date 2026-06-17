@@ -1,7 +1,16 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { rankCmpClause, findMineInTop, computeYou, qualifiesForLeaderboard } = require('./leaderboardRank');
+const {
+  rankCmpClause,
+  findMineInTop,
+  computeYou,
+  qualifiesForLeaderboard,
+  beats,
+  cmpEntries,
+  dedupByDevice,
+  rankInSorted,
+} = require('./leaderboardRank');
 
 test('rankCmpClause: timed mode → strictly higher score OR equal-faster wins', () => {
   const clause = rankCmpClause(false);
@@ -71,4 +80,90 @@ test('qualifiesForLeaderboard: count mode (lowerWins) keeps score=0 — perfect 
   assert.equal(qualifiesForLeaderboard({ score: 0, lowerWins: true }), true);
   assert.equal(qualifiesForLeaderboard({ score: 1, lowerWins: true }), true);
   assert.equal(qualifiesForLeaderboard({ score: 50, lowerWins: true }), true);
+});
+
+// --- beats / cmpEntries / dedupByDevice / rankInSorted -------------
+
+test('beats: higher score wins in timed mode', () => {
+  assert.equal(beats({ score: 20, durationMs: 30000 }, { score: 19, durationMs: 1 }, false), true);
+});
+
+test('beats: lower score wins in endurance mode', () => {
+  assert.equal(beats({ score: 1, durationMs: 30000 }, { score: 5, durationMs: 1 }, true), true);
+});
+
+test('beats: equal score → faster duration wins (both modes)', () => {
+  assert.equal(beats({ score: 20, durationMs: 30000 }, { score: 20, durationMs: 40000 }, false), true);
+  assert.equal(beats({ score: 1, durationMs: 30000 }, { score: 1, durationMs: 40000 }, true), true);
+});
+
+test('beats: identical rows never beat each other', () => {
+  const a = { score: 20, durationMs: 30000 };
+  const b = { score: 20, durationMs: 30000 };
+  assert.equal(beats(a, b, false), false);
+  assert.equal(beats(b, a, false), false);
+});
+
+test('cmpEntries: sort produces best-first order in timed mode', () => {
+  const rows = [
+    { deviceId: 'd1', score: 10, durationMs: 50000 },
+    { deviceId: 'd2', score: 20, durationMs: 50000 },
+    { deviceId: 'd3', score: 15, durationMs: 50000 },
+  ];
+  rows.sort((a, b) => cmpEntries(a, b, false));
+  assert.deepEqual(rows.map((r) => r.deviceId), ['d2', 'd3', 'd1']);
+});
+
+test('cmpEntries: sort produces best-first order in endurance mode', () => {
+  const rows = [
+    { deviceId: 'd1', score: 10, durationMs: 50000 },
+    { deviceId: 'd2', score: 20, durationMs: 50000 },
+    { deviceId: 'd3', score: 0, durationMs: 50000 },
+  ];
+  rows.sort((a, b) => cmpEntries(a, b, true));
+  assert.deepEqual(rows.map((r) => r.deviceId), ['d3', 'd1', 'd2']);
+});
+
+test('dedupByDevice: keeps the better row when the same device appears twice', () => {
+  // Same player from today + yesterday — keep today's higher score.
+  const rows = [
+    { deviceId: 'd1', score: 15, durationMs: 40000, source: 'yesterday' },
+    { deviceId: 'd1', score: 20, durationMs: 50000, source: 'today' },
+    { deviceId: 'd2', score: 18, durationMs: 30000, source: 'today' },
+  ];
+  const out = dedupByDevice(rows, false);
+  assert.equal(out.length, 2);
+  const d1 = out.find((r) => r.deviceId === 'd1');
+  assert.equal(d1?.score, 20);
+  assert.equal(d1?.source, 'today');
+});
+
+test('dedupByDevice: respects mode direction on ties — equal score, faster wins', () => {
+  const rows = [
+    { deviceId: 'd1', score: 20, durationMs: 50000 },
+    { deviceId: 'd1', score: 20, durationMs: 30000 },
+  ];
+  const out = dedupByDevice(rows, false);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].durationMs, 30000);
+});
+
+test('dedupByDevice: empty input → empty output', () => {
+  assert.deepEqual(dedupByDevice([], false), []);
+});
+
+test('rankInSorted: finds caller, 1-based', () => {
+  const sorted = [
+    { deviceId: 'd1' },
+    { deviceId: 'd2' },
+    { deviceId: 'd3' },
+  ];
+  assert.equal(rankInSorted(sorted, 'd1'), 1);
+  assert.equal(rankInSorted(sorted, 'd2'), 2);
+  assert.equal(rankInSorted(sorted, 'd3'), 3);
+});
+
+test('rankInSorted: missing caller → null', () => {
+  const sorted = [{ deviceId: 'd1' }, { deviceId: 'd2' }];
+  assert.equal(rankInSorted(sorted, 'd99'), null);
 });

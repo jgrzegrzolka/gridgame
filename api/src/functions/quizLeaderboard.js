@@ -4,26 +4,43 @@ const {
   validateDeviceIdParam,
 } = require('../lib/validate');
 const { lowerWinsFromConfigKey } = require('../lib/quizRecordKey');
-const { todayDateKey, makePk } = require('../lib/dailyLeaderboardDoc');
+const { todayDateKey, yesterdayDateKey, makePk } = require('../lib/dailyLeaderboardDoc');
 const { queryDocs } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { createTtlCache } = require('../lib/ttlCache');
 const { readFreshFlag } = require('../lib/queryParams');
 const { statsCacheHeaders } = require('../lib/cacheHeaders');
-const { rankCmpClause, findMineInTop, computeYou, qualifiesForLeaderboard } = require('../lib/leaderboardRank');
+const {
+  findMineInTop,
+  computeYou,
+  qualifiesForLeaderboard,
+  cmpEntries,
+  dedupByDevice,
+  rankInSorted,
+} = require('../lib/leaderboardRank');
 const { isLocalRequestUrl } = require('../lib/requestHost');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyLeaderboards';
 const CACHE_TTL_MS = 60_000;
+const ROLLING_WINDOW_MS = 24 * 60 * 60 * 1000;
+// Generous per-partition slice — 50 entries per UTC day, two days unioned,
+// dedup yields at most 100 unique devices. Enough headroom that the
+// caller's rank can be derived from the deduped + sorted list without a
+// second COUNT round-trip. Bump if active devices per config grows past
+// ~80 (currently we have ~5).
+const PER_PARTITION_LIMIT = 50;
 // Must equal TOP_N in flags/dailyLeaderboardRender.js — server/client mismatch
 // would silently drop visible rows or fall short of the rendered slot count.
 const TOP_N = 10;
 
 const limiter = createRateLimiter({ limit: 60, windowMs: 60_000 });
 
-// Cached top-N keyed by (pk, order). Order is included so a future
-// `?order=` override or third mode can't serve a wrong-direction list.
+// Cached top-N keyed by (configKey, order, includeLocal). Date is no
+// longer in the key — Feature N's rolling-24h window has no per-date
+// bucket. The 60 s TTL means a player whose entry just expired (or just
+// landed) might see the old list for up to a minute, which is well
+// inside the noise floor of a 24 h window.
 const topCache = createTtlCache({ ttlMs: CACHE_TTL_MS });
 
 app.http('quizLeaderboard', {
@@ -53,8 +70,10 @@ app.http('quizLeaderboard', {
     if (!dv.ok) return { status: 400, jsonBody: { error: dv.error } };
     const deviceId = dv.value;
 
-    const dateKey = todayDateKey(Date.now());
-    const pk = makePk(configKey, dateKey);
+    const now = Date.now();
+    const cutoff = now - ROLLING_WINDOW_MS;
+    const todayPk = makePk(configKey, todayDateKey(now));
+    const yesterdayPk = makePk(configKey, yesterdayDateKey(now));
     const order = lowerWins ? 'ASC' : 'DESC';
     // Localhost-served requests include `local: true` rows so a dev can
     // play locally and see their own submission appear on the
@@ -63,7 +82,7 @@ app.http('quizLeaderboard', {
     // part of the cache key so a localhost-served response can't leak
     // into prod through the shared module-scope cache.
     const includeLocal = isLocalRequestUrl(req.url);
-    const cacheKey = `${pk}|${order}|${includeLocal ? 'L' : 'P'}`;
+    const cacheKey = `${configKey}|${order}|${includeLocal ? 'L' : 'P'}`;
     const fresh = readFreshFlag(req);
 
     const conn = process.env.COSMOS_CONN;
@@ -72,69 +91,81 @@ app.http('quizLeaderboard', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    const now = Date.now();
-    let top = fresh ? undefined : topCache.get(cacheKey, now);
+    let cached = fresh ? undefined : topCache.get(cacheKey, now);
 
-    // Build the WHERE clauses from two independent gates:
+    // Build the WHERE clauses from three independent gates:
+    //   - `c.submittedAt > @cutoff` is the rolling-window cut: anything
+    //     older than 24 h falls off the board even if the row still
+    //     lives in Cosmos (TTL keeps rows around for 48 h so the
+    //     yesterday partition can serve the older half of the window).
     //   - `NOT IS_DEFINED(c.local)` excludes local-dev rows from prod
     //     responses. Localhost callers skip this so a dev playing
     //     locally sees their own submission in the rendered list.
     //   - `c.score > 0` only fires in timed (higher-wins) mode — see
     //     qualifiesForLeaderboard for the rationale. Endurance
     //     (lower-wins) lets a perfect round through.
-    // Both the top query and the rank-count query need the same gates,
-    // so factor them once.
-    const filters = [];
+    // Same gates apply to both partitions; query is built once.
+    const filters = ['c.submittedAt > @cutoff'];
     if (!includeLocal) filters.push('NOT IS_DEFINED(c.local)');
     if (!lowerWins) filters.push('c.score > 0');
-    const whereCommon = filters.length ? `WHERE ${filters.join(' AND ')} ` : '';
-    const andCommon = filters.length ? ` AND ${filters.join(' AND ')}` : '';
+    const where = `WHERE ${filters.join(' AND ')} `;
+    const queryText =
+      `SELECT TOP ${PER_PARTITION_LIMIT} c.deviceId, c.nickname, c.score, c.durationMs, c.submittedAt ` +
+      'FROM c ' +
+      where +
+      `ORDER BY c.score ${order}, c.durationMs ASC`;
+    const parameters = [{ name: '@cutoff', value: cutoff }];
 
-    if (!top) {
-      // Composite index on (score, durationMs) provisioned at create time.
-      const topQuery =
-        `SELECT TOP ${TOP_N} c.deviceId, c.nickname, c.score, c.durationMs, c.submittedAt ` +
-        'FROM c ' +
-        whereCommon +
-        `ORDER BY c.score ${order}, c.durationMs ASC`;
-      let topRes;
+    /** @type {{ top: Array<any>, sorted: Array<any> } | null} */
+    let cachedShape = cached || null;
+
+    if (!cachedShape) {
+      // Fan out to both partitions in parallel. Composite index on
+      // (score, durationMs) inside each partition supports the ORDER BY.
+      let todayRes, yesterdayRes;
       try {
-        topRes = await queryDocs({
-          connString: conn,
-          dbName: DB_NAME,
-          containerName: CONTAINER_NAME,
-          query: topQuery,
-          parameters: [],
-          partitionKey: pk,
-        });
+        [todayRes, yesterdayRes] = await Promise.all([
+          queryDocs({
+            connString: conn, dbName: DB_NAME, containerName: CONTAINER_NAME,
+            query: queryText, parameters, partitionKey: todayPk,
+          }),
+          queryDocs({
+            connString: conn, dbName: DB_NAME, containerName: CONTAINER_NAME,
+            query: queryText, parameters, partitionKey: yesterdayPk,
+          }),
+        ]);
       } catch (err) {
-        context.error('cosmos top query threw', err);
+        context.error('cosmos leaderboard fan-out threw', err);
         return { status: 500, jsonBody: { error: 'server_error' } };
       }
-      if (!topRes.ok) {
-        context.error('cosmos top query failed', topRes);
+      if (!todayRes.ok || !yesterdayRes.ok) {
+        context.error('cosmos leaderboard fan-out failed', { todayRes, yesterdayRes });
         return { status: 500, jsonBody: { error: 'server_error' } };
       }
-      top = topRes.docs;
-      topCache.set(cacheKey, top, now);
+
+      // Merge → dedup → sort → slice. Dedup keeps each device's best
+      // entry across the two partitions (the same player can have a
+      // row in today's PB bucket AND yesterday's PB bucket; we surface
+      // the better of the two as their representative score).
+      const merged = [...todayRes.docs, ...yesterdayRes.docs];
+      const deduped = dedupByDevice(merged, lowerWins);
+      deduped.sort((a, b) => cmpEntries(a, b, lowerWins));
+      const top = deduped.slice(0, TOP_N);
+      cachedShape = { top, sorted: deduped };
+      topCache.set(cacheKey, cachedShape, now);
     }
 
-    // Cached top may already hold the caller's row — avoids an extra read.
+    const { top, sorted } = cachedShape;
+
+    // Cached top may already hold the caller's row — avoids deriving rank.
     let mine = findMineInTop(top, deviceId);
     if (!mine) {
-      try {
-        const meRes = await queryDocs({
-          connString: conn,
-          dbName: DB_NAME,
-          containerName: CONTAINER_NAME,
-          query: 'SELECT c.score, c.durationMs FROM c WHERE c.id = @id',
-          parameters: [{ name: '@id', value: deviceId }],
-          partitionKey: pk,
-        });
-        if (meRes.ok) mine = meRes.docs[0] || null;
-      } catch (err) {
-        context.warn('cosmos me query threw (rank skipped)', err);
-      }
+      // Caller might be outside top-N but still inside our deduped
+      // window. Searching `sorted` (up to ~100 entries) is cheap and
+      // gives the exact rank without a Cosmos round-trip. If they're
+      // not in `sorted` either, they're past the slice — `you` stays
+      // null, same shape as a caller with no row at all.
+      mine = sorted.find((r) => r.deviceId === deviceId) || null;
     }
 
     // Gate the caller too: a timed-mode score=0 caller doesn't get
@@ -143,35 +174,16 @@ app.http('quizLeaderboard', {
     const mineQualifies =
       mine !== null && qualifiesForLeaderboard({ score: mine.score, lowerWins });
 
-    let ahead = null;
-    if (mine && mineQualifies) {
-      const rankQuery =
-        'SELECT VALUE COUNT(1) FROM c ' +
-        `WHERE ${rankCmpClause(lowerWins)}${andCommon}`;
-      try {
-        const rankRes = await queryDocs({
-          connString: conn,
-          dbName: DB_NAME,
-          containerName: CONTAINER_NAME,
-          query: rankQuery,
-          parameters: [
-            { name: '@s', value: mine.score },
-            { name: '@d', value: mine.durationMs },
-          ],
-          partitionKey: pk,
-        });
-        if (rankRes.ok) ahead = rankRes.docs[0] ?? 0;
-      } catch (err) {
-        context.warn('cosmos rank query threw (rank skipped)', err);
-      }
-    }
+    const ahead = mineQualifies ? (rankInSorted(sorted, deviceId) || 1) - 1 : null;
 
     return {
       status: 200,
       headers: statsCacheHeaders({ fresh, ttlMs: CACHE_TTL_MS }),
       jsonBody: {
         configKey,
-        date: dateKey,
+        // Surface the window semantics so a client that wants to render
+        // a "last 24 h" subtitle has the data without computing it.
+        windowMs: ROLLING_WINDOW_MS,
         top: top.map((r) => ({
           deviceId: r.deviceId,
           nickname: typeof r.nickname === 'string' ? r.nickname : null,

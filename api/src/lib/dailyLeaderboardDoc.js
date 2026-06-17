@@ -19,6 +19,18 @@ function todayDateKey(now) {
 }
 
 /**
+ * UTC YYYY-MM-DD for the day before `now`. Used by the rolling-24h
+ * leaderboard read which has to union today's + yesterday's partitions
+ * to cover the full 24h window regardless of where it started.
+ *
+ * @param {number} now
+ * @returns {string}
+ */
+function yesterdayDateKey(now) {
+  return new Date(now - 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
  * @param {string} configKey
  * @param {string} dateKey
  * @returns {string}
@@ -84,6 +96,7 @@ function mergeDailyLeaderboard({ existing, deviceId, configKey, dateKey, nicknam
 
 module.exports = {
   todayDateKey,
+  yesterdayDateKey,
   makePk,
   buildDailyLeaderboardDoc,
   mergeDailyLeaderboard,
