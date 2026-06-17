@@ -4,6 +4,8 @@ import { avatarSvg } from '../flags/avatar.js';
 import { isOffensiveNickname } from '../flags/nicknameModeration.js';
 import { NICKNAME_STORAGE_KEY } from '../common.js';
 import { hydrateFromServer } from '../flags/syncHydrate.js';
+import { fetchDailyMe } from '../daily/streakClient.js';
+import { evaluateAchievements } from '../flags/achievements.js';
 import { t } from '../i18n.js';
 
 const ENDPOINT = '/api/v1/profile';
@@ -231,6 +233,60 @@ export function bootProfile() {
     ev.preventDefault();
     void save(currentPayload());
   });
+
+  // Feature O — achievement grid. Async, non-blocking: nickname form
+  // is fully usable while the streak fetch is in flight. Section stays
+  // `hidden` until we have data, so a network failure leaves the page
+  // looking like the pre-feature version rather than showing an empty
+  // "Achievements" header.
+  void renderAchievements(deviceId);
+}
+
+/**
+ * Fetch the player's daily snapshot and paint the achievement grid.
+ * No-op (and the section stays hidden) if the fetch fails — same
+ * silent-degrade rule as the streak hint on the finish screen.
+ *
+ * @param {string} deviceId
+ */
+async function renderAchievements(deviceId) {
+  const section = document.getElementById('achievements');
+  const grid = document.getElementById('achievements-grid');
+  if (!section || !grid) return;
+
+  const snapshot = await fetchDailyMe(deviceId);
+  if (!snapshot) return;
+
+  const statuses = evaluateAchievements(snapshot);
+  // Show the section even if zero are earned — locked silhouettes are
+  // the "things to chase" UX. A truly empty grid would be a sign that
+  // every rule failed to load; let the test gate catch that, not the
+  // player.
+  grid.replaceChildren();
+  for (const { rule, earned } of statuses) {
+    const li = document.createElement('li');
+    li.className = `achievement-badge achievement-badge--${earned ? 'earned' : 'locked'}`;
+    li.dataset.achievementId = rule.id;
+
+    const icon = document.createElement('span');
+    icon.className = 'achievement-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = rule.icon;
+    li.appendChild(icon);
+
+    const name = document.createElement('h3');
+    name.className = 'achievement-name';
+    name.textContent = rule.name;
+    li.appendChild(name);
+
+    const detail = document.createElement('p');
+    detail.className = 'achievement-detail';
+    detail.textContent = earned ? rule.description : rule.hint;
+    li.appendChild(detail);
+
+    grid.appendChild(li);
+  }
+  section.hidden = false;
 }
 
 /**
