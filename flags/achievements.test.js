@@ -102,14 +102,17 @@ test('every rule has a unique id (across all tiers)', () => {
   assert.equal(new Set(ids).size, ids.length, `duplicate ids: ${ids.join(', ')}`);
 });
 
-test('every rule has non-empty name, description, hint, and a single-character icon', () => {
+test('every rule has non-empty name, description, hint, and an inline SVG icon', () => {
   for (const rule of ALL_ACHIEVEMENTS) {
     assert.ok(rule.name.length > 0, `${rule.id}: name`);
     assert.ok(rule.description.length > 0, `${rule.id}: description`);
     assert.ok(rule.hint.length > 0, `${rule.id}: hint`);
-    // Emoji can be multi-codepoint (combining marks, variation selectors).
-    // Cap loosely at 4 for sanity, not bytes.
-    assert.ok(rule.icon.length > 0 && rule.icon.length <= 4, `${rule.id}: icon`);
+    // Icons are inline SVG markup — palette-faithful, currentColor
+    // fill. Smoke-test the shape so a future rename or refactor that
+    // drops the SVG can't sneak through.
+    assert.ok(rule.icon.startsWith('<svg '), `${rule.id}: icon should be SVG markup`);
+    assert.ok(rule.icon.includes('currentColor'), `${rule.id}: icon should use currentColor for palette`);
+    assert.ok(rule.icon.endsWith('</svg>'), `${rule.id}: icon should close </svg>`);
   }
 });
 

@@ -44,11 +44,55 @@
  * }} AchievementRule
  */
 
+/**
+ * Render N cells of a 4×4 grid as a monochrome SVG. The shared visual
+ * language for streak + Empty Slate achievements: a small pixel-art
+ * grid that fills as the threshold grows. `n=0` renders just the
+ * grid outline, `n=16` is the full-house "you did everything" state.
+ *
+ * 4×4 = 16 cells. The streak tier caps at 16 even though the 30-day
+ * threshold is higher — what the icon communicates is "more filled =
+ * deeper streak", not the exact count. The number lives in the name.
+ *
+ * @param {number} n  filled cells, clamped to [0, 16]
+ * @returns {string}  SVG markup, currentColor fill
+ */
+function gridIcon(n) {
+  const filled = Math.max(0, Math.min(16, Math.floor(n)));
+  /** @type {string[]} */
+  const cells = [];
+  let count = 0;
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 4; col++) {
+      if (count < filled) {
+        const x = 0.5 + col * 4;
+        const y = 0.5 + row * 4;
+        cells.push(`<rect x="${x}" y="${y}" width="3" height="3"/>`);
+      }
+      count++;
+    }
+  }
+  // Frame the empty/zero state so Empty Slate reads as "you submitted
+  // a zero", not "no icon". For non-zero states the frame is invisible
+  // (under the filled cells) — same path either way for visual unity.
+  return `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="0" y="0" width="16" height="16" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.35"/>${cells.join('')}</svg>`;
+}
+
+const ICON_CHECKMARK =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  '<path d="M14 4L6 12L2 8L3.5 6.5L6 9L12.5 2.5Z"/>' +
+  '</svg>';
+
+const ICON_STAR =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  '<path d="M8 1L10 6L15 6L11 9L13 14L8 11L3 14L5 9L1 6L6 6Z"/>' +
+  '</svg>';
+
 /** @type {AchievementRule[]} */
 export const MASTERY_ACHIEVEMENTS = [
   {
     id: 'clean-sweep',
-    icon: '🎯',
+    icon: ICON_CHECKMARK,
     name: 'Clean Sweep',
     description: 'Finished a daily puzzle 100%.',
     hint: 'Find every answer in one daily puzzle.',
@@ -56,7 +100,7 @@ export const MASTERY_ACHIEVEMENTS = [
   },
   {
     id: 'perfect-five',
-    icon: '🏆',
+    icon: ICON_STAR,
     name: 'Perfect Five',
     description: 'Cleared five daily puzzles 100%.',
     hint: 'Get a clean sweep on five daily puzzles.',
@@ -64,7 +108,7 @@ export const MASTERY_ACHIEVEMENTS = [
   },
   {
     id: 'empty-slate',
-    icon: '🧱',
+    icon: gridIcon(0),
     name: 'Empty Slate',
     description: "Submitted a daily without finding a single flag — we've all been there.",
     hint: 'Submit a daily with zero flags found (the badge of solidarity).',
@@ -76,7 +120,7 @@ export const MASTERY_ACHIEVEMENTS = [
 export const STREAK_ACHIEVEMENTS = [
   {
     id: 'first-daily',
-    icon: '🔥',
+    icon: gridIcon(1),
     name: 'First Daily',
     description: 'Completed your first daily puzzle.',
     hint: 'Finish one daily puzzle.',
@@ -84,7 +128,7 @@ export const STREAK_ACHIEVEMENTS = [
   },
   {
     id: 'daily-habit',
-    icon: '🔥',
+    icon: gridIcon(7),
     name: 'Daily Habit',
     description: 'Played the daily puzzle 7 days in a row.',
     hint: 'Reach a 7-day streak.',
@@ -92,7 +136,7 @@ export const STREAK_ACHIEVEMENTS = [
   },
   {
     id: 'two-weeks-strong',
-    icon: '🔥',
+    icon: gridIcon(14),
     name: 'Two Weeks Strong',
     description: 'Kept the daily streak going for 14 days.',
     hint: 'Reach a 14-day streak.',
@@ -100,7 +144,7 @@ export const STREAK_ACHIEVEMENTS = [
   },
   {
     id: 'monthly-devotee',
-    icon: '🌟',
+    icon: gridIcon(16),
     name: 'Monthly Devotee',
     description: 'A full month of daily puzzles without missing one.',
     hint: 'Reach a 30-day streak.',
