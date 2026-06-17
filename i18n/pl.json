@@ -97,10 +97,10 @@
       "all": "wszystkie"
     },
     "leaderboard": {
-      "title": "Dzisiejszy ranking",
+      "title": "Top 10: 24h",
       "loading": "Ładowanie rankingu…",
-      "failed": "Nie udało się załadować dzisiejszego rankingu.",
-      "empty": "Bądź dziś pierwszy!",
+      "failed": "Nie udało się załadować rankingu.",
+      "empty": "Bądź pierwszy!",
       "you": "Ty"
     },
     "share": {

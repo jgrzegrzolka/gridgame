@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   todayDateKey,
+  yesterdayDateKey,
   makePk,
   buildDailyLeaderboardDoc,
   mergeDailyLeaderboard,
@@ -21,6 +22,25 @@ test('todayDateKey: handles UTC midnight boundary (just before midnight = previo
   const just_after_midnight = Date.UTC(2026, 5, 13, 0, 0, 1);
   assert.equal(todayDateKey(just_before_midnight), '2026-06-12');
   assert.equal(todayDateKey(just_after_midnight), '2026-06-13');
+});
+
+test('yesterdayDateKey: returns the UTC date 24h before `now`', () => {
+  assert.equal(yesterdayDateKey(NOW), '2026-06-11');
+});
+
+test('yesterdayDateKey: at UTC midnight on day D, yesterday is D-1', () => {
+  const utcMidnight = Date.UTC(2026, 5, 13, 0, 0, 0);
+  assert.equal(yesterdayDateKey(utcMidnight), '2026-06-12');
+});
+
+test('yesterdayDateKey: at one ms past UTC midnight, yesterday is still D-1', () => {
+  const justAfter = Date.UTC(2026, 5, 13, 0, 0, 0, 1);
+  assert.equal(yesterdayDateKey(justAfter), '2026-06-12');
+});
+
+test('yesterdayDateKey: crosses month boundary correctly', () => {
+  const earlyJuly = Date.UTC(2026, 6, 1, 6, 0, 0);
+  assert.equal(yesterdayDateKey(earlyJuly), '2026-06-30');
 });
 
 test('makePk: joins configKey + dateKey with a pipe', () => {

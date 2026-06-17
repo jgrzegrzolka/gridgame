@@ -33,8 +33,8 @@ const TOP_N = 10;
  *
  * Render rules:
  *   - State 'loading'   → "Loading leaderboard…"
- *   - State 'failed'    → "Couldn't load today's leaderboard."
- *   - State 'ready', top empty → "Be the first today!"
+ *   - State 'failed'    → "Couldn't load the leaderboard."
+ *   - State 'ready', top empty → "Be the first!"
  *   - State 'ready', top non-empty → ordered list of up to TOP_N rows.
  *     A row whose `deviceId` matches `ownDeviceId` gets the `is-self`
  *     marker class so CSS can highlight it. Each row shows
@@ -68,7 +68,7 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
   if (state === 'failed') {
     const p = doc.createElement('p');
     p.className = 'leaderboard-status leaderboard-status-failed';
-    p.textContent = t('quiz.leaderboard.failed', "Couldn't load today's leaderboard.");
+    p.textContent = t('quiz.leaderboard.failed', "Couldn't load the leaderboard.");
     root.appendChild(p);
     return root;
   }
@@ -79,7 +79,7 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
   if (top.length === 0) {
     const p = doc.createElement('p');
     p.className = 'leaderboard-status leaderboard-status-empty';
-    p.textContent = t('quiz.leaderboard.empty', 'Be the first today!');
+    p.textContent = t('quiz.leaderboard.empty', 'Be the first!');
     root.appendChild(p);
     return root;
   }
