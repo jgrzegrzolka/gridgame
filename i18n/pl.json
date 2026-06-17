@@ -97,7 +97,7 @@
       "all": "wszystkie"
     },
     "leaderboard": {
-      "title": "Top 10 — ostatnie 24 godz.",
+      "title": "Top 10: 24h",
       "loading": "Ładowanie rankingu…",
       "failed": "Nie udało się załadować rankingu.",
       "empty": "Bądź pierwszy!",
