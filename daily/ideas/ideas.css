@@ -2,33 +2,6 @@
  * `daily/ideas/` so the file (and the folder) is stripped by deploy.yml
  * before shipping — keeps the shared `archive.css` untouched. */
 
-.review-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 12px 16px;
-  margin: 0 auto 12px;
-  max-width: 732px;
-  font-size: 14px;
-  color: #444;
-}
-
-.review-counter {
-  font-variant-numeric: tabular-nums;
-}
-
-.hide-reviewed-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  user-select: none;
-}
-.hide-reviewed-toggle input {
-  cursor: pointer;
-}
-
 /* Per-tile review buttons, anchored to the corners of the
  * .archive-square <li>. They sit *outside* the .archive-square-link <a>
  * so clicking them doesn't navigate — the link still covers everything
@@ -104,14 +77,6 @@
 .archive-square--rejected .review-button--reject:hover {
   background: #a82d2d;
   border-color: #a82d2d;
-}
-
-/* "Hide reviewed" mode hides anything with a verdict (approved OR
- * rejected) — what's left is the unmarked-pending pool, which is the
- * point of the toggle ("where did I stop?"). */
-body.hide-reviewed .archive-square--approved,
-body.hide-reviewed .archive-square--rejected {
-  display: none;
 }
 
 /* Inline verdict bar on the play page — same buttons as on the tile,

@@ -33,21 +33,13 @@ import { loadReviewState, saveReviewState } from './reviewState.js';
  *
  * Per-tile review buttons: ✓ (approve) top-right and ✗ (reject)
  * top-left. Three states per idea: approved, rejected, or unmarked
- * (default). State is per-browser localStorage keyed by filter string.
- * "Hide reviewed" toggle hides everything with a verdict so the
- * remaining pool is "what I haven't looked at yet." Counter shows
- * `✓ X · ✗ Y · Z pending` so progress is glanceable.
+ * (default). State is per-browser localStorage keyed by filter string;
+ * the same key powers the play-page verdict bar.
  */
 export function bootIdeas() {
   const listEl = /** @type {HTMLElement} */ (document.getElementById('ideas-list'));
-  const counterEl = /** @type {HTMLElement} */ (document.getElementById('review-counter'));
-  const hideToggleEl = /** @type {HTMLInputElement} */ (document.getElementById('hide-reviewed'));
 
   const state = loadReviewState();
-
-  hideToggleEl.addEventListener('change', () => {
-    document.body.classList.toggle('hide-reviewed', hideToggleEl.checked);
-  });
 
   fetchCatalog('ideas')
     .then((/** @type {Idea[]} */ ideas) => {
@@ -58,19 +50,6 @@ export function bootIdeas() {
         listEl.appendChild(empty);
         return;
       }
-
-      const updateCounter = () => {
-        let approved = 0;
-        let rejected = 0;
-        for (const idea of ideas) {
-          const v = state.get(idea.filter);
-          if (v === 'approved') approved++;
-          else if (v === 'rejected') rejected++;
-        }
-        const pending = ideas.length - approved - rejected;
-        counterEl.textContent = `✓ ${approved} · ✗ ${rejected} · ${pending} pending`;
-      };
-      updateCounter();
 
       ideas.forEach((idea, i) => {
         const k = i + 1;
@@ -116,7 +95,6 @@ export function bootIdeas() {
             else state.set(idea.filter, target);               // set or switch
             saveReviewState(state);
             paintVerdictClass();
-            updateCounter();
           });
           return btn;
         };
