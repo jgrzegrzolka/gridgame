@@ -74,18 +74,6 @@
           <ul class="achievements-grid" id="achievements-grid"></ul>
         </section>
 
-        <dialog class="achievement-info" id="achievement-info" aria-labelledby="achievement-info-name">
-          <div class="achievement-info-card">
-            <span class="achievement-info-icon" id="achievement-info-icon" aria-hidden="true"></span>
-            <h3 class="achievement-info-name" id="achievement-info-name"></h3>
-            <p class="achievement-info-status" id="achievement-info-status"></p>
-            <p class="achievement-info-body" id="achievement-info-body"></p>
-            <form method="dialog" class="achievement-info-actions">
-              <button type="submit" class="achievement-info-close" data-i18n="dialog.close">Close</button>
-            </form>
-          </div>
-        </dialog>
-
         <div class="actions-row">
           <button type="submit" class="profile-save" data-i18n="nickname.save">Save</button>
           <span class="profile-sync-wrap" id="profile-sync-wrap">
@@ -97,6 +85,24 @@
         </div>
       </form>
     </main>
+
+    <!-- Dialog lives OUTSIDE <main> and OUTSIDE the nickname <form>.
+         Its method="dialog" close form would otherwise nest inside the
+         outer .profile-form — HTML5 forbids form nesting; the parser
+         closes the outer form at the inner </form>, which puts the
+         Save button outside the form and breaks bootProfile()'s
+         querySelector lookup. -->
+    <dialog class="achievement-info" id="achievement-info" aria-labelledby="achievement-info-name">
+      <div class="achievement-info-card">
+        <span class="achievement-info-icon" id="achievement-info-icon" aria-hidden="true"></span>
+        <h3 class="achievement-info-name" id="achievement-info-name"></h3>
+        <p class="achievement-info-status" id="achievement-info-status"></p>
+        <p class="achievement-info-body" id="achievement-info-body"></p>
+        <form method="dialog" class="achievement-info-actions">
+          <button type="submit" class="achievement-info-close" data-i18n="dialog.close">Close</button>
+        </form>
+      </div>
+    </dialog>
 
     <script type="module">
       import { bootProfile } from './page.js';
