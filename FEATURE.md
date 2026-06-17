@@ -21,135 +21,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-### Feature R: Eliminate the daily-release scheduler — dated entries, single blob, client filter
-
-**Problem.** The daily release has missed three nights in a row (see `infra/release-incidents.md`). The failure modes are *not* in the catalog data or the page — they're in whatever process is supposed to move `backlog[0]` to the end of `live.json` at Warsaw midnight. We've tried a Logic App, a GitHub Actions cron, and a timer-triggered Function App; each has failed independently. The unit of failure is **the existence of a scheduler**. Anything that has to "do a thing at a specific time" is a separate process whose health is a separate concern, and every one of them has bitten us.
-
-The current Function App is stuck on a boot failure that we don't yet understand (`/admin/host/status` returns 503, App Insights silent, host won't register `releaseDaily`). Rather than debug it, **delete the entire concept of a release scheduler.**
-
-**Goal.** Time becomes data, not a trigger. Every puzzle carries the date it should first be visible. The reader filters `entries.filter(p => p.date <= warsawToday())`. No promoter, no scheduler, no Function App, no Bicep template, no cron expression, no DST math at the trigger level. The whole class of "the autoreleaser failed" incidents stops existing.
-
-**Why client-side filter, not API-side.** The instinct was "API filters by today on retrieve" — that's the same shape problem with a different name. Every daily page load would route through a Function App, taking on cold-starts (Free SKU = 1–2 s after idle) and a new boot-failure surface. Today the daily page is **static page + public blob, zero API hops** — the most reliable surface on the site. Client-side filter keeps it that way. Trade-off accepted: anyone who curls the blob can see future puzzles (one-line `filter(date > today)`). Today's `backlog.json` is already in the same boat — the "secret backlog" is security-through-obscurity. For a flag game where knowing "Europe + cross + blue" doesn't solve anything for you, this is fine. If it ever stops being fine: encrypt entries with a date-derived key on the page (~10 lines), don't add a server.
-
-**End-state architecture:**
-- **Storage:** `styetanotherquiz` storage account survives (we keep the public-read blob model — that's the part that *works*). Container `catalog/` contains **one new blob `puzzles.json`** replacing `live.json` + `backlog.json`. Same anonymous read, same CORS, same versioning, same `max-age=60`. `ideas.json` / `parked.json` / `policy.json` unchanged.
-- **Entry shape:** `{ "n": <int>, "date": "YYYY-MM-DD", "filter": "...", "answers": [...], "description": { "en": "...", "pl": "..." } }`. `n` keeps the role it has today — stable identity for Cosmos `puzzleId`, archive grid order, share links. `date` is the new field; what was "release order" becomes "release date."
-- **Reader:** `daily/page.js` fetches `puzzles.json`, computes `warsawToday()` via `Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(new Date())`, filters `entries.filter(p => p.date <= warsawToday())`, takes the last by date as "today's puzzle." `daily/archive.js` uses the same filter (without the "take last" step).
-- **Authoring:** `daily-puzzle-author` skill assigns `date` when promoting from `ideas.json` to `puzzles.json` (next free date after the latest entry). No promote step, no "move from one array to another" — adding a puzzle means appending a row with the next date stamp.
-- **Validation:** `flags/dailyValidate.js` gains a `date` rule — every entry has `date: "YYYY-MM-DD"`, dates are unique, dates are contiguous from earliest through latest (no gaps). Drops the `live`/`backlog` cross-file numbering rule.
-- **"No puzzle today" edge case.** If a date is missing (gap, deliberate or accidental), the filter returns yesterday's entry as the latest. Player sees yesterday's puzzle still active → daily-result flow says "already submitted" → no scoring. Clean failure signal without a separate UI path. The contiguous-date test catches it as a test failure before it ships.
-- **What's deleted:** `func-yetanotherquiz-release`, `plan-yetanotherquiz-release`, `ai-yetanotherquiz-release`, `stfuncyetanotherquiz`, `log-yetanotherquiz-release` (all Azure resources). `infra/funcapp-release-daily.bicep`, `infra/release-fn/` (whole tree, code + `dist/` + zip), `scripts/build-release-fn.mjs`, the `promote()` module + tests, the dual-cron `warsawTime` helper. App Insights `ai-yetanotherquiz-release` and Log Analytics workspace `log-yetanotherquiz-release` go too — no Function = no telemetry to capture. Net savings: €0 (Y1 Free + Free workspace), but a whole class of incidents stops existing.
-
-**Decisions taken (override before Phase 1 if any are wrong):**
-- Date format `YYYY-MM-DD` in Warsaw time. Computed identically on every read.
-- `n` preserved for stable identity. The migration assigns `date` to existing entries and leaves `n` untouched, so every existing Cosmos `dailyResults` row + share link + leaderboard ref keeps working.
-- Single blob, not per-date blobs. Per-date blobs would mean N fetches for an N-day archive page. One blob is ~25 KB at ~70 entries — still tiny.
-- `flags/warsawTime.js` is the read-path helper, ported from `infra/release-fn/src/lib/warsawTime.js`. The Function-side copy is deleted in Phase 3 along with the rest of `infra/release-fn/`.
-
-**Phase 1 — dated catalog + page reads new blob.** *(One branch + PR.)*
-- [ ] Migration script `scripts/migrate-to-dated-catalog.mjs` reads `.catalog/live.json` + `.catalog/backlog.json`, assigns `date` to every entry (live entries get back-dated by `n`; tonight's N=12 = 2026-06-17, N=11 = 2026-06-16, etc.; backlog entries get `today + (n − live.length)` days), writes `.catalog/puzzles.json`. Run once, commit the script for reference, never run again.
-- [ ] Port `infra/release-fn/src/lib/warsawTime.js` to `flags/warsawTime.js` (and tests) — same logic, just lifted to the SWA-side `flags/` tree where `page.js` can import it.
-- [ ] `daily/page.js` + `daily/archive.js` switch to `fetchCatalog('puzzles')` and apply the date filter. Existing UI unchanged — the "today's puzzle" surface stays identical, just sourced from the new shape.
-- [ ] `daily/catalogSource.js` learns the `puzzles` name. Both old (`live` / `backlog`) and new (`puzzles`) names are valid during the transition.
-- [ ] `daily/backlog/` preview page reads `puzzles.json` and shows entries where `p.date > today` (replacing the current "read backlog blob" path).
-- [ ] Upload `puzzles.json` to blob via `authoring/push.mjs --yes`. Live + backlog blobs stay in place untouched as a safety net.
-- [ ] **Smoke test before merge:** load `/daily/` in a browser, see today's N=12 (date 2026-06-17). Reload at 00:01 Warsaw (simulated with system clock or by editing the filter to `<=` 2026-06-18 in DevTools) — should roll over to N=13 (date 2026-06-18). Archive shows entries with `date <= today`.
-
-*After Phase 1 the daily page no longer depends on the Function App firing — even if the Function never recovers, tomorrow's puzzle ships.* Phase 2 then moves authoring; Phase 3 deletes the carcasses.
-
-**Phase 2 — authoring on the new shape.** *(One branch + PR.)*
-- [ ] `flags/dailyValidate.js` gains the date rules (every entry has `date`, dates unique, dates contiguous from earliest through latest, format `YYYY-MM-DD`). The `live`/`backlog` cross-file sequential-`n` rule drops out. The rest of validation (rules 1–7, 14, 15) is unchanged — they don't care about the file split.
-- [ ] `authoring/push.mjs` learns to push `puzzles.json` instead of `live.json` + `backlog.json`. The conflict detector now compares a single etag instead of two.
-- [ ] `.claude/skills/daily-puzzle-author/SKILL.md` rewrite: the agent loop becomes "pull → append the new entry with the next free date → test → push" with no concept of "promote." Single source of truth in the skill prose, no live-vs-backlog mental model.
-- [ ] `flags/daily.test.js` updates: tests drive off `.catalog/puzzles.json`, rule 4 changes from "sequential `n`" to "sequential `n` AND contiguous dates," rule 6 and rule 14 logic stays identical (they're per-entry-pair, not file-aware).
-- [ ] `daily/ideas/page.js` keeps working unchanged — it reads `ideas.json` which hasn't changed.
-- [ ] Delete `live.json` + `backlog.json` blobs from the storage account (the page no longer reads them, so any drift is harmless, but cleaning up reduces "which blob is current?" cognitive load).
-
-*After Phase 2 the only daily-release artifact in blob is `puzzles.json` + the three author-state blobs. The Function App is still up, still wedged, still doing nothing — and that's fine, nothing depends on it anymore.*
-
-**Phase 3 — demolition.** *(One branch + PR.)*
-- [ ] `az deployment group create` does not undo resource creation; use `az functionapp delete`, `az appservice plan delete`, `az monitor app-insights component delete`, `az monitor log-analytics workspace delete`, `az storage account delete` (on `stfuncyetanotherquiz` only — `styetanotherquiz` survives).
-- [ ] Delete `infra/funcapp-release-daily.bicep`, `infra/release-fn/` (whole tree), `scripts/build-release-fn.mjs`. Drop the `release-fn` bundle scripts from `package.json` if any.
-- [ ] Delete `infra/release-incidents.md` 2026-06-17 entry's "diagnostic commands to run first thing next session" — preserve the historical record but mark it as `// Resolved by Feature R demolition` so the next agent doesn't waste time on a dead host.
-- [ ] Update `infra/operations.md`: drop `func-yetanotherquiz-release` row from the Resources table, drop the "Re-deploying funcapp-release-daily.bicep silently breaks" runbook entry (dead code, dead runbook). Update Topology if it mentions the timer Function.
-- [ ] Update `infra/README.md`: drop `funcapp-release-daily.bicep` row, drop the entire "Deploying funcapp-release-daily.bicep" + "Manual invocation (smoke test)" + "DST resilience" + "Disabling temporarily" sections.
-- [ ] Update `daily/README.md`: replace the "Runtime flow — how players see a puzzle" diagram (no more midnight Function fire); drop the "Authoring flow" mention of promote-at-midnight.
-- [ ] Update `CLAUDE.md` "Hosting" + "API / Azure Functions" sections if they mention the standalone Function App.
-- [ ] **Memory cleanup:** delete the stale "Logic App auto-trigger" note (`feedback_no_bandaid_autorelease.md`) and any other memory pointing at the deleted resources. Replace with one fresh memory: "Daily release has no scheduler — entries carry dates, the page filters."
-
-**Rollback playbook (any phase):**
-- Phase 1 broken — `git revert` the Phase 1 commit, page reverts to reading `live.json`. `puzzles.json` stays in blob as harmless dead weight; clean it up later.
-- Phase 2 broken — `git revert` Phase 2; restore `live.json` + `backlog.json` from blob versioning (we kept versions ON precisely for this) or from the Phase 1 PR's diff. Authoring back on the two-file model.
-- Phase 3 broken — Azure resource deletes are not trivially reversible. Mitigation: do Phase 3 only after Phase 1 + 2 have been live for at least 7 days. By then, the page has fully migrated and the Function App has been provably unused for a week. If we still need to roll back after Phase 3, re-provision from the deleted Bicep (which is in git history) — annoying but not catastrophic.
-
-**Out of scope:**
-- Encrypted future entries on the blob. Tracked above as a one-line escape hatch if "anyone can curl future puzzles" ever becomes a real concern. Today it isn't.
-- A new admin UI for catalog management. The agent skill is the UI; keep it.
-- Per-puzzle release-date *time* (puzzles release at noon Warsaw, not midnight). Possible later; today every release is "midnight Warsaw" implicit in the date field.
-- Migrating `dailyResults` Cosmos rows. They reference `puzzleId === n` which is preserved unchanged across the migration. No data migration needed.
-
----
-
-### Feature P: Decouple daily-puzzle release from the SWA deploy — blob-served catalog
-
-**Problem.** On 2026-06-15 the SWA deploy step kept failing with `mcr.microsoft.com/appsvc/staticappsclient:stable: 429 Too Many Requests` (Microsoft Container Registry throttling the runner pulling the SWA-deploy action's base image). The release workflow successfully committed the promoted entry to git, but the deploy that ships it to players kept erroring. Manual workflow re-dispatch hit the "already released today" guard and no-op'd, so even when MCR recovered the deploy didn't auto-retry. Net effect: today's puzzle didn't reach players for hours despite the catalog file being correct in `main`.
-
-**Root cause to remove.** Player-facing puzzle release is currently coupled to "ship the whole static site." Any SWA-deploy flake (Docker pull throttle, content-distribution flap, regional outage) blocks the puzzle. We control the trigger (Feature E's Logic App is reliable) but not the downstream deploy chain.
-
-**Goal.** Promotion writes to a public-read Azure blob; the daily page reads its catalog from blob. The full SWA deploy can lag, retry, or fail without affecting tonight's puzzle. End state drops both the `release-daily.yml` workflow and the Logic App — the midnight runner becomes a single timer-triggered Azure Function that mutates blob in place.
-
-**Why this revisits Feature E's "ruled out" Cosmos option.** Feature E preserved git as source-of-truth because authoring + audit trail + per-puzzle PR locality were worth more than the runtime simplicity Cosmos offered. That tradeoff still holds for **authoring** (local edit → validate → push CLI is the same DX as edit-and-commit), but the *runtime path* — what gets served at midnight — doesn't need git. Splitting authoring (git/repo-adjacent CLI) from serving (blob) gets both: structural locality where it matters AND zero deploy dependency on the release path.
-
-**End-state architecture:**
-- **Storage:** new account `styetanotherquiz` (Standard LRS, West Europe), container `catalog`, anonymous public read at container level, blob versioning ON. CORS allows GET from `https://www.yetanotherquiz.com`, `https://yetanotherquiz.com`, and localhost dev origins. Cache-Control `max-age=60` on each blob.
-- **Blobs:** `live.json`, `backlog.json`, `ideas.json`, `parked.json`, `policy.json` — replacing the current `daily/*.json` files in the repo.
-- **Midnight runner:** standalone Function App `func-yetanotherquiz-release` (Consumption tier, $0 at our volume), Node 22, **timer trigger** at `0 5 0 * * *` Warsaw TZ (`WEBSITE_TIME_ZONE=Central European Standard Time`). The Function reads live + backlog from blob, runs the shared `promote()` + `validateCatalog()`, writes back. Failures throw → App Insights → existing budget-alert email. (Standalone Function App because SWA-managed Functions don't expose timer triggers.)
-- **Authoring:** local CLI tools `node authoring/pull.mjs` (download all blobs to `.catalog/`, gitignored) and `node authoring/push.mjs` (validate locally with hard rules, refuse on failure, upload). Generator + `/daily/ideas/` work against the local `.catalog/` copy.
-- **Drift detector:** CI step pulls live + backlog blobs and runs `validateCatalog()` against the repo's `flags/countries.json`. Catches data drift that would otherwise only surface at the next midnight Function run.
-
-**Decisions taken (override before Phase 1 if any are wrong):**
-- Storage account name `styetanotherquiz`. Raw blob URL for now (`https://styetanotherquiz.blob.core.windows.net/catalog/live.json`) — defer custom domain `data.yetanotherquiz.com` until everything else works.
-- Anonymous public-read at the container level (catalog is published-state, no secrets). Writes via OIDC federated credentials from GitHub Actions + Azure RBAC `Storage Blob Data Contributor` on the Function's managed identity. No storage keys in secrets.
-- Cache-Control `max-age=60` — players see new puzzles within 1 min of midnight rollover; old puzzles stay in CDN cache up to 60 s.
-
-**Phase 1 — blob exists, page reads from blob, workflow uploads (tonight's test).** *(One branch + PR.)*
-- [ ] Create storage account + container + CORS + versioning via `az storage` (capture commands in `infra/operations.md`).
-- [ ] Seed blobs by uploading current `daily/*.json` from the repo.
-- [ ] `daily/page.js`, `daily/archive.js`, `daily/ideas/page.js` fetch from blob URL. Fallback to repo `/daily/*.json` on fetch failure (transitional belt-and-braces; remove in Phase 3). In dev (hostname is localhost), read from repo unchanged.
-- [ ] Add a step to `release-daily.yml`: after `git push` succeeds, `az storage blob upload --overwrite` the two mutated files (live + backlog) to blob. OIDC auth via `azure/login@v2` against a federated credential on a new service principal.
-- [ ] Verify the blob endpoint serves correctly with CORS from prod origin (browser network tab).
-- [ ] **Midnight smoke test:** Logic App fires → workflow promotes → git push lands → blob upload lands → page loads new puzzle from blob. If the deploy step itself fails, prove that players still see the new puzzle.
-
-*After Phase 1 the deploy can fail and tonight's puzzle still ships.* Phases 2 + 3 then drop the workflow + Logic App entirely for the simplicity win.
-
-**Phase 2 — timer-triggered Function replaces the workflow + Logic App.** *(One branch + PR.)*
-- [x] Port `promote()` + the catalog hard rules into a pure module — landed at `infra/release-fn/src/lib/{promote.js,validate.js}` *instead of* `flags/daily.js`. Rationale: the SWA-side `flags/` modules are ESM and the Function App needs its own self-contained bundle anyway; co-locating the validators with the Function avoids a long cross-tree relative-import path and keeps the SWA bundle smaller. `validateCatalog()` enforces rules **1 (drift), 3 (sovereign codes), 4 (sequential `n`), 7 (en + pl description)** — the four that matter at promote time. Rules 2, 5, 6, 14, 15 are author-time concerns already gated by the existing `flags/daily.test.js` on every PR; they're not re-checked at midnight (deferred to a follow-up if a real bug ever motivates it).
-- [ ] Refactor `flags/daily.test.js` to drive `validateCatalog()` against fixture data — *deferred*. The Function is self-contained, the existing tests still run against the repo catalog on every PR, so there's no rule-coverage gap. Revisit when Phase 3 deletes the repo `daily/*.json` and the existing test layout has to move anyway.
-- [x] Provision `func-yetanotherquiz-release` (Consumption Y1, Linux Node 22, West Europe) + `plan-yetanotherquiz-release` + `ai-yetanotherquiz-release` + `stfuncyetanotherquiz` (Function runtime storage). Managed identity has `Storage Blob Data Contributor` on `styetanotherquiz`. Bicep at `infra/funcapp-release-daily.bicep`.
-- [x] Function `releaseDaily.js` with timer binding. Reads live + backlog from blob via `@azure/storage-blob` + `DefaultAzureCredential`, calls `promote()` + `validateCatalog()`, writes back. Idempotent at the blob level (overwrite same key). Empty backlog throws — same "refill" cue as before. **DST handled in code** — schedule is `0 5 22,23 * * *` (fires both 22:05 and 23:05 UTC) and the handler runs only when `warsawClock(now).hour === 0`. Exactly one fire per day is Warsaw midnight under either CEST (22:05) or CET (23:05). Helpers + 11 unit tests in `infra/release-fn/src/lib/warsawTime.{js,test.js}`. (Reason this is in code rather than `WEBSITE_TIME_ZONE`: that setting is silently ignored on Linux Consumption and the `CRON_TZ=Europe/Warsaw` prefix is rejected by the indexer — both dead ends documented in commit history.)
-- [x] Verified end-to-end — initial invocation promoted #12 to blob in 405 ms; blob restored. Midday re-invoke after the dual-cron handler shipped logged "Warsaw hour is 17, not 0 — wrong cron fire, skipping" without touching blob, pinning the guard's behaviour.
-- [x] Logic App `logic-yetanotherquiz-release-daily` deleted, `gh-actions-yetanotherquiz-release` AAD app + service principal deleted, OIDC GitHub secrets `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` / `AZURE_SUBSCRIPTION_ID` removed. `.github/workflows/release-daily.yml`, `scripts/release-next.mjs` + its test, and `infra/logicapp-release-daily.bicep` deleted. Phase 2 has no dormant code paths.
-
-**Phase 3 — repo files out, CLI tools in, drift detector live.** *(One branch + PR.)*
-- [x] `authoring/pull.mjs` + `authoring/push.mjs`. Push runs `validateCatalog()` locally and refuses upload on failure. Conflict check refuses if the remote drifted since the last pull (e.g. the midnight Function ran). Diff + `y/N` prompt before uploading `live.json` / `backlog.json`; ideas / parked / policy push silently (those are author-state, not player-facing). `--yes` / `-y` flag skips the prompt for batch operations (e.g. generator output review). Storage account key fetched via `az storage account keys list`; no extra role assignment needed.
-- [x] `authoring/generate-candidates.mjs` reads `.catalog/{live,backlog,ideas,parked,policy}.json` and writes back to `.catalog/ideas.json`. Agent then runs `authoring/push.mjs` to upload the new ideas batch.
-- [x] `/daily/ideas/` and `/daily/backlog/` pages fetch from blob via `fetchCatalog()`. Preload hints on the four hidden author-only HTML files now point at the blob URL.
-- [x] Deleted `daily/daily_puzzles.json`, `daily/daily_backlog.json`, `daily/daily_ideas.json`, `daily/daily_parked.json`, `daily/daily_policy.json` from the repo. The emergency snapshot `daily/daily_backup.json` + its generator `scripts/generate-backup.mjs` also went — never read by anything (the Function falls back on an empty backlog by throwing, not by reading the snapshot).
-- [x] Removed the Phase 1 repo-fallback in `daily/catalogSource.js` — API simplifies from `fetchCatalog(name, devPath)` to `fetchCatalog(name)`. Tests cover the prod URL mapping.
-- [x] `.gitignore` adds `.catalog/`.
-- [x] Shared validation extracted from `infra/release-fn/src/lib/validate.js` to `flags/dailyValidate.js`. Function imports it via the esbuild bundle; CLI imports it directly. **Function must be redeployed after merge** to pick up the new import path — bundled logic is byte-identical, no behaviour change, only the source-of-truth file moves.
-- [x] Updated `.claude/skills/daily-puzzle-author/SKILL.md` — author workflow now `pull → edit → test → push` against the blob, all via the agent skill.
-- [ ] **Deferred:** a dedicated CI drift-check step. Today, `npm test` already runs the rule suite against `.catalog/` (populated by `node authoring/pull.mjs` in CI per `deploy.yml`), so the drift detector is *already* enforced — a separate `drift-check` script would be redundant. Resurrect if the test suite ever diverges from the rule set.
-
-**Rollback playbook (any phase):**
-- Phase 1 broken — page no longer has a repo fallback after Phase 3 deleted the repo files, so the rollback path is `git revert` the Phase 1+3 commits to bring back `daily/*.json` and the dev-vs-blob switch in `catalogSource.js`. Or just hand-fix the offending blob with `az storage blob upload`.
-- Phase 2 Function not firing — `git revert` the Phase 2 cleanup commit to bring back `release-daily.yml` + `scripts/release-next.mjs` + `infra/logicapp-release-daily.bicep`, then `az deployment group create` re-provisions the Logic App. Stop-gap before that: `node authoring/pull.mjs`, hand-edit `.catalog/live.json` + `.catalog/backlog.json` to do the promote, `node authoring/push.mjs` to ship.
-- Phase 3 broken authoring — the storage account key is still the auth path (no role assignment to roll back), `az storage blob upload` works as the manual escape hatch. Restoring deleted JSON files from git history rebuilds the previous DX if needed.
-
-**Out of scope:**
-- Custom domain `data.yetanotherquiz.com` (defer; can be added without app changes once everything else is stable).
-- Migrating ideas/parked authoring to a web UI (CLI is sufficient; the rendered `/daily/ideas/` page is the review surface).
-- Per-blob versioning UI / catalog history viewer (blob versioning gives us the durable history; nice-to-have surface for later).
+*(No active feature work — Feature R closed 2026-06-17, see `## Done` below.)*
 
 ---
 
@@ -159,9 +31,9 @@ Items here are not blocking current work but deserve durable memory — the next
 
 ### Feature Q: Observability for the player-facing site (Application Insights)
 
-**Status:** parked 2026-06-16. Jan plans to revisit ~next session. Gap surfaced during the Feature P cleanup audit.
+**Status:** parked 2026-06-16, updated 2026-06-17 after Feature R demolition. Jan plans to revisit ~next session. Gap surfaced during the Feature P cleanup audit; **widened** by Feature R Phase 3 which deleted the only AI instance in the resource group along with the Function App that owned it.
 
-**Problem.** Today the only Application Insights instance in `rg-yetanotherquiz` is `ai-yetanotherquiz-release`, wired exclusively to the timer Function App that owns midnight promotion. **The player-facing site has no telemetry at all.** Specifically:
+**Problem.** As of 2026-06-17 there is **no App Insights instance** in `rg-yetanotherquiz` at all (`ai-yetanotherquiz-release` was deleted with the rest of the scheduler stack). **The player-facing site has no telemetry at all.** Specifically:
 
 - The SWA-managed Function App (which runs `api/dailyResult`, `api/dailyStats`, `api/engagementEvent`, etc.) has `APPLICATIONINSIGHTS_CONNECTION_STRING = null`. Exceptions thrown inside any of those handlers go to /dev/null. When a player's submission fails, Jan doesn't know.
 - The frontend ships no App Insights JS SDK. Page views, JS exceptions, network errors, slow page loads — all invisible.
@@ -171,7 +43,7 @@ Cloudflare Web Analytics (Feature M Part A, shipped 2026-06-14) covers some of t
 
 **Likely shape when this comes off the parking brake:**
 
-1. **App Insights on the SWA-managed Function App.** Either reuse `ai-yetanotherquiz-release` (rename to `ai-yetanotherquiz`) or create `ai-yetanotherquiz-api`. Bicep addition + one `az staticwebapp appsettings set` call. Captures every `api/*` exception, dependency call, and latency distribution. ~10 min of work, no code change in `api/`.
+1. **App Insights on the SWA-managed Function App.** Create a fresh `ai-yetanotherquiz` (or `ai-yetanotherquiz-api`) + Log Analytics workspace via Bicep. One `az staticwebapp appsettings set` call to wire the connection string. Captures every `api/*` exception, dependency call, and latency distribution. ~15 min of work, no code change in `api/`.
 2. **App Insights JS SDK on the frontend.** One inline script in the shared HTML chrome, plus an `Application Insights Connection String` config. Captures page views, JS errors, performance timings, and (optionally) custom events for user funnels. ~5 min of work; adds ~30 KB to the page bundle (deferred load — no first-paint cost).
 
 Both stages land within the 5 GB/month free tier at our traffic.
@@ -304,6 +176,62 @@ Both stages land within the 5 GB/month free tier at our traffic.
 ---
 
 ## Done
+
+### Feature R: Eliminate the daily-release scheduler — *shipped 2026-06-17*
+
+**Problem.** The daily-release path failed three nights in a row (2026-06-15, 2026-06-16, 2026-06-17 — see `infra/release-incidents.md` for the journal). Three different scheduler attempts had bitten us across one week: GH Actions cron (drifted past Warsaw midnight by 75–135 min), Azure Logic App (worked briefly), Function App (host wedged after a Bicep redeploy, App Insights silent, would not register the `releaseDaily` function). The unit of failure was **the existence of a scheduler** — anything that has to "do a thing at a specific time" is a separate process whose health is a separate concern, and every variant we tried failed differently. With a 3-day trip coming up Jan needed structural change, not another debugging round.
+
+**Goal that shipped.** Time becomes data, not a trigger. Every entry in `puzzles.json` carries its own `date`; the daily page filters `entries.filter(p => p.date <= warsawToday())` on every load. No scheduler, no Function App, no cron, no DST math at the trigger level. The whole class of "the autoreleaser failed" incidents is now impossible.
+
+**Architecture that shipped:**
+
+- **Storage:** `styetanotherquiz` blob storage (kept from Feature P — that part of the architecture works). One container `catalog/` with four blobs: **`puzzles.json`** (single source of truth, every entry past/present/future with its own `date`), `ideas.json`, `parked.json`, `policy.json`. Anonymous public-read, `Cache-Control: max-age=60`, blob versioning ON.
+- **Reader:** `daily/page.js` fetches `puzzles.json`, computes `warsawToday()` via `Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' })`, filters entries via `flags/puzzleFilter.js` `visiblePuzzles()` + `latestPuzzle()`. `daily/archive.js` uses the same filter. `daily/backlog/page.js` shows only future-dated entries (`date > warsawToday()`).
+- **Validator** (`flags/dailyValidate.js`): `validateCatalog({ puzzles })` instead of `{ live, backlog }`. New rule 4b: every entry has `date: "YYYY-MM-DD"`, dates are unique, dates are contiguous (no gaps). Per-entry rules 1, 2, 3, 5, 6, 7, 14, 15 unchanged.
+- **Server-side defence** (`api/src/functions/dailyResult.js`): the dated catalog is public-read, so a client could `POST` for a future `puzzleId` and pollute its aggregate. New `isReleased(puzzleId, warsawToday())` check rejects with 400 `not_released`. Implemented as pure `api/src/lib/puzzleDate.js` + `api/src/lib/warsawTime.js` (CJS twins of the page-side helpers, since `api/` is CommonJS).
+- **Authoring:** `authoring/push.mjs` pushes `puzzles.json`; `authoring/pull.mjs` pulls 4 blobs; generator + ambiguity audit read `puzzles.json`. Append-with-date workflow: `n = prev.n + 1`, `date = prev.date + 1 day`. No promote step.
+
+**Three phases, three PRs, all 2026-06-17:**
+
+1. **R.1 (#483) — dated catalog + page filter + server-side `puzzleId` rejection.** One-shot migration script `scripts/migrate-to-dated-catalog.mjs` reads `.catalog/{live,backlog}.json` and writes `puzzles.json` with `date = anchor (N=12 → 2026-06-17) ± days`. Page + archive + backlog preview switch to the new shape; `live.json` + `backlog.json` blobs left in place as Phase-1 safety net. 32 new unit tests (warsawTime, puzzleFilter, puzzleDate, migrate-to-dated-catalog).
+2. **R.2 (#484) — single-blob authoring + validator rewrite + skill rewrite.** Validator collapses to `{puzzles}` with date rules. Authoring tools (`push.mjs`, `pull.mjs`, generator, audit) drive off the single FILES list `[puzzles, ideas, parked, policy]`. Daily-puzzle-author skill rewritten: "promote" step disappears, replaced by "append with next free date." Decorative cleanup: dead `'live'`/`'backlog'` entries from `daily/catalogSource.js`, stale Logic-App/Function-App comments from `flags/daily.js` header.
+3. **R.3 (#?) — demolition.** Deleted Azure resources `func-yetanotherquiz-release`, `plan-yetanotherquiz-release`, `ai-yetanotherquiz-release`, `log-yetanotherquiz-release`, `stfuncyetanotherquiz`, plus the auto-created `Application Insights Smart Detection` action group. Deleted code: `infra/release-fn/` (whole tree), `infra/funcapp-release-daily.bicep`, `scripts/build-release-fn.mjs`. Docs updated: `infra/operations.md` (drop Resources rows + Bicep-redeploy runbook), `infra/README.md` (drop Function App sections), `daily/README.md` (no more midnight Function diagram), `CLAUDE.md` "API / Azure Functions" (no second Function App). `infra/release-incidents.md` marked resolved by Feature R demolition, history preserved.
+
+**Standing artifacts** (the load-bearing outputs future work inherits):
+
+- `flags/warsawTime.js` `warsawClock` + `warsawToday` (and CJS twin at `api/src/lib/warsawTime.js`) — Warsaw-date helpers, DST-safe via `Intl.DateTimeFormat`. Reusable for any feature that needs "what Warsaw calendar day is it now?".
+- `flags/puzzleFilter.js` `visiblePuzzles` + `latestPuzzle` — pure date-based catalog filters. The pattern (filter by date locally rather than schedule a job) is the load-bearing idea, not the helper.
+- `api/src/lib/puzzleDate.js` `puzzleDateIso` + `isReleased` — server-side puzzle-id → date mapping. Couples to the "contiguous 1-per-day" invariant the validator enforces; if that invariant ever loosens, this switches to a blob lookup.
+- `flags/dailyValidate.js` with the date-contiguity rule — every new puzzle is checked against the rule at push time. Gaps and duplicates fail before publish.
+- `puzzles.json` blob shape itself — `{ n, date, filter | kind:'manual'+title, answers, description }`. Future schedulers (if we ever bring back time-of-day flexibility, holiday skips, etc.) extend this rather than adding a separate trigger.
+
+**Key decisions, preserved for future "why don't we just …" questions:**
+
+- **Why client-side filter, not API-side.** Every daily page load would route through a Function App, taking on cold starts (Free SKU = 1–2 s after idle) and a new boot-failure surface. The daily page is now static-page + public-blob = the most reliable surface on the site. Client filter keeps it that way.
+- **Why one blob, not per-date blobs.** Per-date would mean N fetches for the N-day archive page. One blob is ~28 KB at 72 entries — rounding noise.
+- **Why public-read despite the "anyone can curl tomorrow" trade-off.** Knowing "Europe + cross + blue" doesn't solve any puzzle for you — the player still has to recognise flags. Security-through-obscurity wasn't load-bearing. If it ever becomes load-bearing: encrypt entries with a date-derived key on the page (~10 lines), don't add a server.
+- **Why `n` preserved across the migration.** Every `dailyResults` Cosmos row references `puzzleId === n`; same for leaderboard partition keys and share links. Switching the identity scheme would have required a Cosmos migration on top of everything else. Just stamping `date` onto the existing `n` was free.
+- **Why "dates contiguous (no gaps)" was the validator rule rather than "monotonically increasing."** Strict contiguity catches the "tonight's puzzle is missing" bug at test time before it ships. The cost (can't deliberately skip a day) is small and reversible — switch to a "fill with a placeholder entry" pattern if needed.
+
+**Notable journey, preserved for posterity:**
+
+- The original instinct on the morning of 2026-06-17 was to debug the wedged Function App. Diagnostic commands were drafted in `infra/release-incidents.md`, then deleted in Phase 3. Time spent debugging the scheduler would have been time not building the alternative; the right call was to write down what would have been the next session's plan, then delete it.
+- The first migration cut (R.1) hardcoded five fields when copying entries to the new shape and dropped #72's `kind: 'manual'` + `title` fields silently. Caught by tests in R.2. Fixed by spread-then-stamp-date pattern. Lesson pinned: when migrating between shapes, prefer field-preserving spread + explicit overrides over field-listing object construction.
+- Feature R inherited Feature P's blob storage + authoring CLI surface, then deleted Feature P's Function App. Feature P was the first move ("get release off the SWA deploy"); Feature R was the second ("get release off any scheduler"). Both shipped within 48 hours of each other — the second was triggered by the first failing on the same night the second night of the new architecture.
+
+**Out of scope, intentionally deferred** (captured here so they don't drift back in): encrypted future entries on the blob (one-line escape hatch tracked above); a new admin UI for catalog management (the agent skill is the UI); per-puzzle release-date *time* (puzzles release at midnight Warsaw implicit in the `date` field — bring it back if needed by adding a `time` field); migrating `dailyResults` Cosmos rows (they reference `puzzleId === n` which is preserved — no data migration); rename `daily/backlog/` URL (kept for stability; "future schedule preview" semantics).
+
+**Key PRs.** #482 (Feature R spec drafted), #483 (R.1 — dated catalog + page filter), #484 (R.2 — single-blob authoring + validator + skill), Phase 3 PR (R.3 — demolition).
+
+### Feature P: Decouple daily-puzzle release from the SWA deploy — *shipped 2026-06-15, superseded by Feature R 2026-06-17*
+
+**Status.** Feature P shipped its three phases on 2026-06-15/16 — Phase 1 (blob exists, page reads, workflow uploads) and Phase 3 (repo files out, CLI tools in) survived intact and are still load-bearing. Phase 2 (timer-triggered Function App as the midnight runner) was the part that failed under real-world conditions, and Feature R demolished it on 2026-06-17.
+
+**What Feature P solved that's still live:** the daily page reads its catalog from a public-read Azure blob (`styetanotherquiz/catalog/`) instead of bundled JSON files, so an SWA deploy flake (Docker pull throttle, content-distribution flap, regional outage) no longer blocks the puzzle from updating. The authoring CLI (`authoring/pull.mjs` + `push.mjs`) replaced the commit-and-deploy authoring loop. `.gitignore` adds `.catalog/`. Validation extracted to `flags/dailyValidate.js`.
+
+**What Feature P got wrong:** Phase 2 traded "shared GH Actions runner / Logic App" for "standalone Function App" — same fundamental architecture (a runner that must fire at a specific time), different failure modes. The Function App wedged after a Bicep redeploy on 2026-06-16 (host returned 503 below the admin surface, App Insights silent), the GH Actions fallback Jan re-introduced also failed, and the manual `push.mjs` was the only working path. Feature R's "delete the scheduler entirely" was the structural response.
+
+**Key PRs from the Feature P era.** #463 (spec), #464 (Phase 1 — page reads blob), #465 (Phase 2 — Function App provisioned), #466 (Phase 2 cleanup — DST-resilient schedule + delete dormant code), #467 (Phase 3 — blob is sole source of truth), #468–#472 (audit passes, dead-script cleanup). Phase 2-related code (`infra/funcapp-release-daily.bicep`, `infra/release-fn/`, `scripts/build-release-fn.mjs`) deleted by Feature R Phase 3.
 
 ### Feature C: Cross-device link via QR-claim — *shipped 2026-06-16*
 
