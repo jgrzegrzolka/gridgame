@@ -12,6 +12,7 @@ import { newlyWonSmallBoards, isMetaWinNewlyFormed } from '../../flags/ultimateT
 import { shouldFireTicTacToeConfetti } from '../../flags/ticTacToe.js';
 import { loadCountries } from '../../flags/group.js';
 import { shareUrl } from '../../common.js';
+import { trackEvent } from '../../analytics.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
@@ -215,6 +216,17 @@ function runOnline(countries) {
   }
 
   function onSocketClose() {
+    // Feature Q — see ticTacToe/page.js for the rationale (PartyKit's
+    // WS server is on Cloudflare; client side is the only AI-reachable
+    // surface for disconnect signal).
+    trackEvent('ttt-disconnect', {
+      mode: '9x9',
+      role: state.myRole ?? 'unknown',
+      peerPresent: state.peerPresent === true,
+      hadWinner: typeof state.game?.winner === 'string',
+      stopReconnecting,
+      reconnectAttempts,
+    });
     if (stopReconnecting || !activeRoom) return;
     activeRoom = { ...activeRoom, intent: 'join' };
     reconnectAttempts++;
