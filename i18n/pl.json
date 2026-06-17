@@ -161,7 +161,6 @@
       "line": "Seria: {n}"
     },
     "nextPuzzle": {
-      "in": "Następna zagadka za {countdown}",
       "ghostLabel": "Następna zagadka"
     }
   },
