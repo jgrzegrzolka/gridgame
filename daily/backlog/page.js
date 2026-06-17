@@ -2,6 +2,7 @@ import { t } from '../../i18n.js';
 import { renderArchiveSquare, refreshSquareCriteria } from '../squares.js';
 import { scoreEntry } from '../difficulty.js';
 import { fetchCatalog } from '../catalogSource.js';
+import { warsawToday } from '../../flags/warsawTime.js';
 
 /** @typedef {import('../../flags/daily.js').DailyPuzzle} DailyPuzzle */
 /** @typedef {import('../../flags/group.js').Country} Country */
@@ -23,10 +24,14 @@ export function bootBacklog() {
   const listEl = /** @type {HTMLElement} */ (document.getElementById('backlog-list'));
 
   Promise.all([
-    fetchCatalog('backlog'),
+    fetchCatalog('puzzles'),
     fetch('../../flags/countries.json').then((r) => r.json()),
   ])
-    .then(([/** @type {DailyPuzzle[]} */ backlog, /** @type {Country[]} */ countries]) => {
+    .then(([/** @type {DailyPuzzle[]} */ allEntries, /** @type {Country[]} */ countries]) => {
+      // Preview only future-dated entries — that's "what's coming next."
+      // Released entries belong on the archive page, not here.
+      const today = warsawToday();
+      const backlog = allEntries.filter((p) => /** @type {any} */ (p).date > today);
       if (backlog.length === 0) {
         const empty = document.createElement('li');
         empty.className = 'archive-empty';

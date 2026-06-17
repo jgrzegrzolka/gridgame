@@ -4,6 +4,10 @@ import { catalogUrl } from './catalogSource.js';
 
 test('catalogUrl returns the blob URL for each catalog file', () => {
   assert.equal(
+    catalogUrl('puzzles'),
+    'https://styetanotherquiz.blob.core.windows.net/catalog/puzzles.json',
+  );
+  assert.equal(
     catalogUrl('live'),
     'https://styetanotherquiz.blob.core.windows.net/catalog/live.json',
   );

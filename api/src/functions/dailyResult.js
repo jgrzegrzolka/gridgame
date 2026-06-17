@@ -5,6 +5,8 @@ const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { verifyTurnstile } = require('../lib/turnstile');
 const { buildDailyResultDoc } = require('../lib/dailyResultDoc');
 const { isLocalRequestUrl } = require('../lib/requestHost');
+const { isReleased } = require('../lib/puzzleDate');
+const { warsawToday } = require('../lib/warsawTime');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
@@ -33,6 +35,14 @@ app.http('dailyResult', {
     }
     const v = validateResult(body);
     if (!v.ok) return { status: 400, jsonBody: { error: v.error } };
+
+    // Feature R: the dated catalog is public-read, so a client could
+    // POST a result for a future puzzleId and pollute its aggregate
+    // before it's even released. Reject submissions for puzzles whose
+    // Warsaw release date hasn't arrived yet.
+    if (!isReleased(body.puzzleId, warsawToday())) {
+      return { status: 400, jsonBody: { error: 'not_released' } };
+    }
 
     const ts = await verifyTurnstile({
       secret: process.env.TURNSTILE_SECRET,

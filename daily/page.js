@@ -1,6 +1,8 @@
 import { loadCountries, flagsGamePool } from '../flags/group.js';
 import { t, withLocalizedAliases, countryName } from '../i18n.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, manualToCategory } from '../flags/daily.js';
+import { warsawToday } from '../flags/warsawTime.js';
+import { visiblePuzzles } from '../flags/puzzleFilter.js';
 import { loadScores, isCompleteRecord, migrateScores } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
 import {
@@ -580,11 +582,16 @@ export function bootDaily() {
 
   return Promise.all([
     fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
-    fetchCatalog('live'),
+    fetchCatalog('puzzles'),
   ])
-    .then(([raw, catalog]) => {
+    .then(([raw, /** @type {import('../flags/daily.js').DailyPuzzle[]} */ allEntries]) => {
       const all = withLocalizedAliases(flagsGamePool(raw, false));
 
+      // Filter future-dated entries out client-side. Anyone curling the
+      // blob can still see them; the server rejects submissions for
+      // future puzzleIds, so the worst the page can do is let an
+      // author preview tomorrow without recording a score.
+      const catalog = visiblePuzzles(allEntries, warsawToday());
       const today = todayN(catalog);
       const n = dailyNFromUrl(window.location.search, today);
       // Streak only renders for today's puzzle. Archive finishes /

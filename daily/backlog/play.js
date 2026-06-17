@@ -45,7 +45,7 @@ export function bootBacklogPlay() {
 
   return Promise.all([
     fetch('../../flags/countries.json').then((r) => r.json()).then(loadCountries),
-    fetchCatalog('backlog'),
+    fetchCatalog('puzzles'),
   ])
     .then(([raw, /** @type {DailyPuzzle[]} */ catalog]) => {
       const all = withLocalizedAliases(flagsGamePool(raw, false));

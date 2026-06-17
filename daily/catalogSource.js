@@ -12,8 +12,9 @@
 
 const BLOB_BASE = 'https://styetanotherquiz.blob.core.windows.net/catalog';
 
-/** @type {Record<'live' | 'backlog' | 'ideas' | 'parked' | 'policy', string>} */
+/** @type {Record<'puzzles' | 'live' | 'backlog' | 'ideas' | 'parked' | 'policy', string>} */
 const BLOB_FILE = {
+  puzzles: 'puzzles.json',
   live: 'live.json',
   backlog: 'backlog.json',
   ideas: 'ideas.json',
@@ -22,7 +23,7 @@ const BLOB_FILE = {
 };
 
 /**
- * @param {'live' | 'backlog' | 'ideas' | 'parked' | 'policy'} name
+ * @param {keyof typeof BLOB_FILE} name
  * @returns {string}
  */
 export function catalogUrl(name) {
@@ -30,7 +31,7 @@ export function catalogUrl(name) {
 }
 
 /**
- * @param {'live' | 'backlog' | 'ideas' | 'parked' | 'policy'} name
+ * @param {keyof typeof BLOB_FILE} name
  * @returns {Promise<any>}  matches the implicit `any` returned by the
  *                          native `fetch().json()` it replaces
  */

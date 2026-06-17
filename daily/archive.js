@@ -6,6 +6,8 @@ import { mountDevReset } from './devReset.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
 import { trySyncDevices } from '../flags/syncHydrate.js';
 import { fetchCatalog } from './catalogSource.js';
+import { warsawToday } from '../flags/warsawTime.js';
+import { visiblePuzzles } from '../flags/puzzleFilter.js';
 
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
 
@@ -24,8 +26,9 @@ export function bootArchive() {
   const listEl = /** @type {HTMLElement} */ (document.getElementById('archive-list'));
   const scores = loadScores(window.localStorage);
 
-  fetchCatalog('live')
-    .then((/** @type {DailyPuzzle[]} */ catalog) => {
+  fetchCatalog('puzzles')
+    .then((/** @type {DailyPuzzle[]} */ allEntries) => {
+      const catalog = visiblePuzzles(allEntries, warsawToday());
       const today = todayN(catalog);
       if (today === 0) {
         const empty = document.createElement('li');

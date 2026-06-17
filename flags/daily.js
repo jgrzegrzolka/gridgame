@@ -24,6 +24,13 @@ import { parseFilterString } from './findFlag.js';
  *
  * @typedef {Object} DailyPuzzle
  * @property {number} n
+ * @property {string} [date]   YYYY-MM-DD in Warsaw time — the release
+ *                             date the page filters on (Feature R).
+ *                             Optional for now so synthetic test
+ *                             fixtures and the soon-to-be-deleted
+ *                             `live.json` / `backlog.json` blobs still
+ *                             type-check; Phase 2 will tighten this to
+ *                             required once Phase 1 has shipped.
  * @property {'filter' | 'manual'} [kind]  discriminator. Absent or
  *                             `'filter'`: traditional filter-derived
  *                             entry (the original shape). `'manual'`:
