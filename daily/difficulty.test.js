@@ -200,7 +200,7 @@ test('scoreEntry: manual entry composes the rest of the formula normally', () =>
 const COUNTRIES = JSON.parse(readFileSync(join(HERE, '..', 'flags', 'countries.json'), 'utf-8'));
 const BY_CODE = Object.fromEntries(COUNTRIES.map((c) => [c.code, c]));
 /** @type {{ n: number, filter: string, answers: string[] }[]} */
-const LIVE = JSON.parse(readFileSync(join(HERE, '..', '.catalog', 'live.json'), 'utf-8'));
+const PUZZLES = JSON.parse(readFileSync(join(HERE, '..', '.catalog', 'puzzles.json'), 'utf-8'));
 
 function find(catalog, n) {
   const e = catalog.find((x) => x.n === n);
@@ -213,14 +213,14 @@ test('calibration: live #1 Europe + cross lands easy (≈1.5, range 1.3-1.7)', (
   // (Liechtenstein — added 2026-06-11 when we tagged li with `cross` and
   // refined the filter with `motif:!coat-of-arms`). mean = 1.4, outlier
   // bump from max=3 (li) above mean. Range widened from [1.0, 1.4].
-  const r = scoreEntry(find(LIVE, 1), BY_CODE);
+  const r = scoreEntry(find(PUZZLES, 1), BY_CODE);
   assert.ok(r.score >= 1.3 && r.score <= 1.7,
     `Europe + cross score ${r.score.toFixed(2)} outside [1.3, 1.7] — formula or country data drifted`);
 });
 
 test('calibration: live #3 EU members lands easy-but-big (≈1.8, range 1.5-2.2)', () => {
   // 27 famous flags, mean ≈ 1.3, sizeAdjust = +0.5 (n=27, bucket 26-30)
-  const r = scoreEntry(find(LIVE, 3), BY_CODE);
+  const r = scoreEntry(find(PUZZLES, 3), BY_CODE);
   assert.ok(r.score >= 1.5 && r.score <= 2.2,
     `EU members score ${r.score.toFixed(2)} outside [1.5, 2.2] — formula or country data drifted`);
   // Size bump is non-trivial — pin it specifically so a future "make

@@ -8,14 +8,6 @@ test('catalogUrl returns the blob URL for each catalog file', () => {
     'https://styetanotherquiz.blob.core.windows.net/catalog/puzzles.json',
   );
   assert.equal(
-    catalogUrl('live'),
-    'https://styetanotherquiz.blob.core.windows.net/catalog/live.json',
-  );
-  assert.equal(
-    catalogUrl('backlog'),
-    'https://styetanotherquiz.blob.core.windows.net/catalog/backlog.json',
-  );
-  assert.equal(
     catalogUrl('ideas'),
     'https://styetanotherquiz.blob.core.windows.net/catalog/ideas.json',
   );

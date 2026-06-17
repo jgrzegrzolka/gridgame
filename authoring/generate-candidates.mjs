@@ -36,7 +36,7 @@
  *            and DATA_FEATURE.md Feature DA.
  *   - Dedup: filter string not already in catalog, ideas, or parked
  *
- * Rule 6 guard is seeded from LIVE + BACKLOG + existing fresh IDEAS.
+ * Rule 6 guard is seeded from PUZZLES (full dated catalog) + existing fresh IDEAS.
  * Parked entries (`daily/daily_parked.json`) are deliberately NOT in
  * the guard — they're documented rule-6 violators in a waiting room.
  *
@@ -73,17 +73,15 @@ const SOV = flagsGamePool(COUNTRIES, false);
 const BY_CODE = Object.fromEntries(SOV.map((c) => [c.code, c]));
 
 const CATALOG_DIR = join(ROOT, '.catalog');
-const LIVE = JSON.parse(readFileSync(join(CATALOG_DIR, 'live.json'), 'utf-8'));
-const BACKLOG = JSON.parse(readFileSync(join(CATALOG_DIR, 'backlog.json'), 'utf-8'));
+const PUZZLES = JSON.parse(readFileSync(join(CATALOG_DIR, 'puzzles.json'), 'utf-8'));
 const IDEAS = JSON.parse(readFileSync(join(CATALOG_DIR, 'ideas.json'), 'utf-8'));
 const PARKED = JSON.parse(readFileSync(join(CATALOG_DIR, 'parked.json'), 'utf-8'));
 const POLICY = JSON.parse(readFileSync(join(CATALOG_DIR, 'policy.json'), 'utf-8'));
 
-const CATALOG = [...LIVE, ...BACKLOG];
-// Dedup against every known filter — catalog + active ideas + parked
+// Dedup against every known filter — puzzles + active ideas + parked
 // waiting-room. Re-running shouldn't propose a candidate that already
 // exists anywhere.
-const USED_FILTERS = new Set([...CATALOG, ...IDEAS, ...PARKED].map((e) => e.filter));
+const USED_FILTERS = new Set([...PUZZLES, ...IDEAS, ...PARKED].map((e) => e.filter));
 const SINGLE_USE = new Set(POLICY.singleUseTokens.map((t) => t.token));
 
 const CONTINENTS = ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'];
@@ -158,13 +156,8 @@ function rule2NoRedundant(filter, answers) {
  * happens to overlap with a parked one, which is too strict.
  */
 const RULE6_GUARD = [
-  ...LIVE.map((e) => ({
-    ref: `live#${e.n}`,
-    filter: e.filter,
-    set: new Set(e.answers),
-  })),
-  ...BACKLOG.map((e) => ({
-    ref: `backlog#${e.n}`,
+  ...PUZZLES.map((e) => ({
+    ref: `puzzle#${e.n}`,
     filter: e.filter,
     set: new Set(e.answers),
   })),

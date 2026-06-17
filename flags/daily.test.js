@@ -15,15 +15,14 @@ import { auditPuzzle } from './ambiguityAudit.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const COUNTRIES = loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8')));
-// Catalog files live in `.catalog/` (Phase 3 of Feature P — blob is the
-// source of truth, no committed copies in the repo). Run `npm run
-// catalog:pull` once before invoking the test suite; CI does this as a
-// pre-test step in deploy.yml.
+// Single source of truth (Feature R) — `puzzles.json` carries every
+// entry past, present and future, each with its own `date`. Lives in
+// `.catalog/` (blob is canonical, no committed copy in the repo).
+// Run `npm run catalog:pull` once before invoking the test suite; CI
+// does this as a pre-test step in deploy.yml.
 const CATALOG_DIR = join(HERE, '..', '.catalog');
 /** @type {DailyPuzzle[]} */
-const CATALOG = JSON.parse(readFileSync(join(CATALOG_DIR, 'live.json'), 'utf-8'));
-/** @type {DailyPuzzle[]} */
-const BACKLOG = JSON.parse(readFileSync(join(CATALOG_DIR, 'backlog.json'), 'utf-8'));
+const PUZZLES = JSON.parse(readFileSync(join(CATALOG_DIR, 'puzzles.json'), 'utf-8'));
 
 test('todayN returns the catalog length (the last released puzzle)', () => {
   assert.equal(todayN([]), 0);
@@ -322,47 +321,57 @@ test('resolveDailyPuzzle: partial pool drift drops missing codes but still succe
   }
 });
 
-// --- Catalog: structural + drift checks (live and backlog) ---------------
+// --- Catalog: structural + drift checks (single dated puzzles.json) ------
 
-/** @param {DailyPuzzle[]} list @param {string} label */
-function checkShape(list, label) {
+/** @param {DailyPuzzle[]} list */
+function checkShape(list) {
   list.forEach((entry, i) => {
-    assert.equal(entry.n, i + 1, `${label} index ${i}: n=${entry.n}, expected ${i + 1}`);
+    assert.equal(entry.n, i + 1, `puzzles index ${i}: n=${entry.n}, expected ${i + 1}`);
     if (entry.kind === 'manual') {
       // Manual entries have a title (per-language) and answers — no
       // filter to parse. Title presence + content shape is pinned by
       // the dedicated `manual entries have en + pl title` test below.
-      assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `${label} #${entry.n}: answers`);
-      assert.equal(entry.filter, undefined, `${label} #${entry.n}: manual entry must not carry a filter field`);
+      assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `puzzles #${entry.n}: answers`);
+      assert.equal(entry.filter, undefined, `puzzles #${entry.n}: manual entry must not carry a filter field`);
     } else {
-      assert.ok(typeof entry.filter === 'string' && entry.filter.length > 0, `${label} #${entry.n}: filter`);
-      assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `${label} #${entry.n}: answers`);
+      assert.ok(typeof entry.filter === 'string' && entry.filter.length > 0, `puzzles #${entry.n}: filter`);
+      assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `puzzles #${entry.n}: answers`);
     }
   });
 }
 
-test('live catalog: every entry has n matching its index, non-empty filter and answers', () => {
-  checkShape(CATALOG, 'live');
+test('puzzles: every entry has n matching its index, non-empty filter and answers', () => {
+  checkShape(PUZZLES);
 });
 
-test('backlog: numbering picks up where the live catalog leaves off', () => {
-  // The first backlog entry's n must equal live catalog length + 1, and
-  // backlog entries must continue sequentially. This way, releasing a
-  // puzzle is just "move backlog[0] to the end of live" — n stays valid
-  // in both files without renumbering anything.
-  if (BACKLOG.length === 0) return;
-  assert.equal(BACKLOG[0].n, CATALOG.length + 1,
-    `backlog[0].n=${BACKLOG[0].n} but live catalog has ${CATALOG.length} entries — expected backlog to start at ${CATALOG.length + 1}`);
-  BACKLOG.forEach((entry, i) => {
-    const expectedN = CATALOG.length + 1 + i;
-    assert.equal(entry.n, expectedN, `backlog index ${i}: n=${entry.n}, expected ${expectedN}`);
+test('puzzles: every entry has a YYYY-MM-DD date and dates are contiguous', () => {
+  // Feature R rule 4b — the validator's hard rule made test-visible
+  // here too, so contradictions on the dated catalog surface in `npm
+  // test` rather than only at push time.
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const DAY_MS = 86_400_000;
+  PUZZLES.forEach((entry) => {
+    assert.ok(
+      typeof entry.date === 'string' && DATE_RE.test(entry.date),
+      `puzzles #${entry.n}: date missing or not YYYY-MM-DD (got ${JSON.stringify(entry.date)})`,
+    );
   });
+  for (let i = 1; i < PUZZLES.length; i++) {
+    const prev = Date.parse(/** @type {string} */ (PUZZLES[i - 1].date) + 'T00:00:00Z');
+    const curr = Date.parse(/** @type {string} */ (PUZZLES[i].date) + 'T00:00:00Z');
+    const gap = Math.round((curr - prev) / DAY_MS);
+    assert.equal(
+      gap,
+      1,
+      `puzzles #${PUZZLES[i].n}: ${PUZZLES[i].date} is not the day after #${PUZZLES[i - 1].n}'s ${PUZZLES[i - 1].date} (gap=${gap})`,
+    );
+  }
 });
 
-test('live catalog: every answer code is a known sovereign country', () => {
+test('puzzles: every answer code is a known sovereign country', () => {
   const sovCodes = new Set(flagsGamePool(COUNTRIES, false).map((c) => c.code));
   const offenders = [];
-  for (const entry of [...CATALOG, ...BACKLOG]) {
+  for (const entry of PUZZLES) {
     for (const code of entry.answers) {
       if (!sovCodes.has(code)) offenders.push(`#${entry.n}: ${code} is not in the sovereign pool`);
     }
@@ -391,7 +400,7 @@ test('live catalog: every answer code is a known sovereign country', () => {
 // future picker heuristics / strict-mode puzzles, but the default
 // `colors` matching is what the catalog answers are computed against.
 
-test('live + backlog: no puzzle filter carries a redundant constraint', () => {
+test('puzzles: no filter carries a redundant constraint', () => {
   // A token is redundant only when dropping it changes neither the
   // default-`colors` resolution nor — for puzzles bound by the primary-
   // clean rule — the `primaryColors` resolution. The primary-side check
@@ -404,7 +413,7 @@ test('live + backlog: no puzzle filter carries a redundant constraint', () => {
   const sov = flagsGamePool(COUNTRIES, false);
   /** @param {import('./group.js').Country[]} arr */
   const codes = (arr) => arr.map((c) => c.code).sort();
-  for (const entry of [...CATALOG, ...BACKLOG]) {
+  for (const entry of PUZZLES) {
     // Manual entries have no filter to check for redundancy.
     if (entry.kind === 'manual') continue;
     const filterStr = /** @type {string} */ (entry.filter);
@@ -468,9 +477,9 @@ test('ideas: no filter carries a redundant token', () => {
   }
 });
 
-test('live + backlog: answers match what each filter resolves to today', () => {
+test('puzzles: answers match what each filter resolves to today', () => {
   const sov = flagsGamePool(COUNTRIES, false);
-  for (const entry of [...CATALOG, ...BACKLOG]) {
+  for (const entry of PUZZLES) {
     // Manual entries have no filter — the drift detector is filter-only.
     // Curating completeness of the answer list is on the author.
     if (entry.kind === 'manual') continue;
@@ -499,14 +508,14 @@ test('live + backlog: answers match what each filter resolves to today', () => {
 // (fi, gb, gr, is, no, se) being a strict subset of Europe·cross (the
 // same 6 + ch, dk, mt). Allowed past #100 as a deliberate recall
 // mechanic.
-test('live + backlog: puzzles #1-100 have no filter-refinement subsets', () => {
+test('puzzles: entries #1-100 have no filter-refinement subsets', () => {
   // Refined rule 6: strict-violation only when answer-set subset AND
   // filter-token subset coincide (`Europe+cross+blue` vs `Europe+cross`
   // — the smaller answer set's filter literally adds tokens to the
   // larger). Pure answer-set overlap with different filter framings is
   // allowed (`cross+!UJ` and `NA+cross` share 3 flags but neither
   // filter is a refinement of the other — different puzzles).
-  const entries = [...CATALOG, ...BACKLOG].filter((e) => e.n <= 100);
+  const entries = PUZZLES.filter((e) => e.n <= 100);
   /** @type {string[]} */
   const offenders = [];
   for (const a of entries) {
@@ -577,14 +586,9 @@ test('ideas: no filter-refinement relationships against catalog or other ideas',
   // refinement of. Filter manuals out of the fixed set; equality
   // collisions between an idea and a manual remain an author judgment
   // call surfaced at promote time.
-  const liveLabeled = CATALOG
+  const fixed = PUZZLES
     .filter((e) => e.kind !== 'manual')
-    .map((e) => ({ ...e, filter: /** @type {string} */ (e.filter), _label: `live#${e.n}` }));
-  const backlogLabeled = BACKLOG
-    .filter((e) => e.kind !== 'manual')
-    .map((e) => ({ ...e, filter: /** @type {string} */ (e.filter), _label: `backlog#${e.n}` }));
-
-  const fixed = [...liveLabeled, ...backlogLabeled];
+    .map((e) => ({ ...e, filter: /** @type {string} */ (e.filter), _label: `puzzle#${e.n}` }));
   const candidates = IDEAS.filter(
     (e) => Array.isArray(e.answers) && e.answers.length > 0,
   );
@@ -654,10 +658,10 @@ test('ideas: no filter-refinement relationships against catalog or other ideas',
 // Filter entries render a pill chain ("Europe · cross"); manual entries
 // render only `entry.title[lang]`, so it has to be present in every
 // supported language and non-empty.
-test('live + backlog: every manual entry has en + pl title', () => {
+test('puzzles: every manual entry has en + pl title', () => {
   /** @type {string[]} */
   const offenders = [];
-  for (const entry of [...CATALOG, ...BACKLOG]) {
+  for (const entry of PUZZLES) {
     if (entry.kind !== 'manual') continue;
     const tt = /** @type {Record<string, string> | undefined} */ (entry.title);
     if (!tt) {
@@ -673,10 +677,10 @@ test('live + backlog: every manual entry has en + pl title', () => {
   assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
 });
 
-test('live + backlog: every puzzle has en + pl descriptions', () => {
+test('puzzles: every entry has en + pl descriptions', () => {
   /** @type {string[]} */
   const offenders = [];
-  for (const entry of [...CATALOG, ...BACKLOG]) {
+  for (const entry of PUZZLES) {
     const d = /** @type {Record<string, string> | undefined} */ (entry.description);
     if (!d) {
       offenders.push(`#${entry.n}: missing description`);
@@ -697,9 +701,9 @@ test('live + backlog: every puzzle has en + pl descriptions', () => {
 // play even when the data is technically correct. Past #100 a player has
 // the muscle memory to read a surprise as trivia rather than a bug, so
 // the rule is bounded.
-test('live + backlog: puzzles #1-100 are primary-clean (no emblem-only colour matches)', () => {
+test('puzzles: entries #1-100 are primary-clean (no emblem-only colour matches)', () => {
   const sov = flagsGamePool(COUNTRIES, false);
-  for (const entry of [...CATALOG, ...BACKLOG]) {
+  for (const entry of PUZZLES) {
     if (entry.n > 100) continue;
     // Manual entries are filter-free, so the primary-clean rule (which
     // resolves the filter under a stricter colour model) doesn't apply.
@@ -758,8 +762,8 @@ const POLICY = JSON.parse(
   readFileSync(join(CATALOG_DIR, 'policy.json'), 'utf-8'),
 );
 
-test('live + backlog: single-use tokens appear in at most one entry', () => {
-  const all = [...CATALOG, ...BACKLOG];
+test('puzzles: single-use tokens appear in at most one entry', () => {
+  const all = PUZZLES;
   for (const { token } of POLICY.singleUseTokens) {
     // Manual entries have no filter tokens; they can't burn a
     // single-use token even if their answer list happens to be the
@@ -811,8 +815,8 @@ test('formatPuzzleDate: DD.MM.YYYY format', () => {
 // and DATA_FEATURE.md.
 const SOV_FOR_AUDIT = flagsGamePool(COUNTRIES, false);
 
-test('no live puzzle has a flag-data ambiguity violation', () => {
-  for (const entry of CATALOG) {
+test('no puzzle has a flag-data ambiguity violation', () => {
+  for (const entry of PUZZLES) {
     // Manual entries have no filter — the audit's "plausible count
     // flips filter membership" logic doesn't apply. Author still owns
     // judgment about ambiguous flags appearing in the answer list.
@@ -822,21 +826,7 @@ test('no live puzzle has a flag-data ambiguity violation', () => {
     assert.equal(
       violations.length,
       0,
-      `LIVE #${entry.n} (${filterStr}) has ambiguity violations:\n` +
-        violations.map((v) => `  [${v.kind}] ${v.country}: ${v.detail}`).join('\n'),
-    );
-  }
-});
-
-test('no backlog puzzle has a flag-data ambiguity violation', () => {
-  for (const entry of BACKLOG) {
-    if (entry.kind === 'manual') continue;
-    const filterStr = /** @type {string} */ (entry.filter);
-    const violations = auditPuzzle({ filter: filterStr }, SOV_FOR_AUDIT);
-    assert.equal(
-      violations.length,
-      0,
-      `BACKLOG #${entry.n} (${filterStr}) has ambiguity violations:\n` +
+      `puzzles #${entry.n} (${filterStr}) has ambiguity violations:\n` +
         violations.map((v) => `  [${v.kind}] ${v.country}: ${v.detail}`).join('\n'),
     );
   }

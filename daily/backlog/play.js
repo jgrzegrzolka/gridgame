@@ -15,8 +15,10 @@ import { fetchCatalog } from '../catalogSource.js';
 /** @typedef {import('../../flags/daily.js').DailyPuzzle} DailyPuzzle */
 
 /**
- * Play-test a single staged backlog puzzle. URL: `./play.html?n=N`,
- * where `N` is the puzzle number from `daily/daily_backlog.json`.
+ * Play-test a single puzzle by its `n`. URL: `./play.html?n=N`.
+ * Reads the full `puzzles.json` so any entry — past, today, or future
+ * — is playable for review.
+ *
  * Author-only — never reachable from player-facing nav, and the whole
  * `daily/backlog/` folder is stripped by `deploy.yml` before the live
  * site builds. Plays the puzzle through the same `playFlow.startGame`
