@@ -115,18 +115,22 @@
 
 /* Feature O — achievements section.
  *
- * Sits below the nickname form. Hidden until the streak fetch resolves
- * (avoids a flash of empty/wrong state). Grid auto-flows so the badge
- * count can grow in later phases (mastery, modes, TTT) without a
- * layout rewrite — each tile is a fixed ~120px square, columns wrap. */
+ * Sits inside the form, above the actions row so the Save / Sync /
+ * Home links stay anchored at the bottom of the card. Compact tiles
+ * (~72px) so the grid reads as a quiet status row rather than a
+ * dominant feature — full description moves to a `title` tooltip
+ * on hover (browser-native). Hidden until the streak fetch resolves
+ * (avoids a flash of empty/wrong state). */
 .achievements {
-  margin-top: 32px;
+  margin-top: 8px;
 }
 .achievements-title {
-  font-size: 18px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--primary-color);
-  margin: 0 0 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+  margin: 0 0 8px;
   text-align: center;
 }
 .achievements-grid {
@@ -134,49 +138,43 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
 }
 .achievement-badge {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 14px 10px 12px;
-  border: 1px solid var(--muted-color);
-  border-radius: 8px;
+  padding: 8px 4px;
+  min-height: 64px;
+  border: 1px solid #ececec;
+  border-radius: 6px;
   background: #fff;
+  cursor: default;
   /* Locked tiles share the same shape and footprint as earned ones —
    * the grid stays uniform regardless of progress, so a returner can
    * see "what's still ahead" without empty slots feeling like holes. */
-  transition: border-color 80ms, background 80ms, opacity 80ms;
+  transition: border-color 80ms, opacity 80ms, filter 80ms;
 }
 .achievement-badge--earned {
-  border-color: var(--primary-color);
-  background: #fff;
+  border-color: var(--muted-color);
 }
 .achievement-badge--locked {
-  opacity: 0.55;
-  filter: grayscale(0.6);
+  opacity: 0.4;
+  filter: grayscale(1);
 }
 .achievement-icon {
-  font-size: 32px;
+  font-size: 20px;
   line-height: 1;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .achievement-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--primary-color);
-  margin: 0 0 4px;
-}
-.achievement-detail {
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--muted-color);
   margin: 0;
-}
-.achievement-badge--earned .achievement-detail {
-  color: var(--primary-color);
+  line-height: 1.2;
 }
 

@@ -267,6 +267,9 @@ async function renderAchievements(deviceId) {
     const li = document.createElement('li');
     li.className = `achievement-badge achievement-badge--${earned ? 'earned' : 'locked'}`;
     li.dataset.achievementId = rule.id;
+    // Tooltip carries the description (earned) or hint (locked) —
+    // keeps the tile itself compact, only one line of name + icon.
+    li.title = earned ? rule.description : rule.hint;
 
     const icon = document.createElement('span');
     icon.className = 'achievement-icon';
@@ -274,15 +277,10 @@ async function renderAchievements(deviceId) {
     icon.textContent = rule.icon;
     li.appendChild(icon);
 
-    const name = document.createElement('h3');
+    const name = document.createElement('span');
     name.className = 'achievement-name';
     name.textContent = rule.name;
     li.appendChild(name);
-
-    const detail = document.createElement('p');
-    detail.className = 'achievement-detail';
-    detail.textContent = earned ? rule.description : rule.hint;
-    li.appendChild(detail);
 
     grid.appendChild(li);
   }
