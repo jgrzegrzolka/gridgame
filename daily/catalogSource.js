@@ -1,22 +1,20 @@
 /**
  * Catalog source — single source of truth is the public-read Azure
- * blob `styetanotherquiz/catalog`. The page fetches `live.json`,
- * `backlog.json`, `ideas.json`, etc. directly from there in both prod
- * and local dev (the blob is small and CORS-allowed for both origins).
+ * blob `styetanotherquiz/catalog`. The page fetches `puzzles.json`,
+ * `ideas.json`, etc. directly from there in both prod and local dev
+ * (the blob is small and CORS-allowed for both origins).
  *
- * Phase 3 of Feature P removed the Phase 1 repo fallback — there are
- * no longer any `daily/*.json` files committed to the repo, so falling
- * back to them would 404. The authoring path is `npm run catalog:pull`
- * → edit `.catalog/` → `npm run catalog:push`, not commit-and-deploy.
+ * Feature R replaced the old `live.json` + `backlog.json` split with a
+ * single dated `puzzles.json`; the page filters by date locally. The
+ * authoring path is `npm run catalog:pull` → edit `.catalog/` → `npm
+ * run catalog:push`, not commit-and-deploy.
  */
 
 const BLOB_BASE = 'https://styetanotherquiz.blob.core.windows.net/catalog';
 
-/** @type {Record<'puzzles' | 'live' | 'backlog' | 'ideas' | 'parked' | 'policy', string>} */
+/** @type {Record<'puzzles' | 'ideas' | 'parked' | 'policy', string>} */
 const BLOB_FILE = {
   puzzles: 'puzzles.json',
-  live: 'live.json',
-  backlog: 'backlog.json',
   ideas: 'ideas.json',
   parked: 'parked.json',
   policy: 'policy.json',

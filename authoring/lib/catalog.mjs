@@ -21,14 +21,13 @@ export const SNAPSHOT_DIR = join(CATALOG_DIR, '.snapshot');
 
 /**
  * Files held in the catalog container. `mutatesPlayer` flips on the
- * push-time confirm prompt: `live` and `backlog` are the two whose
- * change affects what players see (or what tonight's Function will
- * promote), so we always pause before publishing them. `ideas`,
- * `parked`, `policy` are author-state and push silently.
+ * push-time confirm prompt: `puzzles` is the single player-facing
+ * blob (Feature R — dated entries, no more live/backlog split). Author
+ * always pauses before publishing it. `ideas`, `parked`, `policy` are
+ * author-state and push silently.
  */
 export const FILES = [
-  { name: 'live', mutatesPlayer: true },
-  { name: 'backlog', mutatesPlayer: true },
+  { name: 'puzzles', mutatesPlayer: true },
   { name: 'ideas', mutatesPlayer: false },
   { name: 'parked', mutatesPlayer: false },
   { name: 'policy', mutatesPlayer: false },

@@ -1,19 +1,19 @@
 /**
  * Validate the working copy in `.catalog/` and upload changed files
  * to blob. Push refuses to overwrite a remote that has moved since
- * the last pull — most likely the midnight Function promoted while
- * you were editing. Refused pushes print the file that drifted and
- * the fix (`npm run catalog:pull`).
+ * the last pull — protection against concurrent edits (e.g. a parallel
+ * agent session). Refused pushes print the file that drifted and the
+ * fix (`npm run catalog:pull`).
  *
- * For files that affect what players see — `live.json` + `backlog.json`
- * — push shows a diff and prompts before uploading. Pass `--yes` or
- * `-y` to skip the prompt (useful for batch operations like the
- * generator pipeline, where the author has already reviewed via
- * `/daily/ideas/` and just wants the upload).
+ * For the player-facing file (`puzzles.json`) push shows a diff and
+ * prompts before uploading. Pass `--yes` or `-y` to skip the prompt
+ * (useful for batch operations like the generator pipeline, where the
+ * author has already reviewed via `/daily/ideas/` and just wants the
+ * upload).
  *
  * Auth uses the Storage account key fetched via `az storage account
- * keys list` (the same path the Phase 1 workflow used) — runs anywhere
- * Jan is logged into `az`. No additional role assignment needed.
+ * keys list` — runs anywhere Jan is logged into `az`. No additional
+ * role assignment needed.
  */
 
 import { writeFile } from 'node:fs/promises';
@@ -68,7 +68,7 @@ async function main() {
 
   // 4. Validate the resulting catalog state.
   try {
-    validateCatalog({ live: local.live, backlog: local.backlog });
+    validateCatalog({ puzzles: local.puzzles });
     console.log('validate: OK');
   } catch (err) {
     console.error(`validate FAILED: ${err.message}`);

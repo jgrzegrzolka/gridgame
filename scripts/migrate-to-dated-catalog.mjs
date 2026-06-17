@@ -50,14 +50,16 @@ async function readJson(path) {
 async function main() {
   const live = await readJson('.catalog/live.json');
   const backlog = await readJson('.catalog/backlog.json');
+  // Spread the original entry then stamp `date` so optional fields
+  // (`kind`, `title`, `primaryCleanExempt`, anything future) carry
+  // through. The 2026-06-17 first cut hard-listed five fields and
+  // dropped #72's `kind: 'manual'` + `title` on the floor — fixed
+  // before reuploading.
   const merged = [...live, ...backlog]
     .sort((a, b) => a.n - b.n)
     .map((entry) => ({
-      n: entry.n,
+      ...entry,
       date: assignDate(entry.n),
-      filter: entry.filter,
-      answers: entry.answers,
-      description: entry.description,
     }));
 
   // Sanity: contiguous ns, contiguous dates.

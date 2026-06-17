@@ -3,20 +3,18 @@ import { parseFilterString } from './findFlag.js';
 /**
  * Daily-puzzle catalog helpers. Pure logic; no DOM, no fetch.
  *
- * Release model: the catalog is the source of truth for which puzzles
- * have been released. "Today's puzzle" is the last entry in the
- * catalog — the resolver uses `catalog.length`, not date math.
- * Releasing puzzle N+1 means appending its entry to `live.json` in the
- * `styetanotherquiz/catalog` blob; a timer-triggered Function App
- * (`func-yetanotherquiz-release`) moves `backlog[0]` to the end of
- * `live.json` each Polish midnight (see FEATURE.md Feature P).
+ * Release model (Feature R): every entry carries a `date` field and the
+ * page filters by date locally — `entries.filter(p => p.date <=
+ * warsawToday())`. "Today's puzzle" is the highest-dated visible
+ * entry. The author publishes a puzzle by appending to `puzzles.json`
+ * on the `styetanotherquiz/catalog` blob with the next free date; no
+ * scheduler is involved.
  *
- * Dates: the archive renders each tile's release date as a presentation
- * derivation — `puzzleDate(n) = LAUNCH_DATE + (n - 1) days`. The data
- * model still has no `releaseDate` field. This works as long as the
- * Function reliably promotes one puzzle per day; if a release ever
- * misses, the derived dates drift relative to reality and we'd switch
- * to stored dates per entry.
+ * Dates: each entry stores its own `date`. `puzzleDate(n)` still
+ * derives a Date from `LAUNCH_DATE + (n - 1)` for archive rendering —
+ * valid as long as `puzzles.json` keeps the "contiguous 1-per-day"
+ * invariant the validator enforces. Switch to reading `entry.date`
+ * directly if that invariant ever loosens.
  *
  * The catalog stores resolved answers (a list of country codes), not
  * just the filter that produced them — fixes to country data later
@@ -26,11 +24,10 @@ import { parseFilterString } from './findFlag.js';
  * @property {number} n
  * @property {string} [date]   YYYY-MM-DD in Warsaw time — the release
  *                             date the page filters on (Feature R).
- *                             Optional for now so synthetic test
- *                             fixtures and the soon-to-be-deleted
- *                             `live.json` / `backlog.json` blobs still
- *                             type-check; Phase 2 will tighten this to
- *                             required once Phase 1 has shipped.
+ *                             Required at runtime (the validator
+ *                             enforces it on every puzzles.json entry);
+ *                             typedef-optional only so synthetic test
+ *                             fixtures stay terse.
  * @property {'filter' | 'manual'} [kind]  discriminator. Absent or
  *                             `'filter'`: traditional filter-derived
  *                             entry (the original shape). `'manual'`:
@@ -76,17 +73,11 @@ export function todayN(catalog) {
 }
 
 /**
- * Anchor: puzzle #1 went live on 2026-06-06. Subsequent puzzles release
- * one per day, promoted by the Azure Logic App at Polish midnight. The
- * archive uses this to show each tile's release date (`puzzleDate(n)`).
- *
- * `puzzleDate(n) = LAUNCH_DATE + (n - 1) days`. This relies on the
- * "exactly one puzzle promoted per day" invariant. If we ever miss a
- * day (or deliberately skip), the formula drifts and tile dates no
- * longer match reality. The mitigation is operational, not structural:
- * Logic App reliability (see FEATURE.md "Reliable daily-puzzle
- * auto-release"). If misses ever happen in practice, switch to a
- * stored `releaseDate` field per entry.
+ * Anchor: puzzle #1 went live on 2026-06-06. The validator enforces
+ * contiguous dates across `puzzles.json`, so `LAUNCH_DATE + (n - 1)`
+ * still resolves correctly for every entry. Each entry also carries
+ * its own `date` field — switch to that if the contiguity rule ever
+ * loosens.
  */
 export const LAUNCH_DATE = '2026-06-06';
 
