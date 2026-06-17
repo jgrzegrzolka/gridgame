@@ -133,6 +133,13 @@ body::before {
   cursor: default;
   pointer-events: none;
 }
+/* Lang toggle = text-only ISO code (current language). `data-current`
+ * is set by the synchronous paint script in every page's <head> + by
+ * `wireLangToggle` on switch, so the visible text always tracks the
+ * active language via CSS `attr()`. No flag image — flags here would
+ * compete visually with the puzzle content (a country flag in the
+ * chrome could be misread as part of the puzzle for a half-second).
+ * Text scales cleanly to a third language when Finnish lands. */
 .lang-toggle {
   position: fixed;
   top: 12px;
@@ -145,18 +152,21 @@ body::before {
   cursor: pointer;
   z-index: 25;
   box-sizing: border-box;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 28px 21px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--primary-color);
+  text-decoration: none;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
 }
 .lang-toggle:hover {
   background-color: #f0f0f0;
 }
-.lang-toggle[data-current="en"] {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 480'%3E%3Cpath fill='%23012169' d='M0 0h640v480H0z'/%3E%3Cpath fill='%23FFF' d='m75 0 244 181L562 0h78v62L400 241l240 178v61h-80L320 301 81 480H0v-60l239-178L0 64V0z'/%3E%3Cpath fill='%23C8102E' d='m424 281 216 159v40L369 281zm-184 20 6 35L54 480H0zM640 0v3L391 191l2-44L590 0zM0 0l239 176h-60L0 42z'/%3E%3Cpath fill='%23FFF' d='M241 0v480h160V0zM0 160v160h640V160z'/%3E%3Cpath fill='%23C8102E' d='M0 193v96h640v-96zM273 0v480h96V0z'/%3E%3C/svg%3E");
-}
-.lang-toggle[data-current="pl"] {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 480'%3E%3Cpath fill='%23fff' d='M0 0h640v240H0z'/%3E%3Cpath fill='%23dc143c' d='M0 240h640v240H0z'/%3E%3C/svg%3E");
+.lang-toggle::before {
+  content: attr(data-current);
 }
 .flags-link {
   position: fixed;
