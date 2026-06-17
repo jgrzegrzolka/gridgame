@@ -86,9 +86,31 @@
  * modifier classes that paint the active button solid, mirroring
  * `.archive-square--approved` on the tile. */
 .ideas-play-verdict .review-button {
-  position: static; /* override the tile's absolute positioning */
+  position: static;          /* override the tile's absolute positioning */
+  display: inline-flex;      /* keep flex centering of the glyph, but stay inline */
   vertical-align: middle;
   margin: 0 1px;
+}
+
+/* `.actions-row > a` / `> button` style the row's direct children — my
+ * "Next idea →" link sits inside a wrapper <span> so the bullet hides
+ * with it, so the direct-child selector misses. Apply the same chrome
+ * reset to the wrapped link so it matches Back-to-ideas / Home. */
+.actions-row .ideas-play-next,
+.result-links .ideas-play-next {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: inherit;
+  color: var(--link-color);
+  text-decoration: none;
+  cursor: pointer;
+}
+.actions-row .ideas-play-next:hover,
+.result-links .ideas-play-next:hover {
+  text-decoration: underline;
 }
 .ideas-play-verdict--approved .review-button--approve {
   background: #2a9d3f;
