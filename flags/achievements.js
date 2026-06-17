@@ -30,6 +30,8 @@
  *   maxStreak?: number,
  *   totalPlayed?: number,
  *   totalCompleted?: number,
+ *   cleanSweeps?: number,
+ *   zeroScoreFinishes?: number,
  * }} Snapshot
  *
  * @typedef {{
@@ -41,6 +43,34 @@
  *   predicate: (snapshot: Snapshot) => boolean,
  * }} AchievementRule
  */
+
+/** @type {AchievementRule[]} */
+export const MASTERY_ACHIEVEMENTS = [
+  {
+    id: 'clean-sweep',
+    icon: '🎯',
+    name: 'Clean Sweep',
+    description: 'Finished a daily puzzle 100%.',
+    hint: 'Find every answer in one daily puzzle.',
+    predicate: (s) => num(s.cleanSweeps) >= 1,
+  },
+  {
+    id: 'perfect-five',
+    icon: '🏆',
+    name: 'Perfect Five',
+    description: 'Cleared five daily puzzles 100%.',
+    hint: 'Get a clean sweep on five daily puzzles.',
+    predicate: (s) => num(s.cleanSweeps) >= 5,
+  },
+  {
+    id: 'empty-slate',
+    icon: '🧱',
+    name: 'Empty Slate',
+    description: "Submitted a daily without finding a single flag — we've all been there.",
+    hint: 'Submit a daily with zero flags found (the badge of solidarity).',
+    predicate: (s) => num(s.zeroScoreFinishes) >= 1,
+  },
+];
 
 /** @type {AchievementRule[]} */
 export const STREAK_ACHIEVEMENTS = [
@@ -79,6 +109,19 @@ export const STREAK_ACHIEVEMENTS = [
 ];
 
 /**
+ * Default rule order on the profile page. Streak first (every player
+ * touches the daily flow), mastery second (gated on at least one
+ * completion). Declared this way so a newcomer sees the streak tier
+ * first — the most accessible badges sit at the top of the grid.
+ *
+ * @type {AchievementRule[]}
+ */
+export const ALL_ACHIEVEMENTS = [
+  ...STREAK_ACHIEVEMENTS,
+  ...MASTERY_ACHIEVEMENTS,
+];
+
+/**
  * @typedef {{
  *   rule: AchievementRule,
  *   earned: boolean,
@@ -93,7 +136,7 @@ export const STREAK_ACHIEVEMENTS = [
  * @param {AchievementRule[]} [rules]
  * @returns {AchievementStatus[]}
  */
-export function evaluateAchievements(snapshot, rules = STREAK_ACHIEVEMENTS) {
+export function evaluateAchievements(snapshot, rules = ALL_ACHIEVEMENTS) {
   const safe = snapshot ?? {};
   return rules.map((rule) => ({
     rule,

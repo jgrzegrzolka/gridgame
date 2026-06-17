@@ -26,6 +26,8 @@ const ENDPOINT_BASE = '/api/v1/daily/me';
  *   winPercent: number,
  *   totalPlayed: number,
  *   totalCompleted: number,
+ *   cleanSweeps: number,
+ *   zeroScoreFinishes: number,
  * }} StreakResult
  */
 
@@ -58,6 +60,8 @@ export async function fetchDailyMe(deviceId, opts = {}) {
       winPercent: toInt(json.winPercent),
       totalPlayed: toInt(json.totalPlayed),
       totalCompleted: toInt(json.totalCompleted),
+      cleanSweeps: toInt(json.cleanSweeps),
+      zeroScoreFinishes: toInt(json.zeroScoreFinishes),
     };
   } catch {
     return null;

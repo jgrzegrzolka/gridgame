@@ -6,6 +6,7 @@ const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { readFreshFlag } = require('../lib/queryParams');
 const { statsCacheHeaders } = require('../lib/cacheHeaders');
 const { computeStreak, submissionsToStreakRows } = require('../lib/streakCompute');
+const { computeMastery } = require('../lib/masteryCompute');
 const { warsawDayNumber } = require('../lib/warsawDay');
 
 const DB_NAME = 'yetanotherquiz';
@@ -65,10 +66,12 @@ app.http('dailyMe', {
     // grows we'll cache a per-device `streak:{deviceId}` doc updated
     // on each dailyResult.js write (Feature N's tail-cost mitigation).
     //
-    // We select `submittedAt`, not `puzzleId`: streaks count consecutive
-    // *Warsaw days* the player submitted something, not consecutive
-    // puzzleIds. Doing archive puzzles #1, #2, #3 in one sitting today
-    // gives streak = 1 (one day with plays), not streak = 3.
+    // We select `submittedAt` for streak math, plus `foundCodes` and
+    // `totalCount` for Feature O mastery counters (clean sweeps,
+    // zero-score finishes). Streaks count consecutive *Warsaw days*
+    // the player submitted something, not consecutive puzzleIds.
+    // Doing archive puzzles #1, #2, #3 in one sitting today gives
+    // streak = 1 (one day with plays), not streak = 3.
     //
     // local:true rows are included — for the player's own streak, the
     // owner's localhost plays are their own plays, same as the daily
@@ -79,7 +82,7 @@ app.http('dailyMe', {
         connString: conn,
         dbName: DB_NAME,
         containerName: CONTAINER_NAME,
-        query: 'SELECT c.submittedAt FROM c WHERE c.deviceId = @did',
+        query: 'SELECT c.submittedAt, c.foundCodes, c.totalCount FROM c WHERE c.deviceId = @did',
         parameters: [{ name: '@did', value: deviceId }],
         enableCrossPartition: true,
       });
@@ -99,7 +102,9 @@ app.http('dailyMe', {
     // — without it, a player who hasn't shown up in three days would
     // still see their old streak count.
     const today = warsawDayNumber(now);
-    const result = computeStreak({ rows, latestId: today ?? undefined });
+    const streak = computeStreak({ rows, latestId: today ?? undefined });
+    const mastery = computeMastery(queryRes.docs);
+    const result = { ...streak, ...mastery };
     cache.set(deviceId, result, now);
     return {
       status: 200,
