@@ -274,7 +274,10 @@ async function renderAchievements(deviceId) {
     const icon = document.createElement('span');
     icon.className = 'achievement-icon';
     icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = rule.icon;
+    // Icons are static SVG strings authored in flags/achievements.js
+    // (no player data inside), so innerHTML is safe here — no
+    // user-controlled content reaches this branch.
+    icon.innerHTML = rule.icon;
     li.appendChild(icon);
 
     const name = document.createElement('span');
