@@ -140,12 +140,13 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
    - Past #100: any
    *Why soft:* a few generous puzzles deserve an exception (e.g. a famous-country-only puzzle that includes one nm=4 country).
 
-9. **Answer-set size by N.**
-   - #1–50: 2–30 flags
-   - Past #50: 1–30 flags
-   - 1-flag puzzles allowed only past #50.
+9. **Answer-set size: 4–30 flags.** Every puzzle (filter or manual, every N) must have between 4 and 30 answers inclusive.
+
+   *Why the floor of 4 (was 1–2 banded by N):* tiny answer sets read as unsatisfying — a "find all the X" framing collapses into a gotcha when there are only 2–3 to find, and the player typically meets the answer set by accident before they've engaged with the category. Compounding to land on 2–3 flags ("Asia + green + colorCount:2") also tends to be the contrived-set anti-pattern rule 10 guards against. 4 is the smallest size where "find all of them" still reads as a category, not a trivia question. Hard rule (gated by `flags/daily.test.js`).
 
    *Why 30 (was 25):* membership-shaped puzzles ("all EU members", "all Schengen", "all G20") naturally land in the high 20s. Capping at 25 forced an arbitrary "which 2 do you drop?" question for those puzzles. 30 keeps the autocomplete UX manageable while accepting the common membership sizes whole. NATO (32) and other rare large groups still need to be hand-judged.
+
+   **Escape hatch: `sizeFloorExempt: true`.** Grandfathers shipped puzzles that predate this rule and are now in the immutable past. Two existing exemptions (#5 Asian-animal, #8 Asia-blue-no-red — both 3 flags). Do NOT set on new entries; if a draft lands below 4, drop a token or rework the framing rather than reaching for the exemption.
 
 10. **No small-property compounds (puzzles #1–100).** If any filter property has under 15 sovereign matches under `primaryColors`, use it solo. Current small properties:
    - `motif:weapon` — 13
