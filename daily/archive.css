@@ -138,3 +138,36 @@
 .archive-square-link:focus-visible .archive-square-criteria {
   opacity: 1;
 }
+
+/* Ghost tile = the "next puzzle" placeholder at the tail of the grid.
+ * Reuses the .archive-square-link layout (same dimensions / chrome /
+ * date strip on top / centred slot in the middle / bottom strip) so
+ * it visually fits the grid, but renders its inner wrap as a <div>
+ * (not <a>), strips hover, dashes the border, and dims everything so
+ * it reads as "locked, coming soon".
+ *
+ * Slot reuse: where the regular tile has the puzzle number (.archive-
+ * square-num) we put the countdown text; where the regular tile has
+ * the score (.archive-square-score) we put the "Next puzzle" label.
+ * The class names are layered so the regular-tile rules still apply
+ * (positioning + typography) and the ghost overrides only the colour
+ * and weight. */
+.archive-square--ghost .archive-square-link {
+  cursor: default;
+  background: #fafafa;
+  border-style: dashed;
+  color: var(--muted-color);
+}
+.archive-square--ghost .archive-square-link:hover {
+  background: #fafafa;
+}
+.archive-square-ghost-countdown {
+  color: var(--muted-color);
+  font-weight: 500;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.archive-square-ghost-label {
+  color: var(--muted-color);
+  font-weight: 500;
+}
