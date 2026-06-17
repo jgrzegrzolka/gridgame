@@ -1,10 +1,12 @@
 # Daily release incidents
 
-Time-ordered journal of failures that affect the daily-puzzle release path — `func-yetanotherquiz-release` → `live.json`. Newest incident at the top. One section per night. Each section records what we saw, what we ruled in or out, what we did, and what's still open.
+Time-ordered journal of failures that affected the daily-puzzle release path. **Closed 2026-06-17** when Feature R demolished the scheduler entirely — every puzzle now carries its own `date` and the page filters locally, so the failure class these entries describe (a runner failing to fire) can no longer exist. Kept for the lessons.
 
 `infra/operations.md` is the *runbook* — durable "if you see X, do Y". This file is the *journal* — the messy story behind why a runbook entry exists, and a holding place for symptoms that don't yet have a clean fix.
 
 ## 2026-06-17 (Warsaw midnight) — Function host wedged after a Bicep redeploy; today's N=12 not promoted
+
+> **Resolved by Feature R demolition (2026-06-17 afternoon).** The wedged Function App was deleted in Phase 3 along with its plan, App Insights, Log Analytics workspace, and runtime storage account. The diagnostic commands below are kept for historical reference; **do not run them — the resources they target no longer exist.**
 
 ### Symptom
 At ~00:11 Warsaw (22:11 UTC on 2026-06-16, ~6 min after the expected fire) `/daily/` showed yesterday's puzzle (N=11). `backlog[0]` was N=12 (Europe + animal) and had never been promoted.
