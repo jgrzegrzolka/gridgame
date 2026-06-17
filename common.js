@@ -1,6 +1,7 @@
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from './flags/identity.js';
 import { displayNickname } from './flags/nickname.js';
 import { avatarSvg } from './flags/avatar.js';
+import { initAppInsights } from './analytics.js';
 
 /**
  * Site wordmark in the top-left, pairing with the chrome cluster
@@ -30,6 +31,12 @@ function mountSiteLogo() {
 if (typeof document !== 'undefined') {
   if (document.readyState !== 'loading') mountSiteLogo();
   else document.addEventListener('DOMContentLoaded', mountSiteLogo, { once: true });
+  // Feature Q — frontend telemetry. Auto-init alongside the site
+  // logo since every player-facing page already imports common.js
+  // for the burger / nickname helpers, so no per-page wiring needed.
+  // No-op on localhost (skips the dev-pollution path the same way
+  // requestHost.js tags Cosmos rows `local: true` on the api side).
+  initAppInsights();
 }
 
 /**
