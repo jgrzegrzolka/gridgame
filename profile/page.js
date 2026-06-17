@@ -258,6 +258,7 @@ async function renderAchievements(deviceId) {
   if (!snapshot) return;
 
   const statuses = evaluateAchievements(snapshot);
+
   // Show the section even if zero are earned — locked silhouettes are
   // the "things to chase" UX. A truly empty grid would be a sign that
   // every rule failed to load; let the test gate catch that, not the
