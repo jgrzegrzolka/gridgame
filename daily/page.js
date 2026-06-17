@@ -3,7 +3,6 @@ import { t, withLocalizedAliases, countryName } from '../i18n.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, manualToCategory } from '../flags/daily.js';
 import { warsawToday } from '../flags/warsawTime.js';
 import { visiblePuzzles } from '../flags/puzzleFilter.js';
-import { msUntilNextWarsawMidnight, formatCountdown } from '../flags/nextPuzzleCountdown.js';
 import { loadScores, isCompleteRecord, migrateScores } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
 import {
@@ -90,34 +89,6 @@ let streakAnimated = false;
  * FEATURE.md: a single completion isn't a "streak", and surfacing
  * "Day streak: 1" the first time someone finishes is just clutter. */
 const STREAK_MIN_TO_SHOW = 2;
-
-/**
- * Mount the "next puzzle in HH:MM" countdown into `target`. Renders
- * immediately, ticks every 30 s, re-renders on `langchanged`.
- * Idempotent — only the first call wires the timer + listener; later
- * calls just bump the text.
- *
- * Lives in the result panel (`#next-puzzle-countdown`), so it's only
- * visible after the player finishes (or revisits) — the same surface
- * where the "what next?" question is loudest.
- *
- * @param {HTMLElement} target
- */
-let countdownMounted = false;
-function mountCountdown(target) {
-  const render = () => {
-    const lang = document.documentElement.lang || 'en';
-    const ms = msUntilNextWarsawMidnight(new Date());
-    const tpl = t('daily.nextPuzzle.in', 'Next puzzle in {countdown}');
-    target.textContent = tpl.replace('{countdown}', formatCountdown(ms, lang));
-    target.hidden = false;
-  };
-  render();
-  if (countdownMounted) return;
-  countdownMounted = true;
-  setInterval(render, 30_000);
-  document.addEventListener('langchanged', render);
-}
 
 /**
  * Look up a country by 2-letter code in the loaded list. Used by the
@@ -641,18 +612,6 @@ export function bootDaily() {
       // over while the result page is open.
       const playAgainLink = document.getElementById('play-again');
       if (playAgainLink) playAgainLink.setAttribute('href', `./?n=${n}&replay=1`);
-
-      // Countdown to the next Warsaw midnight — visible inside the
-      // result panel below the action links. Mounted once after the
-      // catalog loads; ticks every 30 s and re-renders on language
-      // change. Skipped when no future-dated entry exists (catalog
-      // exhausted — no rollover to count down to).
-      const hasFutureEntry = allEntries.some(
-        (p) => typeof p.date === 'string' && p.date > warsawToday(),
-      );
-      if (hasFutureEntry) {
-        mountCountdown(/** @type {HTMLElement} */ (document.getElementById('next-puzzle-countdown')));
-      }
 
       const result = resolveDailyPuzzle(catalog, all, n);
       if (result.ok === false) {

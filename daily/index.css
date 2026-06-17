@@ -144,16 +144,6 @@
   text-align: left;
 }
 
-/* Next-puzzle countdown under the result-links row. Muted by default —
- * it's informational, not actionable, so it shouldn't compete with the
- * archive / play-again / home links above it. */
-.next-puzzle-countdown {
-  font-size: 12px;
-  color: var(--muted-color);
-  margin: 6px 0 0;
-  text-align: center;
-}
-
 /* "Loading stats" line — wraps the shared `.loading-dots` (common.css)
  * with daily's left-aligned italic muted styling. */
 .daily-stats-loading {
