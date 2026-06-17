@@ -59,9 +59,12 @@ export function msUntilNextWarsawMidnight(now) {
 }
 
 /**
- * Short localized string for the countdown. Polish grammar is dodgy
- * around hour-count plurals ("godzina" / "godziny" / "godzin"), so
- * we use the unambiguous abbreviation `godz.` instead.
+ * Short countdown string. The main "Xh Ym" / "X min" form is **not
+ * localized** — the Polish equivalent ("X godz. Y min") is too wide
+ * for the result-panel slot and was a prod-visible eyesore on the
+ * day Feature R Phase 1 shipped (2026-06-17). Lang only branches on
+ * the boundary states ("now" / "less than a minute") where the
+ * Polish forms are short enough to not wrap awkwardly.
  *
  * @param {number} ms
  * @param {string} [lang]  'en' | 'pl' (defaults to 'en')
@@ -73,11 +76,6 @@ export function formatCountdown(ms, lang = 'en') {
   if (totalMin < 1) return lang === 'pl' ? 'mniej niż minuta' : 'less than a minute';
   const hours = Math.floor(totalMin / 60);
   const minutes = totalMin % 60;
-  if (hours === 0) {
-    return lang === 'pl' ? `${minutes} min` : `${minutes} min`;
-  }
-  if (lang === 'pl') {
-    return minutes === 0 ? `${hours} godz.` : `${hours} godz. ${minutes} min`;
-  }
+  if (hours === 0) return `${minutes} min`;
   return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
 }

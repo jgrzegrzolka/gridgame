@@ -94,20 +94,22 @@ test('msUntilNextWarsawMidnight: just past midnight returns ~24h', () => {
 
 // --- formatCountdown -----------------------------------------------
 
-test('formatCountdown: hours + minutes, en', () => {
+test('formatCountdown: hours + minutes', () => {
   assert.equal(formatCountdown(4 * 3600_000 + 32 * 60_000, 'en'), '4h 32m');
 });
 
-test('formatCountdown: hours + minutes, pl uses godz. abbreviation', () => {
-  assert.equal(formatCountdown(4 * 3600_000 + 32 * 60_000, 'pl'), '4 godz. 32 min');
+test('formatCountdown: hours + minutes — Polish uses the same compact form (not "godz.")', () => {
+  // Locked: the Polish "X godz. Y min" form is too wide for the
+  // result-panel slot. Both languages share the compact "Xh Ym" form.
+  assert.equal(formatCountdown(4 * 3600_000 + 32 * 60_000, 'pl'), '4h 32m');
 });
 
-test('formatCountdown: exact-hour omits minutes', () => {
+test('formatCountdown: exact-hour omits minutes — same form both langs', () => {
   assert.equal(formatCountdown(3 * 3600_000, 'en'), '3h');
-  assert.equal(formatCountdown(3 * 3600_000, 'pl'), '3 godz.');
+  assert.equal(formatCountdown(3 * 3600_000, 'pl'), '3h');
 });
 
-test('formatCountdown: sub-hour shows minutes only', () => {
+test('formatCountdown: sub-hour shows minutes only — same form both langs', () => {
   assert.equal(formatCountdown(42 * 60_000, 'en'), '42 min');
   assert.equal(formatCountdown(42 * 60_000, 'pl'), '42 min');
 });
