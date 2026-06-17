@@ -133,6 +133,27 @@ export function bootIdeasPlay() {
       const resultBar = document.getElementById('ideas-play-verdict-result');
       if (gameBar) wireVerdictBar(gameBar, idea.filter);
       if (resultBar) wireVerdictBar(resultBar, idea.filter);
+
+      // "Next idea →" — advances to k+1 in the ideas array. Hidden
+      // when k is already the last entry (no wrap-around; reaching
+      // the end is a hint to go back to the grid and reconsider the
+      // hide-reviewed toggle or export approved).
+      //
+      // We unhide the wrapper <span>, not the <a>, so the preceding
+      // " · " separator hides/shows together with the link — keeps
+      // the actions row clean at both ends of the ideas list.
+      if (k < ideas.length) {
+        const href = `./play.html?k=${k + 1}`;
+        for (const [linkId, wrapId] of [
+          ['next-idea-link-game', 'next-idea-wrap-game'],
+          ['next-idea-link-result', 'next-idea-wrap-result'],
+        ]) {
+          const link = document.getElementById(linkId);
+          const wrap = document.getElementById(wrapId);
+          if (link) link.setAttribute('href', href);
+          if (wrap) wrap.hidden = false;
+        }
+      }
     })
     .catch((err) => {
       showState(`${t('game.failedToLoad', 'Failed to load:')} ${err.message}`);

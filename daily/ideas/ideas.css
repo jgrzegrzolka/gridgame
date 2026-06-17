@@ -2,72 +2,25 @@
  * `daily/ideas/` so the file (and the folder) is stripped by deploy.yml
  * before shipping — keeps the shared `archive.css` untouched. */
 
-.review-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 12px 16px;
-  margin: 0 auto 12px;
-  max-width: 732px;
-  font-size: 14px;
-  color: #444;
-}
-
-.review-counter {
-  font-variant-numeric: tabular-nums;
-}
-
-.hide-reviewed-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  user-select: none;
-}
-.hide-reviewed-toggle input {
-  cursor: pointer;
-}
-
-/* "Export ✓" button — copies the approved filter list to the
- * clipboard so the author can paste it into chat for promotion. */
-.export-button {
-  padding: 4px 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
-  color: #444;
-  font-size: 13px;
-  cursor: pointer;
-  font-variant-numeric: tabular-nums;
-  transition: background 80ms, border-color 80ms;
-}
-.export-button:hover {
-  background: #f4f4f4;
-  border-color: #999;
-}
-.export-button--copied {
-  background: #2a9d3f;
-  color: #fff;
-  border-color: #2a9d3f;
-}
-
-/* Per-tile review buttons, anchored to the corners of the
- * .archive-square <li>. They sit *outside* the .archive-square-link <a>
- * so clicking them doesn't navigate — the link still covers everything
- * else, but pointer events on the buttons win because they're sibling
- * DOM nodes with higher z. Approve ✓ in the top-right, reject ✗ in the
- * top-left — symmetry communicates "two verdicts available." */
+/* Per-tile / inline-row review buttons. Square, palette-native. Two
+ * resting states: ✓ (approve, "include") active reads as
+ * primary-filled — same idiom as `.pill.active` in common.css. ✗
+ * (reject, "not this") active reads in brand secondary — same idiom
+ * as `.pill.exclude`. Unmarked is white-on-muted-border.
+ *
+ * On the tile they're absolutely positioned in the top corners; on
+ * the play page (inside `.ideas-play-verdict`) the rules below
+ * override position + display to keep them inline with the text. */
 .review-button {
   position: absolute;
   top: 2px;
   width: 22px;
   height: 22px;
   padding: 0;
-  border: 1px solid #ccc;
-  border-radius: 50%;
+  border: 1px solid var(--muted-color);
+  border-radius: 2px;
   background: #fff;
-  color: #aaa;
+  color: var(--muted-color);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
@@ -82,14 +35,14 @@
 .review-button--reject  { left: 2px; }
 
 .review-button--approve:hover {
-  background: #e8f5ea;
-  color: #1c1c1c;
-  border-color: #6cc079;
+  background: #fafafa;
+  color: var(--primary-color);
+  border-color: var(--primary-color);
 }
 .review-button--reject:hover {
-  background: #fbeaea;
-  color: #1c1c1c;
-  border-color: #d57979;
+  background: #fbeef3; /* same pale-secondary wash as .pill.exclude:hover */
+  color: var(--secondary-color);
+  border-color: var(--secondary-color);
 }
 
 /* Need position:relative on the <li> so the absolutely-positioned
@@ -100,81 +53,72 @@
   position: relative;
 }
 
-/* Approved tile: dims + the ✓ button turns solid green. */
+/* Approved tile/bar: dim the tile; ✓ button goes primary-filled. */
 .archive-square--approved .archive-square-link {
   opacity: 0.45;
 }
-.archive-square--approved .review-button--approve {
-  background: #2a9d3f;
+.archive-square--approved .review-button--approve,
+.ideas-play-verdict--approved .review-button--approve {
+  background: var(--primary-color);
   color: #fff;
-  border-color: #2a9d3f;
+  border-color: var(--primary-color);
 }
-.archive-square--approved .review-button--approve:hover {
-  background: #248234;
-  border-color: #248234;
+.archive-square--approved .review-button--approve:hover,
+.ideas-play-verdict--approved .review-button--approve:hover {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
 }
 
-/* Rejected tile: dims + the ✗ button turns solid red. */
+/* Rejected tile/bar: dim + greyscale the tile; ✗ button goes
+ * secondary-outlined (mirrors `.pill.exclude`'s pink-on-white look). */
 .archive-square--rejected .archive-square-link {
   opacity: 0.35;
   filter: grayscale(0.4);
 }
-.archive-square--rejected .review-button--reject {
-  background: #c63838;
-  color: #fff;
-  border-color: #c63838;
-}
-.archive-square--rejected .review-button--reject:hover {
-  background: #a82d2d;
-  border-color: #a82d2d;
-}
-
-/* "Hide reviewed" mode hides anything with a verdict (approved OR
- * rejected) — what's left is the unmarked-pending pool, which is the
- * point of the toggle ("where did I stop?"). */
-body.hide-reviewed .archive-square--approved,
-body.hide-reviewed .archive-square--rejected {
-  display: none;
-}
-
-/* Inline verdict bar on the play page — same buttons as on the tile,
- * but laid out as a row instead of corner-anchored. Sits below the
- * actions row (during play) and below the result links (after play)
- * so the author can mark a verdict from either state without going
- * back to the full grid. The wrapper receives `--approved` /
- * `--rejected` modifier classes that paint the active button solid,
- * mirroring how `.archive-square--approved` works on the tile. */
-.ideas-play-verdict {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 12px auto 0;
-  padding: 6px 10px;
-  font-size: 13px;
-  color: #444;
-}
-.ideas-play-verdict-label {
-  margin-right: 4px;
-}
-.ideas-play-verdict .review-button {
-  position: static; /* override the tile's absolute positioning */
-}
-.ideas-play-verdict--approved .review-button--approve {
-  background: #2a9d3f;
-  color: #fff;
-  border-color: #2a9d3f;
-}
-.ideas-play-verdict--approved .review-button--approve:hover {
-  background: #248234;
-  border-color: #248234;
-}
+.archive-square--rejected .review-button--reject,
 .ideas-play-verdict--rejected .review-button--reject {
-  background: #c63838;
-  color: #fff;
-  border-color: #c63838;
+  background: #fff;
+  color: var(--secondary-color);
+  border-color: var(--secondary-color);
 }
+.archive-square--rejected .review-button--reject:hover,
 .ideas-play-verdict--rejected .review-button--reject:hover {
-  background: #a82d2d;
-  border-color: #a82d2d;
+  background: #fbeef3;
+  color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+/* Inline verdict on the play page — same ✓ / ✗ buttons as the tile,
+ * appended into the actions row (during play) and result links (after
+ * play) so they share a single line with Give-up / Back / Next /
+ * Home. The wrapper <span> receives `--approved` / `--rejected`
+ * modifier classes that paint the active button solid, mirroring
+ * `.archive-square--approved` on the tile. */
+.ideas-play-verdict .review-button {
+  position: static;          /* override the tile's absolute positioning */
+  display: inline-flex;      /* keep flex centering of the glyph, but stay inline */
+  vertical-align: middle;
+  margin: 0 1px;
+}
+
+/* `.actions-row > a` / `> button` style the row's direct children — my
+ * "Next idea →" link sits inside a wrapper <span> so the bullet hides
+ * with it, so the direct-child selector misses. Apply the same chrome
+ * reset to the wrapped link so it matches Back-to-ideas / Home. */
+.actions-row .ideas-play-next,
+.result-links .ideas-play-next {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: inherit;
+  color: var(--link-color);
+  text-decoration: none;
+  cursor: pointer;
+}
+.actions-row .ideas-play-next:hover,
+.result-links .ideas-play-next:hover {
+  text-decoration: underline;
 }

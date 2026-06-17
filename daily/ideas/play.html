@@ -33,6 +33,30 @@
         document.getElementById('lang-toggle').setAttribute('data-current', lang);
       })();
     </script>
+    <a class="flags-link" href="../../flagsdata/" aria-label="Browse flags" title="Browse flags" data-i18n-attr="aria-label:menu.flagsData,title:menu.flagsData"><span class="flags-icon" aria-hidden="true"></span></a>
+    <button
+      type="button"
+      class="burger"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="burger-panel"
+      data-label-open="Open menu"
+      data-label-close="Close menu"
+      data-i18n-attr="aria-label:menu.open,data-label-open:menu.open,data-label-close:menu.close"
+      onclick="
+        const open = this.getAttribute('aria-expanded') === 'true';
+        this.setAttribute('aria-expanded', String(!open));
+        this.setAttribute('aria-label', open ? this.dataset.labelOpen : this.dataset.labelClose);
+        document.getElementById('burger-panel').hidden = open;
+      "
+    >
+      <span class="burger-bars" aria-hidden="true"></span>
+    </button>
+    <nav id="burger-panel" class="burger-panel" hidden>
+      <ul class="menu">
+        <li><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
+      </ul>
+    </nav>
 
     <section id="daily-state" class="daily-state" hidden></section>
 
@@ -64,13 +88,14 @@
         <button type="button" class="row-cta" id="give-up" data-i18n="game.giveUp">Give up</button>
         ·
         <a id="prev-puzzles-link" href="./">Back to ideas</a>
+        <span id="next-idea-wrap-game" hidden> · <a id="next-idea-link-game" class="ideas-play-next" href="#">Next idea</a></span>
         ·
         <a href="../../" data-i18n="menu.home">Home</a>
-      </div>
-      <div class="ideas-play-verdict" id="ideas-play-verdict-game" hidden>
-        <span class="ideas-play-verdict-label">Verdict:</span>
-        <button type="button" class="review-button review-button--approve" data-verdict-target="approved" title="Approve (mark as fine to promote)" aria-label="Approve">✓</button>
-        <button type="button" class="review-button review-button--reject" data-verdict-target="rejected" title="Reject (mark as not interested)" aria-label="Reject">✗</button>
+        <span class="ideas-play-verdict" id="ideas-play-verdict-game" hidden>
+          ·
+          <button type="button" class="review-button review-button--approve" data-verdict-target="approved" title="Approve (mark as fine to promote)" aria-label="Approve">✓</button>
+          <button type="button" class="review-button review-button--reject" data-verdict-target="rejected" title="Reject (mark as not interested)" aria-label="Reject">✗</button>
+        </span>
       </div>
     </section>
 
@@ -91,22 +116,33 @@
         <a id="result-prev-puzzles-link" class="row-cta" href="./">Back to ideas</a>
         ·
         <a id="play-again" href="#">Play again</a>
+        <span id="next-idea-wrap-result" hidden> · <a id="next-idea-link-result" class="ideas-play-next" href="#">Next idea</a></span>
         ·
         <a href="../../" data-i18n="menu.home">Home</a>
+        <span class="ideas-play-verdict" id="ideas-play-verdict-result" hidden>
+          ·
+          <button type="button" class="review-button review-button--approve" data-verdict-target="approved" title="Approve (mark as fine to promote)" aria-label="Approve">✓</button>
+          <button type="button" class="review-button review-button--reject" data-verdict-target="rejected" title="Reject (mark as not interested)" aria-label="Reject">✗</button>
+        </span>
       </p>
-      <div class="ideas-play-verdict" id="ideas-play-verdict-result" hidden>
-        <span class="ideas-play-verdict-label">Verdict:</span>
-        <button type="button" class="review-button review-button--approve" data-verdict-target="approved" title="Approve (mark as fine to promote)" aria-label="Approve">✓</button>
-        <button type="button" class="review-button review-button--reject" data-verdict-target="rejected" title="Reject (mark as not interested)" aria-label="Reject">✗</button>
-      </div>
     </section>
 
     <script type="module">
       import { bootIdeasPlay } from './play.js';
       import { bootI18n, wireLangToggle } from '../../i18n.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from '../../common.js';
       bootI18n('../../').then((lang) => {
         wireLangToggle(lang, undefined, { softReload: true, base: '../../' });
+        disableBurgerIfEmpty(
+          document.querySelector('.burger'),
+          document.querySelector('#burger-panel .menu'),
+        );
         bootIdeasPlay();
+        wireBurgerDismiss();
+        mountNicknameMenuItem({
+          rootEl: document.querySelector('#burger-panel .menu'),
+          profileHref: '../../profile/',
+        });
       });
     </script>
   </body>
