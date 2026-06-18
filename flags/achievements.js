@@ -45,6 +45,9 @@
  *   hasNickname?: boolean,
  *   dailySharesCount?: number,
  *   quizSharesCount?: number,
+ *   quiz60sCurrentStreak?: number,
+ *   quiz60sMaxStreak?: number,
+ *   quiz60sDistinctDays?: number,
  * }} Snapshot
  *
  * @typedef {{
@@ -172,16 +175,37 @@ const ICON_GLASS_X100 = glassWithLabel('×100', 7);
 // Stopwatch: round face (built as 4 rect strips around a hollow
 // centre), crown button on top, minute hand pointing up from centre.
 // Matches the homepage tile icon for the 60s Quiz card.
-const ICON_STOPWATCH =
-  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+const STOPWATCH_SHAPES =
   '<rect x="7" y="0" width="2" height="2"/>' +    // crown stem
   '<rect x="6" y="1" width="4" height="1"/>' +    // crown cap
   '<rect x="3" y="3" width="10" height="2"/>' +    // face top
   '<rect x="2" y="5" width="2" height="6"/>' +     // face left
   '<rect x="12" y="5" width="2" height="6"/>' +    // face right
   '<rect x="3" y="11" width="10" height="2"/>' +   // face bottom
-  '<rect x="7" y="6" width="2" height="3"/>' +     // minute hand
+  '<rect x="7" y="6" width="2" height="3"/>';      // minute hand
+
+const ICON_STOPWATCH =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  STOPWATCH_SHAPES +
   '</svg>';
+
+// Stopwatch + day-label tier — drives the loyalty achievements
+// (Sprint Habit / Steady Sprinter / Monthly Sprinter / Quiz
+// Centurion). Same shared-shape pattern as the brushes / glasses.
+/**
+ * @param {string} label
+ * @returns {string}
+ */
+function stopwatchWithLabel(label) {
+  return '<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true">' +
+    STOPWATCH_SHAPES +
+    `<text x="8" y="22" font-size="7" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">${label}</text>` +
+    '</svg>';
+}
+const ICON_STOPWATCH_7D = stopwatchWithLabel('7d');
+const ICON_STOPWATCH_14D = stopwatchWithLabel('14d');
+const ICON_STOPWATCH_30D = stopwatchWithLabel('30d');
+const ICON_STOPWATCH_100D = stopwatchWithLabel('100d');
 
 // Globe: octagon outline + horizontal equator + vertical meridian.
 const ICON_GLOBE =
@@ -506,6 +530,43 @@ export const QUIZ_ACHIEVEMENTS = [
     description: 'Tried every 60s quiz variant — all 7 continents (plus All Countries).',
     hint: 'Finish a 60s round in every variant.',
     predicate: (s) => num(s.quizVariantsTouched60s) >= 7,
+  },
+  // ---- Loyalty tier — rewards coming back day after day. Same shape
+  // as the daily streak tier, sourced from quiz_play engagement events
+  // (one row per device per day per mode). Reads `quiz60sMaxStreak`
+  // not `currentStreak` so an earned streak stays earned even if the
+  // player breaks the streak later.
+  {
+    id: 'sprint-habit',
+    icon: ICON_STOPWATCH_7D,
+    name: 'Sprint Habit',
+    description: 'Played a 60s quiz 7 days in a row.',
+    hint: 'Reach a 7-day 60s quiz streak.',
+    predicate: (s) => num(s.quiz60sMaxStreak) >= 7,
+  },
+  {
+    id: 'steady-sprinter',
+    icon: ICON_STOPWATCH_14D,
+    name: 'Steady Sprinter',
+    description: 'Played a 60s quiz 14 days in a row.',
+    hint: 'Reach a 14-day 60s quiz streak.',
+    predicate: (s) => num(s.quiz60sMaxStreak) >= 14,
+  },
+  {
+    id: 'monthly-sprinter',
+    icon: ICON_STOPWATCH_30D,
+    name: 'Monthly Sprinter',
+    description: 'Played a 60s quiz 30 days in a row.',
+    hint: 'Reach a 30-day 60s quiz streak.',
+    predicate: (s) => num(s.quiz60sMaxStreak) >= 30,
+  },
+  {
+    id: 'quiz-centurion',
+    icon: ICON_STOPWATCH_100D,
+    name: 'Quiz Centurion',
+    description: 'Played a 60s quiz on a hundred different days.',
+    hint: 'Play a 60s quiz on 100 different days.',
+    predicate: (s) => num(s.quiz60sDistinctDays) >= 100,
   },
   {
     id: 'quick-recall',

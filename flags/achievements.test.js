@@ -190,6 +190,38 @@ test('quiz rules do NOT cross-contaminate (each reads only its own counter)', ()
   assert.equal(ruleById('europe-cleared').predicate({ quizBestScore60s: 99 }), false);
 });
 
+// --- Loyalty tier (60s quiz streak / distinct days) ------------------------
+
+test('sprint-habit / steady-sprinter / monthly-sprinter fire at 7 / 14 / 30 day streak (reads maxStreak)', () => {
+  assert.equal(ruleById('sprint-habit').predicate({ quiz60sMaxStreak: 6 }), false);
+  assert.equal(ruleById('sprint-habit').predicate({ quiz60sMaxStreak: 7 }), true);
+  assert.equal(ruleById('steady-sprinter').predicate({ quiz60sMaxStreak: 13 }), false);
+  assert.equal(ruleById('steady-sprinter').predicate({ quiz60sMaxStreak: 14 }), true);
+  assert.equal(ruleById('monthly-sprinter').predicate({ quiz60sMaxStreak: 29 }), false);
+  assert.equal(ruleById('monthly-sprinter').predicate({ quiz60sMaxStreak: 30 }), true);
+});
+
+test('loyalty streak rules read maxStreak, not currentStreak (an earned streak stays earned)', () => {
+  // Mirrors the daily-streak tier: the player who once reached a
+  // 14-day streak keeps the badge even if they later miss a day.
+  assert.equal(ruleById('sprint-habit').predicate({ quiz60sCurrentStreak: 0, quiz60sMaxStreak: 7 }), true);
+  assert.equal(ruleById('sprint-habit').predicate({ quiz60sCurrentStreak: 7, quiz60sMaxStreak: 6 }), false);
+});
+
+test('quiz-centurion fires at 100 distinct days', () => {
+  const rule = ruleById('quiz-centurion');
+  assert.equal(rule.predicate({ quiz60sDistinctDays: 99 }), false);
+  assert.equal(rule.predicate({ quiz60sDistinctDays: 100 }), true);
+});
+
+test('loyalty rules do NOT cross-contaminate (read their own quiz60s counters only)', () => {
+  // Streak rules read quiz60sMaxStreak specifically — not the daily
+  // maxStreak, not the distinct-days count, not the engagement counters.
+  assert.equal(ruleById('sprint-habit').predicate({ maxStreak: 99 }), false);
+  assert.equal(ruleById('sprint-habit').predicate({ quiz60sDistinctDays: 99 }), false);
+  assert.equal(ruleById('quiz-centurion').predicate({ quiz60sMaxStreak: 99 }), false);
+});
+
 // --- Endurance tier ---------------------------------------------------------
 
 test('marathon fires at quizAttemptsAll >= 1', () => {
@@ -395,6 +427,7 @@ test('evaluateAchievements with a full snapshot earns every badge across every t
     quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
     quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],
     hasNickname: true, dailySharesCount: 1, quizSharesCount: 1,
+    quiz60sCurrentStreak: 30, quiz60sMaxStreak: 30, quiz60sDistinctDays: 100,
   });
   assert.ok(out.every((s) => s.earned), 'all rules should be earned');
 });
@@ -462,6 +495,7 @@ test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration
     quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
     quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],
     hasNickname: true, dailySharesCount: 1, quizSharesCount: 1,
+    quiz60sCurrentStreak: 30, quiz60sMaxStreak: 30, quiz60sDistinctDays: 100,
   });
   assert.deepEqual(
     newly.map((r) => r.id),

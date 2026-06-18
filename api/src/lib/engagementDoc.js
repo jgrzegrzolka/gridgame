@@ -30,12 +30,18 @@
  *                  (multiple custom-puzzle plays per day are distinct).
  *   share:         "share:{uuid}"                      — non-deterministic
  *                  (multiple shares per day are distinct).
+ *   quiz_play:     "quiz_play:{dayId}:{mode}"          — deterministic
+ *                  (one row per device/day/mode; 409 is idempotent
+ *                  when the player plays the same mode again on the
+ *                  same day. Drives the 60s-streak achievements via
+ *                  engagementStreakCompute.)
  *
  * Per-kind payload contracts:
  *   daily_start:   { puzzleId: number }
  *   findflag_play: { filter: string, mode: 'random' | 'custom' }
  *   share:         { surface: 'daily'|'findflag'|'flagquiz'|'ttt',
  *                    contextHint?: string }
+ *   quiz_play:     { mode: '60s' | 'all' }
  *
  * Unknown payload fields are stripped — defense against future shape
  * drift. The validator returns the first error code it hits; the
@@ -46,22 +52,24 @@
  * so tests can pin both. Stays pure.
  */
 
-const KINDS = /** @type {const} */ (['daily_start', 'findflag_play', 'share']);
+const KINDS = /** @type {const} */ (['daily_start', 'findflag_play', 'share', 'quiz_play']);
 const SHARE_SURFACES = /** @type {const} */ (['daily', 'findflag', 'flagquiz', 'ttt']);
 const FINDFLAG_MODES = /** @type {const} */ (['random', 'custom']);
+const QUIZ_PLAY_MODES = /** @type {const} */ (['60s', 'all']);
 
 const MAX_FILTER_LEN = 256;
 const MAX_CONTEXT_HINT_LEN = 128;
 
 /**
- * @typedef {'daily_start' | 'findflag_play' | 'share'} EventKind
+ * @typedef {'daily_start' | 'findflag_play' | 'share' | 'quiz_play'} EventKind
  * @typedef {{ puzzleId: number }} DailyStartPayload
  * @typedef {{ filter: string, mode: 'random' | 'custom' }} FindFlagPlayPayload
  * @typedef {{
  *   surface: 'daily' | 'findflag' | 'flagquiz' | 'ttt',
  *   contextHint?: string
  * }} SharePayload
- * @typedef {DailyStartPayload | FindFlagPlayPayload | SharePayload} EventPayload
+ * @typedef {{ mode: '60s' | 'all' }} QuizPlayPayload
+ * @typedef {DailyStartPayload | FindFlagPlayPayload | SharePayload | QuizPlayPayload} EventPayload
  *
  * @typedef {{
  *   deviceId: string,
@@ -154,6 +162,16 @@ function validateAndCleanPayload(kind, payload) {
     };
   }
 
+  if (kind === 'quiz_play') {
+    if (!/** @type {readonly string[]} */ (QUIZ_PLAY_MODES).includes(/** @type {string} */ (p.mode))) {
+      return { ok: false, error: 'invalid_payload' };
+    }
+    return {
+      ok: true,
+      payload: { mode: /** @type {'60s' | 'all'} */ (p.mode) },
+    };
+  }
+
   // share
   if (!/** @type {readonly string[]} */ (SHARE_SURFACES).includes(/** @type {string} */ (p.surface))) {
     return { ok: false, error: 'invalid_payload' };
@@ -184,7 +202,14 @@ function makeId(kind, dayId, payload, uuid) {
   if (kind === 'daily_start') {
     return `daily_start:${dayId}:${/** @type {DailyStartPayload} */ (payload).puzzleId}`;
   }
+  if (kind === 'quiz_play') {
+    // Deterministic per (device, day, mode) — a player who plays five
+    // 60s rounds today writes one row, not five. 409 on conflict is
+    // the idempotent "already recorded" case (same shape as
+    // daily_start).
+    return `quiz_play:${dayId}:${/** @type {{ mode: string }} */ (payload).mode}`;
+  }
   return `${kind}:${uuid}`;
 }
 
-module.exports = { buildEngagementDoc, KINDS, SHARE_SURFACES, FINDFLAG_MODES };
+module.exports = { buildEngagementDoc, KINDS, SHARE_SURFACES, FINDFLAG_MODES, QUIZ_PLAY_MODES };

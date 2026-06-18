@@ -5,7 +5,7 @@ const { createTtlCache } = require('../lib/ttlCache');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { readFreshFlag } = require('../lib/queryParams');
 const { statsCacheHeaders } = require('../lib/cacheHeaders');
-const { computeStreak, submissionsToStreakRows } = require('../lib/streakCompute');
+const { computeStreak, submissionsToStreakRows, quizPlayEventsToStreakRows } = require('../lib/streakCompute');
 const { computeMastery } = require('../lib/masteryCompute');
 const { computeQuiz } = require('../lib/quizCompute');
 const { computeEngagement } = require('../lib/engagementCompute');
@@ -152,13 +152,13 @@ app.http('dailyMe', {
 
     // Cross-game engagement signals: profile point-read + a small
     // single-partition query against the player's `engagementEvents`
-    // share history. Both are fire-and-forget soft dependencies — a
-    // Cosmos blip on either degrades to "no signal" rather than
-    // 500'ing the whole snapshot. The two reads run in parallel via
-    // Promise.all to keep the wall-clock cost flat (max of the two,
-    // not the sum).
+    // history (shares + quiz_play rows). Both are fire-and-forget
+    // soft dependencies — a Cosmos blip on either degrades to "no
+    // signal" rather than 500'ing the whole snapshot. The two reads
+    // run in parallel via Promise.all to keep the wall-clock cost
+    // flat (max of the two, not the sum).
     let profileDoc = null;
-    let shareEvents = [];
+    let engagementEvents = [];
     try {
       const [profileRes, eventsRes] = await Promise.all([
         queryDocs({
@@ -173,19 +173,36 @@ app.http('dailyMe', {
           connString: conn,
           dbName: DB_NAME,
           containerName: ENGAGEMENT_EVENTS_CONTAINER,
-          query: "SELECT c.kind, c.payload FROM c WHERE c.kind = 'share'",
+          // Fetch both kinds in one shot — single-partition query, the
+          // shape returned is small and we'd otherwise issue two
+          // separate cross-kind queries. dayId is needed by the
+          // quiz_play streak math; payload by the share aggregator.
+          query: "SELECT c.kind, c.payload, c.dayId FROM c WHERE c.kind IN ('share', 'quiz_play')",
           parameters: [],
           partitionKey: deviceId,
         }),
       ]);
       if (profileRes.ok && profileRes.docs.length > 0) profileDoc = profileRes.docs[0];
-      if (eventsRes.ok) shareEvents = eventsRes.docs;
+      if (eventsRes.ok) engagementEvents = eventsRes.docs;
     } catch (err) {
       context.warn('cosmos engagement reads failed (soft-degraded to no signal)', err);
     }
-    const engagement = computeEngagement(profileDoc, shareEvents);
+    const engagement = computeEngagement(profileDoc, engagementEvents);
 
-    const result = { ...streak, ...mastery, ...quiz, ...engagement };
+    // 60s quiz streak: derive from quiz_play events of mode='60s'.
+    // Same streak math as the daily-puzzle streak; the only difference
+    // is the source (engagementEvents rather than dailyResults). Today
+    // is supplied so currentStreak resets to 0 if the most recent play
+    // is older than today.
+    const quiz60sStreakRows = quizPlayEventsToStreakRows(engagementEvents, '60s');
+    const quiz60sStreak = computeStreak({ rows: quiz60sStreakRows, latestId: today ?? undefined });
+    const quiz60sStreakSnapshot = {
+      quiz60sCurrentStreak: quiz60sStreak.currentStreak,
+      quiz60sMaxStreak: quiz60sStreak.maxStreak,
+      quiz60sDistinctDays: quiz60sStreak.totalPlayed,
+    };
+
+    const result = { ...streak, ...mastery, ...quiz, ...engagement, ...quiz60sStreakSnapshot };
     cache.set(deviceId, result, now);
     return {
       status: 200,

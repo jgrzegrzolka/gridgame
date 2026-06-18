@@ -41,6 +41,9 @@ const ENDPOINT_BASE = '/api/v1/daily/me';
  *   hasNickname: boolean,
  *   dailySharesCount: number,
  *   quizSharesCount: number,
+ *   quiz60sCurrentStreak: number,
+ *   quiz60sMaxStreak: number,
+ *   quiz60sDistinctDays: number,
  * }} StreakResult
  */
 
@@ -94,6 +97,9 @@ export async function fetchDailyMe(deviceId, opts = {}) {
       hasNickname: json.hasNickname === true,
       dailySharesCount: toInt(json.dailySharesCount),
       quizSharesCount: toInt(json.quizSharesCount),
+      quiz60sCurrentStreak: toInt(json.quiz60sCurrentStreak),
+      quiz60sMaxStreak: toInt(json.quiz60sMaxStreak),
+      quiz60sDistinctDays: toInt(json.quiz60sDistinctDays),
     };
   } catch {
     return null;

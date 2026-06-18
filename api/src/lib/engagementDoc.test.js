@@ -313,3 +313,71 @@ test('local: false / undefined leaves field absent', () => {
     assert.equal('local' in r.doc, false, `local=${local}`);
   }
 });
+
+// ----- quiz_play -----------------------------------------------------------
+
+test('quiz_play: builds doc with deterministic id (per device, day, mode)', () => {
+  const r = buildEngagementDoc({
+    ...BASE,
+    kind: 'quiz_play',
+    payload: { mode: '60s' },
+  });
+  assert.equal(r.ok, true);
+  if (!r.ok) throw new Error('unreachable');
+  assert.equal(r.doc.id, 'quiz_play:20598:60s');
+  assert.equal(r.doc.kind, 'quiz_play');
+  assert.deepEqual(r.doc.payload, { mode: '60s' });
+});
+
+test('quiz_play: 60s and all modes yield distinct ids on the same day', () => {
+  const r60 = buildEngagementDoc({ ...BASE, kind: 'quiz_play', payload: { mode: '60s' } });
+  const rAll = buildEngagementDoc({ ...BASE, kind: 'quiz_play', payload: { mode: 'all' } });
+  assert.equal(r60.ok, true);
+  assert.equal(rAll.ok, true);
+  if (!r60.ok || !rAll.ok) throw new Error('unreachable');
+  assert.notEqual(r60.doc.id, rAll.doc.id);
+  assert.equal(rAll.doc.id, 'quiz_play:20598:all');
+});
+
+test('quiz_play: same (day, mode) yields the same id — Cosmos 409 is the idempotent path', () => {
+  // The deterministic-id contract is what makes "one row per device
+  // per day per mode" enforceable at the Cosmos layer — a second
+  // play on the same day re-uses the same id and gets a 409.
+  const r1 = buildEngagementDoc({ ...BASE, kind: 'quiz_play', payload: { mode: '60s' } });
+  const r2 = buildEngagementDoc({ ...BASE, kind: 'quiz_play', payload: { mode: '60s' } });
+  assert.equal(r1.ok, true);
+  assert.equal(r2.ok, true);
+  if (!r1.ok || !r2.ok) throw new Error('unreachable');
+  assert.equal(r1.doc.id, r2.doc.id);
+});
+
+test('quiz_play: rejects unknown mode', () => {
+  const r = buildEngagementDoc({
+    ...BASE,
+    kind: 'quiz_play',
+    payload: { mode: 'sprint' },
+  });
+  assert.equal(r.ok, false);
+  if (r.ok) throw new Error('unreachable');
+  assert.equal(r.error, 'invalid_payload');
+});
+
+test('quiz_play: rejects missing mode', () => {
+  const r = buildEngagementDoc({
+    ...BASE,
+    kind: 'quiz_play',
+    payload: {},
+  });
+  assert.equal(r.ok, false);
+});
+
+test('quiz_play: strips unknown payload fields', () => {
+  const r = buildEngagementDoc({
+    ...BASE,
+    kind: 'quiz_play',
+    payload: { mode: '60s', sneaky: 'value', another: 42 },
+  });
+  assert.equal(r.ok, true);
+  if (!r.ok) throw new Error('unreachable');
+  assert.deepEqual(r.doc.payload, { mode: '60s' });
+});

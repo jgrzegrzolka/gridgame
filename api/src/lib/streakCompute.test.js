@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { computeStreak, submissionsToStreakRows } = require('./streakCompute');
+const { computeStreak, submissionsToStreakRows, quizPlayEventsToStreakRows } = require('./streakCompute');
 
 test('streakCompute: empty rows — all zeros', () => {
   assert.deepEqual(computeStreak({ rows: [] }), {
@@ -256,4 +256,88 @@ test('submissionsToStreakRows: dayFn returning null is dropped', () => {
   ];
   const out = submissionsToStreakRows(docs, (ms) => (ms === 100 ? null : ms));
   assert.deepEqual(out, [{ id: 200, completed: true }]);
+});
+
+// --- quizPlayEventsToStreakRows -------------------------------------------
+
+test('quizPlayEventsToStreakRows: empty/non-array input → []', () => {
+  assert.deepEqual(quizPlayEventsToStreakRows([], '60s'), []);
+  assert.deepEqual(quizPlayEventsToStreakRows(null, '60s'), []);
+  assert.deepEqual(quizPlayEventsToStreakRows(undefined, '60s'), []);
+});
+
+test('quizPlayEventsToStreakRows: filters by kind="quiz_play"', () => {
+  const events = [
+    { kind: 'share', payload: { surface: 'flagquiz' }, dayId: 100 },
+    { kind: 'daily_start', payload: { puzzleId: 12 }, dayId: 100 },
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
+  ];
+  assert.deepEqual(quizPlayEventsToStreakRows(events, '60s'), [{ id: 100, completed: true }]);
+});
+
+test('quizPlayEventsToStreakRows: filters by requested mode', () => {
+  const events = [
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
+    { kind: 'quiz_play', payload: { mode: 'all' }, dayId: 100 },
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 101 },
+  ];
+  assert.deepEqual(quizPlayEventsToStreakRows(events, '60s'), [
+    { id: 100, completed: true },
+    { id: 101, completed: true },
+  ]);
+  assert.deepEqual(quizPlayEventsToStreakRows(events, 'all'), [{ id: 100, completed: true }]);
+});
+
+test('quizPlayEventsToStreakRows: dedupes same-day events (deterministic id should prevent dupes at write time anyway)', () => {
+  const events = [
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 101 },
+  ];
+  assert.deepEqual(quizPlayEventsToStreakRows(events, '60s'), [
+    { id: 100, completed: true },
+    { id: 101, completed: true },
+  ]);
+});
+
+test('quizPlayEventsToStreakRows: returns rows sorted ascending by dayId regardless of input order', () => {
+  const events = [
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 102 },
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 101 },
+  ];
+  assert.deepEqual(quizPlayEventsToStreakRows(events, '60s'), [
+    { id: 100, completed: true },
+    { id: 101, completed: true },
+    { id: 102, completed: true },
+  ]);
+});
+
+test('quizPlayEventsToStreakRows: malformed rows are silently skipped (no crash)', () => {
+  const events = [
+    null,
+    undefined,
+    { kind: 'quiz_play' },                                    // missing payload
+    { kind: 'quiz_play', payload: null },                     // null payload
+    { kind: 'quiz_play', payload: { mode: '60s' } },          // missing dayId
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 'oops' }, // non-numeric
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 }, // good
+  ];
+  assert.deepEqual(quizPlayEventsToStreakRows(events, '60s'), [{ id: 100, completed: true }]);
+});
+
+test('quizPlayEventsToStreakRows feeds computeStreak — full pipeline matches expected streak math', () => {
+  const events = [
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 101 },
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 102 },
+    // gap on 103
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 104 },
+    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 105 },
+  ];
+  const rows = quizPlayEventsToStreakRows(events, '60s');
+  const result = computeStreak({ rows, latestId: 105 });
+  assert.equal(result.maxStreak, 3);     // 100-101-102
+  assert.equal(result.currentStreak, 2); // 104-105 (today is 105)
+  assert.equal(result.totalPlayed, 5);   // 5 distinct days
 });

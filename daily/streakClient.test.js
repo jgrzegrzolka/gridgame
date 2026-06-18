@@ -41,6 +41,9 @@ const FULL = {
   hasNickname: true,
   dailySharesCount: 2,
   quizSharesCount: 1,
+  quiz60sCurrentStreak: 4,
+  quiz60sMaxStreak: 12,
+  quiz60sDistinctDays: 25,
 };
 
 test('fetchDailyMe: happy path — passes deviceId, returns shape', async () => {
@@ -119,6 +122,9 @@ test('fetchDailyMe: missing fields collapse to 0 (defensive shape)', async () =>
     hasNickname: false,
     dailySharesCount: 0,
     quizSharesCount: 0,
+    quiz60sCurrentStreak: 0,
+    quiz60sMaxStreak: 0,
+    quiz60sDistinctDays: 0,
   });
 });
 
@@ -154,6 +160,9 @@ test('fetchDailyMe: non-numeric field values collapse to 0', async () => {
     hasNickname: false,
     dailySharesCount: 0,
     quizSharesCount: 0,
+    quiz60sCurrentStreak: 0,
+    quiz60sMaxStreak: 0,
+    quiz60sDistinctDays: 0,
   });
 });
 

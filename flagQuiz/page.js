@@ -518,6 +518,15 @@ export function bootFlagQuiz() {
         // leaderboard fetch lands after the server's leaderboard write
         // completes so the just-played row is visible on this paint.
         const configKey = quizRecordConfigKey(key, mode, includeAll);
+        // Loyalty signal: one `quiz_play` event per device per day per
+        // mode (server uses deterministic id `quiz_play:{dayId}:{mode}`
+        // so repeated plays in the same day collapse to one row via
+        // Cosmos 409). Drives the Sprint Habit / Steady Sprinter /
+        // Monthly Sprinter / Quiz Centurion achievements.
+        void submitEngagementEvent(deviceId, {
+          kind: 'quiz_play',
+          payload: { mode: '60s' },
+        });
         const cycleP = runLeaderboardCycle({
           submitImpl: () => submitQuizRecord({
             deviceId, configKey,
@@ -567,6 +576,13 @@ export function bootFlagQuiz() {
         resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0, gaveUp };
         paintResultLabels();
         const configKey = quizRecordConfigKey(key, mode, includeAll);
+        // Loyalty signal — same shape as the timed branch above. Today
+        // no endurance-loyalty achievement consumes these events, but
+        // capturing them is cheap and future-proofs a follow-up tier.
+        void submitEngagementEvent(deviceId, {
+          kind: 'quiz_play',
+          payload: { mode: 'all' },
+        });
         void runLeaderboardCycle({
           submitImpl: () => submitQuizRecord({
             deviceId, configKey,
