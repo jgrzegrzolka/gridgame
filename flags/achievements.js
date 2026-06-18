@@ -33,6 +33,10 @@
  *   cleanSweeps?: number,
  *   flawlessSweeps?: number,
  *   zeroScoreFinishes?: number,
+ *   quizAttempts60s?: number,
+ *   quizVariantsTouched60s?: number,
+ *   quizBestScore60s?: number,
+ *   quiz60sClearedVariants?: string[],
  * }} Snapshot
  *
  * @typedef {{
@@ -119,6 +123,92 @@ const ICON_BRUSH_X100 =
   '<text x="8" y="22" font-size="7" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">×100</text>' +
   '</svg>';
 
+// Stopwatch: round face (built as 4 rect strips around a hollow
+// centre), crown button on top, minute hand pointing up from centre.
+// Matches the homepage tile icon for the 60s Quiz card.
+const ICON_STOPWATCH =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  '<rect x="7" y="0" width="2" height="2"/>' +    // crown stem
+  '<rect x="6" y="1" width="4" height="1"/>' +    // crown cap
+  '<rect x="3" y="3" width="10" height="2"/>' +    // face top
+  '<rect x="2" y="5" width="2" height="6"/>' +     // face left
+  '<rect x="12" y="5" width="2" height="6"/>' +    // face right
+  '<rect x="3" y="11" width="10" height="2"/>' +   // face bottom
+  '<rect x="7" y="6" width="2" height="3"/>' +     // minute hand
+  '</svg>';
+
+// Globe: octagon outline + horizontal equator + vertical meridian.
+const ICON_GLOBE =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  '<rect x="5" y="1" width="6" height="2"/>' +
+  '<rect x="3" y="3" width="2" height="2"/>' +
+  '<rect x="11" y="3" width="2" height="2"/>' +
+  '<rect x="2" y="5" width="2" height="6"/>' +
+  '<rect x="12" y="5" width="2" height="6"/>' +
+  '<rect x="3" y="11" width="2" height="2"/>' +
+  '<rect x="11" y="11" width="2" height="2"/>' +
+  '<rect x="5" y="13" width="6" height="2"/>' +
+  '<rect x="3" y="7" width="10" height="2"/>' +    // equator
+  '<rect x="7" y="3" width="2" height="10"/>' +    // meridian
+  '</svg>';
+
+// Lightning bolt for the skill-tier (best 60s score).
+const BOLT_SHAPE = '<path d="M10 0L4 9L8 9L6 16L13 7L9 7Z"/>';
+
+/**
+ * @param {string} label
+ * @param {number} fontSize
+ * @returns {string}
+ */
+function boltWithLabel(label, fontSize) {
+  return '<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true">' +
+    BOLT_SHAPE +
+    `<text x="8" y="22" font-size="${fontSize}" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">${label}</text>` +
+    '</svg>';
+}
+const ICON_BOLT_30 = boltWithLabel('30', 8);
+const ICON_BOLT_40 = boltWithLabel('40', 8);
+const ICON_BOLT_50 = boltWithLabel('50', 8);
+
+// Flag + 2-letter region label for the per-variant "Cleared"
+// achievements. Same shared-shape pattern as the brushes — the only
+// thing that changes between tiles is the label.
+const FLAG_SHAPES =
+  '<rect x="2" y="1" width="2" height="14"/>' +    // pole
+  '<rect x="4" y="2" width="9" height="6"/>';       // fabric
+
+/**
+ * @param {string} label
+ * @returns {string}
+ */
+function flagWithLabel(label) {
+  return '<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true">' +
+    FLAG_SHAPES +
+    `<text x="8" y="22" font-size="8" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">${label}</text>` +
+    '</svg>';
+}
+const ICON_FLAG_EU = flagWithLabel('EU');
+const ICON_FLAG_AS = flagWithLabel('AS');
+const ICON_FLAG_AF = flagWithLabel('AF');
+const ICON_FLAG_NA = flagWithLabel('NA');
+const ICON_FLAG_SA = flagWithLabel('SA');
+const ICON_FLAG_OC = flagWithLabel('OC');
+const ICON_FLAG_WO = flagWithLabel('WO');
+
+// Trophy for the Atlas Champion meta achievement (cleared every
+// variant including the impossible-feeling 195-flag "all countries"
+// one). Previously deleted; re-added for this distinct ultimate-
+// trophy concept.
+const ICON_TROPHY =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  '<rect x="4" y="2" width="8" height="6"/>' +
+  '<rect x="2" y="3" width="2" height="4"/>' +
+  '<rect x="12" y="3" width="2" height="4"/>' +
+  '<rect x="7" y="8" width="2" height="3"/>' +
+  '<rect x="4" y="11" width="8" height="1"/>' +
+  '<rect x="3" y="12" width="10" height="2"/>' +
+  '</svg>';
+
 /** @type {AchievementRule[]} */
 export const MASTERY_ACHIEVEMENTS = [
   {
@@ -199,17 +289,146 @@ export const STREAK_ACHIEVEMENTS = [
   },
 ];
 
+// 60s quiz variants in declaration order — used by Atlas Champion's
+// "every variant cleared" predicate and pinned by the rule-hygiene
+// tests so a new variant landing in the catalog without updating this
+// list fails CI.
+export const QUIZ_60S_VARIANTS = /** @type {const} */ ([
+  'countries',
+  'europe',
+  'asia',
+  'africa',
+  'north-america',
+  'south-america',
+  'oceania',
+]);
+
+/** @type {AchievementRule[]} */
+export const QUIZ_ACHIEVEMENTS = [
+  {
+    id: 'first-sprint',
+    icon: ICON_STOPWATCH,
+    name: 'First Sprint',
+    description: 'Finished your first 60s quiz.',
+    hint: 'Finish one 60s flag quiz.',
+    predicate: (s) => num(s.quizAttempts60s) >= 1,
+  },
+  {
+    id: 'cartographer',
+    icon: ICON_GLOBE,
+    name: 'Cartographer',
+    description: 'Tried every 60s quiz variant — all 7 continents (plus All Countries).',
+    hint: 'Finish a 60s round in every variant.',
+    predicate: (s) => num(s.quizVariantsTouched60s) >= 7,
+  },
+  {
+    id: 'quick-recall',
+    icon: ICON_BOLT_30,
+    name: 'Quick Recall',
+    description: 'Scored 30 in a single 60s quiz.',
+    hint: 'Reach a 60s quiz score of 30.',
+    predicate: (s) => num(s.quizBestScore60s) >= 30,
+  },
+  {
+    id: 'snap-recognition',
+    icon: ICON_BOLT_40,
+    name: 'Snap Recognition',
+    description: 'Scored 40 in a single 60s quiz.',
+    hint: 'Reach a 60s quiz score of 40.',
+    predicate: (s) => num(s.quizBestScore60s) >= 40,
+  },
+  {
+    id: 'flag-whisperer',
+    icon: ICON_BOLT_50,
+    name: 'Flag Whisperer',
+    description: 'Scored 50 in a single 60s quiz.',
+    hint: 'Reach a 60s quiz score of 50.',
+    predicate: (s) => num(s.quizBestScore60s) >= 50,
+  },
+  // Per-variant "Cleared" — declared smallest pool first so the
+  // easiest-to-earn tile sits at the top of the mastery cluster on
+  // the profile grid. Threshold = sov pool size for the variant;
+  // playing the with-territories pool and meeting the sov count
+  // still counts (computeQuiz takes the best across includeAll).
+  {
+    id: 'south-america-cleared',
+    icon: ICON_FLAG_SA,
+    name: 'South America Cleared',
+    description: 'Named every sovereign flag of South America in a single 60s round.',
+    hint: 'Score at least 12 on the South America 60s quiz.',
+    predicate: (s) => hasCleared(s, 'south-america'),
+  },
+  {
+    id: 'oceania-cleared',
+    icon: ICON_FLAG_OC,
+    name: 'Oceania Cleared',
+    description: 'Named every sovereign flag of Oceania in a single 60s round.',
+    hint: 'Score at least 14 on the Oceania 60s quiz.',
+    predicate: (s) => hasCleared(s, 'oceania'),
+  },
+  {
+    id: 'north-america-cleared',
+    icon: ICON_FLAG_NA,
+    name: 'North America Cleared',
+    description: 'Named every sovereign flag of North America in a single 60s round.',
+    hint: 'Score at least 23 on the North America 60s quiz.',
+    predicate: (s) => hasCleared(s, 'north-america'),
+  },
+  {
+    id: 'europe-cleared',
+    icon: ICON_FLAG_EU,
+    name: 'Europe Cleared',
+    description: 'Named every sovereign flag of Europe in a single 60s round.',
+    hint: 'Score at least 45 on the Europe 60s quiz.',
+    predicate: (s) => hasCleared(s, 'europe'),
+  },
+  {
+    id: 'asia-cleared',
+    icon: ICON_FLAG_AS,
+    name: 'Asia Cleared',
+    description: 'Named every sovereign flag of Asia in a single 60s round.',
+    hint: 'Score at least 47 on the Asia 60s quiz.',
+    predicate: (s) => hasCleared(s, 'asia'),
+  },
+  {
+    id: 'africa-cleared',
+    icon: ICON_FLAG_AF,
+    name: 'Africa Cleared',
+    description: 'Named every sovereign flag of Africa in a single 60s round.',
+    hint: 'Score at least 54 on the Africa 60s quiz.',
+    predicate: (s) => hasCleared(s, 'africa'),
+  },
+  {
+    id: 'all-countries-cleared',
+    icon: ICON_FLAG_WO,
+    name: 'All Countries Cleared',
+    description: 'Named every sovereign flag in the world in a single 60s round.',
+    hint: 'Score at least 195 on the All Countries 60s quiz.',
+    predicate: (s) => hasCleared(s, 'countries'),
+  },
+  {
+    id: 'atlas-champion',
+    icon: ICON_TROPHY,
+    name: 'Atlas Champion',
+    description: 'Cleared every 60s quiz variant — the ultimate trophy.',
+    hint: 'Clear every continent AND the All Countries variant.',
+    predicate: (s) => QUIZ_60S_VARIANTS.every((v) => hasCleared(s, v)),
+  },
+];
+
 /**
  * Default rule order on the profile page. Streak first (every player
  * touches the daily flow), mastery second (gated on at least one
- * completion). Declared this way so a newcomer sees the streak tier
- * first — the most accessible badges sit at the top of the grid.
+ * completion), quiz third (a separate game-mode tier). Declared this
+ * way so a newcomer sees the streak tier first — the most accessible
+ * badges sit at the top of the grid.
  *
  * @type {AchievementRule[]}
  */
 export const ALL_ACHIEVEMENTS = [
   ...STREAK_ACHIEVEMENTS,
   ...MASTERY_ACHIEVEMENTS,
+  ...QUIZ_ACHIEVEMENTS,
 ];
 
 /**
@@ -273,4 +492,19 @@ export function diffNewlyEarnedAchievements(before, after, rules = ALL_ACHIEVEME
 function num(x) {
   const n = Number(x);
   return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Defensive lookup for the "Cleared <variant>" predicates — the
+ * server returns the cleared set as a sorted array, but a malformed
+ * or pre-quiz-compute response could yield `undefined` / non-array.
+ * Mirrors the role `num` plays for numeric snapshot fields.
+ *
+ * @param {Snapshot} snapshot
+ * @param {string} variant
+ * @returns {boolean}
+ */
+function hasCleared(snapshot, variant) {
+  const arr = snapshot.quiz60sClearedVariants;
+  return Array.isArray(arr) && arr.includes(variant);
 }

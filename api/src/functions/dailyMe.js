@@ -7,11 +7,30 @@ const { readFreshFlag } = require('../lib/queryParams');
 const { statsCacheHeaders } = require('../lib/cacheHeaders');
 const { computeStreak, submissionsToStreakRows } = require('../lib/streakCompute');
 const { computeMastery } = require('../lib/masteryCompute');
+const { computeQuiz } = require('../lib/quizCompute');
 const { warsawDayNumber } = require('../lib/warsawDay');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
+const QUIZ_RECORDS_CONTAINER = 'quizRecords';
 const CACHE_TTL_MS = 60_000;
+
+// Sovereign-only ("sov") pool sizes per quiz variant. Source of truth
+// for the "Cleared <variant>" achievements — a 60s PB that meets or
+// exceeds the variant's sov pool size counts as a clear (across either
+// includeAll value). The numbers must match what `flagsGamePool(c,
+// false)` produces against `flags/countries.json`; the drift detector
+// `flags/countries.test.js` pins them so a country added or removed
+// without updating this map fails CI loudly.
+const SOV_POOL_SIZES = {
+  countries: 195,
+  europe: 45,
+  asia: 47,
+  africa: 54,
+  'north-america': 23,
+  'south-america': 12,
+  oceania: 14,
+};
 
 // Per-deviceId cache. Same warm-instance / cold-start tradeoff as the
 // dailyStats cache — the deviceId selectivity means cache entries don't
@@ -105,7 +124,30 @@ app.http('dailyMe', {
     const today = warsawDayNumber(now);
     const streak = computeStreak({ rows, latestId: today ?? undefined });
     const mastery = computeMastery(queryRes.docs);
-    const result = { ...streak, ...mastery };
+
+    // Quiz aggregates: single-partition query against the player's
+    // `quizRecords` doc (id == pk == deviceId). At most one row;
+    // returns empty quiz counters if the player has never finished a
+    // round. Treated as a soft dependency — a Cosmos blip on this
+    // query degrades to zero quiz counters rather than 500'ing the
+    // whole snapshot (the streak + mastery fields are still useful).
+    let quizDoc = null;
+    try {
+      const quizRes = await queryDocs({
+        connString: conn,
+        dbName: DB_NAME,
+        containerName: QUIZ_RECORDS_CONTAINER,
+        query: 'SELECT * FROM c WHERE c.id = @did',
+        parameters: [{ name: '@did', value: deviceId }],
+        partitionKey: deviceId,
+      });
+      if (quizRes.ok && quizRes.docs.length > 0) quizDoc = quizRes.docs[0];
+    } catch (err) {
+      context.warn('cosmos quizRecords read failed (soft-degraded to zero quiz counters)', err);
+    }
+    const quiz = computeQuiz(quizDoc, SOV_POOL_SIZES);
+
+    const result = { ...streak, ...mastery, ...quiz };
     cache.set(deviceId, result, now);
     return {
       status: 200,

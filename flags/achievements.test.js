@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import {
   STREAK_ACHIEVEMENTS,
   MASTERY_ACHIEVEMENTS,
+  QUIZ_ACHIEVEMENTS,
+  QUIZ_60S_VARIANTS,
   ALL_ACHIEVEMENTS,
   evaluateAchievements,
   diffNewlyEarnedAchievements,
@@ -81,6 +83,94 @@ test('empty-slate fires at zeroScoreFinishes >= 1', () => {
   const rule = ruleById('empty-slate');
   assert.equal(rule.predicate({ zeroScoreFinishes: 0 }), false);
   assert.equal(rule.predicate({ zeroScoreFinishes: 1 }), true);
+});
+
+// --- Quiz tier ---------------------------------------------------------------
+
+test('first-sprint fires at quizAttempts60s >= 1', () => {
+  const rule = ruleById('first-sprint');
+  assert.equal(rule.predicate({ quizAttempts60s: 0 }), false);
+  assert.equal(rule.predicate({ quizAttempts60s: 1 }), true);
+});
+
+test('cartographer fires at quizVariantsTouched60s >= 7 (all variants)', () => {
+  const rule = ruleById('cartographer');
+  assert.equal(rule.predicate({ quizVariantsTouched60s: 6 }), false);
+  assert.equal(rule.predicate({ quizVariantsTouched60s: 7 }), true);
+});
+
+test('skill tier fires at score thresholds 30 / 40 / 50', () => {
+  assert.equal(ruleById('quick-recall').predicate({ quizBestScore60s: 29 }), false);
+  assert.equal(ruleById('quick-recall').predicate({ quizBestScore60s: 30 }), true);
+  assert.equal(ruleById('snap-recognition').predicate({ quizBestScore60s: 39 }), false);
+  assert.equal(ruleById('snap-recognition').predicate({ quizBestScore60s: 40 }), true);
+  assert.equal(ruleById('flag-whisperer').predicate({ quizBestScore60s: 49 }), false);
+  assert.equal(ruleById('flag-whisperer').predicate({ quizBestScore60s: 50 }), true);
+});
+
+test('each "Cleared <variant>" rule reads the corresponding variant key', () => {
+  // Per-continent / per-variant predicates are 1:1 with QUIZ_60S_VARIANTS;
+  // walk every one of them so a typo in a single id is caught.
+  const idByVariant = {
+    countries: 'all-countries-cleared',
+    europe: 'europe-cleared',
+    asia: 'asia-cleared',
+    africa: 'africa-cleared',
+    'north-america': 'north-america-cleared',
+    'south-america': 'south-america-cleared',
+    oceania: 'oceania-cleared',
+  };
+  for (const v of QUIZ_60S_VARIANTS) {
+    const rule = ruleById(idByVariant[v]);
+    assert.equal(rule.predicate({ quiz60sClearedVariants: [] }), false, `${v}: empty array → not earned`);
+    assert.equal(rule.predicate({ quiz60sClearedVariants: [v] }), true, `${v}: variant present → earned`);
+    // Wrong variant in the array doesn't accidentally fire.
+    const other = v === 'countries' ? 'europe' : 'countries';
+    assert.equal(rule.predicate({ quiz60sClearedVariants: [other] }), false, `${v}: other variant only → not earned`);
+  }
+});
+
+test('cleared predicates tolerate a malformed quiz60sClearedVariants (defensive)', () => {
+  const rule = ruleById('europe-cleared');
+  assert.equal(rule.predicate({ quiz60sClearedVariants: /** @type {any} */ ('oops') }), false);
+  assert.equal(rule.predicate({ quiz60sClearedVariants: /** @type {any} */ (null) }), false);
+  // Empty snapshot — the field is just missing.
+  assert.equal(rule.predicate({}), false);
+});
+
+test('atlas-champion fires only when EVERY variant is cleared', () => {
+  const rule = ruleById('atlas-champion');
+  // Missing any one variant → not earned.
+  for (let i = 0; i < QUIZ_60S_VARIANTS.length; i++) {
+    const without = QUIZ_60S_VARIANTS.filter((_, j) => j !== i);
+    assert.equal(
+      rule.predicate({ quiz60sClearedVariants: [...without] }),
+      false,
+      `missing ${QUIZ_60S_VARIANTS[i]} → not earned`,
+    );
+  }
+  // All present → earned.
+  assert.equal(rule.predicate({ quiz60sClearedVariants: [...QUIZ_60S_VARIANTS] }), true);
+});
+
+test('QUIZ_60S_VARIANTS length matches the per-variant rule count (drift detector)', () => {
+  // Per-variant "Cleared <X>" rules are 1:1 with QUIZ_60S_VARIANTS.
+  // Adding a new variant to QUIZ_60S_VARIANTS without adding a matching
+  // rule (or vice versa) is a latent inconsistency this catches loudly.
+  const clearedRules = QUIZ_ACHIEVEMENTS.filter((r) => r.id.endsWith('-cleared'));
+  assert.equal(
+    clearedRules.length,
+    QUIZ_60S_VARIANTS.length,
+    `expected ${QUIZ_60S_VARIANTS.length} "Cleared <variant>" rules to match QUIZ_60S_VARIANTS, got ${clearedRules.length}`,
+  );
+});
+
+test('quiz rules do NOT cross-contaminate (each reads only its own counter)', () => {
+  // Pin the field-mapping so a future copy-paste rename can't silently
+  // wire a quiz rule to a daily counter or vice versa.
+  assert.equal(ruleById('first-sprint').predicate({ totalCompleted: 99 }), false);
+  assert.equal(ruleById('quick-recall').predicate({ cleanSweeps: 99 }), false);
+  assert.equal(ruleById('europe-cleared').predicate({ quizBestScore60s: 99 }), false);
 });
 
 test('mastery rules do NOT cross-contaminate (each reads only its own counter)', () => {
@@ -177,9 +267,11 @@ test('evaluateAchievements at a 30-day streak earns every streak badge', () => {
   );
 });
 
-test('evaluateAchievements with a full snapshot earns every badge across both tiers', () => {
+test('evaluateAchievements with a full snapshot earns every badge across every tier', () => {
   const out = evaluateAchievements({
     totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, flawlessSweeps: 1, zeroScoreFinishes: 1,
+    quizAttempts60s: 50, quizVariantsTouched60s: 7, quizBestScore60s: 50,
+    quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
   });
   assert.ok(out.every((s) => s.earned), 'all rules should be earned');
 });
@@ -242,6 +334,8 @@ test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration
   // change which card pops first on a multi-unlock).
   const newly = diffNewlyEarnedAchievements({}, {
     totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, flawlessSweeps: 1, zeroScoreFinishes: 1,
+    quizAttempts60s: 50, quizVariantsTouched60s: 7, quizBestScore60s: 50,
+    quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
   });
   assert.deepEqual(
     newly.map((r) => r.id),
