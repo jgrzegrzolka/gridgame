@@ -15,7 +15,7 @@ import {
   hasUltimatePuzzleSolution,
   axesImpliedPair,
 } from './engine.js';
-import { CONTINENTS, loadCountries } from './group.js';
+import { CONTINENTS, flagsGamePool, loadCountries } from './group.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -351,6 +351,41 @@ test('All-countries pool supports the "20" quiz mode (Flag Quiz default)', () =>
   assert.ok(
     n >= 20,
     `All-countries pool is ${n} — flagQuiz default "All countries 20" needs >= 20`,
+  );
+});
+
+test('SOV_POOL_SIZES in api/dailyMe.js matches what flagsGamePool produces (drift detector)', () => {
+  // Pins the threshold numbers used by the "Cleared <variant>" quiz
+  // achievements. If a country lands or leaves countries.json, the
+  // SOV_POOL_SIZES const in `api/src/functions/dailyMe.js` goes stale
+  // and the achievement either becomes impossible to earn (sizes grew)
+  // or trivial (sizes shrank). This test catches both before deploy.
+  const sov = flagsGamePool(COUNTRIES, false);
+  const actual = {
+    countries: sov.length,
+    europe: sov.filter((c) => c.continent === 'Europe').length,
+    asia: sov.filter((c) => c.continent === 'Asia').length,
+    africa: sov.filter((c) => c.continent === 'Africa').length,
+    'north-america': sov.filter((c) => c.continent === 'North America').length,
+    'south-america': sov.filter((c) => c.continent === 'South America').length,
+    oceania: sov.filter((c) => c.continent === 'Oceania').length,
+  };
+  // The expected values must mirror SOV_POOL_SIZES in api/src/functions/dailyMe.js.
+  // If you're adding or removing a sovereign country, update both this
+  // map AND the api/-side constant together.
+  const expected = {
+    countries: 195,
+    europe: 45,
+    asia: 47,
+    africa: 54,
+    'north-america': 23,
+    'south-america': 12,
+    oceania: 14,
+  };
+  assert.deepEqual(
+    actual,
+    expected,
+    'SOV_POOL_SIZES drifted from countries.json — update api/src/functions/dailyMe.js to match',
   );
 });
 

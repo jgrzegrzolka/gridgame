@@ -29,6 +29,10 @@ const ENDPOINT_BASE = '/api/v1/daily/me';
  *   cleanSweeps: number,
  *   flawlessSweeps: number,
  *   zeroScoreFinishes: number,
+ *   quizAttempts60s: number,
+ *   quizVariantsTouched60s: number,
+ *   quizBestScore60s: number,
+ *   quiz60sClearedVariants: string[],
  * }} StreakResult
  */
 
@@ -64,6 +68,10 @@ export async function fetchDailyMe(deviceId, opts = {}) {
       cleanSweeps: toInt(json.cleanSweeps),
       flawlessSweeps: toInt(json.flawlessSweeps),
       zeroScoreFinishes: toInt(json.zeroScoreFinishes),
+      quizAttempts60s: toInt(json.quizAttempts60s),
+      quizVariantsTouched60s: toInt(json.quizVariantsTouched60s),
+      quizBestScore60s: toInt(json.quizBestScore60s),
+      quiz60sClearedVariants: toStringArray(json.quiz60sClearedVariants),
     };
   } catch {
     return null;
@@ -77,4 +85,17 @@ export async function fetchDailyMe(deviceId, opts = {}) {
 function toInt(x) {
   const n = Number(x);
   return Number.isFinite(n) ? Math.trunc(n) : 0;
+}
+
+/**
+ * Defensive normaliser for string-array snapshot fields (currently
+ * just `quiz60sClearedVariants`). Empty array on anything that isn't
+ * an array of strings.
+ *
+ * @param {unknown} x
+ * @returns {string[]}
+ */
+function toStringArray(x) {
+  if (!Array.isArray(x)) return [];
+  return x.filter((v) => typeof v === 'string');
 }

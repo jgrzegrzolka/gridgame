@@ -29,6 +29,10 @@ const FULL = {
   cleanSweeps: 3,
   flawlessSweeps: 2,
   zeroScoreFinishes: 1,
+  quizAttempts60s: 14,
+  quizVariantsTouched60s: 4,
+  quizBestScore60s: 22,
+  quiz60sClearedVariants: ['oceania', 'south-america'],
 };
 
 test('fetchDailyMe: happy path — passes deviceId, returns shape', async () => {
@@ -95,6 +99,10 @@ test('fetchDailyMe: missing fields collapse to 0 (defensive shape)', async () =>
     cleanSweeps: 0,
     flawlessSweeps: 0,
     zeroScoreFinishes: 0,
+    quizAttempts60s: 0,
+    quizVariantsTouched60s: 0,
+    quizBestScore60s: 0,
+    quiz60sClearedVariants: [],
   });
 });
 
@@ -118,7 +126,23 @@ test('fetchDailyMe: non-numeric field values collapse to 0', async () => {
     cleanSweeps: 0,
     flawlessSweeps: 0,
     zeroScoreFinishes: 0,
+    quizAttempts60s: 0,
+    quizVariantsTouched60s: 0,
+    quizBestScore60s: 0,
+    quiz60sClearedVariants: [],
   });
+});
+
+test('fetchDailyMe: malformed quiz60sClearedVariants collapses to empty array', async () => {
+  const f = fakeFetch({ body: { quiz60sClearedVariants: 'not-an-array' } });
+  const out = await fetchDailyMe('dev-abc', { fetchImpl: f });
+  assert.deepEqual(out.quiz60sClearedVariants, []);
+});
+
+test('fetchDailyMe: quiz60sClearedVariants filters out non-string entries', async () => {
+  const f = fakeFetch({ body: { quiz60sClearedVariants: ['europe', 42, null, 'asia'] } });
+  const out = await fetchDailyMe('dev-abc', { fetchImpl: f });
+  assert.deepEqual(out.quiz60sClearedVariants, ['europe', 'asia']);
 });
 
 test('fetchDailyMe: float fields truncate to int', async () => {
