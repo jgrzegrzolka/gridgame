@@ -73,7 +73,7 @@
   },
   "tile": {
     "daily": "Daily puzzle",
-    "quiz": "Quiz",
+    "quiz": "60s Quiz",
     "find": "Make a puzzle",
     "ticTacToe": "Tic Tac Toe"
   },
