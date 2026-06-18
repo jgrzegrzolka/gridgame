@@ -328,27 +328,12 @@ test('angel-investor fires when coffeeClicked is strict-true', () => {
 
 // --- TTT tier --------------------------------------------------------------
 
-test('first-ttt fires when hasPlayedTtt is strict-true', () => {
-  const rule = ruleById('first-ttt');
-  assert.equal(rule.predicate({ hasPlayedTtt: true }), true);
-  assert.equal(rule.predicate({ hasPlayedTtt: false }), false);
-  assert.equal(rule.predicate({}), false);
-  // Defensive: a truthy non-boolean must not satisfy the predicate.
-  assert.equal(rule.predicate({ hasPlayedTtt: /** @type {any} */ (1) }), false);
-});
-
-test('first-ttt does NOT fire on other game signals (cross-contamination guard)', () => {
-  // A player who's a daily-puzzle champion but never touched TTT
-  // must not silently get a TTT achievement.
-  const rule = ruleById('first-ttt');
-  assert.equal(rule.predicate({ totalCompleted: 99, cleanSweeps: 99, hasNickname: true }), false);
-});
-
 test('first-ttt-win fires when hasWonTtt is strict-true', () => {
   const rule = ruleById('first-ttt-win');
   assert.equal(rule.predicate({ hasWonTtt: true }), true);
   assert.equal(rule.predicate({ hasWonTtt: false }), false);
   assert.equal(rule.predicate({}), false);
+  // Defensive: a truthy non-boolean must not satisfy the predicate.
   assert.equal(rule.predicate({ hasWonTtt: /** @type {any} */ (1) }), false);
 });
 
@@ -359,13 +344,21 @@ test('first-ttt-loss fires when hasLostTtt is strict-true', () => {
   assert.equal(rule.predicate({}), false);
 });
 
-test('TTT rules do NOT cross-contaminate (played vs won vs lost are independent)', () => {
-  // Playing without winning shouldn't fire First Win; winning shouldn't
-  // accidentally fire First Loss; etc.
-  assert.equal(ruleById('first-ttt-win').predicate({ hasPlayedTtt: true, hasWonTtt: false }), false);
-  assert.equal(ruleById('first-ttt-loss').predicate({ hasPlayedTtt: true, hasLostTtt: false }), false);
-  assert.equal(ruleById('first-ttt').predicate({ hasWonTtt: true }), false);
-  assert.equal(ruleById('first-ttt').predicate({ hasLostTtt: true }), false);
+test('ten-ttt-games / hundred-ttt-games fire at 10 / 100 tttGamesPlayed', () => {
+  assert.equal(ruleById('ten-ttt-games').predicate({ tttGamesPlayed: 9 }), false);
+  assert.equal(ruleById('ten-ttt-games').predicate({ tttGamesPlayed: 10 }), true);
+  assert.equal(ruleById('hundred-ttt-games').predicate({ tttGamesPlayed: 99 }), false);
+  assert.equal(ruleById('hundred-ttt-games').predicate({ tttGamesPlayed: 100 }), true);
+});
+
+test('TTT rules do NOT cross-contaminate (won vs lost vs count are independent)', () => {
+  // Winning shouldn't accidentally fire First Loss; the count tiers
+  // shouldn't fire from a single win/loss flag; etc.
+  assert.equal(ruleById('first-ttt-win').predicate({ tttGamesPlayed: 99, hasWonTtt: false }), false);
+  assert.equal(ruleById('first-ttt-loss').predicate({ tttGamesPlayed: 99, hasLostTtt: false }), false);
+  assert.equal(ruleById('ten-ttt-games').predicate({ hasWonTtt: true, hasLostTtt: true }), false);
+  // And a daily-puzzle champion shouldn't get a TTT achievement.
+  assert.equal(ruleById('first-ttt-win').predicate({ totalCompleted: 99, cleanSweeps: 99 }), false);
 });
 
 test('social rules do NOT cross-contaminate (each reads only its own counter)', () => {
@@ -500,7 +493,7 @@ test('evaluateAchievements with a full snapshot earns every badge across every t
     hasNickname: true, hasLinkedDevice: true,
     dailySharesCount: 1, quizSharesCount: 1, findflagSharesCount: 1, coffeeClicked: true,
     quiz60sCurrentStreak: 30, quiz60sMaxStreak: 30, quiz60sDistinctDays: 100,
-    hasPlayedTtt: true, hasWonTtt: true, hasLostTtt: true,
+    tttGamesPlayed: 100, hasWonTtt: true, hasLostTtt: true,
   });
   assert.ok(out.every((s) => s.earned), 'all rules should be earned');
 });
@@ -570,7 +563,7 @@ test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration
     hasNickname: true, hasLinkedDevice: true,
     dailySharesCount: 1, quizSharesCount: 1, findflagSharesCount: 1, coffeeClicked: true,
     quiz60sCurrentStreak: 30, quiz60sMaxStreak: 30, quiz60sDistinctDays: 100,
-    hasPlayedTtt: true, hasWonTtt: true, hasLostTtt: true,
+    tttGamesPlayed: 100, hasWonTtt: true, hasLostTtt: true,
   });
   assert.deepEqual(
     newly.map((r) => r.id),

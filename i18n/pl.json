@@ -233,11 +233,6 @@
       "description": "Kupiono kawę dla twórcy — dzięki za wsparcie!",
       "hint": "Kup kawę dla twórcy z menu hamburgera."
     },
-    "first-ttt": {
-      "name": "Pierwsze kółko i krzyżyk",
-      "description": "Zagrano pierwszą partię w kółko i krzyżyk.",
-      "hint": "Zagraj jedną partię w kółko i krzyżyk."
-    },
     "first-ttt-win": {
       "name": "Pierwsza wygrana",
       "description": "Wygrano pierwszą partię w kółko i krzyżyk.",
@@ -247,6 +242,16 @@
       "name": "Pierwsza porażka",
       "description": "Przegrano partię w kółko i krzyżyk — zdarza się każdemu.",
       "hint": "Przegraj partię w kółko i krzyżyk (odznaka solidarności)."
+    },
+    "ten-ttt-games": {
+      "name": "Dziesięć partii",
+      "description": "Zagrano dziesięć partii w kółko i krzyżyk.",
+      "hint": "Zagraj dziesięć partii w kółko i krzyżyk."
+    },
+    "hundred-ttt-games": {
+      "name": "Sto partii",
+      "description": "Zagrano sto partii w kółko i krzyżyk.",
+      "hint": "Zagraj sto partii w kółko i krzyżyk."
     }
   },
   "sync": {
