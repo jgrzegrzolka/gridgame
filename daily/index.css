@@ -46,15 +46,21 @@
   margin-bottom: 12px;
 }
 
-/* Post-finish, #game stays mounted so its puzzle title strip
- * (.find-header + .daily-desc) keeps sitting above the result — the
- * player can see what they solved. We just hide the play-only children:
- * the live count (redundant with the result's "You found N/N" line),
- * the typed-input wrap, the sovereign note, the in-game found grid
- * (replaced by #find-result-found in the result), and the give-up row.
- * The class is added by playFlow.js::renderResult. */
+/* Post-finish, #game stays mounted so its .find-header (puzzle # +
+ * category label) keeps sitting above the result — the player sees
+ * what they solved at a glance. The longer .daily-desc sentence is
+ * hidden along with the play-only children: by the time the puzzle
+ * is done the player has read the description, and the result's
+ * Found / Missed grids already speak for themselves.
+ *
+ * Play-only children hidden here: the live count (redundant with the
+ * result's "You found N/N" line), the typed-input wrap, the sovereign
+ * note, the in-game found grid (replaced by #find-result-found), and
+ * the give-up actions row. The class is added by
+ * playFlow.js::renderResult. */
 #game.is-finished .find-count,
 #game.is-finished .find-input-wrap,
+#game.is-finished .daily-desc,
 #game.is-finished .daily-note,
 #game.is-finished #find-found,
 #game.is-finished .actions-row {
