@@ -355,7 +355,7 @@ export const QUIZ_ACHIEVEMENTS = [
     icon: ICON_FLAG_SA,
     name: 'South America Cleared',
     description: 'Named every sovereign flag of South America in a single 60s round.',
-    hint: 'Score at least 12 on the South America 60s quiz.',
+    hint: 'Name every sovereign flag of South America in a single 60s round.',
     predicate: (s) => hasCleared(s, 'south-america'),
   },
   {
@@ -363,7 +363,7 @@ export const QUIZ_ACHIEVEMENTS = [
     icon: ICON_FLAG_OC,
     name: 'Oceania Cleared',
     description: 'Named every sovereign flag of Oceania in a single 60s round.',
-    hint: 'Score at least 14 on the Oceania 60s quiz.',
+    hint: 'Name every sovereign flag of Oceania in a single 60s round.',
     predicate: (s) => hasCleared(s, 'oceania'),
   },
   {
@@ -371,7 +371,7 @@ export const QUIZ_ACHIEVEMENTS = [
     icon: ICON_FLAG_NA,
     name: 'North America Cleared',
     description: 'Named every sovereign flag of North America in a single 60s round.',
-    hint: 'Score at least 23 on the North America 60s quiz.',
+    hint: 'Name every sovereign flag of North America in a single 60s round.',
     predicate: (s) => hasCleared(s, 'north-america'),
   },
   {
@@ -379,7 +379,7 @@ export const QUIZ_ACHIEVEMENTS = [
     icon: ICON_FLAG_EU,
     name: 'Europe Cleared',
     description: 'Named every sovereign flag of Europe in a single 60s round.',
-    hint: 'Score at least 45 on the Europe 60s quiz.',
+    hint: 'Name every sovereign flag of Europe in a single 60s round.',
     predicate: (s) => hasCleared(s, 'europe'),
   },
   {
@@ -387,7 +387,7 @@ export const QUIZ_ACHIEVEMENTS = [
     icon: ICON_FLAG_AS,
     name: 'Asia Cleared',
     description: 'Named every sovereign flag of Asia in a single 60s round.',
-    hint: 'Score at least 47 on the Asia 60s quiz.',
+    hint: 'Name every sovereign flag of Asia in a single 60s round.',
     predicate: (s) => hasCleared(s, 'asia'),
   },
   {
@@ -395,7 +395,7 @@ export const QUIZ_ACHIEVEMENTS = [
     icon: ICON_FLAG_AF,
     name: 'Africa Cleared',
     description: 'Named every sovereign flag of Africa in a single 60s round.',
-    hint: 'Score at least 54 on the Africa 60s quiz.',
+    hint: 'Name every sovereign flag of Africa in a single 60s round.',
     predicate: (s) => hasCleared(s, 'africa'),
   },
   {
@@ -403,7 +403,7 @@ export const QUIZ_ACHIEVEMENTS = [
     icon: ICON_FLAG_WO,
     name: 'All Countries Cleared',
     description: 'Named every sovereign flag in the world in a single 60s round.',
-    hint: 'Score at least 195 on the All Countries 60s quiz.',
+    hint: 'Name every sovereign flag in the world in a single 60s round.',
     predicate: (s) => hasCleared(s, 'countries'),
   },
   {
