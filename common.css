@@ -286,7 +286,7 @@ body::before {
 .menu li.menu-divider {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--muted-color);
+  border-top: 0.5px solid var(--muted-color);
 }
 /* Privacy reads as a regular menu link (same size / weight / primary
  * colour as siblings, inherited from `.menu a` above), bracketed by a
@@ -390,7 +390,7 @@ body::before {
   bottom: 0;
   z-index: 5;
   background: #fafafa;
-  border-top: 1px solid var(--muted-color);
+  border-top: 0.5px solid var(--muted-color);
   margin-top: 16px;
   margin-left: -24px;
   margin-right: -24px;
@@ -832,7 +832,7 @@ body::before {
   bottom: 0;
   z-index: 5;
   background: #fafafa;
-  border-top: 1px solid var(--muted-color);
+  border-top: 0.5px solid var(--muted-color);
   font-size: 14px;
   color: #666;
   margin: 16px -24px 0;
