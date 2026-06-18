@@ -291,7 +291,7 @@ body::before {
 .menu li.menu-divider {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #eee;
+  border-top: 0.5px solid var(--muted-soft-color);
 }
 /* Privacy reads as a regular menu link (same size / weight / primary
  * colour as siblings, inherited from `.menu a` above), bracketed by a
@@ -301,7 +301,7 @@ body::before {
 .menu li.menu-privacy {
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 0.5px solid var(--muted-soft-color);
 }
 .menu a {
   color: var(--link-color);
@@ -340,7 +340,7 @@ body::before {
    * top region separated from the page-specific nav links below. */
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 0.5px solid var(--muted-soft-color);
 }
 .menu li.menu-nickname a {
   display: inline-flex;
