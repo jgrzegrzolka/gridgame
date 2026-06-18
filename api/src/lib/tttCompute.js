@@ -4,12 +4,14 @@
  * Pure: no DOM, no clock, no Cosmos client. Feeds the Feature O
  * achievement evaluator via `/api/v1/daily/me`.
  *
- *   - `hasPlayedTtt` — `true` iff any tttPairs row exists for this
- *     device. Drives "First Tic Tac Toe". Catches online games only
- *     (offline-vs-AI plays don't write Cosmos).
+ *   - `tttGamesPlayed` — total TTT games played across both modes
+ *     (3x3 + 9x9) and every opponent, derived as
+ *     `Σ (wins + losses + draws)` over every row. Drives the count
+ *     tiers (Ten Games, Hundred Games). Catches online games only —
+ *     offline-vs-AI plays don't write Cosmos.
  *
  *   - `hasWonTtt` — `true` iff the player has won at least one TTT
- *     game across either mode (3x3 or 9x9). Drives "First Win".
+ *     game across either mode. Drives "First Win".
  *
  *   - `hasLostTtt` — `true` iff the player has lost at least one TTT
  *     game across either mode. Drives "First Loss" — there's no shame
@@ -18,9 +20,6 @@
  * Defensive on shape: missing `m3x3` / `m9x9` sub-objects, non-numeric
  * or negative counters all collapse to 0. Real rows from
  * `mergePairResult` always have valid values.
- *
- * Draws aren't surfaced today — adding "First Draw" later is one more
- * boolean and the same loop.
  */
 
 /**
@@ -28,7 +27,7 @@
  * @typedef {{ m3x3?: ModeCounters | null, m9x9?: ModeCounters | null }} TttPairRow
  *
  * @typedef {{
- *   hasPlayedTtt: boolean,
+ *   tttGamesPlayed: number,
  *   hasWonTtt: boolean,
  *   hasLostTtt: boolean,
  * }} TttResult
@@ -44,24 +43,36 @@ function safeCount(x) {
 }
 
 /**
+ * @param {ModeCounters | null} m
+ * @returns {{ wins: number, losses: number, draws: number }}
+ */
+function modeTotals(m) {
+  if (!m) return { wins: 0, losses: 0, draws: 0 };
+  return {
+    wins: safeCount(m.wins),
+    losses: safeCount(m.losses),
+    draws: safeCount(m.draws),
+  };
+}
+
+/**
  * @param {TttPairRow[] | null | undefined} rows
  * @returns {TttResult}
  */
 function computeTttSignals(rows) {
   /** @type {TttResult} */
-  const result = { hasPlayedTtt: false, hasWonTtt: false, hasLostTtt: false };
+  const result = { tttGamesPlayed: 0, hasWonTtt: false, hasLostTtt: false };
   if (!Array.isArray(rows) || rows.length === 0) return result;
-  result.hasPlayedTtt = true;
   for (const row of rows) {
     if (!row || typeof row !== 'object') continue;
-    const m3 = row.m3x3 && typeof row.m3x3 === 'object' ? row.m3x3 : null;
-    const m9 = row.m9x9 && typeof row.m9x9 === 'object' ? row.m9x9 : null;
-    const wins = (m3 ? safeCount(m3.wins) : 0) + (m9 ? safeCount(m9.wins) : 0);
-    const losses = (m3 ? safeCount(m3.losses) : 0) + (m9 ? safeCount(m9.losses) : 0);
+    const m3 = row.m3x3 && typeof row.m3x3 === 'object' ? modeTotals(row.m3x3) : modeTotals(null);
+    const m9 = row.m9x9 && typeof row.m9x9 === 'object' ? modeTotals(row.m9x9) : modeTotals(null);
+    const wins = m3.wins + m9.wins;
+    const losses = m3.losses + m9.losses;
+    const draws = m3.draws + m9.draws;
+    result.tttGamesPlayed += wins + losses + draws;
     if (wins > 0) result.hasWonTtt = true;
     if (losses > 0) result.hasLostTtt = true;
-    // Once both have flipped to true, no point reading more rows.
-    if (result.hasWonTtt && result.hasLostTtt) break;
   }
   return result;
 }

@@ -51,7 +51,7 @@
  *   quiz60sCurrentStreak?: number,
  *   quiz60sMaxStreak?: number,
  *   quiz60sDistinctDays?: number,
- *   hasPlayedTtt?: boolean,
+ *   tttGamesPlayed?: number,
  *   hasWonTtt?: boolean,
  *   hasLostTtt?: boolean,
  * }} Snapshot
@@ -403,32 +403,30 @@ const ICON_LINK =
   '<rect x="7" y="7" width="2" height="2"/>' +
   '</svg>';
 
-// Tic-tac-toe grid — a clean # shape (two vertical bars crossed by
-// two horizontal bars). Drives "First Tic Tac Toe", and the shared
-// base shape for the win/loss tier icons below.
+// Tic-tac-toe grid — clean # shape (two vertical bars crossed by two
+// horizontal bars). Shared base for the W / L / ×10 / ×100 tier
+// icons; same pattern as BRUSH_SHAPES / GLASS_SHAPES / RING_SHAPES.
 const TTT_GRID_SHAPES =
   '<rect x="5" y="1" width="2" height="14"/>' +
   '<rect x="9" y="1" width="2" height="14"/>' +
   '<rect x="1" y="5" width="14" height="2"/>' +
   '<rect x="1" y="9" width="14" height="2"/>';
 
-const ICON_TTT_GRID =
-  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
-  TTT_GRID_SHAPES +
-  '</svg>';
-
 /**
  * @param {string} label
+ * @param {number} fontSize
  * @returns {string}
  */
-function tttGridWithLabel(label) {
+function tttGridWithLabel(label, fontSize) {
   return '<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true">' +
     TTT_GRID_SHAPES +
-    `<text x="8" y="22" font-size="8" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">${label}</text>` +
+    `<text x="8" y="22" font-size="${fontSize}" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">${label}</text>` +
     '</svg>';
 }
-const ICON_TTT_WIN = tttGridWithLabel('W');
-const ICON_TTT_LOSS = tttGridWithLabel('L');
+const ICON_TTT_WIN = tttGridWithLabel('W', 8);
+const ICON_TTT_LOSS = tttGridWithLabel('L', 8);
+const ICON_TTT_X10 = tttGridWithLabel('×10', 8);
+const ICON_TTT_X100 = tttGridWithLabel('×100', 7);
 
 // Coffee cup with rising steam — Angel Investor. Pixel-art cup body
 // (squarish) + handle on the right + two steam lines above.
@@ -849,20 +847,6 @@ export const SOCIAL_ACHIEVEMENTS = [
 /** @type {AchievementRule[]} */
 export const TTT_ACHIEVEMENTS = [
   {
-    id: 'first-ttt',
-    icon: ICON_TTT_GRID,
-    name: 'First Tic Tac Toe',
-    description: 'Played your first tic-tac-toe game.',
-    hint: 'Play a tic-tac-toe round.',
-    // `hasPlayedTtt` is derived server-side from the `tttPairs` Cosmos
-    // partition for this device — true iff at least one TTT outcome
-    // row exists. Catches online games (online TTT writes Cosmos);
-    // offline-vs-AI plays don't write Cosmos and don't trip the
-    // predicate. Acceptable trade-off for the minimum "you played
-    // TTT" rule.
-    predicate: (s) => s.hasPlayedTtt === true,
-  },
-  {
     id: 'first-ttt-win',
     icon: ICON_TTT_WIN,
     name: 'First Win',
@@ -877,6 +861,22 @@ export const TTT_ACHIEVEMENTS = [
     description: "Lost a tic-tac-toe game — happens to the best of us.",
     hint: 'Lose a tic-tac-toe round (the badge of solidarity).',
     predicate: (s) => s.hasLostTtt === true,
+  },
+  {
+    id: 'ten-ttt-games',
+    icon: ICON_TTT_X10,
+    name: 'Ten Games',
+    description: 'Played ten tic-tac-toe games.',
+    hint: 'Play ten tic-tac-toe rounds.',
+    predicate: (s) => num(s.tttGamesPlayed) >= 10,
+  },
+  {
+    id: 'hundred-ttt-games',
+    icon: ICON_TTT_X100,
+    name: 'Hundred Games',
+    description: 'Played a hundred tic-tac-toe games.',
+    hint: 'Play a hundred tic-tac-toe rounds.',
+    predicate: (s) => num(s.tttGamesPlayed) >= 100,
   },
 ];
 

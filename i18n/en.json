@@ -233,11 +233,6 @@
       "description": "Bought the developer a coffee — thanks for the support!",
       "hint": "Buy the developer a coffee from the burger menu."
     },
-    "first-ttt": {
-      "name": "First Tic Tac Toe",
-      "description": "Played your first tic-tac-toe game.",
-      "hint": "Play a tic-tac-toe round."
-    },
     "first-ttt-win": {
       "name": "First Win",
       "description": "Won your first tic-tac-toe game.",
@@ -247,6 +242,16 @@
       "name": "First Loss",
       "description": "Lost a tic-tac-toe game — happens to the best of us.",
       "hint": "Lose a tic-tac-toe round (the badge of solidarity)."
+    },
+    "ten-ttt-games": {
+      "name": "Ten Games",
+      "description": "Played ten tic-tac-toe games.",
+      "hint": "Play ten tic-tac-toe rounds."
+    },
+    "hundred-ttt-games": {
+      "name": "Hundred Games",
+      "description": "Played a hundred tic-tac-toe games.",
+      "hint": "Play a hundred tic-tac-toe rounds."
     }
   },
   "sync": {
