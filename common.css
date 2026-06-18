@@ -60,10 +60,7 @@ body {
    * below) doesn't sit on top of page content. Every page used to
    * repeat this rule in its own stylesheet; promoted here so a new
    * page picks it up automatically. ticTacToe overrides the horizontal
-   * value to fit the 9×9 grid. The bottom value (24 px) is the floor;
-   * pages that mount a sticky bottom rail (`.actions-row`,
-   * `.result-links`) bump it further via the `:has()` rule below so the
-   * fixed rail never covers page content. */
+   * value to fit the 9×9 grid. */
   padding: var(--page-top) 24px 24px;
   background: #fafafa;
   color: #1c1c1c;
@@ -76,19 +73,6 @@ body {
    * to every interactive element. Pages that want per-element tap
    * feedback should use :active / :focus styles instead. */
   -webkit-tap-highlight-color: transparent;
-}
-/* Pages that mount the sticky bottom rail (`.actions-row` for live-game
- * state, `.result-links` for the post-game/result screen) reserve
- * vertical space under their content so the fixed-positioned rail at
- * viewport bottom never covers the last line of page content. The
- * `:has(...)` selector has higher specificity than the bare `body`
- * rule above, so this `padding-bottom` wins over any per-page
- * `padding:` shorthand (e.g. ticTacToe's `padding: var(--page-top)
- * 12px 24px;`) — the cascade resolves per longhand property. The home
- * page (and any other page that doesn't mount these rails) keeps the
- * floor 24 px padding-bottom from the body rule above. */
-body:has(.actions-row, .result-links) {
-  padding-bottom: 60px;
 }
 /* When a page wraps its content in <main> for the a11y landmark,
  * <main> becomes the flex child that body's `align-items: center`
@@ -307,7 +291,7 @@ body::before {
 .menu li.menu-divider {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 0.5px solid var(--muted-soft-color);
+  border-top: 1px solid #eee;
 }
 /* Privacy reads as a regular menu link (same size / weight / primary
  * colour as siblings, inherited from `.menu a` above), bracketed by a
@@ -401,29 +385,30 @@ body::before {
  * (no per-item class spam).
  *
  * Sticky-to-bottom: when content fits the viewport the row sits at
- * Position uses the same `position: fixed` + `left/right: calc(20px +
- * --chrome-x-offset)` recipe the top chrome buttons use, so the bar
- * mirrors the menu cluster — its left edge sits at the logo's left
- * edge, its right edge at the burger's right edge, on every page
- * regardless of any parent container's max-width (TTT lobby's 360 px,
- * /profile/'s 480 px, etc.). Fixed (rather than sticky) was chosen
- * because the sticky variant of this row needs to leave its parent's
- * flow to bleed past the parent's width, and negative margins / vw
- * tricks on flex-item parents (TTT's `.lobby`, `.game`) refused to
- * shift the box reliably. Body reserves vertical space for this row
- * via `padding-bottom` on any page that mounts an `.actions-row` /
- * `.result-links`, so the fixed bar never covers page content. */
+ * its natural position (end of content); when content overflows the
+ * row pins to the viewport bottom and stays visible while the user
+ * scrolls. Background + bleed-to-edge (-24px = cancel body's 24px
+ * horizontal padding) makes the bar a solid strip across the viewport
+ * so scrolling content doesn't show through. */
 .actions-row {
-  position: fixed;
+  position: sticky;
   bottom: 0;
-  left: calc(20px + var(--chrome-x-offset));
-  right: calc(20px + var(--chrome-x-offset));
   z-index: 5;
   background: #fafafa;
   border-top: 0.5px solid var(--muted-soft-color);
+  margin-top: 16px;
+  margin-left: -24px;
+  margin-right: -24px;
   padding: 12px 24px;
   text-align: center;
-  box-sizing: border-box;
+  /* Pages whose body is a flex column with `align-items: center`
+   * (ticTacToe, flagQuiz, stats) would otherwise shrink-fit this row
+   * to its content width — making the background strip too narrow to
+   * cover sibling content beneath when sticky-pinned. `align-self:
+   * stretch` overrides the parent's centring so the row fills its
+   * parent's content box width, and the -24px horizontal margin then
+   * extends it the rest of the way to the viewport edge. */
+  align-self: stretch;
 }
 /* `·` separator that hides itself when the action right before it is
  * hidden. Used in the online ticTacToe actions-row, where `#give-up`
@@ -848,18 +833,20 @@ body::before {
  * this row sits below a heavy result panel; the sticky behaviour is the
  * only shared mechanism. */
 .result-links {
-  position: fixed;
+  position: sticky;
   bottom: 0;
-  left: calc(20px + var(--chrome-x-offset));
-  right: calc(20px + var(--chrome-x-offset));
   z-index: 5;
   background: #fafafa;
   border-top: 0.5px solid var(--muted-soft-color);
   font-size: 14px;
   color: #666;
+  margin: 16px -24px 0;
   padding: 12px 24px;
   text-align: center;
-  box-sizing: border-box;
+  /* Same flex-parent compensation as `.actions-row` — without this the
+   * row shrink-fits on pages whose body is a flex column with
+   * `align-items: center`. */
+  align-self: stretch;
 }
 .result-links a {
   color: var(--link-color);
