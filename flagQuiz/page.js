@@ -239,11 +239,19 @@ export function bootFlagQuiz() {
       // showing it above a "Loading…" spinner reads as a promise the
       // page hasn't kept yet. Reveals on first non-loading paint.
       leaderboardTitleEl.hidden = leaderboardState.state === 'loading';
+      // Endurance mode stores `score = wrongCount` (lower wins). Showing
+      // that as the leaderboard column reads as "Janko 0" — which the
+      // player parses as "Janko got 0 correct" instead of "Janko got 0
+      // wrong". Transform back to a correct-count display for that mode.
+      // Timed (60s) mode already stores `score = correctCount`, no
+      // transform needed.
+      const formatScore = timed ? undefined : (n) => String(target - n);
       const subtree = renderLeaderboard({
         state: leaderboardState.state,
         data: leaderboardState.data,
         ownDeviceId: deviceId,
         t,
+        formatScore,
       });
       leaderboardBodyEl.innerHTML = '';
       leaderboardBodyEl.appendChild(subtree);
