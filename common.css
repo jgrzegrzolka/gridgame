@@ -63,6 +63,11 @@ body {
    * scroll container (`overflow-x: hidden` would). See the `html`
    * comment above for why that matters for sticky positioning. */
   overflow-x: clip;
+  /* Suppress the default blue/grey iOS Safari + Android Chrome tap
+   * highlight that flashes on every link / button tap. Inherits down
+   * to every interactive element. Pages that want per-element tap
+   * feedback should use :active / :focus styles instead. */
+  -webkit-tap-highlight-color: transparent;
 }
 /* When a page wraps its content in <main> for the a11y landmark,
  * <main> becomes the flex child that body's `align-items: center`
