@@ -100,7 +100,7 @@
       "all": "wszystkie"
     },
     "leaderboard": {
-      "title": "Top 10: 24h",
+      "title": "Top 10: 3 dni",
       "loading": "Ładowanie rankingu…",
       "failed": "Nie udało się załadować rankingu.",
       "empty": "Bądź pierwszy!",

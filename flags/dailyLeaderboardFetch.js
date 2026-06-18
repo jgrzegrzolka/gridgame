@@ -1,5 +1,5 @@
 /**
- * GET the rolling-24h leaderboard for a flag-quiz configKey. Never throws
+ * GET the rolling-72h leaderboard for a flag-quiz configKey. Never throws
  * — callers fire-and-forget and the renderer shows a polite failed state.
  * Drops malformed `top` rows and `you` so the renderer doesn't have to
  * re-guard every field.

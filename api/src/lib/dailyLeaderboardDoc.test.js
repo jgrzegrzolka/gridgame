@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const {
   todayDateKey,
   yesterdayDateKey,
+  dateKeyDaysAgo,
   makePk,
   buildDailyLeaderboardDoc,
   mergeDailyLeaderboard,
@@ -41,6 +42,26 @@ test('yesterdayDateKey: at one ms past UTC midnight, yesterday is still D-1', ()
 test('yesterdayDateKey: crosses month boundary correctly', () => {
   const earlyJuly = Date.UTC(2026, 6, 1, 6, 0, 0);
   assert.equal(yesterdayDateKey(earlyJuly), '2026-06-30');
+});
+
+test('dateKeyDaysAgo: n=0 is today, n=1 is yesterday', () => {
+  // Sanity that the generalised helper matches the named shims.
+  assert.equal(dateKeyDaysAgo(NOW, 0), todayDateKey(NOW));
+  assert.equal(dateKeyDaysAgo(NOW, 1), yesterdayDateKey(NOW));
+});
+
+test('dateKeyDaysAgo: walks back across the rolling-72h window (n=0..3)', () => {
+  // 4 distinct date keys for the 4 partitions the leaderboard reader
+  // fans out across.
+  assert.equal(dateKeyDaysAgo(NOW, 0), '2026-06-12');
+  assert.equal(dateKeyDaysAgo(NOW, 1), '2026-06-11');
+  assert.equal(dateKeyDaysAgo(NOW, 2), '2026-06-10');
+  assert.equal(dateKeyDaysAgo(NOW, 3), '2026-06-09');
+});
+
+test('dateKeyDaysAgo: crosses month boundary correctly going back', () => {
+  const earlyJuly = Date.UTC(2026, 6, 2, 6, 0, 0);
+  assert.equal(dateKeyDaysAgo(earlyJuly, 3), '2026-06-29');
 });
 
 test('makePk: joins configKey + dateKey with a pipe', () => {
