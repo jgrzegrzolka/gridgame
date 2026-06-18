@@ -105,7 +105,6 @@ body::before {
   right: 0;
   height: var(--page-top);
   background: #fafafa;
-  border-bottom: 1px solid var(--secondary-color);
   z-index: 10;
 }
 /* Top-left wordmark — pairs with the chrome cluster (lang / flag /
