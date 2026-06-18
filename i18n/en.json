@@ -20,7 +20,218 @@
   "profile": {
     "title": "Your profile — Yet Another Quiz",
     "achievements": {
-      "loading": "Loading achievements…"
+      "loading": "Loading achievements…",
+      "title": "Achievements",
+      "statusEarned": "Earned",
+      "statusLocked": "Locked"
+    }
+  },
+  "achievementUnlocked": "Achievement unlocked",
+  "achievement": {
+    "first-daily": {
+      "name": "First Daily",
+      "description": "Completed your first daily puzzle.",
+      "hint": "Finish one daily puzzle."
+    },
+    "daily-habit": {
+      "name": "Daily Habit",
+      "description": "Played the daily puzzle 7 days in a row.",
+      "hint": "Reach a 7-day streak."
+    },
+    "two-weeks-strong": {
+      "name": "Two Weeks Strong",
+      "description": "Kept the daily streak going for 14 days.",
+      "hint": "Reach a 14-day streak."
+    },
+    "monthly-devotee": {
+      "name": "Monthly Devotee",
+      "description": "A full month of daily puzzles without missing one.",
+      "hint": "Reach a 30-day streak."
+    },
+    "honest-attempt": {
+      "name": "Honest Attempt",
+      "description": "Submitted a daily with some flags found and some wrong guesses — proof you played.",
+      "hint": "Finish a daily with at least one flag found and at least one wrong guess."
+    },
+    "ten-honest-attempts": {
+      "name": "Ten Honest Attempts",
+      "description": "Submitted ten dailies with some flags found and some wrong guesses.",
+      "hint": "Finish ten dailies with at least one flag found and at least one wrong guess."
+    },
+    "hundred-honest-attempts": {
+      "name": "Hundred Honest Attempts",
+      "description": "Submitted a hundred dailies with some flags found and some wrong guesses.",
+      "hint": "Finish a hundred dailies with at least one flag found and at least one wrong guess."
+    },
+    "clean-sweep": {
+      "name": "Clean Sweep",
+      "description": "Finished a daily puzzle 100%.",
+      "hint": "Find every answer in one daily puzzle."
+    },
+    "ten-clean-sweeps": {
+      "name": "Ten Clean Sweeps",
+      "description": "Finished ten daily puzzles 100%.",
+      "hint": "Get a clean sweep on ten daily puzzles."
+    },
+    "hundred-clean-sweeps": {
+      "name": "Hundred Clean Sweeps",
+      "description": "Finished a hundred daily puzzles 100%.",
+      "hint": "Get a clean sweep on a hundred daily puzzles."
+    },
+    "flawless-sweep": {
+      "name": "Flawless Sweep",
+      "description": "Finished a daily 100% with no wrong guesses.",
+      "hint": "Get a clean sweep without any wrong answer."
+    },
+    "empty-slate": {
+      "name": "Empty Slate",
+      "description": "Submitted a daily without finding a single flag.",
+      "hint": "Submit a daily with zero flags found (the badge of solidarity)."
+    },
+    "first-sprint": {
+      "name": "First Sprint",
+      "description": "Finished your first 60s quiz.",
+      "hint": "Finish one 60s flag quiz."
+    },
+    "cartographer": {
+      "name": "Cartographer",
+      "description": "Tried every 60s quiz variant — all 7 continents (plus All Countries).",
+      "hint": "Finish a 60s round in every variant."
+    },
+    "sprint-habit": {
+      "name": "Sprint Habit",
+      "description": "Played a 60s quiz 7 days in a row.",
+      "hint": "Reach a 7-day 60s quiz streak."
+    },
+    "steady-sprinter": {
+      "name": "Steady Sprinter",
+      "description": "Played a 60s quiz 14 days in a row.",
+      "hint": "Reach a 14-day 60s quiz streak."
+    },
+    "monthly-sprinter": {
+      "name": "Monthly Sprinter",
+      "description": "Played a 60s quiz 30 days in a row.",
+      "hint": "Reach a 30-day 60s quiz streak."
+    },
+    "quiz-centurion": {
+      "name": "Quiz Centurion",
+      "description": "Played a 60s quiz on a hundred different days.",
+      "hint": "Play a 60s quiz on 100 different days."
+    },
+    "quick-recall": {
+      "name": "Quick Recall",
+      "description": "Scored 30 in a single 60s quiz.",
+      "hint": "Reach a 60s quiz score of 30."
+    },
+    "snap-recognition": {
+      "name": "Snap Recognition",
+      "description": "Scored 40 in a single 60s quiz.",
+      "hint": "Reach a 60s quiz score of 40."
+    },
+    "flag-whisperer": {
+      "name": "Flag Whisperer",
+      "description": "Scored 50 in a single 60s quiz.",
+      "hint": "Reach a 60s quiz score of 50."
+    },
+    "south-america-cleared": {
+      "name": "South America Cleared",
+      "description": "Named every sovereign flag of South America in a single 60s round.",
+      "hint": "Name every sovereign flag of South America in a single 60s round."
+    },
+    "oceania-cleared": {
+      "name": "Oceania Cleared",
+      "description": "Named every sovereign flag of Oceania in a single 60s round.",
+      "hint": "Name every sovereign flag of Oceania in a single 60s round."
+    },
+    "north-america-cleared": {
+      "name": "North America Cleared",
+      "description": "Named every sovereign flag of North America in a single 60s round.",
+      "hint": "Name every sovereign flag of North America in a single 60s round."
+    },
+    "europe-cleared": {
+      "name": "Europe Cleared",
+      "description": "Named every sovereign flag of Europe in a single 60s round.",
+      "hint": "Name every sovereign flag of Europe in a single 60s round."
+    },
+    "asia-cleared": {
+      "name": "Asia Cleared",
+      "description": "Named every sovereign flag of Asia in a single 60s round.",
+      "hint": "Name every sovereign flag of Asia in a single 60s round."
+    },
+    "africa-cleared": {
+      "name": "Africa Cleared",
+      "description": "Named every sovereign flag of Africa in a single 60s round.",
+      "hint": "Name every sovereign flag of Africa in a single 60s round."
+    },
+    "all-countries-cleared": {
+      "name": "All Countries Cleared",
+      "description": "Named every sovereign flag in the world in a single 60s round.",
+      "hint": "Name every sovereign flag in the world in a single 60s round."
+    },
+    "atlas-champion": {
+      "name": "Atlas Champion",
+      "description": "Cleared every 60s quiz variant — the ultimate trophy.",
+      "hint": "Clear every continent AND the All Countries variant."
+    },
+    "marathon": {
+      "name": "Marathon",
+      "description": "Finished your first endurance quiz.",
+      "hint": "Finish one endurance quiz."
+    },
+    "world-tour": {
+      "name": "World Tour",
+      "description": "Finished an endurance quiz in every variant — all 7.",
+      "hint": "Finish an endurance round in every variant."
+    },
+    "iron-memory": {
+      "name": "Iron Memory",
+      "description": "Finished an endurance quiz with no more than 2 wrong guesses.",
+      "hint": "Finish an endurance round with at most 2 wrong guesses."
+    },
+    "perfect-round": {
+      "name": "Perfect Round",
+      "description": "Finished an endurance quiz with no wrong guesses.",
+      "hint": "Finish an endurance round without any wrong guess."
+    },
+    "all-countries-mastered": {
+      "name": "All Countries Mastered",
+      "description": "Named every sovereign flag in the world in an endurance round with no wrong guesses.",
+      "hint": "Name every sovereign flag in the world without any wrong guess."
+    },
+    "endurance-atlas": {
+      "name": "Endurance Atlas",
+      "description": "Mastered every endurance quiz variant — the depth-of-knowledge trophy.",
+      "hint": "Finish every endurance variant without any wrong guess."
+    },
+    "identified": {
+      "name": "Identified",
+      "description": "Set a nickname on your profile.",
+      "hint": "Pick a nickname on your profile page."
+    },
+    "matrix": {
+      "name": "Matrix",
+      "description": "Linked two devices via the sync flow.",
+      "hint": "Link a second device on the Sync page."
+    },
+    "daily-sharer": {
+      "name": "Daily Sharer",
+      "description": "Shared a daily puzzle result.",
+      "hint": "Tap share on a daily puzzle result."
+    },
+    "quiz-sharer": {
+      "name": "Quiz Sharer",
+      "description": "Shared a flag quiz result.",
+      "hint": "Tap share on a flag quiz result."
+    },
+    "custom-crafter": {
+      "name": "Custom Crafter",
+      "description": "Shared a custom puzzle you built in Make a puzzle.",
+      "hint": "Tap share on a custom-puzzle result."
+    },
+    "angel-investor": {
+      "name": "Angel Investor",
+      "description": "Bought the developer a coffee — thanks for the support!",
+      "hint": "Buy the developer a coffee from the burger menu."
     }
   },
   "sync": {

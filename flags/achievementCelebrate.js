@@ -19,6 +19,8 @@
  * consumer pages don't have to drop any HTML.
  */
 
+import { t } from '../i18n.js';
+
 /** @typedef {import('./achievements.js').AchievementRule} AchievementRule */
 
 const STAGGER_MS = 250;
@@ -82,7 +84,7 @@ function buildCard(rule, i, dialog, onClose) {
 
   const hat = document.createElement('p');
   hat.className = 'ach-celebrate-hat';
-  hat.textContent = 'Achievement unlocked';
+  hat.textContent = t('achievementUnlocked', 'Achievement unlocked');
   card.appendChild(hat);
 
   const icon = document.createElement('span');
@@ -95,7 +97,7 @@ function buildCard(rule, i, dialog, onClose) {
 
   const name = document.createElement('h3');
   name.className = 'ach-celebrate-name';
-  name.textContent = rule.name;
+  name.textContent = t(`achievement.${rule.id}.name`, rule.name);
   card.appendChild(name);
 
   card.addEventListener('click', () => openInfoDialog(dialog, rule));
@@ -114,11 +116,11 @@ function openInfoDialog(dialog, rule) {
   const iconEl = dialog.querySelector('.achievement-info-icon');
   if (iconEl) iconEl.innerHTML = rule.icon;
   const nameEl = dialog.querySelector('.achievement-info-name');
-  if (nameEl) nameEl.textContent = rule.name;
+  if (nameEl) nameEl.textContent = t(`achievement.${rule.id}.name`, rule.name);
   const statusEl = dialog.querySelector('.achievement-info-status');
-  if (statusEl) statusEl.textContent = 'Earned';
+  if (statusEl) statusEl.textContent = t('profile.achievements.statusEarned', 'Earned');
   const bodyEl = dialog.querySelector('.achievement-info-body');
-  if (bodyEl) bodyEl.textContent = rule.description;
+  if (bodyEl) bodyEl.textContent = t(`achievement.${rule.id}.description`, rule.description);
   if (typeof dialog.showModal === 'function') dialog.showModal();
   else dialog.setAttribute('open', '');
 }

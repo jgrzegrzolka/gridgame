@@ -20,7 +20,218 @@
   "profile": {
     "title": "Twój profil — Yet Another Quiz",
     "achievements": {
-      "loading": "Ładowanie osiągnięć…"
+      "loading": "Ładowanie osiągnięć…",
+      "title": "Osiągnięcia",
+      "statusEarned": "Zdobyte",
+      "statusLocked": "Zablokowane"
+    }
+  },
+  "achievementUnlocked": "Osiągnięcie zdobyte",
+  "achievement": {
+    "first-daily": {
+      "name": "Pierwsza zagadka",
+      "description": "Ukończono pierwszą codzienną zagadkę.",
+      "hint": "Ukończ jedną codzienną zagadkę."
+    },
+    "daily-habit": {
+      "name": "Codzienny nawyk",
+      "description": "Zagrano w codzienną zagadkę 7 dni z rzędu.",
+      "hint": "Osiągnij 7-dniową serię."
+    },
+    "two-weeks-strong": {
+      "name": "Dwa tygodnie z rzędu",
+      "description": "Utrzymano serię codziennych zagadek przez 14 dni.",
+      "hint": "Osiągnij 14-dniową serię."
+    },
+    "monthly-devotee": {
+      "name": "Miesięczny weteran",
+      "description": "Pełny miesiąc codziennych zagadek bez ani jednej przerwy.",
+      "hint": "Osiągnij 30-dniową serię."
+    },
+    "honest-attempt": {
+      "name": "Szczera próba",
+      "description": "Oddano codzienną zagadkę z trafionymi i nietrafionymi odpowiedziami — dowód, że grałeś.",
+      "hint": "Ukończ codzienną zagadkę z co najmniej jedną trafioną flagą i co najmniej jedną pomyłką."
+    },
+    "ten-honest-attempts": {
+      "name": "Dziesięć szczerych prób",
+      "description": "Oddano dziesięć codziennych zagadek z trafionymi i nietrafionymi odpowiedziami.",
+      "hint": "Ukończ dziesięć codziennych zagadek z co najmniej jedną trafioną flagą i co najmniej jedną pomyłką."
+    },
+    "hundred-honest-attempts": {
+      "name": "Sto szczerych prób",
+      "description": "Oddano sto codziennych zagadek z trafionymi i nietrafionymi odpowiedziami.",
+      "hint": "Ukończ sto codziennych zagadek z co najmniej jedną trafioną flagą i co najmniej jedną pomyłką."
+    },
+    "clean-sweep": {
+      "name": "Czyste rozwiązanie",
+      "description": "Ukończono codzienną zagadkę w 100%.",
+      "hint": "Znajdź wszystkie flagi w jednej codziennej zagadce."
+    },
+    "ten-clean-sweeps": {
+      "name": "Dziesięć czystych rozwiązań",
+      "description": "Ukończono dziesięć codziennych zagadek w 100%.",
+      "hint": "Rozwiąż w pełni dziesięć codziennych zagadek."
+    },
+    "hundred-clean-sweeps": {
+      "name": "Sto czystych rozwiązań",
+      "description": "Ukończono sto codziennych zagadek w 100%.",
+      "hint": "Rozwiąż w pełni sto codziennych zagadek."
+    },
+    "flawless-sweep": {
+      "name": "Bezbłędne rozwiązanie",
+      "description": "Ukończono codzienną zagadkę w 100% bez żadnego błędu.",
+      "hint": "Rozwiąż w pełni codzienną zagadkę bez błędnych odpowiedzi."
+    },
+    "empty-slate": {
+      "name": "Pusta tabliczka",
+      "description": "Oddano codzienną zagadkę bez ani jednej trafionej flagi.",
+      "hint": "Oddaj codzienną zagadkę z zerem trafień (odznaka solidarności)."
+    },
+    "first-sprint": {
+      "name": "Pierwszy sprint",
+      "description": "Ukończono pierwszy quiz 60s.",
+      "hint": "Ukończ jeden quiz 60s."
+    },
+    "cartographer": {
+      "name": "Kartograf",
+      "description": "Wypróbowano każdy wariant quizu 60s — wszystkie 7 kontynentów (plus Wszystkie kraje).",
+      "hint": "Ukończ rundę 60s w każdym wariancie."
+    },
+    "sprint-habit": {
+      "name": "Nawyk sprintera",
+      "description": "Zagrano w quiz 60s 7 dni z rzędu.",
+      "hint": "Osiągnij 7-dniową serię w quizie 60s."
+    },
+    "steady-sprinter": {
+      "name": "Wytrwały sprinter",
+      "description": "Zagrano w quiz 60s 14 dni z rzędu.",
+      "hint": "Osiągnij 14-dniową serię w quizie 60s."
+    },
+    "monthly-sprinter": {
+      "name": "Miesięczny sprinter",
+      "description": "Zagrano w quiz 60s 30 dni z rzędu.",
+      "hint": "Osiągnij 30-dniową serię w quizie 60s."
+    },
+    "quiz-centurion": {
+      "name": "Quizowy centurion",
+      "description": "Zagrano w quiz 60s przez sto różnych dni.",
+      "hint": "Zagraj w quiz 60s przez 100 różnych dni."
+    },
+    "quick-recall": {
+      "name": "Błyskawiczna pamięć",
+      "description": "Zdobyto 30 punktów w jednym quizie 60s.",
+      "hint": "Zdobądź 30 punktów w quizie 60s."
+    },
+    "snap-recognition": {
+      "name": "Bystre oko",
+      "description": "Zdobyto 40 punktów w jednym quizie 60s.",
+      "hint": "Zdobądź 40 punktów w quizie 60s."
+    },
+    "flag-whisperer": {
+      "name": "Zaklinacz flag",
+      "description": "Zdobyto 50 punktów w jednym quizie 60s.",
+      "hint": "Zdobądź 50 punktów w quizie 60s."
+    },
+    "south-america-cleared": {
+      "name": "Ameryka Południowa zaliczona",
+      "description": "Nazwano każdą suwerenną flagę Ameryki Południowej w jednej rundzie 60s.",
+      "hint": "Nazwij każdą suwerenną flagę Ameryki Południowej w jednej rundzie 60s."
+    },
+    "oceania-cleared": {
+      "name": "Oceania zaliczona",
+      "description": "Nazwano każdą suwerenną flagę Oceanii w jednej rundzie 60s.",
+      "hint": "Nazwij każdą suwerenną flagę Oceanii w jednej rundzie 60s."
+    },
+    "north-america-cleared": {
+      "name": "Ameryka Północna zaliczona",
+      "description": "Nazwano każdą suwerenną flagę Ameryki Północnej w jednej rundzie 60s.",
+      "hint": "Nazwij każdą suwerenną flagę Ameryki Północnej w jednej rundzie 60s."
+    },
+    "europe-cleared": {
+      "name": "Europa zaliczona",
+      "description": "Nazwano każdą suwerenną flagę Europy w jednej rundzie 60s.",
+      "hint": "Nazwij każdą suwerenną flagę Europy w jednej rundzie 60s."
+    },
+    "asia-cleared": {
+      "name": "Azja zaliczona",
+      "description": "Nazwano każdą suwerenną flagę Azji w jednej rundzie 60s.",
+      "hint": "Nazwij każdą suwerenną flagę Azji w jednej rundzie 60s."
+    },
+    "africa-cleared": {
+      "name": "Afryka zaliczona",
+      "description": "Nazwano każdą suwerenną flagę Afryki w jednej rundzie 60s.",
+      "hint": "Nazwij każdą suwerenną flagę Afryki w jednej rundzie 60s."
+    },
+    "all-countries-cleared": {
+      "name": "Wszystkie kraje zaliczone",
+      "description": "Nazwano każdą suwerenną flagę na świecie w jednej rundzie 60s.",
+      "hint": "Nazwij każdą suwerenną flagę na świecie w jednej rundzie 60s."
+    },
+    "atlas-champion": {
+      "name": "Mistrz atlasu",
+      "description": "Zaliczono każdy wariant quizu 60s — ostateczne trofeum.",
+      "hint": "Zalicz każdy kontynent ORAZ wariant Wszystkie kraje."
+    },
+    "marathon": {
+      "name": "Maraton",
+      "description": "Ukończono pierwszy quiz na wytrzymałość.",
+      "hint": "Ukończ jeden quiz na wytrzymałość."
+    },
+    "world-tour": {
+      "name": "Wycieczka dookoła świata",
+      "description": "Ukończono quiz na wytrzymałość w każdym wariancie — wszystkich 7.",
+      "hint": "Ukończ rundę na wytrzymałość w każdym wariancie."
+    },
+    "iron-memory": {
+      "name": "Żelazna pamięć",
+      "description": "Ukończono quiz na wytrzymałość z najwyżej 2 błędami.",
+      "hint": "Ukończ rundę na wytrzymałość z najwyżej 2 błędami."
+    },
+    "perfect-round": {
+      "name": "Idealna runda",
+      "description": "Ukończono quiz na wytrzymałość bez żadnego błędu.",
+      "hint": "Ukończ rundę na wytrzymałość bez błędów."
+    },
+    "all-countries-mastered": {
+      "name": "Wszystkie kraje opanowane",
+      "description": "Nazwano każdą suwerenną flagę na świecie w rundzie na wytrzymałość bez żadnego błędu.",
+      "hint": "Nazwij każdą suwerenną flagę na świecie bez ani jednego błędu."
+    },
+    "endurance-atlas": {
+      "name": "Atlas wytrzymałości",
+      "description": "Opanowano każdy wariant quizu na wytrzymałość — trofeum głębokiej wiedzy.",
+      "hint": "Ukończ każdy wariant na wytrzymałość bez błędów."
+    },
+    "identified": {
+      "name": "Zidentyfikowany",
+      "description": "Ustawiono pseudonim w profilu.",
+      "hint": "Wybierz pseudonim na stronie profilu."
+    },
+    "matrix": {
+      "name": "Matrix",
+      "description": "Połączono dwa urządzenia przez synchronizację.",
+      "hint": "Połącz drugie urządzenie na stronie Synchronizacji."
+    },
+    "daily-sharer": {
+      "name": "Dzielący się zagadką",
+      "description": "Udostępniono wynik codziennej zagadki.",
+      "hint": "Dotknij udostępnij na wyniku codziennej zagadki."
+    },
+    "quiz-sharer": {
+      "name": "Dzielący się quizem",
+      "description": "Udostępniono wynik quizu flag.",
+      "hint": "Dotknij udostępnij na wyniku quizu flag."
+    },
+    "custom-crafter": {
+      "name": "Twórca łamigłówek",
+      "description": "Udostępniono własną łamigłówkę utworzoną w Stwórz łamigłówkę.",
+      "hint": "Dotknij udostępnij na wyniku własnej łamigłówki."
+    },
+    "angel-investor": {
+      "name": "Anioł biznesu",
+      "description": "Kupiono kawę dla twórcy — dzięki za wsparcie!",
+      "hint": "Kup kawę dla twórcy z menu hamburgera."
     }
   },
   "sync": {
