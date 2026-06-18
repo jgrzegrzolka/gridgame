@@ -60,7 +60,10 @@ body {
    * below) doesn't sit on top of page content. Every page used to
    * repeat this rule in its own stylesheet; promoted here so a new
    * page picks it up automatically. ticTacToe overrides the horizontal
-   * value to fit the 9×9 grid. */
+   * value to fit the 9×9 grid. The bottom value (24 px) is the floor;
+   * pages that mount a sticky bottom rail (`.actions-row`,
+   * `.result-links`) bump it further via the `:has()` rule below so the
+   * fixed rail never covers page content. */
   padding: var(--page-top) 24px 24px;
   background: #fafafa;
   color: #1c1c1c;
@@ -73,6 +76,19 @@ body {
    * to every interactive element. Pages that want per-element tap
    * feedback should use :active / :focus styles instead. */
   -webkit-tap-highlight-color: transparent;
+}
+/* Pages that mount the sticky bottom rail (`.actions-row` for live-game
+ * state, `.result-links` for the post-game/result screen) reserve
+ * vertical space under their content so the fixed-positioned rail at
+ * viewport bottom never covers the last line of page content. The
+ * `:has(...)` selector has higher specificity than the bare `body`
+ * rule above, so this `padding-bottom` wins over any per-page
+ * `padding:` shorthand (e.g. ticTacToe's `padding: var(--page-top)
+ * 12px 24px;`) — the cascade resolves per longhand property. The home
+ * page (and any other page that doesn't mount these rails) keeps the
+ * floor 24 px padding-bottom from the body rule above. */
+body:has(.actions-row, .result-links) {
+  padding-bottom: 60px;
 }
 /* When a page wraps its content in <main> for the a11y landmark,
  * <main> becomes the flex child that body's `align-items: center`
@@ -385,32 +401,26 @@ body::before {
  * (no per-item class spam).
  *
  * Sticky-to-bottom: when content fits the viewport the row sits at
- * its natural position (end of content); when content overflows the
- * row pins to the viewport bottom and stays visible while the user
- * scrolls. Width matches the top chrome cluster: inset by
- * `20px + --chrome-x-offset` from each viewport edge so the hairline at
- * the row's top edge runs from the logo's left edge to the burger's
- * right edge — the visual "menu width" — regardless of the parent's
- * own max-width (TTT lobby's 360 px cap, /profile/'s 480 px cap, etc.).
- * The `margin-left` calc shifts the row out of its parent's flow:
- *   target_left_in_viewport = parent_left + margin_left
- * solving for margin_left with target_left = chrome_inset and a
- * centered parent (parent_left = (100vw - parent_width)/2):
- *   margin_left = chrome_inset - 50vw + parent_width/2
- *              = chrome_inset - 50vw + 50%
- * (margin percentages resolve against the parent's width). All pages
- * use centered main content, so this lands consistently. `overflow-x:
- * clip` on body hides any sub-pixel overflow without producing a
- * horizontal scrollbar. */
+ * Position uses the same `position: fixed` + `left/right: calc(20px +
+ * --chrome-x-offset)` recipe the top chrome buttons use, so the bar
+ * mirrors the menu cluster — its left edge sits at the logo's left
+ * edge, its right edge at the burger's right edge, on every page
+ * regardless of any parent container's max-width (TTT lobby's 360 px,
+ * /profile/'s 480 px, etc.). Fixed (rather than sticky) was chosen
+ * because the sticky variant of this row needs to leave its parent's
+ * flow to bleed past the parent's width, and negative margins / vw
+ * tricks on flex-item parents (TTT's `.lobby`, `.game`) refused to
+ * shift the box reliably. Body reserves vertical space for this row
+ * via `padding-bottom` on any page that mounts an `.actions-row` /
+ * `.result-links`, so the fixed bar never covers page content. */
 .actions-row {
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: calc(20px + var(--chrome-x-offset));
+  right: calc(20px + var(--chrome-x-offset));
   z-index: 5;
   background: #fafafa;
   border-top: 0.5px solid var(--muted-soft-color);
-  margin-top: 16px;
-  width: calc(100vw - 2 * (20px + var(--chrome-x-offset)));
-  margin-left: calc(20px + var(--chrome-x-offset) - 50vw + 50%);
   padding: 12px 24px;
   text-align: center;
   box-sizing: border-box;
@@ -838,16 +848,15 @@ body::before {
  * this row sits below a heavy result panel; the sticky behaviour is the
  * only shared mechanism. */
 .result-links {
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: calc(20px + var(--chrome-x-offset));
+  right: calc(20px + var(--chrome-x-offset));
   z-index: 5;
   background: #fafafa;
   border-top: 0.5px solid var(--muted-soft-color);
   font-size: 14px;
   color: #666;
-  margin-top: 16px;
-  width: calc(100vw - 2 * (20px + var(--chrome-x-offset)));
-  margin-left: calc(20px + var(--chrome-x-offset) - 50vw + 50%);
   padding: 12px 24px;
   text-align: center;
   box-sizing: border-box;
