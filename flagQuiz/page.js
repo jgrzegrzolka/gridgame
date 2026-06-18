@@ -36,9 +36,8 @@ import { fetchLeaderboard } from '../flags/dailyLeaderboardFetch.js';
 import { renderLeaderboard } from '../flags/dailyLeaderboardRender.js';
 import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
-import { fetchDailyMe } from '../daily/streakClient.js';
-import { diffNewlyEarnedAchievements } from '../flags/achievements.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
+import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -81,16 +80,13 @@ export function bootFlagQuiz() {
     deviceId, store: window.localStorage, identityKey: IDENTITY_STORAGE_KEY,
   });
 
-  // Pre-fetch the achievement snapshot so the post-finish diff (below
-  // in the timed-mode branch) has a real pre-submit baseline. Without
-  // this, diffNewlyEarnedAchievements(null, fresh) would return every
-  // already-earned rule — a player who already had "First Sprint" or
-  // any daily-side badge would see their entire set re-cascade on
-  // their next quiz finish. Cached path (no bypass) — the post-finish
-  // refetch uses bypassCache to pick up the just-submitted PB.
-  /** @type {import('../daily/streakClient.js').StreakResult | null} */
-  let snapshotBaseline = null;
-  void fetchDailyMe(deviceId).then((s) => { if (s) snapshotBaseline = s; });
+  // Achievement baseline lives in flags/achievementsBaseline.js — the
+  // shared module so this page's finish diff AND any post-action
+  // share/coffee diff use the same axis (no double-firing across two
+  // earn moments). common.js's wireBurgerDismiss already primes it,
+  // but doing it again here is idempotent and avoids racing the
+  // burger-wiring call.
+  primeAchievementsBaseline(deviceId);
 
   const params = new URLSearchParams(window.location.search);
   const urlVariant = params.get('v');
@@ -473,12 +469,18 @@ export function bootFlagQuiz() {
           setTimeout(() => btn.classList.remove('copied'), 1500);
         }
         if (r === 'shared' || r === 'copied') {
+          // Achievement diff chains off the event POST so the
+          // bypassCache read sees the just-recorded share row.
+          // Catches "Quiz Sharer".
           void submitEngagementEvent(deviceId, {
             kind: 'share',
             payload: {
               surface: 'flagquiz',
               contextHint: quizRecordConfigKey(key, mode, includeAll),
             },
+          }).then(async () => {
+            const newly = await refreshAchievementsAndDiff(deviceId);
+            if (newly.length > 0) void celebrate(newly);
           });
         }
       };
@@ -551,15 +553,12 @@ export function bootFlagQuiz() {
         // Achievement diff: chain off the leaderboard cycle so the
         // bypassCache fetch lands AFTER submitQuizRecord has settled
         // server-side (the cycle awaits the submit internally before
-        // resolving). bypassCache → server skips its 60s window so the
-        // just-submitted PB row is reflected in the snapshot used for
-        // the diff. Same shape as daily/page.js's post-finish flow.
+        // resolving). Uses the shared baseline so this finish and any
+        // post-finish share / coffee click on the same page session
+        // share one diff axis (no double-firing).
         void cycleP.then(async () => {
-          const fresh = await fetchDailyMe(deviceId, { bypassCache: true });
-          if (!fresh) return;
-          const newlyEarned = diffNewlyEarnedAchievements(snapshotBaseline, fresh);
-          snapshotBaseline = fresh;
-          if (newlyEarned.length > 0) void celebrate(newlyEarned);
+          const newly = await refreshAchievementsAndDiff(deviceId);
+          if (newly.length > 0) void celebrate(newly);
         });
       } else {
         // Count mode is one-shot per question, so correct + wrong = target.
@@ -583,7 +582,7 @@ export function bootFlagQuiz() {
           kind: 'quiz_play',
           payload: { mode: 'all' },
         });
-        void runLeaderboardCycle({
+        const cycleP = runLeaderboardCycle({
           submitImpl: () => submitQuizRecord({
             deviceId, configKey,
             score: wrongCount, durationMs: elapsed, lowerWins: true,
@@ -600,6 +599,15 @@ export function bootFlagQuiz() {
         });
         if (tier === 'fireworks') launchFireworks();
         else if (tier === 'confetti') launchConfetti({ intensity });
+        // Achievement diff — mirrors the 60s branch. Chains off the
+        // leaderboard cycle so the bypassCache fetch lands AFTER
+        // submitQuizRecord has settled server-side. Catches the
+        // endurance tier (Marathon, World Tour, Iron Memory, Perfect
+        // Round, All Countries Mastered, Endurance Atlas).
+        void cycleP.then(async () => {
+          const newly = await refreshAchievementsAndDiff(deviceId);
+          if (newly.length > 0) void celebrate(newly);
+        });
       }
 
       mountShareButton(answeredCount);

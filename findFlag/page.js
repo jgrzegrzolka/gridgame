@@ -28,6 +28,8 @@ import { refreshChooserI18n } from './chooserI18n.js';
 import { shareUrl } from '../common.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
+import { refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
+import { celebrate } from '../flags/achievementCelebrate.js';
 
 /**
  * Options the Random button (and the result page's "Random next" link)
@@ -86,12 +88,17 @@ function attachShareHandler(el) {
     if (result === 'shared' || result === 'copied') {
       const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
       const filterRaw = new URLSearchParams(window.location.search).get('f') ?? '';
+      // Achievement diff chains off the event POST so the bypassCache
+      // read sees the just-recorded share row. Catches "Custom Crafter".
       void submitEngagementEvent(deviceId, {
         kind: 'share',
         payload: {
           surface: 'findflag',
           ...(filterRaw ? { contextHint: filterRaw } : {}),
         },
+      }).then(async () => {
+        const newly = await refreshAchievementsAndDiff(deviceId);
+        if (newly.length > 0) void celebrate(newly);
       });
     }
   });
