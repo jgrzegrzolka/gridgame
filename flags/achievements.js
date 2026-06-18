@@ -775,9 +775,9 @@ export const SOCIAL_ACHIEVEMENTS = [
     predicate: (s) => s.hasNickname === true,
   },
   {
-    id: 'connected',
+    id: 'matrix',
     icon: ICON_LINK,
-    name: 'Connected',
+    name: 'Matrix',
     description: 'Linked two devices via the sync flow.',
     hint: 'Link a second device on the Sync page.',
     predicate: (s) => s.hasLinkedDevice === true,
@@ -810,8 +810,8 @@ export const SOCIAL_ACHIEVEMENTS = [
     id: 'angel-investor',
     icon: ICON_COFFEE,
     name: 'Angel Investor',
-    description: 'Clicked the "Buy me a coffee" link — thanks for the support.',
-    hint: 'Tap "Buy me a coffee" from the burger menu.',
+    description: 'Bought the developer a coffee — thanks for the support!',
+    hint: 'Buy the developer a coffee from the burger menu.',
     predicate: (s) => s.coffeeClicked === true,
   },
 ];

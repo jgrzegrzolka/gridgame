@@ -303,7 +303,7 @@ test('quiz-sharer fires at quizSharesCount >= 1', () => {
 });
 
 test('connected fires when hasLinkedDevice is strict-true', () => {
-  const rule = ruleById('connected');
+  const rule = ruleById('matrix');
   assert.equal(rule.predicate({ hasLinkedDevice: true }), true);
   assert.equal(rule.predicate({ hasLinkedDevice: false }), false);
   assert.equal(rule.predicate({}), false);
@@ -335,7 +335,7 @@ test('social rules do NOT cross-contaminate (each reads only its own counter)', 
   assert.equal(ruleById('quiz-sharer').predicate({ dailySharesCount: 99 }), false);
   assert.equal(ruleById('custom-crafter').predicate({ dailySharesCount: 99 }), false);
   assert.equal(ruleById('custom-crafter').predicate({ quizSharesCount: 99 }), false);
-  assert.equal(ruleById('connected').predicate({ hasNickname: true }), false);
+  assert.equal(ruleById('matrix').predicate({ hasNickname: true }), false);
   assert.equal(ruleById('angel-investor').predicate({ dailySharesCount: 99 }), false);
   assert.equal(ruleById('daily-sharer').predicate({ totalCompleted: 99 }), false);
 });
