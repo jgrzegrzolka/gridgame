@@ -577,6 +577,7 @@ export function bootDaily() {
   wireZoom();
   mountDevReset();
   migrateScores(window.localStorage);
+  const bootDeviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
   // Background sync for linked devices only. Unlinked users pay
   // zero (a single localStorage read returns null and the helper
   // exits). Linked users refresh local cache from the server at
@@ -584,10 +585,19 @@ export function bootDaily() {
   // and the archive grid honest after the other linked device
   // submitted something elsewhere.
   void trySyncDevices({
-    deviceId: getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID()),
+    deviceId: bootDeviceId,
     store: window.localStorage,
     identityKey: IDENTITY_STORAGE_KEY,
   });
+  // Pre-fetch the achievement snapshot so handleFinish has a real
+  // pre-submit baseline to diff against. Without this, `streakState`
+  // is null at finish time and `diffNewlyEarnedAchievements(null, ...)`
+  // returns every already-earned rule — a returning player would see
+  // their entire achievement set re-cascade on each daily finish.
+  // Cached path (no bypass) — boot doesn't need the freshest read;
+  // the post-submit fetch inside handleFinish uses bypassCache for the
+  // just-submitted row.
+  void fetchDailyMe(bootDeviceId).then((s) => { if (s) streakState = s; });
 
   const numEl = /** @type {HTMLElement} */ (document.getElementById('daily-n'));
   const isReplay = isReplayFromUrl(window.location.search);
