@@ -100,7 +100,7 @@
       "all": "all"
     },
     "leaderboard": {
-      "title": "Top 10: 24h",
+      "title": "Top 10: 3 days",
       "loading": "Loading leaderboard…",
       "failed": "Couldn't load the leaderboard.",
       "empty": "Be the first!",

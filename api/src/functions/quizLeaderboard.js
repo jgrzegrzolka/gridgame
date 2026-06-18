@@ -4,7 +4,7 @@ const {
   validateDeviceIdParam,
 } = require('../lib/validate');
 const { lowerWinsFromConfigKey } = require('../lib/quizRecordKey');
-const { todayDateKey, yesterdayDateKey, makePk } = require('../lib/dailyLeaderboardDoc');
+const { dateKeyDaysAgo, makePk } = require('../lib/dailyLeaderboardDoc');
 const { queryDocs } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { createTtlCache } = require('../lib/ttlCache');
@@ -23,12 +23,19 @@ const { isLocalRequestUrl } = require('../lib/requestHost');
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyLeaderboards';
 const CACHE_TTL_MS = 60_000;
-const ROLLING_WINDOW_MS = 24 * 60 * 60 * 1000;
-// Generous per-partition slice — 50 entries per UTC day, two days unioned,
-// dedup yields at most 100 unique devices. Enough headroom that the
-// caller's rank can be derived from the deduped + sorted list without a
-// second COUNT round-trip. Bump if active devices per config grows past
-// ~80 (currently we have ~5).
+const ROLLING_WINDOW_MS = 72 * 60 * 60 * 1000;
+// Number of UTC-date partitions we fan out across. A 72h rolling
+// window can straddle 4 UTC days regardless of the hour we're called
+// (e.g. at 23:59 UTC, the cutoff lands at 23:59 three days back —
+// still day-3, so 4 distinct date keys: today, yesterday, -2, -3).
+// The container TTL must cover this — currently 96h to give one day
+// of buffer over the read window.
+const WINDOW_DAYS = 4;
+// Generous per-partition slice — 50 entries per UTC day, four days
+// unioned, dedup yields at most 200 unique devices. Enough headroom
+// that the caller's rank can be derived from the deduped + sorted
+// list without a second COUNT round-trip. Bump if active devices per
+// config grows past ~150 (currently we have ~5).
 const PER_PARTITION_LIMIT = 50;
 // Must equal TOP_N in flags/dailyLeaderboardRender.js — server/client mismatch
 // would silently drop visible rows or fall short of the rendered slot count.
@@ -37,7 +44,7 @@ const TOP_N = 10;
 const limiter = createRateLimiter({ limit: 60, windowMs: 60_000 });
 
 // Cached top-N keyed by (configKey, order, includeLocal). Date is no
-// longer in the key — Feature N's rolling-24h window has no per-date
+// longer in the key — the rolling 72h window has no per-date
 // bucket. The 60 s TTL means a player whose entry just expired (or just
 // landed) might see the old list for up to a minute, which is well
 // inside the noise floor of a 24 h window.
@@ -72,8 +79,9 @@ app.http('quizLeaderboard', {
 
     const now = Date.now();
     const cutoff = now - ROLLING_WINDOW_MS;
-    const todayPk = makePk(configKey, todayDateKey(now));
-    const yesterdayPk = makePk(configKey, yesterdayDateKey(now));
+    const partitionKeys = Array.from({ length: WINDOW_DAYS }, (_, i) =>
+      makePk(configKey, dateKeyDaysAgo(now, i)),
+    );
     const order = lowerWins ? 'ASC' : 'DESC';
     // Localhost-served requests include `local: true` rows so a dev can
     // play locally and see their own submission appear on the
@@ -95,16 +103,16 @@ app.http('quizLeaderboard', {
 
     // Build the WHERE clauses from three independent gates:
     //   - `c.submittedAt > @cutoff` is the rolling-window cut: anything
-    //     older than 24 h falls off the board even if the row still
-    //     lives in Cosmos (TTL keeps rows around for 48 h so the
-    //     yesterday partition can serve the older half of the window).
+    //     older than 72 h falls off the board even if the row still
+    //     lives in Cosmos (TTL keeps rows around for 96 h so the
+    //     oldest partition we read still has its data).
     //   - `NOT IS_DEFINED(c.local)` excludes local-dev rows from prod
     //     responses. Localhost callers skip this so a dev playing
     //     locally sees their own submission in the rendered list.
     //   - `c.score > 0` only fires in timed (higher-wins) mode — see
     //     qualifiesForLeaderboard for the rationale. Endurance
     //     (lower-wins) lets a perfect round through.
-    // Same gates apply to both partitions; query is built once.
+    // Same gates apply to every partition; query is built once.
     const filters = ['c.submittedAt > @cutoff'];
     if (!includeLocal) filters.push('NOT IS_DEFINED(c.local)');
     if (!lowerWins) filters.push('c.score > 0');
@@ -120,34 +128,32 @@ app.http('quizLeaderboard', {
     let cachedShape = cached || null;
 
     if (!cachedShape) {
-      // Fan out to both partitions in parallel. Composite index on
+      // Fan out to every partition in parallel. Composite index on
       // (score, durationMs) inside each partition supports the ORDER BY.
-      let todayRes, yesterdayRes;
+      let partitionResults;
       try {
-        [todayRes, yesterdayRes] = await Promise.all([
-          queryDocs({
-            connString: conn, dbName: DB_NAME, containerName: CONTAINER_NAME,
-            query: queryText, parameters, partitionKey: todayPk,
-          }),
-          queryDocs({
-            connString: conn, dbName: DB_NAME, containerName: CONTAINER_NAME,
-            query: queryText, parameters, partitionKey: yesterdayPk,
-          }),
-        ]);
+        partitionResults = await Promise.all(
+          partitionKeys.map((partitionKey) =>
+            queryDocs({
+              connString: conn, dbName: DB_NAME, containerName: CONTAINER_NAME,
+              query: queryText, parameters, partitionKey,
+            }),
+          ),
+        );
       } catch (err) {
         context.error('cosmos leaderboard fan-out threw', err);
         return { status: 500, jsonBody: { error: 'server_error' } };
       }
-      if (!todayRes.ok || !yesterdayRes.ok) {
-        context.error('cosmos leaderboard fan-out failed', { todayRes, yesterdayRes });
+      if (partitionResults.some((r) => !r.ok)) {
+        context.error('cosmos leaderboard fan-out failed', { partitionResults });
         return { status: 500, jsonBody: { error: 'server_error' } };
       }
 
       // Merge → dedup → sort → slice. Dedup keeps each device's best
-      // entry across the two partitions (the same player can have a
-      // row in today's PB bucket AND yesterday's PB bucket; we surface
-      // the better of the two as their representative score).
-      const merged = [...todayRes.docs, ...yesterdayRes.docs];
+      // entry across the partitions (the same player can have a row in
+      // multiple per-day PB buckets; we surface the best of those as
+      // their representative score).
+      const merged = partitionResults.flatMap((r) => r.docs);
       const deduped = dedupByDevice(merged, lowerWins);
       deduped.sort((a, b) => cmpEntries(a, b, lowerWins));
       const top = deduped.slice(0, TOP_N);
