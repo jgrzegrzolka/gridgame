@@ -368,14 +368,17 @@ body {
   font-weight: 600;
 }
 .leaderboard-row.is-self {
-  /* Brand secondary (shady pink) — paints the player's own row full-
-   * saturation so they spot themselves immediately on a busy board.
-   * Dark row text (#1c1c1c) on #C2899F clears WCAG AA at body-text
-   * weight, so legibility holds. */
-  background: var(--secondary-color);
+  /* Pink-bordered, translucent-pink fill so the player spots themselves
+   * without the row screaming. box-shadow inset draws the border without
+   * a layout shift; the row's default 1px #eee bottom border is zeroed
+   * here so it doesn't clash with the pink frame. */
+  background: color-mix(in srgb, var(--secondary-color) 18%, transparent);
+  box-shadow: inset 0 0 0 1px var(--secondary-color);
+  border-bottom-color: transparent;
   border-radius: 4px;
 }
 .leaderboard-row.is-self .leaderboard-name {
+  color: var(--secondary-color);
   font-weight: 600;
 }
 .leaderboard-sep {
