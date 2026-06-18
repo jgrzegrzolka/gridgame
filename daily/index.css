@@ -112,6 +112,15 @@
 #daily-personal-stats {
   margin: -24px 0 16px;
 }
+/* When the puzzle title strip sits above the result (#game.is-finished),
+ * #daily-personal-stats no longer needs the -24px pull-up: the .find-header
+ * above is now what sets the visual top of the result panel. Override to a
+ * smaller magnitude so the score lands a hair below the category label
+ * (.find-header has margin-bottom: 16px from the shared findFlag rule;
+ * -12px here resolves to a ~4px gap) instead of overlapping it. */
+#game.is-finished ~ #result > #daily-personal-stats {
+  margin-top: -12px;
+}
 .daily-stats-headline {
   font-size: 16px;
   color: var(--primary-color);
