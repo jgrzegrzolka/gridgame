@@ -478,6 +478,20 @@ export function bootFindFlag() {
       });
     }
 
+    // Land the chooser on a playable starter rather than a blank slate:
+    // one random continent + one random colour pre-included, so Play is
+    // live on first paint. The user can refine or Clear from there.
+    const continentPills = allPills.filter((p) => p.group === 'continent');
+    const colorPills = allPills.filter((p) => p.group === 'color');
+    if (continentPills.length > 0) {
+      const pick = continentPills[Math.floor(Math.random() * continentPills.length)];
+      cyclePill(pick.group, pick.value, pick.btn);
+    }
+    if (colorPills.length > 0) {
+      const pick = colorPills[Math.floor(Math.random() * colorPills.length)];
+      cyclePill(pick.group, pick.value, pick.btn);
+    }
+
     updateBar();
 
     return {

@@ -46,6 +46,21 @@
   margin-bottom: 12px;
 }
 
+/* Post-finish, #game stays mounted so its puzzle title strip
+ * (.find-header + .daily-desc) keeps sitting above the result — the
+ * player can see what they solved. We just hide the play-only children:
+ * the live count (redundant with the result's "You found N/N" line),
+ * the typed-input wrap, the sovereign note, the in-game found grid
+ * (replaced by #find-result-found in the result), and the give-up row.
+ * The class is added by playFlow.js::renderResult. */
+#game.is-finished .find-count,
+#game.is-finished .find-input-wrap,
+#game.is-finished .daily-note,
+#game.is-finished #find-found,
+#game.is-finished .actions-row {
+  display: none;
+}
+
 /* The shared playFlow renders a big celebratory "You found all" /
  * "You found N/N" paragraph at the top of the result section. On the
  * daily page we replace that with the consolidated stats line below

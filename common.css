@@ -24,7 +24,7 @@
   --muted-color: #999;
   --muted-soft-color: #ddd;
   --link-color: var(--primary-color);
-  --page-top: 80px;
+  --page-top: 84px;
   /* Inward push for the chrome cluster on wide viewports so the buttons
    * align with the right edge of the widest content the project ever
    * renders — the 9×9 tic-tac-toe grid, which maxes at 756 px (9 × 80 px

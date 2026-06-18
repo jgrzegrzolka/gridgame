@@ -656,6 +656,23 @@ export function bootDaily() {
 
       paintDescription(result.entry.description);
 
+      // Filter entries derive the category label from the parsed
+      // Filters object (re-translated on every langchange so pill
+      // labels follow the active language). Manual entries skip that
+      // pipeline — there's no filter — and pull the label from the
+      // hand-written `entry.title` map keyed by language.
+      //
+      // Hoisted above the revisit branch so the revisit path also has
+      // a category label to repaint into the puzzle title strip above
+      // the result — startGame doesn't run on revisit, and renderResult
+      // now needs the label to set `#find-cat`.
+      const labelFor = result.entry.kind === 'manual'
+        ? () => manualToCategory(result.entry, document.documentElement.lang || 'en').label
+        : () => filterToCategory(/** @type {import('../flags/flagsFilter.js').Filters} */ (result.filter), t).label;
+      const category = result.entry.kind === 'manual'
+        ? manualToCategory(result.entry, document.documentElement.lang || 'en')
+        : filterToCategory(/** @type {import('../flags/flagsFilter.js').Filters} */ (result.filter), t);
+
       // Revisit: if this puzzle has a full saved record, jump straight
       // to the result page without confetti (the player saw confetti
       // the first time around; replaying it on every revisit would be
@@ -665,7 +682,7 @@ export function bootDaily() {
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         const revisitDeviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
-        renderResult(result.targets, foundCodes);
+        renderResult(result.targets, foundCodes, category.label);
         setShareCtx(n, result.targets, foundCodes);
         paintPersonalStats(foundCodes.size, result.targets.length);
         paintCommunityStats(null, result.targets.length, { loading: true });
@@ -686,7 +703,7 @@ export function bootDaily() {
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
           paintDescription(result.entry.description);
-          renderResult(result.targets, foundCodes);
+          renderResult(result.targets, foundCodes, labelFor());
           setShareCtx(n, result.targets, foundCodes);
           paintPersonalStats(foundCodes.size, result.targets.length);
           paintCommunityStats(null, result.targets.length, { loading: true });
@@ -711,18 +728,6 @@ export function bootDaily() {
         ensureTurnstile({ container: widgetContainer, siteKey: TURNSTILE_SITE_KEY })
           .catch(() => { /* preload failure is silent — handleFinish retries */ });
       }
-
-      // Filter entries derive the category label from the parsed
-      // Filters object (re-translated on every langchange so pill
-      // labels follow the active language). Manual entries skip that
-      // pipeline — there's no filter — and pull the label from the
-      // hand-written `entry.title` map keyed by language.
-      const labelFor = result.entry.kind === 'manual'
-        ? () => manualToCategory(result.entry, document.documentElement.lang || 'en').label
-        : () => filterToCategory(/** @type {import('../flags/flagsFilter.js').Filters} */ (result.filter), t).label;
-      const category = result.entry.kind === 'manual'
-        ? manualToCategory(result.entry, document.documentElement.lang || 'en')
-        : filterToCategory(/** @type {import('../flags/flagsFilter.js').Filters} */ (result.filter), t);
       // Replays treated identically to first finishes: local archive
       // overwrites with the latest attempt, and we re-POST to the
       // server. The server enforces first-attempt-only via 409 on
