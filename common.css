@@ -387,14 +387,21 @@ body::before {
  * Sticky-to-bottom: when content fits the viewport the row sits at
  * its natural position (end of content); when content overflows the
  * row pins to the viewport bottom and stays visible while the user
- * scrolls. Full-bleed via `100vw` + `calc(50% - 50vw)` margin-left:
- * the row always spans the full viewport width regardless of the
- * parent's max-width (the TTT lobby's 360 px cap, /profile/'s 480 px
- * cap, etc.), so the hairline at its top edge reads as a viewport-wide
- * rule that matches the top chrome strip — not a content-bound line
- * that wanders narrower on capped pages. `overflow-x: clip` on body
- * (set in the `html` rule's comment up top) hides the 100vw overflow
- * past the viewport edges without producing a horizontal scrollbar. */
+ * scrolls. Width matches the top chrome cluster: inset by
+ * `20px + --chrome-x-offset` from each viewport edge so the hairline at
+ * the row's top edge runs from the logo's left edge to the burger's
+ * right edge — the visual "menu width" — regardless of the parent's
+ * own max-width (TTT lobby's 360 px cap, /profile/'s 480 px cap, etc.).
+ * The `margin-left` calc shifts the row out of its parent's flow:
+ *   target_left_in_viewport = parent_left + margin_left
+ * solving for margin_left with target_left = chrome_inset and a
+ * centered parent (parent_left = (100vw - parent_width)/2):
+ *   margin_left = chrome_inset - 50vw + parent_width/2
+ *              = chrome_inset - 50vw + 50%
+ * (margin percentages resolve against the parent's width). All pages
+ * use centered main content, so this lands consistently. `overflow-x:
+ * clip` on body hides any sub-pixel overflow without producing a
+ * horizontal scrollbar. */
 .actions-row {
   position: sticky;
   bottom: 0;
@@ -402,8 +409,8 @@ body::before {
   background: #fafafa;
   border-top: 0.5px solid var(--muted-soft-color);
   margin-top: 16px;
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
+  width: calc(100vw - 2 * (20px + var(--chrome-x-offset)));
+  margin-left: calc(20px + var(--chrome-x-offset) - 50vw + 50%);
   padding: 12px 24px;
   text-align: center;
   box-sizing: border-box;
@@ -839,8 +846,8 @@ body::before {
   font-size: 14px;
   color: #666;
   margin-top: 16px;
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
+  width: calc(100vw - 2 * (20px + var(--chrome-x-offset)));
+  margin-left: calc(20px + var(--chrome-x-offset) - 50vw + 50%);
   padding: 12px 24px;
   text-align: center;
   box-sizing: border-box;
