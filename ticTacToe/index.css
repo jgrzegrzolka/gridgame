@@ -177,6 +177,15 @@ body.game-over .cell:hover::after {
 body.game-over .actions-row {
   display: none;
 }
+/* Drop the shared 32 px top margin on #result so the post-game
+ * `.result-links` lands at the same Y the live-game `.actions-row` sat.
+ * Both rows already carry `margin-top: 16px`, so without this override
+ * the post-game row jumped 32 px lower — even in offline mode where
+ * the final-score line above it is hidden via JS, so no extra content
+ * appeared to justify the shift. */
+#result {
+  margin-top: 0;
+}
 .cell.owned {
   padding: 10px;
   cursor: zoom-in;

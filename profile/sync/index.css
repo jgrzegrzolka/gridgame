@@ -278,15 +278,3 @@
   display: none;
 }
 
-.sync-back {
-  text-align: center;
-  font-size: 14px;
-  margin-top: 8px;
-}
-.sync-back a {
-  color: var(--link-color);
-  text-decoration: none;
-}
-.sync-back a:hover {
-  text-decoration: underline;
-}
