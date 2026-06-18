@@ -387,9 +387,14 @@ body::before {
  * Sticky-to-bottom: when content fits the viewport the row sits at
  * its natural position (end of content); when content overflows the
  * row pins to the viewport bottom and stays visible while the user
- * scrolls. Background + bleed-to-edge (-24px = cancel body's 24px
- * horizontal padding) makes the bar a solid strip across the viewport
- * so scrolling content doesn't show through. */
+ * scrolls. Full-bleed via `100vw` + `calc(50% - 50vw)` margin-left:
+ * the row always spans the full viewport width regardless of the
+ * parent's max-width (the TTT lobby's 360 px cap, /profile/'s 480 px
+ * cap, etc.), so the hairline at its top edge reads as a viewport-wide
+ * rule that matches the top chrome strip — not a content-bound line
+ * that wanders narrower on capped pages. `overflow-x: clip` on body
+ * (set in the `html` rule's comment up top) hides the 100vw overflow
+ * past the viewport edges without producing a horizontal scrollbar. */
 .actions-row {
   position: sticky;
   bottom: 0;
@@ -397,18 +402,11 @@ body::before {
   background: #fafafa;
   border-top: 0.5px solid var(--muted-soft-color);
   margin-top: 16px;
-  margin-left: -24px;
-  margin-right: -24px;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
   padding: 12px 24px;
   text-align: center;
-  /* Pages whose body is a flex column with `align-items: center`
-   * (ticTacToe, flagQuiz, stats) would otherwise shrink-fit this row
-   * to its content width — making the background strip too narrow to
-   * cover sibling content beneath when sticky-pinned. `align-self:
-   * stretch` overrides the parent's centring so the row fills its
-   * parent's content box width, and the -24px horizontal margin then
-   * extends it the rest of the way to the viewport edge. */
-  align-self: stretch;
+  box-sizing: border-box;
 }
 /* `·` separator that hides itself when the action right before it is
  * hidden. Used in the online ticTacToe actions-row, where `#give-up`
@@ -840,13 +838,12 @@ body::before {
   border-top: 0.5px solid var(--muted-soft-color);
   font-size: 14px;
   color: #666;
-  margin: 16px -24px 0;
+  margin-top: 16px;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
   padding: 12px 24px;
   text-align: center;
-  /* Same flex-parent compensation as `.actions-row` — without this the
-   * row shrink-fits on pages whose body is a flex column with
-   * `align-items: center`. */
-  align-self: stretch;
+  box-sizing: border-box;
 }
 .result-links a {
   color: var(--link-color);
