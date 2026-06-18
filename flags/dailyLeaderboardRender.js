@@ -48,10 +48,11 @@ const TOP_N = 10;
  *   ownDeviceId?: string | null,
  *   t: (key: string, fallback: string, vars?: Record<string, string|number>) => string,
  *   doc?: Document,
+ *   formatScore?: (score: number) => string,
  * }} args
  * @returns {HTMLElement}
  */
-export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = globalThis.document }) {
+export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = globalThis.document, formatScore }) {
   // No className on the root: it's appended into a host with id="leaderboard-body"
   // already, so adding a class with the same intent would just nest two
   // equivalent wrappers.
@@ -87,7 +88,7 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
   const list = doc.createElement('ol');
   list.className = 'leaderboard-list';
   top.forEach((entry, idx) => {
-    list.appendChild(buildRow(doc, { rank: idx + 1, entry, ownDeviceId }));
+    list.appendChild(buildRow(doc, { rank: idx + 1, entry, ownDeviceId, formatScore }));
   });
   root.appendChild(list);
 
@@ -114,6 +115,7 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
       },
       ownDeviceId,
       selfLabelOverride: t('quiz.leaderboard.you', 'You'),
+      formatScore,
     }));
     root.appendChild(youList);
   }
@@ -132,9 +134,10 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
  *   entry: LeaderboardEntry,
  *   ownDeviceId: string | null,
  *   selfLabelOverride?: string,
+ *   formatScore?: (score: number) => string,
  * }} args
  */
-function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride }) {
+function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride, formatScore }) {
   const li = doc.createElement('li');
   const isSelf = ownDeviceId !== null && entry.deviceId === ownDeviceId;
   li.className = isSelf ? 'leaderboard-row is-self' : 'leaderboard-row';
@@ -151,7 +154,7 @@ function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride }) {
 
   const scoreEl = doc.createElement('span');
   scoreEl.className = 'leaderboard-score';
-  scoreEl.textContent = String(entry.score);
+  scoreEl.textContent = formatScore ? formatScore(entry.score) : String(entry.score);
 
   li.appendChild(rankEl);
   li.appendChild(nameEl);

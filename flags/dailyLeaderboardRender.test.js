@@ -212,3 +212,53 @@ test('renderLeaderboard: malicious nickname is set via textContent, not innerHTM
   assert.equal(name.textContent, '<script>alert(1)</script>');
   assert.equal(name.children.length, 0);
 });
+
+test('renderLeaderboard: formatScore transforms the score column (endurance mode displays correct count, not wrong count)', () => {
+  // Endurance ('all') stores score = wrongCount. The page passes a
+  // formatter that maps wrongCount → correctCount via `target - n`.
+  // Without the transform the panel reads "Alice 0" which the player
+  // parses as "Alice got 0 correct" instead of "Alice got 0 wrong".
+  const doc = makeDoc();
+  const top = [
+    { deviceId: 'd1', nickname: 'Alice', score: 0, durationMs: 60_000 },  // perfect run
+    { deviceId: 'd2', nickname: 'Bob',   score: 3, durationMs: 50_000 },  // 3 wrong
+  ];
+  const target = 195;
+  const root = renderLeaderboard({
+    state: 'ready',
+    data: { top, you: null },
+    t, doc,
+    formatScore: (n) => String(target - n),
+  });
+  const scores = findAllByClass(root, 'leaderboard-score');
+  assert.equal(scores[0].textContent, '195');
+  assert.equal(scores[1].textContent, '192');
+});
+
+test('renderLeaderboard: formatScore also applies to the bottom "you" row when rank > TOP_N', () => {
+  const doc = makeDoc();
+  const top = Array.from({ length: 10 }, (_, i) => ({
+    deviceId: `d${i}`, nickname: `P${i}`, score: i, durationMs: 60_000,
+  }));
+  const target = 50;
+  const root = renderLeaderboard({
+    state: 'ready',
+    data: { top, you: { rank: 14, score: 8, durationMs: 90_000 } },
+    ownDeviceId: ME, t, doc,
+    formatScore: (n) => String(target - n),
+  });
+  const youList = findAllByClass(root, 'leaderboard-list-you')[0];
+  const youScore = findAllByClass(youList, 'leaderboard-score')[0];
+  // 50 target - 8 wrong = 42 correct
+  assert.equal(youScore.textContent, '42');
+});
+
+test('renderLeaderboard: omitting formatScore preserves the original score string (60s timed mode)', () => {
+  // 60s mode stores score = correctCount already — no transform desired.
+  // Pin the default-behaviour path so a future refactor can't break it.
+  const doc = makeDoc();
+  const top = [{ deviceId: 'd1', nickname: 'Alice', score: 22, durationMs: 60_000 }];
+  const root = renderLeaderboard({ state: 'ready', data: { top, you: null }, t, doc });
+  const score = findAllByClass(root, 'leaderboard-score')[0];
+  assert.equal(score.textContent, '22');
+});
