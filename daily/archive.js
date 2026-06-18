@@ -53,6 +53,16 @@ export function bootArchive() {
       // entry with a Warsaw-midnight countdown. Skipped when the
       // schedule has been exhausted (nothing more to count down to).
       mountNextPuzzleGhostTile(listEl, allEntries);
+      // Scroll today into view so the user lands on a useful anchor
+      // instead of puzzle #1 from a year ago. `instant` (not `smooth`)
+      // so the page appears to render at today rather than scrolling
+      // from the top — less jarring on first paint. `block: 'center'`
+      // keeps today vertically centred so a few puzzles above and below
+      // are visible too.
+      const todayEl = listEl.querySelector('.archive-square--today');
+      if (todayEl && typeof todayEl.scrollIntoView === 'function') {
+        todayEl.scrollIntoView({ behavior: 'instant', block: 'center' });
+      }
       // Soft language switch — re-translate each square's hover overlay
       // (and aria-label) so the criteria label tracks the active lang.
       document.addEventListener('langchanged', () => refreshSquareCriteria());
