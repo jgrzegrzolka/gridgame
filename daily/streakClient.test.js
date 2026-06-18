@@ -33,6 +33,10 @@ const FULL = {
   quizVariantsTouched60s: 4,
   quizBestScore60s: 22,
   quiz60sClearedVariants: ['oceania', 'south-america'],
+  quizAttemptsAll: 8,
+  quizVariantsTouchedAll: 3,
+  quizAllLowWrongAny: 1,
+  quizAllPerfectedVariants: ['oceania'],
 };
 
 test('fetchDailyMe: happy path — passes deviceId, returns shape', async () => {
@@ -103,6 +107,10 @@ test('fetchDailyMe: missing fields collapse to 0 (defensive shape)', async () =>
     quizVariantsTouched60s: 0,
     quizBestScore60s: 0,
     quiz60sClearedVariants: [],
+    quizAttemptsAll: 0,
+    quizVariantsTouchedAll: 0,
+    quizAllLowWrongAny: Number.MAX_SAFE_INTEGER,
+    quizAllPerfectedVariants: [],
   });
 });
 
@@ -130,7 +138,17 @@ test('fetchDailyMe: non-numeric field values collapse to 0', async () => {
     quizVariantsTouched60s: 0,
     quizBestScore60s: 0,
     quiz60sClearedVariants: [],
+    quizAttemptsAll: 0,
+    quizVariantsTouchedAll: 0,
+    quizAllLowWrongAny: Number.MAX_SAFE_INTEGER,
+    quizAllPerfectedVariants: [],
   });
+});
+
+test('fetchDailyMe: missing quizAllLowWrongAny collapses to MAX_SAFE_INTEGER sentinel', async () => {
+  const f = fakeFetch({ body: { quizAllPerfectedVariants: [] } });
+  const out = await fetchDailyMe('dev-abc', { fetchImpl: f });
+  assert.equal(out.quizAllLowWrongAny, Number.MAX_SAFE_INTEGER);
 });
 
 test('fetchDailyMe: malformed quiz60sClearedVariants collapses to empty array', async () => {

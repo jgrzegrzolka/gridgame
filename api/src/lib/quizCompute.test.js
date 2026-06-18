@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { computeQuiz } = require('./quizCompute');
+const { computeQuiz, NO_ENDURANCE_PLAYS } = require('./quizCompute');
 
 // Test-fixture pool sizes — kept distinct from the production map so
 // fixture changes don't quietly mask real drift. Production sizes
@@ -21,6 +21,12 @@ const ZERO = {
   quizVariantsTouched60s: 0,
   quizBestScore60s: 0,
   quiz60sClearedVariants: [],
+  quizAttemptsAll: 0,
+  quizVariantsTouchedAll: 0,
+  // No endurance plays → low-wrong sentinel value so the "≤ N wrong"
+  // predicates can't spuriously fire against a never-played snapshot.
+  quizAllLowWrongAny: NO_ENDURANCE_PLAYS,
+  quizAllPerfectedVariants: [],
 };
 
 test('null doc → empty result', () => {
@@ -35,26 +41,17 @@ test('records map empty → empty result', () => {
   assert.deepEqual(computeQuiz({ records: {} }, POOL), ZERO);
 });
 
-test('endurance-mode (`all`) entries are ignored (this lib is 60s-only)', () => {
-  const out = computeQuiz({
-    records: {
-      'europe:all:sov': { score: 50, attempts: 3 },
-      'africa:all:sov': { score: 40, attempts: 2 },
-    },
-  }, POOL);
-  assert.deepEqual(out, ZERO);
-});
-
-test('attempts sum across every 60s configKey, ignoring mode `all`', () => {
+test('60s attempts and `all` attempts are aggregated independently', () => {
   const out = computeQuiz({
     records: {
       'europe:60s:sov': { score: 5, attempts: 3 },
       'europe:60s:all': { score: 4, attempts: 2 },
       'asia:60s:sov': { score: 10, attempts: 7 },
-      'asia:all:sov': { score: 30, attempts: 99 }, // ignored
+      'asia:all:sov': { score: 30, attempts: 99 },
     },
   }, POOL);
   assert.equal(out.quizAttempts60s, 12);
+  assert.equal(out.quizAttemptsAll, 99);
 });
 
 test('variants touched counts distinct variant keys across both includeAll values', () => {
@@ -164,6 +161,97 @@ test('full snapshot: every counter fires, every variant cleared', () => {
   assert.equal(out.quizVariantsTouched60s, 7);
   assert.equal(out.quizBestScore60s, 200);
   assert.deepEqual(out.quiz60sClearedVariants.sort(), [
+    'africa', 'asia', 'countries', 'europe', 'north-america', 'oceania', 'south-america',
+  ]);
+});
+
+// --- Endurance (`all`) mode ----------------------------------------------
+
+test('endurance: attempts, touched variants, low-wrong tracked independently from 60s', () => {
+  const out = computeQuiz({
+    records: {
+      'europe:all:sov':        { score: 5, attempts: 3 },
+      'europe:all:all':        { score: 8, attempts: 2 },
+      'africa:all:sov':        { score: 2, attempts: 1 },
+      'asia:60s:sov':          { score: 25, attempts: 10 }, // 60s — ignored for endurance counters
+    },
+  }, POOL);
+  assert.equal(out.quizAttemptsAll, 6);
+  assert.equal(out.quizVariantsTouchedAll, 2);
+  // Lowest wrong-count across every endurance slot is 2 (africa).
+  assert.equal(out.quizAllLowWrongAny, 2);
+});
+
+test('endurance: low-wrong sentinel when no endurance plays at all', () => {
+  const out = computeQuiz({
+    records: { 'europe:60s:sov': { score: 25, attempts: 10 } },
+  }, POOL);
+  // Player has 60s data but no endurance — sentinel keeps "≤ N wrong"
+  // predicates from spuriously firing.
+  assert.equal(out.quizAllLowWrongAny, NO_ENDURANCE_PLAYS);
+  assert.deepEqual(out.quizAllPerfectedVariants, []);
+});
+
+test('endurance: a perfect round (0 wrong) lands the variant in perfectedVariants', () => {
+  const out = computeQuiz({
+    records: {
+      'oceania:all:sov': { score: 0, attempts: 1 },
+      'europe:all:sov':  { score: 3, attempts: 5 },
+    },
+  }, POOL);
+  assert.deepEqual(out.quizAllPerfectedVariants, ['oceania']);
+  assert.equal(out.quizAllLowWrongAny, 0);
+});
+
+test('endurance: best (lowest) across includeAll is what counts for perfected check', () => {
+  const out = computeQuiz({
+    records: {
+      // sov side never went perfect; all side did → variant still counts.
+      'oceania:all:sov': { score: 2, attempts: 3 },
+      'oceania:all:all': { score: 0, attempts: 1 },
+    },
+  }, POOL);
+  assert.deepEqual(out.quizAllPerfectedVariants, ['oceania']);
+});
+
+test('endurance: perfectedVariants returned in sorted order', () => {
+  const out = computeQuiz({
+    records: {
+      'south-america:all:sov': { score: 0, attempts: 1 },
+      'oceania:all:sov':       { score: 0, attempts: 1 },
+      'asia:all:sov':          { score: 0, attempts: 1 },
+    },
+  }, POOL);
+  assert.deepEqual(out.quizAllPerfectedVariants, ['asia', 'oceania', 'south-america']);
+});
+
+test('endurance: non-zero best wrong-count does NOT land variant in perfectedVariants', () => {
+  const out = computeQuiz({
+    records: {
+      'europe:all:sov': { score: 1, attempts: 5 },  // close but not perfect
+    },
+  }, POOL);
+  assert.deepEqual(out.quizAllPerfectedVariants, []);
+  // But the low-wrong-any field DID get updated.
+  assert.equal(out.quizAllLowWrongAny, 1);
+});
+
+test('full endurance snapshot: every variant perfected', () => {
+  const out = computeQuiz({
+    records: {
+      'countries:all:sov':     { score: 0, attempts: 5 },
+      'europe:all:sov':        { score: 0, attempts: 5 },
+      'asia:all:sov':          { score: 0, attempts: 5 },
+      'africa:all:sov':        { score: 0, attempts: 5 },
+      'north-america:all:sov': { score: 0, attempts: 5 },
+      'south-america:all:sov': { score: 0, attempts: 5 },
+      'oceania:all:sov':       { score: 0, attempts: 5 },
+    },
+  }, POOL);
+  assert.equal(out.quizAttemptsAll, 35);
+  assert.equal(out.quizVariantsTouchedAll, 7);
+  assert.equal(out.quizAllLowWrongAny, 0);
+  assert.deepEqual(out.quizAllPerfectedVariants.sort(), [
     'africa', 'asia', 'countries', 'europe', 'north-america', 'oceania', 'south-america',
   ]);
 });

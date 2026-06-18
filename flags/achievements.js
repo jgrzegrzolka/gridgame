@@ -37,6 +37,10 @@
  *   quizVariantsTouched60s?: number,
  *   quizBestScore60s?: number,
  *   quiz60sClearedVariants?: string[],
+ *   quizAttemptsAll?: number,
+ *   quizVariantsTouchedAll?: number,
+ *   quizAllLowWrongAny?: number,
+ *   quizAllPerfectedVariants?: string[],
  * }} Snapshot
  *
  * @typedef {{
@@ -207,6 +211,83 @@ const ICON_TROPHY =
   '<rect x="7" y="8" width="2" height="3"/>' +
   '<rect x="4" y="11" width="8" height="1"/>' +
   '<rect x="3" y="12" width="10" height="2"/>' +
+  '</svg>';
+
+// Hollow ring — the shared base for the endurance tier. Suggests the
+// "round" / loop of a full endurance pass. Iron Memory and Perfect
+// Round overlay a small numeric label below it (see ringWithLabel).
+const RING_SHAPES =
+  '<rect x="4" y="2" width="8" height="2"/>' +
+  '<rect x="4" y="12" width="8" height="2"/>' +
+  '<rect x="2" y="4" width="2" height="8"/>' +
+  '<rect x="12" y="4" width="2" height="8"/>';
+
+const ICON_RING =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  RING_SHAPES +
+  '</svg>';
+
+/**
+ * @param {string} label
+ * @returns {string}
+ */
+function ringWithLabel(label) {
+  return '<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true">' +
+    RING_SHAPES +
+    `<text x="8" y="22" font-size="8" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">${label}</text>` +
+    '</svg>';
+}
+const ICON_RING_LE2 = ringWithLabel('≤2'); // "≤2"
+const ICON_RING_0 = ringWithLabel('0');
+
+// Diagonal path/arrow trail — for World Tour (endurance variety).
+// Reads as "journey across all variants" without overlapping the
+// 60s Cartographer's globe glyph.
+const ICON_PATH =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  '<rect x="1" y="13" width="3" height="2"/>' +
+  '<rect x="5" y="11" width="2" height="2"/>' +
+  '<rect x="7" y="9" width="2" height="2"/>' +
+  '<rect x="9" y="7" width="2" height="2"/>' +
+  '<rect x="11" y="5" width="2" height="2"/>' +
+  '<rect x="12" y="3" width="3" height="2"/>' +
+  '<rect x="11" y="1" width="2" height="2"/>' +
+  '<rect x="13" y="3" width="2" height="2"/>' +
+  '</svg>';
+
+// Crown — the depth-of-knowledge meta trophy. Distinct from
+// ICON_TROPHY (Atlas Champion / 60s meta) so the two ultimate
+// achievements read as different ultimate trophies at a glance.
+const ICON_CROWN =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  '<rect x="2" y="3" width="2" height="4"/>' +
+  '<rect x="3" y="2" width="2" height="2"/>' +
+  '<rect x="7" y="4" width="2" height="3"/>' +
+  '<rect x="7" y="2" width="2" height="2"/>' +
+  '<rect x="12" y="3" width="2" height="4"/>' +
+  '<rect x="11" y="2" width="2" height="2"/>' +
+  '<rect x="2" y="7" width="12" height="3"/>' +
+  '<rect x="4" y="11" width="2" height="2"/>' +
+  '<rect x="10" y="11" width="2" height="2"/>' +
+  '<rect x="2" y="13" width="12" height="2"/>' +
+  '</svg>';
+
+// Globe + small star above for the standalone "All Countries
+// Mastered" endurance achievement — distinct from ICON_FLAG_WO
+// (60s All Countries Cleared) so they don't collide on the grid.
+const ICON_GLOBE_STAR =
+  '<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true">' +
+  '<text x="8" y="6" font-size="8" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">★</text>' +
+  '<rect x="5" y="9" width="6" height="2"/>' +
+  '<rect x="3" y="11" width="2" height="2"/>' +
+  '<rect x="11" y="11" width="2" height="2"/>' +
+  '<rect x="2" y="13" width="2" height="6"/>' +
+  '<rect x="12" y="13" width="2" height="6"/>' +
+  '<rect x="3" y="19" width="2" height="2"/>' +
+  '<rect x="11" y="19" width="2" height="2"/>' +
+  '<rect x="5" y="21" width="6" height="2"/>' +
+  '<rect x="3" y="15" width="10" height="2"/>' +
+  '<rect x="7" y="11" width="2" height="10"/>' +
   '</svg>';
 
 /** @type {AchievementRule[]} */
@@ -414,6 +495,59 @@ export const QUIZ_ACHIEVEMENTS = [
     hint: 'Clear every continent AND the All Countries variant.',
     predicate: (s) => QUIZ_60S_VARIANTS.every((v) => hasCleared(s, v)),
   },
+  // ---- Endurance (`all` mode) tier ---------------------------------------
+  // Easiest at the top of the cluster, same convention as the 60s side.
+  {
+    id: 'marathon',
+    icon: ICON_RING,
+    name: 'Marathon',
+    description: 'Finished your first endurance quiz.',
+    hint: 'Finish one endurance quiz.',
+    predicate: (s) => num(s.quizAttemptsAll) >= 1,
+  },
+  {
+    id: 'world-tour',
+    icon: ICON_PATH,
+    name: 'World Tour',
+    description: 'Finished an endurance quiz in every variant — all 7.',
+    hint: 'Finish an endurance round in every variant.',
+    predicate: (s) => num(s.quizVariantsTouchedAll) >= 7,
+  },
+  {
+    id: 'iron-memory',
+    icon: ICON_RING_LE2,
+    name: 'Iron Memory',
+    description: 'Finished an endurance quiz with no more than 2 wrong guesses.',
+    hint: 'Finish an endurance round with at most 2 wrong guesses.',
+    // The attempts guard prevents a spurious fire on the empty/never-
+    // played snapshot — quizAllLowWrongAny would have its sentinel
+    // value, but the guard makes the intent explicit too.
+    predicate: (s) => num(s.quizAttemptsAll) >= 1 && num(s.quizAllLowWrongAny) <= 2,
+  },
+  {
+    id: 'perfect-round',
+    icon: ICON_RING_0,
+    name: 'Perfect Round',
+    description: 'Finished an endurance quiz with no wrong guesses.',
+    hint: 'Finish an endurance round without any wrong guess.',
+    predicate: (s) => hasPerfected(s, null),
+  },
+  {
+    id: 'all-countries-mastered',
+    icon: ICON_GLOBE_STAR,
+    name: 'All Countries Mastered',
+    description: 'Named every sovereign flag in the world in an endurance round with no wrong guesses.',
+    hint: 'Name every sovereign flag in the world without any wrong guess.',
+    predicate: (s) => hasPerfected(s, 'countries'),
+  },
+  {
+    id: 'endurance-atlas',
+    icon: ICON_CROWN,
+    name: 'Endurance Atlas',
+    description: 'Mastered every endurance quiz variant — the depth-of-knowledge trophy.',
+    hint: 'Finish every endurance variant without any wrong guess.',
+    predicate: (s) => QUIZ_60S_VARIANTS.every((v) => hasPerfected(s, v)),
+  },
 ];
 
 /**
@@ -507,4 +641,22 @@ function num(x) {
 function hasCleared(snapshot, variant) {
   const arr = snapshot.quiz60sClearedVariants;
   return Array.isArray(arr) && arr.includes(variant);
+}
+
+/**
+ * Endurance-mode analogue of `hasCleared`. Pass a variant key to ask
+ * "did this specific variant go perfect" or `null` to ask "did any
+ * variant go perfect" (used by "Perfect Round" — fires on the first
+ * endurance round the player finishes with zero wrong, regardless of
+ * which variant).
+ *
+ * @param {Snapshot} snapshot
+ * @param {string | null} variant
+ * @returns {boolean}
+ */
+function hasPerfected(snapshot, variant) {
+  const arr = snapshot.quizAllPerfectedVariants;
+  if (!Array.isArray(arr)) return false;
+  if (variant === null) return arr.length >= 1;
+  return arr.includes(variant);
 }
