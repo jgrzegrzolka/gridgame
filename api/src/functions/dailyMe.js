@@ -9,6 +9,7 @@ const { computeStreak, submissionsToStreakRows, quizPlayEventsToStreakRows } = r
 const { computeMastery } = require('../lib/masteryCompute');
 const { computeQuiz } = require('../lib/quizCompute');
 const { computeEngagement } = require('../lib/engagementCompute');
+const { computeTttSignals } = require('../lib/tttCompute');
 const { warsawDayNumber } = require('../lib/warsawDay');
 
 const DB_NAME = 'yetanotherquiz';
@@ -160,7 +161,8 @@ app.http('dailyMe', {
     // flat (max of the two, not the sum).
     let profileDoc = null;
     let engagementEvents = [];
-    let hasPlayedTtt = false;
+    /** @type {Array<{ m3x3?: { wins?: number, losses?: number, draws?: number }, m9x9?: { wins?: number, losses?: number, draws?: number } }>} */
+    let tttPairs = [];
     try {
       const [profileRes, eventsRes, tttRes] = await Promise.all([
         queryDocs({
@@ -183,27 +185,29 @@ app.http('dailyMe', {
           parameters: [],
           partitionKey: deviceId,
         }),
-        // Existence probe against the player's `tttPairs` partition.
-        // SELECT TOP 1 — we only need to know whether the player has
-        // any TTT outcome row, not what's in it. ~1 RU. Drives the
-        // "First Tic Tac Toe" achievement.
+        // Fetch the win/loss/draw counters from the player's
+        // `tttPairs` partition. One row per opponent; counters are
+        // summed in JS for `hasPlayedTtt` (any row exists),
+        // `hasWonTtt` (Σ wins ≥ 1), `hasLostTtt` (Σ losses ≥ 1).
+        // Single-partition query; result size is O(distinct
+        // opponents) — small.
         queryDocs({
           connString: conn,
           dbName: DB_NAME,
           containerName: TTT_PAIRS_CONTAINER,
-          query: 'SELECT TOP 1 c.id FROM c',
+          query: 'SELECT c.m3x3, c.m9x9 FROM c',
           parameters: [],
           partitionKey: deviceId,
         }),
       ]);
       if (profileRes.ok && profileRes.docs.length > 0) profileDoc = profileRes.docs[0];
       if (eventsRes.ok) engagementEvents = eventsRes.docs;
-      if (tttRes.ok && tttRes.docs.length > 0) hasPlayedTtt = true;
+      if (tttRes.ok) tttPairs = tttRes.docs;
     } catch (err) {
       context.warn('cosmos engagement reads failed (soft-degraded to no signal)', err);
     }
     const engagement = computeEngagement(profileDoc, engagementEvents);
-    const ttt = { hasPlayedTtt };
+    const ttt = computeTttSignals(tttPairs);
 
     // 60s quiz streak: derive from quiz_play events of mode='60s'.
     // Same streak math as the daily-puzzle streak; the only difference

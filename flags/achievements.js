@@ -52,6 +52,8 @@
  *   quiz60sMaxStreak?: number,
  *   quiz60sDistinctDays?: number,
  *   hasPlayedTtt?: boolean,
+ *   hasWonTtt?: boolean,
+ *   hasLostTtt?: boolean,
  * }} Snapshot
  *
  * @typedef {{
@@ -402,14 +404,31 @@ const ICON_LINK =
   '</svg>';
 
 // Tic-tac-toe grid — a clean # shape (two vertical bars crossed by
-// two horizontal bars). Drives "First Tic Tac Toe".
-const ICON_TTT_GRID =
-  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+// two horizontal bars). Drives "First Tic Tac Toe", and the shared
+// base shape for the win/loss tier icons below.
+const TTT_GRID_SHAPES =
   '<rect x="5" y="1" width="2" height="14"/>' +
   '<rect x="9" y="1" width="2" height="14"/>' +
   '<rect x="1" y="5" width="14" height="2"/>' +
-  '<rect x="1" y="9" width="14" height="2"/>' +
+  '<rect x="1" y="9" width="14" height="2"/>';
+
+const ICON_TTT_GRID =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  TTT_GRID_SHAPES +
   '</svg>';
+
+/**
+ * @param {string} label
+ * @returns {string}
+ */
+function tttGridWithLabel(label) {
+  return '<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true">' +
+    TTT_GRID_SHAPES +
+    `<text x="8" y="22" font-size="8" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">${label}</text>` +
+    '</svg>';
+}
+const ICON_TTT_WIN = tttGridWithLabel('W');
+const ICON_TTT_LOSS = tttGridWithLabel('L');
 
 // Coffee cup with rising steam — Angel Investor. Pixel-art cup body
 // (squarish) + handle on the right + two steam lines above.
@@ -835,13 +854,29 @@ export const TTT_ACHIEVEMENTS = [
     name: 'First Tic Tac Toe',
     description: 'Played your first tic-tac-toe game.',
     hint: 'Play a tic-tac-toe round.',
-    // `hasPlayedTtt` is derived server-side from an existence probe
-    // against the player's `tttPairs` Cosmos partition — true iff at
-    // least one TTT outcome row exists. Catches online games (online
-    // TTT writes Cosmos); offline-vs-AI plays don't write Cosmos and
-    // don't trip the predicate. Acceptable trade-off for the minimum
-    // "you played TTT" rule.
+    // `hasPlayedTtt` is derived server-side from the `tttPairs` Cosmos
+    // partition for this device — true iff at least one TTT outcome
+    // row exists. Catches online games (online TTT writes Cosmos);
+    // offline-vs-AI plays don't write Cosmos and don't trip the
+    // predicate. Acceptable trade-off for the minimum "you played
+    // TTT" rule.
     predicate: (s) => s.hasPlayedTtt === true,
+  },
+  {
+    id: 'first-ttt-win',
+    icon: ICON_TTT_WIN,
+    name: 'First Win',
+    description: 'Won your first tic-tac-toe game.',
+    hint: 'Win a tic-tac-toe round.',
+    predicate: (s) => s.hasWonTtt === true,
+  },
+  {
+    id: 'first-ttt-loss',
+    icon: ICON_TTT_LOSS,
+    name: 'First Loss',
+    description: "Lost a tic-tac-toe game — happens to the best of us.",
+    hint: 'Lose a tic-tac-toe round (the badge of solidarity).',
+    predicate: (s) => s.hasLostTtt === true,
   },
 ];
 
