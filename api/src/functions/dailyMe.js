@@ -165,7 +165,7 @@ app.http('dailyMe', {
           connString: conn,
           dbName: DB_NAME,
           containerName: PROFILES_CONTAINER,
-          query: 'SELECT c.nickname FROM c WHERE c.id = @did',
+          query: 'SELECT c.nickname, c.linkedAt FROM c WHERE c.id = @did',
           parameters: [{ name: '@did', value: deviceId }],
           partitionKey: deviceId,
         }),
@@ -173,11 +173,11 @@ app.http('dailyMe', {
           connString: conn,
           dbName: DB_NAME,
           containerName: ENGAGEMENT_EVENTS_CONTAINER,
-          // Fetch both kinds in one shot — single-partition query, the
-          // shape returned is small and we'd otherwise issue two
-          // separate cross-kind queries. dayId is needed by the
-          // quiz_play streak math; payload by the share aggregator.
-          query: "SELECT c.kind, c.payload, c.dayId FROM c WHERE c.kind IN ('share', 'quiz_play')",
+          // Fetch every kind this snapshot consumes in one shot —
+          // single-partition query, small result. dayId is needed by
+          // the quiz_play streak math; payload by the share + coffee
+          // aggregators.
+          query: "SELECT c.kind, c.payload, c.dayId FROM c WHERE c.kind IN ('share', 'quiz_play', 'coffee_click')",
           parameters: [],
           partitionKey: deviceId,
         }),

@@ -3,7 +3,14 @@ const assert = require('node:assert/strict');
 
 const { computeEngagement } = require('./engagementCompute');
 
-const ZERO = { hasNickname: false, dailySharesCount: 0, quizSharesCount: 0 };
+const ZERO = {
+  hasNickname: false,
+  hasLinkedDevice: false,
+  dailySharesCount: 0,
+  quizSharesCount: 0,
+  findflagSharesCount: 0,
+  coffeeClicked: false,
+};
 
 test('null profile and null events → zero result', () => {
   assert.deepEqual(computeEngagement(null, null), ZERO);
@@ -109,15 +116,85 @@ test('event with unrecognised surface is skipped', () => {
   assert.equal(r.quizSharesCount, 0);
 });
 
-test('all three signals at once → all three populated', () => {
-  const profile = { nickname: 'Brave Otter' };
+test('all signals at once → all populated', () => {
+  const profile = { nickname: 'Brave Otter', linkedAt: 1_750_000_000_000 };
   const events = [
     { kind: 'share', payload: { surface: 'daily' } },
     { kind: 'share', payload: { surface: 'flagquiz' } },
+    { kind: 'share', payload: { surface: 'findflag' } },
+    { kind: 'coffee_click', payload: {} },
   ];
   assert.deepEqual(computeEngagement(profile, events), {
     hasNickname: true,
+    hasLinkedDevice: true,
     dailySharesCount: 1,
     quizSharesCount: 1,
+    findflagSharesCount: 1,
+    coffeeClicked: true,
   });
+});
+
+// --- hasLinkedDevice -----------------------------------------------------
+
+test('profile with numeric linkedAt → hasLinkedDevice true', () => {
+  assert.equal(computeEngagement({ linkedAt: 1_750_000_000_000 }, []).hasLinkedDevice, true);
+});
+
+test('profile with null linkedAt → hasLinkedDevice false', () => {
+  assert.equal(computeEngagement({ linkedAt: null }, []).hasLinkedDevice, false);
+});
+
+test('profile with missing linkedAt → hasLinkedDevice false', () => {
+  assert.equal(computeEngagement({ nickname: 'X' }, []).hasLinkedDevice, false);
+});
+
+test('profile with NaN linkedAt → hasLinkedDevice false (defensive)', () => {
+  assert.equal(computeEngagement({ linkedAt: NaN }, []).hasLinkedDevice, false);
+});
+
+test('profile with string linkedAt → hasLinkedDevice false (defensive)', () => {
+  assert.equal(computeEngagement({ linkedAt: /** @type {any} */ ('yesterday') }, []).hasLinkedDevice, false);
+});
+
+// --- findflagSharesCount -------------------------------------------------
+
+test('findflag share event → findflagSharesCount only', () => {
+  const events = [{ kind: 'share', payload: { surface: 'findflag' } }];
+  const r = computeEngagement(null, events);
+  assert.equal(r.findflagSharesCount, 1);
+  assert.equal(r.dailySharesCount, 0);
+  assert.equal(r.quizSharesCount, 0);
+});
+
+test('multiple findflag shares count up', () => {
+  const events = [
+    { kind: 'share', payload: { surface: 'findflag' } },
+    { kind: 'share', payload: { surface: 'findflag' } },
+    { kind: 'share', payload: { surface: 'findflag' } },
+  ];
+  assert.equal(computeEngagement(null, events).findflagSharesCount, 3);
+});
+
+// --- coffeeClicked --------------------------------------------------------
+
+test('any coffee_click event → coffeeClicked true', () => {
+  const events = [{ kind: 'coffee_click', payload: {} }];
+  assert.equal(computeEngagement(null, events).coffeeClicked, true);
+});
+
+test('multiple coffee_click events → coffeeClicked still just true (boolean signal)', () => {
+  const events = [
+    { kind: 'coffee_click', payload: {} },
+    { kind: 'coffee_click', payload: {} },
+    { kind: 'coffee_click', payload: {} },
+  ];
+  assert.equal(computeEngagement(null, events).coffeeClicked, true);
+});
+
+test('no coffee_click events → coffeeClicked false', () => {
+  const events = [
+    { kind: 'share', payload: { surface: 'daily' } },
+    { kind: 'daily_start', payload: { puzzleId: 5 } },
+  ];
+  assert.equal(computeEngagement(null, events).coffeeClicked, false);
 });

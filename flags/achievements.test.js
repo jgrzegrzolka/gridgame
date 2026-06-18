@@ -302,12 +302,41 @@ test('quiz-sharer fires at quizSharesCount >= 1', () => {
   assert.equal(rule.predicate({ quizSharesCount: 1 }), true);
 });
 
+test('connected fires when hasLinkedDevice is strict-true', () => {
+  const rule = ruleById('connected');
+  assert.equal(rule.predicate({ hasLinkedDevice: true }), true);
+  assert.equal(rule.predicate({ hasLinkedDevice: false }), false);
+  assert.equal(rule.predicate({}), false);
+  assert.equal(rule.predicate({ hasLinkedDevice: /** @type {any} */ ('yes') }), false);
+});
+
+test('custom-crafter fires at findflagSharesCount >= 1', () => {
+  const rule = ruleById('custom-crafter');
+  assert.equal(rule.predicate({ findflagSharesCount: 0 }), false);
+  assert.equal(rule.predicate({ findflagSharesCount: 1 }), true);
+});
+
+test('angel-investor fires when coffeeClicked is strict-true', () => {
+  const rule = ruleById('angel-investor');
+  assert.equal(rule.predicate({ coffeeClicked: true }), true);
+  assert.equal(rule.predicate({ coffeeClicked: false }), false);
+  assert.equal(rule.predicate({}), false);
+  // Defensive against a future server-shape change where the field is
+  // returned as a count (1) rather than a boolean — must NOT qualify.
+  assert.equal(rule.predicate({ coffeeClicked: /** @type {any} */ (1) }), false);
+});
+
 test('social rules do NOT cross-contaminate (each reads only its own counter)', () => {
   // Pin the field-mapping so a future rename can't silently wire a
   // share rule to the wrong surface or to a daily counter.
   assert.equal(ruleById('identified').predicate({ dailySharesCount: 99 }), false);
   assert.equal(ruleById('daily-sharer').predicate({ quizSharesCount: 99 }), false);
+  assert.equal(ruleById('daily-sharer').predicate({ findflagSharesCount: 99 }), false);
   assert.equal(ruleById('quiz-sharer').predicate({ dailySharesCount: 99 }), false);
+  assert.equal(ruleById('custom-crafter').predicate({ dailySharesCount: 99 }), false);
+  assert.equal(ruleById('custom-crafter').predicate({ quizSharesCount: 99 }), false);
+  assert.equal(ruleById('connected').predicate({ hasNickname: true }), false);
+  assert.equal(ruleById('angel-investor').predicate({ dailySharesCount: 99 }), false);
   assert.equal(ruleById('daily-sharer').predicate({ totalCompleted: 99 }), false);
 });
 
@@ -426,7 +455,8 @@ test('evaluateAchievements with a full snapshot earns every badge across every t
     quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
     quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
     quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],
-    hasNickname: true, dailySharesCount: 1, quizSharesCount: 1,
+    hasNickname: true, hasLinkedDevice: true,
+    dailySharesCount: 1, quizSharesCount: 1, findflagSharesCount: 1, coffeeClicked: true,
     quiz60sCurrentStreak: 30, quiz60sMaxStreak: 30, quiz60sDistinctDays: 100,
   });
   assert.ok(out.every((s) => s.earned), 'all rules should be earned');
@@ -494,7 +524,8 @@ test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration
     quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
     quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
     quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],
-    hasNickname: true, dailySharesCount: 1, quizSharesCount: 1,
+    hasNickname: true, hasLinkedDevice: true,
+    dailySharesCount: 1, quizSharesCount: 1, findflagSharesCount: 1, coffeeClicked: true,
     quiz60sCurrentStreak: 30, quiz60sMaxStreak: 30, quiz60sDistinctDays: 100,
   });
   assert.deepEqual(

@@ -381,3 +381,38 @@ test('quiz_play: strips unknown payload fields', () => {
   if (!r.ok) throw new Error('unreachable');
   assert.deepEqual(r.doc.payload, { mode: '60s' });
 });
+
+// ----- coffee_click --------------------------------------------------------
+
+test('coffee_click: builds doc with uuid id', () => {
+  const r = buildEngagementDoc({
+    ...BASE,
+    kind: 'coffee_click',
+    payload: {},
+  });
+  assert.equal(r.ok, true);
+  if (!r.ok) throw new Error('unreachable');
+  assert.equal(r.doc.id, `coffee_click:${BASE.uuid}`);
+  assert.equal(r.doc.kind, 'coffee_click');
+  assert.deepEqual(r.doc.payload, {});
+});
+
+test('coffee_click: every click writes a distinct row (id changes per uuid)', () => {
+  const r1 = buildEngagementDoc({ ...BASE, kind: 'coffee_click', payload: {} });
+  const r2 = buildEngagementDoc({ ...BASE, kind: 'coffee_click', payload: {}, uuid: 'second-uuid' });
+  assert.equal(r1.ok, true);
+  assert.equal(r2.ok, true);
+  if (!r1.ok || !r2.ok) throw new Error('unreachable');
+  assert.notEqual(r1.doc.id, r2.doc.id);
+});
+
+test('coffee_click: strips any client-supplied payload fields (existence is the signal)', () => {
+  const r = buildEngagementDoc({
+    ...BASE,
+    kind: 'coffee_click',
+    payload: { amount: 42, currency: 'USD', sneaky: 'value' },
+  });
+  assert.equal(r.ok, true);
+  if (!r.ok) throw new Error('unreachable');
+  assert.deepEqual(r.doc.payload, {});
+});

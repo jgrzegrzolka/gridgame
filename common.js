@@ -2,6 +2,7 @@ import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from './flags/identity.js';
 import { displayNickname } from './flags/nickname.js';
 import { avatarSvg } from './flags/avatar.js';
 import { initAppInsights } from './analytics.js';
+import { submitEngagementEvent } from './flags/eventSubmit.js';
 
 /**
  * Site wordmark in the top-left, pairing with the chrome cluster
@@ -243,6 +244,23 @@ export function wireBurgerDismiss(options = {}) {
     if (e.key !== 'Escape' || panel.hidden) return;
     closeBurger(burger, panel);
     /** @type {HTMLElement} */ (burger).focus?.();
+  });
+  // Coffee-click telemetry: every page's burger has a `.menu-coffee`
+  // link; delegating from document is cheaper than wiring 18 inline
+  // onclicks. Fire-and-forget; the external link still opens normally.
+  // Trust-based — no payment verification, just intent. Drives the
+  // "Angel Investor" achievement.
+  doc.addEventListener('click', (e) => {
+    const t = /** @type {Element | null} */ (e.target);
+    if (!t || !('closest' in t)) return;
+    const link = t.closest('.menu-coffee');
+    if (!link) return;
+    try {
+      const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+      void submitEngagementEvent(deviceId, { kind: 'coffee_click', payload: {} });
+    } catch {
+      // No deviceId on a doc without window/localStorage — skip silently.
+    }
   });
 }
 
