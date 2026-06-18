@@ -630,6 +630,15 @@ export function bootDaily() {
       // Tab title carries #N so archived puzzles open in separate tabs
       // read distinctly. Override runs after bootI18n's data-i18n pass.
       document.title = `Yet Another Quiz #${n}`;
+      // Burger menu's "Today's puzzle" link is hard-coded with
+      // aria-current="page" in daily/index.html — correct for the
+      // bare /daily/ landing, but on an archive view (?n=N) the user
+      // is NOT on today's puzzle, so the link should be live again.
+      // Strip the attribute when we know we're elsewhere.
+      if (!isToday) {
+        const todayLink = document.querySelector('#burger-panel a[data-i18n="daily.todaysPuzzle"]');
+        if (todayLink) todayLink.removeAttribute('aria-current');
+      }
 
       // Point the static "Play again" link at this same puzzle with the
       // replay flag set, so clicking it re-runs the game without
