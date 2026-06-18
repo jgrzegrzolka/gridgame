@@ -30,6 +30,7 @@ import { buildShareText } from '../flags/shareGrid.js';
 import { fetchDailyMe } from './streakClient.js';
 import { diffNewlyEarnedAchievements } from '../flags/achievements.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
+import { primeAchievementsBaseline, refreshAchievementsAndDiff, getCachedAchievementsBaseline } from '../flags/achievementsBaseline.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
 import { fetchCatalog } from './catalogSource.js';
 
@@ -473,9 +474,14 @@ function createShareButton() {
     // block the UI.
     if (r === 'shared' || r === 'copied') {
       const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+      // Achievement diff chains off the event POST so the bypassCache
+      // read sees the just-recorded share row. Catches "Daily Sharer".
       void submitEngagementEvent(deviceId, {
         kind: 'share',
         payload: { surface: 'daily', contextHint: String(n) },
+      }).then(async () => {
+        const newly = await refreshAchievementsAndDiff(deviceId);
+        if (newly.length > 0) void celebrate(newly);
       });
     }
   };
@@ -541,25 +547,24 @@ async function handleFinish(n, targets, all, info, isToday) {
     },
   });
 
-  // Snapshot the pre-submit state, fetch the fresh post-submit state,
-  // and diff for newly-earned achievements. Runs for every daily
-  // finish — archive plays legitimately earn achievements too (an
-  // archive completion bumps totalCompleted server-side just like a
-  // today-finish does), so the unlock card should pop there as well.
-  // The diff lives in `flags/achievements.js` for unit coverage.
-  const beforeSnapshot = streakState;
-  // bypassCache → skip the server's 60s window so the just-submitted
-  // row is reflected in the snapshot used for the diff. Only repaint
-  // the streak sub-line when this is today's puzzle — surfacing it on
-  // an archive finish would falsely suggest the play extended the
-  // streak counter.
-  const fresh = await fetchDailyMe(deviceId, { bypassCache: true });
+  // Achievement diff goes through the shared baseline helper so the
+  // post-finish state stays in sync with the post-share / post-coffee-
+  // click state — three earn-moments on the same page session would
+  // otherwise drift apart and double-fire cards. The helper handles
+  // the bypassCache fetch internally. Runs for every daily finish —
+  // archive plays legitimately earn achievements too (an archive
+  // completion bumps totalCompleted server-side just like a today-
+  // finish does), so the unlock card should pop there as well.
+  const newlyEarned = await refreshAchievementsAndDiff(deviceId);
+  const fresh = getCachedAchievementsBaseline();
   if (fresh) {
     streakState = fresh;
+    // Only repaint the streak sub-line when this is today's puzzle —
+    // surfacing it on an archive finish would falsely suggest the play
+    // extended the streak counter.
     if (isToday) paintPersonalStats(found, info.totalCount);
-    const newlyEarned = diffNewlyEarnedAchievements(beforeSnapshot, fresh);
-    if (newlyEarned.length > 0) void celebrate(newlyEarned);
   }
+  if (newlyEarned.length > 0) void celebrate(newlyEarned);
 }
 
 /**
@@ -589,14 +594,13 @@ export function bootDaily() {
     store: window.localStorage,
     identityKey: IDENTITY_STORAGE_KEY,
   });
-  // Pre-fetch the achievement snapshot so handleFinish has a real
-  // pre-submit baseline to diff against. Without this, `streakState`
-  // is null at finish time and `diffNewlyEarnedAchievements(null, ...)`
-  // returns every already-earned rule — a returning player would see
-  // their entire achievement set re-cascade on each daily finish.
-  // Cached path (no bypass) — boot doesn't need the freshest read;
-  // the post-submit fetch inside handleFinish uses bypassCache for the
-  // just-submitted row.
+  // Pre-fetch the achievement baseline via the shared helper. common.js's
+  // wireBurgerDismiss primes too, but doing it again here is idempotent
+  // and avoids racing the burger-wiring call. Mirror into the local
+  // streakState once it settles so streak rendering has data before the
+  // first finish — without this, a player who hasn't interacted yet
+  // wouldn't see their streak count.
+  primeAchievementsBaseline(bootDeviceId);
   void fetchDailyMe(bootDeviceId).then((s) => { if (s) streakState = s; });
 
   const numEl = /** @type {HTMLElement} */ (document.getElementById('daily-n'));

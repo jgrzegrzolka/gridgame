@@ -4,6 +4,8 @@ import { syncPreview, syncMerge } from '../../flags/syncMergeClient.js';
 import { fetchSyncLink } from '../../flags/syncLinkClient.js';
 import { hydrateFromServer } from '../../flags/syncHydrate.js';
 import { t } from '../../i18n.js';
+import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../../flags/achievementsBaseline.js';
+import { celebrate } from '../../flags/achievementCelebrate.js';
 
 /**
  * /profile/sync/ layout: a QR (always visible, lets any device link
@@ -95,6 +97,28 @@ export function bootSync() {
     title.classList.remove('shake-celebrate');
     void (/** @type {HTMLElement} */ (title)).offsetWidth;
     title.classList.add('shake-celebrate');
+    // Achievement diff: catches "Matrix" (linked two devices via sync).
+    // Fire-and-forget. The sync flow's own UX completes regardless of
+    // whether the achievement cascade card drops.
+    try {
+      const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+      void (async () => {
+        const newly = await refreshAchievementsAndDiff(deviceId);
+        if (newly.length > 0) void celebrate(newly);
+      })();
+    } catch {
+      /* localStorage missing in tests — skip silently. */
+    }
+  }
+  // Prime the baseline early so celebrateLinked's diff has a real
+  // pre-link snapshot to compare against. Common.js already primes it
+  // too, but this is the first user-facing action on the page so being
+  // explicit avoids any race.
+  try {
+    const initDeviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+    primeAchievementsBaseline(initDeviceId);
+  } catch {
+    /* skip in tests */
   }
   const titleEl = linkedEl.querySelector('.sync-linked-title');
   if (titleEl) {

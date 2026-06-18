@@ -3,6 +3,8 @@ import { displayNickname } from './flags/nickname.js';
 import { avatarSvg } from './flags/avatar.js';
 import { initAppInsights } from './analytics.js';
 import { submitEngagementEvent } from './flags/eventSubmit.js';
+import { primeAchievementsBaseline, refreshAchievementsAndDiff } from './flags/achievementsBaseline.js';
+import { celebrate } from './flags/achievementCelebrate.js';
 
 /**
  * Site wordmark in the top-left, pairing with the chrome cluster
@@ -247,9 +249,9 @@ export function wireBurgerDismiss(options = {}) {
   });
   // Coffee-click telemetry: every page's burger has a `.menu-coffee`
   // link; delegating from document is cheaper than wiring 18 inline
-  // onclicks. Fire-and-forget; the external link still opens normally.
-  // Trust-based — no payment verification, just intent. Drives the
-  // "Angel Investor" achievement.
+  // onclicks. Trust-based — no payment verification, just intent.
+  // Drives the "Angel Investor" achievement, with the cascade card
+  // dropping immediately after the event POST settles.
   doc.addEventListener('click', (e) => {
     const t = /** @type {Element | null} */ (e.target);
     if (!t || !('closest' in t)) return;
@@ -257,11 +259,28 @@ export function wireBurgerDismiss(options = {}) {
     if (!link) return;
     try {
       const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
-      void submitEngagementEvent(deviceId, { kind: 'coffee_click', payload: {} });
+      // Await the event POST so the server has recorded it before we
+      // re-fetch the snapshot for the diff; otherwise the bypassCache
+      // read could race the write and miss the change.
+      void submitEngagementEvent(deviceId, { kind: 'coffee_click', payload: {} }).then(async () => {
+        const newly = await refreshAchievementsAndDiff(deviceId);
+        if (newly.length > 0) void celebrate(newly);
+      });
     } catch {
       // No deviceId on a doc without window/localStorage — skip silently.
     }
   });
+
+  // Prime the achievement baseline so post-action diffs anywhere on
+  // this page (coffee click, share button, etc.) have a real
+  // pre-action snapshot to compare against. Cached path (no bypass);
+  // boot doesn't need the freshest read.
+  try {
+    const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+    primeAchievementsBaseline(deviceId);
+  } catch {
+    // window/localStorage missing in the test runner — skip silently.
+  }
 }
 
 /**

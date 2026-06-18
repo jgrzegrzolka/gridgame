@@ -7,6 +7,8 @@ import { hydrateFromServer } from '../flags/syncHydrate.js';
 import { fetchDailyMe } from '../daily/streakClient.js';
 import { evaluateAchievements } from '../flags/achievements.js';
 import { t } from '../i18n.js';
+import { refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
+import { celebrate } from '../flags/achievementCelebrate.js';
 
 const ENDPOINT = '/api/v1/profile';
 const FLASH_MS = 1500;
@@ -210,6 +212,13 @@ export function bootProfile() {
       } catch {
         /* cache failure is non-fatal — server is the source of truth */
       }
+      // Achievement diff: catches "Identified" (set a nickname for the
+      // first time). Fire-and-forget — the save UX completes regardless
+      // of whether the celebration card drops.
+      void (async () => {
+        const newly = await refreshAchievementsAndDiff(deviceId);
+        if (newly.length > 0) void celebrate(newly);
+      })();
     } catch (err) {
       const code = err instanceof Error ? err.message : 'unknown';
       const { i18nKey, fallback } = errorMessageFor(code);
