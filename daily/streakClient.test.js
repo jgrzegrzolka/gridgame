@@ -38,6 +38,9 @@ const FULL = {
   quizVariantsTouchedAll: 3,
   quizAllLowWrongAny: 1,
   quizAllPerfectedVariants: ['oceania'],
+  hasNickname: true,
+  dailySharesCount: 2,
+  quizSharesCount: 1,
 };
 
 test('fetchDailyMe: happy path — passes deviceId, returns shape', async () => {
@@ -113,6 +116,9 @@ test('fetchDailyMe: missing fields collapse to 0 (defensive shape)', async () =>
     quizVariantsTouchedAll: 0,
     quizAllLowWrongAny: Number.MAX_SAFE_INTEGER,
     quizAllPerfectedVariants: [],
+    hasNickname: false,
+    dailySharesCount: 0,
+    quizSharesCount: 0,
   });
 });
 
@@ -145,6 +151,9 @@ test('fetchDailyMe: non-numeric field values collapse to 0', async () => {
     quizVariantsTouchedAll: 0,
     quizAllLowWrongAny: Number.MAX_SAFE_INTEGER,
     quizAllPerfectedVariants: [],
+    hasNickname: false,
+    dailySharesCount: 0,
+    quizSharesCount: 0,
   });
 });
 
@@ -152,6 +161,15 @@ test('fetchDailyMe: missing quizAllLowWrongAny collapses to MAX_SAFE_INTEGER sen
   const f = fakeFetch({ body: { quizAllPerfectedVariants: [] } });
   const out = await fetchDailyMe('dev-abc', { fetchImpl: f });
   assert.equal(out.quizAllLowWrongAny, Number.MAX_SAFE_INTEGER);
+});
+
+test('fetchDailyMe: hasNickname is strict-true only — truthy non-booleans don\'t qualify', async () => {
+  // Defensive against a future server-shape change where the field is
+  // accidentally returned as a string ("true") or a number (1).
+  assert.equal((await fetchDailyMe('dev-abc', { fetchImpl: fakeFetch({ body: { hasNickname: true } }) })).hasNickname, true);
+  assert.equal((await fetchDailyMe('dev-abc', { fetchImpl: fakeFetch({ body: { hasNickname: 'true' } }) })).hasNickname, false);
+  assert.equal((await fetchDailyMe('dev-abc', { fetchImpl: fakeFetch({ body: { hasNickname: 1 } }) })).hasNickname, false);
+  assert.equal((await fetchDailyMe('dev-abc', { fetchImpl: fakeFetch({ body: {} }) })).hasNickname, false);
 });
 
 test('fetchDailyMe: malformed quiz60sClearedVariants collapses to empty array', async () => {

@@ -38,6 +38,9 @@ const ENDPOINT_BASE = '/api/v1/daily/me';
  *   quizVariantsTouchedAll: number,
  *   quizAllLowWrongAny: number,
  *   quizAllPerfectedVariants: string[],
+ *   hasNickname: boolean,
+ *   dailySharesCount: number,
+ *   quizSharesCount: number,
  * }} StreakResult
  */
 
@@ -88,6 +91,9 @@ export async function fetchDailyMe(deviceId, opts = {}) {
       // sentinel rather than `0`.
       quizAllLowWrongAny: toLargeIntOrSentinel(json.quizAllLowWrongAny),
       quizAllPerfectedVariants: toStringArray(json.quizAllPerfectedVariants),
+      hasNickname: json.hasNickname === true,
+      dailySharesCount: toInt(json.dailySharesCount),
+      quizSharesCount: toInt(json.quizSharesCount),
     };
   } catch {
     return null;

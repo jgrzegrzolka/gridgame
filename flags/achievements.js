@@ -42,6 +42,9 @@
  *   quizVariantsTouchedAll?: number,
  *   quizAllLowWrongAny?: number,
  *   quizAllPerfectedVariants?: string[],
+ *   hasNickname?: boolean,
+ *   dailySharesCount?: number,
+ *   quizSharesCount?: number,
  * }} Snapshot
  *
  * @typedef {{
@@ -310,6 +313,41 @@ const ICON_CROWN =
   '<rect x="10" y="11" width="2" height="2"/>' +
   '<rect x="2" y="13" width="12" height="2"/>' +
   '</svg>';
+
+// Nametag — a small badge with a horizontal "name line" inside the
+// frame. Drives the "Identified" social achievement.
+const ICON_NAMETAG =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  '<rect x="2" y="3" width="12" height="2"/>' +
+  '<rect x="2" y="11" width="12" height="2"/>' +
+  '<rect x="2" y="5" width="2" height="6"/>' +
+  '<rect x="12" y="5" width="2" height="6"/>' +
+  '<rect x="4" y="7" width="8" height="2"/>' +
+  '</svg>';
+
+// Share arrow — upward arrow rising from a box. Shared base shape
+// for both share achievements; the surface (daily vs flagquiz) is
+// communicated via a 1-letter label in 16x24 viewBox.
+const SHARE_SHAPES =
+  '<rect x="7" y="2" width="2" height="6"/>' +     // arrow stem
+  '<rect x="5" y="4" width="2" height="2"/>' +     // arrowhead left
+  '<rect x="9" y="4" width="2" height="2"/>' +     // arrowhead right
+  '<rect x="3" y="9" width="2" height="5"/>' +     // box left
+  '<rect x="11" y="9" width="2" height="5"/>' +    // box right
+  '<rect x="3" y="13" width="10" height="2"/>';    // box bottom
+
+/**
+ * @param {string} label
+ * @returns {string}
+ */
+function shareWithLabel(label) {
+  return '<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true">' +
+    SHARE_SHAPES +
+    `<text x="8" y="22" font-size="8" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">${label}</text>` +
+    '</svg>';
+}
+const ICON_SHARE_DAILY = shareWithLabel('D');
+const ICON_SHARE_QUIZ = shareWithLabel('Q');
 
 // Globe + small star above for the standalone "All Countries
 // Mastered" endurance achievement — distinct from ICON_FLAG_WO
@@ -617,12 +655,41 @@ export const QUIZ_ACHIEVEMENTS = [
   },
 ];
 
+/** @type {AchievementRule[]} */
+export const SOCIAL_ACHIEVEMENTS = [
+  {
+    id: 'identified',
+    icon: ICON_NAMETAG,
+    name: 'Identified',
+    description: 'Set a nickname on your profile.',
+    hint: 'Pick a nickname on your profile page.',
+    predicate: (s) => s.hasNickname === true,
+  },
+  {
+    id: 'daily-sharer',
+    icon: ICON_SHARE_DAILY,
+    name: 'Daily Sharer',
+    description: 'Shared a daily puzzle result.',
+    hint: 'Tap share on a daily puzzle result.',
+    predicate: (s) => num(s.dailySharesCount) >= 1,
+  },
+  {
+    id: 'quiz-sharer',
+    icon: ICON_SHARE_QUIZ,
+    name: 'Quiz Sharer',
+    description: 'Shared a flag quiz result.',
+    hint: 'Tap share on a flag quiz result.',
+    predicate: (s) => num(s.quizSharesCount) >= 1,
+  },
+];
+
 /**
  * Default rule order on the profile page. Streak first (every player
  * touches the daily flow), mastery second (gated on at least one
- * completion), quiz third (a separate game-mode tier). Declared this
- * way so a newcomer sees the streak tier first — the most accessible
- * badges sit at the top of the grid.
+ * completion), quiz third (a separate game-mode tier), social last
+ * (cross-game engagement signals — set a nickname, share results).
+ * Declared this way so a newcomer sees the streak tier first — the
+ * most accessible badges sit at the top of the grid.
  *
  * @type {AchievementRule[]}
  */
@@ -630,6 +697,7 @@ export const ALL_ACHIEVEMENTS = [
   ...STREAK_ACHIEVEMENTS,
   ...MASTERY_ACHIEVEMENTS,
   ...QUIZ_ACHIEVEMENTS,
+  ...SOCIAL_ACHIEVEMENTS,
 ];
 
 /**
