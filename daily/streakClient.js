@@ -33,6 +33,10 @@ const ENDPOINT_BASE = '/api/v1/daily/me';
  *   quizVariantsTouched60s: number,
  *   quizBestScore60s: number,
  *   quiz60sClearedVariants: string[],
+ *   quizAttemptsAll: number,
+ *   quizVariantsTouchedAll: number,
+ *   quizAllLowWrongAny: number,
+ *   quizAllPerfectedVariants: string[],
  * }} StreakResult
  */
 
@@ -72,6 +76,16 @@ export async function fetchDailyMe(deviceId, opts = {}) {
       quizVariantsTouched60s: toInt(json.quizVariantsTouched60s),
       quizBestScore60s: toInt(json.quizBestScore60s),
       quiz60sClearedVariants: toStringArray(json.quiz60sClearedVariants),
+      quizAttemptsAll: toInt(json.quizAttemptsAll),
+      quizVariantsTouchedAll: toInt(json.quizVariantsTouchedAll),
+      // Endurance low-wrong defaults to MAX_SAFE_INTEGER on the server
+      // when the player has never finished an endurance round — a
+      // sentinel so "≤ N wrong" predicates can't spuriously fire.
+      // Normalised here via the same `toLargeInt` so a stale server
+      // returning `undefined` for this field collapses to the same
+      // sentinel rather than `0`.
+      quizAllLowWrongAny: toLargeIntOrSentinel(json.quizAllLowWrongAny),
+      quizAllPerfectedVariants: toStringArray(json.quizAllPerfectedVariants),
     };
   } catch {
     return null;
@@ -98,4 +112,19 @@ function toInt(x) {
 function toStringArray(x) {
   if (!Array.isArray(x)) return [];
   return x.filter((v) => typeof v === 'string');
+}
+
+/**
+ * Defensive normaliser for `quizAllLowWrongAny` — the snapshot field
+ * that defaults to `Number.MAX_SAFE_INTEGER` when the player has
+ * never finished an endurance round. A missing field (older server,
+ * malformed body) collapses to the same sentinel rather than `0`,
+ * so the "≤ N wrong" predicates stay correctly locked.
+ *
+ * @param {unknown} x
+ * @returns {number}
+ */
+function toLargeIntOrSentinel(x) {
+  const n = Number(x);
+  return Number.isFinite(n) ? Math.trunc(n) : Number.MAX_SAFE_INTEGER;
 }

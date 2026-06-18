@@ -173,6 +173,70 @@ test('quiz rules do NOT cross-contaminate (each reads only its own counter)', ()
   assert.equal(ruleById('europe-cleared').predicate({ quizBestScore60s: 99 }), false);
 });
 
+// --- Endurance tier ---------------------------------------------------------
+
+test('marathon fires at quizAttemptsAll >= 1', () => {
+  const rule = ruleById('marathon');
+  assert.equal(rule.predicate({ quizAttemptsAll: 0 }), false);
+  assert.equal(rule.predicate({ quizAttemptsAll: 1 }), true);
+});
+
+test('world-tour fires at quizVariantsTouchedAll >= 7', () => {
+  const rule = ruleById('world-tour');
+  assert.equal(rule.predicate({ quizVariantsTouchedAll: 6 }), false);
+  assert.equal(rule.predicate({ quizVariantsTouchedAll: 7 }), true);
+});
+
+test('iron-memory needs both attempts >= 1 AND low-wrong <= 2', () => {
+  const rule = ruleById('iron-memory');
+  // No endurance plays at all — the snapshot-default sentinel keeps it locked.
+  assert.equal(rule.predicate({ quizAllLowWrongAny: Number.MAX_SAFE_INTEGER }), false);
+  // Attempts but no good round yet — still locked.
+  assert.equal(rule.predicate({ quizAttemptsAll: 5, quizAllLowWrongAny: 7 }), false);
+  // Attempts + at least one round at the threshold — earned.
+  assert.equal(rule.predicate({ quizAttemptsAll: 5, quizAllLowWrongAny: 2 }), true);
+  // Defensive: low-wrong reported but attempts is missing → still false.
+  assert.equal(rule.predicate({ quizAllLowWrongAny: 0 }), false);
+});
+
+test('perfect-round fires as soon as any endurance variant lands in the perfected set', () => {
+  const rule = ruleById('perfect-round');
+  assert.equal(rule.predicate({ quizAllPerfectedVariants: [] }), false);
+  assert.equal(rule.predicate({ quizAllPerfectedVariants: ['oceania'] }), true);
+  // Defensive: malformed/missing array → locked.
+  assert.equal(rule.predicate({}), false);
+  assert.equal(rule.predicate({ quizAllPerfectedVariants: /** @type {any} */ ('oops') }), false);
+});
+
+test('all-countries-mastered fires only on the "countries" variant being perfected', () => {
+  const rule = ruleById('all-countries-mastered');
+  // Other variants perfected but not countries → locked.
+  assert.equal(rule.predicate({ quizAllPerfectedVariants: ['europe', 'asia'] }), false);
+  // countries perfected → earned.
+  assert.equal(rule.predicate({ quizAllPerfectedVariants: ['countries'] }), true);
+});
+
+test('endurance-atlas fires only when EVERY variant is in the perfected set', () => {
+  const rule = ruleById('endurance-atlas');
+  for (let i = 0; i < QUIZ_60S_VARIANTS.length; i++) {
+    const without = QUIZ_60S_VARIANTS.filter((_, j) => j !== i);
+    assert.equal(
+      rule.predicate({ quizAllPerfectedVariants: [...without] }),
+      false,
+      `missing ${QUIZ_60S_VARIANTS[i]} → not earned`,
+    );
+  }
+  assert.equal(rule.predicate({ quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS] }), true);
+});
+
+test('endurance rules do NOT cross-contaminate (each reads only its own counter)', () => {
+  // Endurance counters must not satisfy 60s rules, and vice versa.
+  assert.equal(ruleById('marathon').predicate({ quizAttempts60s: 99 }), false);
+  assert.equal(ruleById('perfect-round').predicate({ quiz60sClearedVariants: ['oceania'] }), false);
+  assert.equal(ruleById('first-sprint').predicate({ quizAttemptsAll: 99 }), false);
+  assert.equal(ruleById('oceania-cleared').predicate({ quizAllPerfectedVariants: ['oceania'] }), false);
+});
+
 test('mastery rules do NOT cross-contaminate (each reads only its own counter)', () => {
   // Pin the field-mapping so a future copy-paste rename can't silently
   // wire a rule to the wrong counter.
@@ -272,6 +336,8 @@ test('evaluateAchievements with a full snapshot earns every badge across every t
     totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, flawlessSweeps: 1, zeroScoreFinishes: 1,
     quizAttempts60s: 50, quizVariantsTouched60s: 7, quizBestScore60s: 50,
     quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
+    quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
+    quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],
   });
   assert.ok(out.every((s) => s.earned), 'all rules should be earned');
 });
@@ -336,6 +402,8 @@ test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration
     totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, flawlessSweeps: 1, zeroScoreFinishes: 1,
     quizAttempts60s: 50, quizVariantsTouched60s: 7, quizBestScore60s: 50,
     quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
+    quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
+    quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],
   });
   assert.deepEqual(
     newly.map((r) => r.id),
