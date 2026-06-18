@@ -246,6 +246,39 @@ test('endurance-atlas fires only when EVERY variant is in the perfected set', ()
   assert.equal(rule.predicate({ quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS] }), true);
 });
 
+// --- Social tier ------------------------------------------------------------
+
+test('identified fires when hasNickname is strict-true', () => {
+  const rule = ruleById('identified');
+  assert.equal(rule.predicate({ hasNickname: true }), true);
+  assert.equal(rule.predicate({ hasNickname: false }), false);
+  assert.equal(rule.predicate({}), false);
+  // Defensive: a truthy non-boolean must not satisfy the predicate.
+  assert.equal(rule.predicate({ hasNickname: /** @type {any} */ ('true') }), false);
+  assert.equal(rule.predicate({ hasNickname: /** @type {any} */ (1) }), false);
+});
+
+test('daily-sharer fires at dailySharesCount >= 1', () => {
+  const rule = ruleById('daily-sharer');
+  assert.equal(rule.predicate({ dailySharesCount: 0 }), false);
+  assert.equal(rule.predicate({ dailySharesCount: 1 }), true);
+});
+
+test('quiz-sharer fires at quizSharesCount >= 1', () => {
+  const rule = ruleById('quiz-sharer');
+  assert.equal(rule.predicate({ quizSharesCount: 0 }), false);
+  assert.equal(rule.predicate({ quizSharesCount: 1 }), true);
+});
+
+test('social rules do NOT cross-contaminate (each reads only its own counter)', () => {
+  // Pin the field-mapping so a future rename can't silently wire a
+  // share rule to the wrong surface or to a daily counter.
+  assert.equal(ruleById('identified').predicate({ dailySharesCount: 99 }), false);
+  assert.equal(ruleById('daily-sharer').predicate({ quizSharesCount: 99 }), false);
+  assert.equal(ruleById('quiz-sharer').predicate({ dailySharesCount: 99 }), false);
+  assert.equal(ruleById('daily-sharer').predicate({ totalCompleted: 99 }), false);
+});
+
 test('endurance rules do NOT cross-contaminate (each reads only its own counter)', () => {
   // Endurance counters must not satisfy 60s rules, and vice versa.
   assert.equal(ruleById('marathon').predicate({ quizAttempts60s: 99 }), false);
@@ -361,6 +394,7 @@ test('evaluateAchievements with a full snapshot earns every badge across every t
     quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
     quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
     quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],
+    hasNickname: true, dailySharesCount: 1, quizSharesCount: 1,
   });
   assert.ok(out.every((s) => s.earned), 'all rules should be earned');
 });
@@ -427,6 +461,7 @@ test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration
     quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
     quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
     quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],
+    hasNickname: true, dailySharesCount: 1, quizSharesCount: 1,
   });
   assert.deepEqual(
     newly.map((r) => r.id),

@@ -8,11 +8,14 @@ const { statsCacheHeaders } = require('../lib/cacheHeaders');
 const { computeStreak, submissionsToStreakRows } = require('../lib/streakCompute');
 const { computeMastery } = require('../lib/masteryCompute');
 const { computeQuiz } = require('../lib/quizCompute');
+const { computeEngagement } = require('../lib/engagementCompute');
 const { warsawDayNumber } = require('../lib/warsawDay');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
 const QUIZ_RECORDS_CONTAINER = 'quizRecords';
+const PROFILES_CONTAINER = 'profiles';
+const ENGAGEMENT_EVENTS_CONTAINER = 'engagementEvents';
 const CACHE_TTL_MS = 60_000;
 
 // Sovereign-only ("sov") pool sizes per quiz variant. Source of truth
@@ -147,7 +150,42 @@ app.http('dailyMe', {
     }
     const quiz = computeQuiz(quizDoc, SOV_POOL_SIZES);
 
-    const result = { ...streak, ...mastery, ...quiz };
+    // Cross-game engagement signals: profile point-read + a small
+    // single-partition query against the player's `engagementEvents`
+    // share history. Both are fire-and-forget soft dependencies — a
+    // Cosmos blip on either degrades to "no signal" rather than
+    // 500'ing the whole snapshot. The two reads run in parallel via
+    // Promise.all to keep the wall-clock cost flat (max of the two,
+    // not the sum).
+    let profileDoc = null;
+    let shareEvents = [];
+    try {
+      const [profileRes, eventsRes] = await Promise.all([
+        queryDocs({
+          connString: conn,
+          dbName: DB_NAME,
+          containerName: PROFILES_CONTAINER,
+          query: 'SELECT c.nickname FROM c WHERE c.id = @did',
+          parameters: [{ name: '@did', value: deviceId }],
+          partitionKey: deviceId,
+        }),
+        queryDocs({
+          connString: conn,
+          dbName: DB_NAME,
+          containerName: ENGAGEMENT_EVENTS_CONTAINER,
+          query: "SELECT c.kind, c.payload FROM c WHERE c.kind = 'share'",
+          parameters: [],
+          partitionKey: deviceId,
+        }),
+      ]);
+      if (profileRes.ok && profileRes.docs.length > 0) profileDoc = profileRes.docs[0];
+      if (eventsRes.ok) shareEvents = eventsRes.docs;
+    } catch (err) {
+      context.warn('cosmos engagement reads failed (soft-degraded to no signal)', err);
+    }
+    const engagement = computeEngagement(profileDoc, shareEvents);
+
+    const result = { ...streak, ...mastery, ...quiz, ...engagement };
     cache.set(deviceId, result, now);
     return {
       status: 200,
