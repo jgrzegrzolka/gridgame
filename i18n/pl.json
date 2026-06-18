@@ -98,6 +98,21 @@
       "description": "Wypróbowano każdy wariant quizu 60s — wszystkie 7 kontynentów (plus Wszystkie kraje).",
       "hint": "Ukończ rundę 60s w każdym wariancie."
     },
+    "hundred-sprints": {
+      "name": "Sto sprintów",
+      "description": "Ukończono sto quizów 60s.",
+      "hint": "Ukończ sto quizów 60s."
+    },
+    "five-hundred-sprints": {
+      "name": "Pięćset sprintów",
+      "description": "Ukończono pięćset quizów 60s.",
+      "hint": "Ukończ pięćset quizów 60s."
+    },
+    "thousand-sprints": {
+      "name": "Tysiąc sprintów",
+      "description": "Ukończono tysiąc quizów 60s — to się nazywa lojalność.",
+      "hint": "Ukończ tysiąc quizów 60s."
+    },
     "sprint-habit": {
       "name": "Nawyk sprintera",
       "description": "Zagrano w quiz 60s 7 dni z rzędu.",

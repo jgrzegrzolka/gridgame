@@ -98,6 +98,21 @@
       "description": "Tried every 60s quiz variant — all 7 continents (plus All Countries).",
       "hint": "Finish a 60s round in every variant."
     },
+    "hundred-sprints": {
+      "name": "Hundred Sprints",
+      "description": "Finished a hundred 60s quizzes.",
+      "hint": "Finish a hundred 60s quizzes."
+    },
+    "five-hundred-sprints": {
+      "name": "Five Hundred Sprints",
+      "description": "Finished five hundred 60s quizzes.",
+      "hint": "Finish five hundred 60s quizzes."
+    },
+    "thousand-sprints": {
+      "name": "Thousand Sprints",
+      "description": "Finished a thousand 60s quizzes — that's loyal.",
+      "hint": "Finish a thousand 60s quizzes."
+    },
     "sprint-habit": {
       "name": "Sprint Habit",
       "description": "Played a 60s quiz 7 days in a row.",
