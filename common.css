@@ -19,7 +19,12 @@
   --secondary-color: #C2899F;
   --muted-color: #999;
   --link-color: var(--primary-color);
-  --page-top: 80px;
+  --page-top: 100px;
+  /* Bottom of the fixed chrome strip — where the pink hairline sits.
+   * Decoupled from --page-top so the strip can hug the chrome buttons
+   * (top:12 + height:44 = bottom 56) while content keeps a generous
+   * gap below the line. */
+  --top-strip-height: 64px;
   /* Inward push for the chrome cluster on wide viewports so the buttons
    * align with the right edge of the widest content the project ever
    * renders — the 9×9 tic-tac-toe grid, which maxes at 756 px (9 × 80 px
@@ -103,7 +108,7 @@ body::before {
   top: 0;
   left: 0;
   right: 0;
-  height: var(--page-top);
+  height: var(--top-strip-height);
   background: #fafafa;
   border-bottom: 1px solid var(--secondary-color);
   z-index: 10;
