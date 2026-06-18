@@ -32,6 +32,7 @@
  *   totalCompleted?: number,
  *   cleanSweeps?: number,
  *   flawlessSweeps?: number,
+ *   attemptedFinishes?: number,
  *   zeroScoreFinishes?: number,
  *   quizAttempts60s?: number,
  *   quizVariantsTouched60s?: number,
@@ -126,6 +127,44 @@ const ICON_BRUSH_X100 =
   BRUSH_SHAPES +
   '<text x="8" y="22" font-size="7" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">×100</text>' +
   '</svg>';
+
+// Magnifying glass — the honest-attempt tier (1 / ×10 / ×100).
+// Reads as "you looked, you tried" without overlapping the brush
+// (which is mastery / clean-sweep) or the stopwatch (which is 60s).
+// Same shared-shape + label trick as BRUSH_SHAPES so the three tiers
+// stay visually consistent.
+const GLASS_SHAPES =
+  '<rect x="5" y="2" width="4" height="2"/>' +
+  '<rect x="3" y="4" width="2" height="2"/>' +
+  '<rect x="9" y="4" width="2" height="2"/>' +
+  '<rect x="2" y="6" width="2" height="3"/>' +
+  '<rect x="10" y="6" width="2" height="3"/>' +
+  '<rect x="3" y="9" width="2" height="2"/>' +
+  '<rect x="9" y="9" width="2" height="2"/>' +
+  '<rect x="5" y="11" width="4" height="2"/>' +
+  '<rect x="10" y="10" width="2" height="2"/>' +
+  '<rect x="11" y="11" width="2" height="2"/>' +
+  '<rect x="12" y="12" width="2" height="2"/>' +
+  '<rect x="13" y="13" width="2" height="2"/>';
+
+const ICON_GLASS =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  GLASS_SHAPES +
+  '</svg>';
+
+/**
+ * @param {string} label
+ * @param {number} fontSize
+ * @returns {string}
+ */
+function glassWithLabel(label, fontSize) {
+  return '<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true">' +
+    GLASS_SHAPES +
+    `<text x="8" y="22" font-size="${fontSize}" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">${label}</text>` +
+    '</svg>';
+}
+const ICON_GLASS_X10 = glassWithLabel('×10', 8);
+const ICON_GLASS_X100 = glassWithLabel('×100', 7);
 
 // Stopwatch: round face (built as 4 rect strips around a hollow
 // centre), crown button on top, minute hand pointing up from centre.
@@ -292,6 +331,34 @@ const ICON_GLOBE_STAR =
 
 /** @type {AchievementRule[]} */
 export const MASTERY_ACHIEVEMENTS = [
+  // ---- Casual / engagement tier — submitted with some finds AND
+  // some wrongs, the realistic majority of plays. Sits at the top of
+  // the mastery cluster because every player who'd ever earn a
+  // Clean Sweep would have earned one of these first.
+  {
+    id: 'honest-attempt',
+    icon: ICON_GLASS,
+    name: 'Honest Attempt',
+    description: 'Submitted a daily with some flags found and some wrong guesses — proof you played.',
+    hint: 'Finish a daily with at least one flag found and at least one wrong guess.',
+    predicate: (s) => num(s.attemptedFinishes) >= 1,
+  },
+  {
+    id: 'ten-honest-attempts',
+    icon: ICON_GLASS_X10,
+    name: 'Ten Honest Attempts',
+    description: 'Submitted ten dailies with some flags found and some wrong guesses.',
+    hint: 'Finish ten dailies with at least one flag found and at least one wrong guess.',
+    predicate: (s) => num(s.attemptedFinishes) >= 10,
+  },
+  {
+    id: 'hundred-honest-attempts',
+    icon: ICON_GLASS_X100,
+    name: 'Hundred Honest Attempts',
+    description: 'Submitted a hundred dailies with some flags found and some wrong guesses.',
+    hint: 'Finish a hundred dailies with at least one flag found and at least one wrong guess.',
+    predicate: (s) => num(s.attemptedFinishes) >= 100,
+  },
   {
     id: 'clean-sweep',
     icon: ICON_BRUSH,

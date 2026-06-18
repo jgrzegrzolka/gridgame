@@ -15,6 +15,13 @@
  *     harder than a clean sweep because every guess has to land
  *     in the target set, no spaghetti-throwing.
  *
+ *   - `attemptedFinishes` — "you played, you tried, you missed some".
+ *     Found at least one flag AND made at least one wrong guess.
+ *     Captures the realistic middle of the daily playerbase: not
+ *     sweep-tier, not zero-score, just intentional play with
+ *     imperfect execution. Drives the casual engagement tier
+ *     (Honest Attempt → Hundred Honest Attempts).
+ *
  *   - `zeroScoreFinishes` — count of submissions where the player
  *     submitted with no found answers (`foundCodes.length === 0`).
  *     The "we've all been there" badge ships with `>= 1`. Captured
@@ -27,7 +34,8 @@
  * `buildDailyResultDoc` always have valid values. `wrongCodes` is
  * tolerated as either missing or non-array — a row without it is
  * treated as "we don't know whether it was flawless" and doesn't
- * count toward flawlessSweeps. Real rows always carry it.
+ * count toward flawlessSweeps or attemptedFinishes. Real rows
+ * always carry it.
  */
 
 /**
@@ -40,6 +48,7 @@
  * @typedef {{
  *   cleanSweeps: number,
  *   flawlessSweeps: number,
+ *   attemptedFinishes: number,
  *   zeroScoreFinishes: number,
  * }} MasteryResult
  */
@@ -51,8 +60,9 @@
 function computeMastery(docs) {
   let cleanSweeps = 0;
   let flawlessSweeps = 0;
+  let attemptedFinishes = 0;
   let zeroScoreFinishes = 0;
-  if (!Array.isArray(docs)) return { cleanSweeps, flawlessSweeps, zeroScoreFinishes };
+  if (!Array.isArray(docs)) return { cleanSweeps, flawlessSweeps, attemptedFinishes, zeroScoreFinishes };
   for (const doc of docs) {
     if (!doc || typeof doc !== 'object') continue;
     const found = doc.foundCodes;
@@ -65,8 +75,15 @@ function computeMastery(docs) {
       cleanSweeps++;
       if (Array.isArray(wrong) && wrong.length === 0) flawlessSweeps++;
     }
+    // attemptedFinishes is orthogonal to clean/flawless — counts any
+    // submission with at least one found AND at least one wrong. A
+    // clean sweep that had wrong guesses on the way still qualifies
+    // (the player did intentionally play, errors and all).
+    if (Array.isArray(wrong) && found.length >= 1 && wrong.length >= 1) {
+      attemptedFinishes++;
+    }
   }
-  return { cleanSweeps, flawlessSweeps, zeroScoreFinishes };
+  return { cleanSweeps, flawlessSweeps, attemptedFinishes, zeroScoreFinishes };
 }
 
 module.exports = { computeMastery };
