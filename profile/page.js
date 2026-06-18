@@ -252,10 +252,20 @@ export function bootProfile() {
 async function renderAchievements(deviceId) {
   const section = document.getElementById('achievements');
   const grid = document.getElementById('achievements-grid');
+  const loading = document.getElementById('achievements-loading');
   if (!section || !grid) return;
 
+  // Show the section with a loading label immediately so the heading
+  // doesn't pop in late and shift the form below it.
+  section.hidden = false;
+
   const snapshot = await fetchDailyMe(deviceId);
-  if (!snapshot) return;
+  if (!snapshot) {
+    // Silent degrade: hide the whole section so the page reads exactly
+    // like the pre-feature version on failure.
+    section.hidden = true;
+    return;
+  }
 
   const statuses = evaluateAchievements(snapshot);
 
@@ -298,7 +308,8 @@ async function renderAchievements(deviceId) {
     grid.appendChild(li);
   }
   wireAchievementInfoDismiss();
-  section.hidden = false;
+  if (loading) loading.hidden = true;
+  grid.hidden = false;
 }
 
 /**

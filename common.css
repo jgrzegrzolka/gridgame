@@ -1138,60 +1138,94 @@ dialog#zoom p {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(43, 29, 36, 0.45); /* primary-tinted backdrop, no off-palette black */
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  cursor: pointer;
-  animation: ach-backdrop-fade 0.25s ease-out;
+  padding-bottom: 40px;
+  /* No backdrop: the page underneath stays interactive while the cards
+   * hang at the bottom. pointer-events: none lets clicks pass through
+   * the empty area; the stack opts back in so cards remain tappable. */
+  pointer-events: none;
 }
-@keyframes ach-backdrop-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+/* The class-based display:flex above beats the UA `[hidden]
+ * { display: none; }` rule on specificity, so without this override
+ * setting `overlay.hidden = true` after the last card is dismissed
+ * wouldn't actually hide the empty stack frame. */
+.ach-celebrate[hidden] {
+  display: none;
 }
-.ach-celebrate--leaving {
-  animation: ach-backdrop-fade 0.25s ease-out reverse forwards;
+.ach-celebrate-stack {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  max-width: 100%;
+  pointer-events: auto;
 }
 .ach-celebrate-card {
+  position: relative;
   background: #fff;
   border: 2px solid var(--secondary-color);
   border-radius: 10px;
-  padding: 24px 28px 22px;
-  max-width: 320px;
-  width: calc(100% - 32px);
-  box-shadow: 0 16px 40px rgba(43, 29, 36, 0.25);
+  padding: 8px 10px 6px;
+  width: 140px;
+  box-shadow: 0 12px 32px rgba(43, 29, 36, 0.25);
   text-align: center;
-  cursor: default;
-  /* Drop-and-bounce: lands at 55% of the timeline, then two
-   * diminishing bounces. cubic-bezier(0.34, 1.56, 0.64, 1) gives a
-   * quick accel ending in a small overshoot to sell the impact. */
-  animation: ach-drop-bounce 1.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  cursor: pointer;
+  /* Falls from above the viewport, lands at the bottom edge, then
+   * four diminishing bounces. cubic-bezier(0.34, 1.56, 0.64, 1) gives
+   * each keyframe a small overshoot so the diminishing hops read as
+   * squash-and-stretch rather than discrete teleports. */
+  animation: ach-fall-bump 1.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
-@keyframes ach-drop-bounce {
-  0%   { transform: translateY(-140vh) rotate(-12deg); opacity: 0; }
+@keyframes ach-fall-bump {
+  0%   { transform: translateY(-150vh) rotate(-8deg); opacity: 0; }
   10%  { opacity: 1; }
-  55%  { transform: translateY(0) rotate(0deg); }
-  68%  { transform: translateY(-32px) rotate(2deg); }
-  78%  { transform: translateY(0) rotate(0deg); }
-  87%  { transform: translateY(-12px) rotate(-1deg); }
-  100% { transform: translateY(0) rotate(0deg); }
+  35%  { transform: translateY(0) rotate(0deg); }
+  48%  { transform: translateY(-40px) rotate(2deg); }
+  60%  { transform: translateY(0) rotate(0deg); }
+  70%  { transform: translateY(-22px) rotate(-1deg); }
+  80%  { transform: translateY(0) rotate(0deg); }
+  88%  { transform: translateY(-10px) rotate(1deg); }
+  94%  { transform: translateY(0) rotate(0deg); }
+  97%  { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+.ach-celebrate-close {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted-color);
+  cursor: pointer;
+}
+.ach-celebrate-close:hover {
+  color: var(--primary-color);
 }
 .ach-celebrate-hat {
-  font-size: 11px;
+  font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--secondary-color);
-  margin: 0 0 12px;
+  margin: 0 0 4px;
 }
 .ach-celebrate-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 26px;
+  height: 26px;
   color: var(--secondary-color);
-  margin-bottom: 8px;
+  margin-bottom: 3px;
 }
 .ach-celebrate-icon svg {
   width: 100%;
@@ -1199,19 +1233,85 @@ dialog#zoom p {
   display: block;
 }
 .ach-celebrate-name {
-  font-size: 20px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--primary-color);
-  margin: 0 0 8px;
-}
-.ach-celebrate-desc {
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--primary-color);
   margin: 0;
+  line-height: 1.2;
+}
+@keyframes ach-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ach-celebrate-card {
-    animation: ach-backdrop-fade 0.25s ease-out;
+    animation: ach-fade-in 0.25s ease-out;
   }
+}
+
+/* Achievement-info dialog — opens on profile-tile tap or celebration-
+ * card tap. Native <dialog> for modality + Esc-to-close + focus
+ * management for free. Backdrop click also closes (wired in the
+ * consumer JS — <dialog> doesn't do that on its own).
+ *
+ * Visual is a compact card centred on screen, palette-faithful: the
+ * icon picks up its tile colour (secondary for earned, muted for
+ * locked) so the popup visually echoes whatever was tapped. */
+.achievement-info {
+  border: 1px solid var(--muted-color);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0;
+  max-width: 320px;
+  width: calc(100% - 32px);
+}
+.achievement-info::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+.achievement-info-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 18px 16px;
+  gap: 8px;
+}
+.achievement-info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--muted-color);
+}
+.achievement-info-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.achievement-info--earned .achievement-info-icon {
+  color: var(--secondary-color);
+}
+.achievement-info-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin: 0;
+}
+.achievement-info-status {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+  margin: 0;
+}
+.achievement-info--earned .achievement-info-status {
+  color: var(--secondary-color);
+}
+.achievement-info-body {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--primary-color);
+  margin: 4px 0 8px;
 }
