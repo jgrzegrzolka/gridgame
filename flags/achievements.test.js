@@ -326,6 +326,24 @@ test('angel-investor fires when coffeeClicked is strict-true', () => {
   assert.equal(rule.predicate({ coffeeClicked: /** @type {any} */ (1) }), false);
 });
 
+// --- TTT tier --------------------------------------------------------------
+
+test('first-ttt fires when hasPlayedTtt is strict-true', () => {
+  const rule = ruleById('first-ttt');
+  assert.equal(rule.predicate({ hasPlayedTtt: true }), true);
+  assert.equal(rule.predicate({ hasPlayedTtt: false }), false);
+  assert.equal(rule.predicate({}), false);
+  // Defensive: a truthy non-boolean must not satisfy the predicate.
+  assert.equal(rule.predicate({ hasPlayedTtt: /** @type {any} */ (1) }), false);
+});
+
+test('first-ttt does NOT fire on other game signals (cross-contamination guard)', () => {
+  // A player who's a daily-puzzle champion but never touched TTT
+  // must not silently get a TTT achievement.
+  const rule = ruleById('first-ttt');
+  assert.equal(rule.predicate({ totalCompleted: 99, cleanSweeps: 99, hasNickname: true }), false);
+});
+
 test('social rules do NOT cross-contaminate (each reads only its own counter)', () => {
   // Pin the field-mapping so a future rename can't silently wire a
   // share rule to the wrong surface or to a daily counter.
@@ -458,6 +476,7 @@ test('evaluateAchievements with a full snapshot earns every badge across every t
     hasNickname: true, hasLinkedDevice: true,
     dailySharesCount: 1, quizSharesCount: 1, findflagSharesCount: 1, coffeeClicked: true,
     quiz60sCurrentStreak: 30, quiz60sMaxStreak: 30, quiz60sDistinctDays: 100,
+    hasPlayedTtt: true,
   });
   assert.ok(out.every((s) => s.earned), 'all rules should be earned');
 });
@@ -527,6 +546,7 @@ test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration
     hasNickname: true, hasLinkedDevice: true,
     dailySharesCount: 1, quizSharesCount: 1, findflagSharesCount: 1, coffeeClicked: true,
     quiz60sCurrentStreak: 30, quiz60sMaxStreak: 30, quiz60sDistinctDays: 100,
+    hasPlayedTtt: true,
   });
   assert.deepEqual(
     newly.map((r) => r.id),

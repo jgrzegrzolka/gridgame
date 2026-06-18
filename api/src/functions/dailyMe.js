@@ -15,6 +15,7 @@ const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
 const QUIZ_RECORDS_CONTAINER = 'quizRecords';
 const PROFILES_CONTAINER = 'profiles';
+const TTT_PAIRS_CONTAINER = 'tttPairs';
 const ENGAGEMENT_EVENTS_CONTAINER = 'engagementEvents';
 const CACHE_TTL_MS = 60_000;
 
@@ -159,8 +160,9 @@ app.http('dailyMe', {
     // flat (max of the two, not the sum).
     let profileDoc = null;
     let engagementEvents = [];
+    let hasPlayedTtt = false;
     try {
-      const [profileRes, eventsRes] = await Promise.all([
+      const [profileRes, eventsRes, tttRes] = await Promise.all([
         queryDocs({
           connString: conn,
           dbName: DB_NAME,
@@ -181,13 +183,27 @@ app.http('dailyMe', {
           parameters: [],
           partitionKey: deviceId,
         }),
+        // Existence probe against the player's `tttPairs` partition.
+        // SELECT TOP 1 — we only need to know whether the player has
+        // any TTT outcome row, not what's in it. ~1 RU. Drives the
+        // "First Tic Tac Toe" achievement.
+        queryDocs({
+          connString: conn,
+          dbName: DB_NAME,
+          containerName: TTT_PAIRS_CONTAINER,
+          query: 'SELECT TOP 1 c.id FROM c',
+          parameters: [],
+          partitionKey: deviceId,
+        }),
       ]);
       if (profileRes.ok && profileRes.docs.length > 0) profileDoc = profileRes.docs[0];
       if (eventsRes.ok) engagementEvents = eventsRes.docs;
+      if (tttRes.ok && tttRes.docs.length > 0) hasPlayedTtt = true;
     } catch (err) {
       context.warn('cosmos engagement reads failed (soft-degraded to no signal)', err);
     }
     const engagement = computeEngagement(profileDoc, engagementEvents);
+    const ttt = { hasPlayedTtt };
 
     // 60s quiz streak: derive from quiz_play events of mode='60s'.
     // Same streak math as the daily-puzzle streak; the only difference
@@ -202,7 +218,7 @@ app.http('dailyMe', {
       quiz60sDistinctDays: quiz60sStreak.totalPlayed,
     };
 
-    const result = { ...streak, ...mastery, ...quiz, ...engagement, ...quiz60sStreakSnapshot };
+    const result = { ...streak, ...mastery, ...quiz, ...engagement, ...quiz60sStreakSnapshot, ...ttt };
     cache.set(deviceId, result, now);
     return {
       status: 200,

@@ -51,6 +51,7 @@
  *   quiz60sCurrentStreak?: number,
  *   quiz60sMaxStreak?: number,
  *   quiz60sDistinctDays?: number,
+ *   hasPlayedTtt?: boolean,
  * }} Snapshot
  *
  * @typedef {{
@@ -398,6 +399,16 @@ const ICON_LINK =
   '<rect x="13" y="9" width="2" height="2"/>' +
   // bridge between them
   '<rect x="7" y="7" width="2" height="2"/>' +
+  '</svg>';
+
+// Tic-tac-toe grid — a clean # shape (two vertical bars crossed by
+// two horizontal bars). Drives "First Tic Tac Toe".
+const ICON_TTT_GRID =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  '<rect x="5" y="1" width="2" height="14"/>' +
+  '<rect x="9" y="1" width="2" height="14"/>' +
+  '<rect x="1" y="5" width="14" height="2"/>' +
+  '<rect x="1" y="9" width="14" height="2"/>' +
   '</svg>';
 
 // Coffee cup with rising steam — Angel Investor. Pixel-art cup body
@@ -816,11 +827,30 @@ export const SOCIAL_ACHIEVEMENTS = [
   },
 ];
 
+/** @type {AchievementRule[]} */
+export const TTT_ACHIEVEMENTS = [
+  {
+    id: 'first-ttt',
+    icon: ICON_TTT_GRID,
+    name: 'First Tic Tac Toe',
+    description: 'Played your first tic-tac-toe game.',
+    hint: 'Play a tic-tac-toe round.',
+    // `hasPlayedTtt` is derived server-side from an existence probe
+    // against the player's `tttPairs` Cosmos partition — true iff at
+    // least one TTT outcome row exists. Catches online games (online
+    // TTT writes Cosmos); offline-vs-AI plays don't write Cosmos and
+    // don't trip the predicate. Acceptable trade-off for the minimum
+    // "you played TTT" rule.
+    predicate: (s) => s.hasPlayedTtt === true,
+  },
+];
+
 /**
  * Default rule order on the profile page. Streak first (every player
  * touches the daily flow), mastery second (gated on at least one
- * completion), quiz third (a separate game-mode tier), social last
- * (cross-game engagement signals — set a nickname, share results).
+ * completion), quiz third (a separate game-mode tier), social fourth
+ * (cross-game engagement signals), TTT last (its own game tier — one
+ * rule for now; more land here when TTT activity picks up).
  * Declared this way so a newcomer sees the streak tier first — the
  * most accessible badges sit at the top of the grid.
  *
@@ -831,6 +861,7 @@ export const ALL_ACHIEVEMENTS = [
   ...MASTERY_ACHIEVEMENTS,
   ...QUIZ_ACHIEVEMENTS,
   ...SOCIAL_ACHIEVEMENTS,
+  ...TTT_ACHIEVEMENTS,
 ];
 
 /**

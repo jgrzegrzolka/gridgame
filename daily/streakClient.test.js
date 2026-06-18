@@ -47,6 +47,7 @@ const FULL = {
   quiz60sCurrentStreak: 4,
   quiz60sMaxStreak: 12,
   quiz60sDistinctDays: 25,
+  hasPlayedTtt: true,
 };
 
 test('fetchDailyMe: happy path — passes deviceId, returns shape', async () => {
@@ -131,6 +132,7 @@ test('fetchDailyMe: missing fields collapse to 0 (defensive shape)', async () =>
     quiz60sCurrentStreak: 0,
     quiz60sMaxStreak: 0,
     quiz60sDistinctDays: 0,
+    hasPlayedTtt: false,
   });
 });
 
@@ -172,6 +174,7 @@ test('fetchDailyMe: non-numeric field values collapse to 0', async () => {
     quiz60sCurrentStreak: 0,
     quiz60sMaxStreak: 0,
     quiz60sDistinctDays: 0,
+    hasPlayedTtt: false,
   });
 });
 

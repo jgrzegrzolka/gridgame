@@ -232,6 +232,11 @@
       "name": "Angel Investor",
       "description": "Bought the developer a coffee — thanks for the support!",
       "hint": "Buy the developer a coffee from the burger menu."
+    },
+    "first-ttt": {
+      "name": "First Tic Tac Toe",
+      "description": "Played your first tic-tac-toe game.",
+      "hint": "Play a tic-tac-toe round."
     }
   },
   "sync": {
