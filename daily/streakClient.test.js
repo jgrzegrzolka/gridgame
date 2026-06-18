@@ -27,6 +27,7 @@ const FULL = {
   totalPlayed: 11,
   totalCompleted: 9,
   cleanSweeps: 3,
+  flawlessSweeps: 2,
   zeroScoreFinishes: 1,
 };
 
@@ -92,6 +93,7 @@ test('fetchDailyMe: missing fields collapse to 0 (defensive shape)', async () =>
     totalPlayed: 0,
     totalCompleted: 0,
     cleanSweeps: 0,
+    flawlessSweeps: 0,
     zeroScoreFinishes: 0,
   });
 });
@@ -114,6 +116,7 @@ test('fetchDailyMe: non-numeric field values collapse to 0', async () => {
     totalPlayed: 0,
     totalCompleted: 4,
     cleanSweeps: 0,
+    flawlessSweeps: 0,
     zeroScoreFinishes: 0,
   });
 });

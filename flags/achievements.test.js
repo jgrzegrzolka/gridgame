@@ -71,17 +71,27 @@ test('hundred-clean-sweeps fires at cleanSweeps >= 100', () => {
   assert.equal(rule.predicate({ cleanSweeps: 100 }), true);
 });
 
+test('flawless-sweep fires at flawlessSweeps >= 1', () => {
+  const rule = ruleById('flawless-sweep');
+  assert.equal(rule.predicate({ flawlessSweeps: 0 }), false);
+  assert.equal(rule.predicate({ flawlessSweeps: 1 }), true);
+});
+
 test('empty-slate fires at zeroScoreFinishes >= 1', () => {
   const rule = ruleById('empty-slate');
   assert.equal(rule.predicate({ zeroScoreFinishes: 0 }), false);
   assert.equal(rule.predicate({ zeroScoreFinishes: 1 }), true);
 });
 
-test('mastery rules do NOT cross-contaminate (clean-sweep ignores zeroScoreFinishes, etc.)', () => {
+test('mastery rules do NOT cross-contaminate (each reads only its own counter)', () => {
   // Pin the field-mapping so a future copy-paste rename can't silently
-  // wire clean-sweep to the wrong counter.
+  // wire a rule to the wrong counter.
   assert.equal(ruleById('clean-sweep').predicate({ zeroScoreFinishes: 99 }), false);
   assert.equal(ruleById('empty-slate').predicate({ cleanSweeps: 99 }), false);
+  // flawless-sweep must read flawlessSweeps specifically — having lots
+  // of clean sweeps (with mistakes along the way) shouldn't qualify.
+  assert.equal(ruleById('flawless-sweep').predicate({ cleanSweeps: 99 }), false);
+  assert.equal(ruleById('flawless-sweep').predicate({ zeroScoreFinishes: 99 }), false);
 });
 
 // --- Snapshot defensiveness ------------------------------------------------
@@ -145,10 +155,10 @@ test('evaluateAchievements marks earned=true for the rules whose predicates fire
 });
 
 test('evaluateAchievements with mastery counters lights up the mastery tier independently', () => {
-  const out = evaluateAchievements({ cleanSweeps: 1, zeroScoreFinishes: 1 });
+  const out = evaluateAchievements({ cleanSweeps: 1, flawlessSweeps: 1, zeroScoreFinishes: 1 });
   const earned = out.filter((s) => s.earned).map((s) => s.rule.id);
-  // No streak fields → streak tier all locked. Mastery: clean-sweep + empty-slate fire.
-  assert.deepEqual(earned.sort(), ['clean-sweep', 'empty-slate']);
+  // No streak fields → streak tier all locked. Mastery: clean-sweep + flawless-sweep + empty-slate fire.
+  assert.deepEqual(earned.sort(), ['clean-sweep', 'empty-slate', 'flawless-sweep']);
 });
 
 test('evaluateAchievements tolerates a null snapshot (no profile data fetched yet)', () => {
@@ -169,7 +179,7 @@ test('evaluateAchievements at a 30-day streak earns every streak badge', () => {
 
 test('evaluateAchievements with a full snapshot earns every badge across both tiers', () => {
   const out = evaluateAchievements({
-    totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, zeroScoreFinishes: 1,
+    totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, flawlessSweeps: 1, zeroScoreFinishes: 1,
   });
   assert.ok(out.every((s) => s.earned), 'all rules should be earned');
 });
@@ -231,7 +241,7 @@ test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration
   // future code change can't accidentally reorder them (which would
   // change which card pops first on a multi-unlock).
   const newly = diffNewlyEarnedAchievements({}, {
-    totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, zeroScoreFinishes: 1,
+    totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, flawlessSweeps: 1, zeroScoreFinishes: 1,
   });
   assert.deepEqual(
     newly.map((r) => r.id),
