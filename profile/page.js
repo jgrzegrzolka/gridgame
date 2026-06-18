@@ -240,6 +240,12 @@ export function bootProfile() {
   // looking like the pre-feature version rather than showing an empty
   // "Achievements" header.
   void renderAchievements(deviceId);
+
+  // Re-paint the grid (and the open info dialog, if any) when the
+  // language toggle fires. Cached statuses → no extra network roundtrip.
+  document.addEventListener('langchanged', () => {
+    if (cachedStatuses) paintAchievementsGrid(cachedStatuses);
+  });
 }
 
 /**
@@ -249,6 +255,11 @@ export function bootProfile() {
  *
  * @param {string} deviceId
  */
+// Cached so the langchanged handler can re-paint with the same data
+// without a fresh /api/v1/daily/me roundtrip.
+/** @type {import('../flags/achievements.js').AchievementStatus[] | null} */
+let cachedStatuses = null;
+
 async function renderAchievements(deviceId) {
   const section = document.getElementById('achievements');
   const grid = document.getElementById('achievements-grid');
@@ -267,8 +278,21 @@ async function renderAchievements(deviceId) {
     return;
   }
 
-  const statuses = evaluateAchievements(snapshot);
+  cachedStatuses = evaluateAchievements(snapshot);
+  paintAchievementsGrid(cachedStatuses);
+  if (loading) loading.hidden = true;
+  grid.hidden = false;
+}
 
+/**
+ * Re-paint the grid from a status set. Pulled out of renderAchievements
+ * so the langchanged listener can re-run it without re-fetching.
+ *
+ * @param {import('../flags/achievements.js').AchievementStatus[]} statuses
+ */
+function paintAchievementsGrid(statuses) {
+  const grid = document.getElementById('achievements-grid');
+  if (!grid) return;
   // Show the section even if zero are earned — locked silhouettes are
   // the "things to chase" UX. A truly empty grid would be a sign that
   // every rule failed to load; let the test gate catch that, not the
@@ -284,10 +308,15 @@ async function renderAchievements(deviceId) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `achievement-badge achievement-badge--${earned ? 'earned' : 'locked'}`;
-    button.setAttribute('aria-label', `${rule.name} — ${earned ? 'earned' : 'locked'}`);
+    const localName = t(`achievement.${rule.id}.name`, rule.name);
+    const localDescription = t(`achievement.${rule.id}.description`, rule.description);
+    const localHint = t(`achievement.${rule.id}.hint`, rule.hint);
+    const localEarned = t('profile.achievements.statusEarned', 'Earned');
+    const localLocked = t('profile.achievements.statusLocked', 'Locked');
+    button.setAttribute('aria-label', `${localName} — ${earned ? localEarned : localLocked}`);
     // Tooltip carries the description (earned) or hint (locked) —
     // keeps the tile itself compact, only one line of name + icon.
-    button.title = earned ? rule.description : rule.hint;
+    button.title = earned ? localDescription : localHint;
     button.addEventListener('click', () => openAchievementInfo(rule, earned));
 
     const icon = document.createElement('span');
@@ -301,15 +330,13 @@ async function renderAchievements(deviceId) {
 
     const name = document.createElement('span');
     name.className = 'achievement-name';
-    name.textContent = rule.name;
+    name.textContent = localName;
     button.appendChild(name);
 
     li.appendChild(button);
     grid.appendChild(li);
   }
   wireAchievementInfoDismiss();
-  if (loading) loading.hidden = true;
-  grid.hidden = false;
 }
 
 /**
@@ -333,13 +360,21 @@ function openAchievementInfo(rule, earned) {
   if (iconEl) iconEl.innerHTML = rule.icon;
 
   const nameEl = document.getElementById('achievement-info-name');
-  if (nameEl) nameEl.textContent = rule.name;
+  if (nameEl) nameEl.textContent = t(`achievement.${rule.id}.name`, rule.name);
 
   const statusEl = document.getElementById('achievement-info-status');
-  if (statusEl) statusEl.textContent = earned ? 'Earned' : 'Locked';
+  if (statusEl) {
+    statusEl.textContent = earned
+      ? t('profile.achievements.statusEarned', 'Earned')
+      : t('profile.achievements.statusLocked', 'Locked');
+  }
 
   const bodyEl = document.getElementById('achievement-info-body');
-  if (bodyEl) bodyEl.textContent = earned ? rule.description : rule.hint;
+  if (bodyEl) {
+    bodyEl.textContent = earned
+      ? t(`achievement.${rule.id}.description`, rule.description)
+      : t(`achievement.${rule.id}.hint`, rule.hint);
+  }
 
   if (typeof dialog.showModal === 'function') dialog.showModal();
   else dialog.setAttribute('open', '');
