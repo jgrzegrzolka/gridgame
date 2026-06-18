@@ -224,12 +224,19 @@ export function reasonMessage(reason) {
  * page (restored from localStorage). Confetti is the caller's concern
  * — revisits don't want it.
  *
+ * `categoryLabel` is repainted into `#find-cat` so the puzzle title strip
+ * (which stays visible above the result via the `.is-finished` class)
+ * carries the current language's label. Revisits and soft language
+ * switches pass a fresh string each call.
+ *
  * @param {Country[]} targets
  * @param {Set<string>} foundCodes
+ * @param {string} categoryLabel
  */
-export function renderResult(targets, foundCodes) {
+export function renderResult(targets, foundCodes, categoryLabel) {
   const gameEl = /** @type {HTMLElement} */ (document.getElementById('game'));
   const resultEl = /** @type {HTMLElement} */ (document.getElementById('result'));
+  const catEl = /** @type {HTMLElement} */ (document.getElementById('find-cat'));
 
   const found = foundCodes.size;
   const total = targets.length;
@@ -254,7 +261,13 @@ export function renderResult(targets, foundCodes) {
   for (const c of missed) missedEl.appendChild(flagTile(c));
   /** @type {HTMLElement} */ (document.getElementById('missed-title')).hidden = missed.length === 0;
 
-  gameEl.hidden = true;
+  // Keep #game visible so the puzzle title strip (.find-header with the
+  // category label + .daily-desc) sits above the result — the player
+  // sees what they just solved. Play-only children (input, in-game grid,
+  // count, sovereign note, give-up row) hide via the .is-finished class.
+  catEl.textContent = categoryLabel;
+  gameEl.hidden = false;
+  gameEl.classList.add('is-finished');
   resultEl.hidden = false;
 }
 
@@ -483,7 +496,7 @@ export function startGame(n, category, targets, all, opts = {}) {
     const { tier, intensity } = pickCelebration({ found, total });
     if (tier === 'fireworks') launchFireworks();
     else if (tier === 'confetti') launchConfetti({ intensity });
-    renderResult(targets, foundCodes);
+    renderResult(targets, foundCodes, category.label);
     if (onFinish) {
       onFinish({
         foundCodes: Array.from(foundCodes),
@@ -516,7 +529,7 @@ export function startGame(n, category, targets, all, opts = {}) {
       catEl.textContent = next.label;
       refreshTileNames();
       renderSuggestions();
-      if (finished) renderResult(targets, foundCodes);
+      if (finished) renderResult(targets, foundCodes, next.label);
     },
   };
 }
