@@ -31,6 +31,7 @@
  *   totalPlayed?: number,
  *   totalCompleted?: number,
  *   cleanSweeps?: number,
+ *   flawlessSweeps?: number,
  *   zeroScoreFinishes?: number,
  * }} Snapshot
  *
@@ -143,6 +144,14 @@ export const MASTERY_ACHIEVEMENTS = [
     description: 'Finished a hundred daily puzzles 100%.',
     hint: 'Get a clean sweep on a hundred daily puzzles.',
     predicate: (s) => num(s.cleanSweeps) >= 100,
+  },
+  {
+    id: 'flawless-sweep',
+    icon: ICON_STAR,
+    name: 'Flawless Sweep',
+    description: 'Finished a daily 100% with no wrong guesses.',
+    hint: 'Get a clean sweep without any wrong answer.',
+    predicate: (s) => num(s.flawlessSweeps) >= 1,
   },
   {
     id: 'empty-slate',
