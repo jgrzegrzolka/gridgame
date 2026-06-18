@@ -127,4 +127,39 @@ function submissionsToStreakRows(docs, dayFn) {
     .map((id) => ({ id, completed: true }));
 }
 
-module.exports = { computeStreak, submissionsToStreakRows };
+/**
+ * Map a list of engagementEvents rows to deduped streak rows, filtered
+ * by `kind: 'quiz_play'` and the requested mode (`'60s'` or `'all'`).
+ * Drives the quiz-streak achievements via `computeStreak`.
+ *
+ * `dayId` is already on every engagement row (server-set at write
+ * time from `warsawDayNumber(now)`), so no conversion is needed —
+ * unlike `submissionsToStreakRows` which has to derive day from
+ * `submittedAt`.
+ *
+ * Defensive on shape: missing/non-object rows, wrong kind, missing
+ * or malformed payload, non-numeric dayId all silently skipped.
+ *
+ * @param {Array<{ kind?: unknown, payload?: unknown, dayId?: unknown }>} events
+ * @param {string} mode  '60s' or 'all'
+ * @returns {StreakRow[]}
+ */
+function quizPlayEventsToStreakRows(events, mode) {
+  const days = new Set();
+  if (!Array.isArray(events)) return [];
+  for (const ev of events) {
+    if (!ev || typeof ev !== 'object') continue;
+    if (ev.kind !== 'quiz_play') continue;
+    const p = /** @type {{ mode?: unknown } | null | undefined} */ (
+      typeof ev.payload === 'object' ? ev.payload : null
+    );
+    if (!p || p.mode !== mode) continue;
+    if (typeof ev.dayId !== 'number' || !Number.isFinite(ev.dayId)) continue;
+    days.add(ev.dayId);
+  }
+  return Array.from(days)
+    .sort((a, b) => a - b)
+    .map((id) => ({ id, completed: true }));
+}
+
+module.exports = { computeStreak, submissionsToStreakRows, quizPlayEventsToStreakRows };

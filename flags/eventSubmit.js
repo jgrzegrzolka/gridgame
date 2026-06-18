@@ -21,6 +21,7 @@
  * @typedef {| { kind: 'daily_start', payload: { puzzleId: number } }
  *           | { kind: 'findflag_play', payload: { filter: string, mode: 'random' | 'custom' } }
  *           | { kind: 'share', payload: { surface: 'daily' | 'findflag' | 'flagquiz' | 'ttt', contextHint?: string } }
+ *           | { kind: 'quiz_play', payload: { mode: '60s' | 'all' } }
  *          } EngagementEvent
  */
 
