@@ -36,6 +36,9 @@ import { fetchLeaderboard } from '../flags/dailyLeaderboardFetch.js';
 import { renderLeaderboard } from '../flags/dailyLeaderboardRender.js';
 import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
+import { fetchDailyMe } from '../daily/streakClient.js';
+import { diffNewlyEarnedAchievements } from '../flags/achievements.js';
+import { celebrate } from '../flags/achievementCelebrate.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -77,6 +80,17 @@ export function bootFlagQuiz() {
   void trySyncDevices({
     deviceId, store: window.localStorage, identityKey: IDENTITY_STORAGE_KEY,
   });
+
+  // Pre-fetch the achievement snapshot so the post-finish diff (below
+  // in the timed-mode branch) has a real pre-submit baseline. Without
+  // this, diffNewlyEarnedAchievements(null, fresh) would return every
+  // already-earned rule — a player who already had "First Sprint" or
+  // any daily-side badge would see their entire set re-cascade on
+  // their next quiz finish. Cached path (no bypass) — the post-finish
+  // refetch uses bypassCache to pick up the just-submitted PB.
+  /** @type {import('../daily/streakClient.js').StreakResult | null} */
+  let snapshotBaseline = null;
+  void fetchDailyMe(deviceId).then((s) => { if (s) snapshotBaseline = s; });
 
   const params = new URLSearchParams(window.location.search);
   const urlVariant = params.get('v');
@@ -504,7 +518,7 @@ export function bootFlagQuiz() {
         // leaderboard fetch lands after the server's leaderboard write
         // completes so the just-played row is visible on this paint.
         const configKey = quizRecordConfigKey(key, mode, includeAll);
-        void runLeaderboardCycle({
+        const cycleP = runLeaderboardCycle({
           submitImpl: () => submitQuizRecord({
             deviceId, configKey,
             score: answeredCount, durationMs: budgetUsed, lowerWins: false,
@@ -525,6 +539,19 @@ export function bootFlagQuiz() {
         });
         if (tier === 'fireworks') launchFireworks();
         else if (tier === 'confetti') launchConfetti({ intensity });
+        // Achievement diff: chain off the leaderboard cycle so the
+        // bypassCache fetch lands AFTER submitQuizRecord has settled
+        // server-side (the cycle awaits the submit internally before
+        // resolving). bypassCache → server skips its 60s window so the
+        // just-submitted PB row is reflected in the snapshot used for
+        // the diff. Same shape as daily/page.js's post-finish flow.
+        void cycleP.then(async () => {
+          const fresh = await fetchDailyMe(deviceId, { bypassCache: true });
+          if (!fresh) return;
+          const newlyEarned = diffNewlyEarnedAchievements(snapshotBaseline, fresh);
+          snapshotBaseline = fresh;
+          if (newlyEarned.length > 0) void celebrate(newlyEarned);
+        });
       } else {
         // Count mode is one-shot per question, so correct + wrong = target.
         // We still store wrongCount as best.score (lower-wins) for
