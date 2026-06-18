@@ -1,6 +1,6 @@
 /**
  * Aggregate cross-game engagement signals from a player's `profiles`
- * row + their `engagementEvents` share history.
+ * row + their `engagementEvents` history.
  *
  * Pure: no DOM, no clock, no Cosmos client. Feeds the Feature O
  * achievement evaluator via `/api/v1/daily/me`.
@@ -12,14 +12,18 @@
  *     keeping the actual string out of the snapshot avoids leaking
  *     it to any other consumer.
  *
- *   - `dailySharesCount` — count of `kind: 'share'` events with
- *     `payload.surface === 'daily'`. Drives "Daily Sharer".
+ *   - `hasLinkedDevice` — `true` iff the player's profile row has a
+ *     numeric `linkedAt` field (sync flow successfully ran). Drives
+ *     the "Connected" achievement.
  *
- *   - `quizSharesCount` — count of share events with surface
- *     `'flagquiz'`. Drives "Quiz Sharer". (Both 60s and endurance
- *     fire under the same `flagquiz` surface, so we don't split them
- *     here — a future "shared a 60s round specifically" achievement
- *     would parse `contextHint` for the mode segment.)
+ *   - `dailySharesCount` / `quizSharesCount` / `findflagSharesCount`
+ *     — counts of `kind: 'share'` events by surface. Drive the three
+ *     Sharer achievements. The `'flagquiz'` surface covers both 60s
+ *     and endurance rounds (the mode is embedded in `contextHint`).
+ *
+ *   - `coffeeClicked` — `true` iff at least one `kind: 'coffee_click'`
+ *     event exists for the device. Drives "Angel Investor". Trust-
+ *     based — no payment verification, just intent.
  *
  * Defensive on shape: missing/null inputs return zero/false. Events
  * lacking a recognisable `surface` field are silently skipped (a
@@ -28,7 +32,7 @@
  */
 
 /**
- * @typedef {{ nickname?: unknown } | null | undefined} ProfileRow
+ * @typedef {{ nickname?: unknown, linkedAt?: unknown } | null | undefined} ProfileRow
  * @typedef {{
  *   kind?: unknown,
  *   payload?: { surface?: unknown } | null | undefined,
@@ -36,8 +40,11 @@
  *
  * @typedef {{
  *   hasNickname: boolean,
+ *   hasLinkedDevice: boolean,
  *   dailySharesCount: number,
  *   quizSharesCount: number,
+ *   findflagSharesCount: number,
+ *   coffeeClicked: boolean,
  * }} EngagementResult
  */
 
@@ -50,8 +57,11 @@ function computeEngagement(profile, events) {
   /** @type {EngagementResult} */
   const result = {
     hasNickname: false,
+    hasLinkedDevice: false,
     dailySharesCount: 0,
     quizSharesCount: 0,
+    findflagSharesCount: 0,
+    coffeeClicked: false,
   };
 
   if (profile && typeof profile === 'object') {
@@ -61,19 +71,31 @@ function computeEngagement(profile, events) {
     if (typeof nick === 'string' && nick.length > 0) {
       result.hasNickname = true;
     }
+    // linkedAt is a unix-ms timestamp set when sync completes. Any
+    // finite numeric value counts as linked; null / missing means
+    // the device has never been through the sync flow.
+    const linkedAt = profile.linkedAt;
+    if (typeof linkedAt === 'number' && Number.isFinite(linkedAt)) {
+      result.hasLinkedDevice = true;
+    }
   }
 
   if (!Array.isArray(events)) return result;
   for (const ev of events) {
     if (!ev || typeof ev !== 'object') continue;
+    if (ev.kind === 'coffee_click') {
+      result.coffeeClicked = true;
+      continue;
+    }
     if (ev.kind !== 'share') continue;
     if (!ev.payload || typeof ev.payload !== 'object') continue;
     const surface = ev.payload.surface;
     if (surface === 'daily') result.dailySharesCount++;
     else if (surface === 'flagquiz') result.quizSharesCount++;
-    // Other surfaces (findflag, ttt) are tracked for analytics but
-    // don't feed any current achievement — skip rather than fold
-    // into a generic "any share" counter we'd then have to gate.
+    else if (surface === 'findflag') result.findflagSharesCount++;
+    // Other surfaces (ttt) are tracked for analytics but don't feed
+    // any current achievement — skip rather than fold into a generic
+    // "any share" counter we'd then have to gate.
   }
 
   return result;

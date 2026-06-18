@@ -35,6 +35,10 @@
  *                  when the player plays the same mode again on the
  *                  same day. Drives the 60s-streak achievements via
  *                  engagementStreakCompute.)
+ *   coffee_click:  "coffee_click:{uuid}"               — non-deterministic
+ *                  (every "Buy me a coffee" link click writes a new
+ *                  row; trust-based — no payment verification, just
+ *                  intent. Drives the "Angel Investor" achievement.)
  *
  * Per-kind payload contracts:
  *   daily_start:   { puzzleId: number }
@@ -42,6 +46,7 @@
  *   share:         { surface: 'daily'|'findflag'|'flagquiz'|'ttt',
  *                    contextHint?: string }
  *   quiz_play:     { mode: '60s' | 'all' }
+ *   coffee_click:  {} — no payload fields; existence is the signal.
  *
  * Unknown payload fields are stripped — defense against future shape
  * drift. The validator returns the first error code it hits; the
@@ -52,7 +57,7 @@
  * so tests can pin both. Stays pure.
  */
 
-const KINDS = /** @type {const} */ (['daily_start', 'findflag_play', 'share', 'quiz_play']);
+const KINDS = /** @type {const} */ (['daily_start', 'findflag_play', 'share', 'quiz_play', 'coffee_click']);
 const SHARE_SURFACES = /** @type {const} */ (['daily', 'findflag', 'flagquiz', 'ttt']);
 const FINDFLAG_MODES = /** @type {const} */ (['random', 'custom']);
 const QUIZ_PLAY_MODES = /** @type {const} */ (['60s', 'all']);
@@ -61,7 +66,7 @@ const MAX_FILTER_LEN = 256;
 const MAX_CONTEXT_HINT_LEN = 128;
 
 /**
- * @typedef {'daily_start' | 'findflag_play' | 'share' | 'quiz_play'} EventKind
+ * @typedef {'daily_start' | 'findflag_play' | 'share' | 'quiz_play' | 'coffee_click'} EventKind
  * @typedef {{ puzzleId: number }} DailyStartPayload
  * @typedef {{ filter: string, mode: 'random' | 'custom' }} FindFlagPlayPayload
  * @typedef {{
@@ -69,7 +74,8 @@ const MAX_CONTEXT_HINT_LEN = 128;
  *   contextHint?: string
  * }} SharePayload
  * @typedef {{ mode: '60s' | 'all' }} QuizPlayPayload
- * @typedef {DailyStartPayload | FindFlagPlayPayload | SharePayload | QuizPlayPayload} EventPayload
+ * @typedef {Record<string, never>} CoffeeClickPayload
+ * @typedef {DailyStartPayload | FindFlagPlayPayload | SharePayload | QuizPlayPayload | CoffeeClickPayload} EventPayload
  *
  * @typedef {{
  *   deviceId: string,
@@ -170,6 +176,13 @@ function validateAndCleanPayload(kind, payload) {
       ok: true,
       payload: { mode: /** @type {'60s' | 'all'} */ (p.mode) },
     };
+  }
+
+  if (kind === 'coffee_click') {
+    // No payload fields today — the existence of the row is the
+    // signal. Strip anything the client sent so future shape drift
+    // doesn't bloat the doc.
+    return { ok: true, payload: {} };
   }
 
   // share

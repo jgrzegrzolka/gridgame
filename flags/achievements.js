@@ -43,8 +43,11 @@
  *   quizAllLowWrongAny?: number,
  *   quizAllPerfectedVariants?: string[],
  *   hasNickname?: boolean,
+ *   hasLinkedDevice?: boolean,
  *   dailySharesCount?: number,
  *   quizSharesCount?: number,
+ *   findflagSharesCount?: number,
+ *   coffeeClicked?: boolean,
  *   quiz60sCurrentStreak?: number,
  *   quiz60sMaxStreak?: number,
  *   quiz60sDistinctDays?: number,
@@ -372,6 +375,51 @@ function shareWithLabel(label) {
 }
 const ICON_SHARE_DAILY = shareWithLabel('D');
 const ICON_SHARE_QUIZ = shareWithLabel('Q');
+const ICON_SHARE_FIND = shareWithLabel('F');
+
+// Two overlapping link rings — Connected achievement (devices linked
+// via sync). Reads as "two things joined" without overlapping any
+// existing icon glyph.
+const ICON_LINK =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  // left ring
+  '<rect x="1" y="5" width="2" height="2"/>' +
+  '<rect x="1" y="9" width="2" height="2"/>' +
+  '<rect x="3" y="3" width="2" height="2"/>' +
+  '<rect x="3" y="11" width="2" height="2"/>' +
+  '<rect x="5" y="5" width="2" height="2"/>' +
+  '<rect x="5" y="9" width="2" height="2"/>' +
+  // right ring
+  '<rect x="9" y="5" width="2" height="2"/>' +
+  '<rect x="9" y="9" width="2" height="2"/>' +
+  '<rect x="11" y="3" width="2" height="2"/>' +
+  '<rect x="11" y="11" width="2" height="2"/>' +
+  '<rect x="13" y="5" width="2" height="2"/>' +
+  '<rect x="13" y="9" width="2" height="2"/>' +
+  // bridge between them
+  '<rect x="7" y="7" width="2" height="2"/>' +
+  '</svg>';
+
+// Coffee cup with rising steam — Angel Investor. Pixel-art cup body
+// (squarish) + handle on the right + two steam lines above.
+const ICON_COFFEE =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  // steam
+  '<rect x="5" y="0" width="1" height="2"/>' +
+  '<rect x="6" y="2" width="1" height="2"/>' +
+  '<rect x="8" y="0" width="1" height="2"/>' +
+  '<rect x="9" y="2" width="1" height="2"/>' +
+  // cup top (rim)
+  '<rect x="2" y="5" width="10" height="2"/>' +
+  // cup body
+  '<rect x="3" y="7" width="8" height="5"/>' +
+  // handle
+  '<rect x="12" y="7" width="2" height="2"/>' +
+  '<rect x="13" y="9" width="1" height="2"/>' +
+  '<rect x="12" y="11" width="2" height="1"/>' +
+  // saucer
+  '<rect x="2" y="13" width="10" height="2"/>' +
+  '</svg>';
 
 // Globe + small star above for the standalone "All Countries
 // Mastered" endurance achievement — distinct from ICON_FLAG_WO
@@ -727,6 +775,14 @@ export const SOCIAL_ACHIEVEMENTS = [
     predicate: (s) => s.hasNickname === true,
   },
   {
+    id: 'matrix',
+    icon: ICON_LINK,
+    name: 'Matrix',
+    description: 'Linked two devices via the sync flow.',
+    hint: 'Link a second device on the Sync page.',
+    predicate: (s) => s.hasLinkedDevice === true,
+  },
+  {
     id: 'daily-sharer',
     icon: ICON_SHARE_DAILY,
     name: 'Daily Sharer',
@@ -741,6 +797,22 @@ export const SOCIAL_ACHIEVEMENTS = [
     description: 'Shared a flag quiz result.',
     hint: 'Tap share on a flag quiz result.',
     predicate: (s) => num(s.quizSharesCount) >= 1,
+  },
+  {
+    id: 'custom-crafter',
+    icon: ICON_SHARE_FIND,
+    name: 'Custom Crafter',
+    description: 'Shared a custom puzzle you built in Make a puzzle.',
+    hint: 'Tap share on a custom-puzzle result.',
+    predicate: (s) => num(s.findflagSharesCount) >= 1,
+  },
+  {
+    id: 'angel-investor',
+    icon: ICON_COFFEE,
+    name: 'Angel Investor',
+    description: 'Bought the developer a coffee — thanks for the support!',
+    hint: 'Buy the developer a coffee from the burger menu.',
+    predicate: (s) => s.coffeeClicked === true,
   },
 ];
 
