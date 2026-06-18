@@ -390,7 +390,7 @@ body::before {
   bottom: 0;
   z-index: 5;
   background: #fafafa;
-  border-top: 1px solid var(--secondary-color);
+  border-top: 1px solid #eee;
   margin-top: 16px;
   margin-left: -24px;
   margin-right: -24px;
@@ -832,7 +832,7 @@ body::before {
   bottom: 0;
   z-index: 5;
   background: #fafafa;
-  border-top: 1px solid var(--secondary-color);
+  border-top: 1px solid #eee;
   font-size: 14px;
   color: #666;
   margin: 16px -24px 0;
