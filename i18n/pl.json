@@ -237,6 +237,16 @@
       "name": "Pierwsze kółko i krzyżyk",
       "description": "Zagrano pierwszą partię w kółko i krzyżyk.",
       "hint": "Zagraj jedną partię w kółko i krzyżyk."
+    },
+    "first-ttt-win": {
+      "name": "Pierwsza wygrana",
+      "description": "Wygrano pierwszą partię w kółko i krzyżyk.",
+      "hint": "Wygraj partię w kółko i krzyżyk."
+    },
+    "first-ttt-loss": {
+      "name": "Pierwsza porażka",
+      "description": "Przegrano partię w kółko i krzyżyk — zdarza się każdemu.",
+      "hint": "Przegraj partię w kółko i krzyżyk (odznaka solidarności)."
     }
   },
   "sync": {

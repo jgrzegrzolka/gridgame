@@ -237,6 +237,16 @@
       "name": "First Tic Tac Toe",
       "description": "Played your first tic-tac-toe game.",
       "hint": "Play a tic-tac-toe round."
+    },
+    "first-ttt-win": {
+      "name": "First Win",
+      "description": "Won your first tic-tac-toe game.",
+      "hint": "Win a tic-tac-toe round."
+    },
+    "first-ttt-loss": {
+      "name": "First Loss",
+      "description": "Lost a tic-tac-toe game — happens to the best of us.",
+      "hint": "Lose a tic-tac-toe round (the badge of solidarity)."
     }
   },
   "sync": {

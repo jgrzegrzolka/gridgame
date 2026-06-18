@@ -48,6 +48,8 @@ const FULL = {
   quiz60sMaxStreak: 12,
   quiz60sDistinctDays: 25,
   hasPlayedTtt: true,
+  hasWonTtt: true,
+  hasLostTtt: false,
 };
 
 test('fetchDailyMe: happy path — passes deviceId, returns shape', async () => {
@@ -133,6 +135,8 @@ test('fetchDailyMe: missing fields collapse to 0 (defensive shape)', async () =>
     quiz60sMaxStreak: 0,
     quiz60sDistinctDays: 0,
     hasPlayedTtt: false,
+    hasWonTtt: false,
+    hasLostTtt: false,
   });
 });
 
@@ -175,6 +179,8 @@ test('fetchDailyMe: non-numeric field values collapse to 0', async () => {
     quiz60sMaxStreak: 0,
     quiz60sDistinctDays: 0,
     hasPlayedTtt: false,
+    hasWonTtt: false,
+    hasLostTtt: false,
   });
 });
 
