@@ -212,6 +212,11 @@ const ICON_STOPWATCH_7D = stopwatchWithLabel('7d');
 const ICON_STOPWATCH_14D = stopwatchWithLabel('14d');
 const ICON_STOPWATCH_30D = stopwatchWithLabel('30d');
 const ICON_STOPWATCH_100D = stopwatchWithLabel('100d');
+// Volume tier — total 60s attempts. ×N labels distinguish these from
+// the day-streak tier above which uses "Nd" labels.
+const ICON_STOPWATCH_X100 = stopwatchWithLabel('×100');
+const ICON_STOPWATCH_X500 = stopwatchWithLabel('×500');
+const ICON_STOPWATCH_X1000 = stopwatchWithLabel('×1k');
 
 // Globe: octagon outline + horizontal equator + vertical meridian.
 const ICON_GLOBE =
@@ -606,6 +611,34 @@ export const QUIZ_ACHIEVEMENTS = [
     description: 'Tried every 60s quiz variant — all 7 continents (plus All Countries).',
     hint: 'Finish a 60s round in every variant.',
     predicate: (s) => num(s.quizVariantsTouched60s) >= 7,
+  },
+  // ---- Volume tier — total 60s attempts ever (every finish, PB or
+  // not). The reward for sheer time invested. Counts include 0-score
+  // rounds — the engagement signal is "you showed up to play",
+  // regardless of how many flags you got.
+  {
+    id: 'hundred-sprints',
+    icon: ICON_STOPWATCH_X100,
+    name: 'Hundred Sprints',
+    description: 'Finished a hundred 60s quizzes.',
+    hint: 'Finish a hundred 60s quizzes.',
+    predicate: (s) => num(s.quizAttempts60s) >= 100,
+  },
+  {
+    id: 'five-hundred-sprints',
+    icon: ICON_STOPWATCH_X500,
+    name: 'Five Hundred Sprints',
+    description: 'Finished five hundred 60s quizzes.',
+    hint: 'Finish five hundred 60s quizzes.',
+    predicate: (s) => num(s.quizAttempts60s) >= 500,
+  },
+  {
+    id: 'thousand-sprints',
+    icon: ICON_STOPWATCH_X1000,
+    name: 'Thousand Sprints',
+    description: 'Finished a thousand 60s quizzes — that\'s loyal.',
+    hint: 'Finish a thousand 60s quizzes.',
+    predicate: (s) => num(s.quizAttempts60s) >= 1000,
   },
   // ---- Loyalty tier — rewards coming back day after day. Same shape
   // as the daily streak tier, sourced from quiz_play engagement events

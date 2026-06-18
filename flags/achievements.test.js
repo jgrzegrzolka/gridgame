@@ -116,6 +116,22 @@ test('cartographer fires at quizVariantsTouched60s >= 7 (all variants)', () => {
   assert.equal(rule.predicate({ quizVariantsTouched60s: 7 }), true);
 });
 
+test('volume tier fires at 100 / 500 / 1000 quizAttempts60s', () => {
+  assert.equal(ruleById('hundred-sprints').predicate({ quizAttempts60s: 99 }), false);
+  assert.equal(ruleById('hundred-sprints').predicate({ quizAttempts60s: 100 }), true);
+  assert.equal(ruleById('five-hundred-sprints').predicate({ quizAttempts60s: 499 }), false);
+  assert.equal(ruleById('five-hundred-sprints').predicate({ quizAttempts60s: 500 }), true);
+  assert.equal(ruleById('thousand-sprints').predicate({ quizAttempts60s: 999 }), false);
+  assert.equal(ruleById('thousand-sprints').predicate({ quizAttempts60s: 1000 }), true);
+});
+
+test('volume tier reads quizAttempts60s, not the loyalty or skill counters', () => {
+  // A player with a 100-day streak but few actual attempts must not
+  // accidentally earn a volume badge; a high best-score doesn't count.
+  assert.equal(ruleById('hundred-sprints').predicate({ quiz60sMaxStreak: 999 }), false);
+  assert.equal(ruleById('hundred-sprints').predicate({ quizBestScore60s: 999 }), false);
+});
+
 test('skill tier fires at score thresholds 30 / 40 / 50', () => {
   assert.equal(ruleById('quick-recall').predicate({ quizBestScore60s: 29 }), false);
   assert.equal(ruleById('quick-recall').predicate({ quizBestScore60s: 30 }), true);
@@ -486,7 +502,7 @@ test('evaluateAchievements at a 30-day streak earns every streak badge', () => {
 test('evaluateAchievements with a full snapshot earns every badge across every tier', () => {
   const out = evaluateAchievements({
     totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, flawlessSweeps: 1, attemptedFinishes: 100, zeroScoreFinishes: 1,
-    quizAttempts60s: 50, quizVariantsTouched60s: 7, quizBestScore60s: 50,
+    quizAttempts60s: 1000, quizVariantsTouched60s: 7, quizBestScore60s: 50,
     quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
     quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
     quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],
@@ -556,7 +572,7 @@ test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration
   // change which card pops first on a multi-unlock).
   const newly = diffNewlyEarnedAchievements({}, {
     totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, flawlessSweeps: 1, attemptedFinishes: 100, zeroScoreFinishes: 1,
-    quizAttempts60s: 50, quizVariantsTouched60s: 7, quizBestScore60s: 50,
+    quizAttempts60s: 1000, quizVariantsTouched60s: 7, quizBestScore60s: 50,
     quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
     quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
     quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],
