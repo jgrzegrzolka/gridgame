@@ -6,85 +6,136 @@
  * earn trigger (TTT first-win, etc.) by calling `celebrate(rules)`
  * with the array of newly-earned `AchievementRule`s.
  *
- * The overlay DOM is lazy-mounted on first call so consumer pages
- * don't have to remember to drop the HTML — every page that imports
- * this module gets the celebration capability for free. CSS lives in
- * `common.css` so the styles are always loaded alongside.
+ * Cards rain down from above and pile up at the bottom of the
+ * screen — staggered by `STAGGER_MS` so they cascade rather than
+ * appear all at once. The overlay has no backdrop and is
+ * pointer-events: none on the empty area: the player can still
+ * interact with the result screen underneath. Each card has its own
+ * × to dismiss; tapping the card body opens an info dialog with the
+ * full description (the same shared `.achievement-info` dialog the
+ * profile page uses).
  *
- * Each rule plays one card at a time (queued) — multiple unlocks
- * never pile up on screen. ~4 seconds per card: ~1.6s drop + bounce,
- * ~2.4s hold, ~250ms fade out. Tap anywhere to skip the current card.
+ * The overlay + dialog DOM are lazy-mounted on first call so
+ * consumer pages don't have to drop any HTML.
  */
 
 /** @typedef {import('./achievements.js').AchievementRule} AchievementRule */
 
+const STAGGER_MS = 250;
+
 /**
- * Play the drop-and-bounce overlay for each newly-earned rule in
- * sequence. Returns when the last card has been dismissed.
+ * Cascade-mount one card per rule, staggered by `STAGGER_MS`. Each
+ * card lingers until the player closes it via its own × button.
+ * Resolves once every card has been dismissed.
  *
  * @param {AchievementRule[]} rules
  * @returns {Promise<void>}
  */
-export async function celebrate(rules) {
-  for (const rule of rules) {
-    await celebrateOne(rule);
-  }
-}
-
-/**
- * @param {AchievementRule} rule
- * @returns {Promise<void>}
- */
-function celebrateOne(rule) {
+export function celebrate(rules) {
   return new Promise((resolve) => {
-    if (typeof document === 'undefined') {
+    if (typeof document === 'undefined' || rules.length === 0) {
       resolve();
       return;
     }
-    const els = ensureOverlay();
-    els.icon.innerHTML = rule.icon;
-    els.name.textContent = rule.name;
-    els.desc.textContent = rule.description;
-
-    els.overlay.hidden = false;
-    // Force a reflow so the keyframe animation restarts cleanly
-    // between queued celebrations.
-    els.overlay.classList.remove('ach-celebrate--leaving');
-    // eslint-disable-next-line no-unused-expressions
-    els.overlay.offsetHeight;
-
-    let dismissed = false;
-    const dismiss = () => {
-      if (dismissed) return;
-      dismissed = true;
-      els.overlay.classList.add('ach-celebrate--leaving');
-      setTimeout(() => {
-        els.overlay.hidden = true;
-        els.overlay.classList.remove('ach-celebrate--leaving');
-        els.overlay.removeEventListener('click', dismiss);
+    const { overlay, stack, dialog } = ensureOverlay();
+    stack.replaceChildren();
+    let remaining = rules.length;
+    const onCardClosed = () => {
+      remaining--;
+      if (remaining === 0) {
+        overlay.hidden = true;
         resolve();
-      }, 250);
+      }
     };
-    els.overlay.addEventListener('click', dismiss);
-    // Auto-dismiss after the drop-bounce (~1.6s) + hold (~2.4s).
-    setTimeout(dismiss, 4000);
+    rules.forEach((rule, i) => {
+      stack.appendChild(buildCard(rule, i, dialog, onCardClosed));
+    });
+    overlay.hidden = false;
   });
 }
 
 /**
- * Lazy-mount the overlay DOM on first call; idempotent on subsequent
- * calls. Returns handles for the four nodes the player gets to see.
+ * @param {AchievementRule} rule
+ * @param {number} i
+ * @param {HTMLDialogElement} dialog
+ * @param {() => void} onClose
+ * @returns {HTMLElement}
+ */
+function buildCard(rule, i, dialog, onClose) {
+  const card = document.createElement('div');
+  card.className = 'ach-celebrate-card';
+  card.style.animationDelay = `${i * STAGGER_MS}ms`;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'ach-celebrate-close';
+  closeBtn.setAttribute('aria-label', 'Close');
+  closeBtn.innerHTML = '&times;';
+  // stopPropagation so the close click doesn't also bubble up to the
+  // card body listener (which opens the info dialog).
+  closeBtn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    card.remove();
+    onClose();
+  });
+  card.appendChild(closeBtn);
+
+  const hat = document.createElement('p');
+  hat.className = 'ach-celebrate-hat';
+  hat.textContent = 'Achievement unlocked';
+  card.appendChild(hat);
+
+  const icon = document.createElement('span');
+  icon.className = 'ach-celebrate-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  // rule.icon is a static SVG string authored in flags/achievements.js
+  // (no player data ever flows through it), so innerHTML is safe here.
+  icon.innerHTML = rule.icon;
+  card.appendChild(icon);
+
+  const name = document.createElement('h3');
+  name.className = 'ach-celebrate-name';
+  name.textContent = rule.name;
+  card.appendChild(name);
+
+  card.addEventListener('click', () => openInfoDialog(dialog, rule));
+  return card;
+}
+
+/**
+ * Reuses the shared `.achievement-info` dialog (mounted by
+ * `ensureOverlay`) — same DOM shape and class names the profile page
+ * uses, so they share styling in `common.css`.
  *
- * @returns {{ overlay: HTMLElement, icon: HTMLElement, name: HTMLElement, desc: HTMLElement }}
+ * @param {HTMLDialogElement} dialog
+ * @param {AchievementRule} rule
+ */
+function openInfoDialog(dialog, rule) {
+  const iconEl = dialog.querySelector('.achievement-info-icon');
+  if (iconEl) iconEl.innerHTML = rule.icon;
+  const nameEl = dialog.querySelector('.achievement-info-name');
+  if (nameEl) nameEl.textContent = rule.name;
+  const statusEl = dialog.querySelector('.achievement-info-status');
+  if (statusEl) statusEl.textContent = 'Earned';
+  const bodyEl = dialog.querySelector('.achievement-info-body');
+  if (bodyEl) bodyEl.textContent = rule.description;
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+}
+
+/**
+ * Lazy-mount the overlay (card stack) + the shared info dialog on
+ * first call; idempotent on subsequent calls.
+ *
+ * @returns {{ overlay: HTMLElement, stack: HTMLElement, dialog: HTMLDialogElement }}
  */
 function ensureOverlay() {
   const existing = /** @type {HTMLElement | null} */ (document.getElementById('ach-celebrate'));
   if (existing) {
     return {
       overlay: existing,
-      icon: /** @type {HTMLElement} */ (document.getElementById('ach-celebrate-icon')),
-      name: /** @type {HTMLElement} */ (document.getElementById('ach-celebrate-name')),
-      desc: /** @type {HTMLElement} */ (document.getElementById('ach-celebrate-desc')),
+      stack: /** @type {HTMLElement} */ (document.getElementById('ach-celebrate-stack')),
+      dialog: /** @type {HTMLDialogElement} */ (document.getElementById('ach-celebrate-dialog')),
     };
   }
   const overlay = document.createElement('div');
@@ -93,18 +144,30 @@ function ensureOverlay() {
   overlay.setAttribute('role', 'status');
   overlay.setAttribute('aria-live', 'polite');
   overlay.hidden = true;
-  overlay.innerHTML =
-    '<div class="ach-celebrate-card" id="ach-celebrate-card">' +
-      '<p class="ach-celebrate-hat">Achievement unlocked</p>' +
-      '<span class="ach-celebrate-icon" id="ach-celebrate-icon" aria-hidden="true"></span>' +
-      '<h3 class="ach-celebrate-name" id="ach-celebrate-name"></h3>' +
-      '<p class="ach-celebrate-desc" id="ach-celebrate-desc"></p>' +
-    '</div>';
+  const stack = document.createElement('div');
+  stack.id = 'ach-celebrate-stack';
+  stack.className = 'ach-celebrate-stack';
+  overlay.appendChild(stack);
   document.body.appendChild(overlay);
-  return {
-    overlay,
-    icon: /** @type {HTMLElement} */ (document.getElementById('ach-celebrate-icon')),
-    name: /** @type {HTMLElement} */ (document.getElementById('ach-celebrate-name')),
-    desc: /** @type {HTMLElement} */ (document.getElementById('ach-celebrate-desc')),
-  };
+
+  const dialog = /** @type {HTMLDialogElement} */ (document.createElement('dialog'));
+  dialog.id = 'ach-celebrate-dialog';
+  dialog.className = 'achievement-info achievement-info--earned';
+  dialog.setAttribute('aria-labelledby', 'ach-celebrate-dialog-name');
+  const card = document.createElement('div');
+  card.className = 'achievement-info-card';
+  card.innerHTML =
+    '<span class="achievement-info-icon" aria-hidden="true"></span>' +
+    '<h3 class="achievement-info-name" id="ach-celebrate-dialog-name"></h3>' +
+    '<p class="achievement-info-status">Earned</p>' +
+    '<p class="achievement-info-body"></p>';
+  dialog.appendChild(card);
+  document.body.appendChild(dialog);
+  // Backdrop click closes the dialog — native <dialog> doesn't do
+  // this on its own.
+  dialog.addEventListener('click', (ev) => {
+    if (ev.target === dialog) dialog.close();
+  });
+
+  return { overlay, stack, dialog };
 }

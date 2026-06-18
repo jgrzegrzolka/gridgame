@@ -6,6 +6,7 @@ import {
   MASTERY_ACHIEVEMENTS,
   ALL_ACHIEVEMENTS,
   evaluateAchievements,
+  diffNewlyEarnedAchievements,
 } from './achievements.js';
 
 // --- Per-rule fixtures -----------------------------------------------------
@@ -58,10 +59,16 @@ test('clean-sweep fires at cleanSweeps >= 1', () => {
   assert.equal(rule.predicate({ cleanSweeps: 99 }), true);
 });
 
-test('perfect-five fires at cleanSweeps >= 5', () => {
-  const rule = ruleById('perfect-five');
-  assert.equal(rule.predicate({ cleanSweeps: 4 }), false);
-  assert.equal(rule.predicate({ cleanSweeps: 5 }), true);
+test('ten-clean-sweeps fires at cleanSweeps >= 10', () => {
+  const rule = ruleById('ten-clean-sweeps');
+  assert.equal(rule.predicate({ cleanSweeps: 9 }), false);
+  assert.equal(rule.predicate({ cleanSweeps: 10 }), true);
+});
+
+test('hundred-clean-sweeps fires at cleanSweeps >= 100', () => {
+  const rule = ruleById('hundred-clean-sweeps');
+  assert.equal(rule.predicate({ cleanSweeps: 99 }), false);
+  assert.equal(rule.predicate({ cleanSweeps: 100 }), true);
 });
 
 test('empty-slate fires at zeroScoreFinishes >= 1', () => {
@@ -162,9 +169,74 @@ test('evaluateAchievements at a 30-day streak earns every streak badge', () => {
 
 test('evaluateAchievements with a full snapshot earns every badge across both tiers', () => {
   const out = evaluateAchievements({
-    totalCompleted: 30, maxStreak: 30, cleanSweeps: 5, zeroScoreFinishes: 1,
+    totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, zeroScoreFinishes: 1,
   });
   assert.ok(out.every((s) => s.earned), 'all rules should be earned');
+});
+
+// --- diffNewlyEarnedAchievements -------------------------------------------
+
+test('diffNewlyEarnedAchievements: null before → every earned rule in after counts as new', () => {
+  const newly = diffNewlyEarnedAchievements(null, { totalCompleted: 1 });
+  assert.deepEqual(newly.map((r) => r.id), ['first-daily']);
+});
+
+test('diffNewlyEarnedAchievements: empty before → every earned rule in after counts as new', () => {
+  const newly = diffNewlyEarnedAchievements({}, { totalCompleted: 1, cleanSweeps: 1 });
+  assert.deepEqual(newly.map((r) => r.id).sort(), ['clean-sweep', 'first-daily']);
+});
+
+test('diffNewlyEarnedAchievements: same earned set → empty (already-earned isn\'t a re-unlock)', () => {
+  const snap = { totalCompleted: 1, cleanSweeps: 1 };
+  const newly = diffNewlyEarnedAchievements(snap, snap);
+  assert.deepEqual(newly, []);
+});
+
+test('diffNewlyEarnedAchievements: only the rules that crossed the threshold are returned', () => {
+  const before = { totalCompleted: 1 }; // first-daily already earned
+  const after = { totalCompleted: 1, cleanSweeps: 1 }; // + clean-sweep just crossed
+  const newly = diffNewlyEarnedAchievements(before, after);
+  assert.deepEqual(newly.map((r) => r.id), ['clean-sweep']);
+});
+
+test('diffNewlyEarnedAchievements: multi-tier crossings return every newly-earned rule', () => {
+  // Player who finishes their first ever puzzle AND it's a clean sweep
+  // AND it's day 7 of a streak gets three new badges at once.
+  const before = { totalCompleted: 0, maxStreak: 6, cleanSweeps: 0 };
+  const after = { totalCompleted: 1, maxStreak: 7, cleanSweeps: 1 };
+  const newly = diffNewlyEarnedAchievements(before, after);
+  assert.deepEqual(
+    newly.map((r) => r.id).sort(),
+    ['clean-sweep', 'daily-habit', 'first-daily'],
+  );
+});
+
+test('diffNewlyEarnedAchievements: null after → empty (no snapshot, nothing to compare)', () => {
+  const newly = diffNewlyEarnedAchievements({ totalCompleted: 1 }, null);
+  assert.deepEqual(newly, []);
+});
+
+test('diffNewlyEarnedAchievements: going backwards is ignored (lost badges aren\'t newly earned)', () => {
+  // Defensive — predicate counters are monotonic in practice, but if
+  // some data corruption flipped them, the diff still only reports
+  // forward unlocks. Losing first-daily isn't an "unlock event".
+  const before = { totalCompleted: 1 };
+  const after = { totalCompleted: 0 };
+  const newly = diffNewlyEarnedAchievements(before, after);
+  assert.deepEqual(newly, []);
+});
+
+test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration order', () => {
+  // The celebration cascade plays in array order; pinning this so a
+  // future code change can't accidentally reorder them (which would
+  // change which card pops first on a multi-unlock).
+  const newly = diffNewlyEarnedAchievements({}, {
+    totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, zeroScoreFinishes: 1,
+  });
+  assert.deepEqual(
+    newly.map((r) => r.id),
+    ALL_ACHIEVEMENTS.map((r) => r.id),
+  );
 });
 
 // --- Helpers ---------------------------------------------------------------

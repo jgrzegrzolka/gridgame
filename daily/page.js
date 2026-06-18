@@ -28,7 +28,7 @@ import { pickExtraStats, hasAnyExtraStats, pickMarkerKind } from './extraStats.j
 import { shareText } from '../common.js';
 import { buildShareText } from '../flags/shareGrid.js';
 import { fetchDailyMe } from './streakClient.js';
-import { evaluateAchievements } from '../flags/achievements.js';
+import { diffNewlyEarnedAchievements } from '../flags/achievements.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
 import { fetchCatalog } from './catalogSource.js';
@@ -541,31 +541,24 @@ async function handleFinish(n, targets, all, info, isToday) {
     },
   });
 
-  // Fire the streak fetch after the submit pipeline so the just-
-  // submitted result is reflected (bypassCache → server skips its
-  // 60s cache). Failure is silent — the streak sub-line just doesn't
-  // appear; the score + community stats remain on screen unchanged.
-  // Today-only: an archive finish doesn't extend the streak counter,
-  // so we don't render it on those pages.
-  if (isToday) {
-    // Snapshot the earned-achievement set BEFORE the fresh fetch so
-    // we can diff and fire the drop-and-bounce celebration for
-    // anything newly unlocked by this submit. `streakState` here
-    // holds whatever the page-load fetch returned; the post-submit
-    // fetchDailyMe call below overwrites it with the fresh numbers
-    // that reflect the just-submitted row.
-    const beforeStatuses = streakState ? evaluateAchievements(streakState) : [];
-    const beforeEarnedIds = new Set(
-      beforeStatuses.filter((s) => s.earned).map((s) => s.rule.id),
-    );
-    await loadAndPaintStreak(deviceId, found, info.totalCount, { bypassCache: true });
-    if (streakState) {
-      const afterStatuses = evaluateAchievements(streakState);
-      const newlyEarned = afterStatuses
-        .filter((s) => s.earned && !beforeEarnedIds.has(s.rule.id))
-        .map((s) => s.rule);
-      if (newlyEarned.length > 0) void celebrate(newlyEarned);
-    }
+  // Snapshot the pre-submit state, fetch the fresh post-submit state,
+  // and diff for newly-earned achievements. Runs for every daily
+  // finish — archive plays legitimately earn achievements too (an
+  // archive completion bumps totalCompleted server-side just like a
+  // today-finish does), so the unlock card should pop there as well.
+  // The diff lives in `flags/achievements.js` for unit coverage.
+  const beforeSnapshot = streakState;
+  // bypassCache → skip the server's 60s window so the just-submitted
+  // row is reflected in the snapshot used for the diff. Only repaint
+  // the streak sub-line when this is today's puzzle — surfacing it on
+  // an archive finish would falsely suggest the play extended the
+  // streak counter.
+  const fresh = await fetchDailyMe(deviceId, { bypassCache: true });
+  if (fresh) {
+    streakState = fresh;
+    if (isToday) paintPersonalStats(found, info.totalCount);
+    const newlyEarned = diffNewlyEarnedAchievements(beforeSnapshot, fresh);
+    if (newlyEarned.length > 0) void celebrate(newlyEarned);
   }
 }
 

@@ -18,7 +18,10 @@
     "errorInvalid": "Pseudonim zawiera niedozwolone znaki"
   },
   "profile": {
-    "title": "Twój profil — Yet Another Quiz"
+    "title": "Twój profil — Yet Another Quiz",
+    "achievements": {
+      "loading": "Ładowanie osiągnięć…"
+    }
   },
   "sync": {
     "title": "Synchronizuj między urządzeniami — Yet Another Quiz",

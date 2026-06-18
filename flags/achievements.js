@@ -88,29 +88,67 @@ const ICON_STAR =
   '<path d="M8 1L10 6L15 6L11 9L13 14L8 11L3 14L5 9L1 6L6 6Z"/>' +
   '</svg>';
 
+// Slanted broom: diagonal handle from upper-right, horizontal band,
+// three bristle clumps. Used for the Clean Sweep tier.
+const BRUSH_SHAPES =
+  '<rect x="11" y="0" width="2" height="2"/>' +
+  '<rect x="9" y="2" width="2" height="2"/>' +
+  '<rect x="7" y="4" width="2" height="2"/>' +
+  '<rect x="3" y="6" width="9" height="2"/>' +
+  '<rect x="3" y="8" width="2" height="6"/>' +
+  '<rect x="7" y="8" width="2" height="6"/>' +
+  '<rect x="10" y="8" width="2" height="6"/>';
+
+const ICON_BRUSH =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+  BRUSH_SHAPES +
+  '</svg>';
+
+// Brush + "×N" multiplier label below. Taller viewBox so the brush
+// keeps its size and the label sits underneath.
+const ICON_BRUSH_X10 =
+  '<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true">' +
+  BRUSH_SHAPES +
+  '<text x="8" y="22" font-size="8" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">×10</text>' +
+  '</svg>';
+
+const ICON_BRUSH_X100 =
+  '<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true">' +
+  BRUSH_SHAPES +
+  '<text x="8" y="22" font-size="7" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif">×100</text>' +
+  '</svg>';
+
 /** @type {AchievementRule[]} */
 export const MASTERY_ACHIEVEMENTS = [
   {
     id: 'clean-sweep',
-    icon: ICON_CHECKMARK,
+    icon: ICON_BRUSH,
     name: 'Clean Sweep',
     description: 'Finished a daily puzzle 100%.',
     hint: 'Find every answer in one daily puzzle.',
     predicate: (s) => num(s.cleanSweeps) >= 1,
   },
   {
-    id: 'perfect-five',
-    icon: ICON_STAR,
-    name: 'Perfect Five',
-    description: 'Cleared five daily puzzles 100%.',
-    hint: 'Get a clean sweep on five daily puzzles.',
-    predicate: (s) => num(s.cleanSweeps) >= 5,
+    id: 'ten-clean-sweeps',
+    icon: ICON_BRUSH_X10,
+    name: 'Ten Clean Sweeps',
+    description: 'Finished ten daily puzzles 100%.',
+    hint: 'Get a clean sweep on ten daily puzzles.',
+    predicate: (s) => num(s.cleanSweeps) >= 10,
+  },
+  {
+    id: 'hundred-clean-sweeps',
+    icon: ICON_BRUSH_X100,
+    name: 'Hundred Clean Sweeps',
+    description: 'Finished a hundred daily puzzles 100%.',
+    hint: 'Get a clean sweep on a hundred daily puzzles.',
+    predicate: (s) => num(s.cleanSweeps) >= 100,
   },
   {
     id: 'empty-slate',
     icon: gridIcon(0),
     name: 'Empty Slate',
-    description: "Submitted a daily without finding a single flag — we've all been there.",
+    description: 'Submitted a daily without finding a single flag.',
     hint: 'Submit a daily with zero flags found (the badge of solidarity).',
     predicate: (s) => num(s.zeroScoreFinishes) >= 1,
   },
@@ -186,6 +224,37 @@ export function evaluateAchievements(snapshot, rules = ALL_ACHIEVEMENTS) {
     rule,
     earned: rule.predicate(safe) === true,
   }));
+}
+
+/**
+ * Return the rules that are earned in `after` but were NOT earned in
+ * `before` — the "newly unlocked" set the celebration card should
+ * fire for. Pure: takes snapshots in, returns rule array, no DOM.
+ *
+ * Either snapshot may be `null` (e.g. pre-fetch on a fresh page load
+ * means there's no `before` baseline) — null is treated as an empty
+ * snapshot, so a null `before` makes every earned rule in `after`
+ * count as newly unlocked.
+ *
+ * Going backwards (a rule earned in `before` but not in `after`) is
+ * intentionally ignored — losing a badge isn't an unlock event and
+ * shouldn't pop a card. Predicate counters are monotonically
+ * non-decreasing in practice; the guard is defensive.
+ *
+ * @param {Snapshot | null} before
+ * @param {Snapshot | null} after
+ * @param {AchievementRule[]} [rules]
+ * @returns {AchievementRule[]}
+ */
+export function diffNewlyEarnedAchievements(before, after, rules = ALL_ACHIEVEMENTS) {
+  const beforeIds = new Set(
+    evaluateAchievements(before, rules)
+      .filter((s) => s.earned)
+      .map((s) => s.rule.id),
+  );
+  return evaluateAchievements(after, rules)
+    .filter((s) => s.earned && !beforeIds.has(s.rule.id))
+    .map((s) => s.rule);
 }
 
 /**

@@ -18,7 +18,10 @@
     "errorInvalid": "That nickname contains characters that aren’t allowed"
   },
   "profile": {
-    "title": "Your profile — Yet Another Quiz"
+    "title": "Your profile — Yet Another Quiz",
+    "achievements": {
+      "loading": "Loading achievements…"
+    }
   },
   "sync": {
     "title": "Sync across devices — Yet Another Quiz",
