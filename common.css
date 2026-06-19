@@ -1164,32 +1164,12 @@ dialog#zoom p {
  * here in `common.css` rather than getting copy-pasted across
  * feature stylesheets (per CLAUDE.md "Same mechanism = same code").
  *
- * One off-palette grey remains: `color: #555` on `.rules-btn` /
- * `.help-btn`. It's a mid-grey text bucket that's part of the deferred
- * "PR B" sweep — kept here so a future pass can tokenise it without
- * special-casing the rules-btn rule.
+ * The "?" triggers and the "Got it" dismiss buttons share the unified
+ * pill recipe declared further up (`.profile-save, .lobby-btn,
+ * .rules-close, .help-close, .rules-btn, .help-btn`) — same fill,
+ * border, hover, and pink-border press feedback. Only the slot
+ * geometry overrides live below.
  * ──────────────────────────────────────────────────────────── */
-
-.rules-btn,
-.help-btn {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 50%;
-  background: var(--surface-color);
-  font: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  color: #555;
-  cursor: pointer;
-  line-height: 1;
-}
-.rules-btn:hover,
-.help-btn:hover {
-  background: var(--surface-hover-color);
-  color: var(--primary-color);
-}
 
 .rules-help,
 .help-dialog {
@@ -1235,7 +1215,9 @@ dialog#zoom p {
 .profile-save,
 .lobby-btn,
 .rules-close,
-.help-close {
+.help-close,
+.rules-btn,
+.help-btn {
   font: inherit;
   font-size: 14px;
   color: var(--link-color);
@@ -1254,13 +1236,17 @@ dialog#zoom p {
 .profile-save:hover:not(:disabled),
 .lobby-btn:hover,
 .rules-close:hover,
-.help-close:hover {
+.help-close:hover,
+.rules-btn:hover,
+.help-btn:hover {
   background: var(--surface-hover-color);
 }
 .profile-save:active:not(:disabled),
 .lobby-btn:active,
 .rules-close:active,
-.help-close:active {
+.help-close:active,
+.rules-btn:active,
+.help-btn:active {
   /* Border-only pink so the bg / text stay legible during press; on
    * release, the base rule's 600 ms border-color transition fades it
    * back to --muted-soft-color (the brief "you tapped this" afterglow). */
@@ -1271,7 +1257,9 @@ dialog#zoom p {
 .profile-save:disabled,
 .lobby-btn:disabled,
 .rules-close:disabled,
-.help-close:disabled {
+.help-close:disabled,
+.rules-btn:disabled,
+.help-btn:disabled {
   opacity: 0.5;
   cursor: default;
 }
@@ -1280,6 +1268,17 @@ dialog#zoom p {
 .rules-close,
 .help-close {
   padding: 6px 14px;
+}
+/* Square 32×32 "?" trigger that opens the rules / help modals. Shares
+ * the full pill recipe (bg, border, hover, press, fade-back) — only
+ * the geometry differs: fixed slot, centered glyph. */
+.rules-btn,
+.help-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
 }
 
 /* Achievement-celebrate overlay — fires on a freshly-unlocked badge.
