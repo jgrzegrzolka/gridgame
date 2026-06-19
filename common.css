@@ -72,8 +72,17 @@ body {
    * below) doesn't sit on top of page content. Every page used to
    * repeat this rule in its own stylesheet; promoted here so a new
    * page picks it up automatically. ticTacToe overrides the horizontal
-   * value to fit the 9×9 grid. */
-  padding: var(--page-top) 24px 24px;
+   * value to fit the 9×9 grid.
+   *
+   * Bottom padding is 0 on purpose. Almost every page ends with a
+   * sticky bottom rail (`.actions-row` / `.result-links`) and the rail
+   * carries its own `padding-bottom`. Body padding-bottom > 0 makes
+   * the rail's natural position sit ABOVE body's outer bottom — so at
+   * max scroll the sticky behaviour releases the rail mid-viewport
+   * with a strip of page bg visible below it. Keeping body padding-
+   * bottom at 0 means body's outer bottom == rail's outer bottom ==
+   * viewport bottom at max scroll, so the rail never visibly detaches. */
+  padding: var(--page-top) 24px 0;
   background: #fafafa;
   color: var(--primary-color);
   /* `overflow: clip` clips horizontal overflow without making body a
