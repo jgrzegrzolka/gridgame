@@ -767,6 +767,11 @@ function runOnline(countries) {
     if (game.draw) outcome = 'draw';
     else if (game.winner === myRole) outcome = 'win';
     else if (game.winner) outcome = 'loss';
+    // `applyGiveUp` sets `gaveUp: true` but leaves `winner: null`, so
+    // a resign would fall through all three branches above and leave
+    // `outcome = null` — meaning the give-up game never ticked the
+    // record. Decide from `gaveUpBy` (server-stamped) instead.
+    else if (game.gaveUp) outcome = game.gaveUpBy === myRole ? 'loss' : 'win';
     if (!outcome) return;
     resultSubmittedForGame = true;
     void submitTttResult({ deviceId, opponentId: peerId, mode: '3x3', outcome });
@@ -842,12 +847,22 @@ function runOnline(countries) {
     name.textContent = displayNickname(state.peerId, opponentNickname);
     matchupOpponentEl.append(vs, name);
 
-    // Visible record suffix — `1:0` (wins:losses), with ", N draws"
-    // appended when draws > 0. Painted as a muted span after the name
-    // so the role line reads "You are O vs Alice 1:0" or
-    // "You are O vs Alice 1:0, 2 draws". Hidden until at least one
-    // game is on record so a brand-new pairing doesn't carry "0:0".
-    if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
+    // Suffix after the name:
+    //   - While the pair fetch is in flight: a muted "loading…" label
+    //     so a slow API call doesn't leave the line ambiguous (per Jan's
+    //     rule: every long-running API surface gets a loading label).
+    //   - Once resolved, with at least one game on record: the record
+    //     `1:0` (wins:losses), with ", N draws" appended when draws > 0,
+    //     so the role line reads "You are O vs Alice 1:0" or
+    //     "You are O vs Alice 1:0, 2 draws".
+    //   - Resolved with no games yet: nothing — a brand-new pairing
+    //     shouldn't paint a "0:0".
+    if (pairFetchInFlight) {
+      const loading = document.createElement('span');
+      loading.className = 'matchup-record matchup-record-loading';
+      loading.textContent = t('ttt.matchupRecordLoading', 'loading…');
+      matchupOpponentEl.append(loading);
+    } else if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
       const record = document.createElement('span');
       record.className = 'matchup-record';
       let text = `${pairRecord.wins}:${pairRecord.losses}`;

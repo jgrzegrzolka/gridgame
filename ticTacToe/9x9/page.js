@@ -789,6 +789,12 @@ function runOnline(countries) {
     if (game.draw) outcome = 'draw';
     else if (game.winner === myRole) outcome = 'win';
     else if (game.winner) outcome = 'loss';
+    // `gaveUp` leaves `winner: null`, so a resign falls through above.
+    // 9×9 `UltimateGameState` doesn't carry `gaveUpBy` like the 3×3
+    // state does — instead we tracked who resigned in `lastGaveUpByMe`
+    // off the `gave-up` effect when it arrived. See ../page.js for the
+    // 3×3 mirror that reads `game.gaveUpBy` directly.
+    else if (game.gaveUp) outcome = lastGaveUpByMe ? 'loss' : 'win';
     if (!outcome) return;
     resultSubmittedForGame = true;
     void submitTttResult({ deviceId, opponentId: peerId, mode: '9x9', outcome });
@@ -846,8 +852,14 @@ function runOnline(countries) {
     name.textContent = displayNickname(state.peerId, opponentNickname);
     matchupOpponentEl.append(vs, name);
 
-    // Visible record suffix — see ../page.js for the mirror.
-    if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
+    // Suffix after the name (loading label OR record OR nothing) —
+    // see ../page.js for the mirror with the full rationale.
+    if (pairFetchInFlight) {
+      const loading = document.createElement('span');
+      loading.className = 'matchup-record matchup-record-loading';
+      loading.textContent = t('ttt.matchupRecordLoading', 'loading…');
+      matchupOpponentEl.append(loading);
+    } else if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
       const record = document.createElement('span');
       record.className = 'matchup-record';
       let text = `${pairRecord.wins}:${pairRecord.losses}`;
