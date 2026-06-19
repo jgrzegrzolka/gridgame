@@ -19,7 +19,7 @@
   padding: 0;
   border: 1px solid var(--muted-color);
   border-radius: 2px;
-  background: #fff;
+  background: var(--surface-color);
   color: var(--muted-color);
   font-size: 14px;
   line-height: 1;
@@ -78,7 +78,7 @@
 }
 .archive-square--rejected .review-button--reject,
 .ideas-play-verdict--rejected .review-button--reject {
-  background: #fff;
+  background: var(--surface-color);
   color: var(--secondary-color);
   border-color: var(--secondary-color);
 }

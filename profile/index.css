@@ -23,7 +23,7 @@
   height: 64px;
   border-radius: 8px;
   overflow: hidden;
-  background: #f3f3f3;
+  background: var(--surface-hover-color);
   margin-bottom: 4px;
 }
 .profile-avatar svg {
@@ -39,7 +39,7 @@
   padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface-color);
   box-sizing: border-box;
   width: 100%;
 }
@@ -157,7 +157,7 @@
   min-height: 60px;
   border: 1px solid #ececec;
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface-color);
   font: inherit;
   /* Native button reset — the tile is a <button> for keyboard + screen-
    * reader accessibility, but should read as a passive card. */
