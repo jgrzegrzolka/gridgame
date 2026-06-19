@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { mergePairResult } = require('./tttPairDoc');
+const { mergePairResult, mirrorOutcome } = require('./tttPairDoc');
 
 const DEVICE = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const OPP = '11111111-2222-3333-4444-555555555555';
@@ -174,4 +174,28 @@ test('pre-Feature-MB4 row without lastOutcome upgrades cleanly on next merge', (
   });
   assert.equal(next.lastOutcome, 'win');
   assert.equal(next.m3x3.wins, 3);
+});
+
+// `mirrorOutcome` — used when the room creator's POST triggers the mirror
+// upsert against the opponent's row. The opponent saw the OPPOSITE outcome.
+
+test('mirrorOutcome: win flips to loss', () => {
+  assert.equal(mirrorOutcome('win'), 'loss');
+});
+
+test('mirrorOutcome: loss flips to win', () => {
+  assert.equal(mirrorOutcome('loss'), 'win');
+});
+
+test('mirrorOutcome: draw stays draw', () => {
+  assert.equal(mirrorOutcome('draw'), 'draw');
+});
+
+test('mirrorOutcome is its own inverse', () => {
+  // The mirror-of-mirror should give back the original, otherwise a
+  // future bug where both sides accidentally mirror would silently
+  // double-flip and look correct.
+  for (const o of /** @type {const} */ (['win', 'loss', 'draw'])) {
+    assert.equal(mirrorOutcome(mirrorOutcome(o)), o);
+  }
 });

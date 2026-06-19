@@ -770,7 +770,16 @@ function runOnline(countries) {
     const outcome = deriveTttOutcome(game, myRole);
     if (!outcome) return;
     resultSubmittedForGame = true;
-    void submitTttResult({ deviceId, opponentId: peerId, mode: '3x3', outcome });
+    // Only the room creator (`isHost`) POSTs. The server-side handler
+    // upserts both this row AND the mirror row for the opponent in one
+    // call (`api/src/functions/tttResult.js`), so the two perspectives
+    // can't drift the way they did under the original "both clients
+    // post" design — a dropped POST on one side left that side's row
+    // permanently behind. Both sides still bump their local
+    // `pairRecord` below so the joiner's UI also updates on each game.
+    if (isHost) {
+      void submitTttResult({ deviceId, opponentId: peerId, mode: '3x3', outcome });
+    }
     // Optimistic local bump so the role line's record suffix reflects
     // the just-finished game immediately. If the POST drops a future
     // pair-fetch on a fresh room will correct any drift.

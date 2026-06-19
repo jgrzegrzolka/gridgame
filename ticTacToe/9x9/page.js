@@ -791,7 +791,11 @@ function runOnline(countries) {
     const outcome = deriveTttOutcome(game, myRole, lastGaveUpByMe);
     if (!outcome) return;
     resultSubmittedForGame = true;
-    void submitTttResult({ deviceId, opponentId: peerId, mode: '9x9', outcome });
+    // Only the room creator POSTs — the server upserts both rows from
+    // that single call. See ../page.js for the full rationale.
+    if (isHost) {
+      void submitTttResult({ deviceId, opponentId: peerId, mode: '9x9', outcome });
+    }
     // Optimistic local bump so the role line's record suffix reflects
     // the just-finished game without a round-trip. See ../page.js for
     // the mirror on the 3×3 page.
