@@ -840,17 +840,25 @@ function runOnline(countries) {
     const name = document.createElement('span');
     name.className = 'matchup-name';
     name.textContent = displayNickname(state.peerId, opponentNickname);
-    // Head-to-head record is hover-only — paint it as the name's title
-    // attribute instead of as a visible suffix. The role line stays
-    // short and the curious player still gets the past-games count by
-    // hovering / long-pressing the opponent name.
-    if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
-      name.title = t('ttt.matchupRecordTooltip', 'vs this opponent: {wins} wins, {losses} losses, {draws} draws')
-        .replace('{wins}', String(pairRecord.wins))
-        .replace('{losses}', String(pairRecord.losses))
-        .replace('{draws}', String(pairRecord.draws));
-    }
     matchupOpponentEl.append(vs, name);
+
+    // Visible record suffix — `1:0` (wins:losses), with ", N draws"
+    // appended when draws > 0. Painted as a muted span after the name
+    // so the role line reads "You are O vs Alice 1:0" or
+    // "You are O vs Alice 1:0, 2 draws". Hidden until at least one
+    // game is on record so a brand-new pairing doesn't carry "0:0".
+    if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
+      const record = document.createElement('span');
+      record.className = 'matchup-record';
+      let text = `${pairRecord.wins}:${pairRecord.losses}`;
+      if (pairRecord.draws > 0) {
+        const drawKey = pairRecord.draws === 1 ? 'ttt.matchupDraw' : 'ttt.matchupDraws';
+        const drawLabel = t(drawKey, pairRecord.draws === 1 ? 'draw' : 'draws');
+        text += `, ${pairRecord.draws} ${drawLabel}`;
+      }
+      record.textContent = text;
+      matchupOpponentEl.append(record);
+    }
   }
 
   /**

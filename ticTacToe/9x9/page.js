@@ -844,14 +844,21 @@ function runOnline(countries) {
     const name = document.createElement('span');
     name.className = 'matchup-name';
     name.textContent = displayNickname(state.peerId, opponentNickname);
-    // Hover-only head-to-head record — see ../page.js for the mirror.
-    if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
-      name.title = t('ttt.matchupRecordTooltip', 'vs this opponent: {wins} wins, {losses} losses, {draws} draws')
-        .replace('{wins}', String(pairRecord.wins))
-        .replace('{losses}', String(pairRecord.losses))
-        .replace('{draws}', String(pairRecord.draws));
-    }
     matchupOpponentEl.append(vs, name);
+
+    // Visible record suffix — see ../page.js for the mirror.
+    if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
+      const record = document.createElement('span');
+      record.className = 'matchup-record';
+      let text = `${pairRecord.wins}:${pairRecord.losses}`;
+      if (pairRecord.draws > 0) {
+        const drawKey = pairRecord.draws === 1 ? 'ttt.matchupDraw' : 'ttt.matchupDraws';
+        const drawLabel = t(drawKey, pairRecord.draws === 1 ? 'draw' : 'draws');
+        text += `, ${pairRecord.draws} ${drawLabel}`;
+      }
+      record.textContent = text;
+      matchupOpponentEl.append(record);
+    }
   }
 
   /**

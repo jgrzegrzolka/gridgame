@@ -83,16 +83,15 @@
   margin: 0 0 4px;
 }
 .role-line .muted { color: var(--muted-color); }
-/* Inline matchup affordance — "vs <Opponent>" sits right next to the
- * role badge, so the role line reads "You are O vs Alice". Populated
- * client-side once peerId is known (welcome / peer-joined); empty
- * content (no peer yet, or fetch still pending) means the span
- * collapses and the role line reads as it always did. The head-to-
- * head record (sourced from the `tttPairs` Cosmos row Feature G ships)
- * is painted as the opponent name's `title` attribute, so hover /
- * long-press surfaces the past-games count without cluttering the
- * line — see `flags/tttPairFetch.js` for the read and
- * `renderMatchupOpponent` in the TTT page.js files for the paint. */
+/* Inline matchup affordance — "vs <Opponent> W:L" (with ", N draws"
+ * appended when draws > 0) sits right next to the role badge, so the
+ * role line reads "You are O vs Alice 3:1" or "You are O vs Alice 1:0,
+ * 2 draws". Populated client-side once peerId is known (welcome /
+ * peer-joined); empty content (no peer yet, or fetch still pending)
+ * means the span collapses and the role line reads as it always did.
+ * Numbers source from the `tttPairs` Cosmos row Feature G ships — see
+ * `flags/tttPairFetch.js` for the read and `renderMatchupOpponent` in
+ * the TTT page.js files for the paint. */
 .matchup-opponent {
   /* inline-flex + align-items center keeps the text vertically centred
    * with the 28×28 badge — plain inline text sits on its own baseline,
@@ -102,13 +101,14 @@
   gap: 4px;
   color: var(--muted-color);
 }
-/* Hover-cursor on the opponent's name when a head-to-head record is
- * attached as the `title` attribute, so the affordance reads "there's
- * more info here." `:has()` keeps the rule scoped to the populated case
- * — a fresh pairing with no prior games has no title attr and stays a
- * plain name. */
-.matchup-opponent .matchup-name[title] {
-  cursor: help;
+/* Head-to-head record `W:L, N draws`. Muted so the opponent's name
+ * stays the dominant element on the role line. Tabular digits so the
+ * trio doesn't reflow as counters tick up. Painted by
+ * `renderMatchupOpponent` once `fetchTttPair` resolves AND at least
+ * one game is on record. */
+.matchup-opponent .matchup-record {
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
 }
 .status-line {
   font-size: 14px;
