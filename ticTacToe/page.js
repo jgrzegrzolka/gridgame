@@ -10,6 +10,7 @@ import {
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { submitTttResult } from '../flags/tttResultSubmit.js';
 import { fetchTttPair } from '../flags/tttPairFetch.js';
+import { deriveTttOutcome } from '../flags/tttPairOutcome.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
@@ -762,14 +763,23 @@ function runOnline(countries) {
     if (resultSubmittedForGame) return;
     const { game, myRole, peerId } = state;
     if (!game || !myRole || !peerId) return;
-    /** @type {'win' | 'loss' | 'draw' | null} */
-    let outcome = null;
-    if (game.draw) outcome = 'draw';
-    else if (game.winner === myRole) outcome = 'win';
-    else if (game.winner) outcome = 'loss';
+    // Outcome derivation (incl. the give-up branch the original chain
+    // silently skipped) lives in flags/tttPairOutcome.js so the rule
+    // is pinned by tests. See that file's header for the regression
+    // history that pushed it out of inline.
+    const outcome = deriveTttOutcome(game, myRole);
     if (!outcome) return;
     resultSubmittedForGame = true;
-    void submitTttResult({ deviceId, opponentId: peerId, mode: '3x3', outcome });
+    // Only the room creator (`isHost`) POSTs. The server-side handler
+    // upserts both this row AND the mirror row for the opponent in one
+    // call (`api/src/functions/tttResult.js`), so the two perspectives
+    // can't drift the way they did under the original "both clients
+    // post" design — a dropped POST on one side left that side's row
+    // permanently behind. Both sides still bump their local
+    // `pairRecord` below so the joiner's UI also updates on each game.
+    if (isHost) {
+      void submitTttResult({ deviceId, opponentId: peerId, mode: '3x3', outcome });
+    }
     // Optimistic local bump so the role line's record suffix reflects
     // the just-finished game immediately. If the POST drops a future
     // pair-fetch on a fresh room will correct any drift.
@@ -842,21 +852,31 @@ function runOnline(countries) {
     name.textContent = displayNickname(state.peerId, opponentNickname);
     matchupOpponentEl.append(vs, name);
 
-    // Visible record suffix — `1:0` (wins:losses), with ", N draws"
-    // appended when draws > 0. Painted as a muted span after the name
-    // so the role line reads "You are O vs Alice 1:0" or
-    // "You are O vs Alice 1:0, 2 draws". Hidden until at least one
-    // game is on record so a brand-new pairing doesn't carry "0:0".
-    if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
+    // Suffix after the name:
+    //   - While the pair fetch is in flight: a muted "loading…" label
+    //     so a slow API call doesn't leave the line ambiguous (per Jan's
+    //     rule: every long-running API surface gets a loading label).
+    //   - Once resolved, with at least one game on record: the record
+    //     `1:0` (wins:losses), with ", N draws" appended when draws > 0,
+    //     so the role line reads "You are O vs Alice 1:0" or
+    //     "You are O vs Alice 1:0, 2 draws".
+    //   - Resolved with no games yet: nothing — a brand-new pairing
+    //     shouldn't paint a "0:0".
+    if (pairFetchInFlight) {
+      const loading = document.createElement('span');
+      loading.className = 'matchup-record matchup-record-loading';
+      loading.textContent = t('ttt.matchupRecordLoading', 'loading…');
+      matchupOpponentEl.append(loading);
+    } else if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
       const record = document.createElement('span');
       record.className = 'matchup-record';
-      let text = `${pairRecord.wins}:${pairRecord.losses}`;
+      let inner = `${pairRecord.wins}:${pairRecord.losses}`;
       if (pairRecord.draws > 0) {
         const drawKey = pairRecord.draws === 1 ? 'ttt.matchupDraw' : 'ttt.matchupDraws';
         const drawLabel = t(drawKey, pairRecord.draws === 1 ? 'draw' : 'draws');
-        text += `, ${pairRecord.draws} ${drawLabel}`;
+        inner += `, ${pairRecord.draws} ${drawLabel}`;
       }
-      record.textContent = text;
+      record.textContent = `(${inner})`;
       matchupOpponentEl.append(record);
     }
   }

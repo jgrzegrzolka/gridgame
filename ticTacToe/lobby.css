@@ -101,14 +101,36 @@
   gap: 4px;
   color: var(--muted-color);
 }
-/* Head-to-head record `W:L, N draws`. Muted so the opponent's name
- * stays the dominant element on the role line. Tabular digits so the
- * trio doesn't reflow as counters tick up. Painted by
+/* Opponent's name pops against the muted "vs" and the muted record
+ * digits — primary colour, weight 500. (Was accidentally dropped in
+ * #548 when the rule got replaced with a since-removed `cursor: help`
+ * variant; restoring it here so the role line reads the way it did
+ * before that PR.) */
+.matchup-opponent .matchup-name {
+  color: var(--link-color);
+  font-weight: 500;
+}
+/* Head-to-head record `(W:L)` or `(W:L, N draws)`. Painted by
  * `renderMatchupOpponent` once `fetchTttPair` resolves AND at least
- * one game is on record. */
+ * one game is on record. Same primary colour + 500 weight as the
+ * opponent name so the parenthetical reads as part of the same
+ * identity block — not a quiet caption. Tabular digits so the trio
+ * doesn't reflow as counters tick up. */
 .matchup-opponent .matchup-record {
-  color: var(--muted-color);
+  color: var(--link-color);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+/* While the pair fetch is in flight, paint a quieter "loading…" label
+ * in the record slot so a slow API call doesn't leave the role line
+ * looking like it forgot the record (rule: every long-running API
+ * surface gets a loading label). Italic + muted + normal weight so it
+ * visibly reads as transient state rather than a real value (overrides
+ * the primary / 500-weight defaults from .matchup-record above). */
+.matchup-opponent .matchup-record-loading {
+  color: var(--muted-color);
+  font-weight: 400;
+  font-style: italic;
 }
 .status-line {
   font-size: 14px;

@@ -3,7 +3,7 @@ const { validateTttResultBody } = require('../lib/validate');
 const { insertDoc, queryDocs } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { verifyTurnstile } = require('../lib/turnstile');
-const { mergePairResult } = require('../lib/tttPairDoc');
+const { mergePairResult, mirrorOutcome } = require('../lib/tttPairDoc');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'tttPairs';
@@ -58,56 +58,103 @@ app.http('tttResult', {
     }
 
     const { deviceId, opponentId, mode, outcome } = v.value;
-    const docId = `${deviceId}:${opponentId}`;
+    const now = Date.now();
 
-    // Read existing head-to-head row (one row per pair, partitioned by THIS
-    // device's id, so single-partition). Merge increments the right counter
-    // and upserts. Same read-then-upsert pattern as quizRecord / profile.
-    let queryRes;
-    try {
-      queryRes = await queryDocs({
-        connString: conn,
-        dbName: DB_NAME,
-        containerName: CONTAINER_NAME,
-        query: 'SELECT * FROM c WHERE c.id = @id',
-        parameters: [{ name: '@id', value: docId }],
-        partitionKey: deviceId,
-      });
-    } catch (err) {
-      context.error('cosmos query threw', err);
-      return { status: 500, jsonBody: { error: 'server_error' } };
-    }
-    if (!queryRes.ok) {
-      context.error('cosmos query failed', queryRes);
-      return { status: 500, jsonBody: { error: 'server_error' } };
-    }
-    const existing = queryRes.docs[0] || null;
-
-    const doc = mergePairResult({
-      existing,
-      deviceId,
-      opponentId,
+    // Two upserts per POST so the (deviceId → opponentId) row and the
+    // mirror (opponentId → deviceId) row stay in lockstep. Client-side
+    // contract: only the room CREATOR posts (see ticTacToe/page.js
+    // `reportFinishedResult`), so a single POST per game replaces the
+    // previous "both clients post" design — which let one side's POST
+    // drop (rate-limit, disconnect, give-up bug) and leave the rows
+    // out of sync forever. Mirror-of-the-mirror is the same outcome
+    // (pinned in tttPairDoc.test.js), so a stale client that still
+    // double-posts won't double-bump anyone.
+    const primary = await upsertPairRow({
+      conn,
+      context,
+      ownerId: deviceId,
+      otherId: opponentId,
       mode,
       outcome,
-      now: Date.now(),
+      now,
     });
+    if (!primary.ok) return primary.response;
 
-    let upsertRes;
-    try {
-      upsertRes = await insertDoc({
-        connString: conn,
-        dbName: DB_NAME,
-        containerName: CONTAINER_NAME,
-        partitionKey: deviceId,
-        doc,
-        upsert: true,
-      });
-    } catch (err) {
-      context.error('cosmos upsert threw', err);
-      return { status: 500, jsonBody: { error: 'server_error' } };
+    const mirror = await upsertPairRow({
+      conn,
+      context,
+      ownerId: opponentId,
+      otherId: deviceId,
+      mode,
+      outcome: mirrorOutcome(outcome),
+      now,
+    });
+    if (!mirror.ok) {
+      // Primary landed but mirror failed — the pair is now in the
+      // split-brain state the mirror-write was meant to prevent.
+      // Surface as 500 so the client knows to retry (today: fire-and-
+      // forget, so the row stays asymmetric until the next game's POST
+      // overwrites both sides). Logging captures the drift for later
+      // reconciliation.
+      context.error('mirror upsert failed after primary succeeded', { deviceId, opponentId, mode, outcome });
+      return mirror.response;
     }
-    if (upsertRes.ok) return { status: 204 };
-    context.error('cosmos upsert failed', upsertRes);
-    return { status: 500, jsonBody: { error: 'server_error' } };
+
+    return { status: 204 };
   },
 });
+
+/**
+ * Read existing head-to-head row + merge the new outcome + upsert. Pure
+ * I/O wrapper around `mergePairResult` so the handler can call it once
+ * for the reporter's row and once for the mirror.
+ *
+ * @returns {Promise<{ ok: true } | { ok: false, response: { status: number, jsonBody: { error: string } } }>}
+ */
+async function upsertPairRow({ conn, context, ownerId, otherId, mode, outcome, now }) {
+  const docId = `${ownerId}:${otherId}`;
+  let queryRes;
+  try {
+    queryRes = await queryDocs({
+      connString: conn,
+      dbName: DB_NAME,
+      containerName: CONTAINER_NAME,
+      query: 'SELECT * FROM c WHERE c.id = @id',
+      parameters: [{ name: '@id', value: docId }],
+      partitionKey: ownerId,
+    });
+  } catch (err) {
+    context.error('cosmos query threw', err);
+    return { ok: false, response: { status: 500, jsonBody: { error: 'server_error' } } };
+  }
+  if (!queryRes.ok) {
+    context.error('cosmos query failed', queryRes);
+    return { ok: false, response: { status: 500, jsonBody: { error: 'server_error' } } };
+  }
+  const existing = queryRes.docs[0] || null;
+  const doc = mergePairResult({
+    existing,
+    deviceId: ownerId,
+    opponentId: otherId,
+    mode,
+    outcome,
+    now,
+  });
+  let upsertRes;
+  try {
+    upsertRes = await insertDoc({
+      connString: conn,
+      dbName: DB_NAME,
+      containerName: CONTAINER_NAME,
+      partitionKey: ownerId,
+      doc,
+      upsert: true,
+    });
+  } catch (err) {
+    context.error('cosmos upsert threw', err);
+    return { ok: false, response: { status: 500, jsonBody: { error: 'server_error' } } };
+  }
+  if (upsertRes.ok) return { ok: true };
+  context.error('cosmos upsert failed', upsertRes);
+  return { ok: false, response: { status: 500, jsonBody: { error: 'server_error' } } };
+}

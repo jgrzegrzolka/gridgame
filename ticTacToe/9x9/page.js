@@ -18,6 +18,7 @@ import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
 import { submitTttResult } from '../../flags/tttResultSubmit.js';
 import { fetchTttPair } from '../../flags/tttPairFetch.js';
+import { deriveTttOutcome } from '../../flags/tttPairOutcome.js';
 import { submitEngagementEvent } from '../../flags/eventSubmit.js';
 import { fetchProfile } from '../../flags/profileFetch.js';
 import { displayNickname } from '../../flags/nickname.js';
@@ -784,14 +785,17 @@ function runOnline(countries) {
     if (resultSubmittedForGame) return;
     const { game, myRole, peerId } = state;
     if (!game || !myRole || !peerId) return;
-    /** @type {'win' | 'loss' | 'draw' | null} */
-    let outcome = null;
-    if (game.draw) outcome = 'draw';
-    else if (game.winner === myRole) outcome = 'win';
-    else if (game.winner) outcome = 'loss';
+    // 9×9 `UltimateGameState` doesn't carry `gaveUpBy`, so the helper
+    // falls back to the locally-tracked `lastGaveUpByMe` when the
+    // server-stamped value is absent. See flags/tttPairOutcome.js.
+    const outcome = deriveTttOutcome(game, myRole, lastGaveUpByMe);
     if (!outcome) return;
     resultSubmittedForGame = true;
-    void submitTttResult({ deviceId, opponentId: peerId, mode: '9x9', outcome });
+    // Only the room creator POSTs — the server upserts both rows from
+    // that single call. See ../page.js for the full rationale.
+    if (isHost) {
+      void submitTttResult({ deviceId, opponentId: peerId, mode: '9x9', outcome });
+    }
     // Optimistic local bump so the role line's record suffix reflects
     // the just-finished game without a round-trip. See ../page.js for
     // the mirror on the 3×3 page.
@@ -846,17 +850,23 @@ function runOnline(countries) {
     name.textContent = displayNickname(state.peerId, opponentNickname);
     matchupOpponentEl.append(vs, name);
 
-    // Visible record suffix — see ../page.js for the mirror.
-    if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
+    // Suffix after the name (loading label OR record OR nothing) —
+    // see ../page.js for the mirror with the full rationale.
+    if (pairFetchInFlight) {
+      const loading = document.createElement('span');
+      loading.className = 'matchup-record matchup-record-loading';
+      loading.textContent = t('ttt.matchupRecordLoading', 'loading…');
+      matchupOpponentEl.append(loading);
+    } else if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
       const record = document.createElement('span');
       record.className = 'matchup-record';
-      let text = `${pairRecord.wins}:${pairRecord.losses}`;
+      let inner = `${pairRecord.wins}:${pairRecord.losses}`;
       if (pairRecord.draws > 0) {
         const drawKey = pairRecord.draws === 1 ? 'ttt.matchupDraw' : 'ttt.matchupDraws';
         const drawLabel = t(drawKey, pairRecord.draws === 1 ? 'draw' : 'draws');
-        text += `, ${pairRecord.draws} ${drawLabel}`;
+        inner += `, ${pairRecord.draws} ${drawLabel}`;
       }
-      record.textContent = text;
+      record.textContent = `(${inner})`;
       matchupOpponentEl.append(record);
     }
   }

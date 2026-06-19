@@ -88,4 +88,19 @@ function mergePairResult({ existing, deviceId, opponentId, mode, outcome, now })
   };
 }
 
-module.exports = { mergePairResult };
+/**
+ * Flip win ↔ loss for the mirror write. Used when the room creator's
+ * POST triggers a second upsert against the opponent's row — that row
+ * is keyed on the opponent's device, so the outcome from THEIR
+ * perspective is the opposite of the reporter's. Draws mirror to draws.
+ *
+ * @param {'win' | 'loss' | 'draw'} outcome
+ * @returns {'win' | 'loss' | 'draw'}
+ */
+function mirrorOutcome(outcome) {
+  if (outcome === 'win') return 'loss';
+  if (outcome === 'loss') return 'win';
+  return 'draw';
+}
+
+module.exports = { mergePairResult, mirrorOutcome };

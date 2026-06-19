@@ -417,6 +417,7 @@
     "matchupVs": "vs",
     "matchupDraw": "draw",
     "matchupDraws": "draws",
+    "matchupRecordLoading": "loading…",
     "title": "Yet Another Quiz — Tic Tac Toe with Country Flags",
     "offlineTitle": "Yet Another Quiz — Offline Tic Tac Toe",
     "variant3x3": "3×3",
