@@ -42,7 +42,27 @@ test('submitEngagementEvent: posts to /api/v1/event with deviceId + kind + paylo
   });
 });
 
-test('submitEngagementEvent: treats 409 as success (dedupe path for daily_start)', async () => {
+test('submitEngagementEvent: treats 200 deduped response as success', async () => {
+  // After api/src/functions/engagementEvent.js swapped the dedupe path
+  // from `409 { error: "already_recorded" }` to `200 { ok: true,
+  // deduped: true }` (so the browser stops painting Conflict in DevTools
+  // every time a player finishes their 2nd quiz of the day), the
+  // expected success-on-dedupe is just a normal 200.
+  const fetcher = makeFetch({ ok: true, status: 200 });
+  const ok = await submitEngagementEvent(
+    DEV_ID,
+    { kind: 'quiz_play', payload: { mode: '60s' } },
+    { fetchImpl: fetcher.impl },
+  );
+  assert.equal(ok, true);
+});
+
+test('submitEngagementEvent: still treats 409 as success (defense-in-depth)', async () => {
+  // Kept as defense-in-depth: if a stale cached client is talking to a
+  // pre-fix server during a deploy window, the legacy 409 dedupe
+  // response should still resolve to success. Tied to the explicit
+  // `|| res.status === 409` line in eventSubmit.js — when that line
+  // goes (one safe deploy past the 200-swap), drop this test too.
   const fetcher = makeFetch({ ok: false, status: 409 });
   const ok = await submitEngagementEvent(
     DEV_ID,
