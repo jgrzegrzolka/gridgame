@@ -10,6 +10,7 @@ import {
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { submitTttResult } from '../flags/tttResultSubmit.js';
 import { fetchTttPair } from '../flags/tttPairFetch.js';
+import { deriveTttOutcome } from '../flags/tttPairOutcome.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
@@ -762,16 +763,11 @@ function runOnline(countries) {
     if (resultSubmittedForGame) return;
     const { game, myRole, peerId } = state;
     if (!game || !myRole || !peerId) return;
-    /** @type {'win' | 'loss' | 'draw' | null} */
-    let outcome = null;
-    if (game.draw) outcome = 'draw';
-    else if (game.winner === myRole) outcome = 'win';
-    else if (game.winner) outcome = 'loss';
-    // `applyGiveUp` sets `gaveUp: true` but leaves `winner: null`, so
-    // a resign would fall through all three branches above and leave
-    // `outcome = null` — meaning the give-up game never ticked the
-    // record. Decide from `gaveUpBy` (server-stamped) instead.
-    else if (game.gaveUp) outcome = game.gaveUpBy === myRole ? 'loss' : 'win';
+    // Outcome derivation (incl. the give-up branch the original chain
+    // silently skipped) lives in flags/tttPairOutcome.js so the rule
+    // is pinned by tests. See that file's header for the regression
+    // history that pushed it out of inline.
+    const outcome = deriveTttOutcome(game, myRole);
     if (!outcome) return;
     resultSubmittedForGame = true;
     void submitTttResult({ deviceId, opponentId: peerId, mode: '3x3', outcome });

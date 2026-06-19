@@ -18,6 +18,7 @@ import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
 import { submitTttResult } from '../../flags/tttResultSubmit.js';
 import { fetchTttPair } from '../../flags/tttPairFetch.js';
+import { deriveTttOutcome } from '../../flags/tttPairOutcome.js';
 import { submitEngagementEvent } from '../../flags/eventSubmit.js';
 import { fetchProfile } from '../../flags/profileFetch.js';
 import { displayNickname } from '../../flags/nickname.js';
@@ -784,17 +785,10 @@ function runOnline(countries) {
     if (resultSubmittedForGame) return;
     const { game, myRole, peerId } = state;
     if (!game || !myRole || !peerId) return;
-    /** @type {'win' | 'loss' | 'draw' | null} */
-    let outcome = null;
-    if (game.draw) outcome = 'draw';
-    else if (game.winner === myRole) outcome = 'win';
-    else if (game.winner) outcome = 'loss';
-    // `gaveUp` leaves `winner: null`, so a resign falls through above.
-    // 9×9 `UltimateGameState` doesn't carry `gaveUpBy` like the 3×3
-    // state does — instead we tracked who resigned in `lastGaveUpByMe`
-    // off the `gave-up` effect when it arrived. See ../page.js for the
-    // 3×3 mirror that reads `game.gaveUpBy` directly.
-    else if (game.gaveUp) outcome = lastGaveUpByMe ? 'loss' : 'win';
+    // 9×9 `UltimateGameState` doesn't carry `gaveUpBy`, so the helper
+    // falls back to the locally-tracked `lastGaveUpByMe` when the
+    // server-stamped value is absent. See flags/tttPairOutcome.js.
+    const outcome = deriveTttOutcome(game, myRole, lastGaveUpByMe);
     if (!outcome) return;
     resultSubmittedForGame = true;
     void submitTttResult({ deviceId, opponentId: peerId, mode: '9x9', outcome });
