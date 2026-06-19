@@ -52,7 +52,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .chooser-pills .pill.active .pill-count {
-  color: #ccc;
+  color: var(--muted-color);
 }
 .chooser-pills .pill.exclude .pill-count {
   color: #c0392b;
@@ -124,7 +124,7 @@ body {
   width: 100%;
   box-sizing: border-box;
   padding: 12px 14px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
   font: inherit;
   font-size: 16px;
@@ -135,7 +135,7 @@ body {
 }
 .find-input:focus {
   outline: none;
-  border-color: #1c1c1c;
+  border-color: var(--primary-color);
 }
 .find-input.wrong {
   /* Pink border matches the brand secondary — same idiom as
@@ -166,7 +166,7 @@ body {
   padding: 4px 0;
   margin: 0;
   background: var(--surface-color);
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
   max-height: 280px;
@@ -200,7 +200,7 @@ body {
 .find-tile {
   position: relative;
   aspect-ratio: 4 / 3;
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   overflow: hidden;
   cursor: zoom-in;
 }
@@ -215,7 +215,7 @@ body {
   bottom: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
-  background: #1c1c1c;
+  background: var(--primary-color);
   color: #fff;
   padding: 4px 8px;
   border-radius: 4px;

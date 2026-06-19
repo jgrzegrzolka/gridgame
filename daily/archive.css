@@ -46,7 +46,7 @@
   width: 100%;
   height: 100%;
   background: var(--surface-color);
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
   text-decoration: none;
   color: var(--primary-color);
@@ -60,7 +60,7 @@
   background: var(--surface-hover-color);
 }
 .archive-square--today .archive-square-link {
-  border: 2px solid #1c1c1c;
+  border: 2px solid var(--primary-color);
 }
 
 /* The number stays the visual anchor (centered). The score sits as a
