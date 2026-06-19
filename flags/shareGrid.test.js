@@ -93,6 +93,34 @@ test('foundCodes contains entries not in answerCodes — those are ignored', () 
   assert.equal(text, `T\n\n🟩⬛⬛\n\n${URL}`);
 });
 
+test('with streakLine — appears flush under the grid, before the blank+url', () => {
+  const text = buildShareText({
+    titleLine: 'T',
+    answerCodes: ['a', 'b', 'c'],
+    foundCodes: ['a', 'b'],
+    url: URL,
+    streakLine: '🔥 5-day streak',
+  });
+  assert.equal(text, `T\n\n🟩🟩⬛\n🔥 5-day streak\n\n${URL}`);
+});
+
+test('streakLine omitted — output identical to no-streak shape', () => {
+  const base = buildShareText({
+    titleLine: 'T',
+    answerCodes: ['a', 'b'],
+    foundCodes: ['a'],
+    url: URL,
+  });
+  const withUndefined = buildShareText({
+    titleLine: 'T',
+    answerCodes: ['a', 'b'],
+    foundCodes: ['a'],
+    url: URL,
+    streakLine: undefined,
+  });
+  assert.equal(withUndefined, base);
+});
+
 test('titleLine and url are passed through unchanged (no template)', () => {
   // The renderer takes pre-formed strings — i18n + URL are the
   // caller's responsibility. Confirm we don't try to template either.
