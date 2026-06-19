@@ -1173,8 +1173,12 @@ dialog#zoom p {
 
 .rules-help,
 .help-dialog {
-  max-width: 380px;
-  width: calc(100vw - 32px);
+  /* Cap at 380 px on tablets / desktops; on phones (< ~412 px) leave
+   * 32 px of gutter each side so the card sits inside the viewport as
+   * a discrete popup instead of nearly edge-to-edge. The previous
+   * `100vw - 32px` left only 16 px gutters on a 360 px phone and read
+   * as a full-screen takeover. */
+  width: min(380px, 100vw - 64px);
   padding: 16px 18px 14px;
   border: 1px solid var(--muted-soft-color);
   border-radius: 8px;

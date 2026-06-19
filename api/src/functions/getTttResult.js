@@ -70,13 +70,24 @@ app.http('getTttResult', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
+    // Browser caches the row per device for 30 s — absorbs the
+    // refresh / reconnect / rematch-prefetch bursts that would otherwise
+    // each cost ~1 RU on Cosmos. `private` keeps proxies (CDN, ISP)
+    // out of it because the body is keyed on the requesting device.
+    // Trade-off: an opponent finishing a game in another window will
+    // not show up in this client's hover until the cache expires —
+    // acceptable because the local optimistic bump after THIS client's
+    // own finished game still ticks immediately. */
+    const cacheHeaders = { 'Cache-Control': 'private, max-age=30' };
+
     const row = queryRes.docs[0];
     if (!row) {
       return {
         status: 200,
+        headers: cacheHeaders,
         jsonBody: { deviceId, opponentId, ...EMPTY_PAIR, lastPlayedAt: null },
       };
     }
-    return { status: 200, jsonBody: row };
+    return { status: 200, headers: cacheHeaders, jsonBody: row };
   },
 });

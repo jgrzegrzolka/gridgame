@@ -84,12 +84,15 @@
 }
 .role-line .muted { color: var(--muted-color); }
 /* Inline matchup affordance — "vs <Opponent>" sits right next to the
- * role badge, so the role line reads "You are O vs Alice".
- * Populated client-side once peerId is known (welcome / peer-joined);
- * empty content (no peer yet, or fetch still pending) means the span
- * collapses and the role line reads as it always did. The head-to-head
- * score that would naturally live here is intentionally not rendered
- * yet — see FEATURE.md Feature H3 status. */
+ * role badge, so the role line reads "You are O vs Alice". Populated
+ * client-side once peerId is known (welcome / peer-joined); empty
+ * content (no peer yet, or fetch still pending) means the span
+ * collapses and the role line reads as it always did. The head-to-
+ * head record (sourced from the `tttPairs` Cosmos row Feature G ships)
+ * is painted as the opponent name's `title` attribute, so hover /
+ * long-press surfaces the past-games count without cluttering the
+ * line — see `flags/tttPairFetch.js` for the read and
+ * `renderMatchupOpponent` in the TTT page.js files for the paint. */
 .matchup-opponent {
   /* inline-flex + align-items center keeps the text vertically centred
    * with the 28×28 badge — plain inline text sits on its own baseline,
@@ -99,7 +102,14 @@
   gap: 4px;
   color: var(--muted-color);
 }
-.matchup-opponent .matchup-name { color: var(--link-color); font-weight: 500; }
+/* Hover-cursor on the opponent's name when a head-to-head record is
+ * attached as the `title` attribute, so the affordance reads "there's
+ * more info here." `:has()` keeps the rule scoped to the populated case
+ * — a fresh pairing with no prior games has no title attr and stays a
+ * plain name. */
+.matchup-opponent .matchup-name[title] {
+  cursor: help;
+}
 .status-line {
   font-size: 14px;
   /* Brand secondary so the neutral "Waiting for opponent… share the code
