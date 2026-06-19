@@ -26,7 +26,7 @@ body {
   align-items: center;
   gap: 14px;
   padding: 8px 12px;
-  border: 1px solid #eee;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 8px;
   /* Pin to --primary-color explicitly so the icon (mask-image painted via
    * currentColor) + label both track the brand palette directly, not
@@ -37,7 +37,7 @@ body {
 }
 .quiz-picker .menu li.picker-tile a:hover {
   background: #f6f6f6;
-  border-color: #ddd;
+  border-color: var(--muted-soft-color);
   text-decoration: none;
 }
 .picker-tile-icon {
@@ -82,7 +82,7 @@ body {
   align-items: center;
   gap: 16px;
   padding: 12px 4px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--muted-soft-color);
 }
 .stats-row:last-child {
   border-bottom: none;
@@ -104,7 +104,7 @@ body {
   align-items: baseline;
   gap: 8px;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
   background: #fff;
   text-decoration: none;
@@ -218,7 +218,7 @@ body {
 }
 .flag-choice {
   padding: 0;
-  border: 2px solid #ddd;
+  border: 2px solid var(--muted-soft-color);
   background: #fff;
   cursor: pointer;
   aspect-ratio: 4 / 3;
@@ -306,7 +306,7 @@ body {
    * player's own stats. */
   margin: 56px auto 16px;
   padding-top: 20px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--muted-soft-color);
   width: min(90vw, 480px);
   text-align: left;
 }
@@ -343,7 +343,7 @@ body {
   align-items: baseline;
   gap: 10px;
   padding: 6px 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--muted-soft-color);
   font-variant-numeric: tabular-nums;
 }
 .leaderboard-row:last-child {
@@ -370,8 +370,8 @@ body {
 .leaderboard-row.is-self {
   /* Pink-bordered, translucent-pink fill so the player spots themselves
    * without the row screaming. box-shadow inset draws the border without
-   * a layout shift; the row's default 1px #eee bottom border is zeroed
-   * here so it doesn't clash with the pink frame. */
+   * a layout shift; the row's default 1px --muted-soft-color bottom
+   * border is zeroed here so it doesn't clash with the pink frame. */
   background: color-mix(in srgb, var(--secondary-color) 18%, transparent);
   box-shadow: inset 0 0 0 1px var(--secondary-color);
   border-bottom-color: transparent;
