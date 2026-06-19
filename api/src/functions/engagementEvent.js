@@ -92,11 +92,18 @@ app.http('engagementEvent', {
       return { status: 201, jsonBody: { ok: true, id: built.doc.id } };
     }
     if (result.error === 'conflict') {
-      // Only the daily_start kind has a deterministic id; the conflict
-      // is the expected idempotent path when the same device fires
-      // again for the same (day, puzzle). Surface as 409 so the client
-      // can treat it as a no-op success.
-      return { status: 409, jsonBody: { error: 'already_recorded' } };
+      // Two kinds have deterministic ids today: `daily_start`
+      // (`daily_start:<dayId>:<puzzleId>`) and `quiz_play`
+      // (`quiz_play:<dayId>:<mode>`). Both are intentionally idempotent
+      // — a player who replays the same puzzle / quiz mode on the same
+      // day writes one row, not N. The dedupe path is a SUCCESS from
+      // the caller's perspective (the event IS recorded), so return 200
+      // with `deduped: true` rather than 409: a 409 makes the browser
+      // log a Conflict in DevTools every time the player finishes a
+      // second quiz of the day, which reads as an error to anyone
+      // looking at the console. Client still treats 409 as success as
+      // defense-in-depth (stale cached clients during a deploy window). */
+      return { status: 200, jsonBody: { ok: true, deduped: true } };
     }
     context.error('cosmos insert failed', result);
     return { status: 500, jsonBody: { error: 'server_error' } };
