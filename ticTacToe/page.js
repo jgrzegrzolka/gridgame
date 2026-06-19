@@ -9,6 +9,7 @@ import {
 } from './onlineClient.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { submitTttResult } from '../flags/tttResultSubmit.js';
+import { fetchTttPair } from '../flags/tttPairFetch.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
@@ -133,6 +134,14 @@ function runOnline(countries) {
   /** @type {string | null | undefined} */
   let opponentNickname;
   let opponentFetchInFlight = false;
+  /** Head-to-head record vs this opponent for the 3×3 mode. Server
+   * shape: `{ wins, losses, draws }`. `null` = not yet fetched. One
+   * fetch per peer per room session; bumped optimistically in
+   * `reportFinishedResult` so the UI reflects the just-finished game
+   * without waiting on the POST round-trip. */
+  /** @type {{ wins: number, losses: number, draws: number } | null} */
+  let pairRecord = null;
+  let pairFetchInFlight = false;
   /** Set true by `buildGridStructure` the first time it builds the 3×3 DOM,
    * so subsequent calls (e.g. revisits across rematches) early-return. The
    * declaration sits up here with the other module-scoped state because the
@@ -294,6 +303,7 @@ function runOnline(countries) {
       renderStatus();
     }
     maybeFetchOpponent();
+    maybeFetchPair();
     renderMatchupOpponent();
     for (const effect of effects) {
       if (effect.type === 'shake') shakeCell(effect.row, effect.col);
@@ -333,6 +343,7 @@ function runOnline(countries) {
     // slate; otherwise a stale name would briefly leak into a fresh
     // join while the new fetch is in flight.
     opponentNickname = undefined;
+    pairRecord = null;
     resultSubmittedForGame = false;
     if (matchupOpponentEl) matchupOpponentEl.replaceChildren();
   }
@@ -759,6 +770,21 @@ function runOnline(countries) {
     if (!outcome) return;
     resultSubmittedForGame = true;
     void submitTttResult({ deviceId, opponentId: peerId, mode: '3x3', outcome });
+    // Optimistic local bump so the role line's record suffix reflects
+    // the just-finished game immediately. If the POST drops a future
+    // pair-fetch on a fresh room will correct any drift.
+    if (pairRecord) {
+      if (outcome === 'win') pairRecord = { ...pairRecord, wins: pairRecord.wins + 1 };
+      else if (outcome === 'loss') pairRecord = { ...pairRecord, losses: pairRecord.losses + 1 };
+      else pairRecord = { ...pairRecord, draws: pairRecord.draws + 1 };
+    } else {
+      pairRecord = {
+        wins: outcome === 'win' ? 1 : 0,
+        losses: outcome === 'loss' ? 1 : 0,
+        draws: outcome === 'draw' ? 1 : 0,
+      };
+    }
+    renderMatchupOpponent();
   }
 
   /**
@@ -773,6 +799,24 @@ function runOnline(countries) {
     fetchProfile({ deviceId: state.peerId }).then((r) => {
       opponentNickname = r.ok ? r.nickname : null;
       opponentFetchInFlight = false;
+      renderMatchupOpponent();
+    });
+  }
+
+  /**
+   * Spawn a one-time fetch for the head-to-head record vs this opponent
+   * (3×3 mode). Same lifecycle as `maybeFetchOpponent` — no-op on
+   * subsequent calls until `returnToLobbyWithError` wipes the state.
+   * Failures resolve to null and the suffix stays hidden until the
+   * next fresh peer.
+   */
+  function maybeFetchPair() {
+    if (!state.peerId) return;
+    if (pairRecord !== null || pairFetchInFlight) return;
+    pairFetchInFlight = true;
+    fetchTttPair({ deviceId, opponentId: state.peerId }).then((r) => {
+      pairRecord = r.ok ? r.row.m3x3 : null;
+      pairFetchInFlight = false;
       renderMatchupOpponent();
     });
   }
@@ -796,6 +840,16 @@ function runOnline(countries) {
     const name = document.createElement('span');
     name.className = 'matchup-name';
     name.textContent = displayNickname(state.peerId, opponentNickname);
+    // Head-to-head record is hover-only — paint it as the name's title
+    // attribute instead of as a visible suffix. The role line stays
+    // short and the curious player still gets the past-games count by
+    // hovering / long-pressing the opponent name.
+    if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
+      name.title = t('ttt.matchupRecordTooltip', 'vs this opponent: {wins} wins, {losses} losses, {draws} draws')
+        .replace('{wins}', String(pairRecord.wins))
+        .replace('{losses}', String(pairRecord.losses))
+        .replace('{draws}', String(pairRecord.draws));
+    }
     matchupOpponentEl.append(vs, name);
   }
 
