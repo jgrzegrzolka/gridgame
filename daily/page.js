@@ -198,8 +198,8 @@ function appendExtraRow(parent, label, items, all, targetCodes, userFoundCodes) 
 /**
  * Paint the **personal stats** slot (above Found): the player's score,
  * an optional streak segment when `currentStreak ≥ 2`, and an inline
- * share button. Always renders the moment a result is in view — no
- * network fetch needed, so the score is visible instantly.
+ * share button on touch devices. Always renders the moment a result is
+ * in view — no network fetch needed, so the score is visible instantly.
  *
  * Repainted on every change to module-scope state (streak resolves,
  * language switch) — share button, streak entry animation, and DOM
@@ -217,11 +217,11 @@ function paintPersonalStats(found, total) {
   const h = document.createElement('p');
   h.className = 'daily-stats-headline';
 
-  // Inline composition: score → (· streak when ≥ 2) → · share icon.
-  // The headline runs as inline text (no flex) so the share button
-  // stays glued to its preceding text when a narrow viewport wraps
-  // the line — otherwise flex-wrap puts the button on its own row,
-  // which is uglier than a natural mid-text wrap.
+  // Inline composition: score → (· streak when ≥ 2) → (· share icon
+  // when on touch). The headline runs as inline text (no flex) so the
+  // share button stays glued to its preceding text when a narrow
+  // viewport wraps the line — otherwise flex-wrap puts the button on
+  // its own row, which is uglier than a natural mid-text wrap.
   //
   // Streak is its own span (rather than concatenated into the score
   // text) so the entry animation can target just the streak — first-
@@ -418,15 +418,12 @@ function setShareCtx(n, targets, foundCodes) {
  * sheet → clipboard → legacy textarea fallback). On `copied`, flash
  * `.copied` on the button for 1.5 s (CSS handles the icon swap).
  *
- * Rendered on both touch and desktop. Touch hits the native share
- * sheet via `nav.share`; desktop falls through to the clipboard path
- * and shows the `.copied` flash. Daily intentionally diverges from
- * TTT (`ticTacToe/page.js:76`) and findFlag (`findFlag/page.js:674`),
- * which still gate their share icons to touch — those are room /
- * category-link shares where desktop users have ctrl-L + ctrl-C as
- * an obvious alternative. The daily share-text is the Wordle-style
- * artifact the player can't reconstruct from the URL bar, so the
- * desktop reveal is load-bearing for sharing the result.
+ * Touch-only: matches TTT (`ticTacToe/page.js:76`) and findFlag's
+ * `#game-share` / `#result-share` reveals. On desktop the OS share
+ * sheet is heavy (Windows Share dialog with contacts; macOS share
+ * menu) and clipboard-only feedback is too quiet to be discoverable
+ * — both wrong for the surface, so we just don't render the icon
+ * there. One rule across the whole site: share-icons are touch-only.
  *
  * Reads from the module-level `shareCtx` and `streakState` so the
  * panel-paint code doesn't need to know any of the puzzle details.
@@ -435,6 +432,9 @@ function setShareCtx(n, targets, foundCodes) {
  */
 function createShareButton() {
   if (!shareCtx) return null;
+  const isTouchDevice = typeof window.matchMedia === 'function'
+    && window.matchMedia('(pointer: coarse)').matches;
+  if (!isTouchDevice) return null;
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'share-link';
