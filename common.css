@@ -22,9 +22,15 @@
   --primary-color: #2B1D24;
   --secondary-color: #C2899F;
   --muted-color: #999;
-  --muted-soft-color: #ddd;
+  --muted-soft-color: #eee;
   --link-color: var(--primary-color);
   --page-top: 84px;
+  /* Height of the fixed chrome strip (body::before) — the visible top
+   * bar. Kept smaller than --page-top so a thin band of page background
+   * shows between the strip's bottom edge and the first content row
+   * when the page is scrolled. Sized to contain the 44 px chrome buttons
+   * (top: 12 px + height: 44 px = 56 px bottom) with breathing room. */
+  --strip-height: 66px;
   /* Inward push for the chrome cluster on wide viewports so the buttons
    * align with the right edge of the widest content the project ever
    * renders — the 9×9 tic-tac-toe grid, which maxes at 756 px (9 × 80 px
@@ -108,9 +114,30 @@ body::before {
   top: 0;
   left: 0;
   right: 0;
-  height: var(--page-top);
+  height: var(--strip-height);
   background: #fafafa;
   z-index: 10;
+}
+/* Hairline at the chrome strip's bottom edge, inset to match the visual
+ * width of the menu itself — left edge aligns with the site-logo, right
+ * edge with the rightmost chrome button (burger). Both use the same
+ * `20px + --chrome-x-offset` math, so the line tracks the chrome cluster
+ * as the viewport widens. Sits one pixel above the strip's bottom so it
+ * reads as the strip's own underline rather than a floating rule.
+ *
+ * Sibling pseudo-element (body::after) instead of border-bottom on the
+ * strip itself: the strip MUST span edge-to-edge as the fafafa cover, so
+ * its border would too — and we want the line shorter than the cover. */
+body::after {
+  content: "";
+  position: fixed;
+  top: calc(var(--strip-height) - 1px);
+  left: calc(20px + var(--chrome-x-offset));
+  right: calc(20px + var(--chrome-x-offset));
+  height: 1px;
+  background: var(--muted-soft-color);
+  z-index: 11;
+  pointer-events: none;
 }
 /* Top-left wordmark — pairs with the chrome cluster (lang / flag /
  * burger) on the top-right. Vertically centred on the 44 × 44 chrome
