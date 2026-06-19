@@ -404,7 +404,8 @@
     },
     "share": {
       "aria": "Share result",
-      "title": "Yet Another Quiz — Daily #{n} — {score}/{total}"
+      "title": "Yet Another Quiz — Daily Flag Puzzle #{n} — {score}/{total}",
+      "streakLine": "🔥 {n}-day streak"
     },
     "streak": {
       "line": "Streak: {n}"

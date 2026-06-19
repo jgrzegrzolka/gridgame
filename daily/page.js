@@ -425,8 +425,8 @@ function setShareCtx(n, targets, foundCodes) {
  * — both wrong for the surface, so we just don't render the icon
  * there. One rule across the whole site: share-icons are touch-only.
  *
- * Reads from the module-level `shareCtx` so the panel-paint code
- * doesn't need to know any of the puzzle details.
+ * Reads from the module-level `shareCtx` and `streakState` so the
+ * panel-paint code doesn't need to know any of the puzzle details.
  *
  * @returns {HTMLButtonElement | null}
  */
@@ -447,10 +447,18 @@ function createShareButton() {
   btn.onclick = async () => {
     if (!shareCtx) return;
     const { n, answerCodes, foundCodes } = shareCtx;
-    const titleLine = t('daily.share.title', 'Yet Another Quiz — Daily #{n} — {score}/{total}')
+    const titleLine = t('daily.share.title', 'Yet Another Quiz — Daily Flag Puzzle #{n} — {score}/{total}')
       .replace('{n}', String(n))
       .replace('{score}', String(foundCodes.length))
       .replace('{total}', String(answerCodes.length));
+    // Streak only included when the on-screen streak line is also
+    // showing (≥ STREAK_MIN_TO_SHOW). Single threshold across panel +
+    // share keeps "what gets celebrated" consistent.
+    const showStreakInShare = streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW;
+    const streakLine = showStreakInShare
+      ? t('daily.share.streakLine', '🔥 {n}-day streak')
+        .replace('{n}', String(streakState.currentStreak))
+      : undefined;
     // Always include the puzzle number in the share URL — `/daily/`
     // alone always serves *today's* puzzle, so a recipient clicking
     // a share for a past-day puzzle would land on the wrong one.
@@ -461,6 +469,7 @@ function createShareButton() {
       answerCodes,
       foundCodes,
       url: `${window.location.origin}/daily/?n=${n}`,
+      streakLine,
     });
     const r = await shareText(text);
     if (r === 'copied') {

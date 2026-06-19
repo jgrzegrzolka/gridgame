@@ -6,23 +6,18 @@
  *   <titleLine>
  *
  *   <grid>
+ *   <streakLine?>
  *
  *   <url>
  *
  * The grid is one emoji per answer slot, in the canonical answer-set
  * order, 5 cells per row. 🟩 if the player found the answer at that
- * slot, ⬛ if they missed it. No country names, no flag emojis — the
- * grid is a structural teaser, not a spoiler.
- *
- * Why no 🟥-for-wrong-guesses: `wrongCodes` is a tally of "guessed
- * countries that weren't targets," not a per-slot state. Mapping them
- * onto the slot grid would mean inventing positions where there
- * aren't any. The score line ("8/10") carries the success rate; the
- * wrong-guess count is structurally outside the grid and we
- * deliberately leave it out for cleanliness.
+ * slot, ⬛ if they missed it. The optional streak line appears flush
+ * under the grid (no blank between) so it reads as a flourish on the
+ * result block rather than a second visual section.
  *
  * Pure: no DOM, no clock, no i18n lookup. Caller passes the localised
- * title line and the canonical URL.
+ * title line, optional streak line, and the canonical URL.
  */
 
 /**
@@ -31,15 +26,17 @@
  *   answerCodes: string[],
  *   foundCodes: string[],
  *   url: string,
+ *   streakLine?: string,
  * }} args
  * @returns {string}
  */
-export function buildShareText({ titleLine, answerCodes, foundCodes, url }) {
+export function buildShareText({ titleLine, answerCodes, foundCodes, url, streakLine }) {
   const found = new Set(foundCodes);
   const cells = answerCodes.map((code) => (found.has(code) ? '🟩' : '⬛'));
   const rows = [];
   for (let i = 0; i < cells.length; i += 5) {
     rows.push(cells.slice(i, i + 5).join(''));
   }
-  return `${titleLine}\n\n${rows.join('\n')}\n\n${url}`;
+  const gridBlock = streakLine ? `${rows.join('\n')}\n${streakLine}` : rows.join('\n');
+  return `${titleLine}\n\n${gridBlock}\n\n${url}`;
 }
