@@ -865,13 +865,13 @@ function runOnline(countries) {
     } else if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
       const record = document.createElement('span');
       record.className = 'matchup-record';
-      let text = `${pairRecord.wins}:${pairRecord.losses}`;
+      let inner = `${pairRecord.wins}:${pairRecord.losses}`;
       if (pairRecord.draws > 0) {
         const drawKey = pairRecord.draws === 1 ? 'ttt.matchupDraw' : 'ttt.matchupDraws';
         const drawLabel = t(drawKey, pairRecord.draws === 1 ? 'draw' : 'draws');
-        text += `, ${pairRecord.draws} ${drawLabel}`;
+        inner += `, ${pairRecord.draws} ${drawLabel}`;
       }
-      record.textContent = text;
+      record.textContent = `(${inner})`;
       matchupOpponentEl.append(record);
     }
   }
