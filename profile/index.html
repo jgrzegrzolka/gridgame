@@ -57,28 +57,28 @@
     <main class="profile-main">
       <form class="profile-form" id="profile-form">
         <div class="profile-avatar" id="profile-avatar" aria-hidden="true"></div>
-        <input
-          type="text"
-          class="profile-input"
-          id="profile-input"
-          maxlength="32"
-          autocomplete="off"
-          spellcheck="false"
-          aria-label="Nickname"
-          data-i18n-attr="aria-label:nickname.label"
-        />
+        <div class="profile-input-row">
+          <input
+            type="text"
+            class="profile-input"
+            id="profile-input"
+            maxlength="32"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Nickname"
+            data-i18n-attr="aria-label:nickname.label"
+          />
+          <button type="submit" class="profile-save" data-i18n="nickname.save">Save</button>
+        </div>
         <p class="profile-status" id="profile-status" role="status" aria-live="polite"></p>
 
-        <section class="achievements" id="achievements" hidden aria-labelledby="achievements-title">
-          <h2 class="achievements-title" id="achievements-title" data-i18n="profile.achievements.title">Achievements</h2>
+        <section class="achievements" id="achievements" hidden aria-label="Achievements" data-i18n-attr="aria-label:profile.achievements.title">
           <p class="achievements-loading" id="achievements-loading" data-i18n="profile.achievements.loading">Loading achievements…</p>
           <ul class="achievements-grid" id="achievements-grid" hidden></ul>
         </section>
 
         <div class="actions-row">
-          <button type="submit" class="profile-save" data-i18n="nickname.save">Save</button>
           <span class="profile-sync-wrap" id="profile-sync-wrap">
-            ·
             <a class="profile-sync-link" id="profile-sync-link" href="./sync/" data-i18n="menu.sync">Sync across devices</a>
           </span>
           ·

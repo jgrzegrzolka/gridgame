@@ -1172,20 +1172,69 @@ dialog#zoom p {
   line-height: 1.4;
   color: var(--primary-color);
 }
+/* Unified pill button — every affirmative action on the site (Save
+ * on /profile/, "Start new game" / "Join" / "Play on the same device"
+ * in the TTT lobby, "Got it" in the rules / help dialogs) shares one
+ * visual recipe. Per-page CSS only overrides padding + font-size for
+ * size variants.
+ *
+ * Press feedback: the `:active` state instantly paints the button in
+ * `--secondary-color` (brand pink), and the base rule's `transition`
+ * fades that pink back to the surface fill over ~600 ms once the
+ * pointer is released — so a click leaves a brief pink afterglow
+ * rather than just the standard "darker on hold" affordance.
+ *
+ * Per CLAUDE.md "Same mechanism = same code" — feature stylesheets
+ * MUST extend a class listed here (or add a new one to the comma list)
+ * rather than copy-paste the recipe. */
+.profile-save,
+.lobby-btn,
 .rules-close,
 .help-close {
-  padding: 6px 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--link-color);
   background: var(--surface-color);
   border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
-  color: var(--link-color);
-  font: inherit;
-  font-size: 14px;
+  padding: 10px 16px;
   cursor: pointer;
+  text-decoration: none;
+  /* Two transitions on purpose: bg snaps in / out on hover (120 ms,
+   * tight feedback), border takes 600 ms to fade so a press leaves a
+   * brief pink afterglow on release. */
+  transition: background-color 120ms ease-out,
+              border-color 600ms ease-out;
 }
+.profile-save:hover:not(:disabled),
+.lobby-btn:hover,
 .rules-close:hover,
 .help-close:hover {
   background: var(--surface-hover-color);
+}
+.profile-save:active:not(:disabled),
+.lobby-btn:active,
+.rules-close:active,
+.help-close:active {
+  /* Border-only pink so the bg / text stay legible during press; on
+   * release, the base rule's 600 ms border-color transition fades it
+   * back to --muted-soft-color (the brief "you tapped this" afterglow). */
+  border-color: var(--secondary-color);
+  transition: border-color 0s,
+              background-color 120ms ease-out;
+}
+.profile-save:disabled,
+.lobby-btn:disabled,
+.rules-close:disabled,
+.help-close:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* Smaller dismiss buttons inside the rules / help dialogs — same
+ * recipe as the affirmative pill, just a tighter slot. */
+.rules-close,
+.help-close {
+  padding: 6px 14px;
 }
 
 /* Achievement-celebrate overlay — fires on a freshly-unlocked badge.

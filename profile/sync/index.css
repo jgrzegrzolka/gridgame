@@ -164,11 +164,12 @@
   background: var(--secondary-color);
 }
 /* Wizard actions — text-link style to match the /profile/ actions
- * row idiom (Save · Sync · Home). Same recipe as `.profile-save`:
- * no border, no fill, link-coloured text, underline on hover.
- * "Link devices" gets the heavier 500 weight as the primary action;
- * "Cancel" stays muted so the visual hierarchy nudges toward the
- * affirmative without making Cancel feel disabled. */
+ * row idiom (Sync · Home, with the Save button now living next to the
+ * nickname input rather than in this row): no border, no fill, link-
+ * coloured text, underline on hover. "Link devices" gets the heavier
+ * 500 weight as the primary action; "Cancel" stays muted so the
+ * visual hierarchy nudges toward the affirmative without making
+ * Cancel feel disabled. */
 .sync-wizard-actions {
   display: flex;
   justify-content: flex-start;

@@ -36,6 +36,16 @@
   height: 100%;
 }
 
+/* Nickname input + Save button live side-by-side so the action is
+ * unambiguously attached to the field. Before, Save sat in the bottom
+ * `.actions-row` between Sync and Home — once the long achievements
+ * grid landed between the input and the row, it was no longer obvious
+ * which input Save belonged to. */
+.profile-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
 .profile-input {
   font: inherit;
   font-size: 16px;
@@ -45,7 +55,9 @@
   border-radius: 6px;
   background: var(--surface-color);
   box-sizing: border-box;
-  width: 100%;
+  /* Take up the remaining width next to the Save button */
+  flex: 1;
+  min-width: 0;
 }
 .profile-input:focus {
   outline: none;
@@ -60,24 +72,11 @@
   border-color: var(--secondary-color);
 }
 
-.profile-save {
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--link-color);
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-decoration: none;
-}
-.profile-save:hover:not(:disabled) {
-  text-decoration: underline;
-}
-.profile-save:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
+/* Visual recipe (bg / border / hover / press feedback / disabled fade)
+ * lives on the shared `.profile-save, .lobby-btn, .rules-close,
+ * .help-close` rule in common.css. No per-page overrides needed —
+ * the shared `padding: 10px 16px` lines up cleanly with the nickname
+ * input's height. */
 
 /* Sync link in the actions row — lighter weight than the adjacent
  * Save action since this is navigation, not a primary action.
@@ -127,15 +126,6 @@
  * (avoids a flash of empty/wrong state). */
 .achievements {
   margin-top: 8px;
-}
-.achievements-title {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted-color);
-  margin: 0 0 8px;
-  text-align: center;
 }
 .achievements-loading {
   font-size: 12px;
