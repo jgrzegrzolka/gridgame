@@ -246,6 +246,40 @@ body {
   margin: 24px 0 12px;
   text-align: left;
 }
+/* Zero-found edge case (any `findFlag`-shaped panel). When the player
+ * found no flags, the structure is:
+ *   <h2 #found-title hidden>Found:</h2>
+ *   <ul .find-result-found> (empty)
+ *   <h2 #missed-title>Missed:</h2>
+ *   <ul .find-missed> (populated)
+ * Without these two rules the empty `.find-result-found` still painted
+ * a 16px bottom margin and the visible `Missed:` heading stacked its
+ * 24px top margin on top of that and the shared `#result { margin-
+ * top: 32px }` — so the panel read as "70px of nothing, then Missed:".
+ * Collapse both: empty grid disappears entirely and the next heading
+ * docks at the panel's top edge. */
+.find-result-found:empty {
+  display: none;
+}
+.result-section-title[hidden] + .find-result-found:empty + .result-section-title {
+  margin-top: 0;
+}
+/* `findFlag/` hides `#game` when the result shows (daily keeps it
+ * visible — the puzzle title strip is the persistent context). With
+ * `#game` gone, the shared 32px `#result` top margin and the first
+ * heading's own 24px top margin together became ~56px of empty space
+ * below the chrome strip. Zero both.
+ *
+ * General sibling combinator (`~`) not adjacent (`+`) because there's
+ * a `<dialog id="zoom">` between `#game` and `#result` in the HTML —
+ * `+` would never match. On daily `#game` stays visible so this rule
+ * never applies and daily keeps the original 32px breathing. */
+#game[hidden] ~ #result {
+  margin-top: 0;
+}
+#game[hidden] ~ #result > .result-section-title:first-of-type {
+  margin-top: 0;
+}
 .find-missed,
 .find-result-found {
   text-align: left;
