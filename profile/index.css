@@ -4,11 +4,15 @@
   /* `main` is `width: 100%` from common.css. Without border-box the 20px
    * horizontal padding here would add to that 100%, pushing the page 40px
    * wider than the viewport on mobile and shoving the fixed chrome cluster
-   * off the right edge. */
+   * off the right edge.
+   *
+   * No top padding — body already reserves `--page-top` for the top
+   * chrome strip + breathing room, so adding more here would push the
+   * form down further than other pages and break the uniform gap. */
   box-sizing: border-box;
   max-width: 480px;
   margin: 0 auto;
-  padding: 24px 20px 20px;
+  padding: 0 20px 20px;
 }
 
 .profile-form {

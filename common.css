@@ -30,7 +30,7 @@
    * itself so the surface→hover transition reads as a clear affordance. */
   --surface-hover-color: #f0f0f0;
   --link-color: var(--primary-color);
-  --page-top: 84px;
+  --page-top: 96px;
   /* Height of the fixed chrome strip (body::before) — the visible top
    * bar. Kept smaller than --page-top so a thin band of page background
    * shows between the strip's bottom edge and the first content row

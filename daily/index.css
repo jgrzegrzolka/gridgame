@@ -97,9 +97,9 @@
  * differs from the community block in two ways:
  *
  *  - Negative top margin pulls the score up closer to the chrome.
- *    Body has `padding-top: var(--page-top)` (84px) reserved for the
+ *    Body has `padding-top: var(--page-top)` (96px) reserved for the
  *    fixed chrome strip (which itself is var(--strip-height) = 66px,
- *    so an 18px band of page bg shows beneath the strip on scroll). With
+ *    so a 30px band of page bg shows beneath the strip on scroll). With
  *    the lighter uppercase "FOUND:" the heading used to sit flush with
  *    the strip bottom and read as breathing room; the heavier "Your
  *    score" in the same slot reads as too far down. -24px pulls it
