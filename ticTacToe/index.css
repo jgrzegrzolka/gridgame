@@ -354,19 +354,9 @@ body.game-over .actions-row {
   font-size: 14px;
   color: var(--primary-color);
 }
-.picker-close {
-  padding: 6px 12px;
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 6px;
-  color: var(--link-color);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-.picker-close:hover {
-  background: var(--surface-hover-color);
-}
+/* `.picker-close` visual recipe (bg / border / hover / press feedback)
+ * lives on the unified pill rule in common.css alongside `.rules-close`
+ * and `.help-close`. No per-page override needed. */
 .picker-input {
   width: 100%;
   box-sizing: border-box;
