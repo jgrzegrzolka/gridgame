@@ -62,9 +62,13 @@ body {
 
 .progress-bar {
   position: fixed;
-  top: 0;
+  /* Sits in the breathing gap between the chrome strip's hairline and
+   * the first content row (i.e., flush with the strip's bottom edge),
+   * rather than at the very top of the viewport where it visually
+   * detached from both the chrome and the game. */
+  top: var(--strip-height);
   left: 0;
-  height: 6px;
+  height: 4px;
   width: 0;
   background: var(--secondary-color);
   transition: width 300ms ease;

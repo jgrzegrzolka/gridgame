@@ -30,13 +30,13 @@
    * itself so the surface→hover transition reads as a clear affordance. */
   --surface-hover-color: #f0f0f0;
   --link-color: var(--primary-color);
-  --page-top: 96px;
+  --page-top: 104px;
   /* Height of the fixed chrome strip (body::before) — the visible top
    * bar. Kept smaller than --page-top so a thin band of page background
    * shows between the strip's bottom edge and the first content row
    * when the page is scrolled. Sized to contain the 44 px chrome buttons
    * (top: 12 px + height: 44 px = 56 px bottom) with breathing room. */
-  --strip-height: 66px;
+  --strip-height: 70px;
   /* Inward push for the chrome cluster on wide viewports so the buttons
    * align with the right edge of the widest content the project ever
    * renders — the 9×9 tic-tac-toe grid, which maxes at 756 px (9 × 80 px
@@ -155,14 +155,17 @@ body::after {
   pointer-events: none;
 }
 /* Top-left wordmark — pairs with the chrome cluster (lang / flag /
- * burger) on the top-right. Vertically centred on the 44 × 44 chrome
- * buttons (chrome top:12 + 22 = 34; logo top:18 + 16 = 34). Clicking
- * the logo always returns to the site root, so the link is `aria-
- * current="page"` only on `/` itself — same pattern the burger
- * nickname uses for the profile page. */
+ * burger) on the top-right. Logo sits above the chrome buttons' centre
+ * line (logo top:11 + 16 = 27 vs chrome top:15 + 22 = 37) so the
+ * wordmark + the `.domain-label` directly below it read as a
+ * vertically balanced two-line block within the taller strip while
+ * the single-line button row sits a little lower to centre against
+ * them. Clicking the logo always returns to the site root, so the
+ * link is `aria-current="page"` only on `/` itself — same pattern the
+ * burger nickname uses for the profile page. */
 .site-logo {
   position: fixed;
-  top: 18px;
+  top: 11px;
   /* Mirror of the chrome cluster on the right: same `--chrome-x-offset`
    * math, just anchored to the left edge. On narrow viewports the
    * offset clamps to 0 (logo flush with the 12 px body padding); on
@@ -185,6 +188,39 @@ body::after {
   cursor: default;
   pointer-events: none;
 }
+/* "Flags" label sitting flush under the site logo — communicates the
+ * site's domain to users who didn't infer it from the wordmark. Mounted
+ * by `mountDomainLabel` in common.js, translated via `data-i18n`. Same
+ * `--chrome-x-offset` left edge as the logo so the two stack as a
+ * single block on every viewport.
+ *
+ * Geometry rationale: logo box is at top 18, height 32 → ends at 50.
+ * Label sits 8 px below at top 58, font-size 13 + line-height ~16 →
+ * ends at 74. Strip hairline at 79 (--strip-height 80 minus the 1 px
+ * rule). That leaves 5 px between label bottom and the rule, so the
+ * label reads as cleanly contained inside the chrome rather than
+ * "sitting on" the hairline (the first attempt at 11 px / top 52 in a
+ * 66 px strip was the latter — ugly).
+ *
+ * Colour is muted not pink: the wordmark's "quiz" half is already
+ * pink, so a pink label merged into a single visual block instead of
+ * a separate caption. Grey settles the hierarchy into wordmark-first,
+ * label-second. */
+.domain-label {
+  position: fixed;
+  top: 43px;
+  left: calc(20px + var(--chrome-x-offset));
+  /* Match the wordmark font (logo.svg uses the same stack) so the
+   * label reads as one block with the logo above. */
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--primary-color);
+  z-index: 25;
+  pointer-events: none;
+}
 /* Lang toggle = text-only ISO code (current language). `data-current`
  * is set by the synchronous paint script in every page's <head> + by
  * `wireLangToggle` on switch, so the visible text always tracks the
@@ -194,7 +230,7 @@ body::after {
  * Text scales cleanly to a third language when Finnish lands. */
 .lang-toggle {
   position: fixed;
-  top: 12px;
+  top: 15px;
   right: calc(124px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
@@ -222,7 +258,7 @@ body::after {
 }
 .flags-link {
   position: fixed;
-  top: 12px;
+  top: 15px;
   right: calc(72px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
@@ -252,7 +288,7 @@ body::after {
 }
 .burger {
   position: fixed;
-  top: 12px;
+  top: 15px;
   right: calc(20px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;

@@ -32,6 +32,29 @@ function mountSiteLogo() {
 }
 
 /**
+ * Domain indicator pinned just below the site logo — "Flags" today, ready
+ * to swap or stack when Movies / Books / etc. domains land. Users have
+ * historically not realised the site is flag-themed from the wordmark
+ * alone; this label keeps the signal loud without the in-content `FLAGS`
+ * heading the home page used to carry. Sits inside the chrome strip's
+ * bg coverage area via `position: fixed` + same `--chrome-x-offset` math
+ * as the logo, so it tracks the cluster on wide viewports. Translated via
+ * `data-i18n` like every other chrome string. */
+function mountDomainLabel() {
+  if (document.querySelector('.domain-label')) return;
+  const span = document.createElement('span');
+  span.className = 'domain-label';
+  span.setAttribute('data-i18n', 'domain.flags');
+  span.textContent = 'Flags';
+  const logo = document.querySelector('.site-logo');
+  if (logo && logo.nextSibling) {
+    document.body.insertBefore(span, logo.nextSibling);
+  } else {
+    document.body.insertBefore(span, document.body.firstChild);
+  }
+}
+
+/**
  * Wrap each `.actions-row` / `.result-links` element's children in a
  * single `<span class="row-inner">`. The sticky bottom row's bg still
  * needs to bleed to the viewport edges (so scrolling content doesn't
@@ -54,10 +77,12 @@ function wrapBottomRowsForInsetHairline() {
 if (typeof document !== 'undefined') {
   if (document.readyState !== 'loading') {
     mountSiteLogo();
+    mountDomainLabel();
     wrapBottomRowsForInsetHairline();
   } else {
     document.addEventListener('DOMContentLoaded', () => {
       mountSiteLogo();
+      mountDomainLabel();
       wrapBottomRowsForInsetHairline();
     }, { once: true });
   }

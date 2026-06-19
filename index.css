@@ -9,14 +9,6 @@ body {
   max-width: 720px;
   margin-bottom: 24px;
 }
-.domain-title {
-  font-size: 18px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--secondary-color);
-  margin: 0 0 10px;
-  font-weight: 600;
-}
 .game-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
