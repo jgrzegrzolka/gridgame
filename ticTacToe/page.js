@@ -848,21 +848,42 @@ function runOnline(countries) {
     vs.className = 'muted';
     vs.textContent = t('ttt.matchupVs', 'vs');
     const name = document.createElement('span');
-    name.className = 'matchup-name';
-    name.textContent = displayNickname(state.peerId, opponentNickname);
+    // While the profile fetch is still in flight (opponentNickname is
+    // `undefined`), paint a muted "loading…" label in the name slot
+    // instead of letting `displayNickname` fall back to the deterministic
+    // default (Brave Falcon-style). That fallback flashed the wrong
+    // name for a beat before snapping to the real one once the fetch
+    // resolved. `null` (fetch resolved, no nickname stored) still goes
+    // through `displayNickname` and gets the deterministic default —
+    // that's the intended behaviour for opponents who haven't picked
+    // a nickname. */
+    if (opponentNickname === undefined) {
+      name.className = 'matchup-name matchup-name-loading';
+      name.textContent = t('ttt.matchupOpponentLoading', 'loading…');
+    } else {
+      name.className = 'matchup-name';
+      name.textContent = displayNickname(state.peerId, opponentNickname);
+    }
     matchupOpponentEl.append(vs, name);
 
-    // Suffix after the name:
-    //   - While the pair fetch is in flight: a muted "loading…" label
-    //     so a slow API call doesn't leave the line ambiguous (per Jan's
-    //     rule: every long-running API surface gets a loading label).
-    //   - Once resolved, with at least one game on record: the record
-    //     `1:0` (wins:losses), with ", N draws" appended when draws > 0,
-    //     so the role line reads "You are O vs Alice 1:0" or
-    //     "You are O vs Alice 1:0, 2 draws".
+    // Suffix after the name. When the opponent name is still loading,
+    // skip the record suffix entirely — one loading label per row reads
+    // cleaner than `vs loading… (loading…)`. Once the name resolves,
+    // the record may still be in flight and paints its own loading.
+    //
+    //   - Name loading: nothing here.
+    //   - Pair fetch in flight: a muted "loading…" label so a slow API
+    //     call doesn't leave the line ambiguous (rule: every long-
+    //     running API surface gets a loading label).
+    //   - Resolved with at least one game on record: the record
+    //     `(1:0)` (wins:losses), with ", N draws" appended when draws >
+    //     0, so the role line reads "You are O vs Alice (1:0)" or
+    //     "You are O vs Alice (1:0, 2 draws)".
     //   - Resolved with no games yet: nothing — a brand-new pairing
-    //     shouldn't paint a "0:0".
-    if (pairFetchInFlight) {
+    //     shouldn't paint a "(0:0)".
+    if (opponentNickname === undefined) {
+      // name slot already shows the unified loading state
+    } else if (pairFetchInFlight) {
       const loading = document.createElement('span');
       loading.className = 'matchup-record matchup-record-loading';
       loading.textContent = t('ttt.matchupRecordLoading', 'loading…');

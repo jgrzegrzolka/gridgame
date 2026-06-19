@@ -846,13 +846,23 @@ function runOnline(countries) {
     vs.className = 'muted';
     vs.textContent = t('ttt.matchupVs', 'vs');
     const name = document.createElement('span');
-    name.className = 'matchup-name';
-    name.textContent = displayNickname(state.peerId, opponentNickname);
+    // Name slot shows a loading label while the profile fetch is in
+    // flight (opponentNickname === undefined) — see ../page.js for the
+    // mirror with the full rationale.
+    if (opponentNickname === undefined) {
+      name.className = 'matchup-name matchup-name-loading';
+      name.textContent = t('ttt.matchupOpponentLoading', 'loading…');
+    } else {
+      name.className = 'matchup-name';
+      name.textContent = displayNickname(state.peerId, opponentNickname);
+    }
     matchupOpponentEl.append(vs, name);
 
     // Suffix after the name (loading label OR record OR nothing) —
     // see ../page.js for the mirror with the full rationale.
-    if (pairFetchInFlight) {
+    if (opponentNickname === undefined) {
+      // name slot already shows the unified loading state
+    } else if (pairFetchInFlight) {
       const loading = document.createElement('span');
       loading.className = 'matchup-record matchup-record-loading';
       loading.textContent = t('ttt.matchupRecordLoading', 'loading…');
