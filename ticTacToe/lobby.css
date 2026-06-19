@@ -132,6 +132,17 @@
   font-weight: 400;
   font-style: italic;
 }
+/* Same loading style on the opponent NAME slot while the profile fetch
+ * is in flight — otherwise `displayNickname` falls back to the
+ * deterministic default (Brave Falcon-style) and the role line flashes
+ * the wrong name for a beat before snapping to the real one once the
+ * fetch resolves. Painted by `renderMatchupOpponent` when
+ * `opponentNickname === undefined`. */
+.matchup-opponent .matchup-name-loading {
+  color: var(--muted-color);
+  font-weight: 400;
+  font-style: italic;
+}
 .status-line {
   font-size: 14px;
   /* Brand secondary so the neutral "Waiting for opponent… share the code
