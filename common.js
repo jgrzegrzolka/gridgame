@@ -31,9 +31,36 @@ function mountSiteLogo() {
   document.body.insertBefore(a, document.body.firstChild);
 }
 
+/**
+ * Wrap each `.actions-row` / `.result-links` element's children in a
+ * single `<span class="row-inner">`. The sticky bottom row's bg still
+ * needs to bleed to the viewport edges (so scrolling content doesn't
+ * peek through), but the visible hairline above it should match the
+ * row's content width — pure CSS can't measure rendered text width, so
+ * we wrap once at DOMContentLoaded and put `border-top` on the wrapper.
+ * Idempotent (skips rows already wrapped on a re-run).
+ */
+function wrapBottomRowsForInsetHairline() {
+  document.querySelectorAll('.actions-row, .result-links').forEach((row) => {
+    if (row.firstElementChild && row.firstElementChild.classList.contains('row-inner')
+        && row.children.length === 1) return;
+    const inner = document.createElement('span');
+    inner.className = 'row-inner';
+    while (row.firstChild) inner.appendChild(row.firstChild);
+    row.appendChild(inner);
+  });
+}
+
 if (typeof document !== 'undefined') {
-  if (document.readyState !== 'loading') mountSiteLogo();
-  else document.addEventListener('DOMContentLoaded', mountSiteLogo, { once: true });
+  if (document.readyState !== 'loading') {
+    mountSiteLogo();
+    wrapBottomRowsForInsetHairline();
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      mountSiteLogo();
+      wrapBottomRowsForInsetHairline();
+    }, { once: true });
+  }
   // Feature Q — frontend telemetry. Auto-init alongside the site
   // logo since every player-facing page already imports common.js
   // for the burger / nickname helpers, so no per-page wiring needed.

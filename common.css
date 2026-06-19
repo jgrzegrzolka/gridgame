@@ -421,30 +421,15 @@ body::after {
   position: sticky;
   bottom: 0;
   z-index: 5;
-  /* Two-layer background:
-   *   1) a 1px linear-gradient stripe across the row's top edge,
-   *      transparent on the outer sides and muted-soft in the middle,
-   *      so the visible hairline matches the chrome cluster's width
-   *      (logo's left edge → burger's right edge) via --chrome-x-offset.
-   *   2) the solid #fafafa fill underneath.
-   * Painted as bg layers (not ::before) because absolute pseudo-elements
-   * inside sticky-in-flex containers proved unreliable across browsers,
-   * while bg layers always render. Height 1px so it never sub-pixel-
-   * vanishes — the previous `border-top: 0.5px` was rounding to 0 on
-   * standard-DPI displays. */
-  background:
-    linear-gradient(
-      to right,
-      transparent calc(20px + var(--chrome-x-offset)),
-      var(--muted-soft-color) calc(20px + var(--chrome-x-offset)),
-      var(--muted-soft-color) calc(100% - 20px - var(--chrome-x-offset)),
-      transparent calc(100% - 20px - var(--chrome-x-offset))
-    ) top left / 100% 1px no-repeat,
-    #fafafa;
+  background: #fafafa;
   margin-top: 16px;
   margin-left: -24px;
   margin-right: -24px;
-  padding: 12px 24px;
+  /* Top padding lives on `.row-inner` instead so the inner's border-top
+   * sits at the row's box top edge (where the old `border-top: 0.5px`
+   * sat). The 12px gap between the line and the text content is the
+   * inner's `padding-top`. */
+  padding: 0 24px 12px;
   text-align: center;
   /* Pages whose body is a flex column with `align-items: center`
    * (ticTacToe, flagQuiz, stats) would otherwise shrink-fit this row
@@ -455,13 +440,31 @@ body::after {
    * extends it the rest of the way to the viewport edge. */
   align-self: stretch;
 }
+/* Inner wrapper injected by `wrapBottomRowsForInsetHairline` in
+ * common.js. The visible hairline above the row's content sits on this
+ * inline-block element, so its width matches the row's content (the
+ * links + separators) rather than the row's edge-to-edge background
+ * bleed. Height 1px so it renders at every DPI — `0.5px` rounded to 0
+ * on standard-DPI displays before. text-align: center on the row keeps
+ * this inline-block centred. */
+.actions-row > .row-inner,
+.result-links > .row-inner {
+  display: inline-block;
+  /* Cap at the row's content area so very long link sets don't push the
+   * inner (and the visible hairline) past the viewport edges on phones;
+   * the inner still shrinks to content width when it fits naturally. */
+  max-width: 100%;
+  border-top: 1px solid var(--muted-soft-color);
+  padding-top: 12px;
+}
 /* `·` separator that hides itself when the action right before it is
  * hidden. Used in the online ticTacToe actions-row, where `#give-up`
  * starts `hidden` until both players are connected — without this rule
  * the row would render as " · Home" with a leading dot. The literal `·`
  * text nodes elsewhere don't need this because their neighbours are
- * always visible. */
-.actions-row > [hidden] + .actions-sep {
+ * always visible. Selector reaches through `.row-inner` (the wrapper
+ * added by common.js for the content-width hairline). */
+.actions-row .row-inner > [hidden] + .actions-sep {
   display: none;
 }
 
@@ -538,8 +541,8 @@ body::after {
  * would also reset `font-weight`, and since this selector (`0,1,1`)
  * beats a bare `.row-cta` (`0,1,0`), opt-in bolding would silently lose.
  * Leaving `font-weight` alone keeps `.row-cta` working. */
-.actions-row > a,
-.actions-row > button {
+.actions-row a,
+.actions-row button {
   background: none;
   border: 0;
   padding: 0;
@@ -550,8 +553,8 @@ body::after {
   text-decoration: none;
   cursor: pointer;
 }
-.actions-row > a:hover,
-.actions-row > button:hover:not(:disabled) {
+.actions-row a:hover,
+.actions-row button:hover:not(:disabled) {
   text-decoration: underline;
 }
 /* Disabled action — faded + non-clickable cursor. Matches the
@@ -559,11 +562,11 @@ body::after {
  * disabled action in any `.actions-row` reads the same wherever
  * it appears (e.g. findFlag's `Play` while the filter is empty
  * or matches 0 flags). */
-.actions-row > button:disabled {
+.actions-row button:disabled {
   opacity: 0.5;
   cursor: default;
 }
-.actions-row > [hidden] {
+.actions-row [hidden] {
   display: none;
 }
 /* Opt-in emphasis for ONE item in an `.actions-row` / `.result-links` row
@@ -881,21 +884,13 @@ body::after {
   position: sticky;
   bottom: 0;
   z-index: 5;
-  /* Same inset-hairline-via-gradient pattern as `.actions-row` above —
-   * see that rule's comment for the rationale. */
-  background:
-    linear-gradient(
-      to right,
-      transparent calc(20px + var(--chrome-x-offset)),
-      var(--muted-soft-color) calc(20px + var(--chrome-x-offset)),
-      var(--muted-soft-color) calc(100% - 20px - var(--chrome-x-offset)),
-      transparent calc(100% - 20px - var(--chrome-x-offset))
-    ) top left / 100% 1px no-repeat,
-    #fafafa;
+  background: #fafafa;
   font-size: 14px;
   color: #666;
   margin: 16px -24px 0;
-  padding: 12px 24px;
+  /* Same padding split as `.actions-row` — top padding lives on the
+   * `.row-inner` wrapper so its border-top sits at the row's box top. */
+  padding: 0 24px 12px;
   text-align: center;
   /* Same flex-parent compensation as `.actions-row` — without this the
    * row shrink-fits on pages whose body is a flex column with
