@@ -11,10 +11,15 @@
  * quick edits. */
 
 .sync-main {
+  /* No top padding — body already reserves `--page-top` for the top
+   * chrome strip + breathing room, so any extra here would push the
+   * content down further than other pages and break the uniform gap. */
   box-sizing: border-box;
   max-width: 480px;
   margin: 0 auto;
-  padding: 24px 20px 20px;
+  /* Same rationale as body's `padding-bottom: 0` in common.css — let the
+   * sticky `.actions-row` sit flush at viewport bottom on max scroll. */
+  padding: 0 20px 0;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -161,11 +166,12 @@
   background: var(--secondary-color);
 }
 /* Wizard actions — text-link style to match the /profile/ actions
- * row idiom (Save · Sync · Home). Same recipe as `.profile-save`:
- * no border, no fill, link-coloured text, underline on hover.
- * "Link devices" gets the heavier 500 weight as the primary action;
- * "Cancel" stays muted so the visual hierarchy nudges toward the
- * affirmative without making Cancel feel disabled. */
+ * row idiom (Sync · Home, with the Save button now living next to the
+ * nickname input rather than in this row): no border, no fill, link-
+ * coloured text, underline on hover. "Link devices" gets the heavier
+ * 500 weight as the primary action; "Cancel" stays muted so the
+ * visual hierarchy nudges toward the affirmative without making
+ * Cancel feel disabled. */
 .sync-wizard-actions {
   display: flex;
   justify-content: flex-start;

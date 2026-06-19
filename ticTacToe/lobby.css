@@ -3,23 +3,19 @@
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  margin-top: 24px;
   width: 100%;
   max-width: 360px;
 }
 .lobby[hidden] { display: none; }
+/* Visual recipe (bg / border / hover / press feedback) lives on the
+ * shared `.profile-save, .lobby-btn, .rules-close, .help-close` rule
+ * in common.css. The lobby pills sit standalone (no surrounding form
+ * label), so they get a slightly larger slot to read as a primary
+ * CTA. */
 .lobby-btn {
   padding: 12px 20px;
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 6px;
-  font: inherit;
   font-size: 16px;
-  color: var(--link-color);
-  text-decoration: none;
-  cursor: pointer;
 }
-.lobby-btn:hover { background: var(--surface-hover-color); }
 .lobby-or {
   margin: 4px 0;
   color: var(--muted-color);

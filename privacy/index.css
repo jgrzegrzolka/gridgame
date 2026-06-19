@@ -1,8 +1,13 @@
 .privacy-main {
+  /* No top padding — body already reserves `--page-top` for the top
+   * chrome strip + breathing room, so any extra here would push the
+   * content down further than other pages and break the uniform gap. */
   box-sizing: border-box;
   max-width: 640px;
   margin: 0 auto;
-  padding: 24px 20px 40px;
+  /* Same rationale as body's `padding-bottom: 0` in common.css — let the
+   * sticky `.actions-row` sit flush at viewport bottom on max scroll. */
+  padding: 0 20px 0;
   line-height: 1.55;
   color: var(--primary-color);
 }

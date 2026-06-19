@@ -30,13 +30,13 @@
    * itself so the surface→hover transition reads as a clear affordance. */
   --surface-hover-color: #f0f0f0;
   --link-color: var(--primary-color);
-  --page-top: 84px;
+  --page-top: 104px;
   /* Height of the fixed chrome strip (body::before) — the visible top
    * bar. Kept smaller than --page-top so a thin band of page background
    * shows between the strip's bottom edge and the first content row
    * when the page is scrolled. Sized to contain the 44 px chrome buttons
    * (top: 12 px + height: 44 px = 56 px bottom) with breathing room. */
-  --strip-height: 66px;
+  --strip-height: 70px;
   /* Inward push for the chrome cluster on wide viewports so the buttons
    * align with the right edge of the widest content the project ever
    * renders — the 9×9 tic-tac-toe grid, which maxes at 756 px (9 × 80 px
@@ -72,8 +72,17 @@ body {
    * below) doesn't sit on top of page content. Every page used to
    * repeat this rule in its own stylesheet; promoted here so a new
    * page picks it up automatically. ticTacToe overrides the horizontal
-   * value to fit the 9×9 grid. */
-  padding: var(--page-top) 24px 24px;
+   * value to fit the 9×9 grid.
+   *
+   * Bottom padding is 0 on purpose. Almost every page ends with a
+   * sticky bottom rail (`.actions-row` / `.result-links`) and the rail
+   * carries its own `padding-bottom`. Body padding-bottom > 0 makes
+   * the rail's natural position sit ABOVE body's outer bottom — so at
+   * max scroll the sticky behaviour releases the rail mid-viewport
+   * with a strip of page bg visible below it. Keeping body padding-
+   * bottom at 0 means body's outer bottom == rail's outer bottom ==
+   * viewport bottom at max scroll, so the rail never visibly detaches. */
+  padding: var(--page-top) 24px 0;
   background: #fafafa;
   color: var(--primary-color);
   /* `overflow: clip` clips horizontal overflow without making body a
@@ -146,14 +155,17 @@ body::after {
   pointer-events: none;
 }
 /* Top-left wordmark — pairs with the chrome cluster (lang / flag /
- * burger) on the top-right. Vertically centred on the 44 × 44 chrome
- * buttons (chrome top:12 + 22 = 34; logo top:18 + 16 = 34). Clicking
- * the logo always returns to the site root, so the link is `aria-
- * current="page"` only on `/` itself — same pattern the burger
- * nickname uses for the profile page. */
+ * burger) on the top-right. Logo sits above the chrome buttons' centre
+ * line (logo top:11 + 16 = 27 vs chrome top:15 + 22 = 37) so the
+ * wordmark + the `.domain-label` directly below it read as a
+ * vertically balanced two-line block within the taller strip while
+ * the single-line button row sits a little lower to centre against
+ * them. Clicking the logo always returns to the site root, so the
+ * link is `aria-current="page"` only on `/` itself — same pattern the
+ * burger nickname uses for the profile page. */
 .site-logo {
   position: fixed;
-  top: 18px;
+  top: 11px;
   /* Mirror of the chrome cluster on the right: same `--chrome-x-offset`
    * math, just anchored to the left edge. On narrow viewports the
    * offset clamps to 0 (logo flush with the 12 px body padding); on
@@ -176,6 +188,39 @@ body::after {
   cursor: default;
   pointer-events: none;
 }
+/* "Flags" label sitting flush under the site logo — communicates the
+ * site's domain to users who didn't infer it from the wordmark. Mounted
+ * by `mountDomainLabel` in common.js, translated via `data-i18n`. Same
+ * `--chrome-x-offset` left edge as the logo so the two stack as a
+ * single block on every viewport.
+ *
+ * Geometry rationale: logo box is at top 18, height 32 → ends at 50.
+ * Label sits 8 px below at top 58, font-size 13 + line-height ~16 →
+ * ends at 74. Strip hairline at 79 (--strip-height 80 minus the 1 px
+ * rule). That leaves 5 px between label bottom and the rule, so the
+ * label reads as cleanly contained inside the chrome rather than
+ * "sitting on" the hairline (the first attempt at 11 px / top 52 in a
+ * 66 px strip was the latter — ugly).
+ *
+ * Colour is muted not pink: the wordmark's "quiz" half is already
+ * pink, so a pink label merged into a single visual block instead of
+ * a separate caption. Grey settles the hierarchy into wordmark-first,
+ * label-second. */
+.domain-label {
+  position: fixed;
+  top: 43px;
+  left: calc(20px + var(--chrome-x-offset));
+  /* Match the wordmark font (logo.svg uses the same stack) so the
+   * label reads as one block with the logo above. */
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--primary-color);
+  z-index: 25;
+  pointer-events: none;
+}
 /* Lang toggle = text-only ISO code (current language). `data-current`
  * is set by the synchronous paint script in every page's <head> + by
  * `wireLangToggle` on switch, so the visible text always tracks the
@@ -185,7 +230,7 @@ body::after {
  * Text scales cleanly to a third language when Finnish lands. */
 .lang-toggle {
   position: fixed;
-  top: 12px;
+  top: 15px;
   right: calc(124px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
@@ -213,7 +258,7 @@ body::after {
 }
 .flags-link {
   position: fixed;
-  top: 12px;
+  top: 15px;
   right: calc(72px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
@@ -243,7 +288,7 @@ body::after {
 }
 .burger {
   position: fixed;
-  top: 12px;
+  top: 15px;
   right: calc(20px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
@@ -1172,20 +1217,69 @@ dialog#zoom p {
   line-height: 1.4;
   color: var(--primary-color);
 }
+/* Unified pill button — every affirmative action on the site (Save
+ * on /profile/, "Start new game" / "Join" / "Play on the same device"
+ * in the TTT lobby, "Got it" in the rules / help dialogs) shares one
+ * visual recipe. Per-page CSS only overrides padding + font-size for
+ * size variants.
+ *
+ * Press feedback: the `:active` state instantly paints the button in
+ * `--secondary-color` (brand pink), and the base rule's `transition`
+ * fades that pink back to the surface fill over ~600 ms once the
+ * pointer is released — so a click leaves a brief pink afterglow
+ * rather than just the standard "darker on hold" affordance.
+ *
+ * Per CLAUDE.md "Same mechanism = same code" — feature stylesheets
+ * MUST extend a class listed here (or add a new one to the comma list)
+ * rather than copy-paste the recipe. */
+.profile-save,
+.lobby-btn,
 .rules-close,
 .help-close {
-  padding: 6px 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--link-color);
   background: var(--surface-color);
   border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
-  color: var(--link-color);
-  font: inherit;
-  font-size: 14px;
+  padding: 10px 16px;
   cursor: pointer;
+  text-decoration: none;
+  /* Two transitions on purpose: bg snaps in / out on hover (120 ms,
+   * tight feedback), border takes 600 ms to fade so a press leaves a
+   * brief pink afterglow on release. */
+  transition: background-color 120ms ease-out,
+              border-color 600ms ease-out;
 }
+.profile-save:hover:not(:disabled),
+.lobby-btn:hover,
 .rules-close:hover,
 .help-close:hover {
   background: var(--surface-hover-color);
+}
+.profile-save:active:not(:disabled),
+.lobby-btn:active,
+.rules-close:active,
+.help-close:active {
+  /* Border-only pink so the bg / text stay legible during press; on
+   * release, the base rule's 600 ms border-color transition fades it
+   * back to --muted-soft-color (the brief "you tapped this" afterglow). */
+  border-color: var(--secondary-color);
+  transition: border-color 0s,
+              background-color 120ms ease-out;
+}
+.profile-save:disabled,
+.lobby-btn:disabled,
+.rules-close:disabled,
+.help-close:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* Smaller dismiss buttons inside the rules / help dialogs — same
+ * recipe as the affirmative pill, just a tighter slot. */
+.rules-close,
+.help-close {
+  padding: 6px 14px;
 }
 
 /* Achievement-celebrate overlay — fires on a freshly-unlocked badge.
