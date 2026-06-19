@@ -32,11 +32,11 @@ body {
    * currentColor) + label both track the brand palette directly, not
    * indirectly through `.menu a`'s --link-color alias. */
   color: var(--primary-color);
-  background: #fff;
+  background: var(--surface-color);
   transition: background-color 120ms, border-color 120ms;
 }
 .quiz-picker .menu li.picker-tile a:hover {
-  background: #f6f6f6;
+  background: var(--surface-hover-color);
   border-color: var(--muted-soft-color);
   text-decoration: none;
 }
@@ -106,14 +106,14 @@ body {
   padding: 8px 12px;
   border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface-color);
   text-decoration: none;
   color: inherit;
   min-width: 140px;
   font-variant-numeric: tabular-nums;
 }
 .stats-chip:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover-color);
 }
 .stats-chip-mode {
   font-size: 12px;
@@ -219,7 +219,7 @@ body {
 .flag-choice {
   padding: 0;
   border: 2px solid var(--muted-soft-color);
-  background: #fff;
+  background: var(--surface-color);
   cursor: pointer;
   aspect-ratio: 4 / 3;
   overflow: hidden;

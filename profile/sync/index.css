@@ -61,7 +61,7 @@
   display: none;
 }
 .sync-qr {
-  background: #fff;
+  background: var(--surface-color);
   padding: 12px;
   border-radius: 8px;
   line-height: 0;

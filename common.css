@@ -23,6 +23,12 @@
   --secondary-color: #C2899F;
   --muted-color: #999;
   --muted-soft-color: #eee;
+  /* Elevated-surface white — chrome buttons, panels, popovers, share-link
+   * pill, anything that needs to "stand off" the page bg (#fafafa). */
+  --surface-color: #fff;
+  /* Hover state for surface elements — a touch darker than the surface
+   * itself so the surface→hover transition reads as a clear affordance. */
+  --surface-hover-color: #f0f0f0;
   --link-color: var(--primary-color);
   --page-top: 84px;
   /* Height of the fixed chrome strip (body::before) — the visible top
@@ -183,7 +189,7 @@ body::after {
   right: calc(124px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
-  background-color: #fff;
+  background-color: var(--surface-color);
   border: 1px solid #ddd;
   border-radius: 6px;
   cursor: pointer;
@@ -200,7 +206,7 @@ body::after {
   font-variant-numeric: tabular-nums;
 }
 .lang-toggle:hover {
-  background-color: #f0f0f0;
+  background-color: var(--surface-hover-color);
 }
 .lang-toggle::before {
   content: attr(data-current);
@@ -215,7 +221,7 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: var(--surface-color);
   border: 1px solid #ddd;
   border-radius: 6px;
   color: var(--link-color);
@@ -225,7 +231,7 @@ body::after {
   z-index: 25;
 }
 .flags-link:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover-color);
 }
 .flags-link[aria-disabled="true"] {
   color: #ccc;
@@ -233,7 +239,7 @@ body::after {
   pointer-events: none;
 }
 .flags-link[aria-disabled="true"]:hover {
-  background: #fff;
+  background: var(--surface-color);
 }
 .burger {
   position: fixed;
@@ -245,7 +251,7 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: var(--surface-color);
   border: 1px solid #ddd;
   border-radius: 6px;
   cursor: pointer;
@@ -253,14 +259,14 @@ body::after {
   padding: 0;
 }
 .burger:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover-color);
 }
 .burger[aria-disabled="true"] {
   cursor: default;
   pointer-events: none;
 }
 .burger[aria-disabled="true"]:hover {
-  background: #fff;
+  background: var(--surface-color);
 }
 .burger[aria-disabled="true"] .burger-bars,
 .burger[aria-disabled="true"] .burger-bars::before,
@@ -296,7 +302,7 @@ body::after {
   top: 64px;
   right: calc(20px + var(--chrome-x-offset));
   min-width: 180px;
-  background: #fff;
+  background: var(--surface-color);
   border: 1px solid #ddd;
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -318,7 +324,7 @@ body::after {
 .menu li.menu-divider {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 0.5px solid var(--muted-soft-color);
+  border-top: 1px solid var(--muted-soft-color);
 }
 /* Privacy reads as a regular menu link (same size / weight / primary
  * colour as siblings, inherited from `.menu a` above), bracketed by a
@@ -328,7 +334,7 @@ body::after {
 .menu li.menu-privacy {
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 0.5px solid var(--muted-soft-color);
+  border-bottom: 1px solid var(--muted-soft-color);
 }
 .menu a {
   color: var(--link-color);
@@ -367,7 +373,7 @@ body::after {
    * top region separated from the page-specific nav links below. */
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 0.5px solid var(--muted-soft-color);
+  border-bottom: 1px solid var(--muted-soft-color);
 }
 .menu li.menu-nickname a {
   display: inline-flex;
@@ -382,7 +388,7 @@ body::after {
   height: 24px;
   border-radius: 4px;
   overflow: hidden;
-  background: #f3f3f3;
+  background: var(--surface-hover-color);
 }
 .menu li.menu-nickname .menu-nickname-avatar svg {
   display: block;
@@ -516,7 +522,7 @@ body::after {
   left: 1px;
   width: 16px;
   height: 16px;
-  background: #fff;
+  background: var(--surface-color);
   border-radius: 50%;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   transition: left 0.15s ease;
@@ -623,7 +629,7 @@ body::after {
 .pill {
   font: inherit;
   font-size: 12px;
-  background: #fff;
+  background: var(--surface-color);
   color: var(--primary-color);
   border: 1px solid #ddd;
   border-radius: 999px;
@@ -632,7 +638,7 @@ body::after {
   line-height: 1.4;
 }
 .pill:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover-color);
 }
 .pill.active {
   background: var(--primary-color);
@@ -640,7 +646,7 @@ body::after {
   border-color: var(--primary-color);
 }
 .pill.exclude {
-  background: #fff;
+  background: var(--surface-color);
   /* "NOT this filter" — paint in brand secondary instead of the old red.
    * Strikethrough still carries the "negated" semantic; colour shifts
    * from alarming-red to brand-pink so the chooser reads as palette-
@@ -703,7 +709,7 @@ body::after {
   transform: translateX(-50%);
   gap: 2px;
   padding: 4px;
-  background: #fff;
+  background: var(--surface-color);
   color: #1c1c1c;
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -927,7 +933,7 @@ dialog#zoom {
   border: none;
   border-radius: 0;
   outline: none;
-  background: #fff;
+  background: var(--surface-color);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   opacity: 0;
   transform: scaleX(0);
@@ -1113,10 +1119,9 @@ dialog#zoom p {
  * here in `common.css` rather than getting copy-pasted across
  * feature stylesheets (per CLAUDE.md "Same mechanism = same code").
  *
- * The off-palette greys (#bbb / #ddd / #f0f0f0 / #555 / #1c1c1c)
- * are pre-existing TTT visuals lifted verbatim — touching them
- * would change TTT's look out of scope. Palette cleanup is a
- * separate concern.
+ * The off-palette greys (#bbb / #ddd / #555 / #1c1c1c) are pre-
+ * existing TTT visuals lifted verbatim — touching them would change
+ * TTT's look. Palette cleanup of those is a separate concern.
  * ──────────────────────────────────────────────────────────── */
 
 .rules-btn,
@@ -1126,7 +1131,7 @@ dialog#zoom p {
   padding: 0;
   border: 1px solid #bbb;
   border-radius: 50%;
-  background: #fff;
+  background: var(--surface-color);
   font: inherit;
   font-size: 16px;
   font-weight: 600;
@@ -1136,7 +1141,7 @@ dialog#zoom p {
 }
 .rules-btn:hover,
 .help-btn:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover-color);
   color: #1c1c1c;
 }
 
@@ -1169,7 +1174,7 @@ dialog#zoom p {
 .rules-close,
 .help-close {
   padding: 6px 14px;
-  background: #fff;
+  background: var(--surface-color);
   border: 1px solid #ddd;
   border-radius: 6px;
   color: var(--link-color);
@@ -1179,7 +1184,7 @@ dialog#zoom p {
 }
 .rules-close:hover,
 .help-close:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover-color);
 }
 
 /* Achievement-celebrate overlay — fires on a freshly-unlocked badge.
@@ -1226,7 +1231,7 @@ dialog#zoom p {
 }
 .ach-celebrate-card {
   position: relative;
-  background: #fff;
+  background: var(--surface-color);
   border: 2px solid var(--secondary-color);
   border-radius: 10px;
   padding: 8px 10px 6px;
@@ -1321,7 +1326,7 @@ dialog#zoom p {
 .achievement-info {
   border: 1px solid var(--muted-color);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface-color);
   padding: 0;
   max-width: 320px;
   width: calc(100% - 32px);

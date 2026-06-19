@@ -28,14 +28,14 @@ body {
   align-items: center;
   gap: 10px;
   padding: 20px 16px;
-  background: #fff;
+  background: var(--surface-color);
   border: 1px solid #ddd;
   border-radius: 6px;
   text-decoration: none;
   color: var(--link-color);
 }
 .game-tile:hover {
-  background: #f0f0f0;
+  background: var(--surface-hover-color);
 }
 .game-name {
   font-size: 16px;
