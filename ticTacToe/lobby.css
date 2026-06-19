@@ -101,6 +101,14 @@
   gap: 4px;
   color: var(--muted-color);
 }
+/* Opponent's name pops against the muted "vs" and the muted record
+ * digits — primary colour, weight 500. (Was accidentally dropped in
+ * #548 when the rule got replaced with the now-removed cursor: help
+ * variant; restoring it so the role line reads the way it did before.) */
+.matchup-opponent .matchup-name {
+  color: var(--link-color);
+  font-weight: 500;
+}
 /* Head-to-head record `W:L, N draws`. Muted so the opponent's name
  * stays the dominant element on the role line. Tabular digits so the
  * trio doesn't reflow as counters tick up. Painted by
