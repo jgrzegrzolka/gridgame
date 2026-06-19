@@ -422,7 +422,6 @@ body::after {
   bottom: 0;
   z-index: 5;
   background: #fafafa;
-  border-top: 0.5px solid var(--muted-soft-color);
   margin-top: 16px;
   margin-left: -24px;
   margin-right: -24px;
@@ -436,6 +435,22 @@ body::after {
    * parent's content box width, and the -24px horizontal margin then
    * extends it the rest of the way to the viewport edge. */
   align-self: stretch;
+}
+/* Inset hairline at the row's top edge, mirroring the body::after rule
+ * under the chrome strip. The row's solid background still bleeds to
+ * the viewport edges (so scrolling content doesn't show through), but
+ * the visible rule above it spans only the chrome cluster's width.
+ * Absolute-positioned inside the sticky row so it tracks the row
+ * whether the row is pinned to viewport bottom or sitting inline. */
+.actions-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(20px + var(--chrome-x-offset));
+  right: calc(20px + var(--chrome-x-offset));
+  height: 0.5px;
+  background: var(--muted-soft-color);
+  pointer-events: none;
 }
 /* `·` separator that hides itself when the action right before it is
  * hidden. Used in the online ticTacToe actions-row, where `#give-up`
@@ -864,7 +879,6 @@ body::after {
   bottom: 0;
   z-index: 5;
   background: #fafafa;
-  border-top: 0.5px solid var(--muted-soft-color);
   font-size: 14px;
   color: #666;
   margin: 16px -24px 0;
@@ -874,6 +888,18 @@ body::after {
    * row shrink-fits on pages whose body is a flex column with
    * `align-items: center`. */
   align-self: stretch;
+}
+/* Same inset hairline pattern as `.actions-row::before` — see the
+ * comment there for the geometry rationale. */
+.result-links::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(20px + var(--chrome-x-offset));
+  right: calc(20px + var(--chrome-x-offset));
+  height: 0.5px;
+  background: var(--muted-soft-color);
+  pointer-events: none;
 }
 .result-links a {
   color: var(--link-color);
