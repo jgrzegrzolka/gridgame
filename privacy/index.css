@@ -4,7 +4,7 @@
   margin: 0 auto;
   padding: 24px 20px 40px;
   line-height: 1.55;
-  color: #1c1c1c;
+  color: var(--primary-color);
 }
 
 .privacy-heading {
@@ -25,7 +25,7 @@
 .privacy-section h2 {
   font-size: 16px;
   font-weight: 600;
-  color: #1c1c1c;
+  color: var(--primary-color);
   margin: 0 0 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;

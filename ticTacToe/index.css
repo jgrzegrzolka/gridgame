@@ -87,7 +87,7 @@ body {
   vertical-align: middle;
 }
 .grid td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
 }
 /* Column headers, row headers, and game cells get a 1px outline so the
  * grid reads as one consistent structure. The top-left corner stays
@@ -95,7 +95,7 @@ body {
  * column-header row meets the row-header column, and a border there
  * would visually claim "this is a cell" when it isn't. */
 .grid th:not(.corner) {
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
 }
 .grid th {
   font-weight: 500;
@@ -357,7 +357,7 @@ body.game-over .actions-row {
 .picker-close {
   padding: 6px 12px;
   background: var(--surface-color);
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
   color: var(--link-color);
   font: inherit;

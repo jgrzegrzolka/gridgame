@@ -75,7 +75,7 @@ body {
    * value to fit the 9×9 grid. */
   padding: var(--page-top) 24px 24px;
   background: #fafafa;
-  color: #1c1c1c;
+  color: var(--primary-color);
   /* `overflow: clip` clips horizontal overflow without making body a
    * scroll container (`overflow-x: hidden` would). See the `html`
    * comment above for why that matters for sticky positioning. */
@@ -190,7 +190,7 @@ body::after {
   width: 44px;
   height: 44px;
   background-color: var(--surface-color);
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
   cursor: pointer;
   z-index: 25;
@@ -222,7 +222,7 @@ body::after {
   align-items: center;
   justify-content: center;
   background: var(--surface-color);
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
   color: var(--link-color);
   text-decoration: none;
@@ -234,7 +234,7 @@ body::after {
   background: var(--surface-hover-color);
 }
 .flags-link[aria-disabled="true"] {
-  color: #ccc;
+  color: var(--muted-color);
   cursor: default;
   pointer-events: none;
 }
@@ -252,7 +252,7 @@ body::after {
   align-items: center;
   justify-content: center;
   background: var(--surface-color);
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
   cursor: pointer;
   z-index: 20;
@@ -271,7 +271,7 @@ body::after {
 .burger[aria-disabled="true"] .burger-bars,
 .burger[aria-disabled="true"] .burger-bars::before,
 .burger[aria-disabled="true"] .burger-bars::after {
-  background: #ccc;
+  background: var(--muted-color);
 }
 .burger-bars,
 .burger-bars::before,
@@ -303,7 +303,7 @@ body::after {
   right: calc(20px + var(--chrome-x-offset));
   min-width: 180px;
   background: var(--surface-color);
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   padding: 12px 16px;
@@ -485,7 +485,7 @@ body::after {
   align-items: center;
   gap: 12px;
   font-size: 13px;
-  color: #1c1c1c;
+  color: var(--primary-color);
   cursor: pointer;
   user-select: none;
 }
@@ -631,7 +631,7 @@ body::after {
   font-size: 12px;
   background: var(--surface-color);
   color: var(--primary-color);
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 999px;
   padding: 3px 10px;
   cursor: pointer;
@@ -688,9 +688,9 @@ body::after {
 }
 .color-count-pill.active {
   border-style: solid;
-  background: #1c1c1c;
+  background: var(--primary-color);
   color: #fff;
-  border-color: #1c1c1c;
+  border-color: var(--primary-color);
 }
 .color-count-side {
   position: relative;
@@ -710,8 +710,8 @@ body::after {
   gap: 2px;
   padding: 4px;
   background: var(--surface-color);
-  color: #1c1c1c;
-  border: 1px solid #ddd;
+  color: var(--primary-color);
+  border: 1px solid var(--muted-soft-color);
   border-radius: 8px;
   white-space: nowrap;
   z-index: 10;
@@ -970,7 +970,7 @@ dialog#zoom img {
   display: block;
   width: 100%;
   height: auto;
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   box-sizing: border-box;
 }
 dialog#zoom p {
@@ -1119,9 +1119,10 @@ dialog#zoom p {
  * here in `common.css` rather than getting copy-pasted across
  * feature stylesheets (per CLAUDE.md "Same mechanism = same code").
  *
- * The off-palette greys (#bbb / #ddd / #555 / #1c1c1c) are pre-
- * existing TTT visuals lifted verbatim — touching them would change
- * TTT's look. Palette cleanup of those is a separate concern.
+ * One off-palette grey remains: `color: #555` on `.rules-btn` /
+ * `.help-btn`. It's a mid-grey text bucket that's part of the deferred
+ * "PR B" sweep — kept here so a future pass can tokenise it without
+ * special-casing the rules-btn rule.
  * ──────────────────────────────────────────────────────────── */
 
 .rules-btn,
@@ -1129,7 +1130,7 @@ dialog#zoom p {
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid #bbb;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 50%;
   background: var(--surface-color);
   font: inherit;
@@ -1142,7 +1143,7 @@ dialog#zoom p {
 .rules-btn:hover,
 .help-btn:hover {
   background: var(--surface-hover-color);
-  color: #1c1c1c;
+  color: var(--primary-color);
 }
 
 .rules-help,
@@ -1150,7 +1151,7 @@ dialog#zoom p {
   max-width: 380px;
   width: calc(100vw - 32px);
   padding: 16px 18px 14px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 8px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
 }
@@ -1175,7 +1176,7 @@ dialog#zoom p {
 .help-close {
   padding: 6px 14px;
   background: var(--surface-color);
-  border: 1px solid #ddd;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
   color: var(--link-color);
   font: inherit;
