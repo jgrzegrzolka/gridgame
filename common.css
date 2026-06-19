@@ -421,7 +421,26 @@ body::after {
   position: sticky;
   bottom: 0;
   z-index: 5;
-  background: #fafafa;
+  /* Two-layer background:
+   *   1) a 1px linear-gradient stripe across the row's top edge,
+   *      transparent on the outer sides and muted-soft in the middle,
+   *      so the visible hairline matches the chrome cluster's width
+   *      (logo's left edge → burger's right edge) via --chrome-x-offset.
+   *   2) the solid #fafafa fill underneath.
+   * Painted as bg layers (not ::before) because absolute pseudo-elements
+   * inside sticky-in-flex containers proved unreliable across browsers,
+   * while bg layers always render. Height 1px so it never sub-pixel-
+   * vanishes — the previous `border-top: 0.5px` was rounding to 0 on
+   * standard-DPI displays. */
+  background:
+    linear-gradient(
+      to right,
+      transparent calc(20px + var(--chrome-x-offset)),
+      var(--muted-soft-color) calc(20px + var(--chrome-x-offset)),
+      var(--muted-soft-color) calc(100% - 20px - var(--chrome-x-offset)),
+      transparent calc(100% - 20px - var(--chrome-x-offset))
+    ) top left / 100% 1px no-repeat,
+    #fafafa;
   margin-top: 16px;
   margin-left: -24px;
   margin-right: -24px;
@@ -435,25 +454,6 @@ body::after {
    * parent's content box width, and the -24px horizontal margin then
    * extends it the rest of the way to the viewport edge. */
   align-self: stretch;
-}
-/* Inset hairline at the row's top edge — visual mirror of body::after
- * under the chrome strip so the top and bottom rules read as a matched
- * pair. The row's bg still bleeds edge-to-edge (so scrolling content
- * doesn't show through), but the visible line spans only the chrome
- * cluster's width. Absolute child of the sticky row so it tracks the
- * row whether it's pinned to viewport-bottom or sitting inline at the
- * end of content. Height 1px (not 0.5px) so it renders on every DPI —
- * the previous `border-top: 0.5px` was vanishing on standard-DPI
- * displays. */
-.actions-row::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: calc(20px + var(--chrome-x-offset));
-  right: calc(20px + var(--chrome-x-offset));
-  height: 1px;
-  background: var(--muted-soft-color);
-  pointer-events: none;
 }
 /* `·` separator that hides itself when the action right before it is
  * hidden. Used in the online ticTacToe actions-row, where `#give-up`
@@ -881,7 +881,17 @@ body::after {
   position: sticky;
   bottom: 0;
   z-index: 5;
-  background: #fafafa;
+  /* Same inset-hairline-via-gradient pattern as `.actions-row` above —
+   * see that rule's comment for the rationale. */
+  background:
+    linear-gradient(
+      to right,
+      transparent calc(20px + var(--chrome-x-offset)),
+      var(--muted-soft-color) calc(20px + var(--chrome-x-offset)),
+      var(--muted-soft-color) calc(100% - 20px - var(--chrome-x-offset)),
+      transparent calc(100% - 20px - var(--chrome-x-offset))
+    ) top left / 100% 1px no-repeat,
+    #fafafa;
   font-size: 14px;
   color: #666;
   margin: 16px -24px 0;
@@ -891,19 +901,6 @@ body::after {
    * row shrink-fits on pages whose body is a flex column with
    * `align-items: center`. */
   align-self: stretch;
-}
-/* Same inset hairline pattern as `.actions-row::before` — see the
- * comment there for the rationale (sub-pixel rendering + chrome-tracked
- * inset). */
-.result-links::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: calc(20px + var(--chrome-x-offset));
-  right: calc(20px + var(--chrome-x-offset));
-  height: 1px;
-  background: var(--muted-soft-color);
-  pointer-events: none;
 }
 .result-links a {
   color: var(--link-color);
