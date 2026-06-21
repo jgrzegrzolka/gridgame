@@ -23,7 +23,7 @@
  * customDimensions variant) to see real visitor traffic only.
  */
 
-import { getOrCreateDeviceId } from './flags/identity.js';
+import { getOrCreateDeviceId } from '../flags/identity.js';
 
 const CONNECTION_STRING =
   'InstrumentationKey=4158d8f2-63f5-49d6-a7b4-79b4e97e5af5;' +

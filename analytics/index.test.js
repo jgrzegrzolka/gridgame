@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { enrichTelemetryItem } from './analytics.js';
+import { enrichTelemetryItem } from './index.js';
 
 test('enrichTelemetryItem stamps role, user.id tag, and customDimension on an empty envelope', () => {
   const item = {};
