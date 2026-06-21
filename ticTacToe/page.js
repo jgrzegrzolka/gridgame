@@ -16,7 +16,7 @@ import { submitEngagementEvent } from '../flags/eventSubmit.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
 import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
-import { trackEvent } from '../analytics.js';
+import { trackEvent } from '../analytics/index.js';
 import { loadCountries } from '../flags/group.js';
 import { shareUrl } from '../common.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';

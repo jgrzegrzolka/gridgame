@@ -1,7 +1,7 @@
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from './flags/identity.js';
 import { displayNickname } from './flags/nickname.js';
 import { avatarSvg } from './flags/avatar.js';
-import { initAppInsights } from './analytics.js';
+import { initAppInsights } from './analytics/index.js';
 import { submitEngagementEvent } from './flags/eventSubmit.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from './flags/achievementsBaseline.js';
 import { celebrate } from './flags/achievementCelebrate.js';

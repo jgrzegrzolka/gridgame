@@ -14,7 +14,16 @@
  * Role-tagged `web` so frontend events can be sliced separately from
  * the api side (which auto-tags `swa-api` via the Function App role
  * name). Use `where cloud_RoleName == "web"` in AI queries.
+ *
+ * Every envelope is also stamped with the anonymous `deviceId` so the
+ * dashboard owner can filter their own traffic out:
+ *   - `ai.user.id` tag → first-class `user_Id` field.
+ *   - `data.deviceId`  → `customDimensions.deviceId`.
+ * Filter with `| where user_Id != "<your deviceId>"` (or the
+ * customDimensions variant) to see real visitor traffic only.
  */
+
+import { getOrCreateDeviceId } from '../flags/identity.js';
 
 const CONNECTION_STRING =
   'InstrumentationKey=4158d8f2-63f5-49d6-a7b4-79b4e97e5af5;' +
@@ -61,16 +70,41 @@ export function initAppInsights() {
       },
     });
     ai.loadAppInsights();
+    const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
     ai.addTelemetryInitializer(
-      /** @param {any} item */ (item) => {
-        item.tags = item.tags || {};
-        item.tags['ai.cloud.role'] = 'web';
-      },
+      /** @param {any} item */ (item) => enrichTelemetryItem(item, deviceId),
     );
     ai.trackPageView();
     /** @type {any} */ (window).appInsights = ai;
   };
   document.head.appendChild(script);
+}
+
+/**
+ * Pure enrichment applied to every Application Insights envelope before
+ * it leaves the browser. Mutates `item` in place — that's the shape the
+ * SDK's `addTelemetryInitializer` callback expects.
+ *
+ * - `item.tags['ai.cloud.role']` slices web vs api in queries.
+ * - `item.tags['ai.user.id']` overrides the SDK's auto-generated
+ *   anonymous user id with the stable per-browser `deviceId`. Surfaces
+ *   as the first-class `user_Id` field so the dashboard owner can do
+ *   `| where user_Id != "<my deviceId>"`.
+ * - `item.data.deviceId` surfaces in `customDimensions.deviceId` as a
+ *   parallel handle for the same filter (belt-and-suspenders for the
+ *   rare envelope types where the tag doesn't propagate).
+ *
+ * Preserves any existing tags/data the SDK already attached.
+ *
+ * @param {{ tags?: Record<string, string>, data?: Record<string, unknown> }} item
+ * @param {string} deviceId
+ */
+export function enrichTelemetryItem(item, deviceId) {
+  item.tags = item.tags || {};
+  item.tags['ai.cloud.role'] = 'web';
+  item.tags['ai.user.id'] = deviceId;
+  item.data = item.data || {};
+  item.data.deviceId = deviceId;
 }
 
 /**
