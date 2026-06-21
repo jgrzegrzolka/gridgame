@@ -11,6 +11,7 @@ import { getOrCreateDeviceId } from '../flags/identity.js';
 import { submitTttResult } from '../flags/tttResultSubmit.js';
 import { fetchTttPair } from '../flags/tttPairFetch.js';
 import { deriveTttOutcome } from '../flags/tttPairOutcome.js';
+import { decideIsHost, forgetHostRoom, rememberHostRoom } from '../flags/tttHostMemory.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
@@ -70,7 +71,11 @@ function runOnline(countries) {
   /** Current room context — needed by the auto-reconnect path. */
   /** @type {{ code: string, intent: 'create' | 'join' } | null} */
   let activeRoom = null;
-  /** Sticky across reconnects (activeRoom.intent flips to 'join' on reconnect). */
+  /** Sticky across reconnects (activeRoom.intent flips to 'join' on reconnect).
+   * Also restored across full page reloads via `sessionStorage` —
+   * see `flags/tttHostMemory.js` for the why. Without that, refreshing
+   * mid-game silently dropped the result POST because the URL auto-join
+   * branch flipped `isHost` to false. */
   let isHost = false;
   // Touch-first devices (phones, tablets) — the platforms where copying from
   // the URL bar is fiddly and the native share sheet (WhatsApp etc.) is the
@@ -226,7 +231,8 @@ function runOnline(countries) {
   /** @param {string} code @param {'create' | 'join'} intent */
   function enterRoom(code, intent) {
     activeRoom = { code, intent };
-    if (intent === 'create') isHost = true;
+    if (intent === 'create') rememberHostRoom(window.sessionStorage, code);
+    isHost = decideIsHost({ storage: window.sessionStorage, roomCode: code, urlIntent: intent });
     stopReconnecting = false;
     reconnectAttempts = 0;
     const url = new URL(window.location.href);
@@ -334,6 +340,7 @@ function runOnline(countries) {
     window.history.replaceState(null, '', url.toString());
     activeRoom = null;
     isHost = false;
+    forgetHostRoom(window.sessionStorage);
     state = initialClientState();
     gridBuilt = false;
     if (gridBodyEl) gridBodyEl.innerHTML = '';

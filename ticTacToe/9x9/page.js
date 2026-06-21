@@ -19,6 +19,7 @@ import { trapPicker, releasePicker } from '../pickerLock.js';
 import { submitTttResult } from '../../flags/tttResultSubmit.js';
 import { fetchTttPair } from '../../flags/tttPairFetch.js';
 import { deriveTttOutcome } from '../../flags/tttPairOutcome.js';
+import { decideIsHost, forgetHostRoom, rememberHostRoom } from '../../flags/tttHostMemory.js';
 import { submitEngagementEvent } from '../../flags/eventSubmit.js';
 import { fetchProfile } from '../../flags/profileFetch.js';
 import { displayNickname } from '../../flags/nickname.js';
@@ -68,6 +69,10 @@ function runOnline(countries) {
 
   /** @type {{ code: string, intent: 'create' | 'join' } | null} */
   let activeRoom = null;
+  /** Sticky across reconnects and across full page reloads via
+   * `sessionStorage` — see `flags/tttHostMemory.js`. Without that,
+   * refreshing mid-game silently dropped the result POST because the
+   * URL auto-join branch flipped `isHost` to false. */
   let isHost = false;
   const isTouchDevice =
     typeof window.matchMedia === 'function' &&
@@ -194,7 +199,8 @@ function runOnline(countries) {
   /** @param {string} code @param {'create' | 'join'} intent */
   function enterRoom(code, intent) {
     activeRoom = { code, intent };
-    if (intent === 'create') isHost = true;
+    if (intent === 'create') rememberHostRoom(window.sessionStorage, code);
+    isHost = decideIsHost({ storage: window.sessionStorage, roomCode: code, urlIntent: intent });
     stopReconnecting = false;
     reconnectAttempts = 0;
     const url = new URL(window.location.href);
@@ -288,6 +294,7 @@ function runOnline(countries) {
     window.history.replaceState(null, '', url.toString());
     activeRoom = null;
     isHost = false;
+    forgetHostRoom(window.sessionStorage);
     state = initialUltimateClientState();
     gridBuilt = false;
     if (gridBodyEl) gridBodyEl.innerHTML = '';
