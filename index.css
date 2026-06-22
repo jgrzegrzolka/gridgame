@@ -205,6 +205,87 @@ body {
   letter-spacing: 0.08em;
   color: var(--secondary-color);
 }
+
+/* Phone: compress vertically so all four tiles fit without scrolling
+ * on the common 800-900 px viewport (iPhone 12+ / Android avg). At
+ * the previous desktop min-height of 240 px four tiles + gaps came
+ * out at ~1000 px, leaving the fourth game off-screen for a fresh
+ * visitor. min-height 160 + smaller preview internals lands a stack
+ * around 690 px — fits an 800 px viewport with room above the
+ * chrome reservation; iPhone SE (667) still needs a small scroll
+ * for the last tile to fully show. */
+@media (max-width: 600px) {
+  /* Reclaim ~14 px between the chrome strip and the first tile —
+   * the default body padding-top (--page-top, 104) leaves a 34 px
+   * gap below the 70 px strip; on phone that's pure dead space
+   * since the home page has nothing else above the tiles. */
+  body {
+    padding-top: 90px;
+  }
+  .game-tile {
+    min-height: 140px;
+  }
+  .tile-preview {
+    padding: 14px;
+  }
+  .tile-label {
+    padding: 10px 12px;
+  }
+  .game-name {
+    font-size: 14px;
+  }
+  .daily-preview {
+    gap: 8px;
+  }
+  .daily-category {
+    font-size: 12px;
+  }
+  .daily-progress {
+    font-size: 10px;
+    padding: 1px 7px;
+  }
+  .daily-found {
+    gap: 3px;
+  }
+  .daily-found img {
+    width: 32px;
+  }
+  /* Quiz: prompt + a single row of 4 flags (was 2×2) so the tile
+   * doesn't need to be tall enough for two flag rows. */
+  .quiz-preview {
+    gap: 8px;
+    max-width: 220px;
+  }
+  .quiz-prompt {
+    font-size: 16px;
+  }
+  .quiz-flags {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+  .find-preview {
+    gap: 4px;
+    max-width: 220px;
+  }
+  .find-pill {
+    font-size: 11px;
+    padding: 4px 9px;
+  }
+  .ttt-preview {
+    gap: 4px;
+    max-width: 110px;
+  }
+  .ttt-cell.p1,
+  .ttt-cell.p2 {
+    border-width: 2px;
+  }
+  .ttt-cell.win {
+    box-shadow: 0 0 0 2px var(--secondary-color) inset;
+  }
+  .ttt-result {
+    font-size: 10px;
+  }
+}
 .icon-daily {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
           mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
