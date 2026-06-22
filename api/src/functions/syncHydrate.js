@@ -27,6 +27,11 @@ const limiter = createRateLimiter({ limit: 10, windowMs: 60_000 });
  *     /profile/ page shows the chosen name on a freshly-linked
  *     browser instead of falling back to the deterministic default
  *     ("Pensive Dolphin"-style adjective+animal pair).
+ *   - syncBlob: the client-owned roaming state JSON (achievement
+ *     counters, 60s-streak day log, etc.) added in Feature S Phase 2.
+ *     Returned as-is — the client knows how to unpack it. Null on
+ *     devices that have never written one (matches the legacy
+ *     pre-Phase-2 path where the field didn't exist).
  *
  * Read-only; safe to call repeatedly. The "linked" gate (only the
  * source browser ever holds source's local data; the target browser
@@ -75,7 +80,7 @@ app.http('syncHydrate', {
         }),
         queryDocs({
           connString: conn, dbName: DB_NAME, containerName: 'profiles',
-          query: 'SELECT c.nickname FROM c WHERE c.id = @id',
+          query: 'SELECT c.nickname, c.syncBlob FROM c WHERE c.id = @id',
           parameters: [{ name: '@id', value: deviceId }],
           partitionKey: deviceId,
         }),
@@ -105,10 +110,20 @@ app.http('syncHydrate', {
 
     const profileRow = profileRes.docs[0];
     const nickname = profileRow && typeof profileRow.nickname === 'string' ? profileRow.nickname : null;
+    // Pass syncBlob through as-is when it's a real object; null otherwise.
+    // Arrays / primitives get nulled rather than returned — the server's
+    // own write endpoint rejects non-object blobs, but a hand-edited row
+    // could carry junk and we don't want the renderer choking on it.
+    const syncBlob = (
+      profileRow
+      && profileRow.syncBlob !== null
+      && typeof profileRow.syncBlob === 'object'
+      && !Array.isArray(profileRow.syncBlob)
+    ) ? profileRow.syncBlob : null;
 
     return {
       status: 200,
-      jsonBody: { daily, records, nickname },
+      jsonBody: { daily, records, nickname, syncBlob },
     };
   },
 });

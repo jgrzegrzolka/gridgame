@@ -20,6 +20,7 @@ test('first write (no existing row): createdAt = updatedAt = now, nickname store
     updatedAt: 1_700_000_000_000,
     deletionRequestedAt: null,
     linkedAt: null,
+    syncBlob: null,
     v: 1,
   });
 });
@@ -252,4 +253,60 @@ test('decideEnsureResponse: any other failure → 500 server_error', () => {
       `error=${error}`,
     );
   }
+});
+
+// ---------------------------------------------------------------------------
+// syncBlob (Feature S Phase 2) — opaque JSON carrier for per-device roaming
+// state (achievement counters, day logs, etc.). The builder's job is to
+// distinguish "not touching the blob" (preserve existing) from "explicit
+// caller decision to set/clear" (honour the value).
+// ---------------------------------------------------------------------------
+
+test('syncBlob: defaults to null on a fresh row when caller omits it', () => {
+  const doc = buildProfileDoc({
+    existing: null, deviceId: DEVICE_ID, nickname: null, now: 1,
+  });
+  assert.equal(doc.syncBlob, null);
+});
+
+test('syncBlob: preserves existing blob when caller omits the field (nickname-only edit)', () => {
+  // A nickname edit must NOT wipe the client's roaming achievement state —
+  // the builder's contract is "don't touch fields the caller didn't pass."
+  const existing = { createdAt: 1, syncBlob: { engagement: { shareCount: 5 } } };
+  const doc = buildProfileDoc({
+    existing, deviceId: DEVICE_ID, nickname: 'New name', now: 2,
+  });
+  assert.deepEqual(doc.syncBlob, { engagement: { shareCount: 5 } });
+});
+
+test('syncBlob: caller-supplied blob wins (sync-blob endpoint set it)', () => {
+  const existing = { createdAt: 1, syncBlob: { engagement: { shareCount: 5 } } };
+  const fresh = { engagement: { shareCount: 10 }, quiz60sDayLog: [19000] };
+  const doc = buildProfileDoc({
+    existing, deviceId: DEVICE_ID, nickname: null, now: 2, syncBlob: fresh,
+  });
+  assert.deepEqual(doc.syncBlob, fresh);
+});
+
+test('syncBlob: explicit null from caller honours the clear (not the same as omitted)', () => {
+  // Distinguishing "didn't pass" from "passed null" matters: a future
+  // "reset my sync state" endpoint needs to be able to clear the blob,
+  // and there's no other in-band signal that means "definitely clear."
+  const existing = { createdAt: 1, syncBlob: { engagement: { shareCount: 5 } } };
+  const doc = buildProfileDoc({
+    existing, deviceId: DEVICE_ID, nickname: null, now: 2, syncBlob: null,
+  });
+  assert.equal(doc.syncBlob, null);
+});
+
+test('syncBlob: legacy row missing the field → preserved as null (defensive)', () => {
+  // Profile rows written before Feature S Phase 2 won't have syncBlob.
+  // Treating missing-on-existing as "start at null" matches the fresh-row
+  // case and means a nickname edit on a legacy row populates the field
+  // without surprising the caller.
+  const existing = { createdAt: 1 };
+  const doc = buildProfileDoc({
+    existing, deviceId: DEVICE_ID, nickname: 'Alice', now: 2,
+  });
+  assert.equal(doc.syncBlob, null);
 });
