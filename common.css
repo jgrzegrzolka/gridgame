@@ -155,17 +155,15 @@ body::after {
   pointer-events: none;
 }
 /* Top-left wordmark — pairs with the chrome cluster (lang / flag /
- * burger) on the top-right. Logo sits above the chrome buttons' centre
- * line (logo top:11 + 16 = 27 vs chrome top:15 + 22 = 37) so the
- * wordmark + the `.domain-label` directly below it read as a
- * vertically balanced two-line block within the taller strip while
- * the single-line button row sits a little lower to centre against
- * them. Clicking the logo always returns to the site root, so the
- * link is `aria-current="page"` only on `/` itself — same pattern the
- * burger nickname uses for the profile page. */
+ * burger) on the top-right. Centres on the same vertical axis as the
+ * chrome buttons: buttons are top:15 + height:44 → centre y=37;
+ * logo top:17 + height:40 → centre y=37. Clicking the logo always
+ * returns to the site root, so the link is `aria-current="page"`
+ * only on `/` itself — same pattern the burger nickname uses for
+ * the profile page. */
 .site-logo {
   position: fixed;
-  top: 11px;
+  top: 17px;
   /* Mirror of the chrome cluster on the right: same `--chrome-x-offset`
    * math, just anchored to the left edge. On narrow viewports the
    * offset clamps to 0 (logo flush with the 12 px body padding); on
@@ -174,7 +172,7 @@ body::after {
    * content margins. */
   left: calc(20px + var(--chrome-x-offset));
   z-index: 25;
-  height: 32px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   text-decoration: none;
@@ -186,39 +184,6 @@ body::after {
 }
 .site-logo[aria-current="page"] {
   cursor: default;
-  pointer-events: none;
-}
-/* "Flags" label sitting flush under the site logo — communicates the
- * site's domain to users who didn't infer it from the wordmark. Mounted
- * by `mountDomainLabel` in common.js, translated via `data-i18n`. Same
- * `--chrome-x-offset` left edge as the logo so the two stack as a
- * single block on every viewport.
- *
- * Geometry rationale: logo box is at top 18, height 32 → ends at 50.
- * Label sits 8 px below at top 58, font-size 13 + line-height ~16 →
- * ends at 74. Strip hairline at 79 (--strip-height 80 minus the 1 px
- * rule). That leaves 5 px between label bottom and the rule, so the
- * label reads as cleanly contained inside the chrome rather than
- * "sitting on" the hairline (the first attempt at 11 px / top 52 in a
- * 66 px strip was the latter — ugly).
- *
- * Colour is muted not pink: the wordmark's "quiz" half is already
- * pink, so a pink label merged into a single visual block instead of
- * a separate caption. Grey settles the hierarchy into wordmark-first,
- * label-second. */
-.domain-label {
-  position: fixed;
-  top: 43px;
-  left: calc(20px + var(--chrome-x-offset));
-  /* Match the wordmark font (logo.svg uses the same stack) so the
-   * label reads as one block with the logo above. */
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--primary-color);
-  z-index: 25;
   pointer-events: none;
 }
 /* Lang toggle = text-only ISO code (current language). `data-current`
