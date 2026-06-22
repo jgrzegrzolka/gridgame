@@ -40,6 +40,41 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
 
+  api-smoke:
+    # Loads api/src/index.js end-to-end to catch the class of bug that
+    # broke prod on 2026-06-22 (PR #569's cleanup commit shipped a
+    # SyntaxError in profileEnsure.js — `body` declared twice — which
+    # Azure Functions v4 surfaced at module-load time, taking down
+    # registration of every endpoint and 404'ing the entire API for
+    # ~30 minutes until hotfix #571 landed).
+    #
+    # Neither `npm test` nor `npm run typecheck` caught it: tests only
+    # require() the api/src/lib/ pure modules (handlers are never
+    # imported by *.test.js); typecheck's tsconfigs cover flags/ and
+    # **/page.js but explicitly exclude api/. So the handler files
+    # were only parsed at runtime by Functions when it loaded them.
+    #
+    # This job closes that gap by actually doing the same require()
+    # the Functions runtime does. `node -e "require('./src/index.js')"`
+    # fails with the exact stack the runtime would have hit — a
+    # syntax error, a missing module, a bad `require()` path, etc.
+    # @azure/functions runs in "test mode" because the runtime isn't
+    # detected, which is fine: app.http() calls become logged no-ops
+    # but the module-load + parse path is fully exercised.
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Smoke-load every Azure Functions handler
+        run: node -e "require('./src/index.js')"
+
   changes:
     # Decide whether the deploy job should actually run.
     #
@@ -96,7 +131,7 @@ jobs:
           fi
 
   deploy:
-    needs: [test, typecheck, changes]
+    needs: [test, typecheck, api-smoke, changes]
     if: |
       needs.changes.outputs.should_deploy == 'true' &&
       (
