@@ -1,9 +1,19 @@
 /**
  * Aggregate cross-game engagement signals from a player's `profiles`
- * row + their `engagementEvents` history.
+ * row + their `syncBlob.engagement` section.
  *
  * Pure: no DOM, no clock, no Cosmos client. Feeds the Feature O
  * achievement evaluator via `/api/v1/daily/me`.
+ *
+ * **Source change (Feature S Phase 4):** pre-Phase-4 this read from
+ * `engagementEvents` rows (cross-partition Cosmos scan); post-Phase-4
+ * it reads from the `engagement` section of the client-owned `syncBlob`
+ * field on the profile doc (single-partition point read — already
+ * needed for nickname + linkedAt, so zero extra query). Output shape
+ * is identical so `dailyMe.js` callers and the client `achievements.js`
+ * predicates didn't have to change.
+ *
+ * Per-signal mapping:
  *
  *   - `hasNickname` — `true` iff the player has set a non-empty
  *     nickname on their profiles row. Drives the "Identified"
@@ -17,26 +27,31 @@
  *     the "Connected" achievement.
  *
  *   - `dailySharesCount` / `quizSharesCount` / `findflagSharesCount`
- *     — counts of `kind: 'share'` events by surface. Drive the three
- *     Sharer achievements. The `'flagquiz'` surface covers both 60s
- *     and endurance rounds (the mode is embedded in `contextHint`).
+ *     — counts by surface from `blob.shares.{daily, flagquiz, findflag}`.
+ *     Drive the three Sharer achievements. The `ttt` surface is also
+ *     tracked client-side but isn't surfaced here today (no current
+ *     achievement consumes it — see flags/engagementCounters.js for
+ *     the closed list).
  *
- *   - `coffeeClicked` — `true` iff at least one `kind: 'coffee_click'`
- *     event exists for the device. Drives "Angel Investor". Trust-
- *     based — no payment verification, just intent.
+ *   - `coffeeClicked` — `true` iff `blob.coffeeClickCount >= 1`. Drives
+ *     "Angel Investor". Pre-Phase-4 this was a boolean derived from
+ *     "is there at least one coffee_click event row?"; post-Phase-4
+ *     the client maintains a count and we threshold on >= 1 for the
+ *     same effect. A future Big-Investor tier could threshold higher
+ *     without a snapshot shape change.
  *
- * Defensive on shape: missing/null inputs return zero/false. Events
- * lacking a recognisable `surface` field are silently skipped (a
- * future kind/surface that doesn't match the known list shouldn't
- * inflate any existing counter).
+ * Defensive on shape: missing/null inputs return zero/false. Unknown
+ * keys silently ignored. Behaviour matches the pre-Phase-4 version so
+ * a client that was relying on the old defaults sees the same output.
  */
 
 /**
  * @typedef {{ nickname?: unknown, linkedAt?: unknown } | null | undefined} ProfileRow
+ *
  * @typedef {{
- *   kind?: unknown,
- *   payload?: { surface?: unknown } | null | undefined,
- * }} EngagementEventRow
+ *   shares?: { daily?: unknown, flagquiz?: unknown, findflag?: unknown, ttt?: unknown } | null | undefined,
+ *   coffeeClickCount?: unknown,
+ * } | null | undefined} SyncBlobEngagement
  *
  * @typedef {{
  *   hasNickname: boolean,
@@ -50,10 +65,10 @@
 
 /**
  * @param {ProfileRow} profile
- * @param {EngagementEventRow[] | null | undefined} events
+ * @param {SyncBlobEngagement} engagement
  * @returns {EngagementResult}
  */
-function computeEngagement(profile, events) {
+function computeEngagement(profile, engagement) {
   /** @type {EngagementResult} */
   const result = {
     hasNickname: false,
@@ -80,22 +95,29 @@ function computeEngagement(profile, events) {
     }
   }
 
-  if (!Array.isArray(events)) return result;
-  for (const ev of events) {
-    if (!ev || typeof ev !== 'object') continue;
-    if (ev.kind === 'coffee_click') {
-      result.coffeeClicked = true;
-      continue;
+  if (!engagement || typeof engagement !== 'object') return result;
+
+  // Shares: read each surface defensively. A non-integer or negative
+  // value (e.g. from a hand-edited / future-shape blob) reads as zero
+  // rather than coercing — keeps the snapshot honest.
+  if (engagement.shares && typeof engagement.shares === 'object') {
+    const s = engagement.shares;
+    if (Number.isInteger(s.daily) && /** @type {number} */ (s.daily) > 0) {
+      result.dailySharesCount = /** @type {number} */ (s.daily);
     }
-    if (ev.kind !== 'share') continue;
-    if (!ev.payload || typeof ev.payload !== 'object') continue;
-    const surface = ev.payload.surface;
-    if (surface === 'daily') result.dailySharesCount++;
-    else if (surface === 'flagquiz') result.quizSharesCount++;
-    else if (surface === 'findflag') result.findflagSharesCount++;
-    // Other surfaces (ttt) are tracked for analytics but don't feed
-    // any current achievement — skip rather than fold into a generic
-    // "any share" counter we'd then have to gate.
+    if (Number.isInteger(s.flagquiz) && /** @type {number} */ (s.flagquiz) > 0) {
+      result.quizSharesCount = /** @type {number} */ (s.flagquiz);
+    }
+    if (Number.isInteger(s.findflag) && /** @type {number} */ (s.findflag) > 0) {
+      result.findflagSharesCount = /** @type {number} */ (s.findflag);
+    }
+  }
+
+  // Coffee: threshold on >= 1 for backward-compat with the pre-Phase-4
+  // boolean. The actual count lives in the blob too but isn't surfaced
+  // here — only the "at least one" achievement gate is used today.
+  if (Number.isInteger(engagement.coffeeClickCount) && /** @type {number} */ (engagement.coffeeClickCount) >= 1) {
+    result.coffeeClicked = true;
   }
 
   return result;

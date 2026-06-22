@@ -5,7 +5,7 @@ const { createTtlCache } = require('../lib/ttlCache');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { readFreshFlag } = require('../lib/queryParams');
 const { statsCacheHeaders } = require('../lib/cacheHeaders');
-const { computeStreak, submissionsToStreakRows, quizPlayEventsToStreakRows } = require('../lib/streakCompute');
+const { computeStreak, submissionsToStreakRows, dayLogToStreakRows } = require('../lib/streakCompute');
 const { computeMastery } = require('../lib/masteryCompute');
 const { computeQuiz } = require('../lib/quizCompute');
 const { computeEngagement } = require('../lib/engagementCompute');
@@ -17,7 +17,6 @@ const CONTAINER_NAME = 'dailyResults';
 const QUIZ_RECORDS_CONTAINER = 'quizRecords';
 const PROFILES_CONTAINER = 'profiles';
 const TTT_PAIRS_CONTAINER = 'tttPairs';
-const ENGAGEMENT_EVENTS_CONTAINER = 'engagementEvents';
 const CACHE_TTL_MS = 60_000;
 
 // Sovereign-only ("sov") pool sizes per quiz variant. Source of truth
@@ -152,37 +151,24 @@ app.http('dailyMe', {
     }
     const quiz = computeQuiz(quizDoc, SOV_POOL_SIZES);
 
-    // Cross-game engagement signals: profile point-read + a small
-    // single-partition query against the player's `engagementEvents`
-    // history (shares + quiz_play rows). Both are fire-and-forget
-    // soft dependencies — a Cosmos blip on either degrades to "no
-    // signal" rather than 500'ing the whole snapshot. The two reads
-    // run in parallel via Promise.all to keep the wall-clock cost
-    // flat (max of the two, not the sum).
+    // Cross-game engagement signals: profile point-read + TTT pair
+    // read, in parallel. Pre-Phase-4 this also did a cross-partition
+    // scan of `engagementEvents`; Feature S Phase 4 moved that data
+    // into `profile.syncBlob.engagement` so a single profile point-
+    // read covers nickname, linkedAt, and the engagement counters at
+    // once. Both reads are soft dependencies — a Cosmos blip degrades
+    // to "no signal" rather than 500'ing the whole snapshot.
     let profileDoc = null;
-    let engagementEvents = [];
     /** @type {Array<{ m3x3?: { wins?: number, losses?: number, draws?: number }, m9x9?: { wins?: number, losses?: number, draws?: number } }>} */
     let tttPairs = [];
     try {
-      const [profileRes, eventsRes, tttRes] = await Promise.all([
+      const [profileRes, tttRes] = await Promise.all([
         queryDocs({
           connString: conn,
           dbName: DB_NAME,
           containerName: PROFILES_CONTAINER,
-          query: 'SELECT c.nickname, c.linkedAt FROM c WHERE c.id = @did',
+          query: 'SELECT c.nickname, c.linkedAt, c.syncBlob FROM c WHERE c.id = @did',
           parameters: [{ name: '@did', value: deviceId }],
-          partitionKey: deviceId,
-        }),
-        queryDocs({
-          connString: conn,
-          dbName: DB_NAME,
-          containerName: ENGAGEMENT_EVENTS_CONTAINER,
-          // Fetch every kind this snapshot consumes in one shot —
-          // single-partition query, small result. dayId is needed by
-          // the quiz_play streak math; payload by the share + coffee
-          // aggregators.
-          query: "SELECT c.kind, c.payload, c.dayId FROM c WHERE c.kind IN ('share', 'quiz_play', 'coffee_click')",
-          parameters: [],
           partitionKey: deviceId,
         }),
         // Fetch the win/loss/draw counters from the player's
@@ -201,20 +187,34 @@ app.http('dailyMe', {
         }),
       ]);
       if (profileRes.ok && profileRes.docs.length > 0) profileDoc = profileRes.docs[0];
-      if (eventsRes.ok) engagementEvents = eventsRes.docs;
       if (tttRes.ok) tttPairs = tttRes.docs;
     } catch (err) {
       context.warn('cosmos engagement reads failed (soft-degraded to no signal)', err);
     }
-    const engagement = computeEngagement(profileDoc, engagementEvents);
+
+    // Extract the engagement section from the syncBlob defensively —
+    // a profile from before Feature S Phase 2 (or one whose blob got
+    // hand-edited) might not have it, in which case engagement signals
+    // read as zeros and `coffeeClicked` reads as false. Same shape the
+    // pre-Phase-4 path returned when a device had no engagementEvents
+    // rows, so the client achievement evaluator sees no change.
+    const blob = profileDoc && typeof profileDoc.syncBlob === 'object' ? profileDoc.syncBlob : null;
+    const blobEngagement = blob && typeof blob.engagement === 'object' ? blob.engagement : null;
+
+    const engagement = computeEngagement(profileDoc, blobEngagement);
     const ttt = computeTttSignals(tttPairs);
 
-    // 60s quiz streak: derive from quiz_play events of mode='60s'.
-    // Same streak math as the daily-puzzle streak; the only difference
-    // is the source (engagementEvents rather than dailyResults). Today
-    // is supplied so currentStreak resets to 0 if the most recent play
-    // is older than today.
-    const quiz60sStreakRows = quizPlayEventsToStreakRows(engagementEvents, '60s');
+    // 60s quiz streak: derive from the day log on the syncBlob (one
+    // entry per Warsaw day the player finished a 60s round, populated
+    // by flags/engagementCounters.js#bumpQuiz60sDay). Same streak math
+    // as the daily-puzzle streak; the only difference is the axis
+    // source (syncBlob day log rather than dailyResults submissions).
+    // Today is supplied so currentStreak resets to 0 if the most
+    // recent play is older than today.
+    const quiz60sLog = blobEngagement && Array.isArray(blobEngagement.quiz60sDayLog)
+      ? blobEngagement.quiz60sDayLog
+      : [];
+    const quiz60sStreakRows = dayLogToStreakRows(quiz60sLog);
     const quiz60sStreak = computeStreak({ rows: quiz60sStreakRows, latestId: today ?? undefined });
     const quiz60sStreakSnapshot = {
       quiz60sCurrentStreak: quiz60sStreak.currentStreak,

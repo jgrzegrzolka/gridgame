@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { computeStreak, submissionsToStreakRows, quizPlayEventsToStreakRows } = require('./streakCompute');
+const { computeStreak, submissionsToStreakRows, dayLogToStreakRows } = require('./streakCompute');
 
 test('streakCompute: empty rows — all zeros', () => {
   assert.deepEqual(computeStreak({ rows: [] }), {
@@ -258,84 +258,55 @@ test('submissionsToStreakRows: dayFn returning null is dropped', () => {
   assert.deepEqual(out, [{ id: 200, completed: true }]);
 });
 
-// --- quizPlayEventsToStreakRows -------------------------------------------
+// --- dayLogToStreakRows (Feature S Phase 4) ------------------------------
+// Replaces the pre-Phase-4 quizPlayEventsToStreakRows. Input is now the
+// quiz60sDayLog from syncBlob.engagement (a sorted+deduped number[] from
+// flags/engagementCounters.js#bumpQuiz60sDay), not engagementEvents rows.
 
-test('quizPlayEventsToStreakRows: empty/non-array input → []', () => {
-  assert.deepEqual(quizPlayEventsToStreakRows([], '60s'), []);
-  assert.deepEqual(quizPlayEventsToStreakRows(null, '60s'), []);
-  assert.deepEqual(quizPlayEventsToStreakRows(undefined, '60s'), []);
+test('dayLogToStreakRows: empty/non-array input → []', () => {
+  assert.deepEqual(dayLogToStreakRows([]), []);
+  assert.deepEqual(dayLogToStreakRows(null), []);
+  assert.deepEqual(dayLogToStreakRows(undefined), []);
+  assert.deepEqual(dayLogToStreakRows(/** @type {any} */ ({})), []);
+  assert.deepEqual(dayLogToStreakRows(/** @type {any} */ ('not an array')), []);
 });
 
-test('quizPlayEventsToStreakRows: filters by kind="quiz_play"', () => {
-  const events = [
-    { kind: 'share', payload: { surface: 'flagquiz' }, dayId: 100 },
-    { kind: 'daily_start', payload: { puzzleId: 12 }, dayId: 100 },
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
-  ];
-  assert.deepEqual(quizPlayEventsToStreakRows(events, '60s'), [{ id: 100, completed: true }]);
-});
-
-test('quizPlayEventsToStreakRows: filters by requested mode', () => {
-  const events = [
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
-    { kind: 'quiz_play', payload: { mode: 'all' }, dayId: 100 },
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 101 },
-  ];
-  assert.deepEqual(quizPlayEventsToStreakRows(events, '60s'), [
-    { id: 100, completed: true },
-    { id: 101, completed: true },
-  ]);
-  assert.deepEqual(quizPlayEventsToStreakRows(events, 'all'), [{ id: 100, completed: true }]);
-});
-
-test('quizPlayEventsToStreakRows: dedupes same-day events (deterministic id should prevent dupes at write time anyway)', () => {
-  const events = [
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 101 },
-  ];
-  assert.deepEqual(quizPlayEventsToStreakRows(events, '60s'), [
-    { id: 100, completed: true },
-    { id: 101, completed: true },
-  ]);
-});
-
-test('quizPlayEventsToStreakRows: returns rows sorted ascending by dayId regardless of input order', () => {
-  const events = [
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 102 },
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 101 },
-  ];
-  assert.deepEqual(quizPlayEventsToStreakRows(events, '60s'), [
+test('dayLogToStreakRows: maps each day number to { id, completed: true }', () => {
+  assert.deepEqual(dayLogToStreakRows([100, 101, 102]), [
     { id: 100, completed: true },
     { id: 101, completed: true },
     { id: 102, completed: true },
   ]);
 });
 
-test('quizPlayEventsToStreakRows: malformed rows are silently skipped (no crash)', () => {
-  const events = [
-    null,
-    undefined,
-    { kind: 'quiz_play' },                                    // missing payload
-    { kind: 'quiz_play', payload: null },                     // null payload
-    { kind: 'quiz_play', payload: { mode: '60s' } },          // missing dayId
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 'oops' }, // non-numeric
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 }, // good
-  ];
-  assert.deepEqual(quizPlayEventsToStreakRows(events, '60s'), [{ id: 100, completed: true }]);
+test('dayLogToStreakRows: dedupes same-day entries (the client should already, but defensive against hand-edited blobs)', () => {
+  assert.deepEqual(dayLogToStreakRows([100, 100, 101]), [
+    { id: 100, completed: true },
+    { id: 101, completed: true },
+  ]);
 });
 
-test('quizPlayEventsToStreakRows feeds computeStreak — full pipeline matches expected streak math', () => {
-  const events = [
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 100 },
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 101 },
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 102 },
-    // gap on 103
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 104 },
-    { kind: 'quiz_play', payload: { mode: '60s' }, dayId: 105 },
-  ];
-  const rows = quizPlayEventsToStreakRows(events, '60s');
+test('dayLogToStreakRows: returns rows sorted ascending regardless of input order', () => {
+  assert.deepEqual(dayLogToStreakRows([102, 100, 101]), [
+    { id: 100, completed: true },
+    { id: 101, completed: true },
+    { id: 102, completed: true },
+  ]);
+});
+
+test('dayLogToStreakRows: malformed entries silently skipped (non-integer, negative, NaN, string)', () => {
+  assert.deepEqual(dayLogToStreakRows([100, 'oops', -5, 1.5, NaN, 101]), [
+    { id: 100, completed: true },
+    { id: 101, completed: true },
+  ]);
+});
+
+test('dayLogToStreakRows feeds computeStreak — full pipeline matches expected streak math', () => {
+  // Mirrors the pre-Phase-4 quizPlayEventsToStreakRows pipeline test —
+  // same input, same expected streak numbers, just sourced from a day
+  // log instead of typed events.
+  const log = [100, 101, 102, /* gap on 103 */ 104, 105];
+  const rows = dayLogToStreakRows(log);
   const result = computeStreak({ rows, latestId: 105 });
   assert.equal(result.maxStreak, 3);     // 100-101-102
   assert.equal(result.currentStreak, 2); // 104-105 (today is 105)
