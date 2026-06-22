@@ -332,12 +332,11 @@
       "prompt": "Poland"
     },
     "find": {
-      "africa": "Africa",
-      "hasStars": "Has stars",
+      "asia": "Asia",
+      "hasWeapon": "Has weapon",
       "redWhite": "Red & white",
-      "crescent": "Crescent",
-      "threeStripes": "3 stripes",
-      "europe": "Europe"
+      "notCrescent": "not crescent",
+      "threeStripes": "3 stripes"
     },
     "ttt": {
       "result": "Pink wins!"

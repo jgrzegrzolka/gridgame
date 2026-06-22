@@ -332,12 +332,11 @@
       "prompt": "Polska"
     },
     "find": {
-      "africa": "Afryka",
-      "hasStars": "Z gwiazdami",
+      "asia": "Azja",
+      "hasWeapon": "Z bronią",
       "redWhite": "Czerwono-białe",
-      "crescent": "Półksiężyc",
-      "threeStripes": "3 pasy",
-      "europe": "Europa"
+      "notCrescent": "bez półksiężyca",
+      "threeStripes": "3 pasy"
     },
     "ttt": {
       "result": "Wygrywa różowy!"
