@@ -21,7 +21,54 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-*(No active feature work — Feature R closed 2026-06-17, see `## Done` below.)*
+### Feature S: Cost-minimal Cosmos architecture for 50k users
+
+**Status:** opened 2026-06-22. Triggered by the June bill (€4.31 MTD) — turned out four containers were on manual-400 throughput floors, totalling 2,400 RU/s provisioned against a 1,000 RU/s free-tier allowance, costing ~€5/mo from day one regardless of user count. Same-day fix migrated all containers to autoscale 100–1000 (idle floor now 600 RU/s under free tier → €0 going forward). This feature is the **strategic follow-up**: redesign so the site stays €0 even at 50k DAU spikes by removing the highest-write container and consolidating roaming user state.
+
+**Problem.** Today's container set carries write-heavy data that doesn't need to be server-side:
+- `engagementEvents` — 3-5 writes per active user per day (`daily_start`, `findflag_play`, `share`, `quiz_play`, `coffee_click`). At 50k DAU ≈ 150-250k writes/day, dominant Cosmos write source. Most kinds are pure analytics; the rest drive achievements that could live in localStorage.
+- `quizRecords` — writes on every quiz finish (PB or not, per the `quizRecord.js:87-88` comment). ~50-100k writes/day at 50k DAU. Only PB writes need to reach the leaderboard; attempts/lastPlayedAt are private signals.
+
+At 50k DAU on current architecture, sustained writes would push hourly RU bursts past 1,000 RU/s and start billing. Goal: design so the **provisioned floor + worst-case hourly burst** stays under 1,000 RU/s permanently, with manual throttling (429s) as the failure mode rather than a bill.
+
+**End-state architecture:**
+- `dailyResults` — unchanged (cross-user truth, leaderboard, community %)
+- `dailyLeaderboards` — unchanged (derived from `dailyResults`)
+- `profiles` — **expanded**: `{ deviceId, nickname, nicknameAuto, attempts: { quiz60s, quizAll, ... }, syncBlob: {...}, ... }`. Auto-created on first non-trivial action. Sync blob carries all roaming client state (achievement counters, share count, coffee clicks, 60s-streak day log) so cross-device sync still works.
+- `quizRecords` — kept, **PB-only writes** (no more attempts/lastPlayedAt bumps — those move to `profiles.attempts`, synced every 100 increments)
+- `tttPairs` — unchanged (low write volume, fine on autoscale 100 floor)
+- ~~`engagementEvents`~~ — **deleted** at end of phased migration
+
+Trade-offs accepted:
+- `profiles.attempts` is bumpy (multiples of 100, not real-time). Live count shown to user from localStorage; server value is the persisted floor. Negligible UX impact.
+- Engagement-derived achievement signals (share count, coffee count, 60s streak) move to localStorage. Cross-device roaming preserved via sync blob. A user who clears their browser between syncs loses up to one sync-window of progress — acceptable.
+- Manual throttling under extreme spike: site degrades to 429s instead of billing. Hobby-site appropriate.
+
+**Foundation that already exists (do not rebuild):**
+- `flags/nickname.js` — `defaultNickname(deviceId)` already produces deterministic two-word names (FNV-1a hash → 50 adjectives × 50 nouns). Every viewer derives the same default for any deviceId without a server roundtrip. Phase 1 just *persists* this default into Cosmos + adds the `nicknameAuto` flag; the generator stays.
+- `flags/identity.js` — `getOrCreateDeviceId` is the source of truth for the deviceId. Reuse as-is.
+- Existing sync code (`syncHydrate`, `syncLink`, `syncClaim`, `syncMerge`) — Phase 2 swaps its transport to the new `profiles.syncBlob` field; the public sync-code UX stays identical.
+
+**Phased plan (7 PRs, each = one branch off `main`, tests included per PR):**
+
+1. **Phase 1a — Auto-profile foundation.** Trigger profile creation on first non-trivial action (daily submit, quiz finish, TTT match, share click, coffee click — not just opening the home page). New `flags/autoProfile.js` helper: `ensureProfile(deviceId)` POSTs to a new idempotent `/api/v1/profile/ensure` endpoint that creates the row with `nickname=null, nicknameAuto:true` (display falls back to `defaultNickname(deviceId)` client-side; the row exists to anchor the sync blob, attempt counters, etc. that arrive in later phases). When user customizes via `/profile/` page, server flips `nicknameAuto:false`. **No leaderboard render changes** in 1a — that's 1b. **No Cosmos cost change** — sets up the foundation every later phase depends on.
+2. **Phase 1b — Leaderboard auto-name signal.** Propagate `nicknameAuto` through the dailyLeaderboard write path (denormalised on each entry doc, same as `nickname`). Update `flags/dailyLeaderboardRender.js` to render a small icon (🎲 or similar) next to auto-named entries. Split from 1a because the change touches the leaderboard write path (`quizRecord.js`, `dailyLeaderboardDoc.js`) and the render module — separate file footprint, easier to review.
+3. **Phase 2 — Sync blob field on profiles.** Add `syncBlob: { ... }` field to the profile doc. `syncHydrate` returns the blob; client unpacks to localStorage. `syncLink` writes the blob from current localStorage. Roundtrip-tested. **No cost change** — keeps cross-device sync alive for the phases that move data client-side.
+4. **Phase 3 — Stop writing `engagementEvents`.** Delete `submitEngagementEvent` call sites in `common.js`, `daily/page.js`, `flagQuiz/page.js`, `findFlag/page.js`, `ticTacToe/page.js`, `ticTacToe/9x9/page.js`. Delete `api/src/functions/engagementEvent.js` + `api/src/lib/engagementDoc.js`. Replace each emit with a localStorage counter increment. **One-time migration:** on first visit after deploy, `dailyMe` returns the engagement-derived signals one last time; client captures them into localStorage and sets `gridgame.engagementMigrated = 'v1'`. Server still reads `engagementEvents` for users whose migration flag isn't observed yet (defensive, 1-week grace).
+5. **Phase 4 — Drop `engagementEvents` reads from `dailyMe`.** Strip the `engagementEvents` query out of `dailyMe.js`. Delete `engagementCompute.js` and the `quiz_play` branch in `streakCompute.js`. Achievements that previously consumed those signals (60s streak, Angel Investor, share-count) now read from localStorage / the sync blob. Run full test suite to confirm parity.
+6. **Phase 5 — `quizRecords` → PB-only + attempts counter on profile.** Modify `quizRecord` endpoint to write only on PB-beat; add `attempts: { quiz60s, quizAll, ... }` to profile doc. Client maintains `localStorage.gridgame.quizAttempts.{mode}` counters; ships a profile patch every 100 increments per mode. dailyMe reads attempts from profile instead of quizRecords. **Cost win:** ~99% reduction in quizRecords write volume.
+7. **Phase 6 — Decommission `engagementEvents` container.** One week after Phase 4 ships and traffic confirms the migration flag is universal: delete the container via `az cosmosdb sql container delete`. **Final cost win:** provisioned floor drops from 600 → 500 RU/s; container count: 6 → 5.
+
+**Open design calls (settle when each phase starts, not now):**
+- **Phase 1: which actions count as "non-trivial"?** Conservative list: daily submit, quiz finish (any mode), TTT match completed, share click, coffee click. Excluded: opening home page, opening flag explorer, mid-quiz aborts. Final list TBD when Phase 1 starts.
+- **Phase 1: leaderboard icon for auto-names.** 🎲 vs ✨ vs nothing-but-italics. Settle when the leaderboard render code is touched.
+- **Phase 2: sync blob schema versioning.** `syncBlob: { v: 1, achievements: {...}, counters: {...} }` with explicit `v` field so future schema bumps don't break old clients. Settle in PR-2.
+- **Phase 5: attempts counter granularity per mode.** Currently each mode (60s/all/per-variant) tracks attempts separately. Should the sync trigger be per-mode (each mode flushes at its own 100) or global (total attempts hits 100)? Per-mode is simpler.
+
+**Out of scope (don't sweep in):**
+- Folding `quizRecords` into `profiles` — keep separate, different access patterns (profiles is hot on every leaderboard render; quizRecords is cold).
+- Server-side aggregate analytics dashboards — Feature Q (App Insights) will cover the analytics gap when it comes off the parking brake.
+- Cosmos Free Tier replacement / serverless migration — current setup with autoscale + free tier handles the cost goals without account recreation.
 
 ---
 

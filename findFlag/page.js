@@ -28,6 +28,7 @@ import { refreshChooserI18n } from './chooserI18n.js';
 import { shareUrl } from '../common.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
+import { ensureProfile } from '../flags/autoProfile.js';
 import { refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 
@@ -87,6 +88,7 @@ function attachShareHandler(el) {
     // gated to filter-set states.
     if (result === 'shared' || result === 'copied') {
       const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+      void ensureProfile(deviceId);
       const filterRaw = new URLSearchParams(window.location.search).get('f') ?? '';
       // Achievement diff chains off the event POST so the bypassCache
       // read sees the just-recorded share row. Catches "Custom Crafter".
@@ -220,6 +222,7 @@ export function bootFindFlag() {
               /* sessionStorage unavailable — default mode is fine */
             }
             const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+            void ensureProfile(deviceId);
             void submitEngagementEvent(deviceId, {
               kind: 'findflag_play',
               payload: { filter: filterRaw, mode },

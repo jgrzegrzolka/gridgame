@@ -45,7 +45,7 @@ app.http('getProfile', {
         connString: conn,
         dbName: DB_NAME,
         containerName: CONTAINER_NAME,
-        query: 'SELECT c.deviceId, c.nickname FROM c WHERE c.id = @id',
+        query: 'SELECT c.deviceId, c.nickname, c.nicknameAuto FROM c WHERE c.id = @id',
         parameters: [{ name: '@id', value: id }],
         partitionKey: id,
       });
@@ -59,12 +59,18 @@ app.http('getProfile', {
     }
 
     const row = queryRes.docs[0];
+    const nickname = row && typeof row.nickname === 'string' ? row.nickname : null;
+    // nicknameAuto is the same "did the user pick a name" signal as
+    // profileDoc.buildProfileDoc derives — but for the read path we honour
+    // a stored value if it exists (forward-compat with future flag
+    // semantics) and fall back to "auto when no name picked" otherwise.
+    // No row at all also reads as auto (matches the client-side default).
+    const nicknameAuto = row && typeof row.nicknameAuto === 'boolean'
+      ? row.nicknameAuto
+      : (typeof nickname !== 'string' || nickname.length === 0);
     return {
       status: 200,
-      jsonBody: {
-        deviceId: id,
-        nickname: row && typeof row.nickname === 'string' ? row.nickname : null,
-      },
+      jsonBody: { deviceId: id, nickname, nicknameAuto },
     };
   },
 });

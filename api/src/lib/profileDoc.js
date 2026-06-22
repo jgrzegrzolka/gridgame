@@ -3,11 +3,18 @@
  * one row per device, holding the player's chosen nickname (or null = the
  * default "anonymous device" state).
  *
- * Document shape (per FEATURE.md Feature H2):
+ * Document shape (per FEATURE.md Feature H2 + Feature S Phase 1a):
  *   {
  *     id:                  string,         // == deviceId — partition key + id
  *     deviceId:            string,
  *     nickname:            string | null,  // null = "anonymous device", display falls back to no name
+ *     nicknameAuto:        boolean,        // true when the row exists but the user hasn't chosen a
+ *                                          //   name (display falls back to defaultNickname(deviceId)).
+ *                                          //   Derived from `nickname`: null/empty = auto, real string
+ *                                          //   = user-customised. Lets the leaderboard render a "🎲
+ *                                          //   auto-generated" hint and lets later phases tell
+ *                                          //   "auto-created row" apart from "user actively cleared
+ *                                          //   their nickname after picking one."
  *     createdAt:           number,         // unix ms — first-ever profile write for this device. Preserved
  *                                          //   across subsequent writes by the read-then-upsert flow in
  *                                          //   functions/profile.js; this builder is the pure half.
@@ -71,10 +78,16 @@ function buildProfileDoc({ existing, deviceId, nickname, now, requestDeletion = 
   const linkedAt = (existing && typeof existing.linkedAt === 'number')
     ? existing.linkedAt
     : null;
+  // Auto = no nickname picked. A non-empty user-supplied string flips this to
+  // false; clearing back to null reverts to auto. Derived (not stored as a
+  // separate input) so the source of truth is `nickname` and the two fields
+  // can't drift.
+  const nicknameAuto = typeof nickname !== 'string' || nickname.length === 0;
   return {
     id: deviceId,
     deviceId,
     nickname,
+    nicknameAuto,
     createdAt,
     updatedAt: now,
     deletionRequestedAt,
