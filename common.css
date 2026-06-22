@@ -157,13 +157,13 @@ body::after {
 /* Top-left wordmark — pairs with the chrome cluster (lang / flag /
  * burger) on the top-right. Centres on the same vertical axis as the
  * chrome buttons: buttons are top:15 + height:44 → centre y=37;
- * logo top:17 + height:40 → centre y=37. Clicking the logo always
+ * logo top:19 + height:36 → centre y=37. Clicking the logo always
  * returns to the site root, so the link is `aria-current="page"`
  * only on `/` itself — same pattern the burger nickname uses for
  * the profile page. */
 .site-logo {
   position: fixed;
-  top: 17px;
+  top: 19px;
   /* Mirror of the chrome cluster on the right: same `--chrome-x-offset`
    * math, just anchored to the left edge. On narrow viewports the
    * offset clamps to 0 (logo flush with the 12 px body padding); on
@@ -172,7 +172,7 @@ body::after {
    * content margins. */
   left: calc(20px + var(--chrome-x-offset));
   z-index: 25;
-  height: 40px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   text-decoration: none;

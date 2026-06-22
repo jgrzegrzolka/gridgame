@@ -323,6 +323,26 @@
     "find": "Stwórz łamigłówkę",
     "ticTacToe": "Kółko i krzyżyk"
   },
+  "home": {
+    "daily": {
+      "category": "Europa · krzyż",
+      "progress": "Znaleziono 5 / 10"
+    },
+    "quiz": {
+      "prompt": "Polska"
+    },
+    "find": {
+      "africa": "Afryka",
+      "hasStars": "Z gwiazdami",
+      "redWhite": "Czerwono-białe",
+      "crescent": "Półksiężyc",
+      "threeStripes": "3 pasy",
+      "europe": "Europa"
+    },
+    "ttt": {
+      "result": "Wygrywa różowy!"
+    }
+  },
   "game": {
     "giveUp": "Poddaję się",
     "playAgain": "Zagraj jeszcze raz",
