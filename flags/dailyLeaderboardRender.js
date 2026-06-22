@@ -26,6 +26,12 @@ const TOP_N = 10;
  * @property {string | null} nickname
  * @property {number} score
  * @property {number} durationMs
+ * @property {boolean} [nicknameAuto]  true when the entry's nickname is the
+ *   deterministic default (the player hasn't customised). Denormalised onto
+ *   the leaderboard doc from the writer's profile row (Feature S Phase 1b).
+ *   The renderer paints a small 🎲 next to such names so viewers can tell
+ *   "this player goes by an auto-generated nickname" without joining back
+ *   to the profiles container. Missing or non-true reads as customised.
  */
 
 /**
@@ -148,9 +154,24 @@ function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride, formatScor
 
   const nameEl = doc.createElement('span');
   nameEl.className = 'leaderboard-name';
-  nameEl.textContent = isSelf && selfLabelOverride
-    ? selfLabelOverride
-    : displayNickname(entry.deviceId, entry.nickname);
+  // The bottom "You" row uses the literal "You" label and never decorates
+  // it with the auto-name icon — "You" isn't a nickname, it's a self-marker.
+  // Top-list self rows still render the real nickname + icon so the player
+  // sees themself the same way other viewers do.
+  if (isSelf && selfLabelOverride) {
+    nameEl.textContent = selfLabelOverride;
+  } else {
+    nameEl.textContent = displayNickname(entry.deviceId, entry.nickname);
+    if (entry.nicknameAuto === true) {
+      const autoEl = doc.createElement('span');
+      autoEl.className = 'leaderboard-name-auto';
+      // aria-label is the readable form; the 🎲 alone would read as
+      // "game die" on screen readers, which doesn't convey the meaning.
+      autoEl.setAttribute('aria-label', 'auto-generated name');
+      autoEl.textContent = '🎲';
+      nameEl.appendChild(autoEl);
+    }
+  }
 
   const scoreEl = doc.createElement('span');
   scoreEl.className = 'leaderboard-score';

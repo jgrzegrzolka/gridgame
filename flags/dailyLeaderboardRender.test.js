@@ -17,8 +17,12 @@ function makeDoc() {
       className: '',
       textContent: '',
       start: undefined,
+      attributes: /** @type {Record<string, string>} */ ({}),
       children: [],
       appendChild(/** @type {any} */ c) { this.children.push(c); return c; },
+      setAttribute(/** @type {string} */ name, /** @type {string} */ value) {
+        this.attributes[name] = value;
+      },
     };
     return el;
   };
@@ -211,6 +215,82 @@ test('renderLeaderboard: malicious nickname is set via textContent, not innerHTM
   // It lands as literal text — not parsed as a DOM tree — because we use textContent.
   assert.equal(name.textContent, '<script>alert(1)</script>');
   assert.equal(name.children.length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// Auto-name signal (Feature S Phase 1b) — entries with `nicknameAuto: true`
+// get a 🎲 marker so viewers can tell "this player goes by their auto-
+// generated default" without joining back to profiles.
+// ---------------------------------------------------------------------------
+
+test('renderLeaderboard: nicknameAuto:true entry gets a 🎲 marker with accessibility label', () => {
+  const doc = makeDoc();
+  const top = [
+    { deviceId: 'd1', nickname: null, nicknameAuto: true, score: 20, durationMs: 32_000 },
+  ];
+  const root = renderLeaderboard({ state: 'ready', data: { top, you: null }, t, doc });
+  const autos = findAllByClass(root, 'leaderboard-name-auto');
+  assert.equal(autos.length, 1);
+  assert.equal(autos[0].textContent, '🎲');
+  // Emoji alone reads as "game die" on screen readers — aria-label conveys
+  // the actual meaning ("this nickname is auto-generated").
+  assert.equal(autos[0].attributes['aria-label'], 'auto-generated name');
+});
+
+test('renderLeaderboard: nicknameAuto:false (customised) — no marker', () => {
+  const doc = makeDoc();
+  const top = [
+    { deviceId: 'd1', nickname: 'Alice', nicknameAuto: false, score: 20, durationMs: 32_000 },
+  ];
+  const root = renderLeaderboard({ state: 'ready', data: { top, you: null }, t, doc });
+  assert.equal(findAllByClass(root, 'leaderboard-name-auto').length, 0);
+});
+
+test('renderLeaderboard: nicknameAuto missing (legacy row) — no marker', () => {
+  // Backwards-compat: leaderboard rows written before Feature S Phase 1b
+  // won't have the field. They render exactly as they did pre-1b — no
+  // visual change for legacy data.
+  const doc = makeDoc();
+  const top = [
+    { deviceId: 'd1', nickname: 'Alice', score: 20, durationMs: 32_000 },
+    { deviceId: 'd2', nickname: null,    score: 18, durationMs: 41_000 },
+  ];
+  const root = renderLeaderboard({ state: 'ready', data: { top, you: null }, t, doc });
+  assert.equal(findAllByClass(root, 'leaderboard-name-auto').length, 0);
+});
+
+test('renderLeaderboard: bottom "You" row never gets the auto marker (it shows the literal "You")', () => {
+  // The selfLabelOverride path renders "You", not a nickname. Decorating
+  // "You" with 🎲 would be nonsensical — the marker only attaches to
+  // actual displayed names. The top-list self row (which shows the real
+  // nickname) still gets the marker — see the next test.
+  const doc = makeDoc();
+  const top = Array.from({ length: 10 }, (_, i) => ({
+    deviceId: `d${i + 1}`, nickname: `P${i + 1}`,
+    score: 100 - i, durationMs: 30_000 + i * 1000,
+  }));
+  const root = renderLeaderboard({
+    state: 'ready',
+    data: { top, you: { rank: 87, score: 12, durationMs: 55_000 } },
+    ownDeviceId: ME, t, doc,
+  });
+  const youList = findAllByClass(root, 'leaderboard-list-you');
+  assert.equal(findAllByClass(youList[0], 'leaderboard-name-auto').length, 0);
+});
+
+test('renderLeaderboard: own row IN top with nicknameAuto:true — marker still renders', () => {
+  // Top-list self rows render the real nickname (not "You"), so they
+  // should get the marker just like other entries. The viewer sees
+  // themself with the same signal others see them by.
+  const doc = makeDoc();
+  const top = [
+    { deviceId: ME, nickname: null, nicknameAuto: true, score: 20, durationMs: 32_000 },
+  ];
+  const root = renderLeaderboard({
+    state: 'ready', data: { top, you: { rank: 1, score: 20, durationMs: 32_000 } },
+    ownDeviceId: ME, t, doc,
+  });
+  assert.equal(findAllByClass(root, 'leaderboard-name-auto').length, 1);
 });
 
 test('renderLeaderboard: formatScore transforms the score column (endurance mode displays correct count, not wrong count)', () => {

@@ -9,6 +9,7 @@ const {
   mergeDailyLeaderboard,
 } = require('../lib/dailyLeaderboardDoc');
 const { lowerWinsFromConfigKey } = require('../lib/quizRecordKey');
+const { deriveNicknameAuto } = require('../lib/profileDoc');
 const { isLocalRequestUrl } = require('../lib/requestHost');
 
 const DB_NAME = 'yetanotherquiz';
@@ -147,7 +148,10 @@ async function writeDailyLeaderboardIfPb({ conn, deviceId, configKey, entry, now
       connString: conn,
       dbName: DB_NAME,
       containerName: PROFILES_CONTAINER,
-      query: 'SELECT c.nickname FROM c WHERE c.id = @id',
+      // nicknameAuto is denormalised onto the leaderboard entry below
+      // (Feature S Phase 1b) so the reader can render the "auto-name"
+      // hint without joining back to profiles at render time.
+      query: 'SELECT c.nickname, c.nicknameAuto FROM c WHERE c.id = @id',
       parameters: [{ name: '@id', value: deviceId }],
       partitionKey: deviceId,
     }),
@@ -165,10 +169,11 @@ async function writeDailyLeaderboardIfPb({ conn, deviceId, configKey, entry, now
 
   const profile = profileRes.docs[0];
   const nickname = profile && typeof profile.nickname === 'string' ? profile.nickname : null;
+  const nicknameAuto = deriveNicknameAuto(profile, nickname);
   const existing = leaderboardRes.docs[0] || null;
 
   const merge = mergeDailyLeaderboard({
-    existing, deviceId, configKey, dateKey, nickname, entry, lowerWins, now,
+    existing, deviceId, configKey, dateKey, nickname, nicknameAuto, entry, lowerWins, now,
   });
   if (!merge.changed) return;
 

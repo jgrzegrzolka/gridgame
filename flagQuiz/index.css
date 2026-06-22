@@ -366,6 +366,14 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.leaderboard-name-auto {
+  /* 🎲 next to an auto-generated nickname (Feature S Phase 1b). Smaller
+   * than the name so it reads as an annotation, not part of the name.
+   * Slight left margin so it doesn't touch the last letter. */
+  font-size: 12px;
+  margin-left: 4px;
+  opacity: 0.8;
+}
 .leaderboard-score {
   color: var(--primary-color);
   font-size: 15px;

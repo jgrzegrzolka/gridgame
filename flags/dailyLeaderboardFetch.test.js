@@ -66,6 +66,30 @@ test('fetchLeaderboard: normalises top entries — drops malformed rows, default
   assert.equal(r.top[2].nickname, null);   // coerced
 });
 
+test('fetchLeaderboard: nicknameAuto — true only when the row explicitly carries true', async () => {
+  // Defensive coercion: server contract says boolean, but a legacy row /
+  // proxy / cache could ship the field as anything. The renderer keys on
+  // strict equality so an oddly-typed value defaults to "not auto" rather
+  // than decorating a real nickname with the auto hint.
+  const json = {
+    top: [
+      { deviceId: 'd1', nickname: 'Alice', nicknameAuto: false,    score: 1, durationMs: 1 },
+      { deviceId: 'd2', nickname: null,    nicknameAuto: true,     score: 2, durationMs: 2 },
+      { deviceId: 'd3', nickname: null,                            score: 3, durationMs: 3 },
+      { deviceId: 'd4', nickname: null,    nicknameAuto: 'true',   score: 4, durationMs: 4 },
+    ],
+    you: null,
+  };
+  const f = fakeFetch({ status: 200, json });
+  const r = await fetchLeaderboard({ configKey: CONFIG, deviceId: DEVICE, fetchImpl: f.impl });
+  assert.equal(r.ok, true);
+  if (!r.ok) throw new Error('unreachable');
+  assert.equal(r.top[0].nicknameAuto, false);
+  assert.equal(r.top[1].nicknameAuto, true);
+  assert.equal(r.top[2].nicknameAuto, false);    // missing → false (legacy row)
+  assert.equal(r.top[3].nicknameAuto, false);    // wrong type → false (defensive)
+});
+
 test('fetchLeaderboard: payload with no top key → top: []', async () => {
   // Server-contract violation handled defensively so the renderer never
   // sees an undefined .top.

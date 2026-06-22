@@ -15,7 +15,7 @@ const ENDPOINT = '/api/v1/quiz/leaderboard';
  *   fetchImpl?: typeof fetch,
  * }} args
  * @returns {Promise<
- *   | { ok: true, top: Array<{ deviceId: string, nickname: string|null, score: number, durationMs: number, submittedAt: number }>, you: { rank: number, score: number, durationMs: number } | null }
+ *   | { ok: true, top: Array<{ deviceId: string, nickname: string|null, nicknameAuto: boolean, score: number, durationMs: number, submittedAt: number }>, you: { rank: number, score: number, durationMs: number } | null }
  *   | { ok: false, reason: string }
  * >}
  */
@@ -66,6 +66,10 @@ export async function fetchLeaderboard({
     .map((/** @type {any} */ r) => ({
       deviceId: r.deviceId,
       nickname: typeof r.nickname === 'string' ? r.nickname : null,
+      // Only `=== true` counts as auto — anything else (false, undefined,
+      // legacy rows without the field) reads as "user-customised" so the
+      // renderer doesn't decorate a real nickname with the auto hint.
+      nicknameAuto: r.nicknameAuto === true,
       score: r.score,
       durationMs: r.durationMs,
       submittedAt: typeof r.submittedAt === 'number' ? r.submittedAt : 0,

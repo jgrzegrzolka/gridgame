@@ -188,3 +188,55 @@ test('mergeDailyLeaderboard: equal score + equal duration → not changed', () =
   });
   assert.equal(out.changed, false);
 });
+
+// ---------------------------------------------------------------------------
+// nicknameAuto (Feature S Phase 1b) — denormalised from the writer's
+// profiles row onto each leaderboard entry. Same denormalisation pattern
+// `nickname` already uses so the reader doesn't have to join back to the
+// profiles container at render time.
+// ---------------------------------------------------------------------------
+
+test('buildDailyLeaderboardDoc: stores nicknameAuto when caller supplies it', () => {
+  const doc = buildDailyLeaderboardDoc({
+    deviceId: DEVICE, configKey: 'europe:60s:sov', dateKey: '2026-06-12',
+    nickname: 'Alice', nicknameAuto: false,
+    entry: { score: 18, durationMs: 32_400 }, now: NOW,
+  });
+  assert.equal(doc.nicknameAuto, false);
+});
+
+test('buildDailyLeaderboardDoc: stores nicknameAuto:true when caller supplies it (auto-nicknamed writer)', () => {
+  const doc = buildDailyLeaderboardDoc({
+    deviceId: DEVICE, configKey: 'europe:60s:sov', dateKey: '2026-06-12',
+    nickname: null, nicknameAuto: true,
+    entry: { score: 12, durationMs: 60_000 }, now: NOW,
+  });
+  assert.equal(doc.nicknameAuto, true);
+});
+
+test('buildDailyLeaderboardDoc: derives nicknameAuto from nickname when caller omits it', () => {
+  // Fallback for callers that haven't been updated yet. Same rule the
+  // profileDoc builder applies — null/empty = auto, real string = customised.
+  const auto = buildDailyLeaderboardDoc({
+    deviceId: DEVICE, configKey: 'europe:60s:sov', dateKey: '2026-06-12',
+    nickname: null,
+    entry: { score: 12, durationMs: 60_000 }, now: NOW,
+  });
+  const customised = buildDailyLeaderboardDoc({
+    deviceId: DEVICE, configKey: 'europe:60s:sov', dateKey: '2026-06-12',
+    nickname: 'Alice',
+    entry: { score: 18, durationMs: 32_400 }, now: NOW,
+  });
+  assert.equal(auto.nicknameAuto, true);
+  assert.equal(customised.nicknameAuto, false);
+});
+
+test('mergeDailyLeaderboard: passes nicknameAuto through to the built doc', () => {
+  const out = mergeDailyLeaderboard({
+    existing: null, deviceId: DEVICE, configKey: 'europe:60s:sov',
+    dateKey: '2026-06-12', nickname: 'Alice', nicknameAuto: false,
+    entry: { score: 12, durationMs: 60_000 }, lowerWins: false, now: NOW,
+  });
+  assert.equal(out.changed, true);
+  assert.equal(out.doc.nicknameAuto, false);
+});

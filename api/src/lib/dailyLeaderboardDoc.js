@@ -53,23 +53,43 @@ function makePk(configKey, dateKey) {
 }
 
 /**
+ * `nicknameAuto` denormalises the same flag from the writer's `profiles` row
+ * (Feature S Phase 1a) onto each leaderboard entry — same denormalisation
+ * pattern `nickname` already uses, for the same reason: the reader doesn't
+ * have to join back to the profiles container at render time. The
+ * leaderboard renderer paints a small "auto-generated name" hint next to
+ * entries where this is true.
+ *
+ * When the caller omits it, we fall back to the same nickname-derived rule
+ * `profileDoc.buildProfileDoc` uses — null/empty nickname = auto, real
+ * string = customised. Keeps the merge consistent for legacy callers that
+ * haven't been updated yet, and means a future read of this doc has the
+ * same `nicknameAuto` semantics as a fresh profile write would have
+ * produced.
+ *
  * @param {{
  *   deviceId: string,
  *   configKey: string,
  *   dateKey: string,
  *   nickname: string|null,
+ *   nicknameAuto?: boolean,
  *   entry: { score: number, durationMs: number },
  *   now: number,
  * }} input
  */
-function buildDailyLeaderboardDoc({ deviceId, configKey, dateKey, nickname, entry, now }) {
+function buildDailyLeaderboardDoc({ deviceId, configKey, dateKey, nickname, nicknameAuto, entry, now }) {
+  const cleanNickname = typeof nickname === 'string' ? nickname : null;
+  const resolvedAuto = typeof nicknameAuto === 'boolean'
+    ? nicknameAuto
+    : (cleanNickname === null || cleanNickname.length === 0);
   return {
     id: deviceId,
     pk: makePk(configKey, dateKey),
     deviceId,
     configKey,
     date: dateKey,
-    nickname: typeof nickname === 'string' ? nickname : null,
+    nickname: cleanNickname,
+    nicknameAuto: resolvedAuto,
     score: entry.score,
     durationMs: entry.durationMs,
     submittedAt: now,
@@ -89,12 +109,13 @@ function buildDailyLeaderboardDoc({ deviceId, configKey, dateKey, nickname, entr
  *   configKey: string,
  *   dateKey: string,
  *   nickname: string|null,
+ *   nicknameAuto?: boolean,
  *   entry: { score: number, durationMs: number },
  *   lowerWins: boolean,
  *   now: number,
  * }} args
  */
-function mergeDailyLeaderboard({ existing, deviceId, configKey, dateKey, nickname, entry, lowerWins, now }) {
+function mergeDailyLeaderboard({ existing, deviceId, configKey, dateKey, nickname, nicknameAuto, entry, lowerWins, now }) {
   const incumbent = existing
     ? { score: existing.score, durationMs: existing.durationMs }
     : null;
@@ -103,7 +124,7 @@ function mergeDailyLeaderboard({ existing, deviceId, configKey, dateKey, nicknam
   }
   return {
     changed: true,
-    doc: buildDailyLeaderboardDoc({ deviceId, configKey, dateKey, nickname, entry, now }),
+    doc: buildDailyLeaderboardDoc({ deviceId, configKey, dateKey, nickname, nicknameAuto, entry, now }),
   };
 }
 

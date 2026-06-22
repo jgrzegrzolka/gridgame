@@ -118,7 +118,7 @@ app.http('quizLeaderboard', {
     if (!lowerWins) filters.push('c.score > 0');
     const where = `WHERE ${filters.join(' AND ')} `;
     const queryText =
-      `SELECT TOP ${PER_PARTITION_LIMIT} c.deviceId, c.nickname, c.score, c.durationMs, c.submittedAt ` +
+      `SELECT TOP ${PER_PARTITION_LIMIT} c.deviceId, c.nickname, c.nicknameAuto, c.score, c.durationMs, c.submittedAt ` +
       'FROM c ' +
       where +
       `ORDER BY c.score ${order}, c.durationMs ASC`;
@@ -193,6 +193,11 @@ app.http('quizLeaderboard', {
         top: top.map((r) => ({
           deviceId: r.deviceId,
           nickname: typeof r.nickname === 'string' ? r.nickname : null,
+          // Legacy rows written before Feature S Phase 1b won't have this
+          // field — undefined reads as "not auto" client-side (the
+          // renderer treats only `=== true` as auto). New rows carry the
+          // explicit boolean denormalised from the writer's profile.
+          nicknameAuto: typeof r.nicknameAuto === 'boolean' ? r.nicknameAuto : false,
           score: r.score,
           durationMs: r.durationMs,
           submittedAt: r.submittedAt,
