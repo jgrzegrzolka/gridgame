@@ -1,8 +1,8 @@
 const { app } = require('@azure/functions');
 const { validateDeviceIdParam } = require('../lib/validate');
-const { insertDoc, queryDocs } = require('../lib/cosmos');
+const { insertDoc } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
-const { buildProfileDoc } = require('../lib/profileDoc');
+const { buildProfileDoc, decideEnsureResponse } = require('../lib/profileDoc');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'profiles';
@@ -68,33 +68,11 @@ app.http('profileEnsure', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    // Existence check first. A point-read by id+pk costs ~1 RU; the
-    // insertDoc with `upsert: false` would also 409 on conflict, but
-    // checking first keeps `created: true`/`false` cheap to report and
-    // means we never accidentally overwrite a row whose schema we
-    // haven't loaded into the builder (e.g. a future field).
-    let queryRes;
-    try {
-      queryRes = await queryDocs({
-        connString: conn,
-        dbName: DB_NAME,
-        containerName: CONTAINER_NAME,
-        query: 'SELECT c.id FROM c WHERE c.id = @id',
-        parameters: [{ name: '@id', value: deviceId }],
-        partitionKey: deviceId,
-      });
-    } catch (err) {
-      context.error('cosmos query threw', err);
-      return { status: 500, jsonBody: { error: 'server_error' } };
-    }
-    if (!queryRes.ok) {
-      context.error('cosmos query failed', queryRes);
-      return { status: 500, jsonBody: { error: 'server_error' } };
-    }
-    if (queryRes.docs.length > 0) {
-      return { status: 200, jsonBody: { ok: true, created: false } };
-    }
-
+    // No existence-check query first. `insertDoc` defaults to a real
+    // insert (not an upsert), so it returns `{ error: 'conflict' }` on
+    // an existing row — `decideEnsureResponse` normalises that to a 200
+    // no-op. Skipping the pre-check saves ~1 RU on every ensure call
+    // *and* keeps the handler a single round-trip.
     const doc = buildProfileDoc({
       existing: null,
       deviceId,
@@ -116,17 +94,10 @@ app.http('profileEnsure', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    if (insertRes.ok) {
-      return { status: 201, jsonBody: { ok: true, created: true } };
+    if (!insertRes.ok && insertRes.error !== 'conflict') {
+      context.error('cosmos insert failed', insertRes);
     }
-    if (insertRes.error === 'conflict') {
-      // Race between two devices firing ensureProfile simultaneously (e.g.
-      // a player who opens two tabs and both fire on their first action).
-      // 409 is success — the row exists, that's the postcondition we
-      // promised the caller.
-      return { status: 200, jsonBody: { ok: true, created: false } };
-    }
-    context.error('cosmos insert failed', insertRes);
-    return { status: 500, jsonBody: { error: 'server_error' } };
+    const { status, body } = decideEnsureResponse(insertRes);
+    return { status, jsonBody: body };
   },
 });

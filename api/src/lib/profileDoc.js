@@ -96,4 +96,55 @@ function buildProfileDoc({ existing, deviceId, nickname, now, requestDeletion = 
   };
 }
 
-module.exports = { buildProfileDoc };
+/**
+ * Interpret a Cosmos `profiles` row for the `nicknameAuto` signal —
+ * what the read endpoints (`getProfile`, downstream renderers) should
+ * report to the client. Three cases the caller throws at us:
+ *
+ *   1. Row exists AND has the field set → trust the stored value.
+ *      Reading lets future writes (or hand-edits) carry richer
+ *      semantics than the simple "derived from nickname" default.
+ *   2. Row exists but the field is missing → legacy row from before
+ *      Feature S Phase 1a. Fall back to deriving from `nickname`:
+ *      null/empty = auto, real string = customised. Same rule the
+ *      builder applies, so a legacy row reads identically to one a
+ *      fresh write would have produced.
+ *   3. No row → the device has never written a profile. Reads as auto
+ *      (matches the client-side `defaultNickname` fallback).
+ *
+ * @param {{ nicknameAuto?: unknown } | null | undefined} row
+ * @param {string | null | undefined} nickname
+ * @returns {boolean}
+ */
+function deriveNicknameAuto(row, nickname) {
+  if (row && typeof row.nicknameAuto === 'boolean') return row.nicknameAuto;
+  return typeof nickname !== 'string' || nickname.length === 0;
+}
+
+/**
+ * Map an `insertDoc` result into the HTTP response shape for
+ * `POST /api/v1/profile/ensure`. Three branches:
+ *
+ *   - `{ ok: true }` → 201 Created, the row is fresh.
+ *   - `{ ok: false, error: 'conflict' }` → 200 OK, the row already
+ *     existed (race with a concurrent ensure, or a returning device
+ *     whose localStorage sentinel was cleared). Treated as success
+ *     because the caller's postcondition is "row exists," not "this
+ *     call wrote it."
+ *   - Anything else → 500 server_error.
+ *
+ * Extracted from `functions/profileEnsure.js` so the three-way decision
+ * can be unit-tested without spinning up Cosmos. Coupling: relies on
+ * `cosmos.js#insertDoc`'s result shape — both modules are internal,
+ * acceptable.
+ *
+ * @param {{ ok: true } | { ok: false, error?: string }} insertResult
+ * @returns {{ status: 201 | 200 | 500, body: Record<string, unknown> }}
+ */
+function decideEnsureResponse(insertResult) {
+  if (insertResult.ok) return { status: 201, body: { ok: true, created: true } };
+  if (insertResult.error === 'conflict') return { status: 200, body: { ok: true, created: false } };
+  return { status: 500, body: { error: 'server_error' } };
+}
+
+module.exports = { buildProfileDoc, deriveNicknameAuto, decideEnsureResponse };

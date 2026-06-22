@@ -2,6 +2,7 @@ const { app } = require('@azure/functions');
 const { validateDeviceIdParam } = require('../lib/validate');
 const { queryDocs } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
+const { deriveNicknameAuto } = require('../lib/profileDoc');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'profiles';
@@ -60,14 +61,7 @@ app.http('getProfile', {
 
     const row = queryRes.docs[0];
     const nickname = row && typeof row.nickname === 'string' ? row.nickname : null;
-    // nicknameAuto is the same "did the user pick a name" signal as
-    // profileDoc.buildProfileDoc derives — but for the read path we honour
-    // a stored value if it exists (forward-compat with future flag
-    // semantics) and fall back to "auto when no name picked" otherwise.
-    // No row at all also reads as auto (matches the client-side default).
-    const nicknameAuto = row && typeof row.nicknameAuto === 'boolean'
-      ? row.nicknameAuto
-      : (typeof nickname !== 'string' || nickname.length === 0);
+    const nicknameAuto = deriveNicknameAuto(row, nickname);
     return {
       status: 200,
       jsonBody: { deviceId: id, nickname, nicknameAuto },
