@@ -323,6 +323,26 @@
     "find": "Make a puzzle",
     "ticTacToe": "Tic Tac Toe"
   },
+  "home": {
+    "daily": {
+      "category": "Europe · cross",
+      "progress": "5 / 10 found"
+    },
+    "quiz": {
+      "prompt": "Poland"
+    },
+    "find": {
+      "africa": "Africa",
+      "hasStars": "Has stars",
+      "redWhite": "Red & white",
+      "crescent": "Crescent",
+      "threeStripes": "3 stripes",
+      "europe": "Europe"
+    },
+    "ttt": {
+      "result": "Pink wins!"
+    }
+  },
   "game": {
     "giveUp": "Give up",
     "playAgain": "Play again",
