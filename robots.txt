@@ -5,4 +5,4 @@ Allow: /
 # useful in search results.
 Disallow: /flagQuiz/stats/
 
-Sitemap: https://yetanotherquiz.com/sitemap.xml
+Sitemap: https://www.yetanotherquiz.com/sitemap.xml
