@@ -97,7 +97,14 @@ app.http('profileEnsure', {
     if (!insertRes.ok && insertRes.error !== 'conflict') {
       context.error('cosmos insert failed', insertRes);
     }
-    const { status, body } = decideEnsureResponse(insertRes);
-    return { status, jsonBody: body };
+    // Rename the destructured `body` to `responseBody` — the outer
+    // `let body` on line 51 holds the parsed REQUEST body, and reusing
+    // the same name caused a SyntaxError that broke Function App
+    // registration in prod (PR #569 cleanup landed this; npm test +
+    // npm run typecheck both missed it because handler files aren't
+    // require'd by any test and aren't in either tsconfig's include
+    // glob). Hotfix #571.
+    const { status, body: responseBody } = decideEnsureResponse(insertRes);
+    return { status, jsonBody: responseBody };
   },
 });
