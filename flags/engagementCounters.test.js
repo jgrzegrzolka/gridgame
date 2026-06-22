@@ -11,6 +11,7 @@ import {
   bumpQuiz60sDay,
   getSyncBlobSection,
   inflateFromBlob,
+  pushEngagementBlob,
 } from './engagementCounters.js';
 
 /** Map-backed store double — same shape as the real localStorage. */
@@ -228,4 +229,59 @@ test('inflateFromBlob: sanitises the same way loadState does (closed share list,
   assert.equal(state.shares.daily, 3);
   assert.equal(/** @type {any} */ (state.shares).pinterest, undefined);
   assert.deepEqual(state.quiz60sDayLog, [19000, 19001]);
+});
+
+// ---------------------------------------------------------------------------
+// pushEngagementBlob — wraps current local state into the v:1 envelope and
+// pushes via the syncBlob primitive. Owns the schema-wrap so callers don't
+// repeat it; Phase 5 adding an `attempts` section updates this one helper.
+// ---------------------------------------------------------------------------
+
+test('pushEngagementBlob: posts the wrapped envelope ({ v:1, engagement: <state> }) to the sync-blob endpoint', async () => {
+  const store = makeStore();
+  bumpShare(store, 'daily');
+  bumpCoffeeClick(store);
+  /** @type {Array<{ url: string, init: any }>} */
+  const calls = [];
+  /** @type {any} */
+  const fetchImpl = async (/** @type {string} */ url, /** @type {any} */ init) => {
+    calls.push({ url, init });
+    return { status: 204, async json() { return null; } };
+  };
+  const r = await pushEngagementBlob('dev-1234-5678', store, { fetchImpl });
+  assert.deepEqual(r, { ok: true });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, '/api/v1/profile/sync-blob');
+  const body = JSON.parse(calls[0].init.body);
+  assert.equal(body.deviceId, 'dev-1234-5678');
+  assert.equal(body.blob.v, 1);
+  // The engagement section IS the local state — same shape, no transformation.
+  assert.deepEqual(body.blob.engagement, loadState(store));
+  assert.equal(body.blob.engagement.shares.daily, 1);
+  assert.equal(body.blob.engagement.coffeeClickCount, 1);
+});
+
+test('pushEngagementBlob: with empty state, pushes a clean envelope (still a valid no-op sync)', async () => {
+  // A freshly-migrated device with nothing to report still pushes once
+  // so other linked devices see "this deviceId has a populated blob"
+  // and skip the dailyMe migration on their own boot.
+  const store = makeStore();
+  /** @type {any} */
+  const fetchImpl = async () => ({ status: 204, async json() { return null; } });
+  const r = await pushEngagementBlob('dev-1234-5678', store, { fetchImpl });
+  assert.equal(r.ok, true);
+});
+
+test('pushEngagementBlob: forwards server error verbatim (caller can log / retry)', async () => {
+  // The 413 blob_too_large case shouldn't happen in practice (the
+  // engagement state is <1KB), but if the server signals it the
+  // caller deserves the actual reason rather than a generic failure.
+  const store = makeStore();
+  /** @type {any} */
+  const fetchImpl = async () => ({
+    status: 413,
+    async json() { return { error: 'blob_too_large' }; },
+  });
+  const r = await pushEngagementBlob('dev-1234-5678', store, { fetchImpl });
+  assert.deepEqual(r, { ok: false, reason: 'blob_too_large' });
 });

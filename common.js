@@ -2,9 +2,8 @@ import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from './flags/identity.js';
 import { displayNickname } from './flags/nickname.js';
 import { avatarSvg } from './flags/avatar.js';
 import { initAppInsights } from './analytics/index.js';
-import { bumpCoffeeClick, getSyncBlobSection } from './flags/engagementCounters.js';
+import { bumpCoffeeClick, pushEngagementBlob } from './flags/engagementCounters.js';
 import { migrateEngagement } from './flags/engagementMigration.js';
-import { pushSyncBlob } from './flags/syncBlob.js';
 import { ensureProfile } from './flags/autoProfile.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from './flags/achievementsBaseline.js';
 import { celebrate } from './flags/achievementCelebrate.js';
@@ -298,7 +297,7 @@ export function wireBurgerDismiss(options = {}) {
       // window — coffee_click effectively freezes in the snapshot
       // until Phase 4 ships and the diff switches to localStorage.
       bumpCoffeeClick(window.localStorage);
-      void pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(window.localStorage) });
+      void pushEngagementBlob(deviceId, window.localStorage);
       void refreshAchievementsAndDiff(deviceId).then((newly) => {
         if (newly.length > 0) void celebrate(newly);
       });

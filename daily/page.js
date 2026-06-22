@@ -31,8 +31,7 @@ import { fetchDailyMe } from './streakClient.js';
 import { diffNewlyEarnedAchievements } from '../flags/achievements.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff, getCachedAchievementsBaseline } from '../flags/achievementsBaseline.js';
-import { bumpShare, getSyncBlobSection } from '../flags/engagementCounters.js';
-import { pushSyncBlob } from '../flags/syncBlob.js';
+import { bumpShare, pushEngagementBlob } from '../flags/engagementCounters.js';
 import { ensureProfile } from '../flags/autoProfile.js';
 import { fetchCatalog } from './catalogSource.js';
 
@@ -491,7 +490,7 @@ function createShareButton() {
       // the server snapshot during the Phase 3 → Phase 4 window;
       // Phase 4 will rewire it to read from localStorage.
       bumpShare(window.localStorage, 'daily');
-      void pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(window.localStorage) });
+      void pushEngagementBlob(deviceId, window.localStorage);
       void refreshAchievementsAndDiff(deviceId).then((newly) => {
         if (newly.length > 0) void celebrate(newly);
       });

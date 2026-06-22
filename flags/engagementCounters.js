@@ -1,3 +1,5 @@
+import { pushSyncBlob } from './syncBlob.js';
+
 /**
  * Client-owned engagement counters (Feature S Phase 3). Replaces the
  * server-side `engagementEvents` container as the source of truth for
@@ -244,5 +246,28 @@ export function inflateFromBlob(store, blobEngagement) {
   const sanitised = loadState(wrapper);
   saveState(store, sanitised);
   return sanitised;
+}
+
+/**
+ * Wrap the current local state into the full sync-blob envelope
+ * (`{ v: 1, engagement: ... }`) and push it to the server. The wrap +
+ * version belong to the syncBlob schema, not to any individual call
+ * site — keeping them here means a Phase 5 addition (e.g. an `attempts`
+ * section) updates one place, and every emit site stays a clean
+ * "bump local, sync remote" pair.
+ *
+ * Fire-and-forget by convention: callers `void pushEngagementBlob(...)`.
+ * The underlying `pushSyncBlob` never throws and surfaces failures via
+ * its result tuple — passed back here unchanged for callers that want
+ * to await + branch (very few; the dropped-push case is harmless
+ * because the next bump on any counter will re-push).
+ *
+ * @param {string} deviceId
+ * @param {Store} store
+ * @param {{ fetchImpl?: typeof fetch }} [opts]
+ * @returns {Promise<{ ok: true } | { ok: false, reason: string }>}
+ */
+export function pushEngagementBlob(deviceId, store, opts) {
+  return pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(store) }, opts);
 }
 

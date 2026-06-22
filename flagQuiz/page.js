@@ -27,8 +27,7 @@ import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
-import { bumpShare, bumpQuiz60sDay, getSyncBlobSection } from '../flags/engagementCounters.js';
-import { pushSyncBlob } from '../flags/syncBlob.js';
+import { bumpShare, bumpQuiz60sDay, pushEngagementBlob } from '../flags/engagementCounters.js';
 import { warsawDayNumber } from '../flags/warsawDay.js';
 import { ensureProfile } from '../flags/autoProfile.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
@@ -486,7 +485,7 @@ export function bootFlagQuiz() {
           // the server snapshot during the Phase 3 → Phase 4 window;
           // Phase 4 will rewire it to localStorage.
           bumpShare(window.localStorage, 'flagquiz');
-          void pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(window.localStorage) });
+          void pushEngagementBlob(deviceId, window.localStorage);
           void refreshAchievementsAndDiff(deviceId).then((newly) => {
             if (newly.length > 0) void celebrate(newly);
           });
@@ -538,7 +537,7 @@ export function bootFlagQuiz() {
         const today60s = warsawDayNumber(Date.now());
         if (today60s !== null) {
           bumpQuiz60sDay(window.localStorage, today60s);
-          void pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(window.localStorage) });
+          void pushEngagementBlob(deviceId, window.localStorage);
         }
         const cycleP = runLeaderboardCycle({
           submitImpl: () => submitQuizRecord({

@@ -27,8 +27,7 @@ import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { refreshChooserI18n } from './chooserI18n.js';
 import { shareUrl } from '../common.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
-import { bumpShare, getSyncBlobSection } from '../flags/engagementCounters.js';
-import { pushSyncBlob } from '../flags/syncBlob.js';
+import { bumpShare, pushEngagementBlob } from '../flags/engagementCounters.js';
 import { ensureProfile } from '../flags/autoProfile.js';
 import { refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
@@ -96,7 +95,7 @@ function attachShareHandler(el) {
       // pre-Phase-3 contextHint (filter string) had no consumer and
       // is dropped.
       bumpShare(window.localStorage, 'findflag');
-      void pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(window.localStorage) });
+      void pushEngagementBlob(deviceId, window.localStorage);
       void refreshAchievementsAndDiff(deviceId).then((newly) => {
         if (newly.length > 0) void celebrate(newly);
       });

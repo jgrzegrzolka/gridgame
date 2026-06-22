@@ -12,8 +12,7 @@ import { submitTttResult } from '../flags/tttResultSubmit.js';
 import { fetchTttPair } from '../flags/tttPairFetch.js';
 import { deriveTttOutcome } from '../flags/tttPairOutcome.js';
 import { decideIsHost, forgetHostRoom, rememberHostRoom } from '../flags/tttHostMemory.js';
-import { bumpShare, getSyncBlobSection } from '../flags/engagementCounters.js';
-import { pushSyncBlob } from '../flags/syncBlob.js';
+import { bumpShare, pushEngagementBlob } from '../flags/engagementCounters.js';
 import { ensureProfile } from '../flags/autoProfile.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
@@ -672,7 +671,7 @@ function runOnline(countries) {
       // ttt-surface share count, but we keep it on the closed
       // SHARE_SURFACES list so a future "TTT Sharer" tier is one line.
       bumpShare(window.localStorage, 'ttt');
-      void pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(window.localStorage) });
+      void pushEngagementBlob(deviceId, window.localStorage);
     }
   }
 
