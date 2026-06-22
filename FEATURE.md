@@ -55,13 +55,50 @@ Trade-offs accepted:
 
    *Note:* a "Phase 1b" was planned to propagate `nicknameAuto` through the leaderboard write path and render a 🎲 marker next to auto-named entries. Drafted in PR #568, closed unmerged 2026-06-22 — not load-bearing for the cost goal, and the visual signal had unclear user value. The `nicknameAuto` field remains on `profiles` for future use (e.g., a "you haven't picked a name yet" nudge on the profile page) but does not flow through the leaderboard.
 2. **Phase 2 — Sync blob field on profiles.** Add `syncBlob: { ... }` field to the profile doc. `syncHydrate` returns the blob; client unpacks to localStorage. `syncLink` writes the blob from current localStorage. Roundtrip-tested. **No cost change** — keeps cross-device sync alive for the phases that move data client-side.
-3. **Phase 3 — Stop writing `engagementEvents`.** Delete `submitEngagementEvent` call sites in `common.js`, `daily/page.js`, `flagQuiz/page.js`, `findFlag/page.js`, `ticTacToe/page.js`, `ticTacToe/9x9/page.js`. Delete `api/src/functions/engagementEvent.js` + `api/src/lib/engagementDoc.js`. Replace each emit with a localStorage counter increment. **One-time migration:** on first visit after deploy, `dailyMe` returns the engagement-derived signals one last time; client captures them into localStorage and sets `gridgame.engagementMigrated = 'v1'`. Server still reads `engagementEvents` for users whose migration flag isn't observed yet (defensive, 1-week grace).
-4. **Phase 4 — Drop `engagementEvents` reads from `dailyMe`.** Strip the `engagementEvents` query out of `dailyMe.js`. Delete `engagementCompute.js` and the `quiz_play` branch in `streakCompute.js`. Achievements that previously consumed those signals (60s streak, Angel Investor, share-count) now read from localStorage / the sync blob. Run full test suite to confirm parity.
-5. **Phase 5 — `quizRecords` → PB-only + attempts counter on profile.** Modify `quizRecord` endpoint to write only on PB-beat; add `attempts: { quiz60s, quizAll, ... }` to profile doc. Client maintains `localStorage.gridgame.quizAttempts.{mode}` counters; ships a profile patch every 100 increments per mode. dailyMe reads attempts from profile instead of quizRecords. **Cost win:** ~99% reduction in quizRecords write volume.
+3. **Phase 3 — Stop writing `engagementEvents` + race-safe migration of existing data.** Delete `submitEngagementEvent` call sites in `common.js`, `daily/page.js`, `flagQuiz/page.js`, `findFlag/page.js`, `ticTacToe/page.js`, `ticTacToe/9x9/page.js`. Delete `api/src/functions/engagementEvent.js` + `api/src/lib/engagementDoc.js`. Replace each emit with a localStorage counter increment. **One-time migration of historical data, pull-first ordering** (see "Migration design" block below):
+   1. On boot post-deploy, check `localStorage.gridgame.engagementMigrated === 'v1'`. If set, normal flow — no migration.
+   2. If unset: call `pullSyncBlob(deviceId)` first. If the returned blob already has an `engagement` section, inflate localStorage from THAT (some other device on this deviceId already migrated). Then set the sentinel.
+   3. If `pullSyncBlob` returns null OR no `engagement` section: read engagement-derived signals from `dailyMe` (extended to return them one final time), populate localStorage, then `pushSyncBlob` the populated state. Set the sentinel.
+   4. Server still reads `engagementEvents` for `dailyMe`'s migration payload for the 1-week grace (defensive — Phase 4 strips those reads).
+4. **Phase 4 — Drop `engagementEvents` reads from `dailyMe`.** Strip the `engagementEvents` query out of `dailyMe.js`. Delete `engagementCompute.js` and the `quiz_play` branch in `streakCompute.js`. Achievements that previously consumed those signals (60s streak, Angel Investor, share-count) now read from localStorage / the sync blob. Run full test suite to confirm parity. Ships after Phase 3's grace period (1 week) so any laggard devices have had their migration payload.
+5. **Phase 5 — `quizRecords` → PB-only + attempts counter on profile, same race-safe migration shape as Phase 3.** Modify `quizRecord` endpoint to write only on PB-beat; add `attempts: { quiz60s, quizAll, ... }` to profile doc. Client maintains `localStorage.gridgame.quizAttempts.{mode}` counters; ships a profile patch every 100 increments per mode. dailyMe reads attempts from profile instead of quizRecords. **Migration of existing attempts data** mirrors Phase 3: localStorage sentinel `gridgame.quizAttemptsMigrated = 'v1'`, pull-first ordering against `syncBlob.attempts`, fallback to a one-time `dailyMe` read of pre-Phase-5 quizRecords attempts. **Cost win:** ~99% reduction in quizRecords write volume.
 6. **Phase 6 — Decommission `engagementEvents` container.** One week after Phase 4 ships and traffic confirms the migration flag is universal: delete the container via `az cosmosdb sql container delete`. **Final cost win:** provisioned floor drops from 600 → 500 RU/s; container count: 6 → 5.
 
+**Migration design (Phase 3 + Phase 5 share this shape):**
+
+The naïve "read engagementEvents → write to localStorage → set sentinel" approach has a multi-device data-loss bug. Concretely: Phone A migrates first, earns one more share, pushes `shareCount=6` to syncBlob. Laptop B (same deviceId via QR-link) opens later, its localStorage sentinel is unset, it re-reads the original `engagementEvents` (still shows 5), and overwrites syncBlob back to 5. The post-earned share is gone.
+
+**Pull-first ordering** fixes this: the blob is the canonical post-migration state. A device that finds a populated blob inflates from it and never touches the historical Cosmos rows. Only the FIRST device of a multi-device user actually reads `engagementEvents` (or `quizRecords` in Phase 5); every subsequent device hydrates from the blob the first one wrote.
+
+The `engagementEvents`/`quizRecords` data is **read-only during the grace period** — neither phase rewrites or repopulates those containers. Phase 6 deletes `engagementEvents` outright; Phase 5 leaves `quizRecords` alive (PBs still write there) but no longer relies on the attempts/lastPlayedAt fields.
+
+**`syncBlob` schema (settled now so Phase 3 migration code has a target shape):**
+
+```json
+{
+  "v": 1,
+  "engagement": {
+    "shareCount": 12,
+    "coffeeClickCount": 3,
+    "quiz60sDayLog": [19000, 19001, 19003],
+    "lastMigratedAt": 1750000000000
+  },
+  "attempts": {
+    "quiz60s": 1500,
+    "quizAll": 200,
+    "lastMigratedAt": 1750000000000
+  }
+}
+```
+
+Top-level `v: 1` for future schema bumps. Per-section `lastMigratedAt` lets a Phase-3-only device (no `attempts` section yet) detect "blob exists but my section is missing, run partial migration" when Phase 5 ships later. The server stores the blob opaquely (Phase 2 plumbing); the schema is a client-side convention.
+
+**Acceptable losses (call them out so we don't quietly regret them):**
+- Users whose `engagementEvents` rows TTL'd before they returned (>1 year old) lose those signals. The TTL has always been 1 year; this was lossy before too.
+- Users who never return during the 1-week Phase-3-to-Phase-6 grace get a fresh slate. Acceptable for a hobby site; the lost data was achievement counters, not gameplay state.
+- A user who migrates on Device A while Device B is offline, then earns a share on B before B comes online, will have B's local-only counter blow away when B's migration finally pulls A's blob. **Mitigation:** B's migration only runs if its sentinel is unset; the moment B successfully runs migration its sentinel latches, so this is a single-event risk window. Acceptable.
+
 **Open design calls (settle when each phase starts, not now):**
-- **Phase 2: sync blob schema versioning.** `syncBlob: { v: 1, achievements: {...}, counters: {...} }` with explicit `v` field so future schema bumps don't break old clients. Settle in PR-2.
 - **Phase 5: attempts counter granularity per mode.** Currently each mode (60s/all/per-variant) tracks attempts separately. Should the sync trigger be per-mode (each mode flushes at its own 100) or global (total attempts hits 100)? Per-mode is simpler.
 
 **Out of scope (don't sweep in):**
