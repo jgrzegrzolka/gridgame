@@ -316,6 +316,37 @@ test('trySyncDevices: no prior timestamp on a linked device fires the GET on fir
   assert.equal(calls.length, 1);
 });
 
+test('trySyncDevices: force=true bypasses the fresh gate (still skips when unlinked)', async () => {
+  // Linked + already hydrated 30s ago. Default trySyncDevices would
+  // return { ran: false, reason: 'fresh' }. With force=true the GET
+  // fires anyway — callers use this to refresh local cache before
+  // taking a UX decision that depends on it (e.g. daily revisit).
+  const store = makeStore({
+    'gridgame.identityId': 'd1',
+    'gridgame.lastHydrateAt': String(1_000_000 - 30 * 1000),
+  });
+  const { fetchImpl, calls } = makeFetchDouble({
+    daily: [{ puzzleId: 1, foundCodes: ['fr'], totalCount: 2 }],
+    records: {},
+  });
+  const res = await trySyncDevices({
+    deviceId: 'd1', store, identityKey: 'gridgame.identityId',
+    minIntervalMs: 60 * 1000, now: 1_000_000, fetchImpl, force: true,
+  });
+  assert.equal(res.ran, true);
+  if (res.ran) assert.equal(res.ok, true);
+  assert.equal(calls.length, 1);
+  // Identity gate still applies — force on an unlinked store is a no-op.
+  const store2 = makeStore();
+  const { fetchImpl: f2, calls: calls2 } = makeFetchDouble();
+  const res2 = await trySyncDevices({
+    deviceId: 'd1', store: store2, identityKey: 'gridgame.identityId',
+    now: 1_000_000, fetchImpl: f2, force: true,
+  });
+  assert.deepEqual(res2, { ran: false, reason: 'unlinked' });
+  assert.equal(calls2.length, 0);
+});
+
 test('trySyncDevices: stamps the timestamp BEFORE awaiting the fetch (de-races concurrent tabs)', async () => {
   // Two simultaneous calls — only the first should hit the network if
   // the timestamp is stamped synchronously before the await. We model

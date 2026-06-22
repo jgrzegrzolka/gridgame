@@ -193,6 +193,12 @@ const ENDPOINT = '/api/v1/sync/hydrate';
  * better than hammering a broken endpoint, and the next legitimate
  * page load will retry once the interval rolls over.
  *
+ * `force: true` bypasses the staleness gate (still respects the
+ * identity gate). Used by callers that need fresh data to make a UX
+ * decision *now* — e.g. the daily-puzzle revisit check: we'd rather
+ * pay one extra GET than ask a linked player to re-play a puzzle the
+ * other device already submitted (issue #543).
+ *
  * @param {{
  *   deviceId: string,
  *   store: HydrateStore & { removeItem?: (k: string) => void },
@@ -200,6 +206,7 @@ const ENDPOINT = '/api/v1/sync/hydrate';
  *   minIntervalMs?: number,
  *   now?: number,
  *   fetchImpl?: typeof fetch,
+ *   force?: boolean,
  * }} args
  * @returns {Promise<
  *   | { ran: false, reason: 'unlinked' | 'fresh' }
@@ -212,6 +219,7 @@ export async function trySyncDevices({
   minIntervalMs = DEFAULT_MIN_INTERVAL_MS,
   now = Date.now(),
   fetchImpl,
+  force = false,
 }) {
   let identity = null;
   try { identity = store.getItem(identityKey); } catch {}
@@ -219,20 +227,22 @@ export async function trySyncDevices({
     return { ran: false, reason: 'unlinked' };
   }
 
-  let last = 0;
-  try {
-    const raw = store.getItem(LAST_HYDRATE_KEY);
-    if (typeof raw === 'string') {
-      const n = Number.parseInt(raw, 10);
-      if (Number.isFinite(n) && n > 0) last = n;
+  if (!force) {
+    let last = 0;
+    try {
+      const raw = store.getItem(LAST_HYDRATE_KEY);
+      if (typeof raw === 'string') {
+        const n = Number.parseInt(raw, 10);
+        if (Number.isFinite(n) && n > 0) last = n;
+      }
+    } catch {}
+    // `last === 0` = never run on this browser → always proceed.
+    // Otherwise gate on the interval. The explicit `last > 0` check
+    // means tests can use small `now` values without spuriously
+    // tripping the fresh gate.
+    if (last > 0 && now - last < minIntervalMs) {
+      return { ran: false, reason: 'fresh' };
     }
-  } catch {}
-  // `last === 0` = never run on this browser → always proceed.
-  // Otherwise gate on the interval. The explicit `last > 0` check
-  // means tests can use small `now` values without spuriously
-  // tripping the fresh gate.
-  if (last > 0 && now - last < minIntervalMs) {
-    return { ran: false, reason: 'fresh' };
   }
 
   // Stamp BEFORE the await so a second tab navigating at the same
