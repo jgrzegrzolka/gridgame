@@ -2,7 +2,9 @@ import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from './flags/identity.js';
 import { displayNickname } from './flags/nickname.js';
 import { avatarSvg } from './flags/avatar.js';
 import { initAppInsights } from './analytics/index.js';
-import { submitEngagementEvent } from './flags/eventSubmit.js';
+import { bumpCoffeeClick, getSyncBlobSection } from './flags/engagementCounters.js';
+import { migrateEngagement } from './flags/engagementMigration.js';
+import { pushSyncBlob } from './flags/syncBlob.js';
 import { ensureProfile } from './flags/autoProfile.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from './flags/achievementsBaseline.js';
 import { celebrate } from './flags/achievementCelebrate.js';
@@ -288,11 +290,16 @@ export function wireBurgerDismiss(options = {}) {
     try {
       const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
       void ensureProfile(deviceId);
-      // Await the event POST so the server has recorded it before we
-      // re-fetch the snapshot for the diff; otherwise the bypassCache
-      // read could race the write and miss the change.
-      void submitEngagementEvent(deviceId, { kind: 'coffee_click', payload: {} }).then(async () => {
-        const newly = await refreshAchievementsAndDiff(deviceId);
+      // Local-only counter bump (Feature S Phase 3 replaced the
+      // server-side engagementEvents write). Mirror to syncBlob
+      // fire-and-forget so other devices on this deviceId see the
+      // new count on their next pull. The achievement diff still
+      // runs against the server snapshot during the Phase 3 → Phase 4
+      // window — coffee_click effectively freezes in the snapshot
+      // until Phase 4 ships and the diff switches to localStorage.
+      bumpCoffeeClick(window.localStorage);
+      void pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(window.localStorage) });
+      void refreshAchievementsAndDiff(deviceId).then((newly) => {
         if (newly.length > 0) void celebrate(newly);
       });
     } catch {
@@ -304,9 +311,15 @@ export function wireBurgerDismiss(options = {}) {
   // this page (coffee click, share button, etc.) have a real
   // pre-action snapshot to compare against. Cached path (no bypass);
   // boot doesn't need the freshest read.
+  //
+  // Also kick the one-time engagement migration (Feature S Phase 3).
+  // Sentinel-guarded — first boot post-deploy runs the pull-first
+  // migration; every subsequent boot short-circuits to a single
+  // localStorage read. Fire-and-forget; never throws.
   try {
     const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
     primeAchievementsBaseline(deviceId);
+    void migrateEngagement({ deviceId, store: window.localStorage });
   } catch {
     // window/localStorage missing in the test runner — skip silently.
   }

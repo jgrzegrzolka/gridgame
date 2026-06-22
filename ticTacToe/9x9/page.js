@@ -20,7 +20,8 @@ import { submitTttResult } from '../../flags/tttResultSubmit.js';
 import { fetchTttPair } from '../../flags/tttPairFetch.js';
 import { deriveTttOutcome } from '../../flags/tttPairOutcome.js';
 import { decideIsHost, forgetHostRoom, rememberHostRoom } from '../../flags/tttHostMemory.js';
-import { submitEngagementEvent } from '../../flags/eventSubmit.js';
+import { bumpShare, getSyncBlobSection } from '../../flags/engagementCounters.js';
+import { pushSyncBlob } from '../../flags/syncBlob.js';
 import { ensureProfile } from '../../flags/autoProfile.js';
 import { fetchProfile } from '../../flags/profileFetch.js';
 import { displayNickname } from '../../flags/nickname.js';
@@ -694,10 +695,9 @@ function runOnline(countries) {
     // each of those stays silent here.
     if (result === 'shared' || result === 'copied') {
       void ensureProfile(deviceId);
-      void submitEngagementEvent(deviceId, {
-        kind: 'share',
-        payload: { surface: 'ttt', contextHint: activeRoom.code },
-      });
+      // Feature S Phase 3: same shape as ticTacToe/page.js share.
+      bumpShare(window.localStorage, 'ttt');
+      void pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(window.localStorage) });
     }
   }
 

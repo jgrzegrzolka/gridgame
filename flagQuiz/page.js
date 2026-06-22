@@ -27,7 +27,9 @@ import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
-import { submitEngagementEvent } from '../flags/eventSubmit.js';
+import { bumpShare, bumpQuiz60sDay, getSyncBlobSection } from '../flags/engagementCounters.js';
+import { pushSyncBlob } from '../flags/syncBlob.js';
+import { warsawDayNumber } from '../flags/warsawDay.js';
 import { ensureProfile } from '../flags/autoProfile.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
 import { trySyncDevices } from '../flags/syncHydrate.js';
@@ -479,17 +481,13 @@ export function bootFlagQuiz() {
         }
         if (r === 'shared' || r === 'copied') {
           void ensureProfile(deviceId);
-          // Achievement diff chains off the event POST so the
-          // bypassCache read sees the just-recorded share row.
-          // Catches "Quiz Sharer".
-          void submitEngagementEvent(deviceId, {
-            kind: 'share',
-            payload: {
-              surface: 'flagquiz',
-              contextHint: quizRecordConfigKey(key, mode, includeAll),
-            },
-          }).then(async () => {
-            const newly = await refreshAchievementsAndDiff(deviceId);
+          // Feature S Phase 3: local counter + syncBlob push replaces
+          // the engagementEvents POST. Achievement diff still reads
+          // the server snapshot during the Phase 3 → Phase 4 window;
+          // Phase 4 will rewire it to localStorage.
+          bumpShare(window.localStorage, 'flagquiz');
+          void pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(window.localStorage) });
+          void refreshAchievementsAndDiff(deviceId).then((newly) => {
             if (newly.length > 0) void celebrate(newly);
           });
         }
@@ -531,15 +529,17 @@ export function bootFlagQuiz() {
         // completes so the just-played row is visible on this paint.
         const configKey = quizRecordConfigKey(key, mode, includeAll);
         void ensureProfile(deviceId);
-        // Loyalty signal: one `quiz_play` event per device per day per
-        // mode (server uses deterministic id `quiz_play:{dayId}:{mode}`
-        // so repeated plays in the same day collapse to one row via
-        // Cosmos 409). Drives the Sprint Habit / Steady Sprinter /
-        // Monthly Sprinter / Quiz Centurion achievements.
-        void submitEngagementEvent(deviceId, {
-          kind: 'quiz_play',
-          payload: { mode: '60s' },
-        });
+        // Feature S Phase 3: 60s-mode finish records the Warsaw day on
+        // the local day log (idempotent per day) and mirrors to the
+        // syncBlob. Drives Sprint Habit / Steady Sprinter / Monthly
+        // Sprinter / Quiz Centurion achievements — Phase 4 will rewire
+        // the achievement evaluator to compute streak from this log
+        // instead of the server snapshot.
+        const today60s = warsawDayNumber(Date.now());
+        if (today60s !== null) {
+          bumpQuiz60sDay(window.localStorage, today60s);
+          void pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(window.localStorage) });
+        }
         const cycleP = runLeaderboardCycle({
           submitImpl: () => submitQuizRecord({
             deviceId, configKey,
@@ -587,13 +587,10 @@ export function bootFlagQuiz() {
         paintResultLabels();
         const configKey = quizRecordConfigKey(key, mode, includeAll);
         void ensureProfile(deviceId);
-        // Loyalty signal — same shape as the timed branch above. Today
-        // no endurance-loyalty achievement consumes these events, but
-        // capturing them is cheap and future-proofs a follow-up tier.
-        void submitEngagementEvent(deviceId, {
-          kind: 'quiz_play',
-          payload: { mode: 'all' },
-        });
+        // No engagement counter for endurance-mode plays — pre-Phase-3
+        // we wrote them defensively for a possible future achievement,
+        // but Phase 3 dropped that speculation. Add a bumpQuizAllDay
+        // call back if such an achievement actually lands.
         const cycleP = runLeaderboardCycle({
           submitImpl: () => submitQuizRecord({
             deviceId, configKey,

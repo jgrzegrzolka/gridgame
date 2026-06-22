@@ -31,7 +31,8 @@ import { fetchDailyMe } from './streakClient.js';
 import { diffNewlyEarnedAchievements } from '../flags/achievements.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff, getCachedAchievementsBaseline } from '../flags/achievementsBaseline.js';
-import { submitEngagementEvent } from '../flags/eventSubmit.js';
+import { bumpShare, getSyncBlobSection } from '../flags/engagementCounters.js';
+import { pushSyncBlob } from '../flags/syncBlob.js';
 import { ensureProfile } from '../flags/autoProfile.js';
 import { fetchCatalog } from './catalogSource.js';
 
@@ -485,13 +486,13 @@ function createShareButton() {
     if (r === 'shared' || r === 'copied') {
       const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
       void ensureProfile(deviceId);
-      // Achievement diff chains off the event POST so the bypassCache
-      // read sees the just-recorded share row. Catches "Daily Sharer".
-      void submitEngagementEvent(deviceId, {
-        kind: 'share',
-        payload: { surface: 'daily', contextHint: String(n) },
-      }).then(async () => {
-        const newly = await refreshAchievementsAndDiff(deviceId);
+      // Feature S Phase 3: local counter + syncBlob push replaces the
+      // engagementEvents POST. Achievement diff still runs against
+      // the server snapshot during the Phase 3 → Phase 4 window;
+      // Phase 4 will rewire it to read from localStorage.
+      bumpShare(window.localStorage, 'daily');
+      void pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(window.localStorage) });
+      void refreshAchievementsAndDiff(deviceId).then((newly) => {
         if (newly.length > 0) void celebrate(newly);
       });
     }
@@ -782,12 +783,13 @@ export function bootDaily() {
         // puzzle dedupes via the 409 path. Captures archive replays
         // too (engagement counts regardless of which puzzle).
         onFirstInteraction: () => {
+          // First-interaction signal: only ensureProfile remains (the
+          // engagement-event analytic was dropped in Feature S Phase 3 —
+          // no achievement consumed daily_start). Keeping the trigger
+          // alive so the auto-profile row still gets created on first
+          // play even if the user never finishes the puzzle.
           const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
           void ensureProfile(deviceId);
-          void submitEngagementEvent(deviceId, {
-            kind: 'daily_start',
-            payload: { puzzleId: n },
-          });
         },
       });
       attachLangRefresh(game, {

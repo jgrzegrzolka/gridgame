@@ -17,7 +17,6 @@ require('./functions/getProfile');
 require('./functions/tttResult');
 require('./functions/getTttResult');
 require('./functions/clearLocalRows');
-require('./functions/engagementEvent');
 require('./functions/syncClaimToken');
 require('./functions/syncClaimRedeem');
 require('./functions/syncPreview');
