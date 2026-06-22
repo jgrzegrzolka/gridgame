@@ -6,6 +6,12 @@
       "headers": {
         "cache-control": "public, max-age=31536000, immutable"
       }
+    },
+    {
+      "route": "/og-banner.png",
+      "headers": {
+        "Access-Control-Allow-Origin": "*"
+      }
     }
   ]
 }

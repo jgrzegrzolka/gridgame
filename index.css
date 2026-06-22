@@ -119,7 +119,7 @@ body {
   max-width: 240px;
 }
 .quiz-prompt {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--primary-color);
 }
@@ -247,8 +247,14 @@ body {
   body {
     padding-top: 90px;
   }
+  /* Last-mile fit pass: trim a few px so a Pixel-9-class viewport
+   * (~720 visible after Chrome's bars) lands the fourth tile bottom
+   * inside the fold instead of just below it. */
+  .game-tiles {
+    gap: 14px;
+  }
   .game-tile {
-    min-height: 140px;
+    min-height: 138px;
   }
   .tile-preview {
     padding: 14px;
@@ -282,7 +288,7 @@ body {
     max-width: 220px;
   }
   .quiz-prompt {
-    font-size: 16px;
+    font-size: 14px;
   }
   .quiz-flags {
     grid-template-columns: repeat(4, 1fr);
