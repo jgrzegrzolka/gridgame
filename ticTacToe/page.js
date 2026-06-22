@@ -12,7 +12,7 @@ import { submitTttResult } from '../flags/tttResultSubmit.js';
 import { fetchTttPair } from '../flags/tttPairFetch.js';
 import { deriveTttOutcome } from '../flags/tttPairOutcome.js';
 import { decideIsHost, forgetHostRoom, rememberHostRoom } from '../flags/tttHostMemory.js';
-import { submitEngagementEvent } from '../flags/eventSubmit.js';
+import { bumpShare, pushEngagementBlob } from '../flags/engagementCounters.js';
 import { ensureProfile } from '../flags/autoProfile.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
@@ -666,10 +666,12 @@ function runOnline(countries) {
     //   pre-extraction behaviour.
     if (result === 'shared' || result === 'copied') {
       void ensureProfile(deviceId);
-      void submitEngagementEvent(deviceId, {
-        kind: 'share',
-        payload: { surface: 'ttt', contextHint: activeRoom.code },
-      });
+      // Feature S Phase 3: local counter + syncBlob push replaces the
+      // engagementEvents POST. No achievement currently consumes the
+      // ttt-surface share count, but we keep it on the closed
+      // SHARE_SURFACES list so a future "TTT Sharer" tier is one line.
+      bumpShare(window.localStorage, 'ttt');
+      void pushEngagementBlob(deviceId, window.localStorage);
     }
   }
 

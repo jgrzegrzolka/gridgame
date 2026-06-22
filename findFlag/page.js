@@ -27,7 +27,7 @@ import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { refreshChooserI18n } from './chooserI18n.js';
 import { shareUrl } from '../common.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
-import { submitEngagementEvent } from '../flags/eventSubmit.js';
+import { bumpShare, pushEngagementBlob } from '../flags/engagementCounters.js';
 import { ensureProfile } from '../flags/autoProfile.js';
 import { refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
@@ -89,17 +89,14 @@ function attachShareHandler(el) {
     if (result === 'shared' || result === 'copied') {
       const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
       void ensureProfile(deviceId);
-      const filterRaw = new URLSearchParams(window.location.search).get('f') ?? '';
-      // Achievement diff chains off the event POST so the bypassCache
-      // read sees the just-recorded share row. Catches "Custom Crafter".
-      void submitEngagementEvent(deviceId, {
-        kind: 'share',
-        payload: {
-          surface: 'findflag',
-          ...(filterRaw ? { contextHint: filterRaw } : {}),
-        },
-      }).then(async () => {
-        const newly = await refreshAchievementsAndDiff(deviceId);
+      // Feature S Phase 3: local counter + syncBlob push replaces the
+      // engagementEvents POST. Catches "Custom Crafter" once Phase 4
+      // rewires the achievement evaluator to localStorage. The
+      // pre-Phase-3 contextHint (filter string) had no consumer and
+      // is dropped.
+      bumpShare(window.localStorage, 'findflag');
+      void pushEngagementBlob(deviceId, window.localStorage);
+      void refreshAchievementsAndDiff(deviceId).then((newly) => {
         if (newly.length > 0) void celebrate(newly);
       });
     }
@@ -223,10 +220,10 @@ export function bootFindFlag() {
             }
             const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
             void ensureProfile(deviceId);
-            void submitEngagementEvent(deviceId, {
-              kind: 'findflag_play',
-              payload: { filter: filterRaw, mode },
-            });
+            // Feature S Phase 3 dropped the findflag_play engagement
+            // event — pure analytics, no achievement consumed it.
+            // ensureProfile still fires so the auto-profile row gets
+            // created on first findFlag play.
           }
         }
       }
