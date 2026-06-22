@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildProfileDoc } = require('./profileDoc');
+const { buildProfileDoc, deriveNicknameAuto, decideEnsureResponse } = require('./profileDoc');
 
 const DEVICE_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 
@@ -15,6 +15,7 @@ test('first write (no existing row): createdAt = updatedAt = now, nickname store
     id: DEVICE_ID,
     deviceId: DEVICE_ID,
     nickname: 'Alice',
+    nicknameAuto: false,
     createdAt: 1_700_000_000_000,
     updatedAt: 1_700_000_000_000,
     deletionRequestedAt: null,
@@ -131,4 +132,124 @@ test('linkedAt is preserved from existing — a nickname edit must not erase the
 test('linkedAt defaults to null when neither existing nor input provides it', () => {
   const fresh = buildProfileDoc({ existing: null, deviceId: DEVICE_ID, nickname: 'A', now: 1 });
   assert.equal(fresh.linkedAt, null);
+});
+
+// ---------------------------------------------------------------------------
+// nicknameAuto (Feature S Phase 1a) — derived from `nickname`, never stored
+// as a separate input. Captures whether the user has actively picked a name.
+// ---------------------------------------------------------------------------
+
+test('nicknameAuto is true when nickname is null (auto-created or cleared)', () => {
+  const doc = buildProfileDoc({
+    existing: null,
+    deviceId: DEVICE_ID,
+    nickname: null,
+    now: 1_700_000_000_000,
+  });
+  assert.equal(doc.nicknameAuto, true);
+});
+
+test('nicknameAuto is true when nickname is an empty string (defensive — same as null)', () => {
+  // An empty string survives JSON round-trip differently than null but means
+  // the same thing for display: no name picked. Treating both as auto keeps
+  // the flag honest under client-side edge cases.
+  const doc = buildProfileDoc({
+    existing: null,
+    deviceId: DEVICE_ID,
+    nickname: '',
+    now: 1_700_000_000_000,
+  });
+  assert.equal(doc.nicknameAuto, true);
+});
+
+test('nicknameAuto is false when the user supplies a real nickname', () => {
+  const doc = buildProfileDoc({
+    existing: null,
+    deviceId: DEVICE_ID,
+    nickname: 'Alice',
+    now: 1_700_000_000_000,
+  });
+  assert.equal(doc.nicknameAuto, false);
+});
+
+test('clearing a chosen nickname (Alice → null) flips nicknameAuto back to true', () => {
+  // Symmetry with the customise path: the flag follows the nickname value,
+  // it doesn't latch on first user-set. Lets a player who regrets their
+  // pick reset to the default without leaving a stale "you chose this"
+  // marker on their row.
+  const doc = buildProfileDoc({
+    existing: { createdAt: 1_600_000_000_000 },
+    deviceId: DEVICE_ID,
+    nickname: null,
+    now: 1_700_000_000_000,
+  });
+  assert.equal(doc.nicknameAuto, true);
+});
+
+// ---------------------------------------------------------------------------
+// deriveNicknameAuto — read-side interpreter. Trusts a stored value when
+// present, falls back to the builder's derivation rule otherwise.
+// ---------------------------------------------------------------------------
+
+test('deriveNicknameAuto trusts the stored value when the row has the field', () => {
+  // The stored value wins even when it would disagree with the nickname:
+  // future writes (or hand-edits) can carry richer semantics than the
+  // simple null/non-null rule.
+  assert.equal(deriveNicknameAuto({ nicknameAuto: true }, 'Alice'), true);
+  assert.equal(deriveNicknameAuto({ nicknameAuto: false }, null), false);
+});
+
+test('deriveNicknameAuto falls back to nickname-derived rule on legacy rows (no nicknameAuto field)', () => {
+  // Rows written before Feature S Phase 1a won't have the field. Reading
+  // them should match what a fresh write would have produced for the
+  // same nickname.
+  assert.equal(deriveNicknameAuto({}, null), true);
+  assert.equal(deriveNicknameAuto({}, ''), true);
+  assert.equal(deriveNicknameAuto({}, 'Alice'), false);
+});
+
+test('deriveNicknameAuto returns true when no row exists (device never wrote a profile)', () => {
+  // Matches the client-side `defaultNickname` fallback — a device with
+  // no Cosmos row is, by definition, on its deterministic default.
+  assert.equal(deriveNicknameAuto(null, null), true);
+  assert.equal(deriveNicknameAuto(undefined, null), true);
+});
+
+test('deriveNicknameAuto ignores non-boolean stored values (defensive against malformed rows)', () => {
+  // If the field is somehow a string or number, fall through to the
+  // nickname rule rather than coerce — safer than honouring junk.
+  assert.equal(deriveNicknameAuto(/** @type {any} */ ({ nicknameAuto: 'true' }), 'Alice'), false);
+  assert.equal(deriveNicknameAuto(/** @type {any} */ ({ nicknameAuto: 1 }), null), true);
+});
+
+// ---------------------------------------------------------------------------
+// decideEnsureResponse — three-branch insert-result-to-HTTP-response map.
+// ---------------------------------------------------------------------------
+
+test('decideEnsureResponse: ok → 201 created:true', () => {
+  assert.deepEqual(
+    decideEnsureResponse({ ok: true }),
+    { status: 201, body: { ok: true, created: true } },
+  );
+});
+
+test('decideEnsureResponse: conflict → 200 created:false (idempotent / race-safe)', () => {
+  // The caller promised "this device now has a row." A conflict means
+  // another request (concurrent ensure, or a returning device with a
+  // cleared localStorage sentinel) already created it. Postcondition
+  // satisfied → success.
+  assert.deepEqual(
+    decideEnsureResponse({ ok: false, error: 'conflict' }),
+    { status: 200, body: { ok: true, created: false } },
+  );
+});
+
+test('decideEnsureResponse: any other failure → 500 server_error', () => {
+  for (const error of ['cosmos_error', 'unknown', undefined]) {
+    assert.deepEqual(
+      decideEnsureResponse(/** @type {any} */ ({ ok: false, error })),
+      { status: 500, body: { error: 'server_error' } },
+      `error=${error}`,
+    );
+  }
 });

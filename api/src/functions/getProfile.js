@@ -2,6 +2,7 @@ const { app } = require('@azure/functions');
 const { validateDeviceIdParam } = require('../lib/validate');
 const { queryDocs } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
+const { deriveNicknameAuto } = require('../lib/profileDoc');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'profiles';
@@ -45,7 +46,7 @@ app.http('getProfile', {
         connString: conn,
         dbName: DB_NAME,
         containerName: CONTAINER_NAME,
-        query: 'SELECT c.deviceId, c.nickname FROM c WHERE c.id = @id',
+        query: 'SELECT c.deviceId, c.nickname, c.nicknameAuto FROM c WHERE c.id = @id',
         parameters: [{ name: '@id', value: id }],
         partitionKey: id,
       });
@@ -59,12 +60,11 @@ app.http('getProfile', {
     }
 
     const row = queryRes.docs[0];
+    const nickname = row && typeof row.nickname === 'string' ? row.nickname : null;
+    const nicknameAuto = deriveNicknameAuto(row, nickname);
     return {
       status: 200,
-      jsonBody: {
-        deviceId: id,
-        nickname: row && typeof row.nickname === 'string' ? row.nickname : null,
-      },
+      jsonBody: { deviceId: id, nickname, nicknameAuto },
     };
   },
 });

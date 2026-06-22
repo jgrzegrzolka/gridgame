@@ -21,6 +21,7 @@ import { fetchTttPair } from '../../flags/tttPairFetch.js';
 import { deriveTttOutcome } from '../../flags/tttPairOutcome.js';
 import { decideIsHost, forgetHostRoom, rememberHostRoom } from '../../flags/tttHostMemory.js';
 import { submitEngagementEvent } from '../../flags/eventSubmit.js';
+import { ensureProfile } from '../../flags/autoProfile.js';
 import { fetchProfile } from '../../flags/profileFetch.js';
 import { displayNickname } from '../../flags/nickname.js';
 
@@ -692,6 +693,7 @@ function runOnline(countries) {
     // 'shared' / 'dismissed' / 'failed' — see ticTacToe/page.js for why
     // each of those stays silent here.
     if (result === 'shared' || result === 'copied') {
+      void ensureProfile(deviceId);
       void submitEngagementEvent(deviceId, {
         kind: 'share',
         payload: { surface: 'ttt', contextHint: activeRoom.code },
@@ -800,6 +802,7 @@ function runOnline(countries) {
     resultSubmittedForGame = true;
     // Only the room creator POSTs — the server upserts both rows from
     // that single call. See ../page.js for the full rationale.
+    void ensureProfile(deviceId);
     if (isHost) {
       void submitTttResult({ deviceId, opponentId: peerId, mode: '9x9', outcome });
     }

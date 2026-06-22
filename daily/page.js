@@ -32,6 +32,7 @@ import { diffNewlyEarnedAchievements } from '../flags/achievements.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff, getCachedAchievementsBaseline } from '../flags/achievementsBaseline.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
+import { ensureProfile } from '../flags/autoProfile.js';
 import { fetchCatalog } from './catalogSource.js';
 
 // Turnstile is soft-disabled across all environments (2026-06-10) after
@@ -483,6 +484,7 @@ function createShareButton() {
     // block the UI.
     if (r === 'shared' || r === 'copied') {
       const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+      void ensureProfile(deviceId);
       // Achievement diff chains off the event POST so the bypassCache
       // read sees the just-recorded share row. Catches "Daily Sharer".
       void submitEngagementEvent(deviceId, {
@@ -781,6 +783,7 @@ export function bootDaily() {
         // too (engagement counts regardless of which puzzle).
         onFirstInteraction: () => {
           const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+          void ensureProfile(deviceId);
           void submitEngagementEvent(deviceId, {
             kind: 'daily_start',
             payload: { puzzleId: n },

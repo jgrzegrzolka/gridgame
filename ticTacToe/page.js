@@ -13,6 +13,7 @@ import { fetchTttPair } from '../flags/tttPairFetch.js';
 import { deriveTttOutcome } from '../flags/tttPairOutcome.js';
 import { decideIsHost, forgetHostRoom, rememberHostRoom } from '../flags/tttHostMemory.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
+import { ensureProfile } from '../flags/autoProfile.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
 import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
@@ -664,6 +665,7 @@ function runOnline(countries) {
     // 'failed': all three mechanisms refused; staying silent matches the
     //   pre-extraction behaviour.
     if (result === 'shared' || result === 'copied') {
+      void ensureProfile(deviceId);
       void submitEngagementEvent(deviceId, {
         kind: 'share',
         payload: { surface: 'ttt', contextHint: activeRoom.code },
@@ -784,6 +786,7 @@ function runOnline(countries) {
     // post" design — a dropped POST on one side left that side's row
     // permanently behind. Both sides still bump their local
     // `pairRecord` below so the joiner's UI also updates on each game.
+    void ensureProfile(deviceId);
     if (isHost) {
       void submitTttResult({ deviceId, opponentId: peerId, mode: '3x3', outcome });
     }

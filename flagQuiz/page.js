@@ -28,6 +28,7 @@ import { launchConfetti, launchFireworks } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
 import { submitEngagementEvent } from '../flags/eventSubmit.js';
+import { ensureProfile } from '../flags/autoProfile.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
 import { trySyncDevices } from '../flags/syncHydrate.js';
 import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
@@ -477,6 +478,7 @@ export function bootFlagQuiz() {
           setTimeout(() => btn.classList.remove('copied'), 1500);
         }
         if (r === 'shared' || r === 'copied') {
+          void ensureProfile(deviceId);
           // Achievement diff chains off the event POST so the
           // bypassCache read sees the just-recorded share row.
           // Catches "Quiz Sharer".
@@ -528,6 +530,7 @@ export function bootFlagQuiz() {
         // leaderboard fetch lands after the server's leaderboard write
         // completes so the just-played row is visible on this paint.
         const configKey = quizRecordConfigKey(key, mode, includeAll);
+        void ensureProfile(deviceId);
         // Loyalty signal: one `quiz_play` event per device per day per
         // mode (server uses deterministic id `quiz_play:{dayId}:{mode}`
         // so repeated plays in the same day collapse to one row via
@@ -583,6 +586,7 @@ export function bootFlagQuiz() {
         resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0, gaveUp };
         paintResultLabels();
         const configKey = quizRecordConfigKey(key, mode, includeAll);
+        void ensureProfile(deviceId);
         // Loyalty signal — same shape as the timed branch above. Today
         // no endurance-loyalty achievement consumes these events, but
         // capturing them is cheap and future-proofs a follow-up tier.

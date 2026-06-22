@@ -3,6 +3,7 @@ import { displayNickname } from './flags/nickname.js';
 import { avatarSvg } from './flags/avatar.js';
 import { initAppInsights } from './analytics/index.js';
 import { submitEngagementEvent } from './flags/eventSubmit.js';
+import { ensureProfile } from './flags/autoProfile.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from './flags/achievementsBaseline.js';
 import { celebrate } from './flags/achievementCelebrate.js';
 
@@ -286,6 +287,7 @@ export function wireBurgerDismiss(options = {}) {
     if (!link) return;
     try {
       const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+      void ensureProfile(deviceId);
       // Await the event POST so the server has recorded it before we
       // re-fetch the snapshot for the diff; otherwise the bypassCache
       // read could race the write and miss the change.

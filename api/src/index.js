@@ -10,6 +10,7 @@ require('./functions/dailyMe');
 require('./functions/quizRecord');
 require('./functions/quizLeaderboard');
 require('./functions/profile');
+require('./functions/profileEnsure');
 require('./functions/profileDeletion');
 require('./functions/getProfile');
 require('./functions/tttResult');
