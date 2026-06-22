@@ -12,7 +12,8 @@
     "dev:api": "cd api && func start",
     "dev:party": "partykit dev",
     "party:deploy": "partykit deploy",
-    "build:minify": "node scripts/minify.mjs"
+    "build:minify": "node scripts/minify.mjs",
+    "build:webp": "node scripts/build-webp.mjs"
   },
   "devDependencies": {
     "@azure/static-web-apps-cli": "^2.0.9",
@@ -22,6 +23,7 @@
     "concurrently": "^9.2.1",
     "esbuild": "^0.21.5",
     "partykit": "^0.0.114",
+    "sharp": "^0.35.2",
     "typescript": "^6.0.3"
   }
 }

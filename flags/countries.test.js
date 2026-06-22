@@ -23,6 +23,7 @@ import { emptyFilters, matchesFilters } from './flagsFilter.js';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const COUNTRIES = loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8')));
 const SVG_DIR = join(HERE, 'svg');
+const WEBP_DIR = join(HERE, 'webp');
 
 test('countries.json is a non-empty array', () => {
   assert.ok(Array.isArray(COUNTRIES));
@@ -396,6 +397,19 @@ test('every entry has a corresponding SVG file at flags/svg/{code}.svg', () => {
     if (!existsSync(svgPath)) missing.push(c.code);
   }
   assert.deepEqual(missing, [], `missing SVG files: ${missing.join(', ')}`);
+});
+
+// Catches a missed `npm run build:webp` after adding / renaming a flag
+// — the thumb consumers (daily, findFlag, flagsdata, ticTacToe, home)
+// all reference `flags/webp/{code}.webp` and would 404 in prod
+// otherwise.
+test('every entry has a corresponding WebP thumbnail at flags/webp/{code}.webp', () => {
+  const missing = [];
+  for (const c of COUNTRIES) {
+    const webpPath = join(WEBP_DIR, `${c.code}.webp`);
+    if (!existsSync(webpPath)) missing.push(c.code);
+  }
+  assert.deepEqual(missing, [], `missing WebP files (run \`npm run build:webp\`): ${missing.join(', ')}`);
 });
 
 test('every (continent × color) cell has at least one candidate country', () => {

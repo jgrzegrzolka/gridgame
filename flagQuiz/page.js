@@ -307,7 +307,7 @@ export function bootFlagQuiz() {
         tile.className = 'flag-choice';
         tile.dataset.code = c.code;
         const img = document.createElement('img');
-        img.src = `../flags/svg/${c.code}.svg`;
+        img.src = `../flags/webp/${c.code}.webp`;
         img.alt = '';
         tile.appendChild(img);
         tile.addEventListener('click', () => onAnswer(c, tile));
@@ -322,7 +322,7 @@ export function bootFlagQuiz() {
       const upcoming = quiz.peek();
       if (upcoming) {
         for (const c of upcoming.choices) {
-          new Image().src = `../flags/svg/${c.code}.svg`;
+          new Image().src = `../flags/webp/${c.code}.webp`;
         }
       }
     }

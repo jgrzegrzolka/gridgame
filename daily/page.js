@@ -129,7 +129,7 @@ function buildExtraTile(item, country, markerKind) {
   li.dataset.name = country ? countryName(country) : item.code.toUpperCase();
   if (country) li.addEventListener('click', () => openZoom(country));
   const img = document.createElement('img');
-  img.src = `../flags/svg/${item.code}.svg`;
+  img.src = `../flags/webp/${item.code}.webp`;
   img.alt = li.dataset.name;
   img.loading = 'lazy';
   li.appendChild(img);

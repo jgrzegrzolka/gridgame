@@ -15,6 +15,18 @@ The constraints that shape every fix below:
 
 ## Journal (newest first)
 
+### 2026-06-22 — WebP thumbnails for every flag
+
+**Symptom.** Daily result panel stalled visibly for 2-5 s on a fast connection — many flag `<img>` requests in flight at once, page mostly blank while it loads. Reported by Jan after finishing today's puzzle.
+
+**Diagnosis.** The result panel renders found / missed tiles + the extra-stats rail (most-guessed, most-missed) all in one shot — 15-25 flag SVGs requested in parallel. Brotli was already on (Cloudflare auto-compresses `image/svg+xml`) and cache headers were maximal (`max-age=31536000, immutable`). But a handful of flags carry dense coat-of-arms path data that doesn't compress further: rs Serbia 178 KB on disk → 52 KB brotli'd; sh-ta 289 KB → big chunk on wire; bo Bolivia 101 KB; mx Mexico 83 KB; es Spain 80 KB; sv El Salvador 76 KB. Whenever today's puzzle answers + the wrong-guess rail surfaced two or three of those, the result panel waited on them. `svgo --multipass` shaved 0-3 % — they were already minimal-path. The bloat was genuine artwork detail that can't be compressed away.
+
+**Fix.** Added `scripts/build-webp.mjs` (sharp at 300 px wide, q80) that converts every `flags/svg/*.svg` to `flags/webp/{code}.webp`. Run via `npm run build:webp`, output committed to the repo (same pattern as the SVGs themselves). Every thumb-sized consumer swapped from SVG → WebP: daily in-game + result + extra-stats, findFlag tiles, flagsdata grid, flagQuiz choices, ticTacToe cells (3×3 + 9×9, online + offline), home-page tile previews. **Zoom dialogs kept SVG** so click-to-expand still gets vector quality at full screen. Total catalog: SVG 2221 KiB → WebP 810 KiB (36 %); worst offenders shrank ~95-98 % (rs 178 → 5.5 KB; sh-ta 289 → 7 KB; bo 101 → 2.2 KB).
+
+**Pinned.** `flags/countries.test.js` now asserts every code in `countries.json` has both an `svg/{code}.svg` AND a `webp/{code}.webp`. Forgetting to re-run `build:webp` after adding a flag surfaces in CI rather than as a prod 404 on the result rail.
+
+**Trade-off / open caveats.** Two asset formats per flag means slightly more friction when adding a country (must remember `npm run build:webp` — the test catches it). WebP support is universal on modern browsers (97 %+ caniuse); the < 3 % on pre-2020 Safari see broken image icons rather than a fallback — acceptable for a hobby site. The fix doesn't help the OG banner or other raster assets, but flags were the only material image-perf opportunity (audited at the time).
+
 ### 2026-06-13 — Lang-toggle flag blank on cold load until module graph resolves
 
 **Symptom.** On a cold visit after deploy the `#lang-toggle` button paints empty for several hundred ms after CSS arrives; the flag fills in only once the deferred `i18n.js` module graph (transitively pulling `flags/group.js`, etc.) has finished cold-fetching and `bootI18n()` runs. Visible to Jan on every deploy as "the pl/eng button loads slowly."

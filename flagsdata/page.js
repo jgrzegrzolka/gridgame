@@ -81,7 +81,7 @@ export function bootFlagsData() {
     bindTileCountry(wrap, c);
     wrap.addEventListener('click', () => openZoom(c));
     const img = document.createElement('img');
-    img.src = `../flags/svg/${c.code}.svg`;
+    img.src = `../flags/webp/${c.code}.webp`;
     img.alt = displayName;
     img.loading = 'lazy';
     wrap.appendChild(img);

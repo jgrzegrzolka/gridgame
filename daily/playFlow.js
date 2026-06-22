@@ -91,12 +91,18 @@ export function showReason(reason) {
   document.addEventListener('langchanged', paint);
 }
 
-// Flag SVGs are resolved against this module's URL — not against the
+// Flag assets are resolved against this module's URL — not against the
 // HTML page that loaded a wrapping `play.js`. The live `daily/index.html`
 // and the subfolder `backlog/play.html` / `ideas/play.html` live at
 // different depths; without `import.meta.url`, the subfolder pages would
-// look for SVGs under `daily/flags/svg/...` and 404. Resolving from the
+// look for assets under `daily/flags/...` and 404. Resolving from the
 // module URL gives the same correct site-root path from every caller.
+//
+// Two bases: WEBP for thumbs (find-tile + result-grid tiles, ~100-150 px
+// display) where the raster thumbnails ship 80-97 % smaller than the
+// underlying SVGs; SVG for the zoom dialog where vector quality matters
+// at full-screen size.
+const WEBP_BASE = new URL('../flags/webp/', import.meta.url).href;
 const SVG_BASE = new URL('../flags/svg/', import.meta.url).href;
 
 /**
@@ -155,7 +161,7 @@ function flagTile(c) {
   bindTileCountry(li, c);
   li.addEventListener('click', () => openZoom(c));
   const img = document.createElement('img');
-  img.src = `${SVG_BASE}${c.code}.svg`;
+  img.src = `${WEBP_BASE}${c.code}.webp`;
   img.alt = displayName;
   img.loading = 'lazy';
   li.appendChild(img);

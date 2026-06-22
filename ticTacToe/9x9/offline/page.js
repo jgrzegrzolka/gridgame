@@ -379,7 +379,7 @@ function runUltimateTicTacToe({ puzzle, countries }) {
             td.classList.remove('winning');
             if (cell.country) {
               const img = document.createElement('img');
-              img.src = `../../../flags/svg/${cell.country.code}.svg`;
+              img.src = `../../../flags/webp/${cell.country.code}.webp`;
               img.alt = countryName(cell.country);
               td.appendChild(img);
             }
