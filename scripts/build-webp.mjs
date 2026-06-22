@@ -34,8 +34,15 @@ import sharp from 'sharp';
 const SVG_DIR = fileURLToPath(new URL('../flags/svg/', import.meta.url));
 const WEBP_DIR = fileURLToPath(new URL('../flags/webp/', import.meta.url));
 
-const WIDTH = 300;
-const QUALITY = 80;
+// 400 / q90 chosen after q80 / 300 showed visible artefacts on flags
+// with fine geometric detail at thumbnail size (GB diagonals, KR
+// trigram bars, CN star edges, JP red-circle edge). The bigger raster
+// lands the cleaner downscale; q90 stops the WebP encoder from
+// smoothing high-contrast edges. Catalog roughly doubles (~810 → 1700
+// KiB) but still ~25 % of the SVG-source total and well under the
+// daily-result-stall threshold.
+const WIDTH = 400;
+const QUALITY = 90;
 
 async function main() {
   await mkdir(WEBP_DIR, { recursive: true });
