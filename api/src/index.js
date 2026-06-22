@@ -11,6 +11,7 @@ require('./functions/quizRecord');
 require('./functions/quizLeaderboard');
 require('./functions/profile');
 require('./functions/profileEnsure');
+require('./functions/profileSyncBlob');
 require('./functions/profileDeletion');
 require('./functions/getProfile');
 require('./functions/tttResult');

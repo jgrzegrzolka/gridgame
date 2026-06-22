@@ -32,6 +32,14 @@
  *                                          //   afterwards, so the linkedAt marker is what either
  *                                          //   browser uses to discover the linked state.
  *                                          //   Preserved across nickname edits.
+ *     syncBlob:            object | null,  // opaque JSON blob owned by the client. Feature S Phase 2
+ *                                          //   added this as the carrier for per-device achievement
+ *                                          //   state (share counts, 60s-streak day log, etc.) that
+ *                                          //   Phases 3-5 move from Cosmos containers into
+ *                                          //   localStorage. The server stores it as-is; size cap
+ *                                          //   is enforced at the write endpoint, not here. Preserved
+ *                                          //   across nickname / requestDeletion writes — only
+ *                                          //   /api/v1/profile/sync-blob updates it.
  *     v:                   1,              // schema version. See infra/operations.md "Cosmos data migration policy".
  *   }
  *
@@ -59,15 +67,23 @@
  * `linkedAt` is preserved from `existing` so a nickname edit doesn't erase
  * the link marker (which is written by syncMerge, not by this endpoint).
  *
+ * `syncBlob` (Feature S Phase 2): when the caller omits it, we preserve
+ * whatever `existing` holds (so nickname edits don't wipe the client's
+ * roaming achievement state). When the caller explicitly supplies a value
+ * — even `null` — we honour it (the sync-blob endpoint sets the blob;
+ * clearing it would be an explicit caller decision, not an accidental
+ * side effect of a nickname write).
+ *
  * @param {{
- *   existing: { createdAt?: number, deletionRequestedAt?: number | null, linkedAt?: number | null } | null,
+ *   existing: { createdAt?: number, deletionRequestedAt?: number | null, linkedAt?: number | null, syncBlob?: object | null } | null,
  *   deviceId: string,
  *   nickname: string | null,
  *   now: number,
  *   requestDeletion?: boolean,
+ *   syncBlob?: object | null,
  * }} input
  */
-function buildProfileDoc({ existing, deviceId, nickname, now, requestDeletion = false }) {
+function buildProfileDoc({ existing, deviceId, nickname, now, requestDeletion = false, syncBlob }) {
   const createdAt = (existing && typeof existing.createdAt === 'number')
     ? existing.createdAt
     : now;
@@ -83,6 +99,13 @@ function buildProfileDoc({ existing, deviceId, nickname, now, requestDeletion = 
   // separate input) so the source of truth is `nickname` and the two fields
   // can't drift.
   const nicknameAuto = typeof nickname !== 'string' || nickname.length === 0;
+  // syncBlob: omitted (undefined) → preserve existing; explicit value (incl.
+  // null) → honour caller's choice. Distinguishing "didn't pass" from
+  // "explicitly cleared" is why we use `arguments`-aware destructuring via
+  // a hasOwn check on the input rather than a `??` fallback.
+  const resolvedSyncBlob = syncBlob === undefined
+    ? (existing && typeof existing.syncBlob === 'object' ? existing.syncBlob : null)
+    : syncBlob;
   return {
     id: deviceId,
     deviceId,
@@ -92,6 +115,7 @@ function buildProfileDoc({ existing, deviceId, nickname, now, requestDeletion = 
     updatedAt: now,
     deletionRequestedAt,
     linkedAt,
+    syncBlob: resolvedSyncBlob,
     v: 1,
   };
 }
