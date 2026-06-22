@@ -598,11 +598,17 @@ export function bootDaily() {
   // most once per hour — enough to keep "today already played?"
   // and the archive grid honest after the other linked device
   // submitted something elsewhere.
-  void trySyncDevices({
+  //
+  // We hold the promise so the revisit branch below can await it
+  // before deciding play-vs-revisit. Without that, a linked device
+  // that hasn't pulled the other device's row yet would fall through
+  // to the play flow and ask the user to re-play (issue #543).
+  const bgHydrate = trySyncDevices({
     deviceId: bootDeviceId,
     store: window.localStorage,
     identityKey: IDENTITY_STORAGE_KEY,
   });
+  void bgHydrate;
   // Pre-fetch the achievement baseline via the shared helper. common.js's
   // wireBurgerDismiss primes too, but doing it again here is idempotent
   // and avoids racing the burger-wiring call. Mirror into the local
@@ -619,7 +625,7 @@ export function bootDaily() {
     fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
     fetchCatalog('puzzles'),
   ])
-    .then(([raw, /** @type {import('../flags/daily.js').DailyPuzzle[]} */ allEntries]) => {
+    .then(async ([raw, /** @type {import('../flags/daily.js').DailyPuzzle[]} */ allEntries]) => {
       const all = withLocalizedAliases(flagsGamePool(raw, false));
 
       // Filter future-dated entries out client-side. Anyone curling the
@@ -687,7 +693,27 @@ export function bootDaily() {
       // the first time around; replaying it on every revisit would be
       // obnoxious). Replay mode skips this shortcut — the whole point
       // of ?replay=1 is to actually replay.
-      const stored = loadScores(window.localStorage)[n];
+      //
+      // For linked devices without a local record, wait on the
+      // background hydrate first — the other device may have submitted
+      // this puzzle and we'd otherwise drop into the play flow instead
+      // of revisit (issue #543). If the background hydrate was gated
+      // 'fresh' (already ran within the hour) we force a fresh GET,
+      // since the row we need may have landed on the server inside that
+      // window. Unlinked users return 'unlinked' instantly — no cost.
+      let stored = loadScores(window.localStorage)[n];
+      if (!isReplay && !isCompleteRecord(stored)) {
+        const bg = await bgHydrate;
+        if (bg.ran === false && bg.reason === 'fresh') {
+          await trySyncDevices({
+            deviceId: bootDeviceId,
+            store: window.localStorage,
+            identityKey: IDENTITY_STORAGE_KEY,
+            force: true,
+          });
+        }
+        stored = loadScores(window.localStorage)[n];
+      }
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         const revisitDeviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
