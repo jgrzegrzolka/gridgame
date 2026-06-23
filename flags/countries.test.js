@@ -71,7 +71,7 @@ test('every entry has category "country" or "other"', () => {
   }
 });
 
-test('continent is in CONTINENTS for "country" entries, null for "other" entries', () => {
+test('continent is in CONTINENTS for "country" entries, in CONTINENTS or null for "other" entries', () => {
   for (const c of COUNTRIES) {
     if (c.category === 'country') {
       assert.ok(c.continent, `${c.code}: country must have a non-null continent`);
@@ -79,8 +79,15 @@ test('continent is in CONTINENTS for "country" entries, null for "other" entries
         CONTINENTS.includes(c.continent),
         `${c.code}: continent "${c.continent}" not in CONTINENTS`,
       );
-    } else {
-      assert.equal(c.continent, null, `${c.code}: "other" entry should have null continent`);
+    } else if (c.continent !== null) {
+      // "other" entries (subnational regions like Scotland, organisations like
+      // EU) may carry a continent when they map to exactly one — Scotland is
+      // unambiguously Europe, EU is Europe. Multi-continent orgs (Arab League)
+      // and global ones (UN) keep null because no single answer is right.
+      assert.ok(
+        CONTINENTS.includes(c.continent),
+        `${c.code}: continent "${c.continent}" not in CONTINENTS`,
+      );
     }
   }
 });

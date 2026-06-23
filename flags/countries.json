@@ -295,7 +295,7 @@
     "code": "asean",
     "name": "Association of Southeast Asian Nations",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Asia",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -435,7 +435,7 @@
     "code": "es-pv",
     "name": "Basque Country",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Europe",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -897,7 +897,7 @@
     "code": "ic",
     "name": "Canary Islands",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Europe",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -912,7 +912,7 @@
     "code": "es-ct",
     "name": "Catalonia",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Europe",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -971,7 +971,7 @@
     "code": "cefta",
     "name": "Central European Free Trade Agreement",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Europe",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -1394,7 +1394,7 @@
     "code": "eac",
     "name": "East African Community",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Africa",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -1499,7 +1499,7 @@
     "code": "gb-eng",
     "name": "England",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Europe",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -1614,7 +1614,7 @@
     "code": "eu",
     "name": "European Union",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Europe",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -1830,7 +1830,7 @@
     "code": "es-ga",
     "name": "Galicia",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Europe",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -3422,7 +3422,7 @@
     "code": "gb-nir",
     "name": "Northern Ireland",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Europe",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -3498,7 +3498,7 @@
     "code": "pc",
     "name": "Pacific Community",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Oceania",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -4064,7 +4064,7 @@
     "code": "gb-sct",
     "name": "Scotland",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Europe",
     "category": "other",
     "statehood": null,
     "primaryColors": [
@@ -5138,7 +5138,7 @@
     "code": "gb-wls",
     "name": "Wales",
     "nameScore": 7,
-    "continent": null,
+    "continent": "Europe",
     "category": "other",
     "statehood": null,
     "primaryColors": [
