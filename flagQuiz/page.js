@@ -39,12 +39,21 @@ import {
   getLastQuizRecordPushedAt,
   markQuizRecordPushed,
 } from '../flags/quizRecordThrottle.js';
+import { madeAnyQuizPick } from '../flags/quizEngagement.js';
 
 /**
  * Wrap `submitQuizRecord` with the Feature S Phase 5 decision: PB beats
- * fire immediately; give-up non-PB finishes skip the POST entirely; all
- * other non-PB finishes are throttled (one push per 30 minutes per
- * device). When skipped, returns a synthetic `{ outcome: 'ok' }` so
+ * fire immediately; rounds with no real picks skip the POST entirely
+ * (no consumer cares about empty-round attempt bumps); all other
+ * finishes are throttled (one push per 30 minutes per device).
+ *
+ * `engaged` is computed once at the call site via
+ * `madeAnyQuizPick` so this gate and the 60s day-log gate see the
+ * same engagement signal — preventing the kind of drift that bit us
+ * before unification (Phase 5 used `gaveUp`, the day-log gate used
+ * pick count; they disagreed in two of four cases).
+ *
+ * When skipped, returns a synthetic `{ outcome: 'ok' }` so
  * `runLeaderboardCycle` continues to the fetch step — the leaderboard
  * still paints, just without an incoming write to display.
  *
@@ -55,15 +64,15 @@ import {
  *   durationMs: number,
  *   lowerWins: boolean,
  *   isNew: boolean,
- *   gaveUp: boolean,
+ *   engaged: boolean,
  * }} args
  * @returns {Promise<{ outcome: 'ok' } | { outcome: 'failed', reason: string }>}
  */
-async function maybeSubmitQuizRecord({ deviceId, configKey, score, durationMs, lowerWins, isNew, gaveUp }) {
+async function maybeSubmitQuizRecord({ deviceId, configKey, score, durationMs, lowerWins, isNew, engaged }) {
   const store = window.localStorage;
   const now = Date.now();
   const lastPushedAt = getLastQuizRecordPushedAt(store);
-  if (!shouldPushQuizRecord({ gaveUp, isNew, lastPushedAt, now })) {
+  if (!shouldPushQuizRecord({ engaged, isNew, lastPushedAt, now })) {
     return { outcome: 'ok' };
   }
   const result = await submitQuizRecord({ deviceId, configKey, score, durationMs, lowerWins });
@@ -570,8 +579,9 @@ export function bootFlagQuiz() {
         // Sprinter / Quiz Centurion achievements — Phase 4 will rewire
         // the achievement evaluator to compute streak from this log
         // instead of the server snapshot.
+        const engaged = madeAnyQuizPick({ answeredCount, wrongCount });
         const today60s = warsawDayNumber(Date.now());
-        if (today60s !== null) {
+        if (today60s !== null && engaged) {
           bumpQuiz60sDay(window.localStorage, today60s);
           void pushEngagementBlob(deviceId, window.localStorage);
         }
@@ -579,7 +589,7 @@ export function bootFlagQuiz() {
           submitImpl: () => maybeSubmitQuizRecord({
             deviceId, configKey,
             score: answeredCount, durationMs: budgetUsed, lowerWins: false,
-            isNew, gaveUp,
+            isNew, engaged,
           }),
           fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
           paint: (s) => { leaderboardState = s; paintLeaderboard(); },
@@ -627,11 +637,12 @@ export function bootFlagQuiz() {
         // we wrote them defensively for a possible future achievement,
         // but Phase 3 dropped that speculation. Add a bumpQuizAllDay
         // call back if such an achievement actually lands.
+        const engaged = madeAnyQuizPick({ answeredCount, wrongCount });
         const cycleP = runLeaderboardCycle({
           submitImpl: () => maybeSubmitQuizRecord({
             deviceId, configKey,
             score: wrongCount, durationMs: elapsed, lowerWins: true,
-            isNew, gaveUp,
+            isNew, engaged,
           }),
           fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
           paint: (s) => { leaderboardState = s; paintLeaderboard(); },
