@@ -5,7 +5,6 @@ const {
   countDailyConflicts,
   planQuizMerge,
   planTttMerge,
-  planEventsMerge,
   planProfileMerge,
   detectProfileConflict,
   inferLowerWins,
@@ -219,22 +218,10 @@ test('planTttMerge: overlapping opponent — counters sum, newer lastPlayedAt + 
   assert.equal(r.upserts[0].doc.lastPlayedAt, 2000);
 });
 
-// ---- planEventsMerge ---------------------------------------------------
-
-test('planEventsMerge: source events transfer to target partition, target dedupes by id', () => {
-  const targetRows = [{ id: 'daily_start:20619:5', deviceId: TGT, kind: 'daily_start', dayId: 20619, occurredAt: 1, payload: { puzzleId: 5 }, v: 1 }];
-  const sourceRows = [
-    { id: 'daily_start:20619:5', deviceId: SRC, kind: 'daily_start', dayId: 20619, occurredAt: 2, payload: { puzzleId: 5 }, v: 1 }, // dup id — should NOT transfer
-    { id: 'share:abc', deviceId: SRC, kind: 'share', dayId: 20619, occurredAt: 3, payload: { surface: 'daily', contextHint: '5' }, v: 1 }, // unique — transfer
-  ];
-  const r = planEventsMerge({ targetRows, sourceRows, targetDeviceId: TGT, sourceDeviceId: SRC });
-  // Only `share:abc` transferred; daily_start:20619:5 already in target.
-  assert.equal(r.upserts.length, 1);
-  assert.equal(r.upserts[0].doc.id, 'share:abc');
-  assert.equal(r.upserts[0].doc.deviceId, TGT);
-  // Both source rows deleted regardless (we never want source partition to keep them).
-  assert.equal(r.deletes.length, 2);
-});
+// ---- planEventsMerge — removed in Feature S Phase 4 (engagementEvents
+// container is no longer the source of truth; the data lives on
+// profiles[*].syncBlob.engagement now, which planProfileMerge transfers
+// implicitly via the profile row). Tests dropped with the function.
 
 // ---- planProfileMerge --------------------------------------------------
 
@@ -290,6 +277,64 @@ test('planProfileMerge: both have nickname, choice=source → target rewritten w
   assert.equal(r.upserts[0].doc.id, TGT);
   assert.equal(r.upserts[0].doc.linkedAt, NOW);
   assert.equal(r.deletes.length, 1);
+});
+
+test('planProfileMerge: target has syncBlob → target blob preserved through merge', () => {
+  // Feature S Phase 4: the engagement-counter blob has to survive QR-link
+  // or the engagement data Phase 3 routes through it would be lost on
+  // every cross-device merge.
+  const blob = { v: 1, engagement: { shares: { daily: 5 }, coffeeClickCount: 0, quiz60sDayLog: [] } };
+  const r = planProfileMerge({
+    targetRow: { id: TGT, deviceId: TGT, nickname: 'Alice', syncBlob: blob },
+    sourceRow: null,
+    targetDeviceId: TGT, sourceDeviceId: SRC, nicknameChoice: 'target', now: NOW,
+  });
+  assert.deepEqual(r.upserts[0].doc.syncBlob, blob);
+});
+
+test('planProfileMerge: target has no blob but source does → source blob inherited', () => {
+  // Fresh QR-shower with no migrated engagement data inherits the blob
+  // from the device that scanned its code, so the link doesn't reset
+  // the player's share/coffee/streak counters to zero.
+  const srcBlob = { v: 1, engagement: { shares: { flagquiz: 3 }, coffeeClickCount: 1, quiz60sDayLog: [19000] } };
+  const r = planProfileMerge({
+    targetRow: { id: TGT, deviceId: TGT, nickname: null },
+    sourceRow: { id: SRC, deviceId: SRC, nickname: null, syncBlob: srcBlob },
+    targetDeviceId: TGT, sourceDeviceId: SRC, nicknameChoice: 'target', now: NOW,
+  });
+  assert.deepEqual(r.upserts[0].doc.syncBlob, srcBlob);
+});
+
+test('planProfileMerge: both have blobs → target wins (matches dailyResults primary-wins policy)', () => {
+  // Conflict policy parity with the daily merge: target is the device
+  // showing the QR code (the "main" identity post-link), so its data
+  // takes precedence. Source's blob is lost on conflict — acceptable
+  // for the rare QR-link event.
+  const tgtBlob = { engagement: { shares: { daily: 10 } } };
+  const srcBlob = { engagement: { shares: { daily: 5 } } };
+  const r = planProfileMerge({
+    targetRow: { id: TGT, deviceId: TGT, syncBlob: tgtBlob },
+    sourceRow: { id: SRC, deviceId: SRC, syncBlob: srcBlob },
+    targetDeviceId: TGT, sourceDeviceId: SRC, nicknameChoice: 'target', now: NOW,
+  });
+  assert.deepEqual(r.upserts[0].doc.syncBlob, tgtBlob);
+});
+
+test('planProfileMerge: neither has a blob → syncBlob:null on the upserted doc (clean default)', () => {
+  const r = planProfileMerge({
+    targetRow: null, sourceRow: null,
+    targetDeviceId: TGT, sourceDeviceId: SRC, nicknameChoice: 'target', now: NOW,
+  });
+  assert.equal(r.upserts[0].doc.syncBlob, null);
+});
+
+test('planProfileMerge: malformed source syncBlob (non-object) is ignored', () => {
+  const r = planProfileMerge({
+    targetRow: null,
+    sourceRow: { id: SRC, deviceId: SRC, syncBlob: /** @type {any} */ ('not-an-object') },
+    targetDeviceId: TGT, sourceDeviceId: SRC, nicknameChoice: 'target', now: NOW,
+  });
+  assert.equal(r.upserts[0].doc.syncBlob, null);
 });
 
 test('planProfileMerge: neither row exists → still upserts a barebones target row with linkedAt', () => {

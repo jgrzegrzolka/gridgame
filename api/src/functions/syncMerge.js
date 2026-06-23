@@ -7,7 +7,6 @@ const {
   planDailyMerge,
   planQuizMerge,
   planTttMerge,
-  planEventsMerge,
   planProfileMerge,
 } = require('../lib/syncMerge');
 
@@ -77,9 +76,16 @@ app.http('syncMerge', {
     // Read every container we need to merge, both deviceIds in
     // parallel. dailyResults is the only cross-partition read here;
     // the rest are single-partition by /deviceId.
-    let dailyTgt, dailySrc, quizTgt, quizSrc, tttTgt, tttSrc, eventsTgt, eventsSrc, profileTgt, profileSrc;
+    //
+    // Feature S Phase 4 dropped the engagementEvents reads + the
+    // planEventsMerge call from this list — the container is no
+    // longer the source of truth for engagement signals (that data
+    // lives in profiles[*].syncBlob.engagement now, which the
+    // profile read below already covers). Phase 6 deletes the
+    // container outright.
+    let dailyTgt, dailySrc, quizTgt, quizSrc, tttTgt, tttSrc, profileTgt, profileSrc;
     try {
-      [dailyTgt, dailySrc, quizTgt, quizSrc, tttTgt, tttSrc, eventsTgt, eventsSrc, profileTgt, profileSrc] = await Promise.all([
+      [dailyTgt, dailySrc, quizTgt, quizSrc, tttTgt, tttSrc, profileTgt, profileSrc] = await Promise.all([
         queryDocs({
           connString: conn, dbName: DB_NAME, containerName: 'dailyResults',
           query: 'SELECT * FROM c WHERE c.deviceId = @did',
@@ -112,18 +118,6 @@ app.http('syncMerge', {
         }),
         queryDocs({
           connString: conn, dbName: DB_NAME, containerName: 'tttPairs',
-          query: 'SELECT * FROM c WHERE c.deviceId = @did',
-          parameters: [{ name: '@did', value: sourceDeviceId }],
-          partitionKey: sourceDeviceId,
-        }),
-        queryDocs({
-          connString: conn, dbName: DB_NAME, containerName: 'engagementEvents',
-          query: 'SELECT * FROM c WHERE c.deviceId = @did',
-          parameters: [{ name: '@did', value: targetDeviceId }],
-          partitionKey: targetDeviceId,
-        }),
-        queryDocs({
-          connString: conn, dbName: DB_NAME, containerName: 'engagementEvents',
           query: 'SELECT * FROM c WHERE c.deviceId = @did',
           parameters: [{ name: '@did', value: sourceDeviceId }],
           partitionKey: sourceDeviceId,
@@ -146,14 +140,16 @@ app.http('syncMerge', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    for (const r of [dailyTgt, dailySrc, quizTgt, quizSrc, tttTgt, tttSrc, eventsTgt, eventsSrc, profileTgt, profileSrc]) {
+    for (const r of [dailyTgt, dailySrc, quizTgt, quizSrc, tttTgt, tttSrc, profileTgt, profileSrc]) {
       if (!r.ok) {
         context.error('one of the merge reads failed', r);
         return { status: 500, jsonBody: { error: 'server_error' } };
       }
     }
 
-    // Build the merge plan across all five containers.
+    // Build the merge plan across all four containers. The profile
+    // merge carries the syncBlob across (planProfileMerge picks the
+    // newer engagement section by updatedAt when both sides have one).
     /** @type {Array<import('../lib/syncMerge').ContainerPlan>} */
     const plans = [
       planDailyMerge({
@@ -166,10 +162,6 @@ app.http('syncMerge', {
       }),
       planTttMerge({
         targetRows: tttTgt.docs, sourceRows: tttSrc.docs,
-        targetDeviceId, sourceDeviceId,
-      }),
-      planEventsMerge({
-        targetRows: eventsTgt.docs, sourceRows: eventsSrc.docs,
         targetDeviceId, sourceDeviceId,
       }),
       planProfileMerge({
