@@ -6,6 +6,8 @@ import { NICKNAME_STORAGE_KEY } from '../common.js';
 import { hydrateFromServer } from '../flags/syncHydrate.js';
 import { fetchDailyMe } from '../daily/streakClient.js';
 import { evaluateAchievements } from '../flags/achievements.js';
+import { mergeEngagementOverlay } from '../flags/engagementSnapshot.js';
+import { warsawDayNumber } from '../flags/warsawDay.js';
 import { t } from '../i18n.js';
 import { refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
@@ -279,13 +281,22 @@ async function renderAchievements(deviceId) {
   // doesn't pop in late and shift the form below it.
   section.hidden = false;
 
-  const snapshot = await fetchDailyMe(deviceId);
-  if (!snapshot) {
+  const serverSnap = await fetchDailyMe(deviceId);
+  if (!serverSnap) {
     // Silent degrade: hide the whole section so the page reads exactly
     // like the pre-feature version on failure.
     section.hidden = true;
     return;
   }
+
+  // Phase 4.5 overlay: replace the server's engagement fields with the
+  // localStorage-canonical values so the badge grid reflects the
+  // device's actual state (server may be up to 30 min stale due to the
+  // syncBlob push throttle). Same overlay the achievementsBaseline
+  // refresh path applies — keeps the profile page consistent with the
+  // achievement-on-action celebration.
+  const todayDayId = warsawDayNumber(Date.now());
+  const snapshot = mergeEngagementOverlay(serverSnap, window.localStorage, todayDayId);
 
   cachedStatuses = evaluateAchievements(snapshot);
   paintAchievementsGrid(cachedStatuses);
