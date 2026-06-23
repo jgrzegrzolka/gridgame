@@ -39,6 +39,7 @@ import {
   getLastQuizRecordPushedAt,
   markQuizRecordPushed,
 } from '../flags/quizRecordThrottle.js';
+import { shouldRecordQuiz60sDay } from '../flags/quiz60sDayGate.js';
 
 /**
  * Wrap `submitQuizRecord` with the Feature S Phase 5 decision: PB beats
@@ -571,7 +572,7 @@ export function bootFlagQuiz() {
         // the achievement evaluator to compute streak from this log
         // instead of the server snapshot.
         const today60s = warsawDayNumber(Date.now());
-        if (today60s !== null) {
+        if (today60s !== null && shouldRecordQuiz60sDay({ answeredCount, wrongCount })) {
           bumpQuiz60sDay(window.localStorage, today60s);
           void pushEngagementBlob(deviceId, window.localStorage);
         }
