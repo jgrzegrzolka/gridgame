@@ -838,6 +838,81 @@ test('colorCount(<=, N) predicate matches countries with N or fewer colours', ()
   assert.equal(cat.predicate(three), false);
 });
 
+test('colorCount(=, N) predicate also matches an ambiguousColorCount value (TTT accepts the contested read)', () => {
+  // Kiribati shape: 4 palette colours, [4, 5] count ambiguity from the
+  // yellow/gold shade split. =5 cell must accept it so a player typing
+  // "Kiribati" isn't punished for the plausible count.
+  const ki = country({
+    code: 'ki', name: 'Kiribati',
+    primaryColors: ['red', 'white', 'yellow', 'blue'],
+    ambiguousColorCount: [4, 5],
+  });
+  assert.equal(colorCount('=', 4).predicate(ki), true);  // canonical
+  assert.equal(colorCount('=', 5).predicate(ki), true);  // ambig
+  assert.equal(colorCount('=', 6).predicate(ki), false); // neither
+});
+
+test('colorCount(>=, N) and (<=, N) honour ambiguousColorCount', () => {
+  const ki = country({
+    code: 'ki', name: 'Kiribati',
+    primaryColors: ['red', 'white', 'yellow', 'blue'],
+    ambiguousColorCount: [4, 5],
+  });
+  assert.equal(colorCount('>=', 5).predicate(ki), true);  // ambig 5 satisfies
+  assert.equal(colorCount('>=', 6).predicate(ki), false);
+  assert.equal(colorCount('<=', 4).predicate(ki), true);  // canonical 4 satisfies
+  assert.equal(colorCount('<=', 3).predicate(ki), false); // neither plausible count fits
+});
+
+test('colorCount: a flag without ambiguousColorCount keeps the strict-canonical behaviour', () => {
+  const fr = country({ code: 'fr', name: 'France', primaryColors: ['red', 'white', 'blue'] });
+  assert.equal(colorCount('=', 3).predicate(fr), true);
+  assert.equal(colorCount('=', 4).predicate(fr), false);
+});
+
+test('validateCell accepts an ambiguousColorCount flag for a contested-count cell (player-pick path)', () => {
+  // Cell wants 5 colours; player picks a 4-canonical flag that's tagged
+  // [4, 5]. Under strict-canonical this was rejected — the gap this PR closes.
+  const puzzle = {
+    rows: [continent('Oceania'), continent('Oceania'), continent('Oceania')],
+    cols: [colorCount('=', 5), hasColor('red'), hasColor('blue')],
+  };
+  const ki = country({
+    code: 'ki', name: 'Kiribati', continent: 'Oceania',
+    primaryColors: ['red', 'white', 'yellow', 'blue'],
+    ambiguousColorCount: [4, 5],
+  });
+  assert.equal(validateCell(puzzle, 0, 0, ki), true);
+});
+
+test('findPuzzleSolution finds a solution that requires an ambiguousColorCount flag (generator path)', () => {
+  // One cell can only be filled by an ambig-5 flag — verifies the generator
+  // and solver actually consume the wider predicate, not just unit-level.
+  const puzzle = {
+    rows: [continent('Oceania'), continent('Asia'), continent('Africa')],
+    cols: [colorCount('=', 5), hasColor('red'), hasColor('blue')],
+  };
+  // Three rows × three cols = 9 cells need fillers. Pad with simple flags
+  // for the non-ambig cells; the (Oceania × =5) cell is unfillable under
+  // strict-canonical and only solvable with the ambig flag below.
+  const ki = country({
+    code: 'ki', name: 'Kiribati', continent: 'Oceania',
+    primaryColors: ['red', 'white', 'yellow', 'blue'],
+    ambiguousColorCount: [4, 5],
+  });
+  const oceaniaRed = country({ code: 'au', name: 'Australia', continent: 'Oceania', primaryColors: ['red', 'white', 'blue'] });
+  const oceaniaBlue = country({ code: 'nz', name: 'NZ', continent: 'Oceania', primaryColors: ['blue', 'white', 'red'] });
+  const asiaC5 = country({ code: 'in', name: 'India', continent: 'Asia', primaryColors: ['orange', 'white', 'green', 'blue', 'yellow'] });
+  const asiaRed = country({ code: 'cn', name: 'China', continent: 'Asia', primaryColors: ['red', 'yellow'] });
+  const asiaBlue = country({ code: 'jp2', name: 'JP2', continent: 'Asia', primaryColors: ['blue'] });
+  const africaC5 = country({ code: 'za', name: 'SA', continent: 'Africa', primaryColors: ['black', 'green', 'yellow', 'white', 'red', 'blue'].slice(0, 5) });
+  const africaRed = country({ code: 'ke', name: 'Kenya', continent: 'Africa', primaryColors: ['red', 'green', 'black'] });
+  const africaBlue = country({ code: 'so', name: 'Somalia', continent: 'Africa', primaryColors: ['blue', 'white'] });
+  const sol = findPuzzleSolution(puzzle, [ki, oceaniaRed, oceaniaBlue, asiaC5, asiaRed, asiaBlue, africaC5, africaRed, africaBlue]);
+  assert.ok(sol, 'expected a solution that places Kiribati in the (Oceania × colorCount:5) cell');
+  assert.equal(sol[0][0].code, 'ki');
+});
+
 test('colorCount carries exclusiveGroup so axesConflict rejects two different constraints', () => {
   const conflict = axesConflict(
     [continent('Africa'), hasColor('red'), colorCount('=', 2)],
