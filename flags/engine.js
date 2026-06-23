@@ -265,10 +265,30 @@ export function hasColor(color) {
 }
 
 /**
+ * Every count a player could reasonably give for this flag — the canonical
+ * `c.colors.length` plus any values declared in `ambiguousColorCount`. Used
+ * by the TTT `colorCount` predicate so a flag whose count is genuinely
+ * contested (e.g. Kiribati's yellow/gold shade split) satisfies the cell
+ * under any of its plausible reads. Daily / findFlag stay strict-canonical
+ * via `flagsFilter.js` and instead veto ambiguity-straddling puzzles at
+ * authoring time (`ambiguityAudit.js`).
+ *
+ * @param {{ colors: string[], ambiguousColorCount?: number[] }} c
+ * @returns {number[]}
+ */
+function plausibleCounts(c) {
+  const ambig = Array.isArray(c.ambiguousColorCount) ? c.ambiguousColorCount : [];
+  return [c.colors.length, ...ambig];
+}
+
+/**
  * "Colour-count" Category — `op:'='` matches exactly N colours, `op:'>='`
  * matches N or more, `op:'<='` matches N or fewer. The id encodes the op
  * in URL-suffix form: bare `N` for `=` (keeps daily catalog entries and
  * shareable URLs stable), `>=N` / `<=N` for the inequality variants.
+ *
+ * Predicate accepts a flag if *any* of its plausible counts satisfies the
+ * constraint — see `plausibleCounts` above.
  *
  * @param {'=' | '>=' | '<='} op
  * @param {number} n
@@ -278,13 +298,13 @@ export function colorCount(op, n) {
   const idSuffix = op === '=' ? String(n) : `${op}${n}`;
   let label = `only ${n} colours`;
   /** @type {(c: Country) => boolean} */
-  let predicate = (c) => c.colors.length === n;
+  let predicate = (c) => plausibleCounts(c).some((v) => v === n);
   if (op === '>=') {
     label = `${n} or more colours`;
-    predicate = (c) => c.colors.length >= n;
+    predicate = (c) => plausibleCounts(c).some((v) => v >= n);
   } else if (op === '<=') {
     label = `${n} or fewer colours`;
-    predicate = (c) => c.colors.length <= n;
+    predicate = (c) => plausibleCounts(c).some((v) => v <= n);
   }
   return {
     id: `colorCount:${idSuffix}`,

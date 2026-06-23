@@ -838,6 +838,38 @@ test('colorCount(<=, N) predicate matches countries with N or fewer colours', ()
   assert.equal(cat.predicate(three), false);
 });
 
+test('colorCount(=, N) predicate also matches an ambiguousColorCount value (TTT accepts the contested read)', () => {
+  // Kiribati shape: 4 palette colours, [4, 5] count ambiguity from the
+  // yellow/gold shade split. =5 cell must accept it so a player typing
+  // "Kiribati" isn't punished for the plausible count.
+  const ki = country({
+    code: 'ki', name: 'Kiribati',
+    primaryColors: ['red', 'white', 'yellow', 'blue'],
+    ambiguousColorCount: [4, 5],
+  });
+  assert.equal(colorCount('=', 4).predicate(ki), true);  // canonical
+  assert.equal(colorCount('=', 5).predicate(ki), true);  // ambig
+  assert.equal(colorCount('=', 6).predicate(ki), false); // neither
+});
+
+test('colorCount(>=, N) and (<=, N) honour ambiguousColorCount', () => {
+  const ki = country({
+    code: 'ki', name: 'Kiribati',
+    primaryColors: ['red', 'white', 'yellow', 'blue'],
+    ambiguousColorCount: [4, 5],
+  });
+  assert.equal(colorCount('>=', 5).predicate(ki), true);  // ambig 5 satisfies
+  assert.equal(colorCount('>=', 6).predicate(ki), false);
+  assert.equal(colorCount('<=', 4).predicate(ki), true);  // canonical 4 satisfies
+  assert.equal(colorCount('<=', 3).predicate(ki), false); // neither plausible count fits
+});
+
+test('colorCount: a flag without ambiguousColorCount keeps the strict-canonical behaviour', () => {
+  const fr = country({ code: 'fr', name: 'France', primaryColors: ['red', 'white', 'blue'] });
+  assert.equal(colorCount('=', 3).predicate(fr), true);
+  assert.equal(colorCount('=', 4).predicate(fr), false);
+});
+
 test('colorCount carries exclusiveGroup so axesConflict rejects two different constraints', () => {
   const conflict = axesConflict(
     [continent('Africa'), hasColor('red'), colorCount('=', 2)],
