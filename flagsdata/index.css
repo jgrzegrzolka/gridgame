@@ -11,9 +11,6 @@ body {
   box-sizing: border-box;
 }
 #filter-bar {
-  position: sticky;
-  top: var(--strip-height);
-  z-index: 5;
   background: #fafafa;
   margin: 0 -24px 16px;
   /* No top padding — body already provides the `--page-top` gap from
@@ -37,10 +34,10 @@ body {
   gap: 4px;
 }
 /* Collapse toggle — shown on every viewport so desktop users can also
- * hide the filter bar (which on a busy page eats sticky vertical space
- * once the dataset grows). The initial state differs by viewport: open
- * on desktop, closed on mobile — set by page.js on boot. The CSS rule
- * for hiding the groups is also viewport-agnostic (further down). */
+ * hide the filter bar once the dataset grows. The initial state differs
+ * by viewport: open on desktop, closed on mobile — set by page.js on
+ * boot. The CSS rule for hiding the groups is also viewport-agnostic
+ * (further down). */
 .filter-toggle {
   display: inline-flex;
   font: inherit;
