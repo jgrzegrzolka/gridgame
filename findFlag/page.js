@@ -481,8 +481,13 @@ export function bootFindFlag() {
     // Land the chooser on a playable starter rather than a blank slate:
     // one random continent + one random colour pre-included, so Play is
     // live on first paint. The user can refine or Clear from there.
+    // Violet is excluded from the initial-colour pool because it only
+    // appears on Dominica + Northern Mariana Islands (COA only), so a
+    // continent × violet starter collapses to 0-2 answers — a confusing
+    // landing experience. Violet stays available as a manual chooser
+    // pick and in the explicit Random button's pool.
     const continentPills = allPills.filter((p) => p.group === 'continent');
-    const colorPills = allPills.filter((p) => p.group === 'color');
+    const colorPills = allPills.filter((p) => p.group === 'color' && p.value !== 'violet');
     if (continentPills.length > 0) {
       const pick = continentPills[Math.floor(Math.random() * continentPills.length)];
       cyclePill(pick.group, pick.value, pick.btn);
