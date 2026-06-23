@@ -3,16 +3,16 @@
  *
  * Fire-and-forget: the caller doesn't await, doesn't gate on success,
  * and the function never throws — every failure path resolves with an
- * outcome string. Same retry-philosophy as daily/statsSubmit.js: the
- * server is the source of truth for "is this actually a PB?", the
- * client just hands it the round result.
+ * outcome string.
  *
- * Why only fire on a local-best (client-side `isNew`):
- *   - Skips ~90% of round-end writes (most rounds aren't a PB).
- *   - Server still runs its own merge — if the player cleared
- *     localStorage and the local "best" is null, the first finished
- *     round looks like a new local PB and the request is fired;
- *     server merge then decides whether to overwrite the cloud PB.
+ * **Call-site gating (Feature S Phase 5):** the decision to actually
+ * POST happens in `flags/quizRecordThrottle.js#shouldPushQuizRecord`
+ * — PB beats always push immediately, give-up non-PBs skip, all other
+ * non-PBs are throttled to one push per 30 minutes per device. This
+ * function itself is unconditional; the wrapper at the call site
+ * (`maybeSubmitQuizRecord` in flagQuiz/page.js) decides whether to
+ * fire. Server still runs its own merge — the client's `isNew` is a
+ * cost optimization, not the authoritative PB check.
  *
  * `fetchImpl` is injected so tests run offline.
  *

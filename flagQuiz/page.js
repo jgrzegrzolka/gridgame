@@ -34,6 +34,42 @@ import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js'
 import { trySyncDevices } from '../flags/syncHydrate.js';
 import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
 import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
+import {
+  shouldPushQuizRecord,
+  getLastQuizRecordPushedAt,
+  markQuizRecordPushed,
+} from '../flags/quizRecordThrottle.js';
+
+/**
+ * Wrap `submitQuizRecord` with the Feature S Phase 5 decision: PB beats
+ * fire immediately; give-up non-PB finishes skip the POST entirely; all
+ * other non-PB finishes are throttled (one push per 30 minutes per
+ * device). When skipped, returns a synthetic `{ outcome: 'ok' }` so
+ * `runLeaderboardCycle` continues to the fetch step — the leaderboard
+ * still paints, just without an incoming write to display.
+ *
+ * @param {{
+ *   deviceId: string,
+ *   configKey: string,
+ *   score: number,
+ *   durationMs: number,
+ *   lowerWins: boolean,
+ *   isNew: boolean,
+ *   gaveUp: boolean,
+ * }} args
+ * @returns {Promise<{ outcome: 'ok' } | { outcome: 'failed', reason: string }>}
+ */
+async function maybeSubmitQuizRecord({ deviceId, configKey, score, durationMs, lowerWins, isNew, gaveUp }) {
+  const store = window.localStorage;
+  const now = Date.now();
+  const lastPushedAt = getLastQuizRecordPushedAt(store);
+  if (!shouldPushQuizRecord({ gaveUp, isNew, lastPushedAt, now })) {
+    return { outcome: 'ok' };
+  }
+  const result = await submitQuizRecord({ deviceId, configKey, score, durationMs, lowerWins });
+  if (result.outcome === 'ok') markQuizRecordPushed(store, now);
+  return result;
+}
 import { fetchLeaderboard } from '../flags/dailyLeaderboardFetch.js';
 import { renderLeaderboard } from '../flags/dailyLeaderboardRender.js';
 import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
@@ -540,9 +576,10 @@ export function bootFlagQuiz() {
           void pushEngagementBlob(deviceId, window.localStorage);
         }
         const cycleP = runLeaderboardCycle({
-          submitImpl: () => submitQuizRecord({
+          submitImpl: () => maybeSubmitQuizRecord({
             deviceId, configKey,
             score: answeredCount, durationMs: budgetUsed, lowerWins: false,
+            isNew, gaveUp,
           }),
           fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
           paint: (s) => { leaderboardState = s; paintLeaderboard(); },
@@ -591,9 +628,10 @@ export function bootFlagQuiz() {
         // but Phase 3 dropped that speculation. Add a bumpQuizAllDay
         // call back if such an achievement actually lands.
         const cycleP = runLeaderboardCycle({
-          submitImpl: () => submitQuizRecord({
+          submitImpl: () => maybeSubmitQuizRecord({
             deviceId, configKey,
             score: wrongCount, durationMs: elapsed, lowerWins: true,
+            isNew, gaveUp,
           }),
           fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
           paint: (s) => { leaderboardState = s; paintLeaderboard(); },
