@@ -110,6 +110,8 @@ Otherwise predicates have nothing to read.
 
 **Engagement push cadence:** `pushEngagementBlob` (in `flags/engagementCounters.js`) is throttled at 30 minutes per device. Achievement evaluation doesn't wait for the push — the predicate reads the fresh local state directly via the overlay. The push is purely for cross-device sync.
 
+**Quiz-record push cadence (Phase 5):** `POST /api/v1/quiz/record` is also throttled. The decision lives in `flags/quizRecordThrottle.js#shouldPushQuizRecord`: PB beats fire immediately (the daily leaderboard needs them), give-up non-PB finishes skip the POST entirely (nothing consumes the attempts bump), and all other non-PB finishes are throttled to one push per 30 minutes per device. Server-side schema is unchanged — `attempts` / `lastPlayedAt` still live on `quizRecords` — but the write volume drops 80-95%. The `quizAttempts60s` / `quizAttemptsAll` snapshot fields lag actual plays by up to one throttle window; "Played N rounds" achievements fire a bit later than the user's Nth real play, never sooner.
+
 **Engagement migration:** first boot on any device runs `flags/engagementMigration.js` once. It pulls the server's syncBlob; if populated, inflates localStorage from it (the typical case after Feature S). If the blob is empty, falls back to a one-time `dailyMe` read to seed the device. Sentinel `gridgame.engagementMigrated` latches; migration never re-runs on the same device.
 
 ## Compute-on-read, not stored centrally
@@ -140,6 +142,7 @@ Until then, the indirection costs more than it saves.
 - `flags/engagementSnapshot.js` — the localStorage→snapshot projection + overlay logic (Feature S Phase 4.5).
 - `flags/engagementCounters.js` — the localStorage counter primitives + throttled push.
 - `flags/engagementMigration.js` — once-per-device pull-first hydrate from syncBlob.
+- `flags/quizRecordThrottle.js` — Phase 5 decision for whether to POST quizRecords (PB always / give-up skip / throttle 30min).
 - `flags/streakCompute.js` — client port of `computeStreak` + `dayLogToStreakRows` for the 60s-quiz axis.
 - `api/src/lib/masteryCompute.js` — `cleanSweeps` + `zeroScoreFinishes` from raw rows.
 - `api/src/lib/streakCompute.js` — server `currentStreak` / `maxStreak` / `totalCompleted` / `winPercent` for the daily axis.
