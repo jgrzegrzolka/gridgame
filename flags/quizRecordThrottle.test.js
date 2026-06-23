@@ -21,50 +21,61 @@ function makeStore() {
 const T0 = 1_700_000_000_000;
 
 // ---------------------------------------------------------------------------
-// shouldPushQuizRecord — the decision contract
+// shouldPushQuizRecord — the decision contract.
+// `engaged` comes from madeAnyQuizPick at the call site.
 // ---------------------------------------------------------------------------
 
-test('shouldPushQuizRecord: PB beat → always push (even on give-up, even if throttled)', () => {
-  // A player who gave up mid-round but still beat their PB on the
-  // answered questions: server needs to see it for the daily leaderboard.
-  assert.equal(shouldPushQuizRecord({ gaveUp: true,  isNew: true, lastPushedAt: T0, now: T0 + 1 }), true);
-  assert.equal(shouldPushQuizRecord({ gaveUp: false, isNew: true, lastPushedAt: T0, now: T0 + 1 }), true);
-  assert.equal(shouldPushQuizRecord({ gaveUp: false, isNew: true, lastPushedAt: 0,  now: T0 }),     true);
+test('shouldPushQuizRecord: PB beat → always push (even when not engaged, even if throttled)', () => {
+  // The PB path bypasses both other gates: even a give-up-with-zero-picks
+  // could theoretically be a PB in degenerate-lowerWins shapes; rather
+  // than reason about that, just always push PBs. Server's merge has
+  // the final word on what's actually a PB.
+  assert.equal(shouldPushQuizRecord({ engaged: false, isNew: true, lastPushedAt: T0, now: T0 + 1 }), true);
+  assert.equal(shouldPushQuizRecord({ engaged: true,  isNew: true, lastPushedAt: T0, now: T0 + 1 }), true);
+  assert.equal(shouldPushQuizRecord({ engaged: true,  isNew: true, lastPushedAt: 0,  now: T0 }),     true);
 });
 
-test('shouldPushQuizRecord: give-up without PB → skip (no consumer for the bump)', () => {
-  assert.equal(shouldPushQuizRecord({ gaveUp: true, isNew: false, lastPushedAt: 0, now: T0 }), false);
-  assert.equal(shouldPushQuizRecord({ gaveUp: true, isNew: false, lastPushedAt: T0, now: T0 + 99 * 60 * 1000 }), false);
+test('shouldPushQuizRecord: not engaged (zero picks) without PB → skip', () => {
+  // Pre-fix this used `gaveUp` and would miss the "timer ran out with 0
+  // picks" case (gaveUp=false but zero engagement). The unified
+  // `engaged` signal catches both flavours of non-play correctly.
+  assert.equal(shouldPushQuizRecord({ engaged: false, isNew: false, lastPushedAt: 0, now: T0 }), false);
+  assert.equal(shouldPushQuizRecord({ engaged: false, isNew: false, lastPushedAt: T0, now: T0 + 99 * 60 * 1000 }), false);
 });
 
-test('shouldPushQuizRecord: legitimate non-PB finish, never pushed → push (seeds the sentinel)', () => {
-  // First non-PB finish on a brand-new device. lastPushedAt:0 ("never
-  // pushed") fires regardless of how recent `now` is.
-  assert.equal(shouldPushQuizRecord({ gaveUp: false, isNew: false, lastPushedAt: 0, now: T0 }), true);
+test('shouldPushQuizRecord: engaged non-PB, never pushed → push (seeds the sentinel)', () => {
+  // First engaged finish on a brand-new device. lastPushedAt:0
+  // ("never pushed") fires regardless of how recent `now` is.
+  assert.equal(shouldPushQuizRecord({ engaged: true, isNew: false, lastPushedAt: 0, now: T0 }), true);
 });
 
-test('shouldPushQuizRecord: legitimate non-PB inside throttle window → skip', () => {
+test('shouldPushQuizRecord: engaged non-PB inside throttle window → skip', () => {
   const within = T0 + (PUSH_THROTTLE_MS - 1000);
-  assert.equal(shouldPushQuizRecord({ gaveUp: false, isNew: false, lastPushedAt: T0, now: within }), false);
+  assert.equal(shouldPushQuizRecord({ engaged: true, isNew: false, lastPushedAt: T0, now: within }), false);
 });
 
-test('shouldPushQuizRecord: legitimate non-PB after throttle window → push', () => {
+test('shouldPushQuizRecord: engaged non-PB after throttle window → push', () => {
   const past = T0 + PUSH_THROTTLE_MS + 1000;
-  assert.equal(shouldPushQuizRecord({ gaveUp: false, isNew: false, lastPushedAt: T0, now: past }), true);
+  assert.equal(shouldPushQuizRecord({ engaged: true, isNew: false, lastPushedAt: T0, now: past }), true);
 });
 
-test('shouldPushQuizRecord: legitimate non-PB exactly at the boundary → push', () => {
+test('shouldPushQuizRecord: engaged non-PB exactly at the boundary → push', () => {
   // Boundary is inclusive (>=) so a finish exactly 30 min after the
   // last push qualifies. Matters mostly for tests; in real use the
   // probability of hitting the exact ms is zero.
   const exact = T0 + PUSH_THROTTLE_MS;
-  assert.equal(shouldPushQuizRecord({ gaveUp: false, isNew: false, lastPushedAt: T0, now: exact }), true);
+  assert.equal(shouldPushQuizRecord({ engaged: true, isNew: false, lastPushedAt: T0, now: exact }), true);
 });
 
-test('shouldPushQuizRecord: PB on a brand-new device (lastPushedAt:0) → push', () => {
-  // PB path doesn't care about the sentinel — exercises that branch
-  // explicitly so a refactor that reorders the early returns is caught.
-  assert.equal(shouldPushQuizRecord({ gaveUp: false, isNew: true, lastPushedAt: 0, now: T0 }), true);
+test('shouldPushQuizRecord: gave-up-with-real-progress (now `engaged: true`) → throttled like any non-PB', () => {
+  // Pre-fix Phase 5 used `gaveUp` as the skip signal, which falsely
+  // dropped the attempts bump for players who answered many questions
+  // before giving up. Under the unified gate, those are engaged
+  // rounds — they go through the throttle like any other non-PB.
+  const within = T0 + 60_000;  // 1 min after a recent push
+  assert.equal(shouldPushQuizRecord({ engaged: true, isNew: false, lastPushedAt: T0, now: within }), false);
+  const past = T0 + PUSH_THROTTLE_MS + 60_000;
+  assert.equal(shouldPushQuizRecord({ engaged: true, isNew: false, lastPushedAt: T0, now: past }), true);
 });
 
 // ---------------------------------------------------------------------------
@@ -117,13 +128,13 @@ test('markQuizRecordPushed: setItem failure is swallowed (best-effort)', () => {
 // only the first POSTs" workflow that delivers the cost win.
 // ---------------------------------------------------------------------------
 
-test('integration: 5 non-PB plays within 30 min → only the first qualifies for push', () => {
+test('integration: 5 engaged non-PB plays within 30 min → only the first qualifies for push', () => {
   const store = makeStore();
   let pushed = 0;
   for (let i = 0; i < 5; i++) {
     const now = T0 + i * 5 * 60 * 1000;  // 5 plays, 5 min apart = 25 min total
     const ok = shouldPushQuizRecord({
-      gaveUp: false, isNew: false,
+      engaged: true, isNew: false,
       lastPushedAt: getLastQuizRecordPushedAt(store),
       now,
     });
@@ -140,14 +151,14 @@ test('integration: PB in the middle of a throttled streak still pushes', () => {
   let pushed = 0;
   // First play: non-PB at t=0 → pushes (seeds sentinel)
   let now = T0;
-  if (shouldPushQuizRecord({ gaveUp: false, isNew: false, lastPushedAt: 0, now })) {
+  if (shouldPushQuizRecord({ engaged: true, isNew: false, lastPushedAt: 0, now })) {
     markQuizRecordPushed(store, now);
     pushed++;
   }
   // Second play 10 min later: PB → pushes despite throttle
   now = T0 + 10 * 60 * 1000;
   if (shouldPushQuizRecord({
-    gaveUp: false, isNew: true,
+    engaged: true, isNew: true,
     lastPushedAt: getLastQuizRecordPushedAt(store),
     now,
   })) {
@@ -157,7 +168,7 @@ test('integration: PB in the middle of a throttled streak still pushes', () => {
   // Third play 5 min after that: non-PB → throttled
   now = T0 + 15 * 60 * 1000;
   if (shouldPushQuizRecord({
-    gaveUp: false, isNew: false,
+    engaged: true, isNew: false,
     lastPushedAt: getLastQuizRecordPushedAt(store),
     now,
   })) {
@@ -167,17 +178,17 @@ test('integration: PB in the middle of a throttled streak still pushes', () => {
   assert.equal(pushed, 2, 'first finish + the PB beat');
 });
 
-test('integration: give-ups in the middle of throttled streak never push and never reset the sentinel', () => {
+test('integration: not-engaged rounds in the middle never push and never reset the sentinel', () => {
   const store = makeStore();
   // Successful push at t=0
   markQuizRecordPushed(store, T0);
-  // Give-up 5 min later → no push, sentinel unchanged
-  const give = T0 + 5 * 60 * 1000;
+  // Not-engaged finish 5 min later → no push, sentinel unchanged
+  const noPlay = T0 + 5 * 60 * 1000;
   assert.equal(shouldPushQuizRecord({
-    gaveUp: true, isNew: false,
+    engaged: false, isNew: false,
     lastPushedAt: getLastQuizRecordPushedAt(store),
-    now: give,
+    now: noPlay,
   }), false);
-  // Sentinel preserved at T0 (give-up didn't stamp)
+  // Sentinel preserved at T0 (skipped push didn't stamp)
   assert.equal(getLastQuizRecordPushedAt(store), T0);
 });

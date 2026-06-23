@@ -4,19 +4,25 @@
  *
  * Pre-Phase-5 every finish (PB or not, give-up or not) hit the server.
  * That's ~5× more writes than the data demands — non-PB finishes only
- * bump `attempts` / `lastPlayedAt`, and give-ups bump fields nobody
- * consumes for achievements.
+ * bump `attempts` / `lastPlayedAt`.
  *
  * Decision policy:
  *
  *   - **PB beat** → always push immediately. Daily leaderboard +
  *     personal-best display depend on the server seeing the new score.
- *   - **Give-up, no PB** → skip. Score is partial / zero, no
- *     achievement consumes the bump, no point paying for the write.
- *   - **Legitimate non-PB finish** → throttle: push only if
+ *   - **No real engagement** (zero picks of either kind) → skip. The
+ *     attempts bump would represent a non-play; nothing should count it.
+ *   - **Real non-PB finish** → throttle: push only if
  *     `PUSH_THROTTLE_MS` has elapsed since the last successful push,
  *     so a player chaining several rounds of the same variant only
  *     touches the server occasionally.
+ *
+ * The `engaged` signal is computed once at the call site via
+ * `flags/quizEngagement.js#madeAnyQuizPick` — same gate used by the
+ * 60s day-log bump in `flagQuiz/page.js`. Centralising the
+ * engagement check there means the two consumers can't drift apart
+ * (which they did when this gate used `gaveUp` and the day-log gate
+ * used pick count — pre-fix they disagreed in two of four cases).
  *
  * Net effect at hobby-site traffic: ~80-95% reduction in `quizRecords`
  * write volume. At 50k DAU it's the difference between ~1.2 writes/sec
@@ -58,30 +64,34 @@ export const SENTINEL_KEY = 'gridgame.quizRecordPushedAt';
 /**
  * Decide whether to fire the POST.
  *
+ * `engaged` comes from `flags/quizEngagement.js#madeAnyQuizPick` at
+ * the call site. The unified gate (also used by the 60s day-log
+ * bump) means both consumers see the same "was this a real round?"
+ * decision.
+ *
  * @param {{
- *   gaveUp: boolean,
+ *   engaged: boolean,
  *   isNew: boolean,
  *   lastPushedAt: number,
  *   now: number,
  * }} args
  * @returns {boolean}
  */
-export function shouldPushQuizRecord({ gaveUp, isNew, lastPushedAt, now }) {
+export function shouldPushQuizRecord({ engaged, isNew, lastPushedAt, now }) {
   // PB beats are the only path that gates the daily leaderboard +
   // personal-best display. Always push them, regardless of throttle
-  // or give-up status — a player who gave up mid-round but still
+  // or engagement signal — a player who gave up mid-round but still
   // beat their PB on the answered questions deserves the record.
   if (isNew) return true;
 
-  // Non-PB give-up: skip. The local PB bookkeeping already happened
-  // client-side; the server upsert would only bump attempts/
-  // lastPlayedAt, and we're not paying RU for a half-played round
-  // that no achievement counts.
-  if (gaveUp) return false;
+  // No real engagement (zero picks): skip. The server upsert would
+  // only bump attempts/lastPlayedAt, and no achievement should count
+  // a non-played round.
+  if (!engaged) return false;
 
-  // Legitimate non-PB finish: throttle. Never-pushed (sentinel = 0)
-  // always fires the first time so a brand-new device's first finish
-  // hits the server.
+  // Real non-PB finish: throttle. Never-pushed (sentinel = 0) always
+  // fires the first time so a brand-new device's first finish hits
+  // the server.
   if (lastPushedAt <= 0) return true;
   return (now - lastPushedAt) >= PUSH_THROTTLE_MS;
 }
