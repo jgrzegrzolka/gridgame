@@ -44,6 +44,18 @@ export const STORAGE_KEY = 'gridgame.engagementState';
 export const STATE_VERSION = 1;
 
 /**
+ * localStorage key used by `pushEngagementBlob` to throttle pushes
+ * (Feature S Phase 4.5). Value is the unix-ms timestamp of the last
+ * successful push. A bump within `PUSH_THROTTLE_MS` of the last
+ * successful push is dropped — the in-memory state is still
+ * authoritative on this device, and achievement evaluation reads
+ * directly from localStorage (no longer dependent on the server's
+ * syncBlob being fresh).
+ */
+export const PUSHED_AT_KEY = 'gridgame.engagementPushedAt';
+export const PUSH_THROTTLE_MS = 30 * 60 * 1000;  // 30 minutes
+
+/**
  * Known share surfaces. Adding a new one here also requires teaching
  * the achievement evaluator that consumes the counts (Phase 4 work);
  * keeping the list closed prevents silent data drift.
@@ -256,18 +268,66 @@ export function inflateFromBlob(store, blobEngagement) {
  * section) updates one place, and every emit site stays a clean
  * "bump local, sync remote" pair.
  *
+ * **Throttled** (Feature S Phase 4.5): pushes are capped at one per
+ * `PUSH_THROTTLE_MS` per device. Within that window, calls return
+ * `{ ok: true, skipped: true }` and no network request is made. The
+ * local state is still authoritative on the device — achievement
+ * evaluation reads from `engagementCounters` localStorage directly via
+ * `flags/engagementSnapshot.js`, so UX is unaffected by the
+ * throttle. The push only matters for cross-device sync, which
+ * happens on QR-link (`syncMerge`) and on first boot of a fresh
+ * device (`engagementMigration`).
+ *
+ * Why a hard throttle: at the cost goal (€0 even at 50k DAU), we
+ * can't afford a flood of profile-row upserts during a traffic
+ * spike. Throttling caps per-device writes at 48/day — comfortably
+ * within free-tier headroom even if every active user bumps every
+ * 30 minutes for a full day.
+ *
  * Fire-and-forget by convention: callers `void pushEngagementBlob(...)`.
  * The underlying `pushSyncBlob` never throws and surfaces failures via
  * its result tuple — passed back here unchanged for callers that want
- * to await + branch (very few; the dropped-push case is harmless
- * because the next bump on any counter will re-push).
+ * to await + branch.
+ *
+ * `now` is injected so unit tests can pin the throttle window without
+ * fake timers. In real use, callers omit it and the helper reads
+ * `Date.now()` itself.
  *
  * @param {string} deviceId
  * @param {Store} store
- * @param {{ fetchImpl?: typeof fetch }} [opts]
- * @returns {Promise<{ ok: true } | { ok: false, reason: string }>}
+ * @param {{ fetchImpl?: typeof fetch, now?: number }} [opts]
+ * @returns {Promise<{ ok: true, skipped?: boolean } | { ok: false, reason: string }>}
  */
-export function pushEngagementBlob(deviceId, store, opts) {
-  return pushSyncBlob(deviceId, { v: 1, engagement: getSyncBlobSection(store) }, opts);
+export async function pushEngagementBlob(deviceId, store, opts = {}) {
+  const now = typeof opts.now === 'number' ? opts.now : Date.now();
+  let lastPushedAt = 0;
+  try {
+    const raw = store.getItem(PUSHED_AT_KEY);
+    if (typeof raw === 'string' && raw.length > 0) {
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > 0) lastPushedAt = n;
+    }
+  } catch {
+    // localStorage read failure: treat as no prior push, proceed.
+  }
+
+  // lastPushedAt === 0 means "never pushed" — always fire the first time.
+  // Otherwise, throttle within the window. (In production, real
+  // timestamps from Date.now() are in the trillions, so `lastPushedAt
+  // - 0` is always > the window; but the explicit guard keeps the
+  // small-`now` test values working and the intent obvious.)
+  if (lastPushedAt > 0 && now - lastPushedAt < PUSH_THROTTLE_MS) {
+    return { ok: true, skipped: true };
+  }
+
+  const result = await pushSyncBlob(
+    deviceId,
+    { v: 1, engagement: getSyncBlobSection(store) },
+    { fetchImpl: opts.fetchImpl },
+  );
+  if (result.ok) {
+    try { store.setItem(PUSHED_AT_KEY, String(now)); } catch { /* best-effort */ }
+  }
+  return result;
 }
 

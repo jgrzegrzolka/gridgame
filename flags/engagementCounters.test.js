@@ -285,3 +285,100 @@ test('pushEngagementBlob: forwards server error verbatim (caller can log / retry
   const r = await pushEngagementBlob('dev-1234-5678', store, { fetchImpl });
   assert.deepEqual(r, { ok: false, reason: 'blob_too_large' });
 });
+
+// ---------------------------------------------------------------------------
+// pushEngagementBlob throttle (Feature S Phase 4.5) — at most one push per
+// 30 minutes per device. Cost goal: stay €0 even at 50k DAU. Achievement
+// evaluation reads from localStorage (engagementSnapshot) so the throttle
+// doesn't affect UX on the device.
+// ---------------------------------------------------------------------------
+
+test('pushEngagementBlob: first call fires the network request (no prior pushedAt)', async () => {
+  const store = makeStore();
+  /** @type {Array<unknown>} */
+  const calls = [];
+  /** @type {any} */
+  const fetchImpl = async () => { calls.push(1); return { status: 204, async json() { return null; } }; };
+  await pushEngagementBlob('dev-1', store, { fetchImpl, now: 1_000_000_000 });
+  assert.equal(calls.length, 1);
+});
+
+test('pushEngagementBlob: successful push stamps pushedAt so subsequent calls within 30min skip', async () => {
+  const store = makeStore();
+  /** @type {Array<unknown>} */
+  const calls = [];
+  /** @type {any} */
+  const fetchImpl = async () => { calls.push(1); return { status: 204, async json() { return null; } }; };
+
+  // `now=0` collides with the "never pushed" sentinel; use a non-zero
+  // baseline so the test exercises the throttle math correctly.
+  const T0 = 1_000_000_000;
+
+  // First push → fires
+  await pushEngagementBlob('dev-1', store, { fetchImpl, now: T0 });
+  assert.equal(calls.length, 1);
+
+  // 29 minutes later → throttled, no network
+  const r2 = await pushEngagementBlob('dev-1', store, { fetchImpl, now: T0 + 29 * 60 * 1000 });
+  assert.deepEqual(r2, { ok: true, skipped: true });
+  assert.equal(calls.length, 1, 'no second fetch call');
+
+  // 30 minutes + 1 sec → window passed, fires
+  const r3 = await pushEngagementBlob('dev-1', store, { fetchImpl, now: T0 + 30 * 60 * 1000 + 1000 });
+  assert.deepEqual(r3, { ok: true });
+  assert.equal(calls.length, 2);
+});
+
+test('pushEngagementBlob: failed push does NOT stamp pushedAt — next call retries', async () => {
+  // The throttle only kicks in on confirmed successful pushes. A 5xx /
+  // network error leaves the sentinel unset so the next bump retries.
+  // Otherwise a failed first push would block the next 30 min.
+  const store = makeStore();
+  let attempts = 0;
+  /** @type {any} */
+  const fetchImpl = async () => {
+    attempts++;
+    return attempts === 1
+      ? { status: 500, async json() { return { error: 'server_error' }; } }
+      : { status: 204, async json() { return null; } };
+  };
+
+  const r1 = await pushEngagementBlob('dev-1', store, { fetchImpl, now: 0 });
+  assert.equal(r1.ok, false);
+
+  // Immediately retry — must NOT be throttled (the first push failed).
+  const r2 = await pushEngagementBlob('dev-1', store, { fetchImpl, now: 60_000 });
+  assert.deepEqual(r2, { ok: true });
+  assert.equal(attempts, 2);
+});
+
+test('pushEngagementBlob: throttle persists across instances (localStorage survives reloads)', async () => {
+  // The pushedAt sentinel lives in localStorage so a page reload doesn't
+  // reset the throttle window. This test pins that: two separate
+  // pushEngagementBlob calls with the same store but no in-memory state
+  // share the throttle.
+  const store = makeStore();
+  /** @type {Array<unknown>} */
+  const calls = [];
+  /** @type {any} */
+  const fetchImpl = async () => { calls.push(1); return { status: 204, async json() { return null; } }; };
+
+  await pushEngagementBlob('dev-1', store, { fetchImpl, now: 1_000_000 });
+  await pushEngagementBlob('dev-1', store, { fetchImpl, now: 1_000_000 + 5 * 60 * 1000 });
+
+  assert.equal(calls.length, 1, 'second call inside window must be throttled');
+});
+
+test('pushEngagementBlob: malformed pushedAt sentinel (not a number) → treated as no prior push, fires', async () => {
+  // Defensive against hand-edited / corrupted localStorage state.
+  const store = makeStore();
+  store.setItem('gridgame.engagementPushedAt', 'not a number');
+  /** @type {Array<unknown>} */
+  const calls = [];
+  /** @type {any} */
+  const fetchImpl = async () => { calls.push(1); return { status: 204, async json() { return null; } }; };
+
+  const r = await pushEngagementBlob('dev-1', store, { fetchImpl, now: 5_000_000 });
+  assert.equal(r.ok, true);
+  assert.equal(calls.length, 1);
+});

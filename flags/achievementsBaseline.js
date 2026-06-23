@@ -32,6 +32,35 @@
 
 import { fetchDailyMe } from '../daily/streakClient.js';
 import { diffNewlyEarnedAchievements } from './achievements.js';
+import { mergeEngagementOverlay } from './engagementSnapshot.js';
+import { warsawDayNumber } from './warsawDay.js';
+
+/**
+ * Build the snapshot the predicates actually run against. Combines the
+ * server-derived fields from `fetchDailyMe` (daily streak, mastery,
+ * quiz aggregates, nickname/linked, TTT) with the localStorage-derived
+ * engagement fields (share counts, coffee click, 60s streak). Local
+ * wins for the engagement portion — Phase 4.5's whole point is to
+ * decouple achievement-on-action celebration from the syncBlob push
+ * cadence. The server keeps returning these fields too for backward
+ * compatibility; we just overlay them.
+ *
+ * `store` and `now` are reads on the browser globals; injected here
+ * via the helper layer below so tests don't need them.
+ *
+ * @param {Record<string, unknown> | null | undefined} serverSnap
+ * @returns {Record<string, unknown> | null}
+ */
+function withLocalEngagement(serverSnap) {
+  if (!serverSnap) return null;
+  // Browser-only globals — guard so the module loads under node tests.
+  /** @type {any} */
+  const g = /** @type {any} */ (globalThis);
+  const store = g.window && g.window.localStorage ? g.window.localStorage : null;
+  if (!store) return /** @type {Record<string, unknown>} */ (serverSnap);
+  const todayDayId = warsawDayNumber(Date.now());
+  return mergeEngagementOverlay(serverSnap, store, todayDayId);
+}
 
 /** @type {import('../daily/streakClient.js').StreakResult | null} */
 let baseline = null;
@@ -49,7 +78,8 @@ let inflight = null;
 export function primeAchievementsBaseline(deviceId) {
   if (baseline !== null || inflight !== null) return;
   inflight = fetchDailyMe(deviceId).then((snap) => {
-    if (snap) baseline = snap;
+    const merged = withLocalEngagement(snap);
+    if (merged) baseline = /** @type {any} */ (merged);
     inflight = null;
   });
 }
@@ -77,9 +107,10 @@ export async function refreshAchievementsAndDiff(deviceId) {
   }
   const fresh = await fetchDailyMe(deviceId, { bypassCache: true });
   if (!fresh) return [];
+  const merged = /** @type {any} */ (withLocalEngagement(fresh));
   const before = baseline;
-  baseline = fresh;
-  return diffNewlyEarnedAchievements(before, fresh);
+  baseline = merged;
+  return diffNewlyEarnedAchievements(before, merged);
 }
 
 /**
