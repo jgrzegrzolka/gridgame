@@ -48,7 +48,9 @@ const FULL = {
   quiz60sMaxStreak: 12,
   quiz60sDistinctDays: 25,
   tttGamesPlayed: 14,
+  tttGamesPlayed9x9: 5,
   hasWonTtt: true,
+  hasWon9x9: true,
   hasLostTtt: false,
 };
 
@@ -135,7 +137,9 @@ test('fetchDailyMe: missing fields collapse to 0 (defensive shape)', async () =>
     quiz60sMaxStreak: 0,
     quiz60sDistinctDays: 0,
     tttGamesPlayed: 0,
+    tttGamesPlayed9x9: 0,
     hasWonTtt: false,
+    hasWon9x9: false,
     hasLostTtt: false,
   });
 });
@@ -179,7 +183,9 @@ test('fetchDailyMe: non-numeric field values collapse to 0', async () => {
     quiz60sMaxStreak: 0,
     quiz60sDistinctDays: 0,
     tttGamesPlayed: 0,
+    tttGamesPlayed9x9: 0,
     hasWonTtt: false,
+    hasWon9x9: false,
     hasLostTtt: false,
   });
 });
