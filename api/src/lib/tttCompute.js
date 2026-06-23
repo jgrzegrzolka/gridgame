@@ -10,8 +10,19 @@
  *     tiers (Ten Games, Hundred Games). Catches online games only —
  *     offline-vs-AI plays don't write Cosmos.
  *
+ *   - `tttGamesPlayed9x9` — same shape but restricted to `m9x9`.
+ *     Drives the "9×9 Player" achievement. Counts every 9×9 game
+ *     played online, regardless of outcome (including give-ups).
+ *
  *   - `hasWonTtt` — `true` iff the player has won at least one TTT
  *     game across either mode. Drives "First Win".
+ *
+ *   - `hasWon9x9` — `true` iff the player has won at least one
+ *     `m9x9` game. Drives "9×9 Winner". Includes wins where the
+ *     opponent gave up — the helper that produces row outcomes
+ *     (`flags/tttPairOutcome.js#deriveTttOutcome`) only reports
+ *     `'win'` when the player themselves did NOT give up, so any
+ *     win counted here is a win-from-the-player's-perspective.
  *
  *   - `hasLostTtt` — `true` iff the player has lost at least one TTT
  *     game across either mode. Drives "First Loss" — there's no shame
@@ -28,7 +39,9 @@
  *
  * @typedef {{
  *   tttGamesPlayed: number,
+ *   tttGamesPlayed9x9: number,
  *   hasWonTtt: boolean,
+ *   hasWon9x9: boolean,
  *   hasLostTtt: boolean,
  * }} TttResult
  */
@@ -61,7 +74,13 @@ function modeTotals(m) {
  */
 function computeTttSignals(rows) {
   /** @type {TttResult} */
-  const result = { tttGamesPlayed: 0, hasWonTtt: false, hasLostTtt: false };
+  const result = {
+    tttGamesPlayed: 0,
+    tttGamesPlayed9x9: 0,
+    hasWonTtt: false,
+    hasWon9x9: false,
+    hasLostTtt: false,
+  };
   if (!Array.isArray(rows) || rows.length === 0) return result;
   for (const row of rows) {
     if (!row || typeof row !== 'object') continue;
@@ -71,7 +90,9 @@ function computeTttSignals(rows) {
     const losses = m3.losses + m9.losses;
     const draws = m3.draws + m9.draws;
     result.tttGamesPlayed += wins + losses + draws;
+    result.tttGamesPlayed9x9 += m9.wins + m9.losses + m9.draws;
     if (wins > 0) result.hasWonTtt = true;
+    if (m9.wins > 0) result.hasWon9x9 = true;
     if (losses > 0) result.hasLostTtt = true;
   }
   return result;
