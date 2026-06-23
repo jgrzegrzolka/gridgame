@@ -11,9 +11,14 @@
  *   - dailyResults     primary's row wins on overlap; non-overlap rows transfer
  *   - quizRecords      per configKey: better PB wins, attempts sum
  *   - tttPairs         per opponent: counters sum, newer lastPlayedAt wins
- *   - engagementEvents rows transfer with target deviceId (idempotent for daily_start)
  *   - profiles         nicknameChoice ∈ {'target','source'} resolves conflict; absent
- *                      conflict, source's value transfers if target has none
+ *                      conflict, source's value transfers if target has none.
+ *                      syncBlob (Feature S Phase 2) follows the same rule —
+ *                      source's blob transfers iff the target has none.
+ *
+ * (Pre-Feature-S Phase 4 this also merged `engagementEvents` rows — that
+ * container is no longer the source of truth for engagement signals
+ * since the data lives in `profiles[*].syncBlob.engagement` now.)
  *
  * After merge, every former-source row gets deleted. Cosmos system
  * fields are stripped on write (insertDoc rejects them on read-back).
@@ -347,50 +352,6 @@ function planTttMerge({ targetRows, sourceRows, targetDeviceId, sourceDeviceId }
   return { upserts, deletes };
 }
 
-// ---- engagementEvents ----------------------------------------------------
-
-/**
- * @param {{
- *   targetRows: Array<Record<string, any>>,
- *   sourceRows: Array<Record<string, any>>,
- *   targetDeviceId: string,
- *   sourceDeviceId: string,
- * }} args
- * @returns {ContainerPlan}
- */
-function planEventsMerge({ targetRows, sourceRows, targetDeviceId, sourceDeviceId }) {
-  /** @type {UpsertOp[]} */
-  const upserts = [];
-  /** @type {DeleteOp[]} */
-  const deletes = [];
-
-  const targetIds = new Set(targetRows.map((r) => r.id).filter((id) => typeof id === 'string'));
-
-  for (const src of sourceRows) {
-    if (typeof src.id !== 'string') continue;
-    // Same row id in target's partition would dedupe — only insert
-    // if target doesn't already have it. (Relevant for daily_start
-    // which has a deterministic id; uuid-based kinds will never
-    // collide.)
-    if (!targetIds.has(src.id)) {
-      const stripped = stripSystem(src);
-      stripped.deviceId = targetDeviceId;
-      upserts.push({
-        container: 'engagementEvents',
-        partitionKey: targetDeviceId,
-        doc: stripped,
-      });
-    }
-    deletes.push({
-      container: 'engagementEvents',
-      partitionKey: sourceDeviceId,
-      id: src.id,
-    });
-  }
-
-  return { upserts, deletes };
-}
-
 // ---- profiles ------------------------------------------------------------
 
 /**
@@ -428,6 +389,25 @@ function planProfileMerge({ targetRow, sourceRow, targetDeviceId, sourceDeviceId
     nickname = tgtNick || srcNick;
   }
 
+  // syncBlob (Feature S Phase 2) follows the same merge rule as the
+  // un-conflicted nickname path: keep target's blob if it has one;
+  // otherwise inherit source's. Phase 2 added the field but didn't
+  // teach this merge about it, so the engagement data Phase 3 routes
+  // through the blob would have been lost on cross-device link if
+  // target had no blob — Feature S Phase 4 closes that gap.
+  //
+  // We do NOT pick "the newer" blob when both sides have one: every
+  // active device pushes after each counter bump, so both blobs were
+  // recent before the QR-link kicked off; "target wins on conflict"
+  // matches dailyResults' primary-wins policy and is simpler than
+  // adding a per-section timestamp diff. Source's blob is lost on
+  // conflict — acceptable for the rare QR-link event.
+  const tgtBlob = targetRow && targetRow.syncBlob && typeof targetRow.syncBlob === 'object'
+    ? targetRow.syncBlob : null;
+  const srcBlob = sourceRow && sourceRow.syncBlob && typeof sourceRow.syncBlob === 'object'
+    ? sourceRow.syncBlob : null;
+  const syncBlob = tgtBlob || srcBlob || null;
+
   // Always upsert the target profile — even when nickname is unchanged
   // and even when no profile existed before. The point of the upsert
   // here is to write `linkedAt: now`, which is how target browsers
@@ -440,6 +420,7 @@ function planProfileMerge({ targetRow, sourceRow, targetDeviceId, sourceDeviceId
     id: targetDeviceId,
     deviceId: targetDeviceId,
     nickname,
+    syncBlob,
     updatedAt: now,
     linkedAt: now,
     v: 1,
@@ -478,7 +459,6 @@ module.exports = {
   countDailyConflicts,
   planQuizMerge,
   planTttMerge,
-  planEventsMerge,
   planProfileMerge,
   detectProfileConflict,
   stripSystem,

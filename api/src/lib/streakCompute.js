@@ -128,38 +128,29 @@ function submissionsToStreakRows(docs, dayFn) {
 }
 
 /**
- * Map a list of engagementEvents rows to deduped streak rows, filtered
- * by `kind: 'quiz_play'` and the requested mode (`'60s'` or `'all'`).
- * Drives the quiz-streak achievements via `computeStreak`.
+ * Map a quiz-mode day log (array of Warsaw day numbers from
+ * `syncBlob.engagement.quiz60sDayLog`) to streak rows. The local
+ * counter (`flags/engagementCounters.js#bumpQuiz60sDay`) already
+ * dedupes + sorts on insert, but we re-sanitise here so the server
+ * stays safe against hand-edited or future-shape blobs.
  *
- * `dayId` is already on every engagement row (server-set at write
- * time from `warsawDayNumber(now)`), so no conversion is needed —
- * unlike `submissionsToStreakRows` which has to derive day from
- * `submittedAt`.
+ * Feature S Phase 4 replaced the pre-Phase-4 `quizPlayEventsToStreakRows`
+ * (which scanned `engagementEvents` rows) with this — the source moved
+ * from a cross-partition Cosmos scan to a field on the profile row
+ * the dailyMe handler was already reading.
  *
- * Defensive on shape: missing/non-object rows, wrong kind, missing
- * or malformed payload, non-numeric dayId all silently skipped.
- *
- * @param {Array<{ kind?: unknown, payload?: unknown, dayId?: unknown }>} events
- * @param {string} mode  '60s' or 'all'
+ * @param {unknown} log
  * @returns {StreakRow[]}
  */
-function quizPlayEventsToStreakRows(events, mode) {
+function dayLogToStreakRows(log) {
+  if (!Array.isArray(log)) return [];
   const days = new Set();
-  if (!Array.isArray(events)) return [];
-  for (const ev of events) {
-    if (!ev || typeof ev !== 'object') continue;
-    if (ev.kind !== 'quiz_play') continue;
-    const p = /** @type {{ mode?: unknown } | null | undefined} */ (
-      typeof ev.payload === 'object' ? ev.payload : null
-    );
-    if (!p || p.mode !== mode) continue;
-    if (typeof ev.dayId !== 'number' || !Number.isFinite(ev.dayId)) continue;
-    days.add(ev.dayId);
+  for (const n of log) {
+    if (Number.isInteger(n) && /** @type {number} */ (n) >= 0) days.add(n);
   }
   return Array.from(days)
     .sort((a, b) => a - b)
     .map((id) => ({ id, completed: true }));
 }
 
-module.exports = { computeStreak, submissionsToStreakRows, quizPlayEventsToStreakRows };
+module.exports = { computeStreak, submissionsToStreakRows, dayLogToStreakRows };
