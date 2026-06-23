@@ -89,6 +89,12 @@ export function bootFlagsData() {
   }
 
   const filters = emptyFilters();
+  // Sovereign on by default: 195 UN-member + observer states is the
+  // population most visitors come for, and showing all 269 entries
+  // (including territories, subnational regions, and orgs like EU /
+  // ASEAN) on first load buries the answer in noise. The pill is a
+  // normal toggle — users can deselect it to broaden the view.
+  filters.status.include.add('sovereign');
   /** Diacritic-folded substring of the name search input. Empty means the
    * filter is off. Stored as the folded form so we don't refold per-tile
    * on every input event — the per-country fold is the same idea, computed
@@ -210,6 +216,11 @@ export function bootFlagsData() {
       btn.dataset.group = group;
       btn.dataset.value = value;
       btn.textContent = pillLabel;
+      // Reflect pre-seeded filter state on the pill — currently used so the
+      // Sovereign status pill paints active on first paint to match the
+      // default `filters.status.include.add('sovereign')` set above.
+      if (filters[group].include.has(value)) btn.classList.add('active');
+      else if (filters[group].exclude.has(value)) btn.classList.add('exclude');
       btn.addEventListener('click', () => {
         const { include, exclude } = filters[group];
         if (include.has(value)) {
