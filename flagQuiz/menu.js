@@ -1,5 +1,6 @@
 import { VARIANTS, defaultModeFor, resolveMode, isQuizIncludeAll, setQuizIncludeAll, isQuizShowMap, setQuizShowMap } from '../flags/quiz.js';
 import { t } from '../i18n.js';
+import { buildToggleLi } from '../common.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 
@@ -152,8 +153,8 @@ export function buildVariantPicker(pickerListEl, all, opts) {
 /** @param {boolean} includeAll */
 function buildScopeToggleLi(includeAll) {
   return buildToggleLi({
+    label: t('menu.includeTerritories', 'Include territories & other flags'),
     labelKey: 'menu.includeTerritories',
-    labelFallback: 'Include territories & other flags',
     initial: includeAll,
     onChange: (checked) => setQuizIncludeAll(localStorage, checked),
   });
@@ -161,62 +162,10 @@ function buildScopeToggleLi(includeAll) {
 
 /** @param {boolean} showMap */
 function buildMapToggleLi(showMap) {
-  // Supported on variants that have a bundled map asset (currently
-  // Europe + Asia). The toggle is always present in the menu — it's a
-  // global preference, so the player can pre-set it before navigating
-  // to a supported variant rather than discover the option only once
-  // they're already mid-round. On unsupported variants the preference
-  // simply has no effect.
   return buildToggleLi({
+    label: t('menu.showMap', 'Show map'),
     labelKey: 'menu.showMap',
-    labelFallback: 'Show map',
     initial: showMap,
     onChange: (checked) => setQuizShowMap(localStorage, checked),
   });
-}
-
-/**
- * Shared scaffold for the menu toggles. The two consumers above —
- * include-territories and show-map — flip independent preferences but
- * share the same UX shape: label on the left, iOS-style switch on the
- * right, page reload after the slide animation so the new state takes
- * effect cleanly.
- *
- * @param {{
- *   labelKey: string,
- *   labelFallback: string,
- *   initial: boolean,
- *   onChange: (checked: boolean) => void,
- * }} opts
- */
-function buildToggleLi({ labelKey, labelFallback, initial, onChange }) {
-  const toggleLi = document.createElement('li');
-  const toggleLabel = document.createElement('label');
-  toggleLabel.className = 'scope-toggle';
-  const textSpan = document.createElement('span');
-  textSpan.className = 'scope-toggle-text';
-  textSpan.textContent = t(labelKey, labelFallback);
-  const switchSpan = document.createElement('span');
-  switchSpan.className = 'scope-toggle-switch';
-  const toggleInput = document.createElement('input');
-  toggleInput.type = 'checkbox';
-  toggleInput.checked = initial;
-  toggleInput.addEventListener('change', () => {
-    onChange(toggleInput.checked);
-    // Let the slide animation finish so the user sees the toggle move
-    // before the page reloads.
-    setTimeout(() => window.location.reload(), 350);
-  });
-  const trackSpan = document.createElement('span');
-  trackSpan.className = 'scope-toggle-track';
-  trackSpan.setAttribute('aria-hidden', 'true');
-  const thumbSpan = document.createElement('span');
-  thumbSpan.className = 'scope-toggle-thumb';
-  trackSpan.appendChild(thumbSpan);
-  switchSpan.appendChild(toggleInput);
-  switchSpan.appendChild(trackSpan);
-  toggleLabel.appendChild(textSpan);
-  toggleLabel.appendChild(switchSpan);
-  toggleLi.appendChild(toggleLabel);
-  return toggleLi;
 }
