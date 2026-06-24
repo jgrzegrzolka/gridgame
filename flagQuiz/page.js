@@ -330,6 +330,7 @@ export function bootFlagQuiz() {
         // wide and we don't want pink rings decorating Caribbean /
         // Pacific microstates that aren't part of the Asian round.
         scopeCodes: variantCodes,
+        fullscreenLabel: t('menu.fullscreen', 'Toggle fullscreen'),
       }).then((svg) => {
         mapSvg = svg;
         // Wheel-zoom + pinch + drag-pan + double-tap-reset. Attached

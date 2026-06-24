@@ -197,18 +197,24 @@ export function resetMap(root) {
  * on Caribbean / Pacific / African microstates that aren't in the
  * Asian quiz pool. Caller passes the active variant's codes.
  *
+ * `fullscreenLabel` is the already-translated string used as the
+ * fullscreen button's `aria-label`. Caller passes
+ * `t('menu.fullscreen', 'Toggle fullscreen')`.
+ *
  * @param {{
  *   container: HTMLElement,
  *   url: string,
  *   cropCodes?: string[] | null,
  *   cropPad?: { left?: number, right?: number, top?: number, bottom?: number },
  *   scopeCodes?: string[] | null,
+ *   fullscreenLabel?: string,
  *   fetchImpl?: typeof fetch,
  * }} args
  * @returns {Promise<SVGElement | null>}
  */
 export async function mountFlagMap({
   container, url, cropCodes = null, cropPad, scopeCodes = null,
+  fullscreenLabel = 'Toggle fullscreen',
   fetchImpl = globalThis.fetch,
 }) {
   if (!container || !url) return null;
@@ -244,8 +250,63 @@ export async function mountFlagMap({
     : null;
   tagMicrostates(svg, scope);
   addHitTargets(svg, hitTargetRadius(/** @type {any} */ (svg)));
+  addFullscreenButton(container, fullscreenLabel);
   return /** @type {SVGElement} */ (svg);
 }
+
+/**
+ * Append a small "enter fullscreen" button to the section, anchored
+ * top-right. Click toggles the browser Fullscreen API on the section
+ * itself, so the SVG fills the viewport (browser chrome hidden).
+ * Escape exits, same as any other fullscreen surface. Webkit-prefixed
+ * fallbacks for older Safari.
+ *
+ * `label` is the already-translated aria-label string — caller passes
+ * `t('menu.fullscreen', 'Toggle fullscreen')`.
+ *
+ * @param {HTMLElement} container
+ * @param {string} label
+ */
+function addFullscreenButton(container, label) {
+  if (!container || typeof container.appendChild !== 'function') return;
+  const doc = container.ownerDocument || globalThis.document;
+  if (!doc || typeof doc.createElement !== 'function') return;
+  const btn = doc.createElement('button');
+  btn.type = 'button';
+  btn.className = 'map-fullscreen-btn';
+  btn.setAttribute('aria-label', label || 'Toggle fullscreen');
+  // "Expand to corners" glyph. Tiny, no font dependency beyond what
+  // any system sans-serif covers.
+  btn.textContent = '⛶';
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleFullscreen(container);
+  });
+  container.appendChild(btn);
+}
+
+/**
+ * Cross-browser Fullscreen API toggle. Handles webkit-prefixed
+ * variants for older Safari. No-op when the browser doesn't support
+ * fullscreen (very old browsers).
+ *
+ * @param {HTMLElement} el
+ */
+function toggleFullscreen(el) {
+  /** @type {any} */
+  const doc = globalThis.document;
+  const current = doc.fullscreenElement || doc.webkitFullscreenElement || null;
+  if (current) {
+    const exit = doc.exitFullscreen || doc.webkitExitFullscreen;
+    if (exit) exit.call(doc);
+    return;
+  }
+  /** @type {any} */
+  const elAny = el;
+  const enter = elAny.requestFullscreen || elAny.webkitRequestFullscreen;
+  if (enter) enter.call(elAny);
+}
+
 
 /**
  * Hit-target radius in viewBox units, scaled to whatever viewBox is
