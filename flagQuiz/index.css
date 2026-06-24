@@ -465,12 +465,13 @@ body {
 
 /* Visible pink ring marker over each microstate (injected by
  * addHitTargets in europeMap.js). Doubles as the click target — the
- * 20-px disk is comfortable for mouse and thumb. Transparent fill so
- * the underlying country path shows through; pink stroke (brand
- * secondary) is the affordance signal: "here's a small country, click
- * me." When the player answers, the ring's stroke flips to the status
- * color so the marker doubles as the result indicator (the micro
- * country itself is too small for the fill to read). */
+ * 20-px disk is comfortable for mouse and thumb. The pink stroke
+ * (brand secondary) is a fixed "small country, click me" affordance
+ * and stays pink regardless of answer state — only the fill flips
+ * to green / red on answer, so the colored disk inside the pink
+ * ring tells you the status. Pink ring identity stays constant,
+ * which keeps the "this is a microstate" semantic legible across
+ * the whole map. */
 #europe-map-section svg .map-hit-target {
   fill: transparent;
   stroke: var(--secondary-color);
@@ -478,10 +479,8 @@ body {
   pointer-events: all;
 }
 #europe-map-section svg .map-hit-target.is-correct {
-  stroke: #2a8a3a;
-  stroke-width: 2;
+  fill: #2a8a3a;
 }
 #europe-map-section svg .map-hit-target.is-wrong {
-  stroke: #c0392b;
-  stroke-width: 2;
+  fill: #c0392b;
 }
