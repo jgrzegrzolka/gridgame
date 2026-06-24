@@ -53,12 +53,13 @@
 .map-fullscreen-btn:hover {
   background: var(--surface-hover-color);
 }
-/* Fullscreen mode: section fills the viewport; SVG element fills the
- * section. JS flips the SVG's `preserveAspectRatio` to `slice` on
- * fullscreen entry so the map content scales to FILL the viewport
- * (cropping the longer content axis) instead of letterboxing. Without
- * slice, a wide 2:1 world map on a portrait phone leaves big empty
- * bands top + bottom — wasted screen real estate. */
+/* Fullscreen mode: section + SVG fill the viewport. The SVG's
+ * `preserveAspectRatio` is toggled by JS based on zoom level —
+ * `meet` (letterbox) at full zoom-out so the player sees the whole
+ * map; `slice` (fill, may crop) when zoomed in so the chosen region
+ * uses the entire screen. Both modes need the SVG element itself to
+ * BE viewport-sized; CSS height:auto would otherwise keep it small
+ * and aspect-locked. */
 #flag-map-section:fullscreen,
 #flag-map-section:-webkit-full-screen {
   background: var(--surface-color);

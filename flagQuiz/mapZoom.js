@@ -210,6 +210,26 @@ export function attachZoomPan(svg) {
     current = clampViewBox(next, original);
     svg.setAttribute('viewBox', formatViewBox(current));
     rescaleHitTargets();
+    syncAspectMode();
+  }
+
+  /**
+   * In fullscreen, the SVG element is sized to the viewport (100vw ×
+   * 100vh). The default `preserveAspectRatio="meet"` letterboxes the
+   * map's content to fit within — at zoom-out you see the whole map
+   * but with empty bands on the shorter content axis. When the user
+   * zooms in (viewBox shrinks below original), switch to `slice` so
+   * the cropped region FILLS the viewport, using the screen real
+   * estate the letterbox would otherwise waste.
+   *
+   * Outside fullscreen this rule still applies but is a visual no-op
+   * — height:auto in the base CSS keeps the SVG element matched to
+   * its viewBox aspect, so meet vs slice render identically.
+   */
+  function syncAspectMode() {
+    const zoomedIn = current.width < original.width;
+    if (zoomedIn) svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    else svg.removeAttribute('preserveAspectRatio');
   }
 
   /**
