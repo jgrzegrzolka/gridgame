@@ -19,8 +19,8 @@
  * clicked once) from blowing out the rail.
  */
 
-export const MISTAKE_TARGET = 5;
-export const MISTAKE_MAX = 15;
+export const MISTAKE_TARGET = 10;
+export const MISTAKE_MAX = 20;
 
 /**
  * @typedef {{ totalAttempts: number, perCodeFinds: Record<string, number>, perWrongCode?: Record<string, number> }} StatsInput
