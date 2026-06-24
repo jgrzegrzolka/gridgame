@@ -486,25 +486,30 @@ export function bootFlagQuiz() {
         markCountry(mapSvg, currentAnswer.code, 'correct');
         advanceTo(quiz.next(), 250);
       } else if (timed) {
-        // Timed mode keeps the multi-attempt-per-question flow: wrong pick
-        // costs time (via flashPenalty), shake the feedback, let the player
-        // try the remaining tiles until they hit the right one.
+        // 60s is one-shot per question, same as count mode: a wrong
+        // pick advances the round. The cabinet (quiz.addToCabinet)
+        // queues the missed answer for revisit if the main pool
+        // exhausts before time runs out — your second chance is at the
+        // end, not in-place. Penalty (flashPenalty / wrongCount++)
+        // still applies so random clickers are punished by lost
+        // budget.
+        wrongCount++;
         tile.classList.add('wrong');
-        tile.disabled = true;
+        const correctTile = choicesEl.querySelector(`[data-code="${currentAnswer.code}"]`);
+        if (correctTile) correctTile.classList.add('correct');
+        disableAllTiles();
         feedbackEl.textContent = countryName(chosen);
         feedbackEl.classList.remove('shake-wrong');
-        void feedbackEl.offsetWidth;
-        feedbackEl.classList.add('shake-wrong');
-        wrongCount++;
         flashPenalty();
-        // Map: paint the CLICKED country red — semantically "I confused
-        // this flag with something else." Differs from count mode where
-        // we paint `currentAnswer.code` (the asked-about country); in
-        // timed mode the question is still open so we record the
-        // mis-pick instead. If `chosen` later becomes its own question
-        // and the player gets it right, markCountry's latest-wins rule
-        // flips it green — acceptable lossy behavior for the rare case.
-        markCountry(mapSvg, chosen.code, 'wrong');
+        // Map: paint the ASKED-ABOUT country red (currentAnswer.code),
+        // matching count mode's semantics. The clicked-country tracking
+        // we used during multi-attempt was lossy (latest-wins would
+        // flip the red to green if that country later came up correct);
+        // the cabinet pattern makes the asked-about marking honest —
+        // a wrong stays wrong unless revisited and corrected.
+        markCountry(mapSvg, currentAnswer.code, 'wrong');
+        quiz.addToCabinet(currentAnswer);
+        advanceTo(quiz.next(), 1200);
       } else {
         // Count mode is one-shot: a wrong pick ends the question. We
         // reveal the correct tile so the player learns what it was, then
