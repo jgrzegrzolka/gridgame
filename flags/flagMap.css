@@ -26,6 +26,51 @@
   margin: 24px 0 8px;
   padding: 0 12px;
   box-sizing: border-box;
+  /* Anchor for the absolutely-positioned `.map-fullscreen-btn` below. */
+  position: relative;
+}
+/* Fullscreen toggle — small button overlay anchored to the section's
+ * top-right corner. Click → `requestFullscreen()` on the section so
+ * the map fills the viewport (Escape exits, native browser behavior).
+ * Sits above the SVG via z-index so clicks reach the button and not
+ * the country path underneath. */
+.map-fullscreen-btn {
+  position: absolute;
+  top: 4px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 4px;
+  color: var(--primary-color);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  z-index: 10;
+}
+.map-fullscreen-btn:hover {
+  background: var(--surface-hover-color);
+}
+/* Fullscreen mode: section fills the viewport, SVG scales to fit
+ * within with breathing room. White background so the projection
+ * corners stay clean. Native :fullscreen pseudo + -webkit prefix
+ * for older Safari. */
+#flag-map-section:fullscreen,
+#flag-map-section:-webkit-full-screen {
+  background: var(--surface-color);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#flag-map-section:fullscreen svg,
+#flag-map-section:-webkit-full-screen svg {
+  max-width: 100%;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
 }
 #flag-map-section svg {
   width: 100%;

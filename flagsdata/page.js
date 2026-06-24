@@ -201,6 +201,7 @@ export function bootFlagsData() {
     void mountFlagMap({
       container: flagMapEl,
       url: '../flagQuiz/worldMap.svg',
+      fullscreenLabel: t('menu.fullscreen', 'Toggle fullscreen'),
     }).then((svg) => {
       mapSvg = svg;
       if (svg) mapHandle = attachZoomPan(svg);
