@@ -4,6 +4,7 @@ import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/fla
 import { createColorCountPicker } from '../colorCountPicker.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
+import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 
 /** @param {string} v */
 function statusLabel(v) {
@@ -47,8 +48,6 @@ const STATUS_LABELS = {
 
 export function bootFlagsData() {
   const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
-  const zoomImg = zoom.querySelector('img');
-  const zoomName = zoom.querySelector('p');
   const zoomData = /** @type {HTMLElement} */ (zoom.querySelector('.country-data'));
   // The full JSON dump under the zoomed flag is a data-audit tool for
   // checking colour/motif/status fields against the SVG — not something
@@ -62,15 +61,10 @@ export function bootFlagsData() {
   /** @param {Country} c */
   function openZoom(c) {
     const displayName = countryName(c);
-    zoomImg.src = `../flags/svg/${c.code}.svg`;
-    zoomImg.alt = displayName;
-    zoomName.textContent = displayName;
+    openFlagZoom(zoom, { code: c.code, displayName, svgBase: '../flags/svg/' });
     if (SHOW_DATA) zoomData.textContent = JSON.stringify(c, null, 2);
-    zoom.showModal();
   }
-  zoom.addEventListener('click', (e) => {
-    if (e.target === zoom) zoom.close();
-  });
+  wireFlagZoomBackdropClose(zoom);
 
   /** @param {Country} c */
   function flagTile(c) {

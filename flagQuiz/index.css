@@ -395,3 +395,93 @@ body {
   margin: 0;
   padding: 0;
 }
+
+/* Europe contour map — shown below the choices in all-mode Europe
+ * variant only (gated in page.js). The wrapper sits below the action
+ * row on both mobile and desktop; full-width, capped at the SVG's
+ * native 680px so it doesn't grow unbounded on wide displays.
+ *
+ * Highly-specific selectors are deliberate: the inlined SVG carries
+ * its own internal `<style>` with `.c { fill:#c0c0c0; stroke:#FFF; }`
+ * (see europeMap.svg defs). Without higher specificity our rules
+ * would lose to the inline `<style>` block. Pinning under the
+ * `#europe-map-section svg path.c` chain wins consistently. */
+#europe-map-section {
+  width: 100%;
+  margin: 24px 0 8px;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+#europe-map-section svg {
+  width: 100%;
+  max-width: 680px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+#europe-map-section svg path.c {
+  fill: var(--muted-soft-color);
+  stroke: var(--muted-color);
+  stroke-width: 0.4;
+  /* Slow enough to be visible as a status change, fast enough not to
+   * lag the next render in count mode (1200 ms gap between rounds). */
+  transition: fill 240ms ease-out;
+}
+/* Match daily's per-flag found/missed marker shades so the visual
+ * language of "got it / missed it" reads the same across the site
+ * (daily/index.css:247-251 uses the same two hex values for the
+ * corner dots). Both colours are accepted exceptions to the six-token
+ * palette rule, scoped to "answer status" surfaces. */
+/* Both `<path id="xx">` (most countries) and `<g id="xx">` (UK, Russia,
+ * Turkey — multi-territory groupings) carry the status class. For the
+ * group case, the fill has to land on the child paths since the .c
+ * default-fill rule above paints them grey and would otherwise win
+ * specificity. */
+#europe-map-section svg path.c.is-correct,
+#europe-map-section svg g.is-correct path.c {
+  fill: #2a8a3a;
+}
+#europe-map-section svg path.c.is-wrong,
+#europe-map-section svg g.is-wrong path.c {
+  fill: #c0392b;
+}
+
+/* Microstate paths get NO special styling — they render with the same
+ * thin grey border as bigger countries. Visibility + click target both
+ * come from the overlay ring below. The `.is-small` class still exists
+ * on the path (it tells europeMap.js which countries need an overlay),
+ * but we deliberately don't restyle the path itself: a heavy outline
+ * read as "ugly thick border" rather than "useful marker". */
+/* Click affordance — the map is non-interactive during play; on game
+ * end the section gets `.is-finished` and every country becomes a
+ * review surface. We don't try to be selective about WHAT'S clickable
+ * post-finish (every drawn country resolves to a popup), so a blanket
+ * cursor:pointer over the SVG paint area inside .is-finished is the
+ * right rule. */
+#europe-map-section.is-finished svg path,
+#europe-map-section.is-finished svg .map-hit-target {
+  cursor: pointer;
+}
+
+/* Visible pink ring marker over each microstate (injected by
+ * addHitTargets in europeMap.js). Doubles as the click target — the
+ * 20-px disk is comfortable for mouse and thumb. Transparent fill so
+ * the underlying country path shows through; pink stroke (brand
+ * secondary) is the affordance signal: "here's a small country, click
+ * me." When the player answers, the ring's stroke flips to the status
+ * color so the marker doubles as the result indicator (the micro
+ * country itself is too small for the fill to read). */
+#europe-map-section svg .map-hit-target {
+  fill: transparent;
+  stroke: var(--secondary-color);
+  stroke-width: 1.5;
+  pointer-events: all;
+}
+#europe-map-section svg .map-hit-target.is-correct {
+  stroke: #2a8a3a;
+  stroke-width: 2;
+}
+#europe-map-section svg .map-hit-target.is-wrong {
+  stroke: #c0392b;
+  stroke-width: 2;
+}
