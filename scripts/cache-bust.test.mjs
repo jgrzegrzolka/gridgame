@@ -135,3 +135,33 @@ test('cache-bust rewrites multiple paths in the same source', () => {
   assert.match(out, /\.\.\/b\.js\?v=abc123/);
   assert.match(out, /\.\/data\.json\?v=abc123/);
 });
+
+test('cache-bust rewrites a relative .svg asset URL (flagQuiz map config)', () => {
+  // SWA serves SVGs with `Cache-Control: max-age=31536000, immutable`,
+  // so without the version suffix Cloudflare keeps the previous asset
+  // forever — the BlankMap-World swap got stuck on the old ISO map in
+  // prod until we manually purged CF.
+  const src = `const cfg = { url: './worldMap.svg' };`;
+  assert.equal(
+    applyCacheBust(src, SUFFIX),
+    `const cfg = { url: './worldMap.svg${SUFFIX}' };`,
+  );
+});
+
+test('cache-bust rewrites a parent-relative .svg path', () => {
+  const src = `mountFlagMap({ url: '../assets/europe.svg' });`;
+  assert.equal(
+    applyCacheBust(src, SUFFIX),
+    `mountFlagMap({ url: '../assets/europe.svg${SUFFIX}' });`,
+  );
+});
+
+test('cache-bust does NOT rewrite bare-path .svg references (no ./ or ../ prefix)', () => {
+  // `<img src="flags/svg/ch.svg">` in HTML doesn't start with `./` or
+  // `../`, so the regex deliberately skips it — that path resolves
+  // relative to the HTML's URL, and busting one of ~270 flag SVGs on
+  // every deploy would add per-page request overhead for no real
+  // staleness risk (the flag SVGs in `flags/svg/` change rarely).
+  const src = `<img src="flags/svg/ch.svg" alt="" />`;
+  assert.equal(applyCacheBust(src, SUFFIX), src);
+});

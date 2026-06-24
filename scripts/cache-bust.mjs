@@ -2,9 +2,10 @@
  * Deploy-time cache-bust pass.
  *
  * Walks every shipped .js AND .html file and appends `?v=<sha>` to
- * relative .js / .json paths inside string and template literals.
- * Covers static imports, dynamic imports, export-froms, JSON fetches,
- * the `const url = './foo.json'; fetch(url)` indirection, AND HTML
+ * relative .js / .json / .svg paths inside string and template
+ * literals. Covers static imports, dynamic imports, export-froms,
+ * JSON fetches, the `const url = './foo.json'; fetch(url)` indirection,
+ * SVG asset URLs (e.g. flagQuiz's per-variant contour maps), AND HTML
  * inline `<script type="module">` imports of shared modules.
  *
  * Why a separate pass (not the HTML sed): the HTML sed only versions
@@ -41,10 +42,14 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-// String-literal paths: '<rel>.js' / "<rel>.json" / etc. The body
-// excludes `?` so already-versioned paths don't match (idempotent
-// re-runs and any future explicitly-versioned URLs both fall through).
-const STRING_PATH = /(['"])(\.\.?\/[^'"?\s]+\.(?:js|json))\1/g;
+// String-literal paths: '<rel>.js' / "<rel>.json" / "<rel>.svg" / etc.
+// The body excludes `?` so already-versioned paths don't match
+// (idempotent re-runs and any future explicitly-versioned URLs both
+// fall through). `.svg` covers static asset URLs like flagQuiz's
+// `./worldMap.svg` map — SWA serves SVGs with `Cache-Control:
+// max-age=31536000, immutable`, so without the per-deploy version
+// suffix Cloudflare keeps serving the previous asset forever.
+const STRING_PATH = /(['"])(\.\.?\/[^'"?\s]+\.(?:js|json|svg))\1/g;
 
 // Template-literal paths ending in `.json`. Requires at least one
 // `${…}` interpolation in the literal, which is the actual signal that
