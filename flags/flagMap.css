@@ -53,24 +53,24 @@
 .map-fullscreen-btn:hover {
   background: var(--surface-hover-color);
 }
-/* Fullscreen mode: section fills the viewport, SVG scales to fit
- * within with breathing room. White background so the projection
- * corners stay clean. Native :fullscreen pseudo + -webkit prefix
- * for older Safari. */
+/* Fullscreen mode: section fills the viewport; SVG element fills the
+ * section. JS flips the SVG's `preserveAspectRatio` to `slice` on
+ * fullscreen entry so the map content scales to FILL the viewport
+ * (cropping the longer content axis) instead of letterboxing. Without
+ * slice, a wide 2:1 world map on a portrait phone leaves big empty
+ * bands top + bottom — wasted screen real estate. */
 #flag-map-section:fullscreen,
 #flag-map-section:-webkit-full-screen {
   background: var(--surface-color);
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 0;
+  overflow: hidden;
 }
 #flag-map-section:fullscreen svg,
 #flag-map-section:-webkit-full-screen svg {
-  max-width: 100%;
-  max-height: 100vh;
-  width: auto;
-  height: auto;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
 }
 #flag-map-section svg {
   width: 100%;
