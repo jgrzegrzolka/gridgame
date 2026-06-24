@@ -209,6 +209,32 @@ export function attachZoomPan(svg) {
   function apply(next) {
     current = clampViewBox(next, original);
     svg.setAttribute('viewBox', formatViewBox(current));
+    rescaleHitTargets();
+  }
+
+  /**
+   * Resize the microstate hit-target rings so they stay roughly the
+   * same pixel size as the viewBox crops in. Without this, the rings
+   * (fixed at the asset's natural viewBox size) appear enormous when
+   * zoomed in — Liechtenstein's ring would visually dwarf Switzerland.
+   *
+   * Each ring's natural radius is stored on `data-base-r` by
+   * `addHitTargets` at mount; we scale `r` by `current.width /
+   * original.width` on every apply.
+   */
+  function rescaleHitTargets() {
+    const scale = current.width / original.width;
+    const hits = svg.querySelectorAll('.map-hit-target');
+    for (let i = 0; i < hits.length; i++) {
+      /** @type {any} */
+      const el = hits[i];
+      if (typeof el.getAttribute !== 'function') continue;
+      const base = el.getAttribute('data-base-r');
+      if (!base) continue;
+      const parsed = parseFloat(base);
+      if (!Number.isFinite(parsed)) continue;
+      el.setAttribute('r', String(parsed * scale));
+    }
   }
 
   /** @param {WheelEvent} e */

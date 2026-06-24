@@ -61,8 +61,10 @@ const ISO2_PATTERN = /^[a-z]{2}$/;
  * today; extend when adding new continent maps.
  */
 const MICROSTATE_CODES = new Set([
-  // Europe
-  'va', 'mc', 'sm', 'ad', 'li', 'mt', 'lu',
+  // Europe — Vatican, Monaco, San Marino, Andorra, Liechtenstein, Malta.
+  // Luxembourg is intentionally NOT here: at ~2600 km² it's visible-
+  // sized as a country path on the Europe map and doesn't need a ring.
+  'va', 'mc', 'sm', 'ad', 'li', 'mt',
   // British isles + Crown Dependencies
   'gg', 'je', 'im', 'fo',
   // Asia microstates — only countries whose paths are tinier than
@@ -388,6 +390,12 @@ function addHitTargets(svg, radius) {
     circle.setAttribute('cy', String(cy));
     circle.setAttribute('r', String(radius));
     circle.setAttribute('data-hit-for', path.id);
+    // `data-base-r` is the radius at the asset's natural viewBox.
+    // mapZoom.js scales the live `r` attribute down as the viewBox
+    // crops in, so the ring stays roughly the same on-screen size
+    // regardless of zoom level (otherwise Liechtenstein's ring would
+    // dwarf Switzerland on a zoomed-in Europe view).
+    circle.setAttribute('data-base-r', String(radius));
     circle.setAttribute('class', 'map-hit-target');
     circle.setAttribute('fill', 'transparent');
     svg.appendChild(circle);
