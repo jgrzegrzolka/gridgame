@@ -20,23 +20,45 @@ export function setQuizIncludeAll(store, value) {
 }
 
 /**
- * Per-device preference for showing the Europe contour map during
- * flagQuiz rounds. Defaults to false — `readBoolSetting` returns
- * false when the key is missing. We default to hidden for the
- * rollout; flip to default-shown once the feature has had eyes on it.
+ * Per-device preference for showing the flagQuiz contour map.
+ * **Defaults to true** — every variant has a map now, so the default
+ * surface is "map on" and the toggle is an opt-out.
+ *
+ * Storage convention:
+ *   - `'true'` or **missing** → show map (default-on for new players
+ *     and for players who explicitly opted in pre-rollout).
+ *   - `'false'`               → hide map (explicit opt-out).
+ *
+ * We can't use `readBoolSetting` here because that returns false-on-
+ * missing — which would make the toggle off-by-default for every
+ * player without any saved preference.
  *
  * @param {{ getItem(key: string): string | null } | null | undefined} [store]
  */
 export function isQuizShowMap(store) {
-  return readBoolSetting(store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null), QUIZ_SHOW_MAP_KEY);
+  const s = store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null);
+  if (!s) return true;
+  try {
+    return s.getItem(QUIZ_SHOW_MAP_KEY) !== 'false';
+  } catch {
+    return true;
+  }
 }
 
 /**
- * @param {{ setItem(key: string, value: string): void, removeItem(key: string): void }} store
+ * Writes the literal `'true'` / `'false'` (not `removeItem` on false)
+ * so an explicit opt-out persists. Otherwise a player who toggled the
+ * map off would see it come back on the next visit, because missing
+ * key now reads as default-on.
+ *
+ * @param {{ setItem(key: string, value: string): void }} store
  * @param {boolean} value
  */
 export function setQuizShowMap(store, value) {
-  writeBoolSetting(store, QUIZ_SHOW_MAP_KEY, value);
+  if (!store) return;
+  try {
+    store.setItem(QUIZ_SHOW_MAP_KEY, value ? 'true' : 'false');
+  } catch { /* ignore */ }
 }
 
 /**

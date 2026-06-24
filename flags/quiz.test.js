@@ -1041,17 +1041,32 @@ test('resolveMode is idempotent — passing back the resolved mode returns the s
 // every player's preference. Pin both the default-when-missing
 // behavior and the exact key.
 
-test('isQuizShowMap defaults to false when the key is missing', () => {
-  assert.equal(isQuizShowMap(fakeStore()), false);
+test('isQuizShowMap defaults to true when the key is missing', () => {
+  // Every variant has a map now — opt-out, not opt-in. Missing key
+  // reads as "show" so brand-new players see the map by default.
+  assert.equal(isQuizShowMap(fakeStore()), true);
 });
 
-test('setQuizShowMap writes the truthy preference', () => {
-  // Storage interface for `writeBoolSetting(false)` calls `removeItem`,
-  // which the lean fakeStore doesn't model — group.test.js covers that
-  // round-trip with a fully-featured fake. We just pin that the truthy
-  // write lands under a key isQuizShowMap can read back.
+test('isQuizShowMap returns false when the key is explicitly "false"', () => {
+  // Players who toggle the map off get their opt-out persisted as the
+  // literal string "false" — not removeItem, otherwise the default-on
+  // behavior would bring the map back on the next visit.
+  const store = fakeStore({ 'gridgame.flagquiz.showMap': 'false' });
+  assert.equal(isQuizShowMap(store), false);
+});
+
+test('isQuizShowMap returns true when the key is explicitly "true"', () => {
+  // Pre-rollout players who opted in have 'true' stored — same default
+  // they had then, same behavior post-rollout.
+  const store = fakeStore({ 'gridgame.flagquiz.showMap': 'true' });
+  assert.equal(isQuizShowMap(store), true);
+});
+
+test('setQuizShowMap round-trips both true and false values', () => {
   const store = fakeStore();
-  setQuizShowMap(/** @type {any} */ (store), true);
+  setQuizShowMap(store, false);
+  assert.equal(isQuizShowMap(store), false);
+  setQuizShowMap(store, true);
   assert.equal(isQuizShowMap(store), true);
 });
 
