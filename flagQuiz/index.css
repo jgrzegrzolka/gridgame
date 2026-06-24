@@ -396,30 +396,38 @@ body {
   padding: 0;
 }
 
-/* Europe contour map — shown below the choices in all-mode Europe
- * variant only (gated in page.js). The wrapper sits below the action
- * row on both mobile and desktop; full-width, capped at the SVG's
- * native 680px so it doesn't grow unbounded on wide displays.
+/* Flag-quiz contour map — shown below the choices in supported
+ * variants (currently Europe + Asia, gated in page.js). Wrapper sits
+ * below the action row on both mobile and desktop; full-width, capped
+ * at 680 px so it doesn't grow unbounded on wide displays.
  *
- * Highly-specific selectors are deliberate: the inlined SVG carries
- * its own internal `<style>` with `.c { fill:#c0c0c0; stroke:#FFF; }`
- * (see europeMap.svg defs). Without higher specificity our rules
- * would lose to the inline `<style>` block. Pinning under the
- * `#europe-map-section svg path.c` chain wins consistently. */
-#europe-map-section {
+ * Selectors are highly-specific because the inlined SVG can carry its
+ * own internal `<style>` block (the Europe asset defines `.c` and
+ * `.k`). Pinning under `#flag-map-section svg .map-country` keeps our
+ * rules winning regardless of the asset's internals. `.map-country` is
+ * added by `tagCountryPaths` at mount — any element whose id is a
+ * 2-letter ISO code gets it, so the same selector works for paths
+ * (Europe `<path id="es">`, world map `<path id="es">`) AND for
+ * <g> wrappers (UK, Russia, Turkey, China etc.). */
+#flag-map-section {
   width: 100%;
   margin: 24px 0 8px;
   padding: 0 12px;
   box-sizing: border-box;
 }
-#europe-map-section svg {
+#flag-map-section svg {
   width: 100%;
   max-width: 680px;
   height: auto;
   display: block;
   margin: 0 auto;
 }
-#europe-map-section svg path.c {
+/* Default fill: the country element itself for single-path countries,
+ * and the child paths for <g>-wrapped countries. The second selector
+ * covers gb / ru / tr / cn etc. — their child paths need explicit
+ * styling because the <g> doesn't paint itself. */
+#flag-map-section svg .map-country,
+#flag-map-section svg g.map-country path {
   fill: var(--muted-soft-color);
   stroke: var(--muted-color);
   stroke-width: 0.4;
@@ -427,60 +435,56 @@ body {
    * lag the next render in count mode (1200 ms gap between rounds). */
   transition: fill 240ms ease-out;
 }
-/* Match daily's per-flag found/missed marker shades so the visual
- * language of "got it / missed it" reads the same across the site
- * (daily/index.css:247-251 uses the same two hex values for the
- * corner dots). Both colours are accepted exceptions to the six-token
- * palette rule, scoped to "answer status" surfaces. */
-/* Both `<path id="xx">` (most countries) and `<g id="xx">` (UK, Russia,
- * Turkey — multi-territory groupings) carry the status class. For the
- * group case, the fill has to land on the child paths since the .c
- * default-fill rule above paints them grey and would otherwise win
- * specificity. */
-#europe-map-section svg path.c.is-correct,
-#europe-map-section svg g.is-correct path.c {
+/* Answered status. The fill has to land on the child paths for
+ * <g>-wrapped countries since the default-fill rule above paints them
+ * grey and would otherwise win specificity. Status colors mirror
+ * daily's per-flag found/missed marker shades so the visual language
+ * of "got it / missed it" reads the same across the site (daily/index.css
+ * uses the same two hex values for the corner dots). Both colors are
+ * accepted exceptions to the six-token palette rule, scoped to "answer
+ * status" surfaces. */
+#flag-map-section svg .map-country.is-correct,
+#flag-map-section svg g.is-correct path {
   fill: #2a8a3a;
 }
-#europe-map-section svg path.c.is-wrong,
-#europe-map-section svg g.is-wrong path.c {
+#flag-map-section svg .map-country.is-wrong,
+#flag-map-section svg g.is-wrong path {
   fill: #c0392b;
 }
 
 /* Microstate paths get NO special styling — they render with the same
  * thin grey border as bigger countries. Visibility + click target both
  * come from the overlay ring below. The `.is-small` class still exists
- * on the path (it tells europeMap.js which countries need an overlay),
+ * on the path (it tells flagMap.js which countries need an overlay),
  * but we deliberately don't restyle the path itself: a heavy outline
- * read as "ugly thick border" rather than "useful marker". */
+ * reads as "ugly thick border" rather than "useful marker". */
 /* Click affordance — the map is non-interactive during play; on game
  * end the section gets `.is-finished` and every country becomes a
  * review surface. We don't try to be selective about WHAT'S clickable
  * post-finish (every drawn country resolves to a popup), so a blanket
  * cursor:pointer over the SVG paint area inside .is-finished is the
  * right rule. */
-#europe-map-section.is-finished svg path,
-#europe-map-section.is-finished svg .map-hit-target {
+#flag-map-section.is-finished svg path,
+#flag-map-section.is-finished svg .map-hit-target {
   cursor: pointer;
 }
 
 /* Visible pink ring marker over each microstate (injected by
- * addHitTargets in europeMap.js). Doubles as the click target — the
+ * addHitTargets in flagMap.js). Doubles as the click target — the
  * 20-px disk is comfortable for mouse and thumb. The pink stroke
  * (brand secondary) is a fixed "small country, click me" affordance
  * and stays pink regardless of answer state — only the fill flips
  * to green / red on answer, so the colored disk inside the pink
- * ring tells you the status. Pink ring identity stays constant,
- * which keeps the "this is a microstate" semantic legible across
- * the whole map. */
-#europe-map-section svg .map-hit-target {
+ * ring tells you the status. */
+#flag-map-section svg .map-hit-target {
   fill: transparent;
   stroke: var(--secondary-color);
   stroke-width: 1.5;
   pointer-events: all;
 }
-#europe-map-section svg .map-hit-target.is-correct {
+#flag-map-section svg .map-hit-target.is-correct {
   fill: #2a8a3a;
 }
-#europe-map-section svg .map-hit-target.is-wrong {
+#flag-map-section svg .map-hit-target.is-wrong {
   fill: #c0392b;
 }

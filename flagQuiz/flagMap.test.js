@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { markCountry, resetMap, mountEuropeMap } from './europeMap.js';
+import { markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries } from './flagMap.js';
 
 /**
  * Tiny fake of the SVG host root: maps ID → path-like object with a
@@ -166,7 +166,7 @@ test('resetMap tolerates a null root', () => {
   assert.doesNotThrow(() => resetMap(/** @type {any} */ (null)));
 });
 
-/* mountEuropeMap — fetch + inline + viewBox patch.
+/* mountFlagMap — fetch + inline + viewBox patch.
  *
  * We fake `fetch` and use a minimal `container` whose innerHTML setter
  * builds a tiny DOM stand-in. Node has no DOM, but we only need the
@@ -215,48 +215,48 @@ function fakeFetch(body, { ok = true } = {}) {
   });
 }
 
-test('mountEuropeMap inlines fetched SVG and adds viewBox from width/height', async () => {
+test('mountFlagMap inlines fetched SVG and adds viewBox from width/height', async () => {
   const container = fakeContainer();
   const fetchImpl = fakeFetch('<svg width="680" height="520"><path id="es"/></svg>');
-  const svg = await mountEuropeMap({ container, url: '/x.svg', fetchImpl });
+  const svg = await mountFlagMap({ container, url: '/x.svg', fetchImpl });
   assert.ok(svg, 'returns the svg root');
   assert.equal(svg.getAttribute('viewBox'), '0 0 680 520');
   assert.equal(svg.getAttribute('width'), null, 'width attribute stripped');
   assert.equal(svg.getAttribute('height'), null, 'height attribute stripped');
 });
 
-test('mountEuropeMap preserves an existing viewBox instead of rebuilding it', async () => {
+test('mountFlagMap preserves an existing viewBox instead of rebuilding it', async () => {
   const container = fakeContainer();
   const fetchImpl = fakeFetch('<svg viewBox="0 0 100 80" width="100" height="80"></svg>');
-  const svg = await mountEuropeMap({ container, url: '/x.svg', fetchImpl });
+  const svg = await mountFlagMap({ container, url: '/x.svg', fetchImpl });
   assert.ok(svg);
   assert.equal(svg.getAttribute('viewBox'), '0 0 100 80');
 });
 
-test('mountEuropeMap returns null on fetch failure (network error)', async () => {
+test('mountFlagMap returns null on fetch failure (network error)', async () => {
   const container = fakeContainer();
   const fetchImpl = async () => { throw new Error('boom'); };
-  const svg = await mountEuropeMap({ container, url: '/x.svg', fetchImpl });
+  const svg = await mountFlagMap({ container, url: '/x.svg', fetchImpl });
   assert.equal(svg, null);
 });
 
-test('mountEuropeMap returns null on non-ok HTTP response', async () => {
+test('mountFlagMap returns null on non-ok HTTP response', async () => {
   const container = fakeContainer();
   const fetchImpl = fakeFetch('whatever', { ok: false });
-  const svg = await mountEuropeMap({ container, url: '/x.svg', fetchImpl });
+  const svg = await mountFlagMap({ container, url: '/x.svg', fetchImpl });
   assert.equal(svg, null);
 });
 
-test('mountEuropeMap returns null when the payload has no <svg> root', async () => {
+test('mountFlagMap returns null when the payload has no <svg> root', async () => {
   const container = fakeContainer();
   const fetchImpl = fakeFetch('<html>not an svg</html>');
-  const svg = await mountEuropeMap({ container, url: '/x.svg', fetchImpl });
+  const svg = await mountFlagMap({ container, url: '/x.svg', fetchImpl });
   assert.equal(svg, null);
 });
 
-test('mountEuropeMap with a missing container is a safe no-op', async () => {
+test('mountFlagMap with a missing container is a safe no-op', async () => {
   const fetchImpl = fakeFetch('<svg width="100" height="100"></svg>');
-  const svg = await mountEuropeMap({
+  const svg = await mountFlagMap({
     container: /** @type {any} */ (null), url: '/x.svg', fetchImpl,
   });
   assert.equal(svg, null);
@@ -320,16 +320,148 @@ function matchesSelector(stub, selector) {
   return true;
 }
 
-test('mountEuropeMap promotes SVG-tagged .k paths to .is-small', async () => {
+test('mountFlagMap promotes SVG-tagged .k paths to .is-small', async () => {
   const container = fakeContainerWithPaths([
     { id: 'va', classes: ['c', 'k'] },
     { id: 'mc', classes: ['c', 'k'] },
     { id: 'es', classes: ['c'] },  // not a microstate
   ]);
   const fetchImpl = fakeFetch('<svg width="680" height="520"></svg>');
-  await mountEuropeMap({ container, url: '/x.svg', fetchImpl });
+  await mountFlagMap({ container, url: '/x.svg', fetchImpl });
   const stubs = container._svg._stubs;
   assert.equal(stubs.find((s) => s._id === 'va').classList.has('is-small'), true);
   assert.equal(stubs.find((s) => s._id === 'mc').classList.has('is-small'), true);
   assert.equal(stubs.find((s) => s._id === 'es').classList.has('is-small'), false);
+});
+
+// ---- tagCountryPaths ----
+//
+// Lean stub root that only models `querySelectorAll('[id]')` (the
+// single selector tagCountryPaths uses). Each node carries an `id`
+// string + a classList Set.
+
+function fakeSvgWithIds(ids) {
+  const nodes = ids.map((id) => {
+    const classes = new Set();
+    return {
+      id,
+      classList: {
+        add: (c) => classes.add(c),
+        remove: (c) => classes.delete(c),
+        has: (c) => classes.has(c),
+      },
+      _classes: classes,
+    };
+  });
+  return {
+    querySelectorAll: (sel) => (sel === '[id]' ? nodes : []),
+    _nodes: nodes,
+  };
+}
+
+test('tagCountryPaths adds .map-country only to ISO2-shaped ids', () => {
+  const svg = fakeSvgWithIds([
+    'es',           // ISO2 — yes
+    'fr',           // ISO2 — yes
+    'cn',           // ISO2 — yes
+    'dk_kingdom',   // composite grouping — no
+    'svg1',         // SVG root — no
+    'style1',       // style block — no
+    'st0',          // Adobe-generated class id — no
+    'a',            // single letter — no
+    'esp',          // 3-letter — no
+    '',             // empty — no
+  ]);
+  tagCountryPaths(svg);
+  const tagged = svg._nodes
+    .filter((n) => n.classList.has('map-country'))
+    .map((n) => n.id);
+  assert.deepEqual(tagged, ['es', 'fr', 'cn']);
+});
+
+test('tagCountryPaths tolerates a null svg', () => {
+  assert.doesNotThrow(() => tagCountryPaths(/** @type {any} */ (null)));
+});
+
+test('tagCountryPaths is idempotent — a re-call doesn\'t add a second class', () => {
+  const svg = fakeSvgWithIds(['es']);
+  tagCountryPaths(svg);
+  tagCountryPaths(svg);
+  // classList is a Set; .has returns one boolean. We just confirm the
+  // double tag didn't throw and the class remains.
+  assert.equal(svg._nodes[0].classList.has('map-country'), true);
+});
+
+// ---- cropToCountries ----
+//
+// Stub root supporting `querySelector('#code')` returning a node with
+// `getBBox()`. setAttribute is recorded so we can assert the viewBox.
+
+function fakeSvgWithBboxes(boxes) {
+  const byId = new Map();
+  for (const [id, bb] of Object.entries(boxes)) {
+    byId.set(id, { id, getBBox: () => bb });
+  }
+  let viewBox = null;
+  return {
+    querySelector: (sel) => {
+      if (sel.startsWith('#')) return byId.get(sel.slice(1)) || null;
+      return null;
+    },
+    setAttribute: (k, v) => { if (k === 'viewBox') viewBox = String(v); },
+    _viewBox: () => viewBox,
+  };
+}
+
+test('cropToCountries sets viewBox to the bbox union plus 5% padding', () => {
+  const svg = fakeSvgWithBboxes({
+    cn: { x: 100, y: 50, width: 60, height: 40 },
+    jp: { x: 180, y: 60, width: 30, height: 30 },
+    in: { x: 60,  y: 90, width: 40, height: 50 },
+  });
+  cropToCountries(svg, ['cn', 'jp', 'in']);
+  // Union bbox: minX=60, minY=50, maxX=210, maxY=140
+  //   → width 150, height 90 → 5% padding = 7.5, 4.5
+  // viewBox = `${60-7.5} ${50-4.5} ${150+15} ${90+9}` = "52.5 45.5 165 99"
+  assert.equal(svg._viewBox(), '52.5 45.5 165 99');
+});
+
+test('cropToCountries silently skips codes whose elements are missing', () => {
+  const svg = fakeSvgWithBboxes({
+    cn: { x: 100, y: 50, width: 60, height: 40 },
+  });
+  cropToCountries(svg, ['cn', 'missingcode', 'jp']);
+  // Only cn resolves; viewBox is its bbox + 5% pad.
+  // bbox: 100/50/60/40 → padX=3, padY=2
+  assert.equal(svg._viewBox(), '97 48 66 44');
+});
+
+test('cropToCountries rejects non-ISO2 codes without throwing', () => {
+  const svg = fakeSvgWithBboxes({
+    cn: { x: 0, y: 0, width: 10, height: 10 },
+  });
+  cropToCountries(svg, ['cn', 'dk_kingdom', '', 'CN', 'esp']);
+  // Only 'cn' is allowed — others fail the ISO2 regex. viewBox still set.
+  assert.ok(svg._viewBox() !== null);
+});
+
+test('cropToCountries no-ops when no codes resolve', () => {
+  const svg = fakeSvgWithBboxes({});
+  cropToCountries(svg, ['cn', 'jp']);
+  assert.equal(svg._viewBox(), null);
+});
+
+test('cropToCountries skips degenerate bboxes (width AND height both 0)', () => {
+  const svg = fakeSvgWithBboxes({
+    cn: { x: 5, y: 5, width: 0, height: 0 },
+    jp: { x: 100, y: 100, width: 20, height: 20 },
+  });
+  cropToCountries(svg, ['cn', 'jp']);
+  // Only jp's real bbox contributes — cn is skipped.
+  // jp bbox: 100/100/20/20 → padX=1, padY=1
+  assert.equal(svg._viewBox(), '99 99 22 22');
+});
+
+test('cropToCountries tolerates a null svg', () => {
+  assert.doesNotThrow(() => cropToCountries(/** @type {any} */ (null), ['cn']));
 });

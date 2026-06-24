@@ -161,14 +161,15 @@ function buildScopeToggleLi(includeAll) {
 
 /** @param {boolean} showMap */
 function buildMapToggleLi(showMap) {
-  // Only meaningful on the Europe variant (we don't ship a map asset
-  // for other continents yet) but the toggle is always present in the
-  // menu: it's a global preference, so the player can pre-set it
-  // before navigating to Europe rather than discover the option only
-  // once they're already mid-round.
+  // Supported on variants that have a bundled map asset (currently
+  // Europe + Asia). The toggle is always present in the menu — it's a
+  // global preference, so the player can pre-set it before navigating
+  // to a supported variant rather than discover the option only once
+  // they're already mid-round. On unsupported variants the preference
+  // simply has no effect.
   return buildToggleLi({
     labelKey: 'menu.showMap',
-    labelFallback: 'Show map (Europe)',
+    labelFallback: 'Show map',
     initial: showMap,
     onChange: (checked) => setQuizShowMap(localStorage, checked),
   });
