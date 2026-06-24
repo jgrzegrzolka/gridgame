@@ -290,12 +290,18 @@ export function bootFlagQuiz() {
     let mapSvg = null;
     if (flagMapEl && MAP_CONFIG[key] && isQuizShowMap()) {
       const cfg = MAP_CONFIG[key];
+      const variantCodes = variantPool.map((c) => c.code);
       flagMapEl.hidden = false;
       flagMapEl.setAttribute('aria-hidden', 'false');
       void mountFlagMap({
         container: flagMapEl,
         url: cfg.url,
-        cropCodes: cfg.crop ? variantPool.map((c) => c.code) : null,
+        cropCodes: cfg.crop ? variantCodes : null,
+        // Microstate overlays only land on countries the player will
+        // actually be quizzed on — the world map is geographically
+        // wide and we don't want pink rings decorating Caribbean /
+        // Pacific microstates that aren't part of the Asian round.
+        scopeCodes: variantCodes,
       }).then((svg) => { mapSvg = svg; });
 
       // Click → flag zoom popup. The map is non-interactive while the

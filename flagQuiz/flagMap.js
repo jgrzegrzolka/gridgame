@@ -99,15 +99,26 @@ export function resetMap(root) {
  * of those country paths — used by Asia (which mounts the world map and
  * crops to Asia). Europe keeps the asset's natural viewBox.
  *
+ * `scopeCodes` (optional) limits which countries get the microstate
+ * treatment (pink-ring overlay). Defaults to all `.map-country`
+ * elements — fine for Europe, which only carries European countries in
+ * its asset. For the world map used by Asia we want to suppress overlays
+ * on Caribbean / Pacific / African microstates that aren't in the
+ * Asian quiz pool. Caller passes the active variant's codes.
+ *
  * @param {{
  *   container: HTMLElement,
  *   url: string,
  *   cropCodes?: string[] | null,
+ *   scopeCodes?: string[] | null,
  *   fetchImpl?: typeof fetch,
  * }} args
  * @returns {Promise<SVGElement | null>}
  */
-export async function mountFlagMap({ container, url, cropCodes = null, fetchImpl = globalThis.fetch }) {
+export async function mountFlagMap({
+  container, url, cropCodes = null, scopeCodes = null,
+  fetchImpl = globalThis.fetch,
+}) {
   if (!container || !url) return null;
   let res;
   try {
@@ -137,7 +148,10 @@ export async function mountFlagMap({ container, url, cropCodes = null, fetchImpl
     cropToCountries(/** @type {any} */ (svg), cropCodes);
   }
   const threshold = smallCountryThreshold(/** @type {any} */ (svg));
-  tagSmallPaths(svg, threshold);
+  const scope = Array.isArray(scopeCodes)
+    ? new Set(scopeCodes.map((c) => (typeof c === 'string' ? c.toLowerCase() : '')))
+    : null;
+  tagSmallPaths(svg, threshold, scope);
   addHitTargets(svg);
   return /** @type {SVGElement} */ (svg);
 }
@@ -279,19 +293,28 @@ function addHitTargets(svg) {
  *      bbox is narrower OR shorter than `threshold` get tagged.
  *      Caller passes a threshold scaled to the displayed viewBox.
  *
+ * `scope` (optional Set of lowercase ISO2 codes) gates BOTH passes —
+ * when present, only countries in scope get tagged. Used by the world
+ * map so we don't decorate every Caribbean / Pacific microstate when
+ * the active variant is Asia.
+ *
  * Both passes silently no-op on failure (missing `getBBox`, missing
  * `classList`) — the map remains usable even if the visibility boost
  * doesn't land.
  *
  * @param {Element | SVGElement} svg
  * @param {number} threshold  in viewBox units
+ * @param {Set<string> | null} [scope]
  */
-function tagSmallPaths(svg, threshold) {
+function tagSmallPaths(svg, threshold, scope = null) {
   if (!svg || typeof svg.querySelectorAll !== 'function') return;
+  const inScope = (/** @type {any} */ node) =>
+    !scope || (typeof node.id === 'string' && scope.has(node.id));
   try {
     const kPaths = svg.querySelectorAll('.k');
     for (let i = 0; i < kPaths.length; i++) {
-      const node = /** @type {Element} */ (kPaths[i]);
+      const node = /** @type {any} */ (kPaths[i]);
+      if (!inScope(node)) continue;
       if (node.classList) node.classList.add('is-small');
     }
   } catch { /* ignore */ }
@@ -299,6 +322,7 @@ function tagSmallPaths(svg, threshold) {
     const all = svg.querySelectorAll('.map-country');
     for (let i = 0; i < all.length; i++) {
       const node = /** @type {any} */ (all[i]);
+      if (!inScope(node)) continue;
       if (!node.classList || typeof node.getBBox !== 'function') continue;
       try {
         const bbox = node.getBBox();
