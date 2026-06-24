@@ -70,6 +70,22 @@ const MICROSTATE_CODES = new Set([
   // e.g. Bhutan / Lebanon / Cyprus are already visible-sized as
   // country paths and don't need a ring on top).
   'sg', 'bh', 'mv', 'bn', 'qa', 'kw', 'hk', 'mo', 'ps',
+  // Africa microstates / island nations — same "tinier than the ring"
+  // criterion. Cabo Verde, Comoros, Mauritius, Seychelles, São Tomé.
+  'cv', 'km', 'mu', 'sc', 'st',
+  // Americas — almost all Caribbean island nations + territories, plus
+  // Bermuda and the Falklands. Big mainland Caribbean / Central American
+  // countries (Cuba, Dominican Republic, Haiti, Jamaica, Trinidad) are
+  // visible-sized and don't need rings.
+  'ag', 'ai', 'aw', 'bb', 'bl', 'bm', 'bq', 'dm', 'gd', 'gp',
+  'kn', 'ky', 'lc', 'mf', 'mq', 'ms', 'sx', 'tc', 'vc', 'vg', 'vi',
+  'fk',
+  // Oceania — Pacific island nations and territories that are tinier
+  // than the pink ring would be. Australia / NZ / PNG / New Caledonia /
+  // Fiji / Vanuatu / Solomon Islands / French Polynesia are big enough
+  // as drawn paths and don't need rings.
+  'as', 'cc', 'ck', 'cx', 'fm', 'gu', 'ki', 'mh', 'mp', 'nf',
+  'nr', 'nu', 'pn', 'pw', 'tk', 'to', 'tv', 'wf', 'ws',
 ]);
 
 /**
@@ -127,6 +143,11 @@ export function resetMap(root) {
  * of those country paths — used by Asia (which mounts the world map and
  * crops to Asia). Europe keeps the asset's natural viewBox.
  *
+ * `cropPad` (optional, SVG units) extends the cropped viewBox after
+ * the bbox union. Used when one variant's natural bbox excludes a
+ * specific region we still want visible (e.g. NA's crop excludes US
+ * to avoid the antimeridian wrap, then pads west to include Alaska).
+ *
  * `scopeCodes` (optional) limits which countries get the microstate
  * treatment (pink-ring overlay). Defaults to all `.map-country`
  * elements — fine for Europe, which only carries European countries in
@@ -138,13 +159,14 @@ export function resetMap(root) {
  *   container: HTMLElement,
  *   url: string,
  *   cropCodes?: string[] | null,
+ *   cropPad?: { left?: number, right?: number, top?: number, bottom?: number },
  *   scopeCodes?: string[] | null,
  *   fetchImpl?: typeof fetch,
  * }} args
  * @returns {Promise<SVGElement | null>}
  */
 export async function mountFlagMap({
-  container, url, cropCodes = null, scopeCodes = null,
+  container, url, cropCodes = null, cropPad, scopeCodes = null,
   fetchImpl = globalThis.fetch,
 }) {
   if (!container || !url) return null;
@@ -173,7 +195,7 @@ export async function mountFlagMap({
   svg.removeAttribute('height');
   tagCountryPaths(svg);
   if (Array.isArray(cropCodes) && cropCodes.length > 0) {
-    cropToCountries(/** @type {any} */ (svg), cropCodes);
+    cropToCountries(/** @type {any} */ (svg), cropCodes, cropPad);
   }
   const scope = Array.isArray(scopeCodes)
     ? new Set(scopeCodes.map((c) => (typeof c === 'string' ? c.toLowerCase() : '')))
@@ -226,13 +248,21 @@ export function tagCountryPaths(svg) {
 /**
  * Set the SVG's viewBox to the bounding-box union of the named country
  * paths, plus 5% padding on each side. Used to focus a world map on a
- * specific continent without shipping a per-region asset. No-op when
- * `getBBox` isn't available (test env) or no codes resolve.
+ * specific continent without shipping a per-region asset.
+ *
+ * `extra` (optional, SVG units) extends bounds in a specific direction
+ * after the bbox + percent-pad. Used when one variant's natural bbox
+ * excludes a specific region we still want visible (e.g. NA's crop
+ * excludes US to dodge the antimeridian wrap, then pads west to bring
+ * Alaska's main body back into view).
+ *
+ * No-op when `getBBox` isn't available (test env) or no codes resolve.
  *
  * @param {{ querySelector(sel: string): any, setAttribute(name: string, value: string): void }} svg
  * @param {string[]} codes
+ * @param {{ left?: number, right?: number, top?: number, bottom?: number }} [extra]
  */
-export function cropToCountries(svg, codes) {
+export function cropToCountries(svg, codes, extra) {
   if (!svg || typeof svg.querySelector !== 'function') return;
   let minX = Infinity;
   let minY = Infinity;
@@ -256,10 +286,15 @@ export function cropToCountries(svg, codes) {
   const h = maxY - minY;
   const padX = w * 0.05;
   const padY = h * 0.05;
-  svg.setAttribute(
-    'viewBox',
-    `${minX - padX} ${minY - padY} ${w + 2 * padX} ${h + 2 * padY}`,
-  );
+  const extraLeft = (extra && extra.left) || 0;
+  const extraRight = (extra && extra.right) || 0;
+  const extraTop = (extra && extra.top) || 0;
+  const extraBottom = (extra && extra.bottom) || 0;
+  const x = minX - padX - extraLeft;
+  const y = minY - padY - extraTop;
+  const width = w + 2 * padX + extraLeft + extraRight;
+  const height = h + 2 * padY + extraTop + extraBottom;
+  svg.setAttribute('viewBox', `${x} ${y} ${width} ${height}`);
 }
 
 /**

@@ -429,6 +429,10 @@ body {
   height: auto;
   display: block;
   margin: 0 auto;
+  /* The world map's projection is curved at the top/bottom edges, so
+   * the rectangular viewBox has unpainted corners. Without a white
+   * background the page-bg `#fafafa` would show through there. */
+  background: var(--surface-color);
 }
 /* World-map decoration that doesn't belong in a quiz context:
  *   - <text> labels reveal each country's ISO code (gives answers away)
@@ -446,9 +450,17 @@ body {
 #flag-map-section svg line {
   display: none;
 }
-#flag-map-section svg #ocean {
-  stroke: var(--muted-color);
-  stroke-width: 0.4;
+/* Strip the ocean's coastline outline entirely so the world-map's
+ * projection edges (the dark curves around Greenland / Russia / the
+ * Pacific corners) read as white space, not as a heavy black border.
+ * The white fill of the ocean stays, so countries still appear on a
+ * clean canvas; only the stroke disappears. Targets the BlankMap-World
+ * asset's `<g id="ocean">` containing `<path class="oceanxx">`
+ * children. */
+#flag-map-section svg #ocean,
+#flag-map-section svg #ocean path,
+#flag-map-section svg .oceanxx {
+  stroke: none;
 }
 /* Default fill: the country element itself for single-path countries,
  * and the child paths for <g>-wrapped countries. The second selector

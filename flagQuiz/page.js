@@ -281,21 +281,45 @@ export function bootFlagQuiz() {
     // the Asia pattern by adding an entry here. Gate: variant must be
     // in this table AND the player has the show-map toggle on.
     const variantPool = all.filter(VARIANTS[key].filter);
-    const MAP_CONFIG = /** @type {Record<string, { url: string, crop: boolean }>} */ ({
-      europe: { url: './europeMap.svg', crop: false },
-      asia:   { url: './worldMap.svg',  crop: true  },
+    // `cropExcludes` per-variant drops countries from the bbox crop
+    // computation only. The country still renders + is quizzed; it
+    // just doesn't pull the viewBox toward its bbox. Used for
+    // antimeridian-spanning countries whose `<g>` bbox effectively
+    // wraps the whole map (US's Aleutians cross the date line, so
+    // including US in NA's crop blows the viewBox out to the world).
+    //
+    // `cropPad` extends the crop bounds in SVG units after the bbox
+    // union is computed. For NA we exclude US from the bbox math but
+    // pad the west edge by 200 units so Alaska's main body comes back
+    // into view (it sits west of Canada's westernmost point).
+    const MAP_CONFIG = /** @type {Record<string, { url: string, crop: boolean, cropExcludes?: string[], cropPad?: { left?: number, right?: number, top?: number, bottom?: number } }>} */ ({
+      europe:          { url: './europeMap.svg', crop: false },
+      asia:            { url: './worldMap.svg',  crop: true  },
+      africa:          { url: './worldMap.svg',  crop: true  },
+      'north-america': { url: './worldMap.svg',  crop: true,  cropExcludes: ['us'], cropPad: { left: 200 } },
+      'south-america': { url: './worldMap.svg',  crop: true  },
+      // Fiji and Kiribati both span the antimeridian — including them
+      // would blow the crop out the same way US did for NA. Australia +
+      // NZ + the central-Pacific island chains still anchor a sensible
+      // Oceania view without them.
+      oceania:         { url: './worldMap.svg',  crop: true,  cropExcludes: ['fj', 'ki'] },
     });
     /** @type {SVGElement | null} */
     let mapSvg = null;
     if (flagMapEl && MAP_CONFIG[key] && isQuizShowMap()) {
       const cfg = MAP_CONFIG[key];
       const variantCodes = variantPool.map((c) => c.code);
+      const excludes = new Set(cfg.cropExcludes || []);
+      const cropCodes = cfg.crop
+        ? variantCodes.filter((c) => !excludes.has(c))
+        : null;
       flagMapEl.hidden = false;
       flagMapEl.setAttribute('aria-hidden', 'false');
       void mountFlagMap({
         container: flagMapEl,
         url: cfg.url,
-        cropCodes: cfg.crop ? variantCodes : null,
+        cropCodes,
+        cropPad: cfg.cropPad,
         // Microstate overlays only land on countries the player will
         // actually be quizzed on — the world map is geographically
         // wide and we don't want pink rings decorating Caribbean /
