@@ -15,6 +15,7 @@ import {
   poolFor,
   targetFor,
   isQuizIncludeAll,
+  isQuizShowMap,
   getQuizLastVariant,
   setQuizLastVariant,
   pickCelebration,
@@ -281,9 +282,14 @@ export function bootFlagQuiz() {
     // would need their own SVG asset, so they're gated out. Mount is
     // async; `mapSvg` stays null until the fetch resolves and
     // `markCountry` safely no-ops in the meantime.
+    //
+    // Per-device preference: `isQuizShowMap` defaults to false during
+    // the rollout — players opt in via the burger-menu toggle. Once
+    // the feature has had eyes on it, flip the default to true in
+    // flags/quiz.js (and review this comment).
     /** @type {SVGElement | null} */
     let mapSvg = null;
-    if (europeMapEl && key === 'europe') {
+    if (europeMapEl && key === 'europe' && isQuizShowMap()) {
       europeMapEl.hidden = false;
       europeMapEl.setAttribute('aria-hidden', 'false');
       void mountEuropeMap({

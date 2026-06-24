@@ -36,6 +36,8 @@ import {
   getQuizLastVariant,
   setQuizLastVariant,
   resolveMode,
+  isQuizShowMap,
+  setQuizShowMap,
 } from './quiz.js';
 import { loadCountries } from './group.js';
 
@@ -972,4 +974,31 @@ test('resolveMode is idempotent — passing back the resolved mode returns the s
   // against the same URL — round-trip stability matters.
   const once = resolveMode('60s', 200);
   assert.equal(resolveMode(once, 200), once);
+});
+
+// ---- isQuizShowMap / setQuizShowMap ----
+//
+// Storage key is the contract — once shipped, renaming it orphans
+// every player's preference. Pin both the default-when-missing
+// behavior and the exact key.
+
+test('isQuizShowMap defaults to false when the key is missing', () => {
+  assert.equal(isQuizShowMap(fakeStore()), false);
+});
+
+test('setQuizShowMap writes the truthy preference', () => {
+  // Storage interface for `writeBoolSetting(false)` calls `removeItem`,
+  // which the lean fakeStore doesn't model — group.test.js covers that
+  // round-trip with a fully-featured fake. We just pin that the truthy
+  // write lands under a key isQuizShowMap can read back.
+  const store = fakeStore();
+  setQuizShowMap(/** @type {any} */ (store), true);
+  assert.equal(isQuizShowMap(store), true);
+});
+
+test('isQuizShowMap reads the gridgame.flagquiz.showMap key', () => {
+  // Pin the literal key so a future rename doesn't silently orphan
+  // every existing player's preference.
+  const store = fakeStore({ 'gridgame.flagquiz.showMap': 'true' });
+  assert.equal(isQuizShowMap(store), true);
 });
