@@ -78,18 +78,46 @@ export function panViewBox(vb, dx, dy) {
  * @returns {ViewBox}
  */
 export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN) {
+  // Capture the input's center BEFORE any adjustments — when a tiny
+  // bbox (single small country) is expanded up to the minimum size,
+  // OR when a non-aspect-matching bbox (tall + narrow) is widened to
+  // match the asset's aspect ratio, we want the result centered on
+  // the input's middle, not pinned to the input's (x, y) corner.
+  const centerX = vb.x + vb.width / 2;
+  const centerY = vb.y + vb.height / 2;
   let width = vb.width;
   let height = vb.height;
-  // Smaller width = more zoomed in. Cap at original (no zoom-out
-  // past natural) and at original/maxZoomIn (no zoom-in past max).
-  if (width > original.width) width = original.width;
+  // Aspect-ratio fit: EXPAND the smaller dimension so the input fits
+  // inside the result, never shrink. The old "shrink height to match
+  // width × aspect" would chop off the top/bottom of a tall-and-narrow
+  // input bbox (e.g. Germany + Africa, where Germany sits north of
+  // the Sahara — a height-dominated shape).
+  const targetAspect = original.width / original.height;
+  const inputAspect = width / height;
+  if (inputAspect > targetAspect) {
+    // Wider than target → expand height to match.
+    height = width / targetAspect;
+  } else if (inputAspect < targetAspect) {
+    // Taller than target → expand width to match.
+    width = height * targetAspect;
+  }
+  // Cap at original (no zoom-out past natural). Aspect ratio is
+  // already correct, so both dimensions cap together.
+  if (width > original.width) {
+    width = original.width;
+    height = original.height;
+  }
+  // Bump up to min (no zoom-in past max). Same aspect-locked pair.
   const minWidth = original.width / maxZoomIn;
-  if (width < minWidth) width = minWidth;
-  // Preserve original aspect ratio: height scales with width.
-  height = width * (original.height / original.width);
-  // Now clamp position so the viewBox stays inside `original`.
-  let x = vb.x;
-  let y = vb.y;
+  if (width < minWidth) {
+    width = minWidth;
+    height = original.height / maxZoomIn;
+  }
+  // Re-derive x / y from the captured center so the result stays
+  // centered on its original middle.
+  let x = centerX - width / 2;
+  let y = centerY - height / 2;
+  // Position clamp — keep the viewBox inside `original` bounds.
   const maxX = original.x + original.width - width;
   const maxY = original.y + original.height - height;
   if (x < original.x) x = original.x;
@@ -146,18 +174,33 @@ export function screenToSvg(svg, clientX, clientY) {
 
 /**
  * Attach wheel-zoom / pinch-zoom / drag-pan / double-tap-reset to a
- * mounted SVG. Returns a teardown function (no callers use it today,
- * but the contract is there for a future re-mount path).
+ * mounted SVG. Returns a handle with imperative helpers for callers
+ * that want to drive the viewBox programmatically (e.g. flagsdata's
+ * smart-zoom on filter change). Bare `attachZoomPan(svg)` calls that
+ * discard the return still work — the handle just goes unused.
+ *
+ *   - `setView(vb)` — set viewBox, then re-clamp to original bounds.
+ *     Future user gestures pick up from this new position.
+ *   - `reset()` — back to the original viewBox the SVG was mounted with.
+ *   - `teardown()` — remove event listeners (for an unmount path).
  *
  * @param {SVGElement} svg
- * @returns {() => void}
+ * @returns {{
+ *   setView: (vb: { x: number, y: number, width: number, height: number }) => void,
+ *   reset: () => void,
+ *   teardown: () => void,
+ * }}
  */
 export function attachZoomPan(svg) {
-  const noop = () => {};
-  if (!svg) return noop;
+  const noopHandle = {
+    setView: () => {},
+    reset: () => {},
+    teardown: () => {},
+  };
+  if (!svg) return noopHandle;
   const initialAttr = svg.getAttribute('viewBox');
   const original = parseViewBox(initialAttr || '');
-  if (!original) return noop;
+  if (!original) return noopHandle;
 
   /** @type {ViewBox} */
   let current = { ...original };
@@ -311,16 +354,20 @@ export function attachZoomPan(svg) {
   // Capture phase so we beat the country-click handler in page.js.
   svg.addEventListener('click', onClickCapture, true);
 
-  return () => {
-    svg.removeEventListener('wheel', onWheel);
-    svg.removeEventListener('touchstart', onTouchStart);
-    svg.removeEventListener('touchmove', onTouchMove);
-    svg.removeEventListener('touchend', onTouchEnd);
-    svg.removeEventListener('touchcancel', onTouchEnd);
-    svg.removeEventListener('mousedown', onMouseDown);
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-    svg.removeEventListener('click', onClickCapture, true);
+  return {
+    setView: apply,
+    reset: () => apply({ ...original }),
+    teardown: () => {
+      svg.removeEventListener('wheel', onWheel);
+      svg.removeEventListener('touchstart', onTouchStart);
+      svg.removeEventListener('touchmove', onTouchMove);
+      svg.removeEventListener('touchend', onTouchEnd);
+      svg.removeEventListener('touchcancel', onTouchEnd);
+      svg.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      svg.removeEventListener('click', onClickCapture, true);
+    },
   };
 }
 

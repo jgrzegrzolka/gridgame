@@ -90,21 +90,31 @@
  * daily's per-flag found/missed marker shades so the visual language
  * of "got it / missed it" reads the same across the site. Both colors
  * are accepted exceptions to the six-token palette rule, scoped to
- * "answer status" surfaces. */
+ * "answer status" surfaces.
+ *
+ * `:not(.map-country)` on the descendant selector excludes child paths
+ * that are themselves separate countries — e.g. `<g id="fr">` contains
+ * `<path id="gf">` (French Guiana) and other overseas regions. Without
+ * the `:not()`, selecting France would paint French Guiana too, which
+ * is visually misleading: filter returns 1 flag but the map highlights
+ * the country plus its overseas territories as if they were the same
+ * answer. Inner paths whose id isn't a 2-letter ISO (UK's England /
+ * Scotland / Wales etc., Russia's Kaliningrad slivers) don't carry
+ * `.map-country` and continue to get colored. */
 #flag-map-section svg .map-country.is-correct,
-#flag-map-section svg g.is-correct path {
+#flag-map-section svg g.is-correct path:not(.map-country) {
   fill: #2a8a3a;
 }
 #flag-map-section svg .map-country.is-wrong,
-#flag-map-section svg g.is-wrong path {
+#flag-map-section svg g.is-wrong path:not(.map-country) {
   fill: #c0392b;
 }
 /* Filter-match status (flagsdata). Brand secondary — countries matching
- * the active filter glow pink, palette-faithful. Pink reads as "this
- * matches" without competing visually with the quiz's green/red answer
- * vocabulary (the two surfaces never co-exist). */
+ * the active filter glow pink, palette-faithful. Same `:not(.map-country)`
+ * carve-out so France's overseas regions don't go pink when France
+ * matches a filter. */
 #flag-map-section svg .map-country.is-selected,
-#flag-map-section svg g.is-selected path {
+#flag-map-section svg g.is-selected path:not(.map-country) {
   fill: var(--secondary-color);
 }
 
