@@ -293,6 +293,10 @@ export function bootFlagQuiz() {
     // pad the west edge by 200 units so Alaska's main body comes back
     // into view (it sits west of Canada's westernmost point).
     const MAP_CONFIG = /** @type {Record<string, { url: string, crop: boolean, cropExcludes?: string[], cropPad?: { left?: number, right?: number, top?: number, bottom?: number } }>} */ ({
+      // "All countries" — the whole-world view. No crop; the asset's
+      // natural viewBox already covers everything. Microstates scope
+      // is the full pool so every tiny country worldwide gets a ring.
+      countries:       { url: './worldMap.svg',  crop: false },
       europe:          { url: './europeMap.svg', crop: false },
       asia:            { url: './worldMap.svg',  crop: true  },
       africa:          { url: './worldMap.svg',  crop: true  },
