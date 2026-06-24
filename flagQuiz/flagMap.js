@@ -283,28 +283,6 @@ function addFullscreenButton(container, label) {
     toggleFullscreen(container);
   });
   container.appendChild(btn);
-  // Flip the SVG's preserveAspectRatio to `slice` while in fullscreen
-  // so it FILLS the viewport (cropping the longer content axis)
-  // instead of letterboxing. On a portrait phone, the wide 2:1 world-
-  // map viewBox would otherwise leave huge empty bands top + bottom;
-  // slice mode crops left + right and uses the full screen height.
-  // Restore the default (meet, implicit when the attribute is absent)
-  // on fullscreen exit.
-  const sync = () => {
-    /** @type {any} */
-    const d = globalThis.document;
-    const current = d.fullscreenElement || d.webkitFullscreenElement || null;
-    const svg = container.querySelector('svg');
-    if (!svg) return;
-    if (current === container) svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-    else svg.removeAttribute('preserveAspectRatio');
-  };
-  /** @type {any} */
-  const d = globalThis.document;
-  if (d && typeof d.addEventListener === 'function') {
-    d.addEventListener('fullscreenchange', sync);
-    d.addEventListener('webkitfullscreenchange', sync);
-  }
 }
 
 /**
