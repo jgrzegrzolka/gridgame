@@ -183,6 +183,13 @@
   fill: transparent;
   stroke: var(--secondary-color);
   stroke-width: 1.5;
+  /* Stroke width is in SVG user units, so it would normally render
+   * thicker in pixels as the viewBox shrinks (pinch-zoom in). Lock
+   * it to a constant CSS-pixel width via `vector-effect` so the ring
+   * outline stays the same weight regardless of zoom level. The
+   * ring's RADIUS still scales (via `data-base-r` × zoom in mapZoom)
+   * so it stays roughly the same overall size on screen. */
+  vector-effect: non-scaling-stroke;
   pointer-events: all;
 }
 #flag-map-section svg .map-hit-target.is-correct {
