@@ -211,7 +211,9 @@ body {
   font-size: 28px;
   font-weight: 500;
   color: var(--primary-color);
-  margin: 0 0 40px;
+  /* Matches `#flag-map-section`'s 24 px top margin so the prompt-to-
+   * choices gap reads as the same beat as the choices-to-map gap. */
+  margin: 0 0 24px;
   text-align: center;
 }
 .choices {
