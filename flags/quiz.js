@@ -170,6 +170,7 @@ export function pickQuestion(countries, choiceCount = 4) {
  *   total: number,
  *   next: () => { answer: T, choices: T[] } | null,
  *   peek: () => { answer: T, choices: T[] } | null,
+ *   addToCabinet: (answer: T) => void,
  * }}
  */
 export function createQuiz(pool, count, choiceCount = 4) {
@@ -192,13 +193,41 @@ export function createQuiz(pool, count, choiceCount = 4) {
     answer,
     choices: buildChoices(pool, answer, choiceCount),
   }));
+  /**
+   * "Cabinet" — queue of missed answers re-presented after the main
+   * queue exhausts. 60s timed mode is one-shot per question (no retry
+   * in-place); the cabinet lets a player who finishes the pool with
+   * time left revisit their misses. FIFO; one revisit per miss (cabinet
+   * answers that go wrong again aren't re-cabined — that would be an
+   * infinite loop on a player who can't recognise a flag).
+   *
+   * Choices are rebuilt fresh from the pool so the distractors differ
+   * from the first ask — keeps the revisit a recognition exercise, not
+   * a memory test of "the four flags I saw together earlier."
+   *
+   * `total` doesn't grow with cabinet pushes — it stays the original
+   * pool count. Callers that compute progress against `total` (count
+   * mode's progress bar) need to handle the "over 100%" case if they
+   * adopt the cabinet; timed mode uses a countdown bar instead and is
+   * unaffected.
+   *
+   * @type {Array<{ answer: T, choices: T[] }>}
+   */
+  const cabinet = [];
   return {
     total: count,
     next() {
-      return queue.shift() ?? null;
+      return queue.shift() ?? cabinet.shift() ?? null;
     },
     peek() {
-      return queue[0] ?? null;
+      return queue[0] ?? cabinet[0] ?? null;
+    },
+    /** @param {T} answer */
+    addToCabinet(answer) {
+      cabinet.push({
+        answer,
+        choices: buildChoices(pool, answer, choiceCount),
+      });
     },
   };
 }

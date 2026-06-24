@@ -213,6 +213,65 @@ test('createQuiz.peek returns null after the queue exhausts', () => {
   assert.equal(quiz.next(), null);
 });
 
+test('createQuiz.addToCabinet — missed answer returns after the main queue exhausts', () => {
+  const quiz = createQuiz(sample, 3);
+  const first = quiz.next();
+  const second = quiz.next();
+  const third = quiz.next();
+  assert.ok(first && second && third);
+  assert.equal(quiz.next(), null, 'queue empty before cabinet adds');
+  // Player missed two of the three; queue them for revisit.
+  quiz.addToCabinet(first.answer);
+  quiz.addToCabinet(third.answer);
+  const revisit1 = quiz.next();
+  const revisit2 = quiz.next();
+  assert.ok(revisit1 && revisit2);
+  assert.equal(revisit1.answer, first.answer, 'cabinet is FIFO');
+  assert.equal(revisit2.answer, third.answer);
+  assert.equal(quiz.next(), null, 'cabinet exhausts cleanly');
+});
+
+test('createQuiz.addToCabinet — cabinet questions get fresh distractors', () => {
+  const quiz = createQuiz(sample, 1);
+  const first = quiz.next();
+  assert.ok(first);
+  quiz.addToCabinet(first.answer);
+  const revisit = quiz.next();
+  assert.ok(revisit);
+  assert.equal(revisit.answer, first.answer);
+  // The choices array always contains the answer plus N-1 distractors;
+  // the distractors are picked from the pool excluding the answer. The
+  // revisit pulls fresh distractors so the player isn't memorising the
+  // earlier four-flag layout.
+  assert.ok(revisit.choices.includes(first.answer));
+  assert.equal(revisit.choices.length, 4);
+});
+
+test('createQuiz.peek surfaces cabinet head when the main queue is empty', () => {
+  const quiz = createQuiz(sample, 1);
+  const first = quiz.next();
+  assert.ok(first);
+  quiz.addToCabinet(first.answer);
+  const peeked = quiz.peek();
+  assert.ok(peeked);
+  assert.equal(peeked.answer, first.answer);
+  // peek doesn't consume — the same cabinet entry is still served by next().
+  assert.equal(quiz.next()?.answer, first.answer);
+});
+
+test('createQuiz.addToCabinet — main queue served before cabinet', () => {
+  const quiz = createQuiz(sample, 2);
+  const first = quiz.next();
+  assert.ok(first);
+  // Queue still has one more main question; add a cabinet entry now.
+  quiz.addToCabinet(first.answer);
+  const next = quiz.next();
+  assert.ok(next);
+  // Either the second main question OR the cabinet entry, but
+  // contract says main wins — verify it's NOT the cabinet entry.
+  assert.notEqual(next.answer, first.answer, 'cabinet waits for the main queue to drain');
+});
+
 test('MODES contains "60s" and "all" in that display order', () => {
   assert.deepEqual(Object.keys(MODES), ['60s', 'all']);
 });
