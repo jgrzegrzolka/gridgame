@@ -283,6 +283,26 @@ function addFullscreenButton(container, label) {
     toggleFullscreen(container);
   });
   container.appendChild(btn);
+  // While in fullscreen, force preserveAspectRatio=slice so the SVG
+  // content fills both viewport dimensions (cropping the longer axis)
+  // instead of letterboxing. User can pinch-zoom + drag-pan to
+  // navigate within the filled view. On exit, remove the attribute
+  // so the default `meet` returns for the normal in-page render.
+  const sync = () => {
+    /** @type {any} */
+    const d = globalThis.document;
+    const current = d.fullscreenElement || d.webkitFullscreenElement || null;
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+    if (current === container) svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    else svg.removeAttribute('preserveAspectRatio');
+  };
+  /** @type {any} */
+  const d = globalThis.document;
+  if (d && typeof d.addEventListener === 'function') {
+    d.addEventListener('fullscreenchange', sync);
+    d.addEventListener('webkitfullscreenchange', sync);
+  }
 }
 
 /**

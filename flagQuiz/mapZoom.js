@@ -28,6 +28,11 @@
 
 /** Max zoom-in level relative to the original viewBox. */
 const MAX_ZOOM_IN = 8;
+/** Max zoom-out level relative to the original viewBox. > 1 means the
+ * viewBox can grow LARGER than the asset's natural bounds — used in
+ * fullscreen so the player can pinch out to see the whole map even
+ * when slice mode would otherwise crop it on portrait phones. */
+const MAX_ZOOM_OUT = 3;
 /** Wheel zoom factor per notch. ~10% per tick — comfortable feel. */
 const WHEEL_SCALE_STEP = 1.1;
 /** Two taps within this window count as a double-tap (ms). */
@@ -77,7 +82,7 @@ export function panViewBox(vb, dx, dy) {
  * @param {number} [maxZoomIn]
  * @returns {ViewBox}
  */
-export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN) {
+export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut = 1) {
   // Capture the input's center BEFORE any adjustments — when a tiny
   // bbox (single small country) is expanded up to the minimum size,
   // OR when a non-aspect-matching bbox (tall + narrow) is widened to
@@ -88,24 +93,23 @@ export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN) {
   let width = vb.width;
   let height = vb.height;
   // Aspect-ratio fit: EXPAND the smaller dimension so the input fits
-  // inside the result, never shrink. The old "shrink height to match
-  // width × aspect" would chop off the top/bottom of a tall-and-narrow
-  // input bbox (e.g. Germany + Africa, where Germany sits north of
-  // the Sahara — a height-dominated shape).
+  // inside the result, never shrink.
   const targetAspect = original.width / original.height;
   const inputAspect = width / height;
   if (inputAspect > targetAspect) {
-    // Wider than target → expand height to match.
     height = width / targetAspect;
   } else if (inputAspect < targetAspect) {
-    // Taller than target → expand width to match.
     width = height * targetAspect;
   }
-  // Cap at original (no zoom-out past natural). Aspect ratio is
-  // already correct, so both dimensions cap together.
-  if (width > original.width) {
-    width = original.width;
-    height = original.height;
+  // Cap at the zoom-out limit. Default `maxZoomOut: 1` matches the
+  // historical "can't zoom past natural viewBox" rule. Fullscreen
+  // passes a larger value (e.g. 3) so the player can pinch out to
+  // see the whole map smaller-with-margins, even when slice mode
+  // would otherwise crop it on portrait phones.
+  const maxWidth = original.width * maxZoomOut;
+  if (width > maxWidth) {
+    width = maxWidth;
+    height = original.height * maxZoomOut;
   }
   // Bump up to min (no zoom-in past max). Same aspect-locked pair.
   const minWidth = original.width / maxZoomIn;
@@ -117,13 +121,25 @@ export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN) {
   // centered on its original middle.
   let x = centerX - width / 2;
   let y = centerY - height / 2;
-  // Position clamp — keep the viewBox inside `original` bounds.
-  const maxX = original.x + original.width - width;
-  const maxY = original.y + original.height - height;
-  if (x < original.x) x = original.x;
-  if (x > maxX) x = maxX;
-  if (y < original.y) y = original.y;
-  if (y > maxY) y = maxY;
+  // Position clamp. When viewBox is SMALLER than original, keep it
+  // inside the original bounds (can't pan off the map). When LARGER
+  // than original, the viewBox naturally encompasses everything —
+  // center it on the original's middle so the asset's content sits
+  // in the middle of the cropped viewport.
+  if (width >= original.width) {
+    x = original.x + (original.width - width) / 2;
+  } else {
+    const maxX = original.x + original.width - width;
+    if (x < original.x) x = original.x;
+    if (x > maxX) x = maxX;
+  }
+  if (height >= original.height) {
+    y = original.y + (original.height - height) / 2;
+  } else {
+    const maxY = original.y + original.height - height;
+    if (y < original.y) y = original.y;
+    if (y > maxY) y = maxY;
+  }
   return { x, y, width, height };
 }
 
@@ -207,29 +223,30 @@ export function attachZoomPan(svg) {
 
   /** @param {ViewBox} next */
   function apply(next) {
-    current = clampViewBox(next, original);
+    // In fullscreen, allow zoom-out past the asset's natural viewBox
+    // so the player can see the whole map smaller-with-margins, even
+    // when slice mode crops the default view on portrait phones.
+    // Outside fullscreen, hold the historical "can't zoom past
+    // natural" rule (the page CSS already constrains the SVG's
+    // rendered size, so there's nowhere useful to zoom-out into).
+    const maxOut = isFullscreen() ? MAX_ZOOM_OUT : 1;
+    current = clampViewBox(next, original, MAX_ZOOM_IN, maxOut);
     svg.setAttribute('viewBox', formatViewBox(current));
     rescaleHitTargets();
-    syncAspectMode();
   }
 
   /**
-   * In fullscreen, the SVG element is sized to the viewport (100vw ×
-   * 100vh). The default `preserveAspectRatio="meet"` letterboxes the
-   * map's content to fit within — at zoom-out you see the whole map
-   * but with empty bands on the shorter content axis. When the user
-   * zooms in (viewBox shrinks below original), switch to `slice` so
-   * the cropped region FILLS the viewport, using the screen real
-   * estate the letterbox would otherwise waste.
-   *
-   * Outside fullscreen this rule still applies but is a visual no-op
-   * — height:auto in the base CSS keeps the SVG element matched to
-   * its viewBox aspect, so meet vs slice render identically.
+   * True when the SVG's parent section is the current fullscreen
+   * element. Webkit-prefixed fallback for older Safari.
+   * @returns {boolean}
    */
-  function syncAspectMode() {
-    const zoomedIn = current.width < original.width;
-    if (zoomedIn) svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-    else svg.removeAttribute('preserveAspectRatio');
+  function isFullscreen() {
+    /** @type {any} */
+    const d = globalThis.document;
+    if (!d) return false;
+    const current = d.fullscreenElement || d.webkitFullscreenElement || null;
+    if (!current) return false;
+    return current.contains(svg);
   }
 
   /**
