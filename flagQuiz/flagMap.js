@@ -36,13 +36,41 @@
 const STATUS_CLASSES = ['is-correct', 'is-wrong'];
 
 /**
- * Radius (in SVG viewBox units) of the visible pink-ring marker that
- * doubles as the click target for each microstate. Sized in viewBox
- * units so it scales with the displayed viewBox.
+ * Radius of the visible pink-ring marker, expressed as a fraction of
+ * the displayed viewBox's larger dimension. Tuned by eye: small
+ * enough that microstate markers don't overwhelm their neighbouring
+ * countries on the rendered map, big enough to remain a comfortable
+ * click target.
  */
-const HIT_TARGET_RADIUS = 10;
+const HIT_TARGET_FRACTION = 0.007;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ISO2_PATTERN = /^[a-z]{2}$/;
+
+/**
+ * Curated set of ISO 3166-1 alpha-2 codes whose countries are tiny
+ * enough on the rendered map to need the pink-ring marker treatment.
+ * Hardcoded rather than auto-detected via getBBox because the world-
+ * map asset wraps each country in a `<g>` containing a tiny `<path>`
+ * AND a hidden `<circle r=6>` locator — getBBox on the `<g>` returns
+ * the inflated union, which misses true microstates (the locator
+ * dominates the bbox so Singapore looks 12 units wide and dodges the
+ * threshold).
+ *
+ * Adding a country here makes it get a pink-ring overlay AND become
+ * a comfortable click target. List covers both Europe + Asia variants
+ * today; extend when adding new continent maps.
+ */
+const MICROSTATE_CODES = new Set([
+  // Europe
+  'va', 'mc', 'sm', 'ad', 'li', 'mt', 'lu',
+  // British isles + Crown Dependencies
+  'gg', 'je', 'im', 'fo',
+  // Asia microstates — only countries whose paths are tinier than
+  // the pink ring itself (smaller-than-ring marker would be pointless,
+  // e.g. Bhutan / Lebanon / Cyprus are already visible-sized as
+  // country paths and don't need a ring on top).
+  'sg', 'bh', 'mv', 'bn', 'qa', 'kw', 'hk', 'mo', 'ps',
+]);
 
 /**
  * @typedef {{
@@ -147,13 +175,28 @@ export async function mountFlagMap({
   if (Array.isArray(cropCodes) && cropCodes.length > 0) {
     cropToCountries(/** @type {any} */ (svg), cropCodes);
   }
-  const threshold = smallCountryThreshold(/** @type {any} */ (svg));
   const scope = Array.isArray(scopeCodes)
     ? new Set(scopeCodes.map((c) => (typeof c === 'string' ? c.toLowerCase() : '')))
     : null;
-  tagSmallPaths(svg, threshold, scope);
-  addHitTargets(svg);
+  tagMicrostates(svg, scope);
+  addHitTargets(svg, hitTargetRadius(/** @type {any} */ (svg)));
   return /** @type {SVGElement} */ (svg);
+}
+
+/**
+ * Hit-target radius in viewBox units, scaled to whatever viewBox is
+ * currently set. Read AFTER cropToCountries so the size matches the
+ * displayed crop, not the asset's natural viewBox.
+ *
+ * @param {{ getAttribute(name: string): string | null }} svg
+ * @returns {number}
+ */
+function hitTargetRadius(svg) {
+  const vb = typeof svg.getAttribute === 'function' ? svg.getAttribute('viewBox') : null;
+  if (!vb) return 6;
+  const parts = vb.split(/\s+/).map(Number);
+  if (parts.length < 4 || parts.some((n) => !Number.isFinite(n))) return 6;
+  return Math.max(2, Math.max(parts[2], parts[3]) * HIT_TARGET_FRACTION);
 }
 
 /**
@@ -220,35 +263,18 @@ export function cropToCountries(svg, codes) {
 }
 
 /**
- * "Small enough to be invisible at native render" threshold in viewBox
- * units. 1.2% of the larger viewBox dimension catches both microstates
- * in a focused Europe map (viewBox 680×520 → ~8 units) and small
- * islands in a wider crop (viewBox 1035×531 → ~12 units). Falls back to
- * 6 when the viewBox is missing.
- *
- * @param {{ getAttribute(name: string): string | null }} svg
- */
-function smallCountryThreshold(svg) {
-  const vb = typeof svg.getAttribute === 'function' ? svg.getAttribute('viewBox') : null;
-  if (!vb) return 6;
-  const parts = vb.split(/\s+/).map(Number);
-  if (parts.length < 4 || parts.some((n) => !Number.isFinite(n))) return 6;
-  const largestDim = Math.max(parts[2], parts[3]);
-  return Math.max(2, largestDim * 0.012);
-}
-
-/**
- * Append an invisible `<circle class="map-hit-target">` over each
- * microstate so the click area is comfortably wide regardless of the
- * underlying path's geometry. Inherits the same answered / wrong
+ * Append a visible pink-ring `<circle class="map-hit-target">` over
+ * each microstate so the click area is comfortably wide regardless of
+ * the underlying path's geometry. Inherits the same answered / wrong
  * classes via `markCountry` so the click handler treats path and
  * overlay identically. Appended last so it draws over neighbouring
  * countries — a click in the overlay claims the microstate even if
  * the pixel sits in a neighbour's territory.
  *
  * @param {Element | SVGElement} svg
+ * @param {number} radius  in viewBox units
  */
-function addHitTargets(svg) {
+function addHitTargets(svg, radius) {
   if (!svg || typeof svg.querySelectorAll !== 'function') return;
   /** @type {Document | null} */
   // @ts-ignore — ownerDocument is on real SVGs, not always on test fakes.
@@ -271,7 +297,7 @@ function addHitTargets(svg) {
     const circle = doc.createElementNS(SVG_NS, 'circle');
     circle.setAttribute('cx', String(cx));
     circle.setAttribute('cy', String(cy));
-    circle.setAttribute('r', String(HIT_TARGET_RADIUS));
+    circle.setAttribute('r', String(radius));
     circle.setAttribute('data-hit-for', path.id);
     circle.setAttribute('class', 'map-hit-target');
     circle.setAttribute('fill', 'transparent');
@@ -280,57 +306,26 @@ function addHitTargets(svg) {
 }
 
 /**
- * Mark every country path that's too small to be visible at native
- * render with `.is-small` — CSS uses this to give them a pink-ring
- * marker so they're still legible as a click target.
+ * Tag the curated set of microstates with `.is-small` so they pick up
+ * the pink-ring marker overlay. We used to auto-detect via getBBox
+ * but the world-map asset wraps each country in a `<g>` that also
+ * contains a hidden `<circle r=6>` locator. getBBox on the `<g>`
+ * returns the inflated union, which dodged true microstates and
+ * mis-tagged mid-size ones. A hardcoded list is data, not magic —
+ * predictable and easy to extend.
  *
- * Two passes:
- *
- *   1. **SVG-author hint** — the Europe SVG tags microstates with
- *      `class="k"`. Promote each into our `.is-small`. No-op on the
- *      world map asset, which doesn't carry `.k`.
- *   2. **Bounding-box auto-detect** — `.map-country` elements whose
- *      bbox is narrower OR shorter than `threshold` get tagged.
- *      Caller passes a threshold scaled to the displayed viewBox.
- *
- * `scope` (optional Set of lowercase ISO2 codes) gates BOTH passes —
- * when present, only countries in scope get tagged. Used by the world
- * map so we don't decorate every Caribbean / Pacific microstate when
- * the active variant is Asia.
- *
- * Both passes silently no-op on failure (missing `getBBox`, missing
- * `classList`) — the map remains usable even if the visibility boost
- * doesn't land.
+ * `scope` (optional Set of lowercase ISO2 codes) further filters —
+ * an Asian round doesn't tag European microstates and vice versa.
  *
  * @param {Element | SVGElement} svg
- * @param {number} threshold  in viewBox units
  * @param {Set<string> | null} [scope]
  */
-function tagSmallPaths(svg, threshold, scope = null) {
-  if (!svg || typeof svg.querySelectorAll !== 'function') return;
-  const inScope = (/** @type {any} */ node) =>
-    !scope || (typeof node.id === 'string' && scope.has(node.id));
-  try {
-    const kPaths = svg.querySelectorAll('.k');
-    for (let i = 0; i < kPaths.length; i++) {
-      const node = /** @type {any} */ (kPaths[i]);
-      if (!inScope(node)) continue;
-      if (node.classList) node.classList.add('is-small');
-    }
-  } catch { /* ignore */ }
-  try {
-    const all = svg.querySelectorAll('.map-country');
-    for (let i = 0; i < all.length; i++) {
-      const node = /** @type {any} */ (all[i]);
-      if (!inScope(node)) continue;
-      if (!node.classList || typeof node.getBBox !== 'function') continue;
-      try {
-        const bbox = node.getBBox();
-        if (!bbox) continue;
-        if (bbox.width < threshold || bbox.height < threshold) {
-          node.classList.add('is-small');
-        }
-      } catch { /* skip this path */ }
-    }
-  } catch { /* ignore */ }
+function tagMicrostates(svg, scope = null) {
+  if (!svg || typeof svg.querySelector !== 'function') return;
+  for (const code of MICROSTATE_CODES) {
+    if (scope && !scope.has(code)) continue;
+    /** @type {any} */
+    const el = svg.querySelector(`#${code}`);
+    if (el && el.classList) el.classList.add('is-small');
+  }
 }

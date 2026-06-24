@@ -320,15 +320,32 @@ function matchesSelector(stub, selector) {
   return true;
 }
 
-test('mountFlagMap promotes SVG-tagged .k paths to .is-small', async () => {
-  const container = fakeContainerWithPaths([
-    { id: 'va', classes: ['c', 'k'] },
-    { id: 'mc', classes: ['c', 'k'] },
-    { id: 'es', classes: ['c'] },  // not a microstate
-  ]);
+test('mountFlagMap tags curated microstates via the hardcoded set', async () => {
+  // Test setup mimics the asset query — querySelector('#va') returns
+  // the Vatican stub etc.
+  const stubs = ['va', 'mc', 'es'].map((id) => {
+    const classes = new Set();
+    return {
+      _id: id,
+      classList: { add: (c) => classes.add(c), has: (c) => classes.has(c) },
+    };
+  });
+  const byId = new Map(stubs.map((s) => [s._id, s]));
+  const container = {
+    set innerHTML(_v) {},
+    querySelector: (sel) => {
+      if (sel === 'svg') return {
+        getAttribute: () => null,
+        setAttribute: () => {},
+        removeAttribute: () => {},
+        querySelectorAll: () => [],
+        querySelector: (s) => byId.get(s.slice(1)) || null,
+      };
+      return null;
+    },
+  };
   const fetchImpl = fakeFetch('<svg width="680" height="520"></svg>');
   await mountFlagMap({ container, url: '/x.svg', fetchImpl });
-  const stubs = container._svg._stubs;
   assert.equal(stubs.find((s) => s._id === 'va').classList.has('is-small'), true);
   assert.equal(stubs.find((s) => s._id === 'mc').classList.has('is-small'), true);
   assert.equal(stubs.find((s) => s._id === 'es').classList.has('is-small'), false);
@@ -465,3 +482,4 @@ test('cropToCountries skips degenerate bboxes (width AND height both 0)', () => 
 test('cropToCountries tolerates a null svg', () => {
   assert.doesNotThrow(() => cropToCountries(/** @type {any} */ (null), ['cn']));
 });
+

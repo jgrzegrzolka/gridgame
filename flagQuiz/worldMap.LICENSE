@@ -1,20 +1,16 @@
 worldMap.svg
 ============
 
-Source : https://commons.wikimedia.org/wiki/File:ISO_3166-1_Alpha-2_map.svg
-Author : Wikimedia Commons user "Белозёров Никита"
-License: Creative Commons Attribution-ShareAlike 4.0 International
-         (CC BY-SA 4.0)
-         https://creativecommons.org/licenses/by-sa/4.0/
+Source : https://commons.wikimedia.org/wiki/File:BlankMap-World.svg
+        (Polish Wikipedia mirror: https://pl.wikipedia.org/wiki/Plik:BlankMap-World6.svg)
+Author : Canuckguy and many others (per Wikimedia file history)
+License: Public domain — released by the copyright holder
 
-This SVG is bundled unmodified as `worldMap.svg`. It carries the
-original authorship metadata inside the file. The CC BY-SA 4.0 share-
-alike clause applies to the SVG itself: any modifications to
-`worldMap.svg` must be released under the same license. The
-surrounding project code (JS, CSS, HTML) does not become a derivative
-work merely by loading the SVG — this is "mere aggregation," not a
-derivative, so the rest of the repository keeps its own license.
+This SVG is bundled unmodified as `worldMap.svg`. Paths are ID'd by
+ISO 3166-1 alpha-2 lowercase, with extra codes for disputed territories
+(e.g. `xk` for Kosovo). Zero transforms, zero text labels, zero line
+elements, zero inline fills — clean to style via our CSS and to mount
+without per-country bbox transformation tricks.
 
-Used by the flagQuiz Europe-and-beyond contour map feature: paths are
-ID'd by ISO 3166-1 alpha-2 lowercase country code. Per-variant viewBox
-crops at runtime focus the same asset on each continent's bounds.
+Used by the flagQuiz Europe-and-beyond contour map feature: per-variant
+viewBox crops at runtime focus the same asset on each continent.

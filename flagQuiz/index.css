@@ -422,13 +422,25 @@ body {
   display: block;
   margin: 0 auto;
 }
-/* The world map asset (worldMap.svg) ships with `<text>` labels carrying
- * each country's ISO code — it's literally "ISO 3166-1 Alpha-2 map"
- * from Wikimedia, designed to display the codes. For a quiz that
- * would give away the answers. Hide them globally — the Europe asset
- * doesn't carry text, so this rule is a no-op there. */
-#flag-map-section svg text {
+/* World-map decoration that doesn't belong in a quiz context:
+ *   - <text> labels reveal each country's ISO code (gives answers away)
+ *   - <line class="st29"> leader lines (79 of them, stroke #000) point
+ *     from the now-hidden labels to small countries — without hiding
+ *     the lines, they show up as floating black strokes scattered
+ *     across continents.
+ *   - The `#ocean` path ships with a black coastline stroke (st0:
+ *     stroke:#000000) that makes the world look outlined-in-black
+ *     compared to the Europe asset's clean palette.
+ *
+ * All rules are no-ops on the Europe asset (no <text>, no <line>, no
+ * #ocean id) so they don't affect that variant. */
+#flag-map-section svg text,
+#flag-map-section svg line {
   display: none;
+}
+#flag-map-section svg #ocean {
+  stroke: var(--muted-color);
+  stroke-width: 0.4;
 }
 /* Default fill: the country element itself for single-path countries,
  * and the child paths for <g>-wrapped countries. The second selector
