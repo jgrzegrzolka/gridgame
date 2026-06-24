@@ -69,6 +69,7 @@
       <p class="country-name" id="country-name" data-i18n="quiz.loading">Loading…</p>
       <div class="choices" id="choices"></div>
       <p class="feedback" id="feedback"></p>
+      <section id="europe-map-section" hidden aria-hidden="true"></section>
       <div class="actions-row">
         <a id="play-again-inline" href="#" data-i18n="game.playAgain">Play again</a>
         ·
@@ -93,6 +94,10 @@
         <a href="../" data-i18n="menu.home">Home</a>
       </p>
     </section>
+    <dialog id="zoom">
+      <img alt="" />
+      <p></p>
+    </dialog>
     <script type="module">
       import { bootFlagQuiz } from './page.js';
       import { bootI18n, wireLangToggle } from '../i18n.js';

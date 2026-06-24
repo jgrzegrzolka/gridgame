@@ -85,6 +85,8 @@ import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
+import { mountEuropeMap, markCountry } from './europeMap.js';
+import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -110,6 +112,11 @@ export function bootFlagQuiz() {
   const playAgainInlineEl = /** @type {HTMLAnchorElement | null} */ (
     document.getElementById('play-again-inline')
   );
+  const europeMapEl = /** @type {HTMLElement | null} */ (
+    document.getElementById('europe-map-section')
+  );
+  const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
+  if (zoomEl) wireFlagZoomBackdropClose(zoomEl);
 
   const DEFAULT_VARIANT = 'countries';
 
@@ -211,7 +218,7 @@ export function bootFlagQuiz() {
       let pool = all.filter(VARIANTS[variantKey].filter);
       let modeKey = resolveMode(urlMode, pool.length);
 
-      const game = startGame(variantKey, modeKey, all);
+      const game = startGame(variantKey, modeKey, all, raw);
       document.addEventListener('langchanged', () => {
         rebuildMenu();
         game.refreshI18n();
@@ -246,7 +253,7 @@ export function bootFlagQuiz() {
     });
   }
 
-  function startGame(key, mode, all) {
+  function startGame(key, mode, all, raw) {
     const pool = poolFor(key, all);
     const target = targetFor(mode, pool);
     const quiz = createQuiz(pool, target);
@@ -265,6 +272,69 @@ export function bootFlagQuiz() {
     let gaveUp = false;
     const startTime = Date.now();
     let timerRaf = 0;
+
+    // Europe contour map: only paints for the Europe variant in the
+    // endurance ("all") mode where the player iterates through every
+    // country. 60s mode doesn't visit every country and the map would
+    // just sit half-blank, so we keep the section hidden there. Other
+    // continent variants would need their own SVG asset, so they're
+    // gated out too. Mount is async; `mapSvg` stays null until the
+    // fetch resolves and `markCountry` safely no-ops in the meantime.
+    /** @type {SVGElement | null} */
+    let mapSvg = null;
+    if (europeMapEl && key === 'europe' && mode === 'all') {
+      europeMapEl.hidden = false;
+      europeMapEl.setAttribute('aria-hidden', 'false');
+      void mountEuropeMap({
+        container: europeMapEl,
+        url: './europeMap.svg',
+      }).then((svg) => { mapSvg = svg; });
+
+      // Click → flag zoom popup. The map is non-interactive while the
+      // round is in progress (no `.is-finished` on the section); on
+      // game end `showResult` adds `.is-finished` and every country on
+      // the map becomes clickable for review. Simpler than the older
+      // per-country gate: during play, the player has only one job
+      // (answer the prompt) and we don't want the map distracting them.
+      //
+      // Lookup is built from `raw` (the full 270-entry country list),
+      // not the playable `all` pool — territories like Isle of Man /
+      // Guernsey / Jersey / Faroe Islands aren't quiz items in the
+      // default sovereign pool, but they're still rendered on the map
+      // and the player can click them to see the flag.
+      const byCode = new Map(raw.map((c) => [c.code, c]));
+      europeMapEl.addEventListener('click', (e) => {
+        if (!europeMapEl.classList.contains('is-finished')) return;
+        const target = /** @type {Element | null} */ (e.target);
+        if (!target) return;
+        // Resolve to a country ISO2 code. Two shapes:
+        //   1. Overlay hit-target — carries `data-hit-for="va"`.
+        //   2. Country path — walk up to find the first [id] ancestor
+        //      whose value is a known country code. Handles both
+        //      single-path countries (id="es") and `<g id="ru">`
+        //      wrappers whose child paths have their own ids
+        //      (`ru-main`, `gb-eng`, etc.) that aren't real codes.
+        let code = (typeof target.getAttribute === 'function')
+          ? target.getAttribute('data-hit-for')
+          : null;
+        if (!code) {
+          let el = /** @type {Element | null} */ (target);
+          while (el) {
+            const id = el.id;
+            if (id && byCode.has(id)) { code = id; break; }
+            el = el.parentElement;
+          }
+        }
+        if (!code) return;
+        const country = byCode.get(code);
+        if (!country) return;
+        openFlagZoom(zoomEl, {
+          code: country.code,
+          displayName: countryName(country),
+          svgBase: '../flags/svg/',
+        });
+      });
+    }
 
     // Result-screen data is captured once when showResult fires so a
     // soft language switch can re-paint the localized labels (Final
@@ -404,6 +474,9 @@ export function bootFlagQuiz() {
         disableAllTiles();
         feedbackEl.textContent = '';
         feedbackEl.classList.remove('shake-wrong');
+        // No-op unless the europe-map gate above mounted the SVG;
+        // currentAnswer.code is the ISO2 of the country in question.
+        markCountry(mapSvg, currentAnswer.code, 'correct');
         advanceTo(quiz.next(), 250);
       } else if (timed) {
         // Timed mode keeps the multi-attempt-per-question flow: wrong pick
@@ -430,6 +503,11 @@ export function bootFlagQuiz() {
         progressBarEl.style.width = (countModeProgressRatio(answeredCount, wrongCount, target) * 100) + '%';
         feedbackEl.textContent = '';
         feedbackEl.classList.remove('shake-wrong');
+        // Map: the asked-about country (currentAnswer.code) is the one
+        // the player missed — paint *that* red, not the wrong choice.
+        // The clicked-wrong tile's country may not have been asked yet
+        // and shouldn't get pre-marked here.
+        markCountry(mapSvg, currentAnswer.code, 'wrong');
         advanceTo(quiz.next(), 1200);
       }
     }
@@ -668,6 +746,22 @@ export function bootFlagQuiz() {
       }
 
       mountShareButton(answeredCount);
+
+      // Re-parent the europe contour map into the result panel, above
+      // the leaderboard. The section was mounted as a child of #game so
+      // the player sees it filling in live; on finish we want the final
+      // pattern to sit next to the score recap, not vanish with the
+      // play UI. Idempotent when the map isn't mounted (other variants
+      // or 60s mode): europeMapEl stays `hidden` and the move is a no-op.
+      //
+      // `.is-finished` also gets set here — the click handler reads it
+      // to decide whether to open the flag-zoom popup. Map clicks are
+      // ignored during play; once the round ends every country becomes
+      // a review surface.
+      if (europeMapEl && !europeMapEl.hidden) {
+        resultEl.insertBefore(europeMapEl, leaderboardEl);
+        europeMapEl.classList.add('is-finished');
+      }
 
       gameEl.hidden = true;
       progressBarEl.hidden = true;

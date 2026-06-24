@@ -1,0 +1,17 @@
+europeMap.svg
+=============
+
+Source : https://commons.wikimedia.org/wiki/File:Blank_map_of_Europe.svg
+        (specifically the "with disputed regions" version at
+        https://upload.wikimedia.org/wikipedia/commons/a/a7/Blank_map_of_Europe_%28with_disputed_regions%29.svg)
+Author : Wikimedia Commons user "maix", based on earlier work by Tintazul.
+License: Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
+         https://creativecommons.org/licenses/by-sa/3.0/
+
+This SVG is bundled unmodified as `europeMap.svg`. It carries the original
+authorship metadata inside the file. The CC BY-SA 3.0 share-alike clause
+applies to the SVG itself: any modifications to `europeMap.svg` must be
+released under the same license. The surrounding project code (JS, CSS,
+HTML) does not become a derivative work merely by loading the SVG — this
+is "mere aggregation," not a derivative, so the rest of the repository
+keeps its own license.
