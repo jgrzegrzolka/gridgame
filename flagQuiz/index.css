@@ -435,6 +435,15 @@ body {
    * the rectangular viewBox has unpainted corners. Without a white
    * background the page-bg `#fafafa` would show through there. */
   background: var(--surface-color);
+  /* Claim touch gestures for our wheel/pinch/drag handlers — without
+   * this the browser would intercept two-finger pinches as page-zoom
+   * and one-finger drags as page-scroll, so the map would never get
+   * the gesture events. */
+  touch-action: none;
+  /* Prevent text selection during drag-pan. SVG paths have no text
+   * but a long-hold could still trigger the selection UI. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 /* World-map decoration that doesn't belong in a quiz context:
  *   - <text> labels reveal each country's ISO code (gives answers away)

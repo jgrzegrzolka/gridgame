@@ -87,6 +87,7 @@ import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
 import { mountFlagMap, markCountry } from './flagMap.js';
+import { attachZoomPan } from './mapZoom.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 
 export function bootFlagQuiz() {
@@ -329,7 +330,14 @@ export function bootFlagQuiz() {
         // wide and we don't want pink rings decorating Caribbean /
         // Pacific microstates that aren't part of the Asian round.
         scopeCodes: variantCodes,
-      }).then((svg) => { mapSvg = svg; });
+      }).then((svg) => {
+        mapSvg = svg;
+        // Wheel-zoom + pinch + drag-pan + double-tap-reset. Attached
+        // once the SVG is in the DOM (and after cropToCountries has
+        // set the final viewBox, since mapZoom reads that as the
+        // "original" bounds for clamping).
+        if (svg) attachZoomPan(svg);
+      });
 
       // Click → flag zoom popup. The map is non-interactive while the
       // round is in progress (no `.is-finished` on the section); on
