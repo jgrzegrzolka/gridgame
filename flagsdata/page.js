@@ -5,7 +5,7 @@ import { createColorCountPicker } from '../colorCountPicker.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
-import { mountFlagMap, setSelectedCountries } from '../flagQuiz/flagMap.js';
+import { mountFlagMap, setSelectedCountries, computeCountriesBbox } from '../flagQuiz/flagMap.js';
 import { attachZoomPan } from '../flagQuiz/mapZoom.js';
 import { buildToggleLi } from '../common.js';
 
@@ -180,8 +180,16 @@ export function bootFlagsData() {
   );
   /** @type {SVGElement | null} */
   let mapSvg = null;
+  /** @type {ReturnType<typeof attachZoomPan> | null} */
+  let mapHandle = null;
   /** @type {Map<string, Country> | null} */
   let byCode = null;
+  // Countries whose `<g>` spans the antimeridian on the world map —
+  // their full bbox is the whole map width, so including them in a
+  // smart-zoom bbox union would defeat the zoom. They still get
+  // highlighted via setSelectedCountries; they just don't pull the
+  // crop. Mirrors the same list flagQuiz uses for per-variant crops.
+  const ANTIMERIDIAN = new Set(['us', 'ru', 'fj', 'ki']);
   if (flagMapEl && isFlagsdataShowMap()) {
     flagMapEl.hidden = false;
     flagMapEl.setAttribute('aria-hidden', 'false');
@@ -190,7 +198,7 @@ export function bootFlagsData() {
       url: '../flagQuiz/worldMap.svg',
     }).then((svg) => {
       mapSvg = svg;
-      if (svg) attachZoomPan(svg);
+      if (svg) mapHandle = attachZoomPan(svg);
       // Apply the current filter selection now that the map is
       // mounted — without this, the initial filter state would
       // never get reflected on the map.
@@ -293,6 +301,25 @@ export function bootFlagsData() {
     // visible countries glow pink (`.is-selected`), hidden countries
     // stay grey. No-op until the map's mounted (async fetch).
     if (mapSvg) setSelectedCountries(mapSvg, visibleCodes);
+    // Smart zoom: when the filter narrows the visible set, zoom the
+    // map to its bbox. When the filter is cleared (all visible), reset
+    // to the original world view. The bbox computation excludes
+    // antimeridian-wrapping countries (US, Russia, Fiji, Kiribati)
+    // since their `<g>` spans the whole map width and would defeat
+    // the zoom. Routes through mapHandle.setView so mapZoom's
+    // internal `current` state stays in sync — future user gestures
+    // pick up from the new crop instead of the stale original.
+    if (mapHandle && mapSvg) {
+      if (visible === state.items.length) {
+        mapHandle.reset();
+      } else {
+        const cropCodes = visibleCodes.filter((c) => !ANTIMERIDIAN.has(c));
+        if (cropCodes.length > 0) {
+          const bbox = computeCountriesBbox(mapSvg, cropCodes);
+          if (bbox) mapHandle.setView(bbox);
+        }
+      }
+    }
   }
 
   /** @param {number} count */

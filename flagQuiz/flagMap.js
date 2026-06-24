@@ -286,24 +286,21 @@ export function tagCountryPaths(svg) {
 }
 
 /**
- * Set the SVG's viewBox to the bounding-box union of the named country
- * paths, plus 5% padding on each side. Used to focus a world map on a
- * specific continent without shipping a per-region asset.
+ * Compute the bounding-box union of the named country paths, plus 5%
+ * padding on each side and any `extra` (left/right/top/bottom)
+ * directional padding. Returns the viewBox as `{ x, y, width, height }`
+ * or `null` when no codes resolved (test env, no matches, etc.).
  *
- * `extra` (optional, SVG units) extends bounds in a specific direction
- * after the bbox + percent-pad. Used when one variant's natural bbox
- * excludes a specific region we still want visible (e.g. NA's crop
- * excludes US to dodge the antimeridian wrap, then pads west to bring
- * Alaska's main body back into view).
+ * Pure read-only — doesn't touch the SVG attribute. `cropToCountries`
+ * is the side-effect wrapper that calls this + setAttribute.
  *
- * No-op when `getBBox` isn't available (test env) or no codes resolve.
- *
- * @param {{ querySelector(sel: string): any, setAttribute(name: string, value: string): void }} svg
+ * @param {{ querySelector(sel: string): any }} svg
  * @param {string[]} codes
  * @param {{ left?: number, right?: number, top?: number, bottom?: number }} [extra]
+ * @returns {{ x: number, y: number, width: number, height: number } | null}
  */
-export function cropToCountries(svg, codes, extra) {
-  if (!svg || typeof svg.querySelector !== 'function') return;
+export function computeCountriesBbox(svg, codes, extra) {
+  if (!svg || typeof svg.querySelector !== 'function') return null;
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -321,7 +318,7 @@ export function cropToCountries(svg, codes, extra) {
       if (bb.y + bb.height > maxY) maxY = bb.y + bb.height;
     } catch { /* skip */ }
   }
-  if (!Number.isFinite(minX)) return;
+  if (!Number.isFinite(minX)) return null;
   const w = maxX - minX;
   const h = maxY - minY;
   const padX = w * 0.05;
@@ -330,11 +327,28 @@ export function cropToCountries(svg, codes, extra) {
   const extraRight = (extra && extra.right) || 0;
   const extraTop = (extra && extra.top) || 0;
   const extraBottom = (extra && extra.bottom) || 0;
-  const x = minX - padX - extraLeft;
-  const y = minY - padY - extraTop;
-  const width = w + 2 * padX + extraLeft + extraRight;
-  const height = h + 2 * padY + extraTop + extraBottom;
-  svg.setAttribute('viewBox', `${x} ${y} ${width} ${height}`);
+  return {
+    x: minX - padX - extraLeft,
+    y: minY - padY - extraTop,
+    width: w + 2 * padX + extraLeft + extraRight,
+    height: h + 2 * padY + extraTop + extraBottom,
+  };
+}
+
+/**
+ * Set the SVG's viewBox to the bounding-box union of the named country
+ * paths, plus padding. Used to focus a world map on a specific
+ * continent without shipping a per-region asset. No-op when no codes
+ * resolve.
+ *
+ * @param {{ querySelector(sel: string): any, setAttribute(name: string, value: string): void }} svg
+ * @param {string[]} codes
+ * @param {{ left?: number, right?: number, top?: number, bottom?: number }} [extra]
+ */
+export function cropToCountries(svg, codes, extra) {
+  const bb = computeCountriesBbox(svg, codes, extra);
+  if (!bb) return;
+  svg.setAttribute('viewBox', `${bb.x} ${bb.y} ${bb.width} ${bb.height}`);
 }
 
 /**

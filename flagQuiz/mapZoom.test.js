@@ -88,13 +88,38 @@ test('clampViewBox caps zoom-in at original / maxZoomIn', () => {
   assert.equal(out.height, 12.5);
 });
 
-test('clampViewBox preserves the original aspect ratio after clamping', () => {
+test('clampViewBox expands (never shrinks) to preserve aspect — wider input keeps height-driven width', () => {
   const original = { x: 0, y: 0, width: 200, height: 100 };  // 2:1
-  // Try zooming in but with a slightly off width — height should
-  // re-derive from width × aspect ratio.
+  // Input is taller-than-target (50/999 ≪ 2.0). Result must EXPAND
+  // width so the full height fits — chopping the input's top/bottom
+  // would lose countries (Germany north of Algeria, etc.). Width
+  // ends up at height × targetAspect = 999 × 2 = 1998 → capped at
+  // the original max of 200, with height then locked at 100.
   const out = clampViewBox({ x: 0, y: 0, width: 50, height: 999 }, original);
-  assert.equal(out.width, 50);
-  assert.equal(out.height, 25);  // 50 × (100/200) = 25
+  assert.equal(out.width, 200);
+  assert.equal(out.height, 100);
+});
+
+test('clampViewBox expands height for a wider-than-target input', () => {
+  const original = { x: 0, y: 0, width: 200, height: 100 };  // 2:1
+  // Input is wider-than-target (300/50 = 6, target = 2). Height
+  // expands to width / targetAspect = 300/2 = 150, then both cap.
+  const out = clampViewBox({ x: 0, y: 0, width: 300, height: 50 }, original);
+  assert.equal(out.width, 200);
+  assert.equal(out.height, 100);
+});
+
+test('clampViewBox handles a tall-but-fitting input by widening to aspect', () => {
+  // Bigger original so the result doesn't cap. Input is taller than
+  // target (40/80 = 0.5, target = 2). Width expands to height × 2
+  // = 160, height stays 80. Result is 160 × 80 = aspect 2 ✓.
+  const original = { x: 0, y: 0, width: 1000, height: 500 };
+  const out = clampViewBox({ x: 100, y: 50, width: 40, height: 80 }, original);
+  assert.equal(out.width, 160);
+  assert.equal(out.height, 80);
+  // Centered on the original input center (120, 90).
+  assert.equal(out.x + out.width / 2, 120);
+  assert.equal(out.y + out.height / 2, 90);
 });
 
 test('clampViewBox keeps the viewBox inside the original bounds', () => {
@@ -109,6 +134,22 @@ test('clampViewBox accepts a viewBox already inside bounds unchanged', () => {
   const original = { x: 0, y: 0, width: 100, height: 100 };
   const vb = { x: 30, y: 40, width: 50, height: 50 };
   assert.deepEqual(clampViewBox(vb, original), vb);
+});
+
+test('clampViewBox recenters around the input bbox center when width is bumped up', () => {
+  // Singapore-shaped case: a tiny country at SVG coord (2095, 687)
+  // with a 2-unit-wide bbox. Without the recenter, the expanded
+  // viewBox would have the country at its (0, 0) corner.
+  const original = { x: 0, y: 0, width: 2754, height: 1398 };
+  const vb = { x: 2094, y: 686, width: 2, height: 2 };  // center (2095, 687)
+  const out = clampViewBox(vb, original, 8);
+  // Min width = 2754 / 8 ≈ 344.25. Aspect ratio preserved → height ≈ 174.75.
+  // After recenter, the country center (2095, 687) should still sit
+  // at the new bbox's center.
+  const newCenterX = out.x + out.width / 2;
+  const newCenterY = out.y + out.height / 2;
+  assert.equal(newCenterX, 2095);
+  assert.equal(newCenterY, 687);
 });
 
 // ---- parseViewBox / formatViewBox ----
