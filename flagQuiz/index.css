@@ -227,7 +227,31 @@ body {
   cursor: pointer;
   aspect-ratio: 4 / 3;
   overflow: hidden;
+  /* Anchor for the wrong-tile country-name overlay below. */
+  position: relative;
   transition: border-color 100ms;
+}
+/* Country-name overlay on the wrongly-clicked flag. The page sets
+ * `data-name="Belgium"` on `tile.wrong`; the pseudo-element renders a
+ * dark strip across the bottom of the flag with that name. Saves the
+ * vertical space the standalone `.feedback` line used to reserve, so
+ * the map below has more room to breathe. */
+.flag-choice.wrong[data-name]::after {
+  content: attr(data-name);
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 3px 4px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 .flag-choice:hover:not(:disabled) {
   border-color: #999;
@@ -263,22 +287,6 @@ body {
   width: 100%;
   height: 100%;
   display: block;
-}
-.feedback {
-  margin: 20px 0 12px;
-  font-size: 18px;
-  min-height: 24px;
-  text-align: center;
-  color: var(--secondary-color);
-  font-weight: 500;
-}
-/* shake-wrong is added by the page each time a wrong flag is clicked.
- * The class restart trick (remove → reflow → add) lets a second wrong
- * click in the same question replay the animation. cell-shake keyframes
- * live in common.css — same physical motion as the grid-cell wrong-shake
- * for consistency. */
-.feedback.shake-wrong {
-  animation: cell-shake 0.5s ease-in-out;
 }
 
 /* Touch-only share icon sits at the end of the final-score line

@@ -94,7 +94,6 @@ export function bootFlagQuiz() {
   const gameEl = document.getElementById('game');
   const countryNameEl = document.getElementById('country-name');
   const choicesEl = document.getElementById('choices');
-  const feedbackEl = document.getElementById('feedback');
   const resultEl = document.getElementById('result');
   const finalScoreLineEl = document.getElementById('final-score-line');
   const finalScoreLabelEl = document.getElementById('final-score-label');
@@ -444,8 +443,6 @@ export function bootFlagQuiz() {
         tile.addEventListener('click', () => onAnswer(c, tile));
         choicesEl.appendChild(tile);
       }
-      feedbackEl.textContent = '';
-      feedbackEl.classList.remove('shake-wrong');
       // Warm the next round's flags while the player reads the current
       // one, so render(quiz.next()) hits the browser cache. Replaces the
       // old preload-everything-at-start strategy that queued the first
@@ -486,9 +483,7 @@ export function bootFlagQuiz() {
         }
         tile.classList.add('correct');
         disableAllTiles();
-        feedbackEl.textContent = '';
-        feedbackEl.classList.remove('shake-wrong');
-        // No-op unless the europe-map gate above mounted the SVG;
+        // No-op unless the flag-map gate above mounted the SVG;
         // currentAnswer.code is the ISO2 of the country in question.
         markCountry(mapSvg, currentAnswer.code, 'correct');
         advanceTo(quiz.next(), 250);
@@ -502,11 +497,14 @@ export function bootFlagQuiz() {
         // budget.
         wrongCount++;
         tile.classList.add('wrong');
+        // Overlay the wrong country's name on the tile itself — the
+        // .flag-choice.wrong[data-name]::after rule paints a strip
+        // across the flag's bottom. Replaces the standalone .feedback
+        // line so the map below has more vertical room.
+        tile.dataset.name = countryName(chosen);
         const correctTile = choicesEl.querySelector(`[data-code="${currentAnswer.code}"]`);
         if (correctTile) correctTile.classList.add('correct');
         disableAllTiles();
-        feedbackEl.textContent = countryName(chosen);
-        feedbackEl.classList.remove('shake-wrong');
         flashPenalty();
         // Map: paint the ASKED-ABOUT country red (currentAnswer.code),
         // matching count mode's semantics. The clicked-country tracking
@@ -524,17 +522,14 @@ export function bootFlagQuiz() {
         // which lets the result/stats screens render as "correct/target".
         wrongCount++;
         tile.classList.add('wrong');
+        // Overlay the wrong-pick name on the tile (same strip pattern
+        // as timed mode above) so the player sees what they clicked
+        // even though they're focused on the now-revealed correct tile.
+        tile.dataset.name = countryName(chosen);
         const correctTile = choicesEl.querySelector(`[data-code="${currentAnswer.code}"]`);
         if (correctTile) correctTile.classList.add('correct');
         disableAllTiles();
         progressBarEl.style.width = (countModeProgressRatio(answeredCount, wrongCount, target) * 100) + '%';
-        // Show the wrong-pick country name during the 1200 ms reveal —
-        // the player sees the green correct tile, but they might not
-        // remember what flag they actually clicked. `render()` clears
-        // the feedback on the next round. Same surface that timed mode
-        // already uses for its multi-attempt wrong-name flashes.
-        feedbackEl.textContent = countryName(chosen);
-        feedbackEl.classList.remove('shake-wrong');
         // Map: the asked-about country (currentAnswer.code) is the one
         // the player missed — paint *that* red, not the wrong choice.
         // The clicked-wrong tile's country may not have been asked yet
