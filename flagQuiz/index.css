@@ -422,6 +422,14 @@ body {
   display: block;
   margin: 0 auto;
 }
+/* The world map asset (worldMap.svg) ships with `<text>` labels carrying
+ * each country's ISO code — it's literally "ISO 3166-1 Alpha-2 map"
+ * from Wikimedia, designed to display the codes. For a quiz that
+ * would give away the answers. Hide them globally — the Europe asset
+ * doesn't carry text, so this rule is a no-op there. */
+#flag-map-section svg text {
+  display: none;
+}
 /* Default fill: the country element itself for single-path countries,
  * and the child paths for <g>-wrapped countries. The second selector
  * covers gb / ru / tr / cn etc. — their child paths need explicit
