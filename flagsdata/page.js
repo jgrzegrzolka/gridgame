@@ -5,6 +5,8 @@ import { createColorCountPicker } from '../colorCountPicker.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
+import { mountFlagMap, setSelectedCountries } from '../flagQuiz/flagMap.js';
+import { attachZoomPan } from '../flagQuiz/mapZoom.js';
 
 /** @param {string} v */
 function statusLabel(v) {
@@ -121,6 +123,32 @@ export function bootFlagsData() {
   /** @type {{ items: Country[], foldedNames: string[], tiles: HTMLElement[], count: HTMLElement } | null} */
   let state = null;
 
+  // World contour map below the grid — countries matching the active
+  // filter glow pink (`.is-selected`). Mount is async; `mapSvg` stays
+  // null until the fetch resolves and `setSelectedCountries` safely
+  // no-ops in the meantime. Same asset + module as flagQuiz's
+  // contour map (shared via flags/flagMap.css).
+  const flagMapEl = /** @type {HTMLElement | null} */ (
+    document.getElementById('flag-map-section')
+  );
+  /** @type {SVGElement | null} */
+  let mapSvg = null;
+  if (flagMapEl) {
+    flagMapEl.hidden = false;
+    flagMapEl.setAttribute('aria-hidden', 'false');
+    void mountFlagMap({
+      container: flagMapEl,
+      url: '../flagQuiz/worldMap.svg',
+    }).then((svg) => {
+      mapSvg = svg;
+      if (svg) attachZoomPan(svg);
+      // Apply the current filter selection now that the map is
+      // mounted — without this, the initial filter state would
+      // never get reflected on the map.
+      if (state) applyFilter();
+    });
+  }
+
   function renderAll(parent, items) {
     const h2 = document.createElement('h2');
     // Use data-i18n so applyStringsToDocument re-translates the heading
@@ -156,12 +184,17 @@ export function bootFlagsData() {
   function applyFilter() {
     if (!state) return;
     let visible = 0;
+    /** @type {string[]} */
+    const visibleCodes = [];
     for (let i = 0; i < state.items.length; i++) {
       const catMatch = matchesFilters(state.items[i], filters);
       const nameMatch = nameQuery === '' || state.foldedNames[i].includes(nameQuery);
       const show = catMatch && nameMatch;
       state.tiles[i].hidden = !show;
-      if (show) visible++;
+      if (show) {
+        visible++;
+        visibleCodes.push(state.items[i].code);
+      }
     }
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
@@ -177,6 +210,10 @@ export function bootFlagsData() {
     // user's only cue that something is filtering. Counting it as one
     // "active filter" (alongside each pill) matches that mental model.
     updateFilterToggle(pillTotal + (nameQuery !== '' ? 1 : 0));
+    // Reflect the active filter on the world map below the grid:
+    // visible countries glow pink (`.is-selected`), hidden countries
+    // stay grey. No-op until the map's mounted (async fetch).
+    if (mapSvg) setSelectedCountries(mapSvg, visibleCodes);
   }
 
   /** @param {number} count */

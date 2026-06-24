@@ -1,0 +1,141 @@
+/* Shared styles for the flagQuiz contour map.
+ *
+ * Loaded by both `/flagQuiz/` and `/flagsdata/` — first consumer is the
+ * quiz, second is the flag-browse page (highlights countries matching
+ * the current filter). Per CLAUDE.md's "promote on second consumer"
+ * rule, the rules live here rather than being copy-pasted into both
+ * feature stylesheets.
+ *
+ * Two assets get styled the same way: the focused Europe asset
+ * (`europeMap.svg`, only the Europe variant) and the shared world map
+ * (`worldMap.svg`, every other variant + flagsdata). Both ship with
+ * their own internal `<style>` blocks; our selectors stay highly-
+ * specific (anchored under `#flag-map-section svg .map-country`) so
+ * they win on cascade.
+ *
+ * `.map-country` is added at mount by `flagMap.js#tagCountryPaths` —
+ * any element with a 2-letter ISO id (path OR g wrapper) gets it.
+ *
+ * Status classes added by callers:
+ *   - `.is-correct` / `.is-wrong` — flagQuiz answer state (green/red)
+ *   - `.is-selected`              — flagsdata filter match (pink)
+ */
+
+#flag-map-section {
+  width: 100%;
+  margin: 24px 0 8px;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+#flag-map-section svg {
+  width: 100%;
+  max-width: 680px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  /* The world map's projection is curved at the top/bottom edges, so
+   * the rectangular viewBox has unpainted corners. Without a white
+   * background the page-bg `#fafafa` would show through there. */
+  background: var(--surface-color);
+  /* Claim touch gestures for our wheel/pinch/drag handlers — without
+   * this the browser would intercept two-finger pinches as page-zoom
+   * and one-finger drags as page-scroll, so the map would never get
+   * the gesture events. */
+  touch-action: none;
+  /* Prevent text selection during drag-pan. SVG paths have no text
+   * but a long-hold could still trigger the selection UI. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* World-map decoration that doesn't belong in a quiz / browse context:
+ *   - <text> labels reveal each country's ISO code (gives answers away)
+ *   - <line class="st29"> leader lines (79 of them, stroke #000) point
+ *     from the now-hidden labels to small countries — without hiding
+ *     the lines, they show up as floating black strokes scattered
+ *     across continents.
+ *   - The `#ocean` path ships with a black coastline stroke that makes
+ *     the world look outlined-in-black compared to the Europe asset's
+ *     clean palette.
+ *
+ * All rules are no-ops on the Europe asset (no <text>, no <line>, no
+ * #ocean id) so they don't affect that variant. */
+#flag-map-section svg text,
+#flag-map-section svg line {
+  display: none;
+}
+/* Strip the ocean's coastline outline entirely so the world-map's
+ * projection edges read as white space, not as a heavy black border.
+ * The white fill of the ocean stays. */
+#flag-map-section svg #ocean,
+#flag-map-section svg #ocean path,
+#flag-map-section svg .oceanxx {
+  stroke: none;
+}
+/* Default fill: the country element itself for single-path countries,
+ * and the child paths for <g>-wrapped countries. The second selector
+ * covers gb / ru / tr / cn etc. — their child paths need explicit
+ * styling because the <g> doesn't paint itself. */
+#flag-map-section svg .map-country,
+#flag-map-section svg g.map-country path {
+  fill: var(--muted-soft-color);
+  stroke: var(--muted-color);
+  stroke-width: 0.4;
+  /* Slow enough to be visible as a status change, fast enough not to
+   * lag the next render in count mode (1200 ms gap between rounds). */
+  transition: fill 240ms ease-out;
+}
+/* Answered status (flagQuiz). The fill has to land on the child paths
+ * for <g>-wrapped countries since the default-fill rule above paints
+ * them grey and would otherwise win specificity. Status colors mirror
+ * daily's per-flag found/missed marker shades so the visual language
+ * of "got it / missed it" reads the same across the site. Both colors
+ * are accepted exceptions to the six-token palette rule, scoped to
+ * "answer status" surfaces. */
+#flag-map-section svg .map-country.is-correct,
+#flag-map-section svg g.is-correct path {
+  fill: #2a8a3a;
+}
+#flag-map-section svg .map-country.is-wrong,
+#flag-map-section svg g.is-wrong path {
+  fill: #c0392b;
+}
+/* Filter-match status (flagsdata). Brand secondary — countries matching
+ * the active filter glow pink, palette-faithful. Pink reads as "this
+ * matches" without competing visually with the quiz's green/red answer
+ * vocabulary (the two surfaces never co-exist). */
+#flag-map-section svg .map-country.is-selected,
+#flag-map-section svg g.is-selected path {
+  fill: var(--secondary-color);
+}
+
+/* Microstate paths get NO special styling — they render with the same
+ * thin grey border as bigger countries. Visibility + click target both
+ * come from the overlay ring below. */
+/* Click affordance — the map is non-interactive during play; on game
+ * end the section gets `.is-finished` and every country becomes a
+ * review surface. */
+#flag-map-section.is-finished svg path,
+#flag-map-section.is-finished svg .map-hit-target {
+  cursor: pointer;
+}
+
+/* Visible pink ring marker over each microstate (injected by
+ * addHitTargets in flagMap.js). Doubles as the click target — the
+ * pink stroke (brand secondary) is a fixed "small country, click me"
+ * affordance and stays pink regardless of answer state. Only the fill
+ * flips to green / red / pink on answer / select. */
+#flag-map-section svg .map-hit-target {
+  fill: transparent;
+  stroke: var(--secondary-color);
+  stroke-width: 1.5;
+  pointer-events: all;
+}
+#flag-map-section svg .map-hit-target.is-correct {
+  fill: #2a8a3a;
+}
+#flag-map-section svg .map-hit-target.is-wrong {
+  fill: #c0392b;
+}
+#flag-map-section svg .map-hit-target.is-selected {
+  fill: var(--secondary-color);
+}
