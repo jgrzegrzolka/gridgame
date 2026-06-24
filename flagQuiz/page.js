@@ -86,7 +86,7 @@ import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
-import { mountEuropeMap, markCountry } from './europeMap.js';
+import { mountFlagMap, markCountry } from './flagMap.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 
 export function bootFlagQuiz() {
@@ -113,8 +113,8 @@ export function bootFlagQuiz() {
   const playAgainInlineEl = /** @type {HTMLAnchorElement | null} */ (
     document.getElementById('play-again-inline')
   );
-  const europeMapEl = /** @type {HTMLElement | null} */ (
-    document.getElementById('europe-map-section')
+  const flagMapEl = /** @type {HTMLElement | null} */ (
+    document.getElementById('flag-map-section')
   );
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
   if (zoomEl) wireFlagZoomBackdropClose(zoomEl);
@@ -274,27 +274,28 @@ export function bootFlagQuiz() {
     const startTime = Date.now();
     let timerRaf = 0;
 
-    // Europe contour map: paints in any mode of the Europe variant.
-    // In all-mode the player fills it country-by-country (completion
-    // artifact); in 60s mode the map is sparser — most countries stay
-    // grey — but the red error marks are the main takeaway, showing
-    // the player which flags they confused. Other continent variants
-    // would need their own SVG asset, so they're gated out. Mount is
-    // async; `mapSvg` stays null until the fetch resolves and
-    // `markCountry` safely no-ops in the meantime.
-    //
-    // Per-device preference: `isQuizShowMap` defaults to false during
-    // the rollout — players opt in via the burger-menu toggle. Once
-    // the feature has had eyes on it, flip the default to true in
-    // flags/quiz.js (and review this comment).
+    // Per-variant contour map. Each entry says which asset to mount
+    // and, for variants that use the shared world map, which country
+    // codes to crop the viewBox to. Europe ships its own focused asset
+    // (better stylistic tuning at the regional scale); Asia uses the
+    // world map with a runtime viewBox crop. Future continents follow
+    // the Asia pattern by adding an entry here. Gate: variant must be
+    // in this table AND the player has the show-map toggle on.
+    const variantPool = all.filter(VARIANTS[key].filter);
+    const MAP_CONFIG = /** @type {Record<string, { url: string, crop: boolean }>} */ ({
+      europe: { url: './europeMap.svg', crop: false },
+      asia:   { url: './worldMap.svg',  crop: true  },
+    });
     /** @type {SVGElement | null} */
     let mapSvg = null;
-    if (europeMapEl && key === 'europe' && isQuizShowMap()) {
-      europeMapEl.hidden = false;
-      europeMapEl.setAttribute('aria-hidden', 'false');
-      void mountEuropeMap({
-        container: europeMapEl,
-        url: './europeMap.svg',
+    if (flagMapEl && MAP_CONFIG[key] && isQuizShowMap()) {
+      const cfg = MAP_CONFIG[key];
+      flagMapEl.hidden = false;
+      flagMapEl.setAttribute('aria-hidden', 'false');
+      void mountFlagMap({
+        container: flagMapEl,
+        url: cfg.url,
+        cropCodes: cfg.crop ? variantPool.map((c) => c.code) : null,
       }).then((svg) => { mapSvg = svg; });
 
       // Click → flag zoom popup. The map is non-interactive while the
@@ -310,8 +311,8 @@ export function bootFlagQuiz() {
       // default sovereign pool, but they're still rendered on the map
       // and the player can click them to see the flag.
       const byCode = new Map(raw.map((c) => [c.code, c]));
-      europeMapEl.addEventListener('click', (e) => {
-        if (!europeMapEl.classList.contains('is-finished')) return;
+      flagMapEl.addEventListener('click', (e) => {
+        if (!flagMapEl.classList.contains('is-finished')) return;
         const target = /** @type {Element | null} */ (e.target);
         if (!target) return;
         // Resolve to a country ISO2 code. Two shapes:
@@ -777,15 +778,15 @@ export function bootFlagQuiz() {
       // the player sees it filling in live; on finish we want the final
       // pattern to sit next to the score recap, not vanish with the
       // play UI. Idempotent when the map isn't mounted (other variants
-      // or 60s mode): europeMapEl stays `hidden` and the move is a no-op.
+      // or 60s mode): flagMapEl stays `hidden` and the move is a no-op.
       //
       // `.is-finished` also gets set here — the click handler reads it
       // to decide whether to open the flag-zoom popup. Map clicks are
       // ignored during play; once the round ends every country becomes
       // a review surface.
-      if (europeMapEl && !europeMapEl.hidden) {
-        resultEl.insertBefore(europeMapEl, leaderboardEl);
-        europeMapEl.classList.add('is-finished');
+      if (flagMapEl && !flagMapEl.hidden) {
+        resultEl.insertBefore(flagMapEl, leaderboardEl);
+        flagMapEl.classList.add('is-finished');
       }
 
       gameEl.hidden = true;
