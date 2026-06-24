@@ -7,6 +7,34 @@ import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { mountFlagMap, setSelectedCountries } from '../flagQuiz/flagMap.js';
 import { attachZoomPan } from '../flagQuiz/mapZoom.js';
+import { buildToggleLi } from '../common.js';
+
+/**
+ * Per-device "Show map" preference for flagsdata. Defaults to true.
+ * Stored under a flagsdata-specific key so toggling the quiz's show-
+ * map off doesn't kill the map on the browse page (and vice versa) —
+ * they're independent surfaces with different jobs.
+ *
+ * Storage convention mirrors `isQuizShowMap`: `'true'` or missing
+ * reads as default-on; `'false'` is the persisted opt-out.
+ *
+ * @param {{ getItem(k: string): string | null } | null} [store]
+ * @returns {boolean}
+ */
+const FLAGSDATA_SHOW_MAP_KEY = 'gridgame.flagsdata.showMap';
+function isFlagsdataShowMap(store) {
+  const s = store || (typeof localStorage !== 'undefined' ? localStorage : null);
+  if (!s) return true;
+  try { return s.getItem(FLAGSDATA_SHOW_MAP_KEY) !== 'false'; } catch { return true; }
+}
+/**
+ * @param {{ setItem(k: string, v: string): void }} store
+ * @param {boolean} value
+ */
+function setFlagsdataShowMap(store, value) {
+  if (!store) return;
+  try { store.setItem(FLAGSDATA_SHOW_MAP_KEY, value ? 'true' : 'false'); } catch { /* ignore */ }
+}
 
 /** @param {string} v */
 function statusLabel(v) {
@@ -123,17 +151,38 @@ export function bootFlagsData() {
   /** @type {{ items: Country[], foldedNames: string[], tiles: HTMLElement[], count: HTMLElement } | null} */
   let state = null;
 
+  // Show-map toggle in the burger menu — flagsdata's burger panel ships
+  // empty (just the coffee link), so we prepend the toggle here at
+  // boot. Reuses the shared `buildToggleLi` from common.js.
+  const burgerMenuEl = /** @type {HTMLUListElement | null} */ (
+    document.querySelector('#burger-panel .menu')
+  );
+  if (burgerMenuEl) {
+    burgerMenuEl.insertBefore(
+      buildToggleLi({
+        label: t('menu.showMap', 'Show map'),
+        labelKey: 'menu.showMap',
+        initial: isFlagsdataShowMap(),
+        onChange: (checked) => setFlagsdataShowMap(localStorage, checked),
+      }),
+      burgerMenuEl.firstChild,
+    );
+  }
+
   // World contour map below the grid — countries matching the active
   // filter glow pink (`.is-selected`). Mount is async; `mapSvg` stays
   // null until the fetch resolves and `setSelectedCountries` safely
   // no-ops in the meantime. Same asset + module as flagQuiz's
-  // contour map (shared via flags/flagMap.css).
+  // contour map (shared via flags/flagMap.css). Gated on the per-
+  // device show-map preference.
   const flagMapEl = /** @type {HTMLElement | null} */ (
     document.getElementById('flag-map-section')
   );
   /** @type {SVGElement | null} */
   let mapSvg = null;
-  if (flagMapEl) {
+  /** @type {Map<string, Country> | null} */
+  let byCode = null;
+  if (flagMapEl && isFlagsdataShowMap()) {
     flagMapEl.hidden = false;
     flagMapEl.setAttribute('aria-hidden', 'false');
     void mountFlagMap({
@@ -146,6 +195,32 @@ export function bootFlagsData() {
       // mounted — without this, the initial filter state would
       // never get reflected on the map.
       if (state) applyFilter();
+    });
+    // Click → flag-zoom popup. Same dialog flagsdata's grid tiles use,
+    // same openFlagZoom helper. The handler attaches once at mount
+    // (event delegation on the section) and resolves the clicked
+    // country by walking up the ancestors for the first id that's a
+    // known country code — handles both single-path countries
+    // (`<path id="es">`) and `<g>` wrappers (`<g id="cn">`).
+    flagMapEl.addEventListener('click', (e) => {
+      if (!byCode) return;
+      const target = /** @type {Element | null} */ (e.target);
+      if (!target) return;
+      let code = (typeof target.getAttribute === 'function')
+        ? target.getAttribute('data-hit-for')
+        : null;
+      if (!code) {
+        let el = /** @type {Element | null} */ (target);
+        while (el) {
+          const id = el.id;
+          if (id && byCode.has(id)) { code = id; break; }
+          el = el.parentElement;
+        }
+      }
+      if (!code) return;
+      const country = byCode.get(code);
+      if (!country) return;
+      openZoom(country);
     });
   }
 
@@ -179,6 +254,10 @@ export function bootFlagsData() {
     }
     parent.appendChild(grid);
     state = { items, foldedNames, tiles, count: countSpan };
+    // Build the code→country lookup once items are known — the click
+    // handler on the map needs it to resolve a clicked path's ISO2
+    // code to a Country for the flag-zoom popup.
+    byCode = new Map(items.map((c) => [c.code, c]));
   }
 
   function applyFilter() {

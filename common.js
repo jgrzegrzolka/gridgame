@@ -525,3 +525,56 @@ export function mountPrivacyMenuItem(opts) {
   }
   return li;
 }
+
+/**
+ * Build an iOS-style toggle list item for a burger menu. Same surface
+ * shape every page uses: label on the left, sliding switch on the
+ * right, page reload after the slide animation so the new preference
+ * state takes effect cleanly.
+ *
+ * `label` is the already-translated string (caller invokes `t()`).
+ * `labelKey` is the optional i18n key — when set, it's written as
+ * `data-i18n` on the text span so `applyStringsToDocument` retranslates
+ * the label on a soft language switch without the page rebuilding the
+ * menu.
+ *
+ * @param {{
+ *   label: string,
+ *   labelKey?: string,
+ *   initial: boolean,
+ *   onChange: (checked: boolean) => void,
+ * }} opts
+ * @returns {HTMLLIElement}
+ */
+export function buildToggleLi({ label, labelKey, initial, onChange }) {
+  const toggleLi = document.createElement('li');
+  const toggleLabel = document.createElement('label');
+  toggleLabel.className = 'scope-toggle';
+  const textSpan = document.createElement('span');
+  textSpan.className = 'scope-toggle-text';
+  textSpan.textContent = label;
+  if (labelKey) textSpan.setAttribute('data-i18n', labelKey);
+  const switchSpan = document.createElement('span');
+  switchSpan.className = 'scope-toggle-switch';
+  const toggleInput = document.createElement('input');
+  toggleInput.type = 'checkbox';
+  toggleInput.checked = initial;
+  toggleInput.addEventListener('change', () => {
+    onChange(toggleInput.checked);
+    // Let the slide animation finish so the user sees the toggle move
+    // before the page reloads.
+    setTimeout(() => window.location.reload(), 350);
+  });
+  const trackSpan = document.createElement('span');
+  trackSpan.className = 'scope-toggle-track';
+  trackSpan.setAttribute('aria-hidden', 'true');
+  const thumbSpan = document.createElement('span');
+  thumbSpan.className = 'scope-toggle-thumb';
+  trackSpan.appendChild(thumbSpan);
+  switchSpan.appendChild(toggleInput);
+  switchSpan.appendChild(trackSpan);
+  toggleLabel.appendChild(textSpan);
+  toggleLabel.appendChild(switchSpan);
+  toggleLi.appendChild(toggleLabel);
+  return toggleLi;
+}
