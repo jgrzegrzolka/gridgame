@@ -122,6 +122,46 @@ export function markCountry(root, code, state) {
 }
 
 /**
+ * Replace the set of `.is-selected` countries with a new one — used
+ * by flagsdata to keep the map in sync with the active filter pills.
+ * Walks every `.map-country` element + every `.map-hit-target` overlay
+ * and toggles the class based on whether the country code is in the
+ * `codes` set. Codes are lowercased before comparison.
+ *
+ * Single function instead of per-country mark/unmark calls because
+ * filter changes invalidate the whole set; batching is one O(n) pass
+ * vs O(n) toggle calls.
+ *
+ * @param {MapRoot} root
+ * @param {Iterable<string>} codes
+ */
+export function setSelectedCountries(root, codes) {
+  if (!root) return;
+  /** @type {Set<string>} */
+  const set = new Set();
+  for (const c of codes || []) {
+    if (typeof c === 'string') set.add(c.toLowerCase());
+  }
+  const countries = root.querySelectorAll('.map-country');
+  for (let i = 0; i < countries.length; i++) {
+    /** @type {any} */
+    const el = countries[i];
+    if (!el.id || !el.classList) continue;
+    if (set.has(el.id)) el.classList.add('is-selected');
+    else el.classList.remove('is-selected');
+  }
+  const hits = root.querySelectorAll('.map-hit-target');
+  for (let i = 0; i < hits.length; i++) {
+    /** @type {any} */
+    const el = hits[i];
+    if (!el.classList) continue;
+    const code = typeof el.getAttribute === 'function' ? el.getAttribute('data-hit-for') : null;
+    if (code && set.has(code)) el.classList.add('is-selected');
+    else el.classList.remove('is-selected');
+  }
+}
+
+/**
  * Strip every status class from every marked country — used on
  * play-again so a replayed round starts with a blank silhouette.
  *
