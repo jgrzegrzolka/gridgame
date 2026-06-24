@@ -458,11 +458,25 @@ function addHitTargets(svg, radius) {
   } catch { return; }
   for (let i = 0; i < smalls.length; i++) {
     /** @type {any} */
-    const path = smalls[i];
-    if (!path || !path.id) continue;
-    if (typeof path.getBBox !== 'function') continue;
+    const elem = smalls[i];
+    if (!elem || !elem.id) continue;
+    // For `<g>`-wrapped microstates (BlankMap-World's structure for
+    // Caribbean islands etc.), use the INNER path's bbox — the
+    // sibling `<circle class="circlexx">` locator is positioned at a
+    // label-friendly offset away from the real island, and including
+    // it in the union shifts the ring center off into open water.
+    // For direct-path microstates (Europe asset's Vatican etc.),
+    // querySelector('path') returns null and we fall back to the
+    // element itself.
+    /** @type {any} */
+    let target = elem;
+    if (typeof elem.querySelector === 'function') {
+      const innerPath = elem.querySelector('path');
+      if (innerPath && typeof innerPath.getBBox === 'function') target = innerPath;
+    }
+    if (typeof target.getBBox !== 'function') continue;
     let bbox;
-    try { bbox = path.getBBox(); } catch { continue; }
+    try { bbox = target.getBBox(); } catch { continue; }
     if (!bbox || (bbox.width === 0 && bbox.height === 0)) continue;
     const cx = bbox.x + bbox.width / 2;
     const cy = bbox.y + bbox.height / 2;
@@ -470,7 +484,12 @@ function addHitTargets(svg, radius) {
     circle.setAttribute('cx', String(cx));
     circle.setAttribute('cy', String(cy));
     circle.setAttribute('r', String(radius));
-    circle.setAttribute('data-hit-for', path.id);
+    // `data-hit-for` carries the COUNTRY id (the outer `<g>` / `<path>`
+    // with the ISO code), not the inner path-segment id that the bbox
+    // came from. e.g. for `<g id="kn"><path id="kn-">...</path></g>`,
+    // we want `data-hit-for="kn"` so the click handler resolves
+    // correctly via byCode.
+    circle.setAttribute('data-hit-for', elem.id);
     // `data-base-r` is the radius at the asset's natural viewBox.
     // mapZoom.js scales the live `r` attribute down as the viewBox
     // crops in, so the ring stays roughly the same on-screen size
