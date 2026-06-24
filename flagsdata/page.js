@@ -158,15 +158,20 @@ export function bootFlagsData() {
     document.querySelector('#burger-panel .menu')
   );
   if (burgerMenuEl) {
-    burgerMenuEl.insertBefore(
-      buildToggleLi({
-        label: t('menu.showMap', 'Show map'),
-        labelKey: 'menu.showMap',
-        initial: isFlagsdataShowMap(),
-        onChange: (checked) => setFlagsdataShowMap(localStorage, checked),
-      }),
-      burgerMenuEl.firstChild,
-    );
+    // Insert the toggle BEFORE the coffee link's <li> so the menu
+    // reads: nickname (top, with its own bottom-border divider) →
+    // show-map → coffee. Falls back to append-at-end if the page
+    // ever stops carrying a coffee link.
+    const toggleLi = buildToggleLi({
+      label: t('menu.showMap', 'Show map'),
+      labelKey: 'menu.showMap',
+      initial: isFlagsdataShowMap(),
+      onChange: (checked) => setFlagsdataShowMap(localStorage, checked),
+    });
+    const coffeeLink = burgerMenuEl.querySelector('.menu-coffee');
+    const coffeeLi = coffeeLink ? coffeeLink.closest('li') : null;
+    if (coffeeLi) burgerMenuEl.insertBefore(toggleLi, coffeeLi);
+    else burgerMenuEl.appendChild(toggleLi);
   }
 
   // World contour map below the grid — countries matching the active
