@@ -273,16 +273,17 @@ export function bootFlagQuiz() {
     const startTime = Date.now();
     let timerRaf = 0;
 
-    // Europe contour map: only paints for the Europe variant in the
-    // endurance ("all") mode where the player iterates through every
-    // country. 60s mode doesn't visit every country and the map would
-    // just sit half-blank, so we keep the section hidden there. Other
-    // continent variants would need their own SVG asset, so they're
-    // gated out too. Mount is async; `mapSvg` stays null until the
-    // fetch resolves and `markCountry` safely no-ops in the meantime.
+    // Europe contour map: paints in any mode of the Europe variant.
+    // In all-mode the player fills it country-by-country (completion
+    // artifact); in 60s mode the map is sparser — most countries stay
+    // grey — but the red error marks are the main takeaway, showing
+    // the player which flags they confused. Other continent variants
+    // would need their own SVG asset, so they're gated out. Mount is
+    // async; `mapSvg` stays null until the fetch resolves and
+    // `markCountry` safely no-ops in the meantime.
     /** @type {SVGElement | null} */
     let mapSvg = null;
-    if (europeMapEl && key === 'europe' && mode === 'all') {
+    if (europeMapEl && key === 'europe') {
       europeMapEl.hidden = false;
       europeMapEl.setAttribute('aria-hidden', 'false');
       void mountEuropeMap({
@@ -490,6 +491,14 @@ export function bootFlagQuiz() {
         feedbackEl.classList.add('shake-wrong');
         wrongCount++;
         flashPenalty();
+        // Map: paint the CLICKED country red — semantically "I confused
+        // this flag with something else." Differs from count mode where
+        // we paint `currentAnswer.code` (the asked-about country); in
+        // timed mode the question is still open so we record the
+        // mis-pick instead. If `chosen` later becomes its own question
+        // and the player gets it right, markCountry's latest-wins rule
+        // flips it green — acceptable lossy behavior for the rare case.
+        markCountry(mapSvg, chosen.code, 'wrong');
       } else {
         // Count mode is one-shot: a wrong pick ends the question. We
         // reveal the correct tile so the player learns what it was, then
@@ -501,7 +510,12 @@ export function bootFlagQuiz() {
         if (correctTile) correctTile.classList.add('correct');
         disableAllTiles();
         progressBarEl.style.width = (countModeProgressRatio(answeredCount, wrongCount, target) * 100) + '%';
-        feedbackEl.textContent = '';
+        // Show the wrong-pick country name during the 1200 ms reveal —
+        // the player sees the green correct tile, but they might not
+        // remember what flag they actually clicked. `render()` clears
+        // the feedback on the next round. Same surface that timed mode
+        // already uses for its multi-attempt wrong-name flashes.
+        feedbackEl.textContent = countryName(chosen);
         feedbackEl.classList.remove('shake-wrong');
         // Map: the asked-about country (currentAnswer.code) is the one
         // the player missed — paint *that* red, not the wrong choice.
