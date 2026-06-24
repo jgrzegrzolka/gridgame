@@ -1,4 +1,4 @@
-import { VARIANTS, defaultModeFor, resolveMode, isQuizIncludeAll, setQuizIncludeAll } from '../flags/quiz.js';
+import { VARIANTS, defaultModeFor, resolveMode, isQuizIncludeAll, setQuizIncludeAll, isQuizShowMap, setQuizShowMap } from '../flags/quiz.js';
 import { t } from '../i18n.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
@@ -31,6 +31,7 @@ export function buildQuizMenu(menuEl, all, opts) {
   const includeAll = isQuizIncludeAll();
 
   menuEl.appendChild(buildScopeToggleLi(includeAll));
+  menuEl.appendChild(buildMapToggleLi(isQuizShowMap()));
 
   const WIDE_GROUP = new Set(['countries']);
   let dividerPlaced = false;
@@ -150,19 +151,57 @@ export function buildVariantPicker(pickerListEl, all, opts) {
 
 /** @param {boolean} includeAll */
 function buildScopeToggleLi(includeAll) {
+  return buildToggleLi({
+    labelKey: 'menu.includeTerritories',
+    labelFallback: 'Include territories & other flags',
+    initial: includeAll,
+    onChange: (checked) => setQuizIncludeAll(localStorage, checked),
+  });
+}
+
+/** @param {boolean} showMap */
+function buildMapToggleLi(showMap) {
+  // Only meaningful on the Europe variant (we don't ship a map asset
+  // for other continents yet) but the toggle is always present in the
+  // menu: it's a global preference, so the player can pre-set it
+  // before navigating to Europe rather than discover the option only
+  // once they're already mid-round.
+  return buildToggleLi({
+    labelKey: 'menu.showMap',
+    labelFallback: 'Show map (Europe)',
+    initial: showMap,
+    onChange: (checked) => setQuizShowMap(localStorage, checked),
+  });
+}
+
+/**
+ * Shared scaffold for the menu toggles. The two consumers above —
+ * include-territories and show-map — flip independent preferences but
+ * share the same UX shape: label on the left, iOS-style switch on the
+ * right, page reload after the slide animation so the new state takes
+ * effect cleanly.
+ *
+ * @param {{
+ *   labelKey: string,
+ *   labelFallback: string,
+ *   initial: boolean,
+ *   onChange: (checked: boolean) => void,
+ * }} opts
+ */
+function buildToggleLi({ labelKey, labelFallback, initial, onChange }) {
   const toggleLi = document.createElement('li');
   const toggleLabel = document.createElement('label');
   toggleLabel.className = 'scope-toggle';
   const textSpan = document.createElement('span');
   textSpan.className = 'scope-toggle-text';
-  textSpan.textContent = t('menu.includeTerritories', 'Include territories & other flags');
+  textSpan.textContent = t(labelKey, labelFallback);
   const switchSpan = document.createElement('span');
   switchSpan.className = 'scope-toggle-switch';
   const toggleInput = document.createElement('input');
   toggleInput.type = 'checkbox';
-  toggleInput.checked = includeAll;
+  toggleInput.checked = initial;
   toggleInput.addEventListener('change', () => {
-    setQuizIncludeAll(localStorage, toggleInput.checked);
+    onChange(toggleInput.checked);
     // Let the slide animation finish so the user sees the toggle move
     // before the page reloads.
     setTimeout(() => window.location.reload(), 350);

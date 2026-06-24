@@ -2,6 +2,7 @@ import { readBoolSetting, writeBoolSetting } from './group.js';
 
 const QUIZ_INCLUDE_ALL_KEY = 'gridgame.flagquiz.includeAll';
 const QUIZ_LAST_VARIANT_KEY = 'gridgame.flagquiz.lastVariant';
+const QUIZ_SHOW_MAP_KEY = 'gridgame.flagquiz.showMap';
 
 /**
  * @param {{ getItem(key: string): string | null } | null | undefined} [store]
@@ -16,6 +17,26 @@ export function isQuizIncludeAll(store) {
  */
 export function setQuizIncludeAll(store, value) {
   writeBoolSetting(store, QUIZ_INCLUDE_ALL_KEY, value);
+}
+
+/**
+ * Per-device preference for showing the Europe contour map during
+ * flagQuiz rounds. Defaults to false — `readBoolSetting` returns
+ * false when the key is missing. We default to hidden for the
+ * rollout; flip to default-shown once the feature has had eyes on it.
+ *
+ * @param {{ getItem(key: string): string | null } | null | undefined} [store]
+ */
+export function isQuizShowMap(store) {
+  return readBoolSetting(store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null), QUIZ_SHOW_MAP_KEY);
+}
+
+/**
+ * @param {{ setItem(key: string, value: string): void, removeItem(key: string): void }} store
+ * @param {boolean} value
+ */
+export function setQuizShowMap(store, value) {
+  writeBoolSetting(store, QUIZ_SHOW_MAP_KEY, value);
 }
 
 /**
