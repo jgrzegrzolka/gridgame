@@ -179,6 +179,34 @@
   fill-opacity: 0.5;
 }
 
+/* Answer-flash: in flagQuiz, briefly paint a freshly-answered country
+ * AND its hit-target ring at full opacity, then fade to the resting
+ * 0.5. The fill change itself transitions over 240ms (existing rule
+ * above); this animation overlays a fill-opacity 1 → 0.5 fade so the
+ * answer "pops" into view before settling into the same soft alpha
+ * as every other highlight. 600 ms is comfortable to notice and
+ * fits well inside count mode's 1200 ms between-rounds gap.
+ *
+ * Only `.is-correct` / `.is-wrong` (the quiz answer states) animate
+ * — `.is-selected` (the persistent flagsdata filter highlight) is a
+ * stable visual that shouldn't twitch on every filter change. After
+ * the animation ends the CSS resting value (fill-opacity: 0.5 from
+ * the rule above) takes over with no `animation-fill-mode` needed.
+ * The ring's `.is-correct` / `.is-wrong` flavours get the same flash
+ * so a microstate answer reads identically to a big-country one. */
+@keyframes map-answer-flash {
+  from { fill-opacity: 1; }
+  to   { fill-opacity: 0.5; }
+}
+#flag-map-section svg .map-country.is-correct,
+#flag-map-section svg .map-country.is-wrong,
+#flag-map-section svg g.is-correct path:not(.map-country),
+#flag-map-section svg g.is-wrong path:not(.map-country),
+#flag-map-section svg .map-hit-target.is-correct,
+#flag-map-section svg .map-hit-target.is-wrong {
+  animation: map-answer-flash 600ms ease-out;
+}
+
 /* Microstate paths get NO special styling — they render with the same
  * thin grey border as bigger countries. Visibility + click target both
  * come from the overlay ring below. */
