@@ -163,7 +163,7 @@
   fill: var(--secondary-color);
 }
 
-/* 50% fill-opacity on EVERY highlighted-country fill so the visual
+/* 40% fill-opacity on EVERY highlighted-country fill so the visual
  * weight of a "matched" country reads soft instead of solid. Matches
  * the `.map-hit-target` ring opacity above so the two surfaces (big
  * countries and tiny microstate rings) feel like one design language
@@ -176,13 +176,13 @@
 #flag-map-section svg g.is-correct path:not(.map-country),
 #flag-map-section svg g.is-wrong path:not(.map-country),
 #flag-map-section svg g.is-selected path:not(.map-country) {
-  fill-opacity: 0.5;
+  fill-opacity: 0.4;
 }
 
 /* Answer-flash: in flagQuiz, briefly paint a freshly-answered country
  * AND its hit-target ring at full opacity, then fade to the resting
- * 0.5. The fill change itself transitions over 240ms (existing rule
- * above); this animation overlays a fill-opacity 1 → 0.5 fade so the
+ * 0.4. The fill change itself transitions over 240ms (existing rule
+ * above); this animation overlays a fill-opacity 1 → 0.4 fade so the
  * answer "pops" into view before settling into the same soft alpha
  * as every other highlight. 600 ms is comfortable to notice and
  * fits well inside count mode's 1200 ms between-rounds gap.
@@ -190,13 +190,13 @@
  * Only `.is-correct` / `.is-wrong` (the quiz answer states) animate
  * — `.is-selected` (the persistent flagsdata filter highlight) is a
  * stable visual that shouldn't twitch on every filter change. After
- * the animation ends the CSS resting value (fill-opacity: 0.5 from
+ * the animation ends the CSS resting value (fill-opacity: 0.4 from
  * the rule above) takes over with no `animation-fill-mode` needed.
  * The ring's `.is-correct` / `.is-wrong` flavours get the same flash
  * so a microstate answer reads identically to a big-country one. */
 @keyframes map-answer-flash {
   from { fill-opacity: 1; }
-  to   { fill-opacity: 0.5; }
+  to   { fill-opacity: 0.4; }
 }
 #flag-map-section svg .map-country.is-correct,
 #flag-map-section svg .map-country.is-wrong,
@@ -240,7 +240,7 @@
    * so it stays roughly the same overall size on screen. */
   vector-effect: non-scaling-stroke;
   pointer-events: all;
-  /* 50% fill-opacity so the highlight fills (is-correct / is-wrong /
+  /* 40% fill-opacity so the highlight fills (is-correct / is-wrong /
    * is-selected, set below) read as soft tint rather than solid stamp
    * — the Caribbean chain in particular has neighbour microstate
    * rings that overlap each other regardless of any per-country
@@ -249,7 +249,7 @@
    * pile of solid pink discs reads as one blob. The stroke stays at
    * full opacity (it's only 1.5px wide via non-scaling-stroke, so
    * "soft + thin" would disappear entirely). */
-  fill-opacity: 0.5;
+  fill-opacity: 0.4;
 }
 #flag-map-section svg .map-hit-target.is-correct {
   fill: #2a8a3a;
