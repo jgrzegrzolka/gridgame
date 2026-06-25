@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries } from './flagMap.js';
+import {
+  markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
+  offsetHitTargetCenter,
+} from './flagMap.js';
 
 /**
  * Tiny fake of the SVG host root: maps ID → path-like object with a
@@ -481,5 +484,194 @@ test('cropToCountries skips degenerate bboxes (width AND height both 0)', () => 
 
 test('cropToCountries tolerates a null svg', () => {
   assert.doesNotThrow(() => cropToCountries(/** @type {any} */ (null), ['cn']));
+});
+
+// ---- offsetHitTargetCenter ----
+//
+// Pins the co-located-pair table. mf and sx share one Caribbean
+// island (~9 km across); their inner-path bboxes sit ~0.3 viewBox
+// units apart, so without this offset the default bbox-center rule
+// produced two rings stacked on top of each other and only the top
+// one was clickable. Any future co-located ISO pair would slot a
+// new entry into the same table.
+
+test('offsetHitTargetCenter shifts mf north and sx south-southwest of the shared island', () => {
+  // Same input — represents the (near-identical) bbox center of the
+  // shared landmass. mf goes pure north; sx skews south-southwest so
+  // its ring clears Saint Kitts & Nevis (which sits SE of the island
+  // and would collide with a pure-south push).
+  const sharedCx = 826.5;
+  const sharedCy = 542.3;
+  const mf = offsetHitTargetCenter('mf', sharedCx, sharedCy);
+  const sx = offsetHitTargetCenter('sx', sharedCx, sharedCy);
+  // mf is the northern (French) half — keep cx, push y up.
+  assert.equal(mf.cx, sharedCx);
+  assert.ok(mf.cy < sharedCy, `mf should shift north (smaller y), got ${mf.cy}`);
+  // sx is the southern (Dutch) half — push y down AND skew west to
+  // dodge Saint Kitts & Nevis. The skew is the whole reason this
+  // case fails with a naive pure-S offset, so pin both axes.
+  assert.ok(sx.cy > sharedCy, `sx should shift south (larger y), got ${sx.cy}`);
+  assert.ok(sx.cx < sharedCx, `sx should also skew west to clear kn, got cx=${sx.cx}`);
+  // The pair must end up separated enough that at the NA continent
+  // crop (ring radius ~2.4 vbu), both rings clear every neighbour
+  // ring by positive ring-edge gap. Pin at >= 14 vbu of 2D distance
+  // as the regression guard: anything smaller starts grazing
+  // neighbours like Anguilla and Saint Barthélemy.
+  const dist = Math.hypot(sx.cx - mf.cx, sx.cy - mf.cy);
+  assert.ok(dist >= 14, `mf/sx 2D separation collapsed to ${dist.toFixed(2)}`);
+});
+
+test('offsetHitTargetCenter is the identity for any country not in the table', () => {
+  // The whole point of the targeted approach is "ONLY mf and sx
+  // shift" — every other microstate's ring center comes through
+  // untouched. PR #612's generic overlap-resolver violated this by
+  // cascading across the Caribbean cluster and pushing Bahamas /
+  // Lesser Antilles off into open water.
+  for (const code of ['ai', 'bl', 'ag', 'bs', 'kn', 'lc', 'vg', 'vi', 'tc', 'va', 'mc']) {
+    const out = offsetHitTargetCenter(code, 100, 200);
+    assert.deepEqual(out, { cx: 100, cy: 200 }, `${code} should not shift`);
+  }
+});
+
+test('offsetHitTargetCenter no-ops on unknown / malformed ids', () => {
+  // Defensive: callers feed the country's id straight in. The bbox-
+  // center path shouldn't care if the id happens to be empty / a
+  // composite / non-string — return inputs unchanged so the circle
+  // still gets drawn at the bbox center.
+  assert.deepEqual(offsetHitTargetCenter('', 1, 2), { cx: 1, cy: 2 });
+  assert.deepEqual(offsetHitTargetCenter('not-iso', 3, 4), { cx: 3, cy: 4 });
+  assert.deepEqual(offsetHitTargetCenter(/** @type {any} */ (null), 5, 6), { cx: 5, cy: 6 });
+});
+
+// ---- addHitTargets integration via mountFlagMap ----
+//
+// Verifies the offset actually propagates to the appended <circle>'s
+// cx/cy. The existing fakeContainerWithPaths doesn't model getBBox or
+// createElementNS, so this builds a slightly richer fake that does —
+// enough surface for addHitTargets to create circles and set attrs.
+
+test('mountFlagMap produces distinct mf and sx hit-target centers from a shared bbox', async () => {
+  // mf and sx are wrapped in <g> with a single inner <path>; their
+  // bboxes overlap completely in this fake (same x/y/w/h) — the worst
+  // case the offset table has to defend against. A neighbour ('ai',
+  // Anguilla) ships an unrelated bbox so we can pin "not in the table"
+  // behaviour at the same time.
+  const sharedBbox = { x: 826.4, y: 542.0, width: 0.5, height: 0.4 };
+  const aiBbox = { x: 825.8, y: 541.4, width: 0.6, height: 0.5 };
+
+  /** @param {string} id @param {{x:number,y:number,width:number,height:number}} bb */
+  const groupWithPath = (id, bb) => {
+    const classes = new Set();
+    const inner = { tagName: 'path', getBBox: () => bb };
+    return {
+      id,
+      classList: {
+        add: (c) => classes.add(c),
+        remove: (c) => classes.delete(c),
+        has: (c) => classes.has(c),
+      },
+      querySelector: (sel) => (sel === 'path' ? inner : null),
+      getBBox: () => bb,
+      _classes: classes,
+    };
+  };
+
+  const byId = new Map([
+    ['mf', groupWithPath('mf', sharedBbox)],
+    ['sx', groupWithPath('sx', sharedBbox)],
+    ['ai', groupWithPath('ai', aiBbox)],
+  ]);
+
+  /** @type {Array<{ tagName: string, attrs: Map<string, string>, parent: any }>} */
+  const appended = [];
+  const fakeDoc = {
+    createElementNS: (ns, tag) => {
+      const attrs = new Map();
+      return {
+        tagName: tag,
+        setAttribute: (k, v) => { attrs.set(k, String(v)); },
+        getAttribute: (k) => (attrs.has(k) ? attrs.get(k) : null),
+        _attrs: attrs,
+      };
+    },
+  };
+
+  const allNodes = Array.from(byId.values());
+  const fakeSvgAttrs = new Map();
+  const fakeSvg = {
+    ownerDocument: fakeDoc,
+    getAttribute: (k) => (fakeSvgAttrs.has(k) ? fakeSvgAttrs.get(k) : null),
+    setAttribute: (k, v) => { fakeSvgAttrs.set(k, String(v)); },
+    removeAttribute: (k) => { fakeSvgAttrs.delete(k); },
+    querySelector: (sel) => {
+      if (sel.startsWith('#')) return byId.get(sel.slice(1)) || null;
+      return null;
+    },
+    querySelectorAll: (sel) => {
+      if (sel === '[id]') return allNodes;
+      if (sel === '.is-small') return allNodes.filter((n) => n.classList.has('is-small'));
+      return [];
+    },
+    appendChild: (child) => { appended.push(child); return child; },
+  };
+
+  const container = {
+    set innerHTML(_v) { fakeSvgAttrs.clear(); },
+    get innerHTML() { return ''; },
+    querySelector: (sel) => (sel === 'svg' ? fakeSvg : null),
+    appendChild: () => {},
+    ownerDocument: fakeDoc,
+  };
+
+  const fetchImpl = async () => ({
+    ok: true,
+    text: async () => '<svg width="2754" height="1398"></svg>',
+  });
+  await mountFlagMap({ container, url: '/x.svg', fetchImpl });
+
+  // For mf/sx specifically the appended children should include BOTH a
+  // leader <line> and a hit-target <circle> per country — the line goes
+  // first (so the ring sits visually on top of it) and points from the
+  // shared island's bbox center out to the offset ring center.
+  // Neighbour 'ai' has no offset, so no leader line should be appended.
+  const mfCircle = appended.find((n) => n.tagName === 'circle' && n._attrs.get('data-hit-for') === 'mf');
+  const sxCircle = appended.find((n) => n.tagName === 'circle' && n._attrs.get('data-hit-for') === 'sx');
+  const aiCircle = appended.find((n) => n.tagName === 'circle' && n._attrs.get('data-hit-for') === 'ai');
+  const mfLeader = appended.find((n) => n.tagName === 'line' && n._attrs.get('data-hit-for') === 'mf');
+  const sxLeader = appended.find((n) => n.tagName === 'line' && n._attrs.get('data-hit-for') === 'sx');
+  const aiLeader = appended.find((n) => n.tagName === 'line' && n._attrs.get('data-hit-for') === 'ai');
+  assert.ok(mfCircle, 'mf hit-target circle was appended');
+  assert.ok(sxCircle, 'sx hit-target circle was appended');
+  assert.ok(aiCircle, 'ai hit-target circle was appended');
+  assert.ok(mfLeader, 'mf leader line was appended (offset → island)');
+  assert.ok(sxLeader, 'sx leader line was appended (offset → island)');
+  assert.equal(aiLeader, undefined, 'ai has no offset → no leader line');
+  // Leader endpoints: (x1,y1) is the island bbox center, (x2,y2) is the
+  // ring center. Pins the direction so a future "swap endpoints" edit
+  // (which would put the line endpoint outside the ring instead of
+  // hidden beneath it) gets caught.
+  assert.equal(parseFloat(mfLeader._attrs.get('x1')), sharedBbox.x + sharedBbox.width / 2);
+  assert.equal(parseFloat(mfLeader._attrs.get('y1')), sharedBbox.y + sharedBbox.height / 2);
+  assert.equal(parseFloat(mfLeader._attrs.get('x2')), parseFloat(mfCircle._attrs.get('cx')));
+  assert.equal(parseFloat(mfLeader._attrs.get('y2')), parseFloat(mfCircle._attrs.get('cy')));
+  // DOM order: leader BEFORE the circle so the ring renders on top.
+  const mfLeaderIdx = appended.indexOf(mfLeader);
+  const mfCircleIdx = appended.indexOf(mfCircle);
+  assert.ok(mfLeaderIdx < mfCircleIdx, 'leader appended before circle so the ring renders on top');
+
+  const bboxCx = sharedBbox.x + sharedBbox.width / 2;
+  const bboxCy = sharedBbox.y + sharedBbox.height / 2;
+  // mf and sx must NOT both sit at the bbox center — that's the bug.
+  const mfCy = parseFloat(mfCircle._attrs.get('cy'));
+  const sxCy = parseFloat(sxCircle._attrs.get('cy'));
+  assert.notEqual(mfCy, sxCy, 'mf and sx must not share a y center');
+  assert.ok(mfCy < bboxCy, 'mf shifted north of the shared bbox center');
+  assert.ok(sxCy > bboxCy, 'sx shifted south of the shared bbox center');
+
+  // ai (not in the offset table) must keep the exact bbox center.
+  const aiBboxCx = aiBbox.x + aiBbox.width / 2;
+  const aiBboxCy = aiBbox.y + aiBbox.height / 2;
+  assert.equal(parseFloat(aiCircle._attrs.get('cx')), aiBboxCx);
+  assert.equal(parseFloat(aiCircle._attrs.get('cy')), aiBboxCy);
 });
 

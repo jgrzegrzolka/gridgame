@@ -105,7 +105,7 @@
  * All rules are no-ops on the Europe asset (no <text>, no <line>, no
  * #ocean id) so they don't affect that variant. */
 #flag-map-section svg text,
-#flag-map-section svg line {
+#flag-map-section svg line:not(.map-hit-leader) {
   display: none;
 }
 /* Strip the ocean's coastline outline entirely so the world-map's
@@ -163,6 +163,22 @@
   fill: var(--secondary-color);
 }
 
+/* 50% fill-opacity on EVERY highlighted-country fill so the visual
+ * weight of a "matched" country reads soft instead of solid. Matches
+ * the `.map-hit-target` ring opacity above so the two surfaces (big
+ * countries and tiny microstate rings) feel like one design language
+ * rather than two. Applies across all three status flavours
+ * (`is-correct` / `is-wrong` / `is-selected`) so the quiz answer
+ * paint and the flagsdata filter highlight share the same softness. */
+#flag-map-section svg .map-country.is-correct,
+#flag-map-section svg .map-country.is-wrong,
+#flag-map-section svg .map-country.is-selected,
+#flag-map-section svg g.is-correct path:not(.map-country),
+#flag-map-section svg g.is-wrong path:not(.map-country),
+#flag-map-section svg g.is-selected path:not(.map-country) {
+  fill-opacity: 0.5;
+}
+
 /* Microstate paths get NO special styling — they render with the same
  * thin grey border as bigger countries. Visibility + click target both
  * come from the overlay ring below. */
@@ -191,6 +207,16 @@
    * so it stays roughly the same overall size on screen. */
   vector-effect: non-scaling-stroke;
   pointer-events: all;
+  /* 50% opacity on stroke + fill (default and state). The Caribbean
+   * chain in particular has neighbour microstate rings that overlap
+   * each other regardless of any per-country offset (Anguilla and
+   * Saint Barthélemy sit 2 vbu apart in the source SVG — closer than
+   * 2×r at every continent crop). Solid rings would render as
+   * stacked overlap; soft alpha lets the pile read as layers. Same
+   * treatment on `.is-correct` / `.is-wrong` / `.is-selected` fills
+   * below so transparency is consistent across every ring state. */
+  stroke-opacity: 0.5;
+  fill-opacity: 0.5;
 }
 #flag-map-section svg .map-hit-target.is-correct {
   fill: #2a8a3a;
@@ -200,4 +226,22 @@
 }
 #flag-map-section svg .map-hit-target.is-selected {
   fill: var(--secondary-color);
+}
+
+/* Leader line — appended by addHitTargets only for countries whose
+ * ring center had to be shifted off the actual landmass to separate
+ * from a co-located neighbour (Saint Martin / Sint Maarten share one
+ * 9km Caribbean island). Connects the visible island to the ring so
+ * the player can tell which country each ring belongs to. The ring
+ * itself sits ON TOP of the leader (later in DOM order), so only the
+ * segment between the island and the ring's edge ever shows. Stays
+ * pink in every answer state — the ring's fill carries the state
+ * signal, the leader is purely a "this belongs to that" pointer.
+ * `pointer-events: none` so it never steals a click from the ring. */
+#flag-map-section svg .map-hit-leader {
+  stroke: var(--secondary-color);
+  stroke-width: 1;
+  stroke-opacity: 0.5; /* matches the ring it points to */
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
 }

@@ -47,6 +47,87 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const ISO2_PATTERN = /^[a-z]{2}$/;
 
 /**
+ * Per-country ring-center shifts in natural viewBox units, applied
+ * after the default bbox-center computation. Targeted at the one known
+ * co-located pair: Saint Martin (`mf`, French northern half) and Sint
+ * Maarten (`sx`, Dutch southern half) share a single ~9 km Caribbean
+ * island, and their inner-path bboxes sit ~0.3 vbu apart — the default
+ * rule produced two rings stacked exactly on top of each other, so only
+ * the top one was clickable. mf shifts north, sx shifts south, matching
+ * the actual French / Dutch halves of the island. A leader line (drawn
+ * by addHitTargets when an entry exists here) connects each shifted
+ * ring back to the real landmass.
+ *
+ * A hand-coded table for the one known pair stays surgical. A generic
+ * "push apart any pair within N×radius" loop was tried in PR #612 and
+ * rejected: at world-level radius (~19 vbu) it cascades across the
+ * densely-clustered Caribbean and pushes Bahamas / Lesser Antilles off
+ * their islands into open ocean.
+ *
+ * Offset magnitudes (8 vbu) and DIRECTIONS are picked so that at the
+ * North America continent crop — where `rescaleHitTargets` shrinks
+ * ring radius to ~2.4 vbu — each shifted ring clears every neighbour
+ * ring with positive edge-to-edge gap, not just the obvious pair:
+ *
+ *   - **mf** shifts pure north (`dy: -8`). Anguilla (`ai`) sits ~1 vbu
+ *     north of the shared island; an 8-vbu push puts mf 2 vbu clear
+ *     of ai's ring edge. Nothing else lives close enough north to
+ *     matter (the Turks & Caicos and Bahamas chains start far further
+ *     north on the map).
+ *   - **sx** shifts south-southwest (`dx: -4, dy: +8`). A pure-south
+ *     push would collide with Saint Kitts & Nevis (`kn`) at ~(828,
+ *     549) — sx at pure (826.5, 550.5) would land only 2 vbu from
+ *     kn's center, overlapping by ~3 vbu of ring edge. Skewing 4 vbu
+ *     west takes sx around kn into the open water south-west of the
+ *     shared island, clearing both kn and Saint Barthélemy. Virgin
+ *     Islands (vi, vg) sit far enough west not to be affected.
+ *
+ * Smaller offsets (we tried 5) left the rings grazing each other and
+ * the visual read as a confused pile-up; bigger offsets push the rings
+ * so far into open water that the leader becomes the only "this
+ * belongs to that" cue — 8 vbu lands in the sweet spot where the
+ * leader is a clear short stick and the ring still reads as "near the
+ * island, not at it." World-view crop (no continent zoom) renders
+ * every Caribbean ring heavily overlapping regardless of this offset —
+ * that's data density, not something a per-country shift can fix; the
+ * 50% stroke/fill opacity on `.map-hit-target` (set in flagMap.css)
+ * keeps even the unavoidable overlaps readable as soft layers.
+ *
+ * A generic "push apart any pair within N×radius" loop was tried in
+ * PR #612 and rejected: it cascades across the dense Caribbean and
+ * pushes Bahamas / Lesser Antilles off their islands into open ocean.
+ *
+ * Add a new entry only when a second co-located ISO pair appears.
+ * Re-tune both magnitude AND direction per-pair against the actual
+ * neighbour positions — pure N/S that worked for mf does NOT work for
+ * sx, as the lesson here shows.
+ *
+ * `dx` is east-positive, `dy` is south-positive (SVG y grows downward).
+ *
+ * @type {Record<string, { dx: number, dy: number }>}
+ */
+const HIT_TARGET_CENTER_OFFSETS = {
+  mf: { dx: 0, dy: -8 },
+  sx: { dx: -4, dy: 8 },
+};
+
+/**
+ * Apply the per-country center shift from `HIT_TARGET_CENTER_OFFSETS`,
+ * returning the (possibly unchanged) `{ cx, cy }`. Pure so a sibling
+ * test can pin the table without the addHitTargets DOM ceremony.
+ *
+ * @param {string} id  ISO2 code
+ * @param {number} cx
+ * @param {number} cy
+ * @returns {{ cx: number, cy: number }}
+ */
+export function offsetHitTargetCenter(id, cx, cy) {
+  const o = HIT_TARGET_CENTER_OFFSETS[id];
+  if (!o) return { cx, cy };
+  return { cx: cx + o.dx, cy: cy + o.dy };
+}
+
+/**
  * Curated set of ISO 3166-1 alpha-2 codes whose countries are tiny
  * enough on the rendered map to need the pink-ring marker treatment.
  * Hardcoded rather than auto-detected via getBBox because the world-
@@ -478,8 +559,27 @@ function addHitTargets(svg, radius) {
     let bbox;
     try { bbox = target.getBBox(); } catch { continue; }
     if (!bbox || (bbox.width === 0 && bbox.height === 0)) continue;
-    const cx = bbox.x + bbox.width / 2;
-    const cy = bbox.y + bbox.height / 2;
+    const rawCx = bbox.x + bbox.width / 2;
+    const rawCy = bbox.y + bbox.height / 2;
+    const { cx, cy } = offsetHitTargetCenter(elem.id, rawCx, rawCy);
+    // For countries whose ring was shifted off the actual landmass to
+    // separate from a co-located neighbour (mf / sx), draw a thin pink
+    // leader line back to the real island bbox. Without it the rings
+    // float in open water next to a visible-but-orphan landmass and
+    // the player has to guess which country each ring belongs to.
+    // Appended BEFORE the circle so the ring visually sits on top —
+    // only the segment between the island and the ring's edge shows,
+    // which reads as a balloon-pointer back to the country.
+    if (cx !== rawCx || cy !== rawCy) {
+      const leader = doc.createElementNS(SVG_NS, 'line');
+      leader.setAttribute('x1', String(rawCx));
+      leader.setAttribute('y1', String(rawCy));
+      leader.setAttribute('x2', String(cx));
+      leader.setAttribute('y2', String(cy));
+      leader.setAttribute('class', 'map-hit-leader');
+      leader.setAttribute('data-hit-for', elem.id);
+      svg.appendChild(leader);
+    }
     const circle = doc.createElementNS(SVG_NS, 'circle');
     circle.setAttribute('cx', String(cx));
     circle.setAttribute('cy', String(cy));
