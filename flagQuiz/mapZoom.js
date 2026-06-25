@@ -27,7 +27,7 @@
  */
 
 /** Max zoom-in level relative to the original viewBox. */
-const MAX_ZOOM_IN = 8;
+const MAX_ZOOM_IN = 24;
 /** Max zoom-out level relative to the original viewBox. > 1 means the
  * viewBox can grow LARGER than the asset's natural bounds — used in
  * fullscreen so the player can pinch out to see the whole map even
