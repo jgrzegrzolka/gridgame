@@ -61,11 +61,13 @@ body {
   padding: 12px 16px;
 }
 .game-name {
-  /* Reads as a section heading: 18px / 700 weight gives it the
-   * visual authority of "this is what the tile IS"; the preview
-   * below is the teaser of how the game plays. */
+  /* Reads as a section heading: 18px gives it the visual authority
+   * of "this is what the tile IS"; the preview below is the teaser
+   * of how the game plays. Weight stays at 600 (semi-bold) — bumping
+   * to 700 made the four tiles feel a touch shouty next to the
+   * delicate flag previews. */
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   text-align: center;
 }
 .game-icon {
