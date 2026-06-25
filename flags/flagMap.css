@@ -18,7 +18,7 @@
  *
  * Status classes added by callers:
  *   - `.is-correct` / `.is-wrong` — flagQuiz answer state (green/red)
- *   - `.is-selected`              — flagsdata filter match (pink)
+ *   - `.is-selected`              — flagsdata filter match (green)
  */
 
 #flag-map-section {
@@ -154,13 +154,15 @@
 #flag-map-section svg g.is-wrong path:not(.map-country) {
   fill: #c0392b;
 }
-/* Filter-match status (flagsdata). Brand secondary — countries matching
- * the active filter glow pink, palette-faithful. Same `:not(.map-country)`
- * carve-out so France's overseas regions don't go pink when France
- * matches a filter. */
+/* Filter-match status (flagsdata). Re-uses the "got it right" green
+ * from `.is-correct` so the visual language is consistent — pink
+ * (the brand secondary used elsewhere on the page) read as an alert
+ * colour next to the red `.is-wrong`, and a flagsdata filter match
+ * isn't an alert. Same `:not(.map-country)` carve-out so France's
+ * overseas regions don't paint when France matches a filter. */
 #flag-map-section svg .map-country.is-selected,
 #flag-map-section svg g.is-selected path:not(.map-country) {
-  fill: var(--secondary-color);
+  fill: #2a8a3a;
 }
 
 /* 40% fill-opacity on EVERY highlighted-country fill so the visual
@@ -258,7 +260,7 @@
   fill: #c0392b;
 }
 #flag-map-section svg .map-hit-target.is-selected {
-  fill: var(--secondary-color);
+  fill: #2a8a3a;
 }
 
 /* Leader line — appended by addHitTargets only for countries whose
