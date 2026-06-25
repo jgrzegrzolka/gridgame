@@ -197,7 +197,12 @@
  * flips to green / red / pink on answer / select. */
 #flag-map-section svg .map-hit-target {
   fill: transparent;
-  stroke: var(--secondary-color);
+  /* Outline reads as map cartography (annotation, not highlight). The
+   * stroke is `var(--primary-color)` (near-black) so it doesn't
+   * compete with the brand-pink fills that signal answer / selection
+   * state — outline = "small country here, click me", fill = "this
+   * one matched / you got it / you missed it". */
+  stroke: var(--primary-color);
   stroke-width: 1.5;
   /* Stroke width is in SVG user units, so it would normally render
    * thicker in pixels as the viewBox shrinks (pinch-zoom in). Lock
@@ -207,15 +212,15 @@
    * so it stays roughly the same overall size on screen. */
   vector-effect: non-scaling-stroke;
   pointer-events: all;
-  /* 50% opacity on stroke + fill (default and state). The Caribbean
-   * chain in particular has neighbour microstate rings that overlap
-   * each other regardless of any per-country offset (Anguilla and
-   * Saint Barthélemy sit 2 vbu apart in the source SVG — closer than
-   * 2×r at every continent crop). Solid rings would render as
-   * stacked overlap; soft alpha lets the pile read as layers. Same
-   * treatment on `.is-correct` / `.is-wrong` / `.is-selected` fills
-   * below so transparency is consistent across every ring state. */
-  stroke-opacity: 0.5;
+  /* 50% fill-opacity so the highlight fills (is-correct / is-wrong /
+   * is-selected, set below) read as soft tint rather than solid stamp
+   * — the Caribbean chain in particular has neighbour microstate
+   * rings that overlap each other regardless of any per-country
+   * offset (Anguilla and Saint Barthélemy sit 2 vbu apart in the
+   * source SVG — closer than 2×r at every continent crop), and a
+   * pile of solid pink discs reads as one blob. The stroke stays at
+   * full opacity (it's only 1.5px wide via non-scaling-stroke, so
+   * "soft + thin" would disappear entirely). */
   fill-opacity: 0.5;
 }
 #flag-map-section svg .map-hit-target.is-correct {
@@ -239,9 +244,8 @@
  * signal, the leader is purely a "this belongs to that" pointer.
  * `pointer-events: none` so it never steals a click from the ring. */
 #flag-map-section svg .map-hit-leader {
-  stroke: var(--secondary-color);
+  stroke: var(--primary-color);
   stroke-width: 1;
-  stroke-opacity: 0.5; /* matches the ring it points to */
   vector-effect: non-scaling-stroke;
   pointer-events: none;
 }
