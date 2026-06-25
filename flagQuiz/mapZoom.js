@@ -74,15 +74,37 @@ export function panViewBox(vb, dx, dy) {
 /**
  * Clamp a viewBox so it never zooms out past `original` (the natural
  * crop) and never zooms in past `original / maxZoomIn`. Also clamp
- * the position so the viewBox stays inside the original bounds —
- * the user can't pan the map off the edge.
+ * the position so the VISIBLE window (after the SVG's preserveAspect-
+ * Ratio fit) stays inside `original` — the user can't pan the map off
+ * the edge, but every part of `original` IS reachable.
+ *
+ * `overhang` carries how much the viewBox sticks out past the visible
+ * window on each axis (per side). This matters in `preserveAspectRatio
+ * = slice` mode — used in fullscreen on portrait phones, where the
+ * SVG scales to FILL the viewport and the longer axis is cropped, so
+ * the visible viewBox window is narrower than the viewBox attribute.
+ * Without an overhang allowance, the position clamp would refuse to
+ * let the viewBox center reach the asset's leftmost / rightmost /
+ * topmost / bottommost x/y — Portugal at x≈119 in Europe's 680-wide
+ * viewBox couldn't be centered on a phone because the clamp held
+ * viewBox.x ≥ 0 and the slice cropped everything left of ≈220 vbu
+ * (Jan, 2026-06-25). With `overhang.x = (viewBox.width - visible
+ * window width) / 2`, the clamp lets viewBox.x go as low as
+ * `original.x - overhang.x`, which lets the visible window's left
+ * edge reach original.x. Symmetric on the right / top / bottom.
+ *
+ * In meet mode (default) or any aspect-matching render the overhang
+ * is 0 and this collapses to the historical "viewBox stays inside
+ * original" rule.
  *
  * @param {ViewBox} vb
  * @param {ViewBox} original
  * @param {number} [maxZoomIn]
+ * @param {number} [maxZoomOut]
+ * @param {{ x?: number, y?: number }} [overhang]
  * @returns {ViewBox}
  */
-export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut = 1) {
+export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut = 1, overhang = { x: 0, y: 0 }) {
   // Capture the input's center BEFORE any adjustments — when a tiny
   // bbox (single small country) is expanded up to the minimum size,
   // OR when a non-aspect-matching bbox (tall + narrow) is widened to
@@ -121,23 +143,43 @@ export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut =
   // centered on its original middle.
   let x = centerX - width / 2;
   let y = centerY - height / 2;
-  // Position clamp. When viewBox is SMALLER than original, keep it
-  // inside the original bounds (can't pan off the map). When LARGER
-  // than original, the viewBox naturally encompasses everything —
-  // center it on the original's middle so the asset's content sits
-  // in the middle of the cropped viewport.
-  if (width >= original.width) {
+  // Position clamp. When viewBox is SMALLER than original, keep the
+  // VISIBLE window (viewBox − overhang on each side) inside original
+  // bounds — can't pan off the map, but in slice mode the viewBox
+  // itself is allowed to extend past `original.x` / `original.right`
+  // by the overhang amount so the visible window's edges still reach
+  // the asset's edges. When LARGER than original, the viewBox
+  // naturally encompasses everything — center it on the original's
+  // middle so the asset's content sits in the middle of the cropped
+  // viewport.
+  const ox = (overhang && overhang.x) || 0;
+  const oy = (overhang && overhang.y) || 0;
+  // Allowed pan range = "visible window must overlap original by at
+  // least its full extent" on each axis. Expressed as bounds on
+  // viewBox.x / viewBox.y, that's:
+  //   minX = original.x - overhang.x          (visible-left  touches original.left)
+  //   maxX = original.x + original.width - width + overhang.x  (visible-right touches original.right)
+  // The two branches (width >= original.width vs width < original.width)
+  // converge when ox == 0: the old behaviour centred the viewBox when
+  // width >= original.width (no panning), but with positive overhang
+  // the user CAN still pan because the visible window is narrower
+  // than the viewBox itself. Slice mode at 1x zoom on portrait phones
+  // is exactly that case — Portugal at Europe's western edge was
+  // unreachable until this branch unified.
+  if (ox === 0 && width >= original.width) {
     x = original.x + (original.width - width) / 2;
   } else {
-    const maxX = original.x + original.width - width;
-    if (x < original.x) x = original.x;
+    const minX = original.x - ox;
+    const maxX = original.x + original.width - width + ox;
+    if (x < minX) x = minX;
     if (x > maxX) x = maxX;
   }
-  if (height >= original.height) {
+  if (oy === 0 && height >= original.height) {
     y = original.y + (original.height - height) / 2;
   } else {
-    const maxY = original.y + original.height - height;
-    if (y < original.y) y = original.y;
+    const minY = original.y - oy;
+    const maxY = original.y + original.height - height + oy;
+    if (y < minY) y = minY;
     if (y > maxY) y = maxY;
   }
   return { x, y, width, height };
@@ -230,9 +272,45 @@ export function attachZoomPan(svg) {
     // natural" rule (the page CSS already constrains the SVG's
     // rendered size, so there's nowhere useful to zoom-out into).
     const maxOut = isFullscreen() ? MAX_ZOOM_OUT : 1;
-    current = clampViewBox(next, original, MAX_ZOOM_IN, maxOut);
+    current = clampViewBox(next, original, MAX_ZOOM_IN, maxOut, sliceOverhang(next));
     svg.setAttribute('viewBox', formatViewBox(current));
     rescaleHitTargets();
+  }
+
+  /**
+   * In `preserveAspectRatio = slice` mode (used in fullscreen on
+   * portrait phones), the SVG scales to FILL the viewport — the
+   * longer axis gets cropped, so the visible viewBox window is
+   * narrower / shorter than the viewBox itself. Compute the per-side
+   * overhang so `clampViewBox` can let viewBox.x / viewBox.y extend
+   * past the original bounds by that amount, which is what makes the
+   * asset's edges reachable in fullscreen (otherwise on a 414×900
+   * phone you can never centre the visible window on Portugal at
+   * Europe's western edge — the slice always crops it out).
+   *
+   * Outside slice mode the SVG fits inside its rendered container
+   * (preserveAspectRatio defaults to `meet`), so the visible window
+   * equals the viewBox and overhang is zero.
+   *
+   * @param {ViewBox} vb
+   */
+  function sliceOverhang(vb) {
+    /** @type {any} */
+    const s = svg;
+    const par = typeof s.getAttribute === 'function' ? s.getAttribute('preserveAspectRatio') : null;
+    if (!par || !/\bslice\b/.test(par)) return { x: 0, y: 0 };
+    if (typeof s.getBoundingClientRect !== 'function') return { x: 0, y: 0 };
+    const rect = s.getBoundingClientRect();
+    if (!rect.width || !rect.height || !vb.width || !vb.height) return { x: 0, y: 0 };
+    // Slice scale = the larger of (viewport.dim / viewBox.dim) on each
+    // axis — that's what fills both dimensions.
+    const scale = Math.max(rect.width / vb.width, rect.height / vb.height);
+    const visibleW = rect.width / scale;
+    const visibleH = rect.height / scale;
+    return {
+      x: Math.max(0, (vb.width - visibleW) / 2),
+      y: Math.max(0, (vb.height - visibleH) / 2),
+    };
   }
 
   /**

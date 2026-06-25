@@ -152,6 +152,62 @@ test('clampViewBox recenters around the input bbox center when width is bumped u
   assert.equal(newCenterY, 687);
 });
 
+test('clampViewBox lets viewBox.x extend past original by the overhang amount in slice mode', () => {
+  // Europe asset at portrait phone in fullscreen slice mode: viewBox 680×520,
+  // viewport 414×900 → slice scale 1.731, visible-x-window 239 vbu wide. The
+  // viewBox overhangs the visible window by (680 - 239) / 2 ≈ 220.5 vbu per
+  // side. Without that allowance, the pan clamp pins viewBox.x ≥ 0 and the
+  // visible window center can never reach Portugal at x ≈ 138. The overhang
+  // arg lets the clamp accept viewBox.x as low as -220.5.
+  const original = { x: 0, y: 0, width: 680, height: 520 };
+  const overhang = { x: 220.5, y: 0 };
+  // Try to pan WAY past original.x (the user dragging hard to the right) —
+  // the clamp now permits viewBox.x = -220.5 instead of snapping back to 0.
+  const out = clampViewBox(
+    { x: -500, y: 100, width: 226.67, height: 173.33 },
+    original, 8, 1, overhang,
+  );
+  assert.equal(out.x, -220.5);
+});
+
+test('clampViewBox lets viewBox.x extend past the right edge by overhang too', () => {
+  // Symmetric — the right edge of the asset must be reachable when the
+  // user pans to the rightmost position in slice mode.
+  const original = { x: 0, y: 0, width: 680, height: 520 };
+  const overhang = { x: 220.5, y: 0 };
+  const out = clampViewBox(
+    { x: 1000, y: 100, width: 226.67, height: 173.33 },
+    original, 8, 1, overhang,
+  );
+  // max viewBox.x = original.right - width + overhang = 680 - 226.67 + 220.5 = 673.83
+  assert.ok(Math.abs(out.x - 673.83) < 0.01, `expected ~673.83, got ${out.x}`);
+});
+
+test('clampViewBox with overhang=0 keeps the historical "viewBox stays inside original" behavior', () => {
+  // Default overhang is { x:0, y:0 } — meet mode (or matching aspect)
+  // has no slice extension, so the existing pre-fix rule still applies.
+  const original = { x: 0, y: 0, width: 680, height: 520 };
+  const out = clampViewBox({ x: -500, y: 100, width: 226.67, height: 173.33 }, original);
+  assert.equal(out.x, 0);
+});
+
+test('clampViewBox lets you pan even at 1x zoom (width === original.width) when overhang > 0', () => {
+  // Slice mode on a portrait phone at 1x zoom: viewBox equals original
+  // in both width and height, but the visible window is still narrower
+  // (the slice crops). Before unifying the branches, this case took
+  // the "width >= original.width → center, no pan" path and the user
+  // couldn't reach Portugal at all without zooming in. After the fix:
+  // overhang > 0 forces the branch with positive panning range.
+  const original = { x: 0, y: 0, width: 680, height: 520 };
+  const overhang = { x: 220.5, y: 0 };
+  const out = clampViewBox(
+    { x: -1000, y: 0, width: 680, height: 520 },
+    original, 8, 1, overhang,
+  );
+  // Allowed range: x ∈ [-220.5, 220.5]. Hard left = -220.5.
+  assert.equal(out.x, -220.5);
+});
+
 // ---- parseViewBox / formatViewBox ----
 
 test('parseViewBox parses a 4-number space-separated string', () => {
