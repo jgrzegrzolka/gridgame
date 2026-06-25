@@ -555,6 +555,32 @@ function unionPathBbox(el) {
 }
 
 /**
+ * Bbox of a microstate's `<circle class="circlexx">` locator (if it
+ * has one). Used as the fallback ring position for antimeridian-
+ * spanning countries where the union of path fragments produces a
+ * meaningless half-the-map-wide bbox; the locator was placed by the
+ * asset author at the country's label point, which sits on one of
+ * the actual islands rather than in the middle of the open ocean.
+ *
+ * Returns null when the element has no locator or its bbox can't be
+ * computed.
+ *
+ * @param {any} el
+ * @returns {{ x: number, y: number, width: number, height: number } | null}
+ */
+function locatorBbox(el) {
+  if (!el || typeof el.querySelector !== 'function') return null;
+  let locator;
+  try { locator = el.querySelector('circle'); } catch { return null; }
+  if (!locator || typeof locator.getBBox !== 'function') return null;
+  try {
+    const bb = locator.getBBox();
+    if (!bb || (bb.width === 0 && bb.height === 0)) return null;
+    return { x: bb.x, y: bb.y, width: bb.width, height: bb.height };
+  } catch { return null; }
+}
+
+/**
  * Append a visible pink-ring `<circle class="map-hit-target">` over
  * each microstate so the click area is comfortably wide regardless of
  * the underlying path's geometry. Inherits the same answered / wrong
@@ -595,6 +621,25 @@ function addHitTargets(svg, radius) {
     // direct-path microstates (Europe asset's Vatican etc.) there
     // are no descendants, so we fall back to the element's own bbox.
     let bbox = unionPathBbox(elem);
+    // Antimeridian-spanning microstates (Kiribati, in this asset) ship
+    // path fragments on opposite sides of the date line — the union
+    // bbox spans virtually the whole map, which would put the ring
+    // center in the middle of the ocean AND inflate `data-country-r`
+    // to ~globe-size, painting the entire map pink as soon as the
+    // country is selected. Detect via "anything wider/taller than
+    // half the asset's natural viewBox" and fall back to the `<g>`'s
+    // sibling `<circle class="circlexx">` locator: that's an author-
+    // chosen label point that sits on one of the real islands. We
+    // also intentionally skip the country-r enclosure step in that
+    // case (handled by the `oversized` flag below) so the ring stays
+    // the normal constant-on-screen size.
+    const naturalMaxDim = HIT_TARGET_FRACTION > 0 ? radius / HIT_TARGET_FRACTION : Infinity;
+    const oversizeThreshold = naturalMaxDim * 0.4;
+    let oversized = false;
+    if (bbox && (bbox.width > oversizeThreshold || bbox.height > oversizeThreshold)) {
+      oversized = true;
+      bbox = locatorBbox(elem) || bbox;
+    }
     if (!bbox && typeof elem.getBBox === 'function') {
       try { bbox = elem.getBBox(); } catch { continue; }
     }
@@ -645,7 +690,10 @@ function addHitTargets(svg, radius) {
     // smaller than the island it marks." Constant in vbu, so it
     // doesn't grow with zoom; baseR×scale dominates at every normal
     // view and countryR only takes over at deep pinch-zoom.
-    const countryR = Math.hypot(bbox.width, bbox.height) / 2 + 0.5;
+    // `oversized` (antimeridian-spanning) skips the country-r enclosure
+    // so the ring stays the normal constant-on-screen size — the
+    // alternative would inflate the ring to half the map.
+    const countryR = oversized ? 0 : Math.hypot(bbox.width, bbox.height) / 2 + 0.5;
     circle.setAttribute('data-country-r', String(countryR));
     circle.setAttribute('class', 'map-hit-target');
     circle.setAttribute('fill', 'transparent');

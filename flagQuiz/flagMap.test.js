@@ -593,11 +593,33 @@ test('mountFlagMap produces distinct mf and sx hit-target centers from a shared 
   // first (the historical bug).
   const fkOutlier = { x: 912.7, y: 1145.9, width: 0.5, height: 0.5 };
   const fkEast = { x: 921.5, y: 1147.0, width: 11, height: 2 };
+  // ki (Kiribati): path fragments at the FAR WEST (x=99) and FAR EAST
+  // (x=2630) of the world map — the country actually straddles the
+  // antimeridian. A naive union produces a bbox ~2530 vbu wide; if
+  // we used that center we'd plant the ring in the middle of the
+  // Indian Ocean, and the data-country-r enclosure rule would inflate
+  // the ring to half the map (when fill-painted by is-selected, the
+  // whole world goes pink — the bug this test pins). The fix: detect
+  // anomalously wide union, fall back to the locator <circle>.
+  const kiWestFragment = { x: 99, y: 683, width: 2, height: 2 };
+  const kiEastFragment = { x: 2630, y: 681, width: 0.7, height: 0.7 };
+  const kiLocator = { x: 2621.5, y: 676.2, width: 12, height: 12 }; // <circle cx=2627.5 cy=682.2 r=6>
+  const groupWithPathsAndLocator = (id, pathBboxes, locatorBb) => {
+    const node = groupWithPaths(id, pathBboxes);
+    const locatorNode = { tagName: 'circle', getBBox: () => locatorBb };
+    const origQuerySelector = node.querySelector;
+    node.querySelector = (sel) => {
+      if (sel === 'circle') return locatorNode;
+      return origQuerySelector(sel);
+    };
+    return node;
+  };
   const byId = new Map([
     ['mf', groupWithPaths('mf', [sharedBbox])],
     ['sx', groupWithPaths('sx', [sharedBbox])],
     ['ai', groupWithPaths('ai', [aiBbox])],
     ['fk', groupWithPaths('fk', [fkOutlier, fkEast])],
+    ['ki', groupWithPathsAndLocator('ki', [kiWestFragment, kiEastFragment], kiLocator)],
   ]);
 
   /** @type {Array<{ tagName: string, attrs: Map<string, string>, parent: any }>} */
@@ -741,6 +763,29 @@ test('mountFlagMap produces distinct mf and sx hit-target centers from a shared 
   assert.ok(
     Math.abs(parseFloat(fkCircle._attrs.get('data-country-r')) - fkExpectedCountryR) < 1e-9,
     `fk data-country-r should encompass the union, got ${fkCircle._attrs.get('data-country-r')}`,
+  );
+
+  // Kiribati (antimeridian-spanning): the union of (99, …) and (2630, …)
+  // is ~2530 vbu wide — way past the asset's 0.4 × natural-width
+  // threshold. The fix must fall back to the locator <circle>'s
+  // bbox center AND set data-country-r to 0 so rescaleHitTargets
+  // doesn't inflate the ring to half the map and paint the world
+  // pink when the country is selected. Pin both behaviors.
+  const kiCircle = appended.find((n) => n.tagName === 'circle' && n._attrs.get('data-hit-for') === 'ki');
+  assert.ok(kiCircle, 'ki hit-target circle was appended');
+  const kiLocatorCx = kiLocator.x + kiLocator.width / 2;
+  const kiLocatorCy = kiLocator.y + kiLocator.height / 2;
+  assert.ok(
+    Math.abs(parseFloat(kiCircle._attrs.get('cx')) - kiLocatorCx) < 1e-9,
+    `ki ring cx should fall back to the locator center ${kiLocatorCx}, got ${kiCircle._attrs.get('cx')}`,
+  );
+  assert.ok(
+    Math.abs(parseFloat(kiCircle._attrs.get('cy')) - kiLocatorCy) < 1e-9,
+    `ki ring cy should fall back to the locator center ${kiLocatorCy}, got ${kiCircle._attrs.get('cy')}`,
+  );
+  assert.equal(
+    parseFloat(kiCircle._attrs.get('data-country-r')), 0,
+    'ki data-country-r MUST be 0 (no enclosure) so the ring stays the default size',
   );
 });
 
