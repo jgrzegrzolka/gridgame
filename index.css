@@ -22,12 +22,22 @@ body {
 }
 /* Visual recipe (bg / border / hover / pink-border press feedback)
  * lives on the unified rule in common.css alongside the buttons.
- * Layout here: preview area on top fills the card; label strip
- * with icon + name sits at the bottom. Padding is 0 so the preview
- * can reach the card edges. */
+ * Layout here: label strip (icon + game name) sits ON TOP — it's
+ * what answers "what is this tile?" at a glance, especially on
+ * mobile where the visual preview otherwise dominates. The
+ * preview area fills the remaining space below. Padding is 0 on
+ * the tile so the preview can reach the card edges. The visual
+ * order is label-first via `column-reverse`, NOT by reordering
+ * the DOM — keyboard / screen-reader order stays "label, then
+ * preview" which matches reading flow on assistive tech too.
+ *
+ * Previously the label sat at the bottom of the tile; that read
+ * as "scan flags first, then look up what game this is", which
+ * the player had to do mentally for every tile every visit. The
+ * new heading-on-top hierarchy answers the question in one glance. */
 .game-tile {
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   padding: 0;
   overflow: hidden;
   min-height: 240px;
@@ -38,24 +48,32 @@ body {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  border-bottom: 1px solid var(--muted-soft-color);
+  /* Hairline sits between label (top) and preview (below) — with
+   * `column-reverse` the preview's TOP edge is what touches the
+   * label, so the rule moves from `border-bottom` to `border-top`. */
+  border-top: 1px solid var(--muted-soft-color);
 }
 .tile-label {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 14px 16px;
+  padding: 12px 16px;
 }
 .game-name {
-  font-size: 16px;
+  /* Reads as a section heading: 18px gives it the visual authority
+   * of "this is what the tile IS"; the preview below is the teaser
+   * of how the game plays. Weight stays at 600 (semi-bold) — bumping
+   * to 700 made the four tiles feel a touch shouty next to the
+   * delicate flag previews. */
+  font-size: 18px;
   font-weight: 600;
   text-align: center;
 }
 .game-icon {
   display: block;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   background-color: currentColor;
   -webkit-mask: center / contain no-repeat;
           mask: center / contain no-repeat;
@@ -262,9 +280,10 @@ body {
   .tile-label {
     padding: 10px 12px;
   }
-  .game-name {
-    font-size: 14px;
-  }
+  /* Keep the heading at 18px / 700 on mobile too — shrinking it back
+   * to 14px there would undo the whole "answer 'what is this tile?'
+   * at a glance" goal precisely where the screen real-estate is
+   * tightest and the previews loom largest. */
   .daily-preview {
     gap: 8px;
   }
