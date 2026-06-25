@@ -17,7 +17,7 @@
 import { fnv1a } from './nickname.js';
 
 /**
- * Palette tuned for legibility on the `#fafafa` page background and
+ * Palette tuned for legibility on the page background (`var(--page-bg-color)`) and
  * inside the menu's white panel. Each entry has enough chroma to read
  * as a distinct colour at 24 px while staying within a friendly,
  * non-neon family. Order is stable — re-ordering re-keys every

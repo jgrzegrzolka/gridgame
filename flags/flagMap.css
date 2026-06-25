@@ -96,7 +96,7 @@
   margin: 0 auto;
   /* The world map's projection is curved at the top/bottom edges, so
    * the rectangular viewBox has unpainted corners. Without a white
-   * background the page-bg `#fafafa` would show through there. */
+   * background the page-bg (`var(--page-bg-color)`) would show through there. */
   background: var(--surface-color);
   /* Claim touch gestures for our wheel/pinch/drag handlers — without
    * this the browser would intercept two-finger pinches as page-zoom

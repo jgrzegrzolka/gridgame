@@ -11,7 +11,7 @@ body {
   box-sizing: border-box;
 }
 #filter-bar {
-  background: #fafafa;
+  background: var(--page-bg-color);
   margin: 0 -24px 16px;
   /* No top padding — body already provides the `--page-top` gap from
    * the chrome strip; adding more here would push the search input
