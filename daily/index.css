@@ -6,7 +6,7 @@
   max-width: 480px;
   margin: 48px auto 0;
   padding: 24px;
-  background: #fafafa;
+  background: var(--page-bg-color);
   border: 1px solid #eee;
   border-radius: 6px;
   text-align: center;

@@ -93,7 +93,7 @@ Playwright can't drive the browser's Fullscreen API. To screenshot the map at fu
 const section = document.getElementById('flag-map-section');
 Object.assign(section.style, {
   position: 'fixed', inset: '0', zIndex: '9999',
-  width: '100vw', height: '100vh', background: '#fafafa',
+  width: '100vw', height: '100vh', background: '#fdfdfd',
 });
 const svg = section.querySelector('svg');
 svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');

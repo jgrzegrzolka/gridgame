@@ -35,7 +35,7 @@
 .review-button--reject  { left: 2px; }
 
 .review-button--approve:hover {
-  background: #fafafa;
+  background: var(--page-bg-color);
   color: var(--primary-color);
   border-color: var(--primary-color);
 }
