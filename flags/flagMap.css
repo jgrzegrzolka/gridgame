@@ -24,7 +24,17 @@
 #flag-map-section {
   width: 100%;
   margin: 24px 0 8px;
-  padding: 0 12px;
+  /* No horizontal padding — the section's content (the SVG) should
+   * fill the body's content width so the map visually aligns with
+   * the chrome row above (logo on the left, burger on the right).
+   * The chrome buttons themselves overhang the body's content area
+   * by 4px each side (chrome.left = 20 + --chrome-x-offset, body
+   * padding = 24), but matching that exactly would require negative
+   * margins on the section and the gap reads as the chrome buttons
+   * "floating" next to the map's left/right edges — which is the
+   * same visual relationship they have to every other in-flow
+   * content (filter bar hairline, flag tiles, etc.). */
+  padding: 0;
   box-sizing: border-box;
   /* Anchor for the absolutely-positioned `.map-fullscreen-btn` below. */
   position: relative;
@@ -74,7 +84,13 @@
 }
 #flag-map-section svg {
   width: 100%;
-  max-width: 680px;
+  /* No max-width — let the map fill the parent container (#flag-map-
+   * section, width 100% of body) so it visually aligns with the chrome
+   * row (logo on the left, burger on the right). The body's own
+   * max-width (720 in flagQuiz, 756 in flagsdata) is the real cap;
+   * the SVG just follows. The earlier 680 cap predated the wider
+   * flagsdata body and was leaving a ~50px gutter that read as
+   * "the map is narrower than the menu" — see Jan 2026-06-25. */
   height: auto;
   display: block;
   margin: 0 auto;
