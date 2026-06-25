@@ -203,7 +203,7 @@
    * state — outline = "small country here, click me", fill = "this
    * one matched / you got it / you missed it". */
   stroke: var(--primary-color);
-  stroke-width: 1.5;
+  stroke-width: 1;
   /* Stroke width is in SVG user units, so it would normally render
    * thicker in pixels as the viewBox shrinks (pinch-zoom in). Lock
    * it to a constant CSS-pixel width via `vector-effect` so the ring

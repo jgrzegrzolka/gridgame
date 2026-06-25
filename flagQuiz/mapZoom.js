@@ -255,9 +255,21 @@ export function attachZoomPan(svg) {
    * (fixed at the asset's natural viewBox size) appear enormous when
    * zoomed in — Liechtenstein's ring would visually dwarf Switzerland.
    *
-   * Each ring's natural radius is stored on `data-base-r` by
-   * `addHitTargets` at mount; we scale `r` by `current.width /
-   * original.width` on every apply.
+   * Each ring carries two radii in `data-*` attributes:
+   *   - `data-base-r` — the constant-on-screen target radius at the
+   *     asset's natural viewBox. Multiplied by the current scale to
+   *     keep the displayed pixel size constant as the viewBox crops in.
+   *   - `data-country-r` — the radius (in vbu) needed to enclose the
+   *     country's own bbox plus a small padding. Constant in vbu, so
+   *     it doesn't shrink with zoom-in.
+   *
+   * Final `r` = max(baseR × scale, countryR). At normal continent
+   * crops the constant-on-screen value dominates; at deep pinch-zoom,
+   * countryR kicks in and the ring grows to keep the visible country
+   * inside its outline (otherwise the ring renders smaller than the
+   * landmass it's supposed to mark — particularly noticeable on the
+   * larger "microstates" like Brunei, Cape Verde, or the spread-out
+   * Maldives bbox).
    */
   function rescaleHitTargets() {
     const scale = current.width / original.width;
@@ -270,7 +282,11 @@ export function attachZoomPan(svg) {
       if (!base) continue;
       const parsed = parseFloat(base);
       if (!Number.isFinite(parsed)) continue;
-      el.setAttribute('r', String(parsed * scale));
+      const scaled = parsed * scale;
+      const countryAttr = el.getAttribute('data-country-r');
+      const countryR = countryAttr ? parseFloat(countryAttr) : 0;
+      const finalR = Number.isFinite(countryR) ? Math.max(scaled, countryR) : scaled;
+      el.setAttribute('r', String(finalR));
     }
   }
 

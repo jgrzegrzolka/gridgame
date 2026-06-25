@@ -516,6 +516,45 @@ export function cropToCountries(svg, codes, extra) {
 }
 
 /**
+ * Union the bbox of every descendant `<path>` of `el` and return it.
+ * Used by `addHitTargets` to size a microstate's ring around the
+ * country's complete geometry, not whatever the first path in DOM
+ * order happens to be. Returns null when `el` has no path
+ * descendants (the caller falls back to bbox'ing `el` itself, which
+ * covers single-path-no-wrapper countries like the Europe asset's
+ * Vatican).
+ *
+ * `<circle>` and `<text>` descendants — the label locators and ISO
+ * tags the BlankMap-World asset ships — are intentionally NOT
+ * included: their positions are label-friendly offsets away from the
+ * real landmass and would drag the union off into open water.
+ *
+ * @param {any} el
+ * @returns {{ x: number, y: number, width: number, height: number } | null}
+ */
+function unionPathBbox(el) {
+  if (!el || typeof el.querySelectorAll !== 'function') return null;
+  /** @type {ArrayLike<any>} */
+  let paths;
+  try { paths = el.querySelectorAll('path'); } catch { return null; }
+  if (!paths || paths.length === 0) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (let i = 0; i < paths.length; i++) {
+    const p = paths[i];
+    if (!p || typeof p.getBBox !== 'function') continue;
+    let bb;
+    try { bb = p.getBBox(); } catch { continue; }
+    if (!bb || (bb.width === 0 && bb.height === 0)) continue;
+    if (bb.x < minX) minX = bb.x;
+    if (bb.y < minY) minY = bb.y;
+    if (bb.x + bb.width > maxX) maxX = bb.x + bb.width;
+    if (bb.y + bb.height > maxY) maxY = bb.y + bb.height;
+  }
+  if (!Number.isFinite(minX)) return null;
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+/**
  * Append a visible pink-ring `<circle class="map-hit-target">` over
  * each microstate so the click area is comfortably wide regardless of
  * the underlying path's geometry. Inherits the same answered / wrong
@@ -542,22 +581,23 @@ function addHitTargets(svg, radius) {
     const elem = smalls[i];
     if (!elem || !elem.id) continue;
     // For `<g>`-wrapped microstates (BlankMap-World's structure for
-    // Caribbean islands etc.), use the INNER path's bbox — the
-    // sibling `<circle class="circlexx">` locator is positioned at a
-    // label-friendly offset away from the real island, and including
-    // it in the union shifts the ring center off into open water.
-    // For direct-path microstates (Europe asset's Vatican etc.),
-    // querySelector('path') returns null and we fall back to the
-    // element itself.
-    /** @type {any} */
-    let target = elem;
-    if (typeof elem.querySelector === 'function') {
-      const innerPath = elem.querySelector('path');
-      if (innerPath && typeof innerPath.getBBox === 'function') target = innerPath;
+    // Caribbean islands etc.), union the bbox of EVERY inner `<path>`
+    // — the wrapper `<g>` also contains a `<circle class="circlexx">`
+    // locator at a label-friendly offset that would shift the ring
+    // center off into open water if included, so we explicitly union
+    // the paths instead of bbox'ing the wrapper. Using ALL paths
+    // (not just the first) matters for multi-island countries: the
+    // Falkland Islands ship many path fragments — the first in DOM
+    // order is a small outlying island, and East/West Falkland come
+    // later, so the historical "use the first path" rule put the
+    // ring on the wrong island. Same story for Saint Kitts & Nevis
+    // (the first path is St Kitts, Nevis was orphaned). For
+    // direct-path microstates (Europe asset's Vatican etc.) there
+    // are no descendants, so we fall back to the element's own bbox.
+    let bbox = unionPathBbox(elem);
+    if (!bbox && typeof elem.getBBox === 'function') {
+      try { bbox = elem.getBBox(); } catch { continue; }
     }
-    if (typeof target.getBBox !== 'function') continue;
-    let bbox;
-    try { bbox = target.getBBox(); } catch { continue; }
     if (!bbox || (bbox.width === 0 && bbox.height === 0)) continue;
     const rawCx = bbox.x + bbox.width / 2;
     const rawCy = bbox.y + bbox.height / 2;
@@ -596,6 +636,17 @@ function addHitTargets(svg, radius) {
     // regardless of zoom level (otherwise Liechtenstein's ring would
     // dwarf Switzerland on a zoomed-in Europe view).
     circle.setAttribute('data-base-r', String(radius));
+    // `data-country-r` is the radius needed to enclose the country's
+    // own bbox in vbu (diagonal / 2 + small visual padding). mapZoom's
+    // rescaleHitTargets picks max(baseR * scale, countryR) so the
+    // ring never renders smaller than the country it points to — at
+    // deep zoom-in the constant-on-screen size would otherwise shrink
+    // below the country's apparent footprint, which reads as "ring is
+    // smaller than the island it marks." Constant in vbu, so it
+    // doesn't grow with zoom; baseR×scale dominates at every normal
+    // view and countryR only takes over at deep pinch-zoom.
+    const countryR = Math.hypot(bbox.width, bbox.height) / 2 + 0.5;
+    circle.setAttribute('data-country-r', String(countryR));
     circle.setAttribute('class', 'map-hit-target');
     circle.setAttribute('fill', 'transparent');
     svg.appendChild(circle);

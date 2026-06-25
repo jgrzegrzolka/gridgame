@@ -559,10 +559,16 @@ test('mountFlagMap produces distinct mf and sx hit-target centers from a shared 
   const sharedBbox = { x: 826.4, y: 542.0, width: 0.5, height: 0.4 };
   const aiBbox = { x: 825.8, y: 541.4, width: 0.6, height: 0.5 };
 
-  /** @param {string} id @param {{x:number,y:number,width:number,height:number}} bb */
-  const groupWithPath = (id, bb) => {
+  /**
+   * @param {string} id
+   * @param {Array<{x:number,y:number,width:number,height:number}>} pathBboxes
+   *   One or more inner <path> bboxes. addHitTargets unions them — using
+   *   the FIRST only is the bug that put Falkland's ring on a tiny
+   *   outlying island instead of the East/West Falkland landmass.
+   */
+  const groupWithPaths = (id, pathBboxes) => {
     const classes = new Set();
-    const inner = { tagName: 'path', getBBox: () => bb };
+    const paths = pathBboxes.map((bb, i) => ({ tagName: 'path', _i: i, getBBox: () => bb }));
     return {
       id,
       classList: {
@@ -570,16 +576,28 @@ test('mountFlagMap produces distinct mf and sx hit-target centers from a shared 
         remove: (c) => classes.delete(c),
         has: (c) => classes.has(c),
       },
-      querySelector: (sel) => (sel === 'path' ? inner : null),
-      getBBox: () => bb,
+      querySelector: (sel) => (sel === 'path' ? paths[0] : null),
+      querySelectorAll: (sel) => (sel === 'path' ? paths : []),
+      // `<g>`-wrapped countries don't bbox themselves — they have to
+      // be unioned from their children. Mirror the real DOM by
+      // omitting getBBox; the production code must hit the union
+      // path, not the wrapper-bbox fallback.
       _classes: classes,
     };
   };
 
+  // mf & sx still share one tiny path (the Caribbean island they both
+  // sit on); ai is its own single path. fk (Falklands) ships a tiny
+  // outlying island FIRST in DOM order plus a much bigger East-Falkland
+  // path — the union must produce a bbox covering both, not just the
+  // first (the historical bug).
+  const fkOutlier = { x: 912.7, y: 1145.9, width: 0.5, height: 0.5 };
+  const fkEast = { x: 921.5, y: 1147.0, width: 11, height: 2 };
   const byId = new Map([
-    ['mf', groupWithPath('mf', sharedBbox)],
-    ['sx', groupWithPath('sx', sharedBbox)],
-    ['ai', groupWithPath('ai', aiBbox)],
+    ['mf', groupWithPaths('mf', [sharedBbox])],
+    ['sx', groupWithPaths('sx', [sharedBbox])],
+    ['ai', groupWithPaths('ai', [aiBbox])],
+    ['fk', groupWithPaths('fk', [fkOutlier, fkEast])],
   ]);
 
   /** @type {Array<{ tagName: string, attrs: Map<string, string>, parent: any }>} */
@@ -673,5 +691,56 @@ test('mountFlagMap produces distinct mf and sx hit-target centers from a shared 
   const aiBboxCy = aiBbox.y + aiBbox.height / 2;
   assert.equal(parseFloat(aiCircle._attrs.get('cx')), aiBboxCx);
   assert.equal(parseFloat(aiCircle._attrs.get('cy')), aiBboxCy);
+
+  // data-country-r is the minimum-enclosing-circle radius for the
+  // country's own bbox (diagonal/2 + 0.5 vbu padding). mapZoom's
+  // rescaleHitTargets uses it as a floor so a pinch-zoomed-in ring
+  // never renders smaller than the visible country it's marking.
+  const expectedAiCountryR = Math.hypot(aiBbox.width, aiBbox.height) / 2 + 0.5;
+  assert.ok(
+    Math.abs(parseFloat(aiCircle._attrs.get('data-country-r')) - expectedAiCountryR) < 1e-9,
+    `ai data-country-r mismatch`,
+  );
+  // Both mf and sx share the same inner-path bbox in this fake — their
+  // country-r must therefore match it too, regardless of how their
+  // ring CENTER was offset away from the landmass.
+  const expectedSharedCountryR = Math.hypot(sharedBbox.width, sharedBbox.height) / 2 + 0.5;
+  assert.ok(
+    Math.abs(parseFloat(mfCircle._attrs.get('data-country-r')) - expectedSharedCountryR) < 1e-9,
+    `mf data-country-r mismatch`,
+  );
+  assert.ok(
+    Math.abs(parseFloat(sxCircle._attrs.get('data-country-r')) - expectedSharedCountryR) < 1e-9,
+    `sx data-country-r mismatch`,
+  );
+
+  // Falklands: the ring center MUST sit on the union of the outlier +
+  // East Falkland bboxes, not on the first-path-only outlier. Pre-fix
+  // the ring landed at ~(912.95, 1146.15); post-fix it centers on the
+  // archipelago at ~(923.85, 1146.4). Pinning catches a regression to
+  // "first path only".
+  const fkCircle = appended.find((n) => n.tagName === 'circle' && n._attrs.get('data-hit-for') === 'fk');
+  assert.ok(fkCircle, 'fk hit-target circle was appended');
+  const fkMinX = Math.min(fkOutlier.x, fkEast.x);
+  const fkMinY = Math.min(fkOutlier.y, fkEast.y);
+  const fkMaxX = Math.max(fkOutlier.x + fkOutlier.width, fkEast.x + fkEast.width);
+  const fkMaxY = Math.max(fkOutlier.y + fkOutlier.height, fkEast.y + fkEast.height);
+  const fkExpectedCx = (fkMinX + fkMaxX) / 2;
+  const fkExpectedCy = (fkMinY + fkMaxY) / 2;
+  assert.ok(
+    Math.abs(parseFloat(fkCircle._attrs.get('cx')) - fkExpectedCx) < 1e-9,
+    `fk ring cx should sit at the union center ${fkExpectedCx}, got ${fkCircle._attrs.get('cx')}`,
+  );
+  assert.ok(
+    Math.abs(parseFloat(fkCircle._attrs.get('cy')) - fkExpectedCy) < 1e-9,
+    `fk ring cy should sit at the union center ${fkExpectedCy}, got ${fkCircle._attrs.get('cy')}`,
+  );
+  // And the country-r should reflect the UNION diagonal, big enough to
+  // wrap both islands at deep zoom.
+  const fkExpectedCountryR = Math.hypot(fkMaxX - fkMinX, fkMaxY - fkMinY) / 2 + 0.5;
+  assert.ok(
+    Math.abs(parseFloat(fkCircle._attrs.get('data-country-r')) - fkExpectedCountryR) < 1e-9,
+    `fk data-country-r should encompass the union, got ${fkCircle._attrs.get('data-country-r')}`,
+  );
 });
 
