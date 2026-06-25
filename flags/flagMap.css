@@ -18,13 +18,23 @@
  *
  * Status classes added by callers:
  *   - `.is-correct` / `.is-wrong` — flagQuiz answer state (green/red)
- *   - `.is-selected`              — flagsdata filter match (pink)
+ *   - `.is-selected`              — flagsdata filter match (green)
  */
 
 #flag-map-section {
   width: 100%;
   margin: 24px 0 8px;
-  padding: 0 12px;
+  /* No horizontal padding — the section's content (the SVG) should
+   * fill the body's content width so the map visually aligns with
+   * the chrome row above (logo on the left, burger on the right).
+   * The chrome buttons themselves overhang the body's content area
+   * by 4px each side (chrome.left = 20 + --chrome-x-offset, body
+   * padding = 24), but matching that exactly would require negative
+   * margins on the section and the gap reads as the chrome buttons
+   * "floating" next to the map's left/right edges — which is the
+   * same visual relationship they have to every other in-flow
+   * content (filter bar hairline, flag tiles, etc.). */
+  padding: 0;
   box-sizing: border-box;
   /* Anchor for the absolutely-positioned `.map-fullscreen-btn` below. */
   position: relative;
@@ -74,7 +84,13 @@
 }
 #flag-map-section svg {
   width: 100%;
-  max-width: 680px;
+  /* No max-width — let the map fill the parent container (#flag-map-
+   * section, width 100% of body) so it visually aligns with the chrome
+   * row (logo on the left, burger on the right). The body's own
+   * max-width (720 in flagQuiz, 756 in flagsdata) is the real cap;
+   * the SVG just follows. The earlier 680 cap predated the wider
+   * flagsdata body and was leaving a ~50px gutter that read as
+   * "the map is narrower than the menu" — see Jan 2026-06-25. */
   height: auto;
   display: block;
   margin: 0 auto;
@@ -154,16 +170,18 @@
 #flag-map-section svg g.is-wrong path:not(.map-country) {
   fill: #c0392b;
 }
-/* Filter-match status (flagsdata). Brand secondary — countries matching
- * the active filter glow pink, palette-faithful. Same `:not(.map-country)`
- * carve-out so France's overseas regions don't go pink when France
- * matches a filter. */
+/* Filter-match status (flagsdata). Re-uses the "got it right" green
+ * from `.is-correct` so the visual language is consistent — pink
+ * (the brand secondary used elsewhere on the page) read as an alert
+ * colour next to the red `.is-wrong`, and a flagsdata filter match
+ * isn't an alert. Same `:not(.map-country)` carve-out so France's
+ * overseas regions don't paint when France matches a filter. */
 #flag-map-section svg .map-country.is-selected,
 #flag-map-section svg g.is-selected path:not(.map-country) {
-  fill: var(--secondary-color);
+  fill: #2a8a3a;
 }
 
-/* 50% fill-opacity on EVERY highlighted-country fill so the visual
+/* 40% fill-opacity on EVERY highlighted-country fill so the visual
  * weight of a "matched" country reads soft instead of solid. Matches
  * the `.map-hit-target` ring opacity above so the two surfaces (big
  * countries and tiny microstate rings) feel like one design language
@@ -176,7 +194,35 @@
 #flag-map-section svg g.is-correct path:not(.map-country),
 #flag-map-section svg g.is-wrong path:not(.map-country),
 #flag-map-section svg g.is-selected path:not(.map-country) {
-  fill-opacity: 0.5;
+  fill-opacity: 0.4;
+}
+
+/* Answer-flash: in flagQuiz, briefly paint a freshly-answered country
+ * AND its hit-target ring at full opacity, then fade to the resting
+ * 0.4. The fill change itself transitions over 240ms (existing rule
+ * above); this animation overlays a fill-opacity 1 → 0.4 fade so the
+ * answer "pops" into view before settling into the same soft alpha
+ * as every other highlight. 600 ms is comfortable to notice and
+ * fits well inside count mode's 1200 ms between-rounds gap.
+ *
+ * Only `.is-correct` / `.is-wrong` (the quiz answer states) animate
+ * — `.is-selected` (the persistent flagsdata filter highlight) is a
+ * stable visual that shouldn't twitch on every filter change. After
+ * the animation ends the CSS resting value (fill-opacity: 0.4 from
+ * the rule above) takes over with no `animation-fill-mode` needed.
+ * The ring's `.is-correct` / `.is-wrong` flavours get the same flash
+ * so a microstate answer reads identically to a big-country one. */
+@keyframes map-answer-flash {
+  from { fill-opacity: 1; }
+  to   { fill-opacity: 0.4; }
+}
+#flag-map-section svg .map-country.is-correct,
+#flag-map-section svg .map-country.is-wrong,
+#flag-map-section svg g.is-correct path:not(.map-country),
+#flag-map-section svg g.is-wrong path:not(.map-country),
+#flag-map-section svg .map-hit-target.is-correct,
+#flag-map-section svg .map-hit-target.is-wrong {
+  animation: map-answer-flash 600ms ease-out;
 }
 
 /* Microstate paths get NO special styling — they render with the same
@@ -212,7 +258,7 @@
    * so it stays roughly the same overall size on screen. */
   vector-effect: non-scaling-stroke;
   pointer-events: all;
-  /* 50% fill-opacity so the highlight fills (is-correct / is-wrong /
+  /* 40% fill-opacity so the highlight fills (is-correct / is-wrong /
    * is-selected, set below) read as soft tint rather than solid stamp
    * — the Caribbean chain in particular has neighbour microstate
    * rings that overlap each other regardless of any per-country
@@ -221,7 +267,7 @@
    * pile of solid pink discs reads as one blob. The stroke stays at
    * full opacity (it's only 1.5px wide via non-scaling-stroke, so
    * "soft + thin" would disappear entirely). */
-  fill-opacity: 0.5;
+  fill-opacity: 0.4;
 }
 #flag-map-section svg .map-hit-target.is-correct {
   fill: #2a8a3a;
@@ -230,7 +276,7 @@
   fill: #c0392b;
 }
 #flag-map-section svg .map-hit-target.is-selected {
-  fill: var(--secondary-color);
+  fill: #2a8a3a;
 }
 
 /* Leader line — appended by addHitTargets only for countries whose
