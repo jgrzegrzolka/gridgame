@@ -135,10 +135,17 @@
 /* Default fill: the country element itself for single-path countries,
  * and the child paths for <g>-wrapped countries. The second selector
  * covers gb / ru / tr / cn etc. — their child paths need explicit
- * styling because the <g> doesn't paint itself. */
+ * styling because the <g> doesn't paint itself.
+ *
+ * `#f3f3f3` is an accepted palette exception, same posture as the
+ * `#2a8a3a` / `#c0392b` answer-state colors below. `--muted-soft-color`
+ * (`#eee`) read as too heavy against the `--surface-color` (`#fff`)
+ * map background — land dominated the page visually. A touch lighter
+ * lets the country outlines (`--muted-color`) carry the cartography
+ * weight instead. */
 #flag-map-section svg .map-country,
 #flag-map-section svg g.map-country path {
-  fill: var(--muted-soft-color);
+  fill: #f3f3f3;
   stroke: var(--muted-color);
   stroke-width: 0.4;
   /* Slow enough to be visible as a status change, fast enough not to
