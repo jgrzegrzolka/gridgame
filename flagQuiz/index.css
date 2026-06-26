@@ -105,7 +105,10 @@ body {
 }
 .stats-chip {
   display: flex;
-  align-items: baseline;
+  /* center keeps the 24px icon vertically aligned with the score and
+     time text. baseline would land the icon's bottom on the text line
+     and push it visibly higher than the score. */
+  align-items: center;
   gap: 8px;
   padding: 8px 12px;
   border: 1px solid var(--muted-soft-color);
