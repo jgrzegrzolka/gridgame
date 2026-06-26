@@ -127,10 +127,10 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   color: var(--primary-color);
-  flex: 0 0 20px;
+  flex: 0 0 24px;
 }
 .stats-chip-mode svg {
   display: block;
