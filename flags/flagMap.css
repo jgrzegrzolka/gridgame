@@ -137,16 +137,17 @@
  * covers gb / ru / tr / cn etc. — their child paths need explicit
  * styling because the <g> doesn't paint itself.
  *
- * `#f3f3f3` is an accepted palette exception, same posture as the
- * `#2a8a3a` / `#c0392b` answer-state colors below. `--muted-soft-color`
- * (`#eee`) read as too heavy against the `--surface-color` (`#fff`)
- * map background — land dominated the page visually. A touch lighter
- * lets the country outlines (`--muted-color`) carry the cartography
- * weight instead. */
+ * Land = `#f9f9f9`, outline = `#555` (both accepted palette exceptions,
+ * same posture as the `#2a8a3a` / `#c0392b` answer-state colors below).
+ * Land at `--page-bg-color` (#fdfdfd) read as nearly invisible against
+ * the `#fff` water; this small bump gives the coastlines a shore to
+ * sit on. Outline at `--primary-color` (near-black) read as heavy
+ * inked borders; `#555` is the midpoint between that and the original
+ * `--muted-color` (#999) — fine pen-line, still soft. */
 #flag-map-section svg .map-country,
 #flag-map-section svg g.map-country path {
-  fill: #f3f3f3;
-  stroke: var(--muted-color);
+  fill: #f9f9f9;
+  stroke: #555;
   stroke-width: 0.4;
   /* Slow enough to be visible as a status change, fast enough not to
    * lag the next render in count mode (1200 ms gap between rounds). */
