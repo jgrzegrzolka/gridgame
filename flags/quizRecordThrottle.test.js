@@ -26,18 +26,6 @@ function makeStore() {
 const T0 = 1_700_000_000_000;
 const TODAY = utcDateKey(T0);
 
-// A "not a today-PB candidate" stub: dayBest is for today and the new
-// finish doesn't beat it. Used by the throttle-path tests that want to
-// exercise the 30 min window logic without the today-PB trigger getting
-// in the way.
-function notCandidate(/** @type {number} */ now) {
-  return {
-    dayBest: { date: utcDateKey(now), score: 1000, durationMs: 1 },
-    entry: { score: 999, durationMs: 99_999 },
-    lowerWins: false, // higher-wins, 999 < 1000 → does not beat
-  };
-}
-
 // ---------------------------------------------------------------------------
 // utcDateKey — must match the server's `dailyLeaderboardDoc.todayDateKey`
 // (`new Date(now).toISOString().slice(0, 10)`).
@@ -378,9 +366,3 @@ test('integration: second worse finish on the same config + same day → throttl
   assert.equal(ok, false);
 });
 
-// Reference notCandidate() so the unused-helper lint doesn't trip if the
-// rest of the file is refactored away from it.
-test('notCandidate stub: documented as a non-candidate (smoke)', () => {
-  const ctx = notCandidate(T0);
-  assert.equal(computeTodayPbCandidate({ ...ctx, now: T0 }), false);
-});
