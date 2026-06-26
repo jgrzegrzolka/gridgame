@@ -119,12 +119,21 @@ body {
 .stats-chip:hover {
   background: var(--surface-hover-color);
 }
+/* Icon-only mode badge inside each chip — see modeChip() for why the
+   text label was replaced (PL "wszystkie" overflowed at phone width).
+   Fixed 16px slot keeps the chip's flex layout stable when one chip
+   has a score and the other shows the CTA. */
 .stats-chip-mode {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
   color: var(--muted-color);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  flex: 0 0 16px;
+}
+.stats-chip-mode svg {
+  display: block;
 }
 .stats-chip-score {
   font-weight: 600;

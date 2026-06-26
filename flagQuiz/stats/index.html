@@ -76,6 +76,35 @@
       const includeAll = isQuizIncludeAll();
       const statsEl = document.getElementById('stats');
 
+      // Mode-icon SVGs replace the per-chip text label (the PL "wszystkie"
+      // for `all` mode was overflowing the 340px phone slot — and the
+      // mode is the chip's section, not a piece of data). Stopwatch =
+      // 60s, 2×2 grid = "all" (the whole set, every flag). aria-hidden
+      // on the SVGs because the chip's aria-label carries the spoken
+      // mode name for screen readers. Inline as constants in this
+      // module — second consumer (chips + the existing chunky-pixel
+      // stopwatch in achievements.js) would justify promoting to a
+      // shared icon module; until then the duplication is one chip.
+      const MODE_ICON_SVG = {
+        '60s':
+          '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" ' +
+          'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+          'aria-hidden="true">' +
+            '<circle cx="12" cy="14" r="7"/>' +
+            '<line x1="12" y1="14" x2="12" y2="9"/>' +
+            '<line x1="9" y1="3" x2="15" y2="3"/>' +
+            '<line x1="12" y1="3" x2="12" y2="7"/>' +
+          '</svg>',
+        all:
+          '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" ' +
+          'aria-hidden="true">' +
+            '<rect x="4"  y="4"  width="7" height="7"/>' +
+            '<rect x="13" y="4"  width="7" height="7"/>' +
+            '<rect x="4"  y="13" width="7" height="7"/>' +
+            '<rect x="13" y="13" width="7" height="7"/>' +
+          '</svg>',
+      };
+
       // Wait for i18n so renderStats can use translated variant labels and
       // the "Play" CTA without a load-order race.
       bootI18n('../../').then((lang) => {
@@ -131,9 +160,19 @@
         a.href = `../?v=${key}&n=${mode}`;
         a.className = 'stats-chip';
 
+        // Icon-only mode badge; the visible word lived inside the chip
+        // pre-fix and overflowed in PL ("wszystkie" at 12px uppercase).
+        // SR-only span keeps the spoken label, `title` is the desktop
+        // hover hint.
+        const modeLabel = t(`quiz.mode.${mode}`, mode);
+        a.title = modeLabel;
         const modeEl = document.createElement('span');
         modeEl.className = 'stats-chip-mode';
-        modeEl.textContent = t(`quiz.mode.${mode}`, mode);
+        modeEl.innerHTML = MODE_ICON_SVG[mode] || '';
+        const srLabel = document.createElement('span');
+        srLabel.className = 'sr-only';
+        srLabel.textContent = modeLabel;
+        modeEl.appendChild(srLabel);
         a.appendChild(modeEl);
 
         const best = loadBest(localStorage, bestKey(key, mode, includeAll));
