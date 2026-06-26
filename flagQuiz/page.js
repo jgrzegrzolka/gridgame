@@ -37,22 +37,30 @@ import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
 import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
 import {
   shouldPushQuizRecord,
+  computeTodayPbCandidate,
+  utcDateKey,
   getLastQuizRecordPushedAt,
   markQuizRecordPushed,
+  getQuizDayBest,
+  setQuizDayBest,
 } from '../flags/quizRecordThrottle.js';
 import { madeAnyQuizPick } from '../flags/quizEngagement.js';
 
 /**
- * Wrap `submitQuizRecord` with the Feature S Phase 5 decision: PB beats
- * fire immediately; rounds with no real picks skip the POST entirely
- * (no consumer cares about empty-round attempt bumps); all other
- * finishes are throttled (one push per 30 minutes per device).
+ * Wrap `submitQuizRecord` with the throttle decision. Push policy lives
+ * in `flags/quizRecordThrottle.js` — this wrapper just gathers the
+ * call-site inputs (sentinel, per-config day-best cache, today-PB
+ * computation) and stamps both caches after a successful push.
  *
- * `engaged` is computed once at the call site via
- * `madeAnyQuizPick` so this gate and the 60s day-log gate see the
- * same engagement signal — preventing the kind of drift that bit us
- * before unification (Phase 5 used `gaveUp`, the day-log gate used
- * pick count; they disagreed in two of four cases).
+ * The day-best cache is the fix for the empty-leaderboard bug: without
+ * it, a niche-config finish (e.g. oceania-all) that isn't an all-time
+ * PB but IS the first-of-day-for-this-config would get dropped by the
+ * 30 min throttle and never write the leaderboard row. With it, the
+ * `isTodayPbCandidate` signal forces the push for any finish that
+ * would change today's `dailyLeaderboards` row server-side.
+ *
+ * `engaged` is computed once at the call site via `madeAnyQuizPick` so
+ * this gate and the 60s day-log gate see the same engagement signal.
  *
  * When skipped, returns a synthetic `{ outcome: 'ok' }` so
  * `runLeaderboardCycle` continues to the fetch step — the leaderboard
@@ -73,11 +81,23 @@ async function maybeSubmitQuizRecord({ deviceId, configKey, score, durationMs, l
   const store = window.localStorage;
   const now = Date.now();
   const lastPushedAt = getLastQuizRecordPushedAt(store);
-  if (!shouldPushQuizRecord({ engaged, isNew, lastPushedAt, now })) {
+  const dayBest = getQuizDayBest(store, configKey);
+  const isTodayPbCandidate = computeTodayPbCandidate({
+    dayBest, entry: { score, durationMs }, lowerWins, now,
+  });
+  if (!shouldPushQuizRecord({ engaged, isNew, isTodayPbCandidate, lastPushedAt, now })) {
     return { outcome: 'ok' };
   }
   const result = await submitQuizRecord({ deviceId, configKey, score, durationMs, lowerWins });
-  if (result.outcome === 'ok') markQuizRecordPushed(store, now);
+  if (result.outcome === 'ok') {
+    markQuizRecordPushed(store, now);
+    // Only stamp the day-best cache when this push actually changed
+    // (or created) today's leaderboard row server-side. Throttle-path
+    // pushes don't, so we don't lie about the server's state.
+    if (isTodayPbCandidate) {
+      setQuizDayBest(store, configKey, { date: utcDateKey(now), score, durationMs });
+    }
+  }
   return result;
 }
 import { fetchLeaderboard } from '../flags/dailyLeaderboardFetch.js';
