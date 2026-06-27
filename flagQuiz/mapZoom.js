@@ -348,10 +348,17 @@ export function attachZoomPan(svg) {
    * landmass it's supposed to mark — particularly noticeable on the
    * larger "microstates" like Brunei, Cape Verde, or the spread-out
    * Maldives bbox).
+   *
+   * `.flag-flash` is included so a microstate's answer tint overlay (a
+   * `<circle>` clone of the ring, made by flagMap's `paintCountryFlag`)
+   * tracks the ring's radius on zoom — it copies the ring's `data-base-r`,
+   * so the same formula keeps the two in lockstep. Flag-flash clones of
+   * big countries are `<path>`s with no `data-base-r`; the guard below
+   * skips them (their geometry scales with the viewBox like any path).
    */
   function rescaleHitTargets() {
     const scale = current.width / original.width;
-    const hits = svg.querySelectorAll('.map-hit-target');
+    const hits = svg.querySelectorAll('.map-hit-target, .flag-flash');
     for (let i = 0; i < hits.length; i++) {
       /** @type {any} */
       const el = hits[i];
