@@ -233,6 +233,27 @@
   animation: map-answer-flash 600ms ease-out;
 }
 
+/* Flag-fill answers (flagQuiz). `paintCountryFlag` stamps the answered
+ * country's flag into its contour (inline `fill: url(#flagfill-xx)` at 60%
+ * opacity) and drops a green / red clone of the shape on top (`.flag-flash`)
+ * for the answer status. The flag carries the "which country" signal; the
+ * colour wash carries "right / wrong". Green `#2a8a3a` / red `#c0392b` are
+ * the same answer-state exceptions used elsewhere on the site.
+ *
+ * The animation holds the colour solid briefly (a green / red "got it /
+ * missed it" stamp) then settles it to a faint 25% wash that just hints —
+ * doesn't hide — the flag underneath. `forwards` keeps it resting at 25%;
+ * the colour is set inline on the clone (from the JS), so this rule only
+ * animates the opacity. The clone is removed on play-again by `resetMap`. */
+@keyframes flag-flash-out {
+  0%, 20% { fill-opacity: 1; }
+  100%    { fill-opacity: 0.25; }
+}
+#flag-map-section svg .flag-flash {
+  pointer-events: none;
+  animation: flag-flash-out 700ms ease-out forwards;
+}
+
 /* Microstate paths get NO special styling — they render with the same
  * thin grey border as bigger countries. Visibility + click target both
  * come from the overlay ring below. */

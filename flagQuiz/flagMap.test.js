@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
-  offsetHitTargetCenter,
+  offsetHitTargetCenter, paintCountryFlag,
 } from './flagMap.js';
 
 /**
@@ -167,6 +167,182 @@ test('resetMap is a no-op when nothing is painted', () => {
 
 test('resetMap tolerates a null root', () => {
   assert.doesNotThrow(() => resetMap(/** @type {any} */ (null)));
+});
+
+/* paintCountryFlag — flag-into-contour fill + green/red outline + flash.
+ *
+ * Hand-rolled SVG fake: enough surface for the function — a document
+ * that creates element-like nodes, a country `<g>` with two child paths
+ * (one a real sub-country to be skipped), and a microstate ring overlay.
+ * Nodes can act as parents (`insertBefore` / `children`) and clone
+ * themselves (`cloneNode`) so the answer-flash overlay path is exercised.
+ */
+function makeNode(tag) {
+  const attrs = new Map();
+  const classes = new Set();
+  const children = [];
+  const node = {
+    tagName: tag,
+    style: {},
+    children,
+    parentNode: null,
+    nextSibling: null,
+    classList: {
+      add: (c) => classes.add(c),
+      remove: (c) => classes.delete(c),
+      contains: (c) => classes.has(c),
+      _set: classes,
+    },
+    setAttribute: (k, v) => attrs.set(k, String(v)),
+    setAttributeNS: (_ns, k, v) => attrs.set(k.replace(/^.*:/, ''), String(v)),
+    getAttribute: (k) => (attrs.has(k) ? attrs.get(k) : null),
+    removeAttribute: (k) => attrs.delete(k),
+    appendChild: (c) => { children.push(c); c.parentNode = node; return c; },
+    insertBefore: (c) => { children.push(c); c.parentNode = node; return c; },
+    removeChild: (c) => {
+      const i = children.indexOf(c);
+      if (i >= 0) children.splice(i, 1);
+      c.parentNode = null;
+      return c;
+    },
+    addEventListener: () => {},
+    cloneNode: () => {
+      const clone = makeNode(tag);
+      for (const k of Object.keys(node.style)) clone.style[k] = node.style[k];
+      return clone;
+    },
+    _attrs: attrs,
+  };
+  return node;
+}
+
+function fakeFlagSvg() {
+  const doc = { createElementNS: (_ns, tag) => makeNode(tag) };
+  let defs = null;
+  // The country element returned by `#es` — a <g> wrapper that carries the
+  // status outline class and exposes its inner paths via querySelectorAll.
+  const group = makeNode('g');
+  const innerPath = makeNode('path');
+  innerPath.parentNode = group;
+  const subCountry = makeNode('path');       // e.g. French Guiana inside <g id="fr">
+  subCountry.classList.add('map-country');
+  subCountry.parentNode = group;
+  group.querySelectorAll = (sel) => (sel === 'path' ? [innerPath, subCountry] : []);
+  const hit = makeNode('circle');
+  // Ring overlays live in their own layer in the real asset; give it a
+  // parent so the flash overlay's `insertBefore` has somewhere to land.
+  const hitLayer = makeNode('g');
+  hitLayer.appendChild(hit);
+  const allNodes = [innerPath, subCountry, hit, group];
+  const hasAnyClass = (n, classes) => classes.some((c) => n.classList._set.has(c));
+  // Flash clones carry class "flag-flash" via setAttribute('class', ...)
+  // — collect every node under group/hitLayer whose class attr says so.
+  const collectFlashes = () => [group, hitLayer]
+    .flatMap((p) => p.children)
+    .filter((c) => c.getAttribute('class') === 'flag-flash');
+  const svg = {
+    ownerDocument: doc,
+    firstChild: null,
+    insertBefore: (node) => { defs = node; },
+    querySelector: (sel) => {
+      if (sel.startsWith('#flagfill-')) {
+        if (!defs) return null;
+        return defs.children.find((c) => c.getAttribute('id') === sel.slice(1)) || null;
+      }
+      if (sel === 'defs') return defs;
+      if (sel === '#es') return group;
+      return null;
+    },
+    querySelectorAll: (sel) => {
+      if (sel.includes('map-hit-target')) return [hit];
+      if (sel === '.flag-flash') return collectFlashes();
+      if (sel.includes('is-flag')) {
+        const classes = sel.split(',').map((s) => s.trim().replace(/^\./, ''));
+        return allNodes.filter((n) => hasAnyClass(n, classes));
+      }
+      if (sel === '.is-correct, .is-wrong') return [];
+      return [];
+    },
+    _refs: { innerPath, subCountry, hit, group, hitLayer, collectFlashes, get defs() { return defs; } },
+  };
+  return svg;
+}
+
+test('paintCountryFlag fills the country path + microstate ring with a flag pattern at 60%', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  const { innerPath, hit } = svg._refs;
+  assert.equal(innerPath.style.fill, 'url(#flagfill-es)');
+  assert.equal(innerPath.style.fillOpacity, '0.6');
+  assert.equal(innerPath.classList.contains('is-flagged'), true);
+  assert.equal(hit.style.fill, 'url(#flagfill-es)');
+  assert.equal(hit.style.fillOpacity, '0.6');
+  assert.equal(hit.classList.contains('is-flagged'), true);
+});
+
+test('paintCountryFlag drops a green tint overlay on top of the flag (correct)', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  const flashes = svg._refs.collectFlashes();
+  // One clone over the inner country path, one over the ring.
+  assert.equal(flashes.length, 2);
+  assert.ok(flashes.every((f) => f.style.fill === '#2a8a3a'));
+  assert.ok(flashes.every((f) => f.getAttribute('class') === 'flag-flash'));
+});
+
+test('paintCountryFlag tint overlay is red for a wrong answer', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'wrong');
+  assert.ok(svg._refs.collectFlashes().every((f) => f.style.fill === '#c0392b'));
+});
+
+test('paintCountryFlag skips inner paths that are themselves countries', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  // The .map-country sub-path (French-Guiana-style) must stay unpainted.
+  assert.equal(svg._refs.subCountry.style.fill, undefined);
+  assert.equal(svg._refs.subCountry.classList.contains('is-flagged'), false);
+});
+
+test('paintCountryFlag points the pattern image at the flag svg', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  const pattern = svg._refs.defs.children[0];
+  assert.equal(pattern.getAttribute('id'), 'flagfill-es');
+  const image = pattern.children[0];
+  assert.equal(image.getAttribute('href'), '../flags/svg/es.svg');
+  assert.equal(image.getAttribute('preserveAspectRatio'), 'xMidYMid slice');
+});
+
+test('paintCountryFlag reuses an existing pattern instead of duplicating it', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'wrong');
+  assert.equal(svg._refs.defs.children.length, 1);
+});
+
+test('paintCountryFlag lowercases the code and rejects malformed input', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'ES', '../flags/svg/', 'correct');
+  assert.equal(svg._refs.innerPath.style.fill, 'url(#flagfill-es)');
+  assert.doesNotThrow(() => paintCountryFlag(svg, '', '../flags/svg/', 'correct'));
+  assert.doesNotThrow(() => paintCountryFlag(/** @type {any} */ (null), 'es', '../flags/svg/', 'correct'));
+  assert.doesNotThrow(() => paintCountryFlag(svg, 'es-pv', '../flags/svg/', 'correct'));
+});
+
+test('resetMap clears the flag fills and removes the tint overlays', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  assert.equal(svg._refs.collectFlashes().length, 2);
+  resetMap(svg);
+  const { innerPath, hit } = svg._refs;
+  assert.equal(innerPath.style.fill, '');
+  assert.equal(innerPath.style.fillOpacity, '');
+  assert.equal(innerPath.classList.contains('is-flagged'), false);
+  assert.equal(hit.style.fill, '');
+  assert.equal(hit.classList.contains('is-flagged'), false);
+  // The overlay clones are detached from their parents.
+  assert.equal(svg._refs.collectFlashes().length, 0);
 });
 
 /* mountFlagMap — fetch + inline + viewBox patch.
