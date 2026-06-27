@@ -106,7 +106,7 @@ import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
-import { mountFlagMap, markCountry } from './flagMap.js';
+import { mountFlagMap, paintCountryFlag } from './flagMap.js';
 import { attachZoomPan } from './mapZoom.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 
@@ -542,7 +542,8 @@ export function bootFlagQuiz() {
         disableAllTiles();
         // No-op unless the flag-map gate above mounted the SVG;
         // currentAnswer.code is the ISO2 of the country in question.
-        markCountry(mapSvg, currentAnswer.code, 'correct');
+        // Fill the country's contour with its flag + green outline.
+        paintCountryFlag(mapSvg, currentAnswer.code, '../flags/svg/', 'correct');
         advanceTo(quiz.next(), 250);
       } else if (timed) {
         // 60s is one-shot per question, same as count mode: a wrong
@@ -563,13 +564,14 @@ export function bootFlagQuiz() {
         if (correctTile) correctTile.classList.add('correct');
         disableAllTiles();
         flashPenalty();
-        // Map: paint the ASKED-ABOUT country red (currentAnswer.code),
-        // matching count mode's semantics. The clicked-country tracking
-        // we used during multi-attempt was lossy (latest-wins would
-        // flip the red to green if that country later came up correct);
-        // the cabinet pattern makes the asked-about marking honest —
-        // a wrong stays wrong unless revisited and corrected.
-        markCountry(mapSvg, currentAnswer.code, 'wrong');
+        // Map: fill the ASKED-ABOUT country (currentAnswer.code) with its
+        // flag + red outline, matching count mode's semantics — the player
+        // sees the flag they missed. The clicked-country tracking we used
+        // during multi-attempt was lossy (latest-wins would flip the red to
+        // green if that country later came up correct); the cabinet pattern
+        // makes the asked-about marking honest — a wrong stays wrong unless
+        // revisited and corrected.
+        paintCountryFlag(mapSvg, currentAnswer.code, '../flags/svg/', 'wrong');
         quiz.addToCabinet(currentAnswer);
         advanceTo(quiz.next(), 1200);
       } else {
@@ -588,10 +590,10 @@ export function bootFlagQuiz() {
         disableAllTiles();
         progressBarEl.style.width = (countModeProgressRatio(answeredCount, wrongCount, target) * 100) + '%';
         // Map: the asked-about country (currentAnswer.code) is the one
-        // the player missed — paint *that* red, not the wrong choice.
-        // The clicked-wrong tile's country may not have been asked yet
-        // and shouldn't get pre-marked here.
-        markCountry(mapSvg, currentAnswer.code, 'wrong');
+        // the player missed — flag-fill + red-outline *that*, not the wrong
+        // choice. The clicked-wrong tile's country may not have been asked
+        // yet and shouldn't get pre-marked here.
+        paintCountryFlag(mapSvg, currentAnswer.code, '../flags/svg/', 'wrong');
         advanceTo(quiz.next(), 1200);
       }
     }

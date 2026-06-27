@@ -36,6 +36,14 @@
 const STATUS_CLASSES = ['is-correct', 'is-wrong'];
 
 /**
+ * Answer-status colours for the flag-fill tint overlay — the same green /
+ * red answer-state exceptions used across the site. Set inline on the
+ * overlay clone so it wins over the asset's own `g.map-country path` fill
+ * without a specificity war; the strong-then-soft fade is a CSS animation.
+ */
+const FLAG_FLASH_COLORS = { correct: '#2a8a3a', wrong: '#c0392b' };
+
+/**
  * Radius of the visible pink-ring marker, expressed as a fraction of
  * the displayed viewBox's larger dimension. Tuned by eye: small
  * enough that microstate markers don't overwhelm their neighbouring
@@ -205,6 +213,138 @@ export function markCountry(root, code, state) {
 }
 
 /**
+ * Fill an answered country's contour with its actual flag image (at 60%
+ * opacity), then tint it green (correct) or red (wrong). An SVG `fill` is
+ * clipped to the painted geometry automatically, so pointing a country's
+ * fill at a `<pattern>` whose single `<image>` is the flag stamps the flag
+ * into the country's silhouette; a colour-overlay clone on top supplies
+ * the answer status.
+ *
+ * Used by flagQuiz for every map variant + mode in place of the old flat
+ * green / red fill (`markCountry`). `markCountry` stays for flagsdata's
+ * non-flag highlight surface.
+ *
+ * Mechanics:
+ *   - Lazily create a `<defs>` and append one `<pattern id="flagfill-xx">`
+ *     per country (deduped by id). `patternContentUnits="objectBoundingBox"`
+ *     + width/height = 1 maps the image onto the filled element's own
+ *     bounding box, so the flag scales to whatever the country's bbox is.
+ *   - `preserveAspectRatio="xMidYMid slice"` keeps the flag's proportions
+ *     and crops the overflow rather than stretching it to the (usually
+ *     non-3:2) country bbox.
+ *   - Fill targets: the `#id` element (its child `<path>`s for `<g>`-
+ *     wrapped countries, skipping inner paths that are themselves separate
+ *     countries), plus the microstate ring overlay. Flag fill at 60%
+ *     opacity is set inline so it wins over the stylesheet without
+ *     `!important`.
+ *   - Status: a green / red clone of each filled shape is dropped on top
+ *     (`flash`). The CSS `flag-flash` animation holds it solid briefly
+ *     then settles it to a 40% wash, so the answer flashes its colour and
+ *     leaves a soft tint over the flag.
+ *   - Every flag-filled element gets `.is-flagged` so `resetMap` can find
+ *     and clear it (and the overlay clones) on play-again.
+ *
+ * @param {any} svg     mounted `<svg>` root
+ * @param {string} code ISO 3166-1 alpha-2
+ * @param {string} svgBase  flag-svg directory, e.g. `'../flags/svg/'`
+ * @param {'correct' | 'wrong'} status
+ */
+export function paintCountryFlag(svg, code, svgBase, status) {
+  if (!svg || typeof code !== 'string') return;
+  const id = code.toLowerCase();
+  if (!ISO2_PATTERN.test(id)) return;
+  /** @type {any} */
+  const doc = svg.ownerDocument || globalThis.document;
+  if (!doc || typeof doc.createElementNS !== 'function') return;
+  const statusClass = status === 'correct' ? 'is-flag-correct'
+    : status === 'wrong' ? 'is-flag-wrong' : null;
+  const patternId = `flagfill-${id}`;
+  if (!svg.querySelector(`#${patternId}`)) {
+    let defs = svg.querySelector('defs');
+    if (!defs) {
+      defs = doc.createElementNS(SVG_NS, 'defs');
+      svg.insertBefore(defs, svg.firstChild);
+    }
+    const pattern = doc.createElementNS(SVG_NS, 'pattern');
+    pattern.setAttribute('id', patternId);
+    pattern.setAttribute('patternContentUnits', 'objectBoundingBox');
+    pattern.setAttribute('width', '1');
+    pattern.setAttribute('height', '1');
+    const image = doc.createElementNS(SVG_NS, 'image');
+    const flagUrl = `${svgBase}${id}.svg`;
+    image.setAttribute('href', flagUrl);
+    // xlink:href fallback for renderers that predate the unprefixed attr.
+    image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', flagUrl);
+    image.setAttribute('width', '1');
+    image.setAttribute('height', '1');
+    image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    pattern.appendChild(image);
+    defs.appendChild(pattern);
+  }
+  const fill = `url(#${patternId})`;
+  const flashColor = statusClass ? FLAG_FLASH_COLORS[status] : null;
+  // Overlay a green / red clone of the answered shape on top of the flag.
+  // The CSS `flag-flash` animation holds it solid briefly (a green / red
+  // "got it / missed it" stamp) then settles it to a soft 40% wash that
+  // tints the flag underneath — so the colour reads strongly on answer
+  // and lingers as the resting status without hiding the flag. A clone
+  // (rather than animating the element's own fill) is needed because CSS
+  // can't transition a solid colour into a `url(#pattern)` fill. Inserted
+  // as the element's next sibling so it inherits the same ancestor
+  // transforms and stacks directly on top. No-op in the test fakes
+  // (no `cloneNode`).
+  /** @param {any} el */
+  const flash = (el) => {
+    if (!flashColor || !el || typeof el.cloneNode !== 'function') return;
+    const parent = el.parentNode;
+    if (!parent || typeof parent.insertBefore !== 'function') return;
+    const clone = el.cloneNode(false);
+    clone.setAttribute('class', 'flag-flash');
+    clone.removeAttribute('id');
+    if (clone.style) {
+      clone.style.fill = flashColor;
+      clone.style.fillOpacity = '';
+      clone.style.stroke = 'none';
+      clone.style.pointerEvents = 'none';
+    }
+    parent.insertBefore(clone, el.nextSibling);
+  };
+  /** @param {any} el */
+  const applyFill = (el) => {
+    if (!el) return;
+    if (el.style) {
+      el.style.fill = fill;
+      // 60% so the flag reads soft, matching the 40% colour wash on top.
+      el.style.fillOpacity = '0.6';
+    } else if (typeof el.setAttribute === 'function') {
+      el.setAttribute('fill', fill);
+    }
+    if (el.classList) el.classList.add('is-flagged');
+    flash(el);
+  };
+  const rootEl = svg.querySelector(`#${id}`);
+  if (rootEl) {
+    const childPaths = typeof rootEl.querySelectorAll === 'function'
+      ? rootEl.querySelectorAll('path') : [];
+    let added = 0;
+    for (let i = 0; i < childPaths.length; i++) {
+      const p = childPaths[i];
+      // Skip inner paths that are their own country (e.g. <g id="fr">
+      // wraps <path id="gf"> French Guiana) — same carve-out the CSS
+      // makes with `:not(.map-country)`.
+      if (p && p.classList && p.classList.contains('map-country')) continue;
+      applyFill(p);
+      added++;
+    }
+    // Single-path country (Europe asset's `<path id="es">`) has no inner
+    // paths — fill the element itself.
+    if (added === 0) applyFill(rootEl);
+  }
+  const hits = svg.querySelectorAll(`.map-hit-target[data-hit-for="${id}"]`);
+  for (let i = 0; i < hits.length; i++) applyFill(hits[i]);
+}
+
+/**
  * Replace the set of `.is-selected` countries with a new one — used
  * by flagsdata to keep the map in sync with the active filter pills.
  * Walks every `.map-country` element + every `.map-hit-target` overlay
@@ -255,6 +395,27 @@ export function resetMap(root) {
   const paths = root.querySelectorAll('.is-correct, .is-wrong');
   for (let i = 0; i < paths.length; i++) {
     for (const c of STATUS_CLASSES) paths[i].classList.remove(c);
+  }
+  // Flag-fill answers (paintCountryFlag) set the flag fill inline and tag
+  // `.is-flagged` — clear both so a replayed round starts blank.
+  const flagged = root.querySelectorAll('.is-flagged');
+  for (let i = 0; i < flagged.length; i++) {
+    /** @type {any} */
+    const el = flagged[i];
+    el.classList.remove('is-flagged');
+    if (el.style) {
+      el.style.fill = '';
+      el.style.fillOpacity = '';
+    }
+  }
+  // Drop the green / red tint overlay clones.
+  const flashes = root.querySelectorAll('.flag-flash');
+  for (let i = 0; i < flashes.length; i++) {
+    /** @type {any} */
+    const el = flashes[i];
+    if (el.parentNode && typeof el.parentNode.removeChild === 'function') {
+      el.parentNode.removeChild(el);
+    }
   }
 }
 
