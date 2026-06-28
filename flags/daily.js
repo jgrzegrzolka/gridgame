@@ -64,6 +64,23 @@ import { parseFilterString } from './findFlag.js';
  *                             out of the 4–30 answer-set-size test. Only set
  *                             on shipped puzzles in the immutable past; new
  *                             entries should be reworked instead. See SKILL.md rule 9.
+ * @property {Record<string, Record<string, string>>} [notes]  optional
+ *                             per-answer "why" explanations, keyed by country
+ *                             code, each a per-language map (`en` + `pl`).
+ *                             Surfaced in the post-solve flag-zoom dialog under
+ *                             the country name. Reserved for *non-obvious*
+ *                             matches — why a flag belongs to this puzzle's
+ *                             category when the eye says otherwise (Japan's red
+ *                             disc IS the sun; Oman's emblem is a weapon, not a
+ *                             coat of arms). Category-relative by design, which
+ *                             is why notes live on the puzzle entry and not on
+ *                             the country: the same flag warrants a different
+ *                             note (or none) depending on the criterion. Only
+ *                             the codes that need a note appear here; everything
+ *                             else opens the zoom with just its name. Every
+ *                             note present must carry both `en` and `pl`
+ *                             (pinned by the notes test in daily.test.js) and
+ *                             its code must be one of `answers`.
  */
 
 /**
@@ -294,6 +311,28 @@ export function manualToCategory(entry, lang) {
     label,
     predicate: (c) => codes.has(c.code),
   };
+}
+
+/**
+ * Resolve the post-solve "why" note for one country in a puzzle, in the
+ * requested language. Returns '' when the entry has no note for that code
+ * (the common case — notes are reserved for non-obvious matches), so the
+ * caller can hide the note element on falsy. Falls back to `en` when the
+ * requested language is missing, mirroring `paintDescription`'s policy:
+ * better to show the note in *some* language than to swallow it.
+ *
+ * Pure string-in / string-out so the language-fallback logic is unit
+ * tested rather than buried in the zoom DOM glue.
+ *
+ * @param {Record<string, Record<string, string>> | undefined} notes
+ * @param {string} code  2-letter country code
+ * @param {string} lang  active page language (`en` / `pl`)
+ * @returns {string}
+ */
+export function resolveNote(notes, code, lang) {
+  const note = notes?.[code];
+  if (!note) return '';
+  return note[lang] ?? note.en ?? '';
 }
 
 /**

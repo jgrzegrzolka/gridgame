@@ -9,6 +9,7 @@ import {
   startGame,
   attachLangRefresh,
   showReason,
+  setZoomNotes,
 } from '../playFlow.js';
 import { fetchCatalog } from '../catalogSource.js';
 
@@ -64,6 +65,9 @@ export function bootBacklogPlay() {
       }
 
       paintDescription(result.entry.description);
+      // Preview this entry's zoom notes too, so an author play-testing a
+      // staged puzzle sees the explanations exactly as a player will.
+      setZoomNotes(result.entry.notes);
       // Same kind-aware branch as daily/page.js — backlog plays the
       // same shape as live, so manual entries staged in the backlog
       // need to render with their `entry.title` label here too.

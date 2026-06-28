@@ -22,13 +22,15 @@
  * `find-found`, `give-up`, `final-score-prefix`, `final-score-fraction`,
  * `final-found`, `final-total`, `final-score-line`, `find-result-found`,
  * `found-title`, `find-missed`, `missed-title`, and a `<dialog id="zoom">`
- * carrying an `img` and a `p`. The live `daily/index.html` is the
+ * carrying an `img`, a `p` (the country name), and a `p.zoom-note` (the
+ * optional post-solve explanation). The live `daily/index.html` is the
  * reference markup; `backlog/play.html` and `ideas/play.html` copy it.
  */
 
 import { suggest, exactSingleMatch } from '../flags/engine.js';
 import { findPool, classifyGuess } from '../flags/findFlag.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
+import { resolveNote } from '../flags/daily.js';
 import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { saveScore } from './scores.js';
@@ -100,10 +102,43 @@ export function showReason(reason) {
 const SVG_BASE = new URL('../flags/svg/', import.meta.url).href;
 
 /**
+ * The active puzzle's per-answer "why" notes (`entry.notes`), keyed by
+ * country code. Set once per puzzle via `setZoomNotes` from the page boot
+ * file; read by `openZoom` to decide whether a flag gets an explanation
+ * line under its name. Module-scope (not threaded through openZoom's
+ * callers) because openZoom is wired deep in `flagTile` and the
+ * extra-stats rail, and only ever shows one puzzle's flags at a time —
+ * the same module-singleton shape `shareCtx` / `streakState` use in
+ * page.js. `null` until a puzzle resolves, and on any page that doesn't
+ * set notes (none today, but the preview pages could skip it) — openZoom
+ * then just shows the name.
+ *
+ * @type {Record<string, Record<string, string>> | null}
+ */
+let zoomNotes = null;
+
+/**
+ * Install the active puzzle's notes for the zoom dialog. Called once from
+ * the boot flow after the entry resolves — covers both the play path and
+ * the revisit path, since both open the same zoom. Passing `undefined`
+ * (an entry with no notes) clears any prior puzzle's notes.
+ *
+ * @param {Record<string, Record<string, string>> | undefined} notes
+ */
+export function setZoomNotes(notes) {
+  zoomNotes = notes ?? null;
+}
+
+/**
  * Open the flag-zoom dialog for a single country. Wired by `flagTile`
  * for the in-progress + result grids, and reused by `daily/page.js` for
  * the extra-stats rail tiles so a click on any flag — wherever it
  * appears on the result page — opens the same dialog.
+ *
+ * When the active puzzle carries a note for this country (`setZoomNotes`),
+ * a quiet caption line renders under the name explaining the non-obvious
+ * match. The note element is hidden when there's no note, so flags
+ * without one look exactly as before.
  *
  * @param {Country} c
  */
@@ -111,10 +146,17 @@ export function openZoom(c) {
   const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
   const zoomImg = /** @type {HTMLImageElement} */ (zoom.querySelector('img'));
   const zoomName = /** @type {HTMLParagraphElement} */ (zoom.querySelector('p'));
+  const zoomNote = /** @type {HTMLElement | null} */ (zoom.querySelector('.zoom-note'));
   zoomImg.src = `${SVG_BASE}${c.code}.svg`;
   const displayName = countryName(c);
   zoomImg.alt = displayName;
   zoomName.textContent = displayName;
+  if (zoomNote) {
+    const lang = document.documentElement.lang || 'en';
+    const noteText = resolveNote(zoomNotes ?? undefined, c.code, lang);
+    zoomNote.textContent = noteText;
+    zoomNote.hidden = noteText === '';
+  }
   zoom.showModal();
 }
 

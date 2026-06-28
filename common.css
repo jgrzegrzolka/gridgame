@@ -995,6 +995,17 @@ dialog#zoom p {
   text-align: center;
   font-size: 16px;
 }
+/* The optional post-solve "why" note under the country name (daily zoom
+   only). Reads as a quieter caption than the name above it — smaller and
+   muted — so the name stays the headline and the explanation sits as a
+   secondary line. Hidden via the `hidden` attribute when the active
+   puzzle has no note for this flag. */
+dialog#zoom p.zoom-note {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--muted-color);
+}
 
 .home-icon {
   display: inline-block;
