@@ -65,22 +65,24 @@ import { parseFilterString } from './findFlag.js';
  *                             on shipped puzzles in the immutable past; new
  *                             entries should be reworked instead. See SKILL.md rule 9.
  * @property {Record<string, Record<string, string>>} [notes]  optional
- *                             per-answer "why" explanations, keyed by country
+ *                             per-flag "why" explanations, keyed by country
  *                             code, each a per-language map (`en` + `pl`).
  *                             Surfaced in the post-solve flag-zoom dialog under
  *                             the country name. Reserved for *non-obvious*
- *                             matches — why a flag belongs to this puzzle's
- *                             category when the eye says otherwise (Japan's red
- *                             disc IS the sun; Oman's emblem is a weapon, not a
- *                             coat of arms). Category-relative by design, which
- *                             is why notes live on the puzzle entry and not on
- *                             the country: the same flag warrants a different
- *                             note (or none) depending on the criterion. Only
- *                             the codes that need a note appear here; everything
- *                             else opens the zoom with just its name. Every
- *                             note present must carry both `en` and `pl`
- *                             (pinned by the notes test in daily.test.js) and
- *                             its code must be one of `answers`.
+ *                             flags — either an answer whose membership the eye
+ *                             would dispute (Japan's red disc IS the sun) or a
+ *                             notable *distractor* the player opens from the
+ *                             "most common mistake" rail (Oman in an Asian
+ *                             coat-of-arms puzzle: a weapon emblem, not a COA).
+ *                             Category-relative by design, which is why notes
+ *                             live on the puzzle entry and not on the country:
+ *                             the same flag warrants a different note (or none)
+ *                             depending on the criterion. Only the codes that
+ *                             need a note appear here; everything else opens the
+ *                             zoom with just its name. Every note present must
+ *                             carry both `en` and `pl` (pinned by the notes test
+ *                             in daily.test.js) and its code must be a sovereign
+ *                             country code (answer or distractor).
  */
 
 /**

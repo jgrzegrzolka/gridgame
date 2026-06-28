@@ -753,21 +753,22 @@ test('puzzles: every entry has en + pl descriptions', () => {
 
 // `notes` is optional (only non-obvious matches get one), but every note
 // that IS present pays the same i18n tax as titles/descriptions: both
-// `en` and `pl`, non-empty. And a note must target one of the puzzle's
-// own answers — a note keyed by a code that isn't in `answers` is a
-// typo that would silently never render (the player can only open the
-// zoom for answer flags). Both failure modes are caught here so a
-// malformed note can't ship.
-test('puzzles: every notes entry has en + pl and targets an answer code', () => {
+// `en` and `pl`, non-empty. A note may target either an *answer* (shown
+// on the found/missed grid) OR a notable *distractor* — a wrong guess
+// the player can still open from the "most common mistake" rail (e.g.
+// Oman in an Asian-coat-of-arms puzzle: a weapon emblem, not a COA). So
+// the code only has to be a real sovereign country code, not necessarily
+// an answer; that still catches typos that would silently never render.
+const NOTE_SOV_CODES = new Set(flagsGamePool(COUNTRIES, false).map((c) => c.code));
+test('puzzles: every notes entry has en + pl and a valid country code', () => {
   /** @type {string[]} */
   const offenders = [];
   for (const entry of PUZZLES) {
     const notes = /** @type {Record<string, Record<string, string>> | undefined} */ (entry.notes);
     if (!notes) continue;
-    const answerCodes = new Set(entry.answers);
     for (const [code, note] of Object.entries(notes)) {
-      if (!answerCodes.has(code)) {
-        offenders.push(`#${entry.n}: note for "${code}" is not in answers`);
+      if (!NOTE_SOV_CODES.has(code)) {
+        offenders.push(`#${entry.n}: note for "${code}" is not a sovereign country code`);
       }
       if (!note || typeof note !== 'object') {
         offenders.push(`#${entry.n}: note for "${code}" is not an object`);
