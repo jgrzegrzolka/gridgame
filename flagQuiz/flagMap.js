@@ -240,7 +240,10 @@ export function markCountry(root, code, state) {
  *   - Status: a green / red clone of each filled shape is dropped on top
  *     (`flash`). The CSS `flag-flash` animation holds it solid briefly
  *     then settles it to a 40% wash, so the answer flashes its colour and
- *     leaves a soft tint over the flag.
+ *     leaves a soft tint over the flag. The answered shape also gets a
+ *     thin, semi-transparent green / red outline (inline stroke, set
+ *     below) that persists once the wash fades — a crisp "right / wrong"
+ *     frame around the flag.
  *   - Every flag-filled element gets `.is-flagged` so `resetMap` can find
  *     and clear it (and the overlay clones) on play-again.
  *
@@ -314,8 +317,24 @@ export function paintCountryFlag(svg, code, svgBase, status) {
     if (!el) return;
     if (el.style) {
       el.style.fill = fill;
-      // 60% so the flag reads soft, matching the 40% colour wash on top.
-      el.style.fillOpacity = '0.6';
+      // 90% — the flag reads vividly so it stands out from the grey
+      // neighbours. The old soft 0.6 paired with a resting colour wash;
+      // that wash now fades to nothing (see `flag-flash-out`), so the
+      // flag carries the "which country" signal on its own and the
+      // border below carries "right / wrong".
+      el.style.fillOpacity = '0.9';
+      // Thin, semi-transparent green / red outline framing the answered
+      // country — a crisp "right / wrong" edge that persists after the
+      // flash wash fades. `non-scaling-stroke` keeps it a constant hairline
+      // weight at every map zoom level (the same trick the microstate
+      // rings use); set inline so it wins over the asset's default grey
+      // coastline without a specificity fight.
+      if (flashColor) {
+        el.style.stroke = flashColor;
+        el.style.strokeWidth = '1.5';
+        el.style.strokeOpacity = '0.6';
+        el.style.vectorEffect = 'non-scaling-stroke';
+      }
     } else if (typeof el.setAttribute === 'function') {
       el.setAttribute('fill', fill);
     }
@@ -406,6 +425,13 @@ export function resetMap(root) {
     if (el.style) {
       el.style.fill = '';
       el.style.fillOpacity = '';
+      // Clear the green / red answer outline too (set inline by
+      // paintCountryFlag) so a replayed round starts from the blank
+      // coastline.
+      el.style.stroke = '';
+      el.style.strokeWidth = '';
+      el.style.strokeOpacity = '';
+      el.style.vectorEffect = '';
     }
   }
   // Drop the green / red tint overlay clones.
