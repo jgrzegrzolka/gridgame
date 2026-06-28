@@ -241,13 +241,16 @@
  * the same answer-state exceptions used elsewhere on the site.
  *
  * The animation holds the colour solid briefly (a green / red "got it /
- * missed it" stamp) then settles it to a faint 25% wash that just hints —
- * doesn't hide — the flag underneath. `forwards` keeps it resting at 25%;
- * the colour is set inline on the clone (from the JS), so this rule only
- * animates the opacity. The clone is removed on play-again by `resetMap`. */
+ * missed it" stamp) then fades it out entirely, leaving the bare flag
+ * framed by its thin green / red answer outline (set inline by
+ * paintCountryFlag). `forwards` keeps it resting at 0; the colour is set
+ * inline on the clone (from the JS), so this rule only animates the
+ * opacity. The clone is removed on play-again by `resetMap`. The outline
+ * — not a lingering wash — is what marks "right / wrong" once the flash
+ * has gone, so the flag stays fully readable. */
 @keyframes flag-flash-out {
   0%, 20% { fill-opacity: 1; }
-  100%    { fill-opacity: 0.25; }
+  100%    { fill-opacity: 0; }
 }
 #flag-map-section svg .flag-flash {
   pointer-events: none;

@@ -268,15 +268,15 @@ function fakeFlagSvg() {
   return svg;
 }
 
-test('paintCountryFlag fills the country path + microstate ring with a flag pattern at 60%', () => {
+test('paintCountryFlag fills the country path + microstate ring with a flag pattern at 90%', () => {
   const svg = fakeFlagSvg();
   paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
   const { innerPath, hit } = svg._refs;
   assert.equal(innerPath.style.fill, 'url(#flagfill-es)');
-  assert.equal(innerPath.style.fillOpacity, '0.6');
+  assert.equal(innerPath.style.fillOpacity, '0.9');
   assert.equal(innerPath.classList.contains('is-flagged'), true);
   assert.equal(hit.style.fill, 'url(#flagfill-es)');
-  assert.equal(hit.style.fillOpacity, '0.6');
+  assert.equal(hit.style.fillOpacity, '0.9');
   assert.equal(hit.classList.contains('is-flagged'), true);
 });
 
@@ -294,6 +294,38 @@ test('paintCountryFlag tint overlay is red for a wrong answer', () => {
   const svg = fakeFlagSvg();
   paintCountryFlag(svg, 'es', '../flags/svg/', 'wrong');
   assert.ok(svg._refs.collectFlashes().every((f) => f.style.fill === '#c0392b'));
+});
+
+test('paintCountryFlag frames the answered country with a thin green outline (correct)', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  const { innerPath, hit } = svg._refs;
+  for (const el of [innerPath, hit]) {
+    assert.equal(el.style.stroke, '#2a8a3a');
+    assert.equal(el.style.strokeWidth, '1.5');
+    assert.equal(el.style.strokeOpacity, '0.6');
+    // non-scaling-stroke keeps the outline a constant hairline at every zoom.
+    assert.equal(el.style.vectorEffect, 'non-scaling-stroke');
+  }
+});
+
+test('paintCountryFlag outline is red for a wrong answer', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'wrong');
+  assert.equal(svg._refs.innerPath.style.stroke, '#c0392b');
+});
+
+test('paintCountryFlag does not outline inner sub-country paths', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  // French-Guiana-style sub-path stays unframed along with unpainted.
+  assert.equal(svg._refs.subCountry.style.stroke, undefined);
+});
+
+test('paintCountryFlag flash clone carries no outline (border lives on the country, not the wash)', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  assert.ok(svg._refs.collectFlashes().every((f) => f.style.stroke === 'none'));
 });
 
 test('paintCountryFlag skips inner paths that are themselves countries', () => {
@@ -338,6 +370,9 @@ test('resetMap clears the flag fills and removes the tint overlays', () => {
   const { innerPath, hit } = svg._refs;
   assert.equal(innerPath.style.fill, '');
   assert.equal(innerPath.style.fillOpacity, '');
+  // The green / red answer outline is cleared too.
+  assert.equal(innerPath.style.stroke, '');
+  assert.equal(innerPath.style.strokeOpacity, '');
   assert.equal(innerPath.classList.contains('is-flagged'), false);
   assert.equal(hit.style.fill, '');
   assert.equal(hit.classList.contains('is-flagged'), false);
