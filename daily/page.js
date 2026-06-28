@@ -14,6 +14,7 @@ import {
   startGame,
   attachLangRefresh,
   showReason,
+  setZoomNotes,
 } from './playFlow.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
 import { trySyncDevices } from '../flags/syncHydrate.js';
@@ -672,6 +673,13 @@ export function bootDaily() {
       }
 
       paintDescription(result.entry.description);
+      // Install this puzzle's per-answer "why" notes for the zoom dialog.
+      // Runs above both the revisit and play branches so a tap on any
+      // result tile (or extra-stats rail tile) surfaces the explanation
+      // wherever the flag appears. Notes are language-agnostic at install
+      // time (they carry every language); openZoom localizes on open, so
+      // a soft language switch needs no re-install.
+      setZoomNotes(result.entry.notes);
 
       // Filter entries derive the category label from the parsed
       // Filters object (re-translated on every langchange so pill

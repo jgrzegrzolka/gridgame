@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement, manualToCategory, puzzleDate, formatPuzzleDate, LAUNCH_DATE } from './daily.js';
+import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement, manualToCategory, resolveNote, puzzleDate, formatPuzzleDate, LAUNCH_DATE } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries, createCountry } from './group.js';
@@ -276,6 +276,26 @@ test('manualToCategory: predicate is code-membership against the frozen answer l
   const us = fixtureCountry({ code: 'us' });
   assert.equal(category.predicate(fr), true);
   assert.equal(category.predicate(us), false);
+});
+
+test('resolveNote: returns the note in the requested language', () => {
+  const notes = { om: { en: 'A dagger, not a crest.', pl: 'Sztylet, nie herb.' } };
+  assert.equal(resolveNote(notes, 'om', 'en'), 'A dagger, not a crest.');
+  assert.equal(resolveNote(notes, 'om', 'pl'), 'Sztylet, nie herb.');
+});
+
+test('resolveNote: falls back to en when the requested language is missing', () => {
+  const notes = { jp: { en: 'The disc is the sun.' } };
+  assert.equal(resolveNote(notes, 'jp', 'pl'), 'The disc is the sun.');
+});
+
+test('resolveNote: returns empty string when there is no note for the code', () => {
+  const notes = { om: { en: 'x', pl: 'y' } };
+  assert.equal(resolveNote(notes, 'jp', 'en'), '');
+});
+
+test('resolveNote: returns empty string when notes is undefined', () => {
+  assert.equal(resolveNote(undefined, 'om', 'en'), '');
 });
 
 test('isFilterRefinement: refined has strictly more tokens including all base tokens', () => {
@@ -725,6 +745,39 @@ test('puzzles: every entry has en + pl descriptions', () => {
     for (const lang of ['en', 'pl']) {
       if (typeof d[lang] !== 'string' || d[lang].length === 0) {
         offenders.push(`#${entry.n}: missing or empty description.${lang}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
+
+// `notes` is optional (only non-obvious matches get one), but every note
+// that IS present pays the same i18n tax as titles/descriptions: both
+// `en` and `pl`, non-empty. A note may target either an *answer* (shown
+// on the found/missed grid) OR a notable *distractor* — a wrong guess
+// the player can still open from the "most common mistake" rail (e.g.
+// Oman in an Asian-coat-of-arms puzzle: a weapon emblem, not a COA). So
+// the code only has to be a real sovereign country code, not necessarily
+// an answer; that still catches typos that would silently never render.
+const NOTE_SOV_CODES = new Set(flagsGamePool(COUNTRIES, false).map((c) => c.code));
+test('puzzles: every notes entry has en + pl and a valid country code', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const entry of PUZZLES) {
+    const notes = /** @type {Record<string, Record<string, string>> | undefined} */ (entry.notes);
+    if (!notes) continue;
+    for (const [code, note] of Object.entries(notes)) {
+      if (!NOTE_SOV_CODES.has(code)) {
+        offenders.push(`#${entry.n}: note for "${code}" is not a sovereign country code`);
+      }
+      if (!note || typeof note !== 'object') {
+        offenders.push(`#${entry.n}: note for "${code}" is not an object`);
+        continue;
+      }
+      for (const lang of ['en', 'pl']) {
+        if (typeof note[lang] !== 'string' || note[lang].length === 0) {
+          offenders.push(`#${entry.n}: note for "${code}" missing or empty ${lang}`);
+        }
       }
     }
   }
