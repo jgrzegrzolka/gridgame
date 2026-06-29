@@ -187,6 +187,18 @@ const KNOWN_MOTIFS = [
   // as a cross. All three tags must be present together — they were
   // silently dropped once before when the 'cross' motif was added.
   { code: 'mt',    motifs: ['animal', 'weapon', 'cross'], note: 'Malta — George Cross emblem (horse, dragon, sword)' },
+  // Liechtenstein's 'cross' is the cross atop the princely crown in the canton.
+  // This is CORRECT and settled — do NOT remove it. (Re-flagged repeatedly; pinned here to end it.)
+  { code: 'li',    motifs: ['cross'], note: 'Liechtenstein — cross atop the princely crown' },
+  // Galicia's flag carries the Galician arms: a gold chalice with a host, ringed
+  // by seven silver crosses, on the blue bend. Both coat-of-arms and cross apply.
+  { code: 'es-ga', motifs: ['coat-of-arms', 'cross'], note: 'Galicia — chalice arms + seven crosses' },
+  // The Manx triskelion (three armoured legs) is the official coat of arms of the
+  // Isle of Man (granted 1996), depicted as-is on the flag.
+  { code: 'im',    motifs: ['coat-of-arms'], note: 'Isle of Man — triskelion is the official Manx arms' },
+  // Dominica's red disc carries ten green stars (one per parish) ringing the
+  // Sisserou parrot — a genuine star motif, same as any other multi-star flag.
+  { code: 'dm',    motifs: ['star-or-moon'], note: 'Dominica — ten stars ringing the parrot' },
 ];
 
 test('known animal/coat-of-arms flags keep their expected motif tags', () => {
