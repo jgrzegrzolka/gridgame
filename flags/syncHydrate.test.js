@@ -257,14 +257,71 @@ function makeFetchDouble(payload = { daily: [], records: {} }) {
   return { fetchImpl, calls };
 }
 
-test('trySyncDevices: unlinked device returns { ran: false, reason: unlinked } — no network', async () => {
-  const store = makeStore(); // empty: no identityId
+/**
+ * Fetch double that routes by endpoint: the `/sync/link` probe gets the
+ * `link` body, everything else (the hydrate GET) gets `hydrate`. Lets
+ * the self-discovery tests model "server says linked" vs "not linked"
+ * independently of the hydrate payload.
+ *
+ * @param {{ link?: { linked: boolean, linkedAt?: number }, hydrate?: { daily: Array<{ puzzleId: number, foundCodes: string[], totalCount: number }>, records: Record<string, { score: number, durationMs: number }> } }} [opts]
+ */
+function makeRoutingFetch({ link = { linked: false }, hydrate = { daily: [], records: {} } } = {}) {
+  /** @type {string[]} */
+  const calls = [];
+  /** @type {typeof fetch} */
+  const fetchImpl = /** @type {any} */ (async (/** @type {string} */ url) => {
+    calls.push(url);
+    const body = url.includes('/sync/link') ? link : hydrate;
+    return { ok: true, async json() { return body; } };
+  });
+  return { fetchImpl, calls };
+}
+
+test('trySyncDevices: unlinked + probe already done recently → no network, stays unlinked', async () => {
+  // linkProbedAt within the probe interval suppresses the self-discovery
+  // probe, so a genuinely-unlinked device that already checked today
+  // pays zero network — the 99%-of-players fast path.
+  const store = makeStore({ 'gridgame.linkProbedAt': String(1_000_000 - 1000) }); // 1s ago
   const { fetchImpl, calls } = makeFetchDouble();
   const res = await trySyncDevices({
     deviceId: 'd1', store, identityKey: 'gridgame.identityId', fetchImpl, now: 1_000_000,
   });
   assert.deepEqual(res, { ran: false, reason: 'unlinked' });
-  assert.equal(calls.length, 0, 'no fetch fires for unlinked users');
+  assert.equal(calls.length, 0, 'no fetch when the probe was already spent this interval');
+});
+
+test('trySyncDevices: unlinked + probe due, server says NOT linked → one probe, stays unlinked, stamps linkProbedAt', async () => {
+  const store = makeStore(); // no identityId, no prior probe
+  const { fetchImpl, calls } = makeRoutingFetch({ link: { linked: false } });
+  const res = await trySyncDevices({
+    deviceId: 'd1', store, identityKey: 'gridgame.identityId', fetchImpl, now: 1_000_000,
+  });
+  assert.deepEqual(res, { ran: false, reason: 'unlinked' });
+  assert.equal(calls.length, 1, 'exactly the link probe — no hydrate when not linked');
+  assert.ok(calls[0].includes('/sync/link'));
+  assert.equal(store.getItem('gridgame.linkProbedAt'), '1000000', 'probe timestamp stamped');
+  assert.equal(store.getItem('gridgame.identityId'), null, 'identity not back-filled when not linked');
+});
+
+test('trySyncDevices: unlinked + probe says LINKED → back-fills identityId then hydrates', async () => {
+  // The target-device self-heal: server confirms this deviceId is linked,
+  // so we write identityId locally and fall straight through to hydrate.
+  const store = makeStore();
+  const { fetchImpl, calls } = makeRoutingFetch({
+    link: { linked: true, linkedAt: 123 },
+    hydrate: { daily: [{ puzzleId: 24, foundCodes: ['cn', 'pk'], totalCount: 10 }], records: {} },
+  });
+  const res = await trySyncDevices({
+    deviceId: 'd1', store, identityKey: 'gridgame.identityId', fetchImpl, now: 1_000_000,
+  });
+  assert.equal(res.ran, true);
+  if (res.ran) assert.equal(res.ok, true);
+  assert.equal(store.getItem('gridgame.identityId'), 'd1', 'identity back-filled from the link probe');
+  assert.equal(calls.length, 2, 'link probe + hydrate GET');
+  assert.ok(calls[0].includes('/sync/link'));
+  assert.ok(calls[1].includes('/sync/hydrate'));
+  const scores = JSON.parse(/** @type {string} */ (store.getItem('daily.scores')));
+  assert.equal(scores[24].f, 2, 'hydrated row landed so the daily page can revisit');
 });
 
 test('trySyncDevices: linked but within minInterval returns { ran: false, reason: fresh } — no network', async () => {
@@ -336,8 +393,10 @@ test('trySyncDevices: force=true bypasses the fresh gate (still skips when unlin
   assert.equal(res.ran, true);
   if (res.ran) assert.equal(res.ok, true);
   assert.equal(calls.length, 1);
-  // Identity gate still applies — force on an unlinked store is a no-op.
-  const store2 = makeStore();
+  // Identity gate still applies — force on an unlinked store stays
+  // unlinked. (linkProbedAt is recent so the self-discovery probe is
+  // suppressed and this asserts the pure no-op path: no network.)
+  const store2 = makeStore({ 'gridgame.linkProbedAt': String(1_000_000 - 1000) });
   const { fetchImpl: f2, calls: calls2 } = makeFetchDouble();
   const res2 = await trySyncDevices({
     deviceId: 'd1', store: store2, identityKey: 'gridgame.identityId',

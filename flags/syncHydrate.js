@@ -28,6 +28,8 @@
  * network OR a real localStorage.
  */
 
+import { fetchSyncLink } from './syncLinkClient.js';
+
 /**
  * @typedef {{
  *   getItem(key: string): string | null,
@@ -166,7 +168,59 @@ export function applyHydratePayload({ store, payload }) {
 const LAST_HYDRATE_KEY = 'gridgame.lastHydrateAt';
 const DEFAULT_MIN_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
+// Self-discovery throttle. A *target* device (one that another device
+// linked TO) only learns it's linked — and back-fills `identityId` —
+// when something runs the linkedAt probe. The /profile/sync/ page does
+// it, but the daily / archive / flagQuiz boots (which actually need the
+// hydrate) never did, so a target that never reopened the sync page was
+// stuck re-playing puzzles the other device already solved. We now probe
+// from the ambient sync, throttled to at most once per this interval so
+// the 99% of unlinked players pay one cheap GET per day, not one per load.
+const LINK_PROBE_KEY = 'gridgame.linkProbedAt';
+const DEFAULT_LINK_PROBE_INTERVAL_MS = 24 * 60 * 60 * 1000; // 1 day
+
 const ENDPOINT = '/api/v1/sync/hydrate';
+
+/**
+ * One-time-ish self-discovery for a *target* device. Asks the server
+ * whether this deviceId is in a link record (`linkedAt` stamped on its
+ * profile row by `syncMerge`); on a hit, writes `identityId = deviceId`
+ * into localStorage — exactly what /profile/sync/ does on its own boot —
+ * so the rest of trySyncDevices (and every future boot) treats this
+ * device as linked and hydrates.
+ *
+ * Throttled by a persisted `linkProbedAt` timestamp so an unlinked
+ * device pays at most one probe per `probeIntervalMs`. Never throws;
+ * a failed / not-linked probe simply returns false.
+ *
+ * @param {{
+ *   deviceId: string,
+ *   store: HydrateStore,
+ *   identityKey: string,
+ *   now: number,
+ *   fetchImpl?: typeof fetch,
+ *   probeIntervalMs: number,
+ * }} args
+ * @returns {Promise<boolean>}
+ */
+async function tryDiscoverLink({ deviceId, store, identityKey, now, fetchImpl, probeIntervalMs }) {
+  if (!deviceId) return false;
+  let last = 0;
+  try {
+    const raw = store.getItem(LINK_PROBE_KEY);
+    if (typeof raw === 'string') {
+      const n = Number.parseInt(raw, 10);
+      if (Number.isFinite(n) && n > 0) last = n;
+    }
+  } catch {}
+  if (last > 0 && now - last < probeIntervalMs) return false;
+  // Stamp before the await so concurrent tabs don't both probe.
+  try { store.setItem(LINK_PROBE_KEY, String(now)); } catch {}
+  const { linked } = await fetchSyncLink({ deviceId, fetchImpl });
+  if (!linked) return false;
+  try { store.setItem(identityKey, deviceId); } catch {}
+  return true;
+}
 
 /**
  * Background-safe ambient sync. Called on page boots that read local
@@ -204,6 +258,7 @@ const ENDPOINT = '/api/v1/sync/hydrate';
  *   store: HydrateStore & { removeItem?: (k: string) => void },
  *   identityKey: string,
  *   minIntervalMs?: number,
+ *   probeIntervalMs?: number,
  *   now?: number,
  *   fetchImpl?: typeof fetch,
  *   force?: boolean,
@@ -217,6 +272,7 @@ const ENDPOINT = '/api/v1/sync/hydrate';
 export async function trySyncDevices({
   deviceId, store, identityKey,
   minIntervalMs = DEFAULT_MIN_INTERVAL_MS,
+  probeIntervalMs = DEFAULT_LINK_PROBE_INTERVAL_MS,
   now = Date.now(),
   fetchImpl,
   force = false,
@@ -224,7 +280,15 @@ export async function trySyncDevices({
   let identity = null;
   try { identity = store.getItem(identityKey); } catch {}
   if (typeof identity !== 'string' || identity.length === 0) {
-    return { ran: false, reason: 'unlinked' };
+    // No local identity — but this device might be a *target* that was
+    // linked from another device without us ever visiting /profile/sync/
+    // to self-discover. Probe the link endpoint (throttled to once per
+    // `probeIntervalMs`); on a hit, back-fill identityId and fall through
+    // to hydrate immediately. On a miss / throttle, stay unlinked.
+    const discovered = await tryDiscoverLink({
+      deviceId, store, identityKey, now, fetchImpl, probeIntervalMs,
+    });
+    if (!discovered) return { ran: false, reason: 'unlinked' };
   }
 
   if (!force) {
