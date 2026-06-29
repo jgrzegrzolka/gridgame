@@ -538,15 +538,23 @@ export function mountPrivacyMenuItem(opts) {
  * the label on a soft language switch without the page rebuilding the
  * menu.
  *
+ * `reload` (default true) reloads the page 350ms after a change so the
+ * new setting takes effect on a fresh boot — correct for toggles that
+ * change the game's content (e.g. the territory-scope toggle). Pass
+ * `false` for toggles whose effect the caller applies live in
+ * `onChange` (e.g. flagQuiz's show-map toggle, which mounts/hides the
+ * map in place rather than restarting the round).
+ *
  * @param {{
  *   label: string,
  *   labelKey?: string,
  *   initial: boolean,
  *   onChange: (checked: boolean) => void,
+ *   reload?: boolean,
  * }} opts
  * @returns {HTMLLIElement}
  */
-export function buildToggleLi({ label, labelKey, initial, onChange }) {
+export function buildToggleLi({ label, labelKey, initial, onChange, reload = true }) {
   const toggleLi = document.createElement('li');
   const toggleLabel = document.createElement('label');
   toggleLabel.className = 'scope-toggle';
@@ -562,8 +570,9 @@ export function buildToggleLi({ label, labelKey, initial, onChange }) {
   toggleInput.addEventListener('change', () => {
     onChange(toggleInput.checked);
     // Let the slide animation finish so the user sees the toggle move
-    // before the page reloads.
-    setTimeout(() => window.location.reload(), 350);
+    // before the page reloads. Skipped when `reload` is false — the
+    // caller applies the change live in `onChange` instead.
+    if (reload) setTimeout(() => window.location.reload(), 350);
   });
   const trackSpan = document.createElement('span');
   trackSpan.className = 'scope-toggle-track';

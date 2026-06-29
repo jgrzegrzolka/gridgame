@@ -202,6 +202,11 @@ export function bootFlagQuiz() {
       // nickname "Your name: …" item is re-inserted after each rebuild
       // for the same reason; without that, the first langchanged would
       // wipe it.
+      // Set once the round starts (below). The show-map toggle's
+      // onChange reads this lazily, so a toggle before the game exists
+      // (first-visit picker) simply persists the preference.
+      /** @type {{ refreshI18n: () => void, setMapVisible: (show: boolean) => void } | null} */
+      let game = null;
       const rebuildMenu = () => {
         /** @type {HTMLUListElement} */ (quizMenuEl).innerHTML = '';
         buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), all, {
@@ -211,6 +216,9 @@ export function bootFlagQuiz() {
           // yet. Returning players keep their normal aria-current marker.
           currentVariantKey: isFirstVisit ? null : currentVariantKey,
           statsCurrent: false,
+          // Live map mount/hide instead of a page reload. No-op until the
+          // game is created (first-visit picker has no round to overlay).
+          onShowMapChange: (checked) => { if (game) game.setMapVisible(checked); },
         });
         mountNicknameMenuItem({
           rootEl: quizMenuEl,
@@ -239,7 +247,7 @@ export function bootFlagQuiz() {
       let pool = all.filter(VARIANTS[variantKey].filter);
       let modeKey = resolveMode(urlMode, pool.length);
 
-      const game = startGame(variantKey, modeKey, all, raw);
+      game = startGame(variantKey, modeKey, all, raw);
       document.addEventListener('langchanged', () => {
         rebuildMenu();
         game.refreshI18n();
@@ -331,48 +339,44 @@ export function bootFlagQuiz() {
     });
     /** @type {SVGElement | null} */
     let mapSvg = null;
-    if (flagMapEl && MAP_CONFIG[key] && isQuizShowMap()) {
-      const cfg = MAP_CONFIG[key];
-      const variantCodes = variantPool.map((c) => c.code);
-      const excludes = new Set(cfg.cropExcludes || []);
-      const cropCodes = cfg.crop
-        ? variantCodes.filter((c) => !excludes.has(c))
-        : null;
-      flagMapEl.hidden = false;
-      flagMapEl.setAttribute('aria-hidden', 'false');
-      void mountFlagMap({
-        container: flagMapEl,
-        url: cfg.url,
-        cropCodes,
-        cropPad: cfg.cropPad,
-        // Microstate overlays only land on countries the player will
-        // actually be quizzed on — the world map is geographically
-        // wide and we don't want pink rings decorating Caribbean /
-        // Pacific microstates that aren't part of the Asian round.
-        scopeCodes: variantCodes,
-        fullscreenLabel: t('menu.fullscreen', 'Toggle fullscreen'),
-      }).then((svg) => {
-        mapSvg = svg;
-        // Wheel-zoom + pinch + drag-pan + double-tap-reset. Attached
-        // once the SVG is in the DOM (and after cropToCountries has
-        // set the final viewBox, since mapZoom reads that as the
-        // "original" bounds for clamping).
-        if (svg) attachZoomPan(svg);
-      });
+    // True between a successful mountMap and the next hideMap. Tracked
+    // separately from `mapSvg` because the mount is async — the flag is
+    // set synchronously so a rapid toggle-on/off can't double-mount.
+    let mapMounted = false;
+    // Set once the click → flag-zoom handler is attached to flagMapEl.
+    // The handler lives on the container (not the inner SVG), so it
+    // survives re-mounts; we only want to bind it once.
+    let mapClickWired = false;
+    // Answer-paint history: every markCountry pushes {code, kind} here
+    // so a map mounted LATE (the player flips "Show map" on mid-round or
+    // after finishing) can replay the round's fills onto the fresh SVG.
+    /** @type {{ code: string, kind: 'correct' | 'wrong' }[]} */
+    const painted = [];
 
-      // Click → flag zoom popup. The map is non-interactive while the
-      // round is in progress (no `.is-finished` on the section); on
-      // game end `showResult` adds `.is-finished` and every country on
-      // the map becomes clickable for review. Simpler than the older
-      // per-country gate: during play, the player has only one job
-      // (answer the prompt) and we don't want the map distracting them.
-      //
-      // Lookup is built from `raw` (the full 270-entry country list),
-      // not the playable `all` pool — territories like Isle of Man /
-      // Guernsey / Jersey / Faroe Islands aren't quiz items in the
-      // default sovereign pool, but they're still rendered on the map
-      // and the player can click them to see the flag.
-      const byCode = new Map(raw.map((c) => [c.code, c]));
+    /**
+     * Record + paint an answered country. Single source of truth for the
+     * map fill so a late mount replays exactly what live play would have
+     * drawn. No-op on the SVG itself until a map is mounted (mapSvg null).
+     * @param {string} code
+     * @param {'correct' | 'wrong'} kind
+     */
+    function markCountry(code, kind) {
+      painted.push({ code, kind });
+      paintCountryFlag(mapSvg, code, '../flags/svg/', kind);
+    }
+
+    // Click → flag zoom popup. The map is non-interactive while the
+    // round is in progress (no `.is-finished` on the section); once the
+    // round ends `.is-finished` is set and every country becomes a
+    // review surface. Lookup is built from `raw` (the full 270-entry
+    // country list), not the playable `all` pool — territories like Isle
+    // of Man / Guernsey / Jersey / Faroe Islands aren't quiz items in
+    // the default sovereign pool, but they're still rendered on the map
+    // and the player can click them to see the flag.
+    const byCode = new Map(raw.map((c) => [c.code, c]));
+    function wireMapClick() {
+      if (!flagMapEl || mapClickWired) return;
+      mapClickWired = true;
       flagMapEl.addEventListener('click', (e) => {
         if (!flagMapEl.classList.contains('is-finished')) return;
         const target = /** @type {Element | null} */ (e.target);
@@ -405,6 +409,80 @@ export function bootFlagQuiz() {
         });
       });
     }
+
+    function mountMap() {
+      if (!flagMapEl || !MAP_CONFIG[key] || mapMounted) return;
+      const cfg = MAP_CONFIG[key];
+      const variantCodes = variantPool.map((c) => c.code);
+      const excludes = new Set(cfg.cropExcludes || []);
+      const cropCodes = cfg.crop
+        ? variantCodes.filter((c) => !excludes.has(c))
+        : null;
+      mapMounted = true;
+      flagMapEl.hidden = false;
+      flagMapEl.setAttribute('aria-hidden', 'false');
+      // Mounting after the round already ended (player flipped the toggle
+      // on the result screen): drop the section into the result panel and
+      // mark it reviewable, mirroring what showResult does for a map that
+      // was already up at finish.
+      if (gameOver) {
+        resultEl.insertBefore(flagMapEl, leaderboardEl);
+        flagMapEl.classList.add('is-finished');
+      }
+      void mountFlagMap({
+        container: flagMapEl,
+        url: cfg.url,
+        cropCodes,
+        cropPad: cfg.cropPad,
+        // Microstate overlays only land on countries the player will
+        // actually be quizzed on — the world map is geographically
+        // wide and we don't want pink rings decorating Caribbean /
+        // Pacific microstates that aren't part of the Asian round.
+        scopeCodes: variantCodes,
+        fullscreenLabel: t('menu.fullscreen', 'Toggle fullscreen'),
+      }).then((svg) => {
+        mapSvg = svg;
+        // Wheel-zoom + pinch + drag-pan + double-tap-reset. Attached
+        // once the SVG is in the DOM (and after cropToCountries has
+        // set the final viewBox, since mapZoom reads that as the
+        // "original" bounds for clamping).
+        if (svg) {
+          attachZoomPan(svg);
+          // Replay the round so far — fills every country already
+          // answered before this (possibly late) mount.
+          for (const p of painted) {
+            paintCountryFlag(svg, p.code, '../flags/svg/', p.kind);
+          }
+        }
+      });
+      wireMapClick();
+    }
+
+    function hideMap() {
+      if (!flagMapEl) return;
+      mapMounted = false;
+      mapSvg = null;
+      flagMapEl.hidden = true;
+      flagMapEl.setAttribute('aria-hidden', 'true');
+      flagMapEl.classList.remove('is-finished');
+      // Drop the inlined SVG. The click handler stays bound to flagMapEl
+      // (the container) and is gated on `.is-finished`, so it's inert
+      // until a re-mount restores both the SVG and that class.
+      flagMapEl.innerHTML = '';
+    }
+
+    /**
+     * Live response to the burger menu's "Show map" toggle — mount or
+     * hide the map in place, no page reload. Variants with no map asset
+     * (none today, but the table is the gate) silently no-op.
+     * @param {boolean} show
+     */
+    function setMapVisible(show) {
+      if (show) mountMap();
+      else hideMap();
+    }
+
+    if (isQuizShowMap()) mountMap();
 
     // Result-screen data is captured once when showResult fires so a
     // soft language switch can re-paint the localized labels (Final
@@ -540,10 +618,10 @@ export function bootFlagQuiz() {
         }
         tile.classList.add('correct');
         disableAllTiles();
-        // No-op unless the flag-map gate above mounted the SVG;
         // currentAnswer.code is the ISO2 of the country in question.
         // Fill the country's contour with its flag + green outline.
-        paintCountryFlag(mapSvg, currentAnswer.code, '../flags/svg/', 'correct');
+        // Records into `painted` so a map mounted later replays it.
+        markCountry(currentAnswer.code, 'correct');
         advanceTo(quiz.next(), 250);
       } else if (timed) {
         // 60s is one-shot per question, same as count mode: a wrong
@@ -571,7 +649,7 @@ export function bootFlagQuiz() {
         // green if that country later came up correct); the cabinet pattern
         // makes the asked-about marking honest — a wrong stays wrong unless
         // revisited and corrected.
-        paintCountryFlag(mapSvg, currentAnswer.code, '../flags/svg/', 'wrong');
+        markCountry(currentAnswer.code, 'wrong');
         quiz.addToCabinet(currentAnswer);
         advanceTo(quiz.next(), 1200);
       } else {
@@ -593,7 +671,7 @@ export function bootFlagQuiz() {
         // the player missed — flag-fill + red-outline *that*, not the wrong
         // choice. The clicked-wrong tile's country may not have been asked
         // yet and shouldn't get pre-marked here.
-        paintCountryFlag(mapSvg, currentAnswer.code, '../flags/svg/', 'wrong');
+        markCountry(currentAnswer.code, 'wrong');
         advanceTo(quiz.next(), 1200);
       }
     }
@@ -900,6 +978,9 @@ export function bootFlagQuiz() {
         // can fire mid-game before showResult sets leaderboardState).
         paintLeaderboard();
       },
+      // Burger-menu "Show map" toggle hook — mount/hide the map live
+      // over the current round (or result screen) instead of reloading.
+      setMapVisible,
     };
   }
 }

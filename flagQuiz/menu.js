@@ -23,16 +23,23 @@ import { buildToggleLi } from '../common.js';
  * The scope toggle is built here too so the toggle's wiring (label,
  * track, thumb, delayed reload) lives in one place.
  *
+ * `onShowMapChange` (optional) is invoked with the new checked state
+ * when the show-map toggle flips, AFTER the setting is persisted. The
+ * quiz page passes the live game's `setMapVisible` so the map
+ * mounts/hides in place instead of reloading the page. Pages with no
+ * live map (e.g. the stats sub-page) omit it — the toggle just
+ * persists the preference for the next quiz.
+ *
  * @param {HTMLUListElement} menuEl
  * @param {Country[]} all
- * @param {{ relativeBase: string, currentVariantKey: string | null, statsCurrent: boolean }} opts
+ * @param {{ relativeBase: string, currentVariantKey: string | null, statsCurrent: boolean, onShowMapChange?: (checked: boolean) => void }} opts
  */
 export function buildQuizMenu(menuEl, all, opts) {
-  const { relativeBase, currentVariantKey, statsCurrent } = opts;
+  const { relativeBase, currentVariantKey, statsCurrent, onShowMapChange } = opts;
   const includeAll = isQuizIncludeAll();
 
   menuEl.appendChild(buildScopeToggleLi(includeAll));
-  menuEl.appendChild(buildMapToggleLi(isQuizShowMap()));
+  menuEl.appendChild(buildMapToggleLi(isQuizShowMap(), onShowMapChange));
 
   const WIDE_GROUP = new Set(['countries']);
   let dividerPlaced = false;
@@ -160,12 +167,21 @@ function buildScopeToggleLi(includeAll) {
   });
 }
 
-/** @param {boolean} showMap */
-function buildMapToggleLi(showMap) {
+/**
+ * @param {boolean} showMap
+ * @param {((checked: boolean) => void)} [onShowMapChange]
+ */
+function buildMapToggleLi(showMap, onShowMapChange) {
   return buildToggleLi({
     label: t('menu.showMap', 'Show map'),
     labelKey: 'menu.showMap',
     initial: showMap,
-    onChange: (checked) => setQuizShowMap(localStorage, checked),
+    // No reload — the map is a view over state the page already holds,
+    // so we mount/hide it live rather than restarting the round.
+    reload: false,
+    onChange: (checked) => {
+      setQuizShowMap(localStorage, checked);
+      if (onShowMapChange) onShowMapChange(checked);
+    },
   });
 }
