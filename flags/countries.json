@@ -1356,7 +1356,8 @@
       "animal",
       "bird",
       "coat-of-arms",
-      "cross"
+      "cross",
+      "star-or-moon"
     ],
     "stripesOnly": null
   },
@@ -1841,7 +1842,10 @@
       "red",
       "yellow"
     ],
-    "motifs": [],
+    "motifs": [
+      "coat-of-arms",
+      "cross"
+    ],
     "stripesOnly": null
   },
   {
@@ -2340,7 +2344,9 @@
     "ambiguousColors": [
       "black"
     ],
-    "motifs": [],
+    "motifs": [
+      "coat-of-arms"
+    ],
     "stripesOnly": null
   },
   {
@@ -2476,7 +2482,6 @@
     "motifs": [
       "animal",
       "bird",
-      "coat-of-arms",
       "star-or-moon"
     ],
     "stripesOnly": null
