@@ -277,8 +277,32 @@ export function pillLabel(group, value, sign, translate) {
     body = translate(`status.${value}`, value);
   }
   if (sign === 'exclude') {
-    return `${translate('findFlag.notPrefix', 'not ')}${body}`;
+    return `${translate('findFlag.notPrefix', 'not ')}${excludeBody(group, value, body, translate)}`;
   }
+  return body;
+}
+
+/**
+ * Pick the noun form that reads correctly after the localized exclude
+ * prefix. English "not " takes the bare nominative ("not blue"), but
+ * Polish "bez " governs the genitive ("bez niebieskiego", not "bez
+ * niebieski"). We look up a per-language genitive override keyed by
+ * group + value and fall back to the nominative `body` when none exists
+ * — so English (which has no override table) renders unchanged, and any
+ * untranslated value degrades gracefully to its base form instead of
+ * throwing. Only colour and motif are inflected: those are the groups
+ * that actually appear as excludes in titles, and the home page already
+ * pins the genitive shape with `notCrescent: "bez półksiężyca"`.
+ *
+ * @param {keyof Filters} group
+ * @param {string} value
+ * @param {string} body - the nominative form, used as the fallback
+ * @param {(key: string, fallback: string) => string} translate
+ * @returns {string}
+ */
+function excludeBody(group, value, body, translate) {
+  if (group === 'color') return translate(`colorExclude.${value}`, body);
+  if (group === 'motif') return translate(`motifExclude.${value}`, body);
   return body;
 }
 

@@ -311,6 +311,26 @@ test('pillLabel: exclude prefixes a lowercase "not " on the same bare noun', () 
   assert.equal(pillLabel('motif', 'cross', 'exclude', idTranslate), 'not cross');
 });
 
+test('pillLabel: exclude uses the genitive override when one exists, falling back to the base noun', () => {
+  // Polish "bez " governs the genitive — "bez niebieskiego", not "bez
+  // niebieski". A translate table that supplies colorExclude/motifExclude
+  // entries must feed those into the prefixed label; values without an
+  // override (here: green) degrade to the nominative form.
+  const plTranslate = (/** @type {string} */ k, /** @type {string} */ fallback) =>
+    ({
+      'findFlag.notPrefix': 'bez ',
+      'color.blue': 'niebieski',
+      'colorExclude.blue': 'niebieskiego',
+      'color.green': 'zielony',
+      'motif.cross': 'krzyż',
+      'motifExclude.cross': 'krzyża',
+    })[k] ?? fallback;
+  assert.equal(pillLabel('color', 'blue', 'exclude', plTranslate), 'bez niebieskiego');
+  assert.equal(pillLabel('motif', 'cross', 'exclude', plTranslate), 'bez krzyża');
+  // green has no colorExclude override here → falls back to the nominative
+  assert.equal(pillLabel('color', 'green', 'exclude', plTranslate), 'bez zielony');
+});
+
 test('pillLabel: stripesOnly renders the baked English fallback when no translation is supplied', () => {
   // No translation table → idTranslate returns the fallback the renderer
   // hands it (`"<orientation> stripes only"`).
