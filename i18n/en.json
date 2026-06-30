@@ -520,7 +520,27 @@
     "orange": "orange",
     "violet": "violet"
   },
+  "colorExclude": {
+    "red": "red",
+    "white": "white",
+    "blue": "blue",
+    "green": "green",
+    "yellow": "yellow",
+    "black": "black",
+    "orange": "orange",
+    "violet": "violet"
+  },
   "motif": {
+    "animal": "animal",
+    "bird": "bird",
+    "coat-of-arms": "coat of arms",
+    "weapon": "weapon",
+    "star-or-moon": "star or moon",
+    "cross": "cross",
+    "union-jack": "Union Jack",
+    "eu-member": "EU member"
+  },
+  "motifExclude": {
     "animal": "animal",
     "bird": "bird",
     "coat-of-arms": "coat of arms",

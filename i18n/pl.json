@@ -520,6 +520,16 @@
     "orange": "pomarańczowy",
     "violet": "fioletowy"
   },
+  "colorExclude": {
+    "red": "czerwonego",
+    "white": "białego",
+    "blue": "niebieskiego",
+    "green": "zielonego",
+    "yellow": "żółtego",
+    "black": "czarnego",
+    "orange": "pomarańczowego",
+    "violet": "fioletowego"
+  },
   "motif": {
     "animal": "zwierzę",
     "bird": "ptak",
@@ -529,6 +539,16 @@
     "cross": "krzyż",
     "union-jack": "Union Jack",
     "eu-member": "członek UE"
+  },
+  "motifExclude": {
+    "animal": "zwierzęcia",
+    "bird": "ptaka",
+    "coat-of-arms": "herbu",
+    "weapon": "broni",
+    "star-or-moon": "gwiazdy lub księżyca",
+    "cross": "krzyża",
+    "union-jack": "Union Jacka",
+    "eu-member": "członka UE"
   },
   "stripesOnly": {
     "horizontal": "tylko poziome pasy",
