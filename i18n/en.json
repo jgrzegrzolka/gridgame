@@ -606,6 +606,20 @@
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",
+    "ch": {
+      "intro": "Few flags are as old — or as square — as Switzerland's. The white cross on a red field was a battlefield mark of the Old Swiss Confederacy centuries before it belonged to a country: it is first recorded at the Battle of Laupen in 1339, where confederate soldiers sewed white crosses onto their clothes to tell friend from foe.\n\nThe design goes back further still, to the war banner of the Holy Roman Empire, which bore the same white cross on red — the white long read as the purity of the cause, the red as the blood of the martyrs. What began as a war sign became, five centuries later, the flag of modern Switzerland.",
+      "imperial": "The white cross on red as the Old Swiss Confederacy's heraldic emblem — by legend drawn from the war banner of the Holy Roman Empire, and worn into battles like Laupen (1339).",
+      "flamme": "Confederate cantons carried square battle standards in the flammé style — flame-like tongues radiating from a central cross, each canton in its own colours. This one is Bern's red and black.",
+      "helvetic": "When France invaded in 1798, the puppet Helvetic Republic swapped the cross for a green-red-yellow tricolour. Imposed from outside, it lasted only about five years.",
+      "current": "After Napoleon's fall the cantons returned to the white cross on red. General Dufour unified it for the federal army, and the 1848 constitution made it the flag of the new federal state — square, as it remains.",
+      "fact": {
+        "square": "Switzerland is one of only two countries with a square national flag — the other is Vatican City. The one exception is the flag flown on Swiss lakes and rivers, which is an ordinary rectangle.",
+        "redcross": "The Red Cross emblem is simply the Swiss flag reversed — a red cross on white — adopted in 1864 to honour Switzerland, home of the movement's founder Henry Dunant.",
+        "proportions": "The white cross doesn't touch the edges: its four arms are equal, and each arm is one-sixth longer than it is wide.",
+        "red2017": "The exact shade of red went undefined by law until 2017, when Switzerland finally fixed it — a pure red, close to Pantone 485.",
+        "dufour": "General Guillaume-Henri Dufour, who standardised the flag, was also a cartographer and engineer; Switzerland's highest peak, the Dufourspitze, is named after him."
+      }
+    },
     "gr": {
       "intro": "For centuries Greece was ruled by the Ottoman Empire, yet Greek merchant ships still sailed under their own colours. From that maritime tradition — and from the Orthodox cross at the heart of Greek identity — grew the flag Greece flies today.\n\nCuriously, the exact shade of blue has never been fixed by law — over the centuries it has drifted between pale sky-blue and deep navy.",
       "ottoman": "Under Ottoman rule, Greek Orthodox merchant ships flew a red flag crossed by a blue stripe.",

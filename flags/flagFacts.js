@@ -40,6 +40,22 @@
 
 /** @type {Record<string, FlagFacts>} */
 export const FLAG_FACTS = {
+  ch: {
+    introKey: 'flagFacts.ch.intro',
+    timeline: [
+      { year: '12th–14th c.', img: 'history/ch-arms.svg', captionKey: 'flagFacts.ch.imperial' },
+      { year: '17th–18th c.', img: 'history/ch-flamme.svg', captionKey: 'flagFacts.ch.flamme' },
+      { year: '1798', img: 'history/ch-helvetic.svg', captionKey: 'flagFacts.ch.helvetic' },
+      { year: '1848', img: 'history/ch-square.svg', captionKey: 'flagFacts.ch.current' },
+    ],
+    factKeys: [
+      'flagFacts.ch.fact.square',
+      'flagFacts.ch.fact.redcross',
+      'flagFacts.ch.fact.proportions',
+      'flagFacts.ch.fact.red2017',
+      'flagFacts.ch.fact.dufour',
+    ],
+  },
   gr: {
     introKey: 'flagFacts.gr.intro',
     timeline: [
