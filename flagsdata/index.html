@@ -62,12 +62,14 @@
     <div class="actions-row">
       <a href="../" data-i18n="menu.home">Home</a>
     </div>
-    <dialog id="zoom">
-      <button type="button" class="zoom-close" aria-label="Close" data-i18n-attr="aria-label:zoom.close">×</button>
-      <img alt="" />
-      <p></p>
-      <div class="country-facts" hidden></div>
-      <pre class="country-data"></pre>
+    <dialog id="zoom" tabindex="-1">
+      <button type="button" class="zoom-close" aria-label="Close" data-i18n-attr="aria-label:zoom.close">&times;</button>
+      <div class="zoom-scroll">
+        <img alt="" />
+        <p></p>
+        <div class="country-facts" hidden></div>
+        <pre class="country-data"></pre>
+      </div>
     </dialog>
     <script type="module">
       import { bootFlagsData } from './page.js';
