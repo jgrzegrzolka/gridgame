@@ -119,6 +119,11 @@ export function bootFlagsData() {
   function openZoom(c) {
     const displayName = countryName(c);
     openFlagZoom(zoom, { code: c.code, displayName, svgBase: '../flags/svg/' });
+    // showModal() autofocuses the first focusable child (the × button),
+    // which paints a focus ring on every open. Move focus to the dialog
+    // itself (tabindex="-1", outline suppressed) so the × only shows a ring
+    // when a keyboard user Tabs to it. Esc still closes natively.
+    zoom.focus();
     zoomCountry = c;
     paintFacts(c);
     if (SHOW_DATA) zoomData.textContent = JSON.stringify(c, null, 2);

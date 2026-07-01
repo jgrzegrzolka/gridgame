@@ -947,11 +947,14 @@ body::after {
 dialog#zoom {
   width: min(80vw, 320px);
   padding: 16px;
-  border: none;
-  border-radius: 0;
+  /* Match the app's other popups (`.rules-help` / `.help-dialog`): a soft
+   * 1 px hairline border + 8 px rounded corners, so the flag zoom reads as
+   * the same family of card rather than a sharp-cornered outlier. */
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 8px;
   outline: none;
   background: var(--surface-color);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
   opacity: 0;
   transform: scaleX(0);
   transition: opacity 150ms ease,
@@ -1206,6 +1209,7 @@ dialog#zoom p.zoom-note {
 .rules-btn,
 .help-btn,
 .picker-close,
+.zoom-close,
 .game-tile {
   font: inherit;
   font-size: 14px;
@@ -1229,6 +1233,7 @@ dialog#zoom p.zoom-note {
 .rules-btn:hover,
 .help-btn:hover,
 .picker-close:hover,
+.zoom-close:hover,
 .game-tile:hover {
   background: var(--surface-hover-color);
 }
@@ -1239,6 +1244,7 @@ dialog#zoom p.zoom-note {
 .rules-btn:active,
 .help-btn:active,
 .picker-close:active,
+.zoom-close:active,
 .game-tile:active {
   /* Border-only pink so the bg / text stay legible during press; on
    * release, the base rule's 600 ms border-color transition fades it
@@ -1264,11 +1270,12 @@ dialog#zoom p.zoom-note {
 .picker-close {
   padding: 6px 14px;
 }
-/* Square 32×32 "?" trigger that opens the rules / help modals. Shares
- * the full pill recipe (bg, border, hover, press, fade-back) — only
- * the geometry differs: fixed slot, centered glyph. */
+/* Square 32×32 icon buttons that share the full pill recipe (bg, border,
+ * hover, press, fade-back) — only the geometry differs: fixed slot,
+ * centered glyph. The "?" rules/help triggers and the flag-zoom's × close. */
 .rules-btn,
-.help-btn {
+.help-btn,
+.zoom-close {
   width: 32px;
   height: 32px;
   padding: 0;
