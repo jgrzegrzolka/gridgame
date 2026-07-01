@@ -4,15 +4,25 @@ Historical flag SVGs used by the flag-facts detail panel (`flags/flagFacts.js`,
 rendered on `/flagsdata/` when a flag is clicked). The *current* flags live in
 `flags/svg/`; only superseded / historical designs live here.
 
-All files below are from Wikimedia Commons and are in the **public domain**
-(flags are not eligible for copyright, and these designs long predate any
-modern authorship). Filenames are renamed to `<code>-<era>.svg` for the repo.
+All files below are from Wikimedia Commons. Most are **public domain** (flags
+are not eligible for copyright, and these designs long predate any modern
+authorship); a few are contributor-drawn SVG renderings under a Creative
+Commons licence — see the Licence column and the attribution note below.
+Filenames are renamed to `<code>-<era>.svg` for the repo.
 
-| File | Source (Wikimedia Commons) | Era |
-| --- | --- | --- |
-| `gr-ottoman.svg` | Roman (Orthodox Christian) Merchant Flag 1453-1793.svg | Ottoman-rule Greek/Orthodox merchant flag — red with a blue stripe |
-| `gr-1769.svg` | Greek Independence 1821.svg | Orlov Revolt (1769) banner — white field, sky-blue cross |
-| `gr-1822-land.svg` | Flag of Greece (1822-1978).svg | 1822 land flag — white cross on blue |
+| File | Source (Wikimedia Commons) | Licence | Era |
+| --- | --- | --- | --- |
+| `gr-ottoman.svg` | Roman (Orthodox Christian) Merchant Flag 1453-1793.svg | Public domain | Ottoman-rule Greek/Orthodox merchant flag — red with a blue stripe |
+| `gr-1769.svg` | Greek Independence 1821.svg | Public domain | Orlov Revolt (1769) banner — white field, sky-blue cross |
+| `gr-1822-land.svg` | Flag of Greece (1822-1978).svg | Public domain | 1822 land flag — white cross on blue |
+| `ch-arms.svg` | Swiss Federal CoA triangular.svg | Public domain | Confederate heraldic emblem — white cross on a red shield |
+| `ch-flamme.svg` | Militärfahne der Stadt und Republik Bern.svg | CC BY-SA 4.0 (Oliver65536) | 17th–18th c. Bernese cantonal war flag in the flammé style — red & black |
+| `ch-helvetic.svg` | Flag of the Helvetic Republic (French).svg | Public domain | 1798 French-imposed Helvetic Republic tricolour — green/red/yellow |
+| `ch-square.svg` | Flag of Switzerland.svg | Public domain | Current national flag, square (1:1) |
+
+**Attribution (CC BY-SA):** `ch-flamme.svg` is a derivative of *"Militärfahne der
+Stadt und Republik Bern"* by Wikimedia Commons user **Oliver65536**, licensed
+**CC BY-SA 4.0**; used unmodified and re-shared under the same licence.
 
 When adding a new country's history, drop its historical SVGs here following the
 same `<code>-<era>.svg` naming and record the provenance + licence above.
