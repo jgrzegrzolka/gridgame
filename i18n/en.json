@@ -695,14 +695,11 @@
       }
     },
     "pl": {
-      "intro": "Poland's flag is one of Europe's oldest ideas in its simplest form: white above red, taken straight from the medieval coat of arms — a white eagle on a red shield. The colours weren't designed; they were inherited.\n\nFor centuries the White Eagle flew on royal banners, but Poland had no single flag. The Sejm declared white and red the national colours during the November Uprising of 1831, and adopted the plain bicolour as the official flag in 1919, a year after independence.",
-      "eagle": "The White Eagle on a red shield — Poland's emblem since the 13th century. The flag's colours are simply the eagle (white) and its field (red).",
-      "current": "A year after regaining independence, the Sejm adopted the plain white-over-red bicolour on 1 August 1919.",
+      "intro": "Poland's flag couldn't be simpler: white over red — the two colours of the medieval coat of arms, a white eagle on a red shield. Nobody designed them; they were inherited. White and red became the national colours in 1831, and the plain bicolour the official flag in 1919.",
+      "eagle": "The White Eagle on a red shield — the flag's white and red come straight from it.",
+      "current": "The plain white-over-red bicolour, official since 1919.",
       "fact": {
-        "whiteontop": "White sits above red because in Polish heraldry the eagle — the charge — outranks its red field. Flip the flag over and you get Indonesia or Monaco.",
-        "ensign": "The plain bicolour is the everyday flag; a version with the White Eagle in the white band is reserved for embassies, ships and airports.",
-        "shade": "The exact red went legally undefined until a 1927 decree fixed it as vermilion; a 1980 act later nudged it toward crimson.",
-        "colours": "Poland's colours weren't chosen — they were inherited from the coat of arms, making them among the oldest national colours in Europe."
+        "whiteontop": "White goes on top because the eagle's colour outranks the field's — flip the flag and you get Indonesia or Monaco."
       }
     }
   },
