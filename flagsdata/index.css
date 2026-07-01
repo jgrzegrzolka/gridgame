@@ -267,6 +267,11 @@ dialog#zoom.has-facts {
   box-sizing: border-box;
   width: min(92vw, 560px);
   max-height: 88vh;
+  /* No horizontal padding here — it lives on `.zoom-scroll` below so the
+   * scrollbar renders at the card's inner edge (close to the border) and the
+   * padding reads as the gap between the text and the scrollbar, not between
+   * the scrollbar and the border. Top/bottom stay 16. */
+  padding: 16px 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -276,6 +281,25 @@ dialog#zoom.has-facts .zoom-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Content inset lives here (see the dialog note above): the scrollbar sits
+   * at this element's right edge — near the card border — and this 24 px
+   * right padding is the breathing room between the text and the scrollbar. */
+  padding: 0 24px;
+  /* A quiet, hairline-light scrollbar so it doesn't compete with the story.
+   * Firefox / Chrome 121+ standard props + a WebKit fallback below, both
+   * using the palette's lightest grey (--muted-soft-color) for the thumb. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted-soft-color) transparent;
+}
+dialog#zoom.has-facts .zoom-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+dialog#zoom.has-facts .zoom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+dialog#zoom.has-facts .zoom-scroll::-webkit-scrollbar-thumb {
+  background: var(--muted-soft-color);
+  border-radius: 4px;
 }
 /* On phones the story popup is near full-screen — pin it to an explicit
  * 16 px inset on every side instead of relying on width math (which is
