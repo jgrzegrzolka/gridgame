@@ -25,6 +25,8 @@ Filenames are renamed to `<code>-<era>.svg` for the repo.
 | `gb-wls-stdavid.svg` | Flag of Saint David.svg | Public domain | Cross of St David — gold cross on black |
 | `ie-patrick.svg` | Saint Patrick's Saltire.svg | Public domain | Saltire of St Patrick — red diagonal cross on white (Ireland's element of the Union Jack) |
 | `ie-harp.svg` | Green Harp Flag of Ireland.svg | CC0 | Green harp flag of Ireland — gold harp on green |
+| `pl-eagle.svg` | Herb Polski.svg | Public domain | The White Eagle — Poland's coat of arms, a white crowned eagle on a red shield (source of the flag's colours) |
+| `pl-cockade.svg` | National Cockade of Poland.svg | CC BY-SA 4.0 (Tibetan Pop Rocks) | White-and-red national cockade of the November Uprising (1831), when white and red were declared the national colours |
 
 **Attribution (CC BY-SA):**
 - `ch-flamme.svg` is a derivative of *"Militärfahne der Stadt und Republik Bern"*
@@ -33,6 +35,9 @@ Filenames are renamed to `<code>-<era>.svg` for the repo.
 - `gb-sct-lion.svg` is *"Royal Banner of Scotland"* by Wikimedia Commons user
   **Sodacan**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under the
   same licence.
+- `pl-cockade.svg` is *"National Cockade of Poland"* by Wikimedia Commons user
+  **Tibetan Pop Rocks**, licensed **CC BY-SA 4.0**; used unmodified and re-shared
+  under the same licence.
 
 `ie-harp.svg` is released under **CC0** (public-domain dedication) — no
 attribution required, listed for provenance only.
