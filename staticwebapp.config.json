@@ -2,7 +2,13 @@
   "$schema": "https://json.schemastore.org/staticwebapp.config.json",
   "routes": [
     {
-      "route": "/*.{js,css,json,svg}",
+      "route": "/*.{js,css,json}",
+      "headers": {
+        "cache-control": "public, max-age=31536000, s-maxage=600"
+      }
+    },
+    {
+      "route": "/*.svg",
       "headers": {
         "cache-control": "public, max-age=31536000, immutable"
       }
