@@ -695,16 +695,14 @@
       }
     },
     "pl": {
-      "intro": "Flaga Polski to jeden z najstarszych europejskich pomysłów w najprostszej postaci: dwa pasy, biały nad czerwonym, wzięte wprost ze średniowiecznego herbu — białego orła na czerwonej tarczy. Barw nigdy nie zaprojektowano. Zostały odziedziczone.\n\nPrzez stulecia Orzeł Biały widniał na królewskich chorągwiach i tarczach, ale Polska nie miała jednej flagi narodowej. Dopiero w czasie powstania listopadowego, w 1831 roku, Sejm uznał biel i czerwień za barwy narodowe; i dopiero w 1919 roku, rok po powrocie Polski na mapę Europy, prosty biało-czerwony dwupas stał się oficjalną flagą.",
-      "eagle": "Orzeł Biały na czerwonej tarczy — godło Polski od XIII wieku. Dwie barwy flagi to po prostu orzeł (biel) i pole, na którym stoi (czerwień).",
-      "cockade": "W czasie powstania listopadowego przeciw władzy Rosji Sejm uznał biel i czerwień za barwy narodowe 7 lutego 1831 roku, ujednolicając niespójne oznaki, które żołnierze nosili wcześniej.",
-      "current": "Rok po odzyskaniu niepodległości Sejm przyjął prosty biało-czerwony dwupas jako flagę narodową 1 sierpnia 1919 roku.",
+      "intro": "Flaga Polski to jeden z najstarszych europejskich pomysłów w najprostszej postaci: biel nad czerwienią, wzięta wprost ze średniowiecznego herbu — białego orła na czerwonej tarczy. Barw nie zaprojektowano; zostały odziedziczone.\n\nPrzez stulecia Orzeł Biały widniał na królewskich chorągwiach, ale Polska nie miała jednej flagi. Sejm uznał biel i czerwień za barwy narodowe w czasie powstania listopadowego 1831 roku, a prosty dwupas przyjął jako oficjalną flagę w 1919 roku, rok po odzyskaniu niepodległości.",
+      "eagle": "Orzeł Biały na czerwonej tarczy — godło Polski od XIII wieku. Barwy flagi to po prostu orzeł (biel) i jego pole (czerwień).",
+      "current": "Rok po odzyskaniu niepodległości Sejm przyjął prosty biało-czerwony dwupas 1 sierpnia 1919 roku.",
       "fact": {
-        "whiteontop": "Biel jest nad czerwienią, bo w polskiej heraldyce barwa godła — Orła Białego — stoi wyżej niż barwa pola. Odwróć flagę do góry nogami, a otrzymasz flagę Indonezji lub Monako.",
-        "ensign": "Zwykły dwupas to flaga na co dzień. Druga oficjalna wersja, z Orłem Białym w białym pasie, jest zarezerwowana dla ambasad, statków i lotnisk — obywatele mają wywieszać tę prostą.",
-        "space": "Polska flaga okrążyła Ziemię w 1978 roku na pokładzie Sojuza 30 z Mirosławem Hermaszewskim, wciąż jedynym Polakiem, który poleciał w kosmos.",
-        "shade": "Dokładny odcień czerwieni pozostawał prawnie nieokreślony aż do dekretu prezydenckiego z 1927 roku, który ustalił go jako cynober; ustawa z 1980 roku przesunęła go później ku karmazynowi, używając precyzyjnych współrzędnych barwy.",
-        "colours": "Barw Polski nie wybrano — odziedziczono je ze średniowiecznego herbu, co czyni je jednymi z najstarszych barw narodowych w Europie, formalnie ogłoszonymi 7 lutego 1831 roku."
+        "whiteontop": "Biel jest nad czerwienią, bo w polskiej heraldyce orzeł — godło — stoi wyżej niż jego czerwone pole. Odwróć flagę, a otrzymasz flagę Indonezji lub Monako.",
+        "ensign": "Zwykły dwupas to flaga na co dzień; wersja z Orłem Białym w białym pasie jest zarezerwowana dla ambasad, statków i lotnisk.",
+        "shade": "Dokładny odcień czerwieni pozostawał prawnie nieokreślony aż do dekretu z 1927 roku, który ustalił go jako cynober; ustawa z 1980 roku przesunęła go później ku karmazynowi.",
+        "colours": "Barw Polski nie wybrano — odziedziczono je z herbu, co czyni je jednymi z najstarszych barw narodowych w Europie."
       }
     }
   },

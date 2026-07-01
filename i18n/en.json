@@ -695,16 +695,14 @@
       }
     },
     "pl": {
-      "intro": "Poland's flag is one of Europe's oldest ideas in its simplest form: two stripes, white above red, taken straight from the medieval coat of arms — a white eagle on a red shield. The colours were never designed. They were inherited.\n\nFor centuries the White Eagle flew on royal banners and shields, but Poland had no single national flag. Only during the November Uprising of 1831 did the Sejm declare white and red the national colours; and only in 1919, a year after Poland returned to the map of Europe, was the plain white-over-red bicolour made the official flag.",
-      "eagle": "The White Eagle on a red shield — Poland's emblem since the 13th century. The flag's two colours are simply the eagle (white) and the field it stands on (red).",
-      "cockade": "During the November Uprising against Russian rule, the Sejm declared white and red the national colours on 7 February 1831, unifying the mismatched insignia soldiers had worn until then.",
-      "current": "A year after regaining independence, the Sejm adopted the plain white-over-red bicolour as the national flag on 1 August 1919.",
+      "intro": "Poland's flag is one of Europe's oldest ideas in its simplest form: white above red, taken straight from the medieval coat of arms — a white eagle on a red shield. The colours weren't designed; they were inherited.\n\nFor centuries the White Eagle flew on royal banners, but Poland had no single flag. The Sejm declared white and red the national colours during the November Uprising of 1831, and adopted the plain bicolour as the official flag in 1919, a year after independence.",
+      "eagle": "The White Eagle on a red shield — Poland's emblem since the 13th century. The flag's colours are simply the eagle (white) and its field (red).",
+      "current": "A year after regaining independence, the Sejm adopted the plain white-over-red bicolour on 1 August 1919.",
       "fact": {
-        "whiteontop": "White sits above red because in Polish heraldry the colour of the charge — the White Eagle — ranks above the colour of the field. Turn the flag upside down and you have the flag of Indonesia or Monaco.",
-        "ensign": "The plain bicolour is the everyday flag. A second official version, with the White Eagle set in the white band, is reserved for embassies, ships and airports — ordinary citizens are meant to fly the plain one.",
-        "space": "A Polish flag orbited Earth in 1978 aboard Soyuz 30 with Mirosław Hermaszewski, still the only Pole ever to fly in space.",
-        "shade": "The exact red went legally undefined until a presidential decree of 1927 fixed it as vermilion; a 1980 act later nudged it toward crimson using precise colour coordinates.",
-        "colours": "Poland's colours weren't chosen — they were inherited from the medieval coat of arms, making them among the oldest national colours in Europe, formally declared on 7 February 1831."
+        "whiteontop": "White sits above red because in Polish heraldry the eagle — the charge — outranks its red field. Flip the flag over and you get Indonesia or Monaco.",
+        "ensign": "The plain bicolour is the everyday flag; a version with the White Eagle in the white band is reserved for embassies, ships and airports.",
+        "shade": "The exact red went legally undefined until a 1927 decree fixed it as vermilion; a 1980 act later nudged it toward crimson.",
+        "colours": "Poland's colours weren't chosen — they were inherited from the coat of arms, making them among the oldest national colours in Europe."
       }
     }
   },
