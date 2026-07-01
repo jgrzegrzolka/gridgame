@@ -833,6 +833,9 @@
     "motifs": [
       "star-or-moon"
     ],
+    "aliases": [
+      "Cape Verde"
+    ],
     "stripesOnly": null
   },
   {
@@ -1259,6 +1262,9 @@
     "motifs": [
       "eu-member"
     ],
+    "aliases": [
+      "Czech Republic"
+    ],
     "stripesOnly": null
   },
   {
@@ -1275,6 +1281,9 @@
     ],
     "additionalColors": [],
     "motifs": [],
+    "aliases": [
+      "Ivory Coast"
+    ],
     "stripesOnly": "vertical"
   },
   {
@@ -1294,7 +1303,9 @@
       "star-or-moon"
     ],
     "aliases": [
-      "DRC"
+      "DRC",
+      "DR Congo",
+      "Congo-Kinshasa"
     ],
     "stripesOnly": null
   },
@@ -1589,6 +1600,9 @@
     "additionalColors": [],
     "motifs": [
       "weapon"
+    ],
+    "aliases": [
+      "Swaziland"
     ],
     "stripesOnly": null
   },
@@ -3175,6 +3189,9 @@
     "motifs": [
       "star-or-moon"
     ],
+    "aliases": [
+      "Burma"
+    ],
     "stripesOnly": null
   },
   {
@@ -3248,6 +3265,9 @@
     "additionalColors": [],
     "motifs": [
       "eu-member"
+    ],
+    "aliases": [
+      "Holland"
     ],
     "stripesOnly": "horizontal"
   },
@@ -3764,6 +3784,9 @@
     ],
     "additionalColors": [],
     "motifs": [],
+    "aliases": [
+      "Congo-Brazzaville"
+    ],
     "stripesOnly": null
   },
   {
@@ -3993,6 +4016,9 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
+    ],
+    "aliases": [
+      "Western Samoa"
     ],
     "stripesOnly": null
   },
@@ -4642,6 +4668,9 @@
     "motifs": [
       "star-or-moon"
     ],
+    "aliases": [
+      "East Timor"
+    ],
     "stripesOnly": null
   },
   {
@@ -4834,6 +4863,9 @@
     "additionalColors": [],
     "motifs": [
       "star-or-moon"
+    ],
+    "aliases": [
+      "Turkey"
     ],
     "stripesOnly": null
   },
@@ -5059,6 +5091,9 @@
     "motifs": [
       "coat-of-arms",
       "cross"
+    ],
+    "aliases": [
+      "Holy See"
     ],
     "stripesOnly": null
   },

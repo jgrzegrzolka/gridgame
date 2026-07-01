@@ -176,6 +176,30 @@ test('suggest surfaces the United Kingdom from "great" / "britain" (via alias)',
   }
 });
 
+test('common alternate / former country names resolve via suggest', () => {
+  // Everyday names that are NOT substrings of the canonical name, so without
+  // an alias the search would miss them. Pin them against regression.
+  const cases = {
+    Holland: 'nl',
+    Burma: 'mm',
+    'Ivory Coast': 'ci',
+    'Czech Republic': 'cz',
+    'Holy See': 'va',
+    Turkey: 'tr',
+    Swaziland: 'sz',
+    'Cape Verde': 'cv',
+    'East Timor': 'tl',
+    'Congo-Brazzaville': 'cg',
+    'Congo-Kinshasa': 'cd',
+    'DR Congo': 'cd',
+    'Western Samoa': 'ws',
+  };
+  for (const [q, code] of Object.entries(cases)) {
+    const codes = suggest(COUNTRIES, q).map((c) => c.code);
+    assert.ok(codes.includes(code), `"${q}" should surface ${code}, got ${codes.join(',') || 'none'}`);
+  }
+});
+
 test('motifs (when present) are arrays drawn from ALL_MOTIFS', () => {
   const palette = new Set(ALL_MOTIFS);
   const offenders = [];
