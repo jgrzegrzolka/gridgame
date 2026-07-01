@@ -1,5 +1,8 @@
 {
   "coffee": "Postaw mi kawę",
+  "zoom": {
+    "close": "Zamknij"
+  },
   "menu": {
     "open": "Otwórz menu",
     "close": "Zamknij menu",

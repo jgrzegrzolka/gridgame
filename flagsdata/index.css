@@ -238,14 +238,64 @@ dialog#zoom .country-data {
  * base dialog#zoom rules live in common.css; these widen + scroll it and
  * lay out the intro prose + historical-flag timeline. Scoped to flagsdata
  * (the only consumer today) per the "promote on second consumer" rule. */
+/* Close (×) button, top-right of the zoom dialog. Sticky so it stays put
+ * as the story scrolls; sits in its own strip above the flag (no negative
+ * margin) and floats over content once you scroll past it. A subtle circle
+ * keeps the × legible over whatever scrolls beneath. */
+.zoom-close {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0 0 4px auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-hover-color);
+  color: var(--primary-color);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.zoom-close:hover {
+  background: var(--muted-soft-color);
+}
+
 dialog#zoom.has-facts {
   /* Wider than the default 320 px so the timeline's flag + caption sit on
    * one comfortable row; capped + scrollable so a long history never runs
-   * off the viewport. */
+   * off the viewport. border-box so the 16 px dialog padding counts inside
+   * the width/height caps — otherwise `calc(100vw - 32px)` + padding adds
+   * back up to the full viewport and the mobile inset below disappears. */
+  box-sizing: border-box;
   width: min(92vw, 560px);
   max-height: 88vh;
   overflow-y: auto;
   text-align: left;
+}
+/* On phones the story popup is near full-screen — pin it to an explicit
+ * 16 px inset on every side instead of relying on width math (which is
+ * thrown off by the scrollbar and the modal's `margin: auto` centring).
+ * left+right fix the horizontal gaps exactly; top + max-height leave at
+ * least 16 px at the bottom. dvh tracks the visible height as the browser's
+ * address bar shows/hides, so the bottom gap stays honest. */
+@media (max-width: 600px) {
+  dialog#zoom.has-facts {
+    left: 16px;
+    right: 16px;
+    top: 16px;
+    bottom: auto;
+    margin: 0;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: calc(100dvh - 32px);
+  }
 }
 /* Rein the headline flag in when the panel is open — at full dialog width
  * a 100%-wide flag would dwarf the story. Direct child only, so the

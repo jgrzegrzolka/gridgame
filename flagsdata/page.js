@@ -124,6 +124,11 @@ export function bootFlagsData() {
     if (SHOW_DATA) zoomData.textContent = JSON.stringify(c, null, 2);
   }
   wireFlagZoomBackdropClose(zoom);
+  // Explicit close button (top-right). The backdrop-tap target shrinks to a
+  // thin frame once the facts popup goes near-full-screen on mobile, so the
+  // × is the reliable way out. Native Esc-to-close still works too.
+  const zoomCloseBtn = zoom.querySelector('.zoom-close');
+  if (zoomCloseBtn) zoomCloseBtn.addEventListener('click', () => zoom.close());
   // Clear the tracked country when the dialog closes so a later soft
   // language switch doesn't try to re-render a stale facts panel.
   zoom.addEventListener('close', () => { zoomCountry = null; });
