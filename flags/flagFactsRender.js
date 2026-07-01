@@ -95,8 +95,10 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
 }
 
 /**
- * One timeline `<li>`: historical flag image on one side, year + caption on
- * the other. The caption doubles as the image's `alt` text.
+ * One timeline `<li>`. Normally a single historical flag with year + caption.
+ * When `step.parts` is set, the visual is an equation instead — the part
+ * flags joined by `+`, then `=`, then the result flag — so a composite flag
+ * reads as ingredients combined, not as the flag changing over time.
  *
  * @param {Document} doc
  * @param {{
@@ -109,6 +111,38 @@ function buildStep(doc, { step, t, base }) {
   const caption = t(step.captionKey, '');
 
   const li = doc.createElement('li');
+
+  // Equation step (e.g. 1606 = England + Scotland): the year + description
+  // come first, then the equation row below — read what happened, then see
+  // it. The ingredient flags carry labels; the result flag doesn't (the
+  // year + caption above already name it), only alt text for a11y.
+  if (Array.isArray(step.parts) && step.parts.length > 0) {
+    li.className = 'flag-facts-step flag-facts-step-eq';
+
+    const meta = doc.createElement('div');
+    meta.className = 'flag-facts-meta';
+    const eqYear = doc.createElement('span');
+    eqYear.className = 'flag-facts-year';
+    eqYear.textContent = step.year;
+    const eqCap = doc.createElement('p');
+    eqCap.className = 'flag-facts-caption';
+    eqCap.textContent = caption;
+    meta.appendChild(eqYear);
+    meta.appendChild(eqCap);
+    li.appendChild(meta);
+
+    const eq = doc.createElement('div');
+    eq.className = 'flag-facts-equation';
+    step.parts.forEach((partImg, i) => {
+      if (i > 0) eq.appendChild(operator(doc, '+'));
+      eq.appendChild(equationFlag(doc, base, partImg, t(step.partLabelKeys?.[i] ?? '', ''), false));
+    });
+    eq.appendChild(operator(doc, '='));
+    eq.appendChild(equationFlag(doc, base, step.img, '', true, caption));
+    li.appendChild(eq);
+    return li;
+  }
+
   li.className = 'flag-facts-step';
 
   const img = /** @type {HTMLImageElement} */ (doc.createElement('img'));
@@ -133,4 +167,49 @@ function buildStep(doc, { step, t, base }) {
   li.appendChild(img);
   li.appendChild(meta);
   return li;
+}
+
+/**
+ * A `+` / `=` glyph between flags in an equation step.
+ * @param {Document} doc
+ * @param {string} glyph
+ */
+function operator(doc, glyph) {
+  const span = doc.createElement('span');
+  span.className = 'flag-facts-eq-op';
+  span.textContent = glyph;
+  return span;
+}
+
+/**
+ * One flag inside an equation: the image, plus an optional visible label
+ * beneath it. `isResult` flags the final (sum) flag so CSS can size it a
+ * touch larger. `alt` overrides the image's alt text (defaults to `label`) —
+ * the result flag shows no label but still wants descriptive alt text.
+ *
+ * @param {Document} doc
+ * @param {string} base
+ * @param {string} img
+ * @param {string} label
+ * @param {boolean} isResult
+ * @param {string} [alt]
+ */
+function equationFlag(doc, base, img, label, isResult, alt) {
+  const wrap = doc.createElement('div');
+  wrap.className = isResult ? 'flag-facts-eq-flag flag-facts-eq-result' : 'flag-facts-eq-flag';
+
+  const image = /** @type {HTMLImageElement} */ (doc.createElement('img'));
+  image.className = 'flag-facts-eq-img';
+  image.src = `${base}${img}`;
+  image.alt = alt !== undefined ? alt : label;
+  image.loading = 'lazy';
+  wrap.appendChild(image);
+
+  if (label) {
+    const span = doc.createElement('span');
+    span.className = 'flag-facts-eq-label';
+    span.textContent = label;
+    wrap.appendChild(span);
+  }
+  return wrap;
 }

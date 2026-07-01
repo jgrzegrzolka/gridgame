@@ -26,12 +26,25 @@
  */
 
 /**
- * @typedef {{ year: string, img: string, captionKey: string }} FlagFactStep
+ * @typedef {{
+ *   year: string,
+ *   img: string,
+ *   captionKey: string,
+ *   parts?: string[],
+ *   partLabelKeys?: string[],
+ * }} FlagFactStep
  * @typedef {{
  *   introKey: string,
  *   timeline: FlagFactStep[],
  *   factKeys?: string[],
  * }} FlagFacts
+ *
+ * A step is normally one flag (`img`) with a `year` + caption. When `parts`
+ * is set, the step renders as an *equation* — `part₁ + part₂ = img` — so a
+ * composite flag reads as ingredients combined at a moment, not as the flag
+ * morphing over time (e.g. 1606 = England + Scotland; 1801 = 1606 + Ireland).
+ * `parts` are image paths (same base as `img`); `partLabelKeys` are the
+ * matching i18n labels shown under each part (optional, index-aligned).
  *
  * `factKeys` (optional) is a list of i18n keys rendered as a "Did you know?"
  * bullet list below the timeline — standalone trivia that doesn't belong in
@@ -40,6 +53,85 @@
 
 /** @type {Record<string, FlagFacts>} */
 export const FLAG_FACTS = {
+  gb: {
+    introKey: 'flagFacts.gb.intro',
+    timeline: [
+      {
+        year: '1606',
+        img: 'history/gb-union1606.svg',
+        captionKey: 'flagFacts.gb.union1606',
+        parts: ['svg/gb-eng.svg', 'svg/gb-sct.svg'],
+        partLabelKeys: ['flagFacts.gb.george', 'flagFacts.gb.andrew'],
+      },
+      {
+        year: '1801',
+        img: 'svg/gb.svg',
+        captionKey: 'flagFacts.gb.current',
+        parts: ['history/gb-union1606.svg', 'history/ie-patrick.svg'],
+        partLabelKeys: ['flagFacts.gb.union1606short', 'flagFacts.gb.patrick'],
+      },
+    ],
+    factKeys: [
+      'flagFacts.gb.fact.wales',
+      'flagFacts.gb.fact.name',
+      'flagFacts.gb.fact.asymmetry',
+      'flagFacts.gb.fact.distress',
+      'flagFacts.gb.fact.offspring',
+    ],
+  },
+  'gb-eng': {
+    introKey: 'flagFacts.gb-eng.intro',
+    timeline: [
+      { year: '1198', img: 'history/gb-eng-lions.svg', captionKey: 'flagFacts.gb-eng.lions' },
+      { year: '13th c.', img: 'svg/gb-eng.svg', captionKey: 'flagFacts.gb-eng.current' },
+    ],
+    factKeys: [
+      'flagFacts.gb-eng.fact.george',
+      'flagFacts.gb-eng.fact.genoa',
+      'flagFacts.gb-eng.fact.union',
+      'flagFacts.gb-eng.fact.lions',
+    ],
+  },
+  'gb-sct': {
+    introKey: 'flagFacts.gb-sct.intro',
+    timeline: [
+      { year: 'royal banner', img: 'history/gb-sct-lion.svg', captionKey: 'flagFacts.gb-sct.lion' },
+      { year: 'national flag', img: 'svg/gb-sct.svg', captionKey: 'flagFacts.gb-sct.current' },
+    ],
+    factKeys: [
+      'flagFacts.gb-sct.fact.oldest',
+      'flagFacts.gb-sct.fact.andrew',
+      'flagFacts.gb-sct.fact.union',
+      'flagFacts.gb-sct.fact.lion',
+    ],
+  },
+  'gb-wls': {
+    introKey: 'flagFacts.gb-wls.intro',
+    timeline: [
+      { year: 'St David', img: 'history/gb-wls-stdavid.svg', captionKey: 'flagFacts.gb-wls.david' },
+      { year: '1959', img: 'svg/gb-wls.svg', captionKey: 'flagFacts.gb-wls.current' },
+    ],
+    factKeys: [
+      'flagFacts.gb-wls.fact.union',
+      'flagFacts.gb-wls.fact.dragon',
+      'flagFacts.gb-wls.fact.official',
+      'flagFacts.gb-wls.fact.dragons',
+    ],
+  },
+  ie: {
+    introKey: 'flagFacts.ie.intro',
+    timeline: [
+      { year: "St Patrick", img: 'history/ie-patrick.svg', captionKey: 'flagFacts.ie.patrick' },
+      { year: '16th c.', img: 'history/ie-harp.svg', captionKey: 'flagFacts.ie.harp' },
+      { year: '1848', img: 'svg/ie.svg', captionKey: 'flagFacts.ie.current' },
+    ],
+    factKeys: [
+      'flagFacts.ie.fact.colours',
+      'flagFacts.ie.fact.meagher',
+      'flagFacts.ie.fact.harp',
+      'flagFacts.ie.fact.order',
+    ],
+  },
   ch: {
     introKey: 'flagFacts.ch.intro',
     timeline: [

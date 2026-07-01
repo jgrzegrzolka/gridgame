@@ -19,10 +19,23 @@ Filenames are renamed to `<code>-<era>.svg` for the repo.
 | `ch-flamme.svg` | Militärfahne der Stadt und Republik Bern.svg | CC BY-SA 4.0 (Oliver65536) | 17th–18th c. Bernese cantonal war flag in the flammé style — red & black |
 | `ch-helvetic.svg` | Flag of the Helvetic Republic (French).svg | Public domain | 1798 French-imposed Helvetic Republic tricolour — green/red/yellow |
 | `ch-square.svg` | Flag of Switzerland.svg | Public domain | Current national flag, square (1:1) |
+| `gb-union1606.svg` | Flag of Great Britain (1707-1800).svg | Public domain | First Union Flag — St George's cross over St Andrew's saltire, pre-1801 |
+| `gb-eng-lions.svg` | Royal Banner of England.svg | Public domain | Royal Banner of England — three golden lions on red |
+| `gb-sct-lion.svg` | Royal Banner of Scotland.svg | CC BY-SA 3.0 (Sodacan) | Royal Standard of Scotland — red lion rampant in a double tressure |
+| `gb-wls-stdavid.svg` | Flag of Saint David.svg | Public domain | Cross of St David — gold cross on black |
+| `ie-patrick.svg` | Saint Patrick's Saltire.svg | Public domain | Saltire of St Patrick — red diagonal cross on white (Ireland's element of the Union Jack) |
+| `ie-harp.svg` | Green Harp Flag of Ireland.svg | CC0 | Green harp flag of Ireland — gold harp on green |
 
-**Attribution (CC BY-SA):** `ch-flamme.svg` is a derivative of *"Militärfahne der
-Stadt und Republik Bern"* by Wikimedia Commons user **Oliver65536**, licensed
-**CC BY-SA 4.0**; used unmodified and re-shared under the same licence.
+**Attribution (CC BY-SA):**
+- `ch-flamme.svg` is a derivative of *"Militärfahne der Stadt und Republik Bern"*
+  by Wikimedia Commons user **Oliver65536**, licensed **CC BY-SA 4.0**; used
+  unmodified and re-shared under the same licence.
+- `gb-sct-lion.svg` is *"Royal Banner of Scotland"* by Wikimedia Commons user
+  **Sodacan**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under the
+  same licence.
+
+`ie-harp.svg` is released under **CC0** (public-domain dedication) — no
+attribution required, listed for provenance only.
 
 When adding a new country's history, drop its historical SVGs here following the
 same `<code>-<era>.svg` naming and record the provenance + licence above.

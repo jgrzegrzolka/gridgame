@@ -606,6 +606,67 @@
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",
+    "gb": {
+      "intro": "The Union Jack is really three flags stacked into one. It layers the red cross of St George (England) over the white diagonal saltire of St Andrew (Scotland), with the red saltire of St Patrick (Ireland) threaded through — the badges of three patron saints, combined as their kingdoms were joined by crown and parliament.\n\nOne nation is missing: Wales. By the time the flag was first assembled in 1606, Wales had already been annexed to the Kingdom of England, so it was never given a place of its own.",
+      "george": "England",
+      "andrew": "Scotland",
+      "patrick": "Ireland",
+      "union1606short": "1606 flag",
+      "union1606": "England's St George's cross combined with Scotland's St Andrew's saltire, made when James VI of Scotland also became James I of England.",
+      "current": "St Patrick's red saltire (for Ireland) added to the 1606 flag in 1801 — giving the asymmetric Union Jack still flown today.",
+      "fact": {
+        "wales": "Wales isn't represented at all. It had been absorbed into the Kingdom of England long before the union, so its red dragon never made it onto the flag.",
+        "name": "Why \"Jack\"? A jack is a small flag flown from the bow of a ship — the design spent much of its early life at sea, and the nickname stuck.",
+        "asymmetry": "Look closely and it isn't symmetric: the broad white diagonal sits above the red on the hoist side and below it on the fly. That \"counterchange\" is why there's a right way up.",
+        "distress": "Because it has a right way up, flying it upside-down is a recognised distress signal — and, done by accident, a minor national embarrassment.",
+        "offspring": "It's the most-copied flag in the world: Australia, New Zealand, Fiji, Tuvalu and the US state of Hawaii all still carry a Union Jack in the corner."
+      }
+    },
+    "gb-eng": {
+      "intro": "England's flag is the cross of St George: a plain red cross on white. St George — a Roman soldier martyred in the eastern Mediterranean around 303 AD, who never set foot in England — became the country's patron in the Middle Ages, and his emblem was carried by English soldiers from the age of the Crusades.\n\nThe same red cross sits at the centre of the Union Jack, England's contribution to the flag of the United Kingdom.",
+      "lions": "Before the cross, England's royal banner was three golden lions on red — the arms of the medieval kings, still worn today by England's football and cricket teams.",
+      "current": "The cross of St George, adopted as England's emblem during the 13th century and essentially unchanged since.",
+      "fact": {
+        "george": "St George wasn't English — he was a Greek-speaking Roman officer from Cappadocia (modern Turkey), and is shared as a patron by Georgia, Catalonia, Ethiopia and more.",
+        "genoa": "England is said to have adopted the red cross from Genoa, flying the Italian city's flag so its ships could claim the protection of Genoa's powerful fleet.",
+        "union": "It forms the centre of the Union Jack — the red upright cross laid over the Scottish and Irish saltires.",
+        "lions": "The three lions trace to Richard the Lionheart's royal seal around 1198; it is one of the oldest coats of arms still in continuous use."
+      }
+    },
+    "gb-sct": {
+      "intro": "Scotland's flag, the Saltire, is the white diagonal cross of St Andrew on a blue field — by tradition one of the oldest national flags in the world. Legend sets its origin at the Battle of Athelstaneford in 832 AD, when a Pictish-Scots king is said to have seen a white saltire of cloud in the blue sky before victory, and took it as his banner.\n\nSt Andrew, the apostle martyred on an X-shaped cross, is Scotland's patron; his diagonal cross joined England's upright one to form the first Union Flag in 1606.",
+      "lion": "Scotland's other great flag: the Royal Standard, a red lion rampant inside a double border. It is the banner of the monarch — its use is technically restricted by law.",
+      "current": "The Saltire — St Andrew's white cross on blue — the national flag of Scotland.",
+      "fact": {
+        "oldest": "By the 832 legend the Saltire is often called the oldest national flag still in use; its blue and white have been recorded for over 800 years.",
+        "andrew": "St Andrew was crucified on an X-shaped cross at his own request, feeling unworthy to die as Jesus had — that diagonal became his emblem across the Christian world.",
+        "union": "St Andrew's saltire is the white diagonal in the Union Jack, beneath England's red cross.",
+        "lion": "The red Lion Rampant is the royal banner: strictly it belongs to the monarch, though Scots fly it enthusiastically at sport regardless."
+      }
+    },
+    "gb-wls": {
+      "intro": "Wales flies Y Ddraig Goch — \"the Red Dragon\" — a red dragon on a field of white over green. The dragon is one of Britain's oldest symbols, tied to the Welsh kings and, in the tale of Merlin, to a red dragon that fought a white one beneath the earth and won — an omen of the Welsh prevailing over the invading Saxons.\n\nUniquely among the home nations, Wales is absent from the Union Jack, so its dragon stands entirely on its own.",
+      "david": "An older Welsh flag is the cross of St David — a gold cross on black, for the country's patron saint, still flown on St David's Day.",
+      "current": "Y Ddraig Goch, the Red Dragon, became the official flag of Wales only in 1959 — though the symbol is many centuries older.",
+      "fact": {
+        "union": "Wales is the only home nation missing from the Union Jack: it had been annexed to England before the union flags were designed, so it was folded in under England's cross.",
+        "dragon": "The red dragon may descend from the Roman cavalry standard (the draco); legend has it carried by kings like Cadwaladr and Owain Glyndŵr, and the Tudor dynasty flew it too.",
+        "official": "Despite its age, the dragon became the official national flag only in 1959 — a very young official flag for a very old symbol.",
+        "dragons": "Wales's red dragon and Bhutan's white thunder-dragon are the only two dragons flying on a country's flag today."
+      }
+    },
+    "ie": {
+      "intro": "Ireland's tricolour of green, white and orange is a flag about reconciliation. Green stands for the Gaelic and Catholic tradition, orange for the Protestant tradition of William of Orange, and the white between them for a lasting peace between the two.\n\nIt was first flown in 1848 by the nationalist Thomas Francis Meagher, modelled on the French Tricolore he had seen in revolutionary Paris.",
+      "patrick": "The red saltire of St Patrick — Ireland's element of the Union Jack. Its history is disputed: some argue it was devised simply to give Ireland a place on the British flag.",
+      "harp": "For centuries Ireland's banner was the gold harp on green — the harp is still the country's official emblem, on its coins and passports to this day.",
+      "current": "The green-white-orange tricolour, flown from 1848 and made the national flag of the Irish state in 1937.",
+      "fact": {
+        "colours": "The three bands are a deliberate handshake: green for the Catholic/nationalist tradition, orange for the Protestant/unionist one, and white for peace between them.",
+        "meagher": "Thomas Francis Meagher unveiled it in 1848, inspired by the French Tricolore; the silk was reportedly a gift from \"the women of France\" to the Irish cause.",
+        "harp": "Ireland is the only country whose emblem is a musical instrument — the harp is on its coins, its passports, and the Guinness logo (which faces the other way).",
+        "order": "The order matters: green always goes next to the pole. Flown the other way round it counts as a different, incorrect flag — and, to some, a pointed insult."
+      }
+    },
     "ch": {
       "intro": "Few flags are as old — or as square — as Switzerland's. The white cross on a red field was a battlefield mark of the Old Swiss Confederacy centuries before it belonged to a country: it is first recorded at the Battle of Laupen in 1339, where confederate soldiers sewed white crosses onto their clothes to tell friend from foe.\n\nThe design goes back further still, to the war banner of the Holy Roman Empire, which bore the same white cross on red — the white long read as the purity of the cause, the red as the blood of the martyrs. What began as a war sign became, five centuries later, the flag of modern Switzerland.",
       "imperial": "The white cross on red as the Old Swiss Confederacy's heraldic emblem — by legend drawn from the war banner of the Holy Roman Empire, and worn into battles like Laupen (1339).",
