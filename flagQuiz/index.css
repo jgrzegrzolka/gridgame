@@ -393,6 +393,15 @@ body {
   font-size: 15px;
   font-weight: 600;
 }
+.leaderboard-time {
+  /* Finish time for a row that cleared the whole pool inside the 60s
+   * budget. Muted + lighter than the score so it reads as a secondary
+   * detail hanging off the score, not a competing number. */
+  margin-left: 6px;
+  color: var(--muted-color);
+  font-size: 13px;
+  font-weight: 400;
+}
 .leaderboard-row.is-self {
   /* Pink-bordered, translucent-pink fill so the player spots themselves
    * without the row screaming. box-shadow inset draws the border without
