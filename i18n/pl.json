@@ -695,14 +695,11 @@
       }
     },
     "pl": {
-      "intro": "Flaga Polski to jeden z najstarszych europejskich pomysłów w najprostszej postaci: biel nad czerwienią, wzięta wprost ze średniowiecznego herbu — białego orła na czerwonej tarczy. Barw nie zaprojektowano; zostały odziedziczone.\n\nPrzez stulecia Orzeł Biały widniał na królewskich chorągwiach, ale Polska nie miała jednej flagi. Sejm uznał biel i czerwień za barwy narodowe w czasie powstania listopadowego 1831 roku, a prosty dwupas przyjął jako oficjalną flagę w 1919 roku, rok po odzyskaniu niepodległości.",
-      "eagle": "Orzeł Biały na czerwonej tarczy — godło Polski od XIII wieku. Barwy flagi to po prostu orzeł (biel) i jego pole (czerwień).",
-      "current": "Rok po odzyskaniu niepodległości Sejm przyjął prosty biało-czerwony dwupas 1 sierpnia 1919 roku.",
+      "intro": "Flaga Polski nie może być prostsza: biel nad czerwienią — dwie barwy średniowiecznego herbu, białego orła na czerwonej tarczy. Nikt ich nie wymyślił; zostały odziedziczone. Biało-czerwień stała się barwami narodowymi w 1831 roku, a prosty dwupas — oficjalną flagą w 1919.",
+      "eagle": "Orzeł Biały na czerwonej tarczy — stąd biel i czerwień flagi.",
+      "current": "Prosty biało-czerwony dwupas, oficjalny od 1919 roku.",
       "fact": {
-        "whiteontop": "Biel jest nad czerwienią, bo w polskiej heraldyce orzeł — godło — stoi wyżej niż jego czerwone pole. Odwróć flagę, a otrzymasz flagę Indonezji lub Monako.",
-        "ensign": "Zwykły dwupas to flaga na co dzień; wersja z Orłem Białym w białym pasie jest zarezerwowana dla ambasad, statków i lotnisk.",
-        "shade": "Dokładny odcień czerwieni pozostawał prawnie nieokreślony aż do dekretu z 1927 roku, który ustalił go jako cynober; ustawa z 1980 roku przesunęła go później ku karmazynowi.",
-        "colours": "Barw Polski nie wybrano — odziedziczono je z herbu, co czyni je jednymi z najstarszych barw narodowych w Europie."
+        "whiteontop": "Biel jest na górze, bo barwa orła stoi w heraldyce wyżej niż barwa pola — odwróć flagę i masz flagę Indonezji albo Monako."
       }
     }
   },
