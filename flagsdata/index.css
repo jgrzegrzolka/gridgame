@@ -232,3 +232,110 @@ dialog#zoom .country-data {
   white-space: pre;
   user-select: text;
 }
+
+/* Flag-facts detail panel (the "story of the flag") shown in the zoom
+ * dialog when the clicked country has an entry in flags/flagFacts.js. The
+ * base dialog#zoom rules live in common.css; these widen + scroll it and
+ * lay out the intro prose + historical-flag timeline. Scoped to flagsdata
+ * (the only consumer today) per the "promote on second consumer" rule. */
+dialog#zoom.has-facts {
+  /* Wider than the default 320 px so the timeline's flag + caption sit on
+   * one comfortable row; capped + scrollable so a long history never runs
+   * off the viewport. */
+  width: min(92vw, 560px);
+  max-height: 88vh;
+  overflow-y: auto;
+  text-align: left;
+}
+/* Rein the headline flag in when the panel is open — at full dialog width
+ * a 100%-wide flag would dwarf the story. Direct child only, so the
+ * timeline's own flag images keep their own sizing. */
+dialog#zoom.has-facts > img {
+  width: auto;
+  max-width: 240px;
+  max-height: 150px;
+  margin: 0 auto;
+}
+dialog#zoom .country-facts {
+  /* A single divider between the headline flag + name and the story
+   * below, with generous space on both sides. (The timeline steps
+   * themselves are separated by spacing alone — no lines there.) */
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--muted-soft-color);
+}
+/* Scoped under dialog#zoom to beat common.css's `dialog#zoom p` rule
+ * (which centers + sizes the country-name paragraph). */
+dialog#zoom .flag-facts-intro {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--primary-color);
+  text-align: left;
+}
+.flag-facts-timeline {
+  list-style: none;
+  /* Extra top margin so the first flag (1453–1793) sits well clear of the
+   * intro paragraphs above it. */
+  margin: 30px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.flag-facts-step {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+/* Breathing room between flags via spacing alone — no divider lines. */
+.flag-facts-step + .flag-facts-step {
+  margin-top: 30px;
+}
+.flag-facts-step .flag-facts-img {
+  width: 84px;
+  height: auto;
+  border: 1px solid var(--muted-soft-color);
+  box-sizing: border-box;
+}
+.flag-facts-meta {
+  min-width: 0;
+}
+.flag-facts-year {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+}
+dialog#zoom .flag-facts-caption {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--primary-color);
+  text-align: left;
+}
+/* "Did you know?" trivia block below the timeline. */
+.flag-facts-extra {
+  margin-top: 30px;
+}
+.flag-facts-extra-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+dialog#zoom .flag-facts-list {
+  margin: 0;
+  padding-left: 20px;
+  text-align: left;
+}
+dialog#zoom .flag-facts-list-item {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--primary-color);
+}
+dialog#zoom .flag-facts-list-item:last-child {
+  margin-bottom: 0;
+}

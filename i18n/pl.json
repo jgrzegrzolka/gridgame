@@ -601,6 +601,22 @@
     "searchName": "Szukaj po nazwie…",
     "clear": "Wyczyść"
   },
+  "flagFacts": {
+    "didYouKnow": "Czy wiesz, że?",
+    "gr": {
+      "intro": "Przez stulecia Grecją rządziło Imperium Osmańskie, lecz greckie statki handlowe pływały pod własną banderą. Z tej morskiej tradycji — i z prawosławnego krzyża, który leży u podstaw greckiej tożsamości — wyrosła flaga, którą Grecja podnosi dziś.\n\nCo ciekawe, dokładny odcień błękitu nigdy nie został ustalony prawnie — przez wieki wahał się od jasnego błękitu po ciemny granat.",
+      "ottoman": "Pod panowaniem osmańskim greckie prawosławne statki handlowe używały czerwonej flagi z błękitnym pasem.",
+      "orlov": "Biała flaga z błękitnym krzyżem, wzniesiona podczas powstania Orłowa w 1769 roku — zapowiedź zrywu z 1821 roku i jego najpopularniejszy sztandar.",
+      "land": "Flaga lądowa przyjęta w 1822 roku: biały krzyż na błękicie. Gubernator Kapodistrias ustalił jej ciemniejszy błękit w 1828 roku; powiewała nad państwem greckim aż do 1978 roku.",
+      "current": "Dziewięć niebiesko-białych pasów z krzyżem w rogu. Zaprojektowana jako bandera morska w 1822 roku, w 1978 roku stała się jedyną flagą narodową Grecji.",
+      "fact": {
+        "stripes": "Dziewięć pasów niesie okrzyk bojowy powstańców: pięć niebieskich pasów to sylaby słowa «Ελευθερία» (Wolność), a cztery białe — «ή Θάνατος» (albo śmierć).",
+        "cross": "Biały krzyż symbolizuje Kościół prawosławny — instytucję, która przez blisko cztery wieki osmańskiego panowania podtrzymywała grecki język i tożsamość.",
+        "colours": "Błękit ma oznaczać greckie morze i niebo, a biel — fale i czystość walki, choć grecka encyklopedia z 1934 roku przyznała, że prawdziwe pochodzenie barw nigdy nie zostało dowiedzione.",
+        "ratio": "Proporcje flagi określa prawo: stosunek 2 : 3, a każde ramię krzyża ma szerokość jednej piątej flagi."
+      }
+    }
+  },
   "country": {
     "af": "Afganistan",
     "ax": "Wyspy Alandzkie",
