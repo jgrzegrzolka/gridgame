@@ -35,6 +35,22 @@ test('every timeline step is well-formed', () => {
         step.img.startsWith('history/') || step.img.startsWith('svg/'),
         `${code} img under history/ or svg/`,
       );
+      // Equation steps: every part is an svg under the same roots, and any
+      // partLabelKeys line up one-to-one with the parts.
+      for (const part of step.parts ?? []) {
+        assert.ok(part.endsWith('.svg'), `${code} part is svg`);
+        assert.ok(
+          part.startsWith('history/') || part.startsWith('svg/'),
+          `${code} part under history/ or svg/`,
+        );
+      }
+      if (step.partLabelKeys) {
+        assert.ok(Array.isArray(step.parts), `${code} partLabelKeys needs parts`);
+        assert.equal(step.partLabelKeys.length, step.parts.length, `${code} label/part count`);
+        for (const key of step.partLabelKeys) {
+          assert.ok(key.startsWith('flagFacts.'), `${code} partLabelKey`);
+        }
+      }
     }
     // factKeys is optional; when present every entry is an i18n key.
     for (const key of facts.factKeys ?? []) {
@@ -48,8 +64,10 @@ test('every referenced flag image exists on disk', () => {
   // renderer can't catch that, but the file layout is fixed at build time.
   for (const facts of Object.values(FLAG_FACTS)) {
     for (const step of facts.timeline) {
-      const abs = join(HERE, step.img);
-      assert.ok(existsSync(abs), `missing asset: flags/${step.img}`);
+      for (const img of [step.img, ...(step.parts ?? [])]) {
+        const abs = join(HERE, img);
+        assert.ok(existsSync(abs), `missing asset: flags/${img}`);
+      }
     }
   }
 });
@@ -64,6 +82,7 @@ test('every i18n key referenced by the catalog is present in en.json and pl.json
     const keys = [
       facts.introKey,
       ...facts.timeline.map((s) => s.captionKey),
+      ...facts.timeline.flatMap((s) => s.partLabelKeys ?? []),
       ...(facts.factKeys ?? []),
     ];
     for (const key of keys) {

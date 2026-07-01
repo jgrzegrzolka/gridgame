@@ -101,6 +101,56 @@ test('renderFlagFacts: empty intro string yields no intro paragraphs but still r
   assert.equal(findAllByClass(root, 'flag-facts-step').length, 2);
 });
 
+test('renderFlagFacts renders an equation step (parts + result) instead of a single flag', () => {
+  const doc = makeDoc();
+  const factsEq = {
+    introKey: 'flagFacts.gb.intro',
+    timeline: [
+      {
+        year: '1606',
+        img: 'history/gb-union1606.svg',
+        captionKey: 'flagFacts.gb.union1606',
+        parts: ['svg/gb-eng.svg', 'svg/gb-sct.svg'],
+        partLabelKeys: ['flagFacts.gb.george', 'flagFacts.gb.andrew'],
+      },
+    ],
+  };
+  const t = makeT({
+    'flagFacts.gb.intro': 'Intro.',
+    'flagFacts.gb.union1606': 'England plus Scotland.',
+    'flagFacts.gb.george': 'England',
+    'flagFacts.gb.andrew': 'Scotland',
+  });
+  const root = renderFlagFacts({ facts: factsEq, t, doc, base: '../flags/' });
+
+  // The step is flagged as an equation and carries no plain single image.
+  assert.equal(findAllByClass(root, 'flag-facts-step-eq').length, 1);
+  assert.equal(findAllByClass(root, 'flag-facts-img').length, 0);
+
+  // Two `+`/`=` operators (one `+` between the two parts, one `=` before the result).
+  const ops = findAllByClass(root, 'flag-facts-eq-op').map((e) => e.textContent);
+  assert.deepEqual(ops, ['+', '=']);
+
+  // Three flags in the equation: two parts + the result.
+  const eqImgs = findAllByClass(root, 'flag-facts-eq-img');
+  assert.deepEqual(eqImgs.map((e) => e.src), [
+    '../flags/svg/gb-eng.svg',
+    '../flags/svg/gb-sct.svg',
+    '../flags/history/gb-union1606.svg',
+  ]);
+  assert.equal(findAllByClass(root, 'flag-facts-eq-result').length, 1);
+
+  // Only the ingredient flags are labelled; the result flag isn't (the year +
+  // caption above name it), though its alt text carries the caption.
+  const labels = findAllByClass(root, 'flag-facts-eq-label').map((e) => e.textContent);
+  assert.deepEqual(labels, ['England', 'Scotland']);
+  assert.equal(eqImgs[2].alt, 'England plus Scotland.');
+
+  // Year + description render above the equation (year first in the meta).
+  assert.equal(findAllByClass(root, 'flag-facts-year')[0].textContent, '1606');
+  assert.equal(findAllByClass(root, 'flag-facts-caption')[0].textContent, 'England plus Scotland.');
+});
+
 test('renderFlagFacts renders the "Did you know?" list from factKeys, skipping blanks', () => {
   const doc = makeDoc();
   const factsWithExtra = {

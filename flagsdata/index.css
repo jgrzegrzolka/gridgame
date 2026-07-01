@@ -389,6 +389,57 @@ dialog#zoom .flag-facts-caption {
   color: var(--primary-color);
   text-align: left;
 }
+/* Equation step (e.g. 1606 = England + Scotland): the two-column grid gives
+ * way to a full-width column — the year + description first, the flags-and-
+ * operators row below — so it reads as "these combine", not "flag → flag". */
+.flag-facts-step-eq {
+  display: flex;
+  flex-direction: column;
+  /* Space between the year + description and the equation row below it. */
+  gap: 18px;
+}
+.flag-facts-equation {
+  display: flex;
+  /* Top-align the columns so every flag's top edge lines up; the operators
+   * are sized to the flag height (below) so their glyphs land on the flag's
+   * vertical centre regardless of the label beneath. */
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.flag-facts-eq-flag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+/* Uniform flag HEIGHT (auto width) so flags of different ratios share a
+ * centre line — the alignment the operators key off. Selector is scoped to
+ * `dialog#zoom` to out-specify the base `dialog#zoom img { width: 100% }`
+ * (which otherwise stretches these to the full row width). */
+dialog#zoom .flag-facts-eq-img {
+  height: 40px;
+  width: auto;
+  border: 1px solid var(--muted-soft-color);
+  box-sizing: border-box;
+  display: block;
+}
+.flag-facts-eq-label {
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--muted-color);
+  text-align: center;
+}
+.flag-facts-eq-op {
+  /* Same height as a flag + centre the glyph = operator sits on the flag's
+   * vertical middle. flex-start keeps it level with the flag tops. */
+  align-self: flex-start;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  color: var(--muted-color);
+}
 /* "Did you know?" trivia block below the timeline. */
 .flag-facts-extra {
   margin-top: 30px;

@@ -606,6 +606,67 @@
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",
+    "gb": {
+      "intro": "Union Jack to tak naprawdę trzy flagi złożone w jedną. Nakłada czerwony krzyż św. Jerzego (Anglia) na biały ukośny krzyż św. Andrzeja (Szkocja), a przez całość przewleczony jest czerwony ukośny krzyż św. Patryka (Irlandia) — godła trzech świętych patronów, połączone tak, jak łączyły się ich królestwa pod wspólną koroną i parlamentem.\n\nBrakuje jednego kraju: Walii. Zanim flagę złożono po raz pierwszy w 1606 roku, Walia była już przyłączona do Królestwa Anglii, więc nigdy nie dostała własnego miejsca.",
+      "george": "Anglia",
+      "andrew": "Szkocja",
+      "patrick": "Irlandia",
+      "union1606short": "flaga z 1606",
+      "union1606": "Krzyż św. Jerzego (Anglia) połączony z ukośnym krzyżem św. Andrzeja (Szkocja), powstały gdy Jakub VI Szkocki został zarazem Jakubem I Angielskim.",
+      "current": "Czerwony ukośny krzyż św. Patryka (dla Irlandii) dodany do flagi z 1606 roku w 1801 — dając asymetryczny Union Jack powiewający do dziś.",
+      "fact": {
+        "wales": "Walia nie jest przedstawiona wcale. Została wchłonięta przez Królestwo Anglii na długo przed unią, więc jej czerwony smok nigdy nie trafił na flagę.",
+        "name": "Skąd „Jack”? Jack to niewielka flaga podnoszona na dziobie statku — projekt spędził wiele wczesnych lat na morzu i przydomek się przyjął.",
+        "asymmetry": "Przyjrzyj się uważnie — flaga nie jest symetryczna: szeroki biały ukos jest nad czerwonym od strony drzewca, a pod nim od strony swobodnej. To „przestawienie” sprawia, że istnieje właściwa strona do góry.",
+        "distress": "Ponieważ ma właściwą stronę do góry, podniesienie jej odwrotnie jest uznawanym sygnałem wzywania pomocy — a zrobione przez pomyłkę, drobnym narodowym wstydem.",
+        "offspring": "To najczęściej kopiowana flaga świata: Australia, Nowa Zelandia, Fidżi, Tuvalu i amerykański stan Hawaje wciąż noszą Union Jack w rogu."
+      }
+    },
+    "gb-eng": {
+      "intro": "Flagą Anglii jest krzyż św. Jerzego: prosty czerwony krzyż na bieli. Święty Jerzy — rzymski żołnierz zamęczony we wschodniej części basenu Morza Śródziemnego około 303 roku, który nigdy nie postawił stopy w Anglii — został patronem kraju w średniowieczu, a jego godło nosili angielscy żołnierze od czasów wypraw krzyżowych.\n\nTen sam czerwony krzyż znajduje się w centrum Union Jacka — to wkład Anglii we flagę Zjednoczonego Królestwa.",
+      "lions": "Przed krzyżem sztandarem królewskim Anglii były trzy złote lwy na czerwieni — herb średniowiecznych królów, do dziś noszony przez angielskie reprezentacje w piłce nożnej i krykiecie.",
+      "current": "Krzyż św. Jerzego, przyjęty jako godło Anglii w XIII wieku i w zasadzie niezmieniony od tamtej pory.",
+      "fact": {
+        "george": "Święty Jerzy nie był Anglikiem — był greckojęzycznym rzymskim oficerem z Kapadocji (dzisiejsza Turcja) i jest patronem dzielonym m.in. przez Gruzję, Katalonię i Etiopię.",
+        "genoa": "Mówi się, że Anglia przejęła czerwony krzyż od Genui, podnosząc flagę włoskiego miasta, by jej statki mogły liczyć na ochronę potężnej genueńskiej floty.",
+        "union": "Tworzy środek Union Jacka — czerwony prosty krzyż nałożony na szkocki i irlandzki krzyż ukośny.",
+        "lions": "Trzy lwy wywodzą się z pieczęci królewskiej Ryszarda Lwie Serce z około 1198 roku; to jeden z najstarszych wciąż używanych herbów."
+      }
+    },
+    "gb-sct": {
+      "intro": "Flaga Szkocji, Saltire, to biały ukośny krzyż św. Andrzeja na błękitnym polu — wedle tradycji jedna z najstarszych flag narodowych świata. Legenda umieszcza jej początek w bitwie pod Athelstaneford w 832 roku, gdy piktyjsko-szkocki król miał ujrzeć przed zwycięstwem biały ukośny krzyż z chmur na błękitnym niebie i przyjął go za swój sztandar.\n\nŚwięty Andrzej, apostoł zamęczony na krzyżu w kształcie litery X, jest patronem Szkocji; jego ukośny krzyż połączył się z prostym krzyżem Anglii, tworząc w 1606 roku pierwszą flagę unii.",
+      "lion": "Druga wielka flaga Szkocji: sztandar królewski — czerwony wspięty lew w podwójnym obramowaniu. To sztandar monarchy, którego używanie jest formalnie ograniczone prawem.",
+      "current": "Saltire — biały krzyż św. Andrzeja na błękicie — flaga narodowa Szkocji.",
+      "fact": {
+        "oldest": "Wedle legendy z 832 roku Saltire bywa nazywana najstarszą wciąż używaną flagą narodową; jej błękit i biel są poświadczone od ponad 800 lat.",
+        "andrew": "Świętego Andrzeja ukrzyżowano na krzyżu w kształcie X na jego własną prośbę, gdyż czuł się niegodny umrzeć tak jak Jezus — ten ukos stał się jego godłem w całym chrześcijańskim świecie.",
+        "union": "Ukośny krzyż św. Andrzeja to biały ukos w Union Jacku, pod czerwonym krzyżem Anglii.",
+        "lion": "Czerwony wspięty lew to sztandar królewski: formalnie należy do monarchy, choć Szkoci i tak entuzjastycznie wywieszają go na sportowych trybunach."
+      }
+    },
+    "gb-wls": {
+      "intro": "Walia podnosi Y Ddraig Goch — „Czerwonego Smoka” — czerwonego smoka na polu biało-zielonym. Smok to jeden z najstarszych symboli Brytanii, związany z walijskimi królami i — w opowieści o Merlinie — z czerwonym smokiem, który walczył pod ziemią z białym i zwyciężył, co wróżyło Walijczykom triumf nad najeźdźcami Saksonami.\n\nJako jedyny spośród krajów Zjednoczonego Królestwa Walia jest nieobecna na Union Jacku, więc jej smok stoi całkowicie samodzielnie.",
+      "david": "Starszą flagą walijską jest krzyż św. Dawida — złoty krzyż na czerni, ku czci patrona kraju, wciąż wywieszany w dniu św. Dawida.",
+      "current": "Y Ddraig Goch, Czerwony Smok, stał się oficjalną flagą Walii dopiero w 1959 roku — choć sam symbol jest o wiele starszy.",
+      "fact": {
+        "union": "Walia to jedyny kraj Zjednoczonego Królestwa nieobecny na Union Jacku: została przyłączona do Anglii, zanim zaprojektowano flagi unii, więc wliczono ją pod krzyż Anglii.",
+        "dragon": "Czerwony smok może wywodzić się z rzymskiego sztandaru jazdy (draco); legenda każe nieść go królom takim jak Cadwaladr i Owain Glyndŵr, a wywieszała go też dynastia Tudorów.",
+        "official": "Mimo swego wieku smok stał się oficjalną flagą narodową dopiero w 1959 roku — bardzo młoda oficjalna flaga dla bardzo starego symbolu.",
+        "dragons": "Czerwony smok Walii i biały smok gromu Bhutanu to jedyne dwa smoki powiewające dziś na fladze kraju."
+      }
+    },
+    "ie": {
+      "intro": "Irlandzka trójbarwna flaga w zieleni, bieli i pomarańczu to flaga o pojednaniu. Zieleń oznacza tradycję gaelicką i katolicką, pomarańcz — protestancką tradycję Wilhelma Orańskiego, a biel między nimi — trwały pokój pomiędzy nimi.\n\nPo raz pierwszy podniósł ją w 1848 roku nacjonalista Thomas Francis Meagher, wzorując się na francuskiej trójbarwnej fladze, którą widział w rewolucyjnym Paryżu.",
+      "patrick": "Czerwony ukośny krzyż św. Patryka — irlandzki element Union Jacka. Jego historia jest sporna: niektórzy twierdzą, że wymyślono go tylko po to, by dać Irlandii miejsce na brytyjskiej fladze.",
+      "harp": "Przez wieki sztandarem Irlandii była złota harfa na zieleni — harfa pozostaje oficjalnym godłem kraju, do dziś na monetach i paszportach.",
+      "current": "Trójbarwna flaga zielono-biało-pomarańczowa, wznoszona od 1848 roku i ustanowiona flagą narodową państwa irlandzkiego w 1937 roku.",
+      "fact": {
+        "colours": "Trzy pasy to celowy uścisk dłoni: zieleń dla tradycji katolickiej/narodowej, pomarańcz dla protestanckiej/unionistycznej, a biel dla pokoju między nimi.",
+        "meagher": "Thomas Francis Meagher odsłonił ją w 1848 roku, zainspirowany francuską trójbarwną flagą; jedwab był podobno darem „kobiet Francji” dla irlandzkiej sprawy.",
+        "harp": "Irlandia to jedyny kraj, którego godłem jest instrument muzyczny — harfa widnieje na monetach, paszportach i logo Guinnessa (zwrócona w drugą stronę).",
+        "order": "Kolejność ma znaczenie: zieleń zawsze przy drzewcu. Wywieszona odwrotnie liczy się jako inna, błędna flaga — a dla niektórych jako wyraźna zniewaga."
+      }
+    },
     "ch": {
       "intro": "Niewiele flag jest tak starych — i tak kwadratowych — jak flaga Szwajcarii. Biały krzyż na czerwonym polu był znakiem bojowym starej Konfederacji Szwajcarskiej na całe stulecia przed tym, nim stał się flagą państwa: po raz pierwszy odnotowano go w bitwie pod Laupen w 1339 roku, gdzie konfederaci naszywali białe krzyże na odzież, by odróżnić swoich od wroga.\n\nWzór sięga jeszcze dawniej — do chorągwi bojowej Świętego Cesarstwa Rzymskiego, która nosiła ten sam biały krzyż na czerwieni. Biel odczytywano jako czystość sprawy, a czerwień jako krew męczenników. To, co zaczęło się jako znak wojenny, pięć wieków później stało się flagą nowoczesnej Szwajcarii.",
       "imperial": "Biały krzyż na czerwieni jako herb starej Konfederacji Szwajcarskiej — wedle legendy zaczerpnięty z chorągwi bojowej Świętego Cesarstwa Rzymskiego, noszony w bitwach takich jak Laupen (1339).",
