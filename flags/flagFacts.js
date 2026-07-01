@@ -163,6 +163,21 @@ export const FLAG_FACTS = {
       'flagFacts.gr.fact.ratio',
     ],
   },
+  pl: {
+    introKey: 'flagFacts.pl.intro',
+    timeline: [
+      { year: 'since 13th c.', img: 'history/pl-eagle.svg', captionKey: 'flagFacts.pl.eagle' },
+      { year: '1831', img: 'history/pl-cockade.svg', captionKey: 'flagFacts.pl.cockade' },
+      { year: '1919', img: 'svg/pl.svg', captionKey: 'flagFacts.pl.current' },
+    ],
+    factKeys: [
+      'flagFacts.pl.fact.whiteontop',
+      'flagFacts.pl.fact.ensign',
+      'flagFacts.pl.fact.space',
+      'flagFacts.pl.fact.shade',
+      'flagFacts.pl.fact.colours',
+    ],
+  },
 };
 
 /**
