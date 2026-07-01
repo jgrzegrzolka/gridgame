@@ -280,6 +280,18 @@ export function bootFlagsData() {
     });
   }
 
+  // Folded search terms for a country's name filter: the English canonical
+  // name (so English search works in any UI language, matching how the quiz
+  // answer-input resolves names), the current localized display name, and any
+  // aliases (e.g. "Great Britain" / "Holland"). The localized name changes on
+  // a soft language switch, so these are rebuilt in the `langchanged` handler.
+  /** @param {Country} c @returns {string[]} */
+  function searchTermsFor(c) {
+    const terms = [foldDiacritics(c.name), foldDiacritics(countryName(c))];
+    if (c.aliases) for (const a of c.aliases) terms.push(foldDiacritics(a));
+    return terms;
+  }
+
   function renderAll(parent, items) {
     const h2 = document.createElement('h2');
     // Use data-i18n so applyStringsToDocument re-translates the heading
@@ -300,17 +312,12 @@ export function bootFlagsData() {
     grid.className = 'grid';
     /** @type {HTMLElement[]} */
     const tiles = [];
-    // One folded search string per country: its localized display name plus
-    // any aliases (e.g. "Great Britain" / "UK" for the United Kingdom), so
-    // the name filter matches the same alternates the quiz answer-input does.
     /** @type {string[][]} */
     const foldedTerms = [];
     for (const c of items) {
       const tile = flagTile(c);
       tiles.push(tile);
-      const terms = [foldDiacritics(countryName(c))];
-      if (c.aliases) for (const a of c.aliases) terms.push(foldDiacritics(a));
-      foldedTerms.push(terms);
+      foldedTerms.push(searchTermsFor(c));
       grid.appendChild(tile);
     }
     parent.appendChild(grid);
@@ -601,6 +608,13 @@ export function bootFlagsData() {
   // are handled upstream by `applyStringsToDocument`.
   document.addEventListener('langchanged', () => {
     refreshTileNames();
+    // The name filter matches the localized display name, which just changed —
+    // rebuild the per-country search terms and re-run the filter so the current
+    // query keeps matching in the new language (English still matches always).
+    if (state) {
+      state.foldedTerms = state.items.map(searchTermsFor);
+      applyFilter();
+    }
     // Re-render the open zoom in the new language (softReload keeps the
     // dialog open across the switch): the country-name line (the dialog's
     // first <p>, set once by openFlagZoom) and the facts panel below it.
