@@ -39,8 +39,16 @@ const TOP_N = 10;
  *     A row whose `deviceId` matches `ownDeviceId` gets the `is-self`
  *     marker class so CSS can highlight it. Each row shows
  *     `<rank>. <name> — <score> (<formattedTime>)`.
+ *   - A row whose `score` reaches `poolTotal` (only passed in 60s/timed
+ *     mode, where the pool is exhaustible within the budget) gets a green
+ *     "lime" badge — the player cleared every flag in the category.
  *   - If `you.rank > TOP_N` AND ownDeviceId is supplied, append a
  *     separator + a self-row at the bottom: "… 87. You — 12 (32.4s)".
+ *
+ * `poolTotal` is the number of flags in the played category. It's null in
+ * endurance ('all') mode, where the stored score is a wrong-count (lower
+ * wins) and "cleared everything" isn't a score threshold. When null, no
+ * row is ever badged.
  *
  * @param {{
  *   state: 'loading' | 'failed' | 'ready',
@@ -49,10 +57,12 @@ const TOP_N = 10;
  *   t: (key: string, fallback: string, vars?: Record<string, string|number>) => string,
  *   doc?: Document,
  *   formatScore?: (score: number) => string,
+ *   formatTime?: (durationMs: number) => string,
+ *   poolTotal?: number | null,
  * }} args
  * @returns {HTMLElement}
  */
-export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = globalThis.document, formatScore }) {
+export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = globalThis.document, formatScore, formatTime, poolTotal = null }) {
   // No className on the root: it's appended into a host with id="leaderboard-body"
   // already, so adding a class with the same intent would just nest two
   // equivalent wrappers.
@@ -85,10 +95,12 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
     return root;
   }
 
+  const clearedLabel = t('quiz.leaderboard.clearedAll', 'Cleared every flag');
+
   const list = doc.createElement('ol');
   list.className = 'leaderboard-list';
   top.forEach((entry, idx) => {
-    list.appendChild(buildRow(doc, { rank: idx + 1, entry, ownDeviceId, formatScore }));
+    list.appendChild(buildRow(doc, { rank: idx + 1, entry, ownDeviceId, formatScore, formatTime, poolTotal, clearedLabel }));
   });
   root.appendChild(list);
 
@@ -116,6 +128,9 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
       ownDeviceId,
       selfLabelOverride: t('quiz.leaderboard.you', 'You'),
       formatScore,
+      formatTime,
+      poolTotal,
+      clearedLabel,
     }));
     root.appendChild(youList);
   }
@@ -126,7 +141,9 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
 /**
  * Build one <li> row. Self rows get the `is-self` class so CSS can
  * highlight; the name column shows the "You" label when the caller is
- * the row's device, otherwise the saved/default nickname.
+ * the row's device, otherwise the saved/default nickname. A row that
+ * cleared the whole pool (`poolTotal != null && score >= poolTotal`)
+ * shows its finish time after the score.
  *
  * @param {Document} doc
  * @param {{
@@ -135,9 +152,12 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
  *   ownDeviceId: string | null,
  *   selfLabelOverride?: string,
  *   formatScore?: (score: number) => string,
+ *   formatTime?: (durationMs: number) => string,
+ *   poolTotal?: number | null,
+ *   clearedLabel?: string,
  * }} args
  */
-function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride, formatScore }) {
+function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride, formatScore, formatTime, poolTotal = null, clearedLabel = '' }) {
   const li = doc.createElement('li');
   const isSelf = ownDeviceId !== null && entry.deviceId === ownDeviceId;
   li.className = isSelf ? 'leaderboard-row is-self' : 'leaderboard-row';
@@ -155,6 +175,20 @@ function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride, formatScor
   const scoreEl = doc.createElement('span');
   scoreEl.className = 'leaderboard-score';
   scoreEl.textContent = formatScore ? formatScore(entry.score) : String(entry.score);
+
+  // Cleared-the-whole-pool time. Only possible in 60s mode, where
+  // `poolTotal` is the category size and the score counts flags found;
+  // reaching it means the player exhausted the pool inside the 60s
+  // budget, so their finish time is meaningful (< budget) and becomes
+  // the tiebreaker. Rows that didn't clear used the whole budget, so
+  // their time is just "1:00.000" — noise we don't show.
+  if (poolTotal !== null && entry.score >= poolTotal && formatTime) {
+    const timeEl = doc.createElement('span');
+    timeEl.className = 'leaderboard-time';
+    timeEl.title = clearedLabel;
+    timeEl.textContent = formatTime(entry.durationMs);
+    scoreEl.appendChild(timeEl);
+  }
 
   li.appendChild(rankEl);
   li.appendChild(nameEl);

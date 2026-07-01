@@ -511,12 +511,20 @@ export function bootFlagQuiz() {
       // Timed (60s) mode already stores `score = correctCount`, no
       // transform needed.
       const formatScore = timed ? undefined : (n) => String(target - n);
+      // 60s mode only: a row whose score reaches the pool size cleared
+      // every flag in the category → the renderer shows its finish time
+      // next to the score. Endurance mode stores wrong-counts (lower
+      // wins), so "cleared all" isn't a score threshold there — pass null
+      // to suppress the time.
+      const poolTotal = timed ? pool.length : null;
       const subtree = renderLeaderboard({
         state: leaderboardState.state,
         data: leaderboardState.data,
         ownDeviceId: deviceId,
         t,
         formatScore,
+        formatTime,
+        poolTotal,
       });
       leaderboardBodyEl.innerHTML = '';
       leaderboardBodyEl.appendChild(subtree);

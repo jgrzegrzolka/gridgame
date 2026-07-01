@@ -370,7 +370,8 @@
       "loading": "Loading leaderboard…",
       "failed": "Couldn't load the leaderboard.",
       "empty": "Be the first!",
-      "you": "You"
+      "you": "You",
+      "clearedAll": "Cleared every flag"
     },
     "share": {
       "aria": "Share result",

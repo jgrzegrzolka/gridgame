@@ -370,7 +370,8 @@
       "loading": "Ładowanie rankingu…",
       "failed": "Nie udało się załadować rankingu.",
       "empty": "Bądź pierwszy!",
-      "you": "Ty"
+      "you": "Ty",
+      "clearedAll": "Wszystkie flagi zdobyte"
     },
     "share": {
       "aria": "Udostępnij wynik",

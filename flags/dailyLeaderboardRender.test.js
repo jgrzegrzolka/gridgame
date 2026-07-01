@@ -253,6 +253,67 @@ test('renderLeaderboard: formatScore also applies to the bottom "you" row when r
   assert.equal(youScore.textContent, '42');
 });
 
+// Trivial mm:ss.mmm formatter for the time-display tests — mirrors
+// `flags/quiz.js#formatTime` closely enough to assert the wiring.
+const fmtTime = (/** @type {number} */ ms) => {
+  const totalSec = Math.floor(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min}:${String(sec).padStart(2, '0')}.${String(ms % 1000).padStart(3, '0')}`;
+};
+
+test('renderLeaderboard: poolTotal shows the finish time only on rows that cleared the whole pool', () => {
+  // 60s mode: score counts flags found, poolTotal is the category size.
+  // A row that reached poolTotal cleared everything → shows its time;
+  // a row that fell short (used the whole budget) does not.
+  const doc = makeDoc();
+  const top = [
+    { deviceId: 'd1', nickname: 'Alice', score: 23, durationMs: 42_300 }, // cleared all 23
+    { deviceId: 'd2', nickname: 'Bob',   score: 19, durationMs: 60_000 }, // short
+  ];
+  const root = renderLeaderboard({
+    state: 'ready', data: { top, you: null }, t, doc, poolTotal: 23, formatTime: fmtTime,
+  });
+  const rows = findAllByClass(root, 'leaderboard-row');
+  const aliceTime = findAllByClass(rows[0], 'leaderboard-time');
+  assert.equal(aliceTime.length, 1);
+  assert.equal(aliceTime[0].textContent, '0:42.300');
+  assert.equal(findAllByClass(rows[1], 'leaderboard-time').length, 0);
+});
+
+test('renderLeaderboard: no poolTotal (endurance mode) → never shows a per-row time', () => {
+  // Endurance stores wrong-counts (lower wins); "cleared all" isn't a
+  // score threshold, so the page passes poolTotal=null and no time shows
+  // even for a perfect (score 0) run.
+  const doc = makeDoc();
+  const top = [{ deviceId: 'd1', nickname: 'Alice', score: 0, durationMs: 60_000 }];
+  const root = renderLeaderboard({ state: 'ready', data: { top, you: null }, t, doc, formatTime: fmtTime });
+  assert.equal(findAllByClass(root, 'leaderboard-time').length, 0);
+});
+
+test('renderLeaderboard: poolTotal present but no formatTime → no time element (defensive)', () => {
+  const doc = makeDoc();
+  const top = [{ deviceId: 'd1', nickname: 'Alice', score: 23, durationMs: 42_300 }];
+  const root = renderLeaderboard({ state: 'ready', data: { top, you: null }, t, doc, poolTotal: 23 });
+  assert.equal(findAllByClass(root, 'leaderboard-time').length, 0);
+});
+
+test('renderLeaderboard: the bottom "you" row also shows the time when it cleared the pool', () => {
+  const doc = makeDoc();
+  const top = Array.from({ length: 10 }, (_, i) => ({
+    deviceId: `d${i}`, nickname: `P${i}`, score: 22, durationMs: 30_000,
+  }));
+  const root = renderLeaderboard({
+    state: 'ready',
+    data: { top, you: { rank: 40, score: 23, durationMs: 45_000 } },
+    ownDeviceId: ME, t, doc, poolTotal: 23, formatTime: fmtTime,
+  });
+  const youList = findAllByClass(root, 'leaderboard-list-you')[0];
+  const youTime = findAllByClass(youList, 'leaderboard-time');
+  assert.equal(youTime.length, 1);
+  assert.equal(youTime[0].textContent, '0:45.000');
+});
+
 test('renderLeaderboard: omitting formatScore preserves the original score string (60s timed mode)', () => {
   // 60s mode stores score = correctCount already — no transform desired.
   // Pin the default-behaviour path so a future refactor can't break it.
