@@ -14,6 +14,7 @@ import {
   generateUltimateRandomPuzzle,
   hasUltimatePuzzleSolution,
   axesImpliedPair,
+  suggest,
 } from './engine.js';
 import { CONTINENTS, flagsGamePool, loadCountries } from './group.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
@@ -155,6 +156,24 @@ test('aliases (when present) are non-empty string arrays with no duplicates', ()
     }
   }
   assert.deepEqual(offenders, [], offenders.join('; '));
+});
+
+test('the United Kingdom carries the everyday "Great Britain" / "UK" aliases', () => {
+  // GB's canonical name is "United Kingdom", so without aliases the name
+  // search (browse filter + quiz answer input) would miss the everyday
+  // names. Pin the data so the regression can't recur. "UK" is only useful
+  // in the browse filter — it's below suggest's 3-char floor (asserted next).
+  const gb = COUNTRIES.find((c) => c.code === 'gb');
+  for (const a of ['Great Britain', 'Britain', 'UK']) {
+    assert.ok(gb?.aliases?.includes(a), `gb should alias "${a}"`);
+  }
+});
+
+test('suggest surfaces the United Kingdom from "great" / "britain" (via alias)', () => {
+  for (const q of ['great', 'great britain', 'Great Britain', 'britain']) {
+    const codes = suggest(COUNTRIES, q).map((c) => c.code);
+    assert.ok(codes.includes('gb'), `"${q}" should surface gb, got ${codes.join(',') || 'none'}`);
+  }
 });
 
 test('motifs (when present) are arrays drawn from ALL_MOTIFS', () => {

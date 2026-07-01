@@ -190,7 +190,7 @@ export function bootFlagsData() {
     },
   });
 
-  /** @type {{ items: Country[], foldedNames: string[], tiles: HTMLElement[], count: HTMLElement } | null} */
+  /** @type {{ items: Country[], foldedTerms: string[][], tiles: HTMLElement[], count: HTMLElement } | null} */
   let state = null;
 
   // Show-map toggle in the burger menu — flagsdata's burger panel ships
@@ -300,16 +300,21 @@ export function bootFlagsData() {
     grid.className = 'grid';
     /** @type {HTMLElement[]} */
     const tiles = [];
-    /** @type {string[]} */
-    const foldedNames = [];
+    // One folded search string per country: its localized display name plus
+    // any aliases (e.g. "Great Britain" / "UK" for the United Kingdom), so
+    // the name filter matches the same alternates the quiz answer-input does.
+    /** @type {string[][]} */
+    const foldedTerms = [];
     for (const c of items) {
       const tile = flagTile(c);
       tiles.push(tile);
-      foldedNames.push(foldDiacritics(countryName(c)));
+      const terms = [foldDiacritics(countryName(c))];
+      if (c.aliases) for (const a of c.aliases) terms.push(foldDiacritics(a));
+      foldedTerms.push(terms);
       grid.appendChild(tile);
     }
     parent.appendChild(grid);
-    state = { items, foldedNames, tiles, count: countSpan };
+    state = { items, foldedTerms, tiles, count: countSpan };
     // Build the code→country lookup once items are known — the click
     // handler on the map needs it to resolve a clicked path's ISO2
     // code to a Country for the flag-zoom popup.
@@ -323,7 +328,8 @@ export function bootFlagsData() {
     const visibleCodes = [];
     for (let i = 0; i < state.items.length; i++) {
       const catMatch = matchesFilters(state.items[i], filters);
-      const nameMatch = nameQuery === '' || state.foldedNames[i].includes(nameQuery);
+      const nameMatch =
+        nameQuery === '' || state.foldedTerms[i].some((term) => term.includes(nameQuery));
       const show = catMatch && nameMatch;
       state.tiles[i].hidden = !show;
       if (show) {
