@@ -5,6 +5,8 @@ import { createColorCountPicker } from '../colorCountPicker.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
+import { getFlagFacts } from '../flags/flagFacts.js';
+import { renderFlagFacts } from '../flags/flagFactsRender.js';
 import { mountFlagMap, setSelectedCountries, computeCountriesBbox } from '../flagQuiz/flagMap.js';
 import { attachZoomPan } from '../flagQuiz/mapZoom.js';
 import { buildToggleLi } from '../common.js';
@@ -88,13 +90,43 @@ export function bootFlagsData() {
   // what prod sees once the flag is on.
   const SHOW_DATA = new URLSearchParams(window.location.search).has('audit');
   if (!SHOW_DATA) zoomData.hidden = true;
+  const zoomFacts = /** @type {HTMLElement} */ (zoom.querySelector('.country-facts'));
+
+  // The flag currently shown in the zoom, so a soft language switch can
+  // re-render its facts panel in the new language while the dialog stays
+  // open (softReload keeps it open across the switch).
+  /** @type {Country | null} */
+  let zoomCountry = null;
+
+  /**
+   * Populate the facts panel for the zoomed country (or empty + hide it
+   * when there's no story). Adds `has-facts` to the dialog so the CSS can
+   * widen + scroll the popup only when there's content to show.
+   *
+   * @param {Country | null} c
+   */
+  function paintFacts(c) {
+    zoomFacts.innerHTML = '';
+    const facts = c ? getFlagFacts(c.code) : null;
+    zoom.classList.toggle('has-facts', !!facts);
+    zoomFacts.hidden = !facts;
+    if (!facts) return;
+    const subtree = renderFlagFacts({ facts, t, doc: document, base: '../flags/' });
+    if (subtree) zoomFacts.appendChild(subtree);
+  }
+
   /** @param {Country} c */
   function openZoom(c) {
     const displayName = countryName(c);
     openFlagZoom(zoom, { code: c.code, displayName, svgBase: '../flags/svg/' });
+    zoomCountry = c;
+    paintFacts(c);
     if (SHOW_DATA) zoomData.textContent = JSON.stringify(c, null, 2);
   }
   wireFlagZoomBackdropClose(zoom);
+  // Clear the tracked country when the dialog closes so a later soft
+  // language switch doesn't try to re-render a stale facts panel.
+  zoom.addEventListener('close', () => { zoomCountry = null; });
 
   /** @param {Country} c */
   function flagTile(c) {
@@ -553,6 +585,14 @@ export function bootFlagsData() {
   // are handled upstream by `applyStringsToDocument`.
   document.addEventListener('langchanged', () => {
     refreshTileNames();
+    // Re-render the open zoom in the new language (softReload keeps the
+    // dialog open across the switch): the country-name line (the dialog's
+    // first <p>, set once by openFlagZoom) and the facts panel below it.
+    if (zoom.open && zoomCountry) {
+      const nameP = zoom.querySelector('p');
+      if (nameP) nameP.textContent = countryName(zoomCountry);
+      paintFacts(zoomCountry);
+    }
     const pills = /** @type {NodeListOf<HTMLButtonElement>} */ (
       filterBar.querySelectorAll('.pill[data-group][data-value]')
     );
