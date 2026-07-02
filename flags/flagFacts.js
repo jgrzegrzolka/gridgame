@@ -171,6 +171,18 @@ export const FLAG_FACTS = {
     ],
     factKeys: ['flagFacts.pl.fact.lookalikes'],
   },
+  ge: {
+    introKey: 'flagFacts.ge.intro',
+    timeline: [
+      { year: '1918–1921', img: 'history/ge-1918.svg', captionKey: 'flagFacts.ge.republic' },
+      { year: '1921–1990', img: 'history/ge-ssr.svg', captionKey: 'flagFacts.ge.soviet' },
+      // The 1918 flag returned after the USSR fell — same design, hence the
+      // same image, shown again so the "it came back" beat reads visually.
+      { year: '1991–2004', img: 'history/ge-1918.svg', captionKey: 'flagFacts.ge.restored' },
+      { year: '2004', img: 'svg/ge.svg', captionKey: 'flagFacts.ge.current' },
+    ],
+    factKeys: ['flagFacts.ge.fact.crosses', 'flagFacts.ge.fact.jerusalem'],
+  },
 };
 
 /**

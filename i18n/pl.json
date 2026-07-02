@@ -704,6 +704,17 @@
       "fact": {
         "lookalikes": "Odwróć polską flagę do góry nogami, a otrzymasz Indonezję i Monako — czerwień nad bielą. Te dwie z kolei są niemal identyczne i różnią się jedynie proporcjami: Indonezja jest wydłużona (2:3), a Monako bardziej krępe (4:5)."
       }
+    },
+    "ge": {
+      "intro": "Flaga Gruzji z pięcioma krzyżami wygląda na zupełnie nową — przyjęto ją dopiero w 2004 roku — lecz jej wzór jest średniowieczny. Duży krzyż św. Jerzego dzieli płótno, a w każdym rogu znajduje się mniejszy krzyż „Bolnisi”; razem tworzą układ znany jako Krzyż Jerozolimski. Sam krzyż Bolnisi sięga kamiennych rzeźb z gruzińskiego kościoła z V wieku, a europejska mapa z 1367 roku pokazuje już ten sztandar nad Tbilisi.",
+      "republic": "Flaga pierwszej Republiki Gruzińskiej — wino-czerwona z czarno-białym kantonem — zaprojektowana przez malarza Jakoba Nikoladzego, zwycięzcę ogólnokrajowego konkursu.",
+      "soviet": "Po najeździe Armii Czerwonej w 1921 roku zapanowały symbole radzieckie: czerwony sztandar z młotem, sierpem i gwiazdą.",
+      "restored": "Gdy Związek Radziecki upadł, w grudniu 1991 roku powróciła flaga republiki z 1918 roku.",
+      "current": "Przyjęta w 2004 roku, kilka miesięcy po pokojowej rewolucji róż — wybrana jako symbol nowego początku.",
+      "fact": {
+        "crosses": "Pięć krzyży odczytuje się zwykle jako Pięć Ran Chrystusa — albo jako Chrystusa (krzyż środkowy) wśród czterech ewangelistów.",
+        "jerusalem": "Układ „jeden duży plus cztery małe” to Krzyż Jerozolimski, godło krucjat — nawiązanie do głębokich średniowiecznych związków chrześcijańskich Gruzji, gdy gruzińscy rycerze również przywdziewali krzyż."
+      }
     }
   },
   "country": {
