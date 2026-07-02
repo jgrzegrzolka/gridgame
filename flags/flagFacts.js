@@ -169,7 +169,7 @@ export const FLAG_FACTS = {
       { year: 'since 13th c.', img: 'history/pl-eagle.svg', captionKey: 'flagFacts.pl.eagle' },
       { year: '1919', img: 'svg/pl.svg', captionKey: 'flagFacts.pl.current' },
     ],
-    factKeys: ['flagFacts.pl.fact.whiteontop'],
+    factKeys: ['flagFacts.pl.fact.lookalikes'],
   },
 };
 
