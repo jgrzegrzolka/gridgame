@@ -695,11 +695,11 @@
       }
     },
     "pl": {
-      "intro": "Flaga Polski nie może być prostsza: biel nad czerwienią — dwie barwy średniowiecznego herbu, białego orła na czerwonej tarczy. Nikt ich nie wymyślił; zostały odziedziczone. Biało-czerwień stała się barwami narodowymi w 1831 roku, a prosty dwupas — oficjalną flagą w 1919.",
+      "intro": "Barwy polskiej flagi wywodzą się bezpośrednio z herbu państwowego: Biały Orzeł znajduje się na górnym pasie (symbol czystości i szlachetności), a dolny czerwony pas odpowiada barwie tarczy herbowej (symbolizuje odwagę i waleczność).",
       "eagle": "Orzeł Biały na czerwonej tarczy — stąd biel i czerwień flagi.",
       "current": "Prosty biało-czerwony dwupas, oficjalny od 1919 roku.",
       "fact": {
-        "whiteontop": "Biel jest na górze, bo barwa orła stoi w heraldyce wyżej niż barwa pola — odwróć flagę i masz flagę Indonezji albo Monako."
+        "lookalikes": "Odwróć polską flagę do góry nogami, a otrzymasz Indonezję i Monako — czerwień nad bielą. Te dwie z kolei są niemal identyczne i różnią się jedynie proporcjami: Indonezja jest wydłużona (2:3), a Monako bardziej krępe (4:5)."
       }
     }
   },

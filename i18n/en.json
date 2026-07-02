@@ -695,11 +695,11 @@
       }
     },
     "pl": {
-      "intro": "Poland's flag couldn't be simpler: white over red — the two colours of the medieval coat of arms, a white eagle on a red shield. Nobody designed them; they were inherited. White and red became the national colours in 1831, and the plain bicolour the official flag in 1919.",
+      "intro": "Poland's colours come straight from the state coat of arms: the White Eagle sits on the upper white stripe — a symbol of purity and nobility — while the lower red stripe echoes the colour of the heraldic shield, standing for courage and valour.",
       "eagle": "The White Eagle on a red shield — the flag's white and red come straight from it.",
       "current": "The plain white-over-red bicolour, official since 1919.",
       "fact": {
-        "whiteontop": "White goes on top because the eagle's colour outranks the field's — flip the flag and you get Indonesia or Monaco."
+        "lookalikes": "Flip Poland's flag top-to-bottom and you get Indonesia and Monaco — red over white. Those two are near-identical themselves, told apart only by their proportions: Indonesia is the longer 2:3, Monaco the squarer 4:5."
       }
     }
   },
