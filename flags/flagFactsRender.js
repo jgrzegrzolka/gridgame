@@ -97,7 +97,8 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
   // CC BY-SA). CC BY-SA legally requires the author + licence be shown to the
   // viewer, so we surface a link to the sources/licences list rather than
   // leaving it only in the repo. Built from elements (no text nodes) so the
-  // separator is a CSS `::before` and the unit-test doc stub stays tiny.
+  // separator is a CSS `::after` on the text span (keeps the link underline
+  // off the dot) and the unit-test doc stub stays tiny.
   const credit = doc.createElement('p');
   credit.className = 'flag-facts-credit';
 

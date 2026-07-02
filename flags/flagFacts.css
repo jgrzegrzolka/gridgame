@@ -248,8 +248,10 @@ dialog#zoom .flag-facts-credit {
 .flag-facts-credit-link {
   color: var(--link-color);
 }
-/* Middot separates the credit text from the link without a text node. */
-.flag-facts-credit-link::before {
+/* Middot separates the credit text from the link without a text node. It sits
+ * on the text span (not the anchor) so the link's underline stops at the link
+ * text and doesn't run under the dot. */
+.flag-facts-credit-text::after {
   content: " · ";
   color: var(--muted-color);
 }
