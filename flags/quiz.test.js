@@ -277,7 +277,7 @@ test('MODES contains "60s" and "all" in that display order', () => {
 });
 
 test('MODES["60s"] is a 60-second budget with a 3-second-per-wrong penalty', () => {
-  assert.deepEqual(MODES['60s'], { kind: 'timed', budgetMs: 60_000, penaltyMs: 3_000 });
+  assert.deepEqual(MODES['60s'], { kind: 'timed', budgetMs: 60_000, penaltyMs: 4_000 });
 });
 
 test('isTimedMode is true only for time-budgeted modes', () => {

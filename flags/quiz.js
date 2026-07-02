@@ -311,7 +311,7 @@ export function poolFor(variantKey, countries) {
  *   | { kind: 'count', count: number }} Mode
  *
  * `60s` is a time-attack: 60-second budget, each wrong tile click subtracts
- * 3 seconds. Round ends when the remaining budget hits zero OR the pool
+ * 4 seconds. Round ends when the remaining budget hits zero OR the pool
  * exhausts — score is the number of flags answered correctly.
  *
  * `all` is the original endurance mode: play through every flag in the
@@ -320,7 +320,7 @@ export function poolFor(variantKey, countries) {
  * @type {Record<string, Mode>}
  */
 export const MODES = {
-  '60s': { kind: 'timed', budgetMs: 60_000, penaltyMs: 3_000 },
+  '60s': { kind: 'timed', budgetMs: 60_000, penaltyMs: 4_000 },
   all: { kind: 'count', count: Infinity },
 };
 

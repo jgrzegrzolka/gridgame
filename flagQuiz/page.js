@@ -538,7 +538,7 @@ export function bootFlagQuiz() {
     // 0% to 100% as the budget burns down, so the visual matches the
     // dwindling timer rather than the meaningless "questions done" ratio.
     if (timed) {
-      progressBarEl.style.width = '0%';
+      progressBarEl.style.transform = 'scaleX(0)';
       // Drop the flash class once the keyframes finish, so the next
       // wrong click can restart the animation cleanly via reflow.
       playTimerEl.addEventListener('animationend', () => {
@@ -559,7 +559,12 @@ export function bootFlagQuiz() {
         const elapsedMs = Date.now() - startTime;
         const remaining = timedRemainingMs({ budgetMs, penaltyMs, elapsedMs, wrongCount });
         playTimerEl.textContent = formatTime(remaining);
-        progressBarEl.style.width = ((budgetMs - remaining) / budgetMs * 100) + '%';
+        // Drive the bar with `transform: scaleX` (not `width`): scaleX is a
+        // compositor-only property, so updating it every frame is smooth and
+        // costs no layout — where a per-frame `width` write would relayout /
+        // repaint on each frame, which is what made the map lag on mobile.
+        // transform-origin:left (set in CSS) grows the bar from the left.
+        progressBarEl.style.transform = `scaleX(${(budgetMs - remaining) / budgetMs})`;
         if (remaining <= 0 && !gameOver) {
           gameOver = true;
           showResult();
@@ -626,7 +631,7 @@ export function bootFlagQuiz() {
       if (chosen.code === currentAnswer.code) {
         answeredCount++;
         if (!timed) {
-          progressBarEl.style.width = (countModeProgressRatio(answeredCount, wrongCount, target) * 100) + '%';
+          progressBarEl.style.transform = `scaleX(${countModeProgressRatio(answeredCount, wrongCount, target)})`;
         }
         tile.classList.add('correct');
         disableAllTiles();
@@ -634,7 +639,7 @@ export function bootFlagQuiz() {
         // Fill the country's contour with its flag + green outline.
         // Records into `painted` so a map mounted later replays it.
         markCountry(currentAnswer.code, 'correct');
-        advanceTo(quiz.next(), 250);
+        advanceTo(quiz.next(), 150);
       } else if (timed) {
         // 60s is one-shot per question, same as count mode: a wrong
         // pick advances the round. The cabinet (quiz.addToCabinet)
@@ -678,7 +683,7 @@ export function bootFlagQuiz() {
         const correctTile = choicesEl.querySelector(`[data-code="${currentAnswer.code}"]`);
         if (correctTile) correctTile.classList.add('correct');
         disableAllTiles();
-        progressBarEl.style.width = (countModeProgressRatio(answeredCount, wrongCount, target) * 100) + '%';
+        progressBarEl.style.transform = `scaleX(${countModeProgressRatio(answeredCount, wrongCount, target)})`;
         // Map: the asked-about country (currentAnswer.code) is the one
         // the player missed — flag-fill + red-outline *that*, not the wrong
         // choice. The clicked-wrong tile's country may not have been asked

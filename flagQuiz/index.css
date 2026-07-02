@@ -69,9 +69,16 @@ body {
   top: var(--strip-height);
   left: 0;
   height: 4px;
-  width: 0;
+  /* Full-width element scaled horizontally via `transform: scaleX` rather
+   * than animating `width`. scaleX is a compositor-only property, so the
+   * per-frame countdown updates in `tickTimer` are smooth and cost no
+   * layout — animating `width` every frame relayed out / repainted each
+   * frame, which is what made the map lag on mobile. */
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
   background: var(--secondary-color);
-  transition: width 300ms ease;
+  transition: transform 300ms ease;
   z-index: 30;
 }
 .stats {
