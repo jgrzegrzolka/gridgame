@@ -38,6 +38,16 @@
   box-sizing: border-box;
   /* Anchor for the absolutely-positioned `.map-fullscreen-btn` below. */
   position: relative;
+  /* Isolate the map's layout + paint from the rest of the page. The large
+   * inlined world-map SVG accumulates flag-pattern fills + per-answer flash
+   * animations as a 60s round progresses; without containment the browser
+   * treats the whole page as a single invalidation scope, so map repaints
+   * and the (throttled) countdown repaints keep dirtying each other. On
+   * mobile this is the difference between smooth and "lags with map on."
+   * `layout paint` keeps the box's internal work self-contained; nothing in
+   * the section overflows its border box (the SVG fills it, the fullscreen
+   * button sits inside it), so paint clipping is a no-op visually. */
+  contain: layout paint;
 }
 /* Fullscreen toggle — small button overlay anchored to the section's
  * top-right corner. Click → `requestFullscreen()` on the section so
