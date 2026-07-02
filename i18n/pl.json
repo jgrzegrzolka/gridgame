@@ -716,6 +716,21 @@
         "jerusalem": "Układ „jeden duży plus cztery małe” to Krzyż Jerozolimski, godło krucjat — nawiązanie do głębokich średniowiecznych związków chrześcijańskich Gruzji, gdy gruzińscy rycerze również przywdziewali krzyż.",
         "stgeorge": "Duży środkowy krzyż to krzyż św. Jerzego — ten sam czerwony krzyż na bieli co na fladze Anglii. Nieprzypadkowo, bo św. Jerzy jest patronem Gruzji."
       }
+    },
+    "fr": {
+      "intro": "Francuska trójkolorowa flaga narodziła się w rewolucji. Niebieski i czerwony to dawne barwy Paryża, biel była kolorem króla. W lipcu 1789 roku markiz de La Fayette połączył je w jednej kokardzie — miasto i korona w jednym znaku — i ta niebiesko-biało-czerwona wkrótce stała się flagą nowego państwa.",
+      "royal": "Biel była barwą francuskiej monarchii — sama flaga królewska była biała, tutaj usiana złotymi liliami (fleurs-de-lis) z herbu króla, w tradycji sięgającej białego sztandaru Joanny d'Arc.",
+      "current": "Błękit i czerwień Paryża połączone z bielą króla — flaga nowego państwa, ustalona w tej kolejności w 1794 roku. Biała flaga królewska na krótko powróciła (1815–1830), zanim trójkolorowa zwyciężyła na stałe w 1830 roku za „króla-obywatela” Ludwika Filipa.",
+      "part": {
+        "paris": "Paryż",
+        "king": "królewska biel"
+      },
+      "fact": {
+        "meaning": "Francja nigdy nie nadała barwom oficjalnego znaczenia. Znany odczyt liberté–égalité–fraternité pojawił się później; starsze wyjaśnienie jest prostsze — biel dla króla, niebieski i czerwony dla Paryża.",
+        "paris": "Paryż nosi błękit i czerwień co najmniej od 1358 roku. Tradycja wiąże je z dwoma świętymi: błękit ze św. Marcinem, który rozciął swój płaszcz na pół dla żebraka marznącego w śniegu, a czerwień ze św. Dionizym, patronem miasta.",
+        "flip": "Gdy pasy ułożono po raz pierwszy w 1790 roku, czerwień była przy drzewcu. Malarz Jacques-Louis David odwrócił kolejność do dzisiejszej niebiesko-biało-czerwonej w 1794 roku.",
+        "influence": "Trójkolorowa flaga stała się jedną z najczęściej naśladowanych w historii — od XIX wieku nowo powstające państwa w Europie i poza nią przyjmowały trójpasmowe wzory jako znak narodowej, często republikańskiej, tożsamości."
+      }
     }
   },
   "country": {

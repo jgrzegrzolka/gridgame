@@ -716,6 +716,21 @@
         "jerusalem": "That one-big-plus-four-small shape is the \"Jerusalem Cross\", an emblem of the Crusades — echoing Georgia's deep medieval Christian ties, when Georgian knights also took up the cross.",
         "stgeorge": "The big central cross is St George's Cross — the same red-cross-on-white as England's flag. Fitting, since St George is Georgia's patron saint."
       }
+    },
+    "fr": {
+      "intro": "France's Tricolour was born in the Revolution. Blue and red are the old colours of Paris; white was the colour of the king. In July 1789 the Marquis de Lafayette combined them in a single cockade — city and crown in one badge — and that blue-white-red soon became the flag of the new nation.",
+      "royal": "White was the colour of the French monarchy — the royal flag itself was white, here strewn with the golden fleurs-de-lis of the king's arms, a tradition running back to Joan of Arc's white banner.",
+      "current": "Paris's blue and red joined to the king's white — the flag of the new nation, fixed in this order in 1794. The white royal flag briefly returned (1815–1830) before the Tricolour won out for good in 1830 under the \"Citizen King\", Louis-Philippe.",
+      "part": {
+        "paris": "Paris",
+        "king": "royal white"
+      },
+      "fact": {
+        "meaning": "France has never fixed an official meaning to the three colours. The familiar liberté–égalité–fraternité reading came later; the older explanation is simpler — white for the king, blue and red for Paris.",
+        "paris": "Paris has flown blue and red since at least 1358. Tradition ties them to two saints: blue to St Martin, who cut his cloak in two for a beggar in the snow, and red to St Denis, the city's patron.",
+        "flip": "When the stripes were first arranged in 1790, red sat at the hoist. The painter Jacques-Louis David flipped the order to today's blue-white-red in 1794.",
+        "influence": "The Tricolour became one of the most copied flags in history — from the 1800s on, newly independent nations across Europe and beyond took up three-stripe designs as a badge of national, often republican, identity."
+      }
     }
   },
   "country": {
