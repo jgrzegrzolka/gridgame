@@ -183,6 +183,28 @@ export const FLAG_FACTS = {
     ],
     factKeys: ['flagFacts.ge.fact.crosses', 'flagFacts.ge.fact.jerusalem', 'flagFacts.ge.fact.stgeorge'],
   },
+  fr: {
+    introKey: 'flagFacts.fr.intro',
+    timeline: [
+      { year: 'to 1789', img: 'history/fr-royal.svg', captionKey: 'flagFacts.fr.royal' },
+      // Equation: the Tricolour = Paris's blue-and-red + the king's white.
+      {
+        year: '1794',
+        img: 'svg/fr.svg',
+        captionKey: 'flagFacts.fr.current',
+        // The white ingredient is plain white (the king's colour) — NOT the
+        // fleurs-de-lis royal flag, whose gold never appears on the Tricolour.
+        parts: ['history/fr-paris.svg', 'history/fr-white.svg'],
+        partLabelKeys: ['flagFacts.fr.part.paris', 'flagFacts.fr.part.king'],
+      },
+    ],
+    factKeys: [
+      'flagFacts.fr.fact.meaning',
+      'flagFacts.fr.fact.paris',
+      'flagFacts.fr.fact.flip',
+      'flagFacts.fr.fact.influence',
+    ],
+  },
 };
 
 /**

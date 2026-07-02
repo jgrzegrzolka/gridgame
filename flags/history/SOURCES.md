@@ -28,6 +28,9 @@ Filenames are renamed to `<code>-<era>.svg` for the repo.
 | `pl-eagle.svg` | Herb Polski.svg | Public domain | The White Eagle — Poland's coat of arms, a white crowned eagle on a red shield (source of the flag's colours) |
 | `ge-1918.svg` | Flag of Georgia (1918–1921, 1-2).svg | Public domain | Democratic Republic of Georgia flag — wine-red field, black-and-white canton (also the 1991–2004 restored flag) |
 | `ge-ssr.svg` | Flag of the Georgian Soviet Socialist Republic (1951–1990).svg | Public domain | Georgian SSR flag — red with a blue sun bearing hammer, sickle and star |
+| `fr-royal.svg` | Pavillon royal de France.svg | Public domain (Zippanova) | Pre-revolution / Restoration royal flag — white field strewn with golden fleurs-de-lis |
+| `fr-paris.svg` | Flag of Paris.svg | Public domain | Flag of the city of Paris — blue (hoist) and red (fly); the tricolour's blue-and-red (shown as an equation ingredient) |
+| `fr-white.svg` | (original — plain white rectangle) | Public domain (trivial) | Plain white panel — the "king's white" ingredient in the Tricolour equation (no fleurs-de-lis, since the gold never appears on the flag) |
 
 **Attribution (CC BY-SA):**
 - `ch-flamme.svg` is a derivative of *"Militärfahne der Stadt und Republik Bern"*
