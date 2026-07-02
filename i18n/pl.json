@@ -731,6 +731,20 @@
         "flip": "Gdy pasy ułożono po raz pierwszy w 1790 roku, czerwień była przy drzewcu. Malarz Jacques-Louis David odwrócił kolejność do dzisiejszej niebiesko-biało-czerwonej w 1794 roku.",
         "influence": "Trójkolorowa flaga stała się jedną z najczęściej naśladowanych w historii, od XIX wieku nowo powstające państwa w Europie i poza nią przyjmowały trójpasmowe wzory jako znak narodowej, często republikańskiej, tożsamości."
       }
+    },
+    "af": {
+      "intro": "Żaden kraj nie zmieniał swojej flagi tak niespokojnie jak Afganistan. W XX wieku przerysowywano ją grubo ponad tuzin razy, a niemal każda zmiana władcy przynosiła nowe godło albo zupełnie nowy sztandar.\n\nNicią łączącą większość tych flag jest pionowa trójkolorówka czarno-czerwono-zielona, z godłem państwowym, meczetem w otoczeniu snopów pszenicy, pośrodku. Przetrwała królestwo, republikę i rewolucję, zanim odłożono ją na bok w 2021 roku.",
+      "tricolour": "W 1928 roku król Amanullah Khan, świeżo po podróży po Europie, zamienił dawny czarny sztandar królewski na czarno-czerwono-zieloną pionową trójkolorówkę, pierwszą poprzedniczkę wzoru, który przetrwał króla, republikę i zamachy stanu.",
+      "kingdom": "Trójkolorowa flaga Królestwa Afganistanu. W jej sercu jest godło państwowe: meczet widziany na wprost, z widocznym mihrabem i minbarem, otoczony snopami pszenicy. Jakaś odmiana tej flagi powiewała, ze zmieniającymi się godłami, przez większość stulecia.",
+      "republic": "Po upadku talibów Islamska Republika wróciła do czarno-czerwono-zielonej trójkolorówki z białym godłem meczetu. To flaga, którą świat wciąż kojarzy z Afganistanem, i ta, którą jego sportowcy i ambasady prezentowali za granicą.",
+      "current": "W 2021 roku biały sztandar talibów zastąpił trójkolorówkę: szahada, islamskie wyznanie wiary, wypisana czarnymi literami na bieli. Flagę czarno-czerwono-zieloną nadal prezentują przedstawiciele dawnej republiki za granicą.",
+      "fact": {
+        "changes": "Afganistanowi przypisuje się często najwięcej zmian flagi ze wszystkich krajów w XX wieku, według popularnych wyliczeń około dziewiętnaście, mniej więcej nowa flaga co pięć lat.",
+        "colours": "Trójkolorówka niosła utarte znaczenie: czerń dla mrocznej, okupowanej przeszłości kraju, czerwień dla krwi przelanej w walce o niepodległość, a zieleń dla nadziei, pomyślności i islamu.",
+        "mosque": "Centralne godło to meczet narysowany na wprost, z mihrabem (niszą wskazującą Mekkę) i minbarem (amboną), zwykle owinięty pszenicą, motyw obecny na afgańskich flagach od początku XX wieku.",
+        "redflag": "Przez dwa lata (1978–1980) rząd komunistyczny powiewał niemal całkowicie czerwoną flagą w sowieckim stylu. Okazała się tak niepopularna w pobożnie muzułmańskim kraju, że pospiesznie przywrócono tradycyjną czarno-czerwono-zieloną.",
+        "white": "Biała flaga z szahadą ma głębokie korzenie: biel przywołuje sztandary wczesnych kalifatów islamskich. Talibowie po raz pierwszy podnieśli ten wzór w latach 90., a przywrócili go w 2021 roku."
+      }
     }
   },
   "country": {

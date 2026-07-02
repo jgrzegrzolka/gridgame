@@ -731,6 +731,20 @@
         "flip": "When the stripes were first arranged in 1790, red sat at the hoist. The painter Jacques-Louis David flipped the order to today's blue-white-red in 1794.",
         "influence": "The Tricolour became one of the most copied flags in history, from the 1800s on, newly independent nations across Europe and beyond took up three-stripe designs as a badge of national, often republican, identity."
       }
+    },
+    "af": {
+      "intro": "No country has changed its flag as restlessly as Afghanistan. Through the 20th century it was redrawn well over a dozen times, almost every change of ruler bringing a new emblem or an entirely new banner.\n\nThe thread running through most of those flags is a vertical tricolour of black, red and green, with the national emblem, a mosque framed by sheaves of wheat, in the centre. It endured through kingdom, republic and revolution before being set aside in 2021.",
+      "tricolour": "In 1928 King Amanullah Khan, freshly back from a tour of Europe, swapped the old black royal banner for a black-red-green vertical tricolour, the first ancestor of a design that would outlast king, republic and coup alike.",
+      "kingdom": "The tricolour of the Kingdom of Afghanistan. At its heart is the national emblem: a mosque seen head-on, showing the mihrab and pulpit, wrapped in sheaves of wheat. Some form of this flag flew, with shifting emblems, for most of the century.",
+      "republic": "After the fall of the Taliban, the Islamic Republic returned to the black-red-green tricolour with a white mosque emblem. This is the flag most of the world still pictures for Afghanistan, and the one its athletes and embassies flew abroad.",
+      "current": "In 2021 the Taliban's white banner replaced the tricolour: the Shahada, the Islamic declaration of faith, lettered in black on white. The black-red-green flag is still flown by the former republic's representatives abroad.",
+      "fact": {
+        "changes": "Afghanistan is often credited with the most flag changes of any country in the 20th century, by common counts around nineteen, roughly a new flag every five years.",
+        "colours": "The tricolour carried a standard reading: black for the country's dark, occupied past, red for the blood shed winning independence, and green for hope, prosperity and Islam.",
+        "mosque": "The central emblem is a mosque drawn straight on, showing the mihrab (the niche that points to Mecca) and the minbar (the pulpit), usually wrapped in wheat, a motif on Afghan flags since the early 1900s.",
+        "redflag": "For two years (1978–1980) the communist government flew an almost entirely red, Soviet-style flag. It proved so unpopular in a devoutly Muslim country that the traditional black-red-green was hastily brought back.",
+        "white": "The white Shahada flag has deep roots: white recalls the banners of the early Islamic caliphates. The Taliban first raised this design in the 1990s, and returned it in 2021."
+      }
     }
   },
   "country": {
