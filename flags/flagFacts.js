@@ -181,7 +181,7 @@ export const FLAG_FACTS = {
       { year: '1991–2004', img: 'history/ge-1918.svg', captionKey: 'flagFacts.ge.restored' },
       { year: '2004', img: 'svg/ge.svg', captionKey: 'flagFacts.ge.current' },
     ],
-    factKeys: ['flagFacts.ge.fact.crosses', 'flagFacts.ge.fact.jerusalem'],
+    factKeys: ['flagFacts.ge.fact.crosses', 'flagFacts.ge.fact.jerusalem', 'flagFacts.ge.fact.stgeorge'],
   },
 };
 
