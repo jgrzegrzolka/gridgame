@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openFlagLightbox, wireFlagLightbox } from './flagLightbox.js';
+import { openFlagLightbox, wireFlagLightbox, wireFlagLightboxAll } from './flagLightbox.js';
 
 /**
  * A fake element good enough for the module's DOM touches. Typed `any` (like
@@ -134,4 +134,26 @@ test('wireFlagLightbox opens on Enter and Space, preventing default', () => {
 
 test('wireFlagLightbox is a no-op on a null image', () => {
   assert.doesNotThrow(() => wireFlagLightbox(null, undefined, fakeDoc()));
+});
+
+test('wireFlagLightboxAll wires every flag image under a container', () => {
+  const doc = fakeDoc();
+  const a = doc.createElement('img');
+  a.src = 'flags/history/af-1928.svg';
+  const b = doc.createElement('img');
+  b.src = 'flags/history/af-kingdom.svg';
+  const root = /** @type {any} */ ({ querySelectorAll: (/** @type {string} */ sel) => (sel === 'img' ? [a, b] : []) });
+
+  wireFlagLightboxAll(root, undefined, doc);
+  assert.equal(a.dataset.lightboxWired, '1');
+  assert.equal(b.dataset.lightboxWired, '1');
+
+  // A timeline flag opens the lightbox with its own src (not the headline's).
+  b._fire('click', {});
+  assert.equal(doc.__flagLightbox.img.src, 'flags/history/af-kingdom.svg');
+});
+
+test('wireFlagLightboxAll is a no-op on a container without querySelectorAll', () => {
+  assert.doesNotThrow(() => wireFlagLightboxAll(null, undefined, fakeDoc()));
+  assert.doesNotThrow(() => wireFlagLightboxAll({}, undefined, fakeDoc()));
 });

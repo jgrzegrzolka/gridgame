@@ -4,7 +4,7 @@ import { loadCountries } from './flags/group.js';
 import { getFlagFacts, storyFlagCodes } from './flags/flagFacts.js';
 import { renderFlagFacts } from './flags/flagFactsRender.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from './flags/flagZoom.js';
-import { wireFlagLightbox } from './flags/flagLightbox.js';
+import { wireFlagLightbox, wireFlagLightboxAll } from './flags/flagLightbox.js';
 import { warsawToday } from './flags/warsawTime.js';
 import { flagOfDay } from './flags/flagOfDay.js';
 
@@ -48,6 +48,9 @@ function paintFacts(zoom, zoomFacts, code) {
   if (!facts) return;
   const subtree = renderFlagFacts({ facts, t, doc: document, base: 'flags/' });
   if (subtree) zoomFacts.appendChild(subtree);
+  // The historical flags in the story are tappable to enlarge too, same
+  // lightbox as the headline flag. Re-wired here because the subtree is fresh.
+  wireFlagLightboxAll(zoomFacts, t);
 }
 
 /**
