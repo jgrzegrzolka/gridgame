@@ -626,6 +626,10 @@
         "asymmetry": "Look closely and it isn't symmetric: the broad white diagonal sits above the red on the hoist side and below it on the fly. That \"counterchange\" is why there's a right way up.",
         "distress": "Because it has a right way up, flying it upside-down is a recognised distress signal, and, done by accident, a minor national embarrassment.",
         "offspring": "It's the most-copied flag in the world: Australia, New Zealand, Fiji, Tuvalu and the US state of Hawaii all still carry a Union Jack in the corner."
+      },
+      "compare": {
+        "correct": "Union Jack, right way up",
+        "inverted": "Union Jack, upside down (distress signal)"
       }
     },
     "gb-eng": {

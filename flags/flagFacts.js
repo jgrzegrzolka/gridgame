@@ -38,7 +38,25 @@
  *   introKey: string,
  *   timeline: FlagFactStep[],
  *   factKeys?: string[],
+ *   compare?: FlagFactCompare,
  * }} FlagFacts
+ *
+ * @typedef {{
+ *   img: string,
+ *   afterFactKey: string,
+ *   correctKey: string,
+ *   invertedKey: string,
+ * }} FlagFactCompare
+ *
+ * `compare` (optional) renders a two-flag "right way up vs upside down"
+ * illustration — the same `img` shown normally and flipped vertically —
+ * tucked directly beneath the fact bullet named by `afterFactKey` (so it
+ * illustrates that specific point). It exists for flags whose asymmetry has a
+ * consequence (the Union Jack, where inverting it is a distress signal). No
+ * caption or labels: the fact text above the flags already explains them.
+ * `correctKey` / `invertedKey` supply the images' alt text only (a11y), not
+ * visible labels. Both flags are tap-to-enlarge; the inverted one enlarges
+ * mirrored too (the renderer flags it so the lightbox keeps the flip).
  *
  * `addedOn` (`YYYY-MM-DD`) is the day the story shipped. It drives the
  * flag-of-the-day rotation's append-safety: a flag only becomes eligible the
@@ -85,6 +103,17 @@ export const FLAG_FACTS = {
       'flagFacts.gb.fact.distress',
       'flagFacts.gb.fact.offspring',
     ],
+    // Sits directly under the `asymmetry` bullet: the same flag the right way
+    // up and flipped. The Union Jack has 180° rotational symmetry, so "upside
+    // down" is a vertical FLIP (scaleY(-1)), not a rotation — a rotation would
+    // look identical. The flip correctly drops the broad white below the red
+    // on the hoist side.
+    compare: {
+      img: 'svg/gb.svg',
+      afterFactKey: 'flagFacts.gb.fact.asymmetry',
+      correctKey: 'flagFacts.gb.compare.correct',
+      invertedKey: 'flagFacts.gb.compare.inverted',
+    },
   },
   'gb-eng': {
     addedOn: '2026-07-01',

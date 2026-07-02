@@ -72,6 +72,27 @@ test('openFlagLightbox creates one overlay, reuses it, and sets src/alt + opens'
   assert.equal(lb.dialog.modalCount, 2);
 });
 
+test('openFlagLightbox flips the overlay image when flipped=true, and resets it otherwise', () => {
+  const doc = fakeDoc();
+  openFlagLightbox('flags/svg/gb.svg', 'UK upside down', doc, true);
+  const lb = doc.__flagLightbox;
+  assert.equal(lb.img.className, 'flag-lightbox-flipped');
+  // A later normal open on the reused overlay clears the flip.
+  openFlagLightbox('flags/svg/pl.svg', 'Poland', doc);
+  assert.equal(lb.img.className, '');
+});
+
+test('wireFlagLightbox propagates data-lightbox-flip to the lightbox on open', () => {
+  const doc = fakeDoc();
+  const img = doc.createElement('img');
+  img.src = 'flags/svg/gb.svg';
+  img.alt = 'UK upside down';
+  img.dataset.lightboxFlip = '1';
+  wireFlagLightbox(img, undefined, doc);
+  img._fire('click', {});
+  assert.equal(doc.__flagLightbox.img.className, 'flag-lightbox-flipped');
+});
+
 test('clicking the overlay closes it', () => {
   const doc = fakeDoc();
   openFlagLightbox('flags/svg/pl.svg', 'Poland', doc);

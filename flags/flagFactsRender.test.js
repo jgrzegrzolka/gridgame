@@ -181,6 +181,58 @@ test('renderFlagFacts omits the extra section entirely when factKeys is absent',
   assert.equal(findAllByClass(root, 'flag-facts-list').length, 0);
 });
 
+test('renderFlagFacts nests the orientation comparison inside its fact bullet, no caption/labels', () => {
+  const doc = makeDoc();
+  const factsCmp = {
+    ...FACTS,
+    factKeys: ['flagFacts.x.a', 'flagFacts.x.asym', 'flagFacts.x.b'],
+    compare: {
+      img: 'svg/gb.svg',
+      afterFactKey: 'flagFacts.x.asym',
+      correctKey: 'flagFacts.x.correct',
+      invertedKey: 'flagFacts.x.inverted',
+    },
+  };
+  const t = makeT({
+    'flagFacts.didYouKnow': 'Did you know?',
+    'flagFacts.x.a': 'A.',
+    'flagFacts.x.asym': 'Asymmetry point.',
+    'flagFacts.x.b': 'B.',
+    'flagFacts.x.correct': 'Right way up',
+    'flagFacts.x.inverted': 'Upside down',
+  });
+  const root = renderFlagFacts({ facts: factsCmp, t, doc, base: '../flags/' });
+
+  const imgs = findAllByClass(root, 'flag-facts-compare-img');
+  assert.equal(imgs.length, 2);
+  // Both sides are the same source flag; only the second carries the flip class.
+  assert.equal(imgs[0].src, '../flags/svg/gb.svg');
+  assert.equal(imgs[1].src, '../flags/svg/gb.svg');
+  assert.equal(findAllByClass(root, 'flag-facts-compare-img-inverted').length, 1);
+  assert.ok(imgs[1].className.includes('flag-facts-compare-img-inverted'));
+  assert.ok(!imgs[0].className.includes('flag-facts-compare-img-inverted'));
+
+  // Alt text carries the orientation for a11y — no visible caption or labels.
+  assert.deepEqual(imgs.map((e) => e.alt), ['Right way up', 'Upside down']);
+  assert.equal(findAllByClass(root, 'flag-facts-compare-caption').length, 0);
+  assert.equal(findAllByClass(root, 'flag-facts-compare-label').length, 0);
+
+  // The row is nested inside the asymmetry <li>, and only that one.
+  const items = findAllByClass(root, 'flag-facts-list-item');
+  const asymLi = items.find((li) => li.textContent === 'Asymmetry point.');
+  assert.ok(asymLi, 'asymmetry bullet exists');
+  assert.equal(findAllByClass(asymLi, 'flag-facts-compare-row').length, 1);
+  const aLi = items.find((li) => li.textContent === 'A.');
+  assert.equal(findAllByClass(aLi, 'flag-facts-compare-row').length, 0);
+});
+
+test('renderFlagFacts omits the comparison when compare is absent', () => {
+  const doc = makeDoc();
+  const root = renderFlagFacts({ facts: FACTS, t: makeT({}), doc }); // FACTS has no compare
+  assert.equal(findAllByClass(root, 'flag-facts-compare-row').length, 0);
+  assert.equal(findAllByClass(root, 'flag-facts-compare-img').length, 0);
+});
+
 test('renderFlagFacts appends an image-credit line with a sources link on every story', () => {
   const doc = makeDoc();
   const t = makeT({

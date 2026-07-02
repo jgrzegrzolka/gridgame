@@ -43,14 +43,22 @@ function ensureLightbox(doc) {
 /**
  * Open the lightbox showing an image source at full size.
  *
+ * `flipped` mirrors the enlarged image vertically (`scaleY(-1)` via a CSS
+ * class). It exists for the orientation-comparison flags on a story (the
+ * "upside down" Union Jack): both copies share one `src`, so without this the
+ * flipped one would enlarge right-side-up and contradict its label. Reset on
+ * every open because the single overlay image is reused across flags.
+ *
  * @param {string} src
  * @param {string} alt
  * @param {any} [doc]
+ * @param {boolean} [flipped]
  */
-export function openFlagLightbox(src, alt, doc = globalThis.document) {
+export function openFlagLightbox(src, alt, doc = globalThis.document, flipped = false) {
   const { dialog, img } = ensureLightbox(doc);
   img.src = src;
   img.alt = alt || '';
+  img.className = flipped ? 'flag-lightbox-flipped' : '';
   if (dialog.showModal) dialog.showModal();
 }
 
@@ -75,7 +83,12 @@ export function wireFlagLightbox(img, t, doc = globalThis.document) {
   img.setAttribute('tabindex', '0');
   img.setAttribute('aria-label', t ? t('zoom.enlarge', 'Enlarge flag') : 'Enlarge flag');
 
-  const open = () => openFlagLightbox(img.src, img.alt, doc);
+  // `data-lightbox-flip="1"` on the source flag (the flipped comparison flag)
+  // tells the lightbox to enlarge it mirrored. Read live inside open(), same as
+  // src/alt, so it tracks the current image.
+  const open = () => openFlagLightbox(
+    img.src, img.alt, doc, !!(img.dataset && img.dataset.lightboxFlip === '1'),
+  );
   img.addEventListener('click', open);
   img.addEventListener('keydown', (/** @type {any} */ e) => {
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
