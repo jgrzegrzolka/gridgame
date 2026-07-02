@@ -205,6 +205,22 @@ export const FLAG_FACTS = {
       'flagFacts.fr.fact.influence',
     ],
   },
+  af: {
+    introKey: 'flagFacts.af.intro',
+    timeline: [
+      { year: '1928', img: 'history/af-1928.svg', captionKey: 'flagFacts.af.tricolour' },
+      { year: '1931–1973', img: 'history/af-kingdom.svg', captionKey: 'flagFacts.af.kingdom' },
+      { year: '2004–2021', img: 'history/af-republic.svg', captionKey: 'flagFacts.af.republic' },
+      { year: '2021', img: 'svg/af.svg', captionKey: 'flagFacts.af.current' },
+    ],
+    factKeys: [
+      'flagFacts.af.fact.changes',
+      'flagFacts.af.fact.colours',
+      'flagFacts.af.fact.mosque',
+      'flagFacts.af.fact.redflag',
+      'flagFacts.af.fact.white',
+    ],
+  },
 };
 
 /**

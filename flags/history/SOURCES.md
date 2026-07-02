@@ -31,6 +31,9 @@ Filenames are renamed to `<code>-<era>.svg` for the repo.
 | `fr-royal.svg` | Pavillon royal de France.svg | Public domain (Zippanova) | Pre-revolution / Restoration royal flag — white field strewn with golden fleurs-de-lis |
 | `fr-paris.svg` | Flag of Paris.svg | Public domain | Flag of the city of Paris — blue (hoist) and red (fly); the tricolour's blue-and-red (shown as an equation ingredient) |
 | `fr-white.svg` | (original — plain white rectangle) | Public domain (trivial) | Plain white panel — the "king's white" ingredient in the Tricolour equation (no fleurs-de-lis, since the gold never appears on the flag) |
+| `af-1928.svg` | Flag of Afghanistan (1928–1929).svg | Public domain | Amanullah Khan's first black-red-green vertical tricolour (1928) — the earliest ancestor of Afghanistan's tricolour |
+| `af-kingdom.svg` | Flag of Afghanistan (1931–1973).svg | Public domain | Kingdom of Afghanistan tricolour — black-red-green with the mosque-and-wheat national emblem |
+| `af-republic.svg` | Flag of the Islamic Republic of Afghanistan.svg | Public domain | Islamic Republic of Afghanistan (2004–2021) — black-red-green tricolour with the white mosque emblem |
 
 **Attribution (CC BY-SA):**
 - `ch-flamme.svg` is a derivative of *"Militärfahne der Stadt und Republik Bern"*
