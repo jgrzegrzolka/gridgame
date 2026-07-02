@@ -344,6 +344,9 @@
     },
     "ttt": {
       "result": "Pink wins!"
+    },
+    "fotd": {
+      "label": "Flag of the day:"
     }
   },
   "game": {

@@ -332,6 +332,47 @@ body {
     font-size: 10px;
   }
 }
+/* Flag of the day — a compact, low-profile card under the game grid. The
+ * bordered-button look (surface fill, hairline border, hover, pink-press
+ * afterglow) comes from the shared recipe in common.css (listed alongside
+ * `.game-tile`); only layout + the smaller padding live here. Deliberately
+ * quiet: a single row with a small flag chip so it never competes with the
+ * game tiles above it. Clicking opens the shared flag-story popup. */
+.fotd-card {
+  display: flex;
+  align-items: center;
+  /* Reads as one line: "Flag of the day:" [flag] Name. flex-wrap lets the
+   * name drop below on very narrow phones rather than truncate. */
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 9px 14px;
+  text-align: left;
+}
+.fotd-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+  white-space: nowrap;
+}
+.fotd-flag {
+  width: 46px;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid var(--muted-soft-color);
+  flex: none;
+}
+.fotd-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-color);
+  min-width: 0;
+}
+
 .icon-daily {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
           mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
