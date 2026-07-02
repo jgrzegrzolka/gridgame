@@ -10,6 +10,12 @@ authorship); a few are contributor-drawn SVG renderings under a Creative
 Commons licence — see the Licence column and the attribution note below.
 Filenames are renamed to `<code>-<era>.svg` for the repo.
 
+**Current flags** (`flags/svg/`, the up-to-date national flags) are from the
+[flag-icons](https://github.com/lipis/flag-icons) project by Panayiotis
+Lipiridis, under the **MIT licence** — see `flags/LICENSE`. The flag-story
+panel on `/flagsdata/` links here as its combined image-credit page, so keep
+this file the single source of truth for both current and historical assets.
+
 | File | Source (Wikimedia Commons) | Licence | Era |
 | --- | --- | --- | --- |
 | `gr-ottoman.svg` | Roman (Orthodox Christian) Merchant Flag 1453-1793.svg | Public domain | Ottoman-rule Greek/Orthodox merchant flag — red with a blue stripe |

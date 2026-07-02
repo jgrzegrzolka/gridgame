@@ -236,3 +236,20 @@ dialog#zoom .flag-facts-list-item {
 dialog#zoom .flag-facts-list-item:last-child {
   margin-bottom: 0;
 }
+/* Image attribution footnote, one per story (flag-icons + Wikimedia Commons).
+ * Quiet, caption-sized; the link opens the combined sources/licences list. */
+dialog#zoom .flag-facts-credit {
+  margin: 30px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted-color);
+  text-align: left;
+}
+.flag-facts-credit-link {
+  color: var(--link-color);
+}
+/* Middot separates the credit text from the link without a text node. */
+.flag-facts-credit-link::before {
+  content: " · ";
+  color: var(--muted-color);
+}

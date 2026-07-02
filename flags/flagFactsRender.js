@@ -91,8 +91,41 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
     }
   }
 
+  // Image attribution — rendered on every story (not per-country). The flag
+  // SVGs come from two places: current flags from the flag-icons project
+  // (MIT), historical flags from Wikimedia Commons (public domain, a few
+  // CC BY-SA). CC BY-SA legally requires the author + licence be shown to the
+  // viewer, so we surface a link to the sources/licences list rather than
+  // leaving it only in the repo. Built from elements (no text nodes) so the
+  // separator is a CSS `::before` and the unit-test doc stub stays tiny.
+  const credit = doc.createElement('p');
+  credit.className = 'flag-facts-credit';
+
+  const creditText = doc.createElement('span');
+  creditText.className = 'flag-facts-credit-text';
+  creditText.textContent = t('flagFacts.imageCredit', 'Flag images: flag-icons and Wikimedia Commons');
+  credit.appendChild(creditText);
+
+  const creditLink = /** @type {HTMLAnchorElement} */ (doc.createElement('a'));
+  creditLink.className = 'flag-facts-credit-link';
+  creditLink.href = SOURCES_URL;
+  creditLink.target = '_blank';
+  creditLink.rel = 'noopener noreferrer';
+  creditLink.textContent = t('flagFacts.imageCreditLink', 'sources & licences');
+  credit.appendChild(creditLink);
+
+  root.appendChild(credit);
+
   return root;
 }
+
+/**
+ * Combined image-credit page: the repo's `flags/history/SOURCES.md`, which
+ * lists every flag asset with its source + licence (flag-icons/MIT for current
+ * flags, Wikimedia Commons PD/CC BY-SA for historical). Opened in a new tab
+ * from the credit line under each story.
+ */
+const SOURCES_URL = 'https://github.com/jgrzegrzolka/gridgame/blob/main/flags/history/SOURCES.md';
 
 /**
  * One timeline `<li>`. Normally a single historical flag with year + caption.

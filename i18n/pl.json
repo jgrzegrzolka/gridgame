@@ -609,6 +609,8 @@
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",
+    "imageCredit": "Ilustracje flag: flag-icons i Wikimedia Commons",
+    "imageCreditLink": "źródła i licencje",
     "gb": {
       "intro": "Union Jack to tak naprawdę trzy flagi złożone w jedną. Nakłada czerwony krzyż św. Jerzego (Anglia) na biały ukośny krzyż św. Andrzeja (Szkocja), a przez całość przewleczony jest czerwony ukośny krzyż św. Patryka (Irlandia), godła trzech świętych patronów, połączone tak, jak łączyły się ich królestwa pod wspólną koroną i parlamentem.\n\nBrakuje jednego kraju: Walii. Zanim flagę złożono po raz pierwszy w 1606 roku, Walia była już przyłączona do Królestwa Anglii, więc nigdy nie dostała własnego miejsca.",
       "george": "Anglia",
