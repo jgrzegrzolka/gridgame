@@ -1010,6 +1010,45 @@ dialog#zoom p.zoom-note {
   color: var(--muted-color);
 }
 
+/* Flag lightbox — tap a flag in the zoom dialog to see it big (JS wiring in
+ * flags/flagLightbox.js). A bare full-viewport <dialog>: no card, border, or
+ * close button, just the flag centred on a dark backdrop. It stacks above the
+ * story dialog in the top layer, but reads as "the image got bigger", not a
+ * nested popup. Click anywhere or Esc dismisses. */
+.flag-lightbox {
+  max-width: none;
+  max-height: none;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-out;
+}
+/* `display` only when open, so the UA's `dialog:not([open]){display:none}`
+ * still hides it when closed. */
+.flag-lightbox[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flag-lightbox img {
+  width: auto;
+  height: auto;
+  max-width: 92vw;
+  max-height: 92vh;
+  object-fit: contain;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+.flag-lightbox::backdrop {
+  background: rgba(0, 0, 0, 0.85);
+}
+/* The headline flag in the zoom dialog signals it's tappable to enlarge. */
+.flag-zoomable {
+  cursor: zoom-in;
+}
+
 .home-icon {
   display: inline-block;
   width: 1em;

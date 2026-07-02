@@ -109,6 +109,7 @@ import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/
 import { mountFlagMap, paintCountryFlag } from './flagMap.js';
 import { attachZoomPan } from './mapZoom.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
+import { wireFlagLightbox } from '../flags/flagLightbox.js';
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -138,6 +139,9 @@ export function bootFlagQuiz() {
   );
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
   if (zoomEl) wireFlagZoomBackdropClose(zoomEl);
+  // Tap the enlarged flag to open it bigger in a lightbox (shared behaviour
+  // across the home page + /flagsdata/).
+  if (zoomEl) wireFlagLightbox(zoomEl.querySelector('img'), t);
 
   const DEFAULT_VARIANT = 'countries';
 

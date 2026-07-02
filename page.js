@@ -4,6 +4,7 @@ import { loadCountries } from './flags/group.js';
 import { getFlagFacts, storyFlagCodes } from './flags/flagFacts.js';
 import { renderFlagFacts } from './flags/flagFactsRender.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from './flags/flagZoom.js';
+import { wireFlagLightbox } from './flags/flagLightbox.js';
 import { warsawToday } from './flags/warsawTime.js';
 import { flagOfDay } from './flags/flagOfDay.js';
 
@@ -109,6 +110,9 @@ function mountFlagOfDay() {
     .catch(() => { /* leave the card hidden on any failure */ });
 
   wireFlagZoomBackdropClose(zoom);
+  // Tap the headline flag to enlarge it in a lightbox (same behaviour on
+  // /flagsdata/ and /flagQuiz/). Wired once; reads the img's live src on tap.
+  wireFlagLightbox(zoom.querySelector('img'), t);
   // Explicit × close (the backdrop target shrinks when the facts popup goes
   // near-full-screen on mobile). Native Esc still works too.
   const closeBtn = zoom.querySelector('.zoom-close');
