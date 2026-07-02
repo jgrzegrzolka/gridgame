@@ -1041,6 +1041,12 @@ dialog#zoom p.zoom-note {
   object-fit: contain;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
 }
+/* Enlarged view of a vertically-flipped comparison flag (the "upside down"
+   Union Jack) — keeps the flip the panel showed, since both copies share one
+   src and would otherwise open right-side-up. */
+.flag-lightbox img.flag-lightbox-flipped {
+  transform: scaleY(-1);
+}
 .flag-lightbox::backdrop {
   background: rgba(0, 0, 0, 0.85);
 }

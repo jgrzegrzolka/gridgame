@@ -236,6 +236,27 @@ dialog#zoom .flag-facts-list-item {
 dialog#zoom .flag-facts-list-item:last-child {
   margin-bottom: 0;
 }
+/* Orientation comparison: the same flag right-way-up and flipped, tucked
+ * directly under its fact bullet so an asymmetry with a point (the Union Jack
+ * — inverting it is a distress signal) reads at a glance. The `-inverted` copy
+ * is flipped vertically. No caption/labels; both are tap-to-enlarge. */
+.flag-facts-compare-row {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0 2px;
+}
+/* Scoped to `dialog#zoom` to out-specify the base `dialog#zoom img
+ * { width: 100% }` — same trick as `.flag-facts-eq-img` above. */
+dialog#zoom .flag-facts-compare-img {
+  width: 60px;
+  height: auto;
+  border: 1px solid var(--muted-soft-color);
+  box-sizing: border-box;
+  display: block;
+}
+.flag-facts-compare-img-inverted {
+  transform: scaleY(-1);
+}
 /* Image attribution footnote, one per story (flag-icons + Wikimedia Commons).
  * Quiet, caption-sized; the link opens the combined sources/licences list. */
 dialog#zoom .flag-facts-credit {

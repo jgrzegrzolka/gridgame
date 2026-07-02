@@ -59,6 +59,25 @@ test('every timeline step is well-formed', () => {
     for (const key of facts.factKeys ?? []) {
       assert.ok(key.startsWith('flagFacts.'), `${code} factKey`);
     }
+    // compare is optional; when present its img is an svg under the known
+    // roots, its alt keys are i18n keys, and afterFactKey names a real bullet
+    // in this story's factKeys (else the comparison would silently never
+    // render — it only attaches to an existing fact).
+    if (facts.compare) {
+      const c = facts.compare;
+      assert.ok(c.img.endsWith('.svg'), `${code} compare img is svg`);
+      assert.ok(
+        c.img.startsWith('history/') || c.img.startsWith('svg/'),
+        `${code} compare img under history/ or svg/`,
+      );
+      for (const key of [c.correctKey, c.invertedKey]) {
+        assert.ok(key.startsWith('flagFacts.'), `${code} compare alt key`);
+      }
+      assert.ok(
+        (facts.factKeys ?? []).includes(c.afterFactKey),
+        `${code} compare afterFactKey must be one of factKeys`,
+      );
+    }
   }
 });
 
@@ -71,6 +90,10 @@ test('every referenced flag image exists on disk', () => {
         const abs = join(HERE, img);
         assert.ok(existsSync(abs), `missing asset: flags/${img}`);
       }
+    }
+    if (facts.compare) {
+      const abs = join(HERE, facts.compare.img);
+      assert.ok(existsSync(abs), `missing asset: flags/${facts.compare.img}`);
     }
   }
 });
@@ -87,6 +110,7 @@ test('every i18n key referenced by the catalog is present in en.json and pl.json
       ...facts.timeline.map((s) => s.captionKey),
       ...facts.timeline.flatMap((s) => s.partLabelKeys ?? []),
       ...(facts.factKeys ?? []),
+      ...(facts.compare ? [facts.compare.correctKey, facts.compare.invertedKey] : []),
     ];
     for (const key of keys) {
       assert.ok(has(en, key), `en.json missing ${key}`);

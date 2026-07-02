@@ -626,6 +626,10 @@
         "asymmetry": "Przyjrzyj się uważnie, flaga nie jest symetryczna: szeroki biały ukos jest nad czerwonym od strony drzewca, a pod nim od strony swobodnej. To „przestawienie” sprawia, że istnieje właściwa strona do góry.",
         "distress": "Ponieważ ma właściwą stronę do góry, podniesienie jej odwrotnie jest uznawanym sygnałem wzywania pomocy, a zrobione przez pomyłkę, drobnym narodowym wstydem.",
         "offspring": "To najczęściej kopiowana flaga świata: Australia, Nowa Zelandia, Fidżi, Tuvalu i amerykański stan Hawaje wciąż noszą Union Jack w rogu."
+      },
+      "compare": {
+        "correct": "Union Jack, właściwa strona do góry",
+        "inverted": "Union Jack, do góry nogami (sygnał SOS)"
       }
     },
     "gb-eng": {

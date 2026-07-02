@@ -83,6 +83,12 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
       const li = doc.createElement('li');
       li.className = 'flag-facts-list-item';
       li.textContent = text;
+      // Optional orientation comparison: the two flags render inside the
+      // bullet named by `compare.afterFactKey`, directly under its text — no
+      // caption or labels (the bullet explains them).
+      if (facts.compare && facts.compare.afterFactKey === key) {
+        li.appendChild(buildCompareRow(doc, { compare: facts.compare, t, base }));
+      }
       list.appendChild(li);
     }
     if (list.children.length > 0) {
@@ -201,6 +207,50 @@ function buildStep(doc, { step, t, base }) {
   li.appendChild(img);
   li.appendChild(meta);
   return li;
+}
+
+/**
+ * The orientation-comparison row: two copies of the same flag — normal and
+ * flipped (`-inverted` class → `scaleY(-1)` in CSS) — side by side, no caption
+ * or labels. Both are tap-to-enlarge like the timeline flags; the inverted one
+ * carries `data-lightbox-flip="1"` so the lightbox enlarges it mirrored too
+ * (both share one `src`, so without that flag it would open right-side-up and
+ * contradict the point).
+ *
+ * @param {Document} doc
+ * @param {{
+ *   compare: import('./flagFacts.js').FlagFactCompare,
+ *   t: (key: string, fallback: string) => string,
+ *   base: string,
+ * }} args
+ */
+function buildCompareRow(doc, { compare, t, base }) {
+  const row = doc.createElement('div');
+  row.className = 'flag-facts-compare-row';
+  row.appendChild(compareFlag(doc, { base, img: compare.img, alt: t(compare.correctKey, ''), inverted: false }));
+  row.appendChild(compareFlag(doc, { base, img: compare.img, alt: t(compare.invertedKey, ''), inverted: true }));
+  return row;
+}
+
+/**
+ * One flag in the comparison row: the image, flipped when `inverted`. `alt`
+ * carries the orientation for screen readers (there's no visible label). The
+ * inverted flag also gets `data-lightbox-flip` so its enlarged view stays
+ * flipped — see buildCompareRow.
+ *
+ * @param {Document} doc
+ * @param {{ base: string, img: string, alt: string, inverted: boolean }} args
+ */
+function compareFlag(doc, { base, img, alt, inverted }) {
+  const image = /** @type {HTMLImageElement} */ (doc.createElement('img'));
+  image.className = inverted
+    ? 'flag-facts-compare-img flag-facts-compare-img-inverted'
+    : 'flag-facts-compare-img';
+  image.src = `${base}${img}`;
+  image.alt = alt;
+  image.loading = 'lazy';
+  if (inverted && image.dataset) image.dataset.lightboxFlip = '1';
+  return image;
 }
 
 /**
