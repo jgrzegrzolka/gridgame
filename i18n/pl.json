@@ -19,11 +19,11 @@
     "label": "Pseudonim",
     "save": "Zapisz",
     "error": "Nie udało się zapisać",
-    "errorOffensive": "To obraźliwe słowo — wybierz inny pseudonim",
+    "errorOffensive": "To obraźliwe słowo, wybierz inny pseudonim",
     "errorInvalid": "Pseudonim zawiera niedozwolone znaki"
   },
   "profile": {
-    "title": "Twój profil — Yet Another Quiz",
+    "title": "Twój profil, Yet Another Quiz",
     "achievements": {
       "loading": "Ładowanie osiągnięć…",
       "title": "Osiągnięcia",
@@ -55,7 +55,7 @@
     },
     "honest-attempt": {
       "name": "Szczera próba",
-      "description": "Oddano codzienną zagadkę z trafionymi i nietrafionymi odpowiedziami — dowód, że grałeś.",
+      "description": "Oddano codzienną zagadkę z trafionymi i nietrafionymi odpowiedziami, dowód, że grałeś.",
       "hint": "Ukończ codzienną zagadkę z co najmniej jedną trafioną flagą i co najmniej jedną pomyłką."
     },
     "ten-honest-attempts": {
@@ -100,7 +100,7 @@
     },
     "cartographer": {
       "name": "Kartograf",
-      "description": "Wypróbowano każdy wariant quizu 60s — wszystkie 7 kontynentów (plus Wszystkie kraje).",
+      "description": "Wypróbowano każdy wariant quizu 60s, wszystkie 7 kontynentów (plus Wszystkie kraje).",
       "hint": "Ukończ rundę 60s w każdym wariancie."
     },
     "hundred-sprints": {
@@ -115,7 +115,7 @@
     },
     "thousand-sprints": {
       "name": "Tysiąc sprintów",
-      "description": "Ukończono tysiąc quizów 60s — to się nazywa lojalność.",
+      "description": "Ukończono tysiąc quizów 60s, to się nazywa lojalność.",
       "hint": "Ukończ tysiąc quizów 60s."
     },
     "sprint-habit": {
@@ -190,7 +190,7 @@
     },
     "atlas-champion": {
       "name": "Mistrz atlasu",
-      "description": "Zaliczono każdy wariant quizu 60s — ostateczne trofeum.",
+      "description": "Zaliczono każdy wariant quizu 60s, ostateczne trofeum.",
       "hint": "Zalicz każdy kontynent ORAZ wariant Wszystkie kraje."
     },
     "marathon": {
@@ -200,7 +200,7 @@
     },
     "world-tour": {
       "name": "Wycieczka dookoła świata",
-      "description": "Ukończono quiz na wytrzymałość w każdym wariancie — wszystkich 7.",
+      "description": "Ukończono quiz na wytrzymałość w każdym wariancie, wszystkich 7.",
       "hint": "Ukończ rundę na wytrzymałość w każdym wariancie."
     },
     "iron-memory": {
@@ -220,7 +220,7 @@
     },
     "endurance-atlas": {
       "name": "Atlas wytrzymałości",
-      "description": "Opanowano każdy wariant quizu na wytrzymałość — trofeum głębokiej wiedzy.",
+      "description": "Opanowano każdy wariant quizu na wytrzymałość, trofeum głębokiej wiedzy.",
       "hint": "Ukończ każdy wariant na wytrzymałość bez błędów."
     },
     "identified": {
@@ -250,7 +250,7 @@
     },
     "angel-investor": {
       "name": "Anioł biznesu",
-      "description": "Kupiono kawę dla twórcy — dzięki za wsparcie!",
+      "description": "Kupiono kawę dla twórcy, dzięki za wsparcie!",
       "hint": "Kup kawę dla twórcy z menu hamburgera."
     },
     "first-ttt-win": {
@@ -260,7 +260,7 @@
     },
     "first-ttt-loss": {
       "name": "Pierwsza porażka",
-      "description": "Przegrano partię w kółko i krzyżyk — zdarza się każdemu.",
+      "description": "Przegrano partię w kółko i krzyżyk, zdarza się każdemu.",
       "hint": "Przegraj partię w kółko i krzyżyk (odznaka solidarności)."
     },
     "ten-ttt-games": {
@@ -275,7 +275,7 @@
     }
   },
   "sync": {
-    "title": "Synchronizuj między urządzeniami — Yet Another Quiz",
+    "title": "Synchronizuj między urządzeniami, Yet Another Quiz",
     "heading": "Grasz na więcej niż jednym urządzeniu?",
     "back": "Profil",
     "showQr": {
@@ -284,7 +284,7 @@
     },
     "preparing": "Przygotowywanie linku",
     "linking": "Łączenie urządzeń",
-    "cancelled": "Anulowano — nic nie zostało zmienione.",
+    "cancelled": "Anulowano, nic nie zostało zmienione.",
     "linked": {
       "title": "Urządzenie jest połączone.",
       "idLabel": "ID urządzenia:"
@@ -298,24 +298,24 @@
       "confirm": "Połącz urządzenia"
     },
     "error": {
-      "browser": "Twoja przeglądarka jeszcze tego nie obsługuje — spróbuj nowego Chrome, Safari lub Edge.",
-      "generic": "Nie udało się połączyć — spróbuj jeszcze raz.",
-      "expired": "Ten kod QR wygasł — wygeneruj nowy na drugim urządzeniu.",
+      "browser": "Twoja przeglądarka jeszcze tego nie obsługuje, spróbuj nowego Chrome, Safari lub Edge.",
+      "generic": "Nie udało się połączyć, spróbuj jeszcze raz.",
+      "expired": "Ten kod QR wygasł, wygeneruj nowy na drugim urządzeniu.",
       "invalidToken": "Ten link jest nieprawidłowy. Wygeneruj nowy QR na drugim urządzeniu."
     }
   },
   "privacy": {
     "menuLink": "Prywatność",
-    "title": "Prywatność — Yet Another Quiz",
+    "title": "Prywatność, Yet Another Quiz",
     "heading": "Prywatność",
-    "intro": "Przechowujemy losowe ID urządzenia, które Twoja przeglądarka generuje przy pierwszej potrzebie, oraz dane gier powiązane z tym ID — zgłoszenia codziennych zagadek, rekordy quizu, wyniki kółka i krzyżyka, opcjonalny pseudonim. Czas przechowywania od 48 godzin (wiersze rankingu) do 1 roku (zgłoszenia codzienne); profil i rekordy zostają do momentu, aż poprosisz o usunięcie. Korzystamy też z Cloudflare Web Analytics — anonimowych statystyk ruchu bez ciasteczek (odsłony, kraj, przeglądarka), żeby wiedzieć, ile osób odwiedza stronę. Bez reklam, kont, ciasteczek.",
+    "intro": "Przechowujemy losowe ID urządzenia, które Twoja przeglądarka generuje przy pierwszej potrzebie, oraz dane gier powiązane z tym ID, zgłoszenia codziennych zagadek, rekordy quizu, wyniki kółka i krzyżyka, opcjonalny pseudonim. Czas przechowywania od 48 godzin (wiersze rankingu) do 1 roku (zgłoszenia codzienne); profil i rekordy zostają do momentu, aż poprosisz o usunięcie. Korzystamy też z Cloudflare Web Analytics, anonimowych statystyk ruchu bez ciasteczek (odsłony, kraj, przeglądarka), żeby wiedzieć, ile osób odwiedza stronę. Bez reklam, kont, ciasteczek.",
     "removal": {
       "title": "Chcesz, żeby Twoje dane zniknęły? Masz trzy opcje.",
       "bomb": "Zrzuć bombę na centrum danych Azure Cosmos DB w Amsterdamie.",
       "invade": "Najedź i przejmij wszystkie georepliki Cosmos DB na świecie.",
       "request": "Twój profil zostanie oznaczony do usunięcia, a my ręcznie wymażemy go w ciągu 30 dni. Jeśli w międzyczasie wrócisz i zagrasz, uznamy, że zmieniłeś zdanie i anulujemy prośbę.",
       "link": "Poproś o usunięcie danych",
-      "confirmed": "Załatwione — Twoje dane zostały oznaczone do usunięcia. Powrót i zagranie anuluje prośbę.",
+      "confirmed": "Załatwione, Twoje dane zostały oznaczone do usunięcia. Powrót i zagranie anuluje prośbę.",
       "error": "Nie udało się wysłać prośby. Spróbuj ponownie później."
     }
   },
@@ -360,8 +360,8 @@
     "countryName": "Nazwa kraju…"
   },
   "quiz": {
-    "title": "Yet Another Quiz — Quiz flag państw",
-    "statsTitle": "Yet Another Quiz — Statystyki quizu flag",
+    "title": "Yet Another Quiz: Quiz flag państw",
+    "statsTitle": "Yet Another Quiz: Statystyki quizu flag",
     "loading": "Ładowanie…",
     "finalScore": "Wynik końcowy:",
     "mistakes": "Pomyłki:",
@@ -381,12 +381,12 @@
     },
     "share": {
       "aria": "Udostępnij wynik",
-      "title": "Yet Another Quiz — {variant} {mode} — {score}",
+      "title": "Yet Another Quiz: {variant} {mode}, {score}",
       "text": "Pobijesz mnie?"
     }
   },
   "findFlag": {
-    "title": "Yet Another Quiz — Stwórz własną łamigłówkę flag",
+    "title": "Yet Another Quiz: Stwórz własną łamigłówkę flag",
     "heading": "Stwórz łamigłówkę",
     "blurb": "Wybierz filtry, by stworzyć łamigłówkę. Zagraj sam lub udostępnij link.",
     "typeCountryName": "Wpisz nazwę kraju…",
@@ -397,7 +397,7 @@
     "pickAnotherCategory": "Stwórz nową łamigłówkę",
     "play": "Zagraj",
     "share": "Udostępnij",
-    "shareTitle": "Yet Another Quiz — łamigłówka flag",
+    "shareTitle": "Yet Another Quiz: łamigłówka flag",
     "shareText": "Stworzyłem łamigłówkę flag. Znajdziesz wszystkie?",
     "clear": "Wyczyść wszystko",
     "notPrefix": "bez ",
@@ -413,7 +413,7 @@
     "title": "Yet Another Quiz",
     "todaysPuzzle": "Dzisiejsza zagadka",
     "archive": "Poprzednie zagadki",
-    "archiveTitle": "Yet Another Quiz — Archiwum codziennych zagadek",
+    "archiveTitle": "Yet Another Quiz: Archiwum codziennych zagadek",
     "archiveCount": "{n} flag",
     "notFound": "Nie znaleziono zagadki.",
     "empty": "Brak zagadek.",
@@ -431,7 +431,7 @@
     },
     "share": {
       "aria": "Udostępnij wynik",
-      "title": "Yet Another Quiz — Daily Flag Puzzle #{n} — {score}/{total}",
+      "title": "Yet Another Quiz: Daily Flag Puzzle #{n}, {score}/{total}",
       "streakLine": "🔥 Seria {n} dni"
     },
     "streak": {
@@ -447,12 +447,12 @@
     "matchupDraws": "remisy",
     "matchupRecordLoading": "ładowanie…",
     "matchupOpponentLoading": "ładowanie…",
-    "title": "Yet Another Quiz — Kółko i krzyżyk z flagami państw",
-    "offlineTitle": "Yet Another Quiz — Kółko i krzyżyk offline",
+    "title": "Yet Another Quiz: Kółko i krzyżyk z flagami państw",
+    "offlineTitle": "Yet Another Quiz: Kółko i krzyżyk offline",
     "variant3x3": "3×3",
     "variant9x9": "9×9",
     "createRoom": "Rozpocznij nową grę",
-    "or": "— lub —",
+    "or": "lub",
     "roomCodePlaceholder": "KOD POKOJU",
     "join": "Dołącz",
     "playOffline": "Graj na tym samym urządzeniu",
@@ -479,20 +479,20 @@
     "opponentGaveUp": "Przeciwnik się poddał",
     "rulesBtn": "Jak grać",
     "rulesTitle": "Jak grać",
-    "rulesBody": "Każde pole leży na przecięciu wiersza i kolumny. Wybierz państwo, którego flaga pasuje do obu — na przykład wiersz „Azja\" i kolumna „czerwony\" wymagają flagi, która jest jednocześnie azjatycka i czerwona. Wygrywa ten, kto pierwszy ułoży trzy w rzędzie.",
+    "rulesBody": "Każde pole leży na przecięciu wiersza i kolumny. Wybierz państwo, którego flaga pasuje do obu, na przykład wiersz „Azja\" i kolumna „czerwony\" wymagają flagi, która jest jednocześnie azjatycka i czerwona. Wygrywa ten, kto pierwszy ułoży trzy w rzędzie.",
     "rulesClose": "Rozumiem",
     "reject": {
       "roomFull": "Pokój jest pełny",
-      "roomNotFound": "Pokój nie znaleziony — poproś znajomego o kod lub utwórz nowy pokój",
-      "codeCollision": "Ten kod jest już zajęty — spróbuj utworzyć nowy",
-      "missingPlayerId": "Błąd połączenia — odśwież stronę",
+      "roomNotFound": "Pokój nie znaleziony, poproś znajomego o kod lub utwórz nowy pokój",
+      "codeCollision": "Ten kod jest już zajęty, spróbuj utworzyć nowy",
+      "missingPlayerId": "Błąd połączenia, odśwież stronę",
       "fallback": "Odrzucono: {reason}"
     }
   },
   "ttt9x9": {
-    "title": "Yet Another Quiz — 9×9 Kółko i krzyżyk z flagami",
-    "offlineTitle": "Yet Another Quiz — 9×9 Kółko i krzyżyk offline",
-    "rulesBody": "Dziewięć małych plansz kółko-i-krzyżyk ułożonych w wielką planszę 3×3. Każde pole leży na przecięciu wiersza i kolumny — wybierz państwo, którego flaga pasuje do obu. Wygranie małej planszy daje ci kontrolę nad nią; ułóż trzy zdobyte plansze w rzędzie na wielkiej planszy, by wygrać."
+    "title": "Yet Another Quiz: 9×9 Kółko i krzyżyk z flagami",
+    "offlineTitle": "Yet Another Quiz: 9×9 Kółko i krzyżyk offline",
+    "rulesBody": "Dziewięć małych plansz kółko-i-krzyżyk ułożonych w wielką planszę 3×3. Każde pole leży na przecięciu wiersza i kolumny, wybierz państwo, którego flaga pasuje do obu. Wygranie małej planszy daje ci kontrolę nad nią; ułóż trzy zdobyte plansze w rzędzie na wielkiej planszy, by wygrać."
   },
   "variant": {
     "countries": "Wszystkie kraje",
@@ -597,7 +597,7 @@
     "other": "Inne"
   },
   "flagsdata": {
-    "title": "Yet Another Quiz — Wszystkie flagi państw",
+    "title": "Yet Another Quiz: Wszystkie flagi państw",
     "filters": "Filtry",
     "filterStatus": "Status",
     "filterContinent": "Kontynent",
@@ -610,126 +610,126 @@
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",
     "gb": {
-      "intro": "Union Jack to tak naprawdę trzy flagi złożone w jedną. Nakłada czerwony krzyż św. Jerzego (Anglia) na biały ukośny krzyż św. Andrzeja (Szkocja), a przez całość przewleczony jest czerwony ukośny krzyż św. Patryka (Irlandia) — godła trzech świętych patronów, połączone tak, jak łączyły się ich królestwa pod wspólną koroną i parlamentem.\n\nBrakuje jednego kraju: Walii. Zanim flagę złożono po raz pierwszy w 1606 roku, Walia była już przyłączona do Królestwa Anglii, więc nigdy nie dostała własnego miejsca.",
+      "intro": "Union Jack to tak naprawdę trzy flagi złożone w jedną. Nakłada czerwony krzyż św. Jerzego (Anglia) na biały ukośny krzyż św. Andrzeja (Szkocja), a przez całość przewleczony jest czerwony ukośny krzyż św. Patryka (Irlandia), godła trzech świętych patronów, połączone tak, jak łączyły się ich królestwa pod wspólną koroną i parlamentem.\n\nBrakuje jednego kraju: Walii. Zanim flagę złożono po raz pierwszy w 1606 roku, Walia była już przyłączona do Królestwa Anglii, więc nigdy nie dostała własnego miejsca.",
       "george": "Anglia",
       "andrew": "Szkocja",
       "patrick": "Irlandia",
       "union1606short": "flaga z 1606",
       "union1606": "Krzyż św. Jerzego (Anglia) połączony z ukośnym krzyżem św. Andrzeja (Szkocja), powstały gdy Jakub VI Szkocki został zarazem Jakubem I Angielskim.",
-      "current": "Czerwony ukośny krzyż św. Patryka (dla Irlandii) dodany do flagi z 1606 roku w 1801 — dając asymetryczny Union Jack powiewający do dziś.",
+      "current": "Czerwony ukośny krzyż św. Patryka (dla Irlandii) dodany do flagi z 1606 roku w 1801, dając asymetryczny Union Jack powiewający do dziś.",
       "fact": {
         "wales": "Walia nie jest przedstawiona wcale. Została wchłonięta przez Królestwo Anglii na długo przed unią, więc jej czerwony smok nigdy nie trafił na flagę.",
-        "name": "Skąd „Jack”? Jack to niewielka flaga podnoszona na dziobie statku — projekt spędził wiele wczesnych lat na morzu i przydomek się przyjął.",
-        "asymmetry": "Przyjrzyj się uważnie — flaga nie jest symetryczna: szeroki biały ukos jest nad czerwonym od strony drzewca, a pod nim od strony swobodnej. To „przestawienie” sprawia, że istnieje właściwa strona do góry.",
-        "distress": "Ponieważ ma właściwą stronę do góry, podniesienie jej odwrotnie jest uznawanym sygnałem wzywania pomocy — a zrobione przez pomyłkę, drobnym narodowym wstydem.",
+        "name": "Skąd „Jack”? Jack to niewielka flaga podnoszona na dziobie statku, projekt spędził wiele wczesnych lat na morzu i przydomek się przyjął.",
+        "asymmetry": "Przyjrzyj się uważnie, flaga nie jest symetryczna: szeroki biały ukos jest nad czerwonym od strony drzewca, a pod nim od strony swobodnej. To „przestawienie” sprawia, że istnieje właściwa strona do góry.",
+        "distress": "Ponieważ ma właściwą stronę do góry, podniesienie jej odwrotnie jest uznawanym sygnałem wzywania pomocy, a zrobione przez pomyłkę, drobnym narodowym wstydem.",
         "offspring": "To najczęściej kopiowana flaga świata: Australia, Nowa Zelandia, Fidżi, Tuvalu i amerykański stan Hawaje wciąż noszą Union Jack w rogu."
       }
     },
     "gb-eng": {
-      "intro": "Flagą Anglii jest krzyż św. Jerzego: prosty czerwony krzyż na bieli. Święty Jerzy — rzymski żołnierz zamęczony we wschodniej części basenu Morza Śródziemnego około 303 roku, który nigdy nie postawił stopy w Anglii — został patronem kraju w średniowieczu, a jego godło nosili angielscy żołnierze od czasów wypraw krzyżowych.\n\nTen sam czerwony krzyż znajduje się w centrum Union Jacka — to wkład Anglii we flagę Zjednoczonego Królestwa.",
-      "lions": "Przed krzyżem sztandarem królewskim Anglii były trzy złote lwy na czerwieni — herb średniowiecznych królów, do dziś noszony przez angielskie reprezentacje w piłce nożnej i krykiecie.",
+      "intro": "Flagą Anglii jest krzyż św. Jerzego: prosty czerwony krzyż na bieli. Święty Jerzy, rzymski żołnierz zamęczony we wschodniej części basenu Morza Śródziemnego około 303 roku, który nigdy nie postawił stopy w Anglii, został patronem kraju w średniowieczu, a jego godło nosili angielscy żołnierze od czasów wypraw krzyżowych.\n\nTen sam czerwony krzyż znajduje się w centrum Union Jacka, to wkład Anglii we flagę Zjednoczonego Królestwa.",
+      "lions": "Przed krzyżem sztandarem królewskim Anglii były trzy złote lwy na czerwieni, herb średniowiecznych królów, do dziś noszony przez angielskie reprezentacje w piłce nożnej i krykiecie.",
       "current": "Krzyż św. Jerzego, przyjęty jako godło Anglii w XIII wieku i w zasadzie niezmieniony od tamtej pory.",
       "fact": {
-        "george": "Święty Jerzy nie był Anglikiem — był greckojęzycznym rzymskim oficerem z Kapadocji (dzisiejsza Turcja) i jest patronem dzielonym m.in. przez Gruzję, Katalonię i Etiopię.",
+        "george": "Święty Jerzy nie był Anglikiem, był greckojęzycznym rzymskim oficerem z Kapadocji (dzisiejsza Turcja) i jest patronem dzielonym m.in. przez Gruzję, Katalonię i Etiopię.",
         "genoa": "Mówi się, że Anglia przejęła czerwony krzyż od Genui, podnosząc flagę włoskiego miasta, by jej statki mogły liczyć na ochronę potężnej genueńskiej floty.",
-        "union": "Tworzy środek Union Jacka — czerwony prosty krzyż nałożony na szkocki i irlandzki krzyż ukośny.",
+        "union": "Tworzy środek Union Jacka, czerwony prosty krzyż nałożony na szkocki i irlandzki krzyż ukośny.",
         "lions": "Trzy lwy wywodzą się z pieczęci królewskiej Ryszarda Lwie Serce z około 1198 roku; to jeden z najstarszych wciąż używanych herbów."
       }
     },
     "gb-sct": {
-      "intro": "Flaga Szkocji, Saltire, to biały ukośny krzyż św. Andrzeja na błękitnym polu — wedle tradycji jedna z najstarszych flag narodowych świata. Legenda umieszcza jej początek w bitwie pod Athelstaneford w 832 roku, gdy piktyjsko-szkocki król miał ujrzeć przed zwycięstwem biały ukośny krzyż z chmur na błękitnym niebie i przyjął go za swój sztandar.\n\nŚwięty Andrzej, apostoł zamęczony na krzyżu w kształcie litery X, jest patronem Szkocji; jego ukośny krzyż połączył się z prostym krzyżem Anglii, tworząc w 1606 roku pierwszą flagę unii.",
-      "lion": "Druga wielka flaga Szkocji: sztandar królewski — czerwony wspięty lew w podwójnym obramowaniu. To sztandar monarchy, którego używanie jest formalnie ograniczone prawem.",
-      "current": "Saltire — biały krzyż św. Andrzeja na błękicie — flaga narodowa Szkocji.",
+      "intro": "Flaga Szkocji, Saltire, to biały ukośny krzyż św. Andrzeja na błękitnym polu, wedle tradycji jedna z najstarszych flag narodowych świata. Legenda umieszcza jej początek w bitwie pod Athelstaneford w 832 roku, gdy piktyjsko-szkocki król miał ujrzeć przed zwycięstwem biały ukośny krzyż z chmur na błękitnym niebie i przyjął go za swój sztandar.\n\nŚwięty Andrzej, apostoł zamęczony na krzyżu w kształcie litery X, jest patronem Szkocji; jego ukośny krzyż połączył się z prostym krzyżem Anglii, tworząc w 1606 roku pierwszą flagę unii.",
+      "lion": "Druga wielka flaga Szkocji: sztandar królewski, czerwony wspięty lew w podwójnym obramowaniu. To sztandar monarchy, którego używanie jest formalnie ograniczone prawem.",
+      "current": "Saltire, biały krzyż św. Andrzeja na błękicie, flaga narodowa Szkocji.",
       "fact": {
         "oldest": "Wedle legendy z 832 roku Saltire bywa nazywana najstarszą wciąż używaną flagą narodową; jej błękit i biel są poświadczone od ponad 800 lat.",
-        "andrew": "Świętego Andrzeja ukrzyżowano na krzyżu w kształcie X na jego własną prośbę, gdyż czuł się niegodny umrzeć tak jak Jezus — ten ukos stał się jego godłem w całym chrześcijańskim świecie.",
+        "andrew": "Świętego Andrzeja ukrzyżowano na krzyżu w kształcie X na jego własną prośbę, gdyż czuł się niegodny umrzeć tak jak Jezus, ten ukos stał się jego godłem w całym chrześcijańskim świecie.",
         "union": "Ukośny krzyż św. Andrzeja to biały ukos w Union Jacku, pod czerwonym krzyżem Anglii.",
         "lion": "Czerwony wspięty lew to sztandar królewski: formalnie należy do monarchy, choć Szkoci i tak entuzjastycznie wywieszają go na sportowych trybunach."
       }
     },
     "gb-wls": {
-      "intro": "Walia podnosi Y Ddraig Goch — „Czerwonego Smoka” — czerwonego smoka na polu biało-zielonym. Smok to jeden z najstarszych symboli Brytanii, związany z walijskimi królami i — w opowieści o Merlinie — z czerwonym smokiem, który walczył pod ziemią z białym i zwyciężył, co wróżyło Walijczykom triumf nad najeźdźcami Saksonami.\n\nJako jedyny spośród krajów Zjednoczonego Królestwa Walia jest nieobecna na Union Jacku, więc jej smok stoi całkowicie samodzielnie.",
-      "david": "Starszą flagą walijską jest krzyż św. Dawida — złoty krzyż na czerni, ku czci patrona kraju, wciąż wywieszany w dniu św. Dawida.",
-      "current": "Y Ddraig Goch, Czerwony Smok, stał się oficjalną flagą Walii dopiero w 1959 roku — choć sam symbol jest o wiele starszy.",
+      "intro": "Walia podnosi Y Ddraig Goch, „Czerwonego Smoka”, czerwonego smoka na polu biało-zielonym. Smok to jeden z najstarszych symboli Brytanii, związany z walijskimi królami i, w opowieści o Merlinie, z czerwonym smokiem, który walczył pod ziemią z białym i zwyciężył, co wróżyło Walijczykom triumf nad najeźdźcami Saksonami.\n\nJako jedyny spośród krajów Zjednoczonego Królestwa Walia jest nieobecna na Union Jacku, więc jej smok stoi całkowicie samodzielnie.",
+      "david": "Starszą flagą walijską jest krzyż św. Dawida, złoty krzyż na czerni, ku czci patrona kraju, wciąż wywieszany w dniu św. Dawida.",
+      "current": "Y Ddraig Goch, Czerwony Smok, stał się oficjalną flagą Walii dopiero w 1959 roku, choć sam symbol jest o wiele starszy.",
       "fact": {
         "union": "Walia to jedyny kraj Zjednoczonego Królestwa nieobecny na Union Jacku: została przyłączona do Anglii, zanim zaprojektowano flagi unii, więc wliczono ją pod krzyż Anglii.",
         "dragon": "Czerwony smok może wywodzić się z rzymskiego sztandaru jazdy (draco); legenda każe nieść go królom takim jak Cadwaladr i Owain Glyndŵr, a wywieszała go też dynastia Tudorów.",
-        "official": "Mimo swego wieku smok stał się oficjalną flagą narodową dopiero w 1959 roku — bardzo młoda oficjalna flaga dla bardzo starego symbolu.",
+        "official": "Mimo swego wieku smok stał się oficjalną flagą narodową dopiero w 1959 roku, bardzo młoda oficjalna flaga dla bardzo starego symbolu.",
         "dragons": "Czerwony smok Walii i biały smok gromu Bhutanu to jedyne dwa smoki powiewające dziś na fladze kraju."
       }
     },
     "ie": {
-      "intro": "Irlandzka trójbarwna flaga w zieleni, bieli i pomarańczu to flaga o pojednaniu. Zieleń oznacza tradycję gaelicką i katolicką, pomarańcz — protestancką tradycję Wilhelma Orańskiego, a biel między nimi — trwały pokój pomiędzy nimi.\n\nPo raz pierwszy podniósł ją w 1848 roku nacjonalista Thomas Francis Meagher, wzorując się na francuskiej trójbarwnej fladze, którą widział w rewolucyjnym Paryżu.",
-      "patrick": "Czerwony ukośny krzyż św. Patryka — irlandzki element Union Jacka. Jego historia jest sporna: niektórzy twierdzą, że wymyślono go tylko po to, by dać Irlandii miejsce na brytyjskiej fladze.",
-      "harp": "Przez wieki sztandarem Irlandii była złota harfa na zieleni — harfa pozostaje oficjalnym godłem kraju, do dziś na monetach i paszportach.",
+      "intro": "Irlandzka trójbarwna flaga w zieleni, bieli i pomarańczu to flaga o pojednaniu. Zieleń oznacza tradycję gaelicką i katolicką, pomarańcz, protestancką tradycję Wilhelma Orańskiego, a biel między nimi, trwały pokój pomiędzy nimi.\n\nPo raz pierwszy podniósł ją w 1848 roku nacjonalista Thomas Francis Meagher, wzorując się na francuskiej trójbarwnej fladze, którą widział w rewolucyjnym Paryżu.",
+      "patrick": "Czerwony ukośny krzyż św. Patryka, irlandzki element Union Jacka. Jego historia jest sporna: niektórzy twierdzą, że wymyślono go tylko po to, by dać Irlandii miejsce na brytyjskiej fladze.",
+      "harp": "Przez wieki sztandarem Irlandii była złota harfa na zieleni. Harfa pozostaje oficjalnym godłem kraju, do dziś na monetach i paszportach.",
       "current": "Trójbarwna flaga zielono-biało-pomarańczowa, wznoszona od 1848 roku i ustanowiona flagą narodową państwa irlandzkiego w 1937 roku.",
       "fact": {
         "colours": "Trzy pasy to celowy uścisk dłoni: zieleń dla tradycji katolickiej/narodowej, pomarańcz dla protestanckiej/unionistycznej, a biel dla pokoju między nimi.",
         "meagher": "Thomas Francis Meagher odsłonił ją w 1848 roku, zainspirowany francuską trójbarwną flagą; jedwab był podobno darem „kobiet Francji” dla irlandzkiej sprawy.",
-        "harp": "Irlandia to jedyny kraj, którego godłem jest instrument muzyczny — harfa widnieje na monetach, paszportach i logo Guinnessa (zwrócona w drugą stronę).",
-        "order": "Kolejność ma znaczenie: zieleń zawsze przy drzewcu. Wywieszona odwrotnie liczy się jako inna, błędna flaga — a dla niektórych jako wyraźna zniewaga."
+        "harp": "Irlandia to jedyny kraj, którego godłem jest instrument muzyczny. Harfa widnieje na monetach, paszportach i logo Guinnessa (zwrócona w drugą stronę).",
+        "order": "Kolejność ma znaczenie: zieleń zawsze przy drzewcu. Wywieszona odwrotnie liczy się jako inna, błędna flaga, a dla niektórych jako wyraźna zniewaga."
       }
     },
     "ch": {
-      "intro": "Niewiele flag jest tak starych — i tak kwadratowych — jak flaga Szwajcarii. Biały krzyż na czerwonym polu był znakiem bojowym starej Konfederacji Szwajcarskiej na całe stulecia przed tym, nim stał się flagą państwa: po raz pierwszy odnotowano go w bitwie pod Laupen w 1339 roku, gdzie konfederaci naszywali białe krzyże na odzież, by odróżnić swoich od wroga.\n\nWzór sięga jeszcze dawniej — do chorągwi bojowej Świętego Cesarstwa Rzymskiego, która nosiła ten sam biały krzyż na czerwieni. Biel odczytywano jako czystość sprawy, a czerwień jako krew męczenników. To, co zaczęło się jako znak wojenny, pięć wieków później stało się flagą nowoczesnej Szwajcarii.",
-      "imperial": "Biały krzyż na czerwieni jako herb starej Konfederacji Szwajcarskiej — wedle legendy zaczerpnięty z chorągwi bojowej Świętego Cesarstwa Rzymskiego, noszony w bitwach takich jak Laupen (1339).",
-      "flamme": "Kantony konfederacji nosiły kwadratowe chorągwie bojowe w stylu flammé — z płomienistymi językami rozchodzącymi się od środkowego krzyża, każdy kanton w swoich barwach. Ta należy do Berna, w czerwieni i czerni.",
+      "intro": "Niewiele flag jest tak starych, i tak kwadratowych, jak flaga Szwajcarii. Biały krzyż na czerwonym polu był znakiem bojowym starej Konfederacji Szwajcarskiej na całe stulecia przed tym, nim stał się flagą państwa: po raz pierwszy odnotowano go w bitwie pod Laupen w 1339 roku, gdzie konfederaci naszywali białe krzyże na odzież, by odróżnić swoich od wroga.\n\nWzór sięga jeszcze dawniej, do chorągwi bojowej Świętego Cesarstwa Rzymskiego, która nosiła ten sam biały krzyż na czerwieni. Biel odczytywano jako czystość sprawy, a czerwień jako krew męczenników. To, co zaczęło się jako znak wojenny, pięć wieków później stało się flagą nowoczesnej Szwajcarii.",
+      "imperial": "Biały krzyż na czerwieni jako herb starej Konfederacji Szwajcarskiej, wedle legendy zaczerpnięty z chorągwi bojowej Świętego Cesarstwa Rzymskiego, noszony w bitwach takich jak Laupen (1339).",
+      "flamme": "Kantony konfederacji nosiły kwadratowe chorągwie bojowe w stylu flammé, z płomienistymi językami rozchodzącymi się od środkowego krzyża, każdy kanton w swoich barwach. Ta należy do Berna, w czerwieni i czerni.",
       "helvetic": "Gdy w 1798 roku Francja dokonała inwazji, marionetkowa Republika Helwecka zastąpiła krzyż zielono-czerwono-żółtą trójbarwną flagą. Narzucona z zewnątrz, przetrwała zaledwie około pięciu lat.",
-      "current": "Po upadku Napoleona kantony wróciły do białego krzyża na czerwieni. Generał Dufour ujednolicił go dla armii związkowej, a konstytucja z 1848 roku uczyniła go flagą nowego państwa związkowego — kwadratową, jaką pozostaje do dziś.",
+      "current": "Po upadku Napoleona kantony wróciły do białego krzyża na czerwieni. Generał Dufour ujednolicił go dla armii związkowej, a konstytucja z 1848 roku uczyniła go flagą nowego państwa związkowego, kwadratową, jaką pozostaje do dziś.",
       "fact": {
-        "square": "Szwajcaria to jeden z zaledwie dwóch krajów z kwadratową flagą narodową — drugim jest Watykan. Jedyny wyjątek to bandera używana na szwajcarskich jeziorach i rzekach, która ma zwykły prostokątny kształt.",
-        "redcross": "Godło Czerwonego Krzyża to po prostu odwrócona flaga Szwajcarii — czerwony krzyż na bieli — przyjęte w 1864 roku na cześć Szwajcarii, ojczyzny założyciela ruchu, Henry'ego Dunanta.",
+        "square": "Szwajcaria to jeden z zaledwie dwóch krajów z kwadratową flagą narodową. Drugim jest Watykan. Jedyny wyjątek to bandera używana na szwajcarskich jeziorach i rzekach, która ma zwykły prostokątny kształt.",
+        "redcross": "Godło Czerwonego Krzyża to po prostu odwrócona flaga Szwajcarii, czerwony krzyż na bieli, przyjęte w 1864 roku na cześć Szwajcarii, ojczyzny założyciela ruchu, Henry'ego Dunanta.",
         "proportions": "Biały krzyż nie dotyka krawędzi: jego cztery ramiona są równe, a każde jest o jedną szóstą dłuższe niż szersze.",
-        "red2017": "Dokładny odcień czerwieni pozostawał nieokreślony prawnie aż do 2017 roku, gdy Szwajcaria wreszcie go ustaliła — czysta czerwień, bliska Pantone 485.",
+        "red2017": "Dokładny odcień czerwieni pozostawał nieokreślony prawnie aż do 2017 roku, gdy Szwajcaria wreszcie go ustaliła, czysta czerwień, bliska Pantone 485.",
         "dufour": "Generał Guillaume-Henri Dufour, który ujednolicił flagę, był też kartografem i inżynierem; najwyższy szczyt Szwajcarii, Dufourspitze, nosi jego imię."
       }
     },
     "gr": {
-      "intro": "Przez stulecia Grecją rządziło Imperium Osmańskie, lecz greckie statki handlowe pływały pod własną banderą. Z tej morskiej tradycji — i z prawosławnego krzyża, który leży u podstaw greckiej tożsamości — wyrosła flaga, którą Grecja podnosi dziś.\n\nCo ciekawe, dokładny odcień błękitu nigdy nie został ustalony prawnie — przez wieki wahał się od jasnego błękitu po ciemny granat.",
+      "intro": "Przez stulecia Grecją rządziło Imperium Osmańskie, lecz greckie statki handlowe pływały pod własną banderą. Z tej morskiej tradycji, i z prawosławnego krzyża, który leży u podstaw greckiej tożsamości, wyrosła flaga, którą Grecja podnosi dziś.\n\nCo ciekawe, dokładny odcień błękitu nigdy nie został ustalony prawnie, przez wieki wahał się od jasnego błękitu po ciemny granat.",
       "ottoman": "Pod panowaniem osmańskim greckie prawosławne statki handlowe używały czerwonej flagi z błękitnym pasem.",
-      "orlov": "Biała flaga z błękitnym krzyżem, wzniesiona podczas powstania Orłowa w 1769 roku — zapowiedź zrywu z 1821 roku i jego najpopularniejszy sztandar.",
+      "orlov": "Biała flaga z błękitnym krzyżem, wzniesiona podczas powstania Orłowa w 1769 roku, zapowiedź zrywu z 1821 roku i jego najpopularniejszy sztandar.",
       "land": "Flaga lądowa przyjęta w 1822 roku: biały krzyż na błękicie. Gubernator Kapodistrias ustalił jej ciemniejszy błękit w 1828 roku; powiewała nad państwem greckim aż do 1978 roku.",
       "current": "Dziewięć niebiesko-białych pasów z krzyżem w rogu. Zaprojektowana jako bandera morska w 1822 roku, w 1978 roku stała się jedyną flagą narodową Grecji.",
       "fact": {
-        "stripes": "Dziewięć pasów niesie okrzyk bojowy powstańców: pięć niebieskich pasów to sylaby słowa «Ελευθερία» (Wolność), a cztery białe — «ή Θάνατος» (albo śmierć).",
-        "cross": "Biały krzyż symbolizuje Kościół prawosławny — instytucję, która przez blisko cztery wieki osmańskiego panowania podtrzymywała grecki język i tożsamość.",
-        "colours": "Błękit ma oznaczać greckie morze i niebo, a biel — fale i czystość walki, choć grecka encyklopedia z 1934 roku przyznała, że prawdziwe pochodzenie barw nigdy nie zostało dowiedzione.",
+        "stripes": "Dziewięć pasów niesie okrzyk bojowy powstańców: pięć niebieskich pasów to sylaby słowa «Ελευθερία» (Wolność), a cztery białe, «ή Θάνατος» (albo śmierć).",
+        "cross": "Biały krzyż symbolizuje Kościół prawosławny, instytucję, która przez blisko cztery wieki osmańskiego panowania podtrzymywała grecki język i tożsamość.",
+        "colours": "Błękit ma oznaczać greckie morze i niebo, a biel, fale i czystość walki, choć grecka encyklopedia z 1934 roku przyznała, że prawdziwe pochodzenie barw nigdy nie zostało dowiedzione.",
         "ratio": "Proporcje flagi określa prawo: stosunek 2 : 3, a każde ramię krzyża ma szerokość jednej piątej flagi."
       }
     },
     "pl": {
       "intro": "Barwy polskiej flagi wywodzą się bezpośrednio z herbu państwowego: Biały Orzeł znajduje się na górnym pasie (symbol czystości i szlachetności), a dolny czerwony pas odpowiada barwie tarczy herbowej (symbolizuje odwagę i waleczność).",
-      "eagle": "Orzeł Biały na czerwonej tarczy — stąd biel i czerwień flagi.",
+      "eagle": "Orzeł Biały na czerwonej tarczy, stąd biel i czerwień flagi.",
       "current": "Prosty biało-czerwony dwupas, oficjalny od 1919 roku.",
       "fact": {
-        "lookalikes": "Odwróć polską flagę do góry nogami, a otrzymasz Indonezję i Monako — czerwień nad bielą. Te dwie z kolei są niemal identyczne i różnią się jedynie proporcjami: Indonezja jest wydłużona (2:3), a Monako bardziej krępe (4:5)."
+        "lookalikes": "Odwróć polską flagę do góry nogami, a otrzymasz Indonezję i Monako, czerwień nad bielą. Te dwie z kolei są niemal identyczne i różnią się jedynie proporcjami: Indonezja jest wydłużona (2:3), a Monako bardziej krępe (4:5)."
       }
     },
     "ge": {
-      "intro": "Flaga Gruzji z pięcioma krzyżami wygląda na zupełnie nową — przyjęto ją dopiero w 2004 roku — lecz jej wzór jest średniowieczny. Duży krzyż św. Jerzego dzieli płótno, a w każdym rogu znajduje się mniejszy krzyż „Bolnisi”; razem tworzą układ znany jako Krzyż Jerozolimski. Sam krzyż Bolnisi sięga kamiennych rzeźb z gruzińskiego kościoła z V wieku, a europejska mapa z 1367 roku pokazuje już ten sztandar nad Tbilisi.",
-      "republic": "Flaga pierwszej Republiki Gruzińskiej — wino-czerwona z czarno-białym kantonem — zaprojektowana przez malarza Jakoba Nikoladzego, zwycięzcę ogólnokrajowego konkursu.",
+      "intro": "Flaga Gruzji z pięcioma krzyżami wygląda na zupełnie nową (przyjęto ją dopiero w 2004 roku), lecz jej wzór jest średniowieczny. Duży krzyż św. Jerzego dzieli płótno, a w każdym rogu znajduje się mniejszy krzyż „Bolnisi”; razem tworzą układ znany jako Krzyż Jerozolimski. Sam krzyż Bolnisi sięga kamiennych rzeźb z gruzińskiego kościoła z V wieku, a europejska mapa z 1367 roku pokazuje już ten sztandar nad Tbilisi.",
+      "republic": "Flaga pierwszej Republiki Gruzińskiej, wino-czerwona z czarno-białym kantonem, zaprojektowana przez malarza Jakoba Nikoladzego, zwycięzcę ogólnokrajowego konkursu.",
       "soviet": "Po najeździe Armii Czerwonej w 1921 roku zapanowały symbole radzieckie: czerwony sztandar z młotem, sierpem i gwiazdą.",
       "restored": "Gdy Związek Radziecki upadł, w grudniu 1991 roku powróciła flaga republiki z 1918 roku.",
-      "current": "Ta flaga z pięcioma krzyżami była sztandarem samej rewolucji róż — symbolem opozycji, którym tłumy machały w 2003 roku. Kilka miesięcy po tej pokojowej zmianie władzy, w 2004 roku, stała się flagą państwową.",
+      "current": "Ta flaga z pięcioma krzyżami była sztandarem samej rewolucji róż, symbolem opozycji, którym tłumy machały w 2003 roku. Kilka miesięcy po tej pokojowej zmianie władzy, w 2004 roku, stała się flagą państwową.",
       "fact": {
-        "crosses": "Pięć krzyży odczytuje się zwykle jako Pięć Ran Chrystusa — albo jako Chrystusa (krzyż środkowy) wśród czterech ewangelistów.",
-        "jerusalem": "Układ „jeden duży plus cztery małe” to Krzyż Jerozolimski, godło krucjat — nawiązanie do głębokich średniowiecznych związków chrześcijańskich Gruzji, gdy gruzińscy rycerze również przywdziewali krzyż.",
-        "stgeorge": "Duży środkowy krzyż to krzyż św. Jerzego — ten sam czerwony krzyż na bieli co na fladze Anglii. Nieprzypadkowo, bo św. Jerzy jest patronem Gruzji."
+        "crosses": "Pięć krzyży odczytuje się zwykle jako Pięć Ran Chrystusa, albo jako Chrystusa (krzyż środkowy) wśród czterech ewangelistów.",
+        "jerusalem": "Układ „jeden duży plus cztery małe” to Krzyż Jerozolimski, godło krucjat, nawiązanie do głębokich średniowiecznych związków chrześcijańskich Gruzji, gdy gruzińscy rycerze również przywdziewali krzyż.",
+        "stgeorge": "Duży środkowy krzyż to krzyż św. Jerzego, ten sam czerwony krzyż na bieli co na fladze Anglii. Nieprzypadkowo, bo św. Jerzy jest patronem Gruzji."
       }
     },
     "fr": {
-      "intro": "Francuska trójkolorowa flaga narodziła się w rewolucji. Niebieski i czerwony to dawne barwy Paryża, biel była kolorem króla. W lipcu 1789 roku markiz de La Fayette połączył je w jednej kokardzie — miasto i korona w jednym znaku — i ta niebiesko-biało-czerwona wkrótce stała się flagą nowego państwa.",
-      "royal": "Biel była barwą francuskiej monarchii — sama flaga królewska była biała, tutaj usiana złotymi liliami (fleurs-de-lis) z herbu króla, w tradycji sięgającej białego sztandaru Joanny d'Arc.",
-      "current": "Błękit i czerwień Paryża połączone z bielą króla — flaga nowego państwa, ustalona w tej kolejności w 1794 roku. Biała flaga królewska na krótko powróciła (1815–1830), zanim trójkolorowa zwyciężyła na stałe w 1830 roku za „króla-obywatela” Ludwika Filipa.",
+      "intro": "Francuska trójkolorowa flaga narodziła się w rewolucji. Niebieski i czerwony to dawne barwy Paryża, biel była kolorem króla. W lipcu 1789 roku markiz de La Fayette połączył je w jednej kokardzie, miasto i korona w jednym znaku, i ta niebiesko-biało-czerwona wkrótce stała się flagą nowego państwa.",
+      "royal": "Biel była barwą francuskiej monarchii, sama flaga królewska była biała, tutaj usiana złotymi liliami (fleurs-de-lis) z herbu króla, w tradycji sięgającej białego sztandaru Joanny d'Arc.",
+      "current": "Błękit i czerwień Paryża połączone z bielą króla, flaga nowego państwa, ustalona w tej kolejności w 1794 roku. Biała flaga królewska na krótko powróciła (1815–1830), zanim trójkolorowa zwyciężyła na stałe w 1830 roku za „króla-obywatela” Ludwika Filipa.",
       "part": {
         "paris": "Paryż",
         "king": "królewska biel"
       },
       "fact": {
-        "meaning": "Francja nigdy nie nadała barwom oficjalnego znaczenia. Znany odczyt liberté–égalité–fraternité pojawił się później; starsze wyjaśnienie jest prostsze — biel dla króla, niebieski i czerwony dla Paryża.",
+        "meaning": "Francja nigdy nie nadała barwom oficjalnego znaczenia. Znany odczyt liberté, égalité, fraternité pojawił się później; starsze wyjaśnienie jest prostsze: biel dla króla, niebieski i czerwony dla Paryża.",
         "paris": "Paryż nosi błękit i czerwień co najmniej od 1358 roku. Tradycja wiąże je z dwoma świętymi: błękit ze św. Marcinem, który rozciął swój płaszcz na pół dla żebraka marznącego w śniegu, a czerwień ze św. Dionizym, patronem miasta.",
         "flip": "Gdy pasy ułożono po raz pierwszy w 1790 roku, czerwień była przy drzewcu. Malarz Jacques-Louis David odwrócił kolejność do dzisiejszej niebiesko-biało-czerwonej w 1794 roku.",
-        "influence": "Trójkolorowa flaga stała się jedną z najczęściej naśladowanych w historii — od XIX wieku nowo powstające państwa w Europie i poza nią przyjmowały trójpasmowe wzory jako znak narodowej, często republikańskiej, tożsamości."
+        "influence": "Trójkolorowa flaga stała się jedną z najczęściej naśladowanych w historii, od XIX wieku nowo powstające państwa w Europie i poza nią przyjmowały trójpasmowe wzory jako znak narodowej, często republikańskiej, tożsamości."
       }
     }
   },
@@ -988,7 +988,7 @@
     "ae": "Zjednoczone Emiraty Arabskie",
     "gb": "Wielka Brytania",
     "un": "Organizacja Narodów Zjednoczonych",
-    "um": "Stany Zjednoczone — Dalekie Wyspy Mniejsze",
+    "um": "Stany Zjednoczone, Dalekie Wyspy Mniejsze",
     "us": "Stany Zjednoczone",
     "uy": "Urugwaj",
     "uz": "Uzbekistan",

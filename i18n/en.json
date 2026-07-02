@@ -19,11 +19,11 @@
     "label": "Nickname",
     "save": "Save",
     "error": "Could not save",
-    "errorOffensive": "That’s an offensive word — please choose another",
+    "errorOffensive": "That’s an offensive word, please choose another",
     "errorInvalid": "That nickname contains characters that aren’t allowed"
   },
   "profile": {
-    "title": "Your profile — Yet Another Quiz",
+    "title": "Your profile, Yet Another Quiz",
     "achievements": {
       "loading": "Loading achievements…",
       "title": "Achievements",
@@ -55,7 +55,7 @@
     },
     "honest-attempt": {
       "name": "Honest Attempt",
-      "description": "Submitted a daily with some flags found and some wrong guesses — proof you played.",
+      "description": "Submitted a daily with some flags found and some wrong guesses, proof you played.",
       "hint": "Finish a daily with at least one flag found and at least one wrong guess."
     },
     "ten-honest-attempts": {
@@ -100,7 +100,7 @@
     },
     "cartographer": {
       "name": "Cartographer",
-      "description": "Tried every 60s quiz variant — all 7 continents (plus All Countries).",
+      "description": "Tried every 60s quiz variant, all 7 continents (plus All Countries).",
       "hint": "Finish a 60s round in every variant."
     },
     "hundred-sprints": {
@@ -115,7 +115,7 @@
     },
     "thousand-sprints": {
       "name": "Thousand Sprints",
-      "description": "Finished a thousand 60s quizzes — that's loyal.",
+      "description": "Finished a thousand 60s quizzes, that's loyal.",
       "hint": "Finish a thousand 60s quizzes."
     },
     "sprint-habit": {
@@ -190,7 +190,7 @@
     },
     "atlas-champion": {
       "name": "Atlas Champion",
-      "description": "Cleared every 60s quiz variant — the ultimate trophy.",
+      "description": "Cleared every 60s quiz variant, the ultimate trophy.",
       "hint": "Clear every continent AND the All Countries variant."
     },
     "marathon": {
@@ -200,7 +200,7 @@
     },
     "world-tour": {
       "name": "World Tour",
-      "description": "Finished an endurance quiz in every variant — all 7.",
+      "description": "Finished an endurance quiz in every variant, all 7.",
       "hint": "Finish an endurance round in every variant."
     },
     "iron-memory": {
@@ -220,7 +220,7 @@
     },
     "endurance-atlas": {
       "name": "Endurance Atlas",
-      "description": "Mastered every endurance quiz variant — the depth-of-knowledge trophy.",
+      "description": "Mastered every endurance quiz variant, the depth-of-knowledge trophy.",
       "hint": "Finish every endurance variant without any wrong guess."
     },
     "identified": {
@@ -250,7 +250,7 @@
     },
     "angel-investor": {
       "name": "Angel Investor",
-      "description": "Bought the developer a coffee — thanks for the support!",
+      "description": "Bought the developer a coffee, thanks for the support!",
       "hint": "Buy the developer a coffee from the burger menu."
     },
     "first-ttt-win": {
@@ -260,7 +260,7 @@
     },
     "first-ttt-loss": {
       "name": "First Loss",
-      "description": "Lost a tic-tac-toe game — happens to the best of us.",
+      "description": "Lost a tic-tac-toe game, happens to the best of us.",
       "hint": "Lose a tic-tac-toe round (the badge of solidarity)."
     },
     "ten-ttt-games": {
@@ -275,7 +275,7 @@
     }
   },
   "sync": {
-    "title": "Sync across devices — Yet Another Quiz",
+    "title": "Sync across devices, Yet Another Quiz",
     "heading": "Play on more than one device?",
     "back": "Profile",
     "showQr": {
@@ -284,7 +284,7 @@
     },
     "preparing": "Preparing link",
     "linking": "Linking devices",
-    "cancelled": "Cancelled — nothing was changed.",
+    "cancelled": "Cancelled, nothing was changed.",
     "linked": {
       "title": "Device is linked.",
       "idLabel": "Device ID:"
@@ -298,24 +298,24 @@
       "confirm": "Link devices"
     },
     "error": {
-      "browser": "Your browser doesn’t support this yet — try a recent Chrome, Safari, or Edge.",
-      "generic": "Couldn’t link this device — try again.",
-      "expired": "That QR has expired — generate a new one on your other device.",
+      "browser": "Your browser doesn’t support this yet, try a recent Chrome, Safari, or Edge.",
+      "generic": "Couldn’t link this device, try again.",
+      "expired": "That QR has expired, generate a new one on your other device.",
       "invalidToken": "That link isn’t valid. Generate a new QR on your other device."
     }
   },
   "privacy": {
     "menuLink": "Privacy",
-    "title": "Privacy — Yet Another Quiz",
+    "title": "Privacy, Yet Another Quiz",
     "heading": "Privacy",
-    "intro": "We store a random device ID your browser makes the first time it needs one, plus the game data linked to that ID — daily submissions, quiz personal bests, tic-tac-toe outcomes, an optional nickname. Retention runs from 48 hours (leaderboard rows) to 1 year (daily submissions); profile + records stay until you ask us to delete them. We also use Cloudflare Web Analytics — anonymous, cookieless traffic counts only (page views, country, browser) — to see how many people visit. No ads, no accounts, no cookies.",
+    "intro": "We store a random device ID your browser makes the first time it needs one, plus the game data linked to that ID, daily submissions, quiz personal bests, tic-tac-toe outcomes, an optional nickname. Retention runs from 48 hours (leaderboard rows) to 1 year (daily submissions); profile + records stay until you ask us to delete them. We also use Cloudflare Web Analytics, anonymous, cookieless traffic counts only (page views, country, browser), to see how many people visit. No ads, no accounts, no cookies.",
     "removal": {
       "title": "Want your data gone? You have three options.",
       "bomb": "Drop a bomb on the Azure Cosmos DB datacenter in Amsterdam.",
       "invade": "Invade and seize every Cosmos DB geo-replica on the planet.",
       "request": "Your profile gets flagged for removal and we wipe it manually within 30 days. If you come back and play in the meantime, we'll assume you changed your mind and cancel it.",
       "link": "Request data removal",
-      "confirmed": "Got it — your data is flagged for removal. Coming back to play will cancel the request.",
+      "confirmed": "Got it, your data is flagged for removal. Coming back to play will cancel the request.",
       "error": "Could not send the request. Please try again later."
     }
   },
@@ -360,8 +360,8 @@
     "countryName": "Country name…"
   },
   "quiz": {
-    "title": "Yet Another Quiz — Country Flag Quiz",
-    "statsTitle": "Yet Another Quiz — Flag Quiz Stats",
+    "title": "Yet Another Quiz: Country Flag Quiz",
+    "statsTitle": "Yet Another Quiz: Flag Quiz Stats",
     "loading": "Loading…",
     "finalScore": "Final score:",
     "mistakes": "Mistakes:",
@@ -381,12 +381,12 @@
     },
     "share": {
       "aria": "Share result",
-      "title": "Yet Another Quiz — {variant} {mode} — {score}",
+      "title": "Yet Another Quiz: {variant} {mode}, {score}",
       "text": "Can you beat me?"
     }
   },
   "findFlag": {
-    "title": "Yet Another Quiz — Make a Custom Flag Puzzle",
+    "title": "Yet Another Quiz: Make a Custom Flag Puzzle",
     "heading": "Make a puzzle",
     "blurb": "Pick filters to build your puzzle, then play it or share the link.",
     "typeCountryName": "Type a country name…",
@@ -397,7 +397,7 @@
     "pickAnotherCategory": "Make another puzzle",
     "play": "Play",
     "share": "Share",
-    "shareTitle": "Yet Another Quiz — flag puzzle",
+    "shareTitle": "Yet Another Quiz: flag puzzle",
     "shareText": "I built a flag puzzle. Can you find them all?",
     "clear": "Clear all",
     "notPrefix": "not ",
@@ -413,7 +413,7 @@
     "title": "Yet Another Quiz",
     "todaysPuzzle": "Today's puzzle",
     "archive": "Previous puzzles",
-    "archiveTitle": "Yet Another Quiz — Daily Archive",
+    "archiveTitle": "Yet Another Quiz: Daily Archive",
     "archiveCount": "{n} flags",
     "notFound": "Puzzle not found.",
     "empty": "No puzzles yet.",
@@ -431,7 +431,7 @@
     },
     "share": {
       "aria": "Share result",
-      "title": "Yet Another Quiz — Daily Flag Puzzle #{n} — {score}/{total}",
+      "title": "Yet Another Quiz: Daily Flag Puzzle #{n}, {score}/{total}",
       "streakLine": "🔥 {n}-day streak"
     },
     "streak": {
@@ -447,12 +447,12 @@
     "matchupDraws": "draws",
     "matchupRecordLoading": "loading…",
     "matchupOpponentLoading": "loading…",
-    "title": "Yet Another Quiz — Tic Tac Toe with Country Flags",
-    "offlineTitle": "Yet Another Quiz — Offline Tic Tac Toe",
+    "title": "Yet Another Quiz: Tic Tac Toe with Country Flags",
+    "offlineTitle": "Yet Another Quiz: Offline Tic Tac Toe",
     "variant3x3": "3×3",
     "variant9x9": "9×9",
     "createRoom": "Start new game",
-    "or": "— or —",
+    "or": "or",
     "roomCodePlaceholder": "ROOM CODE",
     "join": "Join",
     "playOffline": "Play on the same device",
@@ -479,20 +479,20 @@
     "opponentGaveUp": "Opponent gave up",
     "rulesBtn": "How to play",
     "rulesTitle": "How to play",
-    "rulesBody": "Each cell sits on a row and a column. Pick a country whose flag matches both — for example, an \"Asia\" row and a \"red\" column needs a flag that is both Asian and red. First to line up three wins.",
+    "rulesBody": "Each cell sits on a row and a column. Pick a country whose flag matches both, for example, an \"Asia\" row and a \"red\" column needs a flag that is both Asian and red. First to line up three wins.",
     "rulesClose": "Got it",
     "reject": {
       "roomFull": "Room is full",
-      "roomNotFound": "Room not found — ask your friend for the code or create a new room",
-      "codeCollision": "That code is already taken — try creating a new one",
-      "missingPlayerId": "Connection error — please reload the page",
+      "roomNotFound": "Room not found, ask your friend for the code or create a new room",
+      "codeCollision": "That code is already taken, try creating a new one",
+      "missingPlayerId": "Connection error, please reload the page",
       "fallback": "Rejected: {reason}"
     }
   },
   "ttt9x9": {
-    "title": "Yet Another Quiz — 9×9 Flag Tic Tac Toe",
-    "offlineTitle": "Yet Another Quiz — Offline 9×9 Flag Tic Tac Toe",
-    "rulesBody": "Nine small tic-tac-toe boards forming a big 3×3 board. Each cell sits on a row and a column — pick a country whose flag matches both. Win a small board to claim it; line up three claimed boards on the big board to win."
+    "title": "Yet Another Quiz: 9×9 Flag Tic Tac Toe",
+    "offlineTitle": "Yet Another Quiz: Offline 9×9 Flag Tic Tac Toe",
+    "rulesBody": "Nine small tic-tac-toe boards forming a big 3×3 board. Each cell sits on a row and a column, pick a country whose flag matches both. Win a small board to claim it; line up three claimed boards on the big board to win."
   },
   "variant": {
     "countries": "All countries",
@@ -597,7 +597,7 @@
     "other": "Other"
   },
   "flagsdata": {
-    "title": "Yet Another Quiz — All Country Flags",
+    "title": "Yet Another Quiz: All Country Flags",
     "filters": "Filters",
     "filterStatus": "Status",
     "filterContinent": "Continent",
@@ -610,126 +610,126 @@
   "flagFacts": {
     "didYouKnow": "Did you know?",
     "gb": {
-      "intro": "The Union Jack is really three flags stacked into one. It layers the red cross of St George (England) over the white diagonal saltire of St Andrew (Scotland), with the red saltire of St Patrick (Ireland) threaded through — the badges of three patron saints, combined as their kingdoms were joined by crown and parliament.\n\nOne nation is missing: Wales. By the time the flag was first assembled in 1606, Wales had already been annexed to the Kingdom of England, so it was never given a place of its own.",
+      "intro": "The Union Jack is really three flags stacked into one. It layers the red cross of St George (England) over the white diagonal saltire of St Andrew (Scotland), with the red saltire of St Patrick (Ireland) threaded through, the badges of three patron saints, combined as their kingdoms were joined by crown and parliament.\n\nOne nation is missing: Wales. By the time the flag was first assembled in 1606, Wales had already been annexed to the Kingdom of England, so it was never given a place of its own.",
       "george": "England",
       "andrew": "Scotland",
       "patrick": "Ireland",
       "union1606short": "1606 flag",
       "union1606": "England's St George's cross combined with Scotland's St Andrew's saltire, made when James VI of Scotland also became James I of England.",
-      "current": "St Patrick's red saltire (for Ireland) added to the 1606 flag in 1801 — giving the asymmetric Union Jack still flown today.",
+      "current": "St Patrick's red saltire (for Ireland) added to the 1606 flag in 1801, giving the asymmetric Union Jack still flown today.",
       "fact": {
         "wales": "Wales isn't represented at all. It had been absorbed into the Kingdom of England long before the union, so its red dragon never made it onto the flag.",
-        "name": "Why \"Jack\"? A jack is a small flag flown from the bow of a ship — the design spent much of its early life at sea, and the nickname stuck.",
+        "name": "Why \"Jack\"? A jack is a small flag flown from the bow of a ship, the design spent much of its early life at sea, and the nickname stuck.",
         "asymmetry": "Look closely and it isn't symmetric: the broad white diagonal sits above the red on the hoist side and below it on the fly. That \"counterchange\" is why there's a right way up.",
-        "distress": "Because it has a right way up, flying it upside-down is a recognised distress signal — and, done by accident, a minor national embarrassment.",
+        "distress": "Because it has a right way up, flying it upside-down is a recognised distress signal, and, done by accident, a minor national embarrassment.",
         "offspring": "It's the most-copied flag in the world: Australia, New Zealand, Fiji, Tuvalu and the US state of Hawaii all still carry a Union Jack in the corner."
       }
     },
     "gb-eng": {
-      "intro": "England's flag is the cross of St George: a plain red cross on white. St George — a Roman soldier martyred in the eastern Mediterranean around 303 AD, who never set foot in England — became the country's patron in the Middle Ages, and his emblem was carried by English soldiers from the age of the Crusades.\n\nThe same red cross sits at the centre of the Union Jack, England's contribution to the flag of the United Kingdom.",
-      "lions": "Before the cross, England's royal banner was three golden lions on red — the arms of the medieval kings, still worn today by England's football and cricket teams.",
+      "intro": "England's flag is the cross of St George: a plain red cross on white. St George, a Roman soldier martyred in the eastern Mediterranean around 303 AD, who never set foot in England, became the country's patron in the Middle Ages, and his emblem was carried by English soldiers from the age of the Crusades.\n\nThe same red cross sits at the centre of the Union Jack, England's contribution to the flag of the United Kingdom.",
+      "lions": "Before the cross, England's royal banner was three golden lions on red, the arms of the medieval kings, still worn today by England's football and cricket teams.",
       "current": "The cross of St George, adopted as England's emblem during the 13th century and essentially unchanged since.",
       "fact": {
-        "george": "St George wasn't English — he was a Greek-speaking Roman officer from Cappadocia (modern Turkey), and is shared as a patron by Georgia, Catalonia, Ethiopia and more.",
+        "george": "St George wasn't English: he was a Greek-speaking Roman officer from Cappadocia (modern Turkey), and is shared as a patron by Georgia, Catalonia, Ethiopia and more.",
         "genoa": "England is said to have adopted the red cross from Genoa, flying the Italian city's flag so its ships could claim the protection of Genoa's powerful fleet.",
-        "union": "It forms the centre of the Union Jack — the red upright cross laid over the Scottish and Irish saltires.",
+        "union": "It forms the centre of the Union Jack, the red upright cross laid over the Scottish and Irish saltires.",
         "lions": "The three lions trace to Richard the Lionheart's royal seal around 1198; it is one of the oldest coats of arms still in continuous use."
       }
     },
     "gb-sct": {
-      "intro": "Scotland's flag, the Saltire, is the white diagonal cross of St Andrew on a blue field — by tradition one of the oldest national flags in the world. Legend sets its origin at the Battle of Athelstaneford in 832 AD, when a Pictish-Scots king is said to have seen a white saltire of cloud in the blue sky before victory, and took it as his banner.\n\nSt Andrew, the apostle martyred on an X-shaped cross, is Scotland's patron; his diagonal cross joined England's upright one to form the first Union Flag in 1606.",
-      "lion": "Scotland's other great flag: the Royal Standard, a red lion rampant inside a double border. It is the banner of the monarch — its use is technically restricted by law.",
-      "current": "The Saltire — St Andrew's white cross on blue — the national flag of Scotland.",
+      "intro": "Scotland's flag, the Saltire, is the white diagonal cross of St Andrew on a blue field, by tradition one of the oldest national flags in the world. Legend sets its origin at the Battle of Athelstaneford in 832 AD, when a Pictish-Scots king is said to have seen a white saltire of cloud in the blue sky before victory, and took it as his banner.\n\nSt Andrew, the apostle martyred on an X-shaped cross, is Scotland's patron; his diagonal cross joined England's upright one to form the first Union Flag in 1606.",
+      "lion": "Scotland's other great flag: the Royal Standard, a red lion rampant inside a double border. It is the banner of the monarch, its use is technically restricted by law.",
+      "current": "The Saltire, St Andrew's white cross on blue, the national flag of Scotland.",
       "fact": {
         "oldest": "By the 832 legend the Saltire is often called the oldest national flag still in use; its blue and white have been recorded for over 800 years.",
-        "andrew": "St Andrew was crucified on an X-shaped cross at his own request, feeling unworthy to die as Jesus had — that diagonal became his emblem across the Christian world.",
+        "andrew": "St Andrew was crucified on an X-shaped cross at his own request, feeling unworthy to die as Jesus had, that diagonal became his emblem across the Christian world.",
         "union": "St Andrew's saltire is the white diagonal in the Union Jack, beneath England's red cross.",
         "lion": "The red Lion Rampant is the royal banner: strictly it belongs to the monarch, though Scots fly it enthusiastically at sport regardless."
       }
     },
     "gb-wls": {
-      "intro": "Wales flies Y Ddraig Goch — \"the Red Dragon\" — a red dragon on a field of white over green. The dragon is one of Britain's oldest symbols, tied to the Welsh kings and, in the tale of Merlin, to a red dragon that fought a white one beneath the earth and won — an omen of the Welsh prevailing over the invading Saxons.\n\nUniquely among the home nations, Wales is absent from the Union Jack, so its dragon stands entirely on its own.",
-      "david": "An older Welsh flag is the cross of St David — a gold cross on black, for the country's patron saint, still flown on St David's Day.",
-      "current": "Y Ddraig Goch, the Red Dragon, became the official flag of Wales only in 1959 — though the symbol is many centuries older.",
+      "intro": "Wales flies Y Ddraig Goch, \"the Red Dragon\", a red dragon on a field of white over green. The dragon is one of Britain's oldest symbols, tied to the Welsh kings and, in the tale of Merlin, to a red dragon that fought a white one beneath the earth and won, an omen of the Welsh prevailing over the invading Saxons.\n\nUniquely among the home nations, Wales is absent from the Union Jack, so its dragon stands entirely on its own.",
+      "david": "An older Welsh flag is the cross of St David, a gold cross on black, for the country's patron saint, still flown on St David's Day.",
+      "current": "Y Ddraig Goch, the Red Dragon, became the official flag of Wales only in 1959, though the symbol is many centuries older.",
       "fact": {
         "union": "Wales is the only home nation missing from the Union Jack: it had been annexed to England before the union flags were designed, so it was folded in under England's cross.",
         "dragon": "The red dragon may descend from the Roman cavalry standard (the draco); legend has it carried by kings like Cadwaladr and Owain Glyndŵr, and the Tudor dynasty flew it too.",
-        "official": "Despite its age, the dragon became the official national flag only in 1959 — a very young official flag for a very old symbol.",
+        "official": "Despite its age, the dragon became the official national flag only in 1959, a very young official flag for a very old symbol.",
         "dragons": "Wales's red dragon and Bhutan's white thunder-dragon are the only two dragons flying on a country's flag today."
       }
     },
     "ie": {
       "intro": "Ireland's tricolour of green, white and orange is a flag about reconciliation. Green stands for the Gaelic and Catholic tradition, orange for the Protestant tradition of William of Orange, and the white between them for a lasting peace between the two.\n\nIt was first flown in 1848 by the nationalist Thomas Francis Meagher, modelled on the French Tricolore he had seen in revolutionary Paris.",
-      "patrick": "The red saltire of St Patrick — Ireland's element of the Union Jack. Its history is disputed: some argue it was devised simply to give Ireland a place on the British flag.",
-      "harp": "For centuries Ireland's banner was the gold harp on green — the harp is still the country's official emblem, on its coins and passports to this day.",
+      "patrick": "The red saltire of St Patrick, Ireland's element of the Union Jack. Its history is disputed: some argue it was devised simply to give Ireland a place on the British flag.",
+      "harp": "For centuries Ireland's banner was the gold harp on green. The harp is still the country's official emblem, on its coins and passports to this day.",
       "current": "The green-white-orange tricolour, flown from 1848 and made the national flag of the Irish state in 1937.",
       "fact": {
         "colours": "The three bands are a deliberate handshake: green for the Catholic/nationalist tradition, orange for the Protestant/unionist one, and white for peace between them.",
         "meagher": "Thomas Francis Meagher unveiled it in 1848, inspired by the French Tricolore; the silk was reportedly a gift from \"the women of France\" to the Irish cause.",
-        "harp": "Ireland is the only country whose emblem is a musical instrument — the harp is on its coins, its passports, and the Guinness logo (which faces the other way).",
-        "order": "The order matters: green always goes next to the pole. Flown the other way round it counts as a different, incorrect flag — and, to some, a pointed insult."
+        "harp": "Ireland is the only country whose emblem is a musical instrument. The harp is on its coins, its passports, and the Guinness logo (which faces the other way).",
+        "order": "The order matters: green always goes next to the pole. Flown the other way round it counts as a different, incorrect flag, and, to some, a pointed insult."
       }
     },
     "ch": {
-      "intro": "Few flags are as old — or as square — as Switzerland's. The white cross on a red field was a battlefield mark of the Old Swiss Confederacy centuries before it belonged to a country: it is first recorded at the Battle of Laupen in 1339, where confederate soldiers sewed white crosses onto their clothes to tell friend from foe.\n\nThe design goes back further still, to the war banner of the Holy Roman Empire, which bore the same white cross on red — the white long read as the purity of the cause, the red as the blood of the martyrs. What began as a war sign became, five centuries later, the flag of modern Switzerland.",
-      "imperial": "The white cross on red as the Old Swiss Confederacy's heraldic emblem — by legend drawn from the war banner of the Holy Roman Empire, and worn into battles like Laupen (1339).",
-      "flamme": "Confederate cantons carried square battle standards in the flammé style — flame-like tongues radiating from a central cross, each canton in its own colours. This one is Bern's red and black.",
+      "intro": "Few flags are as old, or as square, as Switzerland's. The white cross on a red field was a battlefield mark of the Old Swiss Confederacy centuries before it belonged to a country: it is first recorded at the Battle of Laupen in 1339, where confederate soldiers sewed white crosses onto their clothes to tell friend from foe.\n\nThe design goes back further still, to the war banner of the Holy Roman Empire, which bore the same white cross on red, the white long read as the purity of the cause, the red as the blood of the martyrs. What began as a war sign became, five centuries later, the flag of modern Switzerland.",
+      "imperial": "The white cross on red as the Old Swiss Confederacy's heraldic emblem, by legend drawn from the war banner of the Holy Roman Empire, and worn into battles like Laupen (1339).",
+      "flamme": "Confederate cantons carried square battle standards in the flammé style, flame-like tongues radiating from a central cross, each canton in its own colours. This one is Bern's red and black.",
       "helvetic": "When France invaded in 1798, the puppet Helvetic Republic swapped the cross for a green-red-yellow tricolour. Imposed from outside, it lasted only about five years.",
-      "current": "After Napoleon's fall the cantons returned to the white cross on red. General Dufour unified it for the federal army, and the 1848 constitution made it the flag of the new federal state — square, as it remains.",
+      "current": "After Napoleon's fall the cantons returned to the white cross on red. General Dufour unified it for the federal army, and the 1848 constitution made it the flag of the new federal state, square, as it remains.",
       "fact": {
-        "square": "Switzerland is one of only two countries with a square national flag — the other is Vatican City. The one exception is the flag flown on Swiss lakes and rivers, which is an ordinary rectangle.",
-        "redcross": "The Red Cross emblem is simply the Swiss flag reversed — a red cross on white — adopted in 1864 to honour Switzerland, home of the movement's founder Henry Dunant.",
+        "square": "Switzerland is one of only two countries with a square national flag. The other is Vatican City. The one exception is the flag flown on Swiss lakes and rivers, which is an ordinary rectangle.",
+        "redcross": "The Red Cross emblem is simply the Swiss flag reversed, a red cross on white, adopted in 1864 to honour Switzerland, home of the movement's founder Henry Dunant.",
         "proportions": "The white cross doesn't touch the edges: its four arms are equal, and each arm is one-sixth longer than it is wide.",
-        "red2017": "The exact shade of red went undefined by law until 2017, when Switzerland finally fixed it — a pure red, close to Pantone 485.",
+        "red2017": "The exact shade of red went undefined by law until 2017, when Switzerland finally fixed it, a pure red, close to Pantone 485.",
         "dufour": "General Guillaume-Henri Dufour, who standardised the flag, was also a cartographer and engineer; Switzerland's highest peak, the Dufourspitze, is named after him."
       }
     },
     "gr": {
-      "intro": "For centuries Greece was ruled by the Ottoman Empire, yet Greek merchant ships still sailed under their own colours. From that maritime tradition — and from the Orthodox cross at the heart of Greek identity — grew the flag Greece flies today.\n\nCuriously, the exact shade of blue has never been fixed by law — over the centuries it has drifted between pale sky-blue and deep navy.",
+      "intro": "For centuries Greece was ruled by the Ottoman Empire, yet Greek merchant ships still sailed under their own colours. From that maritime tradition, and from the Orthodox cross at the heart of Greek identity, grew the flag Greece flies today.\n\nCuriously, the exact shade of blue has never been fixed by law, over the centuries it has drifted between pale sky-blue and deep navy.",
       "ottoman": "Under Ottoman rule, Greek Orthodox merchant ships flew a red flag crossed by a blue stripe.",
-      "orlov": "A white flag with a sky-blue cross, raised in the Orlov Revolt of 1769 — a precursor of the 1821 uprising and its most popular banner.",
+      "orlov": "A white flag with a sky-blue cross, raised in the Orlov Revolt of 1769, a precursor of the 1821 uprising and its most popular banner.",
       "land": "The land flag adopted in 1822: a white cross on blue. Governor Kapodistrias fixed its darker blue in 1828; it flew over the Greek state until 1978.",
       "current": "Nine blue-and-white stripes with a cross in the canton. Designed as the naval ensign in 1822, it became Greece's sole national flag in 1978.",
       "fact": {
         "stripes": "The nine stripes carry the revolutionaries' battle cry: the five blue stripes are the syllables of «Ελευθερία» (Freedom), the four white ones «ή Θάνατος» (or Death).",
-        "cross": "The white cross stands for the Greek Orthodox Church — the institution that kept the Greek language and identity alive through nearly four centuries of Ottoman rule.",
-        "colours": "Blue is said to be the Greek sea and sky, white the waves and the purity of the struggle — though Greece's own 1934 encyclopedia admitted the true origin of the colours was never proven.",
+        "cross": "The white cross stands for the Greek Orthodox Church, the institution that kept the Greek language and identity alive through nearly four centuries of Ottoman rule.",
+        "colours": "Blue is said to be the Greek sea and sky, white the waves and the purity of the struggle, though Greece's own 1934 encyclopedia admitted the true origin of the colours was never proven.",
         "ratio": "The flag's proportions are set by law: a 2 : 3 ratio, with each arm of the cross one-fifth of the flag's width."
       }
     },
     "pl": {
-      "intro": "Poland's colours come straight from the state coat of arms: the White Eagle sits on the upper white stripe — a symbol of purity and nobility — while the lower red stripe echoes the colour of the heraldic shield, standing for courage and valour.",
-      "eagle": "The White Eagle on a red shield — the flag's white and red come straight from it.",
+      "intro": "Poland's colours come straight from the state coat of arms: the White Eagle sits on the upper white stripe, a symbol of purity and nobility, while the lower red stripe echoes the colour of the heraldic shield, standing for courage and valour.",
+      "eagle": "The White Eagle on a red shield, the flag's white and red come straight from it.",
       "current": "The plain white-over-red bicolour, official since 1919.",
       "fact": {
-        "lookalikes": "Flip Poland's flag top-to-bottom and you get Indonesia and Monaco — red over white. Those two are near-identical themselves, told apart only by their proportions: Indonesia is the longer 2:3, Monaco the squarer 4:5."
+        "lookalikes": "Flip Poland's flag top-to-bottom and you get Indonesia and Monaco, red over white. Those two are near-identical themselves, told apart only by their proportions: Indonesia is the longer 2:3, Monaco the squarer 4:5."
       }
     },
     "ge": {
-      "intro": "Georgia's five-cross flag looks brand new — it was only adopted in 2004 — but its design is medieval. A large St George's cross divides the field, with a smaller \"Bolnisi\" cross in each corner, together forming the shape known as the Jerusalem Cross. The Bolnisi cross itself traces back to stone carvings on a Georgian church from the 5th century, and a European map from 1367 already shows this banner flying over Tbilisi.",
-      "republic": "The first Georgian republic's flag — wine-red with a black-and-white canton — designed by the painter Iakob Nikoladze, winner of a national contest.",
+      "intro": "Georgia's five-cross flag looks brand new (it was only adopted in 2004) but its design is medieval. A large St George's cross divides the field, with a smaller \"Bolnisi\" cross in each corner, together forming the shape known as the Jerusalem Cross. The Bolnisi cross itself traces back to stone carvings on a Georgian church from the 5th century, and a European map from 1367 already shows this banner flying over Tbilisi.",
+      "republic": "The first Georgian republic's flag, wine-red with a black-and-white canton, designed by the painter Iakob Nikoladze, winner of a national contest.",
       "soviet": "After the Red Army invaded in 1921, Soviet symbols took over: a red banner carrying the hammer, sickle and star.",
       "restored": "When the Soviet Union collapsed, the 1918 republic flag returned in December 1991.",
-      "current": "This five-cross banner was the flag of the Rose Revolution itself — the opposition's symbol, waved by the crowds in 2003. Months after that peaceful change of power, it became the national flag in 2004.",
+      "current": "This five-cross banner was the flag of the Rose Revolution itself, the opposition's symbol, waved by the crowds in 2003. Months after that peaceful change of power, it became the national flag in 2004.",
       "fact": {
-        "crosses": "The five crosses are usually read as the Five Wounds of Christ — or as Christ, the central cross, among the four evangelists.",
-        "jerusalem": "That one-big-plus-four-small shape is the \"Jerusalem Cross\", an emblem of the Crusades — echoing Georgia's deep medieval Christian ties, when Georgian knights also took up the cross.",
-        "stgeorge": "The big central cross is St George's Cross — the same red-cross-on-white as England's flag. Fitting, since St George is Georgia's patron saint."
+        "crosses": "The five crosses are usually read as the Five Wounds of Christ, or as Christ, the central cross, among the four evangelists.",
+        "jerusalem": "That one-big-plus-four-small shape is the \"Jerusalem Cross\", an emblem of the Crusades, echoing Georgia's deep medieval Christian ties, when Georgian knights also took up the cross.",
+        "stgeorge": "The big central cross is St George's Cross, the same red-cross-on-white as England's flag. Fitting, since St George is Georgia's patron saint."
       }
     },
     "fr": {
-      "intro": "France's Tricolour was born in the Revolution. Blue and red are the old colours of Paris; white was the colour of the king. In July 1789 the Marquis de Lafayette combined them in a single cockade — city and crown in one badge — and that blue-white-red soon became the flag of the new nation.",
-      "royal": "White was the colour of the French monarchy — the royal flag itself was white, here strewn with the golden fleurs-de-lis of the king's arms, a tradition running back to Joan of Arc's white banner.",
-      "current": "Paris's blue and red joined to the king's white — the flag of the new nation, fixed in this order in 1794. The white royal flag briefly returned (1815–1830) before the Tricolour won out for good in 1830 under the \"Citizen King\", Louis-Philippe.",
+      "intro": "France's Tricolour was born in the Revolution. Blue and red are the old colours of Paris; white was the colour of the king. In July 1789 the Marquis de Lafayette combined them in a single cockade, city and crown in one badge, and that blue-white-red soon became the flag of the new nation.",
+      "royal": "White was the colour of the French monarchy, the royal flag itself was white, here strewn with the golden fleurs-de-lis of the king's arms, a tradition running back to Joan of Arc's white banner.",
+      "current": "Paris's blue and red joined to the king's white, the flag of the new nation, fixed in this order in 1794. The white royal flag briefly returned (1815–1830) before the Tricolour won out for good in 1830 under the \"Citizen King\", Louis-Philippe.",
       "part": {
         "paris": "Paris",
         "king": "royal white"
       },
       "fact": {
-        "meaning": "France has never fixed an official meaning to the three colours. The familiar liberté–égalité–fraternité reading came later; the older explanation is simpler — white for the king, blue and red for Paris.",
+        "meaning": "France has never fixed an official meaning to the three colours. The familiar liberté, égalité, fraternité reading came later; the older explanation is simpler: white for the king, blue and red for Paris.",
         "paris": "Paris has flown blue and red since at least 1358. Tradition ties them to two saints: blue to St Martin, who cut his cloak in two for a beggar in the snow, and red to St Denis, the city's patron.",
         "flip": "When the stripes were first arranged in 1790, red sat at the hoist. The painter Jacques-Louis David flipped the order to today's blue-white-red in 1794.",
-        "influence": "The Tricolour became one of the most copied flags in history — from the 1800s on, newly independent nations across Europe and beyond took up three-stripe designs as a badge of national, often republican, identity."
+        "influence": "The Tricolour became one of the most copied flags in history, from the 1800s on, newly independent nations across Europe and beyond took up three-stripe designs as a badge of national, often republican, identity."
       }
     }
   },
