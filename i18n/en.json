@@ -612,6 +612,22 @@
     "didYouKnow": "Did you know?",
     "imageCredit": "Flag images: flag-icons and Wikimedia Commons",
     "imageCreditLink": "sources & licences",
+    "al": {
+      "intro": "Albania's flag is a black double-headed eagle on a deep red field. The red is for bravery and the blood shed for freedom; the eagle stands for the Albanians themselves. The bird is ancient. It was the emblem of the Byzantine Empire, taken up in the 15th century by the national hero Skanderbeg as the arms of his House of Kastrioti while he held off the Ottoman Empire. The eagle has stayed at the centre of the flag ever since. Through a turbulent century, as principality gave way to kingdom, to occupation, and to communism, what kept changing was what appeared around it.",
+      "principality": "The new Principality of Albania set a white star above the eagle.",
+      "restored": "After the foreign prince left, the re-established state flew the bare eagle again.",
+      "republic": "The first Albanian Republic used a bold, wide-winged eagle.",
+      "kingdom": "King Zog's monarchy crowned the eagle with the golden helmet of Skanderbeg.",
+      "italian": "Fascist Italy's occupation framed the eagle with two lictor's fasces.",
+      "crowned": "Its royal state flag set an ornate crown above the eagle.",
+      "wartime": "The communist-led wartime government added a gold hammer and sickle in the canton.",
+      "communist": "Communist Albania added a gold-bordered red star above the eagle.",
+      "current": "With the fall of communism the star came off, leaving the eagle alone again.",
+      "fact": {
+        "feathers": "The eagle carries exactly 25 feathers, nine on each wing and seven in the tail. Tradition holds that the number honours Skanderbeg, who fought the Ottomans for 25 years and in 25 battles.",
+        "landofeagles": "Albanians call their country Shqipëria, popularly read as the \"Land of the Eagles\", and themselves shqiptarë, the \"sons of the eagle\". Few nations are so closely identified with the bird on their flag."
+      }
+    },
     "gb": {
       "intro": "The Union Jack is really three flags stacked into one. It layers the red cross of St George (England) over the white diagonal saltire of St Andrew (Scotland), with the red saltire of St Patrick (Ireland) threaded through, the badges of three patron saints, combined as their kingdoms were joined by crown and parliament.\n\nOne nation is missing: Wales. By the time the flag was first assembled in 1606, Wales had already been annexed to the Kingdom of England, so it was never given a place of its own.",
       "george": "England",
