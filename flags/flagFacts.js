@@ -34,10 +34,16 @@
  *   partLabelKeys?: string[],
  * }} FlagFactStep
  * @typedef {{
+ *   addedOn: string,
  *   introKey: string,
  *   timeline: FlagFactStep[],
  *   factKeys?: string[],
  * }} FlagFacts
+ *
+ * `addedOn` (`YYYY-MM-DD`) is the day the story shipped. It drives the
+ * flag-of-the-day rotation's append-safety: a flag only becomes eligible the
+ * day after its `addedOn`, so adding a story never disturbs today's or a past
+ * day's pick (see `flags/flagOfDay.js`). A test pins that every entry has one.
  *
  * A step is normally one flag (`img`) with a `year` + caption. When `parts`
  * is set, the step renders as an *equation* — `part₁ + part₂ = img` — so a
@@ -54,6 +60,7 @@
 /** @type {Record<string, FlagFacts>} */
 export const FLAG_FACTS = {
   gb: {
+    addedOn: '2026-07-01',
     introKey: 'flagFacts.gb.intro',
     timeline: [
       {
@@ -80,6 +87,7 @@ export const FLAG_FACTS = {
     ],
   },
   'gb-eng': {
+    addedOn: '2026-07-01',
     introKey: 'flagFacts.gb-eng.intro',
     timeline: [
       { year: '1198', img: 'history/gb-eng-lions.svg', captionKey: 'flagFacts.gb-eng.lions' },
@@ -93,6 +101,7 @@ export const FLAG_FACTS = {
     ],
   },
   'gb-sct': {
+    addedOn: '2026-07-01',
     introKey: 'flagFacts.gb-sct.intro',
     timeline: [
       { year: 'royal banner', img: 'history/gb-sct-lion.svg', captionKey: 'flagFacts.gb-sct.lion' },
@@ -106,6 +115,7 @@ export const FLAG_FACTS = {
     ],
   },
   'gb-wls': {
+    addedOn: '2026-07-01',
     introKey: 'flagFacts.gb-wls.intro',
     timeline: [
       { year: 'St David', img: 'history/gb-wls-stdavid.svg', captionKey: 'flagFacts.gb-wls.david' },
@@ -119,6 +129,7 @@ export const FLAG_FACTS = {
     ],
   },
   ie: {
+    addedOn: '2026-07-01',
     introKey: 'flagFacts.ie.intro',
     timeline: [
       { year: "St Patrick", img: 'history/ie-patrick.svg', captionKey: 'flagFacts.ie.patrick' },
@@ -133,6 +144,7 @@ export const FLAG_FACTS = {
     ],
   },
   ch: {
+    addedOn: '2026-07-01',
     introKey: 'flagFacts.ch.intro',
     timeline: [
       { year: '12th–14th c.', img: 'history/ch-arms.svg', captionKey: 'flagFacts.ch.imperial' },
@@ -149,6 +161,7 @@ export const FLAG_FACTS = {
     ],
   },
   gr: {
+    addedOn: '2026-07-01',
     introKey: 'flagFacts.gr.intro',
     timeline: [
       { year: '1453–1793', img: 'history/gr-ottoman.svg', captionKey: 'flagFacts.gr.ottoman' },
@@ -164,6 +177,7 @@ export const FLAG_FACTS = {
     ],
   },
   pl: {
+    addedOn: '2026-07-01',
     introKey: 'flagFacts.pl.intro',
     timeline: [
       { year: 'since 13th c.', img: 'history/pl-eagle.svg', captionKey: 'flagFacts.pl.eagle' },
@@ -172,6 +186,7 @@ export const FLAG_FACTS = {
     factKeys: ['flagFacts.pl.fact.lookalikes'],
   },
   ge: {
+    addedOn: '2026-07-01',
     introKey: 'flagFacts.ge.intro',
     timeline: [
       { year: '1918–1921', img: 'history/ge-1918.svg', captionKey: 'flagFacts.ge.republic' },
@@ -184,6 +199,7 @@ export const FLAG_FACTS = {
     factKeys: ['flagFacts.ge.fact.crosses', 'flagFacts.ge.fact.jerusalem', 'flagFacts.ge.fact.stgeorge'],
   },
   fr: {
+    addedOn: '2026-07-01',
     introKey: 'flagFacts.fr.intro',
     timeline: [
       { year: 'to 1789', img: 'history/fr-royal.svg', captionKey: 'flagFacts.fr.royal' },
@@ -206,6 +222,7 @@ export const FLAG_FACTS = {
     ],
   },
   af: {
+    addedOn: '2026-07-01',
     // The whole point of Afghanistan's story is churn — it changed its flag
     // more than any country in the 20th century. A 4-step timeline told that
     // but didn't show it (huge 1931→2004 gap), so the timeline walks the
@@ -254,4 +271,15 @@ export function getFlagFacts(code) {
  */
 export function storyFlagCodes() {
   return Object.keys(FLAG_FACTS);
+}
+
+/**
+ * The story pool as `{ code, addedOn }` records — what the flag-of-the-day
+ * picker needs to stay append-safe (each flag's eligibility starts the day
+ * after its `addedOn`). Grows automatically as stories are added.
+ *
+ * @returns {Array<{ code: string, addedOn: string }>}
+ */
+export function storyFlagPool() {
+  return Object.entries(FLAG_FACTS).map(([code, facts]) => ({ code, addedOn: facts.addedOn }));
 }
