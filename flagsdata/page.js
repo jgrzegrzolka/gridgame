@@ -5,7 +5,7 @@ import { createColorCountPicker } from '../colorCountPicker.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
-import { wireFlagLightbox } from '../flags/flagLightbox.js';
+import { wireFlagLightbox, wireFlagLightboxAll } from '../flags/flagLightbox.js';
 import { getFlagFacts } from '../flags/flagFacts.js';
 import { renderFlagFacts } from '../flags/flagFactsRender.js';
 import { mountFlagMap, setSelectedCountries, computeCountriesBbox } from '../flagQuiz/flagMap.js';
@@ -114,6 +114,9 @@ export function bootFlagsData() {
     if (!facts) return;
     const subtree = renderFlagFacts({ facts, t, doc: document, base: '../flags/' });
     if (subtree) zoomFacts.appendChild(subtree);
+    // The story's historical flags enlarge in the same lightbox as the
+    // headline flag. Re-wired each paint because the subtree is rebuilt.
+    wireFlagLightboxAll(zoomFacts, t);
   }
 
   /** @param {Country} c */

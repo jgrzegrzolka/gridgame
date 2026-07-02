@@ -84,3 +84,18 @@ export function wireFlagLightbox(img, t, doc = globalThis.document) {
     }
   });
 }
+
+/**
+ * Make every flag `<img>` under a container tap-to-enlarge. Used for the story
+ * timeline flags, which are re-rendered on each open + on a language switch, so
+ * this runs after each paint; `wireFlagLightbox` is idempotent per element, so
+ * re-running over a mix of old + fresh images is safe.
+ *
+ * @param {any} root container holding the story subtree (e.g. `.country-facts`)
+ * @param {(key: string, fallback: string) => string} [t]
+ * @param {any} [doc]
+ */
+export function wireFlagLightboxAll(root, t, doc = globalThis.document) {
+  if (!root || !root.querySelectorAll) return;
+  root.querySelectorAll('img').forEach((/** @type {any} */ img) => wireFlagLightbox(img, t, doc));
+}
