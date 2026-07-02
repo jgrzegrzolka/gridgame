@@ -179,6 +179,31 @@ test('renderFlagFacts omits the extra section entirely when factKeys is absent',
   assert.equal(findAllByClass(root, 'flag-facts-list').length, 0);
 });
 
+test('renderFlagFacts appends an image-credit line with a sources link on every story', () => {
+  const doc = makeDoc();
+  const t = makeT({
+    'flagFacts.gr.intro': 'Intro.',
+    'flagFacts.imageCredit': 'Flag images: flag-icons and Wikimedia Commons',
+    'flagFacts.imageCreditLink': 'sources & licences',
+  });
+  const root = renderFlagFacts({ facts: FACTS, t, doc });
+
+  const credit = findAllByClass(root, 'flag-facts-credit');
+  assert.equal(credit.length, 1, 'exactly one credit line');
+  assert.equal(
+    findAllByClass(root, 'flag-facts-credit-text')[0].textContent,
+    'Flag images: flag-icons and Wikimedia Commons',
+  );
+
+  const link = findAllByClass(root, 'flag-facts-credit-link')[0];
+  assert.equal(link.tag, 'a');
+  assert.equal(link.textContent, 'sources & licences');
+  assert.match(link.href, /SOURCES\.md$/);
+  // New tab, opened safely.
+  assert.equal(link.target, '_blank');
+  assert.match(link.rel, /noopener/);
+});
+
 test('renderFlagFacts sets strings via textContent, never innerHTML', () => {
   const doc = makeDoc();
   const t = makeT({ 'flagFacts.gr.intro': '<script>alert(1)</script>' });

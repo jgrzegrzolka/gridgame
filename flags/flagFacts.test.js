@@ -90,8 +90,10 @@ test('every i18n key referenced by the catalog is present in en.json and pl.json
       assert.ok(has(pl, key), `pl.json missing ${key}`);
     }
   }
-  // The "Did you know?" heading is referenced by the renderer, not the
-  // catalog — pin it here so a language file can't drop it.
-  assert.ok(has(en, 'flagFacts.didYouKnow'), 'en.json missing flagFacts.didYouKnow');
-  assert.ok(has(pl, 'flagFacts.didYouKnow'), 'pl.json missing flagFacts.didYouKnow');
+  // The "Did you know?" heading and the image-credit line are referenced by
+  // the renderer, not the catalog — pin them so a language file can't drop them.
+  for (const key of ['flagFacts.didYouKnow', 'flagFacts.imageCredit', 'flagFacts.imageCreditLink']) {
+    assert.ok(has(en, key), `en.json missing ${key}`);
+    assert.ok(has(pl, key), `pl.json missing ${key}`);
+  }
 });

@@ -206,10 +206,21 @@ export const FLAG_FACTS = {
     ],
   },
   af: {
+    // The whole point of Afghanistan's story is churn — it changed its flag
+    // more than any country in the 20th century. A 4-step timeline told that
+    // but didn't show it (huge 1931→2004 gap), so the timeline walks the
+    // ideological pendulum: vertical tricolour → horizontal → red → back to
+    // black-red-green → green-white-black → vertical again → white. Still a
+    // curated selection (the intro says so), not all ~19 designs.
     introKey: 'flagFacts.af.intro',
     timeline: [
+      { year: '1901–1919', img: 'history/af-emirate.svg', captionKey: 'flagFacts.af.emirate' },
       { year: '1928', img: 'history/af-1928.svg', captionKey: 'flagFacts.af.tricolour' },
       { year: '1931–1973', img: 'history/af-kingdom.svg', captionKey: 'flagFacts.af.kingdom' },
+      { year: '1974–1978', img: 'history/af-daoud.svg', captionKey: 'flagFacts.af.daoud' },
+      { year: '1978–1980', img: 'history/af-red.svg', captionKey: 'flagFacts.af.red' },
+      { year: '1980–1987', img: 'history/af-dra.svg', captionKey: 'flagFacts.af.dra' },
+      { year: '1992–2001', img: 'history/af-islamicstate.svg', captionKey: 'flagFacts.af.islamicstate' },
       { year: '2004–2021', img: 'history/af-republic.svg', captionKey: 'flagFacts.af.republic' },
       { year: '2021', img: 'svg/af.svg', captionKey: 'flagFacts.af.current' },
     ],
@@ -217,7 +228,7 @@ export const FLAG_FACTS = {
       'flagFacts.af.fact.changes',
       'flagFacts.af.fact.colours',
       'flagFacts.af.fact.mosque',
-      'flagFacts.af.fact.redflag',
+      'flagFacts.af.fact.longlived',
       'flagFacts.af.fact.white',
     ],
   },
