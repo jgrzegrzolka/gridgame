@@ -612,6 +612,22 @@
     "didYouKnow": "Czy wiesz, że?",
     "imageCredit": "Ilustracje flag: flag-icons i Wikimedia Commons",
     "imageCreditLink": "źródła i licencje",
+    "al": {
+      "intro": "Flagę Albanii tworzy czarny dwugłowy orzeł na ciemnoczerwonym tle. Czerwień oznacza męstwo i krew przelaną w walce o wolność, a orzeł symbolizuje samych Albańczyków. Ptak ten jest starożytny. Był godłem Cesarstwa Bizantyjskiego, a w XV wieku przyjął go bohater narodowy Skanderbeg jako herb swojego rodu Kastriotów, stawiając opór Imperium Osmańskiemu. Orzeł pozostaje w sercu flagi już od tamtej pory. Przez burzliwe stulecie, gdy księstwo ustępowało królestwu, potem okupacji, a wreszcie komunizmowi, zmieniało się to, co pojawiało się wokół niego.",
+      "principality": "Nowo powstałe Księstwo Albanii umieściło nad orłem białą gwiazdę.",
+      "restored": "Po odejściu cudzoziemskiego księcia odrodzone państwo znów podniosło samego orła.",
+      "republic": "Pierwsza Republika Albańska używała okazałego orła o szeroko rozpostartych skrzydłach.",
+      "kingdom": "Monarchia króla Zoga zwieńczyła orła złotym hełmem Skanderbega.",
+      "italian": "Faszystowska okupacja włoska otoczyła orła dwiema wiązkami liktorskimi (fasces).",
+      "crowned": "Królewska flaga państwowa umieściła nad orłem ozdobną koronę.",
+      "wartime": "Wojenny rząd kierowany przez komunistów dodał w rogu złoty sierp i młot.",
+      "communist": "W czasach komunistycznych nad orłem dodano czerwoną gwiazdę w złotej obwódce.",
+      "current": "Po upadku państwa jednopartyjnego w 1992 roku gwiazdę usunięto, przywracając samego orła.",
+      "fact": {
+        "feathers": "Orzeł ma dokładnie 25 piór, po dziewięć na każdym skrzydle i siedem w ogonie. Tradycja głosi, że liczba ta upamiętnia Skanderbega, który walczył z Turkami przez 25 lat i stoczył z nimi 25 bitew.",
+        "landofeagles": "Albańczycy nazywają swój kraj Shqipëria, popularnie tłumaczone jako „Kraina Orłów”, a siebie samych shqiptarë, „synami orła”. Niewiele narodów tak silnie utożsamia się z ptakiem ze swojej flagi."
+      }
+    },
     "gb": {
       "intro": "Union Jack to tak naprawdę trzy flagi złożone w jedną. Nakłada czerwony krzyż św. Jerzego (Anglia) na biały ukośny krzyż św. Andrzeja (Szkocja), a przez całość przewleczony jest czerwony ukośny krzyż św. Patryka (Irlandia), godła trzech świętych patronów, połączone tak, jak łączyły się ich królestwa pod wspólną koroną i parlamentem.\n\nBrakuje jednego kraju: Walii. Zanim flagę złożono po raz pierwszy w 1606 roku, Walia była już przyłączona do Królestwa Anglii, więc nigdy nie dostała własnego miejsca.",
       "george": "Anglia",

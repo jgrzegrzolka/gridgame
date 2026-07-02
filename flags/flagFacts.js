@@ -77,6 +77,33 @@
 
 /** @type {Record<string, FlagFacts>} */
 export const FLAG_FACTS = {
+  al: {
+    addedOn: '2026-07-03',
+    // The eagle never leaves the flag; what changes through a turbulent
+    // century is the emblem AROUND it. This walks the full run of historical
+    // designs (matching the Polish Wikipedia gallery): white star, bare
+    // eagle, wide-winged republic eagle, royal helmet, fascist fasces,
+    // crowned royal state flag, wartime hammer-and-sickle, communist star,
+    // plain eagle today. Some 1920s/40s steps are near-identical plain eagles
+    // kept for completeness at Jan's request; the distinct emblems carry the
+    // story.
+    introKey: 'flagFacts.al.intro',
+    timeline: [
+      { year: '1914–1920', img: 'history/al-1914.svg', captionKey: 'flagFacts.al.principality' },
+      { year: '1920–1926', img: 'history/al-1926.svg', captionKey: 'flagFacts.al.restored' },
+      { year: '1925–1928', img: 'history/al-republic.svg', captionKey: 'flagFacts.al.republic' },
+      { year: '1928–1939', img: 'history/al-kingdom.svg', captionKey: 'flagFacts.al.kingdom' },
+      { year: '1939–1943', img: 'history/al-italian.svg', captionKey: 'flagFacts.al.italian' },
+      { year: '1939–1943', img: 'history/al-crowned.svg', captionKey: 'flagFacts.al.crowned' },
+      { year: '1944–1946', img: 'history/al-1944.svg', captionKey: 'flagFacts.al.wartime' },
+      { year: '1946–1992', img: 'history/al-communist.svg', captionKey: 'flagFacts.al.communist' },
+      { year: '1992', img: 'svg/al.svg', captionKey: 'flagFacts.al.current' },
+    ],
+    factKeys: [
+      'flagFacts.al.fact.feathers',
+      'flagFacts.al.fact.landofeagles',
+    ],
+  },
   gb: {
     addedOn: '2026-07-01',
     introKey: 'flagFacts.gb.intro',
