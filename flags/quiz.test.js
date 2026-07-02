@@ -38,6 +38,7 @@ import {
   resolveMode,
   isQuizShowMap,
   setQuizShowMap,
+  variantHasLeaderboard,
 } from './quiz.js';
 import { loadCountries } from './group.js';
 
@@ -1075,4 +1076,18 @@ test('isQuizShowMap reads the gridgame.flagquiz.showMap key', () => {
   // every existing player's preference.
   const store = fakeStore({ 'gridgame.flagquiz.showMap': 'true' });
   assert.equal(isQuizShowMap(store), true);
+});
+
+test('variantHasLeaderboard is true only for the All-countries variant', () => {
+  // Product rule: leaderboards (and the Cosmos writes feeding them) live
+  // only on the "countries" variant. Every continent must be false — if a
+  // future continent slips through, it would resume writing leaderboard
+  // rows on a Free-tier account, which is exactly what this gate prevents.
+  assert.equal(variantHasLeaderboard('countries'), true);
+  for (const v of Object.keys(VARIANTS)) {
+    if (v === 'countries') continue;
+    assert.equal(variantHasLeaderboard(v), false, `${v} must not have a leaderboard`);
+  }
+  // Unknown / junk variant keys never get a board.
+  assert.equal(variantHasLeaderboard('atlantis'), false);
 });

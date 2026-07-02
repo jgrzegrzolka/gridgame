@@ -22,6 +22,7 @@ import {
   shouldShowBestTime,
   mistakesAfterGiveUp,
   countModeProgressRatio,
+  variantHasLeaderboard,
 } from '../flags/quiz.js';
 import { flagsGamePool, loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
@@ -802,6 +803,14 @@ export function bootFlagQuiz() {
       cancelAnimationFrame(timerRaf);
       const elapsed = Date.now() - startTime;
 
+      // Global leaderboards exist only for the "All countries" variant — the
+      // small player base left every continent board empty, and each continent
+      // finish still cost a Free-tier Cosmos write. When false, both finish
+      // branches skip the whole leaderboard cycle (no submit → no write, no
+      // fetch → no board) and keep the panel hidden. Local PBs below are
+      // recorded for every variant regardless.
+      const hasLeaderboard = variantHasLeaderboard(key);
+
       if (timed) {
         // Score = flags answered correctly. There's no "out of target"
         // ratio to colour by, so tint by accuracy (correct vs total picks):
@@ -830,7 +839,6 @@ export function bootFlagQuiz() {
         // attempts + lastPlayedAt counters that depend on it. The chained
         // leaderboard fetch lands after the server's leaderboard write
         // completes so the just-played row is visible on this paint.
-        const configKey = quizRecordConfigKey(key, mode, includeAll);
         void ensureProfile(deviceId);
         // Feature S Phase 3: 60s-mode finish records the Warsaw day on
         // the local day log (idempotent per day) and mirrors to the
@@ -844,15 +852,25 @@ export function bootFlagQuiz() {
           bumpQuiz60sDay(window.localStorage, today60s);
           void pushEngagementBlob(deviceId, window.localStorage);
         }
-        const cycleP = runLeaderboardCycle({
-          submitImpl: () => maybeSubmitQuizRecord({
-            deviceId, configKey,
-            score: answeredCount, durationMs: budgetUsed, lowerWins: false,
-            isNew, engaged,
-          }),
-          fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
-          paint: (s) => { leaderboardState = s; paintLeaderboard(); },
-        });
+        let cycleP;
+        if (hasLeaderboard) {
+          const configKey = quizRecordConfigKey(key, mode, includeAll);
+          cycleP = runLeaderboardCycle({
+            submitImpl: () => maybeSubmitQuizRecord({
+              deviceId, configKey,
+              score: answeredCount, durationMs: budgetUsed, lowerWins: false,
+              isNew, engaged,
+            }),
+            fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
+            paint: (s) => { leaderboardState = s; paintLeaderboard(); },
+          });
+        } else {
+          // Continent variant: no board. Keep the panel hidden and resolve
+          // so the achievement diff below still chains.
+          leaderboardState = null;
+          leaderboardEl.hidden = true;
+          cycleP = Promise.resolve();
+        }
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           // total isn't meaningful for 60s mode (the round ends when the
@@ -890,22 +908,31 @@ export function bootFlagQuiz() {
         );
         resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0, gaveUp };
         paintResultLabels();
-        const configKey = quizRecordConfigKey(key, mode, includeAll);
         void ensureProfile(deviceId);
         // No engagement counter for endurance-mode plays — pre-Phase-3
         // we wrote them defensively for a possible future achievement,
         // but Phase 3 dropped that speculation. Add a bumpQuizAllDay
         // call back if such an achievement actually lands.
-        const engaged = madeAnyQuizPick({ answeredCount, wrongCount });
-        const cycleP = runLeaderboardCycle({
-          submitImpl: () => maybeSubmitQuizRecord({
-            deviceId, configKey,
-            score: wrongCount, durationMs: elapsed, lowerWins: true,
-            isNew, engaged,
-          }),
-          fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
-          paint: (s) => { leaderboardState = s; paintLeaderboard(); },
-        });
+        let cycleP;
+        if (hasLeaderboard) {
+          const configKey = quizRecordConfigKey(key, mode, includeAll);
+          const engaged = madeAnyQuizPick({ answeredCount, wrongCount });
+          cycleP = runLeaderboardCycle({
+            submitImpl: () => maybeSubmitQuizRecord({
+              deviceId, configKey,
+              score: wrongCount, durationMs: elapsed, lowerWins: true,
+              isNew, engaged,
+            }),
+            fetchImpl: () => fetchLeaderboard({ configKey, deviceId, fresh: true }),
+            paint: (s) => { leaderboardState = s; paintLeaderboard(); },
+          });
+        } else {
+          // Continent variant: no board. Keep the panel hidden and resolve
+          // so the achievement diff below still chains.
+          leaderboardState = null;
+          leaderboardEl.hidden = true;
+          cycleP = Promise.resolve();
+        }
         const { tier, intensity } = pickCelebration({
           found: answeredCount,
           total: target,

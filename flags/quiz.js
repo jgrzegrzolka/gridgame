@@ -294,6 +294,23 @@ export const VARIANTS = {
 };
 
 /**
+ * Which variants get a global leaderboard (and the Cosmos writes that feed
+ * it). The player base is too small to spread a competitive board across all
+ * 7 continents × 2 modes × 2 scopes — every continent board sat empty, and
+ * each continent finish still cost a Free-tier Cosmos write. So leaderboards
+ * are limited to the flagship "All countries" variant: the four live boards
+ * are countries × {60s, all} × {sov, all}. Continents keep their local
+ * personal bests (`recordResult`); they just never write or show a global
+ * board.
+ *
+ * @param {string} variantKey
+ * @returns {boolean}
+ */
+export function variantHasLeaderboard(variantKey) {
+  return variantKey === 'countries';
+}
+
+/**
  * @param {string} variantKey
  * @param {Country[]} countries
  * @returns {Country[]}
