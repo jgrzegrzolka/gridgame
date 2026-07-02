@@ -1,7 +1,8 @@
 {
   "coffee": "Buy me a coffee",
   "zoom": {
-    "close": "Close"
+    "close": "Close",
+    "enlarge": "Enlarge flag"
   },
   "menu": {
     "open": "Open menu",

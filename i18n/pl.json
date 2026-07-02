@@ -1,7 +1,8 @@
 {
   "coffee": "Postaw mi kawę",
   "zoom": {
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "enlarge": "Powiększ flagę"
   },
   "menu": {
     "open": "Otwórz menu",

@@ -5,6 +5,7 @@ import { createColorCountPicker } from '../colorCountPicker.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
+import { wireFlagLightbox } from '../flags/flagLightbox.js';
 import { getFlagFacts } from '../flags/flagFacts.js';
 import { renderFlagFacts } from '../flags/flagFactsRender.js';
 import { mountFlagMap, setSelectedCountries, computeCountriesBbox } from '../flagQuiz/flagMap.js';
@@ -129,6 +130,9 @@ export function bootFlagsData() {
     if (SHOW_DATA) zoomData.textContent = JSON.stringify(c, null, 2);
   }
   wireFlagZoomBackdropClose(zoom);
+  // Tap the headline flag to enlarge it in a lightbox (shared with the home
+  // page + flagQuiz). Wired once; reads the img's live src on tap.
+  wireFlagLightbox(zoom.querySelector('img'), t);
   // Explicit close button (top-right). The backdrop-tap target shrinks to a
   // thin frame once the facts popup goes near-full-screen on mobile, so the
   // × is the reliable way out. Native Esc-to-close still works too.
