@@ -344,6 +344,9 @@
     },
     "ttt": {
       "result": "Wygrywa różowy!"
+    },
+    "fotd": {
+      "label": "Flaga dnia:"
     }
   },
   "game": {

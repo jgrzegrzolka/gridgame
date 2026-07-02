@@ -27,6 +27,7 @@
 
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="common.css?v=__BUILD__" />
+    <link rel="stylesheet" href="flags/flagFacts.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
   </head>
   <body>
@@ -151,26 +152,29 @@
             </span>
           </a>
         </div>
+        <!-- Flag of the day — a compact, quiet card under the game grid.
+             Populated by bootHome() (needs countries.json for the name +
+             the story pool); stays hidden until it resolves, so no-JS /
+             fetch-fail degrades to nothing rather than an empty box.
+             Clicking opens the same story popup as /flagsdata/. -->
+        <button type="button" class="fotd-card" id="flag-of-day" hidden>
+          <span class="fotd-kicker" data-i18n="home.fotd.label">Flag of the day:</span>
+          <img class="fotd-flag" alt="" />
+          <span class="fotd-name"></span>
+        </button>
       </section>
     </main>
+    <dialog id="zoom" tabindex="-1">
+      <button type="button" class="zoom-close" aria-label="Close" data-i18n-attr="aria-label:zoom.close">&times;</button>
+      <div class="zoom-scroll">
+        <img alt="" />
+        <p></p>
+        <div class="country-facts" hidden></div>
+      </div>
+    </dialog>
     <script type="module">
-      import { bootI18n, wireLangToggle } from './i18n.js';
-      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from './common.js';
-      bootI18n().then((lang) => {
-        // Home page is `data-i18n`-only — applyStringsToDocument covers
-        // every translated surface, so soft-reload is essentially free
-        // here (no per-page langchanged listener needed).
-        wireLangToggle(lang, undefined, { softReload: true, base: './' });
-        disableBurgerIfEmpty(
-          document.querySelector('.burger'),
-          document.querySelector('#burger-panel .menu'),
-        );
-        wireBurgerDismiss();
-        mountNicknameMenuItem({
-          rootEl: document.querySelector('#burger-panel .menu'),
-          profileHref: 'profile/',
-        });
-      });
+      import { bootHome } from './page.js';
+      bootHome();
     </script>
   </body>
 </html>

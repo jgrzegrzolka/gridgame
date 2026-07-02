@@ -1210,6 +1210,7 @@ dialog#zoom p.zoom-note {
 .help-btn,
 .picker-close,
 .zoom-close,
+.fotd-card,
 .game-tile {
   font: inherit;
   font-size: 14px;
@@ -1234,6 +1235,7 @@ dialog#zoom p.zoom-note {
 .help-btn:hover,
 .picker-close:hover,
 .zoom-close:hover,
+.fotd-card:hover,
 .game-tile:hover {
   background: var(--surface-hover-color);
 }
@@ -1245,6 +1247,7 @@ dialog#zoom p.zoom-note {
 .help-btn:active,
 .picker-close:active,
 .zoom-close:active,
+.fotd-card:active,
 .game-tile:active {
   /* Border-only pink so the bg / text stay legible during press; on
    * release, the base rule's 600 ms border-color transition fades it

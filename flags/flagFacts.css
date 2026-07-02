@@ -1,0 +1,238 @@
+/* Flag-facts "story of the flag" panel shown inside the flag-zoom dialog
+ * when the clicked country has an entry in flags/flagFacts.js. The base
+ * dialog#zoom rules live in common.css; these widen + scroll it and lay out
+ * the intro prose, historical-flag timeline, and "Did you know?" list.
+ *
+ * Shared across pages that open the story popup — /flagsdata/ (every flag
+ * tile) and / (the "flag of the day" card). Promoted here from
+ * flagsdata/index.css when the home page became the second consumer, per the
+ * CLAUDE.md "same mechanism = same code" rule: the popup must look identical
+ * everywhere, so its CSS lives in one place both pages link.
+ */
+
+/* Close (×) button. The bordered-button look + pink-press feedback come
+ * from the shared pill recipe in common.css (listed alongside `.rules-btn`
+ * / `.help-btn` — same 32×32 icon-button geometry). Here we only pin it to
+ * the dialog's top-right corner, absolutely positioned relative to the
+ * dialog (not the scrolling `.zoom-scroll`), so it stays put as the story
+ * scrolls. Its opaque surface fill masks any text scrolling beneath it. */
+.zoom-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 2;
+}
+/* `showModal()` would autofocus the × (first focusable child); openZoom
+ * moves focus to the dialog instead, but keep this so a pointer/touch focus
+ * never paints a ring — only a keyboard Tab (`:focus-visible`) does. */
+.zoom-close:focus:not(:focus-visible) {
+  outline: none;
+}
+
+dialog#zoom.has-facts {
+  /* Wider than the default 320 px so the timeline's flag + caption sit on
+   * one comfortable row. border-box so the 16 px dialog padding counts
+   * inside the width/height caps — otherwise `calc(100vw - 32px)` + padding
+   * adds back up to the full viewport and the mobile inset below
+   * disappears. Flex column + clipped overflow lets the inner `.zoom-scroll`
+   * own the scrolling, so the absolute × stays pinned to the dialog. */
+  box-sizing: border-box;
+  width: min(92vw, 560px);
+  max-height: 88vh;
+  /* No horizontal padding here — it lives on `.zoom-scroll` below so the
+   * scrollbar renders at the card's inner edge (close to the border) and the
+   * padding reads as the gap between the text and the scrollbar, not between
+   * the scrollbar and the border. Top/bottom stay 16. */
+  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  text-align: left;
+}
+dialog#zoom.has-facts .zoom-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Content inset lives here (see the dialog note above): the scrollbar sits
+   * at this element's right edge — near the card border — and this 24 px
+   * right padding is the breathing room between the text and the scrollbar. */
+  padding: 0 24px;
+  /* A quiet, hairline-light scrollbar so it doesn't compete with the story.
+   * Firefox / Chrome 121+ standard props + a WebKit fallback below, both
+   * using the palette's lightest grey (--muted-soft-color) for the thumb. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted-soft-color) transparent;
+}
+dialog#zoom.has-facts .zoom-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+dialog#zoom.has-facts .zoom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+dialog#zoom.has-facts .zoom-scroll::-webkit-scrollbar-thumb {
+  background: var(--muted-soft-color);
+  border-radius: 4px;
+}
+/* On phones the story popup is near full-screen — pin it to an explicit
+ * 16 px inset on every side instead of relying on width math (which is
+ * thrown off by the scrollbar and the modal's `margin: auto` centring).
+ * left+right fix the horizontal gaps exactly; top + max-height leave at
+ * least 16 px at the bottom. dvh tracks the visible height as the browser's
+ * address bar shows/hides, so the bottom gap stays honest. */
+@media (max-width: 600px) {
+  dialog#zoom.has-facts {
+    left: 16px;
+    right: 16px;
+    top: 16px;
+    bottom: auto;
+    margin: 0;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: calc(100dvh - 32px);
+  }
+}
+/* Rein the headline flag in when the panel is open — at full dialog width
+ * a 100%-wide flag would dwarf the story. Scoped to the headline flag (the
+ * direct child of the scroll wrapper), so the timeline's own flag images
+ * keep their own sizing. */
+dialog#zoom.has-facts .zoom-scroll > img {
+  width: auto;
+  max-width: 240px;
+  max-height: 150px;
+  margin: 0 auto;
+}
+dialog#zoom .country-facts {
+  /* A single divider between the headline flag + name and the story
+   * below, with generous space on both sides. (The timeline steps
+   * themselves are separated by spacing alone — no lines there.) */
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--muted-soft-color);
+}
+/* Scoped under dialog#zoom to beat common.css's `dialog#zoom p` rule
+ * (which centers + sizes the country-name paragraph). */
+dialog#zoom .flag-facts-intro {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--primary-color);
+  text-align: left;
+}
+.flag-facts-timeline {
+  list-style: none;
+  /* Extra top margin so the first flag (1453–1793) sits well clear of the
+   * intro paragraphs above it. */
+  margin: 30px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.flag-facts-step {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+/* Breathing room between flags via spacing alone — no divider lines. */
+.flag-facts-step + .flag-facts-step {
+  margin-top: 30px;
+}
+.flag-facts-step .flag-facts-img {
+  width: 84px;
+  height: auto;
+  border: 1px solid var(--muted-soft-color);
+  box-sizing: border-box;
+}
+.flag-facts-meta {
+  min-width: 0;
+}
+.flag-facts-year {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+}
+dialog#zoom .flag-facts-caption {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--primary-color);
+  text-align: left;
+}
+/* Equation step (e.g. 1606 = England + Scotland): the two-column grid gives
+ * way to a full-width column — the year + description first, the flags-and-
+ * operators row below — so it reads as "these combine", not "flag → flag". */
+.flag-facts-step-eq {
+  display: flex;
+  flex-direction: column;
+  /* Space between the year + description and the equation row below it. */
+  gap: 18px;
+}
+.flag-facts-equation {
+  display: flex;
+  /* Top-align the columns so every flag's top edge lines up; the operators
+   * are sized to the flag height (below) so their glyphs land on the flag's
+   * vertical centre regardless of the label beneath. */
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.flag-facts-eq-flag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+/* Uniform flag HEIGHT (auto width) so flags of different ratios share a
+ * centre line — the alignment the operators key off. Selector is scoped to
+ * `dialog#zoom` to out-specify the base `dialog#zoom img { width: 100% }`
+ * (which otherwise stretches these to the full row width). */
+dialog#zoom .flag-facts-eq-img {
+  height: 40px;
+  width: auto;
+  border: 1px solid var(--muted-soft-color);
+  box-sizing: border-box;
+  display: block;
+}
+.flag-facts-eq-label {
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--muted-color);
+  text-align: center;
+}
+.flag-facts-eq-op {
+  /* Same height as a flag + centre the glyph = operator sits on the flag's
+   * vertical middle. flex-start keeps it level with the flag tops. */
+  align-self: flex-start;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  color: var(--muted-color);
+}
+/* "Did you know?" trivia block below the timeline. */
+.flag-facts-extra {
+  margin-top: 30px;
+}
+.flag-facts-extra-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+dialog#zoom .flag-facts-list {
+  margin: 0;
+  padding-left: 20px;
+  text-align: left;
+}
+dialog#zoom .flag-facts-list-item {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--primary-color);
+}
+dialog#zoom .flag-facts-list-item:last-child {
+  margin-bottom: 0;
+}

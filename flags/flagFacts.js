@@ -183,3 +183,14 @@ export const FLAG_FACTS = {
 export function getFlagFacts(code) {
   return Object.prototype.hasOwnProperty.call(FLAG_FACTS, code) ? FLAG_FACTS[code] : null;
 }
+
+/**
+ * Codes of every flag that currently has a story — the pool the home page's
+ * "flag of the day" rotates through. Grows automatically as descriptions are
+ * added, so there's no separate list to keep in sync.
+ *
+ * @returns {string[]}
+ */
+export function storyFlagCodes() {
+  return Object.keys(FLAG_FACTS);
+}
