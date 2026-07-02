@@ -1,7 +1,7 @@
 import { bootI18n, wireLangToggle, t, countryName } from './i18n.js';
 import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from './common.js';
 import { loadCountries } from './flags/group.js';
-import { getFlagFacts, storyFlagCodes } from './flags/flagFacts.js';
+import { getFlagFacts, storyFlagPool } from './flags/flagFacts.js';
 import { renderFlagFacts } from './flags/flagFactsRender.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from './flags/flagZoom.js';
 import { wireFlagLightbox, wireFlagLightboxAll } from './flags/flagLightbox.js';
@@ -64,10 +64,12 @@ function mountFlagOfDay() {
   if (!card || !zoom) return;
 
   // Editorial pins — force a specific flag on a specific date. Debut day
-  // (2026-07-02) leads with Poland; every other day uses the normal
-  // cycle-shuffle rotation. Safe to leave in place or extend later.
+  // (2026-07-02) leads with Poland; every other day uses the append-safe
+  // least-recently-shown rotation. Pins are now purely editorial (a debut
+  // lead, a national day) — no longer needed to keep the schedule stable
+  // when the pool grows. Safe to leave in place or extend later.
   const OVERRIDES = { '2026-07-02': 'pl' };
-  const code = flagOfDay(warsawToday(), storyFlagCodes(), OVERRIDES);
+  const code = flagOfDay(warsawToday(), storyFlagPool(), OVERRIDES);
   if (!code) return;
 
   const img = /** @type {HTMLImageElement | null} */ (card.querySelector('.fotd-flag'));

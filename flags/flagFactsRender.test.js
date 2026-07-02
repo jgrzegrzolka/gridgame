@@ -45,6 +45,7 @@ function findAllByClass(/** @type {any} */ el, /** @type {string} */ cls) {
 }
 
 const FACTS = {
+  addedOn: '2026-07-01',
   introKey: 'flagFacts.gr.intro',
   timeline: [
     { year: '1453–1793', img: 'history/gr-ottoman.svg', captionKey: 'flagFacts.gr.ottoman' },
@@ -104,6 +105,7 @@ test('renderFlagFacts: empty intro string yields no intro paragraphs but still r
 test('renderFlagFacts renders an equation step (parts + result) instead of a single flag', () => {
   const doc = makeDoc();
   const factsEq = {
+    addedOn: '2026-07-01',
     introKey: 'flagFacts.gb.intro',
     timeline: [
       {

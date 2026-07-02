@@ -1,23 +1,32 @@
 /**
- * "Flag of the day" picker — chooses one flag per calendar day from the
- * pool of flags that have a story (see `flags/flagFacts.js`). Pure logic:
- * deterministic in `(dateStr, pool)`, no DOM, no clock, no fetch, so the
- * home page can compute today's flag on load and this stays unit-testable.
+ * "Flag of the day" picker — chooses one flag per calendar day from the pool
+ * of flags that have a story (see `flags/flagFacts.js`). Pure logic:
+ * deterministic in `(dateStr, pool, overrides)`, no DOM, no clock, no fetch,
+ * so the home page can compute today's flag on load and this stays
+ * unit-testable.
  *
- * Selection is **cycle-shuffle**: the pool is shuffled once per "cycle"
- * (a run of `pool.length` days) and each day of the cycle reveals the next
- * entry of that shuffle. Consequences:
- *   - every flag is shown exactly once before any repeat (perfect coverage),
- *   - each cycle uses a fresh permutation, so the order feels random rather
- *     than alphabetical,
- *   - it's stateless — nothing is persisted. When the pool grows (a new
- *     story is added), the current cycle simply recomputes with the larger
- *     pool on the next load. The only visible effect is that the schedule
- *     from that day forward reshuffles; there's no saved rota to migrate.
+ * **Append-safe by construction.** Each story carries an `addedOn` date, and
+ * a flag only becomes eligible the day *after* its `addedOn`. So adding a
+ * story today can never change today's pick or any past day's — it simply
+ * isn't a candidate on any day up to and including today; only future days
+ * weave the newcomer in. That means you can grow the pool whenever you like
+ * with zero editorial pinning. (The old design keyed the whole rotation off
+ * the pool *size*, so adding one flag reshuffled every date, forcing a pin
+ * per day to keep anything stable — the bug this rewrite fixes.)
  *
- * The pool is sorted internally before shuffling, so the result depends only
- * on the *set* of codes, not the order they arrive in (e.g. `Object.keys`
- * insertion order can't change today's pick).
+ * **Selection is least-recently-shown.** Replaying forward from the earliest
+ * `addedOn`, each day picks the eligible flag shown fewest times so far, ties
+ * broken by a per-day hash so the order doesn't read alphabetically. Coverage
+ * stays balanced — every flag comes around regularly, nothing is starved —
+ * *without* depending on `n`, which is the whole point.
+ *
+ * A newly-eligible flag joins "at the back of the pack": its show count is
+ * seeded to the current minimum among active flags, so it neither bursts
+ * (dominating the next N days from a zero count) nor lingers unshown.
+ *
+ * `overrides` (a `{ 'YYYY-MM-DD': code }` map) still forces a specific flag on
+ * a specific date — kept for genuine editorial choices (a debut lead, a flag
+ * on its national day), NOT as the stability mechanism it used to be.
  */
 
 /**
@@ -35,81 +44,91 @@ function dayNumber(dateStr) {
 }
 
 /**
- * Hash a cycle index into a well-spread 32-bit seed, so consecutive cycles
- * produce visibly different shuffles (raw consecutive seeds would correlate).
+ * Deterministic 32-bit hash of a day index + country code — the tiebreak when
+ * several eligible flags are level on show count. Mixing the day in means the
+ * tie order varies day to day rather than being a fixed alphabetical fallback.
  *
- * @param {number} n
+ * @param {number} day
+ * @param {string} code
  * @returns {number}
  */
-function seedForCycle(n) {
-  let h = (n ^ 0x9e3779b9) >>> 0;
-  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+function tiebreak(day, code) {
+  let h = (day ^ 0x9e3779b9) >>> 0;
+  for (let i = 0; i < code.length; i++) {
+    h = Math.imul(h ^ code.charCodeAt(i), 0x45d9f3b) >>> 0;
+  }
   h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
   return (h ^ (h >>> 16)) >>> 0;
 }
 
 /**
- * mulberry32 PRNG — small, deterministic, good enough for shuffling a
- * handful of flags. Returns a function yielding floats in [0, 1).
- *
- * @param {number} a seed
- * @returns {() => number}
- */
-function mulberry32(a) {
-  return function () {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/**
- * Fisher-Yates shuffle of a copy of `items`, driven by a seeded PRNG so the
- * permutation is reproducible for a given seed.
- *
- * @template T
- * @param {T[]} items
- * @param {number} seed
- * @returns {T[]}
- */
-function shuffledCopy(items, seed) {
-  const arr = items.slice();
-  const rng = mulberry32(seed);
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    const tmp = arr[i];
-    arr[i] = arr[j];
-    arr[j] = tmp;
-  }
-  return arr;
-}
-
-/**
- * The flag code to feature on a given day, or null when the pool is empty.
- *
- * `overrides` is an optional editorial pin — a `{ 'YYYY-MM-DD': code }` map
- * that forces a specific flag on a specific date (e.g. debut day, or a flag
- * on its national day). A pin is only honoured when its code is actually in
- * the pool (has a story); otherwise the normal rotation applies.
+ * The flag code to feature on a given day, or null when nothing is eligible
+ * yet (date precedes every story's `addedOn`) or the pool is empty.
  *
  * @param {string} dateStr `YYYY-MM-DD` (typically `warsawToday()`)
- * @param {string[]} pool country codes that have a story
+ * @param {Array<{ code: string, addedOn: string }>} pool  stories with their add dates
  * @param {Record<string, string>} [overrides] date → forced code
  * @returns {string | null}
  */
 export function flagOfDay(dateStr, pool, overrides = {}) {
   if (!Array.isArray(pool) || pool.length === 0) return null;
+
+  // Sort by code so the replay is independent of the pool's arrival order
+  // (e.g. `Object.keys` insertion order can't change any pick).
+  const entries = pool
+    .filter((e) => e && typeof e.code === 'string' && typeof e.addedOn === 'string')
+    .slice()
+    .sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
+  if (entries.length === 0) return null;
+
   if (overrides && Object.prototype.hasOwnProperty.call(overrides, dateStr)) {
     const forced = overrides[dateStr];
-    if (pool.includes(forced)) return forced;
+    if (entries.some((e) => e.code === forced)) return forced;
   }
-  const sorted = pool.slice().sort();
-  const n = sorted.length;
-  const day = dayNumber(dateStr);
-  const cycle = Math.floor(day / n);
-  // JS `%` can be negative for pre-epoch dates; normalise into [0, n).
-  const pos = ((day % n) + n) % n;
-  return shuffledCopy(sorted, seedForCycle(cycle))[pos];
+
+  const targetDay = dayNumber(dateStr);
+  const addedDay = new Map(entries.map((e) => [e.code, dayNumber(e.addedOn)]));
+  let startDay = Infinity;
+  for (const d of addedDay.values()) if (d < startDay) startDay = d;
+  // First day anything can be picked is the day after the earliest addedOn
+  // (eligibility is strictly "added before today"). Nothing before that.
+  if (targetDay <= startDay) return null;
+
+  /** @type {Map<string, number>} */
+  const shows = new Map();
+  let pick = null;
+  for (let day = startDay + 1; day <= targetDay; day++) {
+    // Activate flags added strictly before `day`, seeding each to the current
+    // minimum show count so it blends in rather than bursting or starving.
+    for (const e of entries) {
+      if (shows.has(e.code)) continue;
+      if ((addedDay.get(e.code) ?? Infinity) < day) {
+        let min = 0;
+        if (shows.size > 0) {
+          min = Infinity;
+          for (const v of shows.values()) if (v < min) min = v;
+        }
+        shows.set(e.code, min);
+      }
+    }
+    if (shows.size === 0) { pick = null; continue; }
+
+    // Least-recently-shown wins; per-day hash breaks ties.
+    let best = null;
+    let bestShows = Infinity;
+    let bestHash = Infinity;
+    for (const e of entries) {
+      const s = shows.get(e.code);
+      if (s === undefined) continue; // not eligible yet
+      const h = tiebreak(day, e.code);
+      if (s < bestShows || (s === bestShows && h < bestHash)) {
+        best = e.code;
+        bestShows = s;
+        bestHash = h;
+      }
+    }
+    if (best !== null) shows.set(best, (shows.get(best) ?? 0) + 1);
+    pick = best;
+  }
+  return pick;
 }

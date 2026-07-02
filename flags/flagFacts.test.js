@@ -24,6 +24,9 @@ test('getFlagFacts returns null for a country with no story', () => {
 test('every timeline step is well-formed', () => {
   for (const [code, facts] of Object.entries(FLAG_FACTS)) {
     assert.ok(facts.introKey.startsWith('flagFacts.'), `${code} introKey`);
+    // addedOn drives the flag-of-the-day rotation's append-safety — a missing
+    // or malformed one would silently break eligibility, so pin the shape.
+    assert.match(facts.addedOn, /^\d{4}-\d{2}-\d{2}$/, `${code} addedOn is YYYY-MM-DD`);
     for (const step of facts.timeline) {
       assert.equal(typeof step.year, 'string', `${code} year`);
       assert.ok(step.year.length > 0, `${code} year non-empty`);
