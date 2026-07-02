@@ -26,6 +26,8 @@ Filenames are renamed to `<code>-<era>.svg` for the repo.
 | `ie-patrick.svg` | Saint Patrick's Saltire.svg | Public domain | Saltire of St Patrick — red diagonal cross on white (Ireland's element of the Union Jack) |
 | `ie-harp.svg` | Green Harp Flag of Ireland.svg | CC0 | Green harp flag of Ireland — gold harp on green |
 | `pl-eagle.svg` | Herb Polski.svg | Public domain | The White Eagle — Poland's coat of arms, a white crowned eagle on a red shield (source of the flag's colours) |
+| `ge-1918.svg` | Flag of Georgia (1918–1921, 1-2).svg | Public domain | Democratic Republic of Georgia flag — wine-red field, black-and-white canton (also the 1991–2004 restored flag) |
+| `ge-ssr.svg` | Flag of the Georgian Soviet Socialist Republic (1951–1990).svg | Public domain | Georgian SSR flag — red with a blue sun bearing hammer, sickle and star |
 
 **Attribution (CC BY-SA):**
 - `ch-flamme.svg` is a derivative of *"Militärfahne der Stadt und Republik Bern"*
