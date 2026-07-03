@@ -93,6 +93,15 @@ this file the single source of truth for both current and historical assets.
 | `af-2001.svg` | Flag of Afghanistan (2001–2002).svg | CC BY-SA 3.0 (Orange Tuesday et al.) | Post-Taliban interim flag, restored 1990s mujahideen design |
 | `af-2002.svg` | Flag of Afghanistan (2002–2004).svg | Public domain | Black-red-green tricolour, emblem referencing the 1930–1973 kingdom |
 | `af-2013.svg` | Flag of Afghanistan (2013–2021).svg | Public domain | Islamic Republic tricolour, deepened red and enlarged emblem (2013–2021) |
+| `af-1928-horizontal.svg` | Flag of Afghanistan (1928).svg | CC BY-SA 3.0 (Fornax) | Amanullah Khan's first 1928 flag, black-red-green in horizontal bands |
+| `af-1928-variant.svg` | Flag of Afghanistan (1928-1929) (variant).svg | Public domain (Orange Tuesday) | Variant of the 1928–1929 vertical tricolour with a differently drawn emblem |
+| `af-1929-radial.svg` | Flag of Afghanistan (17 Jan 1929 - 13 Oct 1929).svg | Public domain (BlinxTheKitty) | 1929 vertical tricolour, mosque emblem in a white starburst |
+| `af-daoud-vertical.svg` | Flag of the Republic of Afghanistan (Daoud) Vertical.svg | Public domain (WeaponizingArchitecture) | Vertical version of Daoud's 1974–1978 eagle flag |
+| `af-republic-colored.svg` | Flag of Afghanistan (Colored Emblem).svg | CC0 (BlinxTheKitty) | Republic tricolour (2004–2021) with the state emblem in full colour |
+| `af-pashto.svg` | Flag of the Islamic Emirate of Afghanistan (with Pashto subtext).svg | Public domain | Current Taliban flag with a line of Pashto beneath the Shahada |
+| `af-std-amanullah.svg` | Royal flag of Amanullah Khan.svg | Public domain (vect. ReneeWrites) | Royal standard of Amanullah Khan (1926–1929), red with crossed swords |
+| `af-std-kings.svg` | Royal standard of Afghan Kings(1931~1973).svg | Public domain (Yeemuha) | Royal standard of the Afghan kings (1931–1973), red with the state arms |
+| `af-std-president.svg` | Standard of the President of Afghanistan (2004-2021).svg | CC BY-SA 3.0 (TRAJAN 117) | Standard of the President of the Islamic Republic (2004–2021) |
 
 **Attribution (CC BY-SA):**
 - `ch-flamme.svg` is a derivative of *"Militärfahne der Stadt und Republik Bern"*
@@ -123,6 +132,12 @@ this file the single source of truth for both current and historical assets.
   and re-shared under the same licence.
 - `af-1992b.svg` is *"Flag of the Afghan interim government-in-exile (1988–1992)"*
   by Wikimedia Commons user **BlinxTheKitty**, licensed **CC BY-SA 4.0**; used
+  unmodified and re-shared under the same licence.
+- `af-1928-horizontal.svg` is *"Flag of Afghanistan (1928)"* by Wikimedia Commons
+  user **Fornax**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under
+  the same licence.
+- `af-std-president.svg` is *"Standard of the President of Afghanistan (2004-2021)"*
+  by Wikimedia Commons user **TRAJAN 117**, licensed **CC BY-SA 3.0**; used
   unmodified and re-shared under the same licence.
 
 When adding a new country's history, drop its historical SVGs here following the

@@ -799,12 +799,16 @@
       "octagram": "Amanullah Khan, który w 1919 roku wywalczył pełną niepodległość od Wielkiej Brytanii, ujął godło w białą ośmioramienną gwiazdę.",
       "emblem1921": "Godło przerysowano, a proporcje flagi zmieniono, wciąż biel na czarnym polu.",
       "emblem1926": "Usunięto gwiazdę i powiększono godło, ostatnia z czarnych flag, zanim pojawił się kolor.",
+      "horiz1928": "Pierwsza flaga Amanullaha Chana z 1928 roku układała czerń, czerwień i zieleń w pasy poziome, zanim jeszcze w tym samym roku wzór obrócono do pionu.",
       "tricolour": "W 1928 roku król Amanullah Khan, świeżo po podróży po Europie, zamienił czarny sztandar królewski na czarno-czerwono-zieloną pionową trójkolorówkę, pierwszą z trójkolorówek, które będą wracać przez resztę stulecia.",
+      "variant1928": "Wariant pionowej trójkolorówki niósł te same barwy z inaczej narysowanym godłem państwowym.",
+      "radial1929": "W zamęcie 1929 roku trójkolorówka powróciła z godłem meczetu wpisanym w białą gwiazdę.",
       "kalakani": "Tadżycki rebeliant, Habibullah Kalakani, zajął Kabul na dziewięć miesięcy w 1929 roku i powiewał pasiastą flagą czerwono-czarno-białą, której barwy nawiązywały do dawnych sztandarów.",
       "nadir": "Nadir Szah wypędził Kalakaniego i przywrócił trójkolorówkę czarno-czerwono-zieloną, teraz pod nowym królewskim godłem.",
       "kingdom": "Trójkolorowa flaga Królestwa Afganistanu, z godłem meczetu i snopów pszenicy pośrodku. Jakaś odmiana tej pionowej flagi powiewała przez ponad czterdzieści lat, zdecydowanie najdłużej ze wszystkich afgańskich wzorów.",
       "republic1973": "Zamach stanu Mohammeda Dauda Chana w 1973 roku zakończył monarchię. Jego pierwsza flaga republikańska zachowała pionową trójkolorówkę, usuwając tylko datę pod meczetem.",
       "daoud": "Rok później Republika Dauda przerysowała flagę na poziomą czarno-czerwono-zieloną, z orłem rewolucji.",
+      "daoudvert": "Republika Dauda używała też pionowej wersji swojej flagi z orłem.",
       "noemblem": "Komunistyczny zamach stanu z kwietnia 1978 roku najpierw powiewał samą trójkolorówką, bez żadnego godła, przez kilka miesięcy.",
       "red": "Komunistyczny zamach stanu w 1978 roku przyniósł flagę niemal całkowicie czerwoną, w sowieckim stylu, ze złotymi literami w rogu układającymi się w słowo Chalk, „masy”. Przetrwała ledwie dwa lata.",
       "dra": "Prosowiecki rząd porzucił czerwoną flagę i przywrócił czerń-czerwień-zieleń, tym razem w poziomych pasach, z nowym socjalistycznym godłem państwowym, wschodzącym słońcem nad otwartą księgą.",
@@ -818,14 +822,22 @@
       "post2001": "Po wypędzeniu talibów rząd tymczasowy przez krótki czas powiewał przywróconą wersją flagi mudżahedinów z lat 90.",
       "ref2002": "Wkrótce pojawiła się nowa trójkolorówka czarno-czerwono-zielona, z godłem nawiązującym do królestwa z lat 1930–1973.",
       "republic": "W 2004 roku Islamska Republika ustaliła pionową trójkolorówkę czarno-czerwono-zieloną z białym godłem meczetu, flagę, którą świat wciąż kojarzy z Afganistanem.",
+      "coloured": "Wariant flagi republikańskiej pokazywał godło państwowe w pełnych barwach zamiast na biało.",
       "deepred": "W 2013 roku pogłębiono czerwień i powiększono godło, ostateczna postać flagi republiki, wciąż prezentowana przez jej przedstawicieli za granicą.",
       "current": "W 2021 roku biały sztandar talibów zastąpił trójkolorówkę: szahada, islamskie wyznanie wiary, wypisana czarnymi literami na bieli. Flagę czarno-czerwono-zieloną nadal prezentują przedstawiciele dawnej republiki za granicą.",
+      "pashto": "Niektóre flagi Islamskiego Emiratu dodają pod szahadą wiersz pisma paszto.",
       "fact": {
         "changes": "Afganistanowi przypisuje się często najwięcej zmian flagi ze wszystkich krajów w XX wieku, według popularnych wyliczeń około dziewiętnaście, mniej więcej nowa flaga co pięć lat.",
         "colours": "Trójkolorówka niosła utarte znaczenie: czerń dla mrocznej, okupowanej przeszłości kraju, czerwień dla krwi przelanej w walce o niepodległość, a zieleń dla nadziei, pomyślności i islamu.",
         "mosque": "Powracającym godłem jest meczet narysowany na wprost, z mihrabem (niszą wskazującą Mekkę) i minbarem (amboną), zwykle owinięty pszenicą, motyw obecny na afgańskich flagach od początku XX wieku.",
         "longlived": "Trójkolorówka Królestwa (1931–1973) była zdecydowanie najdłużej używaną flagą Afganistanu, ponad czterdzieści lat. Większość pozostałych przetrwała ledwie kilka.",
-        "white": "Biała flaga z szahadą ma głębokie korzenie: biel przywołuje sztandary wczesnych kalifatów islamskich. Talibowie po raz pierwszy podnieśli ten wzór w latach 90., a przywrócili go w 2021 roku."
+        "white": "Biała flaga z szahadą ma głębokie korzenie: biel przywołuje sztandary wczesnych kalifatów islamskich. Talibowie po raz pierwszy podnieśli ten wzór w latach 90., a przywrócili go w 2021 roku.",
+        "standards": "Poza flagą państwową władcy Afganistanu powiewali własnymi osobistymi sztandarami, odrębnymi chorągwiami króla lub prezydenta, zwykle czerwonymi lub czarnymi, z godłem państwa."
+      },
+      "gallery": {
+        "amanullah": "Flaga królewska Amanullaha Chana (1926–1929)",
+        "kings": "Sztandar królewski (1931–1973)",
+        "president": "Sztandar prezydenta (2004–2021)"
       }
     }
   },

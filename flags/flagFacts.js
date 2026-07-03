@@ -428,12 +428,16 @@ export const FLAG_FACTS = {
       { year: '1919–1921', img: 'history/af-octagram.svg', captionKey: 'flagFacts.af.octagram' },
       { year: '1921–1926', img: 'history/af-1921.svg', captionKey: 'flagFacts.af.emblem1921' },
       { year: '1926–1928', img: 'history/af-1926.svg', captionKey: 'flagFacts.af.emblem1926' },
+      { year: '1928', img: 'history/af-1928-horizontal.svg', captionKey: 'flagFacts.af.horiz1928' },
       { year: '1928–1929', img: 'history/af-1928.svg', captionKey: 'flagFacts.af.tricolour' },
+      { year: '1928–1929', img: 'history/af-1928-variant.svg', captionKey: 'flagFacts.af.variant1928' },
+      { year: '1929', img: 'history/af-1929-radial.svg', captionKey: 'flagFacts.af.radial1929' },
       { year: '1929', img: 'history/af-1929.svg', captionKey: 'flagFacts.af.kalakani' },
       { year: '1929–1931', img: 'history/af-1929-1930.svg', captionKey: 'flagFacts.af.nadir' },
       { year: '1930–1973', img: 'history/af-kingdom.svg', captionKey: 'flagFacts.af.kingdom' },
       { year: '1973–1974', img: 'history/af-1973.svg', captionKey: 'flagFacts.af.republic1973' },
       { year: '1974–1978', img: 'history/af-daoud.svg', captionKey: 'flagFacts.af.daoud' },
+      { year: '1974–1978', img: 'history/af-daoud-vertical.svg', captionKey: 'flagFacts.af.daoudvert' },
       { year: '1978', img: 'history/af-1978.svg', captionKey: 'flagFacts.af.noemblem' },
       { year: '1978–1980', img: 'history/af-red.svg', captionKey: 'flagFacts.af.red' },
       { year: '1980–1987', img: 'history/af-dra.svg', captionKey: 'flagFacts.af.dra' },
@@ -447,8 +451,10 @@ export const FLAG_FACTS = {
       { year: '2001–2002', img: 'history/af-2001.svg', captionKey: 'flagFacts.af.post2001' },
       { year: '2002–2004', img: 'history/af-2002.svg', captionKey: 'flagFacts.af.ref2002' },
       { year: '2004–2013', img: 'history/af-republic.svg', captionKey: 'flagFacts.af.republic' },
+      { year: '2004–2021', img: 'history/af-republic-colored.svg', captionKey: 'flagFacts.af.coloured' },
       { year: '2013–2021', img: 'history/af-2013.svg', captionKey: 'flagFacts.af.deepred' },
       { year: '2021', img: 'svg/af.svg', captionKey: 'flagFacts.af.current' },
+      { year: 'since 2021', img: 'history/af-pashto.svg', captionKey: 'flagFacts.af.pashto' },
     ],
     factKeys: [
       'flagFacts.af.fact.changes',
@@ -456,6 +462,21 @@ export const FLAG_FACTS = {
       'flagFacts.af.fact.mosque',
       'flagFacts.af.fact.longlived',
       'flagFacts.af.fact.white',
+      'flagFacts.af.fact.standards',
+    ],
+    // The rulers' personal standards (king's / president's banners) aren't
+    // national flags, so they sit in a gallery under the "standards" fact
+    // rather than the chronological timeline (Jan's call: flags + variants in
+    // the timeline, ruler flags in "Did you know?").
+    galleries: [
+      {
+        afterFactKey: 'flagFacts.af.fact.standards',
+        items: [
+          { img: 'history/af-std-amanullah.svg', labelKey: 'flagFacts.af.gallery.amanullah' },
+          { img: 'history/af-std-kings.svg', labelKey: 'flagFacts.af.gallery.kings' },
+          { img: 'history/af-std-president.svg', labelKey: 'flagFacts.af.gallery.president' },
+        ],
+      },
     ],
   },
 };
