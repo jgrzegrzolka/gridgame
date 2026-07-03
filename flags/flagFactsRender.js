@@ -57,12 +57,17 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
   if (Array.isArray(facts.timeline) && facts.timeline.length > 0) {
     const list = doc.createElement('ol');
     list.className = 'flag-facts-timeline';
-    for (const group of groupTimeline(facts.timeline)) {
-      list.appendChild(
-        group.length === 1
-          ? buildStep(doc, { step: group[0], t, base })
-          : buildGroupedStep(doc, { steps: group, t, base }),
-      );
+    for (const cluster of clusterTimeline(facts.timeline)) {
+      if (cluster.length === 1) {
+        // A lone step (no overlap with a neighbour): the normal dated node.
+        list.appendChild(buildStep(doc, { step: cluster[0], t, base }));
+      } else if (cluster.every((s) => s.year === cluster[0].year)) {
+        // Every flag shares one date: complete overlap, one bracket over them.
+        list.appendChild(buildGroupedStep(doc, { steps: cluster, t, base }));
+      } else {
+        // Ranges that intersect but differ: partial overlap, parallel braces.
+        list.appendChild(buildOverlapCluster(doc, { steps: cluster, t, base }));
+      }
     }
     root.appendChild(list);
   }
@@ -154,40 +159,219 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
 const SOURCES_URL = 'https://github.com/jgrzegrzolka/gridgame/blob/main/flags/history/SOURCES.md';
 
 /**
- * Bucket the flat timeline into groups of consecutive steps that share an
- * identical `year` label. Such steps were concurrent, not sequential: variants
- * of one flag flown side by side (the 1928-1929 emblem variants), or the rival
- * flags of one chaotic year (1929, 1992). Rendering them as separate dated
- * nodes reads as a false run of changes, so a group of 2+ is drawn as one
- * bracketed node instead (see buildGroupedStep).
+ * Parse a `year` label into a numeric `{ start, end }` range. Takes the first
+ * and last 3-4 digit run in the string: `"1928"` → `{1928, 1928}`,
+ * `"1946–1992"` → `{1946, 1992}`, `"since 2021"` → `{2021, 2021}`. A label with
+ * no year-like number (`"since 13th c."`) yields `{0, 0}` so it never clusters.
  *
- * Equation steps (`parts`) never group — they own a bespoke layout — so one
- * always lands in a group of its own and breaks any surrounding run.
+ * @param {string} year
+ * @returns {{ start: number, end: number }}
+ */
+function parseYearRange(year) {
+  const nums = String(year).match(/\d{3,4}/g);
+  if (!nums || nums.length === 0) return { start: 0, end: 0 };
+  const years = nums.map(Number);
+  return { start: years[0], end: years[years.length - 1] };
+}
+
+/**
+ * Bucket the flat timeline into clusters of consecutive flags that coexisted.
+ * A step joins the running cluster when it carries the **same date label** as
+ * the previous step (concurrent variants: the 1928-1929 emblem trio, the two
+ * 1929 rival flags) or the **same explicit `overlap` id** (a variant flown
+ * across a design change, whose date range differs: the 2004-2021 coloured
+ * emblem over the 2004-2013 and 2013-2021 flags). Otherwise it starts a new
+ * cluster, so a plain sequential run stays one-flag-per-cluster.
+ *
+ * Partial overlap is opt-in (`overlap`) rather than inferred from the dates on
+ * purpose: historical ranges are fuzzy, and a one-year seam between two truly
+ * sequential flags (Nadir's 1929-1931, then the kingdom's 1930-1973) would
+ * otherwise read as a false coexistence. The author marks the genuine ones.
+ *
+ * The render loop then draws a size-1 cluster as a normal dated node, an
+ * all-same-date cluster as one bracket (buildGroupedStep), and a mixed-date
+ * cluster as parallel braces (buildOverlapCluster).
+ *
+ * Equation steps (`parts`) never cluster — they own a bespoke layout — so one
+ * always lands alone and breaks any surrounding run.
  *
  * @param {import('./flagFacts.js').FlagFactStep[]} timeline
  * @returns {import('./flagFacts.js').FlagFactStep[][]}
  */
-function groupTimeline(timeline) {
+function clusterTimeline(timeline) {
   /** @type {import('./flagFacts.js').FlagFactStep[][]} */
-  const groups = [];
+  const clusters = [];
   for (const step of timeline) {
-    const groupable = !(Array.isArray(step.parts) && step.parts.length > 0);
-    const last = groups[groups.length - 1];
-    const lastGroupable = last && !(Array.isArray(last[0].parts) && last[0].parts.length > 0);
-    if (last && groupable && lastGroupable && last[0].year === step.year) {
-      last.push(step);
-    } else {
-      groups.push([step]);
-    }
+    const isEq = Array.isArray(step.parts) && step.parts.length > 0;
+    const last = clusters[clusters.length - 1];
+    const prev = last && last[last.length - 1];
+    const lastEq = last && Array.isArray(last[0].parts) && last[0].parts.length > 0;
+    const joins =
+      last &&
+      prev &&
+      !isEq &&
+      !lastEq &&
+      (step.year === prev.year || (!!step.overlap && step.overlap === prev.overlap));
+    if (joins) last.push(step);
+    else clusters.push([step]);
   }
-  return groups;
+  return clusters;
 }
 
 /**
- * A grouped timeline `<li>`: several concurrent flags under one date. The date
- * pill sits once to the left; a bracket (not a dot) spans the group on the
- * axis, marking it as a single period; and each flag keeps its own caption,
- * stacked. This is the "these overlapped in time" treatment — see groupTimeline.
+ * A partial-overlap cluster: flags whose date ranges intersect but differ, so a
+ * single shared date would lie. Rendered as a small CSS grid, one row per flag,
+ * each with its **own inline date pill** beside its flag + caption (so which
+ * flag flew when is read directly). A **brace** in the left gutter spans the
+ * rows a flag outlived, so a variant flown across a design change reads as
+ * running alongside the sequential flags it coexisted with. Braces are drawn
+ * only when they cover more than one row (a real span); a lone flag that spans
+ * only itself gets just its inline pill, and same-date variants share one brace.
+ * Overlapping braces sit in parallel lanes, widest outermost.
+ *
+ * Grid rows (one per flag) give the braces automatic vertical alignment: a
+ * brace `grid-row: firstRow / lastRow+1` stretches to the real height of the
+ * rows it spans without any pixel measurement (the renderer stays pure).
+ *
+ * @param {Document} doc
+ * @param {{
+ *   steps: import('./flagFacts.js').FlagFactStep[],
+ *   t: (key: string, fallback: string) => string,
+ *   base: string,
+ * }} args
+ */
+function buildOverlapCluster(doc, { steps, t, base }) {
+  const ranges = steps.map((s) => parseYearRange(s.year));
+
+  // Collapse consecutive same-date steps into one "unit" (one date pill + one
+  // brace, e.g. the three 1997-2001 shahada variants).
+  /** @type {{ year: string, start: number, end: number, firstRow: number, lastRow: number, spanFirst: number, spanLast: number, lane: number }[]} */
+  const units = [];
+  steps.forEach((step, row) => {
+    const last = units[units.length - 1];
+    if (last && last.year === step.year) {
+      last.lastRow = row;
+    } else {
+      units.push({
+        year: step.year,
+        start: ranges[row].start,
+        end: ranges[row].end,
+        firstRow: row,
+        lastRow: row,
+        spanFirst: row,
+        spanLast: row,
+        lane: 0,
+      });
+    }
+  });
+
+  // A unit's brace spans every flag whose lifetime fits inside the unit's own
+  // range (it outlived/contained them), so a wrapping flag's brace reaches over
+  // the shorter flags it coexisted with. Rows are time-ordered, so the min/max
+  // of the contained rows is a contiguous span.
+  for (const u of units) {
+    steps.forEach((_, row) => {
+      if (ranges[row].start >= u.start && ranges[row].end <= u.end) {
+        u.spanFirst = Math.min(u.spanFirst, row);
+        u.spanLast = Math.max(u.spanLast, row);
+      }
+    });
+  }
+
+  // Assign lanes so braces that overlap in rows land in separate columns
+  // (greedy interval colouring by span start): units whose spans don't touch
+  // share a lane.
+  /** @type {number[]} */
+  const laneLastRow = [];
+  [...units]
+    .sort((a, b) => a.spanFirst - b.spanFirst || a.spanLast - b.spanLast)
+    .forEach((u) => {
+      let lane = laneLastRow.findIndex((lastRow) => lastRow < u.spanFirst);
+      if (lane === -1) {
+        lane = laneLastRow.length;
+        laneLastRow.push(u.spanLast);
+      } else {
+        laneLastRow[lane] = u.spanLast;
+      }
+      u.lane = lane;
+    });
+  const nLanes = laneLastRow.length;
+
+  // Order the lane columns so the widest-spanning brace sits outermost (leftmost,
+  // nearest the date pills) and shorter braces nest inside it, nearer the flags:
+  // a wrapping variant reads as encompassing the sequential flags it outlived.
+  const laneMaxSpan = new Array(nLanes).fill(-1);
+  for (const u of units) {
+    laneMaxSpan[u.lane] = Math.max(laneMaxSpan[u.lane], u.spanLast - u.spanFirst);
+  }
+  /** @type {number[]} lane column (1-based), widest lane → column 1 (outermost) */
+  const laneToCol = new Array(nLanes);
+  [...laneMaxSpan.keys()]
+    .sort((a, b) => laneMaxSpan[b] - laneMaxSpan[a])
+    .forEach((lane, i) => {
+      laneToCol[lane] = i + 1;
+    });
+
+  const li = doc.createElement('li');
+  li.className = 'flag-facts-step flag-facts-step-overlap';
+  // Columns: one narrow lane per brace column (outermost = widest brace), then
+  // the flag body (which carries its own inline date pill).
+  li.style.gridTemplateColumns = `repeat(${nLanes}, 15px) minmax(0, 1fr)`;
+  const contentCol = nLanes + 1;
+
+  // A brace per date, but only when it actually covers more than one row: the
+  // wrapping variant's brace (spans the flags it outlived) and a same-date
+  // group's brace (spans its own variants). A lone flag that spans only its own
+  // row gets no brace, just its inline date pill, so only real overlap is drawn.
+  for (const u of units) {
+    if (u.spanFirst === u.spanLast) continue;
+    const brace = doc.createElement('span');
+    brace.className = 'flag-facts-brace-lane';
+    brace.style.gridColumn = String(laneToCol[u.lane]);
+    brace.style.gridRow = `${u.spanFirst + 1} / ${u.spanLast + 2}`;
+    li.appendChild(brace);
+  }
+
+  // One row per flag: its date pill, flag, and caption inline, so the flag ↔
+  // period pairing is read directly rather than across the brace gutter.
+  steps.forEach((step, row) => {
+    const caption = t(step.captionKey, '');
+
+    const body = doc.createElement('div');
+    body.className = 'flag-facts-body flag-facts-group-item';
+    body.style.gridColumn = String(contentCol);
+    body.style.gridRow = String(row + 1);
+
+    const year = doc.createElement('span');
+    year.className = 'flag-facts-year';
+    year.textContent = step.year;
+    body.appendChild(year);
+
+    const img = /** @type {HTMLImageElement} */ (doc.createElement('img'));
+    img.className = 'flag-facts-img flag-facts-group-img';
+    img.src = `${base}${step.img}`;
+    img.alt = caption;
+    img.loading = 'lazy';
+    body.appendChild(img);
+
+    const cap = doc.createElement('p');
+    cap.className = 'flag-facts-caption';
+    cap.textContent = caption;
+    body.appendChild(cap);
+
+    li.appendChild(body);
+  });
+
+  return li;
+}
+
+/**
+ * A grouped timeline `<li>`: several flags that share one exact date, stacked
+ * under a single dated node. The date pill sits once to the left and one dot
+ * (the normal node, not a bracket) marks the moment: flags of the *same* date
+ * are concurrent variants of one instant, so they read as a single node with
+ * its variants, not a span. A brace is reserved for *partial* overlap across
+ * differing dates (buildOverlapCluster) — see clusterTimeline.
  *
  * @param {Document} doc
  * @param {{
@@ -205,11 +389,11 @@ function buildGroupedStep(doc, { steps, t, base }) {
   year.textContent = steps[0].year;
   li.appendChild(year);
 
-  // A bracket replaces the single dot: it spans the whole group on the axis, so
-  // the flags read as one period rather than N separate nodes.
-  const bracket = doc.createElement('span');
-  bracket.className = 'flag-facts-bracket';
-  li.appendChild(bracket);
+  // One dot marks the shared moment, exactly like a solo step's node; the
+  // stacked flags below are its concurrent variants.
+  const node = doc.createElement('span');
+  node.className = 'flag-facts-node';
+  li.appendChild(node);
 
   const body = doc.createElement('div');
   body.className = 'flag-facts-body flag-facts-group-body';

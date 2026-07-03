@@ -16,6 +16,7 @@ function makeDoc() {
       src: '',
       alt: '',
       loading: '',
+      style: {},
       children: [],
       appendChild(/** @type {any} */ c) { this.children.push(c); return c; },
     };
@@ -102,7 +103,7 @@ test('renderFlagFacts: empty intro string yields no intro paragraphs but still r
   assert.equal(findAllByClass(root, 'flag-facts-step').length, 2);
 });
 
-test('renderFlagFacts groups consecutive steps with the same year into one bracketed node', () => {
+test('renderFlagFacts groups consecutive steps with the same year under one dotted node', () => {
   const doc = makeDoc();
   const facts = {
     addedOn: '2026-07-01',
@@ -122,9 +123,10 @@ test('renderFlagFacts groups consecutive steps with the same year into one brack
   assert.equal(groups.length, 1);
   // The shared year renders once (group) plus once (the solo 1930 step) = 2 pills.
   assert.deepEqual(findAllByClass(root, 'flag-facts-year').map((e) => e.textContent), ['1928', '1930']);
-  // The group gets a bracket, not a dot; the solo step gets a dot, not a bracket.
-  assert.equal(findAllByClass(root, 'flag-facts-bracket').length, 1);
-  assert.equal(findAllByClass(root, 'flag-facts-node').length, 1);
+  // Same-date flags collapse under one dot (no bracket); the solo step also gets
+  // a dot, so two dots and no brackets in all.
+  assert.equal(findAllByClass(root, 'flag-facts-bracket').length, 0);
+  assert.equal(findAllByClass(root, 'flag-facts-node').length, 2);
   // All four captions still render, each with its flag.
   assert.deepEqual(findAllByClass(root, 'flag-facts-caption').map((e) => e.textContent), ['A', 'B', 'C', 'D']);
   assert.equal(findAllByClass(groups[0], 'flag-facts-group-img').length, 3);
@@ -146,6 +148,94 @@ test('renderFlagFacts does not group non-adjacent same-year steps or across an e
   // The two 1900 steps are not adjacent, so nothing groups: three plain steps.
   assert.equal(findAllByClass(root, 'flag-facts-step-group').length, 0);
   assert.equal(findAllByClass(root, 'flag-facts-node').length, 3);
+});
+
+test('renderFlagFacts renders partially-overlapping ranges as one grid cluster with parallel braces', () => {
+  const doc = makeDoc();
+  const facts = {
+    addedOn: '2026-07-01',
+    introKey: 'i',
+    // A coloured variant (2004–2021) flown across a design change (2004–2013 →
+    // 2013–2021): the ranges intersect but differ, marked as one overlap group.
+    timeline: [
+      { year: '2004–2013', img: 'history/a.svg', captionKey: 'ca', overlap: 'era' },
+      { year: '2004–2021', img: 'history/b.svg', captionKey: 'cb', overlap: 'era' },
+      { year: '2013–2021', img: 'history/c.svg', captionKey: 'cc', overlap: 'era' },
+    ],
+  };
+  const t = makeT({ ca: 'A', cb: 'B', cc: 'C' });
+  const root = renderFlagFacts({ facts, t, doc });
+
+  // One overlap cluster <li>, not three separate dated nodes and not one bracket.
+  assert.equal(findAllByClass(root, 'flag-facts-step-overlap').length, 1);
+  assert.equal(findAllByClass(root, 'flag-facts-bracket').length, 0);
+  assert.equal(findAllByClass(root, 'flag-facts-node').length, 0);
+
+  // Each flag keeps its own date pill (three distinct dates → three pills).
+  assert.deepEqual(findAllByClass(root, 'flag-facts-year').map((e) => e.textContent), [
+    '2004–2013',
+    '2004–2021',
+    '2013–2021',
+  ]);
+  // Only the wrapping variant gets a brace (the two sequential flags span just
+  // their own row, so they show only their inline pill); all three flags render.
+  assert.equal(findAllByClass(root, 'flag-facts-group-img').length, 3);
+  assert.deepEqual(findAllByClass(root, 'flag-facts-caption').map((e) => e.textContent), ['A', 'B', 'C']);
+
+  // That one brace spans all three rows (grid-row 1 through 4).
+  const braces = findAllByClass(root, 'flag-facts-brace-lane');
+  assert.equal(braces.length, 1, 'only the spanning variant draws a brace');
+  assert.equal(braces[0].style.gridRow, '1 / 4', 'the 2004–2021 variant brace spans every row');
+});
+
+test('renderFlagFacts collapses same-date flags within an overlap cluster to one brace', () => {
+  const doc = makeDoc();
+  // A long-running flag (1992–2001) over a short one (1996–1997) then a trio of
+  // same-date variants (1997–2001): four flags, three distinct dates.
+  const facts = {
+    addedOn: '2026-07-01',
+    introKey: 'i',
+    timeline: [
+      { year: '1992–2001', img: 'history/a.svg', captionKey: 'ca', overlap: 'war' },
+      { year: '1996–1997', img: 'history/b.svg', captionKey: 'cb', overlap: 'war' },
+      { year: '1997–2001', img: 'history/c.svg', captionKey: 'cc', overlap: 'war' },
+      { year: '1997–2001', img: 'history/d.svg', captionKey: 'cd', overlap: 'war' },
+    ],
+  };
+  const t = makeT({ ca: 'A', cb: 'B', cc: 'C', cd: 'D' });
+  const root = renderFlagFacts({ facts, t, doc });
+
+  assert.equal(findAllByClass(root, 'flag-facts-step-overlap').length, 1);
+  // Every flag keeps its own inline date pill (four rows). Two braces are drawn:
+  // the 1992–2001 flag spanning all four rows, and the 1997–2001 pair sharing one
+  // (the lone 1996–1997 flag spans only its own row, so no brace).
+  assert.deepEqual(findAllByClass(root, 'flag-facts-year').map((e) => e.textContent), [
+    '1992–2001',
+    '1996–1997',
+    '1997–2001',
+    '1997–2001',
+  ]);
+  assert.equal(findAllByClass(root, 'flag-facts-brace-lane').length, 2);
+  assert.equal(findAllByClass(root, 'flag-facts-group-img').length, 4);
+  assert.deepEqual(findAllByClass(root, 'flag-facts-caption').map((e) => e.textContent), ['A', 'B', 'C', 'D']);
+});
+
+test('renderFlagFacts keeps a shared-boundary handoff (1996–1997 → 1997–2001) as separate nodes', () => {
+  const doc = makeDoc();
+  const facts = {
+    addedOn: '2026-07-01',
+    introKey: 'i',
+    timeline: [
+      { year: '1996–1997', img: 'history/a.svg', captionKey: 'ca' },
+      { year: '1997–2001', img: 'history/b.svg', captionKey: 'cb' },
+    ],
+  };
+  const t = makeT({ ca: 'A', cb: 'B' });
+  const root = renderFlagFacts({ facts, t, doc });
+  // Touching at 1997 is a handoff, not an overlap: two plain dated nodes.
+  assert.equal(findAllByClass(root, 'flag-facts-step-overlap').length, 0);
+  assert.equal(findAllByClass(root, 'flag-facts-node').length, 2);
+  assert.equal(findAllByClass(root, 'flag-facts-brace-lane').length, 0);
 });
 
 test('renderFlagFacts renders an equation step (parts + result) instead of a single flag', () => {

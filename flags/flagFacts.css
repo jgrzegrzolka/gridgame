@@ -209,10 +209,11 @@ dialog#zoom .flag-facts-caption {
   color: var(--primary-color);
   text-align: left;
 }
-/* Grouped step: several concurrent flags sharing one date (emblem variants of
-   one flag, or the rival flags of one chaotic year). One date pill, a bracket
-   spanning the group on the axis, and each flag with its own caption stacked —
-   so it reads as one overlapping period, not a false run of separate changes. */
+/* Grouped step: several concurrent flags sharing one exact date (emblem
+   variants of one flag, or the rival flags of one chaotic year). One date pill
+   and one dot (the normal node), with each flag stacked below it — so they read
+   as the concurrent variants of a single moment. (A brace is reserved for
+   partial overlap across differing dates; see .flag-facts-step-overlap.) */
 .flag-facts-step-group .flag-facts-group-body {
   display: flex;
   flex-direction: column;
@@ -236,20 +237,63 @@ dialog#zoom .flag-facts-step-group .flag-facts-group-img {
 .flag-facts-group-item .flag-facts-caption {
   flex: 1;
 }
-/* The bracket replaces the single dot on the axis: a secondary "[" hugging the
-   dashed line, turned in top and bottom, spanning the whole group so it reads
-   as one period. Sits on the axis (left: 96px) like the dot; its solid stroke
-   covers the dashed line across the group's span. */
-.flag-facts-bracket {
-  position: absolute;
-  left: 96px;
-  top: 6px;
-  bottom: 6px;
+/* Partial-overlap cluster: flags whose ranges intersect but differ (a variant
+   flown across a design change, or rival flags of one era). A CSS grid, one row
+   per flag: the date pill sits in the left column, the flag + caption in the
+   right column, and each date's brace spans its own rows in a lane column
+   between them. Braces that overlap in time land in separate lane columns, so a
+   long-running flag's brace visibly runs parallel to the shorter ones it
+   coexisted with. `grid-template-columns` is set inline by the renderer (it
+   knows the lane count). Overrides the base step's padding/min-height/position,
+   which assume the absolute pill + dot layout. */
+.flag-facts-step-overlap {
+  display: grid;
+  align-items: start;
+  column-gap: 8px;
+  row-gap: 16px;
+  padding-left: 0;
+  min-height: 0;
+  /* Sit above the dashed axis and paint over it: an overlap cluster is a
+     self-contained block where the single-line axis branches, so the dashes
+     pause across it rather than cutting through the flags. */
+  position: relative;
+  z-index: 1;
+  background: var(--surface-color);
+}
+/* Each flag's date pill sits inline, immediately left of its own flag (not in a
+   far-left column split off by the brace gutter), so which flag flew when is
+   unmistakable. Overrides the base pill's absolute position + fixed width. */
+.flag-facts-step-overlap .flag-facts-year {
+  position: static;
+  width: auto;
+  align-self: center;
+  white-space: nowrap;
+  flex: none;
+}
+.flag-facts-step-overlap .flag-facts-group-item {
+  align-self: start;
+}
+/* One flag's brace: a secondary "[" stretched over the grid rows its date spans.
+   `align-self: stretch` (the grid default) makes it fill the exact height of
+   those rows with no pixel maths; `justify-self: center` centres the 9px stroke
+   in its 14px lane column. Mirrors .flag-facts-bracket's look without the
+   absolute positioning. */
+.flag-facts-brace-lane {
+  align-self: stretch;
+  justify-self: center;
   width: 9px;
-  transform: translateX(-50%);
+  min-height: 18px;
   border: 2px solid var(--secondary-color);
   border-right: none;
   border-radius: 6px 0 0 6px;
+}
+/* The cluster's flags reuse the grouped-step's 56px thumbnail + row layout so a
+   run of overlapping flags reads at the same weight as a same-date group. */
+dialog#zoom .flag-facts-step-overlap .flag-facts-group-img {
+  height: 56px;
+  width: auto;
+  max-width: 45%;
+  flex: none;
 }
 /* Equation step (e.g. 1606 = England + Scotland): the body stacks the caption
  * above the "part + part = result" row. The date pill + dot node are unchanged,

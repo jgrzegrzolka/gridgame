@@ -13,10 +13,21 @@
  *       - `year`       — display label (numeric range, language-neutral, so
  *                        it stays in the data rather than i18n). Consecutive
  *                        steps that share an identical `year` render as one
- *                        bracketed "these coexisted" group instead of separate
- *                        dated nodes (see `flagFactsRender.groupTimeline`), so
- *                        give concurrent variants the same label and sequential
- *                        flags distinct ones.
+ *                        bracketed "these coexisted" node (see
+ *                        `flagFactsRender.clusterTimeline`); give concurrent
+ *                        variants the same label and sequential flags distinct
+ *                        ones. For flags whose ranges only *partially* overlap,
+ *                        see `overlap` below.
+ *       - `overlap`    — optional group id. Consecutive steps sharing one, whose
+ *                        dates differ, render as a partial-overlap cluster:
+ *                        parallel braces, each spanning its own years, so a
+ *                        variant flown across a design change (Afghanistan's
+ *                        2004-2021 coloured emblem over the 2004-2013 and
+ *                        2013-2021 flags) reads as coexisting, not sequential.
+ *                        Opt-in on purpose: fuzzy historical dates make
+ *                        auto-detection misfire on one-year seams between truly
+ *                        sequential flags. Omit for everything that isn't a
+ *                        genuine, deliberate coexistence.
  *       - `img`        — path **relative to the `flags/` folder** (e.g.
  *                        `history/gr-ottoman.svg` for a superseded design,
  *                        `svg/gr.svg` for the current flag). The renderer
@@ -35,6 +46,7 @@
  *   year: string,
  *   img: string,
  *   captionKey: string,
+ *   overlap?: string,
  *   parts?: string[],
  *   partLabelKeys?: string[],
  * }} FlagFactStep
@@ -457,9 +469,12 @@ export const FLAG_FACTS = {
       { year: '1997–2001', img: 'history/af-shahada-v2.svg', captionKey: 'flagFacts.af.shahadav2' },
       { year: '2001–2002', img: 'history/af-2001.svg', captionKey: 'flagFacts.af.post2001' },
       { year: '2002–2004', img: 'history/af-2002.svg', captionKey: 'flagFacts.af.ref2002' },
-      { year: '2004–2013', img: 'history/af-republic.svg', captionKey: 'flagFacts.af.republic' },
-      { year: '2004–2021', img: 'history/af-republic-colored.svg', captionKey: 'flagFacts.af.coloured' },
-      { year: '2013–2021', img: 'history/af-2013.svg', captionKey: 'flagFacts.af.deepred' },
+      // The coloured-emblem variant (2004-2021) flew across the republic's
+      // white-emblem (2004-2013) → deep-red (2013-2021) change, so the three
+      // share one overlap group: its brace spans both sequential flags.
+      { year: '2004–2013', img: 'history/af-republic.svg', captionKey: 'flagFacts.af.republic', overlap: 'af-republic-era' },
+      { year: '2004–2021', img: 'history/af-republic-colored.svg', captionKey: 'flagFacts.af.coloured', overlap: 'af-republic-era' },
+      { year: '2013–2021', img: 'history/af-2013.svg', captionKey: 'flagFacts.af.deepred', overlap: 'af-republic-era' },
       { year: '2021', img: 'svg/af.svg', captionKey: 'flagFacts.af.current' },
       { year: 'since 2021', img: 'history/af-pashto.svg', captionKey: 'flagFacts.af.pashto' },
     ],
