@@ -88,7 +88,7 @@ this file the single source of truth for both current and historical assets.
 | `af-1992a.svg` | Flag of Afghanistan (1992).svg | Public domain (Orange Tuesday) | Temporary 1992 green-white-black flag with Shahada and takbir |
 | `af-1992b.svg` | Flag of the Afghan interim government-in-exile (1988–1992).svg | CC BY-SA 4.0 (BlinxTheKitty) | Second 1992 temporary flag, plain black-white-green (writing removed, stripes reordered) |
 | `af-shahada-green.svg` | Flag of the Taliban (Variant).svg | CC0 (BlinxTheKitty) | Taliban flag variant with the Shahada lettered in green rather than black (1997–2001) |
-| `af-white.svg` | Flag of Taliban (original).svg | Public domain (PavelD) | Plain white Taliban flag (1996–1997), no writing |
+| `af-white-2x1.svg` | (own work) | Public domain | Plain white Taliban flag (1996–1997), no writing; a bare white field drawn at 2:1 to match the shahada variant that succeeded it (the original Commons file was 3:2, out of step with the rest of the Taliban banners) |
 | `af-shahada.svg` | Flag of Taliban.svg | Public domain | White Taliban flag with the Shahada in black (1997–2001) |
 | `af-2001.svg` | Flag of Afghanistan (2001–2002).svg | CC BY-SA 3.0 (Orange Tuesday et al.) | Post-Taliban interim flag, restored 1990s mujahideen design |
 | `af-2002.svg` | Flag of Afghanistan (2002–2004).svg | Public domain | Black-red-green tricolour, emblem referencing the 1930–1973 kingdom |
