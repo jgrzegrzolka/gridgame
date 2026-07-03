@@ -244,6 +244,7 @@ dialog#zoom .flag-facts-list-item:last-child {
   display: flex;
   gap: 10px;
   margin: 8px 0 2px;
+  justify-content: center;
 }
 /* Scoped to `dialog#zoom` to out-specify the base `dialog#zoom img
  * { width: 100% }` — same trick as `.flag-facts-eq-img` above. */
@@ -256,6 +257,29 @@ dialog#zoom .flag-facts-compare-img {
 }
 .flag-facts-compare-img-inverted {
   transform: scaleY(-1);
+}
+/* Single captioned illustration under a fact bullet (e.g. a rejected flag
+ * proposal). Unlike the compare row it carries a visible caption so the image
+ * is labelled honestly. Tap-to-enlarge like every other story flag. */
+.flag-facts-illustration {
+  margin: 8px 0 2px;
+  text-align: center;
+}
+/* Scoped to `dialog#zoom` to out-specify `dialog#zoom img { width: 100% }` —
+ * same trick as `.flag-facts-eq-img` / `.flag-facts-compare-img`. */
+dialog#zoom .flag-facts-illustration-img {
+  width: 84px;
+  height: auto;
+  border: 1px solid var(--muted-soft-color);
+  box-sizing: border-box;
+  display: block;
+  margin: 0 auto;
+}
+.flag-facts-illustration-caption {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--primary-color);
 }
 /* Image attribution footnote, one per story (flag-icons + Wikimedia Commons).
  * Quiet, caption-sized; the link opens the combined sources/licences list. */

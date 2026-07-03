@@ -646,7 +646,9 @@
       "compare": {
         "correct": "Union Jack, właściwa strona do góry",
         "inverted": "Union Jack, do góry nogami (sygnał SOS)"
-      }
+      },
+      "walesProposal": "Jedna z proponowanych wersji dodawała walijskiego smoka, ale nigdy jej nie przyjęto.",
+      "walesProposalAlt": "Union Jack z czerwonym walijskim smokiem pośrodku."
     },
     "gb-eng": {
       "intro": "Flagą Anglii jest krzyż św. Jerzego: prosty czerwony krzyż na bieli. Święty Jerzy, rzymski żołnierz zamęczony we wschodniej części basenu Morza Śródziemnego około 303 roku, który nigdy nie postawił stopy w Anglii, został patronem kraju w średniowieczu, a jego godło nosili angielscy żołnierze od czasów wypraw krzyżowych.\n\nTen sam czerwony krzyż znajduje się w centrum Union Jacka, to wkład Anglii we flagę Zjednoczonego Królestwa.",

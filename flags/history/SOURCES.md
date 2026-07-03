@@ -34,6 +34,7 @@ this file the single source of truth for both current and historical assets.
 | `ch-helvetic.svg` | Flag of the Helvetic Republic (French).svg | Public domain | 1798 French-imposed Helvetic Republic tricolour, green/red/yellow |
 | `ch-square.svg` | Flag of Switzerland.svg | Public domain | Current national flag, square (1:1) |
 | `gb-union1606.svg` | Flag of Great Britain (1707-1800).svg | Public domain | First Union Flag, St George's cross over St Andrew's saltire, pre-1801 |
+| `gb-wales-proposal.svg` | Union Flag (including Wales).svg | Public domain | A proposed Union flag with the Welsh dragon added, never adopted |
 | `gb-eng-lions.svg` | Royal Banner of England.svg | Public domain | Royal Banner of England, three golden lions on red |
 | `gb-sct-lion.svg` | Royal Banner of Scotland.svg | CC BY-SA 3.0 (Sodacan) | Royal Standard of Scotland, red lion rampant in a double tressure |
 | `gb-wls-stdavid.svg` | Flag of Saint David.svg | Public domain | Cross of St David, gold cross on black |

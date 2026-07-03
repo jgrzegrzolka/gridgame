@@ -39,6 +39,7 @@
  *   timeline: FlagFactStep[],
  *   factKeys?: string[],
  *   compare?: FlagFactCompare,
+ *   illustration?: FlagFactIllustration,
  * }} FlagFacts
  *
  * @typedef {{
@@ -47,6 +48,13 @@
  *   correctKey: string,
  *   invertedKey: string,
  * }} FlagFactCompare
+ *
+ * @typedef {{
+ *   img: string,
+ *   afterFactKey: string,
+ *   captionKey: string,
+ *   altKey?: string,
+ * }} FlagFactIllustration
  *
  * `compare` (optional) renders a two-flag "right way up vs upside down"
  * illustration — the same `img` shown normally and flipped vertically —
@@ -57,6 +65,13 @@
  * `correctKey` / `invertedKey` supply the images' alt text only (a11y), not
  * visible labels. Both flags are tap-to-enlarge; the inverted one enlarges
  * mirrored too (the renderer flags it so the lightbox keeps the flip).
+ *
+ * `illustration` (optional) renders a single image with a visible caption
+ * beneath the fact bullet named by `afterFactKey` — for a flag that a fact
+ * mentions but that never belonged to the timeline (a rejected proposal, a
+ * one-off variant). `captionKey` is shown (unlike `compare`, which has none)
+ * so the image is labelled honestly; `altKey` overrides the alt text, falling
+ * back to the caption. Tap-to-enlarge like every other story image.
  *
  * `addedOn` (`YYYY-MM-DD`) is the day the story shipped. It drives the
  * flag-of-the-day rotation's append-safety: a flag only becomes eligible the
@@ -140,6 +155,15 @@ export const FLAG_FACTS = {
       afterFactKey: 'flagFacts.gb.fact.asymmetry',
       correctKey: 'flagFacts.gb.compare.correct',
       invertedKey: 'flagFacts.gb.compare.inverted',
+    },
+    // Sits under the "Wales isn't represented" fact: a Union flag with the
+    // Welsh dragon added was proposed but never adopted. A rejected design, so
+    // it illustrates the fact rather than earning a timeline step.
+    illustration: {
+      img: 'history/gb-wales-proposal.svg',
+      afterFactKey: 'flagFacts.gb.fact.wales',
+      captionKey: 'flagFacts.gb.walesProposal',
+      altKey: 'flagFacts.gb.walesProposalAlt',
     },
   },
   'gb-eng': {
