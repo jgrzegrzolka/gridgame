@@ -184,19 +184,19 @@ dialog#zoom .flag-facts-intro {
 /* Scoped under dialog#zoom to beat the base `dialog#zoom img { width: 100% }`
  * rule (same reason as the equation flags below).
  *
- * Fixed SQUARE box + object-fit: contain so every timeline flag reads at the
- * same size regardless of its native ratio. Without this, flags scaled to a
- * fixed WIDTH and their heights followed each flag's proportions, so a 3:2
- * tricolour (84×56) looked smaller than a square medieval banner (84×84) and a
- * 1:5 streamer like the French Oriflamme blew the row to ~420px tall. Now each
- * flag is letterboxed inside an 84×84 cell (surface behind the bars): landscape
- * flags fill the width, square ones fill the cell, and a tall banner fills the
- * height, all sharing one footprint. */
+ * Sized to a fixed HEIGHT (width follows the flag's ratio) so every timeline
+ * flag reads at the same size and the 1px border hugs each flag with no
+ * letterbox padding. A fixed WIDTH instead made heights follow each flag's
+ * proportions, so a 3:2 tricolour looked smaller than a square medieval banner
+ * and the 1:5 Oriflamme streamer blew its row to ~420px tall; a fixed square
+ * box + object-fit fixed the height but left a "weird" gap between the border
+ * and non-square flags. Fixed height avoids both: square banners are ~80×80,
+ * landscape flags a bit wider, and a tall banner is capped at 80px, all
+ * sharing one height. max-width keeps an unusually wide flag inside the body. */
 dialog#zoom .flag-facts-step .flag-facts-img {
-  width: 84px;
-  height: 84px;
-  object-fit: contain;
-  background: var(--surface-color);
+  height: 80px;
+  width: auto;
+  max-width: 100%;
   border: 1px solid var(--muted-soft-color);
   box-sizing: border-box;
   display: block;
@@ -237,7 +237,7 @@ dialog#zoom .flag-facts-caption {
  * `dialog#zoom` to out-specify the base `dialog#zoom img { width: 100% }`
  * (which otherwise stretches these to the full row width). */
 dialog#zoom .flag-facts-eq-img {
-  height: 40px;
+  height: 56px;
   width: auto;
   border: 1px solid var(--muted-soft-color);
   box-sizing: border-box;
@@ -253,10 +253,10 @@ dialog#zoom .flag-facts-eq-img {
   /* Same height as a flag + centre the glyph = operator sits on the flag's
    * vertical middle. flex-start keeps it level with the flag tops. */
   align-self: flex-start;
-  height: 40px;
+  height: 56px;
   display: flex;
   align-items: center;
-  font-size: 18px;
+  font-size: 20px;
   color: var(--muted-color);
 }
 /* "Did you know?" trivia block below the timeline. */
@@ -313,9 +313,12 @@ dialog#zoom .flag-facts-compare-img {
   text-align: center;
 }
 /* Scoped to `dialog#zoom` to out-specify `dialog#zoom img { width: 100% }` —
- * same trick as `.flag-facts-eq-img` / `.flag-facts-compare-img`. */
+ * same trick as `.flag-facts-eq-img` / `.flag-facts-compare-img`. Wider than a
+ * gallery thumbnail (108px) because a single illustration is the focal image
+ * and can carry fine detail (e.g. the crowned Bourbon arms, which were
+ * unreadable at 84px). */
 dialog#zoom .flag-facts-illustration-img {
-  width: 84px;
+  width: 140px;
   height: auto;
   border: 1px solid var(--muted-soft-color);
   box-sizing: border-box;
