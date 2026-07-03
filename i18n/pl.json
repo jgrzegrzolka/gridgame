@@ -721,10 +721,13 @@
       }
     },
     "pl": {
-      "intro": "Barwy polskiej flagi wywodzą się bezpośrednio z herbu państwowego: Biały Orzeł znajduje się na górnym pasie (symbol czystości i szlachetności), a dolny czerwony pas odpowiada barwie tarczy herbowej (symbolizuje odwagę i waleczność).",
+      "intro": "Barwy polskiej flagi wywodzą się bezpośrednio z herbu państwowego: Biały Orzeł znajduje się na górnym pasie (symbol czystości i szlachetności), a dolny czerwony pas odpowiada barwie tarczy herbowej (symbolizuje odwagę i waleczność).\n\nBiały Orzeł powiewa nad Polską od średniowiecza: na jaskółczym proporcu Rzeczypospolitej Obojga Narodów, na flagach XIX-wiecznych powstań przeciw zaborcom, aż po odrodzenie republiki w 1919 roku, gdy pozostały już tylko dwie barwy widniejące na fladze do dziś.",
       "eagle": "Orzeł Biały na czerwonej tarczy, stąd biel i czerwień flagi.",
-      "current": "Prosty biało-czerwony dwupas, oficjalny od 1919 roku.",
+      "commonwealth": "Rzeczpospolita Obojga Narodów podnosiła czerwono-biały proporzec z jaskółczym ogonem, z połączonym herbem obu narodów.",
+      "january": "Powstanie 1863 roku przeciw Rosji walczyło pod biało-czerwono-niebieską flagą z herbami Polski, Litwy i Rusi.",
+      "current": "Prosty biało-czerwony dwupas, flaga narodowa od 1919 roku.",
       "fact": {
+        "crown": "Komunistyczna Polska odebrała orłu koronę w 1955 roku; po upadku komunizmu w 1990 roku korona wróciła na jego głowę i pozostaje tam do dziś.",
         "lookalikes": "Odwróć polską flagę do góry nogami, a otrzymasz Indonezję i Monako, czerwień nad bielą. Te dwie z kolei są niemal identyczne i różnią się jedynie proporcjami: Indonezja jest wydłużona (2:3), a Monako bardziej krępe (4:5)."
       }
     },
