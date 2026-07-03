@@ -219,10 +219,14 @@ dialog#zoom .flag-facts-caption {
   flex-direction: column;
   gap: 14px;
 }
+/* Flag on top, caption stacked beneath it (not beside it), exactly like a solo
+   step. Side-by-side crushed the caption to a sliver on a phone, where there's
+   almost no room to the right of the flag; stacking gives it the full width. */
 .flag-facts-group-item {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }
 /* Grouped flags sit a touch smaller than a solo step's 80px, so a stack of them
    still reads as one node. Scoped like the solo-step rule to beat the base
@@ -231,11 +235,8 @@ dialog#zoom .flag-facts-caption {
 dialog#zoom .flag-facts-step-group .flag-facts-group-img {
   height: 56px;
   width: auto;
-  max-width: 45%;
+  max-width: 100%;
   flex: none;
-}
-.flag-facts-group-item .flag-facts-caption {
-  flex: 1;
 }
 /* Partial-overlap cluster: flags whose ranges intersect but differ (a variant
    flown across a design change, or rival flags of one era). A CSS grid, one row
@@ -260,13 +261,14 @@ dialog#zoom .flag-facts-step-group .flag-facts-group-img {
   z-index: 1;
   background: var(--surface-color);
 }
-/* Each flag's date pill sits inline, immediately left of its own flag (not in a
-   far-left column split off by the brace gutter), so which flag flew when is
-   unmistakable. Overrides the base pill's absolute position + fixed width. */
+/* Each flag's date pill sits directly above its own flag (not in a far-left
+   column split off by the brace gutter), so which flag flew when is
+   unmistakable, and the caption below gets the full width. Overrides the base
+   pill's absolute position + fixed width. */
 .flag-facts-step-overlap .flag-facts-year {
   position: static;
   width: auto;
-  align-self: center;
+  align-self: flex-start;
   white-space: nowrap;
   flex: none;
 }
@@ -287,12 +289,13 @@ dialog#zoom .flag-facts-step-group .flag-facts-group-img {
   border-right: none;
   border-radius: 6px 0 0 6px;
 }
-/* The cluster's flags reuse the grouped-step's 56px thumbnail + row layout so a
-   run of overlapping flags reads at the same weight as a same-date group. */
+/* The cluster's flags reuse the grouped-step's 56px thumbnail + stacked layout
+   (date pill, flag, caption) so a run of overlapping flags reads at the same
+   weight as a same-date group. */
 dialog#zoom .flag-facts-step-overlap .flag-facts-group-img {
   height: 56px;
   width: auto;
-  max-width: 45%;
+  max-width: 100%;
   flex: none;
 }
 /* Equation step (e.g. 1606 = England + Scotland): the body stacks the caption
