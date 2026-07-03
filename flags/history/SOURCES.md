@@ -86,6 +86,8 @@ this file the single source of truth for both current and historical assets.
 | `af-1978.svg` | Flag of Afghanistan (1978).svg | Public domain (Zirland) | Bare black-red-green tricolour, no emblem (early communist) |
 | `af-1987.svg` | Flag of Afghanistan (1987–1992).svg | Public domain (Orange Tuesday) | Najibullah's tricolour, red star and Koran removed from the emblem |
 | `af-1992a.svg` | Flag of Afghanistan (1992).svg | Public domain (Orange Tuesday) | Temporary 1992 green-white-black flag with Shahada and takbir |
+| `af-1992b.svg` | Flag of the Afghan interim government-in-exile (1988–1992).svg | CC BY-SA 4.0 (BlinxTheKitty) | Second 1992 temporary flag, plain black-white-green (writing removed, stripes reordered) |
+| `af-shahada-green.svg` | Flag of the Taliban (Variant).svg | CC0 (BlinxTheKitty) | Taliban flag variant with the Shahada lettered in green rather than black (1997–2001) |
 | `af-white.svg` | Flag of Taliban (original).svg | Public domain (PavelD) | Plain white Taliban flag (1996–1997), no writing |
 | `af-shahada.svg` | Flag of Taliban.svg | Public domain | White Taliban flag with the Shahada in black (1997–2001) |
 | `af-2001.svg` | Flag of Afghanistan (2001–2002).svg | CC BY-SA 3.0 (Orange Tuesday et al.) | Post-Taliban interim flag, restored 1990s mujahideen design |
@@ -119,6 +121,9 @@ this file the single source of truth for both current and historical assets.
 - `af-2001.svg` is *"Flag of Afghanistan (2001–2002)"* by Wikimedia Commons users
   **Orange Tuesday, Saul ip, MS05L**, licensed **CC BY-SA 3.0**; used unmodified
   and re-shared under the same licence.
+- `af-1992b.svg` is *"Flag of the Afghan interim government-in-exile (1988–1992)"*
+  by Wikimedia Commons user **BlinxTheKitty**, licensed **CC BY-SA 4.0**; used
+  unmodified and re-shared under the same licence.
 
 When adding a new country's history, drop its historical SVGs here following the
 same `<code>-<era>.svg` naming and record the provenance + licence above.
