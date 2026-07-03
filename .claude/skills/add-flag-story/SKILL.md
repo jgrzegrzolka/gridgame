@@ -70,6 +70,10 @@ al: {
 **Optional advanced step shapes** (read the typedef in `flagFacts.js`):
 - **Equation** (`parts` + `partLabelKeys`): renders `part₁ + part₂ = img`, for a composite flag assembled from ingredients at a moment (GB 1606 = England + Scotland). **Every colour/element in an ingredient must actually appear in the result** (France's first pass used a gold-fleurs-de-lis flag as the "white" ingredient; the gold never appears on the Tricolour, so it became a plain-white swatch).
 - **Compare** (`compare`): a "right way up vs upside down" pair under one fact bullet, for flags whose asymmetry has a consequence (the Union Jack distress signal). `afterFactKey` must name a real bullet in `factKeys`.
+- **Illustration** (`illustration`): one captioned image under a fact bullet, for a flag a fact *names* but that never belonged in the timeline (a rejected proposal). `afterFactKey` must name a real bullet.
+- **Gallery** (`galleries`): a centred row of labelled 108px flag thumbnails under a fact bullet, for *several* such non-timeline flags at once (Ireland's Starry Plough / Sunburst / Four Provinces under "other flags", the President's standard under the crowned-harp fact). `galleries` is an array; each entry is `{ afterFactKey, items: [{img, labelKey}] }` and `afterFactKey` must name a real bullet. This is how you show flags Jan wants included but that aren't part of the national-flag lineage, so decide tile-vs-gallery by "was it genuinely *the* flag" (timeline) vs "a parallel/other flag a fact mentions" (gallery). After adding its SVGs, run `npm run history:checksums`.
+
+The timeline itself renders as a dated-axis graphic (a dashed primary axis with pink dot nodes and the date in an outline pill to the left, flag + caption to the right); it's automatic, you just fill the data.
 
 ## 5. Write the prose in `i18n/en.json` AND `i18n/pl.json`
 
