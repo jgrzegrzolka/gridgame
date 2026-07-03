@@ -94,6 +94,16 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
       if (facts.illustration && facts.illustration.afterFactKey === key) {
         li.appendChild(buildIllustration(doc, { illustration: facts.illustration, t, base }));
       }
+      // Optional flag galleries: a row of labelled thumbnails under the bullet
+      // named by each gallery's `afterFactKey` (flags a fact names but that
+      // aren't in the timeline).
+      if (Array.isArray(facts.galleries)) {
+        for (const gallery of facts.galleries) {
+          if (gallery.afterFactKey === key) {
+            li.appendChild(buildGallery(doc, { gallery, t, base }));
+          }
+        }
+      }
       list.appendChild(li);
     }
     if (list.children.length > 0) {
@@ -266,6 +276,44 @@ function buildIllustration(doc, { illustration, t, base }) {
     fig.appendChild(figcaption);
   }
   return fig;
+}
+
+/**
+ * A row of small labelled flag thumbnails under a fact bullet: each item is a
+ * flag image with a short caption. For flags a fact names but that never
+ * belonged to the timeline (Ireland's other flags), so they're shown, not just
+ * named. Each thumbnail is tap-to-enlarge like every other story image (the
+ * caller wires the whole subtree).
+ *
+ * @param {Document} doc
+ * @param {{
+ *   gallery: import('./flagFacts.js').FlagFactGallery,
+ *   t: (key: string, fallback: string) => string,
+ *   base: string,
+ * }} args
+ */
+function buildGallery(doc, { gallery, t, base }) {
+  const row = doc.createElement('div');
+  row.className = 'flag-facts-gallery';
+  for (const item of gallery.items) {
+    const fig = doc.createElement('figure');
+    fig.className = 'flag-facts-gallery-item';
+
+    const image = /** @type {HTMLImageElement} */ (doc.createElement('img'));
+    image.className = 'flag-facts-gallery-img';
+    image.src = `${base}${item.img}`;
+    image.alt = t(item.labelKey, '');
+    image.loading = 'lazy';
+    fig.appendChild(image);
+
+    const label = doc.createElement('figcaption');
+    label.className = 'flag-facts-gallery-label';
+    label.textContent = t(item.labelKey, '');
+    fig.appendChild(label);
+
+    row.appendChild(fig);
+  }
+  return row;
 }
 
 /**

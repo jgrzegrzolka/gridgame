@@ -317,6 +317,38 @@ dialog#zoom .flag-facts-illustration-img {
   line-height: 1.55;
   color: var(--primary-color);
 }
+/* Flag gallery under a fact bullet: a centred, wrapping row of labelled
+ * flags, for designs a fact names but that aren't in the timeline. Matches
+ * the single-image `illustration` treatment (84px, centred, primary caption),
+ * just allowing more than one flag per bullet. */
+.flag-facts-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  margin: 12px 0 2px;
+}
+.flag-facts-gallery-item {
+  margin: 0;
+  width: 108px;
+  text-align: center;
+}
+/* Scoped to `dialog#zoom` to out-specify `dialog#zoom img { width: 100% }` —
+ * same trick as `.flag-facts-illustration-img`. */
+dialog#zoom .flag-facts-gallery-img {
+  width: 108px;
+  height: auto;
+  border: 1px solid var(--muted-soft-color);
+  box-sizing: border-box;
+  display: block;
+  margin: 0 auto;
+}
+.flag-facts-gallery-label {
+  margin: 4px 0 0;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--primary-color);
+}
 /* Image attribution footnote, one per story (flag-icons + Wikimedia Commons).
  * Quiet, caption-sized; the link opens the combined sources/licences list. */
 dialog#zoom .flag-facts-credit {

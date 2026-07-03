@@ -233,6 +233,59 @@ test('renderFlagFacts omits the comparison when compare is absent', () => {
   assert.equal(findAllByClass(root, 'flag-facts-compare-img').length, 0);
 });
 
+test('renderFlagFacts nests a flag gallery under the fact bullet it names', () => {
+  const doc = makeDoc();
+  const factsGal = {
+    ...FACTS,
+    factKeys: ['flagFacts.x.a', 'flagFacts.x.others', 'flagFacts.x.b'],
+    galleries: [
+      {
+        afterFactKey: 'flagFacts.x.others',
+        items: [
+          { img: 'history/ie-plough.svg', labelKey: 'flagFacts.x.plough' },
+          { img: 'history/ie-sunburst.svg', labelKey: 'flagFacts.x.sunburst' },
+        ],
+      },
+    ],
+  };
+  const t = makeT({
+    'flagFacts.didYouKnow': 'Did you know?',
+    'flagFacts.x.a': 'A.',
+    'flagFacts.x.others': 'Other flags.',
+    'flagFacts.x.b': 'B.',
+    'flagFacts.x.plough': 'Starry Plough',
+    'flagFacts.x.sunburst': 'Sunburst',
+  });
+  const root = renderFlagFacts({ facts: factsGal, t, doc, base: '../flags/' });
+
+  const imgs = findAllByClass(root, 'flag-facts-gallery-img');
+  assert.equal(imgs.length, 2);
+  assert.deepEqual(imgs.map((e) => e.src), [
+    '../flags/history/ie-plough.svg',
+    '../flags/history/ie-sunburst.svg',
+  ]);
+  // Label is both the visible caption and the alt text.
+  assert.deepEqual(findAllByClass(root, 'flag-facts-gallery-label').map((e) => e.textContent), [
+    'Starry Plough',
+    'Sunburst',
+  ]);
+  assert.deepEqual(imgs.map((e) => e.alt), ['Starry Plough', 'Sunburst']);
+
+  // The row nests inside the "others" bullet, and only that one.
+  const items = findAllByClass(root, 'flag-facts-list-item');
+  const othersLi = items.find((li) => li.textContent === 'Other flags.');
+  assert.ok(othersLi, 'others bullet exists');
+  assert.equal(findAllByClass(othersLi, 'flag-facts-gallery').length, 1);
+  const aLi = items.find((li) => li.textContent === 'A.');
+  assert.equal(findAllByClass(aLi, 'flag-facts-gallery').length, 0);
+});
+
+test('renderFlagFacts omits galleries when none are defined', () => {
+  const doc = makeDoc();
+  const root = renderFlagFacts({ facts: FACTS, t: makeT({}), doc }); // FACTS has no galleries
+  assert.equal(findAllByClass(root, 'flag-facts-gallery').length, 0);
+});
+
 test('renderFlagFacts appends an image-credit line with a sources link on every story', () => {
   const doc = makeDoc();
   const t = makeT({

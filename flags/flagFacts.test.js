@@ -96,6 +96,23 @@ test('every timeline step is well-formed', () => {
         `${code} illustration afterFactKey must be one of factKeys`,
       );
     }
+    // galleries is optional; each item's img is an svg under the known roots,
+    // its labelKey is an i18n key, and each gallery's afterFactKey names a real
+    // bullet in factKeys (else the row silently never renders).
+    for (const gallery of facts.galleries ?? []) {
+      assert.ok(
+        (facts.factKeys ?? []).includes(gallery.afterFactKey),
+        `${code} gallery afterFactKey must be one of factKeys`,
+      );
+      for (const item of gallery.items) {
+        assert.ok(item.img.endsWith('.svg'), `${code} gallery img is svg`);
+        assert.ok(
+          item.img.startsWith('history/') || item.img.startsWith('svg/'),
+          `${code} gallery img under history/ or svg/`,
+        );
+        assert.ok(item.labelKey.startsWith('flagFacts.'), `${code} gallery labelKey`);
+      }
+    }
   }
 });
 
@@ -117,6 +134,12 @@ test('every referenced flag image exists on disk', () => {
       const abs = join(HERE, facts.illustration.img);
       assert.ok(existsSync(abs), `missing asset: flags/${facts.illustration.img}`);
     }
+    for (const gallery of facts.galleries ?? []) {
+      for (const item of gallery.items) {
+        const abs = join(HERE, item.img);
+        assert.ok(existsSync(abs), `missing asset: flags/${item.img}`);
+      }
+    }
   }
 });
 
@@ -136,6 +159,7 @@ test('every i18n key referenced by the catalog is present in en.json and pl.json
       ...(facts.illustration
         ? [facts.illustration.captionKey, ...(facts.illustration.altKey ? [facts.illustration.altKey] : [])]
         : []),
+      ...(facts.galleries ?? []).flatMap((g) => g.items.map((item) => item.labelKey)),
     ];
     for (const key of keys) {
       assert.ok(has(en, key), `en.json missing ${key}`);
