@@ -799,12 +799,16 @@
       "octagram": "Amanullah Khan, who won full independence from Britain in 1919, framed the emblem inside a white eight-pointed star.",
       "emblem1921": "The emblem was redrawn and the flag's proportions changed, still white on a black field.",
       "emblem1926": "The star was dropped and the emblem enlarged, the last of the black flags before colour arrived.",
+      "horiz1928": "Amanullah Khan's very first 1928 flag laid the black, red and green as horizontal bands, before the design was turned on its side later the same year.",
       "tricolour": "In 1928 King Amanullah Khan, freshly back from a tour of Europe, swapped the black royal banner for a black-red-green vertical tricolour, the first of the tricolours that would keep coming back for the rest of the century.",
+      "variant1928": "A variant of the vertical tricolour flew the same colours with the state emblem drawn differently.",
+      "radial1929": "Through the turmoil of 1929 the tricolour reappeared with a mosque emblem set inside a white starburst.",
       "kalakani": "A Tajik rebel, Habibullah Kalakani, seized Kabul for nine months in 1929 and flew a striped red-black-white flag, its colours nodding to older banners.",
       "nadir": "Nadir Shah drove Kalakani out and restored the black-red-green tricolour, now under a new royal emblem.",
       "kingdom": "The tricolour of the Kingdom of Afghanistan, its mosque-and-wheat emblem in the centre. Some version of this vertical flag flew for over forty years, the country's longest-lived design by far.",
       "republic1973": "Mohammed Daoud Khan's 1973 coup ended the monarchy. His first republican flag kept the vertical tricolour, removing only the date beneath the mosque.",
       "daoud": "A year later Daoud's Republic redrew the flag as horizontal black-red-green, charged with the eagle of the revolution.",
+      "daoudvert": "Daoud's republic also used a vertical version of its eagle flag.",
       "noemblem": "The April 1978 communist coup first flew the bare tricolour, with no emblem at all, for a few months.",
       "red": "The 1978 communist coup brought an almost entirely red flag in the Soviet mould, the gold letters in the canton spelling Khalq, \"the masses\". It lasted barely two years.",
       "dra": "The pro-Soviet government dropped the red flag and restored black-red-green, now in horizontal bands and stamped with a new socialist state emblem, a rising sun over an open book.",
@@ -818,14 +822,22 @@
       "post2001": "With the Taliban driven out, the interim government briefly flew a restored version of the 1990s mujahideen flag.",
       "ref2002": "A new black-red-green tricolour followed, its emblem harking back to the 1930–1973 kingdom.",
       "republic": "In 2004 the Islamic Republic settled on the black-red-green vertical tricolour with a white mosque emblem, the flag most of the world still pictures for Afghanistan.",
+      "coloured": "A variant of the republican flag showed the state emblem in full colour rather than white.",
       "deepred": "In 2013 the red was deepened and the emblem enlarged, the final form of the republic's flag, still flown by its representatives abroad.",
       "current": "In 2021 the Taliban's white banner replaced the tricolour: the Shahada, the Islamic declaration of faith, lettered in black on white. The black-red-green flag is still flown by the former republic's representatives abroad.",
+      "pashto": "Some Islamic Emirate flags add a line of Pashto script beneath the Shahada.",
       "fact": {
         "changes": "Afghanistan is often credited with the most flag changes of any country in the 20th century, by common counts around nineteen, roughly a new flag every five years.",
         "colours": "The tricolour carried a standard reading: black for the country's dark, occupied past, red for the blood shed winning independence, and green for hope, prosperity and Islam.",
         "mosque": "The recurring emblem is a mosque drawn straight on, showing the mihrab (the niche that points to Mecca) and the minbar (the pulpit), usually wrapped in wheat, a motif on Afghan flags since the early 1900s.",
         "longlived": "The Kingdom's tricolour (1931–1973) was easily Afghanistan's longest-serving flag, lasting over forty years. Most of the others survived only a handful.",
-        "white": "The white Shahada flag has deep roots: white recalls the banners of the early Islamic caliphates. The Taliban first raised this design in the 1990s, and returned it in 2021."
+        "white": "The white Shahada flag has deep roots: white recalls the banners of the early Islamic caliphates. The Taliban first raised this design in the 1990s, and returned it in 2021.",
+        "standards": "Beyond the national flag, Afghanistan's rulers flew their own personal standards, distinct banners for the king or president, usually red or black and charged with the state arms."
+      },
+      "gallery": {
+        "amanullah": "Amanullah Khan's royal flag (1926–1929)",
+        "kings": "Royal standard of the kings (1931–1973)",
+        "president": "President's standard (2004–2021)"
       }
     }
   },
