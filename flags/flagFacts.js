@@ -410,23 +410,42 @@ export const FLAG_FACTS = {
     ],
   },
   af: {
-    addedOn: '2026-07-01',
-    // The whole point of Afghanistan's story is churn — it changed its flag
-    // more than any country in the 20th century. A 4-step timeline told that
-    // but didn't show it (huge 1931→2004 gap), so the timeline walks the
-    // ideological pendulum: vertical tricolour → horizontal → red → back to
-    // black-red-green → green-white-black → vertical again → white. Still a
-    // curated selection (the intro says so), not all ~19 designs.
+    addedOn: '2026-07-03',
+    // Afghanistan changed its flag more than any country, so this walks the
+    // WHOLE run matching the pl.wikipedia gallery (Jan's "everything" call):
+    // plain black dynastic banners, the Durrani green, the black+emblem emirate
+    // series, the recurring black-red-green tricolour in many near-identical
+    // emblem variants (captions carry the differences the thumbnails can't),
+    // the 1929 red-black-white interlude, communist red, the mujahideen
+    // green-white-black, and the Taliban white->shahada. Several tricolours look
+    // alike at thumbnail on purpose: they were genuinely distinct flags.
     introKey: 'flagFacts.af.intro',
     timeline: [
+      { year: '1709–1738', img: 'history/af-black.svg', captionKey: 'flagFacts.af.black' },
+      { year: '1747–1842', img: 'history/af-durrani.svg', captionKey: 'flagFacts.af.durrani' },
+      { year: '1880–1901', img: 'history/af-1880.svg', captionKey: 'flagFacts.af.black1880' },
       { year: '1901–1919', img: 'history/af-emirate.svg', captionKey: 'flagFacts.af.emirate' },
-      { year: '1928', img: 'history/af-1928.svg', captionKey: 'flagFacts.af.tricolour' },
-      { year: '1931–1973', img: 'history/af-kingdom.svg', captionKey: 'flagFacts.af.kingdom' },
+      { year: '1919–1921', img: 'history/af-octagram.svg', captionKey: 'flagFacts.af.octagram' },
+      { year: '1921–1926', img: 'history/af-1921.svg', captionKey: 'flagFacts.af.emblem1921' },
+      { year: '1926–1928', img: 'history/af-1926.svg', captionKey: 'flagFacts.af.emblem1926' },
+      { year: '1928–1929', img: 'history/af-1928.svg', captionKey: 'flagFacts.af.tricolour' },
+      { year: '1929', img: 'history/af-1929.svg', captionKey: 'flagFacts.af.kalakani' },
+      { year: '1929–1931', img: 'history/af-1929-1930.svg', captionKey: 'flagFacts.af.nadir' },
+      { year: '1930–1973', img: 'history/af-kingdom.svg', captionKey: 'flagFacts.af.kingdom' },
+      { year: '1973–1974', img: 'history/af-1973.svg', captionKey: 'flagFacts.af.republic1973' },
       { year: '1974–1978', img: 'history/af-daoud.svg', captionKey: 'flagFacts.af.daoud' },
+      { year: '1978', img: 'history/af-1978.svg', captionKey: 'flagFacts.af.noemblem' },
       { year: '1978–1980', img: 'history/af-red.svg', captionKey: 'flagFacts.af.red' },
       { year: '1980–1987', img: 'history/af-dra.svg', captionKey: 'flagFacts.af.dra' },
+      { year: '1987–1992', img: 'history/af-1987.svg', captionKey: 'flagFacts.af.najibullah' },
+      { year: '1992', img: 'history/af-1992a.svg', captionKey: 'flagFacts.af.temp1992' },
       { year: '1992–2001', img: 'history/af-islamicstate.svg', captionKey: 'flagFacts.af.islamicstate' },
-      { year: '2004–2021', img: 'history/af-republic.svg', captionKey: 'flagFacts.af.republic' },
+      { year: '1996–1997', img: 'history/af-white.svg', captionKey: 'flagFacts.af.talibanwhite' },
+      { year: '1997–2001', img: 'history/af-shahada.svg', captionKey: 'flagFacts.af.talibanshahada' },
+      { year: '2001–2002', img: 'history/af-2001.svg', captionKey: 'flagFacts.af.post2001' },
+      { year: '2002–2004', img: 'history/af-2002.svg', captionKey: 'flagFacts.af.ref2002' },
+      { year: '2004–2013', img: 'history/af-republic.svg', captionKey: 'flagFacts.af.republic' },
+      { year: '2013–2021', img: 'history/af-2013.svg', captionKey: 'flagFacts.af.deepred' },
       { year: '2021', img: 'svg/af.svg', captionKey: 'flagFacts.af.current' },
     ],
     factKeys: [
