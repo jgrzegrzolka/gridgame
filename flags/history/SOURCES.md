@@ -59,6 +59,7 @@ this file the single source of truth for both current and historical assets.
 | `fr-white.svg` | (original, plain white rectangle) | Public domain (trivial) | Plain white panel, the "king's white" ingredient in the Tricolour equation (no fleurs-de-lis, since the gold never appears on the flag) |
 | `fr-1790.svg` | Flag of France (1790–1794).svg | Public domain (simple geometry) | First French Tricolour (1790–1794), red at the hoist, before David reversed the stripes to blue-white-red |
 | `fr-white-1814.svg` | Flag of France (1814–1830).svg | Public domain (simple geometry) | Bourbon Restoration drapeau blanc, the plain white royal flag flown 1814–1830 |
+| `fr-1976.svg` | (original, simple geometry) | Public domain (trivial) | The lighter 1976–2020 Tricolour (Giscard's brighter blue #0055A4 and lighter red #EF4135, the official Embassy shades) |
 | `fr-oriflamme.svg` | Oriflamme.svg | CC BY-SA 3.0 (Tomasz Steifer) | The Oriflamme, flame-red royal war banner of the French kings (c. 1124–1356) |
 | `fr-ancient.svg` | Flag of France (XII-XIII).svg | Public domain (F l a n k e r) | France Ancient, blue field strewn with golden fleurs-de-lis, the Capetian royal banner (12th–13th c.) |
 | `fr-modern.svg` | Flag of France (XIV-XVI).svg | Public domain (Himasaram) | France Modern, blue field with three golden fleurs-de-lis (14th–16th c.) |

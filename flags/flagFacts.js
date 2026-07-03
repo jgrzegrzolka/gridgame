@@ -342,11 +342,15 @@ export const FLAG_FACTS = {
     // Nearly nine centuries of the flags France actually flew: the medieval
     // Oriflamme and fleurs-de-lis banners, the white royal drapeau blanc, and
     // then the republic->monarchy->republic pendulum of the Revolution and
-    // after. The Tricolour appears twice (1794 and since 1830), separated by
-    // the Bourbon white flag of 1814-1830, so the swing is visible. The 1790
-    // first tricolour flew RED at the hoist before David flipped the order in
-    // 1794. The Oriflamme is a genuinely tall streamer (1:5), so its tile
-    // stands taller than the rest; that's the real shape, kept on purpose.
+    // after. The Tricolour returns after the Bourbon white flag, then the tail
+    // of the timeline shows the SHADE pendulum: dark navy (1830-1976) lightened
+    // by Giscard (the official 1976-2020 blue #0055A4 + lighter red #EF4135),
+    // then Macron's 2020 return to the navy "bleu marine" (#000091, our real
+    // fr.svg). The two navies reuse fr.svg on purpose (it came back to the same
+    // shade); the lighter 1976-2020 flag is the only visibly different one.
+    // The 1790 first tricolour flew RED at the hoist before David flipped the
+    // order in 1794. The Oriflamme is a genuinely tall streamer (1:5) but is
+    // capped to the shared tile height like every other flag.
     introKey: 'flagFacts.fr.intro',
     timeline: [
       { year: '1124–1356', img: 'history/fr-oriflamme.svg', captionKey: 'flagFacts.fr.oriflamme' },
@@ -365,9 +369,14 @@ export const FLAG_FACTS = {
         partLabelKeys: ['flagFacts.fr.part.paris', 'flagFacts.fr.part.king'],
       },
       { year: '1814–1830', img: 'history/fr-white-1814.svg', captionKey: 'flagFacts.fr.white' },
-      // The Tricolour restored: same design as the 1794 step, shown again so
-      // the "the republic's flag came back" beat reads visually.
-      { year: 'since 1830', img: 'svg/fr.svg', captionKey: 'flagFacts.fr.restored' },
+      // The Tricolour restored in 1830, dark navy (reuses fr.svg, the same navy
+      // it returned to in 2020).
+      { year: '1830–1976', img: 'svg/fr.svg', captionKey: 'flagFacts.fr.restored' },
+      // Giscard's lighter blue-and-red (official #0055A4 / #EF4135), the only
+      // visibly different modern shade.
+      { year: '1976–2020', img: 'history/fr-1976.svg', captionKey: 'flagFacts.fr.lighter' },
+      // Macron's 2020 return to the navy "bleu marine" — same fr.svg as 1830.
+      { year: 'since 2020', img: 'svg/fr.svg', captionKey: 'flagFacts.fr.navy2020' },
     ],
     factKeys: [
       'flagFacts.fr.fact.meaning',
@@ -375,7 +384,6 @@ export const FLAG_FACTS = {
       'flagFacts.fr.fact.flip',
       'flagFacts.fr.fact.chambord',
       'flagFacts.fr.fact.wwii',
-      'flagFacts.fr.fact.shade',
       'flagFacts.fr.fact.influence',
     ],
     // The plain white drapeau blanc in the timeline was France's national flag
@@ -390,10 +398,7 @@ export const FLAG_FACTS = {
       altKey: 'flagFacts.fr.bourbonArmsAlt',
     },
     // The two WWII flags, shown beside the national-flag lineage rather than in
-    // it (the Ireland "other flags" pattern). The 2020 shade change is a fact
-    // WITHOUT a gallery on purpose: the pre-2020 blue (#002395) and today's
-    // navy (#000091) are too close to tell apart at thumbnail size, so a
-    // side-by-side row read as a duplicate. The fact text carries it instead.
+    // it (the Ireland "other flags" pattern).
     galleries: [
       {
         afterFactKey: 'flagFacts.fr.fact.wwii',
