@@ -102,6 +102,13 @@ this file the single source of truth for both current and historical assets.
 | `af-std-amanullah.svg` | Royal flag of Amanullah Khan.svg | Public domain (vect. ReneeWrites) | Royal standard of Amanullah Khan (1926–1929), red with crossed swords |
 | `af-std-kings.svg` | Royal standard of Afghan Kings(1931~1973).svg | Public domain (Yeemuha) | Royal standard of the Afghan kings (1931–1973), red with the state arms |
 | `af-std-president.svg` | Standard of the President of Afghanistan (2004-2021).svg | CC BY-SA 3.0 (TRAJAN 117) | Standard of the President of the Islamic Republic (2004–2021) |
+| `af-1928-gold.svg` | Flag of Afghanistan (1928-1929) (Gold).svg | CC0 (BlinxTheKitty) | Variant of the 1928–1929 vertical tricolour with the emblem in gold |
+| `af-shahada-v2.svg` | Flag of the Taliban (Shahada v2).svg | Public domain (Lexicon) | Second rendering of the white Taliban flag, Shahada in a different hand |
+| `af-rebel-aliahmad.svg` | Flag of Ali Ahmad Khan's rebellion against Habibullah Kalakani (defaked svg-version).svg | CC BY-SA 4.0 (Koopinator, vect. Mrmw) | Flag of Ali Ahmad Khan's 1929 Jalalabad rebellion against Kalakani |
+| `af-herat-1930s.svg` | Flag of Afghanistan 1930s.svg | Public domain (BlinxTheKitty) | Herat provincial (Saqqawist) flag, 1930s |
+| `af-std-nadir-reverse.svg` | Royal flag of Mohammad Nadir Shah (reverse).svg | Public domain (vect. Mrmw) | Reverse of Nadir Shah's royal standard |
+| `af-std-kings-reverse.svg` | Royal standard of Afghan Kings (reverse).svg | Public domain | Reverse of the Afghan kings' royal standard (1931–1973) |
+| `af-std-president-var.svg` | Standard of the President of Afghanistan (2004-2021,Variant).svg | CC BY-SA 3.0 (TRAJAN 117) | Variant of the President's standard (2004–2021) |
 
 **Attribution (CC BY-SA):**
 - `ch-flamme.svg` is a derivative of *"Militärfahne der Stadt und Republik Bern"*
@@ -136,9 +143,14 @@ this file the single source of truth for both current and historical assets.
 - `af-1928-horizontal.svg` is *"Flag of Afghanistan (1928)"* by Wikimedia Commons
   user **Fornax**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under
   the same licence.
-- `af-std-president.svg` is *"Standard of the President of Afghanistan (2004-2021)"*
-  by Wikimedia Commons user **TRAJAN 117**, licensed **CC BY-SA 3.0**; used
-  unmodified and re-shared under the same licence.
+- `af-std-president.svg` and `af-std-president-var.svg` are *"Standard of the
+  President of Afghanistan (2004-2021)"* and its variant by Wikimedia Commons user
+  **TRAJAN 117**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under
+  the same licence.
+- `af-rebel-aliahmad.svg` is *"Flag of Ali Ahmad Khan's rebellion against
+  Habibullah Kalakani"* by Wikimedia Commons user **Koopinator** (vectorization by
+  **Mrmw**), licensed **CC BY-SA 4.0**; used unmodified and re-shared under the
+  same licence.
 
 When adding a new country's history, drop its historical SVGs here following the
 same `<code>-<era>.svg` naming and record the provenance + licence above.
