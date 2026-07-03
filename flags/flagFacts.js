@@ -11,7 +11,12 @@
  *     on that.
  *   - `timeline`  — ordered historical flags, oldest first. Each step:
  *       - `year`       — display label (numeric range, language-neutral, so
- *                        it stays in the data rather than i18n).
+ *                        it stays in the data rather than i18n). Consecutive
+ *                        steps that share an identical `year` render as one
+ *                        bracketed "these coexisted" group instead of separate
+ *                        dated nodes (see `flagFactsRender.groupTimeline`), so
+ *                        give concurrent variants the same label and sequential
+ *                        flags distinct ones.
  *       - `img`        — path **relative to the `flags/` folder** (e.g.
  *                        `history/gr-ottoman.svg` for a superseded design,
  *                        `svg/gr.svg` for the current flag). The renderer

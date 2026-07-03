@@ -102,6 +102,52 @@ test('renderFlagFacts: empty intro string yields no intro paragraphs but still r
   assert.equal(findAllByClass(root, 'flag-facts-step').length, 2);
 });
 
+test('renderFlagFacts groups consecutive steps with the same year into one bracketed node', () => {
+  const doc = makeDoc();
+  const facts = {
+    addedOn: '2026-07-01',
+    introKey: 'i',
+    timeline: [
+      { year: '1928', img: 'history/a.svg', captionKey: 'ca' },
+      { year: '1928', img: 'history/b.svg', captionKey: 'cb' },
+      { year: '1928', img: 'history/c.svg', captionKey: 'cc' },
+      { year: '1930', img: 'history/d.svg', captionKey: 'cd' },
+    ],
+  };
+  const t = makeT({ ca: 'A', cb: 'B', cc: 'C', cd: 'D' });
+  const root = renderFlagFacts({ facts, t, doc });
+
+  // One grouped <li> for the three 1928 flags, one plain <li> for 1930.
+  const groups = findAllByClass(root, 'flag-facts-step-group');
+  assert.equal(groups.length, 1);
+  // The shared year renders once (group) plus once (the solo 1930 step) = 2 pills.
+  assert.deepEqual(findAllByClass(root, 'flag-facts-year').map((e) => e.textContent), ['1928', '1930']);
+  // The group gets a bracket, not a dot; the solo step gets a dot, not a bracket.
+  assert.equal(findAllByClass(root, 'flag-facts-bracket').length, 1);
+  assert.equal(findAllByClass(root, 'flag-facts-node').length, 1);
+  // All four captions still render, each with its flag.
+  assert.deepEqual(findAllByClass(root, 'flag-facts-caption').map((e) => e.textContent), ['A', 'B', 'C', 'D']);
+  assert.equal(findAllByClass(groups[0], 'flag-facts-group-img').length, 3);
+});
+
+test('renderFlagFacts does not group non-adjacent same-year steps or across an equation step', () => {
+  const doc = makeDoc();
+  const facts = {
+    addedOn: '2026-07-01',
+    introKey: 'i',
+    timeline: [
+      { year: '1900', img: 'history/a.svg', captionKey: 'ca' },
+      { year: '1901', img: 'history/b.svg', captionKey: 'cb' },
+      { year: '1900', img: 'history/c.svg', captionKey: 'cc' },
+    ],
+  };
+  const t = makeT({ ca: 'A', cb: 'B', cc: 'C' });
+  const root = renderFlagFacts({ facts, t, doc });
+  // The two 1900 steps are not adjacent, so nothing groups: three plain steps.
+  assert.equal(findAllByClass(root, 'flag-facts-step-group').length, 0);
+  assert.equal(findAllByClass(root, 'flag-facts-node').length, 3);
+});
+
 test('renderFlagFacts renders an equation step (parts + result) instead of a single flag', () => {
   const doc = makeDoc();
   const factsEq = {
