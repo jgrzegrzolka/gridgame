@@ -12,7 +12,8 @@
     "dev:api": "cd api && func start",
     "dev:party": "partykit dev",
     "party:deploy": "partykit deploy",
-    "build:minify": "node scripts/minify.mjs"
+    "build:minify": "node scripts/minify.mjs",
+    "history:checksums": "node scripts/history-checksums.mjs"
   },
   "devDependencies": {
     "@azure/static-web-apps-cli": "^2.0.9",

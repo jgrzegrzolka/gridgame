@@ -28,6 +28,8 @@ Current flags already live in `flags/svg/<code>.svg`; reference those directly f
 - Source from **Wikimedia Commons**. **Prefer public domain** (flags generally aren't copyrightable and these designs predate modern authorship). CC BY-SA is acceptable **only with attribution** recorded in `flags/history/SOURCES.md` (used unmodified). CC0 needs no attribution but list it for provenance.
 - Download the **SVG itself**, not a thumbnail (Wikimedia thumb PNG URLs are hotlink-blocked). Resolve the real file via `Special:FilePath/<exact file name>.svg` (URL-encode spaces and any en dash `–` as `%E2%80%93`). If the filename is wrong you get an HTML page instead of `<svg …>`, so verify the first bytes. Find the exact filename with the Commons search API via **WebFetch** (curl to the API often gets blocked or returns HTML): `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=<terms>&srnamespace=6&format=json`.
 - Rename to `<code>-<era>.svg` (e.g. `al-communist.svg`, `af-kingdom.svg`).
+- **NEVER overwrite an existing `flags/history/*.svg`. Ever.** These files are served `immutable, max-age=1yr` (see `staticwebapp.config.json`) and the timeline references them by a **bare, unversioned URL**, so replacing one at the same filename ships the *old* bytes to Cloudflare + browsers for a **year**. When you need a different design for an existing era, add a **new filename** and repoint `flagFacts.js` at it (the winged-harp lesson: PR #664 overwrote `ie-harp.svg` and prod kept the old harp until #665 renamed it to `ie-harp-1642.svg`). A test enforces this: `flags/history/checksums.test.js` pins every SVG's content hash and fails if one changes in place.
+- **After adding a new SVG, run `npm run history:checksums`** to pin its hash, or the guard test fails ("New history SVG(s) not pinned"). The generator is add-only, so it will not silently bless an edit to an existing file.
 - **Watch what a name implies.** "Flag of the Skanderbeg Division" is a WWII SS unit, not a national flag. Read what a file actually depicts before using it.
 - **A single era often has several variant files that look different.** "Flag of Albania (1920-1926).svg" and "Flag of Albania 1926.svg" are different eagles; the 1944 flag has one Commons file with a plain eagle and another with a hammer-and-sickle canton. **When Jan links a specific Commons file, download THAT exact file** (`Special:FilePath/<exact name>`), not a plausibly-named neighbour, and render it against his link. Both times I guessed the filename I got the wrong design and he had to correct me.
 
@@ -107,7 +109,7 @@ Never declare the story done before seeing it rendered. Serve the repo, open `/f
 - **Prose in only one language file.** i18n test fails: `pl.json missing flagFacts.<code>.<key>`. Both files, every key.
 - **Used an em dash.** Jan's hard rule. Grep for `—` and remove it before committing.
 - **Trusted a single blog for a surprising claim.** Cross-check; drop what a second source contradicts.
-- **Overwrote an existing asset filename.** Same URL means browser cache serves the stale bytes. Fine for brand-new files; for a replacement, expect a hard refresh.
+- **Overwrote an existing asset filename.** These SVGs are `immutable`-cached for a year at a bare URL, so a same-filename replacement serves stale bytes to prod for a year, not just a hard-refresh nuisance (PR #664 → #665). Add a new filename and repoint `flagFacts.js`; never edit an existing history SVG in place. The `flags/history/checksums.test.js` guard now fails the build if you do.
 
 ## See also
 
