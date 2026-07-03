@@ -210,16 +210,25 @@ export const FLAG_FACTS = {
   },
   ie: {
     addedOn: '2026-07-01',
+    // Chronological arc: under the crown the harp flew gold on royal blue; the
+    // 1642 Confederates flew it uncrowned on green; the saltire is Ireland's
+    // element in the Union; Erin go Bragh carried the harp with its motto; the
+    // 1848 tricolour replaced all of them. Two green-harp tiles are kept
+    // deliberately distinct (plain harp for 1642, winged harp + motto for Erin).
     introKey: 'flagFacts.ie.intro',
     timeline: [
-      { year: "St Patrick", img: 'history/ie-patrick.svg', captionKey: 'flagFacts.ie.patrick' },
-      { year: '16th c.', img: 'history/ie-harp.svg', captionKey: 'flagFacts.ie.harp' },
+      { year: '1542–1801', img: 'history/ie-royal.svg', captionKey: 'flagFacts.ie.royal' },
+      { year: '1642', img: 'history/ie-harp.svg', captionKey: 'flagFacts.ie.harp' },
+      { year: 'St Patrick', img: 'history/ie-patrick.svg', captionKey: 'flagFacts.ie.patrick' },
+      { year: '1847', img: 'history/ie-erin.svg', captionKey: 'flagFacts.ie.erin' },
       { year: '1848', img: 'svg/ie.svg', captionKey: 'flagFacts.ie.current' },
     ],
     factKeys: [
       'flagFacts.ie.fact.colours',
       'flagFacts.ie.fact.meagher',
       'flagFacts.ie.fact.harp',
+      'flagFacts.ie.fact.crowned',
+      'flagFacts.ie.fact.otherflags',
       'flagFacts.ie.fact.order',
     ],
   },
