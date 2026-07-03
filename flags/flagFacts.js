@@ -234,12 +234,21 @@ export const FLAG_FACTS = {
   },
   pl: {
     addedOn: '2026-07-01',
+    // Every step here looks distinct at thumbnail size (the rule: don't show
+    // near-identical flags in a row). The plain white-red bicolour never
+    // changed after 1919, and the state flag's crown-on/crown-off saga is
+    // invisible at this size, so that lives in a "Did you know?" fact instead
+    // of three look-alike tiles. The visible lineage: royal eagle → the
+    // Commonwealth's swallow-tailed banner → an 1863 uprising flag (the blue
+    // stripe sets it apart) → the modern bicolour.
     introKey: 'flagFacts.pl.intro',
     timeline: [
       { year: 'since 13th c.', img: 'history/pl-eagle.svg', captionKey: 'flagFacts.pl.eagle' },
+      { year: '16th–18th c.', img: 'history/pl-commonwealth.svg', captionKey: 'flagFacts.pl.commonwealth' },
+      { year: '1863', img: 'history/pl-january.svg', captionKey: 'flagFacts.pl.january' },
       { year: '1919', img: 'svg/pl.svg', captionKey: 'flagFacts.pl.current' },
     ],
-    factKeys: ['flagFacts.pl.fact.lookalikes'],
+    factKeys: ['flagFacts.pl.fact.crown', 'flagFacts.pl.fact.lookalikes'],
   },
   ge: {
     addedOn: '2026-07-01',

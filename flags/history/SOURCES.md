@@ -40,6 +40,8 @@ this file the single source of truth for both current and historical assets.
 | `ie-patrick.svg` | Saint Patrick's Saltire.svg | Public domain | Saltire of St Patrick, red diagonal cross on white (Ireland's element of the Union Jack) |
 | `ie-harp.svg` | Green Harp Flag of Ireland.svg | CC0 | Green harp flag of Ireland, gold harp on green |
 | `pl-eagle.svg` | Herb Polski.svg | Public domain | The White Eagle, Poland's coat of arms, a white crowned eagle on a red shield (source of the flag's colours) |
+| `pl-commonwealth.svg` | Flaga Rzeczypospolitej Obojga Narodow ogolna.svg | Public domain | Polish-Lithuanian Commonwealth banner, red-and-white swallow-tail with the joint arms of both nations |
+| `pl-january.svg` | Flag of the Polish-Lithuanian-Ruthenian Commonwealth (January Uprising).svg | Public domain | 1863 January Uprising flag, white-red-blue with the tripartite arms of Poland, Lithuania and Ruthenia |
 | `ge-1918.svg` | Flag of Georgia (1918–1921, 1-2).svg | Public domain | Democratic Republic of Georgia flag, wine-red field, black-and-white canton (also the 1991–2004 restored flag) |
 | `ge-ssr.svg` | Flag of the Georgian Soviet Socialist Republic (1951–1990).svg | Public domain | Georgian SSR flag, red with a blue sun bearing hammer, sickle and star |
 | `fr-royal.svg` | Pavillon royal de France.svg | Public domain (Zippanova) | Pre-revolution / Restoration royal flag, white field strewn with golden fleurs-de-lis |

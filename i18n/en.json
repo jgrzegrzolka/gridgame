@@ -721,10 +721,13 @@
       }
     },
     "pl": {
-      "intro": "Poland's colours come straight from the state coat of arms: the White Eagle sits on the upper white stripe, a symbol of purity and nobility, while the lower red stripe echoes the colour of the heraldic shield, standing for courage and valour.",
+      "intro": "Poland's colours come straight from the state coat of arms: the White Eagle sits on the upper white stripe, a symbol of purity and nobility, while the lower red stripe echoes the colour of the heraldic shield, standing for courage and valour.\n\nThe white eagle has flown over Poland since the Middle Ages: on the swallow-tailed banner of the Polish-Lithuanian Commonwealth, on the flags the 19th-century uprisings carried against the partitioning powers, and, once the republic was reborn in 1919, distilled down to the plain two colours it flies today.",
       "eagle": "The White Eagle on a red shield, the flag's white and red come straight from it.",
-      "current": "The plain white-over-red bicolour, official since 1919.",
+      "commonwealth": "The Polish-Lithuanian Commonwealth flew a red-and-white swallow-tailed banner charged with the joint arms of both nations.",
+      "january": "The 1863 uprising against Russian rule fought under a white-red-blue flag bearing the arms of Poland, Lithuania and Ruthenia.",
+      "current": "The plain white-over-red bicolour, the national flag since 1919.",
       "fact": {
+        "crown": "Communist Poland stripped the crown from the eagle's head in 1955; when communism fell in 1990 the crown was put back, where it remains today.",
         "lookalikes": "Flip Poland's flag top-to-bottom and you get Indonesia and Monaco, red over white. Those two are near-identical themselves, told apart only by their proportions: Indonesia is the longer 2:3, Monaco the squarer 4:5."
       }
     },
