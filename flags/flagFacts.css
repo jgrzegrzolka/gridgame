@@ -182,10 +182,21 @@ dialog#zoom .flag-facts-intro {
   box-shadow: 0 0 0 3px var(--surface-color);
 }
 /* Scoped under dialog#zoom to beat the base `dialog#zoom img { width: 100% }`
- * rule (same reason as the equation flags below). */
+ * rule (same reason as the equation flags below).
+ *
+ * Fixed SQUARE box + object-fit: contain so every timeline flag reads at the
+ * same size regardless of its native ratio. Without this, flags scaled to a
+ * fixed WIDTH and their heights followed each flag's proportions, so a 3:2
+ * tricolour (84×56) looked smaller than a square medieval banner (84×84) and a
+ * 1:5 streamer like the French Oriflamme blew the row to ~420px tall. Now each
+ * flag is letterboxed inside an 84×84 cell (surface behind the bars): landscape
+ * flags fill the width, square ones fill the cell, and a tall banner fills the
+ * height, all sharing one footprint. */
 dialog#zoom .flag-facts-step .flag-facts-img {
   width: 84px;
-  height: auto;
+  height: 84px;
+  object-fit: contain;
+  background: var(--surface-color);
   border: 1px solid var(--muted-soft-color);
   box-sizing: border-box;
   display: block;

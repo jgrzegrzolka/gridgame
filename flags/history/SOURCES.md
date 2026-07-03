@@ -64,7 +64,6 @@ this file the single source of truth for both current and historical assets.
 | `fr-modern.svg` | Flag of France (XIV-XVI).svg | Public domain (Himasaram) | France Modern, blue field with three golden fleurs-de-lis (14th–16th c.) |
 | `fr-freefrance.svg` | Flag of Free France (1940-1944).svg | Public domain | Free France flag, the Tricolour charged with a red Cross of Lorraine (1940–1944) |
 | `fr-vichy.svg` | Flag of Philippe Pétain, Chief of State of Vichy France.svg | CC0 (Tom Lemmens) | Personal standard of Marshal Pétain, head of the Vichy French State, with a francisque emblem (1940–1944) |
-| `fr-lighter.svg` | Flag of France (1976–2020).svg | Public domain (simple geometry) | Lighter-blue variant of the Tricolour, in official use 1976–2020 before the return to navy |
 | `fr-bourbon-arms.svg` | Royal flag of France during the Bourbon Restoration.svg | CC BY-SA 4.0 (Sodacan) | The Bourbon kings' royal flag of the Restoration, white field with the crowned French coat of arms (the richer version of the drapeau blanc) |
 | `af-emirate.svg` | Flag of Afghanistan (1901–1919).svg | Public domain | Emirate of Afghanistan, plain black royal banner with a white mosque-in-wreath emblem |
 | `af-1928.svg` | Flag of Afghanistan (1928–1929).svg | Public domain | Amanullah Khan's first black-red-green vertical tricolour (1928), the earliest ancestor of Afghanistan's tricolour |

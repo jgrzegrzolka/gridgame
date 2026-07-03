@@ -389,22 +389,17 @@ export const FLAG_FACTS = {
       captionKey: 'flagFacts.fr.bourbonArms',
       altKey: 'flagFacts.fr.bourbonArmsAlt',
     },
-    // Flags France really flew but that sit beside the national-flag lineage
-    // rather than in it (the Ireland "other flags" pattern): the two WWII
-    // flags, and the pre-2020 lighter blue shown next to today's navy.
+    // The two WWII flags, shown beside the national-flag lineage rather than in
+    // it (the Ireland "other flags" pattern). The 2020 shade change is a fact
+    // WITHOUT a gallery on purpose: the pre-2020 blue (#002395) and today's
+    // navy (#000091) are too close to tell apart at thumbnail size, so a
+    // side-by-side row read as a duplicate. The fact text carries it instead.
     galleries: [
       {
         afterFactKey: 'flagFacts.fr.fact.wwii',
         items: [
           { img: 'history/fr-freefrance.svg', labelKey: 'flagFacts.fr.gallery.freefrance' },
           { img: 'history/fr-vichy.svg', labelKey: 'flagFacts.fr.gallery.vichy' },
-        ],
-      },
-      {
-        afterFactKey: 'flagFacts.fr.fact.shade',
-        items: [
-          { img: 'history/fr-lighter.svg', labelKey: 'flagFacts.fr.gallery.lighter' },
-          { img: 'svg/fr.svg', labelKey: 'flagFacts.fr.gallery.navy' },
         ],
       },
     ],
