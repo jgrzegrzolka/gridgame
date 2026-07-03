@@ -40,6 +40,7 @@
  *   factKeys?: string[],
  *   compare?: FlagFactCompare,
  *   illustration?: FlagFactIllustration,
+ *   galleries?: FlagFactGallery[],
  * }} FlagFacts
  *
  * @typedef {{
@@ -55,6 +56,11 @@
  *   captionKey: string,
  *   altKey?: string,
  * }} FlagFactIllustration
+ *
+ * @typedef {{
+ *   afterFactKey: string,
+ *   items: { img: string, labelKey: string }[],
+ * }} FlagFactGallery
  *
  * `compare` (optional) renders a two-flag "right way up vs upside down"
  * illustration — the same `img` shown normally and flipped vertically —
@@ -72,6 +78,13 @@
  * one-off variant). `captionKey` is shown (unlike `compare`, which has none)
  * so the image is labelled honestly; `altKey` overrides the alt text, falling
  * back to the caption. Tap-to-enlarge like every other story image.
+ *
+ * `galleries` (optional) is a list of small flag rows, each pinned under the
+ * fact bullet named by its `afterFactKey`. Each `item` is a flag `img` with a
+ * short visible `labelKey`. For flags a fact names but that don't belong in
+ * the timeline (Ireland's other flags: the Starry Plough, Sunburst, Four
+ * Provinces, the President's standard), so the reader sees them, not just
+ * their names. Each thumbnail is tap-to-enlarge like every other story image.
  *
  * `addedOn` (`YYYY-MM-DD`) is the day the story shipped. It drives the
  * flag-of-the-day rotation's append-safety: a flag only becomes eligible the
@@ -230,6 +243,24 @@ export const FLAG_FACTS = {
       'flagFacts.ie.fact.crowned',
       'flagFacts.ie.fact.otherflags',
       'flagFacts.ie.fact.order',
+    ],
+    // The flags a fact names but that never belonged in the national-flag
+    // timeline, shown as thumbnails under the bullet that describes them.
+    galleries: [
+      {
+        afterFactKey: 'flagFacts.ie.fact.crowned',
+        items: [
+          { img: 'history/ie-president.svg', labelKey: 'flagFacts.ie.gallery.president' },
+        ],
+      },
+      {
+        afterFactKey: 'flagFacts.ie.fact.otherflags',
+        items: [
+          { img: 'history/ie-plough.svg', labelKey: 'flagFacts.ie.gallery.plough' },
+          { img: 'history/ie-sunburst.svg', labelKey: 'flagFacts.ie.gallery.sunburst' },
+          { img: 'history/ie-fourprov.svg', labelKey: 'flagFacts.ie.gallery.fourprov' },
+        ],
+      },
     ],
   },
   ch: {

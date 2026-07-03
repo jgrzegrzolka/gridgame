@@ -45,6 +45,10 @@ this file the single source of truth for both current and historical assets.
 | `ie-patrick.svg` | Saint Patrick's Saltire.svg | Public domain | Saltire of St Patrick, red diagonal cross on white (Ireland's element of the Union Jack) |
 | `ie-harp-1642.svg` | Green harp flag of Ireland 17th century.svg | CC BY-SA 3.0 (R-41) | Green harp flag of Ireland, winged Brian Boru harp on green (the 1642 Confederate / nationalist banner) |
 | `ie-erin.svg` | Erin Go Bragh Flag.svg | CC BY-SA 3.0 (Oren neu dag) | Erin go Bragh flag, gold harp and motto on green (San Patricio Battalion, 1847) |
+| `ie-president.svg` | Presidential Standard of Ireland.svg | Public domain | Presidential Standard of Ireland, gold harp on royal blue (the President's personal flag) |
+| `ie-plough.svg` | StarryPlough.svg | Public domain | The Starry Plough, the Plough (Big Dipper) in white stars on blue (labour movement) |
+| `ie-sunburst.svg` | Sunburst Flag.svg | Public domain | The Sunburst (An Gal Gréine), an orange sunburst on blue (republican Fianna) |
+| `ie-fourprov.svg` | Four Provinces Flag.svg | CC BY-SA 3.0 (Caomhan27) | Four Provinces flag, quartered arms of Ulster, Munster, Leinster and Connacht |
 | `pl-eagle.svg` | Herb Polski.svg | Public domain | The White Eagle, Poland's coat of arms, a white crowned eagle on a red shield (source of the flag's colours) |
 | `pl-commonwealth.svg` | Flaga Rzeczypospolitej Obojga Narodow ogolna.svg | Public domain | Polish-Lithuanian Commonwealth banner, red-and-white swallow-tail with the joint arms of both nations |
 | `pl-january.svg` | Flag of the Polish-Lithuanian-Ruthenian Commonwealth (January Uprising).svg | Public domain | 1863 January Uprising flag, white-red-blue with the tripartite arms of Poland, Lithuania and Ruthenia |
@@ -78,6 +82,9 @@ this file the single source of truth for both current and historical assets.
 - `ie-harp-1642.svg` is *"Green harp flag of Ireland 17th century"* by Wikimedia
   Commons user **R-41**, licensed **CC BY-SA 3.0**; used unmodified and re-shared
   under the same licence.
+- `ie-fourprov.svg` is *"Four Provinces Flag"* by Wikimedia Commons user
+  **Caomhan27**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under
+  the same licence.
 
 When adding a new country's history, drop its historical SVGs here following the
 same `<code>-<era>.svg` naming and record the provenance + licence above.
