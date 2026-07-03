@@ -760,9 +760,17 @@
       }
     },
     "fr": {
-      "intro": "Francuska trójkolorowa flaga narodziła się w rewolucji. Niebieski i czerwony to dawne barwy Paryża, biel była kolorem króla. W lipcu 1789 roku markiz de La Fayette połączył je w jednej kokardzie, miasto i korona w jednym znaku, i ta niebiesko-biało-czerwona wkrótce stała się flagą nowego państwa.",
+      "intro": "Przez stulecia Francja powiewała flagami swoich królów: płomiennie czerwonym Oriflamme niesionym do bitwy, głębokim błękitem usianym złotymi liliami, a w końcu zwykłą białą flagą królewską.\n\nTrójkolorowa flaga narodziła się w rewolucji. Niebieski i czerwony to dawne barwy Paryża, biel była kolorem króla. W lipcu 1789 roku markiz de La Fayette połączył je w jednej kokardzie, miasto i korona w jednym znaku, i ta niebiesko-biało-czerwona wkrótce stała się flagą nowego państwa.",
+      "oriflamme": "Zanim Francja miała flagę, miała Oriflamme, płomiennie czerwony sztandar bojowy królów, podnoszony w opactwie Saint-Denis przed bitwą. Wedle tradycji żaden wróg nie mógł się przed nim ostać, dopóki powiewał.",
+      "ancient": "Sztandar królów z dynastii Kapetyngów, głęboki błękit zasiany niezliczonymi złotymi liliami (fleurs-de-lis), kwiatem od dawna wiązanym z Matką Boską i godłem francuskiej korony.",
+      "modern": "W XIV wieku rozsypane lilie zredukowano do trzech, wedle tradycji na cześć Trójcy Świętej. Ten błękitno-złoty herb służył monarchii aż do rewolucji.",
       "royal": "Biel była barwą francuskiej monarchii, sama flaga królewska była biała, tutaj usiana złotymi liliami (fleurs-de-lis) z herbu króla, w tradycji sięgającej białego sztandaru Joanny d'Arc.",
-      "current": "Błękit i czerwień Paryża połączone z bielą króla, flaga nowego państwa, ustalona w tej kolejności w 1794 roku. Biała flaga królewska na krótko powróciła (1815–1830), zanim trójkolorowa zwyciężyła na stałe w 1830 roku za „króla-obywatela” Ludwika Filipa.",
+      "firsttricolour": "Pierwsza trójkolorowa flaga, ułożona w 1790 roku, miała czerwień przy drzewcu, a nie błękit. W tej kolejności powiewała nad wczesną rewolucją, upadkiem monarchii i młodą republiką.",
+      "current": "Błękit i czerwień Paryża połączone z bielą króla, ustalone w tej kolejności w 1794 roku i niesione przez rewolucję oraz cesarstwo Napoleona.",
+      "white": "Po klęsce Napoleona i przywróceniu monarchii Burbonowie przywrócili zamiast trójkolorowej zwykłą białą flagę królewską, drapeau blanc.",
+      "restored": "Rewolucja lipcowa 1830 roku ostatecznie zmiotła Burbonów, a Ludwik Filip, „król-obywatel”, przywrócił trójkolorową flagę. Jej błękit był tradycyjnym ciemnym granatem.",
+      "lighter": "W 1976 roku prezydent Giscard d'Estaing kazał rozjaśnić błękit i czerwień flagi, na jaśniejszy błękit bliższy fladze europejskiej, który lepiej wyglądał też w kolorowej telewizji. Ta jaśniejsza wersja powiewała ponad czterdzieści lat.",
+      "navy2020": "W 2020 roku Francja po cichu wróciła do ciemniejszego granatu „bleu marine”, barwy z czasów rewolucji. Zmiana była tak subtelna, że większość ludzi w ogóle nie zauważyła, że flaga się zmieniła.",
       "part": {
         "paris": "Paryż",
         "king": "królewska biel"
@@ -771,7 +779,15 @@
         "meaning": "Francja nigdy nie nadała barwom oficjalnego znaczenia. Znany odczyt liberté, égalité, fraternité pojawił się później; starsze wyjaśnienie jest prostsze: biel dla króla, niebieski i czerwony dla Paryża.",
         "paris": "Paryż nosi błękit i czerwień co najmniej od 1358 roku. Tradycja wiąże je z dwoma świętymi: błękit ze św. Marcinem, który rozciął swój płaszcz na pół dla żebraka marznącego w śniegu, a czerwień ze św. Dionizym, patronem miasta.",
         "flip": "Gdy pasy ułożono po raz pierwszy w 1790 roku, czerwień była przy drzewcu. Malarz Jacques-Louis David odwrócił kolejność do dzisiejszej niebiesko-biało-czerwonej w 1794 roku.",
+        "chambord": "W 1873 roku monarchiści mieli dość mandatów, by przywrócić tron, ale ich kandydat, hrabia de Chambord, odmówił panowania, dopóki Francja nie porzuci trójkolorowej flagi na rzecz białej flagi jego przodków. Żadna ze stron nie ustąpiła, więc Francja pozostała republiką. Słysząc o tym, papież miał westchnąć: „I to wszystko przez serwetkę”.",
+        "wwii": "W czasie drugiej wojny światowej dwie Francje powiewały dwiema flagami. Vichy zachowało zwykłą trójkolorową flagę, a jego przywódca, marszałek Pétain, używał osobistego sztandaru z francisque, dwugłowym toporem. Wolni Francuzi generała de Gaulle'a dodali czerwony krzyż lotaryński, który stał się znakiem ruchu oporu.",
         "influence": "Trójkolorowa flaga stała się jedną z najczęściej naśladowanych w historii, od XIX wieku nowo powstające państwa w Europie i poza nią przyjmowały trójpasmowe wzory jako znak narodowej, często republikańskiej, tożsamości."
+      },
+      "bourbonArms": "W czasie restauracji zwykła biała flaga była flagą narodową Francji, ale Burbonowie używali też tej bogatszej wersji, białego drapeau blanc z ukoronowanym herbem. To właśnie tej tradycji białej flagi Chambord nie chciał porzucić w 1873 roku.",
+      "bourbonArmsAlt": "Biała flaga restauracji Burbonów z ukoronowanym herbem Burbonów.",
+      "gallery": {
+        "freefrance": "Wolna Francja (krzyż lotaryński)",
+        "vichy": "sztandar Pétaina (Vichy)"
       }
     },
     "af": {

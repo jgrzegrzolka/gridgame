@@ -57,6 +57,15 @@ this file the single source of truth for both current and historical assets.
 | `fr-royal.svg` | Pavillon royal de France.svg | Public domain (Zippanova) | Pre-revolution / Restoration royal flag, white field strewn with golden fleurs-de-lis |
 | `fr-paris.svg` | Flag of Paris.svg | Public domain | Flag of the city of Paris, blue (hoist) and red (fly); the tricolour's blue-and-red (shown as an equation ingredient) |
 | `fr-white.svg` | (original, plain white rectangle) | Public domain (trivial) | Plain white panel, the "king's white" ingredient in the Tricolour equation (no fleurs-de-lis, since the gold never appears on the flag) |
+| `fr-1790.svg` | Flag of France (1790–1794).svg | Public domain (simple geometry) | First French Tricolour (1790–1794), red at the hoist, before David reversed the stripes to blue-white-red |
+| `fr-white-1814.svg` | Flag of France (1814–1830).svg | Public domain (simple geometry) | Bourbon Restoration drapeau blanc, the plain white royal flag flown 1814–1830 |
+| `fr-1976.svg` | (original, simple geometry) | Public domain (trivial) | The lighter 1976–2020 Tricolour (Giscard's brighter blue #0055A4 and lighter red #EF4135, the official Embassy shades) |
+| `fr-oriflamme.svg` | Oriflamme.svg | CC BY-SA 3.0 (Tomasz Steifer) | The Oriflamme, flame-red royal war banner of the French kings (c. 1124–1356) |
+| `fr-ancient.svg` | Flag of France (XII-XIII).svg | Public domain (F l a n k e r) | France Ancient, blue field strewn with golden fleurs-de-lis, the Capetian royal banner (12th–13th c.) |
+| `fr-modern.svg` | Flag of France (XIV-XVI).svg | Public domain (Himasaram) | France Modern, blue field with three golden fleurs-de-lis (14th–16th c.) |
+| `fr-freefrance.svg` | Flag of Free France (1940-1944).svg | Public domain | Free France flag, the Tricolour charged with a red Cross of Lorraine (1940–1944) |
+| `fr-vichy.svg` | Flag of Philippe Pétain, Chief of State of Vichy France.svg | CC0 (Tom Lemmens) | Personal standard of Marshal Pétain, head of the Vichy French State, with a francisque emblem (1940–1944) |
+| `fr-bourbon-arms.svg` | Royal flag of France during the Bourbon Restoration.svg | CC BY-SA 4.0 (Sodacan) | The Bourbon kings' royal flag of the Restoration, white field with the crowned French coat of arms (the richer version of the drapeau blanc) |
 | `af-emirate.svg` | Flag of Afghanistan (1901–1919).svg | Public domain | Emirate of Afghanistan, plain black royal banner with a white mosque-in-wreath emblem |
 | `af-1928.svg` | Flag of Afghanistan (1928–1929).svg | Public domain | Amanullah Khan's first black-red-green vertical tricolour (1928), the earliest ancestor of Afghanistan's tricolour |
 | `af-kingdom.svg` | Flag of Afghanistan (1931–1973).svg | Public domain | Kingdom of Afghanistan tricolour, black-red-green with the mosque-and-wheat national emblem |
@@ -85,6 +94,11 @@ this file the single source of truth for both current and historical assets.
 - `ie-fourprov.svg` is *"Four Provinces Flag"* by Wikimedia Commons user
   **Caomhan27**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under
   the same licence.
+- `fr-oriflamme.svg` is *"Oriflamme"* by **Tomasz Steifer, Gdansk**, licensed
+  **CC BY-SA 3.0**; used unmodified and re-shared under the same licence.
+- `fr-bourbon-arms.svg` is *"Royal flag of France during the Bourbon Restoration"*
+  by Wikimedia Commons user **Sodacan**, licensed **CC BY-SA 4.0**; used
+  unmodified and re-shared under the same licence.
 
 When adding a new country's history, drop its historical SVGs here following the
 same `<code>-<era>.svg` naming and record the provenance + licence above.

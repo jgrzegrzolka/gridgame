@@ -760,9 +760,17 @@
       }
     },
     "fr": {
-      "intro": "France's Tricolour was born in the Revolution. Blue and red are the old colours of Paris; white was the colour of the king. In July 1789 the Marquis de Lafayette combined them in a single cockade, city and crown in one badge, and that blue-white-red soon became the flag of the new nation.",
+      "intro": "For centuries France flew the flags of its kings: the flame-red Oriflamme carried into battle, a deep blue field strewn with golden fleurs-de-lis, and at last a plain white royal flag.\n\nThe Tricolour was born in the Revolution. Blue and red are the old colours of Paris; white was the colour of the king. In July 1789 the Marquis de Lafayette combined them in a single cockade, city and crown in one badge, and that blue-white-red soon became the flag of the new nation.",
+      "oriflamme": "Before it had a flag, France had the Oriflamme, the flame-red war banner of the kings, raised at the abbey of Saint-Denis before battle. By tradition no enemy could stand against it while it flew.",
+      "ancient": "The banner of the Capetian kings, a deep blue field sown with countless golden fleurs-de-lis, the lily long tied to the Virgin Mary and the emblem of the French crown.",
+      "modern": "In the 14th century the scattered lilies were reduced to three, by tradition for the Holy Trinity. This blue-and-gold arms served the monarchy until the Revolution.",
       "royal": "White was the colour of the French monarchy, the royal flag itself was white, here strewn with the golden fleurs-de-lis of the king's arms, a tradition running back to Joan of Arc's white banner.",
-      "current": "Paris's blue and red joined to the king's white, the flag of the new nation, fixed in this order in 1794. The white royal flag briefly returned (1815–1830) before the Tricolour won out for good in 1830 under the \"Citizen King\", Louis-Philippe.",
+      "firsttricolour": "The first Tricolour, arranged in 1790, carried red at the hoist, not blue. In this order it flew over the early Revolution, the fall of the monarchy and the young Republic.",
+      "current": "Paris's blue and red joined to the king's white, fixed in this order in 1794 and carried through the Revolution and Napoleon's Empire.",
+      "white": "With Napoleon defeated and the monarchy restored, the Bourbons brought back the plain white royal flag, the drapeau blanc, in place of the Tricolour.",
+      "restored": "The July Revolution of 1830 swept the Bourbons away for good, and Louis-Philippe, the \"Citizen King\", restored the Tricolour. Its blue was the traditional dark navy.",
+      "lighter": "In 1976 President Giscard d'Estaing had the flag's blue and red lightened, a brighter blue closer to the European flag that also read better on colour television. This lighter version flew for over forty years.",
+      "navy2020": "In 2020 France quietly switched back to the darker navy \"bleu marine\", the shade of the Revolution. The change was so subtle that most people never noticed the flag had changed at all.",
       "part": {
         "paris": "Paris",
         "king": "royal white"
@@ -771,7 +779,15 @@
         "meaning": "France has never fixed an official meaning to the three colours. The familiar liberté, égalité, fraternité reading came later; the older explanation is simpler: white for the king, blue and red for Paris.",
         "paris": "Paris has flown blue and red since at least 1358. Tradition ties them to two saints: blue to St Martin, who cut his cloak in two for a beggar in the snow, and red to St Denis, the city's patron.",
         "flip": "When the stripes were first arranged in 1790, red sat at the hoist. The painter Jacques-Louis David flipped the order to today's blue-white-red in 1794.",
+        "chambord": "In 1873 the monarchists held enough seats to restore the throne, but their candidate, the Comte de Chambord, refused to reign unless France gave up the Tricolour for the white flag of his ancestors. Neither side would yield, so France remained a republic. On hearing it, the Pope reportedly sighed: \"And all that, for a napkin.\"",
+        "wwii": "In the Second World War two Frances flew two flags. Vichy kept the plain Tricolour, its head of state Marshal Pétain flying a personal standard marked with a francisque, a double-headed axe. General de Gaulle's Free French added the red Cross of Lorraine, which became the badge of the Resistance.",
         "influence": "The Tricolour became one of the most copied flags in history, from the 1800s on, newly independent nations across Europe and beyond took up three-stripe designs as a badge of national, often republican, identity."
+      },
+      "bourbonArms": "During the Restoration the plain white flag was France's national flag, but the Bourbon kings also flew this richer version, the white drapeau blanc bearing their crowned coat of arms. It was this white-flag tradition that Chambord refused to give up in 1873.",
+      "bourbonArmsAlt": "White flag of the Bourbon Restoration bearing the crowned Bourbon coat of arms.",
+      "gallery": {
+        "freefrance": "Free France (Cross of Lorraine)",
+        "vichy": "Pétain's standard (Vichy)"
       }
     },
     "af": {
