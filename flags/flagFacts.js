@@ -338,10 +338,22 @@ export const FLAG_FACTS = {
     factKeys: ['flagFacts.ge.fact.crosses', 'flagFacts.ge.fact.jerusalem', 'flagFacts.ge.fact.stgeorge'],
   },
   fr: {
-    addedOn: '2026-07-01',
+    addedOn: '2026-07-03',
+    // Nearly nine centuries of the flags France actually flew: the medieval
+    // Oriflamme and fleurs-de-lis banners, the white royal drapeau blanc, and
+    // then the republic->monarchy->republic pendulum of the Revolution and
+    // after. The Tricolour appears twice (1794 and since 1830), separated by
+    // the Bourbon white flag of 1814-1830, so the swing is visible. The 1790
+    // first tricolour flew RED at the hoist before David flipped the order in
+    // 1794. The Oriflamme is a genuinely tall streamer (1:5), so its tile
+    // stands taller than the rest; that's the real shape, kept on purpose.
     introKey: 'flagFacts.fr.intro',
     timeline: [
+      { year: '1124–1356', img: 'history/fr-oriflamme.svg', captionKey: 'flagFacts.fr.oriflamme' },
+      { year: '12th–13th c.', img: 'history/fr-ancient.svg', captionKey: 'flagFacts.fr.ancient' },
+      { year: '14th–16th c.', img: 'history/fr-modern.svg', captionKey: 'flagFacts.fr.modern' },
       { year: 'to 1789', img: 'history/fr-royal.svg', captionKey: 'flagFacts.fr.royal' },
+      { year: '1790–1794', img: 'history/fr-1790.svg', captionKey: 'flagFacts.fr.firsttricolour' },
       // Equation: the Tricolour = Paris's blue-and-red + the king's white.
       {
         year: '1794',
@@ -352,12 +364,49 @@ export const FLAG_FACTS = {
         parts: ['history/fr-paris.svg', 'history/fr-white.svg'],
         partLabelKeys: ['flagFacts.fr.part.paris', 'flagFacts.fr.part.king'],
       },
+      { year: '1814–1830', img: 'history/fr-white-1814.svg', captionKey: 'flagFacts.fr.white' },
+      // The Tricolour restored: same design as the 1794 step, shown again so
+      // the "the republic's flag came back" beat reads visually.
+      { year: 'since 1830', img: 'svg/fr.svg', captionKey: 'flagFacts.fr.restored' },
     ],
     factKeys: [
       'flagFacts.fr.fact.meaning',
       'flagFacts.fr.fact.paris',
       'flagFacts.fr.fact.flip',
+      'flagFacts.fr.fact.chambord',
+      'flagFacts.fr.fact.wwii',
+      'flagFacts.fr.fact.shade',
       'flagFacts.fr.fact.influence',
+    ],
+    // The plain white drapeau blanc in the timeline was France's national flag
+    // during the Restoration; the Bourbon kings' own richer version (white with
+    // the crowned royal arms) sits under the Chambord fact, which is about that
+    // white-flag tradition. Kept out of the timeline so the national-flag
+    // lineage stays honest.
+    illustration: {
+      img: 'history/fr-bourbon-arms.svg',
+      afterFactKey: 'flagFacts.fr.fact.chambord',
+      captionKey: 'flagFacts.fr.bourbonArms',
+      altKey: 'flagFacts.fr.bourbonArmsAlt',
+    },
+    // Flags France really flew but that sit beside the national-flag lineage
+    // rather than in it (the Ireland "other flags" pattern): the two WWII
+    // flags, and the pre-2020 lighter blue shown next to today's navy.
+    galleries: [
+      {
+        afterFactKey: 'flagFacts.fr.fact.wwii',
+        items: [
+          { img: 'history/fr-freefrance.svg', labelKey: 'flagFacts.fr.gallery.freefrance' },
+          { img: 'history/fr-vichy.svg', labelKey: 'flagFacts.fr.gallery.vichy' },
+        ],
+      },
+      {
+        afterFactKey: 'flagFacts.fr.fact.shade',
+        items: [
+          { img: 'history/fr-lighter.svg', labelKey: 'flagFacts.fr.gallery.lighter' },
+          { img: 'svg/fr.svg', labelKey: 'flagFacts.fr.gallery.navy' },
+        ],
+      },
     ],
   },
   af: {
