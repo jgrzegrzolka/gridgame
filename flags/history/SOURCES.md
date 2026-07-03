@@ -43,7 +43,7 @@ this file the single source of truth for both current and historical assets.
 | `gb-wls-stdavid.svg` | Flag of Saint David.svg | Public domain | Cross of St David, gold cross on black |
 | `ie-royal.svg` | Royal Standard of Ireland (1542–1801).svg | CC BY-SA 3.0 (TRAJAN 117) | Royal Standard of the Kingdom of Ireland, gold harp on royal blue (under the English/British crown) |
 | `ie-patrick.svg` | Saint Patrick's Saltire.svg | Public domain | Saltire of St Patrick, red diagonal cross on white (Ireland's element of the Union Jack) |
-| `ie-harp.svg` | Green Harp Flag of Ireland.svg | CC0 | Green harp flag of Ireland, gold harp on green (the 1642 Confederate / nationalist banner) |
+| `ie-harp.svg` | Green harp flag of Ireland 17th century.svg | CC BY-SA 3.0 (R-41) | Green harp flag of Ireland, winged Brian Boru harp on green (the 1642 Confederate / nationalist banner) |
 | `ie-erin.svg` | Erin Go Bragh Flag.svg | CC BY-SA 3.0 (Oren neu dag) | Erin go Bragh flag, gold harp and motto on green (San Patricio Battalion, 1847) |
 | `pl-eagle.svg` | Herb Polski.svg | Public domain | The White Eagle, Poland's coat of arms, a white crowned eagle on a red shield (source of the flag's colours) |
 | `pl-commonwealth.svg` | Flaga Rzeczypospolitej Obojga Narodow ogolna.svg | Public domain | Polish-Lithuanian Commonwealth banner, red-and-white swallow-tail with the joint arms of both nations |
@@ -75,9 +75,9 @@ this file the single source of truth for both current and historical assets.
 - `ie-erin.svg` is *"Erin Go Bragh Flag"* by Wikimedia Commons user **Oren neu
   dag**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under the same
   licence.
-
-`ie-harp.svg` is released under **CC0** (public-domain dedication), no
-attribution required, listed for provenance only.
+- `ie-harp.svg` is *"Green harp flag of Ireland 17th century"* by Wikimedia
+  Commons user **R-41**, licensed **CC BY-SA 3.0**; used unmodified and re-shared
+  under the same licence.
 
 When adding a new country's history, drop its historical SVGs here following the
 same `<code>-<era>.svg` naming and record the provenance + licence above.
