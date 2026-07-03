@@ -218,7 +218,7 @@ export const FLAG_FACTS = {
     introKey: 'flagFacts.ie.intro',
     timeline: [
       { year: '1542–1801', img: 'history/ie-royal.svg', captionKey: 'flagFacts.ie.royal' },
-      { year: '1642', img: 'history/ie-harp.svg', captionKey: 'flagFacts.ie.harp' },
+      { year: '1642', img: 'history/ie-harp-1642.svg', captionKey: 'flagFacts.ie.harp' },
       { year: 'St Patrick', img: 'history/ie-patrick.svg', captionKey: 'flagFacts.ie.patrick' },
       { year: '1847', img: 'history/ie-erin.svg', captionKey: 'flagFacts.ie.erin' },
       { year: '1848', img: 'svg/ie.svg', captionKey: 'flagFacts.ie.current' },
