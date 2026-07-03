@@ -89,6 +89,11 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
       if (facts.compare && facts.compare.afterFactKey === key) {
         li.appendChild(buildCompareRow(doc, { compare: facts.compare, t, base }));
       }
+      // Optional single illustration (e.g. a rejected proposal): one captioned
+      // image tucked under the bullet named by `illustration.afterFactKey`.
+      if (facts.illustration && facts.illustration.afterFactKey === key) {
+        li.appendChild(buildIllustration(doc, { illustration: facts.illustration, t, base }));
+      }
       list.appendChild(li);
     }
     if (list.children.length > 0) {
@@ -230,6 +235,41 @@ function buildCompareRow(doc, { compare, t, base }) {
   row.appendChild(compareFlag(doc, { base, img: compare.img, alt: t(compare.correctKey, ''), inverted: false }));
   row.appendChild(compareFlag(doc, { base, img: compare.img, alt: t(compare.invertedKey, ''), inverted: true }));
   return row;
+}
+
+/**
+ * A single captioned illustration under a fact bullet: one image plus a
+ * visible caption (unlike the compare row, which has none). For a flag a fact
+ * references that never belonged to the timeline — a rejected proposal, say.
+ * The image is tap-to-enlarge like every other story flag (the caller wires
+ * the whole subtree).
+ *
+ * @param {Document} doc
+ * @param {{
+ *   illustration: import('./flagFacts.js').FlagFactIllustration,
+ *   t: (key: string, fallback: string) => string,
+ *   base: string,
+ * }} args
+ */
+function buildIllustration(doc, { illustration, t, base }) {
+  const fig = doc.createElement('figure');
+  fig.className = 'flag-facts-illustration';
+
+  const image = /** @type {HTMLImageElement} */ (doc.createElement('img'));
+  image.className = 'flag-facts-illustration-img';
+  image.src = `${base}${illustration.img}`;
+  image.alt = t(illustration.altKey ?? illustration.captionKey, '');
+  image.loading = 'lazy';
+  fig.appendChild(image);
+
+  const captionText = t(illustration.captionKey, '').trim();
+  if (captionText) {
+    const figcaption = doc.createElement('figcaption');
+    figcaption.className = 'flag-facts-illustration-caption';
+    figcaption.textContent = captionText;
+    fig.appendChild(figcaption);
+  }
+  return fig;
 }
 
 /**

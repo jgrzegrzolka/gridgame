@@ -646,7 +646,9 @@
       "compare": {
         "correct": "Union Jack, right way up",
         "inverted": "Union Jack, upside down (distress signal)"
-      }
+      },
+      "walesProposal": "One proposed version added the Welsh dragon, but it was never adopted.",
+      "walesProposalAlt": "A Union Jack with a red Welsh dragon in the centre."
     },
     "gb-eng": {
       "intro": "England's flag is the cross of St George: a plain red cross on white. St George, a Roman soldier martyred in the eastern Mediterranean around 303 AD, who never set foot in England, became the country's patron in the Middle Ages, and his emblem was carried by English soldiers from the age of the Crusades.\n\nThe same red cross sits at the centre of the Union Jack, England's contribution to the flag of the United Kingdom.",
