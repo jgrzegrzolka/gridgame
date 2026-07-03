@@ -209,6 +209,48 @@ dialog#zoom .flag-facts-caption {
   color: var(--primary-color);
   text-align: left;
 }
+/* Grouped step: several concurrent flags sharing one date (emblem variants of
+   one flag, or the rival flags of one chaotic year). One date pill, a bracket
+   spanning the group on the axis, and each flag with its own caption stacked —
+   so it reads as one overlapping period, not a false run of separate changes. */
+.flag-facts-step-group .flag-facts-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.flag-facts-group-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+/* Grouped flags sit a touch smaller than a solo step's 80px, so a stack of them
+   still reads as one node. Scoped like the solo-step rule to beat the base
+   `dialog#zoom img { width: 100% }`; placed after it so the height override wins
+   on equal specificity. */
+dialog#zoom .flag-facts-step-group .flag-facts-group-img {
+  height: 56px;
+  width: auto;
+  max-width: 45%;
+  flex: none;
+}
+.flag-facts-group-item .flag-facts-caption {
+  flex: 1;
+}
+/* The bracket replaces the single dot on the axis: a secondary "[" hugging the
+   dashed line, turned in top and bottom, spanning the whole group so it reads
+   as one period. Sits on the axis (left: 96px) like the dot; its solid stroke
+   covers the dashed line across the group's span. */
+.flag-facts-bracket {
+  position: absolute;
+  left: 96px;
+  top: 6px;
+  bottom: 6px;
+  width: 9px;
+  transform: translateX(-50%);
+  border: 2px solid var(--secondary-color);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+}
 /* Equation step (e.g. 1606 = England + Scotland): the body stacks the caption
  * above the "part + part = result" row. The date pill + dot node are unchanged,
  * so it still reads as one node on the same axis. */

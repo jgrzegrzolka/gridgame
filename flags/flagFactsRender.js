@@ -57,8 +57,12 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
   if (Array.isArray(facts.timeline) && facts.timeline.length > 0) {
     const list = doc.createElement('ol');
     list.className = 'flag-facts-timeline';
-    for (const step of facts.timeline) {
-      list.appendChild(buildStep(doc, { step, t, base }));
+    for (const group of groupTimeline(facts.timeline)) {
+      list.appendChild(
+        group.length === 1
+          ? buildStep(doc, { step: group[0], t, base })
+          : buildGroupedStep(doc, { steps: group, t, base }),
+      );
     }
     root.appendChild(list);
   }
@@ -148,6 +152,90 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
  * from the credit line under each story.
  */
 const SOURCES_URL = 'https://github.com/jgrzegrzolka/gridgame/blob/main/flags/history/SOURCES.md';
+
+/**
+ * Bucket the flat timeline into groups of consecutive steps that share an
+ * identical `year` label. Such steps were concurrent, not sequential: variants
+ * of one flag flown side by side (the 1928-1929 emblem variants), or the rival
+ * flags of one chaotic year (1929, 1992). Rendering them as separate dated
+ * nodes reads as a false run of changes, so a group of 2+ is drawn as one
+ * bracketed node instead (see buildGroupedStep).
+ *
+ * Equation steps (`parts`) never group — they own a bespoke layout — so one
+ * always lands in a group of its own and breaks any surrounding run.
+ *
+ * @param {import('./flagFacts.js').FlagFactStep[]} timeline
+ * @returns {import('./flagFacts.js').FlagFactStep[][]}
+ */
+function groupTimeline(timeline) {
+  /** @type {import('./flagFacts.js').FlagFactStep[][]} */
+  const groups = [];
+  for (const step of timeline) {
+    const groupable = !(Array.isArray(step.parts) && step.parts.length > 0);
+    const last = groups[groups.length - 1];
+    const lastGroupable = last && !(Array.isArray(last[0].parts) && last[0].parts.length > 0);
+    if (last && groupable && lastGroupable && last[0].year === step.year) {
+      last.push(step);
+    } else {
+      groups.push([step]);
+    }
+  }
+  return groups;
+}
+
+/**
+ * A grouped timeline `<li>`: several concurrent flags under one date. The date
+ * pill sits once to the left; a bracket (not a dot) spans the group on the
+ * axis, marking it as a single period; and each flag keeps its own caption,
+ * stacked. This is the "these overlapped in time" treatment — see groupTimeline.
+ *
+ * @param {Document} doc
+ * @param {{
+ *   steps: import('./flagFacts.js').FlagFactStep[],
+ *   t: (key: string, fallback: string) => string,
+ *   base: string,
+ * }} args
+ */
+function buildGroupedStep(doc, { steps, t, base }) {
+  const li = doc.createElement('li');
+  li.className = 'flag-facts-step flag-facts-step-group';
+
+  const year = doc.createElement('span');
+  year.className = 'flag-facts-year';
+  year.textContent = steps[0].year;
+  li.appendChild(year);
+
+  // A bracket replaces the single dot: it spans the whole group on the axis, so
+  // the flags read as one period rather than N separate nodes.
+  const bracket = doc.createElement('span');
+  bracket.className = 'flag-facts-bracket';
+  li.appendChild(bracket);
+
+  const body = doc.createElement('div');
+  body.className = 'flag-facts-body flag-facts-group-body';
+  for (const step of steps) {
+    const caption = t(step.captionKey, '');
+
+    const item = doc.createElement('div');
+    item.className = 'flag-facts-group-item';
+
+    const img = /** @type {HTMLImageElement} */ (doc.createElement('img'));
+    img.className = 'flag-facts-img flag-facts-group-img';
+    img.src = `${base}${step.img}`;
+    img.alt = caption;
+    img.loading = 'lazy';
+    item.appendChild(img);
+
+    const cap = doc.createElement('p');
+    cap.className = 'flag-facts-caption';
+    cap.textContent = caption;
+    item.appendChild(cap);
+
+    body.appendChild(item);
+  }
+  li.appendChild(body);
+  return li;
+}
 
 /**
  * One timeline `<li>`. The date sits in a pill to the left of the dashed
