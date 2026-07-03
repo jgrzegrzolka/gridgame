@@ -441,7 +441,7 @@ export const FLAG_FACTS = {
       { year: '1992', img: 'history/af-1992a.svg', captionKey: 'flagFacts.af.temp1992' },
       { year: '1992', img: 'history/af-1992b.svg', captionKey: 'flagFacts.af.temp1992b' },
       { year: '1992–2001', img: 'history/af-islamicstate.svg', captionKey: 'flagFacts.af.islamicstate' },
-      { year: '1996–1997', img: 'history/af-white.svg', captionKey: 'flagFacts.af.talibanwhite' },
+      { year: '1996–1997', img: 'history/af-white-2x1.svg', captionKey: 'flagFacts.af.talibanwhite' },
       { year: '1997–2001', img: 'history/af-shahada.svg', captionKey: 'flagFacts.af.talibanshahada' },
       { year: '1997–2001', img: 'history/af-shahada-green.svg', captionKey: 'flagFacts.af.talibangreen' },
       { year: '2001–2002', img: 'history/af-2001.svg', captionKey: 'flagFacts.af.post2001' },
