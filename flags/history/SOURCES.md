@@ -73,7 +73,24 @@ this file the single source of truth for both current and historical assets.
 | `af-red.svg` | Flag of Afghanistan (1978–1980).svg | Public domain | Khalq communist flag, near-solid red, Soviet-style, gold "Khalq" emblem in the canton |
 | `af-dra.svg` | Flag of Afghanistan (1980–1987).svg | Public domain | Democratic Republic of Afghanistan, horizontal black-red-green with a socialist state emblem (rising sun over a book) |
 | `af-islamicstate.svg` | Flag of Afghanistan (1992–2001).svg | Public domain | Islamic State of Afghanistan (mujahideen), green-white-black tricolour with a central emblem |
-| `af-republic.svg` | Flag of the Islamic Republic of Afghanistan.svg | Public domain | Islamic Republic of Afghanistan (2004–2021), black-red-green tricolour with the white mosque emblem |
+| `af-republic.svg` | Flag of the Islamic Republic of Afghanistan.svg | Public domain | Islamic Republic of Afghanistan (2004–2013), black-red-green tricolour with the white mosque emblem |
+| `af-black.svg` | Black flag.svg | Public domain (PavelD) | Plain black banner of the Hotaki dynasty (early 18th c.) |
+| `af-durrani.svg` | Flag of Herat until 1842.svg | Public domain (Orange Tuesday) | Durrani empire flag (1747–1842), green field with a white stripe |
+| `af-1880.svg` | Flag of Afghanistan (1880–1901).svg | Public domain (PaD, Indolences) | Plain black flag of the Emirate under Abdur Rahman Khan |
+| `af-octagram.svg` | Flag of Afghanistan (1919–1921).svg | Public domain (F l a n k e r) | Black flag, emblem inside a white eight-pointed star (Amanullah Khan) |
+| `af-1921.svg` | Flag of Afghanistan (1921–1926).svg | Public domain (Orange Tuesday) | Black flag with redrawn emblem, changed proportions |
+| `af-1926.svg` | Flag of Afghanistan (1926–1928).svg | Public domain (Orange Tuesday) | Black flag, octagram removed and emblem enlarged |
+| `af-1929.svg` | Flag of Afghanistan (1929).svg | Public domain (ThrashedParanoid, Orange Tuesday) | Habibullah Kalakani's striped red-black-white flag (1929) |
+| `af-1929-1930.svg` | Flag of Afghanistan 1929 to 1930.svg | Public domain (Orange Tuesday) | Nadir Shah's restored black-red-green tricolour with royal emblem |
+| `af-1973.svg` | Flag of Afghanistan (1973–1974).svg | Public domain (SeNeKa) | First republic tricolour, date removed from under the mosque |
+| `af-1978.svg` | Flag of Afghanistan (1978).svg | Public domain (Zirland) | Bare black-red-green tricolour, no emblem (early communist) |
+| `af-1987.svg` | Flag of Afghanistan (1987–1992).svg | Public domain (Orange Tuesday) | Najibullah's tricolour, red star and Koran removed from the emblem |
+| `af-1992a.svg` | Flag of Afghanistan (1992).svg | Public domain (Orange Tuesday) | Temporary 1992 green-white-black flag with Shahada and takbir |
+| `af-white.svg` | Flag of Taliban (original).svg | Public domain (PavelD) | Plain white Taliban flag (1996–1997), no writing |
+| `af-shahada.svg` | Flag of Taliban.svg | Public domain | White Taliban flag with the Shahada in black (1997–2001) |
+| `af-2001.svg` | Flag of Afghanistan (2001–2002).svg | CC BY-SA 3.0 (Orange Tuesday et al.) | Post-Taliban interim flag, restored 1990s mujahideen design |
+| `af-2002.svg` | Flag of Afghanistan (2002–2004).svg | Public domain | Black-red-green tricolour, emblem referencing the 1930–1973 kingdom |
+| `af-2013.svg` | Flag of Afghanistan (2013–2021).svg | Public domain | Islamic Republic tricolour, deepened red and enlarged emblem (2013–2021) |
 
 **Attribution (CC BY-SA):**
 - `ch-flamme.svg` is a derivative of *"Militärfahne der Stadt und Republik Bern"*
@@ -99,6 +116,9 @@ this file the single source of truth for both current and historical assets.
 - `fr-bourbon-arms.svg` is *"Royal flag of France during the Bourbon Restoration"*
   by Wikimedia Commons user **Sodacan**, licensed **CC BY-SA 4.0**; used
   unmodified and re-shared under the same licence.
+- `af-2001.svg` is *"Flag of Afghanistan (2001–2002)"* by Wikimedia Commons users
+  **Orange Tuesday, Saul ip, MS05L**, licensed **CC BY-SA 3.0**; used unmodified
+  and re-shared under the same licence.
 
 When adding a new country's history, drop its historical SVGs here following the
 same `<code>-<era>.svg` naming and record the provenance + licence above.
