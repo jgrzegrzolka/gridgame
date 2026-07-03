@@ -475,7 +475,10 @@ export const FLAG_FACTS = {
       { year: '2004–2013', img: 'history/af-republic.svg', captionKey: 'flagFacts.af.republic', overlap: 'af-republic-era' },
       { year: '2004–2021', img: 'history/af-republic-colored.svg', captionKey: 'flagFacts.af.coloured', overlap: 'af-republic-era' },
       { year: '2013–2021', img: 'history/af-2013.svg', captionKey: 'flagFacts.af.deepred', overlap: 'af-republic-era' },
-      { year: '2021', img: 'svg/af.svg', captionKey: 'flagFacts.af.current' },
+      // Both are the current Islamic Emirate flag (2021-present): the plain white
+      // Shahada and a concurrent Pashto-script variant. Sharing one date label
+      // collapses them under a single dot, stacked, like any same-date group.
+      { year: 'since 2021', img: 'svg/af.svg', captionKey: 'flagFacts.af.current' },
       { year: 'since 2021', img: 'history/af-pashto.svg', captionKey: 'flagFacts.af.pashto' },
     ],
     factKeys: [
