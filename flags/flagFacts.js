@@ -431,6 +431,7 @@ export const FLAG_FACTS = {
       { year: '1928', img: 'history/af-1928-horizontal.svg', captionKey: 'flagFacts.af.horiz1928' },
       { year: '1928–1929', img: 'history/af-1928.svg', captionKey: 'flagFacts.af.tricolour' },
       { year: '1928–1929', img: 'history/af-1928-variant.svg', captionKey: 'flagFacts.af.variant1928' },
+      { year: '1928–1929', img: 'history/af-1928-gold.svg', captionKey: 'flagFacts.af.gold1928' },
       { year: '1929', img: 'history/af-1929-radial.svg', captionKey: 'flagFacts.af.radial1929' },
       { year: '1929', img: 'history/af-1929.svg', captionKey: 'flagFacts.af.kalakani' },
       { year: '1929–1931', img: 'history/af-1929-1930.svg', captionKey: 'flagFacts.af.nadir' },
@@ -448,6 +449,7 @@ export const FLAG_FACTS = {
       { year: '1996–1997', img: 'history/af-white-2x1.svg', captionKey: 'flagFacts.af.talibanwhite' },
       { year: '1997–2001', img: 'history/af-shahada.svg', captionKey: 'flagFacts.af.talibanshahada' },
       { year: '1997–2001', img: 'history/af-shahada-green.svg', captionKey: 'flagFacts.af.talibangreen' },
+      { year: '1997–2001', img: 'history/af-shahada-v2.svg', captionKey: 'flagFacts.af.shahadav2' },
       { year: '2001–2002', img: 'history/af-2001.svg', captionKey: 'flagFacts.af.post2001' },
       { year: '2002–2004', img: 'history/af-2002.svg', captionKey: 'flagFacts.af.ref2002' },
       { year: '2004–2013', img: 'history/af-republic.svg', captionKey: 'flagFacts.af.republic' },
@@ -463,18 +465,31 @@ export const FLAG_FACTS = {
       'flagFacts.af.fact.longlived',
       'flagFacts.af.fact.white',
       'flagFacts.af.fact.standards',
+      'flagFacts.af.fact.civilwar',
     ],
-    // The rulers' personal standards (king's / president's banners) aren't
-    // national flags, so they sit in a gallery under the "standards" fact
-    // rather than the chronological timeline (Jan's call: flags + variants in
-    // the timeline, ruler flags in "Did you know?").
+    // Two galleries of flags that aren't the national flag, so they sit under a
+    // "Did you know?" fact rather than the chronological timeline (Jan's call:
+    // national flags + variants in the timeline, everything else in a gallery):
+    //  - the rulers' personal standards (king's / president's banners), incl.
+    //    the reverse faces, which carry different imagery from the front;
+    //  - the rival and provincial banners of the 1929 civil war.
     galleries: [
       {
         afterFactKey: 'flagFacts.af.fact.standards',
         items: [
           { img: 'history/af-std-amanullah.svg', labelKey: 'flagFacts.af.gallery.amanullah' },
           { img: 'history/af-std-kings.svg', labelKey: 'flagFacts.af.gallery.kings' },
+          { img: 'history/af-std-kings-reverse.svg', labelKey: 'flagFacts.af.gallery.kingsReverse' },
+          { img: 'history/af-std-nadir-reverse.svg', labelKey: 'flagFacts.af.gallery.nadirReverse' },
           { img: 'history/af-std-president.svg', labelKey: 'flagFacts.af.gallery.president' },
+          { img: 'history/af-std-president-var.svg', labelKey: 'flagFacts.af.gallery.presidentVar' },
+        ],
+      },
+      {
+        afterFactKey: 'flagFacts.af.fact.civilwar',
+        items: [
+          { img: 'history/af-rebel-aliahmad.svg', labelKey: 'flagFacts.af.gallery.rebel' },
+          { img: 'history/af-herat-1930s.svg', labelKey: 'flagFacts.af.gallery.herat' },
         ],
       },
     ],

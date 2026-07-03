@@ -802,6 +802,7 @@
       "horiz1928": "Pierwsza flaga Amanullaha Chana z 1928 roku układała czerń, czerwień i zieleń w pasy poziome, zanim jeszcze w tym samym roku wzór obrócono do pionu.",
       "tricolour": "W 1928 roku król Amanullah Khan, świeżo po podróży po Europie, zamienił czarny sztandar królewski na czarno-czerwono-zieloną pionową trójkolorówkę, pierwszą z trójkolorówek, które będą wracać przez resztę stulecia.",
       "variant1928": "Wariant pionowej trójkolorówki niósł te same barwy z inaczej narysowanym godłem państwowym.",
+      "gold1928": "Kolejny wariant pionowej trójkolorówki oddawał godło państwowe w złocie.",
       "radial1929": "W zamęcie 1929 roku trójkolorówka powróciła z godłem meczetu wpisanym w białą gwiazdę.",
       "kalakani": "Tadżycki rebeliant, Habibullah Kalakani, zajął Kabul na dziewięć miesięcy w 1929 roku i powiewał pasiastą flagą czerwono-czarno-białą, której barwy nawiązywały do dawnych sztandarów.",
       "nadir": "Nadir Szah wypędził Kalakaniego i przywrócił trójkolorówkę czarno-czerwono-zieloną, teraz pod nowym królewskim godłem.",
@@ -819,6 +820,7 @@
       "talibanwhite": "Gdy talibowie po raz pierwszy zajęli Kabul w 1996 roku, ich flaga była zwyczajnie biała, w barwie ruchu, bez żadnego napisu.",
       "talibanshahada": "W 1997 roku talibowie dodali szahadę, wyznanie wiary, czarnymi literami na białym polu, wzór, który powróci w 2021 roku.",
       "talibangreen": "Wariant flagi talibów wypisywał tę samą szahadę na zielono zamiast na czarno.",
+      "shahadav2": "Druga wersja białej flagi talibów oddawała tę samą szahadę innym charakterem pisma.",
       "post2001": "Po wypędzeniu talibów rząd tymczasowy przez krótki czas powiewał przywróconą wersją flagi mudżahedinów z lat 90.",
       "ref2002": "Wkrótce pojawiła się nowa trójkolorówka czarno-czerwono-zielona, z godłem nawiązującym do królestwa z lat 1930–1973.",
       "republic": "W 2004 roku Islamska Republika ustaliła pionową trójkolorówkę czarno-czerwono-zieloną z białym godłem meczetu, flagę, którą świat wciąż kojarzy z Afganistanem.",
@@ -832,12 +834,18 @@
         "mosque": "Powracającym godłem jest meczet narysowany na wprost, z mihrabem (niszą wskazującą Mekkę) i minbarem (amboną), zwykle owinięty pszenicą, motyw obecny na afgańskich flagach od początku XX wieku.",
         "longlived": "Trójkolorówka Królestwa (1931–1973) była zdecydowanie najdłużej używaną flagą Afganistanu, ponad czterdzieści lat. Większość pozostałych przetrwała ledwie kilka.",
         "white": "Biała flaga z szahadą ma głębokie korzenie: biel przywołuje sztandary wczesnych kalifatów islamskich. Talibowie po raz pierwszy podnieśli ten wzór w latach 90., a przywrócili go w 2021 roku.",
-        "standards": "Poza flagą państwową władcy Afganistanu powiewali własnymi osobistymi sztandarami, odrębnymi chorągwiami króla lub prezydenta, zwykle czerwonymi lub czarnymi, z godłem państwa."
+        "standards": "Poza flagą państwową władcy Afganistanu powiewali własnymi osobistymi sztandarami, odrębnymi chorągwiami króla lub prezydenta, zwykle czerwonymi lub czarnymi, z godłem państwa. Niektóre były dwustronne, a rewers niósł inne przedstawienie niż awers.",
+        "civilwar": "Wojna domowa 1929 roku, która obaliła króla Amanullaha, zrodziła rywalizujące sztandary: pretendenci jak Ali Ahmad Khan i prowincje jak Herat powiewali własnymi flagami, gdy Kabul przechodził z rąk do rąk."
       },
       "gallery": {
         "amanullah": "Flaga królewska Amanullaha Chana (1926–1929)",
         "kings": "Sztandar królewski (1931–1973)",
-        "president": "Sztandar prezydenta (2004–2021)"
+        "kingsReverse": "Sztandar królewski, rewers",
+        "nadirReverse": "Sztandar Nadir Szaha, rewers",
+        "president": "Sztandar prezydenta (2004–2021)",
+        "presidentVar": "Sztandar prezydenta, wariant",
+        "rebel": "Rebelia Ali Ahmada Chana (1929)",
+        "herat": "Prowincja Herat (lata 30.)"
       }
     }
   },
