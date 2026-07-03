@@ -19,8 +19,8 @@ this file the single source of truth for both current and historical assets.
 | File | Source (Wikimedia Commons) | Licence | Era |
 | --- | --- | --- | --- |
 | `al-1914.svg` | Flag of Albania (1914–1920).svg | Public domain | Principality of Albania, black double-headed eagle beneath a white star, on red |
-| `al-1926.svg` | Flag of Albania 1926.svg | Public domain | Re-established Albanian state (1920–1926), compact upright black double-headed eagle on dark red |
-| `al-republic.svg` | Flag of the Albanian Republic (1925–1928).svg | Public domain | First Albanian Republic, large wide-winged black double-headed eagle |
+| `al-1920-1926.svg` | Flag of Albania (1920–1926).svg | Public domain | Re-established Albanian state (1920–1926), compact upright black double-headed eagle on dark red |
+| `al-1926-1928.svg` | Flag of Albania (1926–1928).svg | Public domain | First Albanian Republic (1926–1928), compact black double-headed eagle |
 | `al-kingdom.svg` | Flag of Albania (1934–1939).svg | Public domain | Kingdom of Albania (Zog I), eagle surmounted by the golden helmet of Skanderbeg |
 | `al-italian.svg` | Flag of Albania (1939–1943).svg | Public domain | Italian-occupied Albania, eagle framed by two fascist lictor's fasces |
 | `al-crowned.svg` | Flag of Albania (1939-1943; crowned).svg | Public domain | Italian-era Kingdom of Albania, royal state flag with the crowned arms over the eagle |
