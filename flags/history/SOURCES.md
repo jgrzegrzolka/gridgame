@@ -27,8 +27,11 @@ this file the single source of truth for both current and historical assets.
 | `al-1944.svg` | Flag of Albania 1944.svg | Public domain | Wartime communist-led Democratic Government (1944–1946), black double-headed eagle with a gold hammer and sickle in the canton |
 | `al-communist.svg` | Flag of Albania (1946–1992).svg | Public domain | People's Socialist Republic of Albania, black double-headed eagle with a gold-bordered red star above, on a darker red field |
 | `gr-ottoman.svg` | Roman (Orthodox Christian) Merchant Flag 1453-1793.svg | Public domain | Ottoman-rule Greek/Orthodox merchant flag, red with a blue stripe |
-| `gr-1769.svg` | Greek Independence 1821.svg | Public domain | Orlov Revolt (1769) banner, white field, sky-blue cross |
+| `gr-1821.svg` | Greek Independence 1821.svg | Public domain | 1821 War of Independence banner, white field with a sky-blue cross |
 | `gr-1822-land.svg` | Flag of Greece (1822-1978).svg | Public domain | 1822 land flag, white cross on blue |
+| `gr-crowned.svg` | State Flag of Greece (1863-1924 and 1935-1973).svg | Public domain | Royal state flag, white cross on blue with a golden crown at the centre |
+| `gr-warensign.svg` | Naval Ensign of Greece (1863-1924 and 1935-1970).svg | Public domain | Royal naval war ensign, nine stripes with a crowned cross in the canton |
+| `gr-junta.svg` | Flag of Greece (1970-1975).svg | Public domain | Military junta flag, the striped design in a dark navy blue |
 | `ch-arms.svg` | Swiss Federal CoA triangular.svg | Public domain | Confederate heraldic emblem, white cross on a red shield |
 | `ch-flamme.svg` | Militärfahne der Stadt und Republik Bern.svg | CC BY-SA 4.0 (Oliver65536) | 17th–18th c. Bernese cantonal war flag in the flammé style, red & black |
 | `ch-helvetic.svg` | Flag of the Helvetic Republic (French).svg | Public domain | 1798 French-imposed Helvetic Republic tricolour, green/red/yellow |

@@ -710,11 +710,14 @@
       }
     },
     "gr": {
-      "intro": "For centuries Greece was ruled by the Ottoman Empire, yet Greek merchant ships still sailed under their own colours. From that maritime tradition, and from the Orthodox cross at the heart of Greek identity, grew the flag Greece flies today.\n\nCuriously, the exact shade of blue has never been fixed by law, over the centuries it has drifted between pale sky-blue and deep navy.",
+      "intro": "For centuries Greece was ruled by the Ottoman Empire, yet Greek merchant ships still sailed under their own colours. From that maritime tradition, and from the Orthodox cross at the heart of Greek identity, grew the flag Greece flies today. For 150 years two flags flew side by side, a white cross on land and blue-and-white stripes at sea, until the stripes won out in 1978.\n\nCuriously, the exact shade of blue has never been fixed by law, over the centuries it has drifted between pale sky-blue and deep navy.",
       "ottoman": "Under Ottoman rule, Greek Orthodox merchant ships flew a red flag crossed by a blue stripe.",
-      "orlov": "A white flag with a sky-blue cross, raised in the Orlov Revolt of 1769, a precursor of the 1821 uprising and its most popular banner.",
+      "revolution": "The sky-blue cross on white, the banner most flown in the 1821 War of Independence.",
       "land": "The land flag adopted in 1822: a white cross on blue. Governor Kapodistrias fixed its darker blue in 1828; it flew over the Greek state until 1978.",
-      "current": "Nine blue-and-white stripes with a cross in the canton. Designed as the naval ensign in 1822, it became Greece's sole national flag in 1978.",
+      "crowned": "When Greece became a kingdom, a golden crown was set at the centre of the cross. It came and went with the throne, gone in the republics, back in 1935, and removed for good when the monarchy fell in 1973.",
+      "warensign": "At sea the striped flag carried the same crown in its canton, the kingdom's naval war ensign for a century.",
+      "junta": "The colonels' military dictatorship darkened the blue to a deep navy, its version of the flag flown from 1970 to 1975.",
+      "current": "Nine blue-and-white stripes with a cross in the canton. Long the flag at sea, in 1978 it replaced the cross on land too, becoming Greece's sole national flag.",
       "fact": {
         "stripes": "The nine stripes carry the revolutionaries' battle cry: the five blue stripes are the syllables of «Ελευθερία» (Freedom), the four white ones «ή Θάνατος» (or Death).",
         "cross": "The white cross stands for the Greek Orthodox Church, the institution that kept the Greek language and identity alive through nearly four centuries of Ottoman rule.",
