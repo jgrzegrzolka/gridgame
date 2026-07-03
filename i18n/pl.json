@@ -685,13 +685,17 @@
     },
     "ie": {
       "intro": "Irlandzka trójbarwna flaga w zieleni, bieli i pomarańczu to flaga o pojednaniu. Zieleń oznacza tradycję gaelicką i katolicką, pomarańcz, protestancką tradycję Wilhelma Orańskiego, a biel między nimi, trwały pokój pomiędzy nimi.\n\nPo raz pierwszy podniósł ją w 1848 roku nacjonalista Thomas Francis Meagher, wzorując się na francuskiej trójbarwnej fladze, którą widział w rewolucyjnym Paryżu.",
+      "royal": "Pod koroną angielską, a potem brytyjską, sztandarem Irlandii była złota harfa na królewsko-niebieskim polu, herb Królestwa Irlandii od czasów Henryka VIII w latach 40. XVI wieku aż do unii z 1801 roku. Ten odcień błękitu wciąż nazywa się błękitem świętego Patryka.",
+      "harp": "Zielona flaga z harfą, po raz pierwszy podniesiona przez Owena Roe O'Neilla i konfederacką Irlandię w 1642 roku. Ta sama złota harfa, przeniesiona z królewskiego błękitu na zieleń, stała się sztandarem irlandzkiego nacjonalizmu na kolejne dwa stulecia.",
       "patrick": "Czerwony ukośny krzyż św. Patryka, irlandzki element Union Jacka. Jego historia jest sporna: niektórzy twierdzą, że wymyślono go tylko po to, by dać Irlandii miejsce na brytyjskiej fladze.",
-      "harp": "Przez wieki sztandarem Irlandii była złota harfa na zieleni. Harfa pozostaje oficjalnym godłem kraju, do dziś na monetach i paszportach.",
+      "erin": "„Erin go Bragh” (Irlandia na wieki): zielona flaga z harfą i dodanym mottem. Niósł ją batalion świętego Patryka podczas wojny meksykańsko-amerykańskiej w 1847 roku, a w 1906 roku lekkoatleta Peter O'Connor wspiął się na maszt, by podnieść ją na igrzyskach olimpijskich.",
       "current": "Trójbarwna flaga zielono-biało-pomarańczowa, wznoszona od 1848 roku i ustanowiona flagą narodową państwa irlandzkiego w 1937 roku.",
       "fact": {
         "colours": "Trzy pasy to celowy uścisk dłoni: zieleń dla tradycji katolickiej/narodowej, pomarańcz dla protestanckiej/unionistycznej, a biel dla pokoju między nimi.",
         "meagher": "Thomas Francis Meagher odsłonił ją w 1848 roku, zainspirowany francuską trójbarwną flagą; jedwab był podobno darem „kobiet Francji” dla irlandzkiej sprawy.",
         "harp": "Irlandia to jedyny kraj, którego godłem jest instrument muzyczny. Harfa widnieje na monetach, paszportach i logo Guinnessa (zwrócona w drugą stronę).",
+        "crowned": "Pod monarchią harfę zwykle rysowano z koroną na szczycie, na monetach, pieczęciach i odznakach policji. Gdy Irlandia uzyskała niepodległość, celowo usunęła koronę i godło pozostaje bez niej do dziś. Ta sama złota harfa na królewskim błękicie powiewa dziś jako osobista flaga prezydenta Irlandii.",
+        "otherflags": "Trójbarwna flaga to nie jedyna flaga Irlandii. Starry Plough, pług nakreślony gwiazdami, to sztandar ruchu robotniczego; pomarańczowy Sunburst należy do republikańskiej Fianny; a flaga Czterech Prowincji łączy herby Ulsteru, Munsteru, Leinsteru i Connachtu.",
         "order": "Kolejność ma znaczenie: zieleń zawsze przy drzewcu. Wywieszona odwrotnie liczy się jako inna, błędna flaga, a dla niektórych jako wyraźna zniewaga."
       }
     },

@@ -685,13 +685,17 @@
     },
     "ie": {
       "intro": "Ireland's tricolour of green, white and orange is a flag about reconciliation. Green stands for the Gaelic and Catholic tradition, orange for the Protestant tradition of William of Orange, and the white between them for a lasting peace between the two.\n\nIt was first flown in 1848 by the nationalist Thomas Francis Meagher, modelled on the French Tricolore he had seen in revolutionary Paris.",
+      "royal": "Under the English then British crown, Ireland's banner was a gold harp on a royal-blue field, the arms of the Kingdom of Ireland from Henry VIII in the 1540s until the 1801 union. The blue is still called Saint Patrick's blue.",
+      "harp": "The green harp flag, first flown by Owen Roe O'Neill and Confederate Ireland in 1642. The same gold harp, moved from royal blue to green, became the banner of Irish nationalism for the next two centuries.",
       "patrick": "The red saltire of St Patrick, Ireland's element of the Union Jack. Its history is disputed: some argue it was devised simply to give Ireland a place on the British flag.",
-      "harp": "For centuries Ireland's banner was the gold harp on green. The harp is still the country's official emblem, on its coins and passports to this day.",
+      "erin": "\"Erin go Bragh\" (Ireland Forever): the green harp flag with its motto added. It was carried by the Saint Patrick's Battalion in the Mexican-American War of 1847, and in 1906 the athlete Peter O'Connor climbed a flagpole to fly it at the Olympics.",
       "current": "The green-white-orange tricolour, flown from 1848 and made the national flag of the Irish state in 1937.",
       "fact": {
         "colours": "The three bands are a deliberate handshake: green for the Catholic/nationalist tradition, orange for the Protestant/unionist one, and white for peace between them.",
         "meagher": "Thomas Francis Meagher unveiled it in 1848, inspired by the French Tricolore; the silk was reportedly a gift from \"the women of France\" to the Irish cause.",
         "harp": "Ireland is the only country whose emblem is a musical instrument. The harp is on its coins, its passports, and the Guinness logo (which faces the other way).",
+        "crowned": "Under the monarchy the harp was usually drawn with a crown on top, on coins, seals and police badges. When Ireland became independent it deliberately dropped the crown, and the emblem has stayed uncrowned ever since. The same gold harp on royal blue flies today as the personal flag of the President of Ireland.",
+        "otherflags": "The tricolour is not Ireland's only flag. The Starry Plough, a plough traced in stars, is the banner of the labour movement; the orange Sunburst belongs to the republican Fianna; and the Four Provinces flag quarters the arms of Ulster, Munster, Leinster and Connacht.",
         "order": "The order matters: green always goes next to the pole. Flown the other way round it counts as a different, incorrect flag, and, to some, a pointed insult."
       }
     },
