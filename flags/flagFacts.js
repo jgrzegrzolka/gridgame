@@ -263,6 +263,7 @@ export const FLAG_FACTS = {
       'flagFacts.gr.fact.cross',
       'flagFacts.gr.fact.colours',
       'flagFacts.gr.fact.ratio',
+      'flagFacts.gr.fact.guinness',
     ],
   },
   pl: {
