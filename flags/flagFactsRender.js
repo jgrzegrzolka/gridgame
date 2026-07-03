@@ -140,10 +140,11 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
 const SOURCES_URL = 'https://github.com/jgrzegrzolka/gridgame/blob/main/flags/history/SOURCES.md';
 
 /**
- * One timeline `<li>`. Normally a single historical flag with year + caption.
- * When `step.parts` is set, the visual is an equation instead — the part
- * flags joined by `+`, then `=`, then the result flag — so a composite flag
- * reads as ingredients combined, not as the flag changing over time.
+ * One timeline `<li>`. The date sits in a pill to the left of the dashed
+ * axis, a dot marks this step's node on the axis, and the body (to the right)
+ * is either the flag + caption or, when `step.parts` is set, an equation: the
+ * part flags joined by `+`, then `=`, then the result flag, so a composite
+ * flag reads as ingredients combined rather than a flag changing over time.
  *
  * @param {Document} doc
  * @param {{
@@ -154,63 +155,58 @@ const SOURCES_URL = 'https://github.com/jgrzegrzolka/gridgame/blob/main/flags/hi
  */
 function buildStep(doc, { step, t, base }) {
   const caption = t(step.captionKey, '');
+  const parts = Array.isArray(step.parts) && step.parts.length > 0 ? step.parts : null;
 
   const li = doc.createElement('li');
+  li.className = parts ? 'flag-facts-step flag-facts-step-eq' : 'flag-facts-step';
 
-  // Equation step (e.g. 1606 = England + Scotland): the year + description
-  // come first, then the equation row below — read what happened, then see
-  // it. The ingredient flags carry labels; the result flag doesn't (the
-  // year + caption above already name it), only alt text for a11y.
-  if (Array.isArray(step.parts) && step.parts.length > 0) {
-    li.className = 'flag-facts-step flag-facts-step-eq';
+  // Date pill (left of the axis) + the dot node (on the axis). Same for every
+  // step shape, so the whole timeline reads as one continuous dashed line.
+  const year = doc.createElement('span');
+  year.className = 'flag-facts-year';
+  year.textContent = step.year;
+  // Decorative dot on the axis; an empty span carries no accessible content.
+  const node = doc.createElement('span');
+  node.className = 'flag-facts-node';
+  li.appendChild(year);
+  li.appendChild(node);
 
-    const meta = doc.createElement('div');
-    meta.className = 'flag-facts-meta';
-    const eqYear = doc.createElement('span');
-    eqYear.className = 'flag-facts-year';
-    eqYear.textContent = step.year;
+  const body = doc.createElement('div');
+  body.className = 'flag-facts-body';
+
+  if (parts) {
+    // Caption first, then the "part + part = result" row beneath it. The
+    // ingredient flags carry labels; the result flag doesn't (the caption
+    // already names it), only alt text for a11y.
     const eqCap = doc.createElement('p');
     eqCap.className = 'flag-facts-caption';
     eqCap.textContent = caption;
-    meta.appendChild(eqYear);
-    meta.appendChild(eqCap);
-    li.appendChild(meta);
+    body.appendChild(eqCap);
 
     const eq = doc.createElement('div');
     eq.className = 'flag-facts-equation';
-    step.parts.forEach((partImg, i) => {
+    parts.forEach((partImg, i) => {
       if (i > 0) eq.appendChild(operator(doc, '+'));
       eq.appendChild(equationFlag(doc, base, partImg, t(step.partLabelKeys?.[i] ?? '', ''), false));
     });
     eq.appendChild(operator(doc, '='));
     eq.appendChild(equationFlag(doc, base, step.img, '', true, caption));
-    li.appendChild(eq);
-    return li;
+    body.appendChild(eq);
+  } else {
+    const img = /** @type {HTMLImageElement} */ (doc.createElement('img'));
+    img.className = 'flag-facts-img';
+    img.src = `${base}${step.img}`;
+    img.alt = caption;
+    img.loading = 'lazy';
+    body.appendChild(img);
+
+    const cap = doc.createElement('p');
+    cap.className = 'flag-facts-caption';
+    cap.textContent = caption;
+    body.appendChild(cap);
   }
 
-  li.className = 'flag-facts-step';
-
-  const img = /** @type {HTMLImageElement} */ (doc.createElement('img'));
-  img.className = 'flag-facts-img';
-  img.src = `${base}${step.img}`;
-  img.alt = caption;
-  img.loading = 'lazy';
-
-  const meta = doc.createElement('div');
-  meta.className = 'flag-facts-meta';
-
-  const year = doc.createElement('span');
-  year.className = 'flag-facts-year';
-  year.textContent = step.year;
-
-  const cap = doc.createElement('p');
-  cap.className = 'flag-facts-caption';
-  cap.textContent = caption;
-
-  meta.appendChild(year);
-  meta.appendChild(cap);
-  li.appendChild(img);
-  li.appendChild(meta);
+  li.appendChild(body);
   return li;
 }
 

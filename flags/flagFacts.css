@@ -121,54 +121,90 @@ dialog#zoom .flag-facts-intro {
 }
 .flag-facts-timeline {
   list-style: none;
-  /* Extra top margin so the first flag (1453–1793) sits well clear of the
-   * intro paragraphs above it. */
+  /* Extra top margin so the first step sits clear of the intro above it. */
   margin: 30px 0 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  /* Positioning context for the dashed axis + each step's absolute pill/node. */
+  position: relative;
+}
+/* The dashed vertical axis the whole timeline hangs off: a thin (1px) dashed
+ * line in primary, sitting just right of the date-pill column. Insets top and
+ * bottom so it starts at the first node and ends at the last. (The dot nodes
+ * stay secondary-pink for contrast against this darker line.) */
+.flag-facts-timeline::before {
+  content: "";
+  position: absolute;
+  left: 96px;
+  top: 10px;
+  bottom: 10px;
+  border-left: 1px dashed var(--primary-color);
 }
 .flag-facts-step {
-  display: grid;
-  grid-template-columns: 84px 1fr;
-  gap: 14px;
-  align-items: start;
+  position: relative;
+  /* Clear the date-pill column + axis; the body starts here. */
+  padding-left: 112px;
+  min-height: 44px;
 }
-/* Breathing room between flags via spacing alone — no divider lines. */
 .flag-facts-step + .flag-facts-step {
-  margin-top: 30px;
+  margin-top: 26px;
 }
-.flag-facts-step .flag-facts-img {
+/* Date pill: a capsule left of the axis, sized to hold a year, a range
+ * (1542–1801) or a phrase (St Patrick). Fixed width so the pills form a tidy
+ * column with their right edges level against the axis. */
+.flag-facts-year {
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 84px;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 3px 6px;
+  border: 1px solid var(--secondary-color);
+  border-radius: 999px;
+  background: var(--surface-color);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--primary-color);
+  font-variant-numeric: tabular-nums;
+}
+/* The dot marking this step's node on the axis. Its ring is the dialog's own
+ * surface colour so the dashed line appears to pass behind it. */
+.flag-facts-node {
+  position: absolute;
+  left: 96px;
+  top: 7px;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--secondary-color);
+  box-shadow: 0 0 0 3px var(--surface-color);
+}
+/* Scoped under dialog#zoom to beat the base `dialog#zoom img { width: 100% }`
+ * rule (same reason as the equation flags below). */
+dialog#zoom .flag-facts-step .flag-facts-img {
   width: 84px;
   height: auto;
   border: 1px solid var(--muted-soft-color);
   box-sizing: border-box;
-}
-.flag-facts-meta {
-  min-width: 0;
-}
-.flag-facts-year {
   display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted-color);
-  font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
 }
 dialog#zoom .flag-facts-caption {
-  margin: 2px 0 0;
+  margin: 0;
   font-size: 13px;
   line-height: 1.45;
   color: var(--primary-color);
   text-align: left;
 }
-/* Equation step (e.g. 1606 = England + Scotland): the two-column grid gives
- * way to a full-width column — the year + description first, the flags-and-
- * operators row below — so it reads as "these combine", not "flag → flag". */
-.flag-facts-step-eq {
+/* Equation step (e.g. 1606 = England + Scotland): the body stacks the caption
+ * above the "part + part = result" row. The date pill + dot node are unchanged,
+ * so it still reads as one node on the same axis. */
+.flag-facts-step-eq .flag-facts-body {
   display: flex;
   flex-direction: column;
-  /* Space between the year + description and the equation row below it. */
-  gap: 18px;
+  gap: 14px;
 }
 .flag-facts-equation {
   display: flex;
