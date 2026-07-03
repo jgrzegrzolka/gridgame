@@ -242,11 +242,20 @@ export const FLAG_FACTS = {
   },
   gr: {
     addedOn: '2026-07-01',
+    // The through-line: for 150 years Greece flew two flags at once, a white
+    // cross on land and blue-and-white stripes at sea, with a crown added to
+    // both while it was a kingdom. In 1978 the stripes replaced the cross as
+    // the single national flag. Every tile is a distinct, genuinely-flown
+    // design (the crowned cross and the junta's dark navy read clearly; the
+    // war ensign's canton crown is small but it was a real century-long flag).
     introKey: 'flagFacts.gr.intro',
     timeline: [
       { year: '1453–1793', img: 'history/gr-ottoman.svg', captionKey: 'flagFacts.gr.ottoman' },
-      { year: '1769', img: 'history/gr-1769.svg', captionKey: 'flagFacts.gr.orlov' },
+      { year: '1821', img: 'history/gr-1821.svg', captionKey: 'flagFacts.gr.revolution' },
       { year: '1822', img: 'history/gr-1822-land.svg', captionKey: 'flagFacts.gr.land' },
+      { year: '1863–1973', img: 'history/gr-crowned.svg', captionKey: 'flagFacts.gr.crowned' },
+      { year: '1863–1970', img: 'history/gr-warensign.svg', captionKey: 'flagFacts.gr.warensign' },
+      { year: '1970–1975', img: 'history/gr-junta.svg', captionKey: 'flagFacts.gr.junta' },
       { year: '1978', img: 'svg/gr.svg', captionKey: 'flagFacts.gr.current' },
     ],
     factKeys: [
@@ -254,6 +263,7 @@ export const FLAG_FACTS = {
       'flagFacts.gr.fact.cross',
       'flagFacts.gr.fact.colours',
       'flagFacts.gr.fact.ratio',
+      'flagFacts.gr.fact.guinness',
     ],
   },
   pl: {

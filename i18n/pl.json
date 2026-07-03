@@ -710,16 +710,20 @@
       }
     },
     "gr": {
-      "intro": "Przez stulecia Grecją rządziło Imperium Osmańskie, lecz greckie statki handlowe pływały pod własną banderą. Z tej morskiej tradycji, i z prawosławnego krzyża, który leży u podstaw greckiej tożsamości, wyrosła flaga, którą Grecja podnosi dziś.\n\nCo ciekawe, dokładny odcień błękitu nigdy nie został ustalony prawnie, przez wieki wahał się od jasnego błękitu po ciemny granat.",
+      "intro": "Przez stulecia Grecją rządziło Imperium Osmańskie, lecz greckie statki handlowe pływały pod własną banderą. Z tej morskiej tradycji, i z prawosławnego krzyża, który leży u podstaw greckiej tożsamości, wyrosła flaga, którą Grecja podnosi dziś. Przez 150 lat powiewały obok siebie dwie flagi, biały krzyż na lądzie i niebiesko-białe pasy na morzu, aż w 1978 roku zwyciężyły pasy.\n\nCo ciekawe, dokładny odcień błękitu nigdy nie został ustalony prawnie, przez wieki wahał się od jasnego błękitu po ciemny granat.",
       "ottoman": "Pod panowaniem osmańskim greckie prawosławne statki handlowe używały czerwonej flagi z błękitnym pasem.",
-      "orlov": "Biała flaga z błękitnym krzyżem, wzniesiona podczas powstania Orłowa w 1769 roku, zapowiedź zrywu z 1821 roku i jego najpopularniejszy sztandar.",
+      "revolution": "Błękitny krzyż na bieli, sztandar najczęściej podnoszony w powstaniu 1821 roku.",
       "land": "Flaga lądowa przyjęta w 1822 roku: biały krzyż na błękicie. Gubernator Kapodistrias ustalił jej ciemniejszy błękit w 1828 roku; powiewała nad państwem greckim aż do 1978 roku.",
-      "current": "Dziewięć niebiesko-białych pasów z krzyżem w rogu. Zaprojektowana jako bandera morska w 1822 roku, w 1978 roku stała się jedyną flagą narodową Grecji.",
+      "crowned": "Gdy Grecja stała się królestwem, pośrodku krzyża umieszczono złotą koronę. Pojawiała się i znikała wraz z tronem: nieobecna w republikach, przywrócona w 1935 roku i usunięta na dobre, gdy w 1973 roku upadła monarchia.",
+      "warensign": "Na morzu flaga w pasy nosiła tę samą koronę w rogu, bandera wojenna królestwa przez całe stulecie.",
+      "junta": "Wojskowa dyktatura pułkowników przyciemniła błękit do granatu, jej wersja flagi używana od 1970 do 1975 roku.",
+      "current": "Dziewięć niebiesko-białych pasów z krzyżem w rogu. Od dawna flaga na morzu, w 1978 roku zastąpiła także krzyż na lądzie, stając się jedyną flagą narodową Grecji.",
       "fact": {
         "stripes": "Dziewięć pasów niesie okrzyk bojowy powstańców: pięć niebieskich pasów to sylaby słowa «Ελευθερία» (Wolność), a cztery białe, «ή Θάνατος» (albo śmierć).",
         "cross": "Biały krzyż symbolizuje Kościół prawosławny, instytucję, która przez blisko cztery wieki osmańskiego panowania podtrzymywała grecki język i tożsamość.",
         "colours": "Błękit ma oznaczać greckie morze i niebo, a biel, fale i czystość walki, choć grecka encyklopedia z 1934 roku przyznała, że prawdziwe pochodzenie barw nigdy nie zostało dowiedzione.",
-        "ratio": "Proporcje flagi określa prawo: stosunek 2 : 3, a każde ramię krzyża ma szerokość jednej piątej flagi."
+        "ratio": "Proporcje flagi określa prawo: stosunek 2 : 3, a każde ramię krzyża ma szerokość jednej piątej flagi.",
+        "guinness": "Największa grecka flaga na świecie powiewa na przylądku Keri na wyspie Zakynthos: około 670 metrów kwadratowych błękitu i bieli, które w 2007 roku trafiły do Księgi Rekordów Guinnessa."
       }
     },
     "pl": {
