@@ -13,8 +13,9 @@ Jan bans the long em dash (`—`) everywhere: i18n copy, captions, code comments
 
 ## 0. Timeline depth: default to the LONGEST history that is VISIBLE on the flag
 
-**We always want as long a flag history as possible.** Include every historical design whose difference is *visible on the flag itself*. This is the default now, not a thing to ask about. Albania started as a timid 2-step and Jan pushed three times ("2 flags???", "wiki has 8") before it reached the full 9-step gallery. Do not make him ask: go long from the start.
+**We always want as long a flag history as possible. A shallow timeline is a defect, not a stylistic choice.** Include every historical design whose difference is *visible on the flag itself*. This is the default now, not a thing to ask about. Albania started as a timid 2-step and Jan pushed three times ("2 flags???", "wiki has 8") before it reached the full 9-step gallery; Wales shipped as a 2-step and had to be reopened to 4 timeline steps + two galleries. Do not make him ask: go long from the start.
 
+- **Research the FULL gallery before you write a single step.** Open the nation's Wikipedia "Flag of X" / "List of X flags" / "historical flags" page AND the Wikimedia Commons category, and build the complete candidate list first. Never write the timeline from memory or from one summary paragraph, that is how flags ship 2 steps deep when the real history is 9. Fanning out one research agent per flag (as in the home-nations review) is the reliable way to enumerate everything before deciding what to keep.
 - **Include every distinct design.** Walk the whole run (Albania: white star, bare eagle, wide-winged republic eagle, royal helmet, fascist fasces, crowned state flag, wartime hammer-and-sickle, communist star, plain eagle today). Match the source gallery (e.g. the Wikipedia "historical flags" list) design-for-design.
 - **"Visible on the flag" is the only filter.** Drop a candidate only when its difference does not show on the flag: a pure shade-of-red tweak, or a file that renders pixel-identical to a neighbour. Even near-plain-eagle years earn a step if they were a real period; caption them honestly ("the re-established state flew the bare eagle again"), do not invent a fake distinction.
 - **If a flag genuinely has no history worth showing**, a short story is still fine: give the colour meaning and stop. Do not pad, and do not let a "Did you know?" fact restate the intro. But when history exists, err all the way toward completeness.
@@ -33,11 +34,7 @@ When in doubt, ask "was this genuinely THE flag of the whole nation at the time?
 
 ## 0b. Reviewing an existing story for completeness
 
-When the task is auditing an already-shipped story (not writing a new one), the shape is: pull the nation's full Wikipedia "historical flags" / "List of X flags" gallery and Commons file list, diff it against the current timeline, and return two lists, missing distinct designs and prose facts that fail a second source. Fanning this out to one research agent per flag works well. Two correctness patterns recur:
-
-- **Reframe unproven tradition as folklore, don't state it as fact.** England's "adopted the red cross from Genoa" is a Victorian story Wikipedia says "cannot be substantiated", so it becomes "by a popular but unproven tradition…". Same for any "at his own request" saint legend: prefix "by tradition".
-- **Soften absolute superlatives to what the source actually says.** "The oldest national flag in the world" → "the oldest flag in Europe, and one of the oldest still in use" (Scotland). Watch "only" claims: "the only two dragon flags, Wales and Bhutan" missed Malta (St George's slain dragon), so it became "the two flags where the dragon is the nation's *own* emblem".
-- **Check the blazon before rejecting a weird-looking asset.** The purple Cross of Neith looked wrong at render time, but the *List of Welsh flags* blazons it "Purpure a celtic cross Or", so purple was correct. Verify against the source's own description, don't drop on vibes.
+When the task is auditing an already-shipped story (not writing a new one), the shape is: pull the nation's full Wikipedia "historical flags" / "List of X flags" gallery and Commons file list, diff it against the current timeline, and return two lists, missing distinct designs (step 0) and prose facts that fail cross-checking (step 3). Fanning this out to one research agent per flag works well: give each agent the current timeline and have it report gaps + fact errors with sources. A shallow existing timeline is the thing you are there to fix, expect to grow it, not confirm it.
 
 Do not change an existing entry's `addedOn` when you expand it: it already shipped, and moving the date would shuffle the flag-of-the-day rotation.
 
@@ -64,9 +61,16 @@ Workflow on this machine (the `cd`-in-subshell and `--directory` server tricks f
 4. Confirm each reads at 84px and is not a confusing crop. Write captions from what you actually see.
 5. **Delete `flags/history/_tmp/` before running tests** (`chrome.test.js` scans every `.html` in the repo and fails on a stray preview page). Put screenshots in the scratchpad, never the repo root, and delete them before committing.
 
-## 3. Verify the facts against a second source
+## 3. Cross-check every fact against MULTIPLE internet sources
 
-Check dates and claims against **Wikipedia / Britannica** (his book once caught a wrong Greece date). When Jan cites a source (a blog, his book), use its facts but **cross-check the surprising or checkable ones**; state folklore as folklore ("by tradition…") and **drop claims a second source contradicts**. Albania lesson: a blog's "naval flag has a yellow star" failed against Wikipedia ("eagle on a white field, red stripe below, no star"), dropped. The "25 feathers = 25 years / 25 battles" tradition was confirmed by both English and Polish Wikipedia (9 per wing + 7 tail = 25), kept. When Jan cites a specific detail you can't match to an image, surface the tradeoff, do not silently substitute. Keep fact notes to the flag's meaning only, no category-justification prose.
+**One source is never enough. Confirm each date and claim against several independent internet sources** (Wikipedia in both languages, Britannica, national/vexillology sites, the Commons file's own description), not a single page and never from memory. The whole point of the story is correctness the reader can trust, so a fact that only one source asserts is either cut or explicitly flagged as tradition. His book once caught a wrong Greece date; a lone blog is the weakest link, treat anything only it says as unconfirmed.
+
+- **State folklore as folklore** ("by tradition…", "legend has it…") and **drop any claim a second source contradicts.** Albania: a blog's "naval flag has a yellow star" failed against Wikipedia ("eagle on a white field, red stripe below, no star"), dropped. The "25 feathers = 25 years / 25 battles" tradition was confirmed by both English and Polish Wikipedia (9 per wing + 7 tail = 25), kept.
+- **Soften absolute superlatives to what the sources actually support.** "The oldest national flag in the world" → "the oldest flag in Europe, one of the oldest still in use" (Scotland). Distrust "only" claims: "the only two dragon flags, Wales and Bhutan" missed Malta.
+- **Reframe an unproven origin story as tradition, not fact.** England's "adopted the red cross from Genoa" is a Victorian tale Wikipedia says cannot be substantiated, so it becomes "by a popular but unproven tradition…".
+- **Verify a suspicious-looking asset against the source's own blazon before rejecting it.** The purple Cross of Neith looked wrong, but the *List of Welsh flags* blazons it "Purpure a celtic cross Or", so purple was correct. Check the description, don't drop on vibes.
+
+When Jan cites a specific detail you can't match to an image, surface the tradeoff, do not silently substitute. Keep fact notes to the flag's meaning only, no category-justification prose.
 
 ## 4. Add the entry to `flags/flagFacts.js`
 
