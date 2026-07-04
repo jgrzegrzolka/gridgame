@@ -33,9 +33,12 @@ this file the single source of truth for both current and historical assets.
 | `gr-warensign.svg` | Naval Ensign of Greece (1863-1924 and 1935-1970).svg | Public domain | Royal naval war ensign, nine stripes with a crowned cross in the canton |
 | `gr-junta.svg` | Flag of Greece (1970-1975).svg | Public domain | Military junta flag, the striped design in a dark navy blue |
 | `ch-arms.svg` | Swiss Federal CoA triangular.svg | Public domain | Confederate heraldic emblem, white cross on a red shield |
+| `ch-warflag.svg` | Early Swiss cross.svg | CC BY-SA 3.0 (Dbachmann) | Old Confederacy war flag, square red field with the white cross reaching the edges (c. 1470–1798) |
 | `ch-flamme.svg` | Militärfahne der Stadt und Republik Bern.svg | CC BY-SA 4.0 (Oliver65536) | 17th–18th c. Bernese cantonal war flag in the flammé style, red & black |
 | `ch-helvetic.svg` | Flag of the Helvetic Republic (French).svg | Public domain | 1798 French-imposed Helvetic Republic tricolour, green/red/yellow |
-| `ch-square.svg` | Flag of Switzerland.svg | Public domain | Current national flag, square (1:1) |
+| `ch-1848.svg` | (own work, simple geometry) | Public domain (trivial) | The 1848 federal flag's five-equal-square cross (Greek cross, arms as wide as long), before the 1889 law elongated the arms to 7:6 |
+| `ch-square.svg` | Flag of Switzerland.svg | Public domain | Current national flag (1889 proportions), square (1:1) |
+| `ch-bachmann.svg` | Swiss flag Bachmann 1815.svg | CC BY-SA 3.0 (Dbachmann) | General Bachmann's 1815 federal army battalion flag, white cross with a central emblem and the motto "Für Vaterland und Ehre" |
 | `gb-union1606.svg` | Flag of Great Britain (1707-1800).svg | Public domain | First Union Flag, St George's cross over St Andrew's saltire, pre-1801 |
 | `gb-wales-proposal.svg` | Union Flag (including Wales).svg | Public domain | A proposed Union flag with the Welsh dragon added, never adopted |
 | `gb-eng-lions.svg` | Royal Banner of England.svg | Public domain | Royal Banner of England, three golden lions on red |
@@ -138,6 +141,9 @@ this file the single source of truth for both current and historical assets.
 - `ie-fourprov.svg` is *"Four Provinces Flag"* by Wikimedia Commons user
   **Caomhan27**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under
   the same licence.
+- `ch-warflag.svg` is *"Early Swiss cross"* and `ch-bachmann.svg` is *"Swiss flag
+  Bachmann 1815"*, both by Wikimedia Commons user **Dbachmann**, licensed
+  **CC BY-SA 3.0**; used unmodified and re-shared under the same licence.
 - `gb-wls-1807.svg` is *"Flag of Wales (1807–1953)"* by Wikimedia Commons user
   **NikNaks**, licensed **CC BY-SA 4.0**; used unmodified and re-shared under the
   same licence.
