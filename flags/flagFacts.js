@@ -326,12 +326,24 @@ export const FLAG_FACTS = {
   },
   ch: {
     addedOn: '2026-07-01',
+    // The white cross on red barely changes, so the depth is in how it was
+    // carried: the heraldic shield, then the confederate war flag with the
+    // cross running to the edges, the cantons' flammé battle standards, the
+    // French-imposed Helvetic tricolour interlude, and finally the national
+    // flag, whose cross went from five equal squares (1848) to today's slightly
+    // longer-armed 7:6 (an 1889 law). The 1848 five-square flag is hand-drawn
+    // (trivial geometry, no clean Commons SVG exists); it and the current 7:6
+    // flag look alike at a glance, kept distinct at Jan's call because the 1889
+    // change was a real, dated, contested event. Bachmann's 1815 army flag was
+    // never the national flag, so it sits in a gallery.
     introKey: 'flagFacts.ch.intro',
     timeline: [
       { year: '12th–14th c.', img: 'history/ch-arms.svg', captionKey: 'flagFacts.ch.imperial' },
+      { year: 'c. 1470–1798', img: 'history/ch-warflag.svg', captionKey: 'flagFacts.ch.warflag' },
       { year: '17th–18th c.', img: 'history/ch-flamme.svg', captionKey: 'flagFacts.ch.flamme' },
       { year: '1798', img: 'history/ch-helvetic.svg', captionKey: 'flagFacts.ch.helvetic' },
-      { year: '1848', img: 'history/ch-square.svg', captionKey: 'flagFacts.ch.current' },
+      { year: '1848', img: 'history/ch-1848.svg', captionKey: 'flagFacts.ch.federal1848' },
+      { year: '1889', img: 'history/ch-square.svg', captionKey: 'flagFacts.ch.current' },
     ],
     factKeys: [
       'flagFacts.ch.fact.square',
@@ -339,6 +351,18 @@ export const FLAG_FACTS = {
       'flagFacts.ch.fact.proportions',
       'flagFacts.ch.fact.red2017',
       'flagFacts.ch.fact.dufour',
+      'flagFacts.ch.fact.armyflags',
+    ],
+    // The 1815 army battalion flag was a federal-army banner, never the civil
+    // national flag, so it sits under the "no national flag before 1848" fact
+    // rather than in the timeline.
+    galleries: [
+      {
+        afterFactKey: 'flagFacts.ch.fact.armyflags',
+        items: [
+          { img: 'history/ch-bachmann.svg', labelKey: 'flagFacts.ch.gallery.bachmann' },
+        ],
+      },
     ],
   },
   gr: {

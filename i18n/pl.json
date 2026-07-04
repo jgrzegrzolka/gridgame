@@ -720,17 +720,23 @@
       }
     },
     "ch": {
-      "intro": "Niewiele flag jest tak starych, i tak kwadratowych, jak flaga Szwajcarii. Biały krzyż na czerwonym polu był znakiem bojowym starej Konfederacji Szwajcarskiej na całe stulecia przed tym, nim stał się flagą państwa: po raz pierwszy odnotowano go w bitwie pod Laupen w 1339 roku, gdzie konfederaci naszywali białe krzyże na odzież, by odróżnić swoich od wroga.\n\nWzór sięga jeszcze dawniej, do chorągwi bojowej Świętego Cesarstwa Rzymskiego, która nosiła ten sam biały krzyż na czerwieni. Biel odczytywano jako czystość sprawy, a czerwień jako krew męczenników. To, co zaczęło się jako znak wojenny, pięć wieków później stało się flagą nowoczesnej Szwajcarii.",
+      "intro": "Niewiele flag jest tak starych, i tak kwadratowych, jak flaga Szwajcarii. Biały krzyż na czerwonym polu był znakiem bojowym starej Konfederacji Szwajcarskiej na całe stulecia przed tym, nim stał się flagą państwa: po raz pierwszy odnotowano go w bitwie pod Laupen w 1339 roku, gdzie konfederaci naszywali białe krzyże na odzież, by odróżnić swoich od wroga.\n\nWzór może sięgać jeszcze dawniej, do chorągwi bojowej Świętego Cesarstwa Rzymskiego, która nosiła ten sam biały krzyż na czerwieni: to najczęściej przywoływane z kilku wyjaśnień, obok legend o Legionie Tebańskim i relikwiach Męki Pańskiej. Wedle tradycji biel odczytywano jako czystość, a czerwień jako krew męczenników. To, co zaczęło się jako znak wojenny, pięć wieków później stało się flagą nowoczesnej Szwajcarii.",
       "imperial": "Biały krzyż na czerwieni jako herb starej Konfederacji Szwajcarskiej, wedle legendy zaczerpnięty z chorągwi bojowej Świętego Cesarstwa Rzymskiego, noszony w bitwach takich jak Laupen (1339).",
+      "warflag": "Gdy kantony walczyły razem, biały krzyż rozszerzył się na kwadratowe czerwone pole, a jego ramiona sięgnęły krawędzi. Tę konfederacką flagę bojową noszono do bitew od końca XV wieku aż do 1798 roku.",
       "flamme": "Kantony konfederacji nosiły kwadratowe chorągwie bojowe w stylu flammé, z płomienistymi językami rozchodzącymi się od środkowego krzyża, każdy kanton w swoich barwach. Ta należy do Berna, w czerwieni i czerni.",
       "helvetic": "Gdy w 1798 roku Francja dokonała inwazji, marionetkowa Republika Helwecka zastąpiła krzyż zielono-czerwono-żółtą trójbarwną flagą. Narzucona z zewnątrz, przetrwała zaledwie około pięciu lat.",
-      "current": "Po upadku Napoleona kantony wróciły do białego krzyża na czerwieni. Generał Dufour ujednolicił go dla armii związkowej, a konstytucja z 1848 roku uczyniła go flagą nowego państwa związkowego, kwadratową, jaką pozostaje do dziś.",
+      "federal1848": "Po upadku Napoleona kantony wróciły do białego krzyża na czerwieni. Generał Dufour ujednolicił go dla armii związkowej, a konstytucja z 1848 roku uczyniła go flagą nowego państwa związkowego, którego krzyż tworzyło wtedy pięć równych kwadratów, tak samo szeroki jak wysoki.",
+      "current": "Ustawa z 1889 roku wydłużyła ramiona krzyża o jedną szóstą ponad ich szerokość, do dokładnych proporcji noszonych do dziś. Petycję ponad 50 tysięcy obywateli o zachowanie dawnego kwadratowego krzyża odrzucono.",
       "fact": {
-        "square": "Szwajcaria to jeden z zaledwie dwóch krajów z kwadratową flagą narodową. Drugim jest Watykan. Jedyny wyjątek to bandera używana na szwajcarskich jeziorach i rzekach, która ma zwykły prostokątny kształt.",
+        "square": "Szwajcaria to jeden z zaledwie dwóch krajów z kwadratową flagą narodową. Drugim jest Watykan. Jedyny wyjątek to bandera szwajcarskich statków morskich, która ma zwykły prostokątny kształt 2:3.",
         "redcross": "Godło Czerwonego Krzyża to po prostu odwrócona flaga Szwajcarii, czerwony krzyż na bieli, przyjęte w 1864 roku na cześć Szwajcarii, ojczyzny założyciela ruchu, Henry'ego Dunanta.",
-        "proportions": "Biały krzyż nie dotyka krawędzi: jego cztery ramiona są równe, a każde jest o jedną szóstą dłuższe niż szersze.",
+        "proportions": "W przeciwieństwie do dawnej flagi bojowej dzisiejszy krzyż nie dotyka krawędzi: jego cztery ramiona są równe, a każde jest o jedną szóstą dłuższe niż szersze.",
         "red2017": "Dokładny odcień czerwieni pozostawał nieokreślony prawnie aż do 2017 roku, gdy Szwajcaria wreszcie go ustaliła, czysta czerwień, bliska Pantone 485.",
-        "dufour": "Generał Guillaume-Henri Dufour, który ujednolicił flagę, był też kartografem i inżynierem; najwyższy szczyt Szwajcarii, Dufourspitze, nosi jego imię."
+        "dufour": "Generał Guillaume-Henri Dufour, który ujednolicił flagę, był też kartografem i inżynierem; najwyższy szczyt Szwajcarii, Dufourspitze, nosi jego imię.",
+        "armyflags": "Przed 1848 rokiem Szwajcaria nie miała jednej flagi narodowej, tylko chorągwie kantonalne i pułkowe. Gdy Konfederacja mobilizowała się w 1815 roku, generał Niklaus Bachmann dał swoim żołnierzom flagę z białym krzyżem i napisem „Für Vaterland und Ehre”, za ojczyznę i honor."
+      },
+      "gallery": {
+        "bachmann": "Flaga wojskowa Bachmanna, 1815"
       }
     },
     "gr": {
