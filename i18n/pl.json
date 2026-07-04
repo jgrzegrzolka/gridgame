@@ -779,11 +779,18 @@
         "crosses": "Pięć krzyży odczytuje się zwykle jako Pięć Ran Chrystusa, albo jako Chrystusa (krzyż środkowy) wśród czterech ewangelistów.",
         "jerusalem": "Układ „jeden duży plus cztery małe” to Krzyż Jerozolimski, godło krucjat, nawiązanie do głębokich średniowiecznych związków chrześcijańskich Gruzji, gdy gruzińscy rycerze również przywdziewali krzyż.",
         "stgeorge": "Duży środkowy krzyż to krzyż św. Jerzego, ten sam czerwony krzyż na bieli co na fladze Anglii. Nieprzypadkowo, bo św. Jerzy jest patronem Gruzji.",
-        "royalbanners": "Władców złotego wieku Gruzji upamiętniają własne sztandary: bordowo-czarny herb wiązany z królową Tamarą oraz biała flaga z jednorożcem króla Dawida Budowniczego. Oba to późniejsze rekonstrukcje, nigdy nie były udokumentowanymi flagami narodowymi."
+        "royalbanners": "Władców złotego wieku Gruzji upamiętniają własne sztandary: bordowo-czarny herb wiązany z królową Tamarą oraz biała flaga z jednorożcem króla Dawida Budowniczego. Oba to późniejsze rekonstrukcje, nigdy nie były udokumentowanymi flagami narodowymi.",
+        "kingdoms": "Po złotym wieku zjednoczone królestwo rozpadło się na rywalizujące gruzińskie królestwa i księstwa, każde z własnym sztandarem: Imeretia na zachodzie, Kartlia-Kachetia na wschodzie i księstwo Megrelii, aż Rosja wcieliła je około 1800 roku. Te wzory przetrwały głównie jako późniejsze rekonstrukcje.",
+        "federations": "W XX wieku Gruzję dwukrotnie włączono do większej unii, każda z własną flagą: krótkotrwałej republiki zakaukaskiej z 1918 roku, dzielonej z Armenią i Azerbejdżanem, oraz radzieckiej federacji zakaukaskiej w latach 1922–1936."
       },
       "gallery": {
         "tamar": "Królowa Tamara (rekonstrukcja)",
-        "david": "Dawid Budowniczy (rekonstrukcja)"
+        "david": "Dawid Budowniczy (rekonstrukcja)",
+        "imereti": "Imeretia",
+        "kkakheti": "Kartlia-Kachetia",
+        "mingrelia": "Megrelia",
+        "tdfr": "Zakaukazie, 1918",
+        "zsfsr": "Zakaukaska FSRR, 1922–1936"
       }
     },
     "fr": {

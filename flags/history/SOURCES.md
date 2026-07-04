@@ -70,6 +70,11 @@ this file the single source of truth for both current and historical assets.
 | `ge-ssr.svg` | Flag of the Georgian Soviet Socialist Republic (1951–1990).svg | Public domain | Georgian SSR flag, red with a blue sun bearing hammer, sickle and star |
 | `ge-tamar.svg` | QueenTamarFlag.svg | CC BY-SA 3.0 (Gaeser) | Modern reconstruction of a banner linked to Queen Tamar, quartered maroon and black (never a documented national flag) |
 | `ge-david.svg` | KingDavidtheBuilderFlag.svg | CC BY-SA 3.0 (David Kldiashvili; render by G-aeser) | Modern reconstruction of King David the Builder's banner, white with a red cross and a unicorn on black (never a documented national flag) |
+| `ge-imereti.svg` | Banner of the Kingdom of Imereti.svg | CC BY-SA 4.0 (Dekodrak) | Banner of the Kingdom of Imereti (western Georgia), a white stag under a crown on cyan (later reconstruction) |
+| `ge-kkakheti.svg` | Flag of Kingdom of Kartli-Kakheti.svg | CC BY-SA 4.0 (Althiphika) | Banner attributed to the Kingdom of Kartli-Kakheti (eastern Georgia), black with a white cross (later reconstruction, attribution uncertain) |
+| `ge-mingrelia.svg` | Flag of The Principality of Mingrelia (Portolan 1559).svg | CC0 (Havshjö) | Flag of the Principality of Mingrelia, red cross on blue, from a 1559 portolan chart |
+| `ge-tdfr.svg` | Flag of the Transcaucasian Federation.svg | Public domain (Sarang) | Transcaucasian Democratic Federative Republic (1918), yellow-black-red tricolour (the federation Georgia briefly joined before independence) |
+| `ge-zsfsr.svg` | Flag of the Transcaucasian SFSR.svg | Public domain (Aivazovsky) | Transcaucasian Socialist Federative Soviet Republic (1922–1936), red with a gold star and ЗСФСР lettering |
 | `fr-royal.svg` | Pavillon royal de France.svg | Public domain (Zippanova) | Pre-revolution / Restoration royal flag, white field strewn with golden fleurs-de-lis |
 | `fr-paris.svg` | Flag of Paris.svg | Public domain | Flag of the city of Paris, blue (hoist) and red (fly); the tricolour's blue-and-red (shown as an equation ingredient) |
 | `fr-white.svg` | (original, plain white rectangle) | Public domain (trivial) | Plain white panel, the "king's white" ingredient in the Tricolour equation (no fleurs-de-lis, since the gold never appears on the flag) |
@@ -158,6 +163,10 @@ this file the single source of truth for both current and historical assets.
   `ge-david.svg` is *"KingDavidtheBuilderFlag"* by **David Kldiashvili** (render
   by **G-aeser**), both licensed **CC BY-SA 3.0**; used unmodified and re-shared
   under the same licence.
+- `ge-imereti.svg` is *"Banner of the Kingdom of Imereti"* by Wikimedia Commons
+  user **Dekodrak**, licensed **CC BY-SA 4.0**, and `ge-kkakheti.svg` is *"Flag of
+  Kingdom of Kartli-Kakheti"* by **Althiphika**, licensed **CC BY-SA 4.0**; both
+  used unmodified and re-shared under the same licence.
 - `gb-wls-1807.svg` is *"Flag of Wales (1807–1953)"* by Wikimedia Commons user
   **NikNaks**, licensed **CC BY-SA 4.0**; used unmodified and re-shared under the
   same licence.
