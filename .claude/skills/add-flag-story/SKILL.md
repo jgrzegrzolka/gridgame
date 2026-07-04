@@ -21,6 +21,26 @@ Jan bans the long em dash (`—`) everywhere: i18n copy, captions, code comments
 
 Render-check every candidate (step 2) before writing captions: the caption on Wikipedia cannot be trusted to tell you what the flag looks like. The 1928-1934 Kingdom file renders as a plain eagle, but the 1934-1939 one carries the golden helmet; a "1943 crowned" file turned out identical to the Kingdom helmet flag. Look at each one.
 
+## 0a. Timeline vs gallery: the Afghanistan classification rule
+
+Depth means the timeline holds every genuinely-flown **national** flag, and a **gallery** (or a plain "Did you know?" fact) holds everything that was flown but was never *the* national flag. Jan's phrasing: "anything that does not belong to timeline since it was not an official flag or never was used, you can always use Did you know for that." Afghanistan is the reference: national flags + their variants in the timeline; rulers' personal standards and rival/provincial civil-war banners in galleries.
+
+- **Timeline** = the chronological run of national flags actually flown, including a kingdom's own royal banner when that banner *was* the state's flag (Ireland's gold-harp-on-blue Kingdom arms; Scotland's Lion Rampant, the banner of the Kingdom of Scotland). Shade-standardisation counts: a discrete, dated official act that lightens or darkens the same design earns its own step (France's 1976/2020 blue pendulum; Scotland's 2003 Pantone 300 saltire). Give the two shade steps distinct year labels and let the captions carry the change, exactly like a real redesign.
+- **Gallery** (the `galleries` shape, one row per `afterFactKey`) = banners that were real but never the sole national flag: personal standards of a specific ruler, battle standards, and the banners of *component* kingdoms/regions that never unified into one flag (Wales: Gwynedd / Powys / Deheubarth lion banners under one fact, Llywelyn's Cross of Neith + Glyndŵr's four-lion banner + his golden Ddraig Aur under another). Split into two galleries under two facts when the groups are thematically distinct, mirroring Afghanistan's standards-vs-civil-war split.
+- **A rejected / never-adopted design** that a fact *names* uses `illustration` (one image) rather than a timeline step (the Welsh-dragon Union proposal, the Bourbon arms flag).
+
+When in doubt, ask "was this genuinely THE flag of the whole nation at the time?" Yes → timeline. It was a monarch's/rebel's/region's banner alongside the national flag → gallery.
+
+## 0b. Reviewing an existing story for completeness
+
+When the task is auditing an already-shipped story (not writing a new one), the shape is: pull the nation's full Wikipedia "historical flags" / "List of X flags" gallery and Commons file list, diff it against the current timeline, and return two lists, missing distinct designs and prose facts that fail a second source. Fanning this out to one research agent per flag works well. Two correctness patterns recur:
+
+- **Reframe unproven tradition as folklore, don't state it as fact.** England's "adopted the red cross from Genoa" is a Victorian story Wikipedia says "cannot be substantiated", so it becomes "by a popular but unproven tradition…". Same for any "at his own request" saint legend: prefix "by tradition".
+- **Soften absolute superlatives to what the source actually says.** "The oldest national flag in the world" → "the oldest flag in Europe, and one of the oldest still in use" (Scotland). Watch "only" claims: "the only two dragon flags, Wales and Bhutan" missed Malta (St George's slain dragon), so it became "the two flags where the dragon is the nation's *own* emblem".
+- **Check the blazon before rejecting a weird-looking asset.** The purple Cross of Neith looked wrong at render time, but the *List of Welsh flags* blazons it "Purpure a celtic cross Or", so purple was correct. Verify against the source's own description, don't drop on vibes.
+
+Do not change an existing entry's `addedOn` when you expand it: it already shipped, and moving the date would shuffle the flag-of-the-day rotation.
+
 ## 1. Source the historical SVGs
 
 Current flags already live in `flags/svg/<code>.svg`; reference those directly for the "today" step. Only *superseded* designs need new assets, under `flags/history/`.

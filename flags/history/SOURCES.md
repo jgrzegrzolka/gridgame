@@ -40,7 +40,16 @@ this file the single source of truth for both current and historical assets.
 | `gb-wales-proposal.svg` | Union Flag (including Wales).svg | Public domain | A proposed Union flag with the Welsh dragon added, never adopted |
 | `gb-eng-lions.svg` | Royal Banner of England.svg | Public domain | Royal Banner of England, three golden lions on red |
 | `gb-sct-lion.svg` | Royal Banner of Scotland.svg | CC BY-SA 3.0 (Sodacan) | Royal Standard of Scotland, red lion rampant in a double tressure |
+| `gb-sct-navy.svg` | Flag of Scotland (1542–2003, navy blue).svg | Public domain | Pre-2003 Saltire in the darker navy blue, before the shade was standardised to Pantone 300 |
 | `gb-wls-stdavid.svg` | Flag of Saint David.svg | Public domain | Cross of St David, gold cross on black |
+| `gb-wls-1807.svg` | Flag of Wales (1807–1953).svg | CC BY-SA 4.0 (NikNaks) | Royal badge of Wales (1807–1953), red dragon on a green mound on a plain white field |
+| `gb-wls-1953.svg` | Flag of Wales (1953–1959).svg | CC BY-SA 3.0 (Sodacan) | Official augmented badge flag (1953–1959), dragon in a badge with St Edward's Crown and the motto scroll |
+| `gb-wls-gwynedd.svg` | Flag of Gwynedd.svg | CC BY-SA 2.5 (Oren neu dag) | Banner of the Princes of Gwynedd, four lions passant counterchanged gold and red |
+| `gb-wls-powys.svg` | Flag of Powys.svg | CC BY-SA 3.0 (AlexD) | Banner of Powys, red lion rampant on gold |
+| `gb-wls-deheubarth.svg` | Flag of Deheubarth.svg | CC BY-SA 3.0 (AlexD) | Banner of Deheubarth, gold lion rampant on red within an engrailed border |
+| `gb-wls-neith.svg` | Cross of Neith.svg | Public domain (Derfel73) | Cross of Neith (Y Groes Nawdd), gold Celtic cross on purple, battle flag of Llywelyn ap Gruffudd (13th c.) |
+| `gb-wls-glyndwr.svg` | Glyndwr's Banner.svg | CC BY-SA 3.0 (Perhelion, AlexD) | Owain Glyndŵr's banner, four lions rampant counterchanged gold and red (1400–1415), still flown today |
+| `gb-wls-goldendragon.svg` | Golden Dragon War Flag of Wales (created 1400).svg | CC0 (Llywelyn2000) | Y Ddraig Aur, Owain Glyndŵr's golden dragon war banner (raised 1401) |
 | `ie-royal.svg` | Royal Standard of Ireland (1542–1801).svg | CC BY-SA 3.0 (TRAJAN 117) | Royal Standard of the Kingdom of Ireland, gold harp on royal blue (under the English/British crown) |
 | `ie-patrick.svg` | Saint Patrick's Saltire.svg | Public domain | Saltire of St Patrick, red diagonal cross on white (Ireland's element of the Union Jack) |
 | `ie-harp-1642.svg` | Green harp flag of Ireland 17th century.svg | CC BY-SA 3.0 (R-41) | Green harp flag of Ireland, winged Brian Boru harp on green (the 1642 Confederate / nationalist banner) |
@@ -129,6 +138,21 @@ this file the single source of truth for both current and historical assets.
 - `ie-fourprov.svg` is *"Four Provinces Flag"* by Wikimedia Commons user
   **Caomhan27**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under
   the same licence.
+- `gb-wls-1807.svg` is *"Flag of Wales (1807–1953)"* by Wikimedia Commons user
+  **NikNaks**, licensed **CC BY-SA 4.0**; used unmodified and re-shared under the
+  same licence.
+- `gb-wls-1953.svg` is *"Flag of Wales (1953–1959)"* by Wikimedia Commons user
+  **Sodacan**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under the
+  same licence.
+- `gb-wls-gwynedd.svg` is *"Flag of Gwynedd"* by Wikimedia Commons user **Oren neu
+  dag**, licensed **CC BY-SA 2.5**; used unmodified and re-shared under the same
+  licence.
+- `gb-wls-powys.svg` and `gb-wls-deheubarth.svg` are *"Flag of Powys"* and *"Flag
+  of Deheubarth"* by Wikimedia Commons user **AlexD**, licensed **CC BY-SA 3.0**;
+  used unmodified and re-shared under the same licence.
+- `gb-wls-glyndwr.svg` is *"Glyndwr's Banner"* by Wikimedia Commons users
+  **Perhelion, AlexD**, licensed **CC BY-SA 3.0**; used unmodified and re-shared
+  under the same licence.
 - `fr-oriflamme.svg` is *"Oriflamme"* by **Tomasz Steifer, Gdansk**, licensed
   **CC BY-SA 3.0**; used unmodified and re-shared under the same licence.
 - `fr-bourbon-arms.svg` is *"Royal flag of France during the Bourbon Restoration"*
