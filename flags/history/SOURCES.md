@@ -64,8 +64,12 @@ this file the single source of truth for both current and historical assets.
 | `pl-eagle.svg` | Herb Polski.svg | Public domain | The White Eagle, Poland's coat of arms, a white crowned eagle on a red shield (source of the flag's colours) |
 | `pl-commonwealth.svg` | Flaga Rzeczypospolitej Obojga Narodow ogolna.svg | Public domain | Polish-Lithuanian Commonwealth banner, red-and-white swallow-tail with the joint arms of both nations |
 | `pl-january.svg` | Flag of the Polish-Lithuanian-Ruthenian Commonwealth (January Uprising).svg | Public domain | 1863 January Uprising flag, white-red-blue with the tripartite arms of Poland, Lithuania and Ruthenia |
+| `ge-medieval.svg` | Flag of the Kingdom of Georgia.svg | CC BY-SA 4.0 (Ec.Domnowall) | Five-cross banner of the medieval Kingdom of Georgia, per the 1339 Dulcert and 1367 Pizzigano maps, in a deeper crimson than the modern flag |
 | `ge-1918.svg` | Flag of Georgia (1918–1921, 1-2).svg | Public domain | Democratic Republic of Georgia flag, wine-red field, black-and-white canton (also the 1991–2004 restored flag) |
+| `ge-ssr-1937.svg` | Flag of the Georgian Soviet Socialist Republic (1937–1951).svg | CC BY-SA 3.0 (Дмитрий-5-Аверин) | Early Georgian SSR flag, plain red with the republic's name in gold Georgian script (stands in for the 1921–1951 inscription flags) |
 | `ge-ssr.svg` | Flag of the Georgian Soviet Socialist Republic (1951–1990).svg | Public domain | Georgian SSR flag, red with a blue sun bearing hammer, sickle and star |
+| `ge-tamar.svg` | QueenTamarFlag.svg | CC BY-SA 3.0 (Gaeser) | Modern reconstruction of a banner linked to Queen Tamar, quartered maroon and black (never a documented national flag) |
+| `ge-david.svg` | KingDavidtheBuilderFlag.svg | CC BY-SA 3.0 (David Kldiashvili; render by G-aeser) | Modern reconstruction of King David the Builder's banner, white with a red cross and a unicorn on black (never a documented national flag) |
 | `fr-royal.svg` | Pavillon royal de France.svg | Public domain (Zippanova) | Pre-revolution / Restoration royal flag, white field strewn with golden fleurs-de-lis |
 | `fr-paris.svg` | Flag of Paris.svg | Public domain | Flag of the city of Paris, blue (hoist) and red (fly); the tricolour's blue-and-red (shown as an equation ingredient) |
 | `fr-white.svg` | (original, plain white rectangle) | Public domain (trivial) | Plain white panel, the "king's white" ingredient in the Tricolour equation (no fleurs-de-lis, since the gold never appears on the flag) |
@@ -144,6 +148,16 @@ this file the single source of truth for both current and historical assets.
 - `ch-warflag.svg` is *"Early Swiss cross"* and `ch-bachmann.svg` is *"Swiss flag
   Bachmann 1815"*, both by Wikimedia Commons user **Dbachmann**, licensed
   **CC BY-SA 3.0**; used unmodified and re-shared under the same licence.
+- `ge-medieval.svg` is *"Flag of the Kingdom of Georgia"* by Wikimedia Commons
+  user **Ec.Domnowall**, licensed **CC BY-SA 4.0**; used unmodified and re-shared
+  under the same licence.
+- `ge-ssr-1937.svg` is *"Flag of the Georgian Soviet Socialist Republic
+  (1937–1951)"* by Wikimedia Commons user **Дмитрий-5-Аверин**, licensed
+  **CC BY-SA 3.0**; used unmodified and re-shared under the same licence.
+- `ge-tamar.svg` is *"QueenTamarFlag"* by Wikimedia Commons user **Gaeser**, and
+  `ge-david.svg` is *"KingDavidtheBuilderFlag"* by **David Kldiashvili** (render
+  by **G-aeser**), both licensed **CC BY-SA 3.0**; used unmodified and re-shared
+  under the same licence.
 - `gb-wls-1807.svg` is *"Flag of Wales (1807–1953)"* by Wikimedia Commons user
   **NikNaks**, licensed **CC BY-SA 4.0**; used unmodified and re-shared under the
   same licence.
