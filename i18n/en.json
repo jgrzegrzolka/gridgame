@@ -653,34 +653,48 @@
     "gb-eng": {
       "intro": "England's flag is the cross of St George: a plain red cross on white. St George, a Roman soldier martyred in the eastern Mediterranean around 303 AD, who never set foot in England, became the country's patron in the Middle Ages, and his emblem was carried by English soldiers from the age of the Crusades.\n\nThe same red cross sits at the centre of the Union Jack, England's contribution to the flag of the United Kingdom.",
       "lions": "Before the cross, England's royal banner was three golden lions on red, the arms of the medieval kings, still worn today by England's football and cricket teams.",
-      "current": "The cross of St George, adopted as England's emblem during the 13th century and essentially unchanged since.",
+      "current": "The cross of St George, tied to England as its emblem during the 14th century under Edward III, and essentially unchanged since.",
       "fact": {
         "george": "St George wasn't English: he was a Greek-speaking Roman officer from Cappadocia (modern Turkey), and is shared as a patron by Georgia, Catalonia, Ethiopia and more.",
-        "genoa": "England is said to have adopted the red cross from Genoa, flying the Italian city's flag so its ships could claim the protection of Genoa's powerful fleet.",
+        "genoa": "By a popular but unproven tradition, England adopted the red cross from Genoa, flying the Italian city's flag so its ships could claim the protection of Genoa's powerful fleet. It is often repeated, but no contemporary record confirms it.",
         "union": "It forms the centre of the Union Jack, the red upright cross laid over the Scottish and Irish saltires.",
         "lions": "The three lions trace to Richard the Lionheart's royal seal around 1198; it is one of the oldest coats of arms still in continuous use."
       }
     },
     "gb-sct": {
-      "intro": "Scotland's flag, the Saltire, is the white diagonal cross of St Andrew on a blue field, by tradition one of the oldest national flags in the world. Legend sets its origin at the Battle of Athelstaneford in 832 AD, when a Pictish-Scots king is said to have seen a white saltire of cloud in the blue sky before victory, and took it as his banner.\n\nSt Andrew, the apostle martyred on an X-shaped cross, is Scotland's patron; his diagonal cross joined England's upright one to form the first Union Flag in 1606.",
+      "intro": "Scotland's flag, the Saltire, is the white diagonal cross of St Andrew on a blue field, by tradition the oldest national flag in Europe and one of the oldest still in use anywhere. Legend sets its origin at the Battle of Athelstaneford in 832 AD, when a Pictish king is said to have seen a white saltire of cloud in the blue sky before victory, and took it as his banner.\n\nSt Andrew, the apostle martyred on an X-shaped cross, is Scotland's patron; his diagonal cross joined England's upright one to form the first Union Flag in 1606.",
       "lion": "Scotland's other great flag: the Royal Standard, a red lion rampant inside a double border. It is the banner of the monarch, its use is technically restricted by law.",
-      "current": "The Saltire, St Andrew's white cross on blue, the national flag of Scotland.",
+      "navy": "For centuries the Saltire's blue ran dark navy, matched by convention to the Union Flag it sits inside, though banners in the past ranged from sky blue to deep navy.",
+      "current": "In 2003 the Scottish Parliament settled the shade on a lighter royal blue, Pantone 300, the official Saltire flown today. Same cross of St Andrew, a brighter field.",
       "fact": {
-        "oldest": "By the 832 legend the Saltire is often called the oldest national flag still in use; its blue and white have been recorded for over 800 years.",
-        "andrew": "St Andrew was crucified on an X-shaped cross at his own request, feeling unworthy to die as Jesus had, that diagonal became his emblem across the Christian world.",
+        "oldest": "The Saltire is often called the oldest flag in Europe: the saltire has stood for Scotland since at least the 1180s in seals, and the legend of the sky-cross reaches back to 832.",
+        "andrew": "St Andrew was, by tradition, crucified on an X-shaped cross at his own request, feeling unworthy to die as Jesus had, that diagonal became his emblem across the Christian world.",
+        "pantone": "Scotland had no single official blue until 2003, when a parliamentary committee fixed it at Pantone 300, ending centuries of drift between navy and pale sky blue.",
         "union": "St Andrew's saltire is the white diagonal in the Union Jack, beneath England's red cross.",
         "lion": "The red Lion Rampant is the royal banner: strictly it belongs to the monarch, though Scots fly it enthusiastically at sport regardless."
       }
     },
     "gb-wls": {
       "intro": "Wales flies Y Ddraig Goch, \"the Red Dragon\", a red dragon on a field of white over green. The dragon is one of Britain's oldest symbols, tied to the Welsh kings and, in the tale of Merlin, to a red dragon that fought a white one beneath the earth and won, an omen of the Welsh prevailing over the invading Saxons.\n\nUniquely among the home nations, Wales is absent from the Union Jack, so its dragon stands entirely on its own.",
-      "david": "An older Welsh flag is the cross of St David, a gold cross on black, for the country's patron saint, still flown on St David's Day.",
-      "current": "Y Ddraig Goch, the Red Dragon, became the official flag of Wales only in 1959, though the symbol is many centuries older.",
+      "david": "An older Welsh flag is the cross of St David, a gold cross on black, for the country's patron saint. It grew popular as a flag through the early 20th century and is still flown every St David's Day.",
+      "badge1807": "From 1807 the royal badge of Wales, the red dragon on a green mound, was flown on a plain white field. A dragon flag in everyday use, though never formally adopted as the national flag.",
+      "badge1953": "In 1953 the badge became official on a white-over-green flag, augmented with St Edward's Crown and a scroll reading \"Y Ddraig Goch Ddyry Cychwyn\", the red dragon inspires action.",
+      "current": "In 1959 the crown, motto and badge frame were stripped away, leaving the plain Y Ddraig Goch, the red dragon on white over green, made the official national flag of Wales.",
       "fact": {
         "union": "Wales is the only home nation missing from the Union Jack: it had been annexed to England before the union flags were designed, so it was folded in under England's cross.",
-        "dragon": "The red dragon may descend from the Roman cavalry standard (the draco); legend has it carried by kings like Cadwaladr and Owain Glyndŵr, and the Tudor dynasty flew it too.",
-        "official": "Despite its age, the dragon became the official national flag only in 1959, a very young official flag for a very old symbol.",
-        "dragons": "Wales's red dragon and Bhutan's white thunder-dragon are the only two dragons flying on a country's flag today."
+        "dragon": "The red dragon may descend from the Roman cavalry standard, the draco. It is associated by legend with early kings such as Cadwaladr; Owain Glyndŵr raised a golden dragon in revolt, and the Tudors flew the red dragon on their green-and-white livery.",
+        "official": "The plain dragon became the official flag only in 1959, replacing the 1953 badge-and-crown version: a very young official flag for a very old symbol.",
+        "princes": "Before the English conquest of 1283, Wales was a patchwork of kingdoms, each with its own banner: the four lions of Gwynedd, and the lions of Powys and Deheubarth.",
+        "glyndwr": "The native princes flew their own war banners: Llywelyn ap Gruffudd's Cross of Neith and, a century later, Owain Glyndŵr's four-lion banner and his golden Ddraig Aur, raised in the 1400 revolt. Glyndŵr's banner is still flown by Welsh nationalists today.",
+        "dragons": "Wales and Bhutan are the two flags where the dragon is the nation's own emblem. Malta's flag carries a dragon too, but as the beast being slain by St George."
+      },
+      "gallery": {
+        "gwynedd": "Gwynedd",
+        "powys": "Powys",
+        "deheubarth": "Deheubarth",
+        "neith": "Cross of Neith",
+        "glyndwr": "Glyndŵr's banner",
+        "goldendragon": "Y Ddraig Aur"
       }
     },
     "ie": {

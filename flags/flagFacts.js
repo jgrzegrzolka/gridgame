@@ -212,30 +212,74 @@ export const FLAG_FACTS = {
   },
   'gb-sct': {
     addedOn: '2026-07-01',
+    // The lion-rampant Royal Banner stays as the timeline's first step: it is the
+    // banner of the Kingdom of Scotland, the same call as Ireland's royal-harp
+    // step (a kingdom's arms, not a personal standard). The two saltire steps
+    // differ only in the blue: for centuries the field ran navy (matched to the
+    // Union Flag), until a 2003 Scottish Parliament committee standardised on the
+    // lighter Pantone 300. Same design, lighter blue, so it's the France
+    // shade-pendulum treatment: distinct year labels, captions carry the shade.
     introKey: 'flagFacts.gb-sct.intro',
     timeline: [
       { year: 'royal banner', img: 'history/gb-sct-lion.svg', captionKey: 'flagFacts.gb-sct.lion' },
-      { year: 'national flag', img: 'svg/gb-sct.svg', captionKey: 'flagFacts.gb-sct.current' },
+      { year: '1542–2003', img: 'history/gb-sct-navy.svg', captionKey: 'flagFacts.gb-sct.navy' },
+      { year: 'since 2003', img: 'svg/gb-sct.svg', captionKey: 'flagFacts.gb-sct.current' },
     ],
     factKeys: [
       'flagFacts.gb-sct.fact.oldest',
       'flagFacts.gb-sct.fact.andrew',
+      'flagFacts.gb-sct.fact.pantone',
       'flagFacts.gb-sct.fact.union',
       'flagFacts.gb-sct.fact.lion',
     ],
   },
   'gb-wls': {
     addedOn: '2026-07-01',
+    // Wales had no single national flag for most of its history: the medieval
+    // kingdoms flew their own lion banners and Llywelyn and Glyndŵr their battle
+    // standards, none of them THE flag of a unified Wales, so those sit in two
+    // galleries (the Afghanistan pattern) rather than the timeline. The timeline
+    // is the genuinely-flown lineage: the patron St David cross, then the red
+    // dragon royal badge (plain on white/green 1807–1953, augmented with St
+    // Edward's Crown and the motto scroll 1953–1959) stripped back to the plain
+    // Ddraig Goch made the official national flag in 1959.
     introKey: 'flagFacts.gb-wls.intro',
     timeline: [
       { year: 'St David', img: 'history/gb-wls-stdavid.svg', captionKey: 'flagFacts.gb-wls.david' },
+      { year: '1807–1953', img: 'history/gb-wls-1807.svg', captionKey: 'flagFacts.gb-wls.badge1807' },
+      { year: '1953–1959', img: 'history/gb-wls-1953.svg', captionKey: 'flagFacts.gb-wls.badge1953' },
       { year: '1959', img: 'svg/gb-wls.svg', captionKey: 'flagFacts.gb-wls.current' },
     ],
     factKeys: [
-      'flagFacts.gb-wls.fact.union',
       'flagFacts.gb-wls.fact.dragon',
       'flagFacts.gb-wls.fact.official',
+      'flagFacts.gb-wls.fact.princes',
+      'flagFacts.gb-wls.fact.glyndwr',
+      'flagFacts.gb-wls.fact.union',
       'flagFacts.gb-wls.fact.dragons',
+    ],
+    // Two galleries of banners that were never THE national flag of Wales:
+    //  - the medieval kingdoms' own lion banners (Gwynedd, Powys, Deheubarth);
+    //  - the battle standards of Llywelyn ap Gruffudd (the Cross of Neith) and
+    //    Owain Glyndŵr (his four-lion banner, still flown today, and the golden
+    //    Ddraig Aur war flag).
+    galleries: [
+      {
+        afterFactKey: 'flagFacts.gb-wls.fact.princes',
+        items: [
+          { img: 'history/gb-wls-gwynedd.svg', labelKey: 'flagFacts.gb-wls.gallery.gwynedd' },
+          { img: 'history/gb-wls-powys.svg', labelKey: 'flagFacts.gb-wls.gallery.powys' },
+          { img: 'history/gb-wls-deheubarth.svg', labelKey: 'flagFacts.gb-wls.gallery.deheubarth' },
+        ],
+      },
+      {
+        afterFactKey: 'flagFacts.gb-wls.fact.glyndwr',
+        items: [
+          { img: 'history/gb-wls-neith.svg', labelKey: 'flagFacts.gb-wls.gallery.neith' },
+          { img: 'history/gb-wls-glyndwr.svg', labelKey: 'flagFacts.gb-wls.gallery.glyndwr' },
+          { img: 'history/gb-wls-goldendragon.svg', labelKey: 'flagFacts.gb-wls.gallery.goldendragon' },
+        ],
+      },
     ],
   },
   ie: {

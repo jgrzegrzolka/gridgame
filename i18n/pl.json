@@ -653,34 +653,48 @@
     "gb-eng": {
       "intro": "Flagą Anglii jest krzyż św. Jerzego: prosty czerwony krzyż na bieli. Święty Jerzy, rzymski żołnierz zamęczony we wschodniej części basenu Morza Śródziemnego około 303 roku, który nigdy nie postawił stopy w Anglii, został patronem kraju w średniowieczu, a jego godło nosili angielscy żołnierze od czasów wypraw krzyżowych.\n\nTen sam czerwony krzyż znajduje się w centrum Union Jacka, to wkład Anglii we flagę Zjednoczonego Królestwa.",
       "lions": "Przed krzyżem sztandarem królewskim Anglii były trzy złote lwy na czerwieni, herb średniowiecznych królów, do dziś noszony przez angielskie reprezentacje w piłce nożnej i krykiecie.",
-      "current": "Krzyż św. Jerzego, przyjęty jako godło Anglii w XIII wieku i w zasadzie niezmieniony od tamtej pory.",
+      "current": "Krzyż św. Jerzego, związany z Anglią jako jej godło w XIV wieku za panowania Edwarda III i w zasadzie niezmieniony od tamtej pory.",
       "fact": {
         "george": "Święty Jerzy nie był Anglikiem, był greckojęzycznym rzymskim oficerem z Kapadocji (dzisiejsza Turcja) i jest patronem dzielonym m.in. przez Gruzję, Katalonię i Etiopię.",
-        "genoa": "Mówi się, że Anglia przejęła czerwony krzyż od Genui, podnosząc flagę włoskiego miasta, by jej statki mogły liczyć na ochronę potężnej genueńskiej floty.",
+        "genoa": "Wedle popularnej, lecz niepotwierdzonej tradycji Anglia przejęła czerwony krzyż od Genui, podnosząc flagę włoskiego miasta, by jej statki mogły liczyć na ochronę potężnej genueńskiej floty. Powtarza się to często, lecz żaden współczesny zapis tego nie potwierdza.",
         "union": "Tworzy środek Union Jacka, czerwony prosty krzyż nałożony na szkocki i irlandzki krzyż ukośny.",
         "lions": "Trzy lwy wywodzą się z pieczęci królewskiej Ryszarda Lwie Serce z około 1198 roku; to jeden z najstarszych wciąż używanych herbów."
       }
     },
     "gb-sct": {
-      "intro": "Flaga Szkocji, Saltire, to biały ukośny krzyż św. Andrzeja na błękitnym polu, wedle tradycji jedna z najstarszych flag narodowych świata. Legenda umieszcza jej początek w bitwie pod Athelstaneford w 832 roku, gdy piktyjsko-szkocki król miał ujrzeć przed zwycięstwem biały ukośny krzyż z chmur na błękitnym niebie i przyjął go za swój sztandar.\n\nŚwięty Andrzej, apostoł zamęczony na krzyżu w kształcie litery X, jest patronem Szkocji; jego ukośny krzyż połączył się z prostym krzyżem Anglii, tworząc w 1606 roku pierwszą flagę unii.",
+      "intro": "Flaga Szkocji, Saltire, to biały ukośny krzyż św. Andrzeja na błękitnym polu, wedle tradycji najstarsza flaga narodowa Europy i jedna z najstarszych używanych gdziekolwiek. Legenda umieszcza jej początek w bitwie pod Athelstaneford w 832 roku, gdy piktyjski król miał ujrzeć przed zwycięstwem biały ukośny krzyż z chmur na błękitnym niebie i przyjął go za swój sztandar.\n\nŚwięty Andrzej, apostoł zamęczony na krzyżu w kształcie litery X, jest patronem Szkocji; jego ukośny krzyż połączył się z prostym krzyżem Anglii, tworząc w 1606 roku pierwszą flagę unii.",
       "lion": "Druga wielka flaga Szkocji: sztandar królewski, czerwony wspięty lew w podwójnym obramowaniu. To sztandar monarchy, którego używanie jest formalnie ograniczone prawem.",
-      "current": "Saltire, biały krzyż św. Andrzeja na błękicie, flaga narodowa Szkocji.",
+      "navy": "Przez stulecia błękit Saltire był ciemnogranatowy, dopasowany zwyczajowo do Union Jacka, w którym się mieści, choć dawne sztandary bywały od jasnego błękitu po głęboki granat.",
+      "current": "W 2003 roku szkocki parlament ustalił odcień na jaśniejszy błękit królewski, Pantone 300, oficjalną Saltire wywieszaną dziś. Ten sam krzyż św. Andrzeja, jaśniejsze pole.",
       "fact": {
-        "oldest": "Wedle legendy z 832 roku Saltire bywa nazywana najstarszą wciąż używaną flagą narodową; jej błękit i biel są poświadczone od ponad 800 lat.",
-        "andrew": "Świętego Andrzeja ukrzyżowano na krzyżu w kształcie X na jego własną prośbę, gdyż czuł się niegodny umrzeć tak jak Jezus, ten ukos stał się jego godłem w całym chrześcijańskim świecie.",
+        "oldest": "Saltire bywa nazywana najstarszą flagą Europy: ukośny krzyż symbolizuje Szkocję co najmniej od lat 80. XII wieku na pieczęciach, a legenda o krzyżu z nieba sięga roku 832.",
+        "andrew": "Świętego Andrzeja wedle tradycji ukrzyżowano na krzyżu w kształcie X na jego własną prośbę, gdyż czuł się niegodny umrzeć tak jak Jezus, ten ukos stał się jego godłem w całym chrześcijańskim świecie.",
+        "pantone": "Szkocja nie miała jednego oficjalnego błękitu aż do 2003 roku, gdy komisja parlamentarna ustaliła go na Pantone 300, kończąc wieki wahań między granatem a bladym błękitem.",
         "union": "Ukośny krzyż św. Andrzeja to biały ukos w Union Jacku, pod czerwonym krzyżem Anglii.",
         "lion": "Czerwony wspięty lew to sztandar królewski: formalnie należy do monarchy, choć Szkoci i tak entuzjastycznie wywieszają go na sportowych trybunach."
       }
     },
     "gb-wls": {
       "intro": "Walia podnosi Y Ddraig Goch, „Czerwonego Smoka”, czerwonego smoka na polu biało-zielonym. Smok to jeden z najstarszych symboli Brytanii, związany z walijskimi królami i, w opowieści o Merlinie, z czerwonym smokiem, który walczył pod ziemią z białym i zwyciężył, co wróżyło Walijczykom triumf nad najeźdźcami Saksonami.\n\nJako jedyny spośród krajów Zjednoczonego Królestwa Walia jest nieobecna na Union Jacku, więc jej smok stoi całkowicie samodzielnie.",
-      "david": "Starszą flagą walijską jest krzyż św. Dawida, złoty krzyż na czerni, ku czci patrona kraju, wciąż wywieszany w dniu św. Dawida.",
-      "current": "Y Ddraig Goch, Czerwony Smok, stał się oficjalną flagą Walii dopiero w 1959 roku, choć sam symbol jest o wiele starszy.",
+      "david": "Starszą flagą walijską jest krzyż św. Dawida, złoty krzyż na czerni, ku czci patrona kraju. Jako flaga rozpowszechnił się na początku XX wieku i wciąż jest wywieszany w dniu św. Dawida.",
+      "badge1807": "Od 1807 roku odznakę królewską Walii, czerwonego smoka na zielonym wzgórku, wywieszano na białym polu. Flaga smoka w codziennym użyciu, choć nigdy formalnie nie przyjęta jako narodowa.",
+      "badge1953": "W 1953 roku odznaka stała się oficjalna na fladze biało-zielonej, wzbogacona koroną św. Edwarda i wstęgą z napisem „Y Ddraig Goch Ddyry Cychwyn”, czerwony smok pobudza do czynu.",
+      "current": "W 1959 roku usunięto koronę, motto i ramkę odznaki, pozostawiając prostą Y Ddraig Goch, czerwonego smoka na bieli i zieleni, ustanowioną oficjalną flagą narodową Walii.",
       "fact": {
         "union": "Walia to jedyny kraj Zjednoczonego Królestwa nieobecny na Union Jacku: została przyłączona do Anglii, zanim zaprojektowano flagi unii, więc wliczono ją pod krzyż Anglii.",
-        "dragon": "Czerwony smok może wywodzić się z rzymskiego sztandaru jazdy (draco); legenda każe nieść go królom takim jak Cadwaladr i Owain Glyndŵr, a wywieszała go też dynastia Tudorów.",
-        "official": "Mimo swego wieku smok stał się oficjalną flagą narodową dopiero w 1959 roku, bardzo młoda oficjalna flaga dla bardzo starego symbolu.",
-        "dragons": "Czerwony smok Walii i biały smok gromu Bhutanu to jedyne dwa smoki powiewające dziś na fladze kraju."
+        "dragon": "Czerwony smok może wywodzić się z rzymskiego sztandaru jazdy, draco. Legenda wiąże go z wczesnymi królami, takimi jak Cadwaladr; Owain Glyndŵr wzniósł w powstaniu złotego smoka, a Tudorowie wywieszali czerwonego smoka na swej zielono-białej barwie.",
+        "official": "Prosty smok stał się oficjalną flagą dopiero w 1959 roku, zastępując wersję z odznaką i koroną z 1953 roku: bardzo młoda oficjalna flaga dla bardzo starego symbolu.",
+        "princes": "Przed angielskim podbojem w 1283 roku Walia była mozaiką królestw, każde z własnym sztandarem: cztery lwy Gwyneddu oraz lwy Powys i Deheubarth.",
+        "glyndwr": "Rdzenni książęta wywieszali własne sztandary bojowe: Krzyż Neith Llywelyna ap Gruffudda, a sto lat później czterolwi sztandar Owaina Glyndŵra i jego złotego Ddraig Aur, wzniesionego w powstaniu 1400 roku. Sztandar Glyndŵra do dziś wywieszają walijscy nacjonaliści.",
+        "dragons": "Walia i Bhutan to dwie flagi, na których smok jest własnym godłem narodu. Flaga Malty również nosi smoka, lecz jako bestię zabijaną przez św. Jerzego."
+      },
+      "gallery": {
+        "gwynedd": "Gwynedd",
+        "powys": "Powys",
+        "deheubarth": "Deheubarth",
+        "neith": "Krzyż Neith",
+        "glyndwr": "Sztandar Glyndŵra",
+        "goldendragon": "Y Ddraig Aur"
       }
     },
     "ie": {
