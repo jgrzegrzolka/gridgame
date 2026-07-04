@@ -779,11 +779,18 @@
         "crosses": "The five crosses are usually read as the Five Wounds of Christ, or as Christ, the central cross, among the four evangelists.",
         "jerusalem": "That one-big-plus-four-small shape is the \"Jerusalem Cross\", an emblem of the Crusades, echoing Georgia's deep medieval Christian ties, when Georgian knights also took up the cross.",
         "stgeorge": "The big central cross is St George's Cross, the same red-cross-on-white as England's flag. Fitting, since St George is Georgia's patron saint.",
-        "royalbanners": "Georgia's golden-age rulers are remembered with their own banners: a maroon-and-black arms linked to Queen Tamar, and a white flag with a unicorn for King David the Builder. Both are later reconstructions, never documented national flags."
+        "royalbanners": "Georgia's golden-age rulers are remembered with their own banners: a maroon-and-black arms linked to Queen Tamar, and a white flag with a unicorn for King David the Builder. Both are later reconstructions, never documented national flags.",
+        "kingdoms": "After the golden age the unified realm broke into rival Georgian kingdoms and principalities, each with its own banner: Imereti in the west, Kartli-Kakheti in the east, and the principality of Mingrelia, until Russia annexed them around 1800. These designs survive mostly as later reconstructions.",
+        "federations": "In the 20th century Georgia was twice folded into a larger union, each with its own flag: the short-lived Transcaucasian republic of 1918, shared with Armenia and Azerbaijan, and the Soviet Transcaucasian federation from 1922 to 1936."
       },
       "gallery": {
         "tamar": "Queen Tamar (reconstruction)",
-        "david": "David the Builder (reconstruction)"
+        "david": "David the Builder (reconstruction)",
+        "imereti": "Imereti",
+        "kkakheti": "Kartli-Kakheti",
+        "mingrelia": "Mingrelia",
+        "tdfr": "Transcaucasia, 1918",
+        "zsfsr": "Transcaucasian SFSR, 1922–1936"
       }
     },
     "fr": {

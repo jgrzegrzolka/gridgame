@@ -437,17 +437,37 @@ export const FLAG_FACTS = {
       'flagFacts.ge.fact.jerusalem',
       'flagFacts.ge.fact.stgeorge',
       'flagFacts.ge.fact.royalbanners',
+      'flagFacts.ge.fact.kingdoms',
+      'flagFacts.ge.fact.federations',
     ],
-    // Reconstructed royal banners of the golden-age kings, shown under the
-    // "royal banners" fact and captioned honestly as later reconstructions
-    // (they were never documented national flags, so they stay out of the
-    // timeline).
+    // Three galleries of flags that were never the single Georgian national
+    // flag, so they sit under "Did you know?" facts rather than the timeline:
+    //  - the golden-age kings' reconstructed royal banners (Tamar, David);
+    //  - the rival successor kingdoms after the realm fragmented (Imereti,
+    //    Kartli-Kakheti, Mingrelia), known mostly from later reconstructions;
+    //  - the 20th-century federations Georgia was folded into (the 1918
+    //    Transcaucasian republic and the 1922-1936 Soviet ZSFSR).
     galleries: [
       {
         afterFactKey: 'flagFacts.ge.fact.royalbanners',
         items: [
           { img: 'history/ge-tamar.svg', labelKey: 'flagFacts.ge.gallery.tamar' },
           { img: 'history/ge-david.svg', labelKey: 'flagFacts.ge.gallery.david' },
+        ],
+      },
+      {
+        afterFactKey: 'flagFacts.ge.fact.kingdoms',
+        items: [
+          { img: 'history/ge-imereti.svg', labelKey: 'flagFacts.ge.gallery.imereti' },
+          { img: 'history/ge-kkakheti.svg', labelKey: 'flagFacts.ge.gallery.kkakheti' },
+          { img: 'history/ge-mingrelia.svg', labelKey: 'flagFacts.ge.gallery.mingrelia' },
+        ],
+      },
+      {
+        afterFactKey: 'flagFacts.ge.fact.federations',
+        items: [
+          { img: 'history/ge-tdfr.svg', labelKey: 'flagFacts.ge.gallery.tdfr' },
+          { img: 'history/ge-zsfsr.svg', labelKey: 'flagFacts.ge.gallery.zsfsr' },
         ],
       },
     ],
