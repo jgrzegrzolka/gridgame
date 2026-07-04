@@ -768,15 +768,22 @@
       }
     },
     "ge": {
-      "intro": "Georgia's five-cross flag looks brand new (it was only adopted in 2004) but its design is medieval. A large St George's cross divides the field, with a smaller \"Bolnisi\" cross in each corner, together forming the shape known as the Jerusalem Cross. The Bolnisi cross itself traces back to stone carvings on a Georgian church from the 5th century, and a European map from 1367 already shows this banner flying over Tbilisi.",
-      "republic": "The first Georgian republic's flag, wine-red with a black-and-white canton, designed by the painter Iakob Nikoladze, winner of a national contest.",
-      "soviet": "After the Red Army invaded in 1921, Soviet symbols took over: a red banner carrying the hammer, sickle and star.",
+      "intro": "Georgia's five-cross flag looks brand new (it was only adopted in 2004) but its design is medieval. A large St George's cross divides the field, with a smaller \"Bolnisi\" cross in each corner, together forming the shape known as the Jerusalem Cross. The Bolnisi cross itself traces back to stone carvings on a Georgian church from the 5th century, and European sea-charts from 1339 and 1367 already show this banner flying over Tbilisi.",
+      "medieval": "The five-cross banner of the medieval Kingdom of Georgia, flown in the golden age of the Bagratid kings. The 1339 Dulcert and 1367 Pizzigano sea-charts already show it over Tbilisi, here in a deeper crimson than today's flag.",
+      "republic": "The first Georgian republic's flag, wine-red with a black-and-white canton, designed by the artist and sculptor Iakob Nikoladze, winner of a national contest.",
+      "sovietearly": "After the Red Army invaded in 1921, Soviet Georgia flew a plain red flag with the republic's name in gold Georgian script, before the design later gained its blue sun.",
+      "soviet": "By 1951 the flag carried a blue sun with the hammer, sickle and star, on a blue stripe across the red.",
       "restored": "When the Soviet Union collapsed, the 1918 republic flag returned in December 1991.",
       "current": "This five-cross banner was the flag of the Rose Revolution itself, the opposition's symbol, waved by the crowds in 2003. Months after that peaceful change of power, it became the national flag in 2004.",
       "fact": {
         "crosses": "The five crosses are usually read as the Five Wounds of Christ, or as Christ, the central cross, among the four evangelists.",
         "jerusalem": "That one-big-plus-four-small shape is the \"Jerusalem Cross\", an emblem of the Crusades, echoing Georgia's deep medieval Christian ties, when Georgian knights also took up the cross.",
-        "stgeorge": "The big central cross is St George's Cross, the same red-cross-on-white as England's flag. Fitting, since St George is Georgia's patron saint."
+        "stgeorge": "The big central cross is St George's Cross, the same red-cross-on-white as England's flag. Fitting, since St George is Georgia's patron saint.",
+        "royalbanners": "Georgia's golden-age rulers are remembered with their own banners: a maroon-and-black arms linked to Queen Tamar, and a white flag with a unicorn for King David the Builder. Both are later reconstructions, never documented national flags."
+      },
+      "gallery": {
+        "tamar": "Queen Tamar (reconstruction)",
+        "david": "David the Builder (reconstruction)"
       }
     },
     "fr": {

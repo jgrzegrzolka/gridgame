@@ -768,15 +768,22 @@
       }
     },
     "ge": {
-      "intro": "Flaga Gruzji z pięcioma krzyżami wygląda na zupełnie nową (przyjęto ją dopiero w 2004 roku), lecz jej wzór jest średniowieczny. Duży krzyż św. Jerzego dzieli płótno, a w każdym rogu znajduje się mniejszy krzyż „Bolnisi”; razem tworzą układ znany jako Krzyż Jerozolimski. Sam krzyż Bolnisi sięga kamiennych rzeźb z gruzińskiego kościoła z V wieku, a europejska mapa z 1367 roku pokazuje już ten sztandar nad Tbilisi.",
-      "republic": "Flaga pierwszej Republiki Gruzińskiej, wino-czerwona z czarno-białym kantonem, zaprojektowana przez malarza Jakoba Nikoladzego, zwycięzcę ogólnokrajowego konkursu.",
-      "soviet": "Po najeździe Armii Czerwonej w 1921 roku zapanowały symbole radzieckie: czerwony sztandar z młotem, sierpem i gwiazdą.",
+      "intro": "Flaga Gruzji z pięcioma krzyżami wygląda na zupełnie nową (przyjęto ją dopiero w 2004 roku), lecz jej wzór jest średniowieczny. Duży krzyż św. Jerzego dzieli płótno, a w każdym rogu znajduje się mniejszy krzyż „Bolnisi”; razem tworzą układ znany jako Krzyż Jerozolimski. Sam krzyż Bolnisi sięga kamiennych rzeźb z gruzińskiego kościoła z V wieku, a europejskie mapy morskie z 1339 i 1367 roku pokazują już ten sztandar nad Tbilisi.",
+      "medieval": "Sztandar z pięcioma krzyżami średniowiecznego Królestwa Gruzji, powiewający w złotym wieku królów z dynastii Bagratydów. Mapy morskie Dulcerta z 1339 i Pizzigana z 1367 roku pokazują go już nad Tbilisi, tutaj w głębszej czerwieni niż dzisiejsza flaga.",
+      "republic": "Flaga pierwszej Republiki Gruzińskiej, wino-czerwona z czarno-białym kantonem, zaprojektowana przez artystę i rzeźbiarza Jakoba Nikoladzego, zwycięzcę ogólnokrajowego konkursu.",
+      "sovietearly": "Po najeździe Armii Czerwonej w 1921 roku radziecka Gruzja podnosiła zwykłą czerwoną flagę z nazwą republiki wypisaną złotym gruzińskim pismem, nim wzór zyskał później niebieskie słońce.",
+      "soviet": "Do 1951 roku flaga nosiła niebieskie słońce z młotem, sierpem i gwiazdą, na niebieskim pasie w poprzek czerwieni.",
       "restored": "Gdy Związek Radziecki upadł, w grudniu 1991 roku powróciła flaga republiki z 1918 roku.",
       "current": "Ta flaga z pięcioma krzyżami była sztandarem samej rewolucji róż, symbolem opozycji, którym tłumy machały w 2003 roku. Kilka miesięcy po tej pokojowej zmianie władzy, w 2004 roku, stała się flagą państwową.",
       "fact": {
         "crosses": "Pięć krzyży odczytuje się zwykle jako Pięć Ran Chrystusa, albo jako Chrystusa (krzyż środkowy) wśród czterech ewangelistów.",
         "jerusalem": "Układ „jeden duży plus cztery małe” to Krzyż Jerozolimski, godło krucjat, nawiązanie do głębokich średniowiecznych związków chrześcijańskich Gruzji, gdy gruzińscy rycerze również przywdziewali krzyż.",
-        "stgeorge": "Duży środkowy krzyż to krzyż św. Jerzego, ten sam czerwony krzyż na bieli co na fladze Anglii. Nieprzypadkowo, bo św. Jerzy jest patronem Gruzji."
+        "stgeorge": "Duży środkowy krzyż to krzyż św. Jerzego, ten sam czerwony krzyż na bieli co na fladze Anglii. Nieprzypadkowo, bo św. Jerzy jest patronem Gruzji.",
+        "royalbanners": "Władców złotego wieku Gruzji upamiętniają własne sztandary: bordowo-czarny herb wiązany z królową Tamarą oraz biała flaga z jednorożcem króla Dawida Budowniczego. Oba to późniejsze rekonstrukcje, nigdy nie były udokumentowanymi flagami narodowymi."
+      },
+      "gallery": {
+        "tamar": "Królowa Tamara (rekonstrukcja)",
+        "david": "Dawid Budowniczy (rekonstrukcja)"
       }
     },
     "fr": {

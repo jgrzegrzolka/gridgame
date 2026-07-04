@@ -411,16 +411,46 @@ export const FLAG_FACTS = {
   },
   ge: {
     addedOn: '2026-07-01',
+    // The current five-cross flag is a REVIVAL: the same white field with a
+    // red cross and four small bolnur-katskhuri crosses flew over Tbilisi on
+    // European portolan maps of 1339 and 1367. So the timeline opens in the
+    // medieval kingdom, not in 1918. The medieval banner uses a darker crimson
+    // and slightly different crosses (a modern render from the map sources), so
+    // it reads as distinct from today's bright-red flag rather than a duplicate.
+    // The Soviet run gets its earlier "red field, gold Georgian inscription"
+    // flag (1921-1951) before the 1951 blue-sun one. Tamar's and David the
+    // Builder's banners are modern heraldic reconstructions, never documented
+    // national flags, so they sit in a labelled gallery, not the timeline.
     introKey: 'flagFacts.ge.intro',
     timeline: [
+      { year: '12th–15th c.', img: 'history/ge-medieval.svg', captionKey: 'flagFacts.ge.medieval' },
       { year: '1918–1921', img: 'history/ge-1918.svg', captionKey: 'flagFacts.ge.republic' },
-      { year: '1921–1990', img: 'history/ge-ssr.svg', captionKey: 'flagFacts.ge.soviet' },
+      { year: '1921–1951', img: 'history/ge-ssr-1937.svg', captionKey: 'flagFacts.ge.sovietearly' },
+      { year: '1951–1990', img: 'history/ge-ssr.svg', captionKey: 'flagFacts.ge.soviet' },
       // The 1918 flag returned after the USSR fell — same design, hence the
       // same image, shown again so the "it came back" beat reads visually.
       { year: '1991–2004', img: 'history/ge-1918.svg', captionKey: 'flagFacts.ge.restored' },
       { year: '2004', img: 'svg/ge.svg', captionKey: 'flagFacts.ge.current' },
     ],
-    factKeys: ['flagFacts.ge.fact.crosses', 'flagFacts.ge.fact.jerusalem', 'flagFacts.ge.fact.stgeorge'],
+    factKeys: [
+      'flagFacts.ge.fact.crosses',
+      'flagFacts.ge.fact.jerusalem',
+      'flagFacts.ge.fact.stgeorge',
+      'flagFacts.ge.fact.royalbanners',
+    ],
+    // Reconstructed royal banners of the golden-age kings, shown under the
+    // "royal banners" fact and captioned honestly as later reconstructions
+    // (they were never documented national flags, so they stay out of the
+    // timeline).
+    galleries: [
+      {
+        afterFactKey: 'flagFacts.ge.fact.royalbanners',
+        items: [
+          { img: 'history/ge-tamar.svg', labelKey: 'flagFacts.ge.gallery.tamar' },
+          { img: 'history/ge-david.svg', labelKey: 'flagFacts.ge.gallery.david' },
+        ],
+      },
+    ],
   },
   fr: {
     addedOn: '2026-07-03',
