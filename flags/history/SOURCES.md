@@ -26,6 +26,10 @@ this file the single source of truth for both current and historical assets.
 | `al-crowned.svg` | Flag of Albania (1939-1943; crowned).svg | Public domain | Italian-era Kingdom of Albania, royal state flag with the crowned arms over the eagle |
 | `al-1944.svg` | Flag of Albania 1944.svg | Public domain | Wartime communist-led Democratic Government (1944–1946), black double-headed eagle with a gold hammer and sickle in the canton |
 | `al-communist.svg` | Flag of Albania (1946–1992).svg | Public domain | People's Socialist Republic of Albania, black double-headed eagle with a gold-bordered red star above, on a darker red field |
+| `ax-triband.svg` | Åland flag 1922.svg | Public domain | The unofficial 1922 Åland flag, a blue-yellow-blue horizontal triband (banned by Finland in 1935) |
+| `ax-pestflaggan.svg` | Åland Flag Proposal "Pestflaggan".svg | CC0 (Germenfer) | Rejected Åland flag proposal, a yellow field with a blue Nordic cross, mocked as the "plague flag" |
+| `ax-1953.svg` | Åland Flag Proposal (1953).svg | CC0 (Germenfer) | Rejected 1953 Åland flag debate proposal, a yellow field with a blue Nordic cross fimbriated yellow |
+| `ax-arms.svg` | Coat of arms of Åland.svg | Public domain | Coat of arms of Åland, a golden deer on blue beneath a comital coronet (the source of the flag's blue and yellow) |
 | `gr-ottoman.svg` | Roman (Orthodox Christian) Merchant Flag 1453-1793.svg | Public domain | Ottoman-rule Greek/Orthodox merchant flag, red with a blue stripe |
 | `gr-1821.svg` | Greek Independence 1821.svg | Public domain | 1821 War of Independence banner, white field with a sky-blue cross |
 | `gr-1822-land.svg` | Flag of Greece (1822-1978).svg | Public domain | 1822 land flag, white cross on blue |
