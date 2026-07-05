@@ -697,6 +697,28 @@
         "goldendragon": "Y Ddraig Aur"
       }
     },
+    "gb-nir": {
+      "intro": "Irlandia Północna jest wyjątkiem wśród krajów Zjednoczonego Królestwa: jako jedyna nie ma własnej oficjalnej flagi. Flaga pokazana tutaj, Sztandar Ulsteru zwany też „flagą Czerwonej Ręki”, czerwony krzyż na bieli z ukoronowaną sześcioramienną gwiazdą niosącą Czerwoną Rękę Ulsteru, wywodzi się z herbu nadanego rządowi Irlandii Północnej w 1924 roku. Powiewał jako oficjalna flaga tego rządu od 1953 do 1972 roku, a gdy rząd zawieszono, a następnie zniesiono, sztandar utracił wszelki oficjalny status i nigdy nie został zastąpiony.\n\nWzór niesie dawną heraldykę Ulsteru: czerwony krzyż średniowiecznych hrabiów, Czerwoną Rękę królów z rodu O'Neillów, sześcioramienną gwiazdę oznaczającą sześć hrabstw i koronę symbolizującą unię z Brytanią. Wciąż szeroko wywieszany, lecz nigdy nieprzyjęty przez obie społeczności, sztandar nie odzyskał oficjalnego statusu, a dziś oficjalnie powiewa jedynie Union Jack.",
+      "unionearly": "Gdy w 1921 roku utworzono Irlandię Północną, nie miała ona własnej flagi, więc jako część Zjednoczonego Królestwa wywieszała Union Jacka. W 1924 roku otrzymała własny herb.",
+      "tudor": "Sztandar z herbu z 1924 roku, w pierwszej postaci. Nad gwiazdą widniała korona Tudorów, królewska korona tamtych czasów, choć w tych latach sztandar rzadko bywał używany oficjalnie.",
+      "stedward": "Z okazji koronacji królowej Elżbiety II w 1953 roku korona stała się koroną św. Edwarda, a sztandar powiewał jako oficjalna flaga rządu Irlandii Północnej aż do 1972 roku.",
+      "noflag": "W 1972 roku rząd zawieszono, a w 1973 zniesiono. W brytyjskiej heraldyce flaga należy do rządu, a nie do miejsca, więc sztandar utracił wszelkie znaczenie i nigdy nie został zastąpiony. Irlandię Północną oficjalnie reprezentuje ponownie już tylko Union Jack.",
+      "fact": {
+        "sport": "Sztandar Ulsteru powiewał jako oficjalna flaga zaledwie przez dziewiętnaście lat, od 1953 do 1972 roku, a mimo to nadal jest flagą, którą większość ludzi kojarzy z Irlandią Północną. Unioniści wywieszają go jako znak brytyjskiej tożsamości, a on sam do dziś reprezentuje kraj w piłce nożnej i na Igrzyskach Wspólnoty Narodów: w 2026 roku zgromadzenie w Stormont potwierdziło, że znów zawiśnie na igrzyskach w Glasgow.",
+        "star": "Sześć ramion gwiazdy to sześć hrabstw Irlandii Północnej: Antrim, Armagh, Down, Fermanagh, Londonderry i Tyrone. Odróżniają one Irlandię Północną, złożoną z sześciu hrabstw, od historycznej prowincji Ulster, która liczy ich dziewięć.",
+        "redhand": "Czerwona Ręka Ulsteru jest znacznie starsza niż flaga. Według tradycji pochodzi z wyścigu łodzi o królestwo Ulsteru: kto pierwszy dotknie ręką brzegu, ten nim zawładnie, więc jeden z rywali, widząc, że przegrywa, odciął sobie dłoń i rzucił ją na brzeg, by wygrać. Poświadczona od XIII wieku, była godłem królów z rodu O'Neillów, a król Jakub I uczynił ją później odznaką brytyjskich baronetów, zwykle rysowaną jako lewa dłoń zamiast prawej dłoni Ulsteru.",
+        "provincial": "Sztandar Ulsteru łatwo pomylić ze starszą Flagą Ulsteru: czerwonym krzyżem na złotym polu z Czerwoną Ręką na białej tarczy. Tamta nie ma korony ani gwiazdy i reprezentuje całą prowincję złożoną z dziewięciu hrabstw, obejmującą zarówno Irlandię Północną, jak i część Republiki.",
+        "saltire": "Elementem Irlandii Północnej na Union Jacku jest czerwony ukośny krzyż św. Patryka. Jego związek ze świętym sięga dopiero lat 80. XVIII wieku, a pochodzenie jest sporne, lecz mając mniej bagażu niż Union Jack czy flaga trójkolorowa, bywa używany jako neutralny symbol Irlandii i jej północy.",
+        "independence": "Poza unionistami i nacjonalistami istnieje też niewielki ruch, który chce, by Irlandia Północna stała się osobnym, niepodległym państwem, niezależnym zarówno od Londynu, jak i od Dublina. Wywiesza on własną flagę Ulster Nation: czerwony ukośny krzyż św. Patryka na błękicie, ze złotą sześcioramienną gwiazdą niosącą Czerwoną Rękę, lecz bez korony.",
+        "communities": "W Irlandii Północnej flaga jest wyrazem tożsamości. Nacjonaliści, w większości z tradycji katolickiej, wywieszają trójkolorową flagę Republiki Irlandii, zieleń dla tradycji gaelickiej i katolickiej, pomarańcz dla protestanckiej, a biel dla pokoju między nimi; unioniści wywieszają Union Jacka i Sztandar Ulsteru. Podział widać na ulicach: całe dzielnice są oznaczane flagami, które w nich wiszą, a to, która flaga powinna wisieć na danej ulicy, bywa realnym sporem."
+      },
+      "gallery": {
+        "ulster": "Flaga Ulsteru",
+        "saltire": "Krzyż św. Patryka",
+        "ulsternation": "Flaga Ulster Nation",
+        "tricolour": "Flaga Irlandii"
+      }
+    },
     "ie": {
       "intro": "Irlandzka trójbarwna flaga w zieleni, bieli i pomarańczu to flaga o pojednaniu. Zieleń oznacza tradycję gaelicką i katolicką, pomarańcz, protestancką tradycję Wilhelma Orańskiego, a biel między nimi, trwały pokój pomiędzy nimi.\n\nPo raz pierwszy podniósł ją w 1848 roku nacjonalista Thomas Francis Meagher, wzorując się na francuskiej trójbarwnej fladze, którą widział w rewolucyjnym Paryżu.",
       "royal": "Pod koroną angielską, a potem brytyjską, sztandarem Irlandii była złota harfa na królewsko-niebieskim polu, herb Królestwa Irlandii od czasów Henryka VIII w latach 40. XVI wieku aż do unii z 1801 roku. Ten odcień błękitu wciąż nazywa się błękitem świętego Patryka.",

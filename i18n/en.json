@@ -697,6 +697,28 @@
         "goldendragon": "Y Ddraig Aur"
       }
     },
+    "gb-nir": {
+      "intro": "Northern Ireland is the odd one out among the nations of the United Kingdom: it is the only one with no official flag of its own. The flag shown here, the Ulster Banner or \"Red Hand Flag\", a red cross on white charged with a crowned six-pointed star bearing the Red Hand of Ulster, was drawn from the coat of arms granted to Northern Ireland's government in 1924. It flew as that government's official flag from 1953 to 1972, and when the government was suspended and then abolished, the banner lost all official standing and was never replaced.\n\nThe design carries the old heraldry of Ulster: the red cross of the medieval earls, the Red Hand of the O'Neill kings, a six-pointed star for the six counties, and a crown for the union with Britain. Still widely flown but never accepted across both communities, the banner was never given official status again, and today only the Union Flag flies officially.",
+      "unionearly": "When Northern Ireland was created in 1921 it had no flag of its own, so as part of the United Kingdom it flew the Union Flag. In 1924 it was granted its own coat of arms.",
+      "tudor": "The banner of those 1924 arms, in its first form. Above the star sat a Tudor Crown, the royal crown of the day, though in these years the banner saw little official use.",
+      "stedward": "For the coronation of Queen Elizabeth II in 1953 the crown became a St Edward's Crown, and the banner was flown as the official flag of the Northern Ireland government until 1972.",
+      "noflag": "In 1972 the government was suspended, and in 1973 abolished. Under British heraldry a flag belongs to a government, not a place, so the banner lost all standing and was never replaced. Northern Ireland is once again represented officially only by the Union Flag.",
+      "fact": {
+        "sport": "The Ulster Banner flew as an official flag for just nineteen years, from 1953 to 1972, yet it is still the flag most people picture for Northern Ireland. Unionists raise it as a symbol of British identity, and it represents the country in football and at the Commonwealth Games to this day: in 2026 the Stormont assembly confirmed it would fly again for the Glasgow Games.",
+        "star": "The six points of the star are the six counties of Northern Ireland: Antrim, Armagh, Down, Fermanagh, Londonderry and Tyrone. They set six-county Northern Ireland apart from the historic province of Ulster, which has nine.",
+        "redhand": "The Red Hand of Ulster is far older than the flag. By tradition it comes from a boat race for the kingship of Ulster: the first to touch the shore with his hand would rule it, so a contender who saw he was losing cut off his own hand and threw it to the bank to win. Documented since the 1200s, it was the emblem of the O'Neill kings, and King James I later made it the badge of British baronets, usually drawn as a left hand rather than the right hand of Ulster.",
+        "provincial": "The Ulster Banner is easily confused with the older Flag of Ulster: a red cross on a gold field with the Red Hand on a white shield. That one has no crown and no star, and it stands for the whole nine-county province, which spans both Northern Ireland and part of the Republic.",
+        "saltire": "Northern Ireland's element in the Union Flag is the red diagonal cross of St Patrick. Its link to the saint only dates to the 1780s and its origin is disputed, but carrying less baggage than the Union Flag or the tricolour, it is sometimes used as a neutral emblem for Ireland and the north.",
+        "independence": "Beyond the unionists and nationalists, a small movement wants Northern Ireland to become its own independent country, separate from both London and Dublin. It flies its own Ulster Nation flag: St Patrick's red saltire on blue, with a gold six-pointed star holding the Red Hand, but no crown.",
+        "communities": "In Northern Ireland a flag is a statement of identity. Nationalists, mostly of the Catholic tradition, fly the tricolour of the Republic of Ireland, green for the Gaelic and Catholic tradition, orange for the Protestant, and white for peace between them; unionists fly the Union Flag and the Ulster Banner. The split is visible on the ground: whole neighbourhoods are marked out by the flags flown in them, and which flag belongs on a given street can be a real dispute."
+      },
+      "gallery": {
+        "ulster": "Flag of Ulster",
+        "saltire": "St Patrick's Saltire",
+        "ulsternation": "Ulster Nation flag",
+        "tricolour": "Irish Tricolour"
+      }
+    },
     "ie": {
       "intro": "Ireland's tricolour of green, white and orange is a flag about reconciliation. Green stands for the Gaelic and Catholic tradition, orange for the Protestant tradition of William of Orange, and the white between them for a lasting peace between the two.\n\nIt was first flown in 1848 by the nationalist Thomas Francis Meagher, modelled on the French Tricolore he had seen in revolutionary Paris.",
       "royal": "Under the English then British crown, Ireland's banner was a gold harp on a royal-blue field, the arms of the Kingdom of Ireland from Henry VIII in the 1540s until the 1801 union. The blue is still called Saint Patrick's blue.",

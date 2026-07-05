@@ -53,6 +53,9 @@ this file the single source of truth for both current and historical assets.
 | `gb-wls-neith.svg` | Cross of Neith.svg | Public domain (Derfel73) | Cross of Neith (Y Groes Nawdd), gold Celtic cross on purple, battle flag of Llywelyn ap Gruffudd (13th c.) |
 | `gb-wls-glyndwr.svg` | Glyndwr's Banner.svg | CC BY-SA 3.0 (Perhelion, AlexD) | Owain Glyndŵr's banner, four lions rampant counterchanged gold and red (1400–1415), still flown today |
 | `gb-wls-goldendragon.svg` | Golden Dragon War Flag of Wales (created 1400).svg | CC0 (Llywelyn2000) | Y Ddraig Aur, Owain Glyndŵr's golden dragon war banner (raised 1401) |
+| `gb-nir-tudor.svg` | Ulster Banner (Tudor Crown version, 3-2).svg | CC0 (Sangjinhwa) | Ulster Banner in its 1924–1953 form, the crowned star with the Red Hand under a Tudor Crown |
+| `gb-nir-ulster.svg` | Flag of Ulster.svg | CC BY-SA 3.0 (Caomhan27) | Provincial flag of Ulster, red cross on a gold field with the Red Hand on a white shield (the nine-county province) |
+| `gb-nir-ulsternation.svg` | Flag of the Ulster Nation.svg | Public domain | Ulster Nation flag of the Northern Ireland independence movement, St Patrick's red saltire on blue with a gold six-pointed star bearing the Red Hand |
 | `ie-royal.svg` | Royal Standard of Ireland (1542–1801).svg | CC BY-SA 3.0 (TRAJAN 117) | Royal Standard of the Kingdom of Ireland, gold harp on royal blue (under the English/British crown) |
 | `ie-patrick.svg` | Saint Patrick's Saltire.svg | Public domain | Saltire of St Patrick, red diagonal cross on white (Ireland's element of the Union Jack) |
 | `ie-harp-1642.svg` | Green harp flag of Ireland 17th century.svg | CC BY-SA 3.0 (R-41) | Green harp flag of Ireland, winged Brian Boru harp on green (the 1642 Confederate / nationalist banner) |
@@ -204,6 +207,9 @@ this file the single source of truth for both current and historical assets.
   Habibullah Kalakani"* by Wikimedia Commons user **Koopinator** (vectorization by
   **Mrmw**), licensed **CC BY-SA 4.0**; used unmodified and re-shared under the
   same licence.
+- `gb-nir-ulster.svg` is *"Flag of Ulster"* by Wikimedia Commons user
+  **Caomhan27**, licensed **CC BY-SA 3.0**; used unmodified and re-shared under
+  the same licence.
 
 When adding a new country's history, drop its historical SVGs here following the
 same `<code>-<era>.svg` naming and record the provenance + licence above.

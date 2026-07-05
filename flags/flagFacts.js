@@ -282,6 +282,68 @@ export const FLAG_FACTS = {
       },
     ],
   },
+  'gb-nir': {
+    addedOn: '2026-07-05',
+    // Northern Ireland is the home-nation outlier: it has NO official flag of
+    // its own. The genuinely-flown lineage: Union Flag (1921–1924, created with
+    // no flag of its own) → Ulster Banner from the 1924 arms in two crown forms
+    // (Tudor Crown 1924–1953, then St Edward's Crown 1953–1972 when it was flown
+    // as the Stormont government's official flag) → Union Flag again (since 1972,
+    // government suspended then abolished 1973, the banner never replaced). The
+    // two crowns are a real, dated design change (the UK-wide Tudor→St Edward's
+    // switch at Elizabeth II's 1953 accession), verified against en.wikipedia at
+    // Jan's steer. svg/gb-nir.svg is the St Edward's-Crown version (confirmed by
+    // render-check); history/gb-nir-tudor.svg is the Tudor-Crown one. svg/gb.svg
+    // (Union Flag) is reused for both outer steps (France two-navy pattern). The
+    // clicked flag (the Banner) is deliberately NOT the final step: the story
+    // teaches that it is the FORMER flag, not today's official one. Galleries
+    // hold related flags that were never THE flag of NI: the gold provincial
+    // Flag of Ulster (nine counties), St Patrick's Saltire (reused ie-patrick),
+    // the Ulster Nation independence flag, and the Irish Tricolour (reused
+    // svg/ie.svg) as the nationalist community flag.
+    introKey: 'flagFacts.gb-nir.intro',
+    timeline: [
+      { year: '1921–1924', img: 'svg/gb.svg', captionKey: 'flagFacts.gb-nir.unionearly' },
+      { year: '1924–1953', img: 'history/gb-nir-tudor.svg', captionKey: 'flagFacts.gb-nir.tudor' },
+      { year: '1953–1972', img: 'svg/gb-nir.svg', captionKey: 'flagFacts.gb-nir.stedward' },
+      { year: 'since 1972', img: 'svg/gb.svg', captionKey: 'flagFacts.gb-nir.noflag' },
+    ],
+    factKeys: [
+      'flagFacts.gb-nir.fact.sport',
+      'flagFacts.gb-nir.fact.star',
+      'flagFacts.gb-nir.fact.redhand',
+      'flagFacts.gb-nir.fact.provincial',
+      'flagFacts.gb-nir.fact.saltire',
+      'flagFacts.gb-nir.fact.independence',
+      'flagFacts.gb-nir.fact.communities',
+    ],
+    galleries: [
+      {
+        afterFactKey: 'flagFacts.gb-nir.fact.provincial',
+        items: [
+          { img: 'history/gb-nir-ulster.svg', labelKey: 'flagFacts.gb-nir.gallery.ulster' },
+        ],
+      },
+      {
+        afterFactKey: 'flagFacts.gb-nir.fact.saltire',
+        items: [
+          { img: 'history/ie-patrick.svg', labelKey: 'flagFacts.gb-nir.gallery.saltire' },
+        ],
+      },
+      {
+        afterFactKey: 'flagFacts.gb-nir.fact.independence',
+        items: [
+          { img: 'history/gb-nir-ulsternation.svg', labelKey: 'flagFacts.gb-nir.gallery.ulsternation' },
+        ],
+      },
+      {
+        afterFactKey: 'flagFacts.gb-nir.fact.communities',
+        items: [
+          { img: 'svg/ie.svg', labelKey: 'flagFacts.gb-nir.gallery.tricolour' },
+        ],
+      },
+    ],
+  },
   ie: {
     addedOn: '2026-07-01',
     // Chronological arc: under the crown the harp flew gold on royal blue; the
