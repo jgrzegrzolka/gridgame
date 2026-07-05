@@ -1,16 +1,16 @@
 /**
  * Flag-facts catalog: per-country "story of the flag" content shown on
- * `/flagsdata/` when a flag tile (or the map) is clicked. Structure only —
+ * `/flagsdata/` when a flag tile (or the map) is clicked. Structure only,
  * the prose lives in i18n (`flagFacts.<code>.*` keys in `i18n/en.json` /
  * `i18n/pl.json`) so it translates and re-renders on a soft language
  * switch, exactly like every other UI string.
  *
  * Each entry:
- *   - `introKey`  — i18n key for the intro paragraph(s). Paragraphs are
+ *   - `introKey`: i18n key for the intro paragraph(s). Paragraphs are
  *     separated by a blank line (`\n\n`) in the string; the renderer splits
  *     on that.
- *   - `timeline`  — ordered historical flags, oldest first. Each step:
- *       - `year`       — display label (numeric range, language-neutral, so
+ *   - `timeline`: ordered historical flags, oldest first. Each step:
+ *       - `year`: display label (numeric range, language-neutral, so
  *                        it stays in the data rather than i18n). Consecutive
  *                        steps that share an identical `year` render as one
  *                        bracketed "these coexisted" node (see
@@ -18,7 +18,7 @@
  *                        variants the same label and sequential flags distinct
  *                        ones. For flags whose ranges only *partially* overlap,
  *                        see `overlap` below.
- *       - `overlap`    — optional group id. Consecutive steps sharing one, whose
+ *       - `overlap`: optional group id. Consecutive steps sharing one, whose
  *                        dates differ, render as a partial-overlap cluster:
  *                        parallel braces, each spanning its own years, so a
  *                        variant flown across a design change (Afghanistan's
@@ -28,11 +28,11 @@
  *                        auto-detection misfire on one-year seams between truly
  *                        sequential flags. Omit for everything that isn't a
  *                        genuine, deliberate coexistence.
- *       - `img`        — path **relative to the `flags/` folder** (e.g.
+ *       - `img`: path **relative to the `flags/` folder** (e.g.
  *                        `history/gr-ottoman.svg` for a superseded design,
  *                        `svg/gr.svg` for the current flag). The renderer
  *                        prefixes it with a caller-supplied base.
- *       - `captionKey` — i18n key for the one-line caption under the flag.
+ *       - `captionKey`: i18n key for the one-line caption under the flag.
  *
  * Deliberately a plain data module (not fetched JSON): it's tiny, wants to
  * be unit-tested without a fetch stub, and the historical-image filenames
@@ -80,7 +80,7 @@
  * }} FlagFactGallery
  *
  * `compare` (optional) renders a two-flag "right way up vs upside down"
- * illustration — the same `img` shown normally and flipped vertically —
+ * illustration (the same `img` shown normally and flipped vertically)
  * tucked directly beneath the fact bullet named by `afterFactKey` (so it
  * illustrates that specific point). It exists for flags whose asymmetry has a
  * consequence (the Union Jack, where inverting it is a distress signal). No
@@ -90,7 +90,7 @@
  * mirrored too (the renderer flags it so the lightbox keeps the flip).
  *
  * `illustration` (optional) renders a single image with a visible caption
- * beneath the fact bullet named by `afterFactKey` — for a flag that a fact
+ * beneath the fact bullet named by `afterFactKey`, for a flag that a fact
  * mentions but that never belonged to the timeline (a rejected proposal, a
  * one-off variant). `captionKey` is shown (unlike `compare`, which has none)
  * so the image is labelled honestly; `altKey` overrides the alt text, falling
@@ -109,14 +109,14 @@
  * day's pick (see `flags/flagOfDay.js`). A test pins that every entry has one.
  *
  * A step is normally one flag (`img`) with a `year` + caption. When `parts`
- * is set, the step renders as an *equation* — `part₁ + part₂ = img` — so a
+ * is set, the step renders as an *equation* (`part₁ + part₂ = img`), so a
  * composite flag reads as ingredients combined at a moment, not as the flag
  * morphing over time (e.g. 1606 = England + Scotland; 1801 = 1606 + Ireland).
  * `parts` are image paths (same base as `img`); `partLabelKeys` are the
  * matching i18n labels shown under each part (optional, index-aligned).
  *
  * `factKeys` (optional) is a list of i18n keys rendered as a "Did you know?"
- * bullet list below the timeline — standalone trivia that doesn't belong in
+ * bullet list below the timeline, standalone trivia that doesn't belong in
  * the narrative intro or on a specific flag.
  */
 
@@ -223,7 +223,7 @@ export const FLAG_FACTS = {
     ],
     // Sits directly under the `asymmetry` bullet: the same flag the right way
     // up and flipped. The Union Jack has 180° rotational symmetry, so "upside
-    // down" is a vertical FLIP (scaleY(-1)), not a rotation — a rotation would
+    // down" is a vertical FLIP (scaleY(-1)), not a rotation. A rotation would
     // look identical. The flip correctly drops the broad white below the red
     // on the hoist side.
     compare: {
@@ -535,7 +535,7 @@ export const FLAG_FACTS = {
       { year: '1918–1921', img: 'history/ge-1918.svg', captionKey: 'flagFacts.ge.republic' },
       { year: '1921–1951', img: 'history/ge-ssr-1937.svg', captionKey: 'flagFacts.ge.sovietearly' },
       { year: '1951–1990', img: 'history/ge-ssr.svg', captionKey: 'flagFacts.ge.soviet' },
-      // The 1918 flag returned after the USSR fell — same design, hence the
+      // The 1918 flag returned after the USSR fell: same design, hence the
       // same image, shown again so the "it came back" beat reads visually.
       { year: '1991–2004', img: 'history/ge-1918.svg', captionKey: 'flagFacts.ge.restored' },
       { year: '2004', img: 'svg/ge.svg', captionKey: 'flagFacts.ge.current' },
@@ -606,7 +606,7 @@ export const FLAG_FACTS = {
         year: '1794',
         img: 'svg/fr.svg',
         captionKey: 'flagFacts.fr.current',
-        // The white ingredient is plain white (the king's colour) — NOT the
+        // The white ingredient is plain white (the king's colour), NOT the
         // fleurs-de-lis royal flag, whose gold never appears on the Tricolour.
         parts: ['history/fr-paris.svg', 'history/fr-white.svg'],
         partLabelKeys: ['flagFacts.fr.part.paris', 'flagFacts.fr.part.king'],
@@ -618,7 +618,7 @@ export const FLAG_FACTS = {
       // Giscard's lighter blue-and-red (official #0055A4 / #EF4135), the only
       // visibly different modern shade.
       { year: '1976–2020', img: 'history/fr-1976.svg', captionKey: 'flagFacts.fr.lighter' },
-      // Macron's 2020 return to the navy "bleu marine" — same fr.svg as 1830.
+      // Macron's 2020 return to the navy "bleu marine": same fr.svg as 1830.
       { year: 'since 2020', img: 'svg/fr.svg', captionKey: 'flagFacts.fr.navy2020' },
     ],
     factKeys: [
@@ -747,7 +747,7 @@ export const FLAG_FACTS = {
 
 /**
  * Facts entry for a country code, or null when we have no story for it.
- * Most flags have none (yet) — the caller renders nothing in that case.
+ * Most flags have none (yet). The caller renders nothing in that case.
  *
  * @param {string} code
  * @returns {FlagFacts | null}
@@ -757,7 +757,7 @@ export function getFlagFacts(code) {
 }
 
 /**
- * Codes of every flag that currently has a story — the pool the home page's
+ * Codes of every flag that currently has a story, the pool the home page's
  * "flag of the day" rotates through. Grows automatically as descriptions are
  * added, so there's no separate list to keep in sync.
  *
@@ -768,7 +768,7 @@ export function storyFlagCodes() {
 }
 
 /**
- * The story pool as `{ code, addedOn }` records — what the flag-of-the-day
+ * The story pool as `{ code, addedOn }` records, what the flag-of-the-day
  * picker needs to stay append-safe (each flag's eligibility starts the day
  * after its `addedOn`). Grows automatically as stories are added.
  *
