@@ -149,6 +149,52 @@ export const FLAG_FACTS = {
       'flagFacts.al.fact.landofeagles',
     ],
   },
+  ax: {
+    addedOn: '2026-07-05',
+    // Åland is a Swedish-speaking archipelago that belongs to Finland; the flag
+    // encodes the split (Sweden's yellow cross on blue + a red Finnish cross set
+    // inside it). Åland's OWN flags are few: the unofficial 1922 blue-yellow-blue
+    // triband (banned by Finland 1935) → the current 1954 flag (svg/ax.svg), so
+    // the timeline is 2 steps and the richer material sits in galleries + facts.
+    // The Swedish flag flown in the 1917–1921 reunion movement is a MOVEMENT
+    // banner, never Åland's own flag, so it is a gallery item (reused svg/se.svg),
+    // not a timeline step (the Wales/NI rule). Other galleries: the rejected
+    // design proposals (the yellow "Pestflaggan" + a 1953 debate design) and the
+    // golden-deer coat of arms the flag's blue+yellow come from.
+    introKey: 'flagFacts.ax.intro',
+    timeline: [
+      { year: '1922–1954', img: 'history/ax-triband.svg', captionKey: 'flagFacts.ax.triband' },
+      { year: 'since 1954', img: 'svg/ax.svg', captionKey: 'flagFacts.ax.current' },
+    ],
+    factKeys: [
+      'flagFacts.ax.fact.design',
+      'flagFacts.ax.fact.reunion',
+      'flagFacts.ax.fact.league',
+      'flagFacts.ax.fact.deer',
+      'flagFacts.ax.fact.flagday',
+    ],
+    galleries: [
+      {
+        afterFactKey: 'flagFacts.ax.fact.design',
+        items: [
+          { img: 'history/ax-pestflaggan.svg', labelKey: 'flagFacts.ax.gallery.pestflaggan' },
+          { img: 'history/ax-1953.svg', labelKey: 'flagFacts.ax.gallery.p1953' },
+        ],
+      },
+      {
+        afterFactKey: 'flagFacts.ax.fact.reunion',
+        items: [
+          { img: 'svg/se.svg', labelKey: 'flagFacts.ax.gallery.sweden' },
+        ],
+      },
+      {
+        afterFactKey: 'flagFacts.ax.fact.deer',
+        items: [
+          { img: 'history/ax-arms.svg', labelKey: 'flagFacts.ax.gallery.arms' },
+        ],
+      },
+    ],
+  },
   gb: {
     addedOn: '2026-07-01',
     introKey: 'flagFacts.gb.intro',
