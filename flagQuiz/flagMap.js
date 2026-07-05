@@ -156,6 +156,10 @@ const MICROSTATE_CODES = new Set([
   'va', 'mc', 'sm', 'ad', 'li', 'mt',
   // British isles + Crown Dependencies
   'gg', 'je', 'im', 'fo',
+  // Åland: a Nordic autonomous archipelago (part of Finland) that the base
+  // world map omits. We inject an `ax` <g> + locator into worldMap.svg so its
+  // pink ring lands in the Baltic between Sweden and Finland.
+  'ax',
   // Asia microstates — only countries whose paths are tinier than
   // the pink ring itself (smaller-than-ring marker would be pointless,
   // e.g. Bhutan / Lebanon / Cyprus are already visible-sized as

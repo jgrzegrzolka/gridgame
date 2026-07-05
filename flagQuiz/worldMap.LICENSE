@@ -6,11 +6,17 @@ Source : https://commons.wikimedia.org/wiki/File:BlankMap-World.svg
 Author : Canuckguy and many others (per Wikimedia file history)
 License: Public domain — released by the copyright holder
 
-This SVG is bundled unmodified as `worldMap.svg`. Paths are ID'd by
-ISO 3166-1 alpha-2 lowercase, with extra codes for disputed territories
-(e.g. `xk` for Kosovo). Zero transforms, zero text labels, zero line
-elements, zero inline fills — clean to style via our CSS and to mount
-without per-country bbox transformation tricks.
+This SVG is bundled as `worldMap.svg` with one local modification (see
+below). Paths are ID'd by ISO 3166-1 alpha-2 lowercase, with extra codes
+for disputed territories (e.g. `xk` for Kosovo). Zero transforms, zero
+text labels, zero line elements, zero inline fills — clean to style via
+our CSS and to mount without per-country bbox transformation tricks.
+
+Local modification: added a small `<g id="ax">` (a tiny path + an r=6
+locator circle) for the Åland Islands in the Baltic between Sweden and
+Finland, which the source map omitted. This lets the flag map ring and
+label Åland like any other microstate. The source is public domain, so
+this modified copy remains freely usable.
 
 Used by the flagQuiz Europe-and-beyond contour map feature: per-variant
 viewBox crops at runtime focus the same asset on each continent.

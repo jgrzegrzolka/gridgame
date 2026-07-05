@@ -3234,6 +3234,11 @@
 		<path id="mc-" class="landxx mc" d="m 1358.89,320.67 c -0.12,-0.144 0.15,-0.405 0.39,-0.45 0.22,-0.04 -0.1,0.553 -0.39,0.45"/>
 		<circle id="mc_" class="circlexx mc" r="6" cy="320.304" cx="1357.15"/>
 	</g>
+	<g id="ax">
+		<title>Åland Islands</title>
+		<path id="ax-" class="landxx ax" d="m 1441.6,183 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
+		<circle id="ax_" class="circlexx ax" r="6" cy="183" cx="1443"/>
+	</g>
 	<g id="va">
 		<title>Vatican City</title>
 		<path id="va-" class="landxx va" d="m 1394.48,337.712 -0.1,0.03 -0.11,-0.04 0.1,-0.08 0.11,-0.02"/>

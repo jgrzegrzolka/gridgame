@@ -8,10 +8,18 @@ Author : Wikimedia Commons user "maix", based on earlier work by Tintazul.
 License: Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
          https://creativecommons.org/licenses/by-sa/3.0/
 
-This SVG is bundled unmodified as `europeMap.svg`. It carries the original
-authorship metadata inside the file. The CC BY-SA 3.0 share-alike clause
-applies to the SVG itself: any modifications to `europeMap.svg` must be
-released under the same license. The surrounding project code (JS, CSS,
+This SVG is bundled as `europeMap.svg` with one local modification (see
+below). It carries the original authorship metadata inside the file. The
+CC BY-SA 3.0 share-alike clause applies to the SVG itself: any
+modifications to `europeMap.svg` must be released under the same license,
+and CC BY-SA also requires that changes be indicated — hence this note.
+
+Local modification: added a small top-most `<path id="ax">` for the Åland
+Islands (the island group in the Baltic between Sweden and Finland), which
+the source map omitted. It sits on the existing island geometry so the
+Europe map can identify and show Åland on click, matching the other
+territories the asset already draws. This modified copy is released under
+the same CC BY-SA 3.0 license as the original. The surrounding project code (JS, CSS,
 HTML) does not become a derivative work merely by loading the SVG — this
 is "mere aggregation," not a derivative, so the rest of the repository
 keeps its own license.
