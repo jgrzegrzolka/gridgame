@@ -436,8 +436,8 @@
     "name": "Basque Country",
     "nameScore": 7,
     "continent": "Europe",
-    "category": "other",
-    "statehood": null,
+    "category": "country",
+    "statehood": "territory",
     "primaryColors": [
       "red",
       "green",
@@ -901,8 +901,8 @@
     "name": "Canary Islands",
     "nameScore": 7,
     "continent": "Europe",
-    "category": "other",
-    "statehood": null,
+    "category": "country",
+    "statehood": "territory",
     "primaryColors": [
       "white",
       "blue"
@@ -916,8 +916,8 @@
     "name": "Catalonia",
     "nameScore": 7,
     "continent": "Europe",
-    "category": "other",
-    "statehood": null,
+    "category": "country",
+    "statehood": "territory",
     "primaryColors": [
       "red",
       "yellow"
@@ -1512,8 +1512,8 @@
     "name": "England",
     "nameScore": 7,
     "continent": "Europe",
-    "category": "other",
-    "statehood": null,
+    "category": "country",
+    "statehood": "territory",
     "primaryColors": [
       "white",
       "red"
@@ -1846,8 +1846,8 @@
     "name": "Galicia",
     "nameScore": 7,
     "continent": "Europe",
-    "category": "other",
-    "statehood": null,
+    "category": "country",
+    "statehood": "territory",
     "primaryColors": [
       "blue",
       "white"
@@ -3448,8 +3448,8 @@
     "name": "Northern Ireland",
     "nameScore": 7,
     "continent": "Europe",
-    "category": "other",
-    "statehood": null,
+    "category": "country",
+    "statehood": "territory",
     "primaryColors": [
       "white",
       "red"
@@ -4096,8 +4096,8 @@
     "name": "Scotland",
     "nameScore": 7,
     "continent": "Europe",
-    "category": "other",
-    "statehood": null,
+    "category": "country",
+    "statehood": "territory",
     "primaryColors": [
       "blue",
       "white"
@@ -5184,8 +5184,8 @@
     "name": "Wales",
     "nameScore": 7,
     "continent": "Europe",
-    "category": "other",
-    "statehood": null,
+    "category": "country",
+    "statehood": "territory",
     "primaryColors": [
       "white",
       "green",

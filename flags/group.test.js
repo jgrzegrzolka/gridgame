@@ -94,10 +94,15 @@ test('sovereigntyOf classifies non_un, territory, and other distinctly', () => {
   assert.equal(sovereigntyOf(createCountry({ code: 'un', name: 'United Nations', category: 'other', continent: null })), 'other');
 });
 
-test('real data: sovereigntyOf yields the expected 195 / 5 / 54 / 15 split', () => {
+test('real data: sovereigntyOf yields the expected 195 / 5 / 62 / 7 split', () => {
+  // `territory` (62) holds every non-sovereign *place*: overseas territories,
+  // dependencies, autonomous regions, plus sub-national/constituent entities
+  // (the four UK home nations, and Catalonia / Basque / Galicia / Canary
+  // Islands). `other` (7) is reserved for non-place flags: the international
+  // organisations (EU, UN, ASEAN, Arab League, CEFTA, EAC, Pacific Community).
   const buckets = { sovereign: 0, non_un: 0, territory: 0, other: 0 };
   for (const c of countries) buckets[sovereigntyOf(c)]++;
-  assert.deepEqual(buckets, { sovereign: 195, non_un: 5, territory: 54, other: 15 });
+  assert.deepEqual(buckets, { sovereign: 195, non_un: 5, territory: 62, other: 7 });
 });
 
 /**

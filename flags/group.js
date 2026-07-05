@@ -70,8 +70,11 @@ export function loadCountries(rawArray) {
  *
  *   sovereign — UN member or UN observer (195: the "games pool")
  *   non_un    — partially-recognised states (currently Kosovo, Taiwan)
- *   territory — overseas territory / dependency / autonomous region
- *   other     — organisations, sub-national flags (EU, ASEAN, Wales, …)
+ *   territory — any non-sovereign *place*: overseas territory / dependency /
+ *               autonomous region, plus constituent or sub-national entities
+ *               (Åland, the UK home nations, Catalonia, Basque, …)
+ *   other     — flags that aren't places: international organisations
+ *               (EU, UN, ASEAN, Arab League, CEFTA, EAC, Pacific Community)
  *
  * @param {Country} c
  * @returns {Sovereignty}
