@@ -33,7 +33,7 @@ function yesterdayDateKey(now) {
  * UTC YYYY-MM-DD for the day `n` days before `now` (n=0 = today,
  * n=1 = yesterday, etc.). The leaderboard read uses this to fan out
  * across as many partitions as the rolling window spans — currently
- * 4 partitions for a 72h window.
+ * 8 partitions for a 168h (7-day) window.
  *
  * @param {number} now
  * @param {number} n

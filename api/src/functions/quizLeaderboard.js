@@ -23,16 +23,16 @@ const { isLocalRequestUrl } = require('../lib/requestHost');
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyLeaderboards';
 const CACHE_TTL_MS = 60_000;
-const ROLLING_WINDOW_MS = 72 * 60 * 60 * 1000;
-// Number of UTC-date partitions we fan out across. A 72h rolling
-// window can straddle 4 UTC days regardless of the hour we're called
-// (e.g. at 23:59 UTC, the cutoff lands at 23:59 three days back —
-// still day-3, so 4 distinct date keys: today, yesterday, -2, -3).
-// The container TTL must cover this — currently 96h to give one day
+const ROLLING_WINDOW_MS = 168 * 60 * 60 * 1000;
+// Number of UTC-date partitions we fan out across. A 168h (7-day)
+// rolling window can straddle 8 UTC days regardless of the hour we're
+// called (e.g. at 23:59 UTC, the cutoff lands at 23:59 seven days back —
+// still day-7, so 8 distinct date keys: today, yesterday, … -7).
+// The container TTL must cover this — currently 192h to give one day
 // of buffer over the read window.
-const WINDOW_DAYS = 4;
-// Generous per-partition slice — 50 entries per UTC day, four days
-// unioned, dedup yields at most 200 unique devices. Enough headroom
+const WINDOW_DAYS = 8;
+// Generous per-partition slice — 50 entries per UTC day, eight days
+// unioned, dedup yields at most 400 unique devices. Enough headroom
 // that the caller's rank can be derived from the deduped + sorted
 // list without a second COUNT round-trip. Bump if active devices per
 // config grows past ~150 (currently we have ~5).
@@ -44,10 +44,10 @@ const TOP_N = 10;
 const limiter = createRateLimiter({ limit: 60, windowMs: 60_000 });
 
 // Cached top-N keyed by (configKey, order, includeLocal). Date is no
-// longer in the key — the rolling 72h window has no per-date
+// longer in the key — the rolling 168h window has no per-date
 // bucket. The 60 s TTL means a player whose entry just expired (or just
 // landed) might see the old list for up to a minute, which is well
-// inside the noise floor of a 24 h window.
+// inside the noise floor of a 7-day window.
 const topCache = createTtlCache({ ttlMs: CACHE_TTL_MS });
 
 app.http('quizLeaderboard', {
@@ -103,8 +103,8 @@ app.http('quizLeaderboard', {
 
     // Build the WHERE clauses from three independent gates:
     //   - `c.submittedAt > @cutoff` is the rolling-window cut: anything
-    //     older than 72 h falls off the board even if the row still
-    //     lives in Cosmos (TTL keeps rows around for 96 h so the
+    //     older than 168 h falls off the board even if the row still
+    //     lives in Cosmos (TTL keeps rows around for 192 h so the
     //     oldest partition we read still has its data).
     //   - `NOT IS_DEFINED(c.local)` excludes local-dev rows from prod
     //     responses. Localhost callers skip this so a dev playing

@@ -50,13 +50,17 @@ test('dateKeyDaysAgo: n=0 is today, n=1 is yesterday', () => {
   assert.equal(dateKeyDaysAgo(NOW, 1), yesterdayDateKey(NOW));
 });
 
-test('dateKeyDaysAgo: walks back across the rolling-72h window (n=0..3)', () => {
-  // 4 distinct date keys for the 4 partitions the leaderboard reader
+test('dateKeyDaysAgo: walks back across the rolling-168h window (n=0..7)', () => {
+  // 8 distinct date keys for the 8 partitions the leaderboard reader
   // fans out across.
   assert.equal(dateKeyDaysAgo(NOW, 0), '2026-06-12');
   assert.equal(dateKeyDaysAgo(NOW, 1), '2026-06-11');
   assert.equal(dateKeyDaysAgo(NOW, 2), '2026-06-10');
   assert.equal(dateKeyDaysAgo(NOW, 3), '2026-06-09');
+  assert.equal(dateKeyDaysAgo(NOW, 4), '2026-06-08');
+  assert.equal(dateKeyDaysAgo(NOW, 5), '2026-06-07');
+  assert.equal(dateKeyDaysAgo(NOW, 6), '2026-06-06');
+  assert.equal(dateKeyDaysAgo(NOW, 7), '2026-06-05');
 });
 
 test('dateKeyDaysAgo: crosses month boundary correctly going back', () => {

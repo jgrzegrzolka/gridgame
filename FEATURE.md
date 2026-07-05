@@ -481,7 +481,9 @@ Don't ship before any of these fire — the write amplification (every `dailyRes
 
 ### Feature K: Daily leaderboard on flag-quiz finish screen — *shipped 2026-06-12*
 
-**Goal.** After a flag-quiz round (Europe 60s, All endurance, etc.) the result screen shows the player's own score *and* today's top-10 leaderboard for that exact configKey, with the caller's row highlighted when visible and a "…N. You" suffix when their rank is past the top 10. Today = UTC, auto-resets nightly via the container's 48 h TTL. Per-configKey (one for `europe:60s:sov`, one for `africa:all:sov`, etc.) — reuses the existing quiz-record key, no new taxonomy.
+**Goal.** After a flag-quiz round (Europe 60s, All endurance, etc.) the result screen shows the player's own score *and* the top-10 leaderboard for that exact configKey, with the caller's row highlighted when visible and a "…N. You" suffix when their rank is past the top 10. Per-configKey (one for `europe:60s:sov`, one for `africa:all:sov`, etc.) — reuses the existing quiz-record key, no new taxonomy.
+
+**Window has grown since ship.** Originally a single-UTC-day board (48 h TTL, "today's top-10", nightly reset). It's now a **rolling 7-day window** (`ROLLING_WINDOW_MS = 168h`, `WINDOW_DAYS = 8` partitions fanned out per read, container `defaultTtl = 691200` / 192 h to keep a one-day buffer over the read window). The finish-screen label reads "Top 10: 7 days". No per-date bucket in the cache key anymore — the rolling cutoff (`c.submittedAt > now - 168h`) does the windowing. Earlier intermediate step was 72 h / 96 h TTL / "Top 10: 3 days".
 
 **What shipped (two phases, both 2026-06-12):**
 
