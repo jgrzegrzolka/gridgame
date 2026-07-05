@@ -373,7 +373,7 @@
       "all": "all"
     },
     "leaderboard": {
-      "title": "Top 10: 3 days",
+      "title": "Top 10: 7 days",
       "loading": "Loading leaderboard…",
       "failed": "Couldn't load the leaderboard.",
       "empty": "Be the first!",
