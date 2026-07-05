@@ -8,7 +8,7 @@ import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox, wireFlagLightboxAll } from '../flags/flagLightbox.js';
 import { getFlagFacts } from '../flags/flagFacts.js';
 import { renderFlagFacts } from '../flags/flagFactsRender.js';
-import { mountFlagMap, setSelectedCountries, computeCountriesBbox } from '../flagQuiz/flagMap.js';
+import { mountFlagMap, paintCountryFlag, clearCountryFlag, computeCountriesBbox } from '../flagQuiz/flagMap.js';
 import { attachZoomPan } from '../flagQuiz/mapZoom.js';
 import { buildToggleLi } from '../common.js';
 
@@ -221,12 +221,13 @@ export function bootFlagsData() {
     else burgerMenuEl.appendChild(toggleLi);
   }
 
-  // World contour map below the grid — countries matching the active
-  // filter glow pink (`.is-selected`). Mount is async; `mapSvg` stays
-  // null until the fetch resolves and `setSelectedCountries` safely
-  // no-ops in the meantime. Same asset + module as flagQuiz's
-  // contour map (shared via flags/flagMap.css). Gated on the per-
-  // device show-map preference.
+  // World contour map below the grid — every country matching the active
+  // filter is stamped with its actual flag (same flag-in-silhouette fill
+  // flagQuiz paints answered countries with, via `paintCountryFlag`).
+  // Mount is async; `mapSvg` stays null until the fetch resolves and
+  // `syncMapFlags` safely no-ops in the meantime. Same asset + module as
+  // flagQuiz's contour map (shared via flags/flagMap.css). Gated on the
+  // per-device show-map preference.
   const flagMapEl = /** @type {HTMLElement | null} */ (
     document.getElementById('flag-map-section')
   );
@@ -236,11 +237,29 @@ export function bootFlagsData() {
   let mapHandle = null;
   /** @type {Map<string, Country> | null} */
   let byCode = null;
+  // Codes currently flag-stamped on the map. Kept so each filter change
+  // only touches the delta — stamp the newly-matched countries, un-stamp
+  // the ones that dropped out — instead of clearing and repainting the
+  // whole (up to ~250-country) set on every keystroke of the name search.
+  /** @type {Set<string>} */
+  let flaggedCodes = new Set();
+  /** @param {string[]} visibleCodes */
+  function syncMapFlags(visibleCodes) {
+    if (!mapSvg) return;
+    const next = new Set(visibleCodes);
+    for (const code of flaggedCodes) {
+      if (!next.has(code)) clearCountryFlag(mapSvg, code);
+    }
+    for (const code of next) {
+      if (!flaggedCodes.has(code)) paintCountryFlag(mapSvg, code, '../flags/svg/', 'select');
+    }
+    flaggedCodes = next;
+  }
   // Countries whose `<g>` spans the antimeridian on the world map —
   // their full bbox is the whole map width, so including them in a
   // smart-zoom bbox union would defeat the zoom. They still get
-  // highlighted via setSelectedCountries; they just don't pull the
-  // crop. Mirrors the same list flagQuiz uses for per-variant crops.
+  // flag-stamped via syncMapFlags; they just don't pull the crop.
+  // Mirrors the same list flagQuiz uses for per-variant crops.
   const ANTIMERIDIAN = new Set(['us', 'ru', 'fj', 'ki']);
   if (flagMapEl && isFlagsdataShowMap()) {
     flagMapEl.hidden = false;
@@ -363,10 +382,12 @@ export function bootFlagsData() {
     // user's only cue that something is filtering. Counting it as one
     // "active filter" (alongside each pill) matches that mental model.
     updateFilterToggle(pillTotal + (nameQuery !== '' ? 1 : 0));
-    // Reflect the active filter on the world map below the grid:
-    // visible countries glow pink (`.is-selected`), hidden countries
-    // stay grey. No-op until the map's mounted (async fetch).
-    if (mapSvg) setSelectedCountries(mapSvg, visibleCodes);
+    // Reflect the active filter on the world map below the grid: every
+    // visible country wears its flag (stamped into its silhouette),
+    // hidden countries stay grey. No-op until the map's mounted (async
+    // fetch); diffs against the currently-stamped set so only the delta
+    // repaints.
+    syncMapFlags(visibleCodes);
     // Smart zoom: when the filter narrows the visible set, zoom the
     // map to its bbox. When the filter is cleared (all visible), reset
     // to the original world view. The bbox computation excludes

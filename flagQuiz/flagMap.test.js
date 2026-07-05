@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
-  offsetHitTargetCenter, paintCountryFlag,
+  offsetHitTargetCenter, paintCountryFlag, clearCountryFlag,
 } from './flagMap.js';
 
 /**
@@ -391,6 +391,43 @@ test('resetMap clears the flag fills and removes the tint overlays', () => {
   assert.equal(hit.classList.contains('is-flagged'), false);
   // The overlay clones are detached from their parents.
   assert.equal(svg._refs.collectFlashes().length, 0);
+});
+
+test("paintCountryFlag 'select' stamps the flag with no flash clone and no outline", () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'select');
+  const { innerPath, hit } = svg._refs;
+  // Flag fill is applied (the whole point) at the 90% opacity...
+  assert.equal(innerPath.style.fill, 'url(#flagfill-es)');
+  assert.equal(innerPath.style.fillOpacity, '0.9');
+  assert.equal(hit.style.fill, 'url(#flagfill-es)');
+  assert.equal(innerPath.classList.contains('is-flagged'), true);
+  // ...but no green / red answer outline and no colour-wash overlay:
+  // flagsdata's neutral highlight is just the flag.
+  assert.equal(innerPath.style.stroke, undefined);
+  assert.equal(svg._refs.collectFlashes().length, 0);
+});
+
+test('clearCountryFlag un-stamps exactly one country (paint inverse)', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'select');
+  clearCountryFlag(svg, 'es');
+  const { innerPath, hit } = svg._refs;
+  assert.equal(innerPath.style.fill, '');
+  assert.equal(innerPath.style.fillOpacity, '');
+  assert.equal(innerPath.classList.contains('is-flagged'), false);
+  assert.equal(hit.style.fill, '');
+  assert.equal(hit.classList.contains('is-flagged'), false);
+});
+
+test('clearCountryFlag lowercases the code and ignores malformed input', () => {
+  const svg = fakeFlagSvg();
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'select');
+  clearCountryFlag(svg, 'ES');
+  assert.equal(svg._refs.innerPath.style.fill, '');
+  assert.doesNotThrow(() => clearCountryFlag(svg, ''));
+  assert.doesNotThrow(() => clearCountryFlag(/** @type {any} */ (null), 'es'));
+  assert.doesNotThrow(() => clearCountryFlag(svg, 'es-pv'));
 });
 
 /* mountFlagMap — fetch + inline + viewBox patch.
