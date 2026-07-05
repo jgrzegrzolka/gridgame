@@ -186,6 +186,46 @@ export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut =
 }
 
 /**
+ * Frame a single country for the "zoom to the answer" fly-in. Centres a
+ * viewBox on the country's bbox, sized to show the country plus a
+ * comfortable ring of surrounding context — regional, not a tight crop.
+ * Capped both ways: a tiny country (Vatican) zooms to `maxZoom` rather
+ * than an extreme close-up, and a huge one (Brazil) still gets a modest
+ * zoom-in instead of nothing. The result is pre-clamp — `attachZoomPan`'s
+ * `apply()` re-clamps to the asset bounds and aspect-fits it, so callers
+ * hand the raw frame straight to `animateTo`.
+ *
+ * @param {ViewBox} bbox      country bbox in viewBox units
+ * @param {ViewBox} original  the asset's natural (mounted) viewBox
+ * @param {{ pad?: number, maxZoom?: number }} [opts]
+ *   pad — multiply the country's own size for surrounding context.
+ *   maxZoom — cap zoom-in relative to `original` (sets the min frame size).
+ * @returns {ViewBox}
+ */
+export function regionalFrame(bbox, original, opts = {}) {
+  const pad = typeof opts.pad === 'number' ? opts.pad : 2.5;
+  const maxZoom = typeof opts.maxZoom === 'number' ? opts.maxZoom : 6;
+  const cx = bbox.x + bbox.width / 2;
+  const cy = bbox.y + bbox.height / 2;
+  const minW = original.width / maxZoom;
+  const minH = original.height / maxZoom;
+  const width = Math.min(Math.max(bbox.width * pad, minW), original.width);
+  const height = Math.min(Math.max(bbox.height * pad, minH), original.height);
+  return { x: cx - width / 2, y: cy - height / 2, width, height };
+}
+
+/**
+ * Cubic ease-in-out, the timing curve for the answer fly-in. Symmetric
+ * accel/decel so the camera starts and stops gently. t ∈ [0, 1].
+ *
+ * @param {number} t
+ * @returns {number}
+ */
+export function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+/**
  * Parse a viewBox attribute string ("x y w h") into a ViewBox object.
  * Returns null on malformed input.
  *
@@ -239,12 +279,23 @@ export function screenToSvg(svg, clientX, clientY) {
  *
  *   - `setView(vb)` — set viewBox, then re-clamp to original bounds.
  *     Future user gestures pick up from this new position.
+ *   - `animateTo(vb, opts)` — smoothly ease the viewBox to `vb` over
+ *     `opts.durationMs` (default 480), firing `opts.onDone` at the end.
+ *     Honours `prefers-reduced-motion` (snaps instead) and no-ops the
+ *     tween when `requestAnimationFrame` is absent (test env). A running
+ *     animation is cancelled by the next `animateTo`/`animateReset` or by
+ *     any user gesture (wheel / touch / drag), so the player always wins.
+ *   - `animateReset(opts)` — animate back to the mounted viewBox.
+ *   - `getOriginal()` — a copy of the viewBox the SVG was mounted with.
  *   - `reset()` — back to the original viewBox the SVG was mounted with.
  *   - `teardown()` — remove event listeners (for an unmount path).
  *
  * @param {SVGElement} svg
  * @returns {{
  *   setView: (vb: { x: number, y: number, width: number, height: number }) => void,
+ *   animateTo: (vb: { x: number, y: number, width: number, height: number }, opts?: { durationMs?: number, onDone?: () => void }) => void,
+ *   animateReset: (opts?: { durationMs?: number, onDone?: () => void }) => void,
+ *   getOriginal: () => { x: number, y: number, width: number, height: number },
  *   reset: () => void,
  *   teardown: () => void,
  * }}
@@ -252,6 +303,9 @@ export function screenToSvg(svg, clientX, clientY) {
 export function attachZoomPan(svg) {
   const noopHandle = {
     setView: () => {},
+    animateTo: () => {},
+    animateReset: () => {},
+    getOriginal: () => ({ x: 0, y: 0, width: 0, height: 0 }),
     reset: () => {},
     teardown: () => {},
   };
@@ -275,6 +329,60 @@ export function attachZoomPan(svg) {
     current = clampViewBox(next, original, MAX_ZOOM_IN, maxOut, sliceOverhang(next));
     svg.setAttribute('viewBox', formatViewBox(current));
     rescaleHitTargets();
+  }
+
+  /** rAF handle for an in-flight `animateTo`, or 0 when idle. */
+  let animRaf = 0;
+  function cancelAnim() {
+    if (animRaf && typeof globalThis.cancelAnimationFrame === 'function') {
+      globalThis.cancelAnimationFrame(animRaf);
+    }
+    animRaf = 0;
+  }
+
+  /**
+   * Ease the viewBox from its current position to `target` over
+   * `opts.durationMs`. The end point is clamped once up front; each
+   * frame interpolates start→end and re-`apply()`s (which re-clamps and
+   * rescales the hit-target rings). Snaps immediately — no tween — when
+   * reduced-motion is requested or `requestAnimationFrame` is missing
+   * (Node test env), so the map still lands on the right view either way.
+   *
+   * @param {ViewBox} target
+   * @param {{ durationMs?: number, onDone?: () => void }} [opts]
+   */
+  function animateTo(target, opts = {}) {
+    const duration = typeof opts.durationMs === 'number' ? opts.durationMs : 480;
+    const raf = globalThis.requestAnimationFrame;
+    const maxOut = isFullscreen() ? MAX_ZOOM_OUT : 1;
+    const end = clampViewBox(target, original, MAX_ZOOM_IN, maxOut, sliceOverhang(target));
+    cancelAnim();
+    if (typeof raf !== 'function' || duration <= 0 || prefersReducedMotion()) {
+      apply(end);
+      if (opts.onDone) opts.onDone();
+      return;
+    }
+    const start = { ...current };
+    let startTs = 0;
+    /** @param {number} ts */
+    function frame(ts) {
+      if (!startTs) startTs = ts;
+      const p = Math.min(1, (ts - startTs) / duration);
+      const e = easeInOutCubic(p);
+      apply({
+        x: start.x + (end.x - start.x) * e,
+        y: start.y + (end.y - start.y) * e,
+        width: start.width + (end.width - start.width) * e,
+        height: start.height + (end.height - start.height) * e,
+      });
+      if (p < 1) {
+        animRaf = raf(frame);
+      } else {
+        animRaf = 0;
+        if (opts.onDone) opts.onDone();
+      }
+    }
+    animRaf = raf(frame);
   }
 
   /**
@@ -378,6 +486,7 @@ export function attachZoomPan(svg) {
   /** @param {WheelEvent} e */
   function onWheel(e) {
     e.preventDefault();
+    cancelAnim();
     const pivot = screenToSvg(svg, e.clientX, e.clientY);
     if (!pivot) return;
     const scale = e.deltaY < 0 ? WHEEL_SCALE_STEP : 1 / WHEEL_SCALE_STEP;
@@ -403,6 +512,7 @@ export function attachZoomPan(svg) {
 
   /** @param {TouchEvent} e */
   function onTouchStart(e) {
+    cancelAnim();
     if (e.touches.length === 1) {
       const t = e.touches[0];
       const now = Date.now();
@@ -459,6 +569,7 @@ export function attachZoomPan(svg) {
   /** @param {MouseEvent} e */
   function onMouseDown(e) {
     if (e.button !== 0) return;
+    cancelAnim();
     mouseState = {
       lastX: e.clientX, lastY: e.clientY,
       downX: e.clientX, downY: e.clientY,
@@ -520,8 +631,12 @@ export function attachZoomPan(svg) {
 
   return {
     setView: apply,
+    animateTo,
+    animateReset: (opts) => animateTo({ ...original }, opts),
+    getOriginal: () => ({ ...original }),
     reset: () => apply({ ...original }),
     teardown: () => {
+      cancelAnim();
       svg.removeEventListener('wheel', onWheel);
       svg.removeEventListener('touchstart', onTouchStart);
       svg.removeEventListener('touchmove', onTouchMove);
@@ -533,6 +648,23 @@ export function attachZoomPan(svg) {
       svg.removeEventListener('click', onClickCapture, true);
     },
   };
+}
+
+/**
+ * True when the viewer has asked the OS to minimise motion. The answer
+ * fly-in snaps to its destination instead of easing when this is set —
+ * same final view, no travel. Guarded for non-browser (test) envs.
+ *
+ * @returns {boolean}
+ */
+function prefersReducedMotion() {
+  const mm = globalThis.matchMedia;
+  if (typeof mm !== 'function') return false;
+  try {
+    return !!mm('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
 }
 
 /**
