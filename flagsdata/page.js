@@ -75,7 +75,7 @@ const STATUS_VALUES = ['sovereign', 'non_un', 'territory', 'other'];
 const STATUS_LABELS = {
   sovereign: 'Sovereign',
   non_un: 'Non-UN',
-  territory: 'Territory',
+  territory: 'Territory / Region',
   other: 'Other',
 };
 
