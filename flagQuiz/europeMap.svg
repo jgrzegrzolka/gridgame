@@ -388,6 +388,10 @@
      fill="#ffffff"
      opacity="0.5"
      style="stroke-width:1.00391" />
+  <path
+     id="ax"
+     class="c k europe"
+     d="m 367.7,209.3 a 1.3,1.1 0 1 0 2.6,0 a 1.3,1.1 0 1 0 -2.6,0" />
   <metadata
      id="metadata1">
     <rdf:RDF>
