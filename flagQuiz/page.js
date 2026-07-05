@@ -107,8 +107,8 @@ import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
-import { mountFlagMap, paintCountryFlag } from './flagMap.js';
-import { attachZoomPan } from './mapZoom.js';
+import { mountFlagMap, paintCountryFlag, computeCountriesBbox } from './flagMap.js';
+import { attachZoomPan, regionalFrame } from './mapZoom.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox } from '../flags/flagLightbox.js';
 
@@ -344,6 +344,10 @@ export function bootFlagQuiz() {
     });
     /** @type {SVGElement | null} */
     let mapSvg = null;
+    // Pan/zoom handle for the mounted map, captured so the answer fly-in
+    // can drive the viewBox programmatically. Null until mountMap resolves.
+    /** @type {ReturnType<typeof attachZoomPan> | null} */
+    let mapZoomHandle = null;
     // True between a successful mountMap and the next hideMap. Tracked
     // separately from `mapSvg` because the mount is async — the flag is
     // set synchronously so a rapid toggle-on/off can't double-mount.
@@ -368,6 +372,32 @@ export function bootFlagQuiz() {
     function markCountry(code, kind) {
       painted.push({ code, kind });
       paintCountryFlag(mapSvg, code, '../flags/svg/', kind);
+      flyToAnsweredCountry(code);
+    }
+
+    /**
+     * Smoothly fly the map to the country that was just answered so the
+     * player can see where it lit up (at world scale a single country is
+     * a speck). Frames it regionally — country plus surrounding context —
+     * and STAYS there: the camera follows each answer, so while you read
+     * the next flag the map rests on the country you just placed. The one
+     * zoom-out back to the whole filled board happens once, at game end
+     * (`showResult`) — calmer to watch and less work than easing out after
+     * every answer. A rapid streak just retargets: `animateTo` cancels any
+     * in-flight tween so the camera chases the latest answer, never stutters.
+     * No-op when no map is mounted or the round has ended (the result
+     * screen owns the view then). Covers correct and wrong answers alike —
+     * both light up the asked country, and seeing a missed country's
+     * location is worth the trip.
+     *
+     * @param {string} code
+     */
+    function flyToAnsweredCountry(code) {
+      if (!mapSvg || !mapZoomHandle || gameOver) return;
+      const bb = computeCountriesBbox(mapSvg, [code]);
+      if (!bb) return;
+      const frame = regionalFrame(bb, mapZoomHandle.getOriginal());
+      mapZoomHandle.animateTo(frame, { durationMs: 480 });
     }
 
     // Click → flag zoom popup. The map is non-interactive while the
@@ -452,9 +482,11 @@ export function bootFlagQuiz() {
         // set the final viewBox, since mapZoom reads that as the
         // "original" bounds for clamping).
         if (svg) {
-          attachZoomPan(svg);
+          mapZoomHandle = attachZoomPan(svg);
           // Replay the round so far — fills every country already
-          // answered before this (possibly late) mount.
+          // answered before this (possibly late) mount. Uses
+          // paintCountryFlag directly (not markCountry) so a late mount
+          // doesn't fire the answer fly-in for every historical fill.
           for (const p of painted) {
             paintCountryFlag(svg, p.code, '../flags/svg/', p.kind);
           }
@@ -466,6 +498,8 @@ export function bootFlagQuiz() {
     function hideMap() {
       if (!flagMapEl) return;
       mapMounted = false;
+      if (mapZoomHandle) mapZoomHandle.teardown();
+      mapZoomHandle = null;
       mapSvg = null;
       flagMapEl.hidden = true;
       flagMapEl.setAttribute('aria-hidden', 'true');
@@ -969,6 +1003,10 @@ export function bootFlagQuiz() {
       if (flagMapEl && !flagMapEl.hidden) {
         resultEl.insertBefore(flagMapEl, leaderboardEl);
         flagMapEl.classList.add('is-finished');
+        // Zoom out to the whole filled-in board for review — the one and
+        // only zoom-out, now that the round is over. Overrides the fly-in
+        // that the final answer just started.
+        if (mapZoomHandle) mapZoomHandle.animateReset({ durationMs: 640 });
       }
 
       gameEl.hidden = true;

@@ -7,6 +7,8 @@ import {
   parseViewBox,
   formatViewBox,
   screenToSvg,
+  regionalFrame,
+  easeInOutCubic,
 } from './mapZoom.js';
 
 // ---- zoomViewBox ----
@@ -260,4 +262,54 @@ test('screenToSvg returns null when the SVG API surface is missing', () => {
   assert.equal(screenToSvg(null, 0, 0), null);
   assert.equal(screenToSvg({}, 0, 0), null);
   assert.equal(screenToSvg({ createSVGPoint: () => ({}) }, 0, 0), null);  // no getScreenCTM
+});
+
+// ---- regionalFrame ----
+
+const WORLD = { x: 0, y: 0, width: 2000, height: 1000 };
+
+test('regionalFrame centers the viewBox on the country bbox', () => {
+  const bbox = { x: 900, y: 400, width: 200, height: 200 };  // center (1000, 500)
+  const out = regionalFrame(bbox, WORLD);
+  assert.equal(out.x + out.width / 2, 1000);
+  assert.equal(out.y + out.height / 2, 500);
+});
+
+test('regionalFrame caps zoom-in for a tiny country at maxZoom (not a pinpoint crop)', () => {
+  // A speck (Vatican-ish). Without a floor this would zoom absurdly deep;
+  // the min frame is original / maxZoom.
+  const speck = { x: 1000, y: 500, width: 1, height: 1 };
+  const out = regionalFrame(speck, WORLD, { maxZoom: 6 });
+  assert.equal(out.width, 2000 / 6);
+  assert.equal(out.height, 1000 / 6);
+});
+
+test('regionalFrame frames a mid-size country with surrounding context (pad applies)', () => {
+  // Country wider than the maxZoom floor: pad multiplier dominates.
+  const country = { x: 800, y: 400, width: 400, height: 200 };
+  const out = regionalFrame(country, WORLD, { pad: 2.5, maxZoom: 6 });
+  assert.equal(out.width, 400 * 2.5);   // 1000, above the 2000/6 floor
+  assert.equal(out.height, 200 * 2.5);  // 500
+});
+
+test('regionalFrame never exceeds the original viewBox (huge country → no over-zoom-out)', () => {
+  const huge = { x: 100, y: 50, width: 1800, height: 900 };
+  const out = regionalFrame(huge, WORLD, { pad: 2.5 });
+  assert.equal(out.width, 2000);   // capped at original.width
+  assert.equal(out.height, 1000);  // capped at original.height
+});
+
+// ---- easeInOutCubic ----
+
+test('easeInOutCubic pins the endpoints and passes through the midpoint', () => {
+  assert.equal(easeInOutCubic(0), 0);
+  assert.equal(easeInOutCubic(1), 1);
+  assert.equal(easeInOutCubic(0.5), 0.5);
+});
+
+test('easeInOutCubic is monotonic and eases in (slow start)', () => {
+  // First quarter covers less ground than a linear ramp would.
+  assert.ok(easeInOutCubic(0.25) < 0.25);
+  // Symmetric: last quarter covers more (fast approach, gentle stop).
+  assert.ok(easeInOutCubic(0.75) > 0.75);
 });
