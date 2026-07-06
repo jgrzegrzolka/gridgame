@@ -693,6 +693,11 @@ export function computeCountriesBbox(svg, codes, extra) {
     } catch { /* skip */ }
   }
   if (!Number.isFinite(minX)) return null;
+  return padBbox(minX, minY, maxX, maxY, extra);
+}
+
+/** Apply the shared 5% margin (plus optional per-side extra) to a raw bbox. */
+function padBbox(minX, minY, maxX, maxY, extra) {
   const w = maxX - minX;
   const h = maxY - minY;
   const padX = w * 0.05;
@@ -707,6 +712,94 @@ export function computeCountriesBbox(svg, codes, extra) {
     width: w + 2 * padX + extraLeft + extraRight,
     height: h + 2 * padY + extraTop + extraBottom,
   };
+}
+
+/**
+ * Gap between two axis-aligned bboxes: 0 if they touch/overlap, else the
+ * straight-line distance between their nearest edges.
+ */
+function bboxGap(a, b) {
+  const dx = Math.max(0, Math.max(a.x - (b.x + b.w), b.x - (a.x + a.w)));
+  const dy = Math.max(0, Math.max(a.y - (b.y + b.h), b.y - (a.y + a.h)));
+  return Math.hypot(dx, dy);
+}
+
+/**
+ * Paths within this many viewBox units of each other count as the same
+ * landmass for the fly-in. Tuned (on the 2754-wide world map) to keep real
+ * archipelagos whole — Indonesia, Japan, Greece, the UK, New Zealand's two
+ * main islands all cluster into one — while an ocean-separated overseas
+ * territory (French Guiana, Alaska, the Canaries) falls into its own cluster
+ * and drops out. Larger (~80) starts pulling Alaska back onto the US mainland
+ * and the Canaries back onto Spain; this is the value that separates them.
+ */
+const FLY_CLUSTER_GAP = 40;
+
+/**
+ * Bbox of a country's main landmass for the answer fly-in: the largest
+ * cluster of its map paths, padded. Countries whose `<g>` spans far-flung
+ * overseas territories (France's French Guiana + Réunion, the USA's Alaska +
+ * Hawaii, Spain's Canaries, Australia's Indian-Ocean islands, …) have a union
+ * bbox that stretches across the globe, so the naive fly-in zooms the camera
+ * all the way out. Clustering by proximity ({@link FLY_CLUSTER_GAP}) keeps
+ * genuine archipelagos together but splits an ocean-separated territory off;
+ * we then frame the biggest-by-area cluster (the mainland / home region).
+ *
+ * Falls back to the whole-country bbox for single-shape countries or when the
+ * element can't be introspected (the common case is unaffected — a contiguous
+ * country is one cluster, so this returns the same bbox as computeCountriesBbox).
+ *
+ * @param {any} svg
+ * @param {string} code ISO2 country code
+ * @param {{ left?: number, right?: number, top?: number, bottom?: number }} [extra]
+ * @returns {{ x: number, y: number, width: number, height: number } | null}
+ */
+export function computeMainlandBbox(svg, code, extra) {
+  if (!svg || typeof svg.querySelector !== 'function') return null;
+  if (typeof code !== 'string' || !ISO2_PATTERN.test(code)) return null;
+  const el = svg.querySelector(`#${code}`);
+  if (!el || typeof el.querySelectorAll !== 'function') return computeCountriesBbox(svg, [code], extra);
+  const boxes = [];
+  for (const p of el.querySelectorAll('path, polygon, polyline')) {
+    if (typeof p.getBBox !== 'function') continue;
+    let b;
+    try { b = p.getBBox(); } catch { continue; }
+    if (!b || (b.width === 0 && b.height === 0)) continue;
+    boxes.push({ x: b.x, y: b.y, w: b.width, h: b.height, area: b.width * b.height });
+  }
+  // Single shape (or nothing measurable): nothing to cluster, use the union.
+  if (boxes.length < 2) return computeCountriesBbox(svg, [code], extra);
+  // Union-find: connect paths whose bboxes are within FLY_CLUSTER_GAP.
+  const parent = boxes.map((_, i) => i);
+  const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      if (bboxGap(boxes[i], boxes[j]) <= FLY_CLUSTER_GAP) parent[find(i)] = find(j);
+    }
+  }
+  // Pick the cluster with the largest total area (the main landmass).
+  const areaByRoot = new Map();
+  for (let i = 0; i < boxes.length; i++) {
+    const r = find(i);
+    areaByRoot.set(r, (areaByRoot.get(r) || 0) + boxes[i].area);
+  }
+  let bestRoot = -1;
+  let bestArea = -1;
+  for (const [r, a] of areaByRoot) if (a > bestArea) { bestArea = a; bestRoot = r; }
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < boxes.length; i++) {
+    if (find(i) !== bestRoot) continue;
+    const b = boxes[i];
+    if (b.x < minX) minX = b.x;
+    if (b.y < minY) minY = b.y;
+    if (b.x + b.w > maxX) maxX = b.x + b.w;
+    if (b.y + b.h > maxY) maxY = b.y + b.h;
+  }
+  if (!Number.isFinite(minX)) return computeCountriesBbox(svg, [code], extra);
+  return padBbox(minX, minY, maxX, maxY, extra);
 }
 
 /**

@@ -107,7 +107,7 @@ import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
-import { mountFlagMap, paintCountryFlag, computeCountriesBbox } from './flagMap.js';
+import { mountFlagMap, paintCountryFlag, computeCountriesBbox, computeMainlandBbox } from './flagMap.js';
 import { attachZoomPan, regionalFrame } from './mapZoom.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox } from '../flags/flagLightbox.js';
@@ -402,7 +402,13 @@ export function bootFlagQuiz() {
      */
     function flyToAnsweredCountry(code) {
       if (!mapSvg || !mapZoomHandle || gameOver) return;
-      const bb = computeCountriesBbox(mapSvg, [code]);
+      // Fly to the country's main landmass, not its far-flung overseas
+      // territories: France's fr group spans French Guiana / Réunion, the USA's
+      // spans Alaska + Hawaii, Spain's the Canaries, … so the union bbox would
+      // zoom the camera out to most of the globe. computeMainlandBbox clusters
+      // the country's paths and frames the biggest one; contiguous countries
+      // are one cluster, so it matches computeCountriesBbox for them.
+      const bb = computeMainlandBbox(mapSvg, code) || computeCountriesBbox(mapSvg, [code]);
       if (!bb) return;
       const frame = regionalFrame(bb, mapZoomHandle.getOriginal());
       mapZoomHandle.animateTo(frame, { durationMs: 480 });

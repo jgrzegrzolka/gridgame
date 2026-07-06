@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
-  offsetHitTargetCenter, paintCountryFlag, clearCountryFlag,
+  offsetHitTargetCenter, paintCountryFlag, clearCountryFlag, computeMainlandBbox,
 } from './flagMap.js';
 import { FLAG_TINTS } from '../flags/flagTints.js';
 
@@ -747,6 +747,72 @@ test('cropToCountries rejects non-ISO2 codes without throwing', () => {
   cropToCountries(svg, ['cn', 'dk_kingdom', '', 'CN', 'esp']);
   // Only 'cn' is allowed — others fail the ISO2 regex. viewBox still set.
   assert.ok(svg._viewBox() !== null);
+});
+
+// A country whose #code element exposes leaf paths (with getBBox) for the
+// clustering in computeMainlandBbox to walk. `paths` is a list of raw bboxes.
+function fakeSvgWithPaths(code, paths) {
+  const leaves = paths.map((p) => ({ tagName: 'path', getBBox: () => p }));
+  // getBBox on the group returns the union of its paths — the single-shape
+  // fallback (computeCountriesBbox) reads it.
+  const union = () => {
+    const minX = Math.min(...paths.map((p) => p.x));
+    const minY = Math.min(...paths.map((p) => p.y));
+    const maxX = Math.max(...paths.map((p) => p.x + p.width));
+    const maxY = Math.max(...paths.map((p) => p.y + p.height));
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  };
+  const el = { querySelectorAll: () => leaves, getBBox: () => union() };
+  return {
+    querySelector: (sel) => (sel === `#${code}` ? el : null),
+  };
+}
+
+test('computeMainlandBbox frames the mainland and drops a far-flung territory', () => {
+  // Mainland (a big shape) plus a small territory an ocean away (gap > 40).
+  // The territory forms its own cluster and is dropped; we frame the mainland.
+  const svg = fakeSvgWithPaths('fr', [
+    { x: 1278, y: 259, width: 96, height: 82 },  // metropolitan France
+    { x: 883, y: 649, width: 23, height: 31 },   // French Guiana (far SW)
+  ]);
+  const bb = computeMainlandBbox(svg, 'fr');
+  // Mainland only, + 5% pad: padX = 96*0.05 = 4.8, padY = 82*0.05 = 4.1
+  assert.equal(bb.x, 1278 - 4.8);
+  assert.equal(bb.width, 96 + 9.6);
+  assert.equal(bb.height, 82 + 8.2);
+});
+
+test('computeMainlandBbox keeps an archipelago whole (all paths within the gap)', () => {
+  // Three islands each within 40 units of the next — one chain, kept together.
+  const svg = fakeSvgWithPaths('id', [
+    { x: 100, y: 100, width: 30, height: 20 },
+    { x: 150, y: 105, width: 30, height: 20 }, // 20 from the first
+    { x: 200, y: 110, width: 30, height: 20 }, // 20 from the second
+  ]);
+  const bb = computeMainlandBbox(svg, 'id');
+  // Union x:100..230, y:100..130 → w130 h30, +5% pad (6.5, 1.5)
+  assert.equal(bb.x, 100 - 6.5);
+  assert.equal(bb.width, 130 + 13);
+  assert.equal(bb.height, 30 + 3);
+});
+
+test('computeMainlandBbox picks the largest-area cluster, not the widest gap', () => {
+  // Two clusters: a small one and a big one, far apart. Big one wins.
+  const svg = fakeSvgWithPaths('us', [
+    { x: 500, y: 300, width: 400, height: 200 }, // mainland (huge area)
+    { x: 100, y: 100, width: 120, height: 120 }, // a large-ish but smaller territory, far
+  ]);
+  const bb = computeMainlandBbox(svg, 'us');
+  assert.equal(bb.x, 500 - 400 * 0.05);
+  assert.equal(bb.width, 400 + 400 * 0.1);
+});
+
+test('computeMainlandBbox rejects non-ISO2 codes and falls back for single shapes', () => {
+  assert.equal(computeMainlandBbox(fakeSvgWithPaths('fr', []), 'FRANCE'), null);
+  // A single path: nothing to cluster → still returns a padded bbox (union path).
+  const svg = fakeSvgWithPaths('dk', [{ x: 0, y: 0, width: 40, height: 40 }]);
+  const bb = computeMainlandBbox(svg, 'dk');
+  assert.ok(bb && bb.width === 40 + 4);
 });
 
 test('cropToCountries no-ops when no codes resolve', () => {
