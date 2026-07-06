@@ -601,15 +601,18 @@ export async function mountFlagMap({
 }
 
 /**
- * Make the map section corner-resizable via a visible bottom-right handle.
- * (The browser's native `resize` grip is invisible over the map, so we draw our
- * own handle and drive the size from its drag.) Keeps it sane:
- *  - default the box shape to the mounted viewBox's aspect, so it opens exactly
- *    as before and only changes once the user drags the handle;
- *  - restore / persist a dragged size in `localStorage` (`gridgame.mapSize`),
- *    clamped to [260, parent width] × [140, 90vh];
- *  - drop the explicit size + aspect while fullscreen (the browser owns the
- *    dimensions there) and restore on exit.
+ * Make the map section height-resizable via a visible bottom-edge handle. The
+ * map always stays full width (logo-to-burger, the documented design); dragging
+ * only changes the section HEIGHT, and the flex-centred `overflow: hidden`
+ * container clips the natural-height SVG to a centred band (see the CSS). Keeps
+ * it sane:
+ *  - height clamps to [140, natural full-width height] — you can compact the
+ *    map down to a band, but not add pointless empty space taller than the map;
+ *  - restore / persist the dragged height in `localStorage`
+ *    (`gridgame.mapHeight`); the older width×height `gridgame.mapSize` key is
+ *    dropped so pre-existing narrow saves don't linger;
+ *  - clear the explicit height while fullscreen (the browser owns the size) and
+ *    restore on exit.
  *
  * @param {HTMLElement} container
  * @param {any} svg
@@ -618,59 +621,49 @@ function makeMapResizable(container, svg) {
   if (!container || !container.style) return;
   const doc = container.ownerDocument || globalThis.document;
   const vb = String(svg.getAttribute('viewBox') || '').split(/\s+/).map(Number);
-  const defaultAspect = (vb.length === 4 && vb[2] > 0 && vb[3] > 0) ? `${vb[2]} / ${vb[3]}` : '';
-  const applyDefault = () => {
-    container.style.aspectRatio = defaultAspect || 'auto';
-    container.style.width = '';
+  const aspect = (vb.length === 4 && vb[2] > 0 && vb[3] > 0) ? vb[2] / vb[3] : 0;
+  // Natural full-width height = the height the map renders at when it fills the
+  // body width; this is the max (taller would just be empty space).
+  const naturalH = () => (aspect > 0 ? container.clientWidth / aspect : Infinity);
+  const clampH = (/** @type {number} */ h) => Math.max(140, Math.min(Math.round(naturalH()), h));
+
+  try { localStorage.removeItem('gridgame.mapSize'); } catch { /* ignore */ }
+  const applySaved = () => {
     container.style.height = '';
     try {
-      const s = JSON.parse(localStorage.getItem('gridgame.mapSize') || 'null');
-      if (s && s.w > 0 && s.h > 0) {
-        container.style.aspectRatio = 'auto';
-        container.style.width = `${s.w}px`;
-        container.style.height = `${s.h}px`;
-      }
-    } catch { /* no saved size */ }
+      const h = Number(localStorage.getItem('gridgame.mapHeight'));
+      if (Number.isFinite(h) && h > 0) container.style.height = `${clampH(h)}px`;
+    } catch { /* no saved height */ }
   };
-  applyDefault();
+  applySaved();
 
-  // Visible drag handle — the native grip can't be seen against the map water.
   if (doc && typeof doc.createElement === 'function') {
     const handle = doc.createElement('div');
     handle.className = 'map-resize-handle';
     handle.setAttribute('aria-hidden', 'true');
+    // Horizontal grip lines — reads as "drag up/down".
     handle.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">'
-      + '<path d="M14.5 6.5 6.5 14.5 M14.5 10.5 10.5 14.5" '
+      + '<path d="M4 6.5 H12 M4 9.5 H12" '
       + 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     container.appendChild(handle);
-    /** @type {{x:number,y:number,w:number,h:number}|null} */
+    /** @type {{y:number,h:number}|null} */
     let start = null;
-    const clampW = (/** @type {number} */ w) => {
-      const max = container.parentElement ? container.parentElement.clientWidth : w;
-      return Math.max(260, Math.min(max, w));
-    };
-    const clampH = (/** @type {number} */ h) =>
-      Math.max(140, Math.min(Math.round((globalThis.innerHeight || 800) * 0.9), h));
     handle.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
       try { handle.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
-      const r = container.getBoundingClientRect();
-      start = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
+      start = { y: e.clientY, h: container.getBoundingClientRect().height };
     });
     handle.addEventListener('pointermove', (e) => {
       if (!start) return;
-      container.style.aspectRatio = 'auto';
-      container.style.width = `${Math.round(clampW(start.w + (e.clientX - start.x)))}px`;
-      container.style.height = `${Math.round(clampH(start.h + (e.clientY - start.y)))}px`;
+      container.style.height = `${clampH(start.h + (e.clientY - start.y))}px`;
     });
     const end = (/** @type {PointerEvent} */ e) => {
       if (!start) return;
       start = null;
       try { handle.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
       try {
-        localStorage.setItem('gridgame.mapSize',
-          JSON.stringify({ w: Math.round(container.offsetWidth), h: Math.round(container.offsetHeight) }));
+        localStorage.setItem('gridgame.mapHeight', String(Math.round(container.offsetHeight)));
       } catch { /* storage full / blocked */ }
     };
     handle.addEventListener('pointerup', end);
@@ -678,17 +671,12 @@ function makeMapResizable(container, svg) {
   }
 
   // Fullscreen: the browser forces the section to the viewport, so our inline
-  // size / aspect would fight it. Clear while fullscreen, restore on exit.
+  // height would fight it. Clear while fullscreen, restore on exit.
   if (doc && doc.addEventListener) {
     const onFs = () => {
       const fs = doc.fullscreenElement || /** @type {any} */ (doc).webkitFullscreenElement;
-      if (fs === container) {
-        container.style.width = '';
-        container.style.height = '';
-        container.style.aspectRatio = '';
-      } else {
-        applyDefault();
-      }
+      if (fs === container) container.style.height = '';
+      else applySaved();
     };
     doc.addEventListener('fullscreenchange', onFs);
     doc.addEventListener('webkitfullscreenchange', onFs);
