@@ -436,7 +436,13 @@ export function screenToSvg(svg, clientX, clientY) {
  *   teardown: () => void,
  * }}
  */
-export function attachZoomPan(svg) {
+export function attachZoomPan(svg, opts = {}) {
+  // Fired (synchronously) with the settled viewBox every time the map comes to
+  // rest — after a gesture commits or an animateTo lands. The quiz uses it to
+  // re-throttle the flag reveal when the finished map is re-zoomed. Runs inside
+  // the same synchronous block that removes `.is-interacting`, so a handler can
+  // re-tint before the browser paints (no image flash).
+  const onSettle = typeof opts.onSettle === 'function' ? opts.onSettle : null;
   const noopHandle = {
     setView: () => {},
     animateTo: () => {},
@@ -556,6 +562,7 @@ export function attachZoomPan(svg) {
     if (!interacting) return;
     setViewBoxNow(current);
     endGesture();
+    if (onSettle) onSettle({ ...current });
   }
   /** Strip the gesture visuals (transform + grey) and stop the timer. */
   function endGesture() {
@@ -694,6 +701,7 @@ export function attachZoomPan(svg) {
       apply(end);
       // Snapped, not animated: make sure no leftover fly tint lingers.
       if (!interacting && svg.classList) svg.classList.remove('is-interacting');
+      if (onSettle) onSettle({ ...end });
       if (opts.onDone) opts.onDone();
       return;
     }
@@ -722,6 +730,7 @@ export function attachZoomPan(svg) {
         // Camera settled: restore real flag images (unless a gesture now owns
         // the class).
         if (!interacting && svg.classList) svg.classList.remove('is-interacting');
+        if (onSettle) onSettle({ ...end });
         if (opts.onDone) opts.onDone();
       }
     }

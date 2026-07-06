@@ -387,6 +387,26 @@ export function settleFlagToTint(svg, code) {
 }
 
 /**
+ * Reveal one already-painted country as its full flag `<image>` — the inverse
+ * of {@link settleFlagToTint}, dropping `.is-tinted` from its targets so the
+ * inline flag fill shows again instead of the settled correctness wash. The
+ * quiz calls this in throttled batches when the round ends (or the finished
+ * map is re-zoomed) so the whole board doesn't rasterise in a single frame and
+ * freeze the tab. No-op for an invalid code.
+ *
+ * @param {any} svg  mounted `<svg>` root
+ * @param {string} code ISO 3166-1 alpha-2
+ */
+export function revealFlagImage(svg, code) {
+  if (!svg || typeof code !== 'string') return;
+  const id = code.toLowerCase();
+  if (!ISO2_PATTERN.test(id)) return;
+  for (const el of flagFillTargets(svg, id)) {
+    if (el && el.classList) el.classList.remove('is-tinted');
+  }
+}
+
+/**
  * The set of elements `paintCountryFlag` fills for one country — its
  * `#id` element's paintable child `<path>`s (the `<g>`-wrapped case the
  * world map uses, skipping inner paths that are themselves separate

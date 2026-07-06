@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
   offsetHitTargetCenter, paintCountryFlag, clearCountryFlag, settleFlagToTint,
-  computeMainlandBbox,
+  revealFlagImage, computeMainlandBbox,
 } from './flagMap.js';
 import { FLAG_TINTS } from '../flags/flagTints.js';
 
@@ -328,6 +328,18 @@ test('settleFlagToTint tags the painted path + ring with is-tinted, skipping the
   // The inner sub-country (its own country, e.g. French Guiana) is skipped —
   // same carve-out flagFillTargets makes when painting.
   assert.equal(subCountry.classList.contains('is-tinted'), false);
+});
+
+test('revealFlagImage drops is-tinted so the real flag shows again (keeps is-flagged)', () => {
+  const svg = fakeFlagSvg('es');
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  settleFlagToTint(svg, 'es');
+  assert.equal(svg._refs.innerPath.classList.contains('is-tinted'), true);
+  revealFlagImage(svg, 'es');
+  assert.equal(svg._refs.innerPath.classList.contains('is-tinted'), false);
+  assert.equal(svg._refs.hit.classList.contains('is-tinted'), false);
+  // Still an image fill, just no longer the settled wash.
+  assert.equal(svg._refs.innerPath.classList.contains('is-flagged'), true);
 });
 
 test('settleFlagToTint ignores non-ISO2 codes', () => {
