@@ -121,6 +121,26 @@
   user-select: none;
   -webkit-user-select: none;
 }
+/* Fluid gesture layer (mapZoom.js). While the map is being panned/zoomed,
+ * `.is-interacting` is on the <svg> and the whole element is moved as one
+ * GPU-composited layer via `transform` — no per-frame repaint. To keep
+ * that single composited layer cheap (and clean while scaling), drop the
+ * flag-image fills back to flat land for the duration of the gesture: with
+ * no element referencing a `url(#flagfill-…)` pattern, the browser doesn't
+ * rasterize the 255 flag images at all. The inline flag fill is set with
+ * plain `style` (no !important), so a class rule with `!important` wins for
+ * the gesture, then loses again the instant the class is removed on settle
+ * — flags snap back sharp, in one repaint, while stopped. Colours are the
+ * same flat land / coastline the default `.map-country` rule uses. */
+#flag-map-section svg.is-interacting .is-flagged {
+  fill: #f9f9f9 !important;
+  fill-opacity: 1 !important;
+  stroke: #555 !important;
+}
+#flag-map-section svg.is-interacting .map-hit-target.is-flagged {
+  fill: transparent !important;
+  stroke: var(--primary-color) !important;
+}
 /* World-map decoration that doesn't belong in a quiz / browse context:
  *   - <text> labels reveal each country's ISO code (gives answers away)
  *   - <line class="st29"> leader lines (79 of them, stroke #000) point
