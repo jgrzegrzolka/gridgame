@@ -1,6 +1,6 @@
 ---
 name: verify-flag-map-ui
-description: Recipe for verifying any change to the flagQuiz contour-map rendering (microstate rings, viewBox crops, hit-target positions, fullscreen behaviour) via Playwright MCP against the local dev server. Covers the load path, the flagsdata-fullscreen trick that magnifies microstate clusters, the read-cx/cy probes that prove ring positions without trusting pixels alone, and the four Playwright-specific gotchas that ate two PRs (HTTP cache holding stale modules, Fullscreen API needing a real user gesture, ref reshuffling between snapshots, screenshot dropping fullscreen). Use whenever a change touches `flagQuiz/flagMap.js`, `flagQuiz/mapZoom.js`, `worldMap.svg`, `europeMap.svg`, or any per-continent crop / microstate / hit-target logic — unit tests alone shipped two regressions (PR #611 / PR #612).
+description: Recipe for verifying any change to the flagQuiz contour-map rendering (microstate rings, viewBox crops, hit-target positions, fullscreen behaviour) via Playwright MCP against the local dev server. Covers the load path, the flagsdata-fullscreen trick that magnifies microstate clusters, the read-cx/cy probes that prove ring positions without trusting pixels alone, and the four Playwright-specific gotchas that ate two PRs (HTTP cache holding stale modules, Fullscreen API needing a real user gesture, ref reshuffling between snapshots, screenshot dropping fullscreen). Use whenever a change touches `flagQuiz/flagMap.js`, `flagQuiz/mapZoom.js`, `worldMap.svg`, or any per-continent crop / microstate / hit-target logic — unit tests alone shipped two regressions (PR #611 / PR #612).
 ---
 
 # Verify flag-map UI via Playwright MCP
@@ -13,7 +13,7 @@ Any time a change touches the rendered map and a reasonable reviewer might ask "
 
 - `flagQuiz/flagMap.js` — hit-target positions, microstate tagging, viewBox cropping.
 - `flagQuiz/mapZoom.js` — pan / zoom / fullscreen behaviour.
-- `flagQuiz/worldMap.svg` or `flagQuiz/europeMap.svg` — geometry edits.
+- `flagQuiz/worldMap.svg` — geometry edits.
 - New variants / continents added to `MAP_CONFIG` in `flagQuiz/page.js` or `flagsdata/page.js`.
 - Changes to `addHitTargets` / `cropToCountries` / `tagMicrostates` / `rescaleHitTargets`.
 
