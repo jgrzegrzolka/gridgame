@@ -10,6 +10,9 @@ body {
   margin: 0 auto;
   box-sizing: border-box;
 }
+/* The map always fills the content column here — no corner resize handle
+ * (mountFlagMap is called with resizable: false). It inherits the shared
+ * `width: 100%` from flags/flagMap.css, so no override is needed. */
 #filter-bar {
   background: var(--page-bg-color);
   margin: 0 -24px 16px;

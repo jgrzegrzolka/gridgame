@@ -496,6 +496,43 @@ export function clearCountryFlag(svg, code) {
 }
 
 /**
+ * Highlight / un-highlight one country with a flat fill (`.is-marked`, yellow
+ * — see flagMap.css). This is the cheap alternative to `paintCountryFlag` for
+ * surfaces that only need to say "this country is in the current set" rather
+ * than show its flag: no `<image>` / `<pattern>` and so no raster decode, which
+ * is what makes flagsdata's whole-world highlight fast (and lets it skip the
+ * tint / throttled-reveal machinery flagQuiz needs). Toggles the same target
+ * set `paintCountryFlag` fills (child paths + microstate hit rings). Distinct
+ * from `markCountry` above, which sets the green / red answer status.
+ *
+ * @param {any} svg  mounted `<svg>` root
+ * @param {string} code ISO 3166-1 alpha-2
+ */
+export function highlightCountry(svg, code) {
+  if (!svg || typeof code !== 'string') return;
+  const id = code.toLowerCase();
+  if (!ISO2_PATTERN.test(id)) return;
+  for (const el of flagFillTargets(svg, id)) {
+    if (el && el.classList) el.classList.add('is-marked');
+  }
+}
+
+/**
+ * Inverse of `highlightCountry` — drop the `.is-marked` fill from one country.
+ *
+ * @param {any} svg  mounted `<svg>` root
+ * @param {string} code ISO 3166-1 alpha-2
+ */
+export function unhighlightCountry(svg, code) {
+  if (!svg || typeof code !== 'string') return;
+  const id = code.toLowerCase();
+  if (!ISO2_PATTERN.test(id)) return;
+  for (const el of flagFillTargets(svg, id)) {
+    if (el && el.classList) el.classList.remove('is-marked');
+  }
+}
+
+/**
  * Strip every status class from every marked country — used on
  * play-again so a replayed round starts with a blank silhouette.
  *
@@ -553,6 +590,7 @@ export function resetMap(root) {
  *   cropPad?: { left?: number, right?: number, top?: number, bottom?: number },
  *   scopeCodes?: string[] | null,
  *   fullscreenLabel?: string,
+ *   resizable?: boolean,
  *   fetchImpl?: typeof fetch,
  * }} args
  * @returns {Promise<SVGElement | null>}
@@ -560,6 +598,7 @@ export function resetMap(root) {
 export async function mountFlagMap({
   container, url, cropCodes = null, cropPad, scopeCodes = null,
   fullscreenLabel = 'Toggle fullscreen',
+  resizable = true,
   fetchImpl = globalThis.fetch,
 }) {
   if (!container || !url) return null;
@@ -596,98 +635,96 @@ export async function mountFlagMap({
   tagMicrostates(svg, scope);
   addHitTargets(svg, hitTargetRadius(/** @type {any} */ (svg)));
   addFullscreenButton(container, fullscreenLabel);
-  makeMapResizable(container, /** @type {any} */ (svg));
+  if (resizable) makeMapResizable(container, /** @type {any} */ (svg));
   return /** @type {SVGElement} */ (svg);
 }
 
 /**
- * Make the map section height-resizable via a visible bottom-edge handle. The
- * map always stays full width (logo-to-burger, the documented design); dragging
- * only changes the section HEIGHT, and the flex-centred `overflow: hidden`
- * container clips the natural-height SVG to a centred band (see the CSS). Keeps
- * it sane:
- *  - height clamps to [140, natural full-width height] — you can compact the
- *    map down to a band, but not add pointless empty space taller than the map;
- *  - restore / persist the dragged height in `localStorage`
- *    (`gridgame.mapHeight`); the older width×height `gridgame.mapSize` key is
- *    dropped so pre-existing narrow saves don't linger;
- *  - clear the explicit height while fullscreen (the browser owns the size) and
- *    restore on exit.
+ * Make the map section width-resizable (desktop only) via a bottom-right corner
+ * handle. The map opens at its CSS default (~480px) and the handle drags it
+ * either way — down to a small floor or out to the full window width — with the
+ * SVG (width:100%, height:auto) scaling to keep the map's shape. Notes:
+ *  - width clamps to [MIN_WIDTH, window width]; the window is the ceiling
+ *    because the section is centred on the viewport and a wider map would force
+ *    a horizontal scrollbar;
+ *  - resizing is session-only — nothing is persisted, so a refresh returns to
+ *    the default; stale width / size keys from earlier builds are cleared;
+ *  - phones (≤600px) get no handle (hidden in CSS); reset to default if the
+ *    viewport crosses into mobile mid-session;
+ *  - clear the explicit width while fullscreen (the browser owns the size).
  *
  * @param {HTMLElement} container
- * @param {any} svg
+ * @param {any} _svg
  */
-function makeMapResizable(container, svg) {
-  if (!container || !container.style) return;
+function makeMapResizable(container, _svg) {
+  if (!container || !container.style || !container.parentElement) return;
   const doc = container.ownerDocument || globalThis.document;
-  const vb = String(svg.getAttribute('viewBox') || '').split(/\s+/).map(Number);
-  const aspect = (vb.length === 4 && vb[2] > 0 && vb[3] > 0) ? vb[2] / vb[3] : 0;
-  // Natural full-width height = the height the map renders at when it fills the
-  // body width; this is the max (taller would just be empty space).
-  const naturalH = () => (aspect > 0 ? container.clientWidth / aspect : Infinity);
-  const clampH = (/** @type {number} */ h) => Math.max(140, Math.min(Math.round(naturalH()), h));
 
-  try { localStorage.removeItem('gridgame.mapSize'); } catch { /* ignore */ }
-  // Desktop only — on phones the full-width map is already short, so the resize
-  // range is too small to bother (the handle is hidden in CSS at the same
-  // breakpoint). On mobile leave the map at its natural height, ignoring any
-  // height saved on a desktop.
+  // Session-only now — drop any width persisted by earlier builds so a refresh
+  // always returns to the CSS default.
+  for (const k of ['gridgame.mapSize', 'gridgame.mapHeight', 'gridgame.mapWidth']) {
+    try { localStorage.removeItem(k); } catch { /* ignore */ }
+  }
+
+  const MIN_WIDTH = 240;
+  // The map grows out to the window width — it's centred on the viewport in CSS,
+  // so past its panel it spills symmetrically into the page's side margins.
+  // `clientWidth` excludes the scrollbar, so full width never forces a
+  // horizontal scrollbar. (Only flagQuiz mounts the map resizable, and its body
+  // is full-width; flagsdata pins the map to its column and opts out.)
+  const maxWidth = () => {
+    const el = doc && doc.documentElement;
+    return (el && el.clientWidth) || (globalThis.innerWidth || 0);
+  };
+  const reset = () => { container.style.width = ''; };
+
+  // The handle is hidden in CSS ≤600px; if the viewport crosses into mobile
+  // with an in-session resize applied, drop it back to the default width.
   const mq = typeof globalThis.matchMedia === 'function'
     ? globalThis.matchMedia('(max-width: 600px)') : null;
-  const applySaved = () => {
-    container.style.height = '';
-    if (mq && mq.matches) return;
-    try {
-      const h = Number(localStorage.getItem('gridgame.mapHeight'));
-      if (Number.isFinite(h) && h > 0) container.style.height = `${clampH(h)}px`;
-    } catch { /* no saved height */ }
-  };
-  applySaved();
-  if (mq && typeof mq.addEventListener === 'function') mq.addEventListener('change', applySaved);
+  if (mq && typeof mq.addEventListener === 'function') {
+    mq.addEventListener('change', () => { if (mq.matches) reset(); });
+  }
 
   if (doc && typeof doc.createElement === 'function') {
     const handle = doc.createElement('div');
     handle.className = 'map-resize-handle';
     handle.setAttribute('aria-hidden', 'true');
-    // Horizontal grip lines — reads as "drag up/down".
+    // Diagonal grip lines — reads as "drag to resize".
     handle.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">'
-      + '<path d="M4 6.5 H12 M4 9.5 H12" '
+      + '<path d="M14.5 6.5 6.5 14.5 M14.5 10.5 10.5 14.5" '
       + 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     container.appendChild(handle);
-    /** @type {{y:number,h:number}|null} */
+    /** @type {{x:number,w:number,max:number}|null} */
     let start = null;
     handle.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
       try { handle.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
-      start = { y: e.clientY, h: container.getBoundingClientRect().height };
+      start = { x: e.clientX, w: container.getBoundingClientRect().width, max: maxWidth() };
     });
     handle.addEventListener('pointermove', (e) => {
       if (!start) return;
-      container.style.height = `${clampH(start.h + (e.clientY - start.y))}px`;
+      // The map is centred, so a corner drag of dx changes each side — resize by
+      // 2·dx to keep the handle under the cursor. Drag out to grow, in to shrink.
+      const w = Math.max(MIN_WIDTH, Math.min(start.max, start.w + (e.clientX - start.x) * 2));
+      container.style.width = `${Math.round(w)}px`;
     });
     const end = (/** @type {PointerEvent} */ e) => {
       if (!start) return;
       start = null;
       try { handle.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-      try {
-        localStorage.setItem('gridgame.mapHeight', String(Math.round(container.offsetHeight)));
-      } catch { /* storage full / blocked */ }
     };
     handle.addEventListener('pointerup', end);
     handle.addEventListener('pointercancel', end);
   }
 
   // Fullscreen: the browser forces the section to the viewport, so our inline
-  // height would fight it. Clear while fullscreen, restore on exit.
+  // width would fight it. Clear it (entering) and settle back to the default
+  // (exiting) — there's no persisted width to restore.
   if (doc && doc.addEventListener) {
-    const onFs = () => {
-      const fs = doc.fullscreenElement || /** @type {any} */ (doc).webkitFullscreenElement;
-      if (fs === container) container.style.height = '';
-      else applySaved();
-    };
-    doc.addEventListener('fullscreenchange', onFs);
-    doc.addEventListener('webkitfullscreenchange', onFs);
+    doc.addEventListener('fullscreenchange', reset);
+    doc.addEventListener('webkitfullscreenchange', reset);
   }
 }
 

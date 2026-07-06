@@ -41,20 +41,19 @@
   box-sizing: border-box;
   /* Anchor for the absolutely-positioned `.map-fullscreen-btn` below. */
   position: relative;
-  /* Height-only resize via the bottom-edge `.map-resize-handle` below. The map
-   * always stays full width (logo-to-burger, the documented design) — dragging
-   * only changes the section's HEIGHT. The SVG stays at its natural aspect
-   * (width:100%, height:auto) and is flex-centered here, so a section shorter
-   * than the map's natural height clips it to a centred horizontal band (the
-   * empty ocean top/bottom drops away) rather than shrinking the map with side
-   * gaps. `overflow: hidden` does the clipping; the dragged height persists in
-   * `gridgame.mapHeight` (mountFlagMap → makeMapResizable). The pan/zoom engine
-   * is untouched: the SVG keeps its natural box, so its viewBox↔pixel mapping
-   * stays 1:1 — only the parent clips what's visible. */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  /* Desktop-only resize via the bottom-right `.map-resize-handle` (flagQuiz
+   * only; flagsdata pins the map to its column and opts out). The map opens at
+   * its ~480px default; the corner handle drags the width either way — smaller,
+   * or out to the full window width — and the SVG (width:100%, height:auto)
+   * scales with it so the map keeps its shape. Resizing is session-only
+   * (makeMapResizable): a refresh returns to the default.
+   *
+   * `left: 50%` + `translateX(-50%)` centres the section on its container's
+   * centre (which is the window centre) for ANY width — so once it's dragged
+   * wider than its panel it spills symmetrically into the page's side margins
+   * and stays centred, instead of overflowing to one side. */
+  left: 50%;
+  transform: translateX(-50%);
   /* Isolate the map's layout + paint from the rest of the page. The large
    * inlined world-map SVG accumulates flag-pattern fills + per-answer flash
    * animations as a 60s round progresses; without containment the browser
@@ -90,36 +89,33 @@
 .map-fullscreen-btn:hover {
   background: var(--surface-hover-color);
 }
-/* Visible height-resize handle, centred on the bottom edge. Sits above the SVG
- * (z-index) so its drag is caught here, not by the map's pan handler. A short
- * surface pill with a horizontal grip glyph and `ns-resize` cursor, so it reads
- * as "drag up/down to change height." Driven by JS (makeMapResizable). */
+/* Visible enlarge handle in the bottom-right corner. Sits above the SVG
+ * (z-index) so its drag is caught here, not by the map's pan handler. A small
+ * surface chip with a diagonal grip glyph and `nwse-resize` cursor, so it reads
+ * as "drag out to grow." Driven by JS (makeMapResizable). */
 .map-resize-handle {
   position: absolute;
+  right: 6px;
   bottom: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--surface-color);
   border: 1px solid var(--muted-soft-color);
-  border-radius: 10px;
+  border-radius: 4px;
   color: var(--primary-color);
-  cursor: ns-resize;
+  cursor: nwse-resize;
   touch-action: none;
   z-index: 10;
 }
 .map-resize-handle:hover {
   background: var(--surface-hover-color);
 }
-/* Desktop only. On phones the map is full-width and therefore already short
- * (~180px), so the resize range (140 → natural) is too small to be worth a
- * handle — leave the map at its natural full-width height there. Matches the
- * site's 600px mobile breakpoint; makeMapResizable also skips applying a saved
- * height below it. */
+/* Desktop only. On phones the map already fills the (narrow) width, so there's
+ * nothing to enlarge — hide the handle. Matches the site's 600px mobile
+ * breakpoint; makeMapResizable also skips applying a saved width below it. */
 @media (max-width: 600px) {
   .map-resize-handle {
     display: none;
@@ -136,6 +132,10 @@
   background: var(--page-bg-color);
   padding: 0;
   overflow: hidden;
+  /* The browser sizes/places the fullscreen element itself — drop the
+   * viewport-centering offset so it isn't shifted off-screen. */
+  left: auto;
+  transform: none;
 }
 /* No resizing while fullscreen — the browser owns the dimensions. */
 #flag-map-section:fullscreen .map-resize-handle,
@@ -249,6 +249,19 @@
 #flag-map-section svg .map-hit-target.is-flagged.is-tinted {
   fill: var(--flag-tint, transparent) !important;
   stroke: var(--flag-tint, var(--primary-color)) !important;
+}
+/* flagsdata marks each country in the current filter with a flat yellow fill
+ * (`markCountry`) instead of painting its flag <image>. No raster decode, so
+ * the whole-world highlight is fast and none of the tint / throttled-reveal
+ * machinery above is needed there. (Map-marking colour, an accepted exception
+ * to the seven-variable palette — like the green / red correctness wash.) */
+#flag-map-section svg .is-marked {
+  fill: #f4c430 !important;
+  fill-opacity: 1 !important;
+}
+#flag-map-section svg .map-hit-target.is-marked {
+  fill: #f4c430 !important;
+  stroke: #f4c430 !important;
 }
 /* World-map decoration that doesn't belong in a quiz / browse context:
  *   - <text> labels reveal each country's ISO code (gives answers away)
