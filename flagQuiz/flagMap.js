@@ -660,15 +660,17 @@ export async function mountFlagMap({
 function makeMapResizable(container, _svg) {
   if (!container || !container.style || !container.parentElement) return;
   const doc = container.ownerDocument || globalThis.document;
-  const parent = container.parentElement;
 
   try { localStorage.removeItem('gridgame.mapSize'); } catch { /* ignore */ }
   try { localStorage.removeItem('gridgame.mapHeight'); } catch { /* ignore */ }
 
-  // Container's inner content width — the max the map can grow to.
+  // The map can grow all the way to the window width (it's centred on the
+  // viewport in CSS, spilling past its panel into the page's side margins).
+  // `documentElement.clientWidth` excludes the scrollbar, so full width never
+  // forces a horizontal scrollbar.
   const maxWidth = () => {
-    const cs = getComputedStyle(parent);
-    return parent.clientWidth - parseFloat(cs.paddingLeft || '0') - parseFloat(cs.paddingRight || '0');
+    const el = doc && doc.documentElement;
+    return (el && el.clientWidth) || (globalThis.innerWidth || 0);
   };
   // The CSS default width (measure with our explicit width cleared).
   const defaultWidth = () => {

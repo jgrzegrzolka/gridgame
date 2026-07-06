@@ -42,15 +42,17 @@
   /* Anchor for the absolutely-positioned `.map-fullscreen-btn` below. */
   position: relative;
   /* Desktop-only enlarge resize via the bottom-right `.map-resize-handle`. Each
-   * page sets the map's default width (flagsdata: full; flagQuiz: the ~480px
-   * answer-grid width, so it opens as before); the corner handle then grows the
-   * width up to the container's full content width, and the SVG (width:100%,
+   * page opens the map at its ~480px default; the corner handle then grows the
+   * width all the way up to the full window width, and the SVG (width:100%,
    * height:auto) scales with it so the map keeps its shape. The dragged width
-   * persists in `gridgame.mapWidth` (mountFlagMap → makeMapResizable), and the
-   * handle only appears where there's room to grow (so flagsdata, already full
-   * width, shows none). Centred with `margin-inline: auto` when narrower than
-   * its container. */
-  margin-inline: auto;
+   * persists in `gridgame.mapWidth` (mountFlagMap → makeMapResizable).
+   *
+   * `left: 50%` + `translateX(-50%)` centres the section on its container's
+   * centre (which is the window centre) for ANY width — so once it's dragged
+   * wider than its panel it spills symmetrically into the page's side margins
+   * and stays centred, instead of overflowing to one side. */
+  left: 50%;
+  transform: translateX(-50%);
   /* Isolate the map's layout + paint from the rest of the page. The large
    * inlined world-map SVG accumulates flag-pattern fills + per-answer flash
    * animations as a 60s round progresses; without containment the browser
@@ -129,6 +131,10 @@
   background: var(--page-bg-color);
   padding: 0;
   overflow: hidden;
+  /* The browser sizes/places the fullscreen element itself — drop the
+   * viewport-centering offset so it isn't shifted off-screen. */
+  left: auto;
+  transform: none;
 }
 /* No resizing while fullscreen — the browser owns the dimensions. */
 #flag-map-section:fullscreen .map-resize-handle,
