@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
-  offsetHitTargetCenter, paintCountryFlag, clearCountryFlag, computeMainlandBbox,
+  offsetHitTargetCenter, paintCountryFlag, clearCountryFlag, settleFlagToTint,
+  computeMainlandBbox,
 } from './flagMap.js';
 import { FLAG_TINTS } from '../flags/flagTints.js';
 
@@ -305,6 +306,47 @@ test('paintCountryFlag fills the country path + microstate ring with a flag patt
   assert.equal(hit.style.fill, 'url(#flagfill-es)');
   assert.equal(hit.style.fillOpacity, '0.9');
   assert.equal(hit.classList.contains('is-flagged'), true);
+});
+
+test('paintCountryFlag records the answer status so the settled wash can read it', () => {
+  const correct = fakeFlagSvg('es');
+  paintCountryFlag(correct, 'es', '../flags/svg/', 'correct');
+  assert.equal(correct._refs.innerPath.classList.contains('is-flag-correct'), true);
+  assert.equal(correct._refs.hit.classList.contains('is-flag-correct'), true);
+  const wrong = fakeFlagSvg('es');
+  paintCountryFlag(wrong, 'es', '../flags/svg/', 'wrong');
+  assert.equal(wrong._refs.innerPath.classList.contains('is-flag-wrong'), true);
+});
+
+test('settleFlagToTint tags the painted path + ring with is-tinted, skipping the sub-country', () => {
+  const svg = fakeFlagSvg('es');
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  settleFlagToTint(svg, 'es');
+  const { innerPath, hit, subCountry } = svg._refs;
+  assert.equal(innerPath.classList.contains('is-tinted'), true);
+  assert.equal(hit.classList.contains('is-tinted'), true);
+  // The inner sub-country (its own country, e.g. French Guiana) is skipped —
+  // same carve-out flagFillTargets makes when painting.
+  assert.equal(subCountry.classList.contains('is-tinted'), false);
+});
+
+test('settleFlagToTint ignores non-ISO2 codes', () => {
+  const svg = fakeFlagSvg('es');
+  settleFlagToTint(svg, 'ESP');
+  settleFlagToTint(svg, '');
+  assert.equal(svg._refs.innerPath.classList.contains('is-tinted'), false);
+});
+
+test('clearCountryFlag removes the is-tinted demotion along with is-flagged', () => {
+  const svg = fakeFlagSvg('es');
+  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
+  settleFlagToTint(svg, 'es');
+  clearCountryFlag(svg, 'es');
+  const { innerPath, hit } = svg._refs;
+  assert.equal(innerPath.classList.contains('is-tinted'), false);
+  assert.equal(hit.classList.contains('is-tinted'), false);
+  assert.equal(innerPath.classList.contains('is-flagged'), false);
+  assert.equal(innerPath.classList.contains('is-flag-correct'), false);
 });
 
 test('paintCountryFlag drops a green tint overlay on top of the flag (correct)', () => {

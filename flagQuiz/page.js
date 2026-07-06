@@ -107,7 +107,7 @@ import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
-import { mountFlagMap, paintCountryFlag, computeCountriesBbox, computeMainlandBbox } from './flagMap.js';
+import { mountFlagMap, paintCountryFlag, settleFlagToTint, computeCountriesBbox, computeMainlandBbox } from './flagMap.js';
 import { attachZoomPan, regionalFrame } from './mapZoom.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox } from '../flags/flagLightbox.js';
@@ -378,7 +378,13 @@ export function bootFlagQuiz() {
      * @param {'correct' | 'wrong'} kind
      */
     function markCountry(code, kind) {
+      // Keep only the most-recently answered country as a live flag image;
+      // demote the previous one to its flat tint first. Caps the map's
+      // per-fly-in settle repaint at one image instead of re-rasterising every
+      // flag already down — the remaining hitch on a full 60s / all-flags run.
+      const prev = painted[painted.length - 1];
       painted.push({ code, kind });
+      if (prev && prev.code !== code) settleFlagToTint(mapSvg, prev.code);
       paintCountryFlag(mapSvg, code, '../flags/svg/', kind);
       flyToAnsweredCountry(code);
     }
@@ -501,8 +507,13 @@ export function bootFlagQuiz() {
           // answered before this (possibly late) mount. Uses
           // paintCountryFlag directly (not markCountry) so a late mount
           // doesn't fire the answer fly-in for every historical fill.
-          for (const p of painted) {
+          for (let i = 0; i < painted.length; i++) {
+            const p = painted[i];
             paintCountryFlag(svg, p.code, '../flags/svg/', p.kind);
+            // Mid-round late mount: match live play — only the newest is a
+            // live image, the rest are tint. (At game over the section is
+            // `.is-finished`, whose CSS shows every real flag regardless.)
+            if (!gameOver && i < painted.length - 1) settleFlagToTint(svg, p.code);
           }
         }
       });

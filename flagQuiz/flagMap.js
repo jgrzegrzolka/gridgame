@@ -348,15 +348,42 @@ export function paintCountryFlag(svg, code, svgBase, status) {
     } else if (typeof el.setAttribute === 'function') {
       el.setAttribute('fill', fill);
     }
-    if (el.classList) el.classList.add('is-flagged');
-    // While the map is moving, CSS fills flagged countries with this cheap
-    // solid colour (var(--flag-tint)) instead of the flag image — same raster
-    // cost as the old flat grey, but the map stays colourful. Full flags snap
-    // back on settle. Missing tint (rare) falls back to grey via the CSS var.
+    if (el.classList) {
+      el.classList.add('is-flagged');
+      // Persist the answer status so once this country is no longer the most
+      // recent (gains `.is-tinted`), it settles to a quiet green / red
+      // correctness wash instead of its flag colour — see flagMap.css.
+      if (statusClass) el.classList.add(statusClass);
+    }
+    // While the map is moving, CSS fills the newest flagged country with this
+    // cheap solid colour (var(--flag-tint)) instead of the flag image — same
+    // raster cost as the old flat grey, but colourful. It snaps back to a full
+    // flag on settle. Missing tint (rare) falls back to grey via the CSS var.
     if (el.style && FLAG_TINTS[id]) el.style.setProperty('--flag-tint', FLAG_TINTS[id]);
     flash(el);
   };
   for (const el of flagFillTargets(svg, id)) applyFill(el);
+}
+
+/**
+ * Demote an already-painted country to its flat dominant-colour tint — add
+ * `.is-tinted` to the same targets {@link paintCountryFlag} filled. The quiz
+ * calls this on the previously-answered country as each new answer lands, so
+ * only the most-recent country renders as a live flag `<image>` and the
+ * per-fly-in settle repaint stays O(1) (see the `.is-tinted` rules in
+ * flagMap.css). No-op for an unpainted / invalid code — an unflagged element
+ * gaining the class is inert until it's also `.is-flagged`.
+ *
+ * @param {any} svg  mounted `<svg>` root
+ * @param {string} code ISO 3166-1 alpha-2
+ */
+export function settleFlagToTint(svg, code) {
+  if (!svg || typeof code !== 'string') return;
+  const id = code.toLowerCase();
+  if (!ISO2_PATTERN.test(id)) return;
+  for (const el of flagFillTargets(svg, id)) {
+    if (el && el.classList) el.classList.add('is-tinted');
+  }
 }
 
 /**
@@ -409,7 +436,14 @@ function flagFillTargets(svg, id) {
  */
 function clearFlagFillStyles(el) {
   if (!el) return;
-  if (el.classList) el.classList.remove('is-flagged');
+  if (el.classList) {
+    el.classList.remove('is-flagged');
+    // Drop the "settled to tint" demotion and the answer-status tag too, so a
+    // cleared / re-mounted country starts fresh (paintCountryFlag re-adds them).
+    el.classList.remove('is-tinted');
+    el.classList.remove('is-flag-correct');
+    el.classList.remove('is-flag-wrong');
+  }
   if (el.style) {
     el.style.fill = '';
     el.style.fillOpacity = '';

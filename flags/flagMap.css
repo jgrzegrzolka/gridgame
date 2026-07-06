@@ -146,6 +146,36 @@
   fill: var(--flag-tint, transparent) !important;
   stroke: var(--flag-tint, var(--primary-color)) !important;
 }
+/* Only the most-recently answered country stays a live flag <image>; every
+ * earlier answer carries `.is-tinted` (added in page.js as the next answer
+ * lands). Without capping this, the settle repaint at the end of each fly-in
+ * re-rasterises every flag on the map — fine with a handful, the hitch you
+ * feel on the 60s / all-flags run once it fills up.
+ *
+ * Rather than each earlier flag's own colour (which would all compete with the
+ * just-answered flag), the settled countries fade to a quiet, semi-transparent
+ * correctness wash: green (`#2a8a3a`) if you got it, red (`#c0392b`) if you
+ * missed. The map reads as a calm "what you got" trail while the newest flag
+ * pops. A solid fill is the same cheap raster the dominant-colour tint was, so
+ * the perf win (one live image at a time) holds. Higher specificity than the
+ * `.is-interacting` fill above, so the wash stays put even while the map moves
+ * — no colour flip during the fly-in. In review (`.is-finished`) the cap is
+ * dropped and every real flag returns. (`#2a8a3a` / `#c0392b` are the accepted
+ * answer-state map-palette colours, same as the flag-flash below.) */
+#flag-map-section:not(.is-finished) svg .is-flagged.is-tinted.is-flag-correct,
+#flag-map-section:not(.is-finished) svg .map-hit-target.is-flagged.is-tinted.is-flag-correct {
+  fill: #2a8a3a !important;
+  fill-opacity: 0.35 !important;
+  stroke: #2a8a3a !important;
+  stroke-opacity: 0.5 !important;
+}
+#flag-map-section:not(.is-finished) svg .is-flagged.is-tinted.is-flag-wrong,
+#flag-map-section:not(.is-finished) svg .map-hit-target.is-flagged.is-tinted.is-flag-wrong {
+  fill: #c0392b !important;
+  fill-opacity: 0.35 !important;
+  stroke: #c0392b !important;
+  stroke-opacity: 0.5 !important;
+}
 /* World-map decoration that doesn't belong in a quiz / browse context:
  *   - <text> labels reveal each country's ISO code (gives answers away)
  *   - <line class="st29"> leader lines (79 of them, stroke #000) point
