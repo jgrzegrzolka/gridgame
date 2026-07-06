@@ -33,8 +33,27 @@ const MAX_ZOOM_IN = 24;
  * fullscreen so the player can pinch out to see the whole map even
  * when slice mode would otherwise crop it on portrait phones. */
 const MAX_ZOOM_OUT = 3;
-/** Wheel zoom factor per notch. ~10% per tick — comfortable feel. */
-const WHEEL_SCALE_STEP = 1.1;
+/**
+ * Wheel-zoom sensitivity: zoom scale = e^(-normalizedDeltaPx × this).
+ * Tuned so a classic mouse notch (~100 px of deltaY) zooms ~10% — the
+ * same feel the old fixed 1.1-per-event step had — while a trackpad or
+ * smooth/momentum wheel (a *stream* of small deltas) accumulates the
+ * same total scroll into the same total zoom instead of firing a full
+ * 10% step per event. The old fixed step ignored deltaY magnitude, so a
+ * single two-finger trackpad swipe (~10 events) zoomed 1.1^10 ≈ 2.6× and
+ * kept drifting on momentum — the "jumpy / laggy" zoom.
+ */
+const WHEEL_ZOOM_SENSITIVITY = 0.001;
+/**
+ * Per-event scroll clamp (normalized px). A momentum spike or a coarse
+ * page-mode delta can't zoom more than one comfortable notch in a single
+ * event, so the map never lurches.
+ */
+const WHEEL_MAX_STEP_PX = 120;
+/** deltaMode === 1 (lines): px-per-line used to normalize to pixels. */
+const WHEEL_LINE_PX = 33;
+/** deltaMode === 2 (pages): px-per-page used to normalize to pixels. */
+const WHEEL_PAGE_PX = 800;
 /** Two taps within this window count as a double-tap (ms). */
 const DOUBLE_TAP_MS = 300;
 
@@ -57,6 +76,30 @@ export function zoomViewBox(vb, pivot, scale) {
     width: vb.width / scale,
     height: vb.height / scale,
   };
+}
+
+/**
+ * Map one wheel event to a zoom scale, proportional to how far the wheel
+ * actually scrolled. Normalizes `deltaMode` (pixels / lines / pages) to
+ * pixels, clamps a single event's contribution so a momentum spike can't
+ * lurch, then maps to an exponential scale so repeated small events
+ * compose smoothly (e^a · e^b = e^(a+b)) — a trackpad swipe of N small
+ * deltas zooms the same total as one mouse notch of the same distance.
+ *
+ * Scroll up (deltaY < 0) → scale > 1 (zoom in); scroll down → scale < 1.
+ *
+ * @param {number} deltaY     wheel event deltaY
+ * @param {number} [deltaMode] wheel event deltaMode (0 px, 1 lines, 2 pages)
+ * @returns {number} zoom scale for `zoomViewBox`
+ */
+export function wheelZoomScale(deltaY, deltaMode = 0) {
+  if (!Number.isFinite(deltaY)) return 1;
+  let px = deltaY;
+  if (deltaMode === 1) px *= WHEEL_LINE_PX;
+  else if (deltaMode === 2) px *= WHEEL_PAGE_PX;
+  if (px > WHEEL_MAX_STEP_PX) px = WHEEL_MAX_STEP_PX;
+  else if (px < -WHEEL_MAX_STEP_PX) px = -WHEEL_MAX_STEP_PX;
+  return Math.exp(-px * WHEEL_ZOOM_SENSITIVITY);
 }
 
 /**
@@ -489,8 +532,7 @@ export function attachZoomPan(svg) {
     cancelAnim();
     const pivot = screenToSvg(svg, e.clientX, e.clientY);
     if (!pivot) return;
-    const scale = e.deltaY < 0 ? WHEEL_SCALE_STEP : 1 / WHEEL_SCALE_STEP;
-    apply(zoomViewBox(current, pivot, scale));
+    apply(zoomViewBox(current, pivot, wheelZoomScale(e.deltaY, e.deltaMode)));
   }
 
   /** @type {{ mode: 'pan' | 'pinch', lastX?: number, lastY?: number, distance?: number } | null} */
