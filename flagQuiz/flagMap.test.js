@@ -5,6 +5,7 @@ import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
   offsetHitTargetCenter, paintCountryFlag, clearCountryFlag,
 } from './flagMap.js';
+import { FLAG_TINTS } from '../flags/flagTints.js';
 
 /**
  * Tiny fake of the SVG host root: maps ID → path-like object with a
@@ -191,9 +192,19 @@ function makeNode(tag) {
   const attrs = new Map();
   const classes = new Set();
   const children = [];
+  // Minimal CSSStyleDeclaration: direct `style.fill = …` plus setProperty /
+  // getPropertyValue for custom props like `--flag-tint`. Methods are
+  // non-enumerable so cloneNode's Object.keys copy skips them.
+  const style = {};
+  Object.defineProperty(style, 'setProperty', {
+    value: (k, v) => { style[k] = String(v); },
+  });
+  Object.defineProperty(style, 'getPropertyValue', {
+    value: (k) => style[k] || '',
+  });
   const node = {
     tagName: tag,
-    style: {},
+    style,
     children,
     parentNode: null,
     nextSibling: null,
@@ -226,7 +237,7 @@ function makeNode(tag) {
   return node;
 }
 
-function fakeFlagSvg() {
+function fakeFlagSvg(code = 'es') {
   const doc = { createElementNS: (_ns, tag) => makeNode(tag) };
   let defs = null;
   // The country element returned by `#es` — a <g> wrapper that carries the
@@ -255,12 +266,18 @@ function fakeFlagSvg() {
     firstChild: null,
     insertBefore: (node) => { defs = node; },
     querySelector: (sel) => {
+      // `#flagfill-xx image` — the pattern's <image> (for swapFlagDetail).
+      const patImg = sel.match(/^#(flagfill-\w+) image$/);
+      if (patImg) {
+        const pat = defs && defs.children.find((c) => c.getAttribute('id') === patImg[1]);
+        return pat ? pat.children.find((c) => c.tagName === 'image') || null : null;
+      }
       if (sel.startsWith('#flagfill-')) {
         if (!defs) return null;
         return defs.children.find((c) => c.getAttribute('id') === sel.slice(1)) || null;
       }
       if (sel === 'defs') return defs;
-      if (sel === '#es') return group;
+      if (sel === '#' + code) return group;
       return null;
     },
     querySelectorAll: (sel) => {
@@ -354,6 +371,15 @@ test('paintCountryFlag points the pattern image at the flag svg', () => {
   const image = pattern.children[0];
   assert.equal(image.getAttribute('href'), '../flags/svg/es.svg');
   assert.equal(image.getAttribute('preserveAspectRatio'), 'xMidYMid slice');
+});
+
+test('paintCountryFlag sets the dominant-colour tint used while the map moves', () => {
+  const svg = fakeFlagSvg('pl');
+  paintCountryFlag(svg, 'pl', '../flags/svg/', 'correct');
+  // The country path carries --flag-tint = Poland's dominant colour, which CSS
+  // fills it with during a gesture (cheap, no flag image to raster).
+  assert.equal(svg._refs.innerPath.style.getPropertyValue('--flag-tint'), FLAG_TINTS.pl);
+  assert.ok(/^#[0-9a-f]{6}$/.test(FLAG_TINTS.pl));
 });
 
 test('paintCountryFlag reuses an existing pattern instead of duplicating it', () => {

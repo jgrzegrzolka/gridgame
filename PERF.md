@@ -15,6 +15,18 @@ The constraints that shape every fix below:
 
 ## Journal (newest first)
 
+### 2026-07-06 — Map pan/zoom stutter → dominant-colour tint while moving
+
+**Symptom.** Panning/zooming the flag map (`/flagsdata/` and the quiz end-of-game view) stuttered. The `.is-interacting` GPU-transform layer (PR #701) already holds the viewBox and moves the whole SVG as one composited layer, so the *movement* is free — but the map still didn't feel fluid.
+
+**Diagnosis.** The cost is **rasterizing the flag images**, and it's proportional to *how many flags are on the map*, not how complex each one is. Every answered / filtered country is filled with an `<image href="…svg">` pattern; building the composited layer at gesture start has to decode and raster all of them (~255 on a full flagsdata view). The heavy coats of arms (Serbia 177 KB, Mexico 356 paths) dominate, but even the simple bicolours add up. The old fix greyed *every* flagged country while moving (`fill:#f9f9f9`) precisely because a flat fill means **zero flag images to raster** — that's why grey was smooth. A prototype that showed emblem-less "plain" flag variants during motion was abandoned: a plain tricolour is still an `<image>` pattern, so it doesn't lower the image count that is the actual cost.
+
+**Fix.** Replace the flat grey with a per-country **dominant-colour tint** (`--flag-tint`, set in `flagMap.js` from `flags/flagTints.js`; CSS fills `.is-interacting .is-flagged` with it). A solid colour costs the browser exactly what grey did — no image decode — so motion stays as smooth as the grey baseline, but the map reads as a colourful world instead of a grey one. Full flags snap back on settle (one repaint, while stopped).
+
+**Regenerating the tints.** `flags/flagTints.js` is generated, not hand-authored. To rebuild it (e.g. when the flag set changes): serve the repo, and in a browser rasterize each `flags/svg/<code>.svg` to a small canvas, bucket the pixels, and pick the colour with the highest `area × saturation × brightness` — the brightness/saturation weighting stops a black or white band (which reads as saturation 1.0 for a near-black like `#000001`) from winning over the real colour. Near-white-only flags (e.g. Afghanistan's white field) fall back to a visible light grey so the country isn't invisible on the page. The one-shot sampler script lives in the PR #703 discussion; keep the output sorted and formatted `~6 per line`.
+
+**Trade-off.** One dominant colour per flag loses the *layout* — a multi-colour flag shows a single block (Germany gold, Mexico red, Ukraine yellow), picked by area×saturation×brightness. Acceptable for a transient moving state; a per-country override in `flagTints.js` is a one-line edit if a specific pick reads wrong. If a single colour ever feels too flat, the next cheap step up (still no images) is a hard-stop gradient for the purely-striped flags.
+
 ### 2026-07-01 — `immutable` on versioned assets → a poisoned edge entry stuck for a year
 
 **Symptom.** After the Poland flag-story fix deployed (PR #637), the `/flagsdata/` story popup kept rendering the *old* 3-step timeline (the broken cockade) for every visitor — even in incognito, even hours after the deploy succeeded. The intro text updated (it comes from i18n JSON) but the timeline (from `flagFacts.js`) did not.
