@@ -8,7 +8,7 @@ import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox, wireFlagLightboxAll } from '../flags/flagLightbox.js';
 import { getFlagFacts } from '../flags/flagFacts.js';
 import { renderFlagFacts } from '../flags/flagFactsRender.js';
-import { mountFlagMap, paintCountryFlag, clearCountryFlag, computeCountriesBbox } from '../flagQuiz/flagMap.js';
+import { mountFlagMap, paintCountryFlag, clearCountryFlag, settleFlagToTint, revealFlagImage, computeCountriesBbox } from '../flagQuiz/flagMap.js';
 import { attachZoomPan } from '../flagQuiz/mapZoom.js';
 import { buildToggleLi } from '../common.js';
 
@@ -243,6 +243,44 @@ export function bootFlagsData() {
   // whole (up to ~250-country) set on every keystroke of the name search.
   /** @type {Set<string>} */
   let flaggedCodes = new Set();
+
+  // ---- Throttled flag reveal ------------------------------------------
+  // Stamping the whole world (~250 flags) at once re-rasterises every flag
+  // <image> in a single frame and can freeze the tab. So each country is
+  // stamped as its cheap dominant-colour tint first (settleFlagToTint — no
+  // image decode; see the `.is-tinted` fallback in flagMap.css), and the real
+  // flags are revealed a few per frame. The board "develops" instead of
+  // hitching, on the initial "show all", on a big filter change, and after a
+  // user zoom (whose new scale invalidates the raster cache).
+  const REVEAL_PER_FRAME = 3;
+  /** @type {string[]} */
+  let revealQueue = [];
+  let revealRaf = 0;
+  /** viewBox width the flags were last decoded at — skip re-revealing after a
+   *  pure pan (same zoom, rasters still cached); only a zoom change re-runs it. */
+  let lastRevealWidth = 0;
+  function pumpReveal() {
+    if (!mapSvg) { revealQueue = []; revealRaf = 0; return; }
+    let done = 0;
+    while (revealQueue.length && done < REVEAL_PER_FRAME) {
+      const code = revealQueue.shift();
+      if (flaggedCodes.has(code)) { revealFlagImage(mapSvg, code); done++; }
+    }
+    const raf = window.requestAnimationFrame;
+    revealRaf = revealQueue.length && typeof raf === 'function' ? raf(pumpReveal) : 0;
+  }
+  /** @param {Iterable<string>} codes */
+  function enqueueReveal(codes) {
+    for (const c of codes) revealQueue.push(c);
+    if (revealRaf) return;
+    if (typeof window.requestAnimationFrame === 'function') {
+      revealRaf = window.requestAnimationFrame(pumpReveal);
+    } else {
+      for (const c of revealQueue) if (flaggedCodes.has(c)) revealFlagImage(mapSvg, c);
+      revealQueue = [];
+    }
+  }
+
   /** @param {string[]} visibleCodes */
   function syncMapFlags(visibleCodes) {
     if (!mapSvg) return;
@@ -250,10 +288,34 @@ export function bootFlagsData() {
     for (const code of flaggedCodes) {
       if (!next.has(code)) clearCountryFlag(mapSvg, code);
     }
+    /** @type {string[]} */
+    const added = [];
     for (const code of next) {
-      if (!flaggedCodes.has(code)) paintCountryFlag(mapSvg, code, '../flags/svg/', 'select');
+      if (!flaggedCodes.has(code)) {
+        // Stamp as the cheap tint now (no decode), reveal the real flag below.
+        paintCountryFlag(mapSvg, code, '../flags/svg/', 'select');
+        settleFlagToTint(mapSvg, code);
+        added.push(code);
+      }
     }
     flaggedCodes = next;
+    // Drop queued reveals for countries that just left the filter.
+    if (revealQueue.length) revealQueue = revealQueue.filter((c) => flaggedCodes.has(c));
+    enqueueReveal(added);
+  }
+
+  /** Re-reveal the whole board, throttled, when the map settles at a NEW zoom
+   *  (its rasters are now stale). Runs synchronously as `.is-interacting` is
+   *  removed, so re-tinting here shows no image flash. Pure pans (same width)
+   *  keep their cached rasters and are skipped.
+   *  @param {{ x: number, y: number, width: number, height: number }} vb */
+  function onMapSettle(vb) {
+    if (!mapSvg || flaggedCodes.size === 0) return;
+    const w = vb && vb.width;
+    if (w && Math.abs(w - lastRevealWidth) < 1) return;
+    lastRevealWidth = w || 0;
+    for (const code of flaggedCodes) settleFlagToTint(mapSvg, code);
+    enqueueReveal(flaggedCodes);
   }
   // Countries whose `<g>` spans the antimeridian on the world map —
   // their full bbox is the whole map width, so including them in a
@@ -270,7 +332,10 @@ export function bootFlagsData() {
       fullscreenLabel: t('menu.fullscreen', 'Toggle fullscreen'),
     }).then((svg) => {
       mapSvg = svg;
-      if (svg) mapHandle = attachZoomPan(svg);
+      if (svg) {
+        mapHandle = attachZoomPan(svg, { onSettle: onMapSettle });
+        lastRevealWidth = mapHandle.getOriginal().width;
+      }
       // Apply the current filter selection now that the map is
       // mounted — without this, the initial filter state would
       // never get reflected on the map.
@@ -406,6 +471,12 @@ export function bootFlagsData() {
           if (bbox) mapHandle.setView(bbox);
         }
       }
+      // The smart-zoom is an instant setView (no onSettle fires), and the
+      // throttled reveal above decodes at whatever view is current now — so
+      // record that width, else the next pan would see a mismatch and
+      // needlessly re-develop the board.
+      const vb = mapSvg.getAttribute('viewBox');
+      if (vb) { const w = Number(vb.split(/\s+/)[2]); if (Number.isFinite(w)) lastRevealWidth = w; }
     }
   }
 

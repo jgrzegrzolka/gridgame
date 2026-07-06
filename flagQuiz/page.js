@@ -107,7 +107,7 @@ import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
-import { mountFlagMap, paintCountryFlag, computeCountriesBbox, computeMainlandBbox } from './flagMap.js';
+import { mountFlagMap, paintCountryFlag, settleFlagToTint, revealFlagImage, computeCountriesBbox, computeMainlandBbox } from './flagMap.js';
 import { attachZoomPan, regionalFrame } from './mapZoom.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox } from '../flags/flagLightbox.js';
@@ -378,9 +378,64 @@ export function bootFlagQuiz() {
      * @param {'correct' | 'wrong'} kind
      */
     function markCountry(code, kind) {
+      // Keep only the most-recently answered country as a live flag image;
+      // demote the previous one to its flat tint first. Caps the map's
+      // per-fly-in settle repaint at one image instead of re-rasterising every
+      // flag already down — the remaining hitch on a full 60s / all-flags run.
+      const prev = painted[painted.length - 1];
       painted.push({ code, kind });
+      if (prev && prev.code !== code) settleFlagToTint(mapSvg, prev.code);
       paintCountryFlag(mapSvg, code, '../flags/svg/', kind);
       flyToAnsweredCountry(code);
+    }
+
+    /** rAF handle for an in-flight throttled reveal, or 0 when idle. */
+    let revealRaf = 0;
+    /** Frame width the board was last revealed at — so re-revealing after a
+     *  pure pan (same zoom, rasters still cached) is skipped, and only a real
+     *  zoom change re-runs the throttle. */
+    let lastRevealWidth = 0;
+    /**
+     * Reveal every answered country as its full flag `<image>`, a few per
+     * frame, so the end-of-round "show the whole board" doesn't rasterise every
+     * flag in one frame and freeze the tab. Each step drops `.is-tinted` from a
+     * batch (its correctness wash → the real flag). Idempotent and restartable.
+     */
+    function revealAllFlagsThrottled() {
+      if (!mapSvg || painted.length === 0) return;
+      const raf = window.requestAnimationFrame;
+      if (typeof raf !== 'function') {
+        for (const p of painted) revealFlagImage(mapSvg, p.code);
+        return;
+      }
+      if (revealRaf) window.cancelAnimationFrame(revealRaf);
+      const queue = painted.slice();
+      const PER_FRAME = 3; // a few flags per frame — smooth "develop" without a spike
+      const step = () => {
+        for (let i = 0; i < PER_FRAME && queue.length; i++) {
+          revealFlagImage(mapSvg, queue.shift().code);
+        }
+        revealRaf = queue.length ? raf(step) : 0;
+      };
+      revealRaf = raf(step);
+    }
+    /**
+     * Called (synchronously) whenever the map settles. Only acts in review
+     * (`.is-finished`): re-shows the whole board, throttled. Skipped after a
+     * pure pan (same zoom) since those rasters are still cached — only a zoom
+     * change, whose new scale invalidates the cache, re-runs the reveal. Re-tints
+     * everything first (cheap, in this same synchronous block so no image flash),
+     * then reveals it a few per frame.
+     * @param {{ x: number, y: number, width: number, height: number }} vb
+     */
+    function onMapSettle(vb) {
+      if (!mapSvg || painted.length === 0) return;
+      if (!flagMapEl || !flagMapEl.classList.contains('is-finished')) return;
+      const w = vb && vb.width;
+      if (w && Math.abs(w - lastRevealWidth) < 1) return; // same zoom: cached, leave as-is
+      lastRevealWidth = w || 0;
+      for (const p of painted) settleFlagToTint(mapSvg, p.code);
+      revealAllFlagsThrottled();
     }
 
     /**
@@ -496,13 +551,25 @@ export function bootFlagQuiz() {
         // set the final viewBox, since mapZoom reads that as the
         // "original" bounds for clamping).
         if (svg) {
-          mapZoomHandle = attachZoomPan(svg);
+          mapZoomHandle = attachZoomPan(svg, { onSettle: onMapSettle });
           // Replay the round so far — fills every country already
           // answered before this (possibly late) mount. Uses
           // paintCountryFlag directly (not markCountry) so a late mount
           // doesn't fire the answer fly-in for every historical fill.
-          for (const p of painted) {
+          for (let i = 0; i < painted.length; i++) {
+            const p = painted[i];
             paintCountryFlag(svg, p.code, '../flags/svg/', p.kind);
+            // Every replayed flag starts as its cheap wash/tint. Mid-round the
+            // newest stays a live image (matching live play); post-game we
+            // throttle-reveal the whole board below instead of rasterising it
+            // all in this one loop.
+            if (gameOver || i < painted.length - 1) settleFlagToTint(svg, p.code);
+          }
+          // Late mount after the round ended: show the board a few flags per
+          // frame rather than all at once (no fly-in settle fires here).
+          if (gameOver) {
+            lastRevealWidth = mapZoomHandle.getOriginal().width;
+            revealAllFlagsThrottled();
           }
         }
       });
@@ -512,6 +579,8 @@ export function bootFlagQuiz() {
     function hideMap() {
       if (!flagMapEl) return;
       mapMounted = false;
+      if (revealRaf) { window.cancelAnimationFrame(revealRaf); revealRaf = 0; }
+      lastRevealWidth = 0;
       if (mapZoomHandle) mapZoomHandle.teardown();
       mapZoomHandle = null;
       mapSvg = null;

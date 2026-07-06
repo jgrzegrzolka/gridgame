@@ -146,6 +146,53 @@
   fill: var(--flag-tint, transparent) !important;
   stroke: var(--flag-tint, var(--primary-color)) !important;
 }
+/* Only the most-recently answered country stays a live flag <image>; every
+ * earlier answer carries `.is-tinted` (added in page.js as the next answer
+ * lands). Without capping this, the settle repaint at the end of each fly-in
+ * re-rasterises every flag on the map — fine with a handful, the hitch you
+ * feel on the 60s / all-flags run once it fills up.
+ *
+ * Rather than each earlier flag's own colour (which would all compete with the
+ * just-answered flag), the settled countries fade to a quiet, semi-transparent
+ * correctness wash: green (`#2a8a3a`) if you got it, red (`#c0392b`) if you
+ * missed. The map reads as a calm "what you got" trail while the newest flag
+ * pops. A solid fill is the same cheap raster the dominant-colour tint was, so
+ * the perf win (one live image at a time) holds. Higher specificity than the
+ * `.is-interacting` fill above, so the wash stays put even while the map moves
+ * — no colour flip during the fly-in. `.is-tinted` is added / removed from JS
+ * (settleFlagToTint / revealFlagImage): at the round's end the board reveals a
+ * few flags per frame (page.js) rather than all at once, so a full map doesn't
+ * rasterise in a single frame and freeze the tab. (`#2a8a3a` / `#c0392b` are
+ * the accepted answer-state map-palette colours, same as the flag-flash below.) */
+#flag-map-section svg .is-flagged.is-tinted.is-flag-correct,
+#flag-map-section svg .map-hit-target.is-flagged.is-tinted.is-flag-correct {
+  fill: #2a8a3a !important;
+  fill-opacity: 0.35 !important;
+  stroke: #2a8a3a !important;
+  stroke-opacity: 0.5 !important;
+}
+#flag-map-section svg .is-flagged.is-tinted.is-flag-wrong,
+#flag-map-section svg .map-hit-target.is-flagged.is-tinted.is-flag-wrong {
+  fill: #c0392b !important;
+  fill-opacity: 0.35 !important;
+  stroke: #c0392b !important;
+  stroke-opacity: 0.5 !important;
+}
+/* Browse surfaces (flagsdata) stamp flags with the neutral `select` status —
+ * no correct / wrong — so a settled `.is-tinted` flag there has no correctness
+ * colour to show. Fall back to the flag's own dominant tint (the same cheap
+ * solid fill used while the map moves), so flagsdata can throttle its "show all
+ * flags" reveal the same way: stamp every country as this tint (no image
+ * decode), then reveal real flags a few per frame. The quiz's correctness rules
+ * above carry an extra class, so they stay more specific and still win there. */
+#flag-map-section svg .is-flagged.is-tinted {
+  fill: var(--flag-tint, #e3e3e3) !important;
+  fill-opacity: 1 !important;
+}
+#flag-map-section svg .map-hit-target.is-flagged.is-tinted {
+  fill: var(--flag-tint, transparent) !important;
+  stroke: var(--flag-tint, var(--primary-color)) !important;
+}
 /* World-map decoration that doesn't belong in a quiz / browse context:
  *   - <text> labels reveal each country's ISO code (gives answers away)
  *   - <line class="st29"> leader lines (79 of them, stroke #000) point
