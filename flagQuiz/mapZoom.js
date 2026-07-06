@@ -112,6 +112,34 @@ export function wheelZoomScale(deltaY, deltaMode = 0) {
 }
 
 /**
+ * Clamp a zoom scale so the resulting width stays within the zoom limits.
+ *
+ * Without this, zooming at the cap still moves the map: zoomViewBox anchors
+ * the pivot, and at the zoom-out limit a scale < 1 magnifies the (off-centre)
+ * pivot's distance from the viewBox centre — so the centre drifts even though
+ * clampViewBox caps the width back down, and freePan's generous range doesn't
+ * catch it. Clamping the scale so `currentWidth / scale` never crosses
+ * [minWidth, maxWidth] means that once you hit a limit the effective scale is
+ * exactly 1 (zoomViewBox is the identity), so the map stops dead instead of
+ * sliding around as you keep scrolling.
+ *
+ * @param {number} scale         requested zoom factor (>1 in, <1 out)
+ * @param {number} currentWidth  the viewBox width the scale applies to
+ * @param {ViewBox} original     natural viewBox (defines the width limits)
+ * @param {number} [maxZoomIn]
+ * @param {number} [maxZoomOut]
+ * @returns {number} the scale, clamped so the new width stays in bounds
+ */
+export function clampZoomScale(scale, currentWidth, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut = MAX_ZOOM_OUT) {
+  if (!Number.isFinite(scale) || scale <= 0 || !(currentWidth > 0)) return 1;
+  const minScale = currentWidth / (original.width * maxZoomOut); // zoom-out floor
+  const maxScale = currentWidth / (original.width / maxZoomIn);  // zoom-in ceiling
+  if (scale < minScale) return minScale;
+  if (scale > maxScale) return maxScale;
+  return scale;
+}
+
+/**
  * The CSS transform (applied to the SVG element with `transform-origin:
  * 0 0`) that makes an element currently rendering `base` LOOK like it
  * renders `target`, without changing its viewBox. Used by the fluid
@@ -774,7 +802,9 @@ export function attachZoomPan(svg) {
     cancelAnim();
     const pivot = gesturePivot(e.clientX, e.clientY);
     if (!pivot) return;
-    scheduleInput(zoomViewBox(inputBase(), pivot, wheelZoomScale(e.deltaY, e.deltaMode)));
+    const base = inputBase();
+    const scale = clampZoomScale(wheelZoomScale(e.deltaY, e.deltaMode), base.width, original);
+    scheduleInput(zoomViewBox(base, pivot, scale));
   }
 
   /** @type {{ mode: 'pan' | 'pinch', lastX?: number, lastY?: number, distance?: number } | null} */
@@ -838,11 +868,12 @@ export function attachZoomPan(svg) {
       const newDistance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       const prev = touchState.distance || 0;
       if (prev === 0) return;
-      const scale = newDistance / prev;
       const midX = (t1.clientX + t2.clientX) / 2;
       const midY = (t1.clientY + t2.clientY) / 2;
       const pivot = gesturePivot(midX, midY);
-      if (pivot) scheduleInput(zoomViewBox(inputBase(), pivot, scale));
+      const base = inputBase();
+      const scale = clampZoomScale(newDistance / prev, base.width, original);
+      if (pivot) scheduleInput(zoomViewBox(base, pivot, scale));
       touchState.distance = newDistance;
     }
   }
