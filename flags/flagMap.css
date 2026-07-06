@@ -178,6 +178,21 @@
   stroke: #c0392b !important;
   stroke-opacity: 0.5 !important;
 }
+/* Browse surfaces (flagsdata) stamp flags with the neutral `select` status —
+ * no correct / wrong — so a settled `.is-tinted` flag there has no correctness
+ * colour to show. Fall back to the flag's own dominant tint (the same cheap
+ * solid fill used while the map moves), so flagsdata can throttle its "show all
+ * flags" reveal the same way: stamp every country as this tint (no image
+ * decode), then reveal real flags a few per frame. The quiz's correctness rules
+ * above carry an extra class, so they stay more specific and still win there. */
+#flag-map-section svg .is-flagged.is-tinted {
+  fill: var(--flag-tint, #e3e3e3) !important;
+  fill-opacity: 1 !important;
+}
+#flag-map-section svg .map-hit-target.is-flagged.is-tinted {
+  fill: var(--flag-tint, transparent) !important;
+  stroke: var(--flag-tint, var(--primary-color)) !important;
+}
 /* World-map decoration that doesn't belong in a quiz / browse context:
  *   - <text> labels reveal each country's ISO code (gives answers away)
  *   - <line class="st29"> leader lines (79 of them, stroke #000) point
