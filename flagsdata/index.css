@@ -10,6 +10,13 @@ body {
   margin: 0 auto;
   box-sizing: border-box;
 }
+/* Open the map at the same ~480px default as flagQuiz, centred in the wider
+ * body, so the desktop-only corner handle (makeMapResizable) has room to grow
+ * it toward the full body width. A saved width is re-applied as an inline width
+ * that wins over this. */
+#flag-map-section {
+  width: min(90vw, 480px);
+}
 #filter-bar {
   background: var(--page-bg-color);
   margin: 0 -24px 16px;
