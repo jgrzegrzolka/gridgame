@@ -374,6 +374,53 @@ export function attachZoomPan(svg) {
     rescaleHitTargets();
   }
 
+  // --- Input coalescing -------------------------------------------------
+  // Continuous input (wheel notches, drag mousemoves, pinch, momentum)
+  // fires far faster than the display refreshes — a 1000 Hz mouse or a
+  // trackpad emits ~16 events per 60 Hz frame. Applying each one
+  // synchronously does ~16× the work (clamp + viewBox write + hit-target
+  // rescale) though the browser only paints the last, which stutters on
+  // constrained devices. Instead, each input event compounds its delta
+  // onto `pendingViewBox` and schedules ONE `apply` at the next frame.
+  /** @type {ViewBox | null} */
+  let pendingViewBox = null;
+  /** rAF handle for the queued input flush, or 0 when idle. */
+  let inputRaf = 0;
+  function flushInput() {
+    inputRaf = 0;
+    const next = pendingViewBox;
+    pendingViewBox = null;
+    if (next) apply(next);
+  }
+  /**
+   * Queue a viewBox to apply on the next animation frame, coalescing
+   * multiple same-frame events into one paint. Falls back to a direct
+   * apply when rAF is unavailable (test env).
+   * @param {ViewBox} next
+   */
+  function scheduleInput(next) {
+    pendingViewBox = next;
+    const raf = globalThis.requestAnimationFrame;
+    if (typeof raf !== 'function') { flushInput(); return; }
+    if (!inputRaf) inputRaf = raf(flushInput);
+  }
+  /**
+   * Base viewBox the next input delta builds on: the queued-but-unapplied
+   * target if one is pending this frame, else the live `current`. Lets
+   * same-frame events compound (two wheel notches zoom twice, a drag's
+   * mousemoves accumulate) instead of each starting from `current`.
+   * @returns {ViewBox}
+   */
+  function inputBase() { return pendingViewBox || current; }
+  /** Drop any queued input — used by discrete resets (double-tap). */
+  function cancelInput() {
+    pendingViewBox = null;
+    if (inputRaf && typeof globalThis.cancelAnimationFrame === 'function') {
+      globalThis.cancelAnimationFrame(inputRaf);
+    }
+    inputRaf = 0;
+  }
+
   /** rAF handle for an in-flight `animateTo`, or 0 when idle. */
   let animRaf = 0;
   function cancelAnim() {
@@ -532,7 +579,7 @@ export function attachZoomPan(svg) {
     cancelAnim();
     const pivot = screenToSvg(svg, e.clientX, e.clientY);
     if (!pivot) return;
-    apply(zoomViewBox(current, pivot, wheelZoomScale(e.deltaY, e.deltaMode)));
+    scheduleInput(zoomViewBox(inputBase(), pivot, wheelZoomScale(e.deltaY, e.deltaMode)));
   }
 
   /** @type {{ mode: 'pan' | 'pinch', lastX?: number, lastY?: number, distance?: number } | null} */
@@ -559,6 +606,7 @@ export function attachZoomPan(svg) {
       const t = e.touches[0];
       const now = Date.now();
       if (now - lastTapAt < DOUBLE_TAP_MS) {
+        cancelInput();
         apply(original);
         touchState = null;
         lastTapAt = 0;
@@ -583,8 +631,9 @@ export function attachZoomPan(svg) {
       const t = e.touches[0];
       const dx = t.clientX - (touchState.lastX || 0);
       const dy = t.clientY - (touchState.lastY || 0);
-      const factor = svgUnitsPerPixel(svg, current);
-      apply(panViewBox(current, -dx * factor, -dy * factor));
+      const base = inputBase();
+      const factor = svgUnitsPerPixel(svg, base);
+      scheduleInput(panViewBox(base, -dx * factor, -dy * factor));
       touchState.lastX = t.clientX;
       touchState.lastY = t.clientY;
     } else if (touchState.mode === 'pinch' && e.touches.length === 2) {
@@ -598,7 +647,7 @@ export function attachZoomPan(svg) {
       const midX = (t1.clientX + t2.clientX) / 2;
       const midY = (t1.clientY + t2.clientY) / 2;
       const pivot = screenToSvg(svg, midX, midY);
-      if (pivot) apply(zoomViewBox(current, pivot, scale));
+      if (pivot) scheduleInput(zoomViewBox(inputBase(), pivot, scale));
       touchState.distance = newDistance;
     }
   }
@@ -630,8 +679,9 @@ export function attachZoomPan(svg) {
     }
     const dx = e.clientX - mouseState.lastX;
     const dy = e.clientY - mouseState.lastY;
-    const factor = svgUnitsPerPixel(svg, current);
-    apply(panViewBox(current, -dx * factor, -dy * factor));
+    const base = inputBase();
+    const factor = svgUnitsPerPixel(svg, base);
+    scheduleInput(panViewBox(base, -dx * factor, -dy * factor));
     mouseState.lastX = e.clientX;
     mouseState.lastY = e.clientY;
   }
@@ -679,6 +729,7 @@ export function attachZoomPan(svg) {
     reset: () => apply({ ...original }),
     teardown: () => {
       cancelAnim();
+      cancelInput();
       svg.removeEventListener('wheel', onWheel);
       svg.removeEventListener('touchstart', onTouchStart);
       svg.removeEventListener('touchmove', onTouchMove);
