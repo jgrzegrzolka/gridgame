@@ -293,6 +293,57 @@ test('clampViewBox lets you pan even at 1x zoom (width === original.width) when 
   assert.equal(out.x, -220.5);
 });
 
+test('clampViewBox still centres a zoomed-out viewBox when freePan is off', () => {
+  // Fullscreen zoom-out (viewBox larger than the map) with the default
+  // freePan=false: the map stays locked dead-centre — the historical rule.
+  const original = { x: 0, y: 0, width: 100, height: 100 };
+  const out = clampViewBox(
+    { x: -80, y: -80, width: 200, height: 200 }, // dragged, 2× zoomed out
+    original, 24, 3,
+  );
+  assert.equal(out.x, -50); // centred: (100 - 200)/2
+  assert.equal(out.y, -50);
+});
+
+test('clampViewBox freePan lets you drag a zoomed-out map off-centre', () => {
+  // Same zoomed-out viewBox, but freePan on (fullscreen). The player drags
+  // the map far up-left; the clamp permits it, stopping once only
+  // FREE_PAN_KEEP (15%) of the map is still on screen.
+  const original = { x: 0, y: 0, width: 100, height: 100 };
+  const out = clampViewBox(
+    { x: -500, y: -500, width: 200, height: 200 },
+    original, 24, 3, { x: 0, y: 0 }, true,
+  );
+  // keep = 15. minX = 0 + 15 - 200 = -185. Dragged past it → clamped to -185,
+  // NOT recentred to -50. So the map really moved.
+  assert.equal(out.x, -185);
+  assert.equal(out.y, -185);
+  assert.notEqual(out.x, -50);
+});
+
+test('clampViewBox freePan keeps the map from leaving the screen entirely', () => {
+  const original = { x: 0, y: 0, width: 100, height: 100 };
+  // Drag hard the OTHER way.
+  const out = clampViewBox(
+    { x: 900, y: 900, width: 200, height: 200 },
+    original, 24, 3, { x: 0, y: 0 }, true,
+  );
+  // maxX = original.x + original.width - keep = 0 + 100 - 15 = 85.
+  assert.equal(out.x, 85);
+  assert.equal(out.y, 85);
+});
+
+test('clampViewBox freePan does not change the zoomed-IN rule (no void while exploring)', () => {
+  // Zoomed in (viewBox smaller than the map): even with freePan on, the
+  // visible window still stays inside the map — same as without freePan.
+  const original = { x: 0, y: 0, width: 100, height: 100 };
+  const vb = { x: 200, y: 200, width: 20, height: 20 };
+  const free = clampViewBox(vb, original, 24, 3, { x: 0, y: 0 }, true);
+  const locked = clampViewBox(vb, original, 24, 3, { x: 0, y: 0 }, false);
+  assert.deepEqual(free, locked);
+  assert.equal(free.x, 80); // 100 - 20, still pinned to the map edge
+});
+
 // ---- parseViewBox / formatViewBox ----
 
 test('parseViewBox parses a 4-number space-separated string', () => {

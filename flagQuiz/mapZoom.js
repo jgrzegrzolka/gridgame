@@ -34,6 +34,15 @@ const MAX_ZOOM_IN = 24;
  * when slice mode would otherwise crop it on portrait phones. */
 const MAX_ZOOM_OUT = 3;
 /**
+ * Free-pan mode (fullscreen): the fraction of the map that must stay on
+ * screen. When the viewBox is larger than the map (zoomed out), the map
+ * floats inside the viewport; instead of locking it dead-centre we let the
+ * player drag it anywhere, stopping only once this little of it is left in
+ * view — so it can be parked in any corner but never lost off-screen (and
+ * double-tap still resets). 0.15 = keep at least 15% visible.
+ */
+const FREE_PAN_KEEP = 0.15;
+/**
  * Wheel-zoom sensitivity: zoom scale = e^(-normalizedDeltaPx × this).
  * Tuned so a classic mouse notch (~100 px of deltaY) zooms ~10% — the
  * same feel the old fixed 1.1-per-event step had — while a trackpad or
@@ -168,14 +177,23 @@ export function panViewBox(vb, dx, dy) {
  * is 0 and this collapses to the historical "viewBox stays inside
  * original" rule.
  *
+ * `freePan` (fullscreen) relaxes the zoomed-OUT position rule: when the
+ * viewBox is larger than the map, instead of locking it dead-centre (so a
+ * drag does nothing), let the player park the map anywhere in the viewport,
+ * stopping only once `FREE_PAN_KEEP` of it would leave the screen. The
+ * zoomed-IN rule (visible window stays inside the map) is unchanged — no
+ * void while exploring. Off in the in-page map, which never zooms past its
+ * natural viewBox anyway.
+ *
  * @param {ViewBox} vb
  * @param {ViewBox} original
  * @param {number} [maxZoomIn]
  * @param {number} [maxZoomOut]
  * @param {{ x?: number, y?: number }} [overhang]
+ * @param {boolean} [freePan]
  * @returns {ViewBox}
  */
-export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut = 1, overhang = { x: 0, y: 0 }) {
+export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut = 1, overhang = { x: 0, y: 0 }, freePan = false) {
   // Capture the input's center BEFORE any adjustments — when a tiny
   // bbox (single small country) is expanded up to the minimum size,
   // OR when a non-aspect-matching bbox (tall + narrow) is widened to
@@ -237,7 +255,15 @@ export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut =
   // than the viewBox itself. Slice mode at 1x zoom on portrait phones
   // is exactly that case — Portugal at Europe's western edge was
   // unreachable until this branch unified.
-  if (ox === 0 && width >= original.width) {
+  if (freePan && width >= original.width) {
+    // Zoomed out in fullscreen: the map floats inside the viewport. Let it
+    // be dragged anywhere, keeping at least FREE_PAN_KEEP of it on screen.
+    const keep = original.width * FREE_PAN_KEEP;
+    const minX = original.x + keep - width + ox;
+    const maxX = original.x + original.width - keep - ox;
+    if (x < minX) x = minX;
+    if (x > maxX) x = maxX;
+  } else if (ox === 0 && width >= original.width) {
     x = original.x + (original.width - width) / 2;
   } else {
     const minX = original.x - ox;
@@ -245,7 +271,13 @@ export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut =
     if (x < minX) x = minX;
     if (x > maxX) x = maxX;
   }
-  if (oy === 0 && height >= original.height) {
+  if (freePan && height >= original.height) {
+    const keep = original.height * FREE_PAN_KEEP;
+    const minY = original.y + keep - height + oy;
+    const maxY = original.y + original.height - keep - oy;
+    if (y < minY) y = minY;
+    if (y > maxY) y = maxY;
+  } else if (oy === 0 && height >= original.height) {
     y = original.y + (original.height - height) / 2;
   } else {
     const minY = original.y - oy;
@@ -416,8 +448,9 @@ export function attachZoomPan(svg) {
     // player can see the whole map smaller-with-margins even when slice
     // mode crops the default view on portrait phones. Otherwise hold the
     // historical "can't zoom past natural" rule.
-    const maxOut = isFullscreen() ? MAX_ZOOM_OUT : 1;
-    current = clampViewBox(next, original, MAX_ZOOM_IN, maxOut, sliceOverhang(next));
+    const fs = isFullscreen();
+    const maxOut = fs ? MAX_ZOOM_OUT : 1;
+    current = clampViewBox(next, original, MAX_ZOOM_IN, maxOut, sliceOverhang(next), fs);
     endGesture();
     setViewBoxNow(current);
   }
@@ -522,8 +555,9 @@ export function attachZoomPan(svg) {
     const next = pendingViewBox;
     pendingViewBox = null;
     if (!next) return;
-    const maxOut = isFullscreen() ? MAX_ZOOM_OUT : 1;
-    current = clampViewBox(next, original, MAX_ZOOM_IN, maxOut, sliceOverhang(next));
+    const fs = isFullscreen();
+    const maxOut = fs ? MAX_ZOOM_OUT : 1;
+    current = clampViewBox(next, original, MAX_ZOOM_IN, maxOut, sliceOverhang(next), fs);
     beginGesture();
     if (usingTransform) paintTransform();
     else setViewBoxNow(current);   // fullscreen: grey simplify + per-frame viewBox
@@ -610,8 +644,9 @@ export function attachZoomPan(svg) {
   function animateTo(target, opts = {}) {
     const duration = typeof opts.durationMs === 'number' ? opts.durationMs : 480;
     const raf = globalThis.requestAnimationFrame;
-    const maxOut = isFullscreen() ? MAX_ZOOM_OUT : 1;
-    const end = clampViewBox(target, original, MAX_ZOOM_IN, maxOut, sliceOverhang(target));
+    const fs = isFullscreen();
+    const maxOut = fs ? MAX_ZOOM_OUT : 1;
+    const end = clampViewBox(target, original, MAX_ZOOM_IN, maxOut, sliceOverhang(target), fs);
     cancelAnim();
     if (typeof raf !== 'function' || duration <= 0 || prefersReducedMotion()) {
       apply(end);
