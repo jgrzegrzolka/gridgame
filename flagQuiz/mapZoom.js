@@ -567,7 +567,8 @@ export function attachZoomPan(svg) {
       svg.style.transformOrigin = '';
       svg.style.willChange = '';
     }
-    if (svg.classList) svg.classList.remove('is-interacting');
+    // Keep the class if an answer fly-in is still easing (it owns the tint now).
+    if (svg.classList && !flying) svg.classList.remove('is-interacting');
   }
 
   // --- Input coalescing -------------------------------------------------
@@ -652,11 +653,25 @@ export function attachZoomPan(svg) {
 
   /** rAF handle for an in-flight `animateTo`, or 0 when idle. */
   let animRaf = 0;
+  /**
+   * True while an answer fly-in is easing. Like a gesture, the fly-in rewrites
+   * the viewBox every frame, so we carry `.is-interacting` through it to drop
+   * flags to their cheap dominant-colour tint — otherwise every already-flagged
+   * country re-rasterises its <image> per frame, which is what janks the 60s /
+   * all-flags run once the map fills up. Tracked separately from the gesture
+   * `interacting` flag so whichever of the two ends last clears the class
+   * (see endGesture / animateTo).
+   */
+  let flying = false;
   function cancelAnim() {
     if (animRaf && typeof globalThis.cancelAnimationFrame === 'function') {
       globalThis.cancelAnimationFrame(animRaf);
     }
     animRaf = 0;
+    // The fly is being stopped (interrupted or superseded); drop its claim on
+    // the tint. The class itself is left for the interrupting gesture to keep
+    // (no add/remove flash) or for the branch below to clear.
+    flying = false;
   }
 
   /**
@@ -677,9 +692,15 @@ export function attachZoomPan(svg) {
     cancelAnim();
     if (typeof raf !== 'function' || duration <= 0 || prefersReducedMotion()) {
       apply(end);
+      // Snapped, not animated: make sure no leftover fly tint lingers.
+      if (!interacting && svg.classList) svg.classList.remove('is-interacting');
       if (opts.onDone) opts.onDone();
       return;
     }
+    // Ride the gesture tint through the flight so cost stays flat regardless of
+    // how many countries are already flagged; flags resolve to images on settle.
+    flying = true;
+    if (svg.classList) svg.classList.add('is-interacting');
     const start = { ...current };
     let startTs = 0;
     /** @param {number} ts */
@@ -697,6 +718,10 @@ export function attachZoomPan(svg) {
         animRaf = raf(frame);
       } else {
         animRaf = 0;
+        flying = false;
+        // Camera settled: restore real flag images (unless a gesture now owns
+        // the class).
+        if (!interacting && svg.classList) svg.classList.remove('is-interacting');
         if (opts.onDone) opts.onDone();
       }
     }
