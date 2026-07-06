@@ -621,6 +621,14 @@ export function bootFlagsData() {
     .then((all) => {
       const sections = document.getElementById('sections');
       renderAll(sections, all);
+      // Reflect the initial (unfiltered) selection now that `state` is
+      // ready. Closes a mount-vs-data race: if `worldMap.svg` resolved
+      // before `countries.json`, the map-mount's own `applyFilter()` was
+      // skipped (state was still null) and nothing re-triggered it, so the
+      // flags never stamped until the user touched a filter. Safe to call
+      // before the map mounts too — `syncMapFlags` no-ops until `mapSvg`
+      // is set, and the mount's `.then` re-runs `applyFilter` once it is.
+      applyFilter();
     })
     .catch((err) => {
       document.getElementById('sections').textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
