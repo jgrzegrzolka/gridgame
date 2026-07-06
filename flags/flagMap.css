@@ -84,7 +84,7 @@
  * leave huge empty bands on the shorter axis on portrait phones. */
 #flag-map-section:fullscreen,
 #flag-map-section:-webkit-full-screen {
-  background: #f9f9f9;
+  background: var(--page-bg-color);
   padding: 0;
   overflow: hidden;
 }
@@ -107,10 +107,11 @@
   height: auto;
   display: block;
   margin: 0 auto;
-  /* The world map's projection is curved at the top/bottom edges, so
-   * the rectangular viewBox has unpainted corners. Back the SVG with the
-   * water colour (`#f9f9f9`) so those corners read as ocean, not page-bg. */
-  background: #f9f9f9;
+  /* The world map's projection is curved at the top/bottom edges, so the
+   * rectangular viewBox has unpainted corners. Back the SVG with the water
+   * colour — `var(--page-bg-color)`, the page background — so the ocean and
+   * those corners blend seamlessly into the page. */
+  background: var(--page-bg-color);
   /* Claim touch gestures for our wheel/pinch/drag handlers — without
    * this the browser would intercept two-finger pinches as page-zoom
    * and one-finger drags as page-scroll, so the map would never get
@@ -136,7 +137,7 @@
  * (`--flag-tint`, set per country in flagMap.js from flagTints.js). A solid
  * colour costs the browser exactly what grey did — no flag image to decode —
  * so motion stays smooth, but the map reads as a colourful world rather than
- * a grey one. `#f9f9f9` is the fallback when a tint is missing. */
+ * a grey one. `#e3e3e3` (the land colour) is the fallback if a tint is missing. */
 #flag-map-section svg.is-interacting .is-flagged {
   fill: var(--flag-tint, #e3e3e3) !important;
   fill-opacity: 1 !important;
@@ -158,13 +159,13 @@
 #flag-map-section svg line:not(.map-hit-leader) {
   display: none;
 }
-/* Ocean: fill it the water colour (`#f9f9f9`) and strip its coastline
- * outline so the world-map's projection edges read as open water, not a
- * heavy black border. */
+/* Ocean: fill it the water colour (`var(--page-bg-color)`, the page bg) and
+ * strip its coastline outline so the world-map's projection edges read as
+ * open water blending into the page, not a heavy black border. */
 #flag-map-section svg #ocean,
 #flag-map-section svg #ocean path,
 #flag-map-section svg .oceanxx {
-  fill: #f9f9f9;
+  fill: var(--page-bg-color);
   stroke: none;
 }
 /* Default fill: the country element itself for single-path countries,
@@ -172,17 +173,17 @@
  * covers gb / ru / tr / cn etc. — their child paths need explicit
  * styling because the <g> doesn't paint itself.
  *
- * Land = `#e3e3e3` (medium grey); border + coastline = `#f9f9f9` — the SAME
- * as the water. Countries read as medium-grey shapes separated by thin
- * water-coloured lines (the vizzlo choropleth look): a coastline (land
- * meeting water) blends into the ocean, while an internal border (between
- * two land countries) shows as a light hairline. The three greys are
- * accepted map-palette exceptions, same posture as the `#2a8a3a` /
- * `#c0392b` answer-state colours below. */
+ * Land = `#e3e3e3` (medium grey); border + coastline = `var(--page-bg-color)`
+ * — the SAME as the water (the page background). Countries read as medium-grey
+ * shapes separated by thin water-coloured lines (the vizzlo choropleth look):
+ * a coastline (land meeting water) blends into the ocean/page, while an
+ * internal border (between two land countries) shows as a light hairline.
+ * `#e3e3e3` is an accepted map-palette exception, same posture as the
+ * `#2a8a3a` / `#c0392b` answer-state colours below. */
 #flag-map-section svg .map-country,
 #flag-map-section svg g.map-country path {
   fill: #e3e3e3;
-  stroke: #f9f9f9;
+  stroke: var(--page-bg-color);
   stroke-width: 0.4;
   /* Slow enough to be visible as a status change, fast enough not to
    * lag the next render in count mode (1200 ms gap between rounds). */
