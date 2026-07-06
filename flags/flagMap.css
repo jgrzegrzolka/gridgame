@@ -18,7 +18,12 @@
  *
  * Status classes added by callers:
  *   - `.is-correct` / `.is-wrong` — flagQuiz answer state (green/red)
- *   - `.is-selected`              — flagsdata filter match (green)
+ *
+ * flagsdata no longer tints filter matches: it stamps each matched
+ * country with its flag (inline `fill: url(#flagfill-xx)` via
+ * `paintCountryFlag`, `status: 'select'`), the same fill flagQuiz paints
+ * answered countries with. See the `.flag-flash` / `.is-flagged` rules
+ * below — shared by both surfaces.
  */
 
 #flag-map-section {
@@ -188,30 +193,16 @@
 #flag-map-section svg g.is-wrong path:not(.map-country) {
   fill: #c0392b;
 }
-/* Filter-match status (flagsdata). Re-uses the "got it right" green
- * from `.is-correct` so the visual language is consistent — pink
- * (the brand secondary used elsewhere on the page) read as an alert
- * colour next to the red `.is-wrong`, and a flagsdata filter match
- * isn't an alert. Same `:not(.map-country)` carve-out so France's
- * overseas regions don't paint when France matches a filter. */
-#flag-map-section svg .map-country.is-selected,
-#flag-map-section svg g.is-selected path:not(.map-country) {
-  fill: #2a8a3a;
-}
-
-/* 40% fill-opacity on EVERY highlighted-country fill so the visual
- * weight of a "matched" country reads soft instead of solid. Matches
+/* 40% fill-opacity on the flat green / red answer fill so the visual
+ * weight of an answered country reads soft instead of solid. Matches
  * the `.map-hit-target` ring opacity above so the two surfaces (big
  * countries and tiny microstate rings) feel like one design language
- * rather than two. Applies across all three status flavours
- * (`is-correct` / `is-wrong` / `is-selected`) so the quiz answer
- * paint and the flagsdata filter highlight share the same softness. */
+ * rather than two. flagsdata's flag stamps set their own inline
+ * fill-opacity (0.9) and aren't affected. */
 #flag-map-section svg .map-country.is-correct,
 #flag-map-section svg .map-country.is-wrong,
-#flag-map-section svg .map-country.is-selected,
 #flag-map-section svg g.is-correct path:not(.map-country),
-#flag-map-section svg g.is-wrong path:not(.map-country),
-#flag-map-section svg g.is-selected path:not(.map-country) {
+#flag-map-section svg g.is-wrong path:not(.map-country) {
   fill-opacity: 0.4;
 }
 
@@ -223,10 +214,8 @@
  * as every other highlight. 600 ms is comfortable to notice and
  * fits well inside count mode's 1200 ms between-rounds gap.
  *
- * Only `.is-correct` / `.is-wrong` (the quiz answer states) animate
- * — `.is-selected` (the persistent flagsdata filter highlight) is a
- * stable visual that shouldn't twitch on every filter change. After
- * the animation ends the CSS resting value (fill-opacity: 0.4 from
+ * Only `.is-correct` / `.is-wrong` (the quiz answer states) animate.
+ * After the animation ends the CSS resting value (fill-opacity: 0.4 from
  * the rule above) takes over with no `animation-fill-mode` needed.
  * The ring's `.is-correct` / `.is-wrong` flavours get the same flash
  * so a microstate answer reads identically to a big-country one. */
@@ -300,8 +289,8 @@
    * so it stays roughly the same overall size on screen. */
   vector-effect: non-scaling-stroke;
   pointer-events: all;
-  /* 40% fill-opacity so the highlight fills (is-correct / is-wrong /
-   * is-selected, set below) read as soft tint rather than solid stamp
+  /* 40% fill-opacity so the answer-state fills (is-correct / is-wrong,
+   * set below) read as soft tint rather than solid stamp
    * — the Caribbean chain in particular has neighbour microstate
    * rings that overlap each other regardless of any per-country
    * offset (Anguilla and Saint Barthélemy sit 2 vbu apart in the
@@ -316,9 +305,6 @@
 }
 #flag-map-section svg .map-hit-target.is-wrong {
   fill: #c0392b;
-}
-#flag-map-section svg .map-hit-target.is-selected {
-  fill: #2a8a3a;
 }
 
 /* Leader line — appended by addHitTargets only for countries whose
