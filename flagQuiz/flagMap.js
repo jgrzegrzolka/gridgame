@@ -1,13 +1,11 @@
 /**
  * Per-variant flag-quiz contour map.
  *
- * Two assets ship today:
+ * One asset ships today:
  *
- *   - `europeMap.svg` (CC BY-SA 3.0) — Europe-focused, ID'd by ISO 3166-1
- *     alpha-2 lowercase. Used for the Europe variant.
  *   - `worldMap.svg` (CC BY-SA 4.0) — world map, ID'd by ISO 3166-1
- *     alpha-2. Used for Asia (with a runtime viewBox crop) and any
- *     future continent variant.
+ *     alpha-2. Every variant mounts it; continent variants (Europe,
+ *     Asia, …) apply a runtime viewBox crop to their country codes.
  *
  * This module is the surface the page wiring talks to. It doesn't know
  * about quiz state, just "paint country X correct" / "paint country X
@@ -152,7 +150,7 @@ export function offsetHitTargetCenter(id, cx, cy) {
 const MICROSTATE_CODES = new Set([
   // Europe — Vatican, Monaco, San Marino, Andorra, Liechtenstein, Malta.
   // Luxembourg is intentionally NOT here: at ~2600 km² it's visible-
-  // sized as a country path on the Europe map and doesn't need a ring.
+  // sized as a country path at the Europe crop and doesn't need a ring.
   'va', 'mc', 'sm', 'ad', 'li', 'mt',
   // British isles + Crown Dependencies
   'gg', 'je', 'im', 'fo',
@@ -356,10 +354,11 @@ export function paintCountryFlag(svg, code, svgBase, status) {
 
 /**
  * The set of elements `paintCountryFlag` fills for one country — its
- * `#id` element's paintable child `<path>`s (the `<g>`-wrapped case,
- * skipping inner paths that are themselves separate countries), or the
- * element itself when it's a single path (Europe asset's `<path id="es">`),
- * plus every microstate ring overlay tagged for the country. Shared by
+ * `#id` element's paintable child `<path>`s (the `<g>`-wrapped case the
+ * world map uses, skipping inner paths that are themselves separate
+ * countries), or the element itself when it has no such child paths (a
+ * defensive single-path fallback), plus every microstate ring overlay
+ * tagged for the country. Shared by
  * `paintCountryFlag` (apply the fill) and `clearCountryFlag` (remove it)
  * so the two stay symmetric — whatever paint touches, clear untouches.
  *
@@ -384,8 +383,9 @@ function flagFillTargets(svg, id) {
       targets.push(p);
       added++;
     }
-    // Single-path country (Europe asset's `<path id="es">`) has no inner
-    // paths — fill the element itself.
+    // Defensive: an element with no paintable inner paths — fill it
+    // directly. (The world map wraps every country in a `<g>`, so this
+    // only fires for a hypothetical single-path country.)
     if (added === 0) targets.push(rootEl);
   }
   const hits = svg.querySelectorAll(`.map-hit-target[data-hit-for="${id}"]`);
@@ -723,9 +723,8 @@ export function cropToCountries(svg, codes, extra) {
  * Used by `addHitTargets` to size a microstate's ring around the
  * country's complete geometry, not whatever the first path in DOM
  * order happens to be. Returns null when `el` has no path
- * descendants (the caller falls back to bbox'ing `el` itself, which
- * covers single-path-no-wrapper countries like the Europe asset's
- * Vatican).
+ * descendants (the caller falls back to bbox'ing `el` itself — a
+ * defensive path for any hypothetical single-path-no-wrapper country).
  *
  * `<circle>` and `<text>` descendants — the label locators and ISO
  * tags the BlankMap-World asset ships — are intentionally NOT
@@ -820,9 +819,9 @@ function addHitTargets(svg, radius) {
     // order is a small outlying island, and East/West Falkland come
     // later, so the historical "use the first path" rule put the
     // ring on the wrong island. Same story for Saint Kitts & Nevis
-    // (the first path is St Kitts, Nevis was orphaned). For
-    // direct-path microstates (Europe asset's Vatican etc.) there
-    // are no descendants, so we fall back to the element's own bbox.
+    // (the first path is St Kitts, Nevis was orphaned). For any
+    // direct-path microstate with no path descendants we fall back to
+    // the element's own bbox.
     let bbox = unionPathBbox(elem);
     // Antimeridian-spanning microstates (Kiribati, in this asset) ship
     // path fragments on opposite sides of the date line — the union

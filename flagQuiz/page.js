@@ -307,13 +307,11 @@ export function bootFlagQuiz() {
     const startTime = Date.now();
     let timerRaf = 0;
 
-    // Per-variant contour map. Each entry says which asset to mount
-    // and, for variants that use the shared world map, which country
-    // codes to crop the viewBox to. Europe ships its own focused asset
-    // (better stylistic tuning at the regional scale); Asia uses the
-    // world map with a runtime viewBox crop. Future continents follow
-    // the Asia pattern by adding an entry here. Gate: variant must be
-    // in this table AND the player has the show-map toggle on.
+    // Per-variant contour map. Every variant mounts the shared world map
+    // (`worldMap.svg`) and, except for the whole-world "countries" view,
+    // crops the viewBox to the variant's country codes. Future continents
+    // follow the same pattern by adding an entry here. Gate: variant must
+    // be in this table AND the player has the show-map toggle on.
     const variantPool = all.filter(VARIANTS[key].filter);
     // `cropExcludes` per-variant drops countries from the bbox crop
     // computation only. The country still renders + is quizzed; it
@@ -331,7 +329,17 @@ export function bootFlagQuiz() {
       // natural viewBox already covers everything. Microstates scope
       // is the full pool so every tiny country worldwide gets a ring.
       countries:       { url: './worldMap.svg',  crop: false },
-      europe:          { url: './europeMap.svg', crop: false },
+      // Europe: several European countries' <g> on the world map bundle
+      // their overseas territories with the metropole (fr+French Guiana,
+      // dk+Greenland, es+Canaries, nl/pt/gb/no their Atlantic/Caribbean
+      // bits), so their bbox spans oceans — dropping them from the crop
+      // math keeps the viewBox on metropolitan Europe (same trick NA uses
+      // for the US). They still render + are quizzed; their mainland sits
+      // inside the frame the other European countries anchor. cropPad
+      // gives Iberia + the British Isles a little western breathing room.
+      europe:          { url: './worldMap.svg',  crop: true,
+                         cropExcludes: ['fr', 'es', 'pt', 'nl', 'gb', 'dk', 'no', 'ru'],
+                         cropPad: { left: 30, bottom: 15 } },
       asia:            { url: './worldMap.svg',  crop: true  },
       africa:          { url: './worldMap.svg',  crop: true  },
       'north-america': { url: './worldMap.svg',  crop: true,  cropExcludes: ['us'], cropPad: { left: 200 } },

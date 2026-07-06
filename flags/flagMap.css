@@ -6,12 +6,10 @@
  * rule, the rules live here rather than being copy-pasted into both
  * feature stylesheets.
  *
- * Two assets get styled the same way: the focused Europe asset
- * (`europeMap.svg`, only the Europe variant) and the shared world map
- * (`worldMap.svg`, every other variant + flagsdata). Both ship with
- * their own internal `<style>` blocks; our selectors stay highly-
- * specific (anchored under `#flag-map-section svg .map-country`) so
- * they win on cascade.
+ * One asset gets styled: the shared world map (`worldMap.svg`, every
+ * quiz variant + flagsdata). It ships with its own internal `<style>`
+ * block; our selectors stay highly-specific (anchored under
+ * `#flag-map-section svg .map-country`) so they win on cascade.
  *
  * `.map-country` is added at mount by `flagMap.js#tagCountryPaths` —
  * any element with a 2-letter ISO id (path OR g wrapper) gets it.
@@ -130,11 +128,8 @@
  *     the lines, they show up as floating black strokes scattered
  *     across continents.
  *   - The `#ocean` path ships with a black coastline stroke that makes
- *     the world look outlined-in-black compared to the Europe asset's
- *     clean palette.
- *
- * All rules are no-ops on the Europe asset (no <text>, no <line>, no
- * #ocean id) so they don't affect that variant. */
+ *     the world look outlined-in-black; we strip it for a clean palette.
+ */
 #flag-map-section svg text,
 #flag-map-section svg line:not(.map-hit-leader) {
   display: none;

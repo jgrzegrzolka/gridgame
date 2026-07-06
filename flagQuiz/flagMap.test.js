@@ -86,16 +86,13 @@ test('markCountry silently no-ops when the code is not in the SVG', () => {
   assert.doesNotThrow(() => markCountry(root, 'sj', 'wrong'));
 });
 
-test('both bundled map assets carry an Åland (ax) element', () => {
-  // Åland is an autonomous territory the source maps omit; we inject an
-  // `ax` shape into both (worldMap: a locator so flagsdata rings it;
-  // europeMap: a top-most path so the Europe map lets you click it).
-  // `ax` is also listed in MICROSTATE_CODES. Pin the SVG presence so a
-  // future asset re-import can't silently drop it.
+test('the world map carries an injected Åland (ax) element', () => {
+  // Åland is an autonomous territory the source map omits; we inject an
+  // `ax` <g> + locator so flagsdata rings it and it's clickable in the
+  // Europe crop. `ax` is also listed in MICROSTATE_CODES. Pin the SVG
+  // presence so a future asset re-import can't silently drop it.
   const world = readFileSync(new URL('./worldMap.svg', import.meta.url), 'utf8');
-  const europe = readFileSync(new URL('./europeMap.svg', import.meta.url), 'utf8');
   assert.match(world, /id="ax"/, 'worldMap.svg must carry an ax element');
-  assert.match(europe, /id="ax"/, 'europeMap.svg must carry an ax element');
 });
 
 test('markCountry no-ops on the compound regional codes the pool surfaces', () => {
