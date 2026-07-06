@@ -628,14 +628,22 @@ function makeMapResizable(container, svg) {
   const clampH = (/** @type {number} */ h) => Math.max(140, Math.min(Math.round(naturalH()), h));
 
   try { localStorage.removeItem('gridgame.mapSize'); } catch { /* ignore */ }
+  // Desktop only — on phones the full-width map is already short, so the resize
+  // range is too small to bother (the handle is hidden in CSS at the same
+  // breakpoint). On mobile leave the map at its natural height, ignoring any
+  // height saved on a desktop.
+  const mq = typeof globalThis.matchMedia === 'function'
+    ? globalThis.matchMedia('(max-width: 600px)') : null;
   const applySaved = () => {
     container.style.height = '';
+    if (mq && mq.matches) return;
     try {
       const h = Number(localStorage.getItem('gridgame.mapHeight'));
       if (Number.isFinite(h) && h > 0) container.style.height = `${clampH(h)}px`;
     } catch { /* no saved height */ }
   };
   applySaved();
+  if (mq && typeof mq.addEventListener === 'function') mq.addEventListener('change', applySaved);
 
   if (doc && typeof doc.createElement === 'function') {
     const handle = doc.createElement('div');
