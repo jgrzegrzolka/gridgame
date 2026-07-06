@@ -235,16 +235,24 @@ body {
   margin: 0 0 24px;
   text-align: center;
 }
-/* The game + result panels take the body's content width up to 720px, so the
- * map inside them fills the full width (aligned with the chrome row, logo-to-
- * burger — the documented design, and how flagsdata already renders). Without
- * this they shrink-to-fit the 480px answer grid / the result text, leaving the
- * map too narrow. The answer grid and leaderboard keep their own width, centred
- * with `margin-inline: auto`. */
+/* The game + result panels take the body's content width up to 720px. This is
+ * the room the map grows INTO: by default the map opens at the answer-grid
+ * width (below), matching the flags; on desktop the corner handle can enlarge
+ * it up to this 720px width (aligned with the chrome row, logo-to-burger). The
+ * answer grid and leaderboard keep their own width, centred with
+ * `margin-inline: auto`. */
 #game,
 #result {
   width: 100%;
   max-width: 720px;
+}
+/* Default the map to the answer-grid width so it opens as it did before the
+ * resize feature (matching the flags), centred in the wider panel. The
+ * desktop-only corner handle (makeMapResizable) grows it from here toward the
+ * 720px panel width; a saved width is re-applied as an inline width that wins
+ * over this. */
+#flag-map-section {
+  width: min(90vw, 480px);
 }
 .choices {
   display: grid;

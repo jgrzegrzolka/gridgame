@@ -601,77 +601,94 @@ export async function mountFlagMap({
 }
 
 /**
- * Make the map section height-resizable via a visible bottom-edge handle. The
- * map always stays full width (logo-to-burger, the documented design); dragging
- * only changes the section HEIGHT, and the flex-centred `overflow: hidden`
- * container clips the natural-height SVG to a centred band (see the CSS). Keeps
- * it sane:
- *  - height clamps to [140, natural full-width height] — you can compact the
- *    map down to a band, but not add pointless empty space taller than the map;
- *  - restore / persist the dragged height in `localStorage`
- *    (`gridgame.mapHeight`); the older width×height `gridgame.mapSize` key is
- *    dropped so pre-existing narrow saves don't linger;
- *  - clear the explicit height while fullscreen (the browser owns the size) and
+ * Make the map section width-resizable (desktop only) via a bottom-right corner
+ * handle, so the player can enlarge it. Each page's CSS sets the default width
+ * (flagsdata: full; flagQuiz: the ~480px answer-grid width, so it opens as
+ * before); the handle grows the width up to the container's full content width,
+ * and the SVG (width:100%, height:auto) scales with it, so the map keeps its
+ * shape and only gets bigger. Keeps it sane:
+ *  - width clamps to [default width, container content width] — you can only
+ *    enlarge, never shrink below the default;
+ *  - the handle only appears where there's room to grow, so flagsdata (already
+ *    full width) shows none;
+ *  - the dragged width persists in `localStorage` (`gridgame.mapWidth`); the
+ *    older size / height keys are dropped so stale saves don't linger;
+ *  - phones (≤600px) get no handle and ignore any saved width;
+ *  - clear the explicit width while fullscreen (the browser owns the size) and
  *    restore on exit.
  *
  * @param {HTMLElement} container
- * @param {any} svg
+ * @param {any} _svg
  */
-function makeMapResizable(container, svg) {
-  if (!container || !container.style) return;
+function makeMapResizable(container, _svg) {
+  if (!container || !container.style || !container.parentElement) return;
   const doc = container.ownerDocument || globalThis.document;
-  const vb = String(svg.getAttribute('viewBox') || '').split(/\s+/).map(Number);
-  const aspect = (vb.length === 4 && vb[2] > 0 && vb[3] > 0) ? vb[2] / vb[3] : 0;
-  // Natural full-width height = the height the map renders at when it fills the
-  // body width; this is the max (taller would just be empty space).
-  const naturalH = () => (aspect > 0 ? container.clientWidth / aspect : Infinity);
-  const clampH = (/** @type {number} */ h) => Math.max(140, Math.min(Math.round(naturalH()), h));
+  const parent = container.parentElement;
 
   try { localStorage.removeItem('gridgame.mapSize'); } catch { /* ignore */ }
-  // Desktop only — on phones the full-width map is already short, so the resize
-  // range is too small to bother (the handle is hidden in CSS at the same
-  // breakpoint). On mobile leave the map at its natural height, ignoring any
-  // height saved on a desktop.
+  try { localStorage.removeItem('gridgame.mapHeight'); } catch { /* ignore */ }
+
+  // Container's inner content width — the max the map can grow to.
+  const maxWidth = () => {
+    const cs = getComputedStyle(parent);
+    return parent.clientWidth - parseFloat(cs.paddingLeft || '0') - parseFloat(cs.paddingRight || '0');
+  };
+  // The CSS default width (measure with our explicit width cleared).
+  const defaultWidth = () => {
+    const saved = container.style.width;
+    container.style.width = '';
+    const w = container.getBoundingClientRect().width;
+    container.style.width = saved;
+    return w;
+  };
+
   const mq = typeof globalThis.matchMedia === 'function'
     ? globalThis.matchMedia('(max-width: 600px)') : null;
   const applySaved = () => {
-    container.style.height = '';
-    if (mq && mq.matches) return;
+    container.style.width = '';
+    if (mq && mq.matches) return;               // mobile: CSS default width
     try {
-      const h = Number(localStorage.getItem('gridgame.mapHeight'));
-      if (Number.isFinite(h) && h > 0) container.style.height = `${clampH(h)}px`;
-    } catch { /* no saved height */ }
+      const w = Number(localStorage.getItem('gridgame.mapWidth'));
+      if (Number.isFinite(w) && w > 0) {
+        const clamped = Math.max(defaultWidth(), Math.min(maxWidth(), w));
+        if (clamped > defaultWidth() + 1) container.style.width = `${Math.round(clamped)}px`;
+      }
+    } catch { /* no saved width */ }
   };
   applySaved();
   if (mq && typeof mq.addEventListener === 'function') mq.addEventListener('change', applySaved);
 
-  if (doc && typeof doc.createElement === 'function') {
+  // Offer the handle only where the map can actually grow (skips flagsdata).
+  if (doc && typeof doc.createElement === 'function' && maxWidth() - defaultWidth() > 8) {
     const handle = doc.createElement('div');
     handle.className = 'map-resize-handle';
     handle.setAttribute('aria-hidden', 'true');
-    // Horizontal grip lines — reads as "drag up/down".
+    // Diagonal grip lines — reads as "drag out to grow".
     handle.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">'
-      + '<path d="M4 6.5 H12 M4 9.5 H12" '
+      + '<path d="M14.5 6.5 6.5 14.5 M14.5 10.5 10.5 14.5" '
       + 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     container.appendChild(handle);
-    /** @type {{y:number,h:number}|null} */
+    /** @type {{x:number,w:number,min:number,max:number}|null} */
     let start = null;
     handle.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
       try { handle.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
-      start = { y: e.clientY, h: container.getBoundingClientRect().height };
+      start = { x: e.clientX, w: container.getBoundingClientRect().width, min: defaultWidth(), max: maxWidth() };
     });
     handle.addEventListener('pointermove', (e) => {
       if (!start) return;
-      container.style.height = `${clampH(start.h + (e.clientY - start.y))}px`;
+      // The map is centred, so a corner drag of dx widens each side — grow by 2·dx
+      // to keep the handle under the cursor.
+      const w = Math.max(start.min, Math.min(start.max, start.w + (e.clientX - start.x) * 2));
+      container.style.width = `${Math.round(w)}px`;
     });
     const end = (/** @type {PointerEvent} */ e) => {
       if (!start) return;
       start = null;
       try { handle.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
       try {
-        localStorage.setItem('gridgame.mapHeight', String(Math.round(container.offsetHeight)));
+        localStorage.setItem('gridgame.mapWidth', String(Math.round(container.offsetWidth)));
       } catch { /* storage full / blocked */ }
     };
     handle.addEventListener('pointerup', end);
@@ -679,11 +696,11 @@ function makeMapResizable(container, svg) {
   }
 
   // Fullscreen: the browser forces the section to the viewport, so our inline
-  // height would fight it. Clear while fullscreen, restore on exit.
+  // width would fight it. Clear while fullscreen, restore on exit.
   if (doc && doc.addEventListener) {
     const onFs = () => {
       const fs = doc.fullscreenElement || /** @type {any} */ (doc).webkitFullscreenElement;
-      if (fs === container) container.style.height = '';
+      if (fs === container) container.style.width = '';
       else applySaved();
     };
     doc.addEventListener('fullscreenchange', onFs);
