@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   zoomViewBox,
   wheelZoomScale,
+  clampZoomScale,
   viewBoxTransform,
   panViewBox,
   clampViewBox,
@@ -107,6 +108,43 @@ test('wheelZoomScale normalizes deltaMode: lines and pages scroll further than r
 test('wheelZoomScale tolerates non-finite input (no-op)', () => {
   assert.equal(wheelZoomScale(NaN), 1);
   assert.equal(wheelZoomScale(Infinity), 1);
+});
+
+// ---- clampZoomScale ----
+
+const ORIG = { x: 0, y: 0, width: 100, height: 100 };
+
+test('clampZoomScale leaves an in-range scale untouched', () => {
+  // At natural width, a modest zoom-in or zoom-out is well within limits.
+  assert.equal(clampZoomScale(1.1, 100, ORIG, 24, 3), 1.1);
+  assert.equal(clampZoomScale(0.9, 100, ORIG, 24, 3), 0.9);
+});
+
+test('clampZoomScale returns 1 (no-op) when already at the zoom-out cap', () => {
+  // currentWidth === maxWidth (100 * 3). A further zoom-out (scale < 1) would
+  // grow the width past the cap AND drift the map — clamp the scale to 1 so
+  // zoomViewBox is the identity and the map stops dead.
+  const s = clampZoomScale(0.85, 300, ORIG, 24, 3);
+  assert.equal(s, 1);
+});
+
+test('clampZoomScale floors a zoom-out that would overshoot the cap', () => {
+  // currentWidth 270, maxWidth 300 → the last legal zoom-out is 270/300 = 0.9.
+  // A stronger 0.5 request is floored to 0.9 (lands exactly on the cap).
+  const s = clampZoomScale(0.5, 270, ORIG, 24, 3);
+  assert.equal(s, 0.9);
+  assert.equal(270 / s, 300); // new width == maxWidth
+});
+
+test('clampZoomScale ceilings a zoom-in that would overshoot the max zoom-in', () => {
+  // minWidth = 100/24. currentWidth already there → any zoom-in clamps to 1.
+  assert.equal(clampZoomScale(1.3, 100 / 24, ORIG, 24, 3), 1);
+});
+
+test('clampZoomScale guards bad input', () => {
+  assert.equal(clampZoomScale(NaN, 100, ORIG), 1);
+  assert.equal(clampZoomScale(0, 100, ORIG), 1);
+  assert.equal(clampZoomScale(1.1, 0, ORIG), 1);
 });
 
 // ---- viewBoxTransform ----
