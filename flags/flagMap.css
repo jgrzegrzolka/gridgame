@@ -26,7 +26,10 @@
 
 #flag-map-section {
   width: 100%;
-  margin: 24px 0 8px;
+  /* `auto` side margins keep the map centered when it's been resized narrower
+   * than the body; at full width (the default) they collapse to 0, so it still
+   * spans logo-to-burger. */
+  margin: 24px auto 8px;
   /* No horizontal padding — the section's content (the SVG) should
    * fill the body's content width so the map visually aligns with
    * the chrome row above (logo on the left, burger on the right).
