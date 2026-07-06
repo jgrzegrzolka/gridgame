@@ -639,20 +639,17 @@ export async function mountFlagMap({
 
 /**
  * Make the map section width-resizable (desktop only) via a bottom-right corner
- * handle, so the player can enlarge it. Each page's CSS sets the default width
- * (flagsdata: full; flagQuiz: the ~480px answer-grid width, so it opens as
- * before); the handle grows the width up to the container's full content width,
- * and the SVG (width:100%, height:auto) scales with it, so the map keeps its
- * shape and only gets bigger. Keeps it sane:
- *  - width clamps to [default width, container content width] — you can only
- *    enlarge, never shrink below the default;
- *  - the handle only appears where there's room to grow, so flagsdata (already
- *    full width) shows none;
- *  - the dragged width persists in `localStorage` (`gridgame.mapWidth`); the
- *    older size / height keys are dropped so stale saves don't linger;
- *  - phones (≤600px) get no handle and ignore any saved width;
- *  - clear the explicit width while fullscreen (the browser owns the size) and
- *    restore on exit.
+ * handle. The map opens at its CSS default (~480px) and the handle drags it
+ * either way — down to a small floor or out to its body's content width — with
+ * the SVG (width:100%, height:auto) scaling to keep the map's shape. Notes:
+ *  - width clamps to [MIN_WIDTH, body content width]; wider than the body would
+ *    overflow it and get clipped (flagsdata) or force a horizontal scrollbar, so
+ *    the body width is the ceiling (on flagQuiz that body is the whole window);
+ *  - resizing is session-only — nothing is persisted, so a refresh returns to
+ *    the default; stale width / size keys from earlier builds are cleared;
+ *  - phones (≤600px) get no handle (hidden in CSS); reset to default if the
+ *    viewport crosses into mobile mid-session;
+ *  - clear the explicit width while fullscreen (the browser owns the size).
  *
  * @param {HTMLElement} container
  * @param {any} _svg
@@ -661,89 +658,74 @@ function makeMapResizable(container, _svg) {
   if (!container || !container.style || !container.parentElement) return;
   const doc = container.ownerDocument || globalThis.document;
 
-  try { localStorage.removeItem('gridgame.mapSize'); } catch { /* ignore */ }
-  try { localStorage.removeItem('gridgame.mapHeight'); } catch { /* ignore */ }
+  // Session-only now — drop any width persisted by earlier builds so a refresh
+  // always returns to the CSS default.
+  for (const k of ['gridgame.mapSize', 'gridgame.mapHeight', 'gridgame.mapWidth']) {
+    try { localStorage.removeItem(k); } catch { /* ignore */ }
+  }
 
-  // The map can grow all the way to the window width (it's centred on the
-  // viewport in CSS, spilling past its panel into the page's side margins).
-  // `documentElement.clientWidth` excludes the scrollbar, so full width never
-  // forces a horizontal scrollbar.
+  const MIN_WIDTH = 240;
+  // The map grows up to its body's content width. On a full-width page
+  // (flagQuiz) that's the whole window, so the map spills past its panel into
+  // the page margins. On a page whose body is a centred column (flagsdata) it's
+  // that column width — going wider would overflow the body and be clipped by
+  // its `overflow-x: clip`, so the extra width just vanished. `clientWidth`
+  // excludes the scrollbar, so full width never forces a horizontal scrollbar.
   const maxWidth = () => {
     const el = doc && doc.documentElement;
-    return (el && el.clientWidth) || (globalThis.innerWidth || 0);
+    const vp = (el && el.clientWidth) || (globalThis.innerWidth || 0);
+    const bodyW = (doc && doc.body && doc.body.clientWidth) || vp;
+    return Math.min(vp, bodyW);
   };
-  // The CSS default width (measure with our explicit width cleared).
-  const defaultWidth = () => {
-    const saved = container.style.width;
-    container.style.width = '';
-    const w = container.getBoundingClientRect().width;
-    container.style.width = saved;
-    return w;
-  };
+  const reset = () => { container.style.width = ''; };
 
+  // The handle is hidden in CSS ≤600px; if the viewport crosses into mobile
+  // with an in-session resize applied, drop it back to the default width.
   const mq = typeof globalThis.matchMedia === 'function'
     ? globalThis.matchMedia('(max-width: 600px)') : null;
-  const applySaved = () => {
-    container.style.width = '';
-    if (mq && mq.matches) return;               // mobile: CSS default width
-    try {
-      const w = Number(localStorage.getItem('gridgame.mapWidth'));
-      if (Number.isFinite(w) && w > 0) {
-        const clamped = Math.max(defaultWidth(), Math.min(maxWidth(), w));
-        if (clamped > defaultWidth() + 1) container.style.width = `${Math.round(clamped)}px`;
-      }
-    } catch { /* no saved width */ }
-  };
-  applySaved();
-  if (mq && typeof mq.addEventListener === 'function') mq.addEventListener('change', applySaved);
+  if (mq && typeof mq.addEventListener === 'function') {
+    mq.addEventListener('change', () => { if (mq.matches) reset(); });
+  }
 
-  // Offer the handle only where the map can actually grow (skips flagsdata).
-  if (doc && typeof doc.createElement === 'function' && maxWidth() - defaultWidth() > 8) {
+  if (doc && typeof doc.createElement === 'function') {
     const handle = doc.createElement('div');
     handle.className = 'map-resize-handle';
     handle.setAttribute('aria-hidden', 'true');
-    // Diagonal grip lines — reads as "drag out to grow".
+    // Diagonal grip lines — reads as "drag to resize".
     handle.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">'
       + '<path d="M14.5 6.5 6.5 14.5 M14.5 10.5 10.5 14.5" '
       + 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     container.appendChild(handle);
-    /** @type {{x:number,w:number,min:number,max:number}|null} */
+    /** @type {{x:number,w:number,max:number}|null} */
     let start = null;
     handle.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
       try { handle.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
-      start = { x: e.clientX, w: container.getBoundingClientRect().width, min: defaultWidth(), max: maxWidth() };
+      start = { x: e.clientX, w: container.getBoundingClientRect().width, max: maxWidth() };
     });
     handle.addEventListener('pointermove', (e) => {
       if (!start) return;
-      // The map is centred, so a corner drag of dx widens each side — grow by 2·dx
-      // to keep the handle under the cursor.
-      const w = Math.max(start.min, Math.min(start.max, start.w + (e.clientX - start.x) * 2));
+      // The map is centred, so a corner drag of dx changes each side — resize by
+      // 2·dx to keep the handle under the cursor. Drag out to grow, in to shrink.
+      const w = Math.max(MIN_WIDTH, Math.min(start.max, start.w + (e.clientX - start.x) * 2));
       container.style.width = `${Math.round(w)}px`;
     });
     const end = (/** @type {PointerEvent} */ e) => {
       if (!start) return;
       start = null;
       try { handle.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-      try {
-        localStorage.setItem('gridgame.mapWidth', String(Math.round(container.offsetWidth)));
-      } catch { /* storage full / blocked */ }
     };
     handle.addEventListener('pointerup', end);
     handle.addEventListener('pointercancel', end);
   }
 
   // Fullscreen: the browser forces the section to the viewport, so our inline
-  // width would fight it. Clear while fullscreen, restore on exit.
+  // width would fight it. Clear it (entering) and settle back to the default
+  // (exiting) — there's no persisted width to restore.
   if (doc && doc.addEventListener) {
-    const onFs = () => {
-      const fs = doc.fullscreenElement || /** @type {any} */ (doc).webkitFullscreenElement;
-      if (fs === container) container.style.width = '';
-      else applySaved();
-    };
-    doc.addEventListener('fullscreenchange', onFs);
-    doc.addEventListener('webkitfullscreenchange', onFs);
+    doc.addEventListener('fullscreenchange', reset);
+    doc.addEventListener('webkitfullscreenchange', reset);
   }
 }
 

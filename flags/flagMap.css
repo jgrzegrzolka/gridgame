@@ -41,11 +41,11 @@
   box-sizing: border-box;
   /* Anchor for the absolutely-positioned `.map-fullscreen-btn` below. */
   position: relative;
-  /* Desktop-only enlarge resize via the bottom-right `.map-resize-handle`. Each
-   * page opens the map at its ~480px default; the corner handle then grows the
-   * width all the way up to the full window width, and the SVG (width:100%,
-   * height:auto) scales with it so the map keeps its shape. The dragged width
-   * persists in `gridgame.mapWidth` (mountFlagMap → makeMapResizable).
+  /* Desktop-only resize via the bottom-right `.map-resize-handle`. Each page
+   * opens the map at its ~480px default; the corner handle drags the width
+   * either way — smaller, or out to the body's content width — and the SVG
+   * (width:100%, height:auto) scales with it so the map keeps its shape.
+   * Resizing is session-only (makeMapResizable): a refresh returns to default.
    *
    * `left: 50%` + `translateX(-50%)` centres the section on its container's
    * centre (which is the window centre) for ANY width — so once it's dragged
