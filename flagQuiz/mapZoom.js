@@ -34,14 +34,17 @@ const MAX_ZOOM_IN = 24;
  * in fullscreen alike), then free-pan it anywhere (see FREE_PAN_KEEP). */
 const MAX_ZOOM_OUT = 3;
 /**
- * Free-pan: the fraction of the map that must stay on screen. When the
- * viewBox is larger than the map (zoomed out), the map floats inside the
- * viewport; instead of locking it dead-centre we let the player drag it
- * anywhere, stopping only once this little of it is left in view — so it can
- * be parked in any corner but never lost off-screen (and double-tap still
- * resets). 0.15 = keep at least 15% visible.
+ * Free-pan: how much of the map must stay on screen while dragging, as a
+ * fraction of the VISIBLE WINDOW (not the map). Measuring against the window
+ * makes the limit a constant fraction of the *screen* at every zoom level —
+ * so panning feels the same at rest as when zoomed out. (Measuring against
+ * the map's fixed width instead made 1x feel guarded — 15% of the map filled
+ * 15% of the screen — while zoomed out the same 15% of the map was a tiny
+ * screen sliver, so the map cleared freely. Jan, 2026-07-06.) Never lost
+ * off-screen; double-tap still resets. 0.1 = keep at least 10% of the
+ * viewport covered by the map.
  */
-const FREE_PAN_KEEP = 0.15;
+const FREE_PAN_KEEP = 0.1;
 /**
  * Wheel-zoom sensitivity: zoom scale = e^(-normalizedDeltaPx × this).
  * Tuned so a classic mouse notch (~100 px of deltaY) zooms ~10% — the
@@ -284,9 +287,11 @@ export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut =
   // is exactly that case — Portugal at Europe's western edge was
   // unreachable until this branch unified.
   if (freePan && width >= original.width) {
-    // Zoomed out in fullscreen: the map floats inside the viewport. Let it
-    // be dragged anywhere, keeping at least FREE_PAN_KEEP of it on screen.
-    const keep = original.width * FREE_PAN_KEEP;
+    // The map floats inside the viewport. Let it be dragged anywhere, keeping
+    // at least FREE_PAN_KEEP of the *visible window* covered by the map — a
+    // constant screen fraction at every zoom, so 1x pans as freely as
+    // zoomed-out (keep is `width`-relative, not `original.width`-relative).
+    const keep = width * FREE_PAN_KEEP;
     const minX = original.x + keep - width + ox;
     const maxX = original.x + original.width - keep - ox;
     if (x < minX) x = minX;
@@ -300,7 +305,7 @@ export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut =
     if (x > maxX) x = maxX;
   }
   if (freePan && height >= original.height) {
-    const keep = original.height * FREE_PAN_KEEP;
+    const keep = height * FREE_PAN_KEEP;
     const minY = original.y + keep - height + oy;
     const maxY = original.y + original.height - keep - oy;
     if (y < minY) y = minY;
