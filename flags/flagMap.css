@@ -41,19 +41,16 @@
   box-sizing: border-box;
   /* Anchor for the absolutely-positioned `.map-fullscreen-btn` below. */
   position: relative;
-  /* Corner-drag resize (bottom-right grip). The SVG fills the box (svg
+  /* Corner-drag resize via the visible `.map-resize-handle` below (the native
+   * grip is invisible over the map water). The SVG fills the box (svg
    * height:100% + default `meet`), so dragging just reshapes the window onto
    * the map — the whole map stays visible and the extra space is page-coloured
    * (see the svg `background` below), so it's invisible against the page. The
    * default box shape is set per-mount from the viewBox (mountFlagMap →
    * makeMapResizable), so it opens matching the map and only changes when
    * dragged; a dragged size persists in `gridgame.mapSize`. */
-  resize: both;
   overflow: hidden;
   max-width: 100%;
-  min-width: 260px;
-  min-height: 140px;
-  max-height: 85vh;
   /* Isolate the map's layout + paint from the rest of the page. The large
    * inlined world-map SVG accumulates flag-pattern fills + per-answer flash
    * animations as a 60s round progresses; without containment the browser
@@ -89,6 +86,31 @@
 .map-fullscreen-btn:hover {
   background: var(--surface-hover-color);
 }
+/* Visible corner resize handle (bottom-right). Sits above the SVG so its drag
+ * is caught here, not by the map's pan handler. The glyph is two diagonal grip
+ * lines in muted grey, darkening on hover so it reads as a control. Driven by
+ * JS (makeMapResizable) rather than native `resize`, which is invisible over
+ * the map water. */
+.map-resize-handle {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 4px;
+  color: var(--primary-color);
+  cursor: nwse-resize;
+  touch-action: none;
+  z-index: 10;
+}
+.map-resize-handle:hover {
+  background: var(--surface-hover-color);
+}
 /* Fullscreen mode: section + SVG fill the viewport. JS pins
  * `preserveAspectRatio="slice"` on the SVG in fullscreen so the
  * map content scales to FILL both dimensions (cropping the longer
@@ -100,10 +122,14 @@
   background: var(--page-bg-color);
   padding: 0;
   overflow: hidden;
-  /* Fullscreen fills the viewport — no corner grip, and the browser sizes it,
-   * so drop the resizable box's shape (JS also clears any dragged size). */
-  resize: none;
+  /* Fullscreen fills the viewport — the browser sizes it, so drop the resizable
+   * box's shape (JS also clears any dragged size). */
   aspect-ratio: auto;
+}
+/* No resizing while fullscreen — the browser owns the dimensions. */
+#flag-map-section:fullscreen .map-resize-handle,
+#flag-map-section:-webkit-full-screen .map-resize-handle {
+  display: none;
 }
 #flag-map-section:fullscreen svg,
 #flag-map-section:-webkit-full-screen svg {

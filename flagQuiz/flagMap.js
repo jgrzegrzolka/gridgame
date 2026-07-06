@@ -601,10 +601,13 @@ export async function mountFlagMap({
 }
 
 /**
- * Make the map section corner-resizable (CSS `resize: both`), keeping it sane:
+ * Make the map section corner-resizable via a visible bottom-right handle.
+ * (The browser's native `resize` grip is invisible over the map, so we draw our
+ * own handle and drive the size from its drag.) Keeps it sane:
  *  - default the box shape to the mounted viewBox's aspect, so it opens exactly
- *    as before and only changes once the user drags the grip;
- *  - restore / persist a dragged size in `localStorage` (`gridgame.mapSize`);
+ *    as before and only changes once the user drags the handle;
+ *  - restore / persist a dragged size in `localStorage` (`gridgame.mapSize`),
+ *    clamped to [260, parent width] × [140, 90vh];
  *  - drop the explicit size + aspect while fullscreen (the browser owns the
  *    dimensions there) and restore on exit.
  *
@@ -613,38 +616,69 @@ export async function mountFlagMap({
  */
 function makeMapResizable(container, svg) {
   if (!container || !container.style) return;
+  const doc = container.ownerDocument || globalThis.document;
   const vb = String(svg.getAttribute('viewBox') || '').split(/\s+/).map(Number);
   const defaultAspect = (vb.length === 4 && vb[2] > 0 && vb[3] > 0) ? `${vb[2]} / ${vb[3]}` : '';
   const applyDefault = () => {
-    if (defaultAspect) container.style.aspectRatio = defaultAspect;
+    container.style.aspectRatio = defaultAspect || 'auto';
+    container.style.width = '';
+    container.style.height = '';
     try {
       const s = JSON.parse(localStorage.getItem('gridgame.mapSize') || 'null');
       if (s && s.w > 0 && s.h > 0) {
+        container.style.aspectRatio = 'auto';
         container.style.width = `${s.w}px`;
         container.style.height = `${s.h}px`;
       }
     } catch { /* no saved size */ }
   };
   applyDefault();
-  // Persist a grip-drag: a pointerdown in the bottom-right corner marks a
-  // resize; save the resulting size on release. (A plain ResizeObserver would
-  // also fire on responsive width changes and wrongly pin the size.)
-  let grabbing = false;
-  container.addEventListener('pointerdown', (e) => {
-    const r = container.getBoundingClientRect();
-    grabbing = (r.right - e.clientX) <= 22 && (r.bottom - e.clientY) <= 22;
-  });
-  globalThis.addEventListener('pointerup', () => {
-    if (!grabbing) return;
-    grabbing = false;
-    try {
-      localStorage.setItem('gridgame.mapSize',
-        JSON.stringify({ w: Math.round(container.offsetWidth), h: Math.round(container.offsetHeight) }));
-    } catch { /* storage full / blocked */ }
-  });
+
+  // Visible drag handle — the native grip can't be seen against the map water.
+  if (doc && typeof doc.createElement === 'function') {
+    const handle = doc.createElement('div');
+    handle.className = 'map-resize-handle';
+    handle.setAttribute('aria-hidden', 'true');
+    handle.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">'
+      + '<path d="M14.5 6.5 6.5 14.5 M14.5 10.5 10.5 14.5" '
+      + 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    container.appendChild(handle);
+    /** @type {{x:number,y:number,w:number,h:number}|null} */
+    let start = null;
+    const clampW = (/** @type {number} */ w) => {
+      const max = container.parentElement ? container.parentElement.clientWidth : w;
+      return Math.max(260, Math.min(max, w));
+    };
+    const clampH = (/** @type {number} */ h) =>
+      Math.max(140, Math.min(Math.round((globalThis.innerHeight || 800) * 0.9), h));
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try { handle.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
+      const r = container.getBoundingClientRect();
+      start = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!start) return;
+      container.style.aspectRatio = 'auto';
+      container.style.width = `${Math.round(clampW(start.w + (e.clientX - start.x)))}px`;
+      container.style.height = `${Math.round(clampH(start.h + (e.clientY - start.y)))}px`;
+    });
+    const end = (/** @type {PointerEvent} */ e) => {
+      if (!start) return;
+      start = null;
+      try { handle.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+      try {
+        localStorage.setItem('gridgame.mapSize',
+          JSON.stringify({ w: Math.round(container.offsetWidth), h: Math.round(container.offsetHeight) }));
+      } catch { /* storage full / blocked */ }
+    };
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+  }
+
   // Fullscreen: the browser forces the section to the viewport, so our inline
   // size / aspect would fight it. Clear while fullscreen, restore on exit.
-  const doc = globalThis.document;
   if (doc && doc.addEventListener) {
     const onFs = () => {
       const fs = doc.fullscreenElement || /** @type {any} */ (doc).webkitFullscreenElement;
