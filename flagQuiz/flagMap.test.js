@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
-  offsetHitTargetCenter, paintCountryFlag, clearCountryFlag,
+  offsetHitTargetCenter, paintCountryFlag, clearCountryFlag, computeElementBbox,
 } from './flagMap.js';
 import { FLAG_TINTS } from '../flags/flagTints.js';
 
@@ -747,6 +747,27 @@ test('cropToCountries rejects non-ISO2 codes without throwing', () => {
   cropToCountries(svg, ['cn', 'dk_kingdom', '', 'CN', 'esp']);
   // Only 'cn' is allowed — others fail the ISO2 regex. viewBox still set.
   assert.ok(svg._viewBox() !== null);
+});
+
+test('computeElementBbox pads a single sub-group bbox (France frx, not the whole fr)', () => {
+  // frx = metropolitan France in Europe; the fr group would also span French
+  // Guiana etc. The fly-in targets frx so the camera stays in Europe.
+  const svg = fakeSvgWithBboxes({
+    frx: { x: 1278, y: 259, width: 96, height: 82 },
+    fr: { x: 835, y: 259, width: 888, height: 626 }, // whole group — must NOT be used
+  });
+  const bb = computeElementBbox(svg, 'frx');
+  // padX = 96*0.05 = 4.8, padY = 82*0.05 = 4.1
+  assert.equal(bb.x, 1278 - 4.8);
+  assert.equal(bb.y, 259 - 4.1);
+  assert.equal(bb.width, 96 + 9.6);
+  assert.equal(bb.height, 82 + 8.2);
+});
+
+test('computeElementBbox accepts non-ISO2 ids and returns null when missing', () => {
+  const svg = fakeSvgWithBboxes({ frx: { x: 0, y: 0, width: 10, height: 10 } });
+  assert.ok(computeElementBbox(svg, 'frx')); // 3-char id is fine (unlike country-code helpers)
+  assert.equal(computeElementBbox(svg, 'nope'), null);
 });
 
 test('cropToCountries no-ops when no codes resolve', () => {

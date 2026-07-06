@@ -107,10 +107,19 @@ import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
-import { mountFlagMap, paintCountryFlag, computeCountriesBbox } from './flagMap.js';
+import { mountFlagMap, paintCountryFlag, computeCountriesBbox, computeElementBbox } from './flagMap.js';
 import { attachZoomPan, regionalFrame } from './mapZoom.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox } from '../flags/flagLightbox.js';
+
+/**
+ * Answer fly-in override: country code → the map sub-group id to frame instead
+ * of the whole country group. For countries whose `<g id>` spans far-flung
+ * overseas territories (so the union bbox would zoom out to the globe), point
+ * at the metropolitan/home sub-group. France's `frx` holds metropolitan France
+ * + Corsica, apart from `gf` / `gp` / `mq` / `re` / `yt` in the `fr` group.
+ */
+const FLY_HOME_SUBGROUP = { fr: 'frx' };
 
 export function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
@@ -402,7 +411,14 @@ export function bootFlagQuiz() {
      */
     function flyToAnsweredCountry(code) {
       if (!mapSvg || !mapZoomHandle || gameOver) return;
-      const bb = computeCountriesBbox(mapSvg, [code]);
+      // A few countries' map <g> spans far-flung overseas territories, so the
+      // union bbox would zoom the camera out to most of the globe. Fly to the
+      // "home" sub-group instead: France's <g id="fr"> wraps French Guiana,
+      // Réunion, Guadeloupe, … around metropolitan <g id="frx">, so target frx
+      // and treat France as if it were entirely in Europe for the fly-in.
+      const homeId = FLY_HOME_SUBGROUP[code];
+      const bb = (homeId && computeElementBbox(mapSvg, homeId))
+        || computeCountriesBbox(mapSvg, [code]);
       if (!bb) return;
       const frame = regionalFrame(bb, mapZoomHandle.getOriginal());
       mapZoomHandle.animateTo(frame, { durationMs: 480 });

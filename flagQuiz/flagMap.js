@@ -693,6 +693,11 @@ export function computeCountriesBbox(svg, codes, extra) {
     } catch { /* skip */ }
   }
   if (!Number.isFinite(minX)) return null;
+  return padBbox(minX, minY, maxX, maxY, extra);
+}
+
+/** Apply the shared 5% margin (plus optional per-side extra) to a raw bbox. */
+function padBbox(minX, minY, maxX, maxY, extra) {
   const w = maxX - minX;
   const h = maxY - minY;
   const padX = w * 0.05;
@@ -707,6 +712,29 @@ export function computeCountriesBbox(svg, codes, extra) {
     width: w + 2 * padX + extraLeft + extraRight,
     height: h + 2 * padY + extraTop + extraBottom,
   };
+}
+
+/**
+ * Padded bbox of a single element by id — like computeCountriesBbox but for
+ * an arbitrary sub-group id, not gated to ISO2 country codes. The answer
+ * fly-in uses it to target France's metropolitan `frx` sub-group instead of
+ * the whole `fr` country group, whose bbox spans the overseas territories
+ * (French Guiana, Réunion, Guadeloupe, …) and would zoom the camera out to
+ * the globe.
+ *
+ * @param {any} svg
+ * @param {string} id
+ * @param {{ left?: number, right?: number, top?: number, bottom?: number }} [extra]
+ * @returns {{ x: number, y: number, width: number, height: number } | null}
+ */
+export function computeElementBbox(svg, id, extra) {
+  if (!svg || typeof svg.querySelector !== 'function' || typeof id !== 'string') return null;
+  const el = svg.querySelector(`#${id}`);
+  if (!el || typeof el.getBBox !== 'function') return null;
+  let bb;
+  try { bb = el.getBBox(); } catch { return null; }
+  if (!bb || (bb.width === 0 && bb.height === 0)) return null;
+  return padBbox(bb.x, bb.y, bb.x + bb.width, bb.y + bb.height, extra);
 }
 
 /**
