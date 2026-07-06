@@ -31,6 +31,8 @@
  * country at once — used on play-again to start fresh.
  */
 
+import { FLAG_TINTS } from '../flags/flagTints.js';
+
 const STATUS_CLASSES = ['is-correct', 'is-wrong'];
 
 /**
@@ -347,6 +349,11 @@ export function paintCountryFlag(svg, code, svgBase, status) {
       el.setAttribute('fill', fill);
     }
     if (el.classList) el.classList.add('is-flagged');
+    // While the map is moving, CSS fills flagged countries with this cheap
+    // solid colour (var(--flag-tint)) instead of the flag image — same raster
+    // cost as the old flat grey, but the map stays colourful. Full flags snap
+    // back on settle. Missing tint (rare) falls back to grey via the CSS var.
+    if (el.style && FLAG_TINTS[id]) el.style.setProperty('--flag-tint', FLAG_TINTS[id]);
     flash(el);
   };
   for (const el of flagFillTargets(svg, id)) applyFill(el);

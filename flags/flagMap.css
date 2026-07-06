@@ -130,16 +130,20 @@
  * rasterize the 255 flag images at all. The inline flag fill is set with
  * plain `style` (no !important), so a class rule with `!important` wins for
  * the gesture, then loses again the instant the class is removed on settle
- * — flags snap back sharp, in one repaint, while stopped. Colours are the
- * same flat land / coastline the default `.map-country` rule uses. */
+ * — flags snap back sharp, in one repaint, while stopped.
+ *
+ * Instead of flat grey we fill each country with its flag's dominant colour
+ * (`--flag-tint`, set per country in flagMap.js from flagTints.js). A solid
+ * colour costs the browser exactly what grey did — no flag image to decode —
+ * so motion stays smooth, but the map reads as a colourful world rather than
+ * a grey one. `#f9f9f9` is the fallback when a tint is missing. */
 #flag-map-section svg.is-interacting .is-flagged {
-  fill: #f9f9f9 !important;
+  fill: var(--flag-tint, #f9f9f9) !important;
   fill-opacity: 1 !important;
-  stroke: #555 !important;
 }
 #flag-map-section svg.is-interacting .map-hit-target.is-flagged {
-  fill: transparent !important;
-  stroke: var(--primary-color) !important;
+  fill: var(--flag-tint, transparent) !important;
+  stroke: var(--flag-tint, var(--primary-color)) !important;
 }
 /* World-map decoration that doesn't belong in a quiz / browse context:
  *   - <text> labels reveal each country's ISO code (gives answers away)
