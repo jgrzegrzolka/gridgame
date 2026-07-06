@@ -29,17 +29,17 @@
 /** Max zoom-in level relative to the original viewBox. */
 const MAX_ZOOM_IN = 24;
 /** Max zoom-out level relative to the original viewBox. > 1 means the
- * viewBox can grow LARGER than the asset's natural bounds — used in
- * fullscreen so the player can pinch out to see the whole map even
- * when slice mode would otherwise crop it on portrait phones. */
+ * viewBox can grow LARGER than the asset's natural bounds — the player can
+ * pinch/scroll out to see the whole map smaller-with-margins (in-page and
+ * in fullscreen alike), then free-pan it anywhere (see FREE_PAN_KEEP). */
 const MAX_ZOOM_OUT = 3;
 /**
- * Free-pan mode (fullscreen): the fraction of the map that must stay on
- * screen. When the viewBox is larger than the map (zoomed out), the map
- * floats inside the viewport; instead of locking it dead-centre we let the
- * player drag it anywhere, stopping only once this little of it is left in
- * view — so it can be parked in any corner but never lost off-screen (and
- * double-tap still resets). 0.15 = keep at least 15% visible.
+ * Free-pan: the fraction of the map that must stay on screen. When the
+ * viewBox is larger than the map (zoomed out), the map floats inside the
+ * viewport; instead of locking it dead-centre we let the player drag it
+ * anywhere, stopping only once this little of it is left in view — so it can
+ * be parked in any corner but never lost off-screen (and double-tap still
+ * resets). 0.15 = keep at least 15% visible.
  */
 const FREE_PAN_KEEP = 0.15;
 /**
@@ -444,13 +444,11 @@ export function attachZoomPan(svg) {
    * @param {ViewBox} next
    */
   function apply(next) {
-    // In fullscreen, allow zoom-out past the asset's natural viewBox so the
-    // player can see the whole map smaller-with-margins even when slice
-    // mode crops the default view on portrait phones. Otherwise hold the
-    // historical "can't zoom past natural" rule.
-    const fs = isFullscreen();
-    const maxOut = fs ? MAX_ZOOM_OUT : 1;
-    current = clampViewBox(next, original, MAX_ZOOM_IN, maxOut, sliceOverhang(next), fs);
+    // Same zoom-out + free-pan freedom in-page and in fullscreen: the player
+    // can pinch/scroll out past the asset's natural viewBox (MAX_ZOOM_OUT)
+    // and drag the shrunk map anywhere (freePan). clampViewBox keeps at
+    // least a sliver on screen so it's never lost, and double-tap resets.
+    current = clampViewBox(next, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(next), true);
     endGesture();
     setViewBoxNow(current);
   }
@@ -555,9 +553,7 @@ export function attachZoomPan(svg) {
     const next = pendingViewBox;
     pendingViewBox = null;
     if (!next) return;
-    const fs = isFullscreen();
-    const maxOut = fs ? MAX_ZOOM_OUT : 1;
-    current = clampViewBox(next, original, MAX_ZOOM_IN, maxOut, sliceOverhang(next), fs);
+    current = clampViewBox(next, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(next), true);
     beginGesture();
     if (usingTransform) paintTransform();
     else setViewBoxNow(current);   // fullscreen: grey simplify + per-frame viewBox
@@ -644,9 +640,7 @@ export function attachZoomPan(svg) {
   function animateTo(target, opts = {}) {
     const duration = typeof opts.durationMs === 'number' ? opts.durationMs : 480;
     const raf = globalThis.requestAnimationFrame;
-    const fs = isFullscreen();
-    const maxOut = fs ? MAX_ZOOM_OUT : 1;
-    const end = clampViewBox(target, original, MAX_ZOOM_IN, maxOut, sliceOverhang(target), fs);
+    const end = clampViewBox(target, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(target), true);
     cancelAnim();
     if (typeof raf !== 'function' || duration <= 0 || prefersReducedMotion()) {
       apply(end);
