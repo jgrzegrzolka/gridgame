@@ -115,6 +115,16 @@
 .map-resize-handle:hover {
   background: var(--surface-hover-color);
 }
+/* Desktop only. On phones the map is full-width and therefore already short
+ * (~180px), so the resize range (140 → natural) is too small to be worth a
+ * handle — leave the map at its natural full-width height there. Matches the
+ * site's 600px mobile breakpoint; makeMapResizable also skips applying a saved
+ * height below it. */
+@media (max-width: 600px) {
+  .map-resize-handle {
+    display: none;
+  }
+}
 /* Fullscreen mode: section + SVG fill the viewport. JS pins
  * `preserveAspectRatio="slice"` on the SVG in fullscreen so the
  * map content scales to FILL both dimensions (cropping the longer
