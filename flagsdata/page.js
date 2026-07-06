@@ -270,6 +270,9 @@ export function bootFlagsData() {
       container: flagMapEl,
       url: '../flagQuiz/worldMap.svg',
       fullscreenLabel: t('menu.fullscreen', 'Toggle fullscreen'),
+      // The map here always fills the content column (see index.css) — no
+      // corner resize handle; fullscreen covers the "see it bigger" case.
+      resizable: false,
     }).then((svg) => {
       mapSvg = svg;
       if (svg) {

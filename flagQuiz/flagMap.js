@@ -590,6 +590,7 @@ export function resetMap(root) {
  *   cropPad?: { left?: number, right?: number, top?: number, bottom?: number },
  *   scopeCodes?: string[] | null,
  *   fullscreenLabel?: string,
+ *   resizable?: boolean,
  *   fetchImpl?: typeof fetch,
  * }} args
  * @returns {Promise<SVGElement | null>}
@@ -597,6 +598,7 @@ export function resetMap(root) {
 export async function mountFlagMap({
   container, url, cropCodes = null, cropPad, scopeCodes = null,
   fullscreenLabel = 'Toggle fullscreen',
+  resizable = true,
   fetchImpl = globalThis.fetch,
 }) {
   if (!container || !url) return null;
@@ -633,18 +635,18 @@ export async function mountFlagMap({
   tagMicrostates(svg, scope);
   addHitTargets(svg, hitTargetRadius(/** @type {any} */ (svg)));
   addFullscreenButton(container, fullscreenLabel);
-  makeMapResizable(container, /** @type {any} */ (svg));
+  if (resizable) makeMapResizable(container, /** @type {any} */ (svg));
   return /** @type {SVGElement} */ (svg);
 }
 
 /**
  * Make the map section width-resizable (desktop only) via a bottom-right corner
  * handle. The map opens at its CSS default (~480px) and the handle drags it
- * either way — down to a small floor or out to its body's content width — with
- * the SVG (width:100%, height:auto) scaling to keep the map's shape. Notes:
- *  - width clamps to [MIN_WIDTH, body content width]; wider than the body would
- *    overflow it and get clipped (flagsdata) or force a horizontal scrollbar, so
- *    the body width is the ceiling (on flagQuiz that body is the whole window);
+ * either way — down to a small floor or out to the full window width — with the
+ * SVG (width:100%, height:auto) scaling to keep the map's shape. Notes:
+ *  - width clamps to [MIN_WIDTH, window width]; the window is the ceiling
+ *    because the section is centred on the viewport and a wider map would force
+ *    a horizontal scrollbar;
  *  - resizing is session-only — nothing is persisted, so a refresh returns to
  *    the default; stale width / size keys from earlier builds are cleared;
  *  - phones (≤600px) get no handle (hidden in CSS); reset to default if the
@@ -665,17 +667,14 @@ function makeMapResizable(container, _svg) {
   }
 
   const MIN_WIDTH = 240;
-  // The map grows up to its body's content width. On a full-width page
-  // (flagQuiz) that's the whole window, so the map spills past its panel into
-  // the page margins. On a page whose body is a centred column (flagsdata) it's
-  // that column width — going wider would overflow the body and be clipped by
-  // its `overflow-x: clip`, so the extra width just vanished. `clientWidth`
-  // excludes the scrollbar, so full width never forces a horizontal scrollbar.
+  // The map grows out to the window width — it's centred on the viewport in CSS,
+  // so past its panel it spills symmetrically into the page's side margins.
+  // `clientWidth` excludes the scrollbar, so full width never forces a
+  // horizontal scrollbar. (Only flagQuiz mounts the map resizable, and its body
+  // is full-width; flagsdata pins the map to its column and opts out.)
   const maxWidth = () => {
     const el = doc && doc.documentElement;
-    const vp = (el && el.clientWidth) || (globalThis.innerWidth || 0);
-    const bodyW = (doc && doc.body && doc.body.clientWidth) || vp;
-    return Math.min(vp, bodyW);
+    return (el && el.clientWidth) || (globalThis.innerWidth || 0);
   };
   const reset = () => { container.style.width = ''; };
 
