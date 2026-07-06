@@ -235,11 +235,23 @@ body {
   margin: 0 0 24px;
   text-align: center;
 }
+/* The game + result panels take the body's content width up to 720px, so the
+ * map inside them fills the full width (aligned with the chrome row, logo-to-
+ * burger — the documented design, and how flagsdata already renders). Without
+ * this they shrink-to-fit the 480px answer grid / the result text, leaving the
+ * map too narrow. The answer grid and leaderboard keep their own width, centred
+ * with `margin-inline: auto`. */
+#game,
+#result {
+  width: 100%;
+  max-width: 720px;
+}
 .choices {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   width: min(90vw, 480px);
+  margin-inline: auto;
 }
 .flag-choice {
   padding: 0;
