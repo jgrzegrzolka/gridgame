@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   zoomViewBox,
+  wheelZoomScale,
   panViewBox,
   clampViewBox,
   parseViewBox,
@@ -57,6 +58,54 @@ test('zoomViewBox no-ops on zero/negative/non-finite scale', () => {
   assert.deepEqual(zoomViewBox(vb, pivot, -1), vb);
   assert.deepEqual(zoomViewBox(vb, pivot, NaN), vb);
   assert.deepEqual(zoomViewBox(vb, pivot, Infinity), vb);
+});
+
+// ---- wheelZoomScale ----
+
+test('wheelZoomScale zooms in on scroll-up (negative deltaY) and out on scroll-down', () => {
+  assert.ok(wheelZoomScale(-100) > 1, 'scroll up zooms in');
+  assert.ok(wheelZoomScale(100) < 1, 'scroll down zooms out');
+  assert.equal(wheelZoomScale(0), 1, 'no scroll → no zoom');
+});
+
+test('wheelZoomScale is proportional to scroll distance — a small delta zooms less than a big one', () => {
+  const small = wheelZoomScale(-10) - 1;
+  const big = wheelZoomScale(-100) - 1;
+  assert.ok(small > 0 && big > 0);
+  assert.ok(small < big, 'a 10px nudge zooms less than a 100px notch');
+});
+
+test('wheelZoomScale composes: N small trackpad events ≈ one mouse notch of the same total scroll', () => {
+  // A trackpad emits ~10 small (-10px) events for a gesture that a mouse
+  // sends as one -100px notch. Because the scale is exponential, the
+  // products must match: e^(-a)·…(10×) = e^(-10a) = e^(-100·k).
+  let trackpad = 1;
+  for (let i = 0; i < 10; i++) trackpad *= wheelZoomScale(-10);
+  const oneNotch = wheelZoomScale(-100);
+  assert.ok(Math.abs(trackpad - oneNotch) < 1e-9,
+    `trackpad total ${trackpad} should equal one notch ${oneNotch}`);
+});
+
+test('wheelZoomScale clamps a single event so a momentum spike cannot lurch', () => {
+  // Beyond the per-event clamp, more delta produces no more zoom.
+  const clamped = wheelZoomScale(-100000);
+  const atClamp = wheelZoomScale(-120); // WHEEL_MAX_STEP_PX
+  assert.equal(clamped, atClamp);
+});
+
+test('wheelZoomScale normalizes deltaMode: lines and pages scroll further than raw pixels', () => {
+  // Same raw deltaY of 3, but line-mode (×33) and page-mode (×800) mean
+  // more scroll → more zoom-out than pixel-mode.
+  const px = wheelZoomScale(3, 0);
+  const lines = wheelZoomScale(3, 1);
+  const pages = wheelZoomScale(3, 2);
+  assert.ok(lines < px, 'line-mode scrolls further than pixel-mode');
+  assert.ok(pages <= lines, 'page-mode scrolls at least as far as line-mode');
+});
+
+test('wheelZoomScale tolerates non-finite input (no-op)', () => {
+  assert.equal(wheelZoomScale(NaN), 1);
+  assert.equal(wheelZoomScale(Infinity), 1);
 });
 
 // ---- panViewBox ----
