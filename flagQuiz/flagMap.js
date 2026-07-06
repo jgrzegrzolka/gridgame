@@ -596,7 +596,69 @@ export async function mountFlagMap({
   tagMicrostates(svg, scope);
   addHitTargets(svg, hitTargetRadius(/** @type {any} */ (svg)));
   addFullscreenButton(container, fullscreenLabel);
+  makeMapResizable(container, /** @type {any} */ (svg));
   return /** @type {SVGElement} */ (svg);
+}
+
+/**
+ * Make the map section corner-resizable (CSS `resize: both`), keeping it sane:
+ *  - default the box shape to the mounted viewBox's aspect, so it opens exactly
+ *    as before and only changes once the user drags the grip;
+ *  - restore / persist a dragged size in `localStorage` (`gridgame.mapSize`);
+ *  - drop the explicit size + aspect while fullscreen (the browser owns the
+ *    dimensions there) and restore on exit.
+ *
+ * @param {HTMLElement} container
+ * @param {any} svg
+ */
+function makeMapResizable(container, svg) {
+  if (!container || !container.style) return;
+  const vb = String(svg.getAttribute('viewBox') || '').split(/\s+/).map(Number);
+  const defaultAspect = (vb.length === 4 && vb[2] > 0 && vb[3] > 0) ? `${vb[2]} / ${vb[3]}` : '';
+  const applyDefault = () => {
+    if (defaultAspect) container.style.aspectRatio = defaultAspect;
+    try {
+      const s = JSON.parse(localStorage.getItem('gridgame.mapSize') || 'null');
+      if (s && s.w > 0 && s.h > 0) {
+        container.style.width = `${s.w}px`;
+        container.style.height = `${s.h}px`;
+      }
+    } catch { /* no saved size */ }
+  };
+  applyDefault();
+  // Persist a grip-drag: a pointerdown in the bottom-right corner marks a
+  // resize; save the resulting size on release. (A plain ResizeObserver would
+  // also fire on responsive width changes and wrongly pin the size.)
+  let grabbing = false;
+  container.addEventListener('pointerdown', (e) => {
+    const r = container.getBoundingClientRect();
+    grabbing = (r.right - e.clientX) <= 22 && (r.bottom - e.clientY) <= 22;
+  });
+  globalThis.addEventListener('pointerup', () => {
+    if (!grabbing) return;
+    grabbing = false;
+    try {
+      localStorage.setItem('gridgame.mapSize',
+        JSON.stringify({ w: Math.round(container.offsetWidth), h: Math.round(container.offsetHeight) }));
+    } catch { /* storage full / blocked */ }
+  });
+  // Fullscreen: the browser forces the section to the viewport, so our inline
+  // size / aspect would fight it. Clear while fullscreen, restore on exit.
+  const doc = globalThis.document;
+  if (doc && doc.addEventListener) {
+    const onFs = () => {
+      const fs = doc.fullscreenElement || /** @type {any} */ (doc).webkitFullscreenElement;
+      if (fs === container) {
+        container.style.width = '';
+        container.style.height = '';
+        container.style.aspectRatio = '';
+      } else {
+        applyDefault();
+      }
+    };
+    doc.addEventListener('fullscreenchange', onFs);
+    doc.addEventListener('webkitfullscreenchange', onFs);
+  }
 }
 
 /**

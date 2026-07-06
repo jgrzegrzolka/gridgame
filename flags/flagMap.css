@@ -41,6 +41,19 @@
   box-sizing: border-box;
   /* Anchor for the absolutely-positioned `.map-fullscreen-btn` below. */
   position: relative;
+  /* Corner-drag resize (bottom-right grip). The SVG fills the box (svg
+   * height:100% + default `meet`), so dragging just reshapes the window onto
+   * the map — the whole map stays visible and the extra space is page-coloured
+   * (see the svg `background` below), so it's invisible against the page. The
+   * default box shape is set per-mount from the viewBox (mountFlagMap →
+   * makeMapResizable), so it opens matching the map and only changes when
+   * dragged; a dragged size persists in `gridgame.mapSize`. */
+  resize: both;
+  overflow: hidden;
+  max-width: 100%;
+  min-width: 260px;
+  min-height: 140px;
+  max-height: 85vh;
   /* Isolate the map's layout + paint from the rest of the page. The large
    * inlined world-map SVG accumulates flag-pattern fills + per-answer flash
    * animations as a 60s round progresses; without containment the browser
@@ -87,6 +100,10 @@
   background: var(--page-bg-color);
   padding: 0;
   overflow: hidden;
+  /* Fullscreen fills the viewport — no corner grip, and the browser sizes it,
+   * so drop the resizable box's shape (JS also clears any dragged size). */
+  resize: none;
+  aspect-ratio: auto;
 }
 #flag-map-section:fullscreen svg,
 #flag-map-section:-webkit-full-screen svg {
@@ -104,7 +121,9 @@
    * the SVG just follows. The earlier 680 cap predated the wider
    * flagsdata body and was leaving a ~50px gutter that read as
    * "the map is narrower than the menu" — see Jan 2026-06-25. */
-  height: auto;
+  /* Fill the (resizable) section box; default `meet` keeps the whole map in
+   * view, the leftover space showing the page-coloured background below. */
+  height: 100%;
   display: block;
   margin: 0 auto;
   /* The world map's projection is curved at the top/bottom edges, so the

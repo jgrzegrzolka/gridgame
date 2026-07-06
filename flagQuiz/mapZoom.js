@@ -925,6 +925,12 @@ export function attachZoomPan(svg, opts = {}) {
   /** @param {MouseEvent} e */
   function onMouseDown(e) {
     if (e.button !== 0) return;
+    // Yield the bottom-right corner to the section's native resize grip
+    // (CSS `resize: both`) so a drag there resizes the map instead of panning.
+    if (typeof svg.getBoundingClientRect === 'function') {
+      const r = svg.getBoundingClientRect();
+      if (r.right - e.clientX <= 22 && r.bottom - e.clientY <= 22) return;
+    }
     cancelAnim();
     mouseState = {
       lastX: e.clientX, lastY: e.clientY,
