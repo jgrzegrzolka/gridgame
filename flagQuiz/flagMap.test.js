@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
   offsetHitTargetCenter, paintCountryFlag, clearCountryFlag, settleFlagToTint,
-  revealFlagImage, computeMainlandBbox,
+  revealFlagImage, computeMainlandBbox, highlightCountry, unhighlightCountry,
 } from './flagMap.js';
 import { FLAG_TINTS } from '../flags/flagTints.js';
 
@@ -340,6 +340,26 @@ test('revealFlagImage drops is-tinted so the real flag shows again (keeps is-fla
   assert.equal(svg._refs.hit.classList.contains('is-tinted'), false);
   // Still an image fill, just no longer the settled wash.
   assert.equal(svg._refs.innerPath.classList.contains('is-flagged'), true);
+});
+
+test('highlightCountry marks the country path + microstate ring, skipping the sub-country', () => {
+  const svg = fakeFlagSvg();
+  highlightCountry(svg, 'es');
+  const { innerPath, hit, subCountry } = svg._refs;
+  assert.equal(innerPath.classList.contains('is-marked'), true);
+  assert.equal(hit.classList.contains('is-marked'), true);
+  // Skips a nested own-country path (e.g. French Guiana inside <g id="fr">).
+  assert.equal(subCountry.classList.contains('is-marked'), false);
+  // No image fill was set — the whole point is to avoid a raster decode.
+  assert.ok(!innerPath.style.fill);
+});
+
+test('unhighlightCountry drops is-marked from the country path + ring', () => {
+  const svg = fakeFlagSvg();
+  highlightCountry(svg, 'es');
+  unhighlightCountry(svg, 'es');
+  assert.equal(svg._refs.innerPath.classList.contains('is-marked'), false);
+  assert.equal(svg._refs.hit.classList.contains('is-marked'), false);
 });
 
 test('settleFlagToTint ignores non-ISO2 codes', () => {

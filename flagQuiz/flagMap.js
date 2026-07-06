@@ -496,6 +496,43 @@ export function clearCountryFlag(svg, code) {
 }
 
 /**
+ * Highlight / un-highlight one country with a flat fill (`.is-marked`, yellow
+ * — see flagMap.css). This is the cheap alternative to `paintCountryFlag` for
+ * surfaces that only need to say "this country is in the current set" rather
+ * than show its flag: no `<image>` / `<pattern>` and so no raster decode, which
+ * is what makes flagsdata's whole-world highlight fast (and lets it skip the
+ * tint / throttled-reveal machinery flagQuiz needs). Toggles the same target
+ * set `paintCountryFlag` fills (child paths + microstate hit rings). Distinct
+ * from `markCountry` above, which sets the green / red answer status.
+ *
+ * @param {any} svg  mounted `<svg>` root
+ * @param {string} code ISO 3166-1 alpha-2
+ */
+export function highlightCountry(svg, code) {
+  if (!svg || typeof code !== 'string') return;
+  const id = code.toLowerCase();
+  if (!ISO2_PATTERN.test(id)) return;
+  for (const el of flagFillTargets(svg, id)) {
+    if (el && el.classList) el.classList.add('is-marked');
+  }
+}
+
+/**
+ * Inverse of `highlightCountry` — drop the `.is-marked` fill from one country.
+ *
+ * @param {any} svg  mounted `<svg>` root
+ * @param {string} code ISO 3166-1 alpha-2
+ */
+export function unhighlightCountry(svg, code) {
+  if (!svg || typeof code !== 'string') return;
+  const id = code.toLowerCase();
+  if (!ISO2_PATTERN.test(id)) return;
+  for (const el of flagFillTargets(svg, id)) {
+    if (el && el.classList) el.classList.remove('is-marked');
+  }
+}
+
+/**
  * Strip every status class from every marked country — used on
  * play-again so a replayed round starts with a blank silhouette.
  *

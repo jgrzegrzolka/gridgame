@@ -243,6 +243,19 @@
   fill: var(--flag-tint, transparent) !important;
   stroke: var(--flag-tint, var(--primary-color)) !important;
 }
+/* flagsdata marks each country in the current filter with a flat yellow fill
+ * (`markCountry`) instead of painting its flag <image>. No raster decode, so
+ * the whole-world highlight is fast and none of the tint / throttled-reveal
+ * machinery above is needed there. (Map-marking colour, an accepted exception
+ * to the seven-variable palette — like the green / red correctness wash.) */
+#flag-map-section svg .is-marked {
+  fill: #f4c430 !important;
+  fill-opacity: 1 !important;
+}
+#flag-map-section svg .map-hit-target.is-marked {
+  fill: #f4c430 !important;
+  stroke: #f4c430 !important;
+}
 /* World-map decoration that doesn't belong in a quiz / browse context:
  *   - <text> labels reveal each country's ISO code (gives answers away)
  *   - <line class="st29"> leader lines (79 of them, stroke #000) point
