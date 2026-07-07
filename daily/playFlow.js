@@ -31,6 +31,7 @@ import { suggest, exactSingleMatch } from '../flags/engine.js';
 import { findPool, classifyGuess } from '../flags/findFlag.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { resolveNote } from '../flags/daily.js';
+import { wireFlagLightbox } from '../flags/flagLightbox.js';
 import { t, countryName } from '../i18n.js';
 import { launchConfetti, launchFireworks } from '../confetti.js';
 import { saveScore } from './scores.js';
@@ -173,6 +174,11 @@ export function openZoom(c) {
  */
 export function wireZoom() {
   const zoom = /** @type {HTMLDialogElement} */ (document.getElementById('zoom'));
+  // Tap the flag to enlarge it in the shared full-viewport lightbox — same
+  // affordance flagsdata's zoom popup gives. The dialog is capped at
+  // min(80vw, 320px), so the lightbox is a genuine magnification. Wired once
+  // here (idempotent per element) rather than per openZoom() call.
+  wireFlagLightbox(zoom.querySelector('img'), t);
   zoom.addEventListener('click', (e) => {
     if (e.target === zoom) zoom.close();
   });
