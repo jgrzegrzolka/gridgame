@@ -755,6 +755,18 @@ test('puzzles: every entry has en + pl descriptions', () => {
         offenders.push(`#${entry.n}: missing or empty description.${lang}`);
       }
     }
+    // additionalDescription is optional (the sovereign-only line, absent on
+    // rosters that include a home nation / territory), but when present it
+    // pays the same en + pl tax — a half-translated note would show English
+    // to Polish players.
+    const ad = /** @type {Record<string, string> | undefined} */ (entry.additionalDescription);
+    if (ad) {
+      for (const lang of ['en', 'pl']) {
+        if (typeof ad[lang] !== 'string' || ad[lang].length === 0) {
+          offenders.push(`#${entry.n}: missing or empty additionalDescription.${lang}`);
+        }
+      }
+    }
   }
   assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
 });

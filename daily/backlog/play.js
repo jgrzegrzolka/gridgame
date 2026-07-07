@@ -1,6 +1,7 @@
-import { flagsGamePool, loadCountries } from '../../flags/group.js';
+import { loadCountries } from '../../flags/group.js';
+import { buildAnswerPool } from '../answerPool.js';
 import { filterToCategory } from '../../flags/findFlag.js';
-import { t, withLocalizedAliases } from '../../i18n.js';
+import { t } from '../../i18n.js';
 import { findPuzzle, resolvePuzzleEntry, manualToCategory } from '../../flags/daily.js';
 import {
   wireZoom,
@@ -51,7 +52,10 @@ export function bootBacklogPlay() {
     fetchCatalog('puzzles'),
   ])
     .then(([raw, /** @type {DailyPuzzle[]} */ catalog]) => {
-      const all = withLocalizedAliases(flagsGamePool(raw, false));
+      // Same answer pool as live (page.js) so a manual roster with a
+      // non-sovereign flag (England in the World Cup puzzle) previews here
+      // exactly as it plays — otherwise gb-eng drops out of the targets.
+      const all = buildAnswerPool(raw, catalog);
 
       const entry = findPuzzle(catalog, n);
       if (!entry) {
@@ -64,7 +68,7 @@ export function bootBacklogPlay() {
         return;
       }
 
-      paintDescription(result.entry.description);
+      paintDescription(result.entry.description, result.entry.additionalDescription);
       // Preview this entry's zoom notes too, so an author play-testing a
       // staged puzzle sees the explanations exactly as a player will.
       setZoomNotes(result.entry.notes);
@@ -83,6 +87,7 @@ export function bootBacklogPlay() {
         targets: result.targets,
         labelFor,
         description: result.entry.description,
+        additionalDescription: result.entry.additionalDescription,
       });
     })
     .catch((err) => {

@@ -56,6 +56,17 @@ import { parseFilterString } from './findFlag.js';
  *                             Typedef-optional so synthetic test fixtures
  *                             stay terse; runtime presence is pinned by
  *                             the description test in flags/daily.test.js.
+ * @property {Record<string, string>} [additionalDescription]  optional
+ *                             second helper line, same per-language shape as
+ *                             `description`, rendered muted beneath it. Carries
+ *                             a per-puzzle qualifier — today "Sovereign
+ *                             countries only." "Sovereign only" is a property
+ *                             of the specific puzzle, not its kind (a manual
+ *                             roster of sovereign countries has it too; a
+ *                             roster that includes a home nation / territory,
+ *                             like the World Cup one with England, omits it),
+ *                             so it lives here as data rather than as page
+ *                             chrome or a `kind`-derived default.
  * @property {boolean} [primaryCleanExempt]  rare escape hatch — when true,
  *                             this entry opts out of the #1-100 primary-clean
  *                             test. Use sparingly; see SKILL.md rule 5.

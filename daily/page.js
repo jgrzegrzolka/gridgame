@@ -1,5 +1,6 @@
-import { loadCountries, flagsGamePool } from '../flags/group.js';
-import { t, withLocalizedAliases, countryName } from '../i18n.js';
+import { loadCountries } from '../flags/group.js';
+import { t, countryName } from '../i18n.js';
+import { buildAnswerPool } from './answerPool.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, manualToCategory } from '../flags/daily.js';
 import { warsawToday } from '../flags/warsawTime.js';
 import { visiblePuzzles } from '../flags/puzzleFilter.js';
@@ -629,20 +630,10 @@ export function bootDaily() {
     fetchCatalog('puzzles'),
   ])
     .then(async ([raw, /** @type {import('../flags/daily.js').DailyPuzzle[]} */ allEntries]) => {
-      // The daily game runs on the sovereign pool. Manual puzzles, though,
-      // can reference non-sovereign flags the filter DSL can't express —
-      // home nations (England), territories, regions — as answers. Pull in
-      // exactly the extra codes any catalog entry references so those flags
-      // are both searchable in the input and renderable as targets, without
-      // dumping the whole territory/bloc pool (eu, un, asean, …) into every
-      // puzzle's autocomplete.
-      const sov = flagsGamePool(raw, false);
-      const sovCodes = new Set(sov.map((c) => c.code));
-      const referenced = new Set(allEntries.flatMap((e) => e.answers ?? []));
-      const extras = flagsGamePool(raw, true).filter(
-        (c) => !sovCodes.has(c.code) && referenced.has(c.code),
-      );
-      const all = withLocalizedAliases([...sov, ...extras]);
+      // Pool the daily game searches + renders against: the sovereign base
+      // plus the exact non-sovereign codes catalog entries reference
+      // (England, territories). See buildAnswerPool.
+      const all = buildAnswerPool(raw, allEntries);
 
       // Filter future-dated entries out client-side. Anyone curling the
       // blob can still see them; the server rejects submissions for
@@ -685,7 +676,7 @@ export function bootDaily() {
         return;
       }
 
-      paintDescription(result.entry.description);
+      paintDescription(result.entry.description, result.entry.additionalDescription);
       // Install this puzzle's per-answer "why" notes for the zoom dialog.
       // Runs above both the revisit and play branches so a tap on any
       // result tile (or extra-stats rail tile) surfaces the explanation
@@ -760,7 +751,7 @@ export function bootDaily() {
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
-          paintDescription(result.entry.description);
+          paintDescription(result.entry.description, result.entry.additionalDescription);
           renderResult(result.targets, foundCodes, labelFor());
           setShareCtx(n, result.targets, foundCodes);
           paintPersonalStats(foundCodes.size, result.targets.length);
@@ -817,6 +808,7 @@ export function bootDaily() {
         targets: result.targets,
         labelFor,
         description: result.entry.description,
+        additionalDescription: result.entry.additionalDescription,
       });
     })
     .catch((err) => {

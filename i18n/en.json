@@ -418,7 +418,6 @@
     "archiveCount": "{n} flags",
     "notFound": "Puzzle not found.",
     "empty": "No puzzles yet.",
-    "sovereignOnly": "Sovereign countries only.",
     "stats": {
       "scoreOnly": "Your score: {found}/{total}",
       "averageOnly": "Average score: {average}/{total}",
