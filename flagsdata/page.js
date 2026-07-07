@@ -339,7 +339,7 @@ export function bootFlagsData() {
           const inPlace = svg.querySelector(`#${code}`);
           if (inPlace) inPlace.classList.add('carib-insetted');
           const specks = svg.querySelectorAll(
-            `.map-hit-target[data-hit-for="${code}"], .map-hit-leader[data-hit-for="${code}"]`,
+            `.map-hit-target[data-hit-for="${code}"], .map-hit-leader[data-hit-for="${code}"], .map-island-dot[data-hit-for="${code}"]`,
           );
           specks.forEach((el) => el.classList.add('carib-insetted'));
         }

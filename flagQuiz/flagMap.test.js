@@ -5,7 +5,7 @@ import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
   offsetHitTargetCenter, paintCountryFlag, clearCountryFlag, settleFlagToTint,
   revealFlagImage, computeMainlandBbox, highlightCountry, unhighlightCountry,
-  pickNearestHitTarget, neutralizeMarkerCircles,
+  pickNearestHitTarget, neutralizeMarkerCircles, planIslandMarker,
 } from './flagMap.js';
 import { FLAG_TINTS } from '../flags/flagTints.js';
 
@@ -1285,4 +1285,54 @@ test('neutralizeMarkerCircles turns off pointer-events on the asset marker discs
 test('neutralizeMarkerCircles no-ops on invalid svg', () => {
   assert.doesNotThrow(() => neutralizeMarkerCircles(null));
   assert.doesNotThrow(() => neutralizeMarkerCircles({}));
+});
+
+test('planIslandMarker: single sub-pixel island → ring on it + a land dot', () => {
+  // Bermuda: one 0.8x0.43 speck.
+  const plan = planIslandMarker([{ x: 0, y: 0, width: 0.8, height: 0.43 }]);
+  assert.deepEqual(plan.ring, { x: 0, y: 0, width: 0.8, height: 0.43 });
+  assert.equal(plan.leaders.length, 0);
+  assert.deepEqual(plan.dots, [{ cx: 0.4, cy: 0.215 }]);   // sub-pixel → dot
+});
+
+test('planIslandMarker: tight cluster → one enclosing ring, no leaders', () => {
+  // Guadeloupe-shaped: two big adjacent lobes. Union barely bigger than the
+  // largest lobe, so it stays a single enclosing circle.
+  const plan = planIslandMarker([
+    { x: 0, y: 0, width: 4, height: 5 },      // Basse-Terre (largest)
+    { x: 1, y: 1, width: 2, height: 3 },      // Grande-Terre, tucked alongside
+  ]);
+  assert.deepEqual(plan.ring, { x: 0, y: 0, width: 4, height: 5 });    // union
+  assert.equal(plan.leaders.length, 0);
+  assert.equal(plan.dots.length, 0);          // both lobes are visible-sized
+});
+
+test('planIslandMarker: spread islands → small ring on main + leaders + dots', () => {
+  // Turks & Caicos-shaped: a main island and a far speck.
+  const plan = planIslandMarker([
+    { x: 0, y: 0, width: 2, height: 1.5 },     // main (largest)
+    { x: 6, y: 0, width: 1, height: 0.8 },     // far speck
+  ]);
+  assert.deepEqual(plan.ring, { x: 0, y: 0, width: 2, height: 1.5 });  // main, not union
+  assert.deepEqual(plan.leaders, [{ cx: 6.5, cy: 0.4 }]);              // pointer to the speck
+  assert.deepEqual(plan.dots, [{ cx: 6.5, cy: 0.4 }]);                 // speck is sub-pixel
+});
+
+test('planIslandMarker: many spread islands → one enclosing ring, not a starburst', () => {
+  // Cape Verde-shaped: 5 small islands scattered wide. Spread by ratio, but too
+  // many to point at, so it encloses instead of sprouting a leader per island.
+  const plan = planIslandMarker([
+    { x: 0, y: 0, width: 1, height: 1 }, { x: 3, y: 0, width: 1, height: 1 },
+    { x: 6, y: 0, width: 1, height: 1 }, { x: 0, y: 3, width: 1, height: 1 },
+    { x: 6, y: 3, width: 1, height: 1 },
+  ]);
+  assert.deepEqual(plan.ring, { x: 0, y: 0, width: 7, height: 4 });  // union, one circle
+  assert.equal(plan.leaders.length, 0);                             // no starburst
+  assert.equal(plan.dots.length, 5);                                // each speck still marked
+});
+
+test('planIslandMarker: empty / degenerate input → null', () => {
+  assert.equal(planIslandMarker([]), null);
+  assert.equal(planIslandMarker(null), null);
+  assert.equal(planIslandMarker([{ x: 0, y: 0, width: 0, height: 0 }]), null);
 });

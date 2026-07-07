@@ -57,6 +57,32 @@ const HIT_TARGET_FRACTION = 0.007;
 // swamps its neighbours. Floored so the very tiniest still show a dot.
 const HUG_RADIUS_MARGIN = 1;
 const HUG_MIN_RADIUS = 1.5;
+// Multi-island microstate markers (hug mode). A country's islands are "tight"
+// (one enclosing circle) unless the union of all islands is more than this many
+// times the largest single island's span, in which case they're "spread"
+// (small circle on the main island + a leader out to each of the others, rather
+// than one big mostly-empty disc). Real getBBox ratios on this asset:
+// Guadeloupe 2.03 and Saint Kitts & Nevis 1.74 (tight) vs US Virgin Islands
+// 2.82, Turks & Caicos 4.15, British Virgin Islands 7.01 (spread) — so 2.4
+// splits them cleanly.
+const MARKER_SPREAD_FACTOR = 2.4;
+// Pointers only make sense for a HANDFUL of scattered islands (Turks & Caicos
+// 3, US/British Virgin Islands 2). A many-island archipelago (Cape Verde 8,
+// Falklands 8, Faroe 6) would sprout a starburst of leaders, so past this count
+// we always draw one enclosing circle even when the islands are spread — the
+// circle reads as the country and the many islands fill it rather than leaving
+// it empty.
+const MARKER_MAX_POINTER_ISLANDS = 3;
+// An island whose bbox is narrower than this (viewBox units) is sub-pixel at
+// map scale, so we draw an artificial land dot on it (British Virgin Islands
+// 0.8, Bermuda 0.8, Montserrat 0.71, and Turks & Caicos' islands 0.72-1.51) —
+// otherwise its ring / leader ends in empty water. Set just above Turks &
+// Caicos' main island (1.51) so a spread country's own ring isn't empty, and
+// below US Virgin Islands' St Croix (2.37), which is visible on its own.
+const ISLAND_DOT_MAX_DIM = 1.55;
+// Radius of that artificial land dot, kept constant on screen via data-base-r
+// (same mechanism as the rings), so it stays visible under the hug ring.
+const ISLAND_DOT_RADIUS = 0.9;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ISO2_PATTERN = /^[a-z]{2}$/;
 
@@ -463,6 +489,11 @@ function flagFillTargets(svg, id) {
   // is-marked / is-flagged highlighting as the in-place element for free.
   const inset = svg.querySelectorAll(`.carib-island[data-hit-for="${id}"]`);
   for (let i = 0; i < inset.length; i++) targets.push(inset[i]);
+  // Artificial land dots (sub-pixel islands: BVI, Bermuda, Turks & Caicos
+  // specks) carry the country's data-hit-for too — mark them so they go
+  // yellow with the rest of the country when a filter matches.
+  const dots = svg.querySelectorAll(`.map-island-dot[data-hit-for="${id}"]`);
+  for (let i = 0; i < dots.length; i++) targets.push(dots[i]);
   return targets;
 }
 
@@ -1075,38 +1106,74 @@ function unionPathBbox(el) {
 }
 
 /**
- * Bbox of a microstate's single LARGEST `<path>` by area. Used in hug mode so
- * a territory whose islands are scattered (US Virgin Islands: St Thomas +
- * St Croix ~5 units apart; Turks & Caicos: three islands over 6 units) gets
- * its ring centered on and sized to its MAIN island, instead of the union
- * bbox whose center falls in open water between the pieces and whose radius
- * dwarfs every individual island. Secondary islands stay clickable via their
- * own landmass. Returns null when `el` has no path descendants.
+ * Bboxes of every `<path>` descendant of a microstate `<g>` (one per island
+ * fragment), skipping empty / unmeasurable ones. Feeds `planIslandMarker`.
  *
  * @param {any} el
- * @returns {{ x: number, y: number, width: number, height: number } | null}
+ * @returns {Array<{ x: number, y: number, width: number, height: number }>}
  */
-function largestPathBbox(el) {
-  if (!el || typeof el.querySelectorAll !== 'function') return null;
+function allPathBboxes(el) {
+  if (!el || typeof el.querySelectorAll !== 'function') return [];
   /** @type {ArrayLike<any>} */
   let paths;
-  try { paths = el.querySelectorAll('path'); } catch { return null; }
-  if (!paths || paths.length === 0) return null;
-  let best = null;
-  let bestArea = -1;
+  try { paths = el.querySelectorAll('path'); } catch { return []; }
+  const out = [];
   for (let i = 0; i < paths.length; i++) {
     const p = paths[i];
     if (!p || typeof p.getBBox !== 'function') continue;
     let bb;
     try { bb = p.getBBox(); } catch { continue; }
     if (!bb || (bb.width === 0 && bb.height === 0)) continue;
-    const area = bb.width * bb.height;
-    if (area > bestArea) {
-      bestArea = area;
-      best = { x: bb.x, y: bb.y, width: bb.width, height: bb.height };
-    }
+    out.push({ x: bb.x, y: bb.y, width: bb.width, height: bb.height });
   }
-  return best;
+  return out;
+}
+
+/**
+ * Plan the visual marker for a (possibly multi-island) microstate from its
+ * individual island bboxes. Pure geometry — returns which bbox the ring should
+ * enclose, which island centers get a leader line back to that ring, and which
+ * get an artificial land dot (their own footprint is sub-pixel).
+ *
+ *   - Single island, or a TIGHT cluster (the union is not much bigger than the
+ *     largest island — Guadeloupe's touching lobes): one ring around the union,
+ *     no leaders.
+ *   - SPREAD islands, up to MARKER_MAX_POINTER_ISLANDS of them (Turks & Caicos /
+ *     US Virgin Islands — a few specks strung across open water): ring on the
+ *     largest island, a thin leader out to each of the others, so the circle
+ *     stays small instead of a big empty disc. A many-island archipelago
+ *     (Cape Verde) exceeds that cap and falls back to the enclosing circle.
+ *
+ * Dots are orthogonal: any island narrower than ISLAND_DOT_MAX_DIM gets one,
+ * whether it hosts the ring or sits at the end of a leader.
+ *
+ * @param {Array<{ x: number, y: number, width: number, height: number }>} pieces
+ * @returns {{ ring: { x: number, y: number, width: number, height: number },
+ *   leaders: Array<{ cx: number, cy: number }>,
+ *   dots: Array<{ cx: number, cy: number }> } | null}
+ */
+export function planIslandMarker(pieces) {
+  const parts = (Array.isArray(pieces) ? pieces : [])
+    .filter((p) => p && (p.width > 0 || p.height > 0));
+  if (parts.length === 0) return null;
+  const center = (p) => ({ cx: p.x + p.width / 2, cy: p.y + p.height / 2 });
+  const maxDim = (p) => Math.max(p.width, p.height);
+  const dots = parts.filter((p) => maxDim(p) < ISLAND_DOT_MAX_DIM).map(center);
+  if (parts.length === 1) return { ring: parts[0], leaders: [], dots };
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  let main = parts[0], mainArea = parts[0].width * parts[0].height;
+  for (const p of parts) {
+    x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y);
+    x1 = Math.max(x1, p.x + p.width); y1 = Math.max(y1, p.y + p.height);
+    const a = p.width * p.height;
+    if (a > mainArea) { mainArea = a; main = p; }
+  }
+  const union = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
+  const spread = maxDim(union) > MARKER_SPREAD_FACTOR * maxDim(main)
+    && parts.length <= MARKER_MAX_POINTER_ISLANDS;
+  if (!spread) return { ring: union, leaders: [], dots };
+  const leaders = parts.filter((p) => p !== main).map(center);
+  return { ring: main, leaders, dots };
 }
 
 /**
@@ -1266,12 +1333,16 @@ function addHitTargets(svg, radius, hugIslands = false) {
       oversized = true;
       bbox = locatorBbox(elem) || bbox;
     }
-    // Hug mode: pin the ring to the territory's largest island so scattered
-    // groups (US Virgin Islands, Turks & Caicos) don't get a ring floating in
-    // the open water between their pieces, sized to enclose all of them.
+    // Hug mode: plan the marker from the country's individual islands — one
+    // enclosing ring for a tight cluster (Guadeloupe), or a small ring on the
+    // main island plus leaders to the others for a spread-out territory (Turks
+    // & Caicos, US Virgin Islands). See planIslandMarker. `plan` also carries
+    // the sub-pixel islands that need an artificial land dot (BVI, Bermuda).
+    /** @type {ReturnType<typeof planIslandMarker>} */
+    let plan = null;
     if (hugIslands && !oversized) {
-      const main = largestPathBbox(elem);
-      if (main) bbox = main;
+      plan = planIslandMarker(allPathBboxes(elem));
+      if (plan) bbox = plan.ring;
     }
     if (!bbox && typeof elem.getBBox === 'function') {
       try { bbox = elem.getBBox(); } catch { continue; }
@@ -1330,7 +1401,41 @@ function addHitTargets(svg, radius, hugIslands = false) {
     circle.setAttribute('data-country-r', String(countryR));
     circle.setAttribute('class', 'map-hit-target');
     circle.setAttribute('fill', 'transparent');
+    // Spread-island leaders: a thin pointer from the ring out to each of the
+    // country's other islands, so a scattered territory reads as one country
+    // without a big enclosing circle. Appended BEFORE the ring (same trick as
+    // the mf/sx offset leader above) so the ring draws over the inner segment.
+    if (plan && plan.leaders.length) {
+      for (const lead of plan.leaders) {
+        const line = doc.createElementNS(SVG_NS, 'line');
+        line.setAttribute('x1', String(cx));
+        line.setAttribute('y1', String(cy));
+        line.setAttribute('x2', String(lead.cx));
+        line.setAttribute('y2', String(lead.cy));
+        line.setAttribute('class', 'map-hit-leader');
+        line.setAttribute('data-hit-for', elem.id);
+        svg.appendChild(line);
+      }
+    }
     svg.appendChild(circle);
+    // Artificial land dots for islands too small to see (British Virgin
+    // Islands, Bermuda, the outlying specks of Turks & Caicos) so no ring or
+    // leader ends in empty water. Constant on screen via data-base-r (like the
+    // rings), carry the country's data-hit-for so a click on the dot resolves,
+    // and pick up is-marked (yellow) through flagFillTargets. Appended AFTER
+    // the ring so they sit on top of it.
+    if (plan && plan.dots.length) {
+      for (const d of plan.dots) {
+        const dot = doc.createElementNS(SVG_NS, 'circle');
+        dot.setAttribute('cx', String(d.cx));
+        dot.setAttribute('cy', String(d.cy));
+        dot.setAttribute('r', String(ISLAND_DOT_RADIUS));
+        dot.setAttribute('data-base-r', String(ISLAND_DOT_RADIUS));
+        dot.setAttribute('data-hit-for', elem.id);
+        dot.setAttribute('class', 'map-island-dot');
+        svg.appendChild(dot);
+      }
+    }
   }
 }
 

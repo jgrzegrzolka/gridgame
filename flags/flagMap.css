@@ -299,6 +299,24 @@
   stroke-width: 1.5;
   pointer-events: none;
 }
+/* Artificial land dot for a sub-pixel island (British Virgin Islands, Bermuda,
+ * the outlying specks of Turks & Caicos): a small filled marker so its hug ring
+ * or leader never ends in empty water. Land grey like the real landmasses, and
+ * yellow when its country is filter-matched (is-marked) — added to
+ * flagFillTargets so it flips with the rest of the country. Clickable (carries
+ * data-hit-for), so a click on the dot resolves to its country. */
+#flag-map-section svg .map-island-dot {
+  fill: #e3e3e3;
+  stroke: none;
+  cursor: pointer;
+}
+#flag-map-section svg .map-island-dot.is-marked {
+  fill: #f4c430 !important;
+  /* Match the microstate landmass fill (is-small.is-marked), not the 0.4
+   * country wash it would otherwise inherit — the wash rule sets fill-opacity
+   * with !important, so this must too. */
+  fill-opacity: 0.8 !important;
+}
 /* Caribbean-microstate inset (flagsdata only) — see flagQuiz/caribInset.js.
  * A framed box in open ocean that redraws Anguilla / Saint-Martin / Sint
  * Maarten / Saint-Barthélemy at zoom, because in place they're piled specks
@@ -566,7 +584,14 @@
  * (mf / sx share one Caribbean island) whenever its ring is active — an
  * answered ring on the quiz (is-flagged) or a filter-matched ring on
  * flagsdata (is-marked). */
-#flag-map-section svg .map-hit-leader.is-flagged,
-#flag-map-section svg .map-hit-leader.is-marked {
+#flag-map-section svg .map-hit-leader.is-flagged {
   stroke: var(--primary-color);
+}
+/* flagsdata pointers (microstate ring → its other islands): yellow like the
+ * rings but lighter than the ring border (thinner already at 1 vs 1.5, plus
+ * half-opacity) so the connector reads as a soft hint, not an aggressive black
+ * line. */
+#flag-map-section svg .map-hit-leader.is-marked {
+  stroke: #f4c430;
+  stroke-opacity: 0.5;
 }
