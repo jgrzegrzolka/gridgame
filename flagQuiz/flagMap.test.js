@@ -368,6 +368,32 @@ test('settleFlagToTint tags the painted path + ring with is-tinted, skipping the
   assert.equal(subCountry.classList.contains('is-tinted'), false);
 });
 
+test('highlighting a country skips a nested foreign country (Kosovo inside Serbia)', () => {
+  // The world map nests <g id="xk"> (Kosovo) inside <g id="rs"> (Serbia). A
+  // plain recursive `#rs path` query pulls in Kosovo's path, so highlighting or
+  // clearing Serbia would clobber Kosovo — which is exactly what broke a
+  // flagsdata "koso" search (clearing every non-match, incl. Serbia, stripped
+  // Kosovo) and would have painted Kosovo when Serbia was answered. A path is
+  // "ours" only if its nearest map-country ancestor is the target country.
+  const rsGroup = makeNode('g'); rsGroup.classList.add('map-country');
+  const xkGroup = makeNode('g'); xkGroup.classList.add('map-country');
+  const rsPath = makeNode('path'); rsPath.closest = (s) => (s === '.map-country' ? rsGroup : null);
+  const xkPath = makeNode('path'); xkPath.closest = (s) => (s === '.map-country' ? xkGroup : null);
+  rsGroup.querySelectorAll = (s) => (s === 'path' ? [rsPath, xkPath] : []);
+  xkGroup.querySelectorAll = (s) => (s === 'path' ? [xkPath] : []);
+  const svg = {
+    querySelector: (s) => (s === '#rs' ? rsGroup : s === '#xk' ? xkGroup : null),
+    querySelectorAll: () => [],
+  };
+  highlightCountry(svg, 'rs');
+  assert.equal(rsPath.classList.contains('is-marked'), true);
+  assert.equal(xkPath.classList.contains('is-marked'), false, 'Serbia must not mark Kosovo');
+  highlightCountry(svg, 'xk');
+  assert.equal(xkPath.classList.contains('is-marked'), true, 'Kosovo marks its own path');
+  unhighlightCountry(svg, 'rs');
+  assert.equal(xkPath.classList.contains('is-marked'), true, 'clearing Serbia leaves Kosovo marked');
+});
+
 test('revealFlagImage drops is-tinted so the real flag shows again (keeps is-flagged)', () => {
   const svg = fakeFlagSvg('es');
   paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
