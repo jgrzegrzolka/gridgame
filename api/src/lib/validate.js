@@ -11,7 +11,17 @@ const { CONFIG_KEY_RE, CONFIG_KEY_MAX } = require('./quizRecordKey');
 const { sanitizeNickname } = require('./sanitizeNickname');
 const { isOffensiveNickname } = require('./blockedNicknames');
 
-const CODE_RE = /^[a-z]{2}$/;
+// A daily-puzzle answer can be any flag in the set, not just a 2-letter
+// sovereign country. Since #724 let manual puzzles use non-sovereign flags,
+// the codes a client legitimately submits also include:
+//   - subdivisions / territories:  gb-eng, gb-sct, es-ct, sh-ac  (xx-yyy)
+//   - supranational / org flags:    asean, cefta, eac, arab       (2-5 letters)
+// Every code in flags/countries.json matches this; a stricter 2-letter-only
+// gate rejected e.g. England (gb-eng) with 400 invalid_code, which killed the
+// whole finish flow (no submit -> no stats, no missed-flags overlay). This is
+// still a shape/bounds check, not a membership check (it always accepted
+// non-existent combos like "zz" too).
+const CODE_RE = /^[a-z]{2,5}(-[a-z]{2,3})?$/;
 
 const LIMITS = {
   PUZZLE_ID_MIN: 1,

@@ -89,16 +89,25 @@ test('foundCodes longer than totalCount fails', () => {
   assert.deepEqual(validateResult(b), { ok: false, error: 'too_many_codes' });
 });
 
-test('code format must be 2 lowercase letters', () => {
+test('code format rejects malformed codes', () => {
   const b = validBody();
-  b.foundCodes = ['CH'];
-  assert.deepEqual(validateResult(b), { ok: false, error: 'invalid_code' });
-  b.foundCodes = ['c'];
-  assert.deepEqual(validateResult(b), { ok: false, error: 'invalid_code' });
-  b.foundCodes = ['ch1'];
-  assert.deepEqual(validateResult(b), { ok: false, error: 'invalid_code' });
+  for (const bad of ['CH', 'c', 'ch1', 'gb-', 'gb-e', '-eng', 'gb--eng', 'gb-engg', 'toolong']) {
+    b.foundCodes = [bad];
+    assert.deepEqual(validateResult(b), { ok: false, error: 'invalid_code' }, `expected reject: ${bad}`);
+  }
   b.foundCodes = [42];
   assert.deepEqual(validateResult(b), { ok: false, error: 'invalid_code' });
+});
+
+test('code format accepts non-sovereign flag codes (subdivisions + org flags)', () => {
+  // #724 lets daily puzzles use non-sovereign flags. The client submits their
+  // real codes (e.g. England gb-eng), so the validator must accept the full
+  // flag-code grammar, not just 2-letter sovereigns. Regression for the
+  // puzzle-33 400 that killed stats + missed-flags after solving.
+  const b = validBody();
+  b.totalCount = 10;
+  b.foundCodes = ['gb-eng', 'gb-sct', 'es-ct', 'sh-ac', 'asean', 'cefta', 'eac', 'arab', 'ch'];
+  assert.deepEqual(validateResult(b), { ok: true });
 });
 
 test('duplicate codes are rejected', () => {
