@@ -89,7 +89,13 @@ const ISLAND_DOT_RADIUS = 0.9;
 // Smaller than any ring's own floor so the dot stays visibly inside its ring.
 const ISLAND_DOT_MIN_RADIUS = 0.5;
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const ISO2_PATTERN = /^[a-z]{2}$/;
+// Codes the map pipeline (paint / fly / mark / bbox) will act on. Plain ISO2
+// (`fr`, `xk`) plus compound subdivision codes (`gb-sct`, `es-ct`) whose own
+// flag is quizzed and which we've given an injected `<g>` + locator. Before,
+// this was ISO2-only, so subdivisions were rejected everywhere and their flag
+// never filled / the camera never flew. Trailing-hyphen path ids (`gb-sct-`)
+// deliberately don't match, so only the country `<g>` is treated as a country.
+const MAP_CODE_PATTERN = /^[a-z]{2}(-[a-z]{2,3})?$/;
 
 /**
  * Per-country ring-center shifts in natural viewBox units, applied
@@ -211,11 +217,12 @@ const MICROSTATE_CODES = new Set([
   // Svalbard and Jan Mayen: a high-Arctic Norwegian territory the base map
   // omits. Injected `sj` <g> + locator far north, above mainland Norway.
   'sj',
-  // Kosovo (xk) + Gibraltar (gi): both DO carry geometry in the asset, but
-  // it's speck-sized (Gibraltar) / small (Kosovo), so without a ring the
-  // answer reveal highlights something too tiny to spot. Ring them like the
-  // other microstates. No injection needed — the landmass already exists.
-  'xk', 'gi',
+  // Gibraltar (gi): carries its own geometry, but it's a ~0.8-unit speck, so
+  // without a ring the answer reveal is too tiny to spot. Ring it. Kosovo (xk)
+  // is intentionally NOT here — its landmass is big enough that its flag fills
+  // the real outline once MAP_CODE_PATTERN lets the paint through; a ring on
+  // top would be redundant.
+  'gi',
   // Asia microstates — only countries whose paths are tinier than
   // the pink ring itself (smaller-than-ring marker would be pointless,
   // e.g. Bhutan / Lebanon / Cyprus are already visible-sized as
@@ -321,7 +328,7 @@ export function markCountry(root, code, state) {
 export function paintCountryFlag(svg, code, svgBase, status) {
   if (!svg || typeof code !== 'string') return;
   const id = code.toLowerCase();
-  if (!ISO2_PATTERN.test(id)) return;
+  if (!MAP_CODE_PATTERN.test(id)) return;
   /** @type {any} */
   const doc = svg.ownerDocument || globalThis.document;
   if (!doc || typeof doc.createElementNS !== 'function') return;
@@ -436,7 +443,7 @@ export function paintCountryFlag(svg, code, svgBase, status) {
 export function settleFlagToTint(svg, code) {
   if (!svg || typeof code !== 'string') return;
   const id = code.toLowerCase();
-  if (!ISO2_PATTERN.test(id)) return;
+  if (!MAP_CODE_PATTERN.test(id)) return;
   for (const el of flagFillTargets(svg, id)) {
     if (el && el.classList) el.classList.add('is-tinted');
   }
@@ -456,7 +463,7 @@ export function settleFlagToTint(svg, code) {
 export function revealFlagImage(svg, code) {
   if (!svg || typeof code !== 'string') return;
   const id = code.toLowerCase();
-  if (!ISO2_PATTERN.test(id)) return;
+  if (!MAP_CODE_PATTERN.test(id)) return;
   for (const el of flagFillTargets(svg, id)) {
     if (el && el.classList) el.classList.remove('is-tinted');
   }
@@ -565,7 +572,7 @@ function clearFlagFillStyles(el) {
 export function clearCountryFlag(svg, code) {
   if (!svg || typeof code !== 'string') return;
   const id = code.toLowerCase();
-  if (!ISO2_PATTERN.test(id)) return;
+  if (!MAP_CODE_PATTERN.test(id)) return;
   for (const el of flagFillTargets(svg, id)) clearFlagFillStyles(el);
 }
 
@@ -585,7 +592,7 @@ export function clearCountryFlag(svg, code) {
 export function highlightCountry(svg, code) {
   if (!svg || typeof code !== 'string') return;
   const id = code.toLowerCase();
-  if (!ISO2_PATTERN.test(id)) return;
+  if (!MAP_CODE_PATTERN.test(id)) return;
   for (const el of flagFillTargets(svg, id)) {
     if (el && el.classList) el.classList.add('is-marked');
   }
@@ -600,7 +607,7 @@ export function highlightCountry(svg, code) {
 export function unhighlightCountry(svg, code) {
   if (!svg || typeof code !== 'string') return;
   const id = code.toLowerCase();
-  if (!ISO2_PATTERN.test(id)) return;
+  if (!MAP_CODE_PATTERN.test(id)) return;
   for (const el of flagFillTargets(svg, id)) {
     if (el && el.classList) el.classList.remove('is-marked');
   }
@@ -925,7 +932,7 @@ export function tagCountryPaths(svg) {
     for (let i = 0; i < all.length; i++) {
       /** @type {any} */
       const el = all[i];
-      if (typeof el.id === 'string' && ISO2_PATTERN.test(el.id) && el.classList) {
+      if (typeof el.id === 'string' && MAP_CODE_PATTERN.test(el.id) && el.classList) {
         el.classList.add('map-country');
       }
     }
@@ -953,7 +960,7 @@ export function computeCountriesBbox(svg, codes, extra) {
   let maxX = -Infinity;
   let maxY = -Infinity;
   for (const code of codes) {
-    if (typeof code !== 'string' || !ISO2_PATTERN.test(code)) continue;
+    if (typeof code !== 'string' || !MAP_CODE_PATTERN.test(code)) continue;
     const el = svg.querySelector(`#${code}`);
     if (!el || typeof el.getBBox !== 'function') continue;
     try {
@@ -1029,7 +1036,7 @@ const FLY_CLUSTER_GAP = 40;
  */
 export function computeMainlandBbox(svg, code, extra) {
   if (!svg || typeof svg.querySelector !== 'function') return null;
-  if (typeof code !== 'string' || !ISO2_PATTERN.test(code)) return null;
+  if (typeof code !== 'string' || !MAP_CODE_PATTERN.test(code)) return null;
   const el = svg.querySelector(`#${code}`);
   if (!el || typeof el.querySelectorAll !== 'function') return computeCountriesBbox(svg, [code], extra);
   const boxes = [];

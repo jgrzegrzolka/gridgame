@@ -119,14 +119,24 @@ test('the world map carries injected subdivision / territory locators', () => {
   }
 });
 
-test('markCountry no-ops on the compound regional codes the pool surfaces', () => {
+test('markCountry marks a compound subdivision code when its element exists', () => {
+  // We inject `<g id="gb-sct">` etc. for the UK / Spanish subdivisions whose
+  // own flag is quizzed, and MAP_CODE_PATTERN now accepts the compound form,
+  // so markCountry (and the rest of the map pipeline) acts on them like any
+  // country — the answered subdivision lights up instead of doing nothing.
+  const root = fakeRoot(['gb-sct', 'es-ct']);
+  markCountry(root, 'gb-sct', 'correct');
+  markCountry(root, 'es-ct', 'wrong');
+  assert.equal(root._get('gb-sct').classList.has('is-correct'), true);
+  assert.equal(root._get('es-ct').classList.has('is-wrong'), true);
+});
+
+test('markCountry still no-ops on a compound code with no element', () => {
   const root = fakeRoot(['es', 'gb']);
-  // `es-pv` (Basque flag), `gb-eng` (England flag) etc. are in the quiz
-  // pool but don't have a country path of their own. Caller doesn't have
-  // to filter them out — we silently drop on the lookup.
-  assert.doesNotThrow(() => markCountry(root, 'es-pv', 'correct'));
-  assert.doesNotThrow(() => markCountry(root, 'gb-eng', 'wrong'));
-  // The base countries (es, gb) stay untouched.
+  // A compound code the asset doesn't carry (e.g. St Helena sub-parts we
+  // haven't injected) drops silently on the lookup and leaves the parent
+  // country untouched — caller doesn't have to filter it out.
+  assert.doesNotThrow(() => markCountry(root, 'sh-ac', 'correct'));
   assert.equal(root._get('es').classList.has('is-correct'), false);
   assert.equal(root._get('gb').classList.has('is-wrong'), false);
 });
