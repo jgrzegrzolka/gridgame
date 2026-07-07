@@ -444,6 +444,13 @@ function flagFillTargets(svg, id) {
   }
   const hits = svg.querySelectorAll(`.map-hit-target[data-hit-for="${id}"]`);
   for (let i = 0; i < hits.length; i++) targets.push(hits[i]);
+  // Include the microstate's leader line (only mf / sx have one) so it
+  // gains / loses the same is-marked / is-flagged state class as its ring
+  // — the CSS hides both by default and reveals them together. Setting a
+  // flag-pattern fill on a <line> is a no-op (lines paint via stroke), so
+  // routing it through here is harmless beyond the class toggle.
+  const leaders = svg.querySelectorAll(`.map-hit-leader[data-hit-for="${id}"]`);
+  for (let i = 0; i < leaders.length; i++) targets.push(leaders[i]);
   return targets;
 }
 

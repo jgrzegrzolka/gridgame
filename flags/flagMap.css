@@ -261,9 +261,15 @@
   fill: #f4c430 !important;
   fill-opacity: 1 !important;
 }
-#flag-map-section svg .map-hit-target.is-marked {
+/* Reveal on flagsdata: a filter-matched ring (is-marked) shows only while
+ * a filter is actually active (is-filtering, toggled in flagsdata/page.js).
+ * flagsdata marks every country when no filter is set, so without the
+ * is-filtering gate the default "browse all" view would light up every
+ * ring again — exactly the clutter we're removing. */
+#flag-map-section svg.is-filtering .map-hit-target.is-marked {
   fill: #f4c430 !important;
   stroke: #f4c430 !important;
+  pointer-events: all;
 }
 /* World-map decoration that doesn't belong in a quiz / browse context:
  *   - <text> labels reveal each country's ISO code (gives answers away)
@@ -414,12 +420,15 @@
  * flips to green / red / pink on answer / select. */
 #flag-map-section svg .map-hit-target {
   fill: transparent;
-  /* Outline reads as map cartography (annotation, not highlight). The
-   * stroke is `var(--primary-color)` (near-black) so it doesn't
-   * compete with the brand-pink fills that signal answer / selection
-   * state — outline = "small country here, click me", fill = "this
-   * one matched / you got it / you missed it". */
-  stroke: var(--primary-color);
+  /* Hidden by default. The ring only appears once its country is
+   * "active": on the quiz when it has been answered (is-flagged, set by
+   * paintCountryFlag), on flagsdata when a filter is on and this country
+   * matched (is-filtering + is-marked). The reveal rules below restore
+   * the outline. Before this, every microstate wore a permanent black
+   * ring, which read as clutter (the North America / Caribbean cluster
+   * worst of all). When shown, the outline is var(--primary-color)
+   * (near-black) so it reads as map annotation, not a pink answer fill. */
+  stroke: transparent;
   stroke-width: 1;
   /* Stroke width is in SVG user units, so it would normally render
    * thicker in pixels as the viewBox shrinks (pinch-zoom in). Lock
@@ -428,7 +437,9 @@
    * ring's RADIUS still scales (via `data-base-r` × zoom in mapZoom)
    * so it stays roughly the same overall size on screen. */
   vector-effect: non-scaling-stroke;
-  pointer-events: all;
+  /* Not a click target while hidden: an invisible ring must not intercept
+   * clicks on empty ocean. The reveal rules below turn this back on. */
+  pointer-events: none;
   /* 40% fill-opacity so the answer-state fills (is-correct / is-wrong,
    * set below) read as soft tint rather than solid stamp
    * — the Caribbean chain in particular has neighbour microstate
@@ -446,6 +457,15 @@
 #flag-map-section svg .map-hit-target.is-wrong {
   fill: #c0392b;
 }
+/* Reveal on the quiz: an answered microstate ring (is-flagged, set by
+ * paintCountryFlag) becomes visible + clickable. The is-tinted /
+ * is-flag-correct / is-flag-wrong rules above are more specific and
+ * override the stroke colour once the answer settles; this is the base
+ * reveal so a just-answered ring is never invisible. */
+#flag-map-section svg .map-hit-target.is-flagged {
+  stroke: var(--primary-color);
+  pointer-events: all;
+}
 
 /* Leader line — appended by addHitTargets only for countries whose
  * ring center had to be shifted off the actual landmass to separate
@@ -458,8 +478,15 @@
  * signal, the leader is purely a "this belongs to that" pointer.
  * `pointer-events: none` so it never steals a click from the ring. */
 #flag-map-section svg .map-hit-leader {
-  stroke: var(--primary-color);
+  /* Hidden by default like the ring it points to — a leader with no
+   * visible ring at its end is just a stray stick. Revealed by the same
+   * active states as the ring (below). */
+  stroke: transparent;
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
   pointer-events: none;
+}
+#flag-map-section svg .map-hit-leader.is-flagged,
+#flag-map-section svg.is-filtering .map-hit-leader.is-marked {
+  stroke: var(--primary-color);
 }
