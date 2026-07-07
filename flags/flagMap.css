@@ -256,20 +256,98 @@
  * (`markCountry`) instead of painting its flag <image>. No raster decode, so
  * the whole-world highlight is fast and none of the tint / throttled-reveal
  * machinery above is needed there. (Map-marking colour, an accepted exception
- * to the seven-variable palette — like the green / red correctness wash.) */
-#flag-map-section svg .is-marked {
+ * to the seven-variable palette — like the green / red correctness wash.)
+ *
+ * Semi-transparent (fill-opacity 0.4) so the underlying map — land shapes,
+ * internal borders, small islands — reads through the yellow tint rather
+ * than being buried under a solid wash. The microstate rings match this
+ * (below) so the whole highlight is consistently see-through.
+ *
+ * `:not(.map-hit-target)` keeps this off the microstate rings: they carry
+ * is-marked too but get their own slightly-more-opaque fill + water border
+ * below, so this country-wash rule must not also paint them. */
+#flag-map-section svg .is-marked:not(.map-hit-target) {
   fill: #f4c430 !important;
-  fill-opacity: 1 !important;
+  fill-opacity: 0.4 !important;
 }
-/* Reveal on flagsdata: a filter-matched ring (is-marked) shows only while
- * a filter is actually active (is-filtering, toggled in flagsdata/page.js).
- * flagsdata marks every country when no filter is set, so without the
- * is-filtering gate the default "browse all" view would light up every
- * ring again — exactly the clutter we're removing. */
-#flag-map-section svg.is-filtering .map-hit-target.is-marked {
+/* A matched microstate's OWN landmass gets a bolder yellow (0.8, vs the 0.4
+ * country wash) so the actual island shape stands out at zoom — these are
+ * tiny, so a pale wash would be lost against the ocean. The ring above is
+ * now just a transparent outline, so nothing hides the island. `.is-small`
+ * tags the microstate country element (see tagMicrostates). Later than the
+ * country rule so it wins the same-specificity tie. */
+#flag-map-section svg .is-small.is-marked,
+#flag-map-section svg .is-small .is-marked {
   fill: #f4c430 !important;
-  stroke: #f4c430 !important;
-  pointer-events: all;
+  fill-opacity: 0.8 !important;
+}
+/* Reveal on flagsdata: a filter-matched microstate ring (is-marked) shows
+ * its yellow. flagsdata marks every visible country, so on load (no filter)
+ * every microstate shows a ring and filtering narrows to the matched
+ * subset. (The quiz uses is-flagged, not is-marked, so this never fires
+ * there — its rings stay gated on being answered.) */
+#flag-map-section svg .map-hit-target.is-marked {
+  /* Outline-only locator, and crucially NON-interactive. The ring is
+   * enlarged and rings overlap in the Caribbean, so if it captured clicks
+   * (pointer-events: all) a click on one island would resolve to whichever
+   * neighbour's ring sits on top — the "click Montserrat, get Guadeloupe"
+   * bug. pointer-events: none lets the click fall through to the real
+   * island path below (which resolves to the correct country), and a
+   * transparent fill keeps that island fully visible under the ring. */
+  fill: transparent;
+  stroke: #f4c430;
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+/* Caribbean-microstate inset (flagsdata only) — see flagQuiz/caribInset.js.
+ * A framed box in open ocean that redraws Anguilla / Saint-Martin / Sint
+ * Maarten / Saint-Barthélemy at zoom, because in place they're piled specks
+ * you can neither see nor click reliably. The islands carry data-hit-for, so
+ * they highlight (is-marked) and take clicks through the shared machinery. */
+#flag-map-section svg .carib-inset-frame {
+  fill: var(--page-bg-color);
+  stroke: var(--primary-color);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+#flag-map-section svg .carib-island {
+  fill: #e3e3e3;                    /* land grey, like every other landmass */
+  stroke: var(--surface-color);    /* water-coloured coastline separates the
+                                      French / Dutch halves of Saint-Martin */
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+}
+#flag-map-section svg .carib-island.is-marked {
+  fill: #f4c430 !important;         /* filter-matched → yellow, like the map */
+}
+#flag-map-section svg .carib-inset-title {
+  fill: var(--muted-color);
+  font-size: 13px;
+  text-anchor: middle;
+  font-family: system-ui, -apple-system, sans-serif;
+  pointer-events: none;
+}
+/* Pointer from the inset back to the islands' real location + the anchor dot
+ * marking that spot. Primary (near-black); the dot is a round-capped
+ * zero-length line so it stays a hair wider than the line at any zoom. */
+#flag-map-section svg .carib-inset-link {
+  stroke: var(--primary-color);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+#flag-map-section svg .carib-inset-anchor {
+  stroke: var(--primary-color);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+/* In-place specks + rings for the four inset islands: hidden, since the inset
+ * now carries them. Without this the map would show both. */
+#flag-map-section svg .carib-insetted {
+  display: none !important;
 }
 /* World-map decoration that doesn't belong in a quiz / browse context:
  *   - <text> labels reveal each country's ISO code (gives answers away)
@@ -280,8 +358,8 @@
  *   - The `#ocean` path ships with a black coastline stroke that makes
  *     the world look outlined-in-black; we strip it for a clean palette.
  */
-#flag-map-section svg text,
-#flag-map-section svg line:not(.map-hit-leader) {
+#flag-map-section svg text:not(.carib-inset-title),
+#flag-map-section svg line:not(.map-hit-leader):not(.carib-inset-link):not(.carib-inset-anchor) {
   display: none;
 }
 /* Ocean: fill it the water colour (`var(--page-bg-color)`, the page bg) and
@@ -422,12 +500,10 @@
   fill: transparent;
   /* Hidden by default. The ring only appears once its country is
    * "active": on the quiz when it has been answered (is-flagged, set by
-   * paintCountryFlag), on flagsdata when a filter is on and this country
-   * matched (is-filtering + is-marked). The reveal rules below restore
-   * the outline. Before this, every microstate wore a permanent black
-   * ring, which read as clutter (the North America / Caribbean cluster
-   * worst of all). When shown, the outline is var(--primary-color)
-   * (near-black) so it reads as map annotation, not a pink answer fill. */
+   * paintCountryFlag), on flagsdata when it is filter-matched (is-marked).
+   * The reveal rules below restore it. Before this, every microstate wore
+   * a permanent black ring, which read as clutter (the North America /
+   * Caribbean cluster worst of all). */
   stroke: transparent;
   stroke-width: 1;
   /* Stroke width is in SVG user units, so it would normally render
@@ -486,7 +562,11 @@
   vector-effect: non-scaling-stroke;
   pointer-events: none;
 }
+/* Leader is a dark pointer from the shifted ring to the actual island
+ * (mf / sx share one Caribbean island) whenever its ring is active — an
+ * answered ring on the quiz (is-flagged) or a filter-matched ring on
+ * flagsdata (is-marked). */
 #flag-map-section svg .map-hit-leader.is-flagged,
-#flag-map-section svg.is-filtering .map-hit-leader.is-marked {
+#flag-map-section svg .map-hit-leader.is-marked {
   stroke: var(--primary-color);
 }

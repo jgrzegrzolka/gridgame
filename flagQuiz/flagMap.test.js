@@ -5,6 +5,7 @@ import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
   offsetHitTargetCenter, paintCountryFlag, clearCountryFlag, settleFlagToTint,
   revealFlagImage, computeMainlandBbox, highlightCountry, unhighlightCountry,
+  pickNearestHitTarget, neutralizeMarkerCircles,
 } from './flagMap.js';
 import { FLAG_TINTS } from '../flags/flagTints.js';
 
@@ -1237,3 +1238,51 @@ test('mountFlagMap produces distinct mf and sx hit-target centers from a shared 
   );
 });
 
+
+test('pickNearestHitTarget resolves overlapping rings by nearest-relative-to-radius', () => {
+  // Guadeloupe (big) with Montserrat + Dominica rings touching it, roughly the
+  // real Caribbean layout (map units).
+  const rings = [
+    { cx: 836.7, cy: 559.0, r: 5.5, code: 'gp' },
+    { cx: 831.7, cy: 554.3, r: 1.9, code: 'ms' },
+    { cx: 837.5, cy: 565.2, r: 3.8, code: 'dm' },
+  ];
+  // Dead-centre of each ring resolves to that country.
+  assert.equal(pickNearestHitTarget({ x: 836.7, y: 559.0 }, rings), 'gp');
+  assert.equal(pickNearestHitTarget({ x: 831.7, y: 554.3 }, rings), 'ms');
+  assert.equal(pickNearestHitTarget({ x: 837.5, y: 565.2 }, rings), 'dm');
+  // A click deep inside tiny Montserrat but also within Guadeloupe's rim goes
+  // to Montserrat (deeper relative to its radius), not the big neighbour.
+  assert.equal(pickNearestHitTarget({ x: 831.7, y: 554.6 }, rings), 'ms');
+  // A point outside every ring returns null (caller falls back to landmass).
+  assert.equal(pickNearestHitTarget({ x: 900, y: 400 }, rings), null);
+  // Hidden rings (suppressed inset islands) are ignored.
+  assert.equal(
+    pickNearestHitTarget({ x: 836.7, y: 559.0 }, [{ cx: 836.7, cy: 559.0, r: 5.5, code: 'gp', hidden: true }]),
+    null,
+  );
+});
+
+test('neutralizeMarkerCircles turns off pointer-events on the asset marker discs only', () => {
+  const circlexx = makeNode('circle');
+  circlexx.classList.add('circlexx');
+  const subxx = makeNode('circle');
+  subxx.classList.add('subxx');
+  const hitTarget = makeNode('circle');       // our own ring — must be left alone
+  hitTarget.classList.add('map-hit-target');
+  const svg = makeNode('svg');
+  svg.querySelectorAll = (sel) =>
+    (sel === '.circlexx, .subxx' ? [circlexx, subxx] : []);
+
+  neutralizeMarkerCircles(svg);
+
+  assert.equal(circlexx.getAttribute('pointer-events'), 'none');
+  assert.equal(subxx.getAttribute('pointer-events'), 'none');
+  // The visible hit-target ring is not in the marker query, so it stays interactive.
+  assert.equal(hitTarget.getAttribute('pointer-events'), null);
+});
+
+test('neutralizeMarkerCircles no-ops on invalid svg', () => {
+  assert.doesNotThrow(() => neutralizeMarkerCircles(null));
+  assert.doesNotThrow(() => neutralizeMarkerCircles({}));
+});

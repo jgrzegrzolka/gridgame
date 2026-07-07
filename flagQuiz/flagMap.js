@@ -51,6 +51,12 @@ const FLAG_FLASH_COLORS = { correct: '#2a8a3a', wrong: '#c0392b' };
  * click target.
  */
 const HIT_TARGET_FRACTION = 0.007;
+// "Hug" ring sizing (flagsdata): the ring tracks the island's own footprint
+// (`countryR`) plus a small margin, instead of the flat locator radius above,
+// so a speck like Montserrat gets a speck-sized circle rather than one that
+// swamps its neighbours. Floored so the very tiniest still show a dot.
+const HUG_RADIUS_MARGIN = 1;
+const HUG_MIN_RADIUS = 1.5;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ISO2_PATTERN = /^[a-z]{2}$/;
 
@@ -451,6 +457,12 @@ function flagFillTargets(svg, id) {
   // routing it through here is harmless beyond the class toggle.
   const leaders = svg.querySelectorAll(`.map-hit-leader[data-hit-for="${id}"]`);
   for (let i = 0; i < leaders.length; i++) targets.push(leaders[i]);
+  // Caribbean-inset island (flagsdata only): a redrawn coastline for a
+  // microstate too small to show in place. It carries the country's
+  // `data-hit-for`, so routing it through here gives it the same
+  // is-marked / is-flagged highlighting as the in-place element for free.
+  const inset = svg.querySelectorAll(`.carib-island[data-hit-for="${id}"]`);
+  for (let i = 0; i < inset.length; i++) targets.push(inset[i]);
   return targets;
 }
 
@@ -598,6 +610,7 @@ export function resetMap(root) {
  *   scopeCodes?: string[] | null,
  *   fullscreenLabel?: string,
  *   resizable?: boolean,
+ *   hugIslands?: boolean,
  *   fetchImpl?: typeof fetch,
  * }} args
  * @returns {Promise<SVGElement | null>}
@@ -606,6 +619,7 @@ export async function mountFlagMap({
   container, url, cropCodes = null, cropPad, scopeCodes = null,
   fullscreenLabel = 'Toggle fullscreen',
   resizable = true,
+  hugIslands = false,
   fetchImpl = globalThis.fetch,
 }) {
   if (!container || !url) return null;
@@ -640,7 +654,7 @@ export async function mountFlagMap({
     ? new Set(scopeCodes.map((c) => (typeof c === 'string' ? c.toLowerCase() : '')))
     : null;
   tagMicrostates(svg, scope);
-  addHitTargets(svg, hitTargetRadius(/** @type {any} */ (svg)));
+  addHitTargets(svg, hitTargetRadius(/** @type {any} */ (svg)), hugIslands);
   addFullscreenButton(container, fullscreenLabel);
   if (resizable) makeMapResizable(container, /** @type {any} */ (svg));
   return /** @type {SVGElement} */ (svg);
@@ -1061,6 +1075,110 @@ function unionPathBbox(el) {
 }
 
 /**
+ * Bbox of a microstate's single LARGEST `<path>` by area. Used in hug mode so
+ * a territory whose islands are scattered (US Virgin Islands: St Thomas +
+ * St Croix ~5 units apart; Turks & Caicos: three islands over 6 units) gets
+ * its ring centered on and sized to its MAIN island, instead of the union
+ * bbox whose center falls in open water between the pieces and whose radius
+ * dwarfs every individual island. Secondary islands stay clickable via their
+ * own landmass. Returns null when `el` has no path descendants.
+ *
+ * @param {any} el
+ * @returns {{ x: number, y: number, width: number, height: number } | null}
+ */
+function largestPathBbox(el) {
+  if (!el || typeof el.querySelectorAll !== 'function') return null;
+  /** @type {ArrayLike<any>} */
+  let paths;
+  try { paths = el.querySelectorAll('path'); } catch { return null; }
+  if (!paths || paths.length === 0) return null;
+  let best = null;
+  let bestArea = -1;
+  for (let i = 0; i < paths.length; i++) {
+    const p = paths[i];
+    if (!p || typeof p.getBBox !== 'function') continue;
+    let bb;
+    try { bb = p.getBBox(); } catch { continue; }
+    if (!bb || (bb.width === 0 && bb.height === 0)) continue;
+    const area = bb.width * bb.height;
+    if (area > bestArea) {
+      bestArea = area;
+      best = { x: bb.x, y: bb.y, width: bb.width, height: bb.height };
+    }
+  }
+  return best;
+}
+
+/**
+ * Resolve a map click to a microstate by ring, not by the exact landmass
+ * pixel under the pointer. Given the click point (svg user coords) and the
+ * ring circles, return the `code` of the ring the point falls inside, picking
+ * the one whose center is nearest RELATIVE to its radius — so a small circle
+ * clicked dead-centre beats a big neighbour clicked at its rim. Returns null
+ * when the point is inside no ring (the caller then falls back to the
+ * ancestor-id walk for full-size countries).
+ *
+ * This is what makes the dense Caribbean click correctly: Guadeloupe,
+ * Montserrat and Dominica rings all touch, but a click resolves to whichever
+ * ring it sits deepest inside, deterministically and without depending on SVG
+ * paint order (unlike native hit-testing on overlapping circles).
+ *
+ * @param {{ x: number, y: number }} pt  click point in svg user coords
+ * @param {Array<{ cx: number, cy: number, r: number, code: string | null, hidden?: boolean }>} rings
+ * @returns {string | null}
+ */
+export function pickNearestHitTarget(pt, rings) {
+  if (!pt || !Array.isArray(rings)) return null;
+  let best = null;
+  let bestScore = Infinity;
+  for (const ring of rings) {
+    if (!ring || ring.hidden || !ring.code || !(ring.r > 0)) continue;
+    const d = Math.hypot(pt.x - ring.cx, pt.y - ring.cy);
+    if (d > ring.r) continue;
+    const score = d / ring.r;
+    if (score < bestScore) {
+      bestScore = score;
+      best = ring.code;
+    }
+  }
+  return best;
+}
+
+/**
+ * Make the asset's native microstate marker circles (`<circle class="circlexx">`
+ * and the subnational-territory `<circle class="subxx">`) non-interactive.
+ *
+ * These are INVISIBLE by default (`opacity: 0` in worldMap.svg's own stylesheet)
+ * but, like any painted SVG shape, still hit-test — and they're generous r≈6
+ * discs planted at each microstate's label point. In the dense Caribbean they
+ * overlap wildly (Montserrat's disc covers Guadeloupe's Basse-Terre lobe, etc.),
+ * so a click on one island's land lands on a NEIGHBOUR's invisible marker and
+ * resolves to the wrong country via the ancestor-id walk. On flagsdata we own
+ * click resolution through the visible `.map-hit-target` rings + landmass-first
+ * + `pickNearestHitTarget`, so these author markers must get out of the way.
+ * We only read their geometry via `getBBox` (see `locatorBbox`), which is
+ * unaffected by `pointer-events`, and they're invisible, so nothing changes
+ * on screen.
+ *
+ * Scoped to flagsdata by its caller — the quiz still relies on these discs as
+ * its microstate click area (it has no nearest-ring fallback), so don't call
+ * this there.
+ *
+ * @param {Element | SVGElement} svg
+ */
+export function neutralizeMarkerCircles(svg) {
+  if (!svg || typeof svg.querySelectorAll !== 'function') return;
+  let circles;
+  try {
+    circles = svg.querySelectorAll('.circlexx, .subxx');
+  } catch { return; }
+  for (let i = 0; i < circles.length; i++) {
+    const c = /** @type {any} */ (circles[i]);
+    if (c && typeof c.setAttribute === 'function') c.setAttribute('pointer-events', 'none');
+  }
+}
+
+/**
  * Bbox of a microstate's `<circle class="circlexx">` locator (if it
  * has one). Used as the fallback ring position for antimeridian-
  * spanning countries where the union of path fragments produces a
@@ -1097,8 +1215,10 @@ function locatorBbox(el) {
  *
  * @param {Element | SVGElement} svg
  * @param {number} radius  in viewBox units
+ * @param {boolean} [hugIslands]  size each ring to its island (see HUG_* above)
+ *   instead of the flat locator radius — used by the flagsdata browse map
  */
-function addHitTargets(svg, radius) {
+function addHitTargets(svg, radius, hugIslands = false) {
   if (!svg || typeof svg.querySelectorAll !== 'function') return;
   /** @type {Document | null} */
   // @ts-ignore — ownerDocument is on real SVGs, not always on test fakes.
@@ -1146,6 +1266,13 @@ function addHitTargets(svg, radius) {
       oversized = true;
       bbox = locatorBbox(elem) || bbox;
     }
+    // Hug mode: pin the ring to the territory's largest island so scattered
+    // groups (US Virgin Islands, Turks & Caicos) don't get a ring floating in
+    // the open water between their pieces, sized to enclose all of them.
+    if (hugIslands && !oversized) {
+      const main = largestPathBbox(elem);
+      if (main) bbox = main;
+    }
     if (!bbox && typeof elem.getBBox === 'function') {
       try { bbox = elem.getBBox(); } catch { continue; }
     }
@@ -1171,10 +1298,17 @@ function addHitTargets(svg, radius) {
       leader.setAttribute('data-hit-for', elem.id);
       svg.appendChild(leader);
     }
+    // `countryR` is the radius that encloses the country's own bbox (diagonal
+    // / 2 + small pad). In hug mode the ring IS that size (floored), so a
+    // speck gets a speck-sized circle; otherwise it's the flat locator radius.
+    const countryR = oversized ? 0 : Math.hypot(bbox.width, bbox.height) / 2 + 0.5;
+    const ringR = hugIslands && !oversized
+      ? Math.max(HUG_MIN_RADIUS, countryR + HUG_RADIUS_MARGIN)
+      : radius;
     const circle = doc.createElementNS(SVG_NS, 'circle');
     circle.setAttribute('cx', String(cx));
     circle.setAttribute('cy', String(cy));
-    circle.setAttribute('r', String(radius));
+    circle.setAttribute('r', String(ringR));
     // `data-hit-for` carries the COUNTRY id (the outer `<g>` / `<path>`
     // with the ISO code), not the inner path-segment id that the bbox
     // came from. e.g. for `<g id="kn"><path id="kn-">...</path></g>`,
@@ -1186,20 +1320,13 @@ function addHitTargets(svg, radius) {
     // crops in, so the ring stays roughly the same on-screen size
     // regardless of zoom level (otherwise Liechtenstein's ring would
     // dwarf Switzerland on a zoomed-in Europe view).
-    circle.setAttribute('data-base-r', String(radius));
-    // `data-country-r` is the radius needed to enclose the country's
-    // own bbox in vbu (diagonal / 2 + small visual padding). mapZoom's
-    // rescaleHitTargets picks max(baseR * scale, countryR) so the
-    // ring never renders smaller than the country it points to — at
-    // deep zoom-in the constant-on-screen size would otherwise shrink
-    // below the country's apparent footprint, which reads as "ring is
-    // smaller than the island it marks." Constant in vbu, so it
-    // doesn't grow with zoom; baseR×scale dominates at every normal
-    // view and countryR only takes over at deep pinch-zoom.
-    // `oversized` (antimeridian-spanning) skips the country-r enclosure
-    // so the ring stays the normal constant-on-screen size — the
-    // alternative would inflate the ring to half the map.
-    const countryR = oversized ? 0 : Math.hypot(bbox.width, bbox.height) / 2 + 0.5;
+    circle.setAttribute('data-base-r', String(ringR));
+    // `data-country-r` (computed above) is the radius needed to enclose the
+    // country's own bbox. mapZoom's rescaleHitTargets picks max(baseR *
+    // scale, countryR) so the ring never renders smaller than the country it
+    // points to. `oversized` (antimeridian-spanning) skips the enclosure so
+    // the ring stays the normal constant-on-screen size — the alternative
+    // would inflate the ring to half the map.
     circle.setAttribute('data-country-r', String(countryR));
     circle.setAttribute('class', 'map-hit-target');
     circle.setAttribute('fill', 'transparent');
