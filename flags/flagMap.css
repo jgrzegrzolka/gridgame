@@ -322,17 +322,21 @@
  * Maarten / Saint-Barthélemy at zoom, because in place they're piled specks
  * you can neither see nor click reliably. The islands carry data-hit-for, so
  * they highlight (is-marked) and take clicks through the shared machinery. */
+/* Inset lines are deliberately the thinnest hairline (0.5 non-scaling): crisp
+ * on high-DPI screens, a faint line on standard-DPI. This is the one place we
+ * go below the usual 1px hairline rule — the inset frame + coastlines read best
+ * as delicate, and they're decorative context, not a load-bearing border. */
 #flag-map-section svg .carib-inset-frame {
   fill: var(--page-bg-color);
   stroke: var(--primary-color);
-  stroke-width: 1;
+  stroke-width: 0.5;
   vector-effect: non-scaling-stroke;
 }
 #flag-map-section svg .carib-island {
   fill: #e3e3e3;                    /* land grey, like every other landmass */
   stroke: var(--surface-color);    /* water-coloured coastline separates the
                                       French / Dutch halves of Saint-Martin */
-  stroke-width: 1;
+  stroke-width: 0.5;
   vector-effect: non-scaling-stroke;
   cursor: pointer;
 }
@@ -351,13 +355,13 @@
  * zero-length line so it stays a hair wider than the line at any zoom. */
 #flag-map-section svg .carib-inset-link {
   stroke: var(--primary-color);
-  stroke-width: 1;
+  stroke-width: 0.5;
   vector-effect: non-scaling-stroke;
   pointer-events: none;
 }
 #flag-map-section svg .carib-inset-anchor {
   stroke: var(--primary-color);
-  stroke-width: 2.5;
+  stroke-width: 1.5;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
   pointer-events: none;
