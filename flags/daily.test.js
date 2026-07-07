@@ -424,12 +424,20 @@ test('ideas: every entry has 4–30 answers', () => {
   assert.deepEqual(offenders, [], offenders.join('; '));
 });
 
-test('puzzles: every answer code is a known sovereign country', () => {
+test('puzzles: every answer code is a known country', () => {
+  // Filter entries are sovereign-only (the DSL resolves against the
+  // sovereign pool). Manual entries are the escape hatch for criteria the
+  // DSL can't express — including real-world rosters that feature
+  // non-sovereign flags (England, other home nations, territories). They
+  // may draw from the full pool, but the code must still be a real flag.
   const sovCodes = new Set(flagsGamePool(COUNTRIES, false).map((c) => c.code));
+  const fullCodes = new Set(flagsGamePool(COUNTRIES, true).map((c) => c.code));
   const offenders = [];
   for (const entry of PUZZLES) {
+    const allowed = entry.kind === 'manual' ? fullCodes : sovCodes;
+    const poolName = entry.kind === 'manual' ? 'full pool' : 'sovereign pool';
     for (const code of entry.answers) {
-      if (!sovCodes.has(code)) offenders.push(`#${entry.n}: ${code} is not in the sovereign pool`);
+      if (!allowed.has(code)) offenders.push(`#${entry.n}: ${code} is not in the ${poolName}`);
     }
   }
   assert.deepEqual(offenders, [], offenders.join('; '));

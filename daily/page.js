@@ -629,7 +629,20 @@ export function bootDaily() {
     fetchCatalog('puzzles'),
   ])
     .then(async ([raw, /** @type {import('../flags/daily.js').DailyPuzzle[]} */ allEntries]) => {
-      const all = withLocalizedAliases(flagsGamePool(raw, false));
+      // The daily game runs on the sovereign pool. Manual puzzles, though,
+      // can reference non-sovereign flags the filter DSL can't express —
+      // home nations (England), territories, regions — as answers. Pull in
+      // exactly the extra codes any catalog entry references so those flags
+      // are both searchable in the input and renderable as targets, without
+      // dumping the whole territory/bloc pool (eu, un, asean, …) into every
+      // puzzle's autocomplete.
+      const sov = flagsGamePool(raw, false);
+      const sovCodes = new Set(sov.map((c) => c.code));
+      const referenced = new Set(allEntries.flatMap((e) => e.answers ?? []));
+      const extras = flagsGamePool(raw, true).filter(
+        (c) => !sovCodes.has(c.code) && referenced.has(c.code),
+      );
+      const all = withLocalizedAliases([...sov, ...extras]);
 
       // Filter future-dated entries out client-side. Anyone curling the
       // blob can still see them; the server rejects submissions for
