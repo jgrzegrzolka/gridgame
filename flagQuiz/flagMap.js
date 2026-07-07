@@ -83,6 +83,11 @@ const ISLAND_DOT_MAX_DIM = 1.55;
 // Radius of that artificial land dot, kept constant on screen via data-base-r
 // (same mechanism as the rings), so it stays visible under the hug ring.
 const ISLAND_DOT_RADIUS = 0.9;
+// ...but floored in viewBox units (data-country-r) so it doesn't shrink to a
+// sub-pixel nothing when the map zooms out — e.g. when a filter frames a single
+// antimeridian microstate (Kiribati) at a wide view, the dot must still read.
+// Smaller than any ring's own floor so the dot stays visibly inside its ring.
+const ISLAND_DOT_MIN_RADIUS = 0.5;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ISO2_PATTERN = /^[a-z]{2}$/;
 
@@ -1343,6 +1348,24 @@ function addHitTargets(svg, radius, hugIslands = false) {
     if (hugIslands && !oversized) {
       plan = planIslandMarker(allPathBboxes(elem));
       if (plan) bbox = plan.ring;
+    } else if (hugIslands && oversized) {
+      // Antimeridian country (Kiribati): the two island clusters sit on opposite
+      // map edges, so there is no sane enclosing circle and a leader between
+      // them would stretch across the whole world. Mark just the cluster at the
+      // author's locator with a normal small hug ring + dot, instead of the flat
+      // ~globe-scale ring that reads as a huge empty circle. `bbox` is currently
+      // the locator; swap it for the actual island nearest the locator.
+      const pieces = allPathBboxes(elem);
+      if (pieces.length) {
+        const lx = bbox.x + bbox.width / 2, ly = bbox.y + bbox.height / 2;
+        const dist = (p) => Math.hypot(p.x + p.width / 2 - lx, p.y + p.height / 2 - ly);
+        const main = pieces.reduce((a, b) => (dist(b) < dist(a) ? b : a));
+        const md = Math.max(main.width, main.height);
+        const center = { cx: main.x + main.width / 2, cy: main.y + main.height / 2 };
+        plan = { ring: main, leaders: [], dots: md < ISLAND_DOT_MAX_DIM ? [center] : [] };
+        bbox = main;
+        oversized = false;   // size the ring like any other hugged island
+      }
     }
     if (!bbox && typeof elem.getBBox === 'function') {
       try { bbox = elem.getBBox(); } catch { continue; }
@@ -1431,6 +1454,7 @@ function addHitTargets(svg, radius, hugIslands = false) {
         dot.setAttribute('cy', String(d.cy));
         dot.setAttribute('r', String(ISLAND_DOT_RADIUS));
         dot.setAttribute('data-base-r', String(ISLAND_DOT_RADIUS));
+        dot.setAttribute('data-country-r', String(ISLAND_DOT_MIN_RADIUS));
         dot.setAttribute('data-hit-for', elem.id);
         dot.setAttribute('class', 'map-island-dot');
         svg.appendChild(dot);

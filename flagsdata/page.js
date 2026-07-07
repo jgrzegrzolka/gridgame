@@ -291,6 +291,30 @@ export function bootFlagsData() {
     }
     return out;
   }
+  // A comfortable zoom box around a microstate's marker ring — used for
+  // antimeridian countries (Kiribati) whose landmass bbox spans the map, so we
+  // frame the marker instead. Floored to MARKER_VIEW_SPAN vbu so the view keeps
+  // some ocean context around the tiny ring rather than filling with it.
+  const MARKER_VIEW_SPAN = 60;
+  /** @param {any} svg @param {string} code @returns {{x:number,y:number,width:number,height:number}|null} */
+  function markerRingBox(svg, code) {
+    const ring = svg.querySelector(`.map-hit-target[data-hit-for="${code}"]`);
+    if (!ring) return null;
+    const cx = parseFloat(ring.getAttribute('cx'));
+    const cy = parseFloat(ring.getAttribute('cy'));
+    const r = parseFloat(ring.getAttribute('r'));
+    if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(r)) return null;
+    const span = Math.max(MARKER_VIEW_SPAN, r * 4);
+    return { x: cx - span / 2, y: cy - span / 2, width: span, height: span };
+  }
+  /** Union of two {x,y,width,height} boxes. */
+  function unionBbox(a, b) {
+    const x = Math.min(a.x, b.x);
+    const y = Math.min(a.y, b.y);
+    const x1 = Math.max(a.x + a.width, b.x + b.width);
+    const y1 = Math.max(a.y + a.height, b.y + b.height);
+    return { x, y, width: x1 - x, height: y1 - y };
+  }
   // Countries whose `<g>` spans the antimeridian on the world map —
   // their full bbox is the whole map width, so including them in a
   // smart-zoom bbox union would defeat the zoom. They still get
@@ -473,7 +497,7 @@ export function bootFlagsData() {
     syncMapFlags(visibleCodes);
     // Smart zoom: when the filter narrows the visible set, zoom the
     // map to its bbox. When the filter is cleared (all visible), reset
-    // to the original world view. The bbox computation excludes
+    // to the original world view. The landmass-bbox computation excludes
     // antimeridian-wrapping countries (US, Russia, Fiji, Kiribati)
     // since their `<g>` spans the whole map width and would defeat
     // the zoom. Routes through mapHandle.setView so mapZoom's
@@ -484,10 +508,19 @@ export function bootFlagsData() {
         mapHandle.reset();
       } else {
         const cropCodes = visibleCodes.filter((c) => !ANTIMERIDIAN.has(c));
-        if (cropCodes.length > 0) {
-          const bbox = computeCountriesBbox(mapSvg, cropCodes);
-          if (bbox) mapHandle.setView(bbox);
+        let bbox = cropCodes.length > 0 ? computeCountriesBbox(mapSvg, cropCodes) : null;
+        // Antimeridian countries were dropped above (map-wide landmass bbox),
+        // but a microstate like Kiribati still has a small marker ring at one
+        // island cluster. Fold a padded box around that ring into the target so
+        // filtering to (or including) it frames the marker instead of leaving
+        // the map parked on a stale view — the case that made Kiribati look
+        // "not shown". Countries with no ring (US, Russia) stay excluded.
+        for (const code of visibleCodes) {
+          if (!ANTIMERIDIAN.has(code)) continue;
+          const box = markerRingBox(mapSvg, code);
+          if (box) bbox = bbox ? unionBbox(bbox, box) : box;
         }
+        if (bbox) mapHandle.setView(bbox);
       }
     }
   }
