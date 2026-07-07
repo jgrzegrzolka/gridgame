@@ -818,7 +818,7 @@ export function attachZoomPan(svg, opts = {}) {
    */
   function rescaleHitTargets() {
     const scale = current.width / original.width;
-    const hits = svg.querySelectorAll('.map-hit-target, .flag-flash');
+    const hits = svg.querySelectorAll('.map-hit-target, .flag-flash, .map-island-dot');
     for (let i = 0; i < hits.length; i++) {
       /** @type {any} */
       const el = hits[i];

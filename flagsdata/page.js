@@ -8,7 +8,8 @@ import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox, wireFlagLightboxAll } from '../flags/flagLightbox.js';
 import { getFlagFacts } from '../flags/flagFacts.js';
 import { renderFlagFacts } from '../flags/flagFactsRender.js';
-import { mountFlagMap, highlightCountry, unhighlightCountry, computeCountriesBbox } from '../flagQuiz/flagMap.js';
+import { mountFlagMap, highlightCountry, unhighlightCountry, computeCountriesBbox, pickNearestHitTarget, neutralizeMarkerCircles } from '../flagQuiz/flagMap.js';
+import { mountCaribInset, CARIB_INSET_CODES } from '../flagQuiz/caribInset.js';
 import { attachZoomPan } from '../flagQuiz/mapZoom.js';
 import { buildToggleLi } from '../common.js';
 
@@ -257,6 +258,39 @@ export function bootFlagsData() {
     }
     flaggedCodes = next;
   }
+  // Map a click to svg user coords via the live screen CTM, so ring
+  // hit-testing works at any zoom / pan. Null off the real DOM (tests).
+  /** @param {any} svg @param {any} e @returns {{x:number,y:number}|null} */
+  function svgPointFromEvent(svg, e) {
+    if (!svg || typeof svg.getScreenCTM !== 'function'
+      || typeof svg.createSVGPoint !== 'function') return null;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    const p = svg.createSVGPoint();
+    p.x = e.clientX;
+    p.y = e.clientY;
+    const local = p.matrixTransform(ctm.inverse());
+    return { x: local.x, y: local.y };
+  }
+  // Snapshot the microstate ring circles (center, current radius, country,
+  // and whether hidden as a suppressed inset speck) for pickNearestHitTarget.
+  /** @param {any} svg */
+  function microstateRings(svg) {
+    /** @type {Array<{cx:number,cy:number,r:number,code:string|null,hidden:boolean}>} */
+    const out = [];
+    const nodes = svg.querySelectorAll('.map-hit-target');
+    for (let i = 0; i < nodes.length; i++) {
+      const el = nodes[i];
+      out.push({
+        cx: parseFloat(el.getAttribute('cx')),
+        cy: parseFloat(el.getAttribute('cy')),
+        r: parseFloat(el.getAttribute('r')),
+        code: el.getAttribute('data-hit-for'),
+        hidden: !!(el.classList && el.classList.contains('carib-insetted')),
+      });
+    }
+    return out;
+  }
   // Countries whose `<g>` spans the antimeridian on the world map —
   // their full bbox is the whole map width, so including them in a
   // smart-zoom bbox union would defeat the zoom. They still get
@@ -273,10 +307,42 @@ export function bootFlagsData() {
       // The map here always fills the content column (see index.css) — no
       // corner resize handle; fullscreen covers the "see it bigger" case.
       resizable: false,
+      // Microstate rings here are non-interactive markers (clicks resolve on
+      // the island itself), so size each to its own island rather than a flat
+      // locator radius — the full-size rings dwarf tiny territories like
+      // Montserrat / Turks & Caicos and overlap their neighbours.
+      hugIslands: true,
     }).then((svg) => {
       mapSvg = svg;
       if (svg) {
         mapHandle = attachZoomPan(svg);
+        // The asset's invisible microstate marker discs (`.circlexx` / `.subxx`,
+        // r≈6, opacity 0) still hit-test and blanket the Caribbean, stealing
+        // clicks from the island underneath and resolving to a neighbour. We
+        // own click resolution here via the visible hit-target rings +
+        // landmass-first + pickNearestHitTarget, so switch those discs off.
+        neutralizeMarkerCircles(svg);
+        // Anguilla, Saint-Martin, Sint Maarten and Saint-Barthélemy sit piled
+        // on top of one another in worldMap.svg (sub-pixel specks, overlapping
+        // rings, ambiguous clicks). Redraw them at zoom in open North-Atlantic
+        // ocean, and hide the in-place specks + rings so nothing is doubled.
+        // The inset islands carry data-hit-for, so clicks + filter highlighting
+        // flow through the same machinery as the rest of the map.
+        // Open Atlantic just east of the Lesser Antilles arc, with a pointer
+        // line back to the islands' real location (~826,542 on this map) so
+        // it reads as a zoom of that spot rather than free-floating.
+        mountCaribInset(svg, {
+          x: 900, y: 440, scale: 0.5,
+          connectTo: { x: 826, y: 542 },
+        });
+        for (const code of CARIB_INSET_CODES) {
+          const inPlace = svg.querySelector(`#${code}`);
+          if (inPlace) inPlace.classList.add('carib-insetted');
+          const specks = svg.querySelectorAll(
+            `.map-hit-target[data-hit-for="${code}"], .map-hit-leader[data-hit-for="${code}"], .map-island-dot[data-hit-for="${code}"]`,
+          );
+          specks.forEach((el) => el.classList.add('carib-insetted'));
+        }
       }
       // Apply the current filter selection now that the map is
       // mounted — without this, the initial filter state would
@@ -284,14 +350,20 @@ export function bootFlagsData() {
       if (state) applyFilter();
     });
     // Click → flag-zoom popup. Same dialog flagsdata's grid tiles use,
-    // same openFlagZoom helper. The handler attaches once at mount
-    // (event delegation on the section) and resolves the clicked
-    // country by walking up the ancestors for the first id that's a
-    // known country code — handles both single-path countries
-    // (`<path id="es">`) and `<g>` wrappers (`<g id="cn">`).
+    // same openFlagZoom helper. Resolution order:
+    //   1. a `data-hit-for` element directly under the pointer (the inset
+    //      islands carry it) — an explicit hit wins;
+    //   2. the actual LANDMASS clicked — walk up the ancestors for the first
+    //      id that's a known country code. Land wins over rings: every piece
+    //      of Guadeloupe (both butterfly wings + Marie-Galante) resolves to
+    //      Guadeloupe even though the outlying pieces sit outside Guadeloupe's
+    //      own ring and inside a neighbour's;
+    //   3. only when the click hit open ocean (no landmass), the nearest
+    //      microstate ring the point falls inside — so clicking just off a
+    //      tiny island still selects it.
     flagMapEl.addEventListener('click', (e) => {
       if (!byCode) return;
-      const target = /** @type {Element | null} */ (e.target);
+      const target = /** @type {any} */ (e.target);
       if (!target) return;
       let code = (typeof target.getAttribute === 'function')
         ? target.getAttribute('data-hit-for')
@@ -303,6 +375,10 @@ export function bootFlagsData() {
           if (id && byCode.has(id)) { code = id; break; }
           el = el.parentElement;
         }
+      }
+      if (!code && mapSvg) {
+        const pt = svgPointFromEvent(mapSvg, e);
+        if (pt) code = pickNearestHitTarget(pt, microstateRings(mapSvg));
       }
       if (!code) return;
       const country = byCode.get(code);
@@ -395,11 +471,6 @@ export function bootFlagsData() {
     // fetch); diffs against the currently-stamped set so only the delta
     // repaints.
     syncMapFlags(visibleCodes);
-    // Gate the microstate rings: they only show for filter-matched small
-    // countries while a filter is actually on. Without a filter every
-    // country is "visible" (so every ring would be is-marked), so the
-    // ring CSS also requires `is-filtering` on the map — set it here.
-    if (mapSvg) mapSvg.classList.toggle('is-filtering', anyActive);
     // Smart zoom: when the filter narrows the visible set, zoom the
     // map to its bbox. When the filter is cleared (all visible), reset
     // to the original world view. The bbox computation excludes

@@ -5,6 +5,7 @@ import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
   offsetHitTargetCenter, paintCountryFlag, clearCountryFlag, settleFlagToTint,
   revealFlagImage, computeMainlandBbox, highlightCountry, unhighlightCountry,
+  pickNearestHitTarget, neutralizeMarkerCircles, planIslandMarker,
 } from './flagMap.js';
 import { FLAG_TINTS } from '../flags/flagTints.js';
 
@@ -1237,3 +1238,101 @@ test('mountFlagMap produces distinct mf and sx hit-target centers from a shared 
   );
 });
 
+
+test('pickNearestHitTarget resolves overlapping rings by nearest-relative-to-radius', () => {
+  // Guadeloupe (big) with Montserrat + Dominica rings touching it, roughly the
+  // real Caribbean layout (map units).
+  const rings = [
+    { cx: 836.7, cy: 559.0, r: 5.5, code: 'gp' },
+    { cx: 831.7, cy: 554.3, r: 1.9, code: 'ms' },
+    { cx: 837.5, cy: 565.2, r: 3.8, code: 'dm' },
+  ];
+  // Dead-centre of each ring resolves to that country.
+  assert.equal(pickNearestHitTarget({ x: 836.7, y: 559.0 }, rings), 'gp');
+  assert.equal(pickNearestHitTarget({ x: 831.7, y: 554.3 }, rings), 'ms');
+  assert.equal(pickNearestHitTarget({ x: 837.5, y: 565.2 }, rings), 'dm');
+  // A click deep inside tiny Montserrat but also within Guadeloupe's rim goes
+  // to Montserrat (deeper relative to its radius), not the big neighbour.
+  assert.equal(pickNearestHitTarget({ x: 831.7, y: 554.6 }, rings), 'ms');
+  // A point outside every ring returns null (caller falls back to landmass).
+  assert.equal(pickNearestHitTarget({ x: 900, y: 400 }, rings), null);
+  // Hidden rings (suppressed inset islands) are ignored.
+  assert.equal(
+    pickNearestHitTarget({ x: 836.7, y: 559.0 }, [{ cx: 836.7, cy: 559.0, r: 5.5, code: 'gp', hidden: true }]),
+    null,
+  );
+});
+
+test('neutralizeMarkerCircles turns off pointer-events on the asset marker discs only', () => {
+  const circlexx = makeNode('circle');
+  circlexx.classList.add('circlexx');
+  const subxx = makeNode('circle');
+  subxx.classList.add('subxx');
+  const hitTarget = makeNode('circle');       // our own ring — must be left alone
+  hitTarget.classList.add('map-hit-target');
+  const svg = makeNode('svg');
+  svg.querySelectorAll = (sel) =>
+    (sel === '.circlexx, .subxx' ? [circlexx, subxx] : []);
+
+  neutralizeMarkerCircles(svg);
+
+  assert.equal(circlexx.getAttribute('pointer-events'), 'none');
+  assert.equal(subxx.getAttribute('pointer-events'), 'none');
+  // The visible hit-target ring is not in the marker query, so it stays interactive.
+  assert.equal(hitTarget.getAttribute('pointer-events'), null);
+});
+
+test('neutralizeMarkerCircles no-ops on invalid svg', () => {
+  assert.doesNotThrow(() => neutralizeMarkerCircles(null));
+  assert.doesNotThrow(() => neutralizeMarkerCircles({}));
+});
+
+test('planIslandMarker: single sub-pixel island → ring on it + a land dot', () => {
+  // Bermuda: one 0.8x0.43 speck.
+  const plan = planIslandMarker([{ x: 0, y: 0, width: 0.8, height: 0.43 }]);
+  assert.deepEqual(plan.ring, { x: 0, y: 0, width: 0.8, height: 0.43 });
+  assert.equal(plan.leaders.length, 0);
+  assert.deepEqual(plan.dots, [{ cx: 0.4, cy: 0.215 }]);   // sub-pixel → dot
+});
+
+test('planIslandMarker: tight cluster → one enclosing ring, no leaders', () => {
+  // Guadeloupe-shaped: two big adjacent lobes. Union barely bigger than the
+  // largest lobe, so it stays a single enclosing circle.
+  const plan = planIslandMarker([
+    { x: 0, y: 0, width: 4, height: 5 },      // Basse-Terre (largest)
+    { x: 1, y: 1, width: 2, height: 3 },      // Grande-Terre, tucked alongside
+  ]);
+  assert.deepEqual(plan.ring, { x: 0, y: 0, width: 4, height: 5 });    // union
+  assert.equal(plan.leaders.length, 0);
+  assert.equal(plan.dots.length, 0);          // both lobes are visible-sized
+});
+
+test('planIslandMarker: spread islands → small ring on main + leaders + dots', () => {
+  // Turks & Caicos-shaped: a main island and a far speck.
+  const plan = planIslandMarker([
+    { x: 0, y: 0, width: 2, height: 1.5 },     // main (largest)
+    { x: 6, y: 0, width: 1, height: 0.8 },     // far speck
+  ]);
+  assert.deepEqual(plan.ring, { x: 0, y: 0, width: 2, height: 1.5 });  // main, not union
+  assert.deepEqual(plan.leaders, [{ cx: 6.5, cy: 0.4 }]);              // pointer to the speck
+  assert.deepEqual(plan.dots, [{ cx: 6.5, cy: 0.4 }]);                 // speck is sub-pixel
+});
+
+test('planIslandMarker: many spread islands → one enclosing ring, not a starburst', () => {
+  // Cape Verde-shaped: 5 small islands scattered wide. Spread by ratio, but too
+  // many to point at, so it encloses instead of sprouting a leader per island.
+  const plan = planIslandMarker([
+    { x: 0, y: 0, width: 1, height: 1 }, { x: 3, y: 0, width: 1, height: 1 },
+    { x: 6, y: 0, width: 1, height: 1 }, { x: 0, y: 3, width: 1, height: 1 },
+    { x: 6, y: 3, width: 1, height: 1 },
+  ]);
+  assert.deepEqual(plan.ring, { x: 0, y: 0, width: 7, height: 4 });  // union, one circle
+  assert.equal(plan.leaders.length, 0);                             // no starburst
+  assert.equal(plan.dots.length, 5);                                // each speck still marked
+});
+
+test('planIslandMarker: empty / degenerate input → null', () => {
+  assert.equal(planIslandMarker([]), null);
+  assert.equal(planIslandMarker(null), null);
+  assert.equal(planIslandMarker([{ x: 0, y: 0, width: 0, height: 0 }]), null);
+});
