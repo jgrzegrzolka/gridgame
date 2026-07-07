@@ -690,10 +690,17 @@ function makeMapResizable(container, _svg) {
     const handle = doc.createElement('div');
     handle.className = 'map-resize-handle';
     handle.setAttribute('aria-hidden', 'true');
-    // Diagonal grip lines — reads as "drag to resize".
-    handle.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">'
-      + '<path d="M14.5 6.5 6.5 14.5 M14.5 10.5 10.5 14.5" '
-      + 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    // Box-with-corner-arrow "expand" glyph, pointing to the bottom-right —
+    // reads as "drag the corner out to enlarge". Built from the standard
+    // top-right box-arrow, vertically flipped (matrix 1 0 0 -1 0 24) so the
+    // arrow points down-right toward the drag corner.
+    handle.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">'
+      + '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" '
+      + 'stroke-linejoin="round" transform="matrix(1 0 0 -1 0 24)">'
+      + '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'
+      + '<path d="M15 3h6v6"/>'
+      + '<path d="M10 14 21 3"/>'
+      + '</g></svg>';
     container.appendChild(handle);
     /** @type {{x:number,w:number,max:number}|null} */
     let start = null;
@@ -749,9 +756,16 @@ function addFullscreenButton(container, label) {
   btn.type = 'button';
   btn.className = 'map-fullscreen-btn';
   btn.setAttribute('aria-label', label || 'Toggle fullscreen');
-  // "Expand to corners" glyph. Tiny, no font dependency beyond what
-  // any system sans-serif covers.
-  btn.textContent = '⛶';
+  // Expand-to-corners glyph as inline SVG (line style, currentColor) so it
+  // matches the resize handle's icon weight, instead of the system ⛶ font
+  // glyph which renders inconsistently (thin corner brackets on some OSes).
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">'
+    + '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M3 9V4a1 1 0 0 1 1-1h5"/>'
+    + '<path d="M15 3h5a1 1 0 0 1 1 1v5"/>'
+    + '<path d="M21 15v5a1 1 0 0 1-1 1h-5"/>'
+    + '<path d="M9 21H4a1 1 0 0 1-1-1v-5"/>'
+    + '</g></svg>';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleFullscreen(container);

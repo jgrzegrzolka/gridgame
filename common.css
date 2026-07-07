@@ -1256,7 +1256,9 @@ dialog#zoom p.zoom-note {
 .picker-close,
 .zoom-close,
 .fotd-card,
-.game-tile {
+.game-tile,
+.map-fullscreen-btn,
+.map-resize-handle {
   font: inherit;
   font-size: 14px;
   color: var(--link-color);
@@ -1281,7 +1283,9 @@ dialog#zoom p.zoom-note {
 .picker-close:hover,
 .zoom-close:hover,
 .fotd-card:hover,
-.game-tile:hover {
+.game-tile:hover,
+.map-fullscreen-btn:hover,
+.map-resize-handle:hover {
   background: var(--surface-hover-color);
 }
 .profile-save:active:not(:disabled),
@@ -1293,7 +1297,9 @@ dialog#zoom p.zoom-note {
 .picker-close:active,
 .zoom-close:active,
 .fotd-card:active,
-.game-tile:active {
+.game-tile:active,
+.map-fullscreen-btn:active,
+.map-resize-handle:active {
   /* Border-only pink so the bg / text stay legible during press; on
    * release, the base rule's 600 ms border-color transition fades it
    * back to --muted-soft-color (the brief "you tapped this" afterglow). */
