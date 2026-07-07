@@ -26,6 +26,10 @@ import RAW_COUNTRIES from './countries.json' with { type: 'json' };
 const COUNTRIES = loadCountries(RAW_COUNTRIES);
 const SOV = flagsGamePool(COUNTRIES, false);
 const SOV_CODES = new Set(SOV.map((c) => c.code));
+// Manual entries may reference non-sovereign flags (home nations,
+// territories) that the filter DSL can't express — validated against the
+// full pool instead of the sovereign one. See checkSovereignCodes.
+const FULL_CODES = new Set(flagsGamePool(COUNTRIES, true).map((c) => c.code));
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 86_400_000;
@@ -121,10 +125,12 @@ function checkAnswerShape(entries) {
  */
 function checkSovereignCodes(entries) {
   for (const entry of entries) {
+    const allowed = entry.kind === 'manual' ? FULL_CODES : SOV_CODES;
     for (const code of entry.answers) {
-      if (!SOV_CODES.has(code)) {
+      if (!allowed.has(code)) {
+        const kind = entry.kind === 'manual' ? 'known country' : 'sovereign country';
         throw new Error(
-          `puzzles #${entry.n}: answer "${code}" is not a sovereign country code`,
+          `puzzles #${entry.n}: answer "${code}" is not a ${kind} code`,
         );
       }
     }
