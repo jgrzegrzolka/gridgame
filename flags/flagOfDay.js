@@ -94,6 +94,13 @@ export function flagOfDay(dateStr, pool, overrides = {}) {
   // (eligibility is strictly "added before today"). Nothing before that.
   if (targetDay <= startDay) return null;
 
+  // Overrides keyed by day index, so the replay loop below can consult them
+  // by its integer `day` without reconstructing date strings.
+  const overrideByDay = new Map();
+  for (const [d, code] of Object.entries(overrides || {})) {
+    overrideByDay.set(dayNumber(d), code);
+  }
+
   /** @type {Map<string, number>} */
   const shows = new Map();
   let pick = null;
@@ -111,6 +118,31 @@ export function flagOfDay(dateStr, pool, overrides = {}) {
         shows.set(e.code, min);
       }
     }
+
+    // An editorial pin for this day counts as a real display: the forced flag
+    // is what the visitor actually saw, so it must accrue a show exactly like a
+    // naturally-picked flag would. Without this, a pin left the flag's tally
+    // untouched and the least-recently-shown rotation served it AGAIN a few
+    // days later (the visible "why did Poland repeat after 6 days" bug) while
+    // never-shown flags kept waiting. Feeding the pin back into `shows` keeps
+    // the tally honest so the pinned flag waits its turn like everything else.
+    const forced = overrideByDay.get(day);
+    if (forced !== undefined && addedDay.has(forced)) {
+      if (!shows.has(forced)) {
+        // Pinned before its own eligibility: seed to the current minimum, the
+        // same rule activation uses, so it blends in rather than bursting.
+        let min = 0;
+        if (shows.size > 0) {
+          min = Infinity;
+          for (const v of shows.values()) if (v < min) min = v;
+        }
+        shows.set(forced, min);
+      }
+      shows.set(forced, (shows.get(forced) ?? 0) + 1);
+      pick = forced;
+      continue;
+    }
+
     if (shows.size === 0) { pick = null; continue; }
 
     // Least-recently-shown wins; per-day hash breaks ties.

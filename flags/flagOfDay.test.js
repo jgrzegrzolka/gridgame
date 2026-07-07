@@ -108,8 +108,21 @@ test('balanced coverage: no flag is starved, counts stay within 1 of each other'
 test('editorial override pins a specific date to a specific flag', () => {
   const ov = { '2026-07-02': 'pl' };
   assert.equal(flagOfDay('2026-07-02', POOL, ov), 'pl');
-  // Other dates are unaffected — normal rotation still applies.
-  assert.equal(flagOfDay('2026-07-03', POOL, ov), flagOfDay('2026-07-03', POOL));
+});
+
+test('a pin counts as a display, so the pinned flag waits its turn', () => {
+  // Regression guard. A pin is a real showing: it must feed the
+  // least-recently-shown tally. Before this was accounted, pinning `pl` on the
+  // debut day left its tally untouched, so the rotation served `pl` again a few
+  // days later while never-shown flags waited (the "why did Poland repeat after
+  // 6 days" bug). Across one full pool cycle starting at the pin, `pl` must
+  // appear exactly once and every flag must appear.
+  const ov = { '2026-07-02': 'pl' };
+  const cycle = dateRange('2026-07-02', '2026-07-09'); // pin day + 7 = 8-flag cycle
+  const picks = cycle.map((d) => flagOfDay(d, POOL, ov));
+  assert.equal(picks[0], 'pl', 'pin honoured on its date');
+  assert.equal(picks.filter((c) => c === 'pl').length, 1, 'pl shown once across the cycle');
+  assert.deepEqual([...new Set(picks)].sort(), CODES.slice().sort(), 'every flag shown once');
 });
 
 test('override is ignored when the forced code is not in the pool', () => {
