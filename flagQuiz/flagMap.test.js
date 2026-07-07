@@ -107,6 +107,18 @@ test('the world map carries an injected Clipperton (cp) element', () => {
   assert.match(world, /id="cp"/, 'worldMap.svg must carry a cp element');
 });
 
+test('the world map carries injected subdivision / territory locators', () => {
+  // Constituent countries (UK, Spain) + omitted territories whose OWN flag is
+  // quizzed but which the base asset only draws inside a parent landmass (or
+  // not at all). Each gets an injected `<g>` + locator so its flag rings a
+  // real spot instead of nothing. All are listed in MICROSTATE_CODES. Pin the
+  // SVG presence so a future asset re-import can't silently drop them.
+  const world = readFileSync(new URL('./worldMap.svg', import.meta.url), 'utf8');
+  for (const code of ['gb-eng', 'gb-sct', 'gb-wls', 'gb-nir', 'es-ct', 'es-pv', 'es-ga', 'ic', 'sj']) {
+    assert.match(world, new RegExp(`id="${code}"`), `worldMap.svg must carry a ${code} element`);
+  }
+});
+
 test('markCountry no-ops on the compound regional codes the pool surfaces', () => {
   const root = fakeRoot(['es', 'gb']);
   // `es-pv` (Basque flag), `gb-eng` (England flag) etc. are in the quiz

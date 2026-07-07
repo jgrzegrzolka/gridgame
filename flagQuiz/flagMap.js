@@ -201,6 +201,21 @@ const MICROSTATE_CODES = new Set([
   // Injected as a `cp` <g> + locator (open ocean SW of Mexico) so it shows a
   // ring instead of nothing on the quiz / browse map.
   'cp',
+  // Constituent countries / autonomous regions whose OWN flag is quizzed but
+  // which the world map only draws as part of a parent landmass (UK, Spain).
+  // We inject a `<g>` + locator at each one's real location so its flag has
+  // something to ring instead of highlighting nothing. gb-eng/sct/wls/nir sit
+  // on Great Britain + the north of Ireland; es-ct/pv/ga on the Iberian rim;
+  // ic (Canary Islands) off NW Africa. On the quiz only one shows at a time.
+  'gb-eng', 'gb-sct', 'gb-wls', 'gb-nir', 'es-ct', 'es-pv', 'es-ga', 'ic',
+  // Svalbard and Jan Mayen: a high-Arctic Norwegian territory the base map
+  // omits. Injected `sj` <g> + locator far north, above mainland Norway.
+  'sj',
+  // Kosovo (xk) + Gibraltar (gi): both DO carry geometry in the asset, but
+  // it's speck-sized (Gibraltar) / small (Kosovo), so without a ring the
+  // answer reveal highlights something too tiny to spot. Ring them like the
+  // other microstates. No injection needed — the landmass already exists.
+  'xk', 'gi',
   // Asia microstates — only countries whose paths are tinier than
   // the pink ring itself (smaller-than-ring marker would be pointless,
   // e.g. Bhutan / Lebanon / Cyprus are already visible-sized as

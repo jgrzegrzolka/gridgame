@@ -3244,6 +3244,51 @@
 		<path id="cp-" class="landxx cp" d="m 494.6,622 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
 		<circle id="cp_" class="circlexx cp" r="6" cy="622" cx="496"/>
 	</g>
+	<g id="gb-sct">
+		<title>Scotland</title>
+		<path id="gb-sct-" class="landxx gb-sct" d="m 1279.6,211 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
+		<circle id="gb-sct_" class="circlexx gb-sct" r="6" cy="211" cx="1281"/>
+	</g>
+	<g id="gb-wls">
+		<title>Wales</title>
+		<path id="gb-wls-" class="landxx gb-wls" d="m 1282.6,249 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
+		<circle id="gb-wls_" class="circlexx gb-wls" r="6" cy="249" cx="1284"/>
+	</g>
+	<g id="gb-eng">
+		<title>England</title>
+		<path id="gb-eng-" class="landxx gb-eng" d="m 1299.6,245 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
+		<circle id="gb-eng_" class="circlexx gb-eng" r="6" cy="245" cx="1301"/>
+	</g>
+	<g id="gb-nir">
+		<title>Northern Ireland</title>
+		<path id="gb-nir-" class="landxx gb-nir" d="m 1261.6,228 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
+		<circle id="gb-nir_" class="circlexx gb-nir" r="6" cy="228" cx="1263"/>
+	</g>
+	<g id="es-ct">
+		<title>Catalonia</title>
+		<path id="es-ct-" class="landxx es-ct" d="m 1318.6,338 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
+		<circle id="es-ct_" class="circlexx es-ct" r="6" cy="338" cx="1320"/>
+	</g>
+	<g id="es-pv">
+		<title>Basque Country</title>
+		<path id="es-pv-" class="landxx es-pv" d="m 1290.6,327 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
+		<circle id="es-pv_" class="circlexx es-pv" r="6" cy="327" cx="1292"/>
+	</g>
+	<g id="es-ga">
+		<title>Galicia</title>
+		<path id="es-ga-" class="landxx es-ga" d="m 1253.6,329 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
+		<circle id="es-ga_" class="circlexx es-ga" r="6" cy="329" cx="1255"/>
+	</g>
+	<g id="ic">
+		<title>Canary Islands</title>
+		<path id="ic-" class="landxx ic" d="m 1181.6,461 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
+		<circle id="ic_" class="circlexx ic" r="6" cy="461" cx="1183"/>
+	</g>
+	<g id="sj">
+		<title>Svalbard and Jan Mayen</title>
+		<path id="sj-" class="landxx sj" d="m 1415.6,42 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
+		<circle id="sj_" class="circlexx sj" r="6" cy="42" cx="1417"/>
+	</g>
 	<g id="va">
 		<title>Vatican City</title>
 		<path id="va-" class="landxx va" d="m 1394.48,337.712 -0.1,0.03 -0.11,-0.04 0.1,-0.08 0.11,-0.02"/>
