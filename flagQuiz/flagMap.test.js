@@ -98,6 +98,15 @@ test('the world map carries an injected Åland (ax) element', () => {
   assert.match(world, /id="ax"/, 'worldMap.svg must carry an ax element');
 });
 
+test('the world map carries an injected Clipperton (cp) element', () => {
+  // Clipperton is a French Pacific atoll the source map omits; we inject a
+  // `cp` <g> + locator (open ocean SW of Mexico) so it rings instead of
+  // showing nothing on the quiz / browse map. Listed in MICROSTATE_CODES.
+  // Pin the SVG presence so a future asset re-import can't silently drop it.
+  const world = readFileSync(new URL('./worldMap.svg', import.meta.url), 'utf8');
+  assert.match(world, /id="cp"/, 'worldMap.svg must carry a cp element');
+});
+
 test('markCountry no-ops on the compound regional codes the pool surfaces', () => {
   const root = fakeRoot(['es', 'gb']);
   // `es-pv` (Basque flag), `gb-eng` (England flag) etc. are in the quiz
