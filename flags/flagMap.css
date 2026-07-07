@@ -197,6 +197,16 @@
  * colour costs the browser exactly what grey did — no flag image to decode —
  * so motion stays smooth, but the map reads as a colourful world rather than
  * a grey one. `#e3e3e3` (the land colour) is the fallback if a tint is missing. */
+/* Disputed-limit paths (Kosovo's `limitxx`) ship `opacity: 0` in the base asset
+ * so the map stays neutral about contested borders. That also hides the flag
+ * fill, so an answered / filter-matched Kosovo rendered as nothing. Restore
+ * opacity once the path is flagged (quiz) or marked (flagsdata) — the fill +
+ * outline then read like any other country. Landmass class, not the country
+ * code, so it covers every disputed-limit territory the asset ships. */
+#flag-map-section svg .limitxx.is-flagged,
+#flag-map-section svg .limitxx.is-marked {
+  opacity: 1;
+}
 #flag-map-section svg.is-interacting .is-flagged {
   fill: var(--flag-tint, #e3e3e3) !important;
   fill-opacity: 1 !important;
