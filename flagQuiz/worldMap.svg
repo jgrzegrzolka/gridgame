@@ -3239,6 +3239,11 @@
 		<path id="ax-" class="landxx ax" d="m 1436.3,184 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
 		<circle id="ax_" class="circlexx ax" r="6" cy="184" cx="1437.7"/>
 	</g>
+	<g id="cp">
+		<title>Clipperton Island</title>
+		<path id="cp-" class="landxx cp" d="m 494.6,622 a 1.4,1.1 0 1 0 2.8,0 a 1.4,1.1 0 1 0 -2.8,0"/>
+		<circle id="cp_" class="circlexx cp" r="6" cy="622" cx="496"/>
+	</g>
 	<g id="va">
 		<title>Vatican City</title>
 		<path id="va-" class="landxx va" d="m 1394.48,337.712 -0.1,0.03 -0.11,-0.04 0.1,-0.08 0.11,-0.02"/>

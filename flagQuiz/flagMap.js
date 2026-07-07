@@ -197,6 +197,10 @@ const MICROSTATE_CODES = new Set([
   // world map omits. We inject an `ax` <g> + locator into worldMap.svg so its
   // pink ring lands in the Baltic between Sweden and Finland.
   'ax',
+  // Clipperton: a French atoll in the eastern Pacific the base map also omits.
+  // Injected as a `cp` <g> + locator (open ocean SW of Mexico) so it shows a
+  // ring instead of nothing on the quiz / browse map.
+  'cp',
   // Asia microstates — only countries whose paths are tinier than
   // the pink ring itself (smaller-than-ring marker would be pointless,
   // e.g. Bhutan / Lebanon / Cyprus are already visible-sized as
