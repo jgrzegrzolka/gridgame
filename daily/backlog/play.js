@@ -64,7 +64,7 @@ export function bootBacklogPlay() {
         return;
       }
 
-      paintDescription(result.entry.description);
+      paintDescription(result.entry.description, result.entry.additionalDescription);
       // Preview this entry's zoom notes too, so an author play-testing a
       // staged puzzle sees the explanations exactly as a player will.
       setZoomNotes(result.entry.notes);
@@ -83,6 +83,7 @@ export function bootBacklogPlay() {
         targets: result.targets,
         labelFor,
         description: result.entry.description,
+        additionalDescription: result.entry.additionalDescription,
       });
     })
     .catch((err) => {

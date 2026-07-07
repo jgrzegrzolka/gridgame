@@ -685,7 +685,7 @@ export function bootDaily() {
         return;
       }
 
-      paintDescription(result.entry.description);
+      paintDescription(result.entry.description, result.entry.additionalDescription);
       // Install this puzzle's per-answer "why" notes for the zoom dialog.
       // Runs above both the revisit and play branches so a tap on any
       // result tile (or extra-stats rail tile) surfaces the explanation
@@ -760,7 +760,7 @@ export function bootDaily() {
         // Re-paint on a soft language switch so found/missed tile hover
         // labels + the description re-translate without a page reload.
         document.addEventListener('langchanged', () => {
-          paintDescription(result.entry.description);
+          paintDescription(result.entry.description, result.entry.additionalDescription);
           renderResult(result.targets, foundCodes, labelFor());
           setShareCtx(n, result.targets, foundCodes);
           paintPersonalStats(foundCodes.size, result.targets.length);
@@ -817,6 +817,7 @@ export function bootDaily() {
         targets: result.targets,
         labelFor,
         description: result.entry.description,
+        additionalDescription: result.entry.additionalDescription,
       });
     })
     .catch((err) => {

@@ -54,7 +54,7 @@ Most puzzles are **filter** entries — `{ n, date, filter, answers, description
   "n": 51,
   "date": "2026-07-26",
   "kind": "manual",                        // discriminator
-  "answers": ["co", "py", "uy", "ve"],     // hand-curated, sovereign codes only
+  "answers": ["co", "py", "uy", "ve"],     // hand-curated; sovereign codes, or full-pool codes (home nations / territories) when the roster needs them
   "title": {                               // replaces the pill chain in the header
     "en": "Triangles pointing inward from the hoist",
     "pl": "Trójkąty wskazujące do środka z drzewca"
@@ -75,7 +75,7 @@ No `filter` field on a manual entry — `kind` is the discriminator. The page pi
 **Funnel.** Manual entries go straight to **`puzzles.json`** (with `n` + `date`) or **`parked.json`** (without `n`/`date`, while you're still working out the answer list). Manual entries do NOT go through `ideas.json` — the ideas pipeline is generator-fed and the generator can't produce manual entries.
 
 **Which rules apply.** Manual entries skip the filter-only rules (1, 2, 5, 6's filter-refinement half, 10, 14, 15) and keep the rest. Specifically:
-- **Apply**: 3 (sovereign codes), 4 (sequential `n` + contiguous dates), 6 (no two entries — any kind — share an identical answer set), 7 (description), 8 (nameScore by N), 9 (answer-set size), 11 (country-reuse cap), 12/13 (onboarding shape).
+- **Apply**: 3 (valid codes — but manual entries may draw from the **full** pool, not just sovereign: home nations / territories like England `gb-eng` are allowed when the roster needs them; filter entries stay sovereign-only), 4 (sequential `n` + contiguous dates), 6 (no two entries — any kind — share an identical answer set), 7 (description; include `additionalDescription` sovereign note unless the roster has a non-sovereign flag), 8 (nameScore by N), 9 (answer-set size), 11 (country-reuse cap), 12/13 (onboarding shape).
 - **Skip**: 1 (drift detector — no filter to resolve), 2 (no tokens), 5 (no colours to be primary-clean against), 6's strict-subset-via-refinement half (a manual entry can't be a "refinement" of a filter entry — no shared token vocabulary), 10 (no compounds), 14 (no tokens), 15 (no filter-membership-flipping flag to flag).
 - **Extra**: manual entries need `title.en` and `title.pl`, both non-empty. Pinned by the `every manual entry has en + pl title` test.
 
@@ -130,6 +130,8 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
    - **Generator** (`authoring/generate-candidates.mjs`) enforces refined rule 6 within each batch — every new candidate is checked against (puzzles ∪ everything already accepted in the current run).
 
 7. **Every puzzle has en + pl descriptions.** *(description test)* `entry.description.en` and `entry.description.pl` must both be non-empty strings. The sentence renders under the daily header to turn the pill chain ("Europe · cross") into plain language ("Find all European flags with a cross"). *Why:* a player reported reading "Europe · cross" as the puzzle title rather than the filter spec — they didn't realise they had to find flags that had a cross. The helper sentence closes that gap. Auto-generation was rejected because mixed include/exclude phrasing reads badly in EN and PL grammar needs a human (gendered adjectives, instrumental case). The shape stays narrow ("Find all X flags with/without Y") so it doesn't drift into a paragraph.
+
+   **Second line — `additionalDescription` (optional, same `{en, pl}` shape).** A muted qualifier rendered under the main description. Today its only content is the sovereign-only note (`{ en: "Sovereign countries only.", pl: "Tylko kraje suwerenne." }`), which **almost every puzzle carries** — the daily game resolves answers against the sovereign pool. **Omit it only when the answer set intentionally includes a non-sovereign flag** (a home nation / territory in a manual roster — e.g. the World Cup quarter-finalists puzzle with England as `gb-eng`), because "sovereign only" would then be false. "Sovereign only" is a property of the *specific puzzle*, not its `kind`: a manual roster of only sovereign countries still carries the note. When present, both `en` and `pl` must be non-empty (pinned by the description test + push validator). New filter puzzles should include it; new manual puzzles include it unless they reference a non-sovereign flag.
 
 ### Soft (hand-check)
 

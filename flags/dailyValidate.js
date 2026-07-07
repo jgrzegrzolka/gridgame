@@ -149,6 +149,16 @@ function checkDescriptions(entries) {
     if (typeof d.pl !== 'string' || d.pl.length === 0) {
       throw new Error(`puzzles #${entry.n}: description.pl missing or empty`);
     }
+    // Optional second line; when present it needs both languages too.
+    const ad = entry.additionalDescription;
+    if (ad !== undefined) {
+      if (!ad || typeof ad.en !== 'string' || ad.en.length === 0) {
+        throw new Error(`puzzles #${entry.n}: additionalDescription.en missing or empty`);
+      }
+      if (typeof ad.pl !== 'string' || ad.pl.length === 0) {
+        throw new Error(`puzzles #${entry.n}: additionalDescription.pl missing or empty`);
+      }
+    }
   }
 }
 

@@ -61,10 +61,10 @@ import {
  * read `entry.title[lang]`. Keeps this helper agnostic.
  *
  * @param {{ refreshI18n: (next: { all: Country[], targets: Country[], label: string }) => void }} game
- * @param {{ raw: any[], targets: Country[], labelFor: () => string, description?: Record<string, string> }} deps
+ * @param {{ raw: any[], targets: Country[], labelFor: () => string, description?: Record<string, string>, additionalDescription?: Record<string, string> }} deps
  * @returns {() => void}
  */
-export function attachLangRefresh(game, { raw, targets, labelFor, description }) {
+export function attachLangRefresh(game, { raw, targets, labelFor, description, additionalDescription }) {
   // Pre-compute the code set once — the targets array doesn't change
   // for the lifetime of a round, only the Country objects backing
   // their entries do (when withLocalizedAliases produces a fresh array
@@ -72,7 +72,7 @@ export function attachLangRefresh(game, { raw, targets, labelFor, description })
   // logical targets in the new array.
   const targetCodes = new Set(targets.map((c) => c.code));
   const listener = () => {
-    if (description !== undefined) paintDescription(description);
+    if (description !== undefined) paintDescription(description, additionalDescription);
     game.refreshI18n(computeLangRefreshPayload({ raw, targetCodes, labelFor }));
   };
   document.addEventListener('langchanged', listener);
@@ -227,23 +227,45 @@ export function showState(msg) {
 }
 
 /**
- * Paint the puzzle's helper sentence for the current page language.
- * i18n has already run by the time the play page fires (the inline
- * `<script type="module">` chains via `.then(bootXxx)`), so
- * `documentElement.lang` is the resolved code. Falls back to English
- * if the requested language is missing — better to show *some*
- * sentence than to leak the absence of a translation. Empty/missing
- * description hides the element so the sovereign note still reads
- * naturally below the header.
+ * Paint the puzzle's helper sentence (and optional second line) for the
+ * current page language. i18n has already run by the time the play page
+ * fires (the inline `<script type="module">` chains via `.then(bootXxx)`),
+ * so `documentElement.lang` is the resolved code. Falls back to English
+ * if the requested language is missing — better to show *some* sentence
+ * than to leak the absence of a translation. Empty/missing text hides the
+ * element.
+ *
+ * The second line (`additionalDescription`) carries per-puzzle qualifiers
+ * like "Sovereign countries only." It is *puzzle data*, not page chrome —
+ * "sovereign only" is a property of the specific puzzle (a manual roster
+ * of sovereign countries has it too; the World Cup roster, which includes
+ * England, does not), so it can't be derived from `kind` or baked into the
+ * page. Rendered into a `.daily-note` sibling this function owns: created
+ * when the puzzle supplies the line, removed when it doesn't, so a repaint
+ * (langchange / revisit) never leaves a stale note from a prior puzzle.
  *
  * @param {Record<string, string> | undefined} description
+ * @param {Record<string, string> | undefined} [additionalDescription]
  */
-export function paintDescription(description) {
+export function paintDescription(description, additionalDescription) {
   const descEl = /** @type {HTMLElement} */ (document.getElementById('daily-desc'));
   const lang = document.documentElement.lang || 'en';
   const text = description?.[lang] ?? description?.en ?? '';
   descEl.textContent = text;
   descEl.hidden = text === '';
+
+  const noteText = additionalDescription?.[lang] ?? additionalDescription?.en ?? '';
+  let noteEl = /** @type {HTMLElement | null} */ (document.querySelector('.daily-note'));
+  if (noteText === '') {
+    if (noteEl) noteEl.remove();
+    return;
+  }
+  if (!noteEl) {
+    noteEl = document.createElement('p');
+    noteEl.className = 'daily-note';
+    descEl.insertAdjacentElement('afterend', noteEl);
+  }
+  noteEl.textContent = noteText;
 }
 
 /**
