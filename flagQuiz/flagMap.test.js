@@ -238,7 +238,7 @@ function makeNode(tag) {
   return node;
 }
 
-function fakeFlagSvg(code = 'es') {
+function fakeFlagSvg(code = 'es', opts = {}) {
   const doc = { createElementNS: (_ns, tag) => makeNode(tag) };
   let defs = null;
   // The country element returned by `#es` — a <g> wrapper that carries the
@@ -255,6 +255,11 @@ function fakeFlagSvg(code = 'es') {
   // parent so the flash overlay's `insertBefore` has somewhere to land.
   const hitLayer = makeNode('g');
   hitLayer.appendChild(hit);
+  // Only mf / sx get a leader line in the real asset. Opt-in so the
+  // default fake (Spain) has none — mirrors reality and keeps the
+  // flash-count assertions (innerPath + ring = 2) intact.
+  const leader = opts.withLeader ? makeNode('line') : null;
+  if (leader) { leader.parentNode = hitLayer; hitLayer.appendChild(leader); }
   const allNodes = [innerPath, subCountry, hit, group];
   const hasAnyClass = (n, classes) => classes.some((c) => n.classList._set.has(c));
   // Flash clones carry class "flag-flash" via setAttribute('class', ...)
@@ -282,6 +287,7 @@ function fakeFlagSvg(code = 'es') {
       return null;
     },
     querySelectorAll: (sel) => {
+      if (sel.includes('map-hit-leader')) return leader ? [leader] : [];
       if (sel.includes('map-hit-target')) return [hit];
       if (sel === '.flag-flash') return collectFlashes();
       if (sel.includes('is-flag')) {
@@ -291,7 +297,7 @@ function fakeFlagSvg(code = 'es') {
       if (sel === '.is-correct, .is-wrong') return [];
       return [];
     },
-    _refs: { innerPath, subCountry, hit, group, hitLayer, collectFlashes, get defs() { return defs; } },
+    _refs: { innerPath, subCountry, hit, leader, group, hitLayer, collectFlashes, get defs() { return defs; } },
   };
   return svg;
 }
@@ -360,6 +366,24 @@ test('unhighlightCountry drops is-marked from the country path + ring', () => {
   unhighlightCountry(svg, 'es');
   assert.equal(svg._refs.innerPath.classList.contains('is-marked'), false);
   assert.equal(svg._refs.hit.classList.contains('is-marked'), false);
+});
+
+test('highlightCountry also marks a microstate leader line, so it reveals with its ring', () => {
+  // The ring + its leader are hidden until active (CSS); both must gain
+  // is-marked together or the reveal would show a ring with no connector.
+  const svg = fakeFlagSvg('mf', { withLeader: true });
+  highlightCountry(svg, 'mf');
+  assert.equal(svg._refs.hit.classList.contains('is-marked'), true);
+  assert.equal(svg._refs.leader.classList.contains('is-marked'), true);
+  unhighlightCountry(svg, 'mf');
+  assert.equal(svg._refs.leader.classList.contains('is-marked'), false);
+});
+
+test('paintCountryFlag tags a microstate leader is-flagged, so it reveals on the quiz', () => {
+  const svg = fakeFlagSvg('mf', { withLeader: true });
+  paintCountryFlag(svg, 'mf', '../flags/svg/', 'correct');
+  assert.equal(svg._refs.hit.classList.contains('is-flagged'), true);
+  assert.equal(svg._refs.leader.classList.contains('is-flagged'), true);
 });
 
 test('settleFlagToTint ignores non-ISO2 codes', () => {

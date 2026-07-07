@@ -395,6 +395,11 @@ export function bootFlagsData() {
     // fetch); diffs against the currently-stamped set so only the delta
     // repaints.
     syncMapFlags(visibleCodes);
+    // Gate the microstate rings: they only show for filter-matched small
+    // countries while a filter is actually on. Without a filter every
+    // country is "visible" (so every ring would be is-marked), so the
+    // ring CSS also requires `is-filtering` on the map — set it here.
+    if (mapSvg) mapSvg.classList.toggle('is-filtering', anyActive);
     // Smart zoom: when the filter narrows the visible set, zoom the
     // map to its bbox. When the filter is cleared (all visible), reset
     // to the original world view. The bbox computation excludes
