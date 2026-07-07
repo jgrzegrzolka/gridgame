@@ -1,6 +1,7 @@
-import { flagsGamePool, loadCountries } from '../../flags/group.js';
+import { loadCountries } from '../../flags/group.js';
+import { buildAnswerPool } from '../answerPool.js';
 import { filterToCategory } from '../../flags/findFlag.js';
-import { t, withLocalizedAliases } from '../../i18n.js';
+import { t } from '../../i18n.js';
 import { findPuzzle, resolvePuzzleEntry, manualToCategory } from '../../flags/daily.js';
 import {
   wireZoom,
@@ -51,7 +52,10 @@ export function bootBacklogPlay() {
     fetchCatalog('puzzles'),
   ])
     .then(([raw, /** @type {DailyPuzzle[]} */ catalog]) => {
-      const all = withLocalizedAliases(flagsGamePool(raw, false));
+      // Same answer pool as live (page.js) so a manual roster with a
+      // non-sovereign flag (England in the World Cup puzzle) previews here
+      // exactly as it plays — otherwise gb-eng drops out of the targets.
+      const all = buildAnswerPool(raw, catalog);
 
       const entry = findPuzzle(catalog, n);
       if (!entry) {
