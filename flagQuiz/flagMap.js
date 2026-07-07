@@ -490,13 +490,22 @@ function flagFillTargets(svg, id) {
   if (rootEl) {
     const childPaths = typeof rootEl.querySelectorAll === 'function'
       ? rootEl.querySelectorAll('path') : [];
+    const rootIsCountry = !!(rootEl.classList && rootEl.classList.contains('map-country'));
     let added = 0;
     for (let i = 0; i < childPaths.length; i++) {
       const p = childPaths[i];
-      // Skip inner paths that are their own country (e.g. <g id="fr">
-      // wraps <path id="gf"> French Guiana) — same carve-out the CSS
-      // makes with `:not(.map-country)`.
+      // Skip inner paths that belong to a DIFFERENT country nested inside this
+      // one, so (un)highlighting the outer country never clobbers the inner:
+      //   - a direct sub-country path: <g id="fr"><path id="gf"> French Guiana
+      //   - a nested country GROUP: the asset draws Kosovo inside Serbia
+      //     (<g id="rs"><g id="xk"><path id="xk-">), so a plain recursive path
+      //     query pulls xk- into Serbia's set — un-highlighting Serbia on a
+      //     flagsdata search then stripped Kosovo's own highlight, and answering
+      //     Serbia on the quiz would have painted Kosovo. A path is "ours" only
+      //     if its nearest map-country ancestor is rootEl.
       if (p && p.classList && p.classList.contains('map-country')) continue;
+      if (rootIsCountry && p && typeof p.closest === 'function'
+        && p.closest('.map-country') !== rootEl) continue;
       targets.push(p);
       added++;
     }
