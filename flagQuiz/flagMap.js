@@ -930,8 +930,12 @@ export function addHideButton(container, label, onToggle) {
   // mirroring the eye / eye-off on-off convention. Line style at the same
   // 1.3 stroke weight the fullscreen / resize glyphs use. Both ship;
   // `.is-collapsed` on the section picks which shows (see flagMap.css).
+  // The two fold lines are `<path>`, not `<line>`: flagMap.css hides every
+  // bare `<line>` inside `#flag-map-section svg` (it kills the world map's
+  // bundled coastline labels), which would blank the map's folds. Paths dodge
+  // that rule, so the folds actually render.
   const map = '<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>'
-    + '<line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>';
+    + '<path d="M8 2 8 18"/><path d="M16 6 16 22"/>';
   const g = (inner) => '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">'
     + '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">'
     + inner + '</g></svg>';
