@@ -5,7 +5,7 @@ import {
   markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
   offsetHitTargetCenter, paintCountryFlag, clearCountryFlag, settleFlagToTint,
   revealFlagImage, computeMainlandBbox, highlightCountry, unhighlightCountry,
-  pickNearestHitTarget, neutralizeMarkerCircles, planIslandMarker,
+  pickNearestHitTarget, neutralizeMarkerCircles, planIslandMarker, addHideButton,
 } from './flagMap.js';
 import { FLAG_TINTS } from '../flags/flagTints.js';
 
@@ -1392,4 +1392,52 @@ test('planIslandMarker: empty / degenerate input → null', () => {
   assert.equal(planIslandMarker([]), null);
   assert.equal(planIslandMarker(null), null);
   assert.equal(planIslandMarker([{ x: 0, y: 0, width: 0, height: 0 }]), null);
+});
+
+// ---- addHideButton: the map's top-left "hide" chip ----
+//
+// Minimal host fake: enough surface for the builder to create a <button>,
+// set its class / aria-label, register a click handler, and be appended.
+
+function fakeHideHost() {
+  const appended = [];
+  const makeBtn = () => {
+    let clickHandler = null;
+    const attrs = new Map();
+    return {
+      type: '', className: '', innerHTML: '',
+      setAttribute: (k, v) => attrs.set(k, String(v)),
+      getAttribute: (k) => (attrs.has(k) ? attrs.get(k) : null),
+      addEventListener: (evt, h) => { if (evt === 'click') clickHandler = h; },
+      _click: () => { if (clickHandler) clickHandler({ stopPropagation() {} }); },
+    };
+  };
+  const container = {
+    ownerDocument: { createElement: () => makeBtn() },
+    appendChild: (child) => { appended.push(child); return child; },
+  };
+  return { container, appended };
+}
+
+test('addHideButton builds a labelled chip whose click invokes onToggle', () => {
+  const { container, appended } = fakeHideHost();
+  let toggles = 0;
+  addHideButton(container, 'Hide map', () => { toggles++; });
+  assert.equal(appended.length, 1, 'one button appended');
+  const btn = appended[0];
+  assert.equal(btn.type, 'button');
+  assert.equal(btn.className, 'map-hide-btn');
+  assert.equal(btn.getAttribute('aria-label'), 'Hide map');
+  // Ships both glyphs so `.is-collapsed` can flip which shows.
+  assert.match(btn.innerHTML, /map-hide-ico--hide/);
+  assert.match(btn.innerHTML, /map-hide-ico--show/);
+  assert.equal(toggles, 0, 'not fired until clicked');
+  btn._click();
+  assert.equal(toggles, 1, 'onToggle fired on click');
+});
+
+test('addHideButton no-ops on a container that cannot host a button', () => {
+  // No throw when appendChild / createElement are missing (test-env guard).
+  assert.doesNotThrow(() => addHideButton(null, 'Hide map', () => {}));
+  assert.doesNotThrow(() => addHideButton({}, 'Hide map', () => {}));
 });

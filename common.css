@@ -1258,6 +1258,7 @@ dialog#zoom p.zoom-note {
 .fotd-card,
 .game-tile,
 .map-fullscreen-btn,
+.map-hide-btn,
 .map-resize-handle {
   font: inherit;
   font-size: 14px;
@@ -1285,6 +1286,7 @@ dialog#zoom p.zoom-note {
 .fotd-card:hover,
 .game-tile:hover,
 .map-fullscreen-btn:hover,
+.map-hide-btn:hover,
 .map-resize-handle:hover {
   background: var(--surface-hover-color);
 }
@@ -1299,6 +1301,7 @@ dialog#zoom p.zoom-note {
 .fotd-card:active,
 .game-tile:active,
 .map-fullscreen-btn:active,
+.map-hide-btn:active,
 .map-resize-handle:active {
   /* Border-only pink so the bg / text stay legible during press; on
    * release, the base rule's 600 ms border-color transition fades it

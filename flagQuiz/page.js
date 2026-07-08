@@ -16,6 +16,7 @@ import {
   targetFor,
   isQuizIncludeAll,
   isQuizShowMap,
+  setQuizShowMap,
   getQuizLastVariant,
   setQuizLastVariant,
   pickCelebration,
@@ -107,7 +108,7 @@ import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../flags/achievementsBaseline.js';
-import { mountFlagMap, paintCountryFlag, settleFlagToTint, revealFlagImage, computeCountriesBbox, computeMainlandBbox } from './flagMap.js';
+import { mountFlagMap, addHideButton, paintCountryFlag, settleFlagToTint, revealFlagImage, computeCountriesBbox, computeMainlandBbox } from './flagMap.js';
 import { attachZoomPan, regionalFrame } from './mapZoom.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox } from '../flags/flagLightbox.js';
@@ -525,12 +526,15 @@ export function bootFlagQuiz() {
       mapMounted = true;
       flagMapEl.hidden = false;
       flagMapEl.setAttribute('aria-hidden', 'false');
-      // Mounting after the round already ended (player flipped the toggle
-      // on the result screen): drop the section into the result panel and
-      // mark it reviewable, mirroring what showResult does for a map that
-      // was already up at finish.
+      // Leaving the collapsed strip for the live map: drop `.is-collapsed`
+      // so the chip flips back to its "hide" glyph. mountFlagMap replaces
+      // the section's innerHTML, so the collapsed chip is rebuilt fresh.
+      flagMapEl.classList.remove('is-collapsed');
+      // Mounting after the round already ended (player reopened the map on
+      // the result screen, via the toggle chip or the burger toggle): the
+      // section is already parented into the result panel by showResult, so
+      // we only mark it reviewable — no re-parent here.
       if (gameOver) {
-        resultEl.insertBefore(flagMapEl, leaderboardEl);
         flagMapEl.classList.add('is-finished');
       }
       void mountFlagMap({
@@ -544,6 +548,11 @@ export function bootFlagQuiz() {
         // Pacific microstates that aren't part of the Asian round.
         scopeCodes: variantCodes,
         fullscreenLabel: t('menu.fullscreen', 'Toggle fullscreen'),
+        // Top-left toggle chip → collapse the map in place (chip stays put,
+        // flips to a "show" eye) and persist the choice — the same path the
+        // burger toggle drives.
+        onToggle: toggleMapVisibility,
+        toggleLabel: t('menu.hideMap', 'Hide map'),
       }).then((svg) => {
         mapSvg = svg;
         // Wheel-zoom + pinch + drag-pan + double-tap-reset. Attached
@@ -584,18 +593,34 @@ export function bootFlagQuiz() {
       if (mapZoomHandle) mapZoomHandle.teardown();
       mapZoomHandle = null;
       mapSvg = null;
-      flagMapEl.hidden = true;
-      flagMapEl.setAttribute('aria-hidden', 'true');
       flagMapEl.classList.remove('is-finished');
-      // Drop the inlined SVG. The click handler stays bound to flagMapEl
-      // (the container) and is gated on `.is-finished`, so it's inert
-      // until a re-mount restores both the SVG and that class.
+      // Drop the inlined SVG (the heavy part — this is the perf relief) and
+      // render the slim collapsed strip: the SAME toggle chip, in the SAME
+      // top-left corner, now showing a "show map" eye. The click handler
+      // stays bound to flagMapEl (the container) and is gated on
+      // `.is-finished`, so it's inert until a re-mount restores it.
+      renderCollapsedMap();
+    }
+
+    /**
+     * Render the collapsed map strip: the section stays visible but holds
+     * only the toggle chip (no SVG), so the chip keeps its exact top-left
+     * position and just flips to the "show map" eye. Shared by hideMap and
+     * the initial paint when the player has the map off. The chip is rebuilt
+     * here because mountFlagMap's innerHTML replacement wipes it on mount.
+     */
+    function renderCollapsedMap() {
+      if (!flagMapEl) return;
+      flagMapEl.hidden = false;
+      flagMapEl.setAttribute('aria-hidden', 'false');
+      flagMapEl.classList.add('is-collapsed');
       flagMapEl.innerHTML = '';
+      addHideButton(flagMapEl, t('menu.showMap', 'Show map'), toggleMapVisibility);
     }
 
     /**
      * Live response to the burger menu's "Show map" toggle — mount or
-     * hide the map in place, no page reload. Variants with no map asset
+     * collapse the map in place, no page reload. Variants with no map asset
      * (none today, but the table is the gate) silently no-op.
      * @param {boolean} show
      */
@@ -604,7 +629,55 @@ export function bootFlagQuiz() {
       else hideMap();
     }
 
-    if (isQuizShowMap()) mountMap();
+    /**
+     * The toggle chip's click. Flips to the opposite of the current state:
+     * a mounted map collapses, a collapsed one re-mounts. Reads `mapMounted`
+     * at click time so the same handler serves the chip in both states.
+     */
+    function toggleMapVisibility() {
+      applyMapPreference(!mapMounted);
+    }
+
+    /**
+     * Single entry point for the in-map toggle chip. Persists the choice to
+     * the shared `gridgame.flagquiz.showMap` key, applies it live, and syncs
+     * the burger menu's "Show map" toggle so the two controls never
+     * disagree. The menu toggle drives its own persistence + setMapVisible
+     * directly, so it doesn't route through here.
+     * @param {boolean} show
+     */
+    function applyMapPreference(show) {
+      setQuizShowMap(localStorage, show);
+      setMapVisible(show);
+      syncMapMenuToggle(show);
+    }
+
+    /**
+     * Reflect the current map visibility on the burger menu's "Show map"
+     * checkbox. The menu isn't rebuilt on every open, so a change made from
+     * the map's own chip/bar would otherwise leave the toggle showing a
+     * stale state. Queries the live checkbox (robust to menu rebuilds) and
+     * sets `.checked` directly — no `change` dispatch, so this can't loop
+     * back through the toggle's own handler.
+     * @param {boolean} show
+     */
+    function syncMapMenuToggle(show) {
+      if (!quizMenuEl) return;
+      const textSpan = quizMenuEl.querySelector('.scope-toggle-text[data-i18n="menu.showMap"]');
+      const label = textSpan && textSpan.closest('.scope-toggle');
+      const input = /** @type {HTMLInputElement | null} */ (
+        label ? label.querySelector('input[type="checkbox"]') : null
+      );
+      if (input) input.checked = show;
+    }
+
+    // Initial paint: for any variant that has a map, show the live map or
+    // the collapsed toggle chip per the saved preference. Variants with no
+    // map asset leave the section hidden.
+    if (MAP_CONFIG[key]) {
+      if (isQuizShowMap()) mountMap();
+      else renderCollapsedMap();
+    }
 
     // Result-screen data is captured once when showResult fires so a
     // soft language switch can re-paint the localized labels (Final
@@ -1072,24 +1145,27 @@ export function bootFlagQuiz() {
 
       mountShareButton(answeredCount);
 
-      // Re-parent the europe contour map into the result panel, above
-      // the leaderboard. The section was mounted as a child of #game so
-      // the player sees it filling in live; on finish we want the final
-      // pattern to sit next to the score recap, not vanish with the
-      // play UI. Idempotent when the map isn't mounted (other variants
-      // or 60s mode): flagMapEl stays `hidden` and the move is a no-op.
+      // Re-parent the contour map section into the result panel, above the
+      // leaderboard. It was mounted as a child of #game so the player sees
+      // it filling in live; on finish we want the final pattern — or, if the
+      // player hid the map, its collapsed toggle chip so they can still open
+      // it for review — to sit next to the score recap instead of vanishing
+      // with the play UI. No-op for variants with no map (section stays
+      // hidden in #game).
       //
-      // `.is-finished` also gets set here — the click handler reads it
-      // to decide whether to open the flag-zoom popup. Map clicks are
-      // ignored during play; once the round ends every country becomes
-      // a review surface.
+      // `.is-finished` is set only when the map is actually mounted — the
+      // click handler reads it to open the flag-zoom popup. Map clicks are
+      // ignored during play; once the round ends every country becomes a
+      // review surface.
       if (flagMapEl && !flagMapEl.hidden) {
         resultEl.insertBefore(flagMapEl, leaderboardEl);
-        flagMapEl.classList.add('is-finished');
-        // Zoom out to the whole filled-in board for review — the one and
-        // only zoom-out, now that the round is over. Overrides the fly-in
-        // that the final answer just started.
-        if (mapZoomHandle) mapZoomHandle.animateReset({ durationMs: 640 });
+        if (mapMounted) {
+          flagMapEl.classList.add('is-finished');
+          // Zoom out to the whole filled-in board for review — the one and
+          // only zoom-out, now that the round is over. Overrides the fly-in
+          // that the final answer just started.
+          if (mapZoomHandle) mapZoomHandle.animateReset({ durationMs: 640 });
+        }
       }
 
       gameEl.hidden = true;

@@ -673,6 +673,14 @@ export function resetMap(root) {
  * fullscreen button's `aria-label`. Caller passes
  * `t('menu.fullscreen', 'Toggle fullscreen')`.
  *
+ * `onToggle` (optional) opts the map into a top-left hide/show toggle chip
+ * that mirrors the fullscreen chip in the opposite corner. Its click calls
+ * `onToggle()` — flagQuiz collapses the mounted map (keeping the chip in
+ * place, flipped to a "show" eye) or re-mounts it, persisting the choice.
+ * Omitted by flagsdata, which has no hide affordance, so no chip renders
+ * there. `toggleLabel` is the already-translated `aria-label` for the
+ * current (mounted → "hide map") state.
+ *
  * @param {{
  *   container: HTMLElement,
  *   url: string,
@@ -680,6 +688,8 @@ export function resetMap(root) {
  *   cropPad?: { left?: number, right?: number, top?: number, bottom?: number },
  *   scopeCodes?: string[] | null,
  *   fullscreenLabel?: string,
+ *   onToggle?: (() => void) | null,
+ *   toggleLabel?: string,
  *   resizable?: boolean,
  *   hugIslands?: boolean,
  *   fetchImpl?: typeof fetch,
@@ -689,6 +699,8 @@ export function resetMap(root) {
 export async function mountFlagMap({
   container, url, cropCodes = null, cropPad, scopeCodes = null,
   fullscreenLabel = 'Toggle fullscreen',
+  onToggle = null,
+  toggleLabel = 'Hide map',
   resizable = true,
   hugIslands = false,
   fetchImpl = globalThis.fetch,
@@ -727,6 +739,7 @@ export async function mountFlagMap({
   tagMicrostates(svg, scope);
   addHitTargets(svg, hitTargetRadius(/** @type {any} */ (svg)), hugIslands);
   addFullscreenButton(container, fullscreenLabel);
+  if (typeof onToggle === 'function') addHideButton(container, toggleLabel, onToggle);
   if (resizable) makeMapResizable(container, /** @type {any} */ (svg));
   return /** @type {SVGElement} */ (svg);
 }
@@ -883,6 +896,56 @@ function addFullscreenButton(container, label) {
     d.addEventListener('fullscreenchange', sync);
     d.addEventListener('webkitfullscreenchange', sync);
   }
+}
+
+/**
+ * Append the map's hide/show toggle chip, anchored top-left — the mirror
+ * of the fullscreen chip in the opposite corner, sharing the exact same
+ * button recipe (surface fill, hover, pink :active afterglow — all in
+ * `common.css`) and icon weight so the two read as one set of map
+ * controls. Click calls `onToggle`; flagQuiz collapses / re-mounts the map
+ * and persists the choice. Built only when the caller passes an `onToggle`
+ * (flagsdata omits it, so no chip there).
+ *
+ * The chip carries BOTH glyphs — an eye (show) and an eye-with-slash
+ * (hide) — and CSS reveals the right one from the section's `.is-collapsed`
+ * state, so the SAME button stays in the SAME spot and only its icon flips
+ * when the map collapses. `label` is the already-translated aria-label for
+ * the current state (hide when mounted, show when collapsed).
+ *
+ * @param {HTMLElement} container
+ * @param {string} label
+ * @param {() => void} onToggle
+ */
+export function addHideButton(container, label, onToggle) {
+  if (!container || typeof container.appendChild !== 'function') return;
+  const doc = container.ownerDocument || globalThis.document;
+  if (!doc || typeof doc.createElement !== 'function') return;
+  const btn = doc.createElement('button');
+  btn.type = 'button';
+  btn.className = 'map-hide-btn';
+  btn.setAttribute('aria-label', label || 'Hide map');
+  // A folded-map glyph so the control clearly reads as "the map" (not a
+  // generic eye): a plain map (show) + a map with a diagonal slash (hide),
+  // mirroring the eye / eye-off on-off convention. Line style at the same
+  // 1.3 stroke weight the fullscreen / resize glyphs use. Both ship;
+  // `.is-collapsed` on the section picks which shows (see flagMap.css).
+  // The two fold lines are `<path>`, not `<line>`: flagMap.css hides every
+  // bare `<line>` inside `#flag-map-section svg` (it kills the world map's
+  // bundled coastline labels), which would blank the map's folds. Paths dodge
+  // that rule, so the folds actually render.
+  const map = '<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>'
+    + '<path d="M8 2 8 18"/><path d="M16 6 16 22"/>';
+  const g = (inner) => '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">'
+    + '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">'
+    + inner + '</g></svg>';
+  btn.innerHTML = `<span class="map-hide-ico map-hide-ico--hide">${g(map + '<path d="M3 3 21 21"/>')}</span>`
+    + `<span class="map-hide-ico map-hide-ico--show">${g(map)}</span>`;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onToggle();
+  });
+  container.appendChild(btn);
 }
 
 /**
