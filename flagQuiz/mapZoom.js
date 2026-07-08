@@ -50,8 +50,9 @@ const FREE_PAN_KEEP = 0.1;
  * clamp, as a fraction of the visible viewBox dimension. The offset eases toward
  * this cap with growing resistance (see rubberBandOffset) and springs back on
  * release (see springHome / endPanGesture), so the edge gives a little instead
- * of dead-stopping ("hitting a wall"). Only applies zoomed in — zoomed out
- * already free-pans (FREE_PAN_KEEP), no wall to soften. Jan, 2026-07-08.
+ * of dead-stopping ("hitting a wall"). Applies at EVERY pan edge — the zoomed-in
+ * map edge and the zoomed-out floating-map keep-sliver (FREE_PAN_KEEP) alike.
+ * Zoom limits stay hard-clamped. Jan, 2026-07-08.
  */
 const MAX_OVERSCROLL = 0.12;
 /** Spring-back duration (ms) easing a released pan from overscroll to the edge. */
@@ -504,17 +505,17 @@ export function attachZoomPan(svg, opts = {}) {
   }
 
   /**
-   * Clamp a live PAN frame. Same hard clamp as `apply`, except a zoomed-in pan
-   * is allowed to overscroll past the edge with rubber-band resistance
-   * (rubberBandOffset) rather than dead-stopping at the wall. The released
-   * overscroll springs back in `endPanGesture`. Zoomed out (width ≥ original)
-   * keeps the plain free-pan clamp — there's no edge wall there to soften.
+   * Clamp a live PAN frame. Same hard clamp as `apply`, except the pan may
+   * overscroll past its edge with rubber-band resistance (rubberBandOffset)
+   * rather than dead-stopping at the wall — for BOTH the zoomed-in map edge and
+   * the zoomed-out floating-map keep-sliver edge (FREE_PAN_KEEP). Within bounds
+   * the offset is 0, so this is a no-op until you actually reach an edge. The
+   * released overscroll springs back in `endPanGesture`. Zoom stays hard-clamped.
    * @param {ViewBox} next
    * @returns {ViewBox}
    */
   function clampPanFrame(next) {
     const hard = clampViewBox(next, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(next), true);
-    if (hard.width >= original.width) return hard;
     return {
       x: hard.x + rubberBandOffset(next.x - hard.x, hard.width),
       y: hard.y + rubberBandOffset(next.y - hard.y, hard.height),
