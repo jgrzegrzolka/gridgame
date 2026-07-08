@@ -210,7 +210,6 @@
    * env() nudge covers a rare top-centre camera without pushing it down. */
   top: max(8px, env(safe-area-inset-top));
   left: 50%;
-  transform: translateX(-50%);
   z-index: 11;
   width: 40px;
   height: 40px;
@@ -220,11 +219,16 @@
   justify-content: center;
   border-radius: 999px;
   color: var(--muted-color); /* the "grey" ✕ */
-  /* Revealed by a swipe down: invisible until flagMap.js adds `.fs-exit-visible`,
-   * then fades in. Keep the recipe's hover / press transitions alongside opacity. */
+  /* Revealed by a swipe down: parked above the top edge and invisible, it slides
+   * DOWN into place + fades in when flagMap.js adds `.fs-exit-visible`, and
+   * slides back up to the top + fades out when it's removed. `translateX(-50%)`
+   * keeps it centred; the Y term carries the slide. Recipe hover / press
+   * transitions ride alongside. */
   opacity: 0;
   pointer-events: none;
-  transition: opacity 200ms ease-out,
+  transform: translate(-50%, -160%);
+  transition: transform 260ms ease-out,
+              opacity 200ms ease-out,
               background-color 120ms ease-out,
               border-color 600ms ease-out;
 }
@@ -232,6 +236,17 @@
 #flag-map-section:-webkit-full-screen.fs-exit-visible .map-fs-exit {
   opacity: 1;
   pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+/* Reduced motion: keep the fade, drop the slide (park it in place). */
+@media (prefers-reduced-motion: reduce) {
+  #flag-map-section:fullscreen .map-fs-exit,
+  #flag-map-section:-webkit-full-screen .map-fs-exit {
+    transform: translate(-50%, 0);
+    transition: opacity 200ms ease-out,
+                background-color 120ms ease-out,
+                border-color 600ms ease-out;
+  }
 }
 /* Keep the ✕ glyph its intended size + transparent (the 100vw/100vh fullscreen
  * svg rule would otherwise blow it up and paint a background, same trap as the
