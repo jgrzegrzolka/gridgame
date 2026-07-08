@@ -15,13 +15,15 @@
  * any element with a 2-letter ISO id (path OR g wrapper) gets it.
  *
  * Status classes added by callers:
- *   - `.is-correct` / `.is-wrong` — flagQuiz answer state (green/red)
- *
- * flagsdata no longer tints filter matches: it stamps each matched
- * country with its flag (inline `fill: url(#flagfill-xx)` via
- * `paintCountryFlag`, `status: 'select'`), the same fill flagQuiz paints
- * answered countries with. See the `.flag-flash` / `.is-flagged` rules
- * below — shared by both surfaces.
+ *   - `.is-flagged` + `.is-flag-correct` / `.is-flag-wrong` — a flagQuiz
+ *     answer: its flag image stamped into the contour, with green / red status
+ *     (`paintCountryFlag`). The newest answer shows the live flag; earlier ones
+ *     carry `.is-tinted` and settle to a quiet green / red correctness wash,
+ *     which also stands in for every flag while the map moves.
+ *   - `.is-marked` — a flagsdata filter match: a flat yellow fill, no flag
+ *     image (the browse map is yellow-only now, so it skips the flag / tint
+ *     machinery entirely).
+ * See the `.flag-flash` / `.is-flagged` / `.is-marked` rules below.
  */
 
 #flag-map-section {
@@ -224,18 +226,22 @@
  * `.is-interacting` is on the <svg> and the whole element is moved as one
  * GPU-composited layer via `transform` — no per-frame repaint. To keep
  * that single composited layer cheap (and clean while scaling), drop the
- * flag-image fills back to flat land for the duration of the gesture: with
- * no element referencing a `url(#flagfill-…)` pattern, the browser doesn't
- * rasterize the 255 flag images at all. The inline flag fill is set with
- * plain `style` (no !important), so a class rule with `!important` wins for
- * the gesture, then loses again the instant the class is removed on settle
- * — flags snap back sharp, in one repaint, while stopped.
+ * flag-image fills for the duration of the gesture: with no element
+ * referencing a `url(#flagfill-…)` pattern, the browser doesn't rasterize the
+ * 255 flag images at all. The inline flag fill is set with plain `style` (no
+ * !important), so a class rule with `!important` wins for the gesture, then
+ * loses again the instant the class is removed on settle — flags snap back
+ * sharp, in one repaint, while stopped.
  *
- * Instead of flat grey we fill each country with its flag's dominant colour
- * (`--flag-tint`, set per country in flagMap.js from flagTints.js). A solid
- * colour costs the browser exactly what grey did — no flag image to decode —
- * so motion stays smooth, but the map reads as a colourful world rather than
- * a grey one. `#e3e3e3` (the land colour) is the fallback if a tint is missing. */
+ * What shows in their place is the same green / red correctness wash the
+ * settled trail already uses (rules below) — cheap solid fill, no image to
+ * decode — so motion stays smooth and every answer reads by its correct /
+ * wrong state the whole time. The newest answer is a live <image> at rest;
+ * during the gesture it flattens to its wash too, then snaps back to a sharp
+ * flag when `.is-interacting` drops. The `.is-tinted` wash rules carry the
+ * same colours at equal specificity, so a country already settled doesn't
+ * flip mid-move. (This replaced an earlier flag's-dominant-colour tint, which
+ * only ever mattered for flagsdata's now-retired flag-image browse map.) */
 /* Disputed-limit paths (Kosovo's `limitxx`) ship `opacity: 0` in the base asset
  * so the map stays neutral about contested borders. That also hides the flag
  * fill, so an answered / filter-matched Kosovo rendered as nothing. Restore
@@ -246,13 +252,19 @@
 #flag-map-section svg .limitxx.is-marked {
   opacity: 1;
 }
-#flag-map-section svg.is-interacting .is-flagged {
-  fill: var(--flag-tint, #e3e3e3) !important;
-  fill-opacity: 1 !important;
+#flag-map-section svg.is-interacting .is-flagged.is-flag-correct,
+#flag-map-section svg.is-interacting .map-hit-target.is-flagged.is-flag-correct {
+  fill: #2a8a3a !important;
+  fill-opacity: 0.35 !important;
+  stroke: #2a8a3a !important;
+  stroke-opacity: 0.5 !important;
 }
-#flag-map-section svg.is-interacting .map-hit-target.is-flagged {
-  fill: var(--flag-tint, transparent) !important;
-  stroke: var(--flag-tint, var(--primary-color)) !important;
+#flag-map-section svg.is-interacting .is-flagged.is-flag-wrong,
+#flag-map-section svg.is-interacting .map-hit-target.is-flagged.is-flag-wrong {
+  fill: #c0392b !important;
+  fill-opacity: 0.35 !important;
+  stroke: #c0392b !important;
+  stroke-opacity: 0.5 !important;
 }
 /* Only the most-recently answered country stays a live flag <image>; every
  * earlier answer carries `.is-tinted` (added in page.js as the next answer
@@ -285,21 +297,6 @@
   fill-opacity: 0.35 !important;
   stroke: #c0392b !important;
   stroke-opacity: 0.5 !important;
-}
-/* Browse surfaces (flagsdata) stamp flags with the neutral `select` status —
- * no correct / wrong — so a settled `.is-tinted` flag there has no correctness
- * colour to show. Fall back to the flag's own dominant tint (the same cheap
- * solid fill used while the map moves), so flagsdata can throttle its "show all
- * flags" reveal the same way: stamp every country as this tint (no image
- * decode), then reveal real flags a few per frame. The quiz's correctness rules
- * above carry an extra class, so they stay more specific and still win there. */
-#flag-map-section svg .is-flagged.is-tinted {
-  fill: var(--flag-tint, #e3e3e3) !important;
-  fill-opacity: 1 !important;
-}
-#flag-map-section svg .map-hit-target.is-flagged.is-tinted {
-  fill: var(--flag-tint, transparent) !important;
-  stroke: var(--flag-tint, var(--primary-color)) !important;
 }
 /* flagsdata marks each country in the current filter with a flat yellow fill
  * (`markCountry`) instead of painting its flag <image>. No raster decode, so
@@ -539,9 +536,9 @@
  * framed by its thin green / red answer outline (set inline by
  * paintCountryFlag). `forwards` keeps it resting at 0; the colour is set
  * inline on the clone (from the JS), so this rule only animates the
- * opacity. The clone is removed on play-again by `resetMap`. The outline
- * — not a lingering wash — is what marks "right / wrong" once the flash
- * has gone, so the flag stays fully readable. */
+ * opacity. The clone is discarded when the map remounts (play-again is a full
+ * page reload). The outline — not a lingering wash — is what marks "right /
+ * wrong" once the flash has gone, so the flag stays fully readable. */
 @keyframes flag-flash-out {
   0%, 20% { fill-opacity: 1; }
   100%    { fill-opacity: 0; }
