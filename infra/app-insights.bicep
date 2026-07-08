@@ -45,6 +45,16 @@ resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
     // week, ~100 api calls/day) we sit at ~50 MB/month — room to grow
     // 100× before hitting the cap.
     retentionInDays: 30
+    // Hard runaway guard: cap daily ingestion so we can never blow past
+    // the 5 GB/month free tier no matter what starts emitting. 0.16 GB/day
+    // × 30 ≈ 4.8 GB/month. This is a ceiling, NOT an operating limit — at
+    // ~1.6 MB/day today it leaves ~100× headroom. Bicep has no decimal
+    // literal, so the fractional GB value goes through json(). If the cap
+    // is ever hit, ingestion (including the 4xx/5xx we care about) stops
+    // until the daily reset — raise this before it ever bites.
+    workspaceCapping: {
+      dailyQuotaGb: json('0.16')
+    }
     features: {
       enableLogAccessUsingOnlyResourcePermissions: true
     }
