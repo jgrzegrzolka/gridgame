@@ -750,11 +750,11 @@ function addFullscreenButton(container, label) {
   });
   container.appendChild(btn);
   // Fullscreen exit ✕. The corner ⤢ button above can be clipped by a phone's
-  // rounded corner or camera notch, and mobile has no Esc — so in fullscreen we
-  // reveal a grey ✕ at the TOP-CENTRE (clear of both a rounded corner and a
-  // landscape side-notch) on tap, auto-hiding a few seconds later like a video
-  // player's controls (see revealMapExit). Rebuilt each mount because
-  // mountFlagMap's innerHTML replacement wipes it; the corner button stays put.
+  // rounded corner or camera notch, and mobile has no Esc — so in fullscreen a
+  // grey ✕ at the TOP-CENTRE (clear of both a rounded corner and a landscape
+  // side-notch) appears on a deliberate SWIPE DOWN, auto-hiding a few seconds
+  // later (see revealMapExit). Rebuilt each mount because mountFlagMap's
+  // innerHTML replacement wipes it; the corner button stays put.
   const exitBtn = doc.createElement('button');
   exitBtn.type = 'button';
   exitBtn.className = 'map-fs-exit';
@@ -787,7 +787,6 @@ function addFullscreenButton(container, label) {
     if (current === container) {
       if (svg) svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
       lockLandscapeOnTouch();
-      revealMapExit(container);
     } else {
       if (svg) svg.removeAttribute('preserveAspectRatio');
       unlockOrientation();
@@ -799,15 +798,37 @@ function addFullscreenButton(container, label) {
     doc.addEventListener('webkitfullscreenchange', sync);
   }
   if (typeof container.addEventListener === 'function') {
-    // Any tap on the map while fullscreen re-reveals the ✕ and resets its timer.
-    container.addEventListener('pointerdown', () => {
-      if (isMapFullscreen(container)) revealMapExit(container);
+    // Reveal the ✕ on a deliberate swipe DOWN only — a plain tap, a country
+    // click, or a horizontal / upward pan leaves it hidden, so the exit surfaces
+    // when the player reaches for it rather than on every touch. One pointer
+    // tracked at a time; fires once per gesture past the vertical threshold.
+    let startX = 0, startY = 0, tracking = false, fired = false;
+    container.addEventListener('pointerdown', (e) => {
+      tracking = isMapFullscreen(container);
+      fired = false;
+      startX = e.clientX;
+      startY = e.clientY;
     });
+    container.addEventListener('pointermove', (e) => {
+      if (!tracking || fired) return;
+      const dy = e.clientY - startY;
+      // Predominantly-downward travel past the threshold: not a tap, not a
+      // sideways/upward pan.
+      if (dy > SWIPE_REVEAL_PX && dy > Math.abs(e.clientX - startX)) {
+        fired = true;
+        revealMapExit(container);
+      }
+    });
+    const endSwipe = () => { tracking = false; };
+    container.addEventListener('pointerup', endSwipe);
+    container.addEventListener('pointercancel', endSwipe);
   }
 }
 
-/** Auto-hide delay for the fullscreen exit ✕ after the last tap. */
+/** Auto-hide delay for the fullscreen exit ✕ after it's revealed. */
 const FS_EXIT_HIDE_MS = 3200;
+/** Downward travel (px) that counts as a "swipe down" to reveal the exit ✕. */
+const SWIPE_REVEAL_PX = 48;
 /** @type {WeakMap<Element, number>} Live auto-hide timer per map section. */
 const fsExitTimers = new WeakMap();
 

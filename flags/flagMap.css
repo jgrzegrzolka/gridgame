@@ -194,8 +194,9 @@
 }
 /* Fullscreen exit ✕ — a grey close button at the top-centre, clear of a phone's
  * rounded corners and a landscape side-notch (where the corner ⤢ chip can be
- * clipped). Reveal-on-tap + auto-hide is driven from flagMap.js (it toggles the
- * `.fs-exit-visible` class); touch-only, so desktop never sees it. Reuses the
+ * clipped). Reveal-on-swipe-down + auto-hide is driven from flagMap.js (it
+ * toggles the `.fs-exit-visible` class); touch-only, so desktop never sees it.
+ * Reuses the
  * shared chrome-button recipe (common.css); only the position, the grey glyph,
  * and the reveal differ. Hidden entirely outside fullscreen. */
 .map-fs-exit {
@@ -219,8 +220,8 @@
   justify-content: center;
   border-radius: 999px;
   color: var(--muted-color); /* the "grey" ✕ */
-  /* Reveal-on-tap: invisible until flagMap.js adds `.fs-exit-visible`, then
-   * fades in. Keep the recipe's hover / press transitions alongside opacity. */
+  /* Revealed by a swipe down: invisible until flagMap.js adds `.fs-exit-visible`,
+   * then fades in. Keep the recipe's hover / press transitions alongside opacity. */
   opacity: 0;
   pointer-events: none;
   transition: opacity 200ms ease-out,
