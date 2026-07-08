@@ -14,26 +14,19 @@
  *
  * Pure DOM, no fetch unless explicitly via `mountFlagMap`. The page
  * mounts the SVG once (inlined into a host element so CSS can reach
- * into it), then calls `markCountry` on each answer.
+ * into it), then calls `paintCountryFlag` on each answer.
  *
  * Codes not present in the SVG (e.g. `ax`, `sj`, the EU/CEFTA regional
  * codes the quiz pool also surfaces) silently no-op — they just don't
  * paint, the rest of the round continues unchanged.
  *
- * Status classes on a tagged country element:
- *   - `is-correct` → green fill
- *   - `is-wrong`   → red fill
- *   - neither      → default grey fill (CSS rules in `flagQuiz/index.css`)
- *
- * A second pick at the same country (only possible across a play-again)
- * would re-mark it; `markCountry` clears both classes before setting
- * the new one so the latest answer wins. resetMap clears every marked
- * country at once — used on play-again to start fresh.
+ * Answer state on a painted country (`paintCountryFlag`): its contour is
+ * filled with the flag image and tagged `.is-flag-correct` (green) or
+ * `.is-flag-wrong` (red). The most-recent answer shows the live flag; earlier
+ * answers settle to a quiet green / red correctness wash (`.is-tinted`), which
+ * is also what stands in for every flag while the map is panned / zoomed — see
+ * the fill rules in `flags/flagMap.css`.
  */
-
-import { FLAG_TINTS } from '../flags/flagTints.js';
-
-const STATUS_CLASSES = ['is-correct', 'is-wrong'];
 
 /**
  * Answer-status colours for the flag-fill tint overlay — the same green /
@@ -247,39 +240,6 @@ const MICROSTATE_CODES = new Set([
 ]);
 
 /**
- * @typedef {{
- *   querySelector(selector: string): { classList: { add(c: string): void, remove(c: string): void } } | null,
- *   querySelectorAll(selector: string): ArrayLike<{ classList: { add(c: string): void, remove(c: string): void } }>,
- * }} MapRoot
- */
-
-/**
- * Set (or clear) the answer status on one country's SVG element.
- *
- * @param {MapRoot} root
- * @param {string} code
- * @param {'correct' | 'wrong' | 'clear'} state
- */
-export function markCountry(root, code, state) {
-  if (!root || typeof code !== 'string' || code.length === 0) return;
-  const id = code.toLowerCase();
-  const safeId = id.replace(/[^a-z0-9_-]/g, '');
-  if (safeId !== id || safeId.length === 0) return;
-  /** @type {Array<{ classList: { add(c: string): void, remove(c: string): void } }>} */
-  const targets = [];
-  const path = root.querySelector(`#${safeId}`);
-  if (path) targets.push(path);
-  const hits = root.querySelectorAll(`[data-hit-for="${safeId}"]`);
-  for (let i = 0; i < hits.length; i++) targets.push(hits[i]);
-  if (targets.length === 0) return;
-  for (const t of targets) {
-    for (const c of STATUS_CLASSES) t.classList.remove(c);
-    if (state === 'correct') t.classList.add('is-correct');
-    else if (state === 'wrong') t.classList.add('is-wrong');
-  }
-}
-
-/**
  * Fill an answered country's contour with its actual flag image (at 60%
  * opacity), then tint it green (correct) or red (wrong). An SVG `fill` is
  * clipped to the painted geometry automatically, so pointing a country's
@@ -287,15 +247,9 @@ export function markCountry(root, code, state) {
  * into the country's silhouette; a colour-overlay clone on top supplies
  * the answer status.
  *
- * Used by flagQuiz for every map variant + mode in place of the old flat
- * green / red fill (`markCountry`), and by flagsdata to stamp every
- * filter-matched country with its flag (`status: 'select'` — the neutral
- * flavour, below). `markCountry` stays as the flat-highlight primitive.
- *
- * `status: 'select'` is the neutral flavour flagsdata uses: it stamps the
- * flag with no colour flash and no green / red outline — just the flag in
- * the silhouette. `clearCountryFlag` is its inverse (un-stamp one country
- * when it drops out of the filter).
+ * Used by flagQuiz for every map variant + mode: each answer stamps the
+ * asked-about country with its flag and a green (correct) / red (wrong)
+ * status.
  *
  * Mechanics:
  *   - Lazily create a `<defs>` and append one `<pattern id="flagfill-xx">`
@@ -317,13 +271,13 @@ export function markCountry(root, code, state) {
  *     thin, semi-transparent green / red outline (inline stroke, set
  *     below) that persists once the wash fades — a crisp "right / wrong"
  *     frame around the flag.
- *   - Every flag-filled element gets `.is-flagged` so `resetMap` can find
- *     and clear it (and the overlay clones) on play-again.
+ *   - Every flag-filled element gets `.is-flagged` so the fills can be
+ *     found (e.g. to settle them to their correctness wash on the next answer).
  *
  * @param {any} svg     mounted `<svg>` root
  * @param {string} code ISO 3166-1 alpha-2
  * @param {string} svgBase  flag-svg directory, e.g. `'../flags/svg/'`
- * @param {'correct' | 'wrong' | 'select'} status
+ * @param {'correct' | 'wrong'} status
  */
 export function paintCountryFlag(svg, code, svgBase, status) {
   if (!svg || typeof code !== 'string') return;
@@ -332,8 +286,7 @@ export function paintCountryFlag(svg, code, svgBase, status) {
   /** @type {any} */
   const doc = svg.ownerDocument || globalThis.document;
   if (!doc || typeof doc.createElementNS !== 'function') return;
-  const statusClass = status === 'correct' ? 'is-flag-correct'
-    : status === 'wrong' ? 'is-flag-wrong' : null;
+  const statusClass = status === 'wrong' ? 'is-flag-wrong' : 'is-flag-correct';
   const patternId = `flagfill-${id}`;
   if (!svg.querySelector(`#${patternId}`)) {
     let defs = svg.querySelector('defs');
@@ -358,7 +311,7 @@ export function paintCountryFlag(svg, code, svgBase, status) {
     defs.appendChild(pattern);
   }
   const fill = `url(#${patternId})`;
-  const flashColor = statusClass ? FLAG_FLASH_COLORS[status] : null;
+  const flashColor = FLAG_FLASH_COLORS[status];
   // Overlay a green / red clone of the answered shape on top of the flag.
   // The CSS `flag-flash` animation holds it solid briefly (a green / red
   // "got it / missed it" stamp) then settles it to a soft 40% wash that
@@ -415,22 +368,18 @@ export function paintCountryFlag(svg, code, svgBase, status) {
       el.classList.add('is-flagged');
       // Persist the answer status so once this country is no longer the most
       // recent (gains `.is-tinted`), it settles to a quiet green / red
-      // correctness wash instead of its flag colour — see flagMap.css.
-      if (statusClass) el.classList.add(statusClass);
+      // correctness wash instead of its flag colour — see flagMap.css. The
+      // same green / red also stands in for the flag while the map moves.
+      el.classList.add(statusClass);
     }
-    // While the map is moving, CSS fills the newest flagged country with this
-    // cheap solid colour (var(--flag-tint)) instead of the flag image — same
-    // raster cost as the old flat grey, but colourful. It snaps back to a full
-    // flag on settle. Missing tint (rare) falls back to grey via the CSS var.
-    if (el.style && FLAG_TINTS[id]) el.style.setProperty('--flag-tint', FLAG_TINTS[id]);
     flash(el);
   };
   for (const el of flagFillTargets(svg, id)) applyFill(el);
 }
 
 /**
- * Demote an already-painted country to its flat dominant-colour tint — add
- * `.is-tinted` to the same targets {@link paintCountryFlag} filled. The quiz
+ * Demote an already-painted country to its flat green / red correctness wash —
+ * add `.is-tinted` to the same targets {@link paintCountryFlag} filled. The quiz
  * calls this on the previously-answered country as each new answer lands, so
  * only the most-recent country renders as a live flag `<image>` and the
  * per-fly-in settle repaint stays O(1) (see the `.is-tinted` rules in
@@ -475,9 +424,8 @@ export function revealFlagImage(svg, code) {
  * world map uses, skipping inner paths that are themselves separate
  * countries), or the element itself when it has no such child paths (a
  * defensive single-path fallback), plus every microstate ring overlay
- * tagged for the country. Shared by
- * `paintCountryFlag` (apply the fill) and `clearCountryFlag` (remove it)
- * so the two stay symmetric — whatever paint touches, clear untouches.
+ * tagged for the country. Used by `paintCountryFlag` (apply the fill) and by
+ * the tint / reveal helpers that toggle the settle-wash class on the same set.
  *
  * @param {any} svg  mounted `<svg>` root
  * @param {string} id  lowercase ISO 3166-1 alpha-2
@@ -538,54 +486,6 @@ function flagFillTargets(svg, id) {
 }
 
 /**
- * Strip the inline flag fill (and any answer-state outline) `paintCountryFlag`
- * set on one element, and drop its `.is-flagged` tag. Shared by `resetMap`
- * (clear every flagged element) and `clearCountryFlag` (clear one country).
- *
- * @param {any} el
- */
-function clearFlagFillStyles(el) {
-  if (!el) return;
-  if (el.classList) {
-    el.classList.remove('is-flagged');
-    // Drop the "settled to tint" demotion and the answer-status tag too, so a
-    // cleared / re-mounted country starts fresh (paintCountryFlag re-adds them).
-    el.classList.remove('is-tinted');
-    el.classList.remove('is-flag-correct');
-    el.classList.remove('is-flag-wrong');
-  }
-  if (el.style) {
-    el.style.fill = '';
-    el.style.fillOpacity = '';
-    // Clear the green / red answer outline too (set inline by
-    // paintCountryFlag) so a cleared country returns to the blank coastline.
-    el.style.stroke = '';
-    el.style.strokeWidth = '';
-    el.style.strokeOpacity = '';
-    el.style.vectorEffect = '';
-  }
-}
-
-/**
- * Un-stamp one country's flag fill — the inverse of a `paintCountryFlag`
- * call. Used by flagsdata to drop the flag from a country that no longer
- * matches the active filter, without disturbing the countries that still
- * do. Clears the same target set `paintCountryFlag` filled (child paths /
- * single path + microstate rings). The `<pattern>` in `<defs>` is left
- * cached, so re-selecting the country re-points its fill at the existing
- * pattern instead of rebuilding it.
- *
- * @param {any} svg  mounted `<svg>` root
- * @param {string} code ISO 3166-1 alpha-2
- */
-export function clearCountryFlag(svg, code) {
-  if (!svg || typeof code !== 'string') return;
-  const id = code.toLowerCase();
-  if (!MAP_CODE_PATTERN.test(id)) return;
-  for (const el of flagFillTargets(svg, id)) clearFlagFillStyles(el);
-}
-
-/**
  * Highlight / un-highlight one country with a flat fill (`.is-marked`, yellow
  * — see flagMap.css). This is the cheap alternative to `paintCountryFlag` for
  * surfaces that only need to say "this country is in the current set" rather
@@ -593,7 +493,7 @@ export function clearCountryFlag(svg, code) {
  * is what makes flagsdata's whole-world highlight fast (and lets it skip the
  * tint / throttled-reveal machinery flagQuiz needs). Toggles the same target
  * set `paintCountryFlag` fills (child paths + microstate hit rings). Distinct
- * from `markCountry` above, which sets the green / red answer status.
+ * from `paintCountryFlag`, which stamps the flag image + green / red status.
  *
  * @param {any} svg  mounted `<svg>` root
  * @param {string} code ISO 3166-1 alpha-2
@@ -619,33 +519,6 @@ export function unhighlightCountry(svg, code) {
   if (!MAP_CODE_PATTERN.test(id)) return;
   for (const el of flagFillTargets(svg, id)) {
     if (el && el.classList) el.classList.remove('is-marked');
-  }
-}
-
-/**
- * Strip every status class from every marked country — used on
- * play-again so a replayed round starts with a blank silhouette.
- *
- * @param {MapRoot} root
- */
-export function resetMap(root) {
-  if (!root) return;
-  const paths = root.querySelectorAll('.is-correct, .is-wrong');
-  for (let i = 0; i < paths.length; i++) {
-    for (const c of STATUS_CLASSES) paths[i].classList.remove(c);
-  }
-  // Flag-fill answers (paintCountryFlag) set the flag fill inline and tag
-  // `.is-flagged` — clear both so a replayed round starts blank.
-  const flagged = root.querySelectorAll('.is-flagged');
-  for (let i = 0; i < flagged.length; i++) clearFlagFillStyles(flagged[i]);
-  // Drop the green / red tint overlay clones.
-  const flashes = root.querySelectorAll('.flag-flash');
-  for (let i = 0; i < flashes.length; i++) {
-    /** @type {any} */
-    const el = flashes[i];
-    if (el.parentNode && typeof el.parentNode.removeChild === 'function') {
-      el.parentNode.removeChild(el);
-    }
   }
 }
 

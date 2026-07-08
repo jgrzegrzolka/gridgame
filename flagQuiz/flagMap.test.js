@@ -2,92 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  markCountry, resetMap, mountFlagMap, tagCountryPaths, cropToCountries,
-  offsetHitTargetCenter, paintCountryFlag, clearCountryFlag, settleFlagToTint,
+  mountFlagMap, tagCountryPaths, cropToCountries,
+  offsetHitTargetCenter, paintCountryFlag, settleFlagToTint,
   revealFlagImage, computeMainlandBbox, highlightCountry, unhighlightCountry,
   pickNearestHitTarget, neutralizeMarkerCircles, planIslandMarker, addHideButton,
 } from './flagMap.js';
-import { FLAG_TINTS } from '../flags/flagTints.js';
-
-/**
- * Tiny fake of the SVG host root: maps ID → path-like object with a
- * classList API. querySelector parses the `#id` selector; querySelectorAll
- * parses a comma-list of class selectors (`.a, .b`) — enough surface for
- * the two callers in europeMap.js.
- */
-function fakeRoot(ids) {
-  const paths = new Map();
-  for (const id of ids) {
-    const classes = new Set();
-    paths.set(id, {
-      classList: {
-        add: (c) => classes.add(c),
-        remove: (c) => classes.delete(c),
-        has: (c) => classes.has(c),
-        _set: classes,
-      },
-    });
-  }
-  return {
-    querySelector(sel) {
-      if (!sel.startsWith('#')) return null;
-      return paths.get(sel.slice(1)) || null;
-    },
-    querySelectorAll(sel) {
-      const classNames = sel.split(',').map((s) => s.trim().replace(/^\./, ''));
-      const out = [];
-      for (const p of paths.values()) {
-        if (classNames.some((c) => p.classList.has(c))) out.push(p);
-      }
-      return out;
-    },
-    _get(id) { return paths.get(id); },
-  };
-}
-
-test('markCountry paints correct → is-correct class', () => {
-  const root = fakeRoot(['es', 'fr']);
-  markCountry(root, 'es', 'correct');
-  assert.equal(root._get('es').classList.has('is-correct'), true);
-  assert.equal(root._get('es').classList.has('is-wrong'), false);
-});
-
-test('markCountry paints wrong → is-wrong class', () => {
-  const root = fakeRoot(['de']);
-  markCountry(root, 'de', 'wrong');
-  assert.equal(root._get('de').classList.has('is-wrong'), true);
-  assert.equal(root._get('de').classList.has('is-correct'), false);
-});
-
-test('markCountry lowercases the code before lookup', () => {
-  const root = fakeRoot(['fr']);
-  markCountry(root, 'FR', 'correct');
-  assert.equal(root._get('fr').classList.has('is-correct'), true);
-});
-
-test('markCountry clears prior status before re-painting (latest answer wins)', () => {
-  const root = fakeRoot(['it']);
-  markCountry(root, 'it', 'wrong');
-  markCountry(root, 'it', 'correct');
-  assert.equal(root._get('it').classList.has('is-correct'), true);
-  assert.equal(root._get('it').classList.has('is-wrong'), false);
-});
-
-test('markCountry with state=clear removes both classes', () => {
-  const root = fakeRoot(['gb']);
-  markCountry(root, 'gb', 'correct');
-  markCountry(root, 'gb', 'clear');
-  assert.equal(root._get('gb').classList.has('is-correct'), false);
-  assert.equal(root._get('gb').classList.has('is-wrong'), false);
-});
-
-test('markCountry silently no-ops when the code is not in the SVG', () => {
-  const root = fakeRoot(['es']);
-  // 'sj' (Svalbard) is a real ISO code the bundled maps don't carry;
-  // 'ax' (Åland) isn't in this minimal fakeRoot. Neither must throw.
-  assert.doesNotThrow(() => markCountry(root, 'ax', 'correct'));
-  assert.doesNotThrow(() => markCountry(root, 'sj', 'wrong'));
-});
 
 test('the world map carries an injected Åland (ax) element', () => {
   // Åland is an autonomous territory the source map omits; we inject an
@@ -119,100 +38,6 @@ test('the world map carries injected subdivision / territory locators', () => {
   }
 });
 
-test('markCountry marks a compound subdivision code when its element exists', () => {
-  // We inject `<g id="gb-sct">` etc. for the UK / Spanish subdivisions whose
-  // own flag is quizzed, and MAP_CODE_PATTERN now accepts the compound form,
-  // so markCountry (and the rest of the map pipeline) acts on them like any
-  // country — the answered subdivision lights up instead of doing nothing.
-  const root = fakeRoot(['gb-sct', 'es-ct']);
-  markCountry(root, 'gb-sct', 'correct');
-  markCountry(root, 'es-ct', 'wrong');
-  assert.equal(root._get('gb-sct').classList.has('is-correct'), true);
-  assert.equal(root._get('es-ct').classList.has('is-wrong'), true);
-});
-
-test('markCountry still no-ops on a compound code with no element', () => {
-  const root = fakeRoot(['es', 'gb']);
-  // A compound code the asset doesn't carry (e.g. St Helena sub-parts we
-  // haven't injected) drops silently on the lookup and leaves the parent
-  // country untouched — caller doesn't have to filter it out.
-  assert.doesNotThrow(() => markCountry(root, 'sh-ac', 'correct'));
-  assert.equal(root._get('es').classList.has('is-correct'), false);
-  assert.equal(root._get('gb').classList.has('is-wrong'), false);
-});
-
-test('markCountry also classes the data-hit-for overlay alongside the country path', () => {
-  // Microstate setup: path #va plus a sibling overlay circle that
-  // claims the larger click area. markCountry must paint both so the
-  // big invisible disk reflects answered state too.
-  const root = (() => {
-    const pathClasses = new Set();
-    const overlayClasses = new Set();
-    const pathNode = {
-      classList: {
-        add: (c) => pathClasses.add(c),
-        remove: (c) => pathClasses.delete(c),
-        has: (c) => pathClasses.has(c),
-      },
-      _kind: 'path',
-      _classes: pathClasses,
-    };
-    const overlayNode = {
-      classList: {
-        add: (c) => overlayClasses.add(c),
-        remove: (c) => overlayClasses.delete(c),
-        has: (c) => overlayClasses.has(c),
-      },
-      _kind: 'overlay',
-      _classes: overlayClasses,
-    };
-    return {
-      querySelector(sel) {
-        if (sel === '#va') return pathNode;
-        return null;
-      },
-      querySelectorAll(sel) {
-        if (sel === '[data-hit-for="va"]') return [overlayNode];
-        return [];
-      },
-      _pathClasses: pathClasses,
-      _overlayClasses: overlayClasses,
-    };
-  })();
-  markCountry(root, 'va', 'correct');
-  assert.equal(root._pathClasses.has('is-correct'), true);
-  assert.equal(root._overlayClasses.has('is-correct'), true);
-});
-
-test('markCountry rejects malformed input without throwing', () => {
-  const root = fakeRoot(['es']);
-  assert.doesNotThrow(() => markCountry(root, '', 'correct'));
-  assert.doesNotThrow(() => markCountry(root, /** @type {any} */ (null), 'correct'));
-  assert.doesNotThrow(() => markCountry(root, /** @type {any} */ (undefined), 'correct'));
-  assert.doesNotThrow(() => markCountry(/** @type {any} */ (null), 'es', 'correct'));
-});
-
-test('resetMap clears every marked country in one call', () => {
-  const root = fakeRoot(['es', 'fr', 'de', 'it']);
-  markCountry(root, 'es', 'correct');
-  markCountry(root, 'fr', 'correct');
-  markCountry(root, 'de', 'wrong');
-  // it stays untouched
-  resetMap(root);
-  assert.equal(root._get('es').classList.has('is-correct'), false);
-  assert.equal(root._get('fr').classList.has('is-correct'), false);
-  assert.equal(root._get('de').classList.has('is-wrong'), false);
-});
-
-test('resetMap is a no-op when nothing is painted', () => {
-  const root = fakeRoot(['es']);
-  assert.doesNotThrow(() => resetMap(root));
-});
-
-test('resetMap tolerates a null root', () => {
-  assert.doesNotThrow(() => resetMap(/** @type {any} */ (null)));
-});
-
 /* paintCountryFlag — flag-into-contour fill + green/red outline + flash.
  *
  * Hand-rolled SVG fake: enough surface for the function — a document
@@ -226,7 +51,7 @@ function makeNode(tag) {
   const classes = new Set();
   const children = [];
   // Minimal CSSStyleDeclaration: direct `style.fill = …` plus setProperty /
-  // getPropertyValue for custom props like `--flag-tint`. Methods are
+  // getPropertyValue for any CSS custom properties. Methods are
   // non-enumerable so cloneNode's Object.keys copy skips them.
   const style = {};
   Object.defineProperty(style, 'setProperty', {
@@ -451,18 +276,6 @@ test('settleFlagToTint ignores non-ISO2 codes', () => {
   assert.equal(svg._refs.innerPath.classList.contains('is-tinted'), false);
 });
 
-test('clearCountryFlag removes the is-tinted demotion along with is-flagged', () => {
-  const svg = fakeFlagSvg('es');
-  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
-  settleFlagToTint(svg, 'es');
-  clearCountryFlag(svg, 'es');
-  const { innerPath, hit } = svg._refs;
-  assert.equal(innerPath.classList.contains('is-tinted'), false);
-  assert.equal(hit.classList.contains('is-tinted'), false);
-  assert.equal(innerPath.classList.contains('is-flagged'), false);
-  assert.equal(innerPath.classList.contains('is-flag-correct'), false);
-});
-
 test('paintCountryFlag drops a green tint overlay on top of the flag (correct)', () => {
   const svg = fakeFlagSvg();
   paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
@@ -529,15 +342,6 @@ test('paintCountryFlag points the pattern image at the flag svg', () => {
   assert.equal(image.getAttribute('preserveAspectRatio'), 'xMidYMid slice');
 });
 
-test('paintCountryFlag sets the dominant-colour tint used while the map moves', () => {
-  const svg = fakeFlagSvg('pl');
-  paintCountryFlag(svg, 'pl', '../flags/svg/', 'correct');
-  // The country path carries --flag-tint = Poland's dominant colour, which CSS
-  // fills it with during a gesture (cheap, no flag image to raster).
-  assert.equal(svg._refs.innerPath.style.getPropertyValue('--flag-tint'), FLAG_TINTS.pl);
-  assert.ok(/^#[0-9a-f]{6}$/.test(FLAG_TINTS.pl));
-});
-
 test('paintCountryFlag reuses an existing pattern instead of duplicating it', () => {
   const svg = fakeFlagSvg();
   paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
@@ -552,61 +356,6 @@ test('paintCountryFlag lowercases the code and rejects malformed input', () => {
   assert.doesNotThrow(() => paintCountryFlag(svg, '', '../flags/svg/', 'correct'));
   assert.doesNotThrow(() => paintCountryFlag(/** @type {any} */ (null), 'es', '../flags/svg/', 'correct'));
   assert.doesNotThrow(() => paintCountryFlag(svg, 'es-pv', '../flags/svg/', 'correct'));
-});
-
-test('resetMap clears the flag fills and removes the tint overlays', () => {
-  const svg = fakeFlagSvg();
-  paintCountryFlag(svg, 'es', '../flags/svg/', 'correct');
-  assert.equal(svg._refs.collectFlashes().length, 2);
-  resetMap(svg);
-  const { innerPath, hit } = svg._refs;
-  assert.equal(innerPath.style.fill, '');
-  assert.equal(innerPath.style.fillOpacity, '');
-  // The green / red answer outline is cleared too.
-  assert.equal(innerPath.style.stroke, '');
-  assert.equal(innerPath.style.strokeOpacity, '');
-  assert.equal(innerPath.classList.contains('is-flagged'), false);
-  assert.equal(hit.style.fill, '');
-  assert.equal(hit.classList.contains('is-flagged'), false);
-  // The overlay clones are detached from their parents.
-  assert.equal(svg._refs.collectFlashes().length, 0);
-});
-
-test("paintCountryFlag 'select' stamps the flag with no flash clone and no outline", () => {
-  const svg = fakeFlagSvg();
-  paintCountryFlag(svg, 'es', '../flags/svg/', 'select');
-  const { innerPath, hit } = svg._refs;
-  // Flag fill is applied (the whole point) at the 90% opacity...
-  assert.equal(innerPath.style.fill, 'url(#flagfill-es)');
-  assert.equal(innerPath.style.fillOpacity, '0.9');
-  assert.equal(hit.style.fill, 'url(#flagfill-es)');
-  assert.equal(innerPath.classList.contains('is-flagged'), true);
-  // ...but no green / red answer outline and no colour-wash overlay:
-  // flagsdata's neutral highlight is just the flag.
-  assert.equal(innerPath.style.stroke, undefined);
-  assert.equal(svg._refs.collectFlashes().length, 0);
-});
-
-test('clearCountryFlag un-stamps exactly one country (paint inverse)', () => {
-  const svg = fakeFlagSvg();
-  paintCountryFlag(svg, 'es', '../flags/svg/', 'select');
-  clearCountryFlag(svg, 'es');
-  const { innerPath, hit } = svg._refs;
-  assert.equal(innerPath.style.fill, '');
-  assert.equal(innerPath.style.fillOpacity, '');
-  assert.equal(innerPath.classList.contains('is-flagged'), false);
-  assert.equal(hit.style.fill, '');
-  assert.equal(hit.classList.contains('is-flagged'), false);
-});
-
-test('clearCountryFlag lowercases the code and ignores malformed input', () => {
-  const svg = fakeFlagSvg();
-  paintCountryFlag(svg, 'es', '../flags/svg/', 'select');
-  clearCountryFlag(svg, 'ES');
-  assert.equal(svg._refs.innerPath.style.fill, '');
-  assert.doesNotThrow(() => clearCountryFlag(svg, ''));
-  assert.doesNotThrow(() => clearCountryFlag(/** @type {any} */ (null), 'es'));
-  assert.doesNotThrow(() => clearCountryFlag(svg, 'es-pv'));
 });
 
 /* mountFlagMap — fetch + inline + viewBox patch.
