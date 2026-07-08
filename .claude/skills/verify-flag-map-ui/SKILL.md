@@ -7,6 +7,8 @@ description: Recipe for verifying any change to the flagQuiz contour-map renderi
 
 Unit tests pin pure logic (offsets, viewBox math, microstate tagging). They don't catch "the rings overlap a real island in fullscreen" or "the Caribbean cluster pushed off the Lesser Antilles" — those need a real browser. This skill is the recipe for that browser pass.
 
+> Changing how the map **moves or renders** (pan / zoom / momentum / rendering feel), rather than *where things sit*? Read the `map-interaction` skill first — it logs what was tried, shipped, and deliberately rejected (GPU-transform panning, full free-pan, elastic-pinch) so you don't re-run a failed experiment.
+
 ## When this skill applies
 
 Any time a change touches the rendered map and a reasonable reviewer might ask "is that still on the right island":
