@@ -751,7 +751,7 @@ function addFullscreenButton(container, label) {
   container.appendChild(btn);
   // Fullscreen exit ✕. The corner ⤢ button above can be clipped by a phone's
   // rounded corner or camera notch, and mobile has no Esc — so in fullscreen a
-  // grey ✕ at the TOP-CENTRE (clear of both a rounded corner and a landscape
+  // ✕ at the TOP-CENTRE (clear of both a rounded corner and a landscape
   // side-notch) appears on a deliberate SWIPE DOWN, auto-hiding a few seconds
   // later (see revealMapExit). Rebuilt each mount because mountFlagMap's
   // innerHTML replacement wipes it; the corner button stays put.

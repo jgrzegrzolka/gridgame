@@ -212,16 +212,15 @@
   left: 50%;
   z-index: 11;
   /* Match the other map chrome buttons exactly: same 30px slot, 6px radius,
-   * surface fill, border, hover, and pink :active afterglow all inherited from
-   * the shared recipe (common.css). Only the position (top-centre), the grey
-   * glyph, and the slide-reveal differ. */
+   * surface fill, ink glyph, border, hover, and pink :active afterglow all
+   * inherited from the shared recipe (common.css). Only the position
+   * (top-centre) and the slide-reveal differ. */
   width: 30px;
   height: 30px;
   box-sizing: border-box;
   padding: 0;
   align-items: center;
   justify-content: center;
-  color: var(--muted-color); /* the "grey" ✕ */
   /* Revealed by a swipe down: parked above the top edge and invisible, it slides
    * DOWN into place + fades in when flagMap.js adds `.fs-exit-visible`, and
    * slides back up to the top + fades out when it's removed. `translateX(-50%)`
