@@ -11,6 +11,8 @@ import {
   screenToSvg,
   regionalFrame,
   easeInOutCubic,
+  easeOutCubic,
+  rubberBandOffset,
 } from './mapZoom.js';
 
 // ---- zoomViewBox ----
@@ -450,4 +452,54 @@ test('easeInOutCubic is monotonic and eases in (slow start)', () => {
   assert.ok(easeInOutCubic(0.25) < 0.25);
   // Symmetric: last quarter covers more (fast approach, gentle stop).
   assert.ok(easeInOutCubic(0.75) > 0.75);
+});
+
+// ---- easeOutCubic ----
+
+test('easeOutCubic pins the endpoints', () => {
+  assert.equal(easeOutCubic(0), 0);
+  assert.equal(easeOutCubic(1), 1);
+});
+
+test('easeOutCubic decelerates — fast start, gentle stop', () => {
+  // Covers more than a linear ramp early (fast start), so the released
+  // overscroll snaps back quickly then eases into the edge.
+  assert.ok(easeOutCubic(0.25) > 0.25);
+  assert.ok(easeOutCubic(0.75) > 0.75);
+});
+
+// ---- rubberBandOffset ----
+
+test('rubberBandOffset is zero within bounds (no overshoot)', () => {
+  assert.equal(rubberBandOffset(0, 100), 0);
+});
+
+test('rubberBandOffset preserves the overshoot direction', () => {
+  assert.ok(rubberBandOffset(20, 100) > 0);   // past the high edge
+  assert.ok(rubberBandOffset(-20, 100) < 0);  // past the low edge
+});
+
+test('rubberBandOffset stays strictly under the cap (dim × 0.12)', () => {
+  const cap = 100 * 0.12;
+  // Even a huge yank only asymptotes toward the cap, never reaches it.
+  assert.ok(rubberBandOffset(1e6, 100) < cap);
+  assert.ok(rubberBandOffset(1e6, 100) > cap * 0.99);
+});
+
+test('rubberBandOffset grows with overshoot but with diminishing returns', () => {
+  const a = rubberBandOffset(10, 100);
+  const b = rubberBandOffset(20, 100);
+  const c = rubberBandOffset(40, 100);
+  assert.ok(b > a && c > b);            // monotonic increasing
+  assert.ok(b - a > c - b);             // each extra pull gives less
+});
+
+test('rubberBandOffset scales its cap with the dimension', () => {
+  // A wider viewBox (more zoomed out) allows proportionally more give.
+  assert.ok(rubberBandOffset(1e6, 200) > rubberBandOffset(1e6, 100));
+});
+
+test('rubberBandOffset guards a non-positive dimension', () => {
+  assert.equal(rubberBandOffset(20, 0), 0);
+  assert.equal(rubberBandOffset(20, -5), 0);
 });

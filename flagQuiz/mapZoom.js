@@ -46,6 +46,19 @@ const MAX_ZOOM_OUT = 3;
  */
 const FREE_PAN_KEEP = 0.1;
 /**
+ * Rubber-band overscroll: how far a zoomed-in pan may stretch PAST the edge
+ * clamp, as a fraction of the visible viewBox dimension. The offset eases toward
+ * this cap with growing resistance (see rubberBandOffset) and springs back on
+ * release (see springHome / endPanGesture), so the edge gives a little instead
+ * of dead-stopping ("hitting a wall"). Only applies zoomed in — zoomed out
+ * already free-pans (FREE_PAN_KEEP), no wall to soften. Jan, 2026-07-08.
+ */
+const MAX_OVERSCROLL = 0.12;
+/** Spring-back duration (ms) easing a released pan from overscroll to the edge. */
+const SPRING_MS = 260;
+/** Overscroll (vbu) below which a released pan counts as settled — no spring. */
+const SPRING_EPS = 0.01;
+/**
  * Wheel-zoom sensitivity: zoom scale = e^(-normalizedDeltaPx × this).
  * Tuned so a classic mouse notch (~100 px of deltaY) zooms ~10% — the
  * same feel the old fixed 1.1-per-event step had — while a trackpad or
@@ -334,6 +347,37 @@ export function easeInOutCubic(t) {
 }
 
 /**
+ * Cubic ease-OUT: fast start, gentle stop. The timing curve for the rubber-band
+ * spring-back, so a released overscroll decelerates into the edge like a
+ * relaxing elastic rather than starting slow. t ∈ [0, 1].
+ *
+ * @param {number} t
+ * @returns {number}
+ */
+export function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+/**
+ * Rubber-band overscroll offset. Maps how far past a pan limit the finger wants
+ * to go (`overshoot`, signed vbu — 0 when within bounds) to a damped offset
+ * that eases toward a cap of `dim × MAX_OVERSCROLL` with growing resistance: a
+ * small overshoot moves nearly 1:1, a hard yank asymptotes to the cap and never
+ * exceeds it. That growing stiffness is the "give" at the edge; `springHome`
+ * eases the result back to 0 on release.
+ *
+ * @param {number} overshoot  signed vbu past the clamp (negative = past the low edge)
+ * @param {number} dim        the viewBox dimension on that axis (width or height)
+ * @returns {number} signed offset, strictly within ±(dim × MAX_OVERSCROLL)
+ */
+export function rubberBandOffset(overshoot, dim) {
+  if (!overshoot || !(dim > 0)) return 0;
+  const max = dim * MAX_OVERSCROLL;
+  const d = Math.abs(overshoot);
+  return Math.sign(overshoot) * max * (1 - 1 / (1 + d / max));
+}
+
+/**
  * Parse a viewBox attribute string ("x y w h") into a ViewBox object.
  * Returns null on malformed input.
  *
@@ -459,6 +503,26 @@ export function attachZoomPan(svg, opts = {}) {
     setViewBoxNow(current);
   }
 
+  /**
+   * Clamp a live PAN frame. Same hard clamp as `apply`, except a zoomed-in pan
+   * is allowed to overscroll past the edge with rubber-band resistance
+   * (rubberBandOffset) rather than dead-stopping at the wall. The released
+   * overscroll springs back in `endPanGesture`. Zoomed out (width ≥ original)
+   * keeps the plain free-pan clamp — there's no edge wall there to soften.
+   * @param {ViewBox} next
+   * @returns {ViewBox}
+   */
+  function clampPanFrame(next) {
+    const hard = clampViewBox(next, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(next), true);
+    if (hard.width >= original.width) return hard;
+    return {
+      x: hard.x + rubberBandOffset(next.x - hard.x, hard.width),
+      y: hard.y + rubberBandOffset(next.y - hard.y, hard.height),
+      width: hard.width,
+      height: hard.height,
+    };
+  }
+
   // --- Gesture layer ---------------------------------------------------
   // While the player pans / zooms, we re-render the real `viewBox` once per
   // frame (input is coalesced to one flush per rAF, below). The SVG also
@@ -526,14 +590,21 @@ export function attachZoomPan(svg, opts = {}) {
   // fullscreen).
   /** @type {ViewBox | null} */
   let pendingViewBox = null;
+  /** Whether the pending frame is a pan (rubber-band eligible) vs a zoom. */
+  let pendingPan = false;
   /** rAF handle for the queued input flush, or 0 when idle. */
   let inputRaf = 0;
   function flushInput() {
     inputRaf = 0;
     const next = pendingViewBox;
+    const isPan = pendingPan;
     pendingViewBox = null;
+    pendingPan = false;
     if (!next) return;
-    current = clampViewBox(next, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(next), true);
+    // Pans may rubber-band past the edge (clampPanFrame); zoom stays hard-clamped.
+    current = isPan
+      ? clampPanFrame(next)
+      : clampViewBox(next, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(next), true);
     beginGesture();
     setViewBoxNow(current);   // grey simplify + per-frame viewBox render
     scheduleSettle();
@@ -543,9 +614,11 @@ export function attachZoomPan(svg, opts = {}) {
    * multiple same-frame events into one update. Falls back to a direct
    * flush when rAF is unavailable (test env).
    * @param {ViewBox} next
+   * @param {boolean} [isPan]  true for a drag-pan (rubber-band eligible)
    */
-  function scheduleInput(next) {
+  function scheduleInput(next, isPan = false) {
     pendingViewBox = next;
+    pendingPan = isPan;
     const raf = globalThis.requestAnimationFrame;
     if (typeof raf !== 'function') { flushInput(); return; }
     if (!inputRaf) inputRaf = raf(flushInput);
@@ -647,6 +720,72 @@ export function attachZoomPan(svg, opts = {}) {
         if (onSettle) onSettle({ ...end });
         if (opts.onDone) opts.onDone();
       }
+    }
+    animRaf = raf(frame);
+  }
+
+  /**
+   * End a one-finger / mouse pan. If it overscrolled past the edge (rubber-band
+   * stretch), spring back to the clamped edge; otherwise commit where it rests.
+   * Flushes any last queued frame first so a move-then-immediate-lift still
+   * springs from the true final position rather than a stale one.
+   */
+  function endPanGesture() {
+    if (pendingViewBox) flushInput();
+    const home = clampViewBox(current, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(current), true);
+    if (Math.abs(home.x - current.x) > SPRING_EPS || Math.abs(home.y - current.y) > SPRING_EPS) {
+      springHome(home);
+    } else {
+      commitGesture();
+    }
+  }
+
+  /**
+   * Ease the viewBox from its current (overscrolled) position back to `home`
+   * over SPRING_MS with an ease-out decel — the elastic snap-back. Writes each
+   * frame straight to the element (NOT via `apply`, which would clamp the
+   * overscroll away on frame one and kill the animation). Carries
+   * `.is-interacting` through so flags stay the cheap wash until it lands, then
+   * restores the images and fires onSettle. Snaps immediately under
+   * reduced-motion / no-rAF (test env).
+   * @param {ViewBox} home  the clamped edge position to settle at
+   */
+  function springHome(home) {
+    const raf = globalThis.requestAnimationFrame;
+    cancelAnim();
+    clearSettle();
+    interacting = false;              // the drag gesture itself is over
+    if (typeof raf !== 'function' || prefersReducedMotion()) {
+      current = { ...home };
+      setViewBoxNow(current);
+      if (svg.classList && !flying) svg.classList.remove('is-interacting');
+      if (onSettle) onSettle({ ...current });
+      return;
+    }
+    flying = true;                    // owns the tint so the wash stays on
+    if (svg.classList) svg.classList.add('is-interacting');
+    const start = { ...current };
+    let startTs = 0;
+    /** @param {number} ts */
+    function frame(ts) {
+      if (!startTs) startTs = ts;
+      const p = Math.min(1, (ts - startTs) / SPRING_MS);
+      const e = easeOutCubic(p);
+      // Only x / y differ; width / height are already the clamped values.
+      current = {
+        x: start.x + (home.x - start.x) * e,
+        y: start.y + (home.y - start.y) * e,
+        width: home.width,
+        height: home.height,
+      };
+      setViewBoxNow(current);
+      if (p < 1) { animRaf = raf(frame); return; }
+      animRaf = 0;
+      flying = false;
+      current = { ...home };
+      setViewBoxNow(current);
+      if (!interacting && svg.classList) svg.classList.remove('is-interacting');
+      if (onSettle) onSettle({ ...current });
     }
     animRaf = raf(frame);
   }
@@ -798,7 +937,7 @@ export function attachZoomPan(svg, opts = {}) {
       const dy = t.clientY - (touchState.lastY || 0);
       const base = inputBase();
       const factor = svgUnitsPerPixel(svg, base);
-      scheduleInput(panViewBox(base, -dx * factor, -dy * factor));
+      scheduleInput(panViewBox(base, -dx * factor, -dy * factor), true);
       touchState.lastX = t.clientX;
       touchState.lastY = t.clientY;
     } else if (touchState.mode === 'pinch' && e.touches.length === 2) {
@@ -819,8 +958,10 @@ export function attachZoomPan(svg, opts = {}) {
   }
 
   function onTouchEnd() {
+    const wasPan = touchState !== null && touchState.mode === 'pan';
     touchState = null;
     dragStartScreen = null;
+    if (wasPan) endPanGesture();
   }
 
   /** @param {MouseEvent} e */
@@ -847,14 +988,16 @@ export function attachZoomPan(svg, opts = {}) {
     const dy = e.clientY - mouseState.lastY;
     const base = inputBase();
     const factor = svgUnitsPerPixel(svg, base);
-    scheduleInput(panViewBox(base, -dx * factor, -dy * factor));
+    scheduleInput(panViewBox(base, -dx * factor, -dy * factor), true);
     mouseState.lastX = e.clientX;
     mouseState.lastY = e.clientY;
   }
 
   function onMouseUp() {
-    if (mouseState && mouseState.dragging) suppressNextClick = true;
+    const wasDrag = mouseState !== null && mouseState.dragging;
+    if (wasDrag) suppressNextClick = true;
     mouseState = null;
+    if (wasDrag) endPanGesture();
   }
 
   /**
