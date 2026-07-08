@@ -8,7 +8,7 @@ import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox, wireFlagLightboxAll } from '../flags/flagLightbox.js';
 import { getFlagFacts } from '../flags/flagFacts.js';
 import { renderFlagFacts } from '../flags/flagFactsRender.js';
-import { mountFlagMap, highlightCountry, unhighlightCountry, computeCountriesBbox, pickNearestHitTarget, neutralizeMarkerCircles } from '../flagQuiz/flagMap.js';
+import { mountFlagMap, addHideButton, highlightCountry, unhighlightCountry, computeCountriesBbox, pickNearestHitTarget, neutralizeMarkerCircles } from '../flagQuiz/flagMap.js';
 import { mountCaribInset, CARIB_INSET_CODES } from '../flagQuiz/caribInset.js';
 import { attachZoomPan } from '../flagQuiz/mapZoom.js';
 import { buildToggleLi } from '../common.js';
@@ -214,7 +214,9 @@ export function bootFlagsData() {
       label: t('menu.showMap', 'Show map'),
       labelKey: 'menu.showMap',
       initial: isFlagsdataShowMap(),
-      onChange: (checked) => setFlagsdataShowMap(localStorage, checked),
+      // Apply live (mount / collapse in place) as well as persist — the same
+      // path the map's own hide chip drives, so the two controls stay in step.
+      onChange: (checked) => applyMapPreference(checked),
     });
     const coffeeLink = burgerMenuEl.querySelector('.menu-coffee');
     const coffeeLi = coffeeLink ? coffeeLink.closest('li') : null;
@@ -321,9 +323,25 @@ export function bootFlagsData() {
   // marked via syncMapFlags; they just don't pull the crop.
   // Mirrors the same list flagQuiz uses for per-variant crops.
   const ANTIMERIDIAN = new Set(['us', 'ru', 'fj', 'ki']);
-  if (flagMapEl && isFlagsdataShowMap()) {
+  // --- Map show / hide (mirrors flagQuiz/page.js) --------------------------
+  // The hide chip (top-left of the map) and the burger "Show map" toggle are
+  // two faces of one control: either collapses the map to a slim strip (SVG
+  // unmounted — the real perf relief) or re-mounts it, persisting the choice to
+  // `gridgame.flagsdata.showMap`. Same mechanism + shared CSS as the quiz map,
+  // per CLAUDE.md's "same behaviour = same code".
+  let mapMounted = false;
+
+  function mountMap() {
+    if (!flagMapEl) return;
+    mapMounted = true;
     flagMapEl.hidden = false;
     flagMapEl.setAttribute('aria-hidden', 'false');
+    // Leaving the collapsed strip: drop `.is-collapsed` so the chip flips back
+    // to its "hide" glyph. mountFlagMap replaces innerHTML, rebuilding the chip.
+    flagMapEl.classList.remove('is-collapsed');
+    // A fresh SVG carries no marks; reset so applyFilter re-marks the current
+    // selection from a clean slate instead of diffing against a stale set.
+    flaggedCodes = new Set();
     void mountFlagMap({
       container: flagMapEl,
       url: '../flagQuiz/worldMap.svg',
@@ -336,6 +354,10 @@ export function bootFlagsData() {
       // locator radius — the full-size rings dwarf tiny territories like
       // Montserrat / Turks & Caicos and overlap their neighbours.
       hugIslands: true,
+      // Top-left chip → collapse the map in place (chip flips to a "show" map
+      // glyph) and persist, the same path the burger toggle drives.
+      onToggle: toggleMapVisibility,
+      toggleLabel: t('menu.hideMap', 'Hide map'),
     }).then((svg) => {
       mapSvg = svg;
       if (svg) {
@@ -373,18 +395,77 @@ export function bootFlagsData() {
       // never get reflected on the map.
       if (state) applyFilter();
     });
-    // Click → flag-zoom popup. Same dialog flagsdata's grid tiles use,
-    // same openFlagZoom helper. Resolution order:
-    //   1. a `data-hit-for` element directly under the pointer (the inset
-    //      islands carry it) — an explicit hit wins;
-    //   2. the actual LANDMASS clicked — walk up the ancestors for the first
-    //      id that's a known country code. Land wins over rings: every piece
-    //      of Guadeloupe (both butterfly wings + Marie-Galante) resolves to
-    //      Guadeloupe even though the outlying pieces sit outside Guadeloupe's
-    //      own ring and inside a neighbour's;
-    //   3. only when the click hit open ocean (no landmass), the nearest
-    //      microstate ring the point falls inside — so clicking just off a
-    //      tiny island still selects it.
+  }
+
+  function hideMap() {
+    if (!flagMapEl) return;
+    mapMounted = false;
+    if (mapHandle) mapHandle.teardown();
+    mapHandle = null;
+    mapSvg = null;
+    flaggedCodes = new Set();
+    renderCollapsedMap();
+  }
+
+  /**
+   * Render the collapsed strip: the section stays visible but holds only the
+   * toggle chip (no SVG), so the chip keeps its exact top-left position and
+   * flips to the "show map" glyph. Shared by hideMap and the initial paint when
+   * the map is off. Rebuilt here because mountFlagMap's innerHTML wipes it.
+   */
+  function renderCollapsedMap() {
+    if (!flagMapEl) return;
+    flagMapEl.hidden = false;
+    flagMapEl.setAttribute('aria-hidden', 'false');
+    flagMapEl.classList.add('is-collapsed');
+    flagMapEl.innerHTML = '';
+    addHideButton(flagMapEl, t('menu.showMap', 'Show map'), toggleMapVisibility);
+  }
+
+  /** @param {boolean} show */
+  function setMapVisible(show) { if (show) mountMap(); else hideMap(); }
+  /** The chip's click: flip to the opposite of the current state. */
+  function toggleMapVisibility() { applyMapPreference(!mapMounted); }
+  /**
+   * Single entry point for both controls: persist to `gridgame.flagsdata.showMap`,
+   * apply live, and sync the burger toggle so the two never disagree.
+   * @param {boolean} show
+   */
+  function applyMapPreference(show) {
+    setFlagsdataShowMap(localStorage, show);
+    setMapVisible(show);
+    syncMapMenuToggle(show);
+  }
+  /**
+   * Reflect the current visibility on the burger menu's "Show map" checkbox.
+   * Sets `.checked` directly (no `change` dispatch) so it can't loop back
+   * through the toggle's own handler.
+   * @param {boolean} show
+   */
+  function syncMapMenuToggle(show) {
+    if (!burgerMenuEl) return;
+    const textSpan = burgerMenuEl.querySelector('.scope-toggle-text[data-i18n="menu.showMap"]');
+    const label = textSpan && textSpan.closest('.scope-toggle');
+    const input = /** @type {HTMLInputElement | null} */ (
+      label ? label.querySelector('input[type="checkbox"]') : null
+    );
+    if (input) input.checked = show;
+  }
+
+  // Click → flag-zoom popup. Registered once on the container (which persists
+  // across mount/collapse); safely no-ops while collapsed since `mapSvg` and
+  // `byCode` are null / the strip has no country elements. Resolution order:
+  //   1. a `data-hit-for` element directly under the pointer (the inset
+  //      islands carry it) — an explicit hit wins;
+  //   2. the actual LANDMASS clicked — walk up the ancestors for the first
+  //      id that's a known country code. Land wins over rings: every piece
+  //      of Guadeloupe (both butterfly wings + Marie-Galante) resolves to
+  //      Guadeloupe even though the outlying pieces sit outside Guadeloupe's
+  //      own ring and inside a neighbour's;
+  //   3. only when the click hit open ocean (no landmass), the nearest
+  //      microstate ring the point falls inside — so clicking just off a
+  //      tiny island still selects it.
+  if (flagMapEl) {
     flagMapEl.addEventListener('click', (e) => {
       if (!byCode) return;
       const target = /** @type {any} */ (e.target);
@@ -409,6 +490,12 @@ export function bootFlagsData() {
       if (!country) return;
       openZoom(country);
     });
+  }
+
+  // Initial paint: live map or the collapsed chip per the saved preference.
+  if (flagMapEl) {
+    if (isFlagsdataShowMap()) mountMap();
+    else renderCollapsedMap();
   }
 
   // Folded search terms for a country's name filter: the English canonical
