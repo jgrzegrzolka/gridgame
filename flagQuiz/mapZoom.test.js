@@ -4,7 +4,6 @@ import {
   zoomViewBox,
   wheelZoomScale,
   clampZoomScale,
-  viewBoxTransform,
   panViewBox,
   clampViewBox,
   parseViewBox,
@@ -145,39 +144,6 @@ test('clampZoomScale guards bad input', () => {
   assert.equal(clampZoomScale(NaN, 100, ORIG), 1);
   assert.equal(clampZoomScale(0, 100, ORIG), 1);
   assert.equal(clampZoomScale(1.1, 0, ORIG), 1);
-});
-
-// ---- viewBoxTransform ----
-
-test('viewBoxTransform is identity when target equals base', () => {
-  const vb = { x: 10, y: 20, width: 100, height: 80 };
-  const t = viewBoxTransform(vb, vb, 200, 160);
-  assert.equal(t.scale, 1);
-  assert.equal(t.tx, 0);
-  assert.equal(t.ty, 0);
-});
-
-test('viewBoxTransform for a pure pan is a translate with no scale', () => {
-  const base = { x: 0, y: 0, width: 100, height: 80 };
-  const target = { x: 20, y: 8, width: 100, height: 80 }; // panned right+down
-  const t = viewBoxTransform(base, target, 200, 160); // box 200×160 (2px per unit)
-  assert.equal(t.scale, 1);
-  // Panning the view right by 20 units → element shifts left by 20·(200/100)=40px.
-  assert.equal(t.tx, -40);
-  assert.equal(t.ty, -16);
-});
-
-test('viewBoxTransform for a 2× zoom about the box centre keeps the centre fixed', () => {
-  const base = { x: 0, y: 0, width: 100, height: 80 };
-  // Zoom 2× centred: half-size viewBox centred on the same middle (50,40).
-  const target = { x: 25, y: 20, width: 50, height: 40 };
-  const boxW = 200, boxH = 160;
-  const t = viewBoxTransform(base, target, boxW, boxH);
-  assert.equal(t.scale, 2);
-  // The element centre pixel must map to itself: cx' = scale·cx + tx.
-  const cx = boxW / 2, cy = boxH / 2;
-  assert.equal(t.scale * cx + t.tx, cx);
-  assert.equal(t.scale * cy + t.ty, cy);
 });
 
 // ---- panViewBox ----
