@@ -15,6 +15,18 @@ The constraints that shape every fix below:
 
 ## Journal (newest first)
 
+### 2026-07-08 — Pan revealed a blank strip → dropped the GPU-transform gesture layer
+
+**Symptom.** Panning the map (quiz result, flagsdata) to reveal a region that was off-screen showed the newly-exposed strip as blank / un-rendered for the duration of the drag; it only filled in on release. Jan: "the part that was not previously visible is rendering and feels weird." Not a throughput problem — a *reveal* artifact.
+
+**Diagnosis.** The `.is-interacting` gesture layer (PR #701, refined 2026-07-06) held the viewBox frozen at the gesture's start view and slid the whole SVG as one GPU-composited layer via `style.transform`. A transform can only move pixels that were *already painted* — so panning past the start-of-gesture viewBox exposed the container behind the layer (blank), and the real region only appeared when settle baked the transform into a real viewBox and repainted. Confirmed by freezing a mid-drag transform: a clean blank band on the leading edge over map that plainly exists.
+
+**Why the transform was safe to drop.** Its whole reason for existing was to avoid re-rasterising the ~255 flag `<image>` patterns every frame. But `.is-interacting` *already* drops every flag to a flat solid fill (the green/red correctness wash / flagsdata yellow) for the duration of a move — so during a gesture there are **no flag images to raster**. Measured the actual per-frame cost of re-rendering the real viewBox with only contours + solid fills (CDP trace, `visible` page): native Paint **max 2.1 ms desktop, 8.2 ms @4× CPU throttle, 23.9 ms worst-frame @6×** (p50 ~1 ms) — comfortably inside frame budget on any normal device. (An early `drawImage`+`getImageData` proxy screamed 60–200 ms; that's a 2D-canvas software-raster + readback artifact, not how the browser paints the live SVG. Trace, not proxy.)
+
+**Fix.** In-page pan/zoom now re-renders the real `viewBox` once per frame (coalesced to one flush per rAF), exactly like fullscreen already did — the transform path is gone. A pan always paints the region it moves into; no blank strip, and no zoom-blur either (the transform magnified a stale bitmap until settle). Removed `viewBoxTransform`, `paintTransform`, `useTransformPath`, the cached gesture-box math in `gesturePivot` / `gestureUnitsPerPixel` (now plain `screenToSvg` / `svgUnitsPerPixel` on the clean CTM), `committedVB`, and the orphaned `isFullscreen`. Net −131 lines. Verified with a real drag: mid-gesture `style.transform` is empty, the viewBox pans, and all flagged countries render as the solid wash (0 images, 0 blank).
+
+**Trade-off.** On a genuinely low-end phone (6× throttle) the *worst* pan frame is ~24 ms — an occasional dropped frame during a fast fling, vs the transform's zero-cost-but-blank motion. Correct rendering beats a blank strip, and fullscreen has ridden this exact per-frame path without complaint. **Do not re-introduce the transform to shave that worst frame** — it brings the blank-reveal back, and the base-contour cache that would keep the transform *and* fix the blank (pre-render the grey map with a margin) was measured as not worth the complexity for a 2–8 ms cost. If low-end fling smoothness ever genuinely bites, the base-contour bitmap cache is the lever, not the transform.
+
 ### 2026-07-06 — Map pan/zoom stutter → dominant-colour tint while moving
 
 **Symptom.** Panning/zooming the flag map (`/flagsdata/` and the quiz end-of-game view) stuttered. The `.is-interacting` GPU-transform layer (PR #701) already holds the viewBox and moves the whole SVG as one composited layer, so the *movement* is free — but the map still didn't feel fluid.

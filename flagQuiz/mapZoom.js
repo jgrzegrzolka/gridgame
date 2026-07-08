@@ -143,34 +143,6 @@ export function clampZoomScale(scale, currentWidth, original, maxZoomIn = MAX_ZO
 }
 
 /**
- * The CSS transform (applied to the SVG element with `transform-origin:
- * 0 0`) that makes an element currently rendering `base` LOOK like it
- * renders `target`, without changing its viewBox. Used by the fluid
- * gesture layer: instead of re-rendering the SVG every frame (which
- * re-rasterizes all 255 flag images), we hold the viewBox at the gesture's
- * start view and move the whole layer with this transform on the GPU, then
- * bake `target` into the real viewBox once the gesture settles.
- *
- * Derivation: a content point vx renders at pixel (vx-base.x)/base.w·W in
- * the base view and (vx-target.x)/target.w·W in the target view; solving
- * pixel_target = a·pixel_base + b gives a = base.w/target.w and
- * b = (base.x-target.x)/target.w·W (same for y). Aspect is preserved by
- * the caller (clampViewBox), so a single uniform `scale` covers both axes.
- *
- * @param {ViewBox} base    the viewBox currently on the element
- * @param {ViewBox} target  the view we want to appear
- * @param {number} boxW     element's rendered width in px
- * @param {number} boxH     element's rendered height in px
- * @returns {{ scale: number, tx: number, ty: number }}
- */
-export function viewBoxTransform(base, target, boxW, boxH) {
-  const scale = base.width / target.width;
-  const tx = (base.x - target.x) * boxW / target.width;
-  const ty = (base.y - target.y) * boxH / target.height;
-  return { scale, tx, ty };
-}
-
-/**
  * Translate a viewBox by (dx, dy) in SVG user coords.
  *
  * @param {ViewBox} vb
@@ -456,23 +428,18 @@ export function attachZoomPan(svg, opts = {}) {
   const original = parseViewBox(initialAttr || '');
   if (!original) return noopHandle;
 
-  /** The live target view — what the player should be looking at. */
+  /** The live target view — what the player should be looking at. Written
+   *  straight to the element every frame (during a gesture and at rest). */
   /** @type {ViewBox} */
   let current = { ...original };
-  // The viewBox actually written to the element. At rest it equals
-  // `current`; DURING a gesture it's held at the gesture's start view while
-  // `current` moves, shown via a GPU transform, then baked back on settle.
-  /** @type {ViewBox} */
-  let committedVB = { ...original };
 
   /**
-   * Write a viewBox to the element (the sharp, full-detail render) and
-   * rescale the hit-target rings. The at-rest / settled / programmatic path.
+   * Write a viewBox to the element and rescale the hit-target rings. Used on
+   * every gesture frame, on settle, and on the programmatic paths.
    * @param {ViewBox} vb  already clamped
    */
   function setViewBoxNow(vb) {
     svg.setAttribute('viewBox', formatViewBox(vb));
-    committedVB = { ...vb };
     rescaleHitTargets();
   }
 
@@ -492,55 +459,32 @@ export function attachZoomPan(svg, opts = {}) {
     setViewBoxNow(current);
   }
 
-  // --- Fluid gesture layer ---------------------------------------------
-  // Changing `viewBox` re-renders the whole SVG every frame. On flagsdata
-  // that re-rasterizes ~255 flag <image> patterns (several are 80-180 KB
-  // coats of arms) per frame — tens of ms, past the frame budget on real
-  // devices. Two combined fixes, active only during an active gesture:
-  //   1. GPU transform — DON'T touch viewBox; move the SVG as one
-  //      composited layer via `style.transform` (rasterized once, then the
-  //      GPU translates/scales it with no repaint).
-  //   2. Simplify while moving — the SVG carries `.is-interacting`, which
-  //      CSS uses to drop flag fills back to flat grey, so the single layer
-  //      we composite is cheap and reads cleanly while scaling.
-  // On settle (~140 ms after the last input) we bake the transform into a
-  // real viewBox and restore the flags: one sharp repaint, while stopped.
-  // Fullscreen (slice mode) skips the transform — the slice viewBox↔box
-  // mapping isn't the linear one the transform math assumes — and just
-  // rides the grey simplify with per-frame viewBox.
+  // --- Gesture layer ---------------------------------------------------
+  // While the player pans / zooms, we re-render the real `viewBox` once per
+  // frame (input is coalesced to one flush per rAF, below). The SVG also
+  // carries `.is-interacting`, which drops flag fills to a flat colour wash
+  // (see flags/flagMap.css) — that's what keeps the per-frame repaint cheap:
+  // no <image> patterns to re-raster, just contours + solid fills (~2-8 ms on
+  // a mid-range phone, measured, well inside frame budget). On settle (~140 ms
+  // after the last input) we drop `.is-interacting` so the flags snap back to
+  // their images: one sharp repaint, while stopped.
+  //
+  // We render the actual viewBox each frame instead of sliding a cached GPU
+  // layer with `style.transform`, so a pan always paints the region it moves
+  // INTO. A transform can only move already-painted pixels, so panning past
+  // the start-of-gesture view left a blank strip that only filled on settle
+  // (Jan, 2026-07-08). The image-raster cost that once justified the transform
+  // is gone during a move — the `.is-interacting` wash means there are no flag
+  // images to re-raster while the map is moving.
   const SETTLE_MS = 140;
   let interacting = false;
-  let usingTransform = false;
-  let gBoxLeft = 0, gBoxTop = 0, gBoxW = 0, gBoxH = 0;
-  /** @type {ViewBox} */
-  let gestureBase = { ...original };
   /** setTimeout handle for the settle-commit, or 0 when idle. */
   let settleTimer = 0;
 
-  function useTransformPath() {
-    return typeof globalThis.requestAnimationFrame === 'function'
-      && typeof svg.getBoundingClientRect === 'function'
-      && !!svg.style && !isFullscreen();
-  }
   function beginGesture() {
     if (interacting) return;
     interacting = true;
-    usingTransform = useTransformPath();
-    gestureBase = { ...committedVB };
-    if (typeof svg.getBoundingClientRect === 'function') {
-      const r = svg.getBoundingClientRect();
-      gBoxLeft = r.left; gBoxTop = r.top; gBoxW = r.width; gBoxH = r.height;
-    }
     if (svg.classList) svg.classList.add('is-interacting');
-    if (usingTransform && svg.style) {
-      svg.style.transformOrigin = '0 0';
-      svg.style.willChange = 'transform';
-    }
-  }
-  function paintTransform() {
-    if (!svg.style || !gBoxW || !gBoxH) return;
-    const { scale, tx, ty } = viewBoxTransform(gestureBase, current, gBoxW, gBoxH);
-    svg.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
   }
   function clearSettle() {
     if (settleTimer && typeof globalThis.clearTimeout === 'function') {
@@ -554,26 +498,21 @@ export function attachZoomPan(svg, opts = {}) {
     if (typeof setT !== 'function') { commitGesture(); return; }
     settleTimer = /** @type {number} */ (/** @type {unknown} */ (setT(commitGesture, SETTLE_MS)));
   }
-  // Bake the live target into a real viewBox and restore the flags. The
-  // viewBox write and the transform clear run in one synchronous block, so
-  // the browser paints only the final (viewBox = current, no transform)
-  // state — no intermediate flash.
+  // Settle: the viewBox is already at `current` (re-rendered each frame), so
+  // this just drops `.is-interacting` to restore the flag images and fires
+  // onSettle. The viewBox re-write is a harmless no-op that keeps the path
+  // uniform with the programmatic `apply()`.
   function commitGesture() {
     if (!interacting) return;
     setViewBoxNow(current);
     endGesture();
     if (onSettle) onSettle({ ...current });
   }
-  /** Strip the gesture visuals (transform + grey) and stop the timer. */
+  /** Drop the gesture simplify class and stop the settle timer. */
   function endGesture() {
     clearSettle();
     if (!interacting) return;
     interacting = false;
-    if (svg.style) {
-      svg.style.transform = '';
-      svg.style.transformOrigin = '';
-      svg.style.willChange = '';
-    }
     // Keep the class if an answer fly-in is still easing (it owns the tint now).
     if (svg.classList && !flying) svg.classList.remove('is-interacting');
   }
@@ -596,8 +535,7 @@ export function attachZoomPan(svg, opts = {}) {
     if (!next) return;
     current = clampViewBox(next, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(next), true);
     beginGesture();
-    if (usingTransform) paintTransform();
-    else setViewBoxNow(current);   // fullscreen: grey simplify + per-frame viewBox
+    setViewBoxNow(current);   // grey simplify + per-frame viewBox render
     scheduleSettle();
   }
   /**
@@ -628,35 +566,11 @@ export function attachZoomPan(svg, opts = {}) {
     }
     inputRaf = 0;
   }
-  /**
-   * SVG-coord point under a screen pixel. During a transform gesture the
-   * element's live CTM is polluted by the transform, so map through the
-   * cached (untransformed) gesture box + the displayed view instead of
-   * `getScreenCTM`. At rest / in fullscreen, use the precise CTM path.
-   * @param {number} cx
-   * @param {number} cy
-   * @returns {Point | null}
-   */
-  function gesturePivot(cx, cy) {
-    if (interacting && usingTransform) {
-      if (!gBoxW || !gBoxH) return null;
-      const base = inputBase();
-      return { x: base.x + (cx - gBoxLeft) / gBoxW * base.width,
-               y: base.y + (cy - gBoxTop) / gBoxH * base.height };
-    }
-    return screenToSvg(svg, cx, cy);
-  }
-  /**
-   * SVG user units per screen pixel for pan deltas. Uses the cached
-   * (untransformed) gesture box during a transform gesture, since the live
-   * bounding rect is scaled by the transform.
-   * @param {ViewBox} base
-   * @returns {number}
-   */
-  function gestureUnitsPerPixel(base) {
-    if (interacting && usingTransform) return gBoxW ? base.width / gBoxW : 1;
-    return svgUnitsPerPixel(svg, base);
-  }
+  // Pivot (screen px → SVG coords) and pan scale (SVG units per px) read the
+  // element's live CTM / bounding rect directly: with per-frame viewBox
+  // rendering there's no `transform` polluting the CTM, so `screenToSvg` /
+  // `svgUnitsPerPixel` are exact. (Under the old transform path these needed a
+  // cached, untransformed gesture box to undo the CTM the transform added.)
 
   /** rAF handle for an in-flight `animateTo`, or 0 when idle. */
   let animRaf = 0;
@@ -773,19 +687,6 @@ export function attachZoomPan(svg, opts = {}) {
     };
   }
 
-  /**
-   * True when the SVG's parent section is the current fullscreen
-   * element. Webkit-prefixed fallback for older Safari.
-   * @returns {boolean}
-   */
-  function isFullscreen() {
-    /** @type {any} */
-    const d = globalThis.document;
-    if (!d) return false;
-    const current = d.fullscreenElement || d.webkitFullscreenElement || null;
-    if (!current) return false;
-    return current.contains(svg);
-  }
 
   /**
    * Resize the microstate hit-target rings so they stay roughly the
@@ -839,7 +740,7 @@ export function attachZoomPan(svg, opts = {}) {
   function onWheel(e) {
     e.preventDefault();
     cancelAnim();
-    const pivot = gesturePivot(e.clientX, e.clientY);
+    const pivot = screenToSvg(svg, e.clientX, e.clientY);
     if (!pivot) return;
     const base = inputBase();
     const scale = clampZoomScale(wheelZoomScale(e.deltaY, e.deltaMode), base.width, original);
@@ -896,7 +797,7 @@ export function attachZoomPan(svg, opts = {}) {
       const dx = t.clientX - (touchState.lastX || 0);
       const dy = t.clientY - (touchState.lastY || 0);
       const base = inputBase();
-      const factor = gestureUnitsPerPixel(base);
+      const factor = svgUnitsPerPixel(svg, base);
       scheduleInput(panViewBox(base, -dx * factor, -dy * factor));
       touchState.lastX = t.clientX;
       touchState.lastY = t.clientY;
@@ -909,7 +810,7 @@ export function attachZoomPan(svg, opts = {}) {
       if (prev === 0) return;
       const midX = (t1.clientX + t2.clientX) / 2;
       const midY = (t1.clientY + t2.clientY) / 2;
-      const pivot = gesturePivot(midX, midY);
+      const pivot = screenToSvg(svg, midX, midY);
       const base = inputBase();
       const scale = clampZoomScale(newDistance / prev, base.width, original);
       if (pivot) scheduleInput(zoomViewBox(base, pivot, scale));
@@ -945,7 +846,7 @@ export function attachZoomPan(svg, opts = {}) {
     const dx = e.clientX - mouseState.lastX;
     const dy = e.clientY - mouseState.lastY;
     const base = inputBase();
-    const factor = gestureUnitsPerPixel(base);
+    const factor = svgUnitsPerPixel(svg, base);
     scheduleInput(panViewBox(base, -dx * factor, -dy * factor));
     mouseState.lastX = e.clientX;
     mouseState.lastY = e.clientY;

@@ -222,16 +222,18 @@
   user-select: none;
   -webkit-user-select: none;
 }
-/* Fluid gesture layer (mapZoom.js). While the map is being panned/zoomed,
- * `.is-interacting` is on the <svg> and the whole element is moved as one
- * GPU-composited layer via `transform` — no per-frame repaint. To keep
- * that single composited layer cheap (and clean while scaling), drop the
- * flag-image fills for the duration of the gesture: with no element
- * referencing a `url(#flagfill-…)` pattern, the browser doesn't rasterize the
- * 255 flag images at all. The inline flag fill is set with plain `style` (no
- * !important), so a class rule with `!important` wins for the gesture, then
- * loses again the instant the class is removed on settle — flags snap back
- * sharp, in one repaint, while stopped.
+/* Gesture layer (mapZoom.js). While the map is being panned/zoomed,
+ * `.is-interacting` is on the <svg> and the real viewBox is re-rendered once
+ * per frame. To keep that per-frame repaint cheap, drop the flag-image fills
+ * for the duration of the gesture: with no element referencing a
+ * `url(#flagfill-…)` pattern, the browser doesn't rasterize the 255 flag
+ * images at all — just contours + solid fills, a few ms even on a phone. The
+ * inline flag fill is set with plain `style` (no !important), so a class rule
+ * with `!important` wins for the gesture, then loses again the instant the
+ * class is removed on settle — flags snap back sharp, in one repaint, while
+ * stopped. (Rendering the actual viewBox each frame, rather than sliding a
+ * cached GPU-transform layer, is what lets a pan paint the region it moves
+ * into instead of exposing a blank strip until settle — see mapZoom.js.)
  *
  * What shows in their place is the same green / red correctness wash the
  * settled trail already uses (rules below) — cheap solid fill, no image to
