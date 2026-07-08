@@ -4,20 +4,20 @@
 // glob in package.json's `main`, but explicit requires are more
 // predictable and easier to debug when something goes wrong at deploy.
 
-// Central failure wrapping: a handler that RETURNS a 5xx leaves request
-// telemetry success=true, so the App Insights Failures blade / alerts never
-// see it (verified in prod — see PR #727 for the sibling logLevel fix). We
-// patch app.http once, here, BEFORE the requires below run their
-// registrations, so every handler — and every future one — has its >=500
-// responses rethrown as failed invocations. See lib/httpFailure.js.
+// Central handler wrapping: patch app.http once, here, BEFORE the requires
+// below run their registrations, so every handler — and every future one —
+// gets the shared behavior in lib/httpHandler.js: (1) deviceId/puzzleId
+// enrichment onto a correlated trace, and (2) rethrowing >= 500 responses as
+// failed invocations so they reach the Failures blade. See PR #727/#728 for
+// the sibling host.json fixes this builds on.
 const { app } = require('@azure/functions');
-const { wrapServerErrorsAsFailures } = require('./lib/httpFailure');
+const { wrapHandler } = require('./lib/httpHandler');
 const registerHttp = app.http.bind(app);
 app.http = (name, options) =>
   registerHttp(
     name,
     options && typeof options.handler === 'function'
-      ? { ...options, handler: wrapServerErrorsAsFailures(options.handler) }
+      ? { ...options, handler: wrapHandler(options.handler) }
       : options,
   );
 
