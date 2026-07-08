@@ -63,6 +63,7 @@ function statsLabels() {
   return {
     scoreOnly: t('daily.stats.scoreOnly', 'Your score: {found}/{total}'),
     averageOnly: t('daily.stats.averageOnly', 'Average score: {average}/{total}'),
+    playerCount: t('daily.stats.playerCount', '{count} players'),
     caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
     loading: t('daily.stats.loading', 'Loading stats'),
     extraRanking: t('daily.stats.extra.ranking', 'Most recognised:'),
@@ -300,9 +301,34 @@ function paintCommunityStats(stats, total, opts = {}) {
   if (hasAverage) {
     const h = document.createElement('p');
     h.className = 'daily-stats-headline';
-    h.textContent = labels.averageOnly
-      .replace('{average}', String(stats.mean))
-      .replace('{total}', String(total));
+    // Only the score value ("6.4/8") carries the tooltip — not the whole
+    // line — so hovering the label text or the empty space past it does
+    // nothing. Split the template on the score token and wrap just that
+    // run in a `.hover-tip` span. Uses the shared bubble (common.css) so
+    // it matches the flag-tile hover labels; the `--cursor` variant
+    // floats it at the pointer, fed by the mousemove handler below.
+    const tipText = labels.playerCount.replace('{count}', String(stats.totalAttempts));
+    const parts = labels.averageOnly.split('{average}/{total}');
+    if (parts.length === 2) {
+      h.appendChild(document.createTextNode(parts[0]));
+      const score = document.createElement('span');
+      score.className = 'hover-tip hover-tip--cursor';
+      score.dataset.tip = tipText;
+      score.textContent = `${stats.mean}/${total}`;
+      score.addEventListener('mousemove', (e) => {
+        const r = score.getBoundingClientRect();
+        score.style.setProperty('--tip-x', `${e.clientX - r.left}px`);
+        score.style.setProperty('--tip-y', `${e.clientY - r.top}px`);
+      });
+      h.appendChild(score);
+      h.appendChild(document.createTextNode(parts[1]));
+    } else {
+      // Locale template without the expected "{average}/{total}" run:
+      // fall back to a plain line, no scoped tooltip.
+      h.textContent = labels.averageOnly
+        .replace('{average}', String(stats.mean))
+        .replace('{total}', String(total));
+    }
     container.appendChild(h);
   }
   if (opts.loading) {
