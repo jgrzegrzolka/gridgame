@@ -60,6 +60,17 @@ const SPRING_MS = 260;
 /** Overscroll (vbu) below which a released pan counts as settled — no spring. */
 const SPRING_EPS = 0.01;
 /**
+ * Flick inertia: releasing a pan with velocity glides on, decelerating to a
+ * stop, like Google Maps. TAU is the glide's time constant — projected distance
+ * = release velocity × TAU, and the ease-out tween runs 3×TAU so its opening
+ * speed matches the flick. MIN_SPEED (px/ms) is the release speed below which we
+ * just settle (a slow drag shouldn't drift). Jan, 2026-07-08.
+ */
+const INERTIA_TAU_MS = 230;
+const INERTIA_MIN_SPEED = 0.35;
+/** Velocity window (ms) sampled at release to measure the flick speed. */
+const FLICK_WINDOW_MS = 80;
+/**
  * Wheel-zoom sensitivity: zoom scale = e^(-normalizedDeltaPx × this).
  * Tuned so a classic mouse notch (~100 px of deltaY) zooms ~10% — the
  * same feel the old fixed 1.1-per-event step had — while a trackpad or
@@ -379,6 +390,32 @@ export function rubberBandOffset(overshoot, dim) {
 }
 
 /**
+ * Release velocity for flick inertia, in px/ms, from recent pointer samples.
+ * Measures over the last `windowMs` so a mid-drag pause-then-release reads as
+ * ~0 (no unwanted glide). `samples` is `{ x, y, t }` newest-last; `now` is the
+ * release time. Returns {0,0} on too few samples, a stale newest sample (paused
+ * before lifting), or a zero time delta.
+ *
+ * @param {Array<{x: number, y: number, t: number}>} samples
+ * @param {number} now       release timestamp (same clock as sample.t)
+ * @param {number} [windowMs] look-back window
+ * @returns {{ vx: number, vy: number }}
+ */
+export function flickVelocity(samples, now, windowMs = 80) {
+  if (!samples || samples.length < 2) return { vx: 0, vy: 0 };
+  const last = samples[samples.length - 1];
+  if (now - last.t > windowMs) return { vx: 0, vy: 0 };
+  let ref = last;
+  for (let k = samples.length - 1; k >= 0; k--) {
+    if (now - samples[k].t <= windowMs) ref = samples[k];
+    else break;
+  }
+  const dt = last.t - ref.t;
+  if (dt <= 0) return { vx: 0, vy: 0 };
+  return { vx: (last.x - ref.x) / dt, vy: (last.y - ref.y) / dt };
+}
+
+/**
  * Parse a viewBox attribute string ("x y w h") into a ViewBox object.
  * Returns null on malformed input.
  *
@@ -678,10 +715,13 @@ export function attachZoomPan(svg, opts = {}) {
    * (Node test env), so the map still lands on the right view either way.
    *
    * @param {ViewBox} target
-   * @param {{ durationMs?: number, onDone?: () => void }} [opts]
+   * @param {{ durationMs?: number, ease?: (t: number) => number, onDone?: () => void }} [opts]
+   *   ease — timing curve (default easeInOutCubic; inertia passes easeOutCubic
+   *   so the glide starts at the flick speed and decelerates).
    */
   function animateTo(target, opts = {}) {
     const duration = typeof opts.durationMs === 'number' ? opts.durationMs : 480;
+    const ease = typeof opts.ease === 'function' ? opts.ease : easeInOutCubic;
     const raf = globalThis.requestAnimationFrame;
     const end = clampViewBox(target, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(target), true);
     cancelAnim();
@@ -703,7 +743,7 @@ export function attachZoomPan(svg, opts = {}) {
     function frame(ts) {
       if (!startTs) startTs = ts;
       const p = Math.min(1, (ts - startTs) / duration);
-      const e = easeInOutCubic(p);
+      const e = ease(p);
       apply({
         x: start.x + (end.x - start.x) * e,
         y: start.y + (end.y - start.y) * e,
@@ -726,19 +766,43 @@ export function attachZoomPan(svg, opts = {}) {
   }
 
   /**
-   * End a one-finger / mouse pan. If it overscrolled past the edge (rubber-band
-   * stretch), spring back to the clamped edge; otherwise commit where it rests.
-   * Flushes any last queued frame first so a move-then-immediate-lift still
-   * springs from the true final position rather than a stale one.
+   * End a one-finger / mouse pan. Priority on release:
+   *   1. Overscrolled past an edge → spring back (rubber-band).
+   *   2. Released with a flick (velocity over the threshold) → glide with
+   *      inertia, decelerating to a stop (clamped at edges).
+   *   3. Otherwise → commit where it rests.
+   * Flushes any last queued frame first so a move-then-immediate-lift uses the
+   * true final position. `vx` / `vy` are the release velocity in px/ms.
+   * @param {number} [vx]
+   * @param {number} [vy]
    */
-  function endPanGesture() {
+  function endPanGesture(vx = 0, vy = 0) {
     if (pendingViewBox) flushInput();
     const home = clampViewBox(current, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(current), true);
     if (Math.abs(home.x - current.x) > SPRING_EPS || Math.abs(home.y - current.y) > SPRING_EPS) {
       springHome(home);
-    } else {
-      commitGesture();
+      return;
     }
+    if (Math.hypot(vx, vy) > INERTIA_MIN_SPEED && !prefersReducedMotion()) {
+      startInertia(vx, vy);
+      return;
+    }
+    commitGesture();
+  }
+
+  /**
+   * Glide the map after a flick. Projects a target from the release velocity
+   * (distance = v × INERTIA_TAU_MS) and eases to it with easeOutCubic over
+   * 3×tau — that pairing makes the tween's opening speed match the flick, then
+   * decelerate. animateTo clamps the target, so a glide toward an edge simply
+   * eases to a stop there. Velocity (px/ms) → viewBox units via the live scale.
+   * @param {number} vx
+   * @param {number} vy
+   */
+  function startInertia(vx, vy) {
+    const factor = svgUnitsPerPixel(svg, current);
+    const target = panViewBox(current, -vx * factor * INERTIA_TAU_MS, -vy * factor * INERTIA_TAU_MS);
+    animateTo(target, { durationMs: 3 * INERTIA_TAU_MS, ease: easeOutCubic });
   }
 
   /**
@@ -904,6 +968,23 @@ export function attachZoomPan(svg, opts = {}) {
   const DRAG_THRESHOLD_PX = 5;
   let suppressNextClick = false;
 
+  /** Recent pointer samples for measuring flick velocity at release (px, ms;
+   *  newest last). Fed by pan moves, read once on release, reset on drag start. */
+  /** @type {Array<{x: number, y: number, t: number}>} */
+  let panSamples = [];
+  const perfNow = () => (globalThis.performance && typeof globalThis.performance.now === 'function')
+    ? globalThis.performance.now()
+    : Date.now();
+  /** @param {number} x @param {number} y */
+  function recordPanSample(x, y) {
+    panSamples.push({ x, y, t: perfNow() });
+    if (panSamples.length > 6) panSamples.shift();
+  }
+  /** Velocity of the just-ended pan (px/ms) from the sample buffer. */
+  function releaseVelocity() {
+    return flickVelocity(panSamples, perfNow(), FLICK_WINDOW_MS);
+  }
+
   /** @param {TouchEvent} e */
   function onTouchStart(e) {
     cancelAnim();
@@ -920,6 +1001,8 @@ export function attachZoomPan(svg, opts = {}) {
       lastTapAt = now;
       touchState = { mode: 'pan', lastX: t.clientX, lastY: t.clientY };
       dragStartScreen = { x: t.clientX, y: t.clientY };
+      panSamples = [];
+      recordPanSample(t.clientX, t.clientY);
     } else if (e.touches.length === 2) {
       const t1 = e.touches[0];
       const t2 = e.touches[1];
@@ -941,6 +1024,7 @@ export function attachZoomPan(svg, opts = {}) {
       scheduleInput(panViewBox(base, -dx * factor, -dy * factor), true);
       touchState.lastX = t.clientX;
       touchState.lastY = t.clientY;
+      recordPanSample(t.clientX, t.clientY);
     } else if (touchState.mode === 'pinch' && e.touches.length === 2) {
       e.preventDefault();
       const t1 = e.touches[0];
@@ -962,7 +1046,7 @@ export function attachZoomPan(svg, opts = {}) {
     const wasPan = touchState !== null && touchState.mode === 'pan';
     touchState = null;
     dragStartScreen = null;
-    if (wasPan) endPanGesture();
+    if (wasPan) { const v = releaseVelocity(); endPanGesture(v.vx, v.vy); }
   }
 
   /** @param {MouseEvent} e */
@@ -974,6 +1058,8 @@ export function attachZoomPan(svg, opts = {}) {
       downX: e.clientX, downY: e.clientY,
       dragging: false,
     };
+    panSamples = [];
+    recordPanSample(e.clientX, e.clientY);
   }
 
   /** @param {MouseEvent} e */
@@ -992,13 +1078,14 @@ export function attachZoomPan(svg, opts = {}) {
     scheduleInput(panViewBox(base, -dx * factor, -dy * factor), true);
     mouseState.lastX = e.clientX;
     mouseState.lastY = e.clientY;
+    recordPanSample(e.clientX, e.clientY);
   }
 
   function onMouseUp() {
     const wasDrag = mouseState !== null && mouseState.dragging;
     if (wasDrag) suppressNextClick = true;
     mouseState = null;
-    if (wasDrag) endPanGesture();
+    if (wasDrag) { const v = releaseVelocity(); endPanGesture(v.vx, v.vy); }
   }
 
   /**

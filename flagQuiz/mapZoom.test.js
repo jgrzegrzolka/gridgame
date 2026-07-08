@@ -13,6 +13,7 @@ import {
   easeInOutCubic,
   easeOutCubic,
   rubberBandOffset,
+  flickVelocity,
 } from './mapZoom.js';
 
 // ---- zoomViewBox ----
@@ -502,4 +503,36 @@ test('rubberBandOffset scales its cap with the dimension', () => {
 test('rubberBandOffset guards a non-positive dimension', () => {
   assert.equal(rubberBandOffset(20, 0), 0);
   assert.equal(rubberBandOffset(20, -5), 0);
+});
+
+// ---- flickVelocity ----
+
+test('flickVelocity needs at least two samples', () => {
+  assert.deepEqual(flickVelocity([], 100), { vx: 0, vy: 0 });
+  assert.deepEqual(flickVelocity([{ x: 0, y: 0, t: 0 }], 100), { vx: 0, vy: 0 });
+});
+
+test('flickVelocity measures px/ms across the window', () => {
+  const s = [{ x: 0, y: 0, t: 0 }, { x: 30, y: 15, t: 50 }];
+  const v = flickVelocity(s, 50, 80);
+  assert.ok(Math.abs(v.vx - 0.6) < 1e-9);   // 30px / 50ms
+  assert.ok(Math.abs(v.vy - 0.3) < 1e-9);   // 15px / 50ms
+});
+
+test('flickVelocity ignores samples older than the window', () => {
+  // The 0ms sample is outside an 80ms window ending at t=200; only the last two count.
+  const s = [{ x: 0, y: 0, t: 0 }, { x: 100, y: 0, t: 150 }, { x: 120, y: 0, t: 200 }];
+  const v = flickVelocity(s, 200, 80);
+  assert.ok(Math.abs(v.vx - (120 - 100) / (200 - 150)) < 1e-9);  // 20px / 50ms = 0.4
+});
+
+test('flickVelocity is ~0 when the finger paused before release', () => {
+  // Newest sample is 200ms old at release → treated as a stop, no glide.
+  const s = [{ x: 0, y: 0, t: 0 }, { x: 100, y: 0, t: 100 }];
+  assert.deepEqual(flickVelocity(s, 300, 80), { vx: 0, vy: 0 });
+});
+
+test('flickVelocity guards a zero time delta', () => {
+  const s = [{ x: 0, y: 0, t: 50 }, { x: 40, y: 0, t: 50 }];
+  assert.deepEqual(flickVelocity(s, 50, 80), { vx: 0, vy: 0 });
 });
