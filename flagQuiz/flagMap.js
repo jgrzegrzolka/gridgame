@@ -754,14 +754,21 @@ function addFullscreenButton(container, label) {
   // instead of letterboxing. User can pinch-zoom + drag-pan to
   // navigate within the filled view. On exit, remove the attribute
   // so the default `meet` returns for the normal in-page render.
+  // On a touch device we also rotate to landscape (see lockLandscapeOnTouch):
+  // the map is ~2:1, so a portrait phone would slice it to an awkward sliver.
   const sync = () => {
     /** @type {any} */
     const d = globalThis.document;
     const current = d.fullscreenElement || d.webkitFullscreenElement || null;
     const svg = container.querySelector('svg');
     if (!svg) return;
-    if (current === container) svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-    else svg.removeAttribute('preserveAspectRatio');
+    if (current === container) {
+      svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      lockLandscapeOnTouch();
+    } else {
+      svg.removeAttribute('preserveAspectRatio');
+      unlockOrientation();
+    }
   };
   /** @type {any} */
   const d = globalThis.document;
@@ -841,6 +848,43 @@ function toggleFullscreen(el) {
   const elAny = el;
   const enter = elAny.requestFullscreen || elAny.webkitRequestFullscreen;
   if (enter) enter.call(elAny);
+}
+
+/**
+ * On a touch device, rotate the fullscreen map to landscape — the way a
+ * fullscreen video does. The world map is ~2:1, so sliced into a tall portrait
+ * viewport it crops to a sliver and forces awkward panning; landscape lets the
+ * wide map fill a wide viewport and the pan/zoom behave normally.
+ *
+ * Only fires in fullscreen (where the Screen Orientation lock is permitted) and
+ * only on a coarse-pointer device, so desktop keeps its native orientation.
+ * Rejects silently where the lock API is unsupported — notably iOS Safari,
+ * which also can't fullscreen a non-video element in the first place — leaving
+ * the existing portrait slice-pan as the graceful fallback.
+ */
+function lockLandscapeOnTouch() {
+  const mq = typeof globalThis.matchMedia === 'function'
+    ? globalThis.matchMedia('(pointer: coarse)') : null;
+  if (!mq || !mq.matches) return;
+  /** @type {any} */
+  const orientation = globalThis.screen && globalThis.screen.orientation;
+  if (!orientation || typeof orientation.lock !== 'function') return;
+  try {
+    const p = orientation.lock('landscape');
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch { /* unsupported / not allowed — portrait slice-pan stays the fallback */ }
+}
+
+/**
+ * Release any orientation lock taken on fullscreen enter. Exiting fullscreen
+ * already drops the lock per spec, so this is belt-and-suspenders — and a
+ * no-op where the API is unsupported.
+ */
+function unlockOrientation() {
+  /** @type {any} */
+  const orientation = globalThis.screen && globalThis.screen.orientation;
+  if (!orientation || typeof orientation.unlock !== 'function') return;
+  try { orientation.unlock(); } catch { /* ignore */ }
 }
 
 
