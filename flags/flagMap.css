@@ -73,6 +73,7 @@
  * resize cursor. Both sit above the SVG (z-index) so a click/drag on
  * them doesn't fall through to the country path underneath. */
 .map-fullscreen-btn,
+.map-hide-btn,
 .map-resize-handle {
   position: absolute;
   right: 6px;
@@ -93,6 +94,7 @@
  * selector (ID + class beats the ID-only map rule) so they render at
  * their intended size with a transparent background. */
 #flag-map-section .map-fullscreen-btn svg,
+#flag-map-section .map-hide-btn svg,
 #flag-map-section .map-resize-handle svg {
   width: 14px;
   height: 14px;
@@ -100,6 +102,39 @@
 }
 .map-fullscreen-btn {
   top: 4px;
+}
+/* Hide/show toggle chip: the mirror of the fullscreen chip, in the opposite
+ * (top-left) corner. `right: auto` clears the shared rule's right anchor so
+ * `left` positions it. */
+.map-hide-btn {
+  top: 4px;
+  left: 6px;
+  right: auto;
+}
+/* The chip carries both glyphs; the section's collapsed state flips which
+ * one shows, so the same button in the same spot reads as "hide" over a
+ * live map and "show" once collapsed. */
+.map-hide-ico--hide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.map-hide-ico--show {
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+#flag-map-section.is-collapsed .map-hide-ico--hide {
+  display: none;
+}
+#flag-map-section.is-collapsed .map-hide-ico--show {
+  display: flex;
+}
+/* Collapsed: the map is gone (SVG unmounted — the real perf relief) but the
+ * toggle chip stays put. The section keeps its width + centered position so
+ * the chip doesn't move; it just shrinks to a slim strip that holds it. */
+#flag-map-section.is-collapsed {
+  min-height: 38px;
 }
 .map-resize-handle {
   bottom: 6px;
@@ -130,9 +165,13 @@
   left: auto;
   transform: none;
 }
-/* No resizing while fullscreen — the browser owns the dimensions. */
+/* No resizing while fullscreen — the browser owns the dimensions. Hiding the
+ * map to a bar makes no sense while fullscreen either, so drop the hide chip
+ * too; the player exits fullscreen (Esc) first. */
 #flag-map-section:fullscreen .map-resize-handle,
-#flag-map-section:-webkit-full-screen .map-resize-handle {
+#flag-map-section:-webkit-full-screen .map-resize-handle,
+#flag-map-section:fullscreen .map-hide-btn,
+#flag-map-section:-webkit-full-screen .map-hide-btn {
   display: none;
 }
 #flag-map-section:fullscreen svg,
