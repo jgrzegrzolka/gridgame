@@ -759,8 +759,8 @@ function addFullscreenButton(container, label) {
   exitBtn.type = 'button';
   exitBtn.className = 'map-fs-exit';
   exitBtn.setAttribute('aria-label', label || 'Toggle fullscreen');
-  exitBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'
-    + '<g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+  exitBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">'
+    + '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">'
     + '<path d="M6 6 18 18"/><path d="M18 6 6 18"/></g></svg>';
   exitBtn.addEventListener('click', (e) => {
     e.stopPropagation();

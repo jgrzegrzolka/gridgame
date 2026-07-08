@@ -211,13 +211,16 @@
   top: max(8px, env(safe-area-inset-top));
   left: 50%;
   z-index: 11;
-  width: 40px;
-  height: 40px;
+  /* Match the other map chrome buttons exactly: same 30px slot, 6px radius,
+   * surface fill, border, hover, and pink :active afterglow all inherited from
+   * the shared recipe (common.css). Only the position (top-centre), the grey
+   * glyph, and the slide-reveal differ. */
+  width: 30px;
+  height: 30px;
   box-sizing: border-box;
   padding: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
   color: var(--muted-color); /* the "grey" ✕ */
   /* Revealed by a swipe down: parked above the top edge and invisible, it slides
    * DOWN into place + fades in when flagMap.js adds `.fs-exit-visible`, and
@@ -238,6 +241,18 @@
   pointer-events: auto;
   transform: translate(-50%, 0);
 }
+/* Snap the pink press border in instantly on tap, like every other button. The
+ * base rule's 600ms border-color transition — needed for the release afterglow —
+ * would otherwise fade the pink in too slowly to see; restated here only because
+ * the :fullscreen scope out-specifies the shared recipe's :active. The pink
+ * colour itself still comes from that recipe. */
+#flag-map-section:fullscreen .map-fs-exit:active,
+#flag-map-section:-webkit-full-screen .map-fs-exit:active {
+  transition: transform 260ms ease-out,
+              opacity 200ms ease-out,
+              border-color 0s,
+              background-color 120ms ease-out;
+}
 /* Reduced motion: keep the fade, drop the slide (park it in place). */
 @media (prefers-reduced-motion: reduce) {
   #flag-map-section:fullscreen .map-fs-exit,
@@ -253,8 +268,8 @@
  * fullscreen button icon above). */
 #flag-map-section:fullscreen .map-fs-exit svg,
 #flag-map-section:-webkit-full-screen .map-fs-exit svg {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   background: none;
 }
 #flag-map-section svg {
