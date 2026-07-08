@@ -422,6 +422,7 @@
     "stats": {
       "scoreOnly": "Your score: {found}/{total}",
       "averageOnly": "Average score: {average}/{total}",
+      "playerCount": "{count} players",
       "caption": "% shows how many other players found each flag.",
       "loading": "Loading stats",
       "noSubmissions": "You're one of the first to play this puzzle.",

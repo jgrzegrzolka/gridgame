@@ -636,6 +636,53 @@ body::after {
   color: #1f8a3a;
 }
 
+/* Shared hover-label bubble: a dark rounded caption that fades in above
+ * the host on hover. Same visual language as the flag-tile hover name
+ * (`.find-tile::after` and friends) so any element that needs a "hover
+ * to reveal more" label reads identically across the site. The host
+ * carries `.hover-tip` (sets the positioning context) and a `data-tip`
+ * attribute holding the label text. */
+.hover-tip {
+  position: relative;
+}
+.hover-tip[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary-color);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 80ms;
+  z-index: 10;
+}
+.hover-tip[data-tip]:hover::after {
+  opacity: 1;
+}
+/* Cursor-following variant: the bubble tracks the mouse instead of
+ * sitting centred above the host. The host's `mousemove` handler writes
+ * `--tip-x` / `--tip-y` (offsets within the host); the label floats just
+ * above the pointer. Used where the host is a wide line rather than a
+ * small tile, so "centred above the element" would land far from the
+ * cursor. */
+.hover-tip--cursor[data-tip]::after {
+  left: var(--tip-x, 50%);
+  top: var(--tip-y, 0);
+  bottom: auto;
+  transform: translate(-50%, calc(-100% - 10px));
+}
+/* Slightly translucent so it reads as a floating overlay over the page
+ * (it tracks the cursor, unlike the solid anchored tile labels). */
+.hover-tip--cursor[data-tip]:hover::after {
+  opacity: 0.8;
+}
+
 /* Tristate filter pill — neutral / .active (include) / .exclude (none-of).
  * Shared by flagsdata's filter bar and findFlag's chooser; consumers
  * override font-size/padding to fit their context (chooser pills are
