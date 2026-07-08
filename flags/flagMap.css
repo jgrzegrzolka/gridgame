@@ -192,6 +192,55 @@
   width: 14px;
   height: 14px;
 }
+/* Fullscreen exit ✕ — a grey close button at the top-centre, clear of a phone's
+ * rounded corners and a landscape side-notch (where the corner ⤢ chip can be
+ * clipped). Reveal-on-tap + auto-hide is driven from flagMap.js (it toggles the
+ * `.fs-exit-visible` class); touch-only, so desktop never sees it. Reuses the
+ * shared chrome-button recipe (common.css); only the position, the grey glyph,
+ * and the reveal differ. Hidden entirely outside fullscreen. */
+.map-fs-exit {
+  display: none;
+}
+#flag-map-section:fullscreen .map-fs-exit,
+#flag-map-section:-webkit-full-screen .map-fs-exit {
+  display: flex;
+  position: absolute;
+  /* Top-centre dodges rounded corners and a landscape side notch; the small
+   * env() nudge covers a rare top-centre camera without pushing it down. */
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--muted-color); /* the "grey" ✕ */
+  /* Reveal-on-tap: invisible until flagMap.js adds `.fs-exit-visible`, then
+   * fades in. Keep the recipe's hover / press transitions alongside opacity. */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out,
+              background-color 120ms ease-out,
+              border-color 600ms ease-out;
+}
+#flag-map-section:fullscreen.fs-exit-visible .map-fs-exit,
+#flag-map-section:-webkit-full-screen.fs-exit-visible .map-fs-exit {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Keep the ✕ glyph its intended size + transparent (the 100vw/100vh fullscreen
+ * svg rule would otherwise blow it up and paint a background, same trap as the
+ * fullscreen button icon above). */
+#flag-map-section:fullscreen .map-fs-exit svg,
+#flag-map-section:-webkit-full-screen .map-fs-exit svg {
+  width: 18px;
+  height: 18px;
+  background: none;
+}
 #flag-map-section svg {
   width: 100%;
   /* No max-width — let the map fill the parent container (#flag-map-

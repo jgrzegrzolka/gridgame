@@ -749,33 +749,115 @@ function addFullscreenButton(container, label) {
     toggleFullscreen(container);
   });
   container.appendChild(btn);
-  // While in fullscreen, force preserveAspectRatio=slice so the SVG
-  // content fills both viewport dimensions (cropping the longer axis)
-  // instead of letterboxing. User can pinch-zoom + drag-pan to
-  // navigate within the filled view. On exit, remove the attribute
-  // so the default `meet` returns for the normal in-page render.
-  // On a touch device we also rotate to landscape (see lockLandscapeOnTouch):
-  // the map is ~2:1, so a portrait phone would slice it to an awkward sliver.
+  // Fullscreen exit ✕. The corner ⤢ button above can be clipped by a phone's
+  // rounded corner or camera notch, and mobile has no Esc — so in fullscreen we
+  // reveal a grey ✕ at the TOP-CENTRE (clear of both a rounded corner and a
+  // landscape side-notch) on tap, auto-hiding a few seconds later like a video
+  // player's controls (see revealMapExit). Rebuilt each mount because
+  // mountFlagMap's innerHTML replacement wipes it; the corner button stays put.
+  const exitBtn = doc.createElement('button');
+  exitBtn.type = 'button';
+  exitBtn.className = 'map-fs-exit';
+  exitBtn.setAttribute('aria-label', label || 'Toggle fullscreen');
+  exitBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'
+    + '<g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M6 6 18 18"/><path d="M18 6 6 18"/></g></svg>';
+  exitBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleFullscreen(container); // already fullscreen → exits
+  });
+  container.appendChild(exitBtn);
+
+  // Document + container listeners are wired ONCE per section: mountFlagMap
+  // re-runs addFullscreenButton on every re-show (the hide/show chip), which
+  // would otherwise stack a fresh sync + pointer listener each mount.
+  if (container.dataset && container.dataset.fsWired) return;
+  if (container.dataset) container.dataset.fsWired = '1';
+
+  // While in fullscreen, force preserveAspectRatio=slice so the SVG content
+  // fills both viewport dimensions (cropping the longer axis) instead of
+  // letterboxing; on a touch device also rotate to landscape
+  // (lockLandscapeOnTouch) and flash the exit ✕ so it's discoverable on entry.
+  // On exit, undo all three.
   const sync = () => {
     /** @type {any} */
     const d = globalThis.document;
     const current = d.fullscreenElement || d.webkitFullscreenElement || null;
     const svg = container.querySelector('svg');
-    if (!svg) return;
     if (current === container) {
-      svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      if (svg) svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
       lockLandscapeOnTouch();
+      revealMapExit(container);
     } else {
-      svg.removeAttribute('preserveAspectRatio');
+      if (svg) svg.removeAttribute('preserveAspectRatio');
       unlockOrientation();
+      hideMapExit(container);
     }
   };
+  if (doc && typeof doc.addEventListener === 'function') {
+    doc.addEventListener('fullscreenchange', sync);
+    doc.addEventListener('webkitfullscreenchange', sync);
+  }
+  if (typeof container.addEventListener === 'function') {
+    // Any tap on the map while fullscreen re-reveals the ✕ and resets its timer.
+    container.addEventListener('pointerdown', () => {
+      if (isMapFullscreen(container)) revealMapExit(container);
+    });
+  }
+}
+
+/** Auto-hide delay for the fullscreen exit ✕ after the last tap. */
+const FS_EXIT_HIDE_MS = 3200;
+/** @type {WeakMap<Element, number>} Live auto-hide timer per map section. */
+const fsExitTimers = new WeakMap();
+
+/**
+ * True when `container` is the element currently in browser fullscreen.
+ * @param {any} container
+ */
+function isMapFullscreen(container) {
   /** @type {any} */
   const d = globalThis.document;
-  if (d && typeof d.addEventListener === 'function') {
-    d.addEventListener('fullscreenchange', sync);
-    d.addEventListener('webkitfullscreenchange', sync);
-  }
+  if (!d) return false;
+  const cur = d.fullscreenElement || d.webkitFullscreenElement || null;
+  return cur === container;
+}
+
+/** Coarse (touch) primary pointer — the only place the exit ✕ is needed. */
+function isCoarsePointer() {
+  const mm = globalThis.matchMedia;
+  if (typeof mm !== 'function') return false;
+  try { return mm('(pointer: coarse)').matches; } catch { return false; }
+}
+
+/**
+ * Reveal the fullscreen exit ✕ and (re)arm its auto-hide timer. Touch only —
+ * desktop keeps the corner button + Esc, so the centred ✕ never shows there.
+ * @param {any} container
+ */
+function revealMapExit(container) {
+  if (!container || !container.classList || !isCoarsePointer()) return;
+  container.classList.add('fs-exit-visible');
+  const prev = fsExitTimers.get(container);
+  if (prev) globalThis.clearTimeout(prev);
+  const set = globalThis.setTimeout;
+  if (typeof set !== 'function') return;
+  const id = set(() => {
+    container.classList.remove('fs-exit-visible');
+    fsExitTimers.delete(container);
+  }, FS_EXIT_HIDE_MS);
+  fsExitTimers.set(container, /** @type {any} */ (id));
+}
+
+/**
+ * Hide the exit ✕ and clear any pending auto-hide timer.
+ * @param {any} container
+ */
+function hideMapExit(container) {
+  if (!container || !container.classList) return;
+  container.classList.remove('fs-exit-visible');
+  const prev = fsExitTimers.get(container);
+  if (prev) { globalThis.clearTimeout(prev); fsExitTimers.delete(container); }
 }
 
 /**
