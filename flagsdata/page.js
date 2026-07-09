@@ -345,10 +345,6 @@ export function bootFlagsData() {
     void mountFlagMap({
       container: flagMapEl,
       url: '../flagQuiz/worldMap.svg',
-      // Same ocean margin as the quiz world map so the antimeridian Pacific
-      // islands aren't jammed against the frame's right edge (see flagMap
-      // `edgePad`). Kept in sync with flagQuiz/page.js's `countries` variant.
-      edgePad: { right: 600, left: 400, top: 320 },
       fullscreenLabel: t('menu.fullscreen', 'Toggle fullscreen'),
       // The map here always fills the content column (see index.css) — no
       // corner resize handle; fullscreen covers the "see it bigger" case.
@@ -365,7 +361,11 @@ export function bootFlagsData() {
     }).then((svg) => {
       mapSvg = svg;
       if (svg) {
-        mapHandle = attachZoomPan(svg, { containZoomOut: true, freePan: false });
+        // boundsExpand: drag / zoom ~15% past the world map's edges into open
+        // ocean (the antimeridian Pacific islands can be pulled off the edge)
+        // while the map still rests at its tight default framing. Matches the
+        // flagQuiz `countries` variant.
+        mapHandle = attachZoomPan(svg, { containZoomOut: true, freePan: false, boundsExpand: 0.15 });
         // The asset's invisible microstate marker discs (`.circlexx` / `.subxx`,
         // r≈6, opacity 0) still hit-test and blanket the Caribbean, stealing
         // clicks from the island underneath and resolving to a neighbour. We

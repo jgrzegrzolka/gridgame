@@ -6,27 +6,7 @@ import {
   offsetHitTargetCenter, paintCountryFlag, settleFlagToTint,
   revealFlagImage, computeMainlandBbox, highlightCountry, unhighlightCountry,
   pickNearestHitTarget, neutralizeMarkerCircles, planIslandMarker, addHideButton,
-  padViewBoxRect,
 } from './flagMap.js';
-
-test('padViewBoxRect widens the box per side, shifting x/y for left/top', () => {
-  const vb = { x: 0, y: 0, width: 2754, height: 1398 };
-  // World-map case: ocean margin on the right (and a little left).
-  const out = padViewBoxRect(vb, { right: 150, left: 50 });
-  assert.deepEqual(out, { x: -50, y: 0, width: 2954, height: 1398 });
-  // top/bottom behave the same on the y axis.
-  const out2 = padViewBoxRect({ x: 10, y: 20, width: 100, height: 80 }, { top: 5, bottom: 15 });
-  assert.deepEqual(out2, { x: 10, y: 15, width: 100, height: 100 });
-});
-
-test('padViewBoxRect returns an unchanged copy for null / empty pad', () => {
-  const vb = { x: 1, y: 2, width: 3, height: 4 };
-  assert.deepEqual(padViewBoxRect(vb, null), vb);
-  assert.deepEqual(padViewBoxRect(vb, undefined), vb);
-  assert.deepEqual(padViewBoxRect(vb, {}), vb);
-  // A copy, not the same reference (caller can mutate safely).
-  assert.notEqual(padViewBoxRect(vb, null), vb);
-});
 
 test('the world map carries an injected Åland (ax) element', () => {
   // Åland is an autonomous territory the source map omits; we inject an

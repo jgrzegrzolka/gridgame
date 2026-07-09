@@ -225,6 +225,29 @@ export function containZoomOutLimit(rectW, rectH, originalW, originalH, slice, m
 }
 
 /**
+ * Grow a viewBox outward by `frac` of each dimension on every side, keeping the
+ * same centre and aspect ratio. Used to build the pan/zoom CLAMP region from the
+ * mounted view: the map still rests at the mounted framing, but the reachable
+ * area is `frac` larger on each edge, so the player can drag / zoom a little past
+ * the map into the surrounding margin. `frac = 0.15` ≈ drag up to 15% of the
+ * view past each edge. `frac <= 0` returns an unchanged copy.
+ *
+ * Aspect is preserved because the same fraction scales both axes (width and
+ * height each become `dim × (1 + 2·frac)`), so feeding the mounted view through
+ * `clampViewBox` against this region never reshapes it.
+ *
+ * @param {ViewBox} vb
+ * @param {number} frac  fraction of each dimension to add per side
+ * @returns {ViewBox}
+ */
+export function expandBounds(vb, frac) {
+  if (!(frac > 0)) return { ...vb };
+  const dx = vb.width * frac;
+  const dy = vb.height * frac;
+  return { x: vb.x - dx, y: vb.y - dy, width: vb.width + 2 * dx, height: vb.height + 2 * dy };
+}
+
+/**
  * Translate a viewBox by (dx, dy) in SVG user coords.
  *
  * @param {ViewBox} vb
@@ -569,9 +592,14 @@ export function screenToSvg(svg, clientX, clientY) {
  *     on the map. Pair with `containZoomOut: true` for the fully bounded feel.
  *   - `maxZoomOut` (default MAX_ZOOM_OUT) — the loose zoom-out cap used when
  *     `containZoomOut` is off.
+ *   - `boundsExpand` (fraction, default 0) — grow the pan/zoom clamp region past
+ *     the mounted view by this fraction of each dimension per side, WITHOUT
+ *     moving the default framing. The map rests tight but the player can drag /
+ *     zoom a little into the surrounding margin (ocean, on the world map) and
+ *     rest there. See `expandBounds`.
  *
  * @param {SVGElement} svg
- * @param {{ onSettle?: (vb: { x: number, y: number, width: number, height: number }) => void, containZoomOut?: boolean, freePan?: boolean, maxZoomOut?: number }} [opts]
+ * @param {{ onSettle?: (vb: { x: number, y: number, width: number, height: number }) => void, containZoomOut?: boolean, freePan?: boolean, maxZoomOut?: number, boundsExpand?: number }} [opts]
  * @returns {{
  *   setView: (vb: { x: number, y: number, width: number, height: number }) => void,
  *   animateTo: (vb: { x: number, y: number, width: number, height: number }, opts?: { durationMs?: number, onDone?: () => void }) => void,
@@ -599,6 +627,14 @@ export function attachZoomPan(svg, opts = {}) {
   const freePan = opts.freePan !== false;
   const looseMaxZoomOut = typeof opts.maxZoomOut === 'number' ? opts.maxZoomOut : MAX_ZOOM_OUT;
   const containZoomOut = opts.containZoomOut === true;
+  // `boundsExpand` (fraction, default 0) grows the pan/zoom CLAMP region beyond
+  // the mounted view by this fraction of each dimension per side, WITHOUT moving
+  // the default view. So the map rests at its tight mounted framing but the
+  // player can drag / zoom a little past its edges into the surrounding margin
+  // (ocean, on the world map) and stay there. Aspect-preserving (same fraction
+  // both axes), so a first gesture never reshapes the view. 0 = clamp exactly to
+  // the mounted view (the historical behaviour continents keep).
+  const boundsExpand = (typeof opts.boundsExpand === 'number' && opts.boundsExpand > 0) ? opts.boundsExpand : 0;
   const noopHandle = {
     setView: () => {},
     animateTo: () => {},
@@ -609,13 +645,20 @@ export function attachZoomPan(svg, opts = {}) {
   };
   if (!svg) return noopHandle;
   const initialAttr = svg.getAttribute('viewBox');
-  const original = parseViewBox(initialAttr || '');
-  if (!original) return noopHandle;
+  /** The tight view the SVG was mounted with — the DEFAULT/reset framing. */
+  const mounted = parseViewBox(initialAttr || '');
+  if (!mounted) return noopHandle;
+  /** The clamp region: the mounted view grown by `boundsExpand`. Every pan /
+   *  zoom clamp (clampViewBox / clampZoomScale / the contain floor) measures
+   *  against THIS, so the reachable area includes the drag margin. Equals
+   *  `mounted` when boundsExpand is 0. */
+  const original = expandBounds(mounted, boundsExpand);
 
   /** The live target view — what the player should be looking at. Written
-   *  straight to the element every frame (during a gesture and at rest). */
+   *  straight to the element every frame (during a gesture and at rest). Starts
+   *  at the tight mounted framing, not the expanded bounds. */
   /** @type {ViewBox} */
-  let current = { ...original };
+  let current = { ...mounted };
 
   /**
    * Write a viewBox to the element and rescale the hit-target rings. Used on
@@ -1122,7 +1165,7 @@ export function attachZoomPan(svg, opts = {}) {
       const now = Date.now();
       if (now - lastTapAt < DOUBLE_TAP_MS) {
         cancelInput();
-        apply({ ...original });
+        apply({ ...mounted });
         touchState = null;
         lastTapAt = 0;
         return;
@@ -1250,9 +1293,9 @@ export function attachZoomPan(svg, opts = {}) {
   return {
     setView: apply,
     animateTo,
-    animateReset: (opts) => animateTo({ ...original }, opts),
-    getOriginal: () => ({ ...original }),
-    reset: () => apply({ ...original }),
+    animateReset: (opts) => animateTo({ ...mounted }, opts),
+    getOriginal: () => ({ ...mounted }),
+    reset: () => apply({ ...mounted }),
     teardown: () => {
       cancelAnim();
       cancelInput();

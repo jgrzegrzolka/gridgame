@@ -5,6 +5,7 @@ import {
   wheelZoomScale,
   clampZoomScale,
   containZoomOutLimit,
+  expandBounds,
   panViewBox,
   clampViewBox,
   parseViewBox,
@@ -181,6 +182,31 @@ test('containZoomOutLimit is always >= 1 and honours a bad rect', () => {
   assert.equal(containZoomOutLimit(500, 500, 0, 0, true, 1.06), 1.06);
   // A margin below 1 is clamped up to 1.
   assert.equal(containZoomOutLimit(400, 400, 400, 400, false, 0.5), 1);
+});
+
+// ---- expandBounds ----
+
+test('expandBounds grows each side by frac × dimension, same centre + aspect', () => {
+  const vb = { x: 0, y: 0, width: 2754, height: 1398 };
+  const out = expandBounds(vb, 0.15);
+  // 0.15 × 2754 = 413.1 per side on x; 0.15 × 1398 = 209.7 per side on y.
+  assert.equal(Math.round(out.x), -413);
+  assert.equal(Math.round(out.y), -210);
+  assert.equal(Math.round(out.width), 3580);   // 2754 × 1.3
+  assert.equal(Math.round(out.height), 1817);  // 1398 × 1.3
+  // Centre preserved.
+  assert.ok(Math.abs((out.x + out.width / 2) - (vb.x + vb.width / 2)) < 1e-9);
+  assert.ok(Math.abs((out.y + out.height / 2) - (vb.y + vb.height / 2)) < 1e-9);
+  // Aspect preserved (so feeding the mounted view through clampViewBox against
+  // this region never reshapes it).
+  assert.ok(Math.abs(out.width / out.height - vb.width / vb.height) < 1e-9);
+});
+
+test('expandBounds returns an unchanged copy for frac <= 0', () => {
+  const vb = { x: 5, y: 6, width: 7, height: 8 };
+  assert.deepEqual(expandBounds(vb, 0), vb);
+  assert.deepEqual(expandBounds(vb, -1), vb);
+  assert.notEqual(expandBounds(vb, 0), vb); // a copy, not the same ref
 });
 
 // ---- panViewBox ----

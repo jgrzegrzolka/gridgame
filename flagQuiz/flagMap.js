@@ -559,7 +559,6 @@ export function unhighlightCountry(svg, code) {
  *   url: string,
  *   cropCodes?: string[] | null,
  *   cropPad?: { left?: number, right?: number, top?: number, bottom?: number },
- *   edgePad?: { left?: number, right?: number, top?: number, bottom?: number },
  *   scopeCodes?: string[] | null,
  *   fullscreenLabel?: string,
  *   onToggle?: (() => void) | null,
@@ -571,7 +570,7 @@ export function unhighlightCountry(svg, code) {
  * @returns {Promise<SVGElement | null>}
  */
 export async function mountFlagMap({
-  container, url, cropCodes = null, cropPad, edgePad, scopeCodes = null,
+  container, url, cropCodes = null, cropPad, scopeCodes = null,
   fullscreenLabel = 'Toggle fullscreen',
   onToggle = null,
   toggleLabel = 'Hide map',
@@ -607,13 +606,6 @@ export async function mountFlagMap({
   if (Array.isArray(cropCodes) && cropCodes.length > 0) {
     cropToCountries(/** @type {any} */ (svg), cropCodes, cropPad);
   }
-  // Breathing room: extend the finalized viewBox by `edgePad` (SVG units, per
-  // side). The world map (no crop) uses this to keep the antimeridian Pacific
-  // islands off the frame's right edge — they sit at the asset's far-right, so
-  // without a margin they read as jammed against the wall. Runs BEFORE
-  // hitTargetRadius so the ring sizing tracks the padded viewBox. Distinct from
-  // cropPad, which only pads the country-bbox crop the continents use.
-  padViewBox(/** @type {any} */ (svg), edgePad);
   const scope = Array.isArray(scopeCodes)
     ? new Set(scopeCodes.map((c) => (typeof c === 'string' ? c.toLowerCase() : '')))
     : null;
@@ -1196,45 +1188,6 @@ export function cropToCountries(svg, codes, extra) {
   const bb = computeCountriesBbox(svg, codes, extra);
   if (!bb) return;
   svg.setAttribute('viewBox', `${bb.x} ${bb.y} ${bb.width} ${bb.height}`);
-}
-
-/**
- * Grow a viewBox rect outward by `pad` (SVG units per side). Pure so a sibling
- * test can pin it. `right` widens the box on the right (more room past the
- * asset's east edge), `left` shifts x left and widens, etc. Missing sides are
- * 0; a null/absent pad returns the rect unchanged.
- *
- * @param {{ x: number, y: number, width: number, height: number }} vb
- * @param {{ left?: number, right?: number, top?: number, bottom?: number } | null} [pad]
- * @returns {{ x: number, y: number, width: number, height: number }}
- */
-export function padViewBoxRect(vb, pad) {
-  if (!pad) return { ...vb };
-  const l = pad.left || 0, r = pad.right || 0, t = pad.top || 0, b = pad.bottom || 0;
-  return {
-    x: vb.x - l,
-    y: vb.y - t,
-    width: vb.width + l + r,
-    height: vb.height + t + b,
-  };
-}
-
-/**
- * DOM wrapper for {@link padViewBoxRect}: read the element's current viewBox,
- * pad it, write it back. No-op when there's no pad or the viewBox is missing /
- * malformed (test fakes without a real viewBox).
- *
- * @param {any} svg
- * @param {{ left?: number, right?: number, top?: number, bottom?: number } | null | undefined} pad
- */
-function padViewBox(svg, pad) {
-  if (!pad || !svg || typeof svg.getAttribute !== 'function') return;
-  const cur = svg.getAttribute('viewBox');
-  if (!cur) return;
-  const parts = cur.trim().split(/\s+/).map(Number);
-  if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) return;
-  const padded = padViewBoxRect({ x: parts[0], y: parts[1], width: parts[2], height: parts[3] }, pad);
-  svg.setAttribute('viewBox', `${padded.x} ${padded.y} ${padded.width} ${padded.height}`);
 }
 
 /**

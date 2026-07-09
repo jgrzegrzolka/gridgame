@@ -325,17 +325,16 @@ export function bootFlagQuiz() {
     // union is computed. For NA we exclude US from the bbox math but
     // pad the west edge by 200 units so Alaska's main body comes back
     // into view (it sits west of Canada's westernmost point).
-    const MAP_CONFIG = /** @type {Record<string, { url: string, crop: boolean, cropExcludes?: string[], cropPad?: { left?: number, right?: number, top?: number, bottom?: number }, edgePad?: { left?: number, right?: number, top?: number, bottom?: number } }>} */ ({
+    const MAP_CONFIG = /** @type {Record<string, { url: string, crop: boolean, cropExcludes?: string[], cropPad?: { left?: number, right?: number, top?: number, bottom?: number }, boundsExpand?: number }>} */ ({
       // "All countries" — the whole-world view. No crop; the asset's
-      // natural viewBox already covers everything. Microstates scope
-      // is the full pool so every tiny country worldwide gets a ring.
-      // `edgePad` adds ocean margin so the antimeridian Pacific islands
-      // (Fiji, NZ, Tonga, and the far east of Russia) aren't jammed against
-      // the frame's right edge; a little on the left keeps the Aleutians /
-      // eastern Russia off the left wall too, and a top strip gives the Arctic
-      // coast some air. No bottom pad — Antarctica stays pinned near the base.
-      countries:       { url: './worldMap.svg',  crop: false,
-                         edgePad: { right: 600, left: 400, top: 320 } },
+      // natural viewBox already covers everything (that tight framing is the
+      // default rest view). Microstates scope is the full pool so every tiny
+      // country worldwide gets a ring. `boundsExpand` lets the player drag /
+      // zoom ~15% past the map edges into open ocean (so the antimeridian
+      // Pacific islands can be pulled off the edge) without changing where the
+      // map rests. Continents omit it — panning past their crop would reveal
+      // neighbouring land, not ocean.
+      countries:       { url: './worldMap.svg',  crop: false, boundsExpand: 0.15 },
       // Europe: several European countries' <g> on the world map bundle
       // their overseas territories with the metropole (fr+French Guiana,
       // dk+Greenland, es+Canaries, nl/pt/gb/no their Atlantic/Caribbean
@@ -548,7 +547,6 @@ export function bootFlagQuiz() {
         url: cfg.url,
         cropCodes,
         cropPad: cfg.cropPad,
-        edgePad: cfg.edgePad,
         // Microstate overlays only land on countries the player will
         // actually be quizzed on — the world map is geographically
         // wide and we don't want pink rings decorating Caribbean /
@@ -567,7 +565,7 @@ export function bootFlagQuiz() {
         // set the final viewBox, since mapZoom reads that as the
         // "original" bounds for clamping).
         if (svg) {
-          mapZoomHandle = attachZoomPan(svg, { onSettle: onMapSettle, containZoomOut: true, freePan: false });
+          mapZoomHandle = attachZoomPan(svg, { onSettle: onMapSettle, containZoomOut: true, freePan: false, boundsExpand: cfg.boundsExpand || 0 });
           // Replay the round so far — fills every country already
           // answered before this (possibly late) mount. Uses
           // paintCountryFlag directly (not markCountry) so a late mount
