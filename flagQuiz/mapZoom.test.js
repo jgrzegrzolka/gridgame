@@ -334,16 +334,32 @@ test('clampViewBox lets you pan even at 1x zoom (width === original.width) when 
   assert.equal(out.x, -220.5);
 });
 
-test('clampViewBox still centres a zoomed-out viewBox when freePan is off', () => {
-  // Fullscreen zoom-out (viewBox larger than the map) with the default
-  // freePan=false: the map stays locked dead-centre — the historical rule.
+test('clampViewBox centres horizontally but bottom-aligns a zoomed-out viewBox when freePan is off', () => {
+  // Zoom-out (viewBox larger than the map) with the default freePan=false:
+  // x locks dead-centre, but y pins the map's BOTTOM to the view bottom so the
+  // vertical slack sits on top (Antarctica flush on the world map, no gap
+  // below). See the clampViewBox bottom-align branch.
   const original = { x: 0, y: 0, width: 100, height: 100 };
   const out = clampViewBox(
     { x: -80, y: -80, width: 200, height: 200 }, // dragged, 2× zoomed out
     original, 24, 3,
   );
-  assert.equal(out.x, -50); // centred: (100 - 200)/2
-  assert.equal(out.y, -50);
+  assert.equal(out.x, -50);  // centred: (100 - 200)/2
+  assert.equal(out.y, -100); // bottom-aligned: 100 - 200 → map bottom (100) = view bottom (-100+200)
+});
+
+test('clampViewBox topRestFrac: soft top rest, hard bottom wall at the default zoom', () => {
+  // Bounds mode with a 25% top-rest give. At the default zoom (view == map,
+  // 100×100) the map may REST up to 25 (0.25 × view height) above its top edge,
+  // but the bottom is a hard wall — it can never drop below the map bottom.
+  const original = { x: 0, y: 0, width: 100, height: 100 };
+  const args = /** @type {const} */ ([original, 24, 1, { x: 0, y: 0 }, false, 0.25]);
+  // Dragged up a little (y = -10): inside the rest zone → stays where dropped.
+  assert.equal(clampViewBox({ x: 0, y: -10, width: 100, height: 100 }, ...args).y, -10);
+  // Dragged up past the rest zone (y = -50): clamped to the -25 rest line.
+  assert.equal(clampViewBox({ x: 0, y: -50, width: 100, height: 100 }, ...args).y, -25);
+  // Dragged DOWN (y = 30, toward below the map): hard wall pins it at 0.
+  assert.equal(clampViewBox({ x: 0, y: 30, width: 100, height: 100 }, ...args).y, 0);
 });
 
 test('clampViewBox freePan lets you drag a zoomed-out map off-centre', () => {

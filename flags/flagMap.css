@@ -307,11 +307,14 @@
    * but a long-hold could still trigger the selection UI. */
   user-select: none;
   -webkit-user-select: none;
-  /* Pink frame around the map viewport (brand secondary). `border-box` keeps
-   * the 100% width inclusive of the border so it never forces a horizontal
+  /* Pale hairline frame around the map viewport. `muted-soft` (#eee) is the
+   * quietest line in the palette — a barely-there rule, not the bolder brand
+   * pink it used to be (Jan wanted it thinner + paler; 1px is the thinness
+   * floor since 0.5px rounds away on standard-DPI). `border-box` keeps the
+   * 100% width inclusive of the border so it never forces a horizontal
    * scrollbar. Dropped in fullscreen (below), where the map fills the screen. */
   box-sizing: border-box;
-  border: 1px solid var(--secondary-color);
+  border: 1px solid var(--muted-soft-color);
   border-radius: 8px;
 }
 /* Gesture layer (mapZoom.js). While the map is being panned/zoomed,

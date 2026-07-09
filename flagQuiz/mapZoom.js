@@ -37,12 +37,26 @@ const MAX_ZOOM_IN = 24;
 const MAX_ZOOM_OUT = 3;
 /**
  * Bounds mode (`containZoomOut: true`) breathing margin: the contain floor is
- * multiplied by this so the outermost coasts aren't flush against the frame
- * edge and the rubber-band has a sliver to pull into. 1.06 = a ~6% border
- * around the fully-zoomed-out map — enough to read as "a thin strip of ocean,"
- * not enough to read as a void. Tune here if the floor feels too tight / loose.
+ * multiplied by this, so zooming out past the whole map keeps pulling back into
+ * open ocean instead of stopping flush against the coasts. 1.25 = a ~25% border
+ * of water around the fully-zoomed-out map — room to actually investigate the
+ * edges (northern coasts especially: the vertical slack is bottom-aligned in
+ * clampViewBox, so it all lands on TOP with Antarctica pinned to the bottom).
+ * The DEFAULT view is unaffected — this only caps how far you can zoom OUT past
+ * 1×. Horizontal margin is split evenly (centred); vertical goes entirely up
+ * top. Tune here if the floor feels too tight / loose (Jan wanted more, 07-09).
  */
-const CONTAIN_ZOOM_OUT_MARGIN = 1.06;
+const CONTAIN_ZOOM_OUT_MARGIN = 1.25;
+/**
+ * Bounds mode (`containZoomOut: true`) TOP rest give: how far the map may REST
+ * past its top edge, as a fraction of the current view height. Drag up into
+ * open ocean at ANY zoom (default included) and the map settles there instead
+ * of springing back, so you can study the northern coasts without zooming out.
+ * The BOTTOM has no equivalent (Antarctica is pinned). 0.15 = a modest strip of
+ * ocean to hold above the northern coasts (a little tighter than the 0.25
+ * zoom-out margin — dialled down on Jan's feel check). Tune here (07-09).
+ */
+const CONTAIN_TOP_REST_FRACTION = 0.15;
 /**
  * Free-pan: how much of the map must stay on screen while dragging, as a
  * fraction of the VISIBLE WINDOW (not the map). Measuring against the window
@@ -281,9 +295,14 @@ export function panViewBox(vb, dx, dy) {
  * @param {number} [maxZoomOut]
  * @param {{ x?: number, y?: number }} [overhang]
  * @param {boolean} [freePan]
+ * @param {number} [topRestFrac] bounds mode only: how far (as a fraction of the
+ *   view height) the map may REST past its TOP edge. The bottom stays a hard
+ *   wall; the top gets this much open-ocean give that the map settles into
+ *   rather than springing away from. 0 (default) = the classic "stays inside
+ *   the map" clamp.
  * @returns {ViewBox}
  */
-export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut = 1, overhang = { x: 0, y: 0 }, freePan = false) {
+export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut = 1, overhang = { x: 0, y: 0 }, freePan = false, topRestFrac = 0) {
   // Capture the input's center BEFORE any adjustments — when a tiny
   // bbox (single small country) is expanded up to the minimum size,
   // OR when a non-aspect-matching bbox (tall + narrow) is widened to
@@ -369,11 +388,19 @@ export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut =
     const maxY = original.y + original.height - keep - oy;
     if (y < minY) y = minY;
     if (y > maxY) y = maxY;
-  } else if (oy === 0 && height >= original.height) {
-    y = original.y + (original.height - height) / 2;
   } else {
-    const minY = original.y - oy;
+    // Asymmetric vertical bounds (bounds mode). The BOTTOM is a hard wall: maxY
+    // pins the window bottom to the map bottom, so no drag or zoom drops below
+    // it — Antarctica stays flush at every zoom (a zoomed-out view lands here,
+    // bottom-aligned, instead of centring with a gap below). The TOP is soft:
+    // the map may rest up to `topRest` (a fraction of the view) above its top
+    // edge, so you can drag up into open ocean and it STAYS there, to study the
+    // northern coasts at the default zoom (Jan, 2026-07-09). `Math.min` keeps
+    // minY <= maxY when the bottom-pin already sits above the top line (deep
+    // zoom-out). topRestFrac 0 → the classic "stays inside the map" clamp.
+    const topRest = Math.max(0, topRestFrac) * height;
     const maxY = original.y + original.height - height + oy;
+    const minY = Math.min(maxY, original.y - oy - topRest);
     if (y < minY) y = minY;
     if (y > maxY) y = maxY;
   }
@@ -621,6 +648,20 @@ export function attachZoomPan(svg, opts = {}) {
   const original = parseViewBox(initialAttr || '');
   if (!original) return noopHandle;
 
+  // Top-rest give only applies in bounds mode (the Google-Maps-style world /
+  // flagsdata maps). Loose mode keeps the classic clamp (topRestFrac 0).
+  const topRestFrac = containZoomOut ? CONTAIN_TOP_REST_FRACTION : 0;
+  /**
+   * Clamp to the live bounds: the current zoom-out floor, slice overhang, and
+   * bounds-mode top-rest. Every clampViewBox call in here goes through this so
+   * the whole instance shares one bounds definition (there is exactly one).
+   * @param {ViewBox} vb
+   * @returns {ViewBox}
+   */
+  function clampBounds(vb) {
+    return clampViewBox(vb, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(vb), freePan, topRestFrac);
+  }
+
   /** The live target view — what the player should be looking at. Written
    *  straight to the element every frame (during a gesture and at rest). */
   /** @type {ViewBox} */
@@ -648,28 +689,35 @@ export function attachZoomPan(svg, opts = {}) {
     // shrunk map anywhere. Contain: stop at the whole-map floor (currentMaxZoom-
     // Out) and keep the visible window on the map (freePan off). Either way
     // clampViewBox never loses the map off-screen, and double-tap resets.
-    current = clampViewBox(next, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(next), freePan);
+    current = clampBounds(next);
     endGesture();
     setViewBoxNow(current);
   }
 
   /**
-   * Clamp a live PAN frame. Same hard clamp as `apply`, except the pan may
-   * overscroll past its edge with rubber-band resistance (rubberBandOffset)
-   * rather than dead-stopping at the wall — for BOTH the zoomed-in map edge and
-   * the zoomed-out floating-map keep-sliver edge (FREE_PAN_KEEP). Within bounds
-   * the offset is 0, so this is a no-op until you actually reach an edge. The
-   * released overscroll springs back in `endPanGesture`. Zoom stays hard-clamped.
+   * Live PAN frame for free drag (option B) with ONE hard edge: the bottom.
+   * The map follows the finger with no resistance up top and on the sides — you
+   * can pull it clear off screen and it springs home on release (endPanGesture)
+   * — but the bottom is a wall. The visible window can never drop below the
+   * map's bottom edge (Antarctica), at any zoom: no drag or zoom reveals empty
+   * space beneath it (Jan, 2026-07-09).
+   *
+   * `hard` is the fully-clamped position; `hard.y` = clamp(next.y, minY, maxY)
+   * where maxY pins Antarctica to the window bottom. `Math.min(next.y, hard.y)`
+   * keeps the free UPWARD direction (next.y below the top floor is used as-is)
+   * while pinning the DOWNWARD one to maxY (the Antarctica wall). x is fully
+   * free (springs home); width/height are the pan's own — zoom can't change
+   * mid-pan. Zoom itself stays fully hard-clamped (the non-pan branch below).
    * @param {ViewBox} next
    * @returns {ViewBox}
    */
-  function clampPanFrame(next) {
-    const hard = clampViewBox(next, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(next), freePan);
+  function freePanFrame(next) {
+    const hard = clampBounds(next);
     return {
-      x: hard.x + rubberBandOffset(next.x - hard.x, hard.width),
-      y: hard.y + rubberBandOffset(next.y - hard.y, hard.height),
-      width: hard.width,
-      height: hard.height,
+      x: next.x,
+      y: Math.min(next.y, hard.y),
+      width: next.width,
+      height: next.height,
     };
   }
 
@@ -751,15 +799,13 @@ export function attachZoomPan(svg, opts = {}) {
     pendingViewBox = null;
     pendingPan = false;
     if (!next) return;
-    // Option B — free drag: a pan follows the finger 1:1 with NO clamp during
-    // the gesture, so you can pull the map anywhere (even off screen), and it
-    // springs back to the clamped home on release (endPanGesture computes
-    // home = clampViewBox(current) and springs to it). Zoom still hard-clamps.
-    // (clampPanFrame — the A-mode rubber-band-during-drag — is parked below
-    // while we trial B; swap it back here to restore A.)
+    // Free drag (option B) with one hard wall — the bottom. A pan follows the
+    // finger 1:1 up top and sideways (springs home on release via
+    // endPanGesture), but freePanFrame pins the bottom so you can never drag
+    // the map's edge above Antarctica into empty space. Zoom stays hard-clamped.
     current = isPan
-      ? next
-      : clampViewBox(next, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(next), freePan);
+      ? freePanFrame(next)
+      : clampBounds(next);
     beginGesture();
     setViewBoxNow(current);   // grey simplify + per-frame viewBox render
     scheduleSettle();
@@ -840,7 +886,7 @@ export function attachZoomPan(svg, opts = {}) {
     const duration = typeof opts.durationMs === 'number' ? opts.durationMs : 480;
     const ease = typeof opts.ease === 'function' ? opts.ease : easeInOutCubic;
     const raf = globalThis.requestAnimationFrame;
-    const end = clampViewBox(target, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(target), freePan);
+    const end = clampBounds(target);
     cancelAnim();
     if (typeof raf !== 'function' || duration <= 0 || prefersReducedMotion()) {
       apply(end);
@@ -895,7 +941,7 @@ export function attachZoomPan(svg, opts = {}) {
    */
   function endPanGesture(vx = 0, vy = 0) {
     if (pendingViewBox) flushInput();
-    const home = clampViewBox(current, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(current), freePan);
+    const home = clampBounds(current);
     if (Math.abs(home.x - current.x) > SPRING_EPS || Math.abs(home.y - current.y) > SPRING_EPS) {
       springHome(home, vx, vy);
       return;
