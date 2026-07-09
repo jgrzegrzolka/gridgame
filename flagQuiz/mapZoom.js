@@ -63,12 +63,16 @@ const FREE_PAN_KEEP = 0.1;
  * of dead-stopping ("hitting a wall"). Applies at EVERY pan edge — the zoomed-in
  * map edge and the zoomed-out floating-map keep-sliver (FREE_PAN_KEEP) alike.
  * Zoom limits stay hard-clamped. Jan, 2026-07-08. Bumped 0.12 -> 0.2 on
- * 2026-07-09 for a rubberier pull (the edge gives noticeably more before the
- * resistance takes over).
+ * 2026-07-09, then 0.2 -> 0.35 the same day for even more drag room (the edge
+ * stretches noticeably further before the resistance asymptotes).
  */
-const MAX_OVERSCROLL = 0.2;
-/** Spring-back duration (ms) easing a released pan from overscroll to the edge. */
-const SPRING_MS = 300;
+const MAX_OVERSCROLL = 0.35;
+/**
+ * Spring-back duration (ms) easing a released pan from overscroll to the edge.
+ * Longer = the map drifts home more slowly / smoothly. Bumped 300 -> 560 on
+ * 2026-07-09 (Jan wanted a slower, gentler return).
+ */
+const SPRING_MS = 560;
 /**
  * Spring-back overshoot: the spring-home tween uses easeOutBack, which shoots a
  * little PAST the edge (into the map, never into a void) and settles back, for a

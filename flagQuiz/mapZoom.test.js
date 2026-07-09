@@ -563,8 +563,8 @@ test('rubberBandOffset preserves the overshoot direction', () => {
   assert.ok(rubberBandOffset(-20, 100) < 0);  // past the low edge
 });
 
-test('rubberBandOffset stays strictly under the cap (dim × MAX_OVERSCROLL = 0.2)', () => {
-  const cap = 100 * 0.2; // mirrors MAX_OVERSCROLL in mapZoom.js
+test('rubberBandOffset stays strictly under the cap (dim × MAX_OVERSCROLL = 0.35)', () => {
+  const cap = 100 * 0.35; // mirrors MAX_OVERSCROLL in mapZoom.js
   // Even a huge yank only asymptotes toward the cap, never reaches it.
   assert.ok(rubberBandOffset(1e6, 100) < cap);
   assert.ok(rubberBandOffset(1e6, 100) > cap * 0.99);
