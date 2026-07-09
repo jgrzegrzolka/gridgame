@@ -523,7 +523,7 @@
     "lockedWaiting": "Locked in, waiting for the others…",
     "locked": "Locked in",
     "fastest": "Fastest",
-    "nextRound": "Next round",
+    "nextIn": "Next round in {n}s",
     "finalScores": "Final scores",
     "winnerTakesIt": "{name} takes it",
     "tie": "It's a tie!",

@@ -5,6 +5,7 @@ import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz } from '../flags/partyClient.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
+import { QUESTION_SECONDS, REVEAL_SECONDS, secondsLeft, remainingFraction } from '../flags/partyTiming.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
 
@@ -47,6 +48,9 @@ export function bootFlagParty() {
   const startBtn = /** @type {HTMLButtonElement} */ ($('start-game'));
   const waitEl = $('lobby-wait');
   const roundPill = $('round-pill');
+  const timerEl = $('round-timer');
+  const timerFill = $('round-timer-fill');
+  const timerLabel = $('round-timer-label');
   const promptQ = $('prompt-q');
   const promptTarget = $('prompt-target');
   const gridEl = $('flags-grid');
@@ -167,12 +171,66 @@ export function bootFlagParty() {
     connect();
   }
 
+  // ---- round clock ----
+  // Everyone renders the countdown; only the host's timer fires the transition
+  // (send 'reveal' when a question runs out, 'next' when a reveal has lingered),
+  // so the room advances on its own with no host button to press. Timing lives
+  // here on the page by design — the room reducer stays time-free. Caveat: the
+  // pace depends on the host's tab staying awake; if the host drops mid-round
+  // the room can stall at a reveal (documented in PARTY.md, server-alarm is the
+  // future fix). All-present-buzzed still auto-reveals server-side regardless.
+  /** @type {string | null} phase:roundIndex the clock is currently counting */
+  let clockToken = null;
+  let clockDeadline = 0;
+  let clockTotalMs = 0;
+  let clockFired = false;
+  let clockInterval = 0;
+
+  function stopClock() {
+    if (clockInterval) { window.clearInterval(clockInterval); clockInterval = 0; }
+    clockToken = null;
+    timerEl.hidden = true;
+  }
+
+  /** (Re)start the countdown when the phase or round changes; otherwise leave it. */
+  function syncClock() {
+    const mode = state.phase === 'reveal' ? 'reveal' : 'question';
+    const token = `${mode}:${state.roundIndex}`;
+    if (token === clockToken) return;
+    clockToken = token;
+    clockFired = false;
+    clockTotalMs = (mode === 'reveal' ? REVEAL_SECONDS : QUESTION_SECONDS) * 1000;
+    clockDeadline = Date.now() + clockTotalMs;
+    timerEl.hidden = false;
+    timerEl.setAttribute('data-mode', mode);
+    if (!clockInterval) clockInterval = window.setInterval(tickClock, 200);
+    tickClock();
+  }
+
+  function tickClock() {
+    const mode = state.phase === 'reveal' ? 'reveal' : 'question';
+    const now = Date.now();
+    const left = secondsLeft(clockDeadline, now);
+    timerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
+    timerEl.classList.toggle('low', mode === 'question' && left <= 5);
+    timerLabel.textContent = mode === 'reveal'
+      ? fmt(t('party.nextIn', 'Next round in {n}s'), { n: left })
+      : String(left);
+    if (left <= 0 && !clockFired) {
+      clockFired = true;
+      // Host only: end the phase. A stale 'reveal'/'next' for a phase that
+      // already advanced is ignored by the room reducer, so this is safe even
+      // if the all-buzzed auto-reveal beat us to it.
+      if (state.isHost) send({ type: mode === 'reveal' ? 'next' : 'reveal' });
+    }
+  }
+
   // ---- render ----
   function render() {
-    if (!activeRoom) { showSection('start'); return; }
-    if (state.phase === 'question' || state.phase === 'reveal') { showSection('round'); renderRound(); }
-    else if (state.phase === 'final') { showSection('final'); renderFinal(); }
-    else { showSection('lobby'); renderLobby(); }
+    if (!activeRoom) { stopClock(); showSection('start'); return; }
+    if (state.phase === 'question' || state.phase === 'reveal') { showSection('round'); renderRound(); syncClock(); }
+    else if (state.phase === 'final') { stopClock(); showSection('final'); renderFinal(); }
+    else { stopClock(); showSection('lobby'); renderLobby(); }
   }
 
   function renderLobby() {
@@ -282,12 +340,9 @@ export function bootFlagParty() {
       list.appendChild(toast);
     }
     footEl.appendChild(list);
-    if (state.isHost) {
-      const btn = /** @type {HTMLButtonElement} */ (el('button', 'party-btn', t('party.nextRound', 'Next round')));
-      btn.type = 'button';
-      btn.addEventListener('click', () => send({ type: 'next' }));
-      footEl.appendChild(btn);
-    }
+    // No "Next round" button: the round advances on its own once the reveal
+    // has lingered (the host's round clock sends 'next'). The countdown bar
+    // above shows "next round in N".
   }
 
   function renderFinal() {
