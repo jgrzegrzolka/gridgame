@@ -751,9 +751,14 @@ export function attachZoomPan(svg, opts = {}) {
     pendingViewBox = null;
     pendingPan = false;
     if (!next) return;
-    // Pans may rubber-band past the edge (clampPanFrame); zoom stays hard-clamped.
+    // Option B — free drag: a pan follows the finger 1:1 with NO clamp during
+    // the gesture, so you can pull the map anywhere (even off screen), and it
+    // springs back to the clamped home on release (endPanGesture computes
+    // home = clampViewBox(current) and springs to it). Zoom still hard-clamps.
+    // (clampPanFrame — the A-mode rubber-band-during-drag — is parked below
+    // while we trial B; swap it back here to restore A.)
     current = isPan
-      ? clampPanFrame(next)
+      ? next
       : clampViewBox(next, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(next), freePan);
     beginGesture();
     setViewBoxNow(current);   // grey simplify + per-frame viewBox render
