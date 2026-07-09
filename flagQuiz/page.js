@@ -325,16 +325,11 @@ export function bootFlagQuiz() {
     // union is computed. For NA we exclude US from the bbox math but
     // pad the west edge by 200 units so Alaska's main body comes back
     // into view (it sits west of Canada's westernmost point).
-    const MAP_CONFIG = /** @type {Record<string, { url: string, crop: boolean, cropExcludes?: string[], cropPad?: { left?: number, right?: number, top?: number, bottom?: number }, boundsExpand?: number }>} */ ({
+    const MAP_CONFIG = /** @type {Record<string, { url: string, crop: boolean, cropExcludes?: string[], cropPad?: { left?: number, right?: number, top?: number, bottom?: number } }>} */ ({
       // "All countries" — the whole-world view. No crop; the asset's
-      // natural viewBox already covers everything (that tight framing is the
-      // default rest view). Microstates scope is the full pool so every tiny
-      // country worldwide gets a ring. `boundsExpand` lets the player drag /
-      // zoom ~15% past the map edges into open ocean (so the antimeridian
-      // Pacific islands can be pulled off the edge) without changing where the
-      // map rests. Continents omit it — panning past their crop would reveal
-      // neighbouring land, not ocean.
-      countries:       { url: './worldMap.svg',  crop: false, boundsExpand: 0.15 },
+      // natural viewBox already covers everything. Microstates scope
+      // is the full pool so every tiny country worldwide gets a ring.
+      countries:       { url: './worldMap.svg',  crop: false },
       // Europe: several European countries' <g> on the world map bundle
       // their overseas territories with the metropole (fr+French Guiana,
       // dk+Greenland, es+Canaries, nl/pt/gb/no their Atlantic/Caribbean
@@ -565,7 +560,7 @@ export function bootFlagQuiz() {
         // set the final viewBox, since mapZoom reads that as the
         // "original" bounds for clamping).
         if (svg) {
-          mapZoomHandle = attachZoomPan(svg, { onSettle: onMapSettle, containZoomOut: true, freePan: false, boundsExpand: cfg.boundsExpand || 0 });
+          mapZoomHandle = attachZoomPan(svg, { onSettle: onMapSettle, containZoomOut: true, freePan: false });
           // Replay the round so far — fills every country already
           // answered before this (possibly late) mount. Uses
           // paintCountryFlag directly (not markCountry) so a late mount

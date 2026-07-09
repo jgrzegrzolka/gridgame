@@ -361,11 +361,7 @@ export function bootFlagsData() {
     }).then((svg) => {
       mapSvg = svg;
       if (svg) {
-        // boundsExpand: drag / zoom ~15% past the world map's edges into open
-        // ocean (the antimeridian Pacific islands can be pulled off the edge)
-        // while the map still rests at its tight default framing. Matches the
-        // flagQuiz `countries` variant.
-        mapHandle = attachZoomPan(svg, { containZoomOut: true, freePan: false, boundsExpand: 0.15 });
+        mapHandle = attachZoomPan(svg, { containZoomOut: true, freePan: false });
         // The asset's invisible microstate marker discs (`.circlexx` / `.subxx`,
         // r≈6, opacity 0) still hit-test and blanket the Caribbean, stealing
         // clicks from the island underneath and resolving to a neighbour. We
