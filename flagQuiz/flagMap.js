@@ -619,16 +619,46 @@ export async function mountFlagMap({
 }
 
 /**
+ * Filter microstate ring snapshots to those a HOVER may resolve to. A ring is
+ * eligible only once it's REVEALED — filter-matched on flagsdata (`isMarked`)
+ * or answered on the quiz (`isFlagged`) — and never an inset-suppressed speck
+ * (`insetted`, whose real marker moved into the Caribbean inset box). This is
+ * the guard that stops the quiz from leaking an UNANSWERED microstate's
+ * location: without it, sweeping the pointer across blank ocean where a still-
+ * hidden ring sits would wash it and give the country away. Pure over the
+ * snapshot objects so it can be pinned without a DOM; the geometry pick that
+ * consumes the result is {@link pickNearestHitTarget}.
+ *
+ * @template {{ isMarked?: boolean, isFlagged?: boolean, insetted?: boolean }} R
+ * @param {R[]} rings
+ * @returns {R[]}
+ */
+export function hoverableRings(rings) {
+  if (!Array.isArray(rings)) return [];
+  return rings.filter((r) => r && (r.isMarked || r.isFlagged) && !r.insetted);
+}
+
+/**
  * Desktop hover feedback: darken the country under the pointer a shade (grey
  * land → deeper grey, a filter-matched yellow → deeper gold) and, for a
- * microstate, fill its ring with a soft wash so a speck-sized island is legible
- * to point at. Toggles `.is-hovered` on the country's `flagFillTargets` — the
- * same scoped set the fills use — so it excludes a nested sub-country (Kosovo
- * inside Serbia never lights up with Serbia) and reaches the ring / island dot
- * / inset island that live in the flat overlay layer outside the country `<g>`.
- * A CSS `:hover` can do neither, which is why this is wired in JS. See the
- * `.is-hovered` rules in flagMap.css for the paint.
+ * microstate, fill its ring with a soft wash. Toggles `.is-hovered` on the
+ * country's `flagFillTargets` — the same scoped set the fills use — so it
+ * excludes a nested sub-country (Kosovo inside Serbia never lights up with
+ * Serbia) and reaches the ring / island dot / inset island that live in the
+ * flat overlay layer outside the country `<g>`. A CSS `:hover` can do neither,
+ * which is why this is wired in JS. See the `.is-hovered` rules in flagMap.css.
  *
+ * Which country the pointer is over is resolved exactly the way a CLICK is (see
+ * flagsdata's handler): first the ring geometry — a point inside a visible
+ * microstate ring resolves to that ring via `pickNearestHitTarget`, so hovering
+ * ANYWHERE in the circle washes it (you don't have to land on the speck-sized
+ * island) — then a fall back to the DOM target for full-size countries. Rings
+ * stay `pointer-events: none` (the click still falls through to the real island,
+ * so overlapping Caribbean rings don't misresolve), which is why the ring hover
+ * has to be a geometry test rather than a native `:hover` on the circle.
+ *
+ * The pointermove hit-test is coalesced to one geometry pass per frame (rAF) so
+ * a fast sweep across the map doesn't rebuild the ring snapshot dozens of times.
  * Touch devices are skipped (`hover: hover`) so a tap never leaves a country
  * stuck dark. No-op where there's no `matchMedia` (tests / SSR).
  *
@@ -646,11 +676,10 @@ function wireCountryHover(svg) {
       if (el && el.classList) el.classList.toggle('is-hovered', on);
     }
   };
-  // Which country a pointer target belongs to: an overlay element (island dot /
-  // inset island) names its country via `data-hit-for`; a land path resolves to
-  // its NEAREST `.map-country` ancestor, so Kosovo's path resolves to `xk`, not
-  // the `rs` group it's drawn inside. (Rings are pointer-events:none, so they're
-  // never the target — the event lands on the island or ocean behind them.)
+  // Which country a DOM target belongs to (the full-size-country fallback): an
+  // overlay element (island dot / inset island) names its country via
+  // `data-hit-for`; a land path resolves to its NEAREST `.map-country` ancestor,
+  // so Kosovo's path resolves to `xk`, not the `rs` group it's drawn inside.
   const countryOf = (el) => {
     if (!el) return null;
     const hitFor = el.dataset && el.dataset.hitFor;
@@ -658,24 +687,69 @@ function wireCountryHover(svg) {
     const c = typeof el.closest === 'function' ? el.closest('.map-country') : null;
     return c && c.id ? c.id : null;
   };
+  // Pointer → svg user coords via the live screen CTM, so ring hit-testing holds
+  // at any zoom / pan. Null off the real DOM (tests), where geometry is skipped.
+  const svgPoint = (e) => {
+    if (typeof svg.getScreenCTM !== 'function' || typeof svg.createSVGPoint !== 'function') return null;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    const p = svg.createSVGPoint();
+    p.x = e.clientX;
+    p.y = e.clientY;
+    const local = p.matrixTransform(ctm.inverse());
+    return { x: local.x, y: local.y };
+  };
+  // Snapshot the rings a hover may resolve to. `hoverableRings` keeps only the
+  // revealed ones (filter-matched on flagsdata, answered on the quiz, never an
+  // inset-suppressed speck) so passing over blank ocean near an unrevealed
+  // microstate can't leak its location. Live `r` (mapZoom rescales it per zoom)
+  // is read here so the geometry holds at any zoom.
+  const visibleRings = () => {
+    const out = [];
+    const nodes = svg.querySelectorAll('.map-hit-target');
+    for (let i = 0; i < nodes.length; i++) {
+      const el = nodes[i];
+      if (!el.classList) continue;
+      out.push({
+        cx: parseFloat(el.getAttribute('cx')),
+        cy: parseFloat(el.getAttribute('cy')),
+        r: parseFloat(el.getAttribute('r')),
+        code: el.getAttribute('data-hit-for'),
+        hidden: false,
+        isMarked: el.classList.contains('is-marked'),
+        isFlagged: el.classList.contains('is-flagged'),
+        insetted: el.classList.contains('carib-insetted'),
+      });
+    }
+    return hoverableRings(out);
+  };
 
-  svg.addEventListener('pointerover', (e) => {
-    const id = countryOf(e.target);
+  let queued = false;
+  let lastEvent = null;
+  const process = () => {
+    queued = false;
+    const e = lastEvent;
+    if (!e) return;
+    let id = null;
+    const pt = svgPoint(e);
+    if (pt) id = pickNearestHitTarget(pt, visibleRings()); // inside a ring?
+    if (!id) id = countryOf(e.target);                     // else full-size country
     if (id === current) return;
     if (current) setHover(current, false);
     current = id;
     if (current) setHover(current, true);
+  };
+  svg.addEventListener('pointermove', (e) => {
+    lastEvent = e;
+    if (queued) return;
+    queued = true;
+    const raf = globalThis.requestAnimationFrame;
+    if (typeof raf === 'function') raf(process); else process();
   });
-  // Clear only when the pointer truly leaves the map (not on every move between
-  // a country's own paths — pointerover already handles country-to-country
-  // switches, and moving onto ocean resolves to a null id there too).
-  svg.addEventListener('pointerout', (e) => {
-    const to = e.relatedTarget;
-    const left = !to || (typeof svg.contains === 'function' && !svg.contains(to));
-    if (current && left) {
-      setHover(current, false);
-      current = null;
-    }
+  // Clear when the pointer leaves the map entirely.
+  svg.addEventListener('pointerleave', () => {
+    lastEvent = null;
+    if (current) { setHover(current, false); current = null; }
   });
 }
 

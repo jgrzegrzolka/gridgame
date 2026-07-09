@@ -6,6 +6,7 @@ import {
   offsetHitTargetCenter, paintCountryFlag, settleFlagToTint,
   revealFlagImage, computeMainlandBbox, highlightCountry, unhighlightCountry,
   pickNearestHitTarget, neutralizeMarkerCircles, planIslandMarker, addHideButton,
+  hoverableRings,
 } from './flagMap.js';
 
 test('the world map carries an injected Åland (ax) element', () => {
@@ -1067,6 +1068,24 @@ test('pickNearestHitTarget resolves overlapping rings by nearest-relative-to-rad
     pickNearestHitTarget({ x: 836.7, y: 559.0 }, [{ cx: 836.7, cy: 559.0, r: 5.5, code: 'gp', hidden: true }]),
     null,
   );
+});
+
+test('hoverableRings keeps only revealed rings (marked or flagged), never an inset speck', () => {
+  const rings = [
+    { code: 'mt', isMarked: true },                     // flagsdata filter match
+    { code: 'sm', isFlagged: true },                     // quiz answered
+    { code: 'ad', isMarked: false, isFlagged: false },   // unrevealed — must be excluded
+    { code: 'ai', isMarked: true, insetted: true },      // suppressed inset speck — excluded
+  ];
+  // Only the two revealed, non-inset rings survive — this is the guard that
+  // stops the quiz leaking an unanswered microstate's location on a passing
+  // hover (see hoverableRings).
+  assert.deepEqual(hoverableRings(rings).map((r) => r.code), ['mt', 'sm']);
+});
+
+test('hoverableRings tolerates a non-array (returns empty)', () => {
+  assert.deepEqual(hoverableRings(null), []);
+  assert.deepEqual(hoverableRings(undefined), []);
 });
 
 test('neutralizeMarkerCircles turns off pointer-events on the asset marker discs only', () => {
