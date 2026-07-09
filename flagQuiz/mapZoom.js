@@ -62,11 +62,20 @@ const FREE_PAN_KEEP = 0.1;
  * release (see springHome / endPanGesture), so the edge gives a little instead
  * of dead-stopping ("hitting a wall"). Applies at EVERY pan edge — the zoomed-in
  * map edge and the zoomed-out floating-map keep-sliver (FREE_PAN_KEEP) alike.
- * Zoom limits stay hard-clamped. Jan, 2026-07-08.
+ * Zoom limits stay hard-clamped. Jan, 2026-07-08. Bumped 0.12 -> 0.2 on
+ * 2026-07-09 for a rubberier pull (the edge gives noticeably more before the
+ * resistance takes over).
  */
-const MAX_OVERSCROLL = 0.12;
+const MAX_OVERSCROLL = 0.2;
 /** Spring-back duration (ms) easing a released pan from overscroll to the edge. */
-const SPRING_MS = 260;
+const SPRING_MS = 300;
+/**
+ * Spring-back overshoot: the spring-home tween uses easeOutBack, which shoots a
+ * little PAST the edge (into the map, never into a void) and settles back, for a
+ * springy little bounce instead of a flat decel. This is the `s` in easeOutBack;
+ * ~1.1 gives roughly a 7% overshoot — present but not cartoonish. Jan, 2026-07-09.
+ */
+const SPRING_OVERSHOOT = 1.1;
 /** Overscroll (vbu) below which a released pan counts as settled — no spring. */
 const SPRING_EPS = 0.01;
 /**
@@ -416,6 +425,25 @@ export function easeInOutCubic(t) {
  */
 export function easeOutCubic(t) {
   return 1 - Math.pow(1 - t, 3);
+}
+
+/**
+ * Cubic ease-OUT with a slight overshoot ("back"): rushes toward 1, sails a
+ * little past it, then eases back down to 1. The spring-back uses this so a
+ * released overscroll bounces gently past the edge (into the map, never a void)
+ * and settles, rather than decelerating flat. `s` sets the overshoot strength
+ * (0 = no overshoot = plain cubic-ish; ~1.1 ≈ 7% past). t ∈ [0, 1]; returns 1
+ * exactly at t = 1.
+ *
+ * @param {number} t
+ * @param {number} [s]  overshoot strength (SPRING_OVERSHOOT by default)
+ * @returns {number}
+ */
+export function easeOutBack(t, s = SPRING_OVERSHOOT) {
+  const c1 = s;
+  const c3 = c1 + 1;
+  const p = t - 1;
+  return 1 + c3 * p * p * p + c1 * p * p;
 }
 
 /**
@@ -882,7 +910,8 @@ export function attachZoomPan(svg, opts = {}) {
 
   /**
    * Ease the viewBox from its current (overscrolled) position back to `home`
-   * over SPRING_MS with an ease-out decel — the elastic snap-back. Writes each
+   * over SPRING_MS with easeOutBack — the elastic snap-back, with a slight
+   * overshoot past the edge (into the map) for a springy bounce. Writes each
    * frame straight to the element (NOT via `apply`, which would clamp the
    * overscroll away on frame one and kill the animation). Carries
    * `.is-interacting` through so flags stay the cheap wash until it lands, then
@@ -910,7 +939,10 @@ export function attachZoomPan(svg, opts = {}) {
     function frame(ts) {
       if (!startTs) startTs = ts;
       const p = Math.min(1, (ts - startTs) / SPRING_MS);
-      const e = easeOutCubic(p);
+      // easeOutBack: overshoot the edge a touch (into the map) then settle —
+      // the springy bounce. The overshoot only moves the axis that was actually
+      // overscrolled (the other's start == home, so its delta is 0).
+      const e = easeOutBack(p);
       // Only x / y differ; width / height are already the clamped values.
       current = {
         x: start.x + (home.x - start.x) * e,

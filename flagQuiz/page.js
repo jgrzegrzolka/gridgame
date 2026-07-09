@@ -325,11 +325,16 @@ export function bootFlagQuiz() {
     // union is computed. For NA we exclude US from the bbox math but
     // pad the west edge by 200 units so Alaska's main body comes back
     // into view (it sits west of Canada's westernmost point).
-    const MAP_CONFIG = /** @type {Record<string, { url: string, crop: boolean, cropExcludes?: string[], cropPad?: { left?: number, right?: number, top?: number, bottom?: number } }>} */ ({
+    const MAP_CONFIG = /** @type {Record<string, { url: string, crop: boolean, cropExcludes?: string[], cropPad?: { left?: number, right?: number, top?: number, bottom?: number }, edgePad?: { left?: number, right?: number, top?: number, bottom?: number } }>} */ ({
       // "All countries" — the whole-world view. No crop; the asset's
       // natural viewBox already covers everything. Microstates scope
       // is the full pool so every tiny country worldwide gets a ring.
-      countries:       { url: './worldMap.svg',  crop: false },
+      // `edgePad` adds ocean margin so the antimeridian Pacific islands
+      // (Fiji, NZ, Tonga, and the far east of Russia) aren't jammed against
+      // the frame's right edge; a little on the left keeps the Aleutians /
+      // eastern Russia off the left wall too.
+      countries:       { url: './worldMap.svg',  crop: false,
+                         edgePad: { right: 150, left: 50 } },
       // Europe: several European countries' <g> on the world map bundle
       // their overseas territories with the metropole (fr+French Guiana,
       // dk+Greenland, es+Canaries, nl/pt/gb/no their Atlantic/Caribbean
@@ -542,6 +547,7 @@ export function bootFlagQuiz() {
         url: cfg.url,
         cropCodes,
         cropPad: cfg.cropPad,
+        edgePad: cfg.edgePad,
         // Microstate overlays only land on countries the player will
         // actually be quizzed on — the world map is geographically
         // wide and we don't want pink rings decorating Caribbean /

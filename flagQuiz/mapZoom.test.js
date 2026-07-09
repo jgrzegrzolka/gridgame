@@ -13,6 +13,7 @@ import {
   regionalFrame,
   easeInOutCubic,
   easeOutCubic,
+  easeOutBack,
   rubberBandOffset,
   flickVelocity,
 } from './mapZoom.js';
@@ -502,6 +503,29 @@ test('easeOutCubic decelerates — fast start, gentle stop', () => {
   assert.ok(easeOutCubic(0.75) > 0.75);
 });
 
+// ---- easeOutBack ----
+
+test('easeOutBack pins the endpoints exactly', () => {
+  // The spring-back must LAND on the edge (home) at t=1, not a hair past it.
+  assert.equal(easeOutBack(0), 0);
+  assert.equal(easeOutBack(1), 1);
+});
+
+test('easeOutBack overshoots past 1 before settling', () => {
+  // Somewhere in the back half it sails past the target — that is the bounce.
+  const peak = Math.max(easeOutBack(0.6), easeOutBack(0.7), easeOutBack(0.8));
+  assert.ok(peak > 1, `expected an overshoot > 1, got ${peak}`);
+  // ...but a gentle one, not cartoonish (default overshoot ~7%).
+  assert.ok(peak < 1.15, `overshoot too large: ${peak}`);
+});
+
+test('easeOutBack overshoot scales with s (0 = no overshoot)', () => {
+  // s = 0 collapses to a plain cubic-out: monotonic to 1, never exceeds it.
+  for (let t = 0; t <= 1.0001; t += 0.1) {
+    assert.ok(easeOutBack(t, 0) <= 1 + 1e-9, `s=0 should not overshoot at t=${t}`);
+  }
+});
+
 // ---- rubberBandOffset ----
 
 test('rubberBandOffset is zero within bounds (no overshoot)', () => {
@@ -513,17 +537,18 @@ test('rubberBandOffset preserves the overshoot direction', () => {
   assert.ok(rubberBandOffset(-20, 100) < 0);  // past the low edge
 });
 
-test('rubberBandOffset stays strictly under the cap (dim × 0.12)', () => {
-  const cap = 100 * 0.12;
+test('rubberBandOffset stays strictly under the cap (dim × MAX_OVERSCROLL = 0.2)', () => {
+  const cap = 100 * 0.2; // mirrors MAX_OVERSCROLL in mapZoom.js
   // Even a huge yank only asymptotes toward the cap, never reaches it.
   assert.ok(rubberBandOffset(1e6, 100) < cap);
   assert.ok(rubberBandOffset(1e6, 100) > cap * 0.99);
 });
 
 test('rubberBandOffset grows with overshoot but with diminishing returns', () => {
-  const a = rubberBandOffset(10, 100);
-  const b = rubberBandOffset(20, 100);
-  const c = rubberBandOffset(40, 100);
+  // Sample further out (20/40/80) so the concavity shows regardless of the cap.
+  const a = rubberBandOffset(20, 100);
+  const b = rubberBandOffset(40, 100);
+  const c = rubberBandOffset(80, 100);
   assert.ok(b > a && c > b);            // monotonic increasing
   assert.ok(b - a > c - b);             // each extra pull gives less
 });
