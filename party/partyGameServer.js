@@ -1,5 +1,7 @@
 import rawCountries from '../flags/countries.json' with { type: 'json' };
-import { loadCountries, flagsGamePool } from '../flags/group.js';
+import { loadCountries } from '../flags/group.js';
+import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
+import { DEFAULT_PLAN, totalRounds, poolIdForRound } from '../flags/partyPlan.js';
 import {
   createRoom,
   applyHello,
@@ -19,8 +21,14 @@ import * as flagPick from '../flags/partyRounds/flagPick.js';
 
 const STORAGE_KEY = 'room';
 
-/** 195 sovereign flags — the pool the flag-pick round draws from. */
-const POOL = flagsGamePool(loadCountries(rawCountries), false);
+/** Flag pools by the plan's poolId — sovereign for the first segment, non-sovereign for the second. */
+const ALL_COUNTRIES = loadCountries(rawCountries);
+/** @type {Record<string, ReturnType<typeof sovereignPool>>} */
+const POOLS = {
+  sovereign: sovereignPool(ALL_COUNTRIES),
+  nonSovereign: nonSovereignPool(ALL_COUNTRIES),
+};
+const TOTAL_ROUNDS = totalRounds(DEFAULT_PLAN);
 
 /**
  * Flag Party durable object — the live show's room. Thin shell around the pure
@@ -45,6 +53,21 @@ export default class PartyGameServer {
     this.playerByConn = new Map();
     /** @type {Map<string, any>} playerId -> conn */
     this.connByPlayer = new Map();
+    /** Answer codes used in the current game, so rounds don't repeat a country. */
+    this.usedCodes = new Set();
+  }
+
+  /**
+   * Generate a flag-pick question for a round, from the pool the plan assigns
+   * to it (sovereign vs non-sovereign), avoiding countries already used this
+   * game. Records the answer as used.
+   * @param {number} roundIndex
+   */
+  generateQuestion(roundIndex) {
+    const pool = POOLS[poolIdForRound(DEFAULT_PLAN, roundIndex)];
+    const q = flagPick.generate(pool, this.usedCodes);
+    this.usedCodes.add(q.answer);
+    return q;
   }
 
   async onStart() {
@@ -85,7 +108,7 @@ export default class PartyGameServer {
           this.rejectConnection(conn, 'room-not-found');
           return;
         }
-        this.room = createRoom();
+        this.room = createRoom(TOTAL_ROUNDS);
       } else if (intent === 'create' && !this.room.seats.has(playerId)) {
         this.rejectConnection(conn, 'code-collision');
         return;
@@ -139,7 +162,8 @@ export default class PartyGameServer {
       let result = null;
       switch (parsed.type) {
         case 'start':
-          result = applyStart(this.room, playerId, flagPick.generate(POOL));
+          this.usedCodes = new Set();
+          result = applyStart(this.room, playerId, this.generateQuestion(0));
           break;
         case 'buzz': {
           const choice = String(parsed.choice ?? '');
@@ -151,9 +175,10 @@ export default class PartyGameServer {
           result = applyForceReveal(this.room, playerId);
           break;
         case 'next':
-          result = applyNext(this.room, playerId, flagPick.generate(POOL));
+          result = applyNext(this.room, playerId, this.generateQuestion(this.room.roundIndex + 1));
           break;
         case 'playAgain':
+          this.usedCodes = new Set();
           result = applyPlayAgain(this.room, playerId);
           break;
         default:
