@@ -58,8 +58,8 @@
     </nav>
 
     <section id="lobby" class="lobby" hidden>
-      <button type="button" class="lobby-btn" id="create-room" data-i18n="ttt.createRoom">Start new game</button>
-      <p class="lobby-or" data-i18n="ttt.or">or</p>
+      <button type="button" class="lobby-btn primary" id="create-room" data-i18n="ttt.createRoom">New online game</button>
+      <p class="start-sep" data-i18n="ttt.orJoin">or join a game</p>
       <form id="join-form" class="join-form">
         <input
           type="text"
@@ -76,8 +76,9 @@
         <button type="submit" class="lobby-btn" data-i18n="ttt.join">Join</button>
       </form>
       <p class="lobby-error" id="lobby-error" hidden></p>
-      <p class="lobby-or" data-i18n="ttt.or">or</p>
+      <p class="start-sep" data-i18n="ttt.or">or</p>
       <a class="lobby-btn" href="offline/" data-i18n="ttt.playOffline">Play on the same device</a>
+      <p class="playing-as" id="playing-as"></p>
       <div class="actions-row">
         <a href="../../" data-i18n="menu.home">Home</a>
       </div>

@@ -262,12 +262,14 @@ body {
   margin-inline: auto;
 }
 .flag-choice {
-  padding: 0;
-  border: 2px solid var(--muted-soft-color);
+  /* Same tile recipe as Flag Party's `.opt`: a soft rounded surface whose
+     border is transparent at rest and only colours on hover / correct / wrong,
+     with the flag itself padded in and rounded (see `.flag-choice img`). Keeps
+     the two flag-picking games visually identical. */
+  padding: 5px;
+  border: 2px solid transparent;
   background: var(--surface-color);
   cursor: pointer;
-  aspect-ratio: 4 / 3;
-  overflow: hidden;
   /* Anchor for the wrong-tile country-name overlay below. */
   position: relative;
   transition: border-color 100ms;
@@ -280,9 +282,11 @@ body {
 .flag-choice.wrong[data-name]::after {
   content: attr(data-name);
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  /* Inset to the padded flag's edges (5px) with the flag's bottom radius, so
+     the strip sits ON the rounded flag rather than the tile's outer corners. */
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
   background: rgba(0, 0, 0, 0.7);
   color: #fff;
   padding: 3px 4px;
@@ -295,7 +299,9 @@ body {
   pointer-events: none;
 }
 .flag-choice:hover:not(:disabled) {
-  border-color: #999;
+  /* Brand pink hover, matching Flag Party's flag tiles — the muted grey it
+     used to be read as a dead/disabled cue rather than "this is tappable". */
+  border-color: var(--secondary-color);
 }
 .flag-choice:disabled {
   cursor: default;
@@ -313,21 +319,17 @@ body {
   border-color: var(--secondary-color);
   animation: pulse-wrong 1.1s ease-out infinite;
 }
-@keyframes pulse-correct {
-  0%   { box-shadow: 0 0 0 0 rgba(42, 157, 74, 0.7); }
-  100% { box-shadow: 0 0 0 14px rgba(42, 157, 74, 0); }
-}
-@keyframes pulse-wrong {
-  /* rgb of --secondary-color (#C2899F) — CSS alpha-on-a-CSS-var still
-   * needs a color-mix() / JS detour, so we hardcode the channels and
-   * vary alpha across keyframes. */
-  0%   { box-shadow: 0 0 0 0 rgba(194, 137, 159, 0.7); }
-  100% { box-shadow: 0 0 0 14px rgba(194, 137, 159, 0); }
-}
+/* `@keyframes pulse-correct` / `pulse-wrong` live in common.css now — Flag
+   Party's reveal shares the same cue (CLAUDE.md "same mechanism = same code"). */
 .flag-choice img {
-  width: 100%;
-  height: 100%;
+  /* Matches Flag Party's `.flag`: the 4:3 SVG canvas shown whole (`contain`,
+     no crop), sharp-cornered, with a hairline inner shadow to define the edge
+     against the white tile. */
   display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.09);
 }
 
 /* Touch-only share icon sits at the end of the final-score line

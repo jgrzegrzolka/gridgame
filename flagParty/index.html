@@ -62,11 +62,8 @@
 
       <!-- Start: create or join -->
       <section class="pt-start" id="pt-start" hidden>
-        <span class="party-brand">Flag<span>Party</span></span>
-        <h1 class="party-h" data-i18n="party.startTitle">Start a game</h1>
-        <p class="party-sub" data-i18n="party.startSub">Play together on your phones</p>
-        <button type="button" class="party-btn primary" id="create-room" data-i18n="party.createRoom">Create a room</button>
-        <p class="party-or" data-i18n="party.orJoin">or join one</p>
+        <button type="button" class="lobby-btn primary" id="create-room" data-i18n="party.createRoom">New online game</button>
+        <p class="start-sep" data-i18n="party.orJoin">or join a game</p>
         <form class="join-form" id="join-form">
           <input
             type="text"
@@ -80,22 +77,26 @@
             placeholder="ROOM CODE"
             data-i18n-attr="placeholder:party.codePlaceholder"
           />
-          <button type="submit" class="party-btn" data-i18n="party.join">Join</button>
+          <button type="submit" class="lobby-btn" data-i18n="party.join">Join</button>
         </form>
         <p class="join-error" id="join-error" hidden></p>
+        <p class="start-sep" data-i18n="party.or">or</p>
+        <button type="button" class="lobby-btn" id="play-solo" data-i18n="party.playSolo">Play solo</button>
         <p class="playing-as" id="playing-as"></p>
+        <div class="actions-row">
+          <a href="../" data-i18n="menu.home">Home</a>
+        </div>
       </section>
 
       <!-- Lobby -->
       <section class="pt-lobby" id="pt-lobby" hidden>
-        <p class="lobby-code-label" data-i18n="party.roomLabel">Room code</p>
-        <div class="room-code" id="room-code">-----</div>
-        <button type="button" class="party-btn ghost share-btn" id="share-btn">
-          <span class="share-icon" aria-hidden="true"></span><span id="share-label" data-i18n="party.share">Invite link</span>
-        </button>
+        <p class="room-line"><span class="room-text"><span data-i18n="party.roomLabel">Room</span> <strong id="room-code">-----</strong></span><button type="button" class="share-link" id="share-btn" aria-label="Invite link" data-i18n-attr="aria-label:party.share"><span class="share-icon" aria-hidden="true"></span></button></p>
         <div class="players" id="players"></div>
-        <button type="button" class="party-btn primary" id="start-game" data-i18n="party.startGame" hidden>Start game</button>
+        <button type="button" class="lobby-btn" id="start-game" data-i18n="party.startGame" hidden>Start game</button>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
+        <div class="actions-row">
+          <a href="../" data-i18n="menu.home">Home</a>
+        </div>
       </section>
 
       <!-- Round (question + reveal share this) -->
@@ -115,11 +116,13 @@
 
       <!-- Final -->
       <section class="pt-final" id="pt-final" hidden>
-        <h2 class="party-h" data-i18n="party.finalScores">Final scores</h2>
         <p class="party-sub" id="final-sub"></p>
         <div class="final-board" id="final-board"></div>
-        <button type="button" class="party-btn primary" id="play-again" data-i18n="party.playAgain" hidden>Play again</button>
-        <a class="party-btn ghost" href="../" id="leave-btn" data-i18n="party.leave">Leave</a>
+        <p class="result-links">
+          <button type="button" class="result-link" id="play-again" data-i18n="party.playAgain" hidden>Play again</button>
+          <span class="result-sep" id="result-sep" aria-hidden="true" hidden>·</span>
+          <a href="../" data-i18n="menu.home">Home</a>
+        </p>
       </section>
     </main>
 

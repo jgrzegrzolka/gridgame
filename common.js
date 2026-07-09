@@ -72,6 +72,49 @@ if (typeof document !== 'undefined') {
 }
 
 /**
+ * Build a profile-identicon avatar span for the online screens (start line,
+ * lobby roster, reveal picks, final board). The identicon is the deterministic
+ * `avatarSvg(deviceId)` tile the burger nickname menu also shows, so a player
+ * reads as the same avatar everywhere. Visual recipe lives on `.avatar` in
+ * common.css.
+ *
+ * @param {string} deviceId  stable id that drives the identicon
+ * @param {Document} [doc]
+ * @returns {HTMLSpanElement}
+ */
+export function buildAvatar(deviceId, doc = document) {
+  const a = doc.createElement('span');
+  a.className = 'avatar';
+  a.innerHTML = avatarSvg(deviceId);
+  return a;
+}
+
+/**
+ * Paint the "Playing as <name>" identity line into `el`: the local player's
+ * profile avatar (the same deterministic identicon the burger nickname menu
+ * shows, via `avatarSvg(deviceId)`) followed by the label and their bold name.
+ * Shared by Flag Party and Tic-Tac-Toe so both start screens carry the
+ * identical chip.
+ *
+ * @param {HTMLElement} el  container to (re)fill
+ * @param {string} deviceId  the local player's stable id (drives the identicon)
+ * @param {string} name  the local player's display name
+ * @param {string} label  already-translated "Playing as" text
+ * @param {Document} [doc]
+ */
+export function renderPlayingAs(el, deviceId, name, label, doc = document) {
+  el.innerHTML = '';
+  el.appendChild(buildAvatar(deviceId, doc));
+  const span = doc.createElement('span');
+  span.className = 'playing-as-label';
+  span.textContent = `${label} `;
+  const strong = doc.createElement('strong');
+  strong.textContent = name;
+  span.appendChild(strong);
+  el.appendChild(span);
+}
+
+/**
  * @typedef {'shared' | 'copied' | 'dismissed' | 'failed'} ShareResult
  */
 

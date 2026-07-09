@@ -11,7 +11,7 @@ import { getOrCreateDeviceId } from '../../flags/identity.js';
 import { newlyWonSmallBoards, isMetaWinNewlyFormed } from '../../flags/ultimateTicTacToe.js';
 import { shouldFireTicTacToeConfetti } from '../../flags/ticTacToe.js';
 import { loadCountries } from '../../flags/group.js';
-import { shareUrl } from '../../common.js';
+import { shareUrl, renderPlayingAs } from '../../common.js';
 import { trackEvent } from '../../analytics/index.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
@@ -51,6 +51,18 @@ export function bootUltimateTicTacToeOnline() {
 /** @param {Country[]} countries */
 function runOnline(countries) {
   const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+
+  // "Playing as <you>" identity line on the lobby — same shared chip as the
+  // 3×3 board and Flag Party. Re-painted on a soft language switch.
+  const playingAsEl = document.getElementById('playing-as');
+  function paintPlayingAs() {
+    if (!playingAsEl) return;
+    let cachedNick = null;
+    try { cachedNick = window.localStorage.getItem('gridgame.nickname'); } catch { /* private mode */ }
+    renderPlayingAs(playingAsEl, deviceId, displayNickname(deviceId, cachedNick), t('ttt.playingAs', 'Playing as'));
+  }
+  paintPlayingAs();
+  document.addEventListener('langchanged', paintPlayingAs);
 
   /** @type {WebSocket | null} */
   let ws = null;

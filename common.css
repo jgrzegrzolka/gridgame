@@ -973,6 +973,21 @@ body::after {
 .result-links a[hidden] {
   display: none;
 }
+/* Link-styled button for a result action that fires JS instead of navigating
+   (online rematch: Tic-Tac-Toe + Flag Party both send a WS message). Reads
+   like the `<a>` "Play again" on the other game pages so the result row is
+   uniform whether the action is a link or a button. */
+.result-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--link-color);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.result-link:hover { text-decoration: none; }
+.result-link[disabled] { color: var(--muted-color); cursor: default; text-decoration: none; }
 .best .new-badge {
   display: inline-block;
   color: #2a9d4a;
@@ -1388,6 +1403,124 @@ dialog#zoom p.zoom-note {
   padding: 0;
   font-size: 16px;
   line-height: 1;
+}
+
+/* ── Shared online start-screen bits ─────────────────────────────────────
+ * A few pieces the online start screens (Flag Party, Tic-Tac-Toe) share so
+ * neither copies the recipe (CLAUDE.md "Same mechanism = same code"): the
+ * full-line "or" separator, the "playing as" identity line + avatar, and a
+ * pink tint for the primary CTA. Each game keeps its OWN button and join-code
+ * styling — this only adds the shared touches on top. */
+
+/* Pink-filled variant of the existing shared pill recipe (the create /
+   new-game CTA). Only the fill changes to the brand accent — the button keeps
+   its base shape, weight, and geometry, so it reads as the primary action
+   without inventing a new button style. */
+.lobby-btn.primary {
+  background: var(--secondary-color);
+  color: var(--surface-color);
+  border-color: var(--secondary-color);
+}
+.lobby-btn.primary:hover { background: var(--secondary-color); filter: brightness(0.97); }
+
+/* Lobby pills get a slightly larger slot than the base pill and centre
+   themselves in their column, so Flag Party (stretch layout) and Tic-Tac-Toe
+   (centred layout) render the same content-width buttons from one recipe. */
+.lobby-btn { padding: 12px 20px; font-size: 16px; align-self: center; }
+
+.start-sep {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted-color);
+  font-size: 13px;
+  margin: 4px 0;
+}
+.start-sep::before, .start-sep::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--muted-soft-color);
+}
+
+/* The join-code box, shared by both start screens (the monospace, wide-tracked
+   ROOM CODE input the site has always used). */
+.join-form { display: flex; gap: 8px; width: 100%; }
+.join-code {
+  flex: 1;
+  padding: 12px;
+  font: inherit;
+  font-size: 18px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 4px;
+  text-align: center;
+  text-transform: uppercase;
+  border: 1px solid var(--muted-color);
+  border-radius: 6px;
+}
+.join-code::placeholder { color: var(--muted-color); }
+.join-code:focus { outline: 2px solid var(--link-color); outline-offset: -2px; }
+
+.playing-as {
+  margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted-color);
+  font-size: 13px;
+}
+.playing-as strong { color: var(--primary-color); }
+/* Profile identicon in the "playing as" line — same tile the burger nickname
+   menu uses (`avatarSvg`), rendered at the line's size. Every avatar on the
+   online screens (playing-as line, lobby roster, reveal picks, final board)
+   is this same identicon tile, so identity reads consistently everywhere. */
+.avatar {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--surface-hover-color);
+  display: inline-flex;
+}
+.avatar svg { display: block; width: 100%; height: 100%; }
+
+/* Room-code line, shared with Tic-Tac-Toe's in-game header: a small muted
+   "Room CODE" with a monospace code and the share-icon button beside it. */
+.room-line { font-size: 14px; color: var(--muted-color); margin: 0 0 4px; }
+.room-line strong {
+  font-family: 'Courier New', monospace;
+  font-size: 18px;
+  letter-spacing: 4px;
+  color: var(--primary-color);
+}
+.room-line:has(.share-link:not([hidden])) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ── Correct / wrong answer pulse ────────────────────────────────────────
+ * Shared by the two flag-picking games (flagQuiz `.flag-choice`, Flag Party
+ * `.opt`) so the "you got it right / you got it wrong" cue is identical on
+ * both. Each game applies these to its own tile class + sets the matching
+ * border colour; only the keyframes live here (CLAUDE.md "same mechanism =
+ * same code"). Correct-green (#2a9d4a) is the documented palette exception —
+ * a positive signal orthogonal to the brand pink; wrong reuses secondary. */
+@keyframes pulse-correct {
+  0%   { box-shadow: 0 0 0 0 rgba(42, 157, 74, 0.7); }
+  100% { box-shadow: 0 0 0 14px rgba(42, 157, 74, 0); }
+}
+@keyframes pulse-wrong {
+  /* rgb of --secondary-color (#C2899F) — alpha-on-a-CSS-var needs a
+     color-mix() / JS detour, so the channels are hardcoded and only alpha
+     varies across the keyframes. */
+  0%   { box-shadow: 0 0 0 0 rgba(194, 137, 159, 0.7); }
+  100% { box-shadow: 0 0 0 14px rgba(194, 137, 159, 0); }
 }
 
 /* Achievement-celebrate overlay — fires on a freshly-unlocked badge.

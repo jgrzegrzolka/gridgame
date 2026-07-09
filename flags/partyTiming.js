@@ -11,11 +11,13 @@
  * unit-tested rather than eyeballed in DOM glue.
  */
 
-/** Seconds a question stays open before it auto-reveals. */
-export const QUESTION_SECONDS = 15;
+/** Seconds a question stays open before it auto-reveals. A slow player gets
+ *  the full window, but the room never waits it out when everyone has already
+ *  answered — the server auto-reveals the moment the last seat buzzes. */
+export const QUESTION_SECONDS = 20;
 
 /** Seconds the reveal (who got it, points) stays up before the next round. */
-export const REVEAL_SECONDS = 6;
+export const REVEAL_SECONDS = 2;
 
 /**
  * Whole seconds left until `deadlineMs`, never negative. Ceil so a freshly-set
