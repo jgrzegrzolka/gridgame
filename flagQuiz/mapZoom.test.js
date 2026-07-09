@@ -348,6 +348,20 @@ test('clampViewBox centres horizontally but bottom-aligns a zoomed-out viewBox w
   assert.equal(out.y, -100); // bottom-aligned: 100 - 200 → map bottom (100) = view bottom (-100+200)
 });
 
+test('clampViewBox topRestFrac: soft top rest, hard bottom wall at the default zoom', () => {
+  // Bounds mode with a 25% top-rest give. At the default zoom (view == map,
+  // 100×100) the map may REST up to 25 (0.25 × view height) above its top edge,
+  // but the bottom is a hard wall — it can never drop below the map bottom.
+  const original = { x: 0, y: 0, width: 100, height: 100 };
+  const args = /** @type {const} */ ([original, 24, 1, { x: 0, y: 0 }, false, 0.25]);
+  // Dragged up a little (y = -10): inside the rest zone → stays where dropped.
+  assert.equal(clampViewBox({ x: 0, y: -10, width: 100, height: 100 }, ...args).y, -10);
+  // Dragged up past the rest zone (y = -50): clamped to the -25 rest line.
+  assert.equal(clampViewBox({ x: 0, y: -50, width: 100, height: 100 }, ...args).y, -25);
+  // Dragged DOWN (y = 30, toward below the map): hard wall pins it at 0.
+  assert.equal(clampViewBox({ x: 0, y: 30, width: 100, height: 100 }, ...args).y, 0);
+});
+
 test('clampViewBox freePan lets you drag a zoomed-out map off-centre', () => {
   // Same zoomed-out viewBox, but freePan on. The player drags the map far
   // up-left; the clamp permits it, stopping once only FREE_PAN_KEEP (10%) of
