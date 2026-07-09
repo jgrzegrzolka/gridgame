@@ -52,11 +52,11 @@ const CONTAIN_ZOOM_OUT_MARGIN = 1.25;
  * past its top edge, as a fraction of the current view height. Drag up into
  * open ocean at ANY zoom (default included) and the map settles there instead
  * of springing back, so you can study the northern coasts without zooming out.
- * The BOTTOM has no equivalent (Antarctica is pinned). 0.25 matches the
- * zoom-out ocean margin so the "how much water can I reach" budget reads the
- * same whether you zoom or drag. Tune here (Jan wanted top drag-room, 07-09).
+ * The BOTTOM has no equivalent (Antarctica is pinned). 0.15 = a modest strip of
+ * ocean to hold above the northern coasts (a little tighter than the 0.25
+ * zoom-out margin — dialled down on Jan's feel check). Tune here (07-09).
  */
-const CONTAIN_TOP_REST_FRACTION = 0.25;
+const CONTAIN_TOP_REST_FRACTION = 0.15;
 /**
  * Free-pan: how much of the map must stay on screen while dragging, as a
  * fraction of the VISIBLE WINDOW (not the map). Measuring against the window
