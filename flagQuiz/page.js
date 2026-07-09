@@ -335,7 +335,7 @@ export function bootFlagQuiz() {
       // eastern Russia off the left wall too, and a top strip gives the Arctic
       // coast some air. No bottom pad — Antarctica stays pinned near the base.
       countries:       { url: './worldMap.svg',  crop: false,
-                         edgePad: { right: 260, left: 140, top: 130 } },
+                         edgePad: { right: 600, left: 400, top: 320 } },
       // Europe: several European countries' <g> on the world map bundle
       // their overseas territories with the metropole (fr+French Guiana,
       // dk+Greenland, es+Canaries, nl/pt/gb/no their Atlantic/Caribbean

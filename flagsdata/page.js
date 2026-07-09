@@ -348,7 +348,7 @@ export function bootFlagsData() {
       // Same ocean margin as the quiz world map so the antimeridian Pacific
       // islands aren't jammed against the frame's right edge (see flagMap
       // `edgePad`). Kept in sync with flagQuiz/page.js's `countries` variant.
-      edgePad: { right: 260, left: 140, top: 130 },
+      edgePad: { right: 600, left: 400, top: 320 },
       fullscreenLabel: t('menu.fullscreen', 'Toggle fullscreen'),
       // The map here always fills the content column (see index.css) — no
       // corner resize handle; fullscreen covers the "see it bigger" case.
