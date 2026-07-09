@@ -523,7 +523,7 @@
     "lockedWaiting": "Wybór zatwierdzony, czekanie na pozostałych…",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
-    "nextRound": "Następna runda",
+    "nextIn": "Następna runda za {n}s",
     "finalScores": "Wyniki końcowe",
     "winnerTakesIt": "{name} wygrywa",
     "tie": "Remis!",

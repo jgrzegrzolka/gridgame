@@ -202,6 +202,42 @@
   padding: 4px 12px;
   border-radius: 999px;
 }
+/* Round countdown: a shrinking bar everyone sees. The host's copy is what
+   actually drives question -> reveal and reveal -> next (flags/partyTiming.js);
+   the rest are cosmetic so the whole room feels the clock. */
+.round-timer { display: flex; align-items: center; gap: 10px; }
+.round-timer-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--muted-soft-color);
+  overflow: hidden;
+}
+.round-timer-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: var(--secondary-color);
+}
+.round-timer-label {
+  min-width: 2ch;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+}
+/* Reveal: the same bar, but a quiet "next round in N" pacer, not a race clock. */
+.round-timer[data-mode="reveal"] .round-timer-fill { background: var(--muted-color); }
+.round-timer[data-mode="reveal"] .round-timer-label { font-weight: 600; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .round-timer-fill { transition: width 0.2s linear; }
+  .round-timer.low .round-timer-label { animation: timer-pulse 1s ease-in-out infinite; }
+}
+@keyframes timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
 .prompt { text-align: center; display: flex; flex-direction: column; gap: 2px; }
 .prompt-q { font-size: 13px; color: var(--muted-color); }
 .prompt-target { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: var(--primary-color); }

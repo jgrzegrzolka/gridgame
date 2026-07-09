@@ -211,14 +211,45 @@ future; this hardcodes the default plan.
 Verified end-to-end: round 1 = a sovereign flag, round 6 = "which flag is Norfolk Island?"
 with all-non-sovereign distinct options. `npm run validate` green.
 
+## Iteration 3 — the clock: countdown + hands-free transitions — SHIPPED (branch `feat/party-round-clock`)
+
+The core loop now *feels* like a race, and it advances on its own — **no host button to press.**
+
+- `flags/partyTiming.js` (pure + tested) — the show's pace as data + arithmetic:
+  `QUESTION_SECONDS = 15`, `REVEAL_SECONDS = 6`, plus `secondsLeft` (ceil + clamp, so it
+  reads the full duration on a fresh deadline and only hits 0 at true expiry) and
+  `remainingFraction` (clamped [0,1] for the shrinking bar).
+- **Every client renders a countdown bar**; the **host's timer is authoritative** for the
+  transition (matching how the room already treats the host as the only seat that can
+  start / advance). When a question's clock runs out the host sends `reveal`; when a reveal
+  has lingered the host sends `next`. Both messages are ignored by the reducer if the phase
+  already moved on, so the existing all-present-buzzed auto-reveal races safely against the
+  timer.
+- **The "Next round" button is gone.** After a reveal lingers `REVEAL_SECONDS` the next
+  round starts by itself; the bar shows "next round in N" (`party.nextIn`, replaced the now
+  dead `party.nextRound`). The last round's reveal auto-advances to the final board the same
+  way.
+- **The room reducer did not change** — timing lives on the page by design; the room stays
+  time-free and only knows "reveal now" / "next now" (`applyForceReveal` / `applyNext`,
+  already present). No wire-protocol change either: clients import the durations directly.
+
+**Known limitation (documented, not yet fixed):** the pace depends on the **host's tab
+staying awake**. If the host disconnects mid-round the room can stall at a reveal (a
+non-host has no authority to send `next`). Two future fixes, both out of scope here:
+server-side PartyKit **alarms** driving the transitions (robust, survives any tab), or
+**host migration** on disconnect. Also cosmetic: a player who *reconnects* mid-question
+starts a fresh full-length bar rather than the real remaining time — the host's
+authoritative reveal still corrects them on schedule.
+
 ## Open decisions (settle as they come up, not now)
 
 - **Settings page** (Jan wants one eventually): host picks which modes and how many rounds
   each. `flags/partyPlan.js` is already the config surface — the page edits `DEFAULT_PLAN`.
 - **QR in the lobby.** Deferred from iteration 1 (see above) — add a self-contained QR
   generator, or accept code + link.
-- **Question count / timing per round.** Fixed at 5 rounds; no per-question countdown yet
-  (the room supports host force-reveal for when a timer is added).
+- **Question count / timing per round.** 10 rounds (5 + 5). Per-question countdown landed in
+  iteration 3 (`flags/partyTiming.js`, host-driven, hands-free advance). Durations
+  (15s / 6s) are constants there — a settings page could expose them later.
 - **Speed-bonus curve.** Currently decaying (+5/+3/+1) in `flags/partyScore.js`.
 - **Max seats.** No hard cap in the room module; 2 is the tested case.
 
