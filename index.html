@@ -76,6 +76,16 @@
     <main>
       <h1 class="sr-only">Yet Another Quiz: country flag games</h1>
       <section class="domain" aria-label="Flags" data-i18n-attr="aria-label:domain.flags">
+        <!-- Flag of the day — a compact, quiet card above the game grid.
+             Populated by bootHome() (needs countries.json for the name +
+             the story pool); stays hidden until it resolves, so no-JS /
+             fetch-fail degrades to nothing rather than an empty box.
+             Clicking opens the same story popup as /flagsdata/. -->
+        <button type="button" class="fotd-card" id="flag-of-day" hidden>
+          <span class="fotd-kicker" data-i18n="home.fotd.label">Flag of the day:</span>
+          <img class="fotd-flag" alt="" />
+          <span class="fotd-name"></span>
+        </button>
         <div class="game-tiles">
           <a class="game-tile" href="daily/">
             <span class="tile-preview">
@@ -152,16 +162,6 @@
             </span>
           </a>
         </div>
-        <!-- Flag of the day — a compact, quiet card under the game grid.
-             Populated by bootHome() (needs countries.json for the name +
-             the story pool); stays hidden until it resolves, so no-JS /
-             fetch-fail degrades to nothing rather than an empty box.
-             Clicking opens the same story popup as /flagsdata/. -->
-        <button type="button" class="fotd-card" id="flag-of-day" hidden>
-          <span class="fotd-kicker" data-i18n="home.fotd.label">Flag of the day:</span>
-          <img class="fotd-flag" alt="" />
-          <span class="fotd-name"></span>
-        </button>
       </section>
     </main>
     <dialog id="zoom" tabindex="-1">

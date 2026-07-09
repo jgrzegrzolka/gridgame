@@ -332,12 +332,12 @@ body {
     font-size: 10px;
   }
 }
-/* Flag of the day — a compact, low-profile card under the game grid. The
+/* Flag of the day — a compact, low-profile card above the game grid. The
  * bordered-button look (surface fill, hairline border, hover, pink-press
  * afterglow) comes from the shared recipe in common.css (listed alongside
  * `.game-tile`); only layout + the smaller padding live here. Deliberately
  * quiet: a single row with a small flag chip so it never competes with the
- * game tiles above it. Clicking opens the shared flag-story popup. */
+ * game tiles below it. Clicking opens the shared flag-story popup. */
 .fotd-card {
   display: flex;
   align-items: center;
@@ -346,7 +346,7 @@ body {
   flex-wrap: wrap;
   gap: 8px 10px;
   width: 100%;
-  margin-top: 16px;
+  margin-bottom: 16px;
   padding: 9px 14px;
   text-align: left;
 }
