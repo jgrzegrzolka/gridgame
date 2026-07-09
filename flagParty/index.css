@@ -135,16 +135,11 @@
   color: var(--muted-color);
   font-variant-numeric: tabular-nums;
 }
-/* Reveal: no moving bar. Hide the progress track and show only the quiet
-   "next round in N" label, centred where the bar would have been — the count
-   ticks down but nothing animates. */
-.round-timer[data-mode="reveal"] .round-timer-track { display: none; }
-.round-timer[data-mode="reveal"] { justify-content: center; }
-.round-timer[data-mode="reveal"] .round-timer-label {
-  min-width: 0;
-  text-align: center;
-  font-weight: 600;
-}
+/* Reveal: the progress bar stays visible, frozen full and stopped (transition
+   dropped so JS setting it to 100% snaps instead of animating), with the quiet
+   "next round in N" label in the same right-hand slot the question countdown
+   number used — the question timer's layout, just not moving. */
+.round-timer[data-mode="reveal"] .round-timer-fill { transition: none; }
 
 @media (prefers-reduced-motion: no-preference) {
   .round-timer-fill { transition: width 0.2s linear; }
@@ -153,7 +148,6 @@
 @keyframes timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
 .prompt { text-align: center; display: flex; flex-direction: column; gap: 2px; }
-.prompt-q { font-size: 13px; color: var(--muted-color); }
 /* Same weight/size as flagQuiz's `.country-name` prompt (28px / 500) so the
    country name reads identically across the two flag-picking games — it used
    to be 800 + tight tracking, which read a size larger than flagQuiz's. */
@@ -190,26 +184,10 @@ button.opt { -webkit-appearance: none; appearance: none; }
   object-fit: contain;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.09);
 }
-.mark {
-  position: absolute;
-  top: -9px;
-  right: -9px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--secondary-color);
-  color: var(--primary-color);
-  display: grid;
-  place-items: center;
-  font-size: 13px;
-  font-weight: 800;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-}
 .picks { position: absolute; bottom: 6px; left: 6px; display: flex; gap: 3px; }
 .picks .avatar { width: 20px; height: 20px; font-size: 8px; box-shadow: 0 0 0 2px var(--surface-color); }
 
 .round-foot { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
-.status-line { text-align: center; font-size: 13px; color: var(--muted-color); }
 
 .toast-list { display: flex; flex-direction: column; gap: 7px; }
 .toast {
@@ -225,7 +203,7 @@ button.opt { -webkit-appearance: none; appearance: none; }
 }
 .toast-name { color: var(--primary-color); }
 .toast .fast { font-size: 11px; color: var(--muted-color); font-weight: 700; }
-.toast .pts { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--primary-color); }
+.toast .pts { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--primary-color); }
 .toast .pts.zero { color: var(--muted-color); }
 
 /* Final screen actions reuse the site's shared `.result-links` + `.result-link`
@@ -253,9 +231,12 @@ button.opt { -webkit-appearance: none; appearance: none; }
 }
 .scoreline.win { background: var(--surface-hover-color); border: 1px solid var(--secondary-color); }
 .scoreline.other { background: var(--surface-color); border: 1px solid var(--muted-soft-color); }
-.scoreline .rank { font-weight: 800; color: var(--muted-color); width: 16px; font-variant-numeric: tabular-nums; }
-.scoreline .nm { font-weight: 700; color: var(--primary-color); }
-.scoreline .sc { margin-left: auto; font-weight: 800; color: var(--primary-color); font-variant-numeric: tabular-nums; }
+/* Weights mirror flagQuiz's daily leaderboard (`.leaderboard-*`): muted rank,
+   500 name, 600 score. The old 700/800 read heavier than anything else on the
+   site — the result board is a leaderboard, so it uses the leaderboard's type. */
+.scoreline .rank { color: var(--muted-color); width: 16px; font-variant-numeric: tabular-nums; }
+.scoreline .nm { font-weight: 500; color: var(--primary-color); }
+.scoreline .sc { margin-left: auto; font-weight: 600; color: var(--primary-color); font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: no-preference) {
   .opt { transition: border-color 0.12s ease, opacity 0.12s ease; }
