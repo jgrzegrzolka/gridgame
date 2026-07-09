@@ -92,15 +92,19 @@
  * background) is meant for the big inlined MAP svg, but it also matched
  * the tiny icon svgs inside these buttons — blowing them up to fill the
  * chip AND painting a page-bg rectangle over the chip's corners, hover
- * and pink press. Re-scope the icon svgs with a higher-specificity
- * selector (ID + class beats the ID-only map rule) so they render at
- * their intended size with a transparent background. */
+ * and pink press. It ALSO leaked the map's pink `border` + `border-radius`
+ * (added below) onto every glyph, framing each icon in a little pink box.
+ * Re-scope the icon svgs with a higher-specificity selector (ID + class
+ * beats the ID-only map rule) so they render at their intended size with a
+ * transparent background and no frame. */
 #flag-map-section .map-fullscreen-btn svg,
 #flag-map-section .map-hide-btn svg,
 #flag-map-section .map-resize-handle svg {
   width: 14px;
   height: 14px;
   background: none;
+  border: none;
+  border-radius: 0;
 }
 .map-fullscreen-btn {
   top: 4px;
@@ -307,7 +311,7 @@
    * the 100% width inclusive of the border so it never forces a horizontal
    * scrollbar. Dropped in fullscreen (below), where the map fills the screen. */
   box-sizing: border-box;
-  border: 2px solid var(--secondary-color);
+  border: 1px solid var(--secondary-color);
   border-radius: 8px;
 }
 /* Gesture layer (mapZoom.js). While the map is being panned/zoomed,

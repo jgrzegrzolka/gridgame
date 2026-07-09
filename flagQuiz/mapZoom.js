@@ -1097,7 +1097,7 @@ export function attachZoomPan(svg, opts = {}) {
     scheduleInput(zoomViewBox(base, pivot, scale));
   }
 
-  /** @type {{ mode: 'pan' | 'pinch', lastX?: number, lastY?: number, distance?: number } | null} */
+  /** @type {{ mode: 'pan' | 'pinch', downX?: number, downY?: number, grabVB?: ViewBox, distance?: number } | null} */
   let touchState = null;
   let lastTapAt = 0;
   let dragStartScreen = null;
@@ -1105,7 +1105,7 @@ export function attachZoomPan(svg, opts = {}) {
   /** Mouse drag state: tracks whether the player is currently dragging
    * the map with the mouse, plus enough info to differentiate a click
    * (no drag) from a pan (drag moved past the threshold). */
-  /** @type {{ lastX: number, lastY: number, downX: number, downY: number, dragging: boolean } | null} */
+  /** @type {{ downX: number, downY: number, dragging: boolean, grabVB: ViewBox } | null} */
   let mouseState = null;
   /** Pixels of mouse movement before we treat it as a drag rather than a
    * click. Below this threshold we let the click propagate (so post-game
@@ -1145,7 +1145,10 @@ export function attachZoomPan(svg, opts = {}) {
         return;
       }
       lastTapAt = now;
-      touchState = { mode: 'pan', lastX: t.clientX, lastY: t.clientY };
+      // Anchor the pan on the touch-down point and the viewBox at grab.
+      // Every move maps the ABSOLUTE finger offset from here onto `grabVB`
+      // (see onTouchMove) — not incremental deltas onto the live viewBox.
+      touchState = { mode: 'pan', downX: t.clientX, downY: t.clientY, grabVB: { ...current } };
       dragStartScreen = { x: t.clientX, y: t.clientY };
       panSamples = [];
       recordPanSample(t.clientX, t.clientY);
@@ -1163,13 +1166,11 @@ export function attachZoomPan(svg, opts = {}) {
     if (touchState.mode === 'pan' && e.touches.length === 1) {
       e.preventDefault();
       const t = e.touches[0];
-      const dx = t.clientX - (touchState.lastX || 0);
-      const dy = t.clientY - (touchState.lastY || 0);
-      const base = inputBase();
-      const factor = svgUnitsPerPixel(svg, base);
-      scheduleInput(panViewBox(base, -dx * factor, -dy * factor), true);
-      touchState.lastX = t.clientX;
-      touchState.lastY = t.clientY;
+      const grab = touchState.grabVB || current;
+      const totalDX = t.clientX - (touchState.downX || 0);
+      const totalDY = t.clientY - (touchState.downY || 0);
+      const factor = svgUnitsPerPixel(svg, grab);
+      scheduleInput(panViewBox(grab, -totalDX * factor, -totalDY * factor), true);
       recordPanSample(t.clientX, t.clientY);
     } else if (touchState.mode === 'pinch' && e.touches.length === 2) {
       e.preventDefault();
@@ -1200,9 +1201,9 @@ export function attachZoomPan(svg, opts = {}) {
     if (e.button !== 0) return;
     cancelAnim();
     mouseState = {
-      lastX: e.clientX, lastY: e.clientY,
       downX: e.clientX, downY: e.clientY,
       dragging: false,
+      grabVB: { ...current },
     };
     panSamples = [];
     recordPanSample(e.clientX, e.clientY);
@@ -1216,14 +1217,22 @@ export function attachZoomPan(svg, opts = {}) {
       const dy = e.clientY - mouseState.downY;
       if (Math.hypot(dx, dy) <= DRAG_THRESHOLD_PX) return;
       mouseState.dragging = true;
+      // Re-anchor at the moment the drag engages so the map doesn't jump by
+      // the ~5px threshold. `grabVB` still equals `current` (no pan happened
+      // below threshold), so the absolute mapping stays consistent.
+      mouseState.downX = e.clientX;
+      mouseState.downY = e.clientY;
     }
-    const dx = e.clientX - mouseState.lastX;
-    const dy = e.clientY - mouseState.lastY;
-    const base = inputBase();
-    const factor = svgUnitsPerPixel(svg, base);
-    scheduleInput(panViewBox(base, -dx * factor, -dy * factor), true);
-    mouseState.lastX = e.clientX;
-    mouseState.lastY = e.clientY;
+    // Absolute mapping: the map tracks the finger's TOTAL offset from grab,
+    // applied once to `grabVB`, so clampPanFrame rubber-bands the true
+    // overshoot each frame. Accumulating incremental deltas onto the live
+    // (already rubber-clamped) viewBox made the raw and shown positions drift
+    // apart and re-clamped an already-clamped value — that fed back as a
+    // shake at the edge and an asymmetric top/bottom feel (Jan, 2026-07-09).
+    const totalDX = e.clientX - mouseState.downX;
+    const totalDY = e.clientY - mouseState.downY;
+    const factor = svgUnitsPerPixel(svg, mouseState.grabVB);
+    scheduleInput(panViewBox(mouseState.grabVB, -totalDX * factor, -totalDY * factor), true);
     recordPanSample(e.clientX, e.clientY);
   }
 
