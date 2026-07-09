@@ -332,9 +332,10 @@ export function bootFlagQuiz() {
       // `edgePad` adds ocean margin so the antimeridian Pacific islands
       // (Fiji, NZ, Tonga, and the far east of Russia) aren't jammed against
       // the frame's right edge; a little on the left keeps the Aleutians /
-      // eastern Russia off the left wall too.
+      // eastern Russia off the left wall too, and a top strip gives the Arctic
+      // coast some air. No bottom pad — Antarctica stays pinned near the base.
       countries:       { url: './worldMap.svg',  crop: false,
-                         edgePad: { right: 150, left: 50 } },
+                         edgePad: { right: 260, left: 140, top: 130 } },
       // Europe: several European countries' <g> on the world map bundle
       // their overseas territories with the metropole (fr+French Guiana,
       // dk+Greenland, es+Canaries, nl/pt/gb/no their Atlantic/Caribbean
