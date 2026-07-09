@@ -94,6 +94,47 @@ test('renderLeaderboard: ranks rows 1..N and shows nickname/score/time per row',
   assert.deepEqual(scores, ['20', '18', '17']);
 });
 
+test('renderLeaderboard: avatarSvg renders one identicon per row, keyed by deviceId', () => {
+  const doc = makeDoc();
+  const top = [
+    { deviceId: 'd1', nickname: 'Alice', score: 20, durationMs: 32_400 },
+    { deviceId: 'd2', nickname: 'Bob',   score: 18, durationMs: 41_000 },
+  ];
+  const stubAvatar = (/** @type {string} */ id) => `<svg data-for="${id}"></svg>`;
+  const root = renderLeaderboard({
+    state: 'ready', data: { top, you: null }, t, doc, avatarSvg: stubAvatar,
+  });
+  const avatars = findAllByClass(root, 'avatar');
+  assert.equal(avatars.length, 2);
+  // Built from the row's deviceId, not the nickname.
+  assert.equal(avatars[0].innerHTML, '<svg data-for="d1"></svg>');
+  assert.equal(avatars[1].innerHTML, '<svg data-for="d2"></svg>');
+});
+
+test('renderLeaderboard: no avatarSvg supplied → no avatar element (default path unchanged)', () => {
+  const doc = makeDoc();
+  const top = [{ deviceId: 'd1', nickname: 'Alice', score: 20, durationMs: 32_400 }];
+  const root = renderLeaderboard({ state: 'ready', data: { top, you: null }, t, doc });
+  assert.equal(findAllByClass(root, 'avatar').length, 0);
+});
+
+test('renderLeaderboard: the bottom "you" row also gets an avatar keyed by ownDeviceId', () => {
+  const doc = makeDoc();
+  const top = Array.from({ length: 10 }, (_, i) => ({
+    deviceId: `d${i + 1}`, nickname: `P${i + 1}`, score: 100 - i, durationMs: 30_000,
+  }));
+  const stubAvatar = (/** @type {string} */ id) => `<svg data-for="${id}"></svg>`;
+  const root = renderLeaderboard({
+    state: 'ready',
+    data: { top, you: { rank: 87, score: 12, durationMs: 55_000 } },
+    ownDeviceId: ME, t, doc, avatarSvg: stubAvatar,
+  });
+  const youList = findAllByClass(root, 'leaderboard-list-you')[0];
+  const youAvatar = findAllByClass(youList, 'avatar');
+  assert.equal(youAvatar.length, 1);
+  assert.equal(youAvatar[0].innerHTML, `<svg data-for="${ME}"></svg>`);
+});
+
 test('renderLeaderboard: own row gets is-self marker class', () => {
   const doc = makeDoc();
   const top = [

@@ -104,6 +104,7 @@ async function maybeSubmitQuizRecord({ deviceId, configKey, score, durationMs, l
 }
 import { fetchLeaderboard } from '../flags/dailyLeaderboardFetch.js';
 import { renderLeaderboard } from '../flags/dailyLeaderboardRender.js';
+import { avatarSvg } from '../flags/avatar.js';
 import { runLeaderboardCycle } from '../flags/leaderboardLifecycle.js';
 import { buildQuizShareTitle } from '../flags/quizShareTitle.js';
 import { celebrate } from '../flags/achievementCelebrate.js';
@@ -720,6 +721,7 @@ export function bootFlagQuiz() {
         formatScore,
         formatTime,
         poolTotal,
+        avatarSvg,
       });
       leaderboardBodyEl.innerHTML = '';
       leaderboardBodyEl.appendChild(subtree);

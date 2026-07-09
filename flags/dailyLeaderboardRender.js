@@ -59,10 +59,11 @@ const TOP_N = 10;
  *   formatScore?: (score: number) => string,
  *   formatTime?: (durationMs: number) => string,
  *   poolTotal?: number | null,
+ *   avatarSvg?: (deviceId: string) => string,
  * }} args
  * @returns {HTMLElement}
  */
-export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = globalThis.document, formatScore, formatTime, poolTotal = null }) {
+export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = globalThis.document, formatScore, formatTime, poolTotal = null, avatarSvg }) {
   // No className on the root: it's appended into a host with id="leaderboard-body"
   // already, so adding a class with the same intent would just nest two
   // equivalent wrappers.
@@ -100,7 +101,7 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
   const list = doc.createElement('ol');
   list.className = 'leaderboard-list';
   top.forEach((entry, idx) => {
-    list.appendChild(buildRow(doc, { rank: idx + 1, entry, ownDeviceId, formatScore, formatTime, poolTotal, clearedLabel }));
+    list.appendChild(buildRow(doc, { rank: idx + 1, entry, ownDeviceId, formatScore, formatTime, poolTotal, clearedLabel, avatarSvg }));
   });
   root.appendChild(list);
 
@@ -131,6 +132,7 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
       formatTime,
       poolTotal,
       clearedLabel,
+      avatarSvg,
     }));
     root.appendChild(youList);
   }
@@ -155,9 +157,10 @@ export function renderLeaderboard({ state, data, ownDeviceId = null, t, doc = gl
  *   formatTime?: (durationMs: number) => string,
  *   poolTotal?: number | null,
  *   clearedLabel?: string,
+ *   avatarSvg?: (deviceId: string) => string,
  * }} args
  */
-function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride, formatScore, formatTime, poolTotal = null, clearedLabel = '' }) {
+function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride, formatScore, formatTime, poolTotal = null, clearedLabel = '', avatarSvg }) {
   const li = doc.createElement('li');
   const isSelf = ownDeviceId !== null && entry.deviceId === ownDeviceId;
   li.className = isSelf ? 'leaderboard-row is-self' : 'leaderboard-row';
@@ -165,6 +168,17 @@ function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride, formatScor
   const rankEl = doc.createElement('span');
   rankEl.className = 'leaderboard-rank';
   rankEl.textContent = `${rank}.`;
+
+  // Same deterministic identicon the online screens use (`avatarSvg`), so a
+  // player's tile reads identically on the leaderboard and in Flag Party. The
+  // SVG is self-contained (fixed palette + hash, no user input), safe as
+  // innerHTML — the nickname beside it still goes in via textContent.
+  let avatarEl = null;
+  if (avatarSvg) {
+    avatarEl = doc.createElement('span');
+    avatarEl.className = 'avatar';
+    avatarEl.innerHTML = avatarSvg(entry.deviceId);
+  }
 
   const nameEl = doc.createElement('span');
   nameEl.className = 'leaderboard-name';
@@ -191,6 +205,7 @@ function buildRow(doc, { rank, entry, ownDeviceId, selfLabelOverride, formatScor
   }
 
   li.appendChild(rankEl);
+  if (avatarEl) li.appendChild(avatarEl);
   li.appendChild(nameEl);
   li.appendChild(scoreEl);
   return li;

@@ -391,11 +391,12 @@ body {
 }
 .leaderboard-row {
   display: grid;
-  /* Rank | name (shrinks to content, ellipsises long ones) | score.
-   * minmax(0, max-content) lets the name take its content width but
-   * shrink for very long nicknames so score never falls off the row. */
-  grid-template-columns: 28px minmax(0, max-content) auto;
-  align-items: baseline;
+  /* Rank | avatar (the shared identicon, same tile Flag Party uses) | name
+   * (shrinks to content, ellipsises long ones) | score. minmax(0, max-content)
+   * lets the name take its content width but shrink for very long nicknames so
+   * score never falls off the row. */
+  grid-template-columns: 28px 24px minmax(0, max-content) auto;
+  align-items: center;
   gap: 10px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--muted-soft-color);

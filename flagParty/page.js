@@ -56,7 +56,6 @@ export function bootFlagParty() {
   const timerEl = $('round-timer');
   const timerFill = $('round-timer-fill');
   const timerLabel = $('round-timer-label');
-  const promptQ = $('prompt-q');
   const promptTarget = $('prompt-target');
   const gridEl = $('flags-grid');
   const footEl = $('round-foot');
@@ -232,9 +231,13 @@ export function bootFlagParty() {
     const now = Date.now();
     const left = secondsLeft(clockDeadline, now);
     if (mode === 'reveal') {
-      // Reveal: a quiet "next round in N" label only. The progress bar (track)
-      // is hidden by CSS in this mode, so nothing animates — the round just
-      // ticks down and advances.
+      // Reveal: the progress bar freezes full and stopped (CSS drops its
+      // transition in this mode) with a quiet "next round in N" label beside
+      // it, in the same slot the question countdown number used. Clear `.low`
+      // so the label never inherits the question timer's last-5s pulse — that
+      // was the "sometimes it blinks" inconsistency.
+      timerFill.style.width = '100%';
+      timerEl.classList.remove('low');
       timerLabel.textContent = fmt(t('party.nextIn', 'Next round in {n}s'), { n: left });
     } else {
       timerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
@@ -293,8 +296,9 @@ export function bootFlagParty() {
     const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
     const country = byCode.get(targetCode);
     const name = country ? countryName(country) : targetCode;
-    promptQ.textContent = isReveal ? t('party.theFlagOf', 'The flag of') : t('party.whichFlag', 'Which flag is');
-    promptTarget.textContent = isReveal ? name : `${name}?`;
+    // Just the country name — no "Which flag is" / "The flag of" lead-in and no
+    // trailing "?". The flag tiles (and their reveal pulse) carry the question.
+    promptTarget.textContent = name;
 
     gridEl.innerHTML = '';
     for (const code of q.options) {
@@ -318,7 +322,6 @@ export function bootFlagParty() {
 
     footEl.innerHTML = '';
     if (isReveal) renderRevealFoot();
-    else renderQuestionFoot();
   }
 
   /**
@@ -337,24 +340,15 @@ export function bootFlagParty() {
     img.src = `../flags/svg/${code}.svg`;
     img.alt = '';
     node.appendChild(img);
-    // ✓ badge only confirms your locked-in pick during the question. On reveal
-    // the correct flag is marked by the green pulse alone (matching flagQuiz),
-    // so no badge there — a pink ✓ on a green tile would clash.
-    if (opts.selected) node.appendChild(el('span', 'mark', '✓'));
+    // The locked-in pick is shown by the pink ring + surface tint on the tile
+    // itself (`.opt.sel`) — no ✓ badge. On reveal the correct flag is marked by
+    // the green pulse alone (matching flagQuiz).
     if (opts.pickers.length) {
       const p = el('div', 'picks');
       for (const pid of opts.pickers) p.appendChild(buildAvatar(pid));
       node.appendChild(p);
     }
     return node;
-  }
-
-  function renderQuestionFoot() {
-    // The "{n} of {total} answered" count already conveys "you're locked in,
-    // waiting" — no separate banner (it read oddly in solo, where there's
-    // nobody else to wait for).
-    const answered = fmt(t('party.answered', '{n} of {total} answered'), { n: state.buzzedCount, total: state.seatCount });
-    footEl.appendChild(el('div', 'status-line', answered));
   }
 
   function renderRevealFoot() {
