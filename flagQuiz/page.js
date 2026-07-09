@@ -560,7 +560,7 @@ export function bootFlagQuiz() {
         // set the final viewBox, since mapZoom reads that as the
         // "original" bounds for clamping).
         if (svg) {
-          mapZoomHandle = attachZoomPan(svg, { onSettle: onMapSettle });
+          mapZoomHandle = attachZoomPan(svg, { onSettle: onMapSettle, containZoomOut: true, freePan: false });
           // Replay the round so far — fills every country already
           // answered before this (possibly late) mount. Uses
           // paintCountryFlag directly (not markCountry) so a late mount

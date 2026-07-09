@@ -361,7 +361,7 @@ export function bootFlagsData() {
     }).then((svg) => {
       mapSvg = svg;
       if (svg) {
-        mapHandle = attachZoomPan(svg);
+        mapHandle = attachZoomPan(svg, { containZoomOut: true, freePan: false });
         // The asset's invisible microstate marker discs (`.circlexx` / `.subxx`,
         // r≈6, opacity 0) still hit-test and blanket the Caribbean, stealing
         // clicks from the island underneath and resolving to a neighbour. We

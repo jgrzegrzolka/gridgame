@@ -4,6 +4,7 @@ import {
   zoomViewBox,
   wheelZoomScale,
   clampZoomScale,
+  containZoomOutLimit,
   panViewBox,
   clampViewBox,
   parseViewBox,
@@ -147,6 +148,38 @@ test('clampZoomScale guards bad input', () => {
   assert.equal(clampZoomScale(NaN, 100, ORIG), 1);
   assert.equal(clampZoomScale(0, 100, ORIG), 1);
   assert.equal(clampZoomScale(1.1, 0, ORIG), 1);
+});
+
+// ---- containZoomOutLimit ----
+
+test('containZoomOutLimit in meet mode is just the breathing margin', () => {
+  // Not slice → viewBox=asset already shows everything, so the floor is the
+  // margin regardless of the rect aspect. A wide 2:1 asset in any viewport.
+  assert.equal(containZoomOutLimit(800, 400, 2754, 1398, false, 1.06), 1.06);
+  assert.equal(containZoomOutLimit(400, 900, 2754, 1398, false, 1.06), 1.06);
+  // Default margin 1 → floor of exactly 1 (can't zoom out past the asset).
+  assert.equal(containZoomOutLimit(400, 900, 2754, 1398, false), 1);
+});
+
+test('containZoomOutLimit in slice mode grows by the aspect mismatch', () => {
+  // A 2:1 asset sliced into a portrait 1:2 viewport crops the width badly; to
+  // keep the whole asset visible the floor must grow by the aspect-mismatch
+  // ratio. asset aspect 2, viewport aspect 0.5 → mismatch 4×.
+  const asset = { w: 2000, h: 1000 }; // aspect 2
+  const floor = containZoomOutLimit(500, 1000, asset.w, asset.h, true, 1);
+  assert.equal(floor, 4);
+  // With a matching-aspect viewport there's no crop, so the floor is ~1 (× margin).
+  assert.equal(containZoomOutLimit(2000, 1000, asset.w, asset.h, true, 1), 1);
+});
+
+test('containZoomOutLimit is always >= 1 and honours a bad rect', () => {
+  // Never below 1 (would let the map zoom in when asked to zoom out).
+  assert.ok(containZoomOutLimit(500, 1000, 2000, 1000, true, 1) >= 1);
+  // Degenerate rect / asset → fall back to the margin, never NaN.
+  assert.equal(containZoomOutLimit(0, 0, 2000, 1000, true, 1.06), 1.06);
+  assert.equal(containZoomOutLimit(500, 500, 0, 0, true, 1.06), 1.06);
+  // A margin below 1 is clamped up to 1.
+  assert.equal(containZoomOutLimit(400, 400, 400, 400, false, 0.5), 1);
 });
 
 // ---- panViewBox ----

@@ -105,6 +105,27 @@ Top-level `v: 1` for future schema bumps. Per-section `lastMigratedAt` lets a Ph
 
 ---
 
+### Feature T: Map interaction feel (Google-style bounds, then smoothness)
+
+**Status:** opened 2026-07-09. The world map's pan / zoom feels far from Google Maps. Two symptoms, one shared root cause (a single CPU-rasterised SVG, ~2224 paths, driven by `viewBox` changes that re-raster the whole vector scene per frame; see `.claude/skills/map-interaction` for the full journey and the option ladder):
+
+1. Drag / zoom isn't fluent.
+2. You can zoom out into a void and drag the map off into empty page. The Europe quiz feels better precisely because its crop stays screen-filling; the world map's looseness is the tell.
+
+**Insight (Jan, 2026-07-09):** the biggest immediate win is not horizontal wrap and not a renderer change. It's tightening the world map's bounds the way Google does: guard the vertical axis (Antarctica pinned near the bottom, a thin ocean strip up top), cap zoom-out so the map can't shrink into a void, and keep the rubber-band we already have on every edge. Cheap, pure clamp logic, no perf or architecture risk. Do this first.
+
+**Why the looseness exists today (don't regress this):** `attachZoomPan` currently runs `MAX_ZOOM_OUT = 3` + `freePan = true` for every mount (`mapZoom.js`). That was deliberate: it let a portrait-phone fullscreen player pinch out to see the whole 2:1 world even though slice mode crops it (see the `clampViewBox` / `FREE_PAN_KEEP` history in `mapZoom.js`). Touch fullscreen now auto-rotates to landscape (`lockLandscapeOnTouch` in `flagMap.js`), so the wide map fits a wide viewport and the loose zoom-out is mostly a fallback for iOS portrait (no orientation lock, no non-video fullscreen) and desktop. Tightening the floor must not strand those users with a cropped world, so favour a contain-fit-with-margin over a hard fit-to-height.
+
+**Phased plan (each phase = one branch off `main` + one PR):**
+
+1. **Phase 1: Google-style bounds on the world map.** Replace "3x zoom-out + free-pan into void" with a contain-fit zoom-out floor (whole map visible at max zoom-out, plus a small margin for the ocean strip) and bounded pan (guard to the map's own edges: Antarctica at the bottom, thin ocean at the top, map edges left / right), rubber-banded on all four edges. Thread `maxZoomOut` / `freePan` (and the vertical-guard behaviour) as per-mount options through `attachZoomPan`, so the world / wide-continent maps get the guard while Europe keeps the feel that already works. Pure `mapZoom.js` logic, unit-tested; browser-verified per the `verify-flag-map-ui` skill. Watch the iOS-portrait-fullscreen case (keep the whole map reachable).
+2. **Phase 2: smoothness (fluency).** Only after the bounds land. Attack per-frame cost: LOD (simplified geometry at world zoom, fewer paths to repaint) and / or the bitmap-pan hybrid with an over-render margin (the fix the #732 revert lacked). See the option ladder in the map-interaction skill.
+3. **Phase 3 (parked, maybe unnecessary): continuous left / right wrap.** Google's toroidal longitude. Geometrically valid (the asset is full-360°: left and right edges are both the antimeridian), but hard on the single-SVG model (cloning the path set ±worldWidth roughly triples the repaint cost) and cleanest only under a canvas basemap. Jan: "maybe this continuation is not even important." Revisit only if Phase 1 + 2 leave the world still feeling worse than Europe.
+
+**Decision still open (settle when Phase 1 starts):** how tight the zoom-out floor should be, pure fit-height like Google vs contain-fit-with-margin, given the iOS-portrait-fullscreen constraint above.
+
+---
+
 ## Backlog
 
 Items here are not blocking current work but deserve durable memory — the next-time-this-comes-up question, the deferred fix that would otherwise vanish into PR archeology. Agents reading FEATURE.md to find their next task should **not** pick from this section; Jan promotes a backlog item to `## Now` when he decides to actually ship it.

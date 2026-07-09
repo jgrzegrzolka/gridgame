@@ -31,8 +31,18 @@ const MAX_ZOOM_IN = 24;
 /** Max zoom-out level relative to the original viewBox. > 1 means the
  * viewBox can grow LARGER than the asset's natural bounds — the player can
  * pinch/scroll out to see the whole map smaller-with-margins (in-page and
- * in fullscreen alike), then free-pan it anywhere (see FREE_PAN_KEEP). */
+ * in fullscreen alike), then free-pan it anywhere (see FREE_PAN_KEEP). This
+ * is the LOOSE default, still used by any caller that doesn't opt into the
+ * `containZoomOut` bounds mode below. */
 const MAX_ZOOM_OUT = 3;
+/**
+ * Bounds mode (`containZoomOut: true`) breathing margin: the contain floor is
+ * multiplied by this so the outermost coasts aren't flush against the frame
+ * edge and the rubber-band has a sliver to pull into. 1.06 = a ~6% border
+ * around the fully-zoomed-out map — enough to read as "a thin strip of ocean,"
+ * not enough to read as a void. Tune here if the floor feels too tight / loose.
+ */
+const CONTAIN_ZOOM_OUT_MARGIN = 1.06;
 /**
  * Free-pan: how much of the map must stay on screen while dragging, as a
  * fraction of the VISIBLE WINDOW (not the map). Measuring against the window
@@ -165,6 +175,44 @@ export function clampZoomScale(scale, currentWidth, original, maxZoomIn = MAX_ZO
   if (scale < minScale) return minScale;
   if (scale > maxScale) return maxScale;
   return scale;
+}
+
+/**
+ * Zoom-out floor for the "contain" bounds mode (Google-Maps-style), expressed
+ * as a multiple of the asset's natural viewBox. It's the *smallest* zoom-out at
+ * which the WHOLE asset is still on screen, so the player can never pull the map
+ * back into a void beyond its own edges (Antarctica pinned near the bottom, a
+ * thin ocean strip up top). Always >= 1.
+ *
+ *   - **meet mode** (the default in-page render — the SVG letterboxes to fit):
+ *     `viewBox = asset` already shows everything, so the floor is just the
+ *     breathing `margin` (a hair over 1). Growing the viewBox past that only
+ *     adds page-bg margin = the void we're removing.
+ *   - **slice mode** (fullscreen fill-and-crop on a viewport whose aspect
+ *     differs from the asset): `viewBox = asset` gets cropped, so to keep the
+ *     whole asset visible the floor grows by the viewport/asset aspect-mismatch
+ *     ratio. That's what still lets a portrait phone zoom out to see the whole
+ *     wide world, without reopening the free-pan void.
+ *
+ * Pure so it can be unit-tested; `attachZoomPan` feeds it the live rect +
+ * whether the current render is slice mode.
+ *
+ * @param {number} rectW   rendered element width (CSS px)
+ * @param {number} rectH   rendered element height (CSS px)
+ * @param {number} originalW  asset natural viewBox width
+ * @param {number} originalH  asset natural viewBox height
+ * @param {boolean} slice   true when preserveAspectRatio is `slice`
+ * @param {number} [margin] breathing multiple (>= 1)
+ * @returns {number} zoom-out floor as a multiple of the asset viewBox (>= 1)
+ */
+export function containZoomOutLimit(rectW, rectH, originalW, originalH, slice, margin = 1) {
+  const m = margin >= 1 ? margin : 1;
+  if (!(rectW > 0) || !(rectH > 0) || !(originalW > 0) || !(originalH > 0)) return m;
+  if (!slice) return m;
+  const a = rectW / originalW;
+  const b = rectH / originalH;
+  const ratio = Math.max(a, b) / Math.min(a, b);
+  return ratio * m;
 }
 
 /**
@@ -480,7 +528,22 @@ export function screenToSvg(svg, clientX, clientY) {
  *   - `reset()` — back to the original viewBox the SVG was mounted with.
  *   - `teardown()` — remove event listeners (for an unmount path).
  *
+ * `opts`:
+ *   - `onSettle(vb)` — fired with the settled viewBox each time the map comes
+ *     to rest (gesture commit or animateTo land).
+ *   - `containZoomOut` (default false) — Google-Maps-style zoom-out floor: stop
+ *     at the smallest zoom-out that still shows the whole map instead of the
+ *     loose `maxZoomOut` multiple, so the map can't shrink into a void. The
+ *     floor is recomputed per-frame from the live rect (fullscreen portrait
+ *     still pulls back to the whole world). See `containZoomOutLimit`.
+ *   - `freePan` (default true) — when false, the shrunk/zoomed-out map can't be
+ *     dragged off into empty page; the position clamp keeps the visible window
+ *     on the map. Pair with `containZoomOut: true` for the fully bounded feel.
+ *   - `maxZoomOut` (default MAX_ZOOM_OUT) — the loose zoom-out cap used when
+ *     `containZoomOut` is off.
+ *
  * @param {SVGElement} svg
+ * @param {{ onSettle?: (vb: { x: number, y: number, width: number, height: number }) => void, containZoomOut?: boolean, freePan?: boolean, maxZoomOut?: number }} [opts]
  * @returns {{
  *   setView: (vb: { x: number, y: number, width: number, height: number }) => void,
  *   animateTo: (vb: { x: number, y: number, width: number, height: number }, opts?: { durationMs?: number, onDone?: () => void }) => void,
@@ -497,6 +560,17 @@ export function attachZoomPan(svg, opts = {}) {
   // the same synchronous block that removes `.is-interacting`, so a handler can
   // re-tint before the browser paints (no image flash).
   const onSettle = typeof opts.onSettle === 'function' ? opts.onSettle : null;
+  // --- Bounds mode --------------------------------------------------------
+  // `containZoomOut: true` + `freePan: false` is the Google-Maps-style bounded
+  // feel: you can't zoom out past the whole map (the contain floor, computed
+  // per-frame from the live rect — see currentMaxZoomOut) and you can't drag the
+  // map off into a void (freePan off → the position clamp keeps the visible
+  // window on the map). Rubber-band still gives at every edge. Callers that pass
+  // neither keep the historical loose behaviour (zoom out to MAX_ZOOM_OUT, free-
+  // pan the shrunk map anywhere) so nothing else regresses.
+  const freePan = opts.freePan !== false;
+  const looseMaxZoomOut = typeof opts.maxZoomOut === 'number' ? opts.maxZoomOut : MAX_ZOOM_OUT;
+  const containZoomOut = opts.containZoomOut === true;
   const noopHandle = {
     setView: () => {},
     animateTo: () => {},
@@ -532,11 +606,12 @@ export function attachZoomPan(svg, opts = {}) {
    * @param {ViewBox} next
    */
   function apply(next) {
-    // Same zoom-out + free-pan freedom in-page and in fullscreen: the player
-    // can pinch/scroll out past the asset's natural viewBox (MAX_ZOOM_OUT)
-    // and drag the shrunk map anywhere (freePan). clampViewBox keeps at
-    // least a sliver on screen so it's never lost, and double-tap resets.
-    current = clampViewBox(next, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(next), true);
+    // Zoom-out floor + pan freedom depend on the bounds mode (see the opts block
+    // at the top). Loose: pinch/scroll out to MAX_ZOOM_OUT and free-pan the
+    // shrunk map anywhere. Contain: stop at the whole-map floor (currentMaxZoom-
+    // Out) and keep the visible window on the map (freePan off). Either way
+    // clampViewBox never loses the map off-screen, and double-tap resets.
+    current = clampViewBox(next, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(next), freePan);
     endGesture();
     setViewBoxNow(current);
   }
@@ -552,7 +627,7 @@ export function attachZoomPan(svg, opts = {}) {
    * @returns {ViewBox}
    */
   function clampPanFrame(next) {
-    const hard = clampViewBox(next, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(next), true);
+    const hard = clampViewBox(next, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(next), freePan);
     return {
       x: hard.x + rubberBandOffset(next.x - hard.x, hard.width),
       y: hard.y + rubberBandOffset(next.y - hard.y, hard.height),
@@ -642,7 +717,7 @@ export function attachZoomPan(svg, opts = {}) {
     // Pans may rubber-band past the edge (clampPanFrame); zoom stays hard-clamped.
     current = isPan
       ? clampPanFrame(next)
-      : clampViewBox(next, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(next), true);
+      : clampViewBox(next, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(next), freePan);
     beginGesture();
     setViewBoxNow(current);   // grey simplify + per-frame viewBox render
     scheduleSettle();
@@ -723,7 +798,7 @@ export function attachZoomPan(svg, opts = {}) {
     const duration = typeof opts.durationMs === 'number' ? opts.durationMs : 480;
     const ease = typeof opts.ease === 'function' ? opts.ease : easeInOutCubic;
     const raf = globalThis.requestAnimationFrame;
-    const end = clampViewBox(target, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(target), true);
+    const end = clampViewBox(target, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(target), freePan);
     cancelAnim();
     if (typeof raf !== 'function' || duration <= 0 || prefersReducedMotion()) {
       apply(end);
@@ -778,7 +853,7 @@ export function attachZoomPan(svg, opts = {}) {
    */
   function endPanGesture(vx = 0, vy = 0) {
     if (pendingViewBox) flushInput();
-    const home = clampViewBox(current, original, MAX_ZOOM_IN, MAX_ZOOM_OUT, sliceOverhang(current), true);
+    const home = clampViewBox(current, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(current), freePan);
     if (Math.abs(home.x - current.x) > SPRING_EPS || Math.abs(home.y - current.y) > SPRING_EPS) {
       springHome(home);
       return;
@@ -872,6 +947,28 @@ export function attachZoomPan(svg, opts = {}) {
    *
    * @param {ViewBox} vb
    */
+  /**
+   * The zoom-out floor to clamp against THIS frame, as a multiple of the asset
+   * viewBox. Loose mode returns the fixed `looseMaxZoomOut`; contain mode reads
+   * the live rect + render mode and returns the smallest zoom-out that still
+   * shows the whole map (see containZoomOutLimit), so a fullscreen portrait
+   * phone can pull back to the whole world while the in-page map stops at its
+   * own edge. Recomputed each clamp because the rect changes on resize / enter-
+   * exit fullscreen.
+   * @returns {number}
+   */
+  function currentMaxZoomOut() {
+    if (!containZoomOut) return looseMaxZoomOut;
+    /** @type {any} */
+    const s = svg;
+    if (typeof s.getBoundingClientRect !== 'function') return CONTAIN_ZOOM_OUT_MARGIN;
+    const rect = s.getBoundingClientRect();
+    if (!rect || !rect.width || !rect.height) return CONTAIN_ZOOM_OUT_MARGIN;
+    const par = typeof s.getAttribute === 'function' ? s.getAttribute('preserveAspectRatio') : null;
+    const slice = !!(par && /\bslice\b/.test(par));
+    return containZoomOutLimit(rect.width, rect.height, original.width, original.height, slice, CONTAIN_ZOOM_OUT_MARGIN);
+  }
+
   function sliceOverhang(vb) {
     /** @type {any} */
     const s = svg;
@@ -947,7 +1044,7 @@ export function attachZoomPan(svg, opts = {}) {
     const pivot = screenToSvg(svg, e.clientX, e.clientY);
     if (!pivot) return;
     const base = inputBase();
-    const scale = clampZoomScale(wheelZoomScale(e.deltaY, e.deltaMode), base.width, original);
+    const scale = clampZoomScale(wheelZoomScale(e.deltaY, e.deltaMode), base.width, original, MAX_ZOOM_IN, currentMaxZoomOut());
     scheduleInput(zoomViewBox(base, pivot, scale));
   }
 
@@ -1036,7 +1133,7 @@ export function attachZoomPan(svg, opts = {}) {
       const midY = (t1.clientY + t2.clientY) / 2;
       const pivot = screenToSvg(svg, midX, midY);
       const base = inputBase();
-      const scale = clampZoomScale(newDistance / prev, base.width, original);
+      const scale = clampZoomScale(newDistance / prev, base.width, original, MAX_ZOOM_IN, currentMaxZoomOut());
       if (pivot) scheduleInput(zoomViewBox(base, pivot, scale));
       touchState.distance = newDistance;
     }
