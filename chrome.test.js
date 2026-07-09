@@ -167,3 +167,20 @@ test('chrome: every page with #lang-toggle ships the canonical synchronous paint
   }
   assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
 });
+
+// A ship-dark home tile (rendered `hidden`, revealed by bootHome() only with
+// ?test) must actually stay hidden. `.game-tile { display: flex }` outweighs
+// the UA `[hidden]` rule, so index.css needs an explicit `.game-tile[hidden]`
+// display:none guard — without it the tile leaks to every visitor. This bit us
+// on the Flag Party tile in prod; pin it so it can't silently come back.
+test('chrome: a hidden .game-tile is actually hidden (no ship-dark leak)', () => {
+  const html = readFileSync(join(HERE, 'index.html'), 'utf-8');
+  const hasHiddenTile = /<a[^>]*\bclass="game-tile"[^>]*\bhidden\b|<a[^>]*\bhidden\b[^>]*\bclass="game-tile"/.test(html);
+  if (!hasHiddenTile) return; // no ship-dark tile today → nothing to guard
+  const css = readFileSync(join(HERE, 'index.css'), 'utf-8').replace(/\s+/g, ' ');
+  assert.match(
+    css,
+    /\.game-tile\[hidden\]\s*\{\s*display:\s*none/,
+    'index.html has a hidden .game-tile but index.css lacks the `.game-tile[hidden] { display: none }` guard — the tile will leak to all visitors',
+  );
+});
