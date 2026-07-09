@@ -37,12 +37,16 @@ const MAX_ZOOM_IN = 24;
 const MAX_ZOOM_OUT = 3;
 /**
  * Bounds mode (`containZoomOut: true`) breathing margin: the contain floor is
- * multiplied by this so the outermost coasts aren't flush against the frame
- * edge and the rubber-band has a sliver to pull into. 1.06 = a ~6% border
- * around the fully-zoomed-out map — enough to read as "a thin strip of ocean,"
- * not enough to read as a void. Tune here if the floor feels too tight / loose.
+ * multiplied by this, so zooming out past the whole map keeps pulling back into
+ * open ocean instead of stopping flush against the coasts. 1.25 = a ~25% border
+ * of water around the fully-zoomed-out map — room to actually investigate the
+ * edges (northern coasts especially: the vertical slack is bottom-aligned in
+ * clampViewBox, so it all lands on TOP with Antarctica pinned to the bottom).
+ * The DEFAULT view is unaffected — this only caps how far you can zoom OUT past
+ * 1×. Horizontal margin is split evenly (centred); vertical goes entirely up
+ * top. Tune here if the floor feels too tight / loose (Jan wanted more, 07-09).
  */
-const CONTAIN_ZOOM_OUT_MARGIN = 1.06;
+const CONTAIN_ZOOM_OUT_MARGIN = 1.25;
 /**
  * Free-pan: how much of the map must stay on screen while dragging, as a
  * fraction of the VISIBLE WINDOW (not the map). Measuring against the window
