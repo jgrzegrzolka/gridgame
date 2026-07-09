@@ -42,6 +42,10 @@ body {
   overflow: hidden;
   min-height: 240px;
 }
+/* The display:flex above outweighs the UA `[hidden]` rule, so a ship-dark
+   tile (e.g. Flag Party, revealed by bootHome() only with ?test) would show
+   to everyone without this. Keep hidden tiles hidden. */
+.game-tile[hidden] { display: none; }
 .tile-preview {
   flex: 1;
   display: flex;
