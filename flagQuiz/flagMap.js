@@ -614,7 +614,69 @@ export async function mountFlagMap({
   addFullscreenButton(container, fullscreenLabel);
   if (typeof onToggle === 'function') addHideButton(container, toggleLabel, onToggle);
   if (resizable) makeMapResizable(container, /** @type {any} */ (svg));
+  wireCountryHover(/** @type {any} */ (svg));
   return /** @type {SVGElement} */ (svg);
+}
+
+/**
+ * Desktop hover feedback: darken the country under the pointer a shade (grey
+ * land → deeper grey, a filter-matched yellow → deeper gold) and, for a
+ * microstate, fill its ring with a soft wash so a speck-sized island is legible
+ * to point at. Toggles `.is-hovered` on the country's `flagFillTargets` — the
+ * same scoped set the fills use — so it excludes a nested sub-country (Kosovo
+ * inside Serbia never lights up with Serbia) and reaches the ring / island dot
+ * / inset island that live in the flat overlay layer outside the country `<g>`.
+ * A CSS `:hover` can do neither, which is why this is wired in JS. See the
+ * `.is-hovered` rules in flagMap.css for the paint.
+ *
+ * Touch devices are skipped (`hover: hover`) so a tap never leaves a country
+ * stuck dark. No-op where there's no `matchMedia` (tests / SSR).
+ *
+ * @param {any} svg mounted `<svg>` root
+ */
+function wireCountryHover(svg) {
+  if (!svg || typeof svg.addEventListener !== 'function') return;
+  const mm = typeof globalThis.matchMedia === 'function' ? globalThis.matchMedia : null;
+  if (mm && !mm('(hover: hover)').matches) return;
+
+  /** id of the country currently under the pointer, or null. */
+  let current = null;
+  const setHover = (id, on) => {
+    for (const el of flagFillTargets(svg, id)) {
+      if (el && el.classList) el.classList.toggle('is-hovered', on);
+    }
+  };
+  // Which country a pointer target belongs to: an overlay element (island dot /
+  // inset island) names its country via `data-hit-for`; a land path resolves to
+  // its NEAREST `.map-country` ancestor, so Kosovo's path resolves to `xk`, not
+  // the `rs` group it's drawn inside. (Rings are pointer-events:none, so they're
+  // never the target — the event lands on the island or ocean behind them.)
+  const countryOf = (el) => {
+    if (!el) return null;
+    const hitFor = el.dataset && el.dataset.hitFor;
+    if (hitFor) return hitFor;
+    const c = typeof el.closest === 'function' ? el.closest('.map-country') : null;
+    return c && c.id ? c.id : null;
+  };
+
+  svg.addEventListener('pointerover', (e) => {
+    const id = countryOf(e.target);
+    if (id === current) return;
+    if (current) setHover(current, false);
+    current = id;
+    if (current) setHover(current, true);
+  });
+  // Clear only when the pointer truly leaves the map (not on every move between
+  // a country's own paths — pointerover already handles country-to-country
+  // switches, and moving onto ocean resolves to a null id there too).
+  svg.addEventListener('pointerout', (e) => {
+    const to = e.relatedTarget;
+    const left = !to || (typeof svg.contains === 'function' && !svg.contains(to));
+    if (current && left) {
+      setHover(current, false);
+      current = null;
+    }
+  });
 }
 
 /**

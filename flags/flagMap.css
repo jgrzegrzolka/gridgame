@@ -557,6 +557,41 @@
    * lag the next render in count mode (1200 ms gap between rounds). */
   transition: fill 240ms ease-out;
 }
+/* Hover feedback — driven from JS (`wireCountryHover` in flagMap.js), which
+ * adds `.is-hovered` to exactly the country under the pointer (its land paths,
+ * its microstate ring, its island dot / inset island) via the same
+ * `flagFillTargets` scoping the fills use. It is NOT a CSS `:hover` for two
+ * reasons the DOM forces: the rings live in a flat overlay layer, not inside
+ * the country `<g>`, so a descendant `:hover` can't reach them; and a country
+ * drawn INSIDE another (Kosovo nested in Serbia) always puts the outer `<g>`
+ * into `:hover` too, so pure CSS would darken both as one. `flagFillTargets`
+ * already excludes nested sub-countries, so routing through it highlights one
+ * country cleanly. Desktop-only + the touch guard both live in the JS.
+ *
+ * Grey land / island dots go a shade deeper; a filter-matched yellow goes a
+ * deeper gold. Answered quiz countries carry an inline flag / solid fill that
+ * wins over the non-`!important` grey rule, so they don't grey out. The yellow
+ * rule needs `!important` only because the base `.is-marked` fill it darkens is
+ * itself `!important`. `#cfcfcf` / `#d6ac2a` are accepted map-palette
+ * exceptions, same posture as the `#e3e3e3` / `#f4c430` base colours. */
+#flag-map-section svg .is-hovered:not(.map-hit-target):not(.map-hit-leader) {
+  fill: #cfcfcf;
+}
+#flag-map-section svg .is-marked.is-hovered:not(.map-hit-target):not(.map-hit-leader) {
+  fill: #d6ac2a !important;
+}
+/* A hovered microstate ring fills with a soft gold wash so pointing at a
+ * speck-sized island reads even when the island itself is too small for its
+ * own darken to register — the circle around it visibly fills instead. Only
+ * for flagsdata's filter-matched rings (`.is-marked`); the quiz's answered
+ * rings already carry their green / red status fill. Semi-transparent so the
+ * island still reads through, and the ring stays `pointer-events: none` (from
+ * the base rule) so the click still falls through to the real island. */
+#flag-map-section svg .map-hit-target.is-marked.is-hovered {
+  fill: #d6ac2a;
+  fill-opacity: 0.3;
+  transition: fill-opacity 120ms ease-out;
+}
 /* Answered status (flagQuiz). The fill has to land on the child paths
  * for <g>-wrapped countries since the default-fill rule above paints
  * them grey and would otherwise win specificity. Status colors mirror
