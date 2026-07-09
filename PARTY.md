@@ -187,8 +187,34 @@ palette colours); C — reveal shows everyone's pick (avatar on the chosen flag)
 correct tagged "⚡ Fastest", full scoreboard only on reveal/final. Name: **Flag Party**
 (folder `flagParty/`; pl tile "Flagowa impreza").
 
+## Iteration 2 — sovereign + non-sovereign segments — SHIPPED (branch `feat/party-nonsovereign-mode`)
+
+One game is now **10 rounds: 5 sovereign flag-pick, then 5 non-sovereign flag-pick**, same
+mechanic, pool swaps at round 6. Settings page (host picks modes + rounds-per-mode) is still
+future; this hardcodes the default plan.
+
+- `flags/partyPlan.js` — the game plan as **data**: `DEFAULT_PLAN = [{sovereign,5},{nonSovereign,5}]`
+  + `totalRounds` + `poolIdForRound`. This is the seed of the settings page — it will just
+  edit this array. Tested.
+- `flags/flagPools.js` — `sovereignPool` (195) and `nonSovereignPool` (54). The non-sovereign
+  pool is territories + quasi-states + subnational regions (Jan's "everything non-sovereign",
+  2026-07-09), with orgs dropped (`category === 'country'`) and **parent-flag duplicates**
+  excluded via `SHARED_PARENT_FLAG` — the flags that read as their parent's (French tricolor
+  territories, Svalbard/Bouvet = Norway, US Minor Outlying = US flag, Heard & McDonald =
+  Australia's flag). Verified by eye against the SVGs, not just `quiz.js` LOOKALIKES (which
+  omits Heard and US Minor Outlying). Pinned by a test so a broken "which flag is Mayotte →
+  French tricolor" question can't slip in.
+- `flagPick.generate(pool, exclude)` — takes a used-answer set so a game doesn't repeat a
+  country; the server tracks `usedCodes`, reset on start / play-again.
+- Server maps `poolId → pool` and generates each round from the right one.
+
+Verified end-to-end: round 1 = a sovereign flag, round 6 = "which flag is Norfolk Island?"
+with all-non-sovereign distinct options. `npm run validate` green.
+
 ## Open decisions (settle as they come up, not now)
 
+- **Settings page** (Jan wants one eventually): host picks which modes and how many rounds
+  each. `flags/partyPlan.js` is already the config surface — the page edits `DEFAULT_PLAN`.
 - **QR in the lobby.** Deferred from iteration 1 (see above) — add a self-contained QR
   generator, or accept code + link.
 - **Question count / timing per round.** Fixed at 5 rounds; no per-question countdown yet

@@ -27,10 +27,15 @@ export const id = 'flagPick';
 
 /**
  * @param {PoolEntry[]} pool
+ * @param {Set<string>} [exclude] answer codes already used this game, so a
+ *   round doesn't repeat a country. Falls back to the full pool if excluding
+ *   would leave too few to build a question.
  * @returns {Question}
  */
-export function generate(pool) {
-  const { answer, choices } = pickQuestion(pool, 4);
+export function generate(pool, exclude) {
+  const usable = exclude && exclude.size ? pool.filter((c) => !exclude.has(c.code)) : pool;
+  const src = usable.length >= 4 ? usable : pool;
+  const { answer, choices } = pickQuestion(src, 4);
   return {
     prompt: answer.code,
     options: choices.map((c) => c.code),
