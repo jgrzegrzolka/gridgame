@@ -6,6 +6,7 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz } from '../flags/partyClient.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, REVEAL_SECONDS, secondsLeft, remainingFraction } from '../flags/partyTiming.js';
+import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
 
@@ -36,6 +37,10 @@ export function bootFlagParty() {
   let rejected = false;
   let reconnectAttempts = 0;
   let reconnectTimer = 0;
+  /** Solo path: created a private room and want to skip the lobby, auto-starting
+   *  the game the moment we're seated as host. Cleared once the first question
+   *  arrives. Keeps the create-a-room (multiplayer) lobby untouched. */
+  let soloPending = false;
 
   // ---- element refs ----
   const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -60,7 +65,7 @@ export function bootFlagParty() {
   const playAgainBtn = /** @type {HTMLButtonElement} */ ($('play-again'));
   const playingAsEl = $('playing-as');
   const joinError = $('join-error');
-  const shareLabel = $('share-label');
+  const shareBtn = /** @type {HTMLButtonElement} */ ($('share-btn'));
 
   /** @type {Map<string, { code: string, name: string }>} */
   const byCode = new Map();
@@ -77,31 +82,35 @@ export function bootFlagParty() {
     return n;
   }
 
-  /** @param {string} name */
-  function initials(name) {
-    const caps = name.match(/[A-ZŁŚŻŹĆŃÓĄĘ]/g) || [];
-    if (caps.length >= 2) return (caps[0] + caps[1]).toUpperCase();
-    return (name.replace(/\s+/g, '').slice(0, 2) || '??').toUpperCase();
-  }
-
-  /** @param {string} name @param {boolean} you */
-  function avatar(name, you) {
-    const a = el('span', 'avatar' + (you ? '' : ' o'), initials(name));
-    return a;
-  }
-
   /**
    * @param {string} key
    * @param {string} fallback
    * @param {Record<string, string|number>} [params]
    */
   function setStatus(key, fallback, params) {
+    statusEl.className = 'party-status';
     statusEl.textContent = params ? fmt(t(key, fallback), params) : t(key, fallback);
     statusEl.hidden = false;
   }
-  function clearStatus() { statusEl.hidden = true; statusEl.textContent = ''; }
+  /**
+   * Loading variant of the status line: a muted label trailed by the shared
+   * pulsing `.loading-dots` (common.css) — the same "something's happening"
+   * idiom as daily-stats / sync "loading…". Used for the solo "Starting…"
+   * spin-up so it reads as a wait, not an error box.
+   * @param {string} key @param {string} fallback
+   */
+  function setLoadingStatus(key, fallback) {
+    statusEl.className = 'party-status loading';
+    statusEl.textContent = t(key, fallback);
+    const dots = el('span', 'loading-dots');
+    dots.setAttribute('aria-hidden', 'true');
+    dots.innerHTML = '<span></span><span></span><span></span>';
+    statusEl.appendChild(dots);
+    statusEl.hidden = false;
+  }
+  function clearStatus() { statusEl.hidden = true; statusEl.textContent = ''; statusEl.className = 'party-status'; }
 
-  function showSection(/** @type {'start'|'lobby'|'round'|'final'} */ which) {
+  function showSection(/** @type {'start'|'lobby'|'round'|'final'|null} */ which) {
     for (const [k, node] of Object.entries(sections)) node.hidden = k !== which;
   }
 
@@ -117,7 +126,9 @@ export function bootFlagParty() {
 
   function connect() {
     if (!activeRoom) return;
-    setStatus('party.connecting', 'Connecting…');
+    // Connecting / reconnecting are waiting states, so they use the same
+    // loading-dots idiom as the solo "Starting" spin-up (not the bordered box).
+    setLoadingStatus('party.connecting', 'Connecting');
     ws = new WebSocket(wsUrl(activeRoom.code, activeRoom.intent));
     ws.addEventListener('open', () => { reconnectAttempts = 0; });
     ws.addEventListener('message', (e) => handleMessage(String(e.data)));
@@ -130,7 +141,7 @@ export function bootFlagParty() {
     activeRoom = { ...activeRoom, intent: 'join' };
     reconnectAttempts += 1;
     const delayMs = Math.min(30000, 1000 * 2 ** (reconnectAttempts - 1));
-    setStatus('party.disconnected', 'Disconnected. Reconnecting…');
+    setLoadingStatus('party.disconnected', 'Disconnected. Reconnecting');
     clearTimeout(reconnectTimer);
     reconnectTimer = window.setTimeout(connect, delayMs);
   }
@@ -142,6 +153,10 @@ export function bootFlagParty() {
     state = next;
     if (msg.type === 'roster' && typeof msg.hostId === 'string') roomHostId = msg.hostId;
     if (msg.type === 'welcome' && msg.isHost) roomHostId = state.you;
+    // Solo auto-start: as soon as we're welcomed back as the host of our fresh
+    // private room, kick the game off without waiting for a lobby tap.
+    if (msg.type === 'welcome' && msg.isHost && soloPending) send({ type: 'start' });
+    if (msg.type === 'question') soloPending = false;
     for (const eff of effects) {
       if (eff.type === 'close') {
         rejected = true;
@@ -153,7 +168,12 @@ export function bootFlagParty() {
     if (state.statusOverride) {
       const so = state.statusOverride;
       setStatus(so.key, so.fallback, so.params || {});
-    } else if (msg.type === 'welcome') {
+    } else {
+      // No override to show, so drop any transient status (connecting, or the
+      // solo "Starting…" banner). render() re-sets "Starting…" itself while a
+      // solo game is still spinning up, so clearing here can't strand it — but
+      // it does clear once the first question arrives (soloPending is false by
+      // then), which is the bug this fixes: the banner used to sit over round 1.
       clearStatus();
     }
     render();
@@ -211,11 +231,16 @@ export function bootFlagParty() {
     const mode = state.phase === 'reveal' ? 'reveal' : 'question';
     const now = Date.now();
     const left = secondsLeft(clockDeadline, now);
-    timerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
-    timerEl.classList.toggle('low', mode === 'question' && left <= 5);
-    timerLabel.textContent = mode === 'reveal'
-      ? fmt(t('party.nextIn', 'Next round in {n}s'), { n: left })
-      : String(left);
+    if (mode === 'reveal') {
+      // Reveal: a quiet "next round in N" label only. The progress bar (track)
+      // is hidden by CSS in this mode, so nothing animates — the round just
+      // ticks down and advances.
+      timerLabel.textContent = fmt(t('party.nextIn', 'Next round in {n}s'), { n: left });
+    } else {
+      timerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
+      timerEl.classList.toggle('low', left <= 5);
+      timerLabel.textContent = String(left);
+    }
     if (left <= 0 && !clockFired) {
       clockFired = true;
       // Host only: end the phase. A stale 'reveal'/'next' for a phase that
@@ -228,6 +253,14 @@ export function bootFlagParty() {
   // ---- render ----
   function render() {
     if (!activeRoom) { stopClock(); showSection('start'); return; }
+    // Solo: suppress the lobby entirely while we connect and auto-start, so the
+    // player drops from "Play solo" straight into round 1 with only a status.
+    if (soloPending && state.phase !== 'question' && state.phase !== 'reveal' && state.phase !== 'final') {
+      stopClock();
+      showSection(null);
+      setLoadingStatus('party.starting', 'Starting');
+      return;
+    }
     if (state.phase === 'question' || state.phase === 'reveal') { showSection('round'); renderRound(); syncClock(); }
     else if (state.phase === 'final') { stopClock(); showSection('final'); renderFinal(); }
     else { stopClock(); showSection('lobby'); renderLobby(); }
@@ -240,7 +273,7 @@ export function bootFlagParty() {
     playersEl.appendChild(label);
     for (const r of state.roster) {
       const chip = el('div', 'chip' + (r.present ? '' : ' away'));
-      chip.appendChild(avatar(r.nickname, r.playerId === state.you));
+      chip.appendChild(buildAvatar(r.playerId));
       chip.appendChild(el('span', 'chip-name', r.nickname));
       if (r.playerId === roomHostId) chip.appendChild(el('span', 'chip-host', t('party.host', 'host')));
       playersEl.appendChild(chip);
@@ -248,14 +281,6 @@ export function bootFlagParty() {
     const inLobby = state.phase === 'lobby';
     startBtn.hidden = !(state.isHost && inLobby);
     waitEl.hidden = !(!state.isHost && inLobby);
-  }
-
-  function nameLookup() {
-    /** @type {Map<string, string>} */
-    const m = new Map();
-    for (const e of state.scoreboard || []) m.set(e.playerId, e.nickname);
-    for (const r of state.roster) if (!m.has(r.playerId)) m.set(r.playerId, r.nickname);
-    return m;
   }
 
   function renderRound() {
@@ -271,21 +296,23 @@ export function bootFlagParty() {
     promptQ.textContent = isReveal ? t('party.theFlagOf', 'The flag of') : t('party.whichFlag', 'Which flag is');
     promptTarget.textContent = isReveal ? name : `${name}?`;
 
-    const names = nameLookup();
     gridEl.innerHTML = '';
     for (const code of q.options) {
       if (isReveal && state.reveal) {
         const correct = code === state.reveal.answer;
-        /** @type {Array<{name:string, you:boolean}>} */
+        // Your own wrong pick pulses pink (flagQuiz's "bad" marker); it isn't
+        // dimmed like the flags nobody chose. The correct flag pulses green.
+        const myWrong = !correct && state.reveal.picks[state.you] === code;
+        /** @type {string[]} */
         const pickers = [];
         for (const [pid, choice] of Object.entries(state.reveal.picks)) {
-          if (choice === code) pickers.push({ name: names.get(pid) || '?', you: pid === state.you });
+          if (choice === code) pickers.push(pid);
         }
-        gridEl.appendChild(flagOpt(code, { selectable: false, selected: false, correct, dim: !correct, pickers }));
+        gridEl.appendChild(flagOpt(code, { selectable: false, selected: false, correct, wrong: myWrong, dim: !correct && !myWrong, pickers }));
       } else {
         const selected = state.myChoice === code;
         const dim = state.myChoice != null && !selected;
-        gridEl.appendChild(flagOpt(code, { selectable: state.myChoice == null, selected, correct: false, dim, pickers: [] }));
+        gridEl.appendChild(flagOpt(code, { selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [] }));
       }
     }
 
@@ -296,11 +323,11 @@ export function bootFlagParty() {
 
   /**
    * @param {string} code
-   * @param {{ selectable: boolean, selected: boolean, correct: boolean, dim: boolean, pickers: Array<{name:string,you:boolean}> }} opts
+   * @param {{ selectable: boolean, selected: boolean, correct: boolean, wrong: boolean, dim: boolean, pickers: string[] }} opts
    */
   function flagOpt(code, opts) {
     const node = document.createElement(opts.selectable ? 'button' : 'div');
-    node.className = 'opt' + (opts.selected ? ' sel' : '') + (opts.correct ? ' correct' : '') + (opts.dim ? ' dim' : '');
+    node.className = 'opt' + (opts.selected ? ' sel' : '') + (opts.correct ? ' correct' : '') + (opts.wrong ? ' wrong' : '') + (opts.dim ? ' dim' : '');
     if (opts.selectable) {
       /** @type {HTMLButtonElement} */ (node).type = 'button';
       node.addEventListener('click', () => onPick(code));
@@ -310,20 +337,24 @@ export function bootFlagParty() {
     img.src = `../flags/svg/${code}.svg`;
     img.alt = '';
     node.appendChild(img);
-    if (opts.selected || opts.correct) node.appendChild(el('span', 'mark', '✓'));
+    // ✓ badge only confirms your locked-in pick during the question. On reveal
+    // the correct flag is marked by the green pulse alone (matching flagQuiz),
+    // so no badge there — a pink ✓ on a green tile would clash.
+    if (opts.selected) node.appendChild(el('span', 'mark', '✓'));
     if (opts.pickers.length) {
       const p = el('div', 'picks');
-      for (const pk of opts.pickers) p.appendChild(avatar(pk.name, pk.you));
+      for (const pid of opts.pickers) p.appendChild(buildAvatar(pid));
       node.appendChild(p);
     }
     return node;
   }
 
   function renderQuestionFoot() {
-    if (state.myChoice) footEl.appendChild(el('div', 'banner', t('party.lockedWaiting', 'Locked in, waiting for the others…')));
+    // The "{n} of {total} answered" count already conveys "you're locked in,
+    // waiting" — no separate banner (it read oddly in solo, where there's
+    // nobody else to wait for).
     const answered = fmt(t('party.answered', '{n} of {total} answered'), { n: state.buzzedCount, total: state.seatCount });
-    const line = state.myChoice ? answered : `${t('party.tapFlag', 'Tap the flag')} · ${answered}`;
-    footEl.appendChild(el('div', 'status-line', line));
+    footEl.appendChild(el('div', 'status-line', answered));
   }
 
   function renderRevealFoot() {
@@ -333,16 +364,16 @@ export function bootFlagParty() {
     for (const entry of state.scoreboard || []) {
       const pts = points[entry.playerId] || 0;
       const toast = el('div', 'toast');
-      toast.appendChild(avatar(entry.nickname, entry.playerId === state.you));
+      toast.appendChild(buildAvatar(entry.playerId));
       toast.appendChild(el('span', 'toast-name', entry.nickname));
       if (pts === fastest) toast.appendChild(el('span', 'fast', `⚡ ${t('party.fastest', 'Fastest')}`));
       toast.appendChild(el('span', 'pts' + (pts === 0 ? ' zero' : ''), `+${pts}`));
       list.appendChild(toast);
     }
     footEl.appendChild(list);
-    // No "Next round" button: the round advances on its own once the reveal
-    // has lingered (the host's round clock sends 'next'). The countdown bar
-    // above shows "next round in N".
+    // No "Next round" button and no countdown: the round advances on its own
+    // after a short beat (the host's clock sends 'next'), so the reveal just
+    // shows who scored and moves on.
   }
 
   function renderFinal() {
@@ -358,12 +389,17 @@ export function bootFlagParty() {
     board.forEach((entry, i) => {
       const row = el('div', 'scoreline' + (i === 0 ? ' win' : ' other'));
       row.appendChild(el('span', 'rank', String(i + 1)));
-      row.appendChild(avatar(entry.nickname, entry.playerId === state.you));
+      row.appendChild(buildAvatar(entry.playerId));
       row.appendChild(el('span', 'nm', entry.nickname));
       row.appendChild(el('span', 'sc', String(entry.score)));
       finalBoard.appendChild(row);
     });
+    // Only the host can restart, so both "Play again" and the "·" separator
+    // that divides it from "Home" show for the host alone; everyone else sees
+    // just "Home".
     playAgainBtn.hidden = !state.isHost;
+    const sep = document.getElementById('result-sep');
+    if (sep) sep.hidden = !state.isHost;
   }
 
   function onPick(/** @type {string} */ code) {
@@ -377,7 +413,9 @@ export function bootFlagParty() {
   }
 
   // ---- wire controls ----
-  $('create-room').addEventListener('click', () => enterRoom(generateCode(), 'create'));
+  $('create-room').addEventListener('click', () => { soloPending = false; enterRoom(generateCode(), 'create'); });
+
+  $('play-solo').addEventListener('click', () => { soloPending = true; enterRoom(generateCode(), 'create'); });
 
   $('join-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -389,42 +427,35 @@ export function bootFlagParty() {
       return;
     }
     joinError.hidden = true;
+    soloPending = false;
     enterRoom(code, 'join');
   });
 
   startBtn.addEventListener('click', () => send({ type: 'start' }));
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
 
-  $('share-btn').addEventListener('click', async () => {
+  // Same share mechanism as Tic-Tac-Toe (common.js `shareUrl` → native sheet,
+  // clipboard fallback), so the invite icon behaves identically across the two
+  // online games. On a plain clipboard copy the icon morphs to a checkmark for
+  // 1.5s via the shared `.copied` class; the native sheet and dismiss/fail
+  // paths stay silent (matching TTT).
+  shareBtn.addEventListener('click', async () => {
     if (!activeRoom) return;
-    const url = new URL(location.href);
-    url.searchParams.set('room', activeRoom.code);
-    const shareUrl = url.toString();
-    const shareText = `${t('party.shareText', 'Join my Flag Party room:')} ${shareUrl}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: t('party.shareTitle', 'Flag Party'), text: shareText, url: shareUrl });
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(shareUrl);
-        flashShareCopied();
-      }
-    } catch { /* user cancelled share, or clipboard blocked — no-op */ }
+    const result = await shareUrl(window.location.href, {
+      title: t('party.shareTitle', 'Flag Party'),
+      text: t('party.shareText', 'Join my Flag Party room:'),
+    });
+    if (result === 'copied') flashCopied();
   });
 
-  function flashShareCopied() {
-    const original = t('party.share', 'Invite link');
-    shareLabel.textContent = t('party.shareCopied', 'Link copied');
-    window.setTimeout(() => { shareLabel.textContent = original; }, 1500);
+  function flashCopied() {
+    shareBtn.classList.add('copied');
+    window.setTimeout(() => shareBtn.classList.remove('copied'), 1500);
   }
 
   // ---- "playing as" line ----
   function paintPlayingAs() {
-    playingAsEl.innerHTML = '';
-    playingAsEl.appendChild(avatar(myName, true));
-    const label = el('span', 'playing-as-label', `${t('party.playingAs', 'Playing as')} `);
-    const strong = el('strong', undefined, myName);
-    label.appendChild(strong);
-    playingAsEl.appendChild(label);
+    renderPlayingAs(playingAsEl, deviceId, myName, t('party.playingAs', 'Playing as'));
   }
   paintPlayingAs();
 

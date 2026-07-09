@@ -4,12 +4,18 @@
    = dimmed; no green/red, staying on-palette by design. */
 
 .party {
-  max-width: 420px;
+  /* 480px cap centred, and NO horizontal padding of its own — the body's
+     standard 24px already insets every page, so relying on it lines the flag
+     grid up with flagQuiz's (min(90vw, 480px)) at the same width instead of
+     sitting 20px narrower on each side. */
+  max-width: 480px;
   margin: 0 auto;
-  padding: 72px 20px 40px;
+  /* No top padding: common.css already pads the body to clear the fixed
+     chrome, same as every other page. Adding more here pushed the content far
+     down the screen. */
+  padding: 0 0 40px;
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
   box-sizing: border-box;
 }
 
@@ -17,29 +23,19 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* Fill the 480px `.party` (which is a <main>, so common.css centres its
+     children rather than stretching them). Without a definite section width
+     the flags grid has nothing to stretch into — Chromium papers over it, but
+     Firefox collapses the `1fr 1fr` tracks to the flag images' min-content, so
+     the flags render tiny. An explicit 100% of the definite-width parent fixes
+     it in both. */
+  width: 100%;
 }
 /* `.party section { display: flex }` outweighs the UA `[hidden]` rule, so
    spell out that a hidden phase section stays gone — otherwise every phase
    stacks on the page at once. */
 .party section[hidden] { display: none; }
 
-.party-brand {
-  align-self: center;
-  font-weight: 800;
-  font-size: 18px;
-  letter-spacing: -0.01em;
-  color: var(--primary-color);
-  margin-bottom: 8px;
-}
-.party-brand span { color: var(--secondary-color); }
-
-.party-h {
-  text-align: center;
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin: 0;
-}
 .party-sub {
   text-align: center;
   color: var(--muted-color);
@@ -47,92 +43,11 @@
   margin: 0 0 6px;
 }
 
-/* Buttons */
-.party-btn {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  text-align: center;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 15px;
-  padding: 13px 16px;
-  border-radius: 12px;
-  background: var(--primary-color);
-  color: var(--surface-color);
-  text-decoration: none;
-}
-.party-btn.primary { background: var(--secondary-color); color: var(--primary-color); }
-.party-btn.ghost {
-  background: var(--surface-color);
-  color: var(--primary-color);
-  border: 1.5px solid var(--muted-soft-color);
-}
-.party-btn:hover { filter: brightness(0.97); }
-.party-btn.ghost:hover { background: var(--surface-hover-color); }
-
-.party-or {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted-color);
-  font-size: 13px;
-  margin: 4px 0;
-}
-.party-or::before, .party-or::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--muted-soft-color);
-}
-
-.join-form { display: flex; gap: 8px; }
-.join-code {
-  flex: 1;
-  min-width: 0;
-  font-family: inherit;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-align: center;
-  text-transform: uppercase;
-  padding: 11px 12px;
-  border: 1.5px solid var(--muted-soft-color);
-  border-radius: 12px;
-  color: var(--primary-color);
-  background: var(--surface-color);
-}
-.join-form .party-btn { width: auto; padding-left: 22px; padding-right: 22px; }
+/* Buttons (`.lobby-btn` + pink `.primary`), the `.join-code` box, the brand
+   mark, separators, playing-as line, and avatar are the shared site components
+   in common.css — Flag Party uses the same ones as Tic-Tac-Toe. Only the
+   feature-specific join error line stays here. */
 .join-error { color: var(--muted-color); font-size: 13px; text-align: center; margin: 0; }
-
-/* "Playing as" + avatars */
-.playing-as {
-  margin-top: auto;
-  padding-top: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--muted-color);
-  font-size: 13px;
-}
-.playing-as strong { color: var(--primary-color); }
-
-.avatar {
-  width: 24px;
-  height: 24px;
-  flex: none;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 9px;
-  font-weight: 800;
-  color: var(--primary-color);
-  background: var(--secondary-color);
-}
-.avatar.o { background: var(--muted-soft-color); color: var(--muted-color); }
 
 .party-status {
   text-align: center;
@@ -144,27 +59,19 @@
   padding: 8px 12px;
   margin: 0 0 14px;
 }
-
-/* Lobby */
-.lobby-code-label {
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 12px;
-  color: var(--muted-color);
-  margin: 8px 0 0;
+/* Loading variant (solo "Starting…"): drop the box and italicise, so the
+   label + shared `.loading-dots` read as the same "loading…" idiom used on
+   the daily-stats and sync screens rather than a bordered status pill. */
+.party-status.loading {
+  background: none;
+  border: none;
+  padding: 0;
+  font-style: italic;
 }
-.room-code {
-  text-align: center;
-  font-size: 44px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  color: var(--primary-color);
-  font-variant-numeric: tabular-nums;
-  margin-left: 0.18em; /* optical: balance the trailing letter-spacing */
-}
-.share-btn { display: flex; align-items: center; justify-content: center; gap: 8px; }
 
+/* Lobby — the room code line (`.room-line`) and invite icon (`.share-link`)
+   are the shared components in common.css, same as Tic-Tac-Toe's in-game
+   header. Only the player list below is Flag-Party-specific. */
 .players { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
 .plabel {
   text-transform: uppercase;
@@ -228,9 +135,16 @@
   color: var(--muted-color);
   font-variant-numeric: tabular-nums;
 }
-/* Reveal: the same bar, but a quiet "next round in N" pacer, not a race clock. */
-.round-timer[data-mode="reveal"] .round-timer-fill { background: var(--muted-color); }
-.round-timer[data-mode="reveal"] .round-timer-label { font-weight: 600; }
+/* Reveal: no moving bar. Hide the progress track and show only the quiet
+   "next round in N" label, centred where the bar would have been — the count
+   ticks down but nothing animates. */
+.round-timer[data-mode="reveal"] .round-timer-track { display: none; }
+.round-timer[data-mode="reveal"] { justify-content: center; }
+.round-timer[data-mode="reveal"] .round-timer-label {
+  min-width: 0;
+  text-align: center;
+  font-weight: 600;
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .round-timer-fill { transition: width 0.2s linear; }
@@ -240,29 +154,40 @@
 
 .prompt { text-align: center; display: flex; flex-direction: column; gap: 2px; }
 .prompt-q { font-size: 13px; color: var(--muted-color); }
-.prompt-target { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: var(--primary-color); }
+/* Same weight/size as flagQuiz's `.country-name` prompt (28px / 500) so the
+   country name reads identically across the two flag-picking games — it used
+   to be 800 + tight tracking, which read a size larger than flagQuiz's. */
+.prompt-target { font-size: 28px; font-weight: 500; color: var(--primary-color); }
 
 .flags-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .opt {
   position: relative;
   padding: 5px;
   border: 2px solid transparent;
-  border-radius: 13px;
   background: var(--surface-color);
   cursor: pointer;
   font: inherit;
 }
 button.opt { -webkit-appearance: none; appearance: none; }
-.opt.sel, .opt.correct { border-color: var(--secondary-color); background: var(--surface-hover-color); }
+/* Question phase: your locked-in tap gets the pink ring + surface tint. */
+.opt.sel { border-color: var(--secondary-color); background: var(--surface-hover-color); }
+/* Reveal: the correct flag gets flagQuiz's green pulse, your own wrong pick
+   gets its pink pulse — the shared good/bad cue (keyframes in common.css), so
+   "right / wrong" reads the same across both flag-picking games. */
+.opt.correct { border-color: #2a9d4a; animation: pulse-correct 1.1s ease-out infinite; }
+.opt.wrong { border-color: var(--secondary-color); animation: pulse-wrong 1.1s ease-out infinite; }
 .opt.dim { opacity: 0.42; }
 .opt:not(.dim):not([disabled]):hover { border-color: var(--secondary-color); }
 
 .flag {
   display: block;
   width: 100%;
-  aspect-ratio: 3 / 2;
-  object-fit: cover;
-  border-radius: 8px;
+  /* The flag SVGs are all 640×480 (4:3); matching that here with `contain`
+     shows each flag whole — a 3:2 crop was cutting the top/bottom off every
+     flag and mangling Nepal's pennant (which is drawn on the 4:3 canvas).
+     Sharp corners (no radius) — reads cleaner than rounded flags. */
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.09);
 }
 .mark {
@@ -285,15 +210,6 @@ button.opt { -webkit-appearance: none; appearance: none; }
 
 .round-foot { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 .status-line { text-align: center; font-size: 13px; color: var(--muted-color); }
-.banner {
-  background: var(--secondary-color);
-  color: var(--primary-color);
-  border-radius: 11px;
-  padding: 10px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 700;
-}
 
 .toast-list { display: flex; flex-direction: column; gap: 7px; }
 .toast {
@@ -311,6 +227,19 @@ button.opt { -webkit-appearance: none; appearance: none; }
 .toast .fast { font-size: 11px; color: var(--muted-color); font-weight: 700; }
 .toast .pts { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--primary-color); }
 .toast .pts.zero { color: var(--muted-color); }
+
+/* Final screen actions reuse the site's shared `.result-links` + `.result-link`
+   (common.css) — the same inline "Play again · Home" row as flagQuiz / TTT,
+   instead of Flag Party's old pair of big buttons. This is a short centered
+   column, not a long scrolling result page, so the sticky full-bleed rail is
+   dropped here; only the inline link look is kept. */
+.pt-final .result-links {
+  position: static;
+  margin: 8px 0 0;
+  padding: 0;
+  background: none;
+}
+.result-sep { color: var(--muted-color); }
 
 /* Final board */
 .final-board { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
