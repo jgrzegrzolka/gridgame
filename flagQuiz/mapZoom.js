@@ -370,7 +370,13 @@ export function clampViewBox(vb, original, maxZoomIn = MAX_ZOOM_IN, maxZoomOut =
     if (y < minY) y = minY;
     if (y > maxY) y = maxY;
   } else if (oy === 0 && height >= original.height) {
-    y = original.y + (original.height - height) / 2;
+    // Bottom-align, don't centre. When the view is taller than the map (zoomed
+    // out past it, or the zoom-out margin), pin the map's BOTTOM edge to the
+    // view bottom so all the slack sits on TOP. On the world map that keeps
+    // Antarctica flush at the bottom with ocean above, instead of the map
+    // floating with a gap below it when you wheel-zoom out (Jan, 2026-07-09).
+    // Horizontal still centres (above) — the sides stay symmetric.
+    y = original.y + (original.height - height);
   } else {
     const minY = original.y - oy;
     const maxY = original.y + original.height - height + oy;

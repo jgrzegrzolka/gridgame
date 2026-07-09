@@ -334,16 +334,18 @@ test('clampViewBox lets you pan even at 1x zoom (width === original.width) when 
   assert.equal(out.x, -220.5);
 });
 
-test('clampViewBox still centres a zoomed-out viewBox when freePan is off', () => {
-  // Fullscreen zoom-out (viewBox larger than the map) with the default
-  // freePan=false: the map stays locked dead-centre — the historical rule.
+test('clampViewBox centres horizontally but bottom-aligns a zoomed-out viewBox when freePan is off', () => {
+  // Zoom-out (viewBox larger than the map) with the default freePan=false:
+  // x locks dead-centre, but y pins the map's BOTTOM to the view bottom so the
+  // vertical slack sits on top (Antarctica flush on the world map, no gap
+  // below). See the clampViewBox bottom-align branch.
   const original = { x: 0, y: 0, width: 100, height: 100 };
   const out = clampViewBox(
     { x: -80, y: -80, width: 200, height: 200 }, // dragged, 2× zoomed out
     original, 24, 3,
   );
-  assert.equal(out.x, -50); // centred: (100 - 200)/2
-  assert.equal(out.y, -50);
+  assert.equal(out.x, -50);  // centred: (100 - 200)/2
+  assert.equal(out.y, -100); // bottom-aligned: 100 - 200 → map bottom (100) = view bottom (-100+200)
 });
 
 test('clampViewBox freePan lets you drag a zoomed-out map off-centre', () => {
