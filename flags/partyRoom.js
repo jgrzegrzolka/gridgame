@@ -229,7 +229,13 @@ export function applyPlayAgain(room, playerId) {
     buzzes: [],
     seats,
   };
-  return { room: nextRoom, broadcasts: [{ to: 'all', message: rosterMessage(nextRoom) }] };
+  // A dedicated 'lobby' message (not just 'roster') so clients move their
+  // phase back — 'roster' only refreshes the player list, it doesn't reset
+  // the screen from the final board.
+  return {
+    room: nextRoom,
+    broadcasts: [{ to: 'all', message: { type: 'lobby', hostId: nextRoom.hostId, roster: rosterList(nextRoom) } }],
+  };
 }
 
 /**

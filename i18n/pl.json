@@ -328,7 +328,8 @@
     "daily": "Codzienna zagadka",
     "quiz": "60s Quiz",
     "find": "Stwórz łamigłówkę",
-    "ticTacToe": "Kółko i krzyżyk"
+    "ticTacToe": "Kółko i krzyżyk",
+    "party": "Flagowa impreza"
   },
   "home": {
     "daily": {
@@ -495,6 +496,49 @@
     "title": "Yet Another Quiz: 9×9 Kółko i krzyżyk z flagami",
     "offlineTitle": "Yet Another Quiz: 9×9 Kółko i krzyżyk offline",
     "rulesBody": "Dziewięć małych plansz kółko-i-krzyżyk ułożonych w wielką planszę 3×3. Każde pole leży na przecięciu wiersza i kolumny, wybierz państwo, którego flaga pasuje do obu. Wygranie małej planszy daje ci kontrolę nad nią; ułóż trzy zdobyte plansze w rzędzie na wielkiej planszy, by wygrać."
+  },
+  "party": {
+    "title": "Yet Another Quiz: Flagowa impreza",
+    "startTitle": "Rozpocznij grę",
+    "startSub": "Grajcie razem na swoich telefonach",
+    "createRoom": "Utwórz pokój",
+    "orJoin": "lub dołącz do pokoju",
+    "codePlaceholder": "KOD POKOJU",
+    "join": "Dołącz",
+    "playingAs": "Grasz jako",
+    "roomLabel": "Kod pokoju",
+    "share": "Link z zaproszeniem",
+    "shareCopied": "Skopiowano link",
+    "shareTitle": "Flagowa impreza",
+    "shareText": "Dołącz do mojego pokoju Flagowej imprezy:",
+    "players": "Gracze",
+    "host": "gospodarz",
+    "waitingHost": "Czekanie, aż gospodarz rozpocznie…",
+    "startGame": "Rozpocznij grę",
+    "round": "Runda {n} z {total}",
+    "whichFlag": "Która flaga to",
+    "theFlagOf": "Flaga państwa",
+    "tapFlag": "Dotknij flagi",
+    "answered": "odpowiedziało {n} z {total}",
+    "lockedWaiting": "Wybór zatwierdzony, czekanie na pozostałych…",
+    "locked": "Wybór zatwierdzony",
+    "fastest": "Najszybszy",
+    "nextRound": "Następna runda",
+    "finalScores": "Wyniki końcowe",
+    "winnerTakesIt": "{name} wygrywa",
+    "tie": "Remis!",
+    "playAgain": "Zagraj ponownie",
+    "leave": "Wyjdź",
+    "connecting": "Łączenie…",
+    "disconnected": "Rozłączono. Ponowne łączenie…",
+    "you": "Ty",
+    "reject": {
+      "roomNotFound": "Pokój nie znaleziony, poproś o kod lub utwórz nowy pokój",
+      "codeCollision": "Ten kod jest już zajęty, spróbuj utworzyć nowy",
+      "inProgress": "Ta gra już się rozpoczęła, poczekaj na następną",
+      "missingPlayerId": "Błąd połączenia, odśwież stronę",
+      "fallback": "Odrzucono: {reason}"
+    }
   },
   "variant": {
     "countries": "Wszystkie kraje",

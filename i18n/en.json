@@ -328,7 +328,8 @@
     "daily": "Daily puzzle",
     "quiz": "60s Quiz",
     "find": "Make a puzzle",
-    "ticTacToe": "Tic Tac Toe"
+    "ticTacToe": "Tic Tac Toe",
+    "party": "Flag Party"
   },
   "home": {
     "daily": {
@@ -495,6 +496,49 @@
     "title": "Yet Another Quiz: 9×9 Flag Tic Tac Toe",
     "offlineTitle": "Yet Another Quiz: Offline 9×9 Flag Tic Tac Toe",
     "rulesBody": "Nine small tic-tac-toe boards forming a big 3×3 board. Each cell sits on a row and a column, pick a country whose flag matches both. Win a small board to claim it; line up three claimed boards on the big board to win."
+  },
+  "party": {
+    "title": "Yet Another Quiz: Flag Party",
+    "startTitle": "Start a game",
+    "startSub": "Play together on your phones",
+    "createRoom": "Create a room",
+    "orJoin": "or join one",
+    "codePlaceholder": "ROOM CODE",
+    "join": "Join",
+    "playingAs": "Playing as",
+    "roomLabel": "Room code",
+    "share": "Invite link",
+    "shareCopied": "Link copied",
+    "shareTitle": "Flag Party",
+    "shareText": "Join my Flag Party room:",
+    "players": "Players",
+    "host": "host",
+    "waitingHost": "Waiting for the host to start…",
+    "startGame": "Start game",
+    "round": "Round {n} of {total}",
+    "whichFlag": "Which flag is",
+    "theFlagOf": "The flag of",
+    "tapFlag": "Tap the flag",
+    "answered": "{n} of {total} answered",
+    "lockedWaiting": "Locked in, waiting for the others…",
+    "locked": "Locked in",
+    "fastest": "Fastest",
+    "nextRound": "Next round",
+    "finalScores": "Final scores",
+    "winnerTakesIt": "{name} takes it",
+    "tie": "It's a tie!",
+    "playAgain": "Play again",
+    "leave": "Leave",
+    "connecting": "Connecting…",
+    "disconnected": "Disconnected. Reconnecting…",
+    "you": "You",
+    "reject": {
+      "roomNotFound": "Room not found, ask for the code or create a new room",
+      "codeCollision": "That code is already taken, try creating a new one",
+      "inProgress": "That game has already started, wait for the next one",
+      "missingPlayerId": "Connection error, please reload the page",
+      "fallback": "Rejected: {reason}"
+    }
   },
   "variant": {
     "countries": "All countries",

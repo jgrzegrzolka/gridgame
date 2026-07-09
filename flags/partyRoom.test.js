@@ -208,6 +208,10 @@ test('applyPlayAgain: host resets scores and returns to the lobby', () => {
   assert.equal(r.room.seats.get('alice')?.score, 0);
   assert.equal(r.room.seats.get('bob')?.score, 0);
   assert.equal(r.room.seats.size, 2, 'seats are kept');
+  // Must broadcast a 'lobby' message (not just 'roster') so clients move their
+  // phase back off the final board.
+  assert.equal(msg(r, 'lobby').hostId, 'alice');
+  assert.equal(msg(r, 'lobby').roster.length, 2);
 });
 
 // ---- applyDisconnect ----

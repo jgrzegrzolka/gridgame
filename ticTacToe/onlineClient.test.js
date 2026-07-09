@@ -1,78 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ROOM_ALPHABET,
-  ROOM_LEN,
-  generateCode,
-  isValidRoomCode,
-  serverUrlFor,
   initialClientState,
   reduceServerMessage,
   canGiveUpOnline,
 } from './onlineClient.js';
 
-// ---- Room code generation ----
-
-test('generateCode: returns ROOM_LEN characters', () => {
-  const code = generateCode(() => 0);
-  assert.equal(code.length, ROOM_LEN);
-});
-
-test('generateCode: every character is from the curated alphabet', () => {
-  // Drive rng across the alphabet so we hit several indices.
-  const seq = [0, 0.1, 0.3, 0.5, 0.9];
-  let i = 0;
-  const code = generateCode(() => seq[i++ % seq.length]);
-  for (const ch of code) {
-    assert.ok(ROOM_ALPHABET.includes(ch), `unexpected char in code: ${ch}`);
-  }
-});
-
-test('generateCode: alphabet excludes ambiguous characters (I, O, L, 0, 1)', () => {
-  for (const ch of 'IOL01') {
-    assert.equal(ROOM_ALPHABET.includes(ch), false, `${ch} should not be in alphabet`);
-  }
-});
-
-// ---- Validation ----
-
-test('isValidRoomCode: accepts 5 uppercase alphanumeric characters', () => {
-  assert.equal(isValidRoomCode('ABCDE'), true);
-  assert.equal(isValidRoomCode('XY7Z9'), true);
-});
-
-test('isValidRoomCode: rejects wrong length and case', () => {
-  assert.equal(isValidRoomCode('ABCD'), false);
-  assert.equal(isValidRoomCode('ABCDEF'), false);
-  assert.equal(isValidRoomCode('abcde'), false);
-  assert.equal(isValidRoomCode(''), false);
-  assert.equal(isValidRoomCode('ABCD!'), false);
-});
-
-// ---- Server URL selection ----
-
-test('serverUrlFor: localhost goes to a local dev server on port 1999', () => {
-  assert.equal(serverUrlFor('localhost'), 'ws://localhost:1999/parties/main/');
-  assert.equal(serverUrlFor('127.0.0.1'), 'ws://127.0.0.1:1999/parties/main/');
-});
-
-test('serverUrlFor: LAN IPs also route to the local dev server (testing from a phone, another laptop, etc.)', () => {
-  assert.equal(serverUrlFor('192.168.0.5'), 'ws://192.168.0.5:1999/parties/main/');
-  assert.equal(serverUrlFor('10.0.0.42'), 'ws://10.0.0.42:1999/parties/main/');
-});
-
-test('serverUrlFor: production hostnames go to the deployed Cloudflare PartyKit', () => {
-  const prod = 'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/main/';
-  assert.equal(serverUrlFor('jgrzegrzolka.github.io'), prod);
-  assert.equal(serverUrlFor('yetanotherquiz.com'), prod);
-  assert.equal(serverUrlFor('www.yetanotherquiz.com'), prod);
-});
-
-test('serverUrlFor: party arg routes to the ultimate (9×9) party for dev and prod', () => {
-  assert.equal(serverUrlFor('localhost', 'ultimate'), 'ws://localhost:1999/parties/ultimate/');
-  assert.equal(serverUrlFor('jgrzegrzolka.github.io', 'ultimate'),
-    'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/ultimate/');
-});
+// Room-code / server-URL helpers moved to flags/roomNet.js — their tests live
+// in flags/roomNet.test.js now. This file covers the TTT-specific reducer.
 
 // ---- Reducer ----
 

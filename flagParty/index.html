@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Flag Party: a fast flag-picking party game you play together on your phones. Race to pick the right flag, points for being right and being first." />
+    <link rel="canonical" href="https://yetanotherquiz.com/flagParty/" />
+    <link rel="dns-prefetch" href="//gridgame-ttt.jgrzegrzolka.partykit.dev" />
+    <link rel="preload" href="../flags/countries.json?v=__BUILD__" as="fetch" type="application/json" crossorigin />
+    <title data-i18n="party.title">Yet Another Quiz: Flag Party</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=__BUILD__" />
+    <link rel="stylesheet" href="../common.css?v=__BUILD__" />
+    <link rel="stylesheet" href="index.css?v=__BUILD__" />
+  </head>
+  <body>
+    <a class="lang-toggle" id="lang-toggle" href="#"></a>
+    <script>
+      // Sync lang-flag paint — sets data-current before any module imports
+      // start, so the toggle shows the flag with first paint instead of
+      // after the i18n.js graph resolves. Pinned by chrome.test.js.
+      (function () {
+        var lang = null;
+        try {
+          var s = localStorage.getItem('gridgame.lang');
+          if (s === 'en' || s === 'pl') lang = s;
+        } catch (e) {}
+        if (!lang) {
+          var n = (navigator.language || '').toLowerCase().split('-')[0];
+          lang = n === 'pl' ? 'pl' : 'en';
+        }
+        document.getElementById('lang-toggle').setAttribute('data-current', lang);
+      })();
+    </script>
+    <a class="flags-link" href="../flagsdata/" aria-label="Browse flags" title="Browse flags" data-i18n-attr="aria-label:menu.flagsData,title:menu.flagsData"><span class="flags-icon" aria-hidden="true"></span></a>
+    <button
+      type="button"
+      class="burger"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="burger-panel"
+      data-label-open="Open menu"
+      data-label-close="Close menu"
+      data-i18n-attr="aria-label:menu.open,data-label-open:menu.open,data-label-close:menu.close"
+      onclick="
+        const open = this.getAttribute('aria-expanded') === 'true';
+        this.setAttribute('aria-expanded', String(!open));
+        this.setAttribute('aria-label', open ? this.dataset.labelOpen : this.dataset.labelClose);
+        document.getElementById('burger-panel').hidden = open;
+      "
+    >
+      <span class="burger-bars" aria-hidden="true"></span>
+    </button>
+    <nav id="burger-panel" class="burger-panel" hidden>
+      <ul class="menu">
+        <li><a href="../" data-i18n="menu.home">Home</a></li>
+        <li class="menu-divider"><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
+      </ul>
+    </nav>
+
+    <main class="party" id="party">
+      <p class="party-status" id="party-status" hidden></p>
+
+      <!-- Start: create or join -->
+      <section class="pt-start" id="pt-start" hidden>
+        <span class="party-brand">Flag<span>Party</span></span>
+        <h1 class="party-h" data-i18n="party.startTitle">Start a game</h1>
+        <p class="party-sub" data-i18n="party.startSub">Play together on your phones</p>
+        <button type="button" class="party-btn primary" id="create-room" data-i18n="party.createRoom">Create a room</button>
+        <p class="party-or" data-i18n="party.orJoin">or join one</p>
+        <form class="join-form" id="join-form">
+          <input
+            type="text"
+            id="join-code"
+            class="join-code"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            maxlength="5"
+            placeholder="ROOM CODE"
+            data-i18n-attr="placeholder:party.codePlaceholder"
+          />
+          <button type="submit" class="party-btn" data-i18n="party.join">Join</button>
+        </form>
+        <p class="join-error" id="join-error" hidden></p>
+        <p class="playing-as" id="playing-as"></p>
+      </section>
+
+      <!-- Lobby -->
+      <section class="pt-lobby" id="pt-lobby" hidden>
+        <p class="lobby-code-label" data-i18n="party.roomLabel">Room code</p>
+        <div class="room-code" id="room-code">-----</div>
+        <button type="button" class="party-btn ghost share-btn" id="share-btn">
+          <span class="share-icon" aria-hidden="true"></span><span id="share-label" data-i18n="party.share">Invite link</span>
+        </button>
+        <div class="players" id="players"></div>
+        <button type="button" class="party-btn primary" id="start-game" data-i18n="party.startGame" hidden>Start game</button>
+        <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
+      </section>
+
+      <!-- Round (question + reveal share this) -->
+      <section class="pt-round" id="pt-round" hidden>
+        <div class="round-pill" id="round-pill"></div>
+        <div class="prompt">
+          <span class="prompt-q" id="prompt-q"></span>
+          <span class="prompt-target" id="prompt-target"></span>
+        </div>
+        <div class="flags-grid" id="flags-grid"></div>
+        <div class="round-foot" id="round-foot"></div>
+      </section>
+
+      <!-- Final -->
+      <section class="pt-final" id="pt-final" hidden>
+        <h2 class="party-h" data-i18n="party.finalScores">Final scores</h2>
+        <p class="party-sub" id="final-sub"></p>
+        <div class="final-board" id="final-board"></div>
+        <button type="button" class="party-btn primary" id="play-again" data-i18n="party.playAgain" hidden>Play again</button>
+        <a class="party-btn ghost" href="../" id="leave-btn" data-i18n="party.leave">Leave</a>
+      </section>
+    </main>
+
+    <script type="module">
+      import { bootFlagParty } from './page.js';
+      import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from '../common.js';
+      import { bootI18n, wireLangToggle } from '../i18n.js';
+      bootI18n('../').then((lang) => {
+        wireLangToggle(lang, undefined, { softReload: true, base: '../' });
+        bootFlagParty();
+        disableBurgerIfEmpty(
+          document.querySelector('.burger'),
+          document.querySelector('#burger-panel .menu'),
+        );
+        wireBurgerDismiss();
+        mountNicknameMenuItem({
+          rootEl: document.querySelector('#burger-panel .menu'),
+          profileHref: '../profile/',
+        });
+      });
+    </script>
+  </body>
+</html>
