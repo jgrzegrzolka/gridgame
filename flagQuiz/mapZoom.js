@@ -654,22 +654,29 @@ export function attachZoomPan(svg, opts = {}) {
   }
 
   /**
-   * Clamp a live PAN frame. Same hard clamp as `apply`, except the pan may
-   * overscroll past its edge with rubber-band resistance (rubberBandOffset)
-   * rather than dead-stopping at the wall — for BOTH the zoomed-in map edge and
-   * the zoomed-out floating-map keep-sliver edge (FREE_PAN_KEEP). Within bounds
-   * the offset is 0, so this is a no-op until you actually reach an edge. The
-   * released overscroll springs back in `endPanGesture`. Zoom stays hard-clamped.
+   * Live PAN frame for free drag (option B) with ONE hard edge: the bottom.
+   * The map follows the finger with no resistance up top and on the sides — you
+   * can pull it clear off screen and it springs home on release (endPanGesture)
+   * — but the bottom is a wall. The visible window can never drop below the
+   * map's bottom edge (Antarctica), at any zoom: no drag or zoom reveals empty
+   * space beneath it (Jan, 2026-07-09).
+   *
+   * `hard` is the fully-clamped position; `hard.y` = clamp(next.y, minY, maxY)
+   * where maxY pins Antarctica to the window bottom. `Math.min(next.y, hard.y)`
+   * keeps the free UPWARD direction (next.y below the top floor is used as-is)
+   * while pinning the DOWNWARD one to maxY (the Antarctica wall). x is fully
+   * free (springs home); width/height are the pan's own — zoom can't change
+   * mid-pan. Zoom itself stays fully hard-clamped (the non-pan branch below).
    * @param {ViewBox} next
    * @returns {ViewBox}
    */
-  function clampPanFrame(next) {
+  function freePanFrame(next) {
     const hard = clampViewBox(next, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(next), freePan);
     return {
-      x: hard.x + rubberBandOffset(next.x - hard.x, hard.width),
-      y: hard.y + rubberBandOffset(next.y - hard.y, hard.height),
-      width: hard.width,
-      height: hard.height,
+      x: next.x,
+      y: Math.min(next.y, hard.y),
+      width: next.width,
+      height: next.height,
     };
   }
 
@@ -751,14 +758,12 @@ export function attachZoomPan(svg, opts = {}) {
     pendingViewBox = null;
     pendingPan = false;
     if (!next) return;
-    // Option B — free drag: a pan follows the finger 1:1 with NO clamp during
-    // the gesture, so you can pull the map anywhere (even off screen), and it
-    // springs back to the clamped home on release (endPanGesture computes
-    // home = clampViewBox(current) and springs to it). Zoom still hard-clamps.
-    // (clampPanFrame — the A-mode rubber-band-during-drag — is parked below
-    // while we trial B; swap it back here to restore A.)
+    // Free drag (option B) with one hard wall — the bottom. A pan follows the
+    // finger 1:1 up top and sideways (springs home on release via
+    // endPanGesture), but freePanFrame pins the bottom so you can never drag
+    // the map's edge above Antarctica into empty space. Zoom stays hard-clamped.
     current = isPan
-      ? next
+      ? freePanFrame(next)
       : clampViewBox(next, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(next), freePan);
     beginGesture();
     setViewBoxNow(current);   // grey simplify + per-frame viewBox render
