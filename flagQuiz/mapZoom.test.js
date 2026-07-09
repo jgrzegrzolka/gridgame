@@ -14,7 +14,6 @@ import {
   easeInOutCubic,
   easeOutCubic,
   springStep,
-  rubberBandOffset,
   flickVelocity,
 } from './mapZoom.js';
 
@@ -553,43 +552,6 @@ test('springStep carries initial velocity past the start before returning', () =
   }
   assert.ok(maxX > 5, `velocity should carry it outward first, peak ${maxX}`);
   assert.ok(Math.abs(x) < 1, `then settle near 0, got ${x}`);
-});
-
-// ---- rubberBandOffset ----
-
-test('rubberBandOffset is zero within bounds (no overshoot)', () => {
-  assert.equal(rubberBandOffset(0, 100), 0);
-});
-
-test('rubberBandOffset preserves the overshoot direction', () => {
-  assert.ok(rubberBandOffset(20, 100) > 0);   // past the high edge
-  assert.ok(rubberBandOffset(-20, 100) < 0);  // past the low edge
-});
-
-test('rubberBandOffset stays strictly under the cap (dim × MAX_OVERSCROLL = 0.3)', () => {
-  const cap = 100 * 0.3; // mirrors MAX_OVERSCROLL in mapZoom.js
-  // Even a huge yank only asymptotes toward the cap, never reaches it.
-  assert.ok(rubberBandOffset(1e6, 100) < cap);
-  assert.ok(rubberBandOffset(1e6, 100) > cap * 0.99);
-});
-
-test('rubberBandOffset grows with overshoot but with diminishing returns', () => {
-  // Sample further out (20/40/80) so the concavity shows regardless of the cap.
-  const a = rubberBandOffset(20, 100);
-  const b = rubberBandOffset(40, 100);
-  const c = rubberBandOffset(80, 100);
-  assert.ok(b > a && c > b);            // monotonic increasing
-  assert.ok(b - a > c - b);             // each extra pull gives less
-});
-
-test('rubberBandOffset scales its cap with the dimension', () => {
-  // A wider viewBox (more zoomed out) allows proportionally more give.
-  assert.ok(rubberBandOffset(1e6, 200) > rubberBandOffset(1e6, 100));
-});
-
-test('rubberBandOffset guards a non-positive dimension', () => {
-  assert.equal(rubberBandOffset(20, 0), 0);
-  assert.equal(rubberBandOffset(20, -5), 0);
 });
 
 // ---- flickVelocity ----

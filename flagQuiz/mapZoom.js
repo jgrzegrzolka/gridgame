@@ -70,18 +70,6 @@ const CONTAIN_TOP_REST_FRACTION = 0.15;
  */
 const FREE_PAN_KEEP = 0.1;
 /**
- * Rubber-band overscroll: how far a zoomed-in pan may stretch PAST the edge
- * clamp, as a fraction of the visible viewBox dimension. The offset eases toward
- * this cap with growing resistance (see rubberBandOffset) and springs back on
- * release (see springHome / endPanGesture), so the edge gives a little instead
- * of dead-stopping ("hitting a wall"). Applies at EVERY pan edge — the zoomed-in
- * map edge and the zoomed-out floating-map keep-sliver (FREE_PAN_KEEP) alike.
- * Zoom limits stay hard-clamped. Jan, 2026-07-08. Bumped 0.12 -> 0.2 -> 0.35,
- * then settled at 0.30 on 2026-07-09 ("wall give 140px" ≈ 30% of the view in the
- * rubber-band feel lab).
- */
-const MAX_OVERSCROLL = 0.3;
-/**
  * Spring-back physics. The released overscroll no longer eases home over a fixed
  * duration; it's integrated as a real damped spring (see springStep / springHome),
  * so it absorbs the release velocity and settles organically instead of running a
@@ -480,25 +468,6 @@ export function springStep(x, v, dt, omega, zeta) {
   const nv = v + a * dt;
   const nx = x + nv * dt;
   return { x: nx, v: nv };
-}
-
-/**
- * Rubber-band overscroll offset. Maps how far past a pan limit the finger wants
- * to go (`overshoot`, signed vbu — 0 when within bounds) to a damped offset
- * that eases toward a cap of `dim × MAX_OVERSCROLL` with growing resistance: a
- * small overshoot moves nearly 1:1, a hard yank asymptotes to the cap and never
- * exceeds it. That growing stiffness is the "give" at the edge; `springHome`
- * eases the result back to 0 on release.
- *
- * @param {number} overshoot  signed vbu past the clamp (negative = past the low edge)
- * @param {number} dim        the viewBox dimension on that axis (width or height)
- * @returns {number} signed offset, strictly within ±(dim × MAX_OVERSCROLL)
- */
-export function rubberBandOffset(overshoot, dim) {
-  if (!overshoot || !(dim > 0)) return 0;
-  const max = dim * MAX_OVERSCROLL;
-  const d = Math.abs(overshoot);
-  return Math.sign(overshoot) * max * (1 - 1 / (1 + d / max));
 }
 
 /**
