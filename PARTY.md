@@ -146,37 +146,55 @@ is proven and the free rounds are in.
   every connection — it's a new client role, not a protocol change. This is the Jackbox
   layer, added on top once own-screen play works.
 
-## Iteration 1 — the show skeleton with one round (flag-pick), own-screen
+## Iteration 1 — the show skeleton with one round (flag-pick), own-screen — SHIPPED (branch `feat/flag-party-iter1`)
 
 Goal: a genuinely playable flag round on two phones (and solo), exercising the **entire**
 engine so rounds 2–4 and the TV surface are pure additions afterward.
 
-- [ ] **Home tile, ship-dark.** 5th `.game-tile` in `index.html` → `flagParty/`, `hidden`
-      by default; `bootHome()` reveals it when `?test` is present. i18n label key.
-- [ ] **PartyKit party + pure room module.** Register the new party in `partykit.json`;
+- [x] **Home tile, ship-dark.** 5th `.game-tile` in `index.html` → `flagParty/`, `hidden`
+      by default; `bootHome()` reveals it when `?test` is present. `tile.party` i18n key.
+- [x] **PartyKit party + pure room module.** Registered `party` in `partykit.json`;
       `party/partyGameServer.js` (thin) + `flags/partyRoom.js` (pure: seats, host, start,
-      buzz-order, reveal-with-all-picks, tally, next, final) + `flags/partyRoom.test.js`.
-- [ ] **Round contract + flag-pick round.** `flags/partyRounds/flagPick.js` implementing
-      `generate` (via `pickQuestion`) + `isCorrect`, with tests. `flags/partyScore.js`
-      (+ test) for the decaying speed bonus + solo scoring.
-- [ ] **Player page** (`flagParty/index.html` + `page.js`) — one page, both create and join:
-      Create → lobby (code + share link + QR + joined players) or Join via `?c=CODE` →
-      Start → per-round (prompt + 4 flags, tap to answer, locked-in) → reveal (correct flag
-      + everyone's pick + points + scoreboard) → final board after 5 rounds → Play again.
-      Nickname auto-read from `gridgame.nickname`.
-- [ ] `npm run validate` green (tests + typecheck).
+      buzz-order, reveal-with-all-picks, tally, next, final, play-again→lobby) + tests.
+- [x] **Round contract + flag-pick round.** `flags/partyRounds/flagPick.js` (`generate` via
+      `pickQuestion` + `isCorrect`), tested. `flags/partyScore.js` (decaying speed bonus,
+      off in solo), tested. `flags/partyClient.js` (client reducer), tested.
+- [x] **Shared lobby helpers promoted** to `flags/roomNet.js` (code + WS URL), re-exported
+      from `ticTacToe/onlineClient.js`; tests moved to `flags/roomNet.test.js`.
+- [x] **Player page** (`flagParty/index.html` + `page.js` + `index.css`) — one page for
+      create + join: Create → lobby (code + invite link + roster) or Join via `?room=CODE`
+      → Start → per-round (prompt + 4 flags, tap, locked-in) → reveal (correct flag +
+      everyone's pick + points + scoreboard) → final board → Play again. Nickname from
+      `gridgame.nickname`. en + pl i18n (`party.*`).
+- [x] `npm run validate` green + end-to-end verified in-browser (solo run through 5 rounds).
 
-**Explicitly NOT in iteration 1** (so it stays shippable): rounds 2–4, the TV/Display
-surface, quantitative data, persisted scores / leaderboards (the show is ephemeral — a room,
-a session, done), more than one round *type*, spectators.
+**Bugs the end-to-end verify caught** (unit tests alone missed both): (1) *Play again* left the
+client stuck on the final board — the server only broadcast `roster`, which carries no phase;
+fixed with a dedicated `lobby` message the client acts on. (2) All phase sections stacked on
+screen at once — `.party section { display: flex }` outweighed the UA `[hidden]` rule; fixed
+with `.party section[hidden] { display: none }`. Both now pinned (unit test + the CSS rule's
+own comment).
+
+**Deferred from iteration 1** (deviations from the mockup, deliberately): the **QR code** in
+the lobby — v1 ships the room code + an invite-link/share button (a 5-letter code is fine to
+read aloud in the same room); QR is a fast follow. Also: rounds 2–4, the TV/Display surface,
+quantitative data, persisted scores / leaderboards (the show is ephemeral), more than one
+round *type*, spectators.
+
+**Confirmed UI decisions (2026-07-09, from the mockup):** A — flags on the phone in a 2×2
+grid; B — correct = secondary (pink) ring + check, wrong = dimmed, no green/red (on the seven
+palette colours); C — reveal shows everyone's pick (avatar on the chosen flag); D — first
+correct tagged "⚡ Fastest", full scoreboard only on reveal/final. Name: **Flag Party**
+(folder `flagParty/`; pl tile "Flagowa impreza").
 
 ## Open decisions (settle as they come up, not now)
 
-- **Name.** "Flag Party" / "Flag Rush" / "Flag Show"? Folder is `flagParty/` for now
-  (can't be `party/` — that's the PartyKit server dir).
-- **Question count / timing per round.** 5 questions, per-question countdown length.
-- **Speed-bonus curve.** Decaying (+5/+3/+1) vs flat first-only vs continuous by rank.
-- **Max seats.** 2 to start is fine; the room module should not hard-cap low.
+- **QR in the lobby.** Deferred from iteration 1 (see above) — add a self-contained QR
+  generator, or accept code + link.
+- **Question count / timing per round.** Fixed at 5 rounds; no per-question countdown yet
+  (the room supports host force-reveal for when a timer is added).
+- **Speed-bonus curve.** Currently decaying (+5/+3/+1) in `flags/partyScore.js`.
+- **Max seats.** No hard cap in the room module; 2 is the tested case.
 
 ## Out of scope (don't sweep in)
 

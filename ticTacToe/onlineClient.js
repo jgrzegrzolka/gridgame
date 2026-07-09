@@ -1,65 +1,11 @@
 /** @typedef {import('../flags/ticTacToe.js').GameState} GameState */
 /** @typedef {import('../flags/ticTacToe.js').Player} Player */
 
-
-/** Alphabet for room codes — no ambiguous characters (no I/O/L/0/1). */
-export const ROOM_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-export const ROOM_LEN = 5;
-
-const ROOM_CODE_RE = /^[A-Z0-9]{5}$/;
-
-/**
- * @param {() => number} [rng]
- * @returns {string}
- */
-export function generateCode(rng = Math.random) {
-  let code = '';
-  for (let i = 0; i < ROOM_LEN; i++) {
-    code += ROOM_ALPHABET[Math.floor(rng() * ROOM_ALPHABET.length)];
-  }
-  return code;
-}
-
-/**
- * Cheap surface check — the server is the real authority on whether a code
- * corresponds to an existing room. This just keeps the lobby UI from sending
- * garbage and gives a friendlier error than waiting for a connection failure.
- *
- * @param {string} code
- * @returns {boolean}
- */
-export function isValidRoomCode(code) {
-  return ROOM_CODE_RE.test(code);
-}
-
-/** Production hostnames that should hit the deployed PartyKit. */
-const PROD_HOSTNAMES = new Set([
-  'jgrzegrzolka.github.io',
-  'yetanotherquiz.com',
-  'www.yetanotherquiz.com',
-]);
-
-/**
- * Which WebSocket URL the client should connect to.
- * The deployed site (GitHub Pages or the custom domain) goes to the
- * Cloudflare-hosted PartyKit. Anywhere else (localhost, 127.0.0.1, LAN IPs
- * like 192.168.x.x when you open the dev server from another device)
- * connects to a partykit dev server running on port 1999 on the same host.
- *
- * `party` selects which PartyKit party class handles the room — 'main'
- * for the 3×3 server, 'ultimate' for the 9×9 server. Rooms in different
- * parties don't share state, so the same room code can exist in both.
- *
- * @param {string} hostname
- * @param {string} [party]
- * @returns {string}
- */
-export function serverUrlFor(hostname, party = 'main') {
-  if (PROD_HOSTNAMES.has(hostname)) {
-    return `wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/${party}/`;
-  }
-  return `ws://${hostname}:1999/parties/${party}/`;
-}
+// Room-lobby primitives (code + validation + server URL) live in the shared
+// flags/roomNet.js now that Flag Party consumes them too. Re-exported here so
+// this module's existing callers — ticTacToe/page.js, the 9×9 client — keep
+// importing them from './onlineClient.js' unchanged.
+export { ROOM_ALPHABET, ROOM_LEN, generateCode, isValidRoomCode, serverUrlFor } from '../flags/roomNet.js';
 
 /**
  * Reject-reason payload: an i18n key + English fallback, plus optional

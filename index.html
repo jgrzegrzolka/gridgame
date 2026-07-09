@@ -161,6 +161,26 @@
               <span class="game-name" data-i18n="tile.ticTacToe">Tic Tac Toe</span>
             </span>
           </a>
+          <!-- Flag Party — shipped dark. Hidden until the URL carries ?test,
+               revealed by bootHome(); reuses the quiz-preview markup so no new
+               home CSS. Remove `hidden` + the reveal guard to launch. -->
+          <a class="game-tile" id="tile-party" href="flagParty/" hidden>
+            <span class="tile-preview">
+              <span class="quiz-preview">
+                <span class="quiz-prompt">Japan</span>
+                <span class="quiz-flags">
+                  <img class="quiz-flag" src="flags/svg/jp.svg" alt="" />
+                  <img class="quiz-flag" src="flags/svg/fr.svg" alt="" />
+                  <img class="quiz-flag" src="flags/svg/pl.svg" alt="" />
+                  <img class="quiz-flag" src="flags/svg/ua.svg" alt="" />
+                </span>
+              </span>
+            </span>
+            <span class="tile-label">
+              <span class="game-icon icon-quiz" aria-hidden="true"></span>
+              <span class="game-name" data-i18n="tile.party">Flag Party</span>
+            </span>
+          </a>
         </div>
       </section>
     </main>

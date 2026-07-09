@@ -1,0 +1,32 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { id, generate, isCorrect } from './flagPick.js';
+
+const POOL = [
+  { code: 'jp' }, { code: 'kr' }, { code: 'cn' }, { code: 'th' },
+  { code: 'fr' }, { code: 'de' }, { code: 'it' }, { code: 'es' },
+];
+
+test('id is stable', () => {
+  assert.equal(id, 'flagPick');
+});
+
+test('generate: four unique options, one of them the answer, prompt == answer', () => {
+  for (let i = 0; i < 50; i++) {
+    const q = generate(POOL);
+    assert.equal(q.options.length, 4);
+    assert.equal(new Set(q.options).size, 4, 'options are distinct');
+    assert.ok(q.options.includes(q.answer), 'the answer is among the options');
+    assert.equal(q.prompt, q.answer, 'prompt names the target country');
+    for (const code of q.options) {
+      assert.ok(POOL.some((c) => c.code === code), 'options come from the pool');
+    }
+  }
+});
+
+test('isCorrect: only the answer code is correct', () => {
+  const q = { prompt: 'jp', options: ['jp', 'kr', 'cn', 'th'], answer: 'jp' };
+  assert.equal(isCorrect(q, 'jp'), true);
+  assert.equal(isCorrect(q, 'kr'), false);
+  assert.equal(isCorrect(q, 'zz'), false);
+});

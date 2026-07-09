@@ -1,0 +1,203 @@
+/**
+ * Client-side state for a Flag Party player. Pure reducer over the messages the
+ * server broadcasts (`flags/partyRoom.js` produces them), same shape as the TTT
+ * `reduceServerMessage`: state on the left, side effects on the right, so the
+ * page (`flagParty/page.js`) stays thin DOM glue and this stays unit-testable.
+ *
+ * The server is authoritative for the shared game; this only tracks what one
+ * player's screen needs to render, plus `myChoice` — the option this device
+ * tapped, which is local until reveal (the server never echoes picks early).
+ *
+ * @typedef {'connecting' | 'lobby' | 'question' | 'reveal' | 'final'} Phase
+ * @typedef {{ playerId: string, nickname: string, score: number, present: boolean }} RosterEntry
+ * @typedef {{ prompt: string, options: string[] }} PublicQuestion
+ * @typedef {{ key: string, fallback: string, params?: Record<string, string> }} StatusOverride
+ *
+ * @typedef {Object} PartyClientState
+ * @property {Phase} phase
+ * @property {string | null} you
+ * @property {boolean} isHost
+ * @property {RosterEntry[]} roster
+ * @property {number} totalRounds
+ * @property {number} roundIndex
+ * @property {PublicQuestion | null} question
+ * @property {number} buzzedCount
+ * @property {number} seatCount
+ * @property {string | null} myChoice
+ * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number> } | null} reveal
+ * @property {Array<{ playerId: string, nickname: string, score: number }> | null} scoreboard
+ * @property {StatusOverride | null} statusOverride
+ *
+ * @typedef {{ type: 'close' }} Effect
+ */
+
+/** @returns {PartyClientState} */
+export function initialPartyClientState() {
+  return {
+    phase: 'connecting',
+    you: null,
+    isHost: false,
+    roster: [],
+    totalRounds: 0,
+    roundIndex: 0,
+    question: null,
+    buzzedCount: 0,
+    seatCount: 0,
+    myChoice: null,
+    reveal: null,
+    scoreboard: null,
+    statusOverride: null,
+  };
+}
+
+/**
+ * @param {RosterEntry[]} roster
+ * @returns {number}
+ */
+function presentCount(roster) {
+  return roster.filter((r) => r.present).length;
+}
+
+/**
+ * Reject reasons keyed by wire-protocol code → i18n key + English fallback.
+ * Translation happens at paint time (the strings cache may not be loaded when
+ * this module is imported), matching the TTT client's approach.
+ *
+ * @type {Record<string, { key: string, fallback: string }>}
+ */
+const REJECT_MESSAGES = {
+  'room-not-found': { key: 'party.reject.roomNotFound', fallback: 'Room not found, ask for the code or create a new room' },
+  'code-collision': { key: 'party.reject.codeCollision', fallback: 'That code is already taken, try creating a new one' },
+  'in-progress': { key: 'party.reject.inProgress', fallback: 'That game has already started, wait for the next one' },
+  'missing-player-id': { key: 'party.reject.missingPlayerId', fallback: 'Connection error, please reload the page' },
+};
+
+/**
+ * @param {PartyClientState} state
+ * @param {any} message
+ * @returns {{ state: PartyClientState, effects: Effect[] }}
+ */
+export function reducePartyMessage(state, message) {
+  switch (message.type) {
+    case 'welcome': {
+      return {
+        state: {
+          ...state,
+          you: message.you,
+          isHost: !!message.isHost,
+          phase: message.phase,
+          roster: message.roster ?? [],
+          totalRounds: message.totalRounds ?? state.totalRounds,
+          roundIndex: message.roundIndex ?? 0,
+          question: message.question ?? null,
+          scoreboard: message.scoreboard ?? null,
+          // A reconnect can't recover whether we already buzzed this question;
+          // treat as fresh — the server ignores a duplicate buzz anyway.
+          myChoice: null,
+          reveal: null,
+        },
+        effects: [],
+      };
+    }
+    case 'roster': {
+      return {
+        state: {
+          ...state,
+          roster: message.roster ?? state.roster,
+          isHost: message.hostId != null ? message.hostId === state.you : state.isHost,
+        },
+        effects: [],
+      };
+    }
+    case 'lobby': {
+      // Sent on Play again: back to the lobby with a clean slate.
+      return {
+        state: {
+          ...state,
+          phase: 'lobby',
+          roster: message.roster ?? state.roster,
+          isHost: message.hostId != null ? message.hostId === state.you : state.isHost,
+          question: null,
+          reveal: null,
+          scoreboard: null,
+          myChoice: null,
+        },
+        effects: [],
+      };
+    }
+    case 'question': {
+      return {
+        state: {
+          ...state,
+          phase: 'question',
+          question: { prompt: message.prompt, options: message.options ?? [] },
+          roundIndex: message.roundIndex ?? state.roundIndex,
+          totalRounds: message.totalRounds ?? state.totalRounds,
+          myChoice: null,
+          reveal: null,
+          buzzedCount: 0,
+          seatCount: presentCount(state.roster),
+        },
+        effects: [],
+      };
+    }
+    case 'buzzed': {
+      return {
+        state: {
+          ...state,
+          buzzedCount: message.buzzedCount ?? state.buzzedCount,
+          seatCount: message.seatCount ?? state.seatCount,
+        },
+        effects: [],
+      };
+    }
+    case 'reveal': {
+      return {
+        state: {
+          ...state,
+          phase: 'reveal',
+          reveal: {
+            answer: message.answer,
+            picks: message.picks ?? {},
+            points: message.points ?? {},
+          },
+          scoreboard: message.scoreboard ?? state.scoreboard,
+          roundIndex: message.roundIndex ?? state.roundIndex,
+          totalRounds: message.totalRounds ?? state.totalRounds,
+        },
+        effects: [],
+      };
+    }
+    case 'final': {
+      return {
+        state: { ...state, phase: 'final', scoreboard: message.scoreboard ?? state.scoreboard },
+        effects: [],
+      };
+    }
+    case 'rejected': {
+      const mapped = REJECT_MESSAGES[message.reason];
+      /** @type {StatusOverride} */
+      const statusOverride = mapped
+        ? { key: mapped.key, fallback: mapped.fallback }
+        : { key: 'party.reject.fallback', fallback: 'Rejected: {reason}', params: { reason: String(message.reason) } };
+      return { state: { ...state, statusOverride }, effects: [{ type: 'close' }] };
+    }
+    default:
+      return { state, effects: [] };
+  }
+}
+
+/**
+ * Record this device's tap locally. Ignored unless we're mid-question and
+ * haven't already locked a pick — one buzz per question, first answer counts.
+ *
+ * @param {PartyClientState} state
+ * @param {string} choice
+ * @returns {PartyClientState}
+ */
+export function withLocalBuzz(state, choice) {
+  if (state.phase !== 'question') return state;
+  if (state.myChoice !== null) return state;
+  if (!state.question || !state.question.options.includes(choice)) return state;
+  return { ...state, myChoice: choice };
+}
