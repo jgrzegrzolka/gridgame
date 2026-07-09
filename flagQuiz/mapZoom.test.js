@@ -13,7 +13,7 @@ import {
   regionalFrame,
   easeInOutCubic,
   easeOutCubic,
-  easeOutBack,
+  springStep,
   rubberBandOffset,
   flickVelocity,
 } from './mapZoom.js';
@@ -503,27 +503,40 @@ test('easeOutCubic decelerates — fast start, gentle stop', () => {
   assert.ok(easeOutCubic(0.75) > 0.75);
 });
 
-// ---- easeOutBack ----
+// ---- springStep ----
 
-test('easeOutBack pins the endpoints exactly', () => {
-  // The spring-back must LAND on the edge (home) at t=1, not a hair past it.
-  assert.equal(easeOutBack(0), 0);
-  assert.equal(easeOutBack(1), 1);
-});
-
-test('easeOutBack overshoots past 1 before settling', () => {
-  // Somewhere in the back half it sails past the target — that is the bounce.
-  const peak = Math.max(easeOutBack(0.6), easeOutBack(0.7), easeOutBack(0.8));
-  assert.ok(peak > 1, `expected an overshoot > 1, got ${peak}`);
-  // ...but a gentle one, not cartoonish (default overshoot ~7%).
-  assert.ok(peak < 1.15, `overshoot too large: ${peak}`);
-});
-
-test('easeOutBack overshoot scales with s (0 = no overshoot)', () => {
-  // s = 0 collapses to a plain cubic-out: monotonic to 1, never exceeds it.
-  for (let t = 0; t <= 1.0001; t += 0.1) {
-    assert.ok(easeOutBack(t, 0) <= 1 + 1e-9, `s=0 should not overshoot at t=${t}`);
+test('springStep with no velocity relaxes a displaced spring toward 0', () => {
+  // Critically damped, released from rest: monotonic approach, never past 0.
+  let x = 100, v = 0;
+  for (let i = 0; i < 400; i++) {
+    const s = springStep(x, v, 1 / 60, 8, 1.0);
+    x = s.x; v = s.v;
+    assert.ok(x >= -0.5, `critical damping should not overshoot below 0 (got ${x})`);
   }
+  assert.ok(Math.abs(x) < 1, `should settle near 0, got ${x}`);
+});
+
+test('springStep underdamped overshoots past 0 at least once', () => {
+  // zeta < 1 → the return crosses the resting point (the gentle bounce).
+  let x = 100, v = 0, minX = Infinity;
+  for (let i = 0; i < 400; i++) {
+    const s = springStep(x, v, 1 / 60, 8, 0.4);
+    x = s.x; v = s.v; minX = Math.min(minX, x);
+  }
+  assert.ok(minX < -1, `underdamped spring should overshoot below 0, min was ${minX}`);
+  assert.ok(Math.abs(x) < 1, `still settles near 0, got ${x}`);
+});
+
+test('springStep carries initial velocity past the start before returning', () => {
+  // Seeded with outward velocity from x=0 (a flick into the wall): it travels
+  // out first, then the spring pulls it back.
+  let x = 0, v = 300, maxX = 0;
+  for (let i = 0; i < 400; i++) {
+    const s = springStep(x, v, 1 / 60, 8, 0.8);
+    x = s.x; v = s.v; maxX = Math.max(maxX, x);
+  }
+  assert.ok(maxX > 5, `velocity should carry it outward first, peak ${maxX}`);
+  assert.ok(Math.abs(x) < 1, `then settle near 0, got ${x}`);
 });
 
 // ---- rubberBandOffset ----
@@ -537,8 +550,8 @@ test('rubberBandOffset preserves the overshoot direction', () => {
   assert.ok(rubberBandOffset(-20, 100) < 0);  // past the low edge
 });
 
-test('rubberBandOffset stays strictly under the cap (dim × MAX_OVERSCROLL = 0.35)', () => {
-  const cap = 100 * 0.35; // mirrors MAX_OVERSCROLL in mapZoom.js
+test('rubberBandOffset stays strictly under the cap (dim × MAX_OVERSCROLL = 0.3)', () => {
+  const cap = 100 * 0.3; // mirrors MAX_OVERSCROLL in mapZoom.js
   // Even a huge yank only asymptotes toward the cap, never reaches it.
   assert.ok(rubberBandOffset(1e6, 100) < cap);
   assert.ok(rubberBandOffset(1e6, 100) > cap * 0.99);

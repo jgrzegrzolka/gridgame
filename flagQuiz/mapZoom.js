@@ -62,26 +62,27 @@ const FREE_PAN_KEEP = 0.1;
  * release (see springHome / endPanGesture), so the edge gives a little instead
  * of dead-stopping ("hitting a wall"). Applies at EVERY pan edge — the zoomed-in
  * map edge and the zoomed-out floating-map keep-sliver (FREE_PAN_KEEP) alike.
- * Zoom limits stay hard-clamped. Jan, 2026-07-08. Bumped 0.12 -> 0.2 on
- * 2026-07-09, then 0.2 -> 0.35 the same day for even more drag room (the edge
- * stretches noticeably further before the resistance asymptotes).
+ * Zoom limits stay hard-clamped. Jan, 2026-07-08. Bumped 0.12 -> 0.2 -> 0.35,
+ * then settled at 0.30 on 2026-07-09 ("wall give 140px" ≈ 30% of the view in the
+ * rubber-band feel lab).
  */
-const MAX_OVERSCROLL = 0.35;
+const MAX_OVERSCROLL = 0.3;
 /**
- * Spring-back duration (ms) easing a released pan from overscroll to the edge.
- * Longer = the map drifts home more slowly / smoothly. Bumped 300 -> 560 on
- * 2026-07-09 (Jan wanted a slower, gentler return).
+ * Spring-back physics. The released overscroll no longer eases home over a fixed
+ * duration; it's integrated as a real damped spring (see springStep / springHome),
+ * so it absorbs the release velocity and settles organically instead of running a
+ * canned curve. That velocity-awareness is what reads as "smooth" (a fixed-duration
+ * tween ignores how fast you let go). Tuned in the feel lab, Jan 2026-07-09:
+ *   - TENSION (ω, rad/s) — stiffness. Higher = faster, snappier return.
+ *   - DAMPING (ζ, ratio) — 1 = critically damped (no overshoot); < 1 springs a
+ *     little past the edge and back; > 1 is heavy/slow. 0.8 = one gentle overshoot.
  */
-const SPRING_MS = 560;
-/**
- * Spring-back overshoot: the spring-home tween uses easeOutBack, which shoots a
- * little PAST the edge (into the map, never into a void) and settles back, for a
- * springy little bounce instead of a flat decel. This is the `s` in easeOutBack;
- * ~1.1 gives roughly a 7% overshoot — present but not cartoonish. Jan, 2026-07-09.
- */
-const SPRING_OVERSHOOT = 1.1;
+const SPRING_TENSION = 8;
+const SPRING_DAMPING = 0.8;
 /** Overscroll (vbu) below which a released pan counts as settled — no spring. */
 const SPRING_EPS = 0.01;
+/** Spring velocity (vbu/s) below which, together with SPRING_EPS, the spring rests. */
+const SPRING_VEL_EPS = 2;
 /**
  * Flick inertia: releasing a pan with velocity glides on, decelerating to a
  * stop, like Google Maps. TAU is the glide's time constant — projected distance
@@ -432,22 +433,26 @@ export function easeOutCubic(t) {
 }
 
 /**
- * Cubic ease-OUT with a slight overshoot ("back"): rushes toward 1, sails a
- * little past it, then eases back down to 1. The spring-back uses this so a
- * released overscroll bounces gently past the edge (into the map, never a void)
- * and settles, rather than decelerating flat. `s` sets the overshoot strength
- * (0 = no overshoot = plain cubic-ish; ~1.1 ≈ 7% past). t ∈ [0, 1]; returns 1
- * exactly at t = 1.
+ * One step of a damped-spring integration toward 0, used by the rubber-band
+ * spring-back. Semi-implicit (symplectic) Euler on the standard second-order
+ * spring `a = -ω²·x - 2ζω·v`: update velocity from the acceleration, then
+ * position from the new velocity. `x` is the offset from the resting edge (vbu)
+ * and `v` its velocity (vbu/s), so seeding `v` with the release flick makes the
+ * return velocity-aware (it carries the throw, then settles) instead of running
+ * a fixed curve. Pure — springHome just loops this per animation frame.
  *
- * @param {number} t
- * @param {number} [s]  overshoot strength (SPRING_OVERSHOOT by default)
- * @returns {number}
+ * @param {number} x      offset from rest (vbu)
+ * @param {number} v      velocity (vbu/s)
+ * @param {number} dt     timestep (s); caller clamps to keep it stable
+ * @param {number} omega  tension ω (rad/s)
+ * @param {number} zeta   damping ratio ζ (1 = critical, <1 overshoots)
+ * @returns {{ x: number, v: number }}
  */
-export function easeOutBack(t, s = SPRING_OVERSHOOT) {
-  const c1 = s;
-  const c3 = c1 + 1;
-  const p = t - 1;
-  return 1 + c3 * p * p * p + c1 * p * p;
+export function springStep(x, v, dt, omega, zeta) {
+  const a = -(omega * omega) * x - 2 * zeta * omega * v;
+  const nv = v + a * dt;
+  const nx = x + nv * dt;
+  return { x: nx, v: nv };
 }
 
 /**
@@ -746,9 +751,14 @@ export function attachZoomPan(svg, opts = {}) {
     pendingViewBox = null;
     pendingPan = false;
     if (!next) return;
-    // Pans may rubber-band past the edge (clampPanFrame); zoom stays hard-clamped.
+    // Option B — free drag: a pan follows the finger 1:1 with NO clamp during
+    // the gesture, so you can pull the map anywhere (even off screen), and it
+    // springs back to the clamped home on release (endPanGesture computes
+    // home = clampViewBox(current) and springs to it). Zoom still hard-clamps.
+    // (clampPanFrame — the A-mode rubber-band-during-drag — is parked below
+    // while we trial B; swap it back here to restore A.)
     current = isPan
-      ? clampPanFrame(next)
+      ? next
       : clampViewBox(next, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(next), freePan);
     beginGesture();
     setViewBoxNow(current);   // grey simplify + per-frame viewBox render
@@ -887,7 +897,7 @@ export function attachZoomPan(svg, opts = {}) {
     if (pendingViewBox) flushInput();
     const home = clampViewBox(current, original, MAX_ZOOM_IN, currentMaxZoomOut(), sliceOverhang(current), freePan);
     if (Math.abs(home.x - current.x) > SPRING_EPS || Math.abs(home.y - current.y) > SPRING_EPS) {
-      springHome(home);
+      springHome(home, vx, vy);
       return;
     }
     if (Math.hypot(vx, vy) > INERTIA_MIN_SPEED && !prefersReducedMotion()) {
@@ -913,17 +923,20 @@ export function attachZoomPan(svg, opts = {}) {
   }
 
   /**
-   * Ease the viewBox from its current (overscrolled) position back to `home`
-   * over SPRING_MS with easeOutBack — the elastic snap-back, with a slight
-   * overshoot past the edge (into the map) for a springy bounce. Writes each
-   * frame straight to the element (NOT via `apply`, which would clamp the
-   * overscroll away on frame one and kill the animation). Carries
-   * `.is-interacting` through so flags stay the cheap wash until it lands, then
-   * restores the images and fires onSettle. Snaps immediately under
-   * reduced-motion / no-rAF (test env).
+   * Spring the viewBox from its current (overscrolled) position back to `home`
+   * as a real damped spring (see springStep), per axis. The release flick
+   * (`vx` / `vy`, px/ms) seeds the spring's velocity, so a throw into the wall
+   * carries a touch further and settles organically rather than running a canned
+   * curve — that velocity-awareness is what reads as "smooth". Writes each frame
+   * straight to the element (NOT via `apply`, which would clamp the overscroll
+   * away on frame one and kill the animation). Carries `.is-interacting` through
+   * so flags stay the cheap wash until it lands, then restores the images and
+   * fires onSettle. Snaps immediately under reduced-motion / no-rAF (test env).
    * @param {ViewBox} home  the clamped edge position to settle at
+   * @param {number} [vx]   release velocity x (px/ms)
+   * @param {number} [vy]   release velocity y (px/ms)
    */
-  function springHome(home) {
+  function springHome(home, vx = 0, vy = 0) {
     const raf = globalThis.requestAnimationFrame;
     cancelAnim();
     clearSettle();
@@ -937,25 +950,30 @@ export function attachZoomPan(svg, opts = {}) {
     }
     flying = true;                    // owns the tint so the wash stays on
     if (svg.classList) svg.classList.add('is-interacting');
-    const start = { ...current };
-    let startTs = 0;
+    // Spring state: offset from the resting edge (vbu) + velocity (vbu/s). The
+    // viewBox pans opposite the finger, so viewBox velocity = -pointerVel; px/ms
+    // → vbu/s is × 1000 × (vbu per px).
+    const factor = svgUnitsPerPixel(svg, current);
+    let ox = current.x - home.x;
+    let oy = current.y - home.y;
+    let vX = -vx * 1000 * factor;
+    let vY = -vy * 1000 * factor;
+    let prevTs = 0;
     /** @param {number} ts */
     function frame(ts) {
-      if (!startTs) startTs = ts;
-      const p = Math.min(1, (ts - startTs) / SPRING_MS);
-      // easeOutBack: overshoot the edge a touch (into the map) then settle —
-      // the springy bounce. The overshoot only moves the axis that was actually
-      // overscrolled (the other's start == home, so its delta is 0).
-      const e = easeOutBack(p);
+      if (!prevTs) { prevTs = ts; animRaf = raf(frame); return; }
+      let dt = (ts - prevTs) / 1000;
+      prevTs = ts;
+      if (dt > 0.045) dt = 0.045;     // clamp (tab stalls) so the integrator stays stable
+      const sx = springStep(ox, vX, dt, SPRING_TENSION, SPRING_DAMPING);
+      const sy = springStep(oy, vY, dt, SPRING_TENSION, SPRING_DAMPING);
+      ox = sx.x; vX = sx.v; oy = sy.x; vY = sy.v;
+      const settled = Math.hypot(ox, oy) < SPRING_EPS && Math.hypot(vX, vY) < SPRING_VEL_EPS;
+      if (settled) { ox = 0; oy = 0; }
       // Only x / y differ; width / height are already the clamped values.
-      current = {
-        x: start.x + (home.x - start.x) * e,
-        y: start.y + (home.y - start.y) * e,
-        width: home.width,
-        height: home.height,
-      };
+      current = { x: home.x + ox, y: home.y + oy, width: home.width, height: home.height };
       setViewBoxNow(current);
-      if (p < 1) { animRaf = raf(frame); return; }
+      if (!settled) { animRaf = raf(frame); return; }
       animRaf = 0;
       flying = false;
       current = { ...home };
@@ -1084,7 +1102,7 @@ export function attachZoomPan(svg, opts = {}) {
     scheduleInput(zoomViewBox(base, pivot, scale));
   }
 
-  /** @type {{ mode: 'pan' | 'pinch', lastX?: number, lastY?: number, distance?: number } | null} */
+  /** @type {{ mode: 'pan' | 'pinch', downX?: number, downY?: number, grabVB?: ViewBox, distance?: number } | null} */
   let touchState = null;
   let lastTapAt = 0;
   let dragStartScreen = null;
@@ -1092,7 +1110,7 @@ export function attachZoomPan(svg, opts = {}) {
   /** Mouse drag state: tracks whether the player is currently dragging
    * the map with the mouse, plus enough info to differentiate a click
    * (no drag) from a pan (drag moved past the threshold). */
-  /** @type {{ lastX: number, lastY: number, downX: number, downY: number, dragging: boolean } | null} */
+  /** @type {{ downX: number, downY: number, dragging: boolean, grabVB: ViewBox } | null} */
   let mouseState = null;
   /** Pixels of mouse movement before we treat it as a drag rather than a
    * click. Below this threshold we let the click propagate (so post-game
@@ -1132,7 +1150,10 @@ export function attachZoomPan(svg, opts = {}) {
         return;
       }
       lastTapAt = now;
-      touchState = { mode: 'pan', lastX: t.clientX, lastY: t.clientY };
+      // Anchor the pan on the touch-down point and the viewBox at grab.
+      // Every move maps the ABSOLUTE finger offset from here onto `grabVB`
+      // (see onTouchMove) — not incremental deltas onto the live viewBox.
+      touchState = { mode: 'pan', downX: t.clientX, downY: t.clientY, grabVB: { ...current } };
       dragStartScreen = { x: t.clientX, y: t.clientY };
       panSamples = [];
       recordPanSample(t.clientX, t.clientY);
@@ -1150,13 +1171,11 @@ export function attachZoomPan(svg, opts = {}) {
     if (touchState.mode === 'pan' && e.touches.length === 1) {
       e.preventDefault();
       const t = e.touches[0];
-      const dx = t.clientX - (touchState.lastX || 0);
-      const dy = t.clientY - (touchState.lastY || 0);
-      const base = inputBase();
-      const factor = svgUnitsPerPixel(svg, base);
-      scheduleInput(panViewBox(base, -dx * factor, -dy * factor), true);
-      touchState.lastX = t.clientX;
-      touchState.lastY = t.clientY;
+      const grab = touchState.grabVB || current;
+      const totalDX = t.clientX - (touchState.downX || 0);
+      const totalDY = t.clientY - (touchState.downY || 0);
+      const factor = svgUnitsPerPixel(svg, grab);
+      scheduleInput(panViewBox(grab, -totalDX * factor, -totalDY * factor), true);
       recordPanSample(t.clientX, t.clientY);
     } else if (touchState.mode === 'pinch' && e.touches.length === 2) {
       e.preventDefault();
@@ -1187,9 +1206,9 @@ export function attachZoomPan(svg, opts = {}) {
     if (e.button !== 0) return;
     cancelAnim();
     mouseState = {
-      lastX: e.clientX, lastY: e.clientY,
       downX: e.clientX, downY: e.clientY,
       dragging: false,
+      grabVB: { ...current },
     };
     panSamples = [];
     recordPanSample(e.clientX, e.clientY);
@@ -1203,14 +1222,22 @@ export function attachZoomPan(svg, opts = {}) {
       const dy = e.clientY - mouseState.downY;
       if (Math.hypot(dx, dy) <= DRAG_THRESHOLD_PX) return;
       mouseState.dragging = true;
+      // Re-anchor at the moment the drag engages so the map doesn't jump by
+      // the ~5px threshold. `grabVB` still equals `current` (no pan happened
+      // below threshold), so the absolute mapping stays consistent.
+      mouseState.downX = e.clientX;
+      mouseState.downY = e.clientY;
     }
-    const dx = e.clientX - mouseState.lastX;
-    const dy = e.clientY - mouseState.lastY;
-    const base = inputBase();
-    const factor = svgUnitsPerPixel(svg, base);
-    scheduleInput(panViewBox(base, -dx * factor, -dy * factor), true);
-    mouseState.lastX = e.clientX;
-    mouseState.lastY = e.clientY;
+    // Absolute mapping: the map tracks the finger's TOTAL offset from grab,
+    // applied once to `grabVB`, so clampPanFrame rubber-bands the true
+    // overshoot each frame. Accumulating incremental deltas onto the live
+    // (already rubber-clamped) viewBox made the raw and shown positions drift
+    // apart and re-clamped an already-clamped value — that fed back as a
+    // shake at the edge and an asymmetric top/bottom feel (Jan, 2026-07-09).
+    const totalDX = e.clientX - mouseState.downX;
+    const totalDY = e.clientY - mouseState.downY;
+    const factor = svgUnitsPerPixel(svg, mouseState.grabVB);
+    scheduleInput(panViewBox(mouseState.grabVB, -totalDX * factor, -totalDY * factor), true);
     recordPanSample(e.clientX, e.clientY);
   }
 
