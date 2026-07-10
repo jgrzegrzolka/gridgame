@@ -3,7 +3,7 @@ import { generateCode, isValidRoomCode, serverUrlFor } from '../flags/roomNet.js
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
-import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration } from '../flags/partyClient.js';
+import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction } from '../flags/partyTiming.js';
@@ -381,13 +381,17 @@ export function bootFlagParty() {
     if (token === clockToken) return;
     clockToken = token;
     clockFired = false;
-    // A lone player trims the reveal (nothing to study alone); multiplayer keeps
-    // the full beat so you can read everyone's picks. Question time is the same.
-    const seatCount = state.roster.filter((r) => r.present).length;
-    clockTotalMs = (mode === 'reveal' ? revealSecondsFor(seatCount) : QUESTION_SECONDS) * 1000;
+    // The reveal length depends on the round, not the room: a clean sweep (every
+    // present player got it right) snaps on; a miss holds so the correct flag
+    // can be read. Question time is fixed. (flagQuiz's correct-fast/wrong-slow.)
+    const clean = mode === 'reveal' && isCleanReveal(state.roster, state.reveal);
+    clockTotalMs = (mode === 'reveal' ? revealSecondsFor(clean) : QUESTION_SECONDS) * 1000;
     clockDeadline = Date.now() + clockTotalMs;
     timerEl.hidden = false;
     timerEl.setAttribute('data-mode', mode);
+    // The reveal bar drains via a CSS animation (no per-tick width writes), so it
+    // runs for exactly this window — variable length included.
+    timerEl.style.setProperty('--reveal-ms', `${clockTotalMs}ms`);
     if (!clockInterval) clockInterval = window.setInterval(tickClock, 200);
     tickClock();
   }
@@ -397,14 +401,11 @@ export function bootFlagParty() {
     const now = Date.now();
     const left = secondsLeft(clockDeadline, now);
     if (mode === 'reveal') {
-      // Reveal: the progress bar freezes full and stopped (CSS drops its
-      // transition in this mode) with a quiet "next round in N" label beside
-      // it, in the same slot the question countdown number used. Clear `.low`
-      // so the label never inherits the question timer's last-5s pulse — that
-      // was the "sometimes it blinks" inconsistency.
-      timerFill.style.width = '100%';
+      // Reveal: the bar drains on its own (CSS `reveal-drain` animation), and the
+      // countdown digit is gone — a short, quiet "we're moving on" cue instead of
+      // a stopwatch. Nothing to write per tick here except the host's advance
+      // below. Clear `.low` so no leftover last-5s pulse from the question.
       timerEl.classList.remove('low');
-      timerLabel.textContent = fmt(t('party.nextIn', 'Next round in {n}s'), { n: left });
     } else {
       timerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
       timerEl.classList.toggle('low', left <= 5);

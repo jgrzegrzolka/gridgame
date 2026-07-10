@@ -5,6 +5,7 @@ import {
   reducePartyMessage,
   withLocalBuzz,
   pickPartyCelebration,
+  isCleanReveal,
 } from './partyClient.js';
 
 const you = 'me';
@@ -178,4 +179,51 @@ test('pickPartyCelebration: empty or null scoreboard → none', () => {
 test('pickPartyCelebration: solo winner with unknown local id → confetti (no false fireworks)', () => {
   const scoreboard = [{ playerId: 'a', nickname: 'A', score: 10 }];
   assert.equal(pickPartyCelebration({ scoreboard, you: null }), 'confetti');
+});
+
+// ---- isCleanReveal ----
+
+/** @param {string} id @param {boolean} [present] */
+function seat(id, present = true) {
+  return { playerId: id, nickname: id, score: 0, present };
+}
+
+test('isCleanReveal: solo player who nailed it → clean', () => {
+  const roster = [seat('me')];
+  assert.equal(isCleanReveal(roster, { answer: 'jp', picks: { me: 'jp' } }), true);
+});
+
+test('isCleanReveal: solo player who missed → not clean', () => {
+  const roster = [seat('me')];
+  assert.equal(isCleanReveal(roster, { answer: 'jp', picks: { me: 'kr' } }), false);
+});
+
+test('isCleanReveal: solo timeout (no pick) → not clean', () => {
+  const roster = [seat('me')];
+  assert.equal(isCleanReveal(roster, { answer: 'jp', picks: {} }), false);
+});
+
+test('isCleanReveal: everyone present buzzed correctly → clean', () => {
+  const roster = [seat('a'), seat('b')];
+  assert.equal(isCleanReveal(roster, { answer: 'jp', picks: { a: 'jp', b: 'jp' } }), true);
+});
+
+test('isCleanReveal: one wrong pick spoils the sweep', () => {
+  const roster = [seat('a'), seat('b')];
+  assert.equal(isCleanReveal(roster, { answer: 'jp', picks: { a: 'jp', b: 'kr' } }), false);
+});
+
+test('isCleanReveal: a present player who never answered spoils the sweep', () => {
+  const roster = [seat('a'), seat('b')];
+  assert.equal(isCleanReveal(roster, { answer: 'jp', picks: { a: 'jp' } }), false);
+});
+
+test('isCleanReveal: an away player is ignored — present sweep still counts as clean', () => {
+  const roster = [seat('a'), seat('gone', false)];
+  assert.equal(isCleanReveal(roster, { answer: 'jp', picks: { a: 'jp' } }), true);
+});
+
+test('isCleanReveal: no reveal or empty room → not clean', () => {
+  assert.equal(isCleanReveal([seat('a')], null), false);
+  assert.equal(isCleanReveal([], { answer: 'jp', picks: {} }), false);
 });

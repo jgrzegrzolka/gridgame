@@ -204,17 +204,28 @@
   color: var(--muted-color);
   font-variant-numeric: tabular-nums;
 }
-/* Reveal: the progress bar stays visible, frozen full and stopped (transition
-   dropped so JS setting it to 100% snaps instead of animating), with the quiet
-   "next round in N" label in the same right-hand slot the question countdown
-   number used — the question timer's layout, just not moving. */
-.round-timer[data-mode="reveal"] .round-timer-fill { transition: none; }
+/* Reveal: no countdown digit (the label is hidden), and the bar drains itself
+   over the reveal window via `reveal-drain` — a clean sweep drains fast, a miss
+   drains slow, so the bar length signals the pace. The window (`--reveal-ms`)
+   comes from JS. Under reduced motion there's nothing to animate, so the reveal
+   timer is simply hidden. */
+.round-timer[data-mode="reveal"] .round-timer-label { display: none; }
 
 @media (prefers-reduced-motion: no-preference) {
   .round-timer-fill { transition: width 0.2s linear; }
   .round-timer.low .round-timer-label { animation: timer-pulse 1s ease-in-out infinite; }
+  .round-timer[data-mode="reveal"] .round-timer-fill {
+    /* The animation drives width (overriding the leftover inline value from the
+       question phase) and forces 100% at its start, so there's no jump-up on a
+       timed-out question where the bar had already drained to 0. */
+    animation: reveal-drain var(--reveal-ms, 1500ms) linear forwards;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .round-timer[data-mode="reveal"] { display: none; }
 }
 @keyframes timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes reveal-drain { from { width: 100%; } to { width: 0; } }
 
 .prompt { text-align: center; display: flex; flex-direction: column; gap: 2px; }
 /* The mode hint ("Which flag?" / "Which outline?") — a quiet lead above the

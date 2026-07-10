@@ -322,9 +322,11 @@ generator; the runtime/client never changed, and the code set (`contourPool.js`)
 - **QR in the lobby.** Deferred from iteration 1 (see above) — add a self-contained QR
   generator, or accept code + link.
 - **Question count / timing per round.** 11 rounds (3 flag / 3 flag / 5 map, per `DEFAULT_PLAN`).
-  Per-question countdown landed in
-  iteration 3 (`flags/partyTiming.js`, host-driven, hands-free advance). Durations
-  (15s / 6s) are constants there — a settings page could expose them later.
+  Per-question countdown landed in iteration 3 (`flags/partyTiming.js`, host-driven,
+  hands-free advance); question time is `QUESTION_SECONDS = 20`. **Reveal pace is decided
+  and deliberately *not* configurable** (see the reveal-pace note under Done): it's keyed on
+  correctness, not a dial. If pace ever becomes a setting it should be one overall fast/normal
+  feel, not raw per-phase seconds.
 - **Speed-bonus curve.** Currently decaying (+5/+3/+1) in `flags/partyScore.js`.
 - **Max seats.** No hard cap in the room module; 2 is the tested case.
 
@@ -337,6 +339,15 @@ generator; the runtime/client never changed, and the code set (`contourPool.js`)
 
 ## Done
 
+- **Reveal pace — correctness-keyed, no countdown digit.** The reveal used to freeze the bar
+  full and count "Next round in Ns" (weird for a sub-2s beat; in solo the digit never even
+  decremented). Now the reveal length is keyed on the round, not the room: `isCleanReveal`
+  (`flags/partyClient.js`) is true when every *present* player picked the answer, and
+  `revealSecondsFor(clean)` returns `CLEAN_REVEAL_SECONDS = 0.9` vs `MISS_REVEAL_SECONDS = 1.8`
+  (`flags/partyTiming.js`) — flagQuiz's correct-fast / wrong-slow feel. The digit is gone; the
+  bar drains itself via a CSS `reveal-drain` animation over `--reveal-ms`, so a clean sweep
+  drains fast and a miss drains slow (hidden under reduced motion). Single-player mode was also
+  removed this round of work — Flag Party is one online path, start with 1+ (see PR #768).
 - **Iteration 4 — the Map round.** Second round type ("Which outline is X?"), the mirror of
   flag-pick: same grid / buzz-order / scoring, tiles render pre-generated country contours
   (`flags/contours/`) instead of flags. Server now picks round modules from the plan via a
