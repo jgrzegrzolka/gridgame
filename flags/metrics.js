@@ -28,8 +28,8 @@
 /**
  * @typedef {Object} CountryLike
  * @property {string} code
- * @property {string} continent
- * @property {string} statehood
+ * @property {string | null} [continent]
+ * @property {string | null} [statehood]
  * @property {string} [category]
  */
 

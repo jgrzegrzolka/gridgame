@@ -2,6 +2,9 @@ import { CONTINENTS, loadCountries } from '../flags/group.js';
 import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
+import { createMetric } from '../flags/metrics.js';
+import { METRICS } from '../flags/metrics/index.js';
+import { computeLensView } from '../flags/metricLens.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
@@ -55,6 +58,12 @@ function continentLabel(name) {
 /** @param {string} v */
 function colorLabel(v) {
   return t(`color.${v}`, v);
+}
+
+/** Translated name of a metric lens, falling back to the metric's own English label.
+ * @param {string} key @param {string} fallback */
+function metricLabel(key, fallback) {
+  return t(`metric.${key}`, fallback);
 }
 
 /** @param {string} v */
@@ -159,6 +168,12 @@ export function bootFlagsData() {
     img.alt = displayName;
     img.loading = 'lazy';
     wrap.appendChild(img);
+    // Metric-lens overlay — a top strip showing "#rank · value" for the active
+    // metric. Empty + hidden until a lens is picked (renderLens fills it).
+    const metric = document.createElement('span');
+    metric.className = 'flag-metric';
+    metric.hidden = true;
+    wrap.appendChild(metric);
     return wrap;
   }
 
@@ -198,6 +213,20 @@ export function bootFlagsData() {
 
   /** @type {{ items: Country[], foldedTerms: string[][], tiles: HTMLElement[], count: HTMLElement } | null} */
   let state = null;
+  /** The grid element, kept so the lens can reorder its children on sort. */
+  let gridEl = /** @type {HTMLElement | null} */ (null);
+
+  // --- Metric lens state (Feature DE). Off by default: flagsdata stays a flag
+  // explorer, the lens is opt-in. `lensKey` is the active metric key (or null),
+  // `lensMetric` its createMetric instance (rebuilt when items load), `lensSort`
+  // the tile order. All metric logic lives here via createMetric — it never
+  // enters the shared per-flag filter DSL. See DATA_FEATURE.md Feature DE.
+  /** @type {string | null} */
+  let lensKey = null;
+  /** @type {ReturnType<typeof createMetric> | null} */
+  let lensMetric = null;
+  /** @type {'default' | 'desc' | 'asc'} */
+  let lensSort = 'default';
 
   // Show-map toggle in the burger menu — flagsdata's burger panel ships
   // empty (just the coffee link), so we prepend the toggle here at
@@ -539,6 +568,7 @@ export function bootFlagsData() {
       grid.appendChild(tile);
     }
     parent.appendChild(grid);
+    gridEl = grid;
     state = { items, foldedTerms, tiles, count: countSpan };
     // Build the code→country lookup once items are known — the click
     // handler on the map needs it to resolve a clicked path's ISO2
@@ -610,6 +640,41 @@ export function bootFlagsData() {
         if (bbox) mapHandle.setView(bbox);
       }
     }
+  }
+
+  /**
+   * Apply the active metric lens: fill each tile's overlay with "#rank · value"
+   * (or dim it as no-data), and reorder the grid by the current sort. No-ops to
+   * a clean flag wall when no lens is active. Cheap and rare — only runs on
+   * lens / sort / language change, never per filter.
+   */
+  function renderLens() {
+    if (!state || !gridEl) return;
+    const { order, cells } = computeLensView(lensMetric, state.items, { sort: lensSort });
+    const active = !!lensMetric;
+    gridEl.classList.toggle('lens-active', active);
+    const noDataText = t('flagsdata.noData', 'no data');
+    for (let i = 0; i < state.tiles.length; i++) {
+      const tile = state.tiles[i];
+      const badge = /** @type {HTMLElement | null} */ (tile.querySelector('.flag-metric'));
+      if (!active) {
+        tile.classList.remove('nodata');
+        if (badge) { badge.hidden = true; badge.textContent = ''; }
+        continue;
+      }
+      const cell = cells[i];
+      tile.classList.toggle('nodata', !cell.hasData);
+      if (badge) {
+        badge.hidden = false;
+        badge.textContent = cell.hasData ? `#${cell.rank} · ${cell.display}` : noDataText;
+      }
+    }
+    // Reorder the DOM to match the sort. appendChild moves existing nodes; the
+    // index-aligned state arrays are untouched, so applyFilter's per-index hide
+    // keeps working. Natural order when sort is default or the lens is off.
+    const target =
+      active && lensSort !== 'default' ? order : state.items.map((_, i) => i);
+    for (const i of target) gridEl.appendChild(state.tiles[i]);
   }
 
   /** @param {number} count */
@@ -818,12 +883,91 @@ export function bootFlagsData() {
   // useful when filters are collapsed but the count badge says "3".
   toggleRow.appendChild(clearBtn);
 
+  // --- Metric lens control (Feature DE) ---------------------------------
+  // A view lens, not a filter: it lives at the top of the bar, always visible
+  // (never behind the Filters collapse), because it changes how the same set is
+  // presented rather than narrowing it. Defaults to None. Metric logic goes
+  // through createMetric; it never touches the shared per-flag filter DSL.
+  const lensRow = document.createElement('div');
+  lensRow.className = 'lens-row';
+  const lensLabel = document.createElement('span');
+  lensLabel.className = 'lens-label';
+  lensLabel.setAttribute('data-i18n', 'flagsdata.metric');
+  lensLabel.textContent = t('flagsdata.metric', 'Metric');
+  lensRow.appendChild(lensLabel);
+
+  const lensBtns = document.createElement('div');
+  lensBtns.className = 'lens-btns';
+  lensRow.appendChild(lensBtns);
+
+  /** @type {{ key: string | null, el: HTMLButtonElement }[]} */
+  const lensButtons = [];
+  /** @param {string | null} key @param {string} label */
+  function makeLensBtn(key, label) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'lens-btn';
+    b.dataset.metric = key ?? 'none';
+    b.textContent = label;
+    b.setAttribute('aria-pressed', String(lensKey === key));
+    b.addEventListener('click', () => selectMetric(key));
+    lensBtns.appendChild(b);
+    lensButtons.push({ key, el: b });
+  }
+  makeLensBtn(null, t('flagsdata.metricNone', 'None'));
+  for (const k of Object.keys(METRICS)) makeLensBtn(k, metricLabel(k, METRICS[k].label));
+
+  // Sort control — only meaningful with a lens on, so hidden until one is picked.
+  const lensSortWrap = document.createElement('div');
+  lensSortWrap.className = 'lens-sort';
+  lensSortWrap.hidden = true;
+  /** @type {Array<['default' | 'desc' | 'asc', string, string]>} */
+  const SORTS = [
+    ['default', 'flagsdata.sortDefault', 'Default'],
+    ['desc', 'flagsdata.sortHighest', 'Highest'],
+    ['asc', 'flagsdata.sortLowest', 'Lowest'],
+  ];
+  for (const [val, key, fb] of SORTS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.sort = val;
+    b.setAttribute('data-i18n', key);
+    b.textContent = t(key, fb);
+    b.setAttribute('aria-pressed', String(lensSort === val));
+    b.addEventListener('click', () => {
+      lensSort = val;
+      syncLensPressed();
+      renderLens();
+    });
+    lensSortWrap.appendChild(b);
+  }
+  lensRow.appendChild(lensSortWrap);
+  filterBar.prepend(lensRow);
+
+  function syncLensPressed() {
+    for (const { key, el } of lensButtons) el.setAttribute('aria-pressed', String(lensKey === key));
+    for (const b of lensSortWrap.querySelectorAll('button')) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-sort') === lensSort));
+    }
+  }
+
+  /** @param {string | null} key */
+  function selectMetric(key) {
+    lensKey = key;
+    lensSort = 'default';
+    lensMetric = key && state ? createMetric(METRICS[key], state.items) : null;
+    lensSortWrap.hidden = !key;
+    syncLensPressed();
+    renderLens();
+  }
+
   fetch('../flags/countries.json')
     .then((r) => r.json())
     .then(loadCountries)
     .then((all) => {
       const sections = document.getElementById('sections');
       renderAll(sections, all);
+      renderLens(); // no-op paint while the lens is off; clears any stale state
       // Reflect the initial (unfiltered) selection now that `state` is
       // ready. Closes a mount-vs-data race: if `worldMap.svg` resolved
       // before `countries.json`, the map-mount's own `applyFilter()` was
@@ -872,5 +1016,11 @@ export function bootFlagsData() {
       else if (group === 'motif') btn.textContent = motifLabel(value);
       else if (group === 'stripesOnly') btn.textContent = stripesOnlyLabel(value);
     }
+    // Lens metric buttons carry dynamic labels (not a fixed data-i18n key), so
+    // re-translate them here; renderLens refreshes the "no data" overlay text.
+    for (const { key, el } of lensButtons) {
+      el.textContent = key ? metricLabel(key, METRICS[key].label) : t('flagsdata.metricNone', 'None');
+    }
+    renderLens();
   });
 }
