@@ -9,14 +9,9 @@
 .online-game[hidden] { display: none; }
 /* `.room-line` (small muted "Room CODE" + monospace code), `.share-link`,
  * `.share-icon`, and the `.copied` morph all live in common.css so Flag
- * Party's lobby renders the identical room header. The one TTT-specific
- * piece is the layout below: when the share icon shows we stretch the row
- * to the grid's visual right edge (code flush left, icon flush right,
- * matching the 4-cell grid width) instead of common.css's centred default. */
-.room-line:has(.share-link:not([hidden])) {
-  justify-content: space-between;
-  width: calc(var(--grid-cell) * 4);
-}
+ * Party's lobby renders the identical room header. TTT reuses that shared
+ * rule verbatim — code flush left, share icon immediately to its right — so
+ * no TTT-specific layout override here. */
 .role-line {
   display: flex;
   align-items: center;

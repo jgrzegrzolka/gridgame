@@ -1520,8 +1520,11 @@ dialog#zoom p.zoom-note {
 .avatar svg { display: block; width: 100%; height: 100%; }
 
 /* Room-code line, shared with Tic-Tac-Toe's in-game header: a small muted
-   "Room CODE" with a monospace code and the share-icon button beside it. */
-.room-line { font-size: 14px; color: var(--muted-color); margin: 0 0 4px; }
+   "Room CODE" with a monospace code and the share-icon button beside it.
+   Left-aligned on both phone and desktop: `text-align: left` handles the
+   plain block case (share button hidden); the `:has(...)` rule below switches
+   to flex + justify-content:flex-start when the button IS shown. */
+.room-line { font-size: 14px; color: var(--muted-color); margin: 0 0 4px; text-align: left; }
 .room-line strong {
   font-family: 'Courier New', monospace;
   font-size: 18px;
@@ -1531,7 +1534,7 @@ dialog#zoom p.zoom-note {
 .room-line:has(.share-link:not([hidden])) {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
 }
 
