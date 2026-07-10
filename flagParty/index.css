@@ -219,8 +219,13 @@
 .prompt-lead { font-size: 14px; font-weight: 500; color: var(--muted-color); }
 /* Same weight/size as flagQuiz's `.country-name` prompt (28px / 500) so the
    country name reads identically across the two flag-picking games — it used
-   to be 800 + tight tracking, which read a size larger than flagQuiz's. */
-.prompt-target { font-size: 28px; font-weight: 500; color: var(--primary-color); }
+   to be 800 + tight tracking, which read a size larger than flagQuiz's.
+   `min-height: 1lh` reserves one line even when empty: the superlative round
+   leaves this blank (its answer is read off the tiles), and without the reserve
+   its shorter header would sit the grid ~37px higher than the flag / map rounds,
+   so the 4-tile grid would jump between modes in a mixed game. Reserving the
+   line keeps the hint and the grid at the same Y in every mode. */
+.prompt-target { font-size: 28px; font-weight: 500; color: var(--primary-color); min-height: 1lh; }
 
 .flags-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .opt {
