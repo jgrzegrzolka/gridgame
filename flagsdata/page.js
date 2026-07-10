@@ -967,7 +967,10 @@ export function bootFlagsData() {
     .then((all) => {
       const sections = document.getElementById('sections');
       renderAll(sections, all);
-      renderLens(); // no-op paint while the lens is off; clears any stale state
+      // If a lens was picked before the data resolved (buttons mount at boot,
+      // data arrives async), build its metric now against the loaded set.
+      if (lensKey) lensMetric = createMetric(METRICS[lensKey], all);
+      renderLens();
       // Reflect the initial (unfiltered) selection now that `state` is
       // ready. Closes a mount-vs-data race: if `worldMap.svg` resolved
       // before `countries.json`, the map-mount's own `applyFilter()` was
