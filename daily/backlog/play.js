@@ -2,7 +2,7 @@ import { loadCountries } from '../../flags/group.js';
 import { buildAnswerPool } from '../answerPool.js';
 import { filterToCategory } from '../../flags/findFlag.js';
 import { t } from '../../i18n.js';
-import { findPuzzle, resolvePuzzleEntry, manualToCategory } from '../../flags/daily.js';
+import { findPuzzle, resolvePuzzleEntry, manualToCategory, superlativeToCategory } from '../../flags/daily.js';
 import {
   wireZoom,
   showState,
@@ -75,12 +75,14 @@ export function bootBacklogPlay() {
       // Same kind-aware branch as daily/page.js — backlog plays the
       // same shape as live, so manual entries staged in the backlog
       // need to render with their `entry.title` label here too.
-      const labelFor = result.entry.kind === 'manual'
-        ? () => manualToCategory(result.entry, document.documentElement.lang || 'en').label
-        : () => filterToCategory(/** @type {import('../../flags/flagsFilter.js').Filters} */ (result.filter), t).label;
-      const category = result.entry.kind === 'manual'
-        ? manualToCategory(result.entry, document.documentElement.lang || 'en')
-        : filterToCategory(/** @type {import('../../flags/flagsFilter.js').Filters} */ (result.filter), t);
+      const catFor = () => {
+        const lang = document.documentElement.lang || 'en';
+        if (result.entry.kind === 'manual') return manualToCategory(result.entry, lang);
+        if (result.entry.kind === 'superlative') return superlativeToCategory(result.entry, lang);
+        return filterToCategory(/** @type {import('../../flags/flagsFilter.js').Filters} */ (result.filter), t);
+      };
+      const labelFor = () => catFor().label;
+      const category = catFor();
       const game = startGame(n, category, result.targets, all, { skipSave: true });
       attachLangRefresh(game, {
         raw,

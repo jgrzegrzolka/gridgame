@@ -1,7 +1,7 @@
 import { loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { buildAnswerPool } from './answerPool.js';
-import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, manualToCategory } from '../flags/daily.js';
+import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, manualToCategory, superlativeToCategory } from '../flags/daily.js';
 import { warsawToday } from '../flags/warsawTime.js';
 import { visiblePuzzles } from '../flags/puzzleFilter.js';
 import { loadScores, isCompleteRecord, migrateScores } from './scores.js';
@@ -721,12 +721,17 @@ export function bootDaily() {
       // a category label to repaint into the puzzle title strip above
       // the result — startGame doesn't run on revisit, and renderResult
       // now needs the label to set `#find-cat`.
-      const labelFor = result.entry.kind === 'manual'
-        ? () => manualToCategory(result.entry, document.documentElement.lang || 'en').label
-        : () => filterToCategory(/** @type {import('../flags/flagsFilter.js').Filters} */ (result.filter), t).label;
-      const category = result.entry.kind === 'manual'
-        ? manualToCategory(result.entry, document.documentElement.lang || 'en')
-        : filterToCategory(/** @type {import('../flags/flagsFilter.js').Filters} */ (result.filter), t);
+      // Kind-aware category: manual + superlative render their hand-written
+      // `title` (a superlative's `filter` only narrowed its ranking pool, so
+      // it isn't the criteria); filter entries render the pill chain.
+      const catFor = () => {
+        const lang = document.documentElement.lang || 'en';
+        if (result.entry.kind === 'manual') return manualToCategory(result.entry, lang);
+        if (result.entry.kind === 'superlative') return superlativeToCategory(result.entry, lang);
+        return filterToCategory(/** @type {import('../flags/flagsFilter.js').Filters} */ (result.filter), t);
+      };
+      const labelFor = () => catFor().label;
+      const category = catFor();
 
       // Revisit: if this puzzle has a full saved record, jump straight
       // to the result page without confetti (the player saw confetti

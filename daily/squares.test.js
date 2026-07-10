@@ -229,6 +229,34 @@ test('renderArchiveSquare: manual entry renders title as criteria label (no thro
   _resetCacheForTests();
 });
 
+test('renderArchiveSquare: superlative entry renders its title as criteria label (title path, filter ignored)', () => {
+  // A superlative carries a pool-narrowing `filter`, but the square must
+  // show its hand-written title (the title path), NOT parse the filter.
+  _seedCacheForTests({});
+  const doc = fakeDoc();
+  doc.documentElement.lang = 'en';
+  const entry = /** @type {any} */ ({
+    n: 80,
+    kind: 'superlative',
+    metric: 'population',
+    scope: 'Europe',
+    direction: 'most',
+    topN: 5,
+    filter: 'color:white',
+    answers: ['ru', 'gb', 'fr', 'it', 'es'],
+    title: { en: '5 most populous white flags of Europe', pl: '5 najludniejszych białych flag Europy' },
+  });
+  const li = renderArchiveSquare(entry, { href: './play.html?n=80', ariaPrefix: 'Backlog' }, /** @type {any} */ (doc));
+  const link = li._children[0];
+  // Title path: no data-filter (would send the walker down the parse
+  // branch and show the pool-narrowing filter instead of the title).
+  assert.equal(link.dataset.filter, undefined);
+  assert.equal(link.dataset.title, JSON.stringify(entry.title));
+  const criteriaEl = link.querySelector('.archive-square-criteria');
+  assert.equal(criteriaEl.textContent, '5 most populous white flags of Europe');
+  _resetCacheForTests();
+});
+
 test('renderArchiveSquare: a backlog list mixing filter + manual entries renders both without throwing', () => {
   // End-to-end regression — the actual failure mode was the backlog
   // index iterating its entries and crashing on the manual one. This
