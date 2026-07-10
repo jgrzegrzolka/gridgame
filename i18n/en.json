@@ -608,6 +608,18 @@
     "horizontal": "horizontal stripes only",
     "vertical": "vertical stripes only"
   },
+  "population": {
+    "atLeast": {
+      "10m": "over 10M people",
+      "50m": "over 50M people",
+      "100m": "over 100M people"
+    },
+    "atMost": {
+      "20m": "under 20M people",
+      "5m": "under 5M people",
+      "1m": "under 1M people"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",

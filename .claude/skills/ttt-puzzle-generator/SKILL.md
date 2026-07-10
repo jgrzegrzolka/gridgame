@@ -1,6 +1,6 @@
 ---
 name: ttt-puzzle-generator
-description: Reference for the tic-tac-toe random puzzle generator in flags/engine.js — how it picks 6 categories, why it rejects some combinations, and what to check when it throws after exhausting its retry budget. Use when adding a new motif/colour/continent tag, debugging a "Could not generate a puzzle after N attempts" failure, or evaluating whether a new rejection rule belongs in the generator vs at the data layer.
+description: Reference for the tic-tac-toe random puzzle generator in flags/engine.js — how it picks 6 categories, why it rejects some combinations, and what to check when it throws after exhausting its retry budget. Use when adding a new motif/colour/continent tag or population threshold, debugging a "Could not generate a puzzle after N attempts" failure, or evaluating whether a new rejection rule belongs in the generator vs at the data layer.
 ---
 
 # Tic-tac-toe random puzzle generator
@@ -18,6 +18,9 @@ The pool is built from `buildRandomCategoryPool()`:
 - `MOTIFS_FOR_RANDOM` — 6 motifs (`animal`, `coat-of-arms`, `weapon`, `star-or-moon`, `cross`, `eu-member`).
 - `COLOR_COUNTS_FOR_RANDOM` — `[['=',2], ['=',3], ['=',4], ['>=',4]]`. Colour-count categories; share `exclusiveGroup: 'colorCount'` so any two of them can't pair (including `=4` × `>=4`, which overlap). `=1` has zero coverage and `>=5` has zero on Asia, so neither is in the pool. `<=N` isn't implemented; symmetric add when a use case lands.
 - `STRIPES_ORIENTATIONS_FOR_RANDOM` — `['horizontal', 'vertical']`. The `hasStripesOnly` factory carries `incompatibleWith` listing every charge motif id (rule 4 below) and `ultimateEligible: false` (so `buildUltimateCategoryPool()` drops it for 9×9 — pure-stripe answer pools are too narrow to back 9-per-cell Hall feasibility).
+- `POPULATION_BREAKS_FOR_RANDOM` — 6 population-threshold breakpoints: `>=10M / >=50M / >=100M` (populous) and `<=20M / <=5M / <=1M` (small). The `population(op, n)` factory bakes `exclusiveGroup: 'population'` on all six, so no two population constraints ever meet across axes (rules out both the impossible band `>=100M × <=1M` and the redundant `>=10M × <=20M`). Only the `>=10M` break is `ultimate: true`; the other five carry `ultimateEligible: false`, so `buildUltimateCategoryPool()` keeps **exactly one** population category in 9×9 (the extreme tiers can't back 9-distinct-per-cell against a continent — e.g. no Oceania country tops 10M).
+
+**Population is the one category whose predicate does NOT read a `countries.json` field.** It reads `country.population`, denormalized from the sparse metric `flags/metrics/population.json` onto each Country at load by `attachPopulations(countries, values)` (in `group.js`). Every TTT load site does this: both party servers (`party/server.js`, `party/ultimateServer.js`, static JSON import) and both offline pages (`ticTacToe/offline/page.js`, `ticTacToe/9x9/offline/page.js`, browser `fetch`). **If a load site forgets to attach, its population cells are silently always-empty** and the generator just never picks population there (or burns retries). Countries absent from the sparse metric (most territories, all non-place flags) match neither `>=` nor `<=`. Rehydration from the wire/storage id works with no metric data because the predicate closes over the raw number in the id (`categoryFromId('population:>=10000000')`).
 
 `ALL_MOTIFS` is a superset that adds `union-jack` for the findFlag / flagsdata UI — union-jack isn't in the random pool because it has no compelling puzzle hook and very narrow continent coverage.
 
@@ -29,7 +32,7 @@ The generator rejects a candidate puzzle if **any** of these fire. Each rule has
 
 Two flavours, both checked in the same function:
 
-**Same exclusiveGroup, different ids.** Categories with an `exclusiveGroup` (`continent`, `statehood`, `colorCount`, `stripesOnly`) can only contribute one value per country. Two continents on opposite axes (`Europe` row × `Asia` col) asks for "European AND Asian" — unsatisfiable by construction. Two stripesOnly cats (`horizontal` × `vertical`) likewise can't co-occur.
+**Same exclusiveGroup, different ids.** Categories with an `exclusiveGroup` (`continent`, `statehood`, `colorCount`, `stripesOnly`, `population`) can only contribute one value per country. Two continents on opposite axes (`Europe` row × `Asia` col) asks for "European AND Asian" — unsatisfiable by construction. Two stripesOnly cats (`horizontal` × `vertical`) likewise can't co-occur, and two population thresholds (`>=100M` × `<=1M`) never share a puzzle.
 
 The check only fires across axes — multiple continents *on the same axis* are fine (that's just three continent rows, normal).
 
@@ -53,7 +56,7 @@ For the 9×9 board, each of the 9 cells needs `perCell = 9` distinct countries w
 
 ### 4. `ultimateEligible: false` — pool-level filter for 9×9
 
-Some categories work for 3×3 (min 2 candidates per cell) but can't back 9×9 (need 9 distinct). Rather than burn 500 retries discovering this via `hasUltimatePuzzleSolution`, mark the category `ultimateEligible: false` and `buildUltimateCategoryPool()` drops it before `randomPuzzle` ever sees it. Current users: both `hasStripesOnly` categories (Europe has 8 pure-horizontals and 5 pure-verticals — both under 9). Default (undefined / true) keeps the category in both pools.
+Some categories work for 3×3 (min 2 candidates per cell) but can't back 9×9 (need 9 distinct). Rather than burn 500 retries discovering this via `hasUltimatePuzzleSolution`, mark the category `ultimateEligible: false` and `buildUltimateCategoryPool()` drops it before `randomPuzzle` ever sees it. Current users: both `hasStripesOnly` categories (Europe has 8 pure-horizontals and 5 pure-verticals — both under 9), and five of the six `POPULATION_BREAKS_FOR_RANDOM` (only `>=10M` stays in 9×9). Default (undefined / true) keeps the category in both pools.
 
 ## When to add a new rejection rule
 
@@ -95,11 +98,12 @@ The generator throws when the retry budget is exhausted. Walking the diagnostic 
 - **Adding a country** — usually safe; new coverage relaxes the search space.
 - **Removing a country** — check the 30-seed test still passes. The country might have been the sole carrier of some (continent × motif) coverage.
 - **Changing `primaryColors` on a country** — `axesImpliedPair` reads against the default `colors` field (primary + additional). Splitting a colour primary→additional doesn't move the country out of the motif's match-set, so the implication graph is stable.
+- **Refreshing `flags/metrics/population.json`** (yearly, via `authoring/build-population.mjs`) — moves countries across the fixed 10M/20M/50M/100M/1M/5M breakpoints, changing which population cells are fillable. The 30-seed sweep in `countries.test.js` attaches the real metric, so a refresh that starved a break would surface there. **Adding or changing a breakpoint** in `POPULATION_BREAKS_FOR_RANDOM` needs a matching i18n label under `population.atLeast.*` / `population.atMost.*` (keyed by the millions token, e.g. `10m`) in both `en.json` and `pl.json`, or the header renders the baked English fallback.
 
 ## Test coverage map
 
 - **Helper unit tests**: `flags/engine.test.js` — `axesConflict` (3 tests), `axesImpliedPair` (5 tests).
 - **Generator behaviour against synthetic data**: `flags/engine.test.js` — pinned across 10 seeds for both `axesConflict` and `axesImpliedPair`.
-- **Generator behaviour against real data**: `flags/countries.test.js` — 30-seed sweep that runs the live `MOTIFS_FOR_RANDOM` pool through `generateRandomPuzzle`, asserting no implied pair leaks and the budget isn't exhausted.
+- **Generator behaviour against real data**: `flags/countries.test.js` — 30-seed sweep that runs the live pool (population attached, like production) through `generateRandomPuzzle`, asserting no implied pair leaks and the budget isn't exhausted; plus pins that population categories actually surface in 3×3 and that only `>=10M` ever reaches 9×9.
 
 When changing the generator, the real-data test is the load-bearing one — failure there means the live game is broken regardless of what synthetic tests say.

@@ -221,6 +221,36 @@ export const ALL_FLAG_COLORS = [...COLORS_FOR_RANDOM, 'violet'];
  */
 export const COLOR_COUNTS_FOR_RANDOM = [['=', 2], ['=', 3], ['=', 4], ['>=', 4]];
 
+/**
+ * Population-threshold Categories the random generator may pair on the row /
+ * column axes. Three "populous" tiers (>= N people) and three "small" tiers
+ * (<= N people), tuned so a player feels an easy→hard gradient: `>=10M` /
+ * `<=20M` each cover roughly half the world, while `>=100M` (≈16 countries)
+ * and `<=1M` are tight pools that demand real knowledge.
+ *
+ * All six share `exclusiveGroup: 'population'` (baked by the `population`
+ * factory) so two population constraints can never meet across axes — that
+ * rules out both the impossible band (`>=100M × <=1M`, always empty) and the
+ * merely redundant one (`>=10M × <=20M`). A puzzle carries population on at
+ * most one cross-axis constraint.
+ *
+ * `ultimate: true` marks the single breakpoint kept in the 9×9 pool. The
+ * extreme tiers can't back 9-distinct-per-cell against a continent (e.g.
+ * Oceania has no country over 10M), so only the broad `>=10M` tier survives
+ * `buildUltimateCategoryPool` — the rest carry `ultimateEligible: false`, the
+ * same mechanism that keeps `stripesOnly` out of 9×9.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const POPULATION_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 10_000_000, ultimate: true },
+  { op: '>=', n: 50_000_000 },
+  { op: '>=', n: 100_000_000 },
+  { op: '<=', n: 20_000_000 },
+  { op: '<=', n: 5_000_000 },
+  { op: '<=', n: 1_000_000 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -327,6 +357,46 @@ export function hasMotif(motif) {
 }
 
 /**
+ * "Population threshold" Category — `op:'>='` matches countries with at least
+ * `n` people, `op:'<='` matches at most `n`. The predicate reads the `population`
+ * field denormalized onto each Country at load (`attachPopulations` in
+ * group.js); a country with no population value (the metric is sparse — most
+ * territories and all non-place flags lack one) never matches either
+ * direction. That mirrors every other engine predicate reading a plain Country
+ * field, so `categoryFromId` can rebuild a working predicate from the id alone
+ * (the online path ships categories over the wire as `{id, label}` and
+ * rehydrates via the id) with no population map to thread through.
+ *
+ * The id encodes the op in URL-suffix form: `>=N` / `<=N` with the raw people
+ * count, keeping shareable URLs and stored puzzles stable. Members share
+ * `exclusiveGroup: 'population'` so no two population constraints coexist
+ * across axes.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function population(op, n, opts = {}) {
+  const human = `${n / 1_000_000}M`;
+  const label = op === '>=' ? `over ${human} people` : `under ${human} people`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.population === 'number' && c.population >= n
+      : (c) => typeof c.population === 'number' && c.population <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `population:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'population',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * @template T
  * @param {T[]} pool
  * @param {number} n
@@ -392,6 +462,19 @@ export function translateCategoryLabel(category, translate) {
     }
     return translate(`filter.onlyN.${value}`, category.label);
   }
+  if (kind === 'population') {
+    // value is the id suffix: ">=10000000" / "<=1000000". Key on the compact
+    // millions token ("10m", "1m") so the i18n block stays readable and the
+    // keys line up with POPULATION_BREAKS_FOR_RANDOM.
+    const op = value.slice(0, 2);
+    const n = Number.parseInt(value.slice(2), 10);
+    if ((op === '>=' || op === '<=') && Number.isInteger(n)) {
+      const token = `${n / 1_000_000}m`;
+      const bucket = op === '>=' ? 'atLeast' : 'atMost';
+      return translate(`population.${bucket}.${token}`, category.label);
+    }
+    return category.label;
+  }
   return category.label;
 }
 
@@ -426,6 +509,20 @@ export function categoryFromId(id) {
     if (Number.isInteger(n) && n >= 0 && String(n) === nStr) return colorCount(op, n);
     return null;
   }
+  if (id.startsWith('population:')) {
+    const suffix = id.slice('population:'.length);
+    /** @type {'>=' | '<=' | null} */
+    let op = null;
+    if (suffix.startsWith('>=')) op = '>=';
+    else if (suffix.startsWith('<=')) op = '<=';
+    if (!op) return null;
+    const nStr = suffix.slice(2);
+    const n = Number.parseInt(nStr, 10);
+    // Rehydrated categories drop `ultimateEligible` — it only steers pool
+    // building, never a live puzzle's category.
+    if (Number.isInteger(n) && n > 0 && String(n) === nStr) return population(op, n);
+    return null;
+  }
   return null;
 }
 
@@ -437,6 +534,8 @@ export function buildRandomCategoryPool() {
     ...MOTIFS_FOR_RANDOM.map(hasMotif),
     ...COLOR_COUNTS_FOR_RANDOM.map(([op, n]) => colorCount(op, n)),
     ...STRIPES_ORIENTATIONS_FOR_RANDOM.map(hasStripesOnly),
+    ...POPULATION_BREAKS_FOR_RANDOM.map(({ op, n, ultimate }) =>
+      population(op, n, { ultimateEligible: ultimate === true })),
   ];
 }
 

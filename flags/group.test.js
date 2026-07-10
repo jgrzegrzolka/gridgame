@@ -13,12 +13,34 @@ import {
   flagsGamePool,
   loadCountries,
   createCountry,
+  attachPopulations,
 } from './group.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const countries = loadCountries(JSON.parse(
   readFileSync(join(__dirname, 'countries.json'), 'utf8'),
 ));
+
+test('attachPopulations denormalizes matching values and leaves the rest without a field', () => {
+  const cs = [
+    createCountry({ code: 'de', name: 'Germany', continent: 'Europe', category: 'country' }),
+    createCountry({ code: 'is', name: 'Iceland', continent: 'Europe', category: 'country' }),
+    createCountry({ code: 'xx', name: 'Nowhere', continent: null, category: 'other' }),
+  ];
+  const values = { de: 83_000_000, is: 385_663 };
+  const result = attachPopulations(cs, values);
+  assert.equal(result, cs, 'mutates and returns the same array');
+  assert.equal(cs[0].population, 83_000_000);
+  assert.equal(cs[1].population, 385_663);
+  assert.equal(cs[2].population, undefined, 'absent from the map → no field');
+});
+
+test('attachPopulations ignores non-number values (defensive against a malformed metric)', () => {
+  const cs = [createCountry({ code: 'de', name: 'Germany', category: 'country' })];
+  // @ts-expect-error intentionally malformed value
+  attachPopulations(cs, { de: 'lots' });
+  assert.equal(cs[0].population, undefined);
+});
 
 test('splitByCategory separates countries from other', () => {
   const result = splitByCategory([

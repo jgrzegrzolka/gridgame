@@ -8,7 +8,7 @@ import {
   isMetaWinNewlyFormed,
 } from '../../../flags/ultimateTicTacToe.js';
 import { shouldFireTicTacToeConfetti } from '../../../flags/ticTacToe.js';
-import { loadCountries } from '../../../flags/group.js';
+import { loadCountries, attachPopulations } from '../../../flags/group.js';
 import { t, countryName, withLocalizedAliases } from '../../../i18n.js';
 import { launchConfetti } from '../../../confetti.js';
 import { trapPicker, releasePicker } from '../../pickerLock.js';
@@ -29,11 +29,18 @@ export function bootTicTacToe9x9() {
   // the 3×3 case too, so on slow connections + slow devices the gap
   // compounds; pre-building keeps the full layout on-screen throughout.
   buildGridSkeleton();
-  fetch('../../../flags/countries.json')
-    .then((r) => r.json())
-    .then(loadCountries)
-    .then((rawCountries) => {
-      const countries = withLocalizedAliases(rawCountries);
+  // Fetch population alongside countries and denormalize it on (browser fetches
+  // JSON, never imports). The 9×9 pool keeps only the single `over 10M`
+  // breakpoint, but still needs the field present to resolve it.
+  Promise.all([
+    fetch('../../../flags/countries.json').then((r) => r.json()),
+    fetch('../../../flags/metrics/population.json').then((r) => r.json()),
+  ])
+    .then(([rawCountries, population]) => {
+      const countries = attachPopulations(
+        withLocalizedAliases(loadCountries(rawCountries)),
+        population.values,
+      );
       // 9×9 requires every (row × col) small board to be filled with 9 distinct
       // flags AND no flag shared across small boards (global no-duplicate).
       // generateUltimateRandomPuzzle uses Hall's marriage theorem to ensure

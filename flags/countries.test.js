@@ -16,13 +16,20 @@ import {
   axesImpliedPair,
   suggest,
 } from './engine.js';
-import { CONTINENTS, flagsGamePool, loadCountries } from './group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations } from './group.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const COUNTRIES = loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8')));
+// Attach population exactly as the TTT load sites do, so the seed sweeps below
+// exercise the real production pool (population categories included) with the
+// same retry budget players hit.
+const POPULATION = JSON.parse(readFileSync(join(HERE, 'metrics', 'population.json'), 'utf-8'));
+const COUNTRIES = attachPopulations(
+  loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'))),
+  POPULATION.values,
+);
 const SVG_DIR = join(HERE, 'svg');
 
 test('countries.json is a non-empty array', () => {
@@ -539,6 +546,42 @@ test('generateUltimateRandomPuzzle succeeds with the real countries.json under m
       true,
       `seed ${seed}: produced a puzzle that fails the Hall feasibility check`,
     );
+  }
+});
+
+// population integration pins — the unit tests in engine.test.js cover the
+// factory + pool + rehydration wiring; these pin end-to-end behaviour against
+// real data so a regression (population never surfacing, or the extreme tiers
+// leaking into 9×9) shows up here rather than as a weird live puzzle.
+
+test('generateRandomPuzzle actually produces population puzzles in the 3×3 pool', () => {
+  // Mirrors the stripesOnly surfacing guard: generation-succeeds alone would
+  // pass even if population never got picked. Six of ~32 pool entries are
+  // population, so over 100 seeds we expect many hits.
+  const SEEDS = Array.from({ length: 100 }, (_, i) => (i + 1) * 17);
+  let popHits = 0;
+  for (const seed of SEEDS) {
+    const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    const ids = [...puzzle.rows, ...puzzle.cols].map((c) => c.id);
+    if (ids.some((id) => id.startsWith('population:'))) popHits++;
+  }
+  assert.ok(popHits > 0,
+    `expected population categories to appear in some 3×3 puzzles over 100 seeds, got ${popHits}`);
+});
+
+test('generateUltimateRandomPuzzle only ever picks the single ultimate population breakpoint', () => {
+  // 9×9 keeps just the `over 10M` tier (buildUltimateCategoryPool); the
+  // extreme tiers can't back 9-distinct-per-cell. Pin that no other
+  // population id ever reaches a generated 9×9 puzzle over 50 seeds.
+  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 9973);
+  for (const seed of SEEDS) {
+    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    for (const cat of [...puzzle.rows, ...puzzle.cols]) {
+      if (cat.id.startsWith('population:')) {
+        assert.equal(cat.id, 'population:>=10000000',
+          `seed ${seed}: 9×9 picked ${cat.id}, but only population:>=10000000 is ultimate-eligible`);
+      }
+    }
   }
 });
 
