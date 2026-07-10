@@ -3,7 +3,7 @@ import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, foldDiacr
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
 import { createMetric } from '../flags/metrics.js';
-import { METRICS } from '../flags/metrics/index.js';
+import { METRIC_FILES } from '../flags/metrics/index.js';
 import { computeLensView } from '../flags/metricLens.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
@@ -227,6 +227,9 @@ export function bootFlagsData() {
   let lensMetric = null;
   /** @type {'default' | 'desc' | 'asc'} */
   let lensSort = 'default';
+  /** Raw metric data, fetched at boot (browser can't statically import JSON).
+   * @type {Record<string, import('../flags/metrics.js').MetricData>} */
+  let metricsData = {};
 
   // Show-map toggle in the burger menu — flagsdata's burger panel ships
   // empty (just the coffee link), so we prepend the toggle here at
@@ -915,7 +918,7 @@ export function bootFlagsData() {
     lensButtons.push({ key, el: b });
   }
   makeLensBtn(null, t('flagsdata.metricNone', 'None'));
-  for (const k of Object.keys(METRICS)) makeLensBtn(k, metricLabel(k, METRICS[k].label));
+  for (const m of METRIC_FILES) makeLensBtn(m.key, metricLabel(m.key, m.label));
 
   // Sort control — only meaningful with a lens on, so hidden until one is picked.
   const lensSortWrap = document.createElement('div');
@@ -955,11 +958,25 @@ export function bootFlagsData() {
   function selectMetric(key) {
     lensKey = key;
     lensSort = 'default';
-    lensMetric = key && state ? createMetric(METRICS[key], state.items) : null;
+    lensMetric = key && state && metricsData[key] ? createMetric(metricsData[key], state.items) : null;
     lensSortWrap.hidden = !key;
     syncLensPressed();
     renderLens();
   }
+
+  // Metric JSON is fetched (not statically imported) so it loads in every
+  // browser. A metric file failing to load only disables that lens — it must
+  // never block the flag grid, so these resolve to null and are filtered out.
+  const metricsReady = Promise.all(
+    METRIC_FILES.map((m) =>
+      fetch(`../flags/metrics/${m.file}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => (data ? /** @type {const} */ ([m.key, data]) : null))
+        .catch(() => null),
+    ),
+  ).then((entries) => {
+    metricsData = Object.fromEntries(entries.filter(Boolean));
+  });
 
   fetch('../flags/countries.json')
     .then((r) => r.json())
@@ -967,9 +984,13 @@ export function bootFlagsData() {
     .then((all) => {
       const sections = document.getElementById('sections');
       renderAll(sections, all);
-      // If a lens was picked before the data resolved (buttons mount at boot,
-      // data arrives async), build its metric now against the loaded set.
-      if (lensKey) lensMetric = createMetric(METRICS[lensKey], all);
+      // Once both the countries and the metric data are in, activate any lens
+      // picked before the data resolved (buttons mount at boot, data is async).
+      metricsReady.then(() => {
+        if (lensKey && metricsData[lensKey]) lensMetric = createMetric(metricsData[lensKey], all);
+        renderLens();
+        applyFilter();
+      });
       renderLens();
       // Reflect the initial (unfiltered) selection now that `state` is
       // ready. Closes a mount-vs-data race: if `worldMap.svg` resolved
@@ -1022,7 +1043,8 @@ export function bootFlagsData() {
     // Lens metric buttons carry dynamic labels (not a fixed data-i18n key), so
     // re-translate them here; renderLens refreshes the "no data" overlay text.
     for (const { key, el } of lensButtons) {
-      el.textContent = key ? metricLabel(key, METRICS[key].label) : t('flagsdata.metricNone', 'None');
+      const file = key ? METRIC_FILES.find((m) => m.key === key) : null;
+      el.textContent = key ? metricLabel(key, file ? file.label : key) : t('flagsdata.metricNone', 'None');
     }
     renderLens();
   });
