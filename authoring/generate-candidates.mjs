@@ -198,6 +198,11 @@ function rule6NoSubset(filter, answers) {
       if (allMatch) return { ok: false, conflict: existing, reason: 'same-answer-set' };
       continue;
     }
+    // Manual / superlative entries carry frozen answers but no filter string,
+    // so they can't be in a filter-refinement relationship. The equal-set dedup
+    // above still catches an identical roster; below (sizes differ) the only
+    // rejection reason is a filter refinement, which needs both filters.
+    if (typeof existing.filter !== 'string') continue;
     if (candSet.size < existing.set.size) {
       // Candidate smaller → check if it's a strict subset of existing.
       let isSubset = true;
