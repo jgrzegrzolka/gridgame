@@ -77,3 +77,44 @@ export function buildPopulationRankNotes(countries, values) {
   }
   return notes;
 }
+
+/**
+ * Compact population for a corner pill on a small result tile — "1.4B" / "337M"
+ * / "9.8K" in English, "mld" / "mln" / "tys" in Polish. Precision drops as the
+ * number grows (a pill has no room for exact figures — the zoom caption carries
+ * those). Sub-thousand values render whole.
+ *
+ * @param {number} v
+ * @param {string} lang
+ * @returns {string}
+ */
+export function formatPopulationShort(v, lang) {
+  const pl = lang === 'pl';
+  const dec = (/** @type {string} */ s) => (pl ? s.replace('.', ',') : s);
+  if (v >= 1e9) return `${dec((v / 1e9).toFixed(1))}${pl ? ' mld' : 'B'}`;
+  if (v >= 1e6) return `${dec(v >= 1e7 ? String(Math.round(v / 1e6)) : (v / 1e6).toFixed(1))}${pl ? ' mln' : 'M'}`;
+  if (v >= 1e3) return `${dec(v >= 1e5 ? String(Math.round(v / 1e3)) : (v / 1e3).toFixed(1))}${pl ? ' tys' : 'K'}`;
+  return String(v);
+}
+
+/**
+ * Per-tile overlay data for a superlative's result grid: each answer's rank
+ * within *this puzzle* (its 1-based place in the frozen, rank-ordered `answers`
+ * array) plus its raw metric value. The daily result screen reads this to badge
+ * each found/missed tile with its place and population. `pop` is null when the
+ * metric has no value for that code (shouldn't happen for a valid roster, but
+ * the tile then just shows the rank).
+ *
+ * @param {{ answers?: string[] }} entry
+ * @param {Record<string, number>} values
+ * @returns {Map<string, { rank: number, pop: number | null }>}
+ */
+export function buildSuperlativeTileMeta(entry, values) {
+  /** @type {Map<string, { rank: number, pop: number | null }>} */
+  const meta = new Map();
+  const answers = Array.isArray(entry.answers) ? entry.answers : [];
+  answers.forEach((code, i) => {
+    meta.set(code, { rank: i + 1, pop: typeof values[code] === 'number' ? values[code] : null });
+  });
+  return meta;
+}

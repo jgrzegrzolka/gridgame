@@ -204,6 +204,37 @@
   pointer-events: none;
 }
 
+/* Rank + population overlay for population-superlative result tiles
+ * (playFlow.js flagTile, only on the Found/Missed grids). Corner pills so
+ * they never collide with the bottom .find-stats-pct find-rate strip: the
+ * in-puzzle rank sits top-left, the compact population top-right. The tile
+ * is position: relative (../findFlag/index.css), so these anchor to it. */
+.find-tile-rank,
+.find-tile-pop {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 4px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.find-tile-rank {
+  left: 0;
+  background: var(--primary-color);
+  color: var(--surface-color);
+  font-weight: 700;
+  border-bottom-right-radius: 4px;
+}
+.find-tile-pop {
+  right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-weight: 600;
+  border-bottom-left-radius: 4px;
+}
+
 /* Extra-stats rail sits below the score caption and renders smaller
  * than the main Znalezione/Pominięte grids — it's secondary signal,
  * not a third copy of the result. The generous top margin separates

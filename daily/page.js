@@ -6,7 +6,7 @@ import { warsawToday } from '../flags/warsawTime.js';
 import { visiblePuzzles } from '../flags/puzzleFilter.js';
 import { loadScores, isCompleteRecord, migrateScores } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
-import { buildPopulationRankNotes } from '../flags/populationRank.js';
+import { buildPopulationRankNotes, buildSuperlativeTileMeta } from '../flags/populationRank.js';
 import {
   wireZoom,
   openZoom,
@@ -17,6 +17,7 @@ import {
   attachLangRefresh,
   showReason,
   setZoomNotes,
+  setTileMeta,
 } from './playFlow.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
 import { trySyncDevices } from '../flags/syncHydrate.js';
@@ -711,19 +712,29 @@ export function bootDaily() {
       // time (they carry every language); openZoom localizes on open, so
       // a soft language switch needs no re-install.
       setZoomNotes(result.entry.notes);
+      setTileMeta(null);
 
-      // Population superlatives: upgrade the zoom captions to carry each flag's
-      // population AND its world rank among sovereign states, computed once from
-      // the metric file. Unlike the baked `entry.notes` (which only cover the
-      // frozen answers), this captions the WHOLE sovereign pool — so the "Most
-      // missed" rail's distractor tiles (the big-but-not-top-N countries a
-      // player wrongly guessed) reveal e.g. "#15 in the world" too, not just a
-      // bare name. Non-blocking and best-effort: the result renders immediately
-      // with the baked fallback, and a fetch failure just leaves that in place.
+      // Population superlatives: one metric fetch feeds two enrichments of the
+      // result screen —
+      //   1. zoom captions across the WHOLE sovereign pool (population + world
+      //      rank), so even the "Most missed" distractor tiles say "#15 in the
+      //      world", not just a bare name (vs. baked `entry.notes`, which only
+      //      cover the frozen answers);
+      //   2. a per-tile overlay (in-puzzle rank badge + population pill) on the
+      //      Found / Missed grids.
+      // Best-effort: `popReady` gates only the revisit path's immediate render
+      // so the badges are present first paint. The play path finishes long
+      // after this resolves, so it never blocks on the fetch. On failure the
+      // baked zoom notes stand and the tiles render without the overlay.
+      let popReady = Promise.resolve();
       if (result.entry.kind === 'superlative' && result.entry.metric === 'population') {
-        fetch('../flags/metrics/population.json')
+        popReady = fetch('../flags/metrics/population.json')
           .then((r) => r.json())
-          .then((d) => setZoomNotes(buildPopulationRankNotes(all, d.values ?? {})))
+          .then((d) => {
+            const values = d.values ?? {};
+            setZoomNotes(buildPopulationRankNotes(all, values));
+            setTileMeta(buildSuperlativeTileMeta(result.entry, values));
+          })
           .catch(() => {});
       }
 
@@ -778,6 +789,9 @@ export function bootDaily() {
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         const revisitDeviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
+        // Wait on the (best-effort) metric fetch so a revisit paints the rank +
+        // population overlay on the first render rather than a beat later.
+        await popReady;
         renderResult(result.targets, foundCodes, category.label);
         setShareCtx(n, result.targets, foundCodes);
         paintPersonalStats(foundCodes.size, result.targets.length);

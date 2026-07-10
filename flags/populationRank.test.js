@@ -4,6 +4,8 @@ import {
   formatPopulation,
   rankByPopulation,
   buildPopulationRankNotes,
+  formatPopulationShort,
+  buildSuperlativeTileMeta,
 } from './populationRank.js';
 
 const VALUES = {
@@ -71,4 +73,40 @@ test('buildPopulationRankNotes: only sovereign (valued) codes get a note', () =>
   const notes = buildPopulationRankNotes(COUNTRIES, VALUES);
   assert.equal('gb-eng' in notes, false);
   assert.equal(Object.keys(notes).length, 6);
+});
+
+test('formatPopulationShort: compact suffixes per magnitude (en)', () => {
+  assert.equal(formatPopulationShort(1_438_069_596, 'en'), '1.4B');
+  assert.equal(formatPopulationShort(336_762_000, 'en'), '337M'); // >=10M → whole
+  assert.equal(formatPopulationShort(1_580_000, 'en'), '1.6M');   // <10M → one decimal
+  assert.equal(formatPopulationShort(9_816, 'en'), '9.8K');       // <100K → one decimal
+  assert.equal(formatPopulationShort(129_739, 'en'), '130K');     // >=100K → whole
+  assert.equal(formatPopulationShort(800, 'en'), '800');
+});
+
+test('formatPopulationShort: pl uses mld/mln/tys and comma decimals', () => {
+  assert.equal(formatPopulationShort(1_438_069_596, 'pl'), '1,4 mld');
+  assert.equal(formatPopulationShort(336_762_000, 'pl'), '337 mln');
+  assert.equal(formatPopulationShort(1_580_000, 'pl'), '1,6 mln');
+  assert.equal(formatPopulationShort(9_816, 'pl'), '9,8 tys');
+});
+
+test('buildSuperlativeTileMeta: rank is 1-based place in the answers array', () => {
+  const entry = { answers: ['in', 'cn', 'us', 'id'] };
+  const meta = buildSuperlativeTileMeta(entry, VALUES);
+  assert.equal(meta.get('in')?.rank, 1);
+  assert.equal(meta.get('cn')?.rank, 2);
+  assert.equal(meta.get('us')?.rank, 3);
+  assert.equal(meta.get('in')?.pop, 1_438_069_596);
+  assert.equal(meta.get('us')?.pop, 336_762_000);
+});
+
+test('buildSuperlativeTileMeta: missing metric value → pop null, rank kept', () => {
+  const meta = buildSuperlativeTileMeta({ answers: ['in', 'zz'] }, VALUES);
+  assert.equal(meta.get('zz')?.rank, 2);
+  assert.equal(meta.get('zz')?.pop, null);
+});
+
+test('buildSuperlativeTileMeta: no answers → empty map', () => {
+  assert.equal(buildSuperlativeTileMeta({}, VALUES).size, 0);
 });
