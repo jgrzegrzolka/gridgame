@@ -13,30 +13,30 @@ import {
   validatePlan,
 } from './partyPlan.js';
 
-test('DEFAULT_PLAN: 3 sovereign flag-pick, 3 non-sovereign flag-pick, 3 sovereign map, 2 superlative', () => {
+test('DEFAULT_PLAN: 4 of each — sovereign flag, non-sovereign flag, sovereign map, superlative', () => {
   assert.deepEqual(DEFAULT_PLAN, [
-    { poolId: 'sovereign', roundId: 'flagPick', rounds: 3 },
-    { poolId: 'nonSovereign', roundId: 'flagPick', rounds: 3 },
-    { poolId: 'sovereign', roundId: 'mapPick', rounds: 3 },
-    { poolId: 'sovereign', roundId: 'superlative', rounds: 2 },
+    { poolId: 'sovereign', roundId: 'flagPick', rounds: 4 },
+    { poolId: 'nonSovereign', roundId: 'flagPick', rounds: 4 },
+    { poolId: 'sovereign', roundId: 'mapPick', rounds: 4 },
+    { poolId: 'sovereign', roundId: 'superlative', rounds: 4 },
   ]);
-  assert.equal(totalRounds(DEFAULT_PLAN), 11);
+  assert.equal(totalRounds(DEFAULT_PLAN), 16);
 });
 
-test('poolIdForRound: non-sovereign only for 3-5, sovereign elsewhere', () => {
-  for (let i = 0; i <= 2; i++) assert.equal(poolIdForRound(DEFAULT_PLAN, i), 'sovereign', `round ${i}`);
-  for (let i = 3; i <= 5; i++) assert.equal(poolIdForRound(DEFAULT_PLAN, i), 'nonSovereign', `round ${i}`);
-  for (let i = 6; i <= 10; i++) assert.equal(poolIdForRound(DEFAULT_PLAN, i), 'sovereign', `round ${i}`);
+test('poolIdForRound: non-sovereign only for 4-7, sovereign elsewhere', () => {
+  for (let i = 0; i <= 3; i++) assert.equal(poolIdForRound(DEFAULT_PLAN, i), 'sovereign', `round ${i}`);
+  for (let i = 4; i <= 7; i++) assert.equal(poolIdForRound(DEFAULT_PLAN, i), 'nonSovereign', `round ${i}`);
+  for (let i = 8; i <= 15; i++) assert.equal(poolIdForRound(DEFAULT_PLAN, i), 'sovereign', `round ${i}`);
 });
 
-test('roundIdForRound: flag-pick 0-5, map 6-8, superlative 9-10', () => {
-  for (let i = 0; i <= 5; i++) assert.equal(roundIdForRound(DEFAULT_PLAN, i), 'flagPick', `round ${i}`);
-  for (let i = 6; i <= 8; i++) assert.equal(roundIdForRound(DEFAULT_PLAN, i), 'mapPick', `round ${i}`);
-  for (let i = 9; i <= 10; i++) assert.equal(roundIdForRound(DEFAULT_PLAN, i), 'superlative', `round ${i}`);
+test('roundIdForRound: flag-pick 0-7, map 8-11, superlative 12-15', () => {
+  for (let i = 0; i <= 7; i++) assert.equal(roundIdForRound(DEFAULT_PLAN, i), 'flagPick', `round ${i}`);
+  for (let i = 8; i <= 11; i++) assert.equal(roundIdForRound(DEFAULT_PLAN, i), 'mapPick', `round ${i}`);
+  for (let i = 12; i <= 15; i++) assert.equal(roundIdForRound(DEFAULT_PLAN, i), 'superlative', `round ${i}`);
 });
 
 test('past the end clamps to the last segment (pool and round)', () => {
-  assert.equal(poolIdForRound(DEFAULT_PLAN, 11), 'sovereign');
+  assert.equal(poolIdForRound(DEFAULT_PLAN, 16), 'sovereign');
   assert.equal(roundIdForRound(DEFAULT_PLAN, 99), 'superlative');
 });
 
@@ -64,9 +64,9 @@ test('PARTY_MODES: every DEFAULT_PLAN segment maps to a catalog mode', () => {
   for (const m of PARTY_MODES) assert.match(m.id, /^[a-z]+(-[a-z]+)*$/);
 });
 
-test('countsForPlan: default plan gives 3 / 3 / 3 / 2 keyed by mode id', () => {
+test('countsForPlan: default plan gives 4 / 4 / 4 / 4 keyed by mode id', () => {
   assert.deepEqual(countsForPlan(DEFAULT_PLAN), {
-    'flags-all': 3, 'flags-territories': 3, 'map-outlines': 3, 'superlative-pop': 2,
+    'flags-all': 4, 'flags-territories': 4, 'map-outlines': 4, 'superlative-pop': 4,
   });
 });
 
