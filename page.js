@@ -10,6 +10,11 @@ import { flagOfDay } from './flags/flagOfDay.js';
 
 /** @typedef {import('./flags/group.js').Country} Country */
 
+// Flag of the day is temporarily hidden from the home screen (2026-07-11).
+// The card markup (index.html), its styles (index.css), and mountFlagOfDay()
+// below all stay intact — flip this to `true` to bring the card back.
+const SHOW_FLAG_OF_DAY = false;
+
 export function bootHome() {
   bootI18n().then((lang) => {
     // Home page is otherwise `data-i18n`-only — applyStringsToDocument covers
@@ -26,7 +31,7 @@ export function bootHome() {
       rootEl: document.querySelector('#burger-panel .menu'),
       profileHref: 'profile/',
     });
-    mountFlagOfDay();
+    if (SHOW_FLAG_OF_DAY) mountFlagOfDay();
   });
 }
 

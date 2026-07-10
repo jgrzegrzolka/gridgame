@@ -339,6 +339,11 @@ body {
   padding: 9px 14px;
   text-align: left;
 }
+/* The display:flex above outweighs the UA `[hidden]` rule, so the card needs
+ * its own guard to honour the `hidden` attribute (same as `.game-tile`) —
+ * otherwise an empty card shows before JS resolves or on fetch-fail. Also what
+ * keeps the card off the page while the feature is toggled off in page.js. */
+.fotd-card[hidden] { display: none; }
 .fotd-kicker {
   font-size: 11px;
   font-weight: 700;
