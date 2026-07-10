@@ -1,17 +1,20 @@
 /**
- * Registry of world metrics. Explicit imports (not a glob) so a missing or
- * malformed metric file fails loudly at the entry point — same rule the API's
- * function registry follows. Add a metric: drop `<key>.json` in this folder and
- * add one line here.
+ * Registry of world metrics — a plain list, no data imported here.
  *
- * Each value is raw MetricData ({ key, label, unit, source, year, values }).
- * Wrap it with createMetric(metric, countries) from ../metrics.js to get the
- * ranked/tiered/compare surface.
+ * IMPORTANT: this is loaded in the browser (flagsdata). Static JSON-module
+ * imports (`import x from './x.json' with { type: 'json' }`) only work reliably
+ * in Node — many browsers reject them and fall back to MIME-checking the file
+ * as a script, which 404-equivalently breaks the whole module graph. So metric
+ * DATA is fetched at runtime the same way `countries.json` is
+ * (`fetch(url).then(r => r.json())`), and this file only names the files.
+ *
+ * Add a metric: drop `<key>.json` in this folder and add one line here. The
+ * `label` is an English fallback for the lens button before i18n resolves
+ * `metric.<key>`.
+ *
+ * @typedef {{ key: string, file: string, label: string }} MetricFile
+ * @type {MetricFile[]}
  */
-
-import population from './population.json' with { type: 'json' };
-
-/** @type {Record<string, import('../metrics.js').MetricData>} */
-export const METRICS = {
-  population,
-};
+export const METRIC_FILES = [
+  { key: 'population', file: 'population.json', label: 'Population' },
+];
