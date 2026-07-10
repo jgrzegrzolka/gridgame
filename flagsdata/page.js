@@ -149,7 +149,16 @@ export function bootFlagsData() {
     zoom.focus();
     zoomCountry = c;
     paintFacts(c);
-    if (SHOW_DATA) zoomData.textContent = JSON.stringify(c, null, 2);
+    if (SHOW_DATA) {
+      // Fold in the world-metric values (population, …) that live outside
+      // countries.json, so the audit dump shows them too. Each metric's value
+      // map is sparse, so a country the metric doesn't cover reads `null`.
+      const metrics = {};
+      for (const m of METRIC_FILES) {
+        metrics[m.key] = metricsData[m.key]?.values?.[c.code] ?? null;
+      }
+      zoomData.textContent = JSON.stringify({ ...c, ...metrics }, null, 2);
+    }
   }
   wireFlagZoomBackdropClose(zoom);
   // Tap the headline flag to enlarge it in a lightbox (shared with the home
