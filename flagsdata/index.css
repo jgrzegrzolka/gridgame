@@ -19,9 +19,9 @@ body {
   /* No top padding — body already provides the `--page-top` gap from
    * the chrome strip; adding more here would push the search input
    * lower than every other page's first content row. The bottom
-   * padding stays so the row's hairline doesn't crowd the controls. */
+   * padding + the row's margin give a clean whitespace gap to the flags
+   * below (no divider line — the filter bar just breathes into the grid). */
   padding: 0 24px 12px 24px;
-  border-bottom: 1px solid var(--muted-soft-color);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
