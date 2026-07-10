@@ -531,7 +531,11 @@ export function startGame(n, category, targets, all, opts = {}) {
 
   /** @param {Country} c */
   function appendFound(c) {
-    foundEl.insertBefore(flagTile(c), foundEl.firstChild);
+    // `showMeta: true` so a correct guess on a population superlative slots in
+    // with its rank + population pills right away — the player watches the
+    // ranked list fill as they play. `tileMeta` is null on every non-superlative
+    // puzzle, so those found tiles stay bare flags (flagTile no-ops the overlay).
+    foundEl.insertBefore(flagTile(c, true), foundEl.firstChild);
   }
 
   /** @param {Country} c */
