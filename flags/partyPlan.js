@@ -1,8 +1,8 @@
 /**
  * The game plan for a Flag Party match: an ordered list of segments, each a
- * pool + a round type + a round count. Today one game is 3 sovereign flag-pick,
- * 3 non-sovereign flag-pick, 3 sovereign map rounds, then 2 sovereign
- * most/least-populous rounds. Modelling it as *data*
+ * pool + a round type + a round count. Today one game is 4 of each: 4 sovereign
+ * flag-pick, 4 non-sovereign flag-pick, 4 sovereign map, then 4 sovereign
+ * most/least-populous rounds (16 total). Modelling it as *data*
  * (not a hardcoded "11 rounds, switch at 3/6") is the seed of the future
  * settings page, where the host will pick modes and rounds-per-mode — that page
  * just edits this array.
@@ -16,10 +16,10 @@
 
 /** @type {Segment[]} */
 export const DEFAULT_PLAN = [
-  { poolId: 'sovereign', roundId: 'flagPick', rounds: 3 },
-  { poolId: 'nonSovereign', roundId: 'flagPick', rounds: 3 },
-  { poolId: 'sovereign', roundId: 'mapPick', rounds: 3 },
-  { poolId: 'sovereign', roundId: 'superlative', rounds: 2 },
+  { poolId: 'sovereign', roundId: 'flagPick', rounds: 4 },
+  { poolId: 'nonSovereign', roundId: 'flagPick', rounds: 4 },
+  { poolId: 'sovereign', roundId: 'mapPick', rounds: 4 },
+  { poolId: 'sovereign', roundId: 'superlative', rounds: 4 },
 ];
 
 /**

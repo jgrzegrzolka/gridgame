@@ -434,7 +434,8 @@ Verified in-browser: a "least populous" reveal showed South Sudan 11.5M / Austra
   surface it edits. Kept here only as a pointer — no longer an open question.
 - **QR in the lobby.** Deferred from iteration 1 (see above) — add a self-contained QR
   generator, or accept code + link.
-- **Question count / timing per round.** 11 rounds (3 flag / 3 flag / 5 map, per `DEFAULT_PLAN`).
+- **Question count / timing per round.** 16 rounds (4 flag / 4 territory / 4 map / 4 superlative,
+  per `DEFAULT_PLAN`; the host can retune each in the lobby setup).
   Per-question countdown landed in iteration 3 (`flags/partyTiming.js`, host-driven,
   hands-free advance); question time is `QUESTION_SECONDS = 20`. **Reveal pace is decided
   and deliberately *not* configurable** (see the reveal-pace note under Done): it's keyed on
