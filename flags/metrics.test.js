@@ -106,9 +106,18 @@ test('population.json has self-describing metadata', () => {
   assert.equal(POPULATION.key, 'population');
   assert.equal(typeof POPULATION.label, 'string');
   assert.equal(typeof POPULATION.unit, 'string');
+  assert.ok(POPULATION.format === 'compact' || POPULATION.format === 'decimal1', 'valid format hint');
   assert.equal(typeof POPULATION.source, 'string');
   assert.equal(typeof POPULATION.year, 'number');
   assert.equal(typeof POPULATION.values, 'object');
+});
+
+test('createMetric defaults format to compact when absent', () => {
+  const bare = createMetric(
+    { key: 'x', label: 'X', unit: 'u', source: 't', year: 2000, values: {} },
+    [],
+  );
+  assert.equal(bare.format, 'compact');
 });
 
 test('every population value is a positive integer', () => {

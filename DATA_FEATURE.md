@@ -19,41 +19,25 @@ A fresh agent picking this up should:
 
 ## Now
 
-### Feature DD: World metrics — population first, as a self-describing metric namespace
+### Feature DE: Metric lens in flagsdata
 
-**Goal.** Introduce a general home for **continuous world metrics** (population today; area, GDP, coffee production, ships-per-capita, … later) so new metrics unlock new game modes without ever running out of ideas. Ship population + the pure helper + tests, with **no game consumer yet** (party "which is bigger?", daily superlative set, TTT population tiers are their own later features).
+**Goal.** flagsdata gains an opt-in **metric lens** — pick a world metric (from `flags/metrics/`) to *look through*, and the explorer reparameterizes: each tile shows that metric's value + rank, you can sort by it, filter by tier, and one-tap superlative presets (Top N / Lowest N / Top N in Europe). Defaults to **None** — flagsdata stays a flag explorer; metrics are the power-user layer. First real consumer of Feature DD's data. **Explore-only; create-puzzle stays untouched.**
 
-**Why a metric namespace and not flat fields on `countries.json` (settled 2026-07-10):**
+**Design decisions (settled 2026-07-10, from the interactive mockup):**
 
-- **Different species of data.** `countries.json` holds *flag-identity* data — hand-curated, stable, coupled to the SVG, the core the engine sits on. World metrics are *external facts* — sourced from datasets, refreshed on their own cadence, each with its **own source and year** (population World Bank 2023, coffee FAO 2022, area 2020…). A flat `coffeeProduction: 123` field has nowhere to record "FAO 2022"; you'd bolt on parallel `…Year` / `…Source` fields — the tell that the shape is wrong.
-- **Sparsity.** Coffee production is meaningful for ~50 countries, ships-per-capita fewer. A metric lists **only** the countries it applies to (`values` map), so no `null` splatter across `countries.json`. The schema contract is "every metric key is a real country," **not** "every country has a value."
-- **The game-mode multiplier.** Each metric is self-describing (`label`, `unit`, `source`, `year`, `values`), so one generic helper gives *every* metric the full mechanic set — top-N, bottom-N, rank, tiers, "which is bigger" — for free. Add a metric file → it instantly works in every superlative-style mode.
+- **Default None.** flagsdata's core identity is flag browsing (colour / motif / continent). A metric is an opt-in lens layered on top, never forced.
+- **Metric = a lens (one active metric), not columns.** The tile shows *at most* the active metric's value + rank. Switching the lens re-renders everything. Ten metrics don't crowd a tile — you look through one at a time.
+- **Why it does NOT touch shared `flagsFilter.js`.** Metric rank/tier is **set-relative** (you need the whole scope to know the cutoff), while `matchesFilters(country, filters)` is a **per-flag predicate**. They're architecturally different, so metric logic lives in the flagsdata page via `createMetric` and never enters the shared filter DSL. This is *why* the lens can't leak into findFlag's create-puzzle chooser — the sharing that categorical filters have simply doesn't apply.
+- **Sparse handling.** On a sparse metric, countries with no value **dim to "no data"** and drop out of the ranking / sort / tier (`createMetric().has()`).
+- **Three capabilities, mapped deliberately.** *Lens display* (value/rank/sort) → explore only. *Tiers* (high/mid/low) → explore only; tertile boundaries are fuzzy, fine for browsing but bad for puzzle answer sets. *Superlative top-N* → the crisp, good puzzle mechanic, but here it appears only as an explore **preset**.
+- **create-puzzle / daily superlatives are a separate later feature** (settled: "leave out for now"). When built, they get a *superlative builder* (metric + scope + N → exact set), never tier pills, and never via the per-flag filter DSL.
+- **Additive metric-file change:** a `format` hint (`'compact'` → 1.4B / 337M / 552K, `'decimal1'` → one-decimal per-capita rates). Self-describing; consumers read it for display.
 
-**Storage decisions:**
+**Phasing** (this feature, on one branch each — don't auto-merge):
 
-- **Store the raw number, never rank.** Rank is scope-dependent (world / UN-only / within-continent / including-territories) — a stored rank would bake in one interpretation and drift on every refresh. Deriving rank is one sort at load: free. Single source of truth.
-- **Scope: all real places.** Every `category !== 'other'` country is eligible (~262). The 7 non-geographic `other` entries never get metrics.
-- **Sparse tail is intentional.** Uninhabited / transient places (Antarctica, Bouvet, Heard & McDonald, Clipperton, South Georgia, French Southern Territories, US Minor Outlying, British Indian Ocean Territory) are **omitted** from `population.json` rather than given a fake `0` — a `0` would pollute "10 least populated" with technicalities. Vatican (~800) is the genuine floor.
-
-**Data shape:**
-
-```
-flags/metrics/
-  population.json   { key, label, unit, source, year, values: { <code>: <int> } }   // values sorted by code
-  index.js          explicit registry — import each metric with { type: 'json' } (matches dailyValidate.js / party servers)
-flags/metrics.js    pure helper: createMetric(metricData, countries) →
-                      { valueOf, has, ranked, topN, bottomN, rankOf, tierOf, compare, label, unit, source, year }
-flags/metrics.test.js   fixture-driven logic tests + real-data schema/integration gate
-authoring/build-population.mjs   fetch World Bank SP.POP.TOTL 2023 → join countries.json → emit population.json (yearly refresh = one command)
-```
-
-- **Helper is pure** (no fetch/DOM — same discipline as `engine.js`): caller loads the JSON + `countries.json` and passes them in; tests pass fixtures. Scope = `'world' | 'un_member' | <continent>`, resolved by joining `values` against `countries.json` by code.
-- **Source.** World Bank WDI `SP.POP.TOTL`, 2023, for the 216 it covers. The 38 populated dependencies / sub-national regions World Bank omits (Taiwan, the UK home nations, Spanish autonomous regions, French overseas departments, Channel Islands, Cook Islands, Vatican, …) come from national-statistics / UN estimates, rounded — recorded in `build-population.mjs`'s `FILLS` map and reflected in the `source` string. Member figures are authoritative; dependency figures are best-effort estimates.
-
-**Phasing** (each = one branch off `main` + one PR):
-
-1. **Data + helper + tests** (this branch). `build-population.mjs` → `population.json`, `metrics.js` helper, `metrics/index.js` registry, `metrics.test.js`, schema gate. `npm run validate` green.
-2. *(later, own features)* consumers — party "which is bigger?", daily superlative set, TTT population tiers.
+1. **Data + spec** (this PR). `format` hint on `population.json` + `build-population.mjs`; `createMetric` passthrough (defaults to `'compact'`); schema test; this spec; move Feature DD to Done.
+2. **Lens UI in flagsdata.** Metric selector (None default) built from the `flags/metrics/` registry; tiles show value + rank for the active metric; sort (A–Z / Highest / Lowest); sparse dimming. i18n labels in `en.json` / `pl.json`. Extract the lens-state logic to a testable sibling module (`flagsdata/metricLens.js` or `flags/metricLens.js`) so the page stays thin glue and the reducer gets unit tests.
+3. **Tiers + superlative presets.** High/Mid/Low tier pills + Top 10 / Lowest 10 / Top 5 in Europe presets, all driven by the active metric via `createMetric`.
 
 ---
 
@@ -62,6 +46,24 @@ authoring/build-population.mjs   fetch World Bank SP.POP.TOTL 2023 → join coun
 ---
 
 ## Done
+
+### Feature DD: World metrics — population first, as a self-describing metric namespace — *shipped 2026-07-10 (#763)*
+
+**Goal.** A general home for **continuous world metrics** (population today; area, GDP, coffee production, ships-per-capita, … later) so new metrics unlock new game modes without running out of ideas. Population + pure helper + tests, no game consumer (consumers are their own later features — Feature DE is the first).
+
+**Why a metric namespace, not flat fields on `countries.json`:**
+
+- **Different species of data.** `countries.json` holds *flag-identity* data — hand-curated, stable, coupled to the SVG. World metrics are *external facts* — sourced, refreshed on their own cadence, each with its **own source and year**. A flat `coffeeProduction: 123` field has nowhere to record "FAO 2022"; parallel `…Year` fields are the tell the shape is wrong.
+- **Sparsity.** A metric lists **only** the countries it applies to (`values` map) — no `null` splatter. Contract: "every metric key is a real country," not "every country has a value."
+- **Game-mode multiplier.** Each metric is self-describing (`label`, `unit`, `format`, `source`, `year`, `values`), so one generic helper gives every metric top-N / rank / tiers / compare for free.
+
+**Storage decisions:** raw number, never rank (rank is scope-dependent and derived — one sort at load); scope = all real places (`category !== 'other'`); uninhabited/transient places (Antarctica, Bouvet, Heard & McDonald, Clipperton, South Georgia, French Southern Territories, US Minor Outlying, British Indian Ocean Territory) **omitted** rather than stored as `0`, so "least populated" stays meaningful (Vatican ~800 is the floor).
+
+**What shipped.** 254 countries in `flags/metrics/population.json` (World Bank WDI `SP.POP.TOTL` 2023 for 216; 38 dependencies / sub-national regions from national-statistics / UN estimates, rounded, in `build-population.mjs`'s `FILLS`; 8 omitted). Pure `flags/metrics.js` `createMetric(metric, countries)` → `valueOf` / `has` / `ranked` / `topN` / `bottomN` / `rankOf` / `tierOf` / `compare` + `label` / `unit` / `format`, scoped `world` / `un_member` / continent. `flags/metrics/index.js` explicit registry. `authoring/build-population.mjs` (yearly refresh = one command). `flags/metrics.test.js` fixture logic + real-data schema gate.
+
+**Standing artifacts:** `flags/metrics/` namespace + `createMetric` helper — every future metric (area, GDP, coffee) drops in as one self-describing file and inherits all mechanics. The `format` hint was added in Feature DE phase 1.
+
+---
 
 ### Feature DB: Stripes-only orientation tag — *shipped 2026-06-18*
 
