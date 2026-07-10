@@ -17,6 +17,22 @@
 
 export const REVIEW_KEY = 'gridgame.ideas.reviewed';
 
+/**
+ * Stable verdict key for an idea, shared by the grid and play surfaces so a
+ * verdict set on one shows on the other. Filter ideas key on the filter string
+ * (the original contract); superlative ideas have no criterion filter, so they
+ * key on a serialized spec instead.
+ *
+ * @param {{ kind?: string, filter?: string, metric?: string, scope?: string, direction?: string, topN?: number }} idea
+ * @returns {string}
+ */
+export function ideaKey(idea) {
+  if (idea.kind === 'superlative') {
+    return `sup:${idea.metric}:${idea.scope}:${idea.direction}:${idea.topN}:${idea.filter ?? ''}`;
+  }
+  return idea.filter ?? '';
+}
+
 /** @returns {Map<string, Verdict>} */
 export function loadReviewState() {
   try {

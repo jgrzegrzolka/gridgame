@@ -1,6 +1,8 @@
 import { flagsGamePool, loadCountries } from '../../flags/group.js';
 import { parseFilterString, filterToCategory } from '../../flags/findFlag.js';
 import { matchesFilters } from '../../flags/flagsFilter.js';
+import { resolveSuperlative } from '../../flags/superlative.js';
+import { METRIC_FILES } from '../../flags/metrics/index.js';
 import { t, withLocalizedAliases } from '../../i18n.js';
 import {
   wireZoom,
@@ -10,7 +12,7 @@ import {
   showReason,
 } from '../playFlow.js';
 import { fetchCatalog } from '../catalogSource.js';
-import { loadReviewState, saveReviewState } from './reviewState.js';
+import { loadReviewState, saveReviewState, ideaKey } from './reviewState.js';
 
 /**
  * Wires up a verdict bar (the ✓ / ✗ pair) to the same localStorage
@@ -51,10 +53,31 @@ function wireVerdictBar(barEl, filter) {
 
 /**
  * @typedef {Object} Idea
- * @property {string} filter
+ * @property {string} [filter]
+ * @property {string} [kind]  'superlative' for metric-ranked ideas; absent = filter idea.
+ * @property {string} [metric]
+ * @property {string} [scope]
+ * @property {'most' | 'least'} [direction]
+ * @property {number} [topN]
+ * @property {Record<string, string>} [title]  hand-written label for superlative ideas.
  * @property {string} [notes]
  * @property {number} [parkUntilN]
  */
+
+/**
+ * Label for a superlative idea in the active language — the hand-written title,
+ * falling back to a bare composed English string for a title-less draft.
+ * @param {Idea} idea
+ * @param {string} lang
+ * @returns {string}
+ */
+function superlativeLabel(idea, lang) {
+  return (
+    idea.title?.[lang] ??
+    idea.title?.en ??
+    `${idea.topN} ${idea.direction} ${idea.metric} · ${idea.scope}${idea.filter ? ` · ${idea.filter}` : ''}`
+  );
+}
 
 /**
  * Play-test a single brainstorm idea. URL: `./play.html?k=K`, where K
@@ -98,7 +121,7 @@ export function bootIdeasPlay() {
     fetch('../../flags/countries.json').then((r) => r.json()).then(loadCountries),
     fetchCatalog('ideas'),
   ])
-    .then(([raw, /** @type {Idea[]} */ ideas]) => {
+    .then(async ([raw, /** @type {Idea[]} */ ideas]) => {
       const all = withLocalizedAliases(flagsGamePool(raw, false));
 
       const idea = ideas[k - 1];
@@ -106,33 +129,66 @@ export function bootIdeasPlay() {
         showReason('not-found');
         return;
       }
-      const filter = parseFilterString(idea.filter);
-      if (!filter) {
-        showReason('invalid-filter');
-        return;
-      }
-      const targets = all.filter((c) => matchesFilters(c, filter));
-      if (targets.length === 0) {
-        showReason('no-targets');
-        return;
+
+      /** @type {import('../../flags/group.js').Country[]} */
+      let targets;
+      /** @type {import('../../flags/engine.js').Category} */
+      let category;
+      /** @type {() => string} */
+      let labelFor;
+
+      if (idea.kind === 'superlative') {
+        // Resolve the roster live (like filter ideas), ranking a fetched
+        // metric. Author-only page, so the extra metric fetch is fine.
+        const mf = METRIC_FILES.find((m) => m.key === idea.metric);
+        if (!mf) {
+          showReason('invalid-filter');
+          return;
+        }
+        const values = await fetch(`../../flags/metrics/${mf.file}`)
+          .then((r) => r.json())
+          .then((d) => d.values ?? {});
+        const codes = resolveSuperlative(
+          { metric: /** @type {string} */ (idea.metric), scope: /** @type {string} */ (idea.scope), direction: /** @type {'most' | 'least'} */ (idea.direction), topN: /** @type {number} */ (idea.topN), filter: idea.filter },
+          all,
+          values,
+        );
+        const byCode = new Map(all.map((c) => [c.code, c]));
+        targets = /** @type {import('../../flags/group.js').Country[]} */ (
+          codes.map((c) => byCode.get(c)).filter((c) => c !== undefined)
+        );
+        if (targets.length === 0) {
+          showReason('no-targets');
+          return;
+        }
+        const codeSet = new Set(codes);
+        labelFor = () => superlativeLabel(idea, document.documentElement.lang || 'en');
+        category = { id: `idea:${k}:superlative`, label: labelFor(), predicate: (c) => codeSet.has(c.code) };
+      } else {
+        const filter = parseFilterString(idea.filter ?? '');
+        if (!filter) {
+          showReason('invalid-filter');
+          return;
+        }
+        targets = all.filter((c) => matchesFilters(c, filter));
+        if (targets.length === 0) {
+          showReason('no-targets');
+          return;
+        }
+        labelFor = () => filterToCategory(filter, t).label;
+        category = filterToCategory(filter, t);
       }
 
-      const category = filterToCategory(filter, t);
       const game = startGame(k, category, targets, all, { skipSave: true });
-      // Ideas have no description; omit it from the deps so the
-      // helper skips the paintDescription branch on each langchange.
-      // Ideas are filter-only (no manual variant — the funnel for
-      // manual entries is backlog or parked, never ideas).
-      attachLangRefresh(game, {
-        raw,
-        targets,
-        labelFor: () => filterToCategory(filter, t).label,
-      });
+      // Ideas have no description; omit it from the deps so the helper skips
+      // the paintDescription branch on each langchange.
+      attachLangRefresh(game, { raw, targets, labelFor });
 
+      const verdictKey = ideaKey(idea);
       const gameBar = document.getElementById('ideas-play-verdict-game');
       const resultBar = document.getElementById('ideas-play-verdict-result');
-      if (gameBar) wireVerdictBar(gameBar, idea.filter);
-      if (resultBar) wireVerdictBar(resultBar, idea.filter);
+      if (gameBar) wireVerdictBar(gameBar, verdictKey);
+      if (resultBar) wireVerdictBar(resultBar, verdictKey);
 
       // "Next idea →" — advances to k+1 in the ideas array. Hidden
       // when k is already the last entry (no wrap-around; reaching

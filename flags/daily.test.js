@@ -9,6 +9,7 @@ import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries, createCountry } from './group.js';
 import { auditPuzzle } from './ambiguityAudit.js';
+import { validateCatalog } from './dailyValidate.js';
 
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./daily.js').DailyPuzzle} DailyPuzzle */
@@ -425,25 +426,49 @@ test('resolveDailyPuzzle: partial pool drift drops missing codes but still succe
 
 // --- Catalog: structural + drift checks (single dated puzzles.json) ------
 
+/**
+ * The filter-shape rules (drift, redundant-token, refinement, primary-clean,
+ * single-use) only apply to filter entries. Manual + superlative entries carry
+ * a frozen roster instead of a criterion filter, so those rules skip them — a
+ * superlative's optional `filter` merely narrowed its ranking pool and isn't a
+ * criterion to drift-check or de-duplicate against.
+ *
+ * @param {{ kind?: string }} entry
+ */
+function isFilterEntry(entry) {
+  return entry.kind !== 'manual' && entry.kind !== 'superlative';
+}
+
 /** @param {DailyPuzzle[]} list */
 function checkShape(list) {
   list.forEach((entry, i) => {
     assert.equal(entry.n, i + 1, `puzzles index ${i}: n=${entry.n}, expected ${i + 1}`);
+    assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `puzzles #${entry.n}: answers`);
     if (entry.kind === 'manual') {
-      // Manual entries have a title (per-language) and answers — no
-      // filter to parse. Title presence + content shape is pinned by
-      // the dedicated `manual entries have en + pl title` test below.
-      assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `puzzles #${entry.n}: answers`);
+      // Manual entries have a title (per-language) and answers — no filter.
       assert.equal(entry.filter, undefined, `puzzles #${entry.n}: manual entry must not carry a filter field`);
+    } else if (entry.kind === 'superlative') {
+      // A superlative's filter is optional (pool-narrowing); when present it
+      // must be a real string. Full shape (metric/scope/direction/topN/title)
+      // is pinned by flags/dailyValidate.test.js + the title test below.
+      if (entry.filter !== undefined) {
+        assert.ok(typeof entry.filter === 'string' && entry.filter.length > 0, `puzzles #${entry.n}: superlative filter must be a non-empty string when present`);
+      }
     } else {
       assert.ok(typeof entry.filter === 'string' && entry.filter.length > 0, `puzzles #${entry.n}: filter`);
-      assert.ok(Array.isArray(entry.answers) && entry.answers.length > 0, `puzzles #${entry.n}: answers`);
     }
   });
 }
 
 test('puzzles: every entry has n matching its index, non-empty filter and answers', () => {
   checkShape(PUZZLES);
+});
+
+test('catalog passes the shared push-time validator (validateCatalog)', () => {
+  // The same gate authoring/push.mjs runs. Belt-and-suspenders over the
+  // inline rule tests, and the only place a superlative entry's shape
+  // (metric/scope/direction/topN/title) gets validated inside `npm test`.
+  assert.doesNotThrow(() => validateCatalog({ puzzles: PUZZLES }));
 });
 
 test('puzzles: every entry has a YYYY-MM-DD date and dates are contiguous', () => {
@@ -560,8 +585,8 @@ test('puzzles: no filter carries a redundant constraint', () => {
   /** @param {import('./group.js').Country[]} arr */
   const codes = (arr) => arr.map((c) => c.code).sort();
   for (const entry of PUZZLES) {
-    // Manual entries have no filter to check for redundancy.
-    if (entry.kind === 'manual') continue;
+    // Manual + superlative entries have no criterion filter to check.
+    if (!isFilterEntry(entry)) continue;
     const filterStr = /** @type {string} */ (entry.filter);
     const tokens = filterStr.split(',');
     if (tokens.length < 2) continue;
@@ -597,11 +622,12 @@ test('ideas: no filter carries a redundant token', () => {
   // `primaryCleanExempt`; if that changes, mirror the primary-side
   // check from the catalog version above.
   const sov = flagsGamePool(COUNTRIES, false);
-  /** @type {{ filter: string, answers: string[] }[]} */
+  /** @type {{ kind?: string, filter: string, answers: string[] }[]} */
   const IDEAS = JSON.parse(
     readFileSync(join(CATALOG_DIR, 'ideas.json'), 'utf-8'),
   );
   for (const entry of IDEAS) {
+    if (!isFilterEntry(entry)) continue;
     if (!Array.isArray(entry.answers) || entry.answers.length === 0) continue;
     const tokens = entry.filter.split(',');
     if (tokens.length < 2) continue;
@@ -626,9 +652,10 @@ test('ideas: no filter carries a redundant token', () => {
 test('puzzles: answers match what each filter resolves to today', () => {
   const sov = flagsGamePool(COUNTRIES, false);
   for (const entry of PUZZLES) {
-    // Manual entries have no filter — the drift detector is filter-only.
-    // Curating completeness of the answer list is on the author.
-    if (entry.kind === 'manual') continue;
+    // Manual + superlative entries have no criterion filter — the drift
+    // detector is filter-only. Their rosters are frozen; completeness /
+    // correctness is the author's (for superlatives, audit-superlative.mjs).
+    if (!isFilterEntry(entry)) continue;
     const filterStr = /** @type {string} */ (entry.filter);
     const f = parseFilterString(filterStr);
     assert.ok(f, `#${entry.n}: failed to parse filter "${filterStr}"`);
@@ -689,8 +716,8 @@ test('puzzles: entries #1-100 have no filter-refinement subsets', () => {
           `#${b.n} ("${bFilter}") and #${a.n} ("${aFilter}") resolve to the same answer set — same puzzle, different filter`,
         );
       } else if (
-        a.kind !== 'manual' &&
-        b.kind !== 'manual' &&
+        isFilterEntry(a) &&
+        isFilterEntry(b) &&
         isFilterRefinement(/** @type {string} */ (b.filter), /** @type {string} */ (a.filter))
       ) {
         offenders.push(
@@ -722,7 +749,7 @@ test('ideas: no filter-refinement relationships against catalog or other ideas',
   // long as the filters aren't structural refinements of each other.
   // Parked filters live in daily/daily_parked.json — intentional rule-6
   // violators kept as a waiting room — and aren't loaded here.
-  /** @type {{ filter: string, answers?: string[], _label: string }[]} */
+  /** @type {{ kind?: string, filter: string, answers?: string[], _label: string }[]} */
   const IDEAS = JSON.parse(
     readFileSync(join(CATALOG_DIR, 'ideas.json'), 'utf-8'),
   ).map((/** @type {any} */ e, /** @type {number} */ i) => ({ ...e, _label: `idea#${i + 1}` }));
@@ -733,10 +760,10 @@ test('ideas: no filter-refinement relationships against catalog or other ideas',
   // collisions between an idea and a manual remain an author judgment
   // call surfaced at promote time.
   const fixed = PUZZLES
-    .filter((e) => e.kind !== 'manual')
+    .filter(isFilterEntry)
     .map((e) => ({ ...e, filter: /** @type {string} */ (e.filter), _label: `puzzle#${e.n}` }));
   const candidates = IDEAS.filter(
-    (e) => Array.isArray(e.answers) && e.answers.length > 0,
+    (e) => isFilterEntry(e) && Array.isArray(e.answers) && e.answers.length > 0,
   );
 
   /** @type {string[]} */
@@ -804,11 +831,13 @@ test('ideas: no filter-refinement relationships against catalog or other ideas',
 // Filter entries render a pill chain ("Europe · cross"); manual entries
 // render only `entry.title[lang]`, so it has to be present in every
 // supported language and non-empty.
-test('puzzles: every manual entry has en + pl title', () => {
+test('puzzles: every manual + superlative entry has en + pl title', () => {
+  // Both title-based kinds render `entry.title[lang]` where a filter entry
+  // would render its pill chain, so the title must exist in both languages.
   /** @type {string[]} */
   const offenders = [];
   for (const entry of PUZZLES) {
-    if (entry.kind !== 'manual') continue;
+    if (isFilterEntry(entry)) continue;
     const tt = /** @type {Record<string, string> | undefined} */ (entry.title);
     if (!tt) {
       offenders.push(`#${entry.n}: missing title`);
@@ -896,12 +925,13 @@ test('puzzles: entries #1-100 are primary-clean (no emblem-only colour matches)'
   const sov = flagsGamePool(COUNTRIES, false);
   for (const entry of PUZZLES) {
     if (entry.n > 100) continue;
-    // Manual entries are filter-free, so the primary-clean rule (which
-    // resolves the filter under a stricter colour model) doesn't apply.
-    // The author owns trust: a poorly-curated manual answer list reads
-    // as "the game is wrong" the same way an emblem-only colour match
-    // does, so the SKILL.md warning about no-completeness-check stands.
-    if (entry.kind === 'manual') continue;
+    // Manual + superlative entries are filter-free (a superlative's optional
+    // filter narrows a ranking pool, it isn't the answer set), so the
+    // primary-clean rule — which resolves the filter under a stricter colour
+    // model and compares to the whole answer set — doesn't apply here. The
+    // author owns trust; for a compound superlative, resolve the roster under
+    // `primaryColors` at authoring time (resolveSuperlative takes colorField).
+    if (!isFilterEntry(entry)) continue;
     // Per-puzzle escape hatch — when set, the entry's answer set is
     // allowed to diverge between `colors` and `primaryColors`. Used for
     // the rare puzzle where excluding a primary-drift flag would gut
@@ -956,10 +986,10 @@ const POLICY = JSON.parse(
 test('puzzles: single-use tokens appear in at most one entry', () => {
   const all = PUZZLES;
   for (const { token } of POLICY.singleUseTokens) {
-    // Manual entries have no filter tokens; they can't burn a
-    // single-use token even if their answer list happens to be the
-    // same flags as the canonical "find all X" puzzle.
-    const uses = all.filter((e) => e.kind !== 'manual' && e.filter?.split(',').includes(token));
+    // Manual + superlative entries don't burn a single-use token: manual
+    // has no filter, and a superlative's optional narrowing filter is a
+    // pool restriction, not a "find all X" exposure of the token's full set.
+    const uses = all.filter((e) => isFilterEntry(e) && e.filter?.split(',').includes(token));
     assert.ok(
       uses.length <= 1,
       `single-use token "${token}" appears in ${uses.length} entries (${uses.map((e) => '#' + e.n).join(', ')}); limit is 1 — see rule 14 / daily/daily_policy.json`,
@@ -1008,10 +1038,11 @@ const SOV_FOR_AUDIT = flagsGamePool(COUNTRIES, false);
 
 test('no puzzle has a flag-data ambiguity violation', () => {
   for (const entry of PUZZLES) {
-    // Manual entries have no filter — the audit's "plausible count
-    // flips filter membership" logic doesn't apply. Author still owns
-    // judgment about ambiguous flags appearing in the answer list.
-    if (entry.kind === 'manual') continue;
+    // Manual + superlative entries have no criterion filter — the audit's
+    // "plausible count flips filter membership" logic doesn't apply. Author
+    // owns judgment about ambiguous flags in the roster (for a compound
+    // superlative, the flag-filter is a pool restriction, not the criterion).
+    if (!isFilterEntry(entry)) continue;
     const filterStr = /** @type {string} */ (entry.filter);
     const violations = auditPuzzle({ filter: filterStr }, SOV_FOR_AUDIT);
     assert.equal(
@@ -1028,11 +1059,12 @@ test('no idea has a flag-data ambiguity violation', () => {
   // batch generator's output also has to pass this gate — otherwise a
   // hand-promote from ideas → backlog could carry an ambig-broken
   // candidate that only the audit script would catch.
-  /** @type {{ filter: string, answers?: string[] }[]} */
+  /** @type {{ kind?: string, filter: string, answers?: string[] }[]} */
   const IDEAS = JSON.parse(
     readFileSync(join(CATALOG_DIR, 'ideas.json'), 'utf-8'),
   );
   for (const entry of IDEAS) {
+    if (!isFilterEntry(entry)) continue;
     if (!Array.isArray(entry.answers) || entry.answers.length === 0) continue;
     const violations = auditPuzzle(entry, SOV_FOR_AUDIT);
     assert.equal(
