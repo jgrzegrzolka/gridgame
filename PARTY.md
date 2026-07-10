@@ -241,6 +241,71 @@ server-side PartyKit **alarms** driving the transitions (robust, survives any ta
 starts a fresh full-length bar rather than the real remaining time — the host's
 authoritative reveal still corrects them on schedule.
 
+## Iteration 4 — Round 2: the Map round (own-screen) — PLANNED (branch `feat/party-map-round`)
+
+Goal: the **second round type** ("which outline is X?"), which is what turns this from "a
+flag quiz with a scoreboard" into the swappable-round *show* the vision describes. The server
+stops hardwiring flag-pick and starts **picking round modules from the plan**. It's the
+**mirror of flag-pick**: identical data shape, same 2×2 grid, same buzz-order + scoring — only
+the tiles render country **contours** instead of flags.
+
+**The plan (the default game becomes 11 rounds):** 3 sovereign flag-pick → 3 non-sovereign
+flag-pick → 5 map (sovereign pool). Nice arc: familiar flags, harder flags, then a mode switch
+to shapes for the finale. A future host-picks-modes settings page will edit this; for now it's
+the hardcoded default in `flags/partyPlan.js`.
+
+**Decisions (2026-07-10):**
+
+- **One module per round type.** Round modules live in `flags/partyRounds/<id>.js` (the existing
+  `flagPick.js` pattern), each satisfying the `{ generate, isCorrect }` contract, wired through a
+  small `ROUNDS` registry in the server. Adding a mode = one new file + one registry line, nothing
+  else touched. Chosen deliberately because the mode set will keep growing (superlative, neighbours,
+  find-the-match, …).
+- **Contours are pre-generated assets, not runtime-rendered.** Each country gets a normalized,
+  tile-ready silhouette at `flags/contours/<code>.svg`, so the map round renders
+  `<img src="flags/contours/xx.svg">` — the literal mirror of flag-pick's
+  `<img src="flags/svg/xx.svg">`. The client difference between the two rounds collapses to
+  **"swap the folder"**: same grid, same lazy-load, same CDN cache/warm story, and zero runtime
+  path-extraction or per-tile bbox math (the cheapest render, scales to N players × 4 tiles for
+  free). Pre-generation is also the **curation gate** — we only generate recognizable geometry, so
+  the map pool becomes exactly "the set we generated"; microstates (unreadable dots at tile size)
+  get no file and never appear.
+- **The asset source is decoupled from the client.** Because the client only ever sees
+  `contours/xx.svg`, the generator's *input* can change without touching a line of round code.
+  Start from `flagQuiz/worldMap.svg` — its detail is already proven, since flagQuiz's map game
+  recognizes countries by that same geometry — and if tile-size detail disappoints, regenerate from
+  Natural Earth 1:50m with the client unchanged. **Gate: sample ~6 contours (easy / medium /
+  small) at tile size and eyeball them before mass-generating.**
+- **Per-round hint.** A small label above the grid — "Which flag is X?" vs "Which outline is X?"
+  — so players know which they're tapping. New `party.*` i18n (en + pl).
+
+**Build steps:**
+
+- [ ] **Sample + lock the source.** Generate ~6 normalized contour SVGs from `worldMap.svg`
+      (mix of easy / medium / small countries), render at tile size, eyeball the detail. Decide
+      worldMap vs Natural Earth. No client code yet — this is the go/no-go on the asset source.
+- [ ] **Contour asset set + generator.** A script that emits `flags/contours/<code>.svg` (the single
+      country path, normalized to a square viewBox) for every code with usable geometry. The set of
+      generated codes *defines the map pool*. Assets checked in.
+- [ ] **Round registry + plan generalization.** `flags/partyPlan.js`: segments gain a `roundId`,
+      plus `roundIdForRound(plan, i)` beside the existing `poolIdForRound`; `DEFAULT_PLAN` → the
+      3 / 3 / 5 split above. `party/partyGameServer.js`: a `ROUNDS = { flagPick, mapPick }` registry,
+      pick the module by `roundIdForRound` instead of importing `flagPick` directly; the broadcast
+      question carries `roundId`. `flags/partyClient.js` passes `roundId` through. All tested.
+- [ ] **`flags/partyRounds/mapPick.js`** (+ test) — `generate(pool, exclude, rng)` / `isCorrect`,
+      same data shape as flag-pick (prompt = target code, 4 option codes, answer). MVP distractors:
+      4 random distinct codes from the pool (shape-similar distractors are a later tuning pass —
+      flag-lookalike logic doesn't apply to outlines).
+- [ ] **Page rendering.** `flagParty/page.js` branches on `question.roundId`: flag-pick renders flag
+      `<img>` tiles (today), map renders contour `<img>` tiles from `flags/contours/`. Locked-in
+      ring, reveal pulse, pick-avatars, and scoring stay identical. Add the per-round hint label.
+- [ ] `npm run validate` green + **end-to-end verified in-browser** — a solo run that reaches the
+      map segment, taps a contour, and sees the reveal — per the `verify-flag-map-ui` recipe.
+
+**Deferred (not this iteration):** shape-similar ("hard") distractors; non-sovereign contours; the
+host settings page (still just edits `DEFAULT_PLAN` when it lands); the higher-detail Natural Earth
+source (only if the worldMap sampling forces it).
+
 ## Open decisions (settle as they come up, not now)
 
 - **Settings page** (Jan wants one eventually): host picks which modes and how many rounds
