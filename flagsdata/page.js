@@ -909,7 +909,11 @@ export function bootFlagsData() {
   function makeLensBtn(key, label) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'lens-btn';
+    // Reuse the shared `.pill` for size + base look; `.lens-btn` only carries
+    // the single-select pressed state (aria-pressed, not the `.active` class
+    // the multi-select filter pills toggle). Keeps the metric pills the same
+    // size as every other pill on the page.
+    b.className = 'pill lens-btn';
     b.dataset.metric = key ?? 'none';
     b.textContent = label;
     b.setAttribute('aria-pressed', String(lensKey === key));

@@ -256,24 +256,19 @@ dialog#zoom .country-data {
   letter-spacing: 0.04em;
 }
 .lens-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-.lens-btn {
-  font: inherit;
-  font-size: 13px;
-  padding: 6px 12px;
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 999px;
-  color: var(--primary-color);
-  cursor: pointer;
-}
-.lens-btn:hover { background: var(--surface-hover-color); }
+/* Size + base look come from the shared `.pill` (common.css). `.lens-btn`
+ * only styles the pressed state: single-select, so it hangs off aria-pressed
+ * rather than the `.active` class the multi-select filter pills use. Matches
+ * `.pill.active` visually so a chosen metric reads like any active pill. */
 .lens-btn[aria-pressed='true'] {
   background: var(--primary-color);
   border-color: var(--primary-color);
   color: var(--surface-color);
-  font-weight: 600;
 }
-/* Sort: a small segmented control, only shown when a lens is on. */
+/* Sort: a small segmented control, only shown when a lens is on. Right-aligned
+ * on wider screens (pushed to the row's far edge); flows left under the metric
+ * pills on mobile, where the auto margin would otherwise shove it awkwardly to
+ * the right of its own wrapped line. */
 .lens-sort {
   display: inline-flex;
   margin-left: auto;
@@ -282,10 +277,21 @@ dialog#zoom .country-data {
   overflow: hidden;
 }
 .lens-sort[hidden] { display: none; }
+/* On mobile let the sort control flow left under the metric pills instead of
+ * being pushed to the right edge of its own wrapped line (the desktop
+ * right-alignment reads as a stray, indented group on a phone). Placed after
+ * the base rule above so equal-specificity source order lets it win — a
+ * media query adds no specificity. */
+@media (max-width: 600px) {
+  .lens-sort { margin-left: 0; }
+}
+/* Padding + line-height tuned so a segmented button's box (buttons + the
+ * container's 1px border) matches the pills' height, keeping the row even. */
 .lens-sort button {
   font: inherit;
   font-size: 12px;
-  padding: 5px 10px;
+  line-height: 1.4;
+  padding: 3px 10px;
   background: var(--surface-color);
   border: 0;
   border-right: 1px solid var(--muted-soft-color);
