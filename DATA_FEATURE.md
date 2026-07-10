@@ -51,13 +51,13 @@ A fresh agent picking this up should:
 
 **Content notes (computed 2026-07-10, sovereign-only):**
 - World top-10 and the per-continent top-5/7 rosters are all famous countries → score easy, good for onboarding.
-- **Oceania is the exception** — only the top ~3 (Australia, PNG, NZ) are famous; the tail is obscure and collides with the 4-flag floor. Skip Oceania or slot it very late.
+- **Oceania (decided 2026-07-10, Jan):** include it, as **top-5 most populous in Oceania** *and* **top-5 smallest in Oceania** (a `direction: 'least'` puzzle). The "smallest" set is deliberately obscure-leaning (Tuvalu / Nauru / Palau…), so it's a late-N curiosity; slot both later in the schedule.
 - Heavy overlap between "world top-10" and "Asia/Africa top-N" (the giants recur) — space them apart in the schedule and watch the rule-11 country-reuse cap.
 
 **Phasing** (one branch each — don't auto-merge):
 
 1. **Compute core + schema + resolution** *(this PR).* `flags/superlative.js` (`resolveSuperlative` + `isValidScope` / `SUPERLATIVE_SCOPES`); `superlative` kind wired into `flags/daily.js` (`resolvePuzzleEntry` treats it like manual — frozen answers, `filter: null`; `superlativeToCategory` label helper with a Phase-1 English fallback); unit tests (`flags/superlative.test.js`) + daily-resolution/label tests. No rendering, no i18n, no content yet.
-2. **Rendering + i18n + difficulty.** `daily/page.js` + `daily/backlog/play.js` render the superlative header (auto-generated title / pill chain from metric+scope+direction+N+filter), en/pl i18n keys, and `daily/difficulty.js` handles the kind. Retire the Phase-1 fallback label.
+2. **Rendering + difficulty** *(done).* Superlative renders like a manual entry — a **hand-written en/pl `title`**, not an auto-generated pill chain (auto-gen was dropped: rule 7 already establishes that PL grammar needs a human, and hand-writing ~15 titles is trivial). Wired the title path through `daily/page.js`, `daily/backlog/play.js`, and `daily/squares.js` (the `isTitleEntry` = manual|superlative helper), and taught `daily/difficulty.js` to score a superlative off its answers (no token friction; worldwide bump keyed on `scope`, not a continent token). No new i18n keys needed (titles are per-entry data). The Phase-1 `superlativeToCategory` English fallback stays as defence-in-depth.
 3. **Authoring generator + audit + content.** `authoring/generate-candidates.mjs` gains superlative templates (metric × scope × N × optional single flag-filter) → `ideas.json`; `authoring/audit-superlative.mjs` recomputes future-dated drafts; then author the family into `puzzles.json` (world top-10, continents, the compound ideas) via the daily flow. Update the `daily-puzzle-author` SKILL.md.
 
 ---

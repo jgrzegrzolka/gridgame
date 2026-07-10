@@ -118,7 +118,7 @@ function worldwideBumpFor(filter) {
  * `byCode` accepts either a `Map<string, CountryLike>` or a plain
  * `Record<string, CountryLike>` so callers don't have to convert.
  *
- * @param {{ kind?: string, filter?: string, answers: string[] }} entry
+ * @param {{ kind?: string, filter?: string, scope?: string, answers: string[] }} entry
  * @param {Map<string, CountryLike> | Record<string, CountryLike>} byCode
  * @returns {DifficultyScore}
  */
@@ -134,14 +134,26 @@ export function scoreEntry(entry, byCode) {
   const outlier = 0.4 * Math.max(0, max - mean - 1.5);
   const setSize = entry.answers.length;
   const sizeAdjust = sizeAdjustFor(setSize);
-  // Manual entries have no filter — no token-count friction, and the
-  // worldwide bump applies (a hand-curated list with no continent
-  // scoping forces the same global recall as a filter without a
-  // continent token does).
-  const isManual = entry.kind === 'manual' || typeof entry.filter !== 'string';
-  const tokens = isManual ? 0 : entry.filter.split(',').length;
+  // Only true filter entries score off filter tokens. Manual entries have
+  // no filter; a superlative's optional `filter` merely narrowed the
+  // ranking pool (colour/motif), so it adds no token friction and its
+  // regional-vs-global difficulty comes from `scope` instead of a
+  // continent token.
+  const isFilterEntry =
+    entry.kind !== 'manual' && entry.kind !== 'superlative' && typeof entry.filter === 'string';
+  const tokens = isFilterEntry ? entry.filter.split(',').length : 0;
   const tokenAdjust = 0.1 * Math.max(0, tokens - 2);
-  const worldwideAdjust = isManual ? 1.0 : worldwideBumpFor(entry.filter);
+  // Worldwide recall bump: filter entries key on the presence of a
+  // continent token; superlatives on their scope (world = global recall,
+  // a continent = regional); manual lists always carry the global bump.
+  let worldwideAdjust;
+  if (isFilterEntry) {
+    worldwideAdjust = worldwideBumpFor(entry.filter);
+  } else if (entry.kind === 'superlative') {
+    worldwideAdjust = entry.scope && entry.scope !== 'world' ? 0 : 1.0;
+  } else {
+    worldwideAdjust = 1.0;
+  }
   const score = mean + outlier + sizeAdjust + tokenAdjust + worldwideAdjust;
 
   return { score, mean, max, outlier, sizeAdjust, tokenAdjust, worldwideAdjust, setSize, tokens };

@@ -3,18 +3,28 @@ import { parseFilterString, filterTitle } from '../flags/findFlag.js';
 import { puzzleDate, formatPuzzleDate } from '../flags/daily.js';
 
 /**
+/** Title-based entries (manual + superlative) render their hand-written
+ * `title` instead of a filter pill chain. A superlative's `filter` only
+ * narrowed its ranking pool, so it isn't the criteria to display.
+ * @param {{ kind?: string }} entry */
+function isTitleEntry(entry) {
+  return entry.kind === 'manual' || entry.kind === 'superlative';
+}
+
+/**
  * Resolve a square's criteria label. Filter entries: parse the stored
- * filter and render the pill chain via `filterTitle`. Manual entries:
- * read `title[currentLang]` (the hand-written per-language label).
- * Falls back to `title.en` for missing translations and to an empty
- * string for malformed input (the catalog tests forbid both, this is
- * defence in depth so a broken entry doesn't crash the archive grid).
+ * filter and render the pill chain via `filterTitle`. Title-based
+ * entries (manual + superlative): read `title[currentLang]` (the
+ * hand-written per-language label). Falls back to `title.en` for missing
+ * translations and to an empty string for malformed input (the catalog
+ * tests forbid both, this is defence in depth so a broken entry doesn't
+ * crash the archive grid).
  *
  * @param {{ kind?: string, filter?: string, title?: Record<string, string> }} entry
  * @returns {string}
  */
 function criteriaLabelFor(entry) {
-  if (entry.kind === 'manual') {
+  if (isTitleEntry(entry)) {
     const lang = typeof document !== 'undefined' ? (document.documentElement.lang || 'en') : 'en';
     return entry.title?.[lang] ?? entry.title?.en ?? '';
   }
@@ -68,7 +78,7 @@ export function renderArchiveSquare(entry, opts, doc = document) {
   // entries store the JSON-encoded title map and look up the active
   // language each time. Mutually exclusive — the walker picks the path
   // by which attribute is present.
-  if (entry.kind === 'manual') {
+  if (isTitleEntry(entry)) {
     link.dataset.title = JSON.stringify(entry.title ?? {});
   } else {
     link.dataset.filter = entry.filter ?? '';

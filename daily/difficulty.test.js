@@ -187,6 +187,39 @@ test('scoreEntry: manual entry composes the rest of the formula normally', () =>
   assert.equal(r.score, 7.0);
 });
 
+test('scoreEntry: superlative (world scope) scores off answers, no token friction, +1.0 worldwide', () => {
+  // A world-scope superlative forces global recall like a manual list.
+  const entry = /** @type {any} */ ({
+    kind: 'superlative',
+    metric: 'population',
+    scope: 'world',
+    answers: ['a', 'b', 'c'],
+    title: { en: 'X', pl: 'X' },
+  });
+  const r = scoreEntry(entry, mk({ a: 2, b: 2, c: 2 }));
+  assert.equal(r.tokens, 0);
+  assert.equal(r.worldwideAdjust, 1.0);
+  assert.equal(r.score, 3.3); // mean 2 + size(3) 0.3 + worldwide 1.0
+});
+
+test('scoreEntry: superlative with a continent scope gets NO worldwide bump (regional)', () => {
+  // "5 most populous in Europe" is a regional search, so no global bump —
+  // even though the entry carries a `filter` that narrowed the pool.
+  const entry = /** @type {any} */ ({
+    kind: 'superlative',
+    metric: 'population',
+    scope: 'Europe',
+    filter: 'color:white', // pool-narrowing only — must NOT add token friction
+    answers: ['a', 'b', 'c'],
+    title: { en: 'X', pl: 'X' },
+  });
+  const r = scoreEntry(entry, mk({ a: 2, b: 2, c: 2 }));
+  assert.equal(r.tokens, 0, 'superlative filter adds no token friction');
+  assert.equal(r.tokenAdjust, 0);
+  assert.equal(r.worldwideAdjust, 0, 'continent scope is regional');
+  assert.equal(r.score, 2.3); // mean 2 + size(3) 0.3
+});
+
 // --- calibration anchors against real catalog data ---
 //
 // These pin the formula's behaviour on actual entries from the live
