@@ -657,7 +657,16 @@
     "filterMotifs": "Motywy",
     "filterStripes": "Pasy",
     "searchName": "Szukaj po nazwie…",
-    "clear": "Wyczyść"
+    "clear": "Wyczyść",
+    "metric": "Metryka",
+    "metricNone": "Brak",
+    "sortDefault": "Domyślnie",
+    "sortHighest": "Najwięcej",
+    "sortLowest": "Najmniej",
+    "noData": "brak danych"
+  },
+  "metric": {
+    "population": "Liczba ludności"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

@@ -235,3 +235,97 @@ dialog#zoom .country-data {
   white-space: pre;
   user-select: text;
 }
+
+/* --- Metric lens (Feature DE) ------------------------------------------- */
+/* A view lens sitting at the top of the filter bar, always visible (never
+ * behind the Filters collapse) — it re-presents the same set rather than
+ * narrowing it. Off by default. */
+.lens-row {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--muted-soft-color);
+}
+.lens-label {
+  font-size: 12px;
+  color: var(--muted-color);
+  margin-right: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.lens-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.lens-btn {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 999px;
+  color: var(--primary-color);
+  cursor: pointer;
+}
+.lens-btn:hover { background: var(--surface-hover-color); }
+.lens-btn[aria-pressed='true'] {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--surface-color);
+  font-weight: 600;
+}
+/* Sort: a small segmented control, only shown when a lens is on. */
+.lens-sort {
+  display: inline-flex;
+  margin-left: auto;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.lens-sort[hidden] { display: none; }
+.lens-sort button {
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  background: var(--surface-color);
+  border: 0;
+  border-right: 1px solid var(--muted-soft-color);
+  color: var(--primary-color);
+  cursor: pointer;
+}
+.lens-sort button:last-child { border-right: 0; }
+.lens-sort button:hover { background: var(--surface-hover-color); }
+.lens-sort button[aria-pressed='true'] {
+  background: var(--secondary-color);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* Per-tile overlay: a top strip with "#rank · value" for the active metric.
+ * Same dark-over-flag treatment as the hover name strip (the documented
+ * exception to the palette rule), placed at the top so the two never collide. */
+.flag-metric {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(28, 28, 28, 0.85);
+  color: #fff;
+  padding: 1px 3px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+.flag-metric[hidden] { display: none; }
+/* Countries the metric doesn't cover: dim the flag, quiet the overlay. */
+.flag.nodata img { opacity: 0.3; }
+.flag.nodata .flag-metric {
+  background: rgba(28, 28, 28, 0.6);
+  color: var(--muted-soft-color);
+  font-variant-numeric: normal;
+}

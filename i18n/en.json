@@ -657,7 +657,16 @@
     "filterMotifs": "Motifs",
     "filterStripes": "Stripes",
     "searchName": "Search by name…",
-    "clear": "Clear"
+    "clear": "Clear",
+    "metric": "Metric",
+    "metricNone": "None",
+    "sortDefault": "Default",
+    "sortHighest": "Highest",
+    "sortLowest": "Lowest",
+    "noData": "no data"
+  },
+  "metric": {
+    "population": "Population"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",
