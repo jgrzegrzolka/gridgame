@@ -41,7 +41,13 @@ A fresh agent picking this up should:
 
 ---
 
-### Feature DG: Superlative daily puzzles — "the N most/least X by a metric"
+## Backlog
+
+---
+
+## Done
+
+### Feature DG: Superlative daily puzzles — "the N most/least X by a metric" — *shipped 2026-07-10 (#780–#783, content on blob, +#785)*
 
 **Goal.** A new daily-puzzle mechanic: *the top-N countries by a world metric, in a scope, optionally intersected with a flag filter.* First examples (population): "the 10 most populous countries", "the 5-7 most populous in each continent", "the 5 most populous European flags with white". Second *play* consumer of the metric namespace (Feature DD) after the TTT population categories (Feature DF).
 
@@ -62,15 +68,9 @@ A fresh agent picking this up should:
 
 4. **Suite kind-awareness + ideas superlative support** *(done).* The `daily.test.js` filter-shape rules (drift, redundant-token, no-subset/refinement, primary-clean, single-use, ambiguity, shape) now skip or handle the superlative kind via an `isFilterEntry` helper, and `validateCatalog` runs inside `npm test` (superlative shape coverage in the suite). `/daily/ideas/` (grid `page.js` + `play.js`) and `reviewState.js` (`ideaKey`) handle superlative ideas so compound concepts can be previewed/played locally. This is the prerequisite for putting superlative entries in either catalog file without breaking the suite or the author tooling.
 
-5. **Content** *(next — blob, no PR).* Per Jan (2026-07-10): **backlog** gets world + per-continent **most and least** populous puzzles, **interleaved** with a batch of fresh regular filter puzzles (generated) so it's not a population wall; **ideas.json** gets a big regular-candidate batch plus the **compound superlatives** (Europe+white, Africa+star, …) as a months-long reservoir. Author via the daily flow (pull → compute rosters with `resolveSuperlative`, incl. `colorField:'primaryColors'` for compounds → hand-write en/pl titles+descriptions → `npm test` + `audit-superlative` → show diff → push). Ships only after Phases 1-4 deploy.
+5. **Content** *(done — blob, 2026-07-10).* Shipped **14 population superlative puzzles** to `puzzles.json`: world most/least-10 and per-continent most/least-5 (Europe/Asia/Africa/N.America/S.America + Oceania). Rather than appending a wall and generating filler regulars, they were **spliced** into the existing future schedule (from #47 / 2026-07-22, spaced ~3 apart, ending 2026-09-12) — existing regulars only shift `n`/`date`, verified content-identical. `world-most` and its subset `Asia-most` land 48 days apart. Each carries **per-flag population captions** via `entry.notes` (e.g. "Population: 1.44 billion", EN+PL), rendered in the zoom on the result grid. `ideas.json` gained **14 compound superlatives** (Europe-red/blue/white, Africa-green/star, cross, coat-of-arms, colorCount:3, …) computed clean under `primaryColors`, plus 3 fresh generator regulars — a months-long reservoir (99 ideas total). One test fix rode along (PR #785): the ideas size check sizes superlative ideas by `topN` since they carry no frozen `answers`. Near-miss rank feedback ("you guessed #12, just outside the top 10") was scoped but deferred as its own feature — it needs rank data threaded into the shared `playFlow.js`.
 
 ---
-
-## Backlog
-
----
-
-## Done
 
 ### Feature DF: Population thresholds as a tic-tac-toe category — *shipped 2026-07-10 (#779)*
 
