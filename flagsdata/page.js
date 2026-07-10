@@ -893,15 +893,21 @@ export function bootFlagsData() {
   // through createMetric; it never touches the shared per-flag filter DSL.
   const lensRow = document.createElement('div');
   lensRow.className = 'lens-row';
+  // Label + metric pills form one group (.lens-main) so the sort control can
+  // sit opposite them via the row's space-between: sort on the right when the
+  // row fits on one line, dropping to its own left-aligned line when it wraps.
+  const lensMain = document.createElement('div');
+  lensMain.className = 'lens-main';
+  lensRow.appendChild(lensMain);
   const lensLabel = document.createElement('span');
   lensLabel.className = 'lens-label';
   lensLabel.setAttribute('data-i18n', 'flagsdata.metric');
   lensLabel.textContent = t('flagsdata.metric', 'Metric');
-  lensRow.appendChild(lensLabel);
+  lensMain.appendChild(lensLabel);
 
   const lensBtns = document.createElement('div');
   lensBtns.className = 'lens-btns';
-  lensRow.appendChild(lensBtns);
+  lensMain.appendChild(lensBtns);
 
   /** @type {{ key: string | null, el: HTMLButtonElement }[]} */
   const lensButtons = [];
@@ -909,7 +915,11 @@ export function bootFlagsData() {
   function makeLensBtn(key, label) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'lens-btn';
+    // Reuse the shared `.pill` for size + base look; `.lens-btn` only carries
+    // the single-select pressed state (aria-pressed, not the `.active` class
+    // the multi-select filter pills toggle). Keeps the metric pills the same
+    // size as every other pill on the page.
+    b.className = 'pill lens-btn';
     b.dataset.metric = key ?? 'none';
     b.textContent = label;
     b.setAttribute('aria-pressed', String(lensKey === key));

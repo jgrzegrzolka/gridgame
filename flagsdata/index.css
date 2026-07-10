@@ -245,8 +245,20 @@ dialog#zoom .country-data {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  /* Two groups: label+pills (.lens-main) and the sort control. space-between
+   * pins the sort to the right when both fit on one line, and — because each
+   * group is alone on its line once wrapped — left-aligns each on a narrow
+   * phone. No breakpoint, so it holds for longer (e.g. Polish) sort labels. */
+  justify-content: space-between;
   gap: 6px;
   margin-bottom: 12px;
+}
+/* Label + metric pills travel together so the sort control can sit opposite. */
+.lens-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 .lens-label {
   font-size: 12px;
@@ -256,36 +268,32 @@ dialog#zoom .country-data {
   letter-spacing: 0.04em;
 }
 .lens-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-.lens-btn {
-  font: inherit;
-  font-size: 13px;
-  padding: 6px 12px;
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 999px;
-  color: var(--primary-color);
-  cursor: pointer;
-}
-.lens-btn:hover { background: var(--surface-hover-color); }
+/* Size + base look come from the shared `.pill` (common.css). `.lens-btn`
+ * only styles the pressed state: single-select, so it hangs off aria-pressed
+ * rather than the `.active` class the multi-select filter pills use. Matches
+ * `.pill.active` visually so a chosen metric reads like any active pill. */
 .lens-btn[aria-pressed='true'] {
   background: var(--primary-color);
   border-color: var(--primary-color);
   color: var(--surface-color);
-  font-weight: 600;
 }
-/* Sort: a small segmented control, only shown when a lens is on. */
+/* Sort: a small segmented control, only shown when a lens is on. Position
+ * (right when inline, left when wrapped) is handled by the row's
+ * space-between above — no margin trickery here. */
 .lens-sort {
   display: inline-flex;
-  margin-left: auto;
   border: 1px solid var(--muted-soft-color);
   border-radius: 8px;
   overflow: hidden;
 }
 .lens-sort[hidden] { display: none; }
+/* Padding + line-height tuned so a segmented button's box (buttons + the
+ * container's 1px border) matches the pills' height, keeping the row even. */
 .lens-sort button {
   font: inherit;
   font-size: 12px;
-  padding: 5px 10px;
+  line-height: 1.4;
+  padding: 3px 10px;
   background: var(--surface-color);
   border: 0;
   border-right: 1px solid var(--muted-soft-color);
