@@ -245,8 +245,20 @@ dialog#zoom .country-data {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  /* Two groups: label+pills (.lens-main) and the sort control. space-between
+   * pins the sort to the right when both fit on one line, and — because each
+   * group is alone on its line once wrapped — left-aligns each on a narrow
+   * phone. No breakpoint, so it holds for longer (e.g. Polish) sort labels. */
+  justify-content: space-between;
   gap: 6px;
   margin-bottom: 12px;
+}
+/* Label + metric pills travel together so the sort control can sit opposite. */
+.lens-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 .lens-label {
   font-size: 12px;
@@ -265,26 +277,16 @@ dialog#zoom .country-data {
   border-color: var(--primary-color);
   color: var(--surface-color);
 }
-/* Sort: a small segmented control, only shown when a lens is on. Right-aligned
- * on wider screens (pushed to the row's far edge); flows left under the metric
- * pills on mobile, where the auto margin would otherwise shove it awkwardly to
- * the right of its own wrapped line. */
+/* Sort: a small segmented control, only shown when a lens is on. Position
+ * (right when inline, left when wrapped) is handled by the row's
+ * space-between above — no margin trickery here. */
 .lens-sort {
   display: inline-flex;
-  margin-left: auto;
   border: 1px solid var(--muted-soft-color);
   border-radius: 8px;
   overflow: hidden;
 }
 .lens-sort[hidden] { display: none; }
-/* On mobile let the sort control flow left under the metric pills instead of
- * being pushed to the right edge of its own wrapped line (the desktop
- * right-alignment reads as a stray, indented group on a phone). Placed after
- * the base rule above so equal-specificity source order lets it win — a
- * media query adds no specificity. */
-@media (max-width: 600px) {
-  .lens-sort { margin-left: 0; }
-}
 /* Padding + line-height tuned so a segmented button's box (buttons + the
  * container's 1px border) matches the pills' height, keeping the row even. */
 .lens-sort button {
