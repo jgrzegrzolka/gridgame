@@ -3,6 +3,7 @@ import { buildAnswerPool } from '../answerPool.js';
 import { filterToCategory } from '../../flags/findFlag.js';
 import { t } from '../../i18n.js';
 import { findPuzzle, resolvePuzzleEntry, manualToCategory, superlativeToCategory } from '../../flags/daily.js';
+import { buildPopulationRankNotes, buildSuperlativeTileMeta } from '../../flags/populationRank.js';
 import {
   wireZoom,
   showState,
@@ -11,6 +12,7 @@ import {
   attachLangRefresh,
   showReason,
   setZoomNotes,
+  setTileMeta,
 } from '../playFlow.js';
 import { fetchCatalog } from '../catalogSource.js';
 
@@ -72,6 +74,25 @@ export function bootBacklogPlay() {
       // Preview this entry's zoom notes too, so an author play-testing a
       // staged puzzle sees the explanations exactly as a player will.
       setZoomNotes(result.entry.notes);
+      setTileMeta(null);
+
+      // Mirror daily/page.js: for a population superlative, the one metric
+      // fetch feeds both result-screen enrichments so the backlog preview
+      // renders identically to live — whole-pool population + world-rank zoom
+      // captions (so even "Most missed" distractors read "#15 in the world")
+      // and the per-tile rank + population overlay on the Found / Missed grids.
+      // Best-effort: the play-through finishes long after this resolves, so it
+      // never needs awaiting here.
+      if (result.entry.kind === 'superlative' && result.entry.metric === 'population') {
+        fetch('../../flags/metrics/population.json')
+          .then((r) => r.json())
+          .then((d) => {
+            const values = d.values ?? {};
+            setZoomNotes(buildPopulationRankNotes(all, values));
+            setTileMeta(buildSuperlativeTileMeta(result.entry, values));
+          })
+          .catch(() => {});
+      }
       // Same kind-aware branch as daily/page.js — backlog plays the
       // same shape as live, so manual entries staged in the backlog
       // need to render with their `entry.title` label here too.
