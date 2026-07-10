@@ -514,6 +514,8 @@
     "waitingHost": "Waiting for the host to start…",
     "startGame": "Start game",
     "round": "Round {n} of {total}",
+    "hintFlag": "Which flag?",
+    "hintMap": "Which outline?",
     "locked": "Locked in",
     "fastest": "Fastest",
     "nextIn": "Next round in {n}s",

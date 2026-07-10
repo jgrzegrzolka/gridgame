@@ -1,7 +1,7 @@
 import rawCountries from '../flags/countries.json' with { type: 'json' };
 import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
-import { DEFAULT_PLAN, totalRounds, poolIdForRound } from '../flags/partyPlan.js';
+import { DEFAULT_PLAN, totalRounds, poolIdForRound, roundIdForRound } from '../flags/partyPlan.js';
 import {
   createRoom,
   applyHello,
@@ -15,6 +15,7 @@ import {
   deserializeRoom,
 } from '../flags/partyRoom.js';
 import * as flagPick from '../flags/partyRounds/flagPick.js';
+import * as mapPick from '../flags/partyRounds/mapPick.js';
 
 /** @typedef {import('../flags/partyRoom.js').Room} Room */
 /** @typedef {import('../flags/partyRoom.js').Broadcast} Broadcast */
@@ -28,6 +29,14 @@ const POOLS = {
   sovereign: sovereignPool(ALL_COUNTRIES),
   nonSovereign: nonSovereignPool(ALL_COUNTRIES),
 };
+
+/**
+ * Round-type registry, keyed by each module's own `id` so the registry key can
+ * never drift from the plan's `roundId`. Adding a mode = one import + one entry.
+ * @type {Record<string, { generate: Function, isCorrect: Function }>}
+ */
+const ROUNDS = Object.fromEntries([flagPick, mapPick].map((m) => [m.id, m]));
+
 const TOTAL_ROUNDS = totalRounds(DEFAULT_PLAN);
 
 /**
@@ -58,16 +67,20 @@ export default class PartyGameServer {
   }
 
   /**
-   * Generate a flag-pick question for a round, from the pool the plan assigns
-   * to it (sovereign vs non-sovereign), avoiding countries already used this
-   * game. Records the answer as used.
+   * Generate the question for a round: the plan picks the round type (flag-pick
+   * vs map) and the pool (sovereign vs non-sovereign); the round module builds
+   * the question, avoiding countries already used this game. The question is
+   * stamped with its `roundId` so the room and clients know how to render and
+   * judge it. Records the answer as used.
    * @param {number} roundIndex
    */
   generateQuestion(roundIndex) {
+    const roundId = roundIdForRound(DEFAULT_PLAN, roundIndex);
+    const round = ROUNDS[roundId];
     const pool = POOLS[poolIdForRound(DEFAULT_PLAN, roundIndex)];
-    const q = flagPick.generate(pool, this.usedCodes);
+    const q = round.generate(pool, this.usedCodes);
     this.usedCodes.add(q.answer);
-    return q;
+    return { ...q, roundId };
   }
 
   async onStart() {
@@ -167,7 +180,9 @@ export default class PartyGameServer {
           break;
         case 'buzz': {
           const choice = String(parsed.choice ?? '');
-          const correct = this.room.question ? flagPick.isCorrect(this.room.question, choice) : false;
+          const q = this.room.question;
+          const round = q ? ROUNDS[q.roundId] : null;
+          const correct = q && round ? round.isCorrect(q, choice) : false;
           result = applyBuzz(this.room, playerId, choice, correct);
           break;
         }

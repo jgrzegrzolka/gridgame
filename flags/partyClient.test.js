@@ -48,9 +48,10 @@ test('roster: recomputes isHost against my own id', () => {
 test('question: enters the question phase and clears the previous pick/reveal', () => {
   /** @type {import('./partyClient.js').PartyClientState} */
   let s = { ...initialPartyClientState(), you, phase: 'reveal', myChoice: 'jp', reveal: { answer: 'jp', picks: {}, points: {} }, roster: [{ playerId: you, nickname: 'Me', score: 0, present: true }] };
-  s = reduce(s, { type: 'question', prompt: 'fr', options: ['fr', 'de', 'it', 'es'], roundIndex: 1, totalRounds: 5 });
+  s = reduce(s, { type: 'question', prompt: 'fr', options: ['fr', 'de', 'it', 'es'], roundId: 'mapPick', roundIndex: 1, totalRounds: 5 });
   assert.equal(s.phase, 'question');
   assert.equal(s.question?.prompt, 'fr');
+  assert.equal(s.question?.roundId, 'mapPick', 'roundId is threaded through so the page can pick flag vs contour tiles');
   assert.equal(s.myChoice, null, 'previous pick cleared');
   assert.equal(s.reveal, null, 'previous reveal cleared');
   assert.equal(s.buzzedCount, 0);

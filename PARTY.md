@@ -241,7 +241,7 @@ server-side PartyKit **alarms** driving the transitions (robust, survives any ta
 starts a fresh full-length bar rather than the real remaining time — the host's
 authoritative reveal still corrects them on schedule.
 
-## Iteration 4 — Round 2: the Map round (own-screen) — PLANNED (branch `feat/party-map-round`)
+## Iteration 4 — Round 2: the Map round (own-screen) — SHIPPED (branch `feat/party-map-round`)
 
 Goal: the **second round type** ("which outline is X?"), which is what turns this from "a
 flag quiz with a scoreboard" into the swappable-round *show* the vision describes. The server
@@ -281,30 +281,38 @@ the hardcoded default in `flags/partyPlan.js`.
 
 **Build steps:**
 
-- [ ] **Sample + lock the source.** Generate ~6 normalized contour SVGs from `worldMap.svg`
-      (mix of easy / medium / small countries), render at tile size, eyeball the detail. Decide
-      worldMap vs Natural Earth. No client code yet — this is the go/no-go on the asset source.
-- [ ] **Contour asset set + generator.** A script that emits `flags/contours/<code>.svg` (the single
-      country path, normalized to a square viewBox) for every code with usable geometry. The set of
-      generated codes *defines the map pool*. Assets checked in.
-- [ ] **Round registry + plan generalization.** `flags/partyPlan.js`: segments gain a `roundId`,
-      plus `roundIdForRound(plan, i)` beside the existing `poolIdForRound`; `DEFAULT_PLAN` → the
-      3 / 3 / 5 split above. `party/partyGameServer.js`: a `ROUNDS = { flagPick, mapPick }` registry,
-      pick the module by `roundIdForRound` instead of importing `flagPick` directly; the broadcast
-      question carries `roundId`. `flags/partyClient.js` passes `roundId` through. All tested.
-- [ ] **`flags/partyRounds/mapPick.js`** (+ test) — `generate(pool, exclude, rng)` / `isCorrect`,
-      same data shape as flag-pick (prompt = target code, 4 option codes, answer). MVP distractors:
-      4 random distinct codes from the pool (shape-similar distractors are a later tuning pass —
-      flag-lookalike logic doesn't apply to outlines).
-- [ ] **Page rendering.** `flagParty/page.js` branches on `question.roundId`: flag-pick renders flag
-      `<img>` tiles (today), map renders contour `<img>` tiles from `flags/contours/`. Locked-in
-      ring, reveal pulse, pick-avatars, and scoring stay identical. Add the per-round hint label.
-- [ ] `npm run validate` green + **end-to-end verified in-browser** — a solo run that reaches the
-      map segment, taps a contour, and sees the reveal — per the `verify-flag-map-ui` recipe.
+- [x] **Sample + lock the source.** Sampled contours (easy / medium / small) from `worldMap.svg`
+      at tile size — detail is plenty, **worldMap wins**, no Natural Earth needed.
+- [x] **Contour asset set + generator.** `scripts/generate-contours.mjs` emits `flags/contours/<code>.svg`
+      (mainland-clustered, square padded viewBox) for every sovereign code with usable geometry.
+      **157 contours** define the map pool (`flags/contourPool.js`); ru / fj / sb hand-excluded,
+      microstates size-gated. Assets + generator + `contourPool.test.js` checked in.
+- [x] **Round registry + plan generalization.** `flags/partyPlan.js`: segments gained `roundId` +
+      `roundIdForRound`; `DEFAULT_PLAN` → the 3 / 3 / 5 split. `party/partyGameServer.js`: a
+      `ROUNDS` registry keyed by each module's `id`, picked via `roundIdForRound`; the broadcast
+      question carries `roundId` (stamped server-side). `flags/partyClient.js` threads it through. Tested.
+- [x] **`flags/partyRounds/mapPick.js`** (+ test) — `generate(pool, exclude, rng)` / `isCorrect`,
+      same shape as flag-pick; narrows any pool to `CONTOUR_CODE_SET`, MVP distractors = 4 random
+      distinct codes, injectable RNG for deterministic tests.
+- [x] **Page rendering.** `flagParty/page.js` branches on `question.roundId`: map renders `.contour`
+      `<img>` tiles from `flags/contours/` (the literal "swap the folder" mirror). Locked-in ring,
+      reveal pulse, pick-avatars, scoring unchanged. Per-round hint label added (`party.hintFlag` /
+      `party.hintMap`, en + pl).
+- [x] `npm run validate` green (2180 tests) + **end-to-end verified in-browser** — solo run reached
+      round 7 ("Which outline? Panama"), tapped a contour, saw the mirror-of-flag-pick reveal
+      (Panama green-pulse, wrong pick pink + avatar, others dimmed).
 
 **Deferred (not this iteration):** shape-similar ("hard") distractors; non-sovereign contours; the
 host settings page (still just edits `DEFAULT_PLAN` when it lands); the higher-detail Natural Earth
 source (only if the worldMap sampling forces it).
+
+**Perf fast-follow (isolated, no runtime code):** the contour set is 1.2 MB / avg 5.5 KB, but a
+few coastline-heavy outlines carry full worldMap coordinate precision that's sub-pixel at tile
+size — Canada 146 KB, US 68 KB, Indonesia 44 KB, Chile 38 KB. Running the assets through SVGO's
+`convertPathData` (proper relative-path simplification, not a naive regex round which drifts over a
+20k-point path) should cut those ~5-10× and the set to roughly ~400 KB. Build-time only: a post-step
+in `scripts/generate-contours.mjs` + a re-eyeball of the heavy tiles; the client never changes.
+Shipped without it — only 4 tiles load per round, lazy + immutable-CDN-cached, so it's not blocking.
 
 ## Open decisions (settle as they come up, not now)
 
@@ -312,7 +320,8 @@ source (only if the worldMap sampling forces it).
   each. `flags/partyPlan.js` is already the config surface — the page edits `DEFAULT_PLAN`.
 - **QR in the lobby.** Deferred from iteration 1 (see above) — add a self-contained QR
   generator, or accept code + link.
-- **Question count / timing per round.** 10 rounds (5 + 5). Per-question countdown landed in
+- **Question count / timing per round.** 11 rounds (3 flag / 3 flag / 5 map, per `DEFAULT_PLAN`).
+  Per-question countdown landed in
   iteration 3 (`flags/partyTiming.js`, host-driven, hands-free advance). Durations
   (15s / 6s) are constants there — a settings page could expose them later.
 - **Speed-bonus curve.** Currently decaying (+5/+3/+1) in `flags/partyScore.js`.
@@ -327,4 +336,9 @@ source (only if the worldMap sampling forces it).
 
 ## Done
 
-_(nothing yet)_
+- **Iteration 4 — the Map round.** Second round type ("Which outline is X?"), the mirror of
+  flag-pick: same grid / buzz-order / scoring, tiles render pre-generated country contours
+  (`flags/contours/`) instead of flags. Server now picks round modules from the plan via a
+  `ROUNDS` registry (`flagPick` + `mapPick`), not hardwired flag-pick. Default game is 11 rounds
+  (3 sovereign flag / 3 non-sovereign flag / 5 sovereign map). `flags/partyPlan.js` is the config
+  surface the future settings page will edit.

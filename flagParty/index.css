@@ -147,6 +147,10 @@
 @keyframes timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
 .prompt { text-align: center; display: flex; flex-direction: column; gap: 2px; }
+/* The mode hint ("Which flag?" / "Which outline?") — a quiet lead above the
+   name so players know whether the tiles are flags or contours. Muted so the
+   country name stays the loud element. */
+.prompt-lead { font-size: 14px; font-weight: 500; color: var(--muted-color); }
 /* Same weight/size as flagQuiz's `.country-name` prompt (28px / 500) so the
    country name reads identically across the two flag-picking games — it used
    to be 800 + tight tracking, which read a size larger than flagQuiz's. */
@@ -182,6 +186,16 @@ button.opt { -webkit-appearance: none; appearance: none; }
   aspect-ratio: 4 / 3;
   object-fit: contain;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.09);
+}
+/* Map round: the contour silhouette. Same tile footprint as `.flag` (4:3 /
+   contain) so grid rows stay level across round types, but no inset frame — a
+   silhouette sits on transparent ground, and the SVG already carries its own
+   8% padding, so a rectangular border would just box empty space. */
+.contour {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
 }
 .picks { position: absolute; bottom: 6px; left: 6px; display: flex; gap: 3px; }
 .picks .avatar { width: 20px; height: 20px; font-size: 8px; box-shadow: 0 0 0 2px var(--surface-color); }
