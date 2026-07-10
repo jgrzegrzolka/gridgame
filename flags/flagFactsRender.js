@@ -121,14 +121,28 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
     }
   }
 
-  // Image attribution — rendered on every story (not per-country). The flag
-  // SVGs come from two places: current flags from the flag-icons project
-  // (MIT), historical flags from Wikimedia Commons (public domain, a few
-  // CC BY-SA). CC BY-SA legally requires the author + licence be shown to the
-  // viewer, so we surface a link to the sources/licences list rather than
-  // leaving it only in the repo. Built from elements (no text nodes) so the
-  // separator is a CSS `::after` on the text span (keeps the link underline
-  // off the dot) and the unit-test doc stub stays tiny.
+  return root;
+}
+
+/**
+ * Build the image-attribution line shown as the popup's footer. The flag SVGs
+ * come from two places: current flags from the flag-icons project (MIT),
+ * historical flags from Wikimedia Commons (public domain, a few CC BY-SA). CC
+ * BY-SA legally requires the author + licence be shown to the viewer, so we
+ * surface a link to the sources/licences list rather than leaving it only in
+ * the repo. Built from elements (no text nodes) so the separator is a CSS
+ * `::after` on the text span (keeps the link underline off the dot) and the
+ * unit-test doc stub stays tiny.
+ *
+ * Kept separate from `renderFlagFacts` so the caller can place it as the very
+ * last element of the popup — below the audit JSON dump on `/flagsdata/`,
+ * where the credit reads as a page footer rather than sitting between the
+ * story and the raw data. Rendered on every story (not per-country).
+ *
+ * @param {{ t: (key: string, fallback: string) => string, doc?: Document }} args
+ * @returns {HTMLElement}
+ */
+export function renderImageCredit({ t, doc = globalThis.document }) {
   const credit = doc.createElement('p');
   credit.className = 'flag-facts-credit';
 
@@ -145,9 +159,7 @@ export function renderFlagFacts({ facts, t, doc = globalThis.document, base = '.
   creditLink.textContent = t('flagFacts.imageCreditLink', 'sources & licences');
   credit.appendChild(creditLink);
 
-  root.appendChild(credit);
-
-  return root;
+  return credit;
 }
 
 /**

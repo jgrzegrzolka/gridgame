@@ -2,7 +2,7 @@ import { bootI18n, wireLangToggle, t, countryName } from './i18n.js';
 import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem } from './common.js';
 import { loadCountries } from './flags/group.js';
 import { getFlagFacts, storyFlagPool } from './flags/flagFacts.js';
-import { renderFlagFacts } from './flags/flagFactsRender.js';
+import { renderFlagFacts, renderImageCredit } from './flags/flagFactsRender.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from './flags/flagZoom.js';
 import { wireFlagLightbox, wireFlagLightboxAll } from './flags/flagLightbox.js';
 import { warsawToday } from './flags/warsawTime.js';
@@ -47,12 +47,18 @@ export function bootHome() {
  */
 function paintFacts(zoom, zoomFacts, code) {
   zoomFacts.innerHTML = '';
+  // Image-credit footer slot — same sibling-of-facts treatment as /flagsdata/
+  // so both popups render the credit identically.
+  const zoomCredit = /** @type {HTMLElement} */ (zoom.querySelector('.country-credit'));
+  if (zoomCredit) zoomCredit.innerHTML = '';
   const facts = getFlagFacts(code);
   zoom.classList.toggle('has-facts', !!facts);
   zoomFacts.hidden = !facts;
+  if (zoomCredit) zoomCredit.hidden = !facts;
   if (!facts) return;
   const subtree = renderFlagFacts({ facts, t, doc: document, base: 'flags/' });
   if (subtree) zoomFacts.appendChild(subtree);
+  if (zoomCredit) zoomCredit.appendChild(renderImageCredit({ t, doc: document }));
   // The historical flags in the story are tappable to enlarge too, same
   // lightbox as the headline flag. Re-wired here because the subtree is fresh.
   wireFlagLightboxAll(zoomFacts, t);

@@ -10,7 +10,7 @@ import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox, wireFlagLightboxAll } from '../flags/flagLightbox.js';
 import { getFlagFacts } from '../flags/flagFacts.js';
-import { renderFlagFacts } from '../flags/flagFactsRender.js';
+import { renderFlagFacts, renderImageCredit } from '../flags/flagFactsRender.js';
 import { mountFlagMap, addHideButton, highlightCountry, unhighlightCountry, computeCountriesBbox, pickNearestHitTarget, neutralizeMarkerCircles } from '../flagQuiz/flagMap.js';
 import { mountCaribInset, CARIB_INSET_CODES } from '../flagQuiz/caribInset.js';
 import { attachZoomPan } from '../flagQuiz/mapZoom.js';
@@ -102,6 +102,10 @@ export function bootFlagsData() {
   const SHOW_DATA = new URLSearchParams(window.location.search).has('audit');
   if (!SHOW_DATA) zoomData.hidden = true;
   const zoomFacts = /** @type {HTMLElement} */ (zoom.querySelector('.country-facts'));
+  // Image-credit footer, a sibling after `.country-data` so it reads as the
+  // popup's footer (below the audit JSON), not sandwiched between the story
+  // and the raw data. Filled by paintFacts.
+  const zoomCredit = /** @type {HTMLElement} */ (zoom.querySelector('.country-credit'));
 
   // The flag currently shown in the zoom, so a soft language switch can
   // re-render its facts panel in the new language while the dialog stays
@@ -118,12 +122,17 @@ export function bootFlagsData() {
    */
   function paintFacts(c) {
     zoomFacts.innerHTML = '';
+    zoomCredit.innerHTML = '';
     const facts = c ? getFlagFacts(c.code) : null;
     zoom.classList.toggle('has-facts', !!facts);
     zoomFacts.hidden = !facts;
+    // Credit shows only when there's a story (unchanged), but now lives in its
+    // own footer slot after the JSON rather than at the tail of the facts panel.
+    zoomCredit.hidden = !facts;
     if (!facts) return;
     const subtree = renderFlagFacts({ facts, t, doc: document, base: '../flags/' });
     if (subtree) zoomFacts.appendChild(subtree);
+    zoomCredit.appendChild(renderImageCredit({ t, doc: document }));
     // The story's historical flags enlarge in the same lightbox as the
     // headline flag. Re-wired each paint because the subtree is rebuilt.
     wireFlagLightboxAll(zoomFacts, t);
@@ -140,7 +149,16 @@ export function bootFlagsData() {
     zoom.focus();
     zoomCountry = c;
     paintFacts(c);
-    if (SHOW_DATA) zoomData.textContent = JSON.stringify(c, null, 2);
+    if (SHOW_DATA) {
+      // Fold in the world-metric values (population, …) that live outside
+      // countries.json, so the audit dump shows them too. Each metric's value
+      // map is sparse, so a country the metric doesn't cover reads `null`.
+      const metrics = {};
+      for (const m of METRIC_FILES) {
+        metrics[m.key] = metricsData[m.key]?.values?.[c.code] ?? null;
+      }
+      zoomData.textContent = JSON.stringify({ ...c, ...metrics }, null, 2);
+    }
   }
   wireFlagZoomBackdropClose(zoom);
   // Tap the headline flag to enlarge it in a lightbox (shared with the home

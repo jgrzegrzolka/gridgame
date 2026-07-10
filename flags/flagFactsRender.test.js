@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { renderFlagFacts } from './flagFactsRender.js';
+import { renderFlagFacts, renderImageCredit } from './flagFactsRender.js';
 
 /** Stub `Document` that records the tree we built. */
 function makeDoc() {
@@ -422,29 +422,34 @@ test('renderFlagFacts omits galleries when none are defined', () => {
   assert.equal(findAllByClass(root, 'flag-facts-gallery').length, 0);
 });
 
-test('renderFlagFacts appends an image-credit line with a sources link on every story', () => {
+test('renderImageCredit builds an image-credit line with a sources link', () => {
   const doc = makeDoc();
   const t = makeT({
-    'flagFacts.gr.intro': 'Intro.',
     'flagFacts.imageCredit': 'Flag images: flag-icons and Wikimedia Commons',
     'flagFacts.imageCreditLink': 'sources & licences',
   });
-  const root = renderFlagFacts({ facts: FACTS, t, doc });
+  const credit = renderImageCredit({ t, doc });
 
-  const credit = findAllByClass(root, 'flag-facts-credit');
-  assert.equal(credit.length, 1, 'exactly one credit line');
+  assert.equal(credit.className, 'flag-facts-credit');
   assert.equal(
-    findAllByClass(root, 'flag-facts-credit-text')[0].textContent,
+    findAllByClass(credit, 'flag-facts-credit-text')[0].textContent,
     'Flag images: flag-icons and Wikimedia Commons',
   );
 
-  const link = findAllByClass(root, 'flag-facts-credit-link')[0];
+  const link = findAllByClass(credit, 'flag-facts-credit-link')[0];
   assert.equal(link.tag, 'a');
   assert.equal(link.textContent, 'sources & licences');
   assert.match(link.href, /SOURCES\.md$/);
   // New tab, opened safely.
   assert.equal(link.target, '_blank');
   assert.match(link.rel, /noopener/);
+});
+
+test('renderFlagFacts no longer embeds the credit (callers place it as a footer)', () => {
+  const doc = makeDoc();
+  const t = makeT({ 'flagFacts.gr.intro': 'Intro.' });
+  const root = renderFlagFacts({ facts: FACTS, t, doc });
+  assert.equal(findAllByClass(root, 'flag-facts-credit').length, 0);
 });
 
 test('renderFlagFacts sets strings via textContent, never innerHTML', () => {
