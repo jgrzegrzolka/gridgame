@@ -58,8 +58,8 @@
   padding: 8px 12px;
   margin: 0 0 14px;
 }
-/* Loading variant (solo "Starting…"): drop the box and italicise, so the
-   label + shared `.loading-dots` read as the same "loading…" idiom used on
+/* Loading variant (connecting / reconnecting): drop the box and italicise, so
+   the label + shared `.loading-dots` read as the same "loading…" idiom used on
    the daily-stats and sync screens rather than a bordered status pill. */
 .party-status.loading {
   background: none;

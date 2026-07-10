@@ -50,10 +50,6 @@ export function bootFlagParty() {
   let rejected = false;
   let reconnectAttempts = 0;
   let reconnectTimer = 0;
-  /** Solo path: created a private room and want to skip the lobby, auto-starting
-   *  the game the moment we're seated as host. Cleared once the first question
-   *  arrives. Keeps the create-a-room (multiplayer) lobby untouched. */
-  let soloPending = false;
   /** Fire the finish celebration (confetti / fireworks) exactly once per final
    *  screen. render() re-runs on every message and on a language switch, so a
    *  guard keeps the burst from re-triggering; reset when we leave the final
@@ -107,8 +103,8 @@ export function bootFlagParty() {
   /**
    * Loading variant of the status line: a muted label trailed by the shared
    * pulsing `.loading-dots` (common.css) — the same "something's happening"
-   * idiom as daily-stats / sync "loading…". Used for the solo "Starting…"
-   * spin-up so it reads as a wait, not an error box.
+   * idiom as daily-stats / sync "loading…". Used for the connecting /
+   * reconnecting wait so it reads as a wait, not an error box.
    * @param {string} key @param {string} fallback
    */
   function setLoadingStatus(key, fallback) {
@@ -127,7 +123,7 @@ export function bootFlagParty() {
   // server's reject reasons (room not found, code taken, in progress) surface
   // here — same placement + styling as Tic-Tac-Toe's `.lobby-error`, instead
   // of the top `.party-status` box which is now reserved for transient
-  // connecting / disconnected / starting states. The last key is stashed so a
+  // connecting / disconnected states. The last key is stashed so a
   // soft language switch re-translates the visible message.
   /** @type {{ key: string, fallback: string, params?: Record<string, string|number> } | null} */
   let lastJoinError = null;
@@ -296,7 +292,7 @@ export function bootFlagParty() {
   function connect() {
     if (!activeRoom) return;
     // Connecting / reconnecting are waiting states, so they use the same
-    // loading-dots idiom as the solo "Starting" spin-up (not the bordered box).
+    // loading-dots idiom as daily-stats loading (not the bordered error box).
     setLoadingStatus('party.connecting', 'Connecting');
     ws = new WebSocket(wsUrl(activeRoom.code, activeRoom.intent));
     ws.addEventListener('open', () => { reconnectAttempts = 0; });
@@ -322,10 +318,6 @@ export function bootFlagParty() {
     state = next;
     if (msg.type === 'roster' && typeof msg.hostId === 'string') roomHostId = msg.hostId;
     if (msg.type === 'welcome' && msg.isHost) roomHostId = state.you;
-    // Solo auto-start: as soon as we're welcomed back as the host of our fresh
-    // private room, kick the game off without waiting for a lobby tap.
-    if (msg.type === 'welcome' && msg.isHost && soloPending) send({ type: 'start', plan: currentPlan() });
-    if (msg.type === 'question') soloPending = false;
     for (const eff of effects) {
       if (eff.type === 'close') {
         rejected = true;
@@ -341,11 +333,8 @@ export function bootFlagParty() {
       clearStatus();
       showJoinError(so.key, so.fallback, so.params);
     } else {
-      // No override to show, so drop any transient status (connecting, or the
-      // solo "Starting…" banner). render() re-sets "Starting…" itself while a
-      // solo game is still spinning up, so clearing here can't strand it — but
-      // it does clear once the first question arrives (soloPending is false by
-      // then), which is the bug this fixes: the banner used to sit over round 1.
+      // No override to show, so drop any transient status (connecting /
+      // reconnecting) now that a real message has arrived.
       clearStatus();
     }
     render();
@@ -392,8 +381,8 @@ export function bootFlagParty() {
     if (token === clockToken) return;
     clockToken = token;
     clockFired = false;
-    // Solo trims the reveal (nothing to study alone); multiplayer keeps the full
-    // beat so you can read everyone's picks. Question time is the same for all.
+    // A lone player trims the reveal (nothing to study alone); multiplayer keeps
+    // the full beat so you can read everyone's picks. Question time is the same.
     const seatCount = state.roster.filter((r) => r.present).length;
     clockTotalMs = (mode === 'reveal' ? revealSecondsFor(seatCount) : QUESTION_SECONDS) * 1000;
     clockDeadline = Date.now() + clockTotalMs;
@@ -433,14 +422,6 @@ export function bootFlagParty() {
   // ---- render ----
   function render() {
     if (!activeRoom) { stopClock(); showSection('start'); return; }
-    // Solo: suppress the lobby entirely while we connect and auto-start, so the
-    // player drops from "Play solo" straight into round 1 with only a status.
-    if (soloPending && state.phase !== 'question' && state.phase !== 'reveal' && state.phase !== 'final') {
-      stopClock();
-      showSection(null);
-      setLoadingStatus('party.starting', 'Starting');
-      return;
-    }
     // Leaving (or not yet in) the final screen re-arms the one-shot celebration.
     if (state.phase !== 'final') finalCelebrated = false;
     if (state.phase === 'question' || state.phase === 'reveal') { showSection('round'); renderRound(); syncClock(); }
@@ -462,10 +443,10 @@ export function bootFlagParty() {
     }
     const inLobby = state.phase === 'lobby';
     startBtn.hidden = !(state.isHost && inLobby);
-    // A party needs at least two present players before the host can start —
-    // the button stays visible but greys out (shared `.actions-row
-    // button:disabled` style) until a second player joins.
-    startBtn.disabled = state.roster.filter((r) => r.present).length < 2;
+    // The host can start as soon as they're seated — a room of one is allowed
+    // (play alone), and more players can join before the tap. The guard only
+    // greys out the impossible empty-roster case.
+    startBtn.disabled = state.roster.filter((r) => r.present).length < 1;
     waitEl.hidden = !(!state.isHost && inLobby);
     // Game setup is the host's to configure, and only in the lobby.
     gameSetupEl.hidden = !(state.isHost && inLobby);
@@ -654,9 +635,7 @@ export function bootFlagParty() {
   }
 
   // ---- wire controls ----
-  $('create-room').addEventListener('click', () => { soloPending = false; enterRoom(generateCode(), 'create'); });
-
-  $('play-solo').addEventListener('click', () => { soloPending = true; enterRoom(generateCode(), 'create'); });
+  $('create-room').addEventListener('click', () => enterRoom(generateCode(), 'create'));
 
   $('join-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -667,7 +646,6 @@ export function bootFlagParty() {
       return;
     }
     clearJoinError();
-    soloPending = false;
     enterRoom(code, 'join');
   });
 
