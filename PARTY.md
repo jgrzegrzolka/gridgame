@@ -60,13 +60,15 @@ model:
 Why own-screen first, not Jackbox: no TV dependency, solo falls out for free, 2-player is
 the main case, and it's **one player page** instead of a host page *plus* a controller page.
 
-## Ship-dark behind `?test` (decided 2026-07-09)
+## Ship-dark behind `?test` (decided 2026-07-09, launched 2026-07-10)
 
-The mode ships to prod immediately but stays invisible: a 5th tile is added to the home
-grid, rendered `hidden`, and revealed by `bootHome()` only when the URL carries `?test`
-(`new URLSearchParams(location.search).has('test')`). Lets us dogfood on the real site
-(real PartyKit, real phones) without exposing a half-built mode to visitors. Flip to
-always-visible by deleting the guard when a round set is ready.
+The mode first shipped dark: a 5th tile was added to the home grid, rendered `hidden`, and
+revealed by `bootHome()` only when the URL carried `?test`
+(`new URLSearchParams(location.search).has('test')`). That let us dogfood on the real site
+(real PartyKit, real phones) without exposing a half-built mode to visitors.
+
+**Launched 2026-07-10.** Flag Party took the "Make a puzzle" (findFlag) slot in the home
+grid, and "Make a puzzle" moved to a burger menu entry. The `?test` reveal guard is gone.
 
 ---
 
@@ -169,6 +171,7 @@ engine so rounds 2–4 and the TV surface are pure additions afterward.
 
 - [x] **Home tile, ship-dark.** 5th `.game-tile` in `index.html` → `flagParty/`, `hidden`
       by default; `bootHome()` reveals it when `?test` is present. `tile.party` i18n key.
+      (Launched 2026-07-10: took the findFlag tile slot; `?test` guard removed.)
 - [x] **PartyKit party + pure room module.** Registered `party` in `partykit.json`;
       `party/partyGameServer.js` (thin) + `flags/partyRoom.js` (pure: seats, host, start,
       buzz-order, reveal-with-all-picks, tally, next, final, play-again→lobby) + tests.
