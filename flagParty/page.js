@@ -82,6 +82,16 @@ export function bootFlagParty() {
   const playingAsEl = $('playing-as');
   const joinError = $('join-error');
   const shareBtn = /** @type {HTMLButtonElement} */ ($('share-btn'));
+  // Invite icon is touch-only, same as Tic-Tac-Toe: on phones/tablets copying
+  // the URL bar is fiddly and the native share sheet (WhatsApp etc.) is the
+  // point; desktop users have ctrl-L + ctrl-C, so the room code alone suffices.
+  // Hiding it lets the shared `.room-line:has(.share-link:not([hidden]))` rule
+  // fall back to the plain centred code line. Visibility depends only on the
+  // device, so it's set once here rather than per render.
+  const isTouchDevice =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches;
+  shareBtn.hidden = !isTouchDevice;
   const gameSetupEl = $('game-setup');
   const gsModesEl = $('gs-modes');
   const gsMixEl = $('gs-mix');
