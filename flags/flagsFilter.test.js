@@ -231,13 +231,55 @@ test('matchesFilters: colorCount combines with color includes — "only red+whit
   assert.equal(matchesFilters(hr, f), false);
 });
 
-test('emptyFilters returns a fresh Filters with all include/exclude sets empty and colorCount null', () => {
+test('matchesFilters: population {op:>=} matches countries at or above the threshold', () => {
+  const big = country({ code: 'big', population: 60_000_000 });
+  const exact = country({ code: 'eq', population: 50_000_000 });
+  const small = country({ code: 'sm', population: 5_000_000 });
+  const f = emptyFilters();
+  f.population = { op: '>=', n: 50_000_000 };
+  assert.equal(matchesFilters(big, f), true);
+  assert.equal(matchesFilters(exact, f), true);
+  assert.equal(matchesFilters(small, f), false);
+});
+
+test('matchesFilters: population {op:<=} matches countries at or below the threshold', () => {
+  const small = country({ code: 'sm', population: 800_000 });
+  const exact = country({ code: 'eq', population: 1_000_000 });
+  const big = country({ code: 'big', population: 20_000_000 });
+  const f = emptyFilters();
+  f.population = { op: '<=', n: 1_000_000 };
+  assert.equal(matchesFilters(small, f), true);
+  assert.equal(matchesFilters(exact, f), true);
+  assert.equal(matchesFilters(big, f), false);
+});
+
+test('matchesFilters: a country with no population value matches neither direction', () => {
+  const noPop = country({ code: 'zz' }); // sparse metric — no population field
+  const geq = emptyFilters(); geq.population = { op: '>=', n: 1 };
+  const leq = emptyFilters(); leq.population = { op: '<=', n: 1_000_000_000 };
+  assert.equal(matchesFilters(noPop, geq), false);
+  assert.equal(matchesFilters(noPop, leq), false);
+});
+
+test('matchesFilters: population combines (AND) with a continent include', () => {
+  const euBig = country({ code: 'eu', continent: 'Europe', population: 80_000_000 });
+  const euSmall = country({ code: 'es', continent: 'Europe', population: 2_000_000 });
+  const asBig = country({ code: 'as', continent: 'Asia', population: 80_000_000 });
+  const f = filters({ continent: { include: ['Europe'] } });
+  f.population = { op: '>=', n: 50_000_000 };
+  assert.equal(matchesFilters(euBig, f), true);
+  assert.equal(matchesFilters(euSmall, f), false); // Europe but too small
+  assert.equal(matchesFilters(asBig, f), false);   // big but wrong continent
+});
+
+test('emptyFilters returns a fresh Filters with all include/exclude sets empty and colorCount + population null', () => {
   const f = emptyFilters();
   for (const k of /** @type {Array<'status'|'continent'|'color'|'motif'|'stripesOnly'>} */ (['status','continent','color','motif','stripesOnly'])) {
     assert.equal(f[k].include.size, 0);
     assert.equal(f[k].exclude.size, 0);
   }
   assert.equal(f.colorCount, null);
+  assert.equal(f.population, null);
   // independence: mutating one instance doesn't affect a fresh one
   f.color.include.add('red');
   assert.equal(emptyFilters().color.include.size, 0);

@@ -4,6 +4,7 @@
 
 import { readBoolSetting, writeBoolSetting } from './group.js';
 import { emptyFilters, matchesFilters, COLOR_COUNT_OPS, COLOR_COUNT_NS } from './flagsFilter.js';
+import { POPULATION_BREAKS_FOR_RANDOM } from './engine.js';
 
 /**
  * Filter-group names in the order they should appear in titles and URLs.
@@ -129,6 +130,25 @@ export function parseFilterString(s) {
       }
       continue;
     }
+    // Scalar primitive: constrains the country's population. Always
+    // carries an explicit op — `population:>=10000000` / `population:<=1000000`
+    // (raw people count, matching the engine's `population:` category id so
+    // findFlag links and TTT category ids share one vocabulary). No `=` op
+    // and no include/exclude sign — population is a threshold, not a value set.
+    if (group === 'population') {
+      /** @type {'>=' | '<='} */
+      let op;
+      let nStr;
+      if (val.startsWith('>=')) { op = '>='; nStr = val.slice(2); }
+      else if (val.startsWith('<=')) { op = '<='; nStr = val.slice(2); }
+      else continue;
+      const n = Number.parseInt(nStr, 10);
+      if (Number.isInteger(n) && n > 0 && String(n) === nStr) {
+        f.population = { op, n };
+        any = true;
+      }
+      continue;
+    }
     /** @type {'include' | 'exclude'} */
     let sign = 'include';
     if (val.startsWith('!')) {
@@ -169,6 +189,9 @@ export function serializeFilter(f) {
     // the explicit form.
     const { op, n } = f.colorCount;
     tokens.push(op === '=' ? `colorCount:${n}` : `colorCount:${op}${n}`);
+  }
+  if (f.population !== null) {
+    tokens.push(`population:${f.population.op}${f.population.n}`);
   }
   return tokens.join(',');
 }
@@ -273,6 +296,19 @@ export function pillLabel(group, value, sign, translate) {
     }
     const n = value.startsWith('=') ? value.slice(1) : value;
     return translate(`filter.onlyN.${n}`, `only ${n} colours`);
+  } else if (group === 'population') {
+    // population is a scalar threshold; the "value" echoes the id suffix
+    //   ">=N" → at least N people, via population.atLeast.<Nm>
+    //   "<=N" → at most N people,  via population.atMost.<Nm>
+    // Keyed on the compact millions token ("10m", "1m") so the keys line
+    // up with the TTT category labels (engine.js translateCategoryLabel)
+    // and POPULATION_BREAKS_FOR_RANDOM. No exclude — the primitive is a
+    // threshold, you either constrain it or you don't.
+    const op = value.slice(0, 2);
+    const n = Number.parseInt(value.slice(2), 10);
+    const token = `${n / 1_000_000}m`;
+    if (op === '>=') return translate(`population.atLeast.${token}`, `over ${n / 1_000_000}M people`);
+    return translate(`population.atMost.${token}`, `under ${n / 1_000_000}M people`);
   } else {
     body = translate(`status.${value}`, value);
   }
@@ -328,6 +364,9 @@ export function filterTitle(f, translate) {
     if (op === '>=') parts.push(translate(`filter.atLeastN.${n}`, `${n} or more colours`));
     else if (op === '<=') parts.push(translate(`filter.atMostN.${n}`, `${n} or fewer colours`));
     else parts.push(translate(`filter.onlyN.${n}`, `only ${n} colours`));
+  }
+  if (f.population !== null) {
+    parts.push(pillLabel('population', `${f.population.op}${f.population.n}`, 'include', translate));
   }
   return parts.join(' · ');
 }
@@ -415,6 +454,7 @@ const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent',
  *   excludeProbability?: number,
  *   onlyColorsProbability?: number,
  *   colorCountProbability?: number,
+ *   populationProbability?: number,
  * }} [options]
  * @returns {Filters}
  */
@@ -426,6 +466,7 @@ export function pickRandomMix(pillPool, all, options = {}) {
     excludeProbability = 0.2,
     onlyColorsProbability = 0,
     colorCountProbability = 0,
+    populationProbability = 0,
   } = options;
 
   // A 2+ pill mix needs at least 2 pills to draw from; degenerate
@@ -455,6 +496,7 @@ export function pickRandomMix(pillPool, all, options = {}) {
       );
     }
     maybeAttachColorCount(f, rng, onlyColorsProbability, colorCountProbability);
+    maybeAttachPopulation(f, rng, populationProbability);
     lastAttempt = f;
     const count = all.filter((c) => matchesFilters(c, f)).length;
     if (count >= minIntersection) return f;
@@ -496,5 +538,36 @@ function maybeAttachColorCount(f, rng, onlyColorsProbability, colorCountProbabil
     const op = COLOR_COUNT_OPS[Math.floor(rng() * COLOR_COUNT_OPS.length)];
     const n = COLOR_COUNT_NS[Math.floor(rng() * COLOR_COUNT_NS.length)];
     f.colorCount = { op, n };
+  }
+}
+
+/**
+ * Mutate `f` to attach a `population` threshold with probability
+ * `populationProbability`, drawing one of the six curated tiers from
+ * `POPULATION_BREAKS_FOR_RANDOM` (the same set the TTT generator uses, so
+ * the two surfaces can't drift on what counts as a tier). Uniform pick, so
+ * every tier is reachable by Random — the coverage half of the findFlag
+ * random-mix contract (see the findflag-random-coverage skill).
+ *
+ * Kept mutually exclusive with `colorCount`: skipped when the mix already
+ * carries a colour-count constraint, so a random puzzle never stacks two
+ * scalar modifiers into a busy title / near-empty answer set. Population is
+ * NOT skipped on `stripesOnly` (unlike colorCount) — it's orthogonal to the
+ * palette, so "horizontal-stripes flags over 50M" is a perfectly good round.
+ *
+ * The probability is checked BEFORE the first rng() call so a caller that
+ * opts out (probability 0, the default) consumes exactly zero rng bytes —
+ * keeping the pre-existing pill-only / colorCount tests deterministic
+ * against their seeded RNGs.
+ *
+ * @param {Filters} f
+ * @param {() => number} rng
+ * @param {number} populationProbability
+ */
+function maybeAttachPopulation(f, rng, populationProbability) {
+  if (f.colorCount !== null) return;
+  if (populationProbability > 0 && rng() < populationProbability) {
+    const brk = POPULATION_BREAKS_FOR_RANDOM[Math.floor(rng() * POPULATION_BREAKS_FOR_RANDOM.length)];
+    f.population = { op: brk.op, n: brk.n };
   }
 }

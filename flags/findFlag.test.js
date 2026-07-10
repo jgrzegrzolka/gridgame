@@ -14,7 +14,7 @@ import {
   filterToCategory,
   pickRandomMix,
 } from './findFlag.js';
-import { categoryFromId } from './engine.js';
+import { categoryFromId, POPULATION_BREAKS_FOR_RANDOM } from './engine.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 import { createCountry } from './group.js';
 
@@ -831,5 +831,118 @@ test('pickRandomMix: empirical coverage — every visible pill AND the colorCoun
     `every pill must appear at least once over ${RUNS} runs; missing: ${missing.join(', ')}`);
   assert.ok(colorCountFired > 0,
     `colorCount modifier must fire at least once over ${RUNS} runs; got 0`);
+});
+
+// ---- population (findFlag "Make a puzzle" scalar filter) -------------------
+
+test('parseFilterString: population:>=N parses as op:>=, n:N', () => {
+  const f = parseFilterString('continent:Europe,population:>=50000000');
+  assert.ok(f);
+  assert.deepEqual([...f.continent.include], ['Europe']);
+  assert.deepEqual(f.population, { op: '>=', n: 50000000 });
+});
+
+test('parseFilterString: population:<=N parses as op:<=, n:N', () => {
+  const f = parseFilterString('population:<=1000000');
+  assert.ok(f);
+  assert.deepEqual(f.population, { op: '<=', n: 1000000 });
+});
+
+test('parseFilterString: population without an explicit op or with a bad number is silently dropped', () => {
+  assert.equal(parseFilterString('population:'), null);
+  assert.equal(parseFilterString('population:50000000'), null, 'bare N (no op) is not a valid population token');
+  assert.equal(parseFilterString('population:>=abc'), null);
+  assert.equal(parseFilterString('population:>='), null);
+  assert.equal(parseFilterString('population:<=0'), null, 'n must be > 0');
+  assert.equal(parseFilterString('population:>=-5'), null);
+});
+
+test('serializeFilter: round-trips a population filter deterministically', () => {
+  const s = 'continent:Africa,population:>=10000000';
+  const f = parseFilterString(s);
+  assert.ok(f);
+  assert.equal(serializeFilter(f), s);
+});
+
+test('serializeFilter: population token emits after colorCount', () => {
+  const f = emptyFilters();
+  f.colorCount = { op: '>=', n: 3 };
+  f.population = { op: '<=', n: 5000000 };
+  assert.equal(serializeFilter(f), 'colorCount:>=3,population:<=5000000');
+});
+
+test('pillLabel: population ">=N" renders as the localized "over N M people" label', () => {
+  assert.equal(pillLabel('population', '>=10000000', 'include', idTranslate), 'over 10M people');
+  assert.equal(pillLabel('population', '>=100000000', 'include', idTranslate), 'over 100M people');
+});
+
+test('pillLabel: population "<=N" renders as the localized "under N M people" label', () => {
+  assert.equal(pillLabel('population', '<=20000000', 'include', idTranslate), 'under 20M people');
+  assert.equal(pillLabel('population', '<=1000000', 'include', idTranslate), 'under 1M people');
+});
+
+test('filterTitle: appends the population phrase after the pill groups', () => {
+  const f = parseFilterString('continent:Europe,population:>=50000000');
+  assert.ok(f);
+  assert.equal(filterTitle(f, idTranslate), 'Europe · over 50M people');
+});
+
+test('pickRandomMix: populationProbability=1 attaches one of the curated tiers, mutually exclusive with colorCount', () => {
+  const validTiers = new Set(POPULATION_BREAKS_FOR_RANDOM.map((b) => `${b.op}${b.n}`));
+  let fired = 0;
+  for (let seed = 0; seed < 50; seed++) {
+    let i = 0;
+    const rng = () => {
+      const v = ((seed * 23 + i * 29) % 100) / 100;
+      i++;
+      return v;
+    };
+    const f = pickRandomMix(PILL_POOL, SAMPLE, {
+      rng,
+      onlyColorsProbability: 0,
+      colorCountProbability: 0,
+      populationProbability: 1,
+      minIntersection: 0,
+    });
+    if (f.population !== null) {
+      fired++;
+      assert.ok(validTiers.has(`${f.population.op}${f.population.n}`),
+        `seed ${seed}: ${f.population.op}${f.population.n} is not a curated tier`);
+      assert.equal(f.colorCount, null, `seed ${seed}: population and colorCount must not both be set`);
+    }
+  }
+  assert.ok(fired > 30, `expected populationProbability=1 to fire on most seeds, got ${fired}/50`);
+});
+
+test('pickRandomMix: populationProbability=0 leaves population null and consumes no rng bytes for it', () => {
+  // Same gate contract as the colorCount test above: the probability is
+  // checked before the first rng() call, so opting out spends zero bytes
+  // and existing seeded tests keep their exact outputs. Both runs use the
+  // identical options shape (only the probability flips) so the byte-count
+  // comparison is apples-to-apples.
+  let rngCalls = 0;
+  const rng = () => { rngCalls++; return ((rngCalls * 13) % 100) / 100; };
+  const f = pickRandomMix(PILL_POOL, SAMPLE, { rng, populationProbability: 0 });
+  assert.equal(f.population, null);
+  const callsOff = rngCalls;
+
+  rngCalls = 0;
+  pickRandomMix(PILL_POOL, SAMPLE, { rng, populationProbability: 1 });
+  assert.ok(rngCalls > callsOff,
+    `enabling population should consume more rng bytes (off: ${callsOff}, on: ${rngCalls})`);
+});
+
+test('pickRandomMix: every population tier is reachable over many runs (coverage half of the contract)', () => {
+  const seen = new Map(POPULATION_BREAKS_FOR_RANDOM.map((b) => [`${b.op}${b.n}`, 0]));
+  const RUNS = 4000;
+  for (let i = 0; i < RUNS; i++) {
+    const f = pickRandomMix(PILL_POOL, SAMPLE, { populationProbability: 0.5, minIntersection: 0 });
+    if (f.population !== null) {
+      const key = `${f.population.op}${f.population.n}`;
+      seen.set(key, (seen.get(key) ?? 0) + 1);
+    }
+  }
+  const missing = [...seen.entries()].filter(([, n]) => n === 0).map(([k]) => k);
+  assert.deepEqual(missing, [], `every population tier must appear at least once; missing: ${missing.join(', ')}`);
 });
 

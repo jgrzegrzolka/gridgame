@@ -18,20 +18,27 @@ import { pillLabel } from '../flags/findFlag.js';
  *
  * @typedef {{ h: { textContent: string }, key: string, fallback: string }} SectionHeader
  * @typedef {{ labelSpan: { textContent: string }, group: 'continent' | 'color' | 'motif' | 'stripesOnly', value: string }} PillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} PopulationPillRef
  *
  * @param {{
  *   sectionHeaders: SectionHeader[],
  *   allPills: PillRef[],
+ *   populationPills?: PopulationPillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
   for (const p of allPills) {
     p.labelSpan.textContent = pillLabel(p.group, p.value, 'include', t);
+  }
+  // Population pills carry only their id suffix (">=10000000"); pillLabel's
+  // population branch maps it to the localized tier label.
+  for (const p of populationPills) {
+    p.labelSpan.textContent = pillLabel('population', p.value, 'include', t);
   }
   if (onlyColorsLabelSpan) {
     onlyColorsLabelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');

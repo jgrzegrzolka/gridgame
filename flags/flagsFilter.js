@@ -17,6 +17,12 @@ import { sovereigntyOf } from './group.js';
  *   `=` constrains the full palette size to exactly N; `>=` to N or
  *   more; `<=` to N or fewer.
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} PopulationConstraint
+ *   `>=` matches countries of at least N people; `<=` at most N. Scalar
+ *   like colorCount (a country has one population), so it's a single
+ *   constraint, not a two-set FilterSet. No `=` op — population is a
+ *   continuous quantity, so an exact-match tier would match ~nothing.
+ *
  * @typedef {{
  *   status: FilterSet,
  *   continent: FilterSet,
@@ -24,6 +30,7 @@ import { sovereigntyOf } from './group.js';
  *   motif: FilterSet,
  *   stripesOnly: FilterSet,
  *   colorCount: ColorCountConstraint | null,
+ *   population: PopulationConstraint | null,
  * }} Filters
  */
 
@@ -59,6 +66,7 @@ export function emptyFilters() {
     motif: { include: new Set(), exclude: new Set() },
     stripesOnly: { include: new Set(), exclude: new Set() },
     colorCount: null,
+    population: null,
   };
 }
 
@@ -185,6 +193,18 @@ export function matchesFilters(country, filters, options = {}) {
     if (op === '=' && len !== n) return false;
     if (op === '>=' && len < n) return false;
     if (op === '<=' && len > n) return false;
+  }
+
+  // Population reads `country.population`, denormalized onto the Country at
+  // load by `attachPopulations` (group.js). The metric is sparse — a country
+  // with no value (most territories, every non-place flag) matches neither
+  // direction, same contract as the engine's population predicate.
+  if (filters.population !== null) {
+    const pop = country.population;
+    if (typeof pop !== 'number') return false;
+    const { op, n } = filters.population;
+    if (op === '>=' && pop < n) return false;
+    if (op === '<=' && pop > n) return false;
   }
 
   const motifs = country.motifs ?? [];
