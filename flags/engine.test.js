@@ -28,8 +28,10 @@ import {
   MOTIFS_FOR_RANDOM,
   COLOR_COUNTS_FOR_RANDOM,
   STRIPES_ORIENTATIONS_FOR_RANDOM,
+  POPULATION_BREAKS_FOR_RANDOM,
   ALL_MOTIFS,
   colorCount,
+  population,
   categoryFromId,
   hasStripesOnly,
   buildUltimateCategoryPool,
@@ -467,7 +469,7 @@ test('randomPuzzle yields 3 row categories and 3 column categories', () => {
   assert.equal(p.cols.length, 3);
 });
 
-test('randomPuzzle categories come from the unified pool (continent / colour / motif / colorCount / stripesOnly)', () => {
+test('randomPuzzle categories come from the unified pool (continent / colour / motif / colorCount / stripesOnly / population)', () => {
   const p = randomPuzzle(mulberry32(1));
   for (const cat of [...p.rows, ...p.cols]) {
     if (cat.id.startsWith('continent:')) {
@@ -490,6 +492,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(nStr, 10);
       const inPool = COLOR_COUNTS_FOR_RANDOM.some(([o, m]) => o === op && m === n);
       assert.ok(inPool, `colorCount ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('population:')) {
+      const suffix = cat.id.slice('population:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = POPULATION_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `population ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -543,14 +552,15 @@ test('continent and statehood categories carry their exclusiveGroup', () => {
   assert.equal(hasMotif('animal').exclusiveGroup, undefined);
 });
 
-test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly', () => {
+test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population', () => {
   const pool = buildRandomCategoryPool();
   const expected =
     CONTINENTS_FOR_RANDOM.length
     + COLORS_FOR_RANDOM.length
     + MOTIFS_FOR_RANDOM.length
     + COLOR_COUNTS_FOR_RANDOM.length
-    + STRIPES_ORIENTATIONS_FOR_RANDOM.length;
+    + STRIPES_ORIENTATIONS_FOR_RANDOM.length
+    + POPULATION_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -643,8 +653,22 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
   const ultPool = buildUltimateCategoryPool();
   const stripes = ultPool.filter((c) => c.id.startsWith('stripesOnly:'));
   assert.equal(stripes.length, 0, 'stripesOnly cats must not appear in the 9×9 pool');
-  // Sanity check — the non-stripesOnly cats survive
-  assert.equal(ultPool.length, buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length);
+  // Sanity check — the non-stripesOnly cats survive, minus the extreme
+  // population tiers (only the one `ultimate: true` break stays in 9×9).
+  const droppedPop = POPULATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(
+    ultPool.length,
+    buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length - droppedPop,
+  );
+});
+
+test('buildUltimateCategoryPool keeps exactly one population breakpoint (the ultimate:true tier)', () => {
+  const ultPool = buildUltimateCategoryPool();
+  const pop = ultPool.filter((c) => c.id.startsWith('population:'));
+  assert.equal(pop.length, 1, '9×9 keeps a single population breakpoint');
+  const ultimateBreak = POPULATION_BREAKS_FOR_RANDOM.find((b) => b.ultimate === true);
+  assert.ok(ultimateBreak, 'exactly one break should be flagged ultimate');
+  assert.equal(pop[0].id, `population:${ultimateBreak?.op}${ultimateBreak?.n}`);
 });
 
 test('categoryFromId round-trips stripesOnly:horizontal and stripesOnly:vertical', () => {
@@ -868,6 +892,84 @@ test('colorCount: a flag without ambiguousColorCount keeps the strict-canonical 
   const fr = country({ code: 'fr', name: 'France', primaryColors: ['red', 'white', 'blue'] });
   assert.equal(colorCount('=', 3).predicate(fr), true);
   assert.equal(colorCount('=', 4).predicate(fr), false);
+});
+
+test('population(>=, N) matches countries whose population is at least N; missing value never matches', () => {
+  const cat = population('>=', 50_000_000);
+  const big = country({ code: 'de', name: 'Germany', population: 83_000_000 });
+  const exactlyN = country({ code: 'xx', name: 'X', population: 50_000_000 });
+  const small = country({ code: 'is', name: 'Iceland', population: 385_000 });
+  const noValue = country({ code: 'nn', name: 'Nowhere' }); // sparse metric: absent
+  assert.equal(cat.id, 'population:>=50000000');
+  assert.equal(cat.exclusiveGroup, 'population');
+  assert.equal(cat.predicate(big), true);
+  assert.equal(cat.predicate(exactlyN), true);
+  assert.equal(cat.predicate(small), false);
+  assert.equal(cat.predicate(noValue), false);
+});
+
+test('population(<=, N) matches countries whose population is at most N; missing value never matches', () => {
+  const cat = population('<=', 1_000_000);
+  const tiny = country({ code: 'mt', name: 'Malta', population: 552_747 });
+  const exactlyN = country({ code: 'xx', name: 'X', population: 1_000_000 });
+  const big = country({ code: 'de', name: 'Germany', population: 83_000_000 });
+  const noValue = country({ code: 'nn', name: 'Nowhere' });
+  assert.equal(cat.id, 'population:<=1000000');
+  assert.equal(cat.predicate(tiny), true);
+  assert.equal(cat.predicate(exactlyN), true);
+  assert.equal(cat.predicate(big), false);
+  assert.equal(cat.predicate(noValue), false);
+});
+
+test('population factory flags ultimateEligible:false only when asked (default keeps it in 9×9)', () => {
+  assert.equal(population('>=', 10_000_000).ultimateEligible, undefined);
+  assert.equal(population('>=', 10_000_000, { ultimateEligible: true }).ultimateEligible, undefined);
+  assert.equal(population('>=', 100_000_000, { ultimateEligible: false }).ultimateEligible, false);
+});
+
+test('axesConflict blocks two population breakpoints across opposite axes (single exclusiveGroup)', () => {
+  // >=100M row × <=1M col would always be empty; >=10M × <=20M would be
+  // redundant. Same exclusiveGroup makes axesConflict reject both.
+  assert.equal(
+    axesConflict([population('>=', 100_000_000)], [population('<=', 1_000_000)]),
+    true,
+  );
+  assert.equal(
+    axesConflict([population('>=', 10_000_000)], [population('<=', 20_000_000)]),
+    true,
+  );
+});
+
+test('categoryFromId round-trips population thresholds and rejects malformed suffixes', () => {
+  const ge = categoryFromId('population:>=10000000');
+  assert.ok(ge);
+  assert.equal(ge?.id, 'population:>=10000000');
+  assert.equal(ge?.exclusiveGroup, 'population');
+  const big = country({ code: 'de', name: 'Germany', population: 83_000_000 });
+  assert.equal(ge?.predicate(big), true);
+
+  const le = categoryFromId('population:<=1000000');
+  assert.ok(le);
+  assert.equal(le?.id, 'population:<=1000000');
+
+  // No operator, bad number, or zero → null, not a broken Category
+  assert.equal(categoryFromId('population:10000000'), null);
+  assert.equal(categoryFromId('population:>=abc'), null);
+  assert.equal(categoryFromId('population:>=0'), null);
+});
+
+test('translateCategoryLabel maps population thresholds to the population.* key, falling back to the baked label', () => {
+  const t = fakeTranslate({
+    'population.atLeast.10m': 'ponad 10 mln ludności',
+    'population.atMost.1m': 'poniżej 1 mln ludności',
+  });
+  assert.equal(translateCategoryLabel(population('>=', 10_000_000), t), 'ponad 10 mln ludności');
+  assert.equal(translateCategoryLabel(population('<=', 1_000_000), t), 'poniżej 1 mln ludności');
+  // Missing key → baked English label
+  assert.equal(
+    translateCategoryLabel(population('>=', 50_000_000), fakeTranslate({})),
+    'over 50M people',
+  );
 });
 
 test('validateCell accepts an ambiguousColorCount flag for a contested-count cell (player-pick path)', () => {
@@ -1296,9 +1398,9 @@ test('findUltimateAssignment: returns 81 distinct countries on an empty puzzle t
     COLORS_FOR_RANDOM,
     10,
   );
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(5), maxAttempts: 500 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(3), maxAttempts: 500 });
   /** @type {Country[][][][] | null} */
-  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(5));
+  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(3));
   if (!assignment) throw new Error('a solvable puzzle must yield a non-null assignment');
   /** @type {Set<string>} */
   const seen = new Set();

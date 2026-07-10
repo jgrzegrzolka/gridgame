@@ -608,6 +608,18 @@
     "horizontal": "tylko poziome pasy",
     "vertical": "tylko pionowe pasy"
   },
+  "population": {
+    "atLeast": {
+      "10m": "ponad 10 mln ludności",
+      "50m": "ponad 50 mln ludności",
+      "100m": "ponad 100 mln ludności"
+    },
+    "atMost": {
+      "20m": "poniżej 20 mln ludności",
+      "5m": "poniżej 5 mln ludności",
+      "1m": "poniżej 1 mln ludności"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "tylko 2 kolory",

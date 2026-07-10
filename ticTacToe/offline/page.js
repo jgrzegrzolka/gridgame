@@ -1,5 +1,5 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
-import { loadCountries } from '../../flags/group.js';
+import { loadCountries, attachPopulations } from '../../flags/group.js';
 import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells } from '../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
@@ -24,11 +24,20 @@ export function bootTicTacToe() {
   // header text and per-cell click handlers get wired up later inside
   // runTicTacToe once the data is ready.
   buildGridSkeleton();
-  fetch('../../flags/countries.json')
-    .then((r) => r.json())
-    .then(loadCountries)
-    .then((rawCountries) => {
-      const countries = withLocalizedAliases(rawCountries);
+  // Population is a separate sparse metric — fetch it alongside countries (the
+  // browser must fetch JSON, never import it) and denormalize it onto the
+  // Country objects so the `population` threshold categories resolve. Attach
+  // after withLocalizedAliases, which re-runs createCountry and would otherwise
+  // not carry the field.
+  Promise.all([
+    fetch('../../flags/countries.json').then((r) => r.json()),
+    fetch('../../flags/metrics/population.json').then((r) => r.json()),
+  ])
+    .then(([rawCountries, population]) => {
+      const countries = attachPopulations(
+        withLocalizedAliases(loadCountries(rawCountries)),
+        population.values,
+      );
       const puzzle = generateRandomPuzzle(countries);
       runTicTacToe({ puzzle, countries });
     })

@@ -47,6 +47,23 @@ A fresh agent picking this up should:
 
 ## Done
 
+### Feature DF: Population thresholds as a tic-tac-toe category — *built 2026-07-10 (PR pending)*
+
+**Goal.** The first *play* consumer of a world metric (Feature DD): population becomes a TTT category family, like `colorCount`. Six breakpoints — populous `>=10M / >=50M / >=100M` and small `<=20M / <=5M / <=1M` — surfacing in the 3×3 and 9×9 random pools. Difficulty falls out of the threshold: `>=10M` / `<=20M` cover ~half the world (easy), `>=100M` (~16 countries) / `<=1M` are tight (hard).
+
+**Design decisions:**
+
+- **Predicate reads a denormalized field, not a metric map.** TTT categories rehydrate from an id string alone (across the PartyKit wire and storage, via `categoryFromId`), so a predicate must read a plain `Country` field. `attachPopulations(countries, values)` (in `group.js`) copies `population.json`'s value onto each Country at load; the metric file stays the single source. `population:>=10000000` then reconstructs to `c => c.population >= 1e7` with no data threading — identical to every other predicate. **The metric file is *not* baked into `countries.json`** (that would erode Feature DD's sparse-metric separation).
+- **Attach at every generate/validate site:** both party servers (static JSON import, safe on Cloudflare) and both offline pages (browser `fetch`, per the never-import-JSON-in-browser rule). Online clients are server-authoritative and skip it (they only rehydrate categories for labels).
+- **One `exclusiveGroup: 'population'`** across all six, so no puzzle carries population on both axes — rules out the impossible band (`>=100M × <=1M`, always empty) and the redundant one (`>=10M × <=20M`).
+- **9×9 keeps exactly one breakpoint (`>=10M`).** The extreme tiers can't back 9-distinct-per-cell against a continent, so five of six carry `ultimateEligible: false` and `buildUltimateCategoryPool()` drops them — same mechanism as `stripesOnly`.
+
+**What shipped.** `population(op, n)` factory + `POPULATION_BREAKS_FOR_RANDOM` + `categoryFromId` / `translateCategoryLabel` branches in `flags/engine.js`; `attachPopulations` in `flags/group.js` (+ `population?` on the `Country` typedef); wiring in `party/server.js`, `party/ultimateServer.js`, `ticTacToe/offline/page.js`, `ticTacToe/9x9/offline/page.js`; `population.*` i18n block (en + pl). Tests: factory/predicate/rehydration/translate + `attachPopulations` units, and real-data seed pins that population surfaces in 3×3 and only `>=10M` reaches 9×9. Skill `.claude/skills/ttt-puzzle-generator/SKILL.md` updated. 2250 tests + typecheck green.
+
+**Standing artifact:** the pattern for *any* future metric-as-category (area, GDP, …) — one factory + breakpoint list + `attach<Metric>` at the TTT load sites, predicate reads the denormalized field.
+
+---
+
 ### Feature DD: World metrics — population first, as a self-describing metric namespace — *shipped 2026-07-10 (#763)*
 
 **Goal.** A general home for **continuous world metrics** (population today; area, GDP, coffee production, ships-per-capita, … later) so new metrics unlock new game modes without running out of ideas. Population + pure helper + tests, no game consumer (consumers are their own later features — Feature DE is the first).
