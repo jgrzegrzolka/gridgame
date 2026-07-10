@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement, manualToCategory, resolveNote, puzzleDate, formatPuzzleDate, LAUNCH_DATE } from './daily.js';
+import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement, manualToCategory, superlativeToCategory, resolveNote, puzzleDate, formatPuzzleDate, LAUNCH_DATE } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries, createCountry } from './group.js';
@@ -276,6 +276,88 @@ test('manualToCategory: predicate is code-membership against the frozen answer l
   const us = fixtureCountry({ code: 'us' });
   assert.equal(category.predicate(fr), true);
   assert.equal(category.predicate(us), false);
+});
+
+test('resolvePuzzleEntry: superlative entry skips filter parsing and returns filter: null', () => {
+  // Like manual, a superlative's frozen answers ARE the puzzle — the top-N
+  // rank is set-relative, not a per-flag predicate, so there's nothing to
+  // parse here. Its optional `filter` only narrowed the ranking pool at
+  // authoring time and must NOT be re-applied as a game filter.
+  const inC = fixtureCountry({ code: 'in' });
+  const cn = fixtureCountry({ code: 'cn' });
+  const r = resolvePuzzleEntry(
+    {
+      n: 60,
+      kind: 'superlative',
+      metric: 'population',
+      scope: 'world',
+      direction: 'most',
+      topN: 2,
+      answers: ['in', 'cn'],
+      title: { en: '2 most populous', pl: '2 najludniejsze' },
+    },
+    [inC, cn],
+  );
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.filter, null);
+    assert.deepEqual(r.targets.map((c) => c.code), ['in', 'cn']);
+    assert.equal(r.entry.kind, 'superlative');
+  }
+});
+
+test('superlativeToCategory: label comes from entry.title[lang]', () => {
+  const category = superlativeToCategory(
+    {
+      n: 60,
+      kind: 'superlative',
+      metric: 'population',
+      scope: 'Europe',
+      direction: 'most',
+      topN: 5,
+      answers: ['ru', 'de', 'gb', 'fr', 'it'],
+      title: { en: '5 most populous in Europe', pl: '5 najludniejszych w Europie' },
+    },
+    'pl',
+  );
+  assert.equal(category.label, '5 najludniejszych w Europie');
+  assert.match(category.id, /60/);
+  assert.match(category.id, /superlative/);
+});
+
+test('superlativeToCategory: composes a bare fallback when title is absent (Phase-1 stopgap)', () => {
+  const category = superlativeToCategory(
+    {
+      n: 60,
+      kind: 'superlative',
+      metric: 'population',
+      scope: 'Europe',
+      direction: 'most',
+      topN: 5,
+      answers: ['ru', 'de', 'gb', 'fr', 'it'],
+      filter: 'color:white',
+    },
+    'en',
+  );
+  assert.equal(category.label, '5 most population · Europe · color:white');
+});
+
+test('superlativeToCategory: predicate is code-membership against the frozen answer list', () => {
+  const category = superlativeToCategory(
+    {
+      n: 60,
+      kind: 'superlative',
+      metric: 'population',
+      scope: 'world',
+      direction: 'most',
+      topN: 2,
+      answers: ['in', 'cn'],
+      title: { en: 'X', pl: 'X' },
+    },
+    'en',
+  );
+  assert.equal(category.predicate(fixtureCountry({ code: 'in' })), true);
+  assert.equal(category.predicate(fixtureCountry({ code: 'us' })), false);
 });
 
 test('resolveNote: returns the note in the requested language', () => {

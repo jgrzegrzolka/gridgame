@@ -28,22 +28,38 @@ import { parseFilterString } from './findFlag.js';
  *                             enforces it on every puzzles.json entry);
  *                             typedef-optional only so synthetic test
  *                             fixtures stay terse.
- * @property {'filter' | 'manual'} [kind]  discriminator. Absent or
- *                             `'filter'`: traditional filter-derived
+ * @property {'filter' | 'manual' | 'superlative'} [kind]  discriminator.
+ *                             Absent or `'filter'`: traditional filter-derived
  *                             entry (the original shape). `'manual'`:
  *                             hand-curated answer list with no filter —
  *                             used for criteria that don't fit the DSL
  *                             (ad-hoc visual patterns, non-flag-data
- *                             facts). See SKILL.md "Manual entries".
+ *                             facts). `'superlative'`: top-N-by-metric
+ *                             roster (`metric` / `scope` / `direction` /
+ *                             `topN`, optional flag `filter`), resolved by
+ *                             `flags/superlative.js` and frozen like a
+ *                             manual entry. See SKILL.md.
+ * @property {string} [metric]  superlative only — metric key (e.g. 'population').
+ * @property {string} [scope]   superlative only — 'world' or a continent name.
+ * @property {'most' | 'least'} [direction]  superlative only — rank from top or bottom.
+ * @property {number} [topN]    superlative only — how many to take (== answers.length).
  * @property {string} [filter]   serialized filter, same form as the
  *                             findFlag chooser's `?f=` URL parameter.
  *                             Required for `kind: 'filter'` (default),
- *                             absent for `kind: 'manual'`.
+ *                             absent for `kind: 'manual'`. Optional for
+ *                             `kind: 'superlative'`, where it *narrows the
+ *                             ranking pool* rather than being the whole
+ *                             criterion (the top-N rank is set-relative and
+ *                             can't be a filter token).
  * @property {Record<string, string>} [title]  per-language category
  *                             label shown where the filter-pill chain
  *                             would render. Required for manual entries
- *                             (the player has no filter to read), absent
- *                             for filter entries (built from the filter).
+ *                             (the player has no filter to read); for
+ *                             superlative entries it's optional in Phase 1
+ *                             (a composed fallback covers a missing title)
+ *                             and gets auto-generated from the parts in a
+ *                             later phase; absent for filter entries (built
+ *                             from the filter).
  * @property {string[]} answers  country codes the puzzle resolves to
  * @property {Record<string, string>} [description]  per-language helper
  *                             sentence shown under the header. Keys are
@@ -280,14 +296,16 @@ export function findPuzzle(catalog, n) {
  * @returns {DailyResolution}
  */
 export function resolvePuzzleEntry(entry, allCountries) {
-  // Manual entries: no filter to parse — the hand-curated answer list
-  // IS the puzzle. Skip parseFilterString entirely so the resolver
-  // doesn't reject them as "invalid-filter", and return filter: null
-  // so callers (page.js, backlog/play.js) know to take the
-  // kind === 'manual' branch when building the category label.
+  // Manual + superlative entries: the frozen answer list IS the puzzle,
+  // so there's no per-flag filter to parse for the game. Manual has no
+  // filter at all; a superlative's optional `filter` only *narrowed the
+  // ranking pool* at authoring time — the top-N rank itself is
+  // set-relative and not a per-flag predicate, so re-applying it here
+  // would be wrong. Both skip parseFilterString and return filter: null,
+  // so callers take the kind-specific branch when building the label.
   /** @type {import('./flagsFilter.js').Filters | null} */
   let filter = null;
-  if (entry.kind !== 'manual') {
+  if (entry.kind !== 'manual' && entry.kind !== 'superlative') {
     filter = parseFilterString(entry.filter ?? '');
     if (!filter) return { ok: false, reason: 'invalid-filter' };
   }
@@ -324,6 +342,49 @@ export function manualToCategory(entry, lang) {
     label,
     predicate: (c) => codes.has(c.code),
   };
+}
+
+/**
+ * Build a synthetic Category for a superlative entry. Like `manualToCategory`,
+ * the predicate is code-membership against the frozen answer list (the ranking
+ * is set-relative, not a per-flag rule). The label prefers the stored
+ * `entry.title[lang]`; when absent it falls back to a bare composed English
+ * string (`"10 most populous · Europe"`) so Phase 1 renders *something* legible
+ * before the i18n auto-title lands in a later phase.
+ *
+ * @param {DailyPuzzle} entry
+ * @param {string} lang
+ * @returns {import('./engine.js').Category}
+ */
+export function superlativeToCategory(entry, lang) {
+  const codes = new Set(entry.answers);
+  const label =
+    entry.title?.[lang] ??
+    entry.title?.en ??
+    composeSuperlativeFallbackLabel(entry);
+  return {
+    id: `daily:${entry.n}:superlative`,
+    label,
+    predicate: (c) => codes.has(c.code),
+  };
+}
+
+/**
+ * Bare English fallback label for a superlative with no stored title —
+ * `"<topN> most|least populous · <scope>"`, plus the filter tokens when the
+ * ranking pool was narrowed. Deliberately plain: it's a Phase-1 stopgap the
+ * i18n auto-title replaces, not player-final copy.
+ *
+ * @param {DailyPuzzle} entry
+ * @returns {string}
+ */
+function composeSuperlativeFallbackLabel(entry) {
+  const dir = entry.direction === 'least' ? 'least' : 'most';
+  const scope = entry.scope === 'world' || !entry.scope ? 'world' : entry.scope;
+  const metric = entry.metric ?? 'metric';
+  let label = `${entry.topN ?? entry.answers.length} ${dir} ${metric} · ${scope}`;
+  if (entry.filter) label += ` · ${entry.filter}`;
+  return label;
 }
 
 /**
