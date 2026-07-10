@@ -42,9 +42,9 @@ body {
   overflow: hidden;
   min-height: 240px;
 }
-/* The display:flex above outweighs the UA `[hidden]` rule, so a ship-dark
-   tile (e.g. Flag Party, revealed by bootHome() only with ?test) would show
-   to everyone without this. Keep hidden tiles hidden. */
+/* The display:flex above outweighs the UA `[hidden]` rule, so any ship-dark
+   tile (rendered `hidden`, revealed later by bootHome()) would show to everyone
+   without this. Keep hidden tiles hidden. */
 .game-tile[hidden] { display: none; }
 .tile-preview {
   flex: 1;
@@ -163,17 +163,6 @@ body {
 }
 .quiz-flag:hover {
   transform: scale(1.08);
-}
-
-/* Make-a-puzzle preview: shared .pill (+ .pill.exclude for "not"
- * negation, pink + strikethrough) from common.css. No local pill
- * styling — same visual language as findFlag's chooser. */
-.find-preview {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: center;
-  max-width: 240px;
 }
 
 /* TTT preview: 3×3 grid with two players (pink = secondary, dark =
@@ -317,10 +306,6 @@ body {
     grid-template-columns: repeat(4, 1fr);
     gap: 5px;
   }
-  .find-preview {
-    gap: 4px;
-    max-width: 220px;
-  }
   .ttt-preview {
     gap: 4px;
     max-width: 110px;
@@ -384,10 +369,6 @@ body {
 .icon-quiz {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z'/%3E%3C/svg%3E");
           mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z'/%3E%3C/svg%3E");
-}
-.icon-find {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z'/%3E%3C/svg%3E");
-          mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z'/%3E%3C/svg%3E");
 }
 .icon-ttt {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 8h18v2H3zM3 14h18v2H3zM8 3h2v18H8zM14 3h2v18h-2z'/%3E%3C/svg%3E");

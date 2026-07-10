@@ -70,7 +70,8 @@
     </button>
     <nav id="burger-panel" class="burger-panel" hidden>
       <ul class="menu">
-        <li><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
+        <li><a href="findFlag/" data-i18n="tile.find">Make a puzzle</a></li>
+        <li class="menu-divider"><a class="menu-coffee" href="https://suppi.pl/jgrzegrzolka" target="_blank" rel="noopener noreferrer" data-i18n="coffee">Buy me a coffee</a></li>
       </ul>
     </nav>
     <main>
@@ -125,18 +126,21 @@
               <span class="game-name" data-i18n="tile.quiz">60s Quiz</span>
             </span>
           </a>
-          <a class="game-tile" href="findFlag/">
+          <a class="game-tile" href="flagParty/">
             <span class="tile-preview">
-              <span class="find-preview">
-                <span class="pill" data-i18n="home.find.asia">Asia</span>
-                <span class="pill exclude" data-i18n="home.find.notCrescent">not crescent</span>
-                <span class="pill" data-i18n="home.find.redWhite">Red &amp; white</span>
-                <span class="pill" data-i18n="home.find.hasWeapon">Has weapon</span>
+              <span class="quiz-preview">
+                <span class="quiz-prompt">Japan</span>
+                <span class="quiz-flags">
+                  <img class="quiz-flag" src="flags/svg/jp.svg" alt="" />
+                  <img class="quiz-flag" src="flags/svg/fr.svg" alt="" />
+                  <img class="quiz-flag" src="flags/svg/pl.svg" alt="" />
+                  <img class="quiz-flag" src="flags/svg/ua.svg" alt="" />
+                </span>
               </span>
             </span>
             <span class="tile-label">
-              <span class="game-icon icon-find" aria-hidden="true"></span>
-              <span class="game-name" data-i18n="tile.find">Make a puzzle</span>
+              <span class="game-icon icon-quiz" aria-hidden="true"></span>
+              <span class="game-name" data-i18n="tile.party">Flag Party</span>
             </span>
           </a>
           <a class="game-tile" href="ticTacToe/">
@@ -159,26 +163,6 @@
             <span class="tile-label">
               <span class="game-icon icon-ttt" aria-hidden="true"></span>
               <span class="game-name" data-i18n="tile.ticTacToe">Tic Tac Toe</span>
-            </span>
-          </a>
-          <!-- Flag Party — shipped dark. Hidden until the URL carries ?test,
-               revealed by bootHome(); reuses the quiz-preview markup so no new
-               home CSS. Remove `hidden` + the reveal guard to launch. -->
-          <a class="game-tile" id="tile-party" href="flagParty/" hidden>
-            <span class="tile-preview">
-              <span class="quiz-preview">
-                <span class="quiz-prompt">Japan</span>
-                <span class="quiz-flags">
-                  <img class="quiz-flag" src="flags/svg/jp.svg" alt="" />
-                  <img class="quiz-flag" src="flags/svg/fr.svg" alt="" />
-                  <img class="quiz-flag" src="flags/svg/pl.svg" alt="" />
-                  <img class="quiz-flag" src="flags/svg/ua.svg" alt="" />
-                </span>
-              </span>
-            </span>
-            <span class="tile-label">
-              <span class="game-icon icon-quiz" aria-hidden="true"></span>
-              <span class="game-name" data-i18n="tile.party">Flag Party</span>
             </span>
           </a>
         </div>

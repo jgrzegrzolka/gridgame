@@ -339,12 +339,6 @@
     "quiz": {
       "prompt": "Polska"
     },
-    "find": {
-      "asia": "Azja",
-      "hasWeapon": "Z bronią",
-      "redWhite": "Czerwono-białe",
-      "notCrescent": "bez półksiężyca"
-    },
     "ttt": {
       "result": "Wygrywa różowy!"
     },

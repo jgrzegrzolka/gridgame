@@ -339,12 +339,6 @@
     "quiz": {
       "prompt": "Poland"
     },
-    "find": {
-      "asia": "Asia",
-      "hasWeapon": "Has weapon",
-      "redWhite": "Red & white",
-      "notCrescent": "not crescent"
-    },
     "ttt": {
       "result": "Pink wins!"
     },

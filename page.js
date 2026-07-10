@@ -27,12 +27,6 @@ export function bootHome() {
       profileHref: 'profile/',
     });
     mountFlagOfDay();
-    // Flag Party ships dark: reveal its home tile only when the URL carries
-    // ?test, so we can dogfood on prod without exposing a half-built mode.
-    if (new URLSearchParams(window.location.search).has('test')) {
-      const partyTile = document.getElementById('tile-party');
-      if (partyTile) partyTile.hidden = false;
-    }
   });
 }
 
