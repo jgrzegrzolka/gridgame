@@ -8,6 +8,7 @@ import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction } from '../flags/partyTiming.js';
 import { PARTY_MODES, DEFAULT_PLAN, countsForPlan, planFromModeCounts, MAX_ROUNDS_PER_MODE } from '../flags/partyPlan.js';
+import { formatValue } from '../flags/metricLens.js';
 import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
@@ -23,6 +24,7 @@ const MODE_LABELS = {
   'flags-all': { key: 'party.mode.flagsAll', full: 'Flags: all countries', shortKey: 'party.modeShort.flagsAll', short: 'Flags' },
   'flags-territories': { key: 'party.mode.flagsTerritories', full: 'Flags: territories', shortKey: 'party.modeShort.flagsTerritories', short: 'Territories' },
   'map-outlines': { key: 'party.mode.mapOutlines', full: 'Map: outlines', shortKey: 'party.modeShort.mapOutlines', short: 'Maps' },
+  'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population: most & least', shortKey: 'party.modeShort.superlativePop', short: 'Population' },
 };
 
 /**
@@ -87,6 +89,14 @@ export function bootFlagParty() {
 
   /** @type {Map<string, { code: string, name: string }>} */
   const byCode = new Map();
+
+  // Population values for the superlative round's reveal, fetched once at load
+  // (the round itself is judged server-side; the client only needs the numbers
+  // to show the ranking after the answer is out). Null until loaded / on failure
+  // — the reveal just omits the strip if the data isn't there.
+  /** @type {Record<string, number> | null} */
+  let popValues = null;
+  let popFormat = 'compact';
 
   // ---- helpers ----
   const fmt = (/** @type {string} */ str, /** @type {Record<string, string|number>} */ params) =>
@@ -457,15 +467,41 @@ export function bootFlagParty() {
     });
     const isReveal = state.phase === 'reveal' && state.reveal;
     const isMap = q.roundId === 'mapPick';
-    const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
-    const country = byCode.get(targetCode);
-    const name = country ? countryName(country) : targetCode;
-    // A quiet mode hint ("Which flag?" / "Which outline?") above the country
-    // name, so players know whether the tiles are flags or contours; the name
-    // itself stays bare (no "The flag of", no trailing "?") — the tiles and
-    // their reveal pulse carry the rest of the question.
-    promptLead.textContent = isMap ? t('party.hintMap', 'Which outline?') : t('party.hintFlag', 'Which flag?');
-    promptTarget.textContent = name;
+    const isSuperlative = q.roundId === 'superlative';
+    // A quiet mode hint above the country name, so players know whether the tiles
+    // are flags or contours; the name itself stays bare (no "The flag of", no
+    // trailing "?") — the tiles and their reveal pulse carry the rest.
+    if (isSuperlative) {
+      // Superlative has no target country: the prompt is a direction ('most' /
+      // 'least'), and the whole question lives in the hint line ("Which is the
+      // most populous?"). The country name stays blank during the question so
+      // it can't give the answer away, and fills with the winner on reveal so
+      // players learn which flag it was (the tiles have no numbers on them).
+      const least = q.prompt === 'least';
+      promptLead.textContent = least
+        ? t('party.hintLeast', 'Which is the least populous?')
+        : t('party.hintMost', 'Which is the most populous?');
+      const winner = isReveal && state.reveal ? byCode.get(state.reveal.answer) : null;
+      promptTarget.textContent = winner ? countryName(winner) : '';
+    } else {
+      const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
+      const country = byCode.get(targetCode);
+      const name = country ? countryName(country) : targetCode;
+      promptLead.textContent = isMap ? t('party.hintMap', 'Which outline?') : t('party.hintFlag', 'Which flag?');
+      promptTarget.textContent = name;
+    }
+
+    // On a superlative reveal, each tile shows its country + population so the
+    // whole ranking is readable at a glance — the round's learning payoff. Only
+    // on reveal (the numbers are hidden during the question), and only when the
+    // population data actually loaded.
+    const popStrip = (/** @type {string} */ code) => {
+      if (!(isSuperlative && isReveal) || !popValues) return null;
+      const v = popValues[code];
+      if (v == null) return null;
+      const c = byCode.get(code);
+      return { name: c ? countryName(c) : code, value: formatValue(v, popFormat) };
+    };
 
     gridEl.innerHTML = '';
     for (const code of q.options) {
@@ -479,11 +515,11 @@ export function bootFlagParty() {
         for (const [pid, choice] of Object.entries(state.reveal.picks)) {
           if (choice === code) pickers.push(pid);
         }
-        gridEl.appendChild(flagOpt(code, { isMap, selectable: false, selected: false, correct, wrong: myWrong, dim: !correct && !myWrong, pickers }));
+        gridEl.appendChild(flagOpt(code, { isMap, selectable: false, selected: false, correct, wrong: myWrong, dim: !correct && !myWrong, pickers, pop: popStrip(code) }));
       } else {
         const selected = state.myChoice === code;
         const dim = state.myChoice != null && !selected;
-        gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [] }));
+        gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [], pop: null }));
       }
     }
 
@@ -493,15 +529,17 @@ export function bootFlagParty() {
 
   /**
    * @param {string} code
-   * @param {{ isMap: boolean, selectable: boolean, selected: boolean, correct: boolean, wrong: boolean, dim: boolean, pickers: string[] }} opts
+   * @param {{ isMap: boolean, selectable: boolean, selected: boolean, correct: boolean, wrong: boolean, dim: boolean, pickers: string[], pop?: { name: string, value: string } | null }} opts
    */
   function flagOpt(code, opts) {
     const node = document.createElement(opts.selectable ? 'button' : 'div');
-    node.className = 'opt' + (opts.selected ? ' sel' : '') + (opts.correct ? ' correct' : '') + (opts.wrong ? ' wrong' : '') + (opts.dim ? ' dim' : '');
+    node.className = 'opt' + (opts.selected ? ' sel' : '') + (opts.correct ? ' correct' : '') + (opts.wrong ? ' wrong' : '') + (opts.dim ? ' dim' : '') + (opts.pop ? ' pop' : '');
     // On reveal, name the flag/outline you got wrong — the shared bottom strip
     // (common.css `.opt.wrong[data-name]`, same as flagQuiz) tells you what you
     // actually picked; the correct answer's name is already in the prompt header.
-    if (opts.wrong) {
+    // Suppressed when a superlative pop-strip is present (`opts.pop`): that strip
+    // already carries every tile's name + value, so the ::after would double up.
+    if (opts.wrong && !opts.pop) {
       const c = byCode.get(code);
       node.dataset.name = c ? countryName(c) : code;
     }
@@ -523,6 +561,15 @@ export function bootFlagParty() {
       const p = el('div', 'picks');
       for (const pid of opts.pickers) p.appendChild(buildAvatar(pid));
       node.appendChild(p);
+    }
+    // Superlative reveal only: a bottom strip naming the country and its
+    // population, so all four values read as a ranking (the correct tile's green
+    // pulse already flags the extreme).
+    if (opts.pop) {
+      const strip = el('div', 'opt-pop');
+      strip.appendChild(el('span', 'nm', opts.pop.name));
+      strip.appendChild(el('span', 'val', opts.pop.value));
+      node.appendChild(strip);
     }
     return node;
   }
@@ -686,11 +733,20 @@ export function bootFlagParty() {
   document.addEventListener('langchanged', () => { paintPlayingAs(); paintJoinError(); repaintSetupLabels(); render(); });
 
   // ---- load data + route ----
-  fetch('../flags/countries.json')
-    .then((r) => r.json())
-    .then(loadCountries)
-    .then((countries) => {
+  // Countries (for names + flags) and the population metric (for the superlative
+  // reveal) load together. Population is best-effort — a failed fetch just means
+  // the reveal shows no numbers — so it can't block the game; countries failing
+  // still falls through to a bare render().
+  Promise.all([
+    fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
+    fetch('../flags/metrics/population.json').then((r) => r.json()).catch(() => null),
+  ])
+    .then(([countries, population]) => {
       for (const c of countries) byCode.set(c.code, c);
+      if (population && population.values) {
+        popValues = population.values;
+        popFormat = population.format || 'compact';
+      }
       const roomParam = new URLSearchParams(location.search).get('room');
       if (roomParam && isValidRoomCode(roomParam.toUpperCase())) {
         enterRoom(roomParam.toUpperCase(), 'join');

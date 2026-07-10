@@ -13,29 +13,31 @@ import {
   validatePlan,
 } from './partyPlan.js';
 
-test('DEFAULT_PLAN: 3 sovereign flag-pick, 3 non-sovereign flag-pick, 5 sovereign map', () => {
+test('DEFAULT_PLAN: 3 sovereign flag-pick, 3 non-sovereign flag-pick, 3 sovereign map, 2 superlative', () => {
   assert.deepEqual(DEFAULT_PLAN, [
     { poolId: 'sovereign', roundId: 'flagPick', rounds: 3 },
     { poolId: 'nonSovereign', roundId: 'flagPick', rounds: 3 },
-    { poolId: 'sovereign', roundId: 'mapPick', rounds: 5 },
+    { poolId: 'sovereign', roundId: 'mapPick', rounds: 3 },
+    { poolId: 'sovereign', roundId: 'superlative', rounds: 2 },
   ]);
   assert.equal(totalRounds(DEFAULT_PLAN), 11);
 });
 
-test('poolIdForRound: sovereign 0-2, non-sovereign 3-5, sovereign 6-10', () => {
+test('poolIdForRound: non-sovereign only for 3-5, sovereign elsewhere', () => {
   for (let i = 0; i <= 2; i++) assert.equal(poolIdForRound(DEFAULT_PLAN, i), 'sovereign', `round ${i}`);
   for (let i = 3; i <= 5; i++) assert.equal(poolIdForRound(DEFAULT_PLAN, i), 'nonSovereign', `round ${i}`);
   for (let i = 6; i <= 10; i++) assert.equal(poolIdForRound(DEFAULT_PLAN, i), 'sovereign', `round ${i}`);
 });
 
-test('roundIdForRound: flag-pick for rounds 0-5, map for 6-10', () => {
+test('roundIdForRound: flag-pick 0-5, map 6-8, superlative 9-10', () => {
   for (let i = 0; i <= 5; i++) assert.equal(roundIdForRound(DEFAULT_PLAN, i), 'flagPick', `round ${i}`);
-  for (let i = 6; i <= 10; i++) assert.equal(roundIdForRound(DEFAULT_PLAN, i), 'mapPick', `round ${i}`);
+  for (let i = 6; i <= 8; i++) assert.equal(roundIdForRound(DEFAULT_PLAN, i), 'mapPick', `round ${i}`);
+  for (let i = 9; i <= 10; i++) assert.equal(roundIdForRound(DEFAULT_PLAN, i), 'superlative', `round ${i}`);
 });
 
 test('past the end clamps to the last segment (pool and round)', () => {
   assert.equal(poolIdForRound(DEFAULT_PLAN, 11), 'sovereign');
-  assert.equal(roundIdForRound(DEFAULT_PLAN, 99), 'mapPick');
+  assert.equal(roundIdForRound(DEFAULT_PLAN, 99), 'superlative');
 });
 
 test('totalRounds / poolIdForRound / roundIdForRound work for an arbitrary plan', () => {
@@ -62,9 +64,9 @@ test('PARTY_MODES: every DEFAULT_PLAN segment maps to a catalog mode', () => {
   for (const m of PARTY_MODES) assert.match(m.id, /^[a-z]+(-[a-z]+)*$/);
 });
 
-test('countsForPlan: default plan gives 3 / 3 / 5 keyed by mode id', () => {
+test('countsForPlan: default plan gives 3 / 3 / 3 / 2 keyed by mode id', () => {
   assert.deepEqual(countsForPlan(DEFAULT_PLAN), {
-    'flags-all': 3, 'flags-territories': 3, 'map-outlines': 5,
+    'flags-all': 3, 'flags-territories': 3, 'map-outlines': 3, 'superlative-pop': 2,
   });
 });
 
@@ -73,6 +75,7 @@ test('countsForPlan: a mode absent from the plan reads 0', () => {
   assert.equal(counts['map-outlines'], 4);
   assert.equal(counts['flags-all'], 0);
   assert.equal(counts['flags-territories'], 0);
+  assert.equal(counts['superlative-pop'], 0);
 });
 
 test('planFromModeCounts round-trips the default counts back to DEFAULT_PLAN', () => {

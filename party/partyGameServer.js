@@ -16,6 +16,7 @@ import {
 } from '../flags/partyRoom.js';
 import * as flagPick from '../flags/partyRounds/flagPick.js';
 import * as mapPick from '../flags/partyRounds/mapPick.js';
+import * as superlative from '../flags/partyRounds/superlative.js';
 
 /** @typedef {import('../flags/partyRoom.js').Room} Room */
 /** @typedef {import('../flags/partyRoom.js').Broadcast} Broadcast */
@@ -35,7 +36,7 @@ const POOLS = {
  * never drift from the plan's `roundId`. Adding a mode = one import + one entry.
  * @type {Record<string, { generate: Function, isCorrect: Function }>}
  */
-const ROUNDS = Object.fromEntries([flagPick, mapPick].map((m) => [m.id, m]));
+const ROUNDS = Object.fromEntries([flagPick, mapPick, superlative].map((m) => [m.id, m]));
 
 const TOTAL_ROUNDS = totalRounds(DEFAULT_PLAN);
 
