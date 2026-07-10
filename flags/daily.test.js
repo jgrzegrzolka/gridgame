@@ -523,9 +523,17 @@ test('ideas: every entry has 4–30 answers', () => {
   );
   const offenders = [];
   for (const entry of IDEAS) {
-    const len = Array.isArray(entry.answers) ? entry.answers.length : 0;
+    // Superlative ideas resolve their roster live (no frozen `answers`), so
+    // their size is `topN` — the same value the puzzle-side shape check pins
+    // to `answers.length`. Filter/manual ideas measure by their answer list.
+    const len =
+      entry.kind === 'superlative'
+        ? entry.topN
+        : Array.isArray(entry.answers)
+          ? entry.answers.length
+          : 0;
     if (len < 4 || len > 30) {
-      offenders.push(`idea (${entry.filter ?? 'manual'}): ${len} answers`);
+      offenders.push(`idea (${entry.filter ?? entry.title?.en ?? 'manual'}): ${len} answers`);
     }
   }
   assert.deepEqual(offenders, [], offenders.join('; '));
