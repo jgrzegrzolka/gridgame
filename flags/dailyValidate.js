@@ -17,6 +17,8 @@
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries } from './group.js';
+import { isValidScope } from './superlative.js';
+import { METRIC_FILES } from './metrics/index.js';
 import RAW_COUNTRIES from './countries.json' with { type: 'json' };
 
 // flagsGamePool expects loadCountries-processed objects (normalized
@@ -33,6 +35,7 @@ const FULL_CODES = new Set(flagsGamePool(COUNTRIES, true).map((c) => c.code));
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 86_400_000;
+const METRIC_KEYS = new Set(METRIC_FILES.map((m) => m.key));
 
 /**
  * @param {{ puzzles: any[] }} state
@@ -43,6 +46,7 @@ export function validateCatalog({ puzzles }) {
   checkAnswerShape(puzzles);
   checkSovereignCodes(puzzles);
   checkDescriptions(puzzles);
+  checkSuperlativeShape(puzzles);
   checkDriftFree(puzzles);
 }
 
@@ -114,8 +118,59 @@ function checkAnswerShape(entries) {
       if (entry.filter !== undefined) {
         throw new Error(`puzzles #${entry.n}: manual entry must not carry a filter`);
       }
+    } else if (entry.kind === 'superlative') {
+      // A superlative's filter is optional — it only narrows the ranking
+      // pool. When present it must be a real (non-empty) filter string.
+      if (entry.filter !== undefined && (typeof entry.filter !== 'string' || entry.filter.length === 0)) {
+        throw new Error(`puzzles #${entry.n}: superlative filter, when present, must be a non-empty string`);
+      }
     } else if (typeof entry.filter !== 'string' || entry.filter.length === 0) {
       throw new Error(`puzzles #${entry.n}: filter must be a non-empty string`);
+    }
+  }
+}
+
+/**
+ * Superlative entries carry a machine-computed roster the catalog treats as
+ * frozen (like manual). This validates the *shape* of the spec — metric /
+ * scope / direction / topN / title — but deliberately does NOT re-derive the
+ * answers against the live metric: `population.json` refreshes yearly and a
+ * released puzzle is immutable, so a live recompute would permanently break a
+ * past puzzle after a refresh. Answer *correctness* (that they really are the
+ * top-N) is an author-time concern enforced by `authoring/audit-superlative.mjs`
+ * on still-editable, future-dated drafts. `topN === answers.length` keeps the
+ * number the title promises honest with the roster actually stored.
+ *
+ * @param {any[]} entries
+ */
+function checkSuperlativeShape(entries) {
+  for (const entry of entries) {
+    if (entry.kind !== 'superlative') continue;
+    const at = `puzzles #${entry.n}`;
+    if (!METRIC_KEYS.has(entry.metric)) {
+      throw new Error(`${at}: superlative metric "${entry.metric}" is not a known metric key`);
+    }
+    if (!isValidScope(entry.scope)) {
+      throw new Error(`${at}: superlative scope "${entry.scope}" is not 'world' or a continent`);
+    }
+    if (entry.direction !== 'most' && entry.direction !== 'least') {
+      throw new Error(`${at}: superlative direction must be 'most' or 'least' (got ${JSON.stringify(entry.direction)})`);
+    }
+    if (!Number.isInteger(entry.topN) || entry.topN < 1) {
+      throw new Error(`${at}: superlative topN must be a positive integer (got ${JSON.stringify(entry.topN)})`);
+    }
+    if (entry.topN !== entry.answers.length) {
+      throw new Error(`${at}: superlative topN (${entry.topN}) must equal answers.length (${entry.answers.length})`);
+    }
+    if (entry.filter !== undefined && !parseFilterString(entry.filter)) {
+      throw new Error(`${at}: superlative filter does not parse: ${entry.filter}`);
+    }
+    const ti = entry.title;
+    if (!ti || typeof ti.en !== 'string' || ti.en.length === 0) {
+      throw new Error(`${at}: superlative title.en missing or empty`);
+    }
+    if (typeof ti.pl !== 'string' || ti.pl.length === 0) {
+      throw new Error(`${at}: superlative title.pl missing or empty`);
     }
   }
 }
@@ -167,7 +222,11 @@ function checkDescriptions(entries) {
  */
 function checkDriftFree(entries) {
   for (const entry of entries) {
-    if (entry.kind === 'manual') continue;
+    // Manual + superlative rosters are frozen — nothing to re-resolve against
+    // a filter. A superlative's answers come from a metric ranking, not a
+    // per-flag filter, so the drift detector doesn't apply (see
+    // checkSuperlativeShape for why it's not live-recomputed here).
+    if (entry.kind === 'manual' || entry.kind === 'superlative') continue;
     const parsed = parseFilterString(entry.filter);
     if (!parsed) {
       throw new Error(`puzzles #${entry.n}: filter does not parse: ${entry.filter}`);
