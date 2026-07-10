@@ -945,7 +945,10 @@ export function bootFlagsData() {
     lensSortWrap.appendChild(b);
   }
   lensRow.appendChild(lensSortWrap);
-  filterBar.prepend(lensRow);
+  // Sits directly below the name-search box (above the Filters toggle), so the
+  // "look through a metric" control reads as a peer of search — both are
+  // always-visible view controls, distinct from the collapsible pill filters.
+  filterBar.insertBefore(lensRow, toggleRow);
 
   function syncLensPressed() {
     for (const { key, el } of lensButtons) el.setAttribute('aria-pressed', String(lensKey === key));
