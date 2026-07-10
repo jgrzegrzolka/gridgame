@@ -1,8 +1,10 @@
-import { CONTINENTS, flagsGamePool, loadCountries } from '../flags/group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations } from '../flags/group.js';
 import {
   ALL_FLAG_COLORS,
   ALL_MOTIFS,
   STRIPES_ORIENTATIONS_FOR_RANDOM,
+  POPULATION_BREAKS_FOR_RANDOM,
+  population,
   suggest,
   exactSingleMatch,
 } from '../flags/engine.js';
@@ -43,12 +45,19 @@ import { celebrate } from '../flags/achievementCelebrate.js';
  *     colorCount picker constraint (any of =/>=/<= × 2..5). Less
  *     frequent because it's a less natural puzzle shape than the
  *     "only these colours" framing.
+ *   - populationProbability: 0.15 — attach a random population tier
+ *     (one of the six POPULATION_BREAKS_FOR_RANDOM). Mutually exclusive
+ *     with colorCount inside pickRandomMix, so a mix never stacks both
+ *     scalar modifiers. Middling frequency: population is a recognizable,
+ *     satisfying constraint, but common enough thresholds that it stays
+ *     discoverable without dominating.
  * Tune these here; flags/findFlag.js's pickRandomMix is a pure
  * generator and stays opt-in.
  */
 const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   onlyColorsProbability: 0.25,
   colorCountProbability: 0.10,
+  populationProbability: 0.15,
 });
 
 /**
@@ -179,11 +188,19 @@ export function bootFindFlag() {
     });
   }
 
-  return fetch('../flags/countries.json')
-    .then((r) => r.json())
-    .then(loadCountries)
-    .then((raw) => {
-      const all = withLocalizedAliases(flagsGamePool(raw, includeAll));
+  return Promise.all([
+    fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
+    // Population powers the chooser's Population section + matchesFilters.
+    // A failed fetch degrades gracefully: attachPopulations over `{}` leaves
+    // every country without the field, so the section renders empty (all
+    // tiers 0-count → dropped) and no population filter is offered.
+    fetch('../flags/metrics/population.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
+  ])
+    .then(([raw, popValues]) => {
+      // Attach AFTER withLocalizedAliases: its clone path (re-wrapping a
+      // renamed Country through createCountry) would drop an extra field
+      // set beforehand, so denormalize onto the final pool objects.
+      const all = attachPopulations(withLocalizedAliases(flagsGamePool(raw, includeAll)), popValues);
       /** @type {{ refreshI18n: (newAll: import('../flags/group.js').Country[]) => void } | null} */
       let activeHandle = null;
       if (!initialFilter) {
@@ -303,6 +320,14 @@ export function bootFindFlag() {
 
     /** @type {Array<{ btn: HTMLButtonElement, group: 'continent' | 'color' | 'motif' | 'stripesOnly', value: string, labelSpan: HTMLSpanElement }>} */
     const allPills = [];
+    // Population pills live in their own array, deliberately NOT in `allPills`:
+    // population is scalar (single-select, one { op, n } — not an include/
+    // exclude value set), and the Random button feeds `allPills` straight into
+    // pickRandomMix's pill pool where a population entry would blow up (no
+    // include/exclude Set to .add into). Random reaches population via the
+    // separate populationProbability modifier path instead.
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const populationPills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
     const sectionHeaders = [];
     /** @type {HTMLSpanElement | null} */
@@ -390,6 +415,54 @@ export function bootFindFlag() {
       sectionsEl.appendChild(secEl);
     }
 
+    // Population section — rendered outside the loop above because its pills
+    // are single-select (scalar `filter.population`), not the include/exclude
+    // tristate the other sections cycle through. Tiers are the six curated
+    // breakpoints the TTT generator uses (POPULATION_BREAKS_FOR_RANDOM), so
+    // the surfaces can't drift; 0-count tiers are dropped like every other
+    // section so the chooser only offers playable filters.
+    {
+      const popItems = POPULATION_BREAKS_FOR_RANDOM.map((brk) => ({
+        value: `${brk.op}${brk.n}`,
+        op: brk.op,
+        n: brk.n,
+        // Count via the engine's canonical threshold predicate (the same one
+        // TTT uses and that categoryFromId rebuilds) rather than re-inlining
+        // `c.population >= n` — one definition of the tier, no drift.
+        count: all.filter(population(brk.op, brk.n).predicate).length,
+      })).filter((it) => it.count > 0);
+
+      if (popItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.population', 'Population');
+        sectionHeaders.push({ h, key: 'findFlag.sections.population', fallback: 'Population' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of popItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('population', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectPopulation(op, n, btn));
+          wrap.appendChild(btn);
+          populationPills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
     const clearBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-clear'));
     const randomBtn = document.getElementById('find-random');
@@ -402,6 +475,7 @@ export function bootFindFlag() {
         selCount += filter[k].include.size + filter[k].exclude.size;
       }
       if (filter.colorCount !== null) selCount++;
+      if (filter.population !== null) selCount++;
       if (selCount === 0) {
         // Nothing selected — bare "Play" (no zero-count to read as a sad
         // empty result; the user hasn't picked anything yet).
@@ -444,6 +518,26 @@ export function bootFindFlag() {
       updateBar();
     }
 
+    /**
+     * Single-select population tier. Clicking the active tier clears it
+     * (toggle off); clicking any other tier replaces the selection —
+     * population is scalar, so two tiers can never both apply. Repaints the
+     * whole population row's active state from `filter.population` so the
+     * previously-active pill deactivates without tracking it separately.
+     *
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectPopulation(op, n, btn) {
+      const isActive = filter.population !== null && filter.population.op === op && filter.population.n === n;
+      filter.population = isActive ? null : { op, n };
+      for (const p of populationPills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
     playBtn.addEventListener('click', () => {
       if (playBtn.disabled) return;
       const params = new URLSearchParams({ f: serializeFilter(filter) });
@@ -458,8 +552,12 @@ export function bootFindFlag() {
       colorCountLock.reset();
       if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
       colorCountPicker.reset();
+      filter.population = null;
       for (const { btn } of allPills) {
         btn.classList.remove('active', 'exclude');
+      }
+      for (const { btn } of populationPills) {
+        btn.classList.remove('active');
       }
       updateBar();
     });
@@ -513,7 +611,7 @@ export function bootFindFlag() {
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        refreshChooserI18n({ sectionHeaders, allPills, onlyColorsLabelSpan, updateBar });
+        refreshChooserI18n({ sectionHeaders, allPills, populationPills, onlyColorsLabelSpan, updateBar });
       },
     };
   }
