@@ -62,6 +62,7 @@ export function bootFlagParty() {
   const timerEl = $('round-timer');
   const timerFill = $('round-timer-fill');
   const timerLabel = $('round-timer-label');
+  const promptLead = $('prompt-lead');
   const promptTarget = $('prompt-target');
   const gridEl = $('flags-grid');
   const footEl = $('round-foot');
@@ -324,11 +325,15 @@ export function bootFlagParty() {
       n: state.roundIndex + 1, total: state.totalRounds,
     });
     const isReveal = state.phase === 'reveal' && state.reveal;
+    const isMap = q.roundId === 'mapPick';
     const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
     const country = byCode.get(targetCode);
     const name = country ? countryName(country) : targetCode;
-    // Just the country name — no "Which flag is" / "The flag of" lead-in and no
-    // trailing "?". The flag tiles (and their reveal pulse) carry the question.
+    // A quiet mode hint ("Which flag?" / "Which outline?") above the country
+    // name, so players know whether the tiles are flags or contours; the name
+    // itself stays bare (no "The flag of", no trailing "?") — the tiles and
+    // their reveal pulse carry the rest of the question.
+    promptLead.textContent = isMap ? t('party.hintMap', 'Which outline?') : t('party.hintFlag', 'Which flag?');
     promptTarget.textContent = name;
 
     gridEl.innerHTML = '';
@@ -336,18 +341,18 @@ export function bootFlagParty() {
       if (isReveal && state.reveal) {
         const correct = code === state.reveal.answer;
         // Your own wrong pick pulses pink (flagQuiz's "bad" marker); it isn't
-        // dimmed like the flags nobody chose. The correct flag pulses green.
+        // dimmed like the tiles nobody chose. The correct tile pulses green.
         const myWrong = !correct && state.reveal.picks[state.you] === code;
         /** @type {string[]} */
         const pickers = [];
         for (const [pid, choice] of Object.entries(state.reveal.picks)) {
           if (choice === code) pickers.push(pid);
         }
-        gridEl.appendChild(flagOpt(code, { selectable: false, selected: false, correct, wrong: myWrong, dim: !correct && !myWrong, pickers }));
+        gridEl.appendChild(flagOpt(code, { isMap, selectable: false, selected: false, correct, wrong: myWrong, dim: !correct && !myWrong, pickers }));
       } else {
         const selected = state.myChoice === code;
         const dim = state.myChoice != null && !selected;
-        gridEl.appendChild(flagOpt(code, { selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [] }));
+        gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [] }));
       }
     }
 
@@ -357,7 +362,7 @@ export function bootFlagParty() {
 
   /**
    * @param {string} code
-   * @param {{ selectable: boolean, selected: boolean, correct: boolean, wrong: boolean, dim: boolean, pickers: string[] }} opts
+   * @param {{ isMap: boolean, selectable: boolean, selected: boolean, correct: boolean, wrong: boolean, dim: boolean, pickers: string[] }} opts
    */
   function flagOpt(code, opts) {
     const node = document.createElement(opts.selectable ? 'button' : 'div');
@@ -367,8 +372,10 @@ export function bootFlagParty() {
       node.addEventListener('click', () => onPick(code));
     }
     const img = document.createElement('img');
-    img.className = 'flag';
-    img.src = `../flags/svg/${code}.svg`;
+    img.className = opts.isMap ? 'contour' : 'flag';
+    // The map round is the literal mirror of flag-pick: same tile, just swap the
+    // asset folder (contours instead of flags/svg).
+    img.src = opts.isMap ? `../flags/contours/${code}.svg` : `../flags/svg/${code}.svg`;
     img.alt = '';
     node.appendChild(img);
     // The locked-in pick is shown by the pink ring + surface tint on the tile

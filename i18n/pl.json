@@ -514,6 +514,8 @@
     "waitingHost": "Czekanie, aż gospodarz rozpocznie…",
     "startGame": "Rozpocznij grę",
     "round": "Runda {n} z {total}",
+    "hintFlag": "Która flaga?",
+    "hintMap": "Który kształt?",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
     "nextIn": "Następna runda za {n}s",

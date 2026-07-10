@@ -18,7 +18,7 @@ import { scoreRound } from './partyScore.js';
  *
  * @typedef {'lobby' | 'question' | 'reveal' | 'final'} Phase
  * @typedef {{ nickname: string, score: number }} Seat
- * @typedef {{ prompt: string, options: string[], answer: string }} Question
+ * @typedef {{ prompt: string, options: string[], answer: string, roundId?: string }} Question
  * @typedef {{ playerId: string, choice: string, correct: boolean }} Buzz
  *
  * @typedef {Object} Room
@@ -368,11 +368,15 @@ function rosterMessage(room) {
 
 /**
  * The public view of a question — the answer is stripped so it never reaches
- * a client before reveal.
+ * a client before reveal. `roundId` rides along so the client knows how to
+ * render it (flag tiles vs contour tiles).
  * @param {Question} q
  */
 function publicQuestion(q) {
-  return { prompt: q.prompt, options: q.options };
+  /** @type {{ prompt: string, options: string[], roundId?: string }} */
+  const pub = { prompt: q.prompt, options: q.options };
+  if (q.roundId != null) pub.roundId = q.roundId;
+  return pub;
 }
 
 /**
