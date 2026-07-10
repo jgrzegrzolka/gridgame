@@ -474,15 +474,15 @@ export function bootFlagParty() {
     if (isSuperlative) {
       // Superlative has no target country: the prompt is a direction ('most' /
       // 'least'), and the whole question lives in the hint line ("Which is the
-      // most populous?"). The country name stays blank during the question so
-      // it can't give the answer away, and fills with the winner on reveal so
-      // players learn which flag it was (the tiles have no numbers on them).
+      // most populous?"). The big name header stays empty in *both* phases — on
+      // reveal the answer is read straight off the tiles (each shows its country
+      // + population and the correct one pulses), so a winner name here would be
+      // redundant, and filling it only on reveal shifted the grid down.
       const least = q.prompt === 'least';
       promptLead.textContent = least
         ? t('party.hintLeast', 'Which is the least populous?')
         : t('party.hintMost', 'Which is the most populous?');
-      const winner = isReveal && state.reveal ? byCode.get(state.reveal.answer) : null;
-      promptTarget.textContent = winner ? countryName(winner) : '';
+      promptTarget.textContent = '';
     } else {
       const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
       const country = byCode.get(targetCode);
