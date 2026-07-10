@@ -146,6 +146,23 @@ is proven and the free rounds are in.
   every connection — it's a new client role, not a protocol change. This is the Jackbox
   layer, added on top once own-screen play works.
 
+## Now
+
+Nothing in flight. The show engine, two rounds (flag-pick + map), the host game-setup panel,
+single online path (start with 1+), and the reveal polish are all shipped and on `main`. Pick
+the next piece:
+
+- **Round 3 — Superlative** (biggest / most-populous of N, closeness score). The soul of the
+  idea, previously gated on data. Population data has since landed at `flags/metrics/`
+  (`population.json` + `flags/metrics.js`, from the flagsdata metric-lens work in
+  `DATA_FEATURE.md`) — first job is to check whether it's reusable here. Needs new UI; scores solo.
+- **TV / Display + Buzzer surface** — the Jackbox layer, see Surfaces above.
+- Loose ends under **Open decisions** (QR in the lobby, speed-bonus curve, max-seat cap).
+
+Reading the history below: it's a time-ordered journal, so the current design of anything is
+the **newest** entry that mentions it — earlier numbers (e.g. Iteration 2's `DEFAULT_PLAN`
+shape) are superseded by later ones.
+
 ## Iteration 1 — the show skeleton with one round (flag-pick), own-screen — SHIPPED (branch `feat/flag-party-iter1`)
 
 Goal: a genuinely playable flag round on two phones (and solo), exercising the **entire**
@@ -317,8 +334,9 @@ generator; the runtime/client never changed, and the code set (`contourPool.js`)
 
 ## Open decisions (settle as they come up, not now)
 
-- **Settings page** (Jan wants one eventually): host picks which modes and how many rounds
-  each. `flags/partyPlan.js` is already the config surface — the page edits `DEFAULT_PLAN`.
+- **Settings page — SHIPPED (#765).** The host game-setup panel in the lobby picks which modes
+  play and how many rounds each (see the Done entry); `flags/partyPlan.js` is the plan-as-data
+  surface it edits. Kept here only as a pointer — no longer an open question.
 - **QR in the lobby.** Deferred from iteration 1 (see above) — add a self-contained QR
   generator, or accept code + link.
 - **Question count / timing per round.** 11 rounds (3 flag / 3 flag / 5 map, per `DEFAULT_PLAN`).
@@ -350,9 +368,16 @@ generator; the runtime/client never changed, and the code set (`contourPool.js`)
   a country-name strip so you learn what you clicked — the shared `.opt.wrong[data-name]::after`
   rule promoted to `common.css` from flagQuiz. Single-player mode was also removed this round of
   work — Flag Party is one online path, start with 1+ (see PR #768).
+- **Host game setup (#765).** The lobby has a host-only, collapsed-by-default panel to choose
+  which modes play and how many rounds each (`flagParty` `.game-setup`), reusing the site's
+  shared toggle switch + stepper rather than any new styling. `flags/partyPlan.js` is the
+  plan-as-data surface (`PARTY_MODES`, `DEFAULT_PLAN` = 3 flag / 3 territory / 5 map = 11 rounds,
+  `planFromModeCounts`, `validatePlan`); the plan rides along on the `start` message and the
+  server validates it, falling back to `DEFAULT_PLAN` on anything malformed. This closed the
+  long-standing "settings page" open decision.
 - **Iteration 4 — the Map round.** Second round type ("Which outline is X?"), the mirror of
   flag-pick: same grid / buzz-order / scoring, tiles render pre-generated country contours
   (`flags/contours/`) instead of flags. Server now picks round modules from the plan via a
   `ROUNDS` registry (`flagPick` + `mapPick`), not hardwired flag-pick. Default game is 11 rounds
   (3 sovereign flag / 3 non-sovereign flag / 5 sovereign map). `flags/partyPlan.js` is the config
-  surface the future settings page will edit.
+  surface the settings page edits (shipped shortly after — see the host-game-setup entry above).
