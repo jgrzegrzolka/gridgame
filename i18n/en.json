@@ -513,6 +513,20 @@
     "host": "host",
     "waitingHost": "Waiting for the host to start…",
     "startGame": "Start game",
+    "gameSetup": "Game setup",
+    "roundsLabel": "rounds",
+    "fewer": "Fewer rounds",
+    "more": "More rounds",
+    "mode": {
+      "flagsAll": "Flags: all countries",
+      "flagsTerritories": "Flags: territories",
+      "mapOutlines": "Map: outlines"
+    },
+    "modeShort": {
+      "flagsAll": "Flags",
+      "flagsTerritories": "Territories",
+      "mapOutlines": "Maps"
+    },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
     "hintMap": "Which outline?",

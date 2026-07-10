@@ -1,7 +1,7 @@
 import rawCountries from '../flags/countries.json' with { type: 'json' };
 import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
-import { DEFAULT_PLAN, totalRounds, poolIdForRound, roundIdForRound } from '../flags/partyPlan.js';
+import { DEFAULT_PLAN, totalRounds, poolIdForRound, roundIdForRound, validatePlan } from '../flags/partyPlan.js';
 import {
   createRoom,
   applyHello,
@@ -72,12 +72,19 @@ export default class PartyGameServer {
    * the question, avoiding countries already used this game. The question is
    * stamped with its `roundId` so the room and clients know how to render and
    * judge it. Records the answer as used.
+   *
+   * The plan is the host's chosen one (passed explicitly at start, before it's
+   * stored on the room), otherwise the room's stored plan, otherwise the built-in
+   * default. Reading it from the room keeps generation correct after a durable-
+   * object eviction mid-game.
    * @param {number} roundIndex
+   * @param {import('../flags/partyPlan.js').Segment[]} [plan]
    */
-  generateQuestion(roundIndex) {
-    const roundId = roundIdForRound(DEFAULT_PLAN, roundIndex);
+  generateQuestion(roundIndex, plan) {
+    const p = plan ?? (this.room && this.room.plan) ?? DEFAULT_PLAN;
+    const roundId = roundIdForRound(p, roundIndex);
     const round = ROUNDS[roundId];
-    const pool = POOLS[poolIdForRound(DEFAULT_PLAN, roundIndex)];
+    const pool = POOLS[poolIdForRound(p, roundIndex)];
     const q = round.generate(pool, this.usedCodes);
     this.usedCodes.add(q.answer);
     return { ...q, roundId };
@@ -121,7 +128,7 @@ export default class PartyGameServer {
           this.rejectConnection(conn, 'room-not-found');
           return;
         }
-        this.room = createRoom(TOTAL_ROUNDS);
+        this.room = createRoom(TOTAL_ROUNDS, DEFAULT_PLAN);
       } else if (intent === 'create' && !this.room.seats.has(playerId)) {
         this.rejectConnection(conn, 'code-collision');
         return;
@@ -174,10 +181,17 @@ export default class PartyGameServer {
       /** @type {import('../flags/partyRoom.js').ApplyResult | null} */
       let result = null;
       switch (parsed.type) {
-        case 'start':
+        case 'start': {
+          // The host's plan rides in on the start message; never trust it raw.
+          // validatePlan strips anything malformed and returns null if nothing
+          // valid survives, so a missing / bad plan cleanly falls back to the
+          // default. Generate round 0 from the same validated plan, then hand
+          // both the question and the plan (+ its round count) to the room.
           this.usedCodes = new Set();
-          result = applyStart(this.room, playerId, this.generateQuestion(0));
+          const plan = validatePlan(parsed.plan) ?? DEFAULT_PLAN;
+          result = applyStart(this.room, playerId, this.generateQuestion(0, plan), plan, totalRounds(plan));
           break;
+        }
         case 'buzz': {
           const choice = String(parsed.choice ?? '');
           const q = this.room.question;

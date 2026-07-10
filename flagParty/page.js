@@ -6,12 +6,24 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, REVEAL_SECONDS, secondsLeft, remainingFraction } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction } from '../flags/partyTiming.js';
+import { PARTY_MODES, DEFAULT_PLAN, countsForPlan, planFromModeCounts, MAX_ROUNDS_PER_MODE } from '../flags/partyPlan.js';
 import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
 
 const NICKNAME_KEY = 'gridgame.nickname';
+const PLAN_KEY = 'gridgame.party.plan';
+
+/** Lobby copy for each catalog mode (`flags/partyPlan.js` PARTY_MODES). The
+ *  catalog stays pure (ids only); labels live here, translated via i18n with the
+ *  English text as the fallback. `full` shows in the dial row, `short` in the
+ *  collapsed summary mix. */
+const MODE_LABELS = {
+  'flags-all': { key: 'party.mode.flagsAll', full: 'Flags: all countries', shortKey: 'party.modeShort.flagsAll', short: 'Flags' },
+  'flags-territories': { key: 'party.mode.flagsTerritories', full: 'Flags: territories', shortKey: 'party.modeShort.flagsTerritories', short: 'Territories' },
+  'map-outlines': { key: 'party.mode.mapOutlines', full: 'Map: outlines', shortKey: 'party.modeShort.mapOutlines', short: 'Maps' },
+};
 
 /**
  * Boot the Flag Party page: resolve identity, wire the lobby controls, open
@@ -72,6 +84,10 @@ export function bootFlagParty() {
   const playingAsEl = $('playing-as');
   const joinError = $('join-error');
   const shareBtn = /** @type {HTMLButtonElement} */ ($('share-btn'));
+  const gameSetupEl = $('game-setup');
+  const gsModesEl = $('gs-modes');
+  const gsMixEl = $('gs-mix');
+  const gsRoundsEl = $('gs-rounds');
 
   /** @type {Map<string, { code: string, name: string }>} */
   const byCode = new Map();
@@ -139,6 +155,138 @@ export function bootFlagParty() {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   }
 
+  // ---- game setup (host-only lobby plan) ----
+  // The host picks which modes play and how many rounds each. The choice is
+  // local (persisted per device) until Start, when the plan rides along on the
+  // 'start' message and the server validates it — this is just the picker.
+  /** @type {Record<string, { on: boolean, n: number }>} */
+  const modeState = loadModeState();
+
+  function defaultModeState() {
+    const counts = countsForPlan(DEFAULT_PLAN);
+    /** @type {Record<string, { on: boolean, n: number }>} */
+    const s = {};
+    for (const m of PARTY_MODES) s[m.id] = { on: counts[m.id] > 0, n: counts[m.id] || 1 };
+    return s;
+  }
+  function loadModeState() {
+    try {
+      const raw = JSON.parse(window.localStorage.getItem(PLAN_KEY) || 'null');
+      if (raw && typeof raw === 'object') {
+        const def = defaultModeState();
+        /** @type {Record<string, { on: boolean, n: number }>} */
+        const s = {};
+        for (const m of PARTY_MODES) {
+          const e = raw[m.id];
+          s[m.id] = e && typeof e.n === 'number' && e.n >= 1
+            ? { on: !!e.on, n: Math.min(MAX_ROUNDS_PER_MODE, Math.max(1, Math.floor(e.n))) }
+            : def[m.id];
+        }
+        // A game needs rounds — never restore an all-off plan.
+        if (!PARTY_MODES.some((m) => s[m.id].on)) return def;
+        return s;
+      }
+    } catch { /* private mode / malformed */ }
+    return defaultModeState();
+  }
+  function saveModeState() {
+    try { window.localStorage.setItem(PLAN_KEY, JSON.stringify(modeState)); } catch { /* private mode */ }
+  }
+  /** The plan to send on Start: enabled modes only, in catalog order. */
+  function currentPlan() {
+    /** @type {Record<string, number>} */
+    const counts = {};
+    for (const m of PARTY_MODES) counts[m.id] = modeState[m.id].on ? modeState[m.id].n : 0;
+    return planFromModeCounts(counts);
+  }
+
+  const modeLabel = (/** @type {string} */ id) => t(MODE_LABELS[id].key, MODE_LABELS[id].full);
+  const modeShort = (/** @type {string} */ id) => t(MODE_LABELS[id].shortKey, MODE_LABELS[id].short);
+
+  /** Build the dial rows once; their values are painted by updateSetup(). */
+  function buildSetup() {
+    gsModesEl.innerHTML = '';
+    for (const m of PARTY_MODES) {
+      const row = el('div', 'gs-mode');
+      row.dataset.mode = m.id;
+      row.appendChild(el('span', 'gs-name', modeLabel(m.id)));
+
+      const stepper = el('span', 'gs-stepper');
+      const minus = el('button', 'gs-step', '−');
+      /** @type {HTMLButtonElement} */ (minus).type = 'button';
+      minus.setAttribute('aria-label', t('party.fewer', 'Fewer rounds'));
+      minus.addEventListener('click', () => stepMode(m.id, -1));
+      const count = el('span', 'gs-count', String(modeState[m.id].n));
+      const plus = el('button', 'gs-step', '+');
+      /** @type {HTMLButtonElement} */ (plus).type = 'button';
+      plus.setAttribute('aria-label', t('party.more', 'More rounds'));
+      plus.addEventListener('click', () => stepMode(m.id, 1));
+      stepper.append(minus, count, plus);
+      row.appendChild(stepper);
+
+      const sw = document.createElement('label');
+      sw.className = 'scope-toggle-switch';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = modeState[m.id].on;
+      input.setAttribute('aria-label', modeLabel(m.id));
+      input.addEventListener('change', () => toggleMode(m.id, input.checked));
+      const track = el('span', 'scope-toggle-track');
+      track.appendChild(el('span', 'scope-toggle-thumb'));
+      sw.append(input, track);
+      row.appendChild(sw);
+
+      gsModesEl.appendChild(row);
+    }
+    updateSetup();
+  }
+
+  function stepMode(/** @type {string} */ id, /** @type {number} */ d) {
+    const st = modeState[id];
+    st.n = Math.min(MAX_ROUNDS_PER_MODE, Math.max(1, st.n + d));
+    saveModeState();
+    updateSetup();
+  }
+  function toggleMode(/** @type {string} */ id, /** @type {boolean} */ on) {
+    // Keep at least one mode enabled — a game needs rounds. Turning off the last
+    // one is a no-op (updateSetup snaps its checkbox back on).
+    if (!on && PARTY_MODES.filter((m) => modeState[m.id].on).length <= 1) { updateSetup(); return; }
+    modeState[id].on = on;
+    saveModeState();
+    updateSetup();
+  }
+
+  /** Repaint counts, toggles, the round total, and the collapsed mix. */
+  function updateSetup() {
+    let total = 0;
+    gsMixEl.innerHTML = '';
+    for (const m of PARTY_MODES) {
+      const st = modeState[m.id];
+      const row = /** @type {HTMLElement | null} */ (gsModesEl.querySelector(`[data-mode="${m.id}"]`));
+      if (row) {
+        row.classList.toggle('off', !st.on);
+        const c = row.querySelector('.gs-count'); if (c) c.textContent = String(st.n);
+        const inp = /** @type {HTMLInputElement | null} */ (row.querySelector('input')); if (inp) inp.checked = st.on;
+      }
+      if (st.on) {
+        total += st.n;
+        const part = el('span');
+        part.append(document.createTextNode(`${modeShort(m.id)} `), el('span', 'n', String(st.n)));
+        gsMixEl.appendChild(part);
+      }
+    }
+    gsRoundsEl.textContent = String(total);
+  }
+  /** On a language switch, repaint the JS-set labels (row names + mix). */
+  function repaintSetupLabels() {
+    for (const m of PARTY_MODES) {
+      const row = gsModesEl.querySelector(`[data-mode="${m.id}"]`);
+      const nm = row && row.querySelector('.gs-name');
+      if (nm) nm.textContent = modeLabel(m.id);
+    }
+    updateSetup();
+  }
+
   // ---- connection ----
   function wsUrl(/** @type {string} */ code, /** @type {'create'|'join'} */ intent) {
     return `${SERVER_URL}${encodeURIComponent(code)}?pid=${encodeURIComponent(deviceId)}` +
@@ -176,7 +324,7 @@ export function bootFlagParty() {
     if (msg.type === 'welcome' && msg.isHost) roomHostId = state.you;
     // Solo auto-start: as soon as we're welcomed back as the host of our fresh
     // private room, kick the game off without waiting for a lobby tap.
-    if (msg.type === 'welcome' && msg.isHost && soloPending) send({ type: 'start' });
+    if (msg.type === 'welcome' && msg.isHost && soloPending) send({ type: 'start', plan: currentPlan() });
     if (msg.type === 'question') soloPending = false;
     for (const eff of effects) {
       if (eff.type === 'close') {
@@ -244,7 +392,10 @@ export function bootFlagParty() {
     if (token === clockToken) return;
     clockToken = token;
     clockFired = false;
-    clockTotalMs = (mode === 'reveal' ? REVEAL_SECONDS : QUESTION_SECONDS) * 1000;
+    // Solo trims the reveal (nothing to study alone); multiplayer keeps the full
+    // beat so you can read everyone's picks. Question time is the same for all.
+    const seatCount = state.roster.filter((r) => r.present).length;
+    clockTotalMs = (mode === 'reveal' ? revealSecondsFor(seatCount) : QUESTION_SECONDS) * 1000;
     clockDeadline = Date.now() + clockTotalMs;
     timerEl.hidden = false;
     timerEl.setAttribute('data-mode', mode);
@@ -316,6 +467,8 @@ export function bootFlagParty() {
     // button:disabled` style) until a second player joins.
     startBtn.disabled = state.roster.filter((r) => r.present).length < 2;
     waitEl.hidden = !(!state.isHost && inLobby);
+    // Game setup is the host's to configure, and only in the lobby.
+    gameSetupEl.hidden = !(state.isHost && inLobby);
   }
 
   function renderRound() {
@@ -518,7 +671,7 @@ export function bootFlagParty() {
     enterRoom(code, 'join');
   });
 
-  startBtn.addEventListener('click', () => send({ type: 'start' }));
+  startBtn.addEventListener('click', () => send({ type: 'start', plan: currentPlan() }));
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
 
   // Same share mechanism as Tic-Tac-Toe (common.js `shareUrl` → native sheet,
@@ -545,9 +698,10 @@ export function bootFlagParty() {
     renderPlayingAs(playingAsEl, deviceId, myName, t('party.playingAs', 'Playing as'));
   }
   paintPlayingAs();
+  buildSetup();
 
   // Re-render dynamic text (country names, labels) on a soft language switch.
-  document.addEventListener('langchanged', () => { paintPlayingAs(); paintJoinError(); render(); });
+  document.addEventListener('langchanged', () => { paintPlayingAs(); paintJoinError(); repaintSetupLabels(); render(); });
 
   // ---- load data + route ----
   fetch('../flags/countries.json')

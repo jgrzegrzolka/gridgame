@@ -92,6 +92,20 @@
       <section class="pt-lobby" id="pt-lobby" hidden>
         <p class="room-line"><span class="room-text"><strong id="room-code">-----</strong></span><button type="button" class="share-link" id="share-btn" aria-label="Invite link" data-i18n-attr="aria-label:party.share"><span class="share-icon" aria-hidden="true"></span></button></p>
         <div class="players" id="players"></div>
+        <details class="game-setup" id="game-setup" hidden>
+          <summary class="game-setup-head">
+            <span class="gs-head-row">
+              <span class="gs-title" data-i18n="party.gameSetup">Game setup</span>
+              <span class="gs-meta">
+                <span class="gs-rounds" id="gs-rounds">11</span>
+                <span data-i18n="party.roundsLabel">rounds</span>
+                <span class="gs-caret" aria-hidden="true"></span>
+              </span>
+            </span>
+            <span class="gs-mix" id="gs-mix"></span>
+          </summary>
+          <div class="gs-modes" id="gs-modes"></div>
+        </details>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
         <div class="actions-row">
           <button type="button" class="row-cta" id="start-game" data-i18n="party.startGame" hidden>Start game</button>

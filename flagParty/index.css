@@ -95,6 +95,76 @@
 .chip-host { margin-left: auto; font-size: 11px; color: var(--muted-color); font-weight: 600; }
 .lobby-wait { text-align: center; color: var(--muted-color); font-size: 14px; }
 
+/* Lobby game setup — host-only, collapsed by default. The summary row shows the
+   default plan at a glance (round total + the mode mix); tapping expands the
+   dials. Surface card + muted-soft border matches the player chips above it, and
+   the on/off switch is the site's shared `.scope-toggle` (common.css) so it
+   reads the same as every other toggle on the site. Weights follow the same
+   restraint as `.scoreline` (500 label, 600 number) — nothing heavier. */
+.game-setup {
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 12px;
+  background: var(--surface-color);
+  overflow: hidden;
+}
+.game-setup-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.game-setup-head::-webkit-details-marker { display: none; }
+.gs-head-row { display: flex; align-items: center; gap: 8px; }
+.gs-title { font-size: 14px; font-weight: 600; color: var(--primary-color); }
+.gs-meta { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted-color); }
+.gs-rounds { color: var(--primary-color); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* CSS chevron (no glyph dependency): a down-caret that flips up when open. */
+.gs-caret {
+  width: 7px;
+  height: 7px;
+  margin-left: 2px;
+  border-right: 2px solid var(--muted-color);
+  border-bottom: 2px solid var(--muted-color);
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+.game-setup[open] .gs-caret { transform: rotate(-135deg) translate(-2px, -2px); }
+/* Collapsed only: the mode mix (short label + count per enabled mode). Hidden
+   once open, since the dials below say the same thing in full. */
+.gs-mix { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted-color); }
+.gs-mix .n { color: var(--primary-color); font-weight: 600; font-variant-numeric: tabular-nums; }
+.game-setup[open] .gs-mix { display: none; }
+
+.gs-modes { display: none; flex-direction: column; padding: 0 12px 10px; }
+.game-setup[open] .gs-modes { display: flex; }
+.gs-mode { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--muted-soft-color); }
+.gs-mode.off { opacity: 0.5; }
+/* Off is the toggle's job, so a disabled mode simply hides its stepper (kept in
+   the layout so the row height doesn't jump) rather than counting down to zero. */
+.gs-mode.off .gs-stepper { visibility: hidden; }
+.gs-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; color: var(--primary-color); }
+
+.gs-stepper { display: flex; align-items: center; gap: 6px; flex: none; }
+.gs-step {
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--muted-soft-color);
+  background: var(--surface-color);
+  color: var(--primary-color);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.gs-step:hover { border-color: var(--secondary-color); }
+.gs-count { min-width: 15px; text-align: center; font-size: 14px; font-weight: 600; color: var(--primary-color); font-variant-numeric: tabular-nums; }
+
 /* Round: prompt + flags */
 .round-pill {
   align-self: center;

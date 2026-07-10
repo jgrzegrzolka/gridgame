@@ -513,6 +513,20 @@
     "host": "gospodarz",
     "waitingHost": "Czekanie, aż gospodarz rozpocznie…",
     "startGame": "Rozpocznij grę",
+    "gameSetup": "Ustawienia gry",
+    "roundsLabel": "rund",
+    "fewer": "Mniej rund",
+    "more": "Więcej rund",
+    "mode": {
+      "flagsAll": "Flagi: wszystkie kraje",
+      "flagsTerritories": "Flagi: terytoria",
+      "mapOutlines": "Mapa: kształty"
+    },
+    "modeShort": {
+      "flagsAll": "Flagi",
+      "flagsTerritories": "Terytoria",
+      "mapOutlines": "Mapy"
+    },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
     "hintMap": "Który kształt?",

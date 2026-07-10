@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   QUESTION_SECONDS,
   REVEAL_SECONDS,
+  SOLO_REVEAL_SECONDS,
+  revealSecondsFor,
   secondsLeft,
   remainingFraction,
 } from './partyTiming.js';
@@ -11,6 +13,15 @@ test('durations are sane: a question outlasts a reveal, both positive', () => {
   assert.ok(QUESTION_SECONDS > 0);
   assert.ok(REVEAL_SECONDS > 0);
   assert.ok(QUESTION_SECONDS > REVEAL_SECONDS, 'a question should stay open longer than a reveal lingers');
+});
+
+test('revealSecondsFor: solo trims the reveal, multiplayer keeps the full beat', () => {
+  assert.ok(SOLO_REVEAL_SECONDS > 0);
+  assert.ok(SOLO_REVEAL_SECONDS < REVEAL_SECONDS, 'solo reveal is snappier than multiplayer');
+  assert.equal(revealSecondsFor(0), SOLO_REVEAL_SECONDS, 'an empty room is treated as solo');
+  assert.equal(revealSecondsFor(1), SOLO_REVEAL_SECONDS, 'one seat is solo');
+  assert.equal(revealSecondsFor(2), REVEAL_SECONDS, 'two seats get the full reveal');
+  assert.equal(revealSecondsFor(6), REVEAL_SECONDS, 'a full room gets the full reveal');
 });
 
 test('secondsLeft: a fresh full-length deadline reads the whole duration', () => {

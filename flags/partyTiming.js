@@ -16,8 +16,25 @@
  *  answered — the server auto-reveals the moment the last seat buzzes. */
 export const QUESTION_SECONDS = 20;
 
-/** Seconds the reveal (who got it, points) stays up before the next round. */
+/** Seconds the reveal (who got it, points) stays up before the next round, in a
+ *  multiplayer room. Solo trims this (see {@link revealSecondsFor}). */
 export const REVEAL_SECONDS = 2;
+
+/** Seconds a solo reveal lingers. There's nothing to study alone (just your own
+ *  pick and points), so it snaps on faster than the multiplayer reveal, which
+ *  earns its extra beat letting you read everyone else's picks. */
+export const SOLO_REVEAL_SECONDS = 1;
+
+/**
+ * How long the reveal lingers for a room of `seatCount` present players. Solo
+ * (one seat, or an empty count) gets the snappy {@link SOLO_REVEAL_SECONDS};
+ * two or more seats get the full {@link REVEAL_SECONDS}.
+ * @param {number} seatCount
+ * @returns {number}
+ */
+export function revealSecondsFor(seatCount) {
+  return seatCount <= 1 ? SOLO_REVEAL_SECONDS : REVEAL_SECONDS;
+}
 
 /**
  * Whole seconds left until `deadlineMs`, never negative. Ceil so a freshly-set
