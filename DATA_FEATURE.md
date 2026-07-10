@@ -19,6 +19,42 @@ A fresh agent picking this up should:
 
 ## Now
 
+### Feature DD: World metrics — population first, as a self-describing metric namespace
+
+**Goal.** Introduce a general home for **continuous world metrics** (population today; area, GDP, coffee production, ships-per-capita, … later) so new metrics unlock new game modes without ever running out of ideas. Ship population + the pure helper + tests, with **no game consumer yet** (party "which is bigger?", daily superlative set, TTT population tiers are their own later features).
+
+**Why a metric namespace and not flat fields on `countries.json` (settled 2026-07-10):**
+
+- **Different species of data.** `countries.json` holds *flag-identity* data — hand-curated, stable, coupled to the SVG, the core the engine sits on. World metrics are *external facts* — sourced from datasets, refreshed on their own cadence, each with its **own source and year** (population World Bank 2023, coffee FAO 2022, area 2020…). A flat `coffeeProduction: 123` field has nowhere to record "FAO 2022"; you'd bolt on parallel `…Year` / `…Source` fields — the tell that the shape is wrong.
+- **Sparsity.** Coffee production is meaningful for ~50 countries, ships-per-capita fewer. A metric lists **only** the countries it applies to (`values` map), so no `null` splatter across `countries.json`. The schema contract is "every metric key is a real country," **not** "every country has a value."
+- **The game-mode multiplier.** Each metric is self-describing (`label`, `unit`, `source`, `year`, `values`), so one generic helper gives *every* metric the full mechanic set — top-N, bottom-N, rank, tiers, "which is bigger" — for free. Add a metric file → it instantly works in every superlative-style mode.
+
+**Storage decisions:**
+
+- **Store the raw number, never rank.** Rank is scope-dependent (world / UN-only / within-continent / including-territories) — a stored rank would bake in one interpretation and drift on every refresh. Deriving rank is one sort at load: free. Single source of truth.
+- **Scope: all real places.** Every `category !== 'other'` country is eligible (~262). The 7 non-geographic `other` entries never get metrics.
+- **Sparse tail is intentional.** Uninhabited / transient places (Antarctica, Bouvet, Heard & McDonald, Clipperton, South Georgia, French Southern Territories, US Minor Outlying, British Indian Ocean Territory) are **omitted** from `population.json` rather than given a fake `0` — a `0` would pollute "10 least populated" with technicalities. Vatican (~800) is the genuine floor.
+
+**Data shape:**
+
+```
+flags/metrics/
+  population.json   { key, label, unit, source, year, values: { <code>: <int> } }   // values sorted by code
+  index.js          explicit registry — import each metric with { type: 'json' } (matches dailyValidate.js / party servers)
+flags/metrics.js    pure helper: createMetric(metricData, countries) →
+                      { valueOf, has, ranked, topN, bottomN, rankOf, tierOf, compare, label, unit, source, year }
+flags/metrics.test.js   fixture-driven logic tests + real-data schema/integration gate
+authoring/build-population.mjs   fetch World Bank SP.POP.TOTL 2023 → join countries.json → emit population.json (yearly refresh = one command)
+```
+
+- **Helper is pure** (no fetch/DOM — same discipline as `engine.js`): caller loads the JSON + `countries.json` and passes them in; tests pass fixtures. Scope = `'world' | 'un_member' | <continent>`, resolved by joining `values` against `countries.json` by code.
+- **Source.** World Bank WDI `SP.POP.TOTL`, 2023, for the 216 it covers. The 38 populated dependencies / sub-national regions World Bank omits (Taiwan, the UK home nations, Spanish autonomous regions, French overseas departments, Channel Islands, Cook Islands, Vatican, …) come from national-statistics / UN estimates, rounded — recorded in `build-population.mjs`'s `FILLS` map and reflected in the `source` string. Member figures are authoritative; dependency figures are best-effort estimates.
+
+**Phasing** (each = one branch off `main` + one PR):
+
+1. **Data + helper + tests** (this branch). `build-population.mjs` → `population.json`, `metrics.js` helper, `metrics/index.js` registry, `metrics.test.js`, schema gate. `npm run validate` green.
+2. *(later, own features)* consumers — party "which is bigger?", daily superlative set, TTT population tiers.
+
 ---
 
 ## Backlog
