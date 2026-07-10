@@ -387,11 +387,11 @@ export function bootFlagParty() {
     const clean = mode === 'reveal' && isCleanReveal(state.roster, state.reveal);
     clockTotalMs = (mode === 'reveal' ? revealSecondsFor(clean) : QUESTION_SECONDS) * 1000;
     clockDeadline = Date.now() + clockTotalMs;
-    timerEl.hidden = false;
+    // Only the question phase shows the shrinking bar. The reveal has no timer of
+    // its own — a sub-second bar read as a flicker — so it runs its clock unseen
+    // and just advances after the beat (short when clean, longer on a miss).
+    timerEl.hidden = mode === 'reveal';
     timerEl.setAttribute('data-mode', mode);
-    // The reveal bar drains via a CSS animation (no per-tick width writes), so it
-    // runs for exactly this window — variable length included.
-    timerEl.style.setProperty('--reveal-ms', `${clockTotalMs}ms`);
     if (!clockInterval) clockInterval = window.setInterval(tickClock, 200);
     tickClock();
   }
@@ -400,13 +400,9 @@ export function bootFlagParty() {
     const mode = state.phase === 'reveal' ? 'reveal' : 'question';
     const now = Date.now();
     const left = secondsLeft(clockDeadline, now);
-    if (mode === 'reveal') {
-      // Reveal: the bar drains on its own (CSS `reveal-drain` animation), and the
-      // countdown digit is gone — a short, quiet "we're moving on" cue instead of
-      // a stopwatch. Nothing to write per tick here except the host's advance
-      // below. Clear `.low` so no leftover last-5s pulse from the question.
-      timerEl.classList.remove('low');
-    } else {
+    // Only the question phase paints a bar; the reveal is bar-less (the clock
+    // still runs below to advance the room, it just isn't drawn).
+    if (mode === 'question') {
       timerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
       timerEl.classList.toggle('low', left <= 5);
       timerLabel.textContent = String(left);
@@ -502,6 +498,13 @@ export function bootFlagParty() {
   function flagOpt(code, opts) {
     const node = document.createElement(opts.selectable ? 'button' : 'div');
     node.className = 'opt' + (opts.selected ? ' sel' : '') + (opts.correct ? ' correct' : '') + (opts.wrong ? ' wrong' : '') + (opts.dim ? ' dim' : '');
+    // On reveal, name the flag/outline you got wrong — the shared bottom strip
+    // (common.css `.opt.wrong[data-name]`, same as flagQuiz) tells you what you
+    // actually picked; the correct answer's name is already in the prompt header.
+    if (opts.wrong) {
+      const c = byCode.get(code);
+      node.dataset.name = c ? countryName(c) : code;
+    }
     if (opts.selectable) {
       /** @type {HTMLButtonElement} */ (node).type = 'button';
       node.addEventListener('click', () => onPick(code));

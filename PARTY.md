@@ -339,15 +339,17 @@ generator; the runtime/client never changed, and the code set (`contourPool.js`)
 
 ## Done
 
-- **Reveal pace — correctness-keyed, no countdown digit.** The reveal used to freeze the bar
-  full and count "Next round in Ns" (weird for a sub-2s beat; in solo the digit never even
+- **Reveal pace — correctness-keyed, no reveal timer.** The reveal used to freeze the bar full
+  and count "Next round in Ns" (weird for a sub-2s beat; in solo the digit never even
   decremented). Now the reveal length is keyed on the round, not the room: `isCleanReveal`
   (`flags/partyClient.js`) is true when every *present* player picked the answer, and
-  `revealSecondsFor(clean)` returns `CLEAN_REVEAL_SECONDS = 0.9` vs `MISS_REVEAL_SECONDS = 1.8`
-  (`flags/partyTiming.js`) — flagQuiz's correct-fast / wrong-slow feel. The digit is gone; the
-  bar drains itself via a CSS `reveal-drain` animation over `--reveal-ms`, so a clean sweep
-  drains fast and a miss drains slow (hidden under reduced motion). Single-player mode was also
-  removed this round of work — Flag Party is one online path, start with 1+ (see PR #768).
+  `revealSecondsFor(clean)` returns `CLEAN_REVEAL_SECONDS = 0.9` vs `MISS_REVEAL_SECONDS = 2.5`
+  (`flags/partyTiming.js`) — flagQuiz's correct-fast / wrong-slow feel. The reveal shows **no
+  timer at all** (a first pass tried a draining bar; a sub-second drain read as a flicker, so it
+  was cut — only the question phase has a bar). On a wrong pick, the flag/outline you chose gets
+  a country-name strip so you learn what you clicked — the shared `.opt.wrong[data-name]::after`
+  rule promoted to `common.css` from flagQuiz. Single-player mode was also removed this round of
+  work — Flag Party is one online path, start with 1+ (see PR #768).
 - **Iteration 4 — the Map round.** Second round type ("Which outline is X?"), the mirror of
   flag-pick: same grid / buzz-order / scoring, tiles render pre-generated country contours
   (`flags/contours/`) instead of flags. Server now picks round modules from the plan via a

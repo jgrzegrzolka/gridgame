@@ -1554,6 +1554,31 @@ dialog#zoom p.zoom-note {
   100% { box-shadow: 0 0 0 14px rgba(194, 137, 159, 0); }
 }
 
+/* Country-name strip on the flag/outline you got wrong — a dark band across the
+ * bottom of the tile naming what you actually picked. Shared by both flag games
+ * (flagQuiz `.flag-choice`, Flag Party `.opt`); each sets `data-name` on its
+ * wrong tile. Both tiles pad the image in by 5px, so the strip insets to match
+ * and sits on the flag, not the tile's outer corners. The rgba(0,0,0,.7) over an
+ * SVG is the documented palette exception (CLAUDE.md, per-tile bottom strip). */
+.flag-choice.wrong[data-name]::after,
+.opt.wrong[data-name]::after {
+  content: attr(data-name);
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 3px 4px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
 /* Achievement-celebrate overlay — fires on a freshly-unlocked badge.
  *
  * The card drops from above the viewport, slams to centre, then

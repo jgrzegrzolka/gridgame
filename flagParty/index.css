@@ -204,28 +204,13 @@
   color: var(--muted-color);
   font-variant-numeric: tabular-nums;
 }
-/* Reveal: no countdown digit (the label is hidden), and the bar drains itself
-   over the reveal window via `reveal-drain` — a clean sweep drains fast, a miss
-   drains slow, so the bar length signals the pace. The window (`--reveal-ms`)
-   comes from JS. Under reduced motion there's nothing to animate, so the reveal
-   timer is simply hidden. */
-.round-timer[data-mode="reveal"] .round-timer-label { display: none; }
-
+/* Only the question phase shows a timer; the reveal is bar-less (the JS hides
+   `.round-timer` then, since a sub-second bar just flickered). */
 @media (prefers-reduced-motion: no-preference) {
   .round-timer-fill { transition: width 0.2s linear; }
   .round-timer.low .round-timer-label { animation: timer-pulse 1s ease-in-out infinite; }
-  .round-timer[data-mode="reveal"] .round-timer-fill {
-    /* The animation drives width (overriding the leftover inline value from the
-       question phase) and forces 100% at its start, so there's no jump-up on a
-       timed-out question where the bar had already drained to 0. */
-    animation: reveal-drain var(--reveal-ms, 1500ms) linear forwards;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .round-timer[data-mode="reveal"] { display: none; }
 }
 @keyframes timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
-@keyframes reveal-drain { from { width: 100%; } to { width: 0; } }
 
 .prompt { text-align: center; display: flex; flex-direction: column; gap: 2px; }
 /* The mode hint ("Which flag?" / "Which outline?") — a quiet lead above the
@@ -280,6 +265,10 @@ button.opt { -webkit-appearance: none; appearance: none; }
 }
 .picks { position: absolute; bottom: 6px; left: 6px; display: flex; gap: 3px; }
 .picks .avatar { width: 20px; height: 20px; font-size: 8px; box-shadow: 0 0 0 2px var(--surface-color); }
+/* When your wrong tile carries the country-name strip (bottom), lift its pick
+   avatars clear of it so both stay readable — party-only, flagQuiz has no
+   avatars on a tile. */
+.opt.wrong[data-name] .picks { bottom: 30px; }
 
 .round-foot { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 

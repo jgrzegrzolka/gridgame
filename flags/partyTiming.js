@@ -22,9 +22,10 @@ export const QUESTION_SECONDS = 20;
 export const CLEAN_REVEAL_SECONDS = 0.9;
 
 /** Seconds a reveal lingers when someone missed (a wrong pick or a timeout), so
- *  players get a beat to see the correct flag they didn't land — same reason
- *  flagQuiz holds longer on a wrong answer than a right one. */
-export const MISS_REVEAL_SECONDS = 1.8;
+ *  players get a beat to see the correct flag they didn't land — and read the
+ *  name strip on the flag they wrongly picked. Same reason flagQuiz holds longer
+ *  on a wrong answer than a right one. */
+export const MISS_REVEAL_SECONDS = 2.5;
 
 /**
  * How long the reveal lingers, keyed on whether the round was a clean sweep. A

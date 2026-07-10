@@ -274,30 +274,8 @@ body {
   position: relative;
   transition: border-color 100ms;
 }
-/* Country-name overlay on the wrongly-clicked flag. The page sets
- * `data-name="Belgium"` on `tile.wrong`; the pseudo-element renders a
- * dark strip across the bottom of the flag with that name. Saves the
- * vertical space the standalone `.feedback` line used to reserve, so
- * the map below has more room to breathe. */
-.flag-choice.wrong[data-name]::after {
-  content: attr(data-name);
-  position: absolute;
-  /* Inset to the padded flag's edges (5px) with the flag's bottom radius, so
-     the strip sits ON the rounded flag rather than the tile's outer corners. */
-  left: 5px;
-  right: 5px;
-  bottom: 5px;
-  background: rgba(0, 0, 0, 0.7);
-  color: #fff;
-  padding: 3px 4px;
-  font-size: 13px;
-  font-weight: 500;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  pointer-events: none;
-}
+/* The wrongly-clicked flag's country-name strip is the shared `.flag-choice.wrong
+   [data-name]::after` rule in common.css (Flag Party's `.opt` reuses it). */
 .flag-choice:hover:not(:disabled) {
   /* Brand pink hover, matching Flag Party's flag tiles — the muted grey it
      used to be read as a dead/disabled cue rather than "this is tappable". */
