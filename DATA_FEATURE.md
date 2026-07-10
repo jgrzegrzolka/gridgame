@@ -41,6 +41,27 @@ A fresh agent picking this up should:
 
 ---
 
+### Feature DG: Superlative daily puzzles — "the N most/least X by a metric"
+
+**Goal.** A new daily-puzzle mechanic: *the top-N countries by a world metric, in a scope, optionally intersected with a flag filter.* First examples (population): "the 10 most populous countries", "the 5-7 most populous in each continent", "the 5 most populous European flags with white". Second *play* consumer of the metric namespace (Feature DD) after the TTT population categories (Feature DF).
+
+**Why a new entry kind, not a filter token.** A superlative is **set-relative** — the answer depends on ranking the whole scope — while the daily filter DSL is a **per-flag predicate** (`matchesFilters(country, ...)`). You cannot express "top 10" as one more token; the same architectural split the metric-lens design (Feature DE) already called out. So the mechanic is: *reuse the flag DSL to narrow the pool, then rank the survivors by the metric and take N.* A superlative entry is `{ kind: "superlative", metric, scope, direction, topN, filter? }` alongside the frozen `answers` / `title` / `description`.
+
+**Key decision — frozen answers, like manual entries.** The catalog does **not** live-recompute a superlative's answers against the metric. `population.json` refreshes yearly and released daily puzzles are immutable (rule 1), so a live recompute would permanently break a past puzzle after a refresh with no legal fix. Instead `resolveSuperlative` is an **authoring** tool: the generator computes the roster, and an audit recomputes *future-dated* (still-editable) drafts to warn on drift before release. Net: a superlative is "a manual entry whose roster the machine computes + validates for you," plus auto-title and generatable ideas. The daily rules that already iterate all entries (rule 3 sovereign codes, rule 9 size 4-30, rule 7 en/pl description, rule 5 primary-clean on the flag-filter part, rule 15 ambiguity) apply unchanged.
+
+**Content notes (computed 2026-07-10, sovereign-only):**
+- World top-10 and the per-continent top-5/7 rosters are all famous countries → score easy, good for onboarding.
+- **Oceania is the exception** — only the top ~3 (Australia, PNG, NZ) are famous; the tail is obscure and collides with the 4-flag floor. Skip Oceania or slot it very late.
+- Heavy overlap between "world top-10" and "Asia/Africa top-N" (the giants recur) — space them apart in the schedule and watch the rule-11 country-reuse cap.
+
+**Phasing** (one branch each — don't auto-merge):
+
+1. **Compute core + schema + resolution** *(this PR).* `flags/superlative.js` (`resolveSuperlative` + `isValidScope` / `SUPERLATIVE_SCOPES`); `superlative` kind wired into `flags/daily.js` (`resolvePuzzleEntry` treats it like manual — frozen answers, `filter: null`; `superlativeToCategory` label helper with a Phase-1 English fallback); unit tests (`flags/superlative.test.js`) + daily-resolution/label tests. No rendering, no i18n, no content yet.
+2. **Rendering + i18n + difficulty.** `daily/page.js` + `daily/backlog/play.js` render the superlative header (auto-generated title / pill chain from metric+scope+direction+N+filter), en/pl i18n keys, and `daily/difficulty.js` handles the kind. Retire the Phase-1 fallback label.
+3. **Authoring generator + audit + content.** `authoring/generate-candidates.mjs` gains superlative templates (metric × scope × N × optional single flag-filter) → `ideas.json`; `authoring/audit-superlative.mjs` recomputes future-dated drafts; then author the family into `puzzles.json` (world top-10, continents, the compound ideas) via the daily flow. Update the `daily-puzzle-author` SKILL.md.
+
+---
+
 ## Backlog
 
 ---
