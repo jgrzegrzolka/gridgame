@@ -306,13 +306,14 @@ the hardcoded default in `flags/partyPlan.js`.
 host settings page (still just edits `DEFAULT_PLAN` when it lands); the higher-detail Natural Earth
 source (only if the worldMap sampling forces it).
 
-**Perf fast-follow (isolated, no runtime code):** the contour set is 1.2 MB / avg 5.5 KB, but a
-few coastline-heavy outlines carry full worldMap coordinate precision that's sub-pixel at tile
-size — Canada 146 KB, US 68 KB, Indonesia 44 KB, Chile 38 KB. Running the assets through SVGO's
-`convertPathData` (proper relative-path simplification, not a naive regex round which drifts over a
-20k-point path) should cut those ~5-10× and the set to roughly ~400 KB. Build-time only: a post-step
-in `scripts/generate-contours.mjs` + a re-eyeball of the heavy tiles; the client never changes.
-Shipped without it — only 4 tiles load per round, lazy + immutable-CDN-cached, so it's not blocking.
+**Perf: contour set halved (done, same PR).** The raw worldMap geometry carried full source
+precision (2+ decimals of a viewBox unit) that's sub-pixel at the ~150 px the tiles render —
+coastline-heavy outlines were the worst (Canada 147 KB, US 68 KB). The generator now runs every
+contour through SVGO's `convertPathData` at 1-decimal precision (a *proper* relative-path
+simplification — a naive regex round would drift over a 20k-point path). Set went **874 KB → 382 KB
+(avg 5.5 KB → 2.4 KB)**, Canada 147 → 57 KB, US 68 → 26 KB, with no visible change at tile size
+(heavy tiles re-eyeballed). Build-time only — `svgo` + `playwright-core` are devDeps of the
+generator; the runtime/client never changed, and the code set (`contourPool.js`) is byte-identical.
 
 ## Open decisions (settle as they come up, not now)
 
