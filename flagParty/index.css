@@ -269,6 +269,31 @@ button.opt { -webkit-appearance: none; appearance: none; }
    avatars clear of it so both stay readable — party-only, flagQuiz has no
    avatars on a tile. */
 .opt.wrong[data-name] .picks { bottom: 30px; }
+/* The superlative pop-strip lifts avatars the same way (all four reveal tiles
+   carry it, so any tile with picks needs the clearance). */
+.opt.pop .picks { bottom: 30px; }
+
+/* Superlative reveal: country + population banded across the bottom of every
+   tile, so the four values read as a ranking. Same rgba(0,0,0,.7)-over-SVG band
+   as the wrong-pick name strip in common.css (the documented per-tile-strip
+   palette exception), inset 5px to sit on the flag — but here on all four tiles
+   and carrying a name + value, which is superlative-only. */
+.opt-pop {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 6px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 13px;
+  pointer-events: none;
+}
+.opt-pop .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.opt-pop .val { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 .round-foot { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 

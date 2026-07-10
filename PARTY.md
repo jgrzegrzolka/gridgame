@@ -405,11 +405,21 @@ new code is *how `generate` picks the four* plus a most/least hint.
       genuinely the least populous of the four) pulsed, the wrong pick showed its pink ring + name
       strip + avatar, the header filled in "Montenegro", and the toast scored +0. Play-again works.
 
-**Deferred (not this iteration):**
+**Follow-up shipped on the same branch: population numbers on reveal.** On a superlative reveal
+every tile now shows a bottom band with its country + population (e.g. "South Sudan 11.5M"), so the
+four values read as a ranking — the round's learning payoff. The page fetches
+`flags/metrics/population.json` alongside `countries.json` (best-effort: a failed fetch just omits
+the band) and formats with the shared `formatValue` from `flags/metricLens.js` (compact: 1.4B /
+337M / 552K), so the numbers match flagsdata's metric lens. The band reuses the
+`rgba(0,0,0,.7)`-over-SVG idiom of the wrong-pick name strip, but on all four tiles and carrying a
+name + value (superlative-only), so the wrong-pick `::after` is suppressed when it's present to
+avoid a double band. **Scoring stays binary and untouched** — the numbers give players the
+"how close was I" feedback without diverging `partyScore.js` from the other rounds. Graded /
+closeness scoring remains parked for the future 16-tile closeness round, where it fits cleanly.
+Verified in-browser: a "least populous" reveal showed South Sudan 11.5M / Australia 26.7M / UK
+68.5M / Germany 83.3M with the correct tile pulsing and +10 scored on a correct pick.
 
-- Showing the actual population number on reveal (a nice learning payoff, but it needs the client
-  to *fetch* population.json per the browser fetch-not-import rule, so it is a fast follow, not
-  MVP).
+**Deferred (not this iteration):**
 - Non-sovereign and continent-scoped superlatives ("most populous in Africa").
 - The 16-tile closeness-score version from the long-term vision: a different mechanic that breaks
   the single-pick grid, so it earns its place as its own future round type rather than folding
