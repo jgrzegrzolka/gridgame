@@ -22,7 +22,7 @@ import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/fla
 import { createColorCountPicker } from '../colorCountPicker.js';
 import { pickCelebration } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
-import { launchConfetti, launchFireworks } from '../confetti.js';
+import { runCelebration } from '../confetti.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { refreshChooserI18n } from './chooserI18n.js';
 import { shareUrl } from '../common.js';
@@ -709,8 +709,7 @@ export function bootFindFlag() {
       // same way: confetti for partial, fireworks (alone, not stacked)
       // for a clean sweep.
       const { tier, intensity } = pickCelebration({ found, total });
-      if (tier === 'fireworks') launchFireworks();
-      else if (tier === 'confetti') launchConfetti({ intensity });
+      runCelebration(tier, { intensity });
 
       // Found section duplicates the in-game .find-found grid onto the
       // result screen. Without it the user never sees the flag they

@@ -27,7 +27,7 @@ import {
 } from '../flags/quiz.js';
 import { flagsGamePool, loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
-import { launchConfetti, launchFireworks } from '../confetti.js';
+import { runCelebration } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
 import { bumpShare, bumpQuiz60sDay, pushEngagementBlob } from '../flags/engagementCounters.js';
@@ -1074,8 +1074,7 @@ export function bootFlagQuiz() {
           isNew,
           prematurelyGaveUp: gaveUp,
         });
-        if (tier === 'fireworks') launchFireworks();
-        else if (tier === 'confetti') launchConfetti({ intensity });
+        runCelebration(tier, { intensity });
         // Achievement diff: chain off the leaderboard cycle so the
         // bypassCache fetch lands AFTER submitQuizRecord has settled
         // server-side (the cycle awaits the submit internally before
@@ -1132,8 +1131,7 @@ export function bootFlagQuiz() {
           isNew,
           prematurelyGaveUp: gaveUp,
         });
-        if (tier === 'fireworks') launchFireworks();
-        else if (tier === 'confetti') launchConfetti({ intensity });
+        runCelebration(tier, { intensity });
         // Achievement diff — mirrors the 60s branch. Chains off the
         // leaderboard cycle so the bypassCache fetch lands AFTER
         // submitQuizRecord has settled server-side. Catches the

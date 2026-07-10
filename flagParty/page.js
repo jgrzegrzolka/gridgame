@@ -3,7 +3,8 @@ import { generateCode, isValidRoomCode, serverUrlFor } from '../flags/roomNet.js
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
-import { initialPartyClientState, reducePartyMessage, withLocalBuzz } from '../flags/partyClient.js';
+import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration } from '../flags/partyClient.js';
+import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, REVEAL_SECONDS, secondsLeft, remainingFraction } from '../flags/partyTiming.js';
 import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
@@ -41,6 +42,11 @@ export function bootFlagParty() {
    *  the game the moment we're seated as host. Cleared once the first question
    *  arrives. Keeps the create-a-room (multiplayer) lobby untouched. */
   let soloPending = false;
+  /** Fire the finish celebration (confetti / fireworks) exactly once per final
+   *  screen. render() re-runs on every message and on a language switch, so a
+   *  guard keeps the burst from re-triggering; reset when we leave the final
+   *  phase (a "Play again" round → final fires a fresh show). */
+  let finalCelebrated = false;
 
   // ---- element refs ----
   const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -283,6 +289,8 @@ export function bootFlagParty() {
       setLoadingStatus('party.starting', 'Starting');
       return;
     }
+    // Leaving (or not yet in) the final screen re-arms the one-shot celebration.
+    if (state.phase !== 'final') finalCelebrated = false;
     if (state.phase === 'question' || state.phase === 'reveal') { showSection('round'); renderRound(); syncClock(); }
     else if (state.phase === 'final') { stopClock(); showSection('final'); renderFinal(); }
     else { stopClock(); showSection('lobby'); renderLobby(); }
@@ -395,28 +403,84 @@ export function bootFlagParty() {
 
   function renderFinal() {
     const board = state.scoreboard || [];
-    if (board.length) {
-      const top = board[0];
-      const tie = board.length > 1 && board[1].score === top.score;
-      finalSub.textContent = tie ? t('party.tie', "It's a tie!") : fmt(t('party.winnerTakesIt', '{name} takes it'), { name: top.nickname });
-    } else {
-      finalSub.textContent = '';
-    }
+    const top = board[0];
+    const tie = board.length > 1 && !!top && board[1].score === top.score;
+    // A clear winner needs no "{name} takes it" caption — the pink highlight
+    // and the breathing effect on the top row already say it. The subtitle
+    // only earns its place on a tie, where there's no single winner row to
+    // carry the message.
+    finalSub.textContent = tie ? t('party.tie', "It's a tie!") : '';
+    finalSub.hidden = !tie;
+
+    // The full finish "moment" — cascade, count-up, subtitle pop, and the
+    // confetti / fireworks burst — plays once, on the first render of the
+    // final screen. Later re-renders (a language switch, a repeated state
+    // message) paint the board statically so nothing re-animates.
+    const firstShow = !finalCelebrated;
+    const animate = firstShow && !prefersReducedMotion();
+
     finalBoard.innerHTML = '';
     board.forEach((entry, i) => {
-      const row = el('div', 'scoreline' + (i === 0 ? ' win' : ' other'));
+      const isWinner = i === 0 && !tie && entry.score > 0;
+      // `.champion` (a sole winner) carries the sustained breathe + glow; a
+      // tie's top row still gets `.win` styling but no champion effect.
+      const row = el('div', 'scoreline' + (i === 0 ? ' win' : ' other') + (isWinner ? ' champion' : ''));
       row.appendChild(el('span', 'rank', String(i + 1)));
       row.appendChild(buildAvatar(entry.playerId));
       row.appendChild(el('span', 'nm', entry.nickname));
-      row.appendChild(el('span', 'sc', String(entry.score)));
+      const sc = el('span', 'sc', String(entry.score));
+      row.appendChild(sc);
+      if (animate) {
+        // Cascade in bottom-to-top so the winner's row lands last, then tick
+        // that row's score up once it has settled.
+        const delay = (board.length - 1 - i) * 90;
+        row.classList.add('enter');
+        row.style.setProperty('--enter-delay', `${delay}ms`);
+        countUp(sc, entry.score, 600, delay + 200);
+      }
       finalBoard.appendChild(row);
     });
+
+    if (firstShow) {
+      // Pop only applies to the tie caption (the sole surviving subtitle).
+      if (animate && tie) { finalSub.classList.remove('pop'); void finalSub.offsetWidth; finalSub.classList.add('pop'); }
+      runCelebration(pickPartyCelebration({ scoreboard: board, you: state.you }));
+      finalCelebrated = true;
+    }
+
     // Only the host can restart, so both "Play again" and the "·" separator
     // that divides it from "Home" show for the host alone; everyone else sees
     // just "Home".
     playAgainBtn.hidden = !state.isHost;
     const sep = document.getElementById('result-sep');
     if (sep) sep.hidden = !state.isHost;
+  }
+
+  function prefersReducedMotion() {
+    return typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /**
+   * Tick a score element from 0 up to its final value with an ease-out, so the
+   * winner's total feels earned rather than just appearing. Starts after
+   * `delayMs` (used to line up with the row's cascade landing).
+   * @param {HTMLElement} node @param {number} to @param {number} durationMs @param {number} delayMs
+   */
+  function countUp(node, to, durationMs, delayMs) {
+    if (to <= 0) { node.textContent = '0'; return; }
+    node.textContent = '0';
+    window.setTimeout(() => {
+      const start = performance.now();
+      const step = (/** @type {number} */ now) => {
+        const p = Math.min(1, (now - start) / durationMs);
+        const eased = 1 - Math.pow(1 - p, 3);
+        node.textContent = String(Math.round(eased * to));
+        if (p < 1) requestAnimationFrame(step);
+        else node.textContent = String(to);
+      };
+      requestAnimationFrame(step);
+    }, delayMs);
   }
 
   function onPick(/** @type {string} */ code) {

@@ -173,6 +173,28 @@ export function launchFireworks(options = {}) {
 }
 
 /**
+ * Map a celebration tier to its effect — the single place the tier → launch
+ * wiring lives, so every finish screen (flagQuiz, findFlag, daily, Flag Party)
+ * fires the same way instead of repeating the `if fireworks … else if confetti
+ * …` block. `none` fires nothing. `intensity` is forwarded to confetti only
+ * (fireworks always plays at full size); callers without a meaningful ratio
+ * (e.g. Flag Party's winner / everyone-else split) omit it and get the full
+ * burst.
+ *
+ * @param {'none' | 'confetti' | 'fireworks'} tier
+ * @param {{ intensity?: number } & Record<string, any>} [opts] extra options
+ *   (doc, rng, prefersReducedMotion, …) forward to the underlying launcher —
+ *   production callers pass only `intensity`; tests use it to inject a fake
+ *   document, the same seam `launchConfetti` / `launchFireworks` already offer.
+ * @returns {{ container: HTMLElement, cancel: () => void } | null}
+ */
+export function runCelebration(tier, { intensity = 1, ...rest } = {}) {
+  if (tier === 'fireworks') return launchFireworks(rest);
+  if (tier === 'confetti') return launchConfetti({ intensity, ...rest });
+  return null;
+}
+
+/**
  * @param {Document} doc
  * @param {number} count
  * @param {() => number} rng

@@ -201,3 +201,28 @@ export function withLocalBuzz(state, choice) {
   if (!state.question || !state.question.options.includes(choice)) return state;
   return { ...state, myChoice: choice };
 }
+
+/**
+ * Pick the finish-screen celebration tier for the LOCAL player on the Flag
+ * Party final screen. The scoreboard is descending by score (index 0 is the
+ * top scorer), matching how `renderFinal` reads it.
+ *
+ * - `fireworks` — you are the sole winner. Your big moment, so the rare-event
+ *   tier (same split as Tic-Tac-Toe: the winner gets the loud one).
+ * - `confetti`  — someone else won, or you're tied at the top. The party still
+ *   ends on a high note for everyone; a tie has no single winner so nobody
+ *   gets the solo fireworks.
+ * - `none`      — no scoreboard, or a scoreless finish (top score 0). Matches
+ *   `pickCelebration`'s "found nothing → celebrate nothing" rule.
+ *
+ * @param {{ scoreboard: Array<{ playerId: string, score: number }> | null, you: string | null }} params
+ * @returns {'fireworks' | 'confetti' | 'none'}
+ */
+export function pickPartyCelebration({ scoreboard, you }) {
+  if (!scoreboard || scoreboard.length === 0) return 'none';
+  const top = scoreboard[0];
+  if (!top || top.score <= 0) return 'none';
+  const tie = scoreboard.length > 1 && scoreboard[1].score === top.score;
+  if (!tie && you != null && top.playerId === you) return 'fireworks';
+  return 'confetti';
+}
