@@ -1423,6 +1423,24 @@ dialog#zoom p.zoom-note {
 }
 .lobby-btn.primary:hover { background: var(--secondary-color); filter: brightness(0.97); }
 
+/* Start / lobby screen container — the create-or-join column shared by Flag
+   Party (`.pt-start`) and Tic-Tac-Toe (`.lobby`). One definition so both
+   render the identical column: same 16px rhythm between the primary pill, the
+   `or join` separator, the join-code box and the playing-as line, capped at
+   the same 360px width and centred. (CLAUDE.md: same mechanism = same code.)
+   The `.party .pt-start` compound is deliberate — it must outweigh the generic
+   `.party section` rule (gap 12 / width 100%) in flagParty/index.css. */
+.lobby,
+.party .pt-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 360px;
+  margin-inline: auto;
+}
+
 /* Lobby pills get a slightly larger slot than the base pill and centre
    themselves in their column, so Flag Party (stretch layout) and Tic-Tac-Toe
    (centred layout) render the same content-width buttons from one recipe. */
@@ -1461,6 +1479,19 @@ dialog#zoom p.zoom-note {
 }
 .join-code::placeholder { color: var(--muted-color); }
 .join-code:focus { outline: 2px solid var(--link-color); outline-offset: -2px; }
+
+/* Validation / reject error under the join form — shared by Flag Party
+   (`.join-error`) and Tic-Tac-Toe (`.lobby-error`) so "Code must be 5
+   characters" and "Room not found…" read identically on both start screens:
+   pink (the site's validation accent), centred, sitting just below the
+   join-code box + Join button. (CLAUDE.md: same mechanism = same code.) */
+.join-error,
+.lobby-error {
+  color: var(--secondary-color);
+  font-size: 14px;
+  text-align: center;
+  margin: 4px 0 0;
+}
 
 .playing-as {
   margin-top: auto;

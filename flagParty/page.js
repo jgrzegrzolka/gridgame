@@ -82,16 +82,6 @@ export function bootFlagParty() {
   }
 
   /**
-   * @param {string} key
-   * @param {string} fallback
-   * @param {Record<string, string|number>} [params]
-   */
-  function setStatus(key, fallback, params) {
-    statusEl.className = 'party-status';
-    statusEl.textContent = params ? fmt(t(key, fallback), params) : t(key, fallback);
-    statusEl.hidden = false;
-  }
-  /**
    * Loading variant of the status line: a muted label trailed by the shared
    * pulsing `.loading-dots` (common.css) — the same "something's happening"
    * idiom as daily-stats / sync "loading…". Used for the solo "Starting…"
@@ -108,6 +98,31 @@ export function bootFlagParty() {
     statusEl.hidden = false;
   }
   function clearStatus() { statusEl.hidden = true; statusEl.textContent = ''; statusEl.className = 'party-status'; }
+
+  // Join-form validation / reject error (pink `.join-error`, shown under the
+  // join box). Both the client-side "code must be 5 chars" check and the
+  // server's reject reasons (room not found, code taken, in progress) surface
+  // here — same placement + styling as Tic-Tac-Toe's `.lobby-error`, instead
+  // of the top `.party-status` box which is now reserved for transient
+  // connecting / disconnected / starting states. The last key is stashed so a
+  // soft language switch re-translates the visible message.
+  /** @type {{ key: string, fallback: string, params?: Record<string, string|number> } | null} */
+  let lastJoinError = null;
+  /**
+   * @param {string} key @param {string} fallback
+   * @param {Record<string, string|number>} [params]
+   */
+  function showJoinError(key, fallback, params) {
+    lastJoinError = { key, fallback, params };
+    paintJoinError();
+    joinError.hidden = false;
+  }
+  function paintJoinError() {
+    if (!lastJoinError) return;
+    const { key, fallback, params } = lastJoinError;
+    joinError.textContent = params ? fmt(t(key, fallback), params) : t(key, fallback);
+  }
+  function clearJoinError() { lastJoinError = null; joinError.hidden = true; joinError.textContent = ''; }
 
   function showSection(/** @type {'start'|'lobby'|'round'|'final'|null} */ which) {
     for (const [k, node] of Object.entries(sections)) node.hidden = k !== which;
@@ -166,7 +181,10 @@ export function bootFlagParty() {
     }
     if (state.statusOverride) {
       const so = state.statusOverride;
-      setStatus(so.key, so.fallback, so.params || {});
+      // A reject bounces us back to the start screen; show it as the pink
+      // validation line under the join form (like TTT), not the top status box.
+      clearStatus();
+      showJoinError(so.key, so.fallback, so.params);
     } else {
       // No override to show, so drop any transient status (connecting, or the
       // solo "Starting…" banner). render() re-sets "Starting…" itself while a
@@ -181,6 +199,7 @@ export function bootFlagParty() {
   function enterRoom(/** @type {string} */ code, /** @type {'create'|'join'} */ intent) {
     rejected = false;
     reconnectAttempts = 0;
+    clearJoinError();
     state = initialPartyClientState();
     activeRoom = { code, intent };
     const url = new URL(location.href);
@@ -283,6 +302,10 @@ export function bootFlagParty() {
     }
     const inLobby = state.phase === 'lobby';
     startBtn.hidden = !(state.isHost && inLobby);
+    // A party needs at least two present players before the host can start —
+    // the button stays visible but greys out (shared `.actions-row
+    // button:disabled` style) until a second player joins.
+    startBtn.disabled = state.roster.filter((r) => r.present).length < 2;
     waitEl.hidden = !(!state.isHost && inLobby);
   }
 
@@ -416,11 +439,10 @@ export function bootFlagParty() {
     const input = /** @type {HTMLInputElement} */ (document.getElementById('join-code'));
     const code = input.value.trim().toUpperCase();
     if (!isValidRoomCode(code)) {
-      joinError.textContent = fmt(t('ttt.codeMustBe5', 'Code must be {n} characters'), { n: 5 });
-      joinError.hidden = false;
+      showJoinError('ttt.codeMustBe5', 'Code must be 5 characters');
       return;
     }
-    joinError.hidden = true;
+    clearJoinError();
     soloPending = false;
     enterRoom(code, 'join');
   });
@@ -454,7 +476,7 @@ export function bootFlagParty() {
   paintPlayingAs();
 
   // Re-render dynamic text (country names, labels) on a soft language switch.
-  document.addEventListener('langchanged', () => { paintPlayingAs(); render(); });
+  document.addEventListener('langchanged', () => { paintPlayingAs(); paintJoinError(); render(); });
 
   // ---- load data + route ----
   fetch('../flags/countries.json')

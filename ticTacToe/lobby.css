@@ -1,22 +1,10 @@
-.lobby {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  width: 100%;
-  max-width: 360px;
-}
 .lobby[hidden] { display: none; }
-/* The lobby's start-screen kit — pill buttons (`.lobby-btn` + pink `.primary`),
- * full-line `.start-sep` separators, the `.join-code` box, the `.start-brand`
- * mark, and the `.playing-as` line — all live in common.css so Flag Party and
+/* The lobby's start-screen kit — the container column itself (`.lobby` /
+ * `.pt-start`), the pill buttons (`.lobby-btn` + pink `.primary`), full-line
+ * `.start-sep` separators, the `.join-code` box, the `.start-brand` mark, and
+ * the `.playing-as` line — all live in common.css so Flag Party and
  * Tic-Tac-Toe render identically (CLAUDE.md "Same mechanism = same code").
- * Only the feature-specific error line stays here. */
-.lobby-error {
-  color: var(--secondary-color);
-  font-size: 14px;
-  margin: 4px 0 0;
-}
+ * The `.lobby-error` validation line is shared from common.css too. */
 
 .online-game[hidden] { display: none; }
 /* `.room-line` (small muted "Room CODE" + monospace code), `.share-link`,

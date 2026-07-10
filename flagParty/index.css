@@ -44,10 +44,9 @@
 }
 
 /* Buttons (`.lobby-btn` + pink `.primary`), the `.join-code` box, the brand
-   mark, separators, playing-as line, and avatar are the shared site components
-   in common.css — Flag Party uses the same ones as Tic-Tac-Toe. Only the
-   feature-specific join error line stays here. */
-.join-error { color: var(--muted-color); font-size: 13px; text-align: center; margin: 0; }
+   mark, separators, playing-as line, avatar, and the `.join-error` validation
+   line are all shared site components in common.css — Flag Party uses the same
+   ones as Tic-Tac-Toe. */
 
 .party-status {
   text-align: center;
