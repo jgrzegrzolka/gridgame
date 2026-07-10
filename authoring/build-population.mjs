@@ -145,6 +145,9 @@ async function main() {
     key: 'population',
     label: 'Population',
     unit: 'people',
+    // Display hint for consumers: 'compact' → 1.4B / 337M / 552K; 'decimal1' →
+    // one decimal place (for small per-capita rates). Additive, self-describing.
+    format: 'compact',
     source:
       `World Bank WDI (SP.POP.TOTL), ${SNAPSHOT_YEAR}; ` +
       'dependencies & sub-national regions from national-statistics / UN estimates (rounded)',

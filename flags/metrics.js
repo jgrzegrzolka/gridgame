@@ -19,6 +19,7 @@
  * @property {string} key
  * @property {string} label
  * @property {string} unit
+ * @property {string} [format] display hint: 'compact' (1.4B) or 'decimal1' (4.2)
  * @property {string} source
  * @property {number} year
  * @property {Record<string, number>} values
@@ -145,6 +146,7 @@ export function createMetric(metric, countries) {
     key: metric.key,
     label: metric.label,
     unit: metric.unit,
+    format: metric.format || 'compact',
     source: metric.source,
     year: metric.year,
     has,
