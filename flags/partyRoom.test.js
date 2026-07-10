@@ -106,6 +106,25 @@ test('applyStart: non-host cannot start; empty lobby cannot start', () => {
   assert.equal(applyStart(createRoom(), 'ghost', q('jp')).broadcasts.length, 0);
 });
 
+test('applyStart: the host plan + its round count are stored on the room', () => {
+  let room = createRoom(11);
+  room = applyHello(room, 'alice', 'Alice').room;
+  const plan = [{ poolId: 'sovereign', roundId: 'mapPick', rounds: 2 }];
+  const r = applyStart(room, 'alice', q('jp'), plan, 2);
+  assert.deepEqual(r.room.plan, plan, 'chosen plan is stored');
+  assert.equal(r.room.totalRounds, 2, 'totalRounds follows the plan, not the opening default');
+  assert.equal(msg(r, 'question').totalRounds, 2, 'the broadcast carries the new total');
+});
+
+test('applyStart: omitting the plan keeps whatever the room opened with', () => {
+  const opening = [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 4 }];
+  let room = createRoom(4, opening);
+  room = applyHello(room, 'alice', 'Alice').room;
+  const r = applyStart(room, 'alice', q('jp')); // 3-arg form, no plan
+  assert.deepEqual(r.room.plan, opening);
+  assert.equal(r.room.totalRounds, 4);
+});
+
 // ---- applyBuzz ----
 
 test('applyBuzz: records a buzz and announces the count without leaking the choice', () => {
@@ -242,4 +261,14 @@ test('serialize/deserialize: round-trips state and resets presence', () => {
   assert.equal(restored.seats.get('alice')?.nickname, 'Alice');
   assert.equal(restored.buzzes.length, 1);
   assert.equal(restored.present.size, 0, 'presence is not persisted');
+});
+
+test('serialize/deserialize: the chosen plan survives an eviction (so mid-game generation stays correct)', () => {
+  const plan = [{ poolId: 'nonSovereign', roundId: 'flagPick', rounds: 2 }, { poolId: 'sovereign', roundId: 'mapPick', rounds: 3 }];
+  let room = createRoom(11);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyStart(room, 'alice', q('jp'), plan, 5).room;
+  const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
+  assert.deepEqual(restored.plan, plan);
+  assert.equal(restored.totalRounds, 5);
 });
