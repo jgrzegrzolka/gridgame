@@ -47,7 +47,7 @@ A fresh agent picking this up should:
 
 ## Done
 
-### Feature DF: Population thresholds as a tic-tac-toe category — *built 2026-07-10 (PR pending)*
+### Feature DF: Population thresholds as a tic-tac-toe category — *shipped 2026-07-10 (#779)*
 
 **Goal.** The first *play* consumer of a world metric (Feature DD): population becomes a TTT category family, like `colorCount`. Six breakpoints — populous `>=10M / >=50M / >=100M` and small `<=20M / <=5M / <=1M` — surfacing in the 3×3 and 9×9 random pools. Difficulty falls out of the threshold: `>=10M` / `<=20M` cover ~half the world (easy), `>=100M` (~16 countries) / `<=1M` are tight (hard).
 
