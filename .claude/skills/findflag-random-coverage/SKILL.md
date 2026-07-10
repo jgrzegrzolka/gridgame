@@ -25,6 +25,7 @@ Each pill becomes a `{ group, value }` entry in the `allPills` array. The Random
 
 - **"no other colours" toggle** — sets `filter.colorCount = { op: '=', n: <count of include colours> }`. In Random: gated on `onlyColorsProbability` and only fires when the pill loop already produced ≥1 include colour.
 - **colorCount picker** (`=`/`>=`/`<=` × N ∈ `[2, 3, 4, 5]`) — sets `filter.colorCount` directly. In Random: gated on `colorCountProbability`, fires independently of whether colours are picked, picks op/N uniformly from `COLOR_COUNT_OPS` × `COLOR_COUNT_NS` (both exported from `flags/flagsFilter.js`).
+- **Population tiers** — a single-select section of the six `POPULATION_BREAKS_FOR_RANDOM` tiers (`>=10M/50M/100M`, `<=20M/5M/1M`). Sets the scalar `filter.population = { op, n }` directly; single-select because a threshold has no meaningful "exclude". Rendered as pills but deliberately **not** in `allPills` (a scalar `{ op, n }`, not an include/exclude value set — feeding it to the pill pool would crash on the missing Set). In Random: gated on `populationProbability`, draws one tier uniformly from `POPULATION_BREAKS_FOR_RANDOM`, and is **mutually exclusive with colorCount** (skipped when the mix already carries a colorCount constraint, so a random puzzle never stacks two scalar modifiers). Unlike colorCount it is *not* skipped on stripesOnly — population is orthogonal to the palette. Counted in the chooser via the canonical `engine.population(op, n).predicate`. Added #790.
 
 **Deliberately out of the chooser today** (and therefore out of Random):
 
@@ -44,7 +45,7 @@ The pill enters the chooser via `ALL_MOTIFS` / `ALL_FLAG_COLORS` / `CONTINENTS`.
 Modifiers ride the parallel paths in `pickRandomMix`, not the pill pool. Two specific things:
 
 - If you add a new colour-count **op** (e.g. `>5`) or **N value** (e.g. `6`), update `COLOR_COUNT_OPS` / `COLOR_COUNT_NS` in `flags/flagsFilter.js`. Both the picker UI and the random generator import from there, so a single edit covers both surfaces. The test "colorCountProbability=1 attaches a picker-shaped colorCount" asserts ops stay in `{=, >=, <=}` and N stays in `{2, 3, 4, 5}` — update the assertion's valid sets when widening the surface.
-- If you add an entirely new constraint kind (e.g. a `region` filter parallel to `continent`), it's a new code path in `pickRandomMix`. Mirror the existing two-arg gate: skip the `rng()` call when the probability is 0 so existing seeded tests stay deterministic.
+- If you add an entirely new constraint kind (e.g. a `region` filter parallel to `continent`), it's a new code path in `pickRandomMix`. Mirror the existing two-arg gate: skip the `rng()` call when the probability is 0 so existing seeded tests stay deterministic. **Population is the worked example** (#790): `maybeAttachPopulation` gates on `populationProbability`, is skipped when `f.colorCount !== null`, and has its own coverage test ("every population tier is reachable over many runs"). A future world-metric threshold filter (area, GDP) should copy this shape rather than the pill-pool path.
 
 ### 3. New status pill in the chooser
 
@@ -81,13 +82,15 @@ In `findFlag/page.js`:
 const RANDOM_MIX_OPTIONS = {
   onlyColorsProbability: 0.25,
   colorCountProbability: 0.10,
+  populationProbability: 0.15,
 };
 ```
 
 - `0.25` for "no other colours" — it's a very recognizable puzzle shape ("flags whose colours are exactly red + white"), so quarter-of-the-time keeps it discoverable without making it feel mandatory.
 - `0.10` for independent colorCount — less natural framing on its own, so rarer.
+- `0.15` for population — a recognizable, satisfying constraint on common enough thresholds; middling frequency keeps it discoverable without dominating. Mutually exclusive with colorCount inside `pickRandomMix`.
 
-These are tunable knobs in one place. The `pickRandomMix` helper itself defaults both to 0 so non-page callers (and existing tests) get pure pill-only behaviour.
+These are tunable knobs in one place. The `pickRandomMix` helper itself defaults all three to 0 so non-page callers (and existing tests) get pure pill-only behaviour.
 
 ## Test coverage map
 
@@ -95,3 +98,4 @@ These are tunable knobs in one place. The `pickRandomMix` helper itself defaults
   - Pill-selection contract (existing): "always emits 2-4 pills", "at most one pill per scalar group", `excludeProbability` boundaries.
   - Modifier contract: `onlyColorsProbability=1` locks colorCount to the include-colour count; never fires without an include colour; `colorCountProbability=1` attaches a picker-shaped constraint; both at 0 means colorCount stays null AND no rng bytes are spent (so the existing seeded tests stay deterministic).
   - **Empirical coverage test**: 8000 runs against live data; pins that every pill in the assembled pool appears at least once and the modifier fires at least once. This is the load-bearing test for the "every chooser option is reachable" contract — if it fails after a chooser change, that change is the bug.
+  - Population modifier contract: `populationProbability=1` draws a curated tier and stays mutually exclusive with colorCount; `populationProbability=0` leaves it null and consumes no rng; a coverage test asserts every population tier is reachable over many runs (the modifier-path analogue of the empirical pill test).
