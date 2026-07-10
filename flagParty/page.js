@@ -3,7 +3,7 @@ import { generateCode, isValidRoomCode, serverUrlFor } from '../flags/roomNet.js
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
-import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration } from '../flags/partyClient.js';
+import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction } from '../flags/partyTiming.js';
@@ -381,12 +381,16 @@ export function bootFlagParty() {
     if (token === clockToken) return;
     clockToken = token;
     clockFired = false;
-    // A lone player trims the reveal (nothing to study alone); multiplayer keeps
-    // the full beat so you can read everyone's picks. Question time is the same.
-    const seatCount = state.roster.filter((r) => r.present).length;
-    clockTotalMs = (mode === 'reveal' ? revealSecondsFor(seatCount) : QUESTION_SECONDS) * 1000;
+    // The reveal length depends on the round, not the room: a clean sweep (every
+    // present player got it right) snaps on; a miss holds so the correct flag
+    // can be read. Question time is fixed. (flagQuiz's correct-fast/wrong-slow.)
+    const clean = mode === 'reveal' && isCleanReveal(state.roster, state.reveal);
+    clockTotalMs = (mode === 'reveal' ? revealSecondsFor(clean) : QUESTION_SECONDS) * 1000;
     clockDeadline = Date.now() + clockTotalMs;
-    timerEl.hidden = false;
+    // Only the question phase shows the shrinking bar. The reveal has no timer of
+    // its own — a sub-second bar read as a flicker — so it runs its clock unseen
+    // and just advances after the beat (short when clean, longer on a miss).
+    timerEl.hidden = mode === 'reveal';
     timerEl.setAttribute('data-mode', mode);
     if (!clockInterval) clockInterval = window.setInterval(tickClock, 200);
     tickClock();
@@ -396,16 +400,9 @@ export function bootFlagParty() {
     const mode = state.phase === 'reveal' ? 'reveal' : 'question';
     const now = Date.now();
     const left = secondsLeft(clockDeadline, now);
-    if (mode === 'reveal') {
-      // Reveal: the progress bar freezes full and stopped (CSS drops its
-      // transition in this mode) with a quiet "next round in N" label beside
-      // it, in the same slot the question countdown number used. Clear `.low`
-      // so the label never inherits the question timer's last-5s pulse — that
-      // was the "sometimes it blinks" inconsistency.
-      timerFill.style.width = '100%';
-      timerEl.classList.remove('low');
-      timerLabel.textContent = fmt(t('party.nextIn', 'Next round in {n}s'), { n: left });
-    } else {
+    // Only the question phase paints a bar; the reveal is bar-less (the clock
+    // still runs below to advance the room, it just isn't drawn).
+    if (mode === 'question') {
       timerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
       timerEl.classList.toggle('low', left <= 5);
       timerLabel.textContent = String(left);
@@ -501,6 +498,13 @@ export function bootFlagParty() {
   function flagOpt(code, opts) {
     const node = document.createElement(opts.selectable ? 'button' : 'div');
     node.className = 'opt' + (opts.selected ? ' sel' : '') + (opts.correct ? ' correct' : '') + (opts.wrong ? ' wrong' : '') + (opts.dim ? ' dim' : '');
+    // On reveal, name the flag/outline you got wrong — the shared bottom strip
+    // (common.css `.opt.wrong[data-name]`, same as flagQuiz) tells you what you
+    // actually picked; the correct answer's name is already in the prompt header.
+    if (opts.wrong) {
+      const c = byCode.get(code);
+      node.dataset.name = c ? countryName(c) : code;
+    }
     if (opts.selectable) {
       /** @type {HTMLButtonElement} */ (node).type = 'button';
       node.addEventListener('click', () => onPick(code));

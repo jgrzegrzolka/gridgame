@@ -16,24 +16,26 @@
  *  answered — the server auto-reveals the moment the last seat buzzes. */
 export const QUESTION_SECONDS = 20;
 
-/** Seconds the reveal (who got it, points) stays up before the next round, in a
- *  multiplayer room. Solo trims this (see {@link revealSecondsFor}). */
-export const REVEAL_SECONDS = 2;
+/** Seconds a clean reveal lingers — every present player got it right, so
+ *  there's nothing to study and the round snaps on. Mirrors flagQuiz's pace
+ *  (a correct pick advances almost immediately). */
+export const CLEAN_REVEAL_SECONDS = 0.9;
 
-/** Seconds a solo reveal lingers. There's nothing to study alone (just your own
- *  pick and points), so it snaps on faster than the multiplayer reveal, which
- *  earns its extra beat letting you read everyone else's picks. */
-export const SOLO_REVEAL_SECONDS = 1;
+/** Seconds a reveal lingers when someone missed (a wrong pick or a timeout), so
+ *  players get a beat to see the correct flag they didn't land — and read the
+ *  name strip on the flag they wrongly picked. Same reason flagQuiz holds longer
+ *  on a wrong answer than a right one. */
+export const MISS_REVEAL_SECONDS = 2.5;
 
 /**
- * How long the reveal lingers for a room of `seatCount` present players. Solo
- * (one seat, or an empty count) gets the snappy {@link SOLO_REVEAL_SECONDS};
- * two or more seats get the full {@link REVEAL_SECONDS}.
- * @param {number} seatCount
+ * How long the reveal lingers, keyed on whether the round was a clean sweep. A
+ * clean round ({@link CLEAN_REVEAL_SECONDS}) moves fast; a missed one
+ * ({@link MISS_REVEAL_SECONDS}) holds so the answer can be read.
+ * @param {boolean} clean  every present player picked the correct answer
  * @returns {number}
  */
-export function revealSecondsFor(seatCount) {
-  return seatCount <= 1 ? SOLO_REVEAL_SECONDS : REVEAL_SECONDS;
+export function revealSecondsFor(clean) {
+  return clean ? CLEAN_REVEAL_SECONDS : MISS_REVEAL_SECONDS;
 }
 
 /**

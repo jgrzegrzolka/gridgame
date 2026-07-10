@@ -204,12 +204,8 @@
   color: var(--muted-color);
   font-variant-numeric: tabular-nums;
 }
-/* Reveal: the progress bar stays visible, frozen full and stopped (transition
-   dropped so JS setting it to 100% snaps instead of animating), with the quiet
-   "next round in N" label in the same right-hand slot the question countdown
-   number used — the question timer's layout, just not moving. */
-.round-timer[data-mode="reveal"] .round-timer-fill { transition: none; }
-
+/* Only the question phase shows a timer; the reveal is bar-less (the JS hides
+   `.round-timer` then, since a sub-second bar just flickered). */
 @media (prefers-reduced-motion: no-preference) {
   .round-timer-fill { transition: width 0.2s linear; }
   .round-timer.low .round-timer-label { animation: timer-pulse 1s ease-in-out infinite; }
@@ -269,6 +265,10 @@ button.opt { -webkit-appearance: none; appearance: none; }
 }
 .picks { position: absolute; bottom: 6px; left: 6px; display: flex; gap: 3px; }
 .picks .avatar { width: 20px; height: 20px; font-size: 8px; box-shadow: 0 0 0 2px var(--surface-color); }
+/* When your wrong tile carries the country-name strip (bottom), lift its pick
+   avatars clear of it so both stay readable — party-only, flagQuiz has no
+   avatars on a tile. */
+.opt.wrong[data-name] .picks { bottom: 30px; }
 
 .round-foot { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 

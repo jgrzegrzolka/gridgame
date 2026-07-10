@@ -203,6 +203,28 @@ export function withLocalBuzz(state, choice) {
 }
 
 /**
+ * Was the reveal a clean sweep — did every present player pick the correct
+ * answer? Drives the reveal pace (see `flags/partyTiming.js`): a clean round has
+ * nothing to study, so it snaps on; any wrong pick or a timeout (a present seat
+ * with no matching pick) counts as a miss and holds longer, so players see the
+ * flag they didn't land. Mirrors flagQuiz's correct-fast / wrong-slow feel.
+ *
+ * A no-answer is a miss: a seat that never buzzed has no entry in `picks`, so
+ * the `=== answer` test fails for it and the round isn't clean. An empty room
+ * (never happens mid-reveal — the host is present) is treated as not-clean.
+ *
+ * @param {RosterEntry[]} roster
+ * @param {{ answer: string, picks: Record<string, string> } | null} reveal
+ * @returns {boolean}
+ */
+export function isCleanReveal(roster, reveal) {
+  if (!reveal) return false;
+  const present = roster.filter((r) => r.present);
+  if (present.length === 0) return false;
+  return present.every((r) => reveal.picks[r.playerId] === reveal.answer);
+}
+
+/**
  * Pick the finish-screen celebration tier for the LOCAL player on the Flag
  * Party final screen. The scoreboard is descending by score (index 0 is the
  * top scorer), matching how `renderFinal` reads it.
