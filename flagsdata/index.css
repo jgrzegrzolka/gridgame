@@ -246,9 +246,7 @@ dialog#zoom .country-data {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid var(--muted-soft-color);
+  margin-bottom: 12px;
 }
 .lens-label {
   font-size: 12px;
