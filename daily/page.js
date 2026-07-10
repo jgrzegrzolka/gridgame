@@ -6,6 +6,7 @@ import { warsawToday } from '../flags/warsawTime.js';
 import { visiblePuzzles } from '../flags/puzzleFilter.js';
 import { loadScores, isCompleteRecord, migrateScores } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
+import { buildPopulationRankNotes } from '../flags/populationRank.js';
 import {
   wireZoom,
   openZoom,
@@ -710,6 +711,21 @@ export function bootDaily() {
       // time (they carry every language); openZoom localizes on open, so
       // a soft language switch needs no re-install.
       setZoomNotes(result.entry.notes);
+
+      // Population superlatives: upgrade the zoom captions to carry each flag's
+      // population AND its world rank among sovereign states, computed once from
+      // the metric file. Unlike the baked `entry.notes` (which only cover the
+      // frozen answers), this captions the WHOLE sovereign pool — so the "Most
+      // missed" rail's distractor tiles (the big-but-not-top-N countries a
+      // player wrongly guessed) reveal e.g. "#15 in the world" too, not just a
+      // bare name. Non-blocking and best-effort: the result renders immediately
+      // with the baked fallback, and a fetch failure just leaves that in place.
+      if (result.entry.kind === 'superlative' && result.entry.metric === 'population') {
+        fetch('../flags/metrics/population.json')
+          .then((r) => r.json())
+          .then((d) => setZoomNotes(buildPopulationRankNotes(all, d.values ?? {})))
+          .catch(() => {});
+      }
 
       // Filter entries derive the category label from the parsed
       // Filters object (re-translated on every langchange so pill
