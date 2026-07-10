@@ -78,16 +78,16 @@
         <button type="submit" class="lobby-btn" data-i18n="ttt.join">Join</button>
       </form>
       <p class="lobby-error" id="lobby-error" hidden></p>
-      <p class="start-sep" data-i18n="ttt.or">or</p>
-      <a class="lobby-btn" href="offline/" data-i18n="ttt.playOffline">Play on the same device</a>
       <p class="playing-as" id="playing-as"></p>
       <div class="actions-row">
+        <a href="offline/" data-i18n="ttt.playOffline">Play on the same device</a>
+        <span class="actions-sep" aria-hidden="true">·</span>
         <a href="../" data-i18n="menu.home">Home</a>
       </div>
     </section>
 
     <section id="game" class="online-game" hidden>
-      <p class="room-line"><span class="room-text"><span data-i18n="ttt.room">Room</span> <strong id="room-code">-----</strong></span><button type="button" class="share-link" id="share-link" aria-label="Share link" data-i18n-attr="aria-label:ttt.shareLink" hidden><span class="share-icon" aria-hidden="true"></span></button></p>
+      <p class="room-line"><span class="room-text"><strong id="room-code">-----</strong></span><button type="button" class="share-link" id="share-link" aria-label="Share link" data-i18n-attr="aria-label:ttt.shareLink" hidden><span class="share-icon" aria-hidden="true"></span></button></p>
       <p class="role-line"><span class="muted" data-i18n="ttt.youAre">You are</span> <span class="turn-badge" id="role-badge">?</span><span class="matchup-opponent" id="matchup-opponent"></span></p>
       <p class="status-line" id="status-line" data-i18n="ttt.waitingForOpponent">Waiting for opponent…</p>
       <table class="grid">

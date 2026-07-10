@@ -80,21 +80,22 @@
           <button type="submit" class="lobby-btn" data-i18n="party.join">Join</button>
         </form>
         <p class="join-error" id="join-error" hidden></p>
-        <p class="start-sep" data-i18n="party.or">or</p>
-        <button type="button" class="lobby-btn" id="play-solo" data-i18n="party.playSolo">Play solo</button>
         <p class="playing-as" id="playing-as"></p>
         <div class="actions-row">
+          <button type="button" id="play-solo" data-i18n="party.playSolo">Play solo</button>
+          <span class="actions-sep" aria-hidden="true">·</span>
           <a href="../" data-i18n="menu.home">Home</a>
         </div>
       </section>
 
       <!-- Lobby -->
       <section class="pt-lobby" id="pt-lobby" hidden>
-        <p class="room-line"><span class="room-text"><span data-i18n="party.roomLabel">Room</span> <strong id="room-code">-----</strong></span><button type="button" class="share-link" id="share-btn" aria-label="Invite link" data-i18n-attr="aria-label:party.share"><span class="share-icon" aria-hidden="true"></span></button></p>
+        <p class="room-line"><span class="room-text"><strong id="room-code">-----</strong></span><button type="button" class="share-link" id="share-btn" aria-label="Invite link" data-i18n-attr="aria-label:party.share"><span class="share-icon" aria-hidden="true"></span></button></p>
         <div class="players" id="players"></div>
-        <button type="button" class="lobby-btn" id="start-game" data-i18n="party.startGame" hidden>Start game</button>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
         <div class="actions-row">
+          <button type="button" class="row-cta" id="start-game" data-i18n="party.startGame" hidden>Start game</button>
+          <span class="actions-sep" aria-hidden="true">·</span>
           <a href="../" data-i18n="menu.home">Home</a>
         </div>
       </section>
