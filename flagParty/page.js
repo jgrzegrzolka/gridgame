@@ -23,6 +23,7 @@ const MODE_LABELS = {
   'flags-all': { key: 'party.mode.flagsAll', full: 'Flags: all countries', shortKey: 'party.modeShort.flagsAll', short: 'Flags' },
   'flags-territories': { key: 'party.mode.flagsTerritories', full: 'Flags: territories', shortKey: 'party.modeShort.flagsTerritories', short: 'Territories' },
   'map-outlines': { key: 'party.mode.mapOutlines', full: 'Map: outlines', shortKey: 'party.modeShort.mapOutlines', short: 'Maps' },
+  'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population: most & least', shortKey: 'party.modeShort.superlativePop', short: 'Population' },
 };
 
 /**
@@ -457,15 +458,29 @@ export function bootFlagParty() {
     });
     const isReveal = state.phase === 'reveal' && state.reveal;
     const isMap = q.roundId === 'mapPick';
-    const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
-    const country = byCode.get(targetCode);
-    const name = country ? countryName(country) : targetCode;
-    // A quiet mode hint ("Which flag?" / "Which outline?") above the country
-    // name, so players know whether the tiles are flags or contours; the name
-    // itself stays bare (no "The flag of", no trailing "?") — the tiles and
-    // their reveal pulse carry the rest of the question.
-    promptLead.textContent = isMap ? t('party.hintMap', 'Which outline?') : t('party.hintFlag', 'Which flag?');
-    promptTarget.textContent = name;
+    const isSuperlative = q.roundId === 'superlative';
+    // A quiet mode hint above the country name, so players know whether the tiles
+    // are flags or contours; the name itself stays bare (no "The flag of", no
+    // trailing "?") — the tiles and their reveal pulse carry the rest.
+    if (isSuperlative) {
+      // Superlative has no target country: the prompt is a direction ('most' /
+      // 'least'), and the whole question lives in the hint line ("Which is the
+      // most populous?"). The country name stays blank during the question so
+      // it can't give the answer away, and fills with the winner on reveal so
+      // players learn which flag it was (the tiles have no numbers on them).
+      const least = q.prompt === 'least';
+      promptLead.textContent = least
+        ? t('party.hintLeast', 'Which is the least populous?')
+        : t('party.hintMost', 'Which is the most populous?');
+      const winner = isReveal && state.reveal ? byCode.get(state.reveal.answer) : null;
+      promptTarget.textContent = winner ? countryName(winner) : '';
+    } else {
+      const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
+      const country = byCode.get(targetCode);
+      const name = country ? countryName(country) : targetCode;
+      promptLead.textContent = isMap ? t('party.hintMap', 'Which outline?') : t('party.hintFlag', 'Which flag?');
+      promptTarget.textContent = name;
+    }
 
     gridEl.innerHTML = '';
     for (const code of q.options) {

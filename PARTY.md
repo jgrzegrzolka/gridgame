@@ -148,15 +148,14 @@ is proven and the free rounds are in.
 
 ## Now
 
-Nothing in flight. The show engine, two rounds (flag-pick + map), the host game-setup panel,
-single online path (start with 1+), and the reveal polish are all shipped and on `main`. Pick
-the next piece:
+**Iteration 5, Round 3: Superlative (population)** is BUILT on `feat/party-superlative-round`
+and verified end-to-end (see the iteration entry below); it awaits a PR + Jan's merge. The show
+engine, two rounds (flag-pick + map), the host game-setup panel, single online path (start with
+1+), and the reveal polish are all shipped and on `main`.
 
-- **Round 3 — Superlative** (biggest / most-populous of N, closeness score). The soul of the
-  idea, previously gated on data. Population data has since landed at `flags/metrics/`
-  (`population.json` + `flags/metrics.js`, from the flagsdata metric-lens work in
-  `DATA_FEATURE.md`) — first job is to check whether it's reusable here. Needs new UI; scores solo.
-- **TV / Display + Buzzer surface** — the Jackbox layer, see Surfaces above.
+After iteration 5, the remaining pieces:
+
+- **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
 - Loose ends under **Open decisions** (QR in the lobby, speed-bonus curve, max-seat cap).
 
 Reading the history below: it's a time-ordered journal, so the current design of anything is
@@ -331,6 +330,92 @@ simplification — a naive regex round would drift over a 20k-point path). Set w
 (avg 5.5 KB → 2.4 KB)**, Canada 147 → 57 KB, US 68 → 26 KB, with no visible change at tile size
 (heavy tiles re-eyeballed). Build-time only — `svgo` + `playwright-core` are devDeps of the
 generator; the runtime/client never changed, and the code set (`contourPool.js`) is byte-identical.
+
+## Iteration 5: Round 3, Superlative (population), BUILT on branch `feat/party-superlative-round` (pending PR)
+
+Goal: the **third round type**, and the first that turns a world *metric* into a question.
+"Which of these four flags is the **most** (or **least**) **populous**?" It cashes in what
+Feature DD's `flags/metrics/` namespace was built for: the same 2x2 grid, buzz-order, and scoring
+as flag-pick, but the answer is decided by population rather than flag identity. Ship it for
+population, and every future metric (area, GDP, coffee) reuses the exact same round for free.
+
+**The shape: a third mirror of flag-pick.** Same `{ prompt, options, answer }` contract, same
+tap-one-of-four grid, same `isCorrect(q, choice) => choice === q.answer`. Tiles render **flags**
+(`flags/svg/<code>.svg`), exactly like flag-pick. That was Jan's call: recognizing the flag is
+part of the round, and the reveal names the country so nobody is left guessing. The only genuinely
+new code is *how `generate` picks the four* plus a most/least hint.
+
+**Decisions (2026-07-10):**
+
+- **Flags on the tiles, no names until reveal.** On brand (this is a flag game), and it reuses
+  flag-pick's tile path verbatim. Draw from the **sovereign pool** only: territories and
+  microstates are too obscure to keep this a fair *population* question rather than a
+  *do-you-know-this-flag* question.
+- **`prompt` carries the direction, not a country.** For flag and map rounds `prompt` is the
+  target country's code; superlative has no single target, so `prompt` is `'most'` or `'least'`,
+  and the client (already branching on `roundId`) reads it to choose the hint. This keeps the
+  three-field contract intact with no wire-protocol change. Alternative considered: a fourth
+  `direction` field, rejected as contract growth for no gain since the client switches on
+  `roundId` anyway.
+- **Correctness is guaranteed; spread is the quality knob.** Population values are distinct, so
+  there is always a strict max and min, and `answer` is never ambiguous. The real work is avoiding
+  *coin-flip* quartets (China 1.41B next to India 1.43B) and *giveaway* quartets (one giant, three
+  tiny). `generate` picks four with a guarded gap: the extreme must clear the runner-up by a
+  margin, resampling a bounded number of times, then accepting. Pure, with an injectable RNG,
+  pinned by a test that every generated question has a strictly correct answer and a runner-up gap
+  above threshold.
+- **The metric lives inside the round module, server-side.** `superlative.js` builds its own
+  `createMetric(population, countries)` at load from JSON imports, the self-contained pattern
+  `mapPick.js` uses for `CONTOUR_CODE_SET`. This runs **only on the server** (PartyKit), so the
+  browser "fetch JSON, never import" rule does not apply here (that is a client constraint); the
+  server already imports `countries.json` with an import attribute. The `ROUNDS` registry in
+  `partyGameServer.js` just gains `superlative` in the `[flagPick, mapPick]` array.
+- **Most vs least per round.** A coin-flip on the injectable RNG. Hint label `party.hintMost` /
+  `party.hintLeast` (en + pl), matching the existing `party.hintFlag` / `party.hintMap` pattern.
+- **Plan slot.** New `PARTY_MODES` entry `{ id: 'superlative-pop', roundId: 'superlative', poolId:
+  'sovereign' }`, which makes it selectable in the host setup for free. `DEFAULT_PLAN` gains a
+  short superlative finale. Proposed: **3 sovereign flag, 3 non-sovereign flag, 3 map, 2
+  superlative, 11 rounds total** (arc: familiar flags, harder flags, shapes, then "now, who is
+  bigger?"). Exact counts are a one-line tweak Jan can adjust.
+
+**Build steps:**
+
+- [x] **`flags/partyRounds/superlative.js`** (+ test). `generate(pool, exclude, rng = Math.random)`
+      returns `{ prompt: 'most' | 'least', options: code[], answer: code }`: narrows the pool to
+      codes that have a population value, picks four with the runner-up-gap guard (`GAP_RATIO = 1.25`),
+      flips most/least on the rng. `isCorrect(q, choice) => choice === q.answer`. Builds its own metric
+      from `flags/metrics/population.json` via `createMetric(population, [])` (world-scope value
+      lookups need no country list). Tests pin: the answer is always the strict, unambiguous extreme
+      in the chosen direction, both directions occur, only valued codes appear, output is
+      deterministic under a seeded rng, and `exclude` is respected.
+- [x] **Registry + plan.** Added `superlative` to `ROUNDS` in `party/partyGameServer.js`; added the
+      `superlative-pop` `PARTY_MODES` entry and a 2-round `DEFAULT_PLAN` finale (now 3 flag / 3
+      territory / 3 map / 2 superlative = 11) in `flags/partyPlan.js`. `flags/partyPlan.test.js`
+      updated.
+- [x] **Page rendering.** `flagParty/page.js` branches on `roundId === 'superlative'`: the hint line
+      carries the whole question (`party.hintMost` / `party.hintLeast`), the country name stays blank
+      during the question and fills with the winner on reveal (so it can't leak the answer), tiles
+      render as flags. Locked-in ring, reveal pulse, wrong-pick name strip + avatars, and scoring are
+      the unchanged flag-pick path.
+- [x] **i18n.** `party.mode.superlativePop`, `party.modeShort.superlativePop`, `party.hintMost`,
+      `party.hintLeast` in `en.json` + `pl.json`. No em dashes in the copy.
+- [x] `npm run validate` green (2232 tests) + **end-to-end verified in-browser** (all-population game
+      via the host setup): saw both a "least" and a "most" round; on a "least" round picked a wrong
+      flag (Cameroon) and the reveal was the exact mirror of flag-pick — the correct flag (Montenegro,
+      genuinely the least populous of the four) pulsed, the wrong pick showed its pink ring + name
+      strip + avatar, the header filled in "Montenegro", and the toast scored +0. Play-again works.
+
+**Deferred (not this iteration):**
+
+- Showing the actual population number on reveal (a nice learning payoff, but it needs the client
+  to *fetch* population.json per the browser fetch-not-import rule, so it is a fast follow, not
+  MVP).
+- Non-sovereign and continent-scoped superlatives ("most populous in Africa").
+- The 16-tile closeness-score version from the long-term vision: a different mechanic that breaks
+  the single-pick grid, so it earns its place as its own future round type rather than folding
+  into this one.
+- Other metrics (area, GDP, coffee): they drop into this same module the day their JSON lands
+  under `flags/metrics/`.
 
 ## Open decisions (settle as they come up, not now)
 
