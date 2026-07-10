@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { launchConfetti, launchFireworks } from './confetti.js';
+import { launchConfetti, launchFireworks, runCelebration } from './confetti.js';
 
 /**
  * Minimal Document stand-in: enough surface area for launchConfetti to
@@ -240,5 +240,35 @@ test('launchFireworks cancel() stops pending bursts from firing', async () => {
   result.cancel();
   await new Promise((resolve) => setTimeout(resolve, 80));
   // Container removed; pending bursts never landed particles.
+  assert.equal(doc.body._children.length, 0);
+});
+
+test('runCelebration: none tier fires nothing and returns null', () => {
+  assert.equal(runCelebration('none'), null);
+});
+
+test('runCelebration: confetti tier builds a confetti container', () => {
+  const doc = fakeDoc();
+  const result = runCelebration('confetti', {
+    doc: /** @type {any} */ (doc), duration: 0, encore: false,
+  });
+  assert.ok(result);
+  assert.equal(result.container.className, 'confetti-container');
+});
+
+test('runCelebration: fireworks tier builds a fireworks container', () => {
+  const doc = fakeDoc();
+  const result = runCelebration('fireworks', {
+    doc: /** @type {any} */ (doc), bursts: 1, particlesPerBurst: 2,
+    burstInterval: 0, particleDuration: 0,
+  });
+  assert.ok(result);
+  assert.equal(result.container.className, 'fireworks-container');
+});
+
+test('runCelebration: honours reduced motion (no container built)', () => {
+  const doc = fakeDoc({ reducedMotion: true });
+  const result = runCelebration('confetti', { doc: /** @type {any} */ (doc), encore: false });
+  assert.equal(result, null);
   assert.equal(doc.body._children.length, 0);
 });

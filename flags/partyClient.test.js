@@ -4,6 +4,7 @@ import {
   initialPartyClientState,
   reducePartyMessage,
   withLocalBuzz,
+  pickPartyCelebration,
 } from './partyClient.js';
 
 const you = 'me';
@@ -134,4 +135,46 @@ test('withLocalBuzz: ignores a choice that is not an option, or outside a questi
   const q = { prompt: 'jp', options: ['jp', 'kr', 'cn', 'th'] };
   assert.equal(withLocalBuzz({ ...initialPartyClientState(), phase: /** @type {const} */ ('question'), question: q }, 'zz').myChoice, null);
   assert.equal(withLocalBuzz({ ...initialPartyClientState(), phase: /** @type {const} */ ('reveal'), question: q }, 'jp').myChoice, null);
+});
+
+test('pickPartyCelebration: sole winner (that is me) gets fireworks', () => {
+  const scoreboard = [
+    { playerId: 'me', nickname: 'Me', score: 30 },
+    { playerId: 'a', nickname: 'A', score: 20 },
+  ];
+  assert.equal(pickPartyCelebration({ scoreboard, you: 'me' }), 'fireworks');
+});
+
+test('pickPartyCelebration: someone else won → confetti', () => {
+  const scoreboard = [
+    { playerId: 'a', nickname: 'A', score: 30 },
+    { playerId: 'me', nickname: 'Me', score: 20 },
+  ];
+  assert.equal(pickPartyCelebration({ scoreboard, you: 'me' }), 'confetti');
+});
+
+test('pickPartyCelebration: tie at the top → confetti even for a tied leader', () => {
+  const scoreboard = [
+    { playerId: 'me', nickname: 'Me', score: 30 },
+    { playerId: 'a', nickname: 'A', score: 30 },
+  ];
+  assert.equal(pickPartyCelebration({ scoreboard, you: 'me' }), 'confetti');
+});
+
+test('pickPartyCelebration: scoreless finish (top score 0) → none', () => {
+  const scoreboard = [
+    { playerId: 'me', nickname: 'Me', score: 0 },
+    { playerId: 'a', nickname: 'A', score: 0 },
+  ];
+  assert.equal(pickPartyCelebration({ scoreboard, you: 'me' }), 'none');
+});
+
+test('pickPartyCelebration: empty or null scoreboard → none', () => {
+  assert.equal(pickPartyCelebration({ scoreboard: [], you: 'me' }), 'none');
+  assert.equal(pickPartyCelebration({ scoreboard: null, you: 'me' }), 'none');
+});
+
+test('pickPartyCelebration: solo winner with unknown local id → confetti (no false fireworks)', () => {
+  const scoreboard = [{ playerId: 'a', nickname: 'A', score: 10 }];
+  assert.equal(pickPartyCelebration({ scoreboard, you: null }), 'confetti');
 });

@@ -33,7 +33,7 @@ import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.j
 import { resolveNote } from '../flags/daily.js';
 import { wireFlagLightbox } from '../flags/flagLightbox.js';
 import { t, countryName } from '../i18n.js';
-import { launchConfetti, launchFireworks } from '../confetti.js';
+import { runCelebration } from '../confetti.js';
 import { saveScore } from './scores.js';
 import {
   computeLangRefreshPayload,
@@ -564,8 +564,7 @@ export function startGame(n, category, targets, all, opts = {}) {
       saveScore(window.localStorage, n, found, total, Array.from(foundCodes));
     }
     const { tier, intensity } = pickCelebration({ found, total });
-    if (tier === 'fireworks') launchFireworks();
-    else if (tier === 'confetti') launchConfetti({ intensity });
+    runCelebration(tier, { intensity });
     renderResult(targets, foundCodes, category.label);
     if (onFinish) {
       onFinish({
