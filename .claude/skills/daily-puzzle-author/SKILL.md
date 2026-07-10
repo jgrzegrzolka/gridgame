@@ -43,9 +43,9 @@ There is no release step. Each entry's `date` is the release date — the page f
 - **Catalog drift = test failure on next push.** If `flags/countries.json` changes break a stored answer set, `validateCatalog()` throws and `push.mjs` refuses to upload. Refresh the offending entry or revert the country-data change.
 - **No emergency manual fallback path.** The release used to have a midnight runner + a manual workflow trigger as backup. Feature R removed both. The single point of dependency is now `puzzles.json` being correctly populated — which is the agent's job. Catch missing dates with `npm test` before pushing.
 
-## Two kinds of entries
+## Three kinds of entries
 
-Most puzzles are **filter** entries — `{ n, date, filter, answers, description }` — where the filter string drives the answer set and the catalog tests pin the link. The rest of this file calls these "filter entries" or just "entries."
+Most puzzles are **filter** entries — `{ n, date, filter, answers, description }` — where the filter string drives the answer set and the catalog tests pin the link. The rest of this file calls these "filter entries" or just "entries." The other two kinds — **manual** and **superlative** — are below.
 
 **Manual entries** are the escape hatch for puzzles whose criterion can't be expressed in the filter DSL — ad-hoc visual patterns ("triangles pointing inward from the hoist"), non-flag-data facts ("countries that legalised X"), curated-list themes ("the original Schengen six"), or anything else the DSL doesn't reach. Shape:
 
@@ -78,6 +78,44 @@ No `filter` field on a manual entry — `kind` is the discriminator. The page pi
 - **Apply**: 3 (valid codes — but manual entries may draw from the **full** pool, not just sovereign: home nations / territories like England `gb-eng` are allowed when the roster needs them; filter entries stay sovereign-only), 4 (sequential `n` + contiguous dates), 6 (no two entries — any kind — share an identical answer set), 7 (description; include `additionalDescription` sovereign note unless the roster has a non-sovereign flag), 8 (nameScore by N), 9 (answer-set size), 11 (country-reuse cap), 12/13 (onboarding shape).
 - **Skip**: 1 (drift detector — no filter to resolve), 2 (no tokens), 5 (no colours to be primary-clean against), 6's strict-subset-via-refinement half (a manual entry can't be a "refinement" of a filter entry — no shared token vocabulary), 10 (no compounds), 14 (no tokens), 15 (no filter-membership-flipping flag to flag).
 - **Extra**: manual entries need `title.en` and `title.pl`, both non-empty. Pinned by the `every manual entry has en + pl title` test.
+
+## Superlative entries
+
+**Superlative** entries (Feature DG) are "the top-N countries by a world metric, in a scope, optionally intersected with a flag filter" — *the 10 most populous countries*, *the 5 most populous European flags with white*, *the 5 smallest in Oceania*. Shape:
+
+```jsonc
+{
+  "n": 60,
+  "date": "2026-08-05",
+  "kind": "superlative",
+  "metric": "population",          // a key in flags/metrics/index.js
+  "scope": "Europe",              // "world" or a continent name
+  "direction": "most",           // "most" | "least"
+  "topN": 5,                      // == answers.length
+  "filter": "color:white",       // OPTIONAL — narrows the ranking pool only
+  "answers": ["ru", "gb", "fr", "it", "es"],   // machine-computed, then FROZEN
+  "title": {                      // hand-written, like a manual entry
+    "en": "The 5 most populous white flags of Europe",
+    "pl": "5 najludniejszych białych flag Europy"
+  },
+  "description": { "en": "…", "pl": "…" },
+  "additionalDescription": { "en": "Sovereign countries only.", "pl": "Tylko kraje suwerenne." }
+}
+```
+
+**Why it's a distinct kind, not a filter token.** A superlative is *set-relative* (rank the whole scope) while the filter DSL is a *per-flag* predicate. So it can't be a token — the mechanic is "reuse the DSL to narrow the pool, then rank by the metric and take N." The optional `filter` is ONLY the pool-narrowing part; it is not the criteria and is not re-applied at play time.
+
+**How to author one.**
+1. Compute the roster: `resolveSuperlative({ metric, scope, direction, topN, filter }, countries, metricValues)` in `flags/superlative.js` is the source of truth. (The `.catalog` working copy + `flags/metrics/<metric>.json` give you the inputs.)
+2. Store the returned codes as `answers`; set `topN` to `answers.length` (the validator enforces equality, so the number in your title stays honest).
+3. Hand-write `title.en` / `title.pl` (auto-generation was rejected — PL grammar needs a human, same reasoning as rule 7). Rendering shows the title, like a manual entry.
+4. Run `node authoring/audit-superlative.mjs` — it recomputes every superlative and flags any **future-dated** entry whose stored roster drifted from the live metric (exit 1). Fix drafts before release.
+
+**Frozen, like manual.** The catalog never re-derives a superlative's answers (`checkSuperlativeShape` in `flags/dailyValidate.js` validates *shape* only). `population.json` refreshes yearly and released puzzles are immutable, so a live recompute would eventually break a past puzzle. The audit script is the future-dated safety net; correctness of a released roster is frozen at author time.
+
+**Which rules apply.** Same as manual for the frozen half (skips rule 1 drift, rule 2 tokens, rule 14). **Applies:** rule 3 (sovereign codes — superlatives are sovereign-only, unlike manual which may draw territories), rule 4 (`n` + dates), rule 5 (primary-clean — resolve the flag-`filter` part under `primaryColors` for #1-100; `resolveSuperlative` takes a `colorField` option for this), rule 7 (en/pl description + the sovereign `additionalDescription` note), rule 8 (nameScore by N), rule 9 (size 4-30), rule 11 (reuse cap), rule 15 (ambiguity, if the flag-filter touches a tagged flag). Plus superlative-only shape checks (metric/scope/direction/topN/title), pinned by `flags/dailyValidate.test.js`.
+
+**Content watch-outs.** Superlatives of "most populous" are all famous → score very easy (good early, but rule 6 no-subset still applies — space "world top-10" apart from "Asia/Africa top-N" since the giants recur). "Smallest" / `direction: "least"` sets go obscure fast (Tuvalu, Nauru…) → high nameScore, late-N only. Watch the rule-11 reuse cap: China / India / USA recur across world + continent + compound rosters.
 
 ## Filter DSL primitives
 
