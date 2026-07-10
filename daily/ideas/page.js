@@ -1,11 +1,13 @@
 import { t } from '../../i18n.js';
 import { renderArchiveSquare, refreshSquareCriteria } from '../squares.js';
 import { fetchCatalog } from '../catalogSource.js';
-import { loadReviewState, saveReviewState } from './reviewState.js';
+import { loadReviewState, saveReviewState, ideaKey } from './reviewState.js';
 
 /**
  * @typedef {Object} Idea
- * @property {string} filter
+ * @property {string} [filter]
+ * @property {string} [kind]  'superlative' for metric-ranked ideas; absent = filter idea.
+ * @property {Record<string, string>} [title]  hand-written label for superlative ideas.
  * @property {string} [notes]
  * @property {number} [parkUntilN]
  * @property {number} [difficulty]
@@ -53,9 +55,14 @@ export function bootIdeas() {
 
       ideas.forEach((idea, i) => {
         const k = i + 1;
+        const key = ideaKey(idea);
+        // Carry kind + title so a superlative idea renders via its title (the
+        // squares title path), not a parse of its absent criterion filter.
         const synthetic = /** @type {DailyPuzzle} */ ({
           n: k,
+          kind: idea.kind,
           filter: idea.filter,
+          title: idea.title,
           answers: [],
         });
         const tile = renderArchiveSquare(synthetic, {
@@ -69,7 +76,7 @@ export function bootIdeas() {
         }
 
         const paintVerdictClass = () => {
-          const v = state.get(idea.filter);
+          const v = state.get(key);
           tile.classList.toggle('archive-square--approved', v === 'approved');
           tile.classList.toggle('archive-square--rejected', v === 'rejected');
         };
@@ -90,9 +97,9 @@ export function bootIdeas() {
           btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const current = state.get(idea.filter);
-            if (current === target) state.delete(idea.filter); // toggle off
-            else state.set(idea.filter, target);               // set or switch
+            const current = state.get(key);
+            if (current === target) state.delete(key); // toggle off
+            else state.set(key, target);               // set or switch
             saveReviewState(state);
             paintVerdictClass();
           });
