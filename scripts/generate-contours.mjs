@@ -17,7 +17,30 @@
  */
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { chromium } from 'playwright-core';
+import { optimize } from 'svgo';
 import { sovereignPool } from '../flags/flagPools.js';
+
+/**
+ * SVGO pass, run over every emitted contour. The raw worldMap geometry carries
+ * full source precision (2+ decimals of a viewBox unit) that's sub-pixel at
+ * tile size — coastline-heavy outlines like Canada weighed ~147 KB of invisible
+ * detail. `convertPathData` at 1-decimal precision does a *proper* relative-path
+ * simplification (a naive regex round would drift over a 20k-point path); the
+ * heavy tiles drop ~2.5× and the whole set roughly halves, with no visible
+ * change at the ~150 px the map round renders them. `removeViewBox` is not part
+ * of preset-default in SVGO 4 and viewBox has no width/height twin to collapse
+ * into, so the square crop is preserved untouched.
+ */
+const SVGO_CONFIG = {
+  multipass: true,
+  plugins: [{
+    name: 'preset-default',
+    params: { overrides: {
+      convertPathData: { floatPrecision: 1 },
+      cleanupNumericValues: { floatPrecision: 1 },
+    } },
+  }],
+};
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const CONTOUR_DIR = `${ROOT}/flags/contours`;
@@ -125,7 +148,8 @@ const included = [];
 const skipped = [];
 for (const r of results) {
   if (r.ok) {
-    writeFileSync(`${CONTOUR_DIR}/${r.code}.svg`, `${r.svg}\n`);
+    const svg = optimize(r.svg, SVGO_CONFIG).data;
+    writeFileSync(`${CONTOUR_DIR}/${r.code}.svg`, `${svg}\n`);
     included.push(r.code);
   } else {
     skipped.push(r);
