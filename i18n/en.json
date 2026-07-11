@@ -556,6 +556,7 @@
       "roomNotFound": "Room not found, ask for the code or create a new room",
       "codeCollision": "That code is already taken, try creating a new one",
       "inProgress": "That game has already started, wait for the next one",
+      "roomFull": "That room is full, ask the host to start or create a new room",
       "missingPlayerId": "Connection error, please reload the page",
       "fallback": "Rejected: {reason}"
     }

@@ -58,6 +58,18 @@ import { scoreRound } from './partyScore.js';
 export const DEFAULT_ROUNDS = 5;
 
 /**
+ * Hard cap on seats in a room. Not a platform limit (the Durable Object would
+ * take far more): it's a sane bound for the phone-only surface (every player is
+ * on their own screen, so the scoreboard and per-tile pick avatars stay
+ * readable) and a cheap guard against a scripted flood of connections bloating
+ * the serialized room. Reconnects are always welcomed regardless, so a full
+ * room's existing players can still drop and come back. Raise this if a
+ * TV/Display surface lands, where players look at one screen and the phone
+ * readability constraint relaxes.
+ */
+export const MAX_SEATS = 20;
+
+/**
  * @param {number} [totalRounds]
  * @param {Room['plan']} [plan]  the default plan the room opens with; the host
  *   can replace it (with a matching `totalRounds`) at start.
@@ -96,6 +108,15 @@ export function applyHello(room, playerId, nickname) {
     return {
       room,
       broadcasts: [{ to: playerId, message: { type: 'rejected', reason: 'in-progress' } }],
+      rejectConnection: true,
+    };
+  }
+  // A full room turns away new seats but always welcomes a reconnect (a known
+  // playerId already holds a seat, so it never counts against the cap).
+  if (!isReconnect && room.seats.size >= MAX_SEATS) {
+    return {
+      room,
+      broadcasts: [{ to: playerId, message: { type: 'rejected', reason: 'room-full' } }],
       rejectConnection: true,
     };
   }
