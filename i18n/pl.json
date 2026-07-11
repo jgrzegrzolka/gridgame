@@ -485,7 +485,8 @@
       "codeCollision": "Ten kod jest już zajęty, spróbuj utworzyć nowy",
       "missingPlayerId": "Błąd połączenia, odśwież stronę",
       "fallback": "Odrzucono: {reason}"
-    }
+    },
+    "noData": "brak danych"
   },
   "ttt9x9": {
     "title": "Yet Another Quiz: 9×9 Kółko i krzyżyk z flagami",

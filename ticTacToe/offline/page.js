@@ -1,5 +1,6 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
 import { loadCountries, attachPopulations } from '../../flags/group.js';
+import { metricDataGap } from '../../flags/metricTiers.js';
 import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells } from '../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
@@ -213,7 +214,21 @@ function runTicTacToe({ puzzle, countries }) {
     selectedIndex = 0;
     renderSuggestions();
     const auto = exactSingleMatch(currentMatches, query);
-    if (auto) pickCountry(auto);
+    // Don't auto-submit a data-gap match — leave it visible as "no data" rather
+    // than shaking mid-type. A deliberate Enter/click still routes through the
+    // pickCountry guard.
+    if (auto && !activeCellDataGap(auto)) pickCountry(auto);
+  }
+
+  /**
+   * The metric key the active cell has no data for `country` (so picking it
+   * would lose the cell to a data gap, not a wrong guess), or null when it's a
+   * fair guess. Drives the "no data" disable in the picker.
+   * @param {Country} country
+   */
+  function activeCellDataGap(country) {
+    if (!activeCell) return null;
+    return metricDataGap([puzzle.rows[activeCell.row], puzzle.cols[activeCell.col]], country);
   }
 
   function renderSuggestions() {
@@ -224,14 +239,25 @@ function runTicTacToe({ puzzle, countries }) {
       const name = document.createElement('span');
       name.textContent = countryName(country);
       li.appendChild(name);
-      li.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        pickCountry(country);
-      });
-      li.addEventListener('mouseenter', () => {
-        selectedIndex = i;
-        renderSelected();
-      });
+      // No population value on a population cell → the player can't know our
+      // data lacks it, so show it disabled with a "no data" tag rather than let
+      // them pick it and lose the cell. Every commit path also refuses it.
+      if (activeCellDataGap(country)) {
+        li.classList.add('no-data');
+        const tag = document.createElement('span');
+        tag.className = 'suggestion-no-data';
+        tag.textContent = t('ttt.noData', 'no data');
+        li.appendChild(tag);
+      } else {
+        li.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          pickCountry(country);
+        });
+        li.addEventListener('mouseenter', () => {
+          selectedIndex = i;
+          renderSelected();
+        });
+      }
       pickerSuggestionsEl.appendChild(li);
     });
   }
@@ -288,6 +314,13 @@ function runTicTacToe({ puzzle, countries }) {
   /** @param {Country} country */
   function pickCountry(country) {
     if (!activeCell) return;
+    // Refuse a country with no data for a metric axis of this cell (also
+    // reached via Enter / exact-name auto-submit) — a shake signals "not a
+    // valid pick here" instead of flipping the turn on a data gap.
+    if (activeCellDataGap(country)) {
+      pulseShake(pickerInputEl);
+      return;
+    }
     const { row, col } = activeCell;
     const outcome = attemptClaim(state, row, col, country);
     state = outcome.nextState;
