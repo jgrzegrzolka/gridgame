@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem, shareUrl, shareText, NICKNAME_STORAGE_KEY } from './common.js';
+import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem, shareUrl, shareText, makeColorSwatch, NICKNAME_STORAGE_KEY } from './common.js';
 import { defaultNickname } from './flags/nickname.js';
 
 /**
@@ -543,3 +543,33 @@ test("shareText: legacy fallback gets the text payload, not a url", async () => 
   assert.deepEqual(doc._inserted, [], "textarea must be cleaned up");
 });
 
+
+/**
+ * Minimal fake element/document for makeColorSwatch: tracks className, the
+ * dataset map, and setAttribute calls — the only surface the helper touches.
+ */
+function fakeSwatchDoc() {
+  return /** @type {any} */ ({
+    createElement: () => {
+      /** @type {Record<string, string>} */
+      const attrs = {};
+      return {
+        className: '',
+        dataset: /** @type {Record<string, string>} */ ({}),
+        setAttribute: (/** @type {string} */ k, /** @type {string} */ v) => { attrs[k] = v; },
+        getAttribute: (/** @type {string} */ k) => attrs[k] ?? null,
+      };
+    },
+  });
+}
+
+test('makeColorSwatch builds a .pill-swatch span carrying the colour in data-value', () => {
+  const sw = makeColorSwatch('red', fakeSwatchDoc());
+  assert.equal(sw.className, 'pill-swatch');
+  assert.equal(sw.dataset.value, 'red');
+});
+
+test('makeColorSwatch marks the dot aria-hidden (the adjacent label names the colour)', () => {
+  const sw = makeColorSwatch('blue', fakeSwatchDoc());
+  assert.equal(sw.getAttribute('aria-hidden'), 'true');
+});

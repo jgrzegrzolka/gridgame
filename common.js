@@ -90,6 +90,27 @@ export function buildAvatar(deviceId, doc = document) {
 }
 
 /**
+ * Build the flag-colour swatch dot that precedes a colour pill / chip label.
+ * Shared by flagsdata's filter bar and findFlag's chooser so the markup can't
+ * drift. The visual recipe (size, ring) and the per-value fill hues live on
+ * `.pill-swatch` in common.css — those hues are the one documented exception to
+ * the seven-colour palette (a swatch shows a literal flag colour, like the flag
+ * SVGs themselves). `aria-hidden` because the adjacent label already names the
+ * colour, so the dot is decorative to assistive tech.
+ *
+ * @param {string} value  one of ALL_FLAG_COLORS (drives the CSS hue via data-value)
+ * @param {Document} [doc]
+ * @returns {HTMLSpanElement}
+ */
+export function makeColorSwatch(value, doc = document) {
+  const sw = doc.createElement('span');
+  sw.className = 'pill-swatch';
+  sw.dataset.value = value;
+  sw.setAttribute('aria-hidden', 'true');
+  return sw;
+}
+
+/**
  * Paint the "Playing as <name>" identity line into `el`: the local player's
  * profile avatar (the same deterministic identicon the burger nickname menu
  * shows, via `avatarSvg(deviceId)`) followed by the label and their bold name.
