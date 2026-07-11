@@ -292,6 +292,48 @@ test('pickMarkerKind: flag not in puzzle (distractor) → no marker', () => {
   assert.equal(r, null);
 });
 
+test('pickMarkerKind: distractor the player clicked wrong → wrong', () => {
+  const r = pickMarkerKind({
+    code: 'ge',
+    targetCodes: new Set(['fr', 'de']),
+    userFoundCodes: new Set(['fr']),
+    userWrongCodes: new Set(['ge']),
+  });
+  assert.equal(r, 'wrong');
+});
+
+test('pickMarkerKind: distractor the player did NOT click → no marker', () => {
+  const r = pickMarkerKind({
+    code: 'si',
+    targetCodes: new Set(['fr', 'de']),
+    userFoundCodes: new Set(['fr']),
+    userWrongCodes: new Set(['ge']),
+  });
+  assert.equal(r, null);
+});
+
+test('pickMarkerKind: found/missed win over wrong (rows are partitioned)', () => {
+  // A target is never a wrong-click, but assert the precedence explicitly.
+  assert.equal(
+    pickMarkerKind({
+      code: 'fr',
+      targetCodes: new Set(['fr']),
+      userFoundCodes: new Set(['fr']),
+      userWrongCodes: new Set(['fr']),
+    }),
+    'found',
+  );
+  assert.equal(
+    pickMarkerKind({
+      code: 'de',
+      targetCodes: new Set(['de']),
+      userFoundCodes: new Set(),
+      userWrongCodes: new Set(['de']),
+    }),
+    'missed',
+  );
+});
+
 test('pickMarkerKind: empty userFoundCodes (no-attempt state) → missed for targets, null for non-targets', () => {
   assert.equal(
     pickMarkerKind({ code: 'fr', targetCodes: new Set(['fr']), userFoundCodes: new Set() }),

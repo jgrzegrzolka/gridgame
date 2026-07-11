@@ -613,7 +613,7 @@ export function startGame(n, category, targets, all, opts = {}) {
     const found = foundCodes.size;
     const total = targetCodes.size;
     if (!skipSave) {
-      saveScore(window.localStorage, n, found, total, Array.from(foundCodes));
+      saveScore(window.localStorage, n, found, total, Array.from(foundCodes), Array.from(wrongCodes));
     }
     const { tier, intensity } = pickCelebration({ found, total });
     runCelebration(tier, { intensity });
