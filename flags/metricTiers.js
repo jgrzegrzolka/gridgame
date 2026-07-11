@@ -23,14 +23,73 @@ import { POPULATION_BREAKS_FOR_RANDOM, population } from './engine.js';
  * threshold family), then add one line here. Both the findFlag chooser and the
  * flagsdata filter bar light up its tier pills for free.
  *
+ * `has(country)` answers "does this country carry a value for the metric?" —
+ * the metric map is sparse (population omits uninhabited territories and the
+ * org "flags"), and a threshold predicate silently fails a country with no
+ * value. TTT reads this to disable such a guess with a "no data" label so a
+ * data gap can't cost the player a cell (see `metricDataGap`).
+ *
  * @type {Record<string, {
  *   breaks: ReadonlyArray<{ op: '>=' | '<=', n: number }>,
  *   factory: (op: '>=' | '<=', n: number) => { predicate: (c: Country) => boolean },
+ *   has: (c: Country) => boolean,
  * }>}
  */
 export const METRIC_TIER_REGISTRY = {
-  population: { breaks: POPULATION_BREAKS_FOR_RANDOM, factory: population },
+  population: {
+    breaks: POPULATION_BREAKS_FOR_RANDOM,
+    factory: population,
+    has: (c) => typeof c.population === 'number',
+  },
 };
+
+/**
+ * The registered metric a category keys on, or null. Prefers `exclusiveGroup`
+ * (present on full offline Category objects), and falls back to the `id` prefix
+ * (`population:>=10000000` → `population`). The fallback matters online: the
+ * puzzle crosses a WebSocket as JSON, so the predicate is gone and only string
+ * fields survive — `id` is always sent (label rendering needs it) but
+ * `exclusiveGroup` may not be. By convention the factory sets both to the metric
+ * name, so either source resolves to the same key.
+ *
+ * @param {{ exclusiveGroup?: string, id?: string } | null | undefined} cat
+ * @returns {string | null}
+ */
+export function metricKeyOfCategory(cat) {
+  if (!cat) return null;
+  if (cat.exclusiveGroup && METRIC_TIER_REGISTRY[cat.exclusiveGroup]) return cat.exclusiveGroup;
+  if (typeof cat.id === 'string') {
+    const i = cat.id.indexOf(':');
+    const prefix = i > 0 ? cat.id.slice(0, i) : '';
+    if (prefix && METRIC_TIER_REGISTRY[prefix]) return prefix;
+  }
+  return null;
+}
+
+/**
+ * A TTT cell keys on two categories (its row + col). If either is a
+ * threshold-metric axis (e.g. `population`) for which `country` carries no
+ * value, that country can never satisfy the cell — but the player has no way to
+ * know our data lacks the value, so letting them pick it would cost a cell to a
+ * data gap, not a wrong guess. This returns the offending metric key so the
+ * picker can show the suggestion disabled with a "no data" label; `null` when
+ * the country is a fair guess (it has data for every metric axis, or the cell
+ * has no metric axis).
+ *
+ * Metric-general by construction: any future threshold metric added to
+ * `METRIC_TIER_REGISTRY` (with its `has`) is covered with no change here.
+ *
+ * @param {ReadonlyArray<{ exclusiveGroup?: string, id?: string } | null | undefined>} categories
+ * @param {Country} country
+ * @returns {string | null} the metric key with no data, or null
+ */
+export function metricDataGap(categories, country) {
+  for (const cat of categories) {
+    const key = metricKeyOfCategory(cat);
+    if (key && !METRIC_TIER_REGISTRY[key].has(country)) return key;
+  }
+  return null;
+}
 
 /** @typedef {{ value: string, op: '>=' | '<=', n: number, count: number }} MetricTierItem */
 

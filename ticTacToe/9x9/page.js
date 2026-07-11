@@ -10,7 +10,8 @@ import {
 import { getOrCreateDeviceId } from '../../flags/identity.js';
 import { newlyWonSmallBoards, isMetaWinNewlyFormed } from '../../flags/ultimateTicTacToe.js';
 import { shouldFireTicTacToeConfetti } from '../../flags/ticTacToe.js';
-import { loadCountries } from '../../flags/group.js';
+import { loadCountries, attachPopulations } from '../../flags/group.js';
+import { metricDataGap } from '../../flags/metricTiers.js';
 import { shareUrl, renderPlayingAs } from '../../common.js';
 import { trackEvent } from '../../analytics/index.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
@@ -36,10 +37,18 @@ function tCat(c) {
 }
 
 export function bootUltimateTicTacToeOnline() {
-  fetch('../../flags/countries.json')
-    .then((r) => r.json())
-    .then(loadCountries)
-    .then((countries) => runOnline(withLocalizedAliases(countries)))
+  // Population powers the picker's "no data" guard; online generation is
+  // server-side, so a population-fetch failure must NOT block the game — it
+  // resolves to null and the guard stays off. Fetched, never imported.
+  Promise.all([
+    fetch('../../flags/countries.json').then((r) => r.json()),
+    fetch('../../flags/metrics/population.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+  ])
+    .then(([rawCountries, population]) => {
+      const countries = withLocalizedAliases(loadCountries(rawCountries));
+      if (population) attachPopulations(countries, population.values);
+      runOnline(countries);
+    })
     .catch((err) => {
       const lobbyEl = document.getElementById('lobby');
       if (lobbyEl) lobbyEl.hidden = false;
@@ -487,7 +496,20 @@ function runOnline(countries) {
     selectedIndex = 0;
     renderSuggestions();
     const auto = exactSingleMatch(currentMatches, query);
-    if (auto) pickCountry(auto);
+    // Don't auto-submit a data-gap match — leave it visible as "no data". A
+    // deliberate Enter/click still routes through the pickCountry guard.
+    if (auto && !activeCellDataGap(auto)) pickCountry(auto);
+  }
+
+  /**
+   * The metric key the active cell has no data for `country` (so picking it
+   * would lose the cell to a data gap, not a wrong guess), or null.
+   * @param {Country} country
+   */
+  function activeCellDataGap(country) {
+    const g = state.game;
+    if (!activeCell || !g) return null;
+    return metricDataGap([g.puzzle.rows[activeCell.bigRow], g.puzzle.cols[activeCell.bigCol]], country);
   }
 
   function renderSuggestions() {
@@ -498,8 +520,19 @@ function runOnline(countries) {
       const name = document.createElement('span');
       name.textContent = countryName(country);
       li.appendChild(name);
-      li.addEventListener('mousedown', (e) => { e.preventDefault(); pickCountry(country); });
-      li.addEventListener('mouseenter', () => { selectedIndex = i; renderSelected(); });
+      // No population value on a population cell → disable it with a "no data"
+      // tag rather than let the player lose the cell to a data gap. Every commit
+      // path also refuses it.
+      if (activeCellDataGap(country)) {
+        li.classList.add('no-data');
+        const tag = document.createElement('span');
+        tag.className = 'suggestion-no-data';
+        tag.textContent = t('ttt.noData', 'no data');
+        li.appendChild(tag);
+      } else {
+        li.addEventListener('mousedown', (e) => { e.preventDefault(); pickCountry(country); });
+        li.addEventListener('mouseenter', () => { selectedIndex = i; renderSelected(); });
+      }
       pickerSuggestionsEl.appendChild(li);
     });
   }
@@ -539,6 +572,13 @@ function runOnline(countries) {
   /** @param {Country} country */
   function pickCountry(country) {
     if (!activeCell || !ws) return;
+    // Refuse a country with no data for a metric axis of this cell (also
+    // reached via Enter / exact-name auto-submit) — shake instead of sending a
+    // claim the server would only reject, so a data gap can't cost the round.
+    if (activeCellDataGap(country)) {
+      pulseShake(pickerInputEl);
+      return;
+    }
     const { bigRow, bigCol, smallRow, smallCol } = activeCell;
     ws.send(JSON.stringify({ type: 'claim', bigRow, bigCol, smallRow, smallCol, countryCode: country.code }));
     closePicker();

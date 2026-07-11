@@ -406,6 +406,23 @@ body.game-over .actions-row {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* A suggestion our data can't score against the active cell's metric axis
+   (e.g. a country with no population value on a population cell). Disabled +
+   muted with a "no data" tag so a data gap can't cost the player a cell —
+   every commit path also refuses it. */
+.picker-suggestions li.no-data,
+.picker-suggestions li.no-data:hover,
+.picker-suggestions li.no-data.selected {
+  cursor: not-allowed;
+  color: var(--muted-color);
+  background: none;
+}
+.picker-suggestions .suggestion-no-data {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--muted-color);
+}
 
 body.picker-open {
   overflow: hidden;

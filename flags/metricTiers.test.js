@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildMetricTierItems, METRIC_TIER_REGISTRY } from './metricTiers.js';
-import { POPULATION_BREAKS_FOR_RANDOM } from './engine.js';
+import { buildMetricTierItems, METRIC_TIER_REGISTRY, metricDataGap } from './metricTiers.js';
+import { POPULATION_BREAKS_FOR_RANDOM, population, continent } from './engine.js';
 
 /** Hand-built population set spanning the breakpoints, plus one country with
  * no population field (the sparse case the predicate must skip). */
@@ -55,5 +55,43 @@ test('registry entries expose breaks + a factory whose predicate is callable', (
     const { op, n } = entry.breaks[0];
     const cat = entry.factory(op, n);
     assert.equal(typeof cat.predicate, 'function', `${key} factory returns a predicate`);
+    assert.equal(typeof entry.has, 'function', `${key} entry exposes has()`);
   }
+});
+
+// ---- metricDataGap (the TTT "no data" guard) -------------------------------
+
+const HAS_POP = { code: 'aa', continent: 'Europe', population: 5_000_000 };
+const NO_POP = { code: 'zz', continent: 'Europe' }; // e.g. an org / uninhabited territory
+
+test('flags a country with no value when the cell has a population axis', () => {
+  const cell = [population('>=', 10_000_000), continent('Europe')];
+  assert.equal(metricDataGap(cell, /** @type {any} */ (NO_POP)), 'population');
+});
+
+test('passes a country that has the value on a population axis', () => {
+  const cell = [population('>=', 10_000_000), continent('Europe')];
+  assert.equal(metricDataGap(cell, /** @type {any} */ (HAS_POP)), null);
+});
+
+test('no metric axis in the cell → never a data gap, even with no value', () => {
+  const cell = [continent('Europe'), continent('Asia')];
+  assert.equal(metricDataGap(cell, /** @type {any} */ (NO_POP)), null);
+});
+
+test('detects the gap regardless of which axis carries the metric', () => {
+  const rowFirst = [continent('Europe'), population('<=', 1_000_000)];
+  assert.equal(metricDataGap(rowFirst, /** @type {any} */ (NO_POP)), 'population');
+});
+
+test('tolerates null / undefined categories', () => {
+  assert.equal(metricDataGap([null, undefined], /** @type {any} */ (NO_POP)), null);
+});
+
+test('resolves the metric from the id prefix when exclusiveGroup is absent (online wire shape)', () => {
+  // Online categories cross a WebSocket as JSON: no predicate, and possibly no
+  // exclusiveGroup — but the id survives.
+  const wireCell = [{ id: 'population:>=10000000', label: 'over 10M people' }, { id: 'continent:Europe', label: 'Europe' }];
+  assert.equal(metricDataGap(wireCell, /** @type {any} */ (NO_POP)), 'population');
+  assert.equal(metricDataGap(wireCell, /** @type {any} */ (HAS_POP)), null);
 });

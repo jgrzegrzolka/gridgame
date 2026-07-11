@@ -485,7 +485,8 @@
       "codeCollision": "That code is already taken, try creating a new one",
       "missingPlayerId": "Connection error, please reload the page",
       "fallback": "Rejected: {reason}"
-    }
+    },
+    "noData": "no data"
   },
   "ttt9x9": {
     "title": "Yet Another Quiz: 9×9 Flag Tic Tac Toe",
