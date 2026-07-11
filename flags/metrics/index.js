@@ -18,4 +18,5 @@
 export const METRIC_FILES = [
   { key: 'population', file: 'population.json', label: 'Population' },
   { key: 'area', file: 'area.json', label: 'Land area' },
+  { key: 'density', file: 'density.json', label: 'Population density' },
 ];
