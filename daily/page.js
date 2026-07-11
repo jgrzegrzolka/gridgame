@@ -7,6 +7,7 @@ import { visiblePuzzles } from '../flags/puzzleFilter.js';
 import { loadScores, isCompleteRecord, migrateScores } from './scores.js';
 import { filterToCategory } from '../flags/findFlag.js';
 import { buildPopulationRankNotes, buildSuperlativeTileMeta } from '../flags/populationRank.js';
+import { buildContinentNotes, mergeNotes } from '../flags/continentNotes.js';
 import {
   wireZoom,
   openZoom,
@@ -711,7 +712,12 @@ export function bootDaily() {
       // wherever the flag appears. Notes are language-agnostic at install
       // time (they carry every language); openZoom localizes on open, so
       // a soft language switch needs no re-install.
-      setZoomNotes(result.entry.notes);
+      //
+      // On a continent-scoped puzzle, fold in the straddler classification
+      // notes (Georgia in "Europe + cross" is a five-cross flag a player
+      // clicks, misses because we classify it Asia, then meets in the "Most
+      // missed" rail). `buildContinentNotes` returns {} off continent scope.
+      setZoomNotes(mergeNotes(result.entry.notes, buildContinentNotes(result.entry)));
       setTileMeta(null);
 
       // Population superlatives: one metric fetch feeds two enrichments of the
@@ -732,7 +738,12 @@ export function bootDaily() {
           .then((r) => r.json())
           .then((d) => {
             const values = d.values ?? {};
-            setZoomNotes(buildPopulationRankNotes(all, values));
+            // Population figure first, then the continent note where both apply
+            // (e.g. Russia in "most populous Asia" shows its world rank AND why
+            // it isn't on the list). Off continent scope the second map is {}.
+            setZoomNotes(
+              mergeNotes(buildPopulationRankNotes(all, values), buildContinentNotes(result.entry)),
+            );
             setTileMeta(buildSuperlativeTileMeta(result.entry, values));
           })
           .catch(() => {});
