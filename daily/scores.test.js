@@ -52,6 +52,22 @@ test('saveScore + loadScores roundtrips full {f, t, c}', () => {
   });
 });
 
+test('saveScore + loadScores roundtrips wrong guesses {f, t, c, w}', () => {
+  const store = fakeStore();
+  saveScore(store, 1, 3, 9, ['fi', 'no', 'se'], ['ge', 'tr']);
+  assert.deepEqual(loadScores(store), {
+    1: { f: 3, t: 9, c: ['fi', 'no', 'se'], w: ['ge', 'tr'] },
+  });
+});
+
+test('saveScore omits w on perfect play (no wrong guesses)', () => {
+  const store = fakeStore();
+  saveScore(store, 1, 9, 9, ['a', 'b'], []); // empty wrong list → no `w` key
+  assert.deepEqual(loadScores(store), {
+    1: { f: 9, t: 9, c: ['a', 'b'] },
+  });
+});
+
 test('saveScore does NOT overwrite an existing entry (first-attempt-only)', () => {
   // The archive locks in the player's first attempt — replays are
   // silently dropped. Mirrors the server-side rule (insert-only Cosmos

@@ -72,26 +72,30 @@ function pickRanking({ stats, targetCodes }) {
 }
 
 /**
- * Decide the per-tile corner marker for the extra-stats rail. The
- * player's foundCodes is the source of truth for "I got this":
+ * Decide the per-tile corner marker for the extra-stats rail. The player's
+ * own found / wrong sets are the source of truth for "what did I do here":
  *
  *   - 'found'  → code is in userFoundCodes (player got it right). Green dot.
  *   - 'missed' → code is in targetCodes but NOT in userFoundCodes (player
  *                saw it and didn't get it). Red dot.
- *   - null     → code isn't a target at all (only happens on the topMistake
- *                row, whose tile is a distractor flag). No dot.
+ *   - 'wrong'  → code is a distractor the player clicked (in userWrongCodes).
+ *                Only occurs on the topMistake row, whose tiles are all
+ *                distractors. Marks "I made this mistake too."
+ *   - null     → none of the above (a distractor the player did NOT click).
  *
- * The topMistake row is intentionally never marked: we don't store the
- * player's own wrongCodes in localStorage, so we can't reliably tell
- * "did I click this wrong myself" on revisit. The marker stays silent
- * rather than guess wrong.
+ * The three markable states are naturally partitioned by row: the ranking row
+ * holds only targets (found / missed), the topMistake row only distractors
+ * (wrong / null), so a code never qualifies for two. `userWrongCodes` is
+ * optional — when absent (old record with no persisted `w`, or an in-progress
+ * caller) the topMistake row stays unmarked rather than guessing.
  *
- * @param {{ code: string, targetCodes: Set<string>, userFoundCodes: Set<string> }} input
- * @returns {'found' | 'missed' | null}
+ * @param {{ code: string, targetCodes: Set<string>, userFoundCodes: Set<string>, userWrongCodes?: Set<string> }} input
+ * @returns {'found' | 'missed' | 'wrong' | null}
  */
-export function pickMarkerKind({ code, targetCodes, userFoundCodes }) {
+export function pickMarkerKind({ code, targetCodes, userFoundCodes, userWrongCodes }) {
   if (userFoundCodes.has(code)) return 'found';
   if (targetCodes.has(code)) return 'missed';
+  if (userWrongCodes && userWrongCodes.has(code)) return 'wrong';
   return null;
 }
 

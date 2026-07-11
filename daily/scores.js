@@ -1,6 +1,6 @@
 /**
  * Persisted per-puzzle results for the daily catalog. Stored under a
- * single localStorage key as `{ [n]: { f, t, c? } }` so reading the
+ * single localStorage key as `{ [n]: { f, t, c?, w? } }` so reading the
  * archive's score column is one parse, not one localStorage call per
  * tile. Short field names keep the serialised blob compact — there
  * will eventually be hundreds of entries.
@@ -10,6 +10,11 @@
  * - `c` — list of found country codes. Optional; only present for
  *   puzzles finished after the schema was extended (2026-06-06).
  *   Required to re-render the found/missed flag grids on revisit.
+ * - `w` — list of the player's wrong-guess codes (flags they clicked
+ *   that weren't answers). Optional; only present when the player made
+ *   at least one wrong guess, and only for puzzles finished after the
+ *   "Your wrong guesses" section shipped. Drives that section on revisit;
+ *   its absence just hides the section (perfect play, or an old record).
  *
  * **First-attempt-only:** `saveScore` is a no-op when a record already
  * exists for that N. The archive shows "your first attempt" — replays
@@ -26,7 +31,7 @@
 
 export const STORAGE_KEY = 'daily.scores';
 
-/** @typedef {{ f: number, t: number, c?: string[] }} DailyScore */
+/** @typedef {{ f: number, t: number, c?: string[], w?: string[] }} DailyScore */
 /** @typedef {Record<number, DailyScore>} DailyScores */
 
 /**
@@ -51,6 +56,9 @@ export function loadScores(store) {
       if (Array.isArray(obj.c) && obj.c.every((/** @type {unknown} */ x) => typeof x === 'string')) {
         score.c = [...obj.c];
       }
+      if (Array.isArray(obj.w) && obj.w.every((/** @type {unknown} */ x) => typeof x === 'string')) {
+        score.w = [...obj.w];
+      }
       scores[n] = score;
     }
     return scores;
@@ -68,21 +76,25 @@ export function loadScores(store) {
  * The optional `foundCodes` argument makes the saved record "full" —
  * without it only the {f, t} headline is kept, which is enough for the
  * archive's score column but not enough to re-render the result page
- * on revisit.
+ * on revisit. `wrongCodes` is stored only when non-empty (perfect play
+ * writes no `w`), so the "Your wrong guesses" section stays hidden unless
+ * there were actual wrong guesses to show.
  *
  * @param {{ getItem(key: string): string | null, setItem(key: string, value: string): void }} store
  * @param {number} n
  * @param {number} found
  * @param {number} total
  * @param {string[]} [foundCodes]
+ * @param {string[]} [wrongCodes]
  */
-export function saveScore(store, n, found, total, foundCodes) {
+export function saveScore(store, n, found, total, foundCodes, wrongCodes) {
   try {
     const scores = loadScores(store);
     if (scores[n]) return; // first-attempt-only: never overwrite
     /** @type {DailyScore} */
     const score = { f: found, t: total };
     if (Array.isArray(foundCodes)) score.c = [...foundCodes];
+    if (Array.isArray(wrongCodes) && wrongCodes.length > 0) score.w = [...wrongCodes];
     scores[n] = score;
     store.setItem(STORAGE_KEY, JSON.stringify(scores));
   } catch {

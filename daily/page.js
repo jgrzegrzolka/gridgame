@@ -125,13 +125,14 @@ function findCountry(all, code) {
  *
  * @param {{ code: string, pct?: number, count?: number }} item
  * @param {Country | null} country
- * @param {'found' | 'missed' | null} markerKind
+ * @param {'found' | 'missed' | 'wrong' | null} markerKind
  */
 function buildExtraTile(item, country, markerKind) {
   const li = document.createElement('li');
   li.className = 'find-tile';
   if (markerKind === 'found') li.classList.add('is-user-found');
   else if (markerKind === 'missed') li.classList.add('is-user-missed');
+  else if (markerKind === 'wrong') li.classList.add('is-user-wrong');
   li.dataset.code = item.code;
   li.dataset.name = country ? countryName(country) : item.code.toUpperCase();
   if (country) li.addEventListener('click', () => openZoom(country));
@@ -161,8 +162,10 @@ function buildExtraTile(item, country, markerKind) {
  * @param {Country[]} targets
  * @param {Country[]} all
  * @param {Set<string>} userFoundCodes
+ * @param {Set<string>} [userWrongCodes] the player's own wrong clicks, so the
+ *   "Most common mistake" row can mark the ones they made too.
  */
-function renderExtraStats(stats, targets, all, userFoundCodes) {
+function renderExtraStats(stats, targets, all, userFoundCodes, userWrongCodes) {
   const container = /** @type {HTMLElement} */ (document.getElementById('daily-extra-stats'));
   container.innerHTML = '';
   container.hidden = true;
@@ -173,8 +176,8 @@ function renderExtraStats(stats, targets, all, userFoundCodes) {
   if (!hasAnyExtraStats(picks)) return;
 
   const labels = statsLabels();
-  appendExtraRow(container, labels.extraRanking, picks.ranking, all, targetCodes, userFoundCodes);
-  appendExtraRow(container, labels.extraTopMistake, picks.topMistake, all, targetCodes, userFoundCodes);
+  appendExtraRow(container, labels.extraRanking, picks.ranking, all, targetCodes, userFoundCodes, userWrongCodes);
+  appendExtraRow(container, labels.extraTopMistake, picks.topMistake, all, targetCodes, userFoundCodes, userWrongCodes);
 
   container.hidden = false;
 }
@@ -186,8 +189,9 @@ function renderExtraStats(stats, targets, all, userFoundCodes) {
  * @param {Country[]} all
  * @param {Set<string>} targetCodes
  * @param {Set<string>} userFoundCodes
+ * @param {Set<string>} [userWrongCodes]
  */
-function appendExtraRow(parent, label, items, all, targetCodes, userFoundCodes) {
+function appendExtraRow(parent, label, items, all, targetCodes, userFoundCodes, userWrongCodes) {
   if (items.length === 0) return;
   const title = document.createElement('h2');
   title.className = 'result-section-title';
@@ -196,7 +200,7 @@ function appendExtraRow(parent, label, items, all, targetCodes, userFoundCodes) 
   const ul = document.createElement('ul');
   ul.className = 'find-result-found';
   for (const item of items) {
-    const marker = pickMarkerKind({ code: item.code, targetCodes, userFoundCodes });
+    const marker = pickMarkerKind({ code: item.code, targetCodes, userFoundCodes, userWrongCodes });
     ul.appendChild(buildExtraTile(item, findCountry(all, item.code), marker));
   }
   parent.appendChild(ul);
@@ -374,9 +378,12 @@ function paintCommunityStats(stats, total, opts = {}) {
  * @param {number} n
  * @param {Country[]} targets
  * @param {number} found
+ * @param {Country[]} all
+ * @param {Set<string>} userFoundCodes
+ * @param {Set<string>} userWrongCodes
  * @param {{ bypassCache?: boolean }} [opts]
  */
-async function loadAndPaintStats(n, targets, found, all, userFoundCodes, opts = {}) {
+async function loadAndPaintStats(n, targets, found, all, userFoundCodes, userWrongCodes, opts = {}) {
   const stats = await fetchStats(n, { bypassCache: opts.bypassCache === true });
   if (!stats) {
     // Fetch failed — hide the community slot (the personal slot at
@@ -388,7 +395,7 @@ async function loadAndPaintStats(n, targets, found, all, userFoundCodes, opts = 
   paintCommunityStats(stats, targets.length);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
-  renderExtraStats(stats, targets, all, userFoundCodes);
+  renderExtraStats(stats, targets, all, userFoundCodes, userWrongCodes);
 }
 
 /**
@@ -585,7 +592,7 @@ async function handleFinish(n, targets, all, info, isToday) {
       paintCommunityStats(stats, targets.length);
       applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
       applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
-      renderExtraStats(stats, targets, all, new Set(info.foundCodes));
+      renderExtraStats(stats, targets, all, new Set(info.foundCodes), new Set(info.wrongCodes));
     },
   });
 
@@ -799,6 +806,10 @@ export function bootDaily() {
       }
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
+        // The player's own wrong clicks, persisted alongside the found codes
+        // (absent on perfect play or pre-`w` records → the "Most common
+        // mistake" row simply stays unmarked). Powers the self-mistake dot.
+        const wrongCodes = new Set(stored.w || []);
         const revisitDeviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
         // Wait on the (best-effort) metric fetch so a revisit paints the rank +
         // population overlay on the first render rather than a beat later.
@@ -813,7 +824,7 @@ export function bootDaily() {
         // section). This way puzzles you finished on a different
         // device — or before submit-tracking shipped — still show
         // stats if the server has them.
-        loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
+        loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes, wrongCodes);
         // Streak fires alongside stats. Cached (no bypass) — revisits
         // don't have a fresh submit to chase past the 60s cache window.
         // Today-only: archive revisits don't show the streak.
@@ -828,7 +839,7 @@ export function bootDaily() {
           setShareCtx(n, result.targets, foundCodes);
           paintPersonalStats(foundCodes.size, result.targets.length);
           paintCommunityStats(null, result.targets.length, { loading: true });
-          loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes);
+          loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes, wrongCodes);
           if (isToday) {
             loadAndPaintStreak(revisitDeviceId, foundCodes.size, result.targets.length);
           }

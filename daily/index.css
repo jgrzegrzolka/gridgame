@@ -258,12 +258,15 @@
 /* Per-player corner marker on the extra-stats rail tiles. The rail
  * mixes "you got this" and "you missed this" flags across all three
  * rows — without this dot the player has to scroll back up to the
- * Znalezione/Pominięte grids to cross-reference each tile. Small
- * coloured circle in the top-right corner, drawn via the tile's
- * ::before so we don't need an extra DOM node. The 1px white outline
- * keeps the dot legible on top of any flag colour. */
+ * Znalezione/Pominięte grids to cross-reference each tile. On the
+ * "Most common mistake" row the dot marks the distractors the player
+ * clicked wrong themselves ("I made this mistake too"). Small coloured
+ * circle in the top-right corner, drawn via the tile's ::before so we
+ * don't need an extra DOM node. The 1px outline keeps the dot legible
+ * on top of any flag colour. */
 .find-tile.is-user-found::before,
-.find-tile.is-user-missed::before {
+.find-tile.is-user-missed::before,
+.find-tile.is-user-wrong::before {
   content: '';
   position: absolute;
   top: 0;
@@ -278,7 +281,11 @@
 .find-tile.is-user-found::before {
   background: #2a8a3a;
 }
-.find-tile.is-user-missed::before {
+/* Missed a target (ranking row) and clicked a wrong flag (mistake row)
+ * are both "you got this flag wrong" — same red, disambiguated by which
+ * row the tile sits in. */
+.find-tile.is-user-missed::before,
+.find-tile.is-user-wrong::before {
   background: #c0392b;
 }
 
