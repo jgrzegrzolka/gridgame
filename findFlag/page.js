@@ -550,8 +550,28 @@ export function bootFindFlag() {
     }
 
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
-    const clearBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-clear'));
     const randomBtn = document.getElementById('find-random');
+
+    // "Clear all" shares the first section's heading line (e.g. "CONTINENTS …
+    // Clear all"), right-aligned. Built here per render — not a static HTML
+    // element — because renderChooser wipes #chooser-sections on every rebuild
+    // (scope toggle), so a moved static button would be destroyed. Keeps
+    // data-i18n so applyStringsToDocument retranslates it on a language switch,
+    // same as the old static markup did.
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'find-clear';
+    clearBtn.id = 'find-clear';
+    clearBtn.setAttribute('data-i18n', 'findFlag.clear');
+    clearBtn.textContent = t('findFlag.clear', 'Clear all');
+    clearBtn.hidden = true;
+    const firstHead = sectionsEl.querySelector('.chooser-section h2');
+    if (firstHead) {
+      const headRow = document.createElement('div');
+      headRow.className = 'chooser-section-head';
+      firstHead.replaceWith(headRow);
+      headRow.append(firstHead, clearBtn);
+    }
 
     const playLabel = () => t('findFlag.play', 'Play');
 

@@ -9,14 +9,6 @@ body {
   margin: 0 0 20px;
   text-align: center;
 }
-/* Clear all sits above the chooser sections, right-aligned, only
- * visible when there's anything to clear. The reserved row height
- * avoids layout shift between "nothing selected" and "something
- * selected" states. */
-.find-clear-row {
-  text-align: right;
-  min-height: 28px;
-}
 .chooser-section {
   margin-bottom: 24px;
 }
@@ -27,6 +19,20 @@ body {
   color: var(--muted-color);
   margin: 0 0 10px;
   font-weight: 600;
+}
+/* The first section's heading shares its line with "Clear all" (right-aligned).
+ * The h2's own bottom margin moves onto the row; min-height reserves the
+ * button's height so toggling the (initially hidden) button — only shown once
+ * something's selected — doesn't shift the pills below. */
+.chooser-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  margin-bottom: 10px;
+}
+.chooser-section-head h2 {
+  margin: 0;
 }
 .chooser-pills {
   display: flex;

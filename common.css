@@ -757,6 +757,15 @@ body::after {
 .pill-swatch[data-value="black"]  { background: #2b2b2b; }
 .pill-swatch[data-value="orange"] { background: #e08a2e; }
 .pill-swatch[data-value="violet"] { background: #7d5bbe; }
+/* A pill carrying a swatch lays its dot + label out inline with a small gap so
+ * the dot doesn't sit flush against the text. findFlag's chooser pills already
+ * get this from their own inline-flex rule; this covers flagsdata's filter-bar
+ * pills (plain inline-block) without a per-page copy. */
+.pill:has(.pill-swatch) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 
 /* Colour-count compound pill — ONE pill rendered in the Colors row of
  * findFlag's chooser and flagsdata's filter bar. Visually `[= 2]` (or
