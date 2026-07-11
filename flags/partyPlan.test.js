@@ -66,7 +66,7 @@ test('PARTY_MODES: every DEFAULT_PLAN segment maps to a catalog mode', () => {
 
 test('countsForPlan: default plan gives 4 / 4 / 4 / 4 keyed by mode id', () => {
   assert.deepEqual(countsForPlan(DEFAULT_PLAN), {
-    'flags-all': 4, 'flags-territories': 4, 'map-outlines': 4, 'superlative-pop': 4, 'superlative-area': 0,
+    'flags-all': 4, 'flags-territories': 4, 'map-outlines': 4, 'superlative-pop': 4, 'superlative-area': 0, 'superlative-density': 0,
   });
 });
 

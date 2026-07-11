@@ -112,3 +112,22 @@ test('areaRound: id and a correct extreme-by-area answer', async () => {
     assert.equal(AREA[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-area option`);
   }
 });
+
+// ---- density instance (people per km², id 'superlative-density') ------------
+
+test('densityRound: id and a correct extreme-by-density answer', async () => {
+  const { densityRound } = await import('./superlative.js');
+  const densityJson = (await import('../metrics/density.json', { with: { type: 'json' } })).default;
+  const DENSITY = /** @type {Record<string, number>} */ (densityJson.values);
+  assert.equal(densityRound.id, 'superlative-density');
+  // Density-distinct sovereigns spanning ~4 orders of magnitude, all in density.json.
+  const pool = ['mc', 'sg', 'bd', 'nl', 'mn', 'au', 'ca', 'ru', 'na', 'kz', 'in', 'jp'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = densityRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => DENSITY[c]);
+    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+    assert.equal(DENSITY[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-density option`);
+  }
+});

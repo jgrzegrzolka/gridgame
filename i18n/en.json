@@ -521,14 +521,16 @@
       "flagsTerritories": "Flags: territories",
       "mapOutlines": "Map: outlines",
       "superlativePop": "Population: most & least",
-      "superlativeArea": "Land area: largest & smallest"
+      "superlativeArea": "Land area: largest & smallest",
+      "superlativeDensity": "Population density: most & least"
     },
     "modeShort": {
       "flagsAll": "Flags",
       "flagsTerritories": "Territories",
       "mapOutlines": "Maps",
       "superlativePop": "Population",
-      "superlativeArea": "Land area"
+      "superlativeArea": "Land area",
+      "superlativeDensity": "Density"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -537,6 +539,8 @@
     "hintLeast": "Which is the least populous?",
     "hintMostArea": "Which is the largest by land area?",
     "hintLeastArea": "Which is the smallest by land area?",
+    "hintMostDensity": "Which is the most densely populated?",
+    "hintLeastDensity": "Which is the least densely populated?",
     "locked": "Locked in",
     "fastest": "Fastest",
     "tie": "It's a tie!",

@@ -1,5 +1,6 @@
 import population from '../metrics/population.json' with { type: 'json' };
 import area from '../metrics/area.json' with { type: 'json' };
+import density from '../metrics/density.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -127,3 +128,6 @@ export const isCorrect = populationRound.isCorrect;
 
 // Area instance: the km² twin, id 'superlative-area'.
 export const areaRound = createSuperlativeRound(createMetric(area, []), 'superlative-area');
+
+// Density instance: people per km², id 'superlative-density'.
+export const densityRound = createSuperlativeRound(createMetric(density, []), 'superlative-density');
