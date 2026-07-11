@@ -19,28 +19,45 @@ A fresh agent picking this up should:
 
 ## Now
 
-### Feature DH: Land area as a world metric
+### Feature DI: Population density as a world metric
 
-Second world metric after population, added to exercise the `add-world-metric` skill end to end. Recipe + surface details live in that skill; this entry is the per-metric tracking.
+Third world metric (after population, area). A **derived rate**: no external source, `density = population / area` for every real place that has both. Exercises the `decimal1` format and confirms the `add-world-metric` process on a computed metric.
 
-**Data contract:** dense (fill all real places). Land area is a stable, universal fact: every real place has one, including the uninhabited territories (Antarctica ~14.2M km², Bouvet 49, etc.), so nothing is "no data" except the org flags. Values are km², rounded to whole numbers from the World Bank, except microstates under 1 km² which keep a decimal (Vatican 0.49). Source: World Bank WDI `AG.LND.TOTL.K2` (2022) for 215 sovereigns + 47 hand-maintained fills.
+**Data contract:** dense (every real place has both population and area, so density is defined for all; only orgs have none). Values are people/km², stored rounded to 2 decimals for ranking precision, displayed at 1 decimal (`decimal1`). Derived, so `build-density.mjs` reads the two metric files with no network call.
 
-- [x] 1. Data: `flags/metrics/area.json` (262 real places) + `authoring/build-area.mjs` + `METRIC_FILES` line + `metrics.test.js` schema/coverage/no-org/ranking tests (area allows fractional values, unlike population)
-- [x] 2. flagsdata lens (free once step 1 landed; "Land area" appears in the metric selector, value + rank + sort)
-- [x] 3. Filters: `metricTiers.js` registry line (+ `has`); findFlag chooser (scalar filter + parse/serialize + pillLabel/filterTitle + Area section + `areaProbability` random modifier) + `findflag-random-coverage` skill note; flagsdata Area filter group (generalized `buildMetricGroup`); `attachAreas` at both load sites; area filter/reachability tests. Verified in-browser: findFlag "over 1M km²" → 28 sovereign, flagsdata → 29 all-places
-- [x] 4. TTT: `area(op, n)` factory + `AREA_BREAKS_FOR_RANDOM` + pool/id/label wiring; `attachAreas` at all 6 load sites; `area.atLeast/atMost` i18n; engine + real-data seed pins; no-data guard verified in-browser (org shows no data; Antarctica-class real places judged on value)
-- [x] 5. Flag Party round: generalized `partyRounds/superlative.js` into a `createSuperlativeRound(metric, id)` factory (population stays `superlative`, area is `superlative-area`), registered in `partyGameServer`, added the `superlative-area` PARTY_MODE, and made the flagParty client metric-aware (per-round `SUPERLATIVE_MODES` config: values file + hint copy). The factory now unblocks every future metric's party round. i18n + tests + in-browser wiring verified
-- [ ] 6. Daily (deferrable): rank captions (`buildAreaRankNotes`); backlog superlative puzzles ("largest / smallest countries", per-continent) + a reservoir of ideas via daily-puzzle-author
+- [x] 1. Data: `flags/metrics/density.json` (262 real places) + `authoring/build-density.mjs` (derived, no fetch) + `METRIC_FILES` line + `metrics.test.js` schema/coverage/no-org/derived-spot-check/ranking
+- [x] 2. flagsdata lens (free once step 1 landed; "Population density" in the selector, decimal1 display)
+- [ ] 3. Filters: `metricTiers.js` registry + `DENSITY_BREAKS_FOR_RANDOM` + `density()` factory; findFlag chooser; flagsdata group; attach at load sites
+- [ ] 4. TTT: `density(op, n)` factory + breaks + pool/id/label wiring + `attachDensities` at all 6 load sites + i18n + seed pins
+- [ ] 5. Flag Party round: one `createSuperlativeRound(createMetric(density, []), 'superlative-density')` instance + PARTY_MODE + client `SUPERLATIVE_MODES` entry + i18n
+- [ ] 6. Daily (deferred, see Backlog): rank captions + superlative puzzles
 
-**Standing artifact:** `authoring/build-area.mjs` (yearly-ish refresh via `AG.LND.TOTL.K2`), `flags/metrics/area.json`, and the `metrics.test.js` area gate. The `format`-hint and `createMetric` mechanics carry over from population unchanged.
+**Standing artifact:** `authoring/build-density.mjs` — the first **derived** metric (computed from other metrics, no source). The pattern for future ratios (GDP per capita, etc.): read the input metric files, divide, round, emit.
 
 ---
 
 ## Backlog
 
+### Deferred: metric daily superlative puzzles (area, density, future metrics)
+
+**Deferred 2026-07-11 at Jan's request** — daily-content authoring is time-consuming and needs his supervision (released puzzles are immutable, daily rule 1), so it does not ride along with the code surfaces. Not forgotten; see memory `project_metric_daily_puzzles_deferred`.
+
+**What's pending, per metric:** author daily superlative puzzles ("the N largest / smallest countries by area / density", per-continent) via the **daily-puzzle-author** skill, the way population's shipped in Feature DG. `resolveSuperlative` is metric-agnostic so this is **zero new code** — just authored `{ kind: "superlative", metric, scope, direction, topN }` entries + a review pass with Jan. Optionally the result-screen rank captions (`build<Metric>RankNotes`, small code). Applies to area (Feature DH surface 6), density (DI surface 6), and every future metric. Agents: do NOT author these unprompted; wait for Jan.
+
 ---
 
 ## Done
+
+### Feature DH: Land area as a world metric — *code surfaces shipped 2026-07-11 (#802, #803, #804, #805); daily deferred*
+
+Second world metric after population, added to prove the `add-world-metric` skill end to end. All five **code** surfaces shipped; surface 6 (daily puzzles) is deferred to Backlog at Jan's request.
+
+**Data contract:** dense. Every real place has a land area (km²), including uninhabited territories (Antarctica ~14.2M, Bouvet 49). Source: World Bank WDI `AG.LND.TOTL.K2` (2022) + 47 hand-fills. Values whole km² except microstates under 1 (Vatican 0.49).
+
+- [x] 1. Data (`area.json` + `build-area.mjs` + tests). [x] 2. Lens (free). [x] 3. Filters (flagsdata + findFlag, via the shared `metricTiers` registry + generalized `buildMetricGroup`). [x] 4. TTT (`area()` factory + `AREA_BREAKS_FOR_RANDOM`, attach at 6 sites, seed pins). [x] 5. Flag Party (generalized `createSuperlativeRound` factory, `superlative-area` mode).
+- [ ] 6. Daily — **deferred** (see Backlog + Feature DG's population precedent).
+
+**Standing artifacts that made DI (density) and every future metric cheaper:** the `metricTiers` registry (one line per metric lights up both filter surfaces), `buildMetricGroup` (metric-keyed flagsdata group), and `createSuperlativeRound(metric, id)` (any metric gets a Flag Party round). Verified in-browser at each surface.
 
 ### Feature DE: Metric lens in flagsdata — *shipped 2026-07-11 (phase 3 reframed)*
 

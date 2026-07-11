@@ -13,6 +13,7 @@ const load = (/** @type {string} */ p) => JSON.parse(readFileSync(join(HERE, p),
 const COUNTRIES = /** @type {Row[]} */ (load('countries.json'));
 const POPULATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/population.json'));
 const AREA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/area.json'));
+const DENSITY = /** @type {import('./metrics.js').MetricData} */ (load('metrics/density.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -201,4 +202,48 @@ test('createMetric over real area ranks the world plausibly', () => {
   assert.equal(area.topN('world', 1)[0].code, 'ru');
   const world = area.ranked('world');
   assert.equal(world[world.length - 1].code, 'va');
+});
+
+// ---- real density.json schema + integration gate (derived metric) ----------
+
+test('density is a valid, self-describing metric file', () => {
+  assert.equal(DENSITY.key, 'density');
+  assert.equal(typeof DENSITY.label, 'string');
+  assert.equal(typeof DENSITY.unit, 'string');
+  assert.ok(DENSITY.format === 'compact' || DENSITY.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof DENSITY.source, 'string');
+  assert.equal(typeof DENSITY.values, 'object');
+});
+
+test('every density value is a non-negative finite number', () => {
+  for (const [code, v] of Object.entries(DENSITY.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('every real place has a density; only non-places have none', () => {
+  const values = DENSITY.values;
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in values), `org ${c.code} should have no density value`);
+    } else {
+      assert.ok(c.code in values, `real place ${c.code} (${c.continent}) has no density value`);
+    }
+  }
+});
+
+test('density equals population / area for a sample country', () => {
+  // Derived-metric contract: a spot-check that the build actually divides.
+  const pop = /** @type {Record<string, number>} */ (POPULATION.values);
+  const area = /** @type {Record<string, number>} */ (AREA.values);
+  const dens = /** @type {Record<string, number>} */ (DENSITY.values);
+  const expected = Math.round((pop.mc / area.mc) * 100) / 100; // Monaco
+  assert.equal(dens.mc, expected);
+});
+
+test('createMetric over real density ranks the world plausibly', () => {
+  const density = createMetric(DENSITY, COUNTRIES);
+  // Macau / Monaco are the densest places on earth.
+  assert.ok(['mo', 'mc'].includes(density.topN('world', 1)[0].code));
 });
