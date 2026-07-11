@@ -999,17 +999,18 @@ test('categoryFromId round-trips population thresholds and rejects malformed suf
   assert.equal(categoryFromId('population:>=0'), null);
 });
 
-test('translateCategoryLabel maps population thresholds to the population.* key, falling back to the baked label', () => {
+test('translateCategoryLabel prefixes population thresholds with the metric name, falling back to the baked label', () => {
   const t = fakeTranslate({
+    'metric.population': 'Liczba ludności',
     'population.atLeast.10m': 'ponad 10 mln ludności',
     'population.atMost.1m': 'poniżej 1 mln ludności',
   });
-  assert.equal(translateCategoryLabel(population('>=', 10_000_000), t), 'ponad 10 mln ludności');
-  assert.equal(translateCategoryLabel(population('<=', 1_000_000), t), 'poniżej 1 mln ludności');
-  // Missing key → baked English label
+  assert.equal(translateCategoryLabel(population('>=', 10_000_000), t), 'Liczba ludności: ponad 10 mln ludności');
+  assert.equal(translateCategoryLabel(population('<=', 1_000_000), t), 'Liczba ludności: poniżej 1 mln ludności');
+  // Missing keys → English metric-name prefix + baked English threshold label
   assert.equal(
     translateCategoryLabel(population('>=', 50_000_000), fakeTranslate({})),
-    'over 50M people',
+    'Population: over 50M people',
   );
 });
 
@@ -1092,17 +1093,18 @@ test('categoryFromId round-trips density thresholds and rejects malformed suffix
   assert.equal(categoryFromId('density:>=0'), null);
 });
 
-test('translateCategoryLabel maps density thresholds to the density.* key, falling back to the baked label', () => {
+test('translateCategoryLabel prefixes density thresholds with the metric name, falling back to the baked label', () => {
   const t = fakeTranslate({
+    'metric.density': 'Gęstość zaludnienia',
     'density.atLeast.500': 'ponad 500 osób/km²',
     'density.atMost.10': 'poniżej 10 osób/km²',
     'density.atLeast.100': 'ponad 100 osób/km²',
   });
-  assert.equal(translateCategoryLabel(density('>=', 500), t), 'ponad 500 osób/km²');
-  assert.equal(translateCategoryLabel(density('<=', 10), t), 'poniżej 10 osób/km²');
-  assert.equal(translateCategoryLabel(density('>=', 100), t), 'ponad 100 osób/km²');
-  // Missing key → baked English label
-  assert.equal(translateCategoryLabel(density('>=', 200), fakeTranslate({})), 'over 200 people/km²');
+  assert.equal(translateCategoryLabel(density('>=', 500), t), 'Gęstość zaludnienia: ponad 500 osób/km²');
+  assert.equal(translateCategoryLabel(density('<=', 10), t), 'Gęstość zaludnienia: poniżej 10 osób/km²');
+  assert.equal(translateCategoryLabel(density('>=', 100), t), 'Gęstość zaludnienia: ponad 100 osób/km²');
+  // Missing keys → English metric-name prefix + baked English threshold label
+  assert.equal(translateCategoryLabel(density('>=', 200), fakeTranslate({})), 'Population density: over 200 people/km²');
 });
 
 test('categoryFromId round-trips area thresholds and rejects malformed suffixes', () => {
@@ -1121,17 +1123,18 @@ test('categoryFromId round-trips area thresholds and rejects malformed suffixes'
   assert.equal(categoryFromId('area:>=0'), null);
 });
 
-test('translateCategoryLabel maps area thresholds to the area.* key, falling back to the baked label', () => {
+test('translateCategoryLabel prefixes area thresholds with the metric name, falling back to the baked label', () => {
   const t = fakeTranslate({
+    'metric.area': 'Powierzchnia',
     'area.atLeast.1m': 'ponad 1 mln km²',
     'area.atMost.1k': 'poniżej 1 tys. km²',
     'area.atLeast.100k': 'ponad 100 tys. km²',
   });
-  assert.equal(translateCategoryLabel(area('>=', 1_000_000), t), 'ponad 1 mln km²');
-  assert.equal(translateCategoryLabel(area('<=', 1_000), t), 'poniżej 1 tys. km²');
-  assert.equal(translateCategoryLabel(area('>=', 100_000), t), 'ponad 100 tys. km²');
-  // Missing key → baked English label
-  assert.equal(translateCategoryLabel(area('>=', 500_000), fakeTranslate({})), 'over 500K km²');
+  assert.equal(translateCategoryLabel(area('>=', 1_000_000), t), 'Powierzchnia: ponad 1 mln km²');
+  assert.equal(translateCategoryLabel(area('<=', 1_000), t), 'Powierzchnia: poniżej 1 tys. km²');
+  assert.equal(translateCategoryLabel(area('>=', 100_000), t), 'Powierzchnia: ponad 100 tys. km²');
+  // Missing keys → English metric-name prefix + baked English threshold label
+  assert.equal(translateCategoryLabel(area('>=', 500_000), fakeTranslate({})), 'Land area: over 500K km²');
 });
 
 test('validateCell accepts an ambiguousColorCount flag for a contested-count cell (player-pick path)', () => {
