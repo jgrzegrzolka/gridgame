@@ -36,61 +36,110 @@ body {
   align-items: center;
   gap: 4px;
 }
-/* Collapse toggle — shown on every viewport so desktop users can also
- * hide the filter bar once the dataset grows. The initial state differs
- * by viewport: open on desktop, closed on mobile — set by page.js on
- * boot. The CSS rule for hiding the groups is also viewport-agnostic
- * (further down). */
-.filter-toggle {
-  display: inline-flex;
-  font: inherit;
-  font-size: 13px;
-  padding: 6px 12px;
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 999px;
-  color: var(--primary-color);
-  cursor: pointer;
-  align-items: center;
-  gap: 6px;
-}
-/* Wrapper claims a full row so the toggle button doesn't share row 2
- * with whatever pill group flows in beside it. The toggle's natural
- * width alone isn't enough — it'd let the pills wrap in next to it.
- * space-between pushes the toggle to the left and the Clear button
- * (when visible) to the right. */
+/* Active-filters summary row. Replaces the old single "Filters ▾" toggle:
+ * the row lists each active filter as a removable chip, then an "Add filter"
+ * button that expands the collapsible groups (further down). The row claims a
+ * full width so it sits alone; space-between pushes the summary to the left
+ * and the Clear button (when visible) to the right. */
 .filter-toggle-row {
   flex-basis: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 8px;
 }
-.filter-toggle:hover { background: var(--surface-hover-color); }
-.filter-toggle-count {
+/* Chips + Add button share one wrapping flex line. `.filter-chips` is
+ * display:contents so its chip children flow as direct flex items of the
+ * summary, sharing its gap with the Add button. */
+.filter-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.filter-chips { display: contents; }
+/* A chip = one active filter. Solid brand fill mirrors `.pill.active` so an
+ * applied filter reads the same whether you see it as a pill or a chip. */
+.filter-chip {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 6px;
+  gap: 5px;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 3px 6px 3px 10px;
   border-radius: 999px;
-  background: var(--link-color);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
+  background: var(--primary-color);
+  color: var(--surface-color);
+  border: 1px solid var(--primary-color);
 }
-.filter-toggle-count[hidden] { display: none; }
-.filter-toggle-chevron {
-  font-size: 10px;
-  transition: transform 0.15s;
+/* Excluded value: same pink strikethrough idiom as `.pill.exclude`, on a
+ * surface fill so it reads as "not this" rather than an applied include. */
+.filter-chip.is-exclude {
+  background: var(--surface-color);
+  color: var(--secondary-color);
+  border-color: var(--secondary-color);
 }
-#filter-bar.is-open .filter-toggle-chevron {
-  transform: rotate(180deg);
+.filter-chip.is-exclude .filter-chip-label { text-decoration: line-through; }
+.filter-chip-x {
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.75;
 }
+.filter-chip-x:hover { opacity: 1; }
+/* "Add filter" — dashed pink outline borrows the `.pill-modifier` idiom to
+ * signal "this adds, it isn't itself a filter". */
+.filter-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 12px;
+  background: var(--surface-color);
+  color: var(--primary-color);
+  border: 1px dashed var(--secondary-color);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.filter-add:hover { background: var(--surface-hover-color); }
+.filter-add-plus { font-weight: 600; }
+.filter-add-plus:empty { display: none; }
 
-/* Closed state hides every group on every viewport. page.js sets
- * .is-open on boot when the viewport is wider than 600 px so desktop
- * users still land on the open state by default. */
+/* Flag-colour swatch dot shown on every Colours pill and colour chip. The
+ * fill hues below are the ONE documented exception to the seven-variable
+ * palette rule: like the flag SVGs themselves (and the per-tile bottom strip),
+ * a swatch shows a literal flag colour, which by definition can't come from the
+ * brand tokens. The dot's ring uses --muted-soft-color so dark swatches (black)
+ * stay visible on the dark active-pill / chip background. Hues live here (not
+ * in JS) keyed off data-value; page.js only adds the empty span. */
+.pill-swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  vertical-align: middle;
+  border: 1px solid var(--muted-soft-color);
+}
+.pill-swatch[data-value="red"]    { background: #c0392b; }
+.pill-swatch[data-value="white"]  { background: #f2f2f2; }
+.pill-swatch[data-value="blue"]   { background: #2d5fa8; }
+.pill-swatch[data-value="green"]  { background: #3a8f4a; }
+.pill-swatch[data-value="yellow"] { background: #e6c92e; }
+.pill-swatch[data-value="black"]  { background: #2b2b2b; }
+.pill-swatch[data-value="orange"] { background: #e08a2e; }
+.pill-swatch[data-value="violet"] { background: #7d5bbe; }
+
+/* Closed state hides every group on every viewport. page.js starts the bar
+ * collapsed (the chip summary is the resting state); "Add filter" sets
+ * .is-open to reveal the groups. */
 #filter-bar:not(.is-open) .filter-groups { display: none; }
 
 @media (max-width: 600px) {
@@ -111,8 +160,11 @@ body {
  * thing I know the name of", filter is "narrow by category". The
  * wrapper claims a full row via flex-basis (a plain div wraps reliably
  * where a replaced <input> didn't). */
+/* Search shares the summary row with the chips + Add-filter button, so the
+ * wrapper sizes to the input (~240px) instead of claiming a full row. It can
+ * shrink on narrow screens; the input inside caps at 240px. */
 .name-search-wrap {
-  flex-basis: 100%;
+  flex: 0 1 240px;
 }
 .name-search {
   font: inherit;

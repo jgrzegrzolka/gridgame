@@ -1,6 +1,6 @@
 import { CONTINENTS, loadCountries, attachPopulations, attachAreas, attachDensities } from '../flags/group.js';
 import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, foldDiacritics } from '../flags/engine.js';
-import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
+import { emptyFilters, matchesFilters, createColorCountLock, activeFilterChips } from '../flags/flagsFilter.js';
 import { buildMetricTierItems } from '../flags/metricTiers.js';
 import { pillLabel } from '../flags/findFlag.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
@@ -627,11 +627,11 @@ export function bootFlagsData() {
     if (filters.density !== null) pillTotal++;
     const anyActive = pillTotal > 0 || nameQuery !== '';
     clearBtn.hidden = !anyActive;
-    // Include name search in the toggle badge count — once the search
-    // is hidden behind the mobile Filters toggle, the badge is the
-    // user's only cue that something is filtering. Counting it as one
-    // "active filter" (alongside each pill) matches that mental model.
-    updateFilterToggle(pillTotal + (nameQuery !== '' ? 1 : 0));
+    // Repaint the active-filters chip summary. Chips replace the old count
+    // badge: they show *which* filters are on (not just how many), so the
+    // user can read and remove them without expanding the groups. Name
+    // search has its own always-visible input, so it isn't chipped here.
+    renderChips();
     // Reflect the active filter on the world map below the grid: every
     // visible country wears its flag (stamped into its silhouette),
     // hidden countries stay grey. No-op until the map's mounted (async
@@ -710,12 +710,114 @@ export function bootFlagsData() {
     for (const i of target) gridEl.appendChild(state.tiles[i]);
   }
 
-  /** @param {number} count */
-  function updateFilterToggle(count) {
-    const badge = document.getElementById('filter-toggle-count');
-    if (!badge) return;
-    badge.textContent = count > 0 ? String(count) : '';
-    badge.hidden = count === 0;
+  /**
+   * Render a colour pill's content: the flag-colour swatch dot + label text.
+   * The swatch hue is a documented exception to the seven-colour palette — it
+   * shows the literal flag colour, like the flag SVGs themselves — with the
+   * hex owned by CSS keyed off `data-value`. Centralised so the initial build
+   * and the langchanged re-label stay in sync (a bare `textContent =` would
+   * wipe the swatch span).
+   * @param {HTMLElement} btn @param {string} value @param {string} labelText
+   */
+  function paintColorPill(btn, value, labelText) {
+    btn.replaceChildren();
+    const sw = document.createElement('span');
+    sw.className = 'pill-swatch';
+    sw.dataset.value = value;
+    sw.setAttribute('aria-hidden', 'true');
+    btn.append(sw, document.createTextNode(labelText));
+  }
+
+  /**
+   * Repaint the active-filters chip row from the current filter state. Chip
+   * membership and order come from the pure `activeFilterChips`; each chip's ×
+   * clears just that one filter. Runs on every `applyFilter`, so the summary
+   * always mirrors what's applied — including while the groups are expanded.
+   */
+  function renderChips() {
+    if (!chipsWrap) return;
+    chipsWrap.replaceChildren();
+    for (const ref of activeFilterChips(filters)) {
+      const chip = document.createElement('span');
+      chip.className = 'filter-chip' + (ref.kind === 'pill' && ref.exclude ? ' is-exclude' : '');
+      if (ref.kind === 'pill' && ref.group === 'color') {
+        const sw = document.createElement('span');
+        sw.className = 'pill-swatch';
+        sw.dataset.value = ref.value;
+        sw.setAttribute('aria-hidden', 'true');
+        chip.appendChild(sw);
+      }
+      const label = document.createElement('span');
+      label.className = 'filter-chip-label';
+      label.textContent = chipLabel(ref);
+      chip.appendChild(label);
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'filter-chip-x';
+      x.setAttribute('aria-label', t('flagsdata.removeFilter', 'Remove filter'));
+      x.textContent = '×';
+      x.addEventListener('click', () => removeChip(ref));
+      chip.appendChild(x);
+      chipsWrap.appendChild(chip);
+    }
+  }
+
+  /**
+   * Localized label for one chip. Pill chips reuse the group's own pill-label
+   * helper; the colorCount scalar reads as "Colors = 3" (reusing the group
+   * label) to sidestep plural grammar; the metric scalars reuse the tier's own
+   * pill label.
+   * @param {import('../flags/flagsFilter.js').FilterChip} ref
+   * @returns {string}
+   */
+  function chipLabel(ref) {
+    if (ref.kind === 'pill') {
+      const v = ref.value;
+      if (ref.group === 'status') return statusLabel(v);
+      if (ref.group === 'continent') return continentLabel(v);
+      if (ref.group === 'color') return colorLabel(v);
+      if (ref.group === 'motif') return motifLabel(v);
+      return stripesOnlyLabel(v);
+    }
+    if (ref.group === 'colorCount') {
+      const c = filters.colorCount;
+      const sym = c && c.op === '>=' ? '≥' : c && c.op === '<=' ? '≤' : '=';
+      return `${t('flagsdata.filterColors', 'Colors')} ${sym} ${c ? c.n : ''}`;
+    }
+    const cons = filters[ref.group];
+    if (cons && state) {
+      const item = buildMetricTierItems(ref.group, state.items).find((it) => it.op === cons.op && it.n === cons.n);
+      if (item) return pillLabel(ref.group, item.value, 'include', t);
+    }
+    return cons ? `${cons.op} ${cons.n}` : '';
+  }
+
+  /**
+   * Clear the single filter a chip stands for — mirroring what a second click
+   * on its pill (or the colour-count ×) would do — then re-run the filter.
+   * @param {import('../flags/flagsFilter.js').FilterChip} ref
+   */
+  function removeChip(ref) {
+    if (ref.kind === 'pill') {
+      const set = ref.exclude ? filters[ref.group].exclude : filters[ref.group].include;
+      set.delete(ref.value);
+      const pill = filterBar.querySelector(`.pill[data-group="${ref.group}"][data-value="${CSS.escape(ref.value)}"]`);
+      if (pill) pill.classList.remove(ref.exclude ? 'exclude' : 'active');
+      // A colour include drives the "no other colours" lock's count — keep it
+      // in step, exactly as the pill click does.
+      if (ref.group === 'color') colorCountLock.sync();
+    } else if (ref.group === 'colorCount') {
+      // colorCount can be set by the picker OR the "no other colours" lock;
+      // clear both surfaces so whichever engaged it turns off.
+      filters.colorCount = null;
+      colorCountLock.reset();
+      colorCountPicker.reset();
+      if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
+    } else {
+      filters[ref.group] = null;
+      for (const p of filterBar.querySelectorAll(`.pill[data-group="${ref.group}"]`)) p.classList.remove('active');
+    }
+    applyFilter();
   }
 
   /**
@@ -740,7 +842,8 @@ export function bootFlagsData() {
       btn.className = 'pill';
       btn.dataset.group = group;
       btn.dataset.value = value;
-      btn.textContent = pillLabel;
+      if (group === 'color') paintColorPill(btn, value, pillLabel);
+      else btn.textContent = pillLabel;
       // Reflect any pre-seeded filter state on the pill. No status filter
       // is seeded by default now, so on first paint every pill starts
       // inactive; this still handles include/exclude if a default returns.
@@ -842,51 +945,60 @@ export function bootFlagsData() {
     nameQuery = foldDiacritics(searchInput.value.trim());
     applyFilter();
   });
-  // The wrapper does the row-claim on desktop (flex-basis: 100% on a
-  // plain div wraps reliably where the same on an <input> doesn't).
-  // The wrapper gets inserted into groupsWrap further down, so the
-  // mobile collapse toggle covers it too.
   const searchWrap = document.createElement('div');
   searchWrap.className = 'name-search-wrap';
   searchWrap.appendChild(searchInput);
 
-  // Search sits OUTSIDE the collapsible groups so it's always reachable —
-  // search and filter are different mental models: search is "I know what
-  // I want, take me there", filter is "narrow the population to a
-  // category". Hiding search behind the toggle would put a click in front
-  // of the faster path.
-  filterBar.appendChild(searchWrap);
+  // Active-filters summary row (replaces the old single "Filters ▾" toggle,
+  // which showed only a count when closed). The row leads with the always-
+  // visible name search, then lists each active filter as a removable chip,
+  // then an "Add filter" button that reveals the full pill groups. Search
+  // shares this row (rather than sitting on its own line) so "Add filter" sits
+  // right beside the search box. Search stays OUTSIDE the collapsible groups —
+  // it's a different mental model ("take me to the thing I know") and must stay
+  // reachable when the groups are folded. The groups are the same collapsible
+  // #filter-groups block (is-open); only the trigger changed. Groups start
+  // collapsed on every viewport: the chip summary is the resting state, you
+  // expand to add.
+  const chipsWrap = document.createElement('div');
+  chipsWrap.id = 'filter-chips';
+  chipsWrap.className = 'filter-chips';
 
-  // Collapse toggle on every viewport. Default initial state differs:
-  //   - mobile (≤600 px): closed — the filter bar would otherwise eat
-  //     half the viewport on a phone
-  //   - desktop: open — preserves what desktop users used to get
-  //     unconditionally, so today's landing experience is unchanged.
-  // The badge shows how many include/exclude pills are currently active
-  // so the user knows whether filtering is happening while the panel is
-  // closed.
-  const toggleBtn = document.createElement('button');
-  toggleBtn.type = 'button';
-  toggleBtn.id = 'filter-toggle';
-  toggleBtn.className = 'filter-toggle';
-  toggleBtn.setAttribute('aria-controls', 'filter-groups');
-  // data-i18n on the inner title span re-translates the "Filters" label
-  // for free on soft language switches; count and chevron stay siblings.
-  toggleBtn.innerHTML = `<span data-i18n="flagsdata.filters">${t('flagsdata.filters', 'Filters')}</span><span id="filter-toggle-count" class="filter-toggle-count" hidden></span><span class="filter-toggle-chevron" aria-hidden="true">▾</span>`;
-  const startOpen = window.matchMedia('(min-width: 601px)').matches;
-  filterBar.classList.toggle('is-open', startOpen);
-  toggleBtn.setAttribute('aria-expanded', String(startOpen));
-  toggleBtn.addEventListener('click', () => {
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.id = 'filter-toggle';
+  addBtn.className = 'filter-add';
+  addBtn.setAttribute('aria-controls', 'filter-groups');
+  filterBar.classList.remove('is-open');
+  addBtn.setAttribute('aria-expanded', 'false');
+  // Re-render the button so its label + leading glyph track the open state:
+  // "+ Add filter" when collapsed, "Done" when open. data-i18n on the label
+  // span lets a soft language switch re-translate it in place; the key swaps
+  // with the state, which doesn't change during a switch.
+  function paintAddBtn() {
+    const open = filterBar.classList.contains('is-open');
+    const key = open ? 'flagsdata.done' : 'flagsdata.addFilter';
+    const txt = open ? t('flagsdata.done', 'Done') : t('flagsdata.addFilter', 'Add filter');
+    addBtn.innerHTML =
+      `<span class="filter-add-plus" aria-hidden="true">${open ? '' : '+'}</span>` +
+      `<span data-i18n="${key}">${txt}</span>`;
+  }
+  addBtn.addEventListener('click', () => {
     const open = filterBar.classList.toggle('is-open');
-    toggleBtn.setAttribute('aria-expanded', String(open));
+    addBtn.setAttribute('aria-expanded', String(open));
+    paintAddBtn();
   });
-  // Wrap the toggle in a full-width row so it sits alone above the pill
-  // groups. Without this it would share row 2 with the first pill group
-  // (toggle is a natural-width inline-flex; the pills would just flow in
-  // beside it).
+  paintAddBtn();
+
+  // Search, then chips, then "Add filter"; the wrapper claims the rest of the
+  // row so the Clear button (appended below) sits opposite via space-between.
+  const filterSummary = document.createElement('div');
+  filterSummary.className = 'filter-summary';
+  filterSummary.append(searchWrap, chipsWrap, addBtn);
+
   const toggleRow = document.createElement('div');
   toggleRow.className = 'filter-toggle-row';
-  toggleRow.appendChild(toggleBtn);
+  toggleRow.appendChild(filterSummary);
   filterBar.appendChild(toggleRow);
 
   const groupsWrap = document.createElement('div');
@@ -1036,10 +1148,11 @@ export function bootFlagsData() {
     lensSortWrap.appendChild(b);
   }
   lensRow.appendChild(lensSortWrap);
-  // Sits directly below the name-search box (above the Filters toggle), so the
-  // "look through a metric" control reads as a peer of search — both are
-  // always-visible view controls, distinct from the collapsible pill filters.
-  filterBar.insertBefore(lensRow, toggleRow);
+  // Sits directly below the search + chips + Add-filter summary row (and above
+  // the collapsible pill groups), so the "look through a metric" control reads
+  // as an always-visible view control, distinct from the pill filters it sits
+  // over.
+  filterBar.insertBefore(lensRow, groupsWrap);
 
   function syncLensPressed() {
     for (const { key, el } of lensButtons) el.setAttribute('aria-pressed', String(lensKey === key));
@@ -1147,13 +1260,15 @@ export function bootFlagsData() {
       const value = btn.dataset.value ?? '';
       if (group === 'status') btn.textContent = statusLabel(value);
       else if (group === 'continent') btn.textContent = continentLabel(value);
-      else if (group === 'color') btn.textContent = colorLabel(value);
+      else if (group === 'color') paintColorPill(btn, value, colorLabel(value));
       else if (group === 'motif') btn.textContent = motifLabel(value);
       else if (group === 'stripesOnly') btn.textContent = stripesOnlyLabel(value);
       else if (group === 'population') btn.textContent = pillLabel('population', value, 'include', t);
       else if (group === 'area') btn.textContent = pillLabel('area', value, 'include', t);
       else if (group === 'density') btn.textContent = pillLabel('density', value, 'include', t);
     }
+    // Chips carry localized labels too — rebuild them in the new language.
+    renderChips();
     // Lens metric buttons carry dynamic labels (not a fixed data-i18n key), so
     // re-translate them here; renderLens refreshes the "no data" overlay text.
     for (const { key, el } of lensButtons) {
