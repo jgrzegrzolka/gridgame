@@ -430,6 +430,63 @@ Verified in-browser: a "least populous" reveal showed South Sudan 11.5M / Austra
 - Other metrics (area, GDP, coffee): they drop into this same module the day their JSON lands
   under `flags/metrics/`.
 
+## Iteration 6 — Tricky mode (progressive reveal), BUILT on branch `feat/party-tricky-mode` (pending PR)
+
+Goal: a host-chosen difficulty that turns the speed bonus into a real bet. With tricky
+mode on, each question tile starts **hidden and clears over the countdown** — grey +
+blurred, with six feathered panels covering it — so buzzing early means gambling on
+partial detail for the speed points, while waiting for the flag to resolve is safer but
+slower. Jan settled the exact look by iterating on an interactive mockup: **grey + blur +
+a soft panel wipe**, stacked, with no visible grid between panels.
+
+**The shape: a pure client render treatment.** No scoring, answer, or round-contract
+change. The whole feature is one boolean (`tricky`) that rides the `start` message,
+is stored on the room, broadcast back on every `question` / `welcome`, and drives a
+per-tile veil the page animates off the question clock. Decisions:
+
+- **One global toggle, not per-mode.** A single "Tricky mode" switch in the host lobby
+  setup (reusing the shared `.scope-toggle-switch`, persisted to `gridgame.party.tricky`).
+  Grey is a no-op on the monochrome map contour anyway, so a per-mode matrix wasn't worth
+  the UI. Applies to every round; the clear timing differs by tile type (below).
+- **Clear timing is per round type, in `flags/partyTiming.js` as data.** `veilProgress`
+  (0 hidden → 1 clear, clamped, unit-tested) reaches full clarity at `veilClearFraction`
+  of the question window, then holds clear so a late decider still gets a clean look.
+  **Flags clear by 70%** (`FLAG_CLEAR_FRACTION`) — they carry give-away detail, so they
+  stay tricky well past the midpoint; **outlines clear by 40%** (`OUTLINE_CLEAR_FRACTION`) —
+  a silhouette is already hard and grey does nothing to it. Both Jan's chosen numbers.
+- **Driven by `--veil-p` on the grid, via rAF.** The page sets one custom property on the
+  (persistent) grid element each frame; CSS reads it for the grey/blur filter and the
+  per-panel fade. Setting it on the grid (not the tiles) means a re-render mid-question —
+  a late join, a buzz notification rebuilding the tiles — never resets the animation.
+  Question phase only; the reveal always paints crisp full-colour tiles.
+- **Animates for everyone, incl. reduced-motion (Jan's call).** The veil is gameplay, not
+  decoration, and disabling it for a reduced-motion user would hand them a peek advantage
+  in a same-room party game, so it is not gated on `prefers-reduced-motion`.
+- **The panel look: six feathered patches, no grid.** A 3×2 cover of surface-colour cells
+  fades out on a scattered order (`VEIL_ORDER`), and the cover overshoots the tile and is
+  itself blurred so panel edges feather into each other — the flag materialises in soft
+  patches, and the blur falls outside the tile clip so the border stays clean.
+
+**Build steps:**
+
+- [x] `flags/partyTiming.js` — `FLAG_CLEAR_FRACTION` / `OUTLINE_CLEAR_FRACTION`,
+      `veilClearFraction(isOutline)`, `veilProgress(deadline, now, total, clearFrac)` (+ tests).
+- [x] `flags/partyRoom.js` — room gains `tricky`; set at `applyStart` (6th arg, coerced),
+      stored, serialized, and included in the `question` + `welcome` broadcasts (+ tests).
+- [x] `party/partyGameServer.js` — reads `parsed.tricky === true` on `start`, passes it through.
+- [x] `flags/partyClient.js` — client state gains `tricky`, adopted from `welcome`/`question` (+ tests).
+- [x] `flagParty/page.js` — the host toggle (persisted), the veil markup on question tiles,
+      the `--veil-p` rAF loop.
+- [x] `flagParty/index.css` — veil styles (grey+blur on `.flag`/`.contour`, feathered panel
+      cover), all on the seven palette vars.
+- [x] `i18n/en.json` + `pl.json` — `party.tricky` + `party.trickyHint`, en + pl, no em dashes.
+- [x] `npm run validate` green for the touched modules (66 tests) + typecheck clean.
+- [ ] End-to-end in-browser verify (blocked on a shared Playwright browser during parallel work).
+
+**Deferred (not this iteration):** a difficulty *dial* (Normal / Tricky / Brutal) mapping to
+distinct effects; per-mode veils; making the clear fractions host-configurable. The single
+toggle is the literal ask; the dial is a fast follow if the mode lands well.
+
 ## Open decisions (settle as they come up, not now)
 
 - **Settings page — SHIPPED (#765).** The host game-setup panel in the lobby picks which modes

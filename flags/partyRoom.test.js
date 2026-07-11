@@ -125,6 +125,39 @@ test('applyStart: omitting the plan keeps whatever the room opened with', () => 
   assert.equal(r.room.totalRounds, 4);
 });
 
+test('applyStart: tricky defaults off and rides every question broadcast', () => {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  assert.equal(room.tricky, false, 'a fresh room is not tricky');
+  const off = applyStart(room, 'alice', q('jp'));
+  assert.equal(off.room.tricky, false, 'omitting tricky keeps it off');
+  assert.equal(msg(off, 'question').tricky, false, 'the broadcast carries the flag');
+});
+
+test('applyStart: the host tricky choice is stored and broadcast', () => {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  const r = applyStart(room, 'alice', q('jp'), undefined, undefined, true);
+  assert.equal(r.room.tricky, true, 'chosen tricky is stored on the room');
+  assert.equal(msg(r, 'question').tricky, true, 'the question broadcast carries it so clients veil');
+});
+
+test('applyStart: a non-boolean tricky keeps the room value (never coerces mid-room)', () => {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  // @ts-expect-error deliberately wrong type — the reducer ignores non-booleans
+  const r = applyStart(room, 'alice', q('jp'), undefined, undefined, 'yes');
+  assert.equal(r.room.tricky, false, 'a bad value falls back to the room, not truthiness');
+});
+
+test('welcome: a mid-game reconnect learns tricky is on so its tiles veil', () => {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyStart(room, 'alice', q('jp'), undefined, undefined, true).room;
+  const r = applyHello(room, 'alice', 'Alice'); // alice reconnects mid-question
+  assert.equal(msg(r, 'welcome').tricky, true, 'the resume snapshot carries the tricky flag');
+});
+
 // ---- applyBuzz ----
 
 test('applyBuzz: records a buzz and announces the count without leaking the choice', () => {
@@ -271,4 +304,14 @@ test('serialize/deserialize: the chosen plan survives an eviction (so mid-game g
   const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
   assert.deepEqual(restored.plan, plan);
   assert.equal(restored.totalRounds, 5);
+});
+
+test('serialize/deserialize: tricky survives an eviction and defaults off for legacy snapshots', () => {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyStart(room, 'alice', q('jp'), undefined, undefined, true).room;
+  const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
+  assert.equal(restored.tricky, true, 'the tricky flag round-trips');
+  const legacy = deserializeRoom({ phase: 'lobby' }); // a snapshot from before the flag existed
+  assert.equal(legacy.tricky, false, 'a pre-tricky snapshot defaults to off');
 });

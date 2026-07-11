@@ -511,6 +511,8 @@
     "roundsLabel": "rounds",
     "fewer": "Fewer rounds",
     "more": "More rounds",
+    "tricky": "Tricky mode",
+    "trickyHint": "Flags start hidden and clear as the clock runs",
     "mode": {
       "flagsAll": "Flags: all countries",
       "flagsTerritories": "Flags: territories",

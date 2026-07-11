@@ -37,6 +37,11 @@ import { scoreRound } from './partyScore.js';
  *   eviction mid-game and the server can generate the right round type); the
  *   room never reads it.
  * @property {number} roundIndex  0-based index of the current question.
+ * @property {boolean} tricky  the host's tricky-mode choice: when true, clients
+ *   veil each tile (grey + blur + panel wipe) and clear it over the question
+ *   clock. Purely a client render flag — the room stores it (so it survives an
+ *   eviction and rides every question / welcome broadcast) but never acts on it;
+ *   scoring, the answer, and the round contract are untouched.
  * @property {Question | null} question  the live question; `answer` never leaves
  *   the server until reveal.
  * @property {Buzz[]} buzzes  this question's buzzes in server arrival order.
@@ -62,6 +67,7 @@ export function createRoom(totalRounds = DEFAULT_ROUNDS, plan = null) {
     totalRounds,
     plan,
     roundIndex: 0,
+    tricky: false,
     question: null,
     buzzes: [],
   };
@@ -124,9 +130,11 @@ export function applyHello(room, playerId, nickname) {
  * @param {Question} question
  * @param {Room['plan']} [plan]
  * @param {number} [totalRoundsValue]
+ * @param {boolean} [tricky]  the host's tricky-mode choice; omit to keep the
+ *   room's current value.
  * @returns {ApplyResult}
  */
-export function applyStart(room, playerId, question, plan, totalRoundsValue) {
+export function applyStart(room, playerId, question, plan, totalRoundsValue, tricky) {
   if (room.phase !== 'lobby') return { room, broadcasts: [] };
   if (room.hostId !== playerId) return { room, broadcasts: [] };
   if (room.seats.size === 0) return { room, broadcasts: [] };
@@ -137,6 +145,7 @@ export function applyStart(room, playerId, question, plan, totalRoundsValue) {
     question,
     buzzes: [],
     plan: plan ?? room.plan,
+    tricky: typeof tricky === 'boolean' ? tricky : room.tricky,
     totalRounds: typeof totalRoundsValue === 'number' ? totalRoundsValue : room.totalRounds,
   };
   return { room: nextRoom, broadcasts: [questionBroadcast(nextRoom)] };
@@ -409,7 +418,7 @@ function questionBroadcast(room) {
   const pub = q ? publicQuestion(q) : { prompt: '', options: [] };
   return {
     to: 'all',
-    message: { type: 'question', ...pub, roundIndex: room.roundIndex, totalRounds: room.totalRounds },
+    message: { type: 'question', ...pub, roundIndex: room.roundIndex, totalRounds: room.totalRounds, tricky: room.tricky },
   };
 }
 
@@ -430,6 +439,7 @@ function welcomeBroadcast(room, playerId) {
       phase: room.phase,
       roundIndex: room.roundIndex,
       totalRounds: room.totalRounds,
+      tricky: room.tricky,
       roster: rosterList(room),
       question: room.question ? publicQuestion(room.question) : null,
       scoreboard: scoreboardOf(room),
@@ -453,6 +463,7 @@ export function serializeRoom(room) {
     totalRounds: room.totalRounds,
     plan: room.plan,
     roundIndex: room.roundIndex,
+    tricky: room.tricky,
     question: room.question,
     buzzes: room.buzzes,
   };
@@ -471,6 +482,7 @@ export function deserializeRoom(snapshot) {
     totalRounds: snapshot.totalRounds ?? DEFAULT_ROUNDS,
     plan: snapshot.plan ?? null,
     roundIndex: snapshot.roundIndex ?? 0,
+    tricky: snapshot.tricky ?? false,
     question: snapshot.question ?? null,
     buzzes: snapshot.buzzes ?? [],
   };

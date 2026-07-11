@@ -190,7 +190,10 @@ export default class PartyGameServer {
           // both the question and the plan (+ its round count) to the room.
           this.usedCodes = new Set();
           const plan = validatePlan(parsed.plan) ?? DEFAULT_PLAN;
-          result = applyStart(this.room, playerId, this.generateQuestion(0, plan), plan, totalRounds(plan));
+          // Tricky mode is a client render flag the host chooses; coerce to a
+          // strict boolean so a malformed value can't reach the room.
+          const tricky = parsed.tricky === true;
+          result = applyStart(this.room, playerId, this.generateQuestion(0, plan), plan, totalRounds(plan), tricky);
           break;
         }
         case 'buzz': {

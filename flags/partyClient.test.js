@@ -38,6 +38,19 @@ test('welcome: adopts identity, host flag, phase, roster and totals', () => {
   assert.equal(s.roster.length, 1);
 });
 
+test('welcome + question: the tricky flag is learned from the server and defaults off', () => {
+  assert.equal(initialPartyClientState().tricky, false, 'off until the server says otherwise');
+  // A mid-game reconnect learns tricky from the welcome snapshot.
+  let s = reduce(initialPartyClientState(), {
+    type: 'welcome', you, isHost: false, phase: 'question', roster: [], totalRounds: 5, tricky: true,
+  });
+  assert.equal(s.tricky, true, 'welcome adopts tricky so the resumed tiles veil');
+  // Each question broadcast also carries it (the source of truth per round).
+  s = reduce({ ...initialPartyClientState(), roster: [{ playerId: you, nickname: 'Me', score: 0, present: true }] },
+    { type: 'question', prompt: 'fr', options: ['fr', 'de'], roundId: 'flagPick', roundIndex: 0, totalRounds: 5, tricky: true });
+  assert.equal(s.tricky, true, 'question adopts tricky');
+});
+
 test('roster: recomputes isHost against my own id', () => {
   let s = reduce(initialPartyClientState(), { type: 'welcome', you, isHost: false, phase: 'lobby', roster: [], totalRounds: 5 });
   s = reduce(s, { type: 'roster', hostId: you, roster: [{ playerId: you, nickname: 'Me', score: 0, present: true }] });
