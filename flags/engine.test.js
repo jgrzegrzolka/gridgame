@@ -29,9 +29,11 @@ import {
   COLOR_COUNTS_FOR_RANDOM,
   STRIPES_ORIENTATIONS_FOR_RANDOM,
   POPULATION_BREAKS_FOR_RANDOM,
+  AREA_BREAKS_FOR_RANDOM,
   ALL_MOTIFS,
   colorCount,
   population,
+  area,
   categoryFromId,
   hasStripesOnly,
   buildUltimateCategoryPool,
@@ -499,6 +501,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = POPULATION_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `population ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('area:')) {
+      const suffix = cat.id.slice('area:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = AREA_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `area ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -552,7 +561,7 @@ test('continent and statehood categories carry their exclusiveGroup', () => {
   assert.equal(hasMotif('animal').exclusiveGroup, undefined);
 });
 
-test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population', () => {
+test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population + area', () => {
   const pool = buildRandomCategoryPool();
   const expected =
     CONTINENTS_FOR_RANDOM.length
@@ -560,7 +569,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + MOTIFS_FOR_RANDOM.length
     + COLOR_COUNTS_FOR_RANDOM.length
     + STRIPES_ORIENTATIONS_FOR_RANDOM.length
-    + POPULATION_BREAKS_FOR_RANDOM.length;
+    + POPULATION_BREAKS_FOR_RANDOM.length
+    + AREA_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -654,11 +664,13 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
   const stripes = ultPool.filter((c) => c.id.startsWith('stripesOnly:'));
   assert.equal(stripes.length, 0, 'stripesOnly cats must not appear in the 9×9 pool');
   // Sanity check — the non-stripesOnly cats survive, minus the extreme
-  // population tiers (only the one `ultimate: true` break stays in 9×9).
+  // population + area tiers (only the one `ultimate: true` break per metric
+  // stays in 9×9).
   const droppedPop = POPULATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  const droppedArea = AREA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
   assert.equal(
     ultPool.length,
-    buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length - droppedPop,
+    buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length - droppedPop - droppedArea,
   );
 });
 
@@ -669,6 +681,15 @@ test('buildUltimateCategoryPool keeps exactly one population breakpoint (the ult
   const ultimateBreak = POPULATION_BREAKS_FOR_RANDOM.find((b) => b.ultimate === true);
   assert.ok(ultimateBreak, 'exactly one break should be flagged ultimate');
   assert.equal(pop[0].id, `population:${ultimateBreak?.op}${ultimateBreak?.n}`);
+});
+
+test('buildUltimateCategoryPool keeps exactly one area breakpoint (the ultimate:true tier)', () => {
+  const ultPool = buildUltimateCategoryPool();
+  const areas = ultPool.filter((c) => c.id.startsWith('area:'));
+  assert.equal(areas.length, 1, '9×9 keeps a single area breakpoint');
+  const ultimateBreak = AREA_BREAKS_FOR_RANDOM.find((b) => b.ultimate === true);
+  assert.ok(ultimateBreak, 'exactly one area break should be flagged ultimate');
+  assert.equal(areas[0].id, `area:${ultimateBreak?.op}${ultimateBreak?.n}`);
 });
 
 test('categoryFromId round-trips stripesOnly:horizontal and stripesOnly:vertical', () => {
@@ -970,6 +991,72 @@ test('translateCategoryLabel maps population thresholds to the population.* key,
     translateCategoryLabel(population('>=', 50_000_000), fakeTranslate({})),
     'over 50M people',
   );
+});
+
+test('area(>=, N) matches countries whose area is at least N; missing value never matches', () => {
+  const cat = area('>=', 1_000_000);
+  const big = country({ code: 'ru', name: 'Russia', area: 16_376_870 });
+  const exactlyN = country({ code: 'xx', name: 'X', area: 1_000_000 });
+  const small = country({ code: 'mt', name: 'Malta', area: 316 });
+  const noValue = country({ code: 'nn', name: 'Nowhere' }); // non-place: no area
+  assert.equal(cat.id, 'area:>=1000000');
+  assert.equal(cat.exclusiveGroup, 'area');
+  assert.equal(cat.predicate(big), true);
+  assert.equal(cat.predicate(exactlyN), true);
+  assert.equal(cat.predicate(small), false);
+  assert.equal(cat.predicate(noValue), false);
+});
+
+test('area(<=, N) matches countries whose area is at most N; missing value never matches', () => {
+  const cat = area('<=', 1_000);
+  const tiny = country({ code: 'va', name: 'Vatican', area: 0.49 });
+  const exactlyN = country({ code: 'xx', name: 'X', area: 1_000 });
+  const big = country({ code: 'ru', name: 'Russia', area: 16_376_870 });
+  const noValue = country({ code: 'nn', name: 'Nowhere' });
+  assert.equal(cat.id, 'area:<=1000');
+  assert.equal(cat.predicate(tiny), true);
+  assert.equal(cat.predicate(exactlyN), true);
+  assert.equal(cat.predicate(big), false);
+  assert.equal(cat.predicate(noValue), false);
+});
+
+test('area factory flags ultimateEligible:false only when asked', () => {
+  assert.equal(area('>=', 100_000).ultimateEligible, undefined);
+  assert.equal(area('>=', 1_000_000, { ultimateEligible: false }).ultimateEligible, false);
+});
+
+test('axesConflict blocks two area breakpoints across opposite axes (single exclusiveGroup)', () => {
+  assert.equal(axesConflict([area('>=', 1_000_000)], [area('<=', 1_000)]), true);
+  assert.equal(axesConflict([area('>=', 100_000)], [area('<=', 100_000)]), true);
+});
+
+test('categoryFromId round-trips area thresholds and rejects malformed suffixes', () => {
+  const ge = categoryFromId('area:>=100000');
+  assert.ok(ge);
+  assert.equal(ge?.id, 'area:>=100000');
+  assert.equal(ge?.exclusiveGroup, 'area');
+  const big = country({ code: 'ru', name: 'Russia', area: 16_376_870 });
+  assert.equal(ge?.predicate(big), true);
+
+  const le = categoryFromId('area:<=1000');
+  assert.equal(le?.id, 'area:<=1000');
+
+  assert.equal(categoryFromId('area:100000'), null);
+  assert.equal(categoryFromId('area:>=abc'), null);
+  assert.equal(categoryFromId('area:>=0'), null);
+});
+
+test('translateCategoryLabel maps area thresholds to the area.* key, falling back to the baked label', () => {
+  const t = fakeTranslate({
+    'area.atLeast.1m': 'ponad 1 mln km²',
+    'area.atMost.1k': 'poniżej 1 tys. km²',
+    'area.atLeast.100k': 'ponad 100 tys. km²',
+  });
+  assert.equal(translateCategoryLabel(area('>=', 1_000_000), t), 'ponad 1 mln km²');
+  assert.equal(translateCategoryLabel(area('<=', 1_000), t), 'poniżej 1 tys. km²');
+  assert.equal(translateCategoryLabel(area('>=', 100_000), t), 'ponad 100 tys. km²');
+  // Missing key → baked English label
+  assert.equal(translateCategoryLabel(area('>=', 500_000), fakeTranslate({})), 'over 500K km²');
 });
 
 test('validateCell accepts an ambiguousColorCount flag for a contested-count cell (player-pick path)', () => {
@@ -1274,6 +1361,13 @@ function denseSquarePool(continents, colors, perCell) {
           code: `c${idx++}`, name: `${cont}-${color}-${n}`,
           continent: /** @type {any} */ (cont), primaryColors: [color],
           motifs: [motif],
+          // Spread metric values WITHIN each (continent × colour) cell so the
+          // 9×9 pool's `>=` metric breaks (population >=10M, area >=100K) are
+          // fillable everywhere (matching production, where every country has a
+          // value) yet match ~half per cell, so neither break is a superset of a
+          // continent. Offset so the two metrics aren't subset-related.
+          population: n % 2 === 0 ? 20_000_000 : 5_000_000,
+          area: n % 2 === 1 ? 200_000 : 50_000,
         }));
       }
     }
@@ -1350,7 +1444,7 @@ test('generateUltimateRandomPuzzle returns a puzzle that passes hasUltimatePuzzl
   // CI doesn't flake when axesImpliedPair narrows the success window past
   // the prior 50-attempt headroom on certain Math.random sequences.
   const countries = denseSquarePool(['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'], COLORS_FOR_RANDOM, 9);
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 500 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 3000 });
   assert.equal(hasUltimatePuzzleSolution(puzzle, countries), true);
 });
 
@@ -1390,17 +1484,18 @@ test('findUltimateAssignment: returns 81 distinct countries on an empty puzzle t
   // CI run. With perCell=9 some axis combinations (especially continent ×
   // motif) leave the Hall check tight, and 50 attempts isn't always enough
   // to roll a Hall-passing layout — this fired once in CI before the bump.
-  // The chosen seed (3) lands on an axis combo the backtracker resolves
-  // within its budget; growing MOTIFS_FOR_RANDOM (e.g. adding `bird`) shifts
-  // which seeds the PRNG sweeps onto, so this is a known sensitivity.
+  // The chosen seed lands on an axis combo the backtracker resolves within its
+  // budget; growing the category pool (adding a motif, or the `area` metric
+  // breakpoints) shifts which seeds the PRNG sweeps onto, so this is a known
+  // sensitivity. Seed 4 resolves under the post-area pool (seed 3 stopped).
   const countries = denseSquarePool(
     ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
     COLORS_FOR_RANDOM,
     10,
   );
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(3), maxAttempts: 500 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(4), maxAttempts: 3000 });
   /** @type {Country[][][][] | null} */
-  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(3));
+  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(4));
   if (!assignment) throw new Error('a solvable puzzle must yield a non-null assignment');
   /** @type {Set<string>} */
   const seen = new Set();
@@ -1436,7 +1531,7 @@ test('findUltimateAssignment: respects preFilled cells and never reuses their co
     COLORS_FOR_RANDOM,
     10,
   );
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 500 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 3000 });
   // Seed one cell at (0,0,0,0) with a country that fits its row × col.
   const seedCandidates = countries.filter(
     (co) => puzzle.rows[0].predicate(co) && puzzle.cols[0].predicate(co),
@@ -1485,7 +1580,7 @@ test('findUltimateAssignment: returns null when preFilled has burned the candida
   // perCell stays at 9 here — the test deliberately exploits the tight
   // pool — but maxAttempts is generous so the puzzle generator itself
   // doesn't flake out on an unlucky axis roll.
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 500 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 3000 });
   // Find a (br, bc) and steal all of its candidates into other cells'
   // preFilled slots whose row × col happens to also accept them.
   const target = { br: 0, bc: 0 };
@@ -1535,7 +1630,7 @@ test('findUltimateAssignment: returns null when maxBacktracks is exceeded instea
     COLORS_FOR_RANDOM,
     10,
   );
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 500 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 3000 });
   const out = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(7), 1);
   assert.equal(out, null, 'cap=1 must abandon the search and return null');
 });
@@ -1561,6 +1656,14 @@ function syntheticTaggedCountries() {
   // of every motif axis, tripping axesImpliedPair on almost every
   // generator attempt once that guard was added.
   const motifPool = MOTIFS_FOR_RANDOM.filter((m) => m !== 'eu-member');
+  // Spread population + area across each country so every threshold breakpoint
+  // (both metrics) has candidates in every continent. Without this the metric
+  // categories in the pool are unfillable and the generator burns its whole
+  // retry budget dodging them. Ladders chosen to populate every break:
+  // pop <=1M / <=5M / <=20M / >=10M / >=50M / >=100M, area <=1K / <=10K /
+  // <=100K / >=100K / >=500K / >=1M.
+  const POP_LADDER = [500_000, 3_000_000, 15_000_000, 30_000_000, 60_000_000, 120_000_000];
+  const AREA_LADDER = [500, 5_000, 50_000, 200_000, 700_000, 2_000_000];
   // Each (continent × colour × n) triple becomes one country. n controls
   // palette size — n=0 keeps the base 1-colour shape, n=1/n=2 layer in
   // distinct neighbour colours so the country has 2 / 3 colours total.
@@ -1572,11 +1675,13 @@ function syntheticTaggedCountries() {
         const motif = motifPool[codeCounter % motifPool.length];
         const extras = COLORS_FOR_RANDOM.filter((c) => c !== color).slice(0, n);
         out.push(country({
-          code: `c${codeCounter++}`,
+          code: `c${codeCounter}`,
           name: `${cont}-${color}-${n}`,
           continent: cont,
           primaryColors: [color, ...extras],
           motifs: [motif],
+          population: POP_LADDER[codeCounter % POP_LADDER.length],
+          area: AREA_LADDER[codeCounter++ % AREA_LADDER.length],
         }));
       }
     }
@@ -1588,11 +1693,13 @@ function syntheticTaggedCountries() {
         const motif = motifPool[codeCounter % motifPool.length];
         const palette = COLORS_FOR_RANDOM.slice(i, i + target);
         out.push(country({
-          code: `c${codeCounter++}`,
+          code: `c${codeCounter}`,
           name: `${cont}-multi${target}-${i}`,
           continent: cont,
           primaryColors: palette,
           motifs: [motif],
+          population: POP_LADDER[codeCounter % POP_LADDER.length],
+          area: AREA_LADDER[codeCounter++ % AREA_LADDER.length],
         }));
       }
     }

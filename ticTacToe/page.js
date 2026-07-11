@@ -18,7 +18,7 @@ import { fetchProfile } from '../flags/profileFetch.js';
 import { displayNickname } from '../flags/nickname.js';
 import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
 import { trackEvent } from '../analytics/index.js';
-import { loadCountries, attachPopulations } from '../flags/group.js';
+import { loadCountries, attachPopulations, attachAreas } from '../flags/group.js';
 import { metricDataGap } from '../flags/metricTiers.js';
 import { shareUrl, renderPlayingAs } from '../common.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
@@ -44,10 +44,12 @@ export function bootTicTacToeOnline() {
   Promise.all([
     fetch('../flags/countries.json').then((r) => r.json()),
     fetch('../flags/metrics/population.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    fetch('../flags/metrics/area.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
   ])
-    .then(([rawCountries, population]) => {
+    .then(([rawCountries, population, area]) => {
       const countries = withLocalizedAliases(loadCountries(rawCountries));
       if (population) attachPopulations(countries, population.values);
+      if (area) attachAreas(countries, area.values);
       runOnline(countries);
     })
     .catch((err) => {
