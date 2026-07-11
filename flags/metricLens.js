@@ -15,7 +15,7 @@
 
 /**
  * Format a metric value for the compact tile overlay.
- *   'compact'  → 1.44B / 336.8M / 552.7K / 800
+ *   'compact'  → 27.81T / 1.44B / 336.8M / 552.7K / 800
  *   'decimal1' → one decimal place (small per-capita rates)
  * @param {number} value
  * @param {string} [format]
@@ -24,6 +24,7 @@
 export function formatValue(value, format) {
   if (format === 'decimal1') return value.toFixed(1);
   const abs = Math.abs(value);
+  if (abs >= 1e12) return (value / 1e12).toFixed(2) + 'T'; // GDP reaches trillions
   if (abs >= 1e9) return (value / 1e9).toFixed(2) + 'B';
   if (abs >= 1e6) return (value / 1e6).toFixed(1) + 'M';
   if (abs >= 1e3) return (value / 1e3).toFixed(1) + 'K';
