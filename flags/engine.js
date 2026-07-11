@@ -514,6 +514,15 @@ function pickRandom(pool, n, rng) {
   return arr.slice(0, n);
 }
 
+/** English fallbacks for the metric-name prefix, keyed by id `kind`. The active
+ * language comes from the `metric.<kind>` i18n key (added by the flagsdata lens);
+ * these back it up so a missing key never renders the prefix blank. */
+const METRIC_PREFIX_FALLBACK = /** @type {const} */ ({
+  population: 'Population',
+  area: 'Land area',
+  density: 'Population density',
+});
+
 /**
  * Translate a category's display label by decoding its `id`. The factories
  * above bake an English label (`"Africa"`, `"red"`, `"weapon"`) onto every
@@ -529,6 +538,10 @@ function pickRandom(pool, n, rng) {
  *   `hasColor:<x>`     → `color.<x>` (bare noun, no "Has " wrapper).
  *   `hasMotif:<x>`     → `motif.<x>` (bare noun, no "Has " wrapper).
  *   `stripesOnly:<o>`  → `stripesOnly.<o>` (e.g. "horizontal stripes only").
+ *   `population/area/density:<op><n>` → `"<metric>: <threshold>"`, e.g.
+ *      "Land area: over 100K km²". The metric name (from `metric.<kind>`) is
+ *      prefixed so a bare "over 100K" cell can't be confused across the three
+ *      threshold metrics; the threshold text itself keeps its unit.
  *
  * @param {Category} category
  * @param {(key: string, fallback: string) => string} translate
@@ -573,7 +586,8 @@ export function translateCategoryLabel(category, translate) {
     if ((op === '>=' || op === '<=') && Number.isInteger(n)) {
       const token = `${n / 1_000_000}m`;
       const bucket = op === '>=' ? 'atLeast' : 'atMost';
-      return translate(`population.${bucket}.${token}`, category.label);
+      const prefix = translate('metric.population', METRIC_PREFIX_FALLBACK.population);
+      return `${prefix}: ${translate(`population.${bucket}.${token}`, category.label)}`;
     }
     return category.label;
   }
@@ -585,7 +599,8 @@ export function translateCategoryLabel(category, translate) {
     if ((op === '>=' || op === '<=') && Number.isInteger(n)) {
       const token = n >= 1_000_000 ? `${n / 1_000_000}m` : `${n / 1_000}k`;
       const bucket = op === '>=' ? 'atLeast' : 'atMost';
-      return translate(`area.${bucket}.${token}`, category.label);
+      const prefix = translate('metric.area', METRIC_PREFIX_FALLBACK.area);
+      return `${prefix}: ${translate(`area.${bucket}.${token}`, category.label)}`;
     }
     return category.label;
   }
@@ -596,7 +611,8 @@ export function translateCategoryLabel(category, translate) {
     const n = Number.parseInt(value.slice(2), 10);
     if ((op === '>=' || op === '<=') && Number.isInteger(n)) {
       const bucket = op === '>=' ? 'atLeast' : 'atMost';
-      return translate(`density.${bucket}.${n}`, category.label);
+      const prefix = translate('metric.density', METRIC_PREFIX_FALLBACK.density);
+      return `${prefix}: ${translate(`density.${bucket}.${n}`, category.label)}`;
     }
     return category.label;
   }
