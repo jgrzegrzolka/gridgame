@@ -27,6 +27,9 @@ import { sovereigntyOf } from './group.js';
  *   Land-area threshold in km², the scalar twin of PopulationConstraint. Same
  *   shape and contract; reads `country.area`.
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} DensityConstraint
+ *   Population-density threshold (people/km²), scalar twin; reads `country.density`.
+ *
  * @typedef {{
  *   status: FilterSet,
  *   continent: FilterSet,
@@ -36,6 +39,7 @@ import { sovereigntyOf } from './group.js';
  *   colorCount: ColorCountConstraint | null,
  *   population: PopulationConstraint | null,
  *   area: AreaConstraint | null,
+ *   density: DensityConstraint | null,
  * }} Filters
  */
 
@@ -73,6 +77,7 @@ export function emptyFilters() {
     colorCount: null,
     population: null,
     area: null,
+    density: null,
   };
 }
 
@@ -222,6 +227,14 @@ export function matchesFilters(country, filters, options = {}) {
     const { op, n } = filters.area;
     if (op === '>=' && km2 < n) return false;
     if (op === '<=' && km2 > n) return false;
+  }
+
+  if (filters.density !== null) {
+    const d = country.density;
+    if (typeof d !== 'number') return false;
+    const { op, n } = filters.density;
+    if (op === '>=' && d < n) return false;
+    if (op === '<=' && d > n) return false;
   }
 
   const motifs = country.motifs ?? [];

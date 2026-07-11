@@ -1,4 +1,4 @@
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas } from '../flags/group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities } from '../flags/group.js';
 import {
   ALL_FLAG_COLORS,
   ALL_MOTIFS,
@@ -62,6 +62,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   colorCountProbability: 0.10,
   populationProbability: 0.15,
   areaProbability: 0.12,
+  densityProbability: 0.10,
 });
 
 /**
@@ -200,14 +201,18 @@ export function bootFindFlag() {
     // dropped) and no filter is offered.
     fetch('../flags/metrics/population.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
     fetch('../flags/metrics/area.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
+    fetch('../flags/metrics/density.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
   ])
-    .then(([raw, popValues, areaValues]) => {
+    .then(([raw, popValues, areaValues, densityValues]) => {
       // Attach AFTER withLocalizedAliases: its clone path (re-wrapping a
       // renamed Country through createCountry) would drop an extra field
       // set beforehand, so denormalize onto the final pool objects.
-      const all = attachAreas(
-        attachPopulations(withLocalizedAliases(flagsGamePool(raw, includeAll)), popValues),
-        areaValues,
+      const all = attachDensities(
+        attachAreas(
+          attachPopulations(withLocalizedAliases(flagsGamePool(raw, includeAll)), popValues),
+          areaValues,
+        ),
+        densityValues,
       );
       /** @type {{ refreshI18n: (newAll: import('../flags/group.js').Country[]) => void } | null} */
       let activeHandle = null;
@@ -338,6 +343,8 @@ export function bootFindFlag() {
     const populationPills = [];
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const areaPills = [];
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const densityPills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
     const sectionHeaders = [];
     /** @type {HTMLSpanElement | null} */
@@ -504,6 +511,40 @@ export function bootFindFlag() {
       }
     }
 
+    // Population-density section, same single-select scalar (`filter.density`).
+    {
+      const densityItems = buildMetricTierItems('density', all);
+      if (densityItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.density', 'Population density');
+        sectionHeaders.push({ h, key: 'findFlag.sections.density', fallback: 'Population density' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of densityItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('density', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectDensity(op, n, btn));
+          wrap.appendChild(btn);
+          densityPills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
     const clearBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-clear'));
     const randomBtn = document.getElementById('find-random');
@@ -518,6 +559,7 @@ export function bootFindFlag() {
       if (filter.colorCount !== null) selCount++;
       if (filter.population !== null) selCount++;
       if (filter.area !== null) selCount++;
+      if (filter.density !== null) selCount++;
       if (selCount === 0) {
         // Nothing selected — bare "Play" (no zero-count to read as a sad
         // empty result; the user hasn't picked anything yet).
@@ -595,6 +637,21 @@ export function bootFindFlag() {
       updateBar();
     }
 
+    /**
+     * Single-select population-density tier, twin of selectArea.
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectDensity(op, n, btn) {
+      const isActive = filter.density !== null && filter.density.op === op && filter.density.n === n;
+      filter.density = isActive ? null : { op, n };
+      for (const p of densityPills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
     playBtn.addEventListener('click', () => {
       if (playBtn.disabled) return;
       const params = new URLSearchParams({ f: serializeFilter(filter) });
@@ -611,6 +668,7 @@ export function bootFindFlag() {
       colorCountPicker.reset();
       filter.population = null;
       filter.area = null;
+      filter.density = null;
       for (const { btn } of allPills) {
         btn.classList.remove('active', 'exclude');
       }
@@ -618,6 +676,9 @@ export function bootFindFlag() {
         btn.classList.remove('active');
       }
       for (const { btn } of areaPills) {
+        btn.classList.remove('active');
+      }
+      for (const { btn } of densityPills) {
         btn.classList.remove('active');
       }
       updateBar();
@@ -672,7 +733,7 @@ export function bootFindFlag() {
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, onlyColorsLabelSpan, updateBar });
+        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, onlyColorsLabelSpan, updateBar });
       },
     };
   }

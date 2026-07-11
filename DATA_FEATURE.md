@@ -27,7 +27,7 @@ Third world metric (after population, area). A **derived rate**: no external sou
 
 - [x] 1. Data: `flags/metrics/density.json` (262 real places) + `authoring/build-density.mjs` (derived, no fetch) + `METRIC_FILES` line + `metrics.test.js` schema/coverage/no-org/derived-spot-check/ranking
 - [x] 2. flagsdata lens (free once step 1 landed; "Population density" in the selector, decimal1 display)
-- [ ] 3. Filters: `metricTiers.js` registry + `DENSITY_BREAKS_FOR_RANDOM` + `density()` factory; findFlag chooser; flagsdata group; attach at load sites
+- [x] 3. Filters: `density()` factory + `DENSITY_BREAKS_FOR_RANDOM` (>=100/200/500, <=100/30/10) + `metricTiers` registry entry + `attachDensities`; flagsFilter `density` constraint + `matchesFilters`; findFlag parse/serialize/pillLabel/filterTitle + `densityProbability` modifier + chooser section; flagsdata group (reused `buildMetricGroup`); i18n; tests. Verified in-browser: flagsdata "over 500 people/km²" → 28 flags
 - [ ] 4. TTT: `density(op, n)` factory + breaks + pool/id/label wiring + `attachDensities` at all 6 load sites + i18n + seed pins
 - [ ] 5. Flag Party round: one `createSuperlativeRound(createMetric(density, []), 'superlative-density')` instance + PARTY_MODE + client `SUPERLATIVE_MODES` entry + i18n
 - [ ] 6. Daily (deferred, see Backlog): rank captions + superlative puzzles

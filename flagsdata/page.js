@@ -1,4 +1,4 @@
-import { CONTINENTS, loadCountries, attachPopulations, attachAreas } from '../flags/group.js';
+import { CONTINENTS, loadCountries, attachPopulations, attachAreas, attachDensities } from '../flags/group.js';
 import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
 import { buildMetricTierItems } from '../flags/metricTiers.js';
@@ -624,6 +624,7 @@ export function bootFlagsData() {
     if (filters.colorCount !== null) pillTotal++;
     if (filters.population !== null) pillTotal++;
     if (filters.area !== null) pillTotal++;
+    if (filters.density !== null) pillTotal++;
     const anyActive = pillTotal > 0 || nameQuery !== '';
     clearBtn.hidden = !anyActive;
     // Include name search in the toggle badge count — once the search
@@ -771,7 +772,7 @@ export function bootFlagsData() {
    * against the loaded set, and the predicate reads the field `attach<Metric>s`
    * denormalizes on). Reuses findFlag's `sections.<metricKey>` label key, same
    * cross-reference the Colors group already makes to `findFlag.noOtherColors`.
-   * @param {'population' | 'area'} metricKey
+   * @param {'population' | 'area' | 'density'} metricKey
    * @param {string} fallbackLabel
    * @param {Country[]} countries
    */
@@ -941,6 +942,7 @@ export function bootFlagsData() {
     }
     filters.population = null;
     filters.area = null;
+    filters.density = null;
     colorCountLock.reset();
     if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
     colorCountPicker.reset();
@@ -1085,6 +1087,10 @@ export function bootFlagsData() {
           attachAreas(all, metricsData.area.values);
           groupsWrap.appendChild(buildMetricGroup('area', 'Land area', all));
         }
+        if (metricsData.density) {
+          attachDensities(all, metricsData.density.values);
+          groupsWrap.appendChild(buildMetricGroup('density', 'Population density', all));
+        }
         if (lensKey && metricsData[lensKey]) lensMetric = createMetric(metricsData[lensKey], all);
         renderLens();
         applyFilter();
@@ -1139,6 +1145,7 @@ export function bootFlagsData() {
       else if (group === 'stripesOnly') btn.textContent = stripesOnlyLabel(value);
       else if (group === 'population') btn.textContent = pillLabel('population', value, 'include', t);
       else if (group === 'area') btn.textContent = pillLabel('area', value, 'include', t);
+      else if (group === 'density') btn.textContent = pillLabel('density', value, 'include', t);
     }
     // Lens metric buttons carry dynamic labels (not a fixed data-i18n key), so
     // re-translate them here; renderLens refreshes the "no data" overlay text.

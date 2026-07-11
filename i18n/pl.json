@@ -405,7 +405,8 @@
       "motifs": "Motywy",
       "stripes": "Pasy",
       "population": "Ludność",
-      "area": "Powierzchnia"
+      "area": "Powierzchnia",
+      "density": "Gęstość zaludnienia"
     }
   },
   "daily": {
@@ -642,6 +643,18 @@
       "1k": "poniżej 1 tys. km²"
     }
   },
+  "density": {
+    "atLeast": {
+      "100": "ponad 100 osób/km²",
+      "200": "ponad 200 osób/km²",
+      "500": "ponad 500 osób/km²"
+    },
+    "atMost": {
+      "100": "poniżej 100 osób/km²",
+      "30": "poniżej 30 osób/km²",
+      "10": "poniżej 10 osób/km²"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "tylko 2 kolory",
@@ -696,7 +709,8 @@
   },
   "metric": {
     "population": "Liczba ludności",
-    "area": "Powierzchnia"
+    "area": "Powierzchnia",
+    "density": "Gęstość zaludnienia"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",
