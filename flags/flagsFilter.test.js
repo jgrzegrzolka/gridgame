@@ -261,6 +261,20 @@ test('matchesFilters: a country with no population value matches neither directi
   assert.equal(matchesFilters(noPop, leq), false);
 });
 
+test('matchesFilters: area {op} matches on the km² threshold; no value matches neither', () => {
+  const large = country({ code: 'ru', area: 16_000_000 });
+  const tiny = country({ code: 'va', area: 0.49 });
+  const noArea = country({ code: 'zz' }); // org: no area field
+  const ge = emptyFilters(); ge.area = { op: '>=', n: 1_000_000 };
+  const le = emptyFilters(); le.area = { op: '<=', n: 1_000 };
+  assert.equal(matchesFilters(large, ge), true);
+  assert.equal(matchesFilters(tiny, ge), false);
+  assert.equal(matchesFilters(tiny, le), true);
+  assert.equal(matchesFilters(large, le), false);
+  assert.equal(matchesFilters(noArea, ge), false);
+  assert.equal(matchesFilters(noArea, le), false);
+});
+
 test('matchesFilters: population combines (AND) with a continent include', () => {
   const euBig = country({ code: 'eu', continent: 'Europe', population: 80_000_000 });
   const euSmall = country({ code: 'es', continent: 'Europe', population: 2_000_000 });

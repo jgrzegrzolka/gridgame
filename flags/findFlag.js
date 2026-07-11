@@ -4,7 +4,7 @@
 
 import { readBoolSetting, writeBoolSetting } from './group.js';
 import { emptyFilters, matchesFilters, COLOR_COUNT_OPS, COLOR_COUNT_NS } from './flagsFilter.js';
-import { POPULATION_BREAKS_FOR_RANDOM } from './engine.js';
+import { POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM } from './engine.js';
 
 /**
  * Filter-group names in the order they should appear in titles and URLs.
@@ -149,6 +149,22 @@ export function parseFilterString(s) {
       }
       continue;
     }
+    // Scalar threshold on land area (km²), the twin of `population`:
+    // `area:>=1000000` / `area:<=1000`, matching the engine's `area:` id.
+    if (group === 'area') {
+      /** @type {'>=' | '<='} */
+      let op;
+      let nStr;
+      if (val.startsWith('>=')) { op = '>='; nStr = val.slice(2); }
+      else if (val.startsWith('<=')) { op = '<='; nStr = val.slice(2); }
+      else continue;
+      const n = Number.parseInt(nStr, 10);
+      if (Number.isInteger(n) && n > 0 && String(n) === nStr) {
+        f.area = { op, n };
+        any = true;
+      }
+      continue;
+    }
     /** @type {'include' | 'exclude'} */
     let sign = 'include';
     if (val.startsWith('!')) {
@@ -192,6 +208,9 @@ export function serializeFilter(f) {
   }
   if (f.population !== null) {
     tokens.push(`population:${f.population.op}${f.population.n}`);
+  }
+  if (f.area !== null) {
+    tokens.push(`area:${f.area.op}${f.area.n}`);
   }
   return tokens.join(',');
 }
@@ -309,6 +328,15 @@ export function pillLabel(group, value, sign, translate) {
     const token = `${n / 1_000_000}m`;
     if (op === '>=') return translate(`population.atLeast.${token}`, `over ${n / 1_000_000}M people`);
     return translate(`population.atMost.${token}`, `under ${n / 1_000_000}M people`);
+  } else if (group === 'area') {
+    // Land-area scalar threshold, twin of population. Keyed on the compact
+    // token ("100k", "1m") aligned with the TTT labels and AREA_BREAKS_FOR_RANDOM.
+    const op = value.slice(0, 2);
+    const n = Number.parseInt(value.slice(2), 10);
+    const token = n >= 1_000_000 ? `${n / 1_000_000}m` : `${n / 1_000}k`;
+    const human = n >= 1_000_000 ? `${n / 1_000_000}M` : `${n / 1_000}K`;
+    if (op === '>=') return translate(`area.atLeast.${token}`, `over ${human} km²`);
+    return translate(`area.atMost.${token}`, `under ${human} km²`);
   } else {
     body = translate(`status.${value}`, value);
   }
@@ -367,6 +395,9 @@ export function filterTitle(f, translate) {
   }
   if (f.population !== null) {
     parts.push(pillLabel('population', `${f.population.op}${f.population.n}`, 'include', translate));
+  }
+  if (f.area !== null) {
+    parts.push(pillLabel('area', `${f.area.op}${f.area.n}`, 'include', translate));
   }
   return parts.join(' · ');
 }
@@ -455,6 +486,7 @@ const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent',
  *   onlyColorsProbability?: number,
  *   colorCountProbability?: number,
  *   populationProbability?: number,
+ *   areaProbability?: number,
  * }} [options]
  * @returns {Filters}
  */
@@ -467,6 +499,7 @@ export function pickRandomMix(pillPool, all, options = {}) {
     onlyColorsProbability = 0,
     colorCountProbability = 0,
     populationProbability = 0,
+    areaProbability = 0,
   } = options;
 
   // A 2+ pill mix needs at least 2 pills to draw from; degenerate
@@ -497,6 +530,7 @@ export function pickRandomMix(pillPool, all, options = {}) {
     }
     maybeAttachColorCount(f, rng, onlyColorsProbability, colorCountProbability);
     maybeAttachPopulation(f, rng, populationProbability);
+    maybeAttachArea(f, rng, areaProbability);
     lastAttempt = f;
     const count = all.filter((c) => matchesFilters(c, f)).length;
     if (count >= minIntersection) return f;
@@ -569,5 +603,27 @@ function maybeAttachPopulation(f, rng, populationProbability) {
   if (populationProbability > 0 && rng() < populationProbability) {
     const brk = POPULATION_BREAKS_FOR_RANDOM[Math.floor(rng() * POPULATION_BREAKS_FOR_RANDOM.length)];
     f.population = { op: brk.op, n: brk.n };
+  }
+}
+
+/**
+ * Mutate `f` to attach an `area` threshold with probability `areaProbability`,
+ * drawing one of the six curated tiers from `AREA_BREAKS_FOR_RANDOM`. The km²
+ * twin of `maybeAttachPopulation`. Kept mutually exclusive with BOTH colorCount
+ * and population (a random puzzle carries at most one scalar modifier, so the
+ * title stays legible and the answer set doesn't collapse). Uniform pick so
+ * every tier stays reachable by Random (the findflag-random-coverage contract).
+ * Probability checked before the first rng() call so an opted-out caller (0,
+ * the default) consumes zero rng bytes.
+ *
+ * @param {Filters} f
+ * @param {() => number} rng
+ * @param {number} areaProbability
+ */
+function maybeAttachArea(f, rng, areaProbability) {
+  if (f.colorCount !== null || f.population !== null) return;
+  if (areaProbability > 0 && rng() < areaProbability) {
+    const brk = AREA_BREAKS_FOR_RANDOM[Math.floor(rng() * AREA_BREAKS_FOR_RANDOM.length)];
+    f.area = { op: brk.op, n: brk.n };
   }
 }

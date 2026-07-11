@@ -404,7 +404,8 @@
       "colors": "Colors",
       "motifs": "Motifs",
       "stripes": "Stripes",
-      "population": "Population"
+      "population": "Population",
+      "area": "Land area"
     }
   },
   "daily": {
