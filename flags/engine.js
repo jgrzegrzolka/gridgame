@@ -231,8 +231,9 @@ export const COLOR_COUNTS_FOR_RANDOM = [['=', 2], ['=', 3], ['=', 4], ['>=', 4]]
  * All six share `exclusiveGroup: 'population'` (baked by the `population`
  * factory) so two population constraints can never meet across axes — that
  * rules out both the impossible band (`>=100M × <=1M`, always empty) and the
- * merely redundant one (`>=10M × <=20M`). A puzzle carries population on at
- * most one cross-axis constraint.
+ * merely redundant one (`>=10M × <=20M`). The same-axis case (two population
+ * tiers both down the rows) is rejected separately by `metricGroupRepeated`,
+ * so a puzzle carries population at most once, on either axis.
  *
  * `ultimate: true` marks the single breakpoint kept in the 9×9 pool. The
  * extreme tiers can't back 9-distinct-per-cell against a continent (e.g.
@@ -260,7 +261,9 @@ export const POPULATION_BREAKS_FOR_RANDOM = [
  *
  * All six share `exclusiveGroup: 'area'` (baked by the `area` factory) so two
  * area constraints can never meet across axes, ruling out the impossible band
- * (`>=1M × <=1K`, always empty) and the redundant one (`>=100K × <=100K`).
+ * (`>=1M × <=1K`, always empty) and the redundant one (`>=100K × <=100K`). The
+ * same-axis case is rejected by `metricGroupRepeated`, so a puzzle carries area
+ * at most once.
  *
  * `ultimate: true` marks the single breakpoint kept in the 9×9 pool: the broad
  * `>=100K` tier is the only one that can back 9-distinct-per-cell against a
@@ -743,6 +746,47 @@ export function axesConflict(rows, cols) {
 }
 
 /**
+ * World-metric exclusiveGroups that may appear at most ONCE across the whole
+ * puzzle (rows + cols combined), not merely once per axis. `axesConflict`
+ * already blocks two categories from the same group meeting on opposite axes,
+ * but two thresholds on the *same* axis — e.g. `over 5M people` in one row and
+ * `under 1M people` in another — slip past it: they never share a cell, so
+ * they're not impossible, just redundant "population again" clutter that reads
+ * as a bug to the player. These groups are the numeric world metrics; other
+ * groups (continent, colorCount, statehood, stripesOnly) are legitimately
+ * repeated on one axis — two different continents down the rows is a normal,
+ * desirable grid — so they stay out of this set. A future metric that ships a
+ * threshold factory with its own exclusiveGroup should be added here to
+ * inherit the single-use rule.
+ *
+ * @type {Set<string>}
+ */
+export const SINGLE_USE_METRIC_GROUPS = new Set(['population', 'area', 'density']);
+
+/**
+ * True when any single-use metric group (see `SINGLE_USE_METRIC_GROUPS`)
+ * appears more than once across the puzzle's six categories, regardless of
+ * axis. Complements `axesConflict` (which only rejects same-group pairs across
+ * opposite axes) by also catching the same-axis case — the two together mean a
+ * puzzle carries each world metric at most once.
+ *
+ * @param {Category[]} rows
+ * @param {Category[]} cols
+ * @returns {boolean}
+ */
+export function metricGroupRepeated(rows, cols) {
+  /** @type {Set<string>} */
+  const seen = new Set();
+  for (const cat of [...rows, ...cols]) {
+    const group = cat.exclusiveGroup;
+    if (!group || !SINGLE_USE_METRIC_GROUPS.has(group)) continue;
+    if (seen.has(group)) return true;
+    seen.add(group);
+  }
+  return false;
+}
+
+/**
  * Detect a degenerate (row × col) pair where one axis's predicate is fully
  * implied by the other's. The classic case is `motif:eu-member` × `continent:Europe`
  * — every EU member is European, so the cell reduces to "EU member" and the
@@ -1025,6 +1069,7 @@ export function generateRandomPuzzle(countries, options = {}) {
   for (let i = 0; i < maxAttempts; i++) {
     const puzzle = randomPuzzle(rng);
     if (axesConflict(puzzle.rows, puzzle.cols)) continue;
+    if (metricGroupRepeated(puzzle.rows, puzzle.cols)) continue;
     if (axesImpliedPair(puzzle.rows, puzzle.cols, countries)) continue;
     if (isPuzzleGeneratable(puzzle, countries, minPerCell)) {
       return puzzle;
@@ -1101,6 +1146,7 @@ export function generateUltimateRandomPuzzle(countries, options = {}) {
   for (let i = 0; i < maxAttempts; i++) {
     const puzzle = randomPuzzle(rng, pool);
     if (axesConflict(puzzle.rows, puzzle.cols)) continue;
+    if (metricGroupRepeated(puzzle.rows, puzzle.cols)) continue;
     if (axesImpliedPair(puzzle.rows, puzzle.cols, countries)) continue;
     if (hasUltimatePuzzleSolution(puzzle, countries)) {
       return puzzle;

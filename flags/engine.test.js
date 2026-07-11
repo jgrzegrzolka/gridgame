@@ -20,6 +20,8 @@ import {
   findUltimateAssignment,
   generateUltimateRandomPuzzle,
   axesConflict,
+  metricGroupRepeated,
+  SINGLE_USE_METRIC_GROUPS,
   axesImpliedPair,
   buildRandomCategoryPool,
   pulseShake,
@@ -607,6 +609,60 @@ test('axesConflict returns false when no categories share an exclusiveGroup', ()
     [hasColor('green'), hasMotif('weapon'), hasMotif('coat-of-arms')],
   );
   assert.equal(conflict, false);
+});
+
+test('metricGroupRepeated catches two population thresholds on the same axis', () => {
+  // axesConflict misses this (both on rows, never share a cell); the
+  // single-use metric rule is what rejects "population again" in one grid.
+  assert.equal(
+    metricGroupRepeated(
+      [population('>=', 5_000_000), population('<=', 1_000_000), continent('Europe')],
+      [hasColor('red'), hasColor('blue'), hasMotif('animal')],
+    ),
+    true,
+  );
+});
+
+test('metricGroupRepeated catches a metric repeated across opposite axes', () => {
+  // Redundant with axesConflict for the cross-axis case, but the metric rule
+  // owns the whole-puzzle "at most once" guarantee regardless of placement.
+  assert.equal(
+    metricGroupRepeated([density('>=', 100)], [density('<=', 10)]),
+    true,
+  );
+  assert.equal(
+    metricGroupRepeated([area('>=', 1_000_000)], [area('<=', 1_000)]),
+    true,
+  );
+});
+
+test('metricGroupRepeated allows a single instance of each metric', () => {
+  assert.equal(
+    metricGroupRepeated(
+      [population('>=', 10_000_000), area('>=', 100_000), density('>=', 100)],
+      [continent('Europe'), hasColor('red'), hasMotif('animal')],
+    ),
+    false,
+  );
+});
+
+test('metricGroupRepeated does not restrict non-metric groups (two continents on one axis)', () => {
+  // Continents are deliberately single-axis-repeatable — two down the rows is
+  // a normal grid, so they stay out of SINGLE_USE_METRIC_GROUPS.
+  assert.equal(
+    metricGroupRepeated(
+      [continent('Africa'), continent('Asia'), continent('Europe')],
+      [hasColor('red'), hasColor('blue'), hasMotif('animal')],
+    ),
+    false,
+  );
+});
+
+test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
+  assert.deepEqual(
+    [...SINGLE_USE_METRIC_GROUPS].sort(),
+    ['area', 'density', 'population'],
+  );
 });
 
 test('hasStripesOnly factory wires id, predicate, exclusiveGroup, incompatibleWith, ultimateEligible', () => {
@@ -1829,6 +1885,21 @@ test('generateRandomPuzzle never produces a puzzle where an exclusiveGroup is sp
       axesConflict(puzzle.rows, puzzle.cols),
       false,
       `seed ${s}: produced a puzzle with split exclusive groups — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
+    );
+  }
+});
+
+test('generateRandomPuzzle never repeats a world metric within one puzzle', () => {
+  // Companion to the axesConflict guard: this covers the case axesConflict
+  // misses — the same metric (population / area / density) appearing twice on
+  // the *same* axis, which reads as redundant clutter to the player.
+  const countries = syntheticTaggedCountries();
+  for (let s = 1; s <= 30; s++) {
+    const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(s) });
+    assert.equal(
+      metricGroupRepeated(puzzle.rows, puzzle.cols),
+      false,
+      `seed ${s}: produced a puzzle repeating a world metric — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
     );
   }
 });
