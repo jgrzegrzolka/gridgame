@@ -4,7 +4,7 @@
 
 import { readBoolSetting, writeBoolSetting } from './group.js';
 import { emptyFilters, matchesFilters, COLOR_COUNT_OPS, COLOR_COUNT_NS } from './flagsFilter.js';
-import { POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM, DENSITY_BREAKS_FOR_RANDOM } from './engine.js';
+import { THRESHOLD_METRICS, METRIC_KEYS, parseThreshold } from './engine.js';
 
 /**
  * Filter-group names in the order they should appear in titles and URLs.
@@ -130,53 +130,15 @@ export function parseFilterString(s) {
       }
       continue;
     }
-    // Scalar primitive: constrains the country's population. Always
-    // carries an explicit op — `population:>=10000000` / `population:<=1000000`
-    // (raw people count, matching the engine's `population:` category id so
-    // findFlag links and TTT category ids share one vocabulary). No `=` op
-    // and no include/exclude sign — population is a threshold, not a value set.
-    if (group === 'population') {
-      /** @type {'>=' | '<='} */
-      let op;
-      let nStr;
-      if (val.startsWith('>=')) { op = '>='; nStr = val.slice(2); }
-      else if (val.startsWith('<=')) { op = '<='; nStr = val.slice(2); }
-      else continue;
-      const n = Number.parseInt(nStr, 10);
-      if (Number.isInteger(n) && n > 0 && String(n) === nStr) {
-        f.population = { op, n };
-        any = true;
-      }
-      continue;
-    }
-    // Scalar threshold on land area (km²), the twin of `population`:
-    // `area:>=1000000` / `area:<=1000`, matching the engine's `area:` id.
-    if (group === 'area') {
-      /** @type {'>=' | '<='} */
-      let op;
-      let nStr;
-      if (val.startsWith('>=')) { op = '>='; nStr = val.slice(2); }
-      else if (val.startsWith('<=')) { op = '<='; nStr = val.slice(2); }
-      else continue;
-      const n = Number.parseInt(nStr, 10);
-      if (Number.isInteger(n) && n > 0 && String(n) === nStr) {
-        f.area = { op, n };
-        any = true;
-      }
-      continue;
-    }
-    // Scalar threshold on population density (people/km²): `density:>=100` /
-    // `density:<=10`, matching the engine's `density:` id.
-    if (group === 'density') {
-      /** @type {'>=' | '<='} */
-      let op;
-      let nStr;
-      if (val.startsWith('>=')) { op = '>='; nStr = val.slice(2); }
-      else if (val.startsWith('<=')) { op = '<='; nStr = val.slice(2); }
-      else continue;
-      const n = Number.parseInt(nStr, 10);
-      if (Number.isInteger(n) && n > 0 && String(n) === nStr) {
-        f.density = { op, n };
+    // Scalar threshold world-metrics (population / area / density / …): always
+    // an explicit op — `population:>=10000000` / `density:<=10` — matching the
+    // engine's `<metric>:` category id so findFlag links and TTT category ids
+    // share one vocabulary. No `=` op and no include/exclude sign: a threshold,
+    // not a value set. One generic parse over the registered metric keys.
+    if (METRIC_KEYS.includes(group)) {
+      const parsed = parseThreshold(val);
+      if (parsed) {
+        /** @type {any} */ (f)[group] = { op: parsed.op, n: parsed.n };
         any = true;
       }
       continue;
@@ -222,14 +184,10 @@ export function serializeFilter(f) {
     const { op, n } = f.colorCount;
     tokens.push(op === '=' ? `colorCount:${n}` : `colorCount:${op}${n}`);
   }
-  if (f.population !== null) {
-    tokens.push(`population:${f.population.op}${f.population.n}`);
-  }
-  if (f.area !== null) {
-    tokens.push(`area:${f.area.op}${f.area.n}`);
-  }
-  if (f.density !== null) {
-    tokens.push(`density:${f.density.op}${f.density.n}`);
+  // Threshold world-metrics, in registry order (stable, deterministic URLs).
+  for (const key of METRIC_KEYS) {
+    const flt = /** @type {any} */ (f)[key];
+    if (flt) tokens.push(`${key}:${flt.op}${flt.n}`);
   }
   return tokens.join(',');
 }
@@ -334,34 +292,15 @@ export function pillLabel(group, value, sign, translate) {
     }
     const n = value.startsWith('=') ? value.slice(1) : value;
     return translate(`filter.onlyN.${n}`, `only ${n} colours`);
-  } else if (group === 'population') {
-    // population is a scalar threshold; the "value" echoes the id suffix
-    //   ">=N" → at least N people, via population.atLeast.<Nm>
-    //   "<=N" → at most N people,  via population.atMost.<Nm>
-    // Keyed on the compact millions token ("10m", "1m") so the keys line
-    // up with the TTT category labels (engine.js translateCategoryLabel)
-    // and POPULATION_BREAKS_FOR_RANDOM. No exclude — the primitive is a
-    // threshold, you either constrain it or you don't.
-    const op = value.slice(0, 2);
-    const n = Number.parseInt(value.slice(2), 10);
-    const token = `${n / 1_000_000}m`;
-    if (op === '>=') return translate(`population.atLeast.${token}`, `over ${n / 1_000_000}M people`);
-    return translate(`population.atMost.${token}`, `under ${n / 1_000_000}M people`);
-  } else if (group === 'area') {
-    // Land-area scalar threshold, twin of population. Keyed on the compact
-    // token ("100k", "1m") aligned with the TTT labels and AREA_BREAKS_FOR_RANDOM.
-    const op = value.slice(0, 2);
-    const n = Number.parseInt(value.slice(2), 10);
-    const token = n >= 1_000_000 ? `${n / 1_000_000}m` : `${n / 1_000}k`;
-    const human = n >= 1_000_000 ? `${n / 1_000_000}M` : `${n / 1_000}K`;
-    if (op === '>=') return translate(`area.atLeast.${token}`, `over ${human} km²`);
-    return translate(`area.atMost.${token}`, `under ${human} km²`);
-  } else if (group === 'density') {
-    // Population-density scalar threshold; token is the plain integer.
-    const op = value.slice(0, 2);
-    const n = Number.parseInt(value.slice(2), 10);
-    if (op === '>=') return translate(`density.atLeast.${n}`, `over ${n} people/km²`);
-    return translate(`density.atMost.${n}`, `under ${n} people/km²`);
+  } else if (THRESHOLD_METRICS[group]) {
+    // Scalar threshold world-metric (population / area / density / …). The
+    // "value" echoes the id suffix (">=N" / "<=N"); the metric's own `labelFor`
+    // renders the localized threshold text, keyed identically to the TTT
+    // category label (engine.js translateCategoryLabel). No exclude — the
+    // primitive is a threshold, you either constrain it or you don't.
+    const parsed = parseThreshold(value);
+    if (parsed) return THRESHOLD_METRICS[group].labelFor(parsed.op, parsed.n, translate);
+    return value;
   } else {
     body = translate(`status.${value}`, value);
   }
@@ -418,14 +357,9 @@ export function filterTitle(f, translate) {
     else if (op === '<=') parts.push(translate(`filter.atMostN.${n}`, `${n} or fewer colours`));
     else parts.push(translate(`filter.onlyN.${n}`, `only ${n} colours`));
   }
-  if (f.population !== null) {
-    parts.push(pillLabel('population', `${f.population.op}${f.population.n}`, 'include', translate));
-  }
-  if (f.area !== null) {
-    parts.push(pillLabel('area', `${f.area.op}${f.area.n}`, 'include', translate));
-  }
-  if (f.density !== null) {
-    parts.push(pillLabel('density', `${f.density.op}${f.density.n}`, 'include', translate));
+  for (const key of METRIC_KEYS) {
+    const flt = /** @type {any} */ (f)[key];
+    if (flt) parts.push(pillLabel(/** @type {any} */ (key), `${flt.op}${flt.n}`, 'include', translate));
   }
   return parts.join(' · ');
 }
@@ -559,9 +493,17 @@ export function pickRandomMix(pillPool, all, options = {}) {
       );
     }
     maybeAttachColorCount(f, rng, onlyColorsProbability, colorCountProbability);
-    maybeAttachPopulation(f, rng, populationProbability);
-    maybeAttachArea(f, rng, areaProbability);
-    maybeAttachDensity(f, rng, densityProbability);
+    // Threshold metrics, drawn in registry order. Each is mutually exclusive
+    // with colorCount and with every other metric (at most one scalar modifier
+    // per mix), so only the first drawn attaches; a 0-probability metric
+    // consumes zero rng bytes, keeping seeded pill-only tests deterministic.
+    /** @type {Record<string, number>} */
+    const metricProbabilities = {
+      population: populationProbability,
+      area: areaProbability,
+      density: densityProbability,
+    };
+    for (const key of METRIC_KEYS) maybeAttachMetric(f, rng, key, metricProbabilities[key] ?? 0);
     lastAttempt = f;
     const count = all.filter((c) => matchesFilters(c, f)).length;
     if (count >= minIntersection) return f;
@@ -625,52 +567,33 @@ function maybeAttachColorCount(f, rng, onlyColorsProbability, colorCountProbabil
  * keeping the pre-existing pill-only / colorCount tests deterministic
  * against their seeded RNGs.
  *
- * @param {Filters} f
- * @param {() => number} rng
- * @param {number} populationProbability
- */
-function maybeAttachPopulation(f, rng, populationProbability) {
-  if (f.colorCount !== null) return;
-  if (populationProbability > 0 && rng() < populationProbability) {
-    const brk = POPULATION_BREAKS_FOR_RANDOM[Math.floor(rng() * POPULATION_BREAKS_FOR_RANDOM.length)];
-    f.population = { op: brk.op, n: brk.n };
-  }
-}
-
 /**
- * Mutate `f` to attach an `area` threshold with probability `areaProbability`,
- * drawing one of the six curated tiers from `AREA_BREAKS_FOR_RANDOM`. The km²
- * twin of `maybeAttachPopulation`. Kept mutually exclusive with BOTH colorCount
- * and population (a random puzzle carries at most one scalar modifier, so the
- * title stays legible and the answer set doesn't collapse). Uniform pick so
- * every tier stays reachable by Random (the findflag-random-coverage contract).
- * Probability checked before the first rng() call so an opted-out caller (0,
- * the default) consumes zero rng bytes.
+ * Mutate `f` to attach one threshold-metric constraint (`key`) with probability
+ * `probability`, drawing one of that metric's curated tiers uniformly from
+ * `THRESHOLD_METRICS[key].breaks`. Generalizes the old per-metric
+ * `maybeAttachPopulation` / `maybeAttachArea` / `maybeAttachDensity`.
+ *
+ * Kept mutually exclusive with colorCount AND every other metric scalar: a
+ * random puzzle carries at most one scalar modifier, so the title stays legible
+ * and the answer set doesn't collapse. Because the callers draw metrics in a
+ * fixed order and this returns early once any scalar is set, only the first
+ * drawn attaches. The exclusion check runs BEFORE any rng() call, and the
+ * probability is checked before the first rng() too, so an opted-out metric
+ * (probability 0, the default) consumes exactly zero rng bytes — keeping seeded
+ * pill-only / colorCount tests deterministic. Uniform tier pick so every tier
+ * stays reachable by Random (the findflag-random-coverage contract).
  *
  * @param {Filters} f
  * @param {() => number} rng
- * @param {number} areaProbability
+ * @param {string} key — a registered metric key (a member of METRIC_KEYS)
+ * @param {number} probability
  */
-function maybeAttachArea(f, rng, areaProbability) {
-  if (f.colorCount !== null || f.population !== null) return;
-  if (areaProbability > 0 && rng() < areaProbability) {
-    const brk = AREA_BREAKS_FOR_RANDOM[Math.floor(rng() * AREA_BREAKS_FOR_RANDOM.length)];
-    f.area = { op: brk.op, n: brk.n };
-  }
-}
-
-/**
- * Mutate `f` to attach a `density` threshold, twin of `maybeAttachArea`. Kept
- * mutually exclusive with colorCount, population, AND area (at most one scalar
- * modifier per mix). Uniform tier draw so every tier stays reachable by Random.
- * @param {Filters} f
- * @param {() => number} rng
- * @param {number} densityProbability
- */
-function maybeAttachDensity(f, rng, densityProbability) {
-  if (f.colorCount !== null || f.population !== null || f.area !== null) return;
-  if (densityProbability > 0 && rng() < densityProbability) {
-    const brk = DENSITY_BREAKS_FOR_RANDOM[Math.floor(rng() * DENSITY_BREAKS_FOR_RANDOM.length)];
-    f.density = { op: brk.op, n: brk.n };
+function maybeAttachMetric(f, rng, key, probability) {
+  if (f.colorCount !== null) return;
+  for (const k of METRIC_KEYS) if (/** @type {any} */ (f)[k] !== null) return;
+  if (probability > 0 && rng() < probability) {
+    const breaks = THRESHOLD_METRICS[key].breaks;
+    const brk = breaks[Math.floor(rng() * breaks.length)];
+    /** @type {any} */ (f)[key] = { op: brk.op, n: brk.n };
   }
 }

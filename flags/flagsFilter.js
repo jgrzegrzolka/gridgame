@@ -1,4 +1,5 @@
 import { sovereigntyOf } from './group.js';
+import { METRIC_KEYS } from './engine.js';
 
 /**
  * Two-set selection per filter group. `include` is AND-among-values (a
@@ -206,35 +207,19 @@ export function matchesFilters(country, filters, options = {}) {
     if (op === '<=' && len > n) return false;
   }
 
-  // Population reads `country.population`, denormalized onto the Country at
-  // load by `attachPopulations` (group.js). The metric is sparse — a country
-  // with no value (most territories, every non-place flag) matches neither
-  // direction, same contract as the engine's population predicate.
-  if (filters.population !== null) {
-    const pop = country.population;
-    if (typeof pop !== 'number') return false;
-    const { op, n } = filters.population;
-    if (op === '>=' && pop < n) return false;
-    if (op === '<=' && pop > n) return false;
-  }
-
-  // Area reads `country.area` (denormalized by `attachAreas`). Area is dense,
-  // so only non-place flags lack a value; those match neither direction, same
-  // contract as the engine's area predicate.
-  if (filters.area !== null) {
-    const km2 = country.area;
-    if (typeof km2 !== 'number') return false;
-    const { op, n } = filters.area;
-    if (op === '>=' && km2 < n) return false;
-    if (op === '<=' && km2 > n) return false;
-  }
-
-  if (filters.density !== null) {
-    const d = country.density;
-    if (typeof d !== 'number') return false;
-    const { op, n } = filters.density;
-    if (op === '>=' && d < n) return false;
-    if (op === '<=' && d > n) return false;
+  // Threshold world-metrics (population, area, density, …) each compare a
+  // denormalized Country field (`attach<Metric>s`, group.js) — the field name
+  // equals the metric key — against a >=/<= threshold. The metric is sparse: a
+  // country with no value (territories, every non-place flag) matches neither
+  // direction, same contract as the engine predicate. One generic loop over
+  // the registered keys covers every metric.
+  for (const key of METRIC_KEYS) {
+    const flt = /** @type {any} */ (filters)[key];
+    if (!flt) continue;
+    const v = /** @type {any} */ (country)[key];
+    if (typeof v !== 'number') return false;
+    if (flt.op === '>=' && v < flt.n) return false;
+    if (flt.op === '<=' && v > flt.n) return false;
   }
 
   const motifs = country.motifs ?? [];
@@ -297,8 +282,10 @@ export function activeFilterChips(filters) {
     for (const value of filters[group].exclude) chips.push({ kind: 'pill', group, value, exclude: true });
   }
   if (filters.colorCount !== null) chips.push({ kind: 'scalar', group: 'colorCount' });
-  if (filters.population !== null) chips.push({ kind: 'scalar', group: 'population' });
-  if (filters.area !== null) chips.push({ kind: 'scalar', group: 'area' });
-  if (filters.density !== null) chips.push({ kind: 'scalar', group: 'density' });
+  for (const key of METRIC_KEYS) {
+    if (/** @type {any} */ (filters)[key] !== null) {
+      chips.push({ kind: 'scalar', group: /** @type {ScalarGroup} */ (key) });
+    }
+  }
   return chips;
 }

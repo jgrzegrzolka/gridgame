@@ -1,6 +1,6 @@
 /** @typedef {import('./group.js').Country} Country */
 
-import { POPULATION_BREAKS_FOR_RANDOM, population, AREA_BREAKS_FOR_RANDOM, area, DENSITY_BREAKS_FOR_RANDOM, density } from './engine.js';
+import { THRESHOLD_METRICS } from './engine.js';
 
 /**
  * Registry of the world metrics that surface as *threshold tier pills* — the
@@ -35,23 +35,12 @@ import { POPULATION_BREAKS_FOR_RANDOM, population, AREA_BREAKS_FOR_RANDOM, area,
  *   has: (c: Country) => boolean,
  * }>}
  */
-export const METRIC_TIER_REGISTRY = {
-  population: {
-    breaks: POPULATION_BREAKS_FOR_RANDOM,
-    factory: population,
-    has: (c) => typeof c.population === 'number',
-  },
-  area: {
-    breaks: AREA_BREAKS_FOR_RANDOM,
-    factory: area,
-    has: (c) => typeof c.area === 'number',
-  },
-  density: {
-    breaks: DENSITY_BREAKS_FOR_RANDOM,
-    factory: density,
-    has: (c) => typeof c.density === 'number',
-  },
-};
+export const METRIC_TIER_REGISTRY = Object.fromEntries(
+  Object.entries(THRESHOLD_METRICS).map(([key, m]) => [
+    key,
+    { breaks: m.breaks, factory: m.factory, has: m.has },
+  ]),
+);
 
 /**
  * The registered metric a category keys on, or null. Prefers `exclusiveGroup`

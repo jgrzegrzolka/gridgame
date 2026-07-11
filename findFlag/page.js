@@ -3,6 +3,7 @@ import {
   ALL_FLAG_COLORS,
   ALL_MOTIFS,
   STRIPES_ORIENTATIONS_FOR_RANDOM,
+  METRIC_KEYS,
   suggest,
   exactSingleMatch,
 } from '../flags/engine.js';
@@ -690,9 +691,7 @@ export function bootFindFlag() {
       colorCountLock.reset();
       if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
       colorCountPicker.reset();
-      filter.population = null;
-      filter.area = null;
-      filter.density = null;
+      for (const k of METRIC_KEYS) filter[k] = null;
       for (const { btn } of allPills) {
         btn.classList.remove('active', 'exclude');
       }
