@@ -5,17 +5,20 @@
  *
  * Fetches the World Bank WDI indicator SP.POP.TOTL (total population) for the
  * latest snapshot year, joins it to `flags/countries.json` by ISO 3166-1
- * alpha-2 code, applies the hand-maintained FILLS map for the populated
- * dependencies / sub-national regions the World Bank omits, and drops the
- * genuinely-uninhabited places (OMIT). Emits a self-describing metric file:
+ * alpha-2 code, and applies the hand-maintained FILLS map for the dependencies /
+ * sub-national regions the World Bank omits (including uninhabited places, which
+ * carry 0 rather than being dropped). Emits a self-describing metric file:
  *
  *   { key, label, unit, source, year, values: { <code>: <int> } }
  *
+ * Every real place (`category !== 'other'`) gets a value, so a metric "no data"
+ * reads only for non-places (orgs). Uninhabited places don't skew "least
+ * populated" superlatives — `resolveSuperlative` ranks sovereign countries only.
  * values are sorted by code so refreshes produce minimal diffs. Re-run once a
  * year (bump SNAPSHOT_YEAR) to refresh — that is the whole maintenance story.
  *
  * See DATA_FEATURE.md "Feature DD" for the design rationale (why a metric
- * namespace, why raw numbers not ranks, why the sparse tail is omitted).
+ * namespace, why raw numbers not ranks).
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -82,23 +85,21 @@ const FILLS = {
   'cx': 1700, // Christmas Island
   'cc': 600, // Cocos (Keeling) Islands
   'tk': 1600, // Tokelau
+  // Uninhabited / non-permanent-population places. Every real place carries a
+  // value (0 when truly uninhabited) rather than being omitted, so the metric's
+  // "no data" reads only for non-places (orgs). These never skew "least
+  // populated" superlatives — `resolveSuperlative` ranks sovereign countries
+  // only, so a research base can't surface there regardless of its value.
+  // Figures: CIA World Factbook / COMNAP, transient staff where noted.
+  'aq': 1100, // Antarctica — ~1,100 overwintering research staff, no permanent pop
+  'bv': 0, // Bouvet Island — uninhabited nature reserve
+  'hm': 0, // Heard Island and McDonald Islands — uninhabited
+  'cp': 0, // Clipperton Island — uninhabited
+  'gs': 30, // South Georgia and the South Sandwich Islands — ~30 summer research/support staff
+  'tf': 150, // French Southern and Antarctic Lands — ~150 rotating research staff
+  'um': 300, // United States Minor Outlying Islands — transient military/staff (e.g. Wake)
+  'io': 3000, // British Indian Ocean Territory — ~3,000 UK/US military + contractors (Diego Garcia)
 };
-
-/**
- * Places with no permanent resident population — omitted rather than stored as
- * 0, so "least populated" superlatives stay meaningful (Vatican is the floor).
- * @type {Set<string>}
- */
-const OMIT = new Set([
-  'aq', // Antarctica
-  'bv', // Bouvet Island
-  'hm', // Heard Island and McDonald Islands
-  'cp', // Clipperton Island
-  'gs', // South Georgia and the South Sandwich Islands
-  'tf', // French Southern Territories
-  'um', // United States Minor Outlying Islands
-  'io', // British Indian Ocean Territory
-]);
 
 async function main() {
   const countries = JSON.parse(
@@ -125,7 +126,6 @@ async function main() {
   let fromWb = 0;
   let fromFill = 0;
   for (const c of realPlaces) {
-    if (OMIT.has(c.code)) continue;
     if (wb.has(c.code)) {
       values[c.code] = wb.get(c.code);
       fromWb++;
@@ -161,7 +161,7 @@ async function main() {
   console.log(`Wrote ${outPath}`);
   console.log(
     `  values: ${Object.keys(sorted).length} ` +
-      `(World Bank ${fromWb}, fills ${fromFill}) | omitted ${OMIT.size} | ` +
+      `(World Bank ${fromWb}, fills ${fromFill}) | ` +
       `real places ${realPlaces.length}`,
   );
   if (unresolved.length) {

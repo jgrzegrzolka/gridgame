@@ -120,10 +120,12 @@ test('createMetric defaults format to compact when absent', () => {
   assert.equal(bare.format, 'compact');
 });
 
-test('every population value is a positive integer', () => {
+test('every population value is a non-negative integer', () => {
+  // 0 is valid: truly-uninhabited real places (Bouvet, Heard, Clipperton) carry
+  // 0 rather than being omitted, so a metric "no data" reads only for non-places.
   for (const [code, v] of Object.entries(POPULATION.values)) {
     assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
-    assert.ok(v > 0, `${code} not positive: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
   }
 });
 
@@ -136,11 +138,18 @@ test('every population key is a real (non-other) country', () => {
   }
 });
 
-test('population covers the vast majority of real places (sparse tail only)', () => {
-  const real = COUNTRIES.filter((c) => c.category !== 'other');
-  const covered = Object.keys(POPULATION.values).length;
-  // ~262 real places, a handful of uninhabited places intentionally omitted
-  assert.ok(covered >= real.length - 12, `only ${covered}/${real.length} covered`);
+test('every real place has a population value; only non-places have none', () => {
+  // The invariant the "no data" guard leans on: a metric value exists for every
+  // real place (uninhabited ones carry 0), and never for an org, so "no data"
+  // means exactly "not a place" — see the TTT picker guard (metricDataGap).
+  const values = POPULATION.values;
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in values), `org ${c.code} should have no population value`);
+    } else {
+      assert.ok(c.code in values, `real place ${c.code} (${c.continent}) has no population value`);
+    }
+  }
 });
 
 test('createMetric over real data ranks the world plausibly', () => {
