@@ -5,9 +5,12 @@
  * the result. Kept here (not in the page) so the ordering + sparse rules are
  * unit-tested; the page stays thin glue.
  *
- * Rank is taken in 'world' scope (every country that has a value). Countries
- * the metric doesn't cover ("no data") always sink to the bottom of a sorted
- * view and are flagged so the page can dim them.
+ * Rank is taken in 'sovereign' scope — only the 195 sovereign states get a
+ * number, so "#12" reads as "12th country" and isn't diluted by territories or
+ * partially-recognised states. Non-sovereign places (territories, non-UN states,
+ * org flags) still show their value, just without a rank. Countries the metric
+ * doesn't cover ("no data") always sink to the bottom of a sorted view and are
+ * flagged so the page can dim them.
  */
 
 /**
@@ -40,7 +43,8 @@ export function formatValue(value, format) {
  * @property {boolean} hasData
  * @property {number | null} value
  * @property {string} display   formatted value, or '' when no data
- * @property {number | null} rank
+ * @property {number | null} rank  1-based rank among sovereign states, or null
+ *   for a non-sovereign place (it has a value but sits outside the ranking)
  */
 
 /**
@@ -62,7 +66,7 @@ export function computeLensView(metric, items, opts = {}) {
       hasData: true,
       value,
       display: formatValue(value, metric.format),
-      rank: metric.rankOf(c.code, 'world'),
+      rank: metric.rankOf(c.code, 'sovereign'),
     };
   });
 

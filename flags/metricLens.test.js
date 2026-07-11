@@ -61,8 +61,31 @@ test('computeLensView: asc sorts ascending, no-data still last', () => {
   assert.deepEqual(order, [1, 0, 2, 3]);
 });
 
-test('computeLensView: rank uses world scope across all with data', () => {
+test('computeLensView: rank uses sovereign scope', () => {
   const { cells } = computeLensView(metric, COUNTRIES, { sort: 'default' });
   assert.equal(cells[0].rank, 2); // aa=300 → rank 2
   assert.equal(cells[1].rank, 3); // bb=100 → rank 3
+});
+
+test('computeLensView: non-sovereign places show a value but get no rank', () => {
+  const countries = [
+    { code: 'aa', continent: 'Europe', statehood: 'un_member' },
+    { code: 'hk', continent: 'Asia', statehood: 'territory' }, // biggest value, not sovereign
+    { code: 'bb', continent: 'Europe', statehood: 'un_member' },
+  ];
+  const m = createMetric(
+    { key: 'm', label: 'M', unit: 'u', format: 'compact', source: 't', year: 2000,
+      values: { aa: 300, hk: 5000, bb: 100 } },
+    countries,
+  );
+  const { cells, order } = computeLensView(m, countries, { sort: 'desc' });
+  // hk has data and the largest value, but sits outside the sovereign ranking.
+  assert.equal(cells[1].hasData, true);
+  assert.equal(cells[1].rank, null);
+  assert.equal(cells[1].display, '5.0K');
+  // The two sovereign states are numbered among themselves.
+  assert.equal(cells[0].rank, 1); // aa=300 → sovereign rank 1
+  assert.equal(cells[2].rank, 2); // bb=100 → sovereign rank 2
+  // hk still interleaves by value (it has data, so it doesn't sink).
+  assert.deepEqual(order, [1, 0, 2]);
 });

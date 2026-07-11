@@ -63,6 +63,25 @@ test('scope filters by continent and by UN membership', () => {
   );
 });
 
+test('sovereign scope keeps observers, drops territories and non-UN states', () => {
+  const rows = [
+    { code: 'aa', continent: 'Europe', statehood: 'un_member' },
+    { code: 'va', continent: 'Europe', statehood: 'un_observer' }, // sovereign (observer)
+    { code: 'xk', continent: 'Europe', statehood: 'non_un' },      // not sovereign
+    { code: 'cc', continent: 'Europe', statehood: 'territory' },   // not sovereign
+    { code: 'oo', continent: 'Europe', category: 'other' },        // org flag, not sovereign
+  ];
+  const m = createMetric(
+    { key: 'm', label: 'M', unit: 'u', source: 't', year: 2000,
+      values: { aa: 100, va: 90, xk: 80, cc: 70, oo: 60 } },
+    rows,
+  );
+  assert.deepEqual(m.ranked('sovereign').map((r) => r.code), ['aa', 'va']);
+  assert.equal(m.rankOf('va', 'sovereign'), 2);
+  assert.equal(m.rankOf('cc', 'sovereign'), null); // territory has a value but no rank
+  assert.equal(m.rankOf('xk', 'sovereign'), null);
+});
+
 test('topN and bottomN slice within scope, in the right order', () => {
   assert.deepEqual(fx.topN('world', 2).map((r) => r.code), ['aa', 'bb']);
   // bottomN is lowest-first

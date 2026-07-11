@@ -137,7 +137,11 @@ export function attachDensities(countries, values) {
  *   other     — flags that aren't places: international organisations
  *               (EU, UN, ASEAN, Arab League, CEFTA, EAC, Pacific Community)
  *
- * @param {Country} c
+ * Only reads `category` and `statehood`, so it accepts any object carrying
+ * those two fields (a full Country, or the lighter CountryLike the metrics
+ * layer passes) rather than requiring the whole flag record.
+ *
+ * @param {{ category?: string, statehood?: string | null }} c
  * @returns {Sovereignty}
  */
 export function sovereigntyOf(c) {

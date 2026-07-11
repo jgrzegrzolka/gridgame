@@ -10,9 +10,12 @@
  * A metric is sparse by contract: `values` lists only the countries the metric
  * applies to. Ranks and tiers are always computed within a *scope*:
  *   'world'       — every country that has a value
+ *   'sovereign'   — the 195 sovereign states (UN members + observers), the pool
  *   'un_member'   — UN member states only
  *   <continent>   — one continent by name ('Europe', 'Asia', …)
  */
+
+import { sovereigntyOf } from './group.js';
 
 /**
  * @typedef {Object} MetricData
@@ -66,6 +69,7 @@ export function createMetric(metric, countries) {
     if (scope === 'world') return true;
     const co = byCode.get(code);
     if (!co) return false;
+    if (scope === 'sovereign') return sovereigntyOf(co) === 'sovereign';
     if (scope === 'un_member') return co.statehood === 'un_member';
     return co.continent === scope;
   }
