@@ -41,6 +41,24 @@ const MODE_LABELS = {
   'flags-territories': { key: 'party.mode.flagsTerritories', full: 'Flags: territories', shortKey: 'party.modeShort.flagsTerritories', short: 'Territories' },
   'map-outlines': { key: 'party.mode.mapOutlines', full: 'Map: outlines', shortKey: 'party.modeShort.mapOutlines', short: 'Maps' },
   'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population: most & least', shortKey: 'party.modeShort.superlativePop', short: 'Population' },
+  'superlative-area': { key: 'party.mode.superlativeArea', full: 'Land area: largest & smallest', shortKey: 'party.modeShort.superlativeArea', short: 'Land area' },
+};
+
+/** Per-round config for the superlative rounds, keyed by the server `roundId`.
+ *  Maps each metric round to the values file it fetches for the reveal strip and
+ *  the hint copy for its direction prompt. Adding a metric superlative round =
+ *  one entry here + the PARTY_MODES / MODE_LABELS entries + i18n. */
+const SUPERLATIVE_MODES = {
+  'superlative': {
+    file: 'population.json',
+    hintMost: { key: 'party.hintMost', fallback: 'Which is the most populous?' },
+    hintLeast: { key: 'party.hintLeast', fallback: 'Which is the least populous?' },
+  },
+  'superlative-area': {
+    file: 'area.json',
+    hintMost: { key: 'party.hintMostArea', fallback: 'Which is the largest by land area?' },
+    hintLeast: { key: 'party.hintLeastArea', fallback: 'Which is the smallest by land area?' },
+  },
 };
 
 /**
@@ -116,13 +134,12 @@ export function bootFlagParty() {
   /** @type {Map<string, { code: string, name: string }>} */
   const byCode = new Map();
 
-  // Population values for the superlative round's reveal, fetched once at load
-  // (the round itself is judged server-side; the client only needs the numbers
-  // to show the ranking after the answer is out). Null until loaded / on failure
-  // — the reveal just omits the strip if the data isn't there.
-  /** @type {Record<string, number> | null} */
-  let popValues = null;
-  let popFormat = 'compact';
+  // Metric values for each superlative round's reveal strip, keyed by roundId
+  // (the round is judged server-side; the client only needs the numbers to show
+  // the ranking after the answer is out). Fetched once at load, best-effort: a
+  // missing metric just means that round's reveal shows no numbers.
+  /** @type {Record<string, { values: Record<string, number>, format: string }>} */
+  const metricByRound = {};
 
   // ---- helpers ----
   const fmt = (/** @type {string} */ str, /** @type {Record<string, string|number>} */ params) =>
@@ -627,7 +644,8 @@ export function bootFlagParty() {
     });
     const isReveal = state.phase === 'reveal' && state.reveal;
     const isMap = q.roundId === 'mapPick';
-    const isSuperlative = q.roundId === 'superlative';
+    const superCfg = SUPERLATIVE_MODES[q.roundId] || null;
+    const isSuperlative = superCfg !== null;
     // A quiet mode hint above the country name, so players know whether the tiles
     // are flags or contours; the name itself stays bare (no "The flag of", no
     // trailing "?") — the tiles and their reveal pulse carry the rest.
@@ -639,9 +657,8 @@ export function bootFlagParty() {
       // + population and the correct one pulses), so a winner name here would be
       // redundant, and filling it only on reveal shifted the grid down.
       const least = q.prompt === 'least';
-      promptLead.textContent = least
-        ? t('party.hintLeast', 'Which is the least populous?')
-        : t('party.hintMost', 'Which is the most populous?');
+      const hint = least ? superCfg.hintLeast : superCfg.hintMost;
+      promptLead.textContent = t(hint.key, hint.fallback);
       promptTarget.textContent = '';
     } else {
       const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
@@ -655,12 +672,13 @@ export function bootFlagParty() {
     // whole ranking is readable at a glance — the round's learning payoff. Only
     // on reveal (the numbers are hidden during the question), and only when the
     // population data actually loaded.
+    const metricData = isSuperlative ? metricByRound[q.roundId] : null;
     const popStrip = (/** @type {string} */ code) => {
-      if (!(isSuperlative && isReveal) || !popValues) return null;
-      const v = popValues[code];
+      if (!(isSuperlative && isReveal) || !metricData) return null;
+      const v = metricData.values[code];
       if (v == null) return null;
       const c = byCode.get(code);
-      return { name: c ? countryName(c) : code, value: formatValue(v, popFormat) };
+      return { name: c ? countryName(c) : code, value: formatValue(v, metricData.format) };
     };
 
     gridEl.innerHTML = '';
@@ -906,20 +924,22 @@ export function bootFlagParty() {
   document.addEventListener('langchanged', () => { paintPlayingAs(); paintJoinError(); repaintSetupLabels(); render(); });
 
   // ---- load data + route ----
-  // Countries (for names + flags) and the population metric (for the superlative
-  // reveal) load together. Population is best-effort — a failed fetch just means
-  // the reveal shows no numbers — so it can't block the game; countries failing
-  // still falls through to a bare render().
+  // Countries (for names + flags) and every superlative round's metric (for the
+  // reveal strip) load together. Metrics are best-effort: a failed fetch just
+  // means that round's reveal shows no numbers, so it can't block the game;
+  // countries failing still falls through to a bare render().
+  const metricEntries = Object.entries(SUPERLATIVE_MODES);
   Promise.all([
     fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
-    fetch('../flags/metrics/population.json').then((r) => r.json()).catch(() => null),
+    ...metricEntries.map(([, cfg]) =>
+      fetch(`../flags/metrics/${cfg.file}`).then((r) => r.json()).catch(() => null)),
   ])
-    .then(([countries, population]) => {
+    .then(([countries, ...metrics]) => {
       for (const c of countries) byCode.set(c.code, c);
-      if (population && population.values) {
-        popValues = population.values;
-        popFormat = population.format || 'compact';
-      }
+      metricEntries.forEach(([roundId], i) => {
+        const m = metrics[i];
+        if (m && m.values) metricByRound[roundId] = { values: m.values, format: m.format || 'compact' };
+      });
       const roomParam = new URLSearchParams(location.search).get('room');
       if (roomParam && isValidRoomCode(roomParam.toUpperCase())) {
         enterRoom(roomParam.toUpperCase(), 'join');

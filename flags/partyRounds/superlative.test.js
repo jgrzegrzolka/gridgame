@@ -93,3 +93,22 @@ test('isCorrect: only the answer code is correct', () => {
   assert.equal(isCorrect(q, 'in'), false);
   assert.equal(isCorrect(q, 'zz'), false);
 });
+
+// ---- area instance (the km² twin, id 'superlative-area') --------------------
+
+test('areaRound: id and a correct extreme-by-area answer', async () => {
+  const { areaRound } = await import('./superlative.js');
+  const areaJson = (await import('../metrics/area.json', { with: { type: 'json' } })).default;
+  const AREA = /** @type {Record<string, number>} */ (areaJson.values);
+  assert.equal(areaRound.id, 'superlative-area');
+  // Large, area-distinct sovereigns, all present in area.json.
+  const pool = ['ru', 'ca', 'cn', 'us', 'br', 'au', 'in', 'ar', 'kz', 'dz', 'mn', 'nl'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = areaRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => AREA[c]);
+    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+    assert.equal(AREA[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-area option`);
+  }
+});

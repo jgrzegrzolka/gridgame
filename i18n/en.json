@@ -519,19 +519,23 @@
       "flagsAll": "Flags: all countries",
       "flagsTerritories": "Flags: territories",
       "mapOutlines": "Map: outlines",
-      "superlativePop": "Population: most & least"
+      "superlativePop": "Population: most & least",
+      "superlativeArea": "Land area: largest & smallest"
     },
     "modeShort": {
       "flagsAll": "Flags",
       "flagsTerritories": "Territories",
       "mapOutlines": "Maps",
-      "superlativePop": "Population"
+      "superlativePop": "Population",
+      "superlativeArea": "Land area"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
     "hintMap": "Which outline?",
     "hintMost": "Which is the most populous?",
     "hintLeast": "Which is the least populous?",
+    "hintMostArea": "Which is the largest by land area?",
+    "hintLeastArea": "Which is the smallest by land area?",
     "locked": "Locked in",
     "fastest": "Fastest",
     "tie": "It's a tie!",

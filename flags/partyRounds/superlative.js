@@ -1,4 +1,5 @@
 import population from '../metrics/population.json' with { type: 'json' };
+import area from '../metrics/area.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -27,7 +28,6 @@ import { createMetric } from '../metrics.js';
 /** @typedef {{ code: string }} PoolEntry */
 /** @typedef {{ prompt: 'most' | 'least', options: string[], answer: string }} Question */
 
-const metric = createMetric(population, []);
 
 /**
  * How much the extreme must beat the runner-up by for a quartet to be accepted,
@@ -43,7 +43,6 @@ const GAP_RATIO = 1.25;
  *  clear extreme is the norm, so this is rarely exhausted. */
 const MAX_ATTEMPTS = 20;
 
-export const id = 'superlative';
 
 /**
  * Fisher-Yates over a copy, using an injectable RNG so tests are deterministic.
@@ -62,15 +61,16 @@ function shuffle(arr, rng) {
 }
 
 /**
+ * @param {ReturnType<typeof createMetric>} metric the metric to rank by.
  * @param {PoolEntry[]} pool  any pool of country entries; narrowed to the ones
- *   that carry a population value before use.
+ *   that carry a value for this metric before use.
  * @param {Set<string>} [exclude] answer codes already used this game, so a round
  *   doesn't repeat a country. Falls back to the full valued set if excluding
  *   would leave too few to build a question.
  * @param {() => number} [rng] injectable for tests; defaults to `Math.random`.
  * @returns {Question}
  */
-export function generate(pool, exclude, rng = Math.random) {
+function generateFor(metric, pool, exclude, rng = Math.random) {
   const withValue = pool.filter((c) => metric.has(c.code));
   const usable = exclude && exclude.size ? withValue.filter((c) => !exclude.has(c.code)) : withValue;
   const src = usable.length >= 4 ? usable : withValue;
@@ -102,10 +102,28 @@ export function generate(pool, exclude, rng = Math.random) {
 }
 
 /**
- * @param {{ answer: string }} question
- * @param {string} choice the chosen option's country code
- * @returns {boolean}
+ * Build a superlative round bound to a metric. The metric is passed in (rather
+ * than hard-imported) so every world metric gets a Flag Party round from one
+ * factory: population is `superlative`, area is `superlative-area`, etc.
+ *
+ * @param {ReturnType<typeof createMetric>} metric a `createMetric(...)` instance
+ * @param {string} roundId stable round id (matches the PARTY_MODES roundId)
+ * @returns {{ id: string, generate: (pool: PoolEntry[], exclude?: Set<string>, rng?: () => number) => Question, isCorrect: (q: { answer: string }, choice: string) => boolean }}
  */
-export function isCorrect(question, choice) {
-  return choice === question.answer;
+export function createSuperlativeRound(metric, roundId) {
+  return {
+    id: roundId,
+    generate: (pool, exclude, rng = Math.random) => generateFor(metric, pool, exclude, rng),
+    isCorrect: (question, choice) => choice === question.answer,
+  };
 }
+
+// Population instance: the original round, exported flat (id / generate /
+// isCorrect) for back-compat with `party/partyGameServer.js` and the tests.
+const populationRound = createSuperlativeRound(createMetric(population, []), 'superlative');
+export const id = populationRound.id;
+export const generate = populationRound.generate;
+export const isCorrect = populationRound.isCorrect;
+
+// Area instance: the km² twin, id 'superlative-area'.
+export const areaRound = createSuperlativeRound(createMetric(area, []), 'superlative-area');
