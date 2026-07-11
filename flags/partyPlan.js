@@ -77,17 +77,33 @@ export function roundIdForRound(plan, index) {
  * segments land in a built plan (flags, then territories, then the map finale).
  * Adding a mode here makes it selectable; nothing else changes.
  *
- * @typedef {{ id: string, roundId: string, poolId: string }} PartyMode
+ * `group` splits the catalog into the fixed **picture** trio (flags / map) and
+ * the open-ended **metric** family (population / area / density / …future GDP,
+ * coffee). The lobby renders the two groups differently: picture modes get a
+ * per-mode stepper + toggle, the metric family collapses to one "world facts"
+ * control with a shared count spread across the enabled metrics (see
+ * {@link buildPartyPlan}). Adding a metric = one more `group: 'metric'` entry
+ * here + its round module + i18n; the setup UI grows by one chip, not one row.
+ *
+ * @typedef {{ id: string, roundId: string, poolId: string, group: 'picture' | 'metric' }} PartyMode
  * @type {PartyMode[]}
  */
 export const PARTY_MODES = [
-  { id: 'flags-all', roundId: 'flagPick', poolId: 'sovereign' },
-  { id: 'flags-territories', roundId: 'flagPick', poolId: 'nonSovereign' },
-  { id: 'map-outlines', roundId: 'mapPick', poolId: 'sovereign' },
-  { id: 'superlative-pop', roundId: 'superlative', poolId: 'sovereign' },
-  { id: 'superlative-area', roundId: 'superlative-area', poolId: 'sovereign' },
-  { id: 'superlative-density', roundId: 'superlative-density', poolId: 'sovereign' },
+  { id: 'flags-all', roundId: 'flagPick', poolId: 'sovereign', group: 'picture' },
+  { id: 'flags-territories', roundId: 'flagPick', poolId: 'nonSovereign', group: 'picture' },
+  { id: 'map-outlines', roundId: 'mapPick', poolId: 'sovereign', group: 'picture' },
+  { id: 'superlative-pop', roundId: 'superlative', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-area', roundId: 'superlative-area', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-density', roundId: 'superlative-density', poolId: 'sovereign', group: 'metric' },
 ];
+
+/** The fixed picture trio (flags / territories / map), in catalog order. */
+export const PICTURE_MODES = PARTY_MODES.filter((m) => m.group === 'picture');
+/** The open-ended world-metric family (population / area / density / …). */
+export const METRIC_MODES = PARTY_MODES.filter((m) => m.group === 'metric');
+
+/** @type {Record<string, PartyMode>} */
+const MODE_BY_ID = Object.fromEntries(PARTY_MODES.map((m) => [m.id, m]));
 
 /** Bounds a host's choices stay inside — a defence against a malformed plan
  *  over the wire as much as a sane ceiling for the lobby steppers. */
@@ -170,4 +186,84 @@ export function validatePlan(plan) {
     total += n;
   }
   return out.length ? out : null;
+}
+
+/**
+ * Fisher-Yates shuffle with an injectable RNG (so callers can seed it in tests).
+ * Returns a new array; the input is not mutated.
+ * @template T
+ * @param {T[]} arr
+ * @param {() => number} rng
+ * @returns {T[]}
+ */
+function shuffle(arr, rng) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+/**
+ * Spread `n` world-facts rounds across the enabled metric modes, as a list of
+ * `n` mode ids in play order. Balanced first (round-robin so each metric gets a
+ * near-equal share) then shuffled, with the leftover rounds (`n % metrics`)
+ * handed to a random subset — so a 6-round / 3-metric game is always 2 each in a
+ * random order, and a 7-round game is 3/2/2 with a random metric getting the
+ * extra. This is the "picked at random from the facts you choose" the lobby
+ * promises: which facts play is the host's pick; how many of each is the deal.
+ *
+ * Unknown / non-metric ids are dropped; `n <= 0` or no metrics yields `[]`.
+ *
+ * @param {number} n  how many world-facts rounds to deal
+ * @param {string[]} metricIds  the enabled metric mode ids
+ * @param {() => number} [rng]
+ * @returns {string[]}  `n` metric mode ids, in play order
+ */
+export function distributeWorldFacts(n, metricIds, rng = Math.random) {
+  const ids = Array.isArray(metricIds)
+    ? metricIds.filter((id) => MODE_BY_ID[id] && MODE_BY_ID[id].group === 'metric')
+    : [];
+  if (!ids.length || !Number.isFinite(n) || n <= 0) return [];
+  const rounds = Math.min(Math.floor(n), MAX_TOTAL_ROUNDS);
+  const order = shuffle(ids, rng); // randomise which metric takes the remainder
+  /** @type {string[]} */
+  const out = [];
+  for (let i = 0; i < rounds; i++) out.push(order[i % order.length]);
+  return shuffle(out, rng); // randomise play order
+}
+
+/**
+ * Build a plan from the lobby setup shape: picture modes contribute one segment
+ * each (their own round count, catalog order); the world-facts family expands
+ * its single shared count into one-round metric segments dealt by
+ * {@link distributeWorldFacts}, appended after the picture block. The result is
+ * a normal `Segment[]` the server validates like any other plan — no server or
+ * room change is needed to group the metric modes, the grouping lives entirely
+ * in how the client turns its setup into segments here.
+ *
+ * @param {{ picture: Record<string, { on: boolean, n: number }>, facts: { on: boolean, n: number, metrics: Record<string, boolean> } }} setup
+ * @param {() => number} [rng]
+ * @returns {Segment[]}
+ */
+export function buildPartyPlan(setup, rng = Math.random) {
+  /** @type {Segment[]} */
+  const plan = [];
+  const picture = (setup && setup.picture) || {};
+  for (const m of PICTURE_MODES) {
+    const st = picture[m.id];
+    if (st && st.on && Number.isFinite(st.n) && st.n > 0) {
+      plan.push({ poolId: m.poolId, roundId: m.roundId, rounds: Math.min(Math.floor(st.n), MAX_ROUNDS_PER_MODE) });
+    }
+  }
+  const facts = (setup && setup.facts) || null;
+  if (facts && facts.on && Number.isFinite(facts.n) && facts.n > 0) {
+    const enabled = METRIC_MODES.filter((m) => facts.metrics && facts.metrics[m.id]).map((m) => m.id);
+    for (const id of distributeWorldFacts(facts.n, enabled, rng)) {
+      const m = MODE_BY_ID[id];
+      plan.push({ poolId: m.poolId, roundId: m.roundId, rounds: 1 });
+    }
+  }
+  return plan;
 }

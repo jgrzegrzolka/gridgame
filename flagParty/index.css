@@ -145,6 +145,33 @@
 .gs-mode.off .gs-stepper { visibility: hidden; }
 .gs-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; color: var(--primary-color); }
 
+/* Section eyebrow splitting the list into the picture trio and the world-facts
+   family. Carries the between-group hairline; the row right after it drops its
+   own top rule so there's no double line under the label. */
+.gs-sec {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted-color);
+  padding: 12px 0 4px;
+  margin-top: 2px;
+  border-top: 1px solid var(--muted-soft-color);
+}
+.gs-sec:first-child { border-top: none; margin-top: 0; padding-top: 2px; }
+.gs-sec + .gs-mode { border-top: none; }
+
+/* Picture leading each row: a flag thumbnail (country flag / Jolly Roger), the
+   Italy contour silhouette, or a monochrome chart. The container is a fixed
+   slot; each kind sizes itself by class. Line charts inherit the row's primary;
+   flag artwork and the contour asset carry their own colour. */
+.gs-ic { flex: none; width: 24px; height: 24px; color: var(--primary-color); display: grid; place-items: center; }
+.gs-ic svg { width: 20px; height: 20px; display: block; }
+/* Flag thumbnails (4:3), framed with the same 1px inset as the game tiles. */
+.gs-ic .gs-thumb { width: 24px; height: 18px; object-fit: cover; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+/* The contour silhouette sits on nothing (no frame), like the real map tiles. */
+.gs-ic .gs-contour { width: 22px; height: 22px; object-fit: contain; box-shadow: none; }
+
 .gs-stepper { display: flex; align-items: center; gap: 6px; flex: none; }
 .gs-step {
   box-sizing: border-box;
@@ -165,11 +192,44 @@
 .gs-step:hover { border-color: var(--secondary-color); }
 .gs-count { min-width: 15px; text-align: center; font-size: 14px; font-weight: 600; color: var(--primary-color); font-variant-numeric: tabular-nums; }
 
-/* Game-wide option row (tricky toggle): same frame as a mode row, but the name
-   column stacks a title over a muted one-line hint, and there's no stepper. */
-.gs-option .gs-name { display: flex; flex-direction: column; gap: 2px; }
+/* Game-wide option row (tricky toggle) + the world-facts lead row: same frame as
+   a mode row, but the name column stacks a title over a muted one-line hint. */
+.gs-option .gs-name,
+.gs-facts .gs-name { display: flex; flex-direction: column; gap: 2px; }
 .gs-opt-title { font-size: 14px; font-weight: 500; color: var(--primary-color); }
 .gs-opt-hint { font-size: 12px; font-weight: 400; color: var(--muted-color); }
+
+/* World-facts metric chips — which facts are in play. DELIBERATE PALETTE
+   EXCEPTION, sanctioned like the per-tile flag strip: each metric carries its
+   own hue so the growing fact family stays scannable (you recognise Population
+   by its teal before reading the label). Colour is confined to these setup
+   chips — it never reaches a gameplay tile or any other surface. Adding a metric
+   is one more `[data-metric]` rule here. Aligned under the lead row's text (past
+   the 22px icon + 10px gap). */
+.gs-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 8px 0 4px 32px; }
+.gs-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 11px 5px 8px;
+  border-radius: 999px;
+  border: 1.5px solid var(--muted-soft-color);
+  background: var(--surface-color);
+  color: var(--muted-color);
+  cursor: pointer;
+}
+.gs-chip .gs-ic { width: 15px; height: 15px; color: inherit; }
+.gs-chip .gs-ic svg { width: 15px; height: 15px; }
+/* Chosen: the metric's own hue on the ring, label, and icon (icon inherits
+   `color` via currentColor). `--mc` is set per metric below. */
+.gs-chip.on { border-color: var(--mc); color: var(--mc); background: var(--surface-hover-color); }
+.gs-chip[data-metric="superlative-pop"] { --mc: #2f8f9d; }
+.gs-chip[data-metric="superlative-area"] { --mc: #3f8f5b; }
+.gs-chip[data-metric="superlative-density"] { --mc: #7b5ea7; }
+.gs-chip:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
 
 /* Per-category reveal timing, shown under the tricky toggle when it's on. A
    quiet indented block (it belongs to the toggle above it) with one row per

@@ -7,13 +7,17 @@ import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCe
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction, veilProgress, DEFAULT_REVEAL, REVEAL_OPTIONS } from '../flags/partyTiming.js';
-import { PARTY_MODES, DEFAULT_PLAN, countsForPlan, planFromModeCounts, MAX_ROUNDS_PER_MODE } from '../flags/partyPlan.js';
+import { MAX_ROUNDS_PER_MODE, PICTURE_MODES, METRIC_MODES, buildPartyPlan } from '../flags/partyPlan.js';
 import { formatValue } from '../flags/metricLens.js';
 import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
 
 const NICKNAME_KEY = 'gridgame.nickname';
+// Setup state (the grouped picture-modes + world-facts shape). Supersedes the
+// old per-mode PLAN_KEY, which is still read once for a one-time migration of a
+// returning host's saved choices into the new shape.
+const SETUP_KEY = 'gridgame.party.setup';
 const PLAN_KEY = 'gridgame.party.plan';
 const TRICKY_KEY = 'gridgame.party.tricky';
 const REVEAL_KEY = 'gridgame.party.reveal';
@@ -24,7 +28,7 @@ const REVEAL_KEY = 'gridgame.party.reveal';
 const REVEAL_CATS = [
   { key: 'flag', labelKey: 'party.modeShort.flagsAll', label: 'Flags' },
   { key: 'map', labelKey: 'party.modeShort.mapOutlines', label: 'Maps' },
-  { key: 'metric', labelKey: 'party.modeShort.superlativePop', label: 'Population' },
+  { key: 'metric', labelKey: 'party.groupFacts', label: 'World facts' },
 ];
 
 /** Scattered reveal order for the six tricky-mode veil panels, so the flag
@@ -37,8 +41,8 @@ const VEIL_ORDER = [0, 4, 2, 5, 1, 3];
  *  English text as the fallback. `full` shows in the dial row, `short` in the
  *  collapsed summary mix. */
 const MODE_LABELS = {
-  'flags-all': { key: 'party.mode.flagsAll', full: 'Flags: all countries', shortKey: 'party.modeShort.flagsAll', short: 'Flags' },
-  'flags-territories': { key: 'party.mode.flagsTerritories', full: 'Flags: territories', shortKey: 'party.modeShort.flagsTerritories', short: 'Territories' },
+  'flags-all': { key: 'party.mode.flagsAll', full: 'Flags: countries', shortKey: 'party.modeShort.flagsAll', short: 'Flags' },
+  'flags-territories': { key: 'party.mode.flagsTerritories', full: 'Flags: others', shortKey: 'party.modeShort.flagsTerritories', short: 'Others' },
   'map-outlines': { key: 'party.mode.mapOutlines', full: 'Map: outlines', shortKey: 'party.modeShort.mapOutlines', short: 'Maps' },
   'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population: most & least', shortKey: 'party.modeShort.superlativePop', short: 'Population' },
   'superlative-area': { key: 'party.mode.superlativeArea', full: 'Land area: largest & smallest', shortKey: 'party.modeShort.superlativeArea', short: 'Land area' },
@@ -65,6 +69,34 @@ const SUPERLATIVE_MODES = {
     hintMost: { key: 'party.hintMostDensity', fallback: 'Which is the most densely populated?' },
     hintLeast: { key: 'party.hintLeastDensity', fallback: 'Which is the least densely populated?' },
   },
+};
+
+/** Little pictures leading each setup row, distinct enough to tell apart at a
+ *  glance. The two flag modes get real flag thumbnails (a country flag for
+ *  "countries", the Jolly Roger for "others" — a flag, on-theme for a party
+ *  game, and unmistakably not a specific country); the map mode gets the actual
+ *  Italy contour asset (the same silhouette the round renders); the world-facts
+ *  lead gets a stat-bar chart. Flag artwork carries its own colours by nature
+ *  (like every `flags/svg/*.svg`); the chart is monochrome `currentColor`.
+ *  Rendered via `iconSpan` (innerHTML), so `<img>` and inline `<svg>` both work;
+ *  sizing is by class in index.css (`.gs-thumb` / `.gs-contour` / plain svg). */
+const SETUP_ICONS = {
+  // A representative country flag (France — a clean tricolour that reads as "a
+  // flag" at 20px). Swap the code to re-pick; nothing keys off which country.
+  'flags-all': '<img class="gs-thumb" src="../flags/svg/fr.svg" alt="" />',
+  // Jolly Roger — a flag with no country, for the non-sovereign "others" pool.
+  'flags-territories': '<svg class="gs-thumb" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="24" fill="#241f22"/><g stroke="#fff" stroke-width="2.4" stroke-linecap="round"><line x1="10" y1="13" x2="22" y2="19"/><line x1="22" y1="13" x2="10" y2="19"/></g><g fill="#fff"><circle cx="9.4" cy="12.6" r="1.5"/><circle cx="22.6" cy="12.6" r="1.5"/><circle cx="9.4" cy="19.4" r="1.5"/><circle cx="22.6" cy="19.4" r="1.5"/></g><ellipse cx="16" cy="10.5" rx="5" ry="5.3" fill="#fff"/><rect x="12.6" y="13.6" width="6.8" height="3.4" rx="1" fill="#fff"/><circle cx="14" cy="10" r="1.4" fill="#241f22"/><circle cx="18" cy="10" r="1.4" fill="#241f22"/><rect x="15.3" y="11.6" width="1.4" height="2" fill="#241f22"/></svg>',
+  // The Italy contour asset — the same silhouette the map round shows.
+  'map-outlines': '<img class="gs-contour" src="../flags/contours/it.svg" alt="" />',
+  // World-facts lead: an ascending stat-bar chart (statistics / metrics).
+  worldFacts: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="13" width="4.4" height="8" rx="1"/><rect x="9.8" y="8" width="4.4" height="13" rx="1"/><rect x="16.6" y="4" width="4.4" height="17" rx="1"/></svg>',
+};
+
+/** Per-metric chip icons — same line style, tinted by the chip's own hue in CSS. */
+const METRIC_ICONS = {
+  'superlative-pop': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.6-5 5.5-5s5.5 2 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.4M17 15c2.3.5 4 2.4 4 5"/></svg>',
+  'superlative-area': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M4 20l5-9 3.5 5L15 12l5 8"/></svg>',
+  'superlative-density': '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="6" r="1.4"/><circle cx="12" cy="6" r="1.4"/><circle cx="18" cy="6" r="1.4"/><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>',
 };
 
 /**
@@ -211,11 +243,15 @@ export function bootFlagParty() {
   }
 
   // ---- game setup (host-only lobby plan) ----
-  // The host picks which modes play and how many rounds each. The choice is
-  // local (persisted per device) until Start, when the plan rides along on the
-  // 'start' message and the server validates it — this is just the picker.
-  /** @type {Record<string, { on: boolean, n: number }>} */
-  const modeState = loadModeState();
+  // The host picks which modes play and how many rounds each. The fixed picture
+  // trio (flags / territories / map) each get a stepper + toggle; the
+  // open-ended world-facts family collapses to one shared count spread across
+  // the metrics the host enables via chips. The choice is local (persisted per
+  // device) until Start, when buildPartyPlan() turns it into a segment plan that
+  // rides the 'start' message and the server validates; this is just the picker.
+  /** @typedef {{ picture: Record<string, { on: boolean, n: number }>, facts: { on: boolean, n: number, metrics: Record<string, boolean> } }} SetupState */
+  /** @type {SetupState} */
+  const setupState = loadSetup();
   // Game-wide tricky-mode toggle (not per-mode). Persisted per device like the
   // plan; rides on the 'start' message and the server broadcasts it back so
   // every client veils the tiles in step.
@@ -250,108 +286,212 @@ export function bootFlagParty() {
     try { window.localStorage.setItem(REVEAL_KEY, JSON.stringify(revealState)); } catch { /* private mode */ }
   }
 
-  function defaultModeState() {
-    const counts = countsForPlan(DEFAULT_PLAN);
+  // A function declaration (hoisted) rather than a const arrow: defaultSetup()
+  // calls it via the `const setupState = loadSetup()` init above, which runs
+  // before a const would be initialized (temporal dead zone).
+  function clampRounds(/** @type {number} */ n) { return Math.min(MAX_ROUNDS_PER_MODE, Math.max(1, Math.floor(n))); }
+
+  /** True when the setup would produce at least one round (a game needs rounds). */
+  function hasAnyRounds(/** @type {SetupState} */ s) {
+    if (PICTURE_MODES.some((m) => s.picture[m.id] && s.picture[m.id].on)) return true;
+    return s.facts.on && METRIC_MODES.some((m) => s.facts.metrics[m.id]);
+  }
+
+  /** The default setup: everything on, ~2 rounds per mode. Every picture mode is
+   *  2 rounds; the world-facts group is on with all metrics chosen and a shared
+   *  count of 2 per metric (so a fresh game is 3 picture modes × 2 + the facts,
+   *  the "2 of each" default Jan asked for). Scales as metrics are added — the
+   *  facts count tracks 2 × the metric count (clamped). */
+  function defaultSetup() {
     /** @type {Record<string, { on: boolean, n: number }>} */
-    const s = {};
-    for (const m of PARTY_MODES) s[m.id] = { on: counts[m.id] > 0, n: counts[m.id] || 1 };
-    return s;
+    const picture = {};
+    for (const m of PICTURE_MODES) picture[m.id] = { on: true, n: 2 };
+    /** @type {Record<string, boolean>} */
+    const metrics = {};
+    for (const m of METRIC_MODES) metrics[m.id] = true;
+    return { picture, facts: { on: true, n: clampRounds(2 * METRIC_MODES.length), metrics } };
   }
-  function loadModeState() {
+
+  /** Coerce a stored / partial setup to a valid one, filling gaps from the
+   *  default and never returning an all-off (zero-round) state. */
+  function sanitizeSetup(/** @type {any} */ raw) {
+    const def = defaultSetup();
+    /** @type {Record<string, { on: boolean, n: number }>} */
+    const picture = {};
+    for (const m of PICTURE_MODES) {
+      const e = raw && raw.picture && raw.picture[m.id];
+      picture[m.id] = e && typeof e.n === 'number' && e.n >= 1
+        ? { on: !!e.on, n: clampRounds(e.n) } : def.picture[m.id];
+    }
+    /** @type {Record<string, boolean>} */
+    const metrics = {};
+    for (const m of METRIC_MODES) {
+      const v = raw && raw.facts && raw.facts.metrics ? raw.facts.metrics[m.id] : undefined;
+      metrics[m.id] = v == null ? def.facts.metrics[m.id] : !!v;
+    }
+    const fRaw = raw && raw.facts;
+    const n = fRaw && typeof fRaw.n === 'number' && fRaw.n >= 1 ? clampRounds(fRaw.n) : def.facts.n;
+    let on = fRaw ? !!fRaw.on : def.facts.on;
+    if (on && !METRIC_MODES.some((m) => metrics[m.id])) on = false;
+    const s = { picture, facts: { on, n, metrics } };
+    return hasAnyRounds(s) ? s : def;
+  }
+
+  /** One-time migration of a returning host's old per-mode plan (PLAN_KEY) into
+   *  the new grouped shape: picture modes carry over 1:1; the metric modes fold
+   *  into the facts group, their counts summing to the shared count. */
+  function migrateModeState(/** @type {any} */ raw) {
+    /** @type {Record<string, { on: boolean, n: number }>} */
+    const picture = {};
+    for (const m of PICTURE_MODES) {
+      const e = raw[m.id];
+      picture[m.id] = e && typeof e.n === 'number' && e.n >= 1 ? { on: !!e.on, n: clampRounds(e.n) } : { on: true, n: 1 };
+    }
+    /** @type {Record<string, boolean>} */
+    const metrics = {};
+    let n = 0;
+    for (const m of METRIC_MODES) {
+      const e = raw[m.id];
+      const on = !!(e && e.on);
+      metrics[m.id] = on;
+      if (on && e && typeof e.n === 'number') n += clampRounds(e.n);
+    }
+    const anyMetric = METRIC_MODES.some((m) => metrics[m.id]);
+    return sanitizeSetup({ picture, facts: { on: anyMetric, n: Math.max(1, n), metrics } });
+  }
+
+  function loadSetup() {
     try {
-      const raw = JSON.parse(window.localStorage.getItem(PLAN_KEY) || 'null');
-      if (raw && typeof raw === 'object') {
-        const def = defaultModeState();
-        /** @type {Record<string, { on: boolean, n: number }>} */
-        const s = {};
-        for (const m of PARTY_MODES) {
-          const e = raw[m.id];
-          s[m.id] = e && typeof e.n === 'number' && e.n >= 1
-            ? { on: !!e.on, n: Math.min(MAX_ROUNDS_PER_MODE, Math.max(1, Math.floor(e.n))) }
-            : def[m.id];
-        }
-        // A game needs rounds — never restore an all-off plan.
-        if (!PARTY_MODES.some((m) => s[m.id].on)) return def;
-        return s;
-      }
+      const raw = JSON.parse(window.localStorage.getItem(SETUP_KEY) || 'null');
+      if (raw && raw.picture && raw.facts) return sanitizeSetup(raw);
     } catch { /* private mode / malformed */ }
-    return defaultModeState();
+    // Fall back to a one-time migration from the old per-mode plan store.
+    try {
+      const old = JSON.parse(window.localStorage.getItem(PLAN_KEY) || 'null');
+      if (old && typeof old === 'object') return migrateModeState(old);
+    } catch { /* ignore */ }
+    return defaultSetup();
   }
-  function saveModeState() {
-    try { window.localStorage.setItem(PLAN_KEY, JSON.stringify(modeState)); } catch { /* private mode */ }
+  function saveSetup() {
+    try { window.localStorage.setItem(SETUP_KEY, JSON.stringify(setupState)); } catch { /* private mode */ }
   }
-  /** The plan to send on Start: enabled modes only, in catalog order. */
+  /** The plan to send on Start: picture segments + the world-facts deal. */
   function currentPlan() {
-    /** @type {Record<string, number>} */
-    const counts = {};
-    for (const m of PARTY_MODES) counts[m.id] = modeState[m.id].on ? modeState[m.id].n : 0;
-    return planFromModeCounts(counts);
+    return buildPartyPlan(setupState);
+  }
+  /** Effective world-facts round count (0 unless the group is on with >=1 metric). */
+  function factsRounds() {
+    return setupState.facts.on && METRIC_MODES.some((m) => setupState.facts.metrics[m.id])
+      ? setupState.facts.n : 0;
   }
 
   const modeLabel = (/** @type {string} */ id) => t(MODE_LABELS[id].key, MODE_LABELS[id].full);
   const modeShort = (/** @type {string} */ id) => t(MODE_LABELS[id].shortKey, MODE_LABELS[id].short);
 
-  /** Build the dial rows once; their values are painted by updateSetup(). */
+  // ---- setup row builders (shared bits) ----
+  /** @param {string} svg */
+  function iconSpan(svg) {
+    const span = el('span', 'gs-ic');
+    span.innerHTML = svg;
+    span.setAttribute('aria-hidden', 'true');
+    return span;
+  }
+  /** @param {string} key @param {string} fallback */
+  function sectionLabel(key, fallback) {
+    const s = el('div', 'gs-sec', t(key, fallback));
+    s.dataset.i18nKey = key;
+    return s;
+  }
+  /** A −/count/+ stepper wired to callbacks. @param {() => number} getN @param {(d: number) => void} onStep */
+  function stepperEl(getN, onStep) {
+    const stepper = el('span', 'gs-stepper');
+    const minus = el('button', 'gs-step', '−');
+    /** @type {HTMLButtonElement} */ (minus).type = 'button';
+    minus.setAttribute('aria-label', t('party.fewer', 'Fewer rounds'));
+    minus.addEventListener('click', () => onStep(-1));
+    const count = el('span', 'gs-count', String(getN()));
+    const plus = el('button', 'gs-step', '+');
+    /** @type {HTMLButtonElement} */ (plus).type = 'button';
+    plus.setAttribute('aria-label', t('party.more', 'More rounds'));
+    plus.addEventListener('click', () => onStep(1));
+    stepper.append(minus, count, plus);
+    return stepper;
+  }
+  /** The site's shared switch, wired to callbacks. @param {() => boolean} getOn @param {(on: boolean) => void} onToggle @param {string} ariaLabel */
+  function toggleEl(getOn, onToggle, ariaLabel) {
+    const sw = document.createElement('label');
+    sw.className = 'scope-toggle-switch';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = getOn();
+    input.setAttribute('aria-label', ariaLabel);
+    input.addEventListener('change', () => onToggle(input.checked));
+    const track = el('span', 'scope-toggle-track');
+    track.appendChild(el('span', 'scope-toggle-thumb'));
+    sw.append(input, track);
+    return sw;
+  }
+
+  /** Build the setup rows once; their values are painted by updateSetup(). */
   function buildSetup() {
     gsModesEl.innerHTML = '';
-    for (const m of PARTY_MODES) {
+
+    // The fixed picture trio — a picture icon, a stepper, and a toggle each.
+    gsModesEl.appendChild(sectionLabel('party.groupPictures', 'Flags & maps'));
+    for (const m of PICTURE_MODES) {
       const row = el('div', 'gs-mode');
       row.dataset.mode = m.id;
+      row.appendChild(iconSpan(SETUP_ICONS[m.id]));
       row.appendChild(el('span', 'gs-name', modeLabel(m.id)));
-
-      const stepper = el('span', 'gs-stepper');
-      const minus = el('button', 'gs-step', '−');
-      /** @type {HTMLButtonElement} */ (minus).type = 'button';
-      minus.setAttribute('aria-label', t('party.fewer', 'Fewer rounds'));
-      minus.addEventListener('click', () => stepMode(m.id, -1));
-      const count = el('span', 'gs-count', String(modeState[m.id].n));
-      const plus = el('button', 'gs-step', '+');
-      /** @type {HTMLButtonElement} */ (plus).type = 'button';
-      plus.setAttribute('aria-label', t('party.more', 'More rounds'));
-      plus.addEventListener('click', () => stepMode(m.id, 1));
-      stepper.append(minus, count, plus);
-      row.appendChild(stepper);
-
-      const sw = document.createElement('label');
-      sw.className = 'scope-toggle-switch';
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.checked = modeState[m.id].on;
-      input.setAttribute('aria-label', modeLabel(m.id));
-      input.addEventListener('change', () => toggleMode(m.id, input.checked));
-      const track = el('span', 'scope-toggle-track');
-      track.appendChild(el('span', 'scope-toggle-thumb'));
-      sw.append(input, track);
-      row.appendChild(sw);
-
+      row.appendChild(stepperEl(() => setupState.picture[m.id].n, (d) => stepPicture(m.id, d)));
+      row.appendChild(toggleEl(() => setupState.picture[m.id].on, (on) => togglePicture(m.id, on), modeLabel(m.id)));
       gsModesEl.appendChild(row);
     }
 
-    // Game-wide option row (not a mode): the tricky-reveal toggle. Same row
-    // frame + shared switch as the modes above, minus the stepper — a title and
-    // a muted one-line hint sit in the name column.
+    // The open-ended world-facts family: one shared "Guess the stat" control
+    // (a stepper for how many facts rounds + a master toggle) with colour chips
+    // below for which facts are in play. The shared count is spread across the
+    // enabled metrics at Start (buildPartyPlan / distributeWorldFacts), so a new
+    // metric costs one chip here, not one more row.
+    gsModesEl.appendChild(sectionLabel('party.groupFacts', 'World facts'));
+    const factsRow = el('div', 'gs-mode gs-facts');
+    factsRow.id = 'gs-facts';
+    factsRow.appendChild(iconSpan(SETUP_ICONS.worldFacts));
+    const factsName = el('span', 'gs-name');
+    factsName.appendChild(el('span', 'gs-opt-title', t('party.factsLead', 'Guess the stat')));
+    factsName.appendChild(el('span', 'gs-opt-hint', t('party.factsHint', 'Picked at random from the facts you choose')));
+    factsRow.appendChild(factsName);
+    factsRow.appendChild(stepperEl(() => setupState.facts.n, stepFacts));
+    factsRow.appendChild(toggleEl(() => setupState.facts.on, toggleFacts, t('party.factsLead', 'Guess the stat')));
+    gsModesEl.appendChild(factsRow);
+
+    const chips = el('div', 'gs-chips');
+    chips.id = 'gs-chips';
+    for (const m of METRIC_MODES) {
+      const chip = el('button', 'gs-chip');
+      /** @type {HTMLButtonElement} */ (chip).type = 'button';
+      chip.dataset.metric = m.id;
+      chip.appendChild(iconSpan(METRIC_ICONS[m.id]));
+      chip.appendChild(el('span', 'gs-chip-label', modeShort(m.id)));
+      chip.addEventListener('click', () => toggleMetric(m.id));
+      chips.appendChild(chip);
+    }
+    gsModesEl.appendChild(chips);
+
+    // Game-wide tricky toggle (a mode-frame row with no stepper) + the
+    // per-category reveal-timing pickers shown only while tricky is on.
     const trickyRow = el('div', 'gs-mode gs-option');
     const nameCol = el('span', 'gs-name');
     nameCol.appendChild(el('span', 'gs-opt-title', t('party.tricky', 'Tricky mode')));
     nameCol.appendChild(el('span', 'gs-opt-hint', t('party.trickyHint', 'Flags start hidden and clear as the clock runs')));
     trickyRow.appendChild(nameCol);
-    const tsw = document.createElement('label');
-    tsw.className = 'scope-toggle-switch';
-    const tinput = document.createElement('input');
-    tinput.type = 'checkbox';
-    tinput.checked = trickyOn;
-    tinput.setAttribute('aria-label', t('party.tricky', 'Tricky mode'));
-    tinput.addEventListener('change', () => { trickyOn = tinput.checked; saveTricky(); syncRevealVisibility(); });
-    const ttrack = el('span', 'scope-toggle-track');
-    ttrack.appendChild(el('span', 'scope-toggle-thumb'));
-    tsw.append(tinput, ttrack);
-    trickyRow.appendChild(tsw);
+    trickyRow.appendChild(toggleEl(() => trickyOn, (on) => { trickyOn = on; saveTricky(); syncRevealVisibility(); }, t('party.tricky', 'Tricky mode')));
     gsModesEl.appendChild(trickyRow);
 
     // Per-category reveal timing, shown only while tricky is on. Each category
-    // (Flags / Maps / Population) picks when its veil fully clears, as a fraction
-    // of the question window (later = harder). A native <select> keeps it compact
-    // and accessible on a phone.
+    // (Flags / Maps / World facts) picks when its veil fully clears, as a
+    // fraction of the question window (later = harder). A native <select> keeps
+    // it compact and accessible on a phone.
     const revealBox = el('div', 'gs-reveal');
     revealBox.id = 'gs-reveal';
     revealBox.appendChild(el('p', 'gs-reveal-hint', t('party.revealHint', 'Clear the flag after…')));
@@ -388,27 +528,64 @@ export function bootFlagParty() {
     if (box) /** @type {HTMLElement} */ (box).hidden = !trickyOn;
   }
 
-  function stepMode(/** @type {string} */ id, /** @type {number} */ d) {
-    const st = modeState[id];
-    st.n = Math.min(MAX_ROUNDS_PER_MODE, Math.max(1, st.n + d));
-    saveModeState();
+  // ---- setup mutations ----
+  function stepPicture(/** @type {string} */ id, /** @type {number} */ d) {
+    const st = setupState.picture[id];
+    st.n = clampRounds(st.n + d);
+    saveSetup();
     updateSetup();
   }
-  function toggleMode(/** @type {string} */ id, /** @type {boolean} */ on) {
-    // Keep at least one mode enabled — a game needs rounds. Turning off the last
-    // one is a no-op (updateSetup snaps its checkbox back on).
-    if (!on && PARTY_MODES.filter((m) => modeState[m.id].on).length <= 1) { updateSetup(); return; }
-    modeState[id].on = on;
-    saveModeState();
+  function togglePicture(/** @type {string} */ id, /** @type {boolean} */ on) {
+    // A game needs rounds — refuse a toggle-off that would zero everything.
+    const tentative = { ...setupState, picture: { ...setupState.picture, [id]: { ...setupState.picture[id], on } } };
+    if (!hasAnyRounds(tentative)) { updateSetup(); return; }
+    setupState.picture[id].on = on;
+    saveSetup();
+    updateSetup();
+  }
+  function stepFacts(/** @type {number} */ d) {
+    setupState.facts.n = clampRounds(setupState.facts.n + d);
+    saveSetup();
+    updateSetup();
+  }
+  function toggleFacts(/** @type {boolean} */ on) {
+    // Turning the group on with no fact chosen enables them all (a sensible
+    // default over an on-but-empty state that plays nothing).
+    if (on && !METRIC_MODES.some((m) => setupState.facts.metrics[m.id])) {
+      for (const m of METRIC_MODES) setupState.facts.metrics[m.id] = true;
+    }
+    const tentative = { ...setupState, facts: { ...setupState.facts, on } };
+    if (!hasAnyRounds(tentative)) { updateSetup(); return; }
+    setupState.facts.on = on;
+    saveSetup();
+    updateSetup();
+  }
+  function toggleMetric(/** @type {string} */ id) {
+    const metrics = setupState.facts.metrics;
+    // Tapping a chip while the group is off re-activates the group with just it.
+    if (!setupState.facts.on) {
+      for (const m of METRIC_MODES) metrics[m.id] = m.id === id;
+      setupState.facts.on = true;
+      saveSetup();
+      updateSetup();
+      return;
+    }
+    const next = !metrics[id];
+    const enabledAfter = METRIC_MODES.filter((m) => (m.id === id ? next : metrics[m.id]));
+    // Never leave the group on with zero facts (turn it off via its own toggle
+    // instead) — snap the chip back.
+    if (!next && enabledAfter.length === 0) { updateSetup(); return; }
+    metrics[id] = next;
+    saveSetup();
     updateSetup();
   }
 
-  /** Repaint counts, toggles, the round total, and the collapsed mix. */
+  /** Repaint counts, toggles, chips, the round total, and the collapsed mix. */
   function updateSetup() {
     let total = 0;
     gsMixEl.innerHTML = '';
-    for (const m of PARTY_MODES) {
-      const st = modeState[m.id];
+    for (const m of PICTURE_MODES) {
+      const st = setupState.picture[m.id];
       const row = /** @type {HTMLElement | null} */ (gsModesEl.querySelector(`[data-mode="${m.id}"]`));
       if (row) {
         row.classList.toggle('off', !st.on);
@@ -422,18 +599,54 @@ export function bootFlagParty() {
         gsMixEl.appendChild(part);
       }
     }
+    // World-facts lead row: count, toggle, off state.
+    const factsRow = /** @type {HTMLElement | null} */ (gsModesEl.querySelector('#gs-facts'));
+    if (factsRow) {
+      factsRow.classList.toggle('off', !setupState.facts.on);
+      const c = factsRow.querySelector('.gs-count'); if (c) c.textContent = String(setupState.facts.n);
+      const inp = /** @type {HTMLInputElement | null} */ (factsRow.querySelector('input')); if (inp) inp.checked = setupState.facts.on;
+    }
+    // Chips: coloured (on) when the group is on and the metric is chosen.
+    for (const m of METRIC_MODES) {
+      const chip = gsModesEl.querySelector(`.gs-chip[data-metric="${m.id}"]`);
+      if (chip) {
+        const active = setupState.facts.on && !!setupState.facts.metrics[m.id];
+        chip.classList.toggle('on', active);
+        chip.classList.toggle('off', !active);
+        chip.setAttribute('aria-pressed', String(active));
+      }
+    }
+    const fr = factsRounds();
+    if (fr > 0) {
+      total += fr;
+      const part = el('span');
+      part.append(document.createTextNode(`${t('party.groupFacts', 'World facts')} `), el('span', 'n', String(fr)));
+      gsMixEl.appendChild(part);
+    }
     gsRoundsEl.textContent = String(total);
   }
-  /** On a language switch, repaint the JS-set labels (row names + mix). */
+
+  /** On a language switch, repaint the JS-set labels (sections, rows, chips, mix). */
   function repaintSetupLabels() {
-    for (const m of PARTY_MODES) {
+    for (const s of /** @type {NodeListOf<HTMLElement>} */ (gsModesEl.querySelectorAll('.gs-sec'))) {
+      const key = s.dataset.i18nKey; if (key) s.textContent = t(key, s.textContent || '');
+    }
+    for (const m of PICTURE_MODES) {
       const row = gsModesEl.querySelector(`[data-mode="${m.id}"]`);
       const nm = row && row.querySelector('.gs-name');
       if (nm) nm.textContent = modeLabel(m.id);
     }
-    const optTitle = gsModesEl.querySelector('.gs-opt-title');
+    const factsTitle = gsModesEl.querySelector('#gs-facts .gs-opt-title');
+    if (factsTitle) factsTitle.textContent = t('party.factsLead', 'Guess the stat');
+    const factsHint = gsModesEl.querySelector('#gs-facts .gs-opt-hint');
+    if (factsHint) factsHint.textContent = t('party.factsHint', 'Picked at random from the facts you choose');
+    for (const m of METRIC_MODES) {
+      const lbl = gsModesEl.querySelector(`.gs-chip[data-metric="${m.id}"] .gs-chip-label`);
+      if (lbl) lbl.textContent = modeShort(m.id);
+    }
+    const optTitle = gsModesEl.querySelector('.gs-option .gs-opt-title');
     if (optTitle) optTitle.textContent = t('party.tricky', 'Tricky mode');
-    const optHint = gsModesEl.querySelector('.gs-opt-hint');
+    const optHint = gsModesEl.querySelector('.gs-option .gs-opt-hint');
     if (optHint) optHint.textContent = t('party.trickyHint', 'Flags start hidden and clear as the clock runs');
     const revealHint = gsModesEl.querySelector('.gs-reveal-hint');
     if (revealHint) revealHint.textContent = t('party.revealHint', 'Clear the flag after…');
