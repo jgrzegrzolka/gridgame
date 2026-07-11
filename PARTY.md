@@ -661,7 +661,13 @@ agent can build it without re-deciding.
   correctness, not a dial. If pace ever becomes a setting it should be one overall fast/normal
   feel, not raw per-phase seconds.
 - **Speed-bonus curve.** Currently decaying (+5/+3/+1) in `flags/partyScore.js`.
-- **Max seats.** No hard cap in the room module; 2 is the tested case.
+- **Max seats — SHIPPED.** Hard cap of 20 (`MAX_SEATS` in `flags/partyRoom.js`).
+  Not a platform limit (the Durable Object would take far more): a sane bound for
+  the phone-only surface (scoreboard + per-tile pick avatars stay readable) plus a
+  cheap guard against a scripted flood of connections bloating the serialized
+  room. `applyHello` rejects a **new** seat past the cap with reason `room-full`
+  (`party.reject.roomFull`, en + pl); **reconnects are always welcomed** (a known
+  playerId already holds a seat). Raise it if the TV/Display surface lands.
 
 ## Out of scope (don't sweep in)
 

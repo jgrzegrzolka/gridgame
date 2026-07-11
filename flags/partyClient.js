@@ -72,6 +72,7 @@ const REJECT_MESSAGES = {
   'room-not-found': { key: 'party.reject.roomNotFound', fallback: 'Room not found, ask for the code or create a new room' },
   'code-collision': { key: 'party.reject.codeCollision', fallback: 'That code is already taken, try creating a new one' },
   'in-progress': { key: 'party.reject.inProgress', fallback: 'That game has already started, wait for the next one' },
+  'room-full': { key: 'party.reject.roomFull', fallback: 'That room is full, ask the host to start or create a new room' },
   'missing-player-id': { key: 'party.reject.missingPlayerId', fallback: 'Connection error, please reload the page' },
 };
 

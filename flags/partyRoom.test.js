@@ -12,6 +12,7 @@ import {
   serializeRoom,
   deserializeRoom,
   DEFAULT_ROUNDS,
+  MAX_SEATS,
 } from './partyRoom.js';
 import { CORRECT_POINTS } from './partyScore.js';
 
@@ -83,6 +84,25 @@ test('applyHello: a new player cannot join once the game has started', () => {
   assert.equal(r.rejectConnection, true);
   assert.equal(msg(r, 'rejected').reason, 'in-progress');
   assert.equal(r.room.seats.has('carol'), false);
+});
+
+test('applyHello: a new player is rejected once the room is full', () => {
+  let room = createRoom();
+  for (let i = 0; i < MAX_SEATS; i++) room = applyHello(room, `p${i}`, `P${i}`).room;
+  assert.equal(room.seats.size, MAX_SEATS);
+  const r = applyHello(room, 'overflow', 'Overflow');
+  assert.equal(r.rejectConnection, true);
+  assert.equal(msg(r, 'rejected').reason, 'room-full');
+  assert.equal(r.room.seats.has('overflow'), false);
+});
+
+test('applyHello: a reconnect is welcomed even when the room is full', () => {
+  let room = createRoom();
+  for (let i = 0; i < MAX_SEATS; i++) room = applyHello(room, `p${i}`, `P${i}`).room;
+  const r = applyHello(room, 'p0', 'P0'); // an existing seat drops and returns
+  assert.equal(r.rejectConnection, undefined);
+  assert.equal(r.room.seats.size, MAX_SEATS, 'no new seat is added');
+  assert.equal(msg(r, 'welcome').you, 'p0');
 });
 
 // ---- applyStart ----

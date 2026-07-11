@@ -556,6 +556,7 @@
       "roomNotFound": "Pokój nie znaleziony, poproś o kod lub utwórz nowy pokój",
       "codeCollision": "Ten kod jest już zajęty, spróbuj utworzyć nowy",
       "inProgress": "Ta gra już się rozpoczęła, poczekaj na następną",
+      "roomFull": "Ten pokój jest pełny, poproś gospodarza o start lub utwórz nowy pokój",
       "missingPlayerId": "Błąd połączenia, odśwież stronę",
       "fallback": "Odrzucono: {reason}"
     }
