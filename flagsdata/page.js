@@ -1,6 +1,8 @@
-import { CONTINENTS, loadCountries } from '../flags/group.js';
+import { CONTINENTS, loadCountries, attachPopulations } from '../flags/group.js';
 import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
+import { buildMetricTierItems } from '../flags/metricTiers.js';
+import { pillLabel } from '../flags/findFlag.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
 import { createMetric } from '../flags/metrics.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
@@ -620,6 +622,7 @@ export function bootFlagsData() {
       pillTotal += filters[k].include.size + filters[k].exclude.size;
     }
     if (filters.colorCount !== null) pillTotal++;
+    if (filters.population !== null) pillTotal++;
     const anyActive = pillTotal > 0 || nameQuery !== '';
     clearBtn.hidden = !anyActive;
     // Include name search in the toggle badge count — once the search
@@ -749,6 +752,54 @@ export function bootFlagsData() {
           btn.classList.add('active');
         }
         if (group === 'color') colorCountLock.sync();
+        applyFilter();
+      });
+      wrap.appendChild(btn);
+    }
+    return wrap;
+  }
+
+  /**
+   * Population tier group — single-select, unlike the include/exclude tristate
+   * `buildFilterGroup` builds. A population threshold is a scalar
+   * (`filters.population`), so at most one tier applies; tapping the active tier
+   * clears it. Same pills, labels, and predicate as findFlag's "Make a puzzle"
+   * chooser (via the shared `buildMetricTierItems` + `pillLabel`), rendered in
+   * flagsdata's own filter-group chrome — the established shared-token /
+   * per-page-chrome split the continent / colour / motif groups already follow.
+   * Built after data loads (the tiers count against the loaded set, and the
+   * predicate reads the population `attachPopulations` denormalizes on).
+   * @param {Country[]} countries
+   */
+  function buildPopulationGroup(countries) {
+    const wrap = document.createElement('div');
+    wrap.className = 'filter-group';
+    const labelEl = document.createElement('span');
+    labelEl.className = 'filter-label';
+    // Reuse findFlag's "Population" section key — same label, and the Colors
+    // group already borrows findFlag.noOtherColors, so a cross-reference here
+    // is the existing pattern, not a new one. data-i18n re-translates on a soft
+    // language switch for free.
+    labelEl.setAttribute('data-i18n', 'findFlag.sections.population');
+    labelEl.textContent = t('findFlag.sections.population', 'Population');
+    wrap.appendChild(labelEl);
+    for (const it of buildMetricTierItems('population', countries)) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill';
+      btn.dataset.group = 'population';
+      btn.dataset.value = it.value;
+      btn.textContent = pillLabel('population', it.value, 'include', t);
+      const active = filters.population !== null && filters.population.op === it.op && filters.population.n === it.n;
+      if (active) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        const isActive = filters.population !== null && filters.population.op === it.op && filters.population.n === it.n;
+        filters.population = isActive ? null : { op: it.op, n: it.n };
+        // Repaint the whole group's pressed state from the single source
+        // (`filters.population`) — single-select, so only the clicked tier
+        // can end up active.
+        for (const p of wrap.querySelectorAll('.pill')) p.classList.remove('active');
+        if (!isActive) btn.classList.add('active');
         applyFilter();
       });
       wrap.appendChild(btn);
@@ -887,6 +938,7 @@ export function bootFlagsData() {
       filters[k].include.clear();
       filters[k].exclude.clear();
     }
+    filters.population = null;
     colorCountLock.reset();
     if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
     colorCountPicker.reset();
@@ -1018,6 +1070,15 @@ export function bootFlagsData() {
       // Once both the countries and the metric data are in, activate any lens
       // picked before the data resolved (buttons mount at boot, data is async).
       metricsReady.then(() => {
+        // Denormalize population onto each country so the tier filter's
+        // predicate (`c.population >= n`, via matchesFilters) resolves — the
+        // lens reads the sparse values map directly, but the filter reads the
+        // field. Then build the Population filter group; its tiers count against
+        // the loaded, population-attached set.
+        if (metricsData.population) {
+          attachPopulations(all, metricsData.population.values);
+          groupsWrap.appendChild(buildPopulationGroup(all));
+        }
         if (lensKey && metricsData[lensKey]) lensMetric = createMetric(metricsData[lensKey], all);
         renderLens();
         applyFilter();
@@ -1070,6 +1131,7 @@ export function bootFlagsData() {
       else if (group === 'color') btn.textContent = colorLabel(value);
       else if (group === 'motif') btn.textContent = motifLabel(value);
       else if (group === 'stripesOnly') btn.textContent = stripesOnlyLabel(value);
+      else if (group === 'population') btn.textContent = pillLabel('population', value, 'include', t);
     }
     // Lens metric buttons carry dynamic labels (not a fixed data-i18n key), so
     // re-translate them here; renderLens refreshes the "no data" overlay text.

@@ -3,11 +3,10 @@ import {
   ALL_FLAG_COLORS,
   ALL_MOTIFS,
   STRIPES_ORIENTATIONS_FOR_RANDOM,
-  POPULATION_BREAKS_FOR_RANDOM,
-  population,
   suggest,
   exactSingleMatch,
 } from '../flags/engine.js';
+import { buildMetricTierItems } from '../flags/metricTiers.js';
 import {
   findTargets,
   findPool,
@@ -422,15 +421,11 @@ export function bootFindFlag() {
     // the surfaces can't drift; 0-count tiers are dropped like every other
     // section so the chooser only offers playable filters.
     {
-      const popItems = POPULATION_BREAKS_FOR_RANDOM.map((brk) => ({
-        value: `${brk.op}${brk.n}`,
-        op: brk.op,
-        n: brk.n,
-        // Count via the engine's canonical threshold predicate (the same one
-        // TTT uses and that categoryFromId rebuilds) rather than re-inlining
-        // `c.population >= n` — one definition of the tier, no drift.
-        count: all.filter(population(brk.op, brk.n).predicate).length,
-      })).filter((it) => it.count > 0);
+      // Shared tier builder — same {value, op, n, count} the flagsdata filter
+      // bar renders, counted via the engine's canonical predicate (no
+      // re-inlined `c.population >= n`), 0-count tiers dropped. One definition
+      // of a tier across both surfaces.
+      const popItems = buildMetricTierItems('population', all);
 
       if (popItems.length > 0) {
         const secEl = document.createElement('section');

@@ -19,7 +19,15 @@ A fresh agent picking this up should:
 
 ## Now
 
-### Feature DE: Metric lens in flagsdata
+---
+
+## Backlog
+
+---
+
+## Done
+
+### Feature DE: Metric lens in flagsdata — *shipped 2026-07-11 (phase 3 reframed)*
 
 **Goal.** flagsdata gains an opt-in **metric lens** — pick a world metric (from `flags/metrics/`) to *look through*, and the explorer reparameterizes: each tile shows that metric's value + rank, you can sort by it, filter by tier, and one-tap superlative presets (Top N / Lowest N / Top N in Europe). Defaults to **None** — flagsdata stays a flag explorer; metrics are the power-user layer. First real consumer of Feature DD's data. **Explore-only; create-puzzle stays untouched.**
 
@@ -35,17 +43,15 @@ A fresh agent picking this up should:
 
 **Phasing** (this feature, on one branch each — don't auto-merge):
 
-1. **Data + spec** (this PR). `format` hint on `population.json` + `build-population.mjs`; `createMetric` passthrough (defaults to `'compact'`); schema test; this spec; move Feature DD to Done.
-2. **Lens UI in flagsdata.** Metric selector (None default) built from the `flags/metrics/` registry; tiles show value + rank for the active metric; sort (A–Z / Highest / Lowest); sparse dimming. i18n labels in `en.json` / `pl.json`. Extract the lens-state logic to a testable sibling module (`flagsdata/metricLens.js` or `flags/metricLens.js`) so the page stays thin glue and the reducer gets unit tests.
-3. **Tiers + superlative presets.** High/Mid/Low tier pills + Top 10 / Lowest 10 / Top 5 in Europe presets, all driven by the active metric via `createMetric`.
+1. **Data + spec** *(done — #763).* `format` hint on `population.json` + `build-population.mjs`; `createMetric` passthrough (defaults to `'compact'`); schema test; this spec; moved Feature DD to Done.
+2. **Lens UI in flagsdata** *(done — #767, #769, #772).* Metric selector (None default) built from the `flags/metrics/` registry; tiles show value + rank for the active metric; sort (A–Z / Highest / Lowest); sparse dimming. i18n labels in `en.json` / `pl.json`. Lens-state logic extracted to the testable `flags/metricLens.js` (`computeLensView`) so the page stays thin glue.
+3. **~~Tiers + superlative presets~~ → Population tier pills, reused from Make-a-puzzle** *(done — feature/de-metric-tier-pills).* **Reframed** from the original plan. The written phase 3 (set-relative High/Mid/Low tertile tiers + explore-only Top 10 / Lowest 10 / Top 5-in-Europe presets) was **dropped** — the tertile tiers were the design's own weakest capability (line above: "fuzzy, bad for puzzles"), and the superlative presets became redundant once Feature DG shipped the superlative mechanic as real daily gameplay. Instead, flagsdata reuses the **exact threshold tier pills from findFlag's "Make a puzzle" chooser** (`>=100M` / `<=1M` / …). These are *absolute per-flag predicates* (not set-relative), so they ride the shared `matchesFilters` path flagsdata already runs — crisp where tertiles were fuzzy, and already built. **Net win: the next metric (area / GDP) inherits tier pills on both surfaces for one line** (see the metric-tier registry in the Feature DD onboarding map). Feature DE closes.
+
+**What shipped (phase 3).** New pure `flags/metricTiers.js` — a `METRIC_TIER_REGISTRY` (`metricKey → { breaks, factory }`; population fills it today) + `buildMetricTierItems(metricKey, countries)` that counts each breakpoint via the metric's canonical predicate and drops 0-count tiers. findFlag's inlined tier build (`page.js`) rewired to call it (behaviour-neutral). flagsdata gained a single-select **Population** filter group (`buildPopulationGroup`) rendered in its own filter-bar chrome, labelled via the shared `pillLabel('population', …)`, wired into Clear / the filter-count badge / the soft-language-switch re-translate. `attachPopulations` denormalises population onto the loaded countries so the filter predicate resolves (the lens reads the values map directly; the filter reads the field). No new i18n keys (reuses `findFlag.sections.population` + `population.atLeast/atMost`). `flags/metricTiers.test.js` pins the builder. Verified in-browser: 6 tiers render, `>=100M` → 16 flags, `<=1M` → 85, single-select replace + toggle-off, badge count, and full en↔pl re-translation.
+
+**Standing artifact:** `flags/metricTiers.js` — the shared threshold-tier builder + registry. Any future threshold metric that exposes a `<KEY>_BREAKS_FOR_RANDOM` list + `<key>()` factory adds one registry line and lights up tier pills in **both** the findFlag chooser and the flagsdata filter bar.
 
 ---
-
-## Backlog
-
----
-
-## Done
 
 ### Feature DG: Superlative daily puzzles — "the N most/least X by a metric" — *shipped 2026-07-10 (#780–#783, content on blob, +#785)*
 
@@ -111,7 +117,8 @@ A fresh agent picking this up should:
 2. **Daily superlatives — zero new code.** `resolveSuperlative` (`flags/superlative.js`) is metric-agnostic: author `{ kind: "superlative", metric: "<key>", scope, direction, topN, filter? }` entries per the **daily-puzzle-author** skill. Rendering, difficulty, validation (`checkSuperlativeShape`) and `audit-superlative.mjs` already handle any metric key. The only thing that won't appear is the result-screen rank caption (step 4). **Scope caveat:** this covers the *daily* superlative only. The **Flag Party** superlative round (`flags/partyRounds/superlative.js`, flagParty `superlative-pop` mode) statically imports `population.json` and hard-codes the metric at module load — a new metric will NOT show up in Flag Party until that module is generalized to take a metric key (or a sibling round is added). Not wired to `METRIC_FILES`.
 3. **TTT thresholds (optional, most code).** Mirror Feature DF: add a `<key>(op, n)` category factory + a `<KEY>_BREAKS_FOR_RANDOM` list in `flags/engine.js` (bake `exclusiveGroup: '<key>'` on all breaks; mark all-but-one `ultimateEligible: false` if the extremes can't back 9×9), wire into `buildRandomCategoryPool` / `categoryFromId` / `translateCategoryLabel`, and **`attach<Key>s(countries, values)` at every TTT load site** (both party servers + both offline pages — forgetting one = silently-empty cells). Add `<key>.atLeast.*` / `.atMost.*` i18n labels. See the **ttt-puzzle-generator** skill.
 4. **Result-screen rank captions (optional, small code).** The population captions (`flags/populationRank.js` + the `metric === 'population'` branch in `daily/page.js`) are metric-specific. For a new metric, add a `build<Key>RankNotes` and a branch (or generalize `populationRank.js` to take a metric key + `label`/`unit` + en/pl caption strings). Without it, that metric's superlatives just show the plain flag name on zoom.
-5. **findFlag "Make a puzzle" scalar filter (optional, moderate code).** Population landed here in #790 as the worked example; a threshold metric surfaces as a chooser filter in five coordinated edits: (a) a scalar `<key>` constraint on `Filters` + a `matchesFilters` branch reading the denormalized field (`flags/flagsFilter.js`); (b) a `<key>:>=N` URL token in `parseFilterString` / `serializeFilter` plus `pillLabel` / `filterTitle` rendering (`flags/findFlag.js`), reusing the `<key>.atLeast/atMost` i18n keys from step 3; (c) a **single-select** chooser section in `findFlag/page.js` (a threshold has no meaningful "exclude", so tapping a tier replaces the prior one), its tiers + counts driven by the same `<KEY>_BREAKS_FOR_RANDOM` and `<key>(op,n).predicate` as step 3 so the surfaces can't drift; (d) `attach<Key>s` at findFlag's own load site (same forget-one-site trap as step 3 — findFlag fetches the metric JSON itself); (e) a `<key>Probability` modifier path in `pickRandomMix` (mutually exclusive with colorCount) so every tier stays reachable by Random. **Then update the findflag-random-coverage skill** — its own rule and Feature DB's precedent both require documenting the new modifier. Add `findFlag.sections.<key>` (en+pl). One new section title is the only new i18n string; the tier labels come free from step 3.
+5. **findFlag "Make a puzzle" scalar filter (optional, moderate code).** Population landed here in #790 as the worked example; a threshold metric surfaces as a chooser filter in five coordinated edits: (a) a scalar `<key>` constraint on `Filters` + a `matchesFilters` branch reading the denormalized field (`flags/flagsFilter.js`); (b) a `<key>:>=N` URL token in `parseFilterString` / `serializeFilter` plus `pillLabel` / `filterTitle` rendering (`flags/findFlag.js`), reusing the `<key>.atLeast/atMost` i18n keys from step 3; (c) a **single-select** chooser section in `findFlag/page.js` (a threshold has no meaningful "exclude", so tapping a tier replaces the prior one), its tiers built by the shared `buildMetricTierItems('<key>', all)` from step 5.5 so the surfaces can't drift; (d) `attach<Key>s` at findFlag's own load site (same forget-one-site trap as step 3 — findFlag fetches the metric JSON itself); (e) a `<key>Probability` modifier path in `pickRandomMix` (mutually exclusive with colorCount) so every tier stays reachable by Random. **Then update the findflag-random-coverage skill** — its own rule and Feature DB's precedent both require documenting the new modifier. Add `findFlag.sections.<key>` (en+pl). One new section title is the only new i18n string; the tier labels come free from step 3.
+5.5. **Register the metric's tiers once (`flags/metricTiers.js`) — then flagsdata's filter bar is free.** Add one line to `METRIC_TIER_REGISTRY`: `<key>: { breaks: <KEY>_BREAKS_FOR_RANDOM, factory: <key> }` (both from step 3). `buildMetricTierItems('<key>', countries)` now backs *both* the findFlag chooser (step 5c) and the flagsdata **filter bar** — flagsdata's `buildPopulationGroup`-style single-select group, `attach<Key>s` at its load site, Clear / badge / language-switch wiring (the Feature DE phase-3 pattern). This is the metric-lens's *filter* half; the lens *display* half (value/rank/sort) still comes free from step 1 via `createMetric`. No new i18n if the `<key>.atLeast/atMost` labels from step 3 and a `<key>` section title exist.
 
 ---
 
