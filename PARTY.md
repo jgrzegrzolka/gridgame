@@ -529,6 +529,123 @@ server stamps the right `clearFrac` on each question from its category. The clie
 - [x] Touched-module tests green (72) + typecheck clean.
 - [ ] End-to-end in-browser verify.
 
+## Iteration 7 — Grouped setup: picture icons + the world-facts family (Option E) — BUILT on branch `feat/party-setup-grouping` (pending PR)
+
+Goal: stop the lobby setup growing one tall row per metric. The panel mixed two
+different things in one flat list: a **fixed picture trio** (flags / territories /
+map) and an **open-ended metric family** (population / area / density, with GDP,
+coffee, coastline… coming). Iteration 7 splits them: the picture trio keeps its
+per-mode stepper + toggle (now with a little picture icon each), and the metric
+family collapses to **one "Guess the extreme" control** with a shared round count
+spread across the facts the host enables via **colour chips**. Adding a metric is
+now one chip, not one row. Jan's direction across three mockup rounds (see the
+artifacts linked below): presets later, **Option E custom now**, one shared count,
+neutral picture icons, colour on the fact chips.
+
+**The shape: a client-only change — no server or room touch.** This is the
+load-bearing decision. The server already generates each round from the plan via
+`roundIdForRound` and `validatePlan` already accepts any mix of metric segments,
+so grouping lives entirely in **how the client turns its setup into a plan**. At
+Start the shared world-facts count is dealt into one-round metric segments
+(`buildPartyPlan` → `distributeWorldFacts`), producing an ordinary `Segment[]`
+the server validates like any other. Nothing in `party/` or `flags/partyRoom.js`
+changed.
+
+**Decisions:**
+
+- **`group` on `PARTY_MODES`.** Each mode is tagged `'picture'` or `'metric'`;
+  `PICTURE_MODES` / `METRIC_MODES` derive from it. The metric modes stay in the
+  catalog (so `validatePlan` still accepts their segments) but the UI renders
+  them as one group. Adding a metric = one `group: 'metric'` entry + its round
+  module + i18n; the setup grows by one chip.
+- **One shared count, dealt at Start (Jan's call over per-metric counts).**
+  `distributeWorldFacts(n, enabledIds, rng)` balances the deal (round-robin so
+  each fact gets a near-equal share) then shuffles, so 6 rounds / 3 facts is
+  always 2/2/2 in a random order, 7 is 3/2/2 with a random fact taking the extra.
+  Pure + seeded-rng tested. Trade-off accepted: you pick *which* facts play, not
+  *how many of each* (that was the price of the group staying one line forever).
+- **Colour chips — a DELIBERATE, documented palette exception.** Each metric
+  carries its own hue (Population teal `#2f8f9d`, Land area green `#3f8f5b`,
+  Density purple `#7b5ea7`) on the chip's ring / label / icon, so a growing fact
+  family stays scannable. Sanctioned like the per-tile flag strip: colour is
+  **confined to the setup chips** and never reaches a gameplay tile or any other
+  surface. New metric = one `[data-metric]` rule in `flagParty/index.css`.
+- **Picture icons are real little pictures (Jan's final call).** "Flags:
+  countries" shows a country flag thumbnail (France — a clean tricolour; nothing
+  keys off which country, swap the code to re-pick); "Flags: others" shows the
+  **Jolly Roger** (a flag with no country, on-theme for the non-sovereign pool);
+  "Map: outlines" shows the **actual Italy contour asset** (`flags/contours/it.svg`,
+  the same silhouette the round renders); the world-facts lead shows a **stat-bar
+  chart**. Flag artwork carries its own colours by nature (like every
+  `flags/svg/*.svg`); the chart is monochrome. `SETUP_ICONS` holds either an
+  `<img>` or inline `<svg>`, sized by class in `index.css`.
+- **Naming (Jan's).** "Flags: countries" / "Flags: others" / "Map: outlines";
+  the world-facts lead is "Guess the stat" (a metric / statistics framing over
+  the earlier "Guess the extreme"). Short labels: Flags / Others / Maps.
+- **Default: everything on, ~2 per mode.** A fresh game is 2 flags + 2 others +
+  2 map + a 6-round world-facts group (all metrics on, ~2 per metric) = 12 rounds.
+  `defaultSetup()` sets the facts count to `2 × METRIC_MODES.length` (clamped) so
+  "2 of each" holds as metrics are added. This replaces deriving the default from
+  `DEFAULT_PLAN` (still the server's malformed-plan fallback, now decoupled).
+- **Migration, not a reset.** A returning host's old per-mode plan (`PLAN_KEY`)
+  folds once into the new `gridgame.party.setup` shape: picture modes carry over
+  1:1, the metric modes' counts sum into the shared count.
+- **Guard generalised.** "A game needs rounds" now spans both groups: any
+  toggle-off that would zero the total (or leave the facts group on with no
+  chip) snaps back.
+
+**Build steps:**
+
+- [x] `flags/partyPlan.js` — `group` on `PARTY_MODES`; `PICTURE_MODES` /
+      `METRIC_MODES`; `distributeWorldFacts` + `buildPartyPlan` (pure, seeded-rng)
+      (+ tests, 25 in the file).
+- [x] `flagParty/page.js` — grouped setup UI (sectioned rows, picture icons,
+      world-facts lead + colour chips), the new `setupState` shape with load /
+      sanitize / migrate / save, `currentPlan()` → `buildPartyPlan`, repaint on
+      language switch. `SETUP_ICONS` / `METRIC_ICONS` inline SVGs.
+- [x] `flagParty/index.css` — `.gs-sec`, `.gs-ic`, `.gs-chips` / `.gs-chip` with
+      the per-metric `--mc` hues (the documented exception block).
+- [x] `i18n/en.json` + `pl.json` — new `party.groupPictures`, `party.groupFacts`,
+      `party.factsLead` ("Guess the stat"), `party.factsHint`; renamed
+      `party.mode.flagsAll` → "Flags: countries", `flagsTerritories` → "Flags:
+      others" (short "Others"), en + pl. Chips reuse `party.modeShort.*`. No em dashes.
+- [x] `npm run validate` green (2416 tests) + typecheck clean.
+- [x] **End-to-end verified in-browser** (fresh-port static serve to beat the SWA
+      CLI cache): sections + picture icons render, chips colour-code and toggle,
+      the shared count holds while metrics are added, the group toggle drops the
+      total, the "needs rounds" guard snaps the last mode back on, `buildPartyPlan`
+      deals a 2/1/1 split across three facts, the tricky reveal category reads
+      "World facts", and the setup persists + re-translates to PL.
+
+**Mockup history (artifacts, for reference):**
+- Round 1 (four monochrome layouts): https://claude.ai/code/artifact/577817c4-642f-4132-a4e8-ec1ba15bd949
+- Round 2 (five more, colour + illustration): https://claude.ai/code/artifact/3591873b-25e8-4d6b-b320-ad0d41d1b2bf
+- Round 3 (the chosen direction: presets + Option E custom): https://claude.ai/code/artifact/ad2cae63-e333-4527-90b9-45d3cf9bce1f
+
+### Future: preset packs (Easy / Default / Advanced) — designed, not built
+
+Jan wants presets **on top of** the custom view, not instead of it: most hosts
+don't want to tune dials, they want "give me a good geography game" in one tap.
+This is parked as the next setup iteration; the design is settled so a future
+agent can build it without re-deciding.
+
+- **The entry screen is a short list of named packs**, each a radio-style card:
+  **Easy** (flags only, gentle), **Default** (flags, the map, a few facts),
+  **Advanced** (every mode, every world fact). A **"Custom setup…"** link drops
+  into the Iteration 7 dial view for the hosts who do want control. See Round 3's
+  artifact (link above) for the exact card layout.
+- **A pack is just a named plan.** Selecting one writes into the same
+  `setupState` the custom view edits (so Custom always shows what a pack picked,
+  and tweaking from there is seamless). No new plan model — a pack is a preset of
+  the shape `buildPartyPlan` already consumes.
+- **Scales for free.** A new metric joins the relevant packs (Default / Advanced)
+  by definition; no per-pack surgery, same as it joins the custom chips.
+- **Colour is safe here.** It lives on the pack badge (an emoji / tinted tile),
+  not on any gameplay surface, so it composes with the confined-to-setup rule.
+- **Open sub-question for build time:** whether packs and Custom are two tabs, or
+  packs are the default with Custom as a disclosure below them (Round 3 drew the
+  latter). Decide when building; both fit the same `setupState` plumbing.
+
 ## Open decisions (settle as they come up, not now)
 
 - **Settings page — SHIPPED (#765).** The host game-setup panel in the lobby picks which modes
