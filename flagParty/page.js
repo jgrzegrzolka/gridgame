@@ -42,6 +42,7 @@ const MODE_LABELS = {
   'map-outlines': { key: 'party.mode.mapOutlines', full: 'Map: outlines', shortKey: 'party.modeShort.mapOutlines', short: 'Maps' },
   'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population: most & least', shortKey: 'party.modeShort.superlativePop', short: 'Population' },
   'superlative-area': { key: 'party.mode.superlativeArea', full: 'Land area: largest & smallest', shortKey: 'party.modeShort.superlativeArea', short: 'Land area' },
+  'superlative-density': { key: 'party.mode.superlativeDensity', full: 'Population density: most & least', shortKey: 'party.modeShort.superlativeDensity', short: 'Density' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -58,6 +59,11 @@ const SUPERLATIVE_MODES = {
     file: 'area.json',
     hintMost: { key: 'party.hintMostArea', fallback: 'Which is the largest by land area?' },
     hintLeast: { key: 'party.hintLeastArea', fallback: 'Which is the smallest by land area?' },
+  },
+  'superlative-density': {
+    file: 'density.json',
+    hintMost: { key: 'party.hintMostDensity', fallback: 'Which is the most densely populated?' },
+    hintLeast: { key: 'party.hintLeastDensity', fallback: 'Which is the least densely populated?' },
   },
 };
 

@@ -86,6 +86,7 @@ export const PARTY_MODES = [
   { id: 'map-outlines', roundId: 'mapPick', poolId: 'sovereign' },
   { id: 'superlative-pop', roundId: 'superlative', poolId: 'sovereign' },
   { id: 'superlative-area', roundId: 'superlative-area', poolId: 'sovereign' },
+  { id: 'superlative-density', roundId: 'superlative-density', poolId: 'sovereign' },
 ];
 
 /** Bounds a host's choices stay inside — a defence against a malformed plan
