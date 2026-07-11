@@ -1,6 +1,6 @@
 /** @typedef {import('./group.js').Country} Country */
 
-import { POPULATION_BREAKS_FOR_RANDOM, population } from './engine.js';
+import { POPULATION_BREAKS_FOR_RANDOM, population, AREA_BREAKS_FOR_RANDOM, area } from './engine.js';
 
 /**
  * Registry of the world metrics that surface as *threshold tier pills* — the
@@ -40,6 +40,11 @@ export const METRIC_TIER_REGISTRY = {
     breaks: POPULATION_BREAKS_FOR_RANDOM,
     factory: population,
     has: (c) => typeof c.population === 'number',
+  },
+  area: {
+    breaks: AREA_BREAKS_FOR_RANDOM,
+    factory: area,
+    has: (c) => typeof c.area === 'number',
   },
 };
 

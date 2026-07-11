@@ -23,6 +23,10 @@ import { sovereigntyOf } from './group.js';
  *   constraint, not a two-set FilterSet. No `=` op — population is a
  *   continuous quantity, so an exact-match tier would match ~nothing.
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} AreaConstraint
+ *   Land-area threshold in km², the scalar twin of PopulationConstraint. Same
+ *   shape and contract; reads `country.area`.
+ *
  * @typedef {{
  *   status: FilterSet,
  *   continent: FilterSet,
@@ -31,6 +35,7 @@ import { sovereigntyOf } from './group.js';
  *   stripesOnly: FilterSet,
  *   colorCount: ColorCountConstraint | null,
  *   population: PopulationConstraint | null,
+ *   area: AreaConstraint | null,
  * }} Filters
  */
 
@@ -67,6 +72,7 @@ export function emptyFilters() {
     stripesOnly: { include: new Set(), exclude: new Set() },
     colorCount: null,
     population: null,
+    area: null,
   };
 }
 
@@ -205,6 +211,17 @@ export function matchesFilters(country, filters, options = {}) {
     const { op, n } = filters.population;
     if (op === '>=' && pop < n) return false;
     if (op === '<=' && pop > n) return false;
+  }
+
+  // Area reads `country.area` (denormalized by `attachAreas`). Area is dense,
+  // so only non-place flags lack a value; those match neither direction, same
+  // contract as the engine's area predicate.
+  if (filters.area !== null) {
+    const km2 = country.area;
+    if (typeof km2 !== 'number') return false;
+    const { op, n } = filters.area;
+    if (op === '>=' && km2 < n) return false;
+    if (op === '<=' && km2 > n) return false;
   }
 
   const motifs = country.motifs ?? [];

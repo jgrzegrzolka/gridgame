@@ -14,7 +14,7 @@ import {
   filterToCategory,
   pickRandomMix,
 } from './findFlag.js';
-import { categoryFromId, POPULATION_BREAKS_FOR_RANDOM } from './engine.js';
+import { categoryFromId, POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM } from './engine.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 import { createCountry } from './group.js';
 
@@ -932,6 +932,76 @@ test('pickRandomMix: populationProbability=0 leaves population null and consumes
     `enabling population should consume more rng bytes (off: ${callsOff}, on: ${rngCalls})`);
 });
 
+// ---- area (findFlag "Make a puzzle" scalar filter, km² twin of population) --
+
+test('parseFilterString: area:>=N / area:<=N parse as { op, n }', () => {
+  const ge = parseFilterString('continent:Europe,area:>=1000000');
+  assert.ok(ge);
+  assert.deepEqual([...ge.continent.include], ['Europe']);
+  assert.deepEqual(ge.area, { op: '>=', n: 1000000 });
+  const le = parseFilterString('area:<=1000');
+  assert.deepEqual(le?.area, { op: '<=', n: 1000 });
+});
+
+test('parseFilterString: area without an explicit op or with a bad number is silently dropped', () => {
+  assert.equal(parseFilterString('area:'), null);
+  assert.equal(parseFilterString('area:1000000'), null, 'bare N (no op) is not a valid area token');
+  assert.equal(parseFilterString('area:>=abc'), null);
+  assert.equal(parseFilterString('area:<=0'), null, 'n must be > 0');
+});
+
+test('serializeFilter: round-trips an area filter, token emits after population', () => {
+  const s = 'continent:Africa,area:>=100000';
+  assert.equal(serializeFilter(/** @type {any} */ (parseFilterString(s))), s);
+  const f = emptyFilters();
+  f.population = { op: '>=', n: 10000000 };
+  f.area = { op: '<=', n: 1000 };
+  assert.equal(serializeFilter(f), 'population:>=10000000,area:<=1000');
+});
+
+test('pillLabel: area renders localized "over/under N km²" labels with K/M tokens', () => {
+  assert.equal(pillLabel('area', '>=1000000', 'include', idTranslate), 'over 1M km²');
+  assert.equal(pillLabel('area', '>=100000', 'include', idTranslate), 'over 100K km²');
+  assert.equal(pillLabel('area', '<=1000', 'include', idTranslate), 'under 1K km²');
+});
+
+test('filterTitle: appends the area phrase after the pill groups', () => {
+  const f = parseFilterString('continent:Asia,area:>=1000000');
+  assert.ok(f);
+  assert.equal(filterTitle(f, idTranslate), 'Asia · over 1M km²');
+});
+
+test('pickRandomMix: areaProbability=1 attaches a curated tier, mutually exclusive with population + colorCount', () => {
+  const validTiers = new Set(AREA_BREAKS_FOR_RANDOM.map((b) => `${b.op}${b.n}`));
+  let fired = 0;
+  for (let seed = 0; seed < 50; seed++) {
+    let i = 0;
+    const rng = () => { const v = ((seed * 23 + i * 29) % 100) / 100; i++; return v; };
+    const f = pickRandomMix(PILL_POOL, SAMPLE, {
+      rng, onlyColorsProbability: 0, colorCountProbability: 0,
+      populationProbability: 0, areaProbability: 1, minIntersection: 0,
+    });
+    if (f.area !== null) {
+      fired++;
+      assert.ok(validTiers.has(`${f.area.op}${f.area.n}`), `seed ${seed}: not a curated area tier`);
+      assert.equal(f.colorCount, null, `seed ${seed}: area and colorCount must not both be set`);
+      assert.equal(f.population, null, `seed ${seed}: area and population must not both be set`);
+    }
+  }
+  assert.ok(fired > 30, `expected areaProbability=1 to fire on most seeds, got ${fired}/50`);
+});
+
+test('pickRandomMix: areaProbability=0 leaves area null and consumes no rng bytes for it', () => {
+  let rngCalls = 0;
+  const rng = () => { rngCalls++; return ((rngCalls * 13) % 100) / 100; };
+  const f = pickRandomMix(PILL_POOL, SAMPLE, { rng, areaProbability: 0 });
+  assert.equal(f.area, null);
+  const callsOff = rngCalls;
+  rngCalls = 0;
+  pickRandomMix(PILL_POOL, SAMPLE, { rng, areaProbability: 1 });
+  assert.ok(rngCalls > callsOff, `enabling area should consume more rng bytes (off: ${callsOff}, on: ${rngCalls})`);
+});
+
 test('pickRandomMix: every population tier is reachable over many runs (coverage half of the contract)', () => {
   const seen = new Map(POPULATION_BREAKS_FOR_RANDOM.map((b) => [`${b.op}${b.n}`, 0]));
   const RUNS = 4000;
@@ -944,5 +1014,19 @@ test('pickRandomMix: every population tier is reachable over many runs (coverage
   }
   const missing = [...seen.entries()].filter(([, n]) => n === 0).map(([k]) => k);
   assert.deepEqual(missing, [], `every population tier must appear at least once; missing: ${missing.join(', ')}`);
+});
+
+test('pickRandomMix: every area tier is reachable over many runs (coverage half of the contract)', () => {
+  const seen = new Map(AREA_BREAKS_FOR_RANDOM.map((b) => [`${b.op}${b.n}`, 0]));
+  const RUNS = 4000;
+  for (let i = 0; i < RUNS; i++) {
+    const f = pickRandomMix(PILL_POOL, SAMPLE, { areaProbability: 0.5, minIntersection: 0 });
+    if (f.area !== null) {
+      const key = `${f.area.op}${f.area.n}`;
+      seen.set(key, (seen.get(key) ?? 0) + 1);
+    }
+  }
+  const missing = [...seen.entries()].filter(([, n]) => n === 0).map(([k]) => k);
+  assert.deepEqual(missing, [], `every area tier must appear at least once; missing: ${missing.join(', ')}`);
 });
 

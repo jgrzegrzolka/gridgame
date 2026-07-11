@@ -1,4 +1,4 @@
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations } from '../flags/group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas } from '../flags/group.js';
 import {
   ALL_FLAG_COLORS,
   ALL_MOTIFS,
@@ -50,6 +50,10 @@ import { celebrate } from '../flags/achievementCelebrate.js';
  *     scalar modifiers. Middling frequency: population is a recognizable,
  *     satisfying constraint, but common enough thresholds that it stays
  *     discoverable without dominating.
+ *   - areaProbability: 0.12, attach a random land-area tier (one of the
+ *     six AREA_BREAKS_FOR_RANDOM). Mutually exclusive with BOTH colorCount
+ *     and population, so a mix carries at most one scalar modifier. Slightly
+ *     rarer than population since it only fires when population didn't.
  * Tune these here; flags/findFlag.js's pickRandomMix is a pure
  * generator and stays opt-in.
  */
@@ -57,6 +61,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   onlyColorsProbability: 0.25,
   colorCountProbability: 0.10,
   populationProbability: 0.15,
+  areaProbability: 0.12,
 });
 
 /**
@@ -189,17 +194,21 @@ export function bootFindFlag() {
 
   return Promise.all([
     fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
-    // Population powers the chooser's Population section + matchesFilters.
-    // A failed fetch degrades gracefully: attachPopulations over `{}` leaves
-    // every country without the field, so the section renders empty (all
-    // tiers 0-count → dropped) and no population filter is offered.
+    // Population + area power the chooser's threshold sections + matchesFilters.
+    // A failed fetch degrades gracefully: attaching over `{}` leaves every
+    // country without the field, so the section renders empty (tiers 0-count →
+    // dropped) and no filter is offered.
     fetch('../flags/metrics/population.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
+    fetch('../flags/metrics/area.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
   ])
-    .then(([raw, popValues]) => {
+    .then(([raw, popValues, areaValues]) => {
       // Attach AFTER withLocalizedAliases: its clone path (re-wrapping a
       // renamed Country through createCountry) would drop an extra field
       // set beforehand, so denormalize onto the final pool objects.
-      const all = attachPopulations(withLocalizedAliases(flagsGamePool(raw, includeAll)), popValues);
+      const all = attachAreas(
+        attachPopulations(withLocalizedAliases(flagsGamePool(raw, includeAll)), popValues),
+        areaValues,
+      );
       /** @type {{ refreshI18n: (newAll: import('../flags/group.js').Country[]) => void } | null} */
       let activeHandle = null;
       if (!initialFilter) {
@@ -327,6 +336,8 @@ export function bootFindFlag() {
     // separate populationProbability modifier path instead.
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const populationPills = [];
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const areaPills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
     const sectionHeaders = [];
     /** @type {HTMLSpanElement | null} */
@@ -458,6 +469,41 @@ export function bootFindFlag() {
       }
     }
 
+    // Land-area section, the km² twin of Population, same single-select scalar
+    // (`filter.area`) shape and the same shared tier builder.
+    {
+      const areaItems = buildMetricTierItems('area', all);
+      if (areaItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.area', 'Land area');
+        sectionHeaders.push({ h, key: 'findFlag.sections.area', fallback: 'Land area' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of areaItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('area', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectArea(op, n, btn));
+          wrap.appendChild(btn);
+          areaPills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
     const clearBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-clear'));
     const randomBtn = document.getElementById('find-random');
@@ -471,6 +517,7 @@ export function bootFindFlag() {
       }
       if (filter.colorCount !== null) selCount++;
       if (filter.population !== null) selCount++;
+      if (filter.area !== null) selCount++;
       if (selCount === 0) {
         // Nothing selected — bare "Play" (no zero-count to read as a sad
         // empty result; the user hasn't picked anything yet).
@@ -533,6 +580,21 @@ export function bootFindFlag() {
       updateBar();
     }
 
+    /**
+     * Single-select land-area tier, twin of selectPopulation.
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectArea(op, n, btn) {
+      const isActive = filter.area !== null && filter.area.op === op && filter.area.n === n;
+      filter.area = isActive ? null : { op, n };
+      for (const p of areaPills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
     playBtn.addEventListener('click', () => {
       if (playBtn.disabled) return;
       const params = new URLSearchParams({ f: serializeFilter(filter) });
@@ -548,10 +610,14 @@ export function bootFindFlag() {
       if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
       colorCountPicker.reset();
       filter.population = null;
+      filter.area = null;
       for (const { btn } of allPills) {
         btn.classList.remove('active', 'exclude');
       }
       for (const { btn } of populationPills) {
+        btn.classList.remove('active');
+      }
+      for (const { btn } of areaPills) {
         btn.classList.remove('active');
       }
       updateBar();
@@ -606,7 +672,7 @@ export function bootFindFlag() {
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        refreshChooserI18n({ sectionHeaders, allPills, populationPills, onlyColorsLabelSpan, updateBar });
+        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, onlyColorsLabelSpan, updateBar });
       },
     };
   }

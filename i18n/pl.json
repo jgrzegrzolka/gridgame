@@ -404,7 +404,8 @@
       "colors": "Kolory",
       "motifs": "Motywy",
       "stripes": "Pasy",
-      "population": "Ludność"
+      "population": "Ludność",
+      "area": "Powierzchnia"
     }
   },
   "daily": {

@@ -19,16 +19,18 @@ import { pillLabel } from '../flags/findFlag.js';
  * @typedef {{ h: { textContent: string }, key: string, fallback: string }} SectionHeader
  * @typedef {{ labelSpan: { textContent: string }, group: 'continent' | 'color' | 'motif' | 'stripesOnly', value: string }} PillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} PopulationPillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} AreaPillRef
  *
  * @param {{
  *   sectionHeaders: SectionHeader[],
  *   allPills: PillRef[],
  *   populationPills?: PopulationPillRef[],
+ *   areaPills?: AreaPillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
@@ -39,6 +41,10 @@ export function refreshChooserI18n({ sectionHeaders, allPills, populationPills =
   // population branch maps it to the localized tier label.
   for (const p of populationPills) {
     p.labelSpan.textContent = pillLabel('population', p.value, 'include', t);
+  }
+  // Area pills, same shape ("<=1000" etc.), via pillLabel's area branch.
+  for (const p of areaPills) {
+    p.labelSpan.textContent = pillLabel('area', p.value, 'include', t);
   }
   if (onlyColorsLabelSpan) {
     onlyColorsLabelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');
