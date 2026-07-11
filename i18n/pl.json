@@ -519,19 +519,23 @@
       "flagsAll": "Flagi: wszystkie kraje",
       "flagsTerritories": "Flagi: terytoria",
       "mapOutlines": "Mapa: kształty",
-      "superlativePop": "Populacja: najwięcej i najmniej"
+      "superlativePop": "Populacja: najwięcej i najmniej",
+      "superlativeArea": "Powierzchnia: największe i najmniejsze"
     },
     "modeShort": {
       "flagsAll": "Flagi",
       "flagsTerritories": "Terytoria",
       "mapOutlines": "Mapy",
-      "superlativePop": "Populacja"
+      "superlativePop": "Populacja",
+      "superlativeArea": "Powierzchnia"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
     "hintMap": "Który kształt?",
     "hintMost": "Który kraj jest najludniejszy?",
     "hintLeast": "Który kraj jest najmniej ludny?",
+    "hintMostArea": "Które ma największą powierzchnię?",
+    "hintLeastArea": "Które ma najmniejszą powierzchnię?",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
     "tie": "Remis!",
