@@ -692,7 +692,14 @@ export function bootFlagsData() {
       tile.classList.toggle('nodata', !cell.hasData);
       if (badge) {
         badge.hidden = false;
-        badge.textContent = cell.hasData ? `#${cell.rank} · ${cell.display}` : noDataText;
+        // Sovereign states carry a rank ("#12 · 84.5M"); non-sovereign places
+        // (territories, non-UN states, org flags) show their value without a
+        // number, since the ranking only counts the 195 sovereign countries.
+        badge.textContent = !cell.hasData
+          ? noDataText
+          : cell.rank != null
+            ? `#${cell.rank} · ${cell.display}`
+            : cell.display;
       }
     }
     // Reorder the DOM to match the sort. appendChild moves existing nodes; the
