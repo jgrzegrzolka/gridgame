@@ -251,6 +251,32 @@ export const POPULATION_BREAKS_FOR_RANDOM = [
   { op: '<=', n: 1_000_000 },
 ];
 
+/**
+ * Land-area-threshold Categories the random generator may pair on the row /
+ * column axes, in km². Three "large" tiers (>= N) and three "small" tiers
+ * (<= N), same easy→hard gradient as population: `>=100K` / `<=100K` each cover
+ * roughly half the world, while `>=1M` (the ~28 giant countries) and `<=1K`
+ * (tiny states) demand real knowledge.
+ *
+ * All six share `exclusiveGroup: 'area'` (baked by the `area` factory) so two
+ * area constraints can never meet across axes, ruling out the impossible band
+ * (`>=1M × <=1K`, always empty) and the redundant one (`>=100K × <=100K`).
+ *
+ * `ultimate: true` marks the single breakpoint kept in the 9×9 pool: the broad
+ * `>=100K` tier is the only one that can back 9-distinct-per-cell against a
+ * continent; the rest carry `ultimateEligible: false`.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const AREA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 100_000, ultimate: true },
+  { op: '>=', n: 500_000 },
+  { op: '>=', n: 1_000_000 },
+  { op: '<=', n: 100_000 },
+  { op: '<=', n: 10_000 },
+  { op: '<=', n: 1_000 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -397,6 +423,36 @@ export function population(op, n, opts = {}) {
 }
 
 /**
+ * Land-area-threshold Category factory, the km² twin of `population`. Reads the
+ * denormalized `country.area` field (copied on at load by `attachAreas`), so a
+ * category rehydrates from its id string alone across the wire and storage.
+ * Members share `exclusiveGroup: 'area'`.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function area(op, n, opts = {}) {
+  const human = n >= 1_000_000 ? `${n / 1_000_000}M` : `${n / 1_000}K`;
+  const label = op === '>=' ? `over ${human} km²` : `under ${human} km²`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.area === 'number' && c.area >= n
+      : (c) => typeof c.area === 'number' && c.area <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `area:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'area',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * @template T
  * @param {T[]} pool
  * @param {number} n
@@ -475,6 +531,18 @@ export function translateCategoryLabel(category, translate) {
     }
     return category.label;
   }
+  if (kind === 'area') {
+    // value is the id suffix: ">=100000" / "<=1000". Key on a compact token
+    // ("100k", "1m") aligned with AREA_BREAKS_FOR_RANDOM.
+    const op = value.slice(0, 2);
+    const n = Number.parseInt(value.slice(2), 10);
+    if ((op === '>=' || op === '<=') && Number.isInteger(n)) {
+      const token = n >= 1_000_000 ? `${n / 1_000_000}m` : `${n / 1_000}k`;
+      const bucket = op === '>=' ? 'atLeast' : 'atMost';
+      return translate(`area.${bucket}.${token}`, category.label);
+    }
+    return category.label;
+  }
   return category.label;
 }
 
@@ -523,6 +591,18 @@ export function categoryFromId(id) {
     if (Number.isInteger(n) && n > 0 && String(n) === nStr) return population(op, n);
     return null;
   }
+  if (id.startsWith('area:')) {
+    const suffix = id.slice('area:'.length);
+    /** @type {'>=' | '<=' | null} */
+    let op = null;
+    if (suffix.startsWith('>=')) op = '>=';
+    else if (suffix.startsWith('<=')) op = '<=';
+    if (!op) return null;
+    const nStr = suffix.slice(2);
+    const n = Number.parseInt(nStr, 10);
+    if (Number.isInteger(n) && n > 0 && String(n) === nStr) return area(op, n);
+    return null;
+  }
   return null;
 }
 
@@ -536,6 +616,8 @@ export function buildRandomCategoryPool() {
     ...STRIPES_ORIENTATIONS_FOR_RANDOM.map(hasStripesOnly),
     ...POPULATION_BREAKS_FOR_RANDOM.map(({ op, n, ultimate }) =>
       population(op, n, { ultimateEligible: ultimate === true })),
+    ...AREA_BREAKS_FOR_RANDOM.map(({ op, n, ultimate }) =>
+      area(op, n, { ultimateEligible: ultimate === true })),
   ];
 }
 

@@ -27,8 +27,8 @@ Second world metric after population, added to exercise the `add-world-metric` s
 
 - [x] 1. Data: `flags/metrics/area.json` (262 real places) + `authoring/build-area.mjs` + `METRIC_FILES` line + `metrics.test.js` schema/coverage/no-org/ranking tests (area allows fractional values, unlike population)
 - [x] 2. flagsdata lens (free once step 1 landed; "Land area" appears in the metric selector, value + rank + sort)
-- [ ] 3. Filters: `metricTiers.js` registry line (+ `has`); findFlag chooser (5 edits) + `findflag-random-coverage` skill note; flagsdata filter group; `attachAreas` at both load sites. Needs an `AREA_BREAKS_FOR_RANDOM` breakpoint set first (from step 4)
-- [ ] 4. TTT: `area(op, n)` factory + `AREA_BREAKS_FOR_RANDOM` + pool/id/label wiring; `attachAreas` at all 6 load sites; `area.atLeast/atMost` i18n; verify no-data guard in-browser
+- [ ] 3. Filters: `metricTiers.js` registry line (+ `has`); findFlag chooser (5 edits) + `findflag-random-coverage` skill note; flagsdata filter group; `attachAreas` at both load sites. The `AREA_BREAKS_FOR_RANDOM` + `area()` factory foundation is done (step 4), so this reuses them
+- [x] 4. TTT: `area(op, n)` factory + `AREA_BREAKS_FOR_RANDOM` + pool/id/label wiring; `attachAreas` at all 6 load sites; `area.atLeast/atMost` i18n; engine + real-data seed pins; no-data guard verified in-browser (org shows no data; Antarctica-class real places judged on value)
 - [ ] 5. Flag Party round (blocked on generalizing `partyRounds/superlative.js`, a one-time cost that also unblocks every future metric)
 - [ ] 6. Daily (deferrable): rank captions (`buildAreaRankNotes`); backlog superlative puzzles ("largest / smallest countries", per-continent) + a reservoir of ideas via daily-puzzle-author
 

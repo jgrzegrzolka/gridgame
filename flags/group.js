@@ -14,6 +14,7 @@
  * @property {string[]} additionalColors
  * @property {string[]} colors  Computed getter — union of primaryColors + additionalColors. Non-enumerable: hidden from JSON.stringify and Object.keys so it can't accidentally end up in PartyKit messages or serialised state.
  * @property {number} [population]  Denormalized from `flags/metrics/population.json` by `attachPopulations` at TTT load time so the `population` threshold predicates can read it off the country like any other field. Absent when the country has no value in the (sparse) metric. Not stored in countries.json — the metric stays the single source.
+ * @property {number} [area]  Denormalized from `flags/metrics/area.json` by `attachAreas`, same pattern as `population`, so the `area` threshold predicates read it off the country. Absent only for non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -86,6 +87,24 @@ export function attachPopulations(countries, values) {
   for (const c of countries) {
     const v = values[c.code];
     if (typeof v === 'number') c.population = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/area.json` values onto each Country as `.area`,
+ * so the `area` threshold predicates read it off the country. Twin of
+ * `attachPopulations`. Area is dense (every real place has a value), so only
+ * non-place flags (orgs) are left without the field.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachAreas(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.area = v;
   }
   return countries;
 }

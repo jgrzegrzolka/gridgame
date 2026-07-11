@@ -625,6 +625,18 @@
       "1m": "under 1M people"
     }
   },
+  "area": {
+    "atLeast": {
+      "100k": "over 100K km²",
+      "500k": "over 500K km²",
+      "1m": "over 1M km²"
+    },
+    "atMost": {
+      "100k": "under 100K km²",
+      "10k": "under 10K km²",
+      "1k": "under 1K km²"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",
@@ -678,7 +690,8 @@
     "noData": "no data"
   },
   "metric": {
-    "population": "Population"
+    "population": "Population",
+    "area": "Land area"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

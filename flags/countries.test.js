@@ -16,19 +16,23 @@ import {
   axesImpliedPair,
   suggest,
 } from './engine.js';
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations } from './group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas } from './group.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-// Attach population exactly as the TTT load sites do, so the seed sweeps below
-// exercise the real production pool (population categories included) with the
+// Attach population + area exactly as the TTT load sites do, so the seed sweeps
+// below exercise the real production pool (metric categories included) with the
 // same retry budget players hit.
 const POPULATION = JSON.parse(readFileSync(join(HERE, 'metrics', 'population.json'), 'utf-8'));
-const COUNTRIES = attachPopulations(
-  loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'))),
-  POPULATION.values,
+const AREA = JSON.parse(readFileSync(join(HERE, 'metrics', 'area.json'), 'utf-8'));
+const COUNTRIES = attachAreas(
+  attachPopulations(
+    loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'))),
+    POPULATION.values,
+  ),
+  AREA.values,
 );
 const SVG_DIR = join(HERE, 'svg');
 
@@ -580,6 +584,35 @@ test('generateUltimateRandomPuzzle only ever picks the single ultimate populatio
       if (cat.id.startsWith('population:')) {
         assert.equal(cat.id, 'population:>=10000000',
           `seed ${seed}: 9×9 picked ${cat.id}, but only population:>=10000000 is ultimate-eligible`);
+      }
+    }
+  }
+});
+
+test('generateRandomPuzzle actually produces area puzzles in the 3×3 pool', () => {
+  // Same surfacing guard as population: six of the pool entries are area, so
+  // over 100 seeds we expect area categories to land in some 3×3 puzzles.
+  const SEEDS = Array.from({ length: 100 }, (_, i) => (i + 1) * 17);
+  let areaHits = 0;
+  for (const seed of SEEDS) {
+    const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    const ids = [...puzzle.rows, ...puzzle.cols].map((c) => c.id);
+    if (ids.some((id) => id.startsWith('area:'))) areaHits++;
+  }
+  assert.ok(areaHits > 0,
+    `expected area categories to appear in some 3×3 puzzles over 100 seeds, got ${areaHits}`);
+});
+
+test('generateUltimateRandomPuzzle only ever picks the single ultimate area breakpoint', () => {
+  // 9×9 keeps just the broad `over 100K km²` tier; the extreme tiers can't
+  // back 9-distinct-per-cell. Pin that no other area id reaches a 9×9 puzzle.
+  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 9973);
+  for (const seed of SEEDS) {
+    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    for (const cat of [...puzzle.rows, ...puzzle.cols]) {
+      if (cat.id.startsWith('area:')) {
+        assert.equal(cat.id, 'area:>=100000',
+          `seed ${seed}: 9×9 picked ${cat.id}, but only area:>=100000 is ultimate-eligible`);
       }
     }
   }
