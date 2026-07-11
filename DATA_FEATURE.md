@@ -27,6 +27,8 @@ Fourth and fifth world metrics, added as a pair. **GDP** is *sourced* (World Ban
 
 **Data-quality note:** Vatican tops per-capita ($375K), an artifact of its rough $300M GDP estimate over ~800 people (its GDP isn't really measured). Harmless for the code surfaces; watch it when hand-authoring per-capita superlative puzzles (surface 6, deferred).
 
+**Verification sweep (2026-07-12):** four parallel agents cross-checked all 74 hand-estimated + stale-fallback figures against Eurostat / ONS / INE / INSEE / IMF / CIA Factbook. 71 held; 3 corrected: South Sudan $12B→$6B (stale 2015 WB figure, oil-collapse; now an `OVERRIDES` entry in `build-gdp.mjs`), Saint Helena whole-territory $50M→$80M (was inconsistent with its own component islands), Niue $10M→$18M. All 8 uninhabited zeros and the North Korea / Taiwan / Vatican estimates were confirmed defensible.
+
 - [x] 1. Data: `flags/metrics/gdp.json` + `gdpPerCapita.json` (262 real places each) + `build-gdp.mjs` (WB fetch + mrnev fallback + 49 FILLS) + `build-gdp-per-capita.mjs` (derived, no fetch) + two `METRIC_FILES` lines + `formatValue` trillions tier (+ its test) + `metrics.test.js` schema/coverage/universal-invariant/derived-spot-check/uninhabited-0/ranking for both
 - [ ] 2. flagsdata lens (free once step 1 landed; "GDP" + "GDP per capita" in the selector, compact display). Confirm in-browser.
 - [ ] 3. Filters: `metricTiers.js` registry lines (+ `has`) for both; findFlag chooser (5 edits each) + `findflag-random-coverage` skill note; flagsdata filter groups; `attachGdps` / `attachGdpPerCapitas` at both load sites; i18n `findFlag.sections.gdp` / `.gdpPerCapita`; tests

@@ -47,6 +47,19 @@ const MRNEV_URL =
   `?mrnev=1&format=json&per_page=400`;
 
 /**
+ * Known-bad World Bank figures to override. The WB *has* a value for these, but
+ * its most-recent one is so stale it is materially wrong, so a defensible recent
+ * nominal estimate wins. Checked BEFORE the World Bank passes. Keep this tiny and
+ * evidence-backed (a verification sweep flagged the entry, cited in the comment).
+ * @type {Record<string, number>}
+ */
+const OVERRIDES = {
+  // WB's latest is 2015 (~$12B); nominal collapsed to ~$5-6B after the 2023-24
+  // oil-export shutdown. Verified against recent World Bank / IMF estimates.
+  ss: 6000000000, // South Sudan
+};
+
+/**
  * GDP (current US$) for places the World Bank WDI does not cover: dependencies,
  * crown dependencies, sub-national regions with their own flag, the uninhabited
  * territories (0 — no permanent economy), plus North Korea (no WB data) and
@@ -88,14 +101,14 @@ const FILLS = {
   'sh-hl': 40000000, // Saint Helena (island)
   'sh-ac': 30000000, // Ascension Island
   'sh-ta': 5000000, // Tristan da Cunha
-  sh: 50000000, // Saint Helena, Ascension and Tristan da Cunha (whole territory)
+  sh: 80000000, // Saint Helena, Ascension and Tristan da Cunha (whole territory ≈ sum of the three)
   // Crown dependencies
   gg: 3900000000, // Guernsey
   je: 6500000000, // Jersey
   // Others
   xk: 10400000000, // Kosovo (if not joined by the WB code we match on)
   ck: 380000000, // Cook Islands
-  nu: 10000000, // Niue
+  nu: 18000000, // Niue
   eh: 900000000, // Western Sahara (phosphates, fishing; contested)
   ax: 1600000000, // Åland Islands
   sj: 200000000, // Svalbard and Jan Mayen
@@ -155,8 +168,12 @@ async function main() {
   let fromYear = 0;
   let fromRecent = 0;
   let fromFill = 0;
+  let fromOverride = 0;
   for (const c of realPlaces) {
-    if (wbYear.has(c.code)) {
+    if (c.code in OVERRIDES) {
+      values[c.code] = OVERRIDES[c.code];
+      fromOverride++;
+    } else if (wbYear.has(c.code)) {
       values[c.code] = Math.round(wbYear.get(c.code));
       fromYear++;
     } else if (wbRecent.has(c.code)) {
@@ -197,7 +214,8 @@ async function main() {
   console.log(`Wrote ${outPath}`);
   console.log(
     `  values: ${Object.keys(sorted).length} ` +
-      `(WB ${SNAPSHOT_YEAR} ${fromYear}, WB older ${fromRecent}, fills ${fromFill}) | ` +
+      `(WB ${SNAPSHOT_YEAR} ${fromYear}, WB older ${fromRecent}, fills ${fromFill}, ` +
+      `overrides ${fromOverride}) | ` +
       `real places ${realPlaces.length}`,
   );
   if (olderYear.length) {
