@@ -19,6 +19,21 @@ A fresh agent picking this up should:
 
 ## Now
 
+### Feature DH: Land area as a world metric
+
+Second world metric after population, added to exercise the `add-world-metric` skill end to end. Recipe + surface details live in that skill; this entry is the per-metric tracking.
+
+**Data contract:** dense (fill all real places). Land area is a stable, universal fact: every real place has one, including the uninhabited territories (Antarctica ~14.2M km², Bouvet 49, etc.), so nothing is "no data" except the org flags. Values are km², rounded to whole numbers from the World Bank, except microstates under 1 km² which keep a decimal (Vatican 0.49). Source: World Bank WDI `AG.LND.TOTL.K2` (2022) for 215 sovereigns + 47 hand-maintained fills.
+
+- [x] 1. Data: `flags/metrics/area.json` (262 real places) + `authoring/build-area.mjs` + `METRIC_FILES` line + `metrics.test.js` schema/coverage/no-org/ranking tests (area allows fractional values, unlike population)
+- [x] 2. flagsdata lens (free once step 1 landed; "Land area" appears in the metric selector, value + rank + sort)
+- [ ] 3. Filters: `metricTiers.js` registry line (+ `has`); findFlag chooser (5 edits) + `findflag-random-coverage` skill note; flagsdata filter group; `attachAreas` at both load sites. Needs an `AREA_BREAKS_FOR_RANDOM` breakpoint set first (from step 4)
+- [ ] 4. TTT: `area(op, n)` factory + `AREA_BREAKS_FOR_RANDOM` + pool/id/label wiring; `attachAreas` at all 6 load sites; `area.atLeast/atMost` i18n; verify no-data guard in-browser
+- [ ] 5. Flag Party round (blocked on generalizing `partyRounds/superlative.js`, a one-time cost that also unblocks every future metric)
+- [ ] 6. Daily (deferrable): rank captions (`buildAreaRankNotes`); backlog superlative puzzles ("largest / smallest countries", per-continent) + a reservoir of ideas via daily-puzzle-author
+
+**Standing artifact:** `authoring/build-area.mjs` (yearly-ish refresh via `AG.LND.TOTL.K2`), `flags/metrics/area.json`, and the `metrics.test.js` area gate. The `format`-hint and `createMetric` mechanics carry over from population unchanged.
+
 ---
 
 ## Backlog

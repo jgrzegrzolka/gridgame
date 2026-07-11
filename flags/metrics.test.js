@@ -12,6 +12,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const load = (/** @type {string} */ p) => JSON.parse(readFileSync(join(HERE, p), 'utf-8'));
 const COUNTRIES = /** @type {Row[]} */ (load('countries.json'));
 const POPULATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/population.json'));
+const AREA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/area.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -159,4 +160,45 @@ test('createMetric over real data ranks the world plausibly', () => {
   assert.equal(pop.rankOf('va', 'world') !== null, true);
   // UN-member scope excludes territories like Hong Kong from the ranking
   assert.equal(pop.rankOf('hk', 'un_member'), null);
+});
+
+// ---- real area.json schema + integration gate ------------------------------
+
+test('area is a valid, self-describing metric file', () => {
+  assert.equal(AREA.key, 'area');
+  assert.equal(typeof AREA.label, 'string');
+  assert.equal(typeof AREA.unit, 'string');
+  assert.ok(AREA.format === 'compact' || AREA.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof AREA.source, 'string');
+  assert.equal(typeof AREA.year, 'number');
+  assert.equal(typeof AREA.values, 'object');
+});
+
+test('every area value is a non-negative finite number', () => {
+  // Unlike population, area is NOT integer-only: microstates are under 1 km²
+  // (Vatican ~0.49), so a fractional value is valid. The floor is 0, never < 0.
+  for (const [code, v] of Object.entries(AREA.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('every real place has an area; only non-places have none', () => {
+  // Same "no data = not a place" invariant the TTT guard leans on (metricDataGap).
+  const values = AREA.values;
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in values), `org ${c.code} should have no area value`);
+    } else {
+      assert.ok(c.code in values, `real place ${c.code} (${c.continent}) has no area value`);
+    }
+  }
+});
+
+test('createMetric over real area ranks the world plausibly', () => {
+  const area = createMetric(AREA, COUNTRIES);
+  // Russia is the largest country; Vatican the smallest place.
+  assert.equal(area.topN('world', 1)[0].code, 'ru');
+  const world = area.ranked('world');
+  assert.equal(world[world.length - 1].code, 'va');
 });
