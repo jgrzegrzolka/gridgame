@@ -430,7 +430,7 @@ Verified in-browser: a "least populous" reveal showed South Sudan 11.5M / Austra
 - Other metrics (area, GDP, coffee): they drop into this same module the day their JSON lands
   under `flags/metrics/`.
 
-## Iteration 6 — Tricky mode (progressive reveal), BUILT on branch `feat/party-tricky-mode` (pending PR)
+## Iteration 6 — Tricky mode (progressive reveal) — SHIPPED (#798)
 
 Goal: a host-chosen difficulty that turns the speed bonus into a real bet. With tricky
 mode on, each question tile starts **hidden and clears over the countdown** — grey +
@@ -483,9 +483,51 @@ per-tile veil the page animates off the question clock. Decisions:
 - [x] `npm run validate` green for the touched modules (66 tests) + typecheck clean.
 - [ ] End-to-end in-browser verify (blocked on a shared Playwright browser during parallel work).
 
-**Deferred (not this iteration):** a difficulty *dial* (Normal / Tricky / Brutal) mapping to
-distinct effects; per-mode veils; making the clear fractions host-configurable. The single
-toggle is the literal ask; the dial is a fast follow if the mode lands well.
+**Deferred (folded into Iteration 6b below):** making the clear fractions host-configurable.
+Still deferred: a preset *dial* (Normal / Tricky / Brutal) and per-effect choices.
+
+## Iteration 6b — Configurable reveal timing, BUILT on branch `feat/party-reveal-config` (pending PR)
+
+Goal: let the host tune how hard tricky mode is, per round category, instead of the fixed
+70 / 40 that shipped in Iteration 6. Jan's call: **each of Flags / Map / Metrics picks its
+own reveal point from {20, 40, 60, 80}%**, defaulting to **80 / 40 / 20** (flags carry the
+most give-away detail so they stay veiled longest; metric rounds barely need hiding since
+the question is the number, not the flag).
+
+**The shape: config as data, resolved server-side per question.** The three fractions ride
+the `start` message next to `tricky` and `plan`, are validated + stored on the room, and the
+server stamps the right `clearFrac` on each question from its category. The client just reads
+`question.clearFrac` — it never needs to know the category mapping. Decisions:
+
+- **Three categories, not four modes.** The veil only cares flags-vs-outlines-vs-numbers, so
+  the two flag modes (all / territories) share one `flag` fraction. `revealCategoryFor(roundId)`
+  (`flags/partyTiming.js`) maps `mapPick → map`, `superlative → metric`, else `flag`.
+- **A discrete option set, snapped defensively.** `REVEAL_OPTIONS = [0.2, 0.4, 0.6, 0.8]`,
+  `DEFAULT_REVEAL = { flag: 0.8, map: 0.4, metric: 0.2 }`. `validateReveal` snaps every wire
+  value to the nearest option and fills gaps with the default, so a malformed config can't
+  reach the room (mirrors `validatePlan`).
+- **Server stamps `clearFrac` per question.** `generateQuestion` resolves the category and
+  attaches `clearFrac`; `publicQuestion` passes it through; the veil loop uses it in place of
+  the old `veilClearFraction(isOutline)`. Stored `reveal` on the room means rounds generated
+  after an eviction still stamp the right timing.
+- **UI: a compact per-category picker under the toggle.** When Tricky is on, three `<select>`
+  rows (Flags / Maps / Population, reusing the `modeShort` labels) appear in the lobby setup,
+  each offering 20/40/60/80%. Persisted to `gridgame.party.reveal`. Hidden when tricky is off.
+
+**Build steps:**
+
+- [x] `flags/partyTiming.js` — `REVEAL_OPTIONS`, `DEFAULT_REVEAL`, `revealCategoryFor`,
+      `clampReveal`, `validateReveal` (replacing the fixed `FLAG_/OUTLINE_CLEAR_FRACTION`) (+ tests).
+- [x] `flags/partyRoom.js` — room gains `reveal`; `applyStart` 7th arg; `publicQuestion` passes
+      `clearFrac`; serialized (+ tests).
+- [x] `party/partyGameServer.js` — validates `parsed.reveal`, stamps `clearFrac` per question.
+- [x] `flags/partyClient.js` — `clearFrac` threaded onto the question (+ test).
+- [x] `flagParty/page.js` — the per-category pickers (persisted, shown only when tricky on),
+      `reveal` on the start message, veil loop keyed on `question.clearFrac`.
+- [x] `flagParty/index.css` — `.gs-reveal` picker styles, on the palette vars.
+- [x] `i18n/en.json` + `pl.json` — `party.revealHint` (categories reuse `party.modeShort.*`).
+- [x] Touched-module tests green (72) + typecheck clean.
+- [ ] End-to-end in-browser verify.
 
 ## Open decisions (settle as they come up, not now)
 
