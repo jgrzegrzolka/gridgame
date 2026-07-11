@@ -2,6 +2,7 @@ import rawCountries from '../flags/countries.json' with { type: 'json' };
 import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalRounds, poolIdForRound, roundIdForRound, validatePlan } from '../flags/partyPlan.js';
+import { DEFAULT_REVEAL, revealCategoryFor, validateReveal } from '../flags/partyTiming.js';
 import {
   createRoom,
   applyHello,
@@ -74,21 +75,25 @@ export default class PartyGameServer {
    * stamped with its `roundId` so the room and clients know how to render and
    * judge it. Records the answer as used.
    *
-   * The plan is the host's chosen one (passed explicitly at start, before it's
-   * stored on the room), otherwise the room's stored plan, otherwise the built-in
-   * default. Reading it from the room keeps generation correct after a durable-
-   * object eviction mid-game.
+   * The plan and reveal config are the host's chosen ones (passed explicitly at
+   * start, before they're stored on the room), otherwise the room's stored ones,
+   * otherwise the built-in defaults. Reading them from the room keeps generation
+   * correct after a durable-object eviction mid-game. The question is stamped with
+   * `clearFrac` — the veil timing for its category — so a tricky-mode client
+   * clears the tile on schedule.
    * @param {number} roundIndex
    * @param {import('../flags/partyPlan.js').Segment[]} [plan]
+   * @param {import('../flags/partyRoom.js').Room['reveal']} [reveal]
    */
-  generateQuestion(roundIndex, plan) {
+  generateQuestion(roundIndex, plan, reveal) {
     const p = plan ?? (this.room && this.room.plan) ?? DEFAULT_PLAN;
+    const rev = reveal ?? (this.room && this.room.reveal) ?? DEFAULT_REVEAL;
     const roundId = roundIdForRound(p, roundIndex);
     const round = ROUNDS[roundId];
     const pool = POOLS[poolIdForRound(p, roundIndex)];
     const q = round.generate(pool, this.usedCodes);
     this.usedCodes.add(q.answer);
-    return { ...q, roundId };
+    return { ...q, roundId, clearFrac: rev[revealCategoryFor(roundId)] };
   }
 
   async onStart() {
@@ -191,9 +196,11 @@ export default class PartyGameServer {
           this.usedCodes = new Set();
           const plan = validatePlan(parsed.plan) ?? DEFAULT_PLAN;
           // Tricky mode is a client render flag the host chooses; coerce to a
-          // strict boolean so a malformed value can't reach the room.
+          // strict boolean so a malformed value can't reach the room. The
+          // per-category reveal timing is snapped to the allowed option set.
           const tricky = parsed.tricky === true;
-          result = applyStart(this.room, playerId, this.generateQuestion(0, plan), plan, totalRounds(plan), tricky);
+          const reveal = validateReveal(parsed.reveal);
+          result = applyStart(this.room, playerId, this.generateQuestion(0, plan, reveal), plan, totalRounds(plan), tricky, reveal);
           break;
         }
         case 'buzz': {

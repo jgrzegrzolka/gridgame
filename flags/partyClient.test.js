@@ -45,10 +45,12 @@ test('welcome + question: the tricky flag is learned from the server and default
     type: 'welcome', you, isHost: false, phase: 'question', roster: [], totalRounds: 5, tricky: true,
   });
   assert.equal(s.tricky, true, 'welcome adopts tricky so the resumed tiles veil');
-  // Each question broadcast also carries it (the source of truth per round).
+  // Each question broadcast also carries it (the source of truth per round), plus
+  // the per-question veil timing the server stamped from the host's reveal config.
   s = reduce({ ...initialPartyClientState(), roster: [{ playerId: you, nickname: 'Me', score: 0, present: true }] },
-    { type: 'question', prompt: 'fr', options: ['fr', 'de'], roundId: 'flagPick', roundIndex: 0, totalRounds: 5, tricky: true });
+    { type: 'question', prompt: 'fr', options: ['fr', 'de'], roundId: 'mapPick', roundIndex: 0, totalRounds: 5, tricky: true, clearFrac: 0.4 });
   assert.equal(s.tricky, true, 'question adopts tricky');
+  assert.equal(s.question?.clearFrac, 0.4, 'the veil timing threads onto the question');
 });
 
 test('roster: recomputes isHost against my own id', () => {

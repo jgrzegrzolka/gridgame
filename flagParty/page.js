@@ -6,7 +6,7 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction, veilProgress, veilClearFraction } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction, veilProgress, DEFAULT_REVEAL, REVEAL_OPTIONS } from '../flags/partyTiming.js';
 import { PARTY_MODES, DEFAULT_PLAN, countsForPlan, planFromModeCounts, MAX_ROUNDS_PER_MODE } from '../flags/partyPlan.js';
 import { formatValue } from '../flags/metricLens.js';
 import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
@@ -16,6 +16,16 @@ import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
 const NICKNAME_KEY = 'gridgame.nickname';
 const PLAN_KEY = 'gridgame.party.plan';
 const TRICKY_KEY = 'gridgame.party.tricky';
+const REVEAL_KEY = 'gridgame.party.reveal';
+
+/** The reveal-timing categories the host configures under tricky mode, in the
+ *  order they appear in the setup. `label` reuses the mode-short i18n so "Flags /
+ *  Maps / Population" read the same as the mode dials above. */
+const REVEAL_CATS = [
+  { key: 'flag', labelKey: 'party.modeShort.flagsAll', label: 'Flags' },
+  { key: 'map', labelKey: 'party.modeShort.mapOutlines', label: 'Maps' },
+  { key: 'metric', labelKey: 'party.modeShort.superlativePop', label: 'Population' },
+];
 
 /** Scattered reveal order for the six tricky-mode veil panels, so the flag
  *  materialises in patches rather than strictly left-to-right (which would give
@@ -187,12 +197,34 @@ export function bootFlagParty() {
   // plan; rides on the 'start' message and the server broadcasts it back so
   // every client veils the tiles in step.
   let trickyOn = loadTricky();
+  // Per-category reveal timing (fraction of the window each veil clears at). Only
+  // meaningful when tricky is on; persisted and sent with the plan on start.
+  /** @type {{ flag: number, map: number, metric: number }} */
+  let revealState = loadReveal();
 
   function loadTricky() {
     try { return window.localStorage.getItem(TRICKY_KEY) === '1'; } catch { return false; }
   }
   function saveTricky() {
     try { window.localStorage.setItem(TRICKY_KEY, trickyOn ? '1' : '0'); } catch { /* private mode */ }
+  }
+  /** Load the saved reveal config, snapping each value to an allowed option and
+   *  filling any gap with the default (so a stale / partial store can't break it). */
+  function loadReveal() {
+    /** @type {any} */
+    let raw = null;
+    try { raw = JSON.parse(window.localStorage.getItem(REVEAL_KEY) || 'null'); } catch { /* private mode */ }
+    const pick = (/** @type {any} */ v, /** @type {number} */ def) =>
+      (REVEAL_OPTIONS.includes(v) ? v : def);
+    const r = raw && typeof raw === 'object' ? raw : {};
+    return {
+      flag: pick(r.flag, DEFAULT_REVEAL.flag),
+      map: pick(r.map, DEFAULT_REVEAL.map),
+      metric: pick(r.metric, DEFAULT_REVEAL.metric),
+    };
+  }
+  function saveReveal() {
+    try { window.localStorage.setItem(REVEAL_KEY, JSON.stringify(revealState)); } catch { /* private mode */ }
   }
 
   function defaultModeState() {
@@ -286,14 +318,51 @@ export function bootFlagParty() {
     tinput.type = 'checkbox';
     tinput.checked = trickyOn;
     tinput.setAttribute('aria-label', t('party.tricky', 'Tricky mode'));
-    tinput.addEventListener('change', () => { trickyOn = tinput.checked; saveTricky(); });
+    tinput.addEventListener('change', () => { trickyOn = tinput.checked; saveTricky(); syncRevealVisibility(); });
     const ttrack = el('span', 'scope-toggle-track');
     ttrack.appendChild(el('span', 'scope-toggle-thumb'));
     tsw.append(tinput, ttrack);
     trickyRow.appendChild(tsw);
     gsModesEl.appendChild(trickyRow);
 
+    // Per-category reveal timing, shown only while tricky is on. Each category
+    // (Flags / Maps / Population) picks when its veil fully clears, as a fraction
+    // of the question window (later = harder). A native <select> keeps it compact
+    // and accessible on a phone.
+    const revealBox = el('div', 'gs-reveal');
+    revealBox.id = 'gs-reveal';
+    revealBox.appendChild(el('p', 'gs-reveal-hint', t('party.revealHint', 'Clear the flag after…')));
+    for (const cat of REVEAL_CATS) {
+      const line = el('div', 'gs-reveal-row');
+      line.appendChild(el('span', 'gs-reveal-name', t(cat.labelKey, cat.label)));
+      const sel = document.createElement('select');
+      sel.className = 'gs-reveal-pick';
+      sel.dataset.cat = cat.key;
+      sel.setAttribute('aria-label', t(cat.labelKey, cat.label));
+      for (const opt of REVEAL_OPTIONS) {
+        const o = document.createElement('option');
+        o.value = String(opt);
+        o.textContent = `${Math.round(opt * 100)}%`;
+        if (opt === revealState[/** @type {'flag'|'map'|'metric'} */ (cat.key)]) o.selected = true;
+        sel.appendChild(o);
+      }
+      sel.addEventListener('change', () => {
+        const v = Number(sel.value);
+        if (REVEAL_OPTIONS.includes(v)) { revealState[/** @type {'flag'|'map'|'metric'} */ (cat.key)] = v; saveReveal(); }
+      });
+      line.appendChild(sel);
+      revealBox.appendChild(line);
+    }
+    gsModesEl.appendChild(revealBox);
+    syncRevealVisibility();
+
     updateSetup();
+  }
+
+  /** Show the per-category reveal pickers only while tricky mode is on. */
+  function syncRevealVisibility() {
+    const box = gsModesEl.querySelector('#gs-reveal');
+    if (box) /** @type {HTMLElement} */ (box).hidden = !trickyOn;
   }
 
   function stepMode(/** @type {string} */ id, /** @type {number} */ d) {
@@ -343,6 +412,13 @@ export function bootFlagParty() {
     if (optTitle) optTitle.textContent = t('party.tricky', 'Tricky mode');
     const optHint = gsModesEl.querySelector('.gs-opt-hint');
     if (optHint) optHint.textContent = t('party.trickyHint', 'Flags start hidden and clear as the clock runs');
+    const revealHint = gsModesEl.querySelector('.gs-reveal-hint');
+    if (revealHint) revealHint.textContent = t('party.revealHint', 'Clear the flag after…');
+    for (const cat of REVEAL_CATS) {
+      const nm = gsModesEl.querySelector(`.gs-reveal-pick[data-cat="${cat.key}"]`);
+      const nameEl = nm && nm.previousElementSibling;
+      if (nameEl) nameEl.textContent = t(cat.labelKey, cat.label);
+    }
     updateSetup();
   }
 
@@ -443,15 +519,16 @@ export function bootFlagParty() {
   // clear) on the grid via rAF for a smooth grey/blur/panel resolve; the CSS
   // does the rest. Setting it on the grid (which persists across tile rebuilds,
   // only its innerHTML is replaced) means a re-render mid-question — a late join,
-  // a buzz notification — never resets the animation. Flags clear later in the
-  // window than outlines (flags/partyTiming.js).
+  // a buzz notification — never resets the animation. The clear timing rides on
+  // the question itself (`clearFrac`, stamped server-side from the host's
+  // per-category config), so each round can veil for a different span.
   let veilRaf = 0;
   function startVeil() {
     if (veilRaf) return;
     const step = () => {
       if (state.phase !== 'question' || !state.tricky) { veilRaf = 0; return; }
-      const isOutline = !!(state.question && state.question.roundId === 'mapPick');
-      const p = veilProgress(clockDeadline, Date.now(), clockTotalMs, veilClearFraction(isOutline));
+      const clearFrac = (state.question && state.question.clearFrac) || DEFAULT_REVEAL.flag;
+      const p = veilProgress(clockDeadline, Date.now(), clockTotalMs, clearFrac);
       gridEl.style.setProperty('--veil-p', p.toFixed(4));
       veilRaf = window.requestAnimationFrame(step);
     };
@@ -796,7 +873,7 @@ export function bootFlagParty() {
     enterRoom(code, 'join');
   });
 
-  startBtn.addEventListener('click', () => send({ type: 'start', plan: currentPlan(), tricky: trickyOn }));
+  startBtn.addEventListener('click', () => send({ type: 'start', plan: currentPlan(), tricky: trickyOn, reveal: revealState }));
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
 
   // Same share mechanism as Tic-Tac-Toe (common.js `shareUrl` → native sheet,

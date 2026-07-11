@@ -18,7 +18,7 @@ import { scoreRound } from './partyScore.js';
  *
  * @typedef {'lobby' | 'question' | 'reveal' | 'final'} Phase
  * @typedef {{ nickname: string, score: number }} Seat
- * @typedef {{ prompt: string, options: string[], answer: string, roundId?: string }} Question
+ * @typedef {{ prompt: string, options: string[], answer: string, roundId?: string, clearFrac?: number }} Question
  * @typedef {{ playerId: string, choice: string, correct: boolean }} Buzz
  *
  * @typedef {Object} Room
@@ -42,6 +42,11 @@ import { scoreRound } from './partyScore.js';
  *   clock. Purely a client render flag — the room stores it (so it survives an
  *   eviction and rides every question / welcome broadcast) but never acts on it;
  *   scoring, the answer, and the round contract are untouched.
+ * @property {{ flag: number, map: number, metric: number } | null} reveal  the
+ *   host's per-category reveal timing (fraction of the window each category's veil
+ *   clears at). Stored like `plan` so the server can stamp the right `clearFrac`
+ *   on every question, including rounds generated after an eviction; null before
+ *   start, when the server falls back to `DEFAULT_REVEAL`. The room never reads it.
  * @property {Question | null} question  the live question; `answer` never leaves
  *   the server until reveal.
  * @property {Buzz[]} buzzes  this question's buzzes in server arrival order.
@@ -68,6 +73,7 @@ export function createRoom(totalRounds = DEFAULT_ROUNDS, plan = null) {
     plan,
     roundIndex: 0,
     tricky: false,
+    reveal: null,
     question: null,
     buzzes: [],
   };
@@ -132,9 +138,11 @@ export function applyHello(room, playerId, nickname) {
  * @param {number} [totalRoundsValue]
  * @param {boolean} [tricky]  the host's tricky-mode choice; omit to keep the
  *   room's current value.
+ * @param {Room['reveal']} [reveal]  the host's per-category reveal timing; omit to
+ *   keep the room's current value.
  * @returns {ApplyResult}
  */
-export function applyStart(room, playerId, question, plan, totalRoundsValue, tricky) {
+export function applyStart(room, playerId, question, plan, totalRoundsValue, tricky, reveal) {
   if (room.phase !== 'lobby') return { room, broadcasts: [] };
   if (room.hostId !== playerId) return { room, broadcasts: [] };
   if (room.seats.size === 0) return { room, broadcasts: [] };
@@ -146,6 +154,7 @@ export function applyStart(room, playerId, question, plan, totalRoundsValue, tri
     buzzes: [],
     plan: plan ?? room.plan,
     tricky: typeof tricky === 'boolean' ? tricky : room.tricky,
+    reveal: reveal ?? room.reveal,
     totalRounds: typeof totalRoundsValue === 'number' ? totalRoundsValue : room.totalRounds,
   };
   return { room: nextRoom, broadcasts: [questionBroadcast(nextRoom)] };
@@ -403,9 +412,12 @@ function rosterMessage(room) {
  * @param {Question} q
  */
 function publicQuestion(q) {
-  /** @type {{ prompt: string, options: string[], roundId?: string }} */
+  /** @type {{ prompt: string, options: string[], roundId?: string, clearFrac?: number }} */
   const pub = { prompt: q.prompt, options: q.options };
   if (q.roundId != null) pub.roundId = q.roundId;
+  // The veil timing for this question rides along so a tricky-mode client clears
+  // the tile on schedule; it's stamped server-side from the host's reveal config.
+  if (q.clearFrac != null) pub.clearFrac = q.clearFrac;
   return pub;
 }
 
@@ -464,6 +476,7 @@ export function serializeRoom(room) {
     plan: room.plan,
     roundIndex: room.roundIndex,
     tricky: room.tricky,
+    reveal: room.reveal,
     question: room.question,
     buzzes: room.buzzes,
   };
@@ -483,6 +496,7 @@ export function deserializeRoom(snapshot) {
     plan: snapshot.plan ?? null,
     roundIndex: snapshot.roundIndex ?? 0,
     tricky: snapshot.tricky ?? false,
+    reveal: snapshot.reveal ?? null,
     question: snapshot.question ?? null,
     buzzes: snapshot.buzzes ?? [],
   };

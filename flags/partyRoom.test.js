@@ -158,6 +158,27 @@ test('welcome: a mid-game reconnect learns tricky is on so its tiles veil', () =
   assert.equal(msg(r, 'welcome').tricky, true, 'the resume snapshot carries the tricky flag');
 });
 
+test('applyStart: the host reveal config is stored on the room', () => {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  assert.equal(room.reveal, null, 'a fresh room has no reveal config');
+  const reveal = { flag: 0.8, map: 0.4, metric: 0.2 };
+  const r = applyStart(room, 'alice', q('jp'), undefined, undefined, true, reveal);
+  assert.deepEqual(r.room.reveal, reveal, 'chosen reveal config is stored for later rounds');
+  const kept = applyStart(createRoom(3, null), 'x', q('jp')); // omitted keeps null
+  assert.equal(kept.room.reveal, null);
+});
+
+test('question broadcast: a stamped clearFrac reaches clients so the veil clears on time', () => {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  // The server stamps clearFrac on the question (per the round's category); the
+  // room just passes it through to the public question.
+  const r = applyStart(room, 'alice', { prompt: 'jp', options: ['jp', 'kr'], answer: 'jp', roundId: 'mapPick', clearFrac: 0.4 }, undefined, undefined, true);
+  assert.equal(msg(r, 'question').clearFrac, 0.4, 'the veil timing rides the question');
+  assert.equal(msg(r, 'question').answer, undefined, 'the answer is still withheld');
+});
+
 // ---- applyBuzz ----
 
 test('applyBuzz: records a buzz and announces the count without leaking the choice', () => {
@@ -314,4 +335,14 @@ test('serialize/deserialize: tricky survives an eviction and defaults off for le
   assert.equal(restored.tricky, true, 'the tricky flag round-trips');
   const legacy = deserializeRoom({ phase: 'lobby' }); // a snapshot from before the flag existed
   assert.equal(legacy.tricky, false, 'a pre-tricky snapshot defaults to off');
+});
+
+test('serialize/deserialize: the reveal config survives an eviction (so later rounds stamp the right timing)', () => {
+  const reveal = { flag: 0.6, map: 0.4, metric: 0.2 };
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyStart(room, 'alice', q('jp'), undefined, undefined, true, reveal).room;
+  const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
+  assert.deepEqual(restored.reveal, reveal, 'the per-category reveal config round-trips');
+  assert.equal(deserializeRoom({ phase: 'lobby' }).reveal, null, 'a pre-reveal snapshot defaults to null');
 });
