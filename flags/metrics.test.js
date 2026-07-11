@@ -14,6 +14,8 @@ const COUNTRIES = /** @type {Row[]} */ (load('countries.json'));
 const POPULATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/population.json'));
 const AREA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/area.json'));
 const DENSITY = /** @type {import('./metrics.js').MetricData} */ (load('metrics/density.json'));
+const GDP = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdp.json'));
+const GDP_PER_CAPITA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdpPerCapita.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -265,4 +267,96 @@ test('createMetric over real density ranks the world plausibly', () => {
   const density = createMetric(DENSITY, COUNTRIES);
   // Macau / Monaco are the densest places on earth.
   assert.ok(['mo', 'mc'].includes(density.topN('world', 1)[0].code));
+});
+
+// ---- real gdp.json schema + integration gate (universal metric) ------------
+
+test('gdp is a valid, self-describing metric file', () => {
+  assert.equal(GDP.key, 'gdp');
+  assert.equal(typeof GDP.label, 'string');
+  assert.equal(typeof GDP.unit, 'string');
+  assert.ok(GDP.format === 'compact' || GDP.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof GDP.source, 'string');
+  assert.equal(typeof GDP.year, 'number');
+  assert.equal(typeof GDP.values, 'object');
+});
+
+test('every gdp value is a non-negative finite number', () => {
+  // 0 is valid: the uninhabited territories (Antarctica, Bouvet, ...) carry 0
+  // deliberately — no permanent economy — rather than being omitted, so a metric
+  // "no data" reads only for non-places. GDP is never negative.
+  for (const [code, v] of Object.entries(GDP.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('every real place has a gdp; only non-places have none', () => {
+  // GDP is *universal*: every real place is sourced or hand-filled, so the "no
+  // data = not a place" invariant the TTT guard leans on (metricDataGap) holds.
+  const values = GDP.values;
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in values), `org ${c.code} should have no gdp value`);
+    } else {
+      assert.ok(c.code in values, `real place ${c.code} (${c.continent}) has no gdp value`);
+    }
+  }
+});
+
+test('createMetric over real gdp ranks the world plausibly', () => {
+  const gdp = createMetric(GDP, COUNTRIES);
+  // The United States is the largest economy.
+  assert.equal(gdp.topN('world', 1)[0].code, 'us');
+  assert.equal(gdp.rankOf('cn', 'world'), 2); // China second
+});
+
+// ---- real gdpPerCapita.json schema + integration gate (derived metric) -----
+
+test('gdpPerCapita is a valid, self-describing metric file', () => {
+  assert.equal(GDP_PER_CAPITA.key, 'gdpPerCapita');
+  assert.equal(typeof GDP_PER_CAPITA.label, 'string');
+  assert.equal(typeof GDP_PER_CAPITA.unit, 'string');
+  assert.ok(
+    GDP_PER_CAPITA.format === 'compact' || GDP_PER_CAPITA.format === 'decimal1',
+    'valid format hint',
+  );
+  assert.equal(typeof GDP_PER_CAPITA.source, 'string');
+  assert.equal(typeof GDP_PER_CAPITA.values, 'object');
+});
+
+test('every gdpPerCapita value is a non-negative finite number', () => {
+  for (const [code, v] of Object.entries(GDP_PER_CAPITA.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('every real place has a gdpPerCapita; only non-places have none', () => {
+  // Derived from gdp / population, both dense. Uninhabited places (population 0)
+  // carry 0 rather than a divide-by-zero drop, so the metric stays dense.
+  const values = GDP_PER_CAPITA.values;
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in values), `org ${c.code} should have no gdpPerCapita value`);
+    } else {
+      assert.ok(c.code in values, `real place ${c.code} (${c.continent}) has no gdpPerCapita value`);
+    }
+  }
+});
+
+test('gdpPerCapita equals gdp / population for a sample country', () => {
+  // Derived-metric contract: a spot-check that the build actually divides.
+  const gdp = /** @type {Record<string, number>} */ (GDP.values);
+  const pop = /** @type {Record<string, number>} */ (POPULATION.values);
+  const pc = /** @type {Record<string, number>} */ (GDP_PER_CAPITA.values);
+  const expected = Math.round(gdp.lu / pop.lu); // Luxembourg
+  assert.equal(pc.lu, expected);
+});
+
+test('uninhabited places carry 0 gdpPerCapita, not a divide-by-zero drop', () => {
+  // Bouvet, Heard, Clipperton have population 0; they must still be present at 0.
+  for (const code of ['bv', 'hm', 'cp']) {
+    assert.equal(GDP_PER_CAPITA.values[code], 0, `${code} should be 0, not missing/NaN`);
+  }
 });

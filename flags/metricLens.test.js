@@ -5,6 +5,7 @@ import { formatValue, computeLensView } from './metricLens.js';
 import { createMetric } from './metrics.js';
 
 test('formatValue: compact magnitudes', () => {
+  assert.equal(formatValue(27811517000000, 'compact'), '27.81T'); // GDP reaches trillions
   assert.equal(formatValue(1438069596, 'compact'), '1.44B');
   assert.equal(formatValue(336755052, 'compact'), '336.8M');
   assert.equal(formatValue(552747, 'compact'), '552.7K');

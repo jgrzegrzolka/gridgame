@@ -19,6 +19,25 @@ A fresh agent picking this up should:
 
 ## Now
 
+### Feature DJ: GDP + GDP per capita as world metrics
+
+Fourth and fifth world metrics, added as a pair. **GDP** is *sourced* (World Bank, exactly like area); **GDP per capita** is *derived* from it (`gdp / population`, exactly like density). Doing them together is cheaper than separately: per-capita is derived from GDP, so once GDP's data lands the second is a ~20-line build script, and both surfaces get wired in one pass over near-identical code. Adds an economic dimension: "10 biggest economies", `>=$1T`, richest/poorest per head.
+
+**Data contract:** GDP is **universal** (absence = unsourced, not zero), so *every* real place is sourced or hand-filled: World Bank covers 203 at 2023, 10 states fall back to their most-recent WB year (Cuba 2020, Eritrea 2011, ...), and 49 territories / sub-national regions / North Korea / Taiwan come from `build-gdp.mjs`'s FILLS (best-available estimates, magnitude is what the game surfaces). The 8 uninhabited territories carry **0 deliberately** (no permanent economy), not omission. GDP per capita is **dense** off that: derived where both inputs exist, and the 3 population-0 places (Bouvet, Heard, Clipperton) are defined as 0 rather than a divide-by-zero drop.
+
+**Data-quality note:** Vatican tops per-capita ($375K), an artifact of its rough $300M GDP estimate over ~800 people (its GDP isn't really measured). Harmless for the code surfaces; watch it when hand-authoring per-capita superlative puzzles (surface 6, deferred).
+
+- [x] 1. Data: `flags/metrics/gdp.json` + `gdpPerCapita.json` (262 real places each) + `build-gdp.mjs` (WB fetch + mrnev fallback + 49 FILLS) + `build-gdp-per-capita.mjs` (derived, no fetch) + two `METRIC_FILES` lines + `formatValue` trillions tier (+ its test) + `metrics.test.js` schema/coverage/universal-invariant/derived-spot-check/uninhabited-0/ranking for both
+- [ ] 2. flagsdata lens (free once step 1 landed; "GDP" + "GDP per capita" in the selector, compact display). Confirm in-browser.
+- [ ] 3. Filters: `metricTiers.js` registry lines (+ `has`) for both; findFlag chooser (5 edits each) + `findflag-random-coverage` skill note; flagsdata filter groups; `attachGdps` / `attachGdpPerCapitas` at both load sites; i18n `findFlag.sections.gdp` / `.gdpPerCapita`; tests
+- [ ] 4. TTT: `gdp(op, n)` / `gdpPerCapita(op, n)` factories + `GDP_BREAKS_FOR_RANDOM` / `GDP_PER_CAPITA_BREAKS_FOR_RANDOM` + pool/id/label wiring; `attach*` at all 6 load sites; `gdp.atLeast/atMost` + `gdpPerCapita.atLeast/atMost` i18n; verify no-data guard in-browser
+- [ ] 5. Flag Party round (needs `partyRounds/superlative.js` generalized first, a one-time cost that then benefits every future metric)
+- [ ] 6. Daily (deferred, see Backlog): rank captions + superlative puzzles
+
+**Standing artifact:** `authoring/build-gdp.mjs` — the pattern for a **universal** metric (fill every real place; mrnev fallback for states missing the snapshot year). `build-gdp-per-capita.mjs` — a second derived metric after density, confirming the divide-and-round pattern generalizes.
+
+---
+
 ### Feature DI: Population density as a world metric
 
 Third world metric (after population, area). A **derived rate**: no external source, `density = population / area` for every real place that has both. Exercises the `decimal1` format and confirms the `add-world-metric` process on a computed metric.
@@ -42,7 +61,7 @@ Third world metric (after population, area). A **derived rate**: no external sou
 
 **Deferred 2026-07-11 at Jan's request** — daily-content authoring is time-consuming and needs his supervision (released puzzles are immutable, daily rule 1), so it does not ride along with the code surfaces. Not forgotten; see memory `project_metric_daily_puzzles_deferred`.
 
-**What's pending, per metric:** author daily superlative puzzles ("the N largest / smallest countries by area / density", per-continent) via the **daily-puzzle-author** skill, the way population's shipped in Feature DG. `resolveSuperlative` is metric-agnostic so this is **zero new code** — just authored `{ kind: "superlative", metric, scope, direction, topN }` entries + a review pass with Jan. Optionally the result-screen rank captions (`build<Metric>RankNotes`, small code). Applies to area (Feature DH surface 6), density (DI surface 6), and every future metric. Agents: do NOT author these unprompted; wait for Jan.
+**What's pending, per metric:** author daily superlative puzzles ("the N largest / smallest countries by area / density", per-continent) via the **daily-puzzle-author** skill, the way population's shipped in Feature DG. `resolveSuperlative` is metric-agnostic so this is **zero new code** — just authored `{ kind: "superlative", metric, scope, direction, topN }` entries + a review pass with Jan. Optionally the result-screen rank captions (`build<Metric>RankNotes`, small code). Applies to area (Feature DH surface 6), density (DI surface 6), GDP + GDP per capita (DJ surface 6), and every future metric. Agents: do NOT author these unprompted; wait for Jan.
 
 ---
 
