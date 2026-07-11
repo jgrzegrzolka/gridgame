@@ -1,4 +1,4 @@
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities } from '../flags/group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas } from '../flags/group.js';
 import {
   ALL_FLAG_COLORS,
   ALL_MOTIFS,
@@ -64,6 +64,8 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   populationProbability: 0.15,
   areaProbability: 0.12,
   densityProbability: 0.10,
+  gdpProbability: 0.08,
+  gdpPerCapitaProbability: 0.06,
 });
 
 /**
@@ -203,18 +205,19 @@ export function bootFindFlag() {
     fetch('../flags/metrics/population.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
     fetch('../flags/metrics/area.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
     fetch('../flags/metrics/density.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
+    fetch('../flags/metrics/gdp.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
+    fetch('../flags/metrics/gdpPerCapita.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
   ])
-    .then(([raw, popValues, areaValues, densityValues]) => {
+    .then(([raw, popValues, areaValues, densityValues, gdpValues, gdpPerCapitaValues]) => {
       // Attach AFTER withLocalizedAliases: its clone path (re-wrapping a
       // renamed Country through createCountry) would drop an extra field
       // set beforehand, so denormalize onto the final pool objects.
-      const all = attachDensities(
-        attachAreas(
-          attachPopulations(withLocalizedAliases(flagsGamePool(raw, includeAll)), popValues),
-          areaValues,
-        ),
-        densityValues,
-      );
+      const all = withLocalizedAliases(flagsGamePool(raw, includeAll));
+      attachPopulations(all, popValues);
+      attachAreas(all, areaValues);
+      attachDensities(all, densityValues);
+      attachGdps(all, gdpValues);
+      attachGdpPerCapitas(all, gdpPerCapitaValues);
       /** @type {{ refreshI18n: (newAll: import('../flags/group.js').Country[]) => void } | null} */
       let activeHandle = null;
       if (!initialFilter) {
@@ -346,6 +349,10 @@ export function bootFindFlag() {
     const areaPills = [];
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const densityPills = [];
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const gdpPills = [];
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const gdpPerCapitaPills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
     const sectionHeaders = [];
     /** @type {HTMLSpanElement | null} */
@@ -550,6 +557,74 @@ export function bootFindFlag() {
       }
     }
 
+    // GDP section, same single-select scalar (`filter.gdp`).
+    {
+      const gdpItems = buildMetricTierItems('gdp', all);
+      if (gdpItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.gdp', 'GDP');
+        sectionHeaders.push({ h, key: 'findFlag.sections.gdp', fallback: 'GDP' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of gdpItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('gdp', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectGdp(op, n, btn));
+          wrap.appendChild(btn);
+          gdpPills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
+    // GDP-per-capita section, same single-select scalar (`filter.gdpPerCapita`).
+    {
+      const gdpPerCapitaItems = buildMetricTierItems('gdpPerCapita', all);
+      if (gdpPerCapitaItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.gdpPerCapita', 'GDP per capita');
+        sectionHeaders.push({ h, key: 'findFlag.sections.gdpPerCapita', fallback: 'GDP per capita' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of gdpPerCapitaItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('gdpPerCapita', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectGdpPerCapita(op, n, btn));
+          wrap.appendChild(btn);
+          gdpPerCapitaPills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
     const randomBtn = document.getElementById('find-random');
 
@@ -677,6 +752,36 @@ export function bootFindFlag() {
       updateBar();
     }
 
+    /**
+     * Single-select GDP tier, twin of selectDensity.
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectGdp(op, n, btn) {
+      const isActive = filter.gdp !== null && filter.gdp.op === op && filter.gdp.n === n;
+      filter.gdp = isActive ? null : { op, n };
+      for (const p of gdpPills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
+    /**
+     * Single-select GDP-per-capita tier, twin of selectGdp.
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectGdpPerCapita(op, n, btn) {
+      const isActive = filter.gdpPerCapita !== null && filter.gdpPerCapita.op === op && filter.gdpPerCapita.n === n;
+      filter.gdpPerCapita = isActive ? null : { op, n };
+      for (const p of gdpPerCapitaPills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
     playBtn.addEventListener('click', () => {
       if (playBtn.disabled) return;
       const params = new URLSearchParams({ f: serializeFilter(filter) });
@@ -702,6 +807,12 @@ export function bootFindFlag() {
         btn.classList.remove('active');
       }
       for (const { btn } of densityPills) {
+        btn.classList.remove('active');
+      }
+      for (const { btn } of gdpPills) {
+        btn.classList.remove('active');
+      }
+      for (const { btn } of gdpPerCapitaPills) {
         btn.classList.remove('active');
       }
       updateBar();
@@ -756,7 +867,7 @@ export function bootFindFlag() {
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, onlyColorsLabelSpan, updateBar });
+        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, onlyColorsLabelSpan, updateBar });
       },
     };
   }

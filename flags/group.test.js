@@ -14,6 +14,8 @@ import {
   loadCountries,
   createCountry,
   attachPopulations,
+  attachGdps,
+  attachGdpPerCapitas,
 } from './group.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -40,6 +42,19 @@ test('attachPopulations ignores non-number values (defensive against a malformed
   // @ts-expect-error intentionally malformed value
   attachPopulations(cs, { de: 'lots' });
   assert.equal(cs[0].population, undefined);
+});
+
+test('attachGdps / attachGdpPerCapitas denormalize onto the matching Country field', () => {
+  const cs = [
+    createCountry({ code: 'us', name: 'USA', category: 'country' }),
+    createCountry({ code: 'xx', name: 'Nowhere', category: 'other' }),
+  ];
+  attachGdps(cs, { us: 27_000_000_000_000 });
+  attachGdpPerCapitas(cs, { us: 81_000 });
+  assert.equal(cs[0].gdp, 27_000_000_000_000);
+  assert.equal(cs[0].gdpPerCapita, 81_000);
+  assert.equal(cs[1].gdp, undefined, 'absent from the map → no field');
+  assert.equal(cs[1].gdpPerCapita, undefined);
 });
 
 test('splitByCategory separates countries from other', () => {

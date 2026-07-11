@@ -406,7 +406,9 @@
       "stripes": "Stripes",
       "population": "Population",
       "area": "Land area",
-      "density": "Population density"
+      "density": "Population density",
+      "gdp": "GDP",
+      "gdpPerCapita": "GDP per capita"
     }
   },
   "daily": {
@@ -664,6 +666,30 @@
       "10": "under 10 people/km²"
     }
   },
+  "gdp": {
+    "atLeast": {
+      "100b": "over $100B",
+      "500b": "over $500B",
+      "1t": "over $1T"
+    },
+    "atMost": {
+      "10b": "under $10B",
+      "1b": "under $1B",
+      "100m": "under $100M"
+    }
+  },
+  "gdpPerCapita": {
+    "atLeast": {
+      "30k": "over $30K",
+      "50k": "over $50K",
+      "70k": "over $70K"
+    },
+    "atMost": {
+      "5k": "under $5K",
+      "2k": "under $2K",
+      "1k": "under $1K"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",
@@ -722,7 +748,9 @@
   "metric": {
     "population": "Population",
     "area": "Land area",
-    "density": "Population density"
+    "density": "Population density",
+    "gdp": "GDP",
+    "gdpPerCapita": "GDP per capita"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

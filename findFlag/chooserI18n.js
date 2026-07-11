@@ -21,6 +21,8 @@ import { pillLabel } from '../flags/findFlag.js';
  * @typedef {{ labelSpan: { textContent: string }, value: string }} PopulationPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} AreaPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} DensityPillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} GdpPillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} GdpPerCapitaPillRef
  *
  * @param {{
  *   sectionHeaders: SectionHeader[],
@@ -28,11 +30,13 @@ import { pillLabel } from '../flags/findFlag.js';
  *   populationPills?: PopulationPillRef[],
  *   areaPills?: AreaPillRef[],
  *   densityPills?: DensityPillRef[],
+ *   gdpPills?: GdpPillRef[],
+ *   gdpPerCapitaPills?: GdpPerCapitaPillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
@@ -51,6 +55,14 @@ export function refreshChooserI18n({ sectionHeaders, allPills, populationPills =
   // Density pills ("<=10" etc.) via pillLabel's density branch.
   for (const p of densityPills) {
     p.labelSpan.textContent = pillLabel('density', p.value, 'include', t);
+  }
+  // GDP pills (">=100000000000" etc.) via pillLabel's gdp branch.
+  for (const p of gdpPills) {
+    p.labelSpan.textContent = pillLabel('gdp', p.value, 'include', t);
+  }
+  // GDP-per-capita pills (">=30000" etc.) via pillLabel's gdpPerCapita branch.
+  for (const p of gdpPerCapitaPills) {
+    p.labelSpan.textContent = pillLabel('gdpPerCapita', p.value, 'include', t);
   }
   if (onlyColorsLabelSpan) {
     onlyColorsLabelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');

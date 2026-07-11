@@ -1,4 +1,4 @@
-import { CONTINENTS, loadCountries, attachPopulations, attachAreas, attachDensities } from '../flags/group.js';
+import { CONTINENTS, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas } from '../flags/group.js';
 import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, METRIC_KEYS, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters, createColorCountLock, activeFilterChips } from '../flags/flagsFilter.js';
 import { makeColorSwatch } from '../common.js';
@@ -873,7 +873,7 @@ export function bootFlagsData() {
    * against the loaded set, and the predicate reads the field `attach<Metric>s`
    * denormalizes on). Reuses findFlag's `sections.<metricKey>` label key, same
    * cross-reference the Colors group already makes to `findFlag.noOtherColors`.
-   * @param {'population' | 'area' | 'density'} metricKey
+   * @param {'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita'} metricKey
    * @param {string} fallbackLabel
    * @param {Country[]} countries
    */
@@ -1200,6 +1200,14 @@ export function bootFlagsData() {
           attachDensities(all, metricsData.density.values);
           groupsWrap.appendChild(buildMetricGroup('density', 'Population density', all));
         }
+        if (metricsData.gdp) {
+          attachGdps(all, metricsData.gdp.values);
+          groupsWrap.appendChild(buildMetricGroup('gdp', 'GDP', all));
+        }
+        if (metricsData.gdpPerCapita) {
+          attachGdpPerCapitas(all, metricsData.gdpPerCapita.values);
+          groupsWrap.appendChild(buildMetricGroup('gdpPerCapita', 'GDP per capita', all));
+        }
         if (lensKey && metricsData[lensKey]) lensMetric = createMetric(metricsData[lensKey], all);
         renderLens();
         applyFilter();
@@ -1252,9 +1260,7 @@ export function bootFlagsData() {
       else if (group === 'color') paintColorPill(btn, value, colorLabel(value));
       else if (group === 'motif') btn.textContent = motifLabel(value);
       else if (group === 'stripesOnly') btn.textContent = stripesOnlyLabel(value);
-      else if (group === 'population') btn.textContent = pillLabel('population', value, 'include', t);
-      else if (group === 'area') btn.textContent = pillLabel('area', value, 'include', t);
-      else if (group === 'density') btn.textContent = pillLabel('density', value, 'include', t);
+      else if (group && METRIC_KEYS.includes(group)) btn.textContent = pillLabel(/** @type {any} */ (group), value, 'include', t);
     }
     // Chips carry localized labels too — rebuild them in the new language.
     renderChips();

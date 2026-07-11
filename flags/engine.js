@@ -298,6 +298,42 @@ export const DENSITY_BREAKS_FOR_RANDOM = [
   { op: '<=', n: 10 },
 ];
 
+/**
+ * GDP-threshold Categories (nominal current US$), same easy→hard gradient as the
+ * other metrics. Big economies `>=$100B / >=$500B / >=$1T` (77 / 33 / 20 real
+ * places) and small `<=$10B / <=$1B / <=$100M` (97 / 41 / 20). `exclusiveGroup:
+ * 'gdp'`; the broad `>=$100B` tier is the sole `ultimate: true` break for 9×9.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const GDP_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 100_000_000_000, ultimate: true },
+  { op: '>=', n: 500_000_000_000 },
+  { op: '>=', n: 1_000_000_000_000 },
+  { op: '<=', n: 10_000_000_000 },
+  { op: '<=', n: 1_000_000_000 },
+  { op: '<=', n: 100_000_000 },
+];
+
+/**
+ * GDP-per-capita-threshold Categories (nominal current US$ per person). Rich
+ * `>=$30K / >=$50K / >=$70K` (70 / 36 / 18 real places) and modest
+ * `<=$5K / <=$2K / <=$1K` (91 / 51 / 28). `exclusiveGroup: 'gdpPerCapita'`; the
+ * broad `>=$30K` tier is the sole `ultimate: true` break for 9×9. The chosen
+ * breakpoints never overlap GDP's (>=$100M) so a bare "$30K" reads as per-capita
+ * and "$100M" as total, no metric prefix needed to disambiguate a pill.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const GDP_PER_CAPITA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 30_000, ultimate: true },
+  { op: '>=', n: 50_000 },
+  { op: '>=', n: 70_000 },
+  { op: '<=', n: 5_000 },
+  { op: '<=', n: 2_000 },
+  { op: '<=', n: 1_000 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -501,6 +537,79 @@ export function area(op, n, opts = {}) {
   return cat;
 }
 
+/** Compact US$ label ("$100B", "$1T", "$100M") for the GDP threshold text. */
+function usdCompact(/** @type {number} */ n) {
+  if (n >= 1_000_000_000_000) return `$${n / 1_000_000_000_000}T`;
+  if (n >= 1_000_000_000) return `$${n / 1_000_000_000}B`;
+  if (n >= 1_000_000) return `$${n / 1_000_000}M`;
+  return `$${n / 1_000}K`;
+}
+
+/** Compact US$ i18n token ("100b", "1t", "100m") aligned with the break lists. */
+function usdToken(/** @type {number} */ n) {
+  if (n >= 1_000_000_000_000) return `${n / 1_000_000_000_000}t`;
+  if (n >= 1_000_000_000) return `${n / 1_000_000_000}b`;
+  if (n >= 1_000_000) return `${n / 1_000_000}m`;
+  return `${n / 1_000}k`;
+}
+
+/**
+ * GDP-threshold Category factory (nominal current US$). Reads the denormalized
+ * `country.gdp` field (`attachGdps`). `exclusiveGroup: 'gdp'`.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function gdp(op, n, opts = {}) {
+  const human = usdCompact(n);
+  const label = op === '>=' ? `over ${human}` : `under ${human}`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.gdp === 'number' && c.gdp >= n
+      : (c) => typeof c.gdp === 'number' && c.gdp <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `gdp:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'gdp',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
+ * GDP-per-capita-threshold Category factory (nominal current US$ per person).
+ * Reads the denormalized `country.gdpPerCapita` field (`attachGdpPerCapitas`).
+ * `exclusiveGroup: 'gdpPerCapita'`.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function gdpPerCapita(op, n, opts = {}) {
+  const human = usdCompact(n);
+  const label = op === '>=' ? `over ${human}` : `under ${human}`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.gdpPerCapita === 'number' && c.gdpPerCapita >= n
+      : (c) => typeof c.gdpPerCapita === 'number' && c.gdpPerCapita <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `gdpPerCapita:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'gdpPerCapita',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
 /**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
@@ -567,6 +676,32 @@ export const THRESHOLD_METRICS = {
     labelFor: (op, n, translate) => {
       if (op === '>=') return translate(`density.atLeast.${n}`, `over ${n} people/km²`);
       return translate(`density.atMost.${n}`, `under ${n} people/km²`);
+    },
+  },
+  gdp: {
+    breaks: GDP_BREAKS_FOR_RANDOM,
+    factory: gdp,
+    prefixFallback: 'GDP',
+    field: 'gdp',
+    has: (c) => typeof c.gdp === 'number',
+    labelFor: (op, n, translate) => {
+      const token = usdToken(n);
+      const human = usdCompact(n);
+      if (op === '>=') return translate(`gdp.atLeast.${token}`, `over ${human}`);
+      return translate(`gdp.atMost.${token}`, `under ${human}`);
+    },
+  },
+  gdpPerCapita: {
+    breaks: GDP_PER_CAPITA_BREAKS_FOR_RANDOM,
+    factory: gdpPerCapita,
+    prefixFallback: 'GDP per capita',
+    field: 'gdpPerCapita',
+    has: (c) => typeof c.gdpPerCapita === 'number',
+    labelFor: (op, n, translate) => {
+      const token = usdToken(n);
+      const human = usdCompact(n);
+      if (op === '>=') return translate(`gdpPerCapita.atLeast.${token}`, `over ${human}`);
+      return translate(`gdpPerCapita.atMost.${token}`, `under ${human}`);
     },
   },
 };

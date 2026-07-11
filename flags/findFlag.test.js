@@ -14,7 +14,7 @@ import {
   filterToCategory,
   pickRandomMix,
 } from './findFlag.js';
-import { categoryFromId, POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM, DENSITY_BREAKS_FOR_RANDOM } from './engine.js';
+import { categoryFromId, POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM, DENSITY_BREAKS_FOR_RANDOM, GDP_BREAKS_FOR_RANDOM, GDP_PER_CAPITA_BREAKS_FOR_RANDOM } from './engine.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 import { createCountry } from './group.js';
 
@@ -1063,5 +1063,45 @@ test('pickRandomMix: densityProbability tiers are reachable and exclusive with t
   }
   const missing = [...seen.entries()].filter(([, n]) => n === 0).map(([k]) => k);
   assert.deepEqual(missing, [], `every density tier must appear; missing: ${missing.join(', ')}`);
+});
+
+test('parseFilterString + serializeFilter round-trip gdp / gdpPerCapita tokens (emit after density)', () => {
+  const f = parseFilterString('continent:Asia,gdp:>=1000000000000');
+  assert.deepEqual(f?.gdp, { op: '>=', n: 1_000_000_000_000 });
+  assert.equal(serializeFilter(/** @type {any} */ (f)), 'continent:Asia,gdp:>=1000000000000');
+  const g = emptyFilters();
+  g.density = { op: '<=', n: 10 };
+  g.gdp = { op: '>=', n: 100_000_000_000 };
+  g.gdpPerCapita = { op: '<=', n: 1_000 };
+  // Registry order: density, then gdp, then gdpPerCapita.
+  assert.equal(serializeFilter(g), 'density:<=10,gdp:>=100000000000,gdpPerCapita:<=1000');
+  assert.equal(parseFilterString('gdp:<=0'), null, 'n must be > 0');
+});
+
+test('pillLabel + filterTitle render gdp / gdpPerCapita as compact US$ thresholds', () => {
+  assert.equal(pillLabel('gdp', '>=1000000000000', 'include', idTranslate), 'over $1T');
+  assert.equal(pillLabel('gdp', '<=100000000', 'include', idTranslate), 'under $100M');
+  assert.equal(pillLabel('gdpPerCapita', '>=30000', 'include', idTranslate), 'over $30K');
+  const f = parseFilterString('continent:Europe,gdpPerCapita:>=50000');
+  assert.equal(filterTitle(/** @type {any} */ (f), idTranslate), 'Europe · over $50K');
+});
+
+test('pickRandomMix: gdp / gdpPerCapita tiers are reachable and exclusive with other scalars', () => {
+  for (const [key, breaks, probKey] of /** @type {const} */ ([
+    ['gdp', GDP_BREAKS_FOR_RANDOM, 'gdpProbability'],
+    ['gdpPerCapita', GDP_PER_CAPITA_BREAKS_FOR_RANDOM, 'gdpPerCapitaProbability'],
+  ])) {
+    const seen = new Map(breaks.map((b) => [`${b.op}${b.n}`, 0]));
+    for (let i = 0; i < 5000; i++) {
+      const f = pickRandomMix(PILL_POOL, SAMPLE, { [probKey]: 0.5, minIntersection: 0 });
+      const c = /** @type {any} */ (f)[key];
+      if (c !== null) {
+        assert.equal(f.colorCount, null);
+        seen.set(`${c.op}${c.n}`, (seen.get(`${c.op}${c.n}`) ?? 0) + 1);
+      }
+    }
+    const missing = [...seen.entries()].filter(([, n]) => n === 0).map(([k]) => k);
+    assert.deepEqual(missing, [], `every ${key} tier must appear; missing: ${missing.join(', ')}`);
+  }
 });
 
