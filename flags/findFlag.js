@@ -4,7 +4,7 @@
 
 import { readBoolSetting, writeBoolSetting } from './group.js';
 import { emptyFilters, matchesFilters, COLOR_COUNT_OPS, COLOR_COUNT_NS } from './flagsFilter.js';
-import { POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM } from './engine.js';
+import { POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM, DENSITY_BREAKS_FOR_RANDOM } from './engine.js';
 
 /**
  * Filter-group names in the order they should appear in titles and URLs.
@@ -165,6 +165,22 @@ export function parseFilterString(s) {
       }
       continue;
     }
+    // Scalar threshold on population density (people/km²): `density:>=100` /
+    // `density:<=10`, matching the engine's `density:` id.
+    if (group === 'density') {
+      /** @type {'>=' | '<='} */
+      let op;
+      let nStr;
+      if (val.startsWith('>=')) { op = '>='; nStr = val.slice(2); }
+      else if (val.startsWith('<=')) { op = '<='; nStr = val.slice(2); }
+      else continue;
+      const n = Number.parseInt(nStr, 10);
+      if (Number.isInteger(n) && n > 0 && String(n) === nStr) {
+        f.density = { op, n };
+        any = true;
+      }
+      continue;
+    }
     /** @type {'include' | 'exclude'} */
     let sign = 'include';
     if (val.startsWith('!')) {
@@ -211,6 +227,9 @@ export function serializeFilter(f) {
   }
   if (f.area !== null) {
     tokens.push(`area:${f.area.op}${f.area.n}`);
+  }
+  if (f.density !== null) {
+    tokens.push(`density:${f.density.op}${f.density.n}`);
   }
   return tokens.join(',');
 }
@@ -337,6 +356,12 @@ export function pillLabel(group, value, sign, translate) {
     const human = n >= 1_000_000 ? `${n / 1_000_000}M` : `${n / 1_000}K`;
     if (op === '>=') return translate(`area.atLeast.${token}`, `over ${human} km²`);
     return translate(`area.atMost.${token}`, `under ${human} km²`);
+  } else if (group === 'density') {
+    // Population-density scalar threshold; token is the plain integer.
+    const op = value.slice(0, 2);
+    const n = Number.parseInt(value.slice(2), 10);
+    if (op === '>=') return translate(`density.atLeast.${n}`, `over ${n} people/km²`);
+    return translate(`density.atMost.${n}`, `under ${n} people/km²`);
   } else {
     body = translate(`status.${value}`, value);
   }
@@ -398,6 +423,9 @@ export function filterTitle(f, translate) {
   }
   if (f.area !== null) {
     parts.push(pillLabel('area', `${f.area.op}${f.area.n}`, 'include', translate));
+  }
+  if (f.density !== null) {
+    parts.push(pillLabel('density', `${f.density.op}${f.density.n}`, 'include', translate));
   }
   return parts.join(' · ');
 }
@@ -487,6 +515,7 @@ const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent',
  *   colorCountProbability?: number,
  *   populationProbability?: number,
  *   areaProbability?: number,
+ *   densityProbability?: number,
  * }} [options]
  * @returns {Filters}
  */
@@ -500,6 +529,7 @@ export function pickRandomMix(pillPool, all, options = {}) {
     colorCountProbability = 0,
     populationProbability = 0,
     areaProbability = 0,
+    densityProbability = 0,
   } = options;
 
   // A 2+ pill mix needs at least 2 pills to draw from; degenerate
@@ -531,6 +561,7 @@ export function pickRandomMix(pillPool, all, options = {}) {
     maybeAttachColorCount(f, rng, onlyColorsProbability, colorCountProbability);
     maybeAttachPopulation(f, rng, populationProbability);
     maybeAttachArea(f, rng, areaProbability);
+    maybeAttachDensity(f, rng, densityProbability);
     lastAttempt = f;
     const count = all.filter((c) => matchesFilters(c, f)).length;
     if (count >= minIntersection) return f;
@@ -625,5 +656,21 @@ function maybeAttachArea(f, rng, areaProbability) {
   if (areaProbability > 0 && rng() < areaProbability) {
     const brk = AREA_BREAKS_FOR_RANDOM[Math.floor(rng() * AREA_BREAKS_FOR_RANDOM.length)];
     f.area = { op: brk.op, n: brk.n };
+  }
+}
+
+/**
+ * Mutate `f` to attach a `density` threshold, twin of `maybeAttachArea`. Kept
+ * mutually exclusive with colorCount, population, AND area (at most one scalar
+ * modifier per mix). Uniform tier draw so every tier stays reachable by Random.
+ * @param {Filters} f
+ * @param {() => number} rng
+ * @param {number} densityProbability
+ */
+function maybeAttachDensity(f, rng, densityProbability) {
+  if (f.colorCount !== null || f.population !== null || f.area !== null) return;
+  if (densityProbability > 0 && rng() < densityProbability) {
+    const brk = DENSITY_BREAKS_FOR_RANDOM[Math.floor(rng() * DENSITY_BREAKS_FOR_RANDOM.length)];
+    f.density = { op: brk.op, n: brk.n };
   }
 }

@@ -14,7 +14,7 @@ import {
   filterToCategory,
   pickRandomMix,
 } from './findFlag.js';
-import { categoryFromId, POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM } from './engine.js';
+import { categoryFromId, POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM, DENSITY_BREAKS_FOR_RANDOM } from './engine.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 import { createCountry } from './group.js';
 
@@ -1028,5 +1028,40 @@ test('pickRandomMix: every area tier is reachable over many runs (coverage half 
   }
   const missing = [...seen.entries()].filter(([, n]) => n === 0).map(([k]) => k);
   assert.deepEqual(missing, [], `every area tier must appear at least once; missing: ${missing.join(', ')}`);
+});
+
+// ---- density (findFlag "Make a puzzle" scalar filter) -----------------------
+
+test('parseFilterString + serializeFilter round-trip a density token (emits after area)', () => {
+  const f = parseFilterString('continent:Asia,density:>=500');
+  assert.deepEqual(f?.density, { op: '>=', n: 500 });
+  assert.equal(serializeFilter(/** @type {any} */ (f)), 'continent:Asia,density:>=500');
+  const g = emptyFilters();
+  g.area = { op: '>=', n: 100000 };
+  g.density = { op: '<=', n: 10 };
+  assert.equal(serializeFilter(g), 'area:>=100000,density:<=10');
+  assert.equal(parseFilterString('density:<=0'), null, 'n must be > 0');
+});
+
+test('pillLabel + filterTitle render density as "over/under N people/km²"', () => {
+  assert.equal(pillLabel('density', '>=500', 'include', idTranslate), 'over 500 people/km²');
+  assert.equal(pillLabel('density', '<=10', 'include', idTranslate), 'under 10 people/km²');
+  const f = parseFilterString('continent:Europe,density:>=100');
+  assert.equal(filterTitle(/** @type {any} */ (f), idTranslate), 'Europe · over 100 people/km²');
+});
+
+test('pickRandomMix: densityProbability tiers are reachable and exclusive with the other scalars', () => {
+  const seen = new Map(DENSITY_BREAKS_FOR_RANDOM.map((b) => [`${b.op}${b.n}`, 0]));
+  for (let i = 0; i < 4000; i++) {
+    const f = pickRandomMix(PILL_POOL, SAMPLE, { densityProbability: 0.5, minIntersection: 0 });
+    if (f.density !== null) {
+      assert.equal(f.colorCount, null);
+      assert.equal(f.population, null);
+      assert.equal(f.area, null);
+      seen.set(`${f.density.op}${f.density.n}`, (seen.get(`${f.density.op}${f.density.n}`) ?? 0) + 1);
+    }
+  }
+  const missing = [...seen.entries()].filter(([, n]) => n === 0).map(([k]) => k);
+  assert.deepEqual(missing, [], `every density tier must appear; missing: ${missing.join(', ')}`);
 });
 

@@ -30,10 +30,12 @@ import {
   STRIPES_ORIENTATIONS_FOR_RANDOM,
   POPULATION_BREAKS_FOR_RANDOM,
   AREA_BREAKS_FOR_RANDOM,
+  DENSITY_BREAKS_FOR_RANDOM,
   ALL_MOTIFS,
   colorCount,
   population,
   area,
+  density,
   categoryFromId,
   hasStripesOnly,
   buildUltimateCategoryPool,
@@ -1028,6 +1030,22 @@ test('area factory flags ultimateEligible:false only when asked', () => {
 test('axesConflict blocks two area breakpoints across opposite axes (single exclusiveGroup)', () => {
   assert.equal(axesConflict([area('>=', 1_000_000)], [area('<=', 1_000)]), true);
   assert.equal(axesConflict([area('>=', 100_000)], [area('<=', 100_000)]), true);
+});
+
+test('density(op, N) matches on people/km²; missing value never matches', () => {
+  const dense = density('>=', 500);
+  const sparse = density('<=', 10);
+  const mo = country({ code: 'mo', name: 'Macau', density: 20000 });
+  const mn = country({ code: 'mn', name: 'Mongolia', density: 2.2 });
+  const none = country({ code: 'zz', name: 'Org' });
+  assert.equal(dense.id, 'density:>=500');
+  assert.equal(dense.exclusiveGroup, 'density');
+  assert.equal(dense.predicate(mo), true);
+  assert.equal(dense.predicate(mn), false);
+  assert.equal(dense.predicate(none), false);
+  assert.equal(sparse.predicate(mn), true);
+  assert.equal(sparse.predicate(mo), false);
+  assert.equal(DENSITY_BREAKS_FOR_RANDOM.filter((b) => b.ultimate).length, 1, 'exactly one ultimate density break');
 });
 
 test('categoryFromId round-trips area thresholds and rejects malformed suffixes', () => {

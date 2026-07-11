@@ -405,7 +405,8 @@
       "motifs": "Motifs",
       "stripes": "Stripes",
       "population": "Population",
-      "area": "Land area"
+      "area": "Land area",
+      "density": "Population density"
     }
   },
   "daily": {
@@ -642,6 +643,18 @@
       "1k": "under 1K km²"
     }
   },
+  "density": {
+    "atLeast": {
+      "100": "over 100 people/km²",
+      "200": "over 200 people/km²",
+      "500": "over 500 people/km²"
+    },
+    "atMost": {
+      "100": "under 100 people/km²",
+      "30": "under 30 people/km²",
+      "10": "under 10 people/km²"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",
@@ -696,7 +709,8 @@
   },
   "metric": {
     "population": "Population",
-    "area": "Land area"
+    "area": "Land area",
+    "density": "Population density"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

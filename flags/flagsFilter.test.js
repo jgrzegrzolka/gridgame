@@ -275,6 +275,20 @@ test('matchesFilters: area {op} matches on the km² threshold; no value matches 
   assert.equal(matchesFilters(noArea, le), false);
 });
 
+test('matchesFilters: density {op} matches on the people/km² threshold; no value matches neither', () => {
+  const dense = country({ code: 'mo', density: 20000 });
+  const sparse = country({ code: 'mn', density: 2.2 });
+  const noDensity = country({ code: 'zz' }); // org
+  const ge = emptyFilters(); ge.density = { op: '>=', n: 500 };
+  const le = emptyFilters(); le.density = { op: '<=', n: 10 };
+  assert.equal(matchesFilters(dense, ge), true);
+  assert.equal(matchesFilters(sparse, ge), false);
+  assert.equal(matchesFilters(sparse, le), true);
+  assert.equal(matchesFilters(dense, le), false);
+  assert.equal(matchesFilters(noDensity, ge), false);
+  assert.equal(matchesFilters(noDensity, le), false);
+});
+
 test('matchesFilters: population combines (AND) with a continent include', () => {
   const euBig = country({ code: 'eu', continent: 'Europe', population: 80_000_000 });
   const euSmall = country({ code: 'es', continent: 'Europe', population: 2_000_000 });

@@ -277,6 +277,24 @@ export const AREA_BREAKS_FOR_RANDOM = [
   { op: '<=', n: 1_000 },
 ];
 
+/**
+ * Population-density-threshold Categories (people per km²), same easy→hard
+ * gradient as population / area. Dense tiers `>=100 / >=200 / >=500` (city-states
+ * and crowded nations) and sparse `<=100 / <=30 / <=10` (Mongolia, Australia,
+ * Canada, …). `exclusiveGroup: 'density'`; `>=100` (~half the world) is the sole
+ * `ultimate: true` break for 9×9.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const DENSITY_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 100, ultimate: true },
+  { op: '>=', n: 200 },
+  { op: '>=', n: 500 },
+  { op: '<=', n: 100 },
+  { op: '<=', n: 30 },
+  { op: '<=', n: 10 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -417,6 +435,34 @@ export function population(op, n, opts = {}) {
     label,
     predicate,
     exclusiveGroup: 'population',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
+ * Population-density-threshold Category factory (people per km²). Reads the
+ * denormalized `country.density` field (`attachDensities`). `exclusiveGroup:
+ * 'density'`. The label bakes a plain integer (`over 100 people/km²`).
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function density(op, n, opts = {}) {
+  const label = op === '>=' ? `over ${n} people/km²` : `under ${n} people/km²`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.density === 'number' && c.density >= n
+      : (c) => typeof c.density === 'number' && c.density <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `density:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'density',
   };
   if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
