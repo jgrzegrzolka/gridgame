@@ -589,6 +589,17 @@ export function translateCategoryLabel(category, translate) {
     }
     return category.label;
   }
+  if (kind === 'density') {
+    // value is the id suffix: ">=100" / "<=10". The token is the plain integer
+    // people-per-km² count, aligned with DENSITY_BREAKS_FOR_RANDOM.
+    const op = value.slice(0, 2);
+    const n = Number.parseInt(value.slice(2), 10);
+    if ((op === '>=' || op === '<=') && Number.isInteger(n)) {
+      const bucket = op === '>=' ? 'atLeast' : 'atMost';
+      return translate(`density.${bucket}.${n}`, category.label);
+    }
+    return category.label;
+  }
   return category.label;
 }
 
@@ -649,6 +660,18 @@ export function categoryFromId(id) {
     if (Number.isInteger(n) && n > 0 && String(n) === nStr) return area(op, n);
     return null;
   }
+  if (id.startsWith('density:')) {
+    const suffix = id.slice('density:'.length);
+    /** @type {'>=' | '<=' | null} */
+    let op = null;
+    if (suffix.startsWith('>=')) op = '>=';
+    else if (suffix.startsWith('<=')) op = '<=';
+    if (!op) return null;
+    const nStr = suffix.slice(2);
+    const n = Number.parseInt(nStr, 10);
+    if (Number.isInteger(n) && n > 0 && String(n) === nStr) return density(op, n);
+    return null;
+  }
   return null;
 }
 
@@ -664,6 +687,8 @@ export function buildRandomCategoryPool() {
       population(op, n, { ultimateEligible: ultimate === true })),
     ...AREA_BREAKS_FOR_RANDOM.map(({ op, n, ultimate }) =>
       area(op, n, { ultimateEligible: ultimate === true })),
+    ...DENSITY_BREAKS_FOR_RANDOM.map(({ op, n, ultimate }) =>
+      density(op, n, { ultimateEligible: ultimate === true })),
   ];
 }
 

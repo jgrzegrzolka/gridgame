@@ -473,7 +473,7 @@ test('randomPuzzle yields 3 row categories and 3 column categories', () => {
   assert.equal(p.cols.length, 3);
 });
 
-test('randomPuzzle categories come from the unified pool (continent / colour / motif / colorCount / stripesOnly / population)', () => {
+test('randomPuzzle categories come from the unified pool (continent / colour / motif / colorCount / stripesOnly / population / area / density)', () => {
   const p = randomPuzzle(mulberry32(1));
   for (const cat of [...p.rows, ...p.cols]) {
     if (cat.id.startsWith('continent:')) {
@@ -510,6 +510,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = AREA_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `area ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('density:')) {
+      const suffix = cat.id.slice('density:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = DENSITY_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `density ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -563,7 +570,7 @@ test('continent and statehood categories carry their exclusiveGroup', () => {
   assert.equal(hasMotif('animal').exclusiveGroup, undefined);
 });
 
-test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population + area', () => {
+test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population + area + density', () => {
   const pool = buildRandomCategoryPool();
   const expected =
     CONTINENTS_FOR_RANDOM.length
@@ -572,7 +579,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + COLOR_COUNTS_FOR_RANDOM.length
     + STRIPES_ORIENTATIONS_FOR_RANDOM.length
     + POPULATION_BREAKS_FOR_RANDOM.length
-    + AREA_BREAKS_FOR_RANDOM.length;
+    + AREA_BREAKS_FOR_RANDOM.length
+    + DENSITY_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -666,13 +674,14 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
   const stripes = ultPool.filter((c) => c.id.startsWith('stripesOnly:'));
   assert.equal(stripes.length, 0, 'stripesOnly cats must not appear in the 9×9 pool');
   // Sanity check — the non-stripesOnly cats survive, minus the extreme
-  // population + area tiers (only the one `ultimate: true` break per metric
-  // stays in 9×9).
+  // population + area + density tiers (only the one `ultimate: true` break per
+  // metric stays in 9×9).
   const droppedPop = POPULATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
   const droppedArea = AREA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  const droppedDensity = DENSITY_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
   assert.equal(
     ultPool.length,
-    buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length - droppedPop - droppedArea,
+    buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length - droppedPop - droppedArea - droppedDensity,
   );
 });
 
@@ -692,6 +701,15 @@ test('buildUltimateCategoryPool keeps exactly one area breakpoint (the ultimate:
   const ultimateBreak = AREA_BREAKS_FOR_RANDOM.find((b) => b.ultimate === true);
   assert.ok(ultimateBreak, 'exactly one area break should be flagged ultimate');
   assert.equal(areas[0].id, `area:${ultimateBreak?.op}${ultimateBreak?.n}`);
+});
+
+test('buildUltimateCategoryPool keeps exactly one density breakpoint (the ultimate:true tier)', () => {
+  const ultPool = buildUltimateCategoryPool();
+  const densities = ultPool.filter((c) => c.id.startsWith('density:'));
+  assert.equal(densities.length, 1, '9×9 keeps a single density breakpoint');
+  const ultimateBreak = DENSITY_BREAKS_FOR_RANDOM.find((b) => b.ultimate === true);
+  assert.ok(ultimateBreak, 'exactly one density break should be flagged ultimate');
+  assert.equal(densities[0].id, `density:${ultimateBreak?.op}${ultimateBreak?.n}`);
 });
 
 test('categoryFromId round-trips stripesOnly:horizontal and stripesOnly:vertical', () => {
@@ -1048,6 +1066,45 @@ test('density(op, N) matches on people/km²; missing value never matches', () =>
   assert.equal(DENSITY_BREAKS_FOR_RANDOM.filter((b) => b.ultimate).length, 1, 'exactly one ultimate density break');
 });
 
+test('density factory flags ultimateEligible:false only when asked', () => {
+  assert.equal(density('>=', 100).ultimateEligible, undefined);
+  assert.equal(density('>=', 500, { ultimateEligible: false }).ultimateEligible, false);
+});
+
+test('axesConflict blocks two density breakpoints across opposite axes (single exclusiveGroup)', () => {
+  assert.equal(axesConflict([density('>=', 500)], [density('<=', 10)]), true);
+  assert.equal(axesConflict([density('>=', 100)], [density('<=', 100)]), true);
+});
+
+test('categoryFromId round-trips density thresholds and rejects malformed suffixes', () => {
+  const ge = categoryFromId('density:>=100');
+  assert.ok(ge);
+  assert.equal(ge?.id, 'density:>=100');
+  assert.equal(ge?.exclusiveGroup, 'density');
+  const mo = country({ code: 'mo', name: 'Macau', density: 20000 });
+  assert.equal(ge?.predicate(mo), true);
+
+  const le = categoryFromId('density:<=10');
+  assert.equal(le?.id, 'density:<=10');
+
+  assert.equal(categoryFromId('density:100'), null);
+  assert.equal(categoryFromId('density:>=abc'), null);
+  assert.equal(categoryFromId('density:>=0'), null);
+});
+
+test('translateCategoryLabel maps density thresholds to the density.* key, falling back to the baked label', () => {
+  const t = fakeTranslate({
+    'density.atLeast.500': 'ponad 500 osób/km²',
+    'density.atMost.10': 'poniżej 10 osób/km²',
+    'density.atLeast.100': 'ponad 100 osób/km²',
+  });
+  assert.equal(translateCategoryLabel(density('>=', 500), t), 'ponad 500 osób/km²');
+  assert.equal(translateCategoryLabel(density('<=', 10), t), 'poniżej 10 osób/km²');
+  assert.equal(translateCategoryLabel(density('>=', 100), t), 'ponad 100 osób/km²');
+  // Missing key → baked English label
+  assert.equal(translateCategoryLabel(density('>=', 200), fakeTranslate({})), 'over 200 people/km²');
+});
+
 test('categoryFromId round-trips area thresholds and rejects malformed suffixes', () => {
   const ge = categoryFromId('area:>=100000');
   assert.ok(ge);
@@ -1380,12 +1437,14 @@ function denseSquarePool(continents, colors, perCell) {
           continent: /** @type {any} */ (cont), primaryColors: [color],
           motifs: [motif],
           // Spread metric values WITHIN each (continent × colour) cell so the
-          // 9×9 pool's `>=` metric breaks (population >=10M, area >=100K) are
-          // fillable everywhere (matching production, where every country has a
-          // value) yet match ~half per cell, so neither break is a superset of a
-          // continent. Offset so the two metrics aren't subset-related.
+          // 9×9 pool's `>=` metric breaks (population >=10M, area >=100K,
+          // density >=100) are fillable everywhere (matching production, where
+          // every country has a value) yet match a fraction per cell, so no
+          // break is a superset of a continent. Offset so the three metrics
+          // aren't subset-related (n%2 vs n%3 give distinct partitions).
           population: n % 2 === 0 ? 20_000_000 : 5_000_000,
           area: n % 2 === 1 ? 200_000 : 50_000,
+          density: n % 3 === 0 ? 500 : 20,
         }));
       }
     }
@@ -1674,14 +1733,16 @@ function syntheticTaggedCountries() {
   // of every motif axis, tripping axesImpliedPair on almost every
   // generator attempt once that guard was added.
   const motifPool = MOTIFS_FOR_RANDOM.filter((m) => m !== 'eu-member');
-  // Spread population + area across each country so every threshold breakpoint
-  // (both metrics) has candidates in every continent. Without this the metric
-  // categories in the pool are unfillable and the generator burns its whole
-  // retry budget dodging them. Ladders chosen to populate every break:
-  // pop <=1M / <=5M / <=20M / >=10M / >=50M / >=100M, area <=1K / <=10K /
-  // <=100K / >=100K / >=500K / >=1M.
+  // Spread population + area + density across each country so every threshold
+  // breakpoint (all three metrics) has candidates in every continent. Without
+  // this the metric categories in the pool are unfillable and the generator
+  // burns its whole retry budget dodging them. Ladders chosen to populate every
+  // break: pop <=1M / <=5M / <=20M / >=10M / >=50M / >=100M, area <=1K / <=10K /
+  // <=100K / >=100K / >=500K / >=1M, density <=10 / <=30 / <=100 / >=100 /
+  // >=200 / >=500.
   const POP_LADDER = [500_000, 3_000_000, 15_000_000, 30_000_000, 60_000_000, 120_000_000];
   const AREA_LADDER = [500, 5_000, 50_000, 200_000, 700_000, 2_000_000];
+  const DENSITY_LADDER = [5, 20, 50, 150, 300, 800];
   // Each (continent × colour × n) triple becomes one country. n controls
   // palette size — n=0 keeps the base 1-colour shape, n=1/n=2 layer in
   // distinct neighbour colours so the country has 2 / 3 colours total.
@@ -1699,7 +1760,8 @@ function syntheticTaggedCountries() {
           primaryColors: [color, ...extras],
           motifs: [motif],
           population: POP_LADDER[codeCounter % POP_LADDER.length],
-          area: AREA_LADDER[codeCounter++ % AREA_LADDER.length],
+          area: AREA_LADDER[codeCounter % AREA_LADDER.length],
+          density: DENSITY_LADDER[codeCounter++ % DENSITY_LADDER.length],
         }));
       }
     }
@@ -1717,7 +1779,8 @@ function syntheticTaggedCountries() {
           primaryColors: palette,
           motifs: [motif],
           population: POP_LADDER[codeCounter % POP_LADDER.length],
-          area: AREA_LADDER[codeCounter++ % AREA_LADDER.length],
+          area: AREA_LADDER[codeCounter % AREA_LADDER.length],
+          density: DENSITY_LADDER[codeCounter++ % DENSITY_LADDER.length],
         }));
       }
     }
