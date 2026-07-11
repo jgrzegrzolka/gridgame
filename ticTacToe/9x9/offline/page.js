@@ -8,7 +8,7 @@ import {
   isMetaWinNewlyFormed,
 } from '../../../flags/ultimateTicTacToe.js';
 import { shouldFireTicTacToeConfetti } from '../../../flags/ticTacToe.js';
-import { loadCountries, attachPopulations, attachAreas } from '../../../flags/group.js';
+import { loadCountries, attachPopulations, attachAreas, attachDensities } from '../../../flags/group.js';
 import { metricDataGap } from '../../../flags/metricTiers.js';
 import { t, countryName, withLocalizedAliases } from '../../../i18n.js';
 import { launchConfetti } from '../../../confetti.js';
@@ -37,11 +37,15 @@ export function bootTicTacToe9x9() {
     fetch('../../../flags/countries.json').then((r) => r.json()),
     fetch('../../../flags/metrics/population.json').then((r) => r.json()),
     fetch('../../../flags/metrics/area.json').then((r) => r.json()),
+    fetch('../../../flags/metrics/density.json').then((r) => r.json()),
   ])
-    .then(([rawCountries, population, area]) => {
-      const countries = attachAreas(
-        attachPopulations(withLocalizedAliases(loadCountries(rawCountries)), population.values),
-        area.values,
+    .then(([rawCountries, population, area, density]) => {
+      const countries = attachDensities(
+        attachAreas(
+          attachPopulations(withLocalizedAliases(loadCountries(rawCountries)), population.values),
+          area.values,
+        ),
+        density.values,
       );
       // 9×9 requires every (row × col) small board to be filled with 9 distinct
       // flags AND no flag shared across small boards (global no-duplicate).

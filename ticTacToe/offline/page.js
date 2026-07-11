@@ -1,5 +1,5 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
-import { loadCountries, attachPopulations, attachAreas } from '../../flags/group.js';
+import { loadCountries, attachPopulations, attachAreas, attachDensities } from '../../flags/group.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
 import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells } from '../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
@@ -34,11 +34,15 @@ export function bootTicTacToe() {
     fetch('../../flags/countries.json').then((r) => r.json()),
     fetch('../../flags/metrics/population.json').then((r) => r.json()),
     fetch('../../flags/metrics/area.json').then((r) => r.json()),
+    fetch('../../flags/metrics/density.json').then((r) => r.json()),
   ])
-    .then(([rawCountries, population, area]) => {
-      const countries = attachAreas(
-        attachPopulations(withLocalizedAliases(loadCountries(rawCountries)), population.values),
-        area.values,
+    .then(([rawCountries, population, area, density]) => {
+      const countries = attachDensities(
+        attachAreas(
+          attachPopulations(withLocalizedAliases(loadCountries(rawCountries)), population.values),
+          area.values,
+        ),
+        density.values,
       );
       const puzzle = generateRandomPuzzle(countries);
       runTicTacToe({ puzzle, countries });

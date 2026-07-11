@@ -16,23 +16,27 @@ import {
   axesImpliedPair,
   suggest,
 } from './engine.js';
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas } from './group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities } from './group.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-// Attach population + area exactly as the TTT load sites do, so the seed sweeps
-// below exercise the real production pool (metric categories included) with the
-// same retry budget players hit.
+// Attach population + area + density exactly as the TTT load sites do, so the
+// seed sweeps below exercise the real production pool (metric categories
+// included) with the same retry budget players hit.
 const POPULATION = JSON.parse(readFileSync(join(HERE, 'metrics', 'population.json'), 'utf-8'));
 const AREA = JSON.parse(readFileSync(join(HERE, 'metrics', 'area.json'), 'utf-8'));
-const COUNTRIES = attachAreas(
-  attachPopulations(
-    loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'))),
-    POPULATION.values,
+const DENSITY = JSON.parse(readFileSync(join(HERE, 'metrics', 'density.json'), 'utf-8'));
+const COUNTRIES = attachDensities(
+  attachAreas(
+    attachPopulations(
+      loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'))),
+      POPULATION.values,
+    ),
+    AREA.values,
   ),
-  AREA.values,
+  DENSITY.values,
 );
 const SVG_DIR = join(HERE, 'svg');
 
@@ -613,6 +617,36 @@ test('generateUltimateRandomPuzzle only ever picks the single ultimate area brea
       if (cat.id.startsWith('area:')) {
         assert.equal(cat.id, 'area:>=100000',
           `seed ${seed}: 9×9 picked ${cat.id}, but only area:>=100000 is ultimate-eligible`);
+      }
+    }
+  }
+});
+
+test('generateRandomPuzzle actually produces density puzzles in the 3×3 pool', () => {
+  // Same surfacing guard as population / area: six of the pool entries are
+  // density, so over 100 seeds we expect density categories to land in some
+  // 3×3 puzzles.
+  const SEEDS = Array.from({ length: 100 }, (_, i) => (i + 1) * 17);
+  let densityHits = 0;
+  for (const seed of SEEDS) {
+    const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    const ids = [...puzzle.rows, ...puzzle.cols].map((c) => c.id);
+    if (ids.some((id) => id.startsWith('density:'))) densityHits++;
+  }
+  assert.ok(densityHits > 0,
+    `expected density categories to appear in some 3×3 puzzles over 100 seeds, got ${densityHits}`);
+});
+
+test('generateUltimateRandomPuzzle only ever picks the single ultimate density breakpoint', () => {
+  // 9×9 keeps just the broad `over 100 people/km²` tier; the extreme tiers
+  // can't back 9-distinct-per-cell. Pin that no other density id reaches 9×9.
+  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 9973);
+  for (const seed of SEEDS) {
+    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    for (const cat of [...puzzle.rows, ...puzzle.cols]) {
+      if (cat.id.startsWith('density:')) {
+        assert.equal(cat.id, 'density:>=100',
+          `seed ${seed}: 9×9 picked ${cat.id}, but only density:>=100 is ultimate-eligible`);
       }
     }
   }
