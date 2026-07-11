@@ -26,7 +26,7 @@ import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { runCelebration } from '../confetti.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { refreshChooserI18n } from './chooserI18n.js';
-import { shareUrl } from '../common.js';
+import { shareUrl, makeColorSwatch } from '../common.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { bumpShare, pushEngagementBlob } from '../flags/engagementCounters.js';
 import { ensureProfile } from '../flags/autoProfile.js';
@@ -392,6 +392,10 @@ export function bootFindFlag() {
         const countSpan = document.createElement('span');
         countSpan.className = 'pill-count';
         countSpan.textContent = String(it.count);
+        // Colour pills lead with the flag-colour swatch dot (shared with the
+        // flagsdata filter bar). Sibling of the label span, so the langchanged
+        // relabel (labelSpan.textContent) leaves it untouched.
+        if (sec.group === 'color') btn.appendChild(makeColorSwatch(it.value));
         btn.appendChild(labelSpan);
         btn.appendChild(countSpan);
         const group = sec.group;

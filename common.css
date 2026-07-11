@@ -732,6 +732,32 @@ body::after {
   border-style: dashed;
 }
 
+/* Flag-colour swatch dot shown before a colour pill / chip label — in
+ * flagsdata's filter bar and findFlag's chooser (markup via
+ * `makeColorSwatch` in common.js). The fill hues below are the ONE documented
+ * exception to the seven-variable palette rule: like the flag SVGs themselves
+ * (and the per-tile bottom strip), a swatch shows a literal flag colour, which
+ * by definition can't come from the brand tokens. The ring uses
+ * --muted-soft-color so dark swatches (black) stay visible on the dark
+ * active-pill / chip background. Hues live here (not in JS) keyed off
+ * data-value; the JS helper only adds the empty span. */
+.pill-swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  vertical-align: middle;
+  border: 1px solid var(--muted-soft-color);
+}
+.pill-swatch[data-value="red"]    { background: #c0392b; }
+.pill-swatch[data-value="white"]  { background: #f2f2f2; }
+.pill-swatch[data-value="blue"]   { background: #2d5fa8; }
+.pill-swatch[data-value="green"]  { background: #3a8f4a; }
+.pill-swatch[data-value="yellow"] { background: #e6c92e; }
+.pill-swatch[data-value="black"]  { background: #2b2b2b; }
+.pill-swatch[data-value="orange"] { background: #e08a2e; }
+.pill-swatch[data-value="violet"] { background: #7d5bbe; }
+
 /* Colour-count compound pill — ONE pill rendered in the Colors row of
  * findFlag's chooser and flagsdata's filter bar. Visually `[= 2]` (or
  * `[= —]` when inactive). Each side has a "current" chip plus a tiny

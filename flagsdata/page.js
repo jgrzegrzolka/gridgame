@@ -1,6 +1,7 @@
 import { CONTINENTS, loadCountries, attachPopulations, attachAreas, attachDensities } from '../flags/group.js';
 import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters, createColorCountLock, activeFilterChips } from '../flags/flagsFilter.js';
+import { makeColorSwatch } from '../common.js';
 import { buildMetricTierItems } from '../flags/metricTiers.js';
 import { pillLabel } from '../flags/findFlag.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
@@ -721,11 +722,7 @@ export function bootFlagsData() {
    */
   function paintColorPill(btn, value, labelText) {
     btn.replaceChildren();
-    const sw = document.createElement('span');
-    sw.className = 'pill-swatch';
-    sw.dataset.value = value;
-    sw.setAttribute('aria-hidden', 'true');
-    btn.append(sw, document.createTextNode(labelText));
+    btn.append(makeColorSwatch(value), document.createTextNode(labelText));
   }
 
   /**
@@ -741,11 +738,7 @@ export function bootFlagsData() {
       const chip = document.createElement('span');
       chip.className = 'filter-chip' + (ref.kind === 'pill' && ref.exclude ? ' is-exclude' : '');
       if (ref.kind === 'pill' && ref.group === 'color') {
-        const sw = document.createElement('span');
-        sw.className = 'pill-swatch';
-        sw.dataset.value = ref.value;
-        sw.setAttribute('aria-hidden', 'true');
-        chip.appendChild(sw);
+        chip.appendChild(makeColorSwatch(ref.value));
       }
       const label = document.createElement('span');
       label.className = 'filter-chip-label';
