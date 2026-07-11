@@ -56,18 +56,18 @@ const MODE_LABELS = {
 const SUPERLATIVE_MODES = {
   'superlative': {
     file: 'population.json',
-    hintMost: { key: 'party.hintMost', fallback: 'Which is the most populous?' },
-    hintLeast: { key: 'party.hintLeast', fallback: 'Which is the least populous?' },
+    hintMost: { key: 'party.hintMost', fallback: 'Most populous' },
+    hintLeast: { key: 'party.hintLeast', fallback: 'Least populous' },
   },
   'superlative-area': {
     file: 'area.json',
-    hintMost: { key: 'party.hintMostArea', fallback: 'Which is the largest by land area?' },
-    hintLeast: { key: 'party.hintLeastArea', fallback: 'Which is the smallest by land area?' },
+    hintMost: { key: 'party.hintMostArea', fallback: 'Largest area' },
+    hintLeast: { key: 'party.hintLeastArea', fallback: 'Smallest area' },
   },
   'superlative-density': {
     file: 'density.json',
-    hintMost: { key: 'party.hintMostDensity', fallback: 'Which is the most densely populated?' },
-    hintLeast: { key: 'party.hintLeastDensity', fallback: 'Which is the least densely populated?' },
+    hintMost: { key: 'party.hintMostDensity', fallback: 'Highest density' },
+    hintLeast: { key: 'party.hintLeastDensity', fallback: 'Lowest density' },
   },
 };
 
@@ -865,26 +865,25 @@ export function bootFlagParty() {
     const isMap = q.roundId === 'mapPick';
     const superCfg = SUPERLATIVE_MODES[q.roundId] || null;
     const isSuperlative = superCfg !== null;
-    // A quiet mode hint above the country name, so players know whether the tiles
-    // are flags or contours; the name itself stays bare (no "The flag of", no
-    // trailing "?") — the tiles and their reveal pulse carry the rest.
+    // One prominent line, nothing else. The tiles already show whether you're
+    // matching a flag, an outline, or ranking a stat, so a "Which flag?" cue on
+    // top was just extra reading — the country name (or the superlative label)
+    // alone is enough, and a single line reads at a glance rather than as a
+    // fast-reading test. The lead span stays hidden across every round.
+    promptLead.hidden = true;
+    promptLead.textContent = '';
     if (isSuperlative) {
       // Superlative has no target country: the prompt is a direction ('most' /
-      // 'least'), and the whole question lives in the hint line ("Which is the
-      // most populous?"). The big name header stays empty in *both* phases — on
-      // reveal the answer is read straight off the tiles (each shows its country
-      // + population and the correct one pulses), so a winner name here would be
-      // redundant, and filling it only on reveal shifted the grid down.
+      // 'least'), shown as a short criterion label ("Most populous"). Same label
+      // in both phases — stable (no grid shift), and it names the criterion, not
+      // the winner, so it never leaks the answer the tiles reveal.
       const least = q.prompt === 'least';
-      const hint = least ? superCfg.hintLeast : superCfg.hintMost;
-      promptLead.textContent = t(hint.key, hint.fallback);
-      promptTarget.textContent = '';
+      const label = least ? superCfg.hintLeast : superCfg.hintMost;
+      promptTarget.textContent = t(label.key, label.fallback);
     } else {
       const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
       const country = byCode.get(targetCode);
-      const name = country ? countryName(country) : targetCode;
-      promptLead.textContent = isMap ? t('party.hintMap', 'Which outline?') : t('party.hintFlag', 'Which flag?');
-      promptTarget.textContent = name;
+      promptTarget.textContent = country ? countryName(country) : targetCode;
     }
 
     // On a superlative reveal, each tile shows its country + population so the
