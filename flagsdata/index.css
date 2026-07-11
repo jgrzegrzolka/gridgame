@@ -154,15 +154,12 @@ body {
     margin-top: 4px;
   }
 }
-/* Name search — sits at the top of the filter bar, OUTSIDE the
- * collapsible groups, so it's reachable even when filters are closed.
- * Search and filter serve different jobs: search is "take me to the
- * thing I know the name of", filter is "narrow by category". The
- * wrapper claims a full row via flex-basis (a plain div wraps reliably
- * where a replaced <input> didn't). */
-/* Search shares the summary row with the chips + Add-filter button, so the
- * wrapper sizes to the input (~240px) instead of claiming a full row. It can
- * shrink on narrow screens; the input inside caps at 240px. */
+/* Name search — sits OUTSIDE the collapsible groups so it's reachable even
+ * when filters are folded (search and filter serve different jobs: "take me to
+ * the thing I know the name of" vs "narrow by category"). It shares the summary
+ * row with the chips + Add-filter button, so the wrapper sizes to the input
+ * (~240px) instead of claiming a full row; it can shrink on narrow screens and
+ * the input inside caps at 240px. */
 .name-search-wrap {
   flex: 0 1 240px;
 }
@@ -216,7 +213,10 @@ body {
   border: none;
   color: var(--link-color);
   cursor: pointer;
-  padding: 4px 8px;
+  /* Vertical padding tuned so Clear's box matches the summary row's first-line
+   * height (driven by the search input), letting its text sit vertically
+   * centred with the search box / chips / Add-filter instead of riding high. */
+  padding: 8px;
   text-decoration: underline;
 }
 #filter-clear:hover {
