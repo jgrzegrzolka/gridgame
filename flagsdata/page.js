@@ -1,5 +1,5 @@
 import { CONTINENTS, loadCountries, attachPopulations, attachAreas, attachDensities } from '../flags/group.js';
-import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, foldDiacritics } from '../flags/engine.js';
+import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, METRIC_KEYS, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters, createColorCountLock, activeFilterChips } from '../flags/flagsFilter.js';
 import { makeColorSwatch } from '../common.js';
 import { buildMetricTierItems } from '../flags/metricTiers.js';
@@ -623,9 +623,7 @@ export function bootFlagsData() {
       pillTotal += filters[k].include.size + filters[k].exclude.size;
     }
     if (filters.colorCount !== null) pillTotal++;
-    if (filters.population !== null) pillTotal++;
-    if (filters.area !== null) pillTotal++;
-    if (filters.density !== null) pillTotal++;
+    for (const k of METRIC_KEYS) if (filters[k] !== null) pillTotal++;
     const anyActive = pillTotal > 0 || nameQuery !== '';
     clearBtn.hidden = !anyActive;
     // Repaint the active-filters chip summary. Chips replace the old count
@@ -1052,9 +1050,7 @@ export function bootFlagsData() {
       filters[k].include.clear();
       filters[k].exclude.clear();
     }
-    filters.population = null;
-    filters.area = null;
-    filters.density = null;
+    for (const k of METRIC_KEYS) filters[k] = null;
     colorCountLock.reset();
     if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
     colorCountPicker.reset();

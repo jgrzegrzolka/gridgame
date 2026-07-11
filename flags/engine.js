@@ -502,6 +502,100 @@ export function area(op, n, opts = {}) {
 }
 
 /**
+ * The threshold world-metrics as one registry, so every surface that treats
+ * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
+ * labels, `categoryFromId`, the random pool, the single-use rule, the
+ * `metricTiers` tier builder) drives off one definition instead of a per-metric
+ * copy. Adding a metric is one entry here (+ its `Filters` field) rather than a
+ * block edited into a dozen places.
+ *
+ * Each entry is self-describing:
+ *   `breaks`         the `<KEY>_BREAKS_FOR_RANDOM` tiers (op/n, optional ultimate)
+ *   `factory`        the Category factory (`population` / `area` / …)
+ *   `prefixFallback` English metric name, backing the `metric.<key>` i18n key
+ *   `field`          the denormalized `Country` field the predicate reads
+ *   `has`            "does this country carry a value?" (drives the no-data guard)
+ *   `labelFor`       op+n → the localized threshold text ("over 100 people/km²"),
+ *                    shared by the findFlag pill and the TTT category label
+ *
+ * `has`/`field` stay explicit per entry (not `c[key]`) so the strict typecheck
+ * over `flags/**` keeps real field types instead of an index signature.
+ *
+ * @typedef {Object} ThresholdMetric
+ * @property {ReadonlyArray<{ op: '>=' | '<=', n: number, ultimate?: boolean }>} breaks
+ * @property {(op: '>=' | '<=', n: number, opts?: { ultimateEligible?: boolean }) => Category} factory
+ * @property {string} prefixFallback
+ * @property {string} field
+ * @property {(c: Country) => boolean} has
+ * @property {(op: '>=' | '<=', n: number, translate: (key: string, fallback: string) => string) => string} labelFor
+ */
+
+/** @type {Record<string, ThresholdMetric>} */
+export const THRESHOLD_METRICS = {
+  population: {
+    breaks: POPULATION_BREAKS_FOR_RANDOM,
+    factory: population,
+    prefixFallback: 'Population',
+    field: 'population',
+    has: (c) => typeof c.population === 'number',
+    labelFor: (op, n, translate) => {
+      const token = `${n / 1_000_000}m`;
+      const human = `${n / 1_000_000}M`;
+      if (op === '>=') return translate(`population.atLeast.${token}`, `over ${human} people`);
+      return translate(`population.atMost.${token}`, `under ${human} people`);
+    },
+  },
+  area: {
+    breaks: AREA_BREAKS_FOR_RANDOM,
+    factory: area,
+    prefixFallback: 'Land area',
+    field: 'area',
+    has: (c) => typeof c.area === 'number',
+    labelFor: (op, n, translate) => {
+      const token = n >= 1_000_000 ? `${n / 1_000_000}m` : `${n / 1_000}k`;
+      const human = n >= 1_000_000 ? `${n / 1_000_000}M` : `${n / 1_000}K`;
+      if (op === '>=') return translate(`area.atLeast.${token}`, `over ${human} km²`);
+      return translate(`area.atMost.${token}`, `under ${human} km²`);
+    },
+  },
+  density: {
+    breaks: DENSITY_BREAKS_FOR_RANDOM,
+    factory: density,
+    prefixFallback: 'Population density',
+    field: 'density',
+    has: (c) => typeof c.density === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`density.atLeast.${n}`, `over ${n} people/km²`);
+      return translate(`density.atMost.${n}`, `under ${n} people/km²`);
+    },
+  },
+};
+
+/** The registered threshold-metric keys, in registry (display) order. */
+export const METRIC_KEYS = Object.keys(THRESHOLD_METRICS);
+
+/**
+ * Decode a `<metric>:<op><n>` id suffix into `{ op, n }`, or null if it isn't a
+ * valid threshold token (`>=`/`<=` prefix, positive integer, canonical form).
+ * Shared by `categoryFromId`, `translateCategoryLabel`, and the filter DSL so
+ * every metric parses its suffix identically.
+ *
+ * @param {string} suffix
+ * @returns {{ op: '>=' | '<=', n: number } | null}
+ */
+export function parseThreshold(suffix) {
+  /** @type {'>=' | '<=' | null} */
+  let op = null;
+  if (suffix.startsWith('>=')) op = '>=';
+  else if (suffix.startsWith('<=')) op = '<=';
+  if (!op) return null;
+  const nStr = suffix.slice(2);
+  const n = Number.parseInt(nStr, 10);
+  if (Number.isInteger(n) && n > 0 && String(n) === nStr) return { op, n };
+  return null;
+}
+
+/**
  * @template T
  * @param {T[]} pool
  * @param {number} n
@@ -516,15 +610,6 @@ function pickRandom(pool, n, rng) {
   }
   return arr.slice(0, n);
 }
-
-/** English fallbacks for the metric-name prefix, keyed by id `kind`. The active
- * language comes from the `metric.<kind>` i18n key (added by the flagsdata lens);
- * these back it up so a missing key never renders the prefix blank. */
-const METRIC_PREFIX_FALLBACK = /** @type {const} */ ({
-  population: 'Population',
-  area: 'Land area',
-  density: 'Population density',
-});
 
 /**
  * Translate a category's display label by decoding its `id`. The factories
@@ -580,44 +665,15 @@ export function translateCategoryLabel(category, translate) {
     }
     return translate(`filter.onlyN.${value}`, category.label);
   }
-  if (kind === 'population') {
-    // value is the id suffix: ">=10000000" / "<=1000000". Key on the compact
-    // millions token ("10m", "1m") so the i18n block stays readable and the
-    // keys line up with POPULATION_BREAKS_FOR_RANDOM.
-    const op = value.slice(0, 2);
-    const n = Number.parseInt(value.slice(2), 10);
-    if ((op === '>=' || op === '<=') && Number.isInteger(n)) {
-      const token = `${n / 1_000_000}m`;
-      const bucket = op === '>=' ? 'atLeast' : 'atMost';
-      const prefix = translate('metric.population', METRIC_PREFIX_FALLBACK.population);
-      return `${prefix}: ${translate(`population.${bucket}.${token}`, category.label)}`;
-    }
-    return category.label;
-  }
-  if (kind === 'area') {
-    // value is the id suffix: ">=100000" / "<=1000". Key on a compact token
-    // ("100k", "1m") aligned with AREA_BREAKS_FOR_RANDOM.
-    const op = value.slice(0, 2);
-    const n = Number.parseInt(value.slice(2), 10);
-    if ((op === '>=' || op === '<=') && Number.isInteger(n)) {
-      const token = n >= 1_000_000 ? `${n / 1_000_000}m` : `${n / 1_000}k`;
-      const bucket = op === '>=' ? 'atLeast' : 'atMost';
-      const prefix = translate('metric.area', METRIC_PREFIX_FALLBACK.area);
-      return `${prefix}: ${translate(`area.${bucket}.${token}`, category.label)}`;
-    }
-    return category.label;
-  }
-  if (kind === 'density') {
-    // value is the id suffix: ">=100" / "<=10". The token is the plain integer
-    // people-per-km² count, aligned with DENSITY_BREAKS_FOR_RANDOM.
-    const op = value.slice(0, 2);
-    const n = Number.parseInt(value.slice(2), 10);
-    if ((op === '>=' || op === '<=') && Number.isInteger(n)) {
-      const bucket = op === '>=' ? 'atLeast' : 'atMost';
-      const prefix = translate('metric.density', METRIC_PREFIX_FALLBACK.density);
-      return `${prefix}: ${translate(`density.${bucket}.${n}`, category.label)}`;
-    }
-    return category.label;
+  if (THRESHOLD_METRICS[kind]) {
+    // value is the id suffix: ">=100" / "<=10". The metric name (from
+    // `metric.<kind>`) is prefixed so a bare "over 100" cell can't be confused
+    // across the threshold metrics; the metric's own `labelFor` renders the
+    // threshold text (with its unit / compact token).
+    const parsed = parseThreshold(value);
+    if (!parsed) return category.label;
+    const prefix = translate(`metric.${kind}`, THRESHOLD_METRICS[kind].prefixFallback);
+    return `${prefix}: ${THRESHOLD_METRICS[kind].labelFor(parsed.op, parsed.n, translate)}`;
   }
   return category.label;
 }
@@ -653,43 +709,16 @@ export function categoryFromId(id) {
     if (Number.isInteger(n) && n >= 0 && String(n) === nStr) return colorCount(op, n);
     return null;
   }
-  if (id.startsWith('population:')) {
-    const suffix = id.slice('population:'.length);
-    /** @type {'>=' | '<=' | null} */
-    let op = null;
-    if (suffix.startsWith('>=')) op = '>=';
-    else if (suffix.startsWith('<=')) op = '<=';
-    if (!op) return null;
-    const nStr = suffix.slice(2);
-    const n = Number.parseInt(nStr, 10);
-    // Rehydrated categories drop `ultimateEligible` — it only steers pool
-    // building, never a live puzzle's category.
-    if (Number.isInteger(n) && n > 0 && String(n) === nStr) return population(op, n);
-    return null;
-  }
-  if (id.startsWith('area:')) {
-    const suffix = id.slice('area:'.length);
-    /** @type {'>=' | '<=' | null} */
-    let op = null;
-    if (suffix.startsWith('>=')) op = '>=';
-    else if (suffix.startsWith('<=')) op = '<=';
-    if (!op) return null;
-    const nStr = suffix.slice(2);
-    const n = Number.parseInt(nStr, 10);
-    if (Number.isInteger(n) && n > 0 && String(n) === nStr) return area(op, n);
-    return null;
-  }
-  if (id.startsWith('density:')) {
-    const suffix = id.slice('density:'.length);
-    /** @type {'>=' | '<=' | null} */
-    let op = null;
-    if (suffix.startsWith('>=')) op = '>=';
-    else if (suffix.startsWith('<=')) op = '<=';
-    if (!op) return null;
-    const nStr = suffix.slice(2);
-    const n = Number.parseInt(nStr, 10);
-    if (Number.isInteger(n) && n > 0 && String(n) === nStr) return density(op, n);
-    return null;
+  // Threshold world-metrics (`population:>=10000000`, `density:<=10`, …): one
+  // generic decode over THRESHOLD_METRICS. Rehydrated categories drop
+  // `ultimateEligible` — it only steers pool building, never a live category.
+  const colon = id.indexOf(':');
+  if (colon > 0) {
+    const metric = THRESHOLD_METRICS[id.slice(0, colon)];
+    if (metric) {
+      const parsed = parseThreshold(id.slice(colon + 1));
+      return parsed ? metric.factory(parsed.op, parsed.n) : null;
+    }
   }
   return null;
 }
@@ -702,12 +731,9 @@ export function buildRandomCategoryPool() {
     ...MOTIFS_FOR_RANDOM.map(hasMotif),
     ...COLOR_COUNTS_FOR_RANDOM.map(([op, n]) => colorCount(op, n)),
     ...STRIPES_ORIENTATIONS_FOR_RANDOM.map(hasStripesOnly),
-    ...POPULATION_BREAKS_FOR_RANDOM.map(({ op, n, ultimate }) =>
-      population(op, n, { ultimateEligible: ultimate === true })),
-    ...AREA_BREAKS_FOR_RANDOM.map(({ op, n, ultimate }) =>
-      area(op, n, { ultimateEligible: ultimate === true })),
-    ...DENSITY_BREAKS_FOR_RANDOM.map(({ op, n, ultimate }) =>
-      density(op, n, { ultimateEligible: ultimate === true })),
+    ...Object.values(THRESHOLD_METRICS).flatMap((m) =>
+      m.breaks.map(({ op, n, ultimate }) =>
+        m.factory(op, n, { ultimateEligible: ultimate === true }))),
   ];
 }
 
@@ -761,7 +787,7 @@ export function axesConflict(rows, cols) {
  *
  * @type {Set<string>}
  */
-export const SINGLE_USE_METRIC_GROUPS = new Set(['population', 'area', 'density']);
+export const SINGLE_USE_METRIC_GROUPS = new Set(METRIC_KEYS);
 
 /**
  * True when any single-use metric group (see `SINGLE_USE_METRIC_GROUPS`)
