@@ -75,6 +75,8 @@ Second world metric after population, added to prove the `add-world-metric` skil
 
 **Data contract:** dense. Every real place has a land area (km²), including uninhabited territories (Antarctica ~14.2M, Bouvet 49). Source: World Bank WDI `AG.LND.TOTL.K2` (2022) + 47 hand-fills. Values whole km² except microstates under 1 (Vatican 0.49).
 
+**Verified 2026-07-12:** the 47 hand-filled areas + a join-sanity pass on the World Bank leaders were cross-checked by the same 4-agent sweep used for GDP (see Feature DJ). Clean, zero corrections. Clipperton's 2 km² is land-only, consistent with the `AG.LND.TOTL.K2` land basis.
+
 - [x] 1. Data (`area.json` + `build-area.mjs` + tests). [x] 2. Lens (free). [x] 3. Filters (flagsdata + findFlag, via the shared `metricTiers` registry + generalized `buildMetricGroup`). [x] 4. TTT (`area()` factory + `AREA_BREAKS_FOR_RANDOM`, attach at 6 sites, seed pins). [x] 5. Flag Party (generalized `createSuperlativeRound` factory, `superlative-area` mode).
 - [ ] 6. Daily — **deferred** (see Backlog + Feature DG's population precedent).
 
@@ -161,6 +163,8 @@ Second world metric after population, added to prove the `add-world-metric` skil
 **Storage decisions:** raw number, never rank (rank is scope-dependent and derived — one sort at load); scope = all real places (`category !== 'other'`); uninhabited/transient places (Antarctica, Bouvet, Heard & McDonald, Clipperton, South Georgia, French Southern Territories, US Minor Outlying, British Indian Ocean Territory) **omitted** rather than stored as `0`, so "least populated" stays meaningful (Vatican ~800 is the floor).
 
 **What shipped.** 254 countries in `flags/metrics/population.json` (World Bank WDI `SP.POP.TOTL` 2023 for 216; 38 dependencies / sub-national regions from national-statistics / UN estimates, rounded, in `build-population.mjs`'s `FILLS`; 8 omitted). Pure `flags/metrics.js` `createMetric(metric, countries)` → `valueOf` / `has` / `ranked` / `topN` / `bottomN` / `rankOf` / `tierOf` / `compare` + `label` / `unit` / `format`, scoped `world` / `un_member` / continent. `flags/metrics/index.js` explicit registry. `authoring/build-population.mjs` (yearly refresh = one command). `flags/metrics.test.js` fixture logic + real-data schema gate.
+
+**Verified 2026-07-12:** the ~40 hand-filled populations + a join-sanity pass on the World Bank leaders were cross-checked by the same 4-agent sweep used for GDP (see Feature DJ). Clean, zero corrections; every figure within ~15% of national-statistics / UN estimates.
 
 **Standing artifacts:** `flags/metrics/` namespace + `createMetric` helper — every future metric (area, GDP, coffee) drops in as one self-describing file and inherits all mechanics. The `format` hint was added in Feature DE phase 1.
 
