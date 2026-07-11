@@ -7,6 +7,10 @@ import {
   revealSecondsFor,
   secondsLeft,
   remainingFraction,
+  FLAG_CLEAR_FRACTION,
+  OUTLINE_CLEAR_FRACTION,
+  veilClearFraction,
+  veilProgress,
 } from './partyTiming.js';
 
 test('durations are sane: a question outlasts either reveal, all positive', () => {
@@ -55,4 +59,33 @@ test('remainingFraction: clamps to [0, 1] for out-of-range now', () => {
 
 test('remainingFraction: a non-positive total is a safe 0 (no divide-by-zero)', () => {
   assert.equal(remainingFraction(1_000, 1_000, 0), 0);
+});
+
+test('veilClearFraction: outlines clear sooner than flags, both below 1', () => {
+  assert.equal(veilClearFraction(false), FLAG_CLEAR_FRACTION, 'a flag round uses the flag fraction');
+  assert.equal(veilClearFraction(true), OUTLINE_CLEAR_FRACTION, 'the map round uses the outline fraction');
+  assert.ok(OUTLINE_CLEAR_FRACTION < FLAG_CLEAR_FRACTION, 'outlines resolve earlier in the window');
+  assert.ok(FLAG_CLEAR_FRACTION < 1, 'the tile is fully clear before the buzzer');
+});
+
+test('veilProgress: 0 at the start, hits 1 at the clear point, holds clear after', () => {
+  const total = 20_000;
+  const now = 1_000_000;
+  const clear = 0.5; // clears halfway through the window
+  assert.equal(veilProgress(now + total, now, total, clear), 0, 'fully hidden at the start');
+  // midway to the clear point (25% of the window) → half-revealed
+  assert.equal(veilProgress(now + total * 0.75, now, total, clear), 0.5);
+  // at the clear point (50% of the window) → fully clear
+  assert.equal(veilProgress(now + total * 0.5, now, total, clear), 1);
+  // past the clear point stays clamped at 1, never overshoots
+  assert.equal(veilProgress(now + total * 0.25, now, total, clear), 1);
+  assert.equal(veilProgress(now, now, total, clear), 1, 'at the deadline it is fully clear');
+});
+
+test('veilProgress: clamps to [0, 1] and is divide-by-zero safe', () => {
+  const now = 1_000_000;
+  assert.equal(veilProgress(now - 5000, now, 20_000, 0.9), 1, 'past the deadline clamps to 1');
+  assert.equal(veilProgress(now + 30_000, now, 20_000, 0.9), 0, 'somehow-early clamps to 0');
+  assert.equal(veilProgress(now, now, 0, 0.9), 1, 'a non-positive total is a safe clear');
+  assert.equal(veilProgress(now, now, 20_000, 0), 1, 'a zero clear fraction is a safe clear');
 });

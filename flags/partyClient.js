@@ -20,6 +20,8 @@
  * @property {RosterEntry[]} roster
  * @property {number} totalRounds
  * @property {number} roundIndex
+ * @property {boolean} tricky  host's tricky-mode choice, learned from the server;
+ *   when true the page veils each question tile and clears it over the clock.
  * @property {PublicQuestion | null} question
  * @property {number} buzzedCount
  * @property {number} seatCount
@@ -40,6 +42,7 @@ export function initialPartyClientState() {
     roster: [],
     totalRounds: 0,
     roundIndex: 0,
+    tricky: false,
     question: null,
     buzzedCount: 0,
     seatCount: 0,
@@ -89,6 +92,7 @@ export function reducePartyMessage(state, message) {
           roster: message.roster ?? [],
           totalRounds: message.totalRounds ?? state.totalRounds,
           roundIndex: message.roundIndex ?? 0,
+          tricky: message.tricky ?? state.tricky,
           question: message.question ?? null,
           scoreboard: message.scoreboard ?? null,
           // A reconnect can't recover whether we already buzzed this question;
@@ -133,6 +137,7 @@ export function reducePartyMessage(state, message) {
           question: { prompt: message.prompt, options: message.options ?? [], roundId: message.roundId },
           roundIndex: message.roundIndex ?? state.roundIndex,
           totalRounds: message.totalRounds ?? state.totalRounds,
+          tricky: message.tricky ?? state.tricky,
           myChoice: null,
           reveal: null,
           buzzedCount: 0,

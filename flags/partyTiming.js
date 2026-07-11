@@ -38,6 +38,45 @@ export function revealSecondsFor(clean) {
   return clean ? CLEAN_REVEAL_SECONDS : MISS_REVEAL_SECONDS;
 }
 
+/** Tricky mode: the fraction of the question window over which a veiled tile
+ *  resolves from fully hidden to fully clear. Flags stay obscured longer (they
+ *  carry more give-away detail, so a 70% window keeps them tricky well past the
+ *  midpoint); outlines clear sooner (a monochrome silhouette is already hard, and
+ *  grey does nothing to it, so 40% is plenty). Both are below 1, so the tile is
+ *  fully readable before time runs out — a late decider still gets a clean look,
+ *  while an early buzzer gambled on partial detail for the speed bonus. */
+export const FLAG_CLEAR_FRACTION = 0.7;
+export const OUTLINE_CLEAR_FRACTION = 0.4;
+
+/**
+ * The tricky-mode clear fraction for a round, keyed on whether its tiles are
+ * country outlines (the map round) rather than flags.
+ * @param {boolean} isOutline
+ * @returns {number}
+ */
+export function veilClearFraction(isOutline) {
+  return isOutline ? OUTLINE_CLEAR_FRACTION : FLAG_CLEAR_FRACTION;
+}
+
+/**
+ * Veil progress in [0, 1] for the tricky-mode reveal: 0 = fully hidden (grey,
+ * blurred, panels covering the tile), 1 = fully clear. Reaches 1 at `clearFrac`
+ * of the way through the question window and then holds clear. Clamped both ends
+ * so a late tick or a reconnect that lands past the deadline never yields a
+ * value outside [0, 1].
+ *
+ * @param {number} deadlineMs  epoch ms the question ends
+ * @param {number} nowMs  current epoch ms
+ * @param {number} totalMs  the question's full length in ms
+ * @param {number} clearFrac  fraction of the window to reach full clarity by
+ * @returns {number}
+ */
+export function veilProgress(deadlineMs, nowMs, totalMs, clearFrac) {
+  if (totalMs <= 0 || clearFrac <= 0) return 1;
+  const elapsed = totalMs - (deadlineMs - nowMs);
+  return Math.min(1, Math.max(0, elapsed / (totalMs * clearFrac)));
+}
+
 /**
  * Whole seconds left until `deadlineMs`, never negative. Ceil so a freshly-set
  * 15,000 ms deadline reads "15" and the display only reaches "0" at true expiry

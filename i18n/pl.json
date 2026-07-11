@@ -510,6 +510,8 @@
     "roundsLabel": "rund",
     "fewer": "Mniej rund",
     "more": "Więcej rund",
+    "tricky": "Tryb trudny",
+    "trickyHint": "Flagi zaczynają ukryte i wyostrzają się z upływem czasu",
     "mode": {
       "flagsAll": "Flagi: wszystkie kraje",
       "flagsTerritories": "Flagi: terytoria",

@@ -6,7 +6,7 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction, veilProgress, veilClearFraction } from '../flags/partyTiming.js';
 import { PARTY_MODES, DEFAULT_PLAN, countsForPlan, planFromModeCounts, MAX_ROUNDS_PER_MODE } from '../flags/partyPlan.js';
 import { formatValue } from '../flags/metricLens.js';
 import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
@@ -15,6 +15,12 @@ import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
 
 const NICKNAME_KEY = 'gridgame.nickname';
 const PLAN_KEY = 'gridgame.party.plan';
+const TRICKY_KEY = 'gridgame.party.tricky';
+
+/** Scattered reveal order for the six tricky-mode veil panels, so the flag
+ *  materialises in patches rather than strictly left-to-right (which would give
+ *  a flag away by which side lights up first). Indexes the 3×2 cover grid. */
+const VEIL_ORDER = [0, 4, 2, 5, 1, 3];
 
 /** Lobby copy for each catalog mode (`flags/partyPlan.js` PARTY_MODES). The
  *  catalog stays pure (ids only); labels live here, translated via i18n with the
@@ -177,6 +183,17 @@ export function bootFlagParty() {
   // 'start' message and the server validates it — this is just the picker.
   /** @type {Record<string, { on: boolean, n: number }>} */
   const modeState = loadModeState();
+  // Game-wide tricky-mode toggle (not per-mode). Persisted per device like the
+  // plan; rides on the 'start' message and the server broadcasts it back so
+  // every client veils the tiles in step.
+  let trickyOn = loadTricky();
+
+  function loadTricky() {
+    try { return window.localStorage.getItem(TRICKY_KEY) === '1'; } catch { return false; }
+  }
+  function saveTricky() {
+    try { window.localStorage.setItem(TRICKY_KEY, trickyOn ? '1' : '0'); } catch { /* private mode */ }
+  }
 
   function defaultModeState() {
     const counts = countsForPlan(DEFAULT_PLAN);
@@ -254,6 +271,28 @@ export function bootFlagParty() {
 
       gsModesEl.appendChild(row);
     }
+
+    // Game-wide option row (not a mode): the tricky-reveal toggle. Same row
+    // frame + shared switch as the modes above, minus the stepper — a title and
+    // a muted one-line hint sit in the name column.
+    const trickyRow = el('div', 'gs-mode gs-option');
+    const nameCol = el('span', 'gs-name');
+    nameCol.appendChild(el('span', 'gs-opt-title', t('party.tricky', 'Tricky mode')));
+    nameCol.appendChild(el('span', 'gs-opt-hint', t('party.trickyHint', 'Flags start hidden and clear as the clock runs')));
+    trickyRow.appendChild(nameCol);
+    const tsw = document.createElement('label');
+    tsw.className = 'scope-toggle-switch';
+    const tinput = document.createElement('input');
+    tinput.type = 'checkbox';
+    tinput.checked = trickyOn;
+    tinput.setAttribute('aria-label', t('party.tricky', 'Tricky mode'));
+    tinput.addEventListener('change', () => { trickyOn = tinput.checked; saveTricky(); });
+    const ttrack = el('span', 'scope-toggle-track');
+    ttrack.appendChild(el('span', 'scope-toggle-thumb'));
+    tsw.append(tinput, ttrack);
+    trickyRow.appendChild(tsw);
+    gsModesEl.appendChild(trickyRow);
+
     updateSetup();
   }
 
@@ -300,6 +339,10 @@ export function bootFlagParty() {
       const nm = row && row.querySelector('.gs-name');
       if (nm) nm.textContent = modeLabel(m.id);
     }
+    const optTitle = gsModesEl.querySelector('.gs-opt-title');
+    if (optTitle) optTitle.textContent = t('party.tricky', 'Tricky mode');
+    const optHint = gsModesEl.querySelector('.gs-opt-hint');
+    if (optHint) optHint.textContent = t('party.trickyHint', 'Flags start hidden and clear as the clock runs');
     updateSetup();
   }
 
@@ -394,6 +437,31 @@ export function bootFlagParty() {
     timerEl.hidden = true;
   }
 
+  // ---- tricky-mode veil ----
+  // When the host enabled tricky mode, each question tile clears over the same
+  // clock the countdown bar counts. We drive a single `--veil-p` (0 hidden → 1
+  // clear) on the grid via rAF for a smooth grey/blur/panel resolve; the CSS
+  // does the rest. Setting it on the grid (which persists across tile rebuilds,
+  // only its innerHTML is replaced) means a re-render mid-question — a late join,
+  // a buzz notification — never resets the animation. Flags clear later in the
+  // window than outlines (flags/partyTiming.js).
+  let veilRaf = 0;
+  function startVeil() {
+    if (veilRaf) return;
+    const step = () => {
+      if (state.phase !== 'question' || !state.tricky) { veilRaf = 0; return; }
+      const isOutline = !!(state.question && state.question.roundId === 'mapPick');
+      const p = veilProgress(clockDeadline, Date.now(), clockTotalMs, veilClearFraction(isOutline));
+      gridEl.style.setProperty('--veil-p', p.toFixed(4));
+      veilRaf = window.requestAnimationFrame(step);
+    };
+    veilRaf = window.requestAnimationFrame(step);
+  }
+  function stopVeil() {
+    if (veilRaf) { window.cancelAnimationFrame(veilRaf); veilRaf = 0; }
+    gridEl.style.setProperty('--veil-p', '1');
+  }
+
   /** (Re)start the countdown when the phase or round changes; otherwise leave it. */
   function syncClock() {
     const mode = state.phase === 'reveal' ? 'reveal' : 'question';
@@ -438,12 +506,17 @@ export function bootFlagParty() {
 
   // ---- render ----
   function render() {
-    if (!activeRoom) { stopClock(); showSection('start'); return; }
+    if (!activeRoom) { stopClock(); stopVeil(); showSection('start'); return; }
     // Leaving (or not yet in) the final screen re-arms the one-shot celebration.
     if (state.phase !== 'final') finalCelebrated = false;
-    if (state.phase === 'question' || state.phase === 'reveal') { showSection('round'); renderRound(); syncClock(); }
-    else if (state.phase === 'final') { stopClock(); showSection('final'); renderFinal(); }
-    else { stopClock(); showSection('lobby'); renderLobby(); }
+    if (state.phase === 'question' || state.phase === 'reveal') {
+      showSection('round'); renderRound(); syncClock();
+      // The veil animates during the question only; the reveal always shows the
+      // crisp, full-colour tiles (stopVeil pins `--veil-p` to 1).
+      if (state.phase === 'question' && state.tricky) startVeil(); else stopVeil();
+    }
+    else if (state.phase === 'final') { stopClock(); stopVeil(); showSection('final'); renderFinal(); }
+    else { stopClock(); stopVeil(); showSection('lobby'); renderLobby(); }
   }
 
   function renderLobby() {
@@ -529,7 +602,7 @@ export function bootFlagParty() {
       } else {
         const selected = state.myChoice === code;
         const dim = state.myChoice != null && !selected;
-        gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [], pop: null }));
+        gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [], pop: null, veil: state.tricky }));
       }
     }
 
@@ -539,11 +612,11 @@ export function bootFlagParty() {
 
   /**
    * @param {string} code
-   * @param {{ isMap: boolean, selectable: boolean, selected: boolean, correct: boolean, wrong: boolean, dim: boolean, pickers: string[], pop?: { name: string, value: string } | null }} opts
+   * @param {{ isMap: boolean, selectable: boolean, selected: boolean, correct: boolean, wrong: boolean, dim: boolean, pickers: string[], pop?: { name: string, value: string } | null, veil?: boolean }} opts
    */
   function flagOpt(code, opts) {
     const node = document.createElement(opts.selectable ? 'button' : 'div');
-    node.className = 'opt' + (opts.selected ? ' sel' : '') + (opts.correct ? ' correct' : '') + (opts.wrong ? ' wrong' : '') + (opts.dim ? ' dim' : '') + (opts.pop ? ' pop' : '');
+    node.className = 'opt' + (opts.selected ? ' sel' : '') + (opts.correct ? ' correct' : '') + (opts.wrong ? ' wrong' : '') + (opts.dim ? ' dim' : '') + (opts.pop ? ' pop' : '') + (opts.veil ? ' veil' : '');
     // On reveal, name the flag/outline you got wrong — the shared bottom strip
     // (common.css `.opt.wrong[data-name]`, same as flagQuiz) tells you what you
     // actually picked; the correct answer's name is already in the prompt header.
@@ -564,6 +637,19 @@ export function bootFlagParty() {
     img.src = opts.isMap ? `../flags/contours/${code}.svg` : `../flags/svg/${code}.svg`;
     img.alt = '';
     node.appendChild(img);
+    // Tricky mode: six feathered panels over the tile that clear as the question
+    // clock runs. The img itself greys + blurs via CSS reading `--veil-p` (set on
+    // the grid by the veil loop); the cover cells fade out on their scattered
+    // slots. Question phase only — the reveal never passes `veil`.
+    if (opts.veil) {
+      const cover = el('div', 'veil-cover');
+      for (const i of VEIL_ORDER) {
+        const cell = el('div', 'veil-cell');
+        cell.style.setProperty('--i', String(i));
+        cover.appendChild(cell);
+      }
+      node.appendChild(cover);
+    }
     // The locked-in pick is shown by the pink ring + surface tint on the tile
     // itself (`.opt.sel`) — no ✓ badge. On reveal the correct flag is marked by
     // the green pulse alone (matching flagQuiz).
@@ -710,7 +796,7 @@ export function bootFlagParty() {
     enterRoom(code, 'join');
   });
 
-  startBtn.addEventListener('click', () => send({ type: 'start', plan: currentPlan() }));
+  startBtn.addEventListener('click', () => send({ type: 'start', plan: currentPlan(), tricky: trickyOn }));
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
 
   // Same share mechanism as Tic-Tac-Toe (common.js `shareUrl` → native sheet,
