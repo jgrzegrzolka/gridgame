@@ -419,6 +419,29 @@ export const BANANA_BREAKS_FOR_RANDOM = [
 ];
 
 /**
+ * Apple-production-threshold Categories (apple tonnes). Sparse like the other
+ * crops, so **`>=`-only**: apples are a temperate fruit, the ~167 tropical /
+ * non-producing real places sit at 0 (via `absence: 'zero'`), so a `<=` tier
+ * would be meaningless. The meaningful axis is "produces AT LEAST N":
+ * `>=10K/100K/1M tonnes` (75 / 52 / 13 real places, a clean spread from the
+ * broad commercial growers up to the 13 giants: China, the US, Turkey, Poland,
+ * India, Italy, Iran, Russia, France, Uzbekistan, South Africa, Chile, Ukraine).
+ * `exclusiveGroup: 'apple'`.
+ *
+ * No `ultimate: true` break: apples are temperate-concentrated (Oceania is just
+ * Australia + New Zealand, sub-Saharan Africa barely grows any), so
+ * `apple >= N × continent` can't reach 9 distinct. Every break carries
+ * `ultimateEligible: false`, keeping apple a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const APPLE_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 10_000 },
+  { op: '>=', n: 100_000 },
+  { op: '>=', n: 1_000_000 },
+];
+
+/**
  * Highest-elevation-threshold Categories (metres above sea level of each place's
  * highest point). Dense and *two-directional*, the mirror of area / GDP: both
  * extremes make good questions, so there are three "high" tiers (`>= N`) and
@@ -931,6 +954,37 @@ export function banana(op, n, opts = {}) {
 }
 
 /**
+ * Apple-production-threshold Category factory (apple tonnes). Reads the
+ * denormalized `country.apple` field (`attachApples`, which fills 0 for a real
+ * place that grows none). `exclusiveGroup: 'apple'`. The break list is
+ * `>=`-only (see APPLE_BREAKS_FOR_RANDOM), but the `<=` branch is kept for
+ * symmetry so an `apple:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function apple(op, n, opts = {}) {
+  const human = tonnesCompact(n);
+  const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.apple === 'number' && c.apple >= n
+      : (c) => typeof c.apple === 'number' && c.apple <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `apple:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'apple',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * Highest-elevation-threshold Category factory (metres above sea level). Reads
  * the denormalized `country.elevation` field (`attachElevations`).
  * `exclusiveGroup: 'elevation'`. Dense and two-directional, so both `>=` (high
@@ -1179,6 +1233,20 @@ export const THRESHOLD_METRICS = {
       const human = tonnesCompact(n);
       if (op === '>=') return translate(`banana.atLeast.${token}`, `over ${human} tonnes`);
       return translate(`banana.atMost.${token}`, `under ${human} tonnes`);
+    },
+  },
+  apple: {
+    breaks: APPLE_BREAKS_FOR_RANDOM,
+    factory: apple,
+    prefixFallback: 'Apple production',
+    field: 'apple',
+    family: 'apple',
+    has: (c) => typeof c.apple === 'number',
+    labelFor: (op, n, translate) => {
+      const token = tonnesToken(n);
+      const human = tonnesCompact(n);
+      if (op === '>=') return translate(`apple.atLeast.${token}`, `over ${human} tonnes`);
+      return translate(`apple.atMost.${token}`, `under ${human} tonnes`);
     },
   },
   elevation: {

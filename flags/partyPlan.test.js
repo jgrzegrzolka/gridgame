@@ -80,7 +80,7 @@ test('PARTY_MODES: every DEFAULT_PLAN segment maps to a catalog mode', () => {
 
 test('countsForPlan: default plan gives 4 / 4 / 4 / 4 keyed by mode id', () => {
   assert.deepEqual(countsForPlan(DEFAULT_PLAN), {
-    'flags-all': 4, 'flags-territories': 4, 'map-outlines': 4, 'superlative-pop': 4, 'superlative-area': 0, 'superlative-density': 0, 'superlative-gdp': 0, 'superlative-gdppc': 0, 'superlative-coffee': 0, 'superlative-wine': 0, 'superlative-cocoa': 0, 'superlative-banana': 0, 'superlative-elevation': 0, 'superlative-coastline': 0, 'superlative-forest': 0,
+    'flags-all': 4, 'flags-territories': 4, 'map-outlines': 4, 'superlative-pop': 4, 'superlative-area': 0, 'superlative-density': 0, 'superlative-gdp': 0, 'superlative-gdppc': 0, 'superlative-coffee': 0, 'superlative-wine': 0, 'superlative-cocoa': 0, 'superlative-banana': 0, 'superlative-apple': 0, 'superlative-elevation': 0, 'superlative-coastline': 0, 'superlative-forest': 0,
   });
 });
 
@@ -145,7 +145,7 @@ test('validatePlan: non-array, empty, or all-invalid input returns null', () => 
 
 test('PARTY_MODES: split into a fixed picture trio and the metric family', () => {
   assert.deepEqual(PICTURE_MODES.map((m) => m.id), ['flags-all', 'flags-territories', 'map-outlines']);
-  assert.deepEqual(METRIC_MODES.map((m) => m.id), ['superlative-pop', 'superlative-area', 'superlative-density', 'superlative-gdp', 'superlative-gdppc', 'superlative-coffee', 'superlative-wine', 'superlative-cocoa', 'superlative-banana', 'superlative-elevation', 'superlative-coastline', 'superlative-forest']);
+  assert.deepEqual(METRIC_MODES.map((m) => m.id), ['superlative-pop', 'superlative-area', 'superlative-density', 'superlative-gdp', 'superlative-gdppc', 'superlative-coffee', 'superlative-wine', 'superlative-cocoa', 'superlative-banana', 'superlative-apple', 'superlative-elevation', 'superlative-coastline', 'superlative-forest']);
   for (const m of PICTURE_MODES) assert.equal(m.group, 'picture');
   for (const m of METRIC_MODES) assert.equal(m.group, 'metric');
 });

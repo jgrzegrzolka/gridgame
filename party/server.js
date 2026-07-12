@@ -8,6 +8,7 @@ import coffee from '../flags/metrics/coffee.json' with { type: 'json' };
 import wine from '../flags/metrics/wine.json' with { type: 'json' };
 import cocoa from '../flags/metrics/cocoa.json' with { type: 'json' };
 import banana from '../flags/metrics/banana.json' with { type: 'json' };
+import apple from '../flags/metrics/apple.json' with { type: 'json' };
 import elevation from '../flags/metrics/elevation.json' with { type: 'json' };
 import coastline from '../flags/metrics/coastline.json' with { type: 'json' };
 import forest from '../flags/metrics/forest.json' with { type: 'json' };
@@ -31,6 +32,7 @@ attachMetrics(countries, {
   wine: wine.values,
   cocoa: cocoa.values,
   banana: banana.values,
+  apple: apple.values,
   elevation: elevation.values,
   coastline: coastline.values,
   forest: forest.values,

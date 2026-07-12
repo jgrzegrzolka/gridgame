@@ -7,6 +7,7 @@ import coffee from '../metrics/coffee.json' with { type: 'json' };
 import wine from '../metrics/wine.json' with { type: 'json' };
 import cocoa from '../metrics/cocoa.json' with { type: 'json' };
 import banana from '../metrics/banana.json' with { type: 'json' };
+import apple from '../metrics/apple.json' with { type: 'json' };
 import elevation from '../metrics/elevation.json' with { type: 'json' };
 import coastline from '../metrics/coastline.json' with { type: 'json' };
 import forest from '../metrics/forest.json' with { type: 'json' };
@@ -177,6 +178,11 @@ export const cocoaRound = createSuperlativeRound(createMetric(cocoa, []), 'super
 // crops, so the round ranks the producers only. Locked to 'most': "biggest
 // banana producer" (India) is the good question.
 export const bananaRound = createSuperlativeRound(createMetric(banana, []), 'superlative-banana', { direction: 'most' });
+
+// Apple instance: apple tonnes, id 'superlative-apple'. Sparse like the other
+// crops, so the round ranks the producers only. Locked to 'most': "biggest
+// apple producer" (China) is the good question.
+export const appleRound = createSuperlativeRound(createMetric(apple, []), 'superlative-apple', { direction: 'most' });
 
 // Elevation instance: highest point in metres, id 'superlative-elevation'. Dense
 // and two-directional (no direction lock, unlike coffee): both "highest peak"

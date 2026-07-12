@@ -413,6 +413,7 @@
       "wine": "Produkcja wina",
       "cocoa": "Produkcja kakao",
       "banana": "Produkcja bananów",
+      "apple": "Produkcja jabłek",
       "elevation": "Najwyższy punkt",
       "coastline": "Długość wybrzeża",
       "forest": "Lesistość"
@@ -542,6 +543,7 @@
       "superlativeWine": "Produkcja wina: najwięcej",
       "superlativeCocoa": "Produkcja kakao: najwięcej",
       "superlativeBanana": "Produkcja bananów: najwięcej",
+      "superlativeApple": "Produkcja jabłek: najwięcej",
       "superlativeElevation": "Najwyższy punkt: najwyższy i najniższy",
       "superlativeCoastline": "Długość wybrzeża: najdłuższe i najkrótsze",
       "superlativeForest": "Lesistość: najbardziej i najmniej zalesione"
@@ -559,6 +561,7 @@
       "superlativeWine": "Wino",
       "superlativeCocoa": "Kakao",
       "superlativeBanana": "Banany",
+      "superlativeApple": "Jabłka",
       "superlativeElevation": "Wysokość",
       "superlativeCoastline": "Wybrzeże",
       "superlativeForest": "Lasy"
@@ -580,6 +583,7 @@
     "hintMostWine": "Największa produkcja wina",
     "hintMostCocoa": "Największa produkcja kakao",
     "hintMostBanana": "Największa produkcja bananów",
+    "hintMostApple": "Największa produkcja jabłek",
     "hintMostElevation": "Najwyższy punkt",
     "hintLeastElevation": "Najniższy punkt",
     "hintMostCoastline": "Najdłuższe wybrzeże",
@@ -759,6 +763,13 @@
       "100k": "ponad 100 tys. ton"
     }
   },
+  "apple": {
+    "atLeast": {
+      "10k": "ponad 10 tys. ton",
+      "100k": "ponad 100 tys. ton",
+      "1m": "ponad 1 mln ton"
+    }
+  },
   "elevation": {
     "atLeast": {
       "1000": "ponad 1000 m",
@@ -860,6 +871,7 @@
     "wine": "Produkcja wina",
     "cocoa": "Produkcja kakao",
     "banana": "Produkcja bananów",
+    "apple": "Produkcja jabłek",
     "elevation": "Najwyższy punkt",
     "coastline": "Długość wybrzeża",
     "forest": "Lesistość"

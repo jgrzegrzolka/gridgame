@@ -265,6 +265,29 @@ test('bananaRound: biggest-only, correct extreme-by-banana answer, producers onl
   }
 });
 
+// ---- apple instance (apple tonnes, id 'superlative-apple') ------------------
+
+test('appleRound: biggest-only, correct extreme-by-apple answer, producers only', async () => {
+  const { appleRound } = await import('./superlative.js');
+  const appleJson = (await import('../metrics/apple.json', { with: { type: 'json' } })).default;
+  const APP = /** @type {Record<string, number>} */ (appleJson.values);
+  assert.equal(appleRound.id, 'superlative-apple');
+  // Apple-distinct sovereign PRODUCERS spanning many orders of magnitude, all in
+  // apple.json. A non-producer (e.g. Nigeria) mixed in must be dropped by the
+  // round's `metric.has` filter, never appear as an option.
+  const pool = ['cn', 'us', 'tr', 'pl', 'it', 'jp', 'nz', 'au', 'ng'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = appleRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Apple is locked to 'most'; every round asks for the biggest producer.
+    assert.equal(q.prompt, 'most', `seed ${i}: apple is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('ng'), 'a non-producer is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => APP[c]);
+    assert.equal(APP[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-apple option`);
+  }
+});
+
 // ---- elevation instance (highest point in metres, id 'superlative-elevation') ---
 
 test('elevationRound: two-directional, correct extreme-by-elevation answer', async () => {

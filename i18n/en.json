@@ -413,6 +413,7 @@
       "wine": "Wine production",
       "cocoa": "Cocoa production",
       "banana": "Banana production",
+      "apple": "Apple production",
       "elevation": "Highest elevation",
       "coastline": "Coastline length",
       "forest": "Forest cover"
@@ -542,6 +543,7 @@
       "superlativeWine": "Wine production: most",
       "superlativeCocoa": "Cocoa production: most",
       "superlativeBanana": "Banana production: most",
+      "superlativeApple": "Apple production: most",
       "superlativeElevation": "Highest elevation: highest & lowest",
       "superlativeCoastline": "Coastline length: longest & shortest",
       "superlativeForest": "Forest cover: most & least forested"
@@ -559,6 +561,7 @@
       "superlativeWine": "Wine",
       "superlativeCocoa": "Cocoa",
       "superlativeBanana": "Banana",
+      "superlativeApple": "Apple",
       "superlativeElevation": "Elevation",
       "superlativeCoastline": "Coastline",
       "superlativeForest": "Forest"
@@ -580,6 +583,7 @@
     "hintMostWine": "Largest wine production",
     "hintMostCocoa": "Largest cocoa production",
     "hintMostBanana": "Largest banana production",
+    "hintMostApple": "Largest apple production",
     "hintMostElevation": "Highest point",
     "hintLeastElevation": "Lowest highpoint",
     "hintMostCoastline": "Longest coast",
@@ -759,6 +763,13 @@
       "100k": "over 100K tonnes"
     }
   },
+  "apple": {
+    "atLeast": {
+      "10k": "over 10K tonnes",
+      "100k": "over 100K tonnes",
+      "1m": "over 1M tonnes"
+    }
+  },
   "elevation": {
     "atLeast": {
       "1000": "over 1,000 m",
@@ -860,6 +871,7 @@
     "wine": "Wine production",
     "cocoa": "Cocoa production",
     "banana": "Banana production",
+    "apple": "Apple production",
     "elevation": "Highest elevation",
     "coastline": "Coastline length",
     "forest": "Forest cover"

@@ -39,6 +39,7 @@ import {
   WINE_BREAKS_FOR_RANDOM,
   COCOA_BREAKS_FOR_RANDOM,
   BANANA_BREAKS_FOR_RANDOM,
+  APPLE_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
   FOREST_BREAKS_FOR_RANDOM,
@@ -644,6 +645,7 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + WINE_BREAKS_FOR_RANDOM.length
     + COCOA_BREAKS_FOR_RANDOM.length
     + BANANA_BREAKS_FOR_RANDOM.length
+    + APPLE_BREAKS_FOR_RANDOM.length
     + ELEVATION_BREAKS_FOR_RANDOM.length
     + COASTLINE_BREAKS_FOR_RANDOM.length
     + FOREST_BREAKS_FOR_RANDOM.length;
@@ -828,7 +830,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['area', 'banana', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'population', 'wine'],
+    ['apple', 'area', 'banana', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'population', 'wine'],
   );
 });
 
@@ -938,6 +940,14 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     0,
     'banana cats must not appear in the 9×9 pool',
   );
+  // Apple, like the other crops, has NO ultimate break, so ALL its breaks drop.
+  const droppedApple = APPLE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedApple, APPLE_BREAKS_FOR_RANDOM.length, 'no apple tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('apple:')).length,
+    0,
+    'apple cats must not appear in the 9×9 pool',
+  );
   // Elevation IS 9×9-eligible (dense): only its five non-ultimate breaks drop,
   // the broad >=1000 tier stays, so unlike coffee it DOES appear in the pool.
   const droppedElevation = ELEVATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
@@ -966,7 +976,7 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
-      - droppedWine - droppedCocoa - droppedBanana - droppedElevation - droppedCoastline - droppedForest,
+      - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest,
   );
 });
 

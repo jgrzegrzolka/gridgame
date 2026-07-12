@@ -54,6 +54,7 @@ const MODE_LABELS = {
   'superlative-wine': { key: 'party.mode.superlativeWine', full: 'Wine production: most', shortKey: 'party.modeShort.superlativeWine', short: 'Wine' },
   'superlative-cocoa': { key: 'party.mode.superlativeCocoa', full: 'Cocoa production: most', shortKey: 'party.modeShort.superlativeCocoa', short: 'Cocoa' },
   'superlative-banana': { key: 'party.mode.superlativeBanana', full: 'Banana production: most', shortKey: 'party.modeShort.superlativeBanana', short: 'Banana' },
+  'superlative-apple': { key: 'party.mode.superlativeApple', full: 'Apple production: most', shortKey: 'party.modeShort.superlativeApple', short: 'Apple' },
   'superlative-elevation': { key: 'party.mode.superlativeElevation', full: 'Highest elevation: highest & lowest', shortKey: 'party.modeShort.superlativeElevation', short: 'Elevation' },
   'superlative-coastline': { key: 'party.mode.superlativeCoastline', full: 'Coastline length: longest & shortest', shortKey: 'party.modeShort.superlativeCoastline', short: 'Coastline' },
   'superlative-forest': { key: 'party.mode.superlativeForest', full: 'Forest cover: most & least forested', shortKey: 'party.modeShort.superlativeForest', short: 'Forest' },
@@ -106,6 +107,10 @@ const SUPERLATIVE_MODES = {
   'superlative-banana': {
     file: 'banana.json',
     hintMost: { key: 'party.hintMostBanana', fallback: 'Largest banana production' },
+  },
+  'superlative-apple': {
+    file: 'apple.json',
+    hintMost: { key: 'party.hintMostApple', fallback: 'Largest apple production' },
   },
   'superlative-elevation': {
     file: 'elevation.json',
@@ -169,6 +174,8 @@ const METRIC_ICONS = {
   'superlative-cocoa': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 4.5c3 2 4 6 2.5 9.5s-5.5 5.5-9 5-5.5-4-4.5-7.5 4-8 8-8c1.4 0 2 .5 3 1z"/><path d="M11 6.5v11"/></svg>',
   // Banana production: a curved banana.
   'superlative-banana': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5c0 7 4 12 11 12 1.6 0 2.8-.3 3.5-.8-1 .3-6 .2-9.5-3.2S6.7 5.6 7 4.5C6.2 4.9 5 4.5 5 5z"/></svg>',
+  // Apple production: a round apple with a leaf and stem.
+  'superlative-apple': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8c-1-1.5-3-2.5-5-2-2 .5-3 2.5-3 5 0 4 3 8 5.5 8 .9 0 1.4-.4 2.5-.4s1.6.4 2.5.4C17 19 20 15 20 11c0-2.5-1-4.5-3-5-2-.5-4 .5-5 2z"/><path d="M12 8c0-2 .5-3.5 2.5-4.5"/></svg>',
   // Highest elevation: a single tall peak with a snowcap (distinct from area's low range).
   'superlative-elevation': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M12 4L20 20H4z"/><path d="M9.4 11.7l2.6 1.6 2.6-1.6"/></svg>',
   // Coastline length: three stacked waves (water / shoreline), distinct from the peak.

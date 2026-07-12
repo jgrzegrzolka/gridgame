@@ -101,6 +101,7 @@ export const PARTY_MODES = [
   { id: 'superlative-wine', roundId: 'superlative-wine', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-cocoa', roundId: 'superlative-cocoa', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-banana', roundId: 'superlative-banana', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-apple', roundId: 'superlative-apple', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-elevation', roundId: 'superlative-elevation', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-coastline', roundId: 'superlative-coastline', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-forest', roundId: 'superlative-forest', poolId: 'sovereign', group: 'metric' },

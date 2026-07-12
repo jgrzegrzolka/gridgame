@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DQ (forest cover, dense + intensive/size-independent) closed once its code surfaces shipped; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DR (apple production, sparse temperate crop) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,20 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DR: Apple production as a world metric, sparse temperate crop (code surfaces complete 2026-07-12, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Thirteenth world metric, the fifth crop after coffee / wine / cocoa / banana and the temperate counterweight to them: apples are a cool-climate fruit, so ~95 real places produce (Europe, Central Asia, China, the Americas' temperate belts) and the whole tropics grow none. FAOSTAT 2024 (item 515 "Apples") via Our World in Data's mirror, producers only. China is the runaway #1 (51.3M t, ~10× the US at #2); Turkey, Poland, India, Italy, Iran, Russia, France round out the top. Jan asked for "apple or oil"; apple was picked as the clean mirror of the proven banana pipeline (same OWID FAOSTAT source, `tonnes` unit, `absence: 'zero'` contract), oil parked as a future addition needing a different source + barrels/day unit.
+
+**Data contract:** *sparse* with `absence: 'zero'`, exactly like the other crops. `flags/metrics/apple.json` lists the 95 producers only; `attachApples` (`attachZeroFilledMetric` in group.js) defaults every real place missing from the map to 0, leaving only the org "flags" without the field, so "no data" still means exactly "not a place" and the TTT no-data guard stays correct. A country that grows no apples is a *fair wrong guess* on an "apple >= 100K tonnes" cell, not a data gap. The lens and the superlative round read the raw sparse map (`createMetric`), ranking producers only. Malta (rounds to 0 t) drops to the absence default; Palestine (2022) and Réunion (2006) carry pre-2024 years, both tiny.
+
+- [x] 1. Data: `flags/metrics/apple.json` (95 producers) + `authoring/build-apple.mjs` + `METRIC_FILES` line + `attachApples` (group.js) + `METRIC_ATTACHERS` entry + `metrics.test.js` schema/absence/positive-integer/no-org/attach-fills-every-real-place/sparse-createMetric tests.
+- [x] 2. flagsdata lens (free once step 1 landed; "Apple production" in the selector, compact tonnes).
+- [x] 3. Filters: `metricTiers.js` auto-derives from `THRESHOLD_METRICS` (zero-edit); findFlag chooser (`Filters.apple` + `AppleConstraint` + `ScalarGroup`; apple section + `selectApple` + `applePills` + `appleProbability` modifier + `chooserI18n` apple loop) + `findflag-random-coverage` skill note; flagsdata filter group + lens are zero-edit (both loop `METRIC_FILES`). `attachApples` at flagsdata + findFlag via the zero-edit `attachMetrics` loop. `apple.atLeast` i18n (en+pl).
+- [x] 4. TTT: `apple(op, n)` factory + `APPLE_BREAKS_FOR_RANDOM` (`>=10K/100K/1M tonnes` = 75 / 52 / 13 real places; **`>=`-only** and no ultimate break, apples are temperate-concentrated so `apple >= N × continent` can't reach 9 distinct, every break `ultimateEligible: false`, keeping apple a 3×3-only axis like banana) + `THRESHOLD_METRICS.apple` entry (drives pool/id/label/single-use/tiers generically). `attachApples` at both party servers' static-import site (party/server.js) + the generic loops; ultimateServer.js skips it (sparse, never 9×9). `apple.atLeast` + `sections.apple` + `metric.apple` i18n (en+pl). Engine pinning tests updated (pool count, `SINGLE_USE_METRIC_GROUPS`, ultimate-pool exclusion).
+- [x] 5. Flag Party round `superlative-apple` via `createSuperlativeRound` over the raw sparse map, locked to 'most' ("biggest apple producer" = China) like the other crops. Registered across all seven spots (superlative.js + test, `partyGameServer` ROUNDS, `partyPlan` METRIC_MODES + test, `flagParty/page.js` MODE_LABELS + SUPERLATIVE_MODES + an apple-with-leaf icon, en+pl `party.mode/modeShort.superlativeApple` + `hintMostApple`) plus the `[data-metric="superlative-apple"] { --mc: #c62828 }` apple-red hue (distinct from cocoa's terracotta and wine's rose).
+
+Surface 6 (daily puzzles) is NOT a checkbox: added a row to `METRIC_DAILY_PUZZLES.md`, Feature closed.
 
 ### Feature DQ: Forest cover (% of land area) as a world metric, dense + intensive/size-independent (code surfaces shipped 2026-07-12, #851 / #852 / #853; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 
