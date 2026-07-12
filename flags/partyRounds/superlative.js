@@ -1,6 +1,8 @@
 import population from '../metrics/population.json' with { type: 'json' };
 import area from '../metrics/area.json' with { type: 'json' };
 import density from '../metrics/density.json' with { type: 'json' };
+import gdp from '../metrics/gdp.json' with { type: 'json' };
+import gdpPerCapita from '../metrics/gdpPerCapita.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -131,3 +133,9 @@ export const areaRound = createSuperlativeRound(createMetric(area, []), 'superla
 
 // Density instance: people per km², id 'superlative-density'.
 export const densityRound = createSuperlativeRound(createMetric(density, []), 'superlative-density');
+
+// GDP instance: total economy in US$, id 'superlative-gdp'.
+export const gdpRound = createSuperlativeRound(createMetric(gdp, []), 'superlative-gdp');
+
+// GDP-per-capita instance: US$ per head, id 'superlative-gdppc'.
+export const gdpPerCapitaRound = createSuperlativeRound(createMetric(gdpPerCapita, []), 'superlative-gdppc');
