@@ -48,8 +48,8 @@ const MODE_LABELS = {
   'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population: most & least', shortKey: 'party.modeShort.superlativePop', short: 'Population' },
   'superlative-area': { key: 'party.mode.superlativeArea', full: 'Land area: largest & smallest', shortKey: 'party.modeShort.superlativeArea', short: 'Land area' },
   'superlative-density': { key: 'party.mode.superlativeDensity', full: 'Population density: most & least', shortKey: 'party.modeShort.superlativeDensity', short: 'Density' },
-  'superlative-gdp': { key: 'party.mode.superlativeGdp', full: 'GDP: biggest & smallest', shortKey: 'party.modeShort.superlativeGdp', short: 'GDP' },
-  'superlative-gdppc': { key: 'party.mode.superlativeGdppc', full: 'GDP per capita: richest & poorest', shortKey: 'party.modeShort.superlativeGdppc', short: 'GDP per capita' },
+  'superlative-gdp': { key: 'party.mode.superlativeGdp', full: 'GDP: largest & smallest', shortKey: 'party.modeShort.superlativeGdp', short: 'GDP' },
+  'superlative-gdppc': { key: 'party.mode.superlativeGdppc', full: 'GDP per capita: largest & smallest', shortKey: 'party.modeShort.superlativeGdppc', short: 'GDP per capita' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -74,13 +74,13 @@ const SUPERLATIVE_MODES = {
   },
   'superlative-gdp': {
     file: 'gdp.json',
-    hintMost: { key: 'party.hintMostGdp', fallback: 'Biggest economy' },
-    hintLeast: { key: 'party.hintLeastGdp', fallback: 'Smallest economy' },
+    hintMost: { key: 'party.hintMostGdp', fallback: 'Largest GDP' },
+    hintLeast: { key: 'party.hintLeastGdp', fallback: 'Smallest GDP' },
   },
   'superlative-gdppc': {
     file: 'gdpPerCapita.json',
-    hintMost: { key: 'party.hintMostGdppc', fallback: 'Richest per head' },
-    hintLeast: { key: 'party.hintLeastGdppc', fallback: 'Poorest per head' },
+    hintMost: { key: 'party.hintMostGdppc', fallback: 'Largest GDP (per capita)' },
+    hintLeast: { key: 'party.hintLeastGdppc', fallback: 'Smallest GDP (per capita)' },
   },
 };
 

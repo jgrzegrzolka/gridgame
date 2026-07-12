@@ -529,8 +529,8 @@
       "superlativePop": "Population: most & least",
       "superlativeArea": "Land area: largest & smallest",
       "superlativeDensity": "Population density: most & least",
-      "superlativeGdp": "GDP: biggest & smallest",
-      "superlativeGdppc": "GDP per capita: richest & poorest"
+      "superlativeGdp": "GDP: largest & smallest",
+      "superlativeGdppc": "GDP per capita: largest & smallest"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -551,10 +551,10 @@
     "hintLeastArea": "Smallest area",
     "hintMostDensity": "Highest density",
     "hintLeastDensity": "Lowest density",
-    "hintMostGdp": "Biggest economy",
-    "hintLeastGdp": "Smallest economy",
-    "hintMostGdppc": "Richest per head",
-    "hintLeastGdppc": "Poorest per head",
+    "hintMostGdp": "Largest GDP",
+    "hintLeastGdp": "Smallest GDP",
+    "hintMostGdppc": "Largest GDP (per capita)",
+    "hintLeastGdppc": "Smallest GDP (per capita)",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",

@@ -530,7 +530,7 @@
       "superlativeArea": "Powierzchnia: największe i najmniejsze",
       "superlativeDensity": "Gęstość zaludnienia: najwięcej i najmniej",
       "superlativeGdp": "PKB: największe i najmniejsze",
-      "superlativeGdppc": "PKB na mieszkańca: najbogatsze i najbiedniejsze"
+      "superlativeGdppc": "PKB na mieszkańca: największe i najmniejsze"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -551,10 +551,10 @@
     "hintLeastArea": "Najmniejsza powierzchnia",
     "hintMostDensity": "Największa gęstość zaludnienia",
     "hintLeastDensity": "Najmniejsza gęstość zaludnienia",
-    "hintMostGdp": "Największa gospodarka",
-    "hintLeastGdp": "Najmniejsza gospodarka",
-    "hintMostGdppc": "Najbogatsze na mieszkańca",
-    "hintLeastGdppc": "Najbiedniejsze na mieszkańca",
+    "hintMostGdp": "Największe PKB",
+    "hintLeastGdp": "Najmniejsze PKB",
+    "hintMostGdppc": "Największe PKB (na mieszkańca)",
+    "hintLeastGdppc": "Najmniejsze PKB (na mieszkańca)",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
