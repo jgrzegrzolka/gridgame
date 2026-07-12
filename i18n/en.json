@@ -416,7 +416,8 @@
       "apple": "Apple production",
       "elevation": "Highest elevation",
       "coastline": "Coastline length",
-      "forest": "Forest cover"
+      "forest": "Forest cover",
+      "oil": "Oil production"
     }
   },
   "daily": {
@@ -546,7 +547,8 @@
       "superlativeApple": "Apple production: most",
       "superlativeElevation": "Highest elevation: highest & lowest",
       "superlativeCoastline": "Coastline length: longest & shortest",
-      "superlativeForest": "Forest cover: most & least forested"
+      "superlativeForest": "Forest cover: most & least forested",
+      "superlativeOil": "Oil production: most"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -564,7 +566,8 @@
       "superlativeApple": "Apple",
       "superlativeElevation": "Elevation",
       "superlativeCoastline": "Coastline",
-      "superlativeForest": "Forest"
+      "superlativeForest": "Forest",
+      "superlativeOil": "Oil"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -590,6 +593,7 @@
     "hintLeastCoastline": "Shortest coast",
     "hintMostForest": "Most forested",
     "hintLeastForest": "Least forested",
+    "hintMostOil": "Largest oil production",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
@@ -806,6 +810,13 @@
       "1": "under 1% forest"
     }
   },
+  "oil": {
+    "atLeast": {
+      "10": "over 10 TWh",
+      "100": "over 100 TWh",
+      "1000": "over 1,000 TWh"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",
@@ -874,7 +885,8 @@
     "apple": "Apple production",
     "elevation": "Highest elevation",
     "coastline": "Coastline length",
-    "forest": "Forest cover"
+    "forest": "Forest cover",
+    "oil": "Oil production"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

@@ -58,6 +58,7 @@ const MODE_LABELS = {
   'superlative-elevation': { key: 'party.mode.superlativeElevation', full: 'Highest elevation: highest & lowest', shortKey: 'party.modeShort.superlativeElevation', short: 'Elevation' },
   'superlative-coastline': { key: 'party.mode.superlativeCoastline', full: 'Coastline length: longest & shortest', shortKey: 'party.modeShort.superlativeCoastline', short: 'Coastline' },
   'superlative-forest': { key: 'party.mode.superlativeForest', full: 'Forest cover: most & least forested', shortKey: 'party.modeShort.superlativeForest', short: 'Forest' },
+  'superlative-oil': { key: 'party.mode.superlativeOil', full: 'Oil production: most', shortKey: 'party.modeShort.superlativeOil', short: 'Oil' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -127,6 +128,10 @@ const SUPERLATIVE_MODES = {
     hintMost: { key: 'party.hintMostForest', fallback: 'Most forested' },
     hintLeast: { key: 'party.hintLeastForest', fallback: 'Least forested' },
   },
+  'superlative-oil': {
+    file: 'oil.json',
+    hintMost: { key: 'party.hintMostOil', fallback: 'Largest oil production' },
+  },
 };
 
 /** Every round id this build can render: the two fixed picture rounds plus the
@@ -182,6 +187,8 @@ const METRIC_ICONS = {
   'superlative-coastline': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8c1.5 0 1.5 1.5 3 1.5S10.5 8 12 8s1.5 1.5 3 1.5S19.5 8 21 8"/><path d="M3 13c1.5 0 1.5 1.5 3 1.5S10.5 13 12 13s1.5 1.5 3 1.5S19.5 13 21 13"/><path d="M3 18c1.5 0 1.5 1.5 3 1.5S10.5 18 12 18s1.5 1.5 3 1.5S19.5 18 21 18"/></svg>',
   // Forest cover: a two-tier pine with a centred trunk, distinct from elevation's bare peak.
   'superlative-forest': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 7.5 10H10l-3.5 5h4v4h3v-4h4L14 10h2.5z"/></svg>',
+  // Oil production: an oil derrick (a pumpjack tower) with a ground line.
+  'superlative-oil': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21 9 5l8 12M7 15h6M4 21h16M9 5l3-2 1 3"/></svg>',
 };
 
 /**

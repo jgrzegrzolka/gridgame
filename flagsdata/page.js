@@ -873,7 +873,7 @@ export function bootFlagsData() {
    * against the loaded set, and the predicate reads the field `attach<Metric>s`
    * denormalizes on). Reuses findFlag's `sections.<metricKey>` label key, same
    * cross-reference the Colors group already makes to `findFlag.noOtherColors`.
-   * @param {'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest'} metricKey
+   * @param {'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil'} metricKey
    * @param {string} fallbackLabel
    * @param {Country[]} countries
    */

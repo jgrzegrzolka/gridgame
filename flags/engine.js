@@ -529,6 +529,28 @@ export const FOREST_BREAKS_FOR_RANDOM = [
   { op: '<=', n: 1 },
 ];
 
+/**
+ * Oil-production-threshold Categories (terawatt-hours). Sparse like the crops,
+ * so **`>=`-only**: only ~92 real places pump any oil, the rest sit at 0 (via
+ * `absence: 'zero'`), so a `<=` tier would be meaningless. The meaningful axis is
+ * "produces AT LEAST N": `>=10/100/1000 TWh` (76 / 35 / 12 real places, a clean
+ * spread from the minor producers up to the 12 giants: the US, Russia, Saudi
+ * Arabia, China, Iran, Iraq, Canada, Brazil, the UAE, Kuwait, Mexico, Kazakhstan).
+ * `exclusiveGroup: 'oil'`.
+ *
+ * No `ultimate: true` break: oil is geographically concentrated (Oceania has
+ * essentially only Australia, sub-Saharan Africa a handful), so `oil >= N ×
+ * continent` can't reach 9 distinct. Every break carries `ultimateEligible:
+ * false`, keeping oil a 3×3-only axis like the crops.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const OIL_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 10 },
+  { op: '>=', n: 100 },
+  { op: '>=', n: 1_000 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -769,6 +791,11 @@ function metresLabel(/** @type {number} */ n) {
 
 /** Kilometres with thousands separators ("25,000", "500") for the coastline threshold text. */
 function kmLabel(/** @type {number} */ n) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/** Terawatt-hours with thousands separators ("1,000", "100") for the oil threshold text. */
+function twhLabel(/** @type {number} */ n) {
   return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
@@ -1076,6 +1103,37 @@ export function forest(op, n, opts = {}) {
 }
 
 /**
+ * Oil-production-threshold Category factory (terawatt-hours). Reads the
+ * denormalized `country.oil` field (`attachOils`, which fills 0 for a real place
+ * that pumps none). `exclusiveGroup: 'oil'`. The break list is `>=`-only (see
+ * OIL_BREAKS_FOR_RANDOM), but the `<=` branch is kept for symmetry so an
+ * `oil:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function oil(op, n, opts = {}) {
+  const human = twhLabel(n);
+  const label = op === '>=' ? `over ${human} TWh` : `under ${human} TWh`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.oil === 'number' && c.oil >= n
+      : (c) => typeof c.oil === 'number' && c.oil <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `oil:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'oil',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -1285,6 +1343,19 @@ export const THRESHOLD_METRICS = {
     labelFor: (op, n, translate) => {
       if (op === '>=') return translate(`forest.atLeast.${n}`, `over ${n}%`);
       return translate(`forest.atMost.${n}`, `under ${n}%`);
+    },
+  },
+  oil: {
+    breaks: OIL_BREAKS_FOR_RANDOM,
+    factory: oil,
+    prefixFallback: 'Oil production',
+    field: 'oil',
+    family: 'oil',
+    has: (c) => typeof c.oil === 'number',
+    labelFor: (op, n, translate) => {
+      const human = twhLabel(n);
+      if (op === '>=') return translate(`oil.atLeast.${n}`, `over ${human} TWh`);
+      return translate(`oil.atMost.${n}`, `under ${human} TWh`);
     },
   },
 };

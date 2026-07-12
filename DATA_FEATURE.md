@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DR (apple production, sparse temperate crop) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DS (oil production, sparse extractive metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,20 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DS: Oil production as a world metric, sparse extractive (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Fourteenth world metric, the sixth sparse one and the first *extractive* (not agricultural) metric: only ~92 real places pump any oil (the Gulf, Russia, the US, the North Sea, west Africa, Venezuela, ...), the rest produce none. Energy Institute Statistical Review of World Energy via Our World in Data, reported in **terawatt-hours (TWh)** of energy, not barrels. We keep the source unit rather than convert to barrels/day (which would bake in an assumed energy-density factor); "biggest oil producer" superlatives don't lean on the unit anyway. The US leads (9,977 TWh), then Russia (6,122) and Saudi Arabia (5,933). Jan's "apple or oil" call: apple shipped first (Feature DR), oil is this follow-up.
+
+**Data contract:** *sparse* with `absence: 'zero'`, exactly like the crops. `flags/metrics/oil.json` lists the 92 producers only; `attachOils` (`attachZeroFilledMetric` in group.js) defaults every real place missing from the map to 0, leaving only the org "flags" without the field, so "no data" still means exactly "not a place" and the TTT no-data guard stays correct. A country that pumps no oil is a *fair wrong guess* on an "oil >= 100 TWh" cell, not a data gap. The lens and the superlative round read the raw sparse map (`createMetric`), ranking producers only. ~8 sub-1-TWh producers round to 0 and drop to the absence default. Data caveat disclosed in the source string: the major producers carry 2024 figures, but ~half the minor producers only have data through 2016 in this OWID series (each carries its latest available year); none is large enough to move a tier or a superlative answer set.
+
+- [x] 1. Data: `flags/metrics/oil.json` (92 producers) + `authoring/build-oil.mjs` + `METRIC_FILES` line + `attachOils` (group.js) + `METRIC_ATTACHERS` entry + `metrics.test.js` schema/absence/positive-integer/no-org/attach-fills-every-real-place/sparse-createMetric tests.
+- [x] 2. flagsdata lens (free once step 1 landed; "Oil production" in the selector, compact TWh).
+- [x] 3. Filters: `metricTiers.js` auto-derives from `THRESHOLD_METRICS` (zero-edit); findFlag chooser (`Filters.oil` + `OilConstraint` + `ScalarGroup`; oil section + `selectOil` + `oilPills` + `oilProbability` modifier + `chooserI18n` oil loop) + `findflag-random-coverage` skill note; flagsdata filter group + lens are zero-edit (both loop `METRIC_FILES`). `attachOils` at flagsdata + findFlag via the zero-edit `attachMetrics` loop. `oil.atLeast` i18n (en+pl).
+- [x] 4. TTT: `oil(op, n)` factory + `twhLabel` helper + `OIL_BREAKS_FOR_RANDOM` (`>=10/100/1000 TWh` = 76/35/12 real places; **`>=`-only** and no ultimate break, oil is geographically concentrated so `oil >= N × continent` can't reach 9 distinct, every break `ultimateEligible: false`, keeping oil a 3×3-only axis like the crops) + `THRESHOLD_METRICS.oil` entry. `attachOils` at party/server.js's static-import site + the generic loops; ultimateServer.js skips it (sparse, never 9×9). `oil.atLeast` + `sections.oil` + `metric.oil` i18n (en+pl). Engine pinning tests updated (pool count, `SINGLE_USE_METRIC_GROUPS`, ultimate-pool exclusion, category-source sweep).
+- [x] 5. Flag Party round `superlative-oil` via `createSuperlativeRound` over the raw sparse map, locked to 'most' ("biggest oil producer" = the US) like the crops. Registered across all seven spots (superlative.js + test, `partyGameServer` ROUNDS, `partyPlan` METRIC_MODES + test, `flagParty/page.js` MODE_LABELS + SUPERLATIVE_MODES + an oil-derrick icon, en+pl `party.mode/modeShort.superlativeOil` + `hintMostOil`) plus the `[data-metric="superlative-oil"] { --mc: #37474f }` petroleum-slate hue (distinct from the blues of elevation/coastline).
+
+Surface 6 (daily puzzles) is NOT a checkbox: added a row to `METRIC_DAILY_PUZZLES.md`, Feature closed.
 
 ### Feature DR: Apple production as a world metric, sparse temperate crop (code surfaces complete 2026-07-12, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

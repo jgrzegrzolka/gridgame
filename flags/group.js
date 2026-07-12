@@ -26,6 +26,7 @@
  * @property {number} [elevation]  Denormalized from `flags/metrics/elevation.json` by `attachElevations` (metres above sea level of the highest point). Dense, same pattern as `area`; absent only for non-places (orgs).
  * @property {number} [coastline]  Denormalized from `flags/metrics/coastline.json` by `attachCoastlines` (kilometres of coastline). Dense, same pattern as `area`: every real place has a value (a landlocked place carries 0), absent only for non-places (orgs).
  * @property {number} [forest]  Denormalized from `flags/metrics/forest.json` by `attachForests` (forest area as a percentage of land area). Dense, same pattern as `area`: every real place has a value (a treeless desert/ice sheet carries 0.0), absent only for non-places (orgs).
+ * @property {number} [oil]  Denormalized from `flags/metrics/oil.json` by `attachOils` (oil production, terawatt-hours). Sparse `absence: 'zero'` metric: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -329,6 +330,22 @@ export function attachApples(countries, values) {
 }
 
 /**
+ * Denormalize `flags/metrics/oil.json` onto each Country as `.oil`
+ * (oil production, terawatt-hours). Sparse `absence: 'zero'` metric like the
+ * crops: producers get their output, every other real place gets 0, orgs stay
+ * bare.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachOils(countries, values) {
+  return attachZeroFilledMetric(countries, values, (c, v) => {
+    c.oil = v;
+  });
+}
+
+/**
  * Registry of the metric denormalizers, keyed by metric key (the same keys as
  * `flags/metrics/index.js`'s METRIC_FILES). This is the single place a new
  * metric registers its loader: add its `attach<Key>s` here next to the others,
@@ -353,6 +370,7 @@ const METRIC_ATTACHERS = {
   elevation: attachElevations,
   coastline: attachCoastlines,
   forest: attachForests,
+  oil: attachOils,
 };
 
 /**
