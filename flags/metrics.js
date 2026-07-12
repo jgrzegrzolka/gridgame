@@ -23,6 +23,10 @@ import { sovereigntyOf } from './group.js';
  * @property {string} label
  * @property {string} unit
  * @property {string} [format] display hint: 'compact' (1.4B) or 'decimal1' (4.2)
+ * @property {string} [absence] sparse-metric hint: 'zero' means a real place
+ *   absent from `values` produces none (the loader defaults it to 0); omitted
+ *   for dense/universal metrics where absence isn't zero. See flags/group.js
+ *   `attachZeroFilledMetric` and the add-world-metric skill's absence policy.
  * @property {string} source
  * @property {number} year
  * @property {Record<string, number>} values

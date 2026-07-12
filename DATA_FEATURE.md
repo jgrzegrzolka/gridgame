@@ -19,7 +19,24 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. The most recent (Feature DJ) closed once its code surfaces shipped; per-metric daily-puzzle authoring now lives in `METRIC_DAILY_PUZZLES.md`, not here._
+### Feature DK: Coffee production as a world metric (the first *sparse* metric)
+
+Sixth world metric, and the **first sparse one**: only ~80 countries grow coffee at all, unlike population / area / GDP where every real place has a real value. So it's the metric that builds the reusable **`absence: 'zero'`** machinery the add-world-metric skill parked for "the first time a sparse metric lands". Adds a genuinely different axis: "biggest coffee producers", `coffee >= 1M tonnes`, the coffee belt lit up on the lens.
+
+**Data contract:** sparse, **`absence: 'zero'`**. The metric file (`coffee.json`) lists **producers only** (78 of them) and carries an `absence: 'zero'` hint. The loader `attachCoffees` → `attachZeroFilledMetric` (group.js) defaults every real place (`category !== 'other'`) the map omits to **0**, leaving only the org flags without the field, so the TTT no-data guard still reads "no data == not a place". A country that grows no coffee is a *fair wrong guess* on a `coffee >= N` cell, not a data gap. The lens and superlative rounds instead read the raw sparse map via `createMetric`, so "smallest producer" ranks the smallest *grower*, not a ~180-way tie at 0. That split (0-fill in the denormalized threshold field only, raw sparse map for ranking) is the whole point of `absence: 'zero'`.
+
+**Filters are one-directional (Jan, 2026-07-12):** for a production metric only **"produces at least N"** tiers make sense. A `<=` / "under N" tier would flood with the ~180 non-growers sitting at 0 (and reads oddly: "produces little/no coffee" is almost everyone). So `COFFEE_BREAKS_FOR_RANDOM` is **atLeast-only** (surface 3/4, PR2), unlike the two-directional population / area / GDP ladders.
+
+**Data-quality note:** FAOSTAT 2023 (via OWID) is the source. Two figures were clearly stale imputations that would have ranked war-collapsed sectors among the world's top producers, corrected in `build-coffee.mjs`'s `OVERRIDES` (same discipline as GDP's South Sudan): **Central African Republic** 316,108 t → 2,800 t (ICO recorded ~45,940 60-kg bags ≈ 2,756 t for 2023; sector collapsed with the civil war), **Guinea** flat 200,000 t → 10,000 t (a constant round number across years = imputation; trade data puts Guinea at ~0.1% of world coffee exports). Verified in-browser: both now rank #49 / #33, not phantom top-10.
+
+- [x] 1. Data: `flags/metrics/coffee.json` (78 producers, `absence: 'zero'`) + `authoring/build-coffee.mjs` (FAOSTAT-2023 snapshot + 2 overrides) + `METRIC_FILES` line + reusable `attachZeroFilledMetric` + `attachCoffees` (group.js) + `absence` on the `MetricData` typedef (metrics.js) + `metrics.test.js` schema/positive-integer/no-org/**zero-fill-contract**/sparse-lens tests + `group.test.js` attach test + `metric.coffee` lens i18n (en+pl). Also freed the `dailyValidate` "unknown metric" test off the now-real `coffee` key. **Verified in-browser** (surface 2 lens: growers show #rank · value, non-growers "no data"). (PR #___)
+- [ ] 2. flagsdata lens — free once step 1 landed; confirmed it appears ("Coffee production" in the selector, compact tonnes). **Done, shipped with PR1.**
+- [ ] 3 + 4 (land together, per Feature DJ's `THRESHOLD_METRICS` refactor note). `coffee(op, n)` factory + `COFFEE_BREAKS_FOR_RANDOM` (**atLeast-only**) + `THRESHOLD_METRICS` registry entry (`has: c => typeof c.coffee === 'number'`) + `attachCoffees` at all TTT/filter load sites. Filters: `Filters` field + findFlag chooser (5 edits) + `coffeeProbability` random modifier + `findflag-random-coverage` skill note; flagsdata filter group. i18n `coffee.atLeast.*` (en+pl) + `findFlag.sections.coffee`. Tests + in-browser no-data-guard verify.
+- [ ] 5. Flag Party round: `coffeeRound` via `createSuperlativeRound` across the six spots (superlative.js + test, partyGameServer ROUNDS, partyPlan METRIC_MODES + test, flagParty/page.js MODE_LABELS/SUPERLATIVE_MODES + icon + chip hue, i18n `party.mode/modeShort.superlativeCoffee`).
+
+Surface 6 (daily puzzles) is NOT a checkbox here: when 1-5 land, add a row to `METRIC_DAILY_PUZZLES.md` and close the Feature.
+
+**Standing artifact (once shipped):** `authoring/build-coffee.mjs` — the first *sparse* metric build (producers only + overrides); `attachZeroFilledMetric` (group.js) — the reusable `absence: 'zero'` loader every future crop / output metric reuses.
 
 ---
 

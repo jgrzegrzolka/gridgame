@@ -51,7 +51,7 @@ test('superlative is exempt from the filter drift detector', () => {
 });
 
 test('unknown metric is rejected', () => {
-  assert.throws(() => run(validSuperlative({ metric: 'coffee' })), /not a known metric key/);
+  assert.throws(() => run(validSuperlative({ metric: 'notametric' })), /not a known metric key/);
 });
 
 test('invalid scope is rejected', () => {

@@ -18,6 +18,7 @@
  * @property {number} [density]  Denormalized from `flags/metrics/density.json` by `attachDensities` (people per km²). Absent only for non-places.
  * @property {number} [gdp]  Denormalized from `flags/metrics/gdp.json` by `attachGdps` (nominal current US$). Absent only for non-places.
  * @property {number} [gdpPerCapita]  Denormalized from `flags/metrics/gdpPerCapita.json` by `attachGdpPerCapitas` (nominal current US$ per person). Absent only for non-places.
+ * @property {number} [coffee]  Denormalized from `flags/metrics/coffee.json` by `attachCoffees` (green-coffee tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -158,6 +159,51 @@ export function attachGdpPerCapitas(countries, values) {
     if (typeof v === 'number') c.gdpPerCapita = v;
   }
   return countries;
+}
+
+/**
+ * Denormalizer for a *sparse* metric whose absence means zero (coffee, and any
+ * future crop / output metric with `absence: 'zero'`). A producer listed in the
+ * metric map gets its value; every real place (`category !== 'other'`) the map
+ * omits produces none and gets 0; only non-place org flags are left without the
+ * field. That upholds the data contract's "every real place has a value, so 'no
+ * data' means exactly 'not a place'" invariant — which the TTT no-data guard
+ * (`metricDataGap`) leans on — without the metric JSON having to spell out ~180
+ * explicit zeros. Dense metrics (population, area, GDP) use the plain
+ * `attach<Key>s` twins instead: for them absence is genuinely "no value".
+ *
+ * `assign` writes the value onto the country's own field (kept as an explicit
+ * `c.field =` closure so the denormalized field stays statically typed, rather
+ * than a dynamic `c[field]` that JSDoc can't check).
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values — producers only (the sparse map).
+ * @param {(c: Country, v: number) => void} assign
+ * @returns {Country[]}
+ */
+export function attachZeroFilledMetric(countries, values, assign) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') assign(c, v);
+    else if (c.category !== 'other') assign(c, 0);
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/coffee.json` onto each Country as `.coffee`
+ * (green-coffee tonnes). Coffee is the first sparse `absence: 'zero'` metric, so
+ * this defers to `attachZeroFilledMetric`: growers get their tonnage, every
+ * other real place gets 0, orgs stay without the field.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachCoffees(countries, values) {
+  return attachZeroFilledMetric(countries, values, (c, v) => {
+    c.coffee = v;
+  });
 }
 
 /**

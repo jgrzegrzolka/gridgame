@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
+import { attachCoffees } from './group.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
 
@@ -16,6 +17,7 @@ const AREA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/are
 const DENSITY = /** @type {import('./metrics.js').MetricData} */ (load('metrics/density.json'));
 const GDP = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdp.json'));
 const GDP_PER_CAPITA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdpPerCapita.json'));
+const COFFEE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coffee.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -359,4 +361,69 @@ test('uninhabited places carry 0 gdpPerCapita, not a divide-by-zero drop', () =>
   for (const code of ['bv', 'hm', 'cp']) {
     assert.equal(GDP_PER_CAPITA.values[code], 0, `${code} should be 0, not missing/NaN`);
   }
+});
+
+// ---- real coffee.json schema + the sparse absence:'zero' contract ----------
+
+test('coffee is a valid, self-describing metric file with an absence hint', () => {
+  assert.equal(COFFEE.key, 'coffee');
+  assert.equal(typeof COFFEE.label, 'string');
+  assert.equal(typeof COFFEE.unit, 'string');
+  assert.ok(COFFEE.format === 'compact' || COFFEE.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof COFFEE.source, 'string');
+  assert.equal(typeof COFFEE.year, 'number');
+  assert.equal(typeof COFFEE.values, 'object');
+  // Coffee is the first sparse metric: the file must declare absence:'zero' so
+  // the loader knows to default missing real places to 0 (not "no data").
+  assert.equal(COFFEE.absence, 'zero');
+});
+
+test('every coffee value is a positive integer (tonnes, sub-tonne producers dropped)', () => {
+  // Whole tonnes; the map lists producers only, so every listed value is >= 1
+  // (a producer rounding below 1 tonne is dropped and falls to the 0 default).
+  for (const [code, v] of Object.entries(COFFEE.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 1, `${code} listed but not >= 1: ${v}`);
+  }
+});
+
+test('every coffee key is a real (non-other) country — never an org', () => {
+  const byCode = new Map(COUNTRIES.map((c) => [c.code, c]));
+  for (const code of Object.keys(COFFEE.values)) {
+    const c = byCode.get(code);
+    assert.ok(c, `coffee key ${code} is not in countries.json`);
+    assert.notEqual(c.category, 'other', `coffee key ${code} is an "other" entry`);
+  }
+});
+
+test("absence:'zero' contract: attachCoffees fills every real place, orgs stay bare", () => {
+  // The sparse-metric invariant the TTT no-data guard leans on: after the loader
+  // runs, EVERY real place carries a numeric .coffee (growers their tonnage,
+  // non-growers 0), and only non-place orgs are left without the field. This is
+  // what makes "no data" mean exactly "not a place" for a sparse metric.
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachCoffees(/** @type {any} */ (rows), COFFEE.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.coffee, undefined, `org ${c.code} should have no coffee field`);
+    } else {
+      assert.equal(typeof row.coffee, 'number', `real place ${c.code} has no coffee value`);
+    }
+  }
+  // Spot-check the two ends: a listed grower keeps its value, a real non-grower
+  // reads exactly 0 (a fair wrong guess, not a data gap).
+  assert.equal(/** @type {any} */ (byCode.get('br')).coffee, COFFEE.values.br);
+  assert.equal(/** @type {any} */ (byCode.get('de')).coffee, 0); // Germany grows none
+});
+
+test('createMetric over coffee stays sparse: it ranks growers only', () => {
+  // Deliberate split: the lens / superlative rounds read the raw sparse map, so
+  // "biggest producer" is Brazil and a non-grower has NO rank (rather than a
+  // 180-way tie at 0). The 0-fill lives only in the denormalized threshold field.
+  const coffee = createMetric(COFFEE, COUNTRIES);
+  assert.equal(coffee.topN('world', 1)[0].code, 'br'); // Brazil, the largest
+  assert.equal(coffee.rankOf('vn', 'world'), 2); // Vietnam second
+  assert.equal(coffee.has('de'), false); // Germany isn't a grower → out of the ranking
 });
