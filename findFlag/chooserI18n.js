@@ -29,6 +29,7 @@ import { pillLabel } from '../flags/findFlag.js';
  * @typedef {{ labelSpan: { textContent: string }, value: string }} BananaPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} ElevationPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} CoastlinePillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} ForestPillRef
  *
  * @param {{
  *   sectionHeaders: SectionHeader[],
@@ -44,11 +45,12 @@ import { pillLabel } from '../flags/findFlag.js';
  *   bananaPills?: BananaPillRef[],
  *   elevationPills?: ElevationPillRef[],
  *   coastlinePills?: CoastlinePillRef[],
+ *   forestPills?: ForestPillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], elevationPills = [], onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], elevationPills = [], coastlinePills = [], forestPills = [], onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
@@ -95,6 +97,14 @@ export function refreshChooserI18n({ sectionHeaders, allPills, populationPills =
   // Elevation pills (">=1000" etc.) via pillLabel's elevation branch.
   for (const p of elevationPills) {
     p.labelSpan.textContent = pillLabel('elevation', p.value, 'include', t);
+  }
+  // Coastline pills (">=1000" etc.) via pillLabel's coastline branch.
+  for (const p of coastlinePills) {
+    p.labelSpan.textContent = pillLabel('coastline', p.value, 'include', t);
+  }
+  // Forest pills (">=30" etc.) via pillLabel's forest branch.
+  for (const p of forestPills) {
+    p.labelSpan.textContent = pillLabel('forest', p.value, 'include', t);
   }
   if (onlyColorsLabelSpan) {
     onlyColorsLabelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');

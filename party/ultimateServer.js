@@ -6,7 +6,8 @@ import gdp from '../flags/metrics/gdp.json' with { type: 'json' };
 import gdpPerCapita from '../flags/metrics/gdpPerCapita.json' with { type: 'json' };
 import elevation from '../flags/metrics/elevation.json' with { type: 'json' };
 import coastline from '../flags/metrics/coastline.json' with { type: 'json' };
-import { loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachElevations, attachCoastlines } from '../flags/group.js';
+import forest from '../flags/metrics/forest.json' with { type: 'json' };
+import { loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachElevations, attachCoastlines, attachForests } from '../flags/group.js';
 import { UltimateTicTacToeServer } from './ultimateTicTacToeServer.js';
 
 // See party/server.js for why the JSON import is safe here. The 9×9 pool keeps
@@ -22,6 +23,7 @@ attachGdps(countries, gdp.values);
 attachGdpPerCapitas(countries, gdpPerCapita.values);
 attachElevations(countries, elevation.values);
 attachCoastlines(countries, coastline.values);
+attachForests(countries, forest.values);
 
 export default class UltimateGameServer extends UltimateTicTacToeServer {
   /** @param {any} party */

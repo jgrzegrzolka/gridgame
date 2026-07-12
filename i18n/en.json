@@ -414,7 +414,8 @@
       "cocoa": "Cocoa production",
       "banana": "Banana production",
       "elevation": "Highest elevation",
-      "coastline": "Coastline length"
+      "coastline": "Coastline length",
+      "forest": "Forest cover"
     }
   },
   "daily": {
@@ -782,6 +783,18 @@
       "1": "landlocked (no coast)"
     }
   },
+  "forest": {
+    "atLeast": {
+      "30": "over 30% forest",
+      "50": "over 50% forest",
+      "70": "over 70% forest"
+    },
+    "atMost": {
+      "20": "under 20% forest",
+      "5": "under 5% forest",
+      "1": "under 1% forest"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",
@@ -848,7 +861,8 @@
     "cocoa": "Cocoa production",
     "banana": "Banana production",
     "elevation": "Highest elevation",
-    "coastline": "Coastline length"
+    "coastline": "Coastline length",
+    "forest": "Forest cover"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",
