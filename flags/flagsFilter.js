@@ -37,6 +37,11 @@ import { METRIC_KEYS } from './engine.js';
  * @typedef {{ op: '>=' | '<=', n: number }} GdpPerCapitaConstraint
  *   GDP-per-capita threshold (nominal US$/person), scalar twin; reads `country.gdpPerCapita`.
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} CoffeeConstraint
+ *   Green-coffee-production threshold (tonnes), scalar twin; reads `country.coffee`.
+ *   Sparse `absence: 'zero'` metric: a real place that grows none reads 0 (a real,
+ *   comparable value), so only non-place org flags match neither direction.
+ *
  * @typedef {{
  *   status: FilterSet,
  *   continent: FilterSet,
@@ -49,6 +54,7 @@ import { METRIC_KEYS } from './engine.js';
  *   density: DensityConstraint | null,
  *   gdp: GdpConstraint | null,
  *   gdpPerCapita: GdpPerCapitaConstraint | null,
+ *   coffee: CoffeeConstraint | null,
  * }} Filters
  */
 
@@ -89,6 +95,7 @@ export function emptyFilters() {
     density: null,
     gdp: null,
     gdpPerCapita: null,
+    coffee: null,
   };
 }
 
@@ -255,7 +262,7 @@ export function matchesFilters(country, filters, options = {}) {
 
 /**
  * @typedef {'status' | 'continent' | 'color' | 'motif' | 'stripesOnly'} PillGroup
- * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita'} ScalarGroup
+ * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee'} ScalarGroup
  *
  * @typedef {{ kind: 'pill', group: PillGroup, value: string, exclude: boolean }
  *   | { kind: 'scalar', group: ScalarGroup }} FilterChip

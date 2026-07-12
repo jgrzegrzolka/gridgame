@@ -408,7 +408,8 @@
       "area": "Powierzchnia",
       "density": "Gęstość zaludnienia",
       "gdp": "PKB",
-      "gdpPerCapita": "PKB na osobę"
+      "gdpPerCapita": "PKB na osobę",
+      "coffee": "Produkcja kawy"
     }
   },
   "daily": {
@@ -697,6 +698,13 @@
       "5k": "poniżej 5 tys. $",
       "2k": "poniżej 2 tys. $",
       "1k": "poniżej 1 tys. $"
+    }
+  },
+  "coffee": {
+    "atLeast": {
+      "1k": "ponad 1 tys. ton",
+      "10k": "ponad 10 tys. ton",
+      "100k": "ponad 100 tys. ton"
     }
   },
   "filter": {

@@ -334,6 +334,30 @@ export const GDP_PER_CAPITA_BREAKS_FOR_RANDOM = [
   { op: '<=', n: 1_000 },
 ];
 
+/**
+ * Coffee-production-threshold Categories (green-coffee tonnes). The first
+ * *sparse* metric, and so the first that is **`>=`-only**: only ~80 countries
+ * grow coffee at all, so a `<=` / "produces under N" tier would just collect the
+ * ~180 non-growers sitting at 0 (via `absence: 'zero'`) — trivially fillable and
+ * meaningless ("grows little/no coffee" is almost everyone). So the meaningful
+ * axis is "produces AT LEAST N": `>=1K / >=10K / >=100K tonnes` (52 / 33 / 14
+ * real places). `exclusiveGroup: 'coffee'`.
+ *
+ * No `ultimate: true` break — unlike the dense metrics, coffee is too sparse and
+ * concentrated to back a 9×9 cell: whole continents (Europe, most of Oceania)
+ * grow essentially none, so `coffee >= N × continent` can't reach 9 distinct.
+ * Every break therefore carries `ultimateEligible: false`, keeping coffee out of
+ * the Ultimate pool (the same mechanism that excludes `stripesOnly`); it stays a
+ * 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const COFFEE_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1_000 },
+  { op: '>=', n: 10_000 },
+  { op: '>=', n: 100_000 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -553,6 +577,20 @@ function usdToken(/** @type {number} */ n) {
   return `${n / 1_000}k`;
 }
 
+/** Compact tonnes label ("1K", "10K", "100K", "1M") for the coffee threshold text. */
+function tonnesCompact(/** @type {number} */ n) {
+  if (n >= 1_000_000) return `${n / 1_000_000}M`;
+  if (n >= 1_000) return `${n / 1_000}K`;
+  return `${n}`;
+}
+
+/** Compact tonnes i18n token ("1k", "10k", "100k", "1m") aligned with the break list. */
+function tonnesToken(/** @type {number} */ n) {
+  if (n >= 1_000_000) return `${n / 1_000_000}m`;
+  if (n >= 1_000) return `${n / 1_000}k`;
+  return `${n}`;
+}
+
 /**
  * GDP-threshold Category factory (nominal current US$). Reads the denormalized
  * `country.gdp` field (`attachGdps`). `exclusiveGroup: 'gdp'`.
@@ -605,6 +643,37 @@ export function gdpPerCapita(op, n, opts = {}) {
     label,
     predicate,
     exclusiveGroup: 'gdpPerCapita',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
+ * Coffee-production-threshold Category factory (green-coffee tonnes). Reads the
+ * denormalized `country.coffee` field (`attachCoffees`, which fills 0 for a real
+ * place that grows none). `exclusiveGroup: 'coffee'`. The break list is `>=`-only
+ * (see COFFEE_BREAKS_FOR_RANDOM), but the `<=` branch is kept for symmetry so a
+ * `coffee:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function coffee(op, n, opts = {}) {
+  const human = tonnesCompact(n);
+  const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.coffee === 'number' && c.coffee >= n
+      : (c) => typeof c.coffee === 'number' && c.coffee <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `coffee:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'coffee',
   };
   if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
@@ -712,6 +781,20 @@ export const THRESHOLD_METRICS = {
       const human = usdCompact(n);
       if (op === '>=') return translate(`gdpPerCapita.atLeast.${token}`, `over ${human}`);
       return translate(`gdpPerCapita.atMost.${token}`, `under ${human}`);
+    },
+  },
+  coffee: {
+    breaks: COFFEE_BREAKS_FOR_RANDOM,
+    factory: coffee,
+    prefixFallback: 'Coffee production',
+    field: 'coffee',
+    family: 'coffee',
+    has: (c) => typeof c.coffee === 'number',
+    labelFor: (op, n, translate) => {
+      const token = tonnesToken(n);
+      const human = tonnesCompact(n);
+      if (op === '>=') return translate(`coffee.atLeast.${token}`, `over ${human} tonnes`);
+      return translate(`coffee.atMost.${token}`, `under ${human} tonnes`);
     },
   },
 };
