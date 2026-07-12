@@ -5,6 +5,7 @@ import gdp from '../metrics/gdp.json' with { type: 'json' };
 import gdpPerCapita from '../metrics/gdpPerCapita.json' with { type: 'json' };
 import coffee from '../metrics/coffee.json' with { type: 'json' };
 import wine from '../metrics/wine.json' with { type: 'json' };
+import cocoa from '../metrics/cocoa.json' with { type: 'json' };
 import elevation from '../metrics/elevation.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
@@ -163,6 +164,11 @@ export const coffeeRound = createSuperlativeRound(createMetric(coffee, []), 'sup
 // round ranks the makers only (non-makers would tie at 0). Locked to 'most':
 // "biggest wine producer" is the good question; "smallest maker" is obscure.
 export const wineRound = createSuperlativeRound(createMetric(wine, []), 'superlative-wine', { direction: 'most' });
+
+// Cocoa instance: cocoa-bean tonnes, id 'superlative-cocoa'. Sparse like coffee /
+// wine, so the round ranks the growers only (non-growers would tie at 0). Locked
+// to 'most': "biggest cocoa producer" (Côte d'Ivoire) is the good question.
+export const cocoaRound = createSuperlativeRound(createMetric(cocoa, []), 'superlative-cocoa', { direction: 'most' });
 
 // Elevation instance: highest point in metres, id 'superlative-elevation'. Dense
 // and two-directional (no direction lock, unlike coffee): both "highest peak"

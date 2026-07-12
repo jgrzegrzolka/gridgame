@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachWines } from './group.js';
+import { attachCoffees, attachWines, attachCocoas } from './group.js';
+import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
 
@@ -19,6 +20,7 @@ const GDP = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdp.
 const GDP_PER_CAPITA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdpPerCapita.json'));
 const COFFEE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coffee.json'));
 const WINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/wine.json'));
+const COCOA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/cocoa.json'));
 const ELEVATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/elevation.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
@@ -496,6 +498,60 @@ test('createMetric over wine stays sparse: it ranks makers only', () => {
   assert.equal(wine.has('af'), false); // Afghanistan isn't a maker → out of the ranking
 });
 
+// ---- real cocoa.json schema + the sparse absence:'zero' contract -----------
+
+test('cocoa is a valid, self-describing metric file with an absence hint', () => {
+  assert.equal(COCOA.key, 'cocoa');
+  assert.equal(typeof COCOA.label, 'string');
+  assert.equal(typeof COCOA.unit, 'string');
+  assert.ok(COCOA.format === 'compact' || COCOA.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof COCOA.source, 'string');
+  assert.equal(typeof COCOA.year, 'number');
+  assert.equal(typeof COCOA.values, 'object');
+  // Sparse like coffee / wine: growers only, absence means "grows none" → 0.
+  assert.equal(COCOA.absence, 'zero');
+});
+
+test('every cocoa value is a positive integer (tonnes, sub-tonne growers dropped)', () => {
+  for (const [code, v] of Object.entries(COCOA.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 1, `${code} listed but not >= 1: ${v}`);
+  }
+});
+
+test('every cocoa key is a real (non-other) country, never an org', () => {
+  const byCode = new Map(COUNTRIES.map((c) => [c.code, c]));
+  for (const code of Object.keys(COCOA.values)) {
+    const c = byCode.get(code);
+    assert.ok(c, `cocoa key ${code} is not in countries.json`);
+    assert.notEqual(c.category, 'other', `cocoa key ${code} is an "other" entry`);
+  }
+});
+
+test("absence:'zero' contract: attachCocoas fills every real place, orgs stay bare", () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachCocoas(/** @type {any} */ (rows), COCOA.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.cocoa, undefined, `org ${c.code} should have no cocoa field`);
+    } else {
+      assert.equal(typeof row.cocoa, 'number', `real place ${c.code} has no cocoa value`);
+    }
+  }
+  // A listed grower keeps its value, a real non-grower reads exactly 0.
+  assert.equal(/** @type {any} */ (byCode.get('ci')).cocoa, COCOA.values.ci);
+  assert.equal(/** @type {any} */ (byCode.get('af')).cocoa, 0); // Afghanistan grows none
+});
+
+test('createMetric over cocoa stays sparse: it ranks growers only', () => {
+  const cocoa = createMetric(COCOA, COUNTRIES);
+  assert.equal(cocoa.topN('world', 1)[0].code, 'ci'); // Côte d'Ivoire, the largest
+  assert.equal(cocoa.rankOf('id', 'world'), 2); // Indonesia second
+  assert.equal(cocoa.has('af'), false); // Afghanistan isn't a grower → out of the ranking
+});
+
 // ---- real elevation.json schema + integration gate (dense, two-directional) --
 
 test('elevation is a valid, self-describing metric file with the plain format', () => {
@@ -547,4 +603,17 @@ test('createMetric over elevation ranks both extremes plausibly', () => {
   const pk = elevation.rankOf('pk', 'world');
   const ind = elevation.rankOf('in', 'world');
   assert.ok(pk !== null && ind !== null && pk < ind);
+});
+
+// ---- guard: the party server can't loop METRIC_FILES (static imports for the
+// Cloudflare bundle), so it hand-lists each metric. That's the one attach site
+// the `attachMetrics` refactor couldn't make zero-edit, and it isn't otherwise
+// unit-tested, so a new metric silently misfires online TTT until someone plays
+// a puzzle with that axis. Scan its source to prove every metric is wired.
+test('party/server.js attaches every registered metric (static-import site)', () => {
+  const src = readFileSync(join(HERE, '..', 'party', 'server.js'), 'utf-8');
+  for (const { key, file } of METRIC_FILES) {
+    assert.ok(src.includes(`metrics/${file}`), `party/server.js does not import ${file}`);
+    assert.ok(src.includes(`${key}: ${key}.values`), `party/server.js does not pass ${key} to attachMetrics`);
+  }
 });

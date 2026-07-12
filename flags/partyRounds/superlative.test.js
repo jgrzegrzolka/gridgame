@@ -218,6 +218,30 @@ test('wineRound: biggest-only, correct extreme-by-wine answer, makers only', asy
   }
 });
 
+// ---- cocoa instance (cocoa-bean tonnes, id 'superlative-cocoa') -------------
+
+test('cocoaRound: biggest-only, correct extreme-by-cocoa answer, growers only', async () => {
+  const { cocoaRound } = await import('./superlative.js');
+  const cocoaJson = (await import('../metrics/cocoa.json', { with: { type: 'json' } })).default;
+  const COC = /** @type {Record<string, number>} */ (cocoaJson.values);
+  assert.equal(cocoaRound.id, 'superlative-cocoa');
+  // Cocoa-distinct sovereign GROWERS spanning many orders of magnitude, all in
+  // cocoa.json. A non-grower (e.g. Afghanistan) mixed in must be dropped by the
+  // round's `metric.has` filter, never appear as an option.
+  const pool = ['ci', 'id', 'gh', 'ec', 'ng', 'cm', 'br', 'pe', 'sl', 'co', 'af'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = cocoaRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Cocoa is locked to 'most'; "smallest grower" is an obscure question, so
+    // it's never dealt. Every round asks for the biggest producer.
+    assert.equal(q.prompt, 'most', `seed ${i}: cocoa is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('af'), 'a non-grower is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => COC[c]);
+    assert.equal(COC[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-cocoa option`);
+  }
+});
+
 // ---- elevation instance (highest point in metres, id 'superlative-elevation') ---
 
 test('elevationRound: two-directional, correct extreme-by-elevation answer', async () => {
