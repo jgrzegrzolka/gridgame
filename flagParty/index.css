@@ -199,13 +199,9 @@
 .gs-opt-title { font-size: 14px; font-weight: 500; color: var(--primary-color); }
 .gs-opt-hint { font-size: 12px; font-weight: 400; color: var(--muted-color); }
 
-/* World-facts metric chips — which facts are in play. DELIBERATE PALETTE
-   EXCEPTION, sanctioned like the per-tile flag strip: each metric carries its
-   own hue so the growing fact family stays scannable (you recognise Population
-   by its teal before reading the label). Colour is confined to these setup
-   chips — it never reaches a gameplay tile or any other surface. Adding a metric
-   is one more `[data-metric]` rule here. Aligned under the lead row's text (past
-   the 22px icon + 10px gap). */
+/* World-facts metric chips — which facts are in play. Aligned under the lead
+   row's text (past the 22px icon + 10px gap). Colour comes from the metric's own
+   `--mc` hue (defined below). */
 .gs-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 8px 0 4px 32px; }
 .gs-chip {
   display: inline-flex;
@@ -226,14 +222,27 @@
 /* Chosen: the metric's own hue on the ring, label, and icon (icon inherits
    `color` via currentColor). `--mc` is set per metric below. */
 .gs-chip.on { border-color: var(--mc); color: var(--mc); background: var(--surface-hover-color); }
-.gs-chip[data-metric="superlative-pop"] { --mc: #2f8f9d; }
-.gs-chip[data-metric="superlative-area"] { --mc: #3f8f5b; }
-.gs-chip[data-metric="superlative-density"] { --mc: #7b5ea7; }
-.gs-chip[data-metric="superlative-gdp"] { --mc: #c0821e; }
-.gs-chip[data-metric="superlative-gdppc"] { --mc: #4f6bb0; }
-.gs-chip[data-metric="superlative-coffee"] { --mc: #7d4f28; }
-.gs-chip[data-metric="superlative-elevation"] { --mc: #5c7a94; }
 .gs-chip:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
+
+/* Per-metric hues (--mc). DELIBERATE PALETTE EXCEPTION, sanctioned like the
+   per-tile flag strip: each metric carries its own hue so the growing fact
+   family stays scannable (you recognise Population by its teal before reading
+   the label). Set per element via [data-metric], and used on exactly two
+   surfaces: the setup chips above (which facts are in play) and the in-round
+   criterion icon on superlative rounds (`.prompt.superlative .prompt-lead`). It
+   reaches no gameplay tile or any other surface. Adding a metric is one more
+   [data-metric] rule here. */
+[data-metric="superlative-pop"] { --mc: #2f8f9d; }
+[data-metric="superlative-area"] { --mc: #3f8f5b; }
+[data-metric="superlative-density"] { --mc: #7b5ea7; }
+[data-metric="superlative-gdp"] { --mc: #c0821e; }
+[data-metric="superlative-gdppc"] { --mc: #4f6bb0; }
+[data-metric="superlative-coffee"] { --mc: #7d4f28; }
+[data-metric="superlative-wine"] { --mc: #9a4658; }
+[data-metric="superlative-cocoa"] { --mc: #a84a30; }
+[data-metric="superlative-banana"] { --mc: #9c8410; }
+[data-metric="superlative-elevation"] { --mc: #5c7a94; }
+[data-metric="superlative-coastline"] { --mc: #2f77a6; }
 
 /* Per-category reveal timing, shown under the tricky toggle when it's on. A
    quiet indented block (it belongs to the toggle above it) with one row per
@@ -317,6 +326,15 @@
    round fills this line now (the superlative label included), so `min-height`
    is just a defensive reserve keeping the grid at the same Y in every mode. */
 .prompt-target { font-size: 28px; font-weight: 500; color: var(--primary-color); min-height: 1lh; }
+/* Superlative rounds: the metric icon leads the criterion label on one row,
+   tinted with the metric's setting hue (--mc, set per round via [data-metric]
+   with the setup-chip hues below). The label drops from the 28px country-name
+   size to 18px — it's a phrase ("Largest coffee production"), not a single name,
+   so it reads better a notch smaller and keeps long labels on one line. */
+.prompt.superlative { flex-direction: row; align-items: center; justify-content: center; gap: 8px; }
+.prompt.superlative .prompt-lead { display: inline-flex; color: var(--mc); }
+.prompt.superlative .prompt-lead svg { width: 18px; height: 18px; }
+.prompt.superlative .prompt-target { font-size: 18px; }
 
 .flags-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .opt {

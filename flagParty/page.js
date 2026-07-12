@@ -214,6 +214,7 @@ export function bootFlagParty() {
   const timerEl = $('round-timer');
   const timerFill = $('round-timer-fill');
   const timerLabel = $('round-timer-label');
+  const promptEl = $('prompt');
   const promptLead = $('prompt-lead');
   const promptTarget = $('prompt-target');
   const gridEl = $('flags-grid');
@@ -965,20 +966,29 @@ export function bootFlagParty() {
     const isMap = q.roundId === 'mapPick';
     const superCfg = SUPERLATIVE_MODES[q.roundId] || null;
     const isSuperlative = superCfg !== null;
-    // One prominent line, nothing else. The tiles already show whether you're
-    // matching a flag, an outline, or ranking a stat, so a "Which flag?" cue on
-    // top was just extra reading — the country name (or the superlative label)
-    // alone is enough, and a single line reads at a glance rather than as a
-    // fast-reading test. The lead span stays hidden across every round.
+    // Country-name rounds (flag / map) show one prominent line, nothing else:
+    // the tiles already say you're matching a flag or outline, so a "Which flag?"
+    // cue was just extra reading. Superlative rounds instead lead the criterion
+    // label with the metric's icon (below) — a picture reads the stat faster than
+    // the phrase alone. Reset both cues each render, then the branches opt in.
+    promptEl.classList.remove('superlative');
+    delete promptEl.dataset.metric;
     promptLead.hidden = true;
     promptLead.textContent = '';
     if (isSuperlative) {
       // Superlative has no target country: the prompt is a direction ('most' /
-      // 'least'), shown as a short criterion label ("Most populous"). Same label
-      // in both phases — stable (no grid shift), and it names the criterion, not
-      // the winner, so it never leaks the answer the tiles reveal.
+      // 'least'), shown as a short criterion label ("Largest coffee production").
+      // Same label in both phases — stable (no grid shift), and it names the
+      // criterion, not the winner, so it never leaks the answer the tiles reveal.
+      // The metric icon leads it, tinted with the metric's setting hue (--mc, set
+      // from q.roundId via [data-metric] in index.css — the same per-metric hue
+      // the setup chips use).
       const least = q.prompt === 'least';
       const label = least ? superCfg.hintLeast : superCfg.hintMost;
+      promptEl.classList.add('superlative');
+      promptEl.dataset.metric = q.roundId;
+      promptLead.innerHTML = METRIC_ICONS[q.roundId] || '';
+      promptLead.hidden = !promptLead.innerHTML;
       promptTarget.textContent = t(label.key, label.fallback);
     } else {
       const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
