@@ -9,6 +9,7 @@ import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction, veilProgress, DEFAULT_REVEAL, REVEAL_OPTIONS } from '../flags/partyTiming.js';
 import { MAX_ROUNDS_PER_MODE, PICTURE_MODES, METRIC_MODES, buildPartyPlan } from '../flags/partyPlan.js';
 import { formatValue } from '../flags/metricLens.js';
+import { renderableRoundIds, roundRenderAction } from './staleGuard.js';
 import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
@@ -82,6 +83,13 @@ const SUPERLATIVE_MODES = {
     hintLeast: { key: 'party.hintLeastGdppc', fallback: 'Poorest per head' },
   },
 };
+
+/** Every round id this build can render: the two fixed picture rounds plus the
+ *  superlative metric rounds above. The server (PartyKit, its own deploy) can be
+ *  a build ahead of a still-open tab and deal a round id outside this set; when
+ *  that happens {@link roundRenderAction} reloads us onto the new build rather
+ *  than rendering a broken round. See `flagParty/staleGuard.js`. */
+const KNOWN_ROUND_IDS = renderableRoundIds(Object.keys(SUPERLATIVE_MODES));
 
 /** Little pictures leading each setup row, distinct enough to tell apart at a
  *  glance. The two flag modes get real flag thumbnails (a country flag for
@@ -833,12 +841,42 @@ export function bootFlagParty() {
     }
   }
 
+  // ---- stale-client reload guard ----
+  // Set only in the instant before a version-skew reload, cleared the moment we
+  // successfully render a server-dealt round (proof our build is compatible), so
+  // it re-arms for a future deploy while blocking a reload loop if the reload
+  // came back on the same stale build. sessionStorage: per-tab, gone on close.
+  const UPDATE_RELOAD_KEY = 'gridgame.party.updateReload';
+  const updateReloadTried = () => { try { return window.sessionStorage.getItem(UPDATE_RELOAD_KEY) === '1'; } catch { return false; } };
+  const markUpdateReload = () => { try { window.sessionStorage.setItem(UPDATE_RELOAD_KEY, '1'); } catch { /* private mode */ } };
+  const clearUpdateReload = () => { try { window.sessionStorage.removeItem(UPDATE_RELOAD_KEY); } catch { /* private mode */ } };
+
+  /** The blocked fallback: a stale tab that reloaded and is *still* on an old
+   *  build (cached HTML, offline). Show a plain notice in the round frame rather
+   *  than looping the reload or rendering the broken round. */
+  function renderUpdateNotice() {
+    roundPill.textContent = '';
+    timerEl.hidden = true;
+    promptLead.hidden = true; promptLead.textContent = '';
+    promptTarget.textContent = t('party.updateNeeded', 'A new version is available. Refresh the page to keep playing.');
+    gridEl.innerHTML = '';
+    footEl.innerHTML = '';
+  }
+
   // ---- render ----
   function render() {
     if (!activeRoom) { stopClock(); stopVeil(); showSection('start'); return; }
     // Leaving (or not yet in) the final screen re-arms the one-shot celebration.
     if (state.phase !== 'final') finalCelebrated = false;
     if (state.phase === 'question' || state.phase === 'reveal') {
+      // A round id this build can't render means the server is a build ahead of
+      // us (its deploy landed while this tab stayed open). Reload onto the new
+      // build once; the seat survives (room code in URL, pid persisted).
+      const q = state.question;
+      const action = q ? roundRenderAction(KNOWN_ROUND_IDS.has(q.roundId), updateReloadTried()) : 'render';
+      if (action === 'reload') { markUpdateReload(); stopClock(); stopVeil(); window.location.reload(); return; }
+      if (action === 'blocked') { stopClock(); stopVeil(); showSection('round'); renderUpdateNotice(); return; }
+      clearUpdateReload();
       showSection('round'); renderRound(); syncClock();
       // The veil animates during the question only; the reveal always shows the
       // crisp, full-colour tiles (stopVeil pins `--veil-p` to 1).

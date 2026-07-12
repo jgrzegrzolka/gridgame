@@ -555,6 +555,7 @@
     "hintLeastGdp": "Smallest economy",
     "hintMostGdppc": "Richest per head",
     "hintLeastGdppc": "Poorest per head",
+    "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
     "tie": "It's a tie!",
