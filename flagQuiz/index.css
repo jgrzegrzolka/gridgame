@@ -276,10 +276,11 @@ body {
 }
 /* The wrongly-clicked flag's country-name strip is the shared `.flag-choice.wrong
    [data-name]::after` rule in common.css (Flag Party's `.opt` reuses it). */
-.flag-choice:hover:not(:disabled) {
+.flag-choice:hover:not(:disabled) img {
   /* Brand pink hover, matching Flag Party's flag tiles — the muted grey it
-     used to be read as a dead/disabled cue rather than "this is tappable". */
-  border-color: var(--secondary-color);
+     used to be read as a dead/disabled cue rather than "this is tappable". The
+     ring sits on the <img> so it hugs the flag with no white padding gap. */
+  box-shadow: 0 0 0 2px var(--secondary-color);
 }
 .flag-choice:disabled {
   cursor: default;
@@ -301,13 +302,16 @@ body {
    Party's reveal shares the same cue (CLAUDE.md "same mechanism = same code"). */
 .flag-choice img {
   /* Matches Flag Party's `.flag`: the 4:3 SVG canvas shown whole (`contain`,
-     no crop), sharp-cornered, with a hairline inner shadow to define the edge
-     against the white tile. */
+     no crop), sharp-cornered, with a 1px primary-black ring (thinnest that
+     survives standard-DPI rounding) so white-heavy flags don't bleed into the
+     white tile. Outset, NOT inset: an inset shadow on an <img> is painted behind
+     the (opaque) image and never shows. */
   display: block;
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: contain;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.09);
+  box-shadow: 0 0 0 1px var(--primary-color);
+  transition: box-shadow 100ms;
 }
 
 /* Touch-only share icon sits at the end of the final-score line
