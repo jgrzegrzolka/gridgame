@@ -9,6 +9,7 @@ import cocoa from '../metrics/cocoa.json' with { type: 'json' };
 import banana from '../metrics/banana.json' with { type: 'json' };
 import elevation from '../metrics/elevation.json' with { type: 'json' };
 import coastline from '../metrics/coastline.json' with { type: 'json' };
+import forest from '../metrics/forest.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -195,3 +196,16 @@ const coastalCoastline = {
   values: Object.fromEntries(Object.entries(coastline.values).filter(([, v]) => v > 0)),
 };
 export const coastlineRound = createSuperlativeRound(createMetric(coastalCoastline, []), 'superlative-coastline');
+
+// Forest instance: forest cover as a % of land area, id 'superlative-forest'.
+// Dense, intensive (size-independent) and two-directional like coastline, and
+// with the same wrinkle: ~19 treeless places (deserts, ice sheets, city-states)
+// carry a real 0.0%, and a "least" quartet drawn from them would tie at 0 (an
+// unfair question: the GAP_RATIO check degenerates when the extreme is 0). So
+// the round metric drops the 0.0% places from selection, leaving only forested
+// countries, among which both "most" and "least forested" are clean questions.
+const forestedForest = {
+  ...forest,
+  values: Object.fromEntries(Object.entries(forest.values).filter(([, v]) => v > 0)),
+};
+export const forestRound = createSuperlativeRound(createMetric(forestedForest, []), 'superlative-forest');

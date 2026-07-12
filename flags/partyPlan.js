@@ -103,6 +103,7 @@ export const PARTY_MODES = [
   { id: 'superlative-banana', roundId: 'superlative-banana', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-elevation', roundId: 'superlative-elevation', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-coastline', roundId: 'superlative-coastline', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-forest', roundId: 'superlative-forest', poolId: 'sovereign', group: 'metric' },
 ];
 
 /** The fixed picture trio (flags / territories / map), in catalog order. */

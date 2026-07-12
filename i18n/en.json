@@ -543,7 +543,8 @@
       "superlativeCocoa": "Cocoa production: most",
       "superlativeBanana": "Banana production: most",
       "superlativeElevation": "Highest elevation: highest & lowest",
-      "superlativeCoastline": "Coastline length: longest & shortest"
+      "superlativeCoastline": "Coastline length: longest & shortest",
+      "superlativeForest": "Forest cover: most & least forested"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -559,7 +560,8 @@
       "superlativeCocoa": "Cocoa",
       "superlativeBanana": "Banana",
       "superlativeElevation": "Elevation",
-      "superlativeCoastline": "Coastline"
+      "superlativeCoastline": "Coastline",
+      "superlativeForest": "Forest"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -582,6 +584,8 @@
     "hintLeastElevation": "Lowest highpoint",
     "hintMostCoastline": "Longest coast",
     "hintLeastCoastline": "Shortest coast",
+    "hintMostForest": "Most forested",
+    "hintLeastForest": "Least forested",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",

@@ -56,6 +56,7 @@ const MODE_LABELS = {
   'superlative-banana': { key: 'party.mode.superlativeBanana', full: 'Banana production: most', shortKey: 'party.modeShort.superlativeBanana', short: 'Banana' },
   'superlative-elevation': { key: 'party.mode.superlativeElevation', full: 'Highest elevation: highest & lowest', shortKey: 'party.modeShort.superlativeElevation', short: 'Elevation' },
   'superlative-coastline': { key: 'party.mode.superlativeCoastline', full: 'Coastline length: longest & shortest', shortKey: 'party.modeShort.superlativeCoastline', short: 'Coastline' },
+  'superlative-forest': { key: 'party.mode.superlativeForest', full: 'Forest cover: most & least forested', shortKey: 'party.modeShort.superlativeForest', short: 'Forest' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -116,6 +117,11 @@ const SUPERLATIVE_MODES = {
     hintMost: { key: 'party.hintMostCoastline', fallback: 'Longest coast' },
     hintLeast: { key: 'party.hintLeastCoastline', fallback: 'Shortest coast' },
   },
+  'superlative-forest': {
+    file: 'forest.json',
+    hintMost: { key: 'party.hintMostForest', fallback: 'Most forested' },
+    hintLeast: { key: 'party.hintLeastForest', fallback: 'Least forested' },
+  },
 };
 
 /** Every round id this build can render: the two fixed picture rounds plus the
@@ -167,6 +173,8 @@ const METRIC_ICONS = {
   'superlative-elevation': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M12 4L20 20H4z"/><path d="M9.4 11.7l2.6 1.6 2.6-1.6"/></svg>',
   // Coastline length: three stacked waves (water / shoreline), distinct from the peak.
   'superlative-coastline': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8c1.5 0 1.5 1.5 3 1.5S10.5 8 12 8s1.5 1.5 3 1.5S19.5 8 21 8"/><path d="M3 13c1.5 0 1.5 1.5 3 1.5S10.5 13 12 13s1.5 1.5 3 1.5S19.5 13 21 13"/><path d="M3 18c1.5 0 1.5 1.5 3 1.5S10.5 18 12 18s1.5 1.5 3 1.5S19.5 18 21 18"/></svg>',
+  // Forest cover: a two-tier pine with a centred trunk, distinct from elevation's bare peak.
+  'superlative-forest': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 7.5 10H10l-3.5 5h4v4h3v-4h4L14 10h2.5z"/></svg>',
 };
 
 /**
