@@ -24,6 +24,7 @@
  * @property {number} [banana]  Denormalized from `flags/metrics/banana.json` by `attachBananas` (banana tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
  * @property {number} [elevation]  Denormalized from `flags/metrics/elevation.json` by `attachElevations` (metres above sea level of the highest point). Dense, same pattern as `area`; absent only for non-places (orgs).
  * @property {number} [coastline]  Denormalized from `flags/metrics/coastline.json` by `attachCoastlines` (kilometres of coastline). Dense, same pattern as `area`: every real place has a value (a landlocked place carries 0), absent only for non-places (orgs).
+ * @property {number} [forest]  Denormalized from `flags/metrics/forest.json` by `attachForests` (forest area as a percentage of land area). Dense, same pattern as `area`: every real place has a value (a treeless desert/ice sheet carries 0.0), absent only for non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -203,6 +204,25 @@ export function attachCoastlines(countries, values) {
 }
 
 /**
+ * Denormalize `flags/metrics/forest.json` values onto each Country as `.forest`
+ * (forest area as a percentage of land area). Twin of `attachCoastlines` /
+ * `attachAreas`. Forest cover is dense (every real place has a value; a treeless
+ * desert or ice sheet carries 0.0), so only non-place flags (orgs) are left
+ * without the field.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachForests(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.forest = v;
+  }
+  return countries;
+}
+
+/**
  * Denormalizer for a *sparse* metric whose absence means zero (coffee, and any
  * future crop / output metric with `absence: 'zero'`). A producer listed in the
  * metric map gets its value; every real place (`category !== 'other'`) the map
@@ -315,6 +335,7 @@ const METRIC_ATTACHERS = {
   banana: attachBananas,
   elevation: attachElevations,
   coastline: attachCoastlines,
+  forest: attachForests,
 };
 
 /**

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachWines, attachCocoas, attachBananas, attachCoastlines } from './group.js';
+import { attachCoffees, attachWines, attachCocoas, attachBananas, attachCoastlines, attachForests } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -24,6 +24,7 @@ const COCOA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/co
 const BANANA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/banana.json'));
 const ELEVATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/elevation.json'));
 const COASTLINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coastline.json'));
+const FOREST = /** @type {import('./metrics.js').MetricData} */ (load('metrics/forest.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -732,6 +733,83 @@ test("attachCoastlines fills every real place (landlocked at 0), orgs stay bare"
   }
   assert.equal(/** @type {any} */ (byCode.get('ca')).coastline, COASTLINE.values.ca);
   assert.equal(/** @type {any} */ (byCode.get('ch')).coastline, 0); // Switzerland is landlocked
+});
+
+// ---- real forest.json schema + integration gate (dense, intensive, treeless = 0) --
+
+test('forest is a valid, self-describing metric file with the decimal1 format', () => {
+  assert.equal(FOREST.key, 'forest');
+  assert.equal(typeof FOREST.label, 'string');
+  assert.equal(typeof FOREST.unit, 'string');
+  // Forest cover is a share of land area (0.0–96.6), so it renders with one
+  // decimal, not compact or plain-integer.
+  assert.equal(FOREST.format, 'decimal1');
+  assert.equal(typeof FOREST.source, 'string');
+  assert.equal(typeof FOREST.year, 'number');
+  assert.equal(typeof FOREST.values, 'object');
+  // Dense, like area / coastline: no absence hint. A missing value would mean
+  // "unsourced", never zero — a treeless place carries a real, explicit 0.0.
+  assert.equal(FOREST.absence, undefined);
+});
+
+test('every forest value is a finite percentage in [0, 100]', () => {
+  // Intensive metric: a share of land area, so unlike the extensive metrics the
+  // valid range is bounded at 100, and fractional values are the norm.
+  for (const [code, v] of Object.entries(FOREST.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0 && v <= 100, `${code} out of [0,100]: ${v}`);
+  }
+});
+
+test('every real place has a forest value; only non-places have none', () => {
+  // Same "no data = not a place" invariant the TTT guard leans on (metricDataGap).
+  // Treeless places are present at 0.0, not omitted, so the invariant holds.
+  const values = FOREST.values;
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in values), `org ${c.code} should have no forest value`);
+    } else {
+      assert.ok(c.code in values, `real place ${c.code} (${c.continent}) has no forest value`);
+    }
+  }
+});
+
+test('a treeless place carries an explicit 0, not a missing value', () => {
+  // The distinguishing feature of this dense metric: 0.0 is a real, sourced value
+  // (desert / ice / city-state), not a data gap.
+  for (const code of ['eg', 'gl', 'qa', 'aq', 'va']) {
+    assert.equal(FOREST.values[code], 0, `${code} should be 0, not missing`);
+  }
+});
+
+test('createMetric over forest ranks the world plausibly and size-independently', () => {
+  const forest = createMetric(FOREST, COUNTRIES);
+  // French Guiana is the most forested place on Earth (~96.6%), a tiny territory
+  // outranking every giant — the size-decoupled property this metric exists for.
+  assert.equal(forest.topN('world', 1)[0].code, 'gf');
+  // Among sovereign states the top three are Suriname, then the F.S. Micronesia /
+  // Gabon cluster — all small, none a large country.
+  assert.equal(forest.topN('sovereign', 1)[0].code, 'sr');
+  // A giant sits mid-pack, not at the top: Australia is well below the leaders.
+  assert.ok(/** @type {number} */ (forest.rankOf('au', 'world')) > 100);
+});
+
+test('attachForests fills every real place (treeless at 0), orgs stay bare', () => {
+  // Dense-metric denormalizer: every real place ends up with a numeric field
+  // (treeless ones at 0.0), and only non-place orgs are left without it.
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachForests(/** @type {any} */ (rows), FOREST.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.forest, undefined, `org ${c.code} should have no forest field`);
+    } else {
+      assert.equal(typeof row.forest, 'number', `real place ${c.code} has no forest value`);
+    }
+  }
+  assert.equal(/** @type {any} */ (byCode.get('gf')).forest, FOREST.values.gf);
+  assert.equal(/** @type {any} */ (byCode.get('eg')).forest, 0); // Egypt is effectively treeless
 });
 
 // ---- guard: the party server can't loop METRIC_FILES (static imports for the

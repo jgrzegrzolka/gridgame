@@ -19,7 +19,21 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DP (coastline length, dense two-directional) closed once its code surfaces shipped; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+### Feature DQ: Forest cover (% of land area) as a world metric, dense + size-independent
+
+Twelfth world metric, the first *intensive* (ratio) one. Forest area as a percentage of each place's land area, FAO FRA 2020/2022 sourced (via the World Bank "Forest area (% of land area)" indicator; the Wikipedia "List of countries by forest area" table mirrors it). Jan's motive: an axis where **being a bigger country does NOT obviously mean a bigger value** — French Guiana (96.6%), Suriname (94.5%), Guyana (93.5%) top it; the giants sit mid-to-low (Australia 17.4%, Kazakhstan 1.3%, Canada 39.5%), and the deserts bottom out at 0.0% (Egypt, Oman, Qatar). Same size-decoupled feel as density / GDP-per-capita / elevation.
+
+**Data contract:** *dense* like area / coastline / elevation, **no `absence` hint**. Every real place (`category !== 'other'`) is sourced explicitly; a treeless desert or ice sheet carries a real `0.0` (Egypt, Greenland, Antarctica, the Gulf states), not omission, so "no data" still means exactly "not a place" and the TTT no-data guard stays correct. `format: 'decimal1'` (one decimal, 0.0–96.6). The ~30 places FAO doesn't list individually (the UK home nations, the Spanish regions, `ic`/`ax`, Taiwan, Hong Kong, Macau, Kosovo, the small dependencies, the Antarctic/subantarctic islands) are `estimate` in `build-forest.mjs`.
+
+- [ ] 1. Data: `flags/metrics/forest.json` (262 real places) + `authoring/build-forest.mjs` + `METRIC_FILES` line + `attachForests` (group.js) + `METRIC_ATTACHERS` entry + `metrics.test.js` schema/finite-0-to-100/coverage/no-org/treeless-is-0/dense-attach tests.
+- [ ] 2. flagsdata lens (free once step 1 lands; "Forest cover" in the selector, one-decimal %).
+- [ ] 3. Filters: `metricTiers.js` registry line (+ `has`); findFlag chooser (5 edits) + `findflag-random-coverage` note; flagsdata filter group; `attachForests` at both load sites.
+- [ ] 4. TTT: `forest(op, n)` factory + `FOREST_BREAKS_FOR_RANDOM` + pool/id/label wiring; `attachForests` at all 6 load sites; `forest.atLeast/atMost` i18n (en+pl); verify no-data guard in-browser.
+- [ ] 5. Flag Party round `superlative-forest` via `createSuperlativeRound` (two-directional; no zero-filter needed, but a treeless-0 quartet is a fair "least forested" so keep the raw map); the `[data-metric="superlative-forest"] { --mc }` hue (pick a green, distinct from the crowded blue/teal region).
+
+Surface 6 (daily puzzles) is NOT a checkbox: when 1-5 land, add a row to `METRIC_DAILY_PUZZLES.md` and close the Feature.
+
+---
 
 ---
 
