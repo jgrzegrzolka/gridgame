@@ -7,23 +7,26 @@ import gdpPerCapita from '../flags/metrics/gdpPerCapita.json' with { type: 'json
 import coffee from '../flags/metrics/coffee.json' with { type: 'json' };
 import wine from '../flags/metrics/wine.json' with { type: 'json' };
 import elevation from '../flags/metrics/elevation.json' with { type: 'json' };
-import { loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachWines, attachElevations } from '../flags/group.js';
+import { loadCountries, attachMetrics } from '../flags/group.js';
 import { TicTacToeServer } from './ticTacToeServer.js';
 
 // JSON-module imports are fine here: the party server is bundled by esbuild for
-// Cloudflare Workers (Node/build-time), not served to a browser. Attaching the
-// metrics lets the `population` / `area` / `density` / `gdp` / `gdpPerCapita`
-// threshold categories in the random pool resolve on the server that generates
-// + validates every puzzle.
+// Cloudflare Workers (Node/build-time), not served to a browser (so unlike the
+// pages it can't loop `METRIC_FILES` to fetch; each metric is a static import).
+// Attaching the metrics lets the threshold categories in the random pool
+// resolve on the server that generates + validates every puzzle. A new metric:
+// add its import above + one line to this map, then `attachMetrics` wires it in.
 const countries = loadCountries(rawCountries);
-attachPopulations(countries, population.values);
-attachAreas(countries, area.values);
-attachDensities(countries, density.values);
-attachGdps(countries, gdp.values);
-attachGdpPerCapitas(countries, gdpPerCapita.values);
-attachCoffees(countries, coffee.values);
-attachWines(countries, wine.values);
-attachElevations(countries, elevation.values);
+attachMetrics(countries, {
+  population: population.values,
+  area: area.values,
+  density: density.values,
+  gdp: gdp.values,
+  gdpPerCapita: gdpPerCapita.values,
+  coffee: coffee.values,
+  wine: wine.values,
+  elevation: elevation.values,
+});
 
 export default class GameServer extends TicTacToeServer {
   /** @param {any} party */

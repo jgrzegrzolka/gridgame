@@ -16,32 +16,19 @@ import {
   axesImpliedPair,
   suggest,
 } from './engine.js';
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachWines, attachElevations } from './group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachMetrics } from './group.js';
+import { METRIC_FILES } from './metrics/index.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-// Attach every metric exactly as the TTT load sites do, so the seed sweeps below
-// exercise the real production pool (metric categories included) with the same
-// retry budget players hit.
-const POPULATION = JSON.parse(readFileSync(join(HERE, 'metrics', 'population.json'), 'utf-8'));
-const AREA = JSON.parse(readFileSync(join(HERE, 'metrics', 'area.json'), 'utf-8'));
-const DENSITY = JSON.parse(readFileSync(join(HERE, 'metrics', 'density.json'), 'utf-8'));
-const GDP = JSON.parse(readFileSync(join(HERE, 'metrics', 'gdp.json'), 'utf-8'));
-const GDP_PER_CAPITA = JSON.parse(readFileSync(join(HERE, 'metrics', 'gdpPerCapita.json'), 'utf-8'));
-const COFFEE = JSON.parse(readFileSync(join(HERE, 'metrics', 'coffee.json'), 'utf-8'));
-const WINE = JSON.parse(readFileSync(join(HERE, 'metrics', 'wine.json'), 'utf-8'));
-const ELEVATION = JSON.parse(readFileSync(join(HERE, 'metrics', 'elevation.json'), 'utf-8'));
+// Attach every metric exactly as the load sites do (via `attachMetrics` over
+// `METRIC_FILES`), so the seed sweeps below exercise the real production pool
+// (metric categories included) with the same retry budget players hit.
 const COUNTRIES = loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8')));
-attachPopulations(COUNTRIES, POPULATION.values);
-attachAreas(COUNTRIES, AREA.values);
-attachDensities(COUNTRIES, DENSITY.values);
-attachGdps(COUNTRIES, GDP.values);
-attachGdpPerCapitas(COUNTRIES, GDP_PER_CAPITA.values);
-attachCoffees(COUNTRIES, COFFEE.values);
-attachWines(COUNTRIES, WINE.values);
-attachElevations(COUNTRIES, ELEVATION.values);
+attachMetrics(COUNTRIES, Object.fromEntries(METRIC_FILES.map((m) =>
+  [m.key, JSON.parse(readFileSync(join(HERE, 'metrics', m.file), 'utf-8')).values])));
 const SVG_DIR = join(HERE, 'svg');
 
 test('countries.json is a non-empty array', () => {
