@@ -4,6 +4,7 @@ import density from '../metrics/density.json' with { type: 'json' };
 import gdp from '../metrics/gdp.json' with { type: 'json' };
 import gdpPerCapita from '../metrics/gdpPerCapita.json' with { type: 'json' };
 import coffee from '../metrics/coffee.json' with { type: 'json' };
+import wine from '../metrics/wine.json' with { type: 'json' };
 import elevation from '../metrics/elevation.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
@@ -157,6 +158,11 @@ export const gdpPerCapitaRound = createSuperlativeRound(createMetric(gdpPerCapit
 // the TTT threshold field. Locked to 'most': "biggest coffee producer" is the
 // good question; "smallest grower" is obscure, so 'least' is never dealt.
 export const coffeeRound = createSuperlativeRound(createMetric(coffee, []), 'superlative-coffee', { direction: 'most' });
+
+// Wine instance: wine tonnes, id 'superlative-wine'. Sparse like coffee, so the
+// round ranks the makers only (non-makers would tie at 0). Locked to 'most':
+// "biggest wine producer" is the good question; "smallest maker" is obscure.
+export const wineRound = createSuperlativeRound(createMetric(wine, []), 'superlative-wine', { direction: 'most' });
 
 // Elevation instance: highest point in metres, id 'superlative-elevation'. Dense
 // and two-directional (no direction lock, unlike coffee): both "highest peak"

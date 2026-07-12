@@ -36,6 +36,7 @@ import {
   GDP_BREAKS_FOR_RANDOM,
   GDP_PER_CAPITA_BREAKS_FOR_RANDOM,
   COFFEE_BREAKS_FOR_RANDOM,
+  WINE_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   ALL_MOTIFS,
   colorCount,
@@ -608,7 +609,7 @@ test('continent and statehood categories carry their exclusiveGroup', () => {
   assert.equal(hasMotif('animal').exclusiveGroup, undefined);
 });
 
-test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population + area + density + gdp + gdpPerCapita + coffee + elevation', () => {
+test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population + area + density + gdp + gdpPerCapita + coffee + wine + elevation', () => {
   const pool = buildRandomCategoryPool();
   const expected =
     CONTINENTS_FOR_RANDOM.length
@@ -622,6 +623,7 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + GDP_BREAKS_FOR_RANDOM.length
     + GDP_PER_CAPITA_BREAKS_FOR_RANDOM.length
     + COFFEE_BREAKS_FOR_RANDOM.length
+    + WINE_BREAKS_FOR_RANDOM.length
     + ELEVATION_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
@@ -804,7 +806,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['area', 'coffee', 'density', 'elevation', 'gdp', 'gdpPerCapita', 'population'],
+    ['area', 'coffee', 'density', 'elevation', 'gdp', 'gdpPerCapita', 'population', 'wine'],
   );
 });
 
@@ -889,6 +891,15 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     0,
     'coffee cats must not appear in the 9×9 pool',
   );
+  // Wine, like coffee, has NO ultimate break (too sparse for 9×9), so ALL its
+  // breaks drop, so wine never appears in the Ultimate pool.
+  const droppedWine = WINE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedWine, WINE_BREAKS_FOR_RANDOM.length, 'no wine tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('wine:')).length,
+    0,
+    'wine cats must not appear in the 9×9 pool',
+  );
   // Elevation IS 9×9-eligible (dense): only its five non-ultimate breaks drop,
   // the broad >=1000 tier stays, so unlike coffee it DOES appear in the pool.
   const droppedElevation = ELEVATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
@@ -901,7 +912,7 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
-      - droppedElevation,
+      - droppedWine - droppedElevation,
   );
 });
 

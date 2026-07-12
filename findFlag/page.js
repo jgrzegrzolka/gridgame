@@ -1,4 +1,4 @@
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachElevations } from '../flags/group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachWines, attachElevations } from '../flags/group.js';
 import {
   ALL_FLAG_COLORS,
   ALL_MOTIFS,
@@ -67,6 +67,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   gdpProbability: 0.08,
   gdpPerCapitaProbability: 0.06,
   coffeeProbability: 0.06,
+  wineProbability: 0.06,
   elevationProbability: 0.10,
 });
 
@@ -210,9 +211,10 @@ export function bootFindFlag() {
     fetch('../flags/metrics/gdp.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
     fetch('../flags/metrics/gdpPerCapita.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
     fetch('../flags/metrics/coffee.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
+    fetch('../flags/metrics/wine.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
     fetch('../flags/metrics/elevation.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
   ])
-    .then(([raw, popValues, areaValues, densityValues, gdpValues, gdpPerCapitaValues, coffeeValues, elevationValues]) => {
+    .then(([raw, popValues, areaValues, densityValues, gdpValues, gdpPerCapitaValues, coffeeValues, wineValues, elevationValues]) => {
       // Attach AFTER withLocalizedAliases: its clone path (re-wrapping a
       // renamed Country through createCountry) would drop an extra field
       // set beforehand, so denormalize onto the final pool objects.
@@ -223,6 +225,7 @@ export function bootFindFlag() {
       attachGdps(all, gdpValues);
       attachGdpPerCapitas(all, gdpPerCapitaValues);
       attachCoffees(all, coffeeValues);
+      attachWines(all, wineValues);
       attachElevations(all, elevationValues);
       /** @type {{ refreshI18n: (newAll: import('../flags/group.js').Country[]) => void } | null} */
       let activeHandle = null;
@@ -361,6 +364,8 @@ export function bootFindFlag() {
     const gdpPerCapitaPills = [];
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const coffeePills = [];
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const winePills = [];
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const elevationPills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
@@ -670,6 +675,41 @@ export function bootFindFlag() {
       }
     }
 
+    // Wine-production section, same single-select scalar (`filter.wine`).
+    // Sparse `>=`-only tiers, so the pills read "over 10K tonnes" etc.
+    {
+      const wineItems = buildMetricTierItems('wine', all);
+      if (wineItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.wine', 'Wine production');
+        sectionHeaders.push({ h, key: 'findFlag.sections.wine', fallback: 'Wine production' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of wineItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('wine', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectWine(op, n, btn));
+          wrap.appendChild(btn);
+          winePills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
     // Highest-elevation section, same single-select scalar (`filter.elevation`).
     // Dense two-directional tiers (both `>= N m` and `<= N m`), like area.
     {
@@ -878,6 +918,21 @@ export function bootFindFlag() {
     }
 
     /**
+     * Single-select wine-production tier, twin of selectCoffee.
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectWine(op, n, btn) {
+      const isActive = filter.wine !== null && filter.wine.op === op && filter.wine.n === n;
+      filter.wine = isActive ? null : { op, n };
+      for (const p of winePills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
+    /**
      * Single-select highest-elevation tier, twin of selectArea.
      * @param {'>=' | '<='} op
      * @param {number} n
@@ -926,6 +981,9 @@ export function bootFindFlag() {
         btn.classList.remove('active');
       }
       for (const { btn } of coffeePills) {
+        btn.classList.remove('active');
+      }
+      for (const { btn } of winePills) {
         btn.classList.remove('active');
       }
       for (const { btn } of elevationPills) {
@@ -983,7 +1041,7 @@ export function bootFindFlag() {
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, elevationPills, onlyColorsLabelSpan, updateBar });
+        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, winePills, elevationPills, onlyColorsLabelSpan, updateBar });
       },
     };
   }

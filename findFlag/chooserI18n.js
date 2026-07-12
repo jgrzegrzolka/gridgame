@@ -24,6 +24,7 @@ import { pillLabel } from '../flags/findFlag.js';
  * @typedef {{ labelSpan: { textContent: string }, value: string }} GdpPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} GdpPerCapitaPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} CoffeePillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} WinePillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} ElevationPillRef
  *
  * @param {{
@@ -35,12 +36,13 @@ import { pillLabel } from '../flags/findFlag.js';
  *   gdpPills?: GdpPillRef[],
  *   gdpPerCapitaPills?: GdpPerCapitaPillRef[],
  *   coffeePills?: CoffeePillRef[],
+ *   winePills?: WinePillRef[],
  *   elevationPills?: ElevationPillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], elevationPills = [], onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], elevationPills = [], onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
@@ -71,6 +73,10 @@ export function refreshChooserI18n({ sectionHeaders, allPills, populationPills =
   // Coffee pills (">=10000" etc.) via pillLabel's coffee branch.
   for (const p of coffeePills) {
     p.labelSpan.textContent = pillLabel('coffee', p.value, 'include', t);
+  }
+  // Wine pills (">=10000" etc.) via pillLabel's wine branch.
+  for (const p of winePills) {
+    p.labelSpan.textContent = pillLabel('wine', p.value, 'include', t);
   }
   // Elevation pills (">=1000" etc.) via pillLabel's elevation branch.
   for (const p of elevationPills) {
