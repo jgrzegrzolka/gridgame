@@ -88,25 +88,23 @@ const SUPERLATIVE_MODES = {
     hintMost: { key: 'party.hintMostGdppc', fallback: 'Largest GDP (per capita)' },
     hintLeast: { key: 'party.hintLeastGdppc', fallback: 'Smallest GDP (per capita)' },
   },
+  // Crops are 'most'-only rounds (superlative.js locks direction to 'most'), so
+  // no hintLeast: "smallest producer" is an obscure question and is never dealt.
   'superlative-coffee': {
     file: 'coffee.json',
-    hintMost: { key: 'party.hintMostCoffee', fallback: 'Most coffee' },
-    hintLeast: { key: 'party.hintLeastCoffee', fallback: 'Least coffee' },
+    hintMost: { key: 'party.hintMostCoffee', fallback: 'Largest coffee production' },
   },
   'superlative-wine': {
     file: 'wine.json',
-    hintMost: { key: 'party.hintMostWine', fallback: 'Most wine' },
-    hintLeast: { key: 'party.hintLeastWine', fallback: 'Least wine' },
+    hintMost: { key: 'party.hintMostWine', fallback: 'Largest wine production' },
   },
   'superlative-cocoa': {
     file: 'cocoa.json',
-    hintMost: { key: 'party.hintMostCocoa', fallback: 'Most cocoa' },
-    hintLeast: { key: 'party.hintLeastCocoa', fallback: 'Least cocoa' },
+    hintMost: { key: 'party.hintMostCocoa', fallback: 'Largest cocoa production' },
   },
   'superlative-banana': {
     file: 'banana.json',
-    hintMost: { key: 'party.hintMostBanana', fallback: 'Most bananas' },
-    hintLeast: { key: 'party.hintLeastBanana', fallback: 'Least bananas' },
+    hintMost: { key: 'party.hintMostBanana', fallback: 'Largest banana production' },
   },
   'superlative-elevation': {
     file: 'elevation.json',
