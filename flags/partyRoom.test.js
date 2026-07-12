@@ -8,6 +8,7 @@ import {
   applyForceReveal,
   applyNext,
   applyPlayAgain,
+  applyReturnToLobby,
   applyDisconnect,
   serializeRoom,
   deserializeRoom,
@@ -305,6 +306,65 @@ test('applyPlayAgain: host resets scores and returns to the lobby', () => {
   // phase back off the final board.
   assert.equal(msg(r, 'lobby').hostId, 'alice');
   assert.equal(msg(r, 'lobby').roster.length, 2);
+});
+
+// ---- applyReturnToLobby ----
+
+test('applyReturnToLobby: host aborts a running question back to the lobby', () => {
+  // Play round 1 to completion so there's a banked score to wipe (scores land
+  // at reveal, not on the buzz), then abort during round 2's live question.
+  let room = startedTwoPlayer(q('jp'));
+  room = applyBuzz(room, 'alice', 'jp', true).room;
+  room = applyBuzz(room, 'bob', 'jp', true).room; // reveal -> scores bank
+  room = applyNext(room, 'alice', q('fr', ['fr', 'de', 'it', 'es'])).room; // round 2 question
+  assert.equal(room.phase, 'question');
+  assert.ok((room.seats.get('alice')?.score ?? 0) > 0, 'precondition: a banked score');
+  const r = applyReturnToLobby(room, 'alice');
+  assert.equal(r.room.phase, 'lobby');
+  assert.equal(r.room.roundIndex, 0, 'round counter rewinds');
+  assert.equal(r.room.question, null);
+  assert.equal(r.room.seats.get('alice')?.score, 0, 'scores wiped');
+  assert.equal(r.room.seats.size, 2, 'seats are kept');
+  // Same dedicated 'lobby' message as play-again, so every client leaves the
+  // round view for the settings screen.
+  assert.equal(msg(r, 'lobby').hostId, 'alice');
+  assert.equal(msg(r, 'lobby').roster.length, 2);
+});
+
+test('applyReturnToLobby: works from the reveal phase too', () => {
+  let room = startedTwoPlayer();
+  room = applyBuzz(room, 'alice', 'jp', true).room;
+  room = applyBuzz(room, 'bob', 'kr', false).room; // both buzzed -> reveal, scores bank
+  assert.equal(room.phase, 'reveal');
+  assert.ok((room.seats.get('alice')?.score ?? 0) > 0, 'precondition: a banked score');
+  const r = applyReturnToLobby(room, 'alice');
+  assert.equal(r.room.phase, 'lobby');
+  assert.equal(r.room.seats.get('alice')?.score, 0, 'scores wiped');
+  assert.equal(msg(r, 'lobby').hostId, 'alice');
+});
+
+test('applyReturnToLobby: only the host can trigger it', () => {
+  const room = startedTwoPlayer();
+  assert.equal(applyReturnToLobby(room, 'bob').broadcasts.length, 0);
+  assert.equal(applyReturnToLobby(room, 'bob').room.phase, 'question', 'no phase change');
+});
+
+test('applyReturnToLobby: no-op from the lobby (nothing to abort)', () => {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room; // still in lobby
+  assert.equal(applyReturnToLobby(room, 'alice').broadcasts.length, 0);
+});
+
+test('applyReturnToLobby: no-op from the final board (use play-again there)', () => {
+  let room = createRoom(1);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  room = applyStart(room, 'alice', q('jp')).room;
+  room = applyBuzz(room, 'alice', 'jp', true).room;
+  room = applyBuzz(room, 'bob', 'kr', false).room;
+  room = applyNext(room, 'alice', q('fr')).room; // final
+  assert.equal(room.phase, 'final');
+  assert.equal(applyReturnToLobby(room, 'alice').broadcasts.length, 0);
 });
 
 // ---- applyDisconnect ----

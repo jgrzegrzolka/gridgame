@@ -269,16 +269,17 @@ export function applyNext(room, playerId, nextQuestion) {
 }
 
 /**
- * Host restarts from the final board: scores zeroed, back to the lobby so
- * people can leave or join before the next show.
+ * Reset the room to the lobby with every score zeroed. Shared by 'play again'
+ * (from the final board) and 'back to settings' (a mid-game abort) — both drop
+ * the whole room onto the setup screen for a fresh start.
+ *
+ * A dedicated 'lobby' message (not just 'roster') so clients move their phase
+ * back — 'roster' only refreshes the player list, it doesn't reset the screen.
  *
  * @param {Room} room
- * @param {string} playerId
  * @returns {ApplyResult}
  */
-export function applyPlayAgain(room, playerId) {
-  if (room.phase !== 'final') return { room, broadcasts: [] };
-  if (room.hostId !== playerId) return { room, broadcasts: [] };
+function resetToLobby(room) {
   const seats = new Map();
   for (const [pid, seat] of room.seats) seats.set(pid, { ...seat, score: 0 });
   const nextRoom = {
@@ -289,13 +290,41 @@ export function applyPlayAgain(room, playerId) {
     buzzes: [],
     seats,
   };
-  // A dedicated 'lobby' message (not just 'roster') so clients move their
-  // phase back — 'roster' only refreshes the player list, it doesn't reset
-  // the screen from the final board.
   return {
     room: nextRoom,
     broadcasts: [{ to: 'all', message: { type: 'lobby', hostId: nextRoom.hostId, roster: rosterList(nextRoom) } }],
   };
+}
+
+/**
+ * Host restarts from the final board: scores zeroed, back to the lobby so
+ * people can leave or join before the next show.
+ *
+ * @param {Room} room
+ * @param {string} playerId
+ * @returns {ApplyResult}
+ */
+export function applyPlayAgain(room, playerId) {
+  if (room.phase !== 'final') return { room, broadcasts: [] };
+  if (room.hostId !== playerId) return { room, broadcasts: [] };
+  return resetToLobby(room);
+}
+
+/**
+ * Host aborts a game in progress and returns the whole room to the settings
+ * screen — the same reset as 'play again', but reachable mid-game (during a
+ * question or reveal) instead of only from the final board. Scores are wiped;
+ * the host reconfigures and starts fresh. No-op from the lobby / final (there's
+ * nothing to abort) or for a non-host.
+ *
+ * @param {Room} room
+ * @param {string} playerId
+ * @returns {ApplyResult}
+ */
+export function applyReturnToLobby(room, playerId) {
+  if (room.phase !== 'question' && room.phase !== 'reveal') return { room, broadcasts: [] };
+  if (room.hostId !== playerId) return { room, broadcasts: [] };
+  return resetToLobby(room);
 }
 
 /**

@@ -222,6 +222,7 @@ export function bootFlagParty() {
   const finalSub = $('final-sub');
   const finalBoard = $('final-board');
   const playAgainBtn = /** @type {HTMLButtonElement} */ ($('play-again'));
+  const roundToSettingsBtn = /** @type {HTMLButtonElement} */ ($('round-to-settings'));
   const playingAsEl = $('playing-as');
   const joinError = $('join-error');
   const shareBtn = /** @type {HTMLButtonElement} */ ($('share-btn'));
@@ -959,6 +960,10 @@ export function bootFlagParty() {
   function renderRound() {
     const q = state.question;
     if (!q) return;
+    // Only the host can abort a game back to the settings screen (it resets the
+    // whole room); guests just have Home. The adjacent `·` hides itself via CSS
+    // when this button is hidden, so there's nothing else to toggle.
+    roundToSettingsBtn.hidden = !state.isHost;
     roundPill.textContent = fmt(t('party.round', 'Round {n} of {total}'), {
       n: state.roundIndex + 1, total: state.totalRounds,
     });
@@ -1221,6 +1226,7 @@ export function bootFlagParty() {
 
   startBtn.addEventListener('click', () => send({ type: 'start', plan: currentPlan(), tricky: trickyOn, reveal: revealState }));
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
+  roundToSettingsBtn.addEventListener('click', () => send({ type: 'backToLobby' }));
 
   // Same share mechanism as Tic-Tac-Toe (common.js `shareUrl` → native sheet,
   // clipboard fallback), so the invite icon behaves identically across the two
