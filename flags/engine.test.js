@@ -36,6 +36,7 @@ import {
   GDP_BREAKS_FOR_RANDOM,
   GDP_PER_CAPITA_BREAKS_FOR_RANDOM,
   COFFEE_BREAKS_FOR_RANDOM,
+  ELEVATION_BREAKS_FOR_RANDOM,
   ALL_MOTIFS,
   colorCount,
   population,
@@ -44,6 +45,7 @@ import {
   gdp,
   gdpPerCapita,
   coffee,
+  elevation,
   categoryFromId,
   hasStripesOnly,
   buildUltimateCategoryPool,
@@ -546,6 +548,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = COFFEE_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `coffee ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('elevation:')) {
+      const suffix = cat.id.slice('elevation:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = ELEVATION_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `elevation ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -599,7 +608,7 @@ test('continent and statehood categories carry their exclusiveGroup', () => {
   assert.equal(hasMotif('animal').exclusiveGroup, undefined);
 });
 
-test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population + area + density + gdp + gdpPerCapita + coffee', () => {
+test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population + area + density + gdp + gdpPerCapita + coffee + elevation', () => {
   const pool = buildRandomCategoryPool();
   const expected =
     CONTINENTS_FOR_RANDOM.length
@@ -612,7 +621,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + DENSITY_BREAKS_FOR_RANDOM.length
     + GDP_BREAKS_FOR_RANDOM.length
     + GDP_PER_CAPITA_BREAKS_FOR_RANDOM.length
-    + COFFEE_BREAKS_FOR_RANDOM.length;
+    + COFFEE_BREAKS_FOR_RANDOM.length
+    + ELEVATION_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -733,6 +743,52 @@ test('coffee is its own family — coexists with gdp / population in one puzzle'
   assert.equal(axesConflict([coffee('>=', 10_000)], [population('>=', 10_000_000)]), false);
 });
 
+test('elevation factory wires id, predicate, exclusiveGroup off the denormalized field', () => {
+  const hi = elevation('>=', 1_000);
+  assert.equal(hi.id, 'elevation:>=1000');
+  assert.equal(hi.exclusiveGroup, 'elevation');
+  assert.equal(hi.predicate(/** @type {any} */ ({ elevation: 8849 })), true); // Everest
+  assert.equal(hi.predicate(/** @type {any} */ ({ elevation: 2 })), false); // Maldives fails >=1000
+  const lo = elevation('<=', 100);
+  assert.equal(lo.id, 'elevation:<=100');
+  assert.equal(lo.predicate(/** @type {any} */ ({ elevation: 2 })), true); // Maldives is <=100
+  assert.equal(lo.predicate(/** @type {any} */ ({})), false); // an org (no field) matches neither
+});
+
+test('ELEVATION_BREAKS_FOR_RANDOM is two-directional with exactly one 9×9-eligible break', () => {
+  // Dense + two-directional, the mirror of area: both high (>=) and low (<=) tiers.
+  assert.ok(ELEVATION_BREAKS_FOR_RANDOM.some((b) => b.op === '>='), 'has a high tier');
+  assert.ok(ELEVATION_BREAKS_FOR_RANDOM.some((b) => b.op === '<='), 'has a low tier');
+  // Dense, so unlike coffee it IS 9×9-eligible: exactly the broad >=1000 break.
+  const ultimate = ELEVATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate === true);
+  assert.equal(ultimate.length, 1, 'exactly one ultimate break');
+  assert.deepEqual(ultimate[0], { op: '>=', n: 1_000, ultimate: true });
+});
+
+test('categoryFromId round-trips elevation thresholds (both directions)', () => {
+  const hi = categoryFromId('elevation:>=5000');
+  assert.ok(hi);
+  assert.equal(hi?.exclusiveGroup, 'elevation');
+  assert.equal(hi?.predicate(/** @type {any} */ ({ elevation: 6190 })), true); // Denali
+  const lo = categoryFromId('elevation:<=200');
+  assert.equal(lo?.predicate(/** @type {any} */ ({ elevation: 63 })), true); // Bahamas
+  assert.equal(categoryFromId('elevation:1000'), null); // bare N (no op) is not a valid threshold
+});
+
+test('translateCategoryLabel prefixes elevation with the metric name and localized tier', () => {
+  const label = translateCategoryLabel(elevation('>=', 5_000), (key, fallback) => {
+    if (key === 'metric.elevation') return 'Highest elevation';
+    if (key === 'elevation.atLeast.5000') return 'over 5,000 m';
+    return fallback;
+  });
+  assert.equal(label, 'Highest elevation: over 5,000 m');
+});
+
+test('elevation is its own family, coexisting with gdp / population in one puzzle', () => {
+  assert.equal(metricGroupRepeated([elevation('>=', 1_000), gdp('>=', 100_000_000_000)], [continent('Asia')]), false);
+  assert.equal(axesConflict([elevation('<=', 100)], [population('>=', 10_000_000)]), false);
+});
+
 test('metricGroupRepeated does not restrict non-metric groups (two continents on one axis)', () => {
   // Continents are deliberately single-axis-repeatable — two down the rows is
   // a normal grid, so they stay out of SINGLE_USE_METRIC_GROUPS.
@@ -748,7 +804,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['area', 'coffee', 'density', 'gdp', 'gdpPerCapita', 'population'],
+    ['area', 'coffee', 'density', 'elevation', 'gdp', 'gdpPerCapita', 'population'],
   );
 });
 
@@ -833,10 +889,19 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     0,
     'coffee cats must not appear in the 9×9 pool',
   );
+  // Elevation IS 9×9-eligible (dense): only its five non-ultimate breaks drop,
+  // the broad >=1000 tier stays, so unlike coffee it DOES appear in the pool.
+  const droppedElevation = ELEVATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('elevation:')).length,
+    1,
+    'exactly the ultimate elevation tier appears in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
-      - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee,
+      - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
+      - droppedElevation,
   );
 });
 
@@ -856,6 +921,15 @@ test('buildUltimateCategoryPool keeps exactly one area breakpoint (the ultimate:
   const ultimateBreak = AREA_BREAKS_FOR_RANDOM.find((b) => b.ultimate === true);
   assert.ok(ultimateBreak, 'exactly one area break should be flagged ultimate');
   assert.equal(areas[0].id, `area:${ultimateBreak?.op}${ultimateBreak?.n}`);
+});
+
+test('buildUltimateCategoryPool keeps exactly one elevation breakpoint (the ultimate:true tier)', () => {
+  const ultPool = buildUltimateCategoryPool();
+  const elevations = ultPool.filter((c) => c.id.startsWith('elevation:'));
+  assert.equal(elevations.length, 1, '9×9 keeps a single elevation breakpoint');
+  const ultimateBreak = ELEVATION_BREAKS_FOR_RANDOM.find((b) => b.ultimate === true);
+  assert.ok(ultimateBreak, 'exactly one elevation break should be flagged ultimate');
+  assert.equal(elevations[0].id, `elevation:${ultimateBreak?.op}${ultimateBreak?.n}`);
 });
 
 test('buildUltimateCategoryPool keeps exactly one density breakpoint (the ultimate:true tier)', () => {
@@ -1651,15 +1725,16 @@ function denseSquarePool(continents, colors, perCell) {
           motifs: [motif],
           // Spread metric values WITHIN each (continent × colour) cell so the
           // 9×9 pool's `>=` metric breaks (population >=10M, area >=100K,
-          // density >=100) are fillable everywhere (matching production, where
-          // every country has a value) yet match a fraction per cell, so no
-          // break is a superset of a continent. Offset so the three metrics
+          // density >=100, elevation >=1000 m) are fillable everywhere (matching
+          // production, where every country has a value) yet match a fraction per
+          // cell, so no break is a superset of a continent. Offset so the metrics
           // aren't subset-related (n%2 vs n%3 give distinct partitions).
           population: n % 2 === 0 ? 20_000_000 : 5_000_000,
           area: n % 2 === 1 ? 200_000 : 50_000,
           density: n % 3 === 0 ? 500 : 20,
           gdp: n % 2 === 1 ? 200_000_000_000 : 8_000_000_000,
           gdpPerCapita: n % 3 === 2 ? 35_000 : 4_000,
+          elevation: n % 3 === 1 ? 2_000 : 500,
         }));
       }
     }
@@ -1777,17 +1852,19 @@ test('findUltimateAssignment: returns 81 distinct countries on an empty puzzle t
   // motif) leave the Hall check tight, and 50 attempts isn't always enough
   // to roll a Hall-passing layout — this fired once in CI before the bump.
   // The chosen seed lands on an axis combo the backtracker resolves within its
-  // budget; growing the category pool (adding a motif, or the `area` metric
-  // breakpoints) shifts which seeds the PRNG sweeps onto, so this is a known
-  // sensitivity. Seed 4 resolves under the post-area pool (seed 3 stopped).
+  // budget; growing the category pool (adding a motif, or the `area` / `elevation`
+  // metric breakpoints) shifts which seeds the PRNG sweeps onto, so this is a
+  // known sensitivity. Seed 7 resolves under the post-elevation pool (seed 4,
+  // which resolved under the post-area pool, stopped when elevation's 9×9 break
+  // joined the ultimate pool).
   const countries = denseSquarePool(
     ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
     COLORS_FOR_RANDOM,
     10,
   );
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(4), maxAttempts: 3000 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 3000 });
   /** @type {Country[][][][] | null} */
-  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(4));
+  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(7));
   if (!assignment) throw new Error('a solvable puzzle must yield a non-null assignment');
   /** @type {Set<string>} */
   const seen = new Set();
@@ -1963,6 +2040,11 @@ function syntheticTaggedCountries() {
   // candidate in every continent" contract as the three ladders above.
   const GDP_LADDER = [50_000_000, 800_000_000, 8_000_000_000, 200_000_000_000, 600_000_000_000, 1_500_000_000_000];
   const GDP_PER_CAPITA_LADDER = [800, 1_800, 4_000, 35_000, 55_000, 80_000];
+  // elevation <=100 / <=200 / <=500 / >=1000 / >=3000 / >=5000 m. Dense +
+  // two-directional; a slower counter (/ 3) decorrelates it from pop/area/density
+  // (which cycle on codeCounter % 6) so cross-metric cells like elevation × area
+  // stay fillable, same discipline as the two GDP ladders above.
+  const ELEVATION_LADDER = [50, 150, 400, 2_000, 4_000, 6_000];
   // Each (continent × colour × n) triple becomes one country. n controls
   // palette size — n=0 keeps the base 1-colour shape, n=1/n=2 layer in
   // distinct neighbour colours so the country has 2 / 3 colours total.
@@ -1989,6 +2071,7 @@ function syntheticTaggedCountries() {
           // style cells. (gdp + gdpPerCapita never co-occur, same family, so
           // their mutual correlation is irrelevant.)
           gdp: GDP_LADDER[Math.floor(codeCounter / 7) % GDP_LADDER.length],
+          elevation: ELEVATION_LADDER[Math.floor(codeCounter / 3) % ELEVATION_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }
@@ -2016,6 +2099,7 @@ function syntheticTaggedCountries() {
           // style cells. (gdp + gdpPerCapita never co-occur, same family, so
           // their mutual correlation is irrelevant.)
           gdp: GDP_LADDER[Math.floor(codeCounter / 7) % GDP_LADDER.length],
+          elevation: ELEVATION_LADDER[Math.floor(codeCounter / 3) % ELEVATION_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }

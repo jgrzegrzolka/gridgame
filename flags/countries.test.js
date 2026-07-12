@@ -16,7 +16,7 @@ import {
   axesImpliedPair,
   suggest,
 } from './engine.js';
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees } from './group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachElevations } from './group.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -31,6 +31,7 @@ const DENSITY = JSON.parse(readFileSync(join(HERE, 'metrics', 'density.json'), '
 const GDP = JSON.parse(readFileSync(join(HERE, 'metrics', 'gdp.json'), 'utf-8'));
 const GDP_PER_CAPITA = JSON.parse(readFileSync(join(HERE, 'metrics', 'gdpPerCapita.json'), 'utf-8'));
 const COFFEE = JSON.parse(readFileSync(join(HERE, 'metrics', 'coffee.json'), 'utf-8'));
+const ELEVATION = JSON.parse(readFileSync(join(HERE, 'metrics', 'elevation.json'), 'utf-8'));
 const COUNTRIES = loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8')));
 attachPopulations(COUNTRIES, POPULATION.values);
 attachAreas(COUNTRIES, AREA.values);
@@ -38,6 +39,7 @@ attachDensities(COUNTRIES, DENSITY.values);
 attachGdps(COUNTRIES, GDP.values);
 attachGdpPerCapitas(COUNTRIES, GDP_PER_CAPITA.values);
 attachCoffees(COUNTRIES, COFFEE.values);
+attachElevations(COUNTRIES, ELEVATION.values);
 const SVG_DIR = join(HERE, 'svg');
 
 test('countries.json is a non-empty array', () => {

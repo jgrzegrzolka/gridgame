@@ -1,4 +1,4 @@
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees } from '../flags/group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachElevations } from '../flags/group.js';
 import {
   ALL_FLAG_COLORS,
   ALL_MOTIFS,
@@ -67,6 +67,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   gdpProbability: 0.08,
   gdpPerCapitaProbability: 0.06,
   coffeeProbability: 0.06,
+  elevationProbability: 0.10,
 });
 
 /**
@@ -209,8 +210,9 @@ export function bootFindFlag() {
     fetch('../flags/metrics/gdp.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
     fetch('../flags/metrics/gdpPerCapita.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
     fetch('../flags/metrics/coffee.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
+    fetch('../flags/metrics/elevation.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
   ])
-    .then(([raw, popValues, areaValues, densityValues, gdpValues, gdpPerCapitaValues, coffeeValues]) => {
+    .then(([raw, popValues, areaValues, densityValues, gdpValues, gdpPerCapitaValues, coffeeValues, elevationValues]) => {
       // Attach AFTER withLocalizedAliases: its clone path (re-wrapping a
       // renamed Country through createCountry) would drop an extra field
       // set beforehand, so denormalize onto the final pool objects.
@@ -221,6 +223,7 @@ export function bootFindFlag() {
       attachGdps(all, gdpValues);
       attachGdpPerCapitas(all, gdpPerCapitaValues);
       attachCoffees(all, coffeeValues);
+      attachElevations(all, elevationValues);
       /** @type {{ refreshI18n: (newAll: import('../flags/group.js').Country[]) => void } | null} */
       let activeHandle = null;
       if (!initialFilter) {
@@ -358,6 +361,8 @@ export function bootFindFlag() {
     const gdpPerCapitaPills = [];
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const coffeePills = [];
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const elevationPills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
     const sectionHeaders = [];
     /** @type {HTMLSpanElement | null} */
@@ -665,6 +670,41 @@ export function bootFindFlag() {
       }
     }
 
+    // Highest-elevation section, same single-select scalar (`filter.elevation`).
+    // Dense two-directional tiers (both `>= N m` and `<= N m`), like area.
+    {
+      const elevationItems = buildMetricTierItems('elevation', all);
+      if (elevationItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.elevation', 'Highest elevation');
+        sectionHeaders.push({ h, key: 'findFlag.sections.elevation', fallback: 'Highest elevation' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of elevationItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('elevation', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectElevation(op, n, btn));
+          wrap.appendChild(btn);
+          elevationPills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
     const randomBtn = document.getElementById('find-random');
 
@@ -837,6 +877,21 @@ export function bootFindFlag() {
       updateBar();
     }
 
+    /**
+     * Single-select highest-elevation tier, twin of selectArea.
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectElevation(op, n, btn) {
+      const isActive = filter.elevation !== null && filter.elevation.op === op && filter.elevation.n === n;
+      filter.elevation = isActive ? null : { op, n };
+      for (const p of elevationPills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
     playBtn.addEventListener('click', () => {
       if (playBtn.disabled) return;
       const params = new URLSearchParams({ f: serializeFilter(filter) });
@@ -871,6 +926,9 @@ export function bootFindFlag() {
         btn.classList.remove('active');
       }
       for (const { btn } of coffeePills) {
+        btn.classList.remove('active');
+      }
+      for (const { btn } of elevationPills) {
         btn.classList.remove('active');
       }
       updateBar();
@@ -925,7 +983,7 @@ export function bootFindFlag() {
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, onlyColorsLabelSpan, updateBar });
+        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, elevationPills, onlyColorsLabelSpan, updateBar });
       },
     };
   }

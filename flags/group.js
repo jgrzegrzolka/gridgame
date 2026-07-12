@@ -19,6 +19,7 @@
  * @property {number} [gdp]  Denormalized from `flags/metrics/gdp.json` by `attachGdps` (nominal current US$). Absent only for non-places.
  * @property {number} [gdpPerCapita]  Denormalized from `flags/metrics/gdpPerCapita.json` by `attachGdpPerCapitas` (nominal current US$ per person). Absent only for non-places.
  * @property {number} [coffee]  Denormalized from `flags/metrics/coffee.json` by `attachCoffees` (green-coffee tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
+ * @property {number} [elevation]  Denormalized from `flags/metrics/elevation.json` by `attachElevations` (metres above sea level of the highest point). Dense, same pattern as `area`; absent only for non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -157,6 +158,24 @@ export function attachGdpPerCapitas(countries, values) {
   for (const c of countries) {
     const v = values[c.code];
     if (typeof v === 'number') c.gdpPerCapita = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/elevation.json` values onto each Country as
+ * `.elevation` (metres above sea level of the highest point). Twin of
+ * `attachAreas`. Elevation is dense (every real place has a value), so only
+ * non-place flags (orgs) are left without the field.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachElevations(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.elevation = v;
   }
   return countries;
 }

@@ -358,6 +358,31 @@ export const COFFEE_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 100_000 },
 ];
 
+/**
+ * Highest-elevation-threshold Categories (metres above sea level of each place's
+ * highest point). Dense and *two-directional*, the mirror of area / GDP: both
+ * extremes make good questions, so there are three "high" tiers (`>= N`) and
+ * three "low" tiers (`<= N`). High `>=1000 / >=3000 / >=5000 m` (175 / 71 / 27
+ * real places, the elite high-mountain nations at the tight end); low
+ * `<=500 / <=200 / <=100 m` (51 / 28 / 18, the flat countries and low coral
+ * islands, bottoming out at the Maldives). `exclusiveGroup: 'elevation'`.
+ *
+ * `ultimate: true` marks the single break kept in the 9×9 pool: the broad
+ * `>=1000` tier (~2/3 of the world, spread across every continent) is the only
+ * one that can back 9-distinct-per-cell against a continent; the rest carry
+ * `ultimateEligible: false`. Dense, so unlike coffee it IS 9×9-eligible.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const ELEVATION_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1_000, ultimate: true },
+  { op: '>=', n: 3_000 },
+  { op: '>=', n: 5_000 },
+  { op: '<=', n: 500 },
+  { op: '<=', n: 200 },
+  { op: '<=', n: 100 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -591,6 +616,11 @@ function tonnesToken(/** @type {number} */ n) {
   return `${n}`;
 }
 
+/** Metres with thousands separators ("5,000", "500") for the elevation threshold text. */
+function metresLabel(/** @type {number} */ n) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 /**
  * GDP-threshold Category factory (nominal current US$). Reads the denormalized
  * `country.gdp` field (`attachGdps`). `exclusiveGroup: 'gdp'`.
@@ -674,6 +704,36 @@ export function coffee(op, n, opts = {}) {
     label,
     predicate,
     exclusiveGroup: 'coffee',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
+ * Highest-elevation-threshold Category factory (metres above sea level). Reads
+ * the denormalized `country.elevation` field (`attachElevations`).
+ * `exclusiveGroup: 'elevation'`. Dense and two-directional, so both `>=` (high
+ * peaks) and `<=` (low, flat places) are meaningful tiers, the mirror of area.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function elevation(op, n, opts = {}) {
+  const human = metresLabel(n);
+  const label = op === '>=' ? `over ${human} m` : `under ${human} m`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.elevation === 'number' && c.elevation >= n
+      : (c) => typeof c.elevation === 'number' && c.elevation <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `elevation:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'elevation',
   };
   if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
@@ -795,6 +855,19 @@ export const THRESHOLD_METRICS = {
       const human = tonnesCompact(n);
       if (op === '>=') return translate(`coffee.atLeast.${token}`, `over ${human} tonnes`);
       return translate(`coffee.atMost.${token}`, `under ${human} tonnes`);
+    },
+  },
+  elevation: {
+    breaks: ELEVATION_BREAKS_FOR_RANDOM,
+    factory: elevation,
+    prefixFallback: 'Highest elevation',
+    field: 'elevation',
+    family: 'elevation',
+    has: (c) => typeof c.elevation === 'number',
+    labelFor: (op, n, translate) => {
+      const human = metresLabel(n);
+      if (op === '>=') return translate(`elevation.atLeast.${n}`, `over ${human} m`);
+      return translate(`elevation.atMost.${n}`, `under ${human} m`);
     },
   },
 };
