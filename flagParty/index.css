@@ -245,6 +245,7 @@
 [data-metric="superlative-elevation"] { --mc: #5c7a94; }
 [data-metric="superlative-coastline"] { --mc: #2f77a6; }
 [data-metric="superlative-forest"] { --mc: #2e7d32; }
+[data-metric="superlative-oil"] { --mc: #37474f; }
 
 /* Per-category reveal timing, shown under the tricky toggle when it's on. A
    quiet indented block (it belongs to the toggle above it) with one row per

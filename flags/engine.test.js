@@ -40,6 +40,7 @@ import {
   COCOA_BREAKS_FOR_RANDOM,
   BANANA_BREAKS_FOR_RANDOM,
   APPLE_BREAKS_FOR_RANDOM,
+  OIL_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
   FOREST_BREAKS_FOR_RANDOM,
@@ -575,6 +576,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = FOREST_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `forest ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('oil:')) {
+      const suffix = cat.id.slice('oil:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = OIL_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `oil ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -648,7 +656,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + APPLE_BREAKS_FOR_RANDOM.length
     + ELEVATION_BREAKS_FOR_RANDOM.length
     + COASTLINE_BREAKS_FOR_RANDOM.length
-    + FOREST_BREAKS_FOR_RANDOM.length;
+    + FOREST_BREAKS_FOR_RANDOM.length
+    + OIL_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -830,7 +839,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['apple', 'area', 'banana', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'population', 'wine'],
+    ['apple', 'area', 'banana', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'oil', 'population', 'wine'],
   );
 });
 
@@ -972,11 +981,19 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     1,
     'exactly the ultimate forest tier appears in the 9×9 pool',
   );
+  // Oil, like the crops, has NO ultimate break, so ALL its breaks drop.
+  const droppedOil = OIL_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedOil, OIL_BREAKS_FOR_RANDOM.length, 'no oil tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('oil:')).length,
+    0,
+    'oil cats must not appear in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
-      - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest,
+      - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest - droppedOil,
   );
 });
 

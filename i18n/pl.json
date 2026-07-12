@@ -416,7 +416,8 @@
       "apple": "Produkcja jabłek",
       "elevation": "Najwyższy punkt",
       "coastline": "Długość wybrzeża",
-      "forest": "Lesistość"
+      "forest": "Lesistość",
+      "oil": "Wydobycie ropy naftowej"
     }
   },
   "daily": {
@@ -546,7 +547,8 @@
       "superlativeApple": "Produkcja jabłek: najwięcej",
       "superlativeElevation": "Najwyższy punkt: najwyższy i najniższy",
       "superlativeCoastline": "Długość wybrzeża: najdłuższe i najkrótsze",
-      "superlativeForest": "Lesistość: najbardziej i najmniej zalesione"
+      "superlativeForest": "Lesistość: najbardziej i najmniej zalesione",
+      "superlativeOil": "Wydobycie ropy naftowej: najwięcej"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -564,7 +566,8 @@
       "superlativeApple": "Jabłka",
       "superlativeElevation": "Wysokość",
       "superlativeCoastline": "Wybrzeże",
-      "superlativeForest": "Lasy"
+      "superlativeForest": "Lasy",
+      "superlativeOil": "Ropa"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
@@ -590,6 +593,7 @@
     "hintLeastCoastline": "Najkrótsze wybrzeże",
     "hintMostForest": "Najbardziej zalesiony",
     "hintLeastForest": "Najmniej zalesiony",
+    "hintMostOil": "Największe wydobycie ropy",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
@@ -806,6 +810,13 @@
       "1": "poniżej 1% lasów"
     }
   },
+  "oil": {
+    "atLeast": {
+      "10": "ponad 10 TWh",
+      "100": "ponad 100 TWh",
+      "1000": "ponad 1000 TWh"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "tylko 2 kolory",
@@ -874,7 +885,8 @@
     "apple": "Produkcja jabłek",
     "elevation": "Najwyższy punkt",
     "coastline": "Długość wybrzeża",
-    "forest": "Lesistość"
+    "forest": "Lesistość",
+    "oil": "Wydobycie ropy naftowej"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

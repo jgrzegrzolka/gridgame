@@ -388,3 +388,26 @@ test('forestRound: treeless (0%) places are excluded from selection', async () =
     }
   }
 });
+
+// ---- oil instance (oil production in TWh, id 'superlative-oil') --------------
+
+test('oilRound: biggest-only, correct extreme-by-oil answer, producers only', async () => {
+  const { oilRound } = await import('./superlative.js');
+  const oilJson = (await import('../metrics/oil.json', { with: { type: 'json' } })).default;
+  const OIL = /** @type {Record<string, number>} */ (oilJson.values);
+  assert.equal(oilRound.id, 'superlative-oil');
+  // Oil-distinct sovereign PRODUCERS spanning many orders of magnitude, all in
+  // oil.json. A non-producer (e.g. Switzerland) mixed in must be dropped by the
+  // round's `metric.has` filter, never appear as an option.
+  const pool = ['us', 'ru', 'sa', 'cn', 'no', 'qa', 'ch'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = oilRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Oil is locked to 'most'; every round asks for the biggest producer.
+    assert.equal(q.prompt, 'most', `seed ${i}: oil is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('ch'), 'a non-producer is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => OIL[c]);
+    assert.equal(OIL[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-oil option`);
+  }
+});

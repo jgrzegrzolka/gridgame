@@ -11,6 +11,7 @@ import apple from '../metrics/apple.json' with { type: 'json' };
 import elevation from '../metrics/elevation.json' with { type: 'json' };
 import coastline from '../metrics/coastline.json' with { type: 'json' };
 import forest from '../metrics/forest.json' with { type: 'json' };
+import oil from '../metrics/oil.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -215,3 +216,8 @@ const forestedForest = {
   values: Object.fromEntries(Object.entries(forest.values).filter(([, v]) => v > 0)),
 };
 export const forestRound = createSuperlativeRound(createMetric(forestedForest, []), 'superlative-forest');
+
+// Oil instance: oil production in TWh, id 'superlative-oil'. Sparse like the
+// crops, so the round ranks the ~92 producers only. Locked to 'most': "biggest
+// oil producer" (the US) is the good question.
+export const oilRound = createSuperlativeRound(createMetric(oil, []), 'superlative-oil', { direction: 'most' });

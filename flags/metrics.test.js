@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachWines, attachCocoas, attachBananas, attachApples, attachCoastlines, attachForests } from './group.js';
+import { attachCoffees, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachCoastlines, attachForests } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -23,6 +23,7 @@ const WINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/win
 const COCOA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/cocoa.json'));
 const BANANA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/banana.json'));
 const APPLE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/apple.json'));
+const OIL = /** @type {import('./metrics.js').MetricData} */ (load('metrics/oil.json'));
 const ELEVATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/elevation.json'));
 const COASTLINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coastline.json'));
 const FOREST = /** @type {import('./metrics.js').MetricData} */ (load('metrics/forest.json'));
@@ -653,6 +654,59 @@ test('createMetric over apple stays sparse: it ranks producers only', () => {
   assert.equal(apple.topN('world', 1)[0].code, 'cn'); // China, the largest
   assert.equal(apple.rankOf('us', 'world'), 2); // United States second
   assert.equal(apple.has('ng'), false); // Nigeria grows none: no rank, not a 0
+});
+
+// ---- real oil.json schema + the sparse absence:'zero' contract -------------
+
+test('oil is a valid, self-describing metric file with an absence hint', () => {
+  assert.equal(OIL.key, 'oil');
+  assert.equal(typeof OIL.label, 'string');
+  assert.equal(typeof OIL.unit, 'string');
+  assert.ok(OIL.format === 'compact' || OIL.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof OIL.source, 'string');
+  assert.equal(typeof OIL.year, 'number');
+  assert.equal(typeof OIL.values, 'object');
+  // Sparse like the crops: producers only, absence means "pumps none" → 0.
+  assert.equal(OIL.absence, 'zero');
+});
+
+test('every oil value is a positive integer (TWh, sub-1-TWh producers dropped)', () => {
+  for (const [code, v] of Object.entries(OIL.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 1, `${code} listed but not >= 1: ${v}`);
+  }
+});
+
+test('every oil key is a real (non-other) country, never an org', () => {
+  const byCode = new Map(COUNTRIES.map((c) => [c.code, c]));
+  for (const code of Object.keys(OIL.values)) {
+    const c = byCode.get(code);
+    assert.ok(c, `oil key ${code} is not in countries.json`);
+    assert.notEqual(c.category, 'other', `oil key ${code} is an "other" entry`);
+  }
+});
+
+test("absence:'zero' contract: attachOils fills every real place, orgs stay bare", () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachOils(/** @type {any} */ (rows), OIL.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.oil, undefined, `org ${c.code} should have no oil field`);
+    } else {
+      assert.equal(typeof row.oil, 'number', `real place ${c.code} has no oil value`);
+    }
+  }
+  assert.equal(/** @type {any} */ (byCode.get('us')).oil, OIL.values.us);
+  assert.equal(/** @type {any} */ (byCode.get('ch')).oil, 0); // Switzerland pumps none
+});
+
+test('createMetric over oil stays sparse: it ranks producers only', () => {
+  const oil = createMetric(OIL, COUNTRIES);
+  assert.equal(oil.topN('world', 1)[0].code, 'us'); // United States, the largest
+  assert.equal(oil.rankOf('ru', 'world'), 2); // Russia second
+  assert.equal(oil.has('ch'), false); // Switzerland pumps none: no rank, not a 0
 });
 
 test('createMetric over banana stays sparse: it ranks producers only', () => {
