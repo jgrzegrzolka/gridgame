@@ -19,7 +19,21 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DK (coffee, the first sparse metric) closed once its code surfaces shipped; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+### Feature DL: Highest elevation as a world metric (dense + two-directional)
+
+Seventh world metric: the highest elevation (metres above sea level) of each place's highest point. **Dense, the mirror of area / GDP** (not sparse like coffee): every real place has a highest point, so every one carries a value and there is **no `absence: 'zero'`** hint. And genuinely **two-directional** like area: both extremes make good questions, "highest peak" (Everest, Nepal / China, 8,849 m) *and* the fun "lowest highpoint" (Maldives 2 m, Tuvalu / Tokelau 5 m, the low coral atolls). So the filters get both `>=` and `<=` tiers and the Flag Party round runs both directions, unlike coffee's one-sided ladder.
+
+**Data contract:** dense (fill all real places), like area / GDP. No API exists for "highest point", so `build-elevation.mjs` is a fully hand-curated `HIGHEST_POINT_M` table (each peak named in a comment for line-by-line refresh) joined to `countries.json`; the script errors if any real place is missing. Values are whole metres, floor 1 (a highest point is above sea level by definition; the Maldives, the lowest highpoint on Earth, rounds to 2 m). New display hint **`format: 'plain'`** (exact metres with thousands separators, 8,849) because compact would collapse Everest / K2 / Kangchenjunga to an indistinguishable "8.6K–8.8K", and the precise height IS the point.
+
+- [x] 1. Data: `flags/metrics/elevation.json` (262 real places, dense, `format: 'plain'`) + `authoring/build-elevation.mjs` (hand-curated table + coverage guard) + `METRIC_FILES` line + `plain` format in `metricLens.js` (+ test) + `metrics.test.js` schema/positive-integer/no-org/dense-coverage/both-extremes tests. (PR pending)
+- [x] 2. flagsdata lens, free once step 1 landed; "Highest elevation" in the selector, exact metres (confirmed in-browser: exact metres render, `cn #1 · 8,849` / `pk #3 · 8,611` / `mv #195 · 2`, orgs read "no data").
+- [ ] 3. Filters: `metricTiers.js` registry line (+ `has`); findFlag chooser (5 edits) + `findflag-random-coverage` skill note; flagsdata filter group; `attachElevations` at both load sites. **Two-directional:** both `>=` and `<=` tiers.
+- [ ] 4. TTT: `elevation()` factory + `ELEVATION_BREAKS_FOR_RANDOM` + pool/id/label wiring; `attachElevations` at all 6 load sites; `elevation.atLeast/atMost` i18n; verify no-data guard in-browser.
+- [ ] 5. Flag Party round (`elevationRound` via `createSuperlativeRound`), **two-directional** (both "highest" and "lowest highpoint"), unlike coffee's biggest-only lock.
+
+Surface 6 (daily puzzles) is NOT a checkbox here: when 1-5 land, add a row to `METRIC_DAILY_PUZZLES.md` and close the Feature.
+
+**PR sequencing (one surface-coherent PR at a time, mirroring DK's #833 / #834 / #835):** PR 1 = surfaces 1-2 (data + lens + `plain` format); PR 2 = surfaces 3-4 (filters + TTT); PR 3 = surface 5 (party round).
 
 ---
 

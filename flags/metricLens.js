@@ -17,12 +17,19 @@
  * Format a metric value for the compact tile overlay.
  *   'compact'  → 27.81T / 1.44B / 336.8M / 552.7K / 800
  *   'decimal1' → one decimal place (small per-capita rates)
+ *   'plain'    → exact integer with thousands separators (8,849), for metrics
+ *                like elevation where the precise figure IS the point and
+ *                compact would collapse 8,849 / 8,611 / 8,586 to "8.6K"
  * @param {number} value
  * @param {string} [format]
  * @returns {string}
  */
 export function formatValue(value, format) {
   if (format === 'decimal1') return value.toFixed(1);
+  // Deterministic thousands grouping (no locale dependence across Node/browser).
+  if (format === 'plain') {
+    return Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
   const abs = Math.abs(value);
   if (abs >= 1e12) return (value / 1e12).toFixed(2) + 'T'; // GDP reaches trillions
   if (abs >= 1e9) return (value / 1e9).toFixed(2) + 'B';
