@@ -41,6 +41,7 @@ import {
   BANANA_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
+  FOREST_BREAKS_FOR_RANDOM,
   ALL_MOTIFS,
   colorCount,
   population,
@@ -566,6 +567,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = COASTLINE_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `coastline ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('forest:')) {
+      const suffix = cat.id.slice('forest:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = FOREST_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `forest ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -637,7 +645,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + COCOA_BREAKS_FOR_RANDOM.length
     + BANANA_BREAKS_FOR_RANDOM.length
     + ELEVATION_BREAKS_FOR_RANDOM.length
-    + COASTLINE_BREAKS_FOR_RANDOM.length;
+    + COASTLINE_BREAKS_FOR_RANDOM.length
+    + FOREST_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -819,7 +828,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['area', 'banana', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'gdp', 'gdpPerCapita', 'population', 'wine'],
+    ['area', 'banana', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'population', 'wine'],
   );
 });
 
@@ -945,11 +954,19 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     1,
     'exactly the ultimate coastline tier appears in the 9×9 pool',
   );
+  // Forest IS 9×9-eligible (dense), like elevation / coastline: only its five
+  // non-ultimate breaks drop, the broad >=30 tier stays.
+  const droppedForest = FOREST_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('forest:')).length,
+    1,
+    'exactly the ultimate forest tier appears in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
-      - droppedWine - droppedCocoa - droppedBanana - droppedElevation - droppedCoastline,
+      - droppedWine - droppedCocoa - droppedBanana - droppedElevation - droppedCoastline - droppedForest,
   );
 });
 
@@ -1901,18 +1918,18 @@ test('findUltimateAssignment: returns 81 distinct countries on an empty puzzle t
   // to roll a Hall-passing layout — this fired once in CI before the bump.
   // The chosen seed lands on an axis combo the backtracker resolves within its
   // budget; growing the category pool (adding a motif, or the `area` / `elevation`
-  // metric breakpoints) shifts which seeds the PRNG sweeps onto, so this is a
-  // known sensitivity. Seed 7 resolves under the post-elevation pool (seed 4,
-  // which resolved under the post-area pool, stopped when elevation's 9×9 break
-  // joined the ultimate pool).
+  // / `coastline` / `forest` metric breakpoints) shifts which seeds the PRNG
+  // sweeps onto, so this is a known sensitivity. Seed 3 resolves under the
+  // post-forest pool (seed 7, which resolved under the post-elevation pool,
+  // stopped when forest's 9×9 break joined the ultimate pool).
   const countries = denseSquarePool(
     ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
     COLORS_FOR_RANDOM,
     10,
   );
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 3000 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(1), maxAttempts: 3000 });
   /** @type {Country[][][][] | null} */
-  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(7));
+  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(1));
   if (!assignment) throw new Error('a solvable puzzle must yield a non-null assignment');
   /** @type {Set<string>} */
   const seen = new Set();
@@ -1948,7 +1965,7 @@ test('findUltimateAssignment: respects preFilled cells and never reuses their co
     COLORS_FOR_RANDOM,
     10,
   );
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 3000 });
+  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(1), maxAttempts: 3000 });
   // Seed one cell at (0,0,0,0) with a country that fits its row × col.
   const seedCandidates = countries.filter(
     (co) => puzzle.rows[0].predicate(co) && puzzle.cols[0].predicate(co),
@@ -1958,7 +1975,7 @@ test('findUltimateAssignment: respects preFilled cells and never reuses their co
   const preFilled = emptyPreFilled();
   preFilled[0][0][0][0] = seed;
 
-  const assignment = findUltimateAssignment(puzzle, preFilled, countries, mulberry32(7));
+  const assignment = findUltimateAssignment(puzzle, preFilled, countries, mulberry32(1));
   if (!assignment) throw new Error('expected an assignment');
   // Seeded cell unchanged.
   assert.equal(assignment[0][0][0][0].code, seed.code);
@@ -2111,6 +2128,12 @@ function syntheticTaggedCountries() {
   // Oceania place is landlocked — the synthetic pool's job is fillability, not
   // realism.
   const COASTLINE_LADDER = [0, 50, 300, 2_000, 8_000, 30_000];
+  // forest <=1 / <=5 / <=20 / >=30 / >=50 / >=70 %. Dense + two-directional,
+  // intensive (size-independent), like elevation / coastline. A /6 counter
+  // decorrelates it from the other metric ladders so cross-metric cells
+  // (forest × coastline, forest × elevation) stay fillable. Half the rungs sit
+  // >=30 so the single 9×9-eligible forest tier fills 9-distinct per continent.
+  const FOREST_LADDER = [0, 3, 15, 40, 60, 85];
   // Each (continent × colour × n) triple becomes one country. n controls
   // palette size — n=0 keeps the base 1-colour shape, n=1/n=2 layer in
   // distinct neighbour colours so the country has 2 / 3 colours total.
@@ -2143,6 +2166,7 @@ function syntheticTaggedCountries() {
           cocoa: CROP_LADDER[codeCounter % CROP_LADDER.length],
           banana: CROP_LADDER[codeCounter % CROP_LADDER.length],
           coastline: COASTLINE_LADDER[Math.floor(codeCounter / 4) % COASTLINE_LADDER.length],
+          forest: FOREST_LADDER[Math.floor(codeCounter / 6) % FOREST_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }
@@ -2176,6 +2200,7 @@ function syntheticTaggedCountries() {
           cocoa: CROP_LADDER[codeCounter % CROP_LADDER.length],
           banana: CROP_LADDER[codeCounter % CROP_LADDER.length],
           coastline: COASTLINE_LADDER[Math.floor(codeCounter / 4) % COASTLINE_LADDER.length],
+          forest: FOREST_LADDER[Math.floor(codeCounter / 6) % FOREST_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }

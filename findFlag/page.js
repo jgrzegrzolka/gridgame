@@ -73,6 +73,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   bananaProbability: 0.06,
   elevationProbability: 0.10,
   coastlineProbability: 0.10,
+  forestProbability: 0.10,
 });
 
 /**
@@ -368,6 +369,8 @@ export function bootFindFlag() {
     const elevationPills = [];
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const coastlinePills = [];
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const forestPills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
     const sectionHeaders = [];
     /** @type {HTMLSpanElement | null} */
@@ -850,6 +853,42 @@ export function bootFindFlag() {
       }
     }
 
+    // Forest-cover section, same single-select scalar (`filter.forest`).
+    // Dense two-directional tiers (both `>= N%` and `<= N%`), intensive so
+    // size-independent, like density.
+    {
+      const forestItems = buildMetricTierItems('forest', all);
+      if (forestItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.forest', 'Forest cover');
+        sectionHeaders.push({ h, key: 'findFlag.sections.forest', fallback: 'Forest cover' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of forestItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('forest', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectForest(op, n, btn));
+          wrap.appendChild(btn);
+          forestPills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
     const randomBtn = document.getElementById('find-random');
 
@@ -1097,6 +1136,21 @@ export function bootFindFlag() {
       updateBar();
     }
 
+    /**
+     * Single-select forest-cover tier, twin of selectCoastline.
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectForest(op, n, btn) {
+      const isActive = filter.forest !== null && filter.forest.op === op && filter.forest.n === n;
+      filter.forest = isActive ? null : { op, n };
+      for (const p of forestPills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
     playBtn.addEventListener('click', () => {
       if (playBtn.disabled) return;
       const params = new URLSearchParams({ f: serializeFilter(filter) });
@@ -1146,6 +1200,9 @@ export function bootFindFlag() {
         btn.classList.remove('active');
       }
       for (const { btn } of coastlinePills) {
+        btn.classList.remove('active');
+      }
+      for (const { btn } of forestPills) {
         btn.classList.remove('active');
       }
       updateBar();
@@ -1200,7 +1257,7 @@ export function bootFindFlag() {
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, winePills, cocoaPills, bananaPills, elevationPills, coastlinePills, onlyColorsLabelSpan, updateBar });
+        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, winePills, cocoaPills, bananaPills, elevationPills, coastlinePills, forestPills, onlyColorsLabelSpan, updateBar });
       },
     };
   }

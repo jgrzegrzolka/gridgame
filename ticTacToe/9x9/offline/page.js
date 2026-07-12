@@ -8,7 +8,7 @@ import {
   isMetaWinNewlyFormed,
 } from '../../../flags/ultimateTicTacToe.js';
 import { shouldFireTicTacToeConfetti } from '../../../flags/ticTacToe.js';
-import { loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachElevations, attachCoastlines } from '../../../flags/group.js';
+import { loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachElevations, attachCoastlines, attachForests } from '../../../flags/group.js';
 import { metricDataGap } from '../../../flags/metricTiers.js';
 import { t, countryName, withLocalizedAliases } from '../../../i18n.js';
 import { launchConfetti } from '../../../confetti.js';
@@ -42,8 +42,9 @@ export function bootTicTacToe9x9() {
     fetch('../../../flags/metrics/gdpPerCapita.json').then((r) => r.json()),
     fetch('../../../flags/metrics/elevation.json').then((r) => r.json()),
     fetch('../../../flags/metrics/coastline.json').then((r) => r.json()),
+    fetch('../../../flags/metrics/forest.json').then((r) => r.json()),
   ])
-    .then(([rawCountries, population, area, density, gdp, gdpPerCapita, elevation, coastline]) => {
+    .then(([rawCountries, population, area, density, gdp, gdpPerCapita, elevation, coastline, forest]) => {
       const countries = withLocalizedAliases(loadCountries(rawCountries));
       attachPopulations(countries, population.values);
       attachAreas(countries, area.values);
@@ -52,6 +53,7 @@ export function bootTicTacToe9x9() {
       attachGdpPerCapitas(countries, gdpPerCapita.values);
       attachElevations(countries, elevation.values);
       attachCoastlines(countries, coastline.values);
+      attachForests(countries, forest.values);
       // 9×9 requires every (row × col) small board to be filled with 9 distinct
       // flags AND no flag shared across small boards (global no-duplicate).
       // generateUltimateRandomPuzzle uses Hall's marriage theorem to ensure
