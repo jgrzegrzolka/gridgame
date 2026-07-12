@@ -22,6 +22,7 @@
  * @property {number} [wine]  Denormalized from `flags/metrics/wine.json` by `attachWines` (wine tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-maker defaults to 0); absent only for non-places (orgs).
  * @property {number} [cocoa]  Denormalized from `flags/metrics/cocoa.json` by `attachCocoas` (cocoa-bean tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
  * @property {number} [banana]  Denormalized from `flags/metrics/banana.json` by `attachBananas` (banana tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
+ * @property {number} [apple]  Denormalized from `flags/metrics/apple.json` by `attachApples` (apple tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
  * @property {number} [elevation]  Denormalized from `flags/metrics/elevation.json` by `attachElevations` (metres above sea level of the highest point). Dense, same pattern as `area`; absent only for non-places (orgs).
  * @property {number} [coastline]  Denormalized from `flags/metrics/coastline.json` by `attachCoastlines` (kilometres of coastline). Dense, same pattern as `area`: every real place has a value (a landlocked place carries 0), absent only for non-places (orgs).
  * @property {number} [forest]  Denormalized from `flags/metrics/forest.json` by `attachForests` (forest area as a percentage of land area). Dense, same pattern as `area`: every real place has a value (a treeless desert/ice sheet carries 0.0), absent only for non-places (orgs).
@@ -313,6 +314,21 @@ export function attachBananas(countries, values) {
 }
 
 /**
+ * Denormalize `flags/metrics/apple.json` onto each Country as `.apple`
+ * (apple tonnes). Sparse `absence: 'zero'` metric like the other crops:
+ * producers get their tonnage, every other real place gets 0, orgs stay bare.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachApples(countries, values) {
+  return attachZeroFilledMetric(countries, values, (c, v) => {
+    c.apple = v;
+  });
+}
+
+/**
  * Registry of the metric denormalizers, keyed by metric key (the same keys as
  * `flags/metrics/index.js`'s METRIC_FILES). This is the single place a new
  * metric registers its loader: add its `attach<Key>s` here next to the others,
@@ -333,6 +349,7 @@ const METRIC_ATTACHERS = {
   wine: attachWines,
   cocoa: attachCocoas,
   banana: attachBananas,
+  apple: attachApples,
   elevation: attachElevations,
   coastline: attachCoastlines,
   forest: attachForests,

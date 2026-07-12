@@ -27,6 +27,7 @@ import { pillLabel } from '../flags/findFlag.js';
  * @typedef {{ labelSpan: { textContent: string }, value: string }} WinePillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} CocoaPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} BananaPillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} ApplePillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} ElevationPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} CoastlinePillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} ForestPillRef
@@ -43,6 +44,7 @@ import { pillLabel } from '../flags/findFlag.js';
  *   winePills?: WinePillRef[],
  *   cocoaPills?: CocoaPillRef[],
  *   bananaPills?: BananaPillRef[],
+ *   applePills?: ApplePillRef[],
  *   elevationPills?: ElevationPillRef[],
  *   coastlinePills?: CoastlinePillRef[],
  *   forestPills?: ForestPillRef[],
@@ -50,7 +52,7 @@ import { pillLabel } from '../flags/findFlag.js';
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], elevationPills = [], coastlinePills = [], forestPills = [], onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], applePills = [], elevationPills = [], coastlinePills = [], forestPills = [], onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
@@ -93,6 +95,10 @@ export function refreshChooserI18n({ sectionHeaders, allPills, populationPills =
   // Banana pills (">=10000" etc.) via pillLabel's banana branch.
   for (const p of bananaPills) {
     p.labelSpan.textContent = pillLabel('banana', p.value, 'include', t);
+  }
+  // Apple pills (">=100000" etc.) via pillLabel's apple branch.
+  for (const p of applePills) {
+    p.labelSpan.textContent = pillLabel('apple', p.value, 'include', t);
   }
   // Elevation pills (">=1000" etc.) via pillLabel's elevation branch.
   for (const p of elevationPills) {
