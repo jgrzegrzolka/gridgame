@@ -413,7 +413,8 @@
       "wine": "Wine production",
       "cocoa": "Cocoa production",
       "banana": "Banana production",
-      "elevation": "Highest elevation"
+      "elevation": "Highest elevation",
+      "coastline": "Coastline length"
     }
   },
   "daily": {
@@ -540,7 +541,8 @@
       "superlativeWine": "Wine production: most",
       "superlativeCocoa": "Cocoa production: most",
       "superlativeBanana": "Banana production: most",
-      "superlativeElevation": "Highest elevation: highest & lowest"
+      "superlativeElevation": "Highest elevation: highest & lowest",
+      "superlativeCoastline": "Coastline length: longest & shortest"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -555,7 +557,8 @@
       "superlativeWine": "Wine",
       "superlativeCocoa": "Cocoa",
       "superlativeBanana": "Banana",
-      "superlativeElevation": "Elevation"
+      "superlativeElevation": "Elevation",
+      "superlativeCoastline": "Coastline"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -580,6 +583,8 @@
     "hintLeastBanana": "Least bananas",
     "hintMostElevation": "Highest point",
     "hintLeastElevation": "Lowest highpoint",
+    "hintMostCoastline": "Longest coast",
+    "hintLeastCoastline": "Shortest coast",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
@@ -764,6 +769,18 @@
       "100": "under 100 m"
     }
   },
+  "coastline": {
+    "atLeast": {
+      "1000": "over 1,000 km of coast",
+      "5000": "over 5,000 km of coast",
+      "25000": "over 25,000 km of coast"
+    },
+    "atMost": {
+      "500": "under 500 km of coast",
+      "100": "under 100 km of coast",
+      "1": "landlocked (no coast)"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",
@@ -829,7 +846,8 @@
     "wine": "Wine production",
     "cocoa": "Cocoa production",
     "banana": "Banana production",
-    "elevation": "Highest elevation"
+    "elevation": "Highest elevation",
+    "coastline": "Coastline length"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

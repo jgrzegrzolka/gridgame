@@ -294,3 +294,39 @@ test('elevationRound: two-directional, correct extreme-by-elevation answer', asy
   assert.equal(elevationRound.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
   assert.equal(elevationRound.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
 });
+
+// ---- coastline instance (km of coast, id 'superlative-coastline') -----------
+
+test('coastlineRound: two-directional over coastal places, correct extreme answer', async () => {
+  const { coastlineRound } = await import('./superlative.js');
+  const coastJson = (await import('../metrics/coastline.json', { with: { type: 'json' } })).default;
+  const COAST = /** @type {Record<string, number>} */ (coastJson.values);
+  assert.equal(coastlineRound.id, 'superlative-coastline');
+  // Coastal sovereigns spanning four orders of magnitude (Canada 202,080 ...
+  // Monaco 4). All strictly > 0, so none is filtered out of the round's pool.
+  const pool = ['ca', 'id', 'no', 'us', 'gb', 'mx', 'it', 'fr', 'de', 'mc', 'gi', 'be'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = coastlineRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => COAST[c]);
+    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+    assert.equal(COAST[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-coastline option`);
+  }
+});
+
+test('coastlineRound: landlocked (0 km) places are excluded from selection', async () => {
+  const { coastlineRound } = await import('./superlative.js');
+  // The round metric is zero-filtered, so a landlocked code never has a value:
+  // even a pool of all-landlocked places falls back to nothing usable and would
+  // never surface one as an answer. Give a mixed pool and prove no landlocked
+  // code ever appears as an option.
+  const landlocked = new Set(['ch', 'at', 'bo', 'np', 'xk', 'hu', 'rs', 'ml', 'td']);
+  const pool = ['ca', 'no', 'gb', 'it', 'ch', 'at', 'bo', 'np', 'xk', 'hu'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = coastlineRound.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!landlocked.has(opt), `seed ${i}: landlocked ${opt} must not be an option`);
+    }
+  }
+});

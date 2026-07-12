@@ -10,7 +10,7 @@ import {
 import { getOrCreateDeviceId } from '../../flags/identity.js';
 import { newlyWonSmallBoards, isMetaWinNewlyFormed } from '../../flags/ultimateTicTacToe.js';
 import { shouldFireTicTacToeConfetti } from '../../flags/ticTacToe.js';
-import { loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachElevations } from '../../flags/group.js';
+import { loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachElevations, attachCoastlines } from '../../flags/group.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
 import { shareUrl, renderPlayingAs } from '../../common.js';
 import { trackEvent } from '../../analytics/index.js';
@@ -48,8 +48,9 @@ export function bootUltimateTicTacToeOnline() {
     fetch('../../flags/metrics/gdp.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
     fetch('../../flags/metrics/gdpPerCapita.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
     fetch('../../flags/metrics/elevation.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    fetch('../../flags/metrics/coastline.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
   ])
-    .then(([rawCountries, population, area, density, gdp, gdpPerCapita, elevation]) => {
+    .then(([rawCountries, population, area, density, gdp, gdpPerCapita, elevation, coastline]) => {
       const countries = withLocalizedAliases(loadCountries(rawCountries));
       if (population) attachPopulations(countries, population.values);
       if (area) attachAreas(countries, area.values);
@@ -57,6 +58,7 @@ export function bootUltimateTicTacToeOnline() {
       if (gdp) attachGdps(countries, gdp.values);
       if (gdpPerCapita) attachGdpPerCapitas(countries, gdpPerCapita.values);
       if (elevation) attachElevations(countries, elevation.values);
+      if (coastline) attachCoastlines(countries, coastline.values);
       runOnline(countries);
     })
     .catch((err) => {

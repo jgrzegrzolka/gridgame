@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DO (banana production, sparse) closed once its code surfaces shipped; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DP (coastline length, dense two-directional) closed once its code surfaces shipped; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,23 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DP: Coastline length as a world metric, dense + two-directional (code surfaces shipped 2026-07-12; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Eleventh world metric, the second dense two-directional one after elevation. Coastline km per place, CIA World Factbook sourced (Canada 202,080 km down to the ~42 landlocked states at 0). Adds a genuinely new "feel" to the board: a physical-geography axis where **landlocked = 0** is a real, comparable value, not a data gap.
+
+**Data contract:** *dense* like area / elevation, **no `absence` hint**. Every real place is sourced explicitly, a landlocked place carrying a real `0` (not omission), so "no data" still means exactly "not a place" and the TTT no-data guard is correct. A handful of places with no Factbook entry (the UK home nations, the Spanish regions, `ic`, a few small dependencies and Antarctic archipelagos) are flagged `estimate` in `build-coastline.mjs`.
+
+**Two-directional with a landlocked wrinkle.** Filters + TTT are two-directional (`COASTLINE_BREAKS_FOR_RANDOM` = `>=1000/5000/25000 km` = 76/23/7 sovereign, `<=500/100/1 km` = 99/56/41); the `<=1` tier is exactly the 41 landlocked sovereigns and renders as **"landlocked (no coast)"** rather than "under 1 km". `>=1000` is the single 9×9-eligible (ultimate) break, so coastline IS in the Ultimate pool (unlike the sparse crops). The **Flag Party** round, though, is built from a **zero-filtered** metric: landlocked 0s are dropped from *selection* so a "shortest coast" quartet can't tie at 0; among the coastal places both directions are clean, so the round stays two-directional (no `'most'` lock).
+
+- [x] 1. Data: `flags/metrics/coastline.json` (262 real places) + `authoring/build-coastline.mjs` + `METRIC_FILES` line + `attachCoastlines` (group.js) + its `METRIC_ATTACHERS` entry + `metrics.test.js` schema/non-negative-integer/coverage/no-org/landlocked-is-0/dense-attach tests.
+- [x] 2. flagsdata lens, free once step 1 landed; "Coastline length" in the selector, exact km (`plain`).
+- [x] 3 + 4 (`THRESHOLD_METRICS` registry). `coastline(op, n)` factory + `COASTLINE_BREAKS_FOR_RANDOM` + `THRESHOLD_METRICS.coastline`; **9×9-eligible** (dense, one ultimate break, pinned). Filters: `CoastlineConstraint` + `coastline` field; findFlag chooser section + `selectCoastline` + `coastlinePills` + `coastlineProbability` modifier + `chooserI18n`; flagsdata filter group (zero-edit, the `METRIC_FILES` loop). i18n `coastline.atLeast.{1000,5000,25000}` + `atMost.{500,100,1}` (the `1` key is the "landlocked" label) + `findFlag.sections.coastline` + `metric.coastline` (en+pl). Load sites: the 3×3 pages + findFlag + flagsdata are zero-edit; the two 9×9 pages and both party servers hand-list and were edited. Engine pinning tests (pool size, ultimate pool, `SINGLE_USE_METRIC_GROUPS`, the category-source sweep) updated; `syntheticTaggedCountries` got a `COASTLINE_LADDER` so the generator tests stay fillable.
+- [x] 5. Flag Party round: `coastlineRound` via `createSuperlativeRound` over the zero-filtered map (two-directional), registered across the six spots + a three-wave icon + en+pl `party.mode/modeShort.superlativeCoastline` + `hintMost/LeastCoastline`. Round-generation + landlocked-exclusion pinned by `superlative.test.js`.
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+---
 
 ### Feature DO: Banana production as a world metric, the fourth sparse crop (code surfaces shipped 2026-07-12; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

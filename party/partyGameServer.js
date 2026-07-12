@@ -37,7 +37,7 @@ const POOLS = {
  * never drift from the plan's `roundId`. Adding a mode = one import + one entry.
  * @type {Record<string, { generate: Function, isCorrect: Function }>}
  */
-const ROUNDS = Object.fromEntries([flagPick, mapPick, superlative, superlative.areaRound, superlative.densityRound, superlative.gdpRound, superlative.gdpPerCapitaRound, superlative.coffeeRound, superlative.wineRound, superlative.cocoaRound, superlative.bananaRound, superlative.elevationRound].map((m) => [m.id, m]));
+const ROUNDS = Object.fromEntries([flagPick, mapPick, superlative, superlative.areaRound, superlative.densityRound, superlative.gdpRound, superlative.gdpPerCapitaRound, superlative.coffeeRound, superlative.wineRound, superlative.cocoaRound, superlative.bananaRound, superlative.elevationRound, superlative.coastlineRound].map((m) => [m.id, m]));
 
 const TOTAL_ROUNDS = totalRounds(DEFAULT_PLAN);
 

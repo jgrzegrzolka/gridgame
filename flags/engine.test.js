@@ -40,6 +40,7 @@ import {
   COCOA_BREAKS_FOR_RANDOM,
   BANANA_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
+  COASTLINE_BREAKS_FOR_RANDOM,
   ALL_MOTIFS,
   colorCount,
   population,
@@ -558,6 +559,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = ELEVATION_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `elevation ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('coastline:')) {
+      const suffix = cat.id.slice('coastline:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = COASTLINE_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `coastline ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -628,7 +636,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + WINE_BREAKS_FOR_RANDOM.length
     + COCOA_BREAKS_FOR_RANDOM.length
     + BANANA_BREAKS_FOR_RANDOM.length
-    + ELEVATION_BREAKS_FOR_RANDOM.length;
+    + ELEVATION_BREAKS_FOR_RANDOM.length
+    + COASTLINE_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -810,7 +819,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['area', 'banana', 'cocoa', 'coffee', 'density', 'elevation', 'gdp', 'gdpPerCapita', 'population', 'wine'],
+    ['area', 'banana', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'gdp', 'gdpPerCapita', 'population', 'wine'],
   );
 });
 
@@ -928,11 +937,19 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     1,
     'exactly the ultimate elevation tier appears in the 9×9 pool',
   );
+  // Coastline IS 9×9-eligible (dense), like elevation: only its five non-ultimate
+  // breaks drop, the broad >=1000 tier stays.
+  const droppedCoastline = COASTLINE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('coastline:')).length,
+    1,
+    'exactly the ultimate coastline tier appears in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
-      - droppedWine - droppedCocoa - droppedBanana - droppedElevation,
+      - droppedWine - droppedCocoa - droppedBanana - droppedElevation - droppedCoastline,
   );
 });
 
@@ -2086,6 +2103,14 @@ function syntheticTaggedCountries() {
   // families so they may co-occur, and a high-tier country satisfies the lower
   // tiers too, so every crop × crop cell stays fillable.
   const CROP_LADDER = [3_000, 30_000, 300_000, 12_000, 120_000, 1_200_000];
+  // coastline <=1 (landlocked, 0 km) / <=100 / <=500 / >=1000 / >=5000 /
+  // >=25000 km. Dense + two-directional like elevation; a /4 counter decorrelates
+  // it from the other metric ladders so cross-metric cells (coastline × area,
+  // coastline × elevation) stay fillable. The 0-km rung makes the "landlocked"
+  // (<=1) tier fillable in every synthetic continent, unlike real data where no
+  // Oceania place is landlocked — the synthetic pool's job is fillability, not
+  // realism.
+  const COASTLINE_LADDER = [0, 50, 300, 2_000, 8_000, 30_000];
   // Each (continent × colour × n) triple becomes one country. n controls
   // palette size — n=0 keeps the base 1-colour shape, n=1/n=2 layer in
   // distinct neighbour colours so the country has 2 / 3 colours total.
@@ -2117,6 +2142,7 @@ function syntheticTaggedCountries() {
           wine: CROP_LADDER[codeCounter % CROP_LADDER.length],
           cocoa: CROP_LADDER[codeCounter % CROP_LADDER.length],
           banana: CROP_LADDER[codeCounter % CROP_LADDER.length],
+          coastline: COASTLINE_LADDER[Math.floor(codeCounter / 4) % COASTLINE_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }
@@ -2149,6 +2175,7 @@ function syntheticTaggedCountries() {
           wine: CROP_LADDER[codeCounter % CROP_LADDER.length],
           cocoa: CROP_LADDER[codeCounter % CROP_LADDER.length],
           banana: CROP_LADDER[codeCounter % CROP_LADDER.length],
+          coastline: COASTLINE_LADDER[Math.floor(codeCounter / 4) % COASTLINE_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }

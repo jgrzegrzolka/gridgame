@@ -55,6 +55,7 @@ const MODE_LABELS = {
   'superlative-cocoa': { key: 'party.mode.superlativeCocoa', full: 'Cocoa production: most', shortKey: 'party.modeShort.superlativeCocoa', short: 'Cocoa' },
   'superlative-banana': { key: 'party.mode.superlativeBanana', full: 'Banana production: most', shortKey: 'party.modeShort.superlativeBanana', short: 'Banana' },
   'superlative-elevation': { key: 'party.mode.superlativeElevation', full: 'Highest elevation: highest & lowest', shortKey: 'party.modeShort.superlativeElevation', short: 'Elevation' },
+  'superlative-coastline': { key: 'party.mode.superlativeCoastline', full: 'Coastline length: longest & shortest', shortKey: 'party.modeShort.superlativeCoastline', short: 'Coastline' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -112,6 +113,11 @@ const SUPERLATIVE_MODES = {
     hintMost: { key: 'party.hintMostElevation', fallback: 'Highest point' },
     hintLeast: { key: 'party.hintLeastElevation', fallback: 'Lowest highpoint' },
   },
+  'superlative-coastline': {
+    file: 'coastline.json',
+    hintMost: { key: 'party.hintMostCoastline', fallback: 'Longest coast' },
+    hintLeast: { key: 'party.hintLeastCoastline', fallback: 'Shortest coast' },
+  },
 };
 
 /** Every round id this build can render: the two fixed picture rounds plus the
@@ -161,6 +167,8 @@ const METRIC_ICONS = {
   'superlative-banana': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5c0 7 4 12 11 12 1.6 0 2.8-.3 3.5-.8-1 .3-6 .2-9.5-3.2S6.7 5.6 7 4.5C6.2 4.9 5 4.5 5 5z"/></svg>',
   // Highest elevation: a single tall peak with a snowcap (distinct from area's low range).
   'superlative-elevation': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M12 4L20 20H4z"/><path d="M9.4 11.7l2.6 1.6 2.6-1.6"/></svg>',
+  // Coastline length: three stacked waves (water / shoreline), distinct from the peak.
+  'superlative-coastline': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8c1.5 0 1.5 1.5 3 1.5S10.5 8 12 8s1.5 1.5 3 1.5S19.5 8 21 8"/><path d="M3 13c1.5 0 1.5 1.5 3 1.5S10.5 13 12 13s1.5 1.5 3 1.5S19.5 13 21 13"/><path d="M3 18c1.5 0 1.5 1.5 3 1.5S10.5 18 12 18s1.5 1.5 3 1.5S19.5 18 21 18"/></svg>',
 };
 
 /**
