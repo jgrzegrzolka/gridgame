@@ -169,3 +169,27 @@ test('gdpPerCapitaRound: id and a correct extreme-by-gdp-per-capita answer', asy
     assert.equal(PC[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-per-capita option`);
   }
 });
+
+// ---- coffee instance (green-coffee tonnes, id 'superlative-coffee') ---------
+
+test('coffeeRound: biggest-only, correct extreme-by-coffee answer, growers only', async () => {
+  const { coffeeRound } = await import('./superlative.js');
+  const coffeeJson = (await import('../metrics/coffee.json', { with: { type: 'json' } })).default;
+  const COF = /** @type {Record<string, number>} */ (coffeeJson.values);
+  assert.equal(coffeeRound.id, 'superlative-coffee');
+  // Coffee-distinct sovereign GROWERS spanning many orders of magnitude, all in
+  // coffee.json. A non-grower (e.g. Germany) mixed in must be dropped by the
+  // round's `metric.has` filter, never appear as an option.
+  const pool = ['br', 'vn', 'co', 'et', 'in', 'mx', 'pe', 'gt', 'cu', 'th', 'rw', 'bo', 'de'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = coffeeRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Coffee is locked to 'most' — "smallest grower" is an obscure question, so
+    // it's never dealt (Jan). Every round asks for the biggest producer.
+    assert.equal(q.prompt, 'most', `seed ${i}: coffee is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('de'), 'a non-grower is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => COF[c]);
+    assert.equal(COF[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-coffee option`);
+  }
+});

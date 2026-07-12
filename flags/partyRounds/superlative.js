@@ -3,6 +3,7 @@ import area from '../metrics/area.json' with { type: 'json' };
 import density from '../metrics/density.json' with { type: 'json' };
 import gdp from '../metrics/gdp.json' with { type: 'json' };
 import gdpPerCapita from '../metrics/gdpPerCapita.json' with { type: 'json' };
+import coffee from '../metrics/coffee.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -71,14 +72,19 @@ function shuffle(arr, rng) {
  *   doesn't repeat a country. Falls back to the full valued set if excluding
  *   would leave too few to build a question.
  * @param {() => number} [rng] injectable for tests; defaults to `Math.random`.
+ * @param {'most' | 'least'} [forcedDirection] lock the prompt to one direction
+ *   instead of a coin flip. Used by metrics where only one extreme is a good
+ *   question — coffee asks "biggest producer" only ('most'); "smallest grower"
+ *   is an obscure question, so 'least' is never dealt for it. When set, no rng
+ *   byte is spent on the coin flip.
  * @returns {Question}
  */
-function generateFor(metric, pool, exclude, rng = Math.random) {
+function generateFor(metric, pool, exclude, rng = Math.random, forcedDirection) {
   const withValue = pool.filter((c) => metric.has(c.code));
   const usable = exclude && exclude.size ? withValue.filter((c) => !exclude.has(c.code)) : withValue;
   const src = usable.length >= 4 ? usable : withValue;
   /** @type {'most' | 'least'} */
-  const direction = rng() < 0.5 ? 'least' : 'most';
+  const direction = forcedDirection ?? (rng() < 0.5 ? 'least' : 'most');
   // Every entry in `src` cleared `metric.has`, so its value is defined; the cast
   // spares the comparator and the gap check a redundant undefined check.
   const val = (/** @type {string} */ code) => /** @type {number} */ (metric.valueOf(code));
@@ -111,12 +117,15 @@ function generateFor(metric, pool, exclude, rng = Math.random) {
  *
  * @param {ReturnType<typeof createMetric>} metric a `createMetric(...)` instance
  * @param {string} roundId stable round id (matches the PARTY_MODES roundId)
+ * @param {{ direction?: 'most' | 'least' }} [opts] `direction` locks the prompt
+ *   to one extreme (coffee is `'most'`-only); omitted = both, chosen per round.
  * @returns {{ id: string, generate: (pool: PoolEntry[], exclude?: Set<string>, rng?: () => number) => Question, isCorrect: (q: { answer: string }, choice: string) => boolean }}
  */
-export function createSuperlativeRound(metric, roundId) {
+export function createSuperlativeRound(metric, roundId, opts = {}) {
+  const forcedDirection = opts.direction;
   return {
     id: roundId,
-    generate: (pool, exclude, rng = Math.random) => generateFor(metric, pool, exclude, rng),
+    generate: (pool, exclude, rng = Math.random) => generateFor(metric, pool, exclude, rng, forcedDirection),
     isCorrect: (question, choice) => choice === question.answer,
   };
 }
@@ -139,3 +148,11 @@ export const gdpRound = createSuperlativeRound(createMetric(gdp, []), 'superlati
 
 // GDP-per-capita instance: US$ per head, id 'superlative-gdppc'.
 export const gdpPerCapitaRound = createSuperlativeRound(createMetric(gdpPerCapita, []), 'superlative-gdppc');
+
+// Coffee instance: green-coffee tonnes, id 'superlative-coffee'. Coffee is a
+// sparse metric, so `createMetric` reads its producers-only `values` map and
+// `metric.has` is true only for growers — the round ranks the producers, never
+// the non-growers (who'd all tie at 0). No zero-fill here: that lives only on
+// the TTT threshold field. Locked to 'most': "biggest coffee producer" is the
+// good question; "smallest grower" is obscure, so 'least' is never dealt.
+export const coffeeRound = createSuperlativeRound(createMetric(coffee, []), 'superlative-coffee', { direction: 'most' });

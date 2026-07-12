@@ -531,7 +531,8 @@
       "superlativeArea": "Powierzchnia: największe i najmniejsze",
       "superlativeDensity": "Gęstość zaludnienia: najwięcej i najmniej",
       "superlativeGdp": "PKB: największe i najmniejsze",
-      "superlativeGdppc": "PKB na mieszkańca: największe i najmniejsze"
+      "superlativeGdppc": "PKB na mieszkańca: największe i najmniejsze",
+      "superlativeCoffee": "Produkcja kawy: największa i najmniejsza"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -541,7 +542,8 @@
       "superlativeArea": "Powierzchnia",
       "superlativeDensity": "Gęstość",
       "superlativeGdp": "PKB",
-      "superlativeGdppc": "PKB na mieszkańca"
+      "superlativeGdppc": "PKB na mieszkańca",
+      "superlativeCoffee": "Kawa"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
@@ -556,6 +558,8 @@
     "hintLeastGdp": "Najmniejsze PKB",
     "hintMostGdppc": "Największe PKB (na mieszkańca)",
     "hintLeastGdppc": "Najmniejsze PKB (na mieszkańca)",
+    "hintMostCoffee": "Najwięcej kawy",
+    "hintLeastCoffee": "Najmniej kawy",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",

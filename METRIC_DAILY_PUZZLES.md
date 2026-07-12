@@ -21,5 +21,6 @@ Population is the shipped precedent (Feature DG: 14 superlative puzzles + per-fl
 - [ ] **Population density** (Feature DI): superlative puzzles + rank captions
 - [ ] **GDP** (Feature DJ): superlative puzzles + rank captions
 - [ ] **GDP per capita** (Feature DJ): superlative puzzles + rank captions. **Watch:** "largest per capita" surfaces Vatican #1 ($375K estimate artifact), then Monaco / Liechtenstein: accurate to the data, but worth a human eye when picking answer sets.
+- [ ] **Coffee production** (Feature DK): superlative puzzles + rank captions. **Sparse + one-directional:** author **"most" only** ("the 10 biggest coffee producers", per-continent biggest), never "least" — coffee is a sparse metric, so `resolveSuperlative` ranks the ~78 growers, and "smallest grower" is an obscure question (this matches the code surfaces: atLeast-only filters, biggest-only party round). Both overrides matter when picking answer sets: CAR (2.8K t) and Guinea (10K t) are deliberately low, not top-10.
 
 Every future metric adds a row here when its code surfaces (1-5) land, and its Feature closes in `DATA_FEATURE.md` without waiting on this list.
