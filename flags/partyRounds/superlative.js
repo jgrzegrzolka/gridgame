@@ -4,6 +4,7 @@ import density from '../metrics/density.json' with { type: 'json' };
 import gdp from '../metrics/gdp.json' with { type: 'json' };
 import gdpPerCapita from '../metrics/gdpPerCapita.json' with { type: 'json' };
 import coffee from '../metrics/coffee.json' with { type: 'json' };
+import elevation from '../metrics/elevation.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -156,3 +157,9 @@ export const gdpPerCapitaRound = createSuperlativeRound(createMetric(gdpPerCapit
 // the TTT threshold field. Locked to 'most': "biggest coffee producer" is the
 // good question; "smallest grower" is obscure, so 'least' is never dealt.
 export const coffeeRound = createSuperlativeRound(createMetric(coffee, []), 'superlative-coffee', { direction: 'most' });
+
+// Elevation instance: highest point in metres, id 'superlative-elevation'. Dense
+// and two-directional (no direction lock, unlike coffee): both "highest peak"
+// (Everest) and the fun "lowest highpoint" (the Maldives, the low coral atolls)
+// are good questions, so 'most' and 'least' are both dealt.
+export const elevationRound = createSuperlativeRound(createMetric(elevation, []), 'superlative-elevation');

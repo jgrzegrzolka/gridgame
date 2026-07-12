@@ -193,3 +193,33 @@ test('coffeeRound: biggest-only, correct extreme-by-coffee answer, growers only'
     assert.equal(COF[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-coffee option`);
   }
 });
+
+// ---- elevation instance (highest point in metres, id 'superlative-elevation') ---
+
+test('elevationRound: two-directional, correct extreme-by-elevation answer', async () => {
+  const { elevationRound } = await import('./superlative.js');
+  const elevJson = (await import('../metrics/elevation.json', { with: { type: 'json' } })).default;
+  const ELEV = /** @type {Record<string, number>} */ (elevJson.values);
+  assert.equal(elevationRound.id, 'superlative-elevation');
+  // Elevation-distinct sovereigns spanning three orders of magnitude, all in
+  // elevation.json (Nepal 8849 ... Maldives 2). Dense metric: every code has a value.
+  const pool = ['np', 'cl', 'ke', 'ch', 'ma', 'gb', 'de', 'nl', 'dk', 'mv', 'tv', 'bh'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = elevationRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => ELEV[c]);
+    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+    assert.equal(ELEV[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-elevation option`);
+  }
+  // Unlike coffee (locked to 'most'), elevation is two-directional: the direction
+  // is a live coin flip on the first rng byte, so both the highest peak and the
+  // fun lowest highpoint get dealt. Drive it directly with a controlled first
+  // byte to prove neither direction is suppressed.
+  const firstThen = (/** @type {number} */ first, /** @type {() => number} */ rest) => {
+    let n = 0;
+    return () => (n++ === 0 ? first : rest());
+  };
+  assert.equal(elevationRound.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
+  assert.equal(elevationRound.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
+});

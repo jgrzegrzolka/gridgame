@@ -232,6 +232,7 @@
 .gs-chip[data-metric="superlative-gdp"] { --mc: #c0821e; }
 .gs-chip[data-metric="superlative-gdppc"] { --mc: #4f6bb0; }
 .gs-chip[data-metric="superlative-coffee"] { --mc: #7d4f28; }
+.gs-chip[data-metric="superlative-elevation"] { --mc: #5c7a94; }
 .gs-chip:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
 
 /* Per-category reveal timing, shown under the tricky toggle when it's on. A
