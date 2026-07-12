@@ -51,9 +51,9 @@ Mirror Feature DF. In `flags/engine.js`: a `<key>(op, n)` category factory (bake
 
 **No-data handling comes for free if the data contract holds.** `metricDataGap` (`flags/metricTiers.js`) already blocks any suggestion whose metric value is missing, and the registry's `has` (surface 3) is what it reads. As long as every real place has a value (rule 1), the guard blocks only non-places, which is correct. Nothing metric-specific to write here beyond the `has` line. Verify in-browser on a threshold cell that a real small place is pickable and an org shows "no data" (the `verify` recipe used for population).
 
-### 5. Flag Party round (moderate, currently NOT generalized)
+### 5. Flag Party round (moderate; the round factory is already generalized)
 
-**Known gap:** the Flag Party superlative round (`flags/partyRounds/superlative.js`, flagParty `superlative-pop` mode) statically imports `population.json` and hard-codes the metric at module load. It is **not** wired to `METRIC_FILES`, so a new metric will not appear in Flag Party until this module is generalized to take a metric key (or a sibling round is added). This is the surface most likely to be forgotten because everything else keys off the registry and this doesn't. Generalizing it once benefits every future metric.
+`flags/partyRounds/superlative.js` exports a `createSuperlativeRound(metric, roundId)` factory that takes a `createMetric(...)` instance, so a new metric is a **sibling round**, not a rewrite. Population (`superlative`), area (`superlative-area`), and density (`superlative-density`) are all registered through it. Unlike surfaces 2-4 this one does **not** auto-light from `METRIC_FILES`: each round is registered explicitly, so it's the surface most likely to be forgotten. Mirror the density round across six spots (grep `densityRound` / `superlative-density` for the exact set): (a) `superlative.js` (import the metric json + `export const <key>Round = createSuperlativeRound(createMetric(<key>, []), 'superlative-<key>')`); (b) `superlative.test.js` round-instance test; (c) `party/partyGameServer.js`'s `ROUNDS` array; (d) `flags/partyPlan.js` `METRIC_MODES` + `partyPlan.test.js`; (e) `flagParty/page.js` `MODE_LABELS` + `SUPERLATIVE_MODES` + an icon SVG; (f) i18n en+pl `party.mode.superlative<Key>` / `party.modeShort.*`.
 
 ### 6. Daily puzzles (deferrable)
 
