@@ -759,7 +759,8 @@
     "area": "Powierzchnia",
     "density": "Gęstość zaludnienia",
     "gdp": "PKB",
-    "gdpPerCapita": "PKB na osobę"
+    "gdpPerCapita": "PKB na osobę",
+    "coffee": "Produkcja kawy"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

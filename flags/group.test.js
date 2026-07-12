@@ -16,6 +16,7 @@ import {
   attachPopulations,
   attachGdps,
   attachGdpPerCapitas,
+  attachCoffees,
 } from './group.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -55,6 +56,18 @@ test('attachGdps / attachGdpPerCapitas denormalize onto the matching Country fie
   assert.equal(cs[0].gdpPerCapita, 81_000);
   assert.equal(cs[1].gdp, undefined, 'absent from the map → no field');
   assert.equal(cs[1].gdpPerCapita, undefined);
+});
+
+test("attachCoffees fills real non-growers with 0 (absence:'zero'), leaves orgs bare", () => {
+  const cs = [
+    createCountry({ code: 'br', name: 'Brazil', continent: 'South America', category: 'country' }),
+    createCountry({ code: 'de', name: 'Germany', continent: 'Europe', category: 'country' }),
+    createCountry({ code: 'xx', name: 'Nowhere', continent: null, category: 'other' }),
+  ];
+  attachCoffees(cs, { br: 3_348_510 }); // sparse map: only the grower listed
+  assert.equal(cs[0].coffee, 3_348_510, 'a listed grower keeps its tonnage');
+  assert.equal(cs[1].coffee, 0, 'a real non-grower defaults to 0, not a data gap');
+  assert.equal(cs[2].coffee, undefined, 'a non-place org stays without the field');
 });
 
 test('splitByCategory separates countries from other', () => {

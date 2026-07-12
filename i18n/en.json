@@ -759,7 +759,8 @@
     "area": "Land area",
     "density": "Population density",
     "gdp": "GDP",
-    "gdpPerCapita": "GDP per capita"
+    "gdpPerCapita": "GDP per capita",
+    "coffee": "Coffee production"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",
