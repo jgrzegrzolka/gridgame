@@ -50,6 +50,7 @@ const MODE_LABELS = {
   'superlative-density': { key: 'party.mode.superlativeDensity', full: 'Population density: most & least', shortKey: 'party.modeShort.superlativeDensity', short: 'Density' },
   'superlative-gdp': { key: 'party.mode.superlativeGdp', full: 'GDP: largest & smallest', shortKey: 'party.modeShort.superlativeGdp', short: 'GDP' },
   'superlative-gdppc': { key: 'party.mode.superlativeGdppc', full: 'GDP per capita: largest & smallest', shortKey: 'party.modeShort.superlativeGdppc', short: 'GDP per capita' },
+  'superlative-coffee': { key: 'party.mode.superlativeCoffee', full: 'Coffee production: most & least', shortKey: 'party.modeShort.superlativeCoffee', short: 'Coffee' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -81,6 +82,11 @@ const SUPERLATIVE_MODES = {
     file: 'gdpPerCapita.json',
     hintMost: { key: 'party.hintMostGdppc', fallback: 'Largest GDP (per capita)' },
     hintLeast: { key: 'party.hintLeastGdppc', fallback: 'Smallest GDP (per capita)' },
+  },
+  'superlative-coffee': {
+    file: 'coffee.json',
+    hintMost: { key: 'party.hintMostCoffee', fallback: 'Most coffee' },
+    hintLeast: { key: 'party.hintLeastCoffee', fallback: 'Least coffee' },
   },
 };
 
@@ -121,6 +127,8 @@ const METRIC_ICONS = {
   'superlative-gdp': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.66 3.13 3 7 3s7-1.34 7-3V6"/><path d="M5 11v5c0 1.66 3.13 3 7 3s7-1.34 7-3v-5"/></svg>',
   // GDP per capita: a single $ coin (wealth per head).
   'superlative-gdppc': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v10"/><path d="M14.5 9.2c-.6-.7-1.5-1-2.5-1-1.4 0-2.5.7-2.5 1.9 0 1.2 1 1.6 2.5 1.9s2.5.7 2.5 1.9c0 1.2-1.1 1.9-2.5 1.9-1 0-1.9-.3-2.5-1"/></svg>',
+  // Coffee production: a steaming coffee cup with a handle.
+  'superlative-coffee': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V9z"/><path d="M17 10h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M8 3.5v2M12 3.5v2"/></svg>',
 };
 
 /**

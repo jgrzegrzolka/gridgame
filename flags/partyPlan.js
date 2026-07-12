@@ -97,6 +97,7 @@ export const PARTY_MODES = [
   { id: 'superlative-density', roundId: 'superlative-density', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-gdp', roundId: 'superlative-gdp', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-gdppc', roundId: 'superlative-gdppc', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-coffee', roundId: 'superlative-coffee', poolId: 'sovereign', group: 'metric' },
 ];
 
 /** The fixed picture trio (flags / territories / map), in catalog order. */

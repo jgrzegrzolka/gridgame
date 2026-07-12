@@ -531,7 +531,8 @@
       "superlativeArea": "Land area: largest & smallest",
       "superlativeDensity": "Population density: most & least",
       "superlativeGdp": "GDP: largest & smallest",
-      "superlativeGdppc": "GDP per capita: largest & smallest"
+      "superlativeGdppc": "GDP per capita: largest & smallest",
+      "superlativeCoffee": "Coffee production: most & least"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -541,7 +542,8 @@
       "superlativeArea": "Land area",
       "superlativeDensity": "Density",
       "superlativeGdp": "GDP",
-      "superlativeGdppc": "GDP per capita"
+      "superlativeGdppc": "GDP per capita",
+      "superlativeCoffee": "Coffee"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -556,6 +558,8 @@
     "hintLeastGdp": "Smallest GDP",
     "hintMostGdppc": "Largest GDP (per capita)",
     "hintLeastGdppc": "Smallest GDP (per capita)",
+    "hintMostCoffee": "Most coffee",
+    "hintLeastCoffee": "Least coffee",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
