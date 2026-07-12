@@ -412,6 +412,7 @@
       "coffee": "Produkcja kawy",
       "wine": "Produkcja wina",
       "cocoa": "Produkcja kakao",
+      "banana": "Produkcja bananów",
       "elevation": "Najwyższy punkt"
     }
   },
@@ -538,6 +539,7 @@
       "superlativeCoffee": "Produkcja kawy: najwięcej",
       "superlativeWine": "Produkcja wina: najwięcej",
       "superlativeCocoa": "Produkcja kakao: najwięcej",
+      "superlativeBanana": "Produkcja bananów: najwięcej",
       "superlativeElevation": "Najwyższy punkt: najwyższy i najniższy"
     },
     "modeShort": {
@@ -552,6 +554,7 @@
       "superlativeCoffee": "Kawa",
       "superlativeWine": "Wino",
       "superlativeCocoa": "Kakao",
+      "superlativeBanana": "Banany",
       "superlativeElevation": "Wysokość"
     },
     "round": "Runda {n} z {total}",
@@ -573,6 +576,8 @@
     "hintLeastWine": "Najmniej wina",
     "hintMostCocoa": "Najwięcej kakao",
     "hintLeastCocoa": "Najmniej kakao",
+    "hintMostBanana": "Najwięcej bananów",
+    "hintLeastBanana": "Najmniej bananów",
     "hintMostElevation": "Najwyższy punkt",
     "hintLeastElevation": "Najniższy punkt",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
@@ -740,6 +745,13 @@
       "100k": "ponad 100 tys. ton"
     }
   },
+  "banana": {
+    "atLeast": {
+      "1k": "ponad 1 tys. ton",
+      "10k": "ponad 10 tys. ton",
+      "100k": "ponad 100 tys. ton"
+    }
+  },
   "elevation": {
     "atLeast": {
       "1000": "ponad 1000 m",
@@ -816,6 +828,7 @@
     "coffee": "Produkcja kawy",
     "wine": "Produkcja wina",
     "cocoa": "Produkcja kakao",
+    "banana": "Produkcja bananów",
     "elevation": "Najwyższy punkt"
   },
   "flagFacts": {

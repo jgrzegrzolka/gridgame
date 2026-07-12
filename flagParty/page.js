@@ -53,6 +53,7 @@ const MODE_LABELS = {
   'superlative-coffee': { key: 'party.mode.superlativeCoffee', full: 'Coffee production: most', shortKey: 'party.modeShort.superlativeCoffee', short: 'Coffee' },
   'superlative-wine': { key: 'party.mode.superlativeWine', full: 'Wine production: most', shortKey: 'party.modeShort.superlativeWine', short: 'Wine' },
   'superlative-cocoa': { key: 'party.mode.superlativeCocoa', full: 'Cocoa production: most', shortKey: 'party.modeShort.superlativeCocoa', short: 'Cocoa' },
+  'superlative-banana': { key: 'party.mode.superlativeBanana', full: 'Banana production: most', shortKey: 'party.modeShort.superlativeBanana', short: 'Banana' },
   'superlative-elevation': { key: 'party.mode.superlativeElevation', full: 'Highest elevation: highest & lowest', shortKey: 'party.modeShort.superlativeElevation', short: 'Elevation' },
 };
 
@@ -100,6 +101,11 @@ const SUPERLATIVE_MODES = {
     file: 'cocoa.json',
     hintMost: { key: 'party.hintMostCocoa', fallback: 'Most cocoa' },
     hintLeast: { key: 'party.hintLeastCocoa', fallback: 'Least cocoa' },
+  },
+  'superlative-banana': {
+    file: 'banana.json',
+    hintMost: { key: 'party.hintMostBanana', fallback: 'Most bananas' },
+    hintLeast: { key: 'party.hintLeastBanana', fallback: 'Least bananas' },
   },
   'superlative-elevation': {
     file: 'elevation.json',
@@ -151,6 +157,8 @@ const METRIC_ICONS = {
   'superlative-wine': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10l-1 6a4 4 0 0 1-8 0z"/><path d="M12 14v5"/><path d="M8 19h8"/></svg>',
   // Cocoa production: a cocoa pod (elongated ridged fruit) with a stem.
   'superlative-cocoa': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 4.5c3 2 4 6 2.5 9.5s-5.5 5.5-9 5-5.5-4-4.5-7.5 4-8 8-8c1.4 0 2 .5 3 1z"/><path d="M11 6.5v11"/></svg>',
+  // Banana production: a curved banana.
+  'superlative-banana': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5c0 7 4 12 11 12 1.6 0 2.8-.3 3.5-.8-1 .3-6 .2-9.5-3.2S6.7 5.6 7 4.5C6.2 4.9 5 4.5 5 5z"/></svg>',
   // Highest elevation: a single tall peak with a snowcap (distinct from area's low range).
   'superlative-elevation': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M12 4L20 20H4z"/><path d="M9.4 11.7l2.6 1.6 2.6-1.6"/></svg>',
 };

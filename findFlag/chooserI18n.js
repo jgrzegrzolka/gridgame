@@ -26,6 +26,7 @@ import { pillLabel } from '../flags/findFlag.js';
  * @typedef {{ labelSpan: { textContent: string }, value: string }} CoffeePillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} WinePillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} CocoaPillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} BananaPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} ElevationPillRef
  *
  * @param {{
@@ -39,12 +40,13 @@ import { pillLabel } from '../flags/findFlag.js';
  *   coffeePills?: CoffeePillRef[],
  *   winePills?: WinePillRef[],
  *   cocoaPills?: CocoaPillRef[],
+ *   bananaPills?: BananaPillRef[],
  *   elevationPills?: ElevationPillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], elevationPills = [], onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], elevationPills = [], onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
@@ -83,6 +85,10 @@ export function refreshChooserI18n({ sectionHeaders, allPills, populationPills =
   // Cocoa pills (">=10000" etc.) via pillLabel's cocoa branch.
   for (const p of cocoaPills) {
     p.labelSpan.textContent = pillLabel('cocoa', p.value, 'include', t);
+  }
+  // Banana pills (">=10000" etc.) via pillLabel's banana branch.
+  for (const p of bananaPills) {
+    p.labelSpan.textContent = pillLabel('banana', p.value, 'include', t);
   }
   // Elevation pills (">=1000" etc.) via pillLabel's elevation branch.
   for (const p of elevationPills) {

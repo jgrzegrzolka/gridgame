@@ -38,6 +38,7 @@ import {
   COFFEE_BREAKS_FOR_RANDOM,
   WINE_BREAKS_FOR_RANDOM,
   COCOA_BREAKS_FOR_RANDOM,
+  BANANA_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   ALL_MOTIFS,
   colorCount,
@@ -626,6 +627,7 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + COFFEE_BREAKS_FOR_RANDOM.length
     + WINE_BREAKS_FOR_RANDOM.length
     + COCOA_BREAKS_FOR_RANDOM.length
+    + BANANA_BREAKS_FOR_RANDOM.length
     + ELEVATION_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
@@ -808,7 +810,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['area', 'cocoa', 'coffee', 'density', 'elevation', 'gdp', 'gdpPerCapita', 'population', 'wine'],
+    ['area', 'banana', 'cocoa', 'coffee', 'density', 'elevation', 'gdp', 'gdpPerCapita', 'population', 'wine'],
   );
 });
 
@@ -910,6 +912,14 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     0,
     'cocoa cats must not appear in the 9×9 pool',
   );
+  // Banana, like the other crops, has NO ultimate break, so ALL its breaks drop.
+  const droppedBanana = BANANA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedBanana, BANANA_BREAKS_FOR_RANDOM.length, 'no banana tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('banana:')).length,
+    0,
+    'banana cats must not appear in the 9×9 pool',
+  );
   // Elevation IS 9×9-eligible (dense): only its five non-ultimate breaks drop,
   // the broad >=1000 tier stays, so unlike coffee it DOES appear in the pool.
   const droppedElevation = ELEVATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
@@ -922,7 +932,7 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
-      - droppedWine - droppedCocoa - droppedElevation,
+      - droppedWine - droppedCocoa - droppedBanana - droppedElevation,
   );
 });
 
@@ -2066,6 +2076,16 @@ function syntheticTaggedCountries() {
   // (which cycle on codeCounter % 6) so cross-metric cells like elevation × area
   // stay fillable, same discipline as the two GDP ladders above.
   const ELEVATION_LADDER = [50, 150, 400, 2_000, 4_000, 6_000];
+  // Sparse crops (coffee / wine / cocoa / banana) share one `>=`-only ladder so
+  // every crop tier (>=1K / >=10K / >=100K tonnes) has candidates in every
+  // continent. Real data leaves most places at 0 (absence:'zero'), but the
+  // synthetic pool must make the crop categories *fillable* or the generator
+  // burns its retry budget dodging them (adding a 4th crop, banana, is what
+  // pushed the previously-tolerated unfillable crops over the 200-attempt
+  // budget). All four crops share the value per country: they're distinct
+  // families so they may co-occur, and a high-tier country satisfies the lower
+  // tiers too, so every crop × crop cell stays fillable.
+  const CROP_LADDER = [3_000, 30_000, 300_000, 12_000, 120_000, 1_200_000];
   // Each (continent × colour × n) triple becomes one country. n controls
   // palette size — n=0 keeps the base 1-colour shape, n=1/n=2 layer in
   // distinct neighbour colours so the country has 2 / 3 colours total.
@@ -2093,6 +2113,10 @@ function syntheticTaggedCountries() {
           // their mutual correlation is irrelevant.)
           gdp: GDP_LADDER[Math.floor(codeCounter / 7) % GDP_LADDER.length],
           elevation: ELEVATION_LADDER[Math.floor(codeCounter / 3) % ELEVATION_LADDER.length],
+          coffee: CROP_LADDER[codeCounter % CROP_LADDER.length],
+          wine: CROP_LADDER[codeCounter % CROP_LADDER.length],
+          cocoa: CROP_LADDER[codeCounter % CROP_LADDER.length],
+          banana: CROP_LADDER[codeCounter % CROP_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }
@@ -2121,6 +2145,10 @@ function syntheticTaggedCountries() {
           // their mutual correlation is irrelevant.)
           gdp: GDP_LADDER[Math.floor(codeCounter / 7) % GDP_LADDER.length],
           elevation: ELEVATION_LADDER[Math.floor(codeCounter / 3) % ELEVATION_LADDER.length],
+          coffee: CROP_LADDER[codeCounter % CROP_LADDER.length],
+          wine: CROP_LADDER[codeCounter % CROP_LADDER.length],
+          cocoa: CROP_LADDER[codeCounter % CROP_LADDER.length],
+          banana: CROP_LADDER[codeCounter % CROP_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }

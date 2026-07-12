@@ -21,6 +21,7 @@
  * @property {number} [coffee]  Denormalized from `flags/metrics/coffee.json` by `attachCoffees` (green-coffee tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
  * @property {number} [wine]  Denormalized from `flags/metrics/wine.json` by `attachWines` (wine tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-maker defaults to 0); absent only for non-places (orgs).
  * @property {number} [cocoa]  Denormalized from `flags/metrics/cocoa.json` by `attachCocoas` (cocoa-bean tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
+ * @property {number} [banana]  Denormalized from `flags/metrics/banana.json` by `attachBananas` (banana tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
  * @property {number} [elevation]  Denormalized from `flags/metrics/elevation.json` by `attachElevations` (metres above sea level of the highest point). Dense, same pattern as `area`; absent only for non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
@@ -258,6 +259,21 @@ export function attachCocoas(countries, values) {
 }
 
 /**
+ * Denormalize `flags/metrics/banana.json` onto each Country as `.banana`
+ * (banana tonnes). Sparse `absence: 'zero'` metric like the other crops:
+ * producers get their tonnage, every other real place gets 0, orgs stay bare.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachBananas(countries, values) {
+  return attachZeroFilledMetric(countries, values, (c, v) => {
+    c.banana = v;
+  });
+}
+
+/**
  * Registry of the metric denormalizers, keyed by metric key (the same keys as
  * `flags/metrics/index.js`'s METRIC_FILES). This is the single place a new
  * metric registers its loader: add its `attach<Key>s` here next to the others,
@@ -277,6 +293,7 @@ const METRIC_ATTACHERS = {
   coffee: attachCoffees,
   wine: attachWines,
   cocoa: attachCocoas,
+  banana: attachBananas,
   elevation: attachElevations,
 };
 

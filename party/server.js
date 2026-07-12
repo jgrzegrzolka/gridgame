@@ -7,6 +7,7 @@ import gdpPerCapita from '../flags/metrics/gdpPerCapita.json' with { type: 'json
 import coffee from '../flags/metrics/coffee.json' with { type: 'json' };
 import wine from '../flags/metrics/wine.json' with { type: 'json' };
 import cocoa from '../flags/metrics/cocoa.json' with { type: 'json' };
+import banana from '../flags/metrics/banana.json' with { type: 'json' };
 import elevation from '../flags/metrics/elevation.json' with { type: 'json' };
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { TicTacToeServer } from './ticTacToeServer.js';
@@ -27,6 +28,7 @@ attachMetrics(countries, {
   coffee: coffee.values,
   wine: wine.values,
   cocoa: cocoa.values,
+  banana: banana.values,
   elevation: elevation.values,
 });
 

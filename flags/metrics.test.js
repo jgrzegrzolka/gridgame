@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachWines, attachCocoas } from './group.js';
+import { attachCoffees, attachWines, attachCocoas, attachBananas } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -21,6 +21,7 @@ const GDP_PER_CAPITA = /** @type {import('./metrics.js').MetricData} */ (load('m
 const COFFEE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coffee.json'));
 const WINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/wine.json'));
 const COCOA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/cocoa.json'));
+const BANANA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/banana.json'));
 const ELEVATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/elevation.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
@@ -550,6 +551,59 @@ test('createMetric over cocoa stays sparse: it ranks growers only', () => {
   assert.equal(cocoa.topN('world', 1)[0].code, 'ci'); // Côte d'Ivoire, the largest
   assert.equal(cocoa.rankOf('id', 'world'), 2); // Indonesia second
   assert.equal(cocoa.has('af'), false); // Afghanistan isn't a grower → out of the ranking
+});
+
+// ---- real banana.json schema + the sparse absence:'zero' contract ----------
+
+test('banana is a valid, self-describing metric file with an absence hint', () => {
+  assert.equal(BANANA.key, 'banana');
+  assert.equal(typeof BANANA.label, 'string');
+  assert.equal(typeof BANANA.unit, 'string');
+  assert.ok(BANANA.format === 'compact' || BANANA.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof BANANA.source, 'string');
+  assert.equal(typeof BANANA.year, 'number');
+  assert.equal(typeof BANANA.values, 'object');
+  // Sparse like the other crops: producers only, absence means "grows none" → 0.
+  assert.equal(BANANA.absence, 'zero');
+});
+
+test('every banana value is a positive integer (tonnes, sub-tonne producers dropped)', () => {
+  for (const [code, v] of Object.entries(BANANA.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 1, `${code} listed but not >= 1: ${v}`);
+  }
+});
+
+test('every banana key is a real (non-other) country, never an org', () => {
+  const byCode = new Map(COUNTRIES.map((c) => [c.code, c]));
+  for (const code of Object.keys(BANANA.values)) {
+    const c = byCode.get(code);
+    assert.ok(c, `banana key ${code} is not in countries.json`);
+    assert.notEqual(c.category, 'other', `banana key ${code} is an "other" entry`);
+  }
+});
+
+test("absence:'zero' contract: attachBananas fills every real place, orgs stay bare", () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachBananas(/** @type {any} */ (rows), BANANA.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.banana, undefined, `org ${c.code} should have no banana field`);
+    } else {
+      assert.equal(typeof row.banana, 'number', `real place ${c.code} has no banana value`);
+    }
+  }
+  assert.equal(/** @type {any} */ (byCode.get('in')).banana, BANANA.values.in);
+  assert.equal(/** @type {any} */ (byCode.get('af')).banana, 0); // Afghanistan grows none
+});
+
+test('createMetric over banana stays sparse: it ranks producers only', () => {
+  const banana = createMetric(BANANA, COUNTRIES);
+  assert.equal(banana.topN('world', 1)[0].code, 'in'); // India, the largest
+  assert.equal(banana.rankOf('cn', 'world'), 2); // China second
+  assert.equal(banana.has('af'), false); // Afghanistan isn't a producer → out of the ranking
 });
 
 // ---- real elevation.json schema + integration gate (dense, two-directional) --

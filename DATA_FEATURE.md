@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DN (cocoa production, sparse) closed once its code surfaces shipped; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DO (banana production, sparse) closed once its code surfaces shipped; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,21 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DO: Banana production as a world metric, the fourth sparse crop (code surfaces shipped 2026-07-12; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Tenth world metric, the fourth (and least sparse) crop after coffee / wine / cocoa. 127 producers from FAOSTAT 2024 (item 486, via OWID), India the runaway #1 (37.6M t). The healthiest tier spread of any sparse crop (>=1K/10K/100K = 112/93/61) because bananas grow across the whole tropics. Same sparse `absence: 'zero'` contract, same `>=`-only, biggest-only shape as the other crops; no new machinery.
+
+- [x] 1. Data: `flags/metrics/banana.json` (127 producers) + `authoring/build-banana.mjs` + `METRIC_FILES` + `attachBananas` + `METRIC_ATTACHERS` + `metrics.test.js` contract tests.
+- [x] 2. flagsdata lens, free.
+- [x] 3 + 4. `banana()` factory + `BANANA_BREAKS_FOR_RANDOM` + registry entry; `BananaConstraint`; findFlag chooser + `bananaProbability`; flagsdata group (free). i18n en+pl. Load sites zero-edit except the guarded party server. Verified in Node: guard blocks orgs, real non-producer is a fair guess; 300 puzzles, 86 with a banana axis, 0 unfillable.
+- [x] 5. Flag Party round: `bananaRound` (biggest-only) + a curved-banana icon + en+pl copy. Pinned by `superlative.test.js`.
+
+**Synthetic-fixture fix (worth noting):** the sparse crops were never laddered in `syntheticTaggedCountries` (only the dense metrics were), so their pool categories are unfillable in the synthetic data. coffee/wine/cocoa were tolerated by the 200-attempt retry budget; banana was the fourth unfillable crop and tipped the "never repeats a world metric" generator test over the budget. Fixed properly: added a shared `CROP_LADDER` so all four crops are fillable in the synthetic pool (real-data no-data behaviour is unaffected, that's tested with real data in `countries.test.js`). Removes the fragility for a future 5th crop.
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+---
 
 ### Feature DN: Cocoa production as a world metric, the third sparse crop (code surfaces shipped 2026-07-12; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 
