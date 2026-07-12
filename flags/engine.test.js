@@ -666,6 +666,26 @@ test('metricGroupRepeated allows a single instance of each metric', () => {
   );
 });
 
+test('gdp and gdpPerCapita share a family, never both in one puzzle', () => {
+  // Same axis: two "GDP" questions (gdp + gdpPerCapita) must be rejected.
+  assert.equal(
+    metricGroupRepeated(
+      [gdp('>=', 1_000_000_000_000), gdpPerCapita('>=', 30_000), continent('Europe')],
+      [hasColor('red'), hasColor('blue'), hasMotif('animal')],
+    ),
+    true,
+  );
+  // Opposite axes: same family must be rejected by both rules.
+  assert.equal(metricGroupRepeated([gdp('>=', 100_000_000_000)], [gdpPerCapita('<=', 1_000)]), true);
+  assert.equal(axesConflict([gdp('>=', 100_000_000_000)], [gdpPerCapita('<=', 1_000)]), true);
+  // But gdp with a DIFFERENT family (population) is still fine.
+  assert.equal(
+    metricGroupRepeated([gdp('>=', 1_000_000_000_000), population('>=', 10_000_000)], [continent('Asia')]),
+    false,
+  );
+  assert.equal(axesConflict([gdp('>=', 1_000_000_000_000)], [population('>=', 10_000_000)]), false);
+});
+
 test('metricGroupRepeated does not restrict non-metric groups (two continents on one axis)', () => {
   // Continents are deliberately single-axis-repeatable — two down the rows is
   // a normal grid, so they stay out of SINGLE_USE_METRIC_GROUPS.
@@ -1906,8 +1926,14 @@ function syntheticTaggedCountries() {
           population: POP_LADDER[codeCounter % POP_LADDER.length],
           area: AREA_LADDER[codeCounter % AREA_LADDER.length],
           density: DENSITY_LADDER[codeCounter % DENSITY_LADDER.length],
-          gdp: GDP_LADDER[codeCounter % GDP_LADDER.length],
-          gdpPerCapita: GDP_PER_CAPITA_LADDER[codeCounter++ % GDP_PER_CAPITA_LADDER.length],
+          // Decorrelate the two GDP ladders from pop/area/density (which all use
+          // codeCounter % 6) via a slower counter, so cross-metric cells stay
+          // fillable: real data isn't perfectly rank-correlated either, and the
+          // generator otherwise burns its retry budget dodging empty gdp × area
+          // style cells. (gdp + gdpPerCapita never co-occur, same family, so
+          // their mutual correlation is irrelevant.)
+          gdp: GDP_LADDER[Math.floor(codeCounter / 7) % GDP_LADDER.length],
+          gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }
     }
@@ -1927,8 +1953,14 @@ function syntheticTaggedCountries() {
           population: POP_LADDER[codeCounter % POP_LADDER.length],
           area: AREA_LADDER[codeCounter % AREA_LADDER.length],
           density: DENSITY_LADDER[codeCounter % DENSITY_LADDER.length],
-          gdp: GDP_LADDER[codeCounter % GDP_LADDER.length],
-          gdpPerCapita: GDP_PER_CAPITA_LADDER[codeCounter++ % GDP_PER_CAPITA_LADDER.length],
+          // Decorrelate the two GDP ladders from pop/area/density (which all use
+          // codeCounter % 6) via a slower counter, so cross-metric cells stay
+          // fillable: real data isn't perfectly rank-correlated either, and the
+          // generator otherwise burns its retry budget dodging empty gdp × area
+          // style cells. (gdp + gdpPerCapita never co-occur, same family, so
+          // their mutual correlation is irrelevant.)
+          gdp: GDP_LADDER[Math.floor(codeCounter / 7) % GDP_LADDER.length],
+          gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }
     }
