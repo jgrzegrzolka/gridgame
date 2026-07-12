@@ -19,7 +19,21 @@ A fresh agent picking this up should:
 
 ## Now
 
-### Feature DJ: GDP + GDP per capita as world metrics
+_No metric is mid-flight. The most recent (Feature DJ) closed once its code surfaces shipped; per-metric daily-puzzle authoring now lives in `METRIC_DAILY_PUZZLES.md`, not here._
+
+---
+
+## Backlog
+
+### Metric daily puzzles → `METRIC_DAILY_PUZZLES.md`
+
+The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, and future metrics) is tracked in its own file, `METRIC_DAILY_PUZZLES.md`, so a metric's Feature closes on its code surfaces (1-5) without waiting on the authoring. Deferred at Jan's request; agents do **not** author unprompted. See memory `project_metric_daily_puzzles_deferred`.
+
+---
+
+## Done
+
+### Feature DJ: GDP + GDP per capita as world metrics (code surfaces shipped 2026-07-12, #825 / #827 / #828 / #829; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 
 Fourth and fifth world metrics, added as a pair. **GDP** is *sourced* (World Bank, exactly like area); **GDP per capita** is *derived* from it (`gdp / population`, exactly like density). Doing them together is cheaper than separately: per-capita is derived from GDP, so once GDP's data lands the second is a ~20-line build script, and both surfaces get wired in one pass over near-identical code. Adds an economic dimension: "10 biggest economies", `>=$1T`, richest/poorest per head.
 
@@ -37,7 +51,7 @@ Fourth and fifth world metrics, added as a pair. **GDP** is *sourced* (World Ban
 
   **Two-PKB guard (folded into #828):** gdp + gdpPerCapita share a `family: 'gdp'` in `THRESHOLD_METRICS`, so a single TTT puzzle never carries both (they'd otherwise read as two "GDP" / PKB questions). `axesConflict` and `metricGroupRepeated` dedupe by family (not group) via `metricFamilyOf`; every other metric's family equals its key. Filters are unaffected: both remain independently selectable. The synthetic test fixture's two GDP ladders were decorrelated from pop/area/density so cross-metric cells stay fillable (real data generates 200/200 seeds under the rule).
 - [x] 5. Flag Party rounds, **two** of them: `superlative-gdp` and `superlative-gdppc`, both via the already-generalized `createSuperlativeRound` (density was the worked example). Six spots each: (a) `gdpRound` / `gdpPerCapitaRound` in `flags/partyRounds/superlative.js`; (b) two round-instance tests in `superlative.test.js`; (c) both added to `party/partyGameServer.js`'s `ROUNDS`; (d) two `PARTY_MODES` entries + the three `partyPlan.test.js` assertions (METRIC_MODES list, default-plan counts map); (e) `flagParty/page.js` `MODE_LABELS` + `SUPERLATIVE_MODES` (gdp.json / gdpPerCapita.json + hint copy) + two `METRIC_ICONS` (coin-stack for total, `$`-coin for per-capita); (f) i18n en+pl `party.mode/modeShort.superlativeGdp[pc]` + `hintMost/LeastGdp[pc]`, Polish uses "PKB" / "PKB na mieszkańca"; plus two `[data-metric]` chip-hue rules in `flagParty/index.css` (amber `#c0821e` for GDP, indigo `#4f6bb0` for per-capita). **Verified in-browser** (full dev stack, CDP cache-clear to beat the SWA-CLI stale-JS ETag): all 5 world-facts chips render with distinct hues + icons; a GDP-only solo game generated live `superlative-gdp` ("Biggest economy": Vietnam $433.81B correct over Slovakia/Zambia/Grenada, compact value strips) and `superlative-gdppc` ("Poorest / Richest per head") rounds; correct-answer highlight + hint copy resolve. **Watch:** the per-capita "richest" round surfaces Vatican #1 ($375K estimate artifact) then Monaco / Liechtenstein, accurate to the data, just worth expecting.
-- [ ] 6. Daily (deferred, see Backlog): rank captions + superlative puzzles
+- 6. Daily puzzles: deferred, tracked in `METRIC_DAILY_PUZZLES.md` (not part of this Feature's completion).
 
 **Post-ship skew + guard (2026-07-12):** a real two-player game surfaced a version-skew bug: the PartyKit server (its own deploy) flipped to dealing GDP rounds while a player's still-open tab was on the pre-GDP `page.js`, whose `SUPERLATIVE_MODES` had no gdp key, so `renderRound` fell through to the flag-pick branch and printed the raw direction token ("least") as the prompt. This is inherent to shipping any new round type (server and clients can differ by a build). Fixed generally in `flagParty/staleGuard.js` (+ test): `page.js` computes `KNOWN_ROUND_IDS` from what it can render (flagPick, mapPick, `SUPERLATIVE_MODES` keys), and when the server deals a roundId outside that set, `render()` reloads the tab once onto the new build (seat survives via the URL room code + persisted pid); a per-tab sessionStorage guard blocks a reload loop, falling back to an "A new version is available" notice if the reload comes back still-stale, and clears on the first good round so it re-arms for the next deploy. Verified in-browser both ways (simulated stale client reloads + shows the notice; fresh client renders the round and clears the guard).
 
@@ -45,7 +59,7 @@ Fourth and fifth world metrics, added as a pair. **GDP** is *sourced* (World Ban
 
 ---
 
-### Feature DI: Population density as a world metric
+### Feature DI: Population density as a world metric (code surfaces shipped 2026-07-11, #808 / #809; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 
 Third world metric (after population, area). A **derived rate**: no external source, `density = population / area` for every real place that has both. Exercises the `decimal1` format and confirms the `add-world-metric` process on a computed metric.
 
@@ -56,23 +70,11 @@ Third world metric (after population, area). A **derived rate**: no external sou
 - [x] 3. Filters: `density()` factory + `DENSITY_BREAKS_FOR_RANDOM` (>=100/200/500, <=100/30/10) + `metricTiers` registry entry + `attachDensities`; flagsFilter `density` constraint + `matchesFilters`; findFlag parse/serialize/pillLabel/filterTitle + `densityProbability` modifier + chooser section; flagsdata group (reused `buildMetricGroup`); i18n; tests. Verified in-browser: flagsdata "over 500 people/km²" → 28 flags
 - [x] 4. TTT: `density(op, n)` breaks wired into `buildRandomCategoryPool` / `categoryFromId` / `translateCategoryLabel` (plain-integer token, reusing surface-3's `density.atLeast/atMost` keys) + `attachDensities` at all 6 load sites; engine pool/9×9 tests + real-data seed pins (surfaces in 3×3, only `>=100` in 9×9). Verified in-browser: a generated 3×3 rendered a `density:>=500` cell; 262 real places valued, only the 7 orgs are no-data (#808)
 - [x] 5. Flag Party round: `createSuperlativeRound(createMetric(density, []), 'superlative-density')` registered in `partyGameServer` + PARTY_MODE + client `MODE_LABELS` / `SUPERLATIVE_MODES` entry + en/pl i18n + round test. Verified against dev server: mode in `PARTY_MODES`, i18n keys resolve, density.json loads (#809)
-- [ ] 6. Daily (deferred, see Backlog): rank captions + superlative puzzles
+- 6. Daily puzzles: deferred, tracked in `METRIC_DAILY_PUZZLES.md` (not part of this Feature's completion).
 
 **Standing artifact:** `authoring/build-density.mjs` — the first **derived** metric (computed from other metrics, no source). The pattern for future ratios (GDP per capita, etc.): read the input metric files, divide, round, emit.
 
 ---
-
-## Backlog
-
-### Deferred: metric daily superlative puzzles (area, density, future metrics)
-
-**Deferred 2026-07-11 at Jan's request** — daily-content authoring is time-consuming and needs his supervision (released puzzles are immutable, daily rule 1), so it does not ride along with the code surfaces. Not forgotten; see memory `project_metric_daily_puzzles_deferred`.
-
-**What's pending, per metric:** author daily superlative puzzles ("the N largest / smallest countries by area / density", per-continent) via the **daily-puzzle-author** skill, the way population's shipped in Feature DG. `resolveSuperlative` is metric-agnostic so this is **zero new code** — just authored `{ kind: "superlative", metric, scope, direction, topN }` entries + a review pass with Jan. Optionally the result-screen rank captions (`build<Metric>RankNotes`, small code). Applies to area (Feature DH surface 6), density (DI surface 6), GDP + GDP per capita (DJ surface 6), and every future metric. Agents: do NOT author these unprompted; wait for Jan.
-
----
-
-## Done
 
 ### Feature DH: Land area as a world metric — *code surfaces shipped 2026-07-11 (#802, #803, #804, #805); daily deferred*
 
@@ -83,7 +85,7 @@ Second world metric after population, added to prove the `add-world-metric` skil
 **Verified 2026-07-12:** the 47 hand-filled areas + a join-sanity pass on the World Bank leaders were cross-checked by the same 4-agent sweep used for GDP (see Feature DJ). Clean, zero corrections. Clipperton's 2 km² is land-only, consistent with the `AG.LND.TOTL.K2` land basis.
 
 - [x] 1. Data (`area.json` + `build-area.mjs` + tests). [x] 2. Lens (free). [x] 3. Filters (flagsdata + findFlag, via the shared `metricTiers` registry + generalized `buildMetricGroup`). [x] 4. TTT (`area()` factory + `AREA_BREAKS_FOR_RANDOM`, attach at 6 sites, seed pins). [x] 5. Flag Party (generalized `createSuperlativeRound` factory, `superlative-area` mode).
-- [ ] 6. Daily — **deferred** (see Backlog + Feature DG's population precedent).
+- 6. Daily puzzles: deferred, tracked in `METRIC_DAILY_PUZZLES.md`.
 
 **Standing artifacts that made DI (density) and every future metric cheaper:** the `metricTiers` registry (one line per metric lights up both filter surfaces), `buildMetricGroup` (metric-keyed flagsdata group), and `createSuperlativeRound(metric, id)` (any metric gets a Flag Party round). Verified in-browser at each surface.
 
