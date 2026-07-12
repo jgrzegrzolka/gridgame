@@ -131,3 +131,41 @@ test('densityRound: id and a correct extreme-by-density answer', async () => {
     assert.equal(DENSITY[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-density option`);
   }
 });
+
+// ---- gdp instance (total economy in US$, id 'superlative-gdp') --------------
+
+test('gdpRound: id and a correct extreme-by-gdp answer', async () => {
+  const { gdpRound } = await import('./superlative.js');
+  const gdpJson = (await import('../metrics/gdp.json', { with: { type: 'json' } })).default;
+  const GDP = /** @type {Record<string, number>} */ (gdpJson.values);
+  assert.equal(gdpRound.id, 'superlative-gdp');
+  // GDP-distinct sovereigns spanning many orders of magnitude, all in gdp.json.
+  const pool = ['us', 'cn', 'jp', 'de', 'in', 'br', 'ng', 'gh', 'is', 'fj', 'to', 'ws'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = gdpRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => GDP[c]);
+    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+    assert.equal(GDP[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-gdp option`);
+  }
+});
+
+// ---- gdp-per-capita instance (US$ per head, id 'superlative-gdppc') ---------
+
+test('gdpPerCapitaRound: id and a correct extreme-by-gdp-per-capita answer', async () => {
+  const { gdpPerCapitaRound } = await import('./superlative.js');
+  const pcJson = (await import('../metrics/gdpPerCapita.json', { with: { type: 'json' } })).default;
+  const PC = /** @type {Record<string, number>} */ (pcJson.values);
+  assert.equal(gdpPerCapitaRound.id, 'superlative-gdppc');
+  // Per-capita-distinct sovereigns spanning ~3 orders of magnitude, all in gdpPerCapita.json.
+  const pool = ['lu', 'no', 'us', 'de', 'cn', 'in', 'ng', 'et', 'bi', 'mw', 'cd', 'ne'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = gdpPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => PC[c]);
+    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+    assert.equal(PC[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-per-capita option`);
+  }
+});

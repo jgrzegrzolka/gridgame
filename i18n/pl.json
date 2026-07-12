@@ -528,7 +528,9 @@
       "mapOutlines": "Mapa: kształty",
       "superlativePop": "Populacja: najwięcej i najmniej",
       "superlativeArea": "Powierzchnia: największe i najmniejsze",
-      "superlativeDensity": "Gęstość zaludnienia: najwięcej i najmniej"
+      "superlativeDensity": "Gęstość zaludnienia: najwięcej i najmniej",
+      "superlativeGdp": "PKB: największe i najmniejsze",
+      "superlativeGdppc": "PKB na mieszkańca: najbogatsze i najbiedniejsze"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -536,7 +538,9 @@
       "mapOutlines": "Mapy",
       "superlativePop": "Populacja",
       "superlativeArea": "Powierzchnia",
-      "superlativeDensity": "Gęstość"
+      "superlativeDensity": "Gęstość",
+      "superlativeGdp": "PKB",
+      "superlativeGdppc": "PKB na mieszkańca"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
@@ -547,6 +551,10 @@
     "hintLeastArea": "Najmniejsza powierzchnia",
     "hintMostDensity": "Największa gęstość zaludnienia",
     "hintLeastDensity": "Najmniejsza gęstość zaludnienia",
+    "hintMostGdp": "Największa gospodarka",
+    "hintLeastGdp": "Najmniejsza gospodarka",
+    "hintMostGdppc": "Najbogatsze na mieszkańca",
+    "hintLeastGdppc": "Najbiedniejsze na mieszkańca",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
     "tie": "Remis!",

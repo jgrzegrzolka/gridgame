@@ -528,7 +528,9 @@
       "mapOutlines": "Map: outlines",
       "superlativePop": "Population: most & least",
       "superlativeArea": "Land area: largest & smallest",
-      "superlativeDensity": "Population density: most & least"
+      "superlativeDensity": "Population density: most & least",
+      "superlativeGdp": "GDP: biggest & smallest",
+      "superlativeGdppc": "GDP per capita: richest & poorest"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -536,7 +538,9 @@
       "mapOutlines": "Maps",
       "superlativePop": "Population",
       "superlativeArea": "Land area",
-      "superlativeDensity": "Density"
+      "superlativeDensity": "Density",
+      "superlativeGdp": "GDP",
+      "superlativeGdppc": "GDP per capita"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -547,6 +551,10 @@
     "hintLeastArea": "Smallest area",
     "hintMostDensity": "Highest density",
     "hintLeastDensity": "Lowest density",
+    "hintMostGdp": "Biggest economy",
+    "hintLeastGdp": "Smallest economy",
+    "hintMostGdppc": "Richest per head",
+    "hintLeastGdppc": "Poorest per head",
     "locked": "Locked in",
     "fastest": "Fastest",
     "tie": "It's a tie!",

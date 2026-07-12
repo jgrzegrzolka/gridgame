@@ -47,6 +47,8 @@ const MODE_LABELS = {
   'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population: most & least', shortKey: 'party.modeShort.superlativePop', short: 'Population' },
   'superlative-area': { key: 'party.mode.superlativeArea', full: 'Land area: largest & smallest', shortKey: 'party.modeShort.superlativeArea', short: 'Land area' },
   'superlative-density': { key: 'party.mode.superlativeDensity', full: 'Population density: most & least', shortKey: 'party.modeShort.superlativeDensity', short: 'Density' },
+  'superlative-gdp': { key: 'party.mode.superlativeGdp', full: 'GDP: biggest & smallest', shortKey: 'party.modeShort.superlativeGdp', short: 'GDP' },
+  'superlative-gdppc': { key: 'party.mode.superlativeGdppc', full: 'GDP per capita: richest & poorest', shortKey: 'party.modeShort.superlativeGdppc', short: 'GDP per capita' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -68,6 +70,16 @@ const SUPERLATIVE_MODES = {
     file: 'density.json',
     hintMost: { key: 'party.hintMostDensity', fallback: 'Highest density' },
     hintLeast: { key: 'party.hintLeastDensity', fallback: 'Lowest density' },
+  },
+  'superlative-gdp': {
+    file: 'gdp.json',
+    hintMost: { key: 'party.hintMostGdp', fallback: 'Biggest economy' },
+    hintLeast: { key: 'party.hintLeastGdp', fallback: 'Smallest economy' },
+  },
+  'superlative-gdppc': {
+    file: 'gdpPerCapita.json',
+    hintMost: { key: 'party.hintMostGdppc', fallback: 'Richest per head' },
+    hintLeast: { key: 'party.hintLeastGdppc', fallback: 'Poorest per head' },
   },
 };
 
@@ -97,6 +109,10 @@ const METRIC_ICONS = {
   'superlative-pop': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.6-5 5.5-5s5.5 2 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.4M17 15c2.3.5 4 2.4 4 5"/></svg>',
   'superlative-area': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M4 20l5-9 3.5 5L15 12l5 8"/></svg>',
   'superlative-density': '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="6" r="1.4"/><circle cx="12" cy="6" r="1.4"/><circle cx="18" cy="6" r="1.4"/><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>',
+  // GDP total: a stack of coins (an economy's overall size).
+  'superlative-gdp': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.66 3.13 3 7 3s7-1.34 7-3V6"/><path d="M5 11v5c0 1.66 3.13 3 7 3s7-1.34 7-3v-5"/></svg>',
+  // GDP per capita: a single $ coin (wealth per head).
+  'superlative-gdppc': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v10"/><path d="M14.5 9.2c-.6-.7-1.5-1-2.5-1-1.4 0-2.5.7-2.5 1.9 0 1.2 1 1.6 2.5 1.9s2.5.7 2.5 1.9c0 1.2-1.1 1.9-2.5 1.9-1 0-1.9-.3-2.5-1"/></svg>',
 };
 
 /**
