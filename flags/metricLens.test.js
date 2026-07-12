@@ -18,6 +18,15 @@ test('formatValue: decimal1 for per-capita rates', () => {
   assert.equal(formatValue(0.1, 'decimal1'), '0.1');
 });
 
+test('formatValue: plain keeps exact metres with thousands separators', () => {
+  // Elevation: compact would collapse these three peaks to an identical "8.6K"–
+  // "8.8K"; plain preserves the precise metre that the metric exists to show.
+  assert.equal(formatValue(8849, 'plain'), '8,849'); // Everest
+  assert.equal(formatValue(8611, 'plain'), '8,611'); // K2
+  assert.equal(formatValue(978, 'plain'), '978'); // Scafell Pike, no separator
+  assert.equal(formatValue(2, 'plain'), '2'); // Maldives, the lowest highpoint
+});
+
 test('formatValue: defaults to compact when no hint', () => {
   assert.equal(formatValue(2500000), '2.5M');
 });

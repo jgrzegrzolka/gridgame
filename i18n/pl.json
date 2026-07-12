@@ -772,7 +772,8 @@
     "density": "Gęstość zaludnienia",
     "gdp": "PKB",
     "gdpPerCapita": "PKB na osobę",
-    "coffee": "Produkcja kawy"
+    "coffee": "Produkcja kawy",
+    "elevation": "Najwyższy punkt"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

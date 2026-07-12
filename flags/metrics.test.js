@@ -18,6 +18,7 @@ const DENSITY = /** @type {import('./metrics.js').MetricData} */ (load('metrics/
 const GDP = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdp.json'));
 const GDP_PER_CAPITA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdpPerCapita.json'));
 const COFFEE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coffee.json'));
+const ELEVATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/elevation.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -426,4 +427,57 @@ test('createMetric over coffee stays sparse: it ranks growers only', () => {
   assert.equal(coffee.topN('world', 1)[0].code, 'br'); // Brazil, the largest
   assert.equal(coffee.rankOf('vn', 'world'), 2); // Vietnam second
   assert.equal(coffee.has('de'), false); // Germany isn't a grower → out of the ranking
+});
+
+// ---- real elevation.json schema + integration gate (dense, two-directional) --
+
+test('elevation is a valid, self-describing metric file with the plain format', () => {
+  assert.equal(ELEVATION.key, 'elevation');
+  assert.equal(typeof ELEVATION.label, 'string');
+  assert.equal(typeof ELEVATION.unit, 'string');
+  // Elevation renders exact metres, not compact: Everest / K2 / Kangchenjunga
+  // must stay distinguishable (8,849 vs 8,611 vs 8,586, not a shared "8.6K").
+  assert.equal(ELEVATION.format, 'plain');
+  assert.equal(typeof ELEVATION.source, 'string');
+  assert.equal(typeof ELEVATION.year, 'number');
+  assert.equal(typeof ELEVATION.values, 'object');
+  // Dense, like area / GDP: no absence hint (absence would mean "unsourced",
+  // never zero, since no real place sits at sea level).
+  assert.equal(ELEVATION.absence, undefined);
+});
+
+test('every elevation value is a positive integer (whole metres, above sea level)', () => {
+  // Whole metres; a highest point is by definition above sea level, so the floor
+  // is 1 (the Maldives, the lowest highpoint on Earth, rounds to 2 m).
+  for (const [code, v] of Object.entries(ELEVATION.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 1, `${code} not >= 1: ${v}`);
+  }
+});
+
+test('every real place has an elevation; only non-places have none', () => {
+  // Same "no data = not a place" invariant the TTT guard leans on (metricDataGap).
+  const values = ELEVATION.values;
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in values), `org ${c.code} should have no elevation value`);
+    } else {
+      assert.ok(c.code in values, `real place ${c.code} (${c.continent}) has no elevation value`);
+    }
+  }
+});
+
+test('createMetric over elevation ranks both extremes plausibly', () => {
+  const elevation = createMetric(ELEVATION, COUNTRIES);
+  // Everest is the highest point on Earth: Nepal and China share it at 8,849 m,
+  // ties broken by code, so China (cn) leads Nepal (np).
+  assert.equal(elevation.topN('world', 1)[0].code, 'cn');
+  assert.equal(elevation.valueOf('cn'), 8849);
+  // The two-directional draw: the lowest highpoint is the Maldives.
+  const world = elevation.ranked('world');
+  assert.equal(world[world.length - 1].code, 'mv');
+  // Pakistan (K2) outranks India (Kangchenjunga), the world's #2 and #3 peaks.
+  const pk = elevation.rankOf('pk', 'world');
+  const ind = elevation.rankOf('in', 'world');
+  assert.ok(pk !== null && ind !== null && pk < ind);
 });

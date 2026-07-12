@@ -772,7 +772,8 @@
     "density": "Population density",
     "gdp": "GDP",
     "gdpPerCapita": "GDP per capita",
-    "coffee": "Coffee production"
+    "coffee": "Coffee production",
+    "elevation": "Highest elevation"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",
