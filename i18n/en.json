@@ -408,7 +408,8 @@
       "area": "Land area",
       "density": "Population density",
       "gdp": "GDP",
-      "gdpPerCapita": "GDP per capita"
+      "gdpPerCapita": "GDP per capita",
+      "coffee": "Coffee production"
     }
   },
   "daily": {
@@ -697,6 +698,13 @@
       "5k": "under $5K",
       "2k": "under $2K",
       "1k": "under $1K"
+    }
+  },
+  "coffee": {
+    "atLeast": {
+      "1k": "over 1K tonnes",
+      "10k": "over 10K tonnes",
+      "100k": "over 100K tonnes"
     }
   },
   "filter": {

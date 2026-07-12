@@ -35,6 +35,7 @@ import {
   DENSITY_BREAKS_FOR_RANDOM,
   GDP_BREAKS_FOR_RANDOM,
   GDP_PER_CAPITA_BREAKS_FOR_RANDOM,
+  COFFEE_BREAKS_FOR_RANDOM,
   ALL_MOTIFS,
   colorCount,
   population,
@@ -42,6 +43,7 @@ import {
   density,
   gdp,
   gdpPerCapita,
+  coffee,
   categoryFromId,
   hasStripesOnly,
   buildUltimateCategoryPool,
@@ -537,6 +539,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = GDP_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `gdp ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('coffee:')) {
+      const suffix = cat.id.slice('coffee:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = COFFEE_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `coffee ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -590,7 +599,7 @@ test('continent and statehood categories carry their exclusiveGroup', () => {
   assert.equal(hasMotif('animal').exclusiveGroup, undefined);
 });
 
-test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population + area + density + gdp + gdpPerCapita', () => {
+test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population + area + density + gdp + gdpPerCapita + coffee', () => {
   const pool = buildRandomCategoryPool();
   const expected =
     CONTINENTS_FOR_RANDOM.length
@@ -602,7 +611,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + AREA_BREAKS_FOR_RANDOM.length
     + DENSITY_BREAKS_FOR_RANDOM.length
     + GDP_BREAKS_FOR_RANDOM.length
-    + GDP_PER_CAPITA_BREAKS_FOR_RANDOM.length;
+    + GDP_PER_CAPITA_BREAKS_FOR_RANDOM.length
+    + COFFEE_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -686,6 +696,43 @@ test('gdp and gdpPerCapita share a family, never both in one puzzle', () => {
   assert.equal(axesConflict([gdp('>=', 1_000_000_000_000)], [population('>=', 10_000_000)]), false);
 });
 
+test('coffee factory wires id, predicate, exclusiveGroup off the denormalized field', () => {
+  const c = coffee('>=', 10_000);
+  assert.equal(c.id, 'coffee:>=10000');
+  assert.equal(c.exclusiveGroup, 'coffee');
+  assert.equal(c.predicate(/** @type {any} */ ({ coffee: 25_000 })), true);
+  assert.equal(c.predicate(/** @type {any} */ ({ coffee: 0 })), false); // a real non-grower (0) fails >=
+  assert.equal(c.predicate(/** @type {any} */ ({})), false); // an org (no field) matches neither
+});
+
+test('COFFEE_BREAKS_FOR_RANDOM is >=-only (a sparse production metric has no meaningful <= tier)', () => {
+  assert.ok(COFFEE_BREAKS_FOR_RANDOM.length > 0);
+  assert.ok(COFFEE_BREAKS_FOR_RANDOM.every((b) => b.op === '>='), 'every coffee tier is atLeast');
+  assert.ok(COFFEE_BREAKS_FOR_RANDOM.every((b) => b.ultimate !== true), 'no coffee tier is 9×9-eligible');
+});
+
+test('categoryFromId round-trips coffee thresholds', () => {
+  const ge = categoryFromId('coffee:>=100000');
+  assert.ok(ge);
+  assert.equal(ge?.exclusiveGroup, 'coffee');
+  assert.equal(ge?.predicate(/** @type {any} */ ({ coffee: 200_000 })), true);
+  assert.equal(categoryFromId('coffee:10000'), null); // bare N (no op) is not a valid threshold
+});
+
+test('translateCategoryLabel prefixes coffee with the metric name and localized tier', () => {
+  const label = translateCategoryLabel(coffee('>=', 10_000), (key, fallback) => {
+    if (key === 'metric.coffee') return 'Coffee production';
+    if (key === 'coffee.atLeast.10k') return 'over 10K tonnes';
+    return fallback;
+  });
+  assert.equal(label, 'Coffee production: over 10K tonnes');
+});
+
+test('coffee is its own family — coexists with gdp / population in one puzzle', () => {
+  assert.equal(metricGroupRepeated([coffee('>=', 10_000), gdp('>=', 100_000_000_000)], [continent('Africa')]), false);
+  assert.equal(axesConflict([coffee('>=', 10_000)], [population('>=', 10_000_000)]), false);
+});
+
 test('metricGroupRepeated does not restrict non-metric groups (two continents on one axis)', () => {
   // Continents are deliberately single-axis-repeatable — two down the rows is
   // a normal grid, so they stay out of SINGLE_USE_METRIC_GROUPS.
@@ -701,7 +748,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['area', 'density', 'gdp', 'gdpPerCapita', 'population'],
+    ['area', 'coffee', 'density', 'gdp', 'gdpPerCapita', 'population'],
   );
 });
 
@@ -777,10 +824,19 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
   const droppedDensity = DENSITY_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
   const droppedGdp = GDP_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
   const droppedGdpPerCapita = GDP_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  // Coffee has NO ultimate break (too sparse/concentrated for 9×9), so ALL its
+  // breaks drop — coffee never appears in the Ultimate pool.
+  const droppedCoffee = COFFEE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedCoffee, COFFEE_BREAKS_FOR_RANDOM.length, 'no coffee tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('coffee:')).length,
+    0,
+    'coffee cats must not appear in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
-      - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita,
+      - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee,
   );
 });
 

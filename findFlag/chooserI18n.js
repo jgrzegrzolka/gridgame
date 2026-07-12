@@ -23,6 +23,7 @@ import { pillLabel } from '../flags/findFlag.js';
  * @typedef {{ labelSpan: { textContent: string }, value: string }} DensityPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} GdpPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} GdpPerCapitaPillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} CoffeePillRef
  *
  * @param {{
  *   sectionHeaders: SectionHeader[],
@@ -32,11 +33,12 @@ import { pillLabel } from '../flags/findFlag.js';
  *   densityPills?: DensityPillRef[],
  *   gdpPills?: GdpPillRef[],
  *   gdpPerCapitaPills?: GdpPerCapitaPillRef[],
+ *   coffeePills?: CoffeePillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
@@ -63,6 +65,10 @@ export function refreshChooserI18n({ sectionHeaders, allPills, populationPills =
   // GDP-per-capita pills (">=30000" etc.) via pillLabel's gdpPerCapita branch.
   for (const p of gdpPerCapitaPills) {
     p.labelSpan.textContent = pillLabel('gdpPerCapita', p.value, 'include', t);
+  }
+  // Coffee pills (">=10000" etc.) via pillLabel's coffee branch.
+  for (const p of coffeePills) {
+    p.labelSpan.textContent = pillLabel('coffee', p.value, 'include', t);
   }
   if (onlyColorsLabelSpan) {
     onlyColorsLabelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');

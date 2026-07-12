@@ -1,4 +1,4 @@
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas } from '../flags/group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees } from '../flags/group.js';
 import {
   ALL_FLAG_COLORS,
   ALL_MOTIFS,
@@ -66,6 +66,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   densityProbability: 0.10,
   gdpProbability: 0.08,
   gdpPerCapitaProbability: 0.06,
+  coffeeProbability: 0.06,
 });
 
 /**
@@ -207,8 +208,9 @@ export function bootFindFlag() {
     fetch('../flags/metrics/density.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
     fetch('../flags/metrics/gdp.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
     fetch('../flags/metrics/gdpPerCapita.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
+    fetch('../flags/metrics/coffee.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
   ])
-    .then(([raw, popValues, areaValues, densityValues, gdpValues, gdpPerCapitaValues]) => {
+    .then(([raw, popValues, areaValues, densityValues, gdpValues, gdpPerCapitaValues, coffeeValues]) => {
       // Attach AFTER withLocalizedAliases: its clone path (re-wrapping a
       // renamed Country through createCountry) would drop an extra field
       // set beforehand, so denormalize onto the final pool objects.
@@ -218,6 +220,7 @@ export function bootFindFlag() {
       attachDensities(all, densityValues);
       attachGdps(all, gdpValues);
       attachGdpPerCapitas(all, gdpPerCapitaValues);
+      attachCoffees(all, coffeeValues);
       /** @type {{ refreshI18n: (newAll: import('../flags/group.js').Country[]) => void } | null} */
       let activeHandle = null;
       if (!initialFilter) {
@@ -353,6 +356,8 @@ export function bootFindFlag() {
     const gdpPills = [];
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const gdpPerCapitaPills = [];
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const coffeePills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
     const sectionHeaders = [];
     /** @type {HTMLSpanElement | null} */
@@ -625,6 +630,41 @@ export function bootFindFlag() {
       }
     }
 
+    // Coffee-production section, same single-select scalar (`filter.coffee`).
+    // Sparse `>=`-only tiers, so the pills read "over 10K tonnes" etc.
+    {
+      const coffeeItems = buildMetricTierItems('coffee', all);
+      if (coffeeItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.coffee', 'Coffee production');
+        sectionHeaders.push({ h, key: 'findFlag.sections.coffee', fallback: 'Coffee production' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of coffeeItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('coffee', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectCoffee(op, n, btn));
+          wrap.appendChild(btn);
+          coffeePills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
     const randomBtn = document.getElementById('find-random');
 
@@ -782,6 +822,21 @@ export function bootFindFlag() {
       updateBar();
     }
 
+    /**
+     * Single-select coffee-production tier, twin of selectGdp.
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectCoffee(op, n, btn) {
+      const isActive = filter.coffee !== null && filter.coffee.op === op && filter.coffee.n === n;
+      filter.coffee = isActive ? null : { op, n };
+      for (const p of coffeePills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
     playBtn.addEventListener('click', () => {
       if (playBtn.disabled) return;
       const params = new URLSearchParams({ f: serializeFilter(filter) });
@@ -813,6 +868,9 @@ export function bootFindFlag() {
         btn.classList.remove('active');
       }
       for (const { btn } of gdpPerCapitaPills) {
+        btn.classList.remove('active');
+      }
+      for (const { btn } of coffeePills) {
         btn.classList.remove('active');
       }
       updateBar();
@@ -867,7 +925,7 @@ export function bootFindFlag() {
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, onlyColorsLabelSpan, updateBar });
+        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, onlyColorsLabelSpan, updateBar });
       },
     };
   }
