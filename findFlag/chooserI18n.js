@@ -28,6 +28,7 @@ import { pillLabel } from '../flags/findFlag.js';
  * @typedef {{ labelSpan: { textContent: string }, value: string }} CocoaPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} BananaPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} ElevationPillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} CoastlinePillRef
  *
  * @param {{
  *   sectionHeaders: SectionHeader[],
@@ -42,6 +43,7 @@ import { pillLabel } from '../flags/findFlag.js';
  *   cocoaPills?: CocoaPillRef[],
  *   bananaPills?: BananaPillRef[],
  *   elevationPills?: ElevationPillRef[],
+ *   coastlinePills?: CoastlinePillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps

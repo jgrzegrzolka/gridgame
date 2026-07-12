@@ -9,6 +9,7 @@ import wine from '../flags/metrics/wine.json' with { type: 'json' };
 import cocoa from '../flags/metrics/cocoa.json' with { type: 'json' };
 import banana from '../flags/metrics/banana.json' with { type: 'json' };
 import elevation from '../flags/metrics/elevation.json' with { type: 'json' };
+import coastline from '../flags/metrics/coastline.json' with { type: 'json' };
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { TicTacToeServer } from './ticTacToeServer.js';
 
@@ -30,6 +31,7 @@ attachMetrics(countries, {
   cocoa: cocoa.values,
   banana: banana.values,
   elevation: elevation.values,
+  coastline: coastline.values,
 });
 
 export default class GameServer extends TicTacToeServer {

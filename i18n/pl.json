@@ -413,7 +413,8 @@
       "wine": "Produkcja wina",
       "cocoa": "Produkcja kakao",
       "banana": "Produkcja bananów",
-      "elevation": "Najwyższy punkt"
+      "elevation": "Najwyższy punkt",
+      "coastline": "Długość wybrzeża"
     }
   },
   "daily": {
@@ -540,7 +541,8 @@
       "superlativeWine": "Produkcja wina: najwięcej",
       "superlativeCocoa": "Produkcja kakao: najwięcej",
       "superlativeBanana": "Produkcja bananów: najwięcej",
-      "superlativeElevation": "Najwyższy punkt: najwyższy i najniższy"
+      "superlativeElevation": "Najwyższy punkt: najwyższy i najniższy",
+      "superlativeCoastline": "Długość wybrzeża: najdłuższe i najkrótsze"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -555,7 +557,8 @@
       "superlativeWine": "Wino",
       "superlativeCocoa": "Kakao",
       "superlativeBanana": "Banany",
-      "superlativeElevation": "Wysokość"
+      "superlativeElevation": "Wysokość",
+      "superlativeCoastline": "Wybrzeże"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
@@ -580,6 +583,8 @@
     "hintLeastBanana": "Najmniej bananów",
     "hintMostElevation": "Najwyższy punkt",
     "hintLeastElevation": "Najniższy punkt",
+    "hintMostCoastline": "Najdłuższe wybrzeże",
+    "hintLeastCoastline": "Najkrótsze wybrzeże",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
@@ -764,6 +769,18 @@
       "100": "poniżej 100 m"
     }
   },
+  "coastline": {
+    "atLeast": {
+      "1000": "ponad 1000 km wybrzeża",
+      "5000": "ponad 5000 km wybrzeża",
+      "25000": "ponad 25000 km wybrzeża"
+    },
+    "atMost": {
+      "500": "poniżej 500 km wybrzeża",
+      "100": "poniżej 100 km wybrzeża",
+      "1": "bez dostępu do morza"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "tylko 2 kolory",
@@ -829,7 +846,8 @@
     "wine": "Produkcja wina",
     "cocoa": "Produkcja kakao",
     "banana": "Produkcja bananów",
-    "elevation": "Najwyższy punkt"
+    "elevation": "Najwyższy punkt",
+    "coastline": "Długość wybrzeża"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

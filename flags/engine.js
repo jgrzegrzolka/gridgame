@@ -443,6 +443,38 @@ export const ELEVATION_BREAKS_FOR_RANDOM = [
   { op: '<=', n: 100 },
 ];
 
+/**
+ * Coastline-threshold Categories (kilometres of coastline). Dense and
+ * two-directional, the mirror of area / elevation. High `>=1000 / >=5000 /
+ * >=25000 km` (76 / 23 / 7 sovereign) climbs from the long-coast countries to
+ * the archipelago giants (Canada ~202k, Indonesia ~55k, Russia, the
+ * Philippines, Japan, Australia, Norway). Low `<=500 / <=100 / <=1 km`
+ * (99 / 56 / 41 sovereign) picks out the short-coast and landlocked places: a
+ * landlocked country carries a real 0 km, so it satisfies every low tier
+ * (correctly, it has no coast), and `<=1` is effectively "landlocked" (the 41
+ * sovereign 0-km states, no coastal state dips that low). `exclusiveGroup:
+ * 'coastline'`.
+ *
+ * `ultimate: true` marks the single break kept in the 9×9 pool: the broad
+ * `>=1000` tier (76 sovereign, 9+ in every continent bar South America and
+ * Antarctica) is the only one that can back 9-distinct-per-cell against a
+ * continent; the rest carry `ultimateEligible: false`. Dense, so like elevation
+ * it IS 9×9-eligible.
+ *
+ * Counts are tuned against flags/metrics/coastline.json; a 0-count tier is
+ * dropped by `buildMetricTierItems` so it never reaches a surface.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const COASTLINE_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1_000, ultimate: true },
+  { op: '>=', n: 5_000 },
+  { op: '>=', n: 25_000 },
+  { op: '<=', n: 500 },
+  { op: '<=', n: 100 },
+  { op: '<=', n: 1 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -681,6 +713,11 @@ function metresLabel(/** @type {number} */ n) {
   return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
+/** Kilometres with thousands separators ("25,000", "500") for the coastline threshold text. */
+function kmLabel(/** @type {number} */ n) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 /**
  * GDP-threshold Category factory (nominal current US$). Reads the denormalized
  * `country.gdp` field (`attachGdps`). `exclusiveGroup: 'gdp'`.
@@ -893,6 +930,37 @@ export function elevation(op, n, opts = {}) {
 }
 
 /**
+ * Coastline-threshold Category factory (kilometres of coastline). Reads the
+ * denormalized `country.coastline` field (`attachCoastlines`). `exclusiveGroup:
+ * 'coastline'`. Dense and two-directional: `>=` picks out the long-coast
+ * archipelagos and giants, `<=` the short-coast and landlocked places (which
+ * carry 0), the mirror of area / elevation.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function coastline(op, n, opts = {}) {
+  const human = kmLabel(n);
+  const label = op === '>=' ? `over ${human} km of coast` : `under ${human} km of coast`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.coastline === 'number' && c.coastline >= n
+      : (c) => typeof c.coastline === 'number' && c.coastline <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `coastline:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'coastline',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -1063,6 +1131,19 @@ export const THRESHOLD_METRICS = {
       const human = metresLabel(n);
       if (op === '>=') return translate(`elevation.atLeast.${n}`, `over ${human} m`);
       return translate(`elevation.atMost.${n}`, `under ${human} m`);
+    },
+  },
+  coastline: {
+    breaks: COASTLINE_BREAKS_FOR_RANDOM,
+    factory: coastline,
+    prefixFallback: 'Coastline length',
+    field: 'coastline',
+    family: 'coastline',
+    has: (c) => typeof c.coastline === 'number',
+    labelFor: (op, n, translate) => {
+      const human = kmLabel(n);
+      if (op === '>=') return translate(`coastline.atLeast.${n}`, `over ${human} km`);
+      return translate(`coastline.atMost.${n}`, `under ${human} km`);
     },
   },
 };

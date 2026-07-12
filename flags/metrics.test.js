@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachWines, attachCocoas, attachBananas } from './group.js';
+import { attachCoffees, attachWines, attachCocoas, attachBananas, attachCoastlines } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -23,6 +23,7 @@ const WINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/win
 const COCOA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/cocoa.json'));
 const BANANA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/banana.json'));
 const ELEVATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/elevation.json'));
+const COASTLINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coastline.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -657,6 +658,80 @@ test('createMetric over elevation ranks both extremes plausibly', () => {
   const pk = elevation.rankOf('pk', 'world');
   const ind = elevation.rankOf('in', 'world');
   assert.ok(pk !== null && ind !== null && pk < ind);
+});
+
+// ---- real coastline.json schema + integration gate (dense, landlocked = 0) --
+
+test('coastline is a valid, self-describing metric file with the plain format', () => {
+  assert.equal(COASTLINE.key, 'coastline');
+  assert.equal(typeof COASTLINE.label, 'string');
+  assert.equal(typeof COASTLINE.unit, 'string');
+  // Coastline renders exact kilometres, not compact: Canada (202,080) and the
+  // archipelago giants must stay distinguishable, not a shared "50K–200K".
+  assert.equal(COASTLINE.format, 'plain');
+  assert.equal(typeof COASTLINE.source, 'string');
+  assert.equal(typeof COASTLINE.year, 'number');
+  assert.equal(typeof COASTLINE.values, 'object');
+  // Dense, like area / elevation: no absence hint. Unlike the crops, a missing
+  // value would mean "unsourced", never zero — a landlocked place carries a
+  // real, explicit 0 in the map rather than being omitted.
+  assert.equal(COASTLINE.absence, undefined);
+});
+
+test('every coastline value is a non-negative integer (whole km; landlocked = 0)', () => {
+  // Whole km; the floor is 0 (a landlocked place genuinely has no coast), so
+  // unlike elevation the valid minimum is 0, not 1.
+  for (const [code, v] of Object.entries(COASTLINE.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('every real place has a coastline; only non-places have none', () => {
+  // Same "no data = not a place" invariant the TTT guard leans on (metricDataGap).
+  // Landlocked places are present at 0, not omitted, so the invariant holds.
+  const values = COASTLINE.values;
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in values), `org ${c.code} should have no coastline value`);
+    } else {
+      assert.ok(c.code in values, `real place ${c.code} (${c.continent}) has no coastline value`);
+    }
+  }
+});
+
+test('a landlocked place carries an explicit 0, not a missing value', () => {
+  // The distinguishing feature of this dense metric: 0 is a real, sourced value.
+  for (const code of ['ch', 'bo', 'np', 'xk', 'va']) {
+    assert.equal(COASTLINE.values[code], 0, `${code} should be 0, not missing`);
+  }
+});
+
+test('createMetric over coastline ranks the world plausibly', () => {
+  const coastline = createMetric(COASTLINE, COUNTRIES);
+  // Canada has by far the longest coastline on Earth.
+  assert.equal(coastline.topN('world', 1)[0].code, 'ca');
+  assert.equal(coastline.valueOf('ca'), 202080);
+  // Indonesia is the archipelago runner-up among sovereign states.
+  assert.equal(coastline.rankOf('id', 'sovereign'), 2);
+});
+
+test("attachCoastlines fills every real place (landlocked at 0), orgs stay bare", () => {
+  // Dense-metric denormalizer: every real place ends up with a numeric field
+  // (landlocked ones at 0), and only non-place orgs are left without it.
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachCoastlines(/** @type {any} */ (rows), COASTLINE.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.coastline, undefined, `org ${c.code} should have no coastline field`);
+    } else {
+      assert.equal(typeof row.coastline, 'number', `real place ${c.code} has no coastline value`);
+    }
+  }
+  assert.equal(/** @type {any} */ (byCode.get('ca')).coastline, COASTLINE.values.ca);
+  assert.equal(/** @type {any} */ (byCode.get('ch')).coastline, 0); // Switzerland is landlocked
 });
 
 // ---- guard: the party server can't loop METRIC_FILES (static imports for the

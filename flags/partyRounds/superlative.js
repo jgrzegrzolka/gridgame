@@ -8,6 +8,7 @@ import wine from '../metrics/wine.json' with { type: 'json' };
 import cocoa from '../metrics/cocoa.json' with { type: 'json' };
 import banana from '../metrics/banana.json' with { type: 'json' };
 import elevation from '../metrics/elevation.json' with { type: 'json' };
+import coastline from '../metrics/coastline.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -181,3 +182,16 @@ export const bananaRound = createSuperlativeRound(createMetric(banana, []), 'sup
 // (Everest) and the fun "lowest highpoint" (the Maldives, the low coral atolls)
 // are good questions, so 'most' and 'least' are both dealt.
 export const elevationRound = createSuperlativeRound(createMetric(elevation, []), 'superlative-elevation');
+
+// Coastline instance: km of coast, id 'superlative-coastline'. Dense and
+// two-directional like elevation, but with one wrinkle: ~42 landlocked places
+// carry a real 0 km, and a "least" quartet drawn from them would tie at 0 (an
+// unfair question with no clear answer). So the round metric is built from a
+// zero-filtered values map: landlocked places are excluded from selection (the
+// way a sparse crop metric's non-producers are), leaving only coastal countries,
+// among which both "longest" and "shortest coastline" are clean questions.
+const coastalCoastline = {
+  ...coastline,
+  values: Object.fromEntries(Object.entries(coastline.values).filter(([, v]) => v > 0)),
+};
+export const coastlineRound = createSuperlativeRound(createMetric(coastalCoastline, []), 'superlative-coastline');

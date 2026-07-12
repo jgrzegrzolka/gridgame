@@ -26,4 +26,5 @@ export const METRIC_FILES = [
   { key: 'cocoa', file: 'cocoa.json', label: 'Cocoa production' },
   { key: 'banana', file: 'banana.json', label: 'Banana production' },
   { key: 'elevation', file: 'elevation.json', label: 'Highest elevation' },
+  { key: 'coastline', file: 'coastline.json', label: 'Coastline length' },
 ];
