@@ -417,7 +417,8 @@
       "elevation": "Najwyższy punkt",
       "coastline": "Długość wybrzeża",
       "forest": "Lesistość",
-      "oil": "Wydobycie ropy naftowej"
+      "oil": "Wydobycie ropy naftowej",
+      "rice": "Produkcja ryżu"
     }
   },
   "daily": {
@@ -548,7 +549,8 @@
       "superlativeElevation": "Najwyższy punkt: najwyższy i najniższy",
       "superlativeCoastline": "Długość wybrzeża: najdłuższe i najkrótsze",
       "superlativeForest": "Lesistość: najbardziej i najmniej zalesione",
-      "superlativeOil": "Wydobycie ropy naftowej: najwięcej"
+      "superlativeOil": "Wydobycie ropy naftowej: najwięcej",
+      "superlativeRice": "Produkcja ryżu: najwięcej"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -567,7 +569,8 @@
       "superlativeElevation": "Wysokość",
       "superlativeCoastline": "Wybrzeże",
       "superlativeForest": "Lasy",
-      "superlativeOil": "Ropa"
+      "superlativeOil": "Ropa",
+      "superlativeRice": "Ryż"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
@@ -594,6 +597,7 @@
     "hintMostForest": "Najbardziej zalesiony",
     "hintLeastForest": "Najmniej zalesiony",
     "hintMostOil": "Największe wydobycie ropy",
+    "hintMostRice": "Największa produkcja ryżu",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
@@ -817,6 +821,13 @@
       "1000": "ponad 1000 TWh"
     }
   },
+  "rice": {
+    "atLeast": {
+      "100k": "ponad 100 tys. ton",
+      "1m": "ponad 1 mln ton",
+      "10m": "ponad 10 mln ton"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "tylko 2 kolory",
@@ -886,7 +897,8 @@
     "elevation": "Najwyższy punkt",
     "coastline": "Długość wybrzeża",
     "forest": "Lesistość",
-    "oil": "Wydobycie ropy naftowej"
+    "oil": "Wydobycie ropy naftowej",
+    "rice": "Produkcja ryżu"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

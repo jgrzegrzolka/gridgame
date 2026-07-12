@@ -411,3 +411,26 @@ test('oilRound: biggest-only, correct extreme-by-oil answer, producers only', as
     assert.equal(OIL[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-oil option`);
   }
 });
+
+// ---- rice instance (rice paddy tonnes, id 'superlative-rice') ---------------
+
+test('riceRound: biggest-only, correct extreme-by-rice answer, growers only', async () => {
+  const { riceRound } = await import('./superlative.js');
+  const riceJson = (await import('../metrics/rice.json', { with: { type: 'json' } })).default;
+  const RICE = /** @type {Record<string, number>} */ (riceJson.values);
+  assert.equal(riceRound.id, 'superlative-rice');
+  // Rice-distinct sovereign GROWERS spanning many orders of magnitude, all in
+  // rice.json. A non-grower (e.g. Canada) mixed in must be dropped by the round's
+  // `metric.has` filter, never appear as an option.
+  const pool = ['in', 'cn', 'id', 'vn', 'th', 'jp', 'it', 'ca'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = riceRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Rice is locked to 'most'; every round asks for the biggest grower.
+    assert.equal(q.prompt, 'most', `seed ${i}: rice is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('ca'), 'a non-grower is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => RICE[c]);
+    assert.equal(RICE[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-rice option`);
+  }
+});

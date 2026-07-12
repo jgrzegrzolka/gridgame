@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DS (oil production, sparse extractive metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DT (rice production, sparse crop) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,20 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DT: Rice production as a world metric, sparse crop (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Fifteenth world metric, the sixth crop after coffee / wine / cocoa / banana / apple and the largest of all by tonnage: ~119 countries grow paddy rice (the whole tropics and subtropics, Asia dominant), cool and arid places grow none. FAOSTAT 2024 (item 27 "Rice", paddy) via Our World in Data's mirror, growers only. India leads (218M tonnes), then China (208M), Bangladesh, Indonesia, Vietnam, Thailand: a heavily Asian top, a nice contrast with apple's temperate/European lean.
+
+**Data contract:** *sparse* with `absence: 'zero'`, exactly like the other crops. `flags/metrics/rice.json` lists the 119 growers only; `attachRices` (`attachZeroFilledMetric` in group.js) defaults every real place missing from the map to 0, leaving only the org "flags" without the field, so "no data" still means exactly "not a place" and the TTT no-data guard stays correct. A country that grows no rice is a *fair wrong guess* on a "rice >= 1M tonnes" cell, not a data gap. The lens and the superlative round read the raw sparse map (`createMetric`), ranking growers only. Nicaragua (2023) and Syria (1996) carry pre-2024 years, both tiny.
+
+- [x] 1. Data: `flags/metrics/rice.json` (119 growers) + `authoring/build-rice.mjs` + `METRIC_FILES` line + `attachRices` (group.js) + `METRIC_ATTACHERS` entry + `metrics.test.js` schema/absence/positive-integer/no-org/attach-fills-every-real-place/sparse-createMetric tests.
+- [x] 2. flagsdata lens (free once step 1 landed; "Rice production" in the selector, compact tonnes).
+- [x] 3. Filters: `metricTiers.js` auto-derives from `THRESHOLD_METRICS` (zero-edit); findFlag chooser (`Filters.rice` + `RiceConstraint` + `ScalarGroup`; rice section + `selectRice` + `ricePills` + `riceProbability` modifier + `chooserI18n` rice loop) + `findflag-random-coverage` skill note; flagsdata filter group + lens are zero-edit (both loop `METRIC_FILES`). `attachRices` at flagsdata + findFlag via the zero-edit `attachMetrics` loop. `rice.atLeast` i18n (en+pl).
+- [x] 4. TTT: `rice(op, n)` factory + `RICE_BREAKS_FOR_RANDOM` (`>=100K/1M/10M tonnes` = 76/42/13 real places; **`>=`-only** and no ultimate break, rice is tropics/subtropics-concentrated and heavily Asian so `rice >= N × continent` can't reach 9 distinct, every break `ultimateEligible: false`, keeping rice a 3×3-only axis like the crops) + `THRESHOLD_METRICS.rice` entry. `attachRices` at party/server.js's static-import site + the generic loops; ultimateServer.js skips it (sparse, never 9×9). `rice.atLeast` + `sections.rice` + `metric.rice` i18n (en+pl). Engine pinning tests updated (pool count, `SINGLE_USE_METRIC_GROUPS`, ultimate-pool exclusion, and the category-source sweep, which also gained the long-missing wine/cocoa/banana/apple branches while there).
+- [x] 5. Flag Party round `superlative-rice` via `createSuperlativeRound` over the raw sparse map, locked to 'most' ("biggest rice producer" = India) like the crops. Registered across all seven spots (superlative.js + test, `partyGameServer` ROUNDS, `partyPlan` METRIC_MODES + test, `flagParty/page.js` MODE_LABELS + SUPERLATIVE_MODES + a rice-bowl-and-chopsticks icon, en+pl `party.mode/modeShort.superlativeRice` + `hintMostRice`) plus the `[data-metric="superlative-rice"] { --mc: #7e8b3d }` paddy-olive hue (distinct from banana's mustard and the greens of area/forest).
+
+Surface 6 (daily puzzles) is NOT a checkbox: added a row to `METRIC_DAILY_PUZZLES.md`, Feature closed.
 
 ### Feature DS: Oil production as a world metric, sparse extractive (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

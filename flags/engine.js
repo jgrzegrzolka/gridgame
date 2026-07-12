@@ -551,6 +551,28 @@ export const OIL_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 1_000 },
 ];
 
+/**
+ * Rice-production-threshold Categories (paddy tonnes). Sparse like the other
+ * crops, so **`>=`-only**: the cool and arid non-growers sit at 0 (via
+ * `absence: 'zero'`), so a `<=` tier would be meaningless. Rice is the largest
+ * crop by tonnage, so the tiers sit high: `>=100K/1M/10M tonnes` (76 / 42 / 13
+ * real places, a clean spread from the minor growers up to the 13 giants: India,
+ * China, Bangladesh, Indonesia, Vietnam, Thailand, Myanmar, the Philippines,
+ * Brazil, Cambodia, the US, Japan, Pakistan). `exclusiveGroup: 'rice'`.
+ *
+ * No `ultimate: true` break: rice is tropics/subtropics-concentrated and heavily
+ * Asian (Europe grows little, Oceania barely any), so `rice >= N × continent`
+ * can't reach 9 distinct. Every break carries `ultimateEligible: false`, keeping
+ * rice a 3×3-only axis like the other crops.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const RICE_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 100_000 },
+  { op: '>=', n: 1_000_000 },
+  { op: '>=', n: 10_000_000 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -1134,6 +1156,37 @@ export function oil(op, n, opts = {}) {
 }
 
 /**
+ * Rice-production-threshold Category factory (paddy tonnes). Reads the
+ * denormalized `country.rice` field (`attachRices`, which fills 0 for a real
+ * place that grows none). `exclusiveGroup: 'rice'`. The break list is `>=`-only
+ * (see RICE_BREAKS_FOR_RANDOM), but the `<=` branch is kept for symmetry so a
+ * `rice:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function rice(op, n, opts = {}) {
+  const human = tonnesCompact(n);
+  const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.rice === 'number' && c.rice >= n
+      : (c) => typeof c.rice === 'number' && c.rice <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `rice:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'rice',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -1356,6 +1409,20 @@ export const THRESHOLD_METRICS = {
       const human = twhLabel(n);
       if (op === '>=') return translate(`oil.atLeast.${n}`, `over ${human} TWh`);
       return translate(`oil.atMost.${n}`, `under ${human} TWh`);
+    },
+  },
+  rice: {
+    breaks: RICE_BREAKS_FOR_RANDOM,
+    factory: rice,
+    prefixFallback: 'Rice production',
+    field: 'rice',
+    family: 'rice',
+    has: (c) => typeof c.rice === 'number',
+    labelFor: (op, n, translate) => {
+      const token = tonnesToken(n);
+      const human = tonnesCompact(n);
+      if (op === '>=') return translate(`rice.atLeast.${token}`, `over ${human} tonnes`);
+      return translate(`rice.atMost.${token}`, `under ${human} tonnes`);
     },
   },
 };

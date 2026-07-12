@@ -32,6 +32,7 @@ import { pillLabel } from '../flags/findFlag.js';
  * @typedef {{ labelSpan: { textContent: string }, value: string }} CoastlinePillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} ForestPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} OilPillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} RicePillRef
  *
  * @param {{
  *   sectionHeaders: SectionHeader[],
@@ -50,11 +51,12 @@ import { pillLabel } from '../flags/findFlag.js';
  *   coastlinePills?: CoastlinePillRef[],
  *   forestPills?: ForestPillRef[],
  *   oilPills?: OilPillRef[],
+ *   ricePills?: RicePillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], applePills = [], elevationPills = [], coastlinePills = [], forestPills = [], oilPills = [], onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], applePills = [], elevationPills = [], coastlinePills = [], forestPills = [], oilPills = [], ricePills = [], onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
@@ -117,6 +119,10 @@ export function refreshChooserI18n({ sectionHeaders, allPills, populationPills =
   // Oil pills (">=100" etc.) via pillLabel's oil branch.
   for (const p of oilPills) {
     p.labelSpan.textContent = pillLabel('oil', p.value, 'include', t);
+  }
+  // Rice pills (">=1000000" etc.) via pillLabel's rice branch.
+  for (const p of ricePills) {
+    p.labelSpan.textContent = pillLabel('rice', p.value, 'include', t);
   }
   if (onlyColorsLabelSpan) {
     onlyColorsLabelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');
