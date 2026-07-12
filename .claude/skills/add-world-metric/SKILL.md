@@ -55,16 +55,16 @@ Mirror Feature DF. In `flags/engine.js`: a `<key>(op, n)` category factory (bake
 
 `flags/partyRounds/superlative.js` exports a `createSuperlativeRound(metric, roundId)` factory that takes a `createMetric(...)` instance, so a new metric is a **sibling round**, not a rewrite. Population (`superlative`), area (`superlative-area`), and density (`superlative-density`) are all registered through it. Unlike surfaces 2-4 this one does **not** auto-light from `METRIC_FILES`: each round is registered explicitly, so it's the surface most likely to be forgotten. Mirror the density round across six spots (grep `densityRound` / `superlative-density` for the exact set): (a) `superlative.js` (import the metric json + `export const <key>Round = createSuperlativeRound(createMetric(<key>, []), 'superlative-<key>')`); (b) `superlative.test.js` round-instance test; (c) `party/partyGameServer.js`'s `ROUNDS` array; (d) `flags/partyPlan.js` `METRIC_MODES` + `partyPlan.test.js`; (e) `flagParty/page.js` `MODE_LABELS` + `SUPERLATIVE_MODES` + an icon SVG; (f) i18n en+pl `party.mode.superlative<Key>` / `party.modeShort.*`.
 
-### 6. Daily puzzles (deferrable)
+### 6. Daily puzzles: NOT part of "done"; tracked in `METRIC_DAILY_PUZZLES.md`
 
-Two parts, both can lag the code surfaces:
+The daily surface is deliberately **not** a code surface and **does not block the Feature's completion**. It's open-ended authoring on Jan's cadence (released daily puzzles are immutable, so they can't ride along with a code PR). So it lives in its own tracker, `METRIC_DAILY_PUZZLES.md`: when a metric's surfaces 1-5 land, add a row there and close the Feature. Do not author daily puzzles unprompted (see memory `project_metric_daily_puzzles_deferred`). For reference, the two parts, both metric-agnostic:
 
-- **Superlatives: zero new code.** `resolveSuperlative` (`flags/superlative.js`) is metric-agnostic. Author `{ kind: "superlative", metric: "<key>", scope, direction, topN, filter? }` entries per the **daily-puzzle-author** skill. Rendering, difficulty, `checkSuperlativeShape` and `audit-superlative.mjs` already handle any metric key. This is the natural place to defer: ship the code surfaces, then add backlog puzzles and a reservoir of ideas over time.
+- **Superlatives: zero new code.** `resolveSuperlative` (`flags/superlative.js`) is metric-agnostic. Author `{ kind: "superlative", metric: "<key>", scope, direction, topN, filter? }` entries per the **daily-puzzle-author** skill. Rendering, difficulty, `checkSuperlativeShape` and `audit-superlative.mjs` already handle any metric key.
 - **Result-screen rank captions (small code).** The population captions (`flags/populationRank.js` + the `metric === 'population'` branch in `daily/page.js`) are metric-specific. Add a `build<Key>RankNotes` and a branch, or generalize `populationRank.js` to take a metric key + label/unit + en/pl caption strings. Without it, that metric's superlatives show the plain flag name on zoom (harmless, just plainer).
 
 ## Tracking: seed a DATA_FEATURE.md Feature entry
 
-When you actually start a metric, open a Feature entry under `## Now` in DATA_FEATURE.md and paste this checklist. Tick each surface as it lands; mark deferred ones explicitly so they stay visible instead of being forgotten. Move the Feature to `## Done` only when every box is ticked or consciously dropped.
+When you actually start a metric, open a Feature entry under `## Now` in DATA_FEATURE.md and paste this checklist (surfaces 1-5). Tick each as it lands. **Close the Feature (move to `## Done`) once surfaces 1-5 are shipped**; the daily surface is tracked separately in `METRIC_DAILY_PUZZLES.md` and never keeps a Feature open.
 
 ```markdown
 ### Feature <ID>: <Metric> as a world metric
@@ -76,7 +76,8 @@ When you actually start a metric, open a Feature entry under `## Now` in DATA_FE
 - [ ] 3. Filters: `metricTiers.js` registry line (+ `has`); findFlag chooser (5 edits) + `findflag-random-coverage` skill note; flagsdata filter group; `attach<Key>s` at both load sites
 - [ ] 4. TTT: `<key>()` factory + `<KEY>_BREAKS_FOR_RANDOM` + pool/id/label wiring; `attach<Key>s` at all 6 load sites; `<key>.atLeast/atMost` i18n; verify no-data guard in-browser
 - [ ] 5. Flag Party round (needs `partyRounds/superlative.js` generalized first, a one-time cost)
-- [ ] 6. Daily (deferrable): rank captions (`build<Key>RankNotes`); backlog superlative puzzles + a reservoir of ideas via daily-puzzle-author
+
+Surface 6 (daily puzzles) is NOT a checkbox here: when 1-5 land, add a row to `METRIC_DAILY_PUZZLES.md` and close the Feature.
 ```
 
 Sub-skills for the individual surfaces: **ttt-puzzle-generator** (surface 4), **findflag-random-coverage** (surface 3e), **daily-puzzle-author** (surface 6). Worked example end to end: population (Features DD, DE, DF, DG in DATA_FEATURE.md, plus the no-data guard and uninhabited-fill follow-ups).
