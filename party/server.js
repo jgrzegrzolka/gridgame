@@ -10,6 +10,7 @@ import cocoa from '../flags/metrics/cocoa.json' with { type: 'json' };
 import banana from '../flags/metrics/banana.json' with { type: 'json' };
 import elevation from '../flags/metrics/elevation.json' with { type: 'json' };
 import coastline from '../flags/metrics/coastline.json' with { type: 'json' };
+import forest from '../flags/metrics/forest.json' with { type: 'json' };
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { TicTacToeServer } from './ticTacToeServer.js';
 
@@ -32,6 +33,7 @@ attachMetrics(countries, {
   banana: banana.values,
   elevation: elevation.values,
   coastline: coastline.values,
+  forest: forest.values,
 });
 
 export default class GameServer extends TicTacToeServer {
