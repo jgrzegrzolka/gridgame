@@ -36,6 +36,12 @@
    * tinted on its own. Externally-loaded SVG assets (favicon, logo,
    * og-banner) hardcode this value — keep them in sync on swap. */
   --page-bg-color: #fdfdfd;
+  /* Chrome-bar fill — a subtle gray that sits between the page (#fdfdfd) and
+   * the surface-hover gray (#f0f0f0): clearly darker than the page so the fixed
+   * top bar reads as its own band, but lighter than #f0f0f0 which felt heavy as
+   * a full-width strip. The one tone outside the core brand set, reserved for
+   * the chrome bar only (body::before). */
+  --strip-bg-color: #f9f9f9;
   --link-color: var(--primary-color);
   --page-top: 104px;
   /* Height of the fixed chrome strip (body::before) — the visible top
@@ -137,25 +143,23 @@ body::before {
   left: 0;
   right: 0;
   height: var(--strip-height);
-  background: var(--page-bg-color);
+  /* Visible chrome bar: a subtle gray (--strip-bg-color) a step darker than the
+   * page so the strip reads as its own band, holding the wordmark + chrome
+   * cluster, with the full-width underline below as its baseline. */
+  background: var(--strip-bg-color);
   z-index: 10;
 }
-/* Hairline at the chrome strip's bottom edge, inset to match the visual
- * width of the menu itself — left edge aligns with the site-logo, right
- * edge with the rightmost chrome button (burger). Both use the same
- * `20px + --chrome-x-offset` math, so the line tracks the chrome cluster
- * as the viewport widens. Sits one pixel above the strip's bottom so it
- * reads as the strip's own underline rather than a floating rule.
- *
- * Sibling pseudo-element (body::after) instead of border-bottom on the
- * strip itself: the strip MUST span edge-to-edge as the fafafa cover, so
- * its border would too — and we want the line shorter than the cover. */
+/* Hairline underline at the chrome bar's bottom edge, running the full
+ * viewport width so it reads as the bar's own baseline (matches the visible
+ * gray fill above, which also spans edge-to-edge). Sits one pixel above the
+ * strip's bottom. Kept as a sibling pseudo-element (body::after) rather than a
+ * border-bottom on the strip so the two can be tuned independently. */
 body::after {
   content: "";
   position: fixed;
   top: calc(var(--strip-height) - 1px);
-  left: calc(20px + var(--chrome-x-offset));
-  right: calc(20px + var(--chrome-x-offset));
+  left: 0;
+  right: 0;
   height: 1px;
   background: var(--muted-soft-color);
   z-index: 11;
@@ -206,8 +210,13 @@ body::after {
   right: calc(124px + var(--chrome-x-offset));
   width: 44px;
   height: 44px;
-  background-color: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
+  /* Flat chrome on the gray bar: transparent fill + transparent (but present,
+   * for slot stability) border, so the button reads as part of the header
+   * rather than a tile floating on it. Hover / press tint the border pink
+   * (secondary) without touching the fill, so the box never shifts and the cue
+   * reads the same on mouse and touch. Shared across lang / flags / burger. */
+  background-color: transparent;
+  border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
   z-index: 25;
@@ -222,8 +231,14 @@ body::after {
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
-.lang-toggle:hover {
-  background-color: var(--surface-hover-color);
+/* Hover border only on real pointers. On touch, `:hover` sticks after a tap
+ * until another element is tapped, so the pink border would linger on the
+ * last-tapped button; the `:active` rule below covers touch press instead. Same
+ * guard on flags-link + burger. */
+@media (hover: hover) {
+  .lang-toggle:hover {
+    border-color: var(--secondary-color);
+  }
 }
 .lang-toggle::before {
   content: attr(data-current);
@@ -238,8 +253,8 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 6px;
   color: var(--link-color);
   text-decoration: none;
@@ -247,8 +262,10 @@ body::after {
   line-height: 1;
   z-index: 25;
 }
-.flags-link:hover {
-  background: var(--surface-hover-color);
+@media (hover: hover) {
+  .flags-link:hover {
+    border-color: var(--secondary-color);
+  }
 }
 .flags-link[aria-disabled="true"] {
   color: var(--muted-color);
@@ -256,7 +273,7 @@ body::after {
   pointer-events: none;
 }
 .flags-link[aria-disabled="true"]:hover {
-  background: var(--surface-color);
+  background: transparent;
 }
 .burger {
   position: fixed;
@@ -268,22 +285,51 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
   z-index: 20;
   padding: 0;
 }
-.burger:hover {
-  background: var(--surface-hover-color);
+@media (hover: hover) {
+  .burger:hover {
+    border-color: var(--secondary-color);
+  }
 }
 .burger[aria-disabled="true"] {
   cursor: default;
   pointer-events: none;
 }
 .burger[aria-disabled="true"]:hover {
-  background: var(--surface-color);
+  background: transparent;
+}
+/* Chrome-cluster focus. With the buttons' own border now transparent, the
+ * browser's default focus ring (near-black `outline: auto`) was the only mark
+ * on a clicked/tapped button and read as a stray black box. Replace it with the
+ * site's brand focus ring (matches `.gs-chip:focus-visible`) for keyboard users,
+ * and suppress the ring entirely for pointer focus (click / tap), where the
+ * action's own result is the feedback. */
+.lang-toggle:focus-visible,
+.flags-link:focus-visible,
+.burger:focus-visible {
+  outline: 2px solid var(--secondary-color);
+  outline-offset: 2px;
+}
+.lang-toggle:focus:not(:focus-visible),
+.flags-link:focus:not(:focus-visible),
+.burger:focus:not(:focus-visible) {
+  outline: none;
+}
+/* Press feedback — the cross-device counterpart to the desktop-only hover.
+ * Hover is a pointer-only concept (touchscreens have none), so `:active` is what
+ * gives a tap on mobile the same pink-border cue a hover gives a mouse. It fires
+ * on both mouse-down and touch, and releases on finger-up so it can't stick the
+ * way `:hover` did. Shared across the cluster. */
+.lang-toggle:active,
+.flags-link:active,
+.burger:active {
+  border-color: var(--secondary-color);
 }
 .burger[aria-disabled="true"] .burger-bars,
 .burger[aria-disabled="true"] .burger-bars::before,
