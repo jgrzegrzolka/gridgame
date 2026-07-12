@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DT (rice production, sparse crop) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DU (coal production, sparse extractive metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,20 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DU: Coal production as a world metric, sparse extractive (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Sixteenth world metric, the second extractive one after oil (Feature DS) and the third of the energy trio (oil / coal, gas parked). ~59 real places mine coal (China dominant, then the Asia-Pacific and the old industrial heartlands), the rest produce none. Energy Institute Statistical Review of World Energy via Our World in Data, in **terawatt-hours (TWh)**, sharing the `twhLabel` threshold text with oil. China is in a league of its own (26,245 TWh, ~5x #2 India), then Indonesia, Australia, the US, Russia, South Africa.
+
+**Data contract:** *sparse* with `absence: 'zero'`, exactly like oil and the crops. `flags/metrics/coal.json` lists the 59 producers only; `attachCoals` (`attachZeroFilledMetric`) defaults every real place missing from the map to 0, only the org "flags" stay bare, so "no data" still means exactly "not a place" and the TTT no-data guard stays correct. ~6 sub-1-TWh miners round to 0 and drop to the absence default. Same data caveat as oil (disclosed in `source`): major producers are 2024, ~29 minor ones only have data through 2016.
+
+- [x] 1. Data: `flags/metrics/coal.json` (59 producers) + `authoring/build-coal.mjs` + `METRIC_FILES` line + `attachCoals` (group.js) + `METRIC_ATTACHERS` entry + `metrics.test.js` schema/absence/positive-integer/no-org/attach-fills-every-real-place/sparse-createMetric tests.
+- [x] 2. flagsdata lens (free once step 1 landed; "Coal production" in the selector, compact TWh).
+- [x] 3. Filters: `metricTiers.js` auto-derives from `THRESHOLD_METRICS` (zero-edit); findFlag chooser (`Filters.coal` + `CoalConstraint` + `ScalarGroup`; coal section + `selectCoal` + `coalPills` + `coalProbability` modifier + `chooserI18n` coal loop) + `findflag-random-coverage` skill note; flagsdata filter group + lens are zero-edit (both loop `METRIC_FILES`). `attachCoals` at flagsdata + findFlag via the zero-edit `attachMetrics` loop. `coal.atLeast` i18n (en+pl).
+- [x] 4. TTT: `coal(op, n)` factory (reuses `twhLabel`) + `COAL_BREAKS_FOR_RANDOM` (`>=10/100/1000 TWh` = 38/17/7 real places; **`>=`-only** and no ultimate break, coal is extremely concentrated so `coal >= N × continent` can't reach 9 distinct, every break `ultimateEligible: false`, keeping coal a 3×3-only axis like oil) + `THRESHOLD_METRICS.coal` entry. `attachCoals` at party/server.js's static-import site + the generic loops; ultimateServer.js skips it (sparse, never 9×9). `coal.atLeast` + `sections.coal` + `metric.coal` i18n (en+pl). Engine pinning tests updated (pool count, `SINGLE_USE_METRIC_GROUPS`, ultimate-pool exclusion, category-source sweep, **and the `syntheticTaggedCountries` metric ladders, which were silently missing `apple`/`oil`/`rice` coverage too: the determinism test only passed by seed luck until coal tipped it over, so this PR backfills APPLE/RICE/FUEL ladders for all four**).
+- [x] 5. Flag Party round `superlative-coal` via `createSuperlativeRound` over the raw sparse map, locked to 'most' ("biggest coal producer" = China) like oil. Registered across all seven spots (superlative.js + test, `partyGameServer` ROUNDS, `partyPlan` METRIC_MODES + test, `flagParty/page.js` MODE_LABELS + SUPERLATIVE_MODES + a lump-of-coal icon, en+pl `party.mode/modeShort.superlativeCoal` + `hintMostCoal`) plus the `[data-metric="superlative-coal"] { --mc: #424242 }` coal-grey hue (distinct from oil's blue-slate).
+
+Surface 6 (daily puzzles) is NOT a checkbox: added a row to `METRIC_DAILY_PUZZLES.md`, Feature closed.
 
 ### Feature DT: Rice production as a world metric, sparse crop (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

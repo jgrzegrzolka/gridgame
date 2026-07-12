@@ -107,6 +107,7 @@ export const PARTY_MODES = [
   { id: 'superlative-forest', roundId: 'superlative-forest', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-oil', roundId: 'superlative-oil', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-rice', roundId: 'superlative-rice', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-coal', roundId: 'superlative-coal', poolId: 'sovereign', group: 'metric' },
 ];
 
 /** The fixed picture trio (flags / territories / map), in catalog order. */

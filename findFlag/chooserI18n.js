@@ -33,6 +33,7 @@ import { pillLabel } from '../flags/findFlag.js';
  * @typedef {{ labelSpan: { textContent: string }, value: string }} ForestPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} OilPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} RicePillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} CoalPillRef
  *
  * @param {{
  *   sectionHeaders: SectionHeader[],
@@ -52,11 +53,12 @@ import { pillLabel } from '../flags/findFlag.js';
  *   forestPills?: ForestPillRef[],
  *   oilPills?: OilPillRef[],
  *   ricePills?: RicePillRef[],
+ *   coalPills?: CoalPillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], applePills = [], elevationPills = [], coastlinePills = [], forestPills = [], oilPills = [], ricePills = [], onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], applePills = [], elevationPills = [], coastlinePills = [], forestPills = [], oilPills = [], ricePills = [], coalPills = [], onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
@@ -123,6 +125,10 @@ export function refreshChooserI18n({ sectionHeaders, allPills, populationPills =
   // Rice pills (">=1000000" etc.) via pillLabel's rice branch.
   for (const p of ricePills) {
     p.labelSpan.textContent = pillLabel('rice', p.value, 'include', t);
+  }
+  // Coal pills (">=100" etc.) via pillLabel's coal branch.
+  for (const p of coalPills) {
+    p.labelSpan.textContent = pillLabel('coal', p.value, 'include', t);
   }
   if (onlyColorsLabelSpan) {
     onlyColorsLabelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');

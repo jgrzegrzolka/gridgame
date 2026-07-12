@@ -60,6 +60,7 @@ const MODE_LABELS = {
   'superlative-forest': { key: 'party.mode.superlativeForest', full: 'Forest cover: most & least forested', shortKey: 'party.modeShort.superlativeForest', short: 'Forest' },
   'superlative-oil': { key: 'party.mode.superlativeOil', full: 'Oil production: most', shortKey: 'party.modeShort.superlativeOil', short: 'Oil' },
   'superlative-rice': { key: 'party.mode.superlativeRice', full: 'Rice production: most', shortKey: 'party.modeShort.superlativeRice', short: 'Rice' },
+  'superlative-coal': { key: 'party.mode.superlativeCoal', full: 'Coal production: most', shortKey: 'party.modeShort.superlativeCoal', short: 'Coal' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -137,6 +138,10 @@ const SUPERLATIVE_MODES = {
     file: 'rice.json',
     hintMost: { key: 'party.hintMostRice', fallback: 'Largest rice production' },
   },
+  'superlative-coal': {
+    file: 'coal.json',
+    hintMost: { key: 'party.hintMostCoal', fallback: 'Largest coal production' },
+  },
 };
 
 /** Every round id this build can render: the two fixed picture rounds plus the
@@ -196,6 +201,8 @@ const METRIC_ICONS = {
   'superlative-oil': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21 9 5l8 12M7 15h6M4 21h16M9 5l3-2 1 3"/></svg>',
   // Rice production: a bowl of rice with a pair of chopsticks resting across it.
   'superlative-rice': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a8 8 0 0 1-16 0zM8 12a4 4 0 0 1 8 0M14 5l5-2M15 8l5-2"/></svg>',
+  // Coal production: a chunky lump of coal (an irregular faceted rock).
+  'superlative-coal': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 3 15l4 4 8 1 5-5-2-6-6-3zM6 9l6 2m0 0 3-4m-3 4-1 8m1-8 8 1"/></svg>',
 };
 
 /**

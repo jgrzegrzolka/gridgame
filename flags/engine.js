@@ -573,6 +573,27 @@ export const RICE_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 10_000_000 },
 ];
 
+/**
+ * Coal-production-threshold Categories (terawatt-hours). Sparse like oil, so
+ * **`>=`-only**: only ~59 real places mine any coal, the rest sit at 0 (via
+ * `absence: 'zero'`), so a `<=` tier would be meaningless. The meaningful axis is
+ * "produces AT LEAST N": `>=10/100/1000 TWh` (38 / 17 / 7 real places, a spread
+ * from the minor miners up to the 7 giants: China, India, Indonesia, Australia,
+ * the US, Russia, South Africa; China alone is 26,245 TWh, ~5x #2). `exclusiveGroup: 'coal'`.
+ *
+ * No `ultimate: true` break: coal is extremely concentrated (China dwarfs all,
+ * whole continents mine essentially none), so `coal >= N × continent` can't reach
+ * 9 distinct. Every break carries `ultimateEligible: false`, keeping coal a
+ * 3×3-only axis like oil and the crops.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const COAL_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 10 },
+  { op: '>=', n: 100 },
+  { op: '>=', n: 1_000 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -1187,6 +1208,37 @@ export function rice(op, n, opts = {}) {
 }
 
 /**
+ * Coal-production-threshold Category factory (terawatt-hours). Reads the
+ * denormalized `country.coal` field (`attachCoals`, which fills 0 for a real
+ * place that mines none). `exclusiveGroup: 'coal'`. The break list is `>=`-only
+ * (see COAL_BREAKS_FOR_RANDOM), but the `<=` branch is kept for symmetry so a
+ * `coal:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function coal(op, n, opts = {}) {
+  const human = twhLabel(n);
+  const label = op === '>=' ? `over ${human} TWh` : `under ${human} TWh`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.coal === 'number' && c.coal >= n
+      : (c) => typeof c.coal === 'number' && c.coal <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `coal:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'coal',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -1423,6 +1475,19 @@ export const THRESHOLD_METRICS = {
       const human = tonnesCompact(n);
       if (op === '>=') return translate(`rice.atLeast.${token}`, `over ${human} tonnes`);
       return translate(`rice.atMost.${token}`, `under ${human} tonnes`);
+    },
+  },
+  coal: {
+    breaks: COAL_BREAKS_FOR_RANDOM,
+    factory: coal,
+    prefixFallback: 'Coal production',
+    field: 'coal',
+    family: 'coal',
+    has: (c) => typeof c.coal === 'number',
+    labelFor: (op, n, translate) => {
+      const human = twhLabel(n);
+      if (op === '>=') return translate(`coal.atLeast.${n}`, `over ${human} TWh`);
+      return translate(`coal.atMost.${n}`, `under ${human} TWh`);
     },
   },
 };

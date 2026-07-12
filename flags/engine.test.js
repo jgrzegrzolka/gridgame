@@ -42,6 +42,7 @@ import {
   APPLE_BREAKS_FOR_RANDOM,
   OIL_BREAKS_FOR_RANDOM,
   RICE_BREAKS_FOR_RANDOM,
+  COAL_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
   FOREST_BREAKS_FOR_RANDOM,
@@ -619,6 +620,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = RICE_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `rice ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('coal:')) {
+      const suffix = cat.id.slice('coal:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = COAL_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `coal ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -694,7 +702,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + COASTLINE_BREAKS_FOR_RANDOM.length
     + FOREST_BREAKS_FOR_RANDOM.length
     + OIL_BREAKS_FOR_RANDOM.length
-    + RICE_BREAKS_FOR_RANDOM.length;
+    + RICE_BREAKS_FOR_RANDOM.length
+    + COAL_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -876,7 +885,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['apple', 'area', 'banana', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'oil', 'population', 'rice', 'wine'],
+    ['apple', 'area', 'banana', 'coal', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'oil', 'population', 'rice', 'wine'],
   );
 });
 
@@ -1034,11 +1043,19 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     0,
     'rice cats must not appear in the 9×9 pool',
   );
+  // Coal, like oil / the crops, has NO ultimate break, so ALL its breaks drop.
+  const droppedCoal = COAL_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedCoal, COAL_BREAKS_FOR_RANDOM.length, 'no coal tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('coal:')).length,
+    0,
+    'coal cats must not appear in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
-      - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest - droppedOil - droppedRice,
+      - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest - droppedOil - droppedRice - droppedCoal,
   );
 });
 
@@ -2206,6 +2223,16 @@ function syntheticTaggedCountries() {
   // (forest × coastline, forest × elevation) stay fillable. Half the rungs sit
   // >=30 so the single 9×9-eligible forest tier fills 9-distinct per continent.
   const FOREST_LADDER = [0, 3, 15, 40, 60, 85];
+  // Apple (sparse crop, >=10K / >=100K / >=1M tonnes) and rice (sparse crop,
+  // >=100K / >=1M / >=10M tonnes) sit an order or two above the CROP_LADDER
+  // tiers, so each gets its own `>=`-only ladder with rungs above its top break
+  // (half the rungs clear the highest tier, so every tier fills per continent).
+  const APPLE_LADDER = [30_000, 300_000, 3_000_000, 120_000, 1_500_000, 30_000_000];
+  const RICE_LADDER = [300_000, 3_000_000, 30_000_000, 1_500_000, 12_000_000, 150_000_000];
+  // Oil + coal (sparse extractive, TWh, >=10 / >=100 / >=1000). Both share one
+  // ladder and the same counter (like the crops share CROP_LADDER) so a
+  // high-fuel country satisfies both and oil × coal cells stay fillable.
+  const FUEL_LADDER = [5, 30, 300, 15, 150, 3_000];
   // Each (continent × colour × n) triple becomes one country. n controls
   // palette size — n=0 keeps the base 1-colour shape, n=1/n=2 layer in
   // distinct neighbour colours so the country has 2 / 3 colours total.
@@ -2237,6 +2264,10 @@ function syntheticTaggedCountries() {
           wine: CROP_LADDER[codeCounter % CROP_LADDER.length],
           cocoa: CROP_LADDER[codeCounter % CROP_LADDER.length],
           banana: CROP_LADDER[codeCounter % CROP_LADDER.length],
+          apple: APPLE_LADDER[codeCounter % APPLE_LADDER.length],
+          rice: RICE_LADDER[codeCounter % RICE_LADDER.length],
+          oil: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
+          coal: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
           coastline: COASTLINE_LADDER[Math.floor(codeCounter / 4) % COASTLINE_LADDER.length],
           forest: FOREST_LADDER[Math.floor(codeCounter / 6) % FOREST_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
@@ -2271,6 +2302,10 @@ function syntheticTaggedCountries() {
           wine: CROP_LADDER[codeCounter % CROP_LADDER.length],
           cocoa: CROP_LADDER[codeCounter % CROP_LADDER.length],
           banana: CROP_LADDER[codeCounter % CROP_LADDER.length],
+          apple: APPLE_LADDER[codeCounter % APPLE_LADDER.length],
+          rice: RICE_LADDER[codeCounter % RICE_LADDER.length],
+          oil: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
+          coal: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
           coastline: COASTLINE_LADDER[Math.floor(codeCounter / 4) % COASTLINE_LADDER.length],
           forest: FOREST_LADDER[Math.floor(codeCounter / 6) % FOREST_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],

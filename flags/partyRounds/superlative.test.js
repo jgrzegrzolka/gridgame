@@ -434,3 +434,26 @@ test('riceRound: biggest-only, correct extreme-by-rice answer, growers only', as
     assert.equal(RICE[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-rice option`);
   }
 });
+
+// ---- coal instance (coal production in TWh, id 'superlative-coal') -----------
+
+test('coalRound: biggest-only, correct extreme-by-coal answer, producers only', async () => {
+  const { coalRound } = await import('./superlative.js');
+  const coalJson = (await import('../metrics/coal.json', { with: { type: 'json' } })).default;
+  const COAL = /** @type {Record<string, number>} */ (coalJson.values);
+  assert.equal(coalRound.id, 'superlative-coal');
+  // Coal-distinct sovereign PRODUCERS spanning many orders of magnitude, all in
+  // coal.json. A non-producer (e.g. France) mixed in must be dropped by the
+  // round's `metric.has` filter, never appear as an option.
+  const pool = ['cn', 'in', 'id', 'au', 'us', 'ru', 'za', 'fr'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = coalRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Coal is locked to 'most'; every round asks for the biggest producer.
+    assert.equal(q.prompt, 'most', `seed ${i}: coal is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('fr'), 'a non-producer is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => COAL[c]);
+    assert.equal(COAL[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-coal option`);
+  }
+});
