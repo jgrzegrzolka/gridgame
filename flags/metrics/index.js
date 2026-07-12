@@ -31,4 +31,5 @@ export const METRIC_FILES = [
   { key: 'forest', file: 'forest.json', label: 'Forest cover' },
   { key: 'oil', file: 'oil.json', label: 'Oil production' },
   { key: 'rice', file: 'rice.json', label: 'Rice production' },
+  { key: 'coal', file: 'coal.json', label: 'Coal production' },
 ];

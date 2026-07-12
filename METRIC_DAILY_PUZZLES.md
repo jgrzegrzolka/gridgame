@@ -35,4 +35,6 @@ Population is the shipped precedent (Feature DG: 14 superlative puzzles + per-fl
 
 - [ ] **Rice production** (Feature DT): superlative puzzles + rank captions. **Sparse + one-directional**, like the crops: author **"most" only** ("the 10 biggest rice producers"), never "least" (`resolveSuperlative` ranks the ~119 growers). Strong per-continent-Asia angle: India / China / Bangladesh / Indonesia / Vietnam / Thailand dominate the global top, and a "biggest rice grower in Africa / the Americas / Europe" set is clean (Nigeria / Egypt; Brazil / US; Italy / Russia). Nice contrast with apple (temperate/European) since rice is the tropical/Asian staple.
 
+- [ ] **Coal production** (Feature DU): superlative puzzles + rank captions. **Sparse + one-directional**, like oil: author **"most" only** ("the 10 biggest coal producers"), never "least" (`resolveSuperlative` ranks the ~59 producers). China is a runaway #1 (26,245 TWh, ~5x India); a striking answer set since coal reads as an old-industrial-West thing but the top is Asia-Pacific (China / India / Indonesia / Australia). Values are TWh (energy, not tonnes). **Watch:** ~29 minor producers carry 2016 data, fine for top-N sets since the top is all current.
+
 Every future metric adds a row here when its code surfaces (1-5) land, and its Feature closes in `DATA_FEATURE.md` without waiting on this list.
