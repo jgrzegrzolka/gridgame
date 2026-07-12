@@ -194,6 +194,30 @@ test('coffeeRound: biggest-only, correct extreme-by-coffee answer, growers only'
   }
 });
 
+// ---- wine instance (wine tonnes, id 'superlative-wine') ---------------------
+
+test('wineRound: biggest-only, correct extreme-by-wine answer, makers only', async () => {
+  const { wineRound } = await import('./superlative.js');
+  const wineJson = (await import('../metrics/wine.json', { with: { type: 'json' } })).default;
+  const WIN = /** @type {Record<string, number>} */ (wineJson.values);
+  assert.equal(wineRound.id, 'superlative-wine');
+  // Wine-distinct sovereign MAKERS spanning many orders of magnitude, all in
+  // wine.json. A non-maker (e.g. Afghanistan) mixed in must be dropped by the
+  // round's `metric.has` filter, never appear as an option.
+  const pool = ['fr', 'it', 'es', 'us', 'cn', 'cl', 'au', 'za', 'ar', 'pt', 'de', 'af'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = wineRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Wine is locked to 'most'; "smallest maker" is an obscure question, so
+    // it's never dealt. Every round asks for the biggest producer.
+    assert.equal(q.prompt, 'most', `seed ${i}: wine is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('af'), 'a non-maker is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => WIN[c]);
+    assert.equal(WIN[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-wine option`);
+  }
+});
+
 // ---- elevation instance (highest point in metres, id 'superlative-elevation') ---
 
 test('elevationRound: two-directional, correct extreme-by-elevation answer', async () => {

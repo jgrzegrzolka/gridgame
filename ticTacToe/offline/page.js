@@ -1,5 +1,5 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
-import { loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachElevations } from '../../flags/group.js';
+import { loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachWines, attachElevations } from '../../flags/group.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
 import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells } from '../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
@@ -38,9 +38,10 @@ export function bootTicTacToe() {
     fetch('../../flags/metrics/gdp.json').then((r) => r.json()),
     fetch('../../flags/metrics/gdpPerCapita.json').then((r) => r.json()),
     fetch('../../flags/metrics/coffee.json').then((r) => r.json()),
+    fetch('../../flags/metrics/wine.json').then((r) => r.json()),
     fetch('../../flags/metrics/elevation.json').then((r) => r.json()),
   ])
-    .then(([rawCountries, population, area, density, gdp, gdpPerCapita, coffee, elevation]) => {
+    .then(([rawCountries, population, area, density, gdp, gdpPerCapita, coffee, wine, elevation]) => {
       const countries = withLocalizedAliases(loadCountries(rawCountries));
       attachPopulations(countries, population.values);
       attachAreas(countries, area.values);
@@ -48,6 +49,7 @@ export function bootTicTacToe() {
       attachGdps(countries, gdp.values);
       attachGdpPerCapitas(countries, gdpPerCapita.values);
       attachCoffees(countries, coffee.values);
+      attachWines(countries, wine.values);
       attachElevations(countries, elevation.values);
       const puzzle = generateRandomPuzzle(countries);
       runTicTacToe({ puzzle, countries });

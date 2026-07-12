@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DL (highest elevation, dense + two-directional) closed once its code surfaces shipped; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DM (wine production, sparse) closed once its code surfaces shipped; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,27 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DM: Wine production as a world metric, coffee's sparse twin (code surfaces shipped 2026-07-12; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Eighth world metric, and the **second sparse one** (after coffee): only ~80 countries make wine at all, so it reuses coffee's `absence: 'zero'` machinery wholesale, no new infrastructure. A near-byte-identical clone of Feature DK: same sparse contract, same `>=`-only ladder, same biggest-only superlative round. Adds a recognizable "old-world vs new-world" axis: France / Italy / Spain at the top, `wine >= 100K tonnes`, the wine belt lit up on the lens.
+
+**Data contract:** sparse, **`absence: 'zero'`**, exactly like coffee. `wine.json` lists **makers only** (78 of them) and carries the `absence: 'zero'` hint; the loader `attachWines` → the shared `attachZeroFilledMetric` (group.js) defaults every real place the map omits to **0**, leaving only the org flags without the field, so the TTT no-data guard still reads "no data == not a place". A country that makes no wine is a *fair wrong guess* on a `wine >= N` cell, not a data gap. The lens and superlative round read the raw sparse map via `createMetric`, so a superlative ranks makers, not a ~180-way tie at 0.
+
+**One-directional throughout**, like coffee: filters are **atLeast-only** (`WINE_BREAKS_FOR_RANDOM` = `>=1K/10K/100K`, 66/44/21 makers; a `<=` tier would flood with the ~180 non-makers at 0), and the Flag Party round is **biggest-only** (locked to `'most'` via the reusable `direction` option; "smallest maker" is obscure).
+
+**Data source:** FAOSTAT 2023 wine (item 564) via Our World in Data. 78 makers joined by ISO code (alpha-3 → our alpha-2). Four minor makers have no 2023 row and carry their latest available year: Malta (2009), Réunion (2006), Syria (2020), Zimbabwe (2013), all tiny and changing no ranking or tier. No `OVERRIDES` needed (unlike coffee's two stale imputations): the FAOSTAT wine figures were clean. The ~15 codes whose latest recorded value was 0 (Botswana, Iceland, Norway, ...) fall to the absence=0 default like any non-maker.
+
+- [x] 1. Data: `flags/metrics/wine.json` (78 makers, `absence: 'zero'`) + `authoring/build-wine.mjs` (FAOSTAT-2023 snapshot, no overrides) + `METRIC_FILES` line + `attachWines` (group.js, reuses `attachZeroFilledMetric`) + `metrics.test.js` schema/positive-integer/no-org/zero-fill-contract/sparse-lens tests + `group.test.js` coverage via `countries.test.js` attach.
+- [x] 2. flagsdata lens, free once step 1 landed; "Wine production" in the selector, compact tonnes. Served `wine.json` confirmed over HTTP (78 makers, France 4.76M, `absence: zero`).
+- [x] 3 + 4 (landed together, driven by the `THRESHOLD_METRICS` registry). `wine(op, n)` factory + `WINE_BREAKS_FOR_RANDOM` (atLeast-only `>=1K/10K/100K`) + `THRESHOLD_METRICS.wine` (`has`, `family: 'wine'`, reuses `tonnesCompact`/`tonnesToken`). **NOT 9×9-eligible** (sparse, like coffee; every break `ultimateEligible: false`, a 3×3-only axis, pinned by a test); `attachWines` at the 3×3 load sites only. Filters: `WineConstraint` + `wine` field (`matchesFilters` generic via `METRIC_KEYS`); findFlag chooser section + `selectWine` + `winePills` + `wineProbability` (0.06) modifier + `chooserI18n` + `findflag-random-coverage` skill note; flagsdata `buildMetricGroup('wine', …)`. i18n `wine.atLeast.{1k,10k,100k}` + `findFlag.sections.wine` + `metric.wine` (en+pl). Verified through the real engine in Node: `metricDataGap` blocks an org on a `wine >= 1K` cell while Afghanistan (a real non-maker, 0) is a fair wrong guess; 300 generated puzzles, 87 carried a wine axis, 0 unfillable cells.
+- [x] 5. Flag Party round: `wineRound` via `createSuperlativeRound` across the six spots (superlative.js + test, partyGameServer `ROUNDS`, partyPlan `PARTY_MODES`/`METRIC_MODES` + the two test assertions, flagParty/page.js `MODE_LABELS`/`SUPERLATIVE_MODES` + a wine-glass icon, i18n en+pl `party.mode/modeShort.superlativeWine` + `hintMost/LeastWine`). **Biggest-only** (locked to `'most'`), reads the raw sparse `createMetric` (makers only). Round-generation pinned by `superlative.test.js` (biggest-only, makers-only, correct extreme over 100 seeds).
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+**Standing artifacts:** none new. Wine is the confirmation that coffee's sparse `absence: 'zero'` machinery (the `attachZeroFilledMetric` loader, the `>=`-only ladder, the `direction`-locked superlative round) is a reusable template: a second sparse production metric landed as a near-mechanical clone with no new infrastructure.
+
+---
 
 ### Feature DL: Highest elevation as a world metric, dense + two-directional (code surfaces shipped 2026-07-12, #836 / #837 / #838; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

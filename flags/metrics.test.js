@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees } from './group.js';
+import { attachCoffees, attachWines } from './group.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
 
@@ -18,6 +18,7 @@ const DENSITY = /** @type {import('./metrics.js').MetricData} */ (load('metrics/
 const GDP = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdp.json'));
 const GDP_PER_CAPITA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdpPerCapita.json'));
 const COFFEE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coffee.json'));
+const WINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/wine.json'));
 const ELEVATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/elevation.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
@@ -427,6 +428,72 @@ test('createMetric over coffee stays sparse: it ranks growers only', () => {
   assert.equal(coffee.topN('world', 1)[0].code, 'br'); // Brazil, the largest
   assert.equal(coffee.rankOf('vn', 'world'), 2); // Vietnam second
   assert.equal(coffee.has('de'), false); // Germany isn't a grower → out of the ranking
+});
+
+// ---- real wine.json schema + the sparse absence:'zero' contract ------------
+
+test('wine is a valid, self-describing metric file with an absence hint', () => {
+  assert.equal(WINE.key, 'wine');
+  assert.equal(typeof WINE.label, 'string');
+  assert.equal(typeof WINE.unit, 'string');
+  assert.ok(WINE.format === 'compact' || WINE.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof WINE.source, 'string');
+  assert.equal(typeof WINE.year, 'number');
+  assert.equal(typeof WINE.values, 'object');
+  // Sparse like coffee: producers only, absence means "makes none" → 0, so
+  // the loader knows to default missing real places to 0 (not "no data").
+  assert.equal(WINE.absence, 'zero');
+});
+
+test('every wine value is a positive integer (tonnes, sub-tonne producers dropped)', () => {
+  // Whole tonnes; the map lists producers only, so every listed value is >= 1
+  // (a producer rounding below 1 tonne is dropped and falls to the 0 default).
+  for (const [code, v] of Object.entries(WINE.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 1, `${code} listed but not >= 1: ${v}`);
+  }
+});
+
+test('every wine key is a real (non-other) country, never an org', () => {
+  const byCode = new Map(COUNTRIES.map((c) => [c.code, c]));
+  for (const code of Object.keys(WINE.values)) {
+    const c = byCode.get(code);
+    assert.ok(c, `wine key ${code} is not in countries.json`);
+    assert.notEqual(c.category, 'other', `wine key ${code} is an "other" entry`);
+  }
+});
+
+test("absence:'zero' contract: attachWines fills every real place, orgs stay bare", () => {
+  // The sparse-metric invariant the TTT no-data guard leans on: after the loader
+  // runs, EVERY real place carries a numeric .wine (makers their tonnage,
+  // non-makers 0), and only non-place orgs are left without the field. This is
+  // what makes "no data" mean exactly "not a place" for a sparse metric.
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachWines(/** @type {any} */ (rows), WINE.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.wine, undefined, `org ${c.code} should have no wine field`);
+    } else {
+      assert.equal(typeof row.wine, 'number', `real place ${c.code} has no wine value`);
+    }
+  }
+  // Spot-check the two ends: a listed maker keeps its value, a real non-maker
+  // reads exactly 0 (a fair wrong guess, not a data gap).
+  assert.equal(/** @type {any} */ (byCode.get('fr')).wine, WINE.values.fr);
+  assert.equal(/** @type {any} */ (byCode.get('jp')).wine, WINE.values.jp);
+  assert.equal(/** @type {any} */ (byCode.get('af')).wine, 0); // Afghanistan makes none
+});
+
+test('createMetric over wine stays sparse: it ranks makers only', () => {
+  // Deliberate split: the lens / superlative rounds read the raw sparse map, so
+  // "biggest producer" is France and a non-maker has NO rank (rather than a
+  // 180-way tie at 0). The 0-fill lives only in the denormalized threshold field.
+  const wine = createMetric(WINE, COUNTRIES);
+  assert.equal(wine.topN('world', 1)[0].code, 'fr'); // France, the largest
+  assert.equal(wine.rankOf('it', 'world'), 2); // Italy second
+  assert.equal(wine.has('af'), false); // Afghanistan isn't a maker → out of the ranking
 });
 
 // ---- real elevation.json schema + integration gate (dense, two-directional) --

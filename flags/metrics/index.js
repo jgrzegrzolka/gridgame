@@ -22,5 +22,6 @@ export const METRIC_FILES = [
   { key: 'gdp', file: 'gdp.json', label: 'GDP' },
   { key: 'gdpPerCapita', file: 'gdpPerCapita.json', label: 'GDP per capita' },
   { key: 'coffee', file: 'coffee.json', label: 'Coffee production' },
+  { key: 'wine', file: 'wine.json', label: 'Wine production' },
   { key: 'elevation', file: 'elevation.json', label: 'Highest elevation' },
 ];
