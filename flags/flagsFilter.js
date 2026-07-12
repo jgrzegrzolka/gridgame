@@ -68,6 +68,12 @@ import { METRIC_KEYS } from './engine.js';
  *   real place has a value (a landlocked place carries 0), so only non-place org
  *   flags match neither direction.
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} ForestConstraint
+ *   Forest-cover threshold (percentage of land area), scalar twin; reads
+ *   `country.forest`. Dense two-directional metric, intensive (size-independent):
+ *   every real place has a value (a treeless place carries 0), so only non-place
+ *   org flags match neither direction.
+ *
  * @typedef {{
  *   status: FilterSet,
  *   continent: FilterSet,
@@ -86,6 +92,7 @@ import { METRIC_KEYS } from './engine.js';
  *   banana: BananaConstraint | null,
  *   elevation: ElevationConstraint | null,
  *   coastline: CoastlineConstraint | null,
+ *   forest: ForestConstraint | null,
  * }} Filters
  */
 
@@ -132,6 +139,7 @@ export function emptyFilters() {
     banana: null,
     elevation: null,
     coastline: null,
+    forest: null,
   };
 }
 
@@ -298,7 +306,7 @@ export function matchesFilters(country, filters, options = {}) {
 
 /**
  * @typedef {'status' | 'continent' | 'color' | 'motif' | 'stripesOnly'} PillGroup
- * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'elevation' | 'coastline'} ScalarGroup
+ * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'elevation' | 'coastline' | 'forest'} ScalarGroup
  *
  * @typedef {{ kind: 'pill', group: PillGroup, value: string, exclude: boolean }
  *   | { kind: 'scalar', group: ScalarGroup }} FilterChip

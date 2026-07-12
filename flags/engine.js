@@ -475,6 +475,37 @@ export const COASTLINE_BREAKS_FOR_RANDOM = [
   { op: '<=', n: 1 },
 ];
 
+/**
+ * Forest-cover-threshold Categories (forest area as a percentage of land area).
+ * Dense, intensive and two-directional, the mirror of area / elevation but
+ * *size-independent*: the tiers reward how forested a place is, not how big it
+ * is. High `>=30 / >=50 / >=70 %` (101 / 46 / 15 sovereign) climbs from the
+ * broadly-wooded countries to the rainforest belt (the Guianas, Gabon, the
+ * Pacific micro-states, Finland). Low `<=20 / <=5 / <=1 %` (73 / 31 / 16
+ * sovereign) picks out the arid and ice-bound places: a treeless place carries a
+ * real 0.0%, so it satisfies every low tier (correctly, it has no forest), and
+ * `<=1` is effectively "practically treeless" (the deserts, ice sheets and
+ * city-states). `exclusiveGroup: 'forest'`.
+ *
+ * `ultimate: true` marks the single break kept in the 9×9 pool: the broad
+ * `>=30` tier (101 sovereign, 9+ in every continent) is the only one that can
+ * back 9-distinct-per-cell against a continent; the rest carry
+ * `ultimateEligible: false`. Dense, so like elevation it IS 9×9-eligible.
+ *
+ * Counts are tuned against flags/metrics/forest.json; a 0-count tier is dropped
+ * by `buildMetricTierItems` so it never reaches a surface.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const FOREST_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 30, ultimate: true },
+  { op: '>=', n: 50 },
+  { op: '>=', n: 70 },
+  { op: '<=', n: 20 },
+  { op: '<=', n: 5 },
+  { op: '<=', n: 1 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -961,6 +992,36 @@ export function coastline(op, n, opts = {}) {
 }
 
 /**
+ * Forest-cover-threshold Category factory (forest area as a percentage of land
+ * area). Reads the denormalized `country.forest` field (`attachForests`).
+ * `exclusiveGroup: 'forest'`. Dense, intensive and two-directional: `>=` picks
+ * out the heavily-wooded places, `<=` the arid and ice-bound ones (which carry
+ * 0.0), size-independent unlike the extensive metrics.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function forest(op, n, opts = {}) {
+  const label = op === '>=' ? `over ${n}% forest` : `under ${n}% forest`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.forest === 'number' && c.forest >= n
+      : (c) => typeof c.forest === 'number' && c.forest <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `forest:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'forest',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -1144,6 +1205,18 @@ export const THRESHOLD_METRICS = {
       const human = kmLabel(n);
       if (op === '>=') return translate(`coastline.atLeast.${n}`, `over ${human} km`);
       return translate(`coastline.atMost.${n}`, `under ${human} km`);
+    },
+  },
+  forest: {
+    breaks: FOREST_BREAKS_FOR_RANDOM,
+    factory: forest,
+    prefixFallback: 'Forest cover',
+    field: 'forest',
+    family: 'forest',
+    has: (c) => typeof c.forest === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`forest.atLeast.${n}`, `over ${n}%`);
+      return translate(`forest.atMost.${n}`, `under ${n}%`);
     },
   },
 };

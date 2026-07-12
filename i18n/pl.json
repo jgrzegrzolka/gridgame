@@ -414,7 +414,8 @@
       "cocoa": "Produkcja kakao",
       "banana": "Produkcja bananów",
       "elevation": "Najwyższy punkt",
-      "coastline": "Długość wybrzeża"
+      "coastline": "Długość wybrzeża",
+      "forest": "Lesistość"
     }
   },
   "daily": {
@@ -778,6 +779,18 @@
       "1": "bez dostępu do morza"
     }
   },
+  "forest": {
+    "atLeast": {
+      "30": "ponad 30% lasów",
+      "50": "ponad 50% lasów",
+      "70": "ponad 70% lasów"
+    },
+    "atMost": {
+      "20": "poniżej 20% lasów",
+      "5": "poniżej 5% lasów",
+      "1": "poniżej 1% lasów"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "tylko 2 kolory",
@@ -844,7 +857,8 @@
     "cocoa": "Produkcja kakao",
     "banana": "Produkcja bananów",
     "elevation": "Najwyższy punkt",
-    "coastline": "Długość wybrzeża"
+    "coastline": "Długość wybrzeża",
+    "forest": "Lesistość"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",
