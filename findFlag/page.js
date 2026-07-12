@@ -1,4 +1,4 @@
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachWines, attachElevations } from '../flags/group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachMetrics } from '../flags/group.js';
 import {
   ALL_FLAG_COLORS,
   ALL_MOTIFS,
@@ -8,6 +8,7 @@ import {
   exactSingleMatch,
 } from '../flags/engine.js';
 import { buildMetricTierItems } from '../flags/metricTiers.js';
+import { METRIC_FILES } from '../flags/metrics/index.js';
 import {
   findTargets,
   findPool,
@@ -201,32 +202,22 @@ export function bootFindFlag() {
 
   return Promise.all([
     fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
-    // Population + area power the chooser's threshold sections + matchesFilters.
-    // A failed fetch degrades gracefully: attaching over `{}` leaves every
+    // The metrics power the chooser's threshold sections + matchesFilters.
+    // A failed fetch degrades gracefully: attaching over `null` leaves every
     // country without the field, so the section renders empty (tiers 0-count →
     // dropped) and no filter is offered.
-    fetch('../flags/metrics/population.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
-    fetch('../flags/metrics/area.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
-    fetch('../flags/metrics/density.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
-    fetch('../flags/metrics/gdp.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
-    fetch('../flags/metrics/gdpPerCapita.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
-    fetch('../flags/metrics/coffee.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
-    fetch('../flags/metrics/wine.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
-    fetch('../flags/metrics/elevation.json').then((r) => r.json()).then((m) => m.values).catch(() => ({})),
+    ...METRIC_FILES.map((m) =>
+      fetch(`../flags/metrics/${m.file}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null)
+        .then((j) => [m.key, j ? j.values : null])),
   ])
-    .then(([raw, popValues, areaValues, densityValues, gdpValues, gdpPerCapitaValues, coffeeValues, wineValues, elevationValues]) => {
+    .then(([raw, ...metricPairs]) => {
       // Attach AFTER withLocalizedAliases: its clone path (re-wrapping a
       // renamed Country through createCountry) would drop an extra field
       // set beforehand, so denormalize onto the final pool objects.
       const all = withLocalizedAliases(flagsGamePool(raw, includeAll));
-      attachPopulations(all, popValues);
-      attachAreas(all, areaValues);
-      attachDensities(all, densityValues);
-      attachGdps(all, gdpValues);
-      attachGdpPerCapitas(all, gdpPerCapitaValues);
-      attachCoffees(all, coffeeValues);
-      attachWines(all, wineValues);
-      attachElevations(all, elevationValues);
+      attachMetrics(all, Object.fromEntries(metricPairs));
       /** @type {{ refreshI18n: (newAll: import('../flags/group.js').Country[]) => void } | null} */
       let activeHandle = null;
       if (!initialFilter) {

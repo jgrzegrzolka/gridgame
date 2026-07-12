@@ -1,5 +1,6 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
-import { loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachWines, attachElevations } from '../../flags/group.js';
+import { loadCountries, attachMetrics } from '../../flags/group.js';
+import { METRIC_FILES } from '../../flags/metrics/index.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
 import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells } from '../../flags/ticTacToe.js';
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
@@ -32,25 +33,15 @@ export function bootTicTacToe() {
   // not carry the field.
   Promise.all([
     fetch('../../flags/countries.json').then((r) => r.json()),
-    fetch('../../flags/metrics/population.json').then((r) => r.json()),
-    fetch('../../flags/metrics/area.json').then((r) => r.json()),
-    fetch('../../flags/metrics/density.json').then((r) => r.json()),
-    fetch('../../flags/metrics/gdp.json').then((r) => r.json()),
-    fetch('../../flags/metrics/gdpPerCapita.json').then((r) => r.json()),
-    fetch('../../flags/metrics/coffee.json').then((r) => r.json()),
-    fetch('../../flags/metrics/wine.json').then((r) => r.json()),
-    fetch('../../flags/metrics/elevation.json').then((r) => r.json()),
+    ...METRIC_FILES.map((m) =>
+      fetch(`../../flags/metrics/${m.file}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null)
+        .then((j) => [m.key, j ? j.values : null])),
   ])
-    .then(([rawCountries, population, area, density, gdp, gdpPerCapita, coffee, wine, elevation]) => {
+    .then(([rawCountries, ...metricPairs]) => {
       const countries = withLocalizedAliases(loadCountries(rawCountries));
-      attachPopulations(countries, population.values);
-      attachAreas(countries, area.values);
-      attachDensities(countries, density.values);
-      attachGdps(countries, gdp.values);
-      attachGdpPerCapitas(countries, gdpPerCapita.values);
-      attachCoffees(countries, coffee.values);
-      attachWines(countries, wine.values);
-      attachElevations(countries, elevation.values);
+      attachMetrics(countries, Object.fromEntries(metricPairs));
       const puzzle = generateRandomPuzzle(countries);
       runTicTacToe({ puzzle, countries });
     })

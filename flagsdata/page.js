@@ -1,4 +1,4 @@
-import { CONTINENTS, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachWines, attachElevations } from '../flags/group.js';
+import { CONTINENTS, loadCountries, attachMetrics } from '../flags/group.js';
 import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, METRIC_KEYS, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters, createColorCountLock, activeFilterChips } from '../flags/flagsFilter.js';
 import { makeColorSwatch } from '../common.js';
@@ -1185,40 +1185,17 @@ export function bootFlagsData() {
       metricsReady.then(() => {
         // Denormalize each metric onto the countries so the tier filter's
         // predicate (`c.<metric> op n`, via matchesFilters) resolves. The lens
-        // reads the values map directly, but the filter reads the field. Then
-        // build each metric filter group; its tiers count against the loaded,
-        // attached set.
-        if (metricsData.population) {
-          attachPopulations(all, metricsData.population.values);
-          groupsWrap.appendChild(buildMetricGroup('population', 'Population', all));
-        }
-        if (metricsData.area) {
-          attachAreas(all, metricsData.area.values);
-          groupsWrap.appendChild(buildMetricGroup('area', 'Land area', all));
-        }
-        if (metricsData.density) {
-          attachDensities(all, metricsData.density.values);
-          groupsWrap.appendChild(buildMetricGroup('density', 'Population density', all));
-        }
-        if (metricsData.gdp) {
-          attachGdps(all, metricsData.gdp.values);
-          groupsWrap.appendChild(buildMetricGroup('gdp', 'GDP', all));
-        }
-        if (metricsData.gdpPerCapita) {
-          attachGdpPerCapitas(all, metricsData.gdpPerCapita.values);
-          groupsWrap.appendChild(buildMetricGroup('gdpPerCapita', 'GDP per capita', all));
-        }
-        if (metricsData.coffee) {
-          attachCoffees(all, metricsData.coffee.values);
-          groupsWrap.appendChild(buildMetricGroup('coffee', 'Coffee production', all));
-        }
-        if (metricsData.wine) {
-          attachWines(all, metricsData.wine.values);
-          groupsWrap.appendChild(buildMetricGroup('wine', 'Wine production', all));
-        }
-        if (metricsData.elevation) {
-          attachElevations(all, metricsData.elevation.values);
-          groupsWrap.appendChild(buildMetricGroup('elevation', 'Highest elevation', all));
+        // reads the values map directly, but the filter reads the field. Both
+        // the attach and the filter-group build loop `METRIC_FILES` (whose
+        // `label` is the English fallback), so a new metric needs no edit here;
+        // each group's tiers count against the loaded, attached set.
+        attachMetrics(all, Object.fromEntries(
+          METRIC_FILES.map((m) => [m.key, metricsData[m.key] ? metricsData[m.key].values : null]),
+        ));
+        for (const m of METRIC_FILES) {
+          if (metricsData[m.key]) {
+            groupsWrap.appendChild(buildMetricGroup(/** @type {any} */ (m.key), m.label, all));
+          }
         }
         if (lensKey && metricsData[lensKey]) lensMetric = createMetric(metricsData[lensKey], all);
         renderLens();

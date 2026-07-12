@@ -242,6 +242,48 @@ export function attachWines(countries, values) {
 }
 
 /**
+ * Registry of the metric denormalizers, keyed by metric key (the same keys as
+ * `flags/metrics/index.js`'s METRIC_FILES). This is the single place a new
+ * metric registers its loader: add its `attach<Key>s` here next to the others,
+ * and every consumer that funnels through {@link attachMetrics} (both TTT pages,
+ * the party server, findFlag, flagsdata, the seed-sweep test) picks it up with
+ * no per-site edit. Dense and sparse metrics both list their own attacher here;
+ * the sparse ones already default to `attachZeroFilledMetric` internally.
+ *
+ * @type {Record<string, (countries: Country[], values: Record<string, number>) => Country[]>}
+ */
+const METRIC_ATTACHERS = {
+  population: attachPopulations,
+  area: attachAreas,
+  density: attachDensities,
+  gdp: attachGdps,
+  gdpPerCapita: attachGdpPerCapitas,
+  coffee: attachCoffees,
+  wine: attachWines,
+  elevation: attachElevations,
+};
+
+/**
+ * Denormalize every world metric onto the country pool in one call, so no load
+ * site hand-lists the attach calls (the omission that silently empties a metric
+ * axis or misfires the TTT no-data guard). `valuesByKey` maps a metric key to
+ * its raw `values` map; a key that is missing or null/undefined is skipped (a
+ * metric whose fetch failed just leaves its guard off, the prior per-site
+ * `if (x) attach…` behaviour). Adding a metric is one `METRIC_ATTACHERS` entry.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, Record<string, number> | null | undefined>} valuesByKey
+ * @returns {Country[]}
+ */
+export function attachMetrics(countries, valuesByKey) {
+  for (const [key, attach] of Object.entries(METRIC_ATTACHERS)) {
+    const values = valuesByKey[key];
+    if (values) attach(countries, values);
+  }
+  return countries;
+}
+
+/**
  * Single source of truth for how each entry is classified.
  *
  *   sovereign — UN member or UN observer (195: the "games pool")
