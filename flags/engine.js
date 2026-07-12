@@ -399,6 +399,26 @@ export const COCOA_BREAKS_FOR_RANDOM = [
 ];
 
 /**
+ * Banana-production-threshold Categories (banana tonnes). Sparse like the other
+ * crops, so **`>=`-only**: the ~135 non-tropical non-producers sit at 0 (via
+ * `absence: 'zero'`), so a `<=` tier would be meaningless. The meaningful axis is
+ * "produces AT LEAST N": `>=1K/10K/100K tonnes` (112 / 93 / 61 real places, the
+ * healthiest spread of any sparse crop, bananas grow across the whole tropics).
+ * `exclusiveGroup: 'banana'`.
+ *
+ * No `ultimate: true` break: bananas are still tropics-concentrated (Europe
+ * grows essentially none), so `banana >= N × continent` can't reach 9 distinct.
+ * Every break carries `ultimateEligible: false`, keeping banana a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const BANANA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1_000 },
+  { op: '>=', n: 10_000 },
+  { op: '>=', n: 100_000 },
+];
+
+/**
  * Highest-elevation-threshold Categories (metres above sea level of each place's
  * highest point). Dense and *two-directional*, the mirror of area / GDP: both
  * extremes make good questions, so there are three "high" tiers (`>= N`) and
@@ -812,6 +832,37 @@ export function cocoa(op, n, opts = {}) {
 }
 
 /**
+ * Banana-production-threshold Category factory (banana tonnes). Reads the
+ * denormalized `country.banana` field (`attachBananas`, which fills 0 for a real
+ * place that grows none). `exclusiveGroup: 'banana'`. The break list is
+ * `>=`-only (see BANANA_BREAKS_FOR_RANDOM), but the `<=` branch is kept for
+ * symmetry so a `banana:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function banana(op, n, opts = {}) {
+  const human = tonnesCompact(n);
+  const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.banana === 'number' && c.banana >= n
+      : (c) => typeof c.banana === 'number' && c.banana <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `banana:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'banana',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * Highest-elevation-threshold Category factory (metres above sea level). Reads
  * the denormalized `country.elevation` field (`attachElevations`).
  * `exclusiveGroup: 'elevation'`. Dense and two-directional, so both `>=` (high
@@ -985,6 +1036,20 @@ export const THRESHOLD_METRICS = {
       const human = tonnesCompact(n);
       if (op === '>=') return translate(`cocoa.atLeast.${token}`, `over ${human} tonnes`);
       return translate(`cocoa.atMost.${token}`, `under ${human} tonnes`);
+    },
+  },
+  banana: {
+    breaks: BANANA_BREAKS_FOR_RANDOM,
+    factory: banana,
+    prefixFallback: 'Banana production',
+    field: 'banana',
+    family: 'banana',
+    has: (c) => typeof c.banana === 'number',
+    labelFor: (op, n, translate) => {
+      const token = tonnesToken(n);
+      const human = tonnesCompact(n);
+      if (op === '>=') return translate(`banana.atLeast.${token}`, `over ${human} tonnes`);
+      return translate(`banana.atMost.${token}`, `under ${human} tonnes`);
     },
   },
   elevation: {

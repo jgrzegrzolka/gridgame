@@ -455,6 +455,7 @@ const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent',
  *   coffeeProbability?: number,
  *   wineProbability?: number,
  *   cocoaProbability?: number,
+ *   bananaProbability?: number,
  *   elevationProbability?: number,
  * }} [options]
  * @returns {Filters}
@@ -475,6 +476,7 @@ export function pickRandomMix(pillPool, all, options = {}) {
     coffeeProbability = 0,
     wineProbability = 0,
     cocoaProbability = 0,
+    bananaProbability = 0,
     elevationProbability = 0,
   } = options;
 
@@ -519,6 +521,7 @@ export function pickRandomMix(pillPool, all, options = {}) {
       coffee: coffeeProbability,
       wine: wineProbability,
       cocoa: cocoaProbability,
+      banana: bananaProbability,
       elevation: elevationProbability,
     };
     for (const key of METRIC_KEYS) maybeAttachMetric(f, rng, key, metricProbabilities[key] ?? 0);

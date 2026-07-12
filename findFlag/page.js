@@ -70,6 +70,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   coffeeProbability: 0.06,
   wineProbability: 0.06,
   cocoaProbability: 0.06,
+  bananaProbability: 0.06,
   elevationProbability: 0.10,
 });
 
@@ -360,6 +361,8 @@ export function bootFindFlag() {
     const winePills = [];
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const cocoaPills = [];
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const bananaPills = [];
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const elevationPills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
@@ -739,6 +742,41 @@ export function bootFindFlag() {
       }
     }
 
+    // Banana-production section, same single-select scalar (`filter.banana`).
+    // Sparse `>=`-only tiers, so the pills read "over 10K tonnes" etc.
+    {
+      const bananaItems = buildMetricTierItems('banana', all);
+      if (bananaItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.banana', 'Banana production');
+        sectionHeaders.push({ h, key: 'findFlag.sections.banana', fallback: 'Banana production' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of bananaItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('banana', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectBanana(op, n, btn));
+          wrap.appendChild(btn);
+          bananaPills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
     // Highest-elevation section, same single-select scalar (`filter.elevation`).
     // Dense two-directional tiers (both `>= N m` and `<= N m`), like area.
     {
@@ -977,6 +1015,21 @@ export function bootFindFlag() {
     }
 
     /**
+     * Single-select banana-production tier, twin of selectCoffee.
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectBanana(op, n, btn) {
+      const isActive = filter.banana !== null && filter.banana.op === op && filter.banana.n === n;
+      filter.banana = isActive ? null : { op, n };
+      for (const p of bananaPills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
+    /**
      * Single-select highest-elevation tier, twin of selectArea.
      * @param {'>=' | '<='} op
      * @param {number} n
@@ -1031,6 +1084,9 @@ export function bootFindFlag() {
         btn.classList.remove('active');
       }
       for (const { btn } of cocoaPills) {
+        btn.classList.remove('active');
+      }
+      for (const { btn } of bananaPills) {
         btn.classList.remove('active');
       }
       for (const { btn } of elevationPills) {
@@ -1088,7 +1144,7 @@ export function bootFindFlag() {
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, winePills, cocoaPills, elevationPills, onlyColorsLabelSpan, updateBar });
+        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, winePills, cocoaPills, bananaPills, elevationPills, onlyColorsLabelSpan, updateBar });
       },
     };
   }
