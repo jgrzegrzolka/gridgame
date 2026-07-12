@@ -411,6 +411,7 @@
       "gdpPerCapita": "GDP per capita",
       "coffee": "Coffee production",
       "wine": "Wine production",
+      "cocoa": "Cocoa production",
       "elevation": "Highest elevation"
     }
   },
@@ -536,6 +537,7 @@
       "superlativeGdppc": "GDP per capita: largest & smallest",
       "superlativeCoffee": "Coffee production: most",
       "superlativeWine": "Wine production: most",
+      "superlativeCocoa": "Cocoa production: most",
       "superlativeElevation": "Highest elevation: highest & lowest"
     },
     "modeShort": {
@@ -549,6 +551,7 @@
       "superlativeGdppc": "GDP per capita",
       "superlativeCoffee": "Coffee",
       "superlativeWine": "Wine",
+      "superlativeCocoa": "Cocoa",
       "superlativeElevation": "Elevation"
     },
     "round": "Round {n} of {total}",
@@ -568,6 +571,8 @@
     "hintLeastCoffee": "Least coffee",
     "hintMostWine": "Most wine",
     "hintLeastWine": "Least wine",
+    "hintMostCocoa": "Most cocoa",
+    "hintLeastCocoa": "Least cocoa",
     "hintMostElevation": "Highest point",
     "hintLeastElevation": "Lowest highpoint",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
@@ -728,6 +733,13 @@
       "100k": "over 100K tonnes"
     }
   },
+  "cocoa": {
+    "atLeast": {
+      "1k": "over 1K tonnes",
+      "10k": "over 10K tonnes",
+      "100k": "over 100K tonnes"
+    }
+  },
   "elevation": {
     "atLeast": {
       "1000": "over 1,000 m",
@@ -803,6 +815,7 @@
     "gdpPerCapita": "GDP per capita",
     "coffee": "Coffee production",
     "wine": "Wine production",
+    "cocoa": "Cocoa production",
     "elevation": "Highest elevation"
   },
   "flagFacts": {

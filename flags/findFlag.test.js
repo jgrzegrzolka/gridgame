@@ -14,7 +14,7 @@ import {
   filterToCategory,
   pickRandomMix,
 } from './findFlag.js';
-import { categoryFromId, POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM, DENSITY_BREAKS_FOR_RANDOM, GDP_BREAKS_FOR_RANDOM, GDP_PER_CAPITA_BREAKS_FOR_RANDOM, COFFEE_BREAKS_FOR_RANDOM, WINE_BREAKS_FOR_RANDOM, ELEVATION_BREAKS_FOR_RANDOM } from './engine.js';
+import { categoryFromId, POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM, DENSITY_BREAKS_FOR_RANDOM, GDP_BREAKS_FOR_RANDOM, GDP_PER_CAPITA_BREAKS_FOR_RANDOM, COFFEE_BREAKS_FOR_RANDOM, WINE_BREAKS_FOR_RANDOM, COCOA_BREAKS_FOR_RANDOM, ELEVATION_BREAKS_FOR_RANDOM } from './engine.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 import { createCountry } from './group.js';
 
@@ -1086,12 +1086,13 @@ test('pillLabel + filterTitle render gdp / gdpPerCapita as compact US$ threshold
   assert.equal(filterTitle(/** @type {any} */ (f), idTranslate), 'Europe · over $50K');
 });
 
-test('pickRandomMix: gdp / gdpPerCapita / coffee / wine / elevation tiers are reachable and exclusive with other scalars', () => {
+test('pickRandomMix: gdp / gdpPerCapita / coffee / wine / cocoa / elevation tiers are reachable and exclusive with other scalars', () => {
   for (const [key, breaks, probKey] of /** @type {const} */ ([
     ['gdp', GDP_BREAKS_FOR_RANDOM, 'gdpProbability'],
     ['gdpPerCapita', GDP_PER_CAPITA_BREAKS_FOR_RANDOM, 'gdpPerCapitaProbability'],
     ['coffee', COFFEE_BREAKS_FOR_RANDOM, 'coffeeProbability'],
     ['wine', WINE_BREAKS_FOR_RANDOM, 'wineProbability'],
+    ['cocoa', COCOA_BREAKS_FOR_RANDOM, 'cocoaProbability'],
     ['elevation', ELEVATION_BREAKS_FOR_RANDOM, 'elevationProbability'],
   ])) {
     const seen = new Map(breaks.map((b) => [`${b.op}${b.n}`, 0]));

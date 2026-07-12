@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DM (wine production, sparse) closed once its code surfaces shipped; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DN (cocoa production, sparse) closed once its code surfaces shipped; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,29 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DN: Cocoa production as a world metric, the third sparse crop (code surfaces shipped 2026-07-12; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Ninth world metric, the third sparse crop after coffee and wine. The first metric added **after** the `attachMetrics` load-site refactor (#841), so it's a test of whether that refactor actually made the load sites zero-edit: it did, all six fetch/attach sites (both TTT pages, findFlag, flagsdata, the seed-sweep test) needed no cocoa edit, they loop `METRIC_FILES`. Adds the "Côte d'Ivoire is the world's #1" surprise: West Africa grows most of the world's cocoa.
+
+**Data contract:** sparse, **`absence: 'zero'`**, identical to coffee / wine. `cocoa.json` lists **growers only** (59 of them) and carries the hint; the loader `attachCocoas` → the shared `attachZeroFilledMetric` defaults every real place the map omits to **0**. A country that grows no cocoa is a fair wrong guess on a `cocoa >= N` cell, not a data gap. The lens and superlative round read the raw sparse map via `createMetric`, ranking growers only.
+
+**One-directional throughout**, like the other crops: filters are **atLeast-only** (`COCOA_BREAKS_FOR_RANDOM` = `>=1K/10K/100K`, 37/25/8 growers; the top tier is the thinnest of any metric at 8, but the seed-sweep confirms it stays fillable in 3×3 with the retry budget), and the Flag Party round is **biggest-only** (locked to `'most'`).
+
+**Data source:** FAOSTAT 2024 cocoa beans (item 661) via Our World in Data. 59 growers joined by ISO code. Two minor growers (Benin 2010, Nicaragua 2023) carry a pre-2024 figure; both tiny. No overrides needed.
+
+- [x] 1. Data: `flags/metrics/cocoa.json` (59 growers, `absence: 'zero'`) + `authoring/build-cocoa.mjs` + `METRIC_FILES` line + `attachCocoas` (group.js) + its `METRIC_ATTACHERS` entry + `metrics.test.js` schema/positive-integer/no-org/zero-fill-contract/sparse-lens tests.
+- [x] 2. flagsdata lens, free once step 1 landed; "Cocoa production" in the selector, compact tonnes.
+- [x] 3 + 4 (`THRESHOLD_METRICS` registry). `cocoa(op, n)` factory + `COCOA_BREAKS_FOR_RANDOM` + `THRESHOLD_METRICS.cocoa`. **NOT 9×9-eligible** (sparse; 3×3-only, pinned). Filters: `CocoaConstraint` + `cocoa` field; findFlag chooser section + `selectCocoa` + `cocoaPills` + `cocoaProbability` modifier + `chooserI18n`; flagsdata filter group (zero-edit, the `METRIC_FILES` loop from #841). i18n `cocoa.atLeast.{1k,10k,100k}` + `findFlag.sections.cocoa` + `metric.cocoa` (en+pl). **Load sites: zero cocoa edits** except the party server (see the guard note). Verified through the real engine in Node: `metricDataGap` blocks an org on a `cocoa >= 100K` cell while Afghanistan (real non-grower, 0) is a fair wrong guess; 300 puzzles, 69 carried a cocoa axis, 0 unfillable.
+- [x] 5. Flag Party round: `cocoaRound` via `createSuperlativeRound` (biggest-only), registered across the six spots + a cocoa-pod icon + en+pl `party.mode/modeShort.superlativeCocoa` + `hintMost/LeastCocoa`. Round-generation pinned by `superlative.test.js`.
+
+**Caught during the work (the refactor's residual gap):** the party server (`party/server.js`) is the *one* attach site the #841 refactor could not make zero-edit, it uses static JSON imports (esbuild bundles it for Cloudflare, so it can't loop `METRIC_FILES` to fetch). Cocoa was initially missed there, which would have silently misfired the metric on **online** TTT only (never a cocoa axis dealt, or a no-data cell). Added a source-scan guard test (`party/server.js attaches every registered metric`) that asserts every `METRIC_FILES` key is imported + passed to `attachMetrics`, so the next metric can't silently skip it.
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+**Standing artifacts:** the `party/server.js` metric-coverage guard test (closes the one silent-omission gap the load-site refactor left). Cocoa also confirms the refactor's payoff: the third crop was materially less work than wine, the fetch/attach sites were untouched.
+
+---
 
 ### Feature DM: Wine production as a world metric, coffee's sparse twin (code surfaces shipped 2026-07-12; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

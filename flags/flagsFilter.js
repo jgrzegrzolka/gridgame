@@ -47,6 +47,11 @@ import { METRIC_KEYS } from './engine.js';
  *   Sparse `absence: 'zero'` metric: a real place that makes none reads 0 (a real,
  *   comparable value), so only non-place org flags match neither direction.
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} CocoaConstraint
+ *   Cocoa-production threshold (tonnes), scalar twin; reads `country.cocoa`.
+ *   Sparse `absence: 'zero'` metric: a real place that grows none reads 0 (a real,
+ *   comparable value), so only non-place org flags match neither direction.
+ *
  * @typedef {{ op: '>=' | '<=', n: number }} ElevationConstraint
  *   Highest-elevation threshold (metres above sea level), scalar twin; reads
  *   `country.elevation`. Dense two-directional metric, the twin of area: every
@@ -66,6 +71,7 @@ import { METRIC_KEYS } from './engine.js';
  *   gdpPerCapita: GdpPerCapitaConstraint | null,
  *   coffee: CoffeeConstraint | null,
  *   wine: WineConstraint | null,
+ *   cocoa: CocoaConstraint | null,
  *   elevation: ElevationConstraint | null,
  * }} Filters
  */
@@ -109,6 +115,7 @@ export function emptyFilters() {
     gdpPerCapita: null,
     coffee: null,
     wine: null,
+    cocoa: null,
     elevation: null,
   };
 }
@@ -276,7 +283,7 @@ export function matchesFilters(country, filters, options = {}) {
 
 /**
  * @typedef {'status' | 'continent' | 'color' | 'motif' | 'stripesOnly'} PillGroup
- * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'elevation'} ScalarGroup
+ * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'elevation'} ScalarGroup
  *
  * @typedef {{ kind: 'pill', group: PillGroup, value: string, exclude: boolean }
  *   | { kind: 'scalar', group: ScalarGroup }} FilterChip

@@ -380,6 +380,25 @@ export const WINE_BREAKS_FOR_RANDOM = [
 ];
 
 /**
+ * Cocoa-production-threshold Categories (cocoa-bean tonnes). Sparse like coffee
+ * and wine, so **`>=`-only**: only ~60 countries grow cocoa, so a `<=` tier
+ * would just collect the ~180 non-growers at 0 (via `absence: 'zero'`),
+ * trivially fillable and meaningless. The meaningful axis is "grows AT LEAST N":
+ * `>=1K/10K/100K tonnes` (37 / 25 / 8 real places). `exclusiveGroup: 'cocoa'`.
+ *
+ * No `ultimate: true` break: like the other sparse crops, cocoa is too
+ * concentrated (West Africa dominant) to back a 9×9 cell, so every break carries
+ * `ultimateEligible: false`, keeping cocoa a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const COCOA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1_000 },
+  { op: '>=', n: 10_000 },
+  { op: '>=', n: 100_000 },
+];
+
+/**
  * Highest-elevation-threshold Categories (metres above sea level of each place's
  * highest point). Dense and *two-directional*, the mirror of area / GDP: both
  * extremes make good questions, so there are three "high" tiers (`>= N`) and
@@ -762,6 +781,37 @@ export function wine(op, n, opts = {}) {
 }
 
 /**
+ * Cocoa-production-threshold Category factory (cocoa-bean tonnes). Reads the
+ * denormalized `country.cocoa` field (`attachCocoas`, which fills 0 for a real
+ * place that grows none). `exclusiveGroup: 'cocoa'`. The break list is `>=`-only
+ * (see COCOA_BREAKS_FOR_RANDOM), but the `<=` branch is kept for symmetry so a
+ * `cocoa:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function cocoa(op, n, opts = {}) {
+  const human = tonnesCompact(n);
+  const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.cocoa === 'number' && c.cocoa >= n
+      : (c) => typeof c.cocoa === 'number' && c.cocoa <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `cocoa:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'cocoa',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * Highest-elevation-threshold Category factory (metres above sea level). Reads
  * the denormalized `country.elevation` field (`attachElevations`).
  * `exclusiveGroup: 'elevation'`. Dense and two-directional, so both `>=` (high
@@ -921,6 +971,20 @@ export const THRESHOLD_METRICS = {
       const human = tonnesCompact(n);
       if (op === '>=') return translate(`wine.atLeast.${token}`, `over ${human} tonnes`);
       return translate(`wine.atMost.${token}`, `under ${human} tonnes`);
+    },
+  },
+  cocoa: {
+    breaks: COCOA_BREAKS_FOR_RANDOM,
+    factory: cocoa,
+    prefixFallback: 'Cocoa production',
+    field: 'cocoa',
+    family: 'cocoa',
+    has: (c) => typeof c.cocoa === 'number',
+    labelFor: (op, n, translate) => {
+      const token = tonnesToken(n);
+      const human = tonnesCompact(n);
+      if (op === '>=') return translate(`cocoa.atLeast.${token}`, `over ${human} tonnes`);
+      return translate(`cocoa.atMost.${token}`, `under ${human} tonnes`);
     },
   },
   elevation: {

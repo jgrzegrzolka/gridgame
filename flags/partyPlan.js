@@ -99,6 +99,7 @@ export const PARTY_MODES = [
   { id: 'superlative-gdppc', roundId: 'superlative-gdppc', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-coffee', roundId: 'superlative-coffee', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-wine', roundId: 'superlative-wine', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-cocoa', roundId: 'superlative-cocoa', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-elevation', roundId: 'superlative-elevation', poolId: 'sovereign', group: 'metric' },
 ];
 
