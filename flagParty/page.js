@@ -50,7 +50,7 @@ const MODE_LABELS = {
   'superlative-density': { key: 'party.mode.superlativeDensity', full: 'Population density: most & least', shortKey: 'party.modeShort.superlativeDensity', short: 'Density' },
   'superlative-gdp': { key: 'party.mode.superlativeGdp', full: 'GDP: largest & smallest', shortKey: 'party.modeShort.superlativeGdp', short: 'GDP' },
   'superlative-gdppc': { key: 'party.mode.superlativeGdppc', full: 'GDP per capita: largest & smallest', shortKey: 'party.modeShort.superlativeGdppc', short: 'GDP per capita' },
-  'superlative-coffee': { key: 'party.mode.superlativeCoffee', full: 'Coffee production: most & least', shortKey: 'party.modeShort.superlativeCoffee', short: 'Coffee' },
+  'superlative-coffee': { key: 'party.mode.superlativeCoffee', full: 'Coffee production: most', shortKey: 'party.modeShort.superlativeCoffee', short: 'Coffee' },
   'superlative-elevation': { key: 'party.mode.superlativeElevation', full: 'Highest elevation: highest & lowest', shortKey: 'party.modeShort.superlativeElevation', short: 'Elevation' },
 };
 
