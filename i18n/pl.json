@@ -409,7 +409,8 @@
       "density": "Gęstość zaludnienia",
       "gdp": "PKB",
       "gdpPerCapita": "PKB na osobę",
-      "coffee": "Produkcja kawy"
+      "coffee": "Produkcja kawy",
+      "elevation": "Najwyższy punkt"
     }
   },
   "daily": {
@@ -709,6 +710,18 @@
       "1k": "ponad 1 tys. ton",
       "10k": "ponad 10 tys. ton",
       "100k": "ponad 100 tys. ton"
+    }
+  },
+  "elevation": {
+    "atLeast": {
+      "1000": "ponad 1000 m",
+      "3000": "ponad 3000 m",
+      "5000": "ponad 5000 m"
+    },
+    "atMost": {
+      "500": "poniżej 500 m",
+      "200": "poniżej 200 m",
+      "100": "poniżej 100 m"
     }
   },
   "filter": {

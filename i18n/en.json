@@ -409,7 +409,8 @@
       "density": "Population density",
       "gdp": "GDP",
       "gdpPerCapita": "GDP per capita",
-      "coffee": "Coffee production"
+      "coffee": "Coffee production",
+      "elevation": "Highest elevation"
     }
   },
   "daily": {
@@ -709,6 +710,18 @@
       "1k": "over 1K tonnes",
       "10k": "over 10K tonnes",
       "100k": "over 100K tonnes"
+    }
+  },
+  "elevation": {
+    "atLeast": {
+      "1000": "over 1,000 m",
+      "3000": "over 3,000 m",
+      "5000": "over 5,000 m"
+    },
+    "atMost": {
+      "500": "under 500 m",
+      "200": "under 200 m",
+      "100": "under 100 m"
     }
   },
   "filter": {

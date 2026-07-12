@@ -1,4 +1,4 @@
-import { CONTINENTS, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees } from '../flags/group.js';
+import { CONTINENTS, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas, attachCoffees, attachElevations } from '../flags/group.js';
 import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, METRIC_KEYS, foldDiacritics } from '../flags/engine.js';
 import { emptyFilters, matchesFilters, createColorCountLock, activeFilterChips } from '../flags/flagsFilter.js';
 import { makeColorSwatch } from '../common.js';
@@ -873,7 +873,7 @@ export function bootFlagsData() {
    * against the loaded set, and the predicate reads the field `attach<Metric>s`
    * denormalizes on). Reuses findFlag's `sections.<metricKey>` label key, same
    * cross-reference the Colors group already makes to `findFlag.noOtherColors`.
-   * @param {'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee'} metricKey
+   * @param {'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'elevation'} metricKey
    * @param {string} fallbackLabel
    * @param {Country[]} countries
    */
@@ -1211,6 +1211,10 @@ export function bootFlagsData() {
         if (metricsData.coffee) {
           attachCoffees(all, metricsData.coffee.values);
           groupsWrap.appendChild(buildMetricGroup('coffee', 'Coffee production', all));
+        }
+        if (metricsData.elevation) {
+          attachElevations(all, metricsData.elevation.values);
+          groupsWrap.appendChild(buildMetricGroup('elevation', 'Highest elevation', all));
         }
         if (lensKey && metricsData[lensKey]) lensMetric = createMetric(metricsData[lensKey], all);
         renderLens();

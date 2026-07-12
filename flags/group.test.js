@@ -17,6 +17,7 @@ import {
   attachGdps,
   attachGdpPerCapitas,
   attachCoffees,
+  attachElevations,
 } from './group.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -68,6 +69,18 @@ test("attachCoffees fills real non-growers with 0 (absence:'zero'), leaves orgs 
   assert.equal(cs[0].coffee, 3_348_510, 'a listed grower keeps its tonnage');
   assert.equal(cs[1].coffee, 0, 'a real non-grower defaults to 0, not a data gap');
   assert.equal(cs[2].coffee, undefined, 'a non-place org stays without the field');
+});
+
+test('attachElevations denormalizes metres onto the matching Country field (dense, orgs bare)', () => {
+  const cs = [
+    createCountry({ code: 'np', name: 'Nepal', continent: 'Asia', category: 'country' }),
+    createCountry({ code: 'mv', name: 'Maldives', continent: 'Asia', category: 'country' }),
+    createCountry({ code: 'xx', name: 'Nowhere', continent: null, category: 'other' }),
+  ];
+  attachElevations(cs, { np: 8849, mv: 2 }); // dense map lists every real place
+  assert.equal(cs[0].elevation, 8849, 'Everest height copied onto Nepal');
+  assert.equal(cs[1].elevation, 2, 'the lowest highpoint copied onto the Maldives');
+  assert.equal(cs[2].elevation, undefined, 'a non-place org stays without the field');
 });
 
 test('splitByCategory separates countries from other', () => {
