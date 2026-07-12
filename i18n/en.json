@@ -533,7 +533,7 @@
       "superlativeDensity": "Population density: most & least",
       "superlativeGdp": "GDP: largest & smallest",
       "superlativeGdppc": "GDP per capita: largest & smallest",
-      "superlativeCoffee": "Coffee production: most & least",
+      "superlativeCoffee": "Coffee production: most",
       "superlativeElevation": "Highest elevation: highest & lowest"
     },
     "modeShort": {
