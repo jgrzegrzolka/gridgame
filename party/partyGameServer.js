@@ -11,6 +11,7 @@ import {
   applyForceReveal,
   applyNext,
   applyPlayAgain,
+  applyReturnToLobby,
   applyDisconnect,
   serializeRoom,
   deserializeRoom,
@@ -220,6 +221,12 @@ export default class PartyGameServer {
         case 'playAgain':
           this.usedCodes = new Set();
           result = applyPlayAgain(this.room, playerId);
+          break;
+        case 'backToLobby':
+          // Host bails on the current game and returns the room to settings.
+          // Fresh code pool, same as a play-again reset.
+          this.usedCodes = new Set();
+          result = applyReturnToLobby(this.room, playerId);
           break;
         default:
           return;
