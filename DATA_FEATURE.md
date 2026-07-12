@@ -29,11 +29,9 @@ Twelfth world metric, the first *intensive* (ratio) one. Forest area as a percen
 - [ ] 2. flagsdata lens (free once step 1 lands; "Forest cover" in the selector, one-decimal %).
 - [ ] 3. Filters: `metricTiers.js` registry line (+ `has`); findFlag chooser (5 edits) + `findflag-random-coverage` note; flagsdata filter group; `attachForests` at both load sites.
 - [ ] 4. TTT: `forest(op, n)` factory + `FOREST_BREAKS_FOR_RANDOM` + pool/id/label wiring; `attachForests` at all 6 load sites; `forest.atLeast/atMost` i18n (en+pl); verify no-data guard in-browser.
-- [ ] 5. Flag Party round `superlative-forest` via `createSuperlativeRound` (two-directional; no zero-filter needed, but a treeless-0 quartet is a fair "least forested" so keep the raw map); the `[data-metric="superlative-forest"] { --mc }` hue (pick a green, distinct from the crowded blue/teal region).
+- [x] 5. Flag Party round `superlative-forest` via `createSuperlativeRound` over a **zero-filtered** map (two-directional, both "most" and "least forested" dealt). Correction to the original plan: the raw map does NOT work. ~19 treeless places carry 0.0% and a "least" quartet of them ties (`GAP_RATIO` degenerates when the extreme is 0), so the round drops the 0.0% places from selection exactly like coastline drops landlocked. Registered across all seven spots (superlative.js + test, `partyGameServer` ROUNDS, `partyPlan` METRIC_MODES + test, `flagParty/page.js` MODE_LABELS + SUPERLATIVE_MODES + a two-tier-pine icon, en+pl `party.mode/modeShort.superlativeForest` + `hintMost/LeastForest`) plus the `[data-metric="superlative-forest"] { --mc: #2e7d32 }` forest-green hue (distinct from area's sea-green).
 
 Surface 6 (daily puzzles) is NOT a checkbox: when 1-5 land, add a row to `METRIC_DAILY_PUZZLES.md` and close the Feature.
-
----
 
 ---
 

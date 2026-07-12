@@ -542,7 +542,8 @@
       "superlativeCocoa": "Produkcja kakao: najwięcej",
       "superlativeBanana": "Produkcja bananów: najwięcej",
       "superlativeElevation": "Najwyższy punkt: najwyższy i najniższy",
-      "superlativeCoastline": "Długość wybrzeża: najdłuższe i najkrótsze"
+      "superlativeCoastline": "Długość wybrzeża: najdłuższe i najkrótsze",
+      "superlativeForest": "Lesistość: najbardziej i najmniej zalesione"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -558,7 +559,8 @@
       "superlativeCocoa": "Kakao",
       "superlativeBanana": "Banany",
       "superlativeElevation": "Wysokość",
-      "superlativeCoastline": "Wybrzeże"
+      "superlativeCoastline": "Wybrzeże",
+      "superlativeForest": "Lasy"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
@@ -581,6 +583,8 @@
     "hintLeastElevation": "Najniższy punkt",
     "hintMostCoastline": "Najdłuższe wybrzeże",
     "hintLeastCoastline": "Najkrótsze wybrzeże",
+    "hintMostForest": "Najbardziej zalesiony",
+    "hintLeastForest": "Najmniej zalesiony",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",

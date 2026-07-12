@@ -330,3 +330,38 @@ test('coastlineRound: landlocked (0 km) places are excluded from selection', asy
     }
   }
 });
+
+// ---- forest instance (% of land area, id 'superlative-forest') --------------
+
+test('forestRound: two-directional over forested places, correct extreme answer', async () => {
+  const { forestRound } = await import('./superlative.js');
+  const forestJson = (await import('../metrics/forest.json', { with: { type: 'json' } })).default;
+  const FOREST = /** @type {Record<string, number>} */ (forestJson.values);
+  assert.equal(forestRound.id, 'superlative-forest');
+  // Forested sovereigns with distinct values spanning the range (Suriname 94.5%
+  // ... Ireland 11.5%). All strictly > 0, so none is filtered out of the round.
+  const pool = ['sr', 'fi', 'jp', 'br', 'ru', 'us', 'cn', 'au', 'ma', 'ie'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = forestRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => FOREST[c]);
+    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+    assert.equal(FOREST[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-forested option`);
+  }
+});
+
+test('forestRound: treeless (0%) places are excluded from selection', async () => {
+  const { forestRound } = await import('./superlative.js');
+  // The round metric is zero-filtered, so a treeless code (desert / ice /
+  // city-state at 0.0%) never has a value. Give a mixed pool and prove no
+  // treeless code ever surfaces as an option.
+  const treeless = new Set(['eg', 'qa', 'gl', 'mc', 'va', 'om', 'nr']);
+  const pool = ['fi', 'br', 'ru', 'us', 'eg', 'qa', 'gl', 'mc', 'va', 'om'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = forestRound.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!treeless.has(opt), `seed ${i}: treeless ${opt} must not be an option`);
+    }
+  }
+});
