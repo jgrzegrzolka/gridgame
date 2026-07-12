@@ -33,11 +33,15 @@ import {
   POPULATION_BREAKS_FOR_RANDOM,
   AREA_BREAKS_FOR_RANDOM,
   DENSITY_BREAKS_FOR_RANDOM,
+  GDP_BREAKS_FOR_RANDOM,
+  GDP_PER_CAPITA_BREAKS_FOR_RANDOM,
   ALL_MOTIFS,
   colorCount,
   population,
   area,
   density,
+  gdp,
+  gdpPerCapita,
   categoryFromId,
   hasStripesOnly,
   buildUltimateCategoryPool,
@@ -519,6 +523,20 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = DENSITY_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `density ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('gdpPerCapita:')) {
+      const suffix = cat.id.slice('gdpPerCapita:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = GDP_PER_CAPITA_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `gdpPerCapita ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('gdp:')) {
+      const suffix = cat.id.slice('gdp:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = GDP_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `gdp ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -572,7 +590,7 @@ test('continent and statehood categories carry their exclusiveGroup', () => {
   assert.equal(hasMotif('animal').exclusiveGroup, undefined);
 });
 
-test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population + area + density', () => {
+test('buildRandomCategoryPool returns one entry per continent + colour + motif + colorCount + stripesOnly + population + area + density + gdp + gdpPerCapita', () => {
   const pool = buildRandomCategoryPool();
   const expected =
     CONTINENTS_FOR_RANDOM.length
@@ -582,7 +600,9 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + STRIPES_ORIENTATIONS_FOR_RANDOM.length
     + POPULATION_BREAKS_FOR_RANDOM.length
     + AREA_BREAKS_FOR_RANDOM.length
-    + DENSITY_BREAKS_FOR_RANDOM.length;
+    + DENSITY_BREAKS_FOR_RANDOM.length
+    + GDP_BREAKS_FOR_RANDOM.length
+    + GDP_PER_CAPITA_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -646,6 +666,26 @@ test('metricGroupRepeated allows a single instance of each metric', () => {
   );
 });
 
+test('gdp and gdpPerCapita share a family, never both in one puzzle', () => {
+  // Same axis: two "GDP" questions (gdp + gdpPerCapita) must be rejected.
+  assert.equal(
+    metricGroupRepeated(
+      [gdp('>=', 1_000_000_000_000), gdpPerCapita('>=', 30_000), continent('Europe')],
+      [hasColor('red'), hasColor('blue'), hasMotif('animal')],
+    ),
+    true,
+  );
+  // Opposite axes: same family must be rejected by both rules.
+  assert.equal(metricGroupRepeated([gdp('>=', 100_000_000_000)], [gdpPerCapita('<=', 1_000)]), true);
+  assert.equal(axesConflict([gdp('>=', 100_000_000_000)], [gdpPerCapita('<=', 1_000)]), true);
+  // But gdp with a DIFFERENT family (population) is still fine.
+  assert.equal(
+    metricGroupRepeated([gdp('>=', 1_000_000_000_000), population('>=', 10_000_000)], [continent('Asia')]),
+    false,
+  );
+  assert.equal(axesConflict([gdp('>=', 1_000_000_000_000)], [population('>=', 10_000_000)]), false);
+});
+
 test('metricGroupRepeated does not restrict non-metric groups (two continents on one axis)', () => {
   // Continents are deliberately single-axis-repeatable — two down the rows is
   // a normal grid, so they stay out of SINGLE_USE_METRIC_GROUPS.
@@ -661,7 +701,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['area', 'density', 'population'],
+    ['area', 'density', 'gdp', 'gdpPerCapita', 'population'],
   );
 });
 
@@ -735,9 +775,12 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
   const droppedPop = POPULATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
   const droppedArea = AREA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
   const droppedDensity = DENSITY_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  const droppedGdp = GDP_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  const droppedGdpPerCapita = GDP_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
   assert.equal(
     ultPool.length,
-    buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length - droppedPop - droppedArea - droppedDensity,
+    buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
+      - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita,
   );
 });
 
@@ -1163,6 +1206,61 @@ test('translateCategoryLabel prefixes density thresholds with the metric name, f
   assert.equal(translateCategoryLabel(density('>=', 200), fakeTranslate({})), 'Population density: over 200 people/km²');
 });
 
+test('gdp(op, N) matches on US$; missing value never matches; compact label', () => {
+  const big = gdp('>=', 1_000_000_000_000);
+  const small = gdp('<=', 100_000_000);
+  const us = country({ code: 'us', name: 'USA', gdp: 27_000_000_000_000 });
+  const tv = country({ code: 'tv', name: 'Tuvalu', gdp: 62_000_000 });
+  const none = country({ code: 'zz', name: 'Org' });
+  assert.equal(big.id, 'gdp:>=1000000000000');
+  assert.equal(big.exclusiveGroup, 'gdp');
+  assert.equal(big.label, 'over $1T');
+  assert.equal(big.predicate(us), true);
+  assert.equal(big.predicate(tv), false);
+  assert.equal(big.predicate(none), false);
+  assert.equal(small.predicate(tv), true);
+  assert.equal(small.predicate(us), false);
+  assert.equal(GDP_BREAKS_FOR_RANDOM.filter((b) => b.ultimate).length, 1, 'exactly one ultimate gdp break');
+});
+
+test('gdpPerCapita(op, N) matches on US$/person; compact label', () => {
+  const rich = gdpPerCapita('>=', 30_000);
+  const poor = gdpPerCapita('<=', 1_000);
+  const lu = country({ code: 'lu', name: 'Luxembourg', gdpPerCapita: 133_000 });
+  const bi = country({ code: 'bi', name: 'Burundi', gdpPerCapita: 250 });
+  assert.equal(rich.id, 'gdpPerCapita:>=30000');
+  assert.equal(rich.exclusiveGroup, 'gdpPerCapita');
+  assert.equal(rich.label, 'over $30K');
+  assert.equal(rich.predicate(lu), true);
+  assert.equal(rich.predicate(bi), false);
+  assert.equal(poor.predicate(bi), true);
+  assert.equal(GDP_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate).length, 1, 'exactly one ultimate gdpPerCapita break');
+});
+
+test('categoryFromId round-trips gdp / gdpPerCapita thresholds', () => {
+  const g = categoryFromId('gdp:>=100000000000');
+  assert.equal(g?.id, 'gdp:>=100000000000');
+  assert.equal(g?.exclusiveGroup, 'gdp');
+  assert.equal(g?.predicate(country({ code: 'us', name: 'USA', gdp: 27e12 })), true);
+  const pc = categoryFromId('gdpPerCapita:<=1000');
+  assert.equal(pc?.id, 'gdpPerCapita:<=1000');
+  assert.equal(pc?.exclusiveGroup, 'gdpPerCapita');
+  assert.equal(categoryFromId('gdp:>=abc'), null);
+  assert.equal(categoryFromId('gdpPerCapita:100'), null);
+});
+
+test('translateCategoryLabel formats gdp / gdpPerCapita with the compact US$ token, English fallback', () => {
+  // English fallbacks exercise usdCompact ($100B / $1T / $30K).
+  assert.equal(translateCategoryLabel(gdp('>=', 100_000_000_000), fakeTranslate({})), 'GDP: over $100B');
+  assert.equal(translateCategoryLabel(gdp('>=', 1_000_000_000_000), fakeTranslate({})), 'GDP: over $1T');
+  assert.equal(translateCategoryLabel(gdp('<=', 100_000_000), fakeTranslate({})), 'GDP: under $100M');
+  assert.equal(translateCategoryLabel(gdpPerCapita('>=', 30_000), fakeTranslate({})), 'GDP per capita: over $30K');
+  assert.equal(translateCategoryLabel(gdpPerCapita('<=', 1_000), fakeTranslate({})), 'GDP per capita: under $1K');
+  // Localized keys resolve through labelFor.
+  const t = fakeTranslate({ 'metric.gdp': 'PKB', 'gdp.atLeast.1t': 'ponad 1 bln $' });
+  assert.equal(translateCategoryLabel(gdp('>=', 1_000_000_000_000), t), 'PKB: ponad 1 bln $');
+});
+
 test('categoryFromId round-trips area thresholds and rejects malformed suffixes', () => {
   const ge = categoryFromId('area:>=100000');
   assert.ok(ge);
@@ -1504,6 +1602,8 @@ function denseSquarePool(continents, colors, perCell) {
           population: n % 2 === 0 ? 20_000_000 : 5_000_000,
           area: n % 2 === 1 ? 200_000 : 50_000,
           density: n % 3 === 0 ? 500 : 20,
+          gdp: n % 2 === 1 ? 200_000_000_000 : 8_000_000_000,
+          gdpPerCapita: n % 3 === 2 ? 35_000 : 4_000,
         }));
       }
     }
@@ -1802,6 +1902,11 @@ function syntheticTaggedCountries() {
   const POP_LADDER = [500_000, 3_000_000, 15_000_000, 30_000_000, 60_000_000, 120_000_000];
   const AREA_LADDER = [500, 5_000, 50_000, 200_000, 700_000, 2_000_000];
   const DENSITY_LADDER = [5, 20, 50, 150, 300, 800];
+  // gdp <=$100M / <=$1B / <=$10B / >=$100B / >=$500B / >=$1T; gdpPerCapita
+  // <=$1K / <=$2K / <=$5K / >=$30K / >=$50K / >=$70K. Same "every break has a
+  // candidate in every continent" contract as the three ladders above.
+  const GDP_LADDER = [50_000_000, 800_000_000, 8_000_000_000, 200_000_000_000, 600_000_000_000, 1_500_000_000_000];
+  const GDP_PER_CAPITA_LADDER = [800, 1_800, 4_000, 35_000, 55_000, 80_000];
   // Each (continent × colour × n) triple becomes one country. n controls
   // palette size — n=0 keeps the base 1-colour shape, n=1/n=2 layer in
   // distinct neighbour colours so the country has 2 / 3 colours total.
@@ -1820,7 +1925,15 @@ function syntheticTaggedCountries() {
           motifs: [motif],
           population: POP_LADDER[codeCounter % POP_LADDER.length],
           area: AREA_LADDER[codeCounter % AREA_LADDER.length],
-          density: DENSITY_LADDER[codeCounter++ % DENSITY_LADDER.length],
+          density: DENSITY_LADDER[codeCounter % DENSITY_LADDER.length],
+          // Decorrelate the two GDP ladders from pop/area/density (which all use
+          // codeCounter % 6) via a slower counter, so cross-metric cells stay
+          // fillable: real data isn't perfectly rank-correlated either, and the
+          // generator otherwise burns its retry budget dodging empty gdp × area
+          // style cells. (gdp + gdpPerCapita never co-occur, same family, so
+          // their mutual correlation is irrelevant.)
+          gdp: GDP_LADDER[Math.floor(codeCounter / 7) % GDP_LADDER.length],
+          gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }
     }
@@ -1839,7 +1952,15 @@ function syntheticTaggedCountries() {
           motifs: [motif],
           population: POP_LADDER[codeCounter % POP_LADDER.length],
           area: AREA_LADDER[codeCounter % AREA_LADDER.length],
-          density: DENSITY_LADDER[codeCounter++ % DENSITY_LADDER.length],
+          density: DENSITY_LADDER[codeCounter % DENSITY_LADDER.length],
+          // Decorrelate the two GDP ladders from pop/area/density (which all use
+          // codeCounter % 6) via a slower counter, so cross-metric cells stay
+          // fillable: real data isn't perfectly rank-correlated either, and the
+          // generator otherwise burns its retry budget dodging empty gdp × area
+          // style cells. (gdp + gdpPerCapita never co-occur, same family, so
+          // their mutual correlation is irrelevant.)
+          gdp: GDP_LADDER[Math.floor(codeCounter / 7) % GDP_LADDER.length],
+          gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
         }));
       }
     }

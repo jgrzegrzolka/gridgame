@@ -16,6 +16,8 @@
  * @property {number} [population]  Denormalized from `flags/metrics/population.json` by `attachPopulations` at TTT load time so the `population` threshold predicates can read it off the country like any other field. Absent when the country has no value in the (sparse) metric. Not stored in countries.json — the metric stays the single source.
  * @property {number} [area]  Denormalized from `flags/metrics/area.json` by `attachAreas`, same pattern as `population`, so the `area` threshold predicates read it off the country. Absent only for non-places (orgs).
  * @property {number} [density]  Denormalized from `flags/metrics/density.json` by `attachDensities` (people per km²). Absent only for non-places.
+ * @property {number} [gdp]  Denormalized from `flags/metrics/gdp.json` by `attachGdps` (nominal current US$). Absent only for non-places.
+ * @property {number} [gdpPerCapita]  Denormalized from `flags/metrics/gdpPerCapita.json` by `attachGdpPerCapitas` (nominal current US$ per person). Absent only for non-places.
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -122,6 +124,38 @@ export function attachDensities(countries, values) {
   for (const c of countries) {
     const v = values[c.code];
     if (typeof v === 'number') c.density = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/gdp.json` values onto each Country as `.gdp`
+ * (nominal current US$). Twin of `attachPopulations` / `attachAreas`.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachGdps(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.gdp = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/gdpPerCapita.json` values onto each Country as
+ * `.gdpPerCapita` (nominal current US$ per person). Twin of the above.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachGdpPerCapitas(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.gdpPerCapita = v;
   }
   return countries;
 }

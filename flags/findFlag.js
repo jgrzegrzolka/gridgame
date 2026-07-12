@@ -450,6 +450,8 @@ const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent',
  *   populationProbability?: number,
  *   areaProbability?: number,
  *   densityProbability?: number,
+ *   gdpProbability?: number,
+ *   gdpPerCapitaProbability?: number,
  * }} [options]
  * @returns {Filters}
  */
@@ -464,6 +466,8 @@ export function pickRandomMix(pillPool, all, options = {}) {
     populationProbability = 0,
     areaProbability = 0,
     densityProbability = 0,
+    gdpProbability = 0,
+    gdpPerCapitaProbability = 0,
   } = options;
 
   // A 2+ pill mix needs at least 2 pills to draw from; degenerate
@@ -502,6 +506,8 @@ export function pickRandomMix(pillPool, all, options = {}) {
       population: populationProbability,
       area: areaProbability,
       density: densityProbability,
+      gdp: gdpProbability,
+      gdpPerCapita: gdpPerCapitaProbability,
     };
     for (const key of METRIC_KEYS) maybeAttachMetric(f, rng, key, metricProbabilities[key] ?? 0);
     lastAttempt = f;

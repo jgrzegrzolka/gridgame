@@ -16,28 +16,26 @@ import {
   axesImpliedPair,
   suggest,
 } from './engine.js';
-import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities } from './group.js';
+import { CONTINENTS, flagsGamePool, loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas } from './group.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 
 /** @typedef {import('./group.js').Country} Country */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-// Attach population + area + density exactly as the TTT load sites do, so the
-// seed sweeps below exercise the real production pool (metric categories
-// included) with the same retry budget players hit.
+// Attach every metric exactly as the TTT load sites do, so the seed sweeps below
+// exercise the real production pool (metric categories included) with the same
+// retry budget players hit.
 const POPULATION = JSON.parse(readFileSync(join(HERE, 'metrics', 'population.json'), 'utf-8'));
 const AREA = JSON.parse(readFileSync(join(HERE, 'metrics', 'area.json'), 'utf-8'));
 const DENSITY = JSON.parse(readFileSync(join(HERE, 'metrics', 'density.json'), 'utf-8'));
-const COUNTRIES = attachDensities(
-  attachAreas(
-    attachPopulations(
-      loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8'))),
-      POPULATION.values,
-    ),
-    AREA.values,
-  ),
-  DENSITY.values,
-);
+const GDP = JSON.parse(readFileSync(join(HERE, 'metrics', 'gdp.json'), 'utf-8'));
+const GDP_PER_CAPITA = JSON.parse(readFileSync(join(HERE, 'metrics', 'gdpPerCapita.json'), 'utf-8'));
+const COUNTRIES = loadCountries(JSON.parse(readFileSync(join(HERE, 'countries.json'), 'utf-8')));
+attachPopulations(COUNTRIES, POPULATION.values);
+attachAreas(COUNTRIES, AREA.values);
+attachDensities(COUNTRIES, DENSITY.values);
+attachGdps(COUNTRIES, GDP.values);
+attachGdpPerCapitas(COUNTRIES, GDP_PER_CAPITA.values);
 const SVG_DIR = join(HERE, 'svg');
 
 test('countries.json is a non-empty array', () => {
@@ -647,6 +645,41 @@ test('generateUltimateRandomPuzzle only ever picks the single ultimate density b
       if (cat.id.startsWith('density:')) {
         assert.equal(cat.id, 'density:>=100',
           `seed ${seed}: 9×9 picked ${cat.id}, but only density:>=100 is ultimate-eligible`);
+      }
+    }
+  }
+});
+
+test('generateRandomPuzzle actually produces gdp + gdpPerCapita puzzles in the 3×3 pool', () => {
+  // Same surfacing guard as the other metrics: both GDP families are in the
+  // pool, so over 100 seeds each should land in some 3×3 puzzles.
+  const SEEDS = Array.from({ length: 100 }, (_, i) => (i + 1) * 17);
+  let gdpHits = 0;
+  let gdpPerCapitaHits = 0;
+  for (const seed of SEEDS) {
+    const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    const ids = [...puzzle.rows, ...puzzle.cols].map((c) => c.id);
+    if (ids.some((id) => id.startsWith('gdp:'))) gdpHits++;
+    if (ids.some((id) => id.startsWith('gdpPerCapita:'))) gdpPerCapitaHits++;
+  }
+  assert.ok(gdpHits > 0, `expected gdp categories in some 3×3 puzzles, got ${gdpHits}`);
+  assert.ok(gdpPerCapitaHits > 0, `expected gdpPerCapita categories in some 3×3 puzzles, got ${gdpPerCapitaHits}`);
+});
+
+test('generateUltimateRandomPuzzle only ever picks the single ultimate gdp / gdpPerCapita breakpoint', () => {
+  // 9×9 keeps just the broad `over $100B` / `over $30K` tiers; the extreme
+  // tiers can't back 9-distinct-per-cell. Pin that no other id reaches 9×9.
+  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 9973);
+  for (const seed of SEEDS) {
+    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
+    for (const cat of [...puzzle.rows, ...puzzle.cols]) {
+      if (cat.id.startsWith('gdp:')) {
+        assert.equal(cat.id, 'gdp:>=100000000000',
+          `seed ${seed}: 9×9 picked ${cat.id}, but only gdp:>=100000000000 is ultimate-eligible`);
+      }
+      if (cat.id.startsWith('gdpPerCapita:')) {
+        assert.equal(cat.id, 'gdpPerCapita:>=30000',
+          `seed ${seed}: 9×9 picked ${cat.id}, but only gdpPerCapita:>=30000 is ultimate-eligible`);
       }
     }
   }

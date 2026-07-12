@@ -10,7 +10,7 @@ import {
 import { getOrCreateDeviceId } from '../../flags/identity.js';
 import { newlyWonSmallBoards, isMetaWinNewlyFormed } from '../../flags/ultimateTicTacToe.js';
 import { shouldFireTicTacToeConfetti } from '../../flags/ticTacToe.js';
-import { loadCountries, attachPopulations, attachAreas, attachDensities } from '../../flags/group.js';
+import { loadCountries, attachPopulations, attachAreas, attachDensities, attachGdps, attachGdpPerCapitas } from '../../flags/group.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
 import { shareUrl, renderPlayingAs } from '../../common.js';
 import { trackEvent } from '../../analytics/index.js';
@@ -45,12 +45,16 @@ export function bootUltimateTicTacToeOnline() {
     fetch('../../flags/metrics/population.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
     fetch('../../flags/metrics/area.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
     fetch('../../flags/metrics/density.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    fetch('../../flags/metrics/gdp.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    fetch('../../flags/metrics/gdpPerCapita.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
   ])
-    .then(([rawCountries, population, area, density]) => {
+    .then(([rawCountries, population, area, density, gdp, gdpPerCapita]) => {
       const countries = withLocalizedAliases(loadCountries(rawCountries));
       if (population) attachPopulations(countries, population.values);
       if (area) attachAreas(countries, area.values);
       if (density) attachDensities(countries, density.values);
+      if (gdp) attachGdps(countries, gdp.values);
+      if (gdpPerCapita) attachGdpPerCapitas(countries, gdpPerCapita.values);
       runOnline(countries);
     })
     .catch((err) => {

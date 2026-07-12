@@ -31,6 +31,12 @@ import { METRIC_KEYS } from './engine.js';
  * @typedef {{ op: '>=' | '<=', n: number }} DensityConstraint
  *   Population-density threshold (people/km²), scalar twin; reads `country.density`.
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} GdpConstraint
+ *   GDP threshold (nominal US$), scalar twin; reads `country.gdp`.
+ *
+ * @typedef {{ op: '>=' | '<=', n: number }} GdpPerCapitaConstraint
+ *   GDP-per-capita threshold (nominal US$/person), scalar twin; reads `country.gdpPerCapita`.
+ *
  * @typedef {{
  *   status: FilterSet,
  *   continent: FilterSet,
@@ -41,6 +47,8 @@ import { METRIC_KEYS } from './engine.js';
  *   population: PopulationConstraint | null,
  *   area: AreaConstraint | null,
  *   density: DensityConstraint | null,
+ *   gdp: GdpConstraint | null,
+ *   gdpPerCapita: GdpPerCapitaConstraint | null,
  * }} Filters
  */
 
@@ -79,6 +87,8 @@ export function emptyFilters() {
     population: null,
     area: null,
     density: null,
+    gdp: null,
+    gdpPerCapita: null,
   };
 }
 
@@ -245,7 +255,7 @@ export function matchesFilters(country, filters, options = {}) {
 
 /**
  * @typedef {'status' | 'continent' | 'color' | 'motif' | 'stripesOnly'} PillGroup
- * @typedef {'colorCount' | 'population' | 'area' | 'density'} ScalarGroup
+ * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita'} ScalarGroup
  *
  * @typedef {{ kind: 'pill', group: PillGroup, value: string, exclude: boolean }
  *   | { kind: 'scalar', group: ScalarGroup }} FilterChip
