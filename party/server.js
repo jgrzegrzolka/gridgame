@@ -10,6 +10,7 @@ import cocoa from '../flags/metrics/cocoa.json' with { type: 'json' };
 import banana from '../flags/metrics/banana.json' with { type: 'json' };
 import apple from '../flags/metrics/apple.json' with { type: 'json' };
 import oil from '../flags/metrics/oil.json' with { type: 'json' };
+import rice from '../flags/metrics/rice.json' with { type: 'json' };
 import elevation from '../flags/metrics/elevation.json' with { type: 'json' };
 import coastline from '../flags/metrics/coastline.json' with { type: 'json' };
 import forest from '../flags/metrics/forest.json' with { type: 'json' };
@@ -38,6 +39,7 @@ attachMetrics(countries, {
   coastline: coastline.values,
   forest: forest.values,
   oil: oil.values,
+  rice: rice.values,
 });
 
 export default class GameServer extends TicTacToeServer {

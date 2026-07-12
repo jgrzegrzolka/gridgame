@@ -30,4 +30,5 @@ export const METRIC_FILES = [
   { key: 'coastline', file: 'coastline.json', label: 'Coastline length' },
   { key: 'forest', file: 'forest.json', label: 'Forest cover' },
   { key: 'oil', file: 'oil.json', label: 'Oil production' },
+  { key: 'rice', file: 'rice.json', label: 'Rice production' },
 ];

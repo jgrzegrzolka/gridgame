@@ -76,6 +76,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   coastlineProbability: 0.10,
   forestProbability: 0.10,
   oilProbability: 0.06,
+  riceProbability: 0.06,
 });
 
 /**
@@ -377,6 +378,8 @@ export function bootFindFlag() {
     const forestPills = [];
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const oilPills = [];
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const ricePills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
     const sectionHeaders = [];
     /** @type {HTMLSpanElement | null} */
@@ -965,6 +968,41 @@ export function bootFindFlag() {
       }
     }
 
+    // Rice-production section, same single-select scalar (`filter.rice`).
+    // Sparse `>=`-only tiers, so the pills read "over 1M tonnes" etc.
+    {
+      const riceItems = buildMetricTierItems('rice', all);
+      if (riceItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.rice', 'Rice production');
+        sectionHeaders.push({ h, key: 'findFlag.sections.rice', fallback: 'Rice production' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of riceItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('rice', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectRice(op, n, btn));
+          wrap.appendChild(btn);
+          ricePills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
     const randomBtn = document.getElementById('find-random');
 
@@ -1257,6 +1295,21 @@ export function bootFindFlag() {
       updateBar();
     }
 
+    /**
+     * Single-select rice-production tier, twin of selectApple.
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectRice(op, n, btn) {
+      const isActive = filter.rice !== null && filter.rice.op === op && filter.rice.n === n;
+      filter.rice = isActive ? null : { op, n };
+      for (const p of ricePills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
     playBtn.addEventListener('click', () => {
       if (playBtn.disabled) return;
       const params = new URLSearchParams({ f: serializeFilter(filter) });
@@ -1317,6 +1370,9 @@ export function bootFindFlag() {
       for (const { btn } of oilPills) {
         btn.classList.remove('active');
       }
+      for (const { btn } of ricePills) {
+        btn.classList.remove('active');
+      }
       updateBar();
     });
 
@@ -1369,7 +1425,7 @@ export function bootFindFlag() {
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, winePills, cocoaPills, bananaPills, applePills, elevationPills, coastlinePills, forestPills, oilPills, onlyColorsLabelSpan, updateBar });
+        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, winePills, cocoaPills, bananaPills, applePills, elevationPills, coastlinePills, forestPills, oilPills, ricePills, onlyColorsLabelSpan, updateBar });
       },
     };
   }

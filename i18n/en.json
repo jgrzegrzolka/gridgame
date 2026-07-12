@@ -417,7 +417,8 @@
       "elevation": "Highest elevation",
       "coastline": "Coastline length",
       "forest": "Forest cover",
-      "oil": "Oil production"
+      "oil": "Oil production",
+      "rice": "Rice production"
     }
   },
   "daily": {
@@ -548,7 +549,8 @@
       "superlativeElevation": "Highest elevation: highest & lowest",
       "superlativeCoastline": "Coastline length: longest & shortest",
       "superlativeForest": "Forest cover: most & least forested",
-      "superlativeOil": "Oil production: most"
+      "superlativeOil": "Oil production: most",
+      "superlativeRice": "Rice production: most"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -567,7 +569,8 @@
       "superlativeElevation": "Elevation",
       "superlativeCoastline": "Coastline",
       "superlativeForest": "Forest",
-      "superlativeOil": "Oil"
+      "superlativeOil": "Oil",
+      "superlativeRice": "Rice"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -594,6 +597,7 @@
     "hintMostForest": "Most forested",
     "hintLeastForest": "Least forested",
     "hintMostOil": "Largest oil production",
+    "hintMostRice": "Largest rice production",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
@@ -817,6 +821,13 @@
       "1000": "over 1,000 TWh"
     }
   },
+  "rice": {
+    "atLeast": {
+      "100k": "over 100K tonnes",
+      "1m": "over 1M tonnes",
+      "10m": "over 10M tonnes"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",
@@ -886,7 +897,8 @@
     "elevation": "Highest elevation",
     "coastline": "Coastline length",
     "forest": "Forest cover",
-    "oil": "Oil production"
+    "oil": "Oil production",
+    "rice": "Rice production"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

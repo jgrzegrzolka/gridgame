@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachCoastlines, attachForests } from './group.js';
+import { attachCoffees, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoastlines, attachForests } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -24,6 +24,7 @@ const COCOA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/co
 const BANANA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/banana.json'));
 const APPLE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/apple.json'));
 const OIL = /** @type {import('./metrics.js').MetricData} */ (load('metrics/oil.json'));
+const RICE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/rice.json'));
 const ELEVATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/elevation.json'));
 const COASTLINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coastline.json'));
 const FOREST = /** @type {import('./metrics.js').MetricData} */ (load('metrics/forest.json'));
@@ -707,6 +708,59 @@ test('createMetric over oil stays sparse: it ranks producers only', () => {
   assert.equal(oil.topN('world', 1)[0].code, 'us'); // United States, the largest
   assert.equal(oil.rankOf('ru', 'world'), 2); // Russia second
   assert.equal(oil.has('ch'), false); // Switzerland pumps none: no rank, not a 0
+});
+
+// ---- real rice.json schema + the sparse absence:'zero' contract ------------
+
+test('rice is a valid, self-describing metric file with an absence hint', () => {
+  assert.equal(RICE.key, 'rice');
+  assert.equal(typeof RICE.label, 'string');
+  assert.equal(typeof RICE.unit, 'string');
+  assert.ok(RICE.format === 'compact' || RICE.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof RICE.source, 'string');
+  assert.equal(typeof RICE.year, 'number');
+  assert.equal(typeof RICE.values, 'object');
+  // Sparse like the other crops: growers only, absence means "grows none" → 0.
+  assert.equal(RICE.absence, 'zero');
+});
+
+test('every rice value is a positive integer (tonnes, sub-tonne growers dropped)', () => {
+  for (const [code, v] of Object.entries(RICE.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 1, `${code} listed but not >= 1: ${v}`);
+  }
+});
+
+test('every rice key is a real (non-other) country, never an org', () => {
+  const byCode = new Map(COUNTRIES.map((c) => [c.code, c]));
+  for (const code of Object.keys(RICE.values)) {
+    const c = byCode.get(code);
+    assert.ok(c, `rice key ${code} is not in countries.json`);
+    assert.notEqual(c.category, 'other', `rice key ${code} is an "other" entry`);
+  }
+});
+
+test("absence:'zero' contract: attachRices fills every real place, orgs stay bare", () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachRices(/** @type {any} */ (rows), RICE.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.rice, undefined, `org ${c.code} should have no rice field`);
+    } else {
+      assert.equal(typeof row.rice, 'number', `real place ${c.code} has no rice value`);
+    }
+  }
+  assert.equal(/** @type {any} */ (byCode.get('in')).rice, RICE.values.in);
+  assert.equal(/** @type {any} */ (byCode.get('ca')).rice, 0); // Canada grows none
+});
+
+test('createMetric over rice stays sparse: it ranks growers only', () => {
+  const rice = createMetric(RICE, COUNTRIES);
+  assert.equal(rice.topN('world', 1)[0].code, 'in'); // India, the largest
+  assert.equal(rice.rankOf('cn', 'world'), 2); // China second
+  assert.equal(rice.has('ca'), false); // Canada grows none: no rank, not a 0
 });
 
 test('createMetric over banana stays sparse: it ranks producers only', () => {

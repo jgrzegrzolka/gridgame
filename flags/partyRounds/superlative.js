@@ -12,6 +12,7 @@ import elevation from '../metrics/elevation.json' with { type: 'json' };
 import coastline from '../metrics/coastline.json' with { type: 'json' };
 import forest from '../metrics/forest.json' with { type: 'json' };
 import oil from '../metrics/oil.json' with { type: 'json' };
+import rice from '../metrics/rice.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -221,3 +222,8 @@ export const forestRound = createSuperlativeRound(createMetric(forestedForest, [
 // crops, so the round ranks the ~92 producers only. Locked to 'most': "biggest
 // oil producer" (the US) is the good question.
 export const oilRound = createSuperlativeRound(createMetric(oil, []), 'superlative-oil', { direction: 'most' });
+
+// Rice instance: rice paddy tonnes, id 'superlative-rice'. Sparse like the other
+// crops, so the round ranks the ~119 growers only. Locked to 'most': "biggest
+// rice producer" (India) is the good question.
+export const riceRound = createSuperlativeRound(createMetric(rice, []), 'superlative-rice', { direction: 'most' });
