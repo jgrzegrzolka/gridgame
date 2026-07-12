@@ -51,6 +51,7 @@ const MODE_LABELS = {
   'superlative-gdp': { key: 'party.mode.superlativeGdp', full: 'GDP: largest & smallest', shortKey: 'party.modeShort.superlativeGdp', short: 'GDP' },
   'superlative-gdppc': { key: 'party.mode.superlativeGdppc', full: 'GDP per capita: largest & smallest', shortKey: 'party.modeShort.superlativeGdppc', short: 'GDP per capita' },
   'superlative-coffee': { key: 'party.mode.superlativeCoffee', full: 'Coffee production: most & least', shortKey: 'party.modeShort.superlativeCoffee', short: 'Coffee' },
+  'superlative-elevation': { key: 'party.mode.superlativeElevation', full: 'Highest elevation: highest & lowest', shortKey: 'party.modeShort.superlativeElevation', short: 'Elevation' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -87,6 +88,11 @@ const SUPERLATIVE_MODES = {
     file: 'coffee.json',
     hintMost: { key: 'party.hintMostCoffee', fallback: 'Most coffee' },
     hintLeast: { key: 'party.hintLeastCoffee', fallback: 'Least coffee' },
+  },
+  'superlative-elevation': {
+    file: 'elevation.json',
+    hintMost: { key: 'party.hintMostElevation', fallback: 'Highest point' },
+    hintLeast: { key: 'party.hintLeastElevation', fallback: 'Lowest highpoint' },
   },
 };
 
@@ -129,6 +135,8 @@ const METRIC_ICONS = {
   'superlative-gdppc': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v10"/><path d="M14.5 9.2c-.6-.7-1.5-1-2.5-1-1.4 0-2.5.7-2.5 1.9 0 1.2 1 1.6 2.5 1.9s2.5.7 2.5 1.9c0 1.2-1.1 1.9-2.5 1.9-1 0-1.9-.3-2.5-1"/></svg>',
   // Coffee production: a steaming coffee cup with a handle.
   'superlative-coffee': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V9z"/><path d="M17 10h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M8 3.5v2M12 3.5v2"/></svg>',
+  // Highest elevation: a single tall peak with a snowcap (distinct from area's low range).
+  'superlative-elevation': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M12 4L20 20H4z"/><path d="M9.4 11.7l2.6 1.6 2.6-1.6"/></svg>',
 };
 
 /**
