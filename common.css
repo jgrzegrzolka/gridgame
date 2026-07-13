@@ -1641,11 +1641,14 @@ dialog#zoom p.zoom-note {
 /* Country-name strip on the flag/outline you got wrong — a dark band across the
  * bottom of the tile naming what you actually picked. Shared by both flag games
  * (flagQuiz `.flag-choice`, Flag Party `.opt`); each sets `data-name` on its
- * wrong tile. Both tiles pad the image in by 5px, so the strip insets to match
- * and sits on the flag, not the tile's outer corners. The rgba(0,0,0,.7) over an
- * SVG is the documented palette exception (CLAUDE.md, per-tile bottom strip). */
+ * wrong tile. The Flag Party `.opt.named` case reuses the exact same strip for the
+ * world-facts question-phase name reveal (fades in via `names-shown`, see
+ * flagParty/index.css). Both tiles pad the image in by 5px, so the strip insets to
+ * match and sits on the flag, not the tile's outer corners. The rgba(0,0,0,.7)
+ * over an SVG is the documented palette exception (CLAUDE.md, per-tile strip). */
 .flag-choice.wrong[data-name]::after,
-.opt.wrong[data-name]::after {
+.opt.wrong[data-name]::after,
+.opt.named[data-name]::after {
   content: attr(data-name);
   position: absolute;
   left: 5px;

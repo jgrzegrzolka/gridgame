@@ -540,6 +540,8 @@
     "tricky": "Tryb trudny",
     "trickyHint": "Flagi zaczynają ukryte i wyostrzają się z upływem czasu",
     "revealHint": "Odsłoń flagę po…",
+    "nameRevealHint": "Pokaż nazwy krajów po…",
+    "namesOff": "Wyłączone",
     "groupPictures": "Flagi i mapy",
     "groupFacts": "Fakty o świecie",
     "factsLead": "Zgadnij statystykę",

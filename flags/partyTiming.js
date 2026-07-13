@@ -44,12 +44,38 @@ export function revealSecondsFor(clean) {
  *  clean look while an early buzzer gambled on partial detail for the speed bonus. */
 export const REVEAL_OPTIONS = [0.2, 0.4, 0.6, 0.8];
 
+/** Tricky mode is about flag *visibility*; the world-facts name reveal is about
+ *  flag *identity* — a separate axis. On a world-facts round the answer is a fact
+ *  ("which grows the most coffee?"), not flag recognition, so a player who knows
+ *  the fact but can't pick the country's flag out of four is blocked on the wrong
+ *  skill. At `name` of the way through the window the country names fade onto the
+ *  tiles, so an early flag-recognizer still buzzes first for the speed bonus while
+ *  a fact-knower gets a fair shot once the labels land. `null` = off (never named,
+ *  pure recognition). Applies to metric rounds only, independent of tricky mode. */
+export const NAME_REVEAL_OPTIONS = [0.4, 0.5, 0.6, 0.8];
+
 /** Default reveal fraction per round category. Flags stay obscured longest (they
  *  carry the most give-away detail); outlines clear earlier (a monochrome
  *  silhouette is already hard, and grey does nothing to it); metric rounds clear
  *  earliest (the flags are incidental there — the question is the number — so the
- *  veil is just flavour). The host can override each in the lobby. */
-export const DEFAULT_REVEAL = { flag: 0.8, map: 0.4, metric: 0.2 };
+ *  veil is just flavour). `name` is the world-facts name-reveal fraction (see
+ *  {@link NAME_REVEAL_OPTIONS}); defaults to halfway. The host can override each
+ *  in the lobby. */
+export const DEFAULT_REVEAL = { flag: 0.8, map: 0.4, metric: 0.2, name: 0.5 };
+
+/**
+ * Whether a round plays a world metric (population / area / GDP / coffee / …).
+ * Every superlative instance shares the `superlative` id prefix (`superlative`
+ * for population, `superlative-area`, `superlative-coffee`, …), so one prefix
+ * test catches them all — unlike {@link revealCategoryFor}, which only maps the
+ * literal `superlative` id to `metric`. Used to decide which rounds get the
+ * name-reveal strip, both server-side (stamping `nameFrac`) and client-side.
+ * @param {string} [roundId]
+ * @returns {boolean}
+ */
+export function isMetricRound(roundId) {
+  return typeof roundId === 'string' && roundId.startsWith('superlative');
+}
 
 /**
  * The reveal category for a round, from its `roundId`: the map round is `map`,
@@ -83,11 +109,33 @@ export function clampReveal(value, fallback) {
 }
 
 /**
+ * Snap an untrusted name-reveal value to the nearest {@link NAME_REVEAL_OPTIONS}
+ * option, keeping `null` as the explicit "off" (never name the tiles) and falling
+ * back to `fallback` when it isn't a usable number or off. `null` and `undefined`
+ * are deliberately distinct: an explicit `null` means the host turned names off,
+ * whereas a missing field (a pre-name-reveal client) defaults to `fallback` (on),
+ * since the feature is meant to help by default.
+ * @param {unknown} value
+ * @param {number | null} fallback
+ * @returns {number | null}
+ */
+export function clampNameReveal(value, fallback) {
+  if (value === null) return null;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  let best = NAME_REVEAL_OPTIONS[0];
+  for (const opt of NAME_REVEAL_OPTIONS) {
+    if (Math.abs(opt - value) < Math.abs(best - value)) best = opt;
+  }
+  return best;
+}
+
+/**
  * Sanitize an untrusted per-category reveal config into a full `{ flag, map,
- * metric }` with every value snapped to an allowed option, defaulting anything
- * missing. The server must never trust a client-supplied reveal config directly.
+ * metric, name }` with every value snapped to an allowed option, defaulting
+ * anything missing. `name` is the world-facts name-reveal fraction (or `null` for
+ * off). The server must never trust a client-supplied reveal config directly.
  * @param {unknown} reveal
- * @returns {{ flag: number, map: number, metric: number }}
+ * @returns {{ flag: number, map: number, metric: number, name: number | null }}
  */
 export function validateReveal(reveal) {
   const r = (reveal && typeof reveal === 'object') ? /** @type {any} */ (reveal) : {};
@@ -95,6 +143,7 @@ export function validateReveal(reveal) {
     flag: clampReveal(r.flag, DEFAULT_REVEAL.flag),
     map: clampReveal(r.map, DEFAULT_REVEAL.map),
     metric: clampReveal(r.metric, DEFAULT_REVEAL.metric),
+    name: clampNameReveal(r.name, DEFAULT_REVEAL.name),
   };
 }
 
@@ -115,6 +164,25 @@ export function veilProgress(deadlineMs, nowMs, totalMs, clearFrac) {
   if (totalMs <= 0 || clearFrac <= 0) return 1;
   const elapsed = totalMs - (deadlineMs - nowMs);
   return Math.min(1, Math.max(0, elapsed / (totalMs * clearFrac)));
+}
+
+/**
+ * Whether the world-facts country names should be shown yet: true once `frac` of
+ * the question window has elapsed. `frac` of `null` (off) never reveals; a `frac`
+ * of 0 or a window past its deadline reveals immediately. Same clock the veil and
+ * countdown read, so every client flips the names on at the same instant.
+ *
+ * @param {number} deadlineMs  epoch ms the question ends
+ * @param {number} nowMs  current epoch ms
+ * @param {number} totalMs  the question's full length in ms
+ * @param {number | null} [frac]  fraction of the window to reveal names at, or null for off
+ * @returns {boolean}
+ */
+export function namesRevealed(deadlineMs, nowMs, totalMs, frac) {
+  if (frac == null) return false;
+  if (frac <= 0 || totalMs <= 0) return true;
+  const elapsed = totalMs - (deadlineMs - nowMs);
+  return elapsed >= totalMs * frac;
 }
 
 /**

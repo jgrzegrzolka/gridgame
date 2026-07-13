@@ -10,7 +10,7 @@
  *
  * @typedef {'connecting' | 'lobby' | 'question' | 'reveal' | 'final'} Phase
  * @typedef {{ playerId: string, nickname: string, score: number, present: boolean }} RosterEntry
- * @typedef {{ prompt: string, options: string[], roundId?: string, clearFrac?: number }} PublicQuestion
+ * @typedef {{ prompt: string, options: string[], roundId?: string, clearFrac?: number, nameFrac?: number }} PublicQuestion
  * @typedef {{ key: string, fallback: string, params?: Record<string, string> }} StatusOverride
  *
  * @typedef {Object} PartyClientState
@@ -135,7 +135,7 @@ export function reducePartyMessage(state, message) {
         state: {
           ...state,
           phase: 'question',
-          question: { prompt: message.prompt, options: message.options ?? [], roundId: message.roundId, clearFrac: message.clearFrac },
+          question: { prompt: message.prompt, options: message.options ?? [], roundId: message.roundId, clearFrac: message.clearFrac, nameFrac: message.nameFrac },
           roundIndex: message.roundIndex ?? state.roundIndex,
           totalRounds: message.totalRounds ?? state.totalRounds,
           tricky: message.tricky ?? state.tricky,

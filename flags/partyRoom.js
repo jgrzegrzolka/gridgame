@@ -18,7 +18,7 @@ import { scoreRound } from './partyScore.js';
  *
  * @typedef {'lobby' | 'question' | 'reveal' | 'final'} Phase
  * @typedef {{ nickname: string, score: number }} Seat
- * @typedef {{ prompt: string, options: string[], answer: string, roundId?: string, clearFrac?: number }} Question
+ * @typedef {{ prompt: string, options: string[], answer: string, roundId?: string, clearFrac?: number, nameFrac?: number }} Question
  * @typedef {{ playerId: string, choice: string, correct: boolean }} Buzz
  *
  * @typedef {Object} Room
@@ -42,9 +42,10 @@ import { scoreRound } from './partyScore.js';
  *   clock. Purely a client render flag — the room stores it (so it survives an
  *   eviction and rides every question / welcome broadcast) but never acts on it;
  *   scoring, the answer, and the round contract are untouched.
- * @property {{ flag: number, map: number, metric: number } | null} reveal  the
+ * @property {{ flag: number, map: number, metric: number, name: number | null } | null} reveal  the
  *   host's per-category reveal timing (fraction of the window each category's veil
- *   clears at). Stored like `plan` so the server can stamp the right `clearFrac`
+ *   clears at) plus `name`, the world-facts name-reveal fraction (null = off).
+ *   Stored like `plan` so the server can stamp the right `clearFrac` / `nameFrac`
  *   on every question, including rounds generated after an eviction; null before
  *   start, when the server falls back to `DEFAULT_REVEAL`. The room never reads it.
  * @property {Question | null} question  the live question; `answer` never leaves
@@ -462,12 +463,15 @@ function rosterMessage(room) {
  * @param {Question} q
  */
 function publicQuestion(q) {
-  /** @type {{ prompt: string, options: string[], roundId?: string, clearFrac?: number }} */
+  /** @type {{ prompt: string, options: string[], roundId?: string, clearFrac?: number, nameFrac?: number }} */
   const pub = { prompt: q.prompt, options: q.options };
   if (q.roundId != null) pub.roundId = q.roundId;
   // The veil timing for this question rides along so a tricky-mode client clears
   // the tile on schedule; it's stamped server-side from the host's reveal config.
   if (q.clearFrac != null) pub.clearFrac = q.clearFrac;
+  // The name-reveal timing (world-facts rounds only) rides along the same way so
+  // every client fades the country names onto the tiles at the same instant.
+  if (q.nameFrac != null) pub.nameFrac = q.nameFrac;
   return pub;
 }
 
