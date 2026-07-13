@@ -59,12 +59,18 @@ body {
   gap: 8px;
 }
 .filter-chips { display: contents; }
-/* Teaser pills flow as direct flex items of the summary row, like the chips. */
+/* Teaser pills flow as direct flex items of the summary row, like the chips.
+ * They stay visible while the groups are open too: hiding them left "less"
+ * orphaned on an empty row, and an active teaser value (excepted from the
+ * chips row) lost its only top-row representation. The group twins are kept
+ * in sync by the shared repaint, so the duplication can't disagree. */
 .filter-teasers { display: contents; }
-/* While the groups are open the same pills are visible in their rows, and the
- * teasers would double-render those values; hide them for the duration (the
- * "+ N more" button stays, reading "less"). */
-#filter-bar.is-open .filter-teasers { display: none; }
+/* Teasers sit directly above the world-facts chips, so they share that row's
+ * pill sizing: two adjacent pill rows at two heights read as a mistake. */
+.filter-teasers .pill {
+  padding: 5px 11px;
+  font-size: 12.5px;
+}
 /* A chip = one active filter. Solid brand fill mirrors `.pill.active` so an
  * applied filter reads the same whether you see it as a pill or a chip. */
 .filter-chip {

@@ -194,11 +194,14 @@ export function bootFlagsData() {
     return wrap;
   }
 
-  // No status filter on by default: first load shows all 269 entries
-  // (sovereign states plus territories, subnational regions, and orgs
-  // like EU / ASEAN). The Status pills are normal toggles for anyone who
-  // wants to narrow the view.
+  // Sovereign is preselected on first load (Jan's call, 2026-07-13): the
+  // page opens on the 195 recognisable countries, with the full 269
+  // (territories, subnational regions, org flags) one visible tap away.
+  // The default is an ordinary include on the always-visible Sovereign
+  // teaser pill, so nothing is hidden: the pill renders active, the count
+  // reads "195 / 269", and tapping the pill (or Clear) shows everything.
   const filters = emptyFilters();
+  filters.status.include.add('sovereign');
   /** Diacritic-folded substring of the name search input. Empty means the
    * filter is off. Stored as the folded form so we don't refold per-tile
    * on every input event — the per-country fold is the same idea, computed
@@ -949,14 +952,13 @@ export function bootFlagsData() {
   chipsWrap.className = 'filter-chips';
 
   // Teaser pills: a curated handful of high-traffic filters, always visible
-  // in the dead space next to the search box, so the common narrowings are
-  // one tap and filtering is discoverable without the abstract "Add filter"
-  // step. They are REAL tristate pills built by the same factory as the
-  // group rows (shared cycle + repaint), so a teaser and its group twin can
-  // never disagree; the CSS hides the teasers while the groups are open
-  // (the same pills are visible in their rows then). Values must exist in
-  // the groups below. Curation is a taste call, tune freely; Sovereign
-  // leads because "just the 195 real countries" is the most-wanted cut.
+  // (groups open or closed) on their own line under the search box, so the
+  // common narrowings are one tap and filtering is discoverable without the
+  // abstract "Add filter" step. They are REAL tristate pills built by the
+  // same factory as the group rows (shared cycle + repaint), so a teaser
+  // and its group twin can never disagree. Values must exist in the groups
+  // below. Curation is a taste call, tune freely; Sovereign leads because
+  // it carries the preselected default above.
   /** The values each group can legally filter on, for the guard below. */
   const GROUP_VALUES = {
     status: /** @type {readonly string[]} */ (STATUS_VALUES),

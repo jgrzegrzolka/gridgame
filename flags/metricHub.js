@@ -26,11 +26,13 @@ import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from './metricVisuals.js';
 /** @typedef {{ op: '>=' | '<=', n: number }} Tier */
 /** @typedef {import('./metricTiers.js').MetricTierItem} MetricTierItem */
 
-/** How many chips show before the "+ N more" toggle. Five keeps the row
+/** How many chips show before the "+ N more" toggle. Four keeps the row
  * (label + chips + the "+ N more" button) on ONE line inside flagsdata's
- * 756px column; at six the button wrapped to a line of its own, which read
- * as a stray element rather than the row's continuation. */
-export const DEFAULT_PRIMARY_COUNT = 5;
+ * 756px column IN BOTH LANGUAGES; a wrapped button reads as a stray element
+ * rather than the row's continuation. Five fit in English but Polish labels
+ * run longer ("PKB na mieszkańca", "+ 14 więcej") and pushed the button onto
+ * its own line, the exact bug the earlier six-chip cut had in English. */
+export const DEFAULT_PRIMARY_COUNT = 4;
 
 /**
  * @typedef {Object} MetricHubOptions
