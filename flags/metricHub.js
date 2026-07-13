@@ -48,6 +48,10 @@ const GAP_FALLBACK = 6;
  * @property {(key: string) => Element[]} [panelExtras] consumer controls
  *   rendered between the panel lead and the tier pills, rebuilt per open.
  * @property {boolean} [showCounts] render each tier's match count (findFlag).
+ * @property {boolean} [moreButton] render the hub's own "+ N more" / "less"
+ *   toggle (default true, findFlag). flagsdata passes false: its single bar
+ *   toggle drives the hub through `setExpanded` instead, so filters and
+ *   world facts expand and collapse as one.
  * @property {{ avail?: () => number, measure?: (el: any) => number }} [fit]
  *   measurement overrides for the fill-to-fit layout: `avail` returns the
  *   row width to fill, `measure` an element's width. Defaults read the live
@@ -72,6 +76,7 @@ export function createMetricHub(opts) {
     onPanelToggle,
     panelExtras,
     showCounts = false,
+    moreButton = true,
     fit = {},
     label,
     doc = document,
@@ -124,20 +129,30 @@ export function createMetricHub(opts) {
   // continuation. How many chips it hides is decided by refit() (fill-to-fit
   // against the live row width), never by a hardcoded count: fixed counts
   // kept wrapping the button onto its own line in one language or another.
-  const moreBtn = doc.createElement('button');
-  /** @type {any} */ (moreBtn).type = 'button';
-  moreBtn.className = 'pill mhub-more';
-  moreBtn.addEventListener('click', () => {
-    expanded = !expanded;
-    // Folding the row folds the open metric's panel with it: the row and
-    // its panel expand and hide together, as one section.
+  // Omitted when a consumer drives the expansion externally (setExpanded).
+  /** @type {HTMLElement | null} */
+  let moreBtn = null;
+  if (moreButton) {
+    moreBtn = doc.createElement('button');
+    /** @type {any} */ (moreBtn).type = 'button';
+    moreBtn.className = 'pill mhub-more';
+    moreBtn.addEventListener('click', () => setExpanded(!expanded));
+    chipsRow.appendChild(moreBtn);
+  }
+
+  /**
+   * Expand to every chip / collapse back to the fitted line. Folding also
+   * folds the open metric's panel: a section and its panel hide as one.
+   * @param {boolean} open
+   */
+  function setExpanded(open) {
+    expanded = open;
     if (!expanded && openKey) {
-      setOpen(null);
-      return; // setOpen's update() already re-fit the row
+      setOpen(null); // setOpen's update() re-fits the row
+      return;
     }
     refit();
-  });
-  chipsRow.appendChild(moreBtn);
+  }
 
   const panel = doc.createElement('div');
   panel.className = 'mhub-panel';
@@ -169,13 +184,15 @@ export function createMetricHub(opts) {
   function refit() {
     if (expanded) {
       for (const c of chips) c.btn.hidden = false;
-      moreBtn.hidden = false;
-      moreBtn.textContent = t('metricHub.less', 'less');
+      if (moreBtn) {
+        moreBtn.hidden = false;
+        moreBtn.textContent = t('metricHub.less', 'less');
+      }
       return;
     }
     // Measure against the widest label the button can carry (the full chip
     // total), then write the real remainder over it.
-    moreBtn.textContent = `+ ${chips.length} ${t('metricHub.more', 'more')}`;
+    if (moreBtn) moreBtn.textContent = `+ ${chips.length} ${t('metricHub.more', 'more')}`;
     const shown = fitChipRow({
       items: chips.map((c) => c.btn),
       moreBtn,
@@ -187,7 +204,7 @@ export function createMetricHub(opts) {
       // the open panel's chip, which anchors the panel.
       pinned: chips.map((c) => getTier(c.key) !== null || openKey === c.key),
     });
-    if (shown < chips.length) {
+    if (moreBtn && shown < chips.length) {
       moreBtn.textContent = `+ ${chips.length - shown} ${t('metricHub.more', 'more')}`;
     }
   }
@@ -345,6 +362,9 @@ export function createMetricHub(opts) {
     update,
     refreshI18n,
     refit,
+    setExpanded,
+    /** How many chips the collapsed fit hid (for an external toggle's count). */
+    hiddenChipCount() { return chips.filter((c) => c.btn.hidden).length; },
     /** Close the panel (fires onPanelToggle(null) if it was open). */
     closePanel() { setOpen(null); },
     /** @returns {string | null} */

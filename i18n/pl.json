@@ -902,8 +902,7 @@
   "metricHub": {
     "title": "Fakty o świecie",
     "more": "więcej",
-    "less": "mniej",
-    "hideValues": "ukryj wartości"
+    "less": "mniej"
   },
   "metric": {
     "population": "Liczba ludności",

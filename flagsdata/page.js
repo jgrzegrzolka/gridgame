@@ -959,16 +959,20 @@ export function bootFlagsData() {
   filterBar.classList.remove('is-open');
   addBtn.setAttribute('aria-expanded', 'false');
   /**
-   * Layout pass for the Status row's toggle + narrow-screen fit. The toggle
-   * lives permanently at the end of the Status row: "+ N more" collapsed
-   * (N = every pill in the folded groups), "less" when they're open, so
-   * expanding never moves or relabels anything already on screen. The
-   * fill-to-fit only matters on narrow screens where even the four status
-   * pills + toggle can overflow one line.
+   * Layout pass for the bar's ONE toggle + the Status row's narrow-screen
+   * fit. The toggle lives permanently at the end of the Status row and
+   * governs the whole bar: collapsed, "+ N more" counts every pill in the
+   * folded groups PLUS every world-facts chip the hub's fit hid; expanded,
+   * "less" folds both back. One switch, one mental model. The fill-to-fit
+   * only matters on narrow screens where even the four status pills + the
+   * toggle can overflow one line.
    */
   function refitPreview() {
     const open = filterBar.classList.contains('is-open');
-    const folded = groupsWrap.querySelectorAll('.pill[data-group][data-value]').length;
+    // Settle the hub's fit first so its hidden-chip count is current.
+    hub.refit();
+    const folded = groupsWrap.querySelectorAll('.pill[data-group][data-value]').length
+      + hub.hiddenChipCount();
     addBtn.textContent = open
       ? t('metricHub.less', 'less')
       : `+ ${folded} ${t('metricHub.more', 'more')}`;
@@ -986,6 +990,8 @@ export function bootFlagsData() {
   addBtn.addEventListener('click', () => {
     const open = filterBar.classList.toggle('is-open');
     addBtn.setAttribute('aria-expanded', String(open));
+    // Filters and world facts expand and collapse as one section.
+    hub.setExpanded(open);
     refitPreview();
   });
   let previewRaf = 0;
@@ -1056,8 +1062,6 @@ export function bootFlagsData() {
   groupsWrap.appendChild(
     buildFilterGroup('flagsdata.filterStripes', 'Stripes', 'stripesOnly', [...STRIPES_ORIENTATIONS_FOR_RANDOM]),
   );
-  // Groups exist now: run the first toggle paint + narrow-screen fit.
-  refitPreview();
 
   const clearBtn = document.createElement('button');
   clearBtn.type = 'button';
@@ -1126,16 +1130,6 @@ export function bootFlagsData() {
     lensSortWrap.appendChild(b);
   }
 
-  // "hide values ×", the panel's explicit off switch. Same action as
-  // re-tapping the open chip; spelled out because "tap the chip again"
-  // isn't discoverable on its own.
-  const hideValuesBtn = document.createElement('button');
-  hideValuesBtn.type = 'button';
-  hideValuesBtn.className = 'mhub-hide';
-  hideValuesBtn.setAttribute('data-i18n', 'metricHub.hideValues');
-  hideValuesBtn.textContent = t('metricHub.hideValues', 'hide values');
-  hideValuesBtn.addEventListener('click', () => hub.closePanel());
-
   const hub = createMetricHub({
     t,
     metrics: METRIC_FILES,
@@ -1153,7 +1147,10 @@ export function bootFlagsData() {
     // unchanged order shows numbers but no story); closing restores the
     // resting A–Z wall.
     onPanelToggle: (key) => setLens(key),
-    panelExtras: () => [lensSortWrap, hideValuesBtn],
+    panelExtras: () => [lensSortWrap],
+    // No hub-side "+ N more": the bar's single toggle (Status row) expands
+    // and collapses the world facts together with the filter groups.
+    moreButton: false,
   });
   // Last row of the bar, AFTER the collapsible pill groups: expanding
   // "+ N more" must open the groups directly under the teaser row they
@@ -1161,6 +1158,9 @@ export function bootFlagsData() {
   // The hub stays always visible either way (it changes how the same set is
   // presented rather than narrowing it).
   filterBar.appendChild(hub.el);
+  // Hub exists now: run the first toggle paint + narrow-screen fit (it
+  // reads the hub's hidden-chip count for the honest "+ N more").
+  refitPreview();
 
   function syncSortPressed() {
     for (const b of lensSortWrap.querySelectorAll('button')) {

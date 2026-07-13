@@ -259,6 +259,22 @@ test('refreshI18n relabels chips, the more button, and the open panel', () => {
   assert.equal(hub.getOpenKey(), 'population'); // open state survives the refresh
 });
 
+test('moreButton:false omits the toggle; setExpanded drives the row externally', () => {
+  const { hub, toggles } = makeHub({ fit: NARROW, moreButton: false });
+  assert.equal(byClass(hub.el, 'mhub-more').length, 0);
+  const fitted = byClass(hub.el, 'mhub-chip').filter((c) => !c.hidden).length;
+  assert.ok(hub.hiddenChipCount() > 0);
+  assert.equal(hub.hiddenChipCount(), METRIC_FILES.length - fitted);
+  hub.setExpanded(true);
+  assert.equal(hub.hiddenChipCount(), 0);
+  // Collapsing externally folds an open panel with the row.
+  chipFor(hub, 'beerPerCapita').click();
+  hub.setExpanded(false);
+  assert.equal(hub.getOpenKey(), null);
+  assert.equal(toggles[toggles.length - 1], null);
+  assert.equal(hub.hiddenChipCount(), METRIC_FILES.length - fitted);
+});
+
 test('an optional label leads the chip row with a data-i18n hook', () => {
   const { hub } = makeHub({ label: { key: 'metricHub.title', fallback: 'World facts' } });
   const labelEl = byClass(hub.el, 'mhub-label')[0];

@@ -297,23 +297,6 @@ dialog#zoom .country-data {
 .mhub {
   margin-bottom: 12px;
 }
-/* "hide values ×": quiet text affordance pushed to the panel's right edge. */
-.mhub-hide {
-  font: inherit;
-  font-size: 12px;
-  background: none;
-  border: none;
-  color: var(--link-color);
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 2px 4px;
-  margin-left: auto;
-  white-space: nowrap;
-}
-.mhub-hide:hover {
-  background: var(--surface-hover-color);
-  border-radius: 4px;
-}
 /* Sort: a small segmented control inside the hub panel, so it only exists
  * while a lens is on. */
 .lens-sort {
