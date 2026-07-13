@@ -27,21 +27,24 @@ Two rules that every surface leans on. Settle them at data time; getting them wr
 
 Numbered to match how the work is usually described. Each notes what it touches, its sub-skill, and whether it can be deferred.
 
-### 1. Data file (required, small)
+### 1. Data file + visual identity (required, small)
 
-Add `flags/metrics/<key>.json`, self-describing: `key` / `label` / `unit` / `format` / `source` / `year` / `values`. `format` is a display hint (`'compact'` for 1.4B / 337M / 552K, `'decimal1'` for one-decimal rates). Generate it with an `authoring/build-<key>.mjs` refresh script modelled on `build-population.mjs` (fetch source, join by ISO code, hand-maintained `FILLS` for what the source omits, honor the data contract above). Add one line to `flags/metrics/index.js`'s `METRIC_FILES`. Add the schema + data-contract test to `flags/metrics.test.js` (integers, coverage invariant, keys are real places). This alone lights up surface 2 for free.
+Add `flags/metrics/<key>.json`, self-describing: `key` / `label` / `unit` / `format` / `source` / `year` / `values`. `format` is a display hint (`'compact'` for 1.4B / 337M / 552K, `'decimal1'` for one-decimal rates). Generate it with an `authoring/build-<key>.mjs` refresh script modelled on `build-population.mjs` (fetch source, join by ISO code, hand-maintained `FILLS` for what the source omits, honor the data contract above). Add one line to `flags/metrics/index.js`'s `METRIC_FILES`. Add the schema + data-contract test to `flags/metrics.test.js` (integers, coverage invariant, keys are real places).
+
+**Visual identity is part of this step now:** one entry each in `flags/metricVisuals.js`'s `METRIC_ICONS` (24-box line-style svg, `currentColor`), `METRIC_HUES` (pick a hue distinct from the nearest existing metric; the blue/teal region is crowded), and `METRIC_SHORT` (compact chip label, usually reusing the `party.modeShort.*` key added in surface 5's i18n). `flags/metricVisuals.test.js` fails until all three exist, so a metric can't ship half-identified. These feed the metric hub chips on flagsdata + findFlag, flagsdata's applied-filter chips, AND Flag Party's setup chips + prompt lead. The hue is the sanctioned palette exception; it lives ONLY here (no CSS hue rules anywhere).
+
+This step alone lights up surface 2 for free.
 
 ### 2. flagsdata metric lens (free once data exists)
 
-The lens (pick a metric, see value + rank per tile, sort, sparse dimming) is metric-agnostic via `createMetric` (`flags/metrics.js`) and the `METRIC_FILES` registry. Adding the data file (surface 1) makes the new metric appear in the flagsdata lens selector with no further code. Feature DE. Nothing to do here beyond surface 1.
+The lens (pick a metric in the World-facts hub, see value + rank per tile, Highest/Lowest sort, sparse dimming) is metric-agnostic via `createMetric` (`flags/metrics.js`) and the `METRIC_FILES` registry. Adding the data file + visuals (surface 1) makes the new metric appear as a hub chip on flagsdata with no further code. Feature DE. Nothing to do here beyond surface 1.
 
-### 3. flagsdata filter bar + findFlag "Make a puzzle" filter (moderate)
+### 3. flagsdata filter bar + findFlag "Make a puzzle" filter (small since the hub)
 
-Threshold tier pills (`>=100M` / `<=1M`, ...) that both surfaces share via `flags/metricTiers.js`. Order:
+Threshold tier pills (`>=100M` / `<=1M`, ...) that both pages render through the shared metric hub (`flags/metricHub.js`), fed by `flags/metricTiers.js`. Since the hub landed there is **no per-page section or filter-group code**: a metric registered in `METRIC_TIER_REGISTRY` gets its tier panel on both pages automatically. What remains:
 
-- **Register the tiers once.** Add one line to `METRIC_TIER_REGISTRY`: `<key>: { breaks: <KEY>_BREAKS_FOR_RANDOM, factory: <key>, has: (c) => typeof c.<key> === 'number' }` (the `breaks` and `factory` come from surface 4; `has` powers the no-data guard). `buildMetricTierItems('<key>', countries)` now backs both surfaces so they can't drift.
-- **findFlag chooser** (five coordinated edits): (a) scalar `<key>` on `Filters` + a `matchesFilters` branch reading the denormalized field (`flags/flagsFilter.js`); (b) a `<key>:>=N` URL token in `parseFilterString` / `serializeFilter` + `pillLabel` / `filterTitle` (`flags/findFlag.js`), reusing the `<key>.atLeast/atMost` i18n from surface 4; (c) a single-select chooser section in `findFlag/page.js` built from `buildMetricTierItems`; (d) `attach<Key>s` at findFlag's own load site (it fetches the metric JSON itself); (e) a `<key>Probability` modifier path in `pickRandomMix` (mutually exclusive with colorCount) so Random can reach every tier. Then update the **findflag-random-coverage** skill (its rule requires documenting the new modifier). Add `findFlag.sections.<key>` (en + pl).
-- **flagsdata filter group.** A single-select group via `buildFilterGroup`-style code in `flagsdata/page.js` (the `buildPopulationGroup` pattern), labelled by the shared `pillLabel`, wired into Clear / the filter-count badge / the language switch, plus `attach<Key>s` at flagsdata's load site. No new i18n if surface 4's `<key>.atLeast/atMost` labels and a `findFlag.sections.<key>` title exist.
+- **Register the tiers once.** Add one line to `METRIC_TIER_REGISTRY`: `<key>: { breaks: <KEY>_BREAKS_FOR_RANDOM, factory: <key>, has: (c) => typeof c.<key> === 'number' }` (the `breaks` and `factory` come from surface 4; `has` powers the no-data guard). `buildMetricTierItems('<key>', countries)` backs both pages so they can't drift.
+- **Shared filter plumbing** (unchanged by the hub): (a) scalar `<key>` on `Filters` + a `matchesFilters` branch reading the denormalized field (`flags/flagsFilter.js`); (b) a `<key>:>=N` URL token in `parseFilterString` / `serializeFilter` + `pillLabel` / `filterTitle` (`flags/findFlag.js`), reusing the `<key>.atLeast/atMost` i18n from surface 4; (c) `attach<Key>s` at both pages' load sites (each fetches the metric JSON itself); (d) a `<key>Probability` modifier path in `pickRandomMix` (mutually exclusive with colorCount) so Random can reach every tier. Then update the **findflag-random-coverage** skill (its rule requires documenting the new modifier). No `findFlag.sections.<key>` key anymore: the hub names metrics via `metric.<key>` + `METRIC_SHORT`.
 
 ### 4. TTT threshold mode + no-data handling (most code)
 
@@ -53,7 +56,7 @@ Mirror Feature DF. In `flags/engine.js`: a `<key>(op, n)` category factory (bake
 
 ### 5. Flag Party round (moderate; the round factory is already generalized)
 
-`flags/partyRounds/superlative.js` exports a `createSuperlativeRound(metric, roundId)` factory that takes a `createMetric(...)` instance, so a new metric is a **sibling round**, not a rewrite. Population (`superlative`), area (`superlative-area`), and density (`superlative-density`) are all registered through it. Unlike surfaces 2-4 this one does **not** auto-light from `METRIC_FILES`: each round is registered explicitly, so it's the surface most likely to be forgotten. Mirror the density round across seven spots (grep `densityRound` / `superlative-density` for the exact set): (a) `superlative.js` (import the metric json + `export const <key>Round = createSuperlativeRound(createMetric(<key>, []), 'superlative-<key>')`); (b) `superlative.test.js` round-instance test; (c) `party/partyGameServer.js`'s `ROUNDS` array; (d) `flags/partyPlan.js` `METRIC_MODES` + `partyPlan.test.js`; (e) `flagParty/page.js` `MODE_LABELS` + `SUPERLATIVE_MODES` + an icon SVG; (f) i18n en+pl `party.mode.superlative<Key>` / `party.modeShort.*`; (g) a per-metric hue in `flagParty/index.css`: one `[data-metric="superlative-<key>"] { --mc: #rrggbb; }` line (grep the existing block). **Don't skip (g).** The `--mc` hue colours both the metric's setup chip *when selected* and the in-round criterion icon (`.prompt.superlative .prompt-lead`); a metric with no `--mc` renders colourless in both places, which shipped as a latent bug for wine/cocoa/banana/coastline. Pick a hue distinct from the nearest existing metric (the blue/teal region is crowded: pop, gdppc, elevation, coastline). It's a sanctioned palette exception, the only one that reaches a gameplay surface.
+`flags/partyRounds/superlative.js` exports a `createSuperlativeRound(metric, roundId)` factory that takes a `createMetric(...)` instance, so a new metric is a **sibling round**, not a rewrite. Population (`superlative`), area (`superlative-area`), and density (`superlative-density`) are all registered through it. Unlike surfaces 2-4 this one does **not** auto-light from `METRIC_FILES`: each round is registered explicitly, so it's the surface most likely to be forgotten. Mirror the density round across six spots (grep `densityRound` / `superlative-density` for the exact set): (a) `superlative.js` (import the metric json + `export const <key>Round = createSuperlativeRound(createMetric(<key>, []), 'superlative-<key>')`); (b) `superlative.test.js` round-instance test; (c) `party/partyGameServer.js`'s `ROUNDS` array; (d) `flags/partyPlan.js` `METRIC_MODES` + `partyPlan.test.js`; (e) `flagParty/page.js` `MODE_LABELS` + `SUPERLATIVE_MODES`; (f) i18n en+pl `party.mode.superlative<Key>` / `party.modeShort.*`. The icon and hue are NOT party steps anymore: the setup chip and the in-round criterion icon resolve both from `flags/metricVisuals.js` via the round's values file (`metricKeyForRound` in `flagParty/page.js`), so surface 1's visuals entry covers them and a metric can no longer ship colourless (the old wine/cocoa/banana/coastline bug class).
 
 ### 6. Daily puzzles: NOT part of "done"; tracked in `METRIC_DAILY_PUZZLES.md`
 
@@ -71,11 +74,11 @@ When you actually start a metric, open a Feature entry under `## Now` in DATA_FE
 
 **Data contract:** dense (fill all real places) | sparse (absence: zero) | universal (source all, absence: unknown)
 
-- [ ] 1. Data: `flags/metrics/<key>.json` + `build-<key>.mjs` + `METRIC_FILES` line + `metrics.test.js` schema/coverage/no-org invariant
-- [ ] 2. flagsdata lens (free once step 1 lands; just confirm it appears)
-- [ ] 3. Filters: `metricTiers.js` registry line (+ `has`); findFlag chooser (5 edits) + `findflag-random-coverage` skill note; flagsdata filter group; `attach<Key>s` at both load sites
+- [ ] 1. Data: `flags/metrics/<key>.json` + `build-<key>.mjs` + `METRIC_FILES` line + `metrics.test.js` schema/coverage/no-org invariant; visuals: icon + hue + short label in `flags/metricVisuals.js` (pinned by `metricVisuals.test.js`)
+- [ ] 2. flagsdata lens (free once step 1 lands; just confirm the hub chip appears)
+- [ ] 3. Filters: `metricTiers.js` registry line (+ `has`); `flagsFilter.js` scalar + `findFlag.js` URL token; `<key>Probability` in `pickRandomMix` + `findflag-random-coverage` skill note; `attach<Key>s` at both load sites (the hub renders both pages' tier pills automatically)
 - [ ] 4. TTT: `<key>()` factory + `<KEY>_BREAKS_FOR_RANDOM` + pool/id/label wiring; `attach<Key>s` at all 6 load sites; `<key>.atLeast/atMost` i18n; verify no-data guard in-browser
-- [ ] 5. Flag Party round (needs `partyRounds/superlative.js` generalized first, a one-time cost); includes the `[data-metric="superlative-<key>"] { --mc }` hue in `flagParty/index.css` (colours the setup chip + in-round icon; skipping it ships a colourless metric)
+- [ ] 5. Flag Party round (six spots, grep `superlative-density`; icon + hue come from step 1's visuals entry)
 
 Surface 6 (daily puzzles) is NOT a checkbox here: when 1-5 land, add a row to `METRIC_DAILY_PUZZLES.md` and close the Feature.
 ```

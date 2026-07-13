@@ -8,6 +8,8 @@ import { createColorCountPicker } from '../colorCountPicker.js';
 import { createMetric } from '../flags/metrics.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { computeLensView } from '../flags/metricLens.js';
+import { createMetricHub } from '../flags/metricHub.js';
+import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
@@ -61,12 +63,6 @@ function continentLabel(name) {
 /** @param {string} v */
 function colorLabel(v) {
   return t(`color.${v}`, v);
-}
-
-/** Translated name of a metric lens, falling back to the metric's own English label.
- * @param {string} key @param {string} fallback */
-function metricLabel(key, fallback) {
-  return t(`metric.${key}`, fallback);
 }
 
 /** @param {string} v */
@@ -738,6 +734,17 @@ export function bootFlagsData() {
       if (ref.kind === 'pill' && ref.group === 'color') {
         chip.appendChild(makeColorSwatch(ref.value));
       }
+      // A metric chip wears its metric's icon + hue (shared with the hub
+      // chips and Flag Party), so "≥ 100K tonnes" can never read as the
+      // wrong fact: the icon and the leading short name disambiguate.
+      if (ref.kind === 'scalar' && ref.group !== 'colorCount') {
+        chip.classList.add('is-metric');
+        chip.style.setProperty('--mc', METRIC_HUES[ref.group] || 'currentColor');
+        const ic = document.createElement('span');
+        ic.className = 'mhub-ic';
+        ic.innerHTML = METRIC_ICONS[ref.group] || '';
+        chip.appendChild(ic);
+      }
       const label = document.createElement('span');
       label.className = 'filter-chip-label';
       label.textContent = chipLabel(ref);
@@ -775,12 +782,14 @@ export function bootFlagsData() {
       const sym = c && c.op === '>=' ? '≥' : c && c.op === '<=' ? '≤' : '=';
       return `${t('flagsdata.filterColors', 'Colors')} ${sym} ${c ? c.n : ''}`;
     }
+    // Metric tier: lead with the metric's short name so a unit-only tier
+    // label ("over 100K tonnes") always names its fact. `${op}${n}` is the
+    // same id suffix the tier pills and the URL serializer use.
     const cons = filters[ref.group];
-    if (cons && state) {
-      const item = buildMetricTierItems(ref.group, state.items).find((it) => it.op === cons.op && it.n === cons.n);
-      if (item) return pillLabel(ref.group, item.value, 'include', t);
-    }
-    return cons ? `${cons.op} ${cons.n}` : '';
+    if (!cons) return '';
+    const short = METRIC_SHORT[ref.group];
+    const tierText = pillLabel(ref.group, `${cons.op}${cons.n}`, 'include', t);
+    return `${short ? t(short.key, short.fallback) : ref.group} · ${tierText}`;
   }
 
   /**
@@ -805,8 +814,10 @@ export function bootFlagsData() {
       colorCountPicker.reset();
       if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
     } else {
+      // Metric tier: clear the scalar and let the hub repaint its chip +
+      // tier-pill states (the hub owns that DOM now, not the filter groups).
       filters[ref.group] = null;
-      for (const p of filterBar.querySelectorAll(`.pill[data-group="${ref.group}"]`)) p.classList.remove('active');
+      hub.update();
     }
     applyFilter();
   }
@@ -855,54 +866,6 @@ export function bootFlagsData() {
           btn.classList.add('active');
         }
         if (group === 'color') colorCountLock.sync();
-        applyFilter();
-      });
-      wrap.appendChild(btn);
-    }
-    return wrap;
-  }
-
-  /**
-   * Metric-threshold tier group (population, area, …), single-select, unlike
-   * the include/exclude tristate `buildFilterGroup` builds. A threshold is a
-   * scalar (`filters[metricKey]`), so at most one tier applies; tapping the
-   * active tier clears it. Same pills, labels, and predicate as findFlag's
-   * "Make a puzzle" chooser (via the shared `buildMetricTierItems` + `pillLabel`),
-   * rendered in flagsdata's own filter-group chrome, the established
-   * shared-token / per-page-chrome split. Built after data loads (tiers count
-   * against the loaded set, and the predicate reads the field `attach<Metric>s`
-   * denormalizes on). Reuses findFlag's `sections.<metricKey>` label key, same
-   * cross-reference the Colors group already makes to `findFlag.noOtherColors`.
-   * @param {'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal'} metricKey
-   * @param {string} fallbackLabel
-   * @param {Country[]} countries
-   */
-  function buildMetricGroup(metricKey, fallbackLabel, countries) {
-    const wrap = document.createElement('div');
-    wrap.className = 'filter-group';
-    const labelEl = document.createElement('span');
-    labelEl.className = 'filter-label';
-    const sectionKey = `findFlag.sections.${metricKey}`;
-    labelEl.setAttribute('data-i18n', sectionKey);
-    labelEl.textContent = t(sectionKey, fallbackLabel);
-    wrap.appendChild(labelEl);
-    for (const it of buildMetricTierItems(metricKey, countries)) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'pill';
-      btn.dataset.group = metricKey;
-      btn.dataset.value = it.value;
-      btn.textContent = pillLabel(metricKey, it.value, 'include', t);
-      const cur = filters[metricKey];
-      if (cur !== null && cur.op === it.op && cur.n === it.n) btn.classList.add('active');
-      btn.addEventListener('click', () => {
-        const active = filters[metricKey];
-        const isActive = active !== null && active.op === it.op && active.n === it.n;
-        filters[metricKey] = isActive ? null : { op: it.op, n: it.n };
-        // Repaint the group's pressed state from the single source: single-
-        // select, so only the clicked tier can end up active.
-        for (const p of wrap.querySelectorAll('.pill')) p.classList.remove('active');
-        if (!isActive) btn.classList.add('active');
         applyFilter();
       });
       wrap.appendChild(btn);
@@ -1060,65 +1023,34 @@ export function bootFlagsData() {
     }
     searchInput.value = '';
     nameQuery = '';
+    // The hub repaints its chip + tier states from the (now empty) filters.
+    // The lens is view state, not a filter, so Clear leaves it alone.
+    hub.update();
     applyFilter();
   });
-  // Clear sits on the same row as the toggle (right-aligned), not inside
-  // the collapsible groups. It only renders when at least one filter is
-  // active, so the user can reset without expanding the bar — particularly
-  // useful when filters are collapsed but the count badge says "3".
-  toggleRow.appendChild(clearBtn);
+  // Clear sits directly after the chips it clears (and before "Add filter"),
+  // not pinned to the row's far edge (a full row away from the chips it
+  // acted on, it read as unrelated chrome). Only renders when at least one
+  // filter is active, so the user can reset without expanding the bar.
+  filterSummary.insertBefore(clearBtn, addBtn);
 
-  // --- Metric lens control (Feature DE) ---------------------------------
-  // A view lens, not a filter: it lives at the top of the bar, always visible
-  // (never behind the Filters collapse), because it changes how the same set is
-  // presented rather than narrowing it. Defaults to None. Metric logic goes
-  // through createMetric; it never touches the shared per-flag filter DSL.
-  const lensRow = document.createElement('div');
-  lensRow.className = 'lens-row';
-  // Label + metric pills form one group (.lens-main) so the sort control can
-  // sit opposite them via the row's space-between: sort on the right when the
-  // row fits on one line, dropping to its own left-aligned line when it wraps.
-  const lensMain = document.createElement('div');
-  lensMain.className = 'lens-main';
-  lensRow.appendChild(lensMain);
-  const lensLabel = document.createElement('span');
-  lensLabel.className = 'lens-label';
-  lensLabel.setAttribute('data-i18n', 'flagsdata.metric');
-  lensLabel.textContent = t('flagsdata.metric', 'Metric');
-  lensMain.appendChild(lensLabel);
+  // --- World-facts hub (Feature DE, hub form) ----------------------------
+  // One home per metric: the shared icon-chip row + inline panel
+  // (flags/metricHub.js, also mounted by findFlag's chooser). On this page
+  // opening a metric's panel doubles as switching the lens on: the tiles
+  // show "#rank · value" sorted Highest-first, and the panel carries the
+  // sort direction plus the metric's threshold tiers. Metric *lens* logic
+  // still goes through createMetric and never enters the shared per-flag
+  // filter DSL; the tiers write the same `filters[key]` scalar the old
+  // per-metric pill groups did.
 
-  const lensBtns = document.createElement('div');
-  lensBtns.className = 'lens-btns';
-  lensMain.appendChild(lensBtns);
-
-  /** @type {{ key: string | null, el: HTMLButtonElement }[]} */
-  const lensButtons = [];
-  /** @param {string | null} key @param {string} label */
-  function makeLensBtn(key, label) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    // Reuse the shared `.pill` for size + base look; `.lens-btn` only carries
-    // the single-select pressed state (aria-pressed, not the `.active` class
-    // the multi-select filter pills toggle). Keeps the metric pills the same
-    // size as every other pill on the page.
-    b.className = 'pill lens-btn';
-    b.dataset.metric = key ?? 'none';
-    b.textContent = label;
-    b.setAttribute('aria-pressed', String(lensKey === key));
-    b.addEventListener('click', () => selectMetric(key));
-    lensBtns.appendChild(b);
-    lensButtons.push({ key, el: b });
-  }
-  makeLensBtn(null, t('flagsdata.metricNone', 'None'));
-  for (const m of METRIC_FILES) makeLensBtn(m.key, metricLabel(m.key, m.label));
-
-  // Sort control — only meaningful with a lens on, so hidden until one is picked.
+  // Highest / Lowest lives in the hub panel, so it only exists while a
+  // lens is on. 'default' order never needs a button anymore: no lens =
+  // the countries.json order (English A–Z).
   const lensSortWrap = document.createElement('div');
   lensSortWrap.className = 'lens-sort';
-  lensSortWrap.hidden = true;
-  /** @type {Array<['default' | 'desc' | 'asc', string, string]>} */
+  /** @type {Array<['desc' | 'asc', string, string]>} */
   const SORTS = [
-    ['default', 'flagsdata.sortDefault', 'Default'],
     ['desc', 'flagsdata.sortHighest', 'Highest'],
     ['asc', 'flagsdata.sortLowest', 'Lowest'],
   ];
@@ -1128,35 +1060,63 @@ export function bootFlagsData() {
     b.dataset.sort = val;
     b.setAttribute('data-i18n', key);
     b.textContent = t(key, fb);
-    b.setAttribute('aria-pressed', String(lensSort === val));
+    // Resting state is unpressed; setLens → syncSortPressed paints the real
+    // state the moment a panel opens (desc by default).
+    b.setAttribute('aria-pressed', 'false');
     b.addEventListener('click', () => {
       lensSort = val;
-      syncLensPressed();
+      syncSortPressed();
       renderLens();
     });
     lensSortWrap.appendChild(b);
   }
-  lensRow.appendChild(lensSortWrap);
-  // Sits directly below the search + chips + Add-filter summary row (and above
-  // the collapsible pill groups), so the "look through a metric" control reads
-  // as an always-visible view control, distinct from the pill filters it sits
-  // over.
-  filterBar.insertBefore(lensRow, groupsWrap);
 
-  function syncLensPressed() {
-    for (const { key, el } of lensButtons) el.setAttribute('aria-pressed', String(lensKey === key));
+  // "hide values ×", the panel's explicit off switch. Same action as
+  // re-tapping the open chip; spelled out because "tap the chip again"
+  // isn't discoverable on its own.
+  const hideValuesBtn = document.createElement('button');
+  hideValuesBtn.type = 'button';
+  hideValuesBtn.className = 'mhub-hide';
+  hideValuesBtn.setAttribute('data-i18n', 'metricHub.hideValues');
+  hideValuesBtn.textContent = t('metricHub.hideValues', 'hide values');
+  hideValuesBtn.addEventListener('click', () => hub.closePanel());
+
+  const hub = createMetricHub({
+    t,
+    metrics: METRIC_FILES,
+    label: { key: 'metricHub.title', fallback: 'World facts' },
+    // Tiers count against the full loaded set (same as the old filter
+    // groups); empty until countries.json resolves, which only matters if a
+    // panel is opened during the initial load.
+    tierItems: (key) => (state ? buildMetricTierItems(key, state.items) : []),
+    getTier: (key) => /** @type {{op: '>=' | '<=', n: number} | null} */ (filters[key] ?? null),
+    onTierChange: (key, tier) => {
+      /** @type {any} */ (filters)[key] = tier;
+      applyFilter();
+    },
+    // Panel open = lens on. Opening picks Highest first (a metric with
+    // unchanged order shows numbers but no story); closing restores the
+    // resting A–Z wall.
+    onPanelToggle: (key) => setLens(key),
+    panelExtras: () => [lensSortWrap, hideValuesBtn],
+  });
+  // Sits directly below the search + chips + Add-filter summary row (and
+  // above the collapsible pill groups): always visible, because it changes
+  // how the same set is presented rather than narrowing it.
+  filterBar.insertBefore(hub.el, groupsWrap);
+
+  function syncSortPressed() {
     for (const b of lensSortWrap.querySelectorAll('button')) {
       b.setAttribute('aria-pressed', String(b.getAttribute('data-sort') === lensSort));
     }
   }
 
   /** @param {string | null} key */
-  function selectMetric(key) {
+  function setLens(key) {
     lensKey = key;
-    lensSort = 'default';
+    lensSort = key ? 'desc' : 'default';
     lensMetric = key && state && metricsData[key] ? createMetric(metricsData[key], state.items) : null;
-    lensSortWrap.hidden = !key;
-    syncLensPressed();
+    syncSortPressed();
     renderLens();
   }
 
@@ -1185,18 +1145,13 @@ export function bootFlagsData() {
       metricsReady.then(() => {
         // Denormalize each metric onto the countries so the tier filter's
         // predicate (`c.<metric> op n`, via matchesFilters) resolves. The lens
-        // reads the values map directly, but the filter reads the field. Both
-        // the attach and the filter-group build loop `METRIC_FILES` (whose
-        // `label` is the English fallback), so a new metric needs no edit here;
-        // each group's tiers count against the loaded, attached set.
+        // reads the values map directly, but the filter reads the field. The
+        // hub's tier panels count against this loaded, attached set (its
+        // `tierItems` closure re-runs on every panel open), so a new metric
+        // needs no edit here.
         attachMetrics(all, Object.fromEntries(
           METRIC_FILES.map((m) => [m.key, metricsData[m.key] ? metricsData[m.key].values : null]),
         ));
-        for (const m of METRIC_FILES) {
-          if (metricsData[m.key]) {
-            groupsWrap.appendChild(buildMetricGroup(/** @type {any} */ (m.key), m.label, all));
-          }
-        }
         if (lensKey && metricsData[lensKey]) lensMetric = createMetric(metricsData[lensKey], all);
         renderLens();
         applyFilter();
@@ -1249,16 +1204,12 @@ export function bootFlagsData() {
       else if (group === 'color') paintColorPill(btn, value, colorLabel(value));
       else if (group === 'motif') btn.textContent = motifLabel(value);
       else if (group === 'stripesOnly') btn.textContent = stripesOnlyLabel(value);
-      else if (group && METRIC_KEYS.includes(group)) btn.textContent = pillLabel(/** @type {any} */ (group), value, 'include', t);
     }
     // Chips carry localized labels too — rebuild them in the new language.
     renderChips();
-    // Lens metric buttons carry dynamic labels (not a fixed data-i18n key), so
-    // re-translate them here; renderLens refreshes the "no data" overlay text.
-    for (const { key, el } of lensButtons) {
-      const file = key ? METRIC_FILES.find((m) => m.key === key) : null;
-      el.textContent = key ? metricLabel(key, file ? file.label : key) : t('flagsdata.metricNone', 'None');
-    }
+    // The hub owns every metric label (chips, panel lead, tier pills);
+    // renderLens refreshes the "no data" overlay text.
+    hub.refreshI18n();
     renderLens();
   });
 }

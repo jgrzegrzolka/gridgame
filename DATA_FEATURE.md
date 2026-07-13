@@ -33,6 +33,18 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 
 ## Done
 
+### Feature DY: World-facts hub, one shared home per metric on flagsdata + findFlag (complete 2026-07-13, pending PR)
+
+Not a new metric: the UX consolidation the metric family forced at 19. flagsdata's always-visible 20-pill lens row and 19 tier filter-groups, plus findFlag's 19 stacked chooser sections, all collapse into one shared component: the **metric hub** (`flags/metricHub.js` + `metricHub.css`), an icon-chip row (6 primary + "+ N more") with a single inline panel per open metric holding its threshold tiers. Same component on both pages, per CLAUDE.md's same-mechanism-same-code rule; unit-tested against a stub document (`metricHub.test.js`).
+
+**Visual identity became shared data.** `flags/metricVisuals.js` now owns each metric's icon, hue, and short label (icons + hues promoted out of `flagParty/page.js` / `index.css`; short labels reuse `party.modeShort.*` strings). Consumed by the hub chips, flagsdata's applied-filter chips (now "icon + Population · over 100M people" in the metric's hue, fixing the naked "≥ 1 000" ambiguity), and Flag Party's setup chips + prompt lead. `metricVisuals.test.js` pins that every registered metric has all three, so a metric can no longer ship colourless (the old wine/cocoa class of bug). The `--mc` hue palette exception now has exactly one source.
+
+**flagsdata behaviour changes:** opening a metric's panel *is* switching the lens on, sorted **Highest-first immediately** (the old flow left "Default" order, numbers with no story); "hide values" / re-tapping the chip switches it off; the Default sort button is gone (no lens = the data file's A–Z); Clear moved from the far right to directly after the chips. findFlag keeps counts on tier pills and gains nothing lens-like.
+
+**Latent bugs fixed en route:** findFlag's `updateBar` hand-listed population/area/density, so a lone tier from any of the 16 later metrics left Play disabled ("nothing selected"); now loops `METRIC_KEYS`. Flag Party's population superlative round keyed icon + hue off its legacy `superlative` roundId and rendered both blank; the shared `metricKeyForRound` (values-file join) resolves it.
+
+**Cost per new metric drops:** no findFlag section block, no `chooserI18n` pill array (helper simplified to 4 params), no flagsdata filter group, no `findFlag.sections.<key>` i18n, no party icon/CSS-hue step; instead one `metricVisuals.js` entry (icon + hue + short label). `findFlag/page.js` shrank ~970 lines. The add-world-metric skill was rewritten to match. Verified live on both pages (EN + PL, desktop + 375 px) via Playwright.
+
 ### Feature DX: Beer per capita as a world metric, the first `absence: 'unknown'` contract (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 
 Nineteenth world metric, and a new *domain*: consumption, not production or livestock (Jan asked for "one more, fun", picked beer). Litres of beer drunk per person per year, an intensive/size-independent metric with a great hook: Czechia is the perennial world #1, but the top set is full of surprises: Gabon, Panama, Croatia, Brazil, Namibia, Mexico all rank above or near Germany. The dry states (Saudi Arabia, Iran, Kuwait, Libya, ...) sit at 0.

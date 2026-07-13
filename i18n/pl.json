@@ -1,5 +1,11 @@
 {
-  "coffee": "Postaw mi kawę",
+  "coffee": {
+    "atLeast": {
+      "1k": "ponad 1 tys. ton",
+      "10k": "ponad 10 tys. ton",
+      "100k": "ponad 100 tys. ton"
+    }
+  },
   "zoom": {
     "close": "Zamknij",
     "enlarge": "Powiększ flagę"
@@ -403,26 +409,7 @@
       "continents": "Kontynenty",
       "colors": "Kolory",
       "motifs": "Motywy",
-      "stripes": "Pasy",
-      "population": "Ludność",
-      "area": "Powierzchnia",
-      "density": "Gęstość zaludnienia",
-      "gdp": "PKB",
-      "gdpPerCapita": "PKB na osobę",
-      "coffee": "Produkcja kawy",
-      "wine": "Produkcja wina",
-      "cocoa": "Produkcja kakao",
-      "banana": "Produkcja bananów",
-      "apple": "Produkcja jabłek",
-      "elevation": "Najwyższy punkt",
-      "coastline": "Długość wybrzeża",
-      "forest": "Lesistość",
-      "oil": "Wydobycie ropy naftowej",
-      "rice": "Produkcja ryżu",
-      "coal": "Wydobycie węgla",
-      "sheepPerCapita": "Owce na osobę",
-      "cattlePerCapita": "Bydło na osobę",
-      "beerPerCapita": "Piwo na osobę"
+      "stripes": "Pasy"
     }
   },
   "daily": {
@@ -759,13 +746,6 @@
       "1k": "poniżej 1 tys. $"
     }
   },
-  "coffee": {
-    "atLeast": {
-      "1k": "ponad 1 tys. ton",
-      "10k": "ponad 10 tys. ton",
-      "100k": "ponad 100 tys. ton"
-    }
-  },
   "wine": {
     "atLeast": {
       "1k": "ponad 1 tys. ton",
@@ -917,12 +897,15 @@
     "addFilter": "Dodaj filtr",
     "done": "Gotowe",
     "removeFilter": "Usuń filtr",
-    "metric": "Metryka",
-    "metricNone": "Brak",
-    "sortDefault": "Domyślnie",
     "sortHighest": "Najwięcej",
     "sortLowest": "Najmniej",
     "noData": "brak danych"
+  },
+  "metricHub": {
+    "title": "Fakty o świecie",
+    "more": "więcej",
+    "less": "mniej",
+    "hideValues": "ukryj wartości"
   },
   "metric": {
     "population": "Liczba ludności",

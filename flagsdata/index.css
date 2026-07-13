@@ -264,50 +264,43 @@ dialog#zoom .country-data {
   user-select: text;
 }
 
-/* --- Metric lens (Feature DE) ------------------------------------------- */
-/* A view lens sitting at the top of the filter bar, always visible (never
- * behind the Filters collapse) — it re-presents the same set rather than
- * narrowing it. Off by default. */
-.lens-row {
-  flex-basis: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  /* Two groups: label+pills (.lens-main) and the sort control. space-between
-   * pins the sort to the right when both fit on one line, and — because each
-   * group is alone on its line once wrapped — left-aligns each on a narrow
-   * phone. No breakpoint, so it holds for longer (e.g. Polish) sort labels. */
-  justify-content: space-between;
-  gap: 6px;
+/* --- Metric lens (Feature DE, hub form) ---------------------------------- */
+/* The metric picker itself is the shared world-facts hub (flags/metricHub.css);
+ * this page adds the lens-only extras that live inside the hub's panel: the
+ * Highest / Lowest sort and the "hide values" off switch. The hub row sits
+ * between the summary row and the collapsible groups; .mhub's flex-basis:100%
+ * (shared stylesheet) claims the full bar width. */
+.mhub {
   margin-bottom: 12px;
 }
-/* Label + metric pills travel together so the sort control can sit opposite. */
-.lens-main {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-.lens-label {
+/* "hide values ×": quiet text affordance pushed to the panel's right edge. */
+.mhub-hide {
+  font: inherit;
   font-size: 12px;
-  color: var(--muted-color);
-  margin-right: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  background: none;
+  border: none;
+  color: var(--link-color);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 2px 4px;
+  margin-left: auto;
+  white-space: nowrap;
 }
-.lens-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-/* Size + base look come from the shared `.pill` (common.css). `.lens-btn`
- * only styles the pressed state: single-select, so it hangs off aria-pressed
- * rather than the `.active` class the multi-select filter pills use. Matches
- * `.pill.active` visually so a chosen metric reads like any active pill. */
-.lens-btn[aria-pressed='true'] {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-  color: var(--surface-color);
+.mhub-hide:hover {
+  background: var(--surface-hover-color);
+  border-radius: 4px;
 }
-/* Sort: a small segmented control, only shown when a lens is on. Position
- * (right when inline, left when wrapped) is handled by the row's
- * space-between above — no margin trickery here. */
+/* Applied metric-tier chip in the summary row: outlined in the metric's hue
+ * (--mc, set inline from flags/metricVisuals.js, the documented palette
+ * exception) with the metric's icon, mirroring the hub chip it came from. */
+.filter-chip.is-metric {
+  background: var(--surface-color);
+  color: var(--mc);
+  border-color: var(--mc);
+  font-weight: 600;
+}
+/* Sort: a small segmented control inside the hub panel, so it only exists
+ * while a lens is on. */
 .lens-sort {
   display: inline-flex;
   border: 1px solid var(--muted-soft-color);

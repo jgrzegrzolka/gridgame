@@ -9,6 +9,8 @@ import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction, veilProgress, DEFAULT_REVEAL, REVEAL_OPTIONS } from '../flags/partyTiming.js';
 import { MAX_ROUNDS_PER_MODE, PICTURE_MODES, METRIC_MODES, buildPartyPlan } from '../flags/partyPlan.js';
 import { formatValue } from '../flags/metricLens.js';
+import { METRIC_ICONS, METRIC_HUES } from '../flags/metricVisuals.js';
+import { METRIC_FILES } from '../flags/metrics/index.js';
 import { renderableRoundIds, roundRenderAction } from './staleGuard.js';
 import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
 
@@ -193,46 +195,21 @@ const SETUP_ICONS = {
   worldFacts: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="13" width="4.4" height="8" rx="1"/><rect x="9.8" y="8" width="4.4" height="13" rx="1"/><rect x="16.6" y="4" width="4.4" height="17" rx="1"/></svg>',
 };
 
-/** Per-metric chip icons — same line style, tinted by the chip's own hue in CSS. */
-const METRIC_ICONS = {
-  'superlative-pop': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.6-5 5.5-5s5.5 2 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.4M17 15c2.3.5 4 2.4 4 5"/></svg>',
-  'superlative-area': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M4 20l5-9 3.5 5L15 12l5 8"/></svg>',
-  'superlative-density': '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="6" r="1.4"/><circle cx="12" cy="6" r="1.4"/><circle cx="18" cy="6" r="1.4"/><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>',
-  // GDP total: a stack of coins (an economy's overall size).
-  'superlative-gdp': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.66 3.13 3 7 3s7-1.34 7-3V6"/><path d="M5 11v5c0 1.66 3.13 3 7 3s7-1.34 7-3v-5"/></svg>',
-  // GDP per capita: a single $ coin (wealth per head).
-  'superlative-gdppc': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v10"/><path d="M14.5 9.2c-.6-.7-1.5-1-2.5-1-1.4 0-2.5.7-2.5 1.9 0 1.2 1 1.6 2.5 1.9s2.5.7 2.5 1.9c0 1.2-1.1 1.9-2.5 1.9-1 0-1.9-.3-2.5-1"/></svg>',
-  // Coffee production: a steaming coffee cup with a handle.
-  'superlative-coffee': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V9z"/><path d="M17 10h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M8 3.5v2M12 3.5v2"/></svg>',
-  // Wine production: a wine glass on a base.
-  'superlative-wine': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10l-1 6a4 4 0 0 1-8 0z"/><path d="M12 14v5"/><path d="M8 19h8"/></svg>',
-  // Cocoa production: a cocoa pod (elongated ridged fruit) with a stem.
-  'superlative-cocoa': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 4.5c3 2 4 6 2.5 9.5s-5.5 5.5-9 5-5.5-4-4.5-7.5 4-8 8-8c1.4 0 2 .5 3 1z"/><path d="M11 6.5v11"/></svg>',
-  // Banana production: a curved banana.
-  'superlative-banana': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5c0 7 4 12 11 12 1.6 0 2.8-.3 3.5-.8-1 .3-6 .2-9.5-3.2S6.7 5.6 7 4.5C6.2 4.9 5 4.5 5 5z"/></svg>',
-  // Apple production: a round apple with a leaf and stem.
-  'superlative-apple': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8c-1-1.5-3-2.5-5-2-2 .5-3 2.5-3 5 0 4 3 8 5.5 8 .9 0 1.4-.4 2.5-.4s1.6.4 2.5.4C17 19 20 15 20 11c0-2.5-1-4.5-3-5-2-.5-4 .5-5 2z"/><path d="M12 8c0-2 .5-3.5 2.5-4.5"/></svg>',
-  // Highest elevation: a single tall peak with a snowcap (distinct from area's low range).
-  'superlative-elevation': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M12 4L20 20H4z"/><path d="M9.4 11.7l2.6 1.6 2.6-1.6"/></svg>',
-  // Coastline length: three stacked waves (water / shoreline), distinct from the peak.
-  'superlative-coastline': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8c1.5 0 1.5 1.5 3 1.5S10.5 8 12 8s1.5 1.5 3 1.5S19.5 8 21 8"/><path d="M3 13c1.5 0 1.5 1.5 3 1.5S10.5 13 12 13s1.5 1.5 3 1.5S19.5 13 21 13"/><path d="M3 18c1.5 0 1.5 1.5 3 1.5S10.5 18 12 18s1.5 1.5 3 1.5S19.5 18 21 18"/></svg>',
-  // Forest cover: a two-tier pine with a centred trunk, distinct from elevation's bare peak.
-  'superlative-forest': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 7.5 10H10l-3.5 5h4v4h3v-4h4L14 10h2.5z"/></svg>',
-  // Oil production: an oil derrick (a pumpjack tower) with a ground line.
-  'superlative-oil': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21 9 5l8 12M7 15h6M4 21h16M9 5l3-2 1 3"/></svg>',
-  // Rice production: a bowl of rice with a pair of chopsticks resting across it.
-  'superlative-rice': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a8 8 0 0 1-16 0zM8 12a4 4 0 0 1 8 0M14 5l5-2M15 8l5-2"/></svg>',
-  // Coal production: a chunky lump of coal (an irregular faceted rock).
-  'superlative-coal': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 3 15l4 4 8 1 5-5-2-6-6-3zM6 9l6 2m0 0 3-4m-3 4-1 8m1-8 8 1"/></svg>',
-  // Sheep per capita: a woolly body (bumpy top) with a small head and two legs.
-  'superlative-sheep': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8a2.5 2.5 0 0 1 4.5-1.5A2.5 2.5 0 0 1 17 8a2.5 2.5 0 0 1 .3 5A2.5 2.5 0 0 1 15 15H9a2.5 2.5 0 0 1-2.3-3.5A2.5 2.5 0 0 1 9 8z"/><circle cx="6.5" cy="9.5" r="2"/><path d="M5 8 3.5 7"/><path d="M10 15.5V18M14 15.5V18"/></svg>',
-  // Cattle per capita: a cow head, horns and ears out to the sides, a broad
-  // muzzle with two nostrils. Reads as a cow to tell it apart from the sheep.
-  'superlative-cattle': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6.5C6 4 4 4 3.5 5.5"/><path d="M17 6.5C18 4 20 4 20.5 5.5"/><path d="M6.5 9C4.5 8.3 3 9 2.8 10.5"/><path d="M17.5 9C19.5 8.3 21 9 21.2 10.5"/><path d="M6.5 8.5a5.5 4.5 0 0 1 11 0c0 3-1.2 4.8-2.8 6C13.7 15.3 12.9 15.6 12 15.6s-1.7-.3-2.7-1.1C7.7 13.3 6.5 11.5 6.5 8.5z"/><ellipse cx="12" cy="13.3" rx="3.3" ry="2.1"/><path d="M10.6 13v.6M13.4 13v.6"/></svg>',
-  // Beer per capita: a foaming tankard, handle to the right, a fill line under
-  // the foam head. Reads as a beer mug to set it apart from the food/animal ones.
-  'superlative-beer': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9h8v9.5a1.5 1.5 0 0 1-1.5 1.5H8a1.5 1.5 0 0 1-1.5-1.5V9z"/><path d="M14.5 11H17a2.5 2.5 0 0 1 0 5h-2.5"/><path d="M6.5 9a1.9 1.9 0 0 1-.3-3.8 2 2 0 0 1 3.9-.7 2 2 0 0 1 3.9.7A1.9 1.9 0 0 1 14.5 9"/><path d="M6.5 12h8"/></svg>',
-};
+/** Metric key (the flags/metrics registry) for a superlative round id,
+ *  resolved via the values file both registries name: SUPERLATIVE_MODES
+ *  fetches `population.json`, METRIC_FILES registers it as `population`.
+ *  Feeds the shared per-metric icon + hue (flags/metricVisuals.js) so the
+ *  party chips, the prompt lead, and the flagsdata / findFlag metric hub
+ *  all wear one visual identity. Also covers the population round's legacy
+ *  `superlative` roundId (its mode id is `superlative-pop`), which the old
+ *  round-id-keyed icon table missed, so population rounds rendered their
+ *  prompt without icon or hue. */
+const METRIC_KEY_BY_FILE = Object.fromEntries(METRIC_FILES.map((m) => [m.file, m.key]));
+/** @param {string} roundId @returns {string | null} */
+function metricKeyForRound(roundId) {
+  const cfg = SUPERLATIVE_MODES[roundId];
+  return cfg ? METRIC_KEY_BY_FILE[cfg.file] ?? null : null;
+}
 
 /**
  * Boot the Flag Party page: resolve identity, wire the lobby controls, open
@@ -608,7 +585,9 @@ export function bootFlagParty() {
       const chip = el('button', 'gs-chip');
       /** @type {HTMLButtonElement} */ (chip).type = 'button';
       chip.dataset.metric = m.id;
-      chip.appendChild(iconSpan(METRIC_ICONS[m.id]));
+      const metricKey = metricKeyForRound(m.roundId);
+      chip.style.setProperty('--mc', (metricKey && METRIC_HUES[metricKey]) || 'currentColor');
+      chip.appendChild(iconSpan((metricKey && METRIC_ICONS[metricKey]) || ''));
       chip.appendChild(el('span', 'gs-chip-label', modeShort(m.id)));
       chip.addEventListener('click', () => toggleMetric(m.id));
       chips.appendChild(chip);
@@ -1043,6 +1022,7 @@ export function bootFlagParty() {
     // the phrase alone. Reset both cues each render, then the branches opt in.
     promptEl.classList.remove('superlative');
     delete promptEl.dataset.metric;
+    promptEl.style.removeProperty('--mc');
     promptLead.hidden = true;
     promptLead.textContent = '';
     if (isSuperlative) {
@@ -1057,7 +1037,9 @@ export function bootFlagParty() {
       const label = least ? superCfg.hintLeast : superCfg.hintMost;
       promptEl.classList.add('superlative');
       promptEl.dataset.metric = q.roundId;
-      promptLead.innerHTML = METRIC_ICONS[q.roundId] || '';
+      const promptMetricKey = metricKeyForRound(q.roundId);
+      promptEl.style.setProperty('--mc', (promptMetricKey && METRIC_HUES[promptMetricKey]) || 'currentColor');
+      promptLead.innerHTML = (promptMetricKey && METRIC_ICONS[promptMetricKey]) || '';
       promptLead.hidden = !promptLead.innerHTML;
       promptTarget.textContent = t(label.key, label.fallback);
     } else {

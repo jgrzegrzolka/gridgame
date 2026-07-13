@@ -220,37 +220,12 @@
 .gs-chip .gs-ic { width: 15px; height: 15px; color: inherit; }
 .gs-chip .gs-ic svg { width: 15px; height: 15px; }
 /* Chosen: the metric's own hue on the ring, label, and icon (icon inherits
-   `color` via currentColor). `--mc` is set per metric below. */
+   `color` via currentColor). `--mc` is the per-metric hue set INLINE by
+   page.js from the shared flags/metricVisuals.js, the single source for the
+   metric-hue palette exception (see the note there). No hue values live in
+   this stylesheet anymore. */
 .gs-chip.on { border-color: var(--mc); color: var(--mc); background: var(--surface-hover-color); }
 .gs-chip:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
-
-/* Per-metric hues (--mc). DELIBERATE PALETTE EXCEPTION, sanctioned like the
-   per-tile flag strip: each metric carries its own hue so the growing fact
-   family stays scannable (you recognise Population by its teal before reading
-   the label). Set per element via [data-metric], and used on exactly two
-   surfaces: the setup chips above (which facts are in play) and the in-round
-   criterion icon on superlative rounds (`.prompt.superlative .prompt-lead`). It
-   reaches no gameplay tile or any other surface. Adding a metric is one more
-   [data-metric] rule here. */
-[data-metric="superlative-pop"] { --mc: #2f8f9d; }
-[data-metric="superlative-area"] { --mc: #3f8f5b; }
-[data-metric="superlative-density"] { --mc: #7b5ea7; }
-[data-metric="superlative-gdp"] { --mc: #c0821e; }
-[data-metric="superlative-gdppc"] { --mc: #4f6bb0; }
-[data-metric="superlative-coffee"] { --mc: #7d4f28; }
-[data-metric="superlative-wine"] { --mc: #9a4658; }
-[data-metric="superlative-cocoa"] { --mc: #a84a30; }
-[data-metric="superlative-banana"] { --mc: #9c8410; }
-[data-metric="superlative-apple"] { --mc: #c62828; }
-[data-metric="superlative-elevation"] { --mc: #5c7a94; }
-[data-metric="superlative-coastline"] { --mc: #2f77a6; }
-[data-metric="superlative-forest"] { --mc: #2e7d32; }
-[data-metric="superlative-oil"] { --mc: #37474f; }
-[data-metric="superlative-rice"] { --mc: #7e8b3d; }
-[data-metric="superlative-coal"] { --mc: #424242; }
-[data-metric="superlative-sheep"] { --mc: #a9825f; }
-[data-metric="superlative-cattle"] { --mc: #6d4c41; }
-[data-metric="superlative-beer"] { --mc: #e0a11e; }
 
 /* Per-category reveal timing, shown under the tricky toggle when it's on. A
    quiet indented block (it belongs to the toggle above it) with one row per
