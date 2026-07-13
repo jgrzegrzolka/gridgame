@@ -82,6 +82,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   sheepPerCapitaProbability: 0.06,
   cattlePerCapitaProbability: 0.06,
   beerPerCapitaProbability: 0.06,
+  teaProbability: 0.06,
 });
 
 /**

@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DX (beer per capita, the first `absence: 'unknown'` metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DZ (tea production, coffee's sparse twin) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,29 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DZ: Tea production as a world metric, coffee's sparse twin (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Twentieth world metric, another **sparse** production crop: only 46 countries grow tea at all, so it reuses coffee's `absence: 'zero'` machinery wholesale, no new infrastructure. A near-mechanical clone of Feature DK/DM: same sparse contract, same `>=`-only ladder, same biggest-only superlative round. Adds a recognizable Asia/Africa axis: China / India / Kenya / Sri Lanka at the top, `tea >= 1M tonnes` the top tier, the tea belt lit up on the lens.
+
+**Which series:** FAOSTAT's official tea item is **"Tea leaves" (item 667), green harvested leaf**, world total ~29.8M tonnes, the single complete FAOSTAT production series (the same discipline coffee used with FAOSTAT's own green-coffee item). NOT the smaller processed "made tea" figure (~7M t world) national boards report; green leaf runs ~4-5× made tea. The rank order is identical either way (China #1, then India, Kenya, Sri Lanka, Turkey, Vietnam), so gameplay (superlatives, thresholds, lens ranks) is unaffected by the choice. China's headline number reads ~13.8M t on the lens rather than the casually-cited ~3M made tea; documented in `build-tea.mjs`'s source string.
+
+**Data contract:** sparse, **`absence: 'zero'`**, exactly like coffee. `tea.json` lists **growers only** (46 of them) and carries the `absence: 'zero'` hint; the loader `attachTeas` → the shared `attachZeroFilledMetric` (group.js) defaults every real place the map omits to **0**, leaving only the org flags without the field, so the TTT no-data guard still reads "no data == not a place". A country that grows no tea is a *fair wrong guess* on a `tea >= N` cell, not a data gap. The lens and superlative round read the raw sparse map via `createMetric`, so a superlative ranks growers, not a ~180-way tie at 0.
+
+**One-directional throughout**, like coffee: filters are **atLeast-only** (`TEA_BREAKS_FOR_RANDOM` = `>=10K/100K/1M`, one decade up from coffee to match the large green-leaf scale, like apple; 24/17/6 growers; a `<=` tier would flood with the ~180 non-growers at 0), and the Flag Party round is **biggest-only** (locked to `'most'`; "smallest grower" is obscure).
+
+**Data source:** FAOSTAT 2023 "Tea leaves" (item 667, green leaf), 46 growers joined by ISO code, embedded snapshot in `authoring/build-tea.mjs`. No overrides needed. All 46 growers round to >= 1 tonne, none dropped.
+
+- [x] 1. Data: `flags/metrics/tea.json` (46 growers, `absence: 'zero'`) + `authoring/build-tea.mjs` + `METRIC_FILES` line + `attachTeas` (group.js, reuses `attachZeroFilledMetric`) + `metrics.test.js` schema/positive-integer/no-org/zero-fill-contract/sparse-lens tests. Visuals: tea-leaf icon + jade hue `#1f9e7a` + short label in `flags/metricVisuals.js` (pinned by `metricVisuals.test.js`, generic).
+- [x] 2. flagsdata lens, free once step 1 landed: registered in `METRIC_FILES`, appears as a hub chip with the leaf icon.
+- [x] 3 + 4 (landed together, driven by the `THRESHOLD_METRICS` registry). `tea(op, n)` factory + `TEA_BREAKS_FOR_RANDOM` (`>=10K/100K/1M`) + `THRESHOLD_METRICS.tea` (`has`, `family: 'tea'`, reuses `tonnesCompact`/`tonnesToken`). **NOT 9×9-eligible** (sparse, like coffee; every break `ultimateEligible: false`, a 3×3-only axis, pinned by the ultimate-pool test); `attachTeas` auto-wires at every load site via the `METRIC_ATTACHERS` registry + `party/server.js`'s explicit import (ultimateServer skipped, sparse). Filters: `TeaConstraint` + `tea` field (`matchesFilters` generic via `METRIC_KEYS`); `teaProbability` (0.06) modifier in `pickRandomMix` + `findFlag/page.js` + `findflag-random-coverage` skill note + a reachability test. i18n `tea.atLeast.{10k,100k,1m}` + `metric.tea` (en+pl).
+- [x] 5. Flag Party round: `teaRound` via `createSuperlativeRound` across the six spots (superlative.js + test, partyGameServer `ROUNDS`, partyPlan `PARTY_MODES`/`METRIC_MODES` + the two test assertions, flagParty/page.js `MODE_LABELS`/`SUPERLATIVE_MODES`; icon + hue resolve from step 1's visuals entry). i18n en+pl `party.mode/modeShort.superlativeTea` + `hintMostTea`. **Biggest-only** (locked to `'most'`), reads the raw sparse `createMetric` (growers only). Pinned by `superlative.test.js` (biggest-only, growers-only, correct extreme over 100 seeds).
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+**Standing artifacts:** none new. Tea is the sixth sparse crop to land as a near-mechanical clone of coffee's `absence: 'zero'` template.
+
+---
 
 ### Feature DY: World-facts hub, one shared home per metric on flagsdata + findFlag (complete 2026-07-13, pending PR)
 

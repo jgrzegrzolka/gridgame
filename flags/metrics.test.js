@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas, attachBeerPerCapitas } from './group.js';
+import { attachCoffees, attachTeas, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas, attachBeerPerCapitas } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -19,6 +19,7 @@ const DENSITY = /** @type {import('./metrics.js').MetricData} */ (load('metrics/
 const GDP = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdp.json'));
 const GDP_PER_CAPITA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdpPerCapita.json'));
 const COFFEE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coffee.json'));
+const TEA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/tea.json'));
 const WINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/wine.json'));
 const COCOA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/cocoa.json'));
 const BANANA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/banana.json'));
@@ -658,6 +659,61 @@ test('createMetric over coffee stays sparse: it ranks growers only', () => {
   assert.equal(coffee.topN('world', 1)[0].code, 'br'); // Brazil, the largest
   assert.equal(coffee.rankOf('vn', 'world'), 2); // Vietnam second
   assert.equal(coffee.has('de'), false); // Germany isn't a grower → out of the ranking
+});
+
+// ---- real tea.json schema + the sparse absence:'zero' contract (coffee's twin)
+
+test('tea is a valid, self-describing metric file with an absence hint', () => {
+  assert.equal(TEA.key, 'tea');
+  assert.equal(typeof TEA.label, 'string');
+  assert.equal(typeof TEA.unit, 'string');
+  assert.ok(TEA.format === 'compact' || TEA.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof TEA.source, 'string');
+  assert.equal(typeof TEA.year, 'number');
+  assert.equal(typeof TEA.values, 'object');
+  // Tea is sparse like coffee: the file must declare absence:'zero' so the
+  // loader defaults missing real places to 0 (not "no data").
+  assert.equal(TEA.absence, 'zero');
+});
+
+test('every tea value is a positive integer (tonnes, sub-tonne producers dropped)', () => {
+  for (const [code, v] of Object.entries(TEA.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 1, `${code} listed but not >= 1: ${v}`);
+  }
+});
+
+test('every tea key is a real (non-other) country — never an org', () => {
+  const byCode = new Map(COUNTRIES.map((c) => [c.code, c]));
+  for (const code of Object.keys(TEA.values)) {
+    const c = byCode.get(code);
+    assert.ok(c, `tea key ${code} is not in countries.json`);
+    assert.notEqual(c.category, 'other', `tea key ${code} is an "other" entry`);
+  }
+});
+
+test("absence:'zero' contract: attachTeas fills every real place, orgs stay bare", () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachTeas(/** @type {any} */ (rows), TEA.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.tea, undefined, `org ${c.code} should have no tea field`);
+    } else {
+      assert.equal(typeof row.tea, 'number', `real place ${c.code} has no tea value`);
+    }
+  }
+  // A listed grower keeps its value; a real non-grower reads exactly 0.
+  assert.equal(/** @type {any} */ (byCode.get('cn')).tea, TEA.values.cn);
+  assert.equal(/** @type {any} */ (byCode.get('de')).tea, 0); // Germany grows none
+});
+
+test('createMetric over tea stays sparse: it ranks growers only', () => {
+  const tea = createMetric(TEA, COUNTRIES);
+  assert.equal(tea.topN('world', 1)[0].code, 'cn'); // China, the largest
+  assert.equal(tea.rankOf('in', 'world'), 2); // India second
+  assert.equal(tea.has('de'), false); // Germany isn't a grower → out of the ranking
 });
 
 // ---- real wine.json schema + the sparse absence:'zero' contract ------------

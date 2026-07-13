@@ -6,6 +6,13 @@
       "100k": "over 100K tonnes"
     }
   },
+  "tea": {
+    "atLeast": {
+      "10k": "over 10K tonnes",
+      "100k": "over 100K tonnes",
+      "1m": "over 1M tonnes"
+    }
+  },
   "zoom": {
     "close": "Close",
     "enlarge": "Enlarge flag"
@@ -545,7 +552,8 @@
       "superlativeCoal": "Coal production: most",
       "superlativeSheep": "Sheep per capita: most",
       "superlativeCattle": "Cattle per capita: most",
-      "superlativeBeer": "Beer per capita: most"
+      "superlativeBeer": "Beer per capita: most",
+      "superlativeTea": "Tea production: most"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -569,7 +577,8 @@
       "superlativeCoal": "Coal",
       "superlativeSheep": "Sheep",
       "superlativeCattle": "Cattle",
-      "superlativeBeer": "Beer"
+      "superlativeBeer": "Beer",
+      "superlativeTea": "Tea"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -601,6 +610,7 @@
     "hintMostSheep": "Most sheep per person",
     "hintMostCattle": "Most cattle per person",
     "hintMostBeer": "Most beer per person",
+    "hintMostTea": "Largest tea production",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
@@ -922,7 +932,8 @@
     "coal": "Coal production",
     "sheepPerCapita": "Sheep per capita",
     "cattlePerCapita": "Cattle per capita",
-    "beerPerCapita": "Beer per capita"
+    "beerPerCapita": "Beer per capita",
+    "tea": "Tea production"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

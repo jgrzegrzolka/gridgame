@@ -6,6 +6,13 @@
       "100k": "ponad 100 tys. ton"
     }
   },
+  "tea": {
+    "atLeast": {
+      "10k": "ponad 10 tys. ton",
+      "100k": "ponad 100 tys. ton",
+      "1m": "ponad 1 mln ton"
+    }
+  },
   "zoom": {
     "close": "Zamknij",
     "enlarge": "Powiększ flagę"
@@ -545,7 +552,8 @@
       "superlativeCoal": "Wydobycie węgla: najwięcej",
       "superlativeSheep": "Owce na osobę: najwięcej",
       "superlativeCattle": "Bydło na osobę: najwięcej",
-      "superlativeBeer": "Piwo na osobę: najwięcej"
+      "superlativeBeer": "Piwo na osobę: najwięcej",
+      "superlativeTea": "Produkcja herbaty: najwięcej"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -569,7 +577,8 @@
       "superlativeCoal": "Węgiel",
       "superlativeSheep": "Owce",
       "superlativeCattle": "Bydło",
-      "superlativeBeer": "Piwo"
+      "superlativeBeer": "Piwo",
+      "superlativeTea": "Herbata"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
@@ -601,6 +610,7 @@
     "hintMostSheep": "Najwięcej owiec na osobę",
     "hintMostCattle": "Najwięcej bydła na osobę",
     "hintMostBeer": "Najwięcej piwa na osobę",
+    "hintMostTea": "Największa produkcja herbaty",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
@@ -922,7 +932,8 @@
     "coal": "Wydobycie węgla",
     "sheepPerCapita": "Owce na osobę",
     "cattlePerCapita": "Bydło na osobę",
-    "beerPerCapita": "Piwo na osobę"
+    "beerPerCapita": "Piwo na osobę",
+    "tea": "Produkcja herbaty"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

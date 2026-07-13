@@ -66,6 +66,10 @@ export const METRIC_ICONS = {
   // Beer per capita: a foaming tankard, handle to the right, a fill line under
   // the foam head. Reads as a beer mug to set it apart from the food/animal ones.
   beerPerCapita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9h8v9.5a1.5 1.5 0 0 1-1.5 1.5H8a1.5 1.5 0 0 1-1.5-1.5V9z"/><path d="M14.5 11H17a2.5 2.5 0 0 1 0 5h-2.5"/><path d="M6.5 9a1.9 1.9 0 0 1-.3-3.8 2 2 0 0 1 3.9-.7 2 2 0 0 1 3.9.7A1.9 1.9 0 0 1 14.5 9"/><path d="M6.5 12h8"/></svg>',
+  // Tea production: a single tea leaf, a broad teardrop with a diagonal midrib.
+  // Reads as a leaf (the harvested crop) to set it apart from coffee's mug and
+  // cocoa's ridged pod.
+  tea: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19C4 12 8 5 18 4c1 8-4 15-13 15z"/><path d="M5 19C8 15 12 12 16 10"/></svg>',
 };
 
 /** @type {Record<string, string>} */
@@ -89,6 +93,7 @@ export const METRIC_HUES = {
   sheepPerCapita: '#a9825f',
   cattlePerCapita: '#6d4c41',
   beerPerCapita: '#e0a11e',
+  tea: '#1f9e7a',
 };
 
 /**
@@ -120,4 +125,5 @@ export const METRIC_SHORT = {
   sheepPerCapita: { key: 'party.modeShort.superlativeSheep', fallback: 'Sheep' },
   cattlePerCapita: { key: 'party.modeShort.superlativeCattle', fallback: 'Cattle' },
   beerPerCapita: { key: 'party.modeShort.superlativeBeer', fallback: 'Beer' },
+  tea: { key: 'party.modeShort.superlativeTea', fallback: 'Tea' },
 };
