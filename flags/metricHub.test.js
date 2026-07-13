@@ -212,15 +212,18 @@ test('opening a second metric swaps the panel in place', () => {
   assert.deepEqual(toggles, ['population', 'coffee']);
 });
 
-test('folding the row folds the open panel; an applied tier keeps its chip pinned', () => {
+test('folding keeps the open panel state; open and applied chips stay pinned', () => {
   const { hub, filter, toggles } = makeHub({ fit: NARROW });
   const more = byClass(hub.el, 'mhub-more')[0];
   more.click(); // expand
   chipFor(hub, 'beerPerCapita').click(); // last metric, never fits at 400px unpinned
-  more.click(); // collapse: the row and its panel hide together
-  assert.equal(hub.getOpenKey(), null);
-  assert.equal(toggles[toggles.length - 1], null);
-  assert.equal(chipFor(hub, 'beerPerCapita').hidden, true); // nothing applied: back to overflow
+  more.click(); // collapse: the panel state SURVIVES (the lens must not clear)
+  assert.equal(hub.getOpenKey(), 'beerPerCapita');
+  assert.notEqual(toggles[toggles.length - 1], null);
+  assert.equal(chipFor(hub, 'beerPerCapita').hidden, false); // open pins it
+  // Closing the panel explicitly demotes the (unapplied) chip to overflow.
+  chipFor(hub, 'beerPerCapita').click();
+  assert.equal(chipFor(hub, 'beerPerCapita').hidden, true);
   // An applied tier pins the chip visible even while collapsed.
   filter.beerPerCapita = { op: '>=', n: 50 };
   hub.update();
@@ -267,12 +270,13 @@ test('moreButton:false omits the toggle; setExpanded drives the row externally',
   assert.equal(hub.hiddenChipCount(), METRIC_FILES.length - fitted);
   hub.setExpanded(true);
   assert.equal(hub.hiddenChipCount(), 0);
-  // Collapsing externally folds an open panel with the row.
+  // Collapsing externally keeps the open panel's state (the lens survives);
+  // the open chip stays pinned, so one fewer unpinned chip fits.
   chipFor(hub, 'beerPerCapita').click();
   hub.setExpanded(false);
-  assert.equal(hub.getOpenKey(), null);
-  assert.equal(toggles[toggles.length - 1], null);
-  assert.equal(hub.hiddenChipCount(), METRIC_FILES.length - fitted);
+  assert.equal(hub.getOpenKey(), 'beerPerCapita');
+  assert.equal(toggles[toggles.length - 1], 'beerPerCapita');
+  assert.ok(hub.hiddenChipCount() > 0);
 });
 
 test('an optional label leads the chip row with a data-i18n hook', () => {

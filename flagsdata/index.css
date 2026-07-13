@@ -119,13 +119,15 @@ body {
 .filter-preview .pill[hidden] {
   display: none;
 }
-/* "+ N more" / "less": the groups' toggle, permanently at the end of the
- * Status row. Brand-pink dashed (the .pill-modifier idiom) rather than the
- * hub's muted dashed: Jan found the muted version too easy to miss, and
- * this one is the bar's main affordance. */
+/* "+ N more" / "less": the bar's toggle, pinned to the Status row's RIGHT
+ * edge in both states (margin-left auto) so it always sits in the same
+ * corner regardless of how many pills the fit shows. Brand-pink dashed (the
+ * .pill-modifier idiom) rather than the hub's muted dashed: Jan found the
+ * muted version too easy to miss, and this is the bar's main affordance. */
 .filter-add {
   display: inline-flex;
   align-items: center;
+  margin-left: auto;
   font: inherit;
   font-size: 12.5px;
   font-weight: 600;

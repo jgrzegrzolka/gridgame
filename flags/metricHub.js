@@ -141,16 +141,16 @@ export function createMetricHub(opts) {
   }
 
   /**
-   * Expand to every chip / collapse back to the fitted line. Folding also
-   * folds the open metric's panel: a section and its panel hide as one.
+   * Expand to every chip / collapse back to the fitted line. Folding does
+   * NOT close an open metric's panel: on flagsdata the whole hub hides with
+   * the fold anyway, and keeping the state means the lens (values on the
+   * tiles) survives the fold and the panel is where you left it on
+   * re-expand. Jan's call: collapsing must not clear the population/GDP
+   * numbers off the flags.
    * @param {boolean} open
    */
   function setExpanded(open) {
     expanded = open;
-    if (!expanded && openKey) {
-      setOpen(null); // setOpen's update() re-fits the row
-      return;
-    }
     refit();
   }
 
