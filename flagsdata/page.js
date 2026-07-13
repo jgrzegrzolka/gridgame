@@ -957,14 +957,29 @@ export function bootFlagsData() {
   // (the same pills are visible in their rows then). Values must exist in
   // the groups below. Curation is a taste call, tune freely; Sovereign
   // leads because "just the 195 real countries" is the most-wanted cut.
-  /** @type {Array<{ group: PillGroup, value: string }>} */
-  const TEASER_PILLS = [
+  /** The values each group can legally filter on, for the guard below. */
+  const GROUP_VALUES = {
+    status: /** @type {readonly string[]} */ (STATUS_VALUES),
+    continent: [...CONTINENTS, 'Other'],
+    color: ALL_FLAG_COLORS,
+    motif: ALL_MOTIFS,
+    stripesOnly: STRIPES_ORIENTATIONS_FOR_RANDOM,
+  };
+  const TEASER_PILLS = /** @type {Array<{ group: PillGroup, value: string }>} */ ([
     { group: 'status', value: 'sovereign' },
     { group: 'continent', value: 'Europe' },
     { group: 'continent', value: 'Africa' },
     { group: 'color', value: 'red' },
-    { group: 'motif', value: 'star' },
-  ];
+    { group: 'motif', value: 'star-or-moon' },
+  ]).filter((tp) => {
+    // A teaser whose value isn't in its group's real value list would filter
+    // to zero flags and never sync with a group twin (a typo shipped exactly
+    // this once: motif 'star' vs the real 'star-or-moon'). Drop it loudly
+    // instead of rendering a dead pill.
+    const ok = GROUP_VALUES[tp.group].includes(/** @type {never} */ (tp.value));
+    if (!ok) console.warn(`flagsdata: teaser pill ${tp.group}:${tp.value} matches no known value, skipped`);
+    return ok;
+  });
   const teasersWrap = document.createElement('div');
   teasersWrap.className = 'filter-teasers';
   for (const tp of TEASER_PILLS) teasersWrap.appendChild(makeFilterPill(tp.group, tp.value));
