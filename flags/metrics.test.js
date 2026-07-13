@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas } from './group.js';
+import { attachCoffees, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -30,6 +30,7 @@ const ELEVATION = /** @type {import('./metrics.js').MetricData} */ (load('metric
 const COASTLINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coastline.json'));
 const FOREST = /** @type {import('./metrics.js').MetricData} */ (load('metrics/forest.json'));
 const SHEEP_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/sheepPerCapita.json'));
+const CATTLE_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/cattlePerCapita.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -450,6 +451,76 @@ test('attachSheepPerCapitas fills every real place (no-sheep at 0), orgs stay ba
   }
   assert.equal(/** @type {any} */ (byCode.get('fk')).sheepPerCapita, SHEEP_PC.values.fk);
   assert.equal(/** @type {any} */ (byCode.get('sg')).sheepPerCapita, 0); // Singapore has no sheep
+});
+
+// ---- real cattlePerCapita.json schema + integration gate (derived, intensive) --
+
+test('cattlePerCapita is a valid, self-describing metric file', () => {
+  assert.equal(CATTLE_PC.key, 'cattlePerCapita');
+  assert.equal(typeof CATTLE_PC.label, 'string');
+  assert.equal(typeof CATTLE_PC.unit, 'string');
+  // A rate spanning ~0.0001 to ~3.5, rendered with 2 significant figures.
+  assert.equal(CATTLE_PC.format, 'sig2');
+  assert.equal(typeof CATTLE_PC.source, 'string');
+  assert.equal(typeof CATTLE_PC.year, 'number');
+  assert.equal(typeof CATTLE_PC.values, 'object');
+  // Dense derived (cattle / population), like the sheep twin: no absence hint.
+  assert.equal(CATTLE_PC.absence, undefined);
+});
+
+test('every cattlePerCapita value is a non-negative finite number', () => {
+  for (const [code, v] of Object.entries(CATTLE_PC.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('every real place has a cattlePerCapita; only non-places have none', () => {
+  // Derived from cattle / population, both dense. A real place with no cattle
+  // carries 0, and the uninhabited ones (population 0) carry 0 rather than a
+  // divide-by-zero drop, so the "no data = not a place" invariant holds.
+  const values = CATTLE_PC.values;
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in values), `org ${c.code} should have no cattlePerCapita value`);
+    } else {
+      assert.ok(c.code in values, `real place ${c.code} (${c.continent}) has no cattlePerCapita value`);
+    }
+  }
+});
+
+test('uninhabited places carry 0 cattlePerCapita, not a divide-by-zero drop', () => {
+  for (const code of ['bv', 'hm', 'cp']) {
+    assert.equal(CATTLE_PC.values[code], 0, `${code} should be 0, not missing/NaN`);
+  }
+});
+
+test('createMetric over cattlePerCapita ranks the world size-independently', () => {
+  const cattle = createMetric(CATTLE_PC, COUNTRIES);
+  // Uruguay is the extreme: ~12M cattle over ~3.4M people, more cows than people,
+  // a small country topping every giant. Its value is well over 3.
+  assert.equal(cattle.topN('world', 1)[0].code, 'uy');
+  assert.ok(/** @type {number} */ (cattle.valueOf('uy')) > 3);
+  // The "more cattle than people" club (value >= 1) is small and famous: New
+  // Zealand, Argentina, Brazil all sit there; a giant like China does not.
+  assert.ok(/** @type {number} */ (cattle.valueOf('nz')) >= 1);
+  assert.ok(/** @type {number} */ (cattle.valueOf('cn')) < 1);
+});
+
+test('attachCattlePerCapitas fills every real place (no-cattle at 0), orgs stay bare', () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachCattlePerCapitas(/** @type {any} */ (rows), CATTLE_PC.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.cattlePerCapita, undefined, `org ${c.code} should have no cattlePerCapita field`);
+    } else {
+      assert.equal(typeof row.cattlePerCapita, 'number', `real place ${c.code} has no cattlePerCapita value`);
+    }
+  }
+  assert.equal(/** @type {any} */ (byCode.get('uy')).cattlePerCapita, CATTLE_PC.values.uy);
+  assert.equal(/** @type {any} */ (byCode.get('sg')).cattlePerCapita, 0); // Singapore has no cattle
 });
 
 // ---- real coffee.json schema + the sparse absence:'zero' contract ----------

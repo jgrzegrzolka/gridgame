@@ -420,7 +420,8 @@
       "oil": "Oil production",
       "rice": "Rice production",
       "coal": "Coal production",
-      "sheepPerCapita": "Sheep per capita"
+      "sheepPerCapita": "Sheep per capita",
+      "cattlePerCapita": "Cattle per capita"
     }
   },
   "daily": {
@@ -554,7 +555,8 @@
       "superlativeOil": "Oil production: most",
       "superlativeRice": "Rice production: most",
       "superlativeCoal": "Coal production: most",
-      "superlativeSheep": "Sheep per capita: most"
+      "superlativeSheep": "Sheep per capita: most",
+      "superlativeCattle": "Cattle per capita: most"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -576,7 +578,8 @@
       "superlativeOil": "Oil",
       "superlativeRice": "Rice",
       "superlativeCoal": "Coal",
-      "superlativeSheep": "Sheep"
+      "superlativeSheep": "Sheep",
+      "superlativeCattle": "Cattle"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -606,6 +609,7 @@
     "hintMostRice": "Largest rice production",
     "hintMostCoal": "Largest coal production",
     "hintMostSheep": "Most sheep per person",
+    "hintMostCattle": "Most cattle per person",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
@@ -849,6 +853,12 @@
       "2": "over 2 sheep per person"
     }
   },
+  "cattlePerCapita": {
+    "atLeast": {
+      "1": "over 1 cattle per person",
+      "2": "over 2 cattle per person"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",
@@ -921,7 +931,8 @@
     "oil": "Oil production",
     "rice": "Rice production",
     "coal": "Coal production",
-    "sheepPerCapita": "Sheep per capita"
+    "sheepPerCapita": "Sheep per capita",
+    "cattlePerCapita": "Cattle per capita"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

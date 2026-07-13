@@ -420,7 +420,8 @@
       "oil": "Wydobycie ropy naftowej",
       "rice": "Produkcja ryżu",
       "coal": "Wydobycie węgla",
-      "sheepPerCapita": "Owce na osobę"
+      "sheepPerCapita": "Owce na osobę",
+      "cattlePerCapita": "Bydło na osobę"
     }
   },
   "daily": {
@@ -554,7 +555,8 @@
       "superlativeOil": "Wydobycie ropy naftowej: najwięcej",
       "superlativeRice": "Produkcja ryżu: najwięcej",
       "superlativeCoal": "Wydobycie węgla: najwięcej",
-      "superlativeSheep": "Owce na osobę: najwięcej"
+      "superlativeSheep": "Owce na osobę: najwięcej",
+      "superlativeCattle": "Bydło na osobę: najwięcej"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -576,7 +578,8 @@
       "superlativeOil": "Ropa",
       "superlativeRice": "Ryż",
       "superlativeCoal": "Węgiel",
-      "superlativeSheep": "Owce"
+      "superlativeSheep": "Owce",
+      "superlativeCattle": "Bydło"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
@@ -606,6 +609,7 @@
     "hintMostRice": "Największa produkcja ryżu",
     "hintMostCoal": "Największe wydobycie węgla",
     "hintMostSheep": "Najwięcej owiec na osobę",
+    "hintMostCattle": "Najwięcej bydła na osobę",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
@@ -849,6 +853,12 @@
       "2": "ponad 2 owce na osobę"
     }
   },
+  "cattlePerCapita": {
+    "atLeast": {
+      "1": "ponad 1 sztuka bydła na osobę",
+      "2": "ponad 2 sztuki bydła na osobę"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "tylko 2 kolory",
@@ -921,7 +931,8 @@
     "oil": "Wydobycie ropy naftowej",
     "rice": "Produkcja ryżu",
     "coal": "Wydobycie węgla",
-    "sheepPerCapita": "Owce na osobę"
+    "sheepPerCapita": "Owce na osobę",
+    "cattlePerCapita": "Bydło na osobę"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

@@ -62,6 +62,7 @@ const MODE_LABELS = {
   'superlative-rice': { key: 'party.mode.superlativeRice', full: 'Rice production: most', shortKey: 'party.modeShort.superlativeRice', short: 'Rice' },
   'superlative-coal': { key: 'party.mode.superlativeCoal', full: 'Coal production: most', shortKey: 'party.modeShort.superlativeCoal', short: 'Coal' },
   'superlative-sheep': { key: 'party.mode.superlativeSheep', full: 'Sheep per capita: most', shortKey: 'party.modeShort.superlativeSheep', short: 'Sheep' },
+  'superlative-cattle': { key: 'party.mode.superlativeCattle', full: 'Cattle per capita: most', shortKey: 'party.modeShort.superlativeCattle', short: 'Cattle' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -149,6 +150,12 @@ const SUPERLATIVE_MODES = {
     file: 'sheepPerCapita.json',
     hintMost: { key: 'party.hintMostSheep', fallback: 'Most sheep per person' },
   },
+  // Cattle per capita is 'most'-only for the same reason as sheep: "more cows
+  // than people" (Uruguay) is the fun question, "fewest" is an obscure tail.
+  'superlative-cattle': {
+    file: 'cattlePerCapita.json',
+    hintMost: { key: 'party.hintMostCattle', fallback: 'Most cattle per person' },
+  },
 };
 
 /** Every round id this build can render: the two fixed picture rounds plus the
@@ -212,6 +219,9 @@ const METRIC_ICONS = {
   'superlative-coal': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 3 15l4 4 8 1 5-5-2-6-6-3zM6 9l6 2m0 0 3-4m-3 4-1 8m1-8 8 1"/></svg>',
   // Sheep per capita: a woolly body (bumpy top) with a small head and two legs.
   'superlative-sheep': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8a2.5 2.5 0 0 1 4.5-1.5A2.5 2.5 0 0 1 17 8a2.5 2.5 0 0 1 .3 5A2.5 2.5 0 0 1 15 15H9a2.5 2.5 0 0 1-2.3-3.5A2.5 2.5 0 0 1 9 8z"/><circle cx="6.5" cy="9.5" r="2"/><path d="M5 8 3.5 7"/><path d="M10 15.5V18M14 15.5V18"/></svg>',
+  // Cattle per capita: a cow head, horns and ears out to the sides, a broad
+  // muzzle with two nostrils. Reads as a cow to tell it apart from the sheep.
+  'superlative-cattle': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6.5C6 4 4 4 3.5 5.5"/><path d="M17 6.5C18 4 20 4 20.5 5.5"/><path d="M6.5 9C4.5 8.3 3 9 2.8 10.5"/><path d="M17.5 9C19.5 8.3 21 9 21.2 10.5"/><path d="M6.5 8.5a5.5 4.5 0 0 1 11 0c0 3-1.2 4.8-2.8 6C13.7 15.3 12.9 15.6 12 15.6s-1.7-.3-2.7-1.1C7.7 13.3 6.5 11.5 6.5 8.5z"/><ellipse cx="12" cy="13.3" rx="3.3" ry="2.1"/><path d="M10.6 13v.6M13.4 13v.6"/></svg>',
 };
 
 /**

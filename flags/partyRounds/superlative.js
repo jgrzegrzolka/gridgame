@@ -15,6 +15,7 @@ import oil from '../metrics/oil.json' with { type: 'json' };
 import rice from '../metrics/rice.json' with { type: 'json' };
 import coal from '../metrics/coal.json' with { type: 'json' };
 import sheepPerCapita from '../metrics/sheepPerCapita.json' with { type: 'json' };
+import cattlePerCapita from '../metrics/cattlePerCapita.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -246,3 +247,15 @@ const sheepRaising = {
   values: Object.fromEntries(Object.entries(sheepPerCapita.values).filter(([, v]) => v > 0)),
 };
 export const sheepPerCapitaRound = createSuperlativeRound(createMetric(sheepRaising, []), 'superlative-sheep', { direction: 'most' });
+
+// Cattle-per-capita instance: cattle head per person, id 'superlative-cattle'.
+// Locked to 'most', same reasoning as sheep: "which has the MOST cattle per
+// person" is the fun question (Uruguay, more cows than people); "fewest cattle
+// per person" is an obscure long tail, so 'least' is never dealt. The round
+// metric drops the 0-cattle places so every option is a genuine cattle-raising
+// country rather than a filler zero.
+const cattleRaising = {
+  ...cattlePerCapita,
+  values: Object.fromEntries(Object.entries(cattlePerCapita.values).filter(([, v]) => v > 0)),
+};
+export const cattlePerCapitaRound = createSuperlativeRound(createMetric(cattleRaising, []), 'superlative-cattle', { direction: 'most' });

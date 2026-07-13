@@ -616,6 +616,26 @@ export const SHEEP_PER_CAPITA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 2 },
 ];
 
+/**
+ * Cattle-per-capita-threshold Categories (cattle head per person), the bovine
+ * twin of sheep-per-capita and the same shape: intensive, top-heavy, so
+ * **`>=`-only and integer-break-only** (`parseThreshold` needs a positive
+ * integer, and nearly every country sits below 1). `>=1` (~10 real places:
+ * Uruguay, Chad, Paraguay, New Zealand, Mongolia, Ireland, Argentina, Australia,
+ * Brazil) is the iconic "more cows than people" cell; `>=2` (Uruguay, Chad) is
+ * the harder tier. `exclusiveGroup: 'cattlePerCapita'`.
+ *
+ * No `ultimate: true` break: the distribution is one Uruguay peak over a thin
+ * tail, so `cattlePerCapita >= N × continent` can't reach 9 distinct. Every
+ * break stays `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1 },
+  { op: '>=', n: 2 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -1293,6 +1313,38 @@ export function sheepPerCapita(op, n, opts = {}) {
 }
 
 /**
+ * Cattle-per-capita-threshold Category factory (cattle head per person), the
+ * bovine twin of `sheepPerCapita`. Reads the denormalized `country.cattlePerCapita`
+ * field (`attachCattlePerCapitas`, a dense derived metric, so a place with no
+ * cattle reads a real 0). `exclusiveGroup: 'cattlePerCapita'`. The break list is
+ * `>=`-only (see CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM), but the `<=` branch is
+ * kept for symmetry so a `cattlePerCapita:<=N` id would still rehydrate. The
+ * label bakes a plain integer (`over 1 cattle per person`).
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function cattlePerCapita(op, n, opts = {}) {
+  const label = op === '>=' ? `over ${n} cattle per person` : `under ${n} cattle per person`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.cattlePerCapita === 'number' && c.cattlePerCapita >= n
+      : (c) => typeof c.cattlePerCapita === 'number' && c.cattlePerCapita <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `cattlePerCapita:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'cattlePerCapita',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -1554,6 +1606,18 @@ export const THRESHOLD_METRICS = {
     labelFor: (op, n, translate) => {
       if (op === '>=') return translate(`sheepPerCapita.atLeast.${n}`, `over ${n} sheep per person`);
       return translate(`sheepPerCapita.atMost.${n}`, `under ${n} sheep per person`);
+    },
+  },
+  cattlePerCapita: {
+    breaks: CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM,
+    factory: cattlePerCapita,
+    prefixFallback: 'Cattle per capita',
+    field: 'cattlePerCapita',
+    family: 'cattlePerCapita',
+    has: (c) => typeof c.cattlePerCapita === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`cattlePerCapita.atLeast.${n}`, `over ${n} cattle per person`);
+      return translate(`cattlePerCapita.atMost.${n}`, `under ${n} cattle per person`);
     },
   },
 };
