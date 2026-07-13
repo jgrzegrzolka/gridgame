@@ -14,6 +14,7 @@ import forest from '../metrics/forest.json' with { type: 'json' };
 import oil from '../metrics/oil.json' with { type: 'json' };
 import rice from '../metrics/rice.json' with { type: 'json' };
 import coal from '../metrics/coal.json' with { type: 'json' };
+import sheepPerCapita from '../metrics/sheepPerCapita.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -233,3 +234,16 @@ export const riceRound = createSuperlativeRound(createMetric(rice, []), 'superla
 // so the round ranks the ~59 producers only. Locked to 'most': "biggest coal
 // producer" (China) is the good question.
 export const coalRound = createSuperlativeRound(createMetric(coal, []), 'superlative-coal', { direction: 'most' });
+
+// Sheep-per-capita instance: sheep head per person, id 'superlative-sheep'.
+// Dense, intensive (size-independent) and two-directional like forest, and with
+// the same wrinkle: the many places with no sheep carry a real 0, and a "least"
+// quartet drawn from them would tie at 0 (an unfair question with no clear
+// answer). So the round metric drops the 0 places from selection, leaving only
+// sheep-raising countries, among which both "most" and "least sheep per person"
+// are clean questions (the famous "more sheep than people" club sits at the top).
+const sheepRaising = {
+  ...sheepPerCapita,
+  values: Object.fromEntries(Object.entries(sheepPerCapita.values).filter(([, v]) => v > 0)),
+};
+export const sheepPerCapitaRound = createSuperlativeRound(createMetric(sheepRaising, []), 'superlative-sheep');

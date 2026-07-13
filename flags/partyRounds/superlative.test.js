@@ -457,3 +457,38 @@ test('coalRound: biggest-only, correct extreme-by-coal answer, producers only', 
     assert.equal(COAL[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-coal option`);
   }
 });
+
+// ---- sheep-per-capita instance (sheep/person, id 'superlative-sheep') --------
+
+test('sheepPerCapitaRound: two-directional over sheep-raising places, correct extreme answer', async () => {
+  const { sheepPerCapitaRound } = await import('./superlative.js');
+  const sheepJson = (await import('../metrics/sheepPerCapita.json', { with: { type: 'json' } })).default;
+  const SHEEP = /** @type {Record<string, number>} */ (sheepJson.values);
+  assert.equal(sheepPerCapitaRound.id, 'superlative-sheep');
+  // Sheep-raising sovereigns with distinct values spanning the range (Mongolia
+  // 7.0 ... Norway 0.39). All strictly > 0, so none is filtered out of the round.
+  const pool = ['mn', 'nz', 'au', 'td', 'uy', 'is', 'ie', 'ro', 'gb', 'no'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = sheepPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => SHEEP[c]);
+    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+    assert.equal(SHEEP[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt} sheep-per-person option`);
+  }
+});
+
+test('sheepPerCapitaRound: no-sheep (0) places are excluded from selection', async () => {
+  const { sheepPerCapitaRound } = await import('./superlative.js');
+  // The round metric is zero-filtered, so a place with no sheep (Singapore,
+  // Japan's negligible flock rounding to 0, Korea, Panama) never has a value.
+  // Give a mixed pool and prove no such code ever surfaces as an option.
+  const noSheep = new Set(['sg', 'jp', 'kr', 'pa']);
+  const pool = ['mn', 'nz', 'au', 'uy', 'sg', 'jp', 'kr', 'pa'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = sheepPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!noSheep.has(opt), `seed ${i}: no-sheep ${opt} must not be an option`);
+    }
+  }
+});

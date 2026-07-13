@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DU (coal production, sparse extractive metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DV (sheep per capita, dense derived + intensive metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,22 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DV: Sheep per capita as a world metric, dense derived + intensive/size-independent (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Seventeenth world metric, and the first *animal* one (Jan asked for "anything animal related"). Sheep head per person: the size-independent metric whose whole charm is the tiny "more sheep than people" club. The Falkland Islands top the world at ~135 sheep/person (~500,000 sheep over ~3,700 people); among sovereign states it's New Zealand, Mongolia, Australia, Uruguay, then Wales among the UK home nations. A giant like China sits far down (many sheep, far more people), exactly the intensive property this metric exists for (memory `feedback_prefer_intensive_metrics`).
+
+**Data contract:** *dense derived*, like `density` and `gdpPerCapita` (no `absence` hint). `flags/metrics/sheepPerCapita.json` carries a value for every real place: `sheep / population`, with a place that has no sheep resolving to a real 0 and the three uninhabited territories (Bouvet, Heard, Clipperton, population 0) pinned to 0 rather than a divide-by-zero drop. So "no data" still means exactly "not a place" and the TTT no-data guard stays correct. The sheep numerator has no repo metric file, so `authoring/build-sheep-per-capita.mjs` embeds a FAOSTAT snapshot table (OWID livestock_counts variable 1290885, mostly 2024) keyed by our alpha-2 codes, plus curated national-statistics fills the FAOSTAT country set omits: Falklands (FI Farm Statistics 2022/23), the four UK home nations (Defra June 2024: England 13.8M, Wales 8.7M, Scotland 6.6M, N. Ireland 2.0M, summing to FAOSTAT's UK total ~31M), and Greenland.
+
+**One design wrinkle** worth noting: `parseThreshold` requires an integer `n`, but sheep-per-capita values are mostly fractional and top-heavy, so (like the sparse crops) the TTT axis is **`>=`-only** with integer breaks `>=1` (~15 real places, the "more sheep than people" cell) and `>=2` (~7). The lens, filters, and party round read the full raw values; only the TTT threshold field is integer-bounded.
+
+- [x] 1. Data: `flags/metrics/sheepPerCapita.json` (262 real places) + `authoring/build-sheep-per-capita.mjs` (embedded FAOSTAT table + Defra/FI/Greenland fills, derived over `population.json`) + `METRIC_FILES` line + `attachSheepPerCapitas` (group.js, dense twin) + `METRIC_ATTACHERS` entry + `metrics.test.js` schema/no-absence/non-negative/coverage/uninhabited-0/intensive-ranking/attach-fills-every-real-place tests.
+- [x] 2. flagsdata lens (free once step 1 landed; "Sheep per capita" in the selector, one-decimal rate).
+- [x] 3. Filters: `metricTiers.js` auto-derives from `THRESHOLD_METRICS` (zero-edit); findFlag chooser (`Filters.sheepPerCapita` + `SheepPerCapitaConstraint` + `ScalarGroup`; sheep section + `selectSheepPerCapita` + `sheepPerCapitaPills` + `sheepPerCapitaProbability` modifier + `chooserI18n` sheep loop) + `findflag-random-coverage` skill note; flagsdata filter group + lens are zero-edit (both loop `METRIC_FILES`). `attachSheepPerCapitas` at flagsdata + findFlag via the zero-edit `attachMetrics` loop. `sheepPerCapita.atLeast` + `findFlag.sections.sheepPerCapita` i18n (en+pl).
+- [x] 4. TTT: `sheepPerCapita(op, n)` factory + `SHEEP_PER_CAPITA_BREAKS_FOR_RANDOM` (`>=1/2 sheep per person` = 15/7 real places; **`>=`-only and integer-only** because `parseThreshold` needs an integer and the metric is top-heavy; no ultimate break, one Falkland outlier over a thin tail can't back a 9×9 cell, every break `ultimateEligible: false`, keeping it a 3×3-only axis like the crops) + `THRESHOLD_METRICS.sheepPerCapita` entry. `attachSheepPerCapitas` at party/server.js's static-import site + the generic loops; ultimateServer.js skips it (never 9×9). `sheepPerCapita.atLeast` + `metric.sheepPerCapita` i18n (en+pl). Engine pinning tests updated (pool count, `SINGLE_USE_METRIC_GROUPS`, ultimate-pool exclusion, category-source sweep).
+- [x] 5. Flag Party round `superlative-sheep` via `createSuperlativeRound` over a **zero-filtered** copy of the dense map (drop the many no-sheep places so a "least" quartet can't tie at 0), **two-directional** like forest/coastline ("most" = the more-sheep-than-people club, "least" = fewest among sheep-raising countries). Registered across all seven spots (superlative.js + two tests, `partyGameServer` ROUNDS, `partyPlan` METRIC_MODES + test, `flagParty/page.js` MODE_LABELS + SUPERLATIVE_MODES + a woolly-sheep icon, en+pl `party.mode/modeShort.superlativeSheep` + `hintMost/LeastSheep`) plus the `[data-metric="superlative-sheep"] { --mc: #a9825f }` warm-wool-tan hue (distinct from the browns of coffee/cocoa).
+
+Surface 6 (daily puzzles) is NOT a checkbox: added a row to `METRIC_DAILY_PUZZLES.md`, Feature closed.
 
 ### Feature DU: Coal production as a world metric, sparse extractive (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

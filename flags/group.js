@@ -29,6 +29,7 @@
  * @property {number} [oil]  Denormalized from `flags/metrics/oil.json` by `attachOils` (oil production, terawatt-hours). Sparse `absence: 'zero'` metric: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
  * @property {number} [rice]  Denormalized from `flags/metrics/rice.json` by `attachRices` (rice paddy tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
  * @property {number} [coal]  Denormalized from `flags/metrics/coal.json` by `attachCoals` (coal production, terawatt-hours). Sparse `absence: 'zero'` metric: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
+ * @property {number} [sheepPerCapita]  Denormalized from `flags/metrics/sheepPerCapita.json` by `attachSheepPerCapitas` (sheep head per person). Dense derived metric like `density` / `gdpPerCapita`: every real place has a value (a place with no sheep, or an uninhabited one, carries 0), absent only for non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -167,6 +168,25 @@ export function attachGdpPerCapitas(countries, values) {
   for (const c of countries) {
     const v = values[c.code];
     if (typeof v === 'number') c.gdpPerCapita = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/sheepPerCapita.json` values onto each Country as
+ * `.sheepPerCapita` (sheep head per person). Twin of `attachDensities` /
+ * `attachGdpPerCapitas`: a dense derived metric, so every real place carries a
+ * value (a place with no sheep, or an uninhabited one, is a real 0) and only
+ * non-place flags (orgs) are left without the field.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachSheepPerCapitas(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.sheepPerCapita = v;
   }
   return countries;
 }
@@ -406,6 +426,7 @@ const METRIC_ATTACHERS = {
   oil: attachOils,
   rice: attachRices,
   coal: attachCoals,
+  sheepPerCapita: attachSheepPerCapitas,
 };
 
 /**
