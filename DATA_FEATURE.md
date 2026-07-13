@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DV (sheep per capita, dense derived + intensive metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DW (cattle per capita, dense derived + intensive metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,24 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DW: Cattle per capita as a world metric, dense derived + intensive/size-independent (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Eighteenth world metric, and the second *animal* one after sheep (Feature DV): Jan asked for "one more, animal/food related, fun and surprising". Cattle head per person, the same size-independent charm as sheep with a punchier headline: Uruguay has *more cows than people* (3.5 head each), the only sovereign over 3. Then Chad, Paraguay, New Zealand, Mongolia, Ireland, Argentina, Australia, Brazil, all famous cattle countries; a giant like China or India sits far down (many cattle, far more people), exactly the intensive property (memory `feedback_prefer_intensive_metrics`).
+
+**Data contract:** *dense derived*, like `density` / `gdpPerCapita` / `sheepPerCapita` (no `absence` hint). `flags/metrics/cattlePerCapita.json` carries a value for every real place: `cattle / population`, with a place that has no cattle resolving to a real 0 and uninhabited territories pinned to 0 rather than a divide-by-zero drop. So "no data" still means exactly "not a place" and the TTT no-data guard stays correct. `authoring/build-cattle-per-capita.mjs` embeds a FAOSTAT cattle snapshot (OWID `cattle-livestock-count-heads` grapher, variable 1197932, mostly 2024) keyed by our alpha-2 codes, derived over `population.json`. Unlike sheep, **no curated national-statistics fills**: the UK home nations sit at 0 (the apple precedent, FAOSTAT reports the UK as one unit and we don't split it), and Cook Islands / Niue are folded into the FAOSTAT map. 262 real places, 196 cattle-bearing.
+
+**Display:** the metric uses the new **`sig2`** format (2 significant figures keeping the whole integer part, trailing zeros stripped: Uruguay "3.5", Mongolia "1.5", the US "0.26", China "0.05", Singapore "0"), added in the sheep-rounding follow-up (PR #861) to read cleanly across the metric's wide range without the "0.0 / 0.0074" artifacts a fixed decimal produced. Forest cover stays on `decimal1`; the two per-capita livestock metrics share `sig2`.
+
+**Same `parseThreshold` wrinkle as sheep:** integer `n` only, and the values are fractional and top-heavy, so the TTT axis is **`>=`-only** with integer breaks `>=1` ("more cattle than people", ~24 real places) and `>=2` (~2). The lens, filters, and party round read the full raw values; only the TTT threshold field is integer-bounded.
+
+- [x] 1. Data: `flags/metrics/cattlePerCapita.json` (262 real places) + `authoring/build-cattle-per-capita.mjs` (embedded FAOSTAT table, derived over `population.json`, no curated fills) + `METRIC_FILES` line + `attachCattlePerCapitas` (group.js, dense twin) + `METRIC_ATTACHERS` entry + `metrics.test.js` schema/sig2-format/no-absence/non-negative/coverage/uninhabited-0/intensive-ranking/attach-fills-every-real-place tests.
+- [x] 2. flagsdata lens (free once step 1 landed; "Cattle per capita" in the selector, `sig2` rate).
+- [x] 3. Filters: `metricTiers.js` auto-derives from `THRESHOLD_METRICS` (zero-edit); findFlag chooser (`Filters.cattlePerCapita` + `CattlePerCapitaConstraint` + `ScalarGroup`; cattle section + `selectCattlePerCapita` + `cattlePerCapitaPills` + `cattlePerCapitaProbability` modifier + `chooserI18n` cattle loop) + `findflag-random-coverage` skill note; flagsdata filter group + lens are zero-edit (both loop `METRIC_FILES`). `attachCattlePerCapitas` at flagsdata + findFlag via the zero-edit `attachMetrics` loop. `cattlePerCapita.atLeast` + `findFlag.sections.cattlePerCapita` + `metric.cattlePerCapita` i18n (en+pl).
+- [x] 4. TTT: `cattlePerCapita(op, n)` factory + `CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM` (`>=1/2 cattle per person`; **`>=`-only and integer-only** because `parseThreshold` needs an integer and the metric is top-heavy; no ultimate break, one Uruguay-ish outlier over a thin tail can't back a 9×9 cell, every break `ultimateEligible: false`, keeping it a 3×3-only axis like sheep) + `THRESHOLD_METRICS.cattlePerCapita` entry. `attachCattlePerCapitas` at party/server.js's static-import site + the generic loops; ultimateServer.js skips it (never 9×9). `cattlePerCapita.atLeast` + `metric.cattlePerCapita` i18n (en+pl). Engine pinning tests updated (pool count, `SINGLE_USE_METRIC_GROUPS`, ultimate-pool exclusion, category-source sweep).
+- [x] 5. Flag Party round `superlative-cattle` via `createSuperlativeRound` over a **zero-filtered** copy of the dense map (drop the no-cattle places so every option is a genuine cattle-raiser), locked to **'most'-only** per Jan ("I only want to be asked for the country that has more"): "more cows than people" is the fun question, "fewest per person" is an obscure tail. This matches the post-#861 sheep round (sheep was flipped to 'most'-only in the same PR). Registered across all seven spots (superlative.js + two tests, `partyGameServer` ROUNDS, `partyPlan` METRIC_MODES + test, `flagParty/page.js` MODE_LABELS + SUPERLATIVE_MODES + a cow-head icon, en+pl `party.mode/modeShort.superlativeCattle` + `hintMostCattle`) plus the `[data-metric="superlative-cattle"] { --mc: #6d4c41 }` cowhide-brown hue (distinct from sheep's lighter tan and the coffee/cocoa browns).
+
+Surface 6 (daily puzzles) is NOT a checkbox: added a row to `METRIC_DAILY_PUZZLES.md`, Feature closed.
 
 ### Feature DV: Sheep per capita as a world metric, dense derived + intensive/size-independent (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

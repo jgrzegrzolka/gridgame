@@ -493,3 +493,39 @@ test('sheepPerCapitaRound: no-sheep (0) places are excluded from selection', asy
     }
   }
 });
+
+// ---- cattle-per-capita instance (cattle/person, id 'superlative-cattle') -----
+
+test('cattlePerCapitaRound: most-only, correct biggest-per-person answer, cattle-raising only', async () => {
+  const { cattlePerCapitaRound } = await import('./superlative.js');
+  const cattleJson = (await import('../metrics/cattlePerCapita.json', { with: { type: 'json' } })).default;
+  const CATTLE = /** @type {Record<string, number>} */ (cattleJson.values);
+  assert.equal(cattlePerCapitaRound.id, 'superlative-cattle');
+  // Cattle-raising sovereigns with distinct values spanning the range (Uruguay
+  // 3.53 ... France 0.24). All strictly > 0, so none is filtered out of the round.
+  const pool = ['uy', 'td', 'py', 'nz', 'mn', 'ie', 'ar', 'au', 'br', 'fr'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = cattlePerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Locked to 'most': every round asks for the biggest, never 'least'.
+    assert.equal(q.prompt, 'most', `seed ${i}: cattle per capita is most-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => CATTLE[c]);
+    assert.equal(CATTLE[q.answer], Math.max(...vals), `seed ${i}: answer must be the most cattle-per-person option`);
+  }
+});
+
+test('cattlePerCapitaRound: no-cattle (0) places are excluded from selection', async () => {
+  const { cattlePerCapitaRound } = await import('./superlative.js');
+  // The round metric is zero-filtered, so a place with no cattle (Singapore,
+  // Monaco, Hong Kong, Vatican) never has a value. Give a mixed pool and prove
+  // no such code ever surfaces as an option.
+  const noCattle = new Set(['sg', 'mc', 'hk', 'va']);
+  const pool = ['uy', 'nz', 'au', 'br', 'sg', 'mc', 'hk', 'va'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = cattlePerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!noCattle.has(opt), `seed ${i}: no-cattle ${opt} must not be an option`);
+    }
+  }
+});
