@@ -61,6 +61,7 @@ const MODE_LABELS = {
   'superlative-oil': { key: 'party.mode.superlativeOil', full: 'Oil production: most', shortKey: 'party.modeShort.superlativeOil', short: 'Oil' },
   'superlative-rice': { key: 'party.mode.superlativeRice', full: 'Rice production: most', shortKey: 'party.modeShort.superlativeRice', short: 'Rice' },
   'superlative-coal': { key: 'party.mode.superlativeCoal', full: 'Coal production: most', shortKey: 'party.modeShort.superlativeCoal', short: 'Coal' },
+  'superlative-sheep': { key: 'party.mode.superlativeSheep', full: 'Sheep per capita: most & fewest', shortKey: 'party.modeShort.superlativeSheep', short: 'Sheep' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -142,6 +143,13 @@ const SUPERLATIVE_MODES = {
     file: 'coal.json',
     hintMost: { key: 'party.hintMostCoal', fallback: 'Largest coal production' },
   },
+  // Sheep per capita is two-directional like forest (both extremes are good
+  // questions among sheep-raising countries: "more sheep than people" at the top).
+  'superlative-sheep': {
+    file: 'sheepPerCapita.json',
+    hintMost: { key: 'party.hintMostSheep', fallback: 'Most sheep per person' },
+    hintLeast: { key: 'party.hintLeastSheep', fallback: 'Fewest sheep per person' },
+  },
 };
 
 /** Every round id this build can render: the two fixed picture rounds plus the
@@ -203,6 +211,8 @@ const METRIC_ICONS = {
   'superlative-rice': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a8 8 0 0 1-16 0zM8 12a4 4 0 0 1 8 0M14 5l5-2M15 8l5-2"/></svg>',
   // Coal production: a chunky lump of coal (an irregular faceted rock).
   'superlative-coal': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 3 15l4 4 8 1 5-5-2-6-6-3zM6 9l6 2m0 0 3-4m-3 4-1 8m1-8 8 1"/></svg>',
+  // Sheep per capita: a woolly body (bumpy top) with a small head and two legs.
+  'superlative-sheep': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8a2.5 2.5 0 0 1 4.5-1.5A2.5 2.5 0 0 1 17 8a2.5 2.5 0 0 1 .3 5A2.5 2.5 0 0 1 15 15H9a2.5 2.5 0 0 1-2.3-3.5A2.5 2.5 0 0 1 9 8z"/><circle cx="6.5" cy="9.5" r="2"/><path d="M5 8 3.5 7"/><path d="M10 15.5V18M14 15.5V18"/></svg>',
 };
 
 /**

@@ -15,6 +15,7 @@ import coal from '../flags/metrics/coal.json' with { type: 'json' };
 import elevation from '../flags/metrics/elevation.json' with { type: 'json' };
 import coastline from '../flags/metrics/coastline.json' with { type: 'json' };
 import forest from '../flags/metrics/forest.json' with { type: 'json' };
+import sheepPerCapita from '../flags/metrics/sheepPerCapita.json' with { type: 'json' };
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { TicTacToeServer } from './ticTacToeServer.js';
 
@@ -42,6 +43,7 @@ attachMetrics(countries, {
   oil: oil.values,
   rice: rice.values,
   coal: coal.values,
+  sheepPerCapita: sheepPerCapita.values,
 });
 
 export default class GameServer extends TicTacToeServer {

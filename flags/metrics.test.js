@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests } from './group.js';
+import { attachCoffees, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -29,6 +29,7 @@ const COAL = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coa
 const ELEVATION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/elevation.json'));
 const COASTLINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coastline.json'));
 const FOREST = /** @type {import('./metrics.js').MetricData} */ (load('metrics/forest.json'));
+const SHEEP_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/sheepPerCapita.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -372,6 +373,82 @@ test('uninhabited places carry 0 gdpPerCapita, not a divide-by-zero drop', () =>
   for (const code of ['bv', 'hm', 'cp']) {
     assert.equal(GDP_PER_CAPITA.values[code], 0, `${code} should be 0, not missing/NaN`);
   }
+});
+
+// ---- real sheepPerCapita.json schema + integration gate (derived, intensive) --
+
+test('sheepPerCapita is a valid, self-describing metric file', () => {
+  assert.equal(SHEEP_PC.key, 'sheepPerCapita');
+  assert.equal(typeof SHEEP_PC.label, 'string');
+  assert.equal(typeof SHEEP_PC.unit, 'string');
+  // A small rate (0.0 to ~135), rendered with one decimal like density.
+  assert.equal(SHEEP_PC.format, 'decimal1');
+  assert.equal(typeof SHEEP_PC.source, 'string');
+  assert.equal(typeof SHEEP_PC.year, 'number');
+  assert.equal(typeof SHEEP_PC.values, 'object');
+  // Dense derived (sheep / population), like density / gdpPerCapita: no absence
+  // hint. A place with no sheep, or an uninhabited one, carries a real 0.
+  assert.equal(SHEEP_PC.absence, undefined);
+});
+
+test('every sheepPerCapita value is a non-negative finite number', () => {
+  for (const [code, v] of Object.entries(SHEEP_PC.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('every real place has a sheepPerCapita; only non-places have none', () => {
+  // Derived from sheep / population, both dense. A real place with no sheep
+  // carries 0, and the uninhabited ones (population 0) carry 0 rather than a
+  // divide-by-zero drop, so the "no data = not a place" invariant holds.
+  const values = SHEEP_PC.values;
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in values), `org ${c.code} should have no sheepPerCapita value`);
+    } else {
+      assert.ok(c.code in values, `real place ${c.code} (${c.continent}) has no sheepPerCapita value`);
+    }
+  }
+});
+
+test('uninhabited places carry 0 sheepPerCapita, not a divide-by-zero drop', () => {
+  // Bouvet, Heard, Clipperton have population 0; they must still be present at 0.
+  for (const code of ['bv', 'hm', 'cp']) {
+    assert.equal(SHEEP_PC.values[code], 0, `${code} should be 0, not missing/NaN`);
+  }
+});
+
+test('createMetric over sheepPerCapita ranks the world size-independently', () => {
+  const sheep = createMetric(SHEEP_PC, COUNTRIES);
+  // The Falklands is the extreme: ~500,000 sheep over ~3,700 people, a tiny
+  // territory topping every large country, the intensive property this metric
+  // exists for. Its value is well over 100 sheep/person.
+  assert.equal(sheep.topN('world', 1)[0].code, 'fk');
+  assert.ok(/** @type {number} */ (sheep.valueOf('fk')) > 100);
+  // The "more sheep than people" club (value >= 1) is small and famous: New
+  // Zealand, Mongolia, Australia, Uruguay all sit there; a giant like China does
+  // not (many sheep, but far more people).
+  assert.ok(/** @type {number} */ (sheep.valueOf('nz')) >= 1);
+  assert.ok(/** @type {number} */ (sheep.valueOf('cn')) < 1);
+});
+
+test('attachSheepPerCapitas fills every real place (no-sheep at 0), orgs stay bare', () => {
+  // Dense-metric denormalizer: every real place ends up with a numeric field
+  // (a place with no sheep at 0), and only non-place orgs are left without it.
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachSheepPerCapitas(/** @type {any} */ (rows), SHEEP_PC.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.sheepPerCapita, undefined, `org ${c.code} should have no sheepPerCapita field`);
+    } else {
+      assert.equal(typeof row.sheepPerCapita, 'number', `real place ${c.code} has no sheepPerCapita value`);
+    }
+  }
+  assert.equal(/** @type {any} */ (byCode.get('fk')).sheepPerCapita, SHEEP_PC.values.fk);
+  assert.equal(/** @type {any} */ (byCode.get('sg')).sheepPerCapita, 0); // Singapore has no sheep
 });
 
 // ---- real coffee.json schema + the sparse absence:'zero' contract ----------

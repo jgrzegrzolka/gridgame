@@ -78,6 +78,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   oilProbability: 0.06,
   riceProbability: 0.06,
   coalProbability: 0.06,
+  sheepPerCapitaProbability: 0.06,
 });
 
 /**
@@ -383,6 +384,8 @@ export function bootFindFlag() {
     const ricePills = [];
     /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
     const coalPills = [];
+    /** @type {Array<{ btn: HTMLButtonElement, value: string, labelSpan: HTMLSpanElement }>} */
+    const sheepPerCapitaPills = [];
     /** @type {Array<{ h: HTMLHeadingElement, key: string, fallback: string }>} */
     const sectionHeaders = [];
     /** @type {HTMLSpanElement | null} */
@@ -1041,6 +1044,41 @@ export function bootFindFlag() {
       }
     }
 
+    // Sheep-per-capita section, same single-select scalar (`filter.sheepPerCapita`).
+    // Intensive `>=`-only tiers, so the pills read "over 1 sheep per person" etc.
+    {
+      const sheepPerCapitaItems = buildMetricTierItems('sheepPerCapita', all);
+      if (sheepPerCapitaItems.length > 0) {
+        const secEl = document.createElement('section');
+        secEl.className = 'chooser-section';
+        const h = document.createElement('h2');
+        h.textContent = t('findFlag.sections.sheepPerCapita', 'Sheep per capita');
+        sectionHeaders.push({ h, key: 'findFlag.sections.sheepPerCapita', fallback: 'Sheep per capita' });
+        secEl.appendChild(h);
+        const wrap = document.createElement('div');
+        wrap.className = 'chooser-pills';
+        for (const it of sheepPerCapitaItems) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pill';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'pill-label';
+          labelSpan.textContent = pillLabel('sheepPerCapita', it.value, 'include', t);
+          const countSpan = document.createElement('span');
+          countSpan.className = 'pill-count';
+          countSpan.textContent = String(it.count);
+          btn.appendChild(labelSpan);
+          btn.appendChild(countSpan);
+          const { op, n } = it;
+          btn.addEventListener('click', () => selectSheepPerCapita(op, n, btn));
+          wrap.appendChild(btn);
+          sheepPerCapitaPills.push({ btn, value: it.value, labelSpan });
+        }
+        secEl.appendChild(wrap);
+        sectionsEl.appendChild(secEl);
+      }
+    }
+
     const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('find-play'));
     const randomBtn = document.getElementById('find-random');
 
@@ -1363,6 +1401,21 @@ export function bootFindFlag() {
       updateBar();
     }
 
+    /**
+     * Single-select sheep-per-capita tier, twin of selectCoal.
+     * @param {'>=' | '<='} op
+     * @param {number} n
+     * @param {HTMLButtonElement} btn
+     */
+    function selectSheepPerCapita(op, n, btn) {
+      const isActive = filter.sheepPerCapita !== null && filter.sheepPerCapita.op === op && filter.sheepPerCapita.n === n;
+      filter.sheepPerCapita = isActive ? null : { op, n };
+      for (const p of sheepPerCapitaPills) {
+        p.btn.classList.toggle('active', !isActive && p.btn === btn);
+      }
+      updateBar();
+    }
+
     playBtn.addEventListener('click', () => {
       if (playBtn.disabled) return;
       const params = new URLSearchParams({ f: serializeFilter(filter) });
@@ -1429,6 +1482,9 @@ export function bootFindFlag() {
       for (const { btn } of coalPills) {
         btn.classList.remove('active');
       }
+      for (const { btn } of sheepPerCapitaPills) {
+        btn.classList.remove('active');
+      }
       updateBar();
     });
 
@@ -1481,7 +1537,7 @@ export function bootFindFlag() {
        * @param {import('../flags/group.js').Country[]} _newAll
        */
       refreshI18n(_newAll) {
-        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, winePills, cocoaPills, bananaPills, applePills, elevationPills, coastlinePills, forestPills, oilPills, ricePills, coalPills, onlyColorsLabelSpan, updateBar });
+        refreshChooserI18n({ sectionHeaders, allPills, populationPills, areaPills, densityPills, gdpPills, gdpPerCapitaPills, coffeePills, winePills, cocoaPills, bananaPills, applePills, elevationPills, coastlinePills, forestPills, oilPills, ricePills, coalPills, sheepPerCapitaPills, onlyColorsLabelSpan, updateBar });
       },
     };
   }

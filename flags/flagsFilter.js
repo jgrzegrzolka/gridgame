@@ -94,6 +94,12 @@ import { METRIC_KEYS } from './engine.js';
  *   every real place has a value (a treeless place carries 0), so only non-place
  *   org flags match neither direction.
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} SheepPerCapitaConstraint
+ *   Sheep-per-capita threshold (sheep head per person), scalar twin; reads
+ *   `country.sheepPerCapita`. Dense derived metric, intensive (size-independent):
+ *   every real place has a value (a place with no sheep carries 0), so only
+ *   non-place org flags match neither direction.
+ *
  * @typedef {{
  *   status: FilterSet,
  *   continent: FilterSet,
@@ -117,6 +123,7 @@ import { METRIC_KEYS } from './engine.js';
  *   oil: OilConstraint | null,
  *   rice: RiceConstraint | null,
  *   coal: CoalConstraint | null,
+ *   sheepPerCapita: SheepPerCapitaConstraint | null,
  * }} Filters
  */
 
@@ -168,6 +175,7 @@ export function emptyFilters() {
     oil: null,
     rice: null,
     coal: null,
+    sheepPerCapita: null,
   };
 }
 
@@ -334,7 +342,7 @@ export function matchesFilters(country, filters, options = {}) {
 
 /**
  * @typedef {'status' | 'continent' | 'color' | 'motif' | 'stripesOnly'} PillGroup
- * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal'} ScalarGroup
+ * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita'} ScalarGroup
  *
  * @typedef {{ kind: 'pill', group: PillGroup, value: string, exclude: boolean }
  *   | { kind: 'scalar', group: ScalarGroup }} FilterChip

@@ -32,4 +32,5 @@ export const METRIC_FILES = [
   { key: 'oil', file: 'oil.json', label: 'Oil production' },
   { key: 'rice', file: 'rice.json', label: 'Rice production' },
   { key: 'coal', file: 'coal.json', label: 'Coal production' },
+  { key: 'sheepPerCapita', file: 'sheepPerCapita.json', label: 'Sheep per capita' },
 ];
