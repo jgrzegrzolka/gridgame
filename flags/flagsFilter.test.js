@@ -519,6 +519,33 @@ test('activeFilterChips orders groups status → continent → color → motif �
   assert.deepEqual(groups, ['status', 'motif', 'stripesOnly']);
 });
 
+test('activeFilterChips: except suppresses a listed pill but not its group siblings', () => {
+  // The summary row's teaser pills show their own active state in place, so
+  // an active teaser must not ALSO render as a removable chip. Only the
+  // exact (group, value) pair is suppressed; other values in the same group
+  // (and the same value under exclude) still chip.
+  const f = emptyFilters();
+  f.continent.include.add('Europe');
+  f.continent.include.add('Asia');
+  f.color.exclude.add('red');
+  const except = [
+    { group: 'continent', value: 'Europe' },
+    { group: 'color', value: 'red' },
+  ];
+  assert.deepEqual(activeFilterChips(f, { except }), [
+    { kind: 'pill', group: 'continent', value: 'Asia', exclude: false },
+  ]);
+});
+
+test('activeFilterChips: except never touches scalar chips', () => {
+  const f = emptyFilters();
+  f.population = { op: '>=', n: 10_000_000 };
+  const except = [{ group: 'population', value: '>=10000000' }];
+  assert.deepEqual(activeFilterChips(f, { except }), [
+    { kind: 'scalar', group: 'population' },
+  ]);
+});
+
 test('activeFilterChips appends scalar chips after pills in colorCount → population → area → density order', () => {
   const f = emptyFilters();
   f.color.include.add('red');

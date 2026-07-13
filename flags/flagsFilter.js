@@ -384,15 +384,28 @@ const PILL_GROUP_ORDER = /** @type {PillGroup[]} */ (['status', 'continent', 'co
  * `filters.colorCount`, so it surfaces as the single `colorCount` scalar chip
  * (removing that chip is what clears the lock).
  *
+ * `except` lists (group, value) pills that must NOT chip even when active:
+ * the summary row's always-visible teaser pills show their own active state
+ * in place, so chipping them too would render the same filter twice. Scalar
+ * chips (colour count, metric tiers) are never excepted.
+ *
  * @param {Filters} filters
+ * @param {{ except?: ReadonlyArray<{ group: string, value: string }> }} [opts]
  * @returns {FilterChip[]}
  */
-export function activeFilterChips(filters) {
+export function activeFilterChips(filters, opts = {}) {
+  const except = opts.except ?? [];
+  /** @param {string} group @param {string} value */
+  const excepted = (group, value) => except.some((e) => e.group === group && e.value === value);
   /** @type {FilterChip[]} */
   const chips = [];
   for (const group of PILL_GROUP_ORDER) {
-    for (const value of filters[group].include) chips.push({ kind: 'pill', group, value, exclude: false });
-    for (const value of filters[group].exclude) chips.push({ kind: 'pill', group, value, exclude: true });
+    for (const value of filters[group].include) {
+      if (!excepted(group, value)) chips.push({ kind: 'pill', group, value, exclude: false });
+    }
+    for (const value of filters[group].exclude) {
+      if (!excepted(group, value)) chips.push({ kind: 'pill', group, value, exclude: true });
+    }
   }
   if (filters.colorCount !== null) chips.push({ kind: 'scalar', group: 'colorCount' });
   for (const key of METRIC_KEYS) {
