@@ -355,3 +355,50 @@ export function matchesFilters(country, filters, options = {}) {
 
   return true;
 }
+
+/**
+ * @typedef {'status' | 'continent' | 'color' | 'motif' | 'stripesOnly'} PillGroup
+ * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita' | 'cattlePerCapita' | 'beerPerCapita'} ScalarGroup
+ *
+ * @typedef {{ kind: 'pill', group: PillGroup, value: string, exclude: boolean }
+ *   | { kind: 'scalar', group: ScalarGroup }} FilterChip
+ *   A pill chip names one include/exclude value; a scalar chip names a
+ *   single-constraint group (the constraint's op/n lives in `filters`).
+ */
+
+/** Fixed group order for the chip row — matches the filter bar's pill-group
+ * order so a chip sits under the same mental heading the user toggled it in. */
+const PILL_GROUP_ORDER = /** @type {PillGroup[]} */ (['status', 'continent', 'color', 'motif', 'stripesOnly']);
+
+/**
+ * Flatten an active `Filters` object into an ordered list of chip descriptors,
+ * one per active constraint, for the collapsed "active filters" summary row.
+ *
+ * Pure and label-free: the caller resolves display text (the page owns i18n +
+ * the metric/colour-count labels) and wires removal. Order is stable — group
+ * order, then each group's include values before its exclude values (both in
+ * the Set's own insertion order), then the scalar constraints — so the chip
+ * row never reshuffles as filters toggle on and off.
+ *
+ * The "no other colours" lock isn't a distinct chip: it drives
+ * `filters.colorCount`, so it surfaces as the single `colorCount` scalar chip
+ * (removing that chip is what clears the lock).
+ *
+ * @param {Filters} filters
+ * @returns {FilterChip[]}
+ */
+export function activeFilterChips(filters) {
+  /** @type {FilterChip[]} */
+  const chips = [];
+  for (const group of PILL_GROUP_ORDER) {
+    for (const value of filters[group].include) chips.push({ kind: 'pill', group, value, exclude: false });
+    for (const value of filters[group].exclude) chips.push({ kind: 'pill', group, value, exclude: true });
+  }
+  if (filters.colorCount !== null) chips.push({ kind: 'scalar', group: 'colorCount' });
+  for (const key of METRIC_KEYS) {
+    if (/** @type {any} */ (filters)[key] !== null) {
+      chips.push({ kind: 'scalar', group: /** @type {ScalarGroup} */ (key) });
+    }
+  }
+  return chips;
+}

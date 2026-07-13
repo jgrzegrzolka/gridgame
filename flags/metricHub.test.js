@@ -212,18 +212,16 @@ test('opening a second metric swaps the panel in place', () => {
   assert.deepEqual(toggles, ['population', 'coffee']);
 });
 
-test('an open or applied metric\'s chip is pinned visible through a collapse', () => {
-  const { hub, filter } = makeHub({ fit: NARROW });
+test('folding the row folds the open panel; an applied tier keeps its chip pinned', () => {
+  const { hub, filter, toggles } = makeHub({ fit: NARROW });
   const more = byClass(hub.el, 'mhub-more')[0];
   more.click(); // expand
   chipFor(hub, 'beerPerCapita').click(); // last metric, never fits at 400px unpinned
-  more.click(); // collapse: the open chip is promoted, panel stays anchored
-  assert.equal(chipFor(hub, 'beerPerCapita').hidden, false);
-  assert.equal(hub.getOpenKey(), 'beerPerCapita');
-  // Close the panel with no tier applied: the chip demotes back to overflow.
-  chipFor(hub, 'beerPerCapita').click();
-  assert.equal(chipFor(hub, 'beerPerCapita').hidden, true);
-  // An applied tier pins without the panel: set one externally + update().
+  more.click(); // collapse: the row and its panel hide together
+  assert.equal(hub.getOpenKey(), null);
+  assert.equal(toggles[toggles.length - 1], null);
+  assert.equal(chipFor(hub, 'beerPerCapita').hidden, true); // nothing applied: back to overflow
+  // An applied tier pins the chip visible even while collapsed.
   filter.beerPerCapita = { op: '>=', n: 50 };
   hub.update();
   assert.equal(chipFor(hub, 'beerPerCapita').hidden, false);

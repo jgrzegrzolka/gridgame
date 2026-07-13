@@ -129,6 +129,12 @@ export function createMetricHub(opts) {
   moreBtn.className = 'pill mhub-more';
   moreBtn.addEventListener('click', () => {
     expanded = !expanded;
+    // Folding the row folds the open metric's panel with it: the row and
+    // its panel expand and hide together, as one section.
+    if (!expanded && openKey) {
+      setOpen(null);
+      return; // setOpen's update() already re-fit the row
+    }
     refit();
   });
   chipsRow.appendChild(moreBtn);
