@@ -66,6 +66,7 @@ const MODE_LABELS = {
   'superlative-sheep': { key: 'party.mode.superlativeSheep', full: 'Sheep per capita: most', shortKey: 'party.modeShort.superlativeSheep', short: 'Sheep' },
   'superlative-cattle': { key: 'party.mode.superlativeCattle', full: 'Cattle per capita: most', shortKey: 'party.modeShort.superlativeCattle', short: 'Cattle' },
   'superlative-beer': { key: 'party.mode.superlativeBeer', full: 'Beer per capita: most', shortKey: 'party.modeShort.superlativeBeer', short: 'Beer' },
+  'superlative-tea': { key: 'party.mode.superlativeTea', full: 'Tea production: most', shortKey: 'party.modeShort.superlativeTea', short: 'Tea' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -164,6 +165,12 @@ const SUPERLATIVE_MODES = {
   'superlative-beer': {
     file: 'beerPerCapita.json',
     hintMost: { key: 'party.hintMostBeer', fallback: 'Most beer per person' },
+  },
+  // Tea is 'most'-only: "biggest tea producer" (China) is the good question;
+  // "smallest grower" is obscure. Sparse like coffee, so the round ranks growers.
+  'superlative-tea': {
+    file: 'tea.json',
+    hintMost: { key: 'party.hintMostTea', fallback: 'Largest tea production' },
   },
 };
 

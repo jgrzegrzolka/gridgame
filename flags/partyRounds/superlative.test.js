@@ -194,6 +194,29 @@ test('coffeeRound: biggest-only, correct extreme-by-coffee answer, growers only'
   }
 });
 
+// ---- tea instance (green-tea-leaf tonnes, id 'superlative-tea') --------------
+
+test('teaRound: biggest-only, correct extreme-by-tea answer, growers only', async () => {
+  const { teaRound } = await import('./superlative.js');
+  const teaJson = (await import('../metrics/tea.json', { with: { type: 'json' } })).default;
+  const TEA = /** @type {Record<string, number>} */ (teaJson.values);
+  assert.equal(teaRound.id, 'superlative-tea');
+  // Tea-distinct sovereign GROWERS spanning many orders of magnitude, all in
+  // tea.json. A non-grower (e.g. Germany) mixed in must be dropped by the round's
+  // `metric.has` filter, never appear as an option.
+  const pool = ['cn', 'in', 'ke', 'lk', 'tr', 'vn', 'id', 'jp', 'np', 'mm', 'rw', 'ge', 'de'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = teaRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Tea is locked to 'most' — "smallest grower" is obscure, so it's never dealt.
+    assert.equal(q.prompt, 'most', `seed ${i}: tea is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('de'), 'a non-grower is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => TEA[c]);
+    assert.equal(TEA[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-tea option`);
+  }
+});
+
 // ---- wine instance (wine tonnes, id 'superlative-wine') ---------------------
 
 test('wineRound: biggest-only, correct extreme-by-wine answer, makers only', async () => {

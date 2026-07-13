@@ -655,6 +655,26 @@ export const BEER_PER_CAPITA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 100 },
 ];
 
+/**
+ * Tea-production-threshold Categories (green-tea-leaf tonnes). Sparse like
+ * coffee, so `>=`-only: only ~46 countries grow tea, and a `<=` tier would just
+ * collect the ~180 non-growers sitting at 0 (via `absence: 'zero'`). The FAOSTAT
+ * green-leaf series runs large (China ~13.8M t), so the breaks scale up one
+ * decade from coffee, matching apple's `10K / 100K / 1M` (24 / 17 / 6 real
+ * places). `exclusiveGroup: 'tea'`.
+ *
+ * No `ultimate: true` break — like the other sparse crops, tea is too
+ * concentrated to back a 9×9 cell (whole continents grow essentially none), so
+ * every break carries `ultimateEligible: false`, keeping it a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const TEA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 10_000 },
+  { op: '>=', n: 100_000 },
+  { op: '>=', n: 1_000_000 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -1397,6 +1417,37 @@ export function beerPerCapita(op, n, opts = {}) {
 }
 
 /**
+ * Tea-production-threshold Category factory (green-tea-leaf tonnes). Reads the
+ * denormalized `country.tea` field (`attachTeas`, which fills 0 for a real place
+ * that grows none). `exclusiveGroup: 'tea'`. The break list is `>=`-only (see
+ * TEA_BREAKS_FOR_RANDOM), but the `<=` branch is kept for symmetry so a
+ * `tea:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function tea(op, n, opts = {}) {
+  const human = tonnesCompact(n);
+  const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.tea === 'number' && c.tea >= n
+      : (c) => typeof c.tea === 'number' && c.tea <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `tea:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'tea',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -1682,6 +1733,20 @@ export const THRESHOLD_METRICS = {
     labelFor: (op, n, translate) => {
       if (op === '>=') return translate(`beerPerCapita.atLeast.${n}`, `over ${n} litres of beer per person`);
       return translate(`beerPerCapita.atMost.${n}`, `under ${n} litres of beer per person`);
+    },
+  },
+  tea: {
+    breaks: TEA_BREAKS_FOR_RANDOM,
+    factory: tea,
+    prefixFallback: 'Tea production',
+    field: 'tea',
+    family: 'tea',
+    has: (c) => typeof c.tea === 'number',
+    labelFor: (op, n, translate) => {
+      const token = tonnesToken(n);
+      const human = tonnesCompact(n);
+      if (op === '>=') return translate(`tea.atLeast.${token}`, `over ${human} tonnes`);
+      return translate(`tea.atMost.${token}`, `under ${human} tonnes`);
     },
   },
 };
