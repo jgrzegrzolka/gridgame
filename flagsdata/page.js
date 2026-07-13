@@ -955,10 +955,16 @@ export function bootFlagsData() {
    * fit. The toggle lives permanently at the end of the Status row and
    * governs the whole bar: collapsed, "+ N more" counts every pill in the
    * folded groups PLUS every world-facts chip the hub's fit hid; expanded,
-   * "less" folds both back. One switch, one mental model. The fill-to-fit
-   * only matters on narrow screens where even the four status pills + the
-   * toggle can overflow one line.
+   * "less" folds both back. One switch, one mental model.
+   *
+   * The four Status pills are ALL pinned: Status is the primary top-level
+   * filter, so every option must be reachable in the collapsed bar. When the
+   * row is too narrow to hold all four plus the toggle on one line (phones),
+   * it wraps to a second line rather than hiding options behind "+ N more" —
+   * hiding half the primary filter offscreen was the bug. On wide screens all
+   * four fit on one line, so pinning changes nothing there.
    */
+  const previewPinned = previewEls.map(() => true);
   function refitPreview() {
     const open = filterBar.classList.contains('is-open');
     // The world-facts row hides entirely while collapsed (CSS on .mhub), so
@@ -976,6 +982,7 @@ export function bootFlagsData() {
         - previewLabel.getBoundingClientRect().width - gap,
       gap,
       measure: (el) => el.getBoundingClientRect().width,
+      pinned: previewPinned,
       alwaysMore: true,
     });
   }

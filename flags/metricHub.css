@@ -34,13 +34,20 @@
   margin-right: 4px;
 }
 /* Icon chip: builds on the shared .pill, adds the icon slot and a quiet
- * resting state (muted text) so the hue pop is reserved for "on". */
+ * resting state (muted text) so the hue pop is reserved for "on".
+ *
+ * Sizing is the dense base-.pill scale (12px / 3px pad) so the chip row is
+ * the same height as flagsdata's filter pills — every chip on that bar reads
+ * at one height. findFlag's chooser uses the bigger 13px pill scale, so it
+ * scales these chips up to match (see findFlag/index.css, `#chooser .mhub-*`).
+ * The 3px-shorter left pad reserves room for the icon without inflating the
+ * chip past a plain pill. */
 .mhub-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 11px 5px 8px;
-  font-size: 12.5px;
+  padding: 3px 10px 3px 7px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--muted-color);
 }
@@ -63,12 +70,13 @@
   outline: 2px solid var(--secondary-color);
   outline-offset: 2px;
 }
-/* "+ N more": dashed like the other meta-pills (.pill-modifier idiom). */
+/* "+ N more": dashed like the other meta-pills (.pill-modifier idiom).
+ * Same dense scale as .mhub-chip (findFlag scales it up alongside). */
 .mhub-more {
   border-style: dashed;
   color: var(--muted-color);
-  font-size: 12.5px;
-  padding: 5px 11px;
+  font-size: 12px;
+  padding: 3px 10px;
 }
 
 /* The open metric's panel: an elevated strip under the chip row, edged with
@@ -104,7 +112,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 11px;
+  padding: 3px 10px;
 }
 .mhub-tiers .pill-count {
   color: var(--muted-color);
