@@ -618,19 +618,11 @@ export function bootFlagsData() {
     }
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
-    let pillTotal = 0;
-    for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'>} */ (['continent','color','motif','status','stripesOnly'])) {
-      pillTotal += filters[k].include.size + filters[k].exclude.size;
-    }
-    if (filters.colorCount !== null) pillTotal++;
-    for (const k of METRIC_KEYS) if (filters[k] !== null) pillTotal++;
-    const anyActive = pillTotal > 0 || nameQuery !== '';
-    // Clear lives in the search row's right corner: it appears in empty
-    // space, so its visibility toggling never moves a pill.
-    clearBtn.hidden = !anyActive;
     // The applied-filters chips sit next to the search box: EVERY applied
     // filter chips there (pills and metric tiers alike, one consistent
-    // treatment), each removable via its x.
+    // treatment), each removable via its x. There is no global Clear:
+    // per-chip removal covers it, and the lone corner button read as clutter
+    // (Jan's review).
     renderChips();
     // Reflect the active filter on the world map below the grid: every
     // visible country wears its flag (stamped into its silhouette),
@@ -969,10 +961,10 @@ export function bootFlagsData() {
    */
   function refitPreview() {
     const open = filterBar.classList.contains('is-open');
-    // Settle the hub's fit first so its hidden-chip count is current.
-    hub.refit();
+    // The world-facts row hides entirely while collapsed (CSS on .mhub), so
+    // the honest count is every folded group pill plus every metric chip.
     const folded = groupsWrap.querySelectorAll('.pill[data-group][data-value]').length
-      + hub.hiddenChipCount();
+      + METRIC_FILES.length;
     addBtn.textContent = open
       ? t('metricHub.less', 'less')
       : `+ ${folded} ${t('metricHub.more', 'more')}`;
@@ -1000,7 +992,8 @@ export function bootFlagsData() {
     previewRaf = requestAnimationFrame(refitPreview);
   });
 
-  // Row 1: search, the applied-filter chips, and Clear in the right corner.
+  // Row 1: search and the applied-filter chips (each removable via its x;
+  // there is no global Clear button).
   const searchRow = document.createElement('div');
   searchRow.className = 'filter-search-row';
   searchRow.append(searchWrap, chipsWrap);
@@ -1062,36 +1055,6 @@ export function bootFlagsData() {
   groupsWrap.appendChild(
     buildFilterGroup('flagsdata.filterStripes', 'Stripes', 'stripesOnly', [...STRIPES_ORIENTATIONS_FOR_RANDOM]),
   );
-
-  const clearBtn = document.createElement('button');
-  clearBtn.type = 'button';
-  clearBtn.id = 'filter-clear';
-  clearBtn.setAttribute('data-i18n', 'flagsdata.clear');
-  clearBtn.textContent = t('flagsdata.clear', 'Clear');
-  clearBtn.hidden = true;
-  clearBtn.addEventListener('click', () => {
-    for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'>} */ (['continent','color','motif','status','stripesOnly'])) {
-      filters[k].include.clear();
-      filters[k].exclude.clear();
-    }
-    for (const k of METRIC_KEYS) filters[k] = null;
-    colorCountLock.reset();
-    if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
-    colorCountPicker.reset();
-    for (const el of filterBar.querySelectorAll('.pill.active, .pill.exclude')) {
-      el.classList.remove('active');
-      el.classList.remove('exclude');
-    }
-    searchInput.value = '';
-    nameQuery = '';
-    // The hub repaints its chip + tier states from the (now empty) filters.
-    // The lens is view state, not a filter, so Clear leaves it alone.
-    hub.update();
-    applyFilter();
-  });
-  // Clear anchors in the search row's empty right corner: appearing and
-  // disappearing there never displaces a pill. It is the only global control.
-  searchRow.appendChild(clearBtn);
 
   // --- World-facts hub (Feature DE, hub form) ----------------------------
   // One home per metric: the shared icon-chip row + inline panel

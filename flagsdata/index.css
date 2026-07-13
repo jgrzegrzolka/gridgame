@@ -46,7 +46,6 @@ body {
   align-items: center;
   gap: 8px;
 }
-.filter-search-row #filter-clear { margin-left: auto; }
 .filter-chips { display: contents; }
 /* A chip = one applied filter (EVERY applied filter chips here, pills and
  * metric tiers alike). Solid brand fill mirrors `.pill.active` so an applied
@@ -139,10 +138,11 @@ body {
 }
 .filter-add:hover { background: var(--surface-hover-color); }
 
-/* Closed state hides every group on every viewport. page.js starts the bar
- * collapsed (the chip summary is the resting state); "Add filter" sets
- * .is-open to reveal the groups. */
+/* Closed state hides every group AND the world-facts row on every viewport:
+ * the bar's single toggle expands and folds them as one section (page.js
+ * starts the bar collapsed; the toggle sets .is-open). */
 #filter-bar:not(.is-open) .filter-groups { display: none; }
+#filter-bar:not(.is-open) .mhub { display: none; }
 
 @media (max-width: 600px) {
   /* When open on mobile, the groups stack as block-level rows so the
@@ -205,23 +205,6 @@ body {
   margin-right: 4px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-#filter-clear {
-  font: inherit;
-  font-size: 12px;
-  background: none;
-  border: none;
-  color: var(--link-color);
-  cursor: pointer;
-  /* Vertical padding tuned so Clear's box matches the summary row's first-line
-   * height (driven by the search input), letting its text sit vertically
-   * centred with the search box / chips / Add-filter instead of riding high. */
-  padding: 8px;
-  text-decoration: underline;
-}
-#filter-clear:hover {
-  background: var(--surface-hover-color);
-  border-radius: 4px;
 }
 #sections h2 {
   font-size: 16px;
