@@ -16,6 +16,18 @@ test('formatValue: compact magnitudes', () => {
 test('formatValue: decimal1 for per-capita rates', () => {
   assert.equal(formatValue(6.53, 'decimal1'), '6.5');
   assert.equal(formatValue(0.1, 'decimal1'), '0.1');
+  assert.equal(formatValue(135.135, 'decimal1'), '135.1'); // the readable top is unchanged
+});
+
+test('formatValue: decimal1 distinguishes a true zero from a tiny nonzero rate', () => {
+  // The sheep-per-capita fix: a top-heavy rate has a long tail below 0.05 that
+  // one decimal would flatten to "0.0", making a real value look like empty data.
+  assert.equal(formatValue(0, 'decimal1'), '0'); // genuinely no sheep (Singapore)
+  assert.equal(formatValue(0.0074, 'decimal1'), '0.0074'); // Poland: 269,538 sheep / 36.7M
+  assert.equal(formatValue(0.018, 'decimal1'), '0.018'); // Germany
+  assert.equal(formatValue(0.007349, 'decimal1'), '0.0073'); // 2 significant figures
+  assert.equal(formatValue(0.049, 'decimal1'), '0.049'); // just under the 0.05 cutoff
+  assert.equal(formatValue(0.05, 'decimal1'), '0.1'); // at the cutoff, back to one decimal
 });
 
 test('formatValue: plain keeps exact metres with thousands separators', () => {
