@@ -8,19 +8,42 @@ name: Deploy PartyKit
 # Heads-up: a deploy restarts every Durable Object, so any in-progress room
 # loses its game state. The path filter keeps this from happening on
 # client-only changes (HTML/CSS, page.js, i18n strings).
+#
+# The flags/ entries below are the transitive import closure of the three
+# PartyKit entry points (party/server.js, party/ultimateServer.js,
+# party/partyGameServer.js) — every shared module the deployed server actually
+# bundles. Miss one and a push that changes it deploys the client but leaves the
+# server on stale code (mis-scoring / crashes in online games); that gap bit the
+# world-facts name reveal, where flags/party*.js changes weren't triggering a
+# deploy. Globs cover the growth areas so new files auto-qualify: a new metric
+# JSON, a new partyRounds/* module, or a new flags/party* helper needs no edit
+# here. `flags/party*.js` also matches the client-only partyClient.js — a
+# harmless over-trigger (a redundant deploy beats a silently stale server).
+# Over-triggering is the safe failure direction.
 
 on:
   push:
     branches: [main]
     paths:
       - 'party/**'
-      - 'flags/onlineRoom.js'
-      - 'flags/ticTacToe.js'
-      - 'flags/engine.js'
-      - 'flags/group.js'
-      - 'flags/countries.json'
       - 'partykit.json'
       - '.github/workflows/deploy-partykit.yml'
+      # Shared engine / domain modules the servers bundle:
+      - 'flags/countries.json'
+      - 'flags/engine.js'
+      - 'flags/quiz.js'
+      - 'flags/group.js'
+      - 'flags/flagPools.js'
+      - 'flags/contourPool.js'
+      - 'flags/onlineRoom.js'
+      - 'flags/ultimateOnlineRoom.js'
+      - 'flags/ticTacToe.js'
+      - 'flags/ultimateTicTacToe.js'
+      # Flag Party engine + data (globs cover new helpers, rounds, metrics):
+      - 'flags/party*.js'
+      - 'flags/partyRounds/**'
+      - 'flags/metrics.js'
+      - 'flags/metrics/**'
 
 jobs:
   test:
