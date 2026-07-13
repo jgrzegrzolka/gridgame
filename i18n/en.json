@@ -421,7 +421,8 @@
       "rice": "Rice production",
       "coal": "Coal production",
       "sheepPerCapita": "Sheep per capita",
-      "cattlePerCapita": "Cattle per capita"
+      "cattlePerCapita": "Cattle per capita",
+      "beerPerCapita": "Beer per capita"
     }
   },
   "daily": {
@@ -556,7 +557,8 @@
       "superlativeRice": "Rice production: most",
       "superlativeCoal": "Coal production: most",
       "superlativeSheep": "Sheep per capita: most",
-      "superlativeCattle": "Cattle per capita: most"
+      "superlativeCattle": "Cattle per capita: most",
+      "superlativeBeer": "Beer per capita: most"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -579,7 +581,8 @@
       "superlativeRice": "Rice",
       "superlativeCoal": "Coal",
       "superlativeSheep": "Sheep",
-      "superlativeCattle": "Cattle"
+      "superlativeCattle": "Cattle",
+      "superlativeBeer": "Beer"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -610,6 +613,7 @@
     "hintMostCoal": "Largest coal production",
     "hintMostSheep": "Most sheep per person",
     "hintMostCattle": "Most cattle per person",
+    "hintMostBeer": "Most beer per person",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
@@ -859,6 +863,12 @@
       "2": "over 2 cattle per person"
     }
   },
+  "beerPerCapita": {
+    "atLeast": {
+      "50": "over 50 litres of beer per person",
+      "100": "over 100 litres of beer per person"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",
@@ -932,7 +942,8 @@
     "rice": "Rice production",
     "coal": "Coal production",
     "sheepPerCapita": "Sheep per capita",
-    "cattlePerCapita": "Cattle per capita"
+    "cattlePerCapita": "Cattle per capita",
+    "beerPerCapita": "Beer per capita"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

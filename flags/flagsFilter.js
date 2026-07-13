@@ -106,6 +106,12 @@ import { METRIC_KEYS } from './engine.js';
  *   every real place has a value (a place with no cattle carries 0), so only
  *   non-place org flags match neither direction.
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} BeerPerCapitaConstraint
+ *   Beer-per-capita threshold (litres of beer per person per year); reads
+ *   `country.beerPerCapita`. `absence: 'unknown'` metric: WHO does not measure
+ *   every real place, so a place without a value matches neither direction (it is
+ *   unknown, not zero), same as an org.
+ *
  * @typedef {{
  *   status: FilterSet,
  *   continent: FilterSet,
@@ -131,6 +137,7 @@ import { METRIC_KEYS } from './engine.js';
  *   coal: CoalConstraint | null,
  *   sheepPerCapita: SheepPerCapitaConstraint | null,
  *   cattlePerCapita: CattlePerCapitaConstraint | null,
+ *   beerPerCapita: BeerPerCapitaConstraint | null,
  * }} Filters
  */
 
@@ -184,6 +191,7 @@ export function emptyFilters() {
     coal: null,
     sheepPerCapita: null,
     cattlePerCapita: null,
+    beerPerCapita: null,
   };
 }
 
@@ -350,7 +358,7 @@ export function matchesFilters(country, filters, options = {}) {
 
 /**
  * @typedef {'status' | 'continent' | 'color' | 'motif' | 'stripesOnly'} PillGroup
- * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita' | 'cattlePerCapita'} ScalarGroup
+ * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita' | 'cattlePerCapita' | 'beerPerCapita'} ScalarGroup
  *
  * @typedef {{ kind: 'pill', group: PillGroup, value: string, exclude: boolean }
  *   | { kind: 'scalar', group: ScalarGroup }} FilterChip

@@ -636,6 +636,25 @@ export const CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 2 },
 ];
 
+/**
+ * Beer-per-capita break tiers (litres of beer drunk per person per year). `>=`-only
+ * like the crops: the fun axis is "who drinks the MOST" (over 50 L is a beer
+ * culture, over 100 L is the elite: Czechia, Gabon, Austria, Panama, Croatia,
+ * Brazil, Poland). The `<=` low end is the dry states, but that reads as a
+ * religion/geography quiz rather than a beer one, so we leave it off. Integer `n`
+ * (parseThreshold requires it), which the 0..131 L range gives comfortably.
+ *
+ * No `ultimate: true` break: beer is `absence: 'unknown'` (73 real places carry
+ * no value), so it cannot back a dense 9×9 axis. Every break stays
+ * `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const BEER_PER_CAPITA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 50 },
+  { op: '>=', n: 100 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -1345,6 +1364,39 @@ export function cattlePerCapita(op, n, opts = {}) {
 }
 
 /**
+ * Beer-per-capita-threshold Category factory (litres of beer per person per year).
+ * Reads the denormalized `country.beerPerCapita` field (`attachBeerPerCapitas`, an
+ * `absence: 'unknown'` metric, so the predicate must guard on the field being a
+ * number: a place WHO does not measure has none and never matches). `exclusiveGroup:
+ * 'beerPerCapita'`. The break list is `>=`-only (see BEER_PER_CAPITA_BREAKS_FOR_RANDOM),
+ * but the `<=` branch is kept for symmetry so a `beerPerCapita:<=N` id would still
+ * rehydrate. The label bakes a plain integer (`over 50 litres of beer per person`).
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function beerPerCapita(op, n, opts = {}) {
+  const label =
+    op === '>=' ? `over ${n} litres of beer per person` : `under ${n} litres of beer per person`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.beerPerCapita === 'number' && c.beerPerCapita >= n
+      : (c) => typeof c.beerPerCapita === 'number' && c.beerPerCapita <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `beerPerCapita:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'beerPerCapita',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -1618,6 +1670,18 @@ export const THRESHOLD_METRICS = {
     labelFor: (op, n, translate) => {
       if (op === '>=') return translate(`cattlePerCapita.atLeast.${n}`, `over ${n} cattle per person`);
       return translate(`cattlePerCapita.atMost.${n}`, `under ${n} cattle per person`);
+    },
+  },
+  beerPerCapita: {
+    breaks: BEER_PER_CAPITA_BREAKS_FOR_RANDOM,
+    factory: beerPerCapita,
+    prefixFallback: 'Beer per capita',
+    field: 'beerPerCapita',
+    family: 'beerPerCapita',
+    has: (c) => typeof c.beerPerCapita === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`beerPerCapita.atLeast.${n}`, `over ${n} litres of beer per person`);
+      return translate(`beerPerCapita.atMost.${n}`, `under ${n} litres of beer per person`);
     },
   },
 };

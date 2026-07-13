@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DW (cattle per capita, dense derived + intensive metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature DX (beer per capita, the first `absence: 'unknown'` metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,24 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature DX: Beer per capita as a world metric, the first `absence: 'unknown'` contract (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Nineteenth world metric, and a new *domain*: consumption, not production or livestock (Jan asked for "one more, fun", picked beer). Litres of beer drunk per person per year, an intensive/size-independent metric with a great hook: Czechia is the perennial world #1, but the top set is full of surprises: Gabon, Panama, Croatia, Brazil, Namibia, Mexico all rank above or near Germany. The dry states (Saudi Arabia, Iran, Kuwait, Libya, ...) sit at 0.
+
+**Data contract: `absence: 'unknown'`, the FIRST metric to use it.** Every prior metric is either *dense* (every real place sourced/filled: population, the livestock per-capitas, even GDP at 262/262) or *sparse `absence: 'zero'`* (the crops / extractives, where a missing place genuinely produces none). Beer is neither. The source (WHO) measures ~189 countries, essentially every sovereign state, but NOT the ~73 sub-national parts (UK home nations, Spanish regions) and small territories (Greenland, Hong Kong, Puerto Rico, Faroe, Gibraltar, Vatican, ...). A territory does drink beer, we just have no figure, so its value is genuinely UNKNOWN, not zero. Those 73 real places are left out of `values` and read "no data" on a beer cell, which is correct: the metricDataGap guard blocks exactly the places we cannot rank (`absence: 'unknown'` documents this; the attacher, `attachBeerPerCapitas`, is a plain set-if-present, NOT the zero-filler). `metrics.test.js` pins the one-directional invariant (every key is a real place, no org, coverage broad but < total, a sovereign present, a sub-national/territory absent).
+
+**Unit: litres of beer, converted from WHO.** Source is WHO GHO indicator SA_0000001400 (recorded alcohol per capita 15+, beer), 2024, which reports litres of *pure alcohol* from beer per adult. `build-beer-per-capita.mjs` converts to litres of *beer* at the standard 5% ABV assumption (a scalar, so the ranking never changes), which is the recognizable "beer country" framing Jan chose over the raw pure-alcohol number. Because it is *recorded* adult consumption, it reads lower than tourist-inclusive industry tallies (Czechia ~131 L here vs the Kirin report's ~184 L); disclosed in the `source` string. Values 0..131, displayed `plain` (whole litres).
+
+**No population division** (unlike the livestock per-capitas): the WHO figure is already per-capita, so the build is a straight embed-and-convert of a WHO snapshot, no `population.json` join.
+
+- [x] 1. Data: `flags/metrics/beerPerCapita.json` (189 WHO-covered real places) + `authoring/build-beer-per-capita.mjs` (embedded WHO pure-alcohol snapshot, 5% ABV convert) + `METRIC_FILES` line + `attachBeerPerCapitas` (group.js, plain set-if-present, absence:unknown) + `METRIC_ATTACHERS` entry + `metrics.test.js` schema/absence:unknown/non-negative/one-directional-coverage/ranking/attach-leaves-gap-bare tests.
+- [x] 2. flagsdata lens (free once step 1 landed; "Beer per capita" in the selector, plain litres; the 73 unknown places dim as no-value).
+- [x] 3. Filters: `metricTiers.js` auto-derives from `THRESHOLD_METRICS` (zero-edit); findFlag chooser (`Filters.beerPerCapita` + `BeerPerCapitaConstraint` + `ScalarGroup`; beer section + `selectBeerPerCapita` + `beerPerCapitaPills` + `beerPerCapitaProbability` modifier + `chooserI18n` beer loop) + `findflag-random-coverage` skill note; flagsdata filter group + lens are zero-edit (both loop `METRIC_FILES`). `attachBeerPerCapitas` at flagsdata + findFlag via the zero-edit `attachMetrics` loop. `beerPerCapita.atLeast` + `findFlag.sections.beerPerCapita` + `metric.beerPerCapita` i18n (en+pl).
+- [x] 4. TTT: `beerPerCapita(op, n)` factory + `BEER_PER_CAPITA_BREAKS_FOR_RANDOM` (`>=50/100 litres of beer per person` = 66/7 real places; **`>=`-only** because the low end is a religion/geography quiz not a beer one; **no ultimate break**, beer is absence:unknown so it cannot back a dense 9×9 axis, every break `ultimateEligible: false`, a 3×3-only axis) + `THRESHOLD_METRICS.beerPerCapita` entry. The predicate guards on the field being a number, so an unknown-gap place never matches. `attachBeerPerCapitas` at party/server.js's static-import site + the generic loops; ultimateServer.js skips it (never 9×9). `beerPerCapita.atLeast` + `metric.beerPerCapita` i18n (en+pl). Engine pinning tests updated (pool count, `SINGLE_USE_METRIC_GROUPS`, ultimate-pool exclusion, category-source sweep).
+- [x] 5. Flag Party round `superlative-beer` via `createSuperlativeRound` over a **zero-filtered** copy of the map (drop the dry states so every option is a beer-drinking country; the round is sovereign-scoped so the absence:unknown gap never surfaces anyway), locked to **'most'-only** ("who drinks the most beer", Czechia). Registered across all seven spots (superlative.js + two tests, `partyGameServer` ROUNDS, `partyPlan` METRIC_MODES + test, `flagParty/page.js` MODE_LABELS + SUPERLATIVE_MODES + a foaming-tankard icon, en+pl `party.mode/modeShort.superlativeBeer` + `hintMostBeer`) plus the `[data-metric="superlative-beer"] { --mc: #e0a11e }` honey-gold hue (distinct from GDP's darker amber and banana's olive gold).
+
+Surface 6 (daily puzzles) is NOT a checkbox: added a row to `METRIC_DAILY_PUZZLES.md`, Feature closed.
 
 ### Feature DW: Cattle per capita as a world metric, dense derived + intensive/size-independent (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

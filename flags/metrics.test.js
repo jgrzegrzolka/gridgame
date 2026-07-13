@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas } from './group.js';
+import { attachCoffees, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas, attachBeerPerCapitas } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -31,6 +31,7 @@ const COASTLINE = /** @type {import('./metrics.js').MetricData} */ (load('metric
 const FOREST = /** @type {import('./metrics.js').MetricData} */ (load('metrics/forest.json'));
 const SHEEP_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/sheepPerCapita.json'));
 const CATTLE_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/cattlePerCapita.json'));
+const BEER_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/beerPerCapita.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -521,6 +522,77 @@ test('attachCattlePerCapitas fills every real place (no-cattle at 0), orgs stay 
   }
   assert.equal(/** @type {any} */ (byCode.get('uy')).cattlePerCapita, CATTLE_PC.values.uy);
   assert.equal(/** @type {any} */ (byCode.get('sg')).cattlePerCapita, 0); // Singapore has no cattle
+});
+
+// ---- real beerPerCapita.json schema + the absence:'unknown' contract -------
+
+test('beerPerCapita is a valid, self-describing metric file with absence:unknown', () => {
+  assert.equal(BEER_PC.key, 'beerPerCapita');
+  assert.equal(typeof BEER_PC.label, 'string');
+  assert.equal(typeof BEER_PC.unit, 'string');
+  // Whole litres of beer (0..~131), rendered plain.
+  assert.equal(BEER_PC.format, 'plain');
+  assert.equal(typeof BEER_PC.source, 'string');
+  assert.equal(typeof BEER_PC.year, 'number');
+  assert.equal(typeof BEER_PC.values, 'object');
+  // The first metric whose absence means "unknown" (WHO does not measure every
+  // real place), not "zero" and not "dense". This hint documents that; nothing at
+  // runtime infers a value from it (the attacher just leaves the gap bare).
+  assert.equal(BEER_PC.absence, 'unknown');
+});
+
+test('every beerPerCapita value is a non-negative finite number', () => {
+  for (const [code, v] of Object.entries(BEER_PC.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('beerPerCapita covers only real places, never orgs; the gap is genuine (absence:unknown)', () => {
+  // Unlike the dense metrics, NOT every real place has a value: WHO measures ~189
+  // sovereign states but not sub-national parts / small territories. So the
+  // invariant is one-directional: every key is a real place, and no org has one.
+  // The uncovered real places are the honest "unknown" gap, blocked by the guard.
+  const realCodes = new Set(COUNTRIES.filter((c) => c.category !== 'other').map((c) => c.code));
+  for (const code of Object.keys(BEER_PC.values)) {
+    assert.ok(realCodes.has(code), `beer value for non-real place ${code}`);
+  }
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in BEER_PC.values), `org ${c.code} should have no beerPerCapita value`);
+    }
+  }
+  // Coverage is broad (every sovereign) but deliberately not total.
+  const covered = COUNTRIES.filter((c) => c.category !== 'other' && c.code in BEER_PC.values).length;
+  assert.ok(covered >= 180, `expected ~189 covered real places, got ${covered}`);
+  assert.ok(covered < realCodes.size, 'beer must NOT be dense: some real places are the unknown gap');
+  // A sovereign is always covered; a sub-national part / territory is the gap.
+  assert.ok('cz' in BEER_PC.values, 'Czechia (sovereign) must be covered');
+  assert.ok(!('gb-wls' in BEER_PC.values), 'Wales (sub-national) is unknown, must be absent');
+  assert.ok(!('gl' in BEER_PC.values), 'Greenland (territory) is unknown, must be absent');
+});
+
+test('createMetric over beerPerCapita ranks Czechia top, dry states at 0', () => {
+  const beer = createMetric(BEER_PC, COUNTRIES);
+  // Czechia is the world's top beer drinker, a fixture of the trivia.
+  assert.equal(beer.topN('world', 1)[0].code, 'cz');
+  assert.ok(/** @type {number} */ (beer.valueOf('cz')) > 100);
+  // Germany is famously high; a dry state records ~none.
+  assert.ok(/** @type {number} */ (beer.valueOf('de')) > 50);
+  assert.equal(beer.valueOf('sa'), 0); // Saudi Arabia
+});
+
+test('attachBeerPerCapitas fills covered real places, leaves the unknown gap + orgs bare', () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachBeerPerCapitas(/** @type {any} */ (rows), BEER_PC.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  // Covered sovereign gets the number.
+  assert.equal(/** @type {any} */ (byCode.get('cz')).beerPerCapita, BEER_PC.values.cz);
+  // Unknown-gap real place stays bare (no false 0) so the guard reads "no data".
+  assert.equal(/** @type {any} */ (byCode.get('gb-wls')).beerPerCapita, undefined);
+  // Org stays bare too.
+  const anOrg = COUNTRIES.find((c) => c.category === 'other');
+  assert.equal(/** @type {any} */ (byCode.get(/** @type {any} */ (anOrg).code)).beerPerCapita, undefined);
 });
 
 // ---- real coffee.json schema + the sparse absence:'zero' contract ----------

@@ -36,6 +36,7 @@ import { pillLabel } from '../flags/findFlag.js';
  * @typedef {{ labelSpan: { textContent: string }, value: string }} CoalPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} SheepPerCapitaPillRef
  * @typedef {{ labelSpan: { textContent: string }, value: string }} CattlePerCapitaPillRef
+ * @typedef {{ labelSpan: { textContent: string }, value: string }} BeerPerCapitaPillRef
  *
  * @param {{
  *   sectionHeaders: SectionHeader[],
@@ -58,11 +59,12 @@ import { pillLabel } from '../flags/findFlag.js';
  *   coalPills?: CoalPillRef[],
  *   sheepPerCapitaPills?: SheepPerCapitaPillRef[],
  *   cattlePerCapitaPills?: CattlePerCapitaPillRef[],
+ *   beerPerCapitaPills?: BeerPerCapitaPillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], applePills = [], elevationPills = [], coastlinePills = [], forestPills = [], oilPills = [], ricePills = [], coalPills = [], sheepPerCapitaPills = [], cattlePerCapitaPills = [], onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], applePills = [], elevationPills = [], coastlinePills = [], forestPills = [], oilPills = [], ricePills = [], coalPills = [], sheepPerCapitaPills = [], cattlePerCapitaPills = [], beerPerCapitaPills = [], onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
@@ -141,6 +143,10 @@ export function refreshChooserI18n({ sectionHeaders, allPills, populationPills =
   // Cattle-per-capita pills (">=1" etc.) via pillLabel's cattlePerCapita branch.
   for (const p of cattlePerCapitaPills) {
     p.labelSpan.textContent = pillLabel('cattlePerCapita', p.value, 'include', t);
+  }
+  // Beer-per-capita pills (">=50" etc.) via pillLabel's beerPerCapita branch.
+  for (const p of beerPerCapitaPills) {
+    p.labelSpan.textContent = pillLabel('beerPerCapita', p.value, 'include', t);
   }
   if (onlyColorsLabelSpan) {
     onlyColorsLabelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');

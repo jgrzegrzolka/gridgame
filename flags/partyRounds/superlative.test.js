@@ -529,3 +529,39 @@ test('cattlePerCapitaRound: no-cattle (0) places are excluded from selection', a
     }
   }
 });
+
+// ---- beer-per-capita instance (litres of beer/person, id 'superlative-beer') --
+
+test('beerPerCapitaRound: most-only, correct biggest-per-person answer, beer-drinking only', async () => {
+  const { beerPerCapitaRound } = await import('./superlative.js');
+  const beerJson = (await import('../metrics/beerPerCapita.json', { with: { type: 'json' } })).default;
+  const BEER = /** @type {Record<string, number>} */ (beerJson.values);
+  assert.equal(beerPerCapitaRound.id, 'superlative-beer');
+  // Beer-drinking sovereigns spanning the range (Czechia ~131 ... Japan ~26).
+  // All strictly > 0, so none is filtered out of the round.
+  const pool = ['cz', 'at', 'de', 'pl', 'br', 'us', 'gb', 'fr', 'it', 'jp'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = beerPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Locked to 'most': every round asks for the biggest, never 'least'.
+    assert.equal(q.prompt, 'most', `seed ${i}: beer per capita is most-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => BEER[c]);
+    assert.equal(BEER[q.answer], Math.max(...vals), `seed ${i}: answer must be the most beer-per-person option`);
+  }
+});
+
+test('beerPerCapitaRound: dry (0) and unknown-gap places are excluded from selection', async () => {
+  const { beerPerCapitaRound } = await import('./superlative.js');
+  // Zero-filtered, so the dry states (Saudi Arabia, Iran, Kuwait, Libya) never
+  // have a value; and the absence:'unknown' gap (Wales, Greenland) has none
+  // either. Neither should ever surface as an option.
+  const excluded = new Set(['sa', 'ir', 'kw', 'ly', 'gb-wls', 'gl']);
+  const pool = ['cz', 'de', 'pl', 'br', 'sa', 'ir', 'kw', 'ly', 'gb-wls', 'gl'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = beerPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!excluded.has(opt), `seed ${i}: excluded ${opt} must not be an option`);
+    }
+  }
+});
