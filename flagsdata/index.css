@@ -48,18 +48,20 @@ body {
 }
 .filter-chips { display: contents; }
 /* A chip = one applied filter (EVERY applied filter chips here, pills and
- * metric tiers alike). Solid brand fill mirrors `.pill.active` so an applied
- * filter reads the same whether you see it as a pill or a chip. */
+ * metric tiers alike). Mirrors `.pill.active` — primary edge + text over a
+ * faint grey fill, semibold — so an applied filter reads the same whether you
+ * see it as a pill or a chip. */
 .filter-chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   font-size: 12px;
+  font-weight: 600;
   line-height: 1.4;
   padding: 3px 6px 3px 10px;
   border-radius: 999px;
-  background: var(--primary-color);
-  color: var(--surface-color);
+  background: var(--surface-hover-color);
+  color: var(--primary-color);
   border: 1px solid var(--primary-color);
 }
 /* Excluded value: same pink strikethrough idiom as `.pill.exclude`, on a
@@ -292,20 +294,25 @@ dialog#zoom .country-data {
 .lens-sort button {
   font: inherit;
   font-size: 12px;
+  font-weight: 600;
   line-height: 1.4;
   padding: 3px 10px;
   background: var(--surface-color);
   border: 0;
   border-right: 1px solid var(--muted-soft-color);
-  color: var(--primary-color);
+  color: var(--muted-color);
   cursor: pointer;
 }
 .lens-sort button:last-child { border-right: 0; }
 .lens-sort button:hover { background: var(--surface-hover-color); }
+/* Pressed segment mirrors .pill.active: grey fill + primary text, with a
+ * primary underline standing in for the pill's full edge (a full border on one
+ * segment of a joined pair reads oddly). Unpressed stays muted, like an off
+ * pill. Inset shadow so the underline doesn't shift the row height. */
 .lens-sort button[aria-pressed='true'] {
-  background: var(--secondary-color);
+  background: var(--surface-hover-color);
   color: var(--primary-color);
-  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--primary-color);
 }
 
 /* Per-tile overlay: a top strip with "#rank · value" for the active metric.

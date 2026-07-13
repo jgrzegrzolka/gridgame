@@ -119,6 +119,5 @@
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
-.mhub-tiers .pill.active .pill-count {
-  color: var(--muted-soft-color);
-}
+/* Active tier now has a light grey fill (see .pill.active), so the count keeps
+ * the same muted colour as the resting tiers — no light-on-dark override. */
