@@ -49,11 +49,16 @@ function satisfies(op, value, n) {
  * Find every ambiguity violation triggered by `filter` across `countries`.
  * Pure: no I/O, doesn't depend on puzzle.answers (computes from the filter).
  *
- * @param {string} filter
+ * @param {string | undefined} filter
  * @param {Country[]} countries
  * @returns {AmbiguityViolation[]}
  */
 export function auditFilter(filter, countries) {
+  // Manual entries have no filter, and superlative entries only sometimes
+  // carry an optional pool-narrowing one. `parseFilterString` assumes a
+  // string, so guard before delegating — a filter-less entry has nothing
+  // to audit.
+  if (typeof filter !== 'string' || filter === '') return [];
   const parsed = parseFilterString(filter);
   if (!parsed) return [];
 
@@ -144,7 +149,7 @@ export function auditFilter(filter, countries) {
 /**
  * Convenience wrapper for puzzle records. Delegates to `auditFilter`.
  *
- * @param {{ filter: string }} puzzle
+ * @param {{ filter?: string }} puzzle
  * @param {Country[]} countries
  */
 export function auditPuzzle(puzzle, countries) {

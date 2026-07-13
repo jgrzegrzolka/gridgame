@@ -49,6 +49,14 @@ let total = 0;
 for (const [label, list] of BUCKETS) {
   let bucketHits = 0;
   for (const puzzle of list) {
+    // Mirror the rule-15 gate in flags/daily.test.js so this script's output
+    // matches what actually fails the build. Manual + superlative entries have
+    // no criterion filter (a superlative's optional filter is a pool
+    // restriction, not the criterion), and answer-less ideas are parked
+    // placeholders the gate deliberately skips — auditing either just cries
+    // wolf on entries that can't reach a player as a filtered puzzle.
+    if (puzzle.kind === 'manual' || puzzle.kind === 'superlative') continue;
+    if (!Array.isArray(puzzle.answers) || puzzle.answers.length === 0) continue;
     const v = auditPuzzle(puzzle, SOV);
     if (v.length === 0) continue;
     if (bucketHits === 0) {
