@@ -67,6 +67,7 @@ const MODE_LABELS = {
   'superlative-cattle': { key: 'party.mode.superlativeCattle', full: 'Cattle per capita: most', shortKey: 'party.modeShort.superlativeCattle', short: 'Cattle' },
   'superlative-beer': { key: 'party.mode.superlativeBeer', full: 'Beer per capita: most', shortKey: 'party.modeShort.superlativeBeer', short: 'Beer' },
   'superlative-tea': { key: 'party.mode.superlativeTea', full: 'Tea production: most', shortKey: 'party.modeShort.superlativeTea', short: 'Tea' },
+  'superlative-sugarcane': { key: 'party.mode.superlativeSugarcane', full: 'Sugarcane production: most', shortKey: 'party.modeShort.superlativeSugarcane', short: 'Sugarcane' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -171,6 +172,12 @@ const SUPERLATIVE_MODES = {
   'superlative-tea': {
     file: 'tea.json',
     hintMost: { key: 'party.hintMostTea', fallback: 'Largest tea production' },
+  },
+  // Sugar cane is 'most'-only: "biggest cane producer" (Brazil) is the good
+  // question; "smallest grower" is obscure. Sparse, so the round ranks growers.
+  'superlative-sugarcane': {
+    file: 'sugarcane.json',
+    hintMost: { key: 'party.hintMostSugarcane', fallback: 'Largest sugarcane production' },
   },
 };
 

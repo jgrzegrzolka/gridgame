@@ -18,6 +18,7 @@ import sheepPerCapita from '../metrics/sheepPerCapita.json' with { type: 'json' 
 import cattlePerCapita from '../metrics/cattlePerCapita.json' with { type: 'json' };
 import beerPerCapita from '../metrics/beerPerCapita.json' with { type: 'json' };
 import tea from '../metrics/tea.json' with { type: 'json' };
+import sugarcane from '../metrics/sugarcane.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -279,3 +280,9 @@ export const beerPerCapitaRound = createSuperlativeRound(createMetric(beerDrinki
 // 'most': "biggest tea producer" (China) is the good question; "smallest grower"
 // is obscure.
 export const teaRound = createSuperlativeRound(createMetric(tea, []), 'superlative-tea', { direction: 'most' });
+
+// Sugar cane instance: tonnes of cane, id 'superlative-sugarcane'. Sparse like
+// the other crops, so the round ranks the growers only (non-growers would tie
+// at 0). Locked to 'most': "biggest cane producer" (Brazil) is the good
+// question; "smallest grower" is obscure.
+export const sugarcaneRound = createSuperlativeRound(createMetric(sugarcane, []), 'superlative-sugarcane', { direction: 'most' });

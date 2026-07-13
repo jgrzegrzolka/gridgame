@@ -112,6 +112,7 @@ export const PARTY_MODES = [
   { id: 'superlative-cattle', roundId: 'superlative-cattle', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-beer', roundId: 'superlative-beer', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-tea', roundId: 'superlative-tea', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-sugarcane', roundId: 'superlative-sugarcane', poolId: 'sovereign', group: 'metric' },
 ];
 
 /** The fixed picture trio (flags / territories / map), in catalog order. */

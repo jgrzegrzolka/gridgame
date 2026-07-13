@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature DZ (tea production, coffee's sparse twin) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature EA (sugar cane production, the largest crop by tonnage) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,27 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature EA: Sugar cane production as a world metric, the largest crop by tonnage (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Twenty-first world metric, the seventh sparse crop, and the **largest crop on Earth by tonnage** (world ~1.9 billion tonnes, an order above rice). 104 growers, so it reuses coffee's `absence: 'zero'` machinery wholesale, no new infrastructure. A near-mechanical clone of tea (Feature DZ): same sparse contract, same `>=`-only ladder, same biggest-only superlative round. Adds a strong tropical-belt axis: Brazil / India dominate (58% of world between them), `sugarcane >= 100M tonnes` the top tier (just Brazil, India, China).
+
+**Data contract:** sparse, **`absence: 'zero'`**, exactly like coffee/tea. `sugarcane.json` lists **growers only** (104 of them) and carries the `absence: 'zero'` hint; the loader `attachSugarcanes` → the shared `attachZeroFilledMetric` (group.js) defaults every real place the map omits to **0**, leaving only the org flags without the field, so the TTT no-data guard still reads "no data == not a place". A country that grows no cane is a *fair wrong guess* on a `sugarcane >= N` cell, not a data gap. The lens and superlative round read the raw sparse map via `createMetric`, so a superlative ranks growers, not a ~180-way tie at 0.
+
+**One-directional throughout**, like the other crops: filters are **atLeast-only** (`SUGARCANE_BREAKS_FOR_RANDOM` = `>=1M/10M/100M`, a decade above rice to match the crop's huge scale; 54/19/3 growers; a `<=` tier would flood with the ~180 non-growers at 0), and the Flag Party round is **biggest-only** (locked to `'most'`; "smallest grower" is obscure).
+
+**Data source:** FAOSTAT "Sugar cane" (item 156) via Our World in Data, latest available year per country (mostly 2024; a handful of overseas territories and lapsed growers carry their last recorded year, e.g. Reunion/Guadeloupe/Martinique/French Guiana 2006, all tiny). Alpha-3 → our alpha-2 join, 104 growers kept; 8 lapsed-to-0 codes (Iraq, Lebanon, Singapore, Syria, Yemen, ...) fall to the absence=0 default like any non-grower. Snapshot embedded in `authoring/build-sugarcane.mjs`.
+
+- [x] 1. Data: `flags/metrics/sugarcane.json` (104 growers, `absence: 'zero'`) + `authoring/build-sugarcane.mjs` + `METRIC_FILES` line + `attachSugarcanes` (group.js, reuses `attachZeroFilledMetric`) + `metrics.test.js` schema/positive-integer/no-org/zero-fill-contract/sparse-lens tests. Visuals: cane-stalk icon + lime hue `#7cb518` + short label in `flags/metricVisuals.js` (pinned by `metricVisuals.test.js`, generic).
+- [x] 2. flagsdata lens, free once step 1 landed: registered in `METRIC_FILES`, appears as a hub chip with the cane icon.
+- [x] 3 + 4 (landed together, driven by the `THRESHOLD_METRICS` registry). `sugarcane(op, n)` factory + `SUGARCANE_BREAKS_FOR_RANDOM` (`>=1M/10M/100M`) + `THRESHOLD_METRICS.sugarcane` (`has`, `family: 'sugarcane'`, reuses `tonnesCompact`/`tonnesToken`). **NOT 9×9-eligible** (sparse, like coffee; every break `ultimateEligible: false`, a 3×3-only axis, pinned by the ultimate-pool test); `attachSugarcanes` auto-wires at every load site via the `METRIC_ATTACHERS` registry + `party/server.js`'s explicit import (ultimateServer skipped, sparse). Filters: `SugarcaneConstraint` + `sugarcane` field (`matchesFilters` generic via `METRIC_KEYS`); `sugarcaneProbability` (0.06) modifier in `pickRandomMix` + `findFlag/page.js` + `findflag-random-coverage` skill note + a reachability test. i18n `sugarcane.atLeast.{1m,10m,100m}` + `metric.sugarcane` (en+pl).
+- [x] 5. Flag Party round: `sugarcaneRound` via `createSuperlativeRound` across the six spots (superlative.js + test, partyGameServer `ROUNDS`, partyPlan `PARTY_MODES`/`METRIC_MODES` + the two test assertions, flagParty/page.js `MODE_LABELS`/`SUPERLATIVE_MODES`; icon + hue resolve from step 1's visuals entry). i18n en+pl `party.mode/modeShort.superlativeSugarcane` + `hintMostSugarcane`. **Biggest-only** (locked to `'most'`), reads the raw sparse `createMetric` (growers only). Pinned by `superlative.test.js` (biggest-only, growers-only, correct extreme over 100 seeds).
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+**Standing artifacts:** none new. The seventh sparse crop to land as a near-mechanical clone of coffee's `absence: 'zero'` template; the alpha-3 → alpha-2 join in the build script is the only wrinkle (OWID keys by alpha-3, our flags by alpha-2).
+
+---
 
 ### Feature DZ: Tea production as a world metric, coffee's sparse twin (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

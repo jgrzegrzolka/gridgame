@@ -675,6 +675,26 @@ export const TEA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 1_000_000 },
 ];
 
+/**
+ * Sugar-cane-production-threshold Categories (tonnes of cane). Sparse like the
+ * other crops, so `>=`-only: ~104 countries grow cane, and a `<=` tier would
+ * just collect the ~180 non-growers at 0 (via `absence: 'zero'`). Cane is the
+ * largest crop on Earth by tonnage (world ~1.9B t), so the breaks sit a decade
+ * above rice: `1M / 10M / 100M` (54 / 19 / 3 real places). `exclusiveGroup:
+ * 'sugarcane'`.
+ *
+ * No `ultimate: true` break: like the other sparse crops, cane is too
+ * concentrated to back a 9×9 cell (whole continents grow essentially none), so
+ * every break carries `ultimateEligible: false`, keeping it a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const SUGARCANE_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1_000_000 },
+  { op: '>=', n: 10_000_000 },
+  { op: '>=', n: 100_000_000 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -1448,6 +1468,37 @@ export function tea(op, n, opts = {}) {
 }
 
 /**
+ * Sugar-cane-production-threshold Category factory (tonnes of cane). Reads the
+ * denormalized `country.sugarcane` field (`attachSugarcanes`, which fills 0 for
+ * a real place that grows none). `exclusiveGroup: 'sugarcane'`. The break list is
+ * `>=`-only (see SUGARCANE_BREAKS_FOR_RANDOM), but the `<=` branch is kept for
+ * symmetry so a `sugarcane:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function sugarcane(op, n, opts = {}) {
+  const human = tonnesCompact(n);
+  const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.sugarcane === 'number' && c.sugarcane >= n
+      : (c) => typeof c.sugarcane === 'number' && c.sugarcane <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `sugarcane:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'sugarcane',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -1747,6 +1798,20 @@ export const THRESHOLD_METRICS = {
       const human = tonnesCompact(n);
       if (op === '>=') return translate(`tea.atLeast.${token}`, `over ${human} tonnes`);
       return translate(`tea.atMost.${token}`, `under ${human} tonnes`);
+    },
+  },
+  sugarcane: {
+    breaks: SUGARCANE_BREAKS_FOR_RANDOM,
+    factory: sugarcane,
+    prefixFallback: 'Sugarcane production',
+    field: 'sugarcane',
+    family: 'sugarcane',
+    has: (c) => typeof c.sugarcane === 'number',
+    labelFor: (op, n, translate) => {
+      const token = tonnesToken(n);
+      const human = tonnesCompact(n);
+      if (op === '>=') return translate(`sugarcane.atLeast.${token}`, `over ${human} tonnes`);
+      return translate(`sugarcane.atMost.${token}`, `under ${human} tonnes`);
     },
   },
 };

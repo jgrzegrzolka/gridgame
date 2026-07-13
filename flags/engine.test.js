@@ -47,6 +47,7 @@ import {
   CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM,
   BEER_PER_CAPITA_BREAKS_FOR_RANDOM,
   TEA_BREAKS_FOR_RANDOM,
+  SUGARCANE_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
   FOREST_BREAKS_FOR_RANDOM,
@@ -568,6 +569,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = TEA_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `tea ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('sugarcane:')) {
+      const suffix = cat.id.slice('sugarcane:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = SUGARCANE_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `sugarcane ${op}${n} not in pool`);
     } else if (cat.id.startsWith('wine:')) {
       const suffix = cat.id.slice('wine:'.length);
       /** @type {'>=' | '<='} */
@@ -739,7 +747,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + SHEEP_PER_CAPITA_BREAKS_FOR_RANDOM.length
     + CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM.length
     + BEER_PER_CAPITA_BREAKS_FOR_RANDOM.length
-    + TEA_BREAKS_FOR_RANDOM.length;
+    + TEA_BREAKS_FOR_RANDOM.length
+    + SUGARCANE_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -921,7 +930,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['apple', 'area', 'banana', 'beerPerCapita', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'oil', 'population', 'rice', 'sheepPerCapita', 'tea', 'wine'],
+    ['apple', 'area', 'banana', 'beerPerCapita', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'oil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'wine'],
   );
 });
 
@@ -1121,12 +1130,20 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     0,
     'tea cats must not appear in the 9×9 pool',
   );
+  // Sugar cane, like the other sparse crops, has NO ultimate break, so ALL drop.
+  const droppedSugarcane = SUGARCANE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedSugarcane, SUGARCANE_BREAKS_FOR_RANDOM.length, 'no sugarcane tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('sugarcane:')).length,
+    0,
+    'sugarcane cats must not appear in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
       - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest - droppedOil - droppedRice - droppedCoal
-      - droppedSheepPerCapita - droppedCattlePerCapita - droppedBeerPerCapita - droppedTea,
+      - droppedSheepPerCapita - droppedCattlePerCapita - droppedBeerPerCapita - droppedTea - droppedSugarcane,
   );
 });
 
