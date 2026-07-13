@@ -411,6 +411,20 @@ button.opt:not(.dim):not([disabled]):has(.contour):hover { border-color: var(--s
   opacity: clamp(0, calc(1 - (1 + var(--veil-p, 1) * 5 - var(--i))), 1);
 }
 
+/* World-facts name reveal: on a metric round the country-name strip (the shared
+   `.opt.named[data-name]::after` band from common.css) is pre-rendered but held
+   hidden, then fades in once the grid gets `names-shown` — the veil loop toggles
+   that class at the host's `nameFrac` point. This decouples knowing the fact from
+   recognising the flag: an early flag-reader still buzzes first, a fact-knower
+   gets a fair shot once the labels land. z-index clears the veil cover (z 2) so
+   the name reads even if a stray panel lingers. */
+.opt.named[data-name]::after {
+  opacity: 0;
+  z-index: 3;
+  transition: opacity 0.3s ease;
+}
+#flags-grid.names-shown .opt.named[data-name]::after { opacity: 1; }
+
 .picks { position: absolute; bottom: 6px; left: 6px; display: flex; gap: 3px; }
 .picks .avatar { width: 20px; height: 20px; font-size: 8px; box-shadow: 0 0 0 2px var(--surface-color); }
 /* When your wrong tile carries the country-name strip (bottom), lift its pick

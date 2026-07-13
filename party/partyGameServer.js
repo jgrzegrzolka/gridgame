@@ -2,7 +2,7 @@ import rawCountries from '../flags/countries.json' with { type: 'json' };
 import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalRounds, poolIdForRound, roundIdForRound, validatePlan } from '../flags/partyPlan.js';
-import { DEFAULT_REVEAL, revealCategoryFor, validateReveal } from '../flags/partyTiming.js';
+import { DEFAULT_REVEAL, revealCategoryFor, validateReveal, isMetricRound } from '../flags/partyTiming.js';
 import {
   createRoom,
   applyHello,
@@ -94,7 +94,12 @@ export default class PartyGameServer {
     const pool = POOLS[poolIdForRound(p, roundIndex)];
     const q = round.generate(pool, this.usedCodes);
     this.usedCodes.add(q.answer);
-    return { ...q, roundId, clearFrac: rev[revealCategoryFor(roundId)] };
+    // World-facts (metric) rounds carry the name-reveal fraction so clients fade
+    // the country names on at the host's chosen point; other rounds never do (flag
+    // / outline recognition is the whole point there). `rev.name` may be null (the
+    // host turned names off), in which case nameFrac stays undefined.
+    const nameFrac = isMetricRound(roundId) ? (rev.name ?? undefined) : undefined;
+    return { ...q, roundId, clearFrac: rev[revealCategoryFor(roundId)], nameFrac };
   }
 
   async onStart() {

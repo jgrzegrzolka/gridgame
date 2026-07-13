@@ -183,7 +183,7 @@ test('applyStart: the host reveal config is stored on the room', () => {
   let room = createRoom(3);
   room = applyHello(room, 'alice', 'Alice').room;
   assert.equal(room.reveal, null, 'a fresh room has no reveal config');
-  const reveal = { flag: 0.8, map: 0.4, metric: 0.2 };
+  const reveal = { flag: 0.8, map: 0.4, metric: 0.2, name: 0.5 };
   const r = applyStart(room, 'alice', q('jp'), undefined, undefined, true, reveal);
   assert.deepEqual(r.room.reveal, reveal, 'chosen reveal config is stored for later rounds');
   const kept = applyStart(createRoom(3, null), 'x', q('jp')); // omitted keeps null
@@ -197,6 +197,16 @@ test('question broadcast: a stamped clearFrac reaches clients so the veil clears
   // room just passes it through to the public question.
   const r = applyStart(room, 'alice', { prompt: 'jp', options: ['jp', 'kr'], answer: 'jp', roundId: 'mapPick', clearFrac: 0.4 }, undefined, undefined, true);
   assert.equal(msg(r, 'question').clearFrac, 0.4, 'the veil timing rides the question');
+  assert.equal(msg(r, 'question').answer, undefined, 'the answer is still withheld');
+});
+
+test('question broadcast: a stamped nameFrac reaches clients so world-facts names appear on time', () => {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  // A world-facts round carries nameFrac (stamped server-side); the room passes it
+  // through so every client fades the country names on at the same instant.
+  const r = applyStart(room, 'alice', { prompt: 'most', options: ['br', 'vn'], answer: 'br', roundId: 'superlative-coffee', nameFrac: 0.5 }, undefined, undefined, false);
+  assert.equal(msg(r, 'question').nameFrac, 0.5, 'the name timing rides the question');
   assert.equal(msg(r, 'question').answer, undefined, 'the answer is still withheld');
 });
 
@@ -418,7 +428,7 @@ test('serialize/deserialize: tricky survives an eviction and defaults off for le
 });
 
 test('serialize/deserialize: the reveal config survives an eviction (so later rounds stamp the right timing)', () => {
-  const reveal = { flag: 0.6, map: 0.4, metric: 0.2 };
+  const reveal = { flag: 0.6, map: 0.4, metric: 0.2, name: null };
   let room = createRoom(3);
   room = applyHello(room, 'alice', 'Alice').room;
   room = applyStart(room, 'alice', q('jp'), undefined, undefined, true, reveal).room;
