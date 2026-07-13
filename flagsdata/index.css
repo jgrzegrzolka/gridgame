@@ -36,33 +36,28 @@ body {
   align-items: center;
   gap: 4px;
 }
-/* Summary row: search, the teaser pills + their "+ N more" expander, then
- * each remaining active filter as a removable chip and Clear. The row claims
- * a full width so it sits alone above the hub row and the (collapsed)
- * groups. */
-.filter-toggle-row {
+/* Row 1 of the coherent bar: the search input with Clear anchored in the
+ * row's right corner, where its appearing/disappearing displaces nothing. */
+.filter-search-row {
   flex-basis: 100%;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 8px;
 }
-/* Chips + Add button share one wrapping flex line. `.filter-chips` is
- * display:contents so its chip children flow as direct flex items of the
- * summary, sharing its gap with the Add button. */
-.filter-summary {
-  flex: 1 1 auto;
-  min-width: 0;
+.filter-search-row #filter-clear { margin-left: auto; }
+/* Row 2: the FILTERS preview line (label + fill-to-fit pills + "+ N more").
+ * Wrap stays allowed as a safety net; the fit keeps it to one line. */
+.filter-preview-row {
+  flex-basis: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
-.filter-chips { display: contents; }
-/* Preview pills flow as direct flex items of the summary row, like the
- * chips. The preview is the collapsed face of the filter groups (page.js
- * fill-to-fit decides how many pills show); expanded, the groups render
- * every pill so the preview hides entirely rather than duplicating them. */
+/* Preview pills flow as direct flex items of the preview row. The preview
+ * is the collapsed face of the filter groups (page.js fill-to-fit decides
+ * how many pills show, applied pills pinned always-visible); expanded, the
+ * groups render every pill so the preview hides rather than duplicate. */
 .filter-preview { display: contents; }
 #filter-bar.is-open .filter-preview { display: none; }
 /* The preview sits directly above the world-facts chips, so it shares that
@@ -79,40 +74,6 @@ body {
 .filter-preview .pill[hidden] {
   display: none;
 }
-/* A chip = one active filter. Solid brand fill mirrors `.pill.active` so an
- * applied filter reads the same whether you see it as a pill or a chip. */
-.filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  line-height: 1.4;
-  padding: 3px 6px 3px 10px;
-  border-radius: 999px;
-  background: var(--primary-color);
-  color: var(--surface-color);
-  border: 1px solid var(--primary-color);
-}
-/* Excluded value: same pink strikethrough idiom as `.pill.exclude`, on a
- * surface fill so it reads as "not this" rather than an applied include. */
-.filter-chip.is-exclude {
-  background: var(--surface-color);
-  color: var(--secondary-color);
-  border-color: var(--secondary-color);
-}
-.filter-chip.is-exclude .filter-chip-label { text-decoration: line-through; }
-.filter-chip-x {
-  font: inherit;
-  font-size: 14px;
-  line-height: 1;
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  padding: 0 2px;
-  opacity: 0.75;
-}
-.filter-chip-x:hover { opacity: 1; }
 /* "+ N more": the groups' overflow toggle. Same dashed + muted idiom as the
  * metric hub's `.mhub-more` (the two expanders sit within a row of each
  * other, so they must read as the same mechanism). */
@@ -147,15 +108,12 @@ body {
     margin-top: 4px;
   }
 }
-/* Name search — sits OUTSIDE the collapsible groups so it's reachable even
- * when filters are folded (search and filter serve different jobs: "take me to
- * the thing I know the name of" vs "narrow by category"). The wrapper claims
- * the full row so the teaser pills always start on a fresh line under the
- * textbox — a text input and a run of pills on one line read as one muddled
- * control; stacked, they read as "find" then "filter". The input inside still
- * caps at 240px. */
+/* Name search: sits OUTSIDE the collapsible groups so it's reachable even
+ * when filters are folded (search and filter serve different jobs: "take me
+ * to the thing I know the name of" vs "narrow by category"). It owns row 1
+ * with Clear; the input caps at 240px. */
 .name-search-wrap {
-  flex-basis: 100%;
+  flex: 0 1 240px;
 }
 .name-search {
   font: inherit;
@@ -307,15 +265,6 @@ dialog#zoom .country-data {
 .mhub-hide:hover {
   background: var(--surface-hover-color);
   border-radius: 4px;
-}
-/* Applied metric-tier chip in the summary row: outlined in the metric's hue
- * (--mc, set inline from flags/metricVisuals.js, the documented palette
- * exception) with the metric's icon, mirroring the hub chip it came from. */
-.filter-chip.is-metric {
-  background: var(--surface-color);
-  color: var(--mc);
-  border-color: var(--mc);
-  font-weight: 600;
 }
 /* Sort: a small segmented control inside the hub panel, so it only exists
  * while a lens is on. */

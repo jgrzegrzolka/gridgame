@@ -1,15 +1,13 @@
 import { CONTINENTS, loadCountries, attachMetrics } from '../flags/group.js';
 import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, METRIC_KEYS, foldDiacritics } from '../flags/engine.js';
-import { emptyFilters, matchesFilters, createColorCountLock, activeFilterChips } from '../flags/flagsFilter.js';
+import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
 import { makeColorSwatch } from '../common.js';
 import { buildMetricTierItems } from '../flags/metricTiers.js';
-import { pillLabel } from '../flags/findFlag.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
 import { createMetric } from '../flags/metrics.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { computeLensView } from '../flags/metricLens.js';
 import { createMetricHub } from '../flags/metricHub.js';
-import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { fitChipRow, rowGap } from '../flags/chipRowFit.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
@@ -625,12 +623,9 @@ export function bootFlagsData() {
     if (filters.colorCount !== null) pillTotal++;
     for (const k of METRIC_KEYS) if (filters[k] !== null) pillTotal++;
     const anyActive = pillTotal > 0 || nameQuery !== '';
+    // Clear lives in the search row's right corner: it appears in empty
+    // space, so its visibility toggling never moves a pill.
     clearBtn.hidden = !anyActive;
-    // Repaint the active-filters chip summary. Chips replace the old count
-    // badge: they show *which* filters are on (not just how many), so the
-    // user can read and remove them without expanding the groups. Name
-    // search has its own always-visible input, so it isn't chipped here.
-    renderChips();
     // Reflect the active filter on the world map below the grid: every
     // visible country wears its flag (stamped into its silhouette),
     // hidden countries stay grey. No-op until the map's mounted (async
@@ -723,112 +718,6 @@ export function bootFlagsData() {
     btn.append(makeColorSwatch(value), document.createTextNode(labelText));
   }
 
-  /**
-   * Repaint the active-filters chip row from the current filter state. Chip
-   * membership and order come from the pure `activeFilterChips`; each chip's ×
-   * clears just that one filter. Runs on every `applyFilter`, so the summary
-   * always mirrors what's applied — including while the groups are expanded.
-   */
-  function renderChips() {
-    if (!chipsWrap) return;
-    chipsWrap.replaceChildren();
-    // One rule: the chips row is the overflow of applied state. A pill
-    // filter chips exactly when its pill is NOT currently on screen: while
-    // collapsed that's every active value whose preview pill didn't fit;
-    // while expanded the groups show every pill, so no pill ever chips.
-    // Scalar filters (metric tiers, colour count) have no always-visible
-    // pill, so they always chip.
-    const open = filterBar.classList.contains('is-open');
-    const except = open
-      ? PREVIEW_PILLS
-      : PREVIEW_PILLS.filter((_, i) => !previewEls[i].hidden);
-    for (const ref of activeFilterChips(filters, { except })) {
-      const chip = document.createElement('span');
-      chip.className = 'filter-chip' + (ref.kind === 'pill' && ref.exclude ? ' is-exclude' : '');
-      if (ref.kind === 'pill' && ref.group === 'color') {
-        chip.appendChild(makeColorSwatch(ref.value));
-      }
-      // A metric chip wears its metric's icon + hue (shared with the hub
-      // chips and Flag Party), so "≥ 100K tonnes" can never read as the
-      // wrong fact: the icon and the leading short name disambiguate.
-      if (ref.kind === 'scalar' && ref.group !== 'colorCount') {
-        chip.classList.add('is-metric');
-        chip.style.setProperty('--mc', METRIC_HUES[ref.group] || 'currentColor');
-        const ic = document.createElement('span');
-        ic.className = 'mhub-ic';
-        ic.innerHTML = METRIC_ICONS[ref.group] || '';
-        chip.appendChild(ic);
-      }
-      const label = document.createElement('span');
-      label.className = 'filter-chip-label';
-      label.textContent = chipLabel(ref);
-      chip.appendChild(label);
-      const x = document.createElement('button');
-      x.type = 'button';
-      x.className = 'filter-chip-x';
-      x.setAttribute('aria-label', t('flagsdata.removeFilter', 'Remove filter'));
-      x.textContent = '×';
-      x.addEventListener('click', () => removeChip(ref));
-      chip.appendChild(x);
-      chipsWrap.appendChild(chip);
-    }
-  }
-
-  /**
-   * Localized label for one chip. Pill chips reuse the group's own pill-label
-   * helper; the colorCount scalar reads as "Colors = 3" (reusing the group
-   * label) to sidestep plural grammar; the metric scalars reuse the tier's own
-   * pill label.
-   * @param {import('../flags/flagsFilter.js').FilterChip} ref
-   * @returns {string}
-   */
-  function chipLabel(ref) {
-    if (ref.kind === 'pill') return pillText(ref.group, ref.value);
-    if (ref.group === 'colorCount') {
-      const c = filters.colorCount;
-      const sym = c && c.op === '>=' ? '≥' : c && c.op === '<=' ? '≤' : '=';
-      return `${t('flagsdata.filterColors', 'Colors')} ${sym} ${c ? c.n : ''}`;
-    }
-    // Metric tier: lead with the metric's short name so a unit-only tier
-    // label ("over 100K tonnes") always names its fact. `${op}${n}` is the
-    // same id suffix the tier pills and the URL serializer use.
-    const cons = filters[ref.group];
-    if (!cons) return '';
-    const short = METRIC_SHORT[ref.group];
-    const tierText = pillLabel(ref.group, `${cons.op}${cons.n}`, 'include', t);
-    return `${short ? t(short.key, short.fallback) : ref.group} · ${tierText}`;
-  }
-
-  /**
-   * Clear the single filter a chip stands for — mirroring what a second click
-   * on its pill (or the colour-count ×) would do — then re-run the filter.
-   * @param {import('../flags/flagsFilter.js').FilterChip} ref
-   */
-  function removeChip(ref) {
-    if (ref.kind === 'pill') {
-      const set = ref.exclude ? filters[ref.group].exclude : filters[ref.group].include;
-      set.delete(ref.value);
-      // Repaint every pill for the value (group row + any teaser twin).
-      repaintFilterPills(ref.group, ref.value);
-      // A colour include drives the "no other colours" lock's count — keep it
-      // in step, exactly as the pill click does.
-      if (ref.group === 'color') colorCountLock.sync();
-    } else if (ref.group === 'colorCount') {
-      // colorCount can be set by the picker OR the "no other colours" lock;
-      // clear both surfaces so whichever engaged it turns off.
-      filters.colorCount = null;
-      colorCountLock.reset();
-      colorCountPicker.reset();
-      if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
-    } else {
-      // Metric tier: clear the scalar and let the hub repaint its chip +
-      // tier-pill states (the hub owns that DOM now, not the filter groups).
-      filters[ref.group] = null;
-      hub.update();
-    }
-    applyFilter();
-  }
-
   /** @typedef {'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'} PillGroup */
 
   /** Localized pill text for one (group, value). Single mapping shared by the
@@ -861,6 +750,9 @@ export function bootFlagsData() {
     }
     if (group === 'color') colorCountLock.sync();
     repaintFilterPills(group, value);
+    // Applied state drives the preview's pinning (an applied pill never
+    // hides), so every cycle re-fits the line.
+    refitPreview();
     applyFilter();
   }
 
@@ -947,18 +839,13 @@ export function bootFlagsData() {
   searchWrap.className = 'name-search-wrap';
   searchWrap.appendChild(searchInput);
 
-  // Active-filters summary row. Leads with the always-visible name search,
-  // then the filter PREVIEW pills (below), then a "+ N more" toggle that reveals the
-  // full pill groups, then each remaining active filter as a removable chip.
-  // Search stays OUTSIDE the collapsible groups: it's a different mental
-  // model ("take me to the thing I know") and must stay reachable when the
-  // groups are folded. The groups are the same collapsible #filter-groups
-  // block (is-open); only the trigger changed. Groups start collapsed on
-  // every viewport: the summary is the resting state, you expand to add.
-  const chipsWrap = document.createElement('div');
-  chipsWrap.id = 'filter-chips';
-  chipsWrap.className = 'filter-chips';
-
+  // The bar is three fixed rows that never restructure (the coherent model
+  // from Jan's 2026-07-13 review): the search row (with Clear anchored in
+  // its right corner), the FILTERS row, and the world-facts row. Expanding
+  // only unfolds the FILTERS row in place into its labeled group rows.
+  // Applied state has exactly ONE representation: the filter's own lit
+  // pill/chip, kept always-visible by the fit's pinning. There is no chips
+  // row, so nothing ever renders twice.
   // Filter preview: the collapsed state IS the beginning of the filters, not
   // a separate curated set. Every group value renders here in group order
   // (status, continents, colours, motifs, stripes) as the same tristate
@@ -997,37 +884,42 @@ export function bootFlagsData() {
    * Collapsed: fill-to-fit shows as many preview pills as one line allows
    * (measured live, so it holds on any device width and in both languages),
    * and the button ends that line as "+ N more" with the honest remainder.
-   * Expanded: the preview hides (the groups show every pill, duplicating
-   * nothing) and the button moves to its own row after the groups, reading
-   * "less" at the point where the reader finishes them.
+   * Applied pills are PINNED: an applied filter's pill is its only
+   * representation, so it always stays on the line (promoted past the
+   * unapplied overflow). Expanded: the preview hides (the groups show every
+   * pill, duplicating nothing) and the button moves to its own row after
+   * the groups, reading "less" at the point where the reader finishes them.
    *
-   * Re-run on toggle, on window resize, and on a language switch (labels
-   * change widths). The dynamic label can't ride data-i18n.
+   * Re-run on toggle, on any pill cycle (pinning follows applied state), on
+   * window resize, and on a language switch (labels change widths). The
+   * dynamic label can't ride data-i18n.
    */
   function refitPreview() {
     const open = filterBar.classList.contains('is-open');
     if (open) {
       addBtn.textContent = t('metricHub.less', 'less');
       lessRow.appendChild(addBtn);
-      renderChips();
       return;
     }
-    // Back on the summary row, after the preview pills.
-    filterSummary.insertBefore(addBtn, chipsWrap);
+    // Back on the preview row, after the pills.
+    previewRow.appendChild(addBtn);
     // Measure against the widest label the button can carry, then write the
     // real remainder over it.
     addBtn.textContent = `+ ${PREVIEW_PILLS.length} ${t('metricHub.more', 'more')}`;
+    const gap = rowGap(previewRow, 8);
     const shown = fitChipRow({
       items: previewEls,
       moreBtn: addBtn,
-      avail: /** @type {any} */ (filterSummary).clientWidth || 0,
-      gap: rowGap(filterSummary, 8),
+      avail: (/** @type {any} */ (previewRow).clientWidth || 0)
+        - previewLabel.getBoundingClientRect().width - gap,
+      gap,
       measure: (el) => el.getBoundingClientRect().width,
+      pinned: PREVIEW_PILLS.map(
+        (tp) => filters[tp.group].include.has(tp.value) || filters[tp.group].exclude.has(tp.value),
+      ),
       alwaysMore: true,
     });
     addBtn.textContent = `+ ${PREVIEW_PILLS.length - shown} ${t('metricHub.more', 'more')}`;
-    // Chips depend on which pills are visible (see renderChips).
-    renderChips();
   }
   addBtn.addEventListener('click', () => {
     const open = filterBar.classList.toggle('is-open');
@@ -1040,16 +932,22 @@ export function bootFlagsData() {
     previewRaf = requestAnimationFrame(refitPreview);
   });
 
-  // Search, then the preview pills + their "+ N more" continuation, then the
-  // active chips; the wrapper claims the rest of the row.
-  const filterSummary = document.createElement('div');
-  filterSummary.className = 'filter-summary';
-  filterSummary.append(searchWrap, previewWrap, addBtn, chipsWrap);
+  // Row 1: search, with Clear (created below) anchored in the right corner.
+  const searchRow = document.createElement('div');
+  searchRow.className = 'filter-search-row';
+  searchRow.appendChild(searchWrap);
+  filterBar.appendChild(searchRow);
 
-  const toggleRow = document.createElement('div');
-  toggleRow.className = 'filter-toggle-row';
-  toggleRow.appendChild(filterSummary);
-  filterBar.appendChild(toggleRow);
+  // Row 2: the FILTERS preview line. Its label mirrors the world-facts
+  // label below, so the two collapsed lines read as sibling sections.
+  const previewLabel = document.createElement('span');
+  previewLabel.className = 'filter-label';
+  previewLabel.setAttribute('data-i18n', 'flagsdata.filters');
+  previewLabel.textContent = t('flagsdata.filters', 'Filters');
+  const previewRow = document.createElement('div');
+  previewRow.className = 'filter-preview-row';
+  previewRow.append(previewLabel, previewWrap, addBtn);
+  filterBar.appendChild(previewRow);
 
   const groupsWrap = document.createElement('div');
   groupsWrap.id = 'filter-groups';
@@ -1127,16 +1025,16 @@ export function bootFlagsData() {
     }
     searchInput.value = '';
     nameQuery = '';
-    // The hub repaints its chip + tier states from the (now empty) filters.
-    // The lens is view state, not a filter, so Clear leaves it alone.
+    // The hub repaints its chip + tier states from the (now empty) filters;
+    // the preview re-fits (nothing pinned anymore). The lens is view state,
+    // not a filter, so Clear leaves it alone.
     hub.update();
+    refitPreview();
     applyFilter();
   });
-  // Clear sits directly after the chips it clears, not pinned to the row's
-  // far edge (a full row away from the chips it acted on, it read as
-  // unrelated chrome). Only renders when at least one filter is active, so
-  // the user can reset without expanding the bar.
-  filterSummary.appendChild(clearBtn);
+  // Clear anchors in the search row's empty right corner: appearing and
+  // disappearing there never displaces a pill. It is the only global control.
+  searchRow.appendChild(clearBtn);
 
   // --- World-facts hub (Feature DE, hub form) ----------------------------
   // One home per metric: the shared icon-chip row + inline panel
@@ -1308,10 +1206,8 @@ export function bootFlagsData() {
       if (group === 'color') paintColorPill(btn, value, pillText(group, value));
       else btn.textContent = pillText(group, value);
     }
-    // Chips carry localized labels too: rebuild them in the new language,
-    // and re-run the preview fit (translated labels change pill widths, and
-    // the "+ N more" text re-composes; it can't ride data-i18n).
-    renderChips();
+    // Re-run the preview fit: translated labels change pill widths, and the
+    // "+ N more" text re-composes (it can't ride data-i18n).
     refitPreview();
     // The hub owns every metric label (chips, panel lead, tier pills);
     // renderLens refreshes the "no data" overlay text.

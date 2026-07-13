@@ -176,14 +176,13 @@ export function createMetricHub(opts) {
       avail: availWidth(),
       gap: rowGap(chipsRow, GAP_FALLBACK),
       measure,
+      // An applied metric's chip is the ONLY representation of its state
+      // (there is no chips row), so it is pinned always-visible; same for
+      // the open panel's chip, which anchors the panel.
+      pinned: chips.map((c) => getTier(c.key) !== null || openKey === c.key),
     });
     if (shown < chips.length) {
       moreBtn.textContent = `+ ${chips.length - shown} ${t('metricHub.more', 'more')}`;
-    }
-    // A hidden chip can't anchor an open panel: if the collapse (or a
-    // shrink) swallowed the open metric's chip, close its panel too.
-    if (openKey && chips.some((c) => c.key === openKey && c.btn.hidden)) {
-      setOpen(null);
     }
   }
 
@@ -283,6 +282,9 @@ export function createMetricHub(opts) {
       const active = tier !== null && value === `${tier.op}${tier.n}`;
       btn.classList.toggle('active', active);
     }
+    // Applied/open state drives the fit's pinning, so every state repaint
+    // re-fits the row (cheap: one measure pass over the chips).
+    refit();
   }
 
   /**
@@ -315,9 +317,8 @@ export function createMetricHub(opts) {
   }
 
   update();
-  refit();
   // The consumer appends `el` right after this constructor returns, so at
-  // refit() time above there was no layout to measure (min-1 fallback). Run
+  // update()'s refit above there was no layout to measure (min-1 fallback). Run
   // a real pass on the next frame, and keep the row one line across window
   // resizes. Browser-only wiring; tests inject `fit` and drive refit()
   // synchronously instead.

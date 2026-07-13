@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { computeFitCount, fitChipRow } from './chipRowFit.js';
+import { computeFitCount, computeFitVisible, fitChipRow } from './chipRowFit.js';
 
 // widths 100 each, gap 10, more-button 80 throughout unless stated.
 const W = (/** @type {number} */ n) => Array(n).fill(100);
@@ -47,6 +47,30 @@ test('mixed widths: a long later chip drops without blocking earlier ones', () =
   // 60 + 210 + 50 = 320, +reserve 90 = 410 <= 420 for the third; the fourth
   // (300) would need 320 + 310 = 630 > 420.
   assert.equal(computeFitCount({ avail: 420, widths, moreWidth: 80, gap: 10 }), 3);
+});
+
+test('a pinned item stays visible however deep in the order it sits', () => {
+  // Two unpinned leaders (100 + 110) + the pinned tail (110) + button (90)
+  // = 410, so 420 holds them: [T, T, F, F, T].
+  assert.deepEqual(
+    computeFitVisible({ avail: 420, widths: W(5), moreWidth: 80, gap: 10, pinned: [false, false, false, false, true] }),
+    [true, true, false, false, true],
+  );
+});
+
+test('unpinned acceptance reserves room for pinned items still ahead', () => {
+  // Without pinning, 400 holds 2 unpinned (see above). Pinning the last
+  // claims its 110, so only 1 unpinned leader fits alongside it.
+  const visible = computeFitVisible({
+    avail: 340, widths: W(4), moreWidth: 80, gap: 10, pinned: [false, false, false, true],
+  });
+  assert.deepEqual(visible, [true, false, false, true]);
+});
+
+test('after the first unpinned rejection, later unpinned items stay hidden', () => {
+  // A short tail chip must not sneak back in past "+ N more".
+  const visible = computeFitVisible({ avail: 300, widths: [100, 100, 100, 10], moreWidth: 80, gap: 10 });
+  assert.deepEqual(visible, [true, true, false, false]);
 });
 
 test('fitChipRow hides the overflow, shows the button, and reports the count', () => {

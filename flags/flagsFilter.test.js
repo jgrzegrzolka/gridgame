@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyFilters, matchesFilters, createColorCountLock, activeFilterChips } from './flagsFilter.js';
+import { emptyFilters, matchesFilters, createColorCountLock } from './flagsFilter.js';
 import { createCountry } from './group.js';
 
 /** @typedef {import('./group.js').Country} Country */
@@ -494,94 +494,3 @@ test('createColorCountLock: matchesFilters honours the locked colorCount on a re
   assert.equal(matchesFilters(hr, f), false);
 });
 
-test('activeFilterChips returns an empty list when no filter is active', () => {
-  assert.deepEqual(activeFilterChips(emptyFilters()), []);
-});
-
-test('activeFilterChips emits one pill chip per include and exclude value, include first', () => {
-  const f = emptyFilters();
-  f.continent.include.add('Europe');
-  f.continent.exclude.add('Asia');
-  f.color.include.add('red');
-  assert.deepEqual(activeFilterChips(f), [
-    { kind: 'pill', group: 'continent', value: 'Europe', exclude: false },
-    { kind: 'pill', group: 'continent', value: 'Asia', exclude: true },
-    { kind: 'pill', group: 'color', value: 'red', exclude: false },
-  ]);
-});
-
-test('activeFilterChips orders groups status → continent → color → motif → stripesOnly', () => {
-  const f = emptyFilters();
-  f.stripesOnly.include.add('horizontal');
-  f.motif.include.add('cross');
-  f.status.include.add('sovereign');
-  const groups = activeFilterChips(f).map((c) => c.group);
-  assert.deepEqual(groups, ['status', 'motif', 'stripesOnly']);
-});
-
-test('activeFilterChips: except suppresses a listed pill but not its group siblings', () => {
-  // The summary row's teaser pills show their own active state in place, so
-  // an active teaser must not ALSO render as a removable chip. Only the
-  // exact (group, value) pair is suppressed; other values in the same group
-  // (and the same value under exclude) still chip.
-  const f = emptyFilters();
-  f.continent.include.add('Europe');
-  f.continent.include.add('Asia');
-  f.color.exclude.add('red');
-  const except = [
-    { group: 'continent', value: 'Europe' },
-    { group: 'color', value: 'red' },
-  ];
-  assert.deepEqual(activeFilterChips(f, { except }), [
-    { kind: 'pill', group: 'continent', value: 'Asia', exclude: false },
-  ]);
-});
-
-test('activeFilterChips: except never touches scalar chips', () => {
-  const f = emptyFilters();
-  f.population = { op: '>=', n: 10_000_000 };
-  const except = [{ group: 'population', value: '>=10000000' }];
-  assert.deepEqual(activeFilterChips(f, { except }), [
-    { kind: 'scalar', group: 'population' },
-  ]);
-});
-
-test('activeFilterChips appends scalar chips after pills in colorCount → population → area → density order', () => {
-  const f = emptyFilters();
-  f.color.include.add('red');
-  f.density = { op: '>=', n: 100 };
-  f.colorCount = { op: '=', n: 3 };
-  f.population = { op: '>=', n: 10_000_000 };
-  f.area = { op: '<=', n: 1000 };
-  assert.deepEqual(activeFilterChips(f), [
-    { kind: 'pill', group: 'color', value: 'red', exclude: false },
-    { kind: 'scalar', group: 'colorCount' },
-    { kind: 'scalar', group: 'population' },
-    { kind: 'scalar', group: 'area' },
-    { kind: 'scalar', group: 'density' },
-  ]);
-});
-
-test('activeFilterChips preserves each set’s insertion order within a group', () => {
-  const f = emptyFilters();
-  f.color.include.add('blue');
-  f.color.include.add('red');
-  f.color.include.add('green');
-  assert.deepEqual(
-    activeFilterChips(f).map((c) => (c.kind === 'pill' ? c.value : '')),
-    ['blue', 'red', 'green'],
-  );
-});
-
-test('activeFilterChips surfaces a lock-driven colorCount as the single scalar chip', () => {
-  // The "no other colours" lock writes filters.colorCount; it must appear as
-  // exactly one colorCount chip (removing it is what clears the lock).
-  const f = emptyFilters();
-  f.color.include.add('red');
-  f.color.include.add('white');
-  const lock = createColorCountLock(f);
-  lock.toggle();
-  const chips = activeFilterChips(f);
-  const scalars = chips.filter((c) => c.kind === 'scalar');
-  assert.deepEqual(scalars, [{ kind: 'scalar', group: 'colorCount' }]);
-});
