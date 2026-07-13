@@ -957,12 +957,15 @@ export function bootFlagsData() {
    * folded groups PLUS every world-facts chip the hub's fit hid; expanded,
    * "less" folds both back. One switch, one mental model.
    *
-   * The four Status pills are ALL pinned: Status is the primary top-level
-   * filter, so every option must be reachable in the collapsed bar. When the
-   * row is too narrow to hold all four plus the toggle on one line (phones),
-   * it wraps to a second line rather than hiding options behind "+ N more" —
-   * hiding half the primary filter offscreen was the bug. On wide screens all
-   * four fit on one line, so pinning changes nothing there.
+   * Status-pill visibility depends on whether the bar is OPEN:
+   *   - Collapsed: fill-to-fit keeps the row to one line, hiding the overflow
+   *     Status pills behind "+ N more" (a phone shows Sovereign + Non-UN, the
+   *     rest fold in). The collapsed bar stays compact and single-line.
+   *   - Expanded: every Status pill is pinned so all four show, wrapping to a
+   *     second line if the phone is too narrow. Expanding is the user asking
+   *     to see everything, so nothing hides — the earlier bug was that the fit
+   *     hid Territory / Region and Other by width alone, EVEN when expanded, so
+   *     they were unreachable. On wide screens all four fit one line either way.
    */
   const previewPinned = previewEls.map(() => true);
   function refitPreview() {
@@ -982,7 +985,8 @@ export function bootFlagsData() {
         - previewLabel.getBoundingClientRect().width - gap,
       gap,
       measure: (el) => el.getBoundingClientRect().width,
-      pinned: previewPinned,
+      // Pin (show all) only when expanded; collapsed keeps the dense fit.
+      pinned: open ? previewPinned : undefined,
       alwaysMore: true,
     });
   }
