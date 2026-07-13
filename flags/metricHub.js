@@ -26,9 +26,11 @@ import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from './metricVisuals.js';
 /** @typedef {{ op: '>=' | '<=', n: number }} Tier */
 /** @typedef {import('./metricTiers.js').MetricTierItem} MetricTierItem */
 
-/** How many chips show before the "+ N more" toggle. Six covers the
- * headline metrics (population … coffee) on one comfortable row. */
-export const DEFAULT_PRIMARY_COUNT = 6;
+/** How many chips show before the "+ N more" toggle. Five keeps the row
+ * (label + chips + the "+ N more" button) on ONE line inside flagsdata's
+ * 756px column; at six the button wrapped to a line of its own, which read
+ * as a stray element rather than the row's continuation. */
+export const DEFAULT_PRIMARY_COUNT = 5;
 
 /**
  * @typedef {Object} MetricHubOptions
