@@ -381,8 +381,9 @@ test('sheepPerCapita is a valid, self-describing metric file', () => {
   assert.equal(SHEEP_PC.key, 'sheepPerCapita');
   assert.equal(typeof SHEEP_PC.label, 'string');
   assert.equal(typeof SHEEP_PC.unit, 'string');
-  // A small rate (0.0 to ~135), rendered with one decimal like density.
-  assert.equal(SHEEP_PC.format, 'decimal1');
+  // A rate spanning 0.0074 to ~135, rendered with 2 significant figures (keeping
+  // the whole integer part) so it reads well at both ends, not a fixed decimal.
+  assert.equal(SHEEP_PC.format, 'sig2');
   assert.equal(typeof SHEEP_PC.source, 'string');
   assert.equal(typeof SHEEP_PC.year, 'number');
   assert.equal(typeof SHEEP_PC.values, 'object');

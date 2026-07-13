@@ -2,7 +2,7 @@
   "key": "sheepPerCapita",
   "label": "Sheep per capita",
   "unit": "sheep/person",
-  "format": "decimal1",
+  "format": "sig2",
   "source": "derived: FAOSTAT sheep stocks (mostly 2024, via Our World in Data) / population (2023); Falklands, UK home nations (Defra 2024) and Greenland from national statistics",
   "year": 2024,
   "values": {

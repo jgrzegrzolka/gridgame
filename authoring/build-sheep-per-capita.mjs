@@ -109,8 +109,10 @@ function main() {
     key: 'sheepPerCapita',
     label: 'Sheep per capita',
     unit: 'sheep/person',
-    // 'decimal1' -> one decimal place; a small rate (0.0 to ~135), like density.
-    format: 'decimal1',
+    // 'sig2' -> 2 significant figures (keeping the whole integer part), so a rate
+    // spanning 0.0074 (Poland) to 135 (Falklands) reads well at both ends: 135,
+    // 7, 4.5, 0.9, 0.0074, and a true 0 as "0". A fixed decimal count can't.
+    format: 'sig2',
     source:
       `derived: FAOSTAT sheep stocks (mostly ${YEAR}, via Our World in Data) / ` +
       `population (${population.year}); Falklands, UK home nations (Defra ${YEAR}) ` +

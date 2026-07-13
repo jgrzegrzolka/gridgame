@@ -25,6 +25,13 @@
  *   'plain'    → exact integer with thousands separators (8,849), for metrics
  *                like elevation where the precise figure IS the point and
  *                compact would collapse 8,849 / 8,611 / 8,586 to "8.6K"
+ *   'sig2'     → 2 significant figures, but never rounding away the whole
+ *                integer part, with trailing zeros stripped. For a rate that
+ *                spans orders of magnitude (sheep-per-capita: 135 down to
+ *                0.0074), a fixed decimal count is wrong at one end or the other:
+ *                one decimal flattens the tail to "0.0", four clutters the top.
+ *                So: 135.135 → "135", 7.035 → "7", 4.535 → "4.5", 0.9 → "0.9",
+ *                0.046 → "0.046", 0.0074 → "0.0074", and a true 0 → "0".
  * @param {number} value
  * @param {string} [format]
  * @returns {string}
@@ -36,6 +43,15 @@ export function formatValue(value, format) {
     // show 2 significant figures instead (Number(...) drops any trailing zeros).
     if (Math.abs(value) < 0.05) return Number(value.toPrecision(2)).toString();
     return value.toFixed(1);
+  }
+  if (format === 'sig2') {
+    if (value === 0) return '0';
+    const abs = Math.abs(value);
+    // Precision = 2 sig figs, or the integer-part length when that is larger, so
+    // a big value keeps its whole part (135, not a 2-sig-fig "140"). Number(...)
+    // then strips the trailing zeros a small value's toPrecision leaves (7.0 → 7).
+    const intDigits = abs >= 1 ? Math.floor(Math.log10(abs)) + 1 : 0;
+    return Number(value.toPrecision(Math.max(2, intDigits))).toString();
   }
   // Deterministic thousands grouping (no locale dependence across Node/browser).
   if (format === 'plain') {
