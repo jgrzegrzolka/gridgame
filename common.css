@@ -736,11 +736,17 @@ body::after {
  * identical across pages — same color language for include (dark) and
  * exclude (red with strikethrough), so the user reads them the same way
  * regardless of which page surfaces the control. */
+/* Resting = quiet: muted text + semibold, the same off-state the world-facts
+ * chips (.mhub-chip) use, so a whole filter row reads calm and the selected
+ * ones stand out. Selected (.active) lights up with a primary edge + text over
+ * a faint grey fill — the world-facts "on" idiom, brand-dark standing in for a
+ * metric hue. No heavy solid fill anywhere; selected and "on" read the same. */
 .pill {
   font: inherit;
   font-size: 12px;
+  font-weight: 600;
   background: var(--surface-color);
-  color: var(--primary-color);
+  color: var(--muted-color);
   border: 1px solid var(--muted-soft-color);
   border-radius: 999px;
   padding: 3px 10px;
@@ -751,8 +757,8 @@ body::after {
   background: var(--surface-hover-color);
 }
 .pill.active {
-  background: var(--primary-color);
-  color: #fff;
+  background: var(--surface-hover-color);
+  color: var(--primary-color);
   border-color: var(--primary-color);
 }
 .pill.exclude {
@@ -833,8 +839,8 @@ body::after {
 }
 .color-count-pill.active {
   border-style: solid;
-  background: var(--primary-color);
-  color: #fff;
+  background: var(--surface-hover-color);
+  color: var(--primary-color);
   border-color: var(--primary-color);
 }
 .color-count-side {
@@ -877,11 +883,8 @@ body::after {
 .color-count-chip:hover {
   background: rgba(0, 0, 0, 0.08);
 }
-.color-count-pill.active .color-count-chip--current:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-/* Hover state for the floating options is always on the light
- * background, even when the pill itself is dark/active. */
+/* Active pill now has a light (grey) fill, so the current chip's hover uses
+ * the same dark overlay as everything else — no special light-on-dark case. */
 .color-count-options .color-count-chip:hover {
   background: rgba(0, 0, 0, 0.08);
 }
