@@ -63,6 +63,23 @@ body {
 .chooser-pills .pill.exclude .pill-count {
   color: #c0392b;
 }
+/* The shared metric-hub chips (flags/metricHub.css) ship at the dense
+ * flagsdata scale. Here the chooser's pills are the bigger 13px scale, so
+ * scale the World-facts chips up to match — every chip in the chooser reads
+ * at one height. Mirrors `.chooser-pills .pill` above (6px 12px / 13px), with
+ * the icon chip keeping its 3px-shorter left pad. */
+#chooser .mhub-chip {
+  padding: 6px 12px 6px 9px;
+  font-size: 13px;
+}
+#chooser .mhub-more {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+#chooser .mhub-tiers .pill {
+  padding: 6px 12px;
+  font-size: 13px;
+}
 .find-clear {
   font: inherit;
   font-size: 13px;

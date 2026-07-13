@@ -105,13 +105,9 @@ body {
  * how many pills show, applied pills pinned always-visible); expanded, the
  * groups render every pill so the preview hides rather than duplicate. */
 .filter-preview { display: contents; }
-/* The preview sits directly above the world-facts chips, so it shares that
- * row's pill sizing: two adjacent pill rows at two heights read as a
- * mistake. */
-.filter-preview .pill {
-  padding: 5px 11px;
-  font-size: 12.5px;
-}
+/* No pill-size override here: preview pills use the site-standard base `.pill`
+ * size so the Status row matches the Continent / Colors / Motifs / Stripes
+ * group rows exactly. Every filter pill on the bar reads at one height. */
 /* Fill-to-fit hides overflow pills via [hidden], but the colour pills'
  * shared `.pill:has(.pill-swatch) { display: inline-flex }` (common.css)
  * outweighs the UA's `[hidden]` rule and kept them painting. Re-assert it
