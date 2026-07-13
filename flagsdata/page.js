@@ -10,6 +10,7 @@ import { METRIC_FILES } from '../flags/metrics/index.js';
 import { computeLensView } from '../flags/metricLens.js';
 import { createMetricHub } from '../flags/metricHub.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
+import { fitChipRow, rowGap } from '../flags/chipRowFit.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
@@ -731,10 +732,17 @@ export function bootFlagsData() {
   function renderChips() {
     if (!chipsWrap) return;
     chipsWrap.replaceChildren();
-    // Teaser values are excepted: an active teaser shows its state on the
-    // always-visible pill itself, so chipping it too would render the same
-    // filter twice on one row.
-    for (const ref of activeFilterChips(filters, { except: TEASER_PILLS })) {
+    // One rule: the chips row is the overflow of applied state. A pill
+    // filter chips exactly when its pill is NOT currently on screen: while
+    // collapsed that's every active value whose preview pill didn't fit;
+    // while expanded the groups show every pill, so no pill ever chips.
+    // Scalar filters (metric tiers, colour count) have no always-visible
+    // pill, so they always chip.
+    const open = filterBar.classList.contains('is-open');
+    const except = open
+      ? PREVIEW_PILLS
+      : PREVIEW_PILLS.filter((_, i) => !previewEls[i].hidden);
+    for (const ref of activeFilterChips(filters, { except })) {
       const chip = document.createElement('span');
       chip.className = 'filter-chip' + (ref.kind === 'pill' && ref.exclude ? ' is-exclude' : '');
       if (ref.kind === 'pill' && ref.group === 'color') {
@@ -940,7 +948,7 @@ export function bootFlagsData() {
   searchWrap.appendChild(searchInput);
 
   // Active-filters summary row. Leads with the always-visible name search,
-  // then the TEASER pills (below), then a "+ N more" toggle that reveals the
+  // then the filter PREVIEW pills (below), then a "+ N more" toggle that reveals the
   // full pill groups, then each remaining active filter as a removable chip.
   // Search stays OUTSIDE the collapsible groups: it's a different mental
   // model ("take me to the thing I know") and must stay reachable when the
@@ -951,40 +959,30 @@ export function bootFlagsData() {
   chipsWrap.id = 'filter-chips';
   chipsWrap.className = 'filter-chips';
 
-  // Teaser pills: a curated handful of high-traffic filters, always visible
-  // (groups open or closed) on their own line under the search box, so the
-  // common narrowings are one tap and filtering is discoverable without the
-  // abstract "Add filter" step. They are REAL tristate pills built by the
-  // same factory as the group rows (shared cycle + repaint), so a teaser
-  // and its group twin can never disagree. Values must exist in the groups
-  // below. Curation is a taste call, tune freely; Sovereign leads because
-  // it carries the preselected default above.
-  /** The values each group can legally filter on, for the guard below. */
-  const GROUP_VALUES = {
-    status: /** @type {readonly string[]} */ (STATUS_VALUES),
-    continent: [...CONTINENTS, 'Other'],
-    color: ALL_FLAG_COLORS,
-    motif: ALL_MOTIFS,
-    stripesOnly: STRIPES_ORIENTATIONS_FOR_RANDOM,
-  };
-  const TEASER_PILLS = /** @type {Array<{ group: PillGroup, value: string }>} */ ([
-    { group: 'status', value: 'sovereign' },
-    { group: 'continent', value: 'Europe' },
-    { group: 'continent', value: 'Africa' },
-    { group: 'color', value: 'red' },
-    { group: 'motif', value: 'star-or-moon' },
-  ]).filter((tp) => {
-    // A teaser whose value isn't in its group's real value list would filter
-    // to zero flags and never sync with a group twin (a typo shipped exactly
-    // this once: motif 'star' vs the real 'star-or-moon'). Drop it loudly
-    // instead of rendering a dead pill.
-    const ok = GROUP_VALUES[tp.group].includes(/** @type {never} */ (tp.value));
-    if (!ok) console.warn(`flagsdata: teaser pill ${tp.group}:${tp.value} matches no known value, skipped`);
-    return ok;
+  // Filter preview: the collapsed state IS the beginning of the filters, not
+  // a separate curated set. Every group value renders here in group order
+  // (status, continents, colours, motifs, stripes) as the same tristate
+  // pills the group rows carry (shared factory + repaint, so twins can't
+  // disagree), and fill-to-fit shows exactly as many as one line allows with
+  // "+ N more" ending it. Expanded, the preview hides entirely and the full
+  // grouped rows take over: nothing is duplicated on screen (Jan's review,
+  // 2026-07-13). No curation to maintain and no way for a preview value to
+  // drift from the groups: both are built from the same value arrays.
+  const PREVIEW_PILLS = /** @type {Array<{ group: PillGroup, value: string }>} */ ([
+    ...STATUS_VALUES.map((v) => ({ group: 'status', value: /** @type {string} */ (v) })),
+    ...[...CONTINENTS, 'Other'].map((v) => ({ group: 'continent', value: /** @type {string} */ (v) })),
+    ...ALL_FLAG_COLORS.map((v) => ({ group: 'color', value: v })),
+    ...ALL_MOTIFS.map((v) => ({ group: 'motif', value: v })),
+    ...STRIPES_ORIENTATIONS_FOR_RANDOM.map((v) => ({ group: 'stripesOnly', value: /** @type {string} */ (v) })),
+  ]);
+  const previewWrap = document.createElement('div');
+  previewWrap.className = 'filter-preview';
+  /** @type {HTMLElement[]} aligned with PREVIEW_PILLS */
+  const previewEls = PREVIEW_PILLS.map((tp) => {
+    const btn = makeFilterPill(tp.group, tp.value);
+    previewWrap.appendChild(btn);
+    return btn;
   });
-  const teasersWrap = document.createElement('div');
-  teasersWrap.className = 'filter-teasers';
-  for (const tp of TEASER_PILLS) teasersWrap.appendChild(makeFilterPill(tp.group, tp.value));
 
   const addBtn = document.createElement('button');
   addBtn.type = 'button';
@@ -993,31 +991,60 @@ export function bootFlagsData() {
   addBtn.setAttribute('aria-controls', 'filter-groups');
   filterBar.classList.remove('is-open');
   addBtn.setAttribute('aria-expanded', 'false');
-  // Label tracks the open state: "+ N more" collapsed (N = the pills hiding
-  // in the groups beyond the teasers, an honest count instead of the old
-  // abstract "Add filter"), "less" when open. Same vocabulary as the metric
-  // hub's overflow toggle, reusing its i18n keys. Relabelled from the
-  // langchanged handler (a dynamic count can't ride data-i18n).
-  function paintAddBtn() {
+  /**
+   * Layout pass for the collapsed preview and the toggle's label + home.
+   *
+   * Collapsed: fill-to-fit shows as many preview pills as one line allows
+   * (measured live, so it holds on any device width and in both languages),
+   * and the button ends that line as "+ N more" with the honest remainder.
+   * Expanded: the preview hides (the groups show every pill, duplicating
+   * nothing) and the button moves to its own row after the groups, reading
+   * "less" at the point where the reader finishes them.
+   *
+   * Re-run on toggle, on window resize, and on a language switch (labels
+   * change widths). The dynamic label can't ride data-i18n.
+   */
+  function refitPreview() {
     const open = filterBar.classList.contains('is-open');
     if (open) {
       addBtn.textContent = t('metricHub.less', 'less');
+      lessRow.appendChild(addBtn);
+      renderChips();
       return;
     }
-    const total = groupsWrap.querySelectorAll('.pill[data-group][data-value]').length;
-    addBtn.textContent = `+ ${Math.max(0, total - TEASER_PILLS.length)} ${t('metricHub.more', 'more')}`;
+    // Back on the summary row, after the preview pills.
+    filterSummary.insertBefore(addBtn, chipsWrap);
+    // Measure against the widest label the button can carry, then write the
+    // real remainder over it.
+    addBtn.textContent = `+ ${PREVIEW_PILLS.length} ${t('metricHub.more', 'more')}`;
+    const shown = fitChipRow({
+      items: previewEls,
+      moreBtn: addBtn,
+      avail: /** @type {any} */ (filterSummary).clientWidth || 0,
+      gap: rowGap(filterSummary, 8),
+      measure: (el) => el.getBoundingClientRect().width,
+      alwaysMore: true,
+    });
+    addBtn.textContent = `+ ${PREVIEW_PILLS.length - shown} ${t('metricHub.more', 'more')}`;
+    // Chips depend on which pills are visible (see renderChips).
+    renderChips();
   }
   addBtn.addEventListener('click', () => {
     const open = filterBar.classList.toggle('is-open');
     addBtn.setAttribute('aria-expanded', String(open));
-    paintAddBtn();
+    refitPreview();
+  });
+  let previewRaf = 0;
+  window.addEventListener('resize', () => {
+    cancelAnimationFrame(previewRaf);
+    previewRaf = requestAnimationFrame(refitPreview);
   });
 
-  // Search, then teasers + their "+ N more" continuation, then the active
-  // chips; the wrapper claims the rest of the row.
+  // Search, then the preview pills + their "+ N more" continuation, then the
+  // active chips; the wrapper claims the rest of the row.
   const filterSummary = document.createElement('div');
   filterSummary.className = 'filter-summary';
-  filterSummary.append(searchWrap, teasersWrap, addBtn, chipsWrap);
+  filterSummary.append(searchWrap, previewWrap, addBtn, chipsWrap);
 
   const toggleRow = document.createElement('div');
   toggleRow.className = 'filter-toggle-row';
@@ -1070,8 +1097,14 @@ export function bootFlagsData() {
   groupsWrap.appendChild(
     buildFilterGroup('flagsdata.filterStripes', 'Stripes', 'stripesOnly', [...STRIPES_ORIENTATIONS_FOR_RANDOM]),
   );
-  // Groups exist now, so the "+ N more" toggle can count what it hides.
-  paintAddBtn();
+  // The toggle's expanded-state home: its own row at the END of the groups,
+  // so "less" sits where the reader finishes them instead of floating alone
+  // under the search box.
+  const lessRow = document.createElement('div');
+  lessRow.className = 'filter-group';
+  groupsWrap.appendChild(lessRow);
+  // Groups + preview exist now: run the first fit.
+  refitPreview();
 
   const clearBtn = document.createElement('button');
   clearBtn.type = 'button';
@@ -1276,9 +1309,10 @@ export function bootFlagsData() {
       else btn.textContent = pillText(group, value);
     }
     // Chips carry localized labels too: rebuild them in the new language,
-    // and re-compose the "+ N more" toggle (dynamic count, no data-i18n).
+    // and re-run the preview fit (translated labels change pill widths, and
+    // the "+ N more" text re-composes; it can't ride data-i18n).
     renderChips();
-    paintAddBtn();
+    refitPreview();
     // The hub owns every metric label (chips, panel lead, tier pills);
     // renderLens refreshes the "no data" overlay text.
     hub.refreshI18n();

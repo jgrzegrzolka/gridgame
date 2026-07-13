@@ -59,17 +59,25 @@ body {
   gap: 8px;
 }
 .filter-chips { display: contents; }
-/* Teaser pills flow as direct flex items of the summary row, like the chips.
- * They stay visible while the groups are open too: hiding them left "less"
- * orphaned on an empty row, and an active teaser value (excepted from the
- * chips row) lost its only top-row representation. The group twins are kept
- * in sync by the shared repaint, so the duplication can't disagree. */
-.filter-teasers { display: contents; }
-/* Teasers sit directly above the world-facts chips, so they share that row's
- * pill sizing: two adjacent pill rows at two heights read as a mistake. */
-.filter-teasers .pill {
+/* Preview pills flow as direct flex items of the summary row, like the
+ * chips. The preview is the collapsed face of the filter groups (page.js
+ * fill-to-fit decides how many pills show); expanded, the groups render
+ * every pill so the preview hides entirely rather than duplicating them. */
+.filter-preview { display: contents; }
+#filter-bar.is-open .filter-preview { display: none; }
+/* The preview sits directly above the world-facts chips, so it shares that
+ * row's pill sizing: two adjacent pill rows at two heights read as a
+ * mistake. */
+.filter-preview .pill {
   padding: 5px 11px;
   font-size: 12.5px;
+}
+/* Fill-to-fit hides overflow pills via [hidden], but the colour pills'
+ * shared `.pill:has(.pill-swatch) { display: inline-flex }` (common.css)
+ * outweighs the UA's `[hidden]` rule and kept them painting. Re-assert it
+ * at higher specificity. (Same bug class as `.mhub [hidden]`.) */
+.filter-preview .pill[hidden] {
+  display: none;
 }
 /* A chip = one active filter. Solid brand fill mirrors `.pill.active` so an
  * applied filter reads the same whether you see it as a pill or a chip. */

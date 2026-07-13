@@ -22,17 +22,14 @@
 
 import { pillLabel } from './findFlag.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from './metricVisuals.js';
+import { fitChipRow, rowGap } from './chipRowFit.js';
 
 /** @typedef {{ op: '>=' | '<=', n: number }} Tier */
 /** @typedef {import('./metricTiers.js').MetricTierItem} MetricTierItem */
 
-/** How many chips show before the "+ N more" toggle. Four keeps the row
- * (label + chips + the "+ N more" button) on ONE line inside flagsdata's
- * 756px column IN BOTH LANGUAGES; a wrapped button reads as a stray element
- * rather than the row's continuation. Five fit in English but Polish labels
- * run longer ("PKB na mieszkańca", "+ 14 więcej") and pushed the button onto
- * its own line, the exact bug the earlier six-chip cut had in English. */
-export const DEFAULT_PRIMARY_COUNT = 4;
+/** Fallback for the chip row's flex gap when there's no layout to read it
+ * from (tests, an unattached row). Must track .mhub-chips in metricHub.css. */
+const GAP_FALLBACK = 6;
 
 /**
  * @typedef {Object} MetricHubOptions
@@ -51,7 +48,10 @@ export const DEFAULT_PRIMARY_COUNT = 4;
  * @property {(key: string) => Element[]} [panelExtras] consumer controls
  *   rendered between the panel lead and the tier pills, rebuilt per open.
  * @property {boolean} [showCounts] render each tier's match count (findFlag).
- * @property {number} [primaryCount]
+ * @property {{ avail?: () => number, measure?: (el: any) => number }} [fit]
+ *   measurement overrides for the fill-to-fit layout: `avail` returns the
+ *   row width to fill, `measure` an element's width. Defaults read the live
+ *   DOM; tests inject synthetic widths.
  * @property {{ key: string, fallback: string }} [label] optional row label
  *   leading the chips ("World facts"); flagsdata's filter bar uses it,
  *   findFlag brings its own section heading instead. Carries data-i18n so
@@ -72,14 +72,14 @@ export function createMetricHub(opts) {
     onPanelToggle,
     panelExtras,
     showCounts = false,
-    primaryCount = DEFAULT_PRIMARY_COUNT,
+    fit = {},
     label,
     doc = document,
   } = opts;
 
   /** @type {string | null} The metric whose panel is open. */
   let openKey = null;
-  /** Whether the overflow chips (beyond primaryCount) are shown. */
+  /** Whether the row is expanded to every chip (multi-line) via "+ N more". */
   let expanded = false;
 
   const el = doc.createElement('div');
@@ -89,17 +89,19 @@ export function createMetricHub(opts) {
   chipsRow.className = 'mhub-chips';
   el.appendChild(chipsRow);
 
+  /** @type {HTMLElement | null} */
+  let labelEl = null;
   if (label) {
-    const labelEl = doc.createElement('span');
+    labelEl = doc.createElement('span');
     labelEl.className = 'mhub-label';
     labelEl.setAttribute('data-i18n', label.key);
     labelEl.textContent = t(label.key, label.fallback);
     chipsRow.appendChild(labelEl);
   }
 
-  /** @type {Array<{ key: string, btn: HTMLElement, labelSpan: HTMLElement, overflow: boolean }>} */
+  /** @type {Array<{ key: string, btn: HTMLElement, labelSpan: HTMLElement }>} */
   const chips = [];
-  metrics.forEach((m, i) => {
+  metrics.forEach((m) => {
     const btn = doc.createElement('button');
     /** @type {any} */ (btn).type = 'button';
     btn.className = 'pill mhub-chip';
@@ -113,35 +115,23 @@ export function createMetricHub(opts) {
     labelSpan.className = 'mhub-chip-label';
     labelSpan.textContent = shortLabel(m.key);
     btn.appendChild(labelSpan);
-    const overflow = i >= primaryCount;
-    if (overflow) btn.hidden = true;
     btn.addEventListener('click', () => togglePanel(m.key));
     chipsRow.appendChild(btn);
-    chips.push({ key: m.key, btn, labelSpan, overflow });
+    chips.push({ key: m.key, btn, labelSpan });
   });
 
-  // "+ N more" / "less" toggle, only when there IS an overflow. Sits last in
-  // the row so it reads as the row's continuation either way.
-  const overflowCount = Math.max(0, metrics.length - primaryCount);
-  /** @type {HTMLElement | null} */
-  let moreBtn = null;
-  if (overflowCount > 0) {
-    moreBtn = doc.createElement('button');
-    /** @type {any} */ (moreBtn).type = 'button';
-    moreBtn.className = 'pill mhub-more';
-    moreBtn.textContent = moreLabel();
-    moreBtn.addEventListener('click', () => {
-      expanded = !expanded;
-      // Collapsing while an overflow metric's panel is open would leave the
-      // panel orphaned from a hidden chip, so close it: open always has a
-      // visible chip to anchor to.
-      if (!expanded && openKey && chips.some((c) => c.key === openKey && c.overflow)) {
-        setOpen(null);
-      }
-      paintOverflow();
-    });
-    chipsRow.appendChild(moreBtn);
-  }
+  // "+ N more" / "less" toggle, last in the row so it reads as the row's
+  // continuation. How many chips it hides is decided by refit() (fill-to-fit
+  // against the live row width), never by a hardcoded count: fixed counts
+  // kept wrapping the button onto its own line in one language or another.
+  const moreBtn = doc.createElement('button');
+  /** @type {any} */ (moreBtn).type = 'button';
+  moreBtn.className = 'pill mhub-more';
+  moreBtn.addEventListener('click', () => {
+    expanded = !expanded;
+    refit();
+  });
+  chipsRow.appendChild(moreBtn);
 
   const panel = doc.createElement('div');
   panel.className = 'mhub-panel';
@@ -154,17 +144,47 @@ export function createMetricHub(opts) {
     return s ? t(s.key, s.fallback) : key;
   }
 
-  function moreLabel() {
-    return expanded
-      ? t('metricHub.less', 'less')
-      : `+ ${overflowCount} ${t('metricHub.more', 'more')}`;
+  /** An element's width for the fit. Injectable; the default needs layout. */
+  const measure = fit.measure || ((el) => el.getBoundingClientRect().width);
+  /** The chip row width to fill, minus the leading label's slice of it. */
+  function availWidth() {
+    const row = fit.avail ? fit.avail() : /** @type {any} */ (chipsRow).clientWidth || 0;
+    if (!labelEl) return row;
+    return row - measure(labelEl) - rowGap(chipsRow, GAP_FALLBACK);
   }
 
-  function paintOverflow() {
-    for (const c of chips) {
-      if (c.overflow) c.btn.hidden = !expanded;
+  /**
+   * Fill-to-fit pass over the chip row. Collapsed: show as many chips as the
+   * current width allows, "+ N more" ends the same line with the honest
+   * remainder (hidden entirely when everything fits). Expanded: every chip
+   * shows (the row wraps) and the button reads "less". Re-run on the toggle,
+   * on resize, and on a language switch (labels change widths).
+   */
+  function refit() {
+    if (expanded) {
+      for (const c of chips) c.btn.hidden = false;
+      moreBtn.hidden = false;
+      moreBtn.textContent = t('metricHub.less', 'less');
+      return;
     }
-    if (moreBtn) moreBtn.textContent = moreLabel();
+    // Measure against the widest label the button can carry (the full chip
+    // total), then write the real remainder over it.
+    moreBtn.textContent = `+ ${chips.length} ${t('metricHub.more', 'more')}`;
+    const shown = fitChipRow({
+      items: chips.map((c) => c.btn),
+      moreBtn,
+      avail: availWidth(),
+      gap: rowGap(chipsRow, GAP_FALLBACK),
+      measure,
+    });
+    if (shown < chips.length) {
+      moreBtn.textContent = `+ ${chips.length - shown} ${t('metricHub.more', 'more')}`;
+    }
+    // A hidden chip can't anchor an open panel: if the collapse (or a
+    // shrink) swallowed the open metric's chip, close its panel too.
+    if (openKey && chips.some((c) => c.key === openKey && c.btn.hidden)) {
+      setOpen(null);
+    }
   }
 
   /** @param {string} key */
@@ -285,20 +305,39 @@ export function createMetricHub(opts) {
   }
 
   /** Re-translate every label the hub painted with t(). Tier pills and the
-   * panel lead rebuild via renderPanel (labels only; open state kept). */
+   * panel lead rebuild via renderPanel (labels only; open state kept); the
+   * refit re-measures because translated labels change chip widths. */
   function refreshI18n() {
     for (const c of chips) c.labelSpan.textContent = shortLabel(c.key);
-    if (moreBtn) moreBtn.textContent = moreLabel();
     renderPanel();
     update();
+    refit();
   }
 
   update();
+  refit();
+  // The consumer appends `el` right after this constructor returns, so at
+  // refit() time above there was no layout to measure (min-1 fallback). Run
+  // a real pass on the next frame, and keep the row one line across window
+  // resizes. Browser-only wiring; tests inject `fit` and drive refit()
+  // synchronously instead.
+  if (typeof requestAnimationFrame === 'function' && !fit.avail) {
+    requestAnimationFrame(refit);
+  }
+  if (typeof window !== 'undefined' && window.addEventListener && !fit.avail) {
+    /** @type {number} */
+    let raf = 0;
+    window.addEventListener('resize', () => {
+      if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(refit);
+    });
+  }
 
   return {
     el,
     update,
     refreshI18n,
+    refit,
     /** Close the panel (fires onPanelToggle(null) if it was open). */
     closePanel() { setOpen(null); },
     /** @returns {string | null} */

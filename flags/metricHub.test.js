@@ -1,8 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createMetricHub, DEFAULT_PRIMARY_COUNT } from './metricHub.js';
+import { createMetricHub } from './metricHub.js';
 import { METRIC_FILES } from './metrics/index.js';
+
+/** Synthetic width for the fill-to-fit layout: text length driven, so the
+ * tests exercise the same "labels change widths" behaviour the browser has. */
+const widthOf = (/** @type {any} */ el) => ((el && el.textContent) || '').length * 7 + 30;
+/** A row width that fits every chip (fill-to-fit hides the more button). */
+const WIDE = { avail: () => 100000, measure: widthOf };
+/** A row width that forces an overflow. */
+const NARROW = { avail: () => 400, measure: widthOf };
 
 /**
  * Stub document, just enough surface for the hub: className / classList,
@@ -80,7 +88,8 @@ const TIERS = {
   ],
 };
 
-/** A hub over the real registry with a controllable filter map. */
+/** A hub over the real registry with a controllable filter map. Wide fit by
+ * default so every chip is visible unless a test narrows the row. */
 function makeHub(/** @type {Partial<import('./metricHub.js').MetricHubOptions>} */ overrides = {}) {
   /** @type {Record<string, { op: '>=' | '<=', n: number } | null>} */
   const filter = {};
@@ -94,6 +103,7 @@ function makeHub(/** @type {Partial<import('./metricHub.js').MetricHubOptions>} 
     getTier: (key) => filter[key] || null,
     onTierChange: (key, tier) => { filter[key] = tier; },
     onPanelToggle: (key) => toggles.push(key),
+    fit: WIDE,
     ...overrides,
   });
   return { hub, filter, toggles };
@@ -103,26 +113,42 @@ function chipFor(/** @type {any} */ hub, /** @type {string} */ key) {
   return byClass(hub.el, 'mhub-chip').find((c) => c.getAttribute('data-metric') === key);
 }
 
-test('renders one chip per registered metric, overflow hidden behind "+ N more"', () => {
+test('renders one chip per registered metric; a wide row shows all, no more button', () => {
   const { hub } = makeHub();
   const chips = byClass(hub.el, 'mhub-chip');
   assert.equal(chips.length, METRIC_FILES.length);
-  assert.equal(chips.filter((c) => !c.hidden).length, DEFAULT_PRIMARY_COUNT);
-  const more = byClass(hub.el, 'mhub-more')[0];
-  assert.equal(more.textContent, `+ ${METRIC_FILES.length - DEFAULT_PRIMARY_COUNT} more`);
+  assert.equal(chips.filter((c) => c.hidden).length, 0);
+  assert.equal(byClass(hub.el, 'mhub-more')[0].hidden, true);
 });
 
-test('the more button expands and collapses the overflow chips', () => {
-  const { hub } = makeHub();
+test('a narrow row fits what it can and the more button carries the honest remainder', () => {
+  const { hub } = makeHub({ fit: NARROW });
+  const visible = byClass(hub.el, 'mhub-chip').filter((c) => !c.hidden).length;
+  assert.ok(visible >= 1 && visible < METRIC_FILES.length, `visible=${visible}`);
+  const more = byClass(hub.el, 'mhub-more')[0];
+  assert.equal(more.hidden, false);
+  assert.equal(more.textContent, `+ ${METRIC_FILES.length - visible} more`);
+});
+
+test('the more button expands to every chip and collapses back to the fit', () => {
+  const { hub } = makeHub({ fit: NARROW });
+  const fitted = byClass(hub.el, 'mhub-chip').filter((c) => !c.hidden).length;
   const more = byClass(hub.el, 'mhub-more')[0];
   more.click();
   assert.equal(byClass(hub.el, 'mhub-chip').filter((c) => c.hidden).length, 0);
   assert.equal(more.textContent, 'less');
   more.click();
-  assert.equal(
-    byClass(hub.el, 'mhub-chip').filter((c) => !c.hidden).length,
-    DEFAULT_PRIMARY_COUNT,
-  );
+  assert.equal(byClass(hub.el, 'mhub-chip').filter((c) => !c.hidden).length, fitted);
+});
+
+test('growing the row width reveals more chips on refit (resize path)', () => {
+  let avail = 400;
+  const { hub } = makeHub({ fit: { avail: () => avail, measure: widthOf } });
+  const countVisible = () => byClass(hub.el, 'mhub-chip').filter((c) => !c.hidden).length;
+  const narrow = countVisible();
+  avail = 900;
+  hub.refit();
+  assert.ok(countVisible() > narrow, `${countVisible()} should exceed ${narrow}`);
 });
 
 test('chip click opens the panel with lead + tier pills and fires onPanelToggle', () => {
@@ -186,12 +212,13 @@ test('opening a second metric swaps the panel in place', () => {
   assert.deepEqual(toggles, ['population', 'coffee']);
 });
 
-test('collapsing the overflow closes an overflow metric\'s open panel', () => {
-  const { hub, toggles } = makeHub();
+test('collapsing closes the panel of a metric whose chip no longer fits', () => {
+  const { hub, toggles } = makeHub({ fit: NARROW });
   const more = byClass(hub.el, 'mhub-more')[0];
-  more.click();
-  chipFor(hub, 'beerPerCapita').click(); // an overflow metric (index > 5)
-  more.click(); // collapse
+  more.click(); // expand
+  chipFor(hub, 'beerPerCapita').click(); // last metric, never fits at 400px
+  more.click(); // collapse: its chip hides, so the panel must close too
+  assert.equal(chipFor(hub, 'beerPerCapita').hidden, true);
   assert.equal(hub.getOpenKey(), null);
   assert.equal(toggles[toggles.length - 1], null);
 });
