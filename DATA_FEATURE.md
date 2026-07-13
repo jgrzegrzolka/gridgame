@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature EA (sugar cane production, the largest crop by tonnage) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Feature EB (gold production, the first mining-domain metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,29 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature EB: Gold production as a world metric, the first mining-domain metric (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Twenty-second world metric and the **first from the mining domain** (distinct from the crops and the oil/coal energy pair). Sparse, so it reuses coffee's `absence: 'zero'` machinery wholesale. Adds a "what does this country dig up" axis: China / Russia / Australia at the top, `gold >= 200 tonnes` the giant tier.
+
+**Coverage note (the one wrinkle):** the authoritative source, USGS Mineral Commodity Summaries, **itemizes only the major producers** (the 17 kept here, ~76% of world output) and lumps everyone else into a single "Other countries" line. So gold's producer set is deliberately the top 17 rather than the ~50-100 named producers a FAOSTAT crop gives. The ~60 minor producers USGS doesn't break out fall to the absence=0 default like a true non-producer. Documented in `build-gold.mjs`; a future refresh from the USGS Minerals Yearbook country table could add the tail if the lens ever wants it.
+
+**Data contract:** sparse, **`absence: 'zero'`**, exactly like coffee. `gold.json` lists the 17 producers and carries the hint; `attachGolds` → the shared `attachZeroFilledMetric` defaults every real place the map omits to 0, so the TTT no-data guard reads "no data == not a place". A country that mines no gold is a *fair wrong guess* on a `gold >= N` cell. The lens and superlative round read the raw sparse map via `createMetric`, so a superlative ranks the 17 producers, not a ~180-way tie at 0.
+
+**One-directional throughout:** filters are **atLeast-only** (`GOLD_BREAKS_FOR_RANDOM` = `>=50/100/200` tonnes, scaled to gold's low tonnage; 17/12/4 producers), and the Flag Party round is **biggest-only** (locked to `'most'`).
+
+**Data source:** USGS Mineral Commodity Summaries 2025 (2024 mine production, primary/newly-mined only, whole tonnes), transcribed into `authoring/build-gold.mjs`.
+
+- [x] 1. Data: `flags/metrics/gold.json` (17 producers, `absence: 'zero'`) + `authoring/build-gold.mjs` + `METRIC_FILES` line + `attachGolds` (group.js) + `metrics.test.js` schema/positive-integer/no-org/zero-fill-contract/sparse-lens tests. Visuals: bullion-bar icon + goldenrod hue `#d4a017` + short label in `flags/metricVisuals.js`.
+- [x] 2. flagsdata lens, free once step 1 landed: registered in `METRIC_FILES`, hub chip with the bar icon.
+- [x] 3 + 4 (driven by the `THRESHOLD_METRICS` registry). `gold(op, n)` factory + `GOLD_BREAKS_FOR_RANDOM` (`>=50/100/200`) + `THRESHOLD_METRICS.gold`. **NOT 9×9-eligible** (sparse; every break `ultimateEligible: false`, 3×3-only, pinned by the ultimate-pool test); `attachGolds` auto-wires via `METRIC_ATTACHERS` + `party/server.js` import (ultimateServer skipped). Filters: `GoldConstraint` + `gold` field; `goldProbability` (0.06) modifier + `findFlag/page.js` + skill note + reachability test. i18n `gold.atLeast.{50,100,200}` + `metric.gold` (en+pl). **Also completed the synthetic TTT fixture** (`syntheticTaggedCountries`): gold plus the previously-uncovered tea / sugarcane / sheep / cattle / beer threshold metrics now get fillability ladders, so every registered metric is fillable, the fixture's stated contract (gold was the metric that finally exhausted the generator's retry budget dodging the uncovered ones).
+- [x] 5. Flag Party round: `goldRound` via `createSuperlativeRound` across the six spots + en/pl i18n. **Biggest-only**, ranks the 17 producers. Pinned by `superlative.test.js` (distinct-value producer pool since gold has tied tonnages).
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+**Standing artifacts:** the synthetic TTT fixture is now complete for every registered threshold metric (a latent gap gold surfaced and closed). Gold is also the template for a *source-limited* sparse metric: when the authoritative source itemizes only the majors, the producer set is those majors and the tail falls to absence=0, documented in the build script.
+
+---
 
 ### Feature EA: Sugar cane production as a world metric, the largest crop by tonnage (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

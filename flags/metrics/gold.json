@@ -1,0 +1,28 @@
+{
+  "key": "gold",
+  "label": "Gold production",
+  "unit": "tonnes",
+  "format": "compact",
+  "absence": "zero",
+  "source": "USGS Mineral Commodity Summaries 2025 (2024 gold mine production, primary/newly-mined only). USGS itemizes the major producers (~76% of world output); ~60 minor producers it lumps as \"Other countries\" fall to the absence=0 default. Whole tonnes",
+  "year": 2024,
+  "values": {
+    "au": 290,
+    "bf": 60,
+    "br": 70,
+    "ca": 200,
+    "cn": 380,
+    "co": 60,
+    "gh": 130,
+    "id": 100,
+    "kz": 130,
+    "ml": 70,
+    "mx": 130,
+    "pe": 100,
+    "ru": 310,
+    "tz": 60,
+    "us": 160,
+    "uz": 120,
+    "za": 100
+  }
+}

@@ -34,6 +34,7 @@
  * @property {number} [beerPerCapita]  Denormalized from `flags/metrics/beerPerCapita.json` by `attachBeerPerCapitas` (litres of beer per person per year). `absence: 'unknown'` metric (the first): WHO measures ~189 sovereign states but not sub-national parts or small territories, so a real place WHO does not cover is genuinely unknown (NOT 0) and is left without the field, reading "no data". Absent for both those ~73 places and non-places (orgs).
  * @property {number} [tea]  Denormalized from `flags/metrics/tea.json` by `attachTeas` (green-tea-leaf tonnes). Sparse `absence: 'zero'` metric like coffee: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
  * @property {number} [sugarcane]  Denormalized from `flags/metrics/sugarcane.json` by `attachSugarcanes` (tonnes of cane). Sparse `absence: 'zero'` metric like coffee: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
+ * @property {number} [gold]  Denormalized from `flags/metrics/gold.json` by `attachGolds` (tonnes of mined gold). Sparse `absence: 'zero'` metric like coffee: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -365,6 +366,21 @@ export function attachSugarcanes(countries, values) {
 }
 
 /**
+ * Denormalize `flags/metrics/gold.json` onto each Country as `.gold`
+ * (tonnes of mined gold). Sparse `absence: 'zero'` metric like coffee: producers
+ * get their tonnage, every other real place gets 0, orgs stay without the field.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachGolds(countries, values) {
+  return attachZeroFilledMetric(countries, values, (c, v) => {
+    c.gold = v;
+  });
+}
+
+/**
  * Denormalize `flags/metrics/wine.json` onto each Country as `.wine`
  * (wine tonnes). Sparse `absence: 'zero'` metric like coffee: makers get their
  * tonnage, every other real place gets 0, orgs stay without the field.
@@ -504,6 +520,7 @@ const METRIC_ATTACHERS = {
   beerPerCapita: attachBeerPerCapitas,
   tea: attachTeas,
   sugarcane: attachSugarcanes,
+  gold: attachGolds,
 };
 
 /**

@@ -19,6 +19,7 @@ import cattlePerCapita from '../metrics/cattlePerCapita.json' with { type: 'json
 import beerPerCapita from '../metrics/beerPerCapita.json' with { type: 'json' };
 import tea from '../metrics/tea.json' with { type: 'json' };
 import sugarcane from '../metrics/sugarcane.json' with { type: 'json' };
+import gold from '../metrics/gold.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -286,3 +287,9 @@ export const teaRound = createSuperlativeRound(createMetric(tea, []), 'superlati
 // at 0). Locked to 'most': "biggest cane producer" (Brazil) is the good
 // question; "smallest grower" is obscure.
 export const sugarcaneRound = createSuperlativeRound(createMetric(sugarcane, []), 'superlative-sugarcane', { direction: 'most' });
+
+// Gold instance: tonnes of mined gold, id 'superlative-gold'. Sparse (the USGS
+// itemizes only ~17 major producers), so the round ranks those producers only.
+// Locked to 'most': "biggest gold producer" (China) is the good question;
+// "smallest producer" is obscure.
+export const goldRound = createSuperlativeRound(createMetric(gold, []), 'superlative-gold', { direction: 'most' });

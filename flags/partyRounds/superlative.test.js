@@ -240,6 +240,31 @@ test('sugarcaneRound: biggest-only, correct extreme-by-cane answer, growers only
   }
 });
 
+// ---- gold instance (tonnes of mined gold, id 'superlative-gold') -------------
+
+test('goldRound: biggest-only, correct extreme-by-gold answer, producers only', async () => {
+  const { goldRound } = await import('./superlative.js');
+  const goldJson = (await import('../metrics/gold.json', { with: { type: 'json' } })).default;
+  const GLD = /** @type {Record<string, number>} */ (goldJson.values);
+  assert.equal(goldRound.id, 'superlative-gold');
+  // Gold-distinct sovereign PRODUCERS spanning the range, all in gold.json. A
+  // non-producer (e.g. Germany) mixed in must be dropped by the round's
+  // `metric.has` filter, never appear as an option.
+  // Distinct-value producers (gold has several tied tonnages: 130×3, 100×3,
+  // 70×2, 60×3) so every quartet has an unambiguous biggest.
+  const pool = ['cn', 'ru', 'au', 'ca', 'us', 'kz', 'uz', 'za', 'br', 'co', 'de'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = goldRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Gold is locked to 'most' — "smallest producer" is obscure, never dealt.
+    assert.equal(q.prompt, 'most', `seed ${i}: gold is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('de'), 'a non-producer is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => GLD[c]);
+    assert.equal(GLD[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-gold option`);
+  }
+});
+
 // ---- wine instance (wine tonnes, id 'superlative-wine') ---------------------
 
 test('wineRound: biggest-only, correct extreme-by-wine answer, makers only', async () => {

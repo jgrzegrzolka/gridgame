@@ -37,4 +37,5 @@ export const METRIC_FILES = [
   { key: 'beerPerCapita', file: 'beerPerCapita.json', label: 'Beer per capita' },
   { key: 'tea', file: 'tea.json', label: 'Tea production' },
   { key: 'sugarcane', file: 'sugarcane.json', label: 'Sugarcane production' },
+  { key: 'gold', file: 'gold.json', label: 'Gold production' },
 ];

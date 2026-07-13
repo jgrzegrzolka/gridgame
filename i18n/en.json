@@ -20,6 +20,13 @@
       "100m": "over 100M tonnes"
     }
   },
+  "gold": {
+    "atLeast": {
+      "50": "over 50 tonnes",
+      "100": "over 100 tonnes",
+      "200": "over 200 tonnes"
+    }
+  },
   "zoom": {
     "close": "Close",
     "enlarge": "Enlarge flag"
@@ -561,7 +568,8 @@
       "superlativeCattle": "Cattle per capita: most",
       "superlativeBeer": "Beer per capita: most",
       "superlativeTea": "Tea production: most",
-      "superlativeSugarcane": "Sugarcane production: most"
+      "superlativeSugarcane": "Sugarcane production: most",
+      "superlativeGold": "Gold production: most"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -587,7 +595,8 @@
       "superlativeCattle": "Cattle",
       "superlativeBeer": "Beer",
       "superlativeTea": "Tea",
-      "superlativeSugarcane": "Sugarcane"
+      "superlativeSugarcane": "Sugarcane",
+      "superlativeGold": "Gold"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -621,6 +630,7 @@
     "hintMostBeer": "Most beer per person",
     "hintMostTea": "Largest tea production",
     "hintMostSugarcane": "Largest sugarcane production",
+    "hintMostGold": "Largest gold production",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
@@ -944,7 +954,8 @@
     "cattlePerCapita": "Cattle per capita",
     "beerPerCapita": "Beer per capita",
     "tea": "Tea production",
-    "sugarcane": "Sugarcane production"
+    "sugarcane": "Sugarcane production",
+    "gold": "Gold production"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",
