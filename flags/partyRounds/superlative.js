@@ -236,14 +236,13 @@ export const riceRound = createSuperlativeRound(createMetric(rice, []), 'superla
 export const coalRound = createSuperlativeRound(createMetric(coal, []), 'superlative-coal', { direction: 'most' });
 
 // Sheep-per-capita instance: sheep head per person, id 'superlative-sheep'.
-// Dense, intensive (size-independent) and two-directional like forest, and with
-// the same wrinkle: the many places with no sheep carry a real 0, and a "least"
-// quartet drawn from them would tie at 0 (an unfair question with no clear
-// answer). So the round metric drops the 0 places from selection, leaving only
-// sheep-raising countries, among which both "most" and "least sheep per person"
-// are clean questions (the famous "more sheep than people" club sits at the top).
+// Locked to 'most': "which has the MOST sheep per person" is the good question
+// (the famous "more sheep than people" club); "fewest sheep per person" is an
+// obscure long tail, so 'least' is never dealt. The round metric still drops the
+// 0-sheep places from selection (like the sparse crops rank producers only), so
+// every option is a genuine sheep-raising country rather than a filler zero.
 const sheepRaising = {
   ...sheepPerCapita,
   values: Object.fromEntries(Object.entries(sheepPerCapita.values).filter(([, v]) => v > 0)),
 };
-export const sheepPerCapitaRound = createSuperlativeRound(createMetric(sheepRaising, []), 'superlative-sheep');
+export const sheepPerCapitaRound = createSuperlativeRound(createMetric(sheepRaising, []), 'superlative-sheep', { direction: 'most' });

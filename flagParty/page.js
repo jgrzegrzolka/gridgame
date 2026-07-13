@@ -61,7 +61,7 @@ const MODE_LABELS = {
   'superlative-oil': { key: 'party.mode.superlativeOil', full: 'Oil production: most', shortKey: 'party.modeShort.superlativeOil', short: 'Oil' },
   'superlative-rice': { key: 'party.mode.superlativeRice', full: 'Rice production: most', shortKey: 'party.modeShort.superlativeRice', short: 'Rice' },
   'superlative-coal': { key: 'party.mode.superlativeCoal', full: 'Coal production: most', shortKey: 'party.modeShort.superlativeCoal', short: 'Coal' },
-  'superlative-sheep': { key: 'party.mode.superlativeSheep', full: 'Sheep per capita: most & fewest', shortKey: 'party.modeShort.superlativeSheep', short: 'Sheep' },
+  'superlative-sheep': { key: 'party.mode.superlativeSheep', full: 'Sheep per capita: most', shortKey: 'party.modeShort.superlativeSheep', short: 'Sheep' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -143,12 +143,11 @@ const SUPERLATIVE_MODES = {
     file: 'coal.json',
     hintMost: { key: 'party.hintMostCoal', fallback: 'Largest coal production' },
   },
-  // Sheep per capita is two-directional like forest (both extremes are good
-  // questions among sheep-raising countries: "more sheep than people" at the top).
+  // Sheep per capita is 'most'-only (superlative.js locks direction): "more sheep
+  // than people" is the good question, "fewest" is an obscure tail, so no hintLeast.
   'superlative-sheep': {
     file: 'sheepPerCapita.json',
     hintMost: { key: 'party.hintMostSheep', fallback: 'Most sheep per person' },
-    hintLeast: { key: 'party.hintLeastSheep', fallback: 'Fewest sheep per person' },
   },
 };
 

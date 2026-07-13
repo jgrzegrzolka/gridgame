@@ -460,7 +460,7 @@ test('coalRound: biggest-only, correct extreme-by-coal answer, producers only', 
 
 // ---- sheep-per-capita instance (sheep/person, id 'superlative-sheep') --------
 
-test('sheepPerCapitaRound: two-directional over sheep-raising places, correct extreme answer', async () => {
+test('sheepPerCapitaRound: most-only, correct biggest-per-person answer, sheep-raising only', async () => {
   const { sheepPerCapitaRound } = await import('./superlative.js');
   const sheepJson = (await import('../metrics/sheepPerCapita.json', { with: { type: 'json' } })).default;
   const SHEEP = /** @type {Record<string, number>} */ (sheepJson.values);
@@ -471,10 +471,11 @@ test('sheepPerCapitaRound: two-directional over sheep-raising places, correct ex
   for (let i = 0; i < 100; i++) {
     const q = sheepPerCapitaRound.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
+    // Locked to 'most': every round asks for the biggest, never 'least'.
+    assert.equal(q.prompt, 'most', `seed ${i}: sheep per capita is most-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => SHEEP[c]);
-    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
-    assert.equal(SHEEP[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt} sheep-per-person option`);
+    assert.equal(SHEEP[q.answer], Math.max(...vals), `seed ${i}: answer must be the most sheep-per-person option`);
   }
 });
 

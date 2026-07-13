@@ -30,6 +30,20 @@ test('formatValue: decimal1 distinguishes a true zero from a tiny nonzero rate',
   assert.equal(formatValue(0.05, 'decimal1'), '0.1'); // at the cutoff, back to one decimal
 });
 
+test('formatValue: sig2 keeps 2 significant figures across a wide-range rate', () => {
+  // Sheep-per-capita spans 135 down to 0.0074; a fixed decimal count is wrong at
+  // one end. sig2 keeps the whole integer part but drops noise decimals.
+  assert.equal(formatValue(135.135, 'sig2'), '135'); // Falklands: whole part kept, not "140"
+  assert.equal(formatValue(7.035, 'sig2'), '7'); // Mongolia: 7, not "7.0"
+  assert.equal(formatValue(4.535, 'sig2'), '4.5'); // New Zealand
+  assert.equal(formatValue(2.976, 'sig2'), '3'); // Australia: 3, not "3.0"
+  assert.equal(formatValue(0.9, 'sig2'), '0.9');
+  assert.equal(formatValue(0.13, 'sig2'), '0.13'); // China
+  assert.equal(formatValue(0.046, 'sig2'), '0.046');
+  assert.equal(formatValue(0.0074, 'sig2'), '0.0074'); // Poland
+  assert.equal(formatValue(0, 'sig2'), '0'); // a true zero, distinct from a tiny value
+});
+
 test('formatValue: plain keeps exact metres with thousands separators', () => {
   // Elevation: compact would collapse these three peaks to an identical "8.6K"–
   // "8.8K"; plain preserves the precise metre that the metric exists to show.
