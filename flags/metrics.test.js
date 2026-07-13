@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachTeas, attachSugarcanes, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas, attachBeerPerCapitas } from './group.js';
+import { attachCoffees, attachTeas, attachSugarcanes, attachGolds, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas, attachBeerPerCapitas } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -21,6 +21,7 @@ const GDP_PER_CAPITA = /** @type {import('./metrics.js').MetricData} */ (load('m
 const COFFEE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coffee.json'));
 const TEA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/tea.json'));
 const SUGARCANE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/sugarcane.json'));
+const GOLD = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gold.json'));
 const WINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/wine.json'));
 const COCOA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/cocoa.json'));
 const BANANA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/banana.json'));
@@ -770,6 +771,61 @@ test('createMetric over sugarcane stays sparse: it ranks growers only', () => {
   assert.equal(sugarcane.topN('world', 1)[0].code, 'br'); // Brazil, the largest
   assert.equal(sugarcane.rankOf('in', 'world'), 2); // India second
   assert.equal(sugarcane.has('de'), false); // Germany isn't a grower → out of the ranking
+});
+
+// ---- real gold.json schema + the sparse absence:'zero' contract -------------
+
+test('gold is a valid, self-describing metric file with an absence hint', () => {
+  assert.equal(GOLD.key, 'gold');
+  assert.equal(typeof GOLD.label, 'string');
+  assert.equal(typeof GOLD.unit, 'string');
+  assert.ok(GOLD.format === 'compact' || GOLD.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof GOLD.source, 'string');
+  assert.equal(typeof GOLD.year, 'number');
+  assert.equal(typeof GOLD.values, 'object');
+  // Sparse like coffee: the file must declare absence:'zero' so the loader
+  // defaults missing real places to 0 (not "no data").
+  assert.equal(GOLD.absence, 'zero');
+});
+
+test('every gold value is a positive integer (whole tonnes)', () => {
+  for (const [code, v] of Object.entries(GOLD.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 1, `${code} listed but not >= 1: ${v}`);
+  }
+});
+
+test('every gold key is a real (non-other) country — never an org', () => {
+  const byCode = new Map(COUNTRIES.map((c) => [c.code, c]));
+  for (const code of Object.keys(GOLD.values)) {
+    const c = byCode.get(code);
+    assert.ok(c, `gold key ${code} is not in countries.json`);
+    assert.notEqual(c.category, 'other', `gold key ${code} is an "other" entry`);
+  }
+});
+
+test("absence:'zero' contract: attachGolds fills every real place, orgs stay bare", () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachGolds(/** @type {any} */ (rows), GOLD.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.gold, undefined, `org ${c.code} should have no gold field`);
+    } else {
+      assert.equal(typeof row.gold, 'number', `real place ${c.code} has no gold value`);
+    }
+  }
+  // A listed producer keeps its value; a real non-producer reads exactly 0.
+  assert.equal(/** @type {any} */ (byCode.get('cn')).gold, GOLD.values.cn);
+  assert.equal(/** @type {any} */ (byCode.get('de')).gold, 0); // Germany mines none
+});
+
+test('createMetric over gold stays sparse: it ranks producers only', () => {
+  const gold = createMetric(GOLD, COUNTRIES);
+  assert.equal(gold.topN('world', 1)[0].code, 'cn'); // China, the largest
+  assert.equal(gold.rankOf('ru', 'world'), 2); // Russia second
+  assert.equal(gold.has('de'), false); // Germany isn't a producer → out of the ranking
 });
 
 // ---- real wine.json schema + the sparse absence:'zero' contract ------------

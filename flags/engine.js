@@ -695,6 +695,26 @@ export const SUGARCANE_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 100_000_000 },
 ];
 
+/**
+ * Gold-production-threshold Categories (tonnes of mined gold). Sparse like the
+ * crops, so `>=`-only: gold is measured in small whole tonnes (China ~380 t
+ * tops it), and the USGS itemizes only ~17 major producers, so a `<=` tier would
+ * just collect the ~180 non-producers at 0 (via `absence: 'zero'`). The breaks
+ * `50 / 100 / 200` scale to gold's low tonnage: 17 / 12 / 4 real places, the
+ * significant / major / giant producers. `exclusiveGroup: 'gold'`.
+ *
+ * No `ultimate: true` break: like the other sparse metrics, gold is too
+ * concentrated to back a 9×9 cell (only ~17 producers worldwide), so every break
+ * carries `ultimateEligible: false`, keeping it a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const GOLD_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 50 },
+  { op: '>=', n: 100 },
+  { op: '>=', n: 200 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -1499,6 +1519,37 @@ export function sugarcane(op, n, opts = {}) {
 }
 
 /**
+ * Gold-production-threshold Category factory (tonnes of mined gold). Reads the
+ * denormalized `country.gold` field (`attachGolds`, which fills 0 for a real
+ * place that mines none). `exclusiveGroup: 'gold'`. The break list is `>=`-only
+ * (see GOLD_BREAKS_FOR_RANDOM), but the `<=` branch is kept for symmetry so a
+ * `gold:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function gold(op, n, opts = {}) {
+  const human = tonnesCompact(n);
+  const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.gold === 'number' && c.gold >= n
+      : (c) => typeof c.gold === 'number' && c.gold <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `gold:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'gold',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -1812,6 +1863,20 @@ export const THRESHOLD_METRICS = {
       const human = tonnesCompact(n);
       if (op === '>=') return translate(`sugarcane.atLeast.${token}`, `over ${human} tonnes`);
       return translate(`sugarcane.atMost.${token}`, `under ${human} tonnes`);
+    },
+  },
+  gold: {
+    breaks: GOLD_BREAKS_FOR_RANDOM,
+    factory: gold,
+    prefixFallback: 'Gold production',
+    field: 'gold',
+    family: 'gold',
+    has: (c) => typeof c.gold === 'number',
+    labelFor: (op, n, translate) => {
+      const token = tonnesToken(n);
+      const human = tonnesCompact(n);
+      if (op === '>=') return translate(`gold.atLeast.${token}`, `over ${human} tonnes`);
+      return translate(`gold.atMost.${token}`, `under ${human} tonnes`);
     },
   },
 };

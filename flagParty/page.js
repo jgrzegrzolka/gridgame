@@ -68,6 +68,7 @@ const MODE_LABELS = {
   'superlative-beer': { key: 'party.mode.superlativeBeer', full: 'Beer per capita: most', shortKey: 'party.modeShort.superlativeBeer', short: 'Beer' },
   'superlative-tea': { key: 'party.mode.superlativeTea', full: 'Tea production: most', shortKey: 'party.modeShort.superlativeTea', short: 'Tea' },
   'superlative-sugarcane': { key: 'party.mode.superlativeSugarcane', full: 'Sugarcane production: most', shortKey: 'party.modeShort.superlativeSugarcane', short: 'Sugarcane' },
+  'superlative-gold': { key: 'party.mode.superlativeGold', full: 'Gold production: most', shortKey: 'party.modeShort.superlativeGold', short: 'Gold' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -178,6 +179,12 @@ const SUPERLATIVE_MODES = {
   'superlative-sugarcane': {
     file: 'sugarcane.json',
     hintMost: { key: 'party.hintMostSugarcane', fallback: 'Largest sugarcane production' },
+  },
+  // Gold is 'most'-only: "biggest gold producer" (China) is the good question;
+  // "smallest producer" is obscure. Sparse, so the round ranks producers.
+  'superlative-gold': {
+    file: 'gold.json',
+    hintMost: { key: 'party.hintMostGold', fallback: 'Largest gold production' },
   },
 };
 

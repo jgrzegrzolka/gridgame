@@ -74,6 +74,10 @@ export const METRIC_ICONS = {
   // blade leaves splaying from the top. Reads as a tall grass stem, distinct
   // from the tea leaf and the rice bowl.
   sugarcane: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21V6"/><path d="M8.8 17h4.4M8.8 13h4.4M8.8 9h4.4"/><path d="M11 6C8 4.5 6 5 4.5 3"/><path d="M11 6c3-1.5 5-1 6.5-3"/></svg>',
+  // Gold production: a bullion bar (a trapezoid ingot with a bevelled top face).
+  // Reads as a gold bar, unmistakable against the coin-stack GDP and the food
+  // icons; the mining domain's first metric.
+  gold: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l2-7h12l2 7z"/><path d="M6 11l1.6-2h8.8L18 11"/></svg>',
 };
 
 /** @type {Record<string, string>} */
@@ -99,6 +103,7 @@ export const METRIC_HUES = {
   beerPerCapita: '#e0a11e',
   tea: '#1f9e7a',
   sugarcane: '#7cb518',
+  gold: '#d4a017',
 };
 
 /**
@@ -132,4 +137,5 @@ export const METRIC_SHORT = {
   beerPerCapita: { key: 'party.modeShort.superlativeBeer', fallback: 'Beer' },
   tea: { key: 'party.modeShort.superlativeTea', fallback: 'Tea' },
   sugarcane: { key: 'party.modeShort.superlativeSugarcane', fallback: 'Sugarcane' },
+  gold: { key: 'party.modeShort.superlativeGold', fallback: 'Gold' },
 };

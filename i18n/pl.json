@@ -20,6 +20,13 @@
       "100m": "ponad 100 mln ton"
     }
   },
+  "gold": {
+    "atLeast": {
+      "50": "ponad 50 ton",
+      "100": "ponad 100 ton",
+      "200": "ponad 200 ton"
+    }
+  },
   "zoom": {
     "close": "Zamknij",
     "enlarge": "Powiększ flagę"
@@ -561,7 +568,8 @@
       "superlativeCattle": "Bydło na osobę: najwięcej",
       "superlativeBeer": "Piwo na osobę: najwięcej",
       "superlativeTea": "Produkcja herbaty: najwięcej",
-      "superlativeSugarcane": "Produkcja trzciny cukrowej: najwięcej"
+      "superlativeSugarcane": "Produkcja trzciny cukrowej: najwięcej",
+      "superlativeGold": "Produkcja złota: najwięcej"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -587,7 +595,8 @@
       "superlativeCattle": "Bydło",
       "superlativeBeer": "Piwo",
       "superlativeTea": "Herbata",
-      "superlativeSugarcane": "Trzcina cukrowa"
+      "superlativeSugarcane": "Trzcina cukrowa",
+      "superlativeGold": "Złoto"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
@@ -621,6 +630,7 @@
     "hintMostBeer": "Najwięcej piwa na osobę",
     "hintMostTea": "Największa produkcja herbaty",
     "hintMostSugarcane": "Największa produkcja trzciny cukrowej",
+    "hintMostGold": "Największa produkcja złota",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
@@ -944,7 +954,8 @@
     "cattlePerCapita": "Bydło na osobę",
     "beerPerCapita": "Piwo na osobę",
     "tea": "Produkcja herbaty",
-    "sugarcane": "Produkcja trzciny cukrowej"
+    "sugarcane": "Produkcja trzciny cukrowej",
+    "gold": "Produkcja złota"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

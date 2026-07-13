@@ -20,6 +20,7 @@ import cattlePerCapita from '../flags/metrics/cattlePerCapita.json' with { type:
 import beerPerCapita from '../flags/metrics/beerPerCapita.json' with { type: 'json' };
 import tea from '../flags/metrics/tea.json' with { type: 'json' };
 import sugarcane from '../flags/metrics/sugarcane.json' with { type: 'json' };
+import gold from '../flags/metrics/gold.json' with { type: 'json' };
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { TicTacToeServer } from './ticTacToeServer.js';
 
@@ -52,6 +53,7 @@ attachMetrics(countries, {
   beerPerCapita: beerPerCapita.values,
   tea: tea.values,
   sugarcane: sugarcane.values,
+  gold: gold.values,
 });
 
 export default class GameServer extends TicTacToeServer {

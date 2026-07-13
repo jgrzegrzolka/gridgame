@@ -48,6 +48,7 @@ import {
   BEER_PER_CAPITA_BREAKS_FOR_RANDOM,
   TEA_BREAKS_FOR_RANDOM,
   SUGARCANE_BREAKS_FOR_RANDOM,
+  GOLD_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
   FOREST_BREAKS_FOR_RANDOM,
@@ -576,6 +577,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = SUGARCANE_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `sugarcane ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('gold:')) {
+      const suffix = cat.id.slice('gold:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = GOLD_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `gold ${op}${n} not in pool`);
     } else if (cat.id.startsWith('wine:')) {
       const suffix = cat.id.slice('wine:'.length);
       /** @type {'>=' | '<='} */
@@ -748,7 +756,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM.length
     + BEER_PER_CAPITA_BREAKS_FOR_RANDOM.length
     + TEA_BREAKS_FOR_RANDOM.length
-    + SUGARCANE_BREAKS_FOR_RANDOM.length;
+    + SUGARCANE_BREAKS_FOR_RANDOM.length
+    + GOLD_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -930,7 +939,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['apple', 'area', 'banana', 'beerPerCapita', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'oil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'wine'],
+    ['apple', 'area', 'banana', 'beerPerCapita', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'gold', 'oil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'wine'],
   );
 });
 
@@ -1138,12 +1147,20 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     0,
     'sugarcane cats must not appear in the 9×9 pool',
   );
+  // Gold, like the other sparse extractives/crops, has NO ultimate break, so ALL drop.
+  const droppedGold = GOLD_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedGold, GOLD_BREAKS_FOR_RANDOM.length, 'no gold tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('gold:')).length,
+    0,
+    'gold cats must not appear in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
       - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest - droppedOil - droppedRice - droppedCoal
-      - droppedSheepPerCapita - droppedCattlePerCapita - droppedBeerPerCapita - droppedTea - droppedSugarcane,
+      - droppedSheepPerCapita - droppedCattlePerCapita - droppedBeerPerCapita - droppedTea - droppedSugarcane - droppedGold,
   );
 });
 
@@ -2321,6 +2338,25 @@ function syntheticTaggedCountries() {
   // ladder and the same counter (like the crops share CROP_LADDER) so a
   // high-fuel country satisfies both and oil × coal cells stay fillable.
   const FUEL_LADDER = [5, 30, 300, 15, 150, 3_000];
+  // Gold (sparse mining, small whole tonnes, >=50 / >=100 / >=200). Every rung
+  // clears >=50, most clear >=100 and two clear >=200, so each gold tier has a
+  // candidate in every synthetic continent (the metric is far sparser in real
+  // data, but the synthetic pool's job is fillability, not realism).
+  const GOLD_LADDER = [60, 130, 250, 90, 180, 400];
+  // Tea (sparse crop, >=10K / >=100K / >=1M) and sugarcane (sparse crop, the
+  // largest by tonnage, >=1M / >=10M / >=100M) each get a `>=`-only ladder with
+  // half the rungs clearing the top break, same discipline as apple/rice above.
+  const TEA_LADDER = [30_000, 300_000, 3_000_000, 120_000, 1_500_000, 6_000_000];
+  const SUGARCANE_LADDER = [3_000_000, 30_000_000, 300_000_000, 12_000_000, 150_000_000, 1_000_000_000];
+  // Sheep + cattle per capita (dense derived, intensive, integer >=1 / >=2 club)
+  // and beer per capita (intensive, >=50 / >=100 litres). Small ladders where
+  // every rung clears the low tier and most clear the high one, so each tier
+  // fills per continent. These threshold metrics had been relying on the
+  // generator's retry budget to dodge them (unfillable); giving them ladders
+  // keeps every registered metric fillable, the synthetic pool's contract.
+  const SHEEP_LADDER = [1, 2, 3, 1, 2, 4];
+  const CATTLE_LADDER = [1, 2, 3, 1, 2, 4];
+  const BEER_LADDER = [60, 120, 200, 55, 150, 300];
   // Each (continent × colour × n) triple becomes one country. n controls
   // palette size — n=0 keeps the base 1-colour shape, n=1/n=2 layer in
   // distinct neighbour colours so the country has 2 / 3 colours total.
@@ -2356,6 +2392,12 @@ function syntheticTaggedCountries() {
           rice: RICE_LADDER[codeCounter % RICE_LADDER.length],
           oil: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
           coal: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
+          gold: GOLD_LADDER[codeCounter % GOLD_LADDER.length],
+          tea: TEA_LADDER[codeCounter % TEA_LADDER.length],
+          sugarcane: SUGARCANE_LADDER[codeCounter % SUGARCANE_LADDER.length],
+          sheepPerCapita: SHEEP_LADDER[codeCounter % SHEEP_LADDER.length],
+          cattlePerCapita: CATTLE_LADDER[codeCounter % CATTLE_LADDER.length],
+          beerPerCapita: BEER_LADDER[codeCounter % BEER_LADDER.length],
           coastline: COASTLINE_LADDER[Math.floor(codeCounter / 4) % COASTLINE_LADDER.length],
           forest: FOREST_LADDER[Math.floor(codeCounter / 6) % FOREST_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
@@ -2394,6 +2436,12 @@ function syntheticTaggedCountries() {
           rice: RICE_LADDER[codeCounter % RICE_LADDER.length],
           oil: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
           coal: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
+          gold: GOLD_LADDER[codeCounter % GOLD_LADDER.length],
+          tea: TEA_LADDER[codeCounter % TEA_LADDER.length],
+          sugarcane: SUGARCANE_LADDER[codeCounter % SUGARCANE_LADDER.length],
+          sheepPerCapita: SHEEP_LADDER[codeCounter % SHEEP_LADDER.length],
+          cattlePerCapita: CATTLE_LADDER[codeCounter % CATTLE_LADDER.length],
+          beerPerCapita: BEER_LADDER[codeCounter % BEER_LADDER.length],
           coastline: COASTLINE_LADDER[Math.floor(codeCounter / 4) % COASTLINE_LADDER.length],
           forest: FOREST_LADDER[Math.floor(codeCounter / 6) % FOREST_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
