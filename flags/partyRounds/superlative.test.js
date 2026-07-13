@@ -217,6 +217,29 @@ test('teaRound: biggest-only, correct extreme-by-tea answer, growers only', asyn
   }
 });
 
+// ---- sugar cane instance (tonnes of cane, id 'superlative-sugarcane') --------
+
+test('sugarcaneRound: biggest-only, correct extreme-by-cane answer, growers only', async () => {
+  const { sugarcaneRound } = await import('./superlative.js');
+  const scJson = (await import('../metrics/sugarcane.json', { with: { type: 'json' } })).default;
+  const SC = /** @type {Record<string, number>} */ (scJson.values);
+  assert.equal(sugarcaneRound.id, 'superlative-sugarcane');
+  // Cane-distinct sovereign GROWERS spanning many orders of magnitude, all in
+  // sugarcane.json. A non-grower (e.g. Germany) mixed in must be dropped by the
+  // round's `metric.has` filter, never appear as an option.
+  const pool = ['br', 'in', 'cn', 'th', 'pk', 'mx', 'au', 'us', 'co', 'pe', 'fj', 'bb', 'de'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = sugarcaneRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Sugar cane is locked to 'most' — "smallest grower" is obscure, never dealt.
+    assert.equal(q.prompt, 'most', `seed ${i}: sugarcane is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('de'), 'a non-grower is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => SC[c]);
+    assert.equal(SC[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-cane option`);
+  }
+});
+
 // ---- wine instance (wine tonnes, id 'superlative-wine') ---------------------
 
 test('wineRound: biggest-only, correct extreme-by-wine answer, makers only', async () => {

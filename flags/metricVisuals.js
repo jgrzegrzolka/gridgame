@@ -70,6 +70,10 @@ export const METRIC_ICONS = {
   // Reads as a leaf (the harvested crop) to set it apart from coffee's mug and
   // cocoa's ridged pod.
   tea: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19C4 12 8 5 18 4c1 8-4 15-13 15z"/><path d="M5 19C8 15 12 12 16 10"/></svg>',
+  // Sugarcane production: an upright cane stalk with three node rings and two
+  // blade leaves splaying from the top. Reads as a tall grass stem, distinct
+  // from the tea leaf and the rice bowl.
+  sugarcane: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21V6"/><path d="M8.8 17h4.4M8.8 13h4.4M8.8 9h4.4"/><path d="M11 6C8 4.5 6 5 4.5 3"/><path d="M11 6c3-1.5 5-1 6.5-3"/></svg>',
 };
 
 /** @type {Record<string, string>} */
@@ -94,6 +98,7 @@ export const METRIC_HUES = {
   cattlePerCapita: '#6d4c41',
   beerPerCapita: '#e0a11e',
   tea: '#1f9e7a',
+  sugarcane: '#7cb518',
 };
 
 /**
@@ -126,4 +131,5 @@ export const METRIC_SHORT = {
   cattlePerCapita: { key: 'party.modeShort.superlativeCattle', fallback: 'Cattle' },
   beerPerCapita: { key: 'party.modeShort.superlativeBeer', fallback: 'Beer' },
   tea: { key: 'party.modeShort.superlativeTea', fallback: 'Tea' },
+  sugarcane: { key: 'party.modeShort.superlativeSugarcane', fallback: 'Sugarcane' },
 };

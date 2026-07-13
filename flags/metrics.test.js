@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachTeas, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas, attachBeerPerCapitas } from './group.js';
+import { attachCoffees, attachTeas, attachSugarcanes, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas, attachBeerPerCapitas } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -20,6 +20,7 @@ const GDP = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdp.
 const GDP_PER_CAPITA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/gdpPerCapita.json'));
 const COFFEE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/coffee.json'));
 const TEA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/tea.json'));
+const SUGARCANE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/sugarcane.json'));
 const WINE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/wine.json'));
 const COCOA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/cocoa.json'));
 const BANANA = /** @type {import('./metrics.js').MetricData} */ (load('metrics/banana.json'));
@@ -714,6 +715,61 @@ test('createMetric over tea stays sparse: it ranks growers only', () => {
   assert.equal(tea.topN('world', 1)[0].code, 'cn'); // China, the largest
   assert.equal(tea.rankOf('in', 'world'), 2); // India second
   assert.equal(tea.has('de'), false); // Germany isn't a grower → out of the ranking
+});
+
+// ---- real sugarcane.json schema + the sparse absence:'zero' contract --------
+
+test('sugarcane is a valid, self-describing metric file with an absence hint', () => {
+  assert.equal(SUGARCANE.key, 'sugarcane');
+  assert.equal(typeof SUGARCANE.label, 'string');
+  assert.equal(typeof SUGARCANE.unit, 'string');
+  assert.ok(SUGARCANE.format === 'compact' || SUGARCANE.format === 'decimal1', 'valid format hint');
+  assert.equal(typeof SUGARCANE.source, 'string');
+  assert.equal(typeof SUGARCANE.year, 'number');
+  assert.equal(typeof SUGARCANE.values, 'object');
+  // Sparse like coffee/tea: the file must declare absence:'zero' so the loader
+  // defaults missing real places to 0 (not "no data").
+  assert.equal(SUGARCANE.absence, 'zero');
+});
+
+test('every sugarcane value is a positive integer (tonnes, sub-tonne producers dropped)', () => {
+  for (const [code, v] of Object.entries(SUGARCANE.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 1, `${code} listed but not >= 1: ${v}`);
+  }
+});
+
+test('every sugarcane key is a real (non-other) country — never an org', () => {
+  const byCode = new Map(COUNTRIES.map((c) => [c.code, c]));
+  for (const code of Object.keys(SUGARCANE.values)) {
+    const c = byCode.get(code);
+    assert.ok(c, `sugarcane key ${code} is not in countries.json`);
+    assert.notEqual(c.category, 'other', `sugarcane key ${code} is an "other" entry`);
+  }
+});
+
+test("absence:'zero' contract: attachSugarcanes fills every real place, orgs stay bare", () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachSugarcanes(/** @type {any} */ (rows), SUGARCANE.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.sugarcane, undefined, `org ${c.code} should have no sugarcane field`);
+    } else {
+      assert.equal(typeof row.sugarcane, 'number', `real place ${c.code} has no sugarcane value`);
+    }
+  }
+  // A listed grower keeps its value; a real non-grower reads exactly 0.
+  assert.equal(/** @type {any} */ (byCode.get('br')).sugarcane, SUGARCANE.values.br);
+  assert.equal(/** @type {any} */ (byCode.get('de')).sugarcane, 0); // Germany grows none
+});
+
+test('createMetric over sugarcane stays sparse: it ranks growers only', () => {
+  const sugarcane = createMetric(SUGARCANE, COUNTRIES);
+  assert.equal(sugarcane.topN('world', 1)[0].code, 'br'); // Brazil, the largest
+  assert.equal(sugarcane.rankOf('in', 'world'), 2); // India second
+  assert.equal(sugarcane.has('de'), false); // Germany isn't a grower → out of the ranking
 });
 
 // ---- real wine.json schema + the sparse absence:'zero' contract ------------
