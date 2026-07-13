@@ -250,6 +250,7 @@
 [data-metric="superlative-coal"] { --mc: #424242; }
 [data-metric="superlative-sheep"] { --mc: #a9825f; }
 [data-metric="superlative-cattle"] { --mc: #6d4c41; }
+[data-metric="superlative-beer"] { --mc: #e0a11e; }
 
 /* Per-category reveal timing, shown under the tricky toggle when it's on. A
    quiet indented block (it belongs to the toggle above it) with one row per

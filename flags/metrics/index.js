@@ -34,4 +34,5 @@ export const METRIC_FILES = [
   { key: 'coal', file: 'coal.json', label: 'Coal production' },
   { key: 'sheepPerCapita', file: 'sheepPerCapita.json', label: 'Sheep per capita' },
   { key: 'cattlePerCapita', file: 'cattlePerCapita.json', label: 'Cattle per capita' },
+  { key: 'beerPerCapita', file: 'beerPerCapita.json', label: 'Beer per capita' },
 ];

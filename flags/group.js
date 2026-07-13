@@ -31,6 +31,7 @@
  * @property {number} [coal]  Denormalized from `flags/metrics/coal.json` by `attachCoals` (coal production, terawatt-hours). Sparse `absence: 'zero'` metric: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
  * @property {number} [sheepPerCapita]  Denormalized from `flags/metrics/sheepPerCapita.json` by `attachSheepPerCapitas` (sheep head per person). Dense derived metric like `density` / `gdpPerCapita`: every real place has a value (a place with no sheep, or an uninhabited one, carries 0), absent only for non-places (orgs).
  * @property {number} [cattlePerCapita]  Denormalized from `flags/metrics/cattlePerCapita.json` by `attachCattlePerCapitas` (cattle head per person). Dense derived metric like `sheepPerCapita`: every real place has a value (a place with no cattle, or an uninhabited one, carries 0), absent only for non-places (orgs).
+ * @property {number} [beerPerCapita]  Denormalized from `flags/metrics/beerPerCapita.json` by `attachBeerPerCapitas` (litres of beer per person per year). `absence: 'unknown'` metric (the first): WHO measures ~189 sovereign states but not sub-national parts or small territories, so a real place WHO does not cover is genuinely unknown (NOT 0) and is left without the field, reading "no data". Absent for both those ~73 places and non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -207,6 +208,26 @@ export function attachCattlePerCapitas(countries, values) {
   for (const c of countries) {
     const v = values[c.code];
     if (typeof v === 'number') c.cattlePerCapita = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/beerPerCapita.json` values onto each Country as
+ * `.beerPerCapita` (litres of beer per person per year). `absence: 'unknown'`,
+ * so this is a plain set-if-present (NOT `attachZeroFilledMetric`): a real place
+ * WHO does not measure is left without the field on purpose, so it reads "no
+ * data" rather than a false 0. Same shape as `attachGdps`, different meaning of
+ * the gap (there GDP is dense; here the gap is real).
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachBeerPerCapitas(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.beerPerCapita = v;
   }
   return countries;
 }
@@ -448,6 +469,7 @@ const METRIC_ATTACHERS = {
   coal: attachCoals,
   sheepPerCapita: attachSheepPerCapitas,
   cattlePerCapita: attachCattlePerCapitas,
+  beerPerCapita: attachBeerPerCapitas,
 };
 
 /**

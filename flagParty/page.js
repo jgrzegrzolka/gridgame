@@ -63,6 +63,7 @@ const MODE_LABELS = {
   'superlative-coal': { key: 'party.mode.superlativeCoal', full: 'Coal production: most', shortKey: 'party.modeShort.superlativeCoal', short: 'Coal' },
   'superlative-sheep': { key: 'party.mode.superlativeSheep', full: 'Sheep per capita: most', shortKey: 'party.modeShort.superlativeSheep', short: 'Sheep' },
   'superlative-cattle': { key: 'party.mode.superlativeCattle', full: 'Cattle per capita: most', shortKey: 'party.modeShort.superlativeCattle', short: 'Cattle' },
+  'superlative-beer': { key: 'party.mode.superlativeBeer', full: 'Beer per capita: most', shortKey: 'party.modeShort.superlativeBeer', short: 'Beer' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -156,6 +157,12 @@ const SUPERLATIVE_MODES = {
     file: 'cattlePerCapita.json',
     hintMost: { key: 'party.hintMostCattle', fallback: 'Most cattle per person' },
   },
+  // Beer per capita is 'most'-only: "who drinks the most beer" (Czechia) is the
+  // fun question; "fewest" is a religion/geography quiz, not a beer one.
+  'superlative-beer': {
+    file: 'beerPerCapita.json',
+    hintMost: { key: 'party.hintMostBeer', fallback: 'Most beer per person' },
+  },
 };
 
 /** Every round id this build can render: the two fixed picture rounds plus the
@@ -222,6 +229,9 @@ const METRIC_ICONS = {
   // Cattle per capita: a cow head, horns and ears out to the sides, a broad
   // muzzle with two nostrils. Reads as a cow to tell it apart from the sheep.
   'superlative-cattle': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6.5C6 4 4 4 3.5 5.5"/><path d="M17 6.5C18 4 20 4 20.5 5.5"/><path d="M6.5 9C4.5 8.3 3 9 2.8 10.5"/><path d="M17.5 9C19.5 8.3 21 9 21.2 10.5"/><path d="M6.5 8.5a5.5 4.5 0 0 1 11 0c0 3-1.2 4.8-2.8 6C13.7 15.3 12.9 15.6 12 15.6s-1.7-.3-2.7-1.1C7.7 13.3 6.5 11.5 6.5 8.5z"/><ellipse cx="12" cy="13.3" rx="3.3" ry="2.1"/><path d="M10.6 13v.6M13.4 13v.6"/></svg>',
+  // Beer per capita: a foaming tankard, handle to the right, a fill line under
+  // the foam head. Reads as a beer mug to set it apart from the food/animal ones.
+  'superlative-beer': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9h8v9.5a1.5 1.5 0 0 1-1.5 1.5H8a1.5 1.5 0 0 1-1.5-1.5V9z"/><path d="M14.5 11H17a2.5 2.5 0 0 1 0 5h-2.5"/><path d="M6.5 9a1.9 1.9 0 0 1-.3-3.8 2 2 0 0 1 3.9-.7 2 2 0 0 1 3.9.7A1.9 1.9 0 0 1 14.5 9"/><path d="M6.5 12h8"/></svg>',
 };
 
 /**

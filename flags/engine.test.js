@@ -45,6 +45,7 @@ import {
   COAL_BREAKS_FOR_RANDOM,
   SHEEP_PER_CAPITA_BREAKS_FOR_RANDOM,
   CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM,
+  BEER_PER_CAPITA_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
   FOREST_BREAKS_FOR_RANDOM,
@@ -643,6 +644,13 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `cattlePerCapita ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('beerPerCapita:')) {
+      const suffix = cat.id.slice('beerPerCapita:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = BEER_PER_CAPITA_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `beerPerCapita ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -721,7 +729,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + RICE_BREAKS_FOR_RANDOM.length
     + COAL_BREAKS_FOR_RANDOM.length
     + SHEEP_PER_CAPITA_BREAKS_FOR_RANDOM.length
-    + CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM.length;
+    + CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM.length
+    + BEER_PER_CAPITA_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -903,7 +912,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['apple', 'area', 'banana', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'oil', 'population', 'rice', 'sheepPerCapita', 'wine'],
+    ['apple', 'area', 'banana', 'beerPerCapita', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'oil', 'population', 'rice', 'sheepPerCapita', 'wine'],
   );
 });
 
@@ -1086,12 +1095,21 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     0,
     'cattlePerCapita cats must not appear in the 9×9 pool',
   );
+  // Beer per capita is absence:'unknown' (not dense), so it too has NO ultimate
+  // break: ALL its breaks drop from the 9×9 pool.
+  const droppedBeerPerCapita = BEER_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedBeerPerCapita, BEER_PER_CAPITA_BREAKS_FOR_RANDOM.length, 'no beerPerCapita tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('beerPerCapita:')).length,
+    0,
+    'beerPerCapita cats must not appear in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
       - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest - droppedOil - droppedRice - droppedCoal
-      - droppedSheepPerCapita - droppedCattlePerCapita,
+      - droppedSheepPerCapita - droppedCattlePerCapita - droppedBeerPerCapita,
   );
 });
 

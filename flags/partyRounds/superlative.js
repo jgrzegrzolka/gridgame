@@ -16,6 +16,7 @@ import rice from '../metrics/rice.json' with { type: 'json' };
 import coal from '../metrics/coal.json' with { type: 'json' };
 import sheepPerCapita from '../metrics/sheepPerCapita.json' with { type: 'json' };
 import cattlePerCapita from '../metrics/cattlePerCapita.json' with { type: 'json' };
+import beerPerCapita from '../metrics/beerPerCapita.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -259,3 +260,15 @@ const cattleRaising = {
   values: Object.fromEntries(Object.entries(cattlePerCapita.values).filter(([, v]) => v > 0)),
 };
 export const cattlePerCapitaRound = createSuperlativeRound(createMetric(cattleRaising, []), 'superlative-cattle', { direction: 'most' });
+
+// Beer-per-capita instance: litres of beer per person, id 'superlative-beer'.
+// Locked to 'most': "which drinks the MOST beer" is the fun question (Czechia,
+// perennial world #1); "fewest" is a religion/geography quiz, not a beer one. The
+// round metric drops the 0-litre places (the dry states) AND is inherently
+// sovereign-scoped, so the absence:'unknown' gap (territories WHO does not
+// measure) never surfaces: every option is a real beer-drinking country.
+const beerDrinking = {
+  ...beerPerCapita,
+  values: Object.fromEntries(Object.entries(beerPerCapita.values).filter(([, v]) => v > 0)),
+};
+export const beerPerCapitaRound = createSuperlativeRound(createMetric(beerDrinking, []), 'superlative-beer', { direction: 'most' });
