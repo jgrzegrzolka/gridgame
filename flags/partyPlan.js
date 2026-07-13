@@ -126,8 +126,8 @@ const MODE_BY_ID = Object.fromEntries(PARTY_MODES.map((m) => [m.id, m]));
 
 /** Bounds a host's choices stay inside — a defence against a malformed plan
  *  over the wire as much as a sane ceiling for the lobby steppers. */
-export const MAX_ROUNDS_PER_MODE = 15;
-export const MAX_TOTAL_ROUNDS = 30;
+export const MAX_ROUNDS_PER_MODE = 30;
+export const MAX_TOTAL_ROUNDS = 100;
 
 /**
  * The catalog mode a segment belongs to (matched on roundId + poolId), or null

@@ -124,11 +124,13 @@ test('validatePlan: drops segments with an unknown mode or a bad count', () => {
 });
 
 test('validatePlan: caps the running total at MAX_TOTAL_ROUNDS', () => {
-  const huge = [
-    { poolId: 'sovereign', roundId: 'flagPick', rounds: MAX_ROUNDS_PER_MODE },
-    { poolId: 'nonSovereign', roundId: 'flagPick', rounds: MAX_ROUNDS_PER_MODE },
-    { poolId: 'sovereign', roundId: 'mapPick', rounds: MAX_ROUNDS_PER_MODE },
-  ];
+  // Enough max-size segments to overshoot the total cap regardless of how the
+  // per-mode / total constants are tuned. validatePlan doesn't dedupe modes, so
+  // repeating a valid one is fine.
+  const segments = Math.ceil(MAX_TOTAL_ROUNDS / MAX_ROUNDS_PER_MODE) + 1;
+  const huge = Array.from({ length: segments }, () => (
+    { poolId: 'sovereign', roundId: 'flagPick', rounds: MAX_ROUNDS_PER_MODE }
+  ));
   const out = validatePlan(huge);
   assert.equal(totalRounds(/** @type {any} */ (out)), MAX_TOTAL_ROUNDS);
 });
