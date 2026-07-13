@@ -1169,10 +1169,12 @@ export function bootFlagsData() {
     onPanelToggle: (key) => setLens(key),
     panelExtras: () => [lensSortWrap, hideValuesBtn],
   });
-  // Sits directly below the search + chips + Add-filter summary row (and
-  // above the collapsible pill groups): always visible, because it changes
-  // how the same set is presented rather than narrowing it.
-  filterBar.insertBefore(hub.el, groupsWrap);
+  // Last row of the bar, AFTER the collapsible pill groups: expanding
+  // "+ N more" must open the groups directly under the teaser row they
+  // continue, never push content between the teasers and their expansion.
+  // The hub stays always visible either way (it changes how the same set is
+  // presented rather than narrowing it).
+  filterBar.appendChild(hub.el);
 
   function syncSortPressed() {
     for (const b of lensSortWrap.querySelectorAll('button')) {

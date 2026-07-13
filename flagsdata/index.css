@@ -135,12 +135,13 @@ body {
 }
 /* Name search — sits OUTSIDE the collapsible groups so it's reachable even
  * when filters are folded (search and filter serve different jobs: "take me to
- * the thing I know the name of" vs "narrow by category"). It shares the summary
- * row with the chips + Add-filter button, so the wrapper sizes to the input
- * (~240px) instead of claiming a full row; it can shrink on narrow screens and
- * the input inside caps at 240px. */
+ * the thing I know the name of" vs "narrow by category"). The wrapper claims
+ * the full row so the teaser pills always start on a fresh line under the
+ * textbox — a text input and a run of pills on one line read as one muddled
+ * control; stacked, they read as "find" then "filter". The input inside still
+ * caps at 240px. */
 .name-search-wrap {
-  flex: 0 1 240px;
+  flex-basis: 100%;
 }
 .name-search {
   font: inherit;
