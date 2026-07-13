@@ -4,10 +4,16 @@ import { pillLabel } from '../flags/findFlag.js';
 /**
  * Re-translate every chooser surface that `renderChooser` painted at
  * render time. Pulled out of `findFlag/page.js` so a unit test can
- * pin the three repaint paths (section headings, pill labels via
+ * pin the repaint paths (section headings, pill labels via
  * `pillLabel(group, value, "include", t)`, and the "no other colours"
  * modifier) plus the `updateBar` callback that rewrites the "Play (N)"
  * button label, without standing up the full chooser DOM.
+ *
+ * The metric surfaces (chips, panel lead, tier pills) are NOT handled
+ * here: the metric hub (flags/metricHub.js) owns that DOM and re-labels
+ * it via its own `refreshI18n()`, which the page calls right after this
+ * helper. Only the "World facts" section heading flows through
+ * `sectionHeaders` like every other heading.
  *
  * Why a helper rather than a method on the chooser handle: the
  * handle's `refreshI18n` is closure-bound to `renderChooser`'s locals,
@@ -18,135 +24,20 @@ import { pillLabel } from '../flags/findFlag.js';
  *
  * @typedef {{ h: { textContent: string }, key: string, fallback: string }} SectionHeader
  * @typedef {{ labelSpan: { textContent: string }, group: 'continent' | 'color' | 'motif' | 'stripesOnly', value: string }} PillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} PopulationPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} AreaPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} DensityPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} GdpPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} GdpPerCapitaPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} CoffeePillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} WinePillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} CocoaPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} BananaPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} ApplePillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} ElevationPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} CoastlinePillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} ForestPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} OilPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} RicePillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} CoalPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} SheepPerCapitaPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} CattlePerCapitaPillRef
- * @typedef {{ labelSpan: { textContent: string }, value: string }} BeerPerCapitaPillRef
  *
  * @param {{
  *   sectionHeaders: SectionHeader[],
  *   allPills: PillRef[],
- *   populationPills?: PopulationPillRef[],
- *   areaPills?: AreaPillRef[],
- *   densityPills?: DensityPillRef[],
- *   gdpPills?: GdpPillRef[],
- *   gdpPerCapitaPills?: GdpPerCapitaPillRef[],
- *   coffeePills?: CoffeePillRef[],
- *   winePills?: WinePillRef[],
- *   cocoaPills?: CocoaPillRef[],
- *   bananaPills?: BananaPillRef[],
- *   applePills?: ApplePillRef[],
- *   elevationPills?: ElevationPillRef[],
- *   coastlinePills?: CoastlinePillRef[],
- *   forestPills?: ForestPillRef[],
- *   oilPills?: OilPillRef[],
- *   ricePills?: RicePillRef[],
- *   coalPills?: CoalPillRef[],
- *   sheepPerCapitaPills?: SheepPerCapitaPillRef[],
- *   cattlePerCapitaPills?: CattlePerCapitaPillRef[],
- *   beerPerCapitaPills?: BeerPerCapitaPillRef[],
  *   onlyColorsLabelSpan: { textContent: string } | null,
  *   updateBar: () => void,
  * }} deps
  */
-export function refreshChooserI18n({ sectionHeaders, allPills, populationPills = [], areaPills = [], densityPills = [], gdpPills = [], gdpPerCapitaPills = [], coffeePills = [], winePills = [], cocoaPills = [], bananaPills = [], applePills = [], elevationPills = [], coastlinePills = [], forestPills = [], oilPills = [], ricePills = [], coalPills = [], sheepPerCapitaPills = [], cattlePerCapitaPills = [], beerPerCapitaPills = [], onlyColorsLabelSpan, updateBar }) {
+export function refreshChooserI18n({ sectionHeaders, allPills, onlyColorsLabelSpan, updateBar }) {
   for (const sh of sectionHeaders) {
     sh.h.textContent = t(sh.key, sh.fallback);
   }
   for (const p of allPills) {
     p.labelSpan.textContent = pillLabel(p.group, p.value, 'include', t);
-  }
-  // Population pills carry only their id suffix (">=10000000"); pillLabel's
-  // population branch maps it to the localized tier label.
-  for (const p of populationPills) {
-    p.labelSpan.textContent = pillLabel('population', p.value, 'include', t);
-  }
-  // Area pills, same shape ("<=1000" etc.), via pillLabel's area branch.
-  for (const p of areaPills) {
-    p.labelSpan.textContent = pillLabel('area', p.value, 'include', t);
-  }
-  // Density pills ("<=10" etc.) via pillLabel's density branch.
-  for (const p of densityPills) {
-    p.labelSpan.textContent = pillLabel('density', p.value, 'include', t);
-  }
-  // GDP pills (">=100000000000" etc.) via pillLabel's gdp branch.
-  for (const p of gdpPills) {
-    p.labelSpan.textContent = pillLabel('gdp', p.value, 'include', t);
-  }
-  // GDP-per-capita pills (">=30000" etc.) via pillLabel's gdpPerCapita branch.
-  for (const p of gdpPerCapitaPills) {
-    p.labelSpan.textContent = pillLabel('gdpPerCapita', p.value, 'include', t);
-  }
-  // Coffee pills (">=10000" etc.) via pillLabel's coffee branch.
-  for (const p of coffeePills) {
-    p.labelSpan.textContent = pillLabel('coffee', p.value, 'include', t);
-  }
-  // Wine pills (">=10000" etc.) via pillLabel's wine branch.
-  for (const p of winePills) {
-    p.labelSpan.textContent = pillLabel('wine', p.value, 'include', t);
-  }
-  // Cocoa pills (">=10000" etc.) via pillLabel's cocoa branch.
-  for (const p of cocoaPills) {
-    p.labelSpan.textContent = pillLabel('cocoa', p.value, 'include', t);
-  }
-  // Banana pills (">=10000" etc.) via pillLabel's banana branch.
-  for (const p of bananaPills) {
-    p.labelSpan.textContent = pillLabel('banana', p.value, 'include', t);
-  }
-  // Apple pills (">=100000" etc.) via pillLabel's apple branch.
-  for (const p of applePills) {
-    p.labelSpan.textContent = pillLabel('apple', p.value, 'include', t);
-  }
-  // Elevation pills (">=1000" etc.) via pillLabel's elevation branch.
-  for (const p of elevationPills) {
-    p.labelSpan.textContent = pillLabel('elevation', p.value, 'include', t);
-  }
-  // Coastline pills (">=1000" etc.) via pillLabel's coastline branch.
-  for (const p of coastlinePills) {
-    p.labelSpan.textContent = pillLabel('coastline', p.value, 'include', t);
-  }
-  // Forest pills (">=30" etc.) via pillLabel's forest branch.
-  for (const p of forestPills) {
-    p.labelSpan.textContent = pillLabel('forest', p.value, 'include', t);
-  }
-  // Oil pills (">=100" etc.) via pillLabel's oil branch.
-  for (const p of oilPills) {
-    p.labelSpan.textContent = pillLabel('oil', p.value, 'include', t);
-  }
-  // Rice pills (">=1000000" etc.) via pillLabel's rice branch.
-  for (const p of ricePills) {
-    p.labelSpan.textContent = pillLabel('rice', p.value, 'include', t);
-  }
-  // Coal pills (">=100" etc.) via pillLabel's coal branch.
-  for (const p of coalPills) {
-    p.labelSpan.textContent = pillLabel('coal', p.value, 'include', t);
-  }
-  // Sheep-per-capita pills (">=1" etc.) via pillLabel's sheepPerCapita branch.
-  for (const p of sheepPerCapitaPills) {
-    p.labelSpan.textContent = pillLabel('sheepPerCapita', p.value, 'include', t);
-  }
-  // Cattle-per-capita pills (">=1" etc.) via pillLabel's cattlePerCapita branch.
-  for (const p of cattlePerCapitaPills) {
-    p.labelSpan.textContent = pillLabel('cattlePerCapita', p.value, 'include', t);
-  }
-  // Beer-per-capita pills (">=50" etc.) via pillLabel's beerPerCapita branch.
-  for (const p of beerPerCapitaPills) {
-    p.labelSpan.textContent = pillLabel('beerPerCapita', p.value, 'include', t);
   }
   if (onlyColorsLabelSpan) {
     onlyColorsLabelSpan.textContent = t('findFlag.noOtherColors', 'no other colours');

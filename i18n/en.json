@@ -1,5 +1,11 @@
 {
-  "coffee": "Buy me a coffee",
+  "coffee": {
+    "atLeast": {
+      "1k": "over 1K tonnes",
+      "10k": "over 10K tonnes",
+      "100k": "over 100K tonnes"
+    }
+  },
   "zoom": {
     "close": "Close",
     "enlarge": "Enlarge flag"
@@ -403,26 +409,7 @@
       "continents": "Continents",
       "colors": "Colors",
       "motifs": "Motifs",
-      "stripes": "Stripes",
-      "population": "Population",
-      "area": "Land area",
-      "density": "Population density",
-      "gdp": "GDP",
-      "gdpPerCapita": "GDP per capita",
-      "coffee": "Coffee production",
-      "wine": "Wine production",
-      "cocoa": "Cocoa production",
-      "banana": "Banana production",
-      "apple": "Apple production",
-      "elevation": "Highest elevation",
-      "coastline": "Coastline length",
-      "forest": "Forest cover",
-      "oil": "Oil production",
-      "rice": "Rice production",
-      "coal": "Coal production",
-      "sheepPerCapita": "Sheep per capita",
-      "cattlePerCapita": "Cattle per capita",
-      "beerPerCapita": "Beer per capita"
+      "stripes": "Stripes"
     }
   },
   "daily": {
@@ -759,13 +746,6 @@
       "1k": "under $1K"
     }
   },
-  "coffee": {
-    "atLeast": {
-      "1k": "over 1K tonnes",
-      "10k": "over 10K tonnes",
-      "100k": "over 100K tonnes"
-    }
-  },
   "wine": {
     "atLeast": {
       "1k": "over 1K tonnes",
@@ -913,16 +893,15 @@
     "filterMotifs": "Motifs",
     "filterStripes": "Stripes",
     "searchName": "Search by name…",
-    "clear": "Clear",
-    "addFilter": "Add filter",
-    "done": "Done",
     "removeFilter": "Remove filter",
-    "metric": "Metric",
-    "metricNone": "None",
-    "sortDefault": "Default",
     "sortHighest": "Highest",
     "sortLowest": "Lowest",
     "noData": "no data"
+  },
+  "metricHub": {
+    "title": "World facts",
+    "more": "more",
+    "less": "less"
   },
   "metric": {
     "population": "Population",

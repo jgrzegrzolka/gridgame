@@ -36,32 +36,20 @@ body {
   align-items: center;
   gap: 4px;
 }
-/* Active-filters summary row. Replaces the old single "Filters ▾" toggle:
- * the row lists each active filter as a removable chip, then an "Add filter"
- * button that expands the collapsible groups (further down). The row claims a
- * full width so it sits alone; space-between pushes the summary to the left
- * and the Clear button (when visible) to the right. */
-.filter-toggle-row {
+/* Row 1: the search input, the applied-filter chips beside it, and Clear
+ * anchored in the row's right corner, where its appearing/disappearing
+ * displaces nothing. Chips wrap under the input when they outgrow the row. */
+.filter-search-row {
   flex-basis: 100%;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-/* Chips + Add button share one wrapping flex line. `.filter-chips` is
- * display:contents so its chip children flow as direct flex items of the
- * summary, sharing its gap with the Add button. */
-.filter-summary {
-  flex: 1 1 auto;
-  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
 .filter-chips { display: contents; }
-/* A chip = one active filter. Solid brand fill mirrors `.pill.active` so an
- * applied filter reads the same whether you see it as a pill or a chip. */
+/* A chip = one applied filter (EVERY applied filter chips here, pills and
+ * metric tiers alike). Solid brand fill mirrors `.pill.active` so an applied
+ * filter reads the same whether you see it as a pill or a chip. */
 .filter-chip {
   display: inline-flex;
   align-items: center;
@@ -82,6 +70,15 @@ body {
   border-color: var(--secondary-color);
 }
 .filter-chip.is-exclude .filter-chip-label { text-decoration: line-through; }
+/* Applied metric-tier chip: outlined in the metric's hue (--mc, set inline
+ * from flags/metricVisuals.js, the documented palette exception) with the
+ * metric's icon, mirroring the hub chip it came from. */
+.filter-chip.is-metric {
+  background: var(--surface-color);
+  color: var(--mc);
+  border-color: var(--mc);
+  font-weight: 600;
+}
 .filter-chip-x {
   font: inherit;
   font-size: 14px;
@@ -94,14 +91,44 @@ body {
   opacity: 0.75;
 }
 .filter-chip-x:hover { opacity: 1; }
-/* "Add filter" — dashed pink outline borrows the `.pill-modifier` idiom to
- * signal "this adds, it isn't itself a filter". */
+/* Row 2: the Status row (label + its four pills + the groups toggle). Wrap
+ * stays allowed as a safety net; the fit keeps it to one line. */
+.filter-preview-row {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+/* Preview pills flow as direct flex items of the preview row. The preview
+ * is the collapsed face of the filter groups (page.js fill-to-fit decides
+ * how many pills show, applied pills pinned always-visible); expanded, the
+ * groups render every pill so the preview hides rather than duplicate. */
+.filter-preview { display: contents; }
+/* The preview sits directly above the world-facts chips, so it shares that
+ * row's pill sizing: two adjacent pill rows at two heights read as a
+ * mistake. */
+.filter-preview .pill {
+  padding: 5px 11px;
+  font-size: 12.5px;
+}
+/* Fill-to-fit hides overflow pills via [hidden], but the colour pills'
+ * shared `.pill:has(.pill-swatch) { display: inline-flex }` (common.css)
+ * outweighs the UA's `[hidden]` rule and kept them painting. Re-assert it
+ * at higher specificity. (Same bug class as `.mhub [hidden]`.) */
+.filter-preview .pill[hidden] {
+  display: none;
+}
+/* "+ N more" / "less": the groups' toggle, permanently at the end of the
+ * Status row. Brand-pink dashed (the .pill-modifier idiom) rather than the
+ * hub's muted dashed: Jan found the muted version too easy to miss, and
+ * this one is the bar's main affordance. */
 .filter-add {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   font: inherit;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 600;
   padding: 5px 12px;
   background: var(--surface-color);
   color: var(--primary-color);
@@ -110,13 +137,12 @@ body {
   cursor: pointer;
 }
 .filter-add:hover { background: var(--surface-hover-color); }
-.filter-add-plus { font-weight: 600; }
-.filter-add-plus:empty { display: none; }
 
-/* Closed state hides every group on every viewport. page.js starts the bar
- * collapsed (the chip summary is the resting state); "Add filter" sets
- * .is-open to reveal the groups. */
+/* Closed state hides every group AND the world-facts row on every viewport:
+ * the bar's single toggle expands and folds them as one section (page.js
+ * starts the bar collapsed; the toggle sets .is-open). */
 #filter-bar:not(.is-open) .filter-groups { display: none; }
+#filter-bar:not(.is-open) .mhub { display: none; }
 
 @media (max-width: 600px) {
   /* When open on mobile, the groups stack as block-level rows so the
@@ -130,12 +156,10 @@ body {
     margin-top: 4px;
   }
 }
-/* Name search — sits OUTSIDE the collapsible groups so it's reachable even
- * when filters are folded (search and filter serve different jobs: "take me to
- * the thing I know the name of" vs "narrow by category"). It shares the summary
- * row with the chips + Add-filter button, so the wrapper sizes to the input
- * (~240px) instead of claiming a full row; it can shrink on narrow screens and
- * the input inside caps at 240px. */
+/* Name search: sits OUTSIDE the collapsible groups so it's reachable even
+ * when filters are folded (search and filter serve different jobs: "take me
+ * to the thing I know the name of" vs "narrow by category"). It owns row 1
+ * with Clear; the input caps at 240px. */
 .name-search-wrap {
   flex: 0 1 240px;
 }
@@ -181,23 +205,6 @@ body {
   margin-right: 4px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-#filter-clear {
-  font: inherit;
-  font-size: 12px;
-  background: none;
-  border: none;
-  color: var(--link-color);
-  cursor: pointer;
-  /* Vertical padding tuned so Clear's box matches the summary row's first-line
-   * height (driven by the search input), letting its text sit vertically
-   * centred with the search box / chips / Add-filter instead of riding high. */
-  padding: 8px;
-  text-decoration: underline;
-}
-#filter-clear:hover {
-  background: var(--surface-hover-color);
-  border-radius: 4px;
 }
 #sections h2 {
   font-size: 16px;
@@ -264,50 +271,17 @@ dialog#zoom .country-data {
   user-select: text;
 }
 
-/* --- Metric lens (Feature DE) ------------------------------------------- */
-/* A view lens sitting at the top of the filter bar, always visible (never
- * behind the Filters collapse) — it re-presents the same set rather than
- * narrowing it. Off by default. */
-.lens-row {
-  flex-basis: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  /* Two groups: label+pills (.lens-main) and the sort control. space-between
-   * pins the sort to the right when both fit on one line, and — because each
-   * group is alone on its line once wrapped — left-aligns each on a narrow
-   * phone. No breakpoint, so it holds for longer (e.g. Polish) sort labels. */
-  justify-content: space-between;
-  gap: 6px;
+/* --- Metric lens (Feature DE, hub form) ---------------------------------- */
+/* The metric picker itself is the shared world-facts hub (flags/metricHub.css);
+ * this page adds the lens-only extras that live inside the hub's panel: the
+ * Highest / Lowest sort and the "hide values" off switch. The hub row sits
+ * between the summary row and the collapsible groups; .mhub's flex-basis:100%
+ * (shared stylesheet) claims the full bar width. */
+.mhub {
   margin-bottom: 12px;
 }
-/* Label + metric pills travel together so the sort control can sit opposite. */
-.lens-main {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-.lens-label {
-  font-size: 12px;
-  color: var(--muted-color);
-  margin-right: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.lens-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-/* Size + base look come from the shared `.pill` (common.css). `.lens-btn`
- * only styles the pressed state: single-select, so it hangs off aria-pressed
- * rather than the `.active` class the multi-select filter pills use. Matches
- * `.pill.active` visually so a chosen metric reads like any active pill. */
-.lens-btn[aria-pressed='true'] {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-  color: var(--surface-color);
-}
-/* Sort: a small segmented control, only shown when a lens is on. Position
- * (right when inline, left when wrapped) is handled by the row's
- * space-between above — no margin trickery here. */
+/* Sort: a small segmented control inside the hub panel, so it only exists
+ * while a lens is on. */
 .lens-sort {
   display: inline-flex;
   border: 1px solid var(--muted-soft-color);

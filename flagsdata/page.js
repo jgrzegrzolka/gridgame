@@ -8,6 +8,9 @@ import { createColorCountPicker } from '../colorCountPicker.js';
 import { createMetric } from '../flags/metrics.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { computeLensView } from '../flags/metricLens.js';
+import { createMetricHub } from '../flags/metricHub.js';
+import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
+import { fitChipRow, rowGap } from '../flags/chipRowFit.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
@@ -61,12 +64,6 @@ function continentLabel(name) {
 /** @param {string} v */
 function colorLabel(v) {
   return t(`color.${v}`, v);
-}
-
-/** Translated name of a metric lens, falling back to the metric's own English label.
- * @param {string} key @param {string} fallback */
-function metricLabel(key, fallback) {
-  return t(`metric.${key}`, fallback);
 }
 
 /** @param {string} v */
@@ -198,11 +195,14 @@ export function bootFlagsData() {
     return wrap;
   }
 
-  // No status filter on by default: first load shows all 269 entries
-  // (sovereign states plus territories, subnational regions, and orgs
-  // like EU / ASEAN). The Status pills are normal toggles for anyone who
-  // wants to narrow the view.
+  // Sovereign is preselected on first load (Jan's call, 2026-07-13): the
+  // page opens on the 195 recognisable countries, with the full 269
+  // (territories, subnational regions, org flags) one visible tap away.
+  // The default is an ordinary include on the always-visible Sovereign
+  // teaser pill, so nothing is hidden: the pill renders active, the count
+  // reads "195 / 269", and tapping the pill (or Clear) shows everything.
   const filters = emptyFilters();
+  filters.status.include.add('sovereign');
   /** Diacritic-folded substring of the name search input. Empty means the
    * filter is off. Stored as the folded form so we don't refold per-tile
    * on every input event — the per-country fold is the same idea, computed
@@ -618,18 +618,11 @@ export function bootFlagsData() {
     }
     state.count.textContent =
       visible === state.items.length ? String(visible) : `${visible} / ${state.items.length}`;
-    let pillTotal = 0;
-    for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'>} */ (['continent','color','motif','status','stripesOnly'])) {
-      pillTotal += filters[k].include.size + filters[k].exclude.size;
-    }
-    if (filters.colorCount !== null) pillTotal++;
-    for (const k of METRIC_KEYS) if (filters[k] !== null) pillTotal++;
-    const anyActive = pillTotal > 0 || nameQuery !== '';
-    clearBtn.hidden = !anyActive;
-    // Repaint the active-filters chip summary. Chips replace the old count
-    // badge: they show *which* filters are on (not just how many), so the
-    // user can read and remove them without expanding the groups. Name
-    // search has its own always-visible input, so it isn't chipped here.
+    // The applied-filters chips sit next to the search box: EVERY applied
+    // filter chips there (pills and metric tiers alike, one consistent
+    // treatment), each removable via its x. There is no global Clear:
+    // per-chip removal covers it, and the lone corner button read as clutter
+    // (Jan's review).
     renderChips();
     // Reflect the active filter on the world map below the grid: every
     // visible country wears its flag (stamped into its silhouette),
@@ -724,10 +717,11 @@ export function bootFlagsData() {
   }
 
   /**
-   * Repaint the active-filters chip row from the current filter state. Chip
-   * membership and order come from the pure `activeFilterChips`; each chip's ×
-   * clears just that one filter. Runs on every `applyFilter`, so the summary
-   * always mirrors what's applied — including while the groups are expanded.
+   * Repaint the applied-filters chips next to the search box. One chip per
+   * applied filter, EVERY applied filter, so "what is filtering right now"
+   * always reads in one place regardless of what the rows below show.
+   * Membership and order come from the pure `activeFilterChips`; each
+   * chip's x clears just that one filter.
    */
   function renderChips() {
     if (!chipsWrap) return;
@@ -738,6 +732,17 @@ export function bootFlagsData() {
       if (ref.kind === 'pill' && ref.group === 'color') {
         chip.appendChild(makeColorSwatch(ref.value));
       }
+      // A metric chip wears its metric's icon + hue (shared with the hub
+      // chips and Flag Party), so "over 100K tonnes" can never read as the
+      // wrong fact: the icon and the leading short name disambiguate.
+      if (ref.kind === 'scalar' && ref.group !== 'colorCount') {
+        chip.classList.add('is-metric');
+        chip.style.setProperty('--mc', METRIC_HUES[ref.group] || 'currentColor');
+        const ic = document.createElement('span');
+        ic.className = 'mhub-ic';
+        ic.innerHTML = METRIC_ICONS[ref.group] || '';
+        chip.appendChild(ic);
+      }
       const label = document.createElement('span');
       label.className = 'filter-chip-label';
       label.textContent = chipLabel(ref);
@@ -746,7 +751,7 @@ export function bootFlagsData() {
       x.type = 'button';
       x.className = 'filter-chip-x';
       x.setAttribute('aria-label', t('flagsdata.removeFilter', 'Remove filter'));
-      x.textContent = '×';
+      x.textContent = '\u00d7';
       x.addEventListener('click', () => removeChip(ref));
       chip.appendChild(x);
       chipsWrap.appendChild(chip);
@@ -756,68 +761,124 @@ export function bootFlagsData() {
   /**
    * Localized label for one chip. Pill chips reuse the group's own pill-label
    * helper; the colorCount scalar reads as "Colors = 3" (reusing the group
-   * label) to sidestep plural grammar; the metric scalars reuse the tier's own
-   * pill label.
+   * label) to sidestep plural grammar; the metric scalars lead with the
+   * metric's short name so a unit-only tier ("over 100K tonnes") always
+   * names its fact.
    * @param {import('../flags/flagsFilter.js').FilterChip} ref
    * @returns {string}
    */
   function chipLabel(ref) {
-    if (ref.kind === 'pill') {
-      const v = ref.value;
-      if (ref.group === 'status') return statusLabel(v);
-      if (ref.group === 'continent') return continentLabel(v);
-      if (ref.group === 'color') return colorLabel(v);
-      if (ref.group === 'motif') return motifLabel(v);
-      return stripesOnlyLabel(v);
-    }
+    if (ref.kind === 'pill') return pillText(ref.group, ref.value);
     if (ref.group === 'colorCount') {
       const c = filters.colorCount;
-      const sym = c && c.op === '>=' ? '≥' : c && c.op === '<=' ? '≤' : '=';
+      const sym = c && c.op === '>=' ? '\u2265' : c && c.op === '<=' ? '\u2264' : '=';
       return `${t('flagsdata.filterColors', 'Colors')} ${sym} ${c ? c.n : ''}`;
     }
     const cons = filters[ref.group];
-    if (cons && state) {
-      const item = buildMetricTierItems(ref.group, state.items).find((it) => it.op === cons.op && it.n === cons.n);
-      if (item) return pillLabel(ref.group, item.value, 'include', t);
-    }
-    return cons ? `${cons.op} ${cons.n}` : '';
+    if (!cons) return '';
+    const short = METRIC_SHORT[ref.group];
+    const tierText = pillLabel(ref.group, `${cons.op}${cons.n}`, 'include', t);
+    return `${short ? t(short.key, short.fallback) : ref.group} \u00b7 ${tierText}`;
   }
 
   /**
-   * Clear the single filter a chip stands for — mirroring what a second click
-   * on its pill (or the colour-count ×) would do — then re-run the filter.
+   * Clear the single filter a chip stands for, mirroring what a second click
+   * on its pill (or the colour-count x) would do, then re-run the filter.
    * @param {import('../flags/flagsFilter.js').FilterChip} ref
    */
   function removeChip(ref) {
     if (ref.kind === 'pill') {
       const set = ref.exclude ? filters[ref.group].exclude : filters[ref.group].include;
       set.delete(ref.value);
-      const pill = filterBar.querySelector(`.pill[data-group="${ref.group}"][data-value="${CSS.escape(ref.value)}"]`);
-      if (pill) pill.classList.remove(ref.exclude ? 'exclude' : 'active');
-      // A colour include drives the "no other colours" lock's count — keep it
-      // in step, exactly as the pill click does.
+      repaintFilterPills(ref.group, ref.value);
       if (ref.group === 'color') colorCountLock.sync();
     } else if (ref.group === 'colorCount') {
-      // colorCount can be set by the picker OR the "no other colours" lock;
-      // clear both surfaces so whichever engaged it turns off.
       filters.colorCount = null;
       colorCountLock.reset();
       colorCountPicker.reset();
       if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
     } else {
       filters[ref.group] = null;
-      for (const p of filterBar.querySelectorAll(`.pill[data-group="${ref.group}"]`)) p.classList.remove('active');
+      hub.update();
     }
     applyFilter();
+  }
+
+  /** @typedef {'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'} PillGroup */
+
+  /** Localized pill text for one (group, value). Single mapping shared by the
+   * pill factory, the chip labels, and the langchanged relabel walk.
+   * @param {PillGroup} group @param {string} value */
+  function pillText(group, value) {
+    if (group === 'status') return statusLabel(value);
+    if (group === 'continent') return continentLabel(value);
+    if (group === 'color') return colorLabel(value);
+    if (group === 'motif') return motifLabel(value);
+    return stripesOnlyLabel(value);
+  }
+
+  /**
+   * One shared include → exclude → off cycle for a filter value, used by the
+   * group pills AND their teaser twins on the summary row. State mutates
+   * first, then EVERY pill carrying (group, value) repaints, so a value that
+   * renders in two places can never show two states.
+   * @param {PillGroup} group @param {string} value
+   */
+  function cycleFilterPill(group, value) {
+    const { include, exclude } = filters[group];
+    if (include.has(value)) {
+      include.delete(value);
+      exclude.add(value);
+    } else if (exclude.has(value)) {
+      exclude.delete(value);
+    } else {
+      include.add(value);
+    }
+    if (group === 'color') colorCountLock.sync();
+    repaintFilterPills(group, value);
+    applyFilter();
+  }
+
+  /** Repaint every pill for one (group, value) from the filter state: the
+   * group row's pill and, for teaser values, its summary-row twin.
+   * @param {PillGroup} group @param {string} value */
+  function repaintFilterPills(group, value) {
+    const g = filters[group];
+    const sel = `.pill[data-group="${group}"][data-value="${CSS.escape(value)}"]`;
+    for (const p of filterBar.querySelectorAll(sel)) {
+      p.classList.toggle('active', g.include.has(value));
+      p.classList.toggle('exclude', g.exclude.has(value));
+    }
+  }
+
+  /**
+   * Build one tristate filter pill for (group, value). Used by the group rows
+   * and the summary-row teasers, so both render and behave identically.
+   * @param {PillGroup} group @param {string} value
+   */
+  function makeFilterPill(group, value) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pill';
+    btn.dataset.group = group;
+    btn.dataset.value = value;
+    if (group === 'color') paintColorPill(btn, value, pillText(group, value));
+    else btn.textContent = pillText(group, value);
+    // Reflect any pre-seeded filter state on the pill. Nothing is seeded by
+    // default today; this still handles include/exclude if a default returns.
+    if (filters[group].include.has(value)) btn.classList.add('active');
+    else if (filters[group].exclude.has(value)) btn.classList.add('exclude');
+    btn.addEventListener('click', () => cycleFilterPill(group, value));
+    return btn;
   }
 
   /**
    * @param {string} labelKey
    * @param {string} labelFallback
-   * @param {'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'} group
-   * @param {Array<{ value: string, label: string }>} entries
+   * @param {PillGroup} group
+   * @param {string[]} values
    */
-  function buildFilterGroup(labelKey, labelFallback, group, entries) {
+  function buildFilterGroup(labelKey, labelFallback, group, values) {
     const wrap = document.createElement('div');
     wrap.className = 'filter-group';
     const labelEl = document.createElement('span');
@@ -827,86 +888,7 @@ export function bootFlagsData() {
     labelEl.setAttribute('data-i18n', labelKey);
     labelEl.textContent = t(labelKey, labelFallback);
     wrap.appendChild(labelEl);
-    for (const { value, label: pillLabel } of entries) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'pill';
-      btn.dataset.group = group;
-      btn.dataset.value = value;
-      if (group === 'color') paintColorPill(btn, value, pillLabel);
-      else btn.textContent = pillLabel;
-      // Reflect any pre-seeded filter state on the pill. No status filter
-      // is seeded by default now, so on first paint every pill starts
-      // inactive; this still handles include/exclude if a default returns.
-      if (filters[group].include.has(value)) btn.classList.add('active');
-      else if (filters[group].exclude.has(value)) btn.classList.add('exclude');
-      btn.addEventListener('click', () => {
-        const { include, exclude } = filters[group];
-        if (include.has(value)) {
-          include.delete(value);
-          exclude.add(value);
-          btn.classList.remove('active');
-          btn.classList.add('exclude');
-        } else if (exclude.has(value)) {
-          exclude.delete(value);
-          btn.classList.remove('exclude');
-        } else {
-          include.add(value);
-          btn.classList.add('active');
-        }
-        if (group === 'color') colorCountLock.sync();
-        applyFilter();
-      });
-      wrap.appendChild(btn);
-    }
-    return wrap;
-  }
-
-  /**
-   * Metric-threshold tier group (population, area, …), single-select, unlike
-   * the include/exclude tristate `buildFilterGroup` builds. A threshold is a
-   * scalar (`filters[metricKey]`), so at most one tier applies; tapping the
-   * active tier clears it. Same pills, labels, and predicate as findFlag's
-   * "Make a puzzle" chooser (via the shared `buildMetricTierItems` + `pillLabel`),
-   * rendered in flagsdata's own filter-group chrome, the established
-   * shared-token / per-page-chrome split. Built after data loads (tiers count
-   * against the loaded set, and the predicate reads the field `attach<Metric>s`
-   * denormalizes on). Reuses findFlag's `sections.<metricKey>` label key, same
-   * cross-reference the Colors group already makes to `findFlag.noOtherColors`.
-   * @param {'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal'} metricKey
-   * @param {string} fallbackLabel
-   * @param {Country[]} countries
-   */
-  function buildMetricGroup(metricKey, fallbackLabel, countries) {
-    const wrap = document.createElement('div');
-    wrap.className = 'filter-group';
-    const labelEl = document.createElement('span');
-    labelEl.className = 'filter-label';
-    const sectionKey = `findFlag.sections.${metricKey}`;
-    labelEl.setAttribute('data-i18n', sectionKey);
-    labelEl.textContent = t(sectionKey, fallbackLabel);
-    wrap.appendChild(labelEl);
-    for (const it of buildMetricTierItems(metricKey, countries)) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'pill';
-      btn.dataset.group = metricKey;
-      btn.dataset.value = it.value;
-      btn.textContent = pillLabel(metricKey, it.value, 'include', t);
-      const cur = filters[metricKey];
-      if (cur !== null && cur.op === it.op && cur.n === it.n) btn.classList.add('active');
-      btn.addEventListener('click', () => {
-        const active = filters[metricKey];
-        const isActive = active !== null && active.op === it.op && active.n === it.n;
-        filters[metricKey] = isActive ? null : { op: it.op, n: it.n };
-        // Repaint the group's pressed state from the single source: single-
-        // select, so only the clicked tier can end up active.
-        for (const p of wrap.querySelectorAll('.pill')) p.classList.remove('active');
-        if (!isActive) btn.classList.add('active');
-        applyFilter();
-      });
-      wrap.appendChild(btn);
-    }
+    for (const value of values) wrap.appendChild(makeFilterPill(group, value));
     return wrap;
   }
 
@@ -940,20 +922,26 @@ export function bootFlagsData() {
   searchWrap.className = 'name-search-wrap';
   searchWrap.appendChild(searchInput);
 
-  // Active-filters summary row (replaces the old single "Filters ▾" toggle,
-  // which showed only a count when closed). The row leads with the always-
-  // visible name search, then lists each active filter as a removable chip,
-  // then an "Add filter" button that reveals the full pill groups. Search
-  // shares this row (rather than sitting on its own line) so "Add filter" sits
-  // right beside the search box. Search stays OUTSIDE the collapsible groups —
-  // it's a different mental model ("take me to the thing I know") and must stay
-  // reachable when the groups are folded. The groups are the same collapsible
-  // #filter-groups block (is-open); only the trigger changed. Groups start
-  // collapsed on every viewport: the chip summary is the resting state, you
-  // expand to add.
+  // The bar is fixed rows that never restructure (Jan's reviews,
+  // 2026-07-13): the search row (applied-filter chips + Clear beside the
+  // box), the STATUS row (the real first filter group, its label never
+  // changes), and the world-facts row. Expanding only ADDS the remaining
+  // group rows under Status; the toggle keeps its exact spot at the end of
+  // the Status row, so nothing on screen jumps or relabels.
   const chipsWrap = document.createElement('div');
   chipsWrap.id = 'filter-chips';
   chipsWrap.className = 'filter-chips';
+
+  // The Status pills live HERE (this row IS the status group); the
+  // collapsible groupsWrap below holds only the remaining groups.
+  const previewWrap = document.createElement('div');
+  previewWrap.className = 'filter-preview';
+  /** @type {HTMLElement[]} */
+  const previewEls = STATUS_VALUES.map((v) => {
+    const btn = makeFilterPill('status', v);
+    previewWrap.appendChild(btn);
+    return btn;
+  });
 
   const addBtn = document.createElement('button');
   addBtn.type = 'button';
@@ -962,48 +950,77 @@ export function bootFlagsData() {
   addBtn.setAttribute('aria-controls', 'filter-groups');
   filterBar.classList.remove('is-open');
   addBtn.setAttribute('aria-expanded', 'false');
-  // Re-render the button so its label + leading glyph track the open state:
-  // "+ Add filter" when collapsed, "Done" when open. data-i18n on the label
-  // span lets a soft language switch re-translate it in place; the key swaps
-  // with the state, which doesn't change during a switch.
-  function paintAddBtn() {
+  /**
+   * Layout pass for the bar's ONE toggle + the Status row's narrow-screen
+   * fit. The toggle lives permanently at the end of the Status row and
+   * governs the whole bar: collapsed, "+ N more" counts every pill in the
+   * folded groups PLUS every world-facts chip the hub's fit hid; expanded,
+   * "less" folds both back. One switch, one mental model. The fill-to-fit
+   * only matters on narrow screens where even the four status pills + the
+   * toggle can overflow one line.
+   */
+  function refitPreview() {
     const open = filterBar.classList.contains('is-open');
-    const key = open ? 'flagsdata.done' : 'flagsdata.addFilter';
-    const txt = open ? t('flagsdata.done', 'Done') : t('flagsdata.addFilter', 'Add filter');
-    addBtn.innerHTML =
-      `<span class="filter-add-plus" aria-hidden="true">${open ? '' : '+'}</span>` +
-      `<span data-i18n="${key}">${txt}</span>`;
+    // The world-facts row hides entirely while collapsed (CSS on .mhub), so
+    // the honest count is every folded group pill plus every metric chip.
+    const folded = groupsWrap.querySelectorAll('.pill[data-group][data-value]').length
+      + METRIC_FILES.length;
+    addBtn.textContent = open
+      ? t('metricHub.less', 'less')
+      : `+ ${folded} ${t('metricHub.more', 'more')}`;
+    const gap = rowGap(previewRow, 8);
+    fitChipRow({
+      items: previewEls,
+      moreBtn: addBtn,
+      avail: (/** @type {any} */ (previewRow).clientWidth || 0)
+        - previewLabel.getBoundingClientRect().width - gap,
+      gap,
+      measure: (el) => el.getBoundingClientRect().width,
+      alwaysMore: true,
+    });
   }
   addBtn.addEventListener('click', () => {
     const open = filterBar.classList.toggle('is-open');
     addBtn.setAttribute('aria-expanded', String(open));
-    paintAddBtn();
+    // Filters and world facts expand and collapse as one section.
+    hub.setExpanded(open);
+    refitPreview();
   });
-  paintAddBtn();
+  let previewRaf = 0;
+  window.addEventListener('resize', () => {
+    cancelAnimationFrame(previewRaf);
+    previewRaf = requestAnimationFrame(refitPreview);
+  });
 
-  // Search, then chips, then "Add filter"; the wrapper claims the rest of the
-  // row so the Clear button (appended below) sits opposite via space-between.
-  const filterSummary = document.createElement('div');
-  filterSummary.className = 'filter-summary';
-  filterSummary.append(searchWrap, chipsWrap, addBtn);
+  // Row 1: search and the applied-filter chips (each removable via its x;
+  // there is no global Clear button).
+  const searchRow = document.createElement('div');
+  searchRow.className = 'filter-search-row';
+  searchRow.append(searchWrap, chipsWrap);
+  filterBar.appendChild(searchRow);
 
-  const toggleRow = document.createElement('div');
-  toggleRow.className = 'filter-toggle-row';
-  toggleRow.appendChild(filterSummary);
-  filterBar.appendChild(toggleRow);
+  // Row 2: the Status row, always visible, label and all: the collapsed bar
+  // simply shows the first filter group, and expanding adds the rest below.
+  const previewLabel = document.createElement('span');
+  previewLabel.className = 'filter-label';
+  previewLabel.setAttribute('data-i18n', 'flagsdata.filterStatus');
+  previewLabel.textContent = t('flagsdata.filterStatus', 'Status');
+  const previewRow = document.createElement('div');
+  previewRow.className = 'filter-preview-row';
+  previewRow.append(previewLabel, previewWrap, addBtn);
+  filterBar.appendChild(previewRow);
 
   const groupsWrap = document.createElement('div');
   groupsWrap.id = 'filter-groups';
   groupsWrap.className = 'filter-groups';
   filterBar.appendChild(groupsWrap);
 
+  // Status is NOT built here: the always-visible row above is the status
+  // group. These are the groups the toggle folds.
   groupsWrap.appendChild(
-    buildFilterGroup('flagsdata.filterStatus', 'Status', 'status', STATUS_VALUES.map((v) => ({ value: v, label: statusLabel(v) }))),
+    buildFilterGroup('flagsdata.filterContinent', 'Continent', 'continent', [...CONTINENTS, 'Other']),
   );
-  groupsWrap.appendChild(
-    buildFilterGroup('flagsdata.filterContinent', 'Continent', 'continent', [...CONTINENTS, 'Other'].map((v) => ({ value: v, label: continentLabel(v) }))),
-  );
-  const colorGroup = buildFilterGroup('flagsdata.filterColors', 'Colors', 'color', ALL_FLAG_COLORS.map((v) => ({ value: v, label: colorLabel(v) })));
+  const colorGroup = buildFilterGroup('flagsdata.filterColors', 'Colors', 'color', [...ALL_FLAG_COLORS]);
   // Append the "no other colours" modifier pill at the end of the Colors
   // row — same placement as findFlag's chooser, same toggle semantics.
   const onlyBtn = document.createElement('button');
@@ -1029,96 +1046,33 @@ export function bootFlagsData() {
   groupsWrap.appendChild(colorGroup);
 
   groupsWrap.appendChild(
-    buildFilterGroup('flagsdata.filterMotifs', 'Motifs', 'motif', ALL_MOTIFS.map((v) => ({ value: v, label: motifLabel(v) }))),
+    buildFilterGroup('flagsdata.filterMotifs', 'Motifs', 'motif', [...ALL_MOTIFS]),
   );
   // Two pills: "horizontal stripes only" + "vertical stripes only". Selects
   // pure-stripe flags (no overlay/charge/canton) — the field is null for
   // anything else, so charged tricolours (Mexico, Spain, Egypt) and
   // non-stripe layouts (Canada, Switzerland, UK) are excluded by design.
   groupsWrap.appendChild(
-    buildFilterGroup('flagsdata.filterStripes', 'Stripes', 'stripesOnly', STRIPES_ORIENTATIONS_FOR_RANDOM.map((v) => ({ value: v, label: stripesOnlyLabel(v) }))),
+    buildFilterGroup('flagsdata.filterStripes', 'Stripes', 'stripesOnly', [...STRIPES_ORIENTATIONS_FOR_RANDOM]),
   );
 
-  const clearBtn = document.createElement('button');
-  clearBtn.type = 'button';
-  clearBtn.id = 'filter-clear';
-  clearBtn.setAttribute('data-i18n', 'flagsdata.clear');
-  clearBtn.textContent = t('flagsdata.clear', 'Clear');
-  clearBtn.hidden = true;
-  clearBtn.addEventListener('click', () => {
-    for (const k of /** @type {Array<'continent' | 'color' | 'motif' | 'status' | 'stripesOnly'>} */ (['continent','color','motif','status','stripesOnly'])) {
-      filters[k].include.clear();
-      filters[k].exclude.clear();
-    }
-    for (const k of METRIC_KEYS) filters[k] = null;
-    colorCountLock.reset();
-    if (onlyColorsBtn) onlyColorsBtn.classList.remove('active');
-    colorCountPicker.reset();
-    for (const el of filterBar.querySelectorAll('.pill.active, .pill.exclude')) {
-      el.classList.remove('active');
-      el.classList.remove('exclude');
-    }
-    searchInput.value = '';
-    nameQuery = '';
-    applyFilter();
-  });
-  // Clear sits on the same row as the toggle (right-aligned), not inside
-  // the collapsible groups. It only renders when at least one filter is
-  // active, so the user can reset without expanding the bar — particularly
-  // useful when filters are collapsed but the count badge says "3".
-  toggleRow.appendChild(clearBtn);
+  // --- World-facts hub (Feature DE, hub form) ----------------------------
+  // One home per metric: the shared icon-chip row + inline panel
+  // (flags/metricHub.js, also mounted by findFlag's chooser). On this page
+  // opening a metric's panel doubles as switching the lens on: the tiles
+  // show "#rank · value" sorted Highest-first, and the panel carries the
+  // sort direction plus the metric's threshold tiers. Metric *lens* logic
+  // still goes through createMetric and never enters the shared per-flag
+  // filter DSL; the tiers write the same `filters[key]` scalar the old
+  // per-metric pill groups did.
 
-  // --- Metric lens control (Feature DE) ---------------------------------
-  // A view lens, not a filter: it lives at the top of the bar, always visible
-  // (never behind the Filters collapse), because it changes how the same set is
-  // presented rather than narrowing it. Defaults to None. Metric logic goes
-  // through createMetric; it never touches the shared per-flag filter DSL.
-  const lensRow = document.createElement('div');
-  lensRow.className = 'lens-row';
-  // Label + metric pills form one group (.lens-main) so the sort control can
-  // sit opposite them via the row's space-between: sort on the right when the
-  // row fits on one line, dropping to its own left-aligned line when it wraps.
-  const lensMain = document.createElement('div');
-  lensMain.className = 'lens-main';
-  lensRow.appendChild(lensMain);
-  const lensLabel = document.createElement('span');
-  lensLabel.className = 'lens-label';
-  lensLabel.setAttribute('data-i18n', 'flagsdata.metric');
-  lensLabel.textContent = t('flagsdata.metric', 'Metric');
-  lensMain.appendChild(lensLabel);
-
-  const lensBtns = document.createElement('div');
-  lensBtns.className = 'lens-btns';
-  lensMain.appendChild(lensBtns);
-
-  /** @type {{ key: string | null, el: HTMLButtonElement }[]} */
-  const lensButtons = [];
-  /** @param {string | null} key @param {string} label */
-  function makeLensBtn(key, label) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    // Reuse the shared `.pill` for size + base look; `.lens-btn` only carries
-    // the single-select pressed state (aria-pressed, not the `.active` class
-    // the multi-select filter pills toggle). Keeps the metric pills the same
-    // size as every other pill on the page.
-    b.className = 'pill lens-btn';
-    b.dataset.metric = key ?? 'none';
-    b.textContent = label;
-    b.setAttribute('aria-pressed', String(lensKey === key));
-    b.addEventListener('click', () => selectMetric(key));
-    lensBtns.appendChild(b);
-    lensButtons.push({ key, el: b });
-  }
-  makeLensBtn(null, t('flagsdata.metricNone', 'None'));
-  for (const m of METRIC_FILES) makeLensBtn(m.key, metricLabel(m.key, m.label));
-
-  // Sort control — only meaningful with a lens on, so hidden until one is picked.
+  // Highest / Lowest lives in the hub panel, so it only exists while a
+  // lens is on. 'default' order never needs a button anymore: no lens =
+  // the countries.json order (English A–Z).
   const lensSortWrap = document.createElement('div');
   lensSortWrap.className = 'lens-sort';
-  lensSortWrap.hidden = true;
-  /** @type {Array<['default' | 'desc' | 'asc', string, string]>} */
+  /** @type {Array<['desc' | 'asc', string, string]>} */
   const SORTS = [
-    ['default', 'flagsdata.sortDefault', 'Default'],
     ['desc', 'flagsdata.sortHighest', 'Highest'],
     ['asc', 'flagsdata.sortLowest', 'Lowest'],
   ];
@@ -1128,35 +1082,61 @@ export function bootFlagsData() {
     b.dataset.sort = val;
     b.setAttribute('data-i18n', key);
     b.textContent = t(key, fb);
-    b.setAttribute('aria-pressed', String(lensSort === val));
+    // Resting state is unpressed; setLens → syncSortPressed paints the real
+    // state the moment a panel opens (desc by default).
+    b.setAttribute('aria-pressed', 'false');
     b.addEventListener('click', () => {
       lensSort = val;
-      syncLensPressed();
+      syncSortPressed();
       renderLens();
     });
     lensSortWrap.appendChild(b);
   }
-  lensRow.appendChild(lensSortWrap);
-  // Sits directly below the search + chips + Add-filter summary row (and above
-  // the collapsible pill groups), so the "look through a metric" control reads
-  // as an always-visible view control, distinct from the pill filters it sits
-  // over.
-  filterBar.insertBefore(lensRow, groupsWrap);
 
-  function syncLensPressed() {
-    for (const { key, el } of lensButtons) el.setAttribute('aria-pressed', String(lensKey === key));
+  const hub = createMetricHub({
+    t,
+    metrics: METRIC_FILES,
+    label: { key: 'metricHub.title', fallback: 'World facts' },
+    // Tiers count against the full loaded set (same as the old filter
+    // groups); empty until countries.json resolves, which only matters if a
+    // panel is opened during the initial load.
+    tierItems: (key) => (state ? buildMetricTierItems(key, state.items) : []),
+    getTier: (key) => /** @type {{op: '>=' | '<=', n: number} | null} */ (filters[key] ?? null),
+    onTierChange: (key, tier) => {
+      /** @type {any} */ (filters)[key] = tier;
+      applyFilter();
+    },
+    // Panel open = lens on. Opening picks Highest first (a metric with
+    // unchanged order shows numbers but no story); closing restores the
+    // resting A–Z wall.
+    onPanelToggle: (key) => setLens(key),
+    panelExtras: () => [lensSortWrap],
+    // No hub-side "+ N more": the bar's single toggle (Status row) expands
+    // and collapses the world facts together with the filter groups.
+    moreButton: false,
+  });
+  // Last row of the bar, AFTER the collapsible pill groups: expanding
+  // "+ N more" must open the groups directly under the teaser row they
+  // continue, never push content between the teasers and their expansion.
+  // The hub stays always visible either way (it changes how the same set is
+  // presented rather than narrowing it).
+  filterBar.appendChild(hub.el);
+  // Hub exists now: run the first toggle paint + narrow-screen fit (it
+  // reads the hub's hidden-chip count for the honest "+ N more").
+  refitPreview();
+
+  function syncSortPressed() {
     for (const b of lensSortWrap.querySelectorAll('button')) {
       b.setAttribute('aria-pressed', String(b.getAttribute('data-sort') === lensSort));
     }
   }
 
   /** @param {string | null} key */
-  function selectMetric(key) {
+  function setLens(key) {
     lensKey = key;
-    lensSort = 'default';
+    lensSort = key ? 'desc' : 'default';
     lensMetric = key && state && metricsData[key] ? createMetric(metricsData[key], state.items) : null;
-    lensSortWrap.hidden = !key;
-    syncLensPressed();
+    syncSortPressed();
     renderLens();
   }
 
@@ -1185,18 +1165,13 @@ export function bootFlagsData() {
       metricsReady.then(() => {
         // Denormalize each metric onto the countries so the tier filter's
         // predicate (`c.<metric> op n`, via matchesFilters) resolves. The lens
-        // reads the values map directly, but the filter reads the field. Both
-        // the attach and the filter-group build loop `METRIC_FILES` (whose
-        // `label` is the English fallback), so a new metric needs no edit here;
-        // each group's tiers count against the loaded, attached set.
+        // reads the values map directly, but the filter reads the field. The
+        // hub's tier panels count against this loaded, attached set (its
+        // `tierItems` closure re-runs on every panel open), so a new metric
+        // needs no edit here.
         attachMetrics(all, Object.fromEntries(
           METRIC_FILES.map((m) => [m.key, metricsData[m.key] ? metricsData[m.key].values : null]),
         ));
-        for (const m of METRIC_FILES) {
-          if (metricsData[m.key]) {
-            groupsWrap.appendChild(buildMetricGroup(/** @type {any} */ (m.key), m.label, all));
-          }
-        }
         if (lensKey && metricsData[lensKey]) lensMetric = createMetric(metricsData[lensKey], all);
         renderLens();
         applyFilter();
@@ -1242,23 +1217,19 @@ export function bootFlagsData() {
       filterBar.querySelectorAll('.pill[data-group][data-value]')
     );
     for (const btn of pills) {
-      const group = btn.dataset.group;
+      const group = /** @type {PillGroup} */ (btn.dataset.group);
       const value = btn.dataset.value ?? '';
-      if (group === 'status') btn.textContent = statusLabel(value);
-      else if (group === 'continent') btn.textContent = continentLabel(value);
-      else if (group === 'color') paintColorPill(btn, value, colorLabel(value));
-      else if (group === 'motif') btn.textContent = motifLabel(value);
-      else if (group === 'stripesOnly') btn.textContent = stripesOnlyLabel(value);
-      else if (group && METRIC_KEYS.includes(group)) btn.textContent = pillLabel(/** @type {any} */ (group), value, 'include', t);
+      if (group === 'color') paintColorPill(btn, value, pillText(group, value));
+      else btn.textContent = pillText(group, value);
     }
-    // Chips carry localized labels too — rebuild them in the new language.
+    // Chips carry localized labels: rebuild them, then re-run the Status
+    // row fit (translated labels change widths; the toggle text re-composes,
+    // it can't ride data-i18n).
     renderChips();
-    // Lens metric buttons carry dynamic labels (not a fixed data-i18n key), so
-    // re-translate them here; renderLens refreshes the "no data" overlay text.
-    for (const { key, el } of lensButtons) {
-      const file = key ? METRIC_FILES.find((m) => m.key === key) : null;
-      el.textContent = key ? metricLabel(key, file ? file.label : key) : t('flagsdata.metricNone', 'None');
-    }
+    refitPreview();
+    // The hub owns every metric label (chips, panel lead, tier pills);
+    // renderLens refreshes the "no data" overlay text.
+    hub.refreshI18n();
     renderLens();
   });
 }

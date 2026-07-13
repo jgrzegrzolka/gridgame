@@ -1,0 +1,116 @@
+/* Metric hub: the shared "world facts" control (flags/metricHub.js), mounted
+ * by the flagsdata filter bar and the findFlag chooser. One stylesheet so the
+ * two pages can't drift (CLAUDE.md: same mechanism = same code).
+ *
+ * `--mc` is the per-metric hue set inline by the component from
+ * flags/metricVisuals.js, the documented palette exception (see the note
+ * there). Everything else uses the shared palette variables. */
+
+.mhub {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-basis: 100%;
+}
+/* The hub's own display rules (inline-flex chips, flex panel) would beat the
+ * UA's `[hidden] { display: none }`, silently un-hiding the overflow chips.
+ * Re-assert hidden inside the hub. */
+.mhub [hidden] {
+  display: none;
+}
+.mhub-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+/* Optional row label ("World facts"), same micro-label idiom as
+ * .filter-label / the chooser section headings. */
+.mhub-label {
+  font-size: 12px;
+  color: var(--muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 4px;
+}
+/* Icon chip: builds on the shared .pill, adds the icon slot and a quiet
+ * resting state (muted text) so the hue pop is reserved for "on". */
+.mhub-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px 5px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted-color);
+}
+.mhub-ic {
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+  color: inherit;
+}
+.mhub-ic svg {
+  width: 15px;
+  height: 15px;
+}
+.mhub-chip.on {
+  border-color: var(--mc);
+  color: var(--mc);
+  background: var(--surface-hover-color);
+}
+.mhub-chip:focus-visible {
+  outline: 2px solid var(--secondary-color);
+  outline-offset: 2px;
+}
+/* "+ N more": dashed like the other meta-pills (.pill-modifier idiom). */
+.mhub-more {
+  border-style: dashed;
+  color: var(--muted-color);
+  font-size: 12.5px;
+  padding: 5px 11px;
+}
+
+/* The open metric's panel: an elevated strip under the chip row, edged with
+ * the metric's hue so panel and chip read as one unit. */
+.mhub-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 9px 12px;
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  border-left: 3px solid var(--mc, var(--secondary-color));
+  border-radius: 8px;
+}
+.mhub-panel-lead {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mc, var(--primary-color));
+  margin-right: 2px;
+  white-space: nowrap;
+}
+.mhub-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.mhub-tiers .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+}
+.mhub-tiers .pill-count {
+  color: var(--muted-color);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.mhub-tiers .pill.active .pill-count {
+  color: var(--muted-soft-color);
+}
