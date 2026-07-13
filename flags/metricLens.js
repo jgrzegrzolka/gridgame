@@ -16,7 +16,12 @@
 /**
  * Format a metric value for the compact tile overlay.
  *   'compact'  → 27.81T / 1.44B / 336.8M / 552.7K / 800
- *   'decimal1' → one decimal place (small per-capita rates)
+ *   'decimal1' → one decimal place for the readable range (135.1 / 4.5 / 0.1),
+ *                but a genuine zero renders as a bare "0", and a tiny nonzero
+ *                value (below 0.05, which one decimal would flatten to "0.0")
+ *                keeps 2 significant figures instead. That matters for a
+ *                top-heavy rate like sheep-per-capita: Poland's real 0.0074 must
+ *                read as 0.0074, not as an indistinguishable-from-empty "0.0".
  *   'plain'    → exact integer with thousands separators (8,849), for metrics
  *                like elevation where the precise figure IS the point and
  *                compact would collapse 8,849 / 8,611 / 8,586 to "8.6K"
@@ -25,7 +30,13 @@
  * @returns {string}
  */
 export function formatValue(value, format) {
-  if (format === 'decimal1') return value.toFixed(1);
+  if (format === 'decimal1') {
+    if (value === 0) return '0'; // a true zero, not a rounded-down tiny value
+    // Below 0.05, toFixed(1) would print "0.0" and hide a real (if small) value;
+    // show 2 significant figures instead (Number(...) drops any trailing zeros).
+    if (Math.abs(value) < 0.05) return Number(value.toPrecision(2)).toString();
+    return value.toFixed(1);
+  }
   // Deterministic thousands grouping (no locale dependence across Node/browser).
   if (format === 'plain') {
     return Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
