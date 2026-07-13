@@ -125,3 +125,8 @@ test('auditFilter returns [] for an unparseable filter', () => {
   const v = auditFilter('!!!not-a-filter', FIXTURES);
   assert.deepEqual(v, []);
 });
+
+test('auditFilter returns [] for a missing filter (manual / filter-less superlative entries)', () => {
+  assert.deepEqual(auditFilter(undefined, FIXTURES), []);
+  assert.deepEqual(auditFilter('', FIXTURES), []);
+});
