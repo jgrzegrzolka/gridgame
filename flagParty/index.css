@@ -327,6 +327,7 @@
   background: var(--surface-color);
   cursor: pointer;
   font: inherit;
+  transition: box-shadow 100ms;
 }
 button.opt { -webkit-appearance: none; appearance: none; }
 /* Question phase: your locked-in tap gets the pink ring + surface tint. */
@@ -339,12 +340,11 @@ button.opt { -webkit-appearance: none; appearance: none; }
 .opt.dim { opacity: 0.42; }
 /* Hover affordance is for the question phase only — reveal tiles are <div>s, so
    scoping to button.opt keeps the cursor (parked on the tile you just tapped)
-   from repainting the correct tile's green border pink. The flag cue is a pink
-   ring on the <img> itself so it hugs the flag with no white padding gap; the
-   map round keeps the tile-edge border because a silhouette floats on
-   transparent ground and a rectangle hugging its box would just frame empty air. */
-button.opt:not(.dim):not([disabled]):hover .flag { box-shadow: 0 0 0 2px var(--secondary-color); }
-button.opt:not(.dim):not([disabled]):has(.contour):hover { border-color: var(--secondary-color); }
+   from repainting the correct tile. The cue is a soft lift on the whole tile:
+   it reads "tappable" without borrowing the pink that `.opt.sel` / `.opt.wrong`
+   use for a locked-in or wrong pick (the old pink ring looked like an error
+   cue). Matches flagQuiz's `.flag-choice` hover (same mechanism = same code). */
+button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15); }
 
 .flag {
   display: block;
