@@ -624,7 +624,8 @@
       "superlativeBorders": "Borders",
       "superlativeOliveOil": "Olive oil",
       "superlativeHoney": "Honey",
-      "superlativeCorruption": "Corruption"
+      "superlativeCorruption": "Corruption",
+      "superlativeTemperature": "Temperature"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",

@@ -27,6 +27,7 @@ import borders from '../flags/metrics/borders.json' with { type: 'json' };
 import oliveOil from '../flags/metrics/oliveOil.json' with { type: 'json' };
 import honey from '../flags/metrics/honey.json' with { type: 'json' };
 import corruption from '../flags/metrics/corruption.json' with { type: 'json' };
+import temperature from '../flags/metrics/temperature.json' with { type: 'json' };
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { TicTacToeServer } from './ticTacToeServer.js';
 
@@ -65,10 +66,12 @@ attachMetrics(countries, {
   borders: borders.values,
   oliveOil: oliveOil.values,
   honey: honey.values,
-  // corruption is a lens-only metric (no attacher yet), so attachMetrics ignores
-  // this value; the line keeps the static-import guard satisfied for when a TTT
-  // axis lands. See the metrics.test.js "static-import site" guard.
+  // corruption + temperature are lens-only metrics (no attacher yet), so
+  // attachMetrics ignores these values; the lines keep the static-import guard
+  // satisfied for when a TTT axis lands. See the metrics.test.js
+  // "static-import site" guard.
   corruption: corruption.values,
+  temperature: temperature.values,
 });
 
 export default class GameServer extends TicTacToeServer {
