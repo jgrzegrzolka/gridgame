@@ -26,6 +26,16 @@ html.is-wide {
 html.is-wide body {
   max-width: none;
 }
+/* The map's corner resize handle only works in full-width mode, so only show
+ * it there. In the centred 756px column the map already fills its width, and a
+ * wider drag would be clipped by the body (overflow-x: clip) — the handle
+ * itself, pinned to the section's right edge, would be clipped off with it.
+ * Full-width mode spans the viewport, so the centred map grows symmetrically to
+ * the window edges exactly like the quiz map. Narrow column: no handle;
+ * fullscreen still covers "see it bigger". */
+html:not(.is-wide) #flag-map-section .map-resize-handle {
+  display: none;
+}
 /* Hide the "Full width" burger toggle on viewports at or below the 756px
  * content cap. There the body already fills the screen and --chrome-x-offset
  * already clamps to 0, so flipping the switch changes nothing — a dead

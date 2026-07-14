@@ -317,6 +317,11 @@ export function bootFlagsData() {
   function applyWidePreference(wide) {
     setFlagsdataWide(localStorage, wide);
     document.documentElement.classList.toggle('is-wide', wide);
+    // A map resized (session-only inline width) while full-width would keep
+    // that width when the centred column returns, where the body clips it to a
+    // centred slice. Drop it so the map falls back to filling whichever layout
+    // is now active; the handle is hidden in the column anyway.
+    if (flagMapEl) flagMapEl.style.width = '';
   }
 
   // World contour map below the grid — every country matching the active
@@ -441,9 +446,12 @@ export function bootFlagsData() {
       container: flagMapEl,
       url: '../flagQuiz/worldMap.svg',
       fullscreenLabel: t('menu.fullscreen', 'Toggle fullscreen'),
-      // The map here always fills the content column (see index.css) — no
-      // corner resize handle; fullscreen covers the "see it bigger" case.
-      resizable: false,
+      // Resizable via the bottom-right corner handle, but index.css only
+      // reveals the handle in full-width mode. In the centred 756px column the
+      // map already fills its width and a wider drag would just be clipped by
+      // the body (overflow-x: clip); full-width mode spans the viewport, so the
+      // centred map can grow to the window edges exactly like the quiz map.
+      resizable: true,
       // Microstate rings here are non-interactive markers (clicks resolve on
       // the island itself), so size each to its own island rather than a flat
       // locator radius — the full-size rings dwarf tiny territories like

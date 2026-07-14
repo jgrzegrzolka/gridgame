@@ -44,7 +44,8 @@
   /* Anchor for the absolutely-positioned `.map-fullscreen-btn` below. */
   position: relative;
   /* Desktop-only resize via the bottom-right `.map-resize-handle` (flagQuiz
-   * only; flagsdata pins the map to its column and opts out). The map opens at
+   * always; flagsdata only in its full-width mode, where the body spans the
+   * viewport too — index.css hides the handle in the centred column). The map opens at
    * its ~480px default; the corner handle drags the width either way — smaller,
    * or out to the full window width — and the SVG (width:100%, height:auto)
    * scales with it so the map keeps its shape. Resizing is session-only

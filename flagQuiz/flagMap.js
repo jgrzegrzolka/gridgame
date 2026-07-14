@@ -784,8 +784,10 @@ function makeMapResizable(container, _svg) {
   // The map grows out to the window width — it's centred on the viewport in CSS,
   // so past its panel it spills symmetrically into the page's side margins.
   // `clientWidth` excludes the scrollbar, so full width never forces a
-  // horizontal scrollbar. (Only flagQuiz mounts the map resizable, and its body
-  // is full-width; flagsdata pins the map to its column and opts out.)
+  // horizontal scrollbar. (flagQuiz's body is full-width; flagsdata mounts
+  // resizable too, but its index.css reveals the handle only in full-width
+  // mode, where the body likewise spans the viewport so the window is the
+  // right ceiling.)
   const maxWidth = () => {
     const el = doc && doc.documentElement;
     return (el && el.clientWidth) || (globalThis.innerWidth || 0);
