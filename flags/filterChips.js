@@ -50,8 +50,8 @@ const FLAG_DESIGN_PILL_GROUPS = new Set(['motif', 'stripesOnly']);
  *   - pill chip: the bare include noun ("red", "cross", "Africa"). Exclusion is
  *     carried by the strike-through styling, not a "not " prefix, so the entry
  *     reads the same whether the value is included or excluded.
- *   - colorCount scalar: "Colors = 3" (reusing the group label sidesteps plural
- *     grammar).
+ *   - colorCount scalar: the same phrasing TTT uses ("only 3 colours" /
+ *     "tylko 3 kolory"), via pillLabel's filter.onlyN/atLeastN/atMostN keys.
  *   - metric scalar: "<short name><metricSep><threshold>" so a unit-only tier
  *     ("over 100K tonnes") always names its fact. `metricSep` is " · " for the
  *     boxed flagsdata chip and a plain " " for the unboxed inline header (see
@@ -67,8 +67,13 @@ export function chipLabelText(ref, filters, t, metricSep = ' · ') {
   if (ref.kind === 'pill') return pillLabel(ref.group, ref.value, 'include', t);
   if (ref.group === 'colorCount') {
     const c = filters.colorCount;
-    const sym = c && c.op === '>=' ? '≥' : c && c.op === '<=' ? '≤' : '=';
-    return `${t('flagsdata.filterColors', 'Colors')} ${sym} ${c ? c.n : ''}`;
+    if (!c) return '';
+    // Route through pillLabel so this reads exactly like the TTT category label
+    // ("only 2 colours" / "tylko 2 kolory") — same filter.onlyN/atLeastN/atMostN
+    // i18n keys, which already carry the per-N plural grammar. Don't reinvent a
+    // "Colors = N" form here; it drifts from TTT and reads worse.
+    const value = c.op === '=' ? String(c.n) : `${c.op}${c.n}`;
+    return pillLabel('colorCount', value, 'include', t);
   }
   const cons = /** @type {{ op: string, n: number } | null} */ (/** @type {any} */ (filters)[ref.group]);
   if (!cons) return '';
