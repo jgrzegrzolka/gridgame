@@ -67,7 +67,7 @@ test('chipLabelText: metric scalar leads with the short name so the fact is neve
   const f = emptyFilters();
   f.coffee = { op: '>=', n: 10000 };
   const label = chipLabelText({ kind: 'scalar', group: 'coffee' }, f, t);
-  assert.match(label, /^Coffee · /); // default separator (boxed flagsdata chip)
+  assert.match(label, /^Coffee production · /); // default separator (boxed flagsdata chip)
   assert.match(label, /over .*tonnes/);
 });
 
@@ -76,7 +76,7 @@ test('chipLabelText: metric separator is configurable (inline header drops the m
   f.coffee = { op: '>=', n: 10000 };
   const inline = chipLabelText({ kind: 'scalar', group: 'coffee' }, f, t, ' ');
   assert.doesNotMatch(inline, /·/); // no middot to blur into the criteria separator
-  assert.match(inline, /^Coffee over .*tonnes/);
+  assert.match(inline, /^Coffee production over .*tonnes/);
 });
 
 // ---- buildFilterChip (DOM) ----
@@ -165,7 +165,7 @@ test('renderCriteriaInline: each token gets exactly the right leading mark', () 
   assert.ok(kids(coffee).includes('crit-ic'));
   // Metric label uses the space separator, not the middot.
   const coffeeLabel = coffee.children.find((/** @type {any} */ k) => k.className === 'crit-label');
-  assert.match(coffeeLabel.textContent, /^Coffee over /);
+  assert.match(coffeeLabel.textContent, /^Coffee production over /);
 });
 
 test('renderCriteriaInline: empty filter yields nothing', () => {

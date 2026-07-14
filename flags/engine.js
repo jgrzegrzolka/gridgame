@@ -1492,7 +1492,7 @@ export function cattlePerCapita(op, n, opts = {}) {
  * number: a place WHO does not measure has none and never matches). `exclusiveGroup:
  * 'beerPerCapita'`. The break list is `>=`-only (see BEER_PER_CAPITA_BREAKS_FOR_RANDOM),
  * but the `<=` branch is kept for symmetry so a `beerPerCapita:<=N` id would still
- * rehydrate. The label bakes a plain integer (`over 50 litres of beer per person`).
+ * rehydrate. The label bakes a plain integer (`over 50 litres per capita`).
  *
  * @param {'>=' | '<='} op
  * @param {number} n
@@ -1501,7 +1501,7 @@ export function cattlePerCapita(op, n, opts = {}) {
  */
 export function beerPerCapita(op, n, opts = {}) {
   const label =
-    op === '>=' ? `over ${n} litres of beer per person` : `under ${n} litres of beer per person`;
+    op === '>=' ? `over ${n} litres per capita` : `under ${n} litres per capita`;
   /** @type {(c: Country) => boolean} */
   const predicate =
     op === '>='
@@ -1534,7 +1534,7 @@ export function beerPerCapita(op, n, opts = {}) {
  */
 export function alcoholPerCapita(op, n, opts = {}) {
   const label =
-    op === '>=' ? `over ${n} litres of alcohol per person` : `under ${n} litres of alcohol per person`;
+    op === '>=' ? `over ${n} litres per capita` : `under ${n} litres per capita`;
   /** @type {(c: Country) => boolean} */
   const predicate =
     op === '>='
@@ -1565,7 +1565,7 @@ export function alcoholPerCapita(op, n, opts = {}) {
  */
 export function meatPerCapita(op, n, opts = {}) {
   const label =
-    op === '>=' ? `over ${n} kg of meat per person` : `under ${n} kg of meat per person`;
+    op === '>=' ? `over ${n} kg per capita` : `under ${n} kg per capita`;
   /** @type {(c: Country) => boolean} */
   const predicate =
     op === '>='
@@ -1990,8 +1990,8 @@ export const THRESHOLD_METRICS = {
     family: 'beerPerCapita',
     has: (c) => typeof c.beerPerCapita === 'number',
     labelFor: (op, n, translate) => {
-      if (op === '>=') return translate(`beerPerCapita.atLeast.${n}`, `over ${n} litres of beer per person`);
-      return translate(`beerPerCapita.atMost.${n}`, `under ${n} litres of beer per person`);
+      if (op === '>=') return translate(`beerPerCapita.atLeast.${n}`, `over ${n} litres per capita`);
+      return translate(`beerPerCapita.atMost.${n}`, `under ${n} litres per capita`);
     },
   },
   tea: {
@@ -2044,8 +2044,8 @@ export const THRESHOLD_METRICS = {
     family: 'alcoholPerCapita',
     has: (c) => typeof c.alcoholPerCapita === 'number',
     labelFor: (op, n, translate) => {
-      if (op === '>=') return translate(`alcoholPerCapita.atLeast.${n}`, `over ${n} litres of alcohol per person`);
-      return translate(`alcoholPerCapita.atMost.${n}`, `under ${n} litres of alcohol per person`);
+      if (op === '>=') return translate(`alcoholPerCapita.atLeast.${n}`, `over ${n} litres per capita`);
+      return translate(`alcoholPerCapita.atMost.${n}`, `under ${n} litres per capita`);
     },
   },
   meatPerCapita: {
@@ -2056,8 +2056,8 @@ export const THRESHOLD_METRICS = {
     family: 'meatPerCapita',
     has: (c) => typeof c.meatPerCapita === 'number',
     labelFor: (op, n, translate) => {
-      if (op === '>=') return translate(`meatPerCapita.atLeast.${n}`, `over ${n} kg of meat per person`);
-      return translate(`meatPerCapita.atMost.${n}`, `under ${n} kg of meat per person`);
+      if (op === '>=') return translate(`meatPerCapita.atLeast.${n}`, `over ${n} kg per capita`);
+      return translate(`meatPerCapita.atMost.${n}`, `under ${n} kg per capita`);
     },
   },
   borders: {
