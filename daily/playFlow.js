@@ -29,7 +29,7 @@
 
 import { suggest, exactSingleMatch } from '../flags/engine.js';
 import { findPool, classifyGuess } from '../flags/findFlag.js';
-import { renderCriteriaInline, renderMetricLeadInline } from '../flags/filterChips.js';
+import { renderCriteriaInline, renderMetricLeadInline, renderFlagLeadInline } from '../flags/filterChips.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { resolveNote } from '../flags/daily.js';
 import { formatPopulationShort } from '../flags/populationRank.js';
@@ -183,39 +183,40 @@ export function setCriteriaFilter(filter) {
 }
 
 /**
- * The active superlative's ranking metric key, when it is one — so the criteria
- * strip can lead its hand-written title with the metric's icon (population,
- * area, …). `null` for filter + manual puzzles. Set alongside `criteriaFilter`
- * on every path that sets it (startGame for live play, `daily/page.js` on
- * revisit), for the same module-scope reason.
+ * The active puzzle's header lead when there are no filter chips: a superlative's
+ * ranking metric icon (`{ metric }`) or a manual flag-design theme's flag glyph
+ * (`{ flag: true }`). `null` for filter puzzles (chips) and plain-title manuals.
+ * Set alongside `criteriaFilter` on every path that sets it (startGame for live
+ * play, `daily/page.js` on revisit), for the same module-scope reason.
  *
- * @type {string | null}
+ * @type {{ metric?: string, flag?: boolean } | null}
  */
-let criteriaMetric = null;
+let criteriaLead = null;
 
 /**
- * Install (or clear) the active puzzle's ranking metric. Called by `startGame`
- * and by `daily/page.js` on revisit, mirroring `setCriteriaFilter`.
+ * Install (or clear) the active puzzle's header lead. Called by `startGame` and
+ * by `daily/page.js` on revisit, mirroring `setCriteriaFilter`.
  *
- * @param {string | null | undefined} metric
+ * @param {{ metric?: string, flag?: boolean } | null | undefined} lead
  */
-export function setCriteriaMetric(metric) {
-  criteriaMetric = metric ?? null;
+export function setCriteriaLead(lead) {
+  criteriaLead = lead ?? null;
 }
 
 /**
- * Paint the criteria strip. Three cases, in priority order: a filter-kind (or
- * manual-with-`criteria`) puzzle renders the icon chips; a superlative leads
- * its title with the ranking metric's icon; everything else is the plain
- * hand-written `label`. One place so the finish, revisit, and langchange paints
- * stay identical.
+ * Paint the criteria strip, in priority order: a filter-kind (or manual-with-
+ * `criteria`) puzzle renders the icon chips; a superlative leads its title with
+ * the ranking metric's icon; a flag-design manual leads with the flag glyph;
+ * everything else is the plain hand-written `label`. One place so the finish,
+ * revisit, and langchange paints stay identical.
  *
  * @param {HTMLElement} catEl
  * @param {string} label
  */
 function paintCriteria(catEl, label) {
   if (criteriaFilter) catEl.replaceChildren(renderCriteriaInline(criteriaFilter, t));
-  else if (criteriaMetric) catEl.replaceChildren(renderMetricLeadInline(criteriaMetric, label));
+  else if (criteriaLead?.metric) catEl.replaceChildren(renderMetricLeadInline(criteriaLead.metric, label));
+  else if (criteriaLead?.flag) catEl.replaceChildren(renderFlagLeadInline(label));
   else catEl.textContent = label;
 }
 
@@ -526,12 +527,12 @@ export function startGame(n, category, targets, all, opts = {}) {
   const foundEl = /** @type {HTMLElement} */ (document.getElementById('find-found'));
   const giveUpEl = /** @type {HTMLElement} */ (document.getElementById('give-up'));
 
-  // Filter-kind puzzles render their criteria as chips; a superlative leads its
-  // title with the metric icon; manual keeps its plain title. Set here so the
-  // live-play + langchange paths (all routed through startGame) are covered;
-  // revisit sets both in page.js.
+  // Filter-kind puzzles render their criteria as chips; a superlative / flag-
+  // design manual leads its title with an icon; a plain manual keeps its title.
+  // Set here so the live-play + langchange paths (all routed through startGame)
+  // are covered; revisit sets both in page.js.
   setCriteriaFilter(category.filter);
-  setCriteriaMetric(category.metric);
+  setCriteriaLead(category.lead);
   paintCriteria(catEl, category.label);
   updateCount();
 
