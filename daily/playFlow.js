@@ -29,6 +29,7 @@
 
 import { suggest, exactSingleMatch } from '../flags/engine.js';
 import { findPool, classifyGuess } from '../flags/findFlag.js';
+import { renderCriteriaInline } from '../flags/filterChips.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { resolveNote } from '../flags/daily.js';
 import { formatPopulationShort } from '../flags/populationRank.js';
@@ -154,6 +155,44 @@ let tileMeta = null;
  */
 export function setTileMeta(meta) {
   tileMeta = meta ?? null;
+}
+
+/**
+ * The active puzzle's source `Filters`, when it's a filter-kind puzzle — so the
+ * criteria strip (`#find-cat`) renders as chips (metric name + icon, colour
+ * swatch, exclude strike) instead of a plain dot-joined string. `null` for
+ * superlative + manual puzzles, which carry a hand-written title and fall back
+ * to plain text. Module-scope for the same reason as `zoomNotes` / `tileMeta`:
+ * `renderResult` is module-level and reached from three paths (finish, revisit,
+ * langchange) that don't all have the category in hand. `startGame` sets it for
+ * the live-play + refresh paths; `daily/page.js` sets it on the revisit path
+ * (where `startGame` never runs).
+ *
+ * @type {import('../flags/flagsFilter.js').Filters | null}
+ */
+let criteriaFilter = null;
+
+/**
+ * Install (or clear, with a null/undefined filter) the active puzzle's criteria
+ * filter. Called by `startGame` internally and by `daily/page.js` on revisit.
+ *
+ * @param {import('../flags/flagsFilter.js').Filters | null | undefined} filter
+ */
+export function setCriteriaFilter(filter) {
+  criteriaFilter = filter ?? null;
+}
+
+/**
+ * Paint the criteria strip: chips when the active puzzle is filter-kind,
+ * otherwise the plain hand-written `label`. One place so the finish, revisit,
+ * and langchange paints stay identical.
+ *
+ * @param {HTMLElement} catEl
+ * @param {string} label
+ */
+function paintCriteria(catEl, label) {
+  if (criteriaFilter) catEl.replaceChildren(renderCriteriaInline(criteriaFilter, t));
+  else catEl.textContent = label;
 }
 
 /**
@@ -383,7 +422,7 @@ export function renderResult(targets, foundCodes, categoryLabel) {
   // category label + .daily-desc) sits above the result — the player
   // sees what they just solved. Play-only children (input, in-game grid,
   // count, sovereign note, give-up row) hide via the .is-finished class.
-  catEl.textContent = categoryLabel;
+  paintCriteria(catEl, categoryLabel);
   gameEl.hidden = false;
   gameEl.classList.add('is-finished');
   resultEl.hidden = false;
@@ -463,7 +502,11 @@ export function startGame(n, category, targets, all, opts = {}) {
   const foundEl = /** @type {HTMLElement} */ (document.getElementById('find-found'));
   const giveUpEl = /** @type {HTMLElement} */ (document.getElementById('give-up'));
 
-  catEl.textContent = category.label;
+  // Filter-kind puzzles render their criteria as chips; superlative + manual
+  // keep their hand-written title. Set here so the live-play + langchange paths
+  // (all routed through startGame) are covered; revisit sets it in page.js.
+  setCriteriaFilter(category.filter);
+  paintCriteria(catEl, category.label);
   updateCount();
 
   /** @type {Country[]} */
@@ -647,7 +690,10 @@ export function startGame(n, category, targets, all, opts = {}) {
       pool = findPool(all);
       targetCodes.clear();
       for (const c of targets) targetCodes.add(c.code);
-      catEl.textContent = next.label;
+      // criteriaFilter is language-independent (Sets of value strings), so it
+      // survives a soft language switch untouched — only `next.label` (the
+      // plain-text fallback) needs the fresh translation.
+      paintCriteria(catEl, next.label);
       refreshTileNames();
       renderSuggestions();
       if (finished) renderResult(targets, foundCodes, next.label);

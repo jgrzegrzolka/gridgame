@@ -846,6 +846,58 @@ body::after {
   gap: 6px;
 }
 
+/* Applied-filter chip — ONE component, three consumers: flagsdata's filter bar
+ * (interactive, with a removal ×), and the findFlag + daily play-screen criteria
+ * headers (read-only). Built by `flags/filterChips.js`; the metric icon reuses
+ * `.mhub-ic` (flags/metricHub.css). Lives here (not in a feature stylesheet) so
+ * the chip can't drift between "filtering now" and "what you're playing".
+ *
+ * A chip = one applied filter. Mirrors `.pill.active` — primary edge + text over
+ * a faint grey fill, semibold — so an applied filter reads the same whether you
+ * see it as a pill or a chip. */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 3px 6px 3px 10px;
+  border-radius: 999px;
+  background: var(--surface-hover-color);
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+/* Excluded value: same pink strikethrough idiom as `.pill.exclude`, on a
+ * surface fill so it reads as "not this" rather than an applied include. */
+.filter-chip.is-exclude {
+  background: var(--surface-color);
+  color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+.filter-chip.is-exclude .filter-chip-label { text-decoration: line-through; }
+/* Applied metric-tier chip: outlined in the metric's hue (--mc, set inline from
+ * flags/metricVisuals.js, the documented palette exception) with the metric's
+ * icon, mirroring the hub chip it came from. */
+.filter-chip.is-metric {
+  background: var(--surface-color);
+  color: var(--mc);
+  border-color: var(--mc);
+  font-weight: 600;
+}
+.filter-chip-x {
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.75;
+}
+.filter-chip-x:hover { opacity: 1; }
+
 /* Colour-count compound pill — ONE pill rendered in the Colors row of
  * findFlag's chooser and flagsdata's filter bar. Visually `[= 2]` (or
  * `[= —]` when inactive). Each side has a "current" chip plus a tiny

@@ -6,6 +6,12 @@
  * @property {string} id
  * @property {string} label
  * @property {(country: Country) => boolean} predicate
+ * @property {import('./flagsFilter.js').Filters} [filter]
+ *   Present on filter-derived categories (findFlag mixes + daily filter
+ *   puzzles, via `filterToCategory`) — the source `Filters`, so a play-screen
+ *   header can render the criteria as chips instead of the plain `label`.
+ *   Absent on tic-tac-toe / superlative / manual categories, which fall back
+ *   to `label`.
  * @property {string} [exclusiveGroup]
  *   When set, two categories with the same `exclusiveGroup` but different
  *   `id` can never coexist on opposite axes (axesConflict catches it).

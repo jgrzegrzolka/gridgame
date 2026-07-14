@@ -23,6 +23,7 @@ import {
   pickRandomMix,
 } from '../flags/findFlag.js';
 import { emptyFilters, matchesFilters, createColorCountLock } from '../flags/flagsFilter.js';
+import { renderCriteriaInline } from '../flags/filterChips.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
 import { pickCelebration } from '../flags/quiz.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
@@ -676,7 +677,11 @@ export function bootFindFlag() {
     const gameRandomEl = /** @type {HTMLAnchorElement} */ (document.getElementById('game-random'));
     const gameShareEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('game-share'));
 
-    catEl.textContent = category.label;
+    // Render the criteria as an inline enriched title (metric icon + name,
+    // colour swatch, flag glyph on flag-design tokens) rather than a plain
+    // dot-joined string, so a metric tier like "over 10K tonnes" names its fact.
+    // `category.label` stays the aria/share text.
+    catEl.replaceChildren(renderCriteriaInline(filter, t));
     updateCount();
 
     let matches = [];
@@ -899,7 +904,7 @@ export function bootFindFlag() {
         targets = findTargets(all, fresh);
         targetCodes.clear();
         for (const c of targets) targetCodes.add(c.code);
-        catEl.textContent = fresh.label;
+        catEl.replaceChildren(renderCriteriaInline(filter, t));
         refreshTileNames();
         renderSuggestions();
       },

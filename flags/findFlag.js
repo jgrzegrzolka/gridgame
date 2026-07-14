@@ -380,6 +380,9 @@ export function filterToCategory(f, translate) {
     id: `find:${serializeFilter(f)}`,
     label: filterTitle(f, translate),
     predicate: (c) => matchesFilters(c, f),
+    // Carry the source filter so a play header can render it as chips
+    // (flags/filterChips.js). `label` stays the plain-text fallback.
+    filter: f,
   };
 }
 

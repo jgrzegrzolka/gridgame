@@ -1,0 +1,191 @@
+/**
+ * Shared rendering for the "applied filter" criteria, one entry per active
+ * constraint in a `Filters` object. Two consumers, two containers, one shared
+ * label + icon vocabulary:
+ *
+ *   - flagsdata's filter bar (`flagsdata/page.js`) renders BOXED, interactive
+ *     chips with a removal `×` (via `buildFilterChip`).
+ *   - the findFlag + daily play-screen criteria headers render INLINE title
+ *     text, dot-separated, no box (via `renderCriteriaInline`). Metrics carry a
+ *     hue-tinted icon, colours a swatch, flag-design tokens (motif / stripes /
+ *     colour count) a flag glyph, world facts (continent / status) nothing, so
+ *     you can tell "on the flag" from "about the country" at a glance.
+ *
+ * The label text + the icon/swatch identity are the drift-prone parts, so they
+ * live here and nowhere else (CLAUDE.md's "same mechanism = same code"). The
+ * two containers differ on purpose: a box can group "Coffee · over 10K tonnes"
+ * with the middot, but an unboxed inline title can't (the middot would blur into
+ * the criteria separator), so the inline metric label drops it to a space
+ * ("Coffee over 10K tonnes") via the `metricSep` argument.
+ *
+ * Box chip styling lives in `common.css` (`.filter-chip*`); inline styling in
+ * `findFlag/index.css` (`.crit*`, loaded on all three play pages).
+ */
+
+import { activeFilterChips } from './flagsFilter.js';
+import { pillLabel } from './findFlag.js';
+import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from './metricVisuals.js';
+import { makeColorSwatch } from '../common.js';
+
+/** @typedef {import('./flagsFilter.js').Filters} Filters */
+/** @typedef {import('./flagsFilter.js').FilterChip} FilterChip */
+
+/**
+ * Provisional flag glyph marking a flag-design criterion (motif / stripes /
+ * colour count) in the inline header. Line style + currentColor so it tints
+ * with the surrounding text. NOTE: Jan wants a different mark here eventually —
+ * swap this one constant when the replacement lands.
+ */
+const FLAG_GLYPH =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 5h10l-2.2 3.2L16 11H6"/></svg>';
+
+/** Pill groups that describe the flag's visual design and so get the flag glyph
+ * in the inline header. `color` is deliberately excluded — its swatch is a
+ * richer, more specific flag cue than the generic glyph. */
+const FLAG_DESIGN_PILL_GROUPS = new Set(['motif', 'stripesOnly']);
+
+/**
+ * Localized label for one chip descriptor. Pure — no DOM — so it's unit-tested.
+ *
+ *   - pill chip: the bare include noun ("red", "cross", "Africa"). Exclusion is
+ *     carried by the strike-through styling, not a "not " prefix, so the entry
+ *     reads the same whether the value is included or excluded.
+ *   - colorCount scalar: "Colors = 3" (reusing the group label sidesteps plural
+ *     grammar).
+ *   - metric scalar: "<short name><metricSep><threshold>" so a unit-only tier
+ *     ("over 100K tonnes") always names its fact. `metricSep` is " · " for the
+ *     boxed flagsdata chip and a plain " " for the unboxed inline header (see
+ *     the module note).
+ *
+ * @param {FilterChip} ref
+ * @param {Filters} filters
+ * @param {(key: string, fallback: string) => string} t
+ * @param {string} [metricSep]
+ * @returns {string}
+ */
+export function chipLabelText(ref, filters, t, metricSep = ' · ') {
+  if (ref.kind === 'pill') return pillLabel(ref.group, ref.value, 'include', t);
+  if (ref.group === 'colorCount') {
+    const c = filters.colorCount;
+    const sym = c && c.op === '>=' ? '≥' : c && c.op === '<=' ? '≤' : '=';
+    return `${t('flagsdata.filterColors', 'Colors')} ${sym} ${c ? c.n : ''}`;
+  }
+  const cons = /** @type {{ op: string, n: number } | null} */ (/** @type {any} */ (filters)[ref.group]);
+  if (!cons) return '';
+  const short = METRIC_SHORT[ref.group];
+  const tierText = pillLabel(/** @type {any} */ (ref.group), `${cons.op}${cons.n}`, 'include', t);
+  return `${short ? t(short.key, short.fallback) : ref.group}${metricSep}${tierText}`;
+}
+
+/**
+ * Build a BOXED chip element for one active filter: the swatch / metric
+ * icon+hue / exclude-strike treatment. Label text is caller-supplied (default
+ * is `chipLabelText`); pass `onRemove` to get the interactive `×` button
+ * (flagsdata's bar), omit it for a read-only chip.
+ *
+ * @param {FilterChip} ref
+ * @param {string} labelText
+ * @param {{ doc?: Document, onRemove?: (() => void) | null, removeLabel?: string }} [opts]
+ * @returns {HTMLSpanElement}
+ */
+export function buildFilterChip(ref, labelText, opts = {}) {
+  const { doc = document, onRemove = null, removeLabel = 'Remove filter' } = opts;
+  const chip = doc.createElement('span');
+  chip.className = 'filter-chip' + (ref.kind === 'pill' && ref.exclude ? ' is-exclude' : '');
+  if (ref.kind === 'pill' && ref.group === 'color') {
+    chip.appendChild(makeColorSwatch(ref.value, doc));
+  }
+  // A metric chip wears its metric's icon + hue (shared with the hub chips and
+  // Flag Party), so "over 100K tonnes" can never read as the wrong fact.
+  if (ref.kind === 'scalar' && ref.group !== 'colorCount') {
+    chip.classList.add('is-metric');
+    chip.style.setProperty('--mc', METRIC_HUES[ref.group] || 'currentColor');
+    const ic = doc.createElement('span');
+    ic.className = 'mhub-ic';
+    ic.innerHTML = METRIC_ICONS[ref.group] || '';
+    chip.appendChild(ic);
+  }
+  const label = doc.createElement('span');
+  label.className = 'filter-chip-label';
+  label.textContent = labelText;
+  chip.appendChild(label);
+  if (onRemove) {
+    const x = doc.createElement('button');
+    x.type = 'button';
+    x.className = 'filter-chip-x';
+    x.setAttribute('aria-label', removeLabel);
+    x.textContent = '×';
+    x.addEventListener('click', onRemove);
+    chip.appendChild(x);
+  }
+  return chip;
+}
+
+/**
+ * Build one INLINE criterion span: leading mark (swatch / flag glyph / metric
+ * icon) + label. Country facts (continent / status) get no mark; the exclude
+ * strike-through is applied to the whole span.
+ *
+ * @param {FilterChip} ref
+ * @param {Filters} filters
+ * @param {(key: string, fallback: string) => string} t
+ * @param {Document} doc
+ * @returns {HTMLSpanElement}
+ */
+function buildCriterionInline(ref, filters, t, doc) {
+  const crit = doc.createElement('span');
+  crit.className = 'crit' + (ref.kind === 'pill' && ref.exclude ? ' crit-exclude' : '');
+  if (ref.kind === 'pill' && ref.group === 'color') {
+    crit.appendChild(makeColorSwatch(ref.value, doc));
+  } else if (ref.kind === 'pill' && FLAG_DESIGN_PILL_GROUPS.has(ref.group)) {
+    crit.appendChild(flagGlyphEl(doc));
+  } else if (ref.kind === 'scalar' && ref.group === 'colorCount') {
+    crit.appendChild(flagGlyphEl(doc));
+  } else if (ref.kind === 'scalar') {
+    // World-fact metric: the icon carries the hue (words stay in ink so every
+    // metric reads at title size — some hues are too light for text).
+    const ic = doc.createElement('span');
+    ic.className = 'crit-ic';
+    ic.style.color = METRIC_HUES[ref.group] || 'currentColor';
+    ic.innerHTML = METRIC_ICONS[ref.group] || '';
+    crit.appendChild(ic);
+  }
+  const label = doc.createElement('span');
+  label.className = 'crit-label';
+  label.textContent = chipLabelText(ref, filters, t, ' ');
+  crit.appendChild(label);
+  return crit;
+}
+
+/** @param {Document} doc */
+function flagGlyphEl(doc) {
+  const el = doc.createElement('span');
+  el.className = 'crit-flag';
+  el.innerHTML = FLAG_GLYPH;
+  return el;
+}
+
+/**
+ * Render the INLINE criteria header for a `Filters` object — one dot-separated
+ * criterion per active constraint, in `activeFilterChips` order. Used by the
+ * findFlag + daily play-screen headers; the caller drops the returned fragment
+ * into `#find-cat` (replacing the old plain-text title).
+ *
+ * @param {Filters} filters
+ * @param {(key: string, fallback: string) => string} t
+ * @param {Document} [doc]
+ * @returns {DocumentFragment}
+ */
+export function renderCriteriaInline(filters, t, doc = document) {
+  const frag = doc.createDocumentFragment();
+  activeFilterChips(filters).forEach((ref, i) => {
+    if (i > 0) {
+      const sep = doc.createElement('span');
+      sep.className = 'crit-sep';
+      sep.textContent = '·';
+      frag.appendChild(sep);
+    }
+    frag.appendChild(buildCriterionInline(ref, filters, t, doc));
+  });
+  return frag;
+}
