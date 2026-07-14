@@ -279,6 +279,17 @@ test('moreButton:false omits the toggle; setExpanded drives the row externally',
   assert.ok(hub.hiddenChipCount() > 0);
 });
 
+test('expandAll shows every chip with no more button, even on a narrow row', () => {
+  // NARROW would normally collapse the row behind "+ N more"; expandAll pins
+  // it fully open (findFlag's stacked section wraps instead of collapsing).
+  const { hub } = makeHub({ fit: NARROW, expandAll: true });
+  assert.equal(byClass(hub.el, 'mhub-more').length, 0);
+  const chips = byClass(hub.el, 'mhub-chip');
+  assert.equal(chips.length, METRIC_FILES.length);
+  assert.equal(chips.filter((c) => c.hidden).length, 0);
+  assert.equal(hub.hiddenChipCount(), 0);
+});
+
 test('an optional label leads the chip row with a data-i18n hook', () => {
   const { hub } = makeHub({ label: { key: 'metricHub.title', fallback: 'World facts' } });
   const labelEl = byClass(hub.el, 'mhub-label')[0];

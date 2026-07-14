@@ -473,6 +473,11 @@ export function bootFindFlag() {
         t,
         metrics: METRIC_FILES,
         showCounts: true,
+        // Show every World-facts chip (the row wraps), no "+ N more" toggle:
+        // this is a stacked chooser section with room to wrap, and every other
+        // filter section here shows all its options, so a collapse toggle read
+        // out of place. See metricHub.js `expandAll`.
+        expandAll: true,
         tierItems: (key) => buildMetricTierItems(key, all),
         getTier: (key) => /** @type {{ op: '>=' | '<=', n: number } | null} */ (/** @type {any} */ (filter)[key] ?? null),
         onTierChange: (key, tier) => {
