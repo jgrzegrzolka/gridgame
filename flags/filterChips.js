@@ -7,9 +7,10 @@
  *     chips with a removal `×` (via `buildFilterChip`).
  *   - the findFlag + daily play-screen criteria headers render INLINE title
  *     text, dot-separated, no box (via `renderCriteriaInline`). Metrics carry a
- *     hue-tinted icon, colours a swatch, flag-design tokens (motif / stripes /
- *     colour count) a flag glyph, world facts (continent / status) nothing, so
- *     you can tell "on the flag" from "about the country" at a glance.
+ *     hue-tinted icon, colours a swatch, flag-design tokens (charge motifs /
+ *     stripes / colour count) a flag glyph, world facts (continent / status /
+ *     the political eu-member motif) nothing, so you can tell "on the flag"
+ *     from "about the country" at a glance (see `isFlagDesignCriterion`).
  *
  * The label text + the icon/swatch identity are the drift-prone parts, so they
  * live here and nowhere else (CLAUDE.md's "same mechanism = same code"). The
@@ -24,6 +25,7 @@
 
 import { activeFilterChips } from './flagsFilter.js';
 import { pillLabel } from './findFlag.js';
+import { CHARGE_MOTIFS } from './engine.js';
 import { METRIC_HUES, METRIC_SHORT, metricIconSpan } from './metricVisuals.js';
 import { makeColorSwatch } from '../common.js';
 
@@ -39,10 +41,30 @@ import { makeColorSwatch } from '../common.js';
 const FLAG_GLYPH =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 5h10l-2.2 3.2L16 11H6"/></svg>';
 
-/** Pill groups that describe the flag's visual design and so get the flag glyph
- * in the inline header. `color` is deliberately excluded — its swatch is a
- * richer, more specific flag cue than the generic glyph. */
-const FLAG_DESIGN_PILL_GROUPS = new Set(['motif', 'stripesOnly']);
+const CHARGE_MOTIF_SET = new Set(CHARGE_MOTIFS);
+
+/**
+ * Does this criterion describe the flag's visible design (→ gets the flag
+ * glyph), as opposed to a fact about the country (→ no mark)?
+ *
+ *   - stripes-only pills: yes (a layout of the flag itself).
+ *   - motif pills: only the actual charges drawn on the flag. `eu-member` lives
+ *     in the motif group but is a *political* membership tag, not a visual
+ *     element (engine.js `CHARGE_MOTIFS` excludes it for exactly this reason),
+ *     so it reads mark-less like continent / status. `union-jack` IS a charge
+ *     (the flag literally carries it) and keeps the glyph.
+ *   - colour count: yes (a property of the flag's palette).
+ *   - `color` is deliberately NOT here — its swatch is a richer flag cue.
+ *
+ * @param {FilterChip} ref
+ * @returns {boolean}
+ */
+function isFlagDesignCriterion(ref) {
+  if (ref.kind === 'scalar') return ref.group === 'colorCount';
+  if (ref.group === 'stripesOnly') return true;
+  if (ref.group === 'motif') return CHARGE_MOTIF_SET.has(ref.value);
+  return false;
+}
 
 /**
  * Localized label for one chip descriptor. Pure — no DOM — so it's unit-tested.
@@ -139,12 +161,10 @@ function buildCriterionInline(ref, filters, t, doc) {
   crit.className = 'crit' + (ref.kind === 'pill' && ref.exclude ? ' crit-exclude' : '');
   if (ref.kind === 'pill' && ref.group === 'color') {
     crit.appendChild(makeColorSwatch(ref.value, doc));
-  } else if (
-    (ref.kind === 'pill' && FLAG_DESIGN_PILL_GROUPS.has(ref.group)) ||
-    (ref.kind === 'scalar' && ref.group === 'colorCount')
-  ) {
-    // Flag-design criteria (motif / stripes-only pills, colour-count scalar) all
-    // get the flag glyph — they describe what's ON the flag, not the country.
+  } else if (isFlagDesignCriterion(ref)) {
+    // Charge motifs / stripes-only / colour-count describe what's ON the flag,
+    // so they get the flag glyph. eu-member (political, not a charge) falls
+    // through to no mark, reading as a country fact like continent / status.
     crit.appendChild(flagGlyphEl(doc));
   } else if (ref.kind === 'scalar') {
     // World-fact metric: the icon carries the hue (words stay in ink so every
