@@ -142,9 +142,12 @@ function buildCriterionInline(ref, filters, t, doc) {
   crit.className = 'crit' + (ref.kind === 'pill' && ref.exclude ? ' crit-exclude' : '');
   if (ref.kind === 'pill' && ref.group === 'color') {
     crit.appendChild(makeColorSwatch(ref.value, doc));
-  } else if (ref.kind === 'pill' && FLAG_DESIGN_PILL_GROUPS.has(ref.group)) {
-    crit.appendChild(flagGlyphEl(doc));
-  } else if (ref.kind === 'scalar' && ref.group === 'colorCount') {
+  } else if (
+    (ref.kind === 'pill' && FLAG_DESIGN_PILL_GROUPS.has(ref.group)) ||
+    (ref.kind === 'scalar' && ref.group === 'colorCount')
+  ) {
+    // Flag-design criteria (motif / stripes-only pills, colour-count scalar) all
+    // get the flag glyph — they describe what's ON the flag, not the country.
     crit.appendChild(flagGlyphEl(doc));
   } else if (ref.kind === 'scalar') {
     // World-fact metric: the icon carries the hue (words stay in ink so every
