@@ -569,12 +569,12 @@
       "superlativeCoal": "Wydobycie węgla: najwięcej",
       "superlativeSheep": "Owce na osobę: najwięcej",
       "superlativeCattle": "Bydło na osobę: najwięcej",
-      "superlativeBeer": "Piwo na osobę: najwięcej",
+      "superlativeBeer": "Spożycie piwa na osobę: najwięcej",
       "superlativeTea": "Produkcja herbaty: najwięcej",
       "superlativeSugarcane": "Produkcja trzciny cukrowej: najwięcej",
       "superlativeGold": "Produkcja złota: najwięcej",
-      "superlativeAlcohol": "Alkohol na osobę: najwięcej",
-      "superlativeMeat": "Mięso na osobę: najwięcej",
+      "superlativeAlcohol": "Spożycie alkoholu na osobę: najwięcej",
+      "superlativeMeat": "Spożycie mięsa na osobę: najwięcej",
       "superlativeBorders": "Sąsiednie kraje: najwięcej"
     },
     "modeShort": {
@@ -586,25 +586,25 @@
       "superlativeDensity": "Gęstość",
       "superlativeGdp": "PKB",
       "superlativeGdppc": "PKB na mieszkańca",
-      "superlativeCoffee": "Kawa",
-      "superlativeWine": "Wino",
-      "superlativeCocoa": "Kakao",
-      "superlativeBanana": "Banany",
-      "superlativeApple": "Jabłka",
+      "superlativeCoffee": "Produkcja kawy",
+      "superlativeWine": "Produkcja wina",
+      "superlativeCocoa": "Produkcja kakao",
+      "superlativeBanana": "Produkcja bananów",
+      "superlativeApple": "Produkcja jabłek",
       "superlativeElevation": "Wysokość",
       "superlativeCoastline": "Wybrzeże",
       "superlativeForest": "Lasy",
-      "superlativeOil": "Ropa",
-      "superlativeRice": "Ryż",
-      "superlativeCoal": "Węgiel",
+      "superlativeOil": "Produkcja ropy",
+      "superlativeRice": "Produkcja ryżu",
+      "superlativeCoal": "Produkcja węgla",
       "superlativeSheep": "Owce",
       "superlativeCattle": "Bydło",
-      "superlativeBeer": "Piwo",
-      "superlativeTea": "Herbata",
-      "superlativeSugarcane": "Trzcina cukrowa",
-      "superlativeGold": "Złoto",
-      "superlativeAlcohol": "Alkohol",
-      "superlativeMeat": "Mięso",
+      "superlativeBeer": "Spożycie piwa",
+      "superlativeTea": "Produkcja herbaty",
+      "superlativeSugarcane": "Produkcja trzciny cukrowej",
+      "superlativeGold": "Produkcja złota",
+      "superlativeAlcohol": "Spożycie alkoholu",
+      "superlativeMeat": "Spożycie mięsa",
       "superlativeBorders": "Granice"
     },
     "round": "Runda {n} z {total}",
@@ -887,20 +887,20 @@
   },
   "beerPerCapita": {
     "atLeast": {
-      "50": "ponad 50 litrów piwa na osobę",
-      "100": "ponad 100 litrów piwa na osobę"
+      "50": "ponad 50 litrów na osobę",
+      "100": "ponad 100 litrów na osobę"
     }
   },
   "alcoholPerCapita": {
     "atLeast": {
-      "10": "ponad 10 litrów alkoholu na osobę",
-      "12": "ponad 12 litrów alkoholu na osobę"
+      "10": "ponad 10 litrów na osobę",
+      "12": "ponad 12 litrów na osobę"
     }
   },
   "meatPerCapita": {
     "atLeast": {
-      "80": "ponad 80 kg mięsa na osobę",
-      "100": "ponad 100 kg mięsa na osobę"
+      "80": "ponad 80 kg na osobę",
+      "100": "ponad 100 kg na osobę"
     }
   },
   "borders": {

@@ -569,12 +569,12 @@
       "superlativeCoal": "Coal production: most",
       "superlativeSheep": "Sheep per capita: most",
       "superlativeCattle": "Cattle per capita: most",
-      "superlativeBeer": "Beer per capita: most",
+      "superlativeBeer": "Beer consumption per capita: most",
       "superlativeTea": "Tea production: most",
       "superlativeSugarcane": "Sugarcane production: most",
       "superlativeGold": "Gold production: most",
-      "superlativeAlcohol": "Alcohol per capita: most",
-      "superlativeMeat": "Meat per capita: most",
+      "superlativeAlcohol": "Alcohol consumption per capita: most",
+      "superlativeMeat": "Meat consumption per capita: most",
       "superlativeBorders": "Bordering countries: most"
     },
     "modeShort": {
@@ -586,25 +586,25 @@
       "superlativeDensity": "Density",
       "superlativeGdp": "GDP",
       "superlativeGdppc": "GDP per capita",
-      "superlativeCoffee": "Coffee",
-      "superlativeWine": "Wine",
-      "superlativeCocoa": "Cocoa",
-      "superlativeBanana": "Banana",
-      "superlativeApple": "Apple",
+      "superlativeCoffee": "Coffee production",
+      "superlativeWine": "Wine production",
+      "superlativeCocoa": "Cocoa production",
+      "superlativeBanana": "Banana production",
+      "superlativeApple": "Apple production",
       "superlativeElevation": "Elevation",
       "superlativeCoastline": "Coastline",
       "superlativeForest": "Forest",
-      "superlativeOil": "Oil",
-      "superlativeRice": "Rice",
-      "superlativeCoal": "Coal",
+      "superlativeOil": "Oil production",
+      "superlativeRice": "Rice production",
+      "superlativeCoal": "Coal production",
       "superlativeSheep": "Sheep",
       "superlativeCattle": "Cattle",
-      "superlativeBeer": "Beer",
-      "superlativeTea": "Tea",
-      "superlativeSugarcane": "Sugarcane",
-      "superlativeGold": "Gold",
-      "superlativeAlcohol": "Alcohol",
-      "superlativeMeat": "Meat",
+      "superlativeBeer": "Beer consumption",
+      "superlativeTea": "Tea production",
+      "superlativeSugarcane": "Sugarcane production",
+      "superlativeGold": "Gold production",
+      "superlativeAlcohol": "Alcohol consumption",
+      "superlativeMeat": "Meat consumption",
       "superlativeBorders": "Borders"
     },
     "round": "Round {n} of {total}",
@@ -887,20 +887,20 @@
   },
   "beerPerCapita": {
     "atLeast": {
-      "50": "over 50 litres of beer per person",
-      "100": "over 100 litres of beer per person"
+      "50": "over 50 litres per capita",
+      "100": "over 100 litres per capita"
     }
   },
   "alcoholPerCapita": {
     "atLeast": {
-      "10": "over 10 litres of alcohol per person",
-      "12": "over 12 litres of alcohol per person"
+      "10": "over 10 litres per capita",
+      "12": "over 12 litres per capita"
     }
   },
   "meatPerCapita": {
     "atLeast": {
-      "80": "over 80 kg of meat per person",
-      "100": "over 100 kg of meat per person"
+      "80": "over 80 kg per capita",
+      "100": "over 100 kg per capita"
     }
   },
   "borders": {
