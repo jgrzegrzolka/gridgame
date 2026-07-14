@@ -102,6 +102,10 @@ export const METRIC_ICONS = {
   // hanging pans). Reads as justice / clean governance, the domain the CPI
   // measures, distinct from the economic coin/bar and the produce icons.
   corruption: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v15"/><path d="M8.5 20h7"/><path d="M5 7h14"/><path d="M5 7 3 11M5 7l2 4"/><path d="M3 11a2 1.6 0 0 0 4 0"/><path d="M19 7l-2 4M19 7l2 4"/><path d="M17 11a2 1.6 0 0 0 4 0"/></svg>',
+  // Average temperature: a thermometer (a stem with a filled bulb and two tick
+  // marks). Reads as heat / climate, distinct from every economic and produce
+  // icon in the family.
+  temperature: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M10 8h1.6M10 11h1.6"/><circle cx="12" cy="18" r="1.6" fill="currentColor" stroke="none"/></svg>',
 };
 
 /** @type {Record<string, string>} */
@@ -134,6 +138,7 @@ export const METRIC_HUES = {
   oliveOil: '#808000',
   honey: '#e08214',
   corruption: '#4b3f9e',
+  temperature: '#d84315',
 };
 
 /**
@@ -174,6 +179,7 @@ export const METRIC_SHORT = {
   oliveOil: { key: 'party.modeShort.superlativeOliveOil', fallback: 'Olive oil production' },
   honey: { key: 'party.modeShort.superlativeHoney', fallback: 'Honey production' },
   corruption: { key: 'party.modeShort.superlativeCorruption', fallback: 'Corruption' },
+  temperature: { key: 'party.modeShort.superlativeTemperature', fallback: 'Temperature' },
 };
 
 /**

@@ -41,6 +41,7 @@ const ALCOHOL_PC = /** @type {import('./metrics.js').MetricData} */ (load('metri
 const MEAT_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/meatPerCapita.json'));
 const BORDERS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/borders.json'));
 const CORRUPTION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/corruption.json'));
+const TEMPERATURE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/temperature.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -1771,4 +1772,62 @@ test('createMetric over corruption ranks the cleanest top, the most corrupt at t
   const bottom = cpi.bottomN('world', 2).map((r) => r.code).sort();
   assert.deepEqual(bottom, ['so', 'ss']);
   assert.equal(cpi.valueOf('so'), 9);
+});
+
+// ---- real temperature.json schema + the absence:'unknown' contract ----------
+// The first metric whose values can be NEGATIVE (climate normals in Celsius),
+// so the numeric test checks Number.isFinite, not `>= 0`. Country-level
+// climatology covers ~234 places; sub-national parts and a few polar /
+// uninhabited places with no country row are the honest "unknown" gap.
+
+test('temperature is a valid, self-describing metric file with absence:unknown', () => {
+  assert.equal(TEMPERATURE.key, 'temperature');
+  assert.equal(typeof TEMPERATURE.label, 'string');
+  assert.equal(typeof TEMPERATURE.unit, 'string');
+  // Celsius, one decimal (30.4, -3.8).
+  assert.equal(TEMPERATURE.format, 'decimal1');
+  assert.equal(typeof TEMPERATURE.source, 'string');
+  assert.equal(typeof TEMPERATURE.year, 'number');
+  assert.equal(typeof TEMPERATURE.values, 'object');
+  // Absence means "no country-level figure", not 0 (0 C is a real reading).
+  assert.equal(TEMPERATURE.absence, 'unknown');
+});
+
+test('every temperature value is a finite number (negatives allowed)', () => {
+  // Unlike every other metric, a value may be below 0: the cold floor
+  // (Greenland ~-18.7, Svalbard ~-6.8, Russia ~-3.8) is real, not an error.
+  let sawNegative = false;
+  for (const [code, v] of Object.entries(TEMPERATURE.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    if (v < 0) sawNegative = true;
+  }
+  assert.ok(sawNegative, 'expected some sub-zero climate normals');
+});
+
+test('temperature covers only real places, never orgs; the gap is genuine (absence:unknown)', () => {
+  const realCodes = new Set(COUNTRIES.filter((c) => c.category !== 'other').map((c) => c.code));
+  for (const code of Object.keys(TEMPERATURE.values)) {
+    assert.ok(realCodes.has(code), `temperature value for non-real place ${code}`);
+  }
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in TEMPERATURE.values), `org ${c.code} should have no temperature value`);
+    }
+  }
+  // Broad coverage, but deliberately not total.
+  const covered = COUNTRIES.filter((c) => c.category !== 'other' && c.code in TEMPERATURE.values).length;
+  assert.ok(covered >= 220, `expected ~234 covered real places, got ${covered}`);
+  assert.ok(covered < realCodes.size, 'temperature must NOT be dense: some real places are the unknown gap');
+  // A country-level place is present; a sub-national part is the gap.
+  assert.ok('sg' in TEMPERATURE.values, 'Singapore (country) must be covered');
+  assert.ok(!('gb-wls' in TEMPERATURE.values), 'Wales (sub-national) is unknown, must be absent');
+});
+
+test('createMetric over temperature ranks the hottest top and the coldest at the floor', () => {
+  const temp = createMetric(TEMPERATURE, COUNTRIES);
+  // Burkina Faso is the hottest country-level place; Greenland is the coldest.
+  assert.equal(temp.topN('world', 1)[0].code, 'bf');
+  assert.ok(/** @type {number} */ (temp.valueOf('bf')) > 30);
+  assert.equal(temp.bottomN('world', 1)[0].code, 'gl');
+  assert.ok(/** @type {number} */ (temp.valueOf('gl')) < -15);
 });
