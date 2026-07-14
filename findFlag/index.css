@@ -143,36 +143,11 @@ body {
  * struck word in a read-only title reads as "removed", not "excluded". The
  * `.crit-exclude` class is kept as a semantic hook (and for the flag-design
  * glyph it still carries); flagsdata's boxed chips keep their own strike idiom. */
-/* Metric icon (hue-tinted inline via style="color") and the flag-design glyph.
- * Sized in em so they track the title font; the SVG fills the box. */
-.find-cat .crit-ic,
-.find-cat .crit-flag {
-  display: inline-block;
-  vertical-align: -0.13em;
-}
-.find-cat .crit-ic {
-  width: 0.95em;
-  height: 0.95em;
-  margin-right: 0.26em;
-}
-.find-cat .crit-flag {
-  /* Coloured two-tone flag mark (teal field, cream offset cross — flags/
-     filterChips.js). Full opacity so the colour reads (the old mono glyph
-     faded to 0.68 to sit quietly in ink; this one carries its own colour). The
-     flag is landscape and fills its box less top-to-bottom than the metric
-     icon fills theirs, so it's set a touch larger to read at the same weight. */
-  width: 1.05em;
-  height: 1.05em;
-  margin-right: 0.24em;
-  vertical-align: -0.2em;
-}
-.find-cat .crit-ic svg,
-.find-cat .crit-flag svg {
-  width: 100%;
-  height: 100%;
-}
-/* The colour swatch (common.css `.pill-swatch`) needs a small gap before its
- * word inline; the boxed `.pill`/`.filter-chip` get this from their flex gap. */
+/* The metric-icon (`.crit-ic`) and flag-glyph (`.crit-flag`) sizing lives in
+ * common.css now that the tic-tac-toe grid headers reuse the same marks (see
+ * `categoryIconEl`). The colour swatch (common.css `.pill-swatch`) still needs a
+ * small gap before its word inline here; the boxed `.pill`/`.filter-chip` get
+ * this from their flex gap. */
 .find-cat .crit .pill-swatch {
   margin-right: 0.3em;
 }

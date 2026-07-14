@@ -1,4 +1,5 @@
 import { generateUltimateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../../flags/engine.js';
+import { renderCategoryLabel, renderCategoryPair } from '../../../flags/filterChips.js';
 import {
   newUltimateGame,
   attemptUltimateClaim,
@@ -144,11 +145,11 @@ function runUltimateTicTacToe({ puzzle, countries }) {
   // click + keydown handlers — those need to close over the local
   // `state` + picker, which only exist now.
   colHeaderEls.forEach((th, i) => {
-    th.textContent = tCat(puzzle.cols[i]);
+    renderCategoryLabel(/** @type {HTMLElement} */ (th), puzzle.cols[i], tCat(puzzle.cols[i]));
   });
   const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
   rowHeaders.forEach((th, i) => {
-    th.textContent = tCat(puzzle.rows[i]);
+    renderCategoryLabel(/** @type {HTMLElement} */ (th), puzzle.rows[i], tCat(puzzle.rows[i]));
   });
   gridBodyEl.querySelectorAll('td').forEach((td) => {
     const bigRow = Number(/** @type {HTMLTableCellElement} */ (td).dataset.bigrow);
@@ -216,7 +217,7 @@ function runUltimateTicTacToe({ puzzle, countries }) {
   /** @param {number} bigRow @param {number} bigCol @param {number} smallRow @param {number} smallCol */
   function openPicker(bigRow, bigCol, smallRow, smallCol) {
     activeCell = { bigRow, bigCol, smallRow, smallCol };
-    pickerCatsEl.textContent = `${tCat(puzzle.rows[bigRow])} × ${tCat(puzzle.cols[bigCol])}`;
+    renderCategoryPair(pickerCatsEl, puzzle.rows[bigRow], puzzle.cols[bigCol], tCat(puzzle.rows[bigRow]), tCat(puzzle.cols[bigCol]));
     pickerInputEl.value = '';
     currentMatches = [];
     selectedIndex = 0;
@@ -580,17 +581,17 @@ function runUltimateTicTacToe({ puzzle, countries }) {
    */
   function refreshI18nForGame() {
     colHeaderEls.forEach((th, i) => {
-      th.textContent = tCat(puzzle.cols[i]);
+      renderCategoryLabel(/** @type {HTMLElement} */ (th), puzzle.cols[i], tCat(puzzle.cols[i]));
     });
     const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
     rowHeaders.forEach((th, i) => {
-      th.textContent = tCat(puzzle.rows[i]);
+      renderCategoryLabel(/** @type {HTMLElement} */ (th), puzzle.rows[i], tCat(puzzle.rows[i]));
     });
     renderGrid();
     renderTurn();
     if (!pickerEl.hidden && activeCell) {
       const { bigRow, bigCol } = activeCell;
-      pickerCatsEl.textContent = `${tCat(puzzle.rows[bigRow])} × ${tCat(puzzle.cols[bigCol])}`;
+      renderCategoryPair(pickerCatsEl, puzzle.rows[bigRow], puzzle.cols[bigCol], tCat(puzzle.rows[bigRow]), tCat(puzzle.cols[bigCol]));
     }
     if (resultEl && !resultEl.hidden) paintFinalScore();
   }

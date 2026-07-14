@@ -846,6 +846,37 @@ body::after {
   gap: 6px;
 }
 
+/* Inline criterion marks — the hue-tinted metric icon (`.crit-ic`) and the
+ * two-tone flag-design glyph (`.crit-flag`) built by `flags/filterChips.js`.
+ * Sized in em so they track whatever label leads them: the findFlag + daily
+ * criteria header (`.find-cat`) and the tic-tac-toe grid headers + picker
+ * (`categoryIconEl`) are both consumers, so the recipe lives here rather than
+ * in one feature stylesheet ("same mechanism = same code"). The hue differs per
+ * mark and is set inline by the JS; the swatch (`.pill-swatch`) is above. */
+.crit-ic,
+.crit-flag {
+  display: inline-block;
+}
+.crit-ic {
+  width: 0.95em;
+  height: 0.95em;
+  margin-right: 0.26em;
+  vertical-align: -0.13em;
+}
+.crit-flag {
+  /* Landscape flag mark: fills its box less top-to-bottom than the metric
+     icon, so it's set a touch larger to read at the same weight. */
+  width: 1.05em;
+  height: 1.05em;
+  margin-right: 0.24em;
+  vertical-align: -0.2em;
+}
+.crit-ic svg,
+.crit-flag svg {
+  width: 100%;
+  height: 100%;
+}
+
 /* Applied-filter chip — ONE component, three consumers: flagsdata's filter bar
  * (interactive, with a removal ×), and the findFlag + daily play-screen criteria
  * headers (read-only). Built by `flags/filterChips.js`; the metric icon reuses

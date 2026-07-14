@@ -1,4 +1,5 @@
 import { suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
+import { renderCategoryLabel, renderCategoryPair } from '../../flags/filterChips.js';
 import {
   generateCode,
   isValidRoomCode,
@@ -389,11 +390,13 @@ function runOnline(countries) {
   function populateGridLabels() {
     const { game } = state;
     if (!game) return;
-    colHeaderEls.forEach((th, i) => { th.textContent = tCat(/** @type {UltimateGameState} */ (game).puzzle.cols[i]); });
+    const cols = /** @type {UltimateGameState} */ (game).puzzle.cols;
+    const rows = /** @type {UltimateGameState} */ (game).puzzle.rows;
+    colHeaderEls.forEach((th, i) => { renderCategoryLabel(/** @type {HTMLElement} */ (th), cols[i], tCat(cols[i])); });
     // Row headers live on every 3rd <tr> (rowspan=3 cells) inside tbody —
     // querySelectorAll('tr > th') finds all three in row order.
     const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
-    rowHeaders.forEach((th, i) => { th.textContent = tCat(/** @type {UltimateGameState} */ (game).puzzle.rows[i]); });
+    rowHeaders.forEach((th, i) => { renderCategoryLabel(/** @type {HTMLElement} */ (th), rows[i], tCat(rows[i])); });
   }
 
   /** @param {number} bigRow @param {number} bigCol @param {number} smallRow @param {number} smallCol */
@@ -450,7 +453,7 @@ function runOnline(countries) {
     const { game } = state;
     if (!game) return;
     activeCell = { bigRow, bigCol, smallRow, smallCol };
-    pickerCatsEl.textContent = `${tCat(game.puzzle.rows[bigRow])} × ${tCat(game.puzzle.cols[bigCol])}`;
+    renderCategoryPair(pickerCatsEl, game.puzzle.rows[bigRow], game.puzzle.cols[bigCol], tCat(game.puzzle.rows[bigRow]), tCat(game.puzzle.cols[bigCol]));
     pickerInputEl.value = '';
     currentMatches = [];
     selectedIndex = 0;
@@ -971,7 +974,9 @@ function runOnline(countries) {
     if (repaintStatusForLang) repaintStatusForLang();
     if (!pickerEl.hidden && activeCell && game) {
       const { bigRow, bigCol } = activeCell;
-      pickerCatsEl.textContent = `${tCat(/** @type {UltimateGameState} */ (game).puzzle.rows[bigRow])} × ${tCat(/** @type {UltimateGameState} */ (game).puzzle.cols[bigCol])}`;
+      const rowCat = /** @type {UltimateGameState} */ (game).puzzle.rows[bigRow];
+      const colCat = /** @type {UltimateGameState} */ (game).puzzle.cols[bigCol];
+      renderCategoryPair(pickerCatsEl, rowCat, colCat, tCat(rowCat), tCat(colCat));
     }
     if (resultEl && !resultEl.hidden) paintFinalScore();
     paintError();
