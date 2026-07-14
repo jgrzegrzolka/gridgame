@@ -9,7 +9,7 @@ import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
 import { MAX_ROUNDS_PER_MODE, PICTURE_MODES, METRIC_MODES, buildPartyPlan } from '../flags/partyPlan.js';
 import { formatValue } from '../flags/metricLens.js';
-import { METRIC_ICONS, METRIC_HUES } from '../flags/metricVisuals.js';
+import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { renderableRoundIds, roundRenderAction } from './staleGuard.js';
 import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
@@ -47,31 +47,31 @@ const MODE_LABELS = {
   'flags-all': { key: 'party.mode.flagsAll', full: 'Flags: countries', shortKey: 'party.modeShort.flagsAll', short: 'Flags' },
   'flags-territories': { key: 'party.mode.flagsTerritories', full: 'Flags: others', shortKey: 'party.modeShort.flagsTerritories', short: 'Others' },
   'map-outlines': { key: 'party.mode.mapOutlines', full: 'Map: outlines', shortKey: 'party.modeShort.mapOutlines', short: 'Maps' },
-  'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population: most & least', shortKey: 'party.modeShort.superlativePop', short: 'Population' },
-  'superlative-area': { key: 'party.mode.superlativeArea', full: 'Land area: largest & smallest', shortKey: 'party.modeShort.superlativeArea', short: 'Land area' },
-  'superlative-density': { key: 'party.mode.superlativeDensity', full: 'Population density: most & least', shortKey: 'party.modeShort.superlativeDensity', short: 'Density' },
-  'superlative-gdp': { key: 'party.mode.superlativeGdp', full: 'GDP: largest & smallest', shortKey: 'party.modeShort.superlativeGdp', short: 'GDP' },
-  'superlative-gdppc': { key: 'party.mode.superlativeGdppc', full: 'GDP per capita: largest & smallest', shortKey: 'party.modeShort.superlativeGdppc', short: 'GDP per capita' },
-  'superlative-coffee': { key: 'party.mode.superlativeCoffee', full: 'Coffee production: most', shortKey: 'party.modeShort.superlativeCoffee', short: 'Coffee production' },
-  'superlative-wine': { key: 'party.mode.superlativeWine', full: 'Wine production: most', shortKey: 'party.modeShort.superlativeWine', short: 'Wine production' },
-  'superlative-cocoa': { key: 'party.mode.superlativeCocoa', full: 'Cocoa production: most', shortKey: 'party.modeShort.superlativeCocoa', short: 'Cocoa production' },
-  'superlative-banana': { key: 'party.mode.superlativeBanana', full: 'Banana production: most', shortKey: 'party.modeShort.superlativeBanana', short: 'Banana production' },
-  'superlative-apple': { key: 'party.mode.superlativeApple', full: 'Apple production: most', shortKey: 'party.modeShort.superlativeApple', short: 'Apple production' },
-  'superlative-elevation': { key: 'party.mode.superlativeElevation', full: 'Highest elevation: highest & lowest', shortKey: 'party.modeShort.superlativeElevation', short: 'Elevation' },
-  'superlative-coastline': { key: 'party.mode.superlativeCoastline', full: 'Coastline length: longest & shortest', shortKey: 'party.modeShort.superlativeCoastline', short: 'Coastline' },
-  'superlative-forest': { key: 'party.mode.superlativeForest', full: 'Forest cover: most & least forested', shortKey: 'party.modeShort.superlativeForest', short: 'Forest' },
-  'superlative-oil': { key: 'party.mode.superlativeOil', full: 'Oil production: most', shortKey: 'party.modeShort.superlativeOil', short: 'Oil production' },
-  'superlative-rice': { key: 'party.mode.superlativeRice', full: 'Rice production: most', shortKey: 'party.modeShort.superlativeRice', short: 'Rice production' },
-  'superlative-coal': { key: 'party.mode.superlativeCoal', full: 'Coal production: most', shortKey: 'party.modeShort.superlativeCoal', short: 'Coal production' },
-  'superlative-sheep': { key: 'party.mode.superlativeSheep', full: 'Sheep per capita: most', shortKey: 'party.modeShort.superlativeSheep', short: 'Sheep' },
-  'superlative-cattle': { key: 'party.mode.superlativeCattle', full: 'Cattle per capita: most', shortKey: 'party.modeShort.superlativeCattle', short: 'Cattle' },
-  'superlative-beer': { key: 'party.mode.superlativeBeer', full: 'Beer consumption per capita: most', shortKey: 'party.modeShort.superlativeBeer', short: 'Beer consumption' },
-  'superlative-tea': { key: 'party.mode.superlativeTea', full: 'Tea production: most', shortKey: 'party.modeShort.superlativeTea', short: 'Tea production' },
-  'superlative-sugarcane': { key: 'party.mode.superlativeSugarcane', full: 'Sugarcane production: most', shortKey: 'party.modeShort.superlativeSugarcane', short: 'Sugarcane production' },
-  'superlative-gold': { key: 'party.mode.superlativeGold', full: 'Gold production: most', shortKey: 'party.modeShort.superlativeGold', short: 'Gold production' },
-  'superlative-alcohol': { key: 'party.mode.superlativeAlcohol', full: 'Alcohol consumption per capita: most', shortKey: 'party.modeShort.superlativeAlcohol', short: 'Alcohol consumption' },
-  'superlative-meat': { key: 'party.mode.superlativeMeat', full: 'Meat consumption per capita: most', shortKey: 'party.modeShort.superlativeMeat', short: 'Meat consumption' },
-  'superlative-borders': { key: 'party.mode.superlativeBorders', full: 'Bordering countries: most', shortKey: 'party.modeShort.superlativeBorders', short: 'Borders' },
+  'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population: most & least' },
+  'superlative-area': { key: 'party.mode.superlativeArea', full: 'Land area: largest & smallest' },
+  'superlative-density': { key: 'party.mode.superlativeDensity', full: 'Population density: most & least' },
+  'superlative-gdp': { key: 'party.mode.superlativeGdp', full: 'GDP: largest & smallest' },
+  'superlative-gdppc': { key: 'party.mode.superlativeGdppc', full: 'GDP per capita: largest & smallest' },
+  'superlative-coffee': { key: 'party.mode.superlativeCoffee', full: 'Coffee production: most' },
+  'superlative-wine': { key: 'party.mode.superlativeWine', full: 'Wine production: most' },
+  'superlative-cocoa': { key: 'party.mode.superlativeCocoa', full: 'Cocoa production: most' },
+  'superlative-banana': { key: 'party.mode.superlativeBanana', full: 'Banana production: most' },
+  'superlative-apple': { key: 'party.mode.superlativeApple', full: 'Apple production: most' },
+  'superlative-elevation': { key: 'party.mode.superlativeElevation', full: 'Highest elevation: highest & lowest' },
+  'superlative-coastline': { key: 'party.mode.superlativeCoastline', full: 'Coastline length: longest & shortest' },
+  'superlative-forest': { key: 'party.mode.superlativeForest', full: 'Forest cover: most & least forested' },
+  'superlative-oil': { key: 'party.mode.superlativeOil', full: 'Oil production: most' },
+  'superlative-rice': { key: 'party.mode.superlativeRice', full: 'Rice production: most' },
+  'superlative-coal': { key: 'party.mode.superlativeCoal', full: 'Coal production: most' },
+  'superlative-sheep': { key: 'party.mode.superlativeSheep', full: 'Sheep per capita: most' },
+  'superlative-cattle': { key: 'party.mode.superlativeCattle', full: 'Cattle per capita: most' },
+  'superlative-beer': { key: 'party.mode.superlativeBeer', full: 'Beer consumption per capita: most' },
+  'superlative-tea': { key: 'party.mode.superlativeTea', full: 'Tea production: most' },
+  'superlative-sugarcane': { key: 'party.mode.superlativeSugarcane', full: 'Sugarcane production: most' },
+  'superlative-gold': { key: 'party.mode.superlativeGold', full: 'Gold production: most' },
+  'superlative-alcohol': { key: 'party.mode.superlativeAlcohol', full: 'Alcohol consumption per capita: most' },
+  'superlative-meat': { key: 'party.mode.superlativeMeat', full: 'Meat consumption per capita: most' },
+  'superlative-borders': { key: 'party.mode.superlativeBorders', full: 'Bordering countries: most' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -548,7 +548,15 @@ export function bootFlagParty() {
   }
 
   const modeLabel = (/** @type {string} */ id) => t(MODE_LABELS[id].key, MODE_LABELS[id].full);
-  const modeShort = (/** @type {string} */ id) => t(MODE_LABELS[id].shortKey, MODE_LABELS[id].short);
+  // Metric rounds take their short name from the shared METRIC_SHORT registry
+  // (one source, so "Beer consumption" can't drift here vs the chips / hub);
+  // the fixed picture rounds carry their own short label in MODE_LABELS.
+  const modeShort = (/** @type {string} */ id) => {
+    const metricKey = metricKeyForRound(id);
+    const short = metricKey ? METRIC_SHORT[metricKey] : null;
+    if (short) return t(short.key, short.fallback);
+    return t(MODE_LABELS[id].shortKey, MODE_LABELS[id].short);
+  };
 
   // ---- setup row builders (shared bits) ----
   /** @param {string} svg */

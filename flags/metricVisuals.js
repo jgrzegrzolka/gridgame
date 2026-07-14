@@ -157,3 +157,24 @@ export const METRIC_SHORT = {
   meatPerCapita: { key: 'party.modeShort.superlativeMeat', fallback: 'Meat consumption' },
   borders: { key: 'party.modeShort.superlativeBorders', fallback: 'Borders' },
 };
+
+/**
+ * Build the leading `<span>` for a metric's icon: the class the caller wants,
+ * the metric's SVG from {@link METRIC_ICONS} as innerHTML (empty for an unknown
+ * key, never `undefined`). The one place the "make a span, drop in the metric
+ * glyph" idiom lives — chips, the hub panel lead, and the criteria header all
+ * used to hand-roll it, which is how a missing `|| ''` guard or a stale class
+ * drifts. The hue differs per surface (some tint the icon, some a parent), so
+ * that stays with the caller.
+ *
+ * @param {string} key  metric key (same keys as METRIC_ICONS)
+ * @param {string} [className]
+ * @param {Document} [doc]
+ * @returns {HTMLSpanElement}
+ */
+export function metricIconSpan(key, className = 'mhub-ic', doc = document) {
+  const ic = doc.createElement('span');
+  ic.className = className;
+  ic.innerHTML = METRIC_ICONS[key] || '';
+  return ic;
+}
