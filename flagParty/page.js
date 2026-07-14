@@ -254,6 +254,40 @@ function metricKeyForRound(roundId) {
 }
 
 /**
+ * Resolve a mode's SHORT label to `{ key, fallback }` — pure, no `t()` — so the
+ * mapping can be pinned by a test (the DOM `modeShort` below is a thin `t()`
+ * wrapper). Metric modes take their short name from METRIC_SHORT keyed off the
+ * ROUND id, which differs from the mode id for population ('superlative-pop' vs
+ * roundId 'superlative'); picture modes fall back to their own MODE_LABELS
+ * `shortKey`. A mode that resolves to neither returns `{ key: undefined }`,
+ * which `flagParty/modeLabels.test.js` asserts can never happen — that gap is
+ * exactly what crashed the lobby (an undefined key reached `t()` → `.split`).
+ *
+ * @param {string} id  a PICTURE_MODES / METRIC_MODES mode id
+ * @returns {{ key: string | undefined, fallback: string | undefined }}
+ */
+export function modeShortLabel(id) {
+  const mode = METRIC_MODES.find((m) => m.id === id);
+  const metricKey = metricKeyForRound(mode ? mode.roundId : id);
+  const short = metricKey ? METRIC_SHORT[metricKey] : null;
+  if (short) return { key: short.key, fallback: short.fallback };
+  const ml = MODE_LABELS[id];
+  return { key: ml && ml.shortKey, fallback: ml && ml.short };
+}
+
+/**
+ * Resolve a mode's FULL label to `{ key, fallback }` — pure sibling of
+ * {@link modeShortLabel}. Every mode has a MODE_LABELS entry with `key` + `full`.
+ *
+ * @param {string} id
+ * @returns {{ key: string | undefined, fallback: string | undefined }}
+ */
+export function modeFullLabel(id) {
+  const ml = MODE_LABELS[id];
+  return { key: ml && ml.key, fallback: ml && ml.full };
+}
+
+/**
  * Boot the Flag Party page: resolve identity, wire the lobby controls, open
  * the WebSocket, and re-render on every server message. Kept thin — all game
  * rules live in the pure modules (`flags/partyRoom.js`, `partyScore.js`,
@@ -547,20 +581,16 @@ export function bootFlagParty() {
       ? setupState.facts.n : 0;
   }
 
-  const modeLabel = (/** @type {string} */ id) => t(MODE_LABELS[id].key, MODE_LABELS[id].full);
-  // Metric rounds take their short name from the shared METRIC_SHORT registry
-  // (one source, so "Beer consumption" can't drift here vs the chips / hub);
-  // the fixed picture rounds carry their own short label in MODE_LABELS.
+  // Thin `t()` wrappers over the pure resolvers (modeFullLabel / modeShortLabel
+  // above) — the id→label mapping lives up there so it can be pinned by
+  // flagParty/modeLabels.test.js; here we just localize the resolved key.
+  const modeLabel = (/** @type {string} */ id) => {
+    const { key, fallback } = modeFullLabel(id);
+    return t(key, fallback);
+  };
   const modeShort = (/** @type {string} */ id) => {
-    // Metric modes take their short label from METRIC_SHORT, keyed off the
-    // ROUND id — which differs from the mode id for population ('superlative-pop'
-    // vs roundId 'superlative'). Resolve the round id first, else pop falls
-    // through to a MODE_LABELS entry with no shortKey and blanks the lobby.
-    const mode = METRIC_MODES.find((m) => m.id === id);
-    const metricKey = metricKeyForRound(mode ? mode.roundId : id);
-    const short = metricKey ? METRIC_SHORT[metricKey] : null;
-    if (short) return t(short.key, short.fallback);
-    return t(MODE_LABELS[id].shortKey, MODE_LABELS[id].short);
+    const { key, fallback } = modeShortLabel(id);
+    return t(key, fallback);
   };
 
   // ---- setup row builders (shared bits) ----
