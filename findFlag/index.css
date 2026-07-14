@@ -138,14 +138,11 @@ body {
   margin: 0 0.4em;
   font-weight: 400;
 }
-/* Excluded value: brand-pink strikethrough, same idiom as `.pill.exclude`. The
- * whole criterion (incl. its leading glyph) tints pink via currentColor. */
-.find-cat .crit-exclude {
-  color: var(--secondary-color);
-}
-.find-cat .crit-exclude .crit-label {
-  text-decoration: line-through;
-}
+/* Excluded value: the label spells it out ("not coat of arms" / "bez herbu"),
+ * so it stays in ink like every other criterion — no pink, no strikethrough. A
+ * struck word in a read-only title reads as "removed", not "excluded". The
+ * `.crit-exclude` class is kept as a semantic hook (and for the flag-design
+ * glyph it still carries); flagsdata's boxed chips keep their own strike idiom. */
 /* Metric icon (hue-tinted inline via style="color") and the flag-design glyph.
  * Sized in em so they track the title font; the SVG fills the box. */
 .find-cat .crit-ic,

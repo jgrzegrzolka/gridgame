@@ -47,9 +47,12 @@ const FLAG_DESIGN_PILL_GROUPS = new Set(['motif', 'stripesOnly']);
 /**
  * Localized label for one chip descriptor. Pure — no DOM — so it's unit-tested.
  *
- *   - pill chip: the bare include noun ("red", "cross", "Africa"). Exclusion is
- *     carried by the strike-through styling, not a "not " prefix, so the entry
- *     reads the same whether the value is included or excluded.
+ *   - pill chip: the bare noun ("red", "cross", "Africa"). By default an
+ *     excluded value renders the same bare noun and the caller's styling carries
+ *     the negation (flagsdata's strike-through). Pass `spellExclude` to instead
+ *     write it out — "not cross" / "bez herbu" (the localized prefix + genitive
+ *     from pillLabel) — for the read-only inline header, where a struck word
+ *     reads as "removed" rather than "excluded".
  *   - colorCount scalar: the same phrasing TTT uses ("only 3 colours" /
  *     "tylko 3 kolory"), via pillLabel's filter.onlyN/atLeastN/atMostN keys.
  *   - metric scalar: "<short name><metricSep><threshold>" so a unit-only tier
@@ -61,10 +64,13 @@ const FLAG_DESIGN_PILL_GROUPS = new Set(['motif', 'stripesOnly']);
  * @param {Filters} filters
  * @param {(key: string, fallback: string) => string} t
  * @param {string} [metricSep]
+ * @param {boolean} [spellExclude]  write excluded pills as "not X" instead of the bare noun
  * @returns {string}
  */
-export function chipLabelText(ref, filters, t, metricSep = ' · ') {
-  if (ref.kind === 'pill') return pillLabel(ref.group, ref.value, 'include', t);
+export function chipLabelText(ref, filters, t, metricSep = ' · ', spellExclude = false) {
+  if (ref.kind === 'pill') {
+    return pillLabel(ref.group, ref.value, spellExclude && ref.exclude ? 'exclude' : 'include', t);
+  }
   if (ref.group === 'colorCount') {
     const c = filters.colorCount;
     if (!c) return '';
@@ -155,7 +161,9 @@ function buildCriterionInline(ref, filters, t, doc) {
   }
   const label = doc.createElement('span');
   label.className = 'crit-label';
-  label.textContent = chipLabelText(ref, filters, t, ' ');
+  // Inline header spells excluded pills out ("not coat of arms") in ink — this
+  // is a read-only title, so a struck word would read as "removed", not "not".
+  label.textContent = chipLabelText(ref, filters, t, ' ', true);
   crit.appendChild(label);
   return crit;
 }
