@@ -55,6 +55,7 @@ const BORDERS = {
   lu: 3, md: 2, mc: 1, me: 5, nl: 2, mk: 5, no: 3, pl: 7, pt: 1, ro: 5, ru: 14,
   sm: 1, rs: 8, sk: 5, si: 4, es: 5, se: 2, ch: 5, ua: 7, va: 1, gb: 1,
   // ---- Asia / Middle East ----
+  af: 6, // Afghanistan: China, Iran, Pakistan, Tajikistan, Turkmenistan, Uzbekistan
   am: 4, az: 5, bd: 2, bt: 2, bn: 1, kh: 3, cn: 14, ge: 4, in: 6, id: 3, ir: 7,
   iq: 6, il: 5, jo: 5, kz: 5, kw: 2, kg: 4, la: 5, lb: 2, my: 3, mn: 2, mm: 5,
   np: 2, kp: 3, om: 3, pk: 4, ps: 3, qa: 1, sa: 7, kr: 1, sy: 5, tj: 4, th: 4,
