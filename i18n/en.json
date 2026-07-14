@@ -623,7 +623,8 @@
       "superlativeMeat": "Meat consumption",
       "superlativeBorders": "Borders",
       "superlativeOliveOil": "Olive oil",
-      "superlativeHoney": "Honey"
+      "superlativeHoney": "Honey",
+      "superlativeCorruption": "Corruption"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
