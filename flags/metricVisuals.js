@@ -106,6 +106,10 @@ export const METRIC_ICONS = {
   // marks). Reads as heat / climate, distinct from every economic and produce
   // icon in the family.
   temperature: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M10 8h1.6M10 11h1.6"/><circle cx="12" cy="18" r="1.6" fill="currentColor" stroke="none"/></svg>',
+  // Happiness: a smiling face (a circle, two dot eyes, an upturned mouth).
+  // Reads as wellbeing / life satisfaction, unmistakable against the economic
+  // and produce icons.
+  happiness: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14a4.5 4.5 0 0 0 7 0"/><path d="M9 9.5h.01M15 9.5h.01"/></svg>',
 };
 
 /** @type {Record<string, string>} */
@@ -139,6 +143,7 @@ export const METRIC_HUES = {
   honey: '#e08214',
   corruption: '#4b3f9e',
   temperature: '#d84315',
+  happiness: '#ec407a',
 };
 
 /**
@@ -180,6 +185,7 @@ export const METRIC_SHORT = {
   honey: { key: 'party.modeShort.superlativeHoney', fallback: 'Honey production' },
   corruption: { key: 'party.modeShort.superlativeCorruption', fallback: 'Corruption' },
   temperature: { key: 'party.modeShort.superlativeTemperature', fallback: 'Temperature' },
+  happiness: { key: 'party.modeShort.superlativeHappiness', fallback: 'Happiness' },
 };
 
 /**

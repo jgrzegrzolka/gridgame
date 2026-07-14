@@ -625,7 +625,8 @@
       "superlativeOliveOil": "Oliwa z oliwek",
       "superlativeHoney": "Miód",
       "superlativeCorruption": "Korupcja",
-      "superlativeTemperature": "Temperatura"
+      "superlativeTemperature": "Temperatura",
+      "superlativeHappiness": "Szczęście"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",

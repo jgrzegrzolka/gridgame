@@ -42,6 +42,7 @@ const MEAT_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/
 const BORDERS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/borders.json'));
 const CORRUPTION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/corruption.json'));
 const TEMPERATURE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/temperature.json'));
+const HAPPINESS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/happiness.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -1830,4 +1831,59 @@ test('createMetric over temperature ranks the hottest top and the coldest at the
   assert.ok(/** @type {number} */ (temp.valueOf('bf')) > 30);
   assert.equal(temp.bottomN('world', 1)[0].code, 'gl');
   assert.ok(/** @type {number} */ (temp.valueOf('gl')) < -15);
+});
+
+// ---- real happiness.json schema + the absence:'unknown' contract -----------
+// World Happiness Report ladder score. The Gallup World Poll reaches ~147
+// countries, the thinnest coverage in the family; everywhere it does not survey
+// is the honest "unknown" gap (0 is the ladder's worst-life floor, not "no data").
+
+test('happiness is a valid, self-describing metric file with absence:unknown', () => {
+  assert.equal(HAPPINESS.key, 'happiness');
+  assert.equal(typeof HAPPINESS.label, 'string');
+  assert.equal(typeof HAPPINESS.unit, 'string');
+  // Ladder score, one decimal on display (7.7); three decimals stored.
+  assert.equal(HAPPINESS.format, 'decimal1');
+  assert.equal(typeof HAPPINESS.source, 'string');
+  assert.equal(typeof HAPPINESS.year, 'number');
+  assert.equal(typeof HAPPINESS.values, 'object');
+  // Absence means "not surveyed", not 0 (0 is the ladder's worst-life floor).
+  assert.equal(HAPPINESS.absence, 'unknown');
+});
+
+test('every happiness value is a finite number in [0, 10]', () => {
+  for (const [code, v] of Object.entries(HAPPINESS.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0 && v <= 10, `${code} out of ladder range [0,10]: ${v}`);
+  }
+});
+
+test('happiness covers only real places, never orgs; the gap is genuine (absence:unknown)', () => {
+  const realCodes = new Set(COUNTRIES.filter((c) => c.category !== 'other').map((c) => c.code));
+  for (const code of Object.keys(HAPPINESS.values)) {
+    assert.ok(realCodes.has(code), `happiness value for non-real place ${code}`);
+  }
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in HAPPINESS.values), `org ${c.code} should have no happiness value`);
+    }
+  }
+  // Real but deliberately thin coverage (the survey's reach), never total.
+  const covered = COUNTRIES.filter((c) => c.category !== 'other' && c.code in HAPPINESS.values).length;
+  assert.ok(covered >= 140, `expected ~147 surveyed real places, got ${covered}`);
+  assert.ok(covered < realCodes.size, 'happiness must NOT be dense: unsurveyed real places are the unknown gap');
+  // A surveyed country is present; a territory / sub-national part is the gap.
+  assert.ok('fi' in HAPPINESS.values, 'Finland (surveyed) must be covered');
+  assert.ok(!('gl' in HAPPINESS.values), 'Greenland (territory) is unsurveyed, must be absent');
+  assert.ok(!('gb-wls' in HAPPINESS.values), 'Wales (sub-national) is unsurveyed, must be absent');
+});
+
+test('createMetric over happiness ranks Finland top and Afghanistan at the floor', () => {
+  const hap = createMetric(HAPPINESS, COUNTRIES);
+  // Finland has led for years; Denmark is second.
+  assert.equal(hap.topN('world', 1)[0].code, 'fi');
+  assert.equal(hap.rankOf('dk', 'world'), 2);
+  // Afghanistan is the lowest life evaluation on record here.
+  assert.equal(hap.bottomN('world', 1)[0].code, 'af');
+  assert.ok(/** @type {number} */ (hap.valueOf('af')) < 2);
 });
