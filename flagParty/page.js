@@ -169,7 +169,7 @@ const SUPERLATIVE_MODES = {
   // fun question; "fewest" is a religion/geography quiz, not a beer one.
   'superlative-beer': {
     file: 'beerPerCapita.json',
-    hintMost: { key: 'party.hintMostBeer', fallback: 'Most beer per person' },
+    hintMost: { key: 'party.hintMostBeer', fallback: 'Most beer consumption per person' },
   },
   // Tea is 'most'-only: "biggest tea producer" (China) is the good question;
   // "smallest grower" is obscure. Sparse like coffee, so the round ranks growers.
@@ -193,13 +193,13 @@ const SUPERLATIVE_MODES = {
   // Ireland) is the fun question; "fewest" is a religion/geography quiz.
   'superlative-alcohol': {
     file: 'alcoholPerCapita.json',
-    hintMost: { key: 'party.hintMostAlcohol', fallback: 'Most alcohol per person' },
+    hintMost: { key: 'party.hintMostAlcohol', fallback: 'Most alcohol consumption per person' },
   },
   // Meat per capita is 'most'-only: "who eats the most meat" (the US, Australia)
   // is the fun question; "least" is the low-income / vegetarian tail.
   'superlative-meat': {
     file: 'meatPerCapita.json',
-    hintMost: { key: 'party.hintMostMeat', fallback: 'Most meat per person' },
+    hintMost: { key: 'party.hintMostMeat', fallback: 'Most meat consumption per person' },
   },
   // Borders is 'most'-only: "which borders the most countries" (Russia, China at
   // 14) is the fun question; "fewest" ties every island at 0.
