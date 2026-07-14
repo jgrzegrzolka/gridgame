@@ -26,6 +26,7 @@ import borders from '../metrics/borders.json' with { type: 'json' };
 import oliveOil from '../metrics/oliveOil.json' with { type: 'json' };
 import honey from '../metrics/honey.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
+import { lookalikesOf } from '../quiz.js';
 
 /**
  * The "superlative" round: "Which of these four flags is the *most* (or *least*)
@@ -86,6 +87,39 @@ function shuffle(arr, rng) {
 }
 
 /**
+ * Draw four entries such that no two are visual flag lookalikes (Indonesia /
+ * Monaco, Romania / Chad, Ireland / Côte d'Ivoire, …). This round renders its
+ * options as *flags with no numbers*, so two indistinguishable flags among the
+ * four would be an unfair coin-flip: you could know Monaco is the densest yet be
+ * unable to tell which of two red-white tiles is Monaco. Greedy over a shuffled
+ * copy, marking each pick's whole lookalike group taken — the same guard
+ * `buildChoices` in `flags/quiz.js` applies to the flag-pick round, sharing its
+ * `lookalikesOf` list so the two rounds can't drift apart. Falls back to filling
+ * from the skipped remainder if the constraint can't reach four (a pool that's
+ * mostly one lookalike group), so it always returns four when `src` has four.
+ *
+ * @param {PoolEntry[]} src
+ * @param {() => number} rng
+ * @returns {PoolEntry[]}
+ */
+function drawFourDistinct(src, rng) {
+  const taken = new Set();
+  /** @type {PoolEntry[]} */ const picked = [];
+  /** @type {PoolEntry[]} */ const skipped = [];
+  for (const c of shuffle(src, rng)) {
+    if (picked.length === 4) break;
+    if (taken.has(c.code)) { skipped.push(c); continue; }
+    picked.push(c);
+    for (const k of lookalikesOf(c.code)) taken.add(k);
+  }
+  for (const c of skipped) {
+    if (picked.length === 4) break;
+    picked.push(c);
+  }
+  return picked;
+}
+
+/**
  * @param {ReturnType<typeof createMetric>} metric the metric to rank by.
  * @param {PoolEntry[]} pool  any pool of country entries; narrowed to the ones
  *   that carry a value for this metric before use.
@@ -116,7 +150,7 @@ function generateFor(metric, pool, exclude, rng = Math.random, forcedDirection) 
   /** @type {{ codes: string[], answer: string } | null} */
   let fallback = null;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const four = shuffle(src, rng).slice(0, 4);
+    const four = drawFourDistinct(src, rng);
     const byValue = four.slice().sort((a, b) => val(b.code) - val(a.code));
     const extreme = /** @type {PoolEntry} */ (direction === 'most' ? byValue[0] : byValue[byValue.length - 1]);
     const runnerUp = /** @type {PoolEntry} */ (direction === 'most' ? byValue[1] : byValue[byValue.length - 2]);
