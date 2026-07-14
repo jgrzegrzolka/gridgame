@@ -115,10 +115,65 @@ body {
   float: right;
 }
 .find-cat {
-  font-size: 22px;
+  /* The screen title. Holds either a plain-text title (superlative / manual
+   * daily puzzles) or an inline enriched criteria line (filter puzzles +
+   * findFlag, via flags/filterChips.js renderCriteriaInline). 18px reads as a
+   * title without the old 22px heft that made a long metric mix crowd the
+   * count. Normal inline flow so criteria wrap naturally between tokens. */
+  font-size: 18px;
   font-weight: 600;
   color: var(--primary-color);
   flex: 1;
+  line-height: 1.5;
+}
+/* Inline criteria pieces (renderCriteriaInline). Each `.crit` is one criterion;
+ * `.crit-sep` is the muted middot between them. A metric's own icon + the flag
+ * glyph mark where a criterion starts, so the single-level dot separators never
+ * blur into a metric's label (which drops its middot to a space here). */
+.find-cat .crit {
+  white-space: nowrap;
+}
+.find-cat .crit-sep {
+  color: var(--muted-color);
+  margin: 0 0.4em;
+  font-weight: 400;
+}
+/* Excluded value: brand-pink strikethrough, same idiom as `.pill.exclude`. The
+ * whole criterion (incl. its leading glyph) tints pink via currentColor. */
+.find-cat .crit-exclude {
+  color: var(--secondary-color);
+}
+.find-cat .crit-exclude .crit-label {
+  text-decoration: line-through;
+}
+/* Metric icon (hue-tinted inline via style="color") and the flag-design glyph.
+ * Sized in em so they track the title font; the SVG fills the box. */
+.find-cat .crit-ic,
+.find-cat .crit-flag {
+  display: inline-block;
+  vertical-align: -0.13em;
+}
+.find-cat .crit-ic {
+  width: 0.95em;
+  height: 0.95em;
+  margin-right: 0.26em;
+}
+.find-cat .crit-flag {
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 0.24em;
+  vertical-align: -0.1em;
+  opacity: 0.68;
+}
+.find-cat .crit-ic svg,
+.find-cat .crit-flag svg {
+  width: 100%;
+  height: 100%;
+}
+/* The colour swatch (common.css `.pill-swatch`) needs a small gap before its
+ * word inline; the boxed `.pill`/`.filter-chip` get this from their flex gap. */
+.find-cat .crit .pill-swatch {
+  margin-right: 0.3em;
 }
 .find-count {
   font-size: 14px;

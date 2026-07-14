@@ -3,13 +3,12 @@ import { ALL_FLAG_COLORS, ALL_MOTIFS, STRIPES_ORIENTATIONS_FOR_RANDOM, METRIC_KE
 import { emptyFilters, matchesFilters, createColorCountLock, activeFilterChips } from '../flags/flagsFilter.js';
 import { makeColorSwatch } from '../common.js';
 import { buildMetricTierItems } from '../flags/metricTiers.js';
-import { pillLabel } from '../flags/findFlag.js';
+import { buildFilterChip, chipLabelText } from '../flags/filterChips.js';
 import { createColorCountPicker } from '../colorCountPicker.js';
 import { createMetric } from '../flags/metrics.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { computeLensView } from '../flags/metricLens.js';
 import { createMetricHub } from '../flags/metricHub.js';
-import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { fitChipRow, rowGap } from '../flags/chipRowFit.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
@@ -761,35 +760,15 @@ export function bootFlagsData() {
   function renderChips() {
     if (!chipsWrap) return;
     chipsWrap.replaceChildren();
+    const removeLabel = t('flagsdata.removeFilter', 'Remove filter');
     for (const ref of activeFilterChips(filters)) {
-      const chip = document.createElement('span');
-      chip.className = 'filter-chip' + (ref.kind === 'pill' && ref.exclude ? ' is-exclude' : '');
-      if (ref.kind === 'pill' && ref.group === 'color') {
-        chip.appendChild(makeColorSwatch(ref.value));
-      }
-      // A metric chip wears its metric's icon + hue (shared with the hub
-      // chips and Flag Party), so "over 100K tonnes" can never read as the
-      // wrong fact: the icon and the leading short name disambiguate.
-      if (ref.kind === 'scalar' && ref.group !== 'colorCount') {
-        chip.classList.add('is-metric');
-        chip.style.setProperty('--mc', METRIC_HUES[ref.group] || 'currentColor');
-        const ic = document.createElement('span');
-        ic.className = 'mhub-ic';
-        ic.innerHTML = METRIC_ICONS[ref.group] || '';
-        chip.appendChild(ic);
-      }
-      const label = document.createElement('span');
-      label.className = 'filter-chip-label';
-      label.textContent = chipLabel(ref);
-      chip.appendChild(label);
-      const x = document.createElement('button');
-      x.type = 'button';
-      x.className = 'filter-chip-x';
-      x.setAttribute('aria-label', t('flagsdata.removeFilter', 'Remove filter'));
-      x.textContent = '\u00d7';
-      x.addEventListener('click', () => removeChip(ref));
-      chip.appendChild(x);
-      chipsWrap.appendChild(chip);
+      // Shared chip factory (flags/filterChips.js) owns the swatch / metric
+      // icon+hue / exclude-strike visuals \u2014 the same component the findFlag +
+      // daily play headers render. The bar supplies the removal handler; the
+      // pill label stays local (pillText carries flagsdata's own i18n keys).
+      chipsWrap.appendChild(
+        buildFilterChip(ref, chipLabel(ref), { onRemove: () => removeChip(ref), removeLabel }),
+      );
     }
   }
 
@@ -803,17 +782,11 @@ export function bootFlagsData() {
    * @returns {string}
    */
   function chipLabel(ref) {
+    // Pill nouns stay local \u2014 pillText resolves a couple of values (the "Other"
+    // continent) through flagsdata's own i18n keys. The colorCount + metric
+    // labels are shared with the play headers via chipLabelText.
     if (ref.kind === 'pill') return pillText(ref.group, ref.value);
-    if (ref.group === 'colorCount') {
-      const c = filters.colorCount;
-      const sym = c && c.op === '>=' ? '\u2265' : c && c.op === '<=' ? '\u2264' : '=';
-      return `${t('flagsdata.filterColors', 'Colors')} ${sym} ${c ? c.n : ''}`;
-    }
-    const cons = filters[ref.group];
-    if (!cons) return '';
-    const short = METRIC_SHORT[ref.group];
-    const tierText = pillLabel(ref.group, `${cons.op}${cons.n}`, 'include', t);
-    return `${short ? t(short.key, short.fallback) : ref.group} \u00b7 ${tierText}`;
+    return chipLabelText(ref, filters, t);
   }
 
   /**
