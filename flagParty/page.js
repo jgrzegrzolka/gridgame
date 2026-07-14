@@ -552,7 +552,12 @@ export function bootFlagParty() {
   // (one source, so "Beer consumption" can't drift here vs the chips / hub);
   // the fixed picture rounds carry their own short label in MODE_LABELS.
   const modeShort = (/** @type {string} */ id) => {
-    const metricKey = metricKeyForRound(id);
+    // Metric modes take their short label from METRIC_SHORT, keyed off the
+    // ROUND id — which differs from the mode id for population ('superlative-pop'
+    // vs roundId 'superlative'). Resolve the round id first, else pop falls
+    // through to a MODE_LABELS entry with no shortKey and blanks the lobby.
+    const mode = METRIC_MODES.find((m) => m.id === id);
+    const metricKey = metricKeyForRound(mode ? mode.roundId : id);
     const short = metricKey ? METRIC_SHORT[metricKey] : null;
     if (short) return t(short.key, short.fallback);
     return t(MODE_LABELS[id].shortKey, MODE_LABELS[id].short);

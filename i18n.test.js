@@ -66,6 +66,17 @@ test('lookupString: returns null when a path crosses a non-object', () => {
   assert.equal(lookupString({ title: 'Hello' }, 'title.nested'), null);
 });
 
+test('lookupString: a nullish key returns null instead of throwing (bad key must not blank a page)', () => {
+  // Regression guard: an undefined label key (e.g. an unresolved mode short
+  // label) used to crash `key.split` and take down the whole render.
+  assert.equal(lookupString({ title: 'Hello' }, /** @type {any} */ (undefined)), null);
+  assert.equal(lookupString({ title: 'Hello' }, /** @type {any} */ (null)), null);
+});
+
+test('t: a nullish key falls back to the provided fallback', () => {
+  assert.equal(t(/** @type {any} */ (undefined), 'Fallback'), 'Fallback');
+});
+
 // ---- applyTextContent ----
 
 function fakeEl(/** @type {Record<string, string>} */ attrs, /** @type {string} */ text = '') {
