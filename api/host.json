@@ -8,7 +8,8 @@
     "logLevel": {
       "default": "Warning",
       "Host.Results": "Information",
-      "Function": "Information"
+      "Function": "Information",
+      "Microsoft.Azure.WebJobs.Script.Diagnostics.HealthChecks.TelemetryHealthCheckPublisher": "Error"
     },
     "applicationInsights": {
       "samplingSettings": {
