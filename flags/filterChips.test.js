@@ -49,9 +49,18 @@ test('chipLabelText: pill chip renders the bare include noun', () => {
   assert.equal(chipLabelText({ kind: 'pill', group: 'color', value: 'red', exclude: false }, emptyFilters(), t), 'red');
 });
 
-test('chipLabelText: exclude pill still renders the bare noun (styling carries the negation)', () => {
-  // No "not " prefix — the chip's strike-through is what says "not this".
+test('chipLabelText: exclude pill defaults to the bare noun (flagsdata: strike carries the negation)', () => {
+  // Default (spellExclude off) — the boxed flagsdata chip's strike-through says "not this".
   assert.equal(chipLabelText({ kind: 'pill', group: 'motif', value: 'cross', exclude: true }, emptyFilters(), t), 'cross');
+});
+
+test('chipLabelText: spellExclude writes an excluded pill out as "not X"', () => {
+  // The inline header opts in (no strike there) so the negation reads as a word.
+  const ref = /** @type {const} */ ({ kind: 'pill', group: 'motif', value: 'cross', exclude: true });
+  assert.equal(chipLabelText(ref, emptyFilters(), t, ' ', true), 'not cross');
+  // An included pill is unaffected by the flag.
+  const inc = /** @type {const} */ ({ kind: 'pill', group: 'motif', value: 'cross', exclude: false });
+  assert.equal(chipLabelText(inc, emptyFilters(), t, ' ', true), 'cross');
 });
 
 test('chipLabelText: colorCount scalar reads exactly like the TTT category label', () => {
@@ -155,7 +164,7 @@ test('renderCriteriaInline: each token gets exactly the right leading mark', () 
   const f = emptyFilters();
   f.continent.include.add('Africa'); // country fact: no mark
   f.color.include.add('red'); // colour: swatch
-  f.motif.exclude.add('cross'); // flag-design + exclude: flag glyph + strike
+  f.motif.exclude.add('cross'); // flag-design + exclude: flag glyph, spelled "not cross"
   f.coffee = { op: '>=', n: 10000 }; // metric: hued icon
   const crits = /** @type {any} */ (renderCriteriaInline(f, t, fakeDoc())).children
     .filter((/** @type {any} */ c) => c.className.split(' ').includes('crit'));
@@ -166,6 +175,9 @@ test('renderCriteriaInline: each token gets exactly the right leading mark', () 
   assert.ok(kids(red).includes('pill-swatch'));
   assert.ok(kids(cross).includes('crit-flag'));
   assert.match(cross.className, /crit-exclude/);
+  // Inline exclude is spelled out in ink, not struck.
+  const crossLabel = cross.children.find((/** @type {any} */ k) => k.className === 'crit-label');
+  assert.equal(crossLabel.textContent, 'not cross');
   assert.ok(kids(coffee).includes('crit-ic'));
   // Metric label uses the space separator, not the middot.
   const coffeeLabel = coffee.children.find((/** @type {any} */ k) => k.className === 'crit-label');
