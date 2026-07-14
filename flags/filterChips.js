@@ -251,3 +251,24 @@ export function renderMetricLeadInline(metricKey, label, doc = document) {
   frag.appendChild(text);
   return frag;
 }
+
+/**
+ * Inline criteria header led by the flag glyph — for a manual puzzle whose theme
+ * is about the flag's design but ISN'T expressible as a filter token (e.g.
+ * "triangles from the hoist": there's no triangle motif), so it can't render
+ * chips yet still deserves the "this is about the flag" cue. Same flag glyph +
+ * `.crit-label` idiom as the chip path, just leading a hand-written title.
+ *
+ * @param {string} label  the puzzle's hand-written title
+ * @param {Document} [doc]
+ * @returns {DocumentFragment}
+ */
+export function renderFlagLeadInline(label, doc = document) {
+  const frag = doc.createDocumentFragment();
+  frag.appendChild(flagGlyphEl(doc));
+  const text = doc.createElement('span');
+  text.className = 'crit-label';
+  text.textContent = label;
+  frag.appendChild(text);
+  return frag;
+}

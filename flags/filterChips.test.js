@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { chipLabelText, buildFilterChip, renderCriteriaInline, renderMetricLeadInline } from './filterChips.js';
+import { chipLabelText, buildFilterChip, renderCriteriaInline, renderMetricLeadInline, renderFlagLeadInline } from './filterChips.js';
 import { emptyFilters } from './flagsFilter.js';
 
 /** Echo the fallback — renders every label in its English default. */
@@ -224,4 +224,16 @@ test('renderMetricLeadInline: unknown metric still renders the title (empty icon
   const frag = /** @type {any} */ (renderMetricLeadInline('nope', 'A title', fakeDoc()));
   assert.equal(frag.children[0].innerHTML, '');
   assert.equal(frag.children[1].textContent, 'A title');
+});
+
+// ---- renderFlagLeadInline (flag-design manual header) ----
+
+test('renderFlagLeadInline: leads the title with the flag glyph', () => {
+  const frag = /** @type {any} */ (renderFlagLeadInline('Triangles from the hoist', fakeDoc()));
+  assert.equal(frag.children.length, 2);
+  const [glyph, label] = frag.children;
+  assert.equal(glyph.className, 'crit-flag');
+  assert.ok(glyph.innerHTML.length > 0, 'glyph span carries the flag SVG');
+  assert.equal(label.className, 'crit-label');
+  assert.equal(label.textContent, 'Triangles from the hoist');
 });

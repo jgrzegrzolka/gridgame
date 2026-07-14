@@ -69,6 +69,11 @@ import { parseFilterString } from './findFlag.js';
  *                             still show the colour swatch / flag glyph / metric
  *                             icon. Forbidden on filter entries — they render
  *                             from `filter` already.
+ * @property {boolean} [flagLead]  manual only — lead the title with the flag
+ *                             glyph when the theme is about the flag's design
+ *                             but can't be a filter token (e.g. "triangles from
+ *                             the hoist"). Ignored when `criteria` is present
+ *                             (chips already carry the glyph).
  * @property {string[]} answers  country codes the puzzle resolves to
  * @property {Record<string, string>} [description]  per-language helper
  *                             sentence shown under the header. Keys are
@@ -361,6 +366,10 @@ export function manualToCategory(entry, lang) {
     label,
     predicate: (c) => codes.has(c.code),
     ...(filter ? { filter } : {}),
+    // A flag-design theme that can't be a filter token (e.g. "triangles from
+    // the hoist") opts into a leading flag glyph instead of chips. Ignored when
+    // `filter` is present — chips already carry the flag glyph per criterion.
+    ...(!filter && entry.flagLead ? { lead: { flag: true } } : {}),
   };
 }
 
@@ -391,10 +400,10 @@ export function superlativeToCategory(entry, lang) {
     label,
     predicate: (c) => codes.has(c.code),
     ...(filter ? { filter } : {}),
-    // Carry the ranking metric so the daily header can lead with its icon
-    // (renderMetricLeadInline) — a superlative has no filter chips to render,
-    // but the metric glyph gives it the same "here's the metric" cue.
-    ...(entry.metric ? { metric: entry.metric } : {}),
+    // Lead the title with the ranking metric's icon (renderMetricLeadInline) —
+    // a superlative has no filter chips, but the metric glyph gives it the same
+    // "here's the metric" cue. Skipped when `criteria` chips are present.
+    ...(!filter && entry.metric ? { lead: { metric: entry.metric } } : {}),
   };
 }
 

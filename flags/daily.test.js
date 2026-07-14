@@ -305,6 +305,33 @@ test('manualToCategory: no `criteria` means no filter (header falls back to the 
     'en',
   );
   assert.equal(category.filter, undefined);
+  assert.equal(category.lead, undefined);
+});
+
+test('manualToCategory: `flagLead` leads the title with the flag glyph (category.lead)', () => {
+  const category = manualToCategory(
+    { n: 59, kind: 'manual', answers: ['fr'], title: { en: 'Triangles from the hoist', pl: 'X' }, flagLead: true },
+    'en',
+  );
+  assert.deepEqual(category.lead, { flag: true });
+  assert.equal(category.filter, undefined);
+});
+
+test('manualToCategory: `criteria` chips win over `flagLead` (no lead when chips render)', () => {
+  const category = manualToCategory(
+    { n: 59, kind: 'manual', answers: ['fr'], title: { en: 'X', pl: 'X' }, criteria: 'continent:Europe', flagLead: true },
+    'en',
+  );
+  assert.ok(category.filter, 'criteria still renders chips');
+  assert.equal(category.lead, undefined, 'no redundant flag lead alongside chips');
+});
+
+test('superlativeToCategory: the ranking metric drives category.lead (no criteria)', () => {
+  const category = superlativeToCategory(
+    { n: 36, kind: 'superlative', metric: 'population', answers: ['ru', 'de'], title: { en: 'X', pl: 'X' } },
+    'en',
+  );
+  assert.deepEqual(category.lead, { metric: 'population' });
 });
 
 test('superlativeToCategory: display-only `criteria` parses into category.filter', () => {

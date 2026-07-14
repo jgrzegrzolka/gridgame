@@ -232,19 +232,30 @@ function checkDescriptions(entries) {
  */
 function checkDisplayCriteria(entries) {
   for (const entry of entries) {
-    if (entry.criteria === undefined) continue;
     const at = `puzzles #${entry.n}`;
     const isCurated = entry.kind === 'manual' || entry.kind === 'superlative';
-    if (!isCurated) {
-      throw new Error(
-        `${at}: criteria is only for manual/superlative entries — filter entries render from filter`,
-      );
+    if (entry.criteria !== undefined) {
+      if (!isCurated) {
+        throw new Error(
+          `${at}: criteria is only for manual/superlative entries — filter entries render from filter`,
+        );
+      }
+      if (typeof entry.criteria !== 'string' || entry.criteria.length === 0) {
+        throw new Error(`${at}: criteria, when present, must be a non-empty string`);
+      }
+      if (!parseFilterString(entry.criteria)) {
+        throw new Error(`${at}: criteria does not parse: ${entry.criteria}`);
+      }
     }
-    if (typeof entry.criteria !== 'string' || entry.criteria.length === 0) {
-      throw new Error(`${at}: criteria, when present, must be a non-empty string`);
-    }
-    if (!parseFilterString(entry.criteria)) {
-      throw new Error(`${at}: criteria does not parse: ${entry.criteria}`);
+    // `flagLead` leads a manual title with the flag glyph (for flag-design
+    // themes that aren't filter-expressible). Manual-only, boolean true.
+    if (entry.flagLead !== undefined) {
+      if (entry.kind !== 'manual') {
+        throw new Error(`${at}: flagLead is only for manual entries`);
+      }
+      if (entry.flagLead !== true) {
+        throw new Error(`${at}: flagLead, when present, must be true`);
+      }
     }
   }
 }

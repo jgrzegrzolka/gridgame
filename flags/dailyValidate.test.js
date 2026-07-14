@@ -102,6 +102,18 @@ test('`criteria` on a filter entry is rejected (they render from filter)', () =>
   );
 });
 
+test('a manual entry with `flagLead: true` passes', () => {
+  assert.doesNotThrow(() => run(validManual({ flagLead: true })));
+});
+
+test('`flagLead` on a superlative is rejected (manual-only)', () => {
+  assert.throws(() => run(validSuperlative({ flagLead: true })), /flagLead is only for manual entries/);
+});
+
+test('`flagLead` that is not literally true is rejected', () => {
+  assert.throws(() => run(validManual({ flagLead: 'yes' })), /flagLead, when present, must be true/);
+});
+
 test('unknown metric is rejected', () => {
   assert.throws(() => run(validSuperlative({ metric: 'notametric' })), /not a known metric key/);
 });
