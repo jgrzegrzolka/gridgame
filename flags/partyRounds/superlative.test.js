@@ -37,6 +37,21 @@ test('generate: four distinct options, answer among them, prompt is a direction'
   }
 });
 
+test('generate: never puts two flag lookalikes among the four options', async () => {
+  const { lookalikesOf } = await import('../quiz.js');
+  // A pool laced with lookalike pairs (id/mc, ro/td, ie/ci) plus enough distinct
+  // sovereigns that the guard never has to fall back — so co-occurrence would be
+  // a real defect, not an unavoidable tiny-pool draw. All carry a population value.
+  const pool = ['id', 'mc', 'ro', 'td', 'ie', 'ci', 'us', 'br', 'cn', 'in', 'ru', 'jp', 'de', 'fr']
+    .map((code) => ({ code }));
+  for (let i = 0; i < 300; i++) {
+    const q = generate(pool, undefined, seeded(i + 1));
+    const groups = q.options.map((c) => lookalikesOf(c).join(','));
+    assert.equal(new Set(groups).size, q.options.length,
+      `seed ${i}: two indistinguishable flags co-occur in [${q.options.join(', ')}]`);
+  }
+});
+
 test('generate: the answer is the strict extreme of the four in the stated direction', () => {
   for (let i = 0; i < 200; i++) {
     const q = generate(POOL, undefined, seeded(i + 500));
