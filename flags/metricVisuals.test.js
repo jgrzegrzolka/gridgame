@@ -1,8 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from './metricVisuals.js';
+import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT, metricIconSpan } from './metricVisuals.js';
 import { METRIC_FILES } from './metrics/index.js';
+
+/** Minimal document stand-in: createElement returns an element that records
+ *  className + innerHTML, enough for metricIconSpan. */
+const fakeDoc = /** @type {any} */ ({
+  createElement: () => ({ className: '', innerHTML: '' }),
+});
 
 // The contract: every registered metric has a complete visual identity, and
 // the visuals module carries no stale entries for metrics that no longer
@@ -51,4 +57,18 @@ test('short labels carry an i18n key and a non-empty fallback', () => {
     assert.ok(s.key.length > 0, `${key} short label needs an i18n key`);
     assert.ok(s.fallback.length > 0, `${key} short label needs a fallback`);
   }
+});
+
+test('metricIconSpan builds a span carrying the metric glyph + requested class', () => {
+  const ic = /** @type {any} */ (metricIconSpan('coffee', 'mhub-ic', fakeDoc));
+  assert.equal(ic.className, 'mhub-ic');
+  assert.equal(ic.innerHTML, METRIC_ICONS.coffee);
+});
+
+test('metricIconSpan defaults the class and never leaves innerHTML undefined for an unknown key', () => {
+  const def = /** @type {any} */ (metricIconSpan('coffee', undefined, fakeDoc));
+  assert.equal(def.className, 'mhub-ic'); // default class
+  const unknown = /** @type {any} */ (metricIconSpan('not-a-metric', 'crit-ic', fakeDoc));
+  assert.equal(unknown.className, 'crit-ic');
+  assert.equal(unknown.innerHTML, ''); // the `|| ''` guard, so no "undefined" ever renders
 });

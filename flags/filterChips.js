@@ -24,7 +24,7 @@
 
 import { activeFilterChips } from './flagsFilter.js';
 import { pillLabel } from './findFlag.js';
-import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from './metricVisuals.js';
+import { METRIC_HUES, METRIC_SHORT, metricIconSpan } from './metricVisuals.js';
 import { makeColorSwatch } from '../common.js';
 
 /** @typedef {import('./flagsFilter.js').Filters} Filters */
@@ -100,10 +100,7 @@ export function buildFilterChip(ref, labelText, opts = {}) {
   if (ref.kind === 'scalar' && ref.group !== 'colorCount') {
     chip.classList.add('is-metric');
     chip.style.setProperty('--mc', METRIC_HUES[ref.group] || 'currentColor');
-    const ic = doc.createElement('span');
-    ic.className = 'mhub-ic';
-    ic.innerHTML = METRIC_ICONS[ref.group] || '';
-    chip.appendChild(ic);
+    chip.appendChild(metricIconSpan(ref.group, 'mhub-ic', doc));
   }
   const label = doc.createElement('span');
   label.className = 'filter-chip-label';
@@ -144,10 +141,8 @@ function buildCriterionInline(ref, filters, t, doc) {
   } else if (ref.kind === 'scalar') {
     // World-fact metric: the icon carries the hue (words stay in ink so every
     // metric reads at title size — some hues are too light for text).
-    const ic = doc.createElement('span');
-    ic.className = 'crit-ic';
+    const ic = metricIconSpan(ref.group, 'crit-ic', doc);
     ic.style.color = METRIC_HUES[ref.group] || 'currentColor';
-    ic.innerHTML = METRIC_ICONS[ref.group] || '';
     crit.appendChild(ic);
   }
   const label = doc.createElement('span');

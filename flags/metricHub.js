@@ -21,7 +21,7 @@
  */
 
 import { pillLabel } from './findFlag.js';
-import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from './metricVisuals.js';
+import { METRIC_HUES, METRIC_SHORT, metricIconSpan } from './metricVisuals.js';
 import { fitChipRow, rowGap } from './chipRowFit.js';
 
 /** @typedef {{ op: '>=' | '<=', n: number }} Tier */
@@ -120,10 +120,7 @@ export function createMetricHub(opts) {
     btn.className = 'pill mhub-chip';
     btn.setAttribute('data-metric', m.key);
     btn.style.setProperty('--mc', METRIC_HUES[m.key] || 'currentColor');
-    const ic = doc.createElement('span');
-    ic.className = 'mhub-ic';
-    ic.innerHTML = METRIC_ICONS[m.key] || '';
-    btn.appendChild(ic);
+    btn.appendChild(metricIconSpan(m.key, 'mhub-ic', doc));
     const labelSpan = doc.createElement('span');
     labelSpan.className = 'mhub-chip-label';
     labelSpan.textContent = shortLabel(m.key);
@@ -245,10 +242,7 @@ export function createMetricHub(opts) {
     // is never ambiguous about which fact it belongs to.
     const lead = doc.createElement('span');
     lead.className = 'mhub-panel-lead';
-    const ic = doc.createElement('span');
-    ic.className = 'mhub-ic';
-    ic.innerHTML = METRIC_ICONS[key] || '';
-    lead.appendChild(ic);
+    lead.appendChild(metricIconSpan(key, 'mhub-ic', doc));
     const title = doc.createElement('span');
     title.className = 'mhub-panel-title';
     title.textContent = fullLabel(key);
