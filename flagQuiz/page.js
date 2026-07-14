@@ -209,10 +209,9 @@ export function bootFlagQuiz() {
       // nickname "Your name: …" item is re-inserted after each rebuild
       // for the same reason; without that, the first langchanged would
       // wipe it.
-      // Set once the round starts (below). The show-map toggle's
-      // onChange reads this lazily, so a toggle before the game exists
-      // (first-visit picker) simply persists the preference.
-      /** @type {{ refreshI18n: () => void, setMapVisible: (show: boolean) => void } | null} */
+      // Set once the round starts (below); holds the live game's
+      // language-refresh hook. Null on the first-visit picker.
+      /** @type {{ refreshI18n: () => void } | null} */
       let game = null;
       const rebuildMenu = () => {
         /** @type {HTMLUListElement} */ (quizMenuEl).innerHTML = '';
@@ -223,9 +222,6 @@ export function bootFlagQuiz() {
           // yet. Returning players keep their normal aria-current marker.
           currentVariantKey: isFirstVisit ? null : currentVariantKey,
           statsCurrent: false,
-          // Live map mount/hide instead of a page reload. No-op until the
-          // game is created (first-visit picker has no round to overlay).
-          onShowMapChange: (checked) => { if (game) game.setMapVisible(checked); },
         });
         mountNicknameMenuItem({
           rootEl: quizMenuEl,
@@ -641,35 +637,14 @@ export function bootFlagQuiz() {
 
     /**
      * Single entry point for the in-map toggle chip. Persists the choice to
-     * the shared `gridgame.flagquiz.showMap` key, applies it live, and syncs
-     * the burger menu's "Show map" toggle so the two controls never
-     * disagree. The menu toggle drives its own persistence + setMapVisible
-     * directly, so it doesn't route through here.
+     * the shared `gridgame.flagquiz.showMap` key and applies it live. The
+     * chip on the map (a "show" chip even on the collapsed strip) is the
+     * only show/hide control, so there's no burger toggle to keep in sync.
      * @param {boolean} show
      */
     function applyMapPreference(show) {
       setQuizShowMap(localStorage, show);
       setMapVisible(show);
-      syncMapMenuToggle(show);
-    }
-
-    /**
-     * Reflect the current map visibility on the burger menu's "Show map"
-     * checkbox. The menu isn't rebuilt on every open, so a change made from
-     * the map's own chip/bar would otherwise leave the toggle showing a
-     * stale state. Queries the live checkbox (robust to menu rebuilds) and
-     * sets `.checked` directly — no `change` dispatch, so this can't loop
-     * back through the toggle's own handler.
-     * @param {boolean} show
-     */
-    function syncMapMenuToggle(show) {
-      if (!quizMenuEl) return;
-      const textSpan = quizMenuEl.querySelector('.scope-toggle-text[data-i18n="menu.showMap"]');
-      const label = textSpan && textSpan.closest('.scope-toggle');
-      const input = /** @type {HTMLInputElement | null} */ (
-        label ? label.querySelector('input[type="checkbox"]') : null
-      );
-      if (input) input.checked = show;
     }
 
     // Initial paint: for any variant that has a map, show the live map or
@@ -1219,9 +1194,6 @@ export function bootFlagQuiz() {
         // can fire mid-game before showResult sets leaderboardState).
         paintLeaderboard();
       },
-      // Burger-menu "Show map" toggle hook — mount/hide the map live
-      // over the current round (or result screen) instead of reloading.
-      setMapVisible,
     };
   }
 }

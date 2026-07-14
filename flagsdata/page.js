@@ -49,6 +49,32 @@ function setFlagsdataShowMap(store, value) {
   try { store.setItem(FLAGSDATA_SHOW_MAP_KEY, value ? 'true' : 'false'); } catch { /* ignore */ }
 }
 
+/**
+ * Per-device "Full width" preference for flagsdata. Defaults to FALSE
+ * (the site's centred column is the norm; edge-to-edge is the opt-in).
+ * Unlike show-map, the sense is inverted: only an explicit `'true'`
+ * turns it on, so a missing key reads as the centred default. The sync
+ * head script in index.html reads this same key/value to stamp `is-wide`
+ * before first paint — keep the literal in step if this key ever moves.
+ *
+ * @param {{ getItem(k: string): string | null } | null} [store]
+ * @returns {boolean}
+ */
+const FLAGSDATA_WIDE_KEY = 'gridgame.flagsdata.wide';
+function isFlagsdataWide(store) {
+  const s = store || (typeof localStorage !== 'undefined' ? localStorage : null);
+  if (!s) return false;
+  try { return s.getItem(FLAGSDATA_WIDE_KEY) === 'true'; } catch { return false; }
+}
+/**
+ * @param {{ setItem(k: string, v: string): void }} store
+ * @param {boolean} value
+ */
+function setFlagsdataWide(store, value) {
+  if (!store) return;
+  try { store.setItem(FLAGSDATA_WIDE_KEY, value ? 'true' : 'false'); } catch { /* ignore */ }
+}
+
 /** @param {string} v */
 function statusLabel(v) {
   return t(`status.${v}`, STATUS_LABELS[/** @type {keyof typeof STATUS_LABELS} */ (v)]);
@@ -252,29 +278,45 @@ export function bootFlagsData() {
    * @type {Record<string, import('../flags/metrics.js').MetricData>} */
   let metricsData = {};
 
-  // Show-map toggle in the burger menu — flagsdata's burger panel ships
-  // empty (just the coffee link), so we prepend the toggle here at
-  // boot. Reuses the shared `buildToggleLi` from common.js.
+  // "Full width" toggle in the burger menu — flagsdata's burger panel ships
+  // with just the coffee link, so we insert the toggle here at boot. Lets the
+  // browse page drop its centred column so more flag columns and a wider map
+  // fit the screen. Off by default; persisted per device. The sync head script
+  // already applied `is-wide` on first paint; this keeps it live + in step.
   const burgerMenuEl = /** @type {HTMLUListElement | null} */ (
     document.querySelector('#burger-panel .menu')
   );
   if (burgerMenuEl) {
-    // Insert the toggle BEFORE the coffee link's <li> so the menu
-    // reads: nickname (top, with its own bottom-border divider) →
-    // show-map → coffee. Falls back to append-at-end if the page
-    // ever stops carrying a coffee link.
+    // Insert BEFORE the coffee link's <li> so the menu reads: nickname (top,
+    // its own divider) → full-width → coffee. Falls back to append-at-end if
+    // the page ever stops carrying a coffee link.
     const toggleLi = buildToggleLi({
-      label: t('menu.showMap', 'Show map'),
-      labelKey: 'menu.showMap',
-      initial: isFlagsdataShowMap(),
-      // Apply live (mount / collapse in place) as well as persist — the same
-      // path the map's own hide chip drives, so the two controls stay in step.
-      onChange: (checked) => applyMapPreference(checked),
+      label: t('menu.wideScreen', 'Full width'),
+      labelKey: 'menu.wideScreen',
+      initial: isFlagsdataWide(),
+      // No reload — flipping a CSS class on <html> reflows the layout live.
+      reload: false,
+      onChange: (checked) => applyWidePreference(checked),
     });
+    // Desktop-only affordance: below the 756px content cap the body already
+    // fills the viewport, so the toggle would be a no-op. A media query in
+    // index.css hides it on narrow screens (see `.flagsdata-wide-toggle`).
+    toggleLi.classList.add('flagsdata-wide-toggle');
     const coffeeLink = burgerMenuEl.querySelector('.menu-coffee');
     const coffeeLi = coffeeLink ? coffeeLink.closest('li') : null;
     if (coffeeLi) burgerMenuEl.insertBefore(toggleLi, coffeeLi);
     else burgerMenuEl.appendChild(toggleLi);
+  }
+
+  /**
+   * Persist the "Full width" choice and reflect it live by toggling the
+   * `is-wide` class on <html> (the same class the sync head script stamps on
+   * load). The CSS override lives in index.css.
+   * @param {boolean} wide
+   */
+  function applyWidePreference(wide) {
+    setFlagsdataWide(localStorage, wide);
+    document.documentElement.classList.toggle('is-wide', wide);
   }
 
   // World contour map below the grid — every country matching the active
@@ -480,29 +522,14 @@ export function bootFlagsData() {
   /** The chip's click: flip to the opposite of the current state. */
   function toggleMapVisibility() { applyMapPreference(!mapMounted); }
   /**
-   * Single entry point for both controls: persist to `gridgame.flagsdata.showMap`,
-   * apply live, and sync the burger toggle so the two never disagree.
+   * Single entry point for the map's toggle chip: persist to
+   * `gridgame.flagsdata.showMap` and apply live. The chip (a "show" chip even
+   * on the collapsed strip) is the only show/hide control — no burger toggle.
    * @param {boolean} show
    */
   function applyMapPreference(show) {
     setFlagsdataShowMap(localStorage, show);
     setMapVisible(show);
-    syncMapMenuToggle(show);
-  }
-  /**
-   * Reflect the current visibility on the burger menu's "Show map" checkbox.
-   * Sets `.checked` directly (no `change` dispatch) so it can't loop back
-   * through the toggle's own handler.
-   * @param {boolean} show
-   */
-  function syncMapMenuToggle(show) {
-    if (!burgerMenuEl) return;
-    const textSpan = burgerMenuEl.querySelector('.scope-toggle-text[data-i18n="menu.showMap"]');
-    const label = textSpan && textSpan.closest('.scope-toggle');
-    const input = /** @type {HTMLInputElement | null} */ (
-      label ? label.querySelector('input[type="checkbox"]') : null
-    );
-    if (input) input.checked = show;
   }
 
   // Click → flag-zoom popup. Registered once on the container (which persists

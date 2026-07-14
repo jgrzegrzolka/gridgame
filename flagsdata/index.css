@@ -10,6 +10,33 @@ body {
   margin: 0 auto;
   box-sizing: border-box;
 }
+/* Full-width layout — opt-in via the burger "Full width" toggle, default
+ * off. The browse page is the one page where edge-to-edge earns its keep:
+ * more flag columns fit at once and the world map gets wider. Dropping the
+ * body's 756 px cap widens the content; zeroing --chrome-x-offset lets the
+ * chrome cluster (logo left, lang/flags/burger right) ride out to the
+ * viewport edges with it instead of floating orphaned at the old column's
+ * corner (the exact problem the 756 px cap was added to fix). The `is-wide`
+ * class is stamped on <html> by the sync head script + the burger toggle;
+ * `html.is-wide` (0,1,1) outranks `:root` (0,1,0) so the variable override
+ * takes. */
+html.is-wide {
+  --chrome-x-offset: 0px;
+}
+html.is-wide body {
+  max-width: none;
+}
+/* Hide the "Full width" burger toggle on viewports at or below the 756px
+ * content cap. There the body already fills the screen and --chrome-x-offset
+ * already clamps to 0, so flipping the switch changes nothing — a dead
+ * control on phones. The toggle is a desktop-only affordance; the media query
+ * makes it appear/disappear live as the viewport crosses the threshold
+ * (resize / rotate) with no JS width-watching. */
+@media (max-width: 756px) {
+  .flagsdata-wide-toggle {
+    display: none;
+  }
+}
 /* The map always fills the content column here — no corner resize handle
  * (mountFlagMap is called with resizable: false). It inherits the shared
  * `width: 100%` from flags/flagMap.css, so no override is needed. */

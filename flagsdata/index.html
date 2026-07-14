@@ -33,6 +33,20 @@
         document.getElementById('lang-toggle').setAttribute('data-current', lang);
       })();
     </script>
+    <script>
+      // Sync full-width paint — stamps `is-wide` on <html> before first
+      // paint when the per-device "Full width" preference is on, so wide-
+      // mode users don't see a narrow→wide reflow as the deferred module
+      // boots. Default off: only an explicit 'true' opts in. The burger
+      // toggle keeps the class + the stored value in step at runtime.
+      (function () {
+        try {
+          if (localStorage.getItem('gridgame.flagsdata.wide') === 'true') {
+            document.documentElement.classList.add('is-wide');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <span class="flags-link" aria-label="Browse flags" aria-disabled="true" role="link" data-i18n-attr="aria-label:menu.flagsData"><span class="flags-icon" aria-hidden="true"></span></span>
     <button
       type="button"
