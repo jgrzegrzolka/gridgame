@@ -492,6 +492,10 @@ body::after {
   z-index: 5;
   background: var(--page-bg-color);
   margin-top: 16px;
+  /* Bleed the box to the body's padding edge (cancels body's 24px). The
+   * page-bg fill that actually covers content scrolling under the row is
+   * widened all the way to the viewport by the `::before` band below — see
+   * there for why the box margin alone isn't enough. */
   margin-left: -24px;
   margin-right: -24px;
   /* Top padding lives on `.row-inner` instead so the inner's border-top
@@ -506,8 +510,31 @@ body::after {
    * cover sibling content beneath when sticky-pinned. `align-self:
    * stretch` overrides the parent's centring so the row fills its
    * parent's content box width, and the -24px horizontal margin then
-   * extends it the rest of the way to the viewport edge. */
+   * extends it to (at least) the body's padding edge. The `::before`
+   * band below carries the fill the rest of the way to the viewport. */
   align-self: stretch;
+}
+/* Full-width background band. A CSS background can't paint past its own box,
+ * and the strip's box stops at its container edge + 24px — short of the
+ * viewport on a page that caps content in a narrow column (flagQuiz's 720px
+ * panel), so a map resized wider than the column showed on both sides of the
+ * strip. This pseudo paints the page-bg fill edge to edge. It's an absolute
+ * pseudo, not viewport margins on the row itself, because those overflow a
+ * centred capped body and break its `margin: 0 auto`; an absolute element
+ * doesn't affect layout. z-index:-1 keeps it behind the links but inside the
+ * row's stacking context, so it still covers the map. Invisible on normal
+ * pages (page-bg on page-bg); overflow-x: clip absorbs the vw spill. */
+.actions-row::before,
+.result-links::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  background: var(--page-bg-color);
 }
 /* Inner wrapper injected by `wrapBottomRowsForInsetHairline` in
  * common.js. The visible hairline above the row's content sits on this
@@ -1041,6 +1068,8 @@ body::after {
   background: var(--page-bg-color);
   font-size: 14px;
   color: #666;
+  /* Same -24px bleed as `.actions-row`; the full-width fill comes from the
+   * shared `::before` band below. */
   margin: 16px -24px 0;
   /* Same padding split as `.actions-row` — top padding lives on the
    * `.row-inner` wrapper so its border-top sits at the row's box top. */
