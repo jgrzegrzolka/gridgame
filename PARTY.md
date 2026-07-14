@@ -252,25 +252,12 @@ The core loop now *feels* like a race, and it advances on its own — **no host 
   time-free and only knows "reveal now" / "next now" (`applyForceReveal` / `applyNext`,
   already present). No wire-protocol change either: clients import the durations directly.
 
-**Host-tab dependency — now backstopped by a server watchdog (2026-07-14).** The pace
-still *prefers* the host's tab: when it's awake the host's clock drives the snappy
-transitions (a clean reveal snaps on in 0.9s, a miss holds 2.5s). But the room no longer
-*depends* on it. `party/partyGameServer.js` arms a PartyKit **alarm** (`storage.setAlarm`)
-on every phase change, pointed a few seconds past the phase's normal duration
-(`QUESTION_WATCHDOG_SECONDS` / `REVEAL_WATCHDOG_SECONDS` in `flags/partyTiming.js`). If the
-host's tab is backgrounded, locked, or closed and the `reveal` / `next` never arrives,
-`onAlarm` force-advances the room via `applyRevealTimeout` / `applyNextTimeout` (the reveal
-/ next reducers minus the host-identity gate). The alarm persists in storage, so it fires
-even after a durable-object eviction. This closes the "room stalls at a reveal" stall — most
-visibly the **final board**, whose only trigger used to be the host clock's last `next`, so a
-host who dropped right after the last question left everyone with no standings. A healthy
-host always transitions first (the watchdog deadline sits past the normal duration), so the
-alarm stays a true fallback, not a second driver racing the host.
-
-*Still open (out of scope):* **host migration** — the host is still the only *seat* that can
-start / restart / abort, so a permanently-gone host can't be replaced mid-game (the watchdog
-only auto-advances an in-progress game to its end). And cosmetic: a player who *reconnects*
-mid-question starts a fresh full-length bar rather than the real remaining time — the
+**Known limitation (documented, not yet fixed):** the pace depends on the **host's tab
+staying awake**. If the host disconnects mid-round the room can stall at a reveal (a
+non-host has no authority to send `next`). Two future fixes, both out of scope here:
+server-side PartyKit **alarms** driving the transitions (robust, survives any tab), or
+**host migration** on disconnect. Also cosmetic: a player who *reconnects* mid-question
+starts a fresh full-length bar rather than the real remaining time — the host's
 authoritative reveal still corrects them on schedule.
 
 ## Iteration 4 — Round 2: the Map round (own-screen) — SHIPPED (branch `feat/party-map-round`)

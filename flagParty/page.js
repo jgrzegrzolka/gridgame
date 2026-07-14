@@ -5,7 +5,6 @@ import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
-import { trackEvent } from '../analytics/index.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
 import { MAX_ROUNDS_PER_MODE, PICTURE_MODES, METRIC_MODES, buildPartyPlan } from '../flags/partyPlan.js';
@@ -991,12 +990,10 @@ export function bootFlagParty() {
   // Everyone renders the countdown; only the host's timer fires the transition
   // (send 'reveal' when a question runs out, 'next' when a reveal has lingered),
   // so the room advances on its own with no host button to press. Timing lives
-  // here on the page by design — the room reducer stays time-free. The host's
-  // tab drives the snappy pace, but the room no longer *depends* on it: a
-  // server-side watchdog alarm (party/partyGameServer.js) force-advances a
-  // lingering question/reveal if the host's tab goes to sleep, so the room can't
-  // stall at a reveal (the final board especially). All-present-buzzed still
-  // auto-reveals server-side regardless. See PARTY.md.
+  // here on the page by design — the room reducer stays time-free. Caveat: the
+  // pace depends on the host's tab staying awake; if the host drops mid-round
+  // the room can stall at a reveal (documented in PARTY.md, server-alarm is the
+  // future fix). All-present-buzzed still auto-reveals server-side regardless.
   /** @type {string | null} phase:roundIndex the clock is currently counting */
   let clockToken = null;
   let clockDeadline = 0;
@@ -1376,29 +1373,7 @@ export function bootFlagParty() {
     if (firstShow) {
       // Pop only applies to the tie caption (the sole surviving subtitle).
       if (animate && tie) { finalSub.classList.remove('pop'); void finalSub.offsetWidth; finalSub.classList.add('pop'); }
-      const tier = pickPartyCelebration({ scoreboard: board, you: state.you });
-      runCelebration(tier);
-      // Feature Q probe: a player reached the final screen but reported the
-      // scoreboard rows missing while the celebration still fired (host saw the
-      // table, a guest saw only confetti). Nothing threw, so auto-capture caught
-      // nothing — this event records what the board actually looked like on this
-      // device. `boardH` is the key signal: rows are built here (right above),
-      // so a populated `rows` with `boardH === 0` means "built but not laid out /
-      // hidden" — a visual bug, not missing data. No-op off-prod (localhost skips
-      // App Insights init), so it never pollutes dev. Fires once per final screen.
-      trackEvent('party-final', {
-        boardLen: board.length,
-        rows: finalBoard.childElementCount,
-        boardH: finalBoard.offsetHeight,
-        finalShown: !sections.final.hidden,
-        isHost: !!state.isHost,
-        youInBoard: board.some((e) => e.playerId === state.you),
-        tier,
-        reducedMotion: prefersReducedMotion(),
-        vw: window.innerWidth,
-        vh: window.innerHeight,
-        totalRounds: state.totalRounds,
-      });
+      runCelebration(pickPartyCelebration({ scoreboard: board, you: state.you }));
       finalCelebrated = true;
     }
 

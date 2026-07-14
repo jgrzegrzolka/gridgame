@@ -487,6 +487,15 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   padding: 0;
   background: none;
 }
+/* Drop the shared full-bleed background band too (common.css
+   `.result-links::before`). It's part of the sticky rail this screen opts out
+   of: that band is `position: absolute; top: 0; bottom: 0` and relies on the
+   row being a positioned containing block to size itself to the row. With the
+   row set `static` above it has no positioned ancestor, so it stretches to the
+   viewport (100vw × 100vh) and — painting above the board — covers the whole
+   final scoreboard with page-bg. The inline links here need no background fill,
+   so suppress the pseudo entirely. */
+.pt-final .result-links::before { content: none; }
 .result-sep { color: var(--muted-color); }
 
 /* Final board */
