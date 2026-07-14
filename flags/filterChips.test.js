@@ -184,6 +184,23 @@ test('renderCriteriaInline: each token gets exactly the right leading mark', () 
   assert.match(coffeeLabel.textContent, /^Coffee production over /);
 });
 
+test('renderCriteriaInline: eu-member is a country fact (no flag glyph); real charges keep it', () => {
+  // eu-member lives in the motif group but is political, not a visual charge —
+  // it must read like continent/status, not "on the flag". union-jack IS a
+  // charge (literally on the canton) and keeps the glyph.
+  const f = emptyFilters();
+  f.motif.include.add('eu-member');
+  f.motif.include.add('union-jack');
+  const crits = /** @type {any} */ (renderCriteriaInline(f, t, fakeDoc())).children
+    .filter((/** @type {any} */ c) => c.className.split(' ').includes('crit'));
+  const kids = (/** @type {any} */ c) => c.children.map((/** @type {any} */ k) => k.className);
+  // echo-t returns the motif's value as the fallback, so labels read 'eu-member' / 'union-jack'.
+  const eu = crits.find((/** @type {any} */ c) => c.children.some((/** @type {any} */ k) => k.textContent === 'eu-member'));
+  const uj = crits.find((/** @type {any} */ c) => c.children.some((/** @type {any} */ k) => k.textContent === 'union-jack'));
+  assert.deepEqual(kids(eu), ['crit-label']); // no glyph — reads as a country fact
+  assert.ok(kids(uj).includes('crit-flag')); // a real charge keeps the glyph
+});
+
 test('renderCriteriaInline: empty filter yields nothing', () => {
   assert.equal(/** @type {any} */ (renderCriteriaInline(emptyFilters(), t, fakeDoc())).children.length, 0);
 });
