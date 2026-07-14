@@ -41,6 +41,7 @@
     "includeTerritories": "Include territories & other flags",
     "showMap": "Show map",
     "hideMap": "Hide map",
+    "wideScreen": "Full width",
     "fullscreen": "Toggle fullscreen",
     "sync": "Sync across devices"
   },
