@@ -982,12 +982,12 @@
     "coal": "Coal production",
     "sheepPerCapita": "Sheep per capita",
     "cattlePerCapita": "Cattle per capita",
-    "beerPerCapita": "Beer per capita",
+    "beerPerCapita": "Beer consumption",
     "tea": "Tea production",
     "sugarcane": "Sugarcane production",
     "gold": "Gold production",
-    "alcoholPerCapita": "Alcohol per capita",
-    "meatPerCapita": "Meat per capita",
+    "alcoholPerCapita": "Alcohol consumption",
+    "meatPerCapita": "Meat consumption",
     "borders": "Bordering countries"
   },
   "flagFacts": {
