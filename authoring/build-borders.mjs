@@ -71,6 +71,8 @@ const BORDERS = {
   gi: 1, // Gibraltar: Spain
   hk: 1, // Hong Kong: China
   mo: 1, // Macau: China
+  mf: 1, // Saint-Martin (French): Sint Maarten — the island of Saint Martin is split in two
+  sx: 1, // Sint Maarten (Dutch): Saint-Martin (the only land border in the Caribbean)
   'gb-nir': 1, // Northern Ireland: Ireland
   'es-ct': 2, // Catalonia: France, Andorra
   'es-pv': 1, // Basque Country: France
