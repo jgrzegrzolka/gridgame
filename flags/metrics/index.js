@@ -41,4 +41,6 @@ export const METRIC_FILES = [
   { key: 'alcoholPerCapita', file: 'alcoholPerCapita.json', label: 'Alcohol per capita' },
   { key: 'meatPerCapita', file: 'meatPerCapita.json', label: 'Meat per capita' },
   { key: 'borders', file: 'borders.json', label: 'Bordering countries' },
+  { key: 'oliveOil', file: 'oliveOil.json', label: 'Olive oil production' },
+  { key: 'honey', file: 'honey.json', label: 'Honey production' },
 ];

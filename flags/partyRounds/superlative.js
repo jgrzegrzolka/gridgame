@@ -23,6 +23,8 @@ import gold from '../metrics/gold.json' with { type: 'json' };
 import alcoholPerCapita from '../metrics/alcoholPerCapita.json' with { type: 'json' };
 import meatPerCapita from '../metrics/meatPerCapita.json' with { type: 'json' };
 import borders from '../metrics/borders.json' with { type: 'json' };
+import oliveOil from '../metrics/oliveOil.json' with { type: 'json' };
+import honey from '../metrics/honey.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -330,3 +332,15 @@ const borderedBorders = {
   values: Object.fromEntries(Object.entries(borders.values).filter(([, v]) => v > 0)),
 };
 export const bordersRound = createSuperlativeRound(createMetric(borderedBorders, []), 'superlative-borders', { direction: 'most' });
+
+// Olive oil instance: tonnes of olive oil, id 'superlative-olive-oil'. Sparse
+// like the other crops (FAO lists ~28 producers), so the round ranks those
+// producers only (non-producers would tie at 0). Locked to 'most': "biggest
+// olive oil producer" (Spain) is the good question; "smallest" is obscure.
+export const oliveOilRound = createSuperlativeRound(createMetric(oliveOil, []), 'superlative-olive-oil', { direction: 'most' });
+
+// Honey instance: tonnes of natural honey, id 'superlative-honey'. Sparse (FAO
+// itemizes ~100 producers, we pin the top 55), so the round ranks those
+// producers only. Locked to 'most': "biggest honey producer" (China, ~a quarter
+// of world output) is the good question; "smallest producer" is obscure.
+export const honeyRound = createSuperlativeRound(createMetric(honey, []), 'superlative-honey', { direction: 'most' });

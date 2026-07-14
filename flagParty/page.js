@@ -72,6 +72,8 @@ const MODE_LABELS = {
   'superlative-alcohol': { key: 'party.mode.superlativeAlcohol', full: 'Alcohol consumption per capita: most' },
   'superlative-meat': { key: 'party.mode.superlativeMeat', full: 'Meat consumption per capita: most' },
   'superlative-borders': { key: 'party.mode.superlativeBorders', full: 'Bordering countries: most' },
+  'superlative-olive-oil': { key: 'party.mode.superlativeOliveOil', full: 'Olive oil production: most' },
+  'superlative-honey': { key: 'party.mode.superlativeHoney', full: 'Honey production: most' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -206,6 +208,18 @@ const SUPERLATIVE_MODES = {
   'superlative-borders': {
     file: 'borders.json',
     hintMost: { key: 'party.hintMostBorders', fallback: 'Most bordering countries' },
+  },
+  // Olive oil is 'most'-only: "biggest olive oil producer" (Spain) is the good
+  // question; "smallest producer" is obscure. Sparse, so the round ranks producers.
+  'superlative-olive-oil': {
+    file: 'oliveOil.json',
+    hintMost: { key: 'party.hintMostOliveOil', fallback: 'Largest olive oil production' },
+  },
+  // Honey is 'most'-only: "biggest honey producer" (China) is the good question;
+  // "smallest producer" is obscure. Sparse, so the round ranks producers.
+  'superlative-honey': {
+    file: 'honey.json',
+    hintMost: { key: 'party.hintMostHoney', fallback: 'Largest honey production' },
   },
 };
 

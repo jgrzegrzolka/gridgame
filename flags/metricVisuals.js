@@ -90,6 +90,14 @@ export const METRIC_ICONS = {
   // boundary line down the middle. Reads as "a border between neighbours",
   // distinct from the geographic terrain / water icons.
   borders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h5v12H4z"/><path d="M15 6h5v12h-5z"/><path d="M12 3.5v17" stroke-dasharray="2 2.6"/></svg>',
+  // Olive oil production: a slender cruet bottle (narrow neck, rounded body, a
+  // fill line) with a single olive leaf sprigging off the neck. Reads as "oil
+  // in a bottle", distinct from the tea leaf, the wine glass, and the coffee cup.
+  oliveOil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h4"/><path d="M9.5 6c0 1.5-1.5 2.2-1.5 4.2V18a1.3 1.3 0 0 0 1.3 1.3h5.4A1.3 1.3 0 0 0 16 18v-7.8c0-2-1.5-2.7-1.5-4.2"/><path d="M8.6 13h6.8"/><path d="M14 6c.9-1.4 2.6-1.6 3.5-.7-.9 1.4-2.6 1.6-3.5.7z"/></svg>',
+  // Honey production: a honey dipper (the grooved wand) with a drip of honey
+  // falling below. Reads as "honey off the dipper", distinct from the olive-oil
+  // cruet, the coffee cup, and the drink glasses.
+  honey: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5v4"/><path d="M8.5 7.5h7l-.6 6.2a2.9 2.9 0 0 1-5.8 0z"/><path d="M9 10.5h6M9.4 13h5.2"/><path d="M12 17.2c0 1.7-1.4 2.3-1.4 3.6a1.4 1.4 0 0 0 2.8 0c0-1.3-1.4-1.9-1.4-3.6z"/></svg>',
 };
 
 /** @type {Record<string, string>} */
@@ -119,6 +127,8 @@ export const METRIC_HUES = {
   alcoholPerCapita: '#b5468a',
   meatPerCapita: '#c85a3c',
   borders: '#5f6bd0',
+  oliveOil: '#808000',
+  honey: '#e08214',
 };
 
 /**
@@ -156,6 +166,8 @@ export const METRIC_SHORT = {
   alcoholPerCapita: { key: 'party.modeShort.superlativeAlcohol', fallback: 'Alcohol consumption' },
   meatPerCapita: { key: 'party.modeShort.superlativeMeat', fallback: 'Meat consumption' },
   borders: { key: 'party.modeShort.superlativeBorders', fallback: 'Borders' },
+  oliveOil: { key: 'party.modeShort.superlativeOliveOil', fallback: 'Olive oil production' },
+  honey: { key: 'party.modeShort.superlativeHoney', fallback: 'Honey production' },
 };
 
 /**

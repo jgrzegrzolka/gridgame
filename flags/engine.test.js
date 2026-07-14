@@ -52,6 +52,8 @@ import {
   TEA_BREAKS_FOR_RANDOM,
   SUGARCANE_BREAKS_FOR_RANDOM,
   GOLD_BREAKS_FOR_RANDOM,
+  OLIVE_OIL_BREAKS_FOR_RANDOM,
+  HONEY_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
   FOREST_BREAKS_FOR_RANDOM,
@@ -587,6 +589,20 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = GOLD_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `gold ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('oliveOil:')) {
+      const suffix = cat.id.slice('oliveOil:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = OLIVE_OIL_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `oliveOil ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('honey:')) {
+      const suffix = cat.id.slice('honey:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = HONEY_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `honey ${op}${n} not in pool`);
     } else if (cat.id.startsWith('wine:')) {
       const suffix = cat.id.slice('wine:'.length);
       /** @type {'>=' | '<='} */
@@ -782,6 +798,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + TEA_BREAKS_FOR_RANDOM.length
     + SUGARCANE_BREAKS_FOR_RANDOM.length
     + GOLD_BREAKS_FOR_RANDOM.length
+    + OLIVE_OIL_BREAKS_FOR_RANDOM.length
+    + HONEY_BREAKS_FOR_RANDOM.length
     + ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM.length
     + MEAT_PER_CAPITA_BREAKS_FOR_RANDOM.length
     + BORDERS_BREAKS_FOR_RANDOM.length;
@@ -966,7 +984,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['alcoholPerCapita', 'apple', 'area', 'banana', 'beerPerCapita', 'borders', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'gold', 'meatPerCapita', 'oil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'wine'],
+    ['alcoholPerCapita', 'apple', 'area', 'banana', 'beerPerCapita', 'borders', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'gold', 'honey', 'meatPerCapita', 'oil', 'oliveOil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'wine'],
   );
 });
 
@@ -1206,13 +1224,29 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     0,
     'borders cats must not appear in the 9×9 pool',
   );
+  // Olive oil, like the other sparse crops, has NO ultimate break, so ALL drop.
+  const droppedOliveOil = OLIVE_OIL_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedOliveOil, OLIVE_OIL_BREAKS_FOR_RANDOM.length, 'no oliveOil tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('oliveOil:')).length,
+    0,
+    'oliveOil cats must not appear in the 9×9 pool',
+  );
+  // Honey, like the other sparse producers, has NO ultimate break, so ALL drop.
+  const droppedHoney = HONEY_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedHoney, HONEY_BREAKS_FOR_RANDOM.length, 'no honey tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('honey:')).length,
+    0,
+    'honey cats must not appear in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
       - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest - droppedOil - droppedRice - droppedCoal
       - droppedSheepPerCapita - droppedCattlePerCapita - droppedBeerPerCapita - droppedTea - droppedSugarcane - droppedGold
-      - droppedAlcoholPerCapita - droppedMeatPerCapita - droppedBorders,
+      - droppedAlcoholPerCapita - droppedMeatPerCapita - droppedBorders - droppedOliveOil - droppedHoney,
   );
 });
 
@@ -2356,15 +2390,18 @@ function syntheticTaggedCountries() {
   // (which cycle on codeCounter % 6) so cross-metric cells like elevation × area
   // stay fillable, same discipline as the two GDP ladders above.
   const ELEVATION_LADDER = [50, 150, 400, 2_000, 4_000, 6_000];
-  // Sparse crops (coffee / wine / cocoa / banana) share one `>=`-only ladder so
-  // every crop tier (>=1K / >=10K / >=100K tonnes) has candidates in every
-  // continent. Real data leaves most places at 0 (absence:'zero'), but the
+  // Sparse crops (coffee / wine / cocoa / banana / olive oil) share one `>=`-only
+  // ladder so every crop tier (>=1K / >=10K / >=100K tonnes) has candidates in
+  // every continent. Real data leaves most places at 0 (absence:'zero'), but the
   // synthetic pool must make the crop categories *fillable* or the generator
   // burns its retry budget dodging them (adding a 4th crop, banana, is what
   // pushed the previously-tolerated unfillable crops over the 200-attempt
-  // budget). All four crops share the value per country: they're distinct
+  // budget). All five crops share the value per country: they're distinct
   // families so they may co-occur, and a high-tier country satisfies the lower
-  // tiers too, so every crop × crop cell stays fillable.
+  // tiers too, so every crop × crop cell stays fillable. (The flip side: five
+  // crops on identical tiers is a dense source of implied-pair rejections, far
+  // denser than real data ever is, which is why the metricGroupRepeated sweep
+  // below carries extra retry headroom.)
   const CROP_LADDER = [3_000, 30_000, 300_000, 12_000, 120_000, 1_200_000];
   // coastline <=1 (landlocked, 0 km) / <=100 / <=500 / >=1000 / >=5000 /
   // >=25000 km. Dense + two-directional like elevation; a /4 counter decorrelates
@@ -2395,6 +2432,11 @@ function syntheticTaggedCountries() {
   // candidate in every synthetic continent (the metric is far sparser in real
   // data, but the synthetic pool's job is fillability, not realism).
   const GOLD_LADDER = [60, 130, 250, 90, 180, 400];
+  // Honey (sparse producer, tonnes, >=10K / >=50K / >=100K). Its own ladder at
+  // its own scale (NOT the crop cluster), so every rung clears >=10K, four clear
+  // >=50K and two clear >=100K, and each tier has a candidate in every synthetic
+  // continent. Decorrelated from the crops so honey × crop cells stay ordinary.
+  const HONEY_LADDER = [15_000, 60_000, 120_000, 30_000, 80_000, 200_000];
   // Tea (sparse crop, >=10K / >=100K / >=1M) and sugarcane (sparse crop, the
   // largest by tonnage, >=1M / >=10M / >=100M) each get a `>=`-only ladder with
   // half the rungs clearing the top break, same discipline as apple/rice above.
@@ -2445,8 +2487,10 @@ function syntheticTaggedCountries() {
           oil: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
           coal: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
           gold: GOLD_LADDER[codeCounter % GOLD_LADDER.length],
+          honey: HONEY_LADDER[codeCounter % HONEY_LADDER.length],
           tea: TEA_LADDER[codeCounter % TEA_LADDER.length],
           sugarcane: SUGARCANE_LADDER[codeCounter % SUGARCANE_LADDER.length],
+          oliveOil: CROP_LADDER[codeCounter % CROP_LADDER.length], // 5th crop, same >=1K/10K/100K breaks
           sheepPerCapita: SHEEP_LADDER[codeCounter % SHEEP_LADDER.length],
           cattlePerCapita: CATTLE_LADDER[codeCounter % CATTLE_LADDER.length],
           beerPerCapita: BEER_LADDER[codeCounter % BEER_LADDER.length],
@@ -2489,8 +2533,10 @@ function syntheticTaggedCountries() {
           oil: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
           coal: FUEL_LADDER[codeCounter % FUEL_LADDER.length],
           gold: GOLD_LADDER[codeCounter % GOLD_LADDER.length],
+          honey: HONEY_LADDER[codeCounter % HONEY_LADDER.length],
           tea: TEA_LADDER[codeCounter % TEA_LADDER.length],
           sugarcane: SUGARCANE_LADDER[codeCounter % SUGARCANE_LADDER.length],
+          oliveOil: CROP_LADDER[codeCounter % CROP_LADDER.length], // 5th crop, same >=1K/10K/100K breaks
           sheepPerCapita: SHEEP_LADDER[codeCounter % SHEEP_LADDER.length],
           cattlePerCapita: CATTLE_LADDER[codeCounter % CATTLE_LADDER.length],
           beerPerCapita: BEER_LADDER[codeCounter % BEER_LADDER.length],
@@ -2550,9 +2596,19 @@ test('generateRandomPuzzle never repeats a world metric within one puzzle', () =
   // Companion to the axesConflict guard: this covers the case axesConflict
   // misses — the same metric (population / area / density) appearing twice on
   // the *same* axis, which reads as redundant clutter to the player.
+  //
+  // maxAttempts is lifted above the production default (200) only here: this is
+  // the widest seed sweep (30) over the synthetic pool, whose five identical-tier
+  // crops make implied-pair rejections far denser than real data, so an unlucky
+  // synthetic seed can drift near or past 200 as metrics are added (it swings with
+  // each addition — a single metric can push one seed over while pulling another
+  // back). This test pins the no-repeat *invariant*, not the retry budget — the
+  // production 200-attempt budget is canaried on real countries.json in
+  // countries.test.js's 30-seed sweep, which is the test that fails first if a
+  // pool addition tightens real-data generation.
   const countries = syntheticTaggedCountries();
   for (let s = 1; s <= 30; s++) {
-    const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(s) });
+    const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(s), maxAttempts: 500 });
     assert.equal(
       metricGroupRepeated(puzzle.rows, puzzle.cols),
       false,

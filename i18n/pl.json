@@ -27,6 +27,20 @@
       "200": "ponad 200 ton"
     }
   },
+  "oliveOil": {
+    "atLeast": {
+      "1k": "ponad 1 tys. ton",
+      "10k": "ponad 10 tys. ton",
+      "100k": "ponad 100 tys. ton"
+    }
+  },
+  "honey": {
+    "atLeast": {
+      "10k": "ponad 10 tys. ton",
+      "50k": "ponad 50 tys. ton",
+      "100k": "ponad 100 tys. ton"
+    }
+  },
   "zoom": {
     "close": "Zamknij",
     "enlarge": "Powiększ flagę"
@@ -575,7 +589,9 @@
       "superlativeGold": "Produkcja złota: najwięcej",
       "superlativeAlcohol": "Spożycie alkoholu na osobę: najwięcej",
       "superlativeMeat": "Spożycie mięsa na osobę: najwięcej",
-      "superlativeBorders": "Sąsiednie kraje: najwięcej"
+      "superlativeBorders": "Sąsiednie kraje: najwięcej",
+      "superlativeOliveOil": "Produkcja oliwy z oliwek: najwięcej",
+      "superlativeHoney": "Produkcja miodu: najwięcej"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -605,7 +621,9 @@
       "superlativeGold": "Produkcja złota",
       "superlativeAlcohol": "Spożycie alkoholu",
       "superlativeMeat": "Spożycie mięsa",
-      "superlativeBorders": "Granice"
+      "superlativeBorders": "Granice",
+      "superlativeOliveOil": "Oliwa z oliwek",
+      "superlativeHoney": "Miód"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
@@ -643,6 +661,8 @@
     "hintMostAlcohol": "Największe spożycie alkoholu na osobę",
     "hintMostMeat": "Największe spożycie mięsa na osobę",
     "hintMostBorders": "Najwięcej sąsiednich krajów",
+    "hintMostOliveOil": "Największa produkcja oliwy z oliwek",
+    "hintMostHoney": "Największa produkcja miodu",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
@@ -988,7 +1008,9 @@
     "gold": "Produkcja złota",
     "alcoholPerCapita": "Spożycie alkoholu",
     "meatPerCapita": "Spożycie mięsa",
-    "borders": "Sąsiednie kraje"
+    "borders": "Sąsiednie kraje",
+    "oliveOil": "Produkcja oliwy z oliwek",
+    "honey": "Produkcja miodu"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

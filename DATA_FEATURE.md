@@ -33,6 +33,40 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 
 ## Done
 
+### Feature EG: Honey production as a world metric, the first beekeeping-corner metric (code surfaces complete 2026-07-14, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Twenty-seventh world metric and the first from the **beekeeping** corner: total tonnes of natural honey harvested per year (an animal product, but total output, not a per-capita livestock count like the sheep/cattle metrics). World ~1.8M tonnes. Its "wow": China alone makes about a quarter of all the honey on Earth (~462K tonnes), roughly four times runner-up Türkiye, then a steep drop into a long thin tail.
+
+**Data contract:** **sparse** with `absence: 'zero'`, exactly like coffee. FAOSTAT 2022 itemizes ~100 producers; this snapshot pins the **top 55** (every producer above ~3,300 tonnes). Every real place below that, and every non-producer, falls to the 0-default at load, so a non-producer is a *fair wrong guess* on a "honey >= 50K tonnes" cell, never a data gap. The dropped sub-3K tail is entirely below the lowest filter tier (>=10K), so the threshold tiers are exact; only the deep lens ranking loses a few tiny producers, fine for a hobby quiz. `build-honey.mjs` carries the table; `attachHoneys` is coffee's zero-filled twin.
+
+**Breaks:** `>=10K / 50K / 100K` tonnes (28 / 10 / 2 producers), scaled to honey's spread (China ~462K tops it, then a steep drop; the >=100K tier is exactly China + Türkiye). `>=`-only (a `<=` tier just collects the ~200 non-producers at 0), 3×3-only (too top-heavy to back a 9×9 cell, every break `ultimateEligible: false`). Flag Party round is **most-only**.
+
+- [x] 1. Data: `flags/metrics/honey.json` (sparse, 55 producers) + `authoring/build-honey.mjs` (FAOSTAT 2022) + `METRIC_FILES` line + `attachHoneys` (group.js) + `metrics.test.js` schema/integer/no-org/sparse-attacher/rank tests. Visuals: honey-dipper-with-a-drip icon + amber hue `#e08214` + short label in `flags/metricVisuals.js`.
+- [x] 2. flagsdata lens, free once step 1 landed: hub chip with the honey icon. Verified through the real engine (China > Türkiye > Iran; Japan a fair wrong guess at 0; no org in the data).
+- [x] 3 + 4 (driven by `THRESHOLD_METRICS`). `honey(op, n)` factory + `HONEY_BREAKS_FOR_RANDOM` (`>=10K/50K/100K`) + `THRESHOLD_METRICS.honey`. Filters: `HoneyConstraint` + `honey` field; `honeyProbability` (0.06) modifier + `findFlag/page.js` + `findflag-random-coverage` skill note. i18n `honey.atLeast.{10k,50k,100k}` + `metric.honey` (en+pl). Synthetic TTT fixture: honey gets its OWN `HONEY_LADDER` at its own scale (not the crop cluster), decorrelated so honey × crop cells stay ordinary; the widest synthetic seed sweep stays comfortably inside the `maxAttempts: 500` headroom that Feature EF added.
+- [x] 5. Flag Party round: `honeyRound` (id `superlative-honey`) across the six spots + en/pl i18n. **Most-only**, producers only. Pinned by `superlative.test.js`.
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+---
+
+### Feature EF: Olive oil production as a world metric, a tightly Mediterranean sparse crop (code surfaces complete 2026-07-14, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Twenty-sixth world metric and the fifth sparse crop (after coffee / wine / cocoa / banana). Tonnes of olive oil per year, world ~2.7M tonnes. Its draw is geographic concentration: the Mediterranean basin (Spain, Italy, Greece, Türkiye, Tunisia, Morocco, Syria, Portugal) makes almost all of it, so "biggest olive oil producer" and the lens map both read as a Mediterranean story. Spain alone tops it at ~666K tonnes, roughly double Italy.
+
+**Data contract:** **sparse** with `absence: 'zero'`, exactly like coffee. FAOSTAT 2022 lists ~28 producers; every other real place makes none and falls to the 0-default at load, so a non-producer is a *fair wrong guess* on an "olive oil >= 100K tonnes" cell, never a data gap. Only the org flags stay without a value. Output swings a lot year to year (a drought year can halve Spain's harvest), so the snapshot pins a single FAO year rather than a rolling mix. `build-oliveOil.mjs` carries the transcribed table; `attachOliveOils` is coffee's zero-filled twin.
+
+**Breaks:** the crop convention `>=1K / 10K / 100K` tonnes (25 / 20 / 8 producers), the growers / notable / major-producer tiers. `>=`-only (a `<=` tier just collects the ~230 non-producers at 0), 3×3-only (too concentrated to back a 9×9 cell, every break `ultimateEligible: false`). Flag Party round is **most-only** ("smallest producer" is obscure).
+
+- [x] 1. Data: `flags/metrics/oliveOil.json` (sparse, 28 producers) + `authoring/build-oliveOil.mjs` (FAOSTAT 2022) + `METRIC_FILES` line + `attachOliveOils` (group.js) + `metrics.test.js` schema/integer/no-org/sparse-attacher/rank tests. Visuals: cruet-bottle-with-olive-leaf icon + olive hue `#808000` + short label in `flags/metricVisuals.js`.
+- [x] 2. flagsdata lens, free once step 1 landed: hub chip with the olive-oil icon. Verified through the real engine (Spain > Italy > Greece; Germany a fair wrong guess at 0; no org in the data).
+- [x] 3 + 4 (driven by `THRESHOLD_METRICS`). `oliveOil(op, n)` factory + `OLIVE_OIL_BREAKS_FOR_RANDOM` (`>=1K/10K/100K`) + `THRESHOLD_METRICS.oliveOil`. Filters: `OliveOilConstraint` + `oliveOil` field; `oliveOilProbability` (0.06) modifier + `findFlag/page.js` + `findflag-random-coverage` skill note. i18n `oliveOil.atLeast.{1k,10k,100k}` + `metric.oliveOil` (en+pl). Synthetic TTT fixture: olive oil joins `CROP_LADDER` (a 5th crop on identical tiers). That density of identical-tier crops pushed the widest synthetic seed sweep (`metricGroupRepeated`, 30 seeds) to ~290 attempts, so that ONE adversarial test carries `maxAttempts: 500`; real-data budget stays canaried at the production 200 in `countries.test.js`.
+- [x] 5. Flag Party round: `oliveOilRound` (id `superlative-olive-oil`, kebab-case to satisfy the mode-id validator; the camelCase metric key `oliveOil` is resolved via the round's values file) across the six spots + en/pl i18n. **Most-only**, producers only. Pinned by `superlative.test.js`.
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+---
+
 ### Feature EE: Bordering countries as a world metric, a pure-geography "wow" count (code surfaces complete 2026-07-14, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 
 Twenty-fifth world metric and the first that is neither production nor consumption: a **count of the countries each place shares a land border with**. Pure geography, so no external source risk (hand-maintained from the standard land-border counts). The "wow" reveal: Russia and China both border 14, most islands border 0.
