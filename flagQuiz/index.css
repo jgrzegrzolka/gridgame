@@ -272,15 +272,16 @@ body {
   cursor: pointer;
   /* Anchor for the wrong-tile country-name overlay below. */
   position: relative;
-  transition: border-color 100ms;
+  transition: border-color 100ms, box-shadow 100ms;
 }
 /* The wrongly-clicked flag's country-name strip is the shared `.flag-choice.wrong
    [data-name]::after` rule in common.css (Flag Party's `.opt` reuses it). */
-.flag-choice:hover:not(:disabled) img {
-  /* Brand pink hover, matching Flag Party's flag tiles — the muted grey it
-     used to be read as a dead/disabled cue rather than "this is tappable". The
-     ring sits on the <img> so it hugs the flag with no white padding gap. */
-  box-shadow: 0 0 0 2px var(--secondary-color);
+.flag-choice:hover:not(:disabled) {
+  /* Soft lift on hover — reads "tappable" without borrowing the pink that
+     `.flag-choice.wrong` uses for a wrong pick. The pink ring this replaced
+     looked like an error cue (same hue as the wrong-answer pulse). Matches
+     Flag Party's tile hover (same mechanism = same code). */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 .flag-choice:disabled {
   cursor: default;
