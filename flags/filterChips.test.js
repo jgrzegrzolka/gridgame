@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { chipLabelText, buildFilterChip, renderCriteriaInline, renderMetricLeadInline, renderFlagLeadInline } from './filterChips.js';
+import { chipLabelText, buildFilterChip, renderCriteriaInline, renderMetricLeadInline, renderFlagLeadInline, categoryIconEl, renderCategoryLabel, renderCategoryPair } from './filterChips.js';
 import { emptyFilters } from './flagsFilter.js';
+import { continent, statehood, hasColor, hasMotif, colorCount, hasStripesOnly, population } from './engine.js';
 
 /** Echo the fallback — renders every label in its English default. */
 const t = (/** @type {string} */ _k, /** @type {string} */ fb) => fb;
@@ -236,4 +237,75 @@ test('renderFlagLeadInline: leads the title with the flag glyph', () => {
   assert.ok(glyph.innerHTML.length > 0, 'glyph span carries the flag SVG');
   assert.equal(label.className, 'crit-label');
   assert.equal(label.textContent, 'Triangles from the hoist');
+});
+
+// ---- categoryIconEl (tic-tac-toe grid marks, keyed off engine Category id) ----
+
+test('categoryIconEl: colour category gets the pill swatch', () => {
+  const el = /** @type {any} */ (categoryIconEl(hasColor('red'), fakeDoc()));
+  assert.match(el.className, /pill-swatch/);
+  assert.equal(el.dataset.value, 'red');
+});
+
+test('categoryIconEl: charge motif gets the flag glyph', () => {
+  const el = /** @type {any} */ (categoryIconEl(hasMotif('animal'), fakeDoc()));
+  assert.equal(el.className, 'crit-flag');
+  assert.ok(el.innerHTML.length > 0, 'glyph carries the flag SVG');
+});
+
+test('categoryIconEl: colour-count and stripes-only get the flag glyph (a design property)', () => {
+  assert.equal(/** @type {any} */ (categoryIconEl(colorCount('=', 3), fakeDoc())).className, 'crit-flag');
+  assert.equal(/** @type {any} */ (categoryIconEl(hasStripesOnly('vertical'), fakeDoc())).className, 'crit-flag');
+});
+
+test('categoryIconEl: metric category gets the hue-tinted metric icon', () => {
+  const el = /** @type {any} */ (categoryIconEl(population('>=', 10_000_000), fakeDoc()));
+  assert.equal(el.className, 'crit-ic');
+  assert.ok(el.innerHTML.length > 0, 'icon carries the metric SVG');
+  assert.ok(el.style.color, 'metric hue applied inline');
+});
+
+test('categoryIconEl: eu-member motif is political, not a charge — no mark', () => {
+  assert.equal(categoryIconEl(hasMotif('eu-member'), fakeDoc()), null);
+});
+
+test('categoryIconEl: country facts (continent / statehood) get no mark', () => {
+  assert.equal(categoryIconEl(continent('Asia'), fakeDoc()), null);
+  assert.equal(categoryIconEl(statehood('sovereign'), fakeDoc()), null);
+});
+
+// ---- renderCategoryLabel / renderCategoryPair (TTT header + picker) ----
+
+test('renderCategoryLabel: marked category → icon then label span', () => {
+  const el = /** @type {any} */ (fakeDoc().createElement());
+  renderCategoryLabel(el, hasColor('blue'), 'blue', fakeDoc());
+  assert.equal(el.children.length, 2);
+  assert.match(el.children[0].className, /pill-swatch/);
+  assert.equal(el.children[1].className, 'cat-label');
+  assert.equal(el.children[1].textContent, 'blue');
+});
+
+test('renderCategoryLabel: unmarked category → just the label span, no icon', () => {
+  const el = /** @type {any} */ (fakeDoc().createElement());
+  renderCategoryLabel(el, continent('Europe'), 'Europe', fakeDoc());
+  assert.equal(el.children.length, 1);
+  assert.equal(el.children[0].className, 'cat-label');
+  assert.equal(el.children[0].textContent, 'Europe');
+});
+
+test('renderCategoryPair: row × col each carries its mark, middot between', () => {
+  const el = /** @type {any} */ (fakeDoc().createElement());
+  const doc = fakeDoc();
+  renderCategoryPair(el, continent('Asia'), hasColor('red'), 'Asia', 'red', doc);
+  assert.equal(el.children.length, 3);
+  const [row, times, col] = el.children;
+  assert.equal(times.className, 'cat-times');
+  assert.equal(times.textContent, ' × ');
+  // row is an unmarked continent → single label span
+  assert.equal(row.children.length, 1);
+  assert.equal(row.children[0].textContent, 'Asia');
+  // col is a colour → swatch + label span
+  assert.equal(col.children.length, 2);
+  assert.match(col.children[0].className, /pill-swatch/);
+  assert.equal(col.children[1].textContent, 'red');
 });

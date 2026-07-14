@@ -1,4 +1,5 @@
 import { suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../flags/engine.js';
+import { renderCategoryLabel, renderCategoryPair } from '../flags/filterChips.js';
 import {
   generateCode,
   isValidRoomCode,
@@ -420,9 +421,11 @@ function runOnline(countries) {
   function populateGridLabels() {
     const { game } = state;
     if (!game) return;
-    colHeaderEls.forEach((th, i) => { th.textContent = tCat(/** @type {GameState} */ (game).puzzle.cols[i]); });
+    const cols = /** @type {GameState} */ (game).puzzle.cols;
+    const rows = /** @type {GameState} */ (game).puzzle.rows;
+    colHeaderEls.forEach((th, i) => { renderCategoryLabel(/** @type {HTMLElement} */ (th), cols[i], tCat(cols[i])); });
     const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
-    rowHeaders.forEach((th, i) => { th.textContent = tCat(/** @type {GameState} */ (game).puzzle.rows[i]); });
+    rowHeaders.forEach((th, i) => { renderCategoryLabel(/** @type {HTMLElement} */ (th), rows[i], tCat(rows[i])); });
   }
 
   /** @param {number} r @param {number} c */
@@ -477,7 +480,7 @@ function runOnline(countries) {
     const { game } = state;
     if (!game) return;
     activeCell = { row: r, col: c };
-    pickerCatsEl.textContent = `${tCat(game.puzzle.rows[r])} × ${tCat(game.puzzle.cols[c])}`;
+    renderCategoryPair(pickerCatsEl, game.puzzle.rows[r], game.puzzle.cols[c], tCat(game.puzzle.rows[r]), tCat(game.puzzle.cols[c]));
     pickerInputEl.value = '';
     currentMatches = [];
     selectedIndex = 0;
@@ -991,7 +994,9 @@ function runOnline(countries) {
     if (repaintStatusForLang) repaintStatusForLang();
     if (!pickerEl.hidden && activeCell && game) {
       const { row, col } = activeCell;
-      pickerCatsEl.textContent = `${tCat(/** @type {GameState} */ (game).puzzle.rows[row])} × ${tCat(/** @type {GameState} */ (game).puzzle.cols[col])}`;
+      const rowCat = /** @type {GameState} */ (game).puzzle.rows[row];
+      const colCat = /** @type {GameState} */ (game).puzzle.cols[col];
+      renderCategoryPair(pickerCatsEl, rowCat, colCat, tCat(rowCat), tCat(colCat));
     }
     if (resultEl && !resultEl.hidden) paintFinalScore();
     paintError();

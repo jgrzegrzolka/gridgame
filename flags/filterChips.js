@@ -202,6 +202,88 @@ function flagGlyphEl(doc) {
 }
 
 /**
+ * Leading mark for an engine {@link import('./engine.js').Category} — the same
+ * swatch / flag-glyph / metric-icon vocabulary `buildCriterionInline` gives a
+ * filter chip, but keyed off the category's `id` prefix (tic-tac-toe categories
+ * come from the engine factories and carry no `Filters`). Returns `null` for a
+ * country fact that earns no mark (continent / statehood / the political
+ * eu-member motif), so "about the flag" reads apart from "about the country" on
+ * the grid exactly as it does in the findFlag + daily header.
+ *
+ *   - `hasColor:<c>`               → colour swatch
+ *   - `colorCount:*` / `stripesOnly:*` → flag glyph (a property of the design)
+ *   - `hasMotif:<m>`               → flag glyph for a charge, else no mark
+ *   - `<metricKey>:*` (population, area, …) → hue-tinted metric icon
+ *   - `continent:*` / `statehood:*` / anything else → null
+ *
+ * @param {import('./engine.js').Category} category
+ * @param {Document} [doc]
+ * @returns {HTMLSpanElement | null}
+ */
+export function categoryIconEl(category, doc = document) {
+  const id = category && category.id ? String(category.id) : '';
+  const sep = id.indexOf(':');
+  const kind = sep === -1 ? id : id.slice(0, sep);
+  const value = sep === -1 ? '' : id.slice(sep + 1);
+  if (kind === 'hasColor') return makeColorSwatch(value, doc);
+  if (kind === 'colorCount' || kind === 'stripesOnly') return flagGlyphEl(doc);
+  if (kind === 'hasMotif') return CHARGE_MOTIF_SET.has(value) ? flagGlyphEl(doc) : null;
+  if (Object.prototype.hasOwnProperty.call(METRIC_HUES, kind)) {
+    const ic = metricIconSpan(kind, 'crit-ic', doc);
+    ic.style.color = METRIC_HUES[kind] || 'currentColor';
+    return ic;
+  }
+  return null;
+}
+
+/**
+ * Paint one category into `el` as its icon (if it earns one) + a localized
+ * label span, replacing the plain `el.textContent = label` the tic-tac-toe grid
+ * headers used. The label is caller-localized (the page's `translateCategoryLabel`),
+ * so this stays DOM-only and the icon logic lives in one place.
+ *
+ * @param {HTMLElement} el
+ * @param {import('./engine.js').Category} category
+ * @param {string} label  already-localized category label
+ * @param {Document} [doc]
+ */
+export function renderCategoryLabel(el, category, label, doc = document) {
+  el.textContent = '';
+  const icon = categoryIconEl(category, doc);
+  if (icon) el.appendChild(icon);
+  const text = doc.createElement('span');
+  text.className = 'cat-label';
+  text.textContent = label;
+  el.appendChild(text);
+}
+
+/**
+ * Paint a "row × col" pair into `el` (the tic-tac-toe picker header) with each
+ * side wearing its {@link categoryIconEl} mark. The `×` sits in its own muted
+ * span so it never blurs into a criterion's label.
+ *
+ * @param {HTMLElement} el
+ * @param {import('./engine.js').Category} rowCat
+ * @param {import('./engine.js').Category} colCat
+ * @param {string} rowLabel  already-localized row label
+ * @param {string} colLabel  already-localized col label
+ * @param {Document} [doc]
+ */
+export function renderCategoryPair(el, rowCat, colCat, rowLabel, colLabel, doc = document) {
+  el.textContent = '';
+  const row = doc.createElement('span');
+  renderCategoryLabel(row, rowCat, rowLabel, doc);
+  const times = doc.createElement('span');
+  times.className = 'cat-times';
+  times.textContent = ' × ';
+  const col = doc.createElement('span');
+  renderCategoryLabel(col, colCat, colLabel, doc);
+  el.appendChild(row);
+  el.appendChild(times);
+  el.appendChild(col);
+}
+
+/**
  * Render the INLINE criteria header for a `Filters` object — one dot-separated
  * criterion per active constraint, in `activeFilterChips` order. Used by the
  * findFlag + daily play-screen headers; the caller drops the returned fragment

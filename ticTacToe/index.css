@@ -354,6 +354,20 @@ body.game-over .actions-row {
   font-size: 14px;
   color: var(--primary-color);
 }
+/* Category labels wear the shared criteria marks (flags/filterChips.js
+ * `categoryIconEl`): a colour swatch, the flag-design glyph, or a hue-tinted
+ * metric icon — the same vocabulary the findFlag + daily headers use. The glyph
+ * / metric icon carry their own right-margin (common.css `.crit-ic`/`.crit-flag`);
+ * the swatch (common.css `.pill-swatch`) needs the gap added here, in the grid
+ * headers and the picker line. The `×` between the picker's two categories stays
+ * muted so it never reads as part of a label. */
+.grid th .pill-swatch,
+.picker-cats .pill-swatch {
+  margin-right: 0.3em;
+}
+.picker-cats .cat-times {
+  color: var(--muted-color);
+}
 /* `.picker-close` visual recipe (bg / border / hover / press feedback)
  * lives on the unified pill rule in common.css alongside `.rules-close`
  * and `.help-close`. No per-page override needed. */

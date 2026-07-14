@@ -1,4 +1,5 @@
 import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
+import { renderCategoryLabel, renderCategoryPair } from '../../flags/filterChips.js';
 import { loadCountries, attachMetrics } from '../../flags/group.js';
 import { METRIC_FILES } from '../../flags/metrics/index.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
@@ -117,12 +118,12 @@ function runTicTacToe({ puzzle, countries }) {
   // cell's click + keydown handlers — these need to close over the
   // local `state` and the picker functions, which only exist now.
   colHeaderEls.forEach((th, i) => {
-    th.textContent = tCat(puzzle.cols[i]);
+    renderCategoryLabel(/** @type {HTMLElement} */ (th), puzzle.cols[i], tCat(puzzle.cols[i]));
   });
   const trs = gridBodyEl.querySelectorAll('tr');
   trs.forEach((tr, r) => {
     const rowHeader = tr.querySelector('th');
-    if (rowHeader) rowHeader.textContent = tCat(puzzle.rows[r]);
+    if (rowHeader) renderCategoryLabel(rowHeader, puzzle.rows[r], tCat(puzzle.rows[r]));
     tr.querySelectorAll('td').forEach((td, c) => {
       /** @type {HTMLTableCellElement} */ (td).tabIndex = 0;
       td.addEventListener('click', () => onCellActivate(r, c));
@@ -181,7 +182,7 @@ function runTicTacToe({ puzzle, countries }) {
   /** @param {number} row @param {number} col */
   function openPicker(row, col) {
     activeCell = { row, col };
-    pickerCatsEl.textContent = `${tCat(puzzle.rows[row])} × ${tCat(puzzle.cols[col])}`;
+    renderCategoryPair(pickerCatsEl, puzzle.rows[row], puzzle.cols[col], tCat(puzzle.rows[row]), tCat(puzzle.cols[col]));
     pickerInputEl.value = '';
     currentMatches = [];
     selectedIndex = 0;
@@ -485,17 +486,17 @@ function runTicTacToe({ puzzle, countries }) {
    */
   function refreshI18nForGame() {
     colHeaderEls.forEach((th, i) => {
-      th.textContent = tCat(puzzle.cols[i]);
+      renderCategoryLabel(/** @type {HTMLElement} */ (th), puzzle.cols[i], tCat(puzzle.cols[i]));
     });
     const rowHeaders = gridBodyEl.querySelectorAll('tr > th');
     rowHeaders.forEach((th, i) => {
-      th.textContent = tCat(puzzle.rows[i]);
+      renderCategoryLabel(/** @type {HTMLElement} */ (th), puzzle.rows[i], tCat(puzzle.rows[i]));
     });
     renderGrid();
     renderTurn();
     if (!pickerEl.hidden && activeCell) {
       const { row, col } = activeCell;
-      pickerCatsEl.textContent = `${tCat(puzzle.rows[row])} × ${tCat(puzzle.cols[col])}`;
+      renderCategoryPair(pickerCatsEl, puzzle.rows[row], puzzle.cols[col], tCat(puzzle.rows[row]), tCat(puzzle.cols[col]));
     }
     if (resultEl && !resultEl.hidden) paintFinalScore();
   }
