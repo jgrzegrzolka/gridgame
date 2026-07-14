@@ -250,23 +250,36 @@ export function applyForceReveal(room, playerId) {
 export function applyNext(room, playerId, nextQuestion) {
   if (room.phase !== 'reveal') return { room, broadcasts: [] };
   if (room.hostId !== playerId) return { room, broadcasts: [] };
+  return advanceFromReveal(room, nextQuestion);
+}
 
-  const isLast = room.roundIndex >= room.totalRounds - 1;
-  if (isLast) {
-    const nextRoom = { ...room, phase: /** @type {Phase} */ ('final'), question: null, buzzes: [] };
-    return {
-      room: nextRoom,
-      broadcasts: [{ to: 'all', message: { type: 'final', scoreboard: scoreboardOf(nextRoom) } }],
-    };
-  }
-  const nextRoom = {
-    ...room,
-    phase: /** @type {Phase} */ ('question'),
-    roundIndex: room.roundIndex + 1,
-    question: nextQuestion,
-    buzzes: [],
-  };
-  return { room: nextRoom, broadcasts: [questionBroadcast(nextRoom)] };
+/**
+ * The reveal / next transitions again, but host-free — driven by the server's
+ * watchdog when the host's tab never sent the message (backgrounded, phone
+ * locked, closed). {@link applyRevealTimeout} mirrors {@link applyForceReveal}
+ * and {@link applyNextTimeout} mirrors {@link applyNext}, each minus the
+ * host-identity gate; the phase guard stays, so a late alarm that fires after
+ * the host (or the all-buzzed auto-reveal) already advanced is a harmless no-op.
+ * Without these the room stalls forever at a reveal if the host drops — most
+ * visibly the final board, which never appears (`page.js` clock is the only
+ * thing that fires the last `next`).
+ *
+ * @param {Room} room
+ * @returns {ApplyResult}
+ */
+export function applyRevealTimeout(room) {
+  if (room.phase !== 'question') return { room, broadcasts: [] };
+  return toReveal(room);
+}
+
+/**
+ * @param {Room} room
+ * @param {Question} nextQuestion  ignored on the final round (goes to the board)
+ * @returns {ApplyResult}
+ */
+export function applyNextTimeout(room, nextQuestion) {
+  if (room.phase !== 'reveal') return { room, broadcasts: [] };
+  return advanceFromReveal(room, nextQuestion);
 }
 
 /**
@@ -352,6 +365,36 @@ export function applyDisconnect(room, playerId) {
 }
 
 // ---- internal helpers ----
+
+/**
+ * The reveal → (next question | final board) transition, with no host check —
+ * shared by {@link applyNext} (host's clock) and {@link applyNextTimeout} (the
+ * server watchdog). On the last round it flips to `final` and broadcasts the
+ * standings; otherwise it deals the next question. The caller is responsible for
+ * only invoking this from the reveal phase.
+ *
+ * @param {Room} room
+ * @param {Question} nextQuestion
+ * @returns {ApplyResult}
+ */
+function advanceFromReveal(room, nextQuestion) {
+  const isLast = room.roundIndex >= room.totalRounds - 1;
+  if (isLast) {
+    const nextRoom = { ...room, phase: /** @type {Phase} */ ('final'), question: null, buzzes: [] };
+    return {
+      room: nextRoom,
+      broadcasts: [{ to: 'all', message: { type: 'final', scoreboard: scoreboardOf(nextRoom) } }],
+    };
+  }
+  const nextRoom = {
+    ...room,
+    phase: /** @type {Phase} */ ('question'),
+    roundIndex: room.roundIndex + 1,
+    question: nextQuestion,
+    buzzes: [],
+  };
+  return { room: nextRoom, broadcasts: [questionBroadcast(nextRoom)] };
+}
 
 /**
  * Tally the current question and move to reveal. Speed bonus is off in solo

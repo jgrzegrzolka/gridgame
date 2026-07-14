@@ -7,6 +7,8 @@ import {
   applyBuzz,
   applyForceReveal,
   applyNext,
+  applyRevealTimeout,
+  applyNextTimeout,
   applyPlayAgain,
   applyReturnToLobby,
   applyDisconnect,
@@ -295,6 +297,53 @@ test('applyNext: after the last round it goes to the final board', () => {
   const f = msg(r, 'final');
   assert.equal(f.scoreboard[0].playerId, 'alice', 'winner sorts first');
   assert.ok(f.scoreboard[0].score > f.scoreboard[1].score);
+});
+
+// ---- applyRevealTimeout / applyNextTimeout (server watchdog, host-free) ----
+
+test('applyRevealTimeout: advances a lingering question to reveal with no host', () => {
+  let room = startedTwoPlayer();
+  room = applyBuzz(room, 'alice', 'jp', true).room; // Bob never answers, no host clock
+  const r = applyRevealTimeout(room);
+  assert.equal(r.room.phase, 'reveal', 'watchdog reveals without a host message');
+  assert.ok(msg(r, 'reveal'), 'emits the reveal broadcast');
+});
+
+test('applyRevealTimeout: no-op outside the question phase', () => {
+  const lobby = createRoom(3);
+  assert.equal(applyRevealTimeout(lobby).broadcasts.length, 0);
+  let room = startedTwoPlayer();
+  room = applyBuzz(room, 'alice', 'jp', true).room;
+  room = applyBuzz(room, 'bob', 'jp', true).room; // now in reveal
+  assert.equal(applyRevealTimeout(room).broadcasts.length, 0, 'not while already revealing');
+});
+
+test('applyNextTimeout: advances a lingering reveal to the next question with no host', () => {
+  let room = startedTwoPlayer(q('jp'));
+  room = applyBuzz(room, 'alice', 'jp', true).room;
+  room = applyBuzz(room, 'bob', 'jp', true).room; // reveal
+  const r = applyNextTimeout(room, q('fr', ['fr', 'de', 'it', 'es']));
+  assert.equal(r.room.phase, 'question');
+  assert.equal(r.room.roundIndex, 1);
+  assert.equal(msg(r, 'question').prompt, 'fr');
+});
+
+test('applyNextTimeout: on the last round it reaches the final board with no host', () => {
+  let room = createRoom(1); // single-round game
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  room = applyStart(room, 'alice', q('jp')).room;
+  room = applyBuzz(room, 'alice', 'jp', true).room;
+  room = applyBuzz(room, 'bob', 'kr', false).room; // reveal, final round
+  const r = applyNextTimeout(room, q('fr'));
+  assert.equal(r.room.phase, 'final', 'the final board no longer depends on the host tab');
+  const f = msg(r, 'final');
+  assert.equal(f.scoreboard[0].playerId, 'alice', 'winner sorts first');
+});
+
+test('applyNextTimeout: no-op outside the reveal phase', () => {
+  const room = startedTwoPlayer(); // still in question
+  assert.equal(applyNextTimeout(room, q('fr')).broadcasts.length, 0);
 });
 
 // ---- applyPlayAgain ----
