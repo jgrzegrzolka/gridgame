@@ -990,10 +990,12 @@ export function bootFlagParty() {
   // Everyone renders the countdown; only the host's timer fires the transition
   // (send 'reveal' when a question runs out, 'next' when a reveal has lingered),
   // so the room advances on its own with no host button to press. Timing lives
-  // here on the page by design — the room reducer stays time-free. Caveat: the
-  // pace depends on the host's tab staying awake; if the host drops mid-round
-  // the room can stall at a reveal (documented in PARTY.md, server-alarm is the
-  // future fix). All-present-buzzed still auto-reveals server-side regardless.
+  // here on the page by design — the room reducer stays time-free. The host's
+  // tab drives the snappy pace, but the room no longer *depends* on it: a
+  // server-side watchdog alarm (party/partyGameServer.js) force-advances a
+  // lingering question/reveal if the host's tab goes to sleep, so the room can't
+  // stall at a reveal (the final board especially). All-present-buzzed still
+  // auto-reveals server-side regardless. See PARTY.md.
   /** @type {string | null} phase:roundIndex the clock is currently counting */
   let clockToken = null;
   let clockDeadline = 0;
