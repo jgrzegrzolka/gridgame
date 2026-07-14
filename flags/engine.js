@@ -656,6 +656,62 @@ export const BEER_PER_CAPITA_BREAKS_FOR_RANDOM = [
 ];
 
 /**
+ * Alcohol-per-capita break tiers (litres of PURE alcohol per person per year).
+ * `>=`-only like beer: the fun axis is "who drinks the MOST" overall. `>=10` L is
+ * a heavy-drinking country (~32 real places), `>=12` L the elite (~11: Lithuania,
+ * Ireland, Latvia, Moldova, Czechia, Romania, Slovenia, France, Portugal, Germany,
+ * Croatia). The `<=` dry-state low end reads as a religion/geography quiz, so it is
+ * left off. Integer `n` (parseThreshold requires it), which the 0..13 L range gives.
+ *
+ * No `ultimate: true` break: alcohol is `absence: 'unknown'` (the small territories
+ * carry no value), so it cannot back a dense 9×9 axis. Every break stays
+ * `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 10 },
+  { op: '>=', n: 12 },
+];
+
+/**
+ * Meat-per-capita break tiers (kg of meat per person per year). `>=`-only like the
+ * drink metrics: "who eats the MOST". `>=80` kg is a big-meat-eating country (~26
+ * real places), `>=100` kg the elite (~7: United States, Australia, Argentina,
+ * Mongolia, New Zealand, Spain, Brazil). Integer `n` (parseThreshold requires it),
+ * which the 0..124 kg range gives comfortably.
+ *
+ * No `ultimate: true` break: meat is `absence: 'unknown'`, so it cannot back a
+ * dense 9×9 axis. Every break stays `ultimateEligible: false` (via the pool
+ * builder), a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const MEAT_PER_CAPITA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 80 },
+  { op: '>=', n: 100 },
+];
+
+/**
+ * Bordering-countries break tiers (number of countries sharing a land border).
+ * `>=`-only: the fun axis is "who borders the MOST". `>=5` is a well-connected
+ * country (~59 real places), `>=8` the elite (~11: Russia & China at 14, Brazil
+ * 10, DR Congo & Germany 9, plus the 8-border club: France, Austria, Serbia,
+ * Turkey, Tanzania, Sudan). The `<=` low end is every island at 0, a geography
+ * quiz rather than a border one, so it is left off. Integer `n`.
+ *
+ * No `ultimate: true` break: borders is dense but top-heavy (a long tail of 0s and
+ * 1s), so `borders >= N × continent` can't reach 9 distinct per cell. Every break
+ * stays `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const BORDERS_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 5 },
+  { op: '>=', n: 8 },
+];
+
+/**
  * Tea-production-threshold Categories (green-tea-leaf tonnes). Sparse like
  * coffee, so `>=`-only: only ~46 countries grow tea, and a `<=` tier would just
  * collect the ~180 non-growers sitting at 0 (via `absence: 'zero'`). The FAOSTAT
@@ -1457,6 +1513,101 @@ export function beerPerCapita(op, n, opts = {}) {
 }
 
 /**
+ * Alcohol-per-capita-threshold Category factory (litres of pure alcohol per person
+ * per year). Reads the denormalized `country.alcoholPerCapita` field
+ * (`attachAlcoholPerCapitas`, an `absence: 'unknown'` metric, so the predicate must
+ * guard on the field being a number: a place the source does not measure has none
+ * and never matches). `exclusiveGroup: 'alcoholPerCapita'`. The break list is
+ * `>=`-only (see ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM), but the `<=` branch is kept
+ * for symmetry so an `alcoholPerCapita:<=N` id would still rehydrate.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function alcoholPerCapita(op, n, opts = {}) {
+  const label =
+    op === '>=' ? `over ${n} litres of alcohol per person` : `under ${n} litres of alcohol per person`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.alcoholPerCapita === 'number' && c.alcoholPerCapita >= n
+      : (c) => typeof c.alcoholPerCapita === 'number' && c.alcoholPerCapita <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `alcoholPerCapita:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'alcoholPerCapita',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
+ * Meat-per-capita-threshold Category factory (kg of meat per person per year).
+ * Reads the denormalized `country.meatPerCapita` field (`attachMeatPerCapitas`, an
+ * `absence: 'unknown'` metric, so the predicate guards on the field being a number).
+ * `exclusiveGroup: 'meatPerCapita'`. The break list is `>=`-only (see
+ * MEAT_PER_CAPITA_BREAKS_FOR_RANDOM); the `<=` branch is kept for symmetry.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function meatPerCapita(op, n, opts = {}) {
+  const label =
+    op === '>=' ? `over ${n} kg of meat per person` : `under ${n} kg of meat per person`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.meatPerCapita === 'number' && c.meatPerCapita >= n
+      : (c) => typeof c.meatPerCapita === 'number' && c.meatPerCapita <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `meatPerCapita:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'meatPerCapita',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
+ * Bordering-countries-threshold Category factory (number of countries sharing a
+ * land border). Reads the denormalized `country.borders` field (`attachBorders`, a
+ * dense metric that fills a true 0 for every island, so the predicate guards on the
+ * field being a number only to exclude the org flags). `exclusiveGroup: 'borders'`.
+ * The break list is `>=`-only (see BORDERS_BREAKS_FOR_RANDOM); the `<=` branch is
+ * kept for symmetry so a `borders:<=N` id would still rehydrate.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function borders(op, n, opts = {}) {
+  const label = op === '>=' ? `${n} or more` : `${n} or fewer`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.borders === 'number' && c.borders >= n
+      : (c) => typeof c.borders === 'number' && c.borders <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `borders:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'borders',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * Tea-production-threshold Category factory (green-tea-leaf tonnes). Reads the
  * denormalized `country.tea` field (`attachTeas`, which fills 0 for a real place
  * that grows none). `exclusiveGroup: 'tea'`. The break list is `>=`-only (see
@@ -1877,6 +2028,42 @@ export const THRESHOLD_METRICS = {
       const human = tonnesCompact(n);
       if (op === '>=') return translate(`gold.atLeast.${token}`, `over ${human} tonnes`);
       return translate(`gold.atMost.${token}`, `under ${human} tonnes`);
+    },
+  },
+  alcoholPerCapita: {
+    breaks: ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM,
+    factory: alcoholPerCapita,
+    prefixFallback: 'Alcohol per capita',
+    field: 'alcoholPerCapita',
+    family: 'alcoholPerCapita',
+    has: (c) => typeof c.alcoholPerCapita === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`alcoholPerCapita.atLeast.${n}`, `over ${n} litres of alcohol per person`);
+      return translate(`alcoholPerCapita.atMost.${n}`, `under ${n} litres of alcohol per person`);
+    },
+  },
+  meatPerCapita: {
+    breaks: MEAT_PER_CAPITA_BREAKS_FOR_RANDOM,
+    factory: meatPerCapita,
+    prefixFallback: 'Meat per capita',
+    field: 'meatPerCapita',
+    family: 'meatPerCapita',
+    has: (c) => typeof c.meatPerCapita === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`meatPerCapita.atLeast.${n}`, `over ${n} kg of meat per person`);
+      return translate(`meatPerCapita.atMost.${n}`, `under ${n} kg of meat per person`);
+    },
+  },
+  borders: {
+    breaks: BORDERS_BREAKS_FOR_RANDOM,
+    factory: borders,
+    prefixFallback: 'Bordering countries',
+    field: 'borders',
+    family: 'borders',
+    has: (c) => typeof c.borders === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`borders.atLeast.${n}`, `${n} or more`);
+      return translate(`borders.atMost.${n}`, `${n} or fewer`);
     },
   },
 };

@@ -127,6 +127,21 @@ import { METRIC_KEYS } from './engine.js';
  *   Sparse `absence: 'zero'` metric like coffee: a real place that mines none reads
  *   0 (a real, comparable value), so only non-place org flags match neither direction.
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} AlcoholPerCapitaConstraint
+ *   Alcohol-per-capita threshold (litres of pure alcohol per person per year); reads
+ *   `country.alcoholPerCapita`. `absence: 'unknown'` metric like beer: a place the
+ *   source does not measure matches neither direction (unknown, not zero).
+ *
+ * @typedef {{ op: '>=' | '<=', n: number }} MeatPerCapitaConstraint
+ *   Meat-per-capita threshold (kg per person per year); reads `country.meatPerCapita`.
+ *   `absence: 'unknown'` metric like the drink metrics: a place the source does not
+ *   cover matches neither direction (unknown, not zero).
+ *
+ * @typedef {{ op: '>=' | '<=', n: number }} BordersConstraint
+ *   Bordering-countries threshold (land borders); reads `country.borders`. Dense
+ *   metric: every real place has a value (an island carries 0), so only non-place
+ *   org flags match neither direction.
+ *
  * @typedef {{
  *   status: FilterSet,
  *   continent: FilterSet,
@@ -156,6 +171,9 @@ import { METRIC_KEYS } from './engine.js';
  *   tea: TeaConstraint | null,
  *   sugarcane: SugarcaneConstraint | null,
  *   gold: GoldConstraint | null,
+ *   alcoholPerCapita: AlcoholPerCapitaConstraint | null,
+ *   meatPerCapita: MeatPerCapitaConstraint | null,
+ *   borders: BordersConstraint | null,
  * }} Filters
  */
 
@@ -213,6 +231,9 @@ export function emptyFilters() {
     tea: null,
     sugarcane: null,
     gold: null,
+    alcoholPerCapita: null,
+    meatPerCapita: null,
+    borders: null,
   };
 }
 
@@ -379,7 +400,7 @@ export function matchesFilters(country, filters, options = {}) {
 
 /**
  * @typedef {'status' | 'continent' | 'color' | 'motif' | 'stripesOnly'} PillGroup
- * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita' | 'cattlePerCapita' | 'beerPerCapita' | 'tea' | 'sugarcane' | 'gold'} ScalarGroup
+ * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita' | 'cattlePerCapita' | 'beerPerCapita' | 'tea' | 'sugarcane' | 'gold' | 'alcoholPerCapita' | 'meatPerCapita' | 'borders'} ScalarGroup
  *
  * @typedef {{ kind: 'pill', group: PillGroup, value: string, exclude: boolean }
  *   | { kind: 'scalar', group: ScalarGroup }} FilterChip

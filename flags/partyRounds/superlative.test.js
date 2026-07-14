@@ -636,3 +636,81 @@ test('beerPerCapitaRound: dry (0) and unknown-gap places are excluded from selec
     }
   }
 });
+
+// ---- alcohol-per-capita instance (litres of pure alcohol, 'superlative-alcohol')
+
+test('alcoholPerCapitaRound: most-only, correct biggest-per-person answer', async () => {
+  const { alcoholPerCapitaRound } = await import('./superlative.js');
+  const alcJson = (await import('../metrics/alcoholPerCapita.json', { with: { type: 'json' } })).default;
+  const ALC = /** @type {Record<string, number>} */ (alcJson.values);
+  assert.equal(alcoholPerCapitaRound.id, 'superlative-alcohol');
+  // Drinking sovereigns spanning the range (Lithuania high ... Italy lower).
+  const pool = ['lt', 'ie', 'de', 'fr', 'pl', 'us', 'gb', 'it', 'br', 'jp'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = alcoholPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.equal(q.prompt, 'most'); // locked to 'most'
+    const answerVal = ALC[q.answer];
+    for (const opt of q.options) assert.ok(answerVal >= ALC[opt], `seed ${i}: ${q.answer} not the biggest`);
+  }
+});
+
+test('alcoholPerCapitaRound: dry (0) and unknown-gap places are excluded from selection', async () => {
+  const { alcoholPerCapitaRound } = await import('./superlative.js');
+  // Fully-dry (recorded 0) states + the absence:'unknown' gap (Wales, Greenland).
+  const excluded = new Set(['ir', 'kw', 'ly', 'af', 'gb-wls', 'gl']);
+  const pool = ['lt', 'de', 'pl', 'br', 'ir', 'kw', 'ly', 'af', 'gb-wls', 'gl'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = alcoholPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!excluded.has(opt), `seed ${i}: excluded ${opt} must not be an option`);
+    }
+  }
+});
+
+// ---- meat-per-capita instance (kg of meat, 'superlative-meat') --------------
+
+test('meatPerCapitaRound: most-only, correct biggest-per-person answer', async () => {
+  const { meatPerCapitaRound } = await import('./superlative.js');
+  const meatJson = (await import('../metrics/meatPerCapita.json', { with: { type: 'json' } })).default;
+  const MEAT = /** @type {Record<string, number>} */ (meatJson.values);
+  assert.equal(meatPerCapitaRound.id, 'superlative-meat');
+  const pool = ['us', 'au', 'ar', 'de', 'fr', 'cn', 'jp', 'in', 'et', 'ng'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = meatPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.equal(q.prompt, 'most');
+    const answerVal = MEAT[q.answer];
+    for (const opt of q.options) assert.ok(answerVal >= MEAT[opt], `seed ${i}: ${q.answer} not the biggest`);
+  }
+});
+
+// ---- borders instance (land borders, 'superlative-borders') -----------------
+
+test('bordersRound: most-only, correct biggest-border answer, islands excluded', async () => {
+  const { bordersRound } = await import('./superlative.js');
+  const borJson = (await import('../metrics/borders.json', { with: { type: 'json' } })).default;
+  const BOR = /** @type {Record<string, number>} */ (borJson.values);
+  assert.equal(bordersRound.id, 'superlative-borders');
+  // Land-bordered countries spanning the range (China 14 ... Portugal 1).
+  const pool = ['cn', 'ru', 'br', 'de', 'fr', 'pl', 'es', 'us', 'ie', 'pt'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = bordersRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.equal(q.prompt, 'most');
+    const answerVal = BOR[q.answer];
+    for (const opt of q.options) assert.ok(answerVal >= BOR[opt], `seed ${i}: ${q.answer} not the most-bordered`);
+  }
+});
+
+test('bordersRound: 0-border islands are excluded from selection', async () => {
+  const { bordersRound } = await import('./superlative.js');
+  const excluded = new Set(['is', 'jp', 'au', 'nz']); // all border nobody (value 0)
+  const pool = ['cn', 'ru', 'de', 'fr', 'is', 'jp', 'au', 'nz'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = bordersRound.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!excluded.has(opt), `seed ${i}: island ${opt} must not be an option`);
+    }
+  }
+});

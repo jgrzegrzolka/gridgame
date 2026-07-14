@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachTeas, attachSugarcanes, attachGolds, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas, attachBeerPerCapitas } from './group.js';
+import { attachCoffees, attachTeas, attachSugarcanes, attachGolds, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas, attachBeerPerCapitas, attachAlcoholPerCapitas, attachMeatPerCapitas, attachBorders } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -35,6 +35,9 @@ const FOREST = /** @type {import('./metrics.js').MetricData} */ (load('metrics/f
 const SHEEP_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/sheepPerCapita.json'));
 const CATTLE_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/cattlePerCapita.json'));
 const BEER_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/beerPerCapita.json'));
+const ALCOHOL_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/alcoholPerCapita.json'));
+const MEAT_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/meatPerCapita.json'));
+const BORDERS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/borders.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -1428,4 +1431,173 @@ test('party/server.js attaches every registered metric (static-import site)', ()
     assert.ok(src.includes(`metrics/${file}`), `party/server.js does not import ${file}`);
     assert.ok(src.includes(`${key}: ${key}.values`), `party/server.js does not pass ${key} to attachMetrics`);
   }
+});
+
+// ---- real alcoholPerCapita.json schema + the absence:'unknown' contract -----
+
+test('alcoholPerCapita is a valid, self-describing metric file with absence:unknown', () => {
+  assert.equal(ALCOHOL_PC.key, 'alcoholPerCapita');
+  assert.equal(typeof ALCOHOL_PC.label, 'string');
+  assert.equal(typeof ALCOHOL_PC.unit, 'string');
+  // Litres of pure alcohol (0..~13), one decimal.
+  assert.equal(ALCOHOL_PC.format, 'decimal1');
+  assert.equal(typeof ALCOHOL_PC.source, 'string');
+  assert.equal(typeof ALCOHOL_PC.year, 'number');
+  assert.equal(typeof ALCOHOL_PC.values, 'object');
+  // absence:'unknown' like beer: WHO does not measure every real place.
+  assert.equal(ALCOHOL_PC.absence, 'unknown');
+});
+
+test('every alcoholPerCapita value is a non-negative finite number', () => {
+  for (const [code, v] of Object.entries(ALCOHOL_PC.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('alcoholPerCapita covers only real places, never orgs; the gap is genuine (absence:unknown)', () => {
+  const realCodes = new Set(COUNTRIES.filter((c) => c.category !== 'other').map((c) => c.code));
+  for (const code of Object.keys(ALCOHOL_PC.values)) {
+    assert.ok(realCodes.has(code), `alcohol value for non-real place ${code}`);
+  }
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in ALCOHOL_PC.values), `org ${c.code} should have no alcoholPerCapita value`);
+    }
+  }
+  const covered = COUNTRIES.filter((c) => c.category !== 'other' && c.code in ALCOHOL_PC.values).length;
+  assert.ok(covered >= 180, `expected ~189 covered real places, got ${covered}`);
+  assert.ok(covered < realCodes.size, 'alcohol must NOT be dense: some real places are the unknown gap');
+  assert.ok('cz' in ALCOHOL_PC.values, 'Czechia (sovereign) must be covered');
+  assert.ok(!('gb-wls' in ALCOHOL_PC.values), 'Wales (sub-national) is unknown, must be absent');
+  assert.ok(!('gl' in ALCOHOL_PC.values), 'Greenland (territory) is unknown, must be absent');
+});
+
+test('createMetric over alcoholPerCapita ranks a European heavyweight top, dry states at 0', () => {
+  const alcohol = createMetric(ALCOHOL_PC, COUNTRIES);
+  // Lithuania is the top recorded per-capita drinker in this snapshot.
+  assert.equal(alcohol.topN('world', 1)[0].code, 'lt');
+  assert.ok(/** @type {number} */ (alcohol.valueOf('lt')) >= 12);
+  assert.ok(/** @type {number} */ (alcohol.valueOf('de')) >= 10);
+  assert.equal(alcohol.valueOf('kw'), 0); // Kuwait, a fully dry state
+});
+
+test('attachAlcoholPerCapitas fills covered real places, leaves the unknown gap + orgs bare', () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachAlcoholPerCapitas(/** @type {any} */ (rows), ALCOHOL_PC.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  assert.equal(/** @type {any} */ (byCode.get('cz')).alcoholPerCapita, ALCOHOL_PC.values.cz);
+  assert.equal(/** @type {any} */ (byCode.get('gb-wls')).alcoholPerCapita, undefined);
+  const anOrg = COUNTRIES.find((c) => c.category === 'other');
+  assert.equal(/** @type {any} */ (byCode.get(/** @type {any} */ (anOrg).code)).alcoholPerCapita, undefined);
+});
+
+// ---- real meatPerCapita.json schema + the absence:'unknown' contract --------
+
+test('meatPerCapita is a valid, self-describing metric file with absence:unknown', () => {
+  assert.equal(MEAT_PC.key, 'meatPerCapita');
+  assert.equal(typeof MEAT_PC.label, 'string');
+  assert.equal(typeof MEAT_PC.unit, 'string');
+  // Whole kg of meat (0..~124), plain.
+  assert.equal(MEAT_PC.format, 'plain');
+  assert.equal(typeof MEAT_PC.source, 'string');
+  assert.equal(typeof MEAT_PC.year, 'number');
+  assert.equal(typeof MEAT_PC.values, 'object');
+  assert.equal(MEAT_PC.absence, 'unknown');
+});
+
+test('every meatPerCapita value is a non-negative integer', () => {
+  for (const [code, v] of Object.entries(MEAT_PC.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('meatPerCapita covers only real places, never orgs; the gap is genuine (absence:unknown)', () => {
+  const realCodes = new Set(COUNTRIES.filter((c) => c.category !== 'other').map((c) => c.code));
+  for (const code of Object.keys(MEAT_PC.values)) {
+    assert.ok(realCodes.has(code), `meat value for non-real place ${code}`);
+  }
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in MEAT_PC.values), `org ${c.code} should have no meatPerCapita value`);
+    }
+  }
+  const covered = COUNTRIES.filter((c) => c.category !== 'other' && c.code in MEAT_PC.values).length;
+  assert.ok(covered >= 180, `expected ~189 covered real places, got ${covered}`);
+  assert.ok(covered < realCodes.size, 'meat must NOT be dense: some real places are the unknown gap');
+});
+
+test('createMetric over meatPerCapita ranks the United States top, low-meat diets at the bottom', () => {
+  const meat = createMetric(MEAT_PC, COUNTRIES);
+  assert.equal(meat.topN('world', 1)[0].code, 'us');
+  assert.ok(/** @type {number} */ (meat.valueOf('us')) > 100);
+  assert.ok(/** @type {number} */ (meat.valueOf('in')) < 10); // India, famously low
+});
+
+test('attachMeatPerCapitas fills covered real places, leaves the unknown gap + orgs bare', () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachMeatPerCapitas(/** @type {any} */ (rows), MEAT_PC.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  assert.equal(/** @type {any} */ (byCode.get('us')).meatPerCapita, MEAT_PC.values.us);
+  assert.equal(/** @type {any} */ (byCode.get('gb-wls')).meatPerCapita, undefined);
+  const anOrg = COUNTRIES.find((c) => c.category === 'other');
+  assert.equal(/** @type {any} */ (byCode.get(/** @type {any} */ (anOrg).code)).meatPerCapita, undefined);
+});
+
+// ---- real borders.json schema + the dense contract --------------------------
+
+test('borders is a valid, self-describing dense metric file', () => {
+  assert.equal(BORDERS.key, 'borders');
+  assert.equal(typeof BORDERS.label, 'string');
+  assert.equal(typeof BORDERS.unit, 'string');
+  assert.equal(BORDERS.format, 'plain');
+  assert.equal(typeof BORDERS.source, 'string');
+  assert.equal(typeof BORDERS.year, 'number');
+  assert.equal(typeof BORDERS.values, 'object');
+  // Dense (like area): no absence hint. Every real place has a true count.
+  assert.equal(BORDERS.absence, undefined);
+});
+
+test('every borders value is a non-negative integer', () => {
+  for (const [code, v] of Object.entries(BORDERS.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('every real place has a borders value; only non-places have none', () => {
+  const values = BORDERS.values;
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in values), `org ${c.code} should have no borders value`);
+    } else {
+      assert.ok(c.code in values, `real place ${c.code} (${c.continent}) has no borders value`);
+    }
+  }
+});
+
+test('createMetric over borders ranks Russia/China top at 14, islands at 0', () => {
+  const b = createMetric(BORDERS, COUNTRIES);
+  // Russia and China tie at 14 (the world maximum); the code tie-break puts cn first.
+  assert.equal(b.topN('world', 1)[0].code, 'cn');
+  assert.equal(b.valueOf('ru'), 14);
+  assert.equal(b.valueOf('br'), 10); // Brazil borders all but Chile and Ecuador
+  assert.equal(b.valueOf('is'), 0); // Iceland, an island, borders nobody
+});
+
+test('attachBorders fills every real place (islands at 0), orgs stay bare', () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachBorders(/** @type {any} */ (rows), BORDERS.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  for (const c of COUNTRIES) {
+    const row = /** @type {any} */ (byCode.get(c.code));
+    if (c.category === 'other') {
+      assert.equal(row.borders, undefined, `org ${c.code} should have no borders field`);
+    } else {
+      assert.equal(typeof row.borders, 'number', `real place ${c.code} has no borders value`);
+    }
+  }
+  assert.equal(/** @type {any} */ (byCode.get('cn')).borders, 14);
+  assert.equal(/** @type {any} */ (byCode.get('is')).borders, 0); // Iceland has no land border
 });

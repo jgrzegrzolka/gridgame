@@ -78,6 +78,18 @@ export const METRIC_ICONS = {
   // Reads as a gold bar, unmistakable against the coin-stack GDP and the food
   // icons; the mining domain's first metric.
   gold: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l2-7h12l2 7z"/><path d="M6 11l1.6-2h8.8L18 11"/></svg>',
+  // Alcohol per capita: a martini/cocktail glass (triangular bowl on a stemmed
+  // base) with an olive on a pick. Reads as spirits/mixed drinks, setting the
+  // whole-alcohol metric apart from beer's tankard and wine's rounded glass.
+  alcoholPerCapita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-8 8z"/><path d="M12 13v6"/><path d="M8 19h8"/><path d="M14.5 8.5 18 5"/></svg>',
+  // Meat per capita: a drumstick, a rounded meaty body with the bone knuckle
+  // poking out at the bottom-left. Reads as a portion of meat, distinct from the
+  // animal-head livestock icons (sheep / cattle).
+  meatPerCapita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.7 5.4a4.6 4.6 0 0 1 4.9 4.9c-.6 3-2.9 3.6-4.6 3.6-1 2-3.6 2.6-5.2 1s-1-4.2 1-5.2c0-1.7.6-3.9 3.9-4.3z"/><path d="M8.8 14.2 5.5 17.5M5 16l3 3"/></svg>',
+  // Bordering countries: two adjacent territory blocks separated by a dashed
+  // boundary line down the middle. Reads as "a border between neighbours",
+  // distinct from the geographic terrain / water icons.
+  borders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h5v12H4z"/><path d="M15 6h5v12h-5z"/><path d="M12 3.5v17" stroke-dasharray="2 2.6"/></svg>',
 };
 
 /** @type {Record<string, string>} */
@@ -104,6 +116,9 @@ export const METRIC_HUES = {
   tea: '#1f9e7a',
   sugarcane: '#7cb518',
   gold: '#d4a017',
+  alcoholPerCapita: '#b5468a',
+  meatPerCapita: '#c85a3c',
+  borders: '#5f6bd0',
 };
 
 /**
@@ -138,4 +153,7 @@ export const METRIC_SHORT = {
   tea: { key: 'party.modeShort.superlativeTea', fallback: 'Tea' },
   sugarcane: { key: 'party.modeShort.superlativeSugarcane', fallback: 'Sugarcane' },
   gold: { key: 'party.modeShort.superlativeGold', fallback: 'Gold' },
+  alcoholPerCapita: { key: 'party.modeShort.superlativeAlcohol', fallback: 'Alcohol' },
+  meatPerCapita: { key: 'party.modeShort.superlativeMeat', fallback: 'Meat' },
+  borders: { key: 'party.modeShort.superlativeBorders', fallback: 'Borders' },
 };
