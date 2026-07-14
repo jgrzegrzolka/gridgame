@@ -1,0 +1,121 @@
+/**
+ * Regenerates flags/metrics/corruption.json: each country's Corruption
+ * Perceptions Index (CPI) score.
+ *
+ * DIRECTION (read this first). The CPI runs 0 (highly corrupt) to 100 (very
+ * clean), so a HIGHER score means LESS corruption. Denmark (89) and Finland
+ * (88) top the world; South Sudan and Somalia (9) sit at the bottom. The lens
+ * therefore reads "Highest = cleanest", which is exactly how Transparency
+ * International itself presents the index (rank 1 = the cleanest country). We
+ * keep the index's own orientation rather than inverting it into a
+ * "corruption level".
+ *
+ * DATA CONTRACT (`absence: 'unknown'`, the beerPerCapita pattern). TI scores
+ * ~180 sovereign states, essentially every UN member, but NOT sub-national
+ * parts (the UK home nations, the Spanish regions), microstates it does not
+ * cover (Andorra, Monaco, San Marino, Liechtenstein, Vatican), or most small
+ * territories. Those real places have no CPI figure: their value is genuinely
+ * UNKNOWN, not zero, so they are left out of `values` and read "no data" on a
+ * corruption cell. That is correct, the metricDataGap guard blocks exactly the
+ * places we cannot rank. (Contrast the crops' `absence: 'zero'`, where a
+ * missing row means "produces none".)
+ *
+ * SOURCE. Transparency International, Corruption Perceptions Index 2025,
+ * published 2026-02-10 (https://www.transparency.org/en/cpi/2025). Whole-number
+ * scores 0..100. Snapshot embedded below, keyed by our ISO 3166-1 alpha-2 flag
+ * code; no network call, so the build is deterministic. To refresh, re-pull the
+ * next CPI release and update RAW_CPI.
+ *
+ * See DATA_FEATURE.md and the add-world-metric skill for the surface map.
+ */
+
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO = join(HERE, '..');
+const YEAR = 2025;
+
+/**
+ * CPI 2025 score (0..100, higher = cleaner) keyed by our alpha-2 flag code. A
+ * real place absent here has no TI figure and stays "no data" (absence:
+ * 'unknown'); it is NOT treated as 0 (0 would mean "maximally corrupt").
+ * @type {Record<string, number>}
+ */
+const RAW_CPI = {
+  ae: 69, af: 16, al: 39, am: 46, ao: 32, ar: 36, at: 69, az: 30, ba: 34, bb: 68, bd: 24,
+  be: 69, bf: 40, bg: 40, bh: 50, bi: 17, bj: 45, bn: 63, bo: 28, br: 35, bs: 64, bt: 71,
+  bw: 58, by: 31, bz: 36, ca: 75, cd: 20, cf: 24, cg: 23, ch: 80, ci: 43, cl: 63, cm: 26,
+  cn: 43, co: 37, cr: 56, cu: 40, cv: 62, cy: 55, cz: 59, de: 77, dj: 31, dk: 89, dm: 60,
+  do: 37, dz: 34, ec: 33, ee: 76, eg: 30, er: 13, es: 55, et: 38, fi: 88, fj: 55, fr: 66,
+  ga: 29, gb: 70, gd: 56, ge: 50, gh: 43, gm: 37, gn: 26, gq: 15, gr: 50, gt: 26, gw: 21,
+  gy: 40, hk: 76, hn: 22, hr: 47, ht: 16, hu: 40, id: 34, ie: 76, il: 62, in: 39, iq: 28,
+  ir: 23, is: 77, it: 53, jm: 44, jo: 50, jp: 71, ke: 30, kg: 26, kh: 20, km: 20, kp: 15,
+  kr: 63, kw: 46, kz: 38, la: 34, lb: 23, lc: 59, lk: 35, lr: 28, ls: 37, lt: 65, lu: 78,
+  lv: 60, ly: 13, ma: 39, md: 42, me: 46, mg: 25, mk: 40, ml: 28, mm: 16, mn: 31, mr: 30,
+  mt: 49, mu: 48, mv: 39, mw: 34, mx: 27, my: 52, mz: 21, na: 46, ne: 31, ng: 26, ni: 14,
+  nl: 78, no: 81, np: 34, nz: 81, om: 52, pa: 33, pe: 30, pg: 26, ph: 32, pk: 28, pl: 52,
+  pt: 56, py: 24, qa: 58, ro: 45, rs: 33, ru: 22, rw: 58, sa: 57, sb: 44, sc: 68, sd: 14,
+  se: 80, sg: 84, si: 58, sk: 48, sl: 34, sn: 46, so: 9, sr: 38, ss: 9, st: 45, sv: 32, sy: 15,
+  sz: 23, td: 22, tg: 32, th: 33, tj: 19, tl: 44, tm: 17, tn: 39, tr: 31, tt: 41, tw: 68,
+  tz: 40, ua: 36, ug: 25, us: 64, uy: 73, uz: 31, vc: 63, ve: 10, vn: 41, vu: 47, xk: 43,
+  ye: 13, za: 41, zm: 37, zw: 22,
+};
+
+function main() {
+  const countries = JSON.parse(
+    readFileSync(join(REPO, 'flags', 'countries.json'), 'utf-8'),
+  );
+  const realCodes = new Set(
+    countries.filter((c) => c.category !== 'other').map((c) => c.code),
+  );
+
+  /** @type {Record<string, number>} */
+  const values = {};
+  const notReal = [];
+  for (const [code, score] of Object.entries(RAW_CPI)) {
+    if (!realCodes.has(code)) {
+      notReal.push(code);
+      continue;
+    }
+    values[code] = score;
+  }
+
+  const sorted = {};
+  for (const code of Object.keys(values).sort()) sorted[code] = values[code];
+
+  const metric = {
+    key: 'corruption',
+    label: 'Corruption Perceptions Index',
+    unit: '/100',
+    // 'plain' -> whole score (89, 9). The range is 0..100, integers only.
+    format: 'plain',
+    // absence: 'unknown' -> a real place missing from `values` (microstates,
+    // sub-national parts and small territories TI does not score) is genuinely
+    // unknown, NOT 0. It reads "no data" and the metricDataGap guard blocks it.
+    absence: 'unknown',
+    source:
+      `Transparency International, Corruption Perceptions Index ${YEAR} ` +
+      `(published 2026-02-10). Score 0 (highly corrupt) to 100 (very clean), so ` +
+      `a HIGHER score means LESS corruption, the index's own orientation. ` +
+      `~180 sovereign states scored; microstates, sub-national parts and small ` +
+      `territories TI does not cover carry no value (absence: unknown)`,
+    year: YEAR,
+    values: sorted,
+  };
+
+  const outPath = join(REPO, 'flags', 'metrics', 'corruption.json');
+  writeFileSync(outPath, JSON.stringify(metric, null, 2) + '\n', 'utf-8');
+
+  console.log(`Wrote ${outPath}`);
+  console.log(
+    `  values: ${Object.keys(sorted).length} (TI-scored real places) | ` +
+      `absence: unknown for the rest`,
+  );
+  if (notReal.length) {
+    console.error(`  CPI codes not in countries.json (dropped): ${notReal.join(', ')}`);
+  }
+}
+
+main();

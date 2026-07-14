@@ -40,6 +40,7 @@ const BEER_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/
 const ALCOHOL_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/alcoholPerCapita.json'));
 const MEAT_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/meatPerCapita.json'));
 const BORDERS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/borders.json'));
+const CORRUPTION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/corruption.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -1712,4 +1713,62 @@ test('attachBorders fills every real place (islands at 0), orgs stay bare', () =
   }
   assert.equal(/** @type {any} */ (byCode.get('cn')).borders, 14);
   assert.equal(/** @type {any} */ (byCode.get('is')).borders, 0); // Iceland has no land border
+});
+
+// ---- real corruption.json schema + the absence:'unknown' contract ----------
+// CPI: 0 (highly corrupt) .. 100 (very clean), so HIGHER = LESS corrupt. Only
+// ~180 sovereign states are scored; microstates / sub-national parts / small
+// territories are the honest "unknown" gap (like beerPerCapita).
+
+test('corruption is a valid, self-describing metric file with absence:unknown', () => {
+  assert.equal(CORRUPTION.key, 'corruption');
+  assert.equal(typeof CORRUPTION.label, 'string');
+  assert.equal(typeof CORRUPTION.unit, 'string');
+  // Whole scores 0..100, rendered plain.
+  assert.equal(CORRUPTION.format, 'plain');
+  assert.equal(typeof CORRUPTION.source, 'string');
+  assert.equal(typeof CORRUPTION.year, 'number');
+  assert.equal(typeof CORRUPTION.values, 'object');
+  // Absence means "TI does not score this place", not 0 (0 would read as
+  // maximally corrupt). The attacher (none yet) would leave the gap bare.
+  assert.equal(CORRUPTION.absence, 'unknown');
+});
+
+test('every corruption value is an integer in [0, 100]', () => {
+  for (const [code, v] of Object.entries(CORRUPTION.values)) {
+    assert.equal(Number.isInteger(v), true, `${code} not an integer: ${v}`);
+    assert.ok(v >= 0 && v <= 100, `${code} out of [0,100]: ${v}`);
+  }
+});
+
+test('corruption covers only real places, never orgs; the gap is genuine (absence:unknown)', () => {
+  const realCodes = new Set(COUNTRIES.filter((c) => c.category !== 'other').map((c) => c.code));
+  for (const code of Object.keys(CORRUPTION.values)) {
+    assert.ok(realCodes.has(code), `corruption value for non-real place ${code}`);
+  }
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in CORRUPTION.values), `org ${c.code} should have no corruption value`);
+    }
+  }
+  // Broad sovereign coverage, but deliberately not total.
+  const covered = COUNTRIES.filter((c) => c.category !== 'other' && c.code in CORRUPTION.values).length;
+  assert.ok(covered >= 175, `expected ~180 scored real places, got ${covered}`);
+  assert.ok(covered < realCodes.size, 'corruption must NOT be dense: some real places are the unknown gap');
+  // A scored sovereign is present; a sub-national part / uncovered territory is the gap.
+  assert.ok('dk' in CORRUPTION.values, 'Denmark (sovereign) must be scored');
+  assert.ok(!('gb-wls' in CORRUPTION.values), 'Wales (sub-national) is unknown, must be absent');
+  assert.ok(!('gl' in CORRUPTION.values), 'Greenland (territory) is unknown, must be absent');
+});
+
+test('createMetric over corruption ranks the cleanest top, the most corrupt at the floor', () => {
+  const cpi = createMetric(CORRUPTION, COUNTRIES);
+  // Denmark is the cleanest (highest score); Finland is second.
+  assert.equal(cpi.topN('world', 1)[0].code, 'dk');
+  assert.equal(cpi.valueOf('dk'), 89);
+  assert.equal(cpi.rankOf('fi', 'world'), 2);
+  // The floor is a 9-point tie between Somalia and South Sudan.
+  const bottom = cpi.bottomN('world', 2).map((r) => r.code).sort();
+  assert.deepEqual(bottom, ['so', 'ss']);
+  assert.equal(cpi.valueOf('so'), 9);
 });
