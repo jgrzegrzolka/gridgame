@@ -53,6 +53,11 @@ export function resolveLang(stored, browserLang) {
  * @returns {string | null}
  */
 export function lookupString(strings, key) {
+  // A nullish key (a caller passed an undefined label key) must degrade to the
+  // fallback, never throw — one bad key should not blank an entire page. This
+  // is what caught the Flag Party lobby: a metric chip with an unresolved short
+  // label crashed the whole boot render on `undefined.split`.
+  if (key == null) return null;
   const parts = key.split('.');
   /** @type {any} */
   let cur = strings;
