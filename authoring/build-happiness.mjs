@@ -1,0 +1,127 @@
+/**
+ * Regenerates flags/metrics/happiness.json: each country's World Happiness
+ * Report ladder score (life evaluation).
+ *
+ * WHY THIS METRIC: it is intensive (a per-person survey average, size-
+ * independent) and a well-known global statistic. Finland (7.736) has led for
+ * nine years; the Nordics and Costa Rica sit at the top, Afghanistan (1.364),
+ * Sierra Leone and Lebanon at the bottom.
+ *
+ * The score is the national average answer to the Cantril ladder question,
+ * "imagine a ladder from 0 (worst possible life) to 10 (best possible life);
+ * where do you stand?", averaged over the latest three survey years. Scores
+ * observed here run ~1.4 to ~7.7. Stored to three decimals so the ranking is
+ * exact; the lens shows one decimal.
+ *
+ * DATA CONTRACT (`absence: 'unknown'`, the beerPerCapita pattern). The Gallup
+ * World Poll reaches ~140-150 countries, so the report ranks only those. Every
+ * place it does not survey (most small states, all territories and sub-national
+ * parts) has no score: its value is genuinely UNKNOWN, not zero (0 is the
+ * ladder's worst-life floor, a real reading, not "no data"). Those real places
+ * are left out of `values` and read "no data" on a happiness cell, which the
+ * metricDataGap guard blocks. This is the thinnest-coverage metric in the
+ * family, an honest limitation of the underlying survey.
+ *
+ * SOURCE. World Happiness Report 2025 (Wellbeing Research Centre, University of
+ * Oxford, with Gallup and the UN SDSN), life-evaluation table, as compiled on
+ * Wikipedia's "World Happiness Report" page. Snapshot embedded below, keyed by
+ * our ISO 3166-1 alpha-2 flag code; no network call, so the build is
+ * deterministic. To refresh, re-pull the next annual report and update RAW.
+ *
+ * See DATA_FEATURE.md and the add-world-metric skill for the surface map.
+ */
+
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO = join(HERE, '..');
+const YEAR = 2025;
+
+/**
+ * WHR 2025 ladder score (0..10, higher = happier) keyed by our alpha-2 flag
+ * code. A real place absent here is not surveyed and stays "no data" (absence:
+ * 'unknown'); it is NOT treated as 0 (0 is the ladder's worst-life floor).
+ * @type {Record<string, number>}
+ */
+const RAW_HAPPINESS = {
+  ae: 6.759, af: 1.364, al: 5.411, am: 5.494, ar: 6.397, at: 6.81, au: 6.974, az: 4.875,
+  ba: 6.136, bd: 3.851, be: 6.91, bf: 4.383, bg: 5.554, bh: 6.03, bj: 4.357, bo: 5.868,
+  br: 6.494, bw: 3.438, bz: 6.711, ca: 6.803, cd: 3.469, cg: 5.03, ch: 6.935, ci: 5.102,
+  cl: 6.361, cm: 4.887, cn: 5.921, co: 6.004, cr: 7.274, cy: 5.942, cz: 6.775, de: 6.753,
+  dk: 7.521, do: 5.846, dz: 5.571, ec: 5.965, ee: 6.417, eg: 3.817, es: 6.466, et: 3.898,
+  fi: 7.736, fr: 6.593, ga: 5.12, gb: 6.728, ge: 5.4, gh: 4.34, gm: 4.423, gn: 4.929,
+  gr: 5.776, gt: 6.362, hk: 5.491, hn: 5.964, hr: 5.87, hu: 5.915, id: 5.617, ie: 6.889,
+  il: 7.234, in: 4.389, iq: 4.976, ir: 5.093, is: 7.515, it: 6.415, jm: 5.87, jo: 4.31,
+  jp: 6.147, ke: 4.51, kg: 5.858, kh: 4.341, km: 3.754, kr: 6.038, kw: 6.629, kz: 6.378,
+  la: 5.301, lb: 3.188, lk: 3.891, lr: 4.277, ls: 3.757, lt: 6.829, lu: 7.122, lv: 6.207,
+  ly: 5.82, ma: 4.622, md: 5.819, me: 5.877, mg: 4.157, mk: 5.503, ml: 4.345, mm: 4.321,
+  mn: 5.833, mr: 4.542, mt: 6.316, mu: 5.832, mw: 3.26, mx: 6.979, my: 5.955, mz: 5.19,
+  na: 4.911, ne: 4.725, ng: 4.885, ni: 6.33, nl: 7.306, no: 7.262, np: 5.311, nz: 6.952,
+  om: 6.197, pa: 6.407, pe: 5.947, ph: 6.107, pk: 4.768, pl: 6.673, ps: 4.78, pt: 6.013,
+  py: 6.172, ro: 6.563, rs: 6.606, ru: 5.945, sa: 6.6, se: 7.345, sg: 6.565, si: 6.792,
+  sk: 6.221, sl: 2.998, sn: 4.856, so: 4.347, sv: 6.492, sz: 3.774, td: 4.384, tg: 4.315,
+  th: 6.222, tj: 5.411, tn: 4.552, tr: 5.262, tt: 5.905, tw: 6.669, tz: 3.8, ua: 4.68,
+  ug: 4.461, us: 6.724, uy: 6.661, uz: 6.193, ve: 5.683, vn: 6.352, xk: 6.659, ye: 3.561,
+  za: 5.213, zm: 3.912, zw: 3.396,
+};
+
+function main() {
+  const countries = JSON.parse(
+    readFileSync(join(REPO, 'flags', 'countries.json'), 'utf-8'),
+  );
+  const realCodes = new Set(
+    countries.filter((c) => c.category !== 'other').map((c) => c.code),
+  );
+
+  /** @type {Record<string, number>} */
+  const values = {};
+  const notReal = [];
+  for (const [code, score] of Object.entries(RAW_HAPPINESS)) {
+    if (!realCodes.has(code)) {
+      notReal.push(code);
+      continue;
+    }
+    values[code] = score;
+  }
+
+  const sorted = {};
+  for (const code of Object.keys(values).sort()) sorted[code] = values[code];
+
+  const metric = {
+    key: 'happiness',
+    label: 'Happiness score',
+    unit: '/10',
+    // 'decimal1' -> one decimal place (7.7). The stored 3-decimal precision
+    // keeps the ranking exact where scores sit close together.
+    format: 'decimal1',
+    // absence: 'unknown' -> a real place missing from `values` (every country
+    // and territory the Gallup World Poll does not survey) is genuinely unknown,
+    // NOT 0 (0 is the ladder's worst-life floor). It reads "no data".
+    absence: 'unknown',
+    source:
+      `World Happiness Report ${YEAR} (Wellbeing Research Centre, University of ` +
+      `Oxford, with Gallup and the UN SDSN). National average Cantril-ladder ` +
+      `life evaluation, 0 (worst possible life) to 10 (best), three decimals. ` +
+      `~147 surveyed countries; every unsurveyed country, territory and ` +
+      `sub-national part carries no value (absence: unknown), the thinnest ` +
+      `coverage in the metric family`,
+    year: YEAR,
+    values: sorted,
+  };
+
+  const outPath = join(REPO, 'flags', 'metrics', 'happiness.json');
+  writeFileSync(outPath, JSON.stringify(metric, null, 2) + '\n', 'utf-8');
+
+  console.log(`Wrote ${outPath}`);
+  console.log(
+    `  values: ${Object.keys(sorted).length} (surveyed real places) | ` +
+      `absence: unknown for the rest`,
+  );
+  if (notReal.length) {
+    console.error(`  happiness codes not in countries.json (dropped): ${notReal.join(', ')}`);
+  }
+}
+
+main();
