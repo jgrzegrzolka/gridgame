@@ -69,6 +69,9 @@ const MODE_LABELS = {
   'superlative-tea': { key: 'party.mode.superlativeTea', full: 'Tea production: most', shortKey: 'party.modeShort.superlativeTea', short: 'Tea' },
   'superlative-sugarcane': { key: 'party.mode.superlativeSugarcane', full: 'Sugarcane production: most', shortKey: 'party.modeShort.superlativeSugarcane', short: 'Sugarcane' },
   'superlative-gold': { key: 'party.mode.superlativeGold', full: 'Gold production: most', shortKey: 'party.modeShort.superlativeGold', short: 'Gold' },
+  'superlative-alcohol': { key: 'party.mode.superlativeAlcohol', full: 'Alcohol per capita: most', shortKey: 'party.modeShort.superlativeAlcohol', short: 'Alcohol' },
+  'superlative-meat': { key: 'party.mode.superlativeMeat', full: 'Meat per capita: most', shortKey: 'party.modeShort.superlativeMeat', short: 'Meat' },
+  'superlative-borders': { key: 'party.mode.superlativeBorders', full: 'Bordering countries: most', shortKey: 'party.modeShort.superlativeBorders', short: 'Borders' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -185,6 +188,24 @@ const SUPERLATIVE_MODES = {
   'superlative-gold': {
     file: 'gold.json',
     hintMost: { key: 'party.hintMostGold', fallback: 'Largest gold production' },
+  },
+  // Alcohol per capita is 'most'-only: "who drinks the most alcohol" (Lithuania,
+  // Ireland) is the fun question; "fewest" is a religion/geography quiz.
+  'superlative-alcohol': {
+    file: 'alcoholPerCapita.json',
+    hintMost: { key: 'party.hintMostAlcohol', fallback: 'Most alcohol per person' },
+  },
+  // Meat per capita is 'most'-only: "who eats the most meat" (the US, Australia)
+  // is the fun question; "least" is the low-income / vegetarian tail.
+  'superlative-meat': {
+    file: 'meatPerCapita.json',
+    hintMost: { key: 'party.hintMostMeat', fallback: 'Most meat per person' },
+  },
+  // Borders is 'most'-only: "which borders the most countries" (Russia, China at
+  // 14) is the fun question; "fewest" ties every island at 0.
+  'superlative-borders': {
+    file: 'borders.json',
+    hintMost: { key: 'party.hintMostBorders', fallback: 'Most bordering countries' },
   },
 };
 

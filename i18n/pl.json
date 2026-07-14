@@ -571,7 +571,10 @@
       "superlativeBeer": "Piwo na osobę: najwięcej",
       "superlativeTea": "Produkcja herbaty: najwięcej",
       "superlativeSugarcane": "Produkcja trzciny cukrowej: najwięcej",
-      "superlativeGold": "Produkcja złota: najwięcej"
+      "superlativeGold": "Produkcja złota: najwięcej",
+      "superlativeAlcohol": "Alkohol na osobę: najwięcej",
+      "superlativeMeat": "Mięso na osobę: najwięcej",
+      "superlativeBorders": "Sąsiednie kraje: najwięcej"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -598,7 +601,10 @@
       "superlativeBeer": "Piwo",
       "superlativeTea": "Herbata",
       "superlativeSugarcane": "Trzcina cukrowa",
-      "superlativeGold": "Złoto"
+      "superlativeGold": "Złoto",
+      "superlativeAlcohol": "Alkohol",
+      "superlativeMeat": "Mięso",
+      "superlativeBorders": "Granice"
     },
     "round": "Runda {n} z {total}",
     "hintFlag": "Która flaga?",
@@ -633,6 +639,9 @@
     "hintMostTea": "Największa produkcja herbaty",
     "hintMostSugarcane": "Największa produkcja trzciny cukrowej",
     "hintMostGold": "Największa produkcja złota",
+    "hintMostAlcohol": "Najwięcej alkoholu na osobę",
+    "hintMostMeat": "Najwięcej mięsa na osobę",
+    "hintMostBorders": "Najwięcej sąsiednich krajów",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
@@ -881,6 +890,24 @@
       "100": "ponad 100 litrów piwa na osobę"
     }
   },
+  "alcoholPerCapita": {
+    "atLeast": {
+      "10": "ponad 10 litrów alkoholu na osobę",
+      "12": "ponad 12 litrów alkoholu na osobę"
+    }
+  },
+  "meatPerCapita": {
+    "atLeast": {
+      "80": "ponad 80 kg mięsa na osobę",
+      "100": "ponad 100 kg mięsa na osobę"
+    }
+  },
+  "borders": {
+    "atLeast": {
+      "5": "5 lub więcej",
+      "8": "8 lub więcej"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "tylko 2 kolory",
@@ -957,7 +984,10 @@
     "beerPerCapita": "Piwo na osobę",
     "tea": "Produkcja herbaty",
     "sugarcane": "Produkcja trzciny cukrowej",
-    "gold": "Produkcja złota"
+    "gold": "Produkcja złota",
+    "alcoholPerCapita": "Alkohol na osobę",
+    "meatPerCapita": "Mięso na osobę",
+    "borders": "Sąsiednie kraje"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

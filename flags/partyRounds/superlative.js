@@ -20,6 +20,9 @@ import beerPerCapita from '../metrics/beerPerCapita.json' with { type: 'json' };
 import tea from '../metrics/tea.json' with { type: 'json' };
 import sugarcane from '../metrics/sugarcane.json' with { type: 'json' };
 import gold from '../metrics/gold.json' with { type: 'json' };
+import alcoholPerCapita from '../metrics/alcoholPerCapita.json' with { type: 'json' };
+import meatPerCapita from '../metrics/meatPerCapita.json' with { type: 'json' };
+import borders from '../metrics/borders.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 
 /**
@@ -293,3 +296,37 @@ export const sugarcaneRound = createSuperlativeRound(createMetric(sugarcane, [])
 // Locked to 'most': "biggest gold producer" (China) is the good question;
 // "smallest producer" is obscure.
 export const goldRound = createSuperlativeRound(createMetric(gold, []), 'superlative-gold', { direction: 'most' });
+
+// Alcohol-per-capita instance: litres of pure alcohol per person, id
+// 'superlative-alcohol'. Locked to 'most': "which drinks the MOST alcohol" is the
+// fun question (Lithuania, Ireland, the European heavyweights); "fewest" is a
+// religion/geography quiz, not a drinking one. The round metric drops the 0-litre
+// dry states AND is inherently sovereign-scoped, so the absence:'unknown' gap
+// (territories the source does not measure) never surfaces.
+const alcoholDrinking = {
+  ...alcoholPerCapita,
+  values: Object.fromEntries(Object.entries(alcoholPerCapita.values).filter(([, v]) => v > 0)),
+};
+export const alcoholPerCapitaRound = createSuperlativeRound(createMetric(alcoholDrinking, []), 'superlative-alcohol', { direction: 'most' });
+
+// Meat-per-capita instance: kg of meat per person, id 'superlative-meat'. Locked
+// to 'most': "which eats the MOST meat" is the fun question (the United States,
+// Australia, Argentina); "least" is the low-income / vegetarian tail. Zero-filtered
+// for consistency with the drink metrics (though no covered place is actually 0),
+// and inherently sovereign-scoped, so the absence:'unknown' gap never surfaces.
+const meatEating = {
+  ...meatPerCapita,
+  values: Object.fromEntries(Object.entries(meatPerCapita.values).filter(([, v]) => v > 0)),
+};
+export const meatPerCapitaRound = createSuperlativeRound(createMetric(meatEating, []), 'superlative-meat', { direction: 'most' });
+
+// Borders instance: number of countries sharing a land border, id
+// 'superlative-borders'. Locked to 'most': "which borders the MOST countries" is
+// the fun question (Russia & China at 14); "fewest" ties every island at 0. The
+// round metric drops the 0-border places (all the islands) from selection, so every
+// option is a country that actually borders someone.
+const borderedBorders = {
+  ...borders,
+  values: Object.fromEntries(Object.entries(borders.values).filter(([, v]) => v > 0)),
+};
+export const bordersRound = createSuperlativeRound(createMetric(borderedBorders, []), 'superlative-borders', { direction: 'most' });

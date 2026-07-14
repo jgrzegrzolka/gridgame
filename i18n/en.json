@@ -571,7 +571,10 @@
       "superlativeBeer": "Beer per capita: most",
       "superlativeTea": "Tea production: most",
       "superlativeSugarcane": "Sugarcane production: most",
-      "superlativeGold": "Gold production: most"
+      "superlativeGold": "Gold production: most",
+      "superlativeAlcohol": "Alcohol per capita: most",
+      "superlativeMeat": "Meat per capita: most",
+      "superlativeBorders": "Bordering countries: most"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -598,7 +601,10 @@
       "superlativeBeer": "Beer",
       "superlativeTea": "Tea",
       "superlativeSugarcane": "Sugarcane",
-      "superlativeGold": "Gold"
+      "superlativeGold": "Gold",
+      "superlativeAlcohol": "Alcohol",
+      "superlativeMeat": "Meat",
+      "superlativeBorders": "Borders"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -633,6 +639,9 @@
     "hintMostTea": "Largest tea production",
     "hintMostSugarcane": "Largest sugarcane production",
     "hintMostGold": "Largest gold production",
+    "hintMostAlcohol": "Most alcohol per person",
+    "hintMostMeat": "Most meat per person",
+    "hintMostBorders": "Most bordering countries",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
@@ -881,6 +890,24 @@
       "100": "over 100 litres of beer per person"
     }
   },
+  "alcoholPerCapita": {
+    "atLeast": {
+      "10": "over 10 litres of alcohol per person",
+      "12": "over 12 litres of alcohol per person"
+    }
+  },
+  "meatPerCapita": {
+    "atLeast": {
+      "80": "over 80 kg of meat per person",
+      "100": "over 100 kg of meat per person"
+    }
+  },
+  "borders": {
+    "atLeast": {
+      "5": "5 or more",
+      "8": "8 or more"
+    }
+  },
   "filter": {
     "onlyN": {
       "2": "only 2 colours",
@@ -957,7 +984,10 @@
     "beerPerCapita": "Beer per capita",
     "tea": "Tea production",
     "sugarcane": "Sugarcane production",
-    "gold": "Gold production"
+    "gold": "Gold production",
+    "alcoholPerCapita": "Alcohol per capita",
+    "meatPerCapita": "Meat per capita",
+    "borders": "Bordering countries"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

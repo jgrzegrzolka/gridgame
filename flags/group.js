@@ -35,6 +35,9 @@
  * @property {number} [tea]  Denormalized from `flags/metrics/tea.json` by `attachTeas` (green-tea-leaf tonnes). Sparse `absence: 'zero'` metric like coffee: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
  * @property {number} [sugarcane]  Denormalized from `flags/metrics/sugarcane.json` by `attachSugarcanes` (tonnes of cane). Sparse `absence: 'zero'` metric like coffee: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
  * @property {number} [gold]  Denormalized from `flags/metrics/gold.json` by `attachGolds` (tonnes of mined gold). Sparse `absence: 'zero'` metric like coffee: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
+ * @property {number} [alcoholPerCapita]  Denormalized from `flags/metrics/alcoholPerCapita.json` by `attachAlcoholPerCapitas` (litres of pure alcohol per person per year). `absence: 'unknown'` metric like `beerPerCapita`: WHO does not measure sub-national parts or small territories, so a real place it does not cover is genuinely unknown (NOT 0) and left without the field, reading "no data". Absent for those places and non-places (orgs).
+ * @property {number} [meatPerCapita]  Denormalized from `flags/metrics/meatPerCapita.json` by `attachMeatPerCapitas` (kg of meat per person per year). `absence: 'unknown'` metric like the drink metrics: a real place the source does not cover is genuinely unknown (NOT 0) and left without the field. Absent for those places and non-places (orgs).
+ * @property {number} [borders]  Denormalized from `flags/metrics/borders.json` by `attachBorders` (number of countries sharing a land border). Dense, same pattern as `area`: every real place has a value (an island carries a true 0), absent only for non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -231,6 +234,61 @@ export function attachBeerPerCapitas(countries, values) {
   for (const c of countries) {
     const v = values[c.code];
     if (typeof v === 'number') c.beerPerCapita = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/alcoholPerCapita.json` values onto each Country as
+ * `.alcoholPerCapita` (litres of pure alcohol per person per year). `absence:
+ * 'unknown'`, so this is a plain set-if-present (like `attachBeerPerCapitas`): a
+ * real place WHO does not measure is left without the field on purpose, reading
+ * "no data" rather than a false 0.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachAlcoholPerCapitas(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.alcoholPerCapita = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/meatPerCapita.json` values onto each Country as
+ * `.meatPerCapita` (kg of meat per person per year). `absence: 'unknown'` like the
+ * drink metrics, so a plain set-if-present: a real place the source does not cover
+ * is left without the field, reading "no data" rather than a false 0.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachMeatPerCapitas(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.meatPerCapita = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/borders.json` values onto each Country as `.borders`
+ * (number of countries sharing a land border). Twin of `attachAreas`. Borders is
+ * dense (every real place has a value; an island carries a true 0), so only
+ * non-place flags (orgs) are left without the field.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachBorders(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.borders = v;
   }
   return countries;
 }
@@ -521,6 +579,9 @@ const METRIC_ATTACHERS = {
   tea: attachTeas,
   sugarcane: attachSugarcanes,
   gold: attachGolds,
+  alcoholPerCapita: attachAlcoholPerCapitas,
+  meatPerCapita: attachMeatPerCapitas,
+  borders: attachBorders,
 };
 
 /**

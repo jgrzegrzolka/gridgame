@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Feature EB (gold production, the first mining-domain metric) closed once its code surfaces landed; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. Features EC / ED / EE (alcohol per capita, meat per capita, bordering countries) closed once their code surfaces landed, shipped together in one PR; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,61 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature EE: Bordering countries as a world metric, a pure-geography "wow" count (code surfaces complete 2026-07-14, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Twenty-fifth world metric and the first that is neither production nor consumption: a **count of the countries each place shares a land border with**. Pure geography, so no external source risk (hand-maintained from the standard land-border counts). The "wow" reveal: Russia and China both border 14, most islands border 0.
+
+**Data contract:** **dense** (like area / coastline), NOT sparse or unknown. Every real place has a definite integer count, and an island or isolated territory borders a true **0** (a real fact, not a data gap), so only the org flags are without a value. `build-borders.mjs` 0-fills every real place, then overrides the ~165 land-bordered ones from a hand-maintained `BORDERS` map. `attachBorders` is a plain dense set-if-present, twin of `attachAreas`.
+
+**Definition (the one judgement call):** distinct sovereign / territorial neighbours sharing a land border, the standard trivia figure. France's metropolitan 8, not 11 (its overseas parts are separate entries carrying their own counts). Western Sahara, Kosovo, Palestine counted as the neighbours they physically are. Sub-national entries count the foreign countries they touch (Catalonia 2 = France + Andorra; England 0). Documented in `build-borders.mjs`.
+
+**One-directional:** filters are **atLeast-only** (`BORDERS_BREAKS_FOR_RANDOM` = `>=5/8`; a `<=` tier would flood with every island at 0), and the Flag Party round is **most-only**, zero-filtered so every option actually borders someone.
+
+- [x] 1. Data: `flags/metrics/borders.json` (dense, 262 real places, 165 with a border) + `authoring/build-borders.mjs` + `METRIC_FILES` line + `attachBorders` (group.js) + `metrics.test.js` schema/integer/dense-coverage/attacher tests. Visuals: two-tiles-with-a-dashed-seam icon + indigo hue `#5f6bd0` + short label in `flags/metricVisuals.js`.
+- [x] 2. flagsdata lens, free once step 1 landed: hub chip with the border icon.
+- [x] 3 + 4 (driven by `THRESHOLD_METRICS`). `borders(op, n)` factory + `BORDERS_BREAKS_FOR_RANDOM` (`>=5/8`) + `THRESHOLD_METRICS.borders`. **NOT 9×9-eligible** (dense but top-heavy; every break `ultimateEligible: false`, pinned by the ultimate-pool test). Filters: `BordersConstraint` + `borders` field; `bordersProbability` (0.06) modifier + `findFlag/page.js` + skill note. i18n `borders.atLeast.{5,8}` + `metric.borders` (en+pl).
+- [x] 5. Flag Party round: `bordersRound` across the six spots + en/pl i18n. **Most-only**, zero-filtered (islands excluded). Pinned by `superlative.test.js`.
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+---
+
+### Feature ED: Meat per capita as a world metric, an intensive consumption metric (code surfaces complete 2026-07-14, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Twenty-fourth world metric, the drink metrics' food twin: **kilograms of meat eaten per person per year**. Intensive (size-independent), so a small rich country tops a giant. The United States leads (~124 kg), the low-income / vegetarian diets sit at the bottom (India ~4 kg).
+
+**Data contract:** **`absence: 'unknown'`**, exactly like beer / alcohol. The source (OWID/FAO food balance sheets) covers essentially every sovereign but not the sub-national parts / small territories, so a place it does not measure is genuinely unknown (NOT 0) and reads "no data". Coverage mirrors the drink metrics' key set (189 covered). `attachMeatPerCapitas` is a plain set-if-present, leaving the gap bare. (Aside: Hong Kong, the real-world meat-eating champion, is a territory and so sits in the unknown gap rather than topping the ranking.)
+
+**One-directional:** filters **atLeast-only** (`MEAT_PER_CAPITA_BREAKS_FOR_RANDOM` = `>=80/100` kg), Flag Party round **most-only**.
+
+- [x] 1. Data: `flags/metrics/meatPerCapita.json` + `authoring/build-meat-per-capita.mjs` + `METRIC_FILES` + `attachMeatPerCapitas` + `metrics.test.js` schema/integer/unknown-gap/attacher tests. Visuals: drumstick icon + warm terracotta hue `#c85a3c` + short label.
+- [x] 2. flagsdata lens, free once step 1 landed.
+- [x] 3 + 4. `meatPerCapita(op, n)` factory + `MEAT_PER_CAPITA_BREAKS_FOR_RANDOM` + `THRESHOLD_METRICS.meatPerCapita`. **NOT 9×9-eligible** (`absence: 'unknown'`). Filters: `MeatPerCapitaConstraint` + `meatPerCapita` field; `meatPerCapitaProbability` (0.06) + skill note. i18n `meatPerCapita.atLeast.{80,100}` + `metric.meatPerCapita` (en+pl).
+- [x] 5. Flag Party round: `meatPerCapitaRound`, **most-only**. Pinned by `superlative.test.js`.
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+---
+
+### Feature EC: Alcohol per capita as a world metric, beer's whole-drink companion (code surfaces complete 2026-07-14, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Twenty-third world metric and the size-independent companion to beer-per-capita: **total recorded alcohol per adult (15+), in litres of pure alcohol**. Beer is one beverage; this is the whole lot (beer + wine + spirits), so the two rank differently (a wine or spirits culture can sit high here while low on beer). Lithuania / Ireland / the European heavyweights top out ~13 L; the dry states sit at 0.
+
+**Data contract:** **`absence: 'unknown'`**, a byte-for-byte reuse of beer's machinery, and the covered key set is kept identical to beer's on purpose so the two per-capita drink metrics share one absence gap. `attachAlcoholPerCapitas` is a plain set-if-present.
+
+**One-directional:** filters **atLeast-only** (`ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM` = `>=10/12` L of pure alcohol), Flag Party round **most-only**, zero-filtered so the dry states never surface as an option.
+
+- [x] 1. Data: `flags/metrics/alcoholPerCapita.json` (`decimal1`) + `authoring/build-alcohol-per-capita.mjs` + `METRIC_FILES` + `attachAlcoholPerCapitas` + `metrics.test.js` schema/finite/unknown-gap/attacher tests. Visuals: cocktail-glass icon + orchid hue `#b5468a` + short label.
+- [x] 2. flagsdata lens, free once step 1 landed.
+- [x] 3 + 4. `alcoholPerCapita(op, n)` factory + `ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM` + `THRESHOLD_METRICS.alcoholPerCapita`. **NOT 9×9-eligible** (`absence: 'unknown'`). Filters: `AlcoholPerCapitaConstraint` + `alcoholPerCapita` field; `alcoholPerCapitaProbability` (0.06) + skill note. i18n `alcoholPerCapita.atLeast.{10,12}` + `metric.alcoholPerCapita` (en+pl).
+- [x] 5. Flag Party round: `alcoholPerCapitaRound`, **most-only**, zero-filtered. Pinned by `superlative.test.js`.
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+**Standing artifacts:** alcohol/meat are the template for cloning an `absence: 'unknown'` per-capita metric off beer while keeping a shared covered key set; borders is the template for a dense count where most values are a legitimate 0.
+
+---
 
 ### Feature EB: Gold production as a world metric, the first mining-domain metric (code surfaces complete 2026-07-13, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 
