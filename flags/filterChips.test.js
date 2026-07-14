@@ -54,12 +54,16 @@ test('chipLabelText: exclude pill still renders the bare noun (styling carries t
   assert.equal(chipLabelText({ kind: 'pill', group: 'motif', value: 'cross', exclude: true }, emptyFilters(), t), 'cross');
 });
 
-test('chipLabelText: colorCount scalar reads as "Colors = N"', () => {
+test('chipLabelText: colorCount scalar reads exactly like the TTT category label', () => {
+  // Same filter.onlyN/atLeastN/atMostN phrasing as the engine/TTT — NOT a
+  // bespoke "Colors = N" that would drift from the tic-tac-toe cell label.
   const f = emptyFilters();
   f.colorCount = { op: '=', n: 3 };
-  assert.equal(chipLabelText({ kind: 'scalar', group: 'colorCount' }, f, t), 'Colors = 3');
+  assert.equal(chipLabelText({ kind: 'scalar', group: 'colorCount' }, f, t), 'only 3 colours');
   f.colorCount = { op: '>=', n: 2 };
-  assert.equal(chipLabelText({ kind: 'scalar', group: 'colorCount' }, f, t), 'Colors ≥ 2');
+  assert.equal(chipLabelText({ kind: 'scalar', group: 'colorCount' }, f, t), '2 or more colours');
+  f.colorCount = { op: '<=', n: 4 };
+  assert.equal(chipLabelText({ kind: 'scalar', group: 'colorCount' }, f, t), '4 or fewer colours');
 });
 
 test('chipLabelText: metric scalar leads with the short name so the fact is never anonymous', () => {
