@@ -35,6 +35,8 @@
  * @property {number} [tea]  Denormalized from `flags/metrics/tea.json` by `attachTeas` (green-tea-leaf tonnes). Sparse `absence: 'zero'` metric like coffee: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
  * @property {number} [sugarcane]  Denormalized from `flags/metrics/sugarcane.json` by `attachSugarcanes` (tonnes of cane). Sparse `absence: 'zero'` metric like coffee: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
  * @property {number} [gold]  Denormalized from `flags/metrics/gold.json` by `attachGolds` (tonnes of mined gold). Sparse `absence: 'zero'` metric like coffee: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
+ * @property {number} [oliveOil]  Denormalized from `flags/metrics/oliveOil.json` by `attachOliveOils` (tonnes of olive oil). Sparse `absence: 'zero'` metric like coffee: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
+ * @property {number} [honey]  Denormalized from `flags/metrics/honey.json` by `attachHoneys` (tonnes of natural honey). Sparse `absence: 'zero'` metric like coffee: every real place gets a value (a non-producer defaults to 0); absent only for non-places (orgs).
  * @property {number} [alcoholPerCapita]  Denormalized from `flags/metrics/alcoholPerCapita.json` by `attachAlcoholPerCapitas` (litres of pure alcohol per person per year). `absence: 'unknown'` metric like `beerPerCapita`: WHO does not measure sub-national parts or small territories, so a real place it does not cover is genuinely unknown (NOT 0) and left without the field, reading "no data". Absent for those places and non-places (orgs).
  * @property {number} [meatPerCapita]  Denormalized from `flags/metrics/meatPerCapita.json` by `attachMeatPerCapitas` (kg of meat per person per year). `absence: 'unknown'` metric like the drink metrics: a real place the source does not cover is genuinely unknown (NOT 0) and left without the field. Absent for those places and non-places (orgs).
  * @property {number} [borders]  Denormalized from `flags/metrics/borders.json` by `attachBorders` (number of countries sharing a land border). Dense, same pattern as `area`: every real place has a value (an island carries a true 0), absent only for non-places (orgs).
@@ -439,6 +441,36 @@ export function attachGolds(countries, values) {
 }
 
 /**
+ * Denormalize `flags/metrics/oliveOil.json` onto each Country as `.oliveOil`
+ * (tonnes of olive oil). Sparse `absence: 'zero'` metric like coffee: producers
+ * get their tonnage, every other real place gets 0, orgs stay without the field.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachOliveOils(countries, values) {
+  return attachZeroFilledMetric(countries, values, (c, v) => {
+    c.oliveOil = v;
+  });
+}
+
+/**
+ * Denormalize `flags/metrics/honey.json` onto each Country as `.honey`
+ * (tonnes of natural honey). Sparse `absence: 'zero'` metric like coffee:
+ * producers get their tonnage, every other real place gets 0, orgs stay bare.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachHoneys(countries, values) {
+  return attachZeroFilledMetric(countries, values, (c, v) => {
+    c.honey = v;
+  });
+}
+
+/**
  * Denormalize `flags/metrics/wine.json` onto each Country as `.wine`
  * (wine tonnes). Sparse `absence: 'zero'` metric like coffee: makers get their
  * tonnage, every other real place gets 0, orgs stay without the field.
@@ -582,6 +614,8 @@ const METRIC_ATTACHERS = {
   alcoholPerCapita: attachAlcoholPerCapitas,
   meatPerCapita: attachMeatPerCapitas,
   borders: attachBorders,
+  oliveOil: attachOliveOils,
+  honey: attachHoneys,
 };
 
 /**

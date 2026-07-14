@@ -14,7 +14,7 @@ import {
   filterToCategory,
   pickRandomMix,
 } from './findFlag.js';
-import { categoryFromId, POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM, DENSITY_BREAKS_FOR_RANDOM, GDP_BREAKS_FOR_RANDOM, GDP_PER_CAPITA_BREAKS_FOR_RANDOM, COFFEE_BREAKS_FOR_RANDOM, WINE_BREAKS_FOR_RANDOM, COCOA_BREAKS_FOR_RANDOM, BANANA_BREAKS_FOR_RANDOM, ELEVATION_BREAKS_FOR_RANDOM, COASTLINE_BREAKS_FOR_RANDOM, FOREST_BREAKS_FOR_RANDOM, TEA_BREAKS_FOR_RANDOM, SUGARCANE_BREAKS_FOR_RANDOM, GOLD_BREAKS_FOR_RANDOM } from './engine.js';
+import { categoryFromId, POPULATION_BREAKS_FOR_RANDOM, AREA_BREAKS_FOR_RANDOM, DENSITY_BREAKS_FOR_RANDOM, GDP_BREAKS_FOR_RANDOM, GDP_PER_CAPITA_BREAKS_FOR_RANDOM, COFFEE_BREAKS_FOR_RANDOM, WINE_BREAKS_FOR_RANDOM, COCOA_BREAKS_FOR_RANDOM, BANANA_BREAKS_FOR_RANDOM, ELEVATION_BREAKS_FOR_RANDOM, COASTLINE_BREAKS_FOR_RANDOM, FOREST_BREAKS_FOR_RANDOM, TEA_BREAKS_FOR_RANDOM, SUGARCANE_BREAKS_FOR_RANDOM, GOLD_BREAKS_FOR_RANDOM, OLIVE_OIL_BREAKS_FOR_RANDOM, HONEY_BREAKS_FOR_RANDOM } from './engine.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 import { createCountry } from './group.js';
 
@@ -1086,7 +1086,7 @@ test('pillLabel + filterTitle render gdp / gdpPerCapita as compact US$ threshold
   assert.equal(filterTitle(/** @type {any} */ (f), idTranslate), 'Europe · over $50K');
 });
 
-test('pickRandomMix: gdp / gdpPerCapita / coffee / wine / cocoa / banana / elevation / coastline / forest / tea / sugarcane / gold tiers are reachable and exclusive with other scalars', () => {
+test('pickRandomMix: gdp / gdpPerCapita / coffee / wine / cocoa / banana / elevation / coastline / forest / tea / sugarcane / gold / oliveOil / honey tiers are reachable and exclusive with other scalars', () => {
   for (const [key, breaks, probKey] of /** @type {const} */ ([
     ['gdp', GDP_BREAKS_FOR_RANDOM, 'gdpProbability'],
     ['gdpPerCapita', GDP_PER_CAPITA_BREAKS_FOR_RANDOM, 'gdpPerCapitaProbability'],
@@ -1100,6 +1100,8 @@ test('pickRandomMix: gdp / gdpPerCapita / coffee / wine / cocoa / banana / eleva
     ['tea', TEA_BREAKS_FOR_RANDOM, 'teaProbability'],
     ['sugarcane', SUGARCANE_BREAKS_FOR_RANDOM, 'sugarcaneProbability'],
     ['gold', GOLD_BREAKS_FOR_RANDOM, 'goldProbability'],
+    ['oliveOil', OLIVE_OIL_BREAKS_FOR_RANDOM, 'oliveOilProbability'],
+    ['honey', HONEY_BREAKS_FOR_RANDOM, 'honeyProbability'],
   ])) {
     const seen = new Map(breaks.map((b) => [`${b.op}${b.n}`, 0]));
     for (let i = 0; i < 5000; i++) {

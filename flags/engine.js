@@ -781,6 +781,47 @@ export const GOLD_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 200 },
 ];
 
+/**
+ * Olive-oil-production-threshold Categories (tonnes of olive oil). Sparse like
+ * the other crops (coffee / wine / cocoa / banana), so `>=`-only: FAOSTAT lists
+ * only ~28 producers, so a `<=` tier would just collect the ~230 non-producers
+ * at 0 (via `absence: 'zero'`). The breaks `1K / 10K / 100K` mirror the crop
+ * convention and sit well inside olive oil's range (Spain ~666K t tops it):
+ * 25 / 20 / 8 producers, the growers / notable / major-producer tiers.
+ * `exclusiveGroup: 'oliveOil'`.
+ *
+ * No `ultimate: true` break: like the other sparse crops, olive oil is too
+ * concentrated to back a 9×9 cell (~28 producers worldwide), so every break
+ * carries `ultimateEligible: false`, keeping it a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const OLIVE_OIL_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1_000 },
+  { op: '>=', n: 10_000 },
+  { op: '>=', n: 100_000 },
+];
+
+/**
+ * Honey-production-threshold Categories (tonnes of natural honey). Sparse like
+ * the crops, so `>=`-only: FAOSTAT itemizes ~100 producers (we pin the top 55),
+ * so a `<=` tier would just collect the ~200 non-producers at 0 (via
+ * `absence: 'zero'`). The breaks `10K / 50K / 100K` scale to honey's spread
+ * (China ~462K t tops it, then a steep drop): 28 / 10 / 2 real places, the
+ * producers / big / giant (China & Türkiye only) tiers. `exclusiveGroup: 'honey'`.
+ *
+ * No `ultimate: true` break: like the other sparse producers, honey is too
+ * top-heavy to back a 9×9 cell, so every break carries `ultimateEligible: false`,
+ * keeping it a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const HONEY_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 10_000 },
+  { op: '>=', n: 50_000 },
+  { op: '>=', n: 100_000 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -1711,6 +1752,68 @@ export function gold(op, n, opts = {}) {
 }
 
 /**
+ * Olive-oil-production-threshold Category factory (tonnes of olive oil). Reads
+ * the denormalized `country.oliveOil` field (`attachOliveOils`, which fills 0 for
+ * a real place that makes none). `exclusiveGroup: 'oliveOil'`. The break list is
+ * `>=`-only (see OLIVE_OIL_BREAKS_FOR_RANDOM), but the `<=` branch is kept for
+ * symmetry so an `oliveOil:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function oliveOil(op, n, opts = {}) {
+  const human = tonnesCompact(n);
+  const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.oliveOil === 'number' && c.oliveOil >= n
+      : (c) => typeof c.oliveOil === 'number' && c.oliveOil <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `oliveOil:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'oliveOil',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
+ * Honey-production-threshold Category factory (tonnes of natural honey). Reads
+ * the denormalized `country.honey` field (`attachHoneys`, which fills 0 for a
+ * real place that makes none). `exclusiveGroup: 'honey'`. The break list is
+ * `>=`-only (see HONEY_BREAKS_FOR_RANDOM), but the `<=` branch is kept for
+ * symmetry so a `honey:<=N` id would still rehydrate correctly.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function honey(op, n, opts = {}) {
+  const human = tonnesCompact(n);
+  const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.honey === 'number' && c.honey >= n
+      : (c) => typeof c.honey === 'number' && c.honey <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `honey:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'honey',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -2074,6 +2177,34 @@ export const THRESHOLD_METRICS = {
     labelFor: (op, n, translate) => {
       if (op === '>=') return translate(`borders.atLeast.${n}`, `${n} or more`);
       return translate(`borders.atMost.${n}`, `${n} or fewer`);
+    },
+  },
+  oliveOil: {
+    breaks: OLIVE_OIL_BREAKS_FOR_RANDOM,
+    factory: oliveOil,
+    prefixFallback: 'Olive oil production',
+    field: 'oliveOil',
+    family: 'oliveOil',
+    has: (c) => typeof c.oliveOil === 'number',
+    labelFor: (op, n, translate) => {
+      const token = tonnesToken(n);
+      const human = tonnesCompact(n);
+      if (op === '>=') return translate(`oliveOil.atLeast.${token}`, `over ${human} tonnes`);
+      return translate(`oliveOil.atMost.${token}`, `under ${human} tonnes`);
+    },
+  },
+  honey: {
+    breaks: HONEY_BREAKS_FOR_RANDOM,
+    factory: honey,
+    prefixFallback: 'Honey production',
+    field: 'honey',
+    family: 'honey',
+    has: (c) => typeof c.honey === 'number',
+    labelFor: (op, n, translate) => {
+      const token = tonnesToken(n);
+      const human = tonnesCompact(n);
+      if (op === '>=') return translate(`honey.atLeast.${token}`, `over ${human} tonnes`);
+      return translate(`honey.atMost.${token}`, `under ${human} tonnes`);
     },
   },
 };

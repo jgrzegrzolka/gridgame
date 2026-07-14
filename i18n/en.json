@@ -27,6 +27,20 @@
       "200": "over 200 tonnes"
     }
   },
+  "oliveOil": {
+    "atLeast": {
+      "1k": "over 1K tonnes",
+      "10k": "over 10K tonnes",
+      "100k": "over 100K tonnes"
+    }
+  },
+  "honey": {
+    "atLeast": {
+      "10k": "over 10K tonnes",
+      "50k": "over 50K tonnes",
+      "100k": "over 100K tonnes"
+    }
+  },
   "zoom": {
     "close": "Close",
     "enlarge": "Enlarge flag"
@@ -575,7 +589,9 @@
       "superlativeGold": "Gold production: most",
       "superlativeAlcohol": "Alcohol consumption per capita: most",
       "superlativeMeat": "Meat consumption per capita: most",
-      "superlativeBorders": "Bordering countries: most"
+      "superlativeBorders": "Bordering countries: most",
+      "superlativeOliveOil": "Olive oil production: most",
+      "superlativeHoney": "Honey production: most"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -605,7 +621,9 @@
       "superlativeGold": "Gold production",
       "superlativeAlcohol": "Alcohol consumption",
       "superlativeMeat": "Meat consumption",
-      "superlativeBorders": "Borders"
+      "superlativeBorders": "Borders",
+      "superlativeOliveOil": "Olive oil",
+      "superlativeHoney": "Honey"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -643,6 +661,8 @@
     "hintMostAlcohol": "Most alcohol consumption per person",
     "hintMostMeat": "Most meat consumption per person",
     "hintMostBorders": "Most bordering countries",
+    "hintMostOliveOil": "Largest olive oil production",
+    "hintMostHoney": "Largest honey production",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
@@ -988,7 +1008,9 @@
     "gold": "Gold production",
     "alcoholPerCapita": "Alcohol consumption",
     "meatPerCapita": "Meat consumption",
-    "borders": "Bordering countries"
+    "borders": "Bordering countries",
+    "oliveOil": "Olive oil production",
+    "honey": "Honey production"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

@@ -265,6 +265,53 @@ test('goldRound: biggest-only, correct extreme-by-gold answer, producers only', 
   }
 });
 
+// ---- olive oil instance (tonnes, id 'superlative-olive-oil') -----------------
+
+test('oliveOilRound: biggest-only, correct extreme-by-oil answer, producers only', async () => {
+  const { oliveOilRound } = await import('./superlative.js');
+  const oliveOilJson = (await import('../metrics/oliveOil.json', { with: { type: 'json' } })).default;
+  const OIL = /** @type {Record<string, number>} */ (oliveOilJson.values);
+  assert.equal(oliveOilRound.id, 'superlative-olive-oil');
+  // Distinct-value sovereign PRODUCERS spanning the range, all in oliveOil.json
+  // (olive oil has some tied tonnages, so pick codes with unambiguous values). A
+  // non-producer (e.g. Germany) mixed in must be dropped by the round's
+  // `metric.has` filter, never appear as an option.
+  const pool = ['es', 'it', 'gr', 'tr', 'tn', 'sy', 'ma', 'pt', 'dz', 'eg', 'de'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = oliveOilRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Olive oil is locked to 'most' — "smallest producer" is obscure, never dealt.
+    assert.equal(q.prompt, 'most', `seed ${i}: oliveOil is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('de'), 'a non-producer is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => OIL[c]);
+    assert.equal(OIL[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-oil option`);
+  }
+});
+
+// ---- honey instance (tonnes, id 'superlative-honey') ------------------------
+
+test('honeyRound: biggest-only, correct extreme-by-honey answer, producers only', async () => {
+  const { honeyRound } = await import('./superlative.js');
+  const honeyJson = (await import('../metrics/honey.json', { with: { type: 'json' } })).default;
+  const HNY = /** @type {Record<string, number>} */ (honeyJson.values);
+  assert.equal(honeyRound.id, 'superlative-honey');
+  // Distinct-value sovereign PRODUCERS spanning the range, all in honey.json. A
+  // non-producer (e.g. Japan, not in the top-55 set) mixed in must be dropped by
+  // the round's `metric.has` filter, never appear as an option.
+  const pool = ['cn', 'tr', 'ir', 'in', 'ar', 'ru', 'mx', 'ua', 'br', 'us', 'jp'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = honeyRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    // Honey is locked to 'most' — "smallest producer" is obscure, never dealt.
+    assert.equal(q.prompt, 'most', `seed ${i}: honey is biggest-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    assert.ok(!q.options.includes('jp'), 'a non-producer is never an option (sparse metric.has filter)');
+    const vals = q.options.map((c) => HNY[c]);
+    assert.equal(HNY[q.answer], Math.max(...vals), `seed ${i}: answer must be the biggest-honey option`);
+  }
+});
+
 // ---- wine instance (wine tonnes, id 'superlative-wine') ---------------------
 
 test('wineRound: biggest-only, correct extreme-by-wine answer, makers only', async () => {

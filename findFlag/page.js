@@ -89,6 +89,8 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   alcoholPerCapitaProbability: 0.06,
   meatPerCapitaProbability: 0.06,
   bordersProbability: 0.06,
+  oliveOilProbability: 0.06,
+  honeyProbability: 0.06,
 });
 
 /**
