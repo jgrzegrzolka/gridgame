@@ -2,10 +2,7 @@ import rawCountries from '../flags/countries.json' with { type: 'json' };
 import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalRounds, poolIdForRound, roundIdForRound, validatePlan } from '../flags/partyPlan.js';
-import {
-  DEFAULT_REVEAL, revealCategoryFor, validateReveal, isMetricRound,
-  QUESTION_WATCHDOG_SECONDS, REVEAL_WATCHDOG_SECONDS,
-} from '../flags/partyTiming.js';
+import { DEFAULT_REVEAL, revealCategoryFor, validateReveal, isMetricRound } from '../flags/partyTiming.js';
 import {
   createRoom,
   applyHello,
@@ -13,8 +10,6 @@ import {
   applyBuzz,
   applyForceReveal,
   applyNext,
-  applyRevealTimeout,
-  applyNextTimeout,
   applyPlayAgain,
   applyReturnToLobby,
   applyDisconnect,
@@ -124,64 +119,6 @@ export default class PartyGameServer {
   }
 
   /**
-   * Point the durable object's single alarm at the current phase's watchdog
-   * deadline. The host's page drives the snappy pace when it's awake; this alarm
-   * is the fallback that force-advances the room when the host's tab is gone
-   * (backgrounded, phone locked, closed) and the `reveal` / `next` message never
-   * arrives — so a game can never stall at a reveal, the final board included.
-   * Question and reveal each get a deadline generously past their normal
-   * duration ({@link QUESTION_WATCHDOG_SECONDS} / {@link REVEAL_WATCHDOG_SECONDS})
-   * so a present host always transitions first. Lobby and final auto-advance from
-   * nothing, so the alarm is cleared there. Call after every phase change.
-   *
-   * PartyKit exposes one alarm per room; `setAlarm` replaces any pending one, so
-   * each phase change simply re-points it. The alarm persists in storage, so it
-   * still fires after a durable-object eviction (handled in {@link onAlarm}).
-   */
-  async scheduleWatchdog() {
-    if (!this.room) return;
-    const phase = this.room.phase;
-    if (phase === 'question') {
-      await this.party.storage.setAlarm(Date.now() + QUESTION_WATCHDOG_SECONDS * 1000);
-    } else if (phase === 'reveal') {
-      await this.party.storage.setAlarm(Date.now() + REVEAL_WATCHDOG_SECONDS * 1000);
-    } else {
-      await this.party.storage.deleteAlarm();
-    }
-  }
-
-  /**
-   * The watchdog deadline hit: the host's tab hasn't advanced the room, so the
-   * server does it — reveal a lingering question, or move a lingering reveal on
-   * to the next round / the final board. Loads first, since the alarm can wake a
-   * fresh instance after an eviction (`this.room` would be null otherwise). The
-   * reducers are no-ops if the room already moved on (the host or the all-buzzed
-   * auto-reveal beat us), so a late fire is harmless. Always reschedules for the
-   * phase we end in, because the fired alarm is now spent.
-   */
-  async onAlarm() {
-    try {
-      await this.loadRoom();
-      if (!this.room) return;
-      /** @type {import('../flags/partyRoom.js').ApplyResult | null} */
-      let result = null;
-      if (this.room.phase === 'question') {
-        result = applyRevealTimeout(this.room);
-      } else if (this.room.phase === 'reveal') {
-        result = applyNextTimeout(this.room, this.generateQuestion(this.room.roundIndex + 1));
-      }
-      if (result && result.broadcasts.length > 0) {
-        this.room = result.room;
-        await this.saveRoom();
-        this.dispatch(result.broadcasts);
-      }
-      await this.scheduleWatchdog();
-    } catch (err) {
-      console.error('[partyGameServer] onAlarm failed:', err);
-    }
-  }
-
-  /**
    * @param {any} conn
    * @param {{ request: { url: string } }} ctx
    */
@@ -245,10 +182,6 @@ export default class PartyGameServer {
       if (!this.room) return;
       const playerId = this.playerByConn.get(sender);
       if (!playerId) return;
-      // Snapshot before applying so we only re-point the watchdog on a real phase
-      // change (start / reveal / next / all-buzzed). A mid-question buzz keeps the
-      // phase, so it must not reset the question deadline.
-      const prevPhase = this.room.phase;
       let parsed;
       try {
         parsed = JSON.parse(message);
@@ -312,7 +245,6 @@ export default class PartyGameServer {
       this.room = result.room;
       await this.saveRoom();
       this.dispatch(result.broadcasts);
-      if (this.room.phase !== prevPhase) await this.scheduleWatchdog();
     } catch (err) {
       console.error('[partyGameServer] onMessage failed:', err);
     }
@@ -328,14 +260,10 @@ export default class PartyGameServer {
       if (this.connByPlayer.get(playerId) === conn) {
         this.connByPlayer.delete(playerId);
       }
-      const prevPhase = this.room.phase;
       const result = applyDisconnect(this.room, playerId);
       this.room = result.room;
       await this.saveRoom();
       this.dispatch(result.broadcasts);
-      // A departing seat can be the last un-buzzed one, auto-revealing the
-      // question — re-point the watchdog if that moved us to the reveal phase.
-      if (this.room.phase !== prevPhase) await this.scheduleWatchdog();
     } catch (err) {
       console.error('[partyGameServer] onClose failed:', err);
     }

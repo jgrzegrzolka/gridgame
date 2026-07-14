@@ -38,28 +38,6 @@ export function revealSecondsFor(clean) {
   return clean ? CLEAN_REVEAL_SECONDS : MISS_REVEAL_SECONDS;
 }
 
-/**
- * Server-side watchdog grace: extra seconds the server waits, on top of a
- * phase's normal client-driven duration, before it force-advances the room
- * itself. The host's page still drives the snappy pace whenever it's awake — the
- * watchdog only bites when the host's tab is gone (backgrounded, phone locked,
- * closed) and the transition message never arrives, so the room can't stall at a
- * reveal (the final board especially, whose only trigger is the host clock's
- * last `next`). Generous, so a healthy host always transitions first and the
- * watchdog stays a true fallback rather than a second driver racing the host.
- */
-export const WATCHDOG_GRACE_SECONDS = 5;
-
-/** Watchdog deadline for a question: its full window plus the grace. All-present
- *  buzzed still auto-reveals server-side well before this; this only fires when
- *  a seat never answers *and* the host is gone. */
-export const QUESTION_WATCHDOG_SECONDS = QUESTION_SECONDS + WATCHDOG_GRACE_SECONDS;
-
-/** Watchdog deadline for a reveal: the longest a reveal ever lingers (a miss)
- *  plus the grace, so a clean reveal (0.9s) or a miss (2.5s) driven by a present
- *  host always advances first; only a departed host lets this fire. */
-export const REVEAL_WATCHDOG_SECONDS = MISS_REVEAL_SECONDS + WATCHDOG_GRACE_SECONDS;
-
 /** Tricky mode: the reveal-timing options a host can pick per round category — a
  *  tile stays veiled until this fraction of the question window has elapsed, then
  *  it is fully clear. Every option is below 1, so a late decider always gets a
