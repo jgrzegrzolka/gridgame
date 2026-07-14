@@ -116,6 +116,43 @@ test('final: switches to the final board with the scoreboard', () => {
   assert.equal(s.scoreboard?.[0].score, 40);
 });
 
+test('final: an empty scoreboard never blanks the standings already shown', () => {
+  // The bug: a stale reconnect while sitting on the final screen re-hydrated the
+  // client with an empty scoreboard, wiping the board to nothing (rows built,
+  // then emptied ~3 min later). An empty scoreboard is never a valid finish.
+  const shown = { ...initialPartyClientState(), phase: /** @type {const} */ ('final'), scoreboard: [{ playerId: 'me', nickname: 'Me', score: 40 }] };
+  const s = reduce(shown, { type: 'final', scoreboard: [] });
+  assert.equal(s.phase, 'final');
+  assert.deepEqual(s.scoreboard, [{ playerId: 'me', nickname: 'Me', score: 40 }], 'kept the shown standings');
+});
+
+test('welcome: a reconnect with an empty scoreboard keeps the standings (the wipe bug)', () => {
+  const shown = { ...initialPartyClientState(), you, phase: /** @type {const} */ ('final'), scoreboard: [{ playerId: you, nickname: 'Me', score: 40 }] };
+  const s = reduce(shown, {
+    type: 'welcome', you, isHost: true, phase: 'final',
+    roster: [{ playerId: you, nickname: 'Me', score: 40, present: true }],
+    roundIndex: 4, totalRounds: 5, question: null, scoreboard: [],
+  });
+  assert.equal(s.phase, 'final');
+  assert.deepEqual(s.scoreboard, [{ playerId: you, nickname: 'Me', score: 40 }], 'reconnect did not wipe the board');
+});
+
+test('welcome: a real scoreboard still hydrates it', () => {
+  const s = reduce(initialPartyClientState(), {
+    type: 'welcome', you, isHost: false, phase: 'reveal', roster: [], totalRounds: 5,
+    scoreboard: [{ playerId: 'a', nickname: 'A', score: 12 }],
+  });
+  assert.equal(s.scoreboard?.[0].score, 12);
+});
+
+test('reveal: an empty scoreboard keeps the running standings', () => {
+  const running = { ...initialPartyClientState(), scoreboard: [{ playerId: 'me', nickname: 'Me', score: 15 }] };
+  const s = reduce(running, {
+    type: 'reveal', answer: 'jp', picks: {}, points: {}, scoreboard: [], roundIndex: 1, totalRounds: 5,
+  });
+  assert.deepEqual(s.scoreboard, [{ playerId: 'me', nickname: 'Me', score: 15 }]);
+});
+
 test('rejected: sets a translatable status and asks the caller to close', () => {
   const r = reducePartyMessage(initialPartyClientState(), { type: 'rejected', reason: 'room-not-found' });
   assert.equal(r.state.statusOverride?.key, 'party.reject.roomNotFound');

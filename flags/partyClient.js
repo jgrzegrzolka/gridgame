@@ -62,6 +62,25 @@ function presentCount(roster) {
 }
 
 /**
+ * Keep the current scoreboard when an incoming one is missing OR empty. The
+ * scoreboard is authoritative-but-monotonic display state — a live game always
+ * has at least one seat, so an empty scoreboard is never a legitimate update.
+ * A stale reconnect `welcome` (PartyKit re-hydrating a room that hibernated
+ * while players sat on the final screen) that carries an empty scoreboard must
+ * not blank out the standings that are already shown. Observed 2026-07-14: the
+ * final board built correctly, then emptied ~3 min later while still on `final`
+ * — the reconnect hydration overwrote it with `[]`. Treat empty like absent.
+ *
+ * @template {{ playerId: string, nickname: string, score: number }} T
+ * @param {T[] | null | undefined} incoming
+ * @param {T[] | null} current
+ * @returns {T[] | null}
+ */
+function keepScoreboard(incoming, current) {
+  return Array.isArray(incoming) && incoming.length > 0 ? incoming : current;
+}
+
+/**
  * Reject reasons keyed by wire-protocol code → i18n key + English fallback.
  * Translation happens at paint time (the strings cache may not be loaded when
  * this module is imported), matching the TTT client's approach.
@@ -95,7 +114,7 @@ export function reducePartyMessage(state, message) {
           roundIndex: message.roundIndex ?? 0,
           tricky: message.tricky ?? state.tricky,
           question: message.question ?? null,
-          scoreboard: message.scoreboard ?? null,
+          scoreboard: keepScoreboard(message.scoreboard, state.scoreboard),
           // A reconnect can't recover whether we already buzzed this question;
           // treat as fresh — the server ignores a duplicate buzz anyway.
           myChoice: null,
@@ -167,7 +186,7 @@ export function reducePartyMessage(state, message) {
             picks: message.picks ?? {},
             points: message.points ?? {},
           },
-          scoreboard: message.scoreboard ?? state.scoreboard,
+          scoreboard: keepScoreboard(message.scoreboard, state.scoreboard),
           roundIndex: message.roundIndex ?? state.roundIndex,
           totalRounds: message.totalRounds ?? state.totalRounds,
         },
@@ -176,7 +195,7 @@ export function reducePartyMessage(state, message) {
     }
     case 'final': {
       return {
-        state: { ...state, phase: 'final', scoreboard: message.scoreboard ?? state.scoreboard },
+        state: { ...state, phase: 'final', scoreboard: keepScoreboard(message.scoreboard, state.scoreboard) },
         effects: [],
       };
     }
