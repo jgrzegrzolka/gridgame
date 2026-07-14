@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { chipLabelText, buildFilterChip, renderCriteriaInline } from './filterChips.js';
+import { chipLabelText, buildFilterChip, renderCriteriaInline, renderMetricLeadInline } from './filterChips.js';
 import { emptyFilters } from './flagsFilter.js';
 
 /** Echo the fallback — renders every label in its English default. */
@@ -203,4 +203,25 @@ test('renderCriteriaInline: eu-member is a country fact (no flag glyph); real ch
 
 test('renderCriteriaInline: empty filter yields nothing', () => {
   assert.equal(/** @type {any} */ (renderCriteriaInline(emptyFilters(), t, fakeDoc())).children.length, 0);
+});
+
+// ---- renderMetricLeadInline (superlative header) ----
+
+test('renderMetricLeadInline: leads the title with the hue-tinted metric icon', () => {
+  const frag = /** @type {any} */ (
+    renderMetricLeadInline('population', 'The 5 most populous countries of Europe', fakeDoc())
+  );
+  assert.equal(frag.children.length, 2);
+  const [icon, label] = frag.children;
+  assert.equal(icon.className, 'crit-ic');
+  assert.ok(icon.innerHTML.length > 0, 'icon span carries the metric SVG');
+  assert.ok(icon.style.color, 'metric hue applied to the icon');
+  assert.equal(label.className, 'crit-label');
+  assert.equal(label.textContent, 'The 5 most populous countries of Europe');
+});
+
+test('renderMetricLeadInline: unknown metric still renders the title (empty icon, no throw)', () => {
+  const frag = /** @type {any} */ (renderMetricLeadInline('nope', 'A title', fakeDoc()));
+  assert.equal(frag.children[0].innerHTML, '');
+  assert.equal(frag.children[1].textContent, 'A title');
 });

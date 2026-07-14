@@ -156,11 +156,15 @@ body {
   margin-right: 0.26em;
 }
 .find-cat .crit-flag {
-  width: 0.85em;
-  height: 0.85em;
+  /* Coloured two-tone flag mark (teal field, cream offset cross — flags/
+     filterChips.js). Full opacity so the colour reads (the old mono glyph
+     faded to 0.68 to sit quietly in ink; this one carries its own colour). The
+     flag is landscape and fills its box less top-to-bottom than the metric
+     icon fills theirs, so it's set a touch larger to read at the same weight. */
+  width: 1.05em;
+  height: 1.05em;
   margin-right: 0.24em;
-  vertical-align: -0.1em;
-  opacity: 0.68;
+  vertical-align: -0.2em;
 }
 .find-cat .crit-ic svg,
 .find-cat .crit-flag svg {

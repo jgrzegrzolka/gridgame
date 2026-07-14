@@ -9,6 +9,7 @@
  *   Rule 3 — every answer code is a sovereign country
  *   Rule 4 — sequential `n` AND contiguous Warsaw dates (Feature R)
  *   Rule 7 — en + pl description present
+ *   (+) display-only `criteria` on manual/superlative must parse (not drift-checked)
  *
  * The other hard rules (2, 5, 6, 14, 15) are author-time concerns
  * already gated by the test suite (`flags/daily.test.js`) on every PR.
@@ -47,6 +48,7 @@ export function validateCatalog({ puzzles }) {
   checkSovereignCodes(puzzles);
   checkDescriptions(puzzles);
   checkSuperlativeShape(puzzles);
+  checkDisplayCriteria(puzzles);
   checkDriftFree(puzzles);
 }
 
@@ -213,6 +215,36 @@ function checkDescriptions(entries) {
       if (typeof ad.pl !== 'string' || ad.pl.length === 0) {
         throw new Error(`puzzles #${entry.n}: additionalDescription.pl missing or empty`);
       }
+    }
+  }
+}
+
+/**
+ * A manual / superlative entry may carry `criteria` — a display-only filter
+ * string that renders the play header as icon chips (colour swatch / flag
+ * glyph / metric icon; see `manualToCategory` in daily.js). It must parse, but
+ * is deliberately NOT drift-checked against the frozen answers: a curated
+ * puzzle uses it precisely because its roster deviates from what the filter
+ * resolves to. Filter entries render from `filter` already, so `criteria`
+ * there is a mistake.
+ *
+ * @param {any[]} entries
+ */
+function checkDisplayCriteria(entries) {
+  for (const entry of entries) {
+    if (entry.criteria === undefined) continue;
+    const at = `puzzles #${entry.n}`;
+    const isCurated = entry.kind === 'manual' || entry.kind === 'superlative';
+    if (!isCurated) {
+      throw new Error(
+        `${at}: criteria is only for manual/superlative entries — filter entries render from filter`,
+      );
+    }
+    if (typeof entry.criteria !== 'string' || entry.criteria.length === 0) {
+      throw new Error(`${at}: criteria, when present, must be a non-empty string`);
+    }
+    if (!parseFilterString(entry.criteria)) {
+      throw new Error(`${at}: criteria does not parse: ${entry.criteria}`);
     }
   }
 }

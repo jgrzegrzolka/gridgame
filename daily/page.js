@@ -20,6 +20,7 @@ import {
   setZoomNotes,
   setTileMeta,
   setCriteriaFilter,
+  setCriteriaMetric,
 } from './playFlow.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
 import { trySyncDevices } from '../flags/syncHydrate.js';
@@ -779,10 +780,12 @@ export function bootDaily() {
       const labelFor = () => catFor().label;
       const category = catFor();
       // Filter-kind puzzles carry a `.filter` so the criteria strip renders as
-      // chips; set it here so the revisit path (which paints the result via
-      // renderResult without ever calling startGame) has it too. startGame sets
-      // it again for the live-play path — same value, harmless.
+      // chips; a superlative carries a `.metric` so the strip leads with its
+      // icon. Set both here so the revisit path (which paints the result via
+      // renderResult without ever calling startGame) has them too. startGame
+      // sets them again for the live-play path — same values, harmless.
       setCriteriaFilter(category.filter);
+      setCriteriaMetric(category.metric);
 
       // Revisit: if this puzzle has a full saved record, jump straight
       // to the result page without confetti (the player saw confetti

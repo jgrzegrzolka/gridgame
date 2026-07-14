@@ -7,6 +7,8 @@
  * @property {string} label
  * @property {(country: Country) => boolean} predicate
  * @property {import('./flagsFilter.js').Filters} [filter]
+ * @property {string} [metric]  daily superlative only — the ranking metric key,
+ *                              so the play header can lead with its icon.
  *   Present on filter-derived categories (findFlag mixes + daily filter
  *   puzzles, via `filterToCategory`) — the source `Filters`, so a play-screen
  *   header can render the criteria as chips instead of the plain `label`.

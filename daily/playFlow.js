@@ -29,7 +29,7 @@
 
 import { suggest, exactSingleMatch } from '../flags/engine.js';
 import { findPool, classifyGuess } from '../flags/findFlag.js';
-import { renderCriteriaInline } from '../flags/filterChips.js';
+import { renderCriteriaInline, renderMetricLeadInline } from '../flags/filterChips.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { resolveNote } from '../flags/daily.js';
 import { formatPopulationShort } from '../flags/populationRank.js';
@@ -183,15 +183,39 @@ export function setCriteriaFilter(filter) {
 }
 
 /**
- * Paint the criteria strip: chips when the active puzzle is filter-kind,
- * otherwise the plain hand-written `label`. One place so the finish, revisit,
- * and langchange paints stay identical.
+ * The active superlative's ranking metric key, when it is one — so the criteria
+ * strip can lead its hand-written title with the metric's icon (population,
+ * area, …). `null` for filter + manual puzzles. Set alongside `criteriaFilter`
+ * on every path that sets it (startGame for live play, `daily/page.js` on
+ * revisit), for the same module-scope reason.
+ *
+ * @type {string | null}
+ */
+let criteriaMetric = null;
+
+/**
+ * Install (or clear) the active puzzle's ranking metric. Called by `startGame`
+ * and by `daily/page.js` on revisit, mirroring `setCriteriaFilter`.
+ *
+ * @param {string | null | undefined} metric
+ */
+export function setCriteriaMetric(metric) {
+  criteriaMetric = metric ?? null;
+}
+
+/**
+ * Paint the criteria strip. Three cases, in priority order: a filter-kind (or
+ * manual-with-`criteria`) puzzle renders the icon chips; a superlative leads
+ * its title with the ranking metric's icon; everything else is the plain
+ * hand-written `label`. One place so the finish, revisit, and langchange paints
+ * stay identical.
  *
  * @param {HTMLElement} catEl
  * @param {string} label
  */
 function paintCriteria(catEl, label) {
   if (criteriaFilter) catEl.replaceChildren(renderCriteriaInline(criteriaFilter, t));
+  else if (criteriaMetric) catEl.replaceChildren(renderMetricLeadInline(criteriaMetric, label));
   else catEl.textContent = label;
 }
 
@@ -502,10 +526,12 @@ export function startGame(n, category, targets, all, opts = {}) {
   const foundEl = /** @type {HTMLElement} */ (document.getElementById('find-found'));
   const giveUpEl = /** @type {HTMLElement} */ (document.getElementById('give-up'));
 
-  // Filter-kind puzzles render their criteria as chips; superlative + manual
-  // keep their hand-written title. Set here so the live-play + langchange paths
-  // (all routed through startGame) are covered; revisit sets it in page.js.
+  // Filter-kind puzzles render their criteria as chips; a superlative leads its
+  // title with the metric icon; manual keeps its plain title. Set here so the
+  // live-play + langchange paths (all routed through startGame) are covered;
+  // revisit sets both in page.js.
   setCriteriaFilter(category.filter);
+  setCriteriaMetric(category.metric);
   paintCriteria(catEl, category.label);
   updateCount();
 

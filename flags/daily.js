@@ -60,6 +60,15 @@ import { parseFilterString } from './findFlag.js';
  *                             and gets auto-generated from the parts in a
  *                             later phase; absent for filter entries (built
  *                             from the filter).
+ * @property {string} [criteria]  manual / superlative only — a display-only
+ *                             filter string (same grammar as `filter`) that
+ *                             renders the play header as icon chips instead of
+ *                             the plain `title`. Never drift-checked and never
+ *                             touches the answer list (those stay the frozen
+ *                             roster); it exists purely so a curated puzzle can
+ *                             still show the colour swatch / flag glyph / metric
+ *                             icon. Forbidden on filter entries — they render
+ *                             from `filter` already.
  * @property {string[]} answers  country codes the puzzle resolves to
  * @property {Record<string, string>} [description]  per-language helper
  *                             sentence shown under the header. Keys are
@@ -330,6 +339,15 @@ export function resolvePuzzleEntry(entry, allCountries) {
  * forbids this in real entries; the fallback only matters for synthetic
  * fixtures).
  *
+ * A manual entry may also carry `criteria` — a display-only filter string
+ * (same grammar as a filter-kind puzzle's `filter`). Manual answers are
+ * frozen and can deviate from what that filter resolves to (the reason the
+ * puzzle is manual), so `criteria` never touches the predicate or the answer
+ * list; it's parsed purely so the play header renders the icon chips
+ * (colour swatch / flag glyph / metric icon via flags/filterChips.js) instead
+ * of the plain title. When absent or unparseable, `filter` stays undefined and
+ * the header falls back to `label`.
+ *
  * @param {DailyPuzzle} entry
  * @param {string} lang
  * @returns {import('./engine.js').Category}
@@ -337,10 +355,12 @@ export function resolvePuzzleEntry(entry, allCountries) {
 export function manualToCategory(entry, lang) {
   const label = entry.title?.[lang] ?? entry.title?.en ?? '';
   const codes = new Set(entry.answers);
+  const filter = entry.criteria ? parseFilterString(entry.criteria) : null;
   return {
     id: `daily:${entry.n}:manual`,
     label,
     predicate: (c) => codes.has(c.code),
+    ...(filter ? { filter } : {}),
   };
 }
 
@@ -362,10 +382,19 @@ export function superlativeToCategory(entry, lang) {
     entry.title?.[lang] ??
     entry.title?.en ??
     composeSuperlativeFallbackLabel(entry);
+  // Optional display-only chips, same as manualToCategory. A superlative's own
+  // `filter` only narrowed the ranking pool and isn't the criteria to show, so
+  // the header opts in explicitly via `criteria` (not `filter`).
+  const filter = entry.criteria ? parseFilterString(entry.criteria) : null;
   return {
     id: `daily:${entry.n}:superlative`,
     label,
     predicate: (c) => codes.has(c.code),
+    ...(filter ? { filter } : {}),
+    // Carry the ranking metric so the daily header can lead with its icon
+    // (renderMetricLeadInline) — a superlative has no filter chips to render,
+    // but the metric glyph gives it the same "here's the metric" cue.
+    ...(entry.metric ? { metric: entry.metric } : {}),
   };
 }
 

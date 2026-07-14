@@ -33,13 +33,18 @@ import { makeColorSwatch } from '../common.js';
 /** @typedef {import('./flagsFilter.js').FilterChip} FilterChip */
 
 /**
- * Provisional flag glyph marking a flag-design criterion (motif / stripes /
- * colour count) in the inline header. Line style + currentColor so it tints
- * with the surrounding text. NOTE: Jan wants a different mark here eventually —
- * swap this one constant when the replacement lands.
+ * Flag glyph marking a flag-design criterion (motif / stripes / colour count)
+ * in the inline header — a small two-tone flag: a teal field with a cream
+ * Nordic cross offset to the hoist. Invented (no country flies it), so it reads
+ * "this criterion is about the flag's design" without impersonating a real one.
+ * The two fixed hues are the documented exception to the 8-colour palette rule,
+ * same standing as the flag SVGs and the colour swatches (a mark that depicts a
+ * flag can't be built from the brand tokens). Sized / placed by
+ * `.find-cat .crit-flag`; unlike the old line glyph it does NOT tint with the
+ * text, so that CSS drops the opacity fade the mono mark relied on.
  */
 const FLAG_GLYPH =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 5h10l-2.2 3.2L16 11H6"/></svg>';
+  '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="1.8" fill="#2a9d8f"/><rect x="7.6" y="4" width="3" height="16" fill="#f4efe6"/><rect x="2" y="10.5" width="20" height="3" fill="#f4efe6"/></svg>';
 
 const CHARGE_MOTIF_SET = new Set(CHARGE_MOTIFS);
 
@@ -218,5 +223,31 @@ export function renderCriteriaInline(filters, t, doc = document) {
     }
     frag.appendChild(buildCriterionInline(ref, filters, t, doc));
   });
+  return frag;
+}
+
+/**
+ * Inline criteria header for a SUPERLATIVE puzzle — the ranking metric's
+ * hue-tinted icon leading the hand-written title. A superlative ranks by a
+ * metric rather than matching a filter, so there's no chip chain to build; the
+ * icon just gives the header the same "here's the metric" visual cue a filter
+ * puzzle gets from its metric chip (e.g. the population glyph before "The 5 most
+ * populous countries of Europe"). The same `.crit-ic` sizing/hue idiom as
+ * `buildCriterionInline`'s scalar branch, so the icon matches everywhere.
+ *
+ * @param {string} metricKey  the entry's `metric` (same keys as METRIC_ICONS)
+ * @param {string} label      the puzzle's hand-written title
+ * @param {Document} [doc]
+ * @returns {DocumentFragment}
+ */
+export function renderMetricLeadInline(metricKey, label, doc = document) {
+  const frag = doc.createDocumentFragment();
+  const ic = metricIconSpan(metricKey, 'crit-ic', doc);
+  ic.style.color = METRIC_HUES[metricKey] || 'currentColor';
+  frag.appendChild(ic);
+  const text = doc.createElement('span');
+  text.className = 'crit-label';
+  text.textContent = label;
+  frag.appendChild(text);
   return frag;
 }

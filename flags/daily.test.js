@@ -279,6 +279,48 @@ test('manualToCategory: predicate is code-membership against the frozen answer l
   assert.equal(category.predicate(us), false);
 });
 
+test('manualToCategory: display-only `criteria` parses into category.filter (for header chips)', () => {
+  const category = manualToCategory(
+    {
+      n: 51,
+      kind: 'manual',
+      answers: ['bn', 'ir', 'om'],
+      title: { en: 'Asia · white · coat of arms or emblem', pl: 'X' },
+      criteria: 'continent:Asia,color:white,motif:coat-of-arms',
+    },
+    'en',
+  );
+  // The criteria drives the icon chips…
+  assert.ok(category.filter, 'category carries a parsed filter for the header');
+  assert.deepEqual(category.filter, parseFilterString('continent:Asia,color:white,motif:coat-of-arms'));
+  // …but the answers stay the frozen roster, NOT the filter resolution — om
+  // is in the answers even though it's an emblem, not a coat of arms.
+  assert.equal(category.predicate(fixtureCountry({ code: 'om' })), true);
+  assert.equal(category.predicate(fixtureCountry({ code: 'fr' })), false);
+});
+
+test('manualToCategory: no `criteria` means no filter (header falls back to the title)', () => {
+  const category = manualToCategory(
+    { n: 51, kind: 'manual', answers: ['fr'], title: { en: 'X', pl: 'X' } },
+    'en',
+  );
+  assert.equal(category.filter, undefined);
+});
+
+test('superlativeToCategory: display-only `criteria` parses into category.filter', () => {
+  const category = superlativeToCategory(
+    {
+      n: 60,
+      kind: 'superlative',
+      answers: ['in', 'cn'],
+      title: { en: 'X', pl: 'X' },
+      criteria: 'continent:Asia',
+    },
+    'en',
+  );
+  assert.deepEqual(category.filter, parseFilterString('continent:Asia'));
+});
+
 test('resolvePuzzleEntry: superlative entry skips filter parsing and returns filter: null', () => {
   // Like manual, a superlative's frozen answers ARE the puzzle — the top-N
   // rank is set-relative, not a per-flag predicate, so there's nothing to

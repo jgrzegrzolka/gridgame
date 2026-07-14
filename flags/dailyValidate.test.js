@@ -50,6 +50,58 @@ test('superlative is exempt from the filter drift detector', () => {
   assert.doesNotThrow(() => run(validSuperlative()));
 });
 
+// ---- display-only `criteria` (icon chips on curated puzzles) ----
+
+/** A single, valid manual entry — base for the criteria cases. */
+function validManual(overrides = {}) {
+  return {
+    n: 1,
+    date: '2026-06-06',
+    kind: 'manual',
+    answers: ['bn', 'ir', 'om'],
+    title: { en: 'Asia · white · coat of arms or emblem', pl: 'X' },
+    description: { en: 'Find them.', pl: 'Znajdź je.' },
+    ...overrides,
+  };
+}
+
+test('a manual entry with a valid `criteria` passes (not drift-checked)', () => {
+  // The answers deliberately don't match what the criteria resolves to — that's
+  // the whole point of a curated puzzle. `criteria` only feeds the header chips.
+  assert.doesNotThrow(() =>
+    run(validManual({ criteria: 'continent:Asia,color:white,motif:coat-of-arms' })),
+  );
+});
+
+test('a superlative may also carry a display-only `criteria`', () => {
+  assert.doesNotThrow(() => run(validSuperlative({ criteria: 'continent:Asia' })));
+});
+
+test('an unparseable `criteria` is rejected', () => {
+  assert.throws(() => run(validManual({ criteria: 'garbage' })), /criteria does not parse/);
+});
+
+test('an empty-string `criteria` is rejected', () => {
+  assert.throws(() => run(validManual({ criteria: '' })), /criteria, when present, must be a non-empty string/);
+});
+
+test('`criteria` on a filter entry is rejected (they render from filter)', () => {
+  // Reaches checkDisplayCriteria before the drift detector, so the criteria
+  // rule fires regardless of whether answers match the filter.
+  assert.throws(
+    () =>
+      run({
+        n: 1,
+        date: '2026-06-06',
+        filter: 'continent:Europe',
+        answers: ['fr'],
+        description: { en: 'x', pl: 'x' },
+        criteria: 'color:white',
+      }),
+    /criteria is only for manual\/superlative/,
+  );
+});
+
 test('unknown metric is rejected', () => {
   assert.throws(() => run(validSuperlative({ metric: 'notametric' })), /not a known metric key/);
 });
