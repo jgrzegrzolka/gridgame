@@ -1985,7 +1985,7 @@ export const THRESHOLD_METRICS = {
   beerPerCapita: {
     breaks: BEER_PER_CAPITA_BREAKS_FOR_RANDOM,
     factory: beerPerCapita,
-    prefixFallback: 'Beer per capita',
+    prefixFallback: 'Beer consumption',
     field: 'beerPerCapita',
     family: 'beerPerCapita',
     has: (c) => typeof c.beerPerCapita === 'number',
@@ -2039,7 +2039,7 @@ export const THRESHOLD_METRICS = {
   alcoholPerCapita: {
     breaks: ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM,
     factory: alcoholPerCapita,
-    prefixFallback: 'Alcohol per capita',
+    prefixFallback: 'Alcohol consumption',
     field: 'alcoholPerCapita',
     family: 'alcoholPerCapita',
     has: (c) => typeof c.alcoholPerCapita === 'number',
@@ -2051,7 +2051,7 @@ export const THRESHOLD_METRICS = {
   meatPerCapita: {
     breaks: MEAT_PER_CAPITA_BREAKS_FOR_RANDOM,
     factory: meatPerCapita,
-    prefixFallback: 'Meat per capita',
+    prefixFallback: 'Meat consumption',
     field: 'meatPerCapita',
     family: 'meatPerCapita',
     has: (c) => typeof c.meatPerCapita === 'number',
