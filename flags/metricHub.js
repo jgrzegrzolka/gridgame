@@ -49,9 +49,15 @@ const GAP_FALLBACK = 6;
  *   rendered between the panel lead and the tier pills, rebuilt per open.
  * @property {boolean} [showCounts] render each tier's match count (findFlag).
  * @property {boolean} [moreButton] render the hub's own "+ N more" / "less"
- *   toggle (default true, findFlag). flagsdata passes false: its single bar
+ *   toggle (default true). flagsdata passes false: its single bar
  *   toggle drives the hub through `setExpanded` instead, so filters and
  *   world facts expand and collapse as one.
+ * @property {boolean} [expandAll] pin the row fully expanded: every chip is
+ *   shown (the row wraps), the fill-to-fit collapse is skipped, and no
+ *   "+ N more" toggle renders (default false). findFlag passes true so the
+ *   World-facts chips read like its other filter sections, which all show
+ *   every option, rather than collapsing behind a "+ N more" that reads oddly
+ *   in a stacked, room-to-wrap section.
  * @property {{ avail?: () => number, measure?: (el: any) => number }} [fit]
  *   measurement overrides for the fill-to-fit layout: `avail` returns the
  *   row width to fill, `measure` an element's width. Defaults read the live
@@ -77,6 +83,7 @@ export function createMetricHub(opts) {
     panelExtras,
     showCounts = false,
     moreButton = true,
+    expandAll = false,
     fit = {},
     label,
     doc = document,
@@ -84,8 +91,9 @@ export function createMetricHub(opts) {
 
   /** @type {string | null} The metric whose panel is open. */
   let openKey = null;
-  /** Whether the row is expanded to every chip (multi-line) via "+ N more". */
-  let expanded = false;
+  /** Whether the row is expanded to every chip (multi-line) via "+ N more".
+   * `expandAll` pins this true for the whole life of the hub. */
+  let expanded = expandAll;
 
   const el = doc.createElement('div');
   el.className = 'mhub';
@@ -132,7 +140,7 @@ export function createMetricHub(opts) {
   // Omitted when a consumer drives the expansion externally (setExpanded).
   /** @type {HTMLElement | null} */
   let moreBtn = null;
-  if (moreButton) {
+  if (moreButton && !expandAll) {
     moreBtn = doc.createElement('button');
     /** @type {any} */ (moreBtn).type = 'button';
     moreBtn.className = 'pill mhub-more';
@@ -182,7 +190,7 @@ export function createMetricHub(opts) {
    * on resize, and on a language switch (labels change widths).
    */
   function refit() {
-    if (expanded) {
+    if (expanded || expandAll) {
       for (const c of chips) c.btn.hidden = false;
       if (moreBtn) {
         moreBtn.hidden = false;
