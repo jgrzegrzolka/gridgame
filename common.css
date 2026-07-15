@@ -39,8 +39,10 @@
   /* Chrome-bar fill — a subtle gray that sits between the page (#fdfdfd) and
    * the surface-hover gray (#f0f0f0): clearly darker than the page so the fixed
    * top bar reads as its own band, but lighter than #f0f0f0 which felt heavy as
-   * a full-width strip. The one tone outside the core brand set, reserved for
-   * the chrome bar only (body::before). */
+   * a full-width strip. The one tone outside the core brand set: the chrome bar
+   * fill (body::before) and the main-page game-tile hover, which deliberately
+   * echoes the strip so the tiles read as a quieter surface than the #f0f0f0
+   * hover the other bordered buttons use. */
   --strip-bg-color: #f9f9f9;
   --link-color: var(--primary-color);
   --page-top: 104px;
@@ -1543,7 +1545,6 @@ dialog#zoom p.zoom-note {
 .picker-close:hover,
 .zoom-close:hover,
 .fotd-card:hover,
-.game-tile:hover,
 .map-fullscreen-btn:hover,
 .map-hide-btn:hover,
 .map-fs-exit:hover,
