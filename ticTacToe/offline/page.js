@@ -4,7 +4,7 @@ import { loadCountries, attachMetrics } from '../../flags/group.js';
 import { METRIC_FILES } from '../../flags/metrics/index.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
 import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells } from '../../flags/ticTacToe.js';
-import { t, countryName, withLocalizedAliases, relocalizeAliases } from '../../i18n.js';
+import { t, countryName, withLocalizedAliases, autoRelocalize } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
 import { renderOfflineStrip, offlineActive } from '../matchStrip.js';
@@ -478,9 +478,6 @@ function runTicTacToe({ puzzle, countries }) {
    * categories if open, and the result text if showing.
    */
   function refreshI18nForGame() {
-    // Keep the picker's search index in the new language — otherwise names
-    // re-render localized but stay searchable only in the boot language.
-    relocalizeAliases(countries);
     colHeaderEls.forEach((th, i) => {
       renderCategoryLabel(/** @type {HTMLElement} */ (th), puzzle.cols[i], tCat(puzzle.cols[i]));
     });
@@ -497,6 +494,9 @@ function runTicTacToe({ puzzle, countries }) {
     if (resultEl && !resultEl.hidden) paintFinalScore();
   }
 
+  // Keep the picker's search index in sync on a soft language switch — reloadI18n
+  // re-localizes registered lists before firing langchanged.
+  autoRelocalize(countries);
   document.addEventListener('langchanged', refreshI18nForGame);
 
   if (playAgainInlineEl) {

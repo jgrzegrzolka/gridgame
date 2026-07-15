@@ -14,6 +14,7 @@ import {
   countryName,
   withLocalizedAliases,
   relocalizeAliases,
+  autoRelocalize,
   reloadI18n,
   _resetCacheForTests,
   _seedCacheForTests,
@@ -429,6 +430,28 @@ test('reloadI18n: dispatches langchanged with { detail: { lang } }', async () =>
   assert.equal(doc._events.length, 1);
   assert.equal(doc._events[0].type, 'langchanged');
   assert.deepEqual(doc._events[0].detail, { lang: 'pl' });
+  _resetCacheForTests();
+});
+
+test('reloadI18n: re-localizes autoRelocalize-registered lists before firing langchanged', async () => {
+  // Boot English: Mexico has no localized alias yet.
+  _resetCacheForTests();
+  const list = withLocalizedAliases([{ code: 'mx', name: 'Mexico', aliases: /** @type {string[]} */ ([]) }]);
+  assert.deepEqual(list[0].aliases ?? [], []);
+  autoRelocalize(list);
+  // Capture the aliases at the instant langchanged is dispatched, to prove the
+  // re-localize runs BEFORE the event (so page handlers see fresh aliases).
+  const doc = fakeReloadDoc();
+  let aliasesAtDispatch = null;
+  const origDispatch = doc.dispatchEvent.bind(doc);
+  doc.dispatchEvent = (e) => { aliasesAtDispatch = [...(list[0].aliases ?? [])]; return origDispatch(e); };
+  await reloadI18n('pl', {
+    base: './',
+    doc: /** @type {any} */ (doc),
+    fetchImpl: fakeFetch({ './i18n/pl.json': { country: { mx: 'Meksyk' } } }),
+  });
+  assert.deepEqual(list[0].aliases, ['Meksyk'], 'registered list re-localized after switch');
+  assert.deepEqual(aliasesAtDispatch, ['Meksyk'], 're-localized before langchanged fired');
   _resetCacheForTests();
 });
 
