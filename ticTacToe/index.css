@@ -89,6 +89,15 @@ body {
 .grid td {
   border: 1px solid var(--muted-soft-color);
 }
+/* While waiting for an opponent the match strip shows its empty "waiting"
+ * seat; dim the board so that state reads as distinct from live play (the
+ * board isn't interactive without a peer anyway). Pure CSS off the waiting
+ * card's presence — offline pages never render a `.player-card`, so they're
+ * unaffected. */
+body:has(.player-card.waiting) .grid {
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
 /* Column headers, row headers, and game cells get a 1px outline so the
  * grid reads as one consistent structure. The top-left corner stays
  * borderless — it's not a content cell, just an empty spacer where the
