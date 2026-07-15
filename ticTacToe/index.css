@@ -491,6 +491,18 @@ body.game-over .actions-row {
   outline: 2px solid var(--link-color);
   outline-offset: -2px;
 }
+/* Wrong / no-data pick feedback: the picker stays open (solo miss, or a
+ * country with no data for this cell's metric in any mode) and the input
+ * itself kicks + flashes the secondary ring — the same "this pick bounced
+ * back" cue the cell shake gives, reusing common.css's shared cell-shake
+ * keyframes (per CLAUDE.md "same mechanism = same code"). Without this,
+ * pulseShake(pickerInputEl) added a .shake class no rule animated, so the
+ * rejection was invisible and the class stuck (animationend never fired). */
+.picker-input.shake {
+  animation: cell-shake 0.4s ease-in-out;
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 1px var(--secondary-color);
+}
 .picker-suggestions {
   list-style: none;
   padding: 0;
