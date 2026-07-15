@@ -10,8 +10,6 @@ import { trapPicker, releasePicker } from '../pickerLock.js';
 import { renderOfflineStrip, offlineActive } from '../matchStrip.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
-/** @typedef {import('../../flags/ticTacToe.js').GameState} GameState */
-/** @typedef {import('../../flags/ticTacToe.js').Player} Player */
 
 /** @param {import('../../flags/engine.js').Category} c */
 function tCat(c) {
