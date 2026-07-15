@@ -1622,25 +1622,28 @@ dialog#zoom p.zoom-note {
    off from the match-strip mockup. Plain --secondary (#C2899F) alone read too
    light and mauve for it, so the two rose tints below are defined here as a
    scoped, documented exception (same posture as ticTacToe's --x-color/--o-color
-   game colours). Rest is a quiet rose; hover fills to the deep rose with white
-   ink; press darkens that fill. 8px corners, a hair softer than the base pill. */
+   game colours). Rest is a quiet rose; hover and press just deepen that same
+   rose a touch (a gentle brightness dip, not a fill flip) so the button never
+   jumps to a different colour. 8px corners, a hair softer than the base pill. */
 .lobby-btn.primary {
-  --cta-rose: #9F6D82;       /* deeper rose: border + ink at rest, the hover fill */
-  --cta-rose-soft: #F2EAEE;  /* pale rose: the fill at rest */
+  --cta-rose: #9F6D82;       /* deeper rose: border + ink */
+  --cta-rose-soft: #F2EAEE;  /* pale rose: the fill */
   background: var(--cta-rose-soft);
   color: var(--cta-rose);
   border-color: var(--cta-rose);
   border-radius: 8px;
 }
+/* Keep the rose fill on hover (explicit, so the base pill's grey --hover-color
+   wash never wins) and just darken the whole button ~4% — a quiet cue, not the
+   colour change it was before. */
 .lobby-btn.primary:hover {
-  background: var(--cta-rose);
-  color: var(--surface-color);
+  background: var(--cta-rose-soft);
+  filter: brightness(0.96);
 }
 .lobby-btn.primary:active {
-  background: var(--cta-rose);
-  color: var(--surface-color);
+  background: var(--cta-rose-soft);
   border-color: var(--cta-rose);
-  filter: brightness(0.94);
+  filter: brightness(0.91);
 }
 
 /* Start / lobby screen container — the create-or-join column shared by Flag
