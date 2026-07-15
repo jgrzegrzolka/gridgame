@@ -60,9 +60,15 @@ For the 9×9 board, each of the 9 cells needs `perCell = 9` distinct countries w
 
 Some categories work for 3×3 (min 2 candidates per cell) but can't back 9×9 (need 9 distinct). Rather than burn 500 retries discovering this via `hasUltimatePuzzleSolution`, mark the category `ultimateEligible: false` and `buildUltimateCategoryPool()` drops it before `randomPuzzle` ever sees it. Current users: both `hasStripesOnly` categories (Europe has 8 pure-horizontals and 5 pure-verticals — both under 9), and five of the six `POPULATION_BREAKS_FOR_RANDOM` (only `>=10M` stays in 9×9). Default (undefined / true) keeps the category in both pools.
 
+### 5. `lacksFlagVisualCategory` — every board needs ≥1 flag-reading rule
+
+At least one of the six categories must read the flag's own visual design, not just a country fact. `FLAG_VISUAL_KINDS` is the set of id-prefixes that qualify: `hasColor`, `colorCount`, `hasMotif`, `stripesOnly`. Everything else — `continent` and every world-metric threshold (`population`, `area`, `gdp`, `temperature`, `happiness`, …) — is answerable without looking at the flag. `isFlagVisualCategory(cat)` classifies one category by that prefix; `lacksFlagVisualCategory(rows, cols)` is true iff none of the six qualify, and the generator retries.
+
+Why this earns a rule (per the "when to add" bar below): the ~30 metric families now outnumber the ~19 flag-visual categories in the pool by a wide margin, so an unconstrained six-pick averages *under one* flag-visual rule — a concrete, recurring degeneracy (an all-stats board that plays as a geography quiz, not a flag game), not a curation preference. It reads ids only (no country data), so it runs **first** in both reject ladders — cheapest prune, and it thins the ~40% of raw 3×3 draws that carry zero flag-visual before the expensive cell checks. The 9×9 pool is naturally flag-visual-heavy (most metric families are `ultimateEligible: false` and drop out), so the rule rarely fires there. Pinned by the ≥1-flag-visual assertion added to both 30-seed real-data sweeps in `flags/countries.test.js`, plus unit tests in `engine.test.js`.
+
 ## When to add a new rejection rule
 
-The current three rules cover the failure modes we've seen so far. Don't add a new rule unless:
+The rules above cover the failure modes we've seen so far. Don't add a new rule unless:
 
 1. **You can name a concrete case the existing rules miss.** "It would be nice to also reject X" without a concrete X is premature — the cost of more rules is a tighter success window, which can exhaust the retry budget on perfectly fine pools.
 

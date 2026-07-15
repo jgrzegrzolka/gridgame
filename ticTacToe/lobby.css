@@ -1,9 +1,9 @@
 .lobby[hidden] { display: none; }
 /* The lobby's start-screen kit — the container column itself (`.lobby` /
  * `.pt-start`), the pill buttons (`.lobby-btn` + pink `.primary`), full-line
- * `.start-sep` separators, the `.join-code` box, the `.start-brand` mark, and
- * the `.playing-as` line — all live in common.css so Flag Party and
- * Tic-Tac-Toe render identically (CLAUDE.md "Same mechanism = same code").
+ * `.start-sep` separators, the `.join-code` box, and the `.start-brand` mark —
+ * all live in common.css so Flag Party and Tic-Tac-Toe render identically
+ * (CLAUDE.md "Same mechanism = same code").
  * The `.lobby-error` validation line is shared from common.css too. */
 
 .online-game[hidden] { display: none; }

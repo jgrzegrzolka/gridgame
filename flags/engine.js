@@ -2749,6 +2749,52 @@ export function axesImpliedPair(rows, cols, countries) {
 }
 
 /**
+ * Category "kinds" (the id prefix before the colon) whose predicate reads the
+ * flag's own visual design — its colours (`hasColor`), how many colours it
+ * carries (`colorCount`), its charge motifs (`hasMotif`), or a stripes-only
+ * layout (`stripesOnly`). Everything else in the random pool is a fact about
+ * the COUNTRY, answerable without ever looking at its flag: `continent`, and
+ * every world-metric threshold (`population`, `area`, `gdp`, `temperature`,
+ * `happiness`, …). The metric families now outnumber the flag-visual kinds in
+ * the pool by an order of magnitude, so an unconstrained six-pick very often
+ * lands zero flag-visual rules — a board that reads as a geography/stats quiz,
+ * not a flag game. `lacksFlagVisualCategory` is the guard that keeps at least
+ * one flag-reading rule on every generated board.
+ *
+ * @type {Set<string>}
+ */
+export const FLAG_VISUAL_KINDS = new Set(['hasColor', 'colorCount', 'hasMotif', 'stripesOnly']);
+
+/**
+ * True when the category's predicate reads the flag's visual design (colour,
+ * colour count, motif, or stripes-only) rather than a country fact.
+ *
+ * @param {Category} cat
+ * @returns {boolean}
+ */
+export function isFlagVisualCategory(cat) {
+  const colon = cat.id.indexOf(':');
+  const kind = colon < 0 ? cat.id : cat.id.slice(0, colon);
+  return FLAG_VISUAL_KINDS.has(kind);
+}
+
+/**
+ * Rejection rule: true when NONE of the puzzle's six categories reads the flag
+ * itself — every row and column is a country fact (continent, or a world-metric
+ * threshold). Such a board is fully solvable without looking at a single flag,
+ * which defeats a flag game, so the generator retries for a mix carrying ≥1
+ * flag-visual rule. Pure function on the six categories, no country data needed
+ * (it reads ids only) — so it runs first and cheapest in the reject ladder.
+ *
+ * @param {Category[]} rows
+ * @param {Category[]} cols
+ * @returns {boolean}
+ */
+export function lacksFlagVisualCategory(rows, cols) {
+  return ![...rows, ...cols].some(isFlagVisualCategory);
+}
+
+/**
  * @param {() => number} [rng]
  * @param {Category[]} [pool] Defaults to the full 3×3 random pool. Pass
  *   `buildUltimateCategoryPool()` to draw only from categories whose
@@ -2983,6 +3029,7 @@ export function generateRandomPuzzle(countries, options = {}) {
   const { rng = Math.random, minPerCell = 2, maxAttempts = 200 } = options;
   for (let i = 0; i < maxAttempts; i++) {
     const puzzle = randomPuzzle(rng);
+    if (lacksFlagVisualCategory(puzzle.rows, puzzle.cols)) continue;
     if (axesConflict(puzzle.rows, puzzle.cols)) continue;
     if (metricGroupRepeated(puzzle.rows, puzzle.cols)) continue;
     if (axesImpliedPair(puzzle.rows, puzzle.cols, countries)) continue;
@@ -3060,6 +3107,7 @@ export function generateUltimateRandomPuzzle(countries, options = {}) {
   const pool = buildUltimateCategoryPool();
   for (let i = 0; i < maxAttempts; i++) {
     const puzzle = randomPuzzle(rng, pool);
+    if (lacksFlagVisualCategory(puzzle.rows, puzzle.cols)) continue;
     if (axesConflict(puzzle.rows, puzzle.cols)) continue;
     if (metricGroupRepeated(puzzle.rows, puzzle.cols)) continue;
     if (axesImpliedPair(puzzle.rows, puzzle.cols, countries)) continue;

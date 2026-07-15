@@ -12,7 +12,7 @@ import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { renderableRoundIds, roundRenderAction } from './staleGuard.js';
-import { buildAvatar, renderPlayingAs, shareUrl } from '../common.js';
+import { buildAvatar, shareUrl } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
 
@@ -380,7 +380,6 @@ export function bootFlagParty() {
   const finalBoard = $('final-board');
   const playAgainBtn = /** @type {HTMLButtonElement} */ ($('play-again'));
   const roundToSettingsBtn = /** @type {HTMLButtonElement} */ ($('round-to-settings'));
-  const playingAsEl = $('playing-as');
   const joinError = $('join-error');
   const shareBtn = /** @type {HTMLButtonElement} */ ($('share-btn'));
   // Invite icon is touch-only, same as Tic-Tac-Toe: on phones/tablets copying
@@ -1485,15 +1484,10 @@ export function bootFlagParty() {
     window.setTimeout(() => shareBtn.classList.remove('copied'), 1500);
   }
 
-  // ---- "playing as" line ----
-  function paintPlayingAs() {
-    renderPlayingAs(playingAsEl, deviceId, myName, t('party.playingAs', 'Playing as'));
-  }
-  paintPlayingAs();
   buildSetup();
 
   // Re-render dynamic text (country names, labels) on a soft language switch.
-  document.addEventListener('langchanged', () => { paintPlayingAs(); paintJoinError(); repaintSetupLabels(); render(); });
+  document.addEventListener('langchanged', () => { paintJoinError(); repaintSetupLabels(); render(); });
 
   // ---- load data + route ----
   // Countries (for names + flags) and every superlative round's metric (for the

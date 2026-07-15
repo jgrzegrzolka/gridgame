@@ -111,31 +111,6 @@ export function makeColorSwatch(value, doc = document) {
 }
 
 /**
- * Paint the "Playing as <name>" identity line into `el`: the local player's
- * profile avatar (the same deterministic identicon the burger nickname menu
- * shows, via `avatarSvg(deviceId)`) followed by the label and their bold name.
- * Shared by Flag Party and Tic-Tac-Toe so both start screens carry the
- * identical chip.
- *
- * @param {HTMLElement} el  container to (re)fill
- * @param {string} deviceId  the local player's stable id (drives the identicon)
- * @param {string} name  the local player's display name
- * @param {string} label  already-translated "Playing as" text
- * @param {Document} [doc]
- */
-export function renderPlayingAs(el, deviceId, name, label, doc = document) {
-  el.innerHTML = '';
-  el.appendChild(buildAvatar(deviceId, doc));
-  const span = doc.createElement('span');
-  span.className = 'playing-as-label';
-  span.textContent = `${label} `;
-  const strong = doc.createElement('strong');
-  strong.textContent = name;
-  span.appendChild(strong);
-  el.appendChild(span);
-}
-
-/**
  * @typedef {'shared' | 'copied' | 'dismissed' | 'failed'} ShareResult
  */
 

@@ -14,6 +14,7 @@ import {
   generateUltimateRandomPuzzle,
   hasUltimatePuzzleSolution,
   axesImpliedPair,
+  isFlagVisualCategory,
   suggest,
 } from './engine.js';
 import { CONTINENTS, flagsGamePool, loadCountries, attachMetrics } from './group.js';
@@ -525,6 +526,14 @@ test('generateRandomPuzzle succeeds with the real countries.json under many seed
       false,
       `seed ${seed}: produced an implied axis pair — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
     );
+    // Every board must carry at least one flag-reading rule — the metric
+    // families outnumber the flag-visual kinds in the pool, so without the
+    // lacksFlagVisualCategory guard many seeds would land an all-country-fact
+    // grid solvable without ever looking at a flag.
+    assert.ok(
+      [...puzzle.rows, ...puzzle.cols].some(isFlagVisualCategory),
+      `seed ${seed}: produced a board with no flag-visual rule — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
+    );
   }
 });
 
@@ -544,6 +553,10 @@ test('generateUltimateRandomPuzzle succeeds with the real countries.json under m
       hasUltimatePuzzleSolution(puzzle, COUNTRIES),
       true,
       `seed ${seed}: produced a puzzle that fails the Hall feasibility check`,
+    );
+    assert.ok(
+      [...puzzle.rows, ...puzzle.cols].some(isFlagVisualCategory),
+      `seed ${seed}: produced a board with no flag-visual rule — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
     );
   }
 });
