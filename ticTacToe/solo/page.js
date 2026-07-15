@@ -307,23 +307,32 @@ function runSolo({ puzzle, countries }) {
     }
     const { row, col } = activeCell;
     const outcome = attemptSoloClaim(state, row, col, country);
-    if (outcome.kind !== 'claimed') {
-      // Wrong / duplicate guess: solo has no turn to flip and no penalty, so
-      // keep the picker open and shake the input — the player sees the pick
-      // bounce back and can immediately try another, exactly like the data-gap
-      // rejection above. (The two-player pages instead close + pass the turn,
-      // because there a wrong guess actually costs you your turn.)
-      pulseShake(pickerInputEl);
-      return;
-    }
-    state = outcome.nextState;
     closePicker();
-    renderGrid();
-    if (isSoloOver(state)) {
-      finishRound();
+    if (outcome.kind === 'claimed') {
+      state = outcome.nextState;
+      renderGrid();
+      if (isSoloOver(state)) {
+        finishRound();
+      } else {
+        focusCell(row, col);
+      }
     } else {
+      // Wrong / duplicate guess: close the picker and shake the cell, same as
+      // the offline / online pages. Solo has no turn to flip, so the cell just
+      // stays empty — click it again to retry.
+      shakeCell(row, col);
       focusCell(row, col);
     }
+  }
+
+  /** @param {number} row @param {number} col */
+  function shakeCell(row, col) {
+    const td = /** @type {HTMLTableCellElement} */ (
+      gridBodyEl.querySelector(`td[data-row="${row}"][data-col="${col}"]`)
+    );
+    td.classList.remove('shake');
+    void td.offsetWidth;
+    pulseShake(td);
   }
 
   /** @param {number} r @param {number} c */

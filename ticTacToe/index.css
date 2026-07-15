@@ -491,9 +491,9 @@ body.game-over .actions-row {
   outline: 2px solid var(--link-color);
   outline-offset: -2px;
 }
-/* Wrong / no-data pick feedback: the picker stays open (solo miss, or a
- * country with no data for this cell's metric in any mode) and the input
- * itself kicks + flashes the secondary ring — the same "this pick bounced
+/* No-data pick feedback: when a country has no data for this cell's metric
+ * (any mode) the picker stays open — nothing was actually guessed — and the
+ * input itself kicks + flashes the secondary ring, the same "this pick bounced
  * back" cue the cell shake gives, reusing common.css's shared cell-shake
  * keyframes (per CLAUDE.md "same mechanism = same code"). Without this,
  * pulseShake(pickerInputEl) added a .shake class no rule animated, so the
