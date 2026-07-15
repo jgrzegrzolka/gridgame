@@ -704,11 +704,17 @@ export const MEAT_PER_CAPITA_BREAKS_FOR_RANDOM = [
 
 /**
  * Bordering-countries break tiers (number of countries sharing a land border).
- * `>=`-only: the fun axis is "who borders the MOST". `>=5` is a well-connected
- * country (~59 real places), `>=8` the elite (~11: Russia & China at 14, Brazil
- * 10, DR Congo & Germany 9, plus the 8-border club: France, Austria, Serbia,
- * Turkey, Tanzania, Sudan). The `<=` low end is every island at 0, a geography
- * quiz rather than a border one, so it is left off. Integer `n`.
+ * `>=5` is a well-connected country (~59 real places), `>=8` the elite (~11:
+ * Russia & China at 14, Brazil 10, DR Congo & Germany 9, plus the 8-border club:
+ * France, Austria, Serbia, Turkey, Tanzania, Sudan).
+ *
+ * One low tier, `<=0` = "island (no land border)" (~94 real places). The low end
+ * is dominated by that island pile at 0, so `<=0` is the one genuinely selective
+ * and evocative low tier; a `<=1` / `<=2` would just fold in the thin 1-2-border
+ * tail and get loose (119 / 148 places), so we keep the single island tier. As a
+ * threshold (set membership) the 94-way tie at 0 is an asset, not the problem it
+ * is for the Party "fewest" superlative (which drops the 0s entirely). `n = 0`
+ * needs `signed` on the THRESHOLD_METRICS entry so `parseThreshold` admits it.
  *
  * No `ultimate: true` break: borders is dense but top-heavy (a long tail of 0s and
  * 1s), so `borders >= N × continent` can't reach 9 distinct per cell. Every break
@@ -717,6 +723,7 @@ export const MEAT_PER_CAPITA_BREAKS_FOR_RANDOM = [
  * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
  */
 export const BORDERS_BREAKS_FOR_RANDOM = [
+  { op: '<=', n: 0 },
   { op: '>=', n: 5 },
   { op: '>=', n: 8 },
 ];
@@ -1694,8 +1701,8 @@ export function meatPerCapita(op, n, opts = {}) {
  * land border). Reads the denormalized `country.borders` field (`attachBorders`, a
  * dense metric that fills a true 0 for every island, so the predicate guards on the
  * field being a number only to exclude the org flags). `exclusiveGroup: 'borders'`.
- * The break list is `>=`-only (see BORDERS_BREAKS_FOR_RANDOM); the `<=` branch is
- * kept for symmetry so a `borders:<=N` id would still rehydrate.
+ * The break list is mostly `>=` plus the one `<=0` "island" tier (see
+ * BORDERS_BREAKS_FOR_RANDOM); the `<=` branch renders "0 or fewer" = no land border.
  *
  * @param {'>=' | '<='} op
  * @param {number} n
@@ -2330,6 +2337,9 @@ export const THRESHOLD_METRICS = {
     prefixFallback: 'Bordering countries',
     field: 'borders',
     family: 'borders',
+    // Signed: the `<=0` "island" break has a non-positive `n` (zero, not a
+    // negative), so parseThreshold is told to admit it for this metric.
+    signed: true,
     has: (c) => typeof c.borders === 'number',
     labelFor: (op, n, translate) => {
       if (op === '>=') return translate(`borders.atLeast.${n}`, `${n} or more`);

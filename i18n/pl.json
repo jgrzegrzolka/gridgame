@@ -593,7 +593,7 @@
       "superlativeOliveOil": "Produkcja oliwy z oliwek: najwięcej",
       "superlativeHoney": "Produkcja miodu: najwięcej",
       "superlativeTemperature": "Średnia temperatura: najcieplej i najzimniej",
-      "superlativeHappiness": "Wskaźnik szczęścia: najszczęśliwsi",
+      "superlativeHappiness": "Wskaźnik szczęścia: najszczęśliwsi i najmniej szczęśliwi",
       "superlativeCorruption": "Uczciwość władz: najbardziej i najmniej skorumpowane"
     },
     "modeShort": {
@@ -672,6 +672,7 @@
     "hintMostTemperature": "Najcieplej",
     "hintLeastTemperature": "Najzimniej",
     "hintMostHappiness": "Najszczęśliwsi",
+    "hintLeastHappiness": "Najmniej szczęśliwi",
     "hintMostCorruption": "Najmniej skorumpowany",
     "hintLeastCorruption": "Najbardziej skorumpowany",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
@@ -964,6 +965,9 @@
     "atLeast": {
       "5": "5 lub więcej",
       "8": "8 lub więcej"
+    },
+    "atMost": {
+      "0": "wyspa (bez granic lądowych)"
     }
   },
   "filter": {

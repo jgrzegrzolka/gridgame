@@ -395,10 +395,14 @@ export const temperatureRound = createSuperlativeRound(createMetric(temperature,
 // countries), so the round ranks the covered places only: raw
 // createMetric(happiness, []) needs no zero-filter because the round's
 // metric.has check already drops the ~115 unsurveyed places (they are absent
-// from values, not 0). Locked to 'most': "the happiest country" (Finland, the
-// Nordics) is the good, tonally-safe question; a "least happy" set surfaces
-// conflict / poverty states, a poverty quiz not a happiness one.
-export const happinessRound = createSuperlativeRound(createMetric(happiness, []), 'superlative-happiness', { direction: 'most' });
+// from values, not 0). TWO-DIRECTIONAL: "happiest" (Finland, the Nordics) and
+// "least happy" (conflict / poverty states). We first shipped this most-only on
+// tone grounds, then matched the corruption round's most-&-least framing: the
+// low pole is a known, distinct answer (Afghanistan), not an obscure tail, so it
+// earns its half of the questions. Unlike corruption the scale is not inverted:
+// higher = happier, so 'most' = happiest and 'least' = least happy, rendered
+// directly by the SUPERLATIVE_MODES hints in flagParty/page.js.
+export const happinessRound = createSuperlativeRound(createMetric(happiness, []), 'superlative-happiness');
 
 // Corruption / "Government integrity" instance: Transparency International CPI
 // (0-100, higher = cleaner), id 'superlative-corruption'. Sparse
