@@ -1616,16 +1616,21 @@ dialog#zoom p.zoom-note {
  * keeps its OWN button and join-code styling — this only adds the shared
  * touches on top. */
 
-/* Pink-filled variant of the existing shared pill recipe (the create /
-   new-game CTA). Only the fill changes to the brand accent — the button keeps
-   its base shape, weight, and geometry, so it reads as the primary action
-   without inventing a new button style. */
+/* Outlined-accent variant of the shared pill recipe (the create / new-game
+   CTA). It reads as the primary action through a brand-pink border rather than
+   a solid pink fill: white surface, pink border, dark ink — same shape, weight,
+   and geometry as every other pill. Hover and press fall through to the base
+   recipe (a light --hover-color wash on hover); on :active the button fills with
+   the brand pink for a moment (white ink), so a press briefly flashes the old
+   solid look and fades back on release. */
 .lobby-btn.primary {
+  border-color: var(--secondary-color);
+}
+.lobby-btn.primary:active {
   background: var(--secondary-color);
   color: var(--surface-color);
   border-color: var(--secondary-color);
 }
-.lobby-btn.primary:hover { background: var(--secondary-color); filter: brightness(0.97); }
 
 /* Start / lobby screen container — the create-or-join column shared by Flag
    Party (`.pt-start`) and Tic-Tac-Toe (`.lobby`). One definition so both
