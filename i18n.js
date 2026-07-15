@@ -308,6 +308,14 @@ export function countryName(c) {
   return t(`country.${c.code}`, c.name);
 }
 
+// Base (pre-localization) aliases per country object, captured the first time
+// we localize it. relocalizeAliases() uses this to swap the localized alias
+// for another language in place without piling up stale ones — the search
+// index must follow a soft language switch, or you see the localized names but
+// can only search them in the boot language (e.g. pick "Meksyk" fails after
+// switching to Polish because the aliases were frozen in English at boot).
+const baseAliasesByCountry = new WeakMap();
+
 /**
  * Enrich a list of countries with their localized name appended to each
  * one's aliases. Lets `suggest()` in flags/engine.js match Polish input
@@ -321,6 +329,9 @@ export function countryName(c) {
  * `any` because the spread + override pattern widens past TypeScript's
  * narrowing — the function's behavior is fully covered by i18n.test.js.
  *
+ * Records each entry's base aliases so a later `relocalizeAliases()` can
+ * rebuild the localized alias for a new language (soft language switch).
+ *
  * @template T
  * @param {T[]} countries
  * @returns {T[]}
@@ -328,17 +339,50 @@ export function countryName(c) {
 export function withLocalizedAliases(countries) {
   return countries.map((c) => {
     const item = /** @type {any} */ (c);
+    const base = item.aliases ?? [];
     const localized = countryName(item);
-    if (localized === item.name) return c;
-    const cloned = { ...item, aliases: [...(item.aliases ?? []), localized] };
+    if (localized === item.name) {
+      // No distinct localized name to add (e.g. English). Still record the
+      // base on the original so a switch to another language can add one.
+      baseAliasesByCountry.set(item, base);
+      return c;
+    }
+    const cloned = { ...item, aliases: [...base, localized] };
     // If the input is a full Country (has primaryColors), re-wrap through
     // createCountry so the cloned object gets a fresh non-enumerable `colors`
     // getter. A raw spread would copy `colors` as a static enumerable field,
     // which then leaks into JSON.stringify output. Minimal stubs without
     // primaryColors (used in some i18n tests) pass through as-is — they're
     // not Countries, so there's no getter to re-attach.
-    return /** @type {any} */ (Array.isArray(item.primaryColors) ? createCountry(cloned) : cloned);
+    const wrapped = /** @type {any} */ (Array.isArray(item.primaryColors) ? createCountry(cloned) : cloned);
+    baseAliasesByCountry.set(wrapped, base);
+    return wrapped;
   });
+}
+
+/**
+ * Rebuild each country's localized alias in place for the *current* language.
+ * Call from a `langchanged` handler so the picker's search index follows a
+ * soft language switch: without it, the names re-render in the new language
+ * but stay searchable only in the boot language. Mutates `aliases` on the
+ * existing objects (preserving any metrics already denormalized onto them);
+ * the base aliases come from the WeakMap populated by withLocalizedAliases.
+ *
+ * @param {{ code: string, name: string, aliases?: string[] }[]} countries
+ */
+export function relocalizeAliases(countries) {
+  for (const c of countries) {
+    const item = /** @type {any} */ (c);
+    let base = baseAliasesByCountry.get(item);
+    if (base === undefined) {
+      // Not seen by withLocalizedAliases (defensive) — adopt the current
+      // aliases as the base so we at least don't accumulate from here on.
+      base = item.aliases ?? [];
+      baseAliasesByCountry.set(item, base);
+    }
+    const localized = countryName(item);
+    item.aliases = localized === item.name ? [...base] : [...base, localized];
+  }
 }
 
 /**

@@ -15,7 +15,7 @@ import { loadCountries, attachPopulations, attachAreas, attachDensities, attachG
 import { metricDataGap } from '../../flags/metricTiers.js';
 import { shareUrl } from '../../common.js';
 import { trackEvent } from '../../analytics/index.js';
-import { t, countryName, withLocalizedAliases } from '../../i18n.js';
+import { t, countryName, withLocalizedAliases, relocalizeAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
 import { submitTttResult } from '../../flags/tttResultSubmit.js';
@@ -899,6 +899,9 @@ function runOnline(countries) {
    * all re-derive from the current cache.
    */
   function refreshI18nForGame() {
+    // Keep the picker's search index in the new language — otherwise names
+    // re-render localized but stay searchable only in the boot language.
+    relocalizeAliases(countries);
     const { game } = state;
     if (game && gridBuilt) {
       populateGridLabels();
