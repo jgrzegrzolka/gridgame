@@ -482,7 +482,7 @@ test('temperatureRound: two-directional over hot and sub-zero places, correct ex
 
 // ---- happiness instance (WHR ladder 0-10, id 'superlative-happiness') -------
 
-test('happinessRound: most-only, correct highest-happiness answer, covered places only', async () => {
+test('happinessRound: two-directional, correct extreme-happiness answer, covered places only', async () => {
   const { happinessRound } = await import('./superlative.js');
   const happyJson = (await import('../metrics/happiness.json', { with: { type: 'json' } })).default;
   const HAPPY = /** @type {Record<string, number>} */ (happyJson.values);
@@ -492,13 +492,24 @@ test('happinessRound: most-only, correct highest-happiness answer, covered place
   for (const c of pool) assert.ok(c.code in HAPPY, `${c.code} must be covered by happiness.json`);
   for (let i = 0; i < 100; i++) {
     const q = happinessRound.generate(pool, undefined, seeded(i + 1));
-    // Locked to 'most' (happiest); "least happy" is never dealt.
-    assert.equal(q.prompt, 'most', 'happiness is locked to most (happiest)');
     assert.equal(q.options.length, 4);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => HAPPY[c]);
-    assert.equal(HAPPY[q.answer], Math.max(...vals), `seed ${i}: answer must be the happiest option`);
+    // Not inverted: 'most' = happiest (max), 'least' = least happy (min).
+    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+    assert.equal(HAPPY[q.answer], extreme, `seed ${i}: ${q.prompt} answer must be the extreme option`);
   }
+});
+
+test('happinessRound: deals both directions across seeds', async () => {
+  const { happinessRound } = await import('./superlative.js');
+  const pool = ['fi', 'dk', 'is', 'cr', 'us', 'de', 'jp', 'br', 'in', 'ke', 'np', 'af'].map((code) => ({ code }));
+  const firstThen = (/** @type {number} */ first, /** @type {() => number} */ rest) => {
+    let n = 0;
+    return () => (n++ === 0 ? first : rest());
+  };
+  assert.equal(happinessRound.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
+  assert.equal(happinessRound.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
 });
 
 test('happinessRound: the unsurveyed no-data places are excluded from selection', async () => {

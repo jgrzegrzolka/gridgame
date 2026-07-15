@@ -75,7 +75,7 @@ const MODE_LABELS = {
   'superlative-olive-oil': { key: 'party.mode.superlativeOliveOil', full: 'Olive oil production: most' },
   'superlative-honey': { key: 'party.mode.superlativeHoney', full: 'Honey production: most' },
   'superlative-temperature': { key: 'party.mode.superlativeTemperature', full: 'Average temperature: hottest & coldest' },
-  'superlative-happiness': { key: 'party.mode.superlativeHappiness', full: 'Happiness score: happiest' },
+  'superlative-happiness': { key: 'party.mode.superlativeHappiness', full: 'Happiness score: happiest & least happy' },
   'superlative-corruption': { key: 'party.mode.superlativeCorruption', full: 'Government integrity: most & least corrupt' },
 };
 
@@ -231,7 +231,10 @@ const SUPERLATIVE_MODES = {
   },
   'superlative-happiness': {
     file: 'happiness.json',
+    // Two-directional and NOT inverted (higher = happier): 'most' = happiest,
+    // 'least' = least happy, shown directly.
     hintMost: { key: 'party.hintMostHappiness', fallback: 'Happiest' },
+    hintLeast: { key: 'party.hintLeastHappiness', fallback: 'Least happy' },
   },
   'superlative-corruption': {
     file: 'corruption.json',

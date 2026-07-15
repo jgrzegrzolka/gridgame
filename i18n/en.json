@@ -593,7 +593,7 @@
       "superlativeOliveOil": "Olive oil production: most",
       "superlativeHoney": "Honey production: most",
       "superlativeTemperature": "Average temperature: hottest & coldest",
-      "superlativeHappiness": "Happiness score: happiest",
+      "superlativeHappiness": "Happiness score: happiest & least happy",
       "superlativeCorruption": "Government integrity: most & least corrupt"
     },
     "modeShort": {
@@ -672,6 +672,7 @@
     "hintMostTemperature": "Hottest",
     "hintLeastTemperature": "Coldest",
     "hintMostHappiness": "Happiest",
+    "hintLeastHappiness": "Least happy",
     "hintMostCorruption": "Least corrupt",
     "hintLeastCorruption": "Most corrupt",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
@@ -964,6 +965,9 @@
     "atLeast": {
       "5": "5 or more",
       "8": "8 or more"
+    },
+    "atMost": {
+      "0": "island (no land border)"
     }
   },
   "filter": {
