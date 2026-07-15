@@ -9,6 +9,10 @@ import {
   applyGiveUp,
   shouldFireTicTacToeConfetti,
   newlyWinningCells,
+  newSoloGame,
+  attemptSoloClaim,
+  isSoloOver,
+  applySoloGiveUp,
 } from './ticTacToe.js';
 import { createCountry } from './group.js';
 
@@ -394,4 +398,147 @@ test('newlyWinningCells: returns empty on re-renders where the line was already 
   // render once more on play-again wiring; this guards that case too.)
   const line = /** @type {[number, number][]} */ ([[0, 0], [0, 1], [0, 2]]);
   assert.deepEqual(newlyWinningCells({ winningLine: line }, { winningLine: line }), []);
+});
+
+// ---- Solo variant --------------------------------------------------------
+// One player, no turns, no lines: fill all nine cells to win. A miss leaves
+// state untouched (nothing to penalise), and filling the ninth cell sets
+// solved=true.
+
+const SOLO_POOL = [FR, DE, IT, JP, KR, PK, KE, NA, NG];
+
+test('newSoloGame: empty 3x3, not solved, not over', () => {
+  const s = newSoloGame(PUZZLE);
+  assert.equal(s.solved, false);
+  assert.equal(isSoloOver(s), false);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      assert.equal(s.cells[r][c].owner, null);
+      assert.equal(s.cells[r][c].country, null);
+    }
+  }
+});
+
+test('attemptSoloClaim: a valid pick fills the cell and bumps the progress count', () => {
+  const s = newSoloGame(PUZZLE);
+  const out = attemptSoloClaim(s, 0, 0, FR);
+  assert.equal(out.kind, 'claimed');
+  assert.equal(out.nextState.cells[0][0].owner, 'X');
+  assert.equal(out.nextState.cells[0][0].country, FR);
+  assert.equal(out.nextState.solved, false);
+});
+
+test('attemptSoloClaim: invalid pick is a no-op miss (state unchanged, no penalty)', () => {
+  const s = newSoloGame(PUZZLE);
+  // JP is Asian; row 0 is Europe → fails the row predicate.
+  const out = attemptSoloClaim(s, 0, 0, JP);
+  assert.equal(out.kind, 'miss-invalid');
+  assert.equal(out.nextState, s, 'same state object — nothing changes on a miss');
+});
+
+test('attemptSoloClaim: duplicate country already on the board is refused', () => {
+  const both = country({ code: 'both', name: 'Bicolour', continent: 'Europe', primaryColors: ['red', 'blue'] });
+  let s = newSoloGame(PUZZLE);
+  s = attemptSoloClaim(s, 0, 0, both).nextState; // Europe × red
+  const out = attemptSoloClaim(s, 0, 1, both); // would satisfy Europe × blue, but already used
+  assert.equal(out.kind, 'miss-duplicate');
+  assert.equal(out.nextState, s, 'duplicate miss leaves state untouched');
+});
+
+test('attemptSoloClaim: a cell that is already filled is refused (miss-taken, unchanged)', () => {
+  let s = newSoloGame(PUZZLE);
+  s = attemptSoloClaim(s, 0, 0, FR).nextState; // fill (0,0)
+  const out = attemptSoloClaim(s, 0, 0, FR); // same cell again
+  assert.equal(out.kind, 'miss-taken');
+  assert.equal(out.nextState, s, 'a taken cell leaves state untouched');
+});
+
+test('attemptSoloClaim: claiming the ninth cell sets solved=true', () => {
+  let s = newSoloGame(PUZZLE);
+  const order = [
+    [0, 0, FR], [0, 1, DE], [0, 2, IT],
+    [1, 0, JP], [1, 1, KR], [1, 2, PK],
+    [2, 0, KE], [2, 1, NA],
+  ];
+  for (const [r, c, cn] of order) {
+    s = attemptSoloClaim(s, /** @type {number} */ (r), /** @type {number} */ (c), /** @type {Country} */ (cn)).nextState;
+  }
+  assert.equal(s.solved, false, '8 filled — not solved yet');
+  const out = attemptSoloClaim(s, 2, 2, NG); // the last cell
+  assert.equal(out.kind, 'claimed');
+  assert.equal(out.nextState.solved, true);
+  assert.equal(isSoloOver(out.nextState), true);
+});
+
+test('attemptSoloClaim: rejected once solved (miss-taken, unchanged)', () => {
+  let s = newSoloGame(PUZZLE);
+  const order = [
+    [0, 0, FR], [0, 1, DE], [0, 2, IT],
+    [1, 0, JP], [1, 1, KR], [1, 2, PK],
+    [2, 0, KE], [2, 1, NA], [2, 2, NG],
+  ];
+  for (const [r, c, cn] of order) {
+    s = attemptSoloClaim(s, /** @type {number} */ (r), /** @type {number} */ (c), /** @type {Country} */ (cn)).nextState;
+  }
+  assert.equal(s.solved, true);
+  const out = attemptSoloClaim(s, 0, 0, FR);
+  assert.equal(out.kind, 'miss-taken');
+  assert.equal(out.nextState, s);
+});
+
+test('applySoloGiveUp: fills every empty cell with a valid unused country and freezes', () => {
+  const s = newSoloGame(PUZZLE);
+  const after = applySoloGiveUp(s, SOLO_POOL, () => 0);
+  assert.equal(after.gaveUp, true);
+  assert.equal(isSoloOver(after), true);
+  assert.equal(after.solved, false, 'a give-up is not a solve');
+  /** @type {Set<string>} */
+  const seen = new Set();
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const cell = after.cells[r][c];
+      assert.ok(cell.country, `cell (${r},${c}) should be revealed`);
+      assert.equal(cell.owner, null);
+      assert.equal(cell.revealed, true);
+      assert.ok(PUZZLE.rows[r].predicate(/** @type {Country} */ (cell.country)));
+      assert.ok(PUZZLE.cols[c].predicate(/** @type {Country} */ (cell.country)));
+      assert.equal(seen.has(/** @type {Country} */ (cell.country).code), false, 'no duplicate across cells');
+      seen.add(/** @type {Country} */ (cell.country).code);
+    }
+  }
+});
+
+test('applySoloGiveUp: keeps the cells the player already filled', () => {
+  let s = newSoloGame(PUZZLE);
+  s = attemptSoloClaim(s, 0, 0, FR).nextState;
+  const after = applySoloGiveUp(s, SOLO_POOL, () => 0);
+  assert.equal(after.cells[0][0].owner, 'X');
+  assert.equal(after.cells[0][0].country, FR);
+  assert.equal(after.cells[0][0].revealed, undefined);
+});
+
+test('attemptSoloClaim: refuses claims after give-up (board is frozen)', () => {
+  // Give up before filling anything, then synthesise a still-empty cell to prove
+  // gaveUp closes the door even where a cell has no owner yet.
+  const s = applySoloGiveUp(newSoloGame(PUZZLE), SOLO_POOL, () => 0);
+  const synthetic = { ...s, cells: s.cells.map((row, r) => row.map((cell, c) => (
+    r === 2 && c === 2 ? { owner: null, country: null } : cell
+  ))) };
+  const out = attemptSoloClaim(synthetic, 2, 2, NG);
+  assert.equal(out.kind, 'miss-taken', 'gaveUp must reject claims even on a still-empty cell');
+});
+
+test('applySoloGiveUp: no-op once the puzzle is already solved', () => {
+  let s = newSoloGame(PUZZLE);
+  const order = [
+    [0, 0, FR], [0, 1, DE], [0, 2, IT],
+    [1, 0, JP], [1, 1, KR], [1, 2, PK],
+    [2, 0, KE], [2, 1, NA], [2, 2, NG],
+  ];
+  for (const [r, c, cn] of order) {
+    s = attemptSoloClaim(s, /** @type {number} */ (r), /** @type {number} */ (c), /** @type {Country} */ (cn)).nextState;
+  }
+  assert.equal(s.solved, true);
+  const after = applySoloGiveUp(s, SOLO_POOL, () => 0);
+  assert.equal(after, s, 'nothing to reveal — same object back');
 });
