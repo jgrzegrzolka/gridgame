@@ -23,6 +23,8 @@ import {
   metricGroupRepeated,
   SINGLE_USE_METRIC_GROUPS,
   axesImpliedPair,
+  isFlagVisualCategory,
+  lacksFlagVisualCategory,
   buildRandomCategoryPool,
   pulseShake,
   CONTINENTS_FOR_RANDOM,
@@ -1431,6 +1433,48 @@ test('axesImpliedPair: ignores intra-axis subset (only cross-axis pairs count)',
       [hasMotif('eu-member'), continent('Europe'), hasColor('red')],
       [hasMotif('weapon'), hasMotif('cross'), hasMotif('animal')],
       cs,
+    ),
+    false,
+  );
+});
+
+test('isFlagVisualCategory: true for the flag-reading kinds, false for country facts', () => {
+  // The four kinds that read the flag's own design.
+  assert.equal(isFlagVisualCategory(hasColor('red')), true);
+  assert.equal(isFlagVisualCategory(hasMotif('cross')), true);
+  assert.equal(isFlagVisualCategory(colorCount('=', 3)), true);
+  assert.equal(isFlagVisualCategory(hasStripesOnly('horizontal')), true);
+  // Country facts — geography, statehood, and every world-metric threshold.
+  assert.equal(isFlagVisualCategory(continent('Europe')), false);
+  assert.equal(isFlagVisualCategory(statehood('un_member')), false);
+  assert.equal(isFlagVisualCategory(population('>=', 10_000_000)), false);
+  assert.equal(isFlagVisualCategory(area('>=', 1_000_000)), false);
+});
+
+test('lacksFlagVisualCategory: true when all six categories are country facts', () => {
+  assert.equal(
+    lacksFlagVisualCategory(
+      [continent('Europe'), population('>=', 10_000_000), area('>=', 1_000_000)],
+      [density('>=', 100), gdp('>=', 100_000_000_000), continent('Asia')],
+    ),
+    true,
+  );
+});
+
+test('lacksFlagVisualCategory: false when at least one axis reads the flag', () => {
+  // A single flag-visual rule anywhere among the six satisfies the guard.
+  assert.equal(
+    lacksFlagVisualCategory(
+      [continent('Europe'), population('>=', 10_000_000), area('>=', 1_000_000)],
+      [density('>=', 100), gdp('>=', 100_000_000_000), hasColor('red')],
+    ),
+    false,
+  );
+  // Order/axis doesn't matter — a flag-visual rule in the rows also passes.
+  assert.equal(
+    lacksFlagVisualCategory(
+      [hasMotif('cross'), continent('Europe'), population('>=', 10_000_000)],
+      [density('>=', 100), gdp('>=', 100_000_000_000), area('>=', 1_000_000)],
     ),
     false,
   );
