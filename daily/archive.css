@@ -57,7 +57,7 @@
   overflow: hidden;
 }
 .archive-square-link:hover {
-  background: var(--surface-hover-color);
+  background: var(--hover-color);
 }
 .archive-square--today .archive-square-link {
   border: 2px solid var(--primary-color);

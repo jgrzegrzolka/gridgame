@@ -26,9 +26,13 @@
   /* Elevated-surface white — chrome buttons, panels, popovers, share-link
    * pill, anything that needs to "stand off" the page bg below. */
   --surface-color: #fff;
-  /* Hover state for surface elements — a touch darker than the surface
-   * itself so the surface→hover transition reads as a clear affordance. */
-  --surface-hover-color: #f0f0f0;
+  /* The heavier grey, reserved for states that must stay clearly visible:
+   * an active / selected / applied control (`.pill.active`, `.filter-chip`,
+   * `.color-count-pill.active`), the selection highlight in a search-suggestion
+   * dropdown, and avatar placeholder boxes. A plain "you can click this" hover
+   * uses the lighter --hover-color instead (see below), so the two never
+   * read the same: a hover is a whisper, a selected state has weight. */
+  --selected-color: #f0f0f0;
   /* Global page background — the soft tint behind every page so the
    * white `--surface-color` chrome / panels / popovers visibly "lift"
    * off it. Distinct from --surface-color (#fff) by ~2% lightness;
@@ -36,14 +40,16 @@
    * tinted on its own. Externally-loaded SVG assets (favicon, logo,
    * og-banner) hardcode this value — keep them in sync on swap. */
   --page-bg-color: #fdfdfd;
-  /* Chrome-bar fill — a subtle gray that sits between the page (#fdfdfd) and
-   * the surface-hover gray (#f0f0f0): clearly darker than the page so the fixed
-   * top bar reads as its own band, but lighter than #f0f0f0 which felt heavy as
-   * a full-width strip. The one tone outside the core brand set: the chrome bar
-   * fill (body::before) and the main-page game-tile hover, which deliberately
-   * echoes the strip so the tiles read as a quieter surface than the #f0f0f0
-   * hover the other bordered buttons use. */
-  --strip-bg-color: #f9f9f9;
+  /* The light wash, ~2% darker than the page (#fdfdfd): quiet enough to be a
+   * whisper, distinct enough to register. Two roles: the chrome-bar fill
+   * (body::before, where it needs to be clearly darker than the page so the
+   * fixed top bar reads as its own band, yet lighter than #f0f0f0 which felt
+   * heavy as a full-width strip) and every casual "you can click this" hover
+   * across the site (game tiles, chrome buttons, pills, chips, tic-tac-toe
+   * cells). Hovers all share this one tone so the whole site's hover feedback
+   * feels identical; the stronger #f0f0f0 above is only for states that need
+   * to shout (active / selected / dropdown selection). */
+  --hover-color: #f9f9f9;
   --link-color: var(--primary-color);
   --page-top: 104px;
   /* Height of the fixed chrome strip (body::before) — the visible top
@@ -145,10 +151,11 @@ body::before {
   left: 0;
   right: 0;
   height: var(--strip-height);
-  /* Visible chrome bar: a subtle gray (--strip-bg-color) a step darker than the
-   * page so the strip reads as its own band, holding the wordmark + chrome
-   * cluster, with the full-width underline below as its baseline. */
-  background: var(--strip-bg-color);
+  /* Visible chrome bar: the same quiet --hover-color wash used for hovers
+   * site-wide (it's a step darker than the page, so the strip reads as its own
+   * band), holding the wordmark + chrome cluster, with the full-width underline
+   * below as its baseline. */
+  background: var(--hover-color);
   z-index: 10;
 }
 /* Hairline underline at the chrome bar's bottom edge, running the full
@@ -453,7 +460,7 @@ body::after {
   height: 24px;
   border-radius: 4px;
   overflow: hidden;
-  background: var(--surface-hover-color);
+  background: var(--selected-color);
 }
 .menu li.menu-nickname .menu-nickname-avatar svg {
   display: block;
@@ -694,7 +701,7 @@ body::after {
   vertical-align: middle;
   line-height: 0;
 }
-.share-link:hover { background: rgba(0, 0, 0, 0.05); }
+.share-link:hover { background: var(--hover-color); }
 .share-link[hidden] { display: none; }
 .share-icon {
   display: inline-block;
@@ -783,10 +790,10 @@ body::after {
   line-height: 1.4;
 }
 .pill:hover {
-  background: var(--surface-hover-color);
+  background: var(--hover-color);
 }
 .pill.active {
-  background: var(--surface-hover-color);
+  background: var(--selected-color);
   color: var(--primary-color);
   border-color: var(--primary-color);
 }
@@ -897,7 +904,7 @@ body::after {
   line-height: 1.4;
   padding: 3px 6px 3px 10px;
   border-radius: 999px;
-  background: var(--surface-hover-color);
+  background: var(--selected-color);
   color: var(--primary-color);
   border: 1px solid var(--primary-color);
 }
@@ -951,7 +958,7 @@ body::after {
 }
 .color-count-pill.active {
   border-style: solid;
-  background: var(--surface-hover-color);
+  background: var(--selected-color);
   color: var(--primary-color);
   border-color: var(--primary-color);
 }
@@ -1549,7 +1556,7 @@ dialog#zoom p.zoom-note {
 .map-hide-btn:hover,
 .map-fs-exit:hover,
 .map-resize-handle:hover {
-  background: var(--surface-hover-color);
+  background: var(--hover-color);
 }
 .profile-save:active:not(:disabled),
 .lobby-btn:active,
@@ -1700,7 +1707,7 @@ dialog#zoom p.zoom-note {
   height: 24px;
   border-radius: 4px;
   overflow: hidden;
-  background: var(--surface-hover-color);
+  background: var(--selected-color);
   display: inline-flex;
 }
 .avatar svg { display: block; width: 100%; height: 100%; }

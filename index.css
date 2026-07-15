@@ -42,13 +42,12 @@ body {
   overflow: hidden;
   min-height: 240px;
 }
-/* Feature-specific hover: the game tiles echo the chrome strip's tone
-   (--strip-bg-color, a hair lighter than the #f0f0f0 --surface-hover-color
-   the other bordered buttons share) so their hover reads as a quiet lift
-   rather than a heavy fill. Everything else in the shared button recipe
-   (border, padding, pink press afterglow) still comes from common.css. */
+/* The site-wide casual hover: --hover-color, the same quiet light wash
+   every clickable surface uses (chrome buttons, pills, tic-tac-toe cells).
+   Everything else in the shared button recipe (border, padding, pink press
+   afterglow) still comes from common.css. */
 .game-tile:hover {
-  background: var(--strip-bg-color);
+  background: var(--hover-color);
 }
 /* The display:flex above outweighs the UA `[hidden]` rule, so any ship-dark
    tile (rendered `hidden`, revealed later by bootHome()) would show to everyone

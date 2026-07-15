@@ -26,7 +26,7 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   padding: 2px 8px;
-  background: var(--surface-hover-color);
+  background: var(--selected-color);
   border-radius: 999px;
   align-self: center;
 }

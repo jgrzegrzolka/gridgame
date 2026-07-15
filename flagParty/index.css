@@ -1,6 +1,6 @@
-/* Flag Party — the live party show. Palette is the site's seven variables
+/* Flag Party — the live party show. Palette is the site's eight variables
    only (see common.css): primary / secondary / muted / muted-soft /
-   surface / surface-hover / page-bg. Correct = secondary (pink) ring, wrong
+   surface / selected / hover / page-bg. Correct = secondary (pink) ring, wrong
    = dimmed; no green/red, staying on-palette by design. */
 
 .party {
@@ -224,7 +224,7 @@
    page.js from the shared flags/metricVisuals.js, the single source for the
    metric-hue palette exception (see the note there). No hue values live in
    this stylesheet anymore. */
-.gs-chip.on { border-color: var(--mc); color: var(--mc); background: var(--surface-hover-color); }
+.gs-chip.on { border-color: var(--mc); color: var(--mc); background: var(--selected-color); }
 .gs-chip:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
 
 /* Per-category reveal timing, shown under the tricky toggle when it's on. A
@@ -331,7 +331,7 @@
 }
 button.opt { -webkit-appearance: none; appearance: none; }
 /* Question phase: your locked-in tap gets the pink ring + surface tint. */
-.opt.sel { border-color: var(--secondary-color); background: var(--surface-hover-color); }
+.opt.sel { border-color: var(--secondary-color); background: var(--selected-color); }
 /* Reveal: the correct flag gets flagQuiz's green pulse, your own wrong pick
    gets its pink pulse — the shared good/bad cue (keyframes in common.css), so
    "right / wrong" reads the same across both flag-picking games. */
@@ -508,7 +508,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   border-radius: 12px;
   font-size: 15px;
 }
-.scoreline.win { background: var(--surface-hover-color); border: 1px solid var(--secondary-color); }
+.scoreline.win { background: var(--selected-color); border: 1px solid var(--secondary-color); }
 .scoreline.other { background: var(--surface-color); border: 1px solid var(--muted-soft-color); }
 /* Weights mirror flagQuiz's daily leaderboard (`.leaderboard-*`): muted rank,
    500 name, 600 score. The old 700/800 read heavier than anything else on the
