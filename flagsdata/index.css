@@ -131,7 +131,7 @@ html:not(.is-wide) #flag-map-section .map-resize-handle {
   border-radius: 999px;
   cursor: pointer;
 }
-.filter-add:hover { background: var(--surface-hover-color); }
+.filter-add:hover { background: var(--strip-bg-color); }
 
 /* Closed state hides every group AND the world-facts row on every viewport:
  * the bar's single toggle expands and folds them as one section (page.js
@@ -299,7 +299,7 @@ dialog#zoom .country-data {
   cursor: pointer;
 }
 .lens-sort button:last-child { border-right: 0; }
-.lens-sort button:hover { background: var(--surface-hover-color); }
+.lens-sort button:hover { background: var(--strip-bg-color); }
 /* Pressed segment mirrors .pill.active: grey fill + primary text, with a
  * primary underline standing in for the pill's full edge (a full border on one
  * segment of a joined pair reads oddly). Unpressed stays muted, like an off

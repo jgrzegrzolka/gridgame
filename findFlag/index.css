@@ -91,7 +91,7 @@ body {
   padding: 4px 6px;
 }
 .find-clear:hover {
-  background: var(--surface-hover-color);
+  background: var(--strip-bg-color);
   border-radius: 4px;
 }
 

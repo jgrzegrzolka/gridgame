@@ -257,8 +257,12 @@ body:has(.player-card.waiting) .grid {
   background: transparent;
   pointer-events: none;
 }
+/* Same light-grey hover the home page game tiles use (--strip-bg-color),
+ * so a cell you're about to claim feels identical to a tile you're about
+ * to open. The ::after only ever covers an unclaimed (empty) cell, so an
+ * opaque fill is safe; owned cells and game-over drop it to transparent. */
 .cell:hover::after {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--strip-bg-color);
 }
 .cell.owned:hover::after {
   background: transparent;
