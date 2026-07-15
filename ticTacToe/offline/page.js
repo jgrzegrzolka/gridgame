@@ -7,6 +7,7 @@ import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConf
 import { t, countryName, withLocalizedAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
+import { renderOfflineStrip, offlineActive } from '../matchStrip.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 /** @typedef {import('../../flags/ticTacToe.js').GameState} GameState */
@@ -47,8 +48,8 @@ export function bootTicTacToe() {
       runTicTacToe({ puzzle, countries });
     })
     .catch((err) => {
-      const turnText = document.getElementById('turn-text');
-      if (turnText) turnText.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
+      const strip = document.getElementById('match-strip');
+      if (strip) strip.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
 }
 
@@ -81,8 +82,11 @@ function runTicTacToe({ puzzle, countries }) {
   // reads it — a later declaration would hit a TDZ on first render.
   /** @type {[number, number][] | null} */
   let lastSeenWinningLine = null;
-  /** @type {Player | null} */
-  let lastRenderedPlayer = null;
+  /** Last active mark painted into the strip; `undefined` until the first
+   * paint so it always rebuilds once. Guards against re-bouncing the mark on
+   * renders that don't change whose turn it is (e.g. a wrong-guess shake). */
+  /** @type {'X' | 'O' | null | undefined} */
+  let lastActive;
 
   /** @type {{ row: number, col: number } | null} */
   let activeCell = null;
@@ -101,9 +105,7 @@ function runTicTacToe({ puzzle, countries }) {
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
   const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
   const zoomName = zoomEl ? /** @type {HTMLParagraphElement | null} */ (zoomEl.querySelector('p')) : null;
-  const turnLineEl = document.getElementById('turn-line');
-  const turnBadgeEl = document.getElementById('turn-badge');
-  const turnTextEl = document.getElementById('turn-text');
+  const matchStripEl = document.getElementById('match-strip');
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
   const playAgainEl = /** @type {HTMLAnchorElement | null} */ (document.getElementById('play-again'));
@@ -414,24 +416,17 @@ function runTicTacToe({ puzzle, countries }) {
     if (giveUpEl) giveUpEl.hidden = isGameOver(state);
   }
 
-  function renderTurn() {
-    if (!turnBadgeEl || !turnTextEl) return;
-    if (isGameOver(state)) {
-      if (turnLineEl) turnLineEl.hidden = true;
-      lastRenderedPlayer = null;
-      return;
-    }
-    if (turnLineEl) turnLineEl.hidden = false;
-    turnBadgeEl.hidden = false;
-    turnBadgeEl.textContent = state.currentPlayer;
-    const changed = lastRenderedPlayer !== state.currentPlayer;
-    turnBadgeEl.className = 'turn-badge ' + state.currentPlayer.toLowerCase();
-    turnTextEl.textContent = t('ttt.toMove', 'to move');
-    if (changed) {
-      void turnBadgeEl.offsetWidth; // restart the bounce animation on every turn change.
-      turnBadgeEl.classList.add('bounce');
-      lastRenderedPlayer = state.currentPlayer;
-    }
+  /** @param {boolean} [force] rebuild even if the active mark is unchanged (language switch) */
+  function renderTurn(force) {
+    if (!matchStripEl) return;
+    const active = offlineActive(state);
+    // Rebuild only when whose-turn actually changes (or when forced, e.g. a
+    // language switch that must re-translate the "Player X / Player O" labels).
+    // Rebuilding restarts the mark bounce, so guarding here keeps a wrong-guess
+    // shake (same player still to move) from re-bouncing.
+    if (!force && active === lastActive) return;
+    renderOfflineStrip({ root: matchStripEl, active, t });
+    lastActive = active;
   }
 
   function renderAll() {
@@ -493,7 +488,7 @@ function runTicTacToe({ puzzle, countries }) {
       renderCategoryLabel(/** @type {HTMLElement} */ (th), puzzle.rows[i], tCat(puzzle.rows[i]));
     });
     renderGrid();
-    renderTurn();
+    renderTurn(true);
     if (!pickerEl.hidden && activeCell) {
       const { row, col } = activeCell;
       renderCategoryPair(pickerCatsEl, puzzle.rows[row], puzzle.cols[col], tCat(puzzle.rows[row]), tCat(puzzle.cols[col]));

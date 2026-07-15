@@ -19,59 +19,149 @@ body {
   flex-direction: column;
 }
 
-.turn-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  color: var(--primary-color);
-  /* Sits above the grid so the action row directly under the grid is the
-   * stable visual footer. Margin reserves a small gap before the grid. */
-  margin: 0 0 12px;
-}
-.turn-line[hidden] {
-  /* Reserve the slot when hidden so the grid doesn't jump up at game end.
-   * Override the default `display: none` from the [hidden] attribute. */
-  display: flex;
-  visibility: hidden;
-}
-.turn-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  font-weight: 700;
-  font-size: 16px;
-  color: #fff;
-  background: var(--x-color);
-  /* Sit above the body::before chrome veil (z:10) so the turn-bounce
-   * animation (translateY -10px) stays fully visible — without this,
-   * the top of the badge ducks behind the veil at the peak of the
-   * jump. Still well below the chrome buttons (z:20+), and the badge
-   * physically can't reach the button row anyway (peak top y≈70 vs
-   * button bottom y≈64). */
-  position: relative;
-  z-index: 11;
-}
-.turn-badge.o {
-  background: var(--o-color);
-}
-.turn-badge.bounce {
-  animation: turn-bounce 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-@keyframes turn-bounce {
-  0%   { transform: translateY(0) scale(1); }
-  30%  { transform: translateY(-10px) scale(1.2); }
-  50%  { transform: translateY(0) scale(1); }
-  70%  { transform: translateY(-5px) scale(1.08); }
-  100% { transform: translateY(0) scale(1); }
-}
-
 :root {
   --x-color: #2d6a8c;
   --o-color: #dd6688;
+}
+
+/* ---- Match strip ----
+ * The in-game header for every TTT surface: two player cards with a centre
+ * slot. Online (3×3 + 9×9) shows avatar + mark + name per player and a
+ * head-to-head scoreboard; the offline hotseat pages show mark + generic
+ * label with a plain "vs" (a shared device has no per-player identity, so no
+ * avatars / record). One markup, built by ticTacToe/matchStrip.js, rendered
+ * on all four pages (CLAUDE.md "same mechanism = same code"). Lives here
+ * because index.css is the one stylesheet every TTT page loads. Online
+ * avatars reuse the shared `.avatar` identicon tile (common.css); X/O marks
+ * use the game-only `--x-color` / `--o-color` exception above. */
+.match-strip {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.player-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 10px;
+  background: var(--surface-color);
+}
+.player-card .avatar { flex: 0 0 auto; }
+/* Name takes the remaining width and truncates with an ellipsis; avatar and
+ * mark stay fixed-size beside it. */
+.pc-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Opponent name while the profile fetch is in flight — muted italic so it
+ * reads as transient, matching the loading treatment used elsewhere. */
+.pc-name-loading {
+  color: var(--muted-color);
+  font-weight: 400;
+  font-style: italic;
+}
+.pc-mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+.pc-mark.x { background: var(--x-color); }
+.pc-mark.o { background: var(--o-color); }
+
+/* Active player: the card's edge turns secondary (a quiet 1px pink border,
+ * no ring) and its X/O mark bounces — the "jumping X/O" turn cue anchored to
+ * the player. The border doubles as the static cue when the bounce is
+ * disabled under prefers-reduced-motion. */
+.player-card.active {
+  border-color: var(--secondary-color);
+}
+/* A short burst (3 hops ≈ 2s), not a constant loop — the strip rebuilds on
+ * each turn change, so the animation restarts fresh when it becomes this
+ * player's turn and then settles. Draws the eye without nagging. */
+.player-card.active .pc-mark {
+  animation: pc-mark-bounce 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) 3;
+}
+@keyframes pc-mark-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  28%      { transform: translateY(-4px) scale(1.15); }
+  50%      { transform: translateY(0) scale(1); }
+  66%      { transform: translateY(-2px) scale(1.06); }
+}
+
+/* Empty opponent seat while waiting (online only): a dashed card with a
+ * pulsing dot, so "waiting" reads distinctly instead of the header looking
+ * mid-game. */
+.player-card.waiting {
+  justify-content: center;
+  border-style: dashed;
+  background: transparent;
+  color: var(--muted-color);
+  font-size: 12px;
+}
+.pc-wait-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--secondary-color);
+  animation: pc-wait-pulse 1.3s ease-in-out infinite;
+}
+@keyframes pc-wait-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50%      { opacity: 1; transform: scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-card.active .pc-mark,
+  .pc-wait-dot { animation: none; }
+}
+
+/* Centre: online shows the head-to-head scoreboard (yours : theirs, draw
+ * count below) or a plain "VS" for a new pair; offline always shows "VS".
+ * Tabular digits so the score doesn't reflow as the tally ticks up. */
+.match-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 4px;
+}
+.mc-vs {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+}
+.mc-score {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-color);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.mc-draws {
+  font-size: 9px;
+  color: var(--muted-color);
 }
 
 .grid {
@@ -92,8 +182,8 @@ body {
 /* While waiting for an opponent the match strip shows its empty "waiting"
  * seat; dim the board so that state reads as distinct from live play (the
  * board isn't interactive without a peer anyway). Pure CSS off the waiting
- * card's presence — offline pages never render a `.player-card`, so they're
- * unaffected. */
+ * card's presence — offline pages render player cards but never a
+ * `.player-card.waiting` (no opponent to wait for), so they're unaffected. */
 body:has(.player-card.waiting) .grid {
   opacity: 0.55;
   transition: opacity 0.2s ease;

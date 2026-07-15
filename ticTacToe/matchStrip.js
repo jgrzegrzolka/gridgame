@@ -93,15 +93,17 @@ function avatarEl(seed) {
 }
 
 /**
- * @param {{ side: 'you'|'opp', active: boolean, seed: string|null, name: string, nameLoading?: boolean, role: 'X'|'O'|null }} o
+ * @param {{ side: 'you'|'opp'|'x'|'o', active: boolean, seed?: string|null, name: string, nameLoading?: boolean, role: 'X'|'O'|null }} o
  */
 function playerCard(o) {
   // One row: [avatar] [mark] [name]. Nothing sits beside the X/O, so a single
   // line keeps the card short (better on phones) instead of stacking the name
-  // over the mark.
+  // over the mark. Online cards lead with the player's identicon; the offline
+  // hotseat has no per-player identity, so it passes no seed and the card is
+  // just [mark] [label].
   const card = document.createElement('div');
   card.className = `player-card ${o.side}` + (o.active ? ' active' : '');
-  card.appendChild(avatarEl(o.seed));
+  if (o.seed) card.appendChild(avatarEl(o.seed));
   if (o.role === 'X' || o.role === 'O') {
     const mark = document.createElement('span');
     mark.className = 'pc-mark ' + o.role.toLowerCase();
@@ -208,4 +210,34 @@ export function renderMatchStrip(ctx) {
     nameLoading: loading,
     role: otherRole(myRole),
   }));
+}
+
+/**
+ * Offline (hotseat) turn strip: two fixed cards, X and O, with generic labels
+ * and no avatar / record (a shared device has no per-player identity). The
+ * active player's card highlights and its mark bounces, same visual language
+ * as the online strip.
+ *
+ * @param {{ root: HTMLElement | null, active: 'X'|'O'|null, t: (key: string, fallback: string) => string }} ctx
+ */
+export function renderOfflineStrip(ctx) {
+  const { root, active, t } = ctx;
+  if (!root) return;
+  root.replaceChildren();
+  root.appendChild(playerCard({ side: 'x', active: active === 'X', name: t('ttt.playerX', 'Player X'), role: 'X' }));
+  root.appendChild(centerCell(null, t)); // no head-to-head record offline → plain "vs"
+  root.appendChild(playerCard({ side: 'o', active: active === 'O', name: t('ttt.playerO', 'Player O'), role: 'O' }));
+}
+
+/**
+ * Which mark's turn it is for the offline strip, or null when the game is over
+ * (or not started) so neither card is marked active. Pure — unit-tested.
+ *
+ * @param {{ currentPlayer?: string, winner?: unknown, draw?: unknown, gaveUp?: unknown } | null | undefined} game
+ * @returns {'X'|'O'|null}
+ */
+export function offlineActive(game) {
+  if (!game) return null;
+  if (game.winner || game.draw || game.gaveUp) return null;
+  return game.currentPlayer === 'X' || game.currentPlayer === 'O' ? game.currentPlayer : null;
 }

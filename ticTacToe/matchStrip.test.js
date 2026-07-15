@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { describeMatchStrip, formatRecord, otherRole } from './matchStrip.js';
+import { describeMatchStrip, formatRecord, otherRole, offlineActive } from './matchStrip.js';
 
 // ---- describeMatchStrip ----
 
@@ -116,4 +116,23 @@ test('otherRole: swaps X and O, null for anything else', () => {
   assert.equal(otherRole('O'), 'X');
   assert.equal(otherRole(null), null);
   assert.equal(otherRole(undefined), null);
+});
+
+// ---- offlineActive ----
+
+test('offlineActive: returns the current player mid-game', () => {
+  assert.equal(offlineActive({ currentPlayer: 'X', winner: null, draw: false }), 'X');
+  assert.equal(offlineActive({ currentPlayer: 'O', winner: null, draw: false }), 'O');
+});
+
+test('offlineActive: null once the game is over (winner / draw / gaveUp)', () => {
+  assert.equal(offlineActive({ currentPlayer: 'X', winner: 'X' }), null);
+  assert.equal(offlineActive({ currentPlayer: 'O', draw: true }), null);
+  assert.equal(offlineActive({ currentPlayer: 'X', gaveUp: true }), null);
+});
+
+test('offlineActive: null for no game or an unset current player', () => {
+  assert.equal(offlineActive(null), null);
+  assert.equal(offlineActive(undefined), null);
+  assert.equal(offlineActive({ currentPlayer: null }), null);
 });
