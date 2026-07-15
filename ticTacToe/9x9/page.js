@@ -25,7 +25,7 @@ import { decideIsHost, forgetHostRoom, rememberHostRoom } from '../../flags/tttH
 import { bumpShare, pushEngagementBlob } from '../../flags/engagementCounters.js';
 import { ensureProfile } from '../../flags/autoProfile.js';
 import { fetchProfile } from '../../flags/profileFetch.js';
-import { displayNickname } from '../../flags/nickname.js';
+import { renderMatchStrip } from '../matchStrip.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 /** @typedef {import('../../flags/ultimateTicTacToe.js').UltimateGameState} UltimateGameState */
@@ -84,14 +84,6 @@ function runOnline(countries) {
    * re-renders don't replay it. */
   /** @type {UltimateGameState | null} */
   let prevGame = null;
-  /** Tracks the rendered status-line state ('your-turn' / 'opponents-turn' /
-   * 'waiting' / 'empty') so we can pulse the line on transitions between
-   * meaningful states — opponent moved, you moved, opponent joined, etc.
-   * Skipping the pulse on the initial render keeps the page from flashing
-   * when the user just arrived. */
-  /** @type {string | null} */
-  let lastStatusKey = null;
-
   /** @type {{ code: string, intent: 'create' | 'join' } | null} */
   let activeRoom = null;
   /** Sticky across reconnects and across full page reloads via
@@ -123,9 +115,8 @@ function runOnline(countries) {
   const errorEl = document.getElementById('lobby-error');
   const roomCodeEl = document.getElementById('room-code');
   const shareBtnEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('share-link'));
-  const roleBadgeEl = document.getElementById('role-badge');
+  const matchStripEl = document.getElementById('match-strip');
   const statusEl = document.getElementById('status-line');
-  const matchupOpponentEl = document.getElementById('matchup-opponent');
   const gridBodyEl = document.getElementById('grid-body');
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
@@ -235,6 +226,10 @@ function runOnline(countries) {
     if (gameEl) gameEl.hidden = false;
     if (roomCodeEl) roomCodeEl.textContent = code;
     renderShareButton();
+    // Paint the strip now (your card + an empty "waiting for player" seat) so
+    // the header is populated the instant the room opens, before the socket
+    // connects and the first server state arrives.
+    paintStrip();
     setStatusKey('ttt.connecting', 'Connecting…');
     // Build the empty 9×9 grid structure now so the full layout is
     // on-screen before the WebSocket connects — header text is filled
@@ -288,13 +283,12 @@ function runOnline(countries) {
         state.statusOverride.params,
       );
     } else {
-      renderRole();
       renderGrid();
       renderStatus();
     }
     maybeFetchOpponent();
     maybeFetchPair();
-    renderMatchupOpponent();
+    paintStrip();
     for (const effect of effects) {
       if (effect.type === 'shake') shakeCell(effect.bigRow, effect.bigCol, effect.smallRow, effect.smallCol);
       else if (effect.type === 'gave-up') lastGaveUpByMe = effect.byMe;
@@ -325,12 +319,11 @@ function runOnline(countries) {
     if (gridBodyEl) gridBodyEl.innerHTML = '';
     if (roomCodeEl) roomCodeEl.textContent = '-----';
     renderShareButton();
-    lastStatusKey = null;
     prevGame = null;
     opponentNickname = undefined;
     pairRecord = null;
     resultSubmittedForGame = false;
-    if (matchupOpponentEl) matchupOpponentEl.replaceChildren();
+    if (matchStripEl) matchStripEl.replaceChildren();
   }
 
   // ---- Grid ----
@@ -590,12 +583,19 @@ function runOnline(countries) {
   }
 
   // ---- Renderers ----
-  function renderRole() {
-    if (!roleBadgeEl) return;
-    const { myRole } = state;
-    if (!myRole) { roleBadgeEl.textContent = '?'; return; }
-    roleBadgeEl.textContent = myRole;
-    roleBadgeEl.className = 'turn-badge ' + myRole.toLowerCase();
+  /** Repaint the match strip (both player cards + the centre scoreboard)
+   * from the current state + fetched opponent/record. Closes over the local
+   * game state; the shared builder lives in ../matchStrip.js so the 3×3 and
+   * 9×9 pages render an identical strip. */
+  function paintStrip() {
+    renderMatchStrip({
+      root: matchStripEl,
+      state,
+      deviceId,
+      opponentNickname,
+      pairRecord,
+      t,
+    });
   }
 
   /**
@@ -701,36 +701,25 @@ function runOnline(countries) {
     if (!statusEl) return;
     const { game, myRole, peerPresent } = state;
     statusEl.className = 'status-line';
-    /** @type {string} */
-    let key;
     if (!game) {
       statusEl.textContent = t('ttt.connecting', 'Connecting…');
-      key = 'connecting';
     } else if (game.winner || game.draw || game.gaveUp) {
       statusEl.textContent = '';
-      key = 'empty';
     } else if (!peerPresent) {
-      statusEl.textContent = t('ttt.waitingShareCode', 'Waiting for opponent… share the code above');
-      statusEl.classList.add('peer-missing');
-      key = 'waiting';
-    } else if (game.currentPlayer === myRole) {
-      statusEl.textContent = t('ttt.yourTurn', 'Your turn');
-      statusEl.classList.add('your-turn');
-      key = 'your-turn';
+      // Waiting is fully carried by the match strip's empty opponent seat
+      // ("Waiting for player…"), so the status line stays empty here — no
+      // redundant waiting/share text.
+      statusEl.textContent = '';
     } else {
-      statusEl.textContent = t('ttt.opponentsTurn', "Opponent's turn");
-      key = 'opponents-turn';
+      // Whose-turn now lives on the match-strip cards (the active card lifts,
+      // its mark bounces). The status line drops to a screen-reader-only live
+      // region: the visible "Your turn / Opponent's turn" text is gone, but
+      // AT still announces the change on each transition.
+      statusEl.textContent = game.currentPlayer === myRole
+        ? t('ttt.yourTurn', 'Your turn')
+        : t('ttt.opponentsTurn', "Opponent's turn");
+      statusEl.classList.add('sr-only');
     }
-    // Pulse on meaningful state transitions — your-turn ↔ opponents-turn is
-    // the main case (replaces the bounce the old turn-badge gave us below
-    // the grid). Skip the initial render (lastStatusKey === null) and any
-    // transition into 'empty' so the line doesn't pulse at game-end.
-    if (lastStatusKey !== null && key !== 'empty' && key !== lastStatusKey) {
-      statusEl.classList.remove('pulse');
-      void statusEl.offsetWidth;
-      statusEl.classList.add('pulse');
-    }
-    lastStatusKey = key;
     repaintStatusForLang = renderStatus;
   }
 
@@ -876,7 +865,7 @@ function runOnline(countries) {
         draws: outcome === 'draw' ? 1 : 0,
       };
     }
-    renderMatchupOpponent();
+    paintStrip();
   }
 
   /** Mirror of the 3×3 page — see ../page.js. */
@@ -887,7 +876,7 @@ function runOnline(countries) {
     fetchProfile({ deviceId: state.peerId }).then((r) => {
       opponentNickname = r.ok ? r.nickname : null;
       opponentFetchInFlight = false;
-      renderMatchupOpponent();
+      paintStrip();
     });
   }
 
@@ -899,59 +888,15 @@ function runOnline(countries) {
     fetchTttPair({ deviceId, opponentId: state.peerId }).then((r) => {
       pairRecord = r.ok ? r.row.m9x9 : null;
       pairFetchInFlight = false;
-      renderMatchupOpponent();
+      paintStrip();
     });
-  }
-
-  function renderMatchupOpponent() {
-    if (!matchupOpponentEl) return;
-    matchupOpponentEl.replaceChildren();
-    if (!state.peerId) return;
-
-    const vs = document.createElement('span');
-    vs.className = 'muted';
-    vs.textContent = t('ttt.matchupVs', 'vs');
-    const name = document.createElement('span');
-    // Name slot shows a loading label while the profile fetch is in
-    // flight (opponentNickname === undefined) — see ../page.js for the
-    // mirror with the full rationale.
-    if (opponentNickname === undefined) {
-      name.className = 'matchup-name matchup-name-loading';
-      name.textContent = t('ttt.matchupOpponentLoading', 'loading…');
-    } else {
-      name.className = 'matchup-name';
-      name.textContent = displayNickname(state.peerId, opponentNickname);
-    }
-    matchupOpponentEl.append(vs, name);
-
-    // Suffix after the name (loading label OR record OR nothing) —
-    // see ../page.js for the mirror with the full rationale.
-    if (opponentNickname === undefined) {
-      // name slot already shows the unified loading state
-    } else if (pairFetchInFlight) {
-      const loading = document.createElement('span');
-      loading.className = 'matchup-record matchup-record-loading';
-      loading.textContent = t('ttt.matchupRecordLoading', 'loading…');
-      matchupOpponentEl.append(loading);
-    } else if (pairRecord && (pairRecord.wins | pairRecord.losses | pairRecord.draws) > 0) {
-      const record = document.createElement('span');
-      record.className = 'matchup-record';
-      let inner = `${pairRecord.wins}:${pairRecord.losses}`;
-      if (pairRecord.draws > 0) {
-        const drawKey = pairRecord.draws === 1 ? 'ttt.matchupDraw' : 'ttt.matchupDraws';
-        const drawLabel = t(drawKey, pairRecord.draws === 1 ? 'draw' : 'draws');
-        inner += `, ${pairRecord.draws} ${drawLabel}`;
-      }
-      record.textContent = `(${inner})`;
-      matchupOpponentEl.append(record);
-    }
   }
 
   /**
    * Soft language switch: re-translate every text surface this game
    * owns. The 9×9 grid headers + every cell `<img>.alt` + status line +
-   * picker categories (if open) + final score (if showing) all re-derive
-   * from the current cache.
+   * match strip + picker categories (if open) + final score (if showing)
+   * all re-derive from the current cache.
    */
   function refreshI18nForGame() {
     const { game } = state;
@@ -960,6 +905,9 @@ function runOnline(countries) {
       renderGrid();
     }
     if (repaintStatusForLang) repaintStatusForLang();
+    // The strip carries translated bits (your "You" label, the "waiting for
+    // player" seat, "VS", the draw word) — repaint it against the new cache.
+    paintStrip();
     if (!pickerEl.hidden && activeCell && game) {
       const { bigRow, bigCol } = activeCell;
       const rowCat = /** @type {UltimateGameState} */ (game).puzzle.rows[bigRow];
@@ -976,7 +924,6 @@ function runOnline(countries) {
     if (resultEl) resultEl.hidden = true;
     if (gridBodyEl) gridBodyEl.innerHTML = '';
     gridBuilt = false;
-    lastStatusKey = null;
     lastGaveUpByMe = null;
     prevGame = null;
     document.body.classList.remove('game-over');
@@ -984,6 +931,7 @@ function runOnline(countries) {
     populateGridLabels();
     renderGrid();
     renderStatus();
+    paintStrip();
   }
 
   if (giveUpEl) {

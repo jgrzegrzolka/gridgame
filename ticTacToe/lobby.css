@@ -12,95 +12,158 @@
  * Party's lobby renders the identical room header. TTT reuses that shared
  * rule verbatim — code flush left, share icon immediately to its right — so
  * no TTT-specific layout override here. */
-.role-line {
+
+/* ---- Match strip ----
+ * The in-game header for both online TTT variants: two facing player cards
+ * with a centre scoreboard. Replaces the old stacked "You are X · vs Opp
+ * (2:1)" role line PLUS the floating "Opponent's turn" status text —
+ * identity and whose-turn now read from one row. The markup is built by
+ * ticTacToe/matchStrip.js and rendered identically on the 3×3 and 9×9 pages
+ * (CLAUDE.md "same mechanism = same code"). Avatars reuse the shared
+ * `.avatar` identicon tile (common.css); X/O marks use the game-only
+ * `--x-color` / `--o-color` exception defined in index.css. */
+.match-strip {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.player-card {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  margin: 0 0 4px;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 10px;
+  background: var(--surface-color);
 }
-.role-line .muted { color: var(--muted-color); }
-/* Inline matchup affordance — "vs <Opponent> W:L" (with ", N draws"
- * appended when draws > 0) sits right next to the role badge, so the
- * role line reads "You are O vs Alice 3:1" or "You are O vs Alice 1:0,
- * 2 draws". Populated client-side once peerId is known (welcome /
- * peer-joined); empty content (no peer yet, or fetch still pending)
- * means the span collapses and the role line reads as it always did.
- * Numbers source from the `tttPairs` Cosmos row Feature G ships — see
- * `flags/tttPairFetch.js` for the read and `renderMatchupOpponent` in
- * the TTT page.js files for the paint. */
-.matchup-opponent {
-  /* inline-flex + align-items center keeps the text vertically centred
-   * with the 28×28 badge — plain inline text sits on its own baseline,
-   * which lands a few pixels below the badge's centre. */
+.player-card .avatar { flex: 0 0 auto; }
+/* Name takes the remaining width and truncates with an ellipsis; avatar and
+ * mark stay fixed-size beside it. */
+.pc-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Opponent name while the profile fetch is in flight — muted italic so it
+ * reads as transient, matching the loading treatment used elsewhere. */
+.pc-name-loading {
+  color: var(--muted-color);
+  font-weight: 400;
+  font-style: italic;
+}
+.pc-mark {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  /* Same white glyph on a coloured chip as the offline `.turn-badge`. */
+  color: #fff;
+}
+.pc-mark.x { background: var(--x-color); }
+.pc-mark.o { background: var(--o-color); }
+
+/* Active player: the card's edge turns secondary (a quiet 1px pink border,
+ * no ring) and its X/O mark bounces — the "jumping X/O" turn cue anchored to
+ * the person, which replaces the old status-line text + pulse. The border
+ * doubles as the static cue when the bounce is disabled under
+ * prefers-reduced-motion. */
+.player-card.active {
+  border-color: var(--secondary-color);
+}
+/* A short burst (3 hops ≈ 2s), not a constant loop — the strip rebuilds on
+ * each turn change, so the animation restarts fresh when it becomes this
+ * player's turn and then settles. Draws the eye without nagging. */
+.player-card.active .pc-mark {
+  animation: pc-mark-bounce 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) 3;
+}
+@keyframes pc-mark-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  28%      { transform: translateY(-4px) scale(1.15); }
+  50%      { transform: translateY(0) scale(1); }
+  66%      { transform: translateY(-2px) scale(1.06); }
+}
+
+/* Empty opponent seat while waiting: a dashed card with a pulsing dot, so
+ * "waiting" reads distinctly instead of the header looking mid-game. */
+.player-card.waiting {
+  justify-content: center;
+  border-style: dashed;
+  background: transparent;
+  color: var(--muted-color);
+  font-size: 12px;
+}
+.pc-wait-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--secondary-color);
+  animation: pc-wait-pulse 1.3s ease-in-out infinite;
+}
+@keyframes pc-wait-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50%      { opacity: 1; transform: scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-card.active .pc-mark,
+  .pc-wait-dot { animation: none; }
+}
+
+/* Centre: head-to-head scoreboard (yours : theirs, draw count below) or a
+ * plain "VS" when the pair has no games on record yet. Tabular digits so the
+ * score doesn't reflow as the tally ticks up across rematches. */
+.match-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 4px;
+}
+.mc-vs {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--muted-color);
 }
-/* Opponent's name pops against the muted "vs" and the muted record
- * digits — primary colour, weight 500. (Was accidentally dropped in
- * #548 when the rule got replaced with a since-removed `cursor: help`
- * variant; restoring it here so the role line reads the way it did
- * before that PR.) */
-.matchup-opponent .matchup-name {
-  color: var(--link-color);
-  font-weight: 500;
-}
-/* Head-to-head record `(W:L)` or `(W:L, N draws)`. Painted by
- * `renderMatchupOpponent` once `fetchTttPair` resolves AND at least
- * one game is on record. Same primary colour + 500 weight as the
- * opponent name so the parenthetical reads as part of the same
- * identity block — not a quiet caption. Tabular digits so the trio
- * doesn't reflow as counters tick up. */
-.matchup-opponent .matchup-record {
-  color: var(--link-color);
-  font-weight: 500;
+.mc-score {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-color);
   font-variant-numeric: tabular-nums;
+  line-height: 1.2;
 }
-/* While the pair fetch is in flight, paint a quieter "loading…" label
- * in the record slot so a slow API call doesn't leave the role line
- * looking like it forgot the record (rule: every long-running API
- * surface gets a loading label). Italic + muted + normal weight so it
- * visibly reads as transient state rather than a real value (overrides
- * the primary / 500-weight defaults from .matchup-record above). */
-.matchup-opponent .matchup-record-loading {
+.mc-draws {
+  font-size: 9px;
   color: var(--muted-color);
-  font-weight: 400;
-  font-style: italic;
 }
-/* Same loading style on the opponent NAME slot while the profile fetch
- * is in flight — otherwise `displayNickname` falls back to the
- * deterministic default (Brave Falcon-style) and the role line flashes
- * the wrong name for a beat before snapping to the real one once the
- * fetch resolves. Painted by `renderMatchupOpponent` when
- * `opponentNickname === undefined`. */
-.matchup-opponent .matchup-name-loading {
-  color: var(--muted-color);
-  font-weight: 400;
-  font-style: italic;
-}
+
 .status-line {
+  /* Sits inline at the end of the room-code line, so the transient
+   * connection messages ("Connecting…" / "Connection error" / reconnect)
+   * share that row instead of occupying their own line and leaving an empty
+   * gap between the match strip and the board. Secondary so they read as an
+   * accent. Whose-turn strings are set here too (as an aria-live region for
+   * screen readers) but carry `.sr-only`, so they never paint visibly — the
+   * match strip is the visual turn cue. */
   font-size: 14px;
-  /* Brand secondary so the neutral "Waiting for opponent… share the code
-   * above" / "Connecting…" / "Opponent's turn" messages read as an
-   * accent. State-specific overrides below (.peer-missing → red,
-   * .your-turn → primary) still win on their respective states. */
   color: var(--secondary-color);
-  margin: 0 0 12px;
-  min-height: 20px;
-}
-.status-line.your-turn { color: var(--link-color); font-weight: 500; }
-/* Pulse on meaningful state transitions (e.g. your-turn ↔ opponents-turn).
- * Replaces the bouncy turn-badge that used to live below the grid — now
- * the cue happens on the same line that already names whose turn it is. */
-.status-line.pulse {
-  animation: status-pulse 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-@keyframes status-pulse {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.08); }
-  100% { transform: scale(1); }
+  margin-left: 8px;
 }
 
 /* `.result-link` (link-styled rematch button) lives in common.css now —
