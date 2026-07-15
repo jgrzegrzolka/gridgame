@@ -9,14 +9,16 @@
  * Values can be NEGATIVE, unlike every other metric so far, so the schema test
  * checks `Number.isFinite`, not `>= 0`.
  *
- * DATA CONTRACT (`absence: 'unknown'`, the beerPerCapita pattern). The source
- * is a country-level climatology, so it covers ~234 sovereign states and
- * territories but NOT the sub-national parts (the UK home nations, the Spanish
- * regions) or a few uninhabited / polar places with no country row (Antarctica,
- * Bouvet, Clipperton). Those real places have no figure: their value is
- * genuinely UNKNOWN, not zero (0 C is a real temperature, not "no data"), so
- * they are left out of `values` and read "no data" on a temperature cell. The
- * metricDataGap guard blocks exactly the places we cannot rank.
+ * DATA CONTRACT (dense: every real place carries a value). The source is a
+ * country-level climatology covering ~234 sovereign states and territories.
+ * The sub-national parts (the UK home nations, the Spanish regions) and a few
+ * uninhabited / polar places with no country row (Antarctica, Bouvet,
+ * Clipperton) are not in that table, so their figures are hand-filled in FILLS
+ * below from published climate normals. Temperature is a physical fact, so
+ * unlike a survey metric every real place genuinely has one: filling them keeps
+ * the metric dense, so the TTT no-data guard blocks only org flags (EU/UN), not
+ * a real place a player would expect to rank. Values may be negative (0 C is a
+ * real reading); only non-places (category 'other') carry no value.
  *
  * SOURCE. World Bank Climate Change Knowledge Portal, observed annual mean
  * near-surface air temperature, 1991-2020 climate normal, as compiled in the
@@ -76,6 +78,28 @@ const RAW_TEMP = {
   ws: 27.58, xk: 10.02, ye: 25.54, za: 18.23, zm: 22.23, zw: 21.9,
 };
 
+/**
+ * Hand-filled climate normals for the real places the country-level source
+ * table omits: sub-national parts (UK home nations, Spanish regions) and
+ * territories / polar islands with no country row. Temperature is a physical
+ * fact, so these genuinely have a value; filling them makes the metric dense
+ * (every real place ranks). Values are published/estimated annual means in C,
+ * approximate to one decimal (exact decimals don't affect rankings, only the
+ * band each place lands in). Keyed by our flag code.
+ * @type {Record<string, number>}
+ */
+const FILLS = {
+  // Sub-national parts of already-covered countries (own climate, near parent)
+  'gb-eng': 9.7, 'gb-sct': 7.5, 'gb-wls': 9.5, 'gb-nir': 9.3,
+  'es-ct': 15.0, 'es-pv': 13.5, 'es-ga': 13.5, ic: 21.0, ax: 5.5,
+  // Warm territories
+  gf: 26.5, gp: 26.5, mq: 26.5, yt: 26.0, re: 22.0, bl: 27.0,
+  hk: 23.5, mo: 23.0, tw: 23.0, eh: 22.0, cc: 27.0,
+  'sh-ac': 26.0, 'sh-hl': 20.0, cp: 27.5,
+  // Cold floor
+  fk: 5.5, 'sh-ta': 14.0, gs: 2.0, bv: -1.0, aq: -49.0,
+};
+
 function main() {
   const countries = JSON.parse(
     readFileSync(join(REPO, 'flags', 'countries.json'), 'utf-8'),
@@ -84,15 +108,28 @@ function main() {
     countries.filter((c) => c.category !== 'other').map((c) => c.code),
   );
 
+  // Source table (RAW_TEMP) + hand-filled parts / territories (FILLS) together
+  // cover every real place: the metric is dense.
+  const ALL_TEMP = { ...RAW_TEMP, ...FILLS };
+
   /** @type {Record<string, number>} */
   const values = {};
   const notReal = [];
-  for (const [code, t] of Object.entries(RAW_TEMP)) {
+  for (const [code, t] of Object.entries(ALL_TEMP)) {
     if (!realCodes.has(code)) {
       notReal.push(code);
       continue;
     }
     values[code] = t;
+  }
+
+  // Dense contract: no real place may be left without a value.
+  const missing = [...realCodes].filter((code) => !(code in values));
+  if (missing.length) {
+    throw new Error(
+      `temperature is meant to be dense but ${missing.length} real place(s) ` +
+        `have no value: ${missing.join(', ')}`,
+    );
   }
 
   const sorted = {};
@@ -105,17 +142,17 @@ function main() {
     // 'decimal1' -> one decimal place (30.4, -3.8). formatValue handles the
     // negative sign; the stored 2-decimal precision keeps the ranking exact.
     format: 'decimal1',
-    // absence: 'unknown' -> a real place missing from `values` (sub-national
-    // parts and the polar / uninhabited places with no country row) is genuinely
-    // unknown, NOT 0 (0 C is a real temperature). It reads "no data".
-    absence: 'unknown',
+    // Dense: no `absence` field. Every real place has a value (the source
+    // table plus the FILLS hand-fills above), so a missing value means a
+    // non-place (org flag). Values may be negative (0 C is a real reading).
     source:
       `World Bank Climate Change Knowledge Portal, observed annual mean ` +
       `near-surface air temperature, 1991-2020 climate normal, as compiled in ` +
       `the Wikipedia "List of countries by average yearly temperature" table. ` +
       `Degrees Celsius, one decimal; values may be negative. ~234 countries and ` +
-      `territories covered; sub-national parts and a few polar / uninhabited ` +
-      `places with no country row carry no value (absence: unknown)`,
+      `territories from the table; sub-national parts and a few polar / ` +
+      `uninhabited places with no country row are hand-filled from published ` +
+      `climate normals so every real place carries a value (dense)`,
     year: YEAR,
     values: sorted,
   };
@@ -125,8 +162,7 @@ function main() {
 
   console.log(`Wrote ${outPath}`);
   console.log(
-    `  values: ${Object.keys(sorted).length} (covered real places) | ` +
-      `absence: unknown for the rest`,
+    `  values: ${Object.keys(sorted).length} (all real places; dense)`,
   );
   if (notReal.length) {
     console.error(`  temp codes not in countries.json (dropped): ${notReal.join(', ')}`);

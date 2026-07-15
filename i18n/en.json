@@ -591,7 +591,10 @@
       "superlativeMeat": "Meat consumption per capita: most",
       "superlativeBorders": "Bordering countries: most",
       "superlativeOliveOil": "Olive oil production: most",
-      "superlativeHoney": "Honey production: most"
+      "superlativeHoney": "Honey production: most",
+      "superlativeTemperature": "Average temperature: hottest & coldest",
+      "superlativeHappiness": "Happiness score: happiest",
+      "superlativeCorruption": "Government integrity: most & least corrupt"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -624,7 +627,7 @@
       "superlativeBorders": "Borders",
       "superlativeOliveOil": "Olive oil",
       "superlativeHoney": "Honey",
-      "superlativeCorruption": "Corruption",
+      "superlativeCorruption": "Integrity",
       "superlativeTemperature": "Temperature",
       "superlativeHappiness": "Happiness"
     },
@@ -666,6 +669,11 @@
     "hintMostBorders": "Most bordering countries",
     "hintMostOliveOil": "Largest olive oil production",
     "hintMostHoney": "Largest honey production",
+    "hintMostTemperature": "Hottest",
+    "hintLeastTemperature": "Coldest",
+    "hintMostHappiness": "Happiest",
+    "hintMostCorruption": "Least corrupt",
+    "hintLeastCorruption": "Most corrupt",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
@@ -785,6 +793,32 @@
       "100": "under 100 people/km²",
       "30": "under 30 people/km²",
       "10": "under 10 people/km²"
+    }
+  },
+  "temperature": {
+    "atLeast": {
+      "25": "over 25 °C",
+      "20": "over 20 °C",
+      "10": "over 10 °C"
+    },
+    "atMost": {
+      "10": "under 10 °C",
+      "5": "under 5 °C",
+      "0": "under 0 °C"
+    }
+  },
+  "happiness": {
+    "atLeast": {
+      "7": "over 7/10",
+      "6": "over 6/10",
+      "5": "over 5/10"
+    }
+  },
+  "corruption": {
+    "atLeast": {
+      "50": "over 50/100",
+      "60": "over 60/100",
+      "70": "over 70/100"
     }
   },
   "gdp": {
@@ -990,6 +1024,9 @@
     "population": "Population",
     "area": "Land area",
     "density": "Population density",
+    "temperature": "Average temperature",
+    "happiness": "Happiness score",
+    "corruption": "Government integrity (less corrupt)",
     "gdp": "GDP",
     "gdpPerCapita": "GDP per capita",
     "coffee": "Coffee production",

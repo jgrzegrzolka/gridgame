@@ -25,6 +25,9 @@ import meatPerCapita from '../metrics/meatPerCapita.json' with { type: 'json' };
 import borders from '../metrics/borders.json' with { type: 'json' };
 import oliveOil from '../metrics/oliveOil.json' with { type: 'json' };
 import honey from '../metrics/honey.json' with { type: 'json' };
+import temperature from '../metrics/temperature.json' with { type: 'json' };
+import happiness from '../metrics/happiness.json' with { type: 'json' };
+import corruption from '../metrics/corruption.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 import { lookalikesOf } from '../quiz.js';
 
@@ -378,3 +381,33 @@ export const oliveOilRound = createSuperlativeRound(createMetric(oliveOil, []), 
 // producers only. Locked to 'most': "biggest honey producer" (China, ~a quarter
 // of world output) is the good question; "smallest producer" is obscure.
 export const honeyRound = createSuperlativeRound(createMetric(honey, []), 'superlative-honey', { direction: 'most' });
+
+// Temperature: dense and two-directional (no direction lock), like density /
+// elevation. Both extremes are good questions: hottest (Burkina Faso, the
+// Gulf / Sahel) and coldest (Antarctica, Greenland, the sub-zero floor). The
+// metric carries negatives, which the round handles fine (plain-subtraction
+// sort; the only sign-sensitive spot, the GAP_RATIO fairness gate, degrades
+// gracefully, never wrong).
+export const temperatureRound = createSuperlativeRound(createMetric(temperature, []), 'superlative-temperature');
+
+// Happiness instance: World Happiness Report ladder score, id
+// 'superlative-happiness'. Sparse absence:'unknown' survey (Gallup reaches ~147
+// countries), so the round ranks the covered places only: raw
+// createMetric(happiness, []) needs no zero-filter because the round's
+// metric.has check already drops the ~115 unsurveyed places (they are absent
+// from values, not 0). Locked to 'most': "the happiest country" (Finland, the
+// Nordics) is the good, tonally-safe question; a "least happy" set surfaces
+// conflict / poverty states, a poverty quiz not a happiness one.
+export const happinessRound = createSuperlativeRound(createMetric(happiness, []), 'superlative-happiness', { direction: 'most' });
+
+// Corruption / "Government integrity" instance: Transparency International CPI
+// (0-100, higher = cleaner), id 'superlative-corruption'. Sparse
+// absence:'unknown' (TI scores ~181 states), so raw createMetric ranks the
+// scored places only (the round's metric.has drops the rest). TWO-DIRECTIONAL
+// (unlike the filter / TTT surfaces, which stay clean-pole "integrity"): the
+// party round asks both "most corrupt" and "least corrupt" as direct questions,
+// which are the clearest possible trivia phrasings. The CPI orientation is
+// inverted at the HINT layer, not here: round 'most' = highest CPI = shown as
+// "Least corrupt"; round 'least' = lowest CPI = "Most corrupt" (see the
+// SUPERLATIVE_MODES entry in flagParty/page.js).
+export const corruptionRound = createSuperlativeRound(createMetric(corruption, []), 'superlative-corruption');

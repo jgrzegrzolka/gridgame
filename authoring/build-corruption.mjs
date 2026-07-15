@@ -87,7 +87,12 @@ function main() {
 
   const metric = {
     key: 'corruption',
-    label: 'Corruption Perceptions Index',
+    // Displayed as "Government integrity", the CLEAN pole of the index, so the
+    // high-is-good CPI scale reads intuitively on the game surfaces (a high
+    // "corruption" number meaning LESS corrupt is backwards). The code key stays
+    // `corruption`; the underlying data and `source` are Transparency
+    // International's CPI. See DATA_FEATURE.md Feature EJ.
+    label: 'Government integrity',
     unit: '/100',
     // 'plain' -> whole score (89, 9). The range is 0..100, integers only.
     format: 'plain',

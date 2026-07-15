@@ -67,13 +67,9 @@ attachMetrics(countries, {
   borders: borders.values,
   oliveOil: oliveOil.values,
   honey: honey.values,
-  // corruption + temperature + happiness are lens-only metrics (no attacher
-  // yet), so attachMetrics ignores these values; the lines keep the
-  // static-import guard satisfied for when a TTT axis lands. See the
-  // metrics.test.js "static-import site" guard.
-  corruption: corruption.values,
   temperature: temperature.values,
   happiness: happiness.values,
+  corruption: corruption.values,
 });
 
 export default class GameServer extends TicTacToeServer {

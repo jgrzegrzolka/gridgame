@@ -1775,13 +1775,14 @@ test('createMetric over corruption ranks the cleanest top, the most corrupt at t
   assert.equal(cpi.valueOf('so'), 9);
 });
 
-// ---- real temperature.json schema + the absence:'unknown' contract ----------
+// ---- real temperature.json schema + the dense contract ----------------------
 // The first metric whose values can be NEGATIVE (climate normals in Celsius),
-// so the numeric test checks Number.isFinite, not `>= 0`. Country-level
-// climatology covers ~234 places; sub-national parts and a few polar /
-// uninhabited places with no country row are the honest "unknown" gap.
+// so the numeric test checks Number.isFinite, not `>= 0`. Temperature is a
+// physical fact, so the metric is DENSE: the country-level table (~234 places)
+// plus hand-filled sub-national parts / territories / polar islands cover every
+// real place. Only org flags (category 'other') have no value.
 
-test('temperature is a valid, self-describing metric file with absence:unknown', () => {
+test('temperature is a valid, self-describing metric file (dense, no absence)', () => {
   assert.equal(TEMPERATURE.key, 'temperature');
   assert.equal(typeof TEMPERATURE.label, 'string');
   assert.equal(typeof TEMPERATURE.unit, 'string');
@@ -1790,8 +1791,10 @@ test('temperature is a valid, self-describing metric file with absence:unknown',
   assert.equal(typeof TEMPERATURE.source, 'string');
   assert.equal(typeof TEMPERATURE.year, 'number');
   assert.equal(typeof TEMPERATURE.values, 'object');
-  // Absence means "no country-level figure", not 0 (0 C is a real reading).
-  assert.equal(TEMPERATURE.absence, 'unknown');
+  // Dense metric: no `absence` hint (a missing value means a non-place, not
+  // an unknown real place). Filling every real place keeps the TTT no-data
+  // guard blocking only org flags.
+  assert.equal(TEMPERATURE.absence, undefined);
 });
 
 test('every temperature value is a finite number (negatives allowed)', () => {
@@ -1805,7 +1808,7 @@ test('every temperature value is a finite number (negatives allowed)', () => {
   assert.ok(sawNegative, 'expected some sub-zero climate normals');
 });
 
-test('temperature covers only real places, never orgs; the gap is genuine (absence:unknown)', () => {
+test('temperature is dense: every real place has a value, only orgs are absent', () => {
   const realCodes = new Set(COUNTRIES.filter((c) => c.category !== 'other').map((c) => c.code));
   for (const code of Object.keys(TEMPERATURE.values)) {
     assert.ok(realCodes.has(code), `temperature value for non-real place ${code}`);
@@ -1815,22 +1818,24 @@ test('temperature covers only real places, never orgs; the gap is genuine (absen
       assert.ok(!(c.code in TEMPERATURE.values), `org ${c.code} should have no temperature value`);
     }
   }
-  // Broad coverage, but deliberately not total.
+  // Dense: every real place carries a value so the TTT no-data guard blocks
+  // only org flags. Temperature is a physical fact, so this is honest (unlike a
+  // survey metric, no real place is a genuine "unknown").
   const covered = COUNTRIES.filter((c) => c.category !== 'other' && c.code in TEMPERATURE.values).length;
-  assert.ok(covered >= 220, `expected ~234 covered real places, got ${covered}`);
-  assert.ok(covered < realCodes.size, 'temperature must NOT be dense: some real places are the unknown gap');
-  // A country-level place is present; a sub-national part is the gap.
+  assert.equal(covered, realCodes.size, `every real place must have a temperature, got ${covered}/${realCodes.size}`);
+  // A country and a sub-national part are both present now.
   assert.ok('sg' in TEMPERATURE.values, 'Singapore (country) must be covered');
-  assert.ok(!('gb-wls' in TEMPERATURE.values), 'Wales (sub-national) is unknown, must be absent');
+  assert.ok('gb-wls' in TEMPERATURE.values, 'Wales (sub-national) must be filled');
 });
 
 test('createMetric over temperature ranks the hottest top and the coldest at the floor', () => {
   const temp = createMetric(TEMPERATURE, COUNTRIES);
-  // Burkina Faso is the hottest country-level place; Greenland is the coldest.
+  // Burkina Faso is the hottest place; Antarctica is the coldest now that the
+  // metric is dense (its hand-filled -49 sits below Greenland's -18.68).
   assert.equal(temp.topN('world', 1)[0].code, 'bf');
   assert.ok(/** @type {number} */ (temp.valueOf('bf')) > 30);
-  assert.equal(temp.bottomN('world', 1)[0].code, 'gl');
-  assert.ok(/** @type {number} */ (temp.valueOf('gl')) < -15);
+  assert.equal(temp.bottomN('world', 1)[0].code, 'aq');
+  assert.ok(/** @type {number} */ (temp.valueOf('aq')) < -40);
 });
 
 // ---- real happiness.json schema + the absence:'unknown' contract -----------

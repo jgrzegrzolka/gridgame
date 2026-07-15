@@ -98,9 +98,10 @@ export const METRIC_ICONS = {
   // falling below. Reads as "honey off the dipper", distinct from the olive-oil
   // cruet, the coffee cup, and the drink glasses.
   honey: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5v4"/><path d="M8.5 7.5h7l-.6 6.2a2.9 2.9 0 0 1-5.8 0z"/><path d="M9 10.5h6M9.4 13h5.2"/><path d="M12 17.2c0 1.7-1.4 2.3-1.4 3.6a1.4 1.4 0 0 0 2.8 0c0-1.3-1.4-1.9-1.4-3.6z"/></svg>',
-  // Corruption Perceptions Index: a balance scale (a central post, a beam, two
-  // hanging pans). Reads as justice / clean governance, the domain the CPI
-  // measures, distinct from the economic coin/bar and the produce icons.
+  // Government integrity (displayed name; data is Transparency International's
+  // CPI, key `corruption`): a balance scale (a central post, a beam, two hanging
+  // pans). Reads as justice / clean governance, distinct from the economic
+  // coin/bar and the produce icons.
   corruption: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v15"/><path d="M8.5 20h7"/><path d="M5 7h14"/><path d="M5 7 3 11M5 7l2 4"/><path d="M3 11a2 1.6 0 0 0 4 0"/><path d="M19 7l-2 4M19 7l2 4"/><path d="M17 11a2 1.6 0 0 0 4 0"/></svg>',
   // Average temperature: a thermometer (a stem with a filled bulb and two tick
   // marks). Reads as heat / climate, distinct from every economic and produce
@@ -183,7 +184,7 @@ export const METRIC_SHORT = {
   borders: { key: 'party.modeShort.superlativeBorders', fallback: 'Borders' },
   oliveOil: { key: 'party.modeShort.superlativeOliveOil', fallback: 'Olive oil production' },
   honey: { key: 'party.modeShort.superlativeHoney', fallback: 'Honey production' },
-  corruption: { key: 'party.modeShort.superlativeCorruption', fallback: 'Corruption' },
+  corruption: { key: 'party.modeShort.superlativeCorruption', fallback: 'Integrity' },
   temperature: { key: 'party.modeShort.superlativeTemperature', fallback: 'Temperature' },
   happiness: { key: 'party.modeShort.superlativeHappiness', fallback: 'Happiness' },
 };

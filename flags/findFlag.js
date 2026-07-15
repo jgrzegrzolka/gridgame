@@ -136,7 +136,7 @@ export function parseFilterString(s) {
     // share one vocabulary. No `=` op and no include/exclude sign: a threshold,
     // not a value set. One generic parse over the registered metric keys.
     if (METRIC_KEYS.includes(group)) {
-      const parsed = parseThreshold(val);
+      const parsed = parseThreshold(val, THRESHOLD_METRICS[group].signed === true);
       if (parsed) {
         /** @type {any} */ (f)[group] = { op: parsed.op, n: parsed.n };
         any = true;
@@ -298,7 +298,7 @@ export function pillLabel(group, value, sign, translate) {
     // renders the localized threshold text, keyed identically to the TTT
     // category label (engine.js translateCategoryLabel). No exclude — the
     // primitive is a threshold, you either constrain it or you don't.
-    const parsed = parseThreshold(value);
+    const parsed = parseThreshold(value, THRESHOLD_METRICS[group].signed === true);
     if (parsed) return THRESHOLD_METRICS[group].labelFor(parsed.op, parsed.n, translate);
     return value;
   } else {
@@ -453,6 +453,9 @@ const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent',
  *   populationProbability?: number,
  *   areaProbability?: number,
  *   densityProbability?: number,
+ *   temperatureProbability?: number,
+ *   happinessProbability?: number,
+ *   corruptionProbability?: number,
  *   gdpProbability?: number,
  *   gdpPerCapitaProbability?: number,
  *   coffeeProbability?: number,
@@ -491,6 +494,9 @@ export function pickRandomMix(pillPool, all, options = {}) {
     populationProbability = 0,
     areaProbability = 0,
     densityProbability = 0,
+    temperatureProbability = 0,
+    happinessProbability = 0,
+    corruptionProbability = 0,
     gdpProbability = 0,
     gdpPerCapitaProbability = 0,
     coffeeProbability = 0,
@@ -553,6 +559,9 @@ export function pickRandomMix(pillPool, all, options = {}) {
       population: populationProbability,
       area: areaProbability,
       density: densityProbability,
+      temperature: temperatureProbability,
+      happiness: happinessProbability,
+      corruption: corruptionProbability,
       gdp: gdpProbability,
       gdpPerCapita: gdpPerCapitaProbability,
       coffee: coffeeProbability,
