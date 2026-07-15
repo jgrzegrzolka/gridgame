@@ -8,6 +8,7 @@ import { t, countryName, withLocalizedAliases, autoRelocalize } from '../../i18n
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
 import { renderOfflineStrip, offlineActive } from '../matchStrip.js';
+import { openMatchSheet, wireMatchSheetDismiss } from '../matchSheet.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 
@@ -103,6 +104,7 @@ function runTicTacToe({ puzzle, countries }) {
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
   const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
   const zoomName = zoomEl ? /** @type {HTMLParagraphElement | null} */ (zoomEl.querySelector('p')) : null;
+  const matchesEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('matches'));
   const matchStripEl = document.getElementById('match-strip');
   const resultEl = document.getElementById('result');
   const finalScoreEl = document.getElementById('final-score');
@@ -140,9 +142,18 @@ function runTicTacToe({ puzzle, countries }) {
 
   /** @param {number} row @param {number} col */
   function onCellActivate(row, col) {
-    const cellCountry = state.cells[row][col].country;
-    if (cellCountry) {
-      openZoom(cellCountry);
+    const cell = state.cells[row][col];
+    // A give-up reveal cell opens the "all matches" sheet (the example flag is
+    // one of many); a player-claimed cell still zooms the single flag.
+    if (cell.revealed) {
+      openMatchSheet({
+        dialogEl: matchesEl, puzzle, row, col, countries,
+        svgBase: '../../flags/svg/', t, countryName, tCat,
+      });
+      return;
+    }
+    if (cell.country) {
+      openZoom(cell.country);
       return;
     }
     if (isGameOver(state)) return;
@@ -164,6 +175,7 @@ function runTicTacToe({ puzzle, countries }) {
       if (e.target === zoomEl) zoomEl.close();
     });
   }
+  wireMatchSheetDismiss(matchesEl);
 
   // ---- Rules help ----
   const rulesBtnEl = document.getElementById('rules-btn');

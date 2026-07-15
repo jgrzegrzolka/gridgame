@@ -218,38 +218,11 @@ html:not(.is-wide) #flag-map-section .map-resize-handle {
   grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
   gap: 8px;
 }
+/* The thumbnail box, hover name-strip, and img fill now come from the shared
+ * `.flag-tile` (common.css); `.flag` keeps only the page-local zoom cursor.
+ * The metric-lens overlay (.flag-metric) sits on `.flag-tile`'s relative box. */
 .flag {
-  position: relative;
-  aspect-ratio: 4 / 3;
-  border: 1px solid var(--muted-soft-color);
-  overflow: hidden;
   cursor: zoom-in;
-}
-.flag img {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-.flag::after {
-  content: attr(data-name);
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(28, 28, 28, 0.85);
-  color: #fff;
-  padding: 2px 4px;
-  font-size: 10px;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 80ms;
-}
-.flag:hover::after {
-  opacity: 1;
 }
 dialog#zoom .country-data {
   margin: 12px 0 0;

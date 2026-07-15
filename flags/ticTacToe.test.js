@@ -13,6 +13,7 @@ import {
   attemptSoloClaim,
   isSoloOver,
   applySoloGiveUp,
+  matchingCountriesForCell,
 } from './ticTacToe.js';
 import { createCountry } from './group.js';
 
@@ -541,4 +542,20 @@ test('applySoloGiveUp: no-op once the puzzle is already solved', () => {
   assert.equal(s.solved, true);
   const after = applySoloGiveUp(s, SOLO_POOL, () => 0);
   assert.equal(after, s, 'nothing to reveal — same object back');
+});
+
+test('matchingCountriesForCell returns every country satisfying both axes, in source order', () => {
+  // A second Europe+red country so the cell has more than one match.
+  const ES = country({ code: 'es', name: 'Spain', continent: 'Europe', primaryColors: ['red'] });
+  const pool = [FR, DE, IT, JP, KR, PK, KE, NA, NG, ES];
+  // Cell (0,0) is Europe × Red: FR and ES qualify, nothing else.
+  const matches = matchingCountriesForCell(PUZZLE, 0, 0, pool);
+  assert.deepEqual(matches.map((c) => c.code), ['00', 'es'], 'both Europe+red flags, in pool order');
+});
+
+test('matchingCountriesForCell returns [] when no country fits the intersection', () => {
+  // Cell (2,1) is Africa × Blue. NA (Namibia) is the only fit in the base pool;
+  // drop it and the intersection is empty.
+  const pool = [FR, DE, IT, JP, KR, PK, KE, NG];
+  assert.deepEqual(matchingCountriesForCell(PUZZLE, 2, 1, pool), []);
 });

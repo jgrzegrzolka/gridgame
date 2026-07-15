@@ -235,6 +235,24 @@ function revealBoard(puzzle, sourceCells, countries, random) {
 }
 
 /**
+ * Every country that would have been a valid answer for one cell — the full
+ * set the give-up reveal drew its single example from. `validateCell` already
+ * encodes "matches this cell's row category AND its column category", so this
+ * is that filter over the whole country pool, in source order (the caller
+ * sorts for display). Pure, unit-tested; the tap-a-revealed-cell "all matches"
+ * sheet is thin DOM glue on top (matchSheet.js).
+ *
+ * @param {Puzzle} puzzle
+ * @param {number} row
+ * @param {number} col
+ * @param {Country[]} countries
+ * @returns {Country[]}
+ */
+export function matchingCountriesForCell(puzzle, row, col, countries) {
+  return countries.filter((country) => validateCell(puzzle, row, col, country));
+}
+
+/**
  * Two-player give-up. No-op when the game is already over
  * (winner/draw/already-gaveUp); otherwise reveals every empty cell and
  * freezes the board with gaveUp=true.

@@ -7,6 +7,7 @@ import { newSoloGame, attemptSoloClaim, isSoloOver, applySoloGiveUp } from '../.
 import { t, countryName, withLocalizedAliases, autoRelocalize } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
+import { openMatchSheet, wireMatchSheetDismiss } from '../matchSheet.js';
 
 /** @typedef {import('../../flags/group.js').Country} Country */
 
@@ -86,6 +87,7 @@ function runSolo({ puzzle, countries }) {
   const pickerSuggestionsEl = /** @type {HTMLUListElement} */ (document.getElementById('picker-suggestions'));
   const colHeaderEls = document.querySelectorAll('.col-header');
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
+  const matchesEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('matches'));
   const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
   const zoomName = zoomEl ? /** @type {HTMLParagraphElement | null} */ (zoomEl.querySelector('p')) : null;
   const resultEl = document.getElementById('result');
@@ -121,9 +123,18 @@ function runSolo({ puzzle, countries }) {
 
   /** @param {number} row @param {number} col */
   function onCellActivate(row, col) {
-    const cellCountry = state.cells[row][col].country;
-    if (cellCountry) {
-      openZoom(cellCountry);
+    const cell = state.cells[row][col];
+    // A give-up reveal cell opens the "all matches" sheet (the example flag is
+    // one of many); a player-claimed cell still zooms the single flag.
+    if (cell.revealed) {
+      openMatchSheet({
+        dialogEl: matchesEl, puzzle, row, col, countries,
+        svgBase: '../../flags/svg/', t, countryName, tCat,
+      });
+      return;
+    }
+    if (cell.country) {
+      openZoom(cell.country);
       return;
     }
     if (isSoloOver(state)) return;
@@ -145,6 +156,7 @@ function runSolo({ puzzle, countries }) {
       if (e.target === zoomEl) zoomEl.close();
     });
   }
+  wireMatchSheetDismiss(matchesEl);
 
   // ---- Rules help ----
   const rulesBtnEl = document.getElementById('rules-btn');

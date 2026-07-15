@@ -267,6 +267,14 @@ body:has(.player-card.waiting) .grid {
 .cell.owned:hover::after {
   background: transparent;
 }
+/* A wrong-answer shake paints its red overlay on .cell.shake::before, but the
+ * hover wash above (.cell:hover::after) paints later and would cover it. The
+ * cursor is always on the cell you just clicked, so drop the wash while the
+ * cell is shaking, the same way owned / game-over cells do, or the red is
+ * never seen. Guarded by ticTacToe/shakeFeedback.test.js. */
+.cell.shake:hover::after {
+  background: transparent;
+}
 body.game-over .cell {
   cursor: default;
 }
@@ -465,10 +473,12 @@ body.game-over .actions-row {
  * headers and the picker line. The `×` between the picker's two categories stays
  * muted so it never reads as part of a label. */
 .grid th .pill-swatch,
-.picker-cats .pill-swatch {
+.picker-cats .pill-swatch,
+.match-cats .pill-swatch {
   margin-right: 0.3em;
 }
-.picker-cats .cat-times {
+.picker-cats .cat-times,
+.match-cats .cat-times {
   color: var(--muted-color);
 }
 /* `.picker-close` visual recipe (bg / border / hover / press feedback)
@@ -560,3 +570,60 @@ body.picker-open {
 /* The "?" rules button and rules-help modal styles live in
  * common.css — shared with /profile/sync/'s `.help-btn` +
  * `.help-dialog`. */
+
+/* Give-up "all matches" sheet: tap a revealed cell to see every country that
+ * fit that (row × col). Same card family as `dialog#zoom` (surface fill,
+ * hairline border, 8px radius, drop shadow — common.css) but wider, to hold a
+ * scrollable flag grid. Built + opened by matchSheet.js, shared by all three
+ * 3×3 pages. */
+.match-sheet {
+  position: relative;
+  width: min(92vw, 460px);
+  max-height: 82vh;
+  padding: 18px;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 8px;
+  outline: none;
+  background: var(--surface-color);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
+  color: var(--primary-color);
+}
+.match-sheet::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+/* Corner × dismiss (geometry + fill from common.css's icon-button recipe). */
+.match-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+.match-head {
+  /* keep the category title clear of the corner × */
+  padding-right: 40px;
+  margin-bottom: 14px;
+}
+.match-cats {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--primary-color);
+}
+/* The tiles themselves are the shared `.flag-tile` (thumbnail + hover
+ * name-strip, common.css); this only lays them out in a scrollable grid with
+ * the shared `.quiet-scroll` hairline scrollbar. */
+.match-grid {
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 12px;
+  max-height: 62vh;
+  overflow-y: auto;
+}
+/* The give-up sheet is a "here are the answers" reveal, so every name shows
+ * always — not on hover like the flagsdata browse grid, otherwise a touch
+ * player (who can't hover) would never see them. Deliberate override of
+ * `.flag-tile`'s hover-reveal. */
+.match-grid .flag-tile::after {
+  opacity: 1;
+}

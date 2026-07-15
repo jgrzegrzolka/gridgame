@@ -202,7 +202,9 @@ export function bootFlagsData() {
   function flagTile(c) {
     const displayName = countryName(c);
     const wrap = document.createElement('div');
-    wrap.className = 'flag';
+    // `flag-tile` (common.css) carries the shared thumbnail + hover name-strip;
+    // `flag` keeps the page-local bits (zoom cursor, the metric-lens overlay).
+    wrap.className = 'flag flag-tile';
     wrap.dataset.name = displayName;
     bindTileCountry(wrap, c);
     wrap.addEventListener('click', () => openZoom(c));
