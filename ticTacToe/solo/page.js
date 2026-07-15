@@ -4,7 +4,7 @@ import { loadCountries, attachMetrics } from '../../flags/group.js';
 import { METRIC_FILES } from '../../flags/metrics/index.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
 import { newSoloGame, attemptSoloClaim, isSoloOver, applySoloGiveUp } from '../../flags/ticTacToe.js';
-import { t, countryName, withLocalizedAliases } from '../../i18n.js';
+import { t, countryName, withLocalizedAliases, relocalizeAliases } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
 
@@ -411,6 +411,9 @@ function runSolo({ puzzle, countries }) {
    * renderGrid), the picker categories if open, and the result text if showing.
    */
   function refreshI18nForGame() {
+    // Keep the picker's search index in the new language — otherwise names
+    // re-render localized but stay searchable only in the boot language.
+    relocalizeAliases(countries);
     colHeaderEls.forEach((th, i) => {
       renderCategoryLabel(/** @type {HTMLElement} */ (th), puzzle.cols[i], tCat(puzzle.cols[i]));
     });

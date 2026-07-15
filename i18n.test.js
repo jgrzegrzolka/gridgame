@@ -13,6 +13,7 @@ import {
   t,
   countryName,
   withLocalizedAliases,
+  relocalizeAliases,
   reloadI18n,
   _resetCacheForTests,
   _seedCacheForTests,
@@ -542,6 +543,37 @@ test('withLocalizedAliases: preserves c.colors on cloned Country objects', async
   const [cloned] = withLocalizedAliases([pl]);
   assert.deepEqual(cloned.colors, ['white', 'red'],
     'cloned country lost c.colors — was the getter set to enumerable:false?');
+  _resetCacheForTests();
+});
+
+// ---- relocalizeAliases (soft language switch keeps search in sync) ----
+
+test('relocalizeAliases: adds the localized alias in place after a language switch', () => {
+  // Boot in English: no distinct localized name, so the entry passes through
+  // unchanged with no alias — this is the state that made "Meksyk" unsearchable
+  // after switching to Polish before the fix.
+  _resetCacheForTests();
+  const list = withLocalizedAliases([{ code: 'mx', name: 'Mexico', aliases: /** @type {string[]} */ ([]) }]);
+  assert.deepEqual(list[0].aliases ?? [], []);
+  // Switch to Polish and relocalize the same array in place.
+  _seedCacheForTests({ country: { mx: 'Meksyk' } });
+  relocalizeAliases(list);
+  assert.deepEqual(list[0].aliases, ['Meksyk']);
+  _resetCacheForTests();
+});
+
+test('relocalizeAliases: swaps languages without accumulating stale aliases', () => {
+  _seedCacheForTests({ country: { de: 'Niemcy' } });
+  const list = withLocalizedAliases([{ code: 'de', name: 'Germany', aliases: ['Deutschland'] }]);
+  assert.deepEqual(list[0].aliases, ['Deutschland', 'Niemcy']);
+  // Switch to a language whose name equals English → only the base survives.
+  _resetCacheForTests();
+  relocalizeAliases(list);
+  assert.deepEqual(list[0].aliases, ['Deutschland'], 'stale localized alias dropped, base kept');
+  // Switch back to Polish → base + Polish, not doubled.
+  _seedCacheForTests({ country: { de: 'Niemcy' } });
+  relocalizeAliases(list);
+  assert.deepEqual(list[0].aliases, ['Deutschland', 'Niemcy']);
   _resetCacheForTests();
 });
 
