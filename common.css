@@ -1605,9 +1605,9 @@ dialog#zoom p.zoom-note {
 /* ── Shared online start-screen bits ─────────────────────────────────────
  * A few pieces the online start screens (Flag Party, Tic-Tac-Toe) share so
  * neither copies the recipe (CLAUDE.md "Same mechanism = same code"): the
- * full-line "or" separator, the "playing as" identity line + avatar, and a
- * pink tint for the primary CTA. Each game keeps its OWN button and join-code
- * styling — this only adds the shared touches on top. */
+ * full-line "or" separator and a pink tint for the primary CTA. Each game
+ * keeps its OWN button and join-code styling — this only adds the shared
+ * touches on top. */
 
 /* Pink-filled variant of the existing shared pill recipe (the create /
    new-game CTA). Only the fill changes to the brand accent — the button keeps
@@ -1623,8 +1623,8 @@ dialog#zoom p.zoom-note {
 /* Start / lobby screen container — the create-or-join column shared by Flag
    Party (`.pt-start`) and Tic-Tac-Toe (`.lobby`). One definition so both
    render the identical column: same 16px rhythm between the primary pill, the
-   `or join` separator, the join-code box and the playing-as line, capped at
-   the same 360px width and centred. (CLAUDE.md: same mechanism = same code.)
+   `or join` separator and the join-code box, capped at the same 360px width
+   and centred. (CLAUDE.md: same mechanism = same code.)
    The `.party .pt-start` compound is deliberate — it must outweigh the generic
    `.party section` rule (gap 12 / width 100%) in flagParty/index.css. */
 .lobby,
@@ -1690,21 +1690,10 @@ dialog#zoom p.zoom-note {
   margin: 4px 0 0;
 }
 
-.playing-as {
-  margin-top: auto;
-  padding-top: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--muted-color);
-  font-size: 13px;
-}
-.playing-as strong { color: var(--primary-color); }
-/* Profile identicon in the "playing as" line — same tile the burger nickname
-   menu uses (`avatarSvg`), rendered at the line's size. Every avatar on the
-   online screens (playing-as line, lobby roster, reveal picks, final board)
-   is this same identicon tile, so identity reads consistently everywhere. */
+/* Profile identicon — same tile the burger nickname menu uses (`avatarSvg`),
+   rendered at the line's size. Every avatar on the online screens (lobby
+   roster, reveal picks, final board) is this same identicon tile, so identity
+   reads consistently everywhere. */
 .avatar {
   flex: none;
   width: 24px;

@@ -22,7 +22,7 @@ import { trackEvent } from '../analytics/index.js';
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { metricDataGap } from '../flags/metricTiers.js';
-import { shareUrl, renderPlayingAs } from '../common.js';
+import { shareUrl } from '../common.js';
 import { t, countryName, withLocalizedAliases } from '../i18n.js';
 import { launchConfetti } from '../confetti.js';
 import { trapPicker, releasePicker } from './pickerLock.js';
@@ -68,19 +68,6 @@ export function bootTicTacToeOnline() {
 function runOnline(countries) {
   const byCode = new Map(countries.map((c) => [c.code, c]));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
-
-  // "Playing as <you>" identity line on the lobby — the same chip Flag Party
-  // shows (shared renderPlayingAs). Re-painted on a soft language switch so the
-  // label follows the new language without a reload.
-  const playingAsEl = document.getElementById('playing-as');
-  function paintPlayingAs() {
-    if (!playingAsEl) return;
-    let cachedNick = null;
-    try { cachedNick = window.localStorage.getItem('gridgame.nickname'); } catch { /* private mode */ }
-    renderPlayingAs(playingAsEl, deviceId, displayNickname(deviceId, cachedNick), t('ttt.playingAs', 'Playing as'));
-  }
-  paintPlayingAs();
-  document.addEventListener('langchanged', paintPlayingAs);
 
   /** @type {WebSocket | null} */
   let ws = null;

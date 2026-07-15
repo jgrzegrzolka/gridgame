@@ -44,9 +44,9 @@
 }
 
 /* Buttons (`.lobby-btn` + pink `.primary`), the `.join-code` box, the brand
-   mark, separators, playing-as line, avatar, and the `.join-error` validation
-   line are all shared site components in common.css — Flag Party uses the same
-   ones as Tic-Tac-Toe. */
+   mark, separators, avatar, and the `.join-error` validation line are all
+   shared site components in common.css — Flag Party uses the same ones as
+   Tic-Tac-Toe. */
 
 .party-status {
   text-align: center;
