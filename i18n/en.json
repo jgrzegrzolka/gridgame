@@ -396,6 +396,7 @@
     "newRecord": "new record!",
     "failedToLoad": "Failed to load:",
     "cancel": "Cancel",
+    "close": "Close",
     "countryName": "Country name…"
   },
   "quiz": {
@@ -521,7 +522,6 @@
     "rulesTitle": "How to play",
     "rulesBody": "Each cell sits on a row and a column. Pick a country whose flag matches both, for example, an \"Asia\" row and a \"red\" column needs a flag that is both Asian and red. First to line up three wins.",
     "rulesSoloBody": "Each cell sits on a row and a column. Pick a country whose flag matches both, for example, an \"Asia\" row and a \"red\" column needs a flag that is both Asian and red. Fill all nine cells to solve the board.",
-    "rulesClose": "Got it",
     "reject": {
       "roomFull": "Room is full",
       "roomNotFound": "Room not found, ask your friend for the code or create a new room",

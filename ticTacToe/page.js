@@ -17,6 +17,7 @@ import { bumpShare, pushEngagementBlob } from '../flags/engagementCounters.js';
 import { ensureProfile } from '../flags/autoProfile.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { renderMatchStrip } from './matchStrip.js';
+import { openMatchSheet, wireMatchSheetDismiss } from './matchSheet.js';
 import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
 import { trackEvent } from '../analytics/index.js';
 import { loadCountries, attachMetrics } from '../flags/group.js';
@@ -167,6 +168,7 @@ function runOnline(countries) {
   const zoomEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('zoom'));
   const zoomImg = zoomEl ? /** @type {HTMLImageElement | null} */ (zoomEl.querySelector('img')) : null;
   const zoomName = zoomEl ? /** @type {HTMLParagraphElement | null} */ (zoomEl.querySelector('p')) : null;
+  const matchesEl = /** @type {HTMLDialogElement | null} */ (document.getElementById('matches'));
   const pickerEl = document.getElementById('picker');
   const pickerBackdropEl = document.getElementById('picker-backdrop');
   const pickerCloseEl = document.getElementById('picker-close');
@@ -412,9 +414,18 @@ function runOnline(countries) {
   function onCellActivate(r, c) {
     const { game, myRole, peerPresent } = state;
     if (!game) return;
-    const cellCountry = game.cells[r][c].country;
-    if (cellCountry) {
-      openZoom(cellCountry);
+    const cell = game.cells[r][c];
+    // A give-up reveal cell opens the "all matches" sheet (the example flag is
+    // one of many); a player-claimed cell still zooms the single flag.
+    if (cell.revealed) {
+      openMatchSheet({
+        dialogEl: matchesEl, puzzle: game.puzzle, row: r, col: c, countries,
+        svgBase: '../flags/svg/', t, countryName, tCat,
+      });
+      return;
+    }
+    if (cell.country) {
+      openZoom(cell.country);
       return;
     }
     if (!myRole) return;
@@ -439,6 +450,7 @@ function runOnline(countries) {
       if (e.target === zoomEl) zoomEl.close();
     });
   }
+  wireMatchSheetDismiss(matchesEl);
 
   // ---- Rules help ----
   const rulesBtnEl = document.getElementById('rules-btn');

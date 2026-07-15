@@ -82,3 +82,26 @@ test('.picker-input.shake runs a real animation (invisible-rejection guard)', ()
 test('.cell.shake runs a real animation on the cell itself', () => {
   assertAnimated('.cell.shake');
 });
+
+// Regression guard for the "shake hidden by hover" bug.
+//
+// The grey hover wash is painted by `.cell:hover::after` (background:
+// --hover-color). The wrong-answer shake paints its red overlay on
+// `.cell.shake::before`. Because `::after` paints AFTER `::before`, the opaque
+// grey wash stacks on top of the red overlay and hides it. The cursor is always
+// sitting on the cell you just clicked (you clicked it to open the picker), so
+// in practice the shake was invisible for every real mouse user — while any
+// scripted test that never hovered saw it fine. A shaking cell must drop the
+// wash, exactly as owned / game-over cells already do.
+test('.cell.shake drops the hover wash so the red overlay is not covered', () => {
+  const body = ruleBody(css, '.cell.shake:hover::after');
+  assert.ok(
+    body,
+    'expected a `.cell.shake:hover::after` rule so the grey hover wash cannot cover the red shake',
+  );
+  assert.match(
+    body,
+    /background\s*:\s*transparent/,
+    '`.cell.shake:hover::after` must set `background: transparent` so the shake shows through hover',
+  );
+});

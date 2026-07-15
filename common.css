@@ -1324,6 +1324,68 @@ dialog#zoom p.zoom-note {
   cursor: zoom-in;
 }
 
+/* Flag-thumbnail tile with a hover name-strip — the shared "grid of flags where
+ * hovering a tile names it" pattern. A relative, clipped 4:3 box holding a
+ * filling `<img>`, plus a dark bottom band (`content: attr(data-name)`) that
+ * fades in on hover OR keyboard focus. Consumers set `data-name` on the tile and
+ * append the `<img>`; per-page extras (the flagsdata metric strip, the TTT
+ * give-up "shown" ring) layer on top. Promoted here when the give-up match sheet
+ * became the second consumer (CLAUDE.md "same mechanism = same code"); the
+ * rgba(0,0,0,.x)-over-SVG band is the documented palette exception. */
+.flag-tile {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--muted-soft-color);
+  overflow: hidden;
+}
+.flag-tile img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.flag-tile::after {
+  content: attr(data-name);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(28, 28, 28, 0.85);
+  color: #fff;
+  padding: 2px 4px;
+  font-size: 10px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 80ms;
+}
+.flag-tile:hover::after,
+.flag-tile:focus-within::after {
+  opacity: 1;
+}
+
+/* Quiet hairline scrollbar for scroll regions inside popups, so a scrollable
+ * dialog reads as a faint track rather than the chunky OS default. Standard
+ * props (Firefox / Chrome 121+) + a WebKit fallback, both on the palette's
+ * lightest grey. Shared by the flag-story dialog and the TTT give-up match sheet
+ * (promoted on the second consumer). */
+.quiet-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted-soft-color) transparent;
+}
+.quiet-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.quiet-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.quiet-scroll::-webkit-scrollbar-thumb {
+  background: var(--muted-soft-color);
+  border-radius: 4px;
+}
+
 .home-icon {
   display: inline-block;
   width: 1em;
@@ -1501,6 +1563,17 @@ dialog#zoom p.zoom-note {
   line-height: 1.4;
   color: var(--primary-color);
 }
+/* The rules dialog dismisses via a corner × (the site's dialog-close idiom,
+ * same as the flag-zoom / match-sheet), not a bottom "Got it" pill. The p above
+ * is the last in-flow element, so the dialog's bottom padding closes the card. */
+.rules-help {
+  position: relative;
+}
+.rules-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
 /* Unified pill button — every affirmative action on the site (Save
  * on /profile/, "Start new game" / "Join" / "Play on the same device"
  * in the TTT lobby, "Got it" in the rules / help dialogs) shares one
@@ -1520,6 +1593,7 @@ dialog#zoom p.zoom-note {
 .lobby-btn,
 .rules-close,
 .help-close,
+.match-close,
 .rules-btn,
 .help-btn,
 .picker-close,
@@ -1549,6 +1623,7 @@ dialog#zoom p.zoom-note {
 .lobby-btn:hover,
 .rules-close:hover,
 .help-close:hover,
+.match-close:hover,
 .rules-btn:hover,
 .help-btn:hover,
 .picker-close:hover,
@@ -1564,6 +1639,7 @@ dialog#zoom p.zoom-note {
 .lobby-btn:active,
 .rules-close:active,
 .help-close:active,
+.match-close:active,
 .rules-btn:active,
 .help-btn:active,
 .picker-close:active,
@@ -1593,17 +1669,19 @@ dialog#zoom p.zoom-note {
 }
 /* Smaller dismiss buttons inside dialogs (rules / help / picker) —
  * same recipe as the affirmative pill, just a tighter slot. */
-.rules-close,
-.help-close,
-.picker-close {
+.help-close {
   padding: 6px 14px;
 }
 /* Square 32×32 icon buttons that share the full pill recipe (bg, border,
  * hover, press, fade-back) — only the geometry differs: fixed slot,
- * centered glyph. The "?" rules/help triggers and the flag-zoom's × close. */
+ * centered glyph. The "?" rules/help triggers, the flag-zoom's × close, the
+ * give-up match sheet's × close, and the corner × on the rules dialog + picker. */
 .rules-btn,
 .help-btn,
-.zoom-close {
+.zoom-close,
+.match-close,
+.rules-close,
+.picker-close {
   width: 32px;
   height: 32px;
   padding: 0;

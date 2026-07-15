@@ -396,6 +396,7 @@
     "newRecord": "nowy rekord!",
     "failedToLoad": "Nie udało się załadować:",
     "cancel": "Anuluj",
+    "close": "Zamknij",
     "countryName": "Nazwa kraju…"
   },
   "quiz": {
@@ -521,7 +522,6 @@
     "rulesTitle": "Jak grać",
     "rulesBody": "Każde pole leży na przecięciu wiersza i kolumny. Wybierz państwo, którego flaga pasuje do obu, na przykład wiersz „Azja\" i kolumna „czerwony\" wymagają flagi, która jest jednocześnie azjatycka i czerwona. Wygrywa ten, kto pierwszy ułoży trzy w rzędzie.",
     "rulesSoloBody": "Każde pole leży na przecięciu wiersza i kolumny. Wybierz państwo, którego flaga pasuje do obu, na przykład wiersz „Azja\" i kolumna „czerwony\" wymagają flagi, która jest jednocześnie azjatycka i czerwona. Wypełnij wszystkie dziewięć pól, aby rozwiązać planszę.",
-    "rulesClose": "Rozumiem",
     "reject": {
       "roomFull": "Pokój jest pełny",
       "roomNotFound": "Pokój nie znaleziony, poproś znajomego o kod lub utwórz nowy pokój",
