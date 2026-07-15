@@ -1616,20 +1616,31 @@ dialog#zoom p.zoom-note {
  * keeps its OWN button and join-code styling — this only adds the shared
  * touches on top. */
 
-/* Outlined-accent variant of the shared pill recipe (the create / new-game
-   CTA). It reads as the primary action through a brand-pink border rather than
-   a solid pink fill: white surface, pink border, dark ink — same shape, weight,
-   and geometry as every other pill. Hover and press fall through to the base
-   recipe (a light --hover-color wash on hover); on :active the button fills with
-   the brand pink for a moment (white ink), so a press briefly flashes the old
-   solid look and fades back on release. */
+/* Primary CTA — the soft-rose pill (create / new-game). This is the site's one
+   accent-tinted button and deliberately steps outside the neutral eight-colour
+   palette: a pale-rose fill with a deeper-rose border AND ink, the look signed
+   off from the match-strip mockup. Plain --secondary (#C2899F) alone read too
+   light and mauve for it, so the two rose tints below are defined here as a
+   scoped, documented exception (same posture as ticTacToe's --x-color/--o-color
+   game colours). Rest is a quiet rose; hover fills to the deep rose with white
+   ink; press darkens that fill. 8px corners, a hair softer than the base pill. */
 .lobby-btn.primary {
-  border-color: var(--secondary-color);
+  --cta-rose: #9F6D82;       /* deeper rose: border + ink at rest, the hover fill */
+  --cta-rose-soft: #F2EAEE;  /* pale rose: the fill at rest */
+  background: var(--cta-rose-soft);
+  color: var(--cta-rose);
+  border-color: var(--cta-rose);
+  border-radius: 8px;
+}
+.lobby-btn.primary:hover {
+  background: var(--cta-rose);
+  color: var(--surface-color);
 }
 .lobby-btn.primary:active {
-  background: var(--secondary-color);
+  background: var(--cta-rose);
   color: var(--surface-color);
-  border-color: var(--secondary-color);
+  border-color: var(--cta-rose);
+  filter: brightness(0.94);
 }
 
 /* Start / lobby screen container — the create-or-join column shared by Flag
