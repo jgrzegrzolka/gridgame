@@ -286,6 +286,51 @@ test('suggest aliases do not displace name matches — both surface', () => {
   assert.deepEqual(suggest([us, fr], 'usa').map((c) => c.code), ['us']);
 });
 
+// ---- suggest ranking (exact > prefix > word-start > substring, then nameScore) ----
+
+test('suggest ranks a prefix match ahead of a mid-word substring match', () => {
+  // Array order lists the substring hit first; ranking must still lead with
+  // the prefix hit.
+  const iceland = country({ code: 'is', name: 'Iceland' });  // "and" mid-word
+  const andorra = country({ code: 'ad', name: 'Andorra' });  // "and" prefix
+  assert.deepEqual(suggest([iceland, andorra], 'and').map((c) => c.code), ['ad', 'is']);
+});
+
+test('suggest ranks a prefix match ahead of a later word-start match', () => {
+  const korea = country({ code: 'kp', name: 'North Korea', aliases: ['Korea Polnocna'] });
+  const poland = country({ code: 'pl', name: 'Poland', aliases: ['Polska'] });
+  // "pol": prefix on Poland/Polska (tier 1) beats the start-of-second-word
+  // "…Polnocna" (tier 2), regardless of array order.
+  assert.deepEqual(suggest([korea, poland], 'pol').map((c) => c.code), ['pl', 'kp']);
+});
+
+test('suggest ranks an exact match ahead of a longer prefix match', () => {
+  const nigeria = country({ code: 'ng', name: 'Nigeria' });
+  const niger = country({ code: 'ne', name: 'Niger' });
+  // Typing the whole "Niger": exact for ne, prefix for ng.
+  assert.deepEqual(suggest([nigeria, niger], 'niger').map((c) => c.code), ['ne', 'ng']);
+});
+
+test('suggest breaks a tier tie by prominence (lower nameScore first)', () => {
+  const polynesia = country({ code: 'pf', name: 'Polynesia', nameScore: 5 });
+  const poland = country({ code: 'pl', name: 'Poland', nameScore: 1 });
+  // Both are prefix matches for "pol"; the more recognizable country leads
+  // even though the obscure one comes first in the array.
+  assert.deepEqual(suggest([polynesia, poland], 'pol').map((c) => c.code), ['pl', 'pf']);
+});
+
+test('suggest surfaces the prefix match when diacritic folding makes other names match (pol → Polska)', () => {
+  // The real regression: ł→l and stripped accents make every "…Północna"
+  // (Northern) / "…Południowa" (Southern) fold to contain "pol", scattering
+  // them ahead of Poland in array order. Ranking must still lead with Polska.
+  const koreaN = country({ code: 'kp', name: 'North Korea', aliases: ['Korea Północna'] });
+  const macedoniaN = country({ code: 'mk', name: 'North Macedonia', aliases: ['Macedonia Północna'] });
+  const safrica = country({ code: 'za', name: 'South Africa', aliases: ['Republika Południowej Afryki'] });
+  const poland = country({ code: 'pl', name: 'Poland', aliases: ['Polska'], nameScore: 1 });
+  const codes = suggest([koreaN, macedoniaN, safrica, poland], 'pol').map((c) => c.code);
+  assert.equal(codes[0], 'pl', 'Polska (prefix) must lead the "pol" suggestions');
+});
+
 test('exactSingleMatch returns the country when the query equals its full name', () => {
   const fr = country({ code: 'fr', name: 'France' });
   assert.equal(exactSingleMatch([fr], 'France'), fr);

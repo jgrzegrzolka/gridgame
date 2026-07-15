@@ -3151,6 +3151,37 @@ export function foldDiacritics(s) {
   );
 }
 
+// nameScore for entries that don't carry one (test stubs; the real data always
+// does). High enough to sort scoreless entries after every ranked country
+// within the same match tier, without affecting relative order among them.
+const NAMESCORE_FALLBACK = 1000;
+
+/**
+ * How well a single (already folded) candidate string matches the (already
+ * folded) query, as a tier where lower is better:
+ *   0 exact       — the whole string equals the query
+ *   1 prefix      — the string starts with the query ("Pol" → "Polska")
+ *   2 word-start  — the query starts a later word ("Pol" → "Korea Polnocna")
+ *   3 substring   — the query appears mid-word ("and" → "Iceland")
+ * Infinity when the query isn't present at all. A "word" boundary is any
+ * non-alphanumeric character (space, hyphen, etc.) — the fold has already
+ * stripped accents, so Polish "Północna" is "polnocna" by here.
+ *
+ * @param {string} folded
+ * @param {string} q
+ * @returns {number}
+ */
+function matchTier(folded, q) {
+  const idx = folded.indexOf(q);
+  if (idx === -1) return Infinity;
+  if (folded === q) return 0;
+  if (idx === 0) return 1;
+  for (let i = idx; i !== -1; i = folded.indexOf(q, i + 1)) {
+    if (!/[a-z0-9]/.test(folded[i - 1])) return 2;
+  }
+  return 3;
+}
+
 /**
  * @param {Country[]} allCountries
  * @param {string} query
@@ -3165,18 +3196,32 @@ export function suggest(allCountries, query, options = {}) {
   // threshold and surprise the user.
   if (trimmed.length < MIN_QUERY_LENGTH) return [];
   const q = foldDiacritics(trimmed);
-  return allCountries
-    .filter((c) => {
-      if (excludeCodes.has(c.code)) return false;
-      if (foldDiacritics(c.name).includes(q)) return true;
-      if (c.aliases) {
-        for (const a of c.aliases) {
-          if (foldDiacritics(a).includes(q)) return true;
-        }
-      }
-      return false;
-    })
-    .slice(0, limit);
+  /** @type {{ c: Country, tier: number }[]} */
+  const scored = [];
+  for (const c of allCountries) {
+    if (excludeCodes.has(c.code)) continue;
+    // Best (lowest) tier across the name and every alias — a country ranks by
+    // its strongest match, so Poland's "Polska" prefix wins even though its
+    // English "Poland" also matches.
+    let tier = matchTier(foldDiacritics(c.name), q);
+    if (c.aliases) {
+      for (const a of c.aliases) tier = Math.min(tier, matchTier(foldDiacritics(a), q));
+    }
+    if (tier === Infinity) continue;
+    scored.push({ c, tier });
+  }
+  // Rank by match tier, then by country prominence (lower nameScore = more
+  // recognizable). Array.sort is stable, so equal-tier/equal-score entries
+  // keep their original data order. This lifts a prefix hit ("Polska") above
+  // the mid-name "…Północna/Południowa" substring hits that the diacritic
+  // fold otherwise scatters ahead of it.
+  scored.sort((a, b) => {
+    if (a.tier !== b.tier) return a.tier - b.tier;
+    const sa = typeof a.c.nameScore === 'number' ? a.c.nameScore : NAMESCORE_FALLBACK;
+    const sb = typeof b.c.nameScore === 'number' ? b.c.nameScore : NAMESCORE_FALLBACK;
+    return sa - sb;
+  });
+  return scored.slice(0, limit).map((s) => s.c);
 }
 
 /**
