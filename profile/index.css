@@ -29,7 +29,7 @@
   height: 64px;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--surface-hover-color);
+  background: var(--selected-color);
   margin-bottom: 4px;
 }
 .profile-avatar svg {

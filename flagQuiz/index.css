@@ -36,7 +36,7 @@ body {
   transition: background-color 120ms, border-color 120ms;
 }
 .quiz-picker .menu li.picker-tile a:hover {
-  background: var(--strip-bg-color);
+  background: var(--hover-color);
   border-color: var(--muted-soft-color);
   text-decoration: none;
 }
@@ -127,7 +127,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .stats-chip:hover {
-  background: var(--strip-bg-color);
+  background: var(--hover-color);
 }
 /* Icon-only mode badge inside each chip — see modeChip() for why the
    text label was replaced (PL "wszystkie" overflowed at phone width).

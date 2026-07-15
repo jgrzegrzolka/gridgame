@@ -64,7 +64,7 @@
 .mhub-chip.on {
   border-color: var(--mc);
   color: var(--mc);
-  background: var(--surface-hover-color);
+  background: var(--selected-color);
 }
 .mhub-chip:focus-visible {
   outline: 2px solid var(--secondary-color);

@@ -91,7 +91,7 @@ body {
   padding: 4px 6px;
 }
 .find-clear:hover {
-  background: var(--strip-bg-color);
+  background: var(--hover-color);
   border-radius: 4px;
 }
 
@@ -236,7 +236,7 @@ body {
 }
 .find-suggestions li.selected,
 .find-suggestions li:hover {
-  background: var(--surface-hover-color);
+  background: var(--selected-color);
 }
 .find-suggestions span {
   font-size: 14px;
