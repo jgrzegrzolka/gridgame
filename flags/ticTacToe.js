@@ -45,6 +45,15 @@ function emptyCell() {
   return { owner: null, country: null };
 }
 
+/** @returns {Cell[][]} a fresh 3×3 board of empty cells. */
+function emptyBoard() {
+  return [
+    [emptyCell(), emptyCell(), emptyCell()],
+    [emptyCell(), emptyCell(), emptyCell()],
+    [emptyCell(), emptyCell(), emptyCell()],
+  ];
+}
+
 /**
  * @param {Puzzle} puzzle
  * @param {Player} [firstPlayer]
@@ -53,11 +62,7 @@ function emptyCell() {
 export function newGame(puzzle, firstPlayer = 'X') {
   return {
     puzzle,
-    cells: [
-      [emptyCell(), emptyCell(), emptyCell()],
-      [emptyCell(), emptyCell(), emptyCell()],
-      [emptyCell(), emptyCell(), emptyCell()],
-    ],
+    cells: emptyBoard(),
     currentPlayer: firstPlayer,
     winner: null,
     winningLine: null,
@@ -189,15 +194,50 @@ export function isGameOver(state) {
 }
 
 /**
- * Give-up reveal. Walks every empty cell, picks a valid country that hasn't
- * been used anywhere on the board, and writes it with owner=null +
- * revealed=true. Returns a fresh state with gaveUp=true.
+ * Give-up reveal, shared by the two-player and solo variants (CLAUDE.md
+ * "same mechanism = same code"). Walks every empty cell (owner null, no
+ * country yet), picks a valid country that hasn't been used anywhere on the
+ * board, and writes it with owner=null + revealed=true. Returns fresh cells.
  *
- * No-op when the game is already over (winner/draw/already-gaveUp). The 3x3
- * variant has no concept of "exhausted" — its global pool is the full
- * country set, which is far larger than 9 cells. We still defensively skip
- * a cell whose (row × col) intersection genuinely has zero countries left
- * (e.g. a degenerate test puzzle), rather than crash.
+ * The 3x3 board has no concept of "exhausted" — its global pool is the full
+ * country set, far larger than 9 cells. We still defensively skip a cell
+ * whose (row × col) intersection genuinely has zero countries left (e.g. a
+ * degenerate test puzzle), rather than crash.
+ *
+ * @param {Puzzle} puzzle
+ * @param {Cell[][]} sourceCells
+ * @param {Country[]} countries
+ * @param {() => number} random
+ * @returns {Cell[][]}
+ */
+function revealBoard(puzzle, sourceCells, countries, random) {
+  /** @type {Set<string>} */
+  const used = new Set();
+  for (const row of sourceCells) {
+    for (const cell of row) {
+      if (cell.country) used.add(cell.country.code);
+    }
+  }
+  const cells = cloneCells(sourceCells);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (cells[r][c].owner || cells[r][c].country) continue;
+      const candidates = countries.filter(
+        (country) => validateCell(puzzle, r, c, country) && !used.has(country.code),
+      );
+      if (candidates.length === 0) continue;
+      const picked = candidates[Math.floor(random() * candidates.length)];
+      cells[r][c] = { owner: null, country: picked, revealed: true };
+      used.add(picked.code);
+    }
+  }
+  return cells;
+}
+
+/**
+ * Two-player give-up. No-op when the game is already over
+ * (winner/draw/already-gaveUp); otherwise reveals every empty cell and
+ * freezes the board with gaveUp=true.
  *
  * @param {GameState} state
  * @param {Country[]} countries
@@ -206,27 +246,7 @@ export function isGameOver(state) {
  */
 export function applyGiveUp(state, countries, random = Math.random) {
   if (isGameOver(state)) return state;
-  /** @type {Set<string>} */
-  const used = new Set();
-  for (const row of state.cells) {
-    for (const cell of row) {
-      if (cell.country) used.add(cell.country.code);
-    }
-  }
-  const cells = cloneCells(state.cells);
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      if (cells[r][c].owner) continue;
-      const candidates = countries.filter(
-        (country) => validateCell(state.puzzle, r, c, country) && !used.has(country.code),
-      );
-      if (candidates.length === 0) continue;
-      const picked = candidates[Math.floor(random() * candidates.length)];
-      cells[r][c] = { owner: null, country: picked, revealed: true };
-      used.add(picked.code);
-    }
-  }
-  return { ...state, cells, gaveUp: true };
+  return { ...state, cells: revealBoard(state.puzzle, state.cells, countries, random), gaveUp: true };
 }
 
 /**
@@ -267,4 +287,89 @@ export function newlyWinningCells(prev, next) {
   if (!next.winningLine) return [];
   if (prev.winningLine) return [];
   return next.winningLine;
+}
+
+// ---- Solo variant --------------------------------------------------------
+//
+// A one-player puzzle on the same board: no turns, no three-in-a-row. The
+// player fills every cell with a valid, non-duplicate flag and wins when all
+// nine are filled. It reuses the shared cell mechanics (validateCell, the
+// duplicate guard, the give-up reveal via revealBoard) but has its own tiny
+// reducer because the two-player attemptClaim bakes in turn-flipping and
+// line-win detection — filling one row with a single owner would falsely
+// "win" a line in that model. Kept beside the two-player engine so the shared
+// primitives (emptyBoard, codeUsed, boardFull, revealBoard) stay one copy.
+
+/**
+ * @typedef {Object} SoloState
+ * @property {Puzzle} puzzle
+ * @property {Cell[][]} cells
+ * @property {boolean} solved  - true once all nine cells are filled.
+ * @property {boolean} [gaveUp] - true when the player invoked give-up; the
+ *   board is then frozen and empty cells filled by applySoloGiveUp.
+ */
+
+/**
+ * @typedef {Object} SoloClaimOutcome
+ * @property {'claimed' | 'miss-invalid' | 'miss-duplicate' | 'miss-taken'} kind
+ * @property {SoloState} nextState
+ */
+
+/**
+ * @param {Puzzle} puzzle
+ * @returns {SoloState}
+ */
+export function newSoloGame(puzzle) {
+  return { puzzle, cells: emptyBoard(), solved: false, gaveUp: false };
+}
+
+/**
+ * @param {SoloState} state
+ * @returns {boolean}
+ */
+export function isSoloOver(state) {
+  return state.solved || Boolean(state.gaveUp);
+}
+
+/**
+ * Try to fill (row, col) with `country`. A valid, unused country claims the
+ * cell; an invalid or duplicate pick is a miss that leaves state untouched
+ * (no turn to flip, no penalty) so the caller can just shake and let the
+ * player try again. Claiming the last empty cell sets solved=true.
+ *
+ * @param {SoloState} state
+ * @param {number} row
+ * @param {number} col
+ * @param {Country} country
+ * @returns {SoloClaimOutcome}
+ */
+export function attemptSoloClaim(state, row, col, country) {
+  if (isSoloOver(state) || state.cells[row][col].owner) {
+    return { kind: 'miss-taken', nextState: state };
+  }
+  if (!validateCell(state.puzzle, row, col, country)) {
+    return { kind: 'miss-invalid', nextState: state };
+  }
+  if (codeUsed(state.cells, country.code)) {
+    return { kind: 'miss-duplicate', nextState: state };
+  }
+  const cells = cloneCells(state.cells);
+  // owner 'X' just marks the cell filled — solo has a single player, so the
+  // render never applies the X/O colour wash (see solo/page.js).
+  cells[row][col] = { owner: 'X', country };
+  return { kind: 'claimed', nextState: { ...state, cells, solved: boardFull(cells) } };
+}
+
+/**
+ * Solo give-up. No-op once solved / already gave up; otherwise reveals every
+ * empty cell and freezes the board with gaveUp=true.
+ *
+ * @param {SoloState} state
+ * @param {Country[]} countries
+ * @param {() => number} [random]
+ * @returns {SoloState}
+ */
+export function applySoloGiveUp(state, countries, random = Math.random) {
+  if (isSoloOver(state)) return state;
+  return { ...state, cells: revealBoard(state.puzzle, state.cells, countries, random), gaveUp: true };
 }
