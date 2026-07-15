@@ -23,7 +23,7 @@ import { loadCountries, attachMetrics } from '../flags/group.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { metricDataGap } from '../flags/metricTiers.js';
 import { shareUrl } from '../common.js';
-import { t, countryName, withLocalizedAliases, relocalizeAliases } from '../i18n.js';
+import { t, countryName, withLocalizedAliases, autoRelocalize } from '../i18n.js';
 import { launchConfetti } from '../confetti.js';
 import { trapPicker, releasePicker } from './pickerLock.js';
 
@@ -891,9 +891,6 @@ function runOnline(countries) {
    * score all re-translate from the current cache.
    */
   function refreshI18nForGame() {
-    // Keep the picker's search index in the new language — otherwise names
-    // re-render localized but stay searchable only in the boot language.
-    relocalizeAliases(countries);
     const { game } = state;
     if (game && gridBuilt) {
       populateGridLabels();
@@ -913,6 +910,9 @@ function runOnline(countries) {
     paintError();
   }
 
+  // Keep the picker's search index in sync on a soft language switch — reloadI18n
+  // re-localizes registered lists before firing langchanged.
+  autoRelocalize(countries);
   document.addEventListener('langchanged', refreshI18nForGame);
 
   // The server-broadcast rematch state arrived: the grid headers need to be

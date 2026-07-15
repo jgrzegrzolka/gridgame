@@ -293,6 +293,10 @@ export async function reloadI18n(lang, options = {}) {
   const strings = await res.json();
   cachedStrings = strings;
   applyStringsToDocument(strings, lang, doc);
+  // Re-sync every registered country list to the new language before firing
+  // langchanged, so page renderers that read country names / search aliases
+  // in their handler already see the new-language values.
+  for (const list of trackedLists) relocalizeAliases(list);
   doc.dispatchEvent(new CustomEvent('langchanged', { detail: { lang } }));
 }
 
@@ -361,12 +365,13 @@ export function withLocalizedAliases(countries) {
 }
 
 /**
- * Rebuild each country's localized alias in place for the *current* language.
- * Call from a `langchanged` handler so the picker's search index follows a
- * soft language switch: without it, the names re-render in the new language
- * but stay searchable only in the boot language. Mutates `aliases` on the
- * existing objects (preserving any metrics already denormalized onto them);
- * the base aliases come from the WeakMap populated by withLocalizedAliases.
+ * Rebuild each country's localized alias in place for the *current* language,
+ * so the picker's search index follows a soft language switch instead of
+ * staying stuck in the boot language. `reloadI18n` calls this for every list
+ * registered via `autoRelocalize`; pages normally register once rather than
+ * calling this directly. Mutates `aliases` on the existing objects (preserving
+ * any metrics already denormalized onto them); the base aliases come from the
+ * WeakMap populated by withLocalizedAliases.
  *
  * @param {{ code: string, name: string, aliases?: string[] }[]} countries
  */
@@ -385,12 +390,31 @@ export function relocalizeAliases(countries) {
   }
 }
 
+// Country lists registered via autoRelocalize() — reloadI18n re-localizes each
+// on a language switch. A plain Set (not WeakSet) so it's iterable; entries
+// live for the page's lifetime, exactly as long as the country arrays do.
+const trackedLists = new Set();
+
+/**
+ * Register a localized country list so a soft language switch keeps its search
+ * aliases in the active language automatically. Call once at page setup (after
+ * withLocalizedAliases). Replaces relocalizing by hand in a langchanged
+ * handler — reloadI18n re-localizes every registered list, before it fires
+ * langchanged, so page renderers already see the new-language aliases.
+ *
+ * @param {{ code: string, name: string, aliases?: string[] }[]} countries
+ */
+export function autoRelocalize(countries) {
+  trackedLists.add(countries);
+}
+
 /**
  * Reset the in-memory string cache. Tests use this between cases; production
  * code shouldn't need it.
  */
 export function _resetCacheForTests() {
   cachedStrings = {};
+  trackedLists.clear();
 }
 
 /**
