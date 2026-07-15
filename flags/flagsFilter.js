@@ -29,6 +29,9 @@ import { METRIC_KEYS } from './engine.js';
  *   shape and contract; reads `country.area`.
  *
  * @typedef {{ op: '>=' | '<=', n: number }} DensityConstraint
+ * @typedef {{ op: '>=' | '<=', n: number }} TemperatureConstraint
+ * @typedef {{ op: '>=' | '<=', n: number }} HappinessConstraint
+ * @typedef {{ op: '>=' | '<=', n: number }} CorruptionConstraint
  *   Population-density threshold (people/km²), scalar twin; reads `country.density`.
  *
  * @typedef {{ op: '>=' | '<=', n: number }} GdpConstraint
@@ -162,6 +165,9 @@ import { METRIC_KEYS } from './engine.js';
  *   population: PopulationConstraint | null,
  *   area: AreaConstraint | null,
  *   density: DensityConstraint | null,
+ *   temperature: TemperatureConstraint | null,
+ *   happiness: HappinessConstraint | null,
+ *   corruption: CorruptionConstraint | null,
  *   gdp: GdpConstraint | null,
  *   gdpPerCapita: GdpPerCapitaConstraint | null,
  *   coffee: CoffeeConstraint | null,
@@ -224,6 +230,9 @@ export function emptyFilters() {
     population: null,
     area: null,
     density: null,
+    temperature: null,
+    happiness: null,
+    corruption: null,
     gdp: null,
     gdpPerCapita: null,
     coffee: null,
@@ -414,7 +423,7 @@ export function matchesFilters(country, filters, options = {}) {
 
 /**
  * @typedef {'status' | 'continent' | 'color' | 'motif' | 'stripesOnly'} PillGroup
- * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita' | 'cattlePerCapita' | 'beerPerCapita' | 'tea' | 'sugarcane' | 'gold' | 'alcoholPerCapita' | 'meatPerCapita' | 'borders' | 'oliveOil' | 'honey'} ScalarGroup
+ * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'temperature' | 'happiness' | 'corruption' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita' | 'cattlePerCapita' | 'beerPerCapita' | 'tea' | 'sugarcane' | 'gold' | 'alcoholPerCapita' | 'meatPerCapita' | 'borders' | 'oliveOil' | 'honey'} ScalarGroup
  *
  * @typedef {{ kind: 'pill', group: PillGroup, value: string, exclude: boolean }
  *   | { kind: 'scalar', group: ScalarGroup }} FilterChip

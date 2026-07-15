@@ -43,7 +43,7 @@ export const METRIC_FILES = [
   { key: 'borders', file: 'borders.json', label: 'Bordering countries' },
   { key: 'oliveOil', file: 'oliveOil.json', label: 'Olive oil production' },
   { key: 'honey', file: 'honey.json', label: 'Honey production' },
-  { key: 'corruption', file: 'corruption.json', label: 'Corruption Perceptions Index' },
+  { key: 'corruption', file: 'corruption.json', label: 'Government integrity' },
   { key: 'temperature', file: 'temperature.json', label: 'Average temperature' },
   { key: 'happiness', file: 'happiness.json', label: 'Happiness score' },
 ];

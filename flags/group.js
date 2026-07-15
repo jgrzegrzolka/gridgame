@@ -16,6 +16,9 @@
  * @property {number} [population]  Denormalized from `flags/metrics/population.json` by `attachPopulations` at TTT load time so the `population` threshold predicates can read it off the country like any other field. Absent when the country has no value in the (sparse) metric. Not stored in countries.json — the metric stays the single source.
  * @property {number} [area]  Denormalized from `flags/metrics/area.json` by `attachAreas`, same pattern as `population`, so the `area` threshold predicates read it off the country. Absent only for non-places (orgs).
  * @property {number} [density]  Denormalized from `flags/metrics/density.json` by `attachDensities` (people per km²). Absent only for non-places.
+ * @property {number} [temperature]  Denormalized from `flags/metrics/temperature.json` by `attachTemperatures` (average annual air temperature, °C, may be negative). Dense metric: every real place has a value, absent only for non-places (orgs).
+ * @property {number} [happiness]  Denormalized from `flags/metrics/happiness.json` by `attachHappinesses` (World Happiness Report ladder score, 0-10). Sparse `absence: 'unknown'` survey metric: the ~115 unsurveyed real places carry no value (read "no data"), not 0. Absent for those and non-places.
+ * @property {number} [corruption]  Denormalized from `flags/metrics/corruption.json` by `attachCorruptions` (Transparency International CPI, 0-100, higher = cleaner; displayed as "Government integrity"). Sparse `absence: 'unknown'` survey metric: the states TI does not score carry no value (read "no data"), not 0. Absent for those and non-places.
  * @property {number} [gdp]  Denormalized from `flags/metrics/gdp.json` by `attachGdps` (nominal current US$). Absent only for non-places.
  * @property {number} [gdpPerCapita]  Denormalized from `flags/metrics/gdpPerCapita.json` by `attachGdpPerCapitas` (nominal current US$ per person). Absent only for non-places.
  * @property {number} [coffee]  Denormalized from `flags/metrics/coffee.json` by `attachCoffees` (green-coffee tonnes). Sparse `absence: 'zero'` metric: every real place gets a value (a non-grower defaults to 0); absent only for non-places (orgs).
@@ -471,6 +474,66 @@ export function attachHoneys(countries, values) {
 }
 
 /**
+ * Denormalize `flags/metrics/temperature.json` onto each Country as
+ * `.temperature` (average annual air temperature, degrees Celsius, may be
+ * negative). Dense metric: every real place has a value, so the plain
+ * set-if-present pattern (like the physical-fact metrics elevation / coastline)
+ * fills every real place and leaves only orgs bare. A `typeof v === 'number'`
+ * guard, not `v > 0`, so sub-zero climate normals attach correctly.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachTemperatures(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.temperature = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/happiness.json` onto each Country as `.happiness`
+ * (World Happiness Report Cantril-ladder score, 0-10). Sparse `absence:
+ * 'unknown'` survey metric like `beerPerCapita`: the ~115 real places the Gallup
+ * poll does not survey carry no value and are left bare (they read "no data"),
+ * NOT 0 (0 is a real ladder score, not a gap). Plain set-if-present, so only the
+ * ~147 covered places get the field.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachHappinesses(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.happiness = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/corruption.json` onto each Country as `.corruption`
+ * (Transparency International CPI, 0-100, higher = cleaner; displayed as
+ * "Government integrity"). Sparse `absence: 'unknown'` survey metric like
+ * `beerPerCapita`: the states TI does not score carry no value and are left bare
+ * (they read "no data"), NOT 0 (0 is "highly corrupt", a real score, not a gap).
+ * Plain set-if-present, so only the ~181 scored places get the field.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachCorruptions(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.corruption = v;
+  }
+  return countries;
+}
+
+/**
  * Denormalize `flags/metrics/wine.json` onto each Country as `.wine`
  * (wine tonnes). Sparse `absence: 'zero'` metric like coffee: makers get their
  * tonnage, every other real place gets 0, orgs stay without the field.
@@ -616,6 +679,9 @@ const METRIC_ATTACHERS = {
   borders: attachBorders,
   oliveOil: attachOliveOils,
   honey: attachHoneys,
+  temperature: attachTemperatures,
+  happiness: attachHappinesses,
+  corruption: attachCorruptions,
 };
 
 /**

@@ -822,6 +822,68 @@ export const HONEY_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 100_000 },
 ];
 
+/**
+ * Average-temperature-threshold Categories (degrees Celsius, dense metric). Hot
+ * `>=25 / >=20 / >=10` (99 / 165 / 212 real places) and cold `<=10 / <=5 / <=0`
+ * (50 / 16 / 6). The `<=0` "below freezing on average" tier (Antarctica,
+ * Greenland, Svalbard, Canada, Russia, Bouvet) is the first metric break whose
+ * `n` is not positive, which is why `parseThreshold` admits zero. Breaks stay
+ * whole integers so the `.`-split i18n keys and `parseThreshold` round-trip.
+ * `exclusiveGroup: 'temperature'`.
+ *
+ * No `ultimate: true` break: kept a 3×3-only axis (the sub-zero extreme is too
+ * narrow to back a 9×9 cell), so every break carries `ultimateEligible: false`.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const TEMPERATURE_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 25 },
+  { op: '>=', n: 20 },
+  { op: '>=', n: 10 },
+  { op: '<=', n: 10 },
+  { op: '<=', n: 5 },
+  { op: '<=', n: 0 },
+];
+
+/**
+ * Happiness-score-threshold Categories (World Happiness Report Cantril ladder,
+ * 0-10). Sparse `absence: 'unknown'` survey metric (the Gallup poll reaches
+ * ~147 countries), so `>=`-only and happiest-first: `>=7 / >=6 / >=5` (9 / 61 /
+ * 100 covered places), the "very happy / happy / above the midpoint" tiers. A
+ * `<=` tier would surface the conflict / poverty tail, a poverty quiz not a
+ * happiness one, so it is deliberately omitted. `exclusiveGroup: 'happiness'`.
+ *
+ * No `ultimate: true` break: 3×3-only, like the other absence:'unknown' metrics.
+ * Breaks are whole integers (the ladder is 0-10) so no signed parse is needed.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const HAPPINESS_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 7 },
+  { op: '>=', n: 6 },
+  { op: '>=', n: 5 },
+];
+
+/**
+ * Government-integrity-threshold Categories (Transparency International CPI,
+ * 0-100, higher = cleaner). Displayed as "Government integrity" so the
+ * high-is-good scale reads intuitively; the code key stays `corruption`. Sparse
+ * `absence: 'unknown'` (TI scores ~181 states), so `>=`-only and cleanest-first:
+ * `>=50 / >=60 / >=70` (58 / 37 / 19 covered places), the "cleaner than the
+ * midpoint / clean / very clean" tiers. A `<=` tier would surface the
+ * failed-state tail, a grim quiz, so it is omitted. `exclusiveGroup: 'corruption'`.
+ *
+ * No `ultimate: true` break: 3×3-only, like the other absence:'unknown' metrics.
+ * Breaks are whole integers (the index is 0-100) so no signed parse is needed.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const CORRUPTION_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 50 },
+  { op: '>=', n: 60 },
+  { op: '>=', n: 70 },
+];
+
 /** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
@@ -1814,6 +1876,98 @@ export function honey(op, n, opts = {}) {
 }
 
 /**
+ * Average-temperature-threshold Category factory (degrees Celsius). Reads the
+ * denormalized `country.temperature` field (`attachTemperatures`). Dense metric:
+ * every real place has a value, so the no-data guard blocks only org flags.
+ * `exclusiveGroup: 'temperature'`. Values and the `<=0` break may be negative.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function temperature(op, n, opts = {}) {
+  const label = op === '>=' ? `over ${n} °C` : `under ${n} °C`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.temperature === 'number' && c.temperature >= n
+      : (c) => typeof c.temperature === 'number' && c.temperature <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `temperature:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'temperature',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
+ * Happiness-score-threshold Category factory (World Happiness Report ladder,
+ * 0-10). Reads the denormalized `country.happiness` field (`attachHappinesses`).
+ * Sparse `absence: 'unknown'` survey metric: the ~115 unsurveyed real places
+ * carry no value and correctly read "no data" on a happiness cell.
+ * `exclusiveGroup: 'happiness'`. The `<=` branch is kept for symmetry so a
+ * `happiness:<=N` id would still rehydrate, though the breaks are `>=`-only.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function happiness(op, n, opts = {}) {
+  const label = op === '>=' ? `over ${n}/10` : `under ${n}/10`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.happiness === 'number' && c.happiness >= n
+      : (c) => typeof c.happiness === 'number' && c.happiness <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `happiness:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'happiness',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
+ * Government-integrity-threshold Category factory (Transparency International
+ * CPI, 0-100, higher = cleaner). Reads the denormalized `country.corruption`
+ * field (`attachCorruptions`). Displayed as "Government integrity"; the code key
+ * stays `corruption`. Sparse `absence: 'unknown'` survey: the states TI does not
+ * score carry no value and correctly read "no data". `exclusiveGroup:
+ * 'corruption'`. The `<=` branch is kept for symmetry, though the breaks are
+ * `>=`-only.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function corruption(op, n, opts = {}) {
+  const label = op === '>=' ? `over ${n}/100` : `under ${n}/100`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.corruption === 'number' && c.corruption >= n
+      : (c) => typeof c.corruption === 'number' && c.corruption <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `corruption:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'corruption',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * The threshold world-metrics as one registry, so every surface that treats
  * them uniformly (the filter DSL parse/serialize, `matchesFilters`, the pill
  * labels, `categoryFromId`, the random pool, the single-use rule, the
@@ -1844,6 +1998,9 @@ export function honey(op, n, opts = {}) {
  *   read as two "GDP" questions). Usually equals the key; only closely-related metrics
  *   share one. Filters are unaffected: you can still filter by both at once.
  * @property {(c: Country) => boolean} has
+ * @property {boolean} [signed]  When true, this metric's breaks may be zero or
+ *   negative (temperature's `<=0` "below freezing" tier), so `parseThreshold`
+ *   is told to admit non-positive `n` for it. Omitted (positive-only) elsewhere.
  * @property {(op: '>=' | '<=', n: number, translate: (key: string, fallback: string) => string) => string} labelFor
  */
 
@@ -2207,6 +2364,52 @@ export const THRESHOLD_METRICS = {
       return translate(`honey.atMost.${token}`, `under ${human} tonnes`);
     },
   },
+  temperature: {
+    breaks: TEMPERATURE_BREAKS_FOR_RANDOM,
+    factory: temperature,
+    prefixFallback: 'Average temperature',
+    field: 'temperature',
+    family: 'temperature',
+    // Signed: its `<=0` break has a non-positive `n`, so parseThreshold is told
+    // to admit zero / negatives for this metric only.
+    signed: true,
+    has: (c) => typeof c.temperature === 'number',
+    labelFor: (op, n, translate) => {
+      // Breaks are whole integers, so `n` is a safe single i18n key segment
+      // (no `.`-split); `temperature.atMost.0` is the below-freezing tier.
+      if (op === '>=') return translate(`temperature.atLeast.${n}`, `over ${n} °C`);
+      return translate(`temperature.atMost.${n}`, `under ${n} °C`);
+    },
+  },
+  happiness: {
+    breaks: HAPPINESS_BREAKS_FOR_RANDOM,
+    factory: happiness,
+    prefixFallback: 'Happiness score',
+    field: 'happiness',
+    family: 'happiness',
+    has: (c) => typeof c.happiness === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`happiness.atLeast.${n}`, `over ${n}/10`);
+      return translate(`happiness.atMost.${n}`, `under ${n}/10`);
+    },
+  },
+  corruption: {
+    breaks: CORRUPTION_BREAKS_FOR_RANDOM,
+    factory: corruption,
+    // Reframed to the clean pole so a high-is-good scale reads intuitively; the
+    // key stays `corruption`. The "(less corrupt)" gloss spells out the
+    // direction on a threshold cell (a high integrity score = less corruption),
+    // since a bare number can't. This prefix backs both the TTT category label
+    // and the metric-hub panel lead. See DATA_FEATURE.md Feature EJ.
+    prefixFallback: 'Government integrity (less corrupt)',
+    field: 'corruption',
+    family: 'corruption',
+    has: (c) => typeof c.corruption === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`corruption.atLeast.${n}`, `over ${n}/100`);
+      return translate(`corruption.atMost.${n}`, `under ${n}/100`);
+    },
+  },
 };
 
 /** The registered threshold-metric keys, in registry (display) order. */
@@ -2214,14 +2417,22 @@ export const METRIC_KEYS = Object.keys(THRESHOLD_METRICS);
 
 /**
  * Decode a `<metric>:<op><n>` id suffix into `{ op, n }`, or null if it isn't a
- * valid threshold token (`>=`/`<=` prefix, positive integer, canonical form).
- * Shared by `categoryFromId`, `translateCategoryLabel`, and the filter DSL so
- * every metric parses its suffix identically.
+ * valid threshold token (`>=`/`<=` prefix, canonical integer). Shared by
+ * `categoryFromId`, `translateCategoryLabel`, and the filter DSL so every metric
+ * parses its suffix identically.
+ *
+ * By default the break must be a POSITIVE integer (every metric's tiers are).
+ * A *signed* metric passes `allowNonPositive: true` so zero / negative breaks
+ * parse too: temperature's `<=0` "below freezing" tier is the only such case
+ * today. Callers derive the flag from `THRESHOLD_METRICS[key].signed`, so the
+ * relaxation is scoped to that one metric and never widens what parses for
+ * population / area / the rest.
  *
  * @param {string} suffix
+ * @param {boolean} [allowNonPositive]
  * @returns {{ op: '>=' | '<=', n: number } | null}
  */
-export function parseThreshold(suffix) {
+export function parseThreshold(suffix, allowNonPositive = false) {
   /** @type {'>=' | '<=' | null} */
   let op = null;
   if (suffix.startsWith('>=')) op = '>=';
@@ -2229,8 +2440,11 @@ export function parseThreshold(suffix) {
   if (!op) return null;
   const nStr = suffix.slice(2);
   const n = Number.parseInt(nStr, 10);
-  if (Number.isInteger(n) && n > 0 && String(n) === nStr) return { op, n };
-  return null;
+  // Canonical integer only: rejects decimals, leading zeros, `+`, NaN.
+  if (!Number.isInteger(n) || String(n) !== nStr) return null;
+  // Positive-only unless the metric is signed (temperature's `<=0`).
+  if (n <= 0 && !allowNonPositive) return null;
+  return { op, n };
 }
 
 /**
@@ -2308,7 +2522,7 @@ export function translateCategoryLabel(category, translate) {
     // `metric.<kind>`) is prefixed so a bare "over 100" cell can't be confused
     // across the threshold metrics; the metric's own `labelFor` renders the
     // threshold text (with its unit / compact token).
-    const parsed = parseThreshold(value);
+    const parsed = parseThreshold(value, THRESHOLD_METRICS[kind].signed === true);
     if (!parsed) return category.label;
     const prefix = translate(`metric.${kind}`, THRESHOLD_METRICS[kind].prefixFallback);
     return `${prefix}: ${THRESHOLD_METRICS[kind].labelFor(parsed.op, parsed.n, translate)}`;
@@ -2354,7 +2568,7 @@ export function categoryFromId(id) {
   if (colon > 0) {
     const metric = THRESHOLD_METRICS[id.slice(0, colon)];
     if (metric) {
-      const parsed = parseThreshold(id.slice(colon + 1));
+      const parsed = parseThreshold(id.slice(colon + 1), metric.signed === true);
       return parsed ? metric.factory(parsed.op, parsed.n) : null;
     }
   }

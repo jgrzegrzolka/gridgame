@@ -451,6 +451,120 @@ test('elevationRound: two-directional, correct extreme-by-elevation answer', asy
   assert.equal(elevationRound.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
 });
 
+// ---- temperature instance (°C, id 'superlative-temperature') ----------------
+
+test('temperatureRound: two-directional over hot and sub-zero places, correct extreme answer', async () => {
+  const { temperatureRound } = await import('./superlative.js');
+  const tempJson = (await import('../metrics/temperature.json', { with: { type: 'json' } })).default;
+  const TEMP = /** @type {Record<string, number>} */ (tempJson.values);
+  assert.equal(temperatureRound.id, 'superlative-temperature');
+  // Temperature-distinct places spanning hot to below freezing, all in
+  // temperature.json (dense). Includes negatives so the extreme-pick is proven
+  // sign-safe: Burkina 30.4 ... Greenland -18.68.
+  const pool = ['bf', 'ae', 'sg', 'gr', 'gb', 'de', 'no', 'is', 'ru', 'ca', 'gl', 'sj'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = temperatureRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => TEMP[c]);
+    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+    assert.equal(TEMP[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-temperature option`);
+  }
+  // Two-directional: hottest AND coldest both get dealt. Drive the first rng
+  // byte directly to prove neither direction is suppressed (negatives included).
+  const firstThen = (/** @type {number} */ first, /** @type {() => number} */ rest) => {
+    let n = 0;
+    return () => (n++ === 0 ? first : rest());
+  };
+  assert.equal(temperatureRound.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
+  assert.equal(temperatureRound.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
+});
+
+// ---- happiness instance (WHR ladder 0-10, id 'superlative-happiness') -------
+
+test('happinessRound: most-only, correct highest-happiness answer, covered places only', async () => {
+  const { happinessRound } = await import('./superlative.js');
+  const happyJson = (await import('../metrics/happiness.json', { with: { type: 'json' } })).default;
+  const HAPPY = /** @type {Record<string, number>} */ (happyJson.values);
+  assert.equal(happinessRound.id, 'superlative-happiness');
+  // Happiness-distinct sovereigns spanning the ladder, all covered by Gallup.
+  const pool = ['fi', 'dk', 'is', 'cr', 'us', 'de', 'jp', 'br', 'in', 'ke', 'np', 'af'].map((code) => ({ code }));
+  for (const c of pool) assert.ok(c.code in HAPPY, `${c.code} must be covered by happiness.json`);
+  for (let i = 0; i < 100; i++) {
+    const q = happinessRound.generate(pool, undefined, seeded(i + 1));
+    // Locked to 'most' (happiest); "least happy" is never dealt.
+    assert.equal(q.prompt, 'most', 'happiness is locked to most (happiest)');
+    assert.equal(q.options.length, 4);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => HAPPY[c]);
+    assert.equal(HAPPY[q.answer], Math.max(...vals), `seed ${i}: answer must be the happiest option`);
+  }
+});
+
+test('happinessRound: the unsurveyed no-data places are excluded from selection', async () => {
+  const { happinessRound } = await import('./superlative.js');
+  const happyJson = (await import('../metrics/happiness.json', { with: { type: 'json' } })).default;
+  const HAPPY = /** @type {Record<string, number>} */ (happyJson.values);
+  // Four covered places plus codes Gallup does not survey (a sub-national part
+  // and polar territories, all absent from happiness.json, absence:'unknown').
+  // Those must never surface as an option: the round's metric.has drops them.
+  const covered = ['fi', 'dk', 'us', 'jp'];
+  const noData = ['gb-wls', 'aq', 'gl'].filter((code) => !(code in HAPPY));
+  assert.ok(noData.length >= 1, 'expected at least one uncovered code for the test');
+  const pool = [...covered, ...noData].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = happinessRound.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) assert.ok(!noData.includes(opt), `no-data place ${opt} must be excluded`);
+  }
+});
+
+// ---- corruption instance (CPI 0-100, id 'superlative-corruption') -----------
+
+test('corruptionRound: two-directional, the extreme CPI is the answer, scored places only', async () => {
+  const { corruptionRound } = await import('./superlative.js');
+  const corrJson = (await import('../metrics/corruption.json', { with: { type: 'json' } })).default;
+  const CORR = /** @type {Record<string, number>} */ (corrJson.values);
+  assert.equal(corruptionRound.id, 'superlative-corruption');
+  // CPI-distinct sovereigns spanning clean to corrupt, all scored by TI.
+  const pool = ['dk', 'fi', 'sg', 'de', 'us', 'jp', 'br', 'in', 'mx', 'ru', 'ng', 'ke'].map((code) => ({ code }));
+  for (const c of pool) assert.ok(c.code in CORR, `${c.code} must be scored by corruption.json`);
+  for (let i = 0; i < 100; i++) {
+    const q = corruptionRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const vals = q.options.map((c) => CORR[c]);
+    // Round 'most' picks the HIGHEST CPI (shown as "Least corrupt"); 'least'
+    // picks the LOWEST CPI (shown as "Most corrupt"). The value comparison here
+    // is by CPI, not by the inverted hint wording.
+    const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+    assert.equal(CORR[q.answer], extreme, `seed ${i}: answer must be the ${q.prompt}-CPI option`);
+  }
+  // Two-directional: both extremes get dealt (the hint layer inverts the CPI
+  // orientation into "Most corrupt" / "Least corrupt").
+  const firstThen = (/** @type {number} */ first, /** @type {() => number} */ rest) => {
+    let n = 0;
+    return () => (n++ === 0 ? first : rest());
+  };
+  assert.equal(corruptionRound.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
+  assert.equal(corruptionRound.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
+});
+
+test('corruptionRound: the unscored no-data places are excluded from selection', async () => {
+  const { corruptionRound } = await import('./superlative.js');
+  const corrJson = (await import('../metrics/corruption.json', { with: { type: 'json' } })).default;
+  const CORR = /** @type {Record<string, number>} */ (corrJson.values);
+  // Four scored places plus codes TI does not score (a sub-national part and
+  // polar territories, absent from corruption.json). Those must never surface.
+  const scored = ['dk', 'fi', 'sg', 'de'];
+  const noData = ['gb-wls', 'aq', 'gl'].filter((code) => !(code in CORR));
+  assert.ok(noData.length >= 1, 'expected at least one unscored code for the test');
+  const pool = [...scored, ...noData].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = corruptionRound.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) assert.ok(!noData.includes(opt), `no-data place ${opt} must be excluded`);
+  }
+});
+
 // ---- coastline instance (km of coast, id 'superlative-coastline') -----------
 
 test('coastlineRound: two-directional over coastal places, correct extreme answer', async () => {

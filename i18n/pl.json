@@ -591,7 +591,10 @@
       "superlativeMeat": "Spożycie mięsa na osobę: najwięcej",
       "superlativeBorders": "Sąsiednie kraje: najwięcej",
       "superlativeOliveOil": "Produkcja oliwy z oliwek: najwięcej",
-      "superlativeHoney": "Produkcja miodu: najwięcej"
+      "superlativeHoney": "Produkcja miodu: najwięcej",
+      "superlativeTemperature": "Średnia temperatura: najcieplej i najzimniej",
+      "superlativeHappiness": "Wskaźnik szczęścia: najszczęśliwsi",
+      "superlativeCorruption": "Uczciwość władz: najbardziej i najmniej skorumpowane"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -624,7 +627,7 @@
       "superlativeBorders": "Granice",
       "superlativeOliveOil": "Oliwa z oliwek",
       "superlativeHoney": "Miód",
-      "superlativeCorruption": "Korupcja",
+      "superlativeCorruption": "Uczciwość",
       "superlativeTemperature": "Temperatura",
       "superlativeHappiness": "Szczęście"
     },
@@ -666,6 +669,11 @@
     "hintMostBorders": "Najwięcej sąsiednich krajów",
     "hintMostOliveOil": "Największa produkcja oliwy z oliwek",
     "hintMostHoney": "Największa produkcja miodu",
+    "hintMostTemperature": "Najcieplej",
+    "hintLeastTemperature": "Najzimniej",
+    "hintMostHappiness": "Najszczęśliwsi",
+    "hintMostCorruption": "Najmniej skorumpowany",
+    "hintLeastCorruption": "Najbardziej skorumpowany",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
@@ -785,6 +793,32 @@
       "100": "poniżej 100 osób/km²",
       "30": "poniżej 30 osób/km²",
       "10": "poniżej 10 osób/km²"
+    }
+  },
+  "temperature": {
+    "atLeast": {
+      "25": "ponad 25 °C",
+      "20": "ponad 20 °C",
+      "10": "ponad 10 °C"
+    },
+    "atMost": {
+      "10": "poniżej 10 °C",
+      "5": "poniżej 5 °C",
+      "0": "poniżej 0 °C"
+    }
+  },
+  "happiness": {
+    "atLeast": {
+      "7": "ponad 7/10",
+      "6": "ponad 6/10",
+      "5": "ponad 5/10"
+    }
+  },
+  "corruption": {
+    "atLeast": {
+      "50": "ponad 50/100",
+      "60": "ponad 60/100",
+      "70": "ponad 70/100"
     }
   },
   "gdp": {
@@ -990,6 +1024,9 @@
     "population": "Liczba ludności",
     "area": "Powierzchnia",
     "density": "Gęstość zaludnienia",
+    "temperature": "Średnia temperatura",
+    "happiness": "Wskaźnik szczęścia",
+    "corruption": "Uczciwość władz (mniej korupcji)",
     "gdp": "PKB",
     "gdpPerCapita": "PKB na osobę",
     "coffee": "Produkcja kawy",

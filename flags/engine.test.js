@@ -54,6 +54,9 @@ import {
   GOLD_BREAKS_FOR_RANDOM,
   OLIVE_OIL_BREAKS_FOR_RANDOM,
   HONEY_BREAKS_FOR_RANDOM,
+  TEMPERATURE_BREAKS_FOR_RANDOM,
+  HAPPINESS_BREAKS_FOR_RANDOM,
+  CORRUPTION_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
   FOREST_BREAKS_FOR_RANDOM,
@@ -715,6 +718,27 @@ test('randomPuzzle categories come from the unified pool (continent / colour / m
       const n = Number.parseInt(suffix.slice(2), 10);
       const inPool = BORDERS_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
       assert.ok(inPool, `borders ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('temperature:')) {
+      const suffix = cat.id.slice('temperature:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = TEMPERATURE_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `temperature ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('happiness:')) {
+      const suffix = cat.id.slice('happiness:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = HAPPINESS_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `happiness ${op}${n} not in pool`);
+    } else if (cat.id.startsWith('corruption:')) {
+      const suffix = cat.id.slice('corruption:'.length);
+      /** @type {'>=' | '<='} */
+      const op = suffix.startsWith('>=') ? '>=' : '<=';
+      const n = Number.parseInt(suffix.slice(2), 10);
+      const inPool = CORRUPTION_BREAKS_FOR_RANDOM.some((b) => b.op === op && b.n === n);
+      assert.ok(inPool, `corruption ${op}${n} not in pool`);
     } else {
       assert.fail(`unexpected category id: ${cat.id}`);
     }
@@ -802,7 +826,10 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + HONEY_BREAKS_FOR_RANDOM.length
     + ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM.length
     + MEAT_PER_CAPITA_BREAKS_FOR_RANDOM.length
-    + BORDERS_BREAKS_FOR_RANDOM.length;
+    + BORDERS_BREAKS_FOR_RANDOM.length
+    + TEMPERATURE_BREAKS_FOR_RANDOM.length
+    + HAPPINESS_BREAKS_FOR_RANDOM.length
+    + CORRUPTION_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -984,7 +1011,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['alcoholPerCapita', 'apple', 'area', 'banana', 'beerPerCapita', 'borders', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'gold', 'honey', 'meatPerCapita', 'oil', 'oliveOil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'wine'],
+    ['alcoholPerCapita', 'apple', 'area', 'banana', 'beerPerCapita', 'borders', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'corruption', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'gold', 'happiness', 'honey', 'meatPerCapita', 'oil', 'oliveOil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'temperature', 'wine'],
   );
 });
 
@@ -1240,13 +1267,37 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     0,
     'honey cats must not appear in the 9×9 pool',
   );
+  // Temperature is 3×3-only (no ultimate break), so ALL its breaks drop.
+  const droppedTemperature = TEMPERATURE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedTemperature, TEMPERATURE_BREAKS_FOR_RANDOM.length, 'no temperature tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('temperature:')).length,
+    0,
+    'temperature cats must not appear in the 9×9 pool',
+  );
+  // Happiness is 3×3-only (absence:'unknown', no ultimate break), so ALL drop.
+  const droppedHappiness = HAPPINESS_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedHappiness, HAPPINESS_BREAKS_FOR_RANDOM.length, 'no happiness tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('happiness:')).length,
+    0,
+    'happiness cats must not appear in the 9×9 pool',
+  );
+  // Corruption is 3×3-only (absence:'unknown', no ultimate break), so ALL drop.
+  const droppedCorruption = CORRUPTION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedCorruption, CORRUPTION_BREAKS_FOR_RANDOM.length, 'no corruption tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('corruption:')).length,
+    0,
+    'corruption cats must not appear in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
       - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest - droppedOil - droppedRice - droppedCoal
       - droppedSheepPerCapita - droppedCattlePerCapita - droppedBeerPerCapita - droppedTea - droppedSugarcane - droppedGold
-      - droppedAlcoholPerCapita - droppedMeatPerCapita - droppedBorders - droppedOliveOil - droppedHoney,
+      - droppedAlcoholPerCapita - droppedMeatPerCapita - droppedBorders - droppedOliveOil - droppedHoney - droppedTemperature - droppedHappiness - droppedCorruption,
   );
 });
 
@@ -2451,6 +2502,26 @@ function syntheticTaggedCountries() {
   const SHEEP_LADDER = [1, 2, 3, 1, 2, 4];
   const CATTLE_LADDER = [1, 2, 3, 1, 2, 4];
   const BEER_LADDER = [60, 120, 200, 55, 150, 300];
+  // Temperature (dense, two-directional, °C, breaks >=25/>=20/>=10 and
+  // <=10/<=5/<=0). Six rungs spanning hot to below-freezing so every tier has a
+  // candidate in every synthetic continent (the -8 rung backs the <=0 tier). A
+  // /2 counter (unused by any other metric) decorrelates it from the %6 cluster
+  // (pop/area/density) and the /3../7 metrics, so cross-metric cells like
+  // temperature × density stay fillable.
+  const TEMPERATURE_LADDER = [30, 21, 14, 7, 1, -8];
+  // Happiness (sparse absence:'unknown' survey, 0-10 ladder, >=-only breaks
+  // >=5/6/7). Six rungs where every rung clears >=5, four clear >=6 and two
+  // clear >=7, so each tier has a candidate in every synthetic continent. Uses
+  // the %6 counter like the other small 3×3-only intensive ladders (sheep /
+  // cattle / beer); the synthetic pool's job is fillability, not the real gap.
+  const HAPPINESS_LADDER = [5.2, 6.1, 7.1, 5.5, 6.5, 7.7];
+  // Corruption / "Government integrity" (sparse absence:'unknown' CPI, 0-100,
+  // >=-only breaks >=50/60/70). Six rungs where every rung clears >=50, four
+  // clear >=60 and two clear >=70, so each tier fills per synthetic continent.
+  // %6 counter like the other small 3×3-only ladders; monotonic so its cross
+  // cells with the other %6 metrics stay fillable on the diagonal (like the
+  // crops that share one ladder).
+  const CORRUPTION_LADDER = [50, 60, 70, 55, 65, 80];
   // Each (continent × colour × n) triple becomes one country. n controls
   // palette size — n=0 keeps the base 1-colour shape, n=1/n=2 layer in
   // distinct neighbour colours so the country has 2 / 3 colours total.
@@ -2470,6 +2541,9 @@ function syntheticTaggedCountries() {
           population: POP_LADDER[codeCounter % POP_LADDER.length],
           area: AREA_LADDER[codeCounter % AREA_LADDER.length],
           density: DENSITY_LADDER[codeCounter % DENSITY_LADDER.length],
+          temperature: TEMPERATURE_LADDER[Math.floor(codeCounter / 2) % TEMPERATURE_LADDER.length],
+          happiness: HAPPINESS_LADDER[codeCounter % HAPPINESS_LADDER.length],
+          corruption: CORRUPTION_LADDER[codeCounter % CORRUPTION_LADDER.length],
           // Decorrelate the two GDP ladders from pop/area/density (which all use
           // codeCounter % 6) via a slower counter, so cross-metric cells stay
           // fillable: real data isn't perfectly rank-correlated either, and the
@@ -2516,6 +2590,9 @@ function syntheticTaggedCountries() {
           population: POP_LADDER[codeCounter % POP_LADDER.length],
           area: AREA_LADDER[codeCounter % AREA_LADDER.length],
           density: DENSITY_LADDER[codeCounter % DENSITY_LADDER.length],
+          temperature: TEMPERATURE_LADDER[Math.floor(codeCounter / 2) % TEMPERATURE_LADDER.length],
+          happiness: HAPPINESS_LADDER[codeCounter % HAPPINESS_LADDER.length],
+          corruption: CORRUPTION_LADDER[codeCounter % CORRUPTION_LADDER.length],
           // Decorrelate the two GDP ladders from pop/area/density (which all use
           // codeCounter % 6) via a slower counter, so cross-metric cells stay
           // fillable: real data isn't perfectly rank-correlated either, and the

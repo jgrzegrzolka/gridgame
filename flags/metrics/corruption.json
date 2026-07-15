@@ -1,6 +1,6 @@
 {
   "key": "corruption",
-  "label": "Corruption Perceptions Index",
+  "label": "Government integrity",
   "unit": "/100",
   "format": "plain",
   "absence": "unknown",

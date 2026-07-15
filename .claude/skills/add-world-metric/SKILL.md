@@ -5,7 +5,7 @@ description: End-to-end recipe for adding a new world metric (area, GDP, coffee 
 
 # Adding a world metric
 
-A "metric" is a continuous world fact keyed per country (population, area, GDP, coffee production, ...). It lives in `flags/metrics/<key>.json` and, once added, can surface on up to six places. **Only the data file is mandatory.** Every consumer below is an independent opt-in, and several are free once the data exists.
+A "metric" is a continuous world fact keyed per country (population, area, GDP, coffee production, ...). It lives in `flags/metrics/<key>.json` and, once added, can surface on up to six places. **Only the data file is mandatory** in the sense that each surface is technically independent, but the **default scope of "add a metric" is surfaces 1-5, one metric fully before starting the next.** Do not stop at the free lens (1-2) unless Jan explicitly scopes it down: a metric that ships lens-only reads as unfinished and leaves the trail half-built (the corruption / temperature / happiness batch of 2026-07-15 did exactly this, and the missing Feature entries below made the partial state invisible). If Jan does scope it down, say so in the Feature entry so the remaining surfaces are visibly to-do.
 
 **Two artifacts, two jobs.** This skill is the *recipe* (how each surface is wired, identical for every metric). The *tracking* of which surfaces are done, in flight, or deferred for a specific metric belongs in a **DATA_FEATURE.md Feature entry** with a phase checklist, exactly like Features DD/DE/DF/DG. Don't record per-metric state here; paste the checklist at the bottom into a new Feature entry and tick it there.
 
@@ -22,6 +22,8 @@ Two rules that every surface leans on. Settle them at data time; getting them wr
 2. **Absence policy for sparse metrics.** Population and area are *dense*: every real place has a real value, so you fill them all (population fills the ~8 uninhabited territories with 0 or transient counts in `build-population.mjs`). Production metrics (coffee, apples, medals) are *sparse*: the source table only lists producers. For those, "absent from the source" safely means `0` for a real place (a country not in the coffee table grows no coffee). Two ways to honor rule 1 for a sparse metric:
    - Simplest: fill `0` for every real place missing from the source (explicit, larger data file).
    - Cleaner (not built yet): give the metric file an `absence: 'zero'` hint and have the `attach<Key>s` loader default missing real places to `0`. Build this the first time a sparse metric lands; population/area don't need it. **Never infer `0` for a metric where absence means "unknown, not zero"** (GDP: every country has substantial GDP; a missing value is unsourced, not zero). For an `absence: 'unknown'` metric, a missing real place stays truly "no data" and the guard correctly blocks it until you source it. So: source it.
+
+3. **Physical-fact metrics MUST be dense, regardless of the source table's coverage.** Classify by the *nature of the quantity*, not by how many rows the source happens to list. If every real place inherently HAS a value (temperature, elevation, coastline, latitude, land area: a physical or geographic fact), the metric is dense: fill every real place, hand-filling the ones the source omits (temperature's ~28 sub-national parts / territories / polar islands are hand-filled in `build-temperature.mjs`). `absence: 'unknown'` is ONLY for genuine survey / measurement metrics where a missing place is truly unmeasured (a WHO consumption survey, a happiness poll, a corruption index). The trap: temperature was first shipped `absence: 'unknown'` because its source table had ~234 rows, exactly like beer, so 28 real places read "no data" on a temperature TTT cell, the Antarctica bug class. "The source table doesn't list Wales" is not the same as "Wales has no temperature." When in doubt, ask: could this value in principle exist for every real place? If yes, it's dense, source it.
 
 ## The six surfaces, cheapest first
 
@@ -67,7 +69,7 @@ The daily surface is deliberately **not** a code surface and **does not block th
 
 ## Tracking: seed a DATA_FEATURE.md Feature entry
 
-When you actually start a metric, open a Feature entry under `## Now` in DATA_FEATURE.md and paste this checklist (surfaces 1-5). Tick each as it lands. **Close the Feature (move to `## Done`) once surfaces 1-5 are shipped**; the daily surface is tracked separately in `METRIC_DAILY_PUZZLES.md` and never keeps a Feature open.
+Open the Feature entry as the **FIRST step**, before writing any code: put it under `## Now` in DATA_FEATURE.md and paste this checklist (surfaces 1-5) with every box unchecked. This is what makes partial or interrupted work visible (the corruption / temperature / happiness batch had no entries, so their half-done state was invisible until Jan noticed). Tick each box as it lands. **Close the Feature (move to `## Done`) once surfaces 1-5 are shipped**; the daily surface is tracked separately in `METRIC_DAILY_PUZZLES.md` and never keeps a Feature open.
 
 ```markdown
 ### Feature <ID>: <Metric> as a world metric

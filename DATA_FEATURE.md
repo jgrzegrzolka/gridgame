@@ -19,7 +19,7 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. Features EC / ED / EE (alcohol per capita, meat per capita, bordering countries) closed once their code surfaces landed, shipped together in one PR; per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+_No metric is mid-flight. The whole social batch (temperature EH, happiness EI, corruption EJ) is now full across surfaces 1-5; every world metric that has shipped is complete or its remaining surface is the deferred daily one. Per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
 
 ---
 
@@ -32,6 +32,63 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 ---
 
 ## Done
+
+### Feature EJ: Corruption Perceptions Index as a world metric, reframed to "Government integrity" so a high-is-good scale reads intuitively (code surfaces complete 2026-07-15, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Thirtieth world metric and the last of the social batch (after temperature EH, happiness EI) taken from a lens-only #902 ship to full surfaces 3-5. Transparency International CPI 2025, score 0-100. The wrinkle that shaped this Feature: the CPI runs **higher = cleaner** (Denmark 89, Finland 88, Singapore 84 top; Somalia / South Sudan 9 bottom), so a metric *named* "corruption" whose highest value means *least* corrupt reads backwards.
+
+**Framing decision (Jan's call): reframe the display to the clean pole, "Government integrity".** The code key stays `corruption` everywhere (data, factory, attacher, round id), but every user-facing label reads as integrity, so "higher = better" is self-evident and needs no direction-spelling (a tier renders plainly as "over 70/100"). The #902 lens is renamed too, for consistency; the CPI stays named in the metric's `source`. Rejected: keeping the "Corruption" name (a high-is-good number under a bad-sounding word) and inverting to 100-CPI (fabricates a non-published number, flips the shipped lens, leads with the grim "most corrupt").
+
+**Data contract:** **sparse, `absence: 'unknown'`** (TI scores ~181 sovereign states; the places it does not cover read "no data", correct). NOT densified (a perceptions index is a survey, not a physical fact, same as happiness EI).
+
+**Direction (surface-split, Jan's calls 2026-07-15):** the filter / TTT surfaces stay **clean-pole, `>=`-only** ("Government integrity", cleanest-first), because a high-number tier under the word "corrupt" reads backwards. The TTT category prefix (and the metric-hub panel lead, same i18n key) carry a **"(less corrupt)"** gloss so the direction is explicit on a threshold cell. The **Party round is TWO-DIRECTIONAL** and asks the direct "most corrupt" / "least corrupt" questions (the clearest trivia phrasing), with the CPI orientation inverted at the hint layer: round `'most'` = highest CPI = shown "Least corrupt"; round `'least'` = lowest CPI = "Most corrupt". So the same metric reads as integrity where a threshold needs a stable direction, and as corruption where a question is asked.
+
+**Breaks:** `>=50 / >=60 / >=70` (58 / 37 / 19 covered places), whole integers on the 0-100 scale (no signed change). Filter / TTT only; the Party round ranks raw values, no breaks.
+
+- [x] 1. Relabel to "Government integrity" (key stays `corruption`): `corruption.json` label (via `build-corruption.mjs`), `METRIC_FILES` label, `metricVisuals` short label, i18n `metric.corruption` + `party.modeShort.superlativeCorruption`. Balance-scale icon + purple hue from #902 kept.
+- [x] 2. flagsdata lens: lit from #902; the relabel updates its chip.
+- [x] 3 + 4 (driven by `THRESHOLD_METRICS`). `corruption(op, n)` factory + `CORRUPTION_BREAKS_FOR_RANDOM` (`>=50/60/70`) + `THRESHOLD_METRICS.corruption` (prefixFallback 'Government integrity'). Filters: `CorruptionConstraint` + field; `corruptionProbability` (0.08) modifier + `findFlag/page.js`. `attachCorruptions` (set-if-present, `absence:'unknown'`) + `METRIC_ATTACHERS`; `party/server.js` line activated (**no metric is lens-only after this**). i18n `corruption.atLeast.{50,60,70}` (en+pl). Synthetic TTT fixture: `CORRUPTION_LADDER`.
+- [x] 5. Flag Party round: `corruptionRound` (id `superlative-corruption`) across the six spots + en/pl i18n. **Two-directional**, direct "most corrupt / least corrupt" wording (inverted hint mapping: round `'most'` = highest CPI = "Least corrupt"). Raw `createMetric(corruption, [])` (the round's `metric.has` filter drops the no-data places); pinned by `superlative.test.js` (both directions + a no-data-exclusion test).
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+---
+
+### Feature EI: Happiness score as a world metric, the second social-batch metric taken from lens-only to full (code surfaces complete 2026-07-15, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Twenty-ninth world metric, and the second of the social batch (after temperature EH) taken from a lens-only #904 ship to full surfaces 3-5. World Happiness Report / Gallup World Poll Cantril-ladder score, 0-10 (`decimal1`, unit `/10`), 2025 report. Its draw is the famous "Finland is the happiest country" story: Finland 7.7 tops it, then Denmark / Iceland / the Nordics; the covered range runs down to Afghanistan 1.4.
+
+**Data contract:** **sparse, `absence: 'unknown'`** (like beer / alcohol / meat), and deliberately NOT densified. Happiness is a *survey*, not a physical fact: the Gallup poll reaches ~147 countries, and the ~115 real places it does not survey genuinely have no score, so they correctly read "no data" on a happiness cell. This is the deliberate contrast with temperature (EH), a physical fact that HAD to be densified. Coverage among *sovereigns* is high (~147/190), so the gap rarely bites the sovereign-scoped games.
+
+**Direction: happiest-only** (Jan's call). Filters + TTT get `>=`-only tiers and the Party round is locked to `'most'`, matching the beer / alcohol / meat precedent: "the happiest countries" (Finland, the Nordics) is the good, tonally-safe question; a "least happy" set surfaces conflict / poverty states, a poverty quiz rather than a happiness one.
+
+**Breaks:** `>=7 / >=6 / >=5` (9 / 61 / 100 covered places), whole integers (the ladder is 0-10, so no signed-parser change like temperature needed). 3×3-only, like the other `absence: 'unknown'` metrics.
+
+- [x] 1. Data + visuals: shipped in #904 (`happiness.json`, `METRIC_FILES` line, smiley icon + pink hue `#ec407a` + short label). No densify (sparse survey), by design.
+- [x] 2. flagsdata lens: lit from #904.
+- [x] 3 + 4 (driven by `THRESHOLD_METRICS`). `happiness(op, n)` factory + `HAPPINESS_BREAKS_FOR_RANDOM` (`>=7/6/5`) + `THRESHOLD_METRICS.happiness`. Filters: `HappinessConstraint` + `happiness` field; `happinessProbability` (0.08) modifier + `findFlag/page.js`. `attachHappinesses` (set-if-present, `absence:'unknown'` like beer) + `METRIC_ATTACHERS`; `party/server.js` line activated. i18n `happiness.atLeast.{5,6,7}` + `metric.happiness` (en+pl). Synthetic TTT fixture: `HAPPINESS_LADDER` (0-10 rungs, `%6` counter).
+- [x] 5. Flag Party round: `happinessRound` (id `superlative-happiness`) across the six spots + en/pl i18n. **Most-only**, raw `createMetric(happiness, [])` (the round's `metric.has` filter drops the ~115 no-data places, so no zero-filter variant like beer needed); pinned by `superlative.test.js` including a no-data-exclusion test.
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+---
+
+### Feature EH: Average temperature as a world metric, the first dense + two-directional + negative-valued climate metric (code surfaces complete 2026-07-15, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Twenty-eighth world metric, and the one that first shipped **lens-only** (surfaces 1-2, PR #903) then had surfaces 3-5 completed here. Average annual air temperature, °C (World Bank CCKP 1991-2020 normal). Its draw is being two-directional and negative-capable: Burkina Faso 30.4 tops it, the sub-zero floor (Antarctica -49, Greenland -18.7, Svalbard -6.8, Canada / Russia below 0) is the cold end.
+
+**Data contract:** **dense** (no `absence`). Temperature is a physical fact, so the earlier `absence: 'unknown'` classification was wrong: the source table's ~234 rows plus 28 hand-filled sub-national parts / territories / polar islands (`build-temperature.mjs` FILLS) now cover every real place. This is why the TTT no-data guard blocks only org flags. (The lens-only #903 left those 28 as gaps; densifying them was step 0 here.)
+
+**Breaks:** `>=25 / >=20 / >=10` (99 / 165 / 212 real places) and `<=10 / <=5 / <=0` (50 / 16 / 6). The `<=0` "below freezing on average" tier is the first metric break with a non-positive `n`, so `parseThreshold` gained an opt-in `allowNonPositive` path driven by a new `signed: true` on the registry entry (temperature only; population / area / the rest stay positive-only, tests unchanged). Breaks stay whole integers so the i18n `.`-split keys round-trip. 3×3-only (every break `ultimateEligible: false`; the sub-zero extreme is too narrow for 9×9), so `party/ultimateServer.js` and the 9×9 pages need no attach.
+
+- [x] 1. Data: densified `flags/metrics/temperature.json` (262/262 real places) + `build-temperature.mjs` FILLS + dropped `absence` + `metrics.test.js` rewritten to the dense contract (Antarctica is the new coldest). Visuals were already present from #903 (icon + hue `#d84315` + short label).
+- [x] 2. flagsdata lens: already lit from #903; densifying un-dims the 28 formerly-"no data" tiles.
+- [x] 3 + 4 (driven by `THRESHOLD_METRICS`). `temperature(op, n)` factory + `TEMPERATURE_BREAKS_FOR_RANDOM` + `THRESHOLD_METRICS.temperature` (`signed: true`). Filters: `TemperatureConstraint` + `temperature` field (flagsFilter.js) + URL token via the shared parser; `temperatureProbability` (0.10) modifier + `findFlag/page.js`. `attachTemperatures` (group.js, dense set-if-present) + `METRIC_ATTACHERS`; `party/server.js` temperature line activated. i18n `temperature.atLeast/atMost.{25,20,10,10,5,0}` + `metric.temperature` (en+pl). Synthetic TTT fixture: `TEMPERATURE_LADDER` decorrelated via `/2`, spanning +30 to -8 so every tier (incl. `<=0`) fills per synthetic continent.
+- [x] 5. Flag Party round: `temperatureRound` (id `superlative-temperature`) across the six spots + en/pl i18n (`party.mode.superlativeTemperature`, `party.hint{Most,Least}Temperature`). **Two-directional** (hottest AND coldest), like density / elevation; pinned by `superlative.test.js` including the negative-value extreme pick.
+
+Surface 6 (daily puzzles): row added to `METRIC_DAILY_PUZZLES.md` (the first two-directional daily candidate); the Feature closed on surfaces 1-5.
+
+---
 
 ### Feature EG: Honey production as a world metric, the first beekeeping-corner metric (code surfaces complete 2026-07-14, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 

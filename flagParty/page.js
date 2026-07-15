@@ -74,6 +74,9 @@ const MODE_LABELS = {
   'superlative-borders': { key: 'party.mode.superlativeBorders', full: 'Bordering countries: most' },
   'superlative-olive-oil': { key: 'party.mode.superlativeOliveOil', full: 'Olive oil production: most' },
   'superlative-honey': { key: 'party.mode.superlativeHoney', full: 'Honey production: most' },
+  'superlative-temperature': { key: 'party.mode.superlativeTemperature', full: 'Average temperature: hottest & coldest' },
+  'superlative-happiness': { key: 'party.mode.superlativeHappiness', full: 'Happiness score: happiest' },
+  'superlative-corruption': { key: 'party.mode.superlativeCorruption', full: 'Government integrity: most & least corrupt' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -220,6 +223,25 @@ const SUPERLATIVE_MODES = {
   'superlative-honey': {
     file: 'honey.json',
     hintMost: { key: 'party.hintMostHoney', fallback: 'Largest honey production' },
+  },
+  'superlative-temperature': {
+    file: 'temperature.json',
+    hintMost: { key: 'party.hintMostTemperature', fallback: 'Hottest' },
+    hintLeast: { key: 'party.hintLeastTemperature', fallback: 'Coldest' },
+  },
+  'superlative-happiness': {
+    file: 'happiness.json',
+    hintMost: { key: 'party.hintMostHappiness', fallback: 'Happiest' },
+  },
+  'superlative-corruption': {
+    file: 'corruption.json',
+    // INVERTED: the CPI runs higher = cleaner, so the round's 'most' extreme
+    // (highest CPI) is the LEAST corrupt country, and 'least' (lowest CPI) is
+    // the MOST corrupt. The party round asks these as direct "corrupt"
+    // questions (clearer than the integrity euphemism for a trivia prompt),
+    // even though the filter / TTT surfaces stay clean-pole "integrity".
+    hintMost: { key: 'party.hintMostCorruption', fallback: 'Least corrupt' },
+    hintLeast: { key: 'party.hintLeastCorruption', fallback: 'Most corrupt' },
   },
 };
 
