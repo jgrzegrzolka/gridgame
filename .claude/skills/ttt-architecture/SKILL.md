@@ -63,7 +63,7 @@ Note the import asymmetry, which tells you the authority model at a glance: `off
 
 ## Adding a setting (the toggle recipe)
 
-There is exactly **one burger switch in the repo**: `findFlag`'s "include territories". Match it rather than inventing a second pattern.
+There are **two burger switches in the repo**: `findFlag`'s "include territories" (the original) and TTT's own "No statistics" (see below — it's the closer model for a TTT setting). Match one of them rather than inventing a third pattern.
 
 Markup (`findFlag/index.html:55-63`) is a `.scope-toggle` label wrapping the text and a `.scope-toggle-switch` containing the checkbox plus `.scope-toggle-track` / `.scope-toggle-thumb`.
 
@@ -79,7 +79,15 @@ export function setFindIncludeAll(store, value) { writeBoolSetting(store, FIND_I
 
 **Key naming:** `gridgame.<surface>.<setting>`. The `ttt` namespace is already claimed (`gridgame.ttt.hostRoom`, `flags/tttHostMemory.js:24`, which is **sessionStorage**, not localStorage). Existing keys: `gridgame.flagfind.includeAll`, `gridgame.flagquiz.includeAll` / `.lastVariant` / `.showMap`, `gridgame.flagsdata.showMap` / `.wide`, `gridgame.party.setup` / `.plan` / `.tricky` / `.reveal`.
 
-**No setting reaches puzzle generation today.** Offline and solo call `generateRandomPuzzle(countries)` bare. The nearest analogue is findFlag, which reads its key at boot and narrows the *country* pool. To narrow the *category* pool, note `randomPuzzle(rng, pool)` already takes one but `generateRandomPuzzle` does not thread it through (it hardcodes the default). And remember: whatever you do here, **online is unaffected** unless you change the protocol.
+**One setting reaches puzzle generation: "No statistics"** (`gridgame.ttt.easy`), on the offline and solo boards. It's the worked example of everything above, so copy it rather than the findFlag original if you're adding a second one:
+
+- `flags/tttSettings.js` — `isTttEasy` / `setTttEasy` over the shared bool helpers. A tiny dedicated module (same shape as `tttHostMemory.js`) rather than a new import in `flags/ticTacToe.js`, which stays a pure reducer.
+- `ticTacToe/easyToggle.js` — `wireEasyToggle({ inputEl, isBoardUntouched, redeal })`, shared by both pages because the same mechanism must be the same code. Injectable storage / defer, so it's unit-tested (`easyToggle.test.js`) despite being DOM glue.
+- Each page reads the setting **once at boot** (`generateRandomPuzzle(countries, isTttEasy() ? { pool: buildEasyCategoryPool() } : {})`) because the board is dealt once.
+- Flipping it **re-deals only an untouched board** — via `window.location.reload()`, which is exactly what the pages' own "Play again" does, gated on `boardIsUntouched(state)` and deferred 350 ms so the thumb's slide is visible. On a board with moves down it applies to the next board instead; reloading there would destroy the player's progress to apply a preference.
+- **It is not rendered on `ticTacToe/index.html`**, and a test reads all three HTML files to keep it that way. Online is server-dealt, so the control would move, save, and change nothing.
+
+Whatever you add next, **online is unaffected** unless you change the protocol.
 
 **Burger borders are load-bearing.** The offline and online menus are currently nickname → coffee-divider with nothing between. `common.css`'s `.menu li.menu-nickname + li.menu-divider` suppresses the divider's `border-top` in exactly that shape, because otherwise the nickname's `border-bottom` and the divider's `border-top` stack into a double grey line (the bug in #926). Add a nav row between them and the rule stops matching, restoring the divider — correct and self-healing, but **look at the menu** after changing it.
 
@@ -98,6 +106,7 @@ TTT state escapes the browser. Before removing a mode or renaming a counter:
 - WS client reducer: `ticTacToe/onlineClient.test.js`.
 - Server: `party/ticTacToeServer.test.js`.
 - UI mechanics: `ticTacToe/shakeFeedback.test.js` (shake-on-miss, winning-cell shake), `ticTacToe/matchStrip.test.js`.
+- Settings: `ticTacToe/easyToggle.test.js` — the "No statistics" switch, including the two contracts that live outside JS: that `.scope-toggle`'s CSS stays in `common.css` where both consumers reach it, and that the toggle is absent from the online board's markup.
 - Generation against real data: `flags/countries.test.js` (the load-bearing one).
 
 The pages themselves are DOM and fetch glue and aren't unit-tested. Per `CLAUDE.md`, "I can't test this" means the logic is in the wrong file: push it into a sibling module or `flags/`.

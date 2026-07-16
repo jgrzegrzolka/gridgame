@@ -23,6 +23,8 @@ import {
   isFlagVisualCategory,
   lacksFlagVisualCategory,
   buildRandomCategoryPool,
+  buildEasyCategoryPool,
+  METRIC_KEYS,
   pulseShake,
   CONTINENTS_FOR_RANDOM,
   COLORS_FOR_RANDOM,
@@ -881,6 +883,74 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
 
+test('buildEasyCategoryPool keeps flag-visual + continent and drops every metric', () => {
+  const pool = buildEasyCategoryPool();
+  const expected =
+    CONTINENTS_FOR_RANDOM.length
+    + COLORS_FOR_RANDOM.length
+    + MOTIFS_FOR_RANDOM.length - 1 // eu-member is a country fact, not a flag mark
+    + COLOR_COUNTS_FOR_RANDOM.length
+    + STRIPES_ORIENTATIONS_FOR_RANDOM.length;
+  assert.equal(pool.length, expected);
+  // Composed, not enumerated: every entry is either flag-visual or a continent.
+  for (const cat of pool) {
+    assert.ok(
+      isFlagVisualCategory(cat) || cat.id.startsWith('continent:'),
+      `${cat.id} is neither flag-visual nor a continent`,
+    );
+  }
+});
+
+test('buildEasyCategoryPool excludes eu-member but keeps the other motifs', () => {
+  const ids = new Set(buildEasyCategoryPool().map((c) => c.id));
+  // Falls out of the reclassification for free — the filter reads
+  // isFlagVisualCategory, so there's no eu-member special-case in the pool code.
+  assert.equal(ids.has('hasMotif:eu-member'), false);
+  assert.equal(ids.has('hasMotif:cross'), true);
+  assert.equal(ids.has('hasMotif:animal'), true);
+});
+
+test('buildEasyCategoryPool derives from the id, so new metric families stay out by default', () => {
+  // The property that makes this pool cheap to own: nothing per-category to
+  // annotate, so adding metric family #33 needs no edit here. Guard it by
+  // asserting the shape of what's absent rather than listing today's families.
+  const easyIds = buildEasyCategoryPool().map((c) => c.id);
+  const dropped = buildRandomCategoryPool()
+    .map((c) => c.id)
+    .filter((id) => !easyIds.includes(id));
+  // Everything dropped is a metric threshold or eu-member — nothing else. Read
+  // the live METRIC_KEYS registry, not the id's `>=` shape: `colorCount:>=4`
+  // wears the same token and is a flag rule, so shape-matching would quietly
+  // bless dropping it.
+  const metricKinds = new Set(METRIC_KEYS);
+  for (const id of dropped) {
+    assert.ok(
+      id === 'hasMotif:eu-member' || metricKinds.has(id.slice(0, id.indexOf(':'))),
+      `${id} was dropped from the easy pool but isn't a metric threshold`,
+    );
+  }
+  assert.ok(dropped.length > 100, `expected the ~116 metric thresholds to drop, got ${dropped.length}`);
+});
+
+test('generateRandomPuzzle draws only from a narrowed pool when one is passed', () => {
+  const countries = syntheticTaggedCountries();
+  const pool = buildEasyCategoryPool();
+  // maxAttempts lifted above the production 200 for the same reason as the
+  // >=2-per-cell test below — the synthetic pool's identical-tier crops make
+  // implied-pair rejections far denser than real data. The real-data budget for
+  // this pool is canaried in countries.test.js, which is the load-bearing one.
+  const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(42), pool, maxAttempts: 500 });
+  const poolIds = new Set(pool.map((c) => c.id));
+  for (const cat of [...puzzle.rows, ...puzzle.cols]) {
+    assert.ok(poolIds.has(cat.id), `${cat.id} was dealt but isn't in the pool that was passed in`);
+  }
+});
+
+// The default (full pool) is pinned against real data by "generateRandomPuzzle
+// actually produces population puzzles in the 3×3 pool" in countries.test.js —
+// if threading `pool` through here ever narrowed the bare call that the party
+// server and the online page make, that test goes red. Not duplicated here.
+
 test('axesConflict flags two different values from the same exclusiveGroup on opposite axes', () => {
   const conflict = axesConflict(
     [continent('Africa'), hasColor('red'), hasMotif('animal')],
@@ -1226,6 +1296,33 @@ test('isFlagVisualCategory: true for the flag-reading kinds, false for country f
   assert.equal(isFlagVisualCategory(statehood('un_member')), false);
   assert.equal(isFlagVisualCategory(population('>=', 10_000_000)), false);
   assert.equal(isFlagVisualCategory(area('>=', 1_000_000)), false);
+});
+
+test('isFlagVisualCategory: eu-member is a country fact despite the hasMotif prefix', () => {
+  // The one exception to prefix-classification. EU membership rides in
+  // country.motifs so the findFlag / flagsdata filter bars can offer it, but no
+  // EU member draws anything on its flag to say so — Ireland's tricolour looks
+  // the same in or out. Classifying it by prefix made it flag-visual, which is
+  // wrong for both consumers: it let a metric-heavy board satisfy the
+  // ≥1-flag-visual guard (below) and it put a non-flag question in the easy pool.
+  assert.equal(isFlagVisualCategory(hasMotif('eu-member')), false);
+  // Every other motif still qualifies — this is one id, not a retreat from
+  // prefix-classification.
+  assert.equal(isFlagVisualCategory(hasMotif('cross')), true);
+  assert.equal(isFlagVisualCategory(hasMotif('star-or-moon')), true);
+});
+
+test('lacksFlagVisualCategory: true when eu-member is the only would-be flag rule', () => {
+  // The latent false positive that reclassifying eu-member closes. Before, this
+  // board passed the guard — six country facts, one of them wearing a motif
+  // prefix — and dealt as a pure statistics grid.
+  assert.equal(
+    lacksFlagVisualCategory(
+      [continent('Europe'), population('>=', 10_000_000), hasMotif('eu-member')],
+      [density('>=', 100), gdp('>=', 100_000_000_000), area('>=', 1_000_000)],
+    ),
+    true,
+  );
 });
 
 test('lacksFlagVisualCategory: true when all six categories are country facts', () => {

@@ -339,6 +339,24 @@ export function newSoloGame(puzzle) {
 }
 
 /**
+ * True when nothing has happened on this board yet — no claim, no give-up
+ * reveal. Reads `country` rather than `owner` so a revealed cell (owner stays
+ * null, country gets filled) counts as touched, and so the same check serves
+ * both the two-player `GameState` and the solo `SoloState`, which share the
+ * cell shape but not the owner semantics.
+ *
+ * Used by the "No statistics" toggle to decide whether flipping it may re-deal
+ * the board immediately or must wait for the next one — re-dealing is a page
+ * reload, which on a board with progress would silently throw that progress away.
+ *
+ * @param {{ cells: Cell[][] }} state
+ * @returns {boolean}
+ */
+export function boardIsUntouched(state) {
+  return state.cells.every((row) => row.every((cell) => cell.country === null));
+}
+
+/**
  * @param {SoloState} state
  * @returns {boolean}
  */
