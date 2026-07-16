@@ -703,6 +703,46 @@ export const MEAT_PER_CAPITA_BREAKS_FOR_RANDOM = [
 ];
 
 /**
+ * Tourism-per-capita break tiers (international tourist arrivals per resident per
+ * year). `>=`-only like the drink / meat metrics: the fun axis is "who gets the
+ * MOST tourists per resident". `>=1` = "more arrivals than residents" (~71 real
+ * places), `>=5` = the elite tourist magnets (~27: the micro-states and island
+ * territories, Andorra, Monaco, San Marino, the Caribbean). The `<=` low end is the
+ * big countries with few visitors per head, which reads as a population quiz rather
+ * than a tourism one, so it is left off. Integer `n`, which the 0..~102 range gives.
+ *
+ * No `ultimate: true` break: tourism is `absence: 'unknown'` (the states the World
+ * Bank has no figure for carry no value), so it cannot back a dense 9×9 axis. Every
+ * break stays `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1 },
+  { op: '>=', n: 5 },
+];
+
+/**
+ * Electricity-per-capita break tiers (electric power consumption, kWh per person per
+ * year). `>=`-only like the other consumption metrics: the fun axis is "who uses the
+ * MOST electricity per head". `>=5000` = a high-consumption country (~45 real
+ * places), `>=10000` = the elite (~14: Iceland, Norway, the Gulf states, Canada, the
+ * US, the Nordics). The `<=` low end is the developing world, which reads as a
+ * development quiz rather than an energy one, so it is left off. Integer `n`, which
+ * the 14..~49,000 kWh range gives comfortably.
+ *
+ * No `ultimate: true` break: electricity is `absence: 'unknown'` (the micro-states
+ * the World Bank does not meter carry no value), so it cannot back a dense 9×9 axis.
+ * Every break stays `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ */
+export const ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 5000 },
+  { op: '>=', n: 10000 },
+];
+
+/**
  * Bordering-countries break tiers (number of countries sharing a land border).
  * `>=5` is a well-connected country (~59 real places), `>=8` the elite (~11:
  * Russia & China at 14, Brazil 10, DR Congo & Germany 9, plus the 8-border club:
@@ -1697,6 +1737,74 @@ export function meatPerCapita(op, n, opts = {}) {
 }
 
 /**
+ * Tourism-per-capita-threshold Category factory (international tourist arrivals per
+ * resident per year). Reads the denormalized `country.tourismPerCapita` field
+ * (`attachTourismPerCapitas`, an `absence: 'unknown'` metric, so the predicate must
+ * guard on the field being a number: a place the World Bank has no figure for has
+ * none and never matches). `exclusiveGroup: 'tourismPerCapita'`. The break list is
+ * `>=`-only (see TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM); the `<=` branch is kept for
+ * symmetry so a `tourismPerCapita:<=N` id would still rehydrate.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function tourismPerCapita(op, n, opts = {}) {
+  const noun = n === 1 ? 'arrival' : 'arrivals';
+  const label =
+    op === '>=' ? `over ${n} ${noun} per resident` : `under ${n} ${noun} per resident`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.tourismPerCapita === 'number' && c.tourismPerCapita >= n
+      : (c) => typeof c.tourismPerCapita === 'number' && c.tourismPerCapita <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `tourismPerCapita:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'tourismPerCapita',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
+ * Electricity-per-capita-threshold Category factory (electric power consumption, kWh
+ * per person per year). Reads the denormalized `country.electricityPerCapita` field
+ * (`attachElectricityPerCapitas`, an `absence: 'unknown'` metric, so the predicate
+ * must guard on the field being a number: a place the World Bank does not meter has
+ * none and never matches). `exclusiveGroup: 'electricityPerCapita'`. The break list
+ * is `>=`-only (see ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM); the `<=` branch is
+ * kept for symmetry.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @param {{ ultimateEligible?: boolean }} [opts]
+ * @returns {Category}
+ */
+export function electricityPerCapita(op, n, opts = {}) {
+  const human = n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const label =
+    op === '>=' ? `over ${human} kWh per capita` : `under ${human} kWh per capita`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.electricityPerCapita === 'number' && c.electricityPerCapita >= n
+      : (c) => typeof c.electricityPerCapita === 'number' && c.electricityPerCapita <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `electricityPerCapita:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'electricityPerCapita',
+  };
+  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
+  return cat;
+}
+
+/**
  * Bordering-countries-threshold Category factory (number of countries sharing a
  * land border). Reads the denormalized `country.borders` field (`attachBorders`, a
  * dense metric that fills a true 0 for every island, so the predicate guards on the
@@ -2329,6 +2437,32 @@ export const THRESHOLD_METRICS = {
     labelFor: (op, n, translate) => {
       if (op === '>=') return translate(`meatPerCapita.atLeast.${n}`, `over ${n} kg per capita`);
       return translate(`meatPerCapita.atMost.${n}`, `under ${n} kg per capita`);
+    },
+  },
+  tourismPerCapita: {
+    breaks: TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM,
+    factory: tourismPerCapita,
+    prefixFallback: 'Tourist arrivals per capita',
+    field: 'tourismPerCapita',
+    family: 'tourismPerCapita',
+    has: (c) => typeof c.tourismPerCapita === 'number',
+    labelFor: (op, n, translate) => {
+      const noun = n === 1 ? 'arrival' : 'arrivals';
+      if (op === '>=') return translate(`tourismPerCapita.atLeast.${n}`, `over ${n} ${noun} per resident`);
+      return translate(`tourismPerCapita.atMost.${n}`, `under ${n} ${noun} per resident`);
+    },
+  },
+  electricityPerCapita: {
+    breaks: ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM,
+    factory: electricityPerCapita,
+    prefixFallback: 'Electricity use per capita',
+    field: 'electricityPerCapita',
+    family: 'electricityPerCapita',
+    has: (c) => typeof c.electricityPerCapita === 'number',
+    labelFor: (op, n, translate) => {
+      const human = n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      if (op === '>=') return translate(`electricityPerCapita.atLeast.${n}`, `over ${human} kWh per capita`);
+      return translate(`electricityPerCapita.atMost.${n}`, `under ${human} kWh per capita`);
     },
   },
   borders: {

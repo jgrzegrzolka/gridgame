@@ -111,6 +111,13 @@ export const METRIC_ICONS = {
   // Reads as wellbeing / life satisfaction, unmistakable against the economic
   // and produce icons.
   happiness: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14a4.5 4.5 0 0 0 7 0"/><path d="M9 9.5h.01M15 9.5h.01"/></svg>',
+  // Tourist arrivals per capita: a suitcase (a rounded body with a top handle and
+  // a centre seam). Reads as travel / luggage, distinct from every economic and
+  // produce icon in the family.
+  tourismPerCapita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M12 8v12"/></svg>',
+  // Electricity use per capita: a lightning bolt. Reads as electric power,
+  // unmistakable against the drink / food / economic icons.
+  electricityPerCapita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-2 8 9-12h-7z"/></svg>',
 };
 
 /** @type {Record<string, string>} */
@@ -145,6 +152,8 @@ export const METRIC_HUES = {
   corruption: '#4b3f9e',
   temperature: '#d84315',
   happiness: '#ec407a',
+  tourismPerCapita: '#1183c7',
+  electricityPerCapita: '#f4b400',
 };
 
 /**
@@ -187,6 +196,8 @@ export const METRIC_SHORT = {
   corruption: { key: 'party.modeShort.superlativeCorruption', fallback: 'Integrity' },
   temperature: { key: 'party.modeShort.superlativeTemperature', fallback: 'Temperature' },
   happiness: { key: 'party.modeShort.superlativeHappiness', fallback: 'Happiness' },
+  tourismPerCapita: { key: 'party.modeShort.superlativeTourism', fallback: 'Tourism' },
+  electricityPerCapita: { key: 'party.modeShort.superlativeElectricity', fallback: 'Electricity' },
 };
 
 /**

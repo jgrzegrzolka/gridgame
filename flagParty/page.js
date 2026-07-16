@@ -77,6 +77,8 @@ const MODE_LABELS = {
   'superlative-temperature': { key: 'party.mode.superlativeTemperature', full: 'Average temperature: hottest & coldest' },
   'superlative-happiness': { key: 'party.mode.superlativeHappiness', full: 'Happiness score: happiest & least happy' },
   'superlative-corruption': { key: 'party.mode.superlativeCorruption', full: 'Government integrity: most & least corrupt' },
+  'superlative-tourism': { key: 'party.mode.superlativeTourism', full: 'Tourist arrivals per capita: most' },
+  'superlative-electricity': { key: 'party.mode.superlativeElectricity', full: 'Electricity use per capita: most' },
 };
 
 /** Per-round config for the superlative rounds, keyed by the server `roundId`.
@@ -245,6 +247,20 @@ const SUPERLATIVE_MODES = {
     // even though the filter / TTT surfaces stay clean-pole "integrity".
     hintMost: { key: 'party.hintMostCorruption', fallback: 'Least corrupt' },
     hintLeast: { key: 'party.hintLeastCorruption', fallback: 'Most corrupt' },
+  },
+  // Tourism per capita is 'most'-only: "which gets the most tourists per resident"
+  // (Andorra, Monaco, the island magnets) is the fun question; "fewest" is the
+  // big-country long tail.
+  'superlative-tourism': {
+    file: 'tourismPerCapita.json',
+    hintMost: { key: 'party.hintMostTourism', fallback: 'Most tourist arrivals per resident' },
+  },
+  // Electricity per capita is 'most'-only: "which uses the most electricity per
+  // person" (Iceland, Norway, the Gulf) is the fun question; "least" is the
+  // low-income tail.
+  'superlative-electricity': {
+    file: 'electricityPerCapita.json',
+    hintMost: { key: 'party.hintMostElectricity', fallback: 'Most electricity use per person' },
   },
 };
 

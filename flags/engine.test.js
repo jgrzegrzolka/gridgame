@@ -59,6 +59,8 @@ import {
   TEMPERATURE_BREAKS_FOR_RANDOM,
   HAPPINESS_BREAKS_FOR_RANDOM,
   CORRUPTION_BREAKS_FOR_RANDOM,
+  TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM,
+  ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
   FOREST_BREAKS_FOR_RANDOM,
@@ -876,7 +878,9 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + BORDERS_BREAKS_FOR_RANDOM.length
     + TEMPERATURE_BREAKS_FOR_RANDOM.length
     + HAPPINESS_BREAKS_FOR_RANDOM.length
-    + CORRUPTION_BREAKS_FOR_RANDOM.length;
+    + CORRUPTION_BREAKS_FOR_RANDOM.length
+    + TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM.length
+    + ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -1058,7 +1062,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['alcoholPerCapita', 'apple', 'area', 'banana', 'beerPerCapita', 'borders', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'corruption', 'density', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'gold', 'happiness', 'honey', 'meatPerCapita', 'oil', 'oliveOil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'temperature', 'wine'],
+    ['alcoholPerCapita', 'apple', 'area', 'banana', 'beerPerCapita', 'borders', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'corruption', 'density', 'electricityPerCapita', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'gold', 'happiness', 'honey', 'meatPerCapita', 'oil', 'oliveOil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'temperature', 'tourismPerCapita', 'wine'],
   );
 });
 
@@ -1338,13 +1342,30 @@ test('buildUltimateCategoryPool excludes stripesOnly categories (their answer se
     0,
     'corruption cats must not appear in the 9×9 pool',
   );
+  // Tourism per capita is 3×3-only (absence:'unknown', no ultimate break), so ALL drop.
+  const droppedTourismPerCapita = TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedTourismPerCapita, TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM.length, 'no tourismPerCapita tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('tourismPerCapita:')).length,
+    0,
+    'tourismPerCapita cats must not appear in the 9×9 pool',
+  );
+  // Electricity per capita is 3×3-only (absence:'unknown', no ultimate break), so ALL drop.
+  const droppedElectricityPerCapita = ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
+  assert.equal(droppedElectricityPerCapita, ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM.length, 'no electricityPerCapita tier is ultimate-eligible');
+  assert.equal(
+    ultPool.filter((c) => c.id.startsWith('electricityPerCapita:')).length,
+    0,
+    'electricityPerCapita cats must not appear in the 9×9 pool',
+  );
   assert.equal(
     ultPool.length,
     buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
       - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
       - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest - droppedOil - droppedRice - droppedCoal
       - droppedSheepPerCapita - droppedCattlePerCapita - droppedBeerPerCapita - droppedTea - droppedSugarcane - droppedGold
-      - droppedAlcoholPerCapita - droppedMeatPerCapita - droppedBorders - droppedOliveOil - droppedHoney - droppedTemperature - droppedHappiness - droppedCorruption,
+      - droppedAlcoholPerCapita - droppedMeatPerCapita - droppedBorders - droppedOliveOil - droppedHoney - droppedTemperature - droppedHappiness - droppedCorruption
+      - droppedTourismPerCapita - droppedElectricityPerCapita,
   );
 });
 
@@ -2591,6 +2612,15 @@ function syntheticTaggedCountries() {
   const SHEEP_LADDER = [1, 2, 3, 1, 2, 4];
   const CATTLE_LADDER = [1, 2, 3, 1, 2, 4];
   const BEER_LADDER = [60, 120, 200, 55, 150, 300];
+  // Tourism per capita (arrivals per resident, breaks >=1/>=5). Rungs straddle the
+  // low break (two below 1) so `>=1` stays SELECTIVE, not universal: a universal
+  // low break would make every cell using it implied by its other axis and trip the
+  // subset-degeneracy guard, the way real data (71/186 above 1) never does.
+  const TOURISM_LADDER = [0.3, 2, 6, 0.7, 8, 20];
+  // Electricity per capita (kWh, breaks >=5000/>=10000). Rungs straddle the low
+  // break (two below 5000) for the same reason: `>=5000` must be selective, not a
+  // universal predicate, matching real data (45/149 above 5000).
+  const ELECTRICITY_LADDER = [1_500, 6_000, 12_000, 3_000, 15_000, 40_000];
   // Temperature (dense, two-directional, °C, breaks >=25/>=20/>=10 and
   // <=10/<=5/<=0). Six rungs spanning hot to below-freezing so every tier has a
   // candidate in every synthetic continent (the -8 rung backs the <=0 tier). A
@@ -2657,6 +2687,8 @@ function syntheticTaggedCountries() {
           sheepPerCapita: SHEEP_LADDER[codeCounter % SHEEP_LADDER.length],
           cattlePerCapita: CATTLE_LADDER[codeCounter % CATTLE_LADDER.length],
           beerPerCapita: BEER_LADDER[codeCounter % BEER_LADDER.length],
+          tourismPerCapita: TOURISM_LADDER[codeCounter % TOURISM_LADDER.length],
+          electricityPerCapita: ELECTRICITY_LADDER[codeCounter % ELECTRICITY_LADDER.length],
           coastline: COASTLINE_LADDER[Math.floor(codeCounter / 4) % COASTLINE_LADDER.length],
           forest: FOREST_LADDER[Math.floor(codeCounter / 6) % FOREST_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
@@ -2706,6 +2738,8 @@ function syntheticTaggedCountries() {
           sheepPerCapita: SHEEP_LADDER[codeCounter % SHEEP_LADDER.length],
           cattlePerCapita: CATTLE_LADDER[codeCounter % CATTLE_LADDER.length],
           beerPerCapita: BEER_LADDER[codeCounter % BEER_LADDER.length],
+          tourismPerCapita: TOURISM_LADDER[codeCounter % TOURISM_LADDER.length],
+          electricityPerCapita: ELECTRICITY_LADDER[codeCounter % ELECTRICITY_LADDER.length],
           coastline: COASTLINE_LADDER[Math.floor(codeCounter / 4) % COASTLINE_LADDER.length],
           forest: FOREST_LADDER[Math.floor(codeCounter / 6) % FOREST_LADDER.length],
           gdpPerCapita: GDP_PER_CAPITA_LADDER[Math.floor(codeCounter++ / 5) % GDP_PER_CAPITA_LADDER.length],
@@ -2720,9 +2754,14 @@ test('generateRandomPuzzle returns a puzzle where every cell has at least 2 vali
   const countries = syntheticTaggedCountries();
   // mulberry32 (period 2^32) gives a fresh distribution each attempt,
   // so the generator's retry loop can land on a valid puzzle within the
-  // 200-attempt budget. The original sequenceRng with 9 fixed values
-  // cycled too tightly once axesImpliedPair narrowed the success space.
-  const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(7) });
+  // budget. The original sequenceRng with 9 fixed values cycled too tightly
+  // once axesImpliedPair narrowed the success space. maxAttempts is lifted
+  // above the production 200 for the same reason the no-repeat sweep below is
+  // (see its comment): the synthetic pool's identical-tier crops make
+  // implied-pair rejections far denser than real data, and each added metric
+  // swings the per-seed budget. This pins the >=2-per-cell invariant, not the
+  // budget — real-data's 200-attempt budget is canaried in countries.test.js.
+  const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 500 });
   const counts = puzzleCellCounts(puzzle, countries);
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
@@ -2749,7 +2788,7 @@ test('generateRandomPuzzle is deterministic given a deterministic RNG and the sa
 test('generateRandomPuzzle never produces a puzzle where an exclusiveGroup is split across axes', () => {
   const countries = syntheticTaggedCountries();
   for (let s = 1; s <= 10; s++) {
-    const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(s) });
+    const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(s), maxAttempts: 500 });
     assert.equal(
       axesConflict(puzzle.rows, puzzle.cols),
       false,
@@ -2791,7 +2830,7 @@ test('generateRandomPuzzle never produces an implied (subset) cross-axis pair', 
   // data coverage with eu-member lives in countries.test.js.
   const countries = syntheticTaggedCountries();
   for (let s = 1; s <= 10; s++) {
-    const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(s) });
+    const puzzle = generateRandomPuzzle(countries, { rng: mulberry32(s), maxAttempts: 500 });
     assert.equal(
       axesImpliedPair(puzzle.rows, puzzle.cols, countries),
       false,

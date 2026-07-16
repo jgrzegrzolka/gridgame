@@ -122,6 +122,8 @@ export const PARTY_MODES = [
   { id: 'superlative-temperature', roundId: 'superlative-temperature', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-happiness', roundId: 'superlative-happiness', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-corruption', roundId: 'superlative-corruption', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-tourism', roundId: 'superlative-tourism', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-electricity', roundId: 'superlative-electricity', poolId: 'sovereign', group: 'metric' },
 ];
 
 /** The fixed picture trio (flags / territories / map), in catalog order. */

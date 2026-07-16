@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createMetric } from './metrics.js';
-import { attachCoffees, attachTeas, attachSugarcanes, attachGolds, attachOliveOils, attachHoneys, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas, attachBeerPerCapitas, attachAlcoholPerCapitas, attachMeatPerCapitas, attachBorders } from './group.js';
+import { attachCoffees, attachTeas, attachSugarcanes, attachGolds, attachOliveOils, attachHoneys, attachWines, attachCocoas, attachBananas, attachApples, attachOils, attachRices, attachCoals, attachCoastlines, attachForests, attachSheepPerCapitas, attachCattlePerCapitas, attachBeerPerCapitas, attachAlcoholPerCapitas, attachMeatPerCapitas, attachBorders, attachTourismPerCapitas, attachElectricityPerCapitas } from './group.js';
 import { METRIC_FILES } from './metrics/index.js';
 
 /** @typedef {{ code: string, continent: string, statehood: string, category?: string }} Row */
@@ -43,6 +43,8 @@ const BORDERS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/
 const CORRUPTION = /** @type {import('./metrics.js').MetricData} */ (load('metrics/corruption.json'));
 const TEMPERATURE = /** @type {import('./metrics.js').MetricData} */ (load('metrics/temperature.json'));
 const HAPPINESS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/happiness.json'));
+const TOURISM_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/tourismPerCapita.json'));
+const ELECTRICITY_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/electricityPerCapita.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -1891,4 +1893,132 @@ test('createMetric over happiness ranks Finland top and Afghanistan at the floor
   // Afghanistan is the lowest life evaluation on record here.
   assert.equal(hap.bottomN('world', 1)[0].code, 'af');
   assert.ok(/** @type {number} */ (hap.valueOf('af')) < 2);
+});
+
+// ---- real tourismPerCapita.json schema + the absence:'unknown' contract -----
+
+test('tourismPerCapita is a valid, self-describing metric file with absence:unknown', () => {
+  assert.equal(TOURISM_PC.key, 'tourismPerCapita');
+  assert.equal(typeof TOURISM_PC.label, 'string');
+  assert.equal(typeof TOURISM_PC.unit, 'string');
+  // A rate spanning ~0.01 to ~102 arrivals per resident, rendered with 2
+  // significant figures like the sheep/cattle-per-capita rates.
+  assert.equal(TOURISM_PC.format, 'sig2');
+  assert.equal(typeof TOURISM_PC.source, 'string');
+  assert.equal(typeof TOURISM_PC.year, 'number');
+  assert.equal(typeof TOURISM_PC.values, 'object');
+  // absence:'unknown' — the states the World Bank has no arrivals figure for
+  // (conflict / closed economies) carry no value, NOT 0.
+  assert.equal(TOURISM_PC.absence, 'unknown');
+});
+
+test('every tourismPerCapita value is a non-negative finite number', () => {
+  for (const [code, v] of Object.entries(TOURISM_PC.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('tourismPerCapita covers only real places, never orgs; the gap is genuine (absence:unknown)', () => {
+  // NOT dense: the World Bank reports arrivals for ~186 real places but not for
+  // the states it has no figure from. So every key is a real place, no org has
+  // one, and the uncovered real places are the honest "unknown" gap.
+  const realCodes = new Set(COUNTRIES.filter((c) => c.category !== 'other').map((c) => c.code));
+  for (const code of Object.keys(TOURISM_PC.values)) {
+    assert.ok(realCodes.has(code), `tourism value for non-real place ${code}`);
+  }
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in TOURISM_PC.values), `org ${c.code} should have no tourismPerCapita value`);
+    }
+  }
+  const covered = COUNTRIES.filter((c) => c.category !== 'other' && c.code in TOURISM_PC.values).length;
+  assert.ok(covered >= 180, `expected ~186 covered real places, got ${covered}`);
+  assert.ok(covered < realCodes.size, 'tourism must NOT be dense: some real places are the unknown gap');
+  // A tourist magnet is covered; a state with no World Bank figure is the gap.
+  assert.ok('ad' in TOURISM_PC.values, 'Andorra must be covered');
+  assert.ok(!('kp' in TOURISM_PC.values), 'North Korea (no figure) must be absent');
+});
+
+test('createMetric over tourismPerCapita ranks the micro-states top, size-independently', () => {
+  const tourism = createMetric(TOURISM_PC, COUNTRIES);
+  // Andorra is the extreme: ~8M arrivals over ~80k residents, a tiny place topping
+  // every large country, the intensive property this metric exists for.
+  assert.equal(tourism.topN('world', 1)[0].code, 'ad');
+  assert.ok(/** @type {number} */ (tourism.valueOf('ad')) > 50);
+  // The "more arrivals than residents" club is small tourist states; a giant like
+  // India sits far below 1 (many visitors, far more residents).
+  assert.ok(/** @type {number} */ (tourism.valueOf('hr')) >= 1); // Croatia
+  assert.ok(/** @type {number} */ (tourism.valueOf('in')) < 1);  // India
+});
+
+test('attachTourismPerCapitas fills covered real places, leaves the unknown gap + orgs bare', () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachTourismPerCapitas(/** @type {any} */ (rows), TOURISM_PC.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  assert.equal(/** @type {any} */ (byCode.get('ad')).tourismPerCapita, TOURISM_PC.values.ad);
+  // Unknown-gap real place stays bare (no false 0) so the guard reads "no data".
+  assert.equal(/** @type {any} */ (byCode.get('kp')).tourismPerCapita, undefined);
+  const anOrg = COUNTRIES.find((c) => c.category === 'other');
+  assert.equal(/** @type {any} */ (byCode.get(/** @type {any} */ (anOrg).code)).tourismPerCapita, undefined);
+});
+
+// ---- real electricityPerCapita.json schema + the absence:'unknown' contract --
+
+test('electricityPerCapita is a valid, self-describing metric file with absence:unknown', () => {
+  assert.equal(ELECTRICITY_PC.key, 'electricityPerCapita');
+  assert.equal(typeof ELECTRICITY_PC.label, 'string');
+  assert.equal(typeof ELECTRICITY_PC.unit, 'string');
+  // kWh per person over a wide range (14..~49,000), rendered compact.
+  assert.equal(ELECTRICITY_PC.format, 'compact');
+  assert.equal(typeof ELECTRICITY_PC.source, 'string');
+  assert.equal(typeof ELECTRICITY_PC.year, 'number');
+  assert.equal(typeof ELECTRICITY_PC.values, 'object');
+  // absence:'unknown' — the micro-states the World Bank does not meter carry no
+  // value, NOT 0.
+  assert.equal(ELECTRICITY_PC.absence, 'unknown');
+});
+
+test('every electricityPerCapita value is a non-negative finite number', () => {
+  for (const [code, v] of Object.entries(ELECTRICITY_PC.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('electricityPerCapita covers only real places, never orgs; the gap is genuine (absence:unknown)', () => {
+  const realCodes = new Set(COUNTRIES.filter((c) => c.category !== 'other').map((c) => c.code));
+  for (const code of Object.keys(ELECTRICITY_PC.values)) {
+    assert.ok(realCodes.has(code), `electricity value for non-real place ${code}`);
+  }
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in ELECTRICITY_PC.values), `org ${c.code} should have no electricityPerCapita value`);
+    }
+  }
+  const covered = COUNTRIES.filter((c) => c.category !== 'other' && c.code in ELECTRICITY_PC.values).length;
+  assert.ok(covered >= 140, `expected ~149 covered real places, got ${covered}`);
+  assert.ok(covered < realCodes.size, 'electricity must NOT be dense: some real places are the unknown gap');
+  assert.ok('is' in ELECTRICITY_PC.values, 'Iceland must be covered');
+  assert.ok(!('ad' in ELECTRICITY_PC.values), 'Andorra (unmetered by the World Bank) must be absent');
+});
+
+test('createMetric over electricityPerCapita ranks Iceland top, size-independently', () => {
+  const elec = createMetric(ELECTRICITY_PC, COUNTRIES);
+  // Iceland leads by a wide margin (geothermal power + aluminium smelting), a tiny
+  // country topping every giant.
+  assert.equal(elec.topN('world', 1)[0].code, 'is');
+  assert.ok(/** @type {number} */ (elec.valueOf('is')) > 40000);
+  // The big populous countries sit mid-table, the intensive property this exists for.
+  assert.ok(/** @type {number} */ (elec.valueOf('cn')) < /** @type {number} */ (elec.valueOf('no'))); // China < Norway
+});
+
+test('attachElectricityPerCapitas fills covered real places, leaves the unknown gap + orgs bare', () => {
+  const rows = COUNTRIES.map((c) => ({ code: c.code, category: c.category }));
+  attachElectricityPerCapitas(/** @type {any} */ (rows), ELECTRICITY_PC.values);
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  assert.equal(/** @type {any} */ (byCode.get('is')).electricityPerCapita, ELECTRICITY_PC.values.is);
+  assert.equal(/** @type {any} */ (byCode.get('ad')).electricityPerCapita, undefined);
+  const anOrg = COUNTRIES.find((c) => c.category === 'other');
+  assert.equal(/** @type {any} */ (byCode.get(/** @type {any} */ (anOrg).code)).electricityPerCapita, undefined);
 });

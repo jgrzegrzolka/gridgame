@@ -29,6 +29,8 @@ import honey from '../flags/metrics/honey.json' with { type: 'json' };
 import corruption from '../flags/metrics/corruption.json' with { type: 'json' };
 import temperature from '../flags/metrics/temperature.json' with { type: 'json' };
 import happiness from '../flags/metrics/happiness.json' with { type: 'json' };
+import tourismPerCapita from '../flags/metrics/tourismPerCapita.json' with { type: 'json' };
+import electricityPerCapita from '../flags/metrics/electricityPerCapita.json' with { type: 'json' };
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { TicTacToeServer } from './ticTacToeServer.js';
 
@@ -70,6 +72,8 @@ attachMetrics(countries, {
   temperature: temperature.values,
   happiness: happiness.values,
   corruption: corruption.values,
+  tourismPerCapita: tourismPerCapita.values,
+  electricityPerCapita: electricityPerCapita.values,
 });
 
 export default class GameServer extends TicTacToeServer {
