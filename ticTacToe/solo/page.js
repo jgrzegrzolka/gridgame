@@ -3,7 +3,7 @@ import { renderCategoryLabel, renderCategoryPair } from '../../flags/filterChips
 import { loadCountries, attachMetrics } from '../../flags/group.js';
 import { METRIC_FILES } from '../../flags/metrics/index.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
-import { newSoloGame, attemptSoloClaim, isSoloOver, applySoloGiveUp, boardIsUntouched } from '../../flags/ticTacToe.js';
+import { newSoloGame, attemptSoloClaim, isSoloOver, applySoloGiveUp, newlyClaimedCells, boardIsUntouched } from '../../flags/ticTacToe.js';
 import { isTttAdvanced } from '../../flags/tttSettings.js';
 import { wireAdvancedToggle } from '../advancedToggle.js';
 import { t, countryName, withLocalizedAliases, autoRelocalize } from '../../i18n.js';
@@ -80,6 +80,11 @@ function buildGridSkeleton() {
  */
 function runSolo({ puzzle, countries }) {
   let state = newSoloGame(puzzle);
+  // Previous render's state, for the claimed-cell diff in renderGrid. Safe to
+  // hold by reference rather than copy: every claim rebuilds cells, so this
+  // stays a snapshot instead of aliasing the live board.
+  /** @type {import('../../flags/ticTacToe.js').SoloState | null} */
+  let lastRenderedState = null;
 
   /** @type {{ row: number, col: number } | null} */
   let activeCell = null;
@@ -391,6 +396,16 @@ function runSolo({ puzzle, countries }) {
         renderCellContent(r, c);
       }
     }
+    // One-shot flip on cells claimed since the last render. A state diff, not
+    // a `.owned` selector: renderCellContent rebuilds every cell's <img> on
+    // every render, so the class would re-flip the whole board each time.
+    for (const [r, c] of newlyClaimedCells(lastRenderedState, state)) {
+      const td = gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`);
+      if (!td) continue;
+      td.classList.add('flip-in');
+      setTimeout(() => td.classList.remove('flip-in'), 400);
+    }
+    lastRenderedState = state;
     document.body.classList.toggle('game-over', isSoloOver(state));
     if (giveUpEl) giveUpEl.hidden = isSoloOver(state);
   }

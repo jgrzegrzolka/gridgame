@@ -63,11 +63,25 @@ The server loads its own countries and metrics at module scope (`party/server.js
 
 Pure, tested, no DOM. Pages are renderers over these.
 
-- **`flags/ticTacToe.js`** — the two-player reducer (`newGame`, `attemptClaim`, `findWinner`, `applyGiveUp`, `isGameOver`, `newlyWinningCells`, `shouldFireTicTacToeConfetti`) **and** the solo variant (`newSoloGame`, `attemptSoloClaim`, `isSoloOver`, `applySoloGiveUp`).
+- **`flags/ticTacToe.js`** — the two-player reducer (`newGame`, `attemptClaim`, `findWinner`, `applyGiveUp`, `isGameOver`, `newlyWinningCells`, `newlyClaimedCells`, `shouldFireTicTacToeConfetti`) **and** the solo variant (`newSoloGame`, `attemptSoloClaim`, `isSoloOver`, `applySoloGiveUp`).
 - **`flags/onlineRoom.js`** — room state machine (roles, hello, claim, rematch, disconnect, set-advanced), shared by client and server. Every rule about who may do what lives here, not in the server's message handler.
 - **`ticTacToe/onlineClient.js`** — the client-side WS message reducer.
 
-Note the import asymmetry, which tells you the authority model at a glance: `offline/page.js` and `solo/page.js` import the *game* reducers, while the online `page.js` imports only `shouldFireTicTacToeConfetti` and `newlyWinningCells`. Online game logic lives server-side.
+Note the import asymmetry, which tells you the authority model at a glance: `offline/page.js` and `solo/page.js` import the *game* reducers, while the online `page.js` imports no reducer at all — only the render-time helpers (`shouldFireTicTacToeConfetti`, `newlyWinningCells`, `newlyClaimedCells`, `boardIsUntouched`). Online game logic lives server-side.
+
+### Motion vocabulary (three animations, three different meanings)
+
+Each says something distinct, so none may borrow another's:
+
+| Animation | Means | Driven by |
+|---|---|---|
+| `cell-flip-in` | "you got it" — a cell was just claimed | `newlyClaimedCells(prev, next)` diff |
+| `revealed-bounce` | "here's the answer you didn't get" — give-up | `.revealed`, excluded from the flip at source |
+| `shake-win` / `cell-shake` | a line just formed / a wrong pick | `newlyWinningCells`, `pulseShake` |
+
+**Both cell diffs exist for the same reason and share the same trap.** All three boards rebuild every cell's `<img>` on every render, and the online board re-renders on *every* server message (a peer reconnecting, a status line changing). So a claimed/winning cell must be found by diffing the previous state against the next one, never by a `.owned` / `.winning` selector — otherwise the whole board re-animates whenever anything at all happens. Each page keeps a `lastRenderedState` / `lastSeenWinningLine` for this. Online additionally resets `lastRenderedGame = null` on room entry and on bounce-to-lobby, so two different rooms' boards are never diffed against each other.
+
+`newlyClaimedCells` reads `country`, not `owner`, so one function serves both `GameState` and `SoloState` (solo cells have no owner).
 
 ## Adding a setting (the toggle recipe)
 
@@ -133,7 +147,7 @@ TTT state escapes the browser. Before removing a mode or renaming a counter:
 - Reducers: `flags/ticTacToe.test.js`, `flags/onlineRoom.test.js`.
 - WS client reducer: `ticTacToe/onlineClient.test.js`.
 - Server: `party/ticTacToeServer.test.js`.
-- UI mechanics: `ticTacToe/shakeFeedback.test.js` (shake-on-miss, winning-cell shake), `ticTacToe/matchStrip.test.js`.
+- UI mechanics: `ticTacToe/shakeFeedback.test.js` (shake-on-miss, winning-cell shake), `ticTacToe/matchStrip.test.js`. The claimed-cell flip is driven by `newlyClaimedCells`, covered in `flags/ticTacToe.test.js` — including the two rules that are easy to regress: a give-up reveal never counts as a claim, and a first render (refresh, or a client re-entering a room mid-game) claims nothing.
 - Settings: `ticTacToe/advancedToggle.test.js` — the "Advanced mode" switch: `decideAdvancedToggleState`'s rules (room beats preference, host-only, locks on first move), the two-switch sync, plus the contracts that live outside JS: that `.scope-toggle`'s CSS stays in `common.css` where every consumer reaches it, that all three boards mount both switches and explain the mode, and that the room chip is online-only.
 - Generation against real data: `flags/countries.test.js` (the load-bearing one).
 

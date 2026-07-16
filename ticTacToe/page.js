@@ -18,7 +18,7 @@ import { ensureProfile } from '../flags/autoProfile.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { renderMatchStrip } from './matchStrip.js';
 import { openMatchSheet, wireMatchSheetDismiss } from './matchSheet.js';
-import { shouldFireTicTacToeConfetti, newlyWinningCells, boardIsUntouched } from '../flags/ticTacToe.js';
+import { shouldFireTicTacToeConfetti, newlyWinningCells, newlyClaimedCells, boardIsUntouched } from '../flags/ticTacToe.js';
 import { decideAdvancedToggleState } from './advancedToggle.js';
 import { isTttAdvanced, setTttAdvanced } from '../flags/tttSettings.js';
 import { trackEvent } from '../analytics/index.js';
@@ -81,6 +81,12 @@ function runOnline(countries) {
   // declaration site, which would hit a TDZ.
   /** @type {[number, number][] | null} */
   let lastSeenWinningLine = null;
+  // Previous rendered board, so renderGrid flips in only the cells just
+  // claimed. Null until the first render — see `newlyClaimedCells` for why a
+  // restore must not animate. Sits beside lastSeenWinningLine because it guards
+  // the same class of bug: a re-render is not a move.
+  /** @type {{ cells: import('../flags/ticTacToe.js').Cell[][] } | null} */
+  let lastRenderedGame = null;
   /** Current room context — needed by the auto-reconnect path. */
   /** @type {{ code: string, intent: 'create' | 'join' } | null} */
   let activeRoom = null;
@@ -261,6 +267,11 @@ function runOnline(countries) {
   /** @param {string} code @param {'create' | 'join'} intent */
   function enterRoom(code, intent) {
     activeRoom = { code, intent };
+    // Forget the previous room's board. Without this, hopping from a room where
+    // (0,0) was filled into one where (0,0) and (1,1) are would diff the two
+    // strangers against each other and flip (1,1) as if someone had just played
+    // it. A room you are arriving at was never claimed in front of you.
+    lastRenderedGame = null;
     if (intent === 'create') rememberHostRoom(window.sessionStorage, code);
     isHost = decideIsHost({ storage: window.sessionStorage, roomCode: code, urlIntent: intent });
     stopReconnecting = false;
@@ -390,6 +401,7 @@ function runOnline(countries) {
     isHost = false;
     forgetHostRoom(window.sessionStorage);
     state = initialClientState();
+    lastRenderedGame = null;
     gridBuilt = false;
     if (gridBodyEl) gridBodyEl.innerHTML = '';
     if (roomCodeEl) roomCodeEl.textContent = '-----';
@@ -681,6 +693,17 @@ function runOnline(countries) {
         if (td) td.classList.add('winning');
       }
     }
+    // One-shot flip on cells claimed since the last render. Must come from a
+    // state diff, not from `.owned`: this function rebuilds every cell's <img>
+    // and runs on every server message, so keying off the class would re-flip
+    // the whole board whenever anything happened.
+    for (const [r, c] of newlyClaimedCells(lastRenderedGame, game)) {
+      const td = gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`);
+      if (!td) continue;
+      td.classList.add('flip-in');
+      setTimeout(() => td.classList.remove('flip-in'), 400);
+    }
+    lastRenderedGame = game;
     // One-shot shake on the freshly formed line — lastSeenWinningLine
     // guards against re-shaking on later renders (rematch reset etc.).
     const fresh = newlyWinningCells(

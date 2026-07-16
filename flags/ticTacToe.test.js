@@ -9,6 +9,7 @@ import {
   applyGiveUp,
   shouldFireTicTacToeConfetti,
   newlyWinningCells,
+  newlyClaimedCells,
   newSoloGame,
   attemptSoloClaim,
   isSoloOver,
@@ -579,4 +580,76 @@ test('boardIsUntouched: false after a give-up reveal, which leaves owner null', 
   // and let the toggle reload away the reveal the player just asked to see.
   const revealed = applyGiveUp(newGame(PUZZLE), [FR, DE, IT, JP, KR, PK, KE, NA, NG], () => 0);
   assert.equal(boardIsUntouched(revealed), false);
+});
+
+// ---------------------------------------------------------------------------
+// newlyClaimedCells — drives the one-shot flip-in on a correct pick
+
+/**
+ * A board built straight from a literal, bypassing attemptClaim — these tests
+ * are about the diff between two boards, so the states are the fixtures, not
+ * the result of playing. `_` is an empty cell.
+ *
+ * @param {Array<Array<{ country?: string, revealed?: boolean }>>} rows
+ * @returns {{ cells: Cell[][] }}
+ */
+function board(rows) {
+  return {
+    cells: rows.map((row) => row.map((c) => ({
+      owner: null,
+      country: c.country ? country({ code: c.country, name: c.country.toUpperCase() }) : null,
+      revealed: c.revealed === true,
+    }))),
+  };
+}
+const _ = {};
+
+test('newlyClaimedCells: reports only the cell that just gained a country', () => {
+  const prev = board([[{ country: 'fr' }, _, _], [_, _, _], [_, _, _]]);
+  const next = board([[{ country: 'fr' }, { country: 'jp' }, _], [_, _, _], [_, _, _]]);
+  assert.deepEqual(newlyClaimedCells(prev, next), [[0, 1]]);
+});
+
+test('newlyClaimedCells: an unchanged board claims nothing', () => {
+  // The online board re-renders on EVERY server message — a peer reconnecting, a
+  // status line changing. If this returned the filled cells, all of them would
+  // re-flip on each one.
+  const same = board([[{ country: 'fr' }, { country: 'jp' }, _], [_, _, _], [_, _, _]]);
+  assert.deepEqual(newlyClaimedCells(same, board([[{ country: 'fr' }, { country: 'jp' }, _], [_, _, _], [_, _, _]])), []);
+});
+
+test('newlyClaimedCells: a first render claims nothing — restoring a board is not playing it', () => {
+  // A refresh, or a joiner arriving mid-game, replays a board that already has
+  // moves on it. Without this, every flag on it would flip at once.
+  const next = board([[{ country: 'fr' }, { country: 'jp' }, _], [_, _, _], [_, _, _]]);
+  assert.deepEqual(newlyClaimedCells(null, next), []);
+  assert.deepEqual(newlyClaimedCells(undefined, next), []);
+  assert.deepEqual(newlyClaimedCells(/** @type {any} */ ({}), next), []);
+});
+
+test('newlyClaimedCells: give-up reveals never count as claims', () => {
+  // They carry their own revealed-bounce, and dressing "here's the answer you
+  // didn't get" in the animation that means "you got it" would be a lie.
+  const prev = board([[_, _, _], [_, _, _], [_, _, _]]);
+  const next = board([
+    [{ country: 'fr', revealed: true }, { country: 'jp', revealed: true }, { country: 'br', revealed: true }],
+    [{ country: 'de', revealed: true }, { country: 'it', revealed: true }, { country: 'es', revealed: true }],
+    [{ country: 'us', revealed: true }, { country: 'tr', revealed: true }, { country: 'za', revealed: true }],
+  ]);
+  assert.deepEqual(newlyClaimedCells(prev, next), []);
+});
+
+test('newlyClaimedCells: a real claim still counts on the turn a give-up reveals the rest', () => {
+  const prev = board([[_, _, _], [_, _, _], [_, _, _]]);
+  const next = board([
+    [{ country: 'fr' }, { country: 'jp', revealed: true }, _],
+    [_, _, _], [_, _, _],
+  ]);
+  assert.deepEqual(newlyClaimedCells(prev, next), [[0, 0]]);
+});
+
+test('newlyClaimedCells: reports several cells when more than one lands at once', () => {
+  const prev = board([[_, _, _], [_, _, _], [_, _, _]]);
+  const next = board([[{ country: 'fr' }, _, _], [_, { country: 'jp' }, _], [_, _, { country: 'br' }]]);
+  assert.deepEqual(newlyClaimedCells(prev, next), [[0, 0], [1, 1], [2, 2]]);
 });
