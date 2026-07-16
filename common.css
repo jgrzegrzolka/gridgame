@@ -59,14 +59,15 @@
    * (top: 12 px + height: 44 px = 56 px bottom) with breathing room. */
   --strip-height: 70px;
   /* Inward push for the chrome cluster on wide viewports so the buttons
-   * align with the right edge of the widest content the project ever
-   * renders — the 9×9 tic-tac-toe grid, which maxes at 756 px (9 × 80 px
-   * cells + 36 px row-header column). Anchoring there means chrome sits
-   * at the grid's right edge on the 9×9 page, and a small distance past
-   * content on narrower pages — better than floating at the viewport
-   * corner on a 1920 px monitor. max(0px, ...) clamps to 0 on viewports
-   * narrower than 756 px, so phones keep the original right:12px
-   * behaviour. */
+   * align with the right edge of the project's content cap, 756 px.
+   * (That number was originally derived from the 9×9 tic-tac-toe grid —
+   * 9 × 80 px cells + a 36 px row-header column. The 9×9 board is gone,
+   * but 756 px stayed as the site-wide content width; `flagsdata` caps
+   * itself to the same value to stay aligned.) Anchoring here means
+   * chrome sits a small distance past content rather than floating at
+   * the viewport corner on a 1920 px monitor. max(0px, ...) clamps to 0
+   * on viewports narrower than 756 px, so phones keep the original
+   * right:12px behaviour. */
   --chrome-x-offset: max(0px, calc(50vw - 378px));
 }
 html {
@@ -93,7 +94,7 @@ body {
    * below) doesn't sit on top of page content. Every page used to
    * repeat this rule in its own stylesheet; promoted here so a new
    * page picks it up automatically. ticTacToe overrides the horizontal
-   * value to fit the 9×9 grid.
+   * value to fit its grid.
    *
    * Bottom padding is 0 on purpose. Almost every page ends with a
    * sticky bottom rail (`.actions-row` / `.result-links`) and the rail
@@ -1053,7 +1054,7 @@ body::after {
  * physical motion is identical to the wrong-move shake; the difference is
  * the wrong shake paints a red overlay via ::before and this one doesn't,
  * so winning cells just bounce in place wearing their gold .winning ring.
- * Shared across 3x3, 9x9 small-board, and 9x9 meta wins. */
+ * Shared across every tic-tac-toe board. */
 .cell.shake-win {
   animation: cell-shake 0.4s ease-in-out 3;
 }

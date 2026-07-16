@@ -466,6 +466,10 @@ test('validateTttResultBody: mode must be exactly 3x3 or 9x9', () => {
     /** @type {any} */ (b).mode = bad;
     assert.deepEqual(validateTttResultBody(b), { ok: false, error: 'invalid_mode' });
   }
+  // '9x9' is still accepted on purpose after the 9×9 board was removed: a tab
+  // opened before the removal can still POST, and a 400 is a worse answer than
+  // a quiet accept. `mergePairResult` ignores the result rather than counting
+  // it, so nothing lands in the 3×3 counters (pinned in tttPairDoc.test.js).
   for (const good of ['3x3', '9x9']) {
     const b = validTttBody();
     b.mode = good;

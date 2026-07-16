@@ -27,13 +27,6 @@
  *   every charge motif (`hasMotif:cross`, `coat-of-arms`, etc.) because a
  *   pure-stripes flag has no overlay by definition, so those cells are
  *   always empty. Symmetric — axesConflict checks both directions.
- * @property {boolean} [ultimateEligible]
- *   When explicitly `false`, the category is excluded from the 9×9 random
- *   pool. Used for categories whose answer pools are too narrow to back
- *   9-per-cell Hall-marriage solvability — e.g. stripesOnly:vertical has
- *   only 5 European flags. 3×3 (`generateRandomPuzzle`) still includes
- *   them because minPerCell=2 is achievable. Default behaviour
- *   (undefined / true) keeps the category in both pools.
  */
 
 /**
@@ -147,10 +140,6 @@ const STRIPES_ONLY_INCOMPATIBLE = CHARGE_MOTIFS.map((m) => `hasMotif:${m}`);
  *   - `incompatibleWith` lists every charge motif id, so the generator
  *     never tries to pair stripesOnly with a charge — the resulting cell
  *     is empty by construction.
- *   - `ultimateEligible: false` keeps stripesOnly out of the 9×9 pool:
- *     European horizontals (8) and verticals (5) are both under 9, and
- *     other continents are tighter, so Hall-marriage solvability fails.
- *     Daily-puzzle authoring (which hand-picks compounds) is unaffected.
  *
  * @param {'horizontal' | 'vertical'} orientation
  * @returns {Category}
@@ -162,7 +151,6 @@ export function hasStripesOnly(orientation) {
     predicate: (c) => c.stripesOnly === orientation,
     exclusiveGroup: 'stripesOnly',
     incompatibleWith: STRIPES_ONLY_INCOMPATIBLE,
-    ultimateEligible: false,
   };
 }
 
@@ -245,16 +233,10 @@ export const COLOR_COUNTS_FOR_RANDOM = [['=', 2], ['=', 3], ['=', 4], ['>=', 4]]
  * tiers both down the rows) is rejected separately by `metricGroupRepeated`,
  * so a puzzle carries population at most once, on either axis.
  *
- * `ultimate: true` marks the single breakpoint kept in the 9×9 pool. The
- * extreme tiers can't back 9-distinct-per-cell against a continent (e.g.
- * Oceania has no country over 10M), so only the broad `>=10M` tier survives
- * `buildUltimateCategoryPool` — the rest carry `ultimateEligible: false`, the
- * same mechanism that keeps `stripesOnly` out of 9×9.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const POPULATION_BREAKS_FOR_RANDOM = [
-  { op: '>=', n: 10_000_000, ultimate: true },
+  { op: '>=', n: 10_000_000 },
   { op: '>=', n: 50_000_000 },
   { op: '>=', n: 100_000_000 },
   { op: '<=', n: 20_000_000 },
@@ -275,14 +257,10 @@ export const POPULATION_BREAKS_FOR_RANDOM = [
  * same-axis case is rejected by `metricGroupRepeated`, so a puzzle carries area
  * at most once.
  *
- * `ultimate: true` marks the single breakpoint kept in the 9×9 pool: the broad
- * `>=100K` tier is the only one that can back 9-distinct-per-cell against a
- * continent; the rest carry `ultimateEligible: false`.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const AREA_BREAKS_FOR_RANDOM = [
-  { op: '>=', n: 100_000, ultimate: true },
+  { op: '>=', n: 100_000 },
   { op: '>=', n: 500_000 },
   { op: '>=', n: 1_000_000 },
   { op: '<=', n: 100_000 },
@@ -294,13 +272,12 @@ export const AREA_BREAKS_FOR_RANDOM = [
  * Population-density-threshold Categories (people per km²), same easy→hard
  * gradient as population / area. Dense tiers `>=100 / >=200 / >=500` (city-states
  * and crowded nations) and sparse `<=100 / <=30 / <=10` (Mongolia, Australia,
- * Canada, …). `exclusiveGroup: 'density'`; `>=100` (~half the world) is the sole
- * `ultimate: true` break for 9×9.
+ * Canada, …). `exclusiveGroup: 'density'`; `>=100` covers roughly half the world.
  *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const DENSITY_BREAKS_FOR_RANDOM = [
-  { op: '>=', n: 100, ultimate: true },
+  { op: '>=', n: 100 },
   { op: '>=', n: 200 },
   { op: '>=', n: 500 },
   { op: '<=', n: 100 },
@@ -311,13 +288,13 @@ export const DENSITY_BREAKS_FOR_RANDOM = [
 /**
  * GDP-threshold Categories (nominal current US$), same easy→hard gradient as the
  * other metrics. Big economies `>=$100B / >=$500B / >=$1T` (77 / 33 / 20 real
- * places) and small `<=$10B / <=$1B / <=$100M` (97 / 41 / 20). `exclusiveGroup:
- * 'gdp'`; the broad `>=$100B` tier is the sole `ultimate: true` break for 9×9.
+ * places) and small `<=$10B / <=$1B / <=$100M` (97 / 41 / 20).
+ * `exclusiveGroup: 'gdp'`.
  *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const GDP_BREAKS_FOR_RANDOM = [
-  { op: '>=', n: 100_000_000_000, ultimate: true },
+  { op: '>=', n: 100_000_000_000 },
   { op: '>=', n: 500_000_000_000 },
   { op: '>=', n: 1_000_000_000_000 },
   { op: '<=', n: 10_000_000_000 },
@@ -328,15 +305,14 @@ export const GDP_BREAKS_FOR_RANDOM = [
 /**
  * GDP-per-capita-threshold Categories (nominal current US$ per person). Rich
  * `>=$30K / >=$50K / >=$70K` (70 / 36 / 18 real places) and modest
- * `<=$5K / <=$2K / <=$1K` (91 / 51 / 28). `exclusiveGroup: 'gdpPerCapita'`; the
- * broad `>=$30K` tier is the sole `ultimate: true` break for 9×9. The chosen
- * breakpoints never overlap GDP's (>=$100M) so a bare "$30K" reads as per-capita
+ * `<=$5K / <=$2K / <=$1K` (91 / 51 / 28). `exclusiveGroup: 'gdpPerCapita'`. The
+ * chosen breakpoints never overlap GDP's (>=$100M) so a bare "$30K" reads as per-capita
  * and "$100M" as total, no metric prefix needed to disambiguate a pill.
  *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const GDP_PER_CAPITA_BREAKS_FOR_RANDOM = [
-  { op: '>=', n: 30_000, ultimate: true },
+  { op: '>=', n: 30_000 },
   { op: '>=', n: 50_000 },
   { op: '>=', n: 70_000 },
   { op: '<=', n: 5_000 },
@@ -353,14 +329,7 @@ export const GDP_PER_CAPITA_BREAKS_FOR_RANDOM = [
  * axis is "produces AT LEAST N": `>=1K / >=10K / >=100K tonnes` (52 / 33 / 14
  * real places). `exclusiveGroup: 'coffee'`.
  *
- * No `ultimate: true` break — unlike the dense metrics, coffee is too sparse and
- * concentrated to back a 9×9 cell: whole continents (Europe, most of Oceania)
- * grow essentially none, so `coffee >= N × continent` can't reach 9 distinct.
- * Every break therefore carries `ultimateEligible: false`, keeping coffee out of
- * the Ultimate pool (the same mechanism that excludes `stripesOnly`); it stays a
- * 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const COFFEE_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 1_000 },
@@ -376,12 +345,7 @@ export const COFFEE_BREAKS_FOR_RANDOM = [
  * `>=1K / >=10K / >=100K tonnes` (66 / 44 / 21 real places). `exclusiveGroup:
  * 'wine'`.
  *
- * No `ultimate: true` break: like coffee, wine is too sparse and concentrated
- * to back a 9×9 cell (whole continents make essentially none), so `wine >= N ×
- * continent` can't reach 9 distinct. Every break carries `ultimateEligible:
- * false`, keeping wine a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const WINE_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 1_000 },
@@ -396,11 +360,7 @@ export const WINE_BREAKS_FOR_RANDOM = [
  * trivially fillable and meaningless. The meaningful axis is "grows AT LEAST N":
  * `>=1K/10K/100K tonnes` (37 / 25 / 8 real places). `exclusiveGroup: 'cocoa'`.
  *
- * No `ultimate: true` break: like the other sparse crops, cocoa is too
- * concentrated (West Africa dominant) to back a 9×9 cell, so every break carries
- * `ultimateEligible: false`, keeping cocoa a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const COCOA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 1_000 },
@@ -416,11 +376,7 @@ export const COCOA_BREAKS_FOR_RANDOM = [
  * healthiest spread of any sparse crop, bananas grow across the whole tropics).
  * `exclusiveGroup: 'banana'`.
  *
- * No `ultimate: true` break: bananas are still tropics-concentrated (Europe
- * grows essentially none), so `banana >= N × continent` can't reach 9 distinct.
- * Every break carries `ultimateEligible: false`, keeping banana a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const BANANA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 1_000 },
@@ -438,12 +394,7 @@ export const BANANA_BREAKS_FOR_RANDOM = [
  * India, Italy, Iran, Russia, France, Uzbekistan, South Africa, Chile, Ukraine).
  * `exclusiveGroup: 'apple'`.
  *
- * No `ultimate: true` break: apples are temperate-concentrated (Oceania is just
- * Australia + New Zealand, sub-Saharan Africa barely grows any), so
- * `apple >= N × continent` can't reach 9 distinct. Every break carries
- * `ultimateEligible: false`, keeping apple a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const APPLE_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 10_000 },
@@ -460,15 +411,10 @@ export const APPLE_BREAKS_FOR_RANDOM = [
  * `<=500 / <=200 / <=100 m` (51 / 28 / 18, the flat countries and low coral
  * islands, bottoming out at the Maldives). `exclusiveGroup: 'elevation'`.
  *
- * `ultimate: true` marks the single break kept in the 9×9 pool: the broad
- * `>=1000` tier (~2/3 of the world, spread across every continent) is the only
- * one that can back 9-distinct-per-cell against a continent; the rest carry
- * `ultimateEligible: false`. Dense, so unlike coffee it IS 9×9-eligible.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const ELEVATION_BREAKS_FOR_RANDOM = [
-  { op: '>=', n: 1_000, ultimate: true },
+  { op: '>=', n: 1_000 },
   { op: '>=', n: 3_000 },
   { op: '>=', n: 5_000 },
   { op: '<=', n: 500 },
@@ -488,19 +434,13 @@ export const ELEVATION_BREAKS_FOR_RANDOM = [
  * sovereign 0-km states, no coastal state dips that low). `exclusiveGroup:
  * 'coastline'`.
  *
- * `ultimate: true` marks the single break kept in the 9×9 pool: the broad
- * `>=1000` tier (76 sovereign, 9+ in every continent bar South America and
- * Antarctica) is the only one that can back 9-distinct-per-cell against a
- * continent; the rest carry `ultimateEligible: false`. Dense, so like elevation
- * it IS 9×9-eligible.
- *
  * Counts are tuned against flags/metrics/coastline.json; a 0-count tier is
  * dropped by `buildMetricTierItems` so it never reaches a surface.
  *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const COASTLINE_BREAKS_FOR_RANDOM = [
-  { op: '>=', n: 1_000, ultimate: true },
+  { op: '>=', n: 1_000 },
   { op: '>=', n: 5_000 },
   { op: '>=', n: 25_000 },
   { op: '<=', n: 500 },
@@ -520,18 +460,13 @@ export const COASTLINE_BREAKS_FOR_RANDOM = [
  * `<=1` is effectively "practically treeless" (the deserts, ice sheets and
  * city-states). `exclusiveGroup: 'forest'`.
  *
- * `ultimate: true` marks the single break kept in the 9×9 pool: the broad
- * `>=30` tier (101 sovereign, 9+ in every continent) is the only one that can
- * back 9-distinct-per-cell against a continent; the rest carry
- * `ultimateEligible: false`. Dense, so like elevation it IS 9×9-eligible.
- *
  * Counts are tuned against flags/metrics/forest.json; a 0-count tier is dropped
  * by `buildMetricTierItems` so it never reaches a surface.
  *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const FOREST_BREAKS_FOR_RANDOM = [
-  { op: '>=', n: 30, ultimate: true },
+  { op: '>=', n: 30 },
   { op: '>=', n: 50 },
   { op: '>=', n: 70 },
   { op: '<=', n: 20 },
@@ -548,12 +483,7 @@ export const FOREST_BREAKS_FOR_RANDOM = [
  * Arabia, China, Iran, Iraq, Canada, Brazil, the UAE, Kuwait, Mexico, Kazakhstan).
  * `exclusiveGroup: 'oil'`.
  *
- * No `ultimate: true` break: oil is geographically concentrated (Oceania has
- * essentially only Australia, sub-Saharan Africa a handful), so `oil >= N ×
- * continent` can't reach 9 distinct. Every break carries `ultimateEligible:
- * false`, keeping oil a 3×3-only axis like the crops.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const OIL_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 10 },
@@ -570,12 +500,7 @@ export const OIL_BREAKS_FOR_RANDOM = [
  * China, Bangladesh, Indonesia, Vietnam, Thailand, Myanmar, the Philippines,
  * Brazil, Cambodia, the US, Japan, Pakistan). `exclusiveGroup: 'rice'`.
  *
- * No `ultimate: true` break: rice is tropics/subtropics-concentrated and heavily
- * Asian (Europe grows little, Oceania barely any), so `rice >= N × continent`
- * can't reach 9 distinct. Every break carries `ultimateEligible: false`, keeping
- * rice a 3×3-only axis like the other crops.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const RICE_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 100_000 },
@@ -591,12 +516,7 @@ export const RICE_BREAKS_FOR_RANDOM = [
  * from the minor miners up to the 7 giants: China, India, Indonesia, Australia,
  * the US, Russia, South Africa; China alone is 26,245 TWh, ~5x #2). `exclusiveGroup: 'coal'`.
  *
- * No `ultimate: true` break: coal is extremely concentrated (China dwarfs all,
- * whole continents mine essentially none), so `coal >= N × continent` can't reach
- * 9 distinct. Every break carries `ultimateEligible: false`, keeping coal a
- * 3×3-only axis like oil and the crops.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const COAL_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 10 },
@@ -614,12 +534,7 @@ export const COAL_BREAKS_FOR_RANDOM = [
  * Uruguay, Wales, the Falklands, …) is the iconic "more sheep than people" cell;
  * `>=2` (~7) is the harder tier. `exclusiveGroup: 'sheepPerCapita'`.
  *
- * No `ultimate: true` break: the distribution is one Falkland outlier over a
- * thin tail, so `sheepPerCapita >= N × continent` can't reach 9 distinct. Every
- * break stays `ultimateEligible: false` (via the pool builder), keeping this a
- * 3×3-only axis like the crops.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const SHEEP_PER_CAPITA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 1 },
@@ -635,11 +550,7 @@ export const SHEEP_PER_CAPITA_BREAKS_FOR_RANDOM = [
  * Brazil) is the iconic "more cows than people" cell; `>=2` (Uruguay, Chad) is
  * the harder tier. `exclusiveGroup: 'cattlePerCapita'`.
  *
- * No `ultimate: true` break: the distribution is one Uruguay peak over a thin
- * tail, so `cattlePerCapita >= N × continent` can't reach 9 distinct. Every
- * break stays `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 1 },
@@ -654,11 +565,7 @@ export const CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM = [
  * religion/geography quiz rather than a beer one, so we leave it off. Integer `n`
  * (parseThreshold requires it), which the 0..131 L range gives comfortably.
  *
- * No `ultimate: true` break: beer is `absence: 'unknown'` (73 real places carry
- * no value), so it cannot back a dense 9×9 axis. Every break stays
- * `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const BEER_PER_CAPITA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 50 },
@@ -673,11 +580,7 @@ export const BEER_PER_CAPITA_BREAKS_FOR_RANDOM = [
  * Croatia). The `<=` dry-state low end reads as a religion/geography quiz, so it is
  * left off. Integer `n` (parseThreshold requires it), which the 0..13 L range gives.
  *
- * No `ultimate: true` break: alcohol is `absence: 'unknown'` (the small territories
- * carry no value), so it cannot back a dense 9×9 axis. Every break stays
- * `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 10 },
@@ -691,11 +594,7 @@ export const ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM = [
  * Mongolia, New Zealand, Spain, Brazil). Integer `n` (parseThreshold requires it),
  * which the 0..124 kg range gives comfortably.
  *
- * No `ultimate: true` break: meat is `absence: 'unknown'`, so it cannot back a
- * dense 9×9 axis. Every break stays `ultimateEligible: false` (via the pool
- * builder), a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const MEAT_PER_CAPITA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 80 },
@@ -711,11 +610,7 @@ export const MEAT_PER_CAPITA_BREAKS_FOR_RANDOM = [
  * big countries with few visitors per head, which reads as a population quiz rather
  * than a tourism one, so it is left off. Integer `n`, which the 0..~102 range gives.
  *
- * No `ultimate: true` break: tourism is `absence: 'unknown'` (the states the World
- * Bank has no figure for carry no value), so it cannot back a dense 9×9 axis. Every
- * break stays `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 1 },
@@ -731,11 +626,7 @@ export const TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM = [
  * development quiz rather than an energy one, so it is left off. Integer `n`, which
  * the 14..~49,000 kWh range gives comfortably.
  *
- * No `ultimate: true` break: electricity is `absence: 'unknown'` (the micro-states
- * the World Bank does not meter carry no value), so it cannot back a dense 9×9 axis.
- * Every break stays `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 5000 },
@@ -756,11 +647,7 @@ export const ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM = [
  * is for the Party "fewest" superlative (which drops the 0s entirely). `n = 0`
  * needs `signed` on the THRESHOLD_METRICS entry so `parseThreshold` admits it.
  *
- * No `ultimate: true` break: borders is dense but top-heavy (a long tail of 0s and
- * 1s), so `borders >= N × continent` can't reach 9 distinct per cell. Every break
- * stays `ultimateEligible: false` (via the pool builder), a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const BORDERS_BREAKS_FOR_RANDOM = [
   { op: '<=', n: 0 },
@@ -776,11 +663,7 @@ export const BORDERS_BREAKS_FOR_RANDOM = [
  * decade from coffee, matching apple's `10K / 100K / 1M` (24 / 17 / 6 real
  * places). `exclusiveGroup: 'tea'`.
  *
- * No `ultimate: true` break — like the other sparse crops, tea is too
- * concentrated to back a 9×9 cell (whole continents grow essentially none), so
- * every break carries `ultimateEligible: false`, keeping it a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const TEA_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 10_000 },
@@ -796,11 +679,7 @@ export const TEA_BREAKS_FOR_RANDOM = [
  * above rice: `1M / 10M / 100M` (54 / 19 / 3 real places). `exclusiveGroup:
  * 'sugarcane'`.
  *
- * No `ultimate: true` break: like the other sparse crops, cane is too
- * concentrated to back a 9×9 cell (whole continents grow essentially none), so
- * every break carries `ultimateEligible: false`, keeping it a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const SUGARCANE_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 1_000_000 },
@@ -816,11 +695,7 @@ export const SUGARCANE_BREAKS_FOR_RANDOM = [
  * `50 / 100 / 200` scale to gold's low tonnage: 17 / 12 / 4 real places, the
  * significant / major / giant producers. `exclusiveGroup: 'gold'`.
  *
- * No `ultimate: true` break: like the other sparse metrics, gold is too
- * concentrated to back a 9×9 cell (only ~17 producers worldwide), so every break
- * carries `ultimateEligible: false`, keeping it a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const GOLD_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 50 },
@@ -837,11 +712,7 @@ export const GOLD_BREAKS_FOR_RANDOM = [
  * 25 / 20 / 8 producers, the growers / notable / major-producer tiers.
  * `exclusiveGroup: 'oliveOil'`.
  *
- * No `ultimate: true` break: like the other sparse crops, olive oil is too
- * concentrated to back a 9×9 cell (~28 producers worldwide), so every break
- * carries `ultimateEligible: false`, keeping it a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const OLIVE_OIL_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 1_000 },
@@ -857,11 +728,7 @@ export const OLIVE_OIL_BREAKS_FOR_RANDOM = [
  * (China ~462K t tops it, then a steep drop): 28 / 10 / 2 real places, the
  * producers / big / giant (China & Türkiye only) tiers. `exclusiveGroup: 'honey'`.
  *
- * No `ultimate: true` break: like the other sparse producers, honey is too
- * top-heavy to back a 9×9 cell, so every break carries `ultimateEligible: false`,
- * keeping it a 3×3-only axis.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const HONEY_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 10_000 },
@@ -878,10 +745,7 @@ export const HONEY_BREAKS_FOR_RANDOM = [
  * whole integers so the `.`-split i18n keys and `parseThreshold` round-trip.
  * `exclusiveGroup: 'temperature'`.
  *
- * No `ultimate: true` break: kept a 3×3-only axis (the sub-zero extreme is too
- * narrow to back a 9×9 cell), so every break carries `ultimateEligible: false`.
- *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const TEMPERATURE_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 25 },
@@ -900,10 +764,9 @@ export const TEMPERATURE_BREAKS_FOR_RANDOM = [
  * `<=` tier would surface the conflict / poverty tail, a poverty quiz not a
  * happiness one, so it is deliberately omitted. `exclusiveGroup: 'happiness'`.
  *
- * No `ultimate: true` break: 3×3-only, like the other absence:'unknown' metrics.
  * Breaks are whole integers (the ladder is 0-10) so no signed parse is needed.
  *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const HAPPINESS_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 7 },
@@ -920,10 +783,9 @@ export const HAPPINESS_BREAKS_FOR_RANDOM = [
  * midpoint / clean / very clean" tiers. A `<=` tier would surface the
  * failed-state tail, a grim quiz, so it is omitted. `exclusiveGroup: 'corruption'`.
  *
- * No `ultimate: true` break: 3×3-only, like the other absence:'unknown' metrics.
  * Breaks are whole integers (the index is 0-100) so no signed parse is needed.
  *
- * @type {Array<{ op: '>=' | '<=', n: number, ultimate?: boolean }>}
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
  */
 export const CORRUPTION_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 50 },
@@ -931,7 +793,7 @@ export const CORRUPTION_BREAKS_FOR_RANDOM = [
   { op: '>=', n: 70 },
 ];
 
-/** Motifs the random puzzle generator (3×3 and 9×9 ticTacToe) is allowed
+/** Motifs the random puzzle generator (ticTacToe) is allowed
  * to pair with continents on the row / column axes. Some motifs appear on
  * flags from only one continent (e.g. `eu-member` is Europe-only) — those
  * are still allowed in the pool because `generateRandomPuzzle` retries up
@@ -1054,10 +916,9 @@ export function hasMotif(motif) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function population(op, n, opts = {}) {
+export function population(op, n) {
   const human = `${n / 1_000_000}M`;
   const label = op === '>=' ? `over ${human} people` : `under ${human} people`;
   /** @type {(c: Country) => boolean} */
@@ -1072,7 +933,6 @@ export function population(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'population',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1083,10 +943,9 @@ export function population(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function density(op, n, opts = {}) {
+export function density(op, n) {
   const label = op === '>=' ? `over ${n} people/km²` : `under ${n} people/km²`;
   /** @type {(c: Country) => boolean} */
   const predicate =
@@ -1100,7 +959,6 @@ export function density(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'density',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1112,10 +970,9 @@ export function density(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function area(op, n, opts = {}) {
+export function area(op, n) {
   const human = n >= 1_000_000 ? `${n / 1_000_000}M` : `${n / 1_000}K`;
   const label = op === '>=' ? `over ${human} km²` : `under ${human} km²`;
   /** @type {(c: Country) => boolean} */
@@ -1130,7 +987,6 @@ export function area(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'area',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1185,10 +1041,9 @@ function twhLabel(/** @type {number} */ n) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function gdp(op, n, opts = {}) {
+export function gdp(op, n) {
   const human = usdCompact(n);
   const label = op === '>=' ? `over ${human}` : `under ${human}`;
   /** @type {(c: Country) => boolean} */
@@ -1203,7 +1058,6 @@ export function gdp(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'gdp',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1214,10 +1068,9 @@ export function gdp(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function gdpPerCapita(op, n, opts = {}) {
+export function gdpPerCapita(op, n) {
   const human = usdCompact(n);
   const label = op === '>=' ? `over ${human}` : `under ${human}`;
   /** @type {(c: Country) => boolean} */
@@ -1232,7 +1085,6 @@ export function gdpPerCapita(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'gdpPerCapita',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1245,10 +1097,9 @@ export function gdpPerCapita(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function coffee(op, n, opts = {}) {
+export function coffee(op, n) {
   const human = tonnesCompact(n);
   const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
   /** @type {(c: Country) => boolean} */
@@ -1263,7 +1114,6 @@ export function coffee(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'coffee',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1276,10 +1126,9 @@ export function coffee(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function wine(op, n, opts = {}) {
+export function wine(op, n) {
   const human = tonnesCompact(n);
   const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
   /** @type {(c: Country) => boolean} */
@@ -1294,7 +1143,6 @@ export function wine(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'wine',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1307,10 +1155,9 @@ export function wine(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function cocoa(op, n, opts = {}) {
+export function cocoa(op, n) {
   const human = tonnesCompact(n);
   const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
   /** @type {(c: Country) => boolean} */
@@ -1325,7 +1172,6 @@ export function cocoa(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'cocoa',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1338,10 +1184,9 @@ export function cocoa(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function banana(op, n, opts = {}) {
+export function banana(op, n) {
   const human = tonnesCompact(n);
   const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
   /** @type {(c: Country) => boolean} */
@@ -1356,7 +1201,6 @@ export function banana(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'banana',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1369,10 +1213,9 @@ export function banana(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function apple(op, n, opts = {}) {
+export function apple(op, n) {
   const human = tonnesCompact(n);
   const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
   /** @type {(c: Country) => boolean} */
@@ -1387,7 +1230,6 @@ export function apple(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'apple',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1399,10 +1241,9 @@ export function apple(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function elevation(op, n, opts = {}) {
+export function elevation(op, n) {
   const human = metresLabel(n);
   const label = op === '>=' ? `over ${human} m` : `under ${human} m`;
   /** @type {(c: Country) => boolean} */
@@ -1417,7 +1258,6 @@ export function elevation(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'elevation',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1430,10 +1270,9 @@ export function elevation(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function coastline(op, n, opts = {}) {
+export function coastline(op, n) {
   const human = kmLabel(n);
   const label = op === '>=' ? `over ${human} km of coast` : `under ${human} km of coast`;
   /** @type {(c: Country) => boolean} */
@@ -1448,7 +1287,6 @@ export function coastline(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'coastline',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1461,10 +1299,9 @@ export function coastline(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function forest(op, n, opts = {}) {
+export function forest(op, n) {
   const label = op === '>=' ? `over ${n}% forest` : `under ${n}% forest`;
   /** @type {(c: Country) => boolean} */
   const predicate =
@@ -1478,7 +1315,6 @@ export function forest(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'forest',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1491,10 +1327,9 @@ export function forest(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function oil(op, n, opts = {}) {
+export function oil(op, n) {
   const human = twhLabel(n);
   const label = op === '>=' ? `over ${human} TWh` : `under ${human} TWh`;
   /** @type {(c: Country) => boolean} */
@@ -1509,7 +1344,6 @@ export function oil(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'oil',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1522,10 +1356,9 @@ export function oil(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function rice(op, n, opts = {}) {
+export function rice(op, n) {
   const human = tonnesCompact(n);
   const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
   /** @type {(c: Country) => boolean} */
@@ -1540,7 +1373,6 @@ export function rice(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'rice',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1553,10 +1385,9 @@ export function rice(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function coal(op, n, opts = {}) {
+export function coal(op, n) {
   const human = twhLabel(n);
   const label = op === '>=' ? `over ${human} TWh` : `under ${human} TWh`;
   /** @type {(c: Country) => boolean} */
@@ -1571,7 +1402,6 @@ export function coal(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'coal',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1586,10 +1416,9 @@ export function coal(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function sheepPerCapita(op, n, opts = {}) {
+export function sheepPerCapita(op, n) {
   const label = op === '>=' ? `over ${n} sheep per person` : `under ${n} sheep per person`;
   /** @type {(c: Country) => boolean} */
   const predicate =
@@ -1603,7 +1432,6 @@ export function sheepPerCapita(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'sheepPerCapita',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1618,10 +1446,9 @@ export function sheepPerCapita(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function cattlePerCapita(op, n, opts = {}) {
+export function cattlePerCapita(op, n) {
   const label = op === '>=' ? `over ${n} cattle per person` : `under ${n} cattle per person`;
   /** @type {(c: Country) => boolean} */
   const predicate =
@@ -1635,7 +1462,6 @@ export function cattlePerCapita(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'cattlePerCapita',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1650,10 +1476,9 @@ export function cattlePerCapita(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function beerPerCapita(op, n, opts = {}) {
+export function beerPerCapita(op, n) {
   const label =
     op === '>=' ? `over ${n} litres per capita` : `under ${n} litres per capita`;
   /** @type {(c: Country) => boolean} */
@@ -1668,7 +1493,6 @@ export function beerPerCapita(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'beerPerCapita',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1683,10 +1507,9 @@ export function beerPerCapita(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function alcoholPerCapita(op, n, opts = {}) {
+export function alcoholPerCapita(op, n) {
   const label =
     op === '>=' ? `over ${n} litres per capita` : `under ${n} litres per capita`;
   /** @type {(c: Country) => boolean} */
@@ -1701,7 +1524,6 @@ export function alcoholPerCapita(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'alcoholPerCapita',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1714,10 +1536,9 @@ export function alcoholPerCapita(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function meatPerCapita(op, n, opts = {}) {
+export function meatPerCapita(op, n) {
   const label =
     op === '>=' ? `over ${n} kg per capita` : `under ${n} kg per capita`;
   /** @type {(c: Country) => boolean} */
@@ -1732,7 +1553,6 @@ export function meatPerCapita(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'meatPerCapita',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1747,10 +1567,9 @@ export function meatPerCapita(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function tourismPerCapita(op, n, opts = {}) {
+export function tourismPerCapita(op, n) {
   const noun = n === 1 ? 'arrival' : 'arrivals';
   const label =
     op === '>=' ? `over ${n} ${noun} per resident` : `under ${n} ${noun} per resident`;
@@ -1766,7 +1585,6 @@ export function tourismPerCapita(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'tourismPerCapita',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1781,10 +1599,9 @@ export function tourismPerCapita(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function electricityPerCapita(op, n, opts = {}) {
+export function electricityPerCapita(op, n) {
   const human = n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const label =
     op === '>=' ? `over ${human} kWh per capita` : `under ${human} kWh per capita`;
@@ -1800,7 +1617,6 @@ export function electricityPerCapita(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'electricityPerCapita',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1814,10 +1630,9 @@ export function electricityPerCapita(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function borders(op, n, opts = {}) {
+export function borders(op, n) {
   const label = op === '>=' ? `${n} or more` : `${n} or fewer`;
   /** @type {(c: Country) => boolean} */
   const predicate =
@@ -1831,7 +1646,6 @@ export function borders(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'borders',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1844,10 +1658,9 @@ export function borders(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function tea(op, n, opts = {}) {
+export function tea(op, n) {
   const human = tonnesCompact(n);
   const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
   /** @type {(c: Country) => boolean} */
@@ -1862,7 +1675,6 @@ export function tea(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'tea',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1875,10 +1687,9 @@ export function tea(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function sugarcane(op, n, opts = {}) {
+export function sugarcane(op, n) {
   const human = tonnesCompact(n);
   const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
   /** @type {(c: Country) => boolean} */
@@ -1893,7 +1704,6 @@ export function sugarcane(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'sugarcane',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1906,10 +1716,9 @@ export function sugarcane(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function gold(op, n, opts = {}) {
+export function gold(op, n) {
   const human = tonnesCompact(n);
   const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
   /** @type {(c: Country) => boolean} */
@@ -1924,7 +1733,6 @@ export function gold(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'gold',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1937,10 +1745,9 @@ export function gold(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function oliveOil(op, n, opts = {}) {
+export function oliveOil(op, n) {
   const human = tonnesCompact(n);
   const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
   /** @type {(c: Country) => boolean} */
@@ -1955,7 +1762,6 @@ export function oliveOil(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'oliveOil',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1968,10 +1774,9 @@ export function oliveOil(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function honey(op, n, opts = {}) {
+export function honey(op, n) {
   const human = tonnesCompact(n);
   const label = op === '>=' ? `over ${human} tonnes` : `under ${human} tonnes`;
   /** @type {(c: Country) => boolean} */
@@ -1986,7 +1791,6 @@ export function honey(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'honey',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -1998,10 +1802,9 @@ export function honey(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function temperature(op, n, opts = {}) {
+export function temperature(op, n) {
   const label = op === '>=' ? `over ${n} °C` : `under ${n} °C`;
   /** @type {(c: Country) => boolean} */
   const predicate =
@@ -2015,7 +1818,6 @@ export function temperature(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'temperature',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -2029,10 +1831,9 @@ export function temperature(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function happiness(op, n, opts = {}) {
+export function happiness(op, n) {
   const label = op === '>=' ? `over ${n}/10` : `under ${n}/10`;
   /** @type {(c: Country) => boolean} */
   const predicate =
@@ -2046,7 +1847,6 @@ export function happiness(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'happiness',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -2061,10 +1861,9 @@ export function happiness(op, n, opts = {}) {
  *
  * @param {'>=' | '<='} op
  * @param {number} n
- * @param {{ ultimateEligible?: boolean }} [opts]
  * @returns {Category}
  */
-export function corruption(op, n, opts = {}) {
+export function corruption(op, n) {
   const label = op === '>=' ? `over ${n}/100` : `under ${n}/100`;
   /** @type {(c: Country) => boolean} */
   const predicate =
@@ -2078,7 +1877,6 @@ export function corruption(op, n, opts = {}) {
     predicate,
     exclusiveGroup: 'corruption',
   };
-  if (opts.ultimateEligible === false) cat.ultimateEligible = false;
   return cat;
 }
 
@@ -2091,7 +1889,7 @@ export function corruption(op, n, opts = {}) {
  * block edited into a dozen places.
  *
  * Each entry is self-describing:
- *   `breaks`         the `<KEY>_BREAKS_FOR_RANDOM` tiers (op/n, optional ultimate)
+ *   `breaks`         the `<KEY>_BREAKS_FOR_RANDOM` tiers (op/n)
  *   `factory`        the Category factory (`population` / `area` / …)
  *   `prefixFallback` English metric name, backing the `metric.<key>` i18n key
  *   `field`          the denormalized `Country` field the predicate reads
@@ -2103,8 +1901,8 @@ export function corruption(op, n, opts = {}) {
  * over `flags/**` keeps real field types instead of an index signature.
  *
  * @typedef {Object} ThresholdMetric
- * @property {ReadonlyArray<{ op: '>=' | '<=', n: number, ultimate?: boolean }>} breaks
- * @property {(op: '>=' | '<=', n: number, opts?: { ultimateEligible?: boolean }) => Category} factory
+ * @property {ReadonlyArray<{ op: '>=' | '<=', n: number }>} breaks
+ * @property {(op: '>=' | '<=', n: number) => Category} factory
  * @property {string} prefixFallback
  * @property {string} field
  * @property {string} family  Co-occurrence family for TTT puzzle composition:
@@ -2706,8 +2504,7 @@ export function categoryFromId(id) {
     return null;
   }
   // Threshold world-metrics (`population:>=10000000`, `density:<=10`, …): one
-  // generic decode over THRESHOLD_METRICS. Rehydrated categories drop
-  // `ultimateEligible` — it only steers pool building, never a live category.
+  // generic decode over THRESHOLD_METRICS.
   const colon = id.indexOf(':');
   if (colon > 0) {
     const metric = THRESHOLD_METRICS[id.slice(0, colon)];
@@ -2728,20 +2525,8 @@ export function buildRandomCategoryPool() {
     ...COLOR_COUNTS_FOR_RANDOM.map(([op, n]) => colorCount(op, n)),
     ...STRIPES_ORIENTATIONS_FOR_RANDOM.map(hasStripesOnly),
     ...Object.values(THRESHOLD_METRICS).flatMap((m) =>
-      m.breaks.map(({ op, n, ultimate }) =>
-        m.factory(op, n, { ultimateEligible: ultimate === true }))),
+      m.breaks.map(({ op, n }) => m.factory(op, n))),
   ];
-}
-
-/**
- * Subset of the 3×3 pool that can back a 9×9 Ultimate puzzle. Drops any
- * category marked `ultimateEligible: false` — currently the stripesOnly
- * pair, whose answer sets are too narrow to satisfy 9-distinct-per-cell.
- *
- * @returns {Category[]}
- */
-export function buildUltimateCategoryPool() {
-  return buildRandomCategoryPool().filter((cat) => cat.ultimateEligible !== false);
 }
 
 /**
@@ -2930,9 +2715,8 @@ export function lacksFlagVisualCategory(rows, cols) {
 
 /**
  * @param {() => number} [rng]
- * @param {Category[]} [pool] Defaults to the full 3×3 random pool. Pass
- *   `buildUltimateCategoryPool()` to draw only from categories whose
- *   answer set can support 9-per-cell.
+ * @param {Category[]} [pool] Defaults to the full 3×3 random pool. Pass a
+ *   narrowed pool to restrict which categories may be drawn.
  * @returns {Puzzle}
  */
 export function randomPuzzle(rng = Math.random, pool = buildRandomCategoryPool()) {
@@ -3024,102 +2808,6 @@ export function findPuzzleSolution(puzzle, countries) {
 }
 
 /**
- * Find a complete 81-distinct country assignment for an Ultimate (9×9)
- * puzzle, respecting any sub-cells already populated in `preFilled`.
- *
- * Returns the 3×3×3×3 grid of countries (indexed `[bigRow][bigCol][r][c]`)
- * or null if no consistent assignment exists. Uses backtracking with the
- * MRV (most-constrained-first) heuristic; each cell's candidate list is
- * shuffled with `rng` so repeat calls produce different solutions.
- *
- * Generation guarantees an 81-distinct solution exists on an empty board
- * (via `hasUltimatePuzzleSolution`), so this returns non-null for the
- * give-up-on-empty case. With claimed cells the result can be null if
- * the player has steered the puzzle into an infeasible state — callers
- * must handle that.
- *
- * Bounded by `maxBacktracks`. The solver is plain DFS with MRV ordering
- * and no constraint propagation, so adversarial candidate orderings can
- * still trigger long search trees on tight pools (the synthetic
- * denseSquarePool tests hit this). The cap turns "could hang for
- * minutes" into "returns null after a fixed amount of work" — give-up
- * callers already fall back to a greedy reveal on null, so this never
- * loses the player the reveal, just trades a slow exact answer for a
- * fast best-effort one. Default headroom is far above what any healthy
- * production puzzle needs.
- *
- * @param {Puzzle} puzzle
- * @param {(Country | null)[][][][]} preFilled 3×3×3×3 of claimed countries (or null when empty).
- * @param {Country[]} countries
- * @param {() => number} [rng]
- * @param {number} [maxBacktracks] Cap on backtrack-tree nodes visited; returns null if exceeded.
- * @returns {Country[][][][] | null}
- */
-export function findUltimateAssignment(puzzle, preFilled, countries, rng = Math.random, maxBacktracks = 100_000) {
-  /** @type {(Country | null)[][][][]} */
-  const result = preFilled.map((bigRow) =>
-    bigRow.map((board) => board.map((row) => row.slice())),
-  );
-  /** @type {Set<string>} */
-  const used = new Set();
-  /** @type {Array<{ br: number, bc: number, r: number, c: number, candidates: Country[] }>} */
-  const empties = [];
-
-  for (let br = 0; br < 3; br++) {
-    for (let bc = 0; bc < 3; bc++) {
-      const rowCat = puzzle.rows[br];
-      const colCat = puzzle.cols[bc];
-      // Every sub-cell of small board (br, bc) sees the same candidate
-      // pool initially — the (row × col) predicate is identical across
-      // the 9 sub-cells of one small board.
-      const valid = countries.filter(
-        (co) => rowCat.predicate(co) && colCat.predicate(co),
-      );
-      for (let r = 0; r < 3; r++) {
-        for (let c = 0; c < 3; c++) {
-          const claimed = preFilled[br][bc][r][c];
-          if (claimed) {
-            used.add(claimed.code);
-          } else {
-            empties.push({ br, bc, r, c, candidates: shuffleInPlace(valid.slice(), rng) });
-          }
-        }
-      }
-    }
-  }
-
-  // Drop already-claimed countries from each empty cell's domain. MRV
-  // sort favours the most-constrained empty cells first — without it,
-  // the search blows up on thin (row × col) pairs because we'd try
-  // wide-pool cells first, burn through countries needed elsewhere, and
-  // dead-end deep in the tree.
-  for (const e of empties) {
-    e.candidates = e.candidates.filter((co) => !used.has(co.code));
-  }
-  empties.sort((a, b) => a.candidates.length - b.candidates.length);
-
-  let steps = 0;
-  /** @param {number} i */
-  function backtrack(i) {
-    if (++steps > maxBacktracks) return false;
-    if (i === empties.length) return true;
-    const { br, bc, r, c, candidates } = empties[i];
-    for (const co of candidates) {
-      if (used.has(co.code)) continue;
-      result[br][bc][r][c] = co;
-      used.add(co.code);
-      if (backtrack(i + 1)) return true;
-      used.delete(co.code);
-      result[br][bc][r][c] = null;
-    }
-    return false;
-  }
-
-  if (!backtrack(0)) return null;
-  return /** @type {Country[][][][]} */ (result);
-}
-
-/**
  * Fisher–Yates shuffle in place. Internal helper for randomizing
  * candidate orderings inside backtracking solvers.
  *
@@ -3173,84 +2861,6 @@ export function generateRandomPuzzle(countries, options = {}) {
   }
   throw new Error(
     `Could not generate a random puzzle with >= ${minPerCell} countries per cell after ${maxAttempts} attempts`,
-  );
-}
-
-/**
- * Hall-marriage check for 9×9 (Ultimate) playability: returns true iff there
- * exist 81 distinct countries (or `perCell × 9` in general) that satisfy
- * every (row × col) cell, with `perCell` distinct countries assigned per cell
- * and no country shared between cells.
- *
- * Proof of correctness — Hall's defect theorem (the b-matching generalization):
- * a perfect assignment respecting per-cell demand exists iff for every
- * non-empty subset S of cells, the union of their candidate countries
- * (the countries that match at least one cell in S) has size ≥
- * perCell × |S|. With only 9 cells there are 2^9 − 1 = 511 subsets to check —
- * cheap enough to run inside a puzzle-generation loop.
- *
- * @param {Puzzle} puzzle
- * @param {Country[]} countries
- * @param {number} [perCell] Slots per cell — defaults to 9 (the small-board size).
- * @returns {boolean}
- */
-export function hasUltimatePuzzleSolution(puzzle, countries, perCell = 9) {
-  /** @type {Set<string>[]} 9 cells in row-major order, each holding the codes of every country that fits its (row × col) predicate. */
-  const cells = [];
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      /** @type {Set<string>} */
-      const set = new Set();
-      for (const co of countries) {
-        if (puzzle.rows[r].predicate(co) && puzzle.cols[c].predicate(co)) {
-          set.add(co.code);
-        }
-      }
-      cells.push(set);
-    }
-  }
-  for (let mask = 1; mask < (1 << 9); mask++) {
-    let size = 0;
-    /** @type {Set<string>} */
-    const union = new Set();
-    for (let i = 0; i < 9; i++) {
-      if (mask & (1 << i)) {
-        size++;
-        for (const code of cells[i]) union.add(code);
-      }
-    }
-    if (union.size < size * perCell) return false;
-  }
-  return true;
-}
-
-/**
- * Random-search the category space for a puzzle that admits a full 81-distinct
- * country assignment (i.e. one valid country per sub-cell across all 9 small
- * boards). Pulls candidate puzzles via `randomPuzzle`, skips axis conflicts,
- * and gates on `hasUltimatePuzzleSolution`. The stronger constraint thins out
- * the eligible category space — observed ~55 attempts on average — so the
- * default attempt budget is higher than `generateRandomPuzzle`'s.
- *
- * @param {Country[]} countries
- * @param {{ rng?: () => number, maxAttempts?: number }} [options]
- * @returns {Puzzle}
- */
-export function generateUltimateRandomPuzzle(countries, options = {}) {
-  const { rng = Math.random, maxAttempts = 500 } = options;
-  const pool = buildUltimateCategoryPool();
-  for (let i = 0; i < maxAttempts; i++) {
-    const puzzle = randomPuzzle(rng, pool);
-    if (lacksFlagVisualCategory(puzzle.rows, puzzle.cols)) continue;
-    if (axesConflict(puzzle.rows, puzzle.cols)) continue;
-    if (metricGroupRepeated(puzzle.rows, puzzle.cols)) continue;
-    if (axesImpliedPair(puzzle.rows, puzzle.cols, countries)) continue;
-    if (hasUltimatePuzzleSolution(puzzle, countries)) {
-      return puzzle;
-    }
-  }
-  throw new Error(
-    `Could not generate a 9×9-solvable puzzle after ${maxAttempts} attempts`,
   );
 }
 

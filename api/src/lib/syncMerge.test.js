@@ -181,7 +181,7 @@ test('planQuizMerge: per configKey better PB wins, attempts sum, latest lastPlay
 test('planTttMerge: new opponent in source → row transferred with target deviceId', () => {
   const sourceRows = [{
     id: `${SRC}:opp-1`, deviceId: SRC, opponentId: 'opp-1',
-    m3x3: { wins: 2, losses: 1, draws: 0 }, m9x9: { wins: 0, losses: 0, draws: 0 },
+    m3x3: { wins: 2, losses: 1, draws: 0 },
     lastOutcome: 'win', lastPlayedAt: 500, v: 1,
   }];
   const r = planTttMerge({ targetRows: [], sourceRows, targetDeviceId: TGT, sourceDeviceId: SRC });
@@ -196,12 +196,12 @@ test('planTttMerge: new opponent in source → row transferred with target devic
 test('planTttMerge: overlapping opponent — counters sum, newer lastPlayedAt + outcome wins', () => {
   const targetRows = [{
     id: `${TGT}:opp-1`, deviceId: TGT, opponentId: 'opp-1',
-    m3x3: { wins: 3, losses: 1, draws: 0 }, m9x9: { wins: 1, losses: 0, draws: 1 },
+    m3x3: { wins: 3, losses: 1, draws: 0 },
     lastOutcome: 'win', lastPlayedAt: 1000, v: 1,
   }];
   const sourceRows = [{
     id: `${SRC}:opp-1`, deviceId: SRC, opponentId: 'opp-1',
-    m3x3: { wins: 2, losses: 4, draws: 1 }, m9x9: { wins: 0, losses: 1, draws: 0 },
+    m3x3: { wins: 2, losses: 4, draws: 1 },
     lastOutcome: 'loss', lastPlayedAt: 2000, v: 1,
   }];
   const r = planTttMerge({ targetRows, sourceRows, targetDeviceId: TGT, sourceDeviceId: SRC });
@@ -210,10 +210,7 @@ test('planTttMerge: overlapping opponent — counters sum, newer lastPlayedAt + 
   assert.equal(m3.wins, 5);
   assert.equal(m3.losses, 5);
   assert.equal(m3.draws, 1);
-  const m9 = /** @type {any} */ (r.upserts[0].doc.m9x9);
-  assert.equal(m9.wins, 1);
-  assert.equal(m9.losses, 1);
-  assert.equal(m9.draws, 1);
+  assert.equal(r.upserts[0].doc.m9x9, undefined, 'legacy m9x9 is not carried into the merged row');
   assert.equal(r.upserts[0].doc.lastOutcome, 'loss', 'newer wins on outcome');
   assert.equal(r.upserts[0].doc.lastPlayedAt, 2000);
 });

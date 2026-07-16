@@ -26,11 +26,6 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.yetanotherquiz.com/ticTacToe/9x9/</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://www.yetanotherquiz.com/flagsdata/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

@@ -3,7 +3,6 @@
   "name": "gridgame-ttt",
   "main": "party/server.js",
   "parties": {
-    "ultimate": "party/ultimateServer.js",
     "party": "party/partyGameServer.js"
   },
   "compatibilityDate": "2026-06-01"

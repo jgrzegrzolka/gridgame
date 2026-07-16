@@ -116,18 +116,11 @@ async function listAllRows(connString) {
 function reconcile(thisSide, otherSide) {
   const tM3 = normaliseMode(thisSide && thisSide.m3x3);
   const oM3 = normaliseMode(otherSide && otherSide.m3x3);
-  const tM9 = normaliseMode(thisSide && thisSide.m9x9);
-  const oM9 = normaliseMode(otherSide && otherSide.m9x9);
   return {
     m3x3: {
       wins: Math.max(tM3.wins, oM3.losses),
       losses: Math.max(tM3.losses, oM3.wins),
       draws: Math.max(tM3.draws, oM3.draws),
-    },
-    m9x9: {
-      wins: Math.max(tM9.wins, oM9.losses),
-      losses: Math.max(tM9.losses, oM9.wins),
-      draws: Math.max(tM9.draws, oM9.draws),
     },
   };
 }
@@ -169,28 +162,24 @@ async function main() {
 
     const aBefore = {
       m3x3: normaliseMode(aRow && aRow.m3x3),
-      m9x9: normaliseMode(aRow && aRow.m9x9),
     };
     const bBefore = {
       m3x3: normaliseMode(bRow && bRow.m3x3),
-      m9x9: normaliseMode(bRow && bRow.m9x9),
     };
 
-    const aChanged =
-      modeChanged(aBefore.m3x3, aTarget.m3x3) || modeChanged(aBefore.m9x9, aTarget.m9x9);
-    const bChanged =
-      modeChanged(bBefore.m3x3, bTarget.m3x3) || modeChanged(bBefore.m9x9, bTarget.m9x9);
+    const aChanged = modeChanged(aBefore.m3x3, aTarget.m3x3);
+    const bChanged = modeChanged(bBefore.m3x3, bTarget.m3x3);
     if (!aChanged && !bChanged) continue;
 
     asymmetricCount++;
     console.log(`\npair ${a.slice(0, 8)}…  ↔  ${b.slice(0, 8)}…`);
     if (aChanged || !aRow) {
-      console.log(`  A→B  before: ${fmtMode('3x3', aBefore.m3x3)} ${fmtMode('9x9', aBefore.m9x9)}`);
-      console.log(`       after:  ${fmtMode('3x3', aTarget.m3x3)} ${fmtMode('9x9', aTarget.m9x9)}`);
+      console.log(`  A→B  before: ${fmtMode('3x3', aBefore.m3x3)}`);
+      console.log(`       after:  ${fmtMode('3x3', aTarget.m3x3)}`);
     }
     if (bChanged || !bRow) {
-      console.log(`  B→A  before: ${fmtMode('3x3', bBefore.m3x3)} ${fmtMode('9x9', bBefore.m9x9)}`);
-      console.log(`       after:  ${fmtMode('3x3', bTarget.m3x3)} ${fmtMode('9x9', bTarget.m9x9)}`);
+      console.log(`  B→A  before: ${fmtMode('3x3', bBefore.m3x3)}`);
+      console.log(`       after:  ${fmtMode('3x3', bTarget.m3x3)}`);
     }
 
     if (apply) {
@@ -200,7 +189,6 @@ async function main() {
           deviceId: a,
           opponentId: b,
           m3x3: aTarget.m3x3,
-          m9x9: aTarget.m9x9,
           lastOutcome: (aRow && aRow.lastOutcome) || null,
           lastPlayedAt: (aRow && aRow.lastPlayedAt) || Date.now(),
           v: 1,
@@ -226,7 +214,6 @@ async function main() {
           deviceId: b,
           opponentId: a,
           m3x3: bTarget.m3x3,
-          m9x9: bTarget.m9x9,
           lastOutcome: (bRow && bRow.lastOutcome) || null,
           lastPlayedAt: (bRow && bRow.lastPlayedAt) || Date.now(),
           v: 1,

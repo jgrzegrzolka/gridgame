@@ -308,13 +308,9 @@ function planTttMerge({ targetRows, sourceRows, targetDeviceId, sourceDeviceId }
     const opponentId = src.opponentId;
     const tgt = targetByOpp.get(opponentId);
     const tgtM3 = normalisedCounters(tgt && tgt.m3x3);
-    const tgtM9 = normalisedCounters(tgt && tgt.m9x9);
     const srcM3 = normalisedCounters(src.m3x3);
-    const srcM9 = normalisedCounters(src.m9x9);
     /** @type {Record<string, number>} */
     const m3x3 = { wins: tgtM3.wins + srcM3.wins, losses: tgtM3.losses + srcM3.losses, draws: tgtM3.draws + srcM3.draws };
-    /** @type {Record<string, number>} */
-    const m9x9 = { wins: tgtM9.wins + srcM9.wins, losses: tgtM9.losses + srcM9.losses, draws: tgtM9.draws + srcM9.draws };
     const tgtLast = tgt && typeof tgt.lastPlayedAt === 'number' ? tgt.lastPlayedAt : 0;
     const srcLast = typeof src.lastPlayedAt === 'number' ? src.lastPlayedAt : 0;
     /** @type {string | undefined} */
@@ -331,7 +327,6 @@ function planTttMerge({ targetRows, sourceRows, targetDeviceId, sourceDeviceId }
       deviceId: targetDeviceId,
       opponentId,
       m3x3,
-      m9x9,
       lastPlayedAt: Math.max(tgtLast, srcLast),
       v: 1,
     };

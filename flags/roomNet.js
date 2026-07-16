@@ -55,9 +55,8 @@ const PROD_HOSTNAMES = new Set([
  * connects to a partykit dev server running on port 1999 on the same host.
  *
  * `party` selects which PartyKit party class handles the room — 'main' for
- * the 3×3 server, 'ultimate' for the 9×9 server, 'party' for Flag Party.
- * Rooms in different parties don't share state, so the same room code can
- * exist in more than one.
+ * the tic-tac-toe server, 'party' for Flag Party. Rooms in different parties
+ * don't share state, so the same room code can exist in more than one.
  *
  * @param {string} hostname
  * @param {string} [party]

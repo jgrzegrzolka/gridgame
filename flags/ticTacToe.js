@@ -11,9 +11,6 @@ import { validateCell } from './engine.js';
  * @property {Country | null} country
  * @property {boolean} [revealed]  - true when the country was filled in by
  *   the give-up reveal (not by a player claim). owner stays null.
- * @property {boolean} [exhausted] - 9x9 only; true when even the give-up
- *   reveal had to reuse a country that's already shown elsewhere because
- *   no fresh valid country was available globally. Always implies revealed.
  */
 
 /**
@@ -199,10 +196,10 @@ export function isGameOver(state) {
  * country yet), picks a valid country that hasn't been used anywhere on the
  * board, and writes it with owner=null + revealed=true. Returns fresh cells.
  *
- * The 3x3 board has no concept of "exhausted" — its global pool is the full
- * country set, far larger than 9 cells. We still defensively skip a cell
- * whose (row × col) intersection genuinely has zero countries left (e.g. a
- * degenerate test puzzle), rather than crash.
+ * The global pool is the full country set, far larger than 9 cells, so the
+ * reveal can always find fresh countries in practice. We still defensively
+ * skip a cell whose (row × col) intersection genuinely has zero countries
+ * left (e.g. a degenerate test puzzle), rather than crash.
  *
  * @param {Puzzle} puzzle
  * @param {Cell[][]} sourceCells
@@ -268,7 +265,7 @@ export function applyGiveUp(state, countries, random = Math.random) {
 }
 
 /**
- * Confetti rule for any Tic-Tac-Toe page (3x3, 9x9, online).
+ * Confetti rule for any Tic-Tac-Toe page (offline, solo, online).
  *
  * Offline (myRole omitted/null): there is no "you" — the game has a
  * winner from the local player's perspective regardless of which mark

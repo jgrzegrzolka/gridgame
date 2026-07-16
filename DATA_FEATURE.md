@@ -15,6 +15,8 @@ A fresh agent picking this up should:
 
 **Concurrent-work caution:** Jan often has a separate agent in flight on program/perf work. Before committing here, run `git status` and **stage data files by name only** (e.g. `git add flags/countries.json DATA_FEATURE.md`) — never `git add -A` or `git add .`, both of which would scoop up the other agent's WIP.
 
+**Archival note — 9×9 / `ultimateEligible` (2026-07-16).** A 9×9 "ultimate" tic-tac-toe board existed until Feature U removed it (see `FEATURE.md`). While it did, every metric had to mark its breaks `ultimateEligible: false` when the extremes couldn't back a 9-distinct cell, so **the shipped entries below are full of "NOT 9×9-eligible" / "3×3-only" notes**. Those are left as written: they record decisions actually taken at the time. **They no longer describe the code** — the flag, the pool filter, and the board are all gone. Don't copy that pattern into a new metric, and don't "fix" the history. The current recipe is in the **add-world-metric** skill.
+
 ---
 
 ## Now

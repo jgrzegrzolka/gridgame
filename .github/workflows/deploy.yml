@@ -251,8 +251,6 @@ jobs:
               "https://www.yetanotherquiz.com/profile/",
               "https://www.yetanotherquiz.com/ticTacToe/",
               "https://www.yetanotherquiz.com/ticTacToe/offline/",
-              "https://www.yetanotherquiz.com/ticTacToe/9x9/",
-              "https://www.yetanotherquiz.com/ticTacToe/9x9/offline/",
               "https://www.yetanotherquiz.com/flagParty/"
             ]}')
           echo "${response}"
@@ -341,8 +339,6 @@ jobs:
             https://www.yetanotherquiz.com/profile/ \
             https://www.yetanotherquiz.com/ticTacToe/ \
             https://www.yetanotherquiz.com/ticTacToe/offline/ \
-            https://www.yetanotherquiz.com/ticTacToe/9x9/ \
-            https://www.yetanotherquiz.com/ticTacToe/9x9/offline/ \
             https://www.yetanotherquiz.com/flagParty/
           do
             curl -sS -o /dev/null -w "  ${url}: %{http_code} (%{time_total}s)\n" "${url}" || true

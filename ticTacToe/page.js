@@ -603,7 +603,7 @@ function runOnline(countries) {
   /** Repaint the match strip (both player cards + the centre scoreboard)
    * from the current state + fetched opponent/record. Closes over the local
    * game state; the shared builder lives in ./matchStrip.js so the 3×3 and
-   * 9×9 pages render an identical strip. */
+   */
   function paintStrip() {
     renderMatchStrip({
       root: matchStripEl,
@@ -629,7 +629,6 @@ function runOnline(countries) {
         td.classList.toggle('owner-x', cell.owner === 'X');
         td.classList.toggle('owner-o', cell.owner === 'O');
         td.classList.toggle('revealed', !!cell.revealed);
-        td.classList.toggle('exhausted', !!cell.exhausted);
         td.classList.remove('winning');
         if (cell.country) {
           const img = document.createElement('img');

@@ -159,7 +159,7 @@ app.http('dailyMe', {
     // once. Both reads are soft dependencies — a Cosmos blip degrades
     // to "no signal" rather than 500'ing the whole snapshot.
     let profileDoc = null;
-    /** @type {Array<{ m3x3?: { wins?: number, losses?: number, draws?: number }, m9x9?: { wins?: number, losses?: number, draws?: number } }>} */
+    /** @type {Array<{ m3x3?: { wins?: number, losses?: number, draws?: number } }>} */
     let tttPairs = [];
     try {
       const [profileRes, tttRes] = await Promise.all([
@@ -181,7 +181,7 @@ app.http('dailyMe', {
           connString: conn,
           dbName: DB_NAME,
           containerName: TTT_PAIRS_CONTAINER,
-          query: 'SELECT c.m3x3, c.m9x9 FROM c',
+          query: 'SELECT c.m3x3 FROM c',
           parameters: [],
           partitionKey: deviceId,
         }),

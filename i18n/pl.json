@@ -489,14 +489,13 @@
     "title": "Yet Another Quiz: Kółko i krzyżyk z flagami państw",
     "offlineTitle": "Yet Another Quiz: Kółko i krzyżyk offline",
     "soloTitle": "Yet Another Quiz: Kółko i krzyżyk solo z flagami",
-    "variant3x3": "3×3",
-    "variant9x9": "9×9",
     "createRoom": "Nowa gra online",
     "orJoin": "lub dołącz do gry",
     "roomCodePlaceholder": "KOD POKOJU",
     "join": "Dołącz",
     "playOffline": "Graj na tym samym urządzeniu",
     "playSolo": "Graj solo",
+    "playOnline": "Graj online",
     "solved": "Rozwiązane!",
     "you": "Ty",
     "playerX": "Gracz X",
@@ -530,11 +529,6 @@
       "fallback": "Odrzucono: {reason}"
     },
     "noData": "brak danych"
-  },
-  "ttt9x9": {
-    "title": "Yet Another Quiz: 9×9 Kółko i krzyżyk z flagami",
-    "offlineTitle": "Yet Another Quiz: 9×9 Kółko i krzyżyk offline",
-    "rulesBody": "Dziewięć małych plansz kółko-i-krzyżyk ułożonych w wielką planszę 3×3. Każde pole leży na przecięciu wiersza i kolumny, wybierz państwo, którego flaga pasuje do obu. Wygranie małej planszy daje ci kontrolę nad nią; ułóż trzy zdobyte plansze w rzędzie na wielkiej planszy, by wygrać."
   },
   "party": {
     "title": "Yet Another Quiz: Flagowa impreza",

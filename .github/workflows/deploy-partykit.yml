@@ -10,7 +10,7 @@ name: Deploy PartyKit
 # client-only changes (HTML/CSS, page.js, i18n strings).
 #
 # The flags/ entries below are the transitive import closure of the three
-# PartyKit entry points (party/server.js, party/ultimateServer.js,
+# PartyKit entry points (party/server.js,
 # party/partyGameServer.js) — every shared module the deployed server actually
 # bundles. Miss one and a push that changes it deploys the client but leaves the
 # server on stale code (mis-scoring / crashes in online games); that gap bit the
@@ -36,9 +36,7 @@ on:
       - 'flags/flagPools.js'
       - 'flags/contourPool.js'
       - 'flags/onlineRoom.js'
-      - 'flags/ultimateOnlineRoom.js'
       - 'flags/ticTacToe.js'
-      - 'flags/ultimateTicTacToe.js'
       # Flag Party engine + data (globs cover new helpers, rounds, metrics):
       - 'flags/party*.js'
       - 'flags/partyRounds/**'

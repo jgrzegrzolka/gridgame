@@ -1,7 +1,7 @@
 /**
  * Pure builder + merge logic for the Cosmos `tttPairs` container — one
  * row per (deviceId, opponentId) pair, from THIS device's perspective.
- * Holds rolling head-to-head counters for both modes.
+ * Holds rolling head-to-head counters.
  *
  * Doc shape:
  *   {
@@ -9,7 +9,6 @@
  *     deviceId:     string,            // partition key — this device's id
  *     opponentId:   string,
  *     m3x3:         { wins, losses, draws },
- *     m9x9:         { wins, losses, draws },
  *     lastOutcome:  'win' | 'loss' | 'draw',  // outcome of the most recent
  *                                              //   game vs. this opponent
  *                                              //   (any mode). Set on every
@@ -61,6 +60,11 @@ function normalisedCounters(from) {
  * Build the Cosmos doc to upsert after a single game result. Existing row
  * may be null (first game for this pair) or a previous row (we increment).
  *
+ * `mode` outlives the 9×9 board on purpose: `validate.js` still accepts
+ * `'9x9'` so a POST already in flight from a tab opened before the board
+ * was removed doesn't 400. Such a result is *ignored* rather than counted
+ * — folding it into `m3x3` would record a 9×9 game as a 3×3 one.
+ *
  * @param {{
  *   existing: any,
  *   deviceId: string,
@@ -72,16 +76,15 @@ function normalisedCounters(from) {
  */
 function mergePairResult({ existing, deviceId, opponentId, mode, outcome, now }) {
   const m3x3 = normalisedCounters(existing && existing.m3x3);
-  const m9x9 = normalisedCounters(existing && existing.m9x9);
-  const target = mode === '3x3' ? m3x3 : m9x9;
-  const counterKey = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws';
-  target[counterKey] += 1;
+  if (mode === '3x3') {
+    const counterKey = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws';
+    m3x3[counterKey] += 1;
+  }
   return {
     id: `${deviceId}:${opponentId}`,
     deviceId,
     opponentId,
     m3x3,
-    m9x9,
     lastOutcome: outcome,
     lastPlayedAt: now,
     v: 1,

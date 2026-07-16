@@ -56,8 +56,7 @@ test('serverUrlFor: production hostnames go to the deployed Cloudflare PartyKit'
   assert.equal(serverUrlFor('www.yetanotherquiz.com'), prod);
 });
 
-test('serverUrlFor: party arg routes to the ultimate and party namespaces', () => {
-  assert.equal(serverUrlFor('localhost', 'ultimate'), 'ws://localhost:1999/parties/ultimate/');
+test('serverUrlFor: party arg routes to the named party namespace', () => {
   assert.equal(serverUrlFor('localhost', 'party'), 'ws://localhost:1999/parties/party/');
   assert.equal(serverUrlFor('yetanotherquiz.com', 'party'),
     'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/party/');
