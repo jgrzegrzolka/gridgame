@@ -23,11 +23,11 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ### Feature U: Simplify tic-tac-toe — remove 9×9, add a flag-only easy mode
 
-**Status:** Phase 1 shipped (#924). Phase 2 shipped (#925 code removal, #926 follow-up + the Cosmos strip, which has been **run and verified**). **Phase 3 is next and unstarted** — a fresh agent should begin there. Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
+**Status:** Phase 1 shipped (#924). Phase 2 shipped (#925 code removal, #926 follow-up + the Cosmos strip, which has been **run and verified**). **Phase 3 shipped (#928)** — the "No statistics" toggle on the offline + solo boards. All three phases done; online easy mode stays deferred (see the Phase 3 scope decision) and is the only thing left in this feature. Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
 
 **Why both halves are one feature.** They're the same lever pulled twice: *what may enter the category pool*. 9×9 is a pool filter (`ultimateEligible`) that costs a line plus a JSDoc paragraph in all 32 metric factories. Easy mode is a pool filter that costs nothing per-metric because it derives from the category id. Removing the first and adding the second in one feature keeps the reasoning in one place, and Phase 2 must not delete the `pool` plumbing that Phase 3 reuses (`randomPuzzle(rng, pool)`, engine.js:2938).
 
-**Measured baseline (2026-07-16, `flags/engine.js`):** full 3×3 pool = 142 categories, of which 20 are flag-visual (14%) and 6 are continents. The remaining 116 are world-metric thresholds across 32 metric families. Easy pool (flag-visual + continent) = 26 categories. Both pools generate 500/500 seeds; easy averages 6.0 attempts vs full's 16.1, so easy mode *relaxes* the generator rather than straining it. `statehood` is a factory but is **not** in the random pool, so it isn't a consideration here.
+**Measured baseline (2026-07-16, `flags/engine.js`):** full 3×3 pool = 142 categories, of which 19 are flag-visual (13%) and 6 are continents. The remaining 116 are world-metric thresholds across 32 metric families. Easy pool (flag-visual + continent) = 25 categories. Both pools generate 500/500 seeds; easy averages 5.7 attempts vs full's 16.5, so easy mode *relaxes* the generator rather than straining it. `statehood` is a factory but is **not** in the random pool, so it isn't a consideration here. *(Phase 1 counted 20 flag-visual / 26 easy; Phase 3 reclassified `hasMotif:eu-member` as a country fact, moving one category out of both.)*
 
 #### Phase 1 — write down the plan + start a TTT skill *(this phase)*
 
@@ -93,20 +93,30 @@ The Phase 1 plan said "stop writing, keep reading" for both. Jan overrode: *"do 
 
 *Line numbers below are post-#926 (verified 2026-07-16). `engine.js` shrank 3404 → ~3020 in Phase 2, so anything cited from the Phase 1 plan has moved.*
 
-- [ ] Add a `pool` option to `generateRandomPuzzle` (`engine.js:2831`). It calls `randomPuzzle(rng)` with the default pool hardcoded; `randomPuzzle` (`engine.js:2722`) **already accepts a pool** — Phase 2 deliberately kept that parameter for this.
-- [ ] `buildEasyCategoryPool()` next to `buildRandomCategoryPool` (`engine.js:2520`): `buildRandomCategoryPool().filter(c => isFlagVisualCategory(c) || c.id.startsWith('continent:'))`. `isFlagVisualCategory` is at `engine.js:2694`, `FLAG_VISUAL_KINDS` at `:2685`. No per-category annotation to maintain (that was `ultimateEligible`'s sin).
-- [ ] Thread it through the two client generate sites: `ticTacToe/solo/page.js:38` and `ticTacToe/offline/page.js:46`, both currently `generateRandomPuzzle(countries)` bare.
-- [ ] Burger toggle on `ticTacToe/offline/` + `ticTacToe/solo/`, keyed `gridgame.ttt.easy`. Reuse the `.scope-toggle` markup from `findFlag/index.html:56-63` and `readBoolSetting` / `writeBoolSetting` from `flags/group.js:798-811`, which are **default-off by construction** (`getItem(key) === 'true'`) and so already match the opt-in sense easy mode wants. **`findFlag` is the repo's only burger switch** — match it, don't reinvent.
-- [ ] Toggle must not appear on `ticTacToe/index.html` (online), where it would be a lie.
-- [ ] **Mind the burger borders.** Both those menus are now nickname → coffee-divider with nothing between (that's what caused #926's double grey line). Inserting a toggle `<li>` between them puts a nav row back, which makes `.menu li.menu-nickname + li.menu-divider` (common.css) stop matching and the divider's own `border-top` return — which is correct and self-healing, but **look at the menu after wiring it** rather than assuming.
-- [ ] Tests: seeded sweep in `flags/countries.test.js` proving the easy pool generates against real data and that no metric category leaks into an easy board.
+- [x] Add a `pool` option to `generateRandomPuzzle`. `randomPuzzle` already accepted one — Phase 2 deliberately kept that parameter for this. Side benefit: hoisting the default into `generateRandomPuzzle` means the pool is built **once per generate instead of once per attempt** (the old `randomPuzzle(rng)` re-evaluated its default parameter, rebuilding all 142 categories on every retry, up to 200×).
+- [x] `buildEasyCategoryPool()` next to `buildRandomCategoryPool`: `buildRandomCategoryPool().filter(c => isFlagVisualCategory(c) || c.id.startsWith('continent:'))`. No per-category annotation to maintain (that was `ultimateEligible`'s sin).
+- [x] Threaded through both client generate sites (`ticTacToe/solo/page.js`, `ticTacToe/offline/page.js`), read once at boot because the board is dealt once.
+- [x] Burger toggle on `ticTacToe/offline/` + `ticTacToe/solo/`, keyed `gridgame.ttt.easy`, reusing findFlag's `.scope-toggle` markup and `readBoolSetting` / `writeBoolSetting`.
+- [x] Toggle does not appear on `ticTacToe/index.html` (online). Pinned by a test that reads all three HTML files, so it can't drift back in.
+- [x] Tests: seeded 50-seed real-data sweep in `flags/countries.test.js` (generates + no metric leak + flag-visual ratio), unit tests in `engine.test.js`, `flags/ticTacToe.test.js` (`boardIsUntouched`), and `ticTacToe/easyToggle.test.js`.
 
-**Measured 2026-07-16 (re-verify if the pool changes):** easy pool = 26 categories; 500/500 seeds generate at a mean 6.0 attempts vs the full 142-pool's 16.1. Easy mode *relaxes* the generator. A live solo board sampled after Phase 2 came out 5-of-6 statistics, which is the complaint this phase answers.
+**Measured 2026-07-16 post-implementation (500 seeds, real data):**
 
-**Open calls for Phase 3:**
-- **`hasMotif:eu-member` is in the easy pool but isn't flag-readable.** `isFlagVisualCategory` classifies by id prefix, so `eu-member` counts as a motif. It's a country fact wearing a motif tag. Options: exclude it from the easy pool specifically, or reclassify it (which also fixes a latent false-positive in `lacksFlagVisualCategory`, where a board's only "flag-visual" rule could be `eu-member`). Prefer the reclassify if it doesn't cascade.
-- **Naming.** "Easy mode" vs "flags only" vs "no statistics". The toggle describes *what it filters* (statistics out), not a difficulty claim we have to defend. Leaning "flags only".
-- **Does the toggle re-deal the current board or only affect the next one?** Re-dealing mid-game destroys progress; not re-dealing makes the toggle look broken. Probably: applies to the next puzzle, with the toggle sitting next to the existing new-game affordance.
+| | full pool | easy pool |
+|---|---|---|
+| categories | 142 | **25** (19 flag-visual + 6 continent) |
+| seeds generating | 500/500 | 500/500 |
+| mean attempts | 16.5 | **5.7** |
+| mean flag rules per board | **1.5 / 6** | **4.9 / 6** |
+
+Easy mode *relaxes* the generator (fewer exclusiveGroup collisions once the metric thresholds are gone). The 1.5/6 figure is the complaint stated numerically: the full pool sits barely above `lacksFlagVisualCategory`'s floor of 1, so the typical board really is a statistics quiz with one flag question wedged in. A live solo board sampled after Phase 2 came out 5-of-6 statistics — right on the mean, not bad luck.
+
+**Open calls — settled by Jan, 2026-07-16:**
+- **`hasMotif:eu-member`** → **reclassified**, not excluded from the easy pool. `MEMBERSHIP_MOTIF_IDS` in `engine.js` makes `isFlagVisualCategory` answer false for it. The cascade worry didn't materialise: `isFlagVisualCategory` has only two call sites (`lacksFlagVisualCategory` + tests). This fixes the latent false positive **and** drops eu-member from the easy pool for free, with no eu-member special-case in the pool code. It also shrank the plan's projected 26-category pool to 25 and the full pool's flag-visual count from 20 to 19. Precedent: `daily/difficulty.js:81` already draws this exact line (`MEMBERSHIP_MOTIFS`, "recall a discrete known list rather than search by visual property") — same distinction, same motif, different consumer. If a second membership motif is ever tagged (NATO, Commonwealth), both sets want it.
+- **Naming** → **"No statistics"** (`ttt.noStatistics`; pl "Bez statystyk"), not "flags only". The plan leaned "flags only", but the pool is flag-visual **+ continent**, and continent is a country fact — so every "flags only" framing overclaims. Naming the removal is the only label that's literally true. Secondary reason: findFlag's burger switch is "Include territories & other flags", which is about *which flags are in scope*; a sibling burger saying "Flags only" reads as the same axis. Continents stay in the pool deliberately — they're what makes a flag question findable ("red × Europe" gives you somewhere to look; "red × 3 colours" is a search of the whole world).
+- **Re-deal** → **only when the board is untouched.** Flipping the toggle on an empty board re-deals immediately; with any move down, it applies to the next board instead. Re-dealing is `window.location.reload()`, the exact mechanism the pages' own "Play again" already uses, gated on `boardIsUntouched(state)` and deferred 350 ms so the thumb's slide is visible first (same beat findFlag uses, same reason). `boardIsUntouched` reads `cell.country`, not `cell.owner`, so a give-up reveal counts as touched.
+
+**Correction to the Phase 3 plan, found by looking:** the "nickname → coffee-divider with nothing between" trap applies to **offline only**. `mountNicknameMenuItem` inserts the nickname as the menu's *first* child, so solo was already nickname → "Play online" → divider and never matched `.menu li.menu-nickname + li.menu-divider`. Offline was the bare case; inserting the toggle there restores the divider's own `border-top`, which is correct and self-healing exactly as `common.css:405-408` says. Verified in-browser on both menus, not assumed.
 
 **Out of scope for Feature U:**
 - Online easy mode (see Phase 3 scope decision).

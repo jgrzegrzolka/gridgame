@@ -2530,6 +2530,35 @@ export function buildRandomCategoryPool() {
 }
 
 /**
+ * The "no statistics" pool: every flag-visual category plus the six continents,
+ * with all 116 world-metric thresholds filtered out. Backs the TTT burger
+ * toggle (`gridgame.ttt.easy`) on the offline and solo boards.
+ *
+ * Why it exists: the full pool is 142 categories of which only ~19 read the
+ * flag, so a random six-pick plays as a country-statistics quiz with one flag
+ * question wedged in to satisfy `lacksFlagVisualCategory`. This pool inverts
+ * that ratio.
+ *
+ * Continents stay in despite being a country fact. They're the axis that makes
+ * a flag question findable — "red × Europe" gives the player somewhere to look,
+ * where "red × 3 colours" is a search of the whole world. That's also why no
+ * "flags only" label would be honest for this pool, and the toggle is named for
+ * what it removes instead.
+ *
+ * Derived, not annotated: membership is a function of the category id, so a new
+ * motif or colour joins automatically and a new metric family stays out
+ * automatically. No per-category flag to maintain — that was `ultimateEligible`'s
+ * sin, 99 mentions across 32 factories for one boolean.
+ *
+ * @returns {Category[]}
+ */
+export function buildEasyCategoryPool() {
+  return buildRandomCategoryPool().filter(
+    (c) => isFlagVisualCategory(c) || c.id.startsWith('continent:'),
+  );
+}
+
+/**
  * @param {Category[]} rows
  * @param {Category[]} cols
  * @returns {boolean}
@@ -2685,13 +2714,42 @@ export function axesImpliedPair(rows, cols, countries) {
 export const FLAG_VISUAL_KINDS = new Set(['hasColor', 'colorCount', 'hasMotif', 'stripesOnly']);
 
 /**
+ * Categories that ride in a flag-visual KIND but describe membership of a
+ * political bloc rather than anything drawn on the flag. `eu-member` lives in
+ * `country.motifs` so the findFlag / flagsdata filter bars can offer it as one
+ * more chip, but "is this country in the EU" is recalled, not seen — Ireland's
+ * tricolour carries no EU mark. So it fails the one test `FLAG_VISUAL_KINDS`
+ * exists to apply, despite matching the `hasMotif` prefix.
+ *
+ * `daily/difficulty.js` draws this same line independently (`MEMBERSHIP_MOTIFS`,
+ * exempt from the worldwide bump because such a puzzle asks the player to recall
+ * a discrete known list rather than search by sight). Same distinction, same
+ * motif, different consumer — if a second membership motif is ever tagged (NATO,
+ * Commonwealth, …), both sets want it.
+ *
+ * Full ids rather than bare motif keys, so the check is one Set lookup on
+ * `cat.id` with no re-parsing.
+ *
+ * @type {Set<string>}
+ */
+export const MEMBERSHIP_MOTIF_IDS = new Set(['hasMotif:eu-member']);
+
+/**
  * True when the category's predicate reads the flag's visual design (colour,
  * colour count, motif, or stripes-only) rather than a country fact.
+ *
+ * The kind prefix decides, with `MEMBERSHIP_MOTIF_IDS` as the one exception: a
+ * membership motif matches `hasMotif` but isn't readable off the flag, so it
+ * answers false. Without that exception a board whose only "flag-visual" rule
+ * was `eu-member` would satisfy `lacksFlagVisualCategory` while still being
+ * fully solvable without looking at a single flag — the exact degeneracy that
+ * rule exists to catch.
  *
  * @param {Category} cat
  * @returns {boolean}
  */
 export function isFlagVisualCategory(cat) {
+  if (MEMBERSHIP_MOTIF_IDS.has(cat.id)) return false;
   const colon = cat.id.indexOf(':');
   const kind = colon < 0 ? cat.id : cat.id.slice(0, colon);
   return FLAG_VISUAL_KINDS.has(kind);
@@ -2825,13 +2883,23 @@ export function isPuzzleGeneratable(puzzle, countries, minPerCell = 2) {
 
 /**
  * @param {Country[]} countries
- * @param {{ rng?: () => number, minPerCell?: number, maxAttempts?: number }} [options]
+ * @param {{ rng?: () => number, minPerCell?: number, maxAttempts?: number, pool?: Category[] }} [options]
+ *   `pool` defaults to the full 3×3 random pool; pass `buildEasyCategoryPool()`
+ *   to deal a board with no world-metric thresholds on it. Hoisting the default
+ *   out here also means the pool is built once per generate rather than once per
+ *   attempt — `randomPuzzle`'s own default would rebuild all 142 categories on
+ *   every retry, up to `maxAttempts` times.
  * @returns {Puzzle}
  */
 export function generateRandomPuzzle(countries, options = {}) {
-  const { rng = Math.random, minPerCell = 2, maxAttempts = 200 } = options;
+  const {
+    rng = Math.random,
+    minPerCell = 2,
+    maxAttempts = 200,
+    pool = buildRandomCategoryPool(),
+  } = options;
   for (let i = 0; i < maxAttempts; i++) {
-    const puzzle = randomPuzzle(rng);
+    const puzzle = randomPuzzle(rng, pool);
     if (lacksFlagVisualCategory(puzzle.rows, puzzle.cols)) continue;
     if (axesConflict(puzzle.rows, puzzle.cols)) continue;
     if (metricGroupRepeated(puzzle.rows, puzzle.cols)) continue;

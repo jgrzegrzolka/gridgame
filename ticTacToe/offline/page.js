@@ -1,9 +1,11 @@
-import { generateRandomPuzzle, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
+import { generateRandomPuzzle, buildEasyCategoryPool, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
 import { renderCategoryLabel, renderCategoryPair } from '../../flags/filterChips.js';
 import { loadCountries, attachMetrics } from '../../flags/group.js';
 import { METRIC_FILES } from '../../flags/metrics/index.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
-import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells } from '../../flags/ticTacToe.js';
+import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells, boardIsUntouched } from '../../flags/ticTacToe.js';
+import { isTttEasy } from '../../flags/tttSettings.js';
+import { wireEasyToggle } from '../easyToggle.js';
 import { t, countryName, withLocalizedAliases, autoRelocalize } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
@@ -43,7 +45,12 @@ export function bootTicTacToe() {
     .then(([rawCountries, ...metricPairs]) => {
       const countries = withLocalizedAliases(loadCountries(rawCountries));
       attachMetrics(countries, Object.fromEntries(metricPairs));
-      const puzzle = generateRandomPuzzle(countries);
+      // The "No statistics" burger switch is read here, once, because the board
+      // is dealt once. Flipping it later re-deals via a reload (see easyToggle.js).
+      const puzzle = generateRandomPuzzle(
+        countries,
+        isTttEasy() ? { pool: buildEasyCategoryPool() } : {},
+      );
       runTicTacToe({ puzzle, countries });
     })
     .catch((err) => {
@@ -517,6 +524,12 @@ function runTicTacToe({ puzzle, countries }) {
       window.location.reload();
     }, { once: true });
   }
+
+  wireEasyToggle({
+    inputEl: /** @type {HTMLInputElement | null} */ (document.getElementById('easy-toggle-input')),
+    isBoardUntouched: () => boardIsUntouched(state),
+    redeal: () => window.location.reload(),
+  });
 
   if (giveUpEl) {
     giveUpEl.addEventListener('click', () => {

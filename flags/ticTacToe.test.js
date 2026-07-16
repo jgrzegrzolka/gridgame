@@ -14,6 +14,7 @@ import {
   isSoloOver,
   applySoloGiveUp,
   matchingCountriesForCell,
+  boardIsUntouched,
 } from './ticTacToe.js';
 import { createCountry } from './group.js';
 
@@ -558,4 +559,24 @@ test('matchingCountriesForCell returns [] when no country fits the intersection'
   // drop it and the intersection is empty.
   const pool = [FR, DE, IT, JP, KR, PK, KE, NG];
   assert.deepEqual(matchingCountriesForCell(PUZZLE, 2, 1, pool), []);
+});
+
+test('boardIsUntouched: true for a fresh two-player and a fresh solo board', () => {
+  assert.equal(boardIsUntouched(newGame(PUZZLE)), true);
+  assert.equal(boardIsUntouched(newSoloGame(PUZZLE)), true);
+});
+
+test('boardIsUntouched: false once a cell is claimed', () => {
+  const { nextState } = attemptClaim(newGame(PUZZLE), 0, 0, FR);
+  assert.equal(boardIsUntouched(nextState), false);
+  const solo = attemptSoloClaim(newSoloGame(PUZZLE), 0, 0, FR);
+  assert.equal(boardIsUntouched(solo.nextState), false);
+});
+
+test('boardIsUntouched: false after a give-up reveal, which leaves owner null', () => {
+  // The reason the check reads `country` rather than `owner`. A revealed cell
+  // has no owner, so an owner-based check would call a given-up board untouched
+  // and let the toggle reload away the reveal the player just asked to see.
+  const revealed = applyGiveUp(newGame(PUZZLE), [FR, DE, IT, JP, KR, PK, KE, NA, NG], () => 0);
+  assert.equal(boardIsUntouched(revealed), false);
 });

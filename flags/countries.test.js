@@ -11,6 +11,8 @@ import {
   ALL_MOTIFS,
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
+  buildEasyCategoryPool,
+  METRIC_KEYS,
   axesImpliedPair,
   isFlagVisualCategory,
   suggest,
@@ -533,6 +535,85 @@ test('generateRandomPuzzle succeeds with the real countries.json under many seed
       `seed ${seed}: produced a board with no flag-visual rule — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
     );
   }
+});
+
+test('the easy pool generates against the real countries.json under many seeds', () => {
+  // The load-bearing canary for the "No statistics" toggle (offline + solo
+  // burger, `gridgame.ttt.easy`). The easy pool is ~25 categories against the
+  // full pool's 142, and a smaller pool is not automatically an easier one —
+  // it could in principle concentrate the narrow-coverage categories and starve
+  // the retry budget. Measured at the time of writing it does the opposite
+  // (mean ~6 attempts vs the full pool's ~16), because dropping the metric
+  // thresholds also drops most of the exclusiveGroup collisions. This test is
+  // what tells us if that ever stops being true.
+  const pool = buildEasyCategoryPool();
+  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 7919);
+  for (const seed of SEEDS) {
+    const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed), pool });
+    assert.equal(puzzle.rows.length, 3);
+    assert.equal(puzzle.cols.length, 3);
+    assert.equal(
+      axesImpliedPair(puzzle.rows, puzzle.cols, COUNTRIES),
+      false,
+      `seed ${seed}: produced an implied axis pair — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
+    );
+  }
+});
+
+test('no metric category ever reaches an easy board', () => {
+  // The whole promise of the toggle in one assertion. Reads METRIC_KEYS — the
+  // live registry — rather than a hand-listed set of today's 32 families, so
+  // metric #33 is covered the day it lands without anyone remembering to come
+  // back here. Not by id shape either: `colorCount:>=4` wears the same `>=`
+  // token as a metric threshold and is very much a flag rule.
+  const metricKinds = new Set(METRIC_KEYS);
+  const pool = buildEasyCategoryPool();
+  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 7919);
+  for (const seed of SEEDS) {
+    const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed), pool });
+    for (const cat of [...puzzle.rows, ...puzzle.cols]) {
+      assert.ok(
+        !metricKinds.has(cat.id.slice(0, cat.id.indexOf(':'))),
+        `seed ${seed}: metric threshold ${cat.id} leaked onto an easy board`,
+      );
+      // eu-member is the other thing that must not appear: it wears a hasMotif
+      // prefix but EU membership isn't readable off a flag, so on a board that
+      // promises no country facts it would be exactly that.
+      assert.notEqual(cat.id, 'hasMotif:eu-member', `seed ${seed}: eu-member leaked onto an easy board`);
+      // Positive form of the same contract — every dealt category is a flag
+      // rule or a continent, nothing else exists in this pool.
+      assert.ok(
+        isFlagVisualCategory(cat) || cat.id.startsWith('continent:'),
+        `seed ${seed}: ${cat.id} is neither flag-visual nor a continent`,
+      );
+    }
+  }
+});
+
+test('an easy board is mostly flag rules, not one flag rule wedged among country facts', () => {
+  // The complaint this whole feature answers: a live solo board sampled during
+  // Feature U came out 5-of-6 statistics, technically legal because
+  // lacksFlagVisualCategory only demands ONE flag rule. Continents are the only
+  // country fact left in the easy pool and they're capped by the 6 that exist,
+  // so the ratio can't regress far — but "≥1" was also true of the board that
+  // triggered the complaint, so pin the ratio rather than the guard.
+  const pool = buildEasyCategoryPool();
+  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 7919);
+  let totalFlagVisual = 0;
+  for (const seed of SEEDS) {
+    const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed), pool });
+    const cats = [...puzzle.rows, ...puzzle.cols];
+    const flagVisual = cats.filter(isFlagVisualCategory).length;
+    assert.ok(
+      flagVisual >= 1,
+      `seed ${seed}: no flag-visual rule — rows=[${puzzle.rows.map((r) => r.id).join(',')}]`,
+    );
+    totalFlagVisual += flagVisual;
+  }
+  // 19 of the 25 pool entries read the flag, so the expected mean is ~4.6 of 6.
+  // Assert well below that to pin the property, not the arithmetic.
+  const mean = totalFlagVisual / SEEDS.length;
+  assert.ok(mean >= 3.5, `easy boards averaged only ${mean.toFixed(1)}/6 flag-visual rules`);
 });
 
 // population integration pins — the unit tests in engine.test.js cover the
