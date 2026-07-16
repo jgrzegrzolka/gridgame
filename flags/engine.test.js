@@ -23,7 +23,7 @@ import {
   isFlagVisualCategory,
   lacksFlagVisualCategory,
   buildRandomCategoryPool,
-  buildEasyCategoryPool,
+  buildFlagCategoryPool,
   METRIC_KEYS,
   pulseShake,
   CONTINENTS_FOR_RANDOM,
@@ -883,8 +883,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
 
-test('buildEasyCategoryPool keeps flag-visual + continent and drops every metric', () => {
-  const pool = buildEasyCategoryPool();
+test('buildFlagCategoryPool keeps flag-visual + continent and drops every metric', () => {
+  const pool = buildFlagCategoryPool();
   const expected =
     CONTINENTS_FOR_RANDOM.length
     + COLORS_FOR_RANDOM.length
@@ -901,8 +901,8 @@ test('buildEasyCategoryPool keeps flag-visual + continent and drops every metric
   }
 });
 
-test('buildEasyCategoryPool excludes eu-member but keeps the other motifs', () => {
-  const ids = new Set(buildEasyCategoryPool().map((c) => c.id));
+test('buildFlagCategoryPool excludes eu-member but keeps the other motifs', () => {
+  const ids = new Set(buildFlagCategoryPool().map((c) => c.id));
   // Falls out of the reclassification for free — the filter reads
   // isFlagVisualCategory, so there's no eu-member special-case in the pool code.
   assert.equal(ids.has('hasMotif:eu-member'), false);
@@ -910,14 +910,14 @@ test('buildEasyCategoryPool excludes eu-member but keeps the other motifs', () =
   assert.equal(ids.has('hasMotif:animal'), true);
 });
 
-test('buildEasyCategoryPool derives from the id, so new metric families stay out by default', () => {
+test('buildFlagCategoryPool derives from the id, so new metric families stay out by default', () => {
   // The property that makes this pool cheap to own: nothing per-category to
   // annotate, so adding metric family #33 needs no edit here. Guard it by
   // asserting the shape of what's absent rather than listing today's families.
-  const easyIds = buildEasyCategoryPool().map((c) => c.id);
+  const flagPoolIds = buildFlagCategoryPool().map((c) => c.id);
   const dropped = buildRandomCategoryPool()
     .map((c) => c.id)
-    .filter((id) => !easyIds.includes(id));
+    .filter((id) => !flagPoolIds.includes(id));
   // Everything dropped is a metric threshold or eu-member — nothing else. Read
   // the live METRIC_KEYS registry, not the id's `>=` shape: `colorCount:>=4`
   // wears the same token and is a flag rule, so shape-matching would quietly
@@ -926,7 +926,7 @@ test('buildEasyCategoryPool derives from the id, so new metric families stay out
   for (const id of dropped) {
     assert.ok(
       id === 'hasMotif:eu-member' || metricKinds.has(id.slice(0, id.indexOf(':'))),
-      `${id} was dropped from the easy pool but isn't a metric threshold`,
+      `${id} was dropped from the flag pool but isn't a metric threshold`,
     );
   }
   assert.ok(dropped.length > 100, `expected the ~116 metric thresholds to drop, got ${dropped.length}`);
@@ -934,7 +934,7 @@ test('buildEasyCategoryPool derives from the id, so new metric families stay out
 
 test('generateRandomPuzzle draws only from a narrowed pool when one is passed', () => {
   const countries = syntheticTaggedCountries();
-  const pool = buildEasyCategoryPool();
+  const pool = buildFlagCategoryPool();
   // maxAttempts lifted above the production 200 for the same reason as the
   // >=2-per-cell test below — the synthetic pool's identical-tier crops make
   // implied-pair rejections far denser than real data. The real-data budget for
@@ -1304,7 +1304,7 @@ test('isFlagVisualCategory: eu-member is a country fact despite the hasMotif pre
   // EU member draws anything on its flag to say so — Ireland's tricolour looks
   // the same in or out. Classifying it by prefix made it flag-visual, which is
   // wrong for both consumers: it let a metric-heavy board satisfy the
-  // ≥1-flag-visual guard (below) and it put a non-flag question in the easy pool.
+  // ≥1-flag-visual guard (below) and it put a non-flag question in the flag pool.
   assert.equal(isFlagVisualCategory(hasMotif('eu-member')), false);
   // Every other motif still qualifies — this is one id, not a retreat from
   // prefix-classification.

@@ -510,3 +510,33 @@ body.picker-open {
 .match-grid .flag-tile::after {
   opacity: 1;
 }
+
+/* ---- Advanced mode block in the "How to play" dialog ----
+ * The `?` dialog is the one surface with room to say what Advanced mode
+ * actually does, and it's the only place a solo / offline player can discover
+ * the mode at all (the room chip is online-only). So the switch appears here as
+ * well as in the burger: two controls, one setting, kept in step by
+ * `advancedToggle.js`.
+ *
+ * Lives here rather than common.css because the dialog *shell* is shared with
+ * /profile/sync/'s "How it works" popup, but this block is TTT's alone. Promote
+ * it only if a second dialog ever grows a setting.
+ *
+ * The hairline separates the rules prose from a control, which is a different
+ * kind of thing than the paragraph above it. `.rules-help p`'s own 14px bottom
+ * margin supplies the gap above the line. */
+.rules-mode {
+  border-top: 1px solid var(--muted-soft-color);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+/* Must out-specify `.rules-help p` (0,1,1), which paints every paragraph in the
+ * dialog `--primary-color` with a 14px bottom margin. A bare `.rules-mode-note`
+ * (0,1,0) loses both and renders dark, cramped, and indistinguishable from the
+ * rules text it is meant to sit quietly underneath. */
+.rules-help .rules-mode-note {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted-color);
+}

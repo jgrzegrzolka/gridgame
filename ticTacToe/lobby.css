@@ -21,6 +21,32 @@
  * the same strip (CLAUDE.md "same mechanism = same code"). Only the
  * online-specific `.status-line` treatment stays here. */
 
+/* Room-mode chip — sits beside the room code and names the room's board when,
+ * and only when, the host opted into Advanced mode. The default room shows
+ * nothing: the ordinary board is just the board, and a chip on every room would
+ * be permanent chrome for a setting most players never touch.
+ *
+ * Why it exists at all: the burger switch already reports the mode, but a joiner
+ * never opens the burger, so without this they meet a room's board with nothing
+ * on screen saying it was a choice someone made. Muted + hairline so it reads as
+ * a fact about the room rather than a button.
+ *
+ * Online-only, hence this file rather than index.css: it hangs off `.room-line`,
+ * which the offline and solo boards don't have. If Flag Party ever wants the
+ * same badge, this is the rule to promote to common.css alongside `.room-line`. */
+.room-mode {
+  font-size: 12px;
+  color: var(--muted-color);
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.room-mode[hidden] {
+  display: none;
+}
+
 .status-line {
   /* Sits inline at the end of the room-code line, so the transient
    * connection messages ("Connecting…" / "Connection error" / reconnect)

@@ -8,7 +8,7 @@ description: Reference for the tic-tac-toe random puzzle generator in flags/engi
 The tic-tac-toe board picks its categories from a pool built in `flags/engine.js`:
 
 - `randomPuzzle(rng, pool)` — picks 6 distinct categories, first 3 become rows, last 3 become columns. `pool` defaults to the full 3×3 pool; pass a narrowed one to restrict what may be drawn.
-- `generateRandomPuzzle(countries, options)` — wraps `randomPuzzle` in a retry loop, rejecting candidates that fail any of the rules below. Default `maxAttempts: 200`, `minPerCell: 2`, `pool` = the full 3×3 pool. Throws if no valid puzzle is found. Pass `pool: buildEasyCategoryPool()` for a board with no world-metric thresholds on it (see "The easy pool" below). The default is hoisted here rather than left to `randomPuzzle`'s own default parameter, which would rebuild all 142 categories on every retry.
+- `generateRandomPuzzle(countries, options)` — wraps `randomPuzzle` in a retry loop, rejecting candidates that fail any of the rules below. Default `maxAttempts: 200`, `minPerCell: 2`, `pool` = the full 3×3 pool. Throws if no valid puzzle is found. The TTT boards pass `pool: buildFlagCategoryPool()` for the default (no world-metric thresholds) board and omit it only in Advanced mode (see "The flag pool" below). The default is hoisted here rather than left to `randomPuzzle`'s own default parameter, which would rebuild all 142 categories on every retry.
 
 The pool is built from `buildRandomCategoryPool()`:
 
@@ -61,20 +61,24 @@ At least one of the six categories must read the flag's own visual design, not j
 
 Why this earns a rule (per the "when to add" bar below): the 32 metric families badly outnumber the 20 flag-visual categories in the 142-entry pool, so an unconstrained six-pick averages *under one* flag-visual rule — a concrete, recurring degeneracy (an all-stats board that plays as a geography quiz, not a flag game), not a curation preference. It reads ids only (no country data), so it runs **first** in the reject ladder — cheapest prune, and it thins the raw draws that carry zero flag-visual before the expensive cell checks. Pinned by the ≥1-flag-visual assertion in the 30-seed real-data sweep in `flags/countries.test.js`, plus unit tests in `engine.test.js`.
 
-`FLAG_VISUAL_KINDS` / `isFlagVisualCategory` are also the lever the "No statistics" pool filter uses — they already partition the pool into flag-visual vs country-fact. See `buildEasyCategoryPool` below.
+`FLAG_VISUAL_KINDS` / `isFlagVisualCategory` are also the lever the "No statistics" pool filter uses — they already partition the pool into flag-visual vs country-fact. See `buildFlagCategoryPool` below.
 
-**The one exception to prefix-classification:** `MEMBERSHIP_MOTIF_IDS` (today just `hasMotif:eu-member`). EU membership rides in `country.motifs` so the findFlag / flagsdata filter bars can offer it, but it isn't readable off a flag — Ireland's tricolour looks the same in or out. `isFlagVisualCategory` answers false for it, which both keeps it out of the easy pool and stops a board whose only "flag rule" is `eu-member` from satisfying `lacksFlagVisualCategory`. `daily/difficulty.js` draws the same line independently (`MEMBERSHIP_MOTIFS`) for the same reason; if a second membership motif is ever tagged (NATO, Commonwealth), both sets want it.
+**The one exception to prefix-classification:** `MEMBERSHIP_MOTIF_IDS` (today just `hasMotif:eu-member`). EU membership rides in `country.motifs` so the findFlag / flagsdata filter bars can offer it, but it isn't readable off a flag — Ireland's tricolour looks the same in or out. `isFlagVisualCategory` answers false for it, which both keeps it out of the flag pool and stops a board whose only "flag rule" is `eu-member` from satisfying `lacksFlagVisualCategory`. `daily/difficulty.js` draws the same line independently (`MEMBERSHIP_MOTIFS`) for the same reason; if a second membership motif is ever tagged (NATO, Commonwealth), both sets want it.
 
-## The easy pool ("No statistics")
+## The flag pool (the default board)
 
-`buildEasyCategoryPool()` = `buildRandomCategoryPool().filter(c => isFlagVisualCategory(c) || c.id.startsWith('continent:'))` — 25 categories (19 flag-visual + 6 continents) against the full pool's 142. Backs the burger toggle on the offline and solo boards (`gridgame.ttt.easy`); see the **ttt-architecture** skill for the wiring and for why online is unaffected.
+`buildFlagCategoryPool()` = `buildRandomCategoryPool().filter(c => isFlagVisualCategory(c) || c.id.startsWith('continent:'))` — 25 categories (19 flag-visual + 6 continents) against the full pool's 142.
+
+**This is what every tic-tac-toe board is dealt from by default.** `buildRandomCategoryPool()` (everything, metrics included) is reached only when the player opts into **Advanced mode** (`gridgame.ttt.advanced`, off by default). Note the polarity trap: `generateRandomPuzzle`'s *own* default is still the full pool, because the engine stays a general library — the product default lives in the three TTT call sites that read the setting. See the **ttt-architecture** skill for the wiring, the room-setting protocol, and the two switches per board.
+
+*(Renamed from `buildEasyCategoryPool` in Feature U Phase 5, which also flipped the default and retired the "No statistics" / `gridgame.ttt.easy` framing. Anything you find using those names is pre-flip.)*
 
 Two things to know before touching it:
 
-- **It's derived, not annotated.** Membership is a function of the category id, so a new motif or colour joins automatically and metric family #33 stays out automatically. Nothing per-category to maintain — that was `ultimateEligible`'s sin (99 mentions across 32 factories for one boolean). Keep it that way.
-- **A smaller pool is not automatically an easier one**, so it gets its own canary. Measured over 500 real-data seeds: easy generates 500/500 at a mean **5.7** attempts vs the full pool's **16.5** — dropping the metric thresholds also drops most of the exclusiveGroup collisions, so it *relaxes* the generator. In principle a narrowed pool could instead concentrate the narrow-coverage categories and starve the retry budget; the seeded sweep in `countries.test.js` is what tells us if that ever starts happening.
+- **It's derived, not annotated.** Membership is a function of the category id, so a new motif or colour joins automatically and metric family #33 stays out automatically. Nothing per-category to maintain — that was `ultimateEligible`'s sin (99 mentions across 32 factories for one boolean). Keep it that way. Since this is now the default board, a category that lands on the wrong side of `isFlagVisualCategory` is a bug every player sees, not a bug in an opt-in setting.
+- **A smaller pool is not automatically an easier one**, so it gets its own canary. Measured over 500 real-data seeds: the flag pool generates 500/500 at a mean **5.7** attempts vs the full pool's **16.5** — dropping the metric thresholds also drops most of the exclusiveGroup collisions, so it *relaxes* the generator. In principle a narrowed pool could instead concentrate the narrow-coverage categories and starve the retry budget; the seeded sweep in `countries.test.js` is what tells us if that ever starts happening. That sweep now guards the default board, so a failure there is a broken game rather than a broken setting.
 
-For scale on why this exists: a full-pool board averages **1.5 of 6** flag-reading rules — barely above `lacksFlagVisualCategory`'s floor of 1, i.e. the typical random board really is a statistics quiz with one flag question wedged in. An easy board averages **4.9 of 6**.
+For scale on why the default moved: a full-pool board averages **1.5 of 6** flag-reading rules — barely above `lacksFlagVisualCategory`'s floor of 1, i.e. the typical random board really was a statistics quiz with one flag question wedged in, on a page that promises "every move is a country flag pick matching the row × column category". A flag-pool board averages **4.9 of 6**.
 
 Note that `colorCount:>=4` wears the same `>=` token as a metric threshold and is very much a flag rule. Don't identify metrics by id shape — read `METRIC_KEYS`.
 

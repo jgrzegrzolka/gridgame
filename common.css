@@ -1599,8 +1599,12 @@ dialog#zoom p.zoom-note {
   color: var(--primary-color);
 }
 /* The rules dialog dismisses via a corner × (the site's dialog-close idiom,
- * same as the flag-zoom / match-sheet), not a bottom "Got it" pill. The p above
- * is the last in-flow element, so the dialog's bottom padding closes the card. */
+ * same as the flag-zoom / match-sheet), not a bottom "Got it" pill. Nothing in
+ * flow follows the content, so the dialog's own bottom padding closes the card
+ * — which means the last in-flow child must not carry a bottom margin of its
+ * own. (This used to say "the p above is the last in-flow element"; TTT's rules
+ * dialog now ends with a `.rules-mode` block instead, and `ticTacToe/index.css`
+ * keeps that rule by giving its trailing note a top margin only.) */
 .rules-help {
   position: relative;
 }

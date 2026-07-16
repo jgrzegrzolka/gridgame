@@ -21,10 +21,10 @@ import { categoryFromId } from './engine.js';
  * @property {Set<string>} present  - playerIds currently connected
  * @property {Player} lastFirstPlayer  - who started the current game; the
  *   rematch flips this so games alternate which side moves first
- * @property {boolean} easy  - deal from the no-statistics pool. A room
+ * @property {boolean} advanced  - also deal world-metric categories. A room
  *   property, not a player one: the server deals one board for two people, so
  *   there is only one answer. The host seeds it at create time from their own
- *   preference and may change it via `applySetEasy` while the board is
+ *   preference and may change it via `applySetAdvanced` while the board is
  *   untouched; the joiner sees it and cannot change it. Persisted, so a
  *   rematch stays in the same mode.
  */
@@ -42,9 +42,9 @@ import { categoryFromId } from './engine.js';
 
 /**
  * @param {Puzzle} puzzle
- * @param {{ easy?: boolean }} [options] - `easy` records which pool `puzzle`
- *   was dealt from. It is the caller's job to keep the two consistent: this
- *   function stores the flag, it does not generate the board.
+ * @param {{ advanced?: boolean }} [options] - `advanced` records which pool
+ *   `puzzle` was dealt from. It is the caller's job to keep the two consistent:
+ *   this function stores the flag, it does not generate the board.
  * @returns {Room}
  */
 export function createRoom(puzzle, options = {}) {
@@ -54,7 +54,7 @@ export function createRoom(puzzle, options = {}) {
     roles: new Map(),
     present: new Set(),
     lastFirstPlayer: 'O',
-    easy: options.easy === true,
+    advanced: options.advanced === true,
   };
 }
 
@@ -229,7 +229,7 @@ export function applyStartRematch(room, playerId, newPuzzle) {
 }
 
 /**
- * The host changes the room's "No statistics" mode, which re-deals the board.
+ * The host changes the room's Advanced mode, which re-deals the board.
  *
  * Refuses unless **all** of:
  *   - the sender is the room's host. One board, two players, so somebody has to
@@ -251,22 +251,22 @@ export function applyStartRematch(room, playerId, newPuzzle) {
  *
  * @param {Room} room
  * @param {string} playerId
- * @param {boolean} easy
- * @param {Puzzle} newPuzzle - dealt from the pool matching `easy`
+ * @param {boolean} advanced
+ * @param {Puzzle} newPuzzle - dealt from the pool matching `advanced`
  * @returns {ApplyResult}
  */
-export function applySetEasy(room, playerId, easy, newPuzzle) {
+export function applySetAdvanced(room, playerId, advanced, newPuzzle) {
   if (room.hostId !== playerId) return { room, broadcasts: [] };
   if (!boardIsUntouched(room.game)) return { room, broadcasts: [] };
-  if (room.easy === easy) return { room, broadcasts: [] };
+  if (room.advanced === advanced) return { room, broadcasts: [] };
   // Keep whoever was due to move first: nothing has happened yet, so this is
   // the same round with a different board, not a new one. `lastFirstPlayer` is
   // the rematch's business.
   const newGameState = newGame(newPuzzle, room.lastFirstPlayer);
-  const nextRoom = { ...room, game: newGameState, easy };
+  const nextRoom = { ...room, game: newGameState, advanced };
   return {
     room: nextRoom,
-    broadcasts: [{ to: 'all', message: { type: 'state', kind: 'easy-changed', game: newGameState, easy } }],
+    broadcasts: [{ to: 'all', message: { type: 'state', kind: 'advanced-changed', game: newGameState, advanced } }],
   };
 }
 
@@ -294,7 +294,7 @@ export function serializeRoom(room) {
     hostId: room.hostId,
     roles: [...room.roles.entries()],
     lastFirstPlayer: room.lastFirstPlayer,
-    easy: room.easy,
+    advanced: room.advanced,
   };
 }
 
@@ -315,9 +315,18 @@ export function deserializeRoom(snapshot) {
     roles: new Map(snapshot.roles),
     present: new Set(),
     lastFirstPlayer: snapshot.lastFirstPlayer ?? 'O',
-    // `=== true` rather than `??`: a room persisted before this field existed
-    // has no `easy` key, and a full-pool board is what it was actually dealt.
-    easy: snapshot.easy === true,
+    // Rooms outlive deploys — a durable object holds one until it is evicted,
+    // so the first snapshots this build loads were written by older ones. Read
+    // whichever field is there, and answer for the board that room was actually
+    // dealt:
+    //   - has `advanced`  → this build wrote it, trust it.
+    //   - has `easy`      → #931 wrote it. `easy` was the near-opposite flag, so
+    //                       easy:true means a flag-pool board (not advanced) and
+    //                       easy:false means the full pool (advanced).
+    //   - has neither     → pre-#931, when every room was dealt the full pool.
+    // Getting this wrong would relabel a live room's chip and, worse, hand its
+    // rematch the other pool.
+    advanced: snapshot.advanced ?? snapshot.easy !== true,
   };
 }
 
@@ -368,12 +377,12 @@ function welcomeFor(room, playerId) {
       peerPresent,
       peerId,
       // Carried explicitly rather than inferred from the puzzle's categories.
-      // The predicate that defines the easy pool has already been re-cut once
-      // (eu-member moved out of it in #928), and an inferred badge would have
+      // The predicate that splits the two pools has already been re-cut once
+      // (eu-member moved across it in #928), and an inferred badge would have
       // silently re-labelled every live room that day. It also tells the joiner
-      // the *host's choice*, which a lucky full-pool board can imitate but not
-      // actually be.
-      easy: room.easy,
+      // the *host's choice*, which a metric-free full-pool board can imitate but
+      // not actually be.
+      advanced: room.advanced,
       isHost: room.hostId === playerId,
     },
   };

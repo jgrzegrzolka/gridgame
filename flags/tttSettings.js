@@ -1,41 +1,56 @@
 /**
  * Player settings for the tic-tac-toe boards.
  *
- * **Offline and solo only.** The PartyKit server deals online puzzles
- * (`party/ticTacToeServer.js`, both the fresh-room and the rematch call), so a
- * localStorage flag read in the browser cannot reach an online board — and
- * wiring it naively would let whoever created the room impose their preference
- * on the opponent with no UI saying so. Online is a room setting (WS param at
- * create + durable-object state + lobby display), deferred. Don't render this
- * toggle on `ticTacToe/index.html`, where it would be a lie.
+ * **Advanced mode** decides which pool a board is dealt from:
  *
- * **Naming split, deliberate.** Internally this is "easy" (`gridgame.ttt.easy`,
- * `buildEasyCategoryPool`). To the player it reads "No statistics", because the
- * pool it selects is flag-visual + continent, and continents are a country fact
- * — no "flags only" label would be true, and "easy" is a difficulty claim we'd
- * have to defend (a flags-only board isn't easy if you don't know flags). The
- * label is an i18n key and cheap to change; the storage key is not, since a
- * rename silently reverts every player who set it. They're free to disagree.
+ *   - off (the default) — `buildFlagCategoryPool()`: the flag itself plus the
+ *     continent.
+ *   - on — `buildRandomCategoryPool()`: the above **plus** all 116 world-metric
+ *     thresholds (GDP, population, forest cover, …).
+ *
+ * **Why off is the default.** A full-pool board averages 1.5 flag rules out of
+ * 6, so the game the page advertises ("every move is a country flag pick
+ * matching the row × column category") was mostly a country-data quiz. Feature U
+ * first shipped this as an opt-in "No statistics" toggle, which only helped
+ * players who opened a burger and decoded the label. Flipping the default fixes
+ * it for everyone who never touches a menu, and makes the word honest: you opt
+ * *into* advanced, which is what "advanced" means everywhere else.
+ *
+ * **Naming, settled after the "No statistics" experiment failed.** That label
+ * read as "hide my score" — the online board renders a live head-to-head record
+ * a few pixels from the burger, and the site has achievements and community
+ * stats. It was also a *removal* framing, and in a burger those read as display
+ * preferences. Naming the opt-in pole instead means one word covers the switch,
+ * the room chip, and the how-to-play copy. The default state needs no name: it
+ * is just the board.
+ *
+ * **Key.** `gridgame.ttt.advanced`, deliberately not the old `gridgame.ttt.easy`.
+ * The two are near-opposites, and reusing the key would have made every player
+ * who set "No statistics" land in Advanced mode — the exact board they had asked
+ * to get away from. With a new key they fall to the new default, which *is* the
+ * board they wanted, so there is no migration to write. The dead `.easy` key is
+ * left where it lies; it is a few bytes and nothing reads it.
  */
 
 import { readBoolSetting, writeBoolSetting } from './group.js';
 
-const TTT_EASY_KEY = 'gridgame.ttt.easy';
+const TTT_ADVANCED_KEY = 'gridgame.ttt.advanced';
 
 /**
- * Whether the board should be dealt from the no-statistics pool.
+ * Whether the board should also be dealt world-metric categories.
  *
  * Default-off by construction: `readBoolSetting` is `getItem(key) === 'true'`,
- * which is the opt-in sense we want — an unset key, a disabled localStorage, and
- * an explicit "off" all read false.
+ * so an unset key, a disabled localStorage, and an explicit "off" all read
+ * false. That matches the product default, which is why no default-on idiom
+ * (`getItem(k) !== 'false'`) is needed here.
  *
  * @param {{ getItem(key: string): string | null } | null | undefined} [store]
  * @returns {boolean}
  */
-export function isTttEasy(store) {
+export function isTttAdvanced(store) {
   return readBoolSetting(
     store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null),
-    TTT_EASY_KEY,
+    TTT_ADVANCED_KEY,
   );
 }
 
@@ -43,6 +58,6 @@ export function isTttEasy(store) {
  * @param {{ setItem(key: string, value: string): void, removeItem(key: string): void }} store
  * @param {boolean} value
  */
-export function setTttEasy(store, value) {
-  writeBoolSetting(store, TTT_EASY_KEY, value);
+export function setTttAdvanced(store, value) {
+  writeBoolSetting(store, TTT_ADVANCED_KEY, value);
 }

@@ -2530,20 +2530,23 @@ export function buildRandomCategoryPool() {
 }
 
 /**
- * The "no statistics" pool: every flag-visual category plus the six continents,
- * with all 116 world-metric thresholds filtered out. Backs the TTT burger
- * toggle (`gridgame.ttt.easy`) on the offline and solo boards.
+ * Every flag-visual category plus the six continents, with all 116 world-metric
+ * thresholds filtered out. **This is what a tic-tac-toe board is dealt from by
+ * default** — `buildRandomCategoryPool` is the opt-in "Advanced mode" pool.
  *
- * Why it exists: the full pool is 142 categories of which only ~19 read the
- * flag, so a random six-pick plays as a country-statistics quiz with one flag
- * question wedged in to satisfy `lacksFlagVisualCategory`. This pool inverts
- * that ratio.
+ * Why this is the default: the full pool is 142 categories of which only ~19
+ * read the flag, so a random six-pick plays as a country-statistics quiz with
+ * one flag question wedged in to satisfy `lacksFlagVisualCategory`. Measured at
+ * 1.5 flag rules of 6. The page promises "tic-tac-toe where every move is a
+ * country flag pick matching the row × column category", so a board that is
+ * mostly GDP thresholds is not the advertised game. This pool inverts the ratio
+ * to 4.9 of 6.
  *
  * Continents stay in despite being a country fact. They're the axis that makes
  * a flag question findable — "red × Europe" gives the player somewhere to look,
- * where "red × 3 colours" is a search of the whole world. That's also why no
- * "flags only" label would be honest for this pool, and the toggle is named for
- * what it removes instead.
+ * where "red × 3 colours" is a search of the whole world. So this pool is not
+ * strictly "flags only"; the name is the closest honest short label, and the
+ * player-facing wording never claims otherwise (see `ttt.advancedModeNote`).
  *
  * Derived, not annotated: membership is a function of the category id, so a new
  * motif or colour joins automatically and a new metric family stays out
@@ -2552,7 +2555,7 @@ export function buildRandomCategoryPool() {
  *
  * @returns {Category[]}
  */
-export function buildEasyCategoryPool() {
+export function buildFlagCategoryPool() {
   return buildRandomCategoryPool().filter(
     (c) => isFlagVisualCategory(c) || c.id.startsWith('continent:'),
   );
@@ -2884,11 +2887,14 @@ export function isPuzzleGeneratable(puzzle, countries, minPerCell = 2) {
 /**
  * @param {Country[]} countries
  * @param {{ rng?: () => number, minPerCell?: number, maxAttempts?: number, pool?: Category[] }} [options]
- *   `pool` defaults to the full 3×3 random pool; pass `buildEasyCategoryPool()`
- *   to deal a board with no world-metric thresholds on it. Hoisting the default
- *   out here also means the pool is built once per generate rather than once per
- *   attempt — `randomPuzzle`'s own default would rebuild all 142 categories on
- *   every retry, up to `maxAttempts` times.
+ *   `pool` defaults to every category this engine can build, world-metric
+ *   thresholds included. Note that this is **not** what the tic-tac-toe boards
+ *   deal from by default: they pass `buildFlagCategoryPool()` unless the player
+ *   opted into Advanced mode, so the product default lives in the TTT code that
+ *   reads the setting, not in this library. Hoisting the default out here also
+ *   means the pool is built once per generate rather than once per attempt —
+ *   `randomPuzzle`'s own default would rebuild all 142 categories on every
+ *   retry, up to `maxAttempts` times.
  * @returns {Puzzle}
  */
 export function generateRandomPuzzle(countries, options = {}) {

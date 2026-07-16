@@ -5,11 +5,11 @@ import {
   applyGiveUp,
   applyDisconnect,
   applyStartRematch,
-  applySetEasy,
+  applySetAdvanced,
   serializeRoom,
   deserializeRoom,
 } from '../flags/onlineRoom.js';
-import { generateRandomPuzzle, buildEasyCategoryPool } from '../flags/engine.js';
+import { generateRandomPuzzle, buildFlagCategoryPool } from '../flags/engine.js';
 
 /** @typedef {import('../flags/onlineRoom.js').Room} Room */
 /** @typedef {import('../flags/onlineRoom.js').Broadcast} Broadcast */
@@ -26,11 +26,11 @@ const STORAGE_KEY = 'room';
  *     reconnects keep the same role.
  *   - Clients pass ?intent=create when opening a freshly generated code,
  *     and omit it (or use ?intent=join) when joining a known code.
- *   - The creator passes ?easy=1 to deal the room's board from the
- *     no-statistics pool. Only read while actually creating the room: a
- *     joiner appending it to their own URL changes nothing, because by then
- *     the board exists. Changing it later is a `set-easy` message, which
- *     applySetEasy authorizes.
+ *   - The creator passes ?advanced=1 to also deal world-metric categories.
+ *     Only read while actually creating the room: a joiner appending it to
+ *     their own URL changes nothing, because by then the board exists.
+ *     Changing it later is a `set-advanced` message, which applySetAdvanced
+ *     authorizes.
  *
  * Persistence:
  *   - The Room is stored in party.storage under one key, so the puzzle and
@@ -49,11 +49,11 @@ export class TicTacToeServer {
     this.countries = countries;
     /** Forced puzzle for tests; real runs generate per fresh room. */
     this.forcedPuzzle = puzzle;
-    /** Easy pool, built once per DO rather than per deal. 25 categories out of
-     * the full pool's 142, and `generateRandomPuzzle` retries up to 200 times,
-     * so rebuilding it per call is pure waste. */
+    /** The default pool, built once per DO rather than per deal. 25 categories
+     * out of the full pool's 142, and `generateRandomPuzzle` retries up to 200
+     * times, so rebuilding it per call is pure waste. */
     /** @type {import('../flags/engine.js').Category[] | null} */
-    this.easyPool = null;
+    this.flagPool = null;
     /** @type {Room | null} */
     this.room = null;
     this.loaded = false;
@@ -74,14 +74,19 @@ export class TicTacToeServer {
    * server hands out goes through here, so a new deal site can't quietly
    * ignore the room setting.
    *
-   * @param {boolean} easy
+   * Note the polarity: **the flag pool is the default** and `generateRandomPuzzle`'s
+   * own default (every category, metrics included) is the opt-in branch. The
+   * engine stays a general library; the product decision lives here and in the
+   * two client boards.
+   *
+   * @param {boolean} advanced
    * @returns {import('../flags/engine.js').Puzzle}
    */
-  dealPuzzle(easy) {
+  dealPuzzle(advanced) {
     if (this.forcedPuzzle) return this.forcedPuzzle;
-    if (!easy) return generateRandomPuzzle(this.countries);
-    if (!this.easyPool) this.easyPool = buildEasyCategoryPool();
-    return generateRandomPuzzle(this.countries, { pool: this.easyPool });
+    if (advanced) return generateRandomPuzzle(this.countries);
+    if (!this.flagPool) this.flagPool = buildFlagCategoryPool();
+    return generateRandomPuzzle(this.countries, { pool: this.flagPool });
   }
 
   async loadRoom() {
@@ -108,7 +113,7 @@ export class TicTacToeServer {
       const url = new URL(ctx.request.url, 'http://localhost');
       const playerId = url.searchParams.get('pid');
       const intent = url.searchParams.get('intent') === 'create' ? 'create' : 'join';
-      const easy = url.searchParams.get('easy') === '1';
+      const advanced = url.searchParams.get('advanced') === '1';
 
       if (!playerId) {
         this.rejectConnection(conn, 'missing-player-id');
@@ -120,7 +125,7 @@ export class TicTacToeServer {
           this.rejectConnection(conn, 'room-not-found');
           return;
         }
-        this.room = createRoom(this.dealPuzzle(easy), { easy });
+        this.room = createRoom(this.dealPuzzle(advanced), { advanced });
       } else if (intent === 'create' && !this.room.roles.has(playerId)) {
         this.rejectConnection(conn, 'code-collision');
         return;
@@ -189,23 +194,24 @@ export class TicTacToeServer {
       } else if (parsed && parsed.type === 'rematch') {
         const playerId = this.playerByConn.get(sender);
         if (!playerId) return;
-        // The room's mode outlives the game: agreeing to a no-statistics board
-        // and then getting a metrics board on "Play again" would be a bait.
-        const result = applyStartRematch(this.room, playerId, this.dealPuzzle(this.room.easy));
+        // The room's mode outlives the game: agreeing to one kind of board and
+        // then getting the other on "Play again" would be a bait.
+        const result = applyStartRematch(this.room, playerId, this.dealPuzzle(this.room.advanced));
         if (result.broadcasts.length === 0) return;
         this.room = result.room;
         await this.saveRoom();
         this.dispatch(result.broadcasts);
-      } else if (parsed && parsed.type === 'set-easy') {
+      } else if (parsed && parsed.type === 'set-advanced') {
         const playerId = this.playerByConn.get(sender);
         if (!playerId) return;
-        const easy = parsed.easy === true;
-        // Deal before authorizing: applySetEasy needs a board to install, and
-        // it may refuse (not the host, board already touched, mode unchanged),
-        // in which case the puzzle is simply dropped. Wasting a generate on a
-        // refusal is cheaper than teaching this handler the room's rules and
-        // having them drift from the reducer's.
-        const result = applySetEasy(this.room, playerId, easy, this.dealPuzzle(easy));
+        const advanced = parsed.advanced === true;
+        // Deal before authorizing: applySetAdvanced needs a board to install,
+        // and it may refuse (not the host, board already touched, mode
+        // unchanged), in which case the puzzle is simply dropped. Wasting a
+        // generate on a refusal is cheaper than teaching this handler the room's
+        // rules and having them drift from the reducer's — the same trade the
+        // rematch branch above already makes.
+        const result = applySetAdvanced(this.room, playerId, advanced, this.dealPuzzle(advanced));
         if (result.broadcasts.length === 0) return;
         this.room = result.room;
         await this.saveRoom();
