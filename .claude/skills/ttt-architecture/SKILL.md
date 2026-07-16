@@ -79,7 +79,9 @@ export function setFindIncludeAll(store, value) { writeBoolSetting(store, FIND_I
 
 **Key naming:** `gridgame.<surface>.<setting>`. The `ttt` namespace is already claimed (`gridgame.ttt.hostRoom`, `flags/tttHostMemory.js:24`, which is **sessionStorage**, not localStorage). Existing keys: `gridgame.flagfind.includeAll`, `gridgame.flagquiz.includeAll` / `.lastVariant` / `.showMap`, `gridgame.flagsdata.showMap` / `.wide`, `gridgame.party.setup` / `.plan` / `.tricky` / `.reveal`.
 
-**No setting reaches puzzle generation today.** Offline and solo call `generateRandomPuzzle(countries)` bare. The nearest analogue is findFlag, which reads its key at boot and narrows the *country* pool. To narrow the *category* pool, note `randomPuzzle(rng, pool)` already takes one (`engine.js:2938`) but `generateRandomPuzzle` does not thread it through (`:3162-3165` hardcodes the default). And remember: whatever you do here, **online is unaffected** unless you change the protocol.
+**No setting reaches puzzle generation today.** Offline and solo call `generateRandomPuzzle(countries)` bare. The nearest analogue is findFlag, which reads its key at boot and narrows the *country* pool. To narrow the *category* pool, note `randomPuzzle(rng, pool)` already takes one but `generateRandomPuzzle` does not thread it through (it hardcodes the default). And remember: whatever you do here, **online is unaffected** unless you change the protocol.
+
+**Burger borders are load-bearing.** The offline and online menus are currently nickname → coffee-divider with nothing between. `common.css`'s `.menu li.menu-nickname + li.menu-divider` suppresses the divider's `border-top` in exactly that shape, because otherwise the nickname's `border-bottom` and the divider's `border-top` stack into a double grey line (the bug in #926). Add a nav row between them and the rule stops matching, restoring the divider — correct and self-healing, but **look at the menu** after changing it.
 
 ## Surfaces that resist deletion
 
