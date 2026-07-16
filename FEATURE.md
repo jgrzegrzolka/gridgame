@@ -21,6 +21,75 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
+### Feature U: Simplify tic-tac-toe — remove 9×9, add a flag-only easy mode
+
+**Status:** started 2026-07-16. Phase 1 in progress. Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
+
+**Why both halves are one feature.** They're the same lever pulled twice: *what may enter the category pool*. 9×9 is a pool filter (`ultimateEligible`) that costs a line plus a JSDoc paragraph in all 32 metric factories. Easy mode is a pool filter that costs nothing per-metric because it derives from the category id. Removing the first and adding the second in one feature keeps the reasoning in one place, and Phase 2 must not delete the `pool` plumbing that Phase 3 reuses (`randomPuzzle(rng, pool)`, engine.js:2938).
+
+**Measured baseline (2026-07-16, `flags/engine.js`):** full 3×3 pool = 142 categories, of which 20 are flag-visual (14%) and 6 are continents. The remaining 116 are world-metric thresholds across 32 metric families. Easy pool (flag-visual + continent) = 26 categories. Both pools generate 500/500 seeds; easy averages 6.0 attempts vs full's 16.1, so easy mode *relaxes* the generator rather than straining it. `statehood` is a factory but is **not** in the random pool, so it isn't a consideration here.
+
+#### Phase 1 — write down the plan + start a TTT skill *(this phase)*
+
+- [x] Feature U entry in `FEATURE.md` (this).
+- [x] New `.claude/skills/ttt-architecture/SKILL.md`: board topology, puzzle authority (server deals online), reducer map, the settings/toggle recipe, the persisted surfaces that resist deletion.
+- [ ] Merge before Phase 2 starts.
+
+**Why a second TTT skill rather than growing `ttt-puzzle-generator`.** They answer different questions. `ttt-puzzle-generator` is "I'm changing how categories get picked"; `ttt-architecture` is "I'm changing a TTT page and need to know what else moves". The generator skill has no idea there are five boards, one shared stylesheet, or a server that deals the puzzle, and that gap is what makes generation-affecting changes dangerous.
+
+**Known drift in `ttt-puzzle-generator/SKILL.md`, fix in Phase 2** (it has to be edited there anyway, so don't do it now):
+- It documents 5 rejection rules; the live ladder runs **6** (`metricGroupRepeated`, engine.js:3168, is undocumented despite being in `SINGLE_USE_METRIC_GROUPS` at engine.js:2809-2836).
+- Counts are stale: says "~30 metric families / ~19 flag-visual", live is 32 / 20 of a 142 pool.
+
+#### Phase 2 — remove 9×9
+
+**Optional first step (Jan's call):** confirm the "nobody plays it" premise from prod rather than assuming. The `m9x9` counters are already in Cosmos (`api/src/lib/tttPairDoc.js:12`), so one read-only query answers it. Cheap; either confirms the plan or surprises us.
+
+**Deletes cleanly:**
+- [ ] `ticTacToe/9x9/` (whole tree: `index.html`, `page.js`, `onlineClient.js` + test, `offline/`).
+- [ ] `flags/ultimateTicTacToe.js` + test, `flags/ultimateOnlineRoom.js` + test.
+- [ ] `party/ultimateTicTacToeServer.js` + test, `party/ultimateServer.js`.
+
+**The actual prize (engine.js), do this carefully:**
+- [ ] `buildUltimateCategoryPool` (:2743), `generateUltimateRandomPuzzle` (:3239), `hasUltimatePuzzleSolution` (:3197), `findUltimateAssignment` (:3058).
+- [ ] The `ultimateEligible` field on `Category` (:30) and its assignment in **every** metric factory (:1075, :1103, :1133, :1206, :1235, :1266, :1297, :1328, …).
+- [ ] The `ultimate?: boolean` flag on every `*_BREAKS_FOR_RANDOM` array (:254-928) and the `{ ultimateEligible: ultimate === true }` mapping in `buildRandomCategoryPool` (:2730-2732). **Most of the 700 lines at :248-928 is JSDoc arguing 9×9 eligibility per metric; it goes too.**
+- [ ] `hasStripesOnly`'s `ultimateEligible: false` (:165).
+- [ ] **Keep** `randomPuzzle`'s `pool` parameter (:2938). Phase 3 needs it.
+
+**Leaks 9×9 into 3×3 today, clean up while here:**
+- [ ] `exhausted` is 9×9-only (`flags/ticTacToe.js:14-17` typedef, set only in `ultimateTicTacToe.js:374`), yet both 3×3 pages run `td.classList.toggle('exhausted', …)` as a permanent no-op (`ticTacToe/page.js:632`, `ticTacToe/offline/page.js:389`). Remove the toggles, the typedef, and `.cell.exhausted` from `ticTacToe/index.css:325-330`. **Note:** `CLAUDE.md:67` cites `.cell.exhausted` by name as the sanctioned exception to the no-duplicate-CSS rule; that line must be updated in the same PR or it becomes a dangling reference.
+- [ ] `ticTacToe/index.css:332`→EOF is the `/* ---- 9x9 variant ---- */` block, roughly two thirds of the 21 KB file. 9×9 pages link `../index.css`; there is no separate 9×9 stylesheet.
+
+**Do NOT delete (shipped, player-visible, or persisted):**
+- **Achievements** `first-ttt-9x9-game` / `first-ttt-9x9-win` (`flags/achievements.js:919-933`). Real players hold these badges. The `add-achievement` skill's stable-id rule applies: **stop awarding, keep displaying**. Do not reuse the ids.
+- **Cosmos `m9x9`** (`tttPairDoc.js:12,68,75-84`, `tttCompute.js:8-44`, `syncMerge.js:311-334`, `getTttResult.js:20,60`, `dailyMe.js:162,184`). Stop writing, keep reading. No data migration.
+- `validate.js:304`'s `TTT_MODES` keeps `'9x9'` so old clients and replayed rows don't 400.
+
+**Also touches:** `i18n/{en,pl}.json` (`ttt.variant3x3` / `ttt.variant9x9` — the 3×3 label exists only to pair with the 9×9 one in the burger, so both go; plus the `ttt9x9.*` block at en.json:534-537), the two burger `<li>`s (`ticTacToe/index.html:56-57`), `ticTacToe/index.html:6`'s meta description ("9×9 ultimate variant"), `sitemap.xml:29`, `.github/workflows/deploy.yml:254-255,344-345` (warm + smoke URLs), `tsconfig.json:22-23`, `authoring/reconcileTttPairs.mjs:119-188`, `daily/streakClient.js:51-117`, and 9×9 assertions inside `flags/engine.test.js` / `flags/countries.test.js` (the "only `>=10M` reaches 9×9" pins) / `flags/achievements.test.js` / `langRefresh.test.js`.
+
+**Mode lives in the URL path, not a query param** (`/ticTacToe/` vs `/ticTacToe/9x9/`), so there's no param to clean up, but the deleted paths need a redirect decision (see open calls).
+
+#### Phase 3 — flag-only easy mode (offline + solo only)
+
+**Scope decision (Jan, 2026-07-16): start offline/solo only.** The PartyKit server deals online puzzles (`party/ticTacToeServer.js:96` fresh, `:166` rematch), so a localStorage toggle would silently do nothing in an online room, and naively wiring it would let the room creator impose difficulty on the opponent with no UI saying so. Online easy mode is a room setting (WS URL param at create + durable-object state + lobby display) and is deferred until we see whether anyone uses the offline toggle.
+
+- [ ] Add a `pool` option to `generateRandomPuzzle` (engine.js:3162). It currently calls `randomPuzzle(rng)` at :3165 with the default pool hardcoded; `randomPuzzle` already accepts a pool.
+- [ ] `buildEasyCategoryPool()` next to `buildRandomCategoryPool` (engine.js:2723): `buildRandomCategoryPool().filter(c => isFlagVisualCategory(c) || c.id.startsWith('continent:'))`. Same shape as the `buildUltimateCategoryPool` that Phase 2 deletes, but with no per-category annotation to maintain.
+- [ ] Burger toggle on `ticTacToe/offline/` + `ticTacToe/solo/`, keyed `gridgame.ttt.easy`. Reuse the `.scope-toggle` markup from `findFlag/index.html:55-63` and `readBoolSetting`/`writeBoolSetting` from `flags/group.js:798-811`, which are default-off by construction (`getItem(key) === 'true'`) and so already match the opt-in sense easy mode wants. **`findFlag` is the repo's only burger switch**, so it's the pattern to match, not to reinvent.
+- [ ] Toggle must not appear on `ticTacToe/index.html` (online), where it would be a lie.
+- [ ] Tests: seeded sweep in `flags/countries.test.js` proving the easy pool generates against real data and that no metric category leaks into an easy board.
+
+**Open calls for Phase 3:**
+- **`hasMotif:eu-member` is in the easy pool but isn't flag-readable.** `isFlagVisualCategory` classifies by id prefix, so `eu-member` counts as a motif. It's a country fact wearing a motif tag. Options: exclude it from the easy pool specifically, or reclassify it (which also fixes a latent false-positive in `lacksFlagVisualCategory`, where a board's only "flag-visual" rule could be `eu-member`). Prefer the reclassify if it doesn't cascade.
+- **Naming.** "Easy mode" vs "flags only" vs "no statistics". The toggle describes *what it filters* (statistics out), not a difficulty claim we have to defend. Leaning "flags only".
+- **Does the toggle re-deal the current board or only affect the next one?** Re-dealing mid-game destroys progress; not re-dealing makes the toggle look broken. Probably: applies to the next puzzle, with the toggle sitting next to the existing new-game affordance.
+
+**Out of scope for Feature U:**
+- Online easy mode (see Phase 3 scope decision).
+- Any change to the daily-puzzle catalogue. Easy mode is player-selected curation of the *random* pool; the daily catalogue is human-curated already.
+- Difficulty tiers beyond the one binary toggle. Jan asked for a toggle, not a difficulty system.
+
 ---
 
 ## Backlog
