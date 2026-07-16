@@ -28,6 +28,8 @@ import honey from '../metrics/honey.json' with { type: 'json' };
 import temperature from '../metrics/temperature.json' with { type: 'json' };
 import happiness from '../metrics/happiness.json' with { type: 'json' };
 import corruption from '../metrics/corruption.json' with { type: 'json' };
+import tourismPerCapita from '../metrics/tourismPerCapita.json' with { type: 'json' };
+import electricityPerCapita from '../metrics/electricityPerCapita.json' with { type: 'json' };
 import { createMetric } from '../metrics.js';
 import { lookalikesOf } from '../quiz.js';
 
@@ -415,3 +417,26 @@ export const happinessRound = createSuperlativeRound(createMetric(happiness, [])
 // "Least corrupt"; round 'least' = lowest CPI = "Most corrupt" (see the
 // SUPERLATIVE_MODES entry in flagParty/page.js).
 export const corruptionRound = createSuperlativeRound(createMetric(corruption, []), 'superlative-corruption');
+
+// Tourism-per-capita instance: tourist arrivals per resident, id
+// 'superlative-tourism'. Locked to 'most': "which gets the most tourists per
+// resident" (Andorra, Monaco, the island magnets) is the fun question; "fewest" is
+// the big-country long tail. The round metric drops the 0-arrival places AND is
+// inherently sovereign-scoped, so the absence:'unknown' gap (states with no figure)
+// never surfaces: every option is a real, measured tourist destination.
+const tourismDestinations = {
+  ...tourismPerCapita,
+  values: Object.fromEntries(Object.entries(tourismPerCapita.values).filter(([, v]) => v > 0)),
+};
+export const tourismPerCapitaRound = createSuperlativeRound(createMetric(tourismDestinations, []), 'superlative-tourism', { direction: 'most' });
+
+// Electricity-per-capita instance: kWh per person, id 'superlative-electricity'.
+// Locked to 'most': "which uses the most electricity per person" (Iceland, Norway,
+// the Gulf) is the fun question; "least" is the low-income tail. Zero-filtered for
+// consistency with the other consumption metrics (though no covered place is 0),
+// and inherently sovereign-scoped, so the absence:'unknown' gap never surfaces.
+const electricityUsing = {
+  ...electricityPerCapita,
+  values: Object.fromEntries(Object.entries(electricityPerCapita.values).filter(([, v]) => v > 0)),
+};
+export const electricityPerCapitaRound = createSuperlativeRound(createMetric(electricityUsing, []), 'superlative-electricity', { direction: 'most' });

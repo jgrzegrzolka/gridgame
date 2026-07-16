@@ -595,7 +595,9 @@
       "superlativeHoney": "Honey production: most",
       "superlativeTemperature": "Average temperature: hottest & coldest",
       "superlativeHappiness": "Happiness score: happiest & least happy",
-      "superlativeCorruption": "Government integrity: most & least corrupt"
+      "superlativeCorruption": "Government integrity: most & least corrupt",
+      "superlativeTourism": "Tourist arrivals per capita: most",
+      "superlativeElectricity": "Electricity use per capita: most"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -630,7 +632,9 @@
       "superlativeHoney": "Honey",
       "superlativeCorruption": "Integrity",
       "superlativeTemperature": "Temperature",
-      "superlativeHappiness": "Happiness"
+      "superlativeHappiness": "Happiness",
+      "superlativeTourism": "Tourism",
+      "superlativeElectricity": "Electricity"
     },
     "round": "Round {n} of {total}",
     "hintFlag": "Which flag?",
@@ -676,6 +680,8 @@
     "hintLeastHappiness": "Least happy",
     "hintMostCorruption": "Least corrupt",
     "hintLeastCorruption": "Most corrupt",
+    "hintMostTourism": "Most tourist arrivals per resident",
+    "hintMostElectricity": "Most electricity use per person",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "locked": "Locked in",
     "fastest": "Fastest",
@@ -962,6 +968,18 @@
       "100": "over 100 kg per capita"
     }
   },
+  "tourismPerCapita": {
+    "atLeast": {
+      "1": "over 1 arrival per resident",
+      "5": "over 5 arrivals per resident"
+    }
+  },
+  "electricityPerCapita": {
+    "atLeast": {
+      "5000": "over 5,000 kWh per capita",
+      "10000": "over 10,000 kWh per capita"
+    }
+  },
   "borders": {
     "atLeast": {
       "5": "5 or more",
@@ -1055,7 +1073,9 @@
     "meatPerCapita": "Meat consumption",
     "borders": "Bordering countries",
     "oliveOil": "Olive oil production",
-    "honey": "Honey production"
+    "honey": "Honey production",
+    "tourismPerCapita": "Tourist arrivals per capita",
+    "electricityPerCapita": "Electricity use per capita"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

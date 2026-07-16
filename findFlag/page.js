@@ -94,6 +94,8 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   bordersProbability: 0.06,
   oliveOilProbability: 0.06,
   honeyProbability: 0.06,
+  tourismPerCapitaProbability: 0.06,
+  electricityPerCapitaProbability: 0.06,
 });
 
 /**

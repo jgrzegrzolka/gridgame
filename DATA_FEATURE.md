@@ -33,6 +33,46 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 
 ## Done
 
+### Feature EK: Tourist arrivals per capita as a world metric, an intensive "non-obvious #1" metric (code surfaces complete 2026-07-16, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Thirty-first world metric. Jan asked for two new production/consumption metrics whose top spot is a *surprise*, not one of the five biggest countries by size. Tourist arrivals per capita delivers exactly that: **Andorra ~102 arrivals per resident** tops it, then Monaco / San Marino / the Caribbean micro-states; the big countries sit near the bottom per head (USA ~0.5, China ~0.12, India ~0.01). The intensive (size-independent) property is the whole point, same family as sheep/cattle-per-capita.
+
+**Sourcing note (Jan's pick #3 was coffee consumption per capita, SKIPPED):** coffee consumption per capita has no clean non-listicle source, the ICO World Coffee Statistics Database is subscriber-only and USDA lumps the EU into one bloc (killing the per-country Nordic story). That is the same "listicles fabricate" wall that blocked cheese (see memory `project_metric_cheese_blocked_temp_parked`), so per Jan's "skip a metric with data issues" instruction it was dropped and **electricity per capita (Feature EL) substituted** so he still gets two, both matching the non-obvious-#1 ask.
+
+**Data contract:** **sparse, `absence: 'unknown'`** (like the drink metrics). Derived: World Bank ST.INT.ARVL (2019, the last pre-pandemic normal year, over the COVID-collapse years so the ranking reflects touristedness not pandemic impact) divided by population. 186 real places covered; the states the World Bank has no figure for (conflict / closed economies: North Korea, Libya, Venezuela, ...) read "no data", correct.
+
+**Direction: most-only.** "Which gets the most tourists per resident" is the fun question; "fewest" is the big-country long tail. Filters + TTT `>=`-only, Party round locked to `'most'`, matching the drink-metric precedent.
+
+**Breaks:** `>=1 / >=5` (71 / 27 covered places), "more arrivals than residents" and the elite magnets. 3×3-only (`absence: 'unknown'`, not 9×9-eligible).
+
+- [x] 1. Data + visuals: `tourismPerCapita.json` + `build-tourism-per-capita.mjs` + `METRIC_FILES` line + `metrics.test.js` schema/coverage/no-org tests; suitcase icon + azure hue `#1183c7` + short label "Tourism" in `metricVisuals.js`.
+- [x] 2. flagsdata lens: lit from step 1 (metric-agnostic hub chip).
+- [x] 3 + 4 (driven by `THRESHOLD_METRICS`). `tourismPerCapita(op, n)` factory + `TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM` (`>=1/5`) + registry entry. Filters: `TourismPerCapitaConstraint` + field + `emptyFilters` + `ScalarGroup`; `tourismPerCapitaProbability` (0.06) modifier in `findFlag.js` + `findFlag/page.js`; findflag-random-coverage skill noted. `attachTourismPerCapitas` (set-if-present, `absence:'unknown'`) + `METRIC_ATTACHERS`; `party/server.js` line. i18n `tourismPerCapita.atLeast.{1,5}` + `metric.tourismPerCapita` (en+pl). Synthetic TTT fixture: `TOURISM_LADDER` (straddles the low break so `>=1` stays selective).
+- [x] 5. Flag Party round: `tourismPerCapitaRound` (id `superlative-tourism`) across the six spots + en/pl i18n. **Most-only**, zero-filtered `createMetric` (drops the ~0-arrival places); pinned by `superlative.test.js` (most-only + exclusion tests).
+
+Surface 6 (daily puzzles): deferred to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+---
+
+### Feature EL: Electricity use per capita as a world metric, the substitute for the un-sourceable coffee-consumption metric (code surfaces complete 2026-07-16, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Thirty-second world metric, and the first energy-consumption metric (the trail had no energy-per-head metric before this). Substituted for Jan's coffee-consumption pick (see Feature EK for why coffee was skipped) so he still got two non-obvious-#1 metrics. **Iceland ~49,000 kWh** tops it by a wide margin (cheap geothermal power feeding aluminium smelters), then Norway / Bahrain / Qatar / the Gulf; the big populous countries sit mid-table (China ~6,500, India ~1,200). Intensive / size-independent, exactly the non-obvious-#1 property Jan wanted.
+
+**Data contract:** **sparse, `absence: 'unknown'`** (like the drink metrics). World Bank EG.USE.ELEC.KH.PC (electric power consumption, kWh per capita), latest year per country (2023-2024 for most), embedded directly (already per-capita, no division). 149 real places covered; the micro-states / small territories the World Bank does not meter (Andorra, Monaco, Liechtenstein, much of the Pacific / Caribbean) read "no data", correct.
+
+**Direction: most-only.** "Which uses the most electricity per person" is the fun question; "least" is the low-income tail. Filters + TTT `>=`-only, Party round locked to `'most'`.
+
+**Breaks:** `>=5000 / >=10000` kWh (45 / 14 covered places), the developed world and the elite consumers. 3×3-only (`absence: 'unknown'`).
+
+- [x] 1. Data + visuals: `electricityPerCapita.json` + `build-electricity-per-capita.mjs` + `METRIC_FILES` line + `metrics.test.js` tests; lightning-bolt icon + yellow hue `#f4b400` + short label "Electricity" in `metricVisuals.js`.
+- [x] 2. flagsdata lens: lit from step 1.
+- [x] 3 + 4 (driven by `THRESHOLD_METRICS`). `electricityPerCapita(op, n)` factory (comma-grouped kWh label) + `ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM` (`>=5000/10000`) + registry entry. Filters: `ElectricityPerCapitaConstraint` + field + `emptyFilters` + `ScalarGroup`; `electricityPerCapitaProbability` (0.06) modifier + `findFlag/page.js`. `attachElectricityPerCapitas` + `METRIC_ATTACHERS`; `party/server.js` line. i18n `electricityPerCapita.atLeast.{5000,10000}` + `metric.electricityPerCapita` (en+pl). Synthetic TTT fixture: `ELECTRICITY_LADDER` (straddles the low break).
+- [x] 5. Flag Party round: `electricityPerCapitaRound` (id `superlative-electricity`) across the six spots + en/pl i18n. **Most-only**, zero-filtered `createMetric`; pinned by `superlative.test.js`.
+
+Surface 6 (daily puzzles): deferred to `METRIC_DAILY_PUZZLES.md`; the Feature closed on surfaces 1-5.
+
+---
+
 ### Feature EJ: Corruption Perceptions Index as a world metric, reframed to "Government integrity" so a high-is-good scale reads intuitively (code surfaces complete 2026-07-15, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 
 Thirtieth world metric and the last of the social batch (after temperature EH, happiness EI) taken from a lens-only #902 ship to full surfaces 3-5. Transparency International CPI 2025, score 0-100. The wrinkle that shaped this Feature: the CPI runs **higher = cleaner** (Denmark 89, Finland 88, Singapore 84 top; Somalia / South Sudan 9 bottom), so a metric *named* "corruption" whose highest value means *least* corrupt reads backwards.

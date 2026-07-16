@@ -43,6 +43,8 @@
  * @property {number} [alcoholPerCapita]  Denormalized from `flags/metrics/alcoholPerCapita.json` by `attachAlcoholPerCapitas` (litres of pure alcohol per person per year). `absence: 'unknown'` metric like `beerPerCapita`: WHO does not measure sub-national parts or small territories, so a real place it does not cover is genuinely unknown (NOT 0) and left without the field, reading "no data". Absent for those places and non-places (orgs).
  * @property {number} [meatPerCapita]  Denormalized from `flags/metrics/meatPerCapita.json` by `attachMeatPerCapitas` (kg of meat per person per year). `absence: 'unknown'` metric like the drink metrics: a real place the source does not cover is genuinely unknown (NOT 0) and left without the field. Absent for those places and non-places (orgs).
  * @property {number} [borders]  Denormalized from `flags/metrics/borders.json` by `attachBorders` (number of countries sharing a land border). Dense, same pattern as `area`: every real place has a value (an island carries a true 0), absent only for non-places (orgs).
+ * @property {number} [tourismPerCapita]  Denormalized from `flags/metrics/tourismPerCapita.json` by `attachTourismPerCapitas` (international tourist arrivals per resident per year). `absence: 'unknown'` metric like the drink metrics: a real place the World Bank has no arrivals figure for carries no value (read "no data"), NOT 0. Absent for those and non-places (orgs).
+ * @property {number} [electricityPerCapita]  Denormalized from `flags/metrics/electricityPerCapita.json` by `attachElectricityPerCapitas` (electric power consumption, kWh per person per year). `absence: 'unknown'` metric like the drink metrics: a real place the World Bank does not meter carries no value (read "no data"), NOT 0. Absent for those and non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -276,6 +278,45 @@ export function attachMeatPerCapitas(countries, values) {
   for (const c of countries) {
     const v = values[c.code];
     if (typeof v === 'number') c.meatPerCapita = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/tourismPerCapita.json` values onto each Country as
+ * `.tourismPerCapita` (international tourist arrivals per resident per year).
+ * `absence: 'unknown'` like the drink / meat metrics, so a plain set-if-present: a
+ * real place the World Bank has no arrivals figure for is left without the field,
+ * reading "no data" rather than a false 0 (a country does receive tourists, we
+ * just have no figure).
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachTourismPerCapitas(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.tourismPerCapita = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/electricityPerCapita.json` values onto each Country as
+ * `.electricityPerCapita` (electric power consumption, kWh per person per year).
+ * `absence: 'unknown'` like the drink / meat metrics, so a plain set-if-present: a
+ * real place the World Bank does not meter (micro-states, small territories) is left
+ * without the field, reading "no data" rather than a false 0.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachElectricityPerCapitas(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.electricityPerCapita = v;
   }
   return countries;
 }
@@ -682,6 +723,8 @@ const METRIC_ATTACHERS = {
   temperature: attachTemperatures,
   happiness: attachHappinesses,
   corruption: attachCorruptions,
+  tourismPerCapita: attachTourismPerCapitas,
+  electricityPerCapita: attachElectricityPerCapitas,
 };
 
 /**

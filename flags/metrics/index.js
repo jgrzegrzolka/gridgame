@@ -46,4 +46,6 @@ export const METRIC_FILES = [
   { key: 'corruption', file: 'corruption.json', label: 'Government integrity' },
   { key: 'temperature', file: 'temperature.json', label: 'Average temperature' },
   { key: 'happiness', file: 'happiness.json', label: 'Happiness score' },
+  { key: 'tourismPerCapita', file: 'tourismPerCapita.json', label: 'Tourist arrivals per capita' },
+  { key: 'electricityPerCapita', file: 'electricityPerCapita.json', label: 'Electricity use per capita' },
 ];

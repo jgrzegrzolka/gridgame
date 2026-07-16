@@ -901,3 +901,69 @@ test('bordersRound: 0-border islands are excluded from selection', async () => {
     }
   }
 });
+
+// ---- tourism-per-capita instance (arrivals per resident, 'superlative-tourism')
+
+test('tourismPerCapitaRound: most-only, correct biggest-per-resident answer', async () => {
+  const { tourismPerCapitaRound } = await import('./superlative.js');
+  const tourJson = (await import('../metrics/tourismPerCapita.json', { with: { type: 'json' } })).default;
+  const TOUR = /** @type {Record<string, number>} */ (tourJson.values);
+  assert.equal(tourismPerCapitaRound.id, 'superlative-tourism');
+  // Sovereigns spanning the range (Croatia high ... India near zero). All > 0.
+  const pool = ['hr', 'me', 'is', 'gr', 'es', 'fr', 'us', 'cn', 'in', 'br'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = tourismPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.equal(q.prompt, 'most', `seed ${i}: tourism per capita is most-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const answerVal = TOUR[q.answer];
+    for (const opt of q.options) assert.ok(answerVal >= TOUR[opt], `seed ${i}: ${q.answer} not the biggest`);
+  }
+});
+
+test('tourismPerCapitaRound: zero and unknown-gap places are excluded from selection', async () => {
+  const { tourismPerCapitaRound } = await import('./superlative.js');
+  // Zero-filtered, so the ~0-arrival places (Bangladesh, Chad round to 0) never
+  // have a value; and the absence:'unknown' gap (North Korea, Venezuela) has none.
+  const excluded = new Set(['bd', 'td', 'kp', 've']);
+  const pool = ['hr', 'is', 'gr', 'es', 'bd', 'td', 'kp', 've'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = tourismPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!excluded.has(opt), `seed ${i}: excluded ${opt} must not be an option`);
+    }
+  }
+});
+
+// ---- electricity-per-capita instance (kWh per person, 'superlative-electricity')
+
+test('electricityPerCapitaRound: most-only, correct biggest-per-person answer', async () => {
+  const { electricityPerCapitaRound } = await import('./superlative.js');
+  const elecJson = (await import('../metrics/electricityPerCapita.json', { with: { type: 'json' } })).default;
+  const ELEC = /** @type {Record<string, number>} */ (elecJson.values);
+  assert.equal(electricityPerCapitaRound.id, 'superlative-electricity');
+  // Sovereigns spanning the range (Iceland ~49k ... Chad ~14). All > 0.
+  const pool = ['is', 'no', 'qa', 'us', 'cn', 'fr', 'de', 'in', 'et', 'td'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = electricityPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.equal(q.prompt, 'most', `seed ${i}: electricity per capita is most-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const answerVal = ELEC[q.answer];
+    for (const opt of q.options) assert.ok(answerVal >= ELEC[opt], `seed ${i}: ${q.answer} not the biggest`);
+  }
+});
+
+test('electricityPerCapitaRound: unknown-gap places are excluded from selection', async () => {
+  const { electricityPerCapitaRound } = await import('./superlative.js');
+  // The absence:'unknown' gap (the micro-states the World Bank does not meter:
+  // Andorra, Monaco, Liechtenstein) has no value and must never surface.
+  const excluded = new Set(['ad', 'mc', 'li']);
+  const pool = ['is', 'no', 'us', 'de', 'ad', 'mc', 'li'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = electricityPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!excluded.has(opt), `seed ${i}: excluded ${opt} must not be an option`);
+    }
+  }
+});
