@@ -304,6 +304,51 @@ export function newlyWinningCells(prev, next) {
   return next.winningLine;
 }
 
+/**
+ * Cells that were just claimed — i.e. gained a country since the previous
+ * render. The pages use this to fire the one-shot flip-in on a correct pick.
+ *
+ * Why a diff and not "every filled cell": all three boards rebuild every cell's
+ * `<img>` on every render (`td.innerHTML = ''`), and the online board re-renders
+ * on **every** server message. A CSS animation keyed off `.cell.owned` would
+ * therefore re-fire on all nine flags whenever anything happened — the opponent
+ * moving, a peer reconnecting, a status line changing. Same trap, same cure, as
+ * `newlyWinningCells` above.
+ *
+ * Two rules baked in rather than left to callers, because they are the domain's
+ * and not the DOM's:
+ *
+ *   - **`revealed` cells never count.** Give-up hands you all nine at once and
+ *     they already have their own `revealed-bounce`; flipping them would double
+ *     up, and worse, would dress "here is the answer you didn't get" in the
+ *     animation that means "you got it".
+ *   - **A first render claims nothing.** With no previous state (a refresh, or a
+ *     joiner arriving mid-game) every filled cell would otherwise flip at once.
+ *     Restoring a board is not playing it.
+ *
+ * Shape-compatible with both `GameState` and `SoloState` — it reads `country`,
+ * which both fill, not `owner`, which only the two-player boards use.
+ *
+ * @param {{ cells: Cell[][] } | null | undefined} prev
+ * @param {{ cells: Cell[][] }} next
+ * @returns {[number, number][]}
+ */
+export function newlyClaimedCells(prev, next) {
+  /** @type {[number, number][]} */
+  const fresh = [];
+  if (!prev || !prev.cells) return fresh;
+  for (let r = 0; r < next.cells.length; r++) {
+    for (let c = 0; c < next.cells[r].length; c++) {
+      const after = next.cells[r][c];
+      if (!after.country || after.revealed) continue;
+      const before = prev.cells[r] && prev.cells[r][c];
+      if (before && before.country) continue;
+      fresh.push([r, c]);
+    }
+  }
+  return fresh;
+}
+
 // ---- Solo variant --------------------------------------------------------
 //
 // A one-player puzzle on the same board: no turns, no three-in-a-row. The

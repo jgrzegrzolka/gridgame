@@ -3,7 +3,7 @@ import { renderCategoryLabel, renderCategoryPair } from '../../flags/filterChips
 import { loadCountries, attachMetrics } from '../../flags/group.js';
 import { METRIC_FILES } from '../../flags/metrics/index.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
-import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells, boardIsUntouched } from '../../flags/ticTacToe.js';
+import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells, newlyClaimedCells, boardIsUntouched } from '../../flags/ticTacToe.js';
 import { isTttAdvanced } from '../../flags/tttSettings.js';
 import { wireAdvancedToggle } from '../advancedToggle.js';
 import { t, countryName, withLocalizedAliases, autoRelocalize } from '../../i18n.js';
@@ -90,6 +90,11 @@ function runTicTacToe({ puzzle, countries }) {
   // reads it — a later declaration would hit a TDZ on first render.
   /** @type {[number, number][] | null} */
   let lastSeenWinningLine = null;
+  // Previous render's state, for the claimed-cell diff in renderGrid. Safe to
+  // hold by reference rather than copy: every claim rebuilds cells, so this
+  // stays a snapshot instead of aliasing the live board.
+  /** @type {import('../../flags/ticTacToe.js').GameState | null} */
+  let lastRenderedState = null;
   /** Last active mark painted into the strip; `undefined` until the first
    * paint so it always rebuilds once. Guards against re-bouncing the mark on
    * renders that don't change whose turn it is (e.g. a wrong-guess shake). */
@@ -416,6 +421,16 @@ function runTicTacToe({ puzzle, countries }) {
         if (td) td.classList.add('winning');
       }
     }
+    // One-shot flip on cells claimed since the last render. A state diff, not
+    // a `.owned` selector: renderCellContent rebuilds every cell's <img> on
+    // every render, so the class would re-flip the whole board each time.
+    for (const [r, c] of newlyClaimedCells(lastRenderedState, state)) {
+      const td = gridBodyEl.querySelector(`td[data-row="${r}"][data-col="${c}"]`);
+      if (!td) continue;
+      td.classList.add('flip-in');
+      setTimeout(() => td.classList.remove('flip-in'), 400);
+    }
+    lastRenderedState = state;
     // Fire a one-shot shake on the freshly formed line; comparing against
     // lastSeenWinningLine prevents the animation from replaying on later
     // re-renders that re-apply the .winning class.
