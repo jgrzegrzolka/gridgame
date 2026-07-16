@@ -1,13 +1,13 @@
 /**
  * GET the head-to-head row for (deviceId, opponentId) from
  * /api/v1/ttt/result. Returns the same shape the server's POST writes
- * — `{ deviceId, opponentId, m3x3, m9x9, lastPlayedAt }` — with all
+ * — `{ deviceId, opponentId, m3x3, lastPlayedAt }` — with all
  * counters defaulted to 0 when no row exists yet (first game between
  * this pair). Saves the caller from having to special-case a 404 vs
  * a zero-counters row.
  *
  * Returns:
- *   { ok: true, row: { deviceId, opponentId, m3x3, m9x9, lastPlayedAt } }
+ *   { ok: true, row: { deviceId, opponentId, m3x3, lastPlayedAt } }
  *   { ok: false, reason: <string> }
  *
  * Never throws — same contract as the other fetch helpers.
@@ -22,7 +22,6 @@ const ENDPOINT = '/api/v1/ttt/result';
  *   deviceId: string,
  *   opponentId: string,
  *   m3x3: { wins: number, losses: number, draws: number },
- *   m9x9: { wins: number, losses: number, draws: number },
  *   lastPlayedAt: number | null,
  * }} TttPairRow
  */
@@ -66,7 +65,6 @@ export async function fetchTttPair({ deviceId, opponentId, fetchImpl = globalThi
     deviceId,
     opponentId,
     m3x3: normaliseMode(payload && payload.m3x3),
-    m9x9: normaliseMode(payload && payload.m9x9),
     lastPlayedAt: payload && typeof payload.lastPlayedAt === 'number' ? payload.lastPlayedAt : null,
   };
   return { ok: true, row };

@@ -1,6 +1,6 @@
 /**
  * Room-lobby networking primitives shared by every PartyKit-backed game on the
- * site — tic-tac-toe (3×3 and 9×9) and Flag Party. These are domain-agnostic:
+ * site — tic-tac-toe and Flag Party. These are domain-agnostic:
  * a room code, its validation, and the WebSocket URL for a given host + party.
  *
  * Promoted here from `ticTacToe/onlineClient.js` when Flag Party arrived as the

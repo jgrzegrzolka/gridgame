@@ -21,10 +21,15 @@
 const ENDPOINT = '/api/v1/ttt/result';
 
 /**
+ * `mode` stays on the wire but only `'3x3'` exists now — the 9×9 board was
+ * removed in Feature U. The server still *accepts* `'9x9'` so an in-flight
+ * POST from a tab opened before that doesn't 400, but no current client can
+ * produce one, so the type here is narrowed to what we actually send.
+ *
  * @param {{
  *   deviceId: string,
  *   opponentId: string,
- *   mode: '3x3' | '9x9',
+ *   mode: '3x3',
  *   outcome: 'win' | 'loss' | 'draw',
  *   fetchImpl?: typeof fetch,
  * }} args

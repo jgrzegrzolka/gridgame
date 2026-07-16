@@ -1,8 +1,8 @@
 /**
  * Remember whether this browser session created the TTT room currently
- * carried in `?room=...` on the URL. Used by `ticTacToe/page.js` and
- * `ticTacToe/9x9/page.js` to decide whether the local client should POST
- * the head-to-head result on game finish.
+ * carried in `?room=...` on the URL. Used by `ticTacToe/page.js` to decide
+ * whether the local client should POST the head-to-head result on game
+ * finish.
  *
  * Why this isn't just a module-scoped `let isHost = false` (regression
  * caught when Majkel's deviceId was missing from `tttPairs` after a

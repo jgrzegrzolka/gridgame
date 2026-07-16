@@ -1,6 +1,6 @@
 body {
-  /* Cap content at the same 756 px the chrome buttons align to (the 9×9
-   * tic-tac-toe grid's max width — see common.css --chrome-x-offset).
+  /* Cap content at the same 756 px the chrome buttons align to (the site's
+   * content width — see common.css --chrome-x-offset).
    * Without this the flag grid stretched edge-to-edge on wide monitors
    * while every other page sat centred, which left the burger floating
    * orphan in the right corner. The filter bar's "margin: 0 -24px" bleed
