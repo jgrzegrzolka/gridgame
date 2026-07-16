@@ -23,7 +23,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ### Feature U: Simplify tic-tac-toe — remove 9×9, add a flag-only easy mode
 
-**Status:** started 2026-07-16. Phase 1 in progress. Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
+**Status:** started 2026-07-16. Phase 1 shipped (PR #924). Phase 2 code removal done, **the Cosmos strip has NOT been run yet** (see its checklist below). Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
 
 **Why both halves are one feature.** They're the same lever pulled twice: *what may enter the category pool*. 9×9 is a pool filter (`ultimateEligible`) that costs a line plus a JSDoc paragraph in all 32 metric factories. Easy mode is a pool filter that costs nothing per-metric because it derives from the category id. Removing the first and adding the second in one feature keeps the reasoning in one place, and Phase 2 must not delete the `pool` plumbing that Phase 3 reuses (`randomPuzzle(rng, pool)`, engine.js:2938).
 
@@ -33,7 +33,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 - [x] Feature U entry in `FEATURE.md` (this).
 - [x] New `.claude/skills/ttt-architecture/SKILL.md`: board topology, puzzle authority (server deals online), reducer map, the settings/toggle recipe, the persisted surfaces that resist deletion.
-- [ ] Merge before Phase 2 starts.
+- [x] Merged as PR #924.
 
 **Why a second TTT skill rather than growing `ttt-puzzle-generator`.** They answer different questions. `ttt-puzzle-generator` is "I'm changing how categories get picked"; `ttt-architecture` is "I'm changing a TTT page and need to know what else moves". The generator skill has no idea there are five boards, one shared stylesheet, or a server that deals the puzzle, and that gap is what makes generation-affecting changes dangerous.
 
@@ -46,25 +46,39 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 **Optional first step (Jan's call):** confirm the "nobody plays it" premise from prod rather than assuming. The `m9x9` counters are already in Cosmos (`api/src/lib/tttPairDoc.js:12`), so one read-only query answers it. Cheap; either confirms the plan or surprises us.
 
 **Deletes cleanly:**
-- [ ] `ticTacToe/9x9/` (whole tree: `index.html`, `page.js`, `onlineClient.js` + test, `offline/`).
-- [ ] `flags/ultimateTicTacToe.js` + test, `flags/ultimateOnlineRoom.js` + test.
-- [ ] `party/ultimateTicTacToeServer.js` + test, `party/ultimateServer.js`.
+- [x] `ticTacToe/9x9/` (whole tree: `index.html`, `page.js`, `onlineClient.js` + test, `offline/`).
+- [x] `flags/ultimateTicTacToe.js` + test, `flags/ultimateOnlineRoom.js` + test.
+- [x] `party/ultimateTicTacToeServer.js` + test, `party/ultimateServer.js`.
 
 **The actual prize (engine.js), do this carefully:**
-- [ ] `buildUltimateCategoryPool` (:2743), `generateUltimateRandomPuzzle` (:3239), `hasUltimatePuzzleSolution` (:3197), `findUltimateAssignment` (:3058).
-- [ ] The `ultimateEligible` field on `Category` (:30) and its assignment in **every** metric factory (:1075, :1103, :1133, :1206, :1235, :1266, :1297, :1328, …).
-- [ ] The `ultimate?: boolean` flag on every `*_BREAKS_FOR_RANDOM` array (:254-928) and the `{ ultimateEligible: ultimate === true }` mapping in `buildRandomCategoryPool` (:2730-2732). **Most of the 700 lines at :248-928 is JSDoc arguing 9×9 eligibility per metric; it goes too.**
-- [ ] `hasStripesOnly`'s `ultimateEligible: false` (:165).
-- [ ] **Keep** `randomPuzzle`'s `pool` parameter (:2938). Phase 3 needs it.
+- [x] `buildUltimateCategoryPool` (:2743), `generateUltimateRandomPuzzle` (:3239), `hasUltimatePuzzleSolution` (:3197), `findUltimateAssignment` (:3058).
+- [x] The `ultimateEligible` field on `Category` (:30) and its assignment in **every** metric factory (:1075, :1103, :1133, :1206, :1235, :1266, :1297, :1328, …).
+- [x] The `ultimate?: boolean` flag on every `*_BREAKS_FOR_RANDOM` array and the `{ ultimateEligible: ultimate === true }` mapping in `buildRandomCategoryPool`, plus the per-metric JSDoc arguing 9×9 eligibility. **Result: `engine.js` 3404 → 3020 lines, 99 `ultimateEligible` mentions → 0.**
+- [x] `hasStripesOnly`'s `ultimateEligible: false` (:165).
+- [x] **Keep** `randomPuzzle`'s `pool` parameter (:2938). Phase 3 needs it.
 
 **Leaks 9×9 into 3×3 today, clean up while here:**
 - [ ] `exhausted` is 9×9-only (`flags/ticTacToe.js:14-17` typedef, set only in `ultimateTicTacToe.js:374`), yet both 3×3 pages run `td.classList.toggle('exhausted', …)` as a permanent no-op (`ticTacToe/page.js:632`, `ticTacToe/offline/page.js:389`). Remove the toggles, the typedef, and `.cell.exhausted` from `ticTacToe/index.css:325-330`. **Note:** `CLAUDE.md:67` cites `.cell.exhausted` by name as the sanctioned exception to the no-duplicate-CSS rule; that line must be updated in the same PR or it becomes a dangling reference.
 - [ ] `ticTacToe/index.css:332`→EOF is the `/* ---- 9x9 variant ---- */` block, roughly two thirds of the 21 KB file. 9×9 pages link `../index.css`; there is no separate 9×9 stylesheet.
 
-**Do NOT delete (shipped, player-visible, or persisted):**
-- **Achievements** `first-ttt-9x9-game` / `first-ttt-9x9-win` (`flags/achievements.js:919-933`). Real players hold these badges. The `add-achievement` skill's stable-id rule applies: **stop awarding, keep displaying**. Do not reuse the ids.
-- **Cosmos `m9x9`** (`tttPairDoc.js:12,68,75-84`, `tttCompute.js:8-44`, `syncMerge.js:311-334`, `getTttResult.js:20,60`, `dailyMe.js:162,184`). Stop writing, keep reading. No data migration.
-- `validate.js:304`'s `TTT_MODES` keeps `'9x9'` so old clients and replayed rows don't 400.
+**Persisted surfaces — Jan's call, 2026-07-16: delete them, data loss accepted.**
+
+The Phase 1 plan said "stop writing, keep reading" for both. Jan overrode: *"do we keep anything in cosmos that tell you that its 9x9? if yes i wan to delete that. i dont care about data loss."* Superseded, recorded here so nobody re-derives the cautious version from the git history.
+
+- **Achievements** `first-ttt-9x9-game` / `first-ttt-9x9-win` (`flags/achievements.js:918-933`) — **delete the rules**. This is a *pure code change*: achievements are **computed on read**, not stored. `tttCompute.js` derives the snapshot from `tttPairs` rows on every `/api/v1/daily/me` request and `achievements.js` runs predicates over it. There is no award record anywhere, so deleting the two rules removes the badges from every profile with no data work. The stable-id rule still forbids **reusing** the ids for something else.
+- **Cosmos `m9x9`** — **strip the field** from every `tttPairs` doc. It is the **only** 9×9 artifact in Cosmos; of the four containers (`dailyResults`, `profiles`, `quizRecords`, `tttPairs`) only `tttPairs` encodes a mode at all. Everything else in a `9x9` grep of `api/` is code reading the field.
+- `validate.js:304`'s `TTT_MODES` keeps `'9x9'` so an old client's in-flight POST doesn't 400. Cheap; drop it a release later.
+
+**Known collateral of stripping `m9x9` (accepted).** `tttCompute.js:89-96` sums `tttGamesPlayed` / `hasWonTtt` / `hasLostTtt` across **both** modes. Removing `m9x9` shrinks those totals, so a player whose 10th game or only win was a 9×9 game silently loses **Ten Games** / **First Win** / **First Loss**. Jan's read is that he's the only one with 9×9 rows, which would make the collateral his alone. **The dry run must confirm that before `--apply`.**
+
+**Ordering matters:** ship the code removal first (stops new `m9x9` writes), deploy, *then* run the strip. Stripping while 9×9 is still live lets a game re-add the field.
+
+- [x] `scripts/strip-m9x9.mjs` written, modelled on `authoring/reconcileTttPairs.mjs`: **dry run by default**, `--apply` to write, `COSMOS_CONN` pulled from SWA app settings via `az` and never written to disk. Dry run prints per-device badge deltas so the collateral is visible before it happens.
+- [ ] **Run the dry run** (`node scripts/strip-m9x9.mjs`), read the badge-impact table, confirm the collateral is Jan-only.
+- [ ] **Run `--apply`** once the dry run looks right. Must happen *after* this PR is deployed.
+- [ ] Delete the script afterwards (one-shot, same lifecycle as `scripts/backfill-puzzle1-add-li.cjs`); add the Backlog cleanup entry when it's run.
+
+**Note on the earlier blocked read.** A read-only probe of `tttPairs` was denied by the agent harness on 2026-07-16 ("general cleanup goal, not explicit naming of a direct production database read"). Jan then explicitly asked for the deletion, which authorizes it. The dry run above is the same query with the badge-impact table attached, so no separate probe is needed.
 
 **Also touches:** `i18n/{en,pl}.json` (`ttt.variant3x3` / `ttt.variant9x9` — the 3×3 label exists only to pair with the 9×9 one in the burger, so both go; plus the `ttt9x9.*` block at en.json:534-537), the two burger `<li>`s (`ticTacToe/index.html:56-57`), `ticTacToe/index.html:6`'s meta description ("9×9 ultimate variant"), `sitemap.xml:29`, `.github/workflows/deploy.yml:254-255,344-345` (warm + smoke URLs), `tsconfig.json:22-23`, `authoring/reconcileTttPairs.mjs:119-188`, `daily/streakClient.js:51-117`, and 9×9 assertions inside `flags/engine.test.js` / `flags/countries.test.js` (the "only `>=10M` reaches 9×9" pins) / `flags/achievements.test.js` / `langRefresh.test.js`.
 

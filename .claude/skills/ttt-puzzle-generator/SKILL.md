@@ -5,11 +5,10 @@ description: Reference for the tic-tac-toe random puzzle generator in flags/engi
 
 # Tic-tac-toe random puzzle generator
 
-The 3×3 and 9×9 tic-tac-toe boards both pick their categories from the same pool. The generator lives in `flags/engine.js`:
+The tic-tac-toe board picks its categories from a pool built in `flags/engine.js`:
 
-- `randomPuzzle(rng)` — picks 6 distinct categories from the pool, first 3 become rows, last 3 become columns.
+- `randomPuzzle(rng, pool)` — picks 6 distinct categories, first 3 become rows, last 3 become columns. `pool` defaults to the full 3×3 pool; pass a narrowed one to restrict what may be drawn.
 - `generateRandomPuzzle(countries, options)` — wraps `randomPuzzle` in a retry loop, rejecting candidates that fail any of the rules below. Default `maxAttempts: 200`, `minPerCell: 2`. Throws if no valid puzzle is found.
-- `generateUltimateRandomPuzzle(countries, options)` — same loop, but the cell check is the stronger 9×9 Hall-marriage feasibility (`hasUltimatePuzzleSolution`). Default `maxAttempts: 500`.
 
 The pool is built from `buildRandomCategoryPool()`:
 
@@ -17,12 +16,12 @@ The pool is built from `buildRandomCategoryPool()`:
 - `COLORS_FOR_RANDOM` — 7 canonical colours (no violet — too narrow).
 - `MOTIFS_FOR_RANDOM` — 6 motifs (`animal`, `coat-of-arms`, `weapon`, `star-or-moon`, `cross`, `eu-member`).
 - `COLOR_COUNTS_FOR_RANDOM` — `[['=',2], ['=',3], ['=',4], ['>=',4]]`. Colour-count categories; share `exclusiveGroup: 'colorCount'` so any two of them can't pair (including `=4` × `>=4`, which overlap). `=1` has zero coverage and `>=5` has zero on Asia, so neither is in the pool. `<=N` isn't implemented; symmetric add when a use case lands.
-- `STRIPES_ORIENTATIONS_FOR_RANDOM` — `['horizontal', 'vertical']`. The `hasStripesOnly` factory carries `incompatibleWith` listing every charge motif id (rule 4 below) and `ultimateEligible: false` (so `buildUltimateCategoryPool()` drops it for 9×9 — pure-stripe answer pools are too narrow to back 9-per-cell Hall feasibility).
-- `POPULATION_BREAKS_FOR_RANDOM` — 6 population-threshold breakpoints: `>=10M / >=50M / >=100M` (populous) and `<=20M / <=5M / <=1M` (small). The `population(op, n)` factory bakes `exclusiveGroup: 'population'` on all six, so no two population constraints ever meet across axes (rules out both the impossible band `>=100M × <=1M` and the redundant `>=10M × <=20M`). Only the `>=10M` break is `ultimate: true`; the other five carry `ultimateEligible: false`, so `buildUltimateCategoryPool()` keeps **exactly one** population category in 9×9 (the extreme tiers can't back 9-distinct-per-cell against a continent — e.g. no Oceania country tops 10M).
-- `AREA_BREAKS_FOR_RANDOM` is the km² twin, identical in shape: `>=100K / >=500K / >=1M` (large) and `<=100K / <=10K / <=1K` (small), `exclusiveGroup: 'area'`, `>=100K` the sole `ultimate: true`. Same rules, same 9×9 treatment. Any future threshold metric is added the same way (see the **add-world-metric** skill).
-- `DENSITY_BREAKS_FOR_RANDOM` is the people-per-km² twin, same shape: `>=100 / >=200 / >=500` (dense) and `<=100 / <=30 / <=10` (sparse), `exclusiveGroup: 'density'`, `>=100` the sole `ultimate: true`. Same rules, same 9×9 treatment.
+- `STRIPES_ORIENTATIONS_FOR_RANDOM` — `['horizontal', 'vertical']`. The `hasStripesOnly` factory carries `incompatibleWith` listing every charge motif id (rule 4 below).
+- `POPULATION_BREAKS_FOR_RANDOM` — 6 population-threshold breakpoints: `>=10M / >=50M / >=100M` (populous) and `<=20M / <=5M / <=1M` (small). The `population(op, n)` factory bakes `exclusiveGroup: 'population'` on all six, so no two population constraints ever meet across axes (rules out both the impossible band `>=100M × <=1M` and the redundant `>=10M × <=20M`).
+- `AREA_BREAKS_FOR_RANDOM` is the km² twin, identical in shape: `>=100K / >=500K / >=1M` (large) and `<=100K / <=10K / <=1K` (small), `exclusiveGroup: 'area'`. Any future threshold metric is added the same way (see the **add-world-metric** skill).
+- `DENSITY_BREAKS_FOR_RANDOM` is the people-per-km² twin, same shape: `>=100 / >=200 / >=500` (dense) and `<=100 / <=30 / <=10` (sparse), `exclusiveGroup: 'density'`.
 
-**Metric-threshold categories (`population`, `area`, `density`) are the ones whose predicate does NOT read a `countries.json` field.** They read `country.population` / `country.area` / `country.density`, denormalized from `flags/metrics/<key>.json` onto each Country at load by `attachPopulations` / `attachAreas` / `attachDensities` (in `group.js`). Every TTT load site attaches **all three**: both party servers (`party/server.js`, `party/ultimateServer.js`, static JSON import), both offline pages, and both online pages (`ticTacToe/page.js`, `ticTacToe/9x9/page.js`, tolerant browser `fetch`). **If a load site forgets to attach, that metric's cells are silently always-empty** and the generator never picks them there (or burns retries). Population omits only non-place flags (area and density are dense, every real place has a value); an absent value matches neither `>=` nor `<=`, and the picker's `metricDataGap` guard shows it as "no data". Rehydration from the wire/storage id needs no metric data because the predicate closes over the raw number in the id (`categoryFromId('density:>=100')`).
+**Metric-threshold categories (`population`, `area`, `density`) are the ones whose predicate does NOT read a `countries.json` field.** They read `country.population` / `country.area` / `country.density`, denormalized from `flags/metrics/<key>.json` onto each Country at load by `attachPopulations` / `attachAreas` / `attachDensities` (in `group.js`). Every TTT load site attaches **all three**: the party server (`party/server.js`, static JSON import), and the offline / solo / online pages (`ticTacToe/page.js` and siblings, tolerant browser `fetch`). **If a load site forgets to attach, that metric's cells are silently always-empty** and the generator never picks them there (or burns retries). Population omits only non-place flags (area and density are dense, every real place has a value); an absent value matches neither `>=` nor `<=`, and the picker's `metricDataGap` guard shows it as "no data". Rehydration from the wire/storage id needs no metric data because the predicate closes over the raw number in the id (`categoryFromId('density:>=100')`).
 
 `ALL_MOTIFS` is a superset that adds `union-jack` for the findFlag / flagsdata UI — union-jack isn't in the random pool because it has no compelling puzzle hook and very narrow continent coverage.
 
@@ -52,19 +51,17 @@ Empty match-sets are skipped — those are `isPuzzleGeneratable`'s failure mode,
 
 Default `minPerCell = 2` so the player has a real choice in each cell. The backtracking solver then checks that 9 distinct countries can be assigned across the grid (no country reused).
 
-### 3b. `hasUltimatePuzzleSolution` (9×9) — Hall-marriage check
+### 4. `metricGroupRepeated` — one metric *family* per puzzle, across both axes
 
-For the 9×9 board, each of the 9 cells needs `perCell = 9` distinct countries with no overlap. The check enumerates all 2^9 − 1 = 511 non-empty subsets of cells and verifies the union of their candidate countries is large enough (Hall's defect theorem). Cheap enough to run inside the loop.
-
-### 4. `ultimateEligible: false` — pool-level filter for 9×9
-
-Some categories work for 3×3 (min 2 candidates per cell) but can't back 9×9 (need 9 distinct). Rather than burn 500 retries discovering this via `hasUltimatePuzzleSolution`, mark the category `ultimateEligible: false` and `buildUltimateCategoryPool()` drops it before `randomPuzzle` ever sees it. Current users: both `hasStripesOnly` categories (Europe has 8 pure-horizontals and 5 pure-verticals — both under 9), and five of the six `POPULATION_BREAKS_FOR_RANDOM` (only `>=10M` stays in 9×9). Default (undefined / true) keeps the category in both pools.
+`SINGLE_USE_METRIC_GROUPS` (engine.js) bakes an `exclusiveGroup` per metric family, and this rule rejects a puzzle carrying the same family twice — including two tiers **on the same axis**, which `axesConflict` (cross-axis only) doesn't catch. So "over 10M people" and "under 1M people" can't both appear, and neither can two area tiers down the rows.
 
 ### 5. `lacksFlagVisualCategory` — every board needs ≥1 flag-reading rule
 
 At least one of the six categories must read the flag's own visual design, not just a country fact. `FLAG_VISUAL_KINDS` is the set of id-prefixes that qualify: `hasColor`, `colorCount`, `hasMotif`, `stripesOnly`. Everything else — `continent` and every world-metric threshold (`population`, `area`, `gdp`, `temperature`, `happiness`, …) — is answerable without looking at the flag. `isFlagVisualCategory(cat)` classifies one category by that prefix; `lacksFlagVisualCategory(rows, cols)` is true iff none of the six qualify, and the generator retries.
 
-Why this earns a rule (per the "when to add" bar below): the ~30 metric families now outnumber the ~19 flag-visual categories in the pool by a wide margin, so an unconstrained six-pick averages *under one* flag-visual rule — a concrete, recurring degeneracy (an all-stats board that plays as a geography quiz, not a flag game), not a curation preference. It reads ids only (no country data), so it runs **first** in both reject ladders — cheapest prune, and it thins the ~40% of raw 3×3 draws that carry zero flag-visual before the expensive cell checks. The 9×9 pool is naturally flag-visual-heavy (most metric families are `ultimateEligible: false` and drop out), so the rule rarely fires there. Pinned by the ≥1-flag-visual assertion added to both 30-seed real-data sweeps in `flags/countries.test.js`, plus unit tests in `engine.test.js`.
+Why this earns a rule (per the "when to add" bar below): the 32 metric families badly outnumber the 20 flag-visual categories in the 142-entry pool, so an unconstrained six-pick averages *under one* flag-visual rule — a concrete, recurring degeneracy (an all-stats board that plays as a geography quiz, not a flag game), not a curation preference. It reads ids only (no country data), so it runs **first** in the reject ladder — cheapest prune, and it thins the raw draws that carry zero flag-visual before the expensive cell checks. Pinned by the ≥1-flag-visual assertion in the 30-seed real-data sweep in `flags/countries.test.js`, plus unit tests in `engine.test.js`.
+
+`FLAG_VISUAL_KINDS` / `isFlagVisualCategory` are also the natural lever for any "flag questions only" pool filter — they already partition the pool into flag-visual vs country-fact. One wart to know: `hasMotif:eu-member` classifies as flag-visual by id prefix, but EU membership isn't readable from the flag.
 
 ## When to add a new rejection rule
 
@@ -76,7 +73,7 @@ The rules above cover the failure modes we've seen so far. Don't add a new rule 
 
 3. **You can't fix it at the data layer.** If a motif tag is "too narrow" or "too political", consider removing it from `MOTIFS_FOR_RANDOM` (it can still live in `ALL_MOTIFS` for filters) rather than coding a new rule. The data-layer fix is more transparent and reversible.
 
-If you do add a rule: model it after `axesConflict` / `axesImpliedPair` (a pure function on `(rows, cols, countries?)` returning a boolean), wire it into both `generateRandomPuzzle` and `generateUltimateRandomPuzzle`, and add the matching seeds-based pin in `flags/countries.test.js`.
+If you do add a rule: model it after `axesConflict` / `axesImpliedPair` (a pure function on `(rows, cols, countries?)` returning a boolean), wire it into `generateRandomPuzzle`'s reject ladder, and add the matching seeds-based pin in `flags/countries.test.js`.
 
 ## Why not a data-level exclusions file?
 
@@ -112,6 +109,6 @@ The generator throws when the retry budget is exhausted. Walking the diagnostic 
 
 - **Helper unit tests**: `flags/engine.test.js` — `axesConflict` (3 tests), `axesImpliedPair` (5 tests).
 - **Generator behaviour against synthetic data**: `flags/engine.test.js` — pinned across 10 seeds for both `axesConflict` and `axesImpliedPair`.
-- **Generator behaviour against real data**: `flags/countries.test.js` — 30-seed sweep that runs the live pool (population attached, like production) through `generateRandomPuzzle`, asserting no implied pair leaks and the budget isn't exhausted; plus pins that population categories actually surface in 3×3 and that only `>=10M` ever reaches 9×9.
+- **Generator behaviour against real data**: `flags/countries.test.js` — 30-seed sweep that runs the live pool (population attached, like production) through `generateRandomPuzzle`, asserting no implied pair leaks and the budget isn't exhausted; plus pins that population and stripesOnly categories actually surface in the pool.
 
 When changing the generator, the real-data test is the load-bearing one — failure there means the live game is broken regardless of what synthetic tests say.

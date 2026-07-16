@@ -1,6 +1,6 @@
 /**
  * The in-game "match strip" for both online Tic-Tac-Toe variants (3×3 and
- * 9×9): two facing player cards with a centre scoreboard. It replaces the
+ * two facing player cards with a centre scoreboard. It replaces the
  * old stacked header — a "You are X" role line, an inline "· vs Opp (2:1)"
  * matchup, and a floating "Opponent's turn" status line — with one row that
  * carries identity AND whose-turn at a glance:
@@ -13,7 +13,7 @@
  * the opponent seat is an empty dashed card with a pulsing dot.
  *
  * Same markup rendered on both pages (CLAUDE.md "same mechanism = same
- * code"): `ticTacToe/page.js` imports it as `./matchStrip.js`, the 9×9 page
+ * code"): `ticTacToe/page.js` imports it as `./matchStrip.js`, the offline page
  * as `../matchStrip.js`. The pure state/format helpers below are unit-tested
  * in `matchStrip.test.js`; `renderMatchStrip` is thin DOM glue on top.
  *

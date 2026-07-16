@@ -377,37 +377,6 @@ test('TTT rules do NOT cross-contaminate (won vs lost vs count are independent)'
   assert.equal(ruleById('first-ttt-win').predicate({ totalCompleted: 99, cleanSweeps: 99 }), false);
 });
 
-test('first-ttt-9x9-game fires at tttGamesPlayed9x9 >= 1', () => {
-  const rule = ruleById('first-ttt-9x9-game');
-  assert.equal(rule.predicate({ tttGamesPlayed9x9: 0 }), false);
-  assert.equal(rule.predicate({ tttGamesPlayed9x9: 1 }), true);
-  assert.equal(rule.predicate({}), false);
-});
-
-test('first-ttt-9x9-win fires when hasWon9x9 is strict-true', () => {
-  const rule = ruleById('first-ttt-9x9-win');
-  assert.equal(rule.predicate({ hasWon9x9: true }), true);
-  assert.equal(rule.predicate({ hasWon9x9: false }), false);
-  assert.equal(rule.predicate({}), false);
-  // Defensive: a truthy non-boolean must not satisfy the predicate.
-  assert.equal(rule.predicate({ hasWon9x9: /** @type {any} */ (1) }), false);
-});
-
-test('9x9 rules do NOT trigger from 3x3-only play (mode separation pinned)', () => {
-  // The whole point of these rules is mode-specific recognition. A
-  // player who has played a hundred 3x3 games but zero 9x9 should
-  // see neither badge. The signals come from computeTttSignals's
-  // m9x9-only branches.
-  assert.equal(
-    ruleById('first-ttt-9x9-game').predicate({ tttGamesPlayed: 100, tttGamesPlayed9x9: 0 }),
-    false,
-  );
-  assert.equal(
-    ruleById('first-ttt-9x9-win').predicate({ hasWonTtt: true, hasWon9x9: false }),
-    false,
-  );
-});
-
 test('social rules do NOT cross-contaminate (each reads only its own counter)', () => {
   // Pin the field-mapping so a future rename can't silently wire a
   // share rule to the wrong surface or to a daily counter.
@@ -540,7 +509,7 @@ test('evaluateAchievements with a full snapshot earns every badge across every t
     hasNickname: true, hasLinkedDevice: true,
     dailySharesCount: 1, quizSharesCount: 1, findflagSharesCount: 1, coffeeClicked: true,
     quiz60sCurrentStreak: 30, quiz60sMaxStreak: 30, quiz60sDistinctDays: 100,
-    tttGamesPlayed: 100, tttGamesPlayed9x9: 1, hasWonTtt: true, hasWon9x9: true, hasLostTtt: true,
+    tttGamesPlayed: 100, hasWonTtt: true, hasLostTtt: true,
   });
   assert.ok(out.every((s) => s.earned), 'all rules should be earned');
 });
@@ -610,7 +579,7 @@ test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration
     hasNickname: true, hasLinkedDevice: true,
     dailySharesCount: 1, quizSharesCount: 1, findflagSharesCount: 1, coffeeClicked: true,
     quiz60sCurrentStreak: 30, quiz60sMaxStreak: 30, quiz60sDistinctDays: 100,
-    tttGamesPlayed: 100, tttGamesPlayed9x9: 1, hasWonTtt: true, hasWon9x9: true, hasLostTtt: true,
+    tttGamesPlayed: 100, hasWonTtt: true, hasLostTtt: true,
   });
   assert.deepEqual(
     newly.map((r) => r.id),

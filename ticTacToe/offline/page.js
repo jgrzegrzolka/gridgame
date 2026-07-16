@@ -386,7 +386,6 @@ function runTicTacToe({ puzzle, countries }) {
     td.classList.toggle('owner-x', cell.owner === 'X');
     td.classList.toggle('owner-o', cell.owner === 'O');
     td.classList.toggle('revealed', !!cell.revealed);
-    td.classList.toggle('exhausted', !!cell.exhausted);
     td.classList.remove('winning');
     if (cell.country) {
       const img = document.createElement('img');

@@ -52,9 +52,7 @@
  *   quiz60sMaxStreak?: number,
  *   quiz60sDistinctDays?: number,
  *   tttGamesPlayed?: number,
- *   tttGamesPlayed9x9?: number,
  *   hasWonTtt?: boolean,
- *   hasWon9x9?: boolean,
  *   hasLostTtt?: boolean,
  * }} Snapshot
  *
@@ -434,8 +432,6 @@ const ICON_TTT_WIN = tttGridWithLabel('W', 8);
 const ICON_TTT_LOSS = tttGridWithLabel('L', 8);
 const ICON_TTT_X10 = tttGridWithLabel('×10', 8);
 const ICON_TTT_X100 = tttGridWithLabel('×100', 7);
-const ICON_TTT_9X9_PLAY = tttGridWithLabel('9×9', 7);
-const ICON_TTT_9X9_WIN = tttGridWithLabel('9 W', 7);
 
 // Coffee cup with rising steam — Angel Investor. Pixel-art cup body
 // (squarish) + handle on the right + two steam lines above.
@@ -914,22 +910,6 @@ export const TTT_ACHIEVEMENTS = [
     description: 'Played a hundred tic-tac-toe games.',
     hint: 'Play a hundred tic-tac-toe rounds.',
     predicate: (s) => num(s.tttGamesPlayed) >= 100,
-  },
-  {
-    id: 'first-ttt-9x9-game',
-    icon: ICON_TTT_9X9_PLAY,
-    name: '9×9 Player',
-    description: 'Played your first 9×9 tic-tac-toe round.',
-    hint: 'Play a 9×9 tic-tac-toe round online.',
-    predicate: (s) => num(s.tttGamesPlayed9x9) >= 1,
-  },
-  {
-    id: 'first-ttt-9x9-win',
-    icon: ICON_TTT_9X9_WIN,
-    name: '9×9 Winner',
-    description: 'Won a 9×9 tic-tac-toe game.',
-    hint: 'Win a 9×9 tic-tac-toe round online.',
-    predicate: (s) => s.hasWon9x9 === true,
   },
 ];
 

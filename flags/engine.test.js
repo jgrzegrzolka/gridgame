@@ -16,9 +16,6 @@ import {
   findPuzzleSolution,
   isPuzzleGeneratable,
   generateRandomPuzzle,
-  hasUltimatePuzzleSolution,
-  findUltimateAssignment,
-  generateUltimateRandomPuzzle,
   axesConflict,
   metricGroupRepeated,
   SINGLE_USE_METRIC_GROUPS,
@@ -75,7 +72,6 @@ import {
   elevation,
   categoryFromId,
   hasStripesOnly,
-  buildUltimateCategoryPool,
 } from './engine.js';
 import { createCountry } from './group.js';
 
@@ -976,7 +972,6 @@ test('coffee factory wires id, predicate, exclusiveGroup off the denormalized fi
 test('COFFEE_BREAKS_FOR_RANDOM is >=-only (a sparse production metric has no meaningful <= tier)', () => {
   assert.ok(COFFEE_BREAKS_FOR_RANDOM.length > 0);
   assert.ok(COFFEE_BREAKS_FOR_RANDOM.every((b) => b.op === '>='), 'every coffee tier is atLeast');
-  assert.ok(COFFEE_BREAKS_FOR_RANDOM.every((b) => b.ultimate !== true), 'no coffee tier is 9×9-eligible');
 });
 
 test('categoryFromId round-trips coffee thresholds', () => {
@@ -1013,14 +1008,10 @@ test('elevation factory wires id, predicate, exclusiveGroup off the denormalized
   assert.equal(lo.predicate(/** @type {any} */ ({})), false); // an org (no field) matches neither
 });
 
-test('ELEVATION_BREAKS_FOR_RANDOM is two-directional with exactly one 9×9-eligible break', () => {
+test('ELEVATION_BREAKS_FOR_RANDOM is two-directional', () => {
   // Dense + two-directional, the mirror of area: both high (>=) and low (<=) tiers.
   assert.ok(ELEVATION_BREAKS_FOR_RANDOM.some((b) => b.op === '>='), 'has a high tier');
   assert.ok(ELEVATION_BREAKS_FOR_RANDOM.some((b) => b.op === '<='), 'has a low tier');
-  // Dense, so unlike coffee it IS 9×9-eligible: exactly the broad >=1000 break.
-  const ultimate = ELEVATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate === true);
-  assert.equal(ultimate.length, 1, 'exactly one ultimate break');
-  assert.deepEqual(ultimate[0], { op: '>=', n: 1_000, ultimate: true });
 });
 
 test('categoryFromId round-trips elevation thresholds (both directions)', () => {
@@ -1066,11 +1057,10 @@ test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   );
 });
 
-test('hasStripesOnly factory wires id, predicate, exclusiveGroup, incompatibleWith, ultimateEligible', () => {
+test('hasStripesOnly factory wires id, predicate, exclusiveGroup, incompatibleWith', () => {
   const h = hasStripesOnly('horizontal');
   assert.equal(h.id, 'stripesOnly:horizontal');
   assert.equal(h.exclusiveGroup, 'stripesOnly');
-  assert.equal(h.ultimateEligible, false);
   assert.ok(h.incompatibleWith?.includes('hasMotif:cross'));
   assert.ok(h.incompatibleWith?.includes('hasMotif:coat-of-arms'));
   assert.ok(h.incompatibleWith?.includes('hasMotif:animal'));
@@ -1124,285 +1114,6 @@ test('axesConflict allows stripesOnly × eu-member (eu-member is not a visual ch
     [hasMotif('eu-member'), hasColor('blue'), hasColor('white')],
   );
   assert.equal(conflict, false);
-});
-
-test('buildUltimateCategoryPool excludes stripesOnly categories (their answer sets are too narrow for 9×9)', () => {
-  const ultPool = buildUltimateCategoryPool();
-  const stripes = ultPool.filter((c) => c.id.startsWith('stripesOnly:'));
-  assert.equal(stripes.length, 0, 'stripesOnly cats must not appear in the 9×9 pool');
-  // Sanity check — the non-stripesOnly cats survive, minus the extreme
-  // population + area + density tiers (only the one `ultimate: true` break per
-  // metric stays in 9×9).
-  const droppedPop = POPULATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  const droppedArea = AREA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  const droppedDensity = DENSITY_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  const droppedGdp = GDP_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  const droppedGdpPerCapita = GDP_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  // Coffee has NO ultimate break (too sparse/concentrated for 9×9), so ALL its
-  // breaks drop — coffee never appears in the Ultimate pool.
-  const droppedCoffee = COFFEE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedCoffee, COFFEE_BREAKS_FOR_RANDOM.length, 'no coffee tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('coffee:')).length,
-    0,
-    'coffee cats must not appear in the 9×9 pool',
-  );
-  // Wine, like coffee, has NO ultimate break (too sparse for 9×9), so ALL its
-  // breaks drop, so wine never appears in the Ultimate pool.
-  const droppedWine = WINE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedWine, WINE_BREAKS_FOR_RANDOM.length, 'no wine tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('wine:')).length,
-    0,
-    'wine cats must not appear in the 9×9 pool',
-  );
-  // Cocoa, like coffee / wine, has NO ultimate break, so ALL its breaks drop.
-  const droppedCocoa = COCOA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedCocoa, COCOA_BREAKS_FOR_RANDOM.length, 'no cocoa tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('cocoa:')).length,
-    0,
-    'cocoa cats must not appear in the 9×9 pool',
-  );
-  // Banana, like the other crops, has NO ultimate break, so ALL its breaks drop.
-  const droppedBanana = BANANA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedBanana, BANANA_BREAKS_FOR_RANDOM.length, 'no banana tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('banana:')).length,
-    0,
-    'banana cats must not appear in the 9×9 pool',
-  );
-  // Apple, like the other crops, has NO ultimate break, so ALL its breaks drop.
-  const droppedApple = APPLE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedApple, APPLE_BREAKS_FOR_RANDOM.length, 'no apple tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('apple:')).length,
-    0,
-    'apple cats must not appear in the 9×9 pool',
-  );
-  // Elevation IS 9×9-eligible (dense): only its five non-ultimate breaks drop,
-  // the broad >=1000 tier stays, so unlike coffee it DOES appear in the pool.
-  const droppedElevation = ELEVATION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('elevation:')).length,
-    1,
-    'exactly the ultimate elevation tier appears in the 9×9 pool',
-  );
-  // Coastline IS 9×9-eligible (dense), like elevation: only its five non-ultimate
-  // breaks drop, the broad >=1000 tier stays.
-  const droppedCoastline = COASTLINE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('coastline:')).length,
-    1,
-    'exactly the ultimate coastline tier appears in the 9×9 pool',
-  );
-  // Forest IS 9×9-eligible (dense), like elevation / coastline: only its five
-  // non-ultimate breaks drop, the broad >=30 tier stays.
-  const droppedForest = FOREST_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('forest:')).length,
-    1,
-    'exactly the ultimate forest tier appears in the 9×9 pool',
-  );
-  // Oil, like the crops, has NO ultimate break, so ALL its breaks drop.
-  const droppedOil = OIL_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedOil, OIL_BREAKS_FOR_RANDOM.length, 'no oil tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('oil:')).length,
-    0,
-    'oil cats must not appear in the 9×9 pool',
-  );
-  // Rice, like the crops, has NO ultimate break, so ALL its breaks drop.
-  const droppedRice = RICE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedRice, RICE_BREAKS_FOR_RANDOM.length, 'no rice tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('rice:')).length,
-    0,
-    'rice cats must not appear in the 9×9 pool',
-  );
-  // Coal, like oil / the crops, has NO ultimate break, so ALL its breaks drop.
-  const droppedCoal = COAL_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedCoal, COAL_BREAKS_FOR_RANDOM.length, 'no coal tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('coal:')).length,
-    0,
-    'coal cats must not appear in the 9×9 pool',
-  );
-  // Sheep per capita, like the crops, has NO ultimate break (one Falkland
-  // outlier over a thin tail), so ALL its breaks drop.
-  const droppedSheepPerCapita = SHEEP_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedSheepPerCapita, SHEEP_PER_CAPITA_BREAKS_FOR_RANDOM.length, 'no sheepPerCapita tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('sheepPerCapita:')).length,
-    0,
-    'sheepPerCapita cats must not appear in the 9×9 pool',
-  );
-  // Cattle per capita, like the sheep twin, has NO ultimate break, so ALL drop.
-  const droppedCattlePerCapita = CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedCattlePerCapita, CATTLE_PER_CAPITA_BREAKS_FOR_RANDOM.length, 'no cattlePerCapita tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('cattlePerCapita:')).length,
-    0,
-    'cattlePerCapita cats must not appear in the 9×9 pool',
-  );
-  // Beer per capita is absence:'unknown' (not dense), so it too has NO ultimate
-  // break: ALL its breaks drop from the 9×9 pool.
-  const droppedBeerPerCapita = BEER_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedBeerPerCapita, BEER_PER_CAPITA_BREAKS_FOR_RANDOM.length, 'no beerPerCapita tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('beerPerCapita:')).length,
-    0,
-    'beerPerCapita cats must not appear in the 9×9 pool',
-  );
-  // Tea, like coffee, has NO ultimate break (too sparse for 9×9), so ALL drop.
-  const droppedTea = TEA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedTea, TEA_BREAKS_FOR_RANDOM.length, 'no tea tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('tea:')).length,
-    0,
-    'tea cats must not appear in the 9×9 pool',
-  );
-  // Sugar cane, like the other sparse crops, has NO ultimate break, so ALL drop.
-  const droppedSugarcane = SUGARCANE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedSugarcane, SUGARCANE_BREAKS_FOR_RANDOM.length, 'no sugarcane tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('sugarcane:')).length,
-    0,
-    'sugarcane cats must not appear in the 9×9 pool',
-  );
-  // Gold, like the other sparse extractives/crops, has NO ultimate break, so ALL drop.
-  const droppedGold = GOLD_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedGold, GOLD_BREAKS_FOR_RANDOM.length, 'no gold tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('gold:')).length,
-    0,
-    'gold cats must not appear in the 9×9 pool',
-  );
-  // Alcohol per capita is absence:'unknown' like beer, so it has NO ultimate break.
-  const droppedAlcoholPerCapita = ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedAlcoholPerCapita, ALCOHOL_PER_CAPITA_BREAKS_FOR_RANDOM.length, 'no alcoholPerCapita tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('alcoholPerCapita:')).length,
-    0,
-    'alcoholPerCapita cats must not appear in the 9×9 pool',
-  );
-  // Meat per capita is absence:'unknown' like the drink metrics, so ALL drop.
-  const droppedMeatPerCapita = MEAT_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedMeatPerCapita, MEAT_PER_CAPITA_BREAKS_FOR_RANDOM.length, 'no meatPerCapita tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('meatPerCapita:')).length,
-    0,
-    'meatPerCapita cats must not appear in the 9×9 pool',
-  );
-  // Borders is dense but top-heavy (a long tail of 0s), so it has NO ultimate break.
-  const droppedBorders = BORDERS_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedBorders, BORDERS_BREAKS_FOR_RANDOM.length, 'no borders tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('borders:')).length,
-    0,
-    'borders cats must not appear in the 9×9 pool',
-  );
-  // Olive oil, like the other sparse crops, has NO ultimate break, so ALL drop.
-  const droppedOliveOil = OLIVE_OIL_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedOliveOil, OLIVE_OIL_BREAKS_FOR_RANDOM.length, 'no oliveOil tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('oliveOil:')).length,
-    0,
-    'oliveOil cats must not appear in the 9×9 pool',
-  );
-  // Honey, like the other sparse producers, has NO ultimate break, so ALL drop.
-  const droppedHoney = HONEY_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedHoney, HONEY_BREAKS_FOR_RANDOM.length, 'no honey tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('honey:')).length,
-    0,
-    'honey cats must not appear in the 9×9 pool',
-  );
-  // Temperature is 3×3-only (no ultimate break), so ALL its breaks drop.
-  const droppedTemperature = TEMPERATURE_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedTemperature, TEMPERATURE_BREAKS_FOR_RANDOM.length, 'no temperature tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('temperature:')).length,
-    0,
-    'temperature cats must not appear in the 9×9 pool',
-  );
-  // Happiness is 3×3-only (absence:'unknown', no ultimate break), so ALL drop.
-  const droppedHappiness = HAPPINESS_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedHappiness, HAPPINESS_BREAKS_FOR_RANDOM.length, 'no happiness tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('happiness:')).length,
-    0,
-    'happiness cats must not appear in the 9×9 pool',
-  );
-  // Corruption is 3×3-only (absence:'unknown', no ultimate break), so ALL drop.
-  const droppedCorruption = CORRUPTION_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedCorruption, CORRUPTION_BREAKS_FOR_RANDOM.length, 'no corruption tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('corruption:')).length,
-    0,
-    'corruption cats must not appear in the 9×9 pool',
-  );
-  // Tourism per capita is 3×3-only (absence:'unknown', no ultimate break), so ALL drop.
-  const droppedTourismPerCapita = TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedTourismPerCapita, TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM.length, 'no tourismPerCapita tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('tourismPerCapita:')).length,
-    0,
-    'tourismPerCapita cats must not appear in the 9×9 pool',
-  );
-  // Electricity per capita is 3×3-only (absence:'unknown', no ultimate break), so ALL drop.
-  const droppedElectricityPerCapita = ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate !== true).length;
-  assert.equal(droppedElectricityPerCapita, ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM.length, 'no electricityPerCapita tier is ultimate-eligible');
-  assert.equal(
-    ultPool.filter((c) => c.id.startsWith('electricityPerCapita:')).length,
-    0,
-    'electricityPerCapita cats must not appear in the 9×9 pool',
-  );
-  assert.equal(
-    ultPool.length,
-    buildRandomCategoryPool().length - STRIPES_ORIENTATIONS_FOR_RANDOM.length
-      - droppedPop - droppedArea - droppedDensity - droppedGdp - droppedGdpPerCapita - droppedCoffee
-      - droppedWine - droppedCocoa - droppedBanana - droppedApple - droppedElevation - droppedCoastline - droppedForest - droppedOil - droppedRice - droppedCoal
-      - droppedSheepPerCapita - droppedCattlePerCapita - droppedBeerPerCapita - droppedTea - droppedSugarcane - droppedGold
-      - droppedAlcoholPerCapita - droppedMeatPerCapita - droppedBorders - droppedOliveOil - droppedHoney - droppedTemperature - droppedHappiness - droppedCorruption
-      - droppedTourismPerCapita - droppedElectricityPerCapita,
-  );
-});
-
-test('buildUltimateCategoryPool keeps exactly one population breakpoint (the ultimate:true tier)', () => {
-  const ultPool = buildUltimateCategoryPool();
-  const pop = ultPool.filter((c) => c.id.startsWith('population:'));
-  assert.equal(pop.length, 1, '9×9 keeps a single population breakpoint');
-  const ultimateBreak = POPULATION_BREAKS_FOR_RANDOM.find((b) => b.ultimate === true);
-  assert.ok(ultimateBreak, 'exactly one break should be flagged ultimate');
-  assert.equal(pop[0].id, `population:${ultimateBreak?.op}${ultimateBreak?.n}`);
-});
-
-test('buildUltimateCategoryPool keeps exactly one area breakpoint (the ultimate:true tier)', () => {
-  const ultPool = buildUltimateCategoryPool();
-  const areas = ultPool.filter((c) => c.id.startsWith('area:'));
-  assert.equal(areas.length, 1, '9×9 keeps a single area breakpoint');
-  const ultimateBreak = AREA_BREAKS_FOR_RANDOM.find((b) => b.ultimate === true);
-  assert.ok(ultimateBreak, 'exactly one area break should be flagged ultimate');
-  assert.equal(areas[0].id, `area:${ultimateBreak?.op}${ultimateBreak?.n}`);
-});
-
-test('buildUltimateCategoryPool keeps exactly one elevation breakpoint (the ultimate:true tier)', () => {
-  const ultPool = buildUltimateCategoryPool();
-  const elevations = ultPool.filter((c) => c.id.startsWith('elevation:'));
-  assert.equal(elevations.length, 1, '9×9 keeps a single elevation breakpoint');
-  const ultimateBreak = ELEVATION_BREAKS_FOR_RANDOM.find((b) => b.ultimate === true);
-  assert.ok(ultimateBreak, 'exactly one elevation break should be flagged ultimate');
-  assert.equal(elevations[0].id, `elevation:${ultimateBreak?.op}${ultimateBreak?.n}`);
-});
-
-test('buildUltimateCategoryPool keeps exactly one density breakpoint (the ultimate:true tier)', () => {
-  const ultPool = buildUltimateCategoryPool();
-  const densities = ultPool.filter((c) => c.id.startsWith('density:'));
-  assert.equal(densities.length, 1, '9×9 keeps a single density breakpoint');
-  const ultimateBreak = DENSITY_BREAKS_FOR_RANDOM.find((b) => b.ultimate === true);
-  assert.ok(ultimateBreak, 'exactly one density break should be flagged ultimate');
-  assert.equal(densities[0].id, `density:${ultimateBreak?.op}${ultimateBreak?.n}`);
 });
 
 test('categoryFromId round-trips stripesOnly:horizontal and stripesOnly:vertical', () => {
@@ -1697,12 +1408,6 @@ test('population(<=, N) matches countries whose population is at most N; missing
   assert.equal(cat.predicate(noValue), false);
 });
 
-test('population factory flags ultimateEligible:false only when asked (default keeps it in 9×9)', () => {
-  assert.equal(population('>=', 10_000_000).ultimateEligible, undefined);
-  assert.equal(population('>=', 10_000_000, { ultimateEligible: true }).ultimateEligible, undefined);
-  assert.equal(population('>=', 100_000_000, { ultimateEligible: false }).ultimateEligible, false);
-});
-
 test('axesConflict blocks two population breakpoints across opposite axes (single exclusiveGroup)', () => {
   // >=100M row × <=1M col would always be empty; >=10M × <=20M would be
   // redundant. Same exclusiveGroup makes axesConflict reject both.
@@ -1776,11 +1481,6 @@ test('area(<=, N) matches countries whose area is at most N; missing value never
   assert.equal(cat.predicate(noValue), false);
 });
 
-test('area factory flags ultimateEligible:false only when asked', () => {
-  assert.equal(area('>=', 100_000).ultimateEligible, undefined);
-  assert.equal(area('>=', 1_000_000, { ultimateEligible: false }).ultimateEligible, false);
-});
-
 test('axesConflict blocks two area breakpoints across opposite axes (single exclusiveGroup)', () => {
   assert.equal(axesConflict([area('>=', 1_000_000)], [area('<=', 1_000)]), true);
   assert.equal(axesConflict([area('>=', 100_000)], [area('<=', 100_000)]), true);
@@ -1799,12 +1499,6 @@ test('density(op, N) matches on people/km²; missing value never matches', () =>
   assert.equal(dense.predicate(none), false);
   assert.equal(sparse.predicate(mn), true);
   assert.equal(sparse.predicate(mo), false);
-  assert.equal(DENSITY_BREAKS_FOR_RANDOM.filter((b) => b.ultimate).length, 1, 'exactly one ultimate density break');
-});
-
-test('density factory flags ultimateEligible:false only when asked', () => {
-  assert.equal(density('>=', 100).ultimateEligible, undefined);
-  assert.equal(density('>=', 500, { ultimateEligible: false }).ultimateEligible, false);
 });
 
 test('axesConflict blocks two density breakpoints across opposite axes (single exclusiveGroup)', () => {
@@ -1856,7 +1550,6 @@ test('gdp(op, N) matches on US$; missing value never matches; compact label', ()
   assert.equal(big.predicate(none), false);
   assert.equal(small.predicate(tv), true);
   assert.equal(small.predicate(us), false);
-  assert.equal(GDP_BREAKS_FOR_RANDOM.filter((b) => b.ultimate).length, 1, 'exactly one ultimate gdp break');
 });
 
 test('gdpPerCapita(op, N) matches on US$/person; compact label', () => {
@@ -1870,7 +1563,6 @@ test('gdpPerCapita(op, N) matches on US$/person; compact label', () => {
   assert.equal(rich.predicate(lu), true);
   assert.equal(rich.predicate(bi), false);
   assert.equal(poor.predicate(bi), true);
-  assert.equal(GDP_PER_CAPITA_BREAKS_FOR_RANDOM.filter((b) => b.ultimate).length, 1, 'exactly one ultimate gdpPerCapita break');
 });
 
 test('categoryFromId round-trips gdp / gdpPerCapita thresholds', () => {
@@ -2205,8 +1897,7 @@ test('findPuzzleSolution does not mutate the inputs', () => {
  * Build a synthetic country pool where every (continent × color) cell of the
  * 3×3 has exactly `perCell` distinct flags matching it. Each flag also carries
  * every motif key so the random puzzle generator (which can pick motif rows/
- * cols) still finds candidates for motif cells — keeps the helper usable for
- * the `generateUltimateRandomPuzzle` test.
+ * cols) still finds candidates for motif cells.
  *
  * @param {string[]} continents
  * @param {string[]} colors
@@ -2230,10 +1921,10 @@ function denseSquarePool(continents, colors, perCell) {
           continent: /** @type {any} */ (cont), primaryColors: [color],
           motifs: [motif],
           // Spread metric values WITHIN each (continent × colour) cell so the
-          // 9×9 pool's `>=` metric breaks (population >=10M, area >=100K,
-          // density >=100, elevation >=1000 m) are fillable everywhere (matching
-          // production, where every country has a value) yet match a fraction per
-          // cell, so no break is a superset of a continent. Offset so the metrics
+          // `>=` metric breaks (population >=10M, area >=100K, density >=100,
+          // elevation >=1000 m) are fillable everywhere (matching production,
+          // where every country has a value) yet match a fraction per cell, so
+          // no break is a superset of a continent. Offset so the metrics
           // aren't subset-related (n%2 vs n%3 give distinct partitions).
           population: n % 2 === 0 ? 20_000_000 : 5_000_000,
           area: n % 2 === 1 ? 200_000 : 50_000,
@@ -2248,87 +1939,6 @@ function denseSquarePool(continents, colors, perCell) {
   return out;
 }
 
-test('hasUltimatePuzzleSolution: true when each of the 9 cells has its own 9 disjoint candidates', () => {
-  const puzzle = {
-    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
-    cols: [hasColor('red'), hasColor('blue'), hasColor('green')],
-  };
-  const countries = denseSquarePool(['Europe', 'Asia', 'Africa'], ['red', 'blue', 'green'], 9);
-  assert.equal(hasUltimatePuzzleSolution(puzzle, countries), true);
-});
-
-test('hasUltimatePuzzleSolution: false when any cell falls below 9 candidates', () => {
-  const puzzle = {
-    rows: [continent('Europe'), continent('Asia'), continent('Africa')],
-    cols: [hasColor('red'), hasColor('blue'), hasColor('green')],
-  };
-  // Every cell gets 9 except (Asia × blue) — remove one of its candidates,
-  // leaving 8. The singleton subset {(Asia, blue)} demands 9 but supply is 8.
-  const countries = denseSquarePool(['Europe', 'Asia', 'Africa'], ['red', 'blue', 'green'], 9);
-  const oneAsiaBlue = countries.find((c) => c.continent === 'Asia' && c.primaryColors?.includes('blue'));
-  assert.ok(oneAsiaBlue);
-  const filtered = countries.filter((c) => c.code !== oneAsiaBlue.code);
-  assert.equal(hasUltimatePuzzleSolution(puzzle, filtered), false);
-});
-
-test('hasUltimatePuzzleSolution: false when cells share a candidate pool too thin to feed them all', () => {
-  // Three different cells all have a generous pool, but they share the SAME
-  // 12 multi-match countries. Demand for any pair of these cells is 18; their
-  // union of candidates is only 12. Hall fails.
-  const puzzle = {
-    rows: [continent('Europe'), continent('Europe'), continent('Europe')],
-    cols: [hasColor('red'), hasColor('white'), hasColor('blue')],
-  };
-  /** @type {Country[]} */
-  const multiMatch = [];
-  for (let i = 0; i < 12; i++) {
-    multiMatch.push(country({
-      code: `m${i}`, name: `multi-${i}`, continent: 'Europe',
-      primaryColors: ['red', 'white', 'blue'],
-    }));
-  }
-  assert.equal(hasUltimatePuzzleSolution(puzzle, multiMatch), false);
-});
-
-test('hasUltimatePuzzleSolution: perCell=1 reduces it to the regular 9-distinct-country check', () => {
-  // Same multi-match pool of 12 countries, 9 cells — at perCell=1, total
-  // demand is 9 against supply 12. Hall passes.
-  const puzzle = {
-    rows: [continent('Europe'), continent('Europe'), continent('Europe')],
-    cols: [hasColor('red'), hasColor('white'), hasColor('blue')],
-  };
-  /** @type {Country[]} */
-  const multiMatch = [];
-  for (let i = 0; i < 12; i++) {
-    multiMatch.push(country({
-      code: `m${i}`, name: `multi-${i}`, continent: 'Europe',
-      primaryColors: ['red', 'white', 'blue'],
-    }));
-  }
-  assert.equal(hasUltimatePuzzleSolution(puzzle, multiMatch, 1), true);
-  // Bump perCell to 2 — total demand 18 vs supply 12 → Hall fails.
-  assert.equal(hasUltimatePuzzleSolution(puzzle, multiMatch, 2), false);
-});
-
-test('generateUltimateRandomPuzzle returns a puzzle that passes hasUltimatePuzzleSolution', () => {
-  // Saturated synthetic pool — every (continent × color) cell has 9 flags of
-  // its own. Any combination the generator survives must pass the Hall check.
-  // Deterministic mulberry32 seed + production-default 500-attempt budget so
-  // CI doesn't flake when axesImpliedPair narrows the success window past
-  // the prior 50-attempt headroom on certain Math.random sequences.
-  const countries = denseSquarePool(['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'], COLORS_FOR_RANDOM, 9);
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 3000 });
-  assert.equal(hasUltimatePuzzleSolution(puzzle, countries), true);
-});
-
-test('generateUltimateRandomPuzzle throws when no puzzle in the category pool can be 9×9-solved', () => {
-  // Sparse pool — only 1 country per (continent × color) cell. Every puzzle
-  // fails the Hall check at the singleton subset (1 < 9).
-  const countries = denseSquarePool(['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'], COLORS_FOR_RANDOM, 1);
-  assert.throws(() => generateUltimateRandomPuzzle(countries, { maxAttempts: 30 }));
-});
-
-// findUltimateAssignment
 // Constructs the 81-distinct assignment generation only proves exists.
 // Replaces the give-up greedy fill that was hitting duplicate-surfacing
 // dead-ends on the real countries dataset.
@@ -2351,166 +1961,6 @@ function emptyPreFilled() {
   return grid;
 }
 
-test('findUltimateAssignment: returns 81 distinct countries on an empty puzzle that passes the Hall check', () => {
-  // perCell=10 (not 9) + generous maxAttempts so Hall has enough breathing
-  // room and the random axis generator doesn't fail outright on an unlucky
-  // CI run. With perCell=9 some axis combinations (especially continent ×
-  // motif) leave the Hall check tight, and 50 attempts isn't always enough
-  // to roll a Hall-passing layout — this fired once in CI before the bump.
-  // The chosen seed lands on an axis combo the backtracker resolves within its
-  // budget; growing the category pool (adding a motif, or the `area` / `elevation`
-  // / `coastline` / `forest` metric breakpoints) shifts which seeds the PRNG
-  // sweeps onto, so this is a known sensitivity. Seed 3 resolves under the
-  // post-forest pool (seed 7, which resolved under the post-elevation pool,
-  // stopped when forest's 9×9 break joined the ultimate pool).
-  const countries = denseSquarePool(
-    ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
-    COLORS_FOR_RANDOM,
-    10,
-  );
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(1), maxAttempts: 3000 });
-  /** @type {Country[][][][] | null} */
-  const assignment = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(1));
-  if (!assignment) throw new Error('a solvable puzzle must yield a non-null assignment');
-  /** @type {Set<string>} */
-  const seen = new Set();
-  for (let br = 0; br < 3; br++) {
-    for (let bc = 0; bc < 3; bc++) {
-      for (let r = 0; r < 3; r++) {
-        for (let c = 0; c < 3; c++) {
-          /** @type {Country} */
-          const co = assignment[br][bc][r][c];
-          assert.ok(
-            puzzle.rows[br].predicate(co) && puzzle.cols[bc].predicate(co),
-            `${co.code} at (${br},${bc},${r},${c}) must satisfy row × col`,
-          );
-          assert.equal(seen.has(co.code), false, `${co.code} reused at (${br},${bc},${r},${c})`);
-          seen.add(co.code);
-        }
-      }
-    }
-  }
-  assert.equal(seen.size, 81);
-});
-
-test('findUltimateAssignment: respects preFilled cells and never reuses their countries', () => {
-  // 10 (not 9) per (continent × color) cell so the seeded country never
-  // starves a bottleneck. With perCell=9 a randomly-generated puzzle that
-  // pairs a continent row with a hasColor col makes that one cell strictly
-  // 9-candidate: seeding ANY country from its pool elsewhere drops the
-  // remaining candidates below the demand and the puzzle becomes unsolvable,
-  // not because the solver is broken but because Hall's theorem only
-  // guarantees the empty case. perCell=10 buys one slot of breathing room.
-  const countries = denseSquarePool(
-    ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
-    COLORS_FOR_RANDOM,
-    10,
-  );
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(1), maxAttempts: 3000 });
-  // Seed one cell at (0,0,0,0) with a country that fits its row × col.
-  const seedCandidates = countries.filter(
-    (co) => puzzle.rows[0].predicate(co) && puzzle.cols[0].predicate(co),
-  );
-  assert.ok(seedCandidates.length > 0, 'test puzzle must have a valid seed');
-  const seed = seedCandidates[0];
-  const preFilled = emptyPreFilled();
-  preFilled[0][0][0][0] = seed;
-
-  const assignment = findUltimateAssignment(puzzle, preFilled, countries, mulberry32(1));
-  if (!assignment) throw new Error('expected an assignment');
-  // Seeded cell unchanged.
-  assert.equal(assignment[0][0][0][0].code, seed.code);
-  // Seeded country appears exactly once across the whole grid.
-  let count = 0;
-  for (let br = 0; br < 3; br++) {
-    for (let bc = 0; bc < 3; bc++) {
-      for (let r = 0; r < 3; r++) {
-        for (let c = 0; c < 3; c++) {
-          if (assignment[br][bc][r][c].code === seed.code) count++;
-        }
-      }
-    }
-  }
-  assert.equal(count, 1, 'seeded country must not be reused elsewhere');
-});
-
-test('findUltimateAssignment: returns null when preFilled has burned the candidates needed elsewhere', () => {
-  // 9 countries per (continent × color) cell — exactly enough for an
-  // empty-board 81-distinct assignment. Forcibly seed a cell with a
-  // country that another small board sharing that continent also needs:
-  // since the pool was minimal, removing it makes completion impossible.
-  const countries = denseSquarePool(
-    ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
-    COLORS_FOR_RANDOM,
-    9,
-  );
-  // Use a fixed puzzle layout we can reason about: continents on rows,
-  // colors on cols. Each (continent[r], color[c]) cell has exactly 9
-  // matching countries in this pool — so for a cell at (br=0,bc=0) to
-  // accommodate 9 distinct fills, none of its 9 candidates may be used
-  // by another small board sharing continent[0]. We can't easily force
-  // that from outside the API without rebuilding the pool. Instead,
-  // assert the simpler contract: a wildly over-seeded cell (every one
-  // of its candidates planted somewhere else first) fails the solver.
-  // perCell stays at 9 here — the test deliberately exploits the tight
-  // pool — but maxAttempts is generous so the puzzle generator itself
-  // doesn't flake out on an unlucky axis roll.
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 3000 });
-  // Find a (br, bc) and steal all of its candidates into other cells'
-  // preFilled slots whose row × col happens to also accept them.
-  const target = { br: 0, bc: 0 };
-  const targetCandidates = countries.filter(
-    (co) => puzzle.rows[target.br].predicate(co) && puzzle.cols[target.bc].predicate(co),
-  );
-  // Seed the *other* 8 small boards with as many of target's candidates
-  // as they can accept. If we can place all 9 in other boards, the
-  // target board has zero candidates left and the solver must fail.
-  const preFilled = emptyPreFilled();
-  let seededCount = 0;
-  outer: for (const co of targetCandidates) {
-    for (let br = 0; br < 3 && seededCount < targetCandidates.length; br++) {
-      for (let bc = 0; bc < 3 && seededCount < targetCandidates.length; bc++) {
-        if (br === target.br && bc === target.bc) continue;
-        if (!puzzle.rows[br].predicate(co) || !puzzle.cols[bc].predicate(co)) continue;
-        // Find any empty preFilled slot in this small board.
-        for (let r = 0; r < 3; r++) {
-          for (let c = 0; c < 3; c++) {
-            if (preFilled[br][bc][r][c]) continue;
-            preFilled[br][bc][r][c] = co;
-            seededCount++;
-            continue outer;
-          }
-        }
-      }
-    }
-  }
-  // If we managed to siphon every target candidate elsewhere, the
-  // solver must return null. If not, this test's premise didn't hold
-  // for this puzzle — skip the assertion rather than fail spuriously.
-  if (seededCount === targetCandidates.length) {
-    const out = findUltimateAssignment(puzzle, preFilled, countries, mulberry32(7));
-    assert.equal(out, null, 'no completion possible when target small board has zero candidates left');
-  }
-});
-
-test('findUltimateAssignment: returns null when maxBacktracks is exceeded instead of running unbounded', () => {
-  // The solver has no constraint propagation, so adversarial candidate
-  // orderings can balloon into long search trees. The cap defends the
-  // give-up reveal path: instead of hanging the UI, the solver returns
-  // null and the caller falls back to a greedy fill. Pin the contract
-  // by passing a 1-step budget against an otherwise-solvable puzzle —
-  // the solver can't possibly finish in 1 step, so it must return null.
-  const countries = denseSquarePool(
-    ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'],
-    COLORS_FOR_RANDOM,
-    10,
-  );
-  const puzzle = generateUltimateRandomPuzzle(countries, { rng: mulberry32(7), maxAttempts: 3000 });
-  const out = findUltimateAssignment(puzzle, emptyPreFilled(), countries, mulberry32(7), 1);
-  assert.equal(out, null, 'cap=1 must abandon the search and return null');
-});
-
-// TODO: a real-countries.json regression test for findUltimateAssignment
 // belongs here, but the only obvious shape (generate a few random
 // puzzles and assert 81 distinct outputs) is dominated by puzzle
 // generation cost — too slow to keep in the suite. Tracked in
@@ -2575,8 +2025,7 @@ function syntheticTaggedCountries() {
   // forest <=1 / <=5 / <=20 / >=30 / >=50 / >=70 %. Dense + two-directional,
   // intensive (size-independent), like elevation / coastline. A /6 counter
   // decorrelates it from the other metric ladders so cross-metric cells
-  // (forest × coastline, forest × elevation) stay fillable. Half the rungs sit
-  // >=30 so the single 9×9-eligible forest tier fills 9-distinct per continent.
+  // (forest × coastline, forest × elevation) stay fillable.
   const FOREST_LADDER = [0, 3, 15, 40, 60, 85];
   // Apple (sparse crop, >=10K / >=100K / >=1M tonnes) and rice (sparse crop,
   // >=100K / >=1M / >=10M tonnes) sit an order or two above the CROP_LADDER

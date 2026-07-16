@@ -301,6 +301,11 @@ function validateProfileBody(body) {
  * Returns `{ ok: true, value: { deviceId, opponentId, mode, outcome } }`
  * on success so the handler doesn't have to re-extract the trusted fields.
  */
+// `9x9` is still accepted even though the 9×9 board was removed: a tab opened
+// before the removal can still POST a result, and a 400 would be a worse
+// answer than a quiet accept. `tttPairDoc.mergePairResult` ignores the result
+// rather than counting it, so nothing lands in the 3×3 counters. Drop this
+// once no such tab can plausibly still be open.
 const TTT_MODES = new Set(['3x3', '9x9']);
 const TTT_OUTCOMES = new Set(['win', 'loss', 'draw']);
 

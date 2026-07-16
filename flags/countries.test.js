@@ -11,8 +11,6 @@ import {
   ALL_MOTIFS,
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
-  generateUltimateRandomPuzzle,
-  hasUltimatePuzzleSolution,
   axesImpliedPair,
   isFlagVisualCategory,
   suggest,
@@ -537,34 +535,10 @@ test('generateRandomPuzzle succeeds with the real countries.json under many seed
   }
 });
 
-test('generateUltimateRandomPuzzle succeeds with the real countries.json under many seeds', () => {
-  // Mirrors the 30-seed 3×3 sweep above, but with the stronger 9×9
-  // Hall-marriage feasibility gate. The synthetic Ultimate tests in
-  // engine.test.js use a saturated denseSquarePool; this one pins the
-  // real-data retry budget so pool additions that tighten the search
-  // (e.g. colorCount:2, where SA has only 1 candidate) surface as a
-  // sweep failure rather than as intermittent throws in production.
-  const SEEDS = Array.from({ length: 30 }, (_, i) => (i + 1) * 9973);
-  for (const seed of SEEDS) {
-    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
-    assert.equal(puzzle.rows.length, 3);
-    assert.equal(puzzle.cols.length, 3);
-    assert.equal(
-      hasUltimatePuzzleSolution(puzzle, COUNTRIES),
-      true,
-      `seed ${seed}: produced a puzzle that fails the Hall feasibility check`,
-    );
-    assert.ok(
-      [...puzzle.rows, ...puzzle.cols].some(isFlagVisualCategory),
-      `seed ${seed}: produced a board with no flag-visual rule — rows=[${puzzle.rows.map((r) => r.id).join(',')}] cols=[${puzzle.cols.map((c) => c.id).join(',')}]`,
-    );
-  }
-});
-
 // population integration pins — the unit tests in engine.test.js cover the
 // factory + pool + rehydration wiring; these pin end-to-end behaviour against
-// real data so a regression (population never surfacing, or the extreme tiers
-// leaking into 9×9) shows up here rather than as a weird live puzzle.
+// real data so a regression (e.g. population never surfacing) shows up here
+// rather than as a weird live puzzle.
 
 test('generateRandomPuzzle actually produces population puzzles in the 3×3 pool', () => {
   // Mirrors the stripesOnly surfacing guard: generation-succeeds alone would
@@ -581,22 +555,6 @@ test('generateRandomPuzzle actually produces population puzzles in the 3×3 pool
     `expected population categories to appear in some 3×3 puzzles over 100 seeds, got ${popHits}`);
 });
 
-test('generateUltimateRandomPuzzle only ever picks the single ultimate population breakpoint', () => {
-  // 9×9 keeps just the `over 10M` tier (buildUltimateCategoryPool); the
-  // extreme tiers can't back 9-distinct-per-cell. Pin that no other
-  // population id ever reaches a generated 9×9 puzzle over 50 seeds.
-  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 9973);
-  for (const seed of SEEDS) {
-    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
-    for (const cat of [...puzzle.rows, ...puzzle.cols]) {
-      if (cat.id.startsWith('population:')) {
-        assert.equal(cat.id, 'population:>=10000000',
-          `seed ${seed}: 9×9 picked ${cat.id}, but only population:>=10000000 is ultimate-eligible`);
-      }
-    }
-  }
-});
-
 test('generateRandomPuzzle actually produces area puzzles in the 3×3 pool', () => {
   // Same surfacing guard as population: six of the pool entries are area, so
   // over 100 seeds we expect area categories to land in some 3×3 puzzles.
@@ -609,21 +567,6 @@ test('generateRandomPuzzle actually produces area puzzles in the 3×3 pool', () 
   }
   assert.ok(areaHits > 0,
     `expected area categories to appear in some 3×3 puzzles over 100 seeds, got ${areaHits}`);
-});
-
-test('generateUltimateRandomPuzzle only ever picks the single ultimate area breakpoint', () => {
-  // 9×9 keeps just the broad `over 100K km²` tier; the extreme tiers can't
-  // back 9-distinct-per-cell. Pin that no other area id reaches a 9×9 puzzle.
-  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 9973);
-  for (const seed of SEEDS) {
-    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
-    for (const cat of [...puzzle.rows, ...puzzle.cols]) {
-      if (cat.id.startsWith('area:')) {
-        assert.equal(cat.id, 'area:>=100000',
-          `seed ${seed}: 9×9 picked ${cat.id}, but only area:>=100000 is ultimate-eligible`);
-      }
-    }
-  }
 });
 
 test('generateRandomPuzzle actually produces density puzzles in the 3×3 pool', () => {
@@ -639,21 +582,6 @@ test('generateRandomPuzzle actually produces density puzzles in the 3×3 pool', 
   }
   assert.ok(densityHits > 0,
     `expected density categories to appear in some 3×3 puzzles over 100 seeds, got ${densityHits}`);
-});
-
-test('generateUltimateRandomPuzzle only ever picks the single ultimate density breakpoint', () => {
-  // 9×9 keeps just the broad `over 100 people/km²` tier; the extreme tiers
-  // can't back 9-distinct-per-cell. Pin that no other density id reaches 9×9.
-  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 9973);
-  for (const seed of SEEDS) {
-    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
-    for (const cat of [...puzzle.rows, ...puzzle.cols]) {
-      if (cat.id.startsWith('density:')) {
-        assert.equal(cat.id, 'density:>=100',
-          `seed ${seed}: 9×9 picked ${cat.id}, but only density:>=100 is ultimate-eligible`);
-      }
-    }
-  }
 });
 
 test('generateRandomPuzzle actually produces gdp + gdpPerCapita puzzles in the 3×3 pool', () => {
@@ -672,30 +600,11 @@ test('generateRandomPuzzle actually produces gdp + gdpPerCapita puzzles in the 3
   assert.ok(gdpPerCapitaHits > 0, `expected gdpPerCapita categories in some 3×3 puzzles, got ${gdpPerCapitaHits}`);
 });
 
-test('generateUltimateRandomPuzzle only ever picks the single ultimate gdp / gdpPerCapita breakpoint', () => {
-  // 9×9 keeps just the broad `over $100B` / `over $30K` tiers; the extreme
-  // tiers can't back 9-distinct-per-cell. Pin that no other id reaches 9×9.
-  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 9973);
-  for (const seed of SEEDS) {
-    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
-    for (const cat of [...puzzle.rows, ...puzzle.cols]) {
-      if (cat.id.startsWith('gdp:')) {
-        assert.equal(cat.id, 'gdp:>=100000000000',
-          `seed ${seed}: 9×9 picked ${cat.id}, but only gdp:>=100000000000 is ultimate-eligible`);
-      }
-      if (cat.id.startsWith('gdpPerCapita:')) {
-        assert.equal(cat.id, 'gdpPerCapita:>=30000',
-          `seed ${seed}: 9×9 picked ${cat.id}, but only gdpPerCapita:>=30000 is ultimate-eligible`);
-      }
-    }
-  }
-});
-
 // stripesOnly integration pins — Phase 5 of Feature DB. The unit tests in
 // engine.test.js already cover the factory wiring and pool composition;
-// these three pin the end-to-end behaviour against real data so a
-// regression in the pool builder, axesConflict, or buildUltimateCategoryPool
-// surfaces here rather than as a player-visible weird puzzle.
+// these two pin the end-to-end behaviour against real data so a regression
+// in the pool builder or axesConflict surfaces here rather than as a
+// player-visible weird puzzle.
 
 const CHARGE_MOTIF_IDS = [
   'hasMotif:cross', 'hasMotif:coat-of-arms', 'hasMotif:animal',
@@ -720,24 +629,6 @@ test('generateRandomPuzzle actually produces stripesOnly puzzles in the 3×3 poo
   }
   assert.ok(stripesHits > 0,
     `expected stripesOnly to appear in some 3×3 puzzles over 100 seeds, got ${stripesHits}`);
-});
-
-test('generateUltimateRandomPuzzle never picks stripesOnly (ultimateEligible: false on the factory)', () => {
-  // Phase 2 set hasStripesOnly { ultimateEligible: false } so 9×9 random
-  // can't draw it (pure-stripe answer pools are too narrow to back
-  // 9-distinct-per-cell). Engine-level test already pins
-  // buildUltimateCategoryPool excludes it; this pins the contract
-  // end-to-end through 50 seeded generations against real data — a
-  // regression in the buildUltimateCategoryPool wiring would surface
-  // here even if the filter helper itself looked correct.
-  const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 9973);
-  for (const seed of SEEDS) {
-    const puzzle = generateUltimateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed) });
-    for (const cat of [...puzzle.rows, ...puzzle.cols]) {
-      assert.ok(!cat.id.startsWith('stripesOnly:'),
-        `seed ${seed}: 9×9 puzzle picked ${cat.id}, but stripesOnly is ultimateEligible:false`);
-    }
-  }
 });
 
 test('generateRandomPuzzle never places stripesOnly opposite a charge motif (incompatibleWith end-to-end)', () => {

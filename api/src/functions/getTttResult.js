@@ -17,7 +17,6 @@ const limiter = createRateLimiter({ limit: 60, windowMs: 60_000 });
  *  pair). Saves the caller having to special-case 404 vs zero-counters. */
 const EMPTY_PAIR = Object.freeze({
   m3x3: { wins: 0, losses: 0, draws: 0 },
-  m9x9: { wins: 0, losses: 0, draws: 0 },
 });
 
 app.http('getTttResult', {
@@ -57,7 +56,7 @@ app.http('getTttResult', {
         connString: conn,
         dbName: DB_NAME,
         containerName: CONTAINER_NAME,
-        query: 'SELECT c.deviceId, c.opponentId, c.m3x3, c.m9x9, c.lastPlayedAt FROM c WHERE c.id = @id',
+        query: 'SELECT c.deviceId, c.opponentId, c.m3x3, c.lastPlayedAt FROM c WHERE c.id = @id',
         parameters: [{ name: '@id', value: docId }],
         partitionKey: deviceId,
       });

@@ -489,14 +489,13 @@
     "title": "Yet Another Quiz: Tic Tac Toe with Country Flags",
     "offlineTitle": "Yet Another Quiz: Offline Tic Tac Toe",
     "soloTitle": "Yet Another Quiz: Solo Flag Tic Tac Toe",
-    "variant3x3": "3×3",
-    "variant9x9": "9×9",
     "createRoom": "New online game",
     "orJoin": "or join a game",
     "roomCodePlaceholder": "ROOM CODE",
     "join": "Join",
     "playOffline": "Play on the same device",
     "playSolo": "Play solo",
+    "playOnline": "Play online",
     "solved": "Solved!",
     "you": "You",
     "playerX": "Player X",
@@ -530,11 +529,6 @@
       "fallback": "Rejected: {reason}"
     },
     "noData": "no data"
-  },
-  "ttt9x9": {
-    "title": "Yet Another Quiz: 9×9 Flag Tic Tac Toe",
-    "offlineTitle": "Yet Another Quiz: Offline 9×9 Flag Tic Tac Toe",
-    "rulesBody": "Nine small tic-tac-toe boards forming a big 3×3 board. Each cell sits on a row and a column, pick a country whose flag matches both. Win a small board to claim it; line up three claimed boards on the big board to win."
   },
   "party": {
     "title": "Yet Another Quiz: Flag Party",

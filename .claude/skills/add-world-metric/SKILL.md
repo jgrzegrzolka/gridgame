@@ -50,9 +50,11 @@ Threshold tier pills (`>=100M` / `<=1M`, ...) that both pages render through the
 
 ### 4. TTT threshold mode + no-data handling (most code)
 
-Mirror Feature DF. In `flags/engine.js`: a `<key>(op, n)` category factory (bake `exclusiveGroup: '<key>'`) + a `<KEY>_BREAKS_FOR_RANDOM` list; mark all-but-one break `ultimateEligible: false` if the extremes can't back a 9×9 cell. Wire into `buildRandomCategoryPool` / `categoryFromId` / `translateCategoryLabel`. Add `<key>.atLeast.*` / `<key>.atMost.*` i18n (en + pl). See the **ttt-puzzle-generator** skill.
+Mirror Feature DF. In `flags/engine.js`: a `<key>(op, n)` category factory (bake `exclusiveGroup: '<key>'`) + a `<KEY>_BREAKS_FOR_RANDOM` list. Wire into `buildRandomCategoryPool` / `categoryFromId` / `translateCategoryLabel`. Add `<key>.atLeast.*` / `<key>.atMost.*` i18n (en + pl). See the **ttt-puzzle-generator** skill.
 
-**`attach<Key>s(countries, values)` at every load site.** Both party servers (`party/server.js`, `party/ultimateServer.js`), both offline pages, both online pages (they fetch the metric JSON tolerantly so a fetch failure only disables the guard), and findFlag (surface 3d). **Forgetting one site = silently-empty cells or a misfiring guard.** Model `attach<Key>s` on `attachPopulations` in `flags/group.js`.
+> **Nothing per-metric to decide about board size any more.** Until 2026-07-16 a 9×9 board existed and every metric had to declare `ultimateEligible` per break, with a JSDoc paragraph arguing whether its extremes could back a 9-distinct cell. Feature U deleted the 9×9 board and that whole annotation. If you're copying an older metric as a template, drop any `ultimateEligible` / `ultimate: true` you find in it — those are the single biggest source of stale copy-paste in this file's history.
+
+**`attach<Key>s(countries, values)` at every load site.** The party server (`party/server.js`), the offline / solo / online TTT pages (they fetch the metric JSON tolerantly so a fetch failure only disables the guard), and findFlag (surface 3d). **Forgetting one site = silently-empty cells or a misfiring guard.** Model `attach<Key>s` on `attachPopulations` in `flags/group.js`.
 
 **No-data handling comes for free if the data contract holds.** `metricDataGap` (`flags/metricTiers.js`) already blocks any suggestion whose metric value is missing, and the registry's `has` (surface 3) is what it reads. As long as every real place has a value (rule 1), the guard blocks only non-places, which is correct. Nothing metric-specific to write here beyond the `has` line. Verify in-browser on a threshold cell that a real small place is pickable and an org shows "no data" (the `verify` recipe used for population).
 

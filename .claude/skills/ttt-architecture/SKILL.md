@@ -11,36 +11,34 @@ The single most expensive thing to learn late: **online puzzles are dealt by the
 
 ## The boards
 
-Five pages, four of them 3×3. Mode is carried by **URL path**, not a query param.
+Three pages, all 3×3. (A 9×9 "ultimate" variant existed until 2026-07-16; Feature U removed it. If you find a stray `9x9` / `ultimate` reference, it's a leftover, not a feature.)
 
 | Page | Path | Players | Game state owned by |
 |---|---|---|---|
-| 3×3 online | `ticTacToe/` | two, over the network | **PartyKit server** |
-| 3×3 offline | `ticTacToe/offline/` | two, same device | the page |
-| 3×3 solo | `ticTacToe/solo/` | one, fill the board | the page |
-| 9×9 online | `ticTacToe/9x9/` | two, over the network | **PartyKit server** |
-| 9×9 offline | `ticTacToe/9x9/offline/` | two, same device | the page |
-
-> **9×9 is being removed** (FEATURE.md, Feature U Phase 2). Don't build on it, and don't extend a new feature to cover it.
+| online | `ticTacToe/` | two, over the network | **PartyKit server** |
+| offline | `ticTacToe/offline/` | two, same device | the page |
+| solo | `ticTacToe/solo/` | one, fill the board | the page |
 
 Each page is markup-only HTML plus a sibling `page.js` exporting a `bootX()` that a tiny inline `<script type="module">` calls. Standard repo pattern.
 
-### Shared assets, and the trap in them
+**Reachability:** `offline/` and `solo/` are linked *only* from `ticTacToe/index.html`, and none of the three has a `.back` chrome button. Solo's burger carries the one link back (`ttt.playOnline` → `../`). Keep that in mind before pruning a menu item.
 
-- **`ticTacToe/index.css` styles all five boards.** The 9×9 pages just link `../index.css`; there is no 9×9 stylesheet. From `:332` to EOF is the `/* ---- 9x9 variant ---- */` block, roughly two thirds of the file. A "3×3 CSS change" can be a 9×9 change if you edit above that line carelessly.
-- **`ticTacToe/lobby.css`** is shared by both online pages.
-- **There is no shared burger component.** Every `index.html` inlines its own burger markup with an inline `onclick` toggling `aria-expanded` and the panel's `hidden` (see `ticTacToe/index.html:36-60`). Runtime items (nickname, privacy, sync) are mounted by `common.js`. If you add a menu item, you add it per page.
+### Shared assets
+
+- **`ticTacToe/index.css` styles all three boards**, including the picker sheet (from `.picker[hidden]` onward). There is no per-page stylesheet, so a "just the offline grid" CSS change is a change to every board.
+- **`ticTacToe/lobby.css`** is the online lobby only.
+- **There is no shared burger component.** Every `index.html` inlines its own burger markup with an inline `onclick` toggling `aria-expanded` and the panel's `hidden` (see `ticTacToe/index.html:36-58`). Runtime items (nickname, privacy, sync) are mounted by `common.js`. If you add a menu item, you add it per page.
 
 ## Puzzle authority: the server deals online
 
 ```js
 // party/ticTacToeServer.js
-import { generateRandomPuzzle } from '../flags/engine.js';   // :11
-const puzzle = this.forcedPuzzle ?? generateRandomPuzzle(this.countries);     // :96  fresh room
-const newPuzzle = this.forcedPuzzle ?? generateRandomPuzzle(this.countries);  // :166 rematch
+import { generateRandomPuzzle } from '../flags/engine.js';
+const puzzle = this.forcedPuzzle ?? generateRandomPuzzle(this.countries);     // fresh room
+const newPuzzle = this.forcedPuzzle ?? generateRandomPuzzle(this.countries);  // rematch
 ```
 
-The server loads its own countries and metrics at module scope (`party/server.js`) and persists the puzzle in the durable object, so both players and any reconnect see one identical board.
+The server loads its own countries and metrics at module scope (`party/server.js`) and persists the puzzle in the durable object, so both players and any reconnect see one identical board. `partykit.json` maps the party names to entry points — if you add or remove a server file, that mapping must move with it or the deploy breaks (nothing tests it).
 
 **The online client never generates.** `ticTacToe/page.js` fetches countries only so the picker can render and so `metricDataGap` can show "no data"; the comment at `:42-46` says so explicitly. Offline and solo *do* generate client-side (`ticTacToe/solo/page.js:38`).
 
@@ -57,14 +55,11 @@ The server loads its own countries and metrics at module scope (`party/server.js
 
 Pure, tested, no DOM. Pages are renderers over these.
 
-- **`flags/ticTacToe.js`** — the 3×3 two-player reducer (`newGame`, `attemptClaim`, `findWinner`, `applyGiveUp`, `isGameOver`, `newlyWinningCells`, `shouldFireTicTacToeConfetti`) **and** the solo variant (`newSoloGame`, `attemptSoloClaim`, `isSoloOver`, `applySoloGiveUp`).
-- **`flags/onlineRoom.js`** — room state machine (roles, hello, claim, rematch, disconnect), shared by client and server. `flags/ultimateOnlineRoom.js` is the 9×9 twin.
-- **`ticTacToe/onlineClient.js`** — the client-side WS message reducer. `ticTacToe/9x9/onlineClient.js` is its twin.
-- **`flags/ultimateTicTacToe.js`** — the 9×9 reducer.
+- **`flags/ticTacToe.js`** — the two-player reducer (`newGame`, `attemptClaim`, `findWinner`, `applyGiveUp`, `isGameOver`, `newlyWinningCells`, `shouldFireTicTacToeConfetti`) **and** the solo variant (`newSoloGame`, `attemptSoloClaim`, `isSoloOver`, `applySoloGiveUp`).
+- **`flags/onlineRoom.js`** — room state machine (roles, hello, claim, rematch, disconnect), shared by client and server.
+- **`ticTacToe/onlineClient.js`** — the client-side WS message reducer.
 
 Note the import asymmetry, which tells you the authority model at a glance: `offline/page.js` and `solo/page.js` import the *game* reducers, while the online `page.js` imports only `shouldFireTicTacToeConfetti` and `newlyWinningCells`. Online game logic lives server-side.
-
-`exhausted` is a **9×9-only** concept (typedef `flags/ticTacToe.js:14-17`, set only in `ultimateTicTacToe.js`). Both 3×3 pages toggle a `.exhausted` class anyway, where it is a permanent no-op. Inherited from the 9×9 render shape; Feature U Phase 2 removes it.
 
 ## Adding a setting (the toggle recipe)
 
@@ -90,17 +85,16 @@ export function setFindIncludeAll(store, value) { writeBoolSetting(store, FIND_I
 
 TTT state escapes the browser. Before removing a mode or renaming a counter:
 
-- **Achievements** (`flags/achievements.js`) read snapshot fields like `tttGamesPlayed9x9` / `hasWon9x9`. Badges are **already awarded to real players**; the `add-achievement` skill's stable-id rule means you stop awarding, keep displaying, and never reuse an id.
-- **Cosmos head-to-head docs** (`api/src/lib/tttPairDoc.js`) are shaped `{ m3x3, m9x9 }`, computed by `tttCompute.js`, merged by `syncMerge.js`, read by `getTttResult.js` and `dailyMe.js`, reconciled by `authoring/reconcileTttPairs.mjs`. Stopping a write is cheap; changing the doc shape is a migration.
-- **`api/src/lib/validate.js`** carries `TTT_MODES`. Keep accepting a retired mode so old clients and replayed rows don't 400.
-- `flags/tttResultSubmit.js` / `tttPairFetch.js` / `tttPairOutcome.js` carry `mode: '3x3' | '9x9'` on the wire.
+- **Achievements are computed on read, never stored.** `api/src/lib/tttCompute.js` derives a snapshot from the player's `tttPairs` rows on every `/api/v1/daily/me` request, and `flags/achievements.js` runs predicates over it. There is no award record. Two consequences: deleting a rule removes the badge from every profile with **no data migration**, and deleting *data* silently re-evaluates every badge that reads it. `tttGamesPlayed` / `hasWonTtt` / `hasLostTtt` all aggregate over the rows, so a row edit can revoke a badge that looks unrelated. The stable-id rule still forbids **reusing** a retired id.
+- **Cosmos head-to-head docs** (`api/src/lib/tttPairDoc.js`) are one row per (deviceId, opponentId), computed by `tttCompute.js`, merged by `syncMerge.js`, read by `getTttResult.js` and `dailyMe.js`, reconciled by `authoring/reconcileTttPairs.mjs`. Change the doc shape in one place and you must chase all six.
+- **`api/src/lib/validate.js`** carries `TTT_MODES`, which still accepts the retired `'9x9'` so an in-flight POST from a stale tab doesn't 400. `mergePairResult` ignores such a result rather than counting it. That pattern (accept, ignore, don't miscount) is the template for retiring anything else on this wire.
 - `flags/engagementCounters.js` — `bumpShare(…, 'ttt')`.
 
 ## Test coverage map
 
-- Reducers: `flags/ticTacToe.test.js`, `flags/ultimateTicTacToe.test.js`, `flags/onlineRoom.test.js`, `flags/ultimateOnlineRoom.test.js`.
-- WS client reducers: `ticTacToe/onlineClient.test.js`, `ticTacToe/9x9/onlineClient.test.js`.
-- Server: `party/ticTacToeServer.test.js`, `party/ultimateTicTacToeServer.test.js`.
+- Reducers: `flags/ticTacToe.test.js`, `flags/onlineRoom.test.js`.
+- WS client reducer: `ticTacToe/onlineClient.test.js`.
+- Server: `party/ticTacToeServer.test.js`.
 - UI mechanics: `ticTacToe/shakeFeedback.test.js` (shake-on-miss, winning-cell shake), `ticTacToe/matchStrip.test.js`.
 - Generation against real data: `flags/countries.test.js` (the load-bearing one).
 

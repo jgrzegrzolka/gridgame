@@ -20,7 +20,6 @@ test('first write (no existing): all counters 0 except the bumped slot, v: 1', (
     deviceId: DEVICE,
     opponentId: OPP,
     m3x3: { wins: 1, losses: 0, draws: 0 },
-    m9x9: { wins: 0, losses: 0, draws: 0 },
     lastOutcome: 'win',
     lastPlayedAt: NOW,
     v: 1,
@@ -44,13 +43,16 @@ test('draw bumps the draws slot', () => {
   assert.equal(doc.m3x3.draws, 1);
 });
 
-test('9x9 outcome bumps m9x9 only — m3x3 stays at zero', () => {
+test('a legacy 9x9 result is accepted but counts nothing — it must not land in m3x3', () => {
+  // validate.js still accepts mode '9x9' so an in-flight POST from a tab
+  // opened before the 9×9 board was removed doesn't 400. Folding it into
+  // m3x3 would record a 9×9 game as a 3×3 one, so it is ignored instead.
   const doc = mergePairResult({
     existing: null, deviceId: DEVICE, opponentId: OPP,
     mode: '9x9', outcome: 'win', now: NOW,
   });
   assert.deepEqual(doc.m3x3, { wins: 0, losses: 0, draws: 0 });
-  assert.equal(doc.m9x9.wins, 1);
+  assert.equal(doc.m9x9, undefined, 'no m9x9 is written back');
 });
 
 test('subsequent write increments the right counter and preserves the others', () => {
@@ -59,7 +61,6 @@ test('subsequent write increments the right counter and preserves the others', (
     deviceId: DEVICE,
     opponentId: OPP,
     m3x3: { wins: 3, losses: 1, draws: 2 },
-    m9x9: { wins: 0, losses: 1, draws: 0 },
     lastPlayedAt: NOW - 1000,
     v: 1,
   };
@@ -68,12 +69,10 @@ test('subsequent write increments the right counter and preserves the others', (
     mode: '3x3', outcome: 'win', now: NOW,
   });
   assert.deepEqual(doc.m3x3, { wins: 4, losses: 1, draws: 2 });
-  // 9x9 untouched, lastPlayedAt bumped.
-  assert.deepEqual(doc.m9x9, { wins: 0, losses: 1, draws: 0 });
   assert.equal(doc.lastPlayedAt, NOW);
 });
 
-test('partial existing row (missing m9x9, missing draws bucket) is normalised to zeros', () => {
+test('partial existing row (missing draws bucket) is normalised to zeros, and a legacy m9x9 is dropped', () => {
   // Defensive: an out-of-band edit or a future migration that adds a
   // bucket shouldn't NaN the merge.
   const existing = {
@@ -81,7 +80,7 @@ test('partial existing row (missing m9x9, missing draws bucket) is normalised to
     deviceId: DEVICE,
     opponentId: OPP,
     m3x3: { wins: 5, losses: 2 },  // no draws bucket
-    // no m9x9 at all
+    m9x9: { wins: 9, losses: 9, draws: 9 },  // legacy, pre-removal
     v: 1,
   };
   const doc = mergePairResult({
@@ -91,7 +90,7 @@ test('partial existing row (missing m9x9, missing draws bucket) is normalised to
   assert.equal(doc.m3x3.wins, 5);
   assert.equal(doc.m3x3.losses, 2);
   assert.equal(doc.m3x3.draws, 1, 'missing bucket starts at 0 then gets +1');
-  assert.deepEqual(doc.m9x9, { wins: 0, losses: 0, draws: 0 });
+  assert.equal(doc.m9x9, undefined, 'legacy m9x9 is not carried forward');
 });
 
 test('garbage counter (NaN, negative, string) is treated as 0 — never propagates', () => {
@@ -143,7 +142,7 @@ test('lastOutcome reflects this game only — overwrites prior value', () => {
   assert.equal(rematch.lastOutcome, 'win');
 });
 
-test('lastOutcome reflects the most recent game across modes (3x3 then 9x9)', () => {
+test('lastOutcome reflects the most recent game', () => {
   const first = mergePairResult({
     existing: null, deviceId: DEVICE, opponentId: OPP,
     mode: '3x3', outcome: 'win', now: 1,
@@ -151,7 +150,7 @@ test('lastOutcome reflects the most recent game across modes (3x3 then 9x9)', ()
   const second = mergePairResult({
     existing: first,
     deviceId: DEVICE, opponentId: OPP,
-    mode: '9x9', outcome: 'draw', now: 2,
+    mode: '3x3', outcome: 'draw', now: 2,
   });
   assert.equal(second.lastOutcome, 'draw');
 });
@@ -164,7 +163,6 @@ test('pre-Feature-MB4 row without lastOutcome upgrades cleanly on next merge', (
     id: `${DEVICE}:${OPP}`,
     deviceId: DEVICE, opponentId: OPP,
     m3x3: { wins: 2, losses: 1, draws: 0 },
-    m9x9: { wins: 0, losses: 0, draws: 0 },
     lastPlayedAt: 1, v: 1,
   };
   const next = mergePairResult({

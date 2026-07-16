@@ -3,7 +3,7 @@
 
 // Room-lobby primitives (code + validation + server URL) live in the shared
 // flags/roomNet.js now that Flag Party consumes them too. Re-exported here so
-// this module's existing callers — ticTacToe/page.js, the 9×9 client — keep
+// this module's existing callers — ticTacToe/page.js — keep
 // importing them from './onlineClient.js' unchanged.
 export { ROOM_ALPHABET, ROOM_LEN, generateCode, isValidRoomCode, serverUrlFor } from '../flags/roomNet.js';
 
