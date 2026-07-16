@@ -199,30 +199,25 @@ body:has(.player-card.waiting) .grid {
   font-weight: 500;
   font-size: 14px;
   color: var(--primary-color);
-  /* Truncate long header labels with an ellipsis instead of wrapping. Without
-   * this a label like "Has star or moon" used to wrap to a second line and
-   * push the whole grid down — and a rotated row header like "South America"
-   * used to wrap to a second VERTICAL column, fattening the row-header
-   * strip on phones. The full row × col label is still readable when a cell
-   * is opened: the picker header shows it in full. */
-  white-space: nowrap;
+  /* Clip rather than spill if a label is somehow taller than its box. The
+   * nowrap + ellipsis truncation that used to live here was for the 9×9
+   * board's narrow rotated headers; every header on this board wraps (see
+   * the thead / tbody rules below), so it was dead and is gone. */
   overflow: hidden;
-  text-overflow: ellipsis;
-}
-.grid thead th {
-  height: var(--grid-cell);
-  /* max-width pin: table-layout:fixed alone doesn't stop a nowrap min-content
-   * wider than --grid-cell from pushing the column out (Chrome honours the
-   * unbreakable text width over the declared width). The explicit max-width
-   * keeps the column locked, so the grid stays at the same horizontal
-   * position regardless of how long a label like "Has star or moon" is. */
-  max-width: var(--grid-cell);
 }
 /* thead headers sit in full-cell-sized boxes — let long labels like
  * "coat of arms" or "star or moon" wrap onto two lines instead of
- * truncating with `…`. Row headers already wrap below; this gives the
- * column row the same treatment so the whole 4×4 reads symmetrically. */
+ * spilling. Row headers wrap too (below), so the whole 4×4 reads
+ * symmetrically.
+ *
+ * max-width pin: table-layout:fixed alone doesn't stop a long min-content
+ * word wider than --grid-cell from pushing the column out (Chrome honours
+ * the unbreakable text width over the declared width). The explicit
+ * max-width keeps the column locked, so the grid stays at the same
+ * horizontal position regardless of how long a label is. */
 .grid thead th {
+  height: var(--grid-cell);
+  max-width: var(--grid-cell);
   white-space: normal;
   line-height: 1.2;
 }

@@ -29,7 +29,6 @@ test('fetchTttPair: 200 with full row returns it verbatim with URL-encoded param
     json: {
       deviceId: DEVICE, opponentId: OPP,
       m3x3: { wins: 3, losses: 2, draws: 1 },
-      m9x9: { wins: 0, losses: 1, draws: 0 },
       lastPlayedAt: 1_700_000_000_000,
     },
   });
@@ -37,7 +36,7 @@ test('fetchTttPair: 200 with full row returns it verbatim with URL-encoded param
   assert.equal(r.ok, true);
   if (!r.ok) return;
   assert.equal(r.row.m3x3.wins, 3);
-  assert.equal(r.row.m9x9.losses, 1);
+  assert.equal(r.row.m3x3.losses, 2);
   assert.equal(r.row.lastPlayedAt, 1_700_000_000_000);
   assert.equal(fetcher.calls[0].url,
     `/api/v1/ttt/result?deviceId=${encodeURIComponent(DEVICE)}&opponentId=${encodeURIComponent(OPP)}`);
@@ -49,7 +48,6 @@ test('fetchTttPair: empty-pair server response (server returns zero counters) no
     json: {
       deviceId: DEVICE, opponentId: OPP,
       m3x3: { wins: 0, losses: 0, draws: 0 },
-      m9x9: { wins: 0, losses: 0, draws: 0 },
       lastPlayedAt: null,
     },
   });
@@ -69,7 +67,6 @@ test('fetchTttPair: partial / garbage server row is defensively zeroed out', asy
   assert.equal(r.ok, true);
   if (!r.ok) return;
   assert.deepEqual(r.row.m3x3, { wins: 0, losses: 0, draws: 0 });
-  assert.deepEqual(r.row.m9x9, { wins: 0, losses: 0, draws: 0 });
 });
 
 test('fetchTttPair: network error → { ok: false, reason: "network_error" }', async () => {

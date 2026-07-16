@@ -399,6 +399,18 @@ body::after {
   padding-top: 12px;
   border-top: 1px solid var(--muted-soft-color);
 }
+/* The divider's job is to separate the coffee CTA from the page's nav
+ * links. A menu with no nav links puts it directly under the nickname row,
+ * which already draws its own `border-bottom` — the two rules then stack
+ * into a visible double line with an empty band between them (the ticTacToe
+ * menus after the 9×9 links were removed). One separator is enough: the
+ * nickname keeps its rule, the divider drops its own. Adjacent-sibling so it
+ * re-applies by itself if a nav link is ever added back between them. */
+.menu li.menu-nickname + li.menu-divider {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
 /* Privacy reads as a regular menu link (same size / weight / primary
  * colour as siblings, inherited from `.menu a` above), bracketed by a
  * top border (nickname's `border-bottom`) and its own `border-bottom`

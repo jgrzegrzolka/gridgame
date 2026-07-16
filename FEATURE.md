@@ -74,11 +74,14 @@ The Phase 1 plan said "stop writing, keep reading" for both. Jan overrode: *"do 
 **Ordering matters:** ship the code removal first (stops new `m9x9` writes), deploy, *then* run the strip. Stripping while 9×9 is still live lets a game re-add the field.
 
 - [x] `scripts/strip-m9x9.mjs` written, modelled on `authoring/reconcileTttPairs.mjs`: **dry run by default**, `--apply` to write, `COSMOS_CONN` pulled from SWA app settings via `az` and never written to disk. Dry run prints per-device badge deltas so the collateral is visible before it happens.
-- [ ] **Run the dry run** (`node scripts/strip-m9x9.mjs`), read the badge-impact table, confirm the collateral is Jan-only.
-- [ ] **Run `--apply`** once the dry run looks right. Must happen *after* this PR is deployed.
-- [ ] Delete the script afterwards (one-shot, same lifecycle as `scripts/backfill-puzzle1-add-li.cjs`); add the Backlog cleanup entry when it's run.
+- [x] **Dry run** done 2026-07-16, after the `64e7da9` deploy succeeded.
+- [x] **`--apply`** run 2026-07-16: 24/24 rows rewritten. Re-ran the dry run to confirm: **24 rows, 0 carrying `m9x9`.** Cosmos holds zero trace of 9×9.
 
-**Note on the earlier blocked read.** A read-only probe of `tttPairs` was denied by the agent harness on 2026-07-16 ("general cleanup goal, not explicit naming of a direct production database read"). Jan then explicitly asked for the deletion, which authorizes it. The dry run above is the same query with the badge-impact table attached, so no separate probe is needed.
+**What the dry run actually found (the reason it was worth insisting on).** 9×9 was played **twice ever** (4 row-writes = 2 games × 2 perspectives), which confirms the "nobody plays it" premise. But of the 24 rows carrying `m9x9`, only 4 held a real game, and stripping them was **not** badge-neutral: `b7f0f806…` lost **First Win** and `4dc0f0b4…` lost **First Loss**, because each player's only win/loss happened to be in a 9×9 game. Jan chose to strip all 24 with that known (2026-07-16). Self-consistent: if 9×9 never happened, those wins never happened. Recorded here because the counters can never explain this themselves.
+
+**Blocked reads, both correct.** (1) A read-only `tttPairs` probe was denied before Jan named the deletion. (2) A follow-up joining `profiles` to check whether those 4 devices were all Jan's was denied as PII access beyond the task's need — the badge-impact table already answered the operational question without identities. Neither was worked around.
+
+**Baseline for any future TTT badge work:** the 4 remaining TTT rules are `first-ttt-win`, `first-ttt-loss`, `ten-ttt-games`, `hundred-ttt-games` (48 rules site-wide). Verified in-browser post-change, including that a stale snapshot still carrying `tttGamesPlayed9x9` / `hasWon9x9` earns nothing.
 
 **Also touches:** `i18n/{en,pl}.json` (`ttt.variant3x3` / `ttt.variant9x9` — the 3×3 label exists only to pair with the 9×9 one in the burger, so both go; plus the `ttt9x9.*` block at en.json:534-537), the two burger `<li>`s (`ticTacToe/index.html:56-57`), `ticTacToe/index.html:6`'s meta description ("9×9 ultimate variant"), `sitemap.xml:29`, `.github/workflows/deploy.yml:254-255,344-345` (warm + smoke URLs), `tsconfig.json:22-23`, `authoring/reconcileTttPairs.mjs:119-188`, `daily/streakClient.js:51-117`, and 9×9 assertions inside `flags/engine.test.js` / `flags/countries.test.js` (the "only `>=10M` reaches 9×9" pins) / `flags/achievements.test.js` / `langRefresh.test.js`.
 
@@ -166,6 +169,16 @@ Both stages land within the 5 GB/month free tier at our traffic.
 - **Snapshot of per-row data.** Would defeat F2's TTL policy — the whole point is to keep aggregates without keeping raw rows.
 - **Cross-puzzle aggregates** (lifetime per-flag rates across every puzzle ever). Could be added later as a different snapshot type, but not load-bearing for the 2027-06-09 deadline.
 - **Re-snapshot on every new submission.** The point is to capture a final aggregate when the raw data is about to age out, not maintain a live materialised view.
+
+### Cleanup: delete `scripts/strip-m9x9.mjs` and the `9x9` mode compat
+
+**Status:** parked, no deadline. The script **has been run** (2026-07-16, 24/24 rows); it is spent and now a no-op. Kept only so the run is auditable next to Feature U, same lifecycle as `scripts/backfill-puzzle1-add-li.cjs`.
+
+**What to remove when this comes off the parking brake:**
+1. `scripts/strip-m9x9.mjs`.
+2. `'9x9'` from `TTT_MODES` in `api/src/lib/validate.js`, plus the `mode === '3x3'` guard in `tttPairDoc.mergePairResult` that exists only to ignore it, plus the two tests pinning that behaviour.
+
+**Why parked:** the compat exists so a tab opened before the 9×9 removal doesn't 400 on its final POST. That window is measured in "how long does someone leave a tab open", so a month is plenty. Neither piece costs anything to keep meanwhile.
 
 ### Cleanup: rename `PASSKEY_HMAC_SECRET` → `SYNC_HMAC_SECRET`
 

@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path';
 // `.picker-input.shake` animation — the rejection was completely invisible.
 //
 // pulseShake is applied to two element classes across the TTT pages:
-//   - `.cell`         (wrong-category guess in offline / online / 9x9)
+//   - `.cell`         (wrong-category guess in offline / online / solo)
 //   - `.picker-input` (no-data rejection everywhere; every miss in solo)
 // Both must resolve to a `.shake` rule that runs a defined @keyframes.
 

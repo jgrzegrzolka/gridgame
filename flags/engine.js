@@ -2808,25 +2808,6 @@ export function findPuzzleSolution(puzzle, countries) {
 }
 
 /**
- * Fisher–Yates shuffle in place. Internal helper for randomizing
- * candidate orderings inside backtracking solvers.
- *
- * @template T
- * @param {T[]} arr
- * @param {() => number} rng
- * @returns {T[]}
- */
-function shuffleInPlace(arr, rng) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    const tmp = arr[i];
-    arr[i] = arr[j];
-    arr[j] = tmp;
-  }
-  return arr;
-}
-
-/**
  * @param {Puzzle} puzzle
  * @param {Country[]} countries
  * @param {number} [minPerCell]

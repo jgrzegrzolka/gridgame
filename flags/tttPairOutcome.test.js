@@ -39,29 +39,13 @@ test('gaveUp + gaveUpBy is opponent → win (opponent gave up)', () => {
   assert.equal(deriveTttOutcome({ gaveUp: true, gaveUpBy: 'X' }, 'O'), 'win');
 });
 
-test('gaveUp + no gaveUpBy + lastGaveUpByMe=true → loss (9×9 fallback path)', () => {
-  // 9×9 doesn't stamp `gaveUpBy` on `UltimateGameState`; the page tracks
-  // the resigner locally via `lastGaveUpByMe`.
-  assert.equal(deriveTttOutcome({ gaveUp: true }, 'X', true), 'loss');
-  assert.equal(deriveTttOutcome({ gaveUp: true }, 'O', true), 'loss');
-});
-
-test('gaveUp + no gaveUpBy + lastGaveUpByMe=false → win (9×9 fallback path)', () => {
-  assert.equal(deriveTttOutcome({ gaveUp: true }, 'X', false), 'win');
-  assert.equal(deriveTttOutcome({ gaveUp: true }, 'O', false), 'win');
-});
-
-test('gaveUp + neither gaveUpBy nor lastGaveUpByMe → null (don\'t guess)', () => {
-  // Defensive: an incomplete give-up state should NOT silently report
-  // an outcome — better to miss this game than to lie about the result.
+test('gaveUp + no gaveUpBy → null (don\'t guess)', () => {
+  // Defensive: an incomplete give-up state should NOT silently report an
+  // outcome — better to miss this game than to lie about the result. A
+  // legacy persisted room is the realistic source of one, and
+  // onlineClient.js likewise refuses to attribute an unattributable resign.
   assert.equal(deriveTttOutcome({ gaveUp: true }, 'X'), null);
-  assert.equal(deriveTttOutcome({ gaveUp: true }, 'X', null), null);
-});
-
-test('gaveUpBy wins over lastGaveUpByMe when both present (3×3 trusts server)', () => {
-  // If server stamps gaveUpBy=X but a stale lastGaveUpByMe says false,
-  // trust the server. (Shouldn't normally happen — pinning the precedence.)
-  assert.equal(deriveTttOutcome({ gaveUp: true, gaveUpBy: 'X' }, 'X', false), 'loss');
+  assert.equal(deriveTttOutcome({ gaveUp: true }, 'O'), null);
 });
 
 // Mirror property — for every outcome from one player's perspective, the

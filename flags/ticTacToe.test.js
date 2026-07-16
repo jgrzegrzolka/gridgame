@@ -351,7 +351,7 @@ test('draw when board fills with no winner', () => {
 // Rule: a win (winner is 'X' or 'O') fires confetti; draws and give-ups
 // (winner === null) never do. When myRole is provided (online), the
 // browser only celebrates *its own* win — the loser sees no confetti.
-// When myRole is absent (offline 3x3, 9x9, or anywhere with no notion
+// When myRole is absent (offline, solo, or anywhere with no notion
 // of "you"), any winner fires.
 
 test('shouldFireTicTacToeConfetti: offline (no myRole) fires on any X or O win', () => {

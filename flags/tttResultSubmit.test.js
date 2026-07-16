@@ -45,7 +45,7 @@ test('submitTttResult: 204 → { outcome: "ok" } and POSTs the expected body sha
 test('submitTttResult: network error → { outcome: "failed", reason: "network_error" }', async () => {
   const fetcher = fakeFetch({ throws: true });
   const r = await submitTttResult({
-    deviceId: DEVICE, opponentId: OPP, mode: '9x9', outcome: 'loss',
+    deviceId: DEVICE, opponentId: OPP, mode: '3x3', outcome: 'loss',
     fetchImpl: fetcher.impl,
   });
   assert.deepEqual(r, { outcome: 'failed', reason: 'network_error' });
