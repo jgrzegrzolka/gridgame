@@ -1,4 +1,4 @@
-import { newGame, attemptClaim, isGameOver, applyGiveUp as applyGiveUpEngine } from './ticTacToe.js';
+import { newGame, attemptClaim, isGameOver, applyGiveUp as applyGiveUpEngine, boardIsUntouched } from './ticTacToe.js';
 import { categoryFromId } from './engine.js';
 
 /** @typedef {import('./ticTacToe.js').GameState} GameState */
@@ -21,6 +21,12 @@ import { categoryFromId } from './engine.js';
  * @property {Set<string>} present  - playerIds currently connected
  * @property {Player} lastFirstPlayer  - who started the current game; the
  *   rematch flips this so games alternate which side moves first
+ * @property {boolean} easy  - deal from the no-statistics pool. A room
+ *   property, not a player one: the server deals one board for two people, so
+ *   there is only one answer. The host seeds it at create time from their own
+ *   preference and may change it via `applySetEasy` while the board is
+ *   untouched; the joiner sees it and cannot change it. Persisted, so a
+ *   rematch stays in the same mode.
  */
 
 /**
@@ -36,15 +42,19 @@ import { categoryFromId } from './engine.js';
 
 /**
  * @param {Puzzle} puzzle
+ * @param {{ easy?: boolean }} [options] - `easy` records which pool `puzzle`
+ *   was dealt from. It is the caller's job to keep the two consistent: this
+ *   function stores the flag, it does not generate the board.
  * @returns {Room}
  */
-export function createRoom(puzzle) {
+export function createRoom(puzzle, options = {}) {
   return {
     game: newGame(puzzle, 'O'),
     hostId: null,
     roles: new Map(),
     present: new Set(),
     lastFirstPlayer: 'O',
+    easy: options.easy === true,
   };
 }
 
@@ -219,6 +229,48 @@ export function applyStartRematch(room, playerId, newPuzzle) {
 }
 
 /**
+ * The host changes the room's "No statistics" mode, which re-deals the board.
+ *
+ * Refuses unless **all** of:
+ *   - the sender is the room's host. One board, two players, so somebody has to
+ *     own the setting, and the creator is the only one who has it before the
+ *     joiner exists.
+ *   - the board is untouched. Re-dealing throws away every move on it, and here
+ *     those moves are partly the *opponent's* — a settings switch must never
+ *     destroy someone else's progress to apply a preference. In practice this
+ *     leaves the host a create-to-first-move window, which is mostly the wait
+ *     for an opponent to arrive.
+ *   - the mode actually changes. A no-op flip re-dealing the board would let a
+ *     host reroll a disliked board by toggling twice, which is a different
+ *     feature (and one nobody asked for).
+ *
+ * A refusal returns zero broadcasts, so the caller can leave the room untouched
+ * rather than persist and re-send an unchanged state. The client disables the
+ * control in exactly these cases; this is the server-side half of that rule,
+ * because a disabled input is a UI convenience, not an authority.
+ *
+ * @param {Room} room
+ * @param {string} playerId
+ * @param {boolean} easy
+ * @param {Puzzle} newPuzzle - dealt from the pool matching `easy`
+ * @returns {ApplyResult}
+ */
+export function applySetEasy(room, playerId, easy, newPuzzle) {
+  if (room.hostId !== playerId) return { room, broadcasts: [] };
+  if (!boardIsUntouched(room.game)) return { room, broadcasts: [] };
+  if (room.easy === easy) return { room, broadcasts: [] };
+  // Keep whoever was due to move first: nothing has happened yet, so this is
+  // the same round with a different board, not a new one. `lastFirstPlayer` is
+  // the rematch's business.
+  const newGameState = newGame(newPuzzle, room.lastFirstPlayer);
+  const nextRoom = { ...room, game: newGameState, easy };
+  return {
+    room: nextRoom,
+    broadcasts: [{ to: 'all', message: { type: 'state', kind: 'easy-changed', game: newGameState, easy } }],
+  };
+}
+
+/**
  * Structured-clone-safe snapshot of the room for persistence.
  *
  *   - `present` is omitted: it represents live WebSocket connections, which
@@ -242,6 +294,7 @@ export function serializeRoom(room) {
     hostId: room.hostId,
     roles: [...room.roles.entries()],
     lastFirstPlayer: room.lastFirstPlayer,
+    easy: room.easy,
   };
 }
 
@@ -262,6 +315,9 @@ export function deserializeRoom(snapshot) {
     roles: new Map(snapshot.roles),
     present: new Set(),
     lastFirstPlayer: snapshot.lastFirstPlayer ?? 'O',
+    // `=== true` rather than `??`: a room persisted before this field existed
+    // has no `easy` key, and a full-pool board is what it was actually dealt.
+    easy: snapshot.easy === true,
   };
 }
 
@@ -305,6 +361,20 @@ function welcomeFor(room, playerId) {
   }
   return {
     to: playerId,
-    message: { type: 'welcome', you, game: room.game, peerPresent, peerId },
+    message: {
+      type: 'welcome',
+      you,
+      game: room.game,
+      peerPresent,
+      peerId,
+      // Carried explicitly rather than inferred from the puzzle's categories.
+      // The predicate that defines the easy pool has already been re-cut once
+      // (eu-member moved out of it in #928), and an inferred badge would have
+      // silently re-labelled every live room that day. It also tells the joiner
+      // the *host's choice*, which a lucky full-pool board can imitate but not
+      // actually be.
+      easy: room.easy,
+      isHost: room.hostId === playerId,
+    },
   };
 }

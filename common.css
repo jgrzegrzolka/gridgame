@@ -649,6 +649,28 @@ body::after {
   outline: 2px solid var(--link-color);
   outline-offset: 2px;
 }
+/* Read-only switch: still reports its value, but this player can't set it.
+ * Used by the online tic-tac-toe board, where the "No statistics" mode belongs
+ * to the room rather than the device — the joiner sees which kind of board they
+ * joined, and both players see it lock once a move lands (re-dealing after that
+ * would throw away someone's progress). Muted label + faded switch, matching
+ * `.actions-row button:disabled`, so a disabled control reads the same
+ * everywhere. The `opacity` is on the switch alone, not the label: the label has
+ * a real colour var for "quieter text" and CLAUDE.md rules out faking shades
+ * with opacity, but there is no var for "a faded control", which is exactly what
+ * the actions-row precedent already established. */
+.scope-toggle.is-disabled {
+  cursor: default;
+}
+.scope-toggle.is-disabled .scope-toggle-text {
+  color: var(--muted-color);
+}
+.scope-toggle.is-disabled .scope-toggle-switch {
+  opacity: 0.5;
+}
+.scope-toggle.is-disabled .scope-toggle-switch input {
+  cursor: default;
+}
 /* Visually a text link — children of `.actions-row` (any `<a>` or
  * `<button>`) read as siblings of the row's `·`-separated text actions
  * (e.g. "Give up", "Play again", "Random", "Home"). Buttons keep their

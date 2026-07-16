@@ -23,11 +23,13 @@ export { ROOM_ALPHABET, ROOM_LEN, generateCode, isValidRoomCode, serverUrlFor } 
  * @property {boolean} peerPresent
  * @property {string | null} peerId  - opponent's playerId once known. Welcome / peer-joined fill it in. Used by the Feature G head-to-head row that keys writes by both deviceIds.
  * @property {StatusOverride | null} statusOverride  - non-null when the server sent a 'rejected' or the socket died; takes precedence over the derived status. Stored as `{ key, fallback, params? }` so the page can re-translate on a soft language switch.
+ * @property {boolean | null} easy  - the room's "No statistics" mode, from the server. `null` until welcome arrives (we are in the lobby, or still connecting), which is why the toggle falls back to the local preference there.
+ * @property {boolean} isHost  - whether the server considers us this room's host. Distinct from page.js's own `isHost`, which is a sessionStorage guess used for the Feature G result POST; this one is authoritative and drives whether the toggle is live.
  */
 
 /** @returns {ClientState} */
 export function initialClientState() {
-  return { game: null, myRole: null, peerPresent: false, peerId: null, statusOverride: null };
+  return { game: null, myRole: null, peerPresent: false, peerId: null, statusOverride: null, easy: null, isHost: false };
 }
 
 /**
@@ -51,6 +53,7 @@ export function canGiveUpOnline(state) {
  *   | { type: 'gave-up', byMe: boolean }
  *   | { type: 'close' }
  *   | { type: 'rematch-started' }
+ *   | { type: 'puzzle-replaced' }
  * } Effect
  */
 
@@ -104,6 +107,8 @@ export function reduceServerMessage(state, message) {
           game: message.game,
           peerPresent: message.peerPresent,
           peerId: typeof message.peerId === 'string' ? message.peerId : null,
+          easy: message.easy === true,
+          isHost: message.isHost === true,
         },
         effects,
       };
@@ -124,10 +129,17 @@ export function reduceServerMessage(state, message) {
         // "Opponent gave up". Server stamps `who` with the resigner's role.
         effects.push({ type: 'gave-up', byMe: message.who === state.myRole });
       }
+      if (message.kind === 'easy-changed') {
+        // The host re-dealt the board. Same round, new puzzle, so the grid
+        // headers have to be rebuilt — distinct from 'rematch-started' because
+        // no game ended here and there is no result UI to clear.
+        effects.push({ type: 'puzzle-replaced' });
+      }
       if (message.game && (message.game.winner || message.game.draw || message.game.gaveUp)) {
         effects.push({ type: 'finished' });
       }
-      return { state: { ...state, game: message.game }, effects };
+      const easy = message.kind === 'easy-changed' ? message.easy === true : state.easy;
+      return { state: { ...state, game: message.game, easy }, effects };
     }
     case 'peer-joined': {
       // peerId arrives on the first peer-joined (when the room learns who
