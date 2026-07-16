@@ -21,7 +21,9 @@ Three pages, all 3×3. (A 9×9 "ultimate" variant existed until 2026-07-16; Feat
 
 Each page is markup-only HTML plus a sibling `page.js` exporting a `bootX()` that a tiny inline `<script type="module">` calls. Standard repo pattern.
 
-**Reachability:** `offline/` and `solo/` are linked *only* from `ticTacToe/index.html`, and none of the three has a `.back` chrome button. Solo's burger carries the one link back (`ttt.playOnline` → `../`). Keep that in mind before pruning a menu item.
+**Reachability:** `offline/` and `solo/` are linked *only* from `ticTacToe/index.html`, and none of the three has a `.back` chrome button — that button was deliberately removed site-wide and replaced by the inline "Home" link in each page's `.actions-row`, which is pinned by `chrome.test.js`. So **the site has no "up one level" nav on purpose**, and every board exits to the site root via Home.
+
+Solo's burger used to carry a lone `ttt.playOnline` → `../` link; it was removed 2026-07-16 because offline never had one, and a single cross-page nav link in one of two sibling burgers is the inconsistency, not the feature. Both burgers now read nickname → "No statistics" → coffee. Don't reintroduce an up-level link to one board without the other — and prefer neither, per the `.back` decision above.
 
 ### Shared assets
 
