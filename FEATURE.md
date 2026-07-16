@@ -23,7 +23,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ### Feature U: Simplify tic-tac-toe — remove 9×9, add a flag-only easy mode
 
-**Status:** Phase 1 shipped (#924). Phase 2 shipped (#925 code removal, #926 follow-up + the Cosmos strip, which has been **run and verified**). **Phase 3 shipped (#928)** — the "No statistics" toggle on the offline + solo boards. All three phases done; online easy mode stays deferred (see the Phase 3 scope decision) and is the only thing left in this feature. Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
+**Status:** Phase 1 shipped (#924). Phase 2 shipped (#925 code removal, #926 follow-up + the Cosmos strip, which has been **run and verified**). **Phase 3 shipped (#928)** — the "No statistics" toggle on the offline + solo boards. **Phase 4 (this PR) takes the toggle online**, which was the one thing left. Feature U is complete. Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
 
 **Why both halves are one feature.** They're the same lever pulled twice: *what may enter the category pool*. 9×9 is a pool filter (`ultimateEligible`) that costs a line plus a JSDoc paragraph in all 32 metric factories. Easy mode is a pool filter that costs nothing per-metric because it derives from the category id. Removing the first and adding the second in one feature keeps the reasoning in one place, and Phase 2 must not delete the `pool` plumbing that Phase 3 reuses (`randomPuzzle(rng, pool)`, engine.js:2938).
 
@@ -118,10 +118,32 @@ Easy mode *relaxes* the generator (fewer exclusiveGroup collisions once the metr
 
 **Correction to the Phase 3 plan, found by looking:** the "nickname → coffee-divider with nothing between" trap applies to **offline only**. `mountNicknameMenuItem` inserts the nickname as the menu's *first* child, so solo was already nickname → "Play online" → divider and never matched `.menu li.menu-nickname + li.menu-divider`. Offline was the bare case; inserting the toggle there restores the divider's own `border-top`, which is correct and self-healing exactly as `common.css:405-408` says. Verified in-browser on both menus, not assumed.
 
+#### Phase 4 — online easy mode *(this PR)*
+
+**Jan's call, 2026-07-16, overriding Phase 3's deferral: keep the toggle exactly where it is — in the burger, on all three boards.** The host's setting wins, the joiner sees it and cannot change it. His argument was consistency ("this way we have same UI for all modes"), and it beats the lobby-placement alternative that was mocked first: that one justified itself with "the choice is frozen at create time", and the moment the host can change it in-room, that rationale evaporates. Keeping it in the burger also means **no new UI element at all** — the switch is its own disclosure, so the "room mode" chip the mock proposed was dropped.
+
+**Who decides was never really open.** The server deals the puzzle at room creation, before a joiner exists, so there is nobody else to ask. Phase 3's objection was never about authority; it was that the creator would impose a mode "with no UI saying so". The joiner's read-only switch is that UI.
+
+**The one refinement on top of what Jan described.** He said flipping it re-deals the game and that this is fine. Offline it is — it's your own board. Online, a mid-game re-deal throws away moves the *opponent* made, and #928 already wrote that rule for the single-player case ("a reload would destroy the player's progress to apply a preference, which is the one thing a settings switch must not do"). So the switch is live only until the first move lands, then locks for both. That leaves the host a create-to-first-move window, which in practice is the wait for someone to join. It also keeps the switch honest: it always describes the board in front of you. The rejected alternative (mid-game flips applying to the next board, as offline does) would have the joiner's switch reading "on" while they stare at a metrics board.
+
+**Shape:**
+- `?easy=1` on the create WS URL only. A joiner appending it is inert — the board already exists.
+- `Room.easy`, persisted in the durable object, so the mode survives an eviction and a **rematch** (agreeing to a no-statistics board and then getting metrics on "Play again" would be a bait).
+- New `set-easy` client message. `applyStartRematch` could not be reused: it hard-requires `isGameOver` (`onlineRoom.js:210`), and this fires on a live untouched board.
+- `applySetEasy` authorizes host + untouched + actually-changing. The third guard stops a host rerolling a disliked board by toggling twice — that's a different feature nobody asked for.
+- `welcome` carries `easy` + `isHost`. Carried explicitly, not inferred from the board's categories: the easy-pool predicate has already been re-cut once (eu-member, #928), and an inferred badge would have silently re-labelled every live room that day.
+- `decideEasyToggleState` (pure, in `ticTacToe/easyToggle.js`) holds the whole rule; `page.js` is the DOM half. Disabling is a courtesy — the server re-checks everything, since anyone can send a frame.
+
+**`easyToggle.test.js`'s "never on the online board" assertion is inverted, deliberately.** It pinned a *consequence* of the mode being unreachable from the client, and this PR makes it reachable. The rule it protected (the switch must never claim something it cannot deliver) survives as the `decideEasyToggleState` tests.
+
+**Known follow-up, deliberately not bundled:** `welcome.isHost` is now server-authoritative, which makes `flags/tttHostMemory.js`'s sessionStorage guess redundant — and the guess is *wrong* for a host who reopens the room in a fresh tab (it reads false, so they'd also skip the Feature G result POST). This PR uses the server's answer for the toggle and leaves the POST path alone; collapsing the two is a small, separately reviewable change to a write path that has bitten before.
+
+**Verified in two real browsers against local PartyKit** (separate contexts, so separate deviceIds): an easy room deals 6-of-6 flag rules and zero metrics; a joiner with **no** saved preference sees the switch read on + greyed, proving room-beats-preference; the host flipping it off re-deals both boards to a metrics board in lockstep; a give-up locks the switch for both. The online burger's borders come out byte-identical to offline's (nickname `border-bottom: 1px`, divider `border-top: 1px`, no double line).
+
 **Out of scope for Feature U:**
-- Online easy mode (see Phase 3 scope decision).
 - Any change to the daily-puzzle catalogue. Easy mode is player-selected curation of the *random* pool; the daily catalogue is human-curated already.
 - Difficulty tiers beyond the one binary toggle. Jan asked for a toggle, not a difficulty system.
+- Letting either player change the mode mid-game, or negotiating it between two players. One board, one owner, and a create-to-first-move window is enough.
 
 ---
 

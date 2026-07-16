@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { wireEasyToggle } from './easyToggle.js';
+import { wireEasyToggle, decideEasyToggleState } from './easyToggle.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -163,19 +163,75 @@ test('the .scope-toggle styles live in common.css, where both consumers can reac
   }
 });
 
-test('the toggle is mounted on offline + solo, and never on the online board', () => {
-  // The trap this feature is built around: PartyKit deals the online puzzle, so
-  // a localStorage switch cannot reach it. Rendering the control there would be
-  // a lie — it would move, save, and change nothing.
+test('the toggle is mounted on all three boards', () => {
+  // This assertion used to be the opposite: it pinned the toggle OFF the online
+  // board, because a localStorage switch cannot reach a server-dealt puzzle, so
+  // rendering it there would have been a lie. That premise is gone — the mode is
+  // now a room setting the server owns (`?easy=1` at create, `set-easy` to
+  // change, `applySetEasy` to authorize), so the control there is honoured.
+  // The rule it protected survives as the two tests below: the switch must never
+  // *claim* something it cannot deliver.
   const offline = readFileSync(join(here, 'offline', 'index.html'), 'utf8');
   const solo = readFileSync(join(here, 'solo', 'index.html'), 'utf8');
   const online = readFileSync(join(here, 'index.html'), 'utf8');
 
   assert.ok(offline.includes('id="easy-toggle-input"'), 'offline board is missing the toggle');
   assert.ok(solo.includes('id="easy-toggle-input"'), 'solo board is missing the toggle');
-  assert.equal(
-    online.includes('easy-toggle-input'),
-    false,
-    'the online board must not offer a toggle it cannot honour',
-  );
+  assert.ok(online.includes('id="easy-toggle-input"'), 'online board is missing the toggle');
+});
+
+// ---- decideEasyToggleState (the online board's switch) ----
+
+test('decideEasyToggleState: in the lobby it is your own preference, and it is live', () => {
+  for (const prefEasy of [true, false]) {
+    assert.deepEqual(
+      decideEasyToggleState({ inRoom: false, isHost: false, boardUntouched: true, roomEasy: null, prefEasy }),
+      { checked: prefEasy, disabled: false },
+      'the lobby switch seeds the next room you create, so it is always yours to set',
+    );
+  }
+});
+
+test('decideEasyToggleState: in a room it reports the ROOM, not your preference', () => {
+  // The disclosure rule. A joiner who prefers metrics, in a no-statistics room,
+  // must see "on" — the switch describes the board in front of them.
+  const s = decideEasyToggleState({
+    inRoom: true, isHost: false, boardUntouched: true, roomEasy: true, prefEasy: false,
+  });
+  assert.equal(s.checked, true, 'the room mode wins over the local preference');
+  assert.equal(s.disabled, true, 'and the joiner cannot change it');
+});
+
+test('decideEasyToggleState: the host may flip it while the board is untouched', () => {
+  const s = decideEasyToggleState({
+    inRoom: true, isHost: true, boardUntouched: true, roomEasy: false, prefEasy: false,
+  });
+  assert.equal(s.disabled, false);
+});
+
+test('decideEasyToggleState: it locks for the host once a move lands', () => {
+  // Re-dealing here would throw away the opponent's moves to apply a
+  // preference, which is the one thing a settings switch must never do.
+  const s = decideEasyToggleState({
+    inRoom: true, isHost: true, boardUntouched: false, roomEasy: true, prefEasy: true,
+  });
+  assert.equal(s.disabled, true);
+});
+
+test('decideEasyToggleState: the joiner never gets it, untouched board or not', () => {
+  for (const boardUntouched of [true, false]) {
+    assert.equal(
+      decideEasyToggleState({ inRoom: true, isHost: false, boardUntouched, roomEasy: false, prefEasy: true }).disabled,
+      true,
+    );
+  }
+});
+
+test('decideEasyToggleState: falls back to the preference before welcome lands', () => {
+  // Between "connecting" and the server's welcome we do not yet know the room's
+  // mode. Showing the local preference beats flickering through "off".
+  const s = decideEasyToggleState({
+    inRoom: true, isHost: true, boardUntouched: true, roomEasy: null, prefEasy: true,
+  });
+  assert.equal(s.checked, true);
 });

@@ -18,7 +18,9 @@ import { ensureProfile } from '../flags/autoProfile.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { renderMatchStrip } from './matchStrip.js';
 import { openMatchSheet, wireMatchSheetDismiss } from './matchSheet.js';
-import { shouldFireTicTacToeConfetti, newlyWinningCells } from '../flags/ticTacToe.js';
+import { shouldFireTicTacToeConfetti, newlyWinningCells, boardIsUntouched } from '../flags/ticTacToe.js';
+import { decideEasyToggleState } from './easyToggle.js';
+import { isTttEasy, setTttEasy } from '../flags/tttSettings.js';
 import { trackEvent } from '../analytics/index.js';
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
@@ -133,6 +135,15 @@ function runOnline(countries) {
   const finalScoreEl = document.getElementById('final-score');
   const playAgainEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('play-again'));
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
+  /** The "No statistics" switch. Online this is a ROOM setting, not a device
+   * one — the server deals one board for two people. `decideEasyToggleState`
+   * carries the whole rule and its reasoning; the code here is the DOM half.
+   * Declared up with the other elements (not next to renderEasyToggle further
+   * down) because a `?room=…` URL runs enterRoom → renderEasyToggle during
+   * module init, which would TDZ on a lower `const` — same reason `gridBuilt`
+   * and `isTouchDevice` sit up here. */
+  const easyToggleEl = /** @type {HTMLInputElement | null} */ (document.getElementById('easy-toggle-input'));
+  const easyToggleLabelEl = document.getElementById('easy-toggle-label');
   /** Server stamps the resigner's role on the broadcast; we keep it locally so
    * finishRound can pick "You gave up" vs "Opponent gave up" without re-deriving
    * it from the game state. */
@@ -191,6 +202,9 @@ function runOnline(countries) {
   function showLobby() {
     if (lobbyEl) lobbyEl.hidden = false;
     if (gameEl) gameEl.hidden = true;
+    // First paint: the switch shows this device's saved preference, which is
+    // what the next room you create will be dealt from.
+    renderEasyToggle();
   }
 
   if (createBtn) {
@@ -258,6 +272,10 @@ function runOnline(countries) {
     // connects and the first server state arrives.
     paintStrip();
     setStatusKey('ttt.connecting', 'Connecting…');
+    // We're in a room now, so the switch stops being "your preference" and
+    // starts describing this room. Until welcome lands it shows the preference
+    // and is locked — we don't yet know the mode or whether we host it.
+    renderEasyToggle();
     // Build the empty grid structure now so the user sees the full
     // 3×3 layout immediately, instead of just the (empty) thead row
     // while the WebSocket connects and the server responds with
@@ -270,7 +288,12 @@ function runOnline(countries) {
   function connect() {
     if (!activeRoom) return;
     const { code, intent } = activeRoom;
-    const wsUrl = `${SERVER_URL}${encodeURIComponent(code)}?pid=${encodeURIComponent(deviceId)}&intent=${intent}`;
+    // Only a create carries the mode: it seeds the room the server is about to
+    // deal. A reconnect flips intent to 'join' (see enterRoom), and by then the
+    // room owns the setting and remembers it — re-sending our preference there
+    // could quietly overwrite what the room actually is.
+    const easyParam = intent === 'create' && isTttEasy(window.localStorage) ? '&easy=1' : '';
+    const wsUrl = `${SERVER_URL}${encodeURIComponent(code)}?pid=${encodeURIComponent(deviceId)}&intent=${intent}${easyParam}`;
     ws = new WebSocket(wsUrl);
     ws.addEventListener('message', (ev) => onServerMessage(JSON.parse(ev.data)));
     ws.addEventListener('close', onSocketClose);
@@ -326,11 +349,17 @@ function runOnline(countries) {
     maybeFetchOpponent();
     maybeFetchPair();
     paintStrip();
+    // Every server message can move the switch: welcome brings the room's mode
+    // and whether we host it, and the first claim locks it for both players.
+    // Re-deriving it here rather than at each site is also what heals a flip
+    // the server refused.
+    renderEasyToggle();
     for (const effect of effects) {
       if (effect.type === 'shake') shakeCell(effect.row, effect.col);
       else if (effect.type === 'gave-up') lastGaveUpByMe = effect.byMe;
       else if (effect.type === 'finished') { finishRound(); reportFinishedResult(); }
       else if (effect.type === 'rematch-started') { resultSubmittedForGame = false; startFreshRound(); }
+      else if (effect.type === 'puzzle-replaced') startFreshRound();
       else if (effect.type === 'close') {
         // Server-side rejection — don't auto-reconnect, snap back to the
         // lobby with the reason visible so the user understands why their
@@ -365,6 +394,9 @@ function runOnline(countries) {
     // join while the new fetch is in flight.
     opponentNickname = undefined;
     pairRecord = null;
+    // Back in the lobby: `state` was just reset, so the switch reverts from the
+    // dead room's mode to this device's own preference, and unlocks.
+    renderEasyToggle();
     resultSubmittedForGame = false;
     if (matchStripEl) matchStripEl.replaceChildren();
   }
@@ -926,12 +958,50 @@ function runOnline(countries) {
   autoRelocalize(countries);
   document.addEventListener('langchanged', refreshI18nForGame);
 
+  function renderEasyToggle() {
+    if (!easyToggleEl) return;
+    const { checked, disabled } = decideEasyToggleState({
+      inRoom: activeRoom !== null,
+      // The server's answer, not `isHost` above: that one is a sessionStorage
+      // guess kept for the Feature G result POST, and it reads false for a host
+      // who reopened the room in a fresh tab. Getting the toggle wrong there
+      // would be visible; the server is authoritative and re-checks anyway.
+      isHost: state.isHost,
+      boardUntouched: state.game ? boardIsUntouched(state.game) : true,
+      roomEasy: state.easy,
+      prefEasy: isTttEasy(window.localStorage),
+    });
+    easyToggleEl.checked = checked;
+    easyToggleEl.disabled = disabled;
+    if (easyToggleLabelEl) easyToggleLabelEl.classList.toggle('is-disabled', disabled);
+  }
+
+  if (easyToggleEl) {
+    easyToggleEl.addEventListener('change', () => {
+      const easy = easyToggleEl.checked;
+      // Save wherever it was flipped: in the lobby that IS the whole action
+      // (it seeds your next room), and in a room it keeps your preference in
+      // step with the choice you just made for everyone.
+      setTttEasy(window.localStorage, easy);
+      if (!activeRoom) return;
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set-easy', easy }));
+      // Deliberately optimistic: no snap-back on send. The server answers with
+      // an 'easy-changed' broadcast that repaints this from room truth, and if
+      // it refuses (a move landed in the same instant), the very broadcast that
+      // beat us re-renders the switch back to the room's real state. Snapping
+      // back here instead would flicker on every ordinary flip to fix a race
+      // that heals itself.
+    });
+  }
+
   // The server-broadcast rematch state arrived: the grid headers need to be
   // rebuilt for the new puzzle, the finished overlay needs to go away, and
   // the body must shed the .game-over class so cells become clickable again.
   // Render at the end too — onServerMessage already called renderGrid once,
   // but against the OLD grid built from the OLD puzzle, so those writes hit
   // stale td references and we have to re-render against the fresh grid.
+  // Also serves 'puzzle-replaced' (the host changed the room's mode), which
+  // needs the same rebuild for the same reason: a new puzzle, mid-room.
   function startFreshRound() {
     if (resultEl) resultEl.hidden = true;
     if (gridBodyEl) gridBodyEl.innerHTML = '';

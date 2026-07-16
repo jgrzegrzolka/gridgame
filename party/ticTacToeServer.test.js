@@ -398,3 +398,152 @@ test('onClose: broadcasts peer-left and keeps the role for reconnect', async () 
   const msgs = [...a.sent.slice(aBefore), ...b.sent.slice(bBefore)].map((s) => JSON.parse(s));
   assert.ok(msgs.some((m) => m.type === 'peer-left'));
 });
+
+// ---- easy mode (the room's "No statistics" setting) ----
+
+/**
+ * @param {string} pid
+ * @param {'create' | 'join'} intent
+ * @param {boolean} easy
+ */
+function ctxForEasy(pid, intent, easy) {
+  const url = new URL('wss://example.test/parties/main/ABC12');
+  url.searchParams.set('pid', pid);
+  url.searchParams.set('intent', intent);
+  if (easy) url.searchParams.set('easy', '1');
+  return { request: /** @type {any} */ ({ url: url.toString() }) };
+}
+
+/**
+ * Record which pool each deal asked for. The suite forces a fixed puzzle, so
+ * the generated board can't reveal the pool — but "did the server ask for the
+ * easy one" is the actual contract here, and it's the thing that silently
+ * breaks (a rematch quietly reverting to the full pool looks fine locally).
+ * @param {TicTacToeServer} srv
+ */
+function recordDeals(srv) {
+  /** @type {boolean[]} */
+  const calls = [];
+  const original = srv.dealPuzzle.bind(srv);
+  srv.dealPuzzle = (easy) => { calls.push(easy); return original(easy); };
+  return calls;
+}
+
+test('onConnect: ?easy=1 on a create deals the room from the easy pool and tells the host', async () => {
+  const a = mockConn('a');
+  const srv = new TicTacToeServer(mockParty([a]), COUNTRIES, PUZZLE);
+  const deals = recordDeals(srv);
+  await srv.onStart();
+  await srv.onConnect(a, ctxForEasy('alice', 'create', true));
+
+  assert.deepEqual(deals, [true], 'the create deal must use the easy pool');
+  const msg = JSON.parse(a.sent[0]);
+  assert.equal(msg.easy, true);
+  assert.equal(msg.isHost, true);
+});
+
+test('onConnect: a create without ?easy deals a normal board', async () => {
+  const a = mockConn('a');
+  const srv = new TicTacToeServer(mockParty([a]), COUNTRIES, PUZZLE);
+  const deals = recordDeals(srv);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+
+  assert.deepEqual(deals, [false]);
+  assert.equal(JSON.parse(a.sent[0]).easy, false);
+});
+
+test('onConnect: a joiner cannot smuggle ?easy=1 into an existing room', async () => {
+  const a = mockConn('a');
+  const b = mockConn('b');
+  const srv = new TicTacToeServer(mockParty([a, b]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));      // normal room
+  await srv.onConnect(b, ctxForEasy('bob', 'join', true)); // bob tries his luck
+
+  const bobWelcome = JSON.parse(b.sent[0]);
+  assert.equal(bobWelcome.easy, false, 'the room was already dealt; the param is inert');
+  assert.equal(bobWelcome.isHost, false);
+});
+
+test('set-easy: the host re-deals and both players are sent the new board', async () => {
+  const a = mockConn('a');
+  const b = mockConn('b');
+  const srv = new TicTacToeServer(mockParty([a, b]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+  await srv.onConnect(b, ctxFor('bob', 'join'));
+  const deals = recordDeals(srv);
+
+  await srv.onMessage(JSON.stringify({ type: 'set-easy', easy: true }), a);
+
+  assert.deepEqual(deals, [true], 'the re-deal must use the pool the host just asked for');
+  for (const conn of [a, b]) {
+    const last = JSON.parse(conn.sent[conn.sent.length - 1]);
+    assert.equal(last.kind, 'easy-changed', `${conn.id} must be told the board changed`);
+    assert.equal(last.easy, true);
+  }
+});
+
+test('set-easy: the joiner is ignored, and nobody is told anything', async () => {
+  const a = mockConn('a');
+  const b = mockConn('b');
+  const srv = new TicTacToeServer(mockParty([a, b]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+  await srv.onConnect(b, ctxFor('bob', 'join'));
+  const sentBefore = a.sent.length;
+
+  await srv.onMessage(JSON.stringify({ type: 'set-easy', easy: true }), b);
+
+  assert.equal(a.sent.length, sentBefore, 'a refused set-easy broadcasts nothing');
+  assert.equal(srv.room?.easy, false);
+});
+
+test('set-easy: is refused once a move has landed', async () => {
+  const a = mockConn('a');
+  const b = mockConn('b');
+  const srv = new TicTacToeServer(mockParty([a, b]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create'));
+  await srv.onConnect(b, ctxFor('bob', 'join'));
+  // Bob is O and moves first; FR is Europe + red, so (0,0) is valid.
+  await srv.onMessage(JSON.stringify({ type: 'claim', row: 0, col: 0, countryCode: FR.code }), b);
+  const sentBefore = a.sent.length;
+
+  await srv.onMessage(JSON.stringify({ type: 'set-easy', easy: true }), a);
+
+  assert.equal(a.sent.length, sentBefore, 'the host cannot re-deal over the opponent');
+  assert.equal(srv.room?.game.cells[0][0].country?.code, FR.code);
+});
+
+test('set-easy: survives a durable-object eviction, so a rematch keeps the mode', async () => {
+  const storage = mockStorage();
+  const a = mockConn('a');
+  const srv = new TicTacToeServer(mockParty([a], storage), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxForEasy('alice', 'create', true));
+
+  // A fresh DO over the same storage — what an eviction actually looks like.
+  const revived = new TicTacToeServer(mockParty([a], storage), COUNTRIES, PUZZLE);
+  await revived.onStart();
+  assert.equal(revived.room?.easy, true);
+});
+
+test('rematch: deals from the room mode, not the default pool', async () => {
+  const a = mockConn('a');
+  const b = mockConn('b');
+  const srv = new TicTacToeServer(mockParty([a, b]), COUNTRIES, PUZZLE);
+  await srv.onStart();
+  await srv.onConnect(a, ctxForEasy('alice', 'create', true));
+  await srv.onConnect(b, ctxFor('bob', 'join'));
+  await srv.onMessage(JSON.stringify({ type: 'give-up' }), a);
+  const deals = recordDeals(srv);
+
+  await srv.onMessage(JSON.stringify({ type: 'rematch' }), a);
+
+  // Agreeing to a no-statistics board and then getting metrics on "Play again"
+  // would be a bait, so this is the assertion that keeps the promise.
+  assert.deepEqual(deals, [true]);
+  assert.equal(srv.room?.easy, true);
+});

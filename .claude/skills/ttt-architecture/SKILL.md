@@ -34,10 +34,12 @@ Solo's burger used to carry a lone `ttt.playOnline` → `../` link; it was remov
 ## Puzzle authority: the server deals online
 
 ```js
-// party/ticTacToeServer.js
-import { generateRandomPuzzle } from '../flags/engine.js';
-const puzzle = this.forcedPuzzle ?? generateRandomPuzzle(this.countries);     // fresh room
-const newPuzzle = this.forcedPuzzle ?? generateRandomPuzzle(this.countries);  // rematch
+// party/ticTacToeServer.js — every deal funnels through one method, so a new
+// deal site can't quietly ignore the room's mode.
+dealPuzzle(easy) { /* forcedPuzzle for tests, else generate from the matching pool */ }
+this.room = createRoom(this.dealPuzzle(easy), { easy });              // fresh room (?easy=1)
+applyStartRematch(this.room, playerId, this.dealPuzzle(this.room.easy)); // rematch keeps the mode
+applySetEasy(this.room, playerId, easy, this.dealPuzzle(easy));       // host re-deals mid-room
 ```
 
 The server loads its own countries and metrics at module scope (`party/server.js`) and persists the puzzle in the durable object, so both players and any reconnect see one identical board. `partykit.json` maps the party names to entry points — if you add or remove a server file, that mapping must move with it or the deploy breaks (nothing tests it).
@@ -46,19 +48,23 @@ The server loads its own countries and metrics at module scope (`party/server.js
 
 **Consequences for anything generation-affecting:**
 
-1. A localStorage setting read in the browser **silently does nothing online**. The server already dealt the board and never sees the flag.
-2. If you did wire it naively, the room creator would impose their setting on the opponent with no UI saying so. Two players, one board, one preference: that's a room setting, not a device setting.
-3. Making it work online means a protocol change: a param on the WS URL at create time (today it accepts only `?pid=` and `?intent=create|join`, `party/ticTacToeServer.js:83-84`), durable-object state to remember it, honouring it on **rematch** too (`:166`), and lobby UI so the joiner knows what they're joining.
-4. Client→server messages are only `claim`, `give-up`, `rematch` (`:146-172`). There is no options channel.
+1. A localStorage setting read in the browser **cannot reach an online board by itself**. The server already dealt it and never sees the flag. It has to travel: a create-time WS param, room state, and a message to change it later.
+2. Two players, one board, one preference — so it's a **room setting, not a device setting**, and the room's answer must beat the local one in the UI. Otherwise the creator imposes a mode on the opponent with nothing saying so.
+3. **"No statistics" is the worked example** — copy it rather than re-deriving. `?easy=1` at create (`party/ticTacToeServer.js`), `Room.easy` persisted in the durable object, `set-easy` to change it, `applySetEasy` to authorize, `easy` + `isHost` on `welcome` so the joiner's control can report the room. See "Adding a setting" below.
+4. Client→server messages are `claim`, `give-up`, `rematch`, `set-easy`. Adding a fifth means a handler in `onMessage` **and** a reducer in `onlineRoom.js` that owns the rules — the handler must not decide anything the reducer doesn't.
+5. **`applyStartRematch` requires `isGameOver`.** Anything that re-deals a *live* board needs its own transition; you cannot lean on the rematch path.
+6. **Never re-deal a board with progress on it.** Online those moves are partly the opponent's, so a settings change that re-deals must be gated on `boardIsUntouched` in the reducer, not only in the UI.
 
 **What is safe:** puzzles serialize by **category id** and rehydrate via `categoryFromId` (`engine.js:2686`). That decode path is total over the pool, so drawing from a narrowed pool needs no wire-format change.
+
+**Version skew is real here.** The page and the PartyKit server deploy from different workflows, so a new client meets an old server and vice versa. Absent fields must read as the safe default (`deserializeRoom` treats a missing `easy` as false — a pre-existing room really was dealt from the full pool; the client treats a missing `isHost` as false, which only locks a control).
 
 ## Reducers
 
 Pure, tested, no DOM. Pages are renderers over these.
 
 - **`flags/ticTacToe.js`** — the two-player reducer (`newGame`, `attemptClaim`, `findWinner`, `applyGiveUp`, `isGameOver`, `newlyWinningCells`, `shouldFireTicTacToeConfetti`) **and** the solo variant (`newSoloGame`, `attemptSoloClaim`, `isSoloOver`, `applySoloGiveUp`).
-- **`flags/onlineRoom.js`** — room state machine (roles, hello, claim, rematch, disconnect), shared by client and server.
+- **`flags/onlineRoom.js`** — room state machine (roles, hello, claim, rematch, disconnect, set-easy), shared by client and server. Every rule about who may do what lives here, not in the server's message handler.
 - **`ticTacToe/onlineClient.js`** — the client-side WS message reducer.
 
 Note the import asymmetry, which tells you the authority model at a glance: `offline/page.js` and `solo/page.js` import the *game* reducers, while the online `page.js` imports only `shouldFireTicTacToeConfetti` and `newlyWinningCells`. Online game logic lives server-side.
@@ -81,15 +87,30 @@ export function setFindIncludeAll(store, value) { writeBoolSetting(store, FIND_I
 
 **Key naming:** `gridgame.<surface>.<setting>`. The `ttt` namespace is already claimed (`gridgame.ttt.hostRoom`, `flags/tttHostMemory.js:24`, which is **sessionStorage**, not localStorage). Existing keys: `gridgame.flagfind.includeAll`, `gridgame.flagquiz.includeAll` / `.lastVariant` / `.showMap`, `gridgame.flagsdata.showMap` / `.wide`, `gridgame.party.setup` / `.plan` / `.tricky` / `.reveal`.
 
-**One setting reaches puzzle generation: "No statistics"** (`gridgame.ttt.easy`), on the offline and solo boards. It's the worked example of everything above, so copy it rather than the findFlag original if you're adding a second one:
+**One setting reaches puzzle generation: "No statistics"** (`gridgame.ttt.easy`), and it is mounted on **all three** boards. It's the worked example of everything above, so copy it rather than the findFlag original if you're adding a second one.
+
+Shared by all three:
 
 - `flags/tttSettings.js` — `isTttEasy` / `setTttEasy` over the shared bool helpers. A tiny dedicated module (same shape as `tttHostMemory.js`) rather than a new import in `flags/ticTacToe.js`, which stays a pure reducer.
-- `ticTacToe/easyToggle.js` — `wireEasyToggle({ inputEl, isBoardUntouched, redeal })`, shared by both pages because the same mechanism must be the same code. Injectable storage / defer, so it's unit-tested (`easyToggle.test.js`) despite being DOM glue.
-- Each page reads the setting **once at boot** (`generateRandomPuzzle(countries, isTttEasy() ? { pool: buildEasyCategoryPool() } : {})`) because the board is dealt once.
-- Flipping it **re-deals only an untouched board** — via `window.location.reload()`, which is exactly what the pages' own "Play again" does, gated on `boardIsUntouched(state)` and deferred 350 ms so the thumb's slide is visible. On a board with moves down it applies to the next board instead; reloading there would destroy the player's progress to apply a preference.
-- **It is not rendered on `ticTacToe/index.html`**, and a test reads all three HTML files to keep it that way. Online is server-dealt, so the control would move, save, and change nothing.
+- The same `.scope-toggle` burger markup and the same storage key, so a player has **one** preference, not three.
 
-Whatever you add next, **online is unaffected** unless you change the protocol.
+Offline + solo (the board is dealt at boot, by the page):
+
+- `ticTacToe/easyToggle.js` — `wireEasyToggle({ inputEl, isBoardUntouched, redeal })`, shared by both pages because the same mechanism must be the same code. Injectable storage / defer, so it's unit-tested despite being DOM glue.
+- Each page reads the setting **once at boot** (`generateRandomPuzzle(countries, isTttEasy() ? { pool: buildEasyCategoryPool() } : {})`).
+- Flipping it **re-deals only an untouched board** — via `window.location.reload()`, which is exactly what the pages' own "Play again" does, gated on `boardIsUntouched(state)` and deferred 350 ms so the thumb's slide is visible. With moves down it applies to the next board instead.
+
+Online (the board is dealt by the server, for two people):
+
+- Same control, same place, but it is a **room** setting. `decideEasyToggleState({ inRoom, isHost, boardUntouched, roomEasy, prefEasy })` in `easyToggle.js` owns the whole rule; `page.js`'s `renderEasyToggle` is the DOM half and runs on **every** server message.
+- In the lobby it is your preference and seeds the room you create (`?easy=1`). In a room it reports *that room's* mode, so a joiner who prefers metrics sees "on" if the room is on.
+- Live only for the host, only while the board is untouched; otherwise `.scope-toggle.is-disabled` (muted label + faded switch, matching `.actions-row button:disabled`). Locking it once play starts is what keeps the switch describing the board actually in front of you.
+- The change handler is **optimistic** — it does not snap back. The server's `easy-changed` broadcast repaints from room truth, and a refusal is healed by whatever message beat it.
+- The `is-disabled` styling lives in `common.css` with the rest of `.scope-toggle`, because two consumers reach it.
+
+`easyToggle.test.js` pins that all three boards mount the toggle (it used to pin the opposite — see FEATURE.md Feature U Phase 4), plus that `.scope-toggle`'s CSS stays in `common.css`.
+
+Whatever you add next: **online is not automatically unaffected any more.** A new pool-affecting setting has to answer "whose setting wins, and how does the other player find out?" before it has a design.
 
 **Burger borders are load-bearing.** The offline and online menus are currently nickname → coffee-divider with nothing between. `common.css`'s `.menu li.menu-nickname + li.menu-divider` suppresses the divider's `border-top` in exactly that shape, because otherwise the nickname's `border-bottom` and the divider's `border-top` stack into a double grey line (the bug in #926). Add a nav row between them and the rule stops matching, restoring the divider — correct and self-healing, but **look at the menu** after changing it.
 
@@ -108,7 +129,7 @@ TTT state escapes the browser. Before removing a mode or renaming a counter:
 - WS client reducer: `ticTacToe/onlineClient.test.js`.
 - Server: `party/ticTacToeServer.test.js`.
 - UI mechanics: `ticTacToe/shakeFeedback.test.js` (shake-on-miss, winning-cell shake), `ticTacToe/matchStrip.test.js`.
-- Settings: `ticTacToe/easyToggle.test.js` — the "No statistics" switch, including the two contracts that live outside JS: that `.scope-toggle`'s CSS stays in `common.css` where both consumers reach it, and that the toggle is absent from the online board's markup.
+- Settings: `ticTacToe/easyToggle.test.js` — the "No statistics" switch: `decideEasyToggleState`'s rules (room beats preference, host-only, locks on first move), plus the two contracts that live outside JS: that `.scope-toggle`'s CSS stays in `common.css` where every consumer reaches it, and that all three boards mount the toggle.
 - Generation against real data: `flags/countries.test.js` (the load-bearing one).
 
 The pages themselves are DOM and fetch glue and aren't unit-tested. Per `CLAUDE.md`, "I can't test this" means the logic is in the wrong file: push it into a sibling module or `flags/`.
