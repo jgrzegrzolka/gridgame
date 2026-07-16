@@ -23,7 +23,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ### Feature U: Simplify tic-tac-toe — remove 9×9, add a flag-only easy mode
 
-**Status:** started 2026-07-16. Phase 1 shipped (PR #924). Phase 2 code removal done, **the Cosmos strip has NOT been run yet** (see its checklist below). Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
+**Status:** Phase 1 shipped (#924). Phase 2 shipped (#925 code removal, #926 follow-up + the Cosmos strip, which has been **run and verified**). **Phase 3 is next and unstarted** — a fresh agent should begin there. Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
 
 **Why both halves are one feature.** They're the same lever pulled twice: *what may enter the category pool*. 9×9 is a pool filter (`ultimateEligible`) that costs a line plus a JSDoc paragraph in all 32 metric factories. Easy mode is a pool filter that costs nothing per-metric because it derives from the category id. Removing the first and adding the second in one feature keeps the reasoning in one place, and Phase 2 must not delete the `pool` plumbing that Phase 3 reuses (`randomPuzzle(rng, pool)`, engine.js:2938).
 
@@ -89,13 +89,19 @@ The Phase 1 plan said "stop writing, keep reading" for both. Jan overrode: *"do 
 
 #### Phase 3 — flag-only easy mode (offline + solo only)
 
-**Scope decision (Jan, 2026-07-16): start offline/solo only.** The PartyKit server deals online puzzles (`party/ticTacToeServer.js:96` fresh, `:166` rematch), so a localStorage toggle would silently do nothing in an online room, and naively wiring it would let the room creator impose difficulty on the opponent with no UI saying so. Online easy mode is a room setting (WS URL param at create + durable-object state + lobby display) and is deferred until we see whether anyone uses the offline toggle.
+**Scope decision (Jan, 2026-07-16): start offline/solo only.** The PartyKit server deals online puzzles (`party/ticTacToeServer.js`, both the fresh-room and rematch calls), so a localStorage toggle would silently do nothing in an online room, and naively wiring it would let the room creator impose difficulty on the opponent with no UI saying so. Online easy mode is a room setting (WS URL param at create + durable-object state + lobby display) and is deferred until we see whether anyone uses the offline toggle. **Read the `ttt-architecture` skill before touching this** — it carries the puzzle-authority rule and the toggle recipe.
 
-- [ ] Add a `pool` option to `generateRandomPuzzle` (engine.js:3162). It currently calls `randomPuzzle(rng)` at :3165 with the default pool hardcoded; `randomPuzzle` already accepts a pool.
-- [ ] `buildEasyCategoryPool()` next to `buildRandomCategoryPool` (engine.js:2723): `buildRandomCategoryPool().filter(c => isFlagVisualCategory(c) || c.id.startsWith('continent:'))`. Same shape as the `buildUltimateCategoryPool` that Phase 2 deletes, but with no per-category annotation to maintain.
-- [ ] Burger toggle on `ticTacToe/offline/` + `ticTacToe/solo/`, keyed `gridgame.ttt.easy`. Reuse the `.scope-toggle` markup from `findFlag/index.html:55-63` and `readBoolSetting`/`writeBoolSetting` from `flags/group.js:798-811`, which are default-off by construction (`getItem(key) === 'true'`) and so already match the opt-in sense easy mode wants. **`findFlag` is the repo's only burger switch**, so it's the pattern to match, not to reinvent.
+*Line numbers below are post-#926 (verified 2026-07-16). `engine.js` shrank 3404 → ~3020 in Phase 2, so anything cited from the Phase 1 plan has moved.*
+
+- [ ] Add a `pool` option to `generateRandomPuzzle` (`engine.js:2831`). It calls `randomPuzzle(rng)` with the default pool hardcoded; `randomPuzzle` (`engine.js:2722`) **already accepts a pool** — Phase 2 deliberately kept that parameter for this.
+- [ ] `buildEasyCategoryPool()` next to `buildRandomCategoryPool` (`engine.js:2520`): `buildRandomCategoryPool().filter(c => isFlagVisualCategory(c) || c.id.startsWith('continent:'))`. `isFlagVisualCategory` is at `engine.js:2694`, `FLAG_VISUAL_KINDS` at `:2685`. No per-category annotation to maintain (that was `ultimateEligible`'s sin).
+- [ ] Thread it through the two client generate sites: `ticTacToe/solo/page.js:38` and `ticTacToe/offline/page.js:46`, both currently `generateRandomPuzzle(countries)` bare.
+- [ ] Burger toggle on `ticTacToe/offline/` + `ticTacToe/solo/`, keyed `gridgame.ttt.easy`. Reuse the `.scope-toggle` markup from `findFlag/index.html:56-63` and `readBoolSetting` / `writeBoolSetting` from `flags/group.js:798-811`, which are **default-off by construction** (`getItem(key) === 'true'`) and so already match the opt-in sense easy mode wants. **`findFlag` is the repo's only burger switch** — match it, don't reinvent.
 - [ ] Toggle must not appear on `ticTacToe/index.html` (online), where it would be a lie.
+- [ ] **Mind the burger borders.** Both those menus are now nickname → coffee-divider with nothing between (that's what caused #926's double grey line). Inserting a toggle `<li>` between them puts a nav row back, which makes `.menu li.menu-nickname + li.menu-divider` (common.css) stop matching and the divider's own `border-top` return — which is correct and self-healing, but **look at the menu after wiring it** rather than assuming.
 - [ ] Tests: seeded sweep in `flags/countries.test.js` proving the easy pool generates against real data and that no metric category leaks into an easy board.
+
+**Measured 2026-07-16 (re-verify if the pool changes):** easy pool = 26 categories; 500/500 seeds generate at a mean 6.0 attempts vs the full 142-pool's 16.1. Easy mode *relaxes* the generator. A live solo board sampled after Phase 2 came out 5-of-6 statistics, which is the complaint this phase answers.
 
 **Open calls for Phase 3:**
 - **`hasMotif:eu-member` is in the easy pool but isn't flag-readable.** `isFlagVisualCategory` classifies by id prefix, so `eu-member` counts as a motif. It's a country fact wearing a motif tag. Options: exclude it from the easy pool specifically, or reclassify it (which also fixes a latent false-positive in `lacksFlagVisualCategory`, where a board's only "flag-visual" rule could be `eu-member`). Prefer the reclassify if it doesn't cascade.
