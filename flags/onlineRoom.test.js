@@ -8,7 +8,7 @@ import {
   applyGiveUp,
   applyDisconnect,
   applyStartRematch,
-  applySetEasy,
+  applySetAdvanced,
   serializeRoom,
   deserializeRoom,
 } from './onlineRoom.js';
@@ -517,29 +517,29 @@ test('deserializeRoom rebuilds puzzle predicates so the game stays playable', ()
   assert.equal(msg.kind, 'claimed');
 });
 
-// ---- easy mode (the "No statistics" room setting) ----
+// ---- Advanced mode (the room setting) ----
 
 /** A second puzzle, distinguishable from PUZZLE by its row ids. */
-const EASY_PUZZLE = {
+const OTHER_PUZZLE = {
   rows: [continent('Africa'), continent('Asia'), continent('Europe')],
   cols: [hasColor('green'), hasColor('red'), hasColor('blue')],
 };
 
-test('createRoom: easy defaults off, and records the pool the puzzle came from', () => {
-  assert.equal(createRoom(PUZZLE).easy, false);
-  assert.equal(createRoom(PUZZLE, {}).easy, false);
-  assert.equal(createRoom(PUZZLE, { easy: true }).easy, true);
+test('createRoom: advanced defaults off, and records the pool the puzzle came from', () => {
+  assert.equal(createRoom(PUZZLE).advanced, false);
+  assert.equal(createRoom(PUZZLE, {}).advanced, false);
+  assert.equal(createRoom(PUZZLE, { advanced: true }).advanced, true);
   // Not truthy-coerced: only a real boolean true turns it on, so a stray
   // query-string '0' or 'false' reaching this can't silently enable it.
-  assert.equal(createRoom(PUZZLE, { easy: /** @type {any} */ ('false') }).easy, false);
+  assert.equal(createRoom(PUZZLE, { advanced: /** @type {any} */ ('false') }).advanced, false);
 });
 
 test('welcome tells every player the room mode, and each player whether they host it', () => {
-  let room = createRoom(PUZZLE, { easy: true });
+  let room = createRoom(PUZZLE, { advanced: true });
   const hello = applyHello(room, 'alice');
   room = hello.room;
   const aliceWelcome = /** @type {any} */ (hello.broadcasts[0].message);
-  assert.equal(aliceWelcome.easy, true, 'host sees the room mode');
+  assert.equal(aliceWelcome.advanced, true, 'host sees the room mode');
   assert.equal(aliceWelcome.isHost, true);
 
   const bobHello = applyHello(room, 'bob');
@@ -548,106 +548,121 @@ test('welcome tells every player the room mode, and each player whether they hos
   );
   // The disclosure the whole design rests on: the joiner is told what kind of
   // room they walked into, rather than inferring it from the board.
-  assert.equal(bobWelcome.easy, true, 'joiner is told the room mode');
+  assert.equal(bobWelcome.advanced, true, 'joiner is told the room mode');
   assert.equal(bobWelcome.isHost, false, 'joiner is not the host');
 });
 
-test('applySetEasy: the host re-deals an untouched board and both players hear about it', () => {
-  let room = createRoom(PUZZLE, { easy: false });
+test('applySetAdvanced: the host re-deals an untouched board and both players hear about it', () => {
+  let room = createRoom(PUZZLE, { advanced: false });
   room = applyHello(room, 'alice').room;
   room = applyHello(room, 'bob').room;
 
-  const result = applySetEasy(room, 'alice', true, EASY_PUZZLE);
-  assert.equal(result.room.easy, true);
+  const result = applySetAdvanced(room, 'alice', true, OTHER_PUZZLE);
+  assert.equal(result.room.advanced, true);
   assert.equal(result.room.game.puzzle.rows[0].id, continent('Africa').id, 'board was re-dealt');
   assert.equal(result.broadcasts.length, 1);
   assert.equal(result.broadcasts[0].to, 'all', 'the opponent must see the new board too');
   const msg = /** @type {any} */ (result.broadcasts[0].message);
-  assert.equal(msg.kind, 'easy-changed');
-  assert.equal(msg.easy, true);
+  assert.equal(msg.kind, 'advanced-changed');
+  assert.equal(msg.advanced, true);
 });
 
-test('applySetEasy: keeps whoever was due to move first — same round, new board', () => {
-  let room = createRoom(PUZZLE, { easy: false });
+test('applySetAdvanced: keeps whoever was due to move first — same round, new board', () => {
+  let room = createRoom(PUZZLE, { advanced: false });
   room = applyHello(room, 'alice').room;
   room = applyHello(room, 'bob').room;
   const before = room.game.currentPlayer;
   assert.equal(before, 'O', 'guard: a fresh room starts on O, so the assert below can actually fail');
 
-  const result = applySetEasy(room, 'alice', true, EASY_PUZZLE);
+  const result = applySetAdvanced(room, 'alice', true, OTHER_PUZZLE);
   assert.equal(result.room.game.currentPlayer, before, 'a re-deal is not a rematch; it must not steal a turn');
   assert.equal(result.room.lastFirstPlayer, room.lastFirstPlayer);
 });
 
-test('applySetEasy: the joiner cannot change the room mode', () => {
-  let room = createRoom(PUZZLE, { easy: false });
+test('applySetAdvanced: the joiner cannot change the room mode', () => {
+  let room = createRoom(PUZZLE, { advanced: false });
   room = applyHello(room, 'alice').room;
   room = applyHello(room, 'bob').room;
 
-  const result = applySetEasy(room, 'bob', true, EASY_PUZZLE);
+  const result = applySetAdvanced(room, 'bob', true, OTHER_PUZZLE);
   assert.equal(result.broadcasts.length, 0, 'refusals broadcast nothing');
-  assert.equal(result.room.easy, false, 'room mode unchanged');
+  assert.equal(result.room.advanced, false, 'room mode unchanged');
   assert.equal(result.room.game.puzzle.rows[0].id, continent('Europe').id, 'board unchanged');
 });
 
-test('applySetEasy: refuses once a move has landed, so nobody loses progress', () => {
-  let room = createRoom(PUZZLE, { easy: false });
+test('applySetAdvanced: refuses once a move has landed, so nobody loses progress', () => {
+  let room = createRoom(PUZZLE, { advanced: false });
   room = applyHello(room, 'alice').room;
   room = applyHello(room, 'bob').room;
   // Bob is O and moves first; FR is Europe + red, so (0,0) is a valid claim.
   room = applyClaim(room, 'bob', 0, 0, FR).room;
 
-  const result = applySetEasy(room, 'alice', true, EASY_PUZZLE);
+  const result = applySetAdvanced(room, 'alice', true, OTHER_PUZZLE);
   assert.equal(result.broadcasts.length, 0);
-  assert.equal(result.room.easy, false);
+  assert.equal(result.room.advanced, false);
   assert.equal(result.room.game.cells[0][0].country?.code, FR.code, "the opponent's move survives");
 });
 
-test('applySetEasy: a give-up reveal counts as progress too', () => {
-  let room = createRoom(PUZZLE, { easy: false });
+test('applySetAdvanced: a give-up reveal counts as progress too', () => {
+  let room = createRoom(PUZZLE, { advanced: false });
   room = applyHello(room, 'alice').room;
   room = applyHello(room, 'bob').room;
   room = applyGiveUp(room, 'bob', [FR, DE, IT, JP, KR]).room;
 
-  const result = applySetEasy(room, 'alice', true, EASY_PUZZLE);
+  const result = applySetAdvanced(room, 'alice', true, OTHER_PUZZLE);
   assert.equal(result.broadcasts.length, 0, 'a revealed board must not be re-dealt under the players');
 });
 
-test('applySetEasy: flipping to the value it already has is a no-op, not a reroll', () => {
-  let room = createRoom(PUZZLE, { easy: true });
+test('applySetAdvanced: flipping to the value it already has is a no-op, not a reroll', () => {
+  let room = createRoom(PUZZLE, { advanced: true });
   room = applyHello(room, 'alice').room;
 
-  const result = applySetEasy(room, 'alice', true, EASY_PUZZLE);
+  const result = applySetAdvanced(room, 'alice', true, OTHER_PUZZLE);
   assert.equal(result.broadcasts.length, 0, 'no change means no re-deal');
   assert.equal(result.room.game.puzzle.rows[0].id, continent('Europe').id, 'same board');
 });
 
-test('applySetEasy: a stranger who is in no role cannot touch the room', () => {
-  let room = createRoom(PUZZLE, { easy: false });
+test('applySetAdvanced: a stranger who is in no role cannot touch the room', () => {
+  let room = createRoom(PUZZLE, { advanced: false });
   room = applyHello(room, 'alice').room;
 
-  const result = applySetEasy(room, 'mallory', true, EASY_PUZZLE);
+  const result = applySetAdvanced(room, 'mallory', true, OTHER_PUZZLE);
   assert.equal(result.broadcasts.length, 0);
-  assert.equal(result.room.easy, false);
+  assert.equal(result.room.advanced, false);
 });
 
 test('the room mode survives persistence, so a rematch stays in the same mode', () => {
-  let room = createRoom(PUZZLE, { easy: true });
+  let room = createRoom(PUZZLE, { advanced: true });
   room = applyHello(room, 'alice').room;
   room = applyHello(room, 'bob').room;
 
   const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
-  assert.equal(restored.easy, true);
+  assert.equal(restored.advanced, true);
 });
 
-test('a room persisted before easy mode existed reads as a normal room', () => {
-  // Rooms live in the durable object across a deploy, so the first snapshot
-  // this build loads will have no `easy` key at all. A full-pool board is what
-  // it was actually dealt, so false is the truthful answer, not a guess.
+test('deserializeRoom answers for the board a room was actually dealt, across all three snapshot vintages', () => {
+  // Rooms outlive deploys: a durable object holds one until eviction, so this
+  // build will load snapshots written by two older ones. Getting this wrong
+  // relabels a live room's chip and hands its rematch the other pool.
   let room = createRoom(PUZZLE);
   room = applyHello(room, 'alice').room;
-  const snapshot = /** @type {any} */ (JSON.parse(JSON.stringify(serializeRoom(room))));
-  delete snapshot.easy;
+  const base = /** @type {any} */ (JSON.parse(JSON.stringify(serializeRoom(room))));
 
-  assert.equal(deserializeRoom(snapshot).easy, false);
+  // Vintage 1 — pre-#931: no mode field at all, and every room was full-pool.
+  const ancient = { ...base };
+  delete ancient.advanced;
+  assert.equal(deserializeRoom(ancient).advanced, true, 'a pre-#931 room really was dealt the full pool');
+
+  // Vintage 2 — #931: an `easy` field, the near-opposite flag.
+  const easyTrue = { ...base, easy: true };
+  delete easyTrue.advanced;
+  assert.equal(deserializeRoom(easyTrue).advanced, false, 'easy:true was a flag-pool board, i.e. not advanced');
+
+  const easyFalse = { ...base, easy: false };
+  delete easyFalse.advanced;
+  assert.equal(deserializeRoom(easyFalse).advanced, true, 'easy:false was a full-pool board, i.e. advanced');
+
+  // Vintage 3 — this build. Explicit, and it wins over any stale `easy`.
+  assert.equal(deserializeRoom({ ...base, advanced: true, easy: true }).advanced, true);
+  assert.equal(deserializeRoom({ ...base, advanced: false, easy: false }).advanced, false);
 });

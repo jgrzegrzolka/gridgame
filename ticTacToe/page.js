@@ -19,8 +19,8 @@ import { fetchProfile } from '../flags/profileFetch.js';
 import { renderMatchStrip } from './matchStrip.js';
 import { openMatchSheet, wireMatchSheetDismiss } from './matchSheet.js';
 import { shouldFireTicTacToeConfetti, newlyWinningCells, boardIsUntouched } from '../flags/ticTacToe.js';
-import { decideEasyToggleState } from './easyToggle.js';
-import { isTttEasy, setTttEasy } from '../flags/tttSettings.js';
+import { decideAdvancedToggleState } from './advancedToggle.js';
+import { isTttAdvanced, setTttAdvanced } from '../flags/tttSettings.js';
 import { trackEvent } from '../analytics/index.js';
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
@@ -135,15 +135,20 @@ function runOnline(countries) {
   const finalScoreEl = document.getElementById('final-score');
   const playAgainEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('play-again'));
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
-  /** The "No statistics" switch. Online this is a ROOM setting, not a device
-   * one — the server deals one board for two people. `decideEasyToggleState`
+  /** The Advanced switches. Online this is a ROOM setting, not a device one —
+   * the server deals one board for two people. `decideAdvancedToggleState`
    * carries the whole rule and its reasoning; the code here is the DOM half.
-   * Declared up with the other elements (not next to renderEasyToggle further
-   * down) because a `?room=…` URL runs enterRoom → renderEasyToggle during
-   * module init, which would TDZ on a lower `const` — same reason `gridBuilt`
-   * and `isTouchDevice` sit up here. */
-  const easyToggleEl = /** @type {HTMLInputElement | null} */ (document.getElementById('easy-toggle-input'));
-  const easyToggleLabelEl = document.getElementById('easy-toggle-label');
+   * Two copies: the burger's and the "How to play" dialog's, paired with their
+   * labels so the disabled styling can follow.
+   * Declared up with the other elements (not next to renderAdvancedToggles
+   * further down) because a `?room=…` URL runs enterRoom → renderAdvancedToggles
+   * during module init, which would TDZ on a lower `const` — same reason
+   * `gridBuilt` and `isTouchDevice` sit up here. */
+  const advancedToggles = [
+    { input: /** @type {HTMLInputElement | null} */ (document.getElementById('advanced-toggle-input')), label: document.getElementById('advanced-toggle-label') },
+    { input: /** @type {HTMLInputElement | null} */ (document.getElementById('rules-advanced-toggle-input')), label: document.getElementById('rules-advanced-toggle-label') },
+  ].filter((t) => t.input);
+  const roomModeEl = document.getElementById('room-mode');
   /** Server stamps the resigner's role on the broadcast; we keep it locally so
    * finishRound can pick "You gave up" vs "Opponent gave up" without re-deriving
    * it from the game state. */
@@ -204,7 +209,7 @@ function runOnline(countries) {
     if (gameEl) gameEl.hidden = true;
     // First paint: the switch shows this device's saved preference, which is
     // what the next room you create will be dealt from.
-    renderEasyToggle();
+    renderAdvancedToggles();
   }
 
   if (createBtn) {
@@ -275,7 +280,7 @@ function runOnline(countries) {
     // We're in a room now, so the switch stops being "your preference" and
     // starts describing this room. Until welcome lands it shows the preference
     // and is locked — we don't yet know the mode or whether we host it.
-    renderEasyToggle();
+    renderAdvancedToggles();
     // Build the empty grid structure now so the user sees the full
     // 3×3 layout immediately, instead of just the (empty) thead row
     // while the WebSocket connects and the server responds with
@@ -292,8 +297,8 @@ function runOnline(countries) {
     // deal. A reconnect flips intent to 'join' (see enterRoom), and by then the
     // room owns the setting and remembers it — re-sending our preference there
     // could quietly overwrite what the room actually is.
-    const easyParam = intent === 'create' && isTttEasy(window.localStorage) ? '&easy=1' : '';
-    const wsUrl = `${SERVER_URL}${encodeURIComponent(code)}?pid=${encodeURIComponent(deviceId)}&intent=${intent}${easyParam}`;
+    const advancedParam = intent === 'create' && isTttAdvanced(window.localStorage) ? '&advanced=1' : '';
+    const wsUrl = `${SERVER_URL}${encodeURIComponent(code)}?pid=${encodeURIComponent(deviceId)}&intent=${intent}${advancedParam}`;
     ws = new WebSocket(wsUrl);
     ws.addEventListener('message', (ev) => onServerMessage(JSON.parse(ev.data)));
     ws.addEventListener('close', onSocketClose);
@@ -353,7 +358,7 @@ function runOnline(countries) {
     // and whether we host it, and the first claim locks it for both players.
     // Re-deriving it here rather than at each site is also what heals a flip
     // the server refused.
-    renderEasyToggle();
+    renderAdvancedToggles();
     for (const effect of effects) {
       if (effect.type === 'shake') shakeCell(effect.row, effect.col);
       else if (effect.type === 'gave-up') lastGaveUpByMe = effect.byMe;
@@ -396,7 +401,7 @@ function runOnline(countries) {
     pairRecord = null;
     // Back in the lobby: `state` was just reset, so the switch reverts from the
     // dead room's mode to this device's own preference, and unlocks.
-    renderEasyToggle();
+    renderAdvancedToggles();
     resultSubmittedForGame = false;
     if (matchStripEl) matchStripEl.replaceChildren();
   }
@@ -958,9 +963,9 @@ function runOnline(countries) {
   autoRelocalize(countries);
   document.addEventListener('langchanged', refreshI18nForGame);
 
-  function renderEasyToggle() {
-    if (!easyToggleEl) return;
-    const { checked, disabled } = decideEasyToggleState({
+  function renderAdvancedToggles() {
+    if (advancedToggles.length === 0) return;
+    const { checked, disabled } = decideAdvancedToggleState({
       inRoom: activeRoom !== null,
       // The server's answer, not `isHost` above: that one is a sessionStorage
       // guess kept for the Feature G result POST, and it reads false for a host
@@ -968,29 +973,50 @@ function runOnline(countries) {
       // would be visible; the server is authoritative and re-checks anyway.
       isHost: state.isHost,
       boardUntouched: state.game ? boardIsUntouched(state.game) : true,
-      roomEasy: state.easy,
-      prefEasy: isTttEasy(window.localStorage),
+      roomAdvanced: state.advanced,
+      prefAdvanced: isTttAdvanced(window.localStorage),
     });
-    easyToggleEl.checked = checked;
-    easyToggleEl.disabled = disabled;
-    if (easyToggleLabelEl) easyToggleLabelEl.classList.toggle('is-disabled', disabled);
+    for (const { input, label } of advancedToggles) {
+      if (!input) continue;
+      input.checked = checked;
+      input.disabled = disabled;
+      if (label) label.classList.toggle('is-disabled', disabled);
+    }
+    // The chip names the room only once the server has told us what the room is,
+    // and only for the mode that has a name. `state.advanced` is null until
+    // welcome lands, so `=== true` keeps it hidden while connecting rather than
+    // flashing a badge we would have to take back.
+    if (roomModeEl) roomModeEl.hidden = !(activeRoom !== null && state.advanced === true);
   }
 
-  if (easyToggleEl) {
-    easyToggleEl.addEventListener('change', () => {
-      const easy = easyToggleEl.checked;
+  for (const { input } of advancedToggles) {
+    if (!input) continue;
+    input.addEventListener('change', () => {
+      const advanced = input.checked;
       // Save wherever it was flipped: in the lobby that IS the whole action
       // (it seeds your next room), and in a room it keeps your preference in
       // step with the choice you just made for everyone.
-      setTttEasy(window.localStorage, easy);
-      if (!activeRoom) return;
-      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set-easy', easy }));
+      setTttAdvanced(window.localStorage, advanced);
+      if (!activeRoom) {
+        // Lobby: the preference IS the answer, so re-deriving paints the other
+        // copy correctly. There is no server round-trip here to do it for us.
+        renderAdvancedToggles();
+        return;
+      }
+      // In a room, deliberately do NOT re-derive from `state`: the server hasn't
+      // answered yet, so `state.advanced` still holds the room's old value and
+      // re-deriving would snap the switch back under the player's finger. Mirror
+      // the click onto the other copy and let the broadcast paint the truth.
+      for (const other of advancedToggles) {
+        if (other.input && other.input !== input) other.input.checked = advanced;
+      }
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set-advanced', advanced }));
       // Deliberately optimistic: no snap-back on send. The server answers with
-      // an 'easy-changed' broadcast that repaints this from room truth, and if
-      // it refuses (a move landed in the same instant), the very broadcast that
-      // beat us re-renders the switch back to the room's real state. Snapping
-      // back here instead would flicker on every ordinary flip to fix a race
-      // that heals itself.
+      // an 'advanced-changed' broadcast that repaints this from room truth, and
+      // if it refuses (a move landed in the same instant), the very broadcast
+      // that beat us re-renders the switch back to the room's real state.
+      // Snapping back here instead would flicker on every ordinary flip to fix a
+      // race that heals itself.
     });
   }
 

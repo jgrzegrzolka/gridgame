@@ -278,42 +278,42 @@ test('canGiveUpOnline: false once either side has already conceded', () => {
 });
 
 
-// ---- easy mode (the room's "No statistics" setting) ----
+// ---- Advanced mode (the room setting) ----
 
 test('welcome carries the room mode and whether the server thinks we host it', () => {
   const { state } = reduceServerMessage(initialClientState(), {
-    type: 'welcome', you: 'X', game: null, peerPresent: false, peerId: null, easy: true, isHost: true,
+    type: 'welcome', you: 'X', game: null, peerPresent: false, peerId: null, advanced: true, isHost: true,
   });
-  assert.equal(state.easy, true);
+  assert.equal(state.advanced, true);
   assert.equal(state.isHost, true);
 });
 
 test('a welcome from a normal room reads as easy:false, not unknown', () => {
   const { state } = reduceServerMessage(initialClientState(), {
-    type: 'welcome', you: 'O', game: null, peerPresent: true, peerId: 'alice', easy: false, isHost: false,
+    type: 'welcome', you: 'O', game: null, peerPresent: true, peerId: 'alice', advanced: false, isHost: false,
   });
-  assert.equal(state.easy, false, 'in a room the mode is known; null means "not in a room yet"');
+  assert.equal(state.advanced, false, 'in a room the mode is known; null means "not in a room yet"');
   assert.equal(state.isHost, false);
 });
 
-test('a welcome from a server that predates easy mode does not claim the room is easy', () => {
+test('a welcome from a server that predates Advanced mode does not claim the room is advanced', () => {
   // Client and PartyKit server deploy independently, so a new page can meet an
   // old server. Absent fields must read as a normal room, and as "not host" —
   // the fail-closed direction, which only locks a control.
   const { state } = reduceServerMessage(initialClientState(), {
     type: 'welcome', you: 'X', game: null, peerPresent: false, peerId: null,
   });
-  assert.equal(state.easy, false);
+  assert.equal(state.advanced, false);
   assert.equal(state.isHost, false);
 });
 
-test("easy-changed updates the mode and rebuilds the board, without touching the result UI", () => {
-  const before = { ...initialClientState(), easy: false, isHost: true };
+test("advanced-changed updates the mode and rebuilds the board, without touching the result UI", () => {
+  const before = { ...initialClientState(), advanced: false, isHost: true };
   const game = { cells: [], currentPlayer: 'O', winner: null, draw: false };
   const { state, effects } = reduceServerMessage(before, {
-    type: 'state', kind: 'easy-changed', game, easy: true,
+    type: 'state', kind: 'advanced-changed', game, advanced: true,
   });
-  assert.equal(state.easy, true);
+  assert.equal(state.advanced, true);
   assert.equal(state.game, game);
   // 'puzzle-replaced', not 'rematch-started': no game ended, so there is no
   // result to clear and no submitted-result flag to reset.
@@ -321,9 +321,9 @@ test("easy-changed updates the mode and rebuilds the board, without touching the
 });
 
 test('ordinary state messages leave the room mode alone', () => {
-  const before = { ...initialClientState(), easy: true, isHost: true };
+  const before = { ...initialClientState(), advanced: true, isHost: true };
   const game = { cells: [], currentPlayer: 'X', winner: null, draw: false };
   const { state } = reduceServerMessage(before, { type: 'state', kind: 'claimed', game });
-  assert.equal(state.easy, true, 'a claim must not reset the room mode to its default');
+  assert.equal(state.advanced, true, 'a claim must not reset the room mode to its default');
   assert.equal(state.isHost, true);
 });

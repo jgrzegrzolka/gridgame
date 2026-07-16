@@ -1,11 +1,11 @@
-import { generateRandomPuzzle, buildEasyCategoryPool, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
+import { generateRandomPuzzle, buildFlagCategoryPool, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
 import { renderCategoryLabel, renderCategoryPair } from '../../flags/filterChips.js';
 import { loadCountries, attachMetrics } from '../../flags/group.js';
 import { METRIC_FILES } from '../../flags/metrics/index.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
 import { newSoloGame, attemptSoloClaim, isSoloOver, applySoloGiveUp, boardIsUntouched } from '../../flags/ticTacToe.js';
-import { isTttEasy } from '../../flags/tttSettings.js';
-import { wireEasyToggle } from '../easyToggle.js';
+import { isTttAdvanced } from '../../flags/tttSettings.js';
+import { wireAdvancedToggle } from '../advancedToggle.js';
 import { t, countryName, withLocalizedAliases, autoRelocalize } from '../../i18n.js';
 import { launchConfetti } from '../../confetti.js';
 import { trapPicker, releasePicker } from '../pickerLock.js';
@@ -37,11 +37,13 @@ export function bootTicTacToeSolo() {
     .then(([rawCountries, ...metricPairs]) => {
       const countries = withLocalizedAliases(loadCountries(rawCountries));
       attachMetrics(countries, Object.fromEntries(metricPairs));
-      // The "No statistics" burger switch is read here, once, because the board
-      // is dealt once. Flipping it later re-deals via a reload (see easyToggle.js).
+      // The Advanced switch is read here, once, because the board is dealt
+      // once. Flipping it later re-deals via a reload (see advancedToggle.js).
+      // Note the polarity: the flag pool is the default and the engine's own
+      // full-pool default is the opt-in branch.
       const puzzle = generateRandomPuzzle(
         countries,
-        isTttEasy() ? { pool: buildEasyCategoryPool() } : {},
+        isTttAdvanced() ? {} : { pool: buildFlagCategoryPool() },
       );
       runSolo({ puzzle, countries });
     })
@@ -458,8 +460,12 @@ function runSolo({ puzzle, countries }) {
     }, { once: true });
   }
 
-  wireEasyToggle({
-    inputEl: /** @type {HTMLInputElement | null} */ (document.getElementById('easy-toggle-input')),
+  wireAdvancedToggle({
+    // Two switches, one setting: the burger's and the "How to play" dialog's.
+    inputEls: [
+      /** @type {HTMLInputElement | null} */ (document.getElementById('advanced-toggle-input')),
+      /** @type {HTMLInputElement | null} */ (document.getElementById('rules-advanced-toggle-input')),
+    ],
     isBoardUntouched: () => boardIsUntouched(state),
     redeal: () => window.location.reload(),
   });

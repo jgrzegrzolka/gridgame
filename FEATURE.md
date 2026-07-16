@@ -21,9 +21,11 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
-### Feature U: Simplify tic-tac-toe — remove 9×9, add a flag-only easy mode
+### Feature U: Simplify tic-tac-toe — remove 9×9, make the flag board the default
 
-**Status:** Phase 1 shipped (#924). Phase 2 shipped (#925 code removal, #926 follow-up + the Cosmos strip, which has been **run and verified**). **Phase 3 shipped (#928)** — the "No statistics" toggle on the offline + solo boards. **Phase 4 (this PR) takes the toggle online**, which was the one thing left. Feature U is complete. Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
+**Status:** Phase 1 shipped (#924). Phase 2 shipped (#925 code removal, #926 follow-up + the Cosmos strip, which has been **run and verified**). **Phase 3 shipped (#928)** — the "No statistics" toggle on the offline + solo boards. **Phase 4 shipped (#931)** — the toggle went online as a room setting. **Phase 5 (this PR) flips the default**: the flag board is what everyone now gets, and country data became opt-in "Advanced mode". Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
+
+*The feature's title used to say "add a flag-only easy mode". Phase 5 retired that framing along with the label: naming the opt-in pole turned out to be the thing that made the whole feature legible, so there is no "easy mode" here any more.*
 
 **Why both halves are one feature.** They're the same lever pulled twice: *what may enter the category pool*. 9×9 is a pool filter (`ultimateEligible`) that costs a line plus a JSDoc paragraph in all 32 metric factories. Easy mode is a pool filter that costs nothing per-metric because it derives from the category id. Removing the first and adding the second in one feature keeps the reasoning in one place, and Phase 2 must not delete the `pool` plumbing that Phase 3 reuses (`randomPuzzle(rng, pool)`, engine.js:2938).
 
@@ -140,10 +142,36 @@ Easy mode *relaxes* the generator (fewer exclusiveGroup collisions once the metr
 
 **Verified in two real browsers against local PartyKit** (separate contexts, so separate deviceIds): an easy room deals 6-of-6 flag rules and zero metrics; a joiner with **no** saved preference sees the switch read on + greyed, proving room-beats-preference; the host flipping it off re-deals both boards to a metrics board in lockstep; a give-up locks the switch for both. The online burger's borders come out byte-identical to offline's (nickname `border-bottom: 1px`, divider `border-top: 1px`, no double line).
 
+#### Phase 5 — flip the default, and name the opt-in pole *(this PR)*
+
+**Jan, 2026-07-16: "no statistics is a misleading name… maybe we should name other one advanced mode?"** Both halves of that were right, and the second one turned out to be a product decision wearing a naming decision's clothes.
+
+**Why "No statistics" had to go.** It read as *"hide my score"*. The online board renders a live head-to-head record a few pixels from the burger, and the site has achievements and community stats — so the label collided with real UI on the same screen. Underneath that: it was a *removal* framing, and in a burger those read as display preferences (findFlag's sibling switch is "Include territories & other flags", a scope statement). It also named the pole you *don't* have, leaving the state you're actually in with no name at all.
+
+**Why naming the other pole forced the default to move.** If Advanced is what everyone gets by default, then Advanced *is* normal, and calling normal "advanced" contradicts itself. The word only earns its name as something you opt into. So Jan's rename only works if the flag board becomes the default — which is the logical endpoint of Feature U's own premise. The page promises "tic-tac-toe where every move is a country flag pick matching the row × column category"; a board averaging **1.5 of 6** flag rules was not that game. A toggle only ever helped players who opened a burger and decoded the label; flipping the default helps everyone who never touches a menu.
+
+**The cost, accepted by Jan:** everyone who never touched the setting now gets a different board, and anyone who liked the mix must find Advanced mode. 116 of the 142 categories become opt-in **on this surface**. Metrics are not buried: `generateRandomPuzzle` is TTT-only (7 non-test files, all TTT), so the flagsdata lens, both "Make a puzzle" filter sets, the Flag Party round, and the daily superlatives are untouched. TTT stops being metric-dominated by default; metrics keep their home.
+
+**The payoff that confirmed the framing.** Naming the opt-in pole collapses the vocabulary to **one word**. The default state needs no name (it's just the board), so the switch, the room chip, and the how-to-play copy all say "Advanced". The earlier design needed a name for each pole; this one doesn't.
+
+**Shape:**
+- New key `gridgame.ttt.advanced`, default off — which now matches `readBoolSetting`'s default-off construction instead of fighting it. Deliberately **not** a rename of `gridgame.ttt.easy`: the two are near-opposites, so reusing it would have dropped every "No statistics" player into Advanced mode, the exact board they asked to get away from. With a new key they fall to the new default, which *is* what they wanted, so **there is no migration**. The dead `.easy` key is left where it lies.
+- `buildEasyCategoryPool` → `buildFlagCategoryPool`, and it is now the *default* pool. The polarity lives in the TTT code that reads the setting (`isTttAdvanced() ? {} : { pool: buildFlagCategoryPool() }`), not in the engine, which stays a general library whose default is "every category".
+- Wire renamed (`?advanced=1`, `set-advanced`, `advanced-changed`, `Room.advanced`). `deserializeRoom` reads all **three** snapshot vintages, because rooms outlive deploys: `advanced` (this build) → `easy` (#931, the near-opposite flag) → neither (pre-#931, always full-pool). Getting it wrong would relabel a live room's chip and hand its rematch the other pool.
+- **Room chip** (`#room-mode`, `lobby.css`) beside the room code, only when advanced. This closes the hole in #931: the burger switch was the "disclosure", but *a joiner never opens the burger*. Online-only, which is also structural — offline and solo have no `.room-line`, and there you set the mode yourself seconds ago.
+- **Mode block in "How to play"** (all three boards): the switch plus a muted note saying what it does. It is the only discovery path for solo / offline, and the only surface with room for the sentence the burger row can't hold. So each board mounts **two** switches for one setting; `wireAdvancedToggle` takes a list and paints all of them, because the off-screen copy is exactly the one that goes stale and is then believed when it opens.
+
+**Two bugs the mock caught before they were code:** `.rules-help p` (0,1,1) out-specifies a bare `.rules-mode-note` (0,1,0), so the note rendered dark and cramped; and `common.css`'s "the p above is the last in-flow element" note became false once a block followed it — updated rather than silently broken.
+
+**One bug caught while writing it:** re-deriving the switch from `state` right after a click snaps it back, because `state.advanced` still holds the room's old value until the server answers. In a room the click now mirrors onto the sibling switch only, and the broadcast paints the truth.
+
+**Verified in real browsers against local PartyKit:** a brand-new player (empty localStorage) is dealt **zero metrics** on solo and offline; flipping Advanced inside "How to play" writes the key, syncs the burger's copy, and re-deals to a metrics board; a default online room shows no chip; the host opting in re-deals both boards and raises the chip; a joiner with no saved preference sees the chip plus a checked-and-greyed switch; and a player carrying the old `gridgame.ttt.easy=true` lands on the flag board with Advanced off, exactly where they wanted, with no migration run.
+
 **Out of scope for Feature U:**
-- Any change to the daily-puzzle catalogue. Easy mode is player-selected curation of the *random* pool; the daily catalogue is human-curated already.
+- Any change to the daily-puzzle catalogue. Advanced mode is player-selected curation of the *random* pool; the daily catalogue is human-curated already.
 - Difficulty tiers beyond the one binary toggle. Jan asked for a toggle, not a difficulty system.
 - Letting either player change the mode mid-game, or negotiating it between two players. One board, one owner, and a create-to-first-move window is enough.
+- Chips on the offline / solo boards. They have no header to hang one on, and there the mode was your own choice moments ago.
 
 ---
 

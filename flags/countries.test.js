@@ -11,7 +11,7 @@ import {
   ALL_MOTIFS,
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
-  buildEasyCategoryPool,
+  buildFlagCategoryPool,
   METRIC_KEYS,
   axesImpliedPair,
   isFlagVisualCategory,
@@ -537,16 +537,18 @@ test('generateRandomPuzzle succeeds with the real countries.json under many seed
   }
 });
 
-test('the easy pool generates against the real countries.json under many seeds', () => {
-  // The load-bearing canary for the "No statistics" toggle (offline + solo
-  // burger, `gridgame.ttt.easy`). The easy pool is ~25 categories against the
+test('the flag pool generates against the real countries.json under many seeds', () => {
+  // The load-bearing canary for **the board every tic-tac-toe player is dealt
+  // by default** — this pool stopped being the opt-in one when Advanced mode
+  // flipped the polarity, so a failure here is a broken game, not a broken
+  // setting. The flag pool is ~25 categories against the
   // full pool's 142, and a smaller pool is not automatically an easier one —
   // it could in principle concentrate the narrow-coverage categories and starve
   // the retry budget. Measured at the time of writing it does the opposite
   // (mean ~6 attempts vs the full pool's ~16), because dropping the metric
   // thresholds also drops most of the exclusiveGroup collisions. This test is
   // what tells us if that ever stops being true.
-  const pool = buildEasyCategoryPool();
+  const pool = buildFlagCategoryPool();
   const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 7919);
   for (const seed of SEEDS) {
     const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed), pool });
@@ -567,7 +569,7 @@ test('no metric category ever reaches an easy board', () => {
   // back here. Not by id shape either: `colorCount:>=4` wears the same `>=`
   // token as a metric threshold and is very much a flag rule.
   const metricKinds = new Set(METRIC_KEYS);
-  const pool = buildEasyCategoryPool();
+  const pool = buildFlagCategoryPool();
   const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 7919);
   for (const seed of SEEDS) {
     const puzzle = generateRandomPuzzle(COUNTRIES, { rng: mulberry32(seed), pool });
@@ -594,10 +596,10 @@ test('an easy board is mostly flag rules, not one flag rule wedged among country
   // The complaint this whole feature answers: a live solo board sampled during
   // Feature U came out 5-of-6 statistics, technically legal because
   // lacksFlagVisualCategory only demands ONE flag rule. Continents are the only
-  // country fact left in the easy pool and they're capped by the 6 that exist,
+  // country fact left in the flag pool and they're capped by the 6 that exist,
   // so the ratio can't regress far — but "≥1" was also true of the board that
   // triggered the complaint, so pin the ratio rather than the guard.
-  const pool = buildEasyCategoryPool();
+  const pool = buildFlagCategoryPool();
   const SEEDS = Array.from({ length: 50 }, (_, i) => (i + 1) * 7919);
   let totalFlagVisual = 0;
   for (const seed of SEEDS) {
