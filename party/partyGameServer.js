@@ -1,8 +1,9 @@
 import rawCountries from '../flags/countries.json' with { type: 'json' };
 import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
-import { DEFAULT_PLAN, totalRounds, poolIdForRound, roundIdForRound, validatePlan } from '../flags/partyPlan.js';
+import { DEFAULT_PLAN, totalRounds, poolIdForRound, roundIdForRound, validatePlan, PARTY_MODES, BLOCK_ROUNDS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor, validateReveal, isMetricRound } from '../flags/partyTiming.js';
+import { blockCountFor, pickerFor, handFor, isValidPick, OPENING_MODE_ID } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
@@ -13,6 +14,9 @@ import {
   applyPlayAgain,
   applyReturnToLobby,
   applyDisconnect,
+  pendingPickAfterReveal,
+  applyEnterPicking,
+  applyPick,
   serializeRoom,
   deserializeRoom,
 } from '../flags/partyRoom.js';
@@ -42,6 +46,22 @@ const ROUNDS = Object.fromEntries([flagPick, mapPick, superlative, superlative.a
 
 const TOTAL_ROUNDS = totalRounds(DEFAULT_PLAN);
 
+/** Mode id -> catalog mode ({ poolId, roundId }), so a draft pick (a mode id off
+ *  the wire) resolves to the block segment + round type to generate. */
+const MODE_BY_ID = Object.fromEntries(PARTY_MODES.map((m) => [m.id, m]));
+
+/** Reverse lookup: a segment's (roundId, poolId) -> its mode id. Every catalog
+ *  mode has a unique pair, so this recovers the mode a plan segment came from
+ *  (used to rebuild `usedModes` after an eviction). */
+const MODE_ID_BY_SEG = Object.fromEntries(PARTY_MODES.map((m) => [`${m.roundId}|${m.poolId}`, m.id]));
+/** @param {{ roundId: string, poolId: string }} seg @returns {string | undefined} */
+function modeIdForSegment(seg) {
+  return MODE_ID_BY_SEG[`${seg.roundId}|${seg.poolId}`];
+}
+
+/** The opening block every draft plays: one Flags block (see `partyDraft`). */
+const OPENING_MODE = MODE_BY_ID[OPENING_MODE_ID];
+
 /**
  * Flag Party durable object — the live show's room. Thin shell around the pure
  * reducer in `flags/partyRoom.js`: it owns sockets, persistence, and the two
@@ -67,6 +87,9 @@ export default class PartyGameServer {
     this.connByPlayer = new Map();
     /** Answer codes used in the current game, so rounds don't repeat a country. */
     this.usedCodes = new Set();
+    /** Mode ids already played this game (draft mode), so the pick hand and the
+     *  no-repeat clause never offer a mode twice. */
+    this.usedModes = new Set();
   }
 
   /**
@@ -88,10 +111,23 @@ export default class PartyGameServer {
    */
   generateQuestion(roundIndex, plan, reveal) {
     const p = plan ?? (this.room && this.room.plan) ?? DEFAULT_PLAN;
+    return this.generateForRound(roundIdForRound(p, roundIndex), poolIdForRound(p, roundIndex), reveal);
+  }
+
+  /**
+   * Generate a question for an explicit round type + pool, independent of the
+   * plan. Shared by {@link generateQuestion} (plan-driven) and the draft pick
+   * path (mode-driven, where the block isn't in the plan yet). Stamps `roundId`,
+   * the veil `clearFrac`, and the metric name-reveal `nameFrac`, and records the
+   * answer as used.
+   * @param {string} roundId
+   * @param {string} poolId
+   * @param {import('../flags/partyRoom.js').Room['reveal']} [reveal]
+   */
+  generateForRound(roundId, poolId, reveal) {
     const rev = reveal ?? (this.room && this.room.reveal) ?? DEFAULT_REVEAL;
-    const roundId = roundIdForRound(p, roundIndex);
     const round = ROUNDS[roundId];
-    const pool = POOLS[poolIdForRound(p, roundIndex)];
+    const pool = POOLS[poolId];
     const q = round.generate(pool, this.usedCodes);
     this.usedCodes.add(q.answer);
     // World-facts (metric) rounds carry the name-reveal fraction so clients fade
@@ -109,8 +145,28 @@ export default class PartyGameServer {
   async loadRoom() {
     if (this.loaded) return;
     const snapshot = await this.party.storage.get(STORAGE_KEY);
-    if (snapshot) this.room = deserializeRoom(snapshot);
+    if (snapshot) {
+      this.room = deserializeRoom(snapshot);
+      // usedModes lives only in memory, so a durable-object eviction mid-draft
+      // loses it — rebuild from the persisted plan (each block is one mode) so a
+      // later hand can't offer a mode already played.
+      if (this.room.draft && Array.isArray(this.room.plan)) {
+        for (const seg of this.room.plan) {
+          const id = modeIdForSegment(seg);
+          if (id) this.usedModes.add(id);
+        }
+      }
+    }
     this.loaded = true;
+  }
+
+  /** The room's scoreboard as a plain descending-by-score list — the shape
+   *  `pickerFor` reads to choose the draft's next picker. */
+  scoreboard() {
+    if (!this.room) return [];
+    return [...this.room.seats.entries()]
+      .map(([playerId, seat]) => ({ playerId, score: seat.score }))
+      .sort((a, b) => b.score - a.score);
   }
 
   async saveRoom() {
@@ -194,18 +250,30 @@ export default class PartyGameServer {
       let result = null;
       switch (parsed.type) {
         case 'start': {
-          // The host's plan rides in on the start message; never trust it raw.
-          // validatePlan strips anything malformed and returns null if nothing
-          // valid survives, so a missing / bad plan cleanly falls back to the
-          // default. Generate round 0 from the same validated plan, then hand
-          // both the question and the plan (+ its round count) to the room.
           this.usedCodes = new Set();
-          const plan = validatePlan(parsed.plan) ?? DEFAULT_PLAN;
+          this.usedModes = new Set();
           // Tricky mode is a client render flag the host chooses; coerce to a
           // strict boolean so a malformed value can't reach the room. The
           // per-category reveal timing is snapped to the allowed option set.
           const tricky = parsed.tricky === true;
           const reveal = validateReveal(parsed.reveal);
+          if (parsed.draft === true) {
+            // Draft: the plan grows one block per pick. Open with a single Flags
+            // block; the game runs `targetBlocks` blocks, sized from the present
+            // seat count (`players + 1`, capped). Round 0 comes from the opening
+            // block, not a host plan.
+            const targetBlocks = blockCountFor(this.room.present.size);
+            const openingPlan = [{ poolId: OPENING_MODE.poolId, roundId: OPENING_MODE.roundId, rounds: BLOCK_ROUNDS }];
+            this.usedModes.add(OPENING_MODE_ID);
+            const question = this.generateForRound(OPENING_MODE.roundId, OPENING_MODE.poolId, reveal);
+            result = applyStart(this.room, playerId, question, openingPlan, targetBlocks * BLOCK_ROUNDS, tricky, reveal, { draft: true, targetBlocks });
+            break;
+          }
+          // Setlist: the host's plan rides in on the start message; never trust it
+          // raw. validatePlan strips anything malformed and returns null if nothing
+          // valid survives, so a missing / bad plan cleanly falls back to the
+          // default. Generate round 0 from the same validated plan.
+          const plan = validatePlan(parsed.plan) ?? DEFAULT_PLAN;
           result = applyStart(this.room, playerId, this.generateQuestion(0, plan, reveal), plan, totalRounds(plan), tricky, reveal);
           break;
         }
@@ -220,17 +288,60 @@ export default class PartyGameServer {
         case 'reveal':
           result = applyForceReveal(this.room, playerId);
           break;
-        case 'next':
-          result = applyNext(this.room, playerId, this.generateQuestion(this.room.roundIndex + 1));
+        case 'next': {
+          // In a draft, a `next` that lands on a block boundary opens a pick
+          // instead of dealing the next question: the lowest-ranked seat that
+          // hasn't picked chooses the next block from a dealt hand. Otherwise
+          // (and always in setlist) it advances the round or ends the game.
+          if (pendingPickAfterReveal(this.room)) {
+            const picker = pickerFor(this.scoreboard(), this.room.pickedBy);
+            const hand = handFor(this.usedModes);
+            result = applyEnterPicking(this.room, playerId, picker, hand);
+          } else {
+            result = applyNext(this.room, playerId, this.generateQuestion(this.room.roundIndex + 1));
+          }
           break;
+        }
+        case 'pick': {
+          // The designated picker chooses their block. Guard the phase + picker
+          // here so a stale / spoofed pick never generates a question, then
+          // validate the mode against the no-repeat set before building its block.
+          if (this.room.phase !== 'picking' || this.room.picker !== playerId) return;
+          const modeId = String(parsed.modeId ?? '');
+          if (!isValidPick(modeId, this.usedModes)) return;
+          const mode = MODE_BY_ID[modeId];
+          const segment = { poolId: mode.poolId, roundId: mode.roundId, rounds: BLOCK_ROUNDS };
+          const question = this.generateForRound(mode.roundId, mode.poolId);
+          result = applyPick(this.room, playerId, modeId, segment, question);
+          if (result.broadcasts.length > 0) this.usedModes.add(modeId);
+          break;
+        }
+        case 'forcePick': {
+          // The picker's clock ran out (the host page fires this, authoritative
+          // for timing like `reveal`/`next`). Pick a random card from the dealt
+          // hand for the current picker so an idle / absent picker can't stall.
+          if (this.room.phase !== 'picking' || this.room.hostId !== playerId) return;
+          const picker = this.room.picker;
+          const hand = (this.room.hand ?? []).filter((id) => isValidPick(id, this.usedModes));
+          if (!picker || hand.length === 0) return;
+          const modeId = hand[Math.floor(Math.random() * hand.length)];
+          const mode = MODE_BY_ID[modeId];
+          const segment = { poolId: mode.poolId, roundId: mode.roundId, rounds: BLOCK_ROUNDS };
+          const question = this.generateForRound(mode.roundId, mode.poolId);
+          result = applyPick(this.room, picker, modeId, segment, question);
+          if (result.broadcasts.length > 0) this.usedModes.add(modeId);
+          break;
+        }
         case 'playAgain':
           this.usedCodes = new Set();
+          this.usedModes = new Set();
           result = applyPlayAgain(this.room, playerId);
           break;
         case 'backToLobby':
           // Host bails on the current game and returns the room to settings.
           // Fresh code pool, same as a play-again reset.
           this.usedCodes = new Set();
+          this.usedModes = new Set();
           result = applyReturnToLobby(this.room, playerId);
           break;
         default:

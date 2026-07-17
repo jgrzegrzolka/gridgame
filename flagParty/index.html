@@ -89,6 +89,17 @@
       <section class="pt-lobby" id="pt-lobby" hidden>
         <p class="room-line"><span class="room-text"><strong id="room-code">-----</strong></span><button type="button" class="share-link" id="share-btn" aria-label="Invite link" data-i18n-attr="aria-label:party.share"><span class="share-icon" aria-hidden="true"></span></button></p>
         <div class="players" id="players"></div>
+        <!-- Host-only: how to play — Draft (players pick each block) or Custom setup. -->
+        <div class="party-mode" id="party-mode" hidden>
+          <button type="button" class="mode-door" id="mode-draft" data-mode="draft">
+            <span class="mode-door-title" data-i18n="party.doorDraftTitle">Draft</span>
+            <span class="mode-door-desc" data-i18n="party.doorDraftDesc">Start now. After each block, whoever is last picks what everyone plays next.</span>
+          </button>
+          <button type="button" class="mode-door" id="mode-custom" data-mode="setlist">
+            <span class="mode-door-title" data-i18n="party.doorCustomTitle">Custom setup</span>
+            <span class="mode-door-desc" data-i18n="party.doorCustomDesc">Build the whole show up front. You choose every block.</span>
+          </button>
+        </div>
         <details class="game-setup" id="game-setup" hidden>
           <summary class="game-setup-head">
             <span class="gs-head-row">
@@ -129,6 +140,15 @@
           <span class="actions-sep" aria-hidden="true">·</span>
           <a href="../" data-i18n="menu.home">Home</a>
         </div>
+      </section>
+
+      <!-- Draft pick: one player chooses the next block from a hand of cards -->
+      <section class="pt-pick" id="pt-pick" hidden>
+        <div class="round-pill" id="pick-pill"></div>
+        <div class="pick-timer" id="pick-timer"><div class="pick-timer-fill" id="pick-timer-fill"></div></div>
+        <p class="plabel" id="pick-lead"></p>
+        <div class="pick-hand" id="pick-hand"></div>
+        <div class="pick-watch" id="pick-watch" hidden></div>
       </section>
 
       <!-- Between-blocks break: the standings beat after each block (not the final one) -->

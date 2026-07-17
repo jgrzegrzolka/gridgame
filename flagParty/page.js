@@ -7,8 +7,8 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, BLOCK_BREAK_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
-import { BLOCK_ROUNDS, PICTURE_MODES, METRIC_MODES, buildPartyPlan, isBlockBoundary, blockIndexForRound, blockCount } from '../flags/partyPlan.js';
+import { QUESTION_SECONDS, revealSecondsFor, BLOCK_BREAK_SECONDS, PICK_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
+import { BLOCK_ROUNDS, PICTURE_MODES, METRIC_MODES, PARTY_MODES, buildPartyPlan, isBlockBoundary, blockIndexForRound, blockCount } from '../flags/partyPlan.js';
 import { blockBreak } from '../flags/partyBreak.js';
 import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
@@ -27,6 +27,7 @@ const SETUP_KEY = 'gridgame.party.setup';
 const PLAN_KEY = 'gridgame.party.plan';
 const TRICKY_KEY = 'gridgame.party.tricky';
 const REVEAL_KEY = 'gridgame.party.reveal';
+const MODE_KEY = 'gridgame.party.mode';
 
 /** The reveal-timing categories the host configures under tricky mode, in the
  *  order they appear in the setup. `label` reuses the mode-short i18n so "Flags /
@@ -129,6 +130,28 @@ function metricKeyForRound(roundId) {
 /** Values file for a metric key, for the reveal strip's fetch. */
 const METRIC_FILE_BY_KEY = Object.fromEntries(METRIC_FILES.map((m) => [m.key, m.file]));
 
+/** Party mode id -> catalog mode, so the draft's hand cards and block attribution
+ *  resolve a mode id to its round type (for the icon) and label. */
+const MODE_BY_ID = Object.fromEntries(PARTY_MODES.map((m) => [m.id, m]));
+
+/** The icon HTML for a draft card: the picture thumbnail for a picture mode, or
+ *  the metric's own icon for a statistic. Empty string if unknown. */
+function modeIconHtml(/** @type {string} */ modeId) {
+  if (SETUP_ICONS[modeId]) return SETUP_ICONS[modeId];
+  const mode = MODE_BY_ID[modeId];
+  if (!mode) return '';
+  const key = metricKeyForRound(mode.roundId);
+  return (key && METRIC_ICONS[key]) || '';
+}
+
+/** The per-metric hue for a statistic mode (for the draft card accent), or null. */
+function modeHue(/** @type {string} */ modeId) {
+  const mode = MODE_BY_ID[modeId];
+  if (!mode) return null;
+  const key = metricKeyForRound(mode.roundId);
+  return (key && METRIC_HUES[key]) || null;
+}
+
 /**
  * Resolve a mode's SHORT label to `{ key, fallback }` — pure, no `t()` — so the
  * mapping can be pinned by a test (the DOM `modeShort` below is a thin `t()`
@@ -198,7 +221,7 @@ export function bootFlagParty() {
   const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
   const statusEl = $('party-status');
   const sections = {
-    start: $('pt-start'), lobby: $('pt-lobby'), round: $('pt-round'), break: $('pt-break'), final: $('pt-final'),
+    start: $('pt-start'), lobby: $('pt-lobby'), round: $('pt-round'), pick: $('pt-pick'), break: $('pt-break'), final: $('pt-final'),
   };
   const roomCodeEl = $('room-code');
   const playersEl = $('players');
@@ -219,6 +242,15 @@ export function bootFlagParty() {
   const breakMvp = $('break-mvp');
   const breakStandingsLabel = $('break-standings-label');
   const breakBoard = $('break-board');
+  const partyModeEl = $('party-mode');
+  const modeDraftBtn = $('mode-draft');
+  const modeCustomBtn = $('mode-custom');
+  const pickPill = $('pick-pill');
+  const pickTimer = $('pick-timer');
+  const pickTimerFill = $('pick-timer-fill');
+  const pickLead = $('pick-lead');
+  const pickHand = $('pick-hand');
+  const pickWatch = $('pick-watch');
   const playAgainBtn = /** @type {HTMLButtonElement} */ ($('play-again'));
   const roundToSettingsBtn = /** @type {HTMLButtonElement} */ ($('round-to-settings'));
   const joinError = $('join-error');
@@ -303,12 +335,25 @@ export function bootFlagParty() {
   }
   function clearJoinError() { lastJoinError = null; joinError.hidden = true; joinError.textContent = ''; }
 
-  function showSection(/** @type {'start'|'lobby'|'round'|'break'|'final'|null} */ which) {
+  function showSection(/** @type {'start'|'lobby'|'round'|'pick'|'break'|'final'|null} */ which) {
     for (const [k, node] of Object.entries(sections)) node.hidden = k !== which;
   }
 
   function send(/** @type {object} */ msg) {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+  }
+
+  // ---- how to play: draft vs custom setlist ----
+  // The host chooses at the lobby. Draft (the default) is zero-setup: the players
+  // pick each block as they go. Custom setup opens the game-setup panel below to
+  // build the whole show up front. Persisted per device.
+  /** @type {'draft' | 'setlist'} */
+  let partyMode = loadPartyMode();
+  function loadPartyMode() {
+    try { return window.localStorage.getItem(MODE_KEY) === 'setlist' ? 'setlist' : 'draft'; } catch { return 'draft'; }
+  }
+  function savePartyMode() {
+    try { window.localStorage.setItem(MODE_KEY, partyMode); } catch { /* private mode */ }
   }
 
   // ---- game setup (host-only lobby plan) ----
@@ -834,9 +879,16 @@ export function bootFlagParty() {
     gridEl.classList.remove('names-shown');
   }
 
+  /** The clock's current mode, from the phase: `picking` gets its own timed beat
+   *  (the draft pick), reveal and question as before. */
+  function clockMode() {
+    if (state.phase === 'picking') return 'picking';
+    return state.phase === 'reveal' ? 'reveal' : 'question';
+  }
+
   /** (Re)start the countdown when the phase or round changes; otherwise leave it. */
   function syncClock() {
-    const mode = state.phase === 'reveal' ? 'reveal' : 'question';
+    const mode = clockMode();
     const token = `${mode}:${state.roundIndex}`;
     if (token === clockToken) return;
     clockToken = token;
@@ -844,38 +896,45 @@ export function bootFlagParty() {
     // The reveal length depends on the round, not the room: a clean sweep (every
     // present player got it right) snaps on; a miss holds so the correct flag
     // can be read. Question time is fixed. (flagQuiz's correct-fast/wrong-slow.)
+    // The draft pick has its own fixed window.
     const clean = mode === 'reveal' && isCleanReveal(state.roster, state.reveal);
     // A block-boundary reveal holds longer (the standings break) than an ordinary
     // reveal; the host counts this down before sending `next`, same as any reveal.
     const revealSecs = atBlockBreak() ? BLOCK_BREAK_SECONDS : revealSecondsFor(clean);
-    clockTotalMs = (mode === 'reveal' ? revealSecs : QUESTION_SECONDS) * 1000;
+    const secs = mode === 'picking' ? PICK_SECONDS : (mode === 'reveal' ? revealSecs : QUESTION_SECONDS);
+    clockTotalMs = secs * 1000;
     clockDeadline = Date.now() + clockTotalMs;
-    // Only the question phase shows the shrinking bar. The reveal has no timer of
-    // its own — a sub-second bar read as a flicker — so it runs its clock unseen
-    // and just advances after the beat (short when clean, longer on a miss).
-    timerEl.hidden = mode === 'reveal';
+    // Only the question phase shows the round bar. The reveal is bar-less (a
+    // sub-second bar read as a flicker); the pick draws its own bar (below).
+    timerEl.hidden = mode !== 'question';
     timerEl.setAttribute('data-mode', mode);
     if (!clockInterval) clockInterval = window.setInterval(tickClock, 200);
     tickClock();
   }
 
   function tickClock() {
-    const mode = state.phase === 'reveal' ? 'reveal' : 'question';
+    const mode = clockMode();
     const now = Date.now();
     const left = secondsLeft(clockDeadline, now);
-    // Only the question phase paints a bar; the reveal is bar-less (the clock
-    // still runs below to advance the room, it just isn't drawn).
+    // The question paints the round bar; the pick paints its own bar; the reveal
+    // is bar-less (its clock still runs below to advance the room).
     if (mode === 'question') {
       timerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
       timerEl.classList.toggle('low', left <= 5);
       timerLabel.textContent = String(left);
+    } else if (mode === 'picking') {
+      pickTimerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
     }
     if (left <= 0 && !clockFired) {
       clockFired = true;
-      // Host only: end the phase. A stale 'reveal'/'next' for a phase that
-      // already advanced is ignored by the room reducer, so this is safe even
-      // if the all-buzzed auto-reveal beat us to it.
-      if (state.isHost) send({ type: mode === 'reveal' ? 'next' : 'reveal' });
+      // Host only: end the phase. A stale message for a phase that already moved
+      // on is ignored by the room reducer, so this is safe against the races
+      // (all-buzzed auto-reveal, the picker choosing just as the clock expires).
+      if (state.isHost) {
+        if (mode === 'reveal') send({ type: 'next' });
+        else if (mode === 'picking') send({ type: 'forcePick' });
+        else send({ type: 'reveal' });
+      }
     }
   }
 
@@ -917,6 +976,9 @@ export function bootFlagParty() {
   let pendingBreakBoard = null;
   /** Guards the once-per-break capture against repeated renders of one break. */
   let breakSnapToken = null;
+  /** True once this device has sent its pick for the current draft turn, so a
+   *  double-tap can't fire two picks; reset when we leave the picking phase. */
+  let pickSent = false;
 
   /** True when the current reveal is a between-blocks break (a boundary round
    *  with another block to follow). Client-derived from roundIndex + totalRounds
@@ -931,6 +993,9 @@ export function bootFlagParty() {
     if (!activeRoom) { stopClock(); stopVeil(); showSection('start'); return; }
     // Leaving (or not yet in) the final screen re-arms the one-shot celebration.
     if (state.phase !== 'final') finalCelebrated = false;
+    // Re-arm the pick guard whenever we're not mid-pick, so the next draft turn
+    // accepts a fresh choice.
+    if (state.phase !== 'picking') pickSent = false;
     if (state.phase === 'question' || state.phase === 'reveal') {
       // A question this build can't render means the server is a build ahead of
       // us (its deploy landed while this tab stayed open). Reload onto the new
@@ -957,6 +1022,7 @@ export function bootFlagParty() {
       // name-reveal enabled.
       if (state.phase === 'question' && (state.tricky || nameActive())) startVeil(); else stopVeil();
     }
+    else if (state.phase === 'picking') { stopVeil(); showSection('pick'); renderPick(); syncClock(); }
     else if (state.phase === 'final') { stopClock(); stopVeil(); showSection('final'); renderFinal(); }
     else {
       // Lobby = a fresh game (or play-again reset): forget the block baselines so
@@ -979,14 +1045,27 @@ export function bootFlagParty() {
       playersEl.appendChild(chip);
     }
     const inLobby = state.phase === 'lobby';
-    startBtn.hidden = !(state.isHost && inLobby);
+    const hostSetup = state.isHost && inLobby;
+    startBtn.hidden = !hostSetup;
     // The host can start as soon as they're seated — a room of one is allowed
     // (play alone), and more players can join before the tap. The guard only
     // greys out the impossible empty-roster case.
     startBtn.disabled = state.roster.filter((r) => r.present).length < 1;
     waitEl.hidden = !(!state.isHost && inLobby);
-    // Game setup is the host's to configure, and only in the lobby.
-    gameSetupEl.hidden = !(state.isHost && inLobby);
+    // Draft-vs-custom is the host's choice; the game-setup panel only shows under
+    // Custom. Both are host-only, lobby-only.
+    partyModeEl.hidden = !hostSetup;
+    syncPartyMode();
+    gameSetupEl.hidden = !(hostSetup && partyMode === 'setlist');
+  }
+
+  /** Reflect the selected mode on the two doors (and the setup panel's visibility
+   *  is handled by renderLobby). */
+  function syncPartyMode() {
+    modeDraftBtn.classList.toggle('on', partyMode === 'draft');
+    modeCustomBtn.classList.toggle('on', partyMode === 'setlist');
+    modeDraftBtn.setAttribute('aria-pressed', String(partyMode === 'draft'));
+    modeCustomBtn.setAttribute('aria-pressed', String(partyMode === 'setlist'));
   }
 
   function renderRound() {
@@ -1004,6 +1083,13 @@ export function bootFlagParty() {
       b: blockIndexForRound(state.roundIndex) + 1, blocks: totalBlocks,
       n: state.roundIndex + 1, total: state.totalRounds,
     });
+    // On the first round of a drafted block, name who chose it ("Zosia's pick").
+    if (state.lastPick) {
+      const seat = state.roster.find((r) => r.playerId === state.lastPick?.picker);
+      if (seat) {
+        roundPill.appendChild(el('span', 'pill-pick', ` · ${fmt(t('party.blockPick', "{name}'s pick"), { name: seat.nickname })}`));
+      }
+    }
     const isReveal = state.phase === 'reveal' && state.reveal;
     const isMap = q.roundId === 'mapPick';
     const superCfg = superlativeMetricByRoundId(q.roundId);
@@ -1146,6 +1232,53 @@ export function bootFlagParty() {
       node.appendChild(strip);
     }
     return node;
+  }
+
+  /** The draft pick screen: the picker chooses the next block from a hand of
+   *  cards; everyone else watches "X is choosing". The pick countdown (drawn by
+   *  the clock) is visible to all; the host's timer fires `forcePick` at 0. */
+  function renderPick() {
+    const totalBlocks = Math.max(1, Math.ceil(state.totalRounds / BLOCK_ROUNDS));
+    const nextBlock = blockIndexForRound(state.roundIndex) + 2; // 1-based: the block being chosen
+    pickPill.textContent = fmt(t('party.choosingBlock', 'Choosing block {n} of {total}'), { n: nextBlock, total: totalBlocks });
+
+    const youPick = state.you != null && state.you === state.picker;
+    const pickerSeat = state.roster.find((r) => r.playerId === state.picker);
+    const pickerName = pickerSeat ? pickerSeat.nickname : t('party.aPlayer', 'A player');
+
+    if (youPick) {
+      pickLead.hidden = false;
+      pickLead.textContent = t('party.yourPick', 'Your pick, choose the next block');
+      pickWatch.hidden = true;
+      pickHand.hidden = false;
+      pickHand.innerHTML = '';
+      for (const modeId of state.hand || []) {
+        const card = el('button', 'pick-card');
+        /** @type {HTMLButtonElement} */ (card).type = 'button';
+        const hue = modeHue(modeId);
+        if (hue) card.style.setProperty('--mc', hue);
+        const ic = el('span', 'pick-card-ic');
+        ic.innerHTML = modeIconHtml(modeId);
+        ic.setAttribute('aria-hidden', 'true');
+        card.appendChild(ic);
+        card.appendChild(el('span', 'pick-card-label', modeLabel(modeId)));
+        card.addEventListener('click', () => {
+          if (pickSent) return;
+          pickSent = true;
+          pickHand.classList.add('sent');
+          card.classList.add('chosen');
+          send({ type: 'pick', modeId });
+        });
+        pickHand.appendChild(card);
+      }
+    } else {
+      pickLead.hidden = true;
+      pickHand.hidden = true;
+      pickWatch.hidden = false;
+      pickWatch.innerHTML = '';
+      pickWatch.appendChild(buildAvatar(state.picker || ''));
+      pickWatch.appendChild(el('p', 'pick-watch-name', fmt(t('party.isChoosing', '{name} is choosing…'), { name: pickerName })));
+    }
   }
 
   /** The between-blocks standings break: the block's MVP, then the full board
@@ -1329,7 +1462,25 @@ export function bootFlagParty() {
     enterRoom(code, 'join');
   });
 
-  startBtn.addEventListener('click', () => send({ type: 'start', plan: currentPlan(), tricky: trickyOn, reveal: revealState }));
+  for (const btn of [modeDraftBtn, modeCustomBtn]) {
+    btn.addEventListener('click', () => {
+      partyMode = /** @type {'draft'|'setlist'} */ (btn.dataset.mode === 'setlist' ? 'setlist' : 'draft');
+      savePartyMode();
+      syncPartyMode();
+      gameSetupEl.hidden = !(state.isHost && state.phase === 'lobby' && partyMode === 'setlist');
+    });
+  }
+  startBtn.addEventListener('click', () => {
+    // Draft is zero-setup: the players pick each block, so the start carries no
+    // plan (the server builds the opening Flags block and sizes the game from the
+    // seat count). Custom sends the built plan as before. Tricky / reveal ride
+    // along either way.
+    if (partyMode === 'draft') {
+      send({ type: 'start', draft: true, tricky: trickyOn, reveal: revealState });
+    } else {
+      send({ type: 'start', plan: currentPlan(), tricky: trickyOn, reveal: revealState });
+    }
+  });
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
   roundToSettingsBtn.addEventListener('click', () => send({ type: 'backToLobby' }));
 

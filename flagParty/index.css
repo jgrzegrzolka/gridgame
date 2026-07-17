@@ -523,6 +523,61 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .break-mvp-gain { margin-left: auto; font-weight: 600; color: var(--secondary-color); font-variant-numeric: tabular-nums; }
 .break-board { display: flex; flex-direction: column; gap: 8px; }
 
+/* ---- draft: the two doors (how to play) ---- */
+.party-mode { display: flex; flex-direction: column; gap: 8px; }
+.mode-door {
+  appearance: none;
+  text-align: left;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 12px;
+  background: var(--surface-color);
+  padding: 12px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--primary-color);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mode-door:hover { background: var(--hover-color); }
+.mode-door.on { border-color: var(--secondary-color); background: var(--selected-color); }
+.mode-door-title { font-size: 15px; font-weight: 650; }
+.mode-door-desc { font-size: 12.5px; color: var(--muted-color); line-height: 1.4; }
+
+/* ---- draft: the pick screen ---- */
+.pick-timer { height: 4px; border-radius: 2px; background: var(--muted-soft-color); overflow: hidden; }
+.pick-timer-fill { height: 100%; background: var(--secondary-color); width: 100%; }
+.pick-hand { display: flex; flex-direction: column; gap: 9px; }
+.pick-hand.sent { opacity: 0.6; pointer-events: none; }
+.pick-card {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 12px;
+  background: var(--surface-color);
+  cursor: pointer;
+  font: inherit;
+  color: var(--primary-color);
+  text-align: left;
+  width: 100%;
+}
+/* Metric cards wear the statistic's own hue on hover / chosen — the same
+   confined-to-setup colour exception the draft chips use, never a gameplay tile. */
+.pick-card:hover { background: var(--hover-color); border-color: var(--mc, var(--secondary-color)); }
+.pick-card.chosen { border-color: var(--mc, var(--secondary-color)); background: var(--selected-color); }
+.pick-card-ic { flex: none; width: 30px; height: 30px; display: grid; place-items: center; color: var(--mc, var(--primary-color)); }
+.pick-card-ic svg { width: 24px; height: 24px; display: block; }
+.pick-card-ic img { width: 28px; height: 22px; object-fit: contain; }
+.pick-card-label { font-size: 15px; font-weight: 600; }
+.pick-watch { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 0; }
+.pick-watch .avatar { width: 44px; height: 44px; border-radius: 8px; }
+.pick-watch-name { margin: 0; font-size: 17px; font-weight: 600; color: var(--primary-color); text-align: center; }
+/* The "'s pick" attribution suffix on the round pill: quieter than the pill text. */
+.pill-pick { color: var(--muted-color); font-weight: 600; }
+
 /* Finish-screen choreography — the scoreboard cascades in bottom-to-top so the
    winner's row lands last (with a small victory bounce), then the sole winner
    (`.champion`) settles into a slow breathe + pink glow that keeps first place

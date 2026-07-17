@@ -10,6 +10,9 @@ import {
   applyPlayAgain,
   applyReturnToLobby,
   applyDisconnect,
+  pendingPickAfterReveal,
+  applyEnterPicking,
+  applyPick,
   serializeRoom,
   deserializeRoom,
   DEFAULT_ROUNDS,
@@ -435,4 +438,104 @@ test('serialize/deserialize: the reveal config survives an eviction (so later ro
   const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
   assert.deepEqual(restored.reveal, reveal, 'the per-category reveal config round-trips');
   assert.equal(deserializeRoom({ phase: 'lobby' }).reveal, null, 'a pre-reveal snapshot defaults to null');
+});
+
+// ---- draft mode (Iteration 9) ----
+
+/** A draft room fast-forwarded to a reveal at a block boundary (roundIndex 4 of a
+ *  15-round / 3-block game). Reducers are pure, so setting phase/roundIndex on the
+ *  started room is a legitimate way to exercise the pick reducers in isolation. */
+function draftRevealAtBoundary(roundIndex = 4, targetBlocks = 3) {
+  let room = createRoom(15);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  const openingPlan = [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 5 }];
+  room = applyStart(room, 'alice', q('jp'), openingPlan, 15, false, null, { draft: true, targetBlocks }).room;
+  return { ...room, phase: /** @type {any} */ ('reveal'), roundIndex };
+}
+
+test('applyStart: draft mode records draft + targetBlocks and clears pick state', () => {
+  let room = createRoom(15);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  const r = applyStart(room, 'alice', q('jp'), [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 5 }], 15, false, null, { draft: true, targetBlocks: 3 });
+  assert.equal(r.room.draft, true);
+  assert.equal(r.room.targetBlocks, 3);
+  assert.equal(r.room.totalRounds, 15);
+  assert.deepEqual(r.room.pickedBy, []);
+  assert.equal(r.room.picker, null);
+});
+
+test('applyStart: a non-draft game leaves draft off', () => {
+  const room = startedTwoPlayer();
+  assert.equal(room.draft, false);
+  assert.equal(room.targetBlocks, 0);
+});
+
+test('pendingPickAfterReveal: true at a draft block boundary, not on the last round or in setlist', () => {
+  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(4)), true);   // end of block 1
+  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(9)), true);   // end of block 2
+  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(14)), false); // final round -> final board
+  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(2)), false);  // mid-block
+  // setlist (non-draft) never opens a pick
+  const setlist = { ...draftRevealAtBoundary(4), draft: false };
+  assert.equal(pendingPickAfterReveal(setlist), false);
+});
+
+test('applyEnterPicking: reveal -> picking, records picker + hand, broadcasts to all', () => {
+  const room = draftRevealAtBoundary(4);
+  const hand = ['map-outlines', 'superlative-coffee', 'superlative-beer'];
+  const r = applyEnterPicking(room, 'alice', 'bob', hand);
+  assert.equal(r.room.phase, 'picking');
+  assert.equal(r.room.picker, 'bob');
+  assert.deepEqual(r.room.hand, hand);
+  const m = msg(r, 'picking');
+  assert.equal(m.picker, 'bob');
+  assert.deepEqual(m.hand, hand);
+});
+
+test('applyEnterPicking: ignored for a non-host or with no picker', () => {
+  const room = draftRevealAtBoundary(4);
+  assert.equal(applyEnterPicking(room, 'bob', 'bob', ['map-outlines']).broadcasts.length, 0);
+  assert.equal(applyEnterPicking(room, 'alice', null, ['map-outlines']).broadcasts.length, 0);
+});
+
+test('applyPick: the picker chooses -> block appended, advances to its first question', () => {
+  let room = draftRevealAtBoundary(4);
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines', 'superlative-coffee']).room;
+  const segment = { poolId: 'sovereign', roundId: 'mapPick', rounds: 5 };
+  const r = applyPick(room, 'bob', 'map-outlines', segment, q('pa', ['pa', 'us', 'fr', 'de']));
+  assert.equal(r.room.phase, 'question');
+  assert.equal(r.room.roundIndex, 5);               // first round of block 2
+  assert.deepEqual(r.room.plan?.[r.room.plan.length - 1], segment); // block appended
+  assert.deepEqual(r.room.pickedBy, ['bob']);       // no-repeat set updated
+  assert.equal(r.room.picker, null);
+  assert.equal(r.room.hand, null);
+  const m = msg(r, 'question');
+  assert.deepEqual(m.draftPick, { picker: 'bob', modeId: 'map-outlines' });
+  assert.equal(m.answer, undefined, 'the answer never rides the question broadcast');
+});
+
+test('applyPick: only the designated picker can pick, and only in the picking phase', () => {
+  let room = draftRevealAtBoundary(4);
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']).room;
+  const seg = { poolId: 'sovereign', roundId: 'mapPick', rounds: 5 };
+  assert.equal(applyPick(room, 'alice', 'map-outlines', seg, q('pa')).broadcasts.length, 0, 'wrong picker ignored');
+  const notPicking = draftRevealAtBoundary(4); // still in reveal
+  assert.equal(applyPick(notPicking, 'bob', 'map-outlines', seg, q('pa')).broadcasts.length, 0, 'wrong phase ignored');
+});
+
+test('serialize/deserialize: draft state survives an eviction; a legacy snapshot defaults to non-draft', () => {
+  let room = draftRevealAtBoundary(4);
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines', 'superlative-coffee']).room;
+  const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
+  assert.equal(restored.draft, true);
+  assert.equal(restored.targetBlocks, 3);
+  assert.equal(restored.picker, 'bob');
+  assert.deepEqual(restored.hand, ['map-outlines', 'superlative-coffee']);
+  const legacy = deserializeRoom({ phase: 'lobby' });
+  assert.equal(legacy.draft, false);
+  assert.equal(legacy.targetBlocks, 0);
+  assert.deepEqual(legacy.pickedBy, []);
+  assert.equal(legacy.picker, null);
 });
