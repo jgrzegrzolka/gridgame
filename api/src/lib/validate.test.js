@@ -586,3 +586,58 @@ test('validateProfileDeletionBody: rejects missing / undersized / oversized devi
   assert.deepEqual(validateProfileDeletionBody({ deviceId: 'a'.repeat(7) }), { ok: false, error: 'invalid_deviceId' });
   assert.deepEqual(validateProfileDeletionBody({ deviceId: 'a'.repeat(65) }), { ok: false, error: 'invalid_deviceId' });
 });
+
+// Feature V follow-up. A flat 0..1000 score gate let a scripted submission
+// store 189 correct answers in a 60-second round (2026-07-07); the best real
+// score in prod is 49. The bound is now derived from the mode: time for 60s,
+// pool for endurance.
+test('validateQuizRecord: rejects a physically impossible 60s score', () => {
+  const b = validQuizBody();
+  b.configKey = 'countries:60s';
+  b.durationMs = 60_000;
+  b.score = 189;                       // the score that actually got in
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_score' });
+  b.score = 121;                       // one past 2 answers/sec
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_score' });
+});
+
+test('validateQuizRecord: every real score on record still passes', () => {
+  const b = validQuizBody();
+  for (const [k, score, durationMs] of [
+    ['countries:60s', 49, 60_000],
+    ['europe:60s', 45, 53_500],
+    ['oceania:60s', 14, 25_000],
+    ['countries:all', 12, 180_000],
+    ['countries:60s:sov', 49, 60_000],   // legacy shape from a cached client
+  ]) {
+    Object.assign(b, { configKey: k, score, durationMs });
+    assert.equal(validateQuizRecord(b).ok, true, `${k} score=${score} should pass`);
+  }
+});
+
+test('validateQuizRecord: a short round bounds lower than a full one', () => {
+  const b = validQuizBody();
+  b.configKey = 'oceania:60s';
+  b.durationMs = 10_000;               // 10s → at most 20
+  b.score = 21;
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_score' });
+  b.score = 20;
+  assert.equal(validateQuizRecord(b).ok, true);
+});
+
+test('validateQuizRecord: endurance is pool-bounded, not time-bounded', () => {
+  const b = validQuizBody();
+  b.configKey = 'countries:all';
+  b.durationMs = 3_600_000;            // an hour — time must not inflate the cap
+  b.score = 250;
+  assert.equal(validateQuizRecord(b).ok, true);
+  b.score = 251;
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_score' });
+});
+
+test('validateQuizRecord: unknown mode is rejected, not waved through', () => {
+  const b = validQuizBody();
+  b.configKey = 'countries:newmode';
+  b.score = 5;
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_score' });
+});
