@@ -539,3 +539,27 @@ test('serialize/deserialize: draft state survives an eviction; a legacy snapshot
   assert.deepEqual(legacy.pickedBy, []);
   assert.equal(legacy.picker, null);
 });
+
+// ---- final-block double points (final-block polish) ----
+
+test('final block: the reveal doubles points and flags doubled; earlier blocks do not', () => {
+  // A 10-round (2-block) game. Round 0 is block 1 (single), round 5 is the final block.
+  let room = createRoom(10);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyStart(room, 'alice', q('jp'), [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 10 }], 10).room;
+
+  // Round 0 (block 1): a correct solo answer scores the base, not doubled.
+  let r = applyBuzz(room, 'alice', 'jp', true);
+  let rev = msg(r, 'reveal');
+  assert.equal(rev.doubled, false);
+  assert.equal(rev.points.alice, CORRECT_POINTS);
+
+  // Fast-forward to a final-block round (index 5) and answer correctly.
+  const atFinal = { ...r.room, phase: /** @type {any} */ ('question'), roundIndex: 5, question: q('kr'), buzzes: [] };
+  r = applyBuzz(atFinal, 'alice', 'kr', true);
+  rev = msg(r, 'reveal');
+  assert.equal(rev.doubled, true, 'the final block is flagged doubled');
+  assert.equal(rev.points.alice, CORRECT_POINTS * 2, 'points are doubled');
+  // and the seat's running total reflects the doubled award
+  assert.equal(r.room.seats.get('alice')?.score, CORRECT_POINTS + CORRECT_POINTS * 2);
+});

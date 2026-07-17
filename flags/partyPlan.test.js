@@ -19,6 +19,7 @@ import {
   blockCount,
   isBlockEnd,
   isBlockBoundary,
+  isFinalBlock,
 } from './partyPlan.js';
 
 test('DEFAULT_PLAN: 4 of each — sovereign flag, non-sovereign flag, sovereign map, superlative', () => {
@@ -268,4 +269,18 @@ test('isBlockBoundary: keyed on index + total, matches isBlockEnd for a plan', (
   assert.equal(isBlockBoundary(4, 15), true);
   assert.equal(isBlockBoundary(9, 15), true);
   assert.equal(isBlockBoundary(14, 15), false);
+});
+
+test('isFinalBlock: true only for rounds in the last block', () => {
+  // 15 rounds = 3 blocks; the final block is rounds 10-14.
+  for (let i = 0; i < 10; i++) assert.equal(isFinalBlock(i, 15), false, `round ${i}`);
+  for (let i = 10; i < 15; i++) assert.equal(isFinalBlock(i, 15), true, `round ${i}`);
+});
+
+test('isFinalBlock: a single-block game has no final block (nothing to contrast)', () => {
+  assert.equal(isFinalBlock(0, 5), false);
+  assert.equal(isFinalBlock(4, 5), false);
+  // two blocks: the second is the final one
+  assert.equal(isFinalBlock(4, 10), false);
+  assert.equal(isFinalBlock(5, 10), true);
 });

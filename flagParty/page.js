@@ -8,7 +8,7 @@ import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCe
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, revealSecondsFor, BLOCK_BREAK_SECONDS, PICK_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
-import { BLOCK_ROUNDS, PICTURE_MODES, METRIC_MODES, PARTY_MODES, buildPartyPlan, isBlockBoundary, blockIndexForRound, blockCount } from '../flags/partyPlan.js';
+import { BLOCK_ROUNDS, PICTURE_MODES, METRIC_MODES, PARTY_MODES, buildPartyPlan, isBlockBoundary, isFinalBlock, blockIndexForRound, blockCount } from '../flags/partyPlan.js';
 import { blockBreak } from '../flags/partyBreak.js';
 import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
@@ -857,12 +857,17 @@ export function bootFlagParty() {
   function nameActive() {
     return !!(state.question && isMetricRound(state.question.roundId) && state.question.nameFrac != null);
   }
+  /** True when this question's tiles are veiled: the host's tricky mode, or the
+   *  always-tricky final block (regardless of the host's setting). */
+  function veilActive() {
+    return state.tricky || isFinalBlock(state.roundIndex, state.totalRounds);
+  }
   function startVeil() {
     if (veilRaf) return;
     const step = () => {
-      if (state.phase !== 'question' || !(state.tricky || nameActive())) { veilRaf = 0; return; }
+      if (state.phase !== 'question' || !(veilActive() || nameActive())) { veilRaf = 0; return; }
       const now = Date.now();
-      if (state.tricky) {
+      if (veilActive()) {
         const clearFrac = (state.question && state.question.clearFrac) || DEFAULT_REVEAL.flag;
         const p = veilProgress(clockDeadline, now, clockTotalMs, clearFrac);
         gridEl.style.setProperty('--veil-p', p.toFixed(4));
@@ -1018,9 +1023,11 @@ export function bootFlagParty() {
       showSection('round'); renderRound(); syncClock();
       // The veil + name reveal animate during the question only; the reveal phase
       // always shows crisp tiles (stopVeil pins `--veil-p` to 1 and clears
-      // `names-shown`). Run the loop when tricky is on or a world-facts round has
-      // name-reveal enabled.
-      if (state.phase === 'question' && (state.tricky || nameActive())) startVeil(); else stopVeil();
+      // `names-shown`). Run the loop when tricky is on, when a world-facts round
+      // has name-reveal enabled, or on the always-tricky final block (the block
+      // that decides the game plays veiled regardless of the host's setting — it
+      // finally gives the veil a home, since draft never shows the toggle).
+      if (state.phase === 'question' && (veilActive() || nameActive())) startVeil(); else stopVeil();
     }
     else if (state.phase === 'picking') { stopVeil(); showSection('pick'); renderPick(); syncClock(); }
     else if (state.phase === 'final') { stopClock(); stopVeil(); showSection('final'); renderFinal(); }
@@ -1089,6 +1096,10 @@ export function bootFlagParty() {
       if (seat) {
         roundPill.appendChild(el('span', 'pill-pick', ` · ${fmt(t('party.blockPick', "{name}'s pick"), { name: seat.nickname })}`));
       }
+    }
+    // The final block scores double and plays veiled — badge it so the stakes read.
+    if (isFinalBlock(state.roundIndex, state.totalRounds)) {
+      roundPill.appendChild(el('span', 'pill-double', t('party.doublePoints', 'Double points')));
     }
     const isReveal = state.phase === 'reveal' && state.reveal;
     const isMap = q.roundId === 'mapPick';
@@ -1164,7 +1175,7 @@ export function bootFlagParty() {
         // toggled by the veil loop). The strip is pre-rendered here; CSS keeps it
         // hidden until then. Name only, no value — the value would leak the answer.
         const named = isSuperlative && q.nameFrac != null;
-        gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [], pop: null, veil: state.tricky, named }));
+        gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [], pop: null, veil: veilActive(), named }));
       }
     }
 

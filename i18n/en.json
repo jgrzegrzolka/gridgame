@@ -646,6 +646,7 @@
     "isChoosing": "{name} is choosing…",
     "aPlayer": "A player",
     "blockPick": "{name}'s pick",
+    "doublePoints": "Double points",
     "hintFlag": "Which flag?",
     "hintMap": "Which outline?",
     "hintMost": "Most populous",

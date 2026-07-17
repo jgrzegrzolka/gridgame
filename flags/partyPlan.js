@@ -93,6 +93,22 @@ export function isBlockEnd(plan, index) {
 }
 
 /**
+ * Whether a 0-based round falls in the game's **final block** — the block that
+ * decides the game, which scores double and is always played tricky. Keyed on the
+ * round index and total (like {@link isBlockBoundary}), so the client can call it
+ * from a reveal / question alone. A **single-block game has no final block**
+ * (there's no earlier block to contrast, so doubling / veiling it throughout would
+ * be pointless and surprising): returns false unless the game runs 2+ blocks.
+ * @param {number} index
+ * @param {number} total  the game's total round count
+ * @returns {boolean}
+ */
+export function isFinalBlock(index, total) {
+  const blocks = Math.ceil(total / BLOCK_ROUNDS);
+  return blocks > 1 && blockIndexForRound(index) === blocks - 1;
+}
+
+/**
  * The segment a given 0-based round falls in. A round index past the end clamps
  * to the last segment — harmless, since the server only generates a question
  * for a round the room will actually play (the extra question on the final

@@ -1,5 +1,5 @@
-import { scoreRound } from './partyScore.js';
-import { isBlockBoundary } from './partyPlan.js';
+import { scoreRound, FINAL_BLOCK_MULTIPLIER } from './partyScore.js';
+import { isBlockBoundary, isFinalBlock } from './partyPlan.js';
 
 /**
  * Flag Party room — the pure state machine behind the live show. Same shape as
@@ -482,7 +482,13 @@ export function applyDisconnect(room, playerId) {
 function toReveal(room) {
   const q = room.question;
   if (!q) return { room, broadcasts: [] };
-  const points = scoreRound(room.buzzes, { applySpeedBonus: room.seats.size > 1 });
+  // The final block (the one that decides the game) scores double, so a trailing
+  // player can still swing it. `doubled` rides the reveal so clients can badge it.
+  const doubled = isFinalBlock(room.roundIndex, room.totalRounds);
+  const points = scoreRound(room.buzzes, {
+    applySpeedBonus: room.seats.size > 1,
+    multiplier: doubled ? FINAL_BLOCK_MULTIPLIER : 1,
+  });
   const seats = new Map();
   for (const [pid, seat] of room.seats) {
     seats.set(pid, { ...seat, score: seat.score + (points[pid] ?? 0) });
@@ -500,6 +506,7 @@ function toReveal(room) {
         answer: q.answer,
         picks,
         points,
+        doubled,
         scoreboard: scoreboardOf(nextRoom),
         roundIndex: room.roundIndex,
         totalRounds: room.totalRounds,
