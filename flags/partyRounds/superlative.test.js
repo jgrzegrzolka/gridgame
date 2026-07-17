@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import population from '../metrics/population.json' with { type: 'json' };
 import { id, generate, isCorrect } from './superlative.js';
+import * as superlative from './superlative.js';
+import { SUPERLATIVE_METRICS } from './superlativeCatalog.js';
+import { METRIC_FILES } from '../metrics/index.js';
 
 /** Raw value map so the test can judge extremes independently of the module. */
 const POP = /** @type {Record<string, number>} */ (population.values);
@@ -25,6 +28,160 @@ function seeded(seed) {
 
 test('id is stable', () => {
   assert.equal(id, 'superlative');
+});
+
+// This module's whole job is now to bring the data the catalog names. A catalog
+// entry with no `DATA` entry throws at import (the round could never resolve a
+// value), but the reverse — data for a metric no catalog entry asks about — is
+// silent dead weight, so pin both directions. Together with the catalog's own
+// drift test this chains: metrics/index.js <-> catalog <-> DATA.
+test('every catalog metric is built, and every built round is in the catalog', () => {
+  for (const m of SUPERLATIVE_METRICS) {
+    const round = roundFor(m.roundId);
+    assert.ok(round, `catalog names "${m.key}" (${m.roundId}) but no round was built for it`);
+    assert.equal(typeof round.generate, 'function', `${m.key}: round cannot generate`);
+    assert.equal(typeof round.isCorrect, 'function', `${m.key}: round cannot score`);
+  }
+});
+
+// The one that matters, and the one my first attempt got wrong. `ROUNDS` is
+// built FROM the catalog, so any test that counts "built rounds" against
+// `SUPERLATIVE_METRICS.length` is tautological: retire a catalog entry and both
+// sides drop together while `export const honeyRound = ROUNDS.honey;` is left
+// behind as `undefined`. That is not a cosmetic leftover —
+// `party/partyGameServer.js:41` lists these exports BY NAME and reads `.id` off
+// each to build its registry, so an undefined one throws at module load and
+// EVERY Flag Party room dies, flag-pick and map-pick included.
+//
+// Verified by mutation: retiring honey from the catalog while leaving its export
+// dangling left this file green except for honey's own legacy per-metric test —
+// exactly the test a dev deletes when retiring a metric.
+test('every *Round export is a live round the catalog claims', () => {
+  const roundExports = exportedEntries().filter(([name]) => name.endsWith('Round'));
+  for (const [name, round] of roundExports) {
+    assert.ok(round,
+      `export "${name}" is undefined — its catalog entry is gone but the export was left behind. `
+      + 'party/partyGameServer.js reads .id off it and throws at import, killing every room.');
+    assert.equal(typeof round.id, 'string', `export "${name}" is not a round`);
+    assert.equal(typeof round.generate, 'function', `export "${name}" cannot generate`);
+    assert.ok(SUPERLATIVE_METRICS.some((m) => m.roundId === round.id),
+      `export "${name}" deals round "${round.id}" that no catalog entry claims`);
+  }
+  // All but population, which is exported flat rather than as a `<key>Round`.
+  assert.equal(roundExports.length, SUPERLATIVE_METRICS.length - 1,
+    'every catalog metric but population needs exactly one <key>Round export');
+});
+
+/** This module's exports, as opaque entries: the checker sees a union of string
+ *  (the flat `id`), two functions, and 31 round objects, so probing `.id` needs
+ *  the cast. @returns {[string, any][]} */
+const exportedEntries = () => /** @type {[string, any][]} */ (Object.entries(superlative));
+
+/** @returns {any[]} */
+const exportedValues = () => exportedEntries().map(([, v]) => v);
+
+/** The round for a catalog entry. The population round is exported FLAT (id /
+ *  generate / isCorrect, the shape it shipped in before there was a second
+ *  metric), so reassemble it; every other metric exports a round object.
+ *  @param {string} roundId */
+const roundFor = (roundId) => (
+  roundId === id
+    ? { id, generate, isCorrect }
+    : exportedValues().find((r) => r && r.id === roundId)
+);
+
+/** A metric's raw values map, loaded the way the module itself does.
+ *  @param {string} key @returns {Promise<Record<string, number>>} */
+async function valuesOf(key) {
+  const file = /** @type {{ key: string, file: string }} */ (
+    METRIC_FILES.find((f) => f.key === key)
+  ).file;
+  const json = (await import(`../metrics/${file}`, { with: { type: 'json' } })).default;
+  return json.values;
+}
+
+// The direction lock and the zero-filter used to be written per metric, right
+// beside the data. They're read from the catalog now, so pin that every entry
+// really got its rule applied. Without this, a builder that ignored `direction`
+// would be caught only by the ~20 per-metric tests below that happen to assert
+// it — and a NEW metric would ship with no such test at all.
+test('every direction-locked metric only ever deals its locked direction', async () => {
+  for (const m of SUPERLATIVE_METRICS) {
+    if (!m.direction) continue;
+    const values = await valuesOf(m.key);
+    // Distinct-valued codes so a quartet always has an unambiguous extreme.
+    const seen = new Set();
+    const pool = Object.entries(values)
+      .filter(([, v]) => v > 0 && !seen.has(v) && seen.add(v))
+      .slice(0, 12)
+      .map(([code]) => ({ code }));
+    assert.ok(pool.length >= 4, `${m.key}: need 4+ distinct values to test`);
+    for (let i = 0; i < 20; i++) {
+      const q = roundFor(m.roundId).generate(pool, undefined, seeded(i + 1));
+      assert.equal(q.prompt, m.direction,
+        `${m.key} is locked to '${m.direction}' but dealt '${q.prompt}'`);
+    }
+  }
+});
+
+// The other catalog rule. A real 0 must never be selectable on a zero-filtered
+// metric — that's what keeps "least forested" from drawing four countries that
+// all sit at 0.0% and tie.
+test('every zero-filtered metric excludes its real zeros from selection', async () => {
+  let checked = 0;
+  for (const m of SUPERLATIVE_METRICS) {
+    if (!m.zeroFiltered) continue;
+    const values = await valuesOf(m.key);
+    const zeros = Object.entries(values).filter(([, v]) => v === 0).map(([code]) => code);
+    if (zeros.length === 0) continue; // zero-filtered defensively; nothing to prove
+    checked++;
+    const nonZero = Object.entries(values)
+      .filter(([, v]) => v > 0)
+      .slice(0, 6)
+      .map(([code]) => ({ code }));
+    const pool = [...nonZero, ...zeros.slice(0, 6).map((code) => ({ code }))];
+    for (let i = 0; i < 40; i++) {
+      const q = roundFor(m.roundId).generate(pool, undefined, seeded(i + 1));
+      for (const opt of q.options) {
+        assert.ok(!zeros.includes(opt), `${m.key}: zero-valued ${opt} was offered as an option`);
+      }
+    }
+  }
+  assert.ok(checked >= 5, `expected several metrics with real zeros, checked ${checked}`);
+});
+
+// The converse of the direction lock. Without it, `direction: 'most'` on every
+// entry would satisfy the lock test above while silently halving the question
+// space of the eleven metrics whose low pole is a real question (the Maldives'
+// lowest highpoint, Afghanistan's happiness floor, the coldest place).
+test('every two-directional metric deals both directions', async () => {
+  // Drive the first rng byte, which is the direction coin flip. Spreading seeds
+  // and hoping is what made the population version of this test flaky.
+  const firstThen = (/** @type {number} */ first, /** @type {() => number} */ rest) => {
+    let n = 0;
+    return () => (n++ === 0 ? first : rest());
+  };
+  let checked = 0;
+  for (const m of SUPERLATIVE_METRICS) {
+    if (m.direction !== null) continue;
+    checked++;
+    const values = await valuesOf(m.key);
+    const seen = new Set();
+    const pool = Object.entries(values)
+      .filter(([, v]) => v > 0 && !seen.has(v) && seen.add(v))
+      .slice(0, 12)
+      .map(([code]) => ({ code }));
+    assert.ok(pool.length >= 4, `${m.key}: need 4+ distinct values to test`);
+    const round = roundFor(m.roundId);
+    assert.equal(round.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least',
+      `${m.key} is two-directional but never deals 'least'`);
+    assert.equal(round.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most',
+      `${m.key} is two-directional but never deals 'most'`);
+  }
+  // A floor, not an exact count: the loop must not pass vacuously. Pinning the
+  // exact number would fail on every new two-directional metric, which teaches
+  // bumping the constant rather than reading the test.
+  assert.ok(checked >= 5, `expected several two-directional metrics, checked ${checked}`);
 });
 
 test('generate: four distinct options, answer among them, prompt is a direction', () => {

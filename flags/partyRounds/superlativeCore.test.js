@@ -5,32 +5,36 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createSuperlativeRound } from './superlativeCore.js';
+import { collectReachable, findJsonModuleOffenders } from '../../tooling/browserImportGraph.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 // THE reason this module exists. `superlative.js` statically imports 32 metric
 // JSONs; in a real browser that kills the module and ships a blank page (#767,
-// fixed in #769). The core must stay loadable by the browser, so it must never
-// import JSON — directly or through anything it imports.
-test('the core imports no JSON, directly or transitively', () => {
-  /** @type {Set<string>} */
-  const seen = new Set();
-  /** @type {string[]} */
-  const offenders = [];
-  /** @param {string} file */
-  const walk = (file) => {
-    if (seen.has(file)) return;
-    seen.add(file);
-    let src;
-    try { src = readFileSync(file, 'utf8'); } catch { return; }
-    if (/with\s*\{\s*type:\s*['"]json['"]\s*\}/.test(src.replace(/^\s*\*.*$/gm, ''))) {
-      offenders.push(file.split(/[\/]/).slice(-2).join('/'));
-    }
-    for (const m of src.matchAll(/^\s*import\s[^'"]*['"](\.[^'"]+)['"]/gm)) {
-      walk(join(dirname(file), m[1]));
-    }
+// fixed in #769). The core must stay loadable, so it must never import JSON —
+// directly or through anything it imports.
+//
+// This is the ONLY protection, and it has to be: Playwright's Chromium loads
+// superlative.js and all 32 JSON imports perfectly happily (verified 2026-07-17,
+// `dataHalfLoads: true`). A browser probe cannot tell safe from fatal here and
+// would argue the split was pointless right up until real users get a blank page.
+// Treat "but it works in Playwright" as no evidence at all.
+//
+// The walk itself is `tooling/browserImportGraph.js` — the repo's existing
+// guard, unit-tested on fixtures, which also handles `export … from` re-exports
+// that a hand-rolled `^import` regex misses. The catalog needs no entry here:
+// `flagParty/page.js` imports it, so tooling's repo-wide test (which walks every
+// page.js) already covers it. The CORE is the gap — no page reaches it until
+// flagQuiz's Facts deck lands in Phase 4b-ii — so it gets this explicit walk
+// until then.
+test('superlativeCore.js imports no JSON, directly or transitively', () => {
+  const read = (/** @type {string} */ p) => {
+    try { return readFileSync(p, 'utf8'); } catch { return null; }
   };
-  walk(join(HERE, 'superlativeCore.js'));
+  const reachable = collectReachable([join(HERE, 'superlativeCore.js')], read);
+  assert.ok(reachable.size > 1, `import walk looks broken: only ${reachable.size} files reached`);
+  const offenders = findJsonModuleOffenders(reachable, read)
+    .map((p) => p.replace(/\\/g, '/').split('/').slice(-2).join('/'));
   assert.deepEqual(offenders, [],
     `these would break the browser: ${offenders.join(', ')}`);
 });

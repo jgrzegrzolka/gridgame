@@ -18,11 +18,13 @@
 
 /**
  * The round ids this build can actually render: the two fixed picture rounds
- * (flag-pick, map-pick) plus every superlative metric round wired into the
- * page's `SUPERLATIVE_MODES`. A `roundId` the server sends from outside this set
- * proves the server is newer than us.
+ * (flag-pick, map-pick) plus every superlative metric round this build knows
+ * about. A `roundId` the server sends from outside this set proves the server is
+ * newer than us.
  *
- * @param {Iterable<string>} superlativeRoundIds  `Object.keys(SUPERLATIVE_MODES)`
+ * @param {Iterable<string>} superlativeRoundIds  the catalog's round ids —
+ *   `SUPERLATIVE_METRICS.map((m) => m.roundId)` from
+ *   `flags/partyRounds/superlativeCatalog.js`
  * @returns {Set<string>}
  */
 export function renderableRoundIds(superlativeRoundIds) {

@@ -1,0 +1,126 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+import { SUPERLATIVE_METRICS, superlativeMetricByRoundId, superlativeMetricByKey, hintFor } from './superlativeCatalog.js';
+import { METRIC_FILES } from '../metrics/index.js';
+import { METRIC_MODES } from '../partyPlan.js';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const I18N = join(HERE, '..', '..', 'i18n');
+
+/** @param {string} lang */
+const loadLang = (lang) => JSON.parse(readFileSync(join(I18N, `${lang}.json`), 'utf8'));
+
+/**
+ * Resolve a dotted i18n key ('party.hintMostForest') against a loaded bundle.
+ * @param {any} bundle
+ * @param {string} key
+ * @returns {string | undefined}
+ */
+function lookup(bundle, key) {
+  return key.split('.').reduce((node, part) => (node == null ? undefined : node[part]), bundle);
+}
+
+// THE drift test, and the reason the catalog names rather than imports. A metric
+// added to flags/metrics/index.js but forgotten here would simply never be asked
+// about; one added here but not there names a values file that doesn't exist, so
+// the round resolves no data and deals nothing. Neither fails loudly on its own.
+test('every registered metric has exactly one catalog entry, and vice versa', () => {
+  const registered = METRIC_FILES.map((m) => m.key).sort();
+  const cataloged = SUPERLATIVE_METRICS.map((m) => m.key).sort();
+  assert.deepEqual(cataloged, registered);
+});
+
+// The other half of the same drift: `roundId` is what the server deals and what
+// flagParty looks a question up by. A mismatch here means a dealt round whose
+// prompt has no label.
+test('every metric party mode has exactly one catalog entry, and vice versa', () => {
+  const modeRoundIds = METRIC_MODES.map((m) => m.roundId).sort();
+  const cataloged = SUPERLATIVE_METRICS.map((m) => m.roundId).sort();
+  assert.deepEqual(cataloged, modeRoundIds);
+});
+
+test('keys and round ids are unique', () => {
+  const keys = SUPERLATIVE_METRICS.map((m) => m.key);
+  assert.equal(new Set(keys).size, keys.length, 'duplicate metric key');
+  const ids = SUPERLATIVE_METRICS.map((m) => m.roundId);
+  assert.equal(new Set(ids).size, ids.length, 'duplicate roundId');
+});
+
+// The invariant `hintFor` leans on: a locked metric never needs a 'least' label,
+// and an unlocked one always does. Stated here so the table can't half-express a
+// direction change (lock the direction, leave the label, or the reverse).
+test('hintLeast is present exactly when the direction is not locked', () => {
+  for (const m of SUPERLATIVE_METRICS) {
+    if (m.direction === null) {
+      assert.ok(m.hintLeast, `${m.key}: two-directional but has no hintLeast`);
+    } else {
+      assert.equal(m.direction, 'most', `${m.key}: the only lock we deal is 'most'`);
+      assert.equal(m.hintLeast, null, `${m.key}: locked to 'most' but carries a hintLeast`);
+    }
+  }
+});
+
+test('every hint resolves in both languages', () => {
+  const bundles = { en: loadLang('en'), pl: loadLang('pl') };
+  for (const m of SUPERLATIVE_METRICS) {
+    for (const hint of [m.hintMost, m.hintLeast]) {
+      if (!hint) continue;
+      for (const [lang, bundle] of Object.entries(bundles)) {
+        const got = lookup(bundle, hint.key);
+        assert.equal(typeof got, 'string', `${m.key}: ${hint.key} missing from ${lang}.json`);
+        assert.ok(/** @type {string} */ (got).length > 0, `${m.key}: ${hint.key} is empty in ${lang}.json`);
+      }
+    }
+  }
+});
+
+test('the English fallback matches en.json, so a hint reads the same either way', () => {
+  const en = loadLang('en');
+  for (const m of SUPERLATIVE_METRICS) {
+    for (const hint of [m.hintMost, m.hintLeast]) {
+      if (!hint) continue;
+      assert.equal(lookup(en, hint.key), hint.fallback, `${hint.key}: fallback drifted from en.json`);
+    }
+  }
+});
+
+test('hintFor picks the label for the direction', () => {
+  const forest = superlativeMetricByKey('forest');
+  assert.ok(forest);
+  assert.equal(hintFor(forest, 'most').fallback, 'Most forested');
+  assert.equal(hintFor(forest, 'least').fallback, 'Least forested');
+});
+
+test('hintFor falls back to hintMost rather than crashing on a locked metric', () => {
+  // Unreachable in practice (the same `direction` field locks generation), but
+  // the old code read `.key` off undefined here, which killed the round.
+  const coffee = superlativeMetricByKey('coffee');
+  assert.ok(coffee);
+  assert.equal(coffee.hintLeast, null);
+  assert.equal(hintFor(coffee, 'least').fallback, 'Largest coffee production');
+});
+
+test('lookups resolve, and an unknown id is null rather than a throw', () => {
+  // A still-open tab can be dealt a round id by a newer server; that must read
+  // as "I don't know this" and reach the stale-client guard, not explode.
+  const pop = superlativeMetricByRoundId('superlative');
+  const forest = superlativeMetricByRoundId('superlative-forest');
+  assert.ok(pop && forest);
+  assert.equal(pop.key, 'population');
+  assert.equal(forest.key, 'forest');
+  assert.equal(superlativeMetricByRoundId('superlative-unobtainium'), null);
+  assert.equal(superlativeMetricByKey('nope'), null);
+});
+
+// The population round predates the metric suffix, and its id is on the wire in
+// every live room. Pinned because a "tidy-up" rename is a plausible future edit
+// and would break every game mid-round.
+test('the population round keeps its legacy unsuffixed id', () => {
+  const pop = superlativeMetricByKey('population');
+  assert.ok(pop);
+  assert.equal(pop.roundId, 'superlative');
+});
