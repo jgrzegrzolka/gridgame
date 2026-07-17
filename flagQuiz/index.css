@@ -128,8 +128,21 @@ body {
   font-size: 14px;
   color: var(--muted-color);
   margin: 0 0 12px;
-  text-align: center;
   font-variant-numeric: tabular-nums;
+  /* A flex row, not a text line. It was `text-align: center` while everything
+   * in it was text — fine then, wrong once Feature V put a flag thumbnail
+   * beside the words. Inline layout aligns children on the BASELINE, an
+   * inline-flex takes its baseline from its first flex item, and that item's
+   * content is an <img> whose baseline is its bottom edge — so the flag's
+   * bottom pinned to the text baseline and it floated ~3.5px high.
+   * `vertical-align: middle` improves it but still misses by ~2px, because CSS
+   * "middle" means baseline + half x-height, not the text's true centre.
+   * Centring on the cross axis is exact, and costs nothing: the row stays
+   * centred (body is already a column flex with align-items: center) and gets
+   * 2px shorter. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 /* Wrong-pick penalty flash in the 60s mode — the -3s jump on the
    countdown is too subtle without it. inline-block lets the transform
@@ -185,6 +198,10 @@ body {
   position: relative;
   display: inline-flex;
   align-items: center;
+  /* `.play-timer` centres this on its cross axis (see there for why it had to
+   * become a flex row). `vertical-align` is left at its default deliberately:
+   * it does nothing to a flex item, and setting it would only mislead the next
+   * reader into thinking it's load-bearing. */
 }
 .deck-side::after {
   content: "·";
