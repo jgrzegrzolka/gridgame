@@ -1092,10 +1092,13 @@ export function bootFlagParty() {
       // Leaving a break (the next block's first question is here): the standings
       // we just showed become the baseline the following break diffs against.
       if (state.phase === 'question' && pendingBreakBoard) { prevBreakBoard = pendingBreakBoard; pendingBreakBoard = null; }
-      // Blocks 2..N open with a title-card beat before their first round. The
-      // question is already dealt; we hold the card and start the round + clock +
-      // veil only when the beat ends, so the card costs no answer time. Armed once
-      // per block-start (the token guards render()'s re-runs from restarting it).
+      // Every block opens with a title-card beat before its first round — the
+      // opening block included, so it doubles as the synchronized "get ready" beat
+      // at game start (the host who clicked Start doesn't see the first question
+      // ahead of the other seats). The question is already dealt; we hold the card
+      // and start the round + clock + veil only when the beat ends, so the card
+      // costs no answer time. Armed once per block-start (the token guards
+      // render()'s re-runs from restarting it).
       if (state.phase === 'question' && isBlockStart(state.roundIndex, state.totalRounds)) {
         const token = String(state.roundIndex);
         if (blockIntroToken !== token) armBlockIntro(token);
@@ -1381,7 +1384,8 @@ export function bootFlagParty() {
     }
   }
 
-  /** The block title card: a short beat before block 2..N's first round, naming
+  /** The block title card: a short beat before each block's first round (the
+   *  opening block included — it doubles as the game's "get ready" beat), naming
    *  the block number, its mode (icon + full label, metric hue on the icon),
    *  "5 rounds", who picked it (draft), and the double-points stakes on the final
    *  block. Paints in `#pt-blockcard`; the round follows when the beat elapses
