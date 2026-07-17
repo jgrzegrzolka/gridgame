@@ -96,6 +96,14 @@ export function setQuizLastVariant(store, key) {
  *   Absent means 'flag' — true of every deck but Outlines, so the default
  *   keeps the common case quiet. Read via `artKindFor` / `artBaseFor`, never
  *   directly, so the fallback lives in one place.
+ * @property {string[]} [modes] Which of `MODES` this variant offers. Absent
+ *   means all of them, which is every deck but Facts. Declared here rather than
+ *   decided at each call site, for the same reason `art` is: five places ask
+ *   the question and they must not disagree. Read via `availableModes`.
+ * @property {'country' | 'superlative'} [ask] What the prompt says. Absent means
+ *   'country' — the deck names a country and you pick its flag. Facts asks a
+ *   superlative instead ("Most forest cover?"), which is the first prompt on
+ *   this page that isn't a country name. Read via `askKindFor`.
  */
 
 /**
@@ -316,7 +324,48 @@ export const VARIANTS = {
     filter: (c) => isSovereignFlag(c) && CONTOUR_CODE_SET.has(c.code),
     art: 'contour',
   },
+  // Feature V Phase 4b. The superlative deck: "Most forest cover?" over four
+  // flags, the same question Flag Party's world-facts rounds ask, from the same
+  // catalog and the same round factory.
+  //
+  // `art` stays 'flag' — the choices ARE four flags. What's new is `ask`: the
+  // prompt is a criterion, not a country name.
+  //
+  // **60s-only, and this is the one deck where that's forced rather than
+  // chosen.** Every other deck has a finite pool you can play through, so `all`
+  // means something. Facts has nothing to exhaust: each question draws a fresh
+  // metric and a fresh quartet, so an endurance run would never end. This is the
+  // rule Phases 2 and 3 deferred to here, and `modes` is where it lands.
+  //
+  // **The pool is sovereign, and that is load-bearing, not a default.** Four
+  // metrics carry a real 0 for uninhabited territories (population, density,
+  // gdp, gdpPerCapita — Bouvet, Clipperton, Heard & McDonald, Antarctica, …).
+  // They are deliberately NOT zero-filtered, because a 0 there is true. Widen
+  // this pool and "Least populous?" can correctly answer Bouvet Island, which is
+  // an unanswerable question wearing a correct answer. Flag Party avoids it by
+  // dealing `poolId: 'sovereign'`; this is the same choice, made explicitly.
+  facts: {
+    label: 'Facts',
+    filter: isSovereignFlag,
+    modes: ['60s'],
+    ask: 'superlative',
+  },
 };
+
+/**
+ * What a variant's prompt asks: 'country' (name a country, pick its flag) or
+ * 'superlative' (name a criterion, pick the country at the extreme).
+ *
+ * Unknown variants fall back to 'country', so a stale `?v=` renders the ordinary
+ * question rather than reaching for a metric it has no round for.
+ *
+ * @param {string} variantKey
+ * @returns {string}
+ */
+export function askKindFor(variantKey) {
+  const v = VARIANTS[variantKey];
+  return (v && v.ask) ? v.ask : 'country';
+}
 
 /**
  * What a variant's choice tiles are made of: 'flag' (every deck but one) or
@@ -511,11 +560,29 @@ export function mistakesAfterGiveUp({ modeKey, target, answeredCount, wrongCount
 }
 
 /**
+ * The modes a variant offers, in MODES order.
+ *
+ * `variantKey` is what Phases 2 and 3 kept deferring: until Facts, every deck
+ * had a finite pool, so "can I play through it?" was answerable from the pool
+ * size alone and the argument would have been dead weight. Facts is the one deck
+ * with nothing to exhaust — each question draws a fresh metric and quartet — so
+ * `all` would never end, and the rule needs to know *which* deck it's asked
+ * about. The variant declares it (`VARIANTS.facts.modes`) rather than this
+ * function knowing deck names, so the next such deck is a data change.
+ *
+ * An unknown variant offers every mode: a stale `?v=` is already going to fall
+ * back elsewhere, and silently narrowing its modes would be a second surprise.
+ *
  * @param {number} poolSize
+ * @param {string} [variantKey] omit only where no variant is in play; every real
+ *   call site has one.
  * @returns {string[]}
  */
-export function availableModes(poolSize) {
+export function availableModes(poolSize, variantKey) {
+  const variant = variantKey === undefined ? undefined : VARIANTS[variantKey];
+  const offered = variant && variant.modes;
   return Object.keys(MODES).filter((m) => {
+    if (offered && !offered.includes(m)) return false;
     const def = MODES[m];
     if (def.kind === 'timed') return true;
     return def.count === Infinity || def.count <= poolSize;
@@ -524,10 +591,11 @@ export function availableModes(poolSize) {
 
 /**
  * @param {number} poolSize
+ * @param {string} [variantKey]
  * @returns {string | null}
  */
-export function defaultModeFor(poolSize) {
-  return availableModes(poolSize)[0] ?? null;
+export function defaultModeFor(poolSize, variantKey) {
+  return availableModes(poolSize, variantKey)[0] ?? null;
 }
 
 /**
@@ -546,11 +614,12 @@ export function defaultModeFor(poolSize) {
  *
  * @param {string | null} urlMode
  * @param {number} poolSize
+ * @param {string} [variantKey]
  * @returns {string | null}
  */
-export function resolveMode(urlMode, poolSize) {
-  if (urlMode && availableModes(poolSize).includes(urlMode)) return urlMode;
-  return defaultModeFor(poolSize);
+export function resolveMode(urlMode, poolSize, variantKey) {
+  if (urlMode && availableModes(poolSize, variantKey).includes(urlMode)) return urlMode;
+  return defaultModeFor(poolSize, variantKey);
 }
 
 /**

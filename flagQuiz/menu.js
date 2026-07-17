@@ -28,8 +28,8 @@ function poolOf(all, key) {
  */
 function modeForLink(all, key, current) {
   const size = poolOf(all, key).length;
-  if (current && availableModes(size).includes(current)) return current;
-  return defaultModeFor(size);
+  if (current && availableModes(size, key).includes(current)) return current;
+  return defaultModeFor(size, key);
 }
 
 /** Small uppercase group caption. @param {string} key @param {string} fallback */

@@ -347,6 +347,28 @@ body {
   margin: 0 0 24px;
   text-align: center;
 }
+/* Facts deck: the prompt is a superlative criterion ("Most forest cover?") led
+ * by the metric's icon, tinted with the metric's hue. Mirrors flagParty's
+ * `.prompt.superlative` (the in-round criterion line) so the two surfaces read
+ * identically; the icon + hue themselves come from the shared `metricVisuals`
+ * (`metricIconSpan` + `--mc` set inline from `METRIC_HUES`), the single source
+ * both features key off. `--mc` is the per-metric hue, a sanctioned palette
+ * exception documented there, not one of the eight tokens. */
+.country-name.superlative {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.country-name.superlative .facts-prompt-ic {
+  display: inline-flex;
+  color: var(--mc);
+}
+.country-name.superlative .facts-prompt-ic svg {
+  width: 22px;
+  height: 22px;
+}
 /* The game + result panels take the body's content width up to 720px. This is
  * the room the map grows INTO: by default the map opens at the answer-grid
  * width (below), matching the flags; on desktop the corner handle can enlarge
