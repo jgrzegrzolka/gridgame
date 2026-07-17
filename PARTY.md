@@ -962,6 +962,19 @@ it carries no gameplay advantage). Once per break (its own token guards render()
   settled break showing B risen to #1 (75) and A dropped to #2 (45, "30 behind"), no arrows. 0
   party-code console errors.
 
+### Fix: a watcher saw their old hand — BUILT on `fix/party-stale-pick-hand` (pending PR)
+
+Jan (draft, 3+ blocks): a player who picked an earlier block kept **seeing that block's card hand**
+while watching someone else pick the next block. Root cause was the exact `.party section[hidden]`
+trap: `.pick-hand { display: flex }` outweighs the UA `[hidden] { display: none }`, so `renderPick`
+setting `pickHand.hidden = true` on the watcher didn't actually hide it — and its cards aren't
+cleared between picks, so the picker's own old hand stayed on screen under the "X is choosing" panel.
+Fix is one CSS line mirroring the section precedent: `.pick-hand[hidden], .pick-watch[hidden],
+.break-mvp[hidden], .blockcard-pick[hidden] { display: none }` (the last two share the trap but were
+masked by having their content cleared; spelled out so a future change can't resurface it). Client
+CSS only. Reproduced + fixed with two real clients: at the second pick the watcher's `#pick-hand`
+still holds 10 stale cards but now computes `display:none`, and only the watch panel shows.
+
 ## Open decisions (settle as they come up, not now)
 
 - **Settings page — SHIPPED (#765).** The host game-setup panel in the lobby picks which modes
