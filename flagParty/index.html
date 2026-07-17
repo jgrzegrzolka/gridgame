@@ -142,6 +142,19 @@
         </div>
       </section>
 
+      <!-- Block title card: a short beat announcing the next block (2..N) before
+           its first round begins -->
+      <section class="pt-blockcard" id="pt-blockcard" hidden>
+        <div class="blockcard">
+          <span class="blockcard-count" id="blockcard-count"></span>
+          <span class="blockcard-ic" id="blockcard-ic" aria-hidden="true"></span>
+          <span class="blockcard-name" id="blockcard-name"></span>
+          <span class="blockcard-rounds" id="blockcard-rounds"></span>
+          <span class="blockcard-pick" id="blockcard-pick" hidden></span>
+          <span class="blockcard-double" id="blockcard-double" hidden></span>
+        </div>
+      </section>
+
       <!-- Draft pick: one player chooses the next block from a hand of cards -->
       <section class="pt-pick" id="pt-pick" hidden>
         <div class="round-pill" id="pick-pill"></div>

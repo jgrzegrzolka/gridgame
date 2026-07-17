@@ -646,6 +646,8 @@
     "isChoosing": "{name} wybiera…",
     "aPlayer": "Gracz",
     "blockPick": "wybór: {name}",
+    "blockCardCount": "Blok {n} z {total}",
+    "blockCardRounds": "Rund: {n}",
     "doublePoints": "Podwójne punkty",
     "hintFlag": "Która flaga?",
     "hintMap": "Który kształt?",

@@ -589,6 +589,53 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   text-transform: uppercase;
 }
 
+/* ---- block title card: the beat that announces block 2..N before its first
+   round (a big-card counterpart to the round pill's "X's pick" attribution). The
+   metric hue on the icon is the same confined-to-setup colour exception the draft
+   cards and setup chips use — it never reaches a gameplay tile. */
+.pt-blockcard { align-items: center; justify-content: center; min-height: 320px; }
+.blockcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--muted-soft-color);
+  background: var(--surface-color);
+  text-align: center;
+  width: 100%;
+  max-width: 320px;
+}
+.blockcard-count { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-color); }
+.blockcard-ic { width: 72px; height: 72px; display: grid; place-items: center; color: var(--mc, var(--primary-color)); margin: 2px 0; }
+.blockcard-ic svg { width: 60px; height: 60px; display: block; }
+.blockcard-thumb { width: 68px; height: 46px; object-fit: contain; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.blockcard-contour { width: 64px; height: 64px; object-fit: contain; }
+.blockcard-name { font-size: 22px; font-weight: 700; color: var(--primary-color); line-height: 1.2; }
+.blockcard-rounds { font-size: 14px; color: var(--muted-color); }
+.blockcard-pick { display: inline-flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--primary-color); }
+.blockcard-pick .avatar { width: 26px; height: 26px; border-radius: 6px; }
+.blockcard-double {
+  margin-top: 2px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--secondary-color);
+  color: var(--surface-color);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+/* The card fades + rises in when its block starts; static for reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .blockcard { animation: blockcard-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+}
+@keyframes blockcard-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
 /* Finish-screen choreography — the scoreboard cascades in bottom-to-top so the
    winner's row lands last (with a small victory bounce), then the sole winner
    (`.champion`) settles into a slow breathe + pink glow that keeps first place

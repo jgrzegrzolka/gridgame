@@ -93,6 +93,22 @@ export function isBlockEnd(plan, index) {
 }
 
 /**
+ * Whether a 0-based round is the **first round of a block after the opener** —
+ * the beat where the client announces the new block with its title card. True
+ * for block 2..N's first round, false for the game's opening block (round 0,
+ * which starts play rather than announcing a switch) and for every mid-block
+ * round. Keyed on index + total (like {@link isBlockBoundary}) so the client can
+ * call it from a question alone. Fires exactly `blockCount - 1` times per game,
+ * the mirror of {@link isBlockBoundary}.
+ * @param {number} index
+ * @param {number} total  the game's total round count
+ * @returns {boolean}
+ */
+export function isBlockStart(index, total) {
+  return index > 0 && index < total && index % BLOCK_ROUNDS === 0;
+}
+
+/**
  * Whether a 0-based round falls in the game's **final block** — the block that
  * decides the game, which scores double and is always played tricky. Keyed on the
  * round index and total (like {@link isBlockBoundary}), so the client can call it

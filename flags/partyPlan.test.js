@@ -19,6 +19,7 @@ import {
   blockCount,
   isBlockEnd,
   isBlockBoundary,
+  isBlockStart,
   isFinalBlock,
 } from './partyPlan.js';
 
@@ -269,6 +270,30 @@ test('isBlockBoundary: keyed on index + total, matches isBlockEnd for a plan', (
   assert.equal(isBlockBoundary(4, 15), true);
   assert.equal(isBlockBoundary(9, 15), true);
   assert.equal(isBlockBoundary(14, 15), false);
+});
+
+test('isBlockStart: true on the first round of block 2..N, never the opener', () => {
+  // 15 rounds = 3 blocks; block starts are the first round of blocks 2 and 3.
+  const starts = [];
+  for (let i = 0; i < 15; i++) if (isBlockStart(i, 15)) starts.push(i);
+  assert.deepEqual(starts, [5, 10]);
+  // the opening block's first round (0) is play-start, not an announced switch
+  assert.equal(isBlockStart(0, 15), false);
+  // mid-block rounds are never starts
+  assert.equal(isBlockStart(6, 15), false);
+});
+
+test('isBlockStart fires exactly blockCount - 1 times, mirroring isBlockBoundary', () => {
+  for (const total of [5, 10, 15, 20, 25]) {
+    let starts = 0;
+    for (let i = 0; i < total; i++) if (isBlockStart(i, total)) starts++;
+    assert.equal(starts, Math.ceil(total / 5) - 1, `total ${total}`);
+  }
+});
+
+test('isBlockStart: a single-block game never announces a block', () => {
+  assert.equal(isBlockStart(0, 5), false);
+  for (let i = 0; i < 5; i++) assert.equal(isBlockStart(i, 5), false, `round ${i}`);
 });
 
 test('isFinalBlock: true only for rounds in the last block', () => {

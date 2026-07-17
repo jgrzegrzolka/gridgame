@@ -646,6 +646,8 @@
     "isChoosing": "{name} is choosing…",
     "aPlayer": "A player",
     "blockPick": "{name}'s pick",
+    "blockCardCount": "Block {n} of {total}",
+    "blockCardRounds": "{n} rounds",
     "doublePoints": "Double points",
     "hintFlag": "Which flag?",
     "hintMap": "Which outline?",

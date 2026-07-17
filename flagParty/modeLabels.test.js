@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { PICTURE_MODES, METRIC_MODES } from '../flags/partyPlan.js';
 import { METRIC_SHORT } from '../flags/metricVisuals.js';
-import { modeShortLabel, modeFullLabel } from './page.js';
+import { modeShortLabel, modeFullLabel, blockModeId } from './page.js';
 
 // Every mode the lobby can render — the two fixed picture modes plus every
 // metric superlative mode. `buildSetup` labels each of these, so each MUST
@@ -47,4 +47,34 @@ test('population mode (id superlative-pop / roundId superlative) resolves the po
     key: METRIC_SHORT.population.key,
     fallback: METRIC_SHORT.population.fallback,
   });
+});
+
+// The block title card (isBlockStart) resolves which mode to announce from what
+// the client knows: a draft pick names the mode precisely, a custom block falls
+// back to the round id, and the two flag pools (which share one round id) can
+// only be announced generically without a pick.
+test('blockModeId: a draft pick names the exact mode, over the round id', () => {
+  // A picked stat block: the specific metric, not the generic superlative.
+  assert.equal(blockModeId({ picker: 'p1', modeId: 'superlative-coffee' }, 'superlative-coffee'), 'superlative-coffee');
+  // A picked flag block: the pool the pick chose, which the round id can't reveal.
+  assert.equal(blockModeId({ picker: 'p1', modeId: 'flags-territories' }, 'flagPick'), 'flags-territories');
+  assert.equal(blockModeId({ picker: 'p1', modeId: 'flags-all' }, 'flagPick'), 'flags-all');
+});
+
+test('blockModeId: a custom block derives the mode from the round id', () => {
+  assert.equal(blockModeId(null, 'mapPick'), 'map-outlines');
+  assert.equal(blockModeId(null, 'superlative-coffee'), 'superlative-coffee');
+  // population's legacy round id (`superlative`) maps back to its mode id.
+  assert.equal(blockModeId(null, 'superlative'), 'superlative-pop');
+});
+
+test('blockModeId: an unpicked flag block is generic (the two pools share one round id)', () => {
+  assert.equal(blockModeId(null, 'flagPick'), null);
+});
+
+test('blockModeId: an unknown / missing round id is generic', () => {
+  assert.equal(blockModeId(null, 'someFutureRound'), null);
+  assert.equal(blockModeId(null, undefined), null);
+  // a stale pick whose mode id isn't in the catalog falls through to the round id
+  assert.equal(blockModeId({ picker: 'p1', modeId: 'gone' }, 'mapPick'), 'map-outlines');
 });

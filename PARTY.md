@@ -150,18 +150,17 @@ is proven and the free rounds are in.
 
 ## Now
 
-**Iteration 8 (blocks) is SHIPPED (#950, on `main`). Iteration 9 (the draft) is BUILT on
-`feat/party-draft`**, verified end-to-end in-browser, pending a PR + Jan's merge.
-
-The next thing after Iteration 9 merges is the **deferred final-block polish** (double points +
-always-tricky on the last block) — a small scoring/veil slice on top of the draft, see its entry.
+**Iterations 8 (blocks, #950) and 9 (the draft, #951) are SHIPPED on `main`**, along with the
+final-block polish (#952) and the pick-screen polish (#953). The **block title card** (the deferred
+"full next-block card") is **BUILT on `feat/party-block-title-card`**, verified end-to-end in-browser
+(both the drafted and the custom paths), pending a PR + Jan's merge — see its entry below.
 
 Shipped and on `main`: the show engine, three round types (flag-pick, map, superlative), the clock,
-tricky mode + its configurable reveal timing, the host game-setup panel, the grouped setup, and
-**Iteration 8's blocks + the standings break** (per-statistic blocks, on/off setup, the between-blocks
-break with MVP + rank deltas).
+tricky mode + its configurable reveal timing, the host game-setup panel, the grouped setup, the
+blocks + standings break (#950), the draft (#951), the double-points/always-tricky final block (#952),
+and the pick-screen polish (#953).
 
-Still open after 8 and 9:
+Still open:
 
 - **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
 - Loose ends under **Open decisions** (QR in the lobby, max-seat cap).
@@ -892,12 +891,42 @@ Three follow-ups on the shipped draft + finale, from Jan playing it:
   that force-picks *only* a truly absent picker so the room can't hang; a present player picks long
   before it, with no clock on screen.
 
-**Still deferred:**
-- **The full "next block" title card** (a big card, not just the pill attribution). The client has
-  what it needs (`lastPick`), so this is pure presentation whenever it's wanted.
-
 Still deferred (unchanged): the TV / Display surface; preset packs (probably dead — Draft supersedes,
 see Iteration 7's note); per-player hint tokens and double-down, parked with scoring.
+
+### The block title card — BUILT on `feat/party-block-title-card` (pending PR)
+
+The deferred "full next-block title card" (a big card, not just the round pill's "X's pick"). A short
+**intro beat** (2 s) that plays before the first round of **every block 2..N** (Draft and Custom
+both — Jan's call), announcing the block: "Block 2 of 3", the mode's icon, its full name, "5 rounds",
+who picked it (Draft only), and a "Double points" badge on the final block. The opening block (round 1)
+starts play straight away — a card there would just delay the game, and it's always Flags anyway.
+
+**The shape: pure presentation, no server / room / wire touch.** The client already learns the block's
+mode from what it holds — `lastPick.modeId` on a drafted block (precise: the exact stat, the exact flag
+pool) or the question's `roundId` on a custom block. The one gap is the two flag pools sharing
+`roundId: 'flagPick'`, so an *un-picked* flag block is announced generically ("Flags"); every other case
+is precise. The beat is a **client-side hold**: the question is already dealt, but the card shows first
+and the round + clock + veil start only when the beat ends, so it costs no answer time. Because every
+client (host included) holds the same beat, it introduces no clock drift (the host's authoritative
+reveal clock simply starts after the card, like everyone else's).
+
+- `flags/partyPlan.js` — `isBlockStart(index, total)` (first round of block 2..N; mirror of
+  `isBlockBoundary`) (+ tested).
+- `flags/partyTiming.js` — `BLOCK_INTRO_SECONDS = 2` (the beat).
+- `flagParty/page.js` — exported `blockModeId(lastPick, roundId)` (which mode to announce; pinned in
+  `modeLabels.test.js`); the `#pt-blockcard` render + the `armBlockIntro` hold that gates the round
+  behind the beat, re-armed once per block-start.
+- `flagParty/index.html` + `index.css` — the `#pt-blockcard` section + card styles (palette vars;
+  metric hue on the icon is the same confined-to-setup exception the draft cards use), a fade+rise
+  entrance gated on `prefers-reduced-motion`.
+- `i18n/en.json` + `pl.json` — `party.blockCardCount`, `party.blockCardRounds` (en + pl, no em dashes;
+  reuses `party.blockPick` / `party.doublePoints`).
+- `npm run validate` green (2895 tests) + **end-to-end verified in-browser** (fresh-port serve): a solo
+  draft game showed the card at block 2 with the picked mode (metric label + its hue on the icon; then
+  the contour icon on a Map pick), the picker attribution, and the "Double points" badge (block 2/2 is
+  final); a 3-block Custom game showed the card at block 2 with the roundId-derived mode, **no** picker
+  attribution, and **no** double badge (block 2/3 isn't final). 0 party-code console errors.
 
 ## Open decisions (settle as they come up, not now)
 
