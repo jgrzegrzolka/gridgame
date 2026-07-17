@@ -382,12 +382,28 @@ export function superlativeMetricByKey(key) {
 /**
  * The criterion label to show for a question's direction.
  *
- * Falls back to `hintMost` when a 'least' question somehow reaches a
- * direction-locked metric. That can't happen — the same `direction` field locks
- * generation — but the two are only linked by this table being right, and a
- * missing label used to mean reading `.key` off undefined, i.e. a crash that
- * takes the whole round down. A label that's merely wrong is strictly better
- * than a dead screen, and the drift test makes the case unreachable anyway.
+ * Falls back to `hintMost` when a 'least' question reaches a direction-locked
+ * metric, because reading `.key` off `undefined` used to take the whole round
+ * down.
+ *
+ * **This case is NOT unreachable, and an earlier draft of this comment wrongly
+ * said it was.** Within one build it is: the same `direction` field locks
+ * generation. But the server (PartyKit, Cloudflare) and the page (SWA) are
+ * separate deploys of this file — that skew is exactly why `flagParty/staleGuard.js`
+ * exists. Flip a metric from `'most'` to `null` (a one-word edit this table is
+ * designed to make easy) and during the skew window the server can deal 'least'
+ * while an open tab still has `hintLeast: null`. `staleGuard` will NOT catch it:
+ * the `roundId` is unchanged, only the direction is new.
+ *
+ * The fallback then shows the 'most' label over a 'least' question, which
+ * mis-scores silently. That is arguably worse than the crash it replaced, and it
+ * is the one spot where Phase 4b-i is not strictly behaviour-neutral. It is left
+ * as-is rather than fixed here because the honest fix is to make direction part
+ * of the staleness check (a new code path, not a neutral refactor).
+ *
+ * **So: flipping any metric's `direction` is a wire-visible change.** Ship the
+ * catalog side to both deploys before the server starts dealing the new
+ * direction, or accept one skew window of wrong labels.
  *
  * @param {SuperlativeMetric} metric
  * @param {'most' | 'least'} direction

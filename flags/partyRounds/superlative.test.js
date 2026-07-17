@@ -42,23 +42,43 @@ test('every catalog metric is built, and every built round is in the catalog', (
     assert.equal(typeof round.generate, 'function', `${m.key}: round cannot generate`);
     assert.equal(typeof round.isCorrect, 'function', `${m.key}: round cannot score`);
   }
-  // Every exported round OBJECT (i.e. all but population, which is flat) must be
-  // claimed by the catalog — data left behind after a metric is retired would
-  // otherwise keep dealing rounds nothing names.
-  const builtIds = exportedValues()
-    .filter((r) => r && typeof r === 'object' && typeof r.id === 'string')
-    .map((r) => r.id);
-  for (const roundId of builtIds) {
-    assert.ok(SUPERLATIVE_METRICS.some((m) => m.roundId === roundId),
-      `round "${roundId}" is built but no catalog entry claims it`);
-  }
-  assert.equal(new Set(builtIds).size, SUPERLATIVE_METRICS.length - 1, 'all but the flat population round');
 });
 
-/** This module's exports, as an opaque list: the checker sees a union of string
+// The one that matters, and the one my first attempt got wrong. `ROUNDS` is
+// built FROM the catalog, so any test that counts "built rounds" against
+// `SUPERLATIVE_METRICS.length` is tautological: retire a catalog entry and both
+// sides drop together while `export const honeyRound = ROUNDS.honey;` is left
+// behind as `undefined`. That is not a cosmetic leftover —
+// `party/partyGameServer.js:41` lists these exports BY NAME and reads `.id` off
+// each to build its registry, so an undefined one throws at module load and
+// EVERY Flag Party room dies, flag-pick and map-pick included.
+//
+// Verified by mutation: retiring honey from the catalog while leaving its export
+// dangling left this file green except for honey's own legacy per-metric test —
+// exactly the test a dev deletes when retiring a metric.
+test('every *Round export is a live round the catalog claims', () => {
+  const roundExports = exportedEntries().filter(([name]) => name.endsWith('Round'));
+  for (const [name, round] of roundExports) {
+    assert.ok(round,
+      `export "${name}" is undefined — its catalog entry is gone but the export was left behind. `
+      + 'party/partyGameServer.js reads .id off it and throws at import, killing every room.');
+    assert.equal(typeof round.id, 'string', `export "${name}" is not a round`);
+    assert.equal(typeof round.generate, 'function', `export "${name}" cannot generate`);
+    assert.ok(SUPERLATIVE_METRICS.some((m) => m.roundId === round.id),
+      `export "${name}" deals round "${round.id}" that no catalog entry claims`);
+  }
+  // All but population, which is exported flat rather than as a `<key>Round`.
+  assert.equal(roundExports.length, SUPERLATIVE_METRICS.length - 1,
+    'every catalog metric but population needs exactly one <key>Round export');
+});
+
+/** This module's exports, as opaque entries: the checker sees a union of string
  *  (the flat `id`), two functions, and 31 round objects, so probing `.id` needs
- *  the cast. @returns {any[]} */
-const exportedValues = () => /** @type {any[]} */ (Object.values(superlative));
+ *  the cast. @returns {[string, any][]} */
+const exportedEntries = () => /** @type {[string, any][]} */ (Object.entries(superlative));
+
+/** @returns {any[]} */
+const exportedValues = () => exportedEntries().map(([, v]) => v);
 
 /** The round for a catalog entry. The population round is exported FLAT (id /
  *  generate / isCorrect, the shape it shipped in before there was a second
@@ -158,7 +178,10 @@ test('every two-directional metric deals both directions', async () => {
     assert.equal(round.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most',
       `${m.key} is two-directional but never deals 'most'`);
   }
-  assert.equal(checked, 11, 'expected eleven two-directional metrics');
+  // A floor, not an exact count: the loop must not pass vacuously. Pinning the
+  // exact number would fail on every new two-directional metric, which teaches
+  // bumping the constant rather than reading the test.
+  assert.ok(checked >= 5, `expected several two-directional metrics, checked ${checked}`);
 });
 
 test('generate: four distinct options, answer among them, prompt is a direction', () => {

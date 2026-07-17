@@ -127,8 +127,14 @@ export const generate = ROUNDS.population.generate;
 export const isCorrect = ROUNDS.population.isCorrect;
 
 // The rest, one named export each — the shape `party/partyGameServer.js` lists
-// explicitly. Keeping these names is what lets the catalog land without a
-// PartyKit deploy (its server is on Cloudflare, its own workflow).
+// explicitly, reading `.id` off each to build its round registry. Keeping these
+// names is what lets the catalog land without editing that server at all.
+//
+// It does NOT avoid a PartyKit deploy: `deploy-partykit.yml` triggers on
+// `flags/partyRounds/**` because it tracks the server's whole import closure,
+// deliberately over-triggering ("a redundant deploy beats a silently stale
+// server"). So touching this file redeploys and restarts every Durable Object.
+// The rounds it deals are unchanged; the in-progress rooms it drops are not.
 export const areaRound = ROUNDS.area;
 export const densityRound = ROUNDS.density;
 export const gdpRound = ROUNDS.gdp;
