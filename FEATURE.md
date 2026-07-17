@@ -248,10 +248,49 @@ The play screen also ends up *lighter* than today, because `60s | all` vanishes 
 
 #### Phases (each = one branch off `main` + one PR; Jan merges)
 
-- [ ] **Phase 1 — scope toggle → `weird` deck.** Delete `isQuizIncludeAll` / `setQuizIncludeAll` / `buildScopeToggleLi` / the `gridgame.flagquiz.includeAll` key / `bestKey`'s `.all` branch / `flagsGamePool`'s `includeAll` arg at this call site. Add `weird` to `VARIANTS` — **a plain filter, no `type` field needed**, since it asks the same question ("which flag is X?") over a different pool. **Ships with an API change**: `api/src/lib/quizRecordKey.js`'s `CONFIG_KEY_RE` drops its `(sov|all)` segment, and `quizRecordConfigKey` drops the third part — client and API must deploy in lockstep. Needs a read-path migration for existing `.all`-suffixed personal bests. *Highest-risk phase; do it alone, while the only thing that can break is understood.*
+- [ ] **Phase 1 — scope toggle → `weird` deck.** Delete `isQuizIncludeAll` / `setQuizIncludeAll` / `buildScopeToggleLi` / the `gridgame.flagquiz.includeAll` key / `bestKey`'s `.all` branch / `flagsGamePool`'s `includeAll` arg at this call site. Add `weird` to `VARIANTS` — **a plain filter, no `type` field needed**, since it asks the same question ("which flag is X?") over a different pool. **The configKey shape changes, and that is the whole risk: see "Phase 1 in detail" below.** Ships as **three PRs (1a → 1b → 1c)**, not one. *Highest-risk phase; do it alone, while the only thing that can break is understood.*
 - [ ] **Phase 2 — delete the picker; add the indicator + the reactive burger.** *(Rewritten 2026-07-17; the old "make the label the door" version is dead.)* Remove `buildVariantPicker`, `#quiz-picker`, the `.picker-tile` CSS block, `flagQuiz/continents/*.svg`, and the `isFirstVisit` branch in `page.js`. **Keep `getQuizLastVariant`/`setQuizLastVariant`** — that's what makes a bare `flagQuiz/` resume your last deck. Then: (a) promote `SETUP_ICONS` + its `.gs-thumb` / `.gs-contour` sizing out of `flagParty/` into shared code, with Flag Party as a consumer; (b) add the single deck indicator to `.play-timer`, opening a `.color-count-side` / `.color-count-options` popover; (c) rebuild the burger as a four-`.pill` deck row plus a scope list that only renders under `flags`. `playModeEl` **keeps its existing job** and just says where you are. Pure UI, no data risk. **Fix the four icons' visual weight while you're in there** (a surface tile behind the contour + chart) rather than shipping the mismatch. Per the repo's UI-consistency rule this is one PR, not one per polish round.
 - [ ] **Phase 3 — Outlines.** `VARIANTS.outlines` with `filter: c => CONTOUR_CODE_SET.has(c.code)` and the first real `type` field, because the *renderer* changes (`flags/contours/<code>.svg` instead of `flags/svg/<code>.svg`). `availableModes()` grows a variant argument here.
 - [ ] **Phase 4 — Facts.** Read the landmine above first. Port `superlative.js`'s quartet logic (`GAP_RATIO = 1.25`, `drawFourDistinct`, the `lookalikesOf` guard) behind a browser-safe data path.
+
+#### Phase 1 in detail — the configKey change (researched 2026-07-17)
+
+The configKey goes from `"<variant>:<mode>:<sov|all>"` to `"<variant>:<mode>"`, and `weird` / `outlines` / `facts` join as ordinary variants. Jan's worry going in was *"we already has data in cosmos, so we would need to clear it"*. **Do not clear it.** The research says the data is nearly all fine and the real risk is elsewhere.
+
+**Why clearing would be wrong.** `quizRecords` is **one document per device** (`id` = deviceId). The configKey is **not** a document key, it is a map key *inside* `records`. Changing its shape orphans map entries, never documents. Clearing would delete every player's entire quiz history, including the 102 `:sov` entries whose meaning does not change at all (same 195 sovereign flags before and after).
+
+**Census (measured against prod 2026-07-17, read-only):**
+
+| | count | fate |
+|---|---|---|
+| `quizRecords` device docs | 48 | untouched |
+| record entries, total | 116 (all 3-part) | — |
+| … `:sov` entries | **102** | rename to 2-part; same pool, same meaning |
+| … `:all` entries | **14** | **drop** (Jan's call, 2026-07-17) |
+| lifetime attempts | 727 | preserved |
+| `dailyLeaderboards` live rows | 19 | **no action** |
+
+The 14 `:all` entries are thin: 4 devices hold `countries:60s:all`, the other 8 keys hold 1–2 each. **They are not migratable to `weird`.** They measured the 269-flag pool (sovereign + territories + orgs); `weird` is 54 non-sovereign flags. A score of 40 against 269 flags says nothing about a 54-flag deck, so renaming them would be a lie, and keeping them keeps inflating `quizBestScore60s` for those 4 devices.
+
+**`dailyLeaderboards` needs nothing.** configKey *is* in its partition key (`"<configKey>|<date>"`), but `defaultTtl` is **691200 (192 h, verified via `az cosmosdb sql container show`)**, so old-key partitions age out by themselves. Expect the board to look sparse for a few days after the flip while new-key rows accumulate; with 19 live rows across 4 configs that is a small loss. *(Note: `infra/operations.md` documented this TTL as `172_800` / 48 h. That was wrong and is corrected in the same PR as this writeup. The oldest live row is 188.7 h old, which only 192 h explains.)*
+
+**localStorage needs nothing either**, and the old entry's claim that it "needs a read-path migration" was wrong. `bestKey(v, m, false)` already returns `flagquiz.best.<variant>.<mode>` with **no** scope segment; dropping the `includeAll` param yields the identical string. Sovereign PBs survive untouched, `weird` gets a fresh `flagquiz.best.weird.60s`, and only `.all`-suffixed keys orphan as harmless dead bytes.
+
+**⚠️ The actual risk: five parsers split the configKey, and three fail *silently*.**
+
+| where | guard | if unfixed |
+|---|---|---|
+| `api/src/lib/quizRecordKey.js` — `CONFIG_KEY_RE` | `(sov\|all)` required | 400 `invalid_config_key`. **Loud**, the safe one. |
+| `api/src/lib/quizCompute.js:104` | `if (parts.length !== 3) continue` | **Every record skipped for every player.** `quizBestScore60s` → 0, `quizVariantsTouched60s` → 0, **earned achievements evaporate**. No error, no log. |
+| `api/src/lib/quizRecordKey.js` — `lowerWinsFromConfigKey` | `if (parts.length !== 3) return null` | Leaderboard write skipped for every new-shape key. Silent. |
+| `flags/syncHydrate.js` — `bestKeyFromConfigKey` | `if (parts.length !== 3) return null` | **Cross-device sync stops restoring quiz PBs.** Silent. |
+| `api/src/lib/syncMerge.js` — `inferLowerWins` | reads `parts[1]` only | **Survives unchanged** — mode stays at index 1. |
+
+That table, not the data, is why Phase 1 is three PRs.
+
+- [ ] **Phase 1a — make the read paths shape-tolerant. Ship this alone, first.** Teach all four guards to accept **2- or 3-part** keys (`quizCompute`, `lowerWinsFromConfigKey`, `bestKeyFromConfigKey`, and widen `CONFIG_KEY_RE` to `(:(sov|all))?`). **Zero behaviour change** — nothing writes 2-part keys yet. This disarms the badge trap before it can fire and covers the stale-client window: SWA ships client + API in one deploy, but a browser with cached JS keeps POSTing 3-part keys for a while, and those must keep working. Tests pin both shapes.
+- [ ] **Phase 1b — flip the client.** `quizRecordConfigKey` drops its third part; `bestKey` drops `includeAll`; delete the toggle and its storage key; add `weird` to `VARIANTS`. **`weird` / `outlines` / `facts` start recording for free** — `quizRecordKey.js` deliberately does not enumerate variants *"so we don't have to redeploy the API every time a new variant ships in the client"*. Only `sovPoolSizes` in `dailyMe.js` needs new entries, and only if the new decks should count toward `quiz60sClearedVariants` (see the achievements open call — the current lean is no).
+- [ ] **Phase 1c — backfill, once 1b has settled.** Rename 102 `:sov` entries to bare, **drop the 14 `:all`**, bump `v: 2`. Follow `infra/operations.md`'s migration policy; `scripts/backfill-quiz-v1.cjs` is the working template (pure `planRow()`, dry-run by default, idempotent, system fields stripped). 48 docs is a seconds-long run. Per the policy, do **not** set `backfilled: true`: no analytical field is being defaulted in, this is a key rename plus a delete.
 
 #### Open calls (small; settle when the phase starts)
 
