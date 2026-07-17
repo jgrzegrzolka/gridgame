@@ -894,13 +894,22 @@ Three follow-ups on the shipped draft + finale, from Jan playing it:
 Still deferred (unchanged): the TV / Display surface; preset packs (probably dead — Draft supersedes,
 see Iteration 7's note); per-player hint tokens and double-down, parked with scoring.
 
-### The block title card — BUILT on `feat/party-block-title-card` (pending PR)
+### The block title card — SHIPPED (#954), block-1 follow-up on `feat/party-block1-card2`
 
 The deferred "full next-block title card" (a big card, not just the round pill's "X's pick"). A short
-**intro beat** (2 s) that plays before the first round of **every block 2..N** (Draft and Custom
-both — Jan's call), announcing the block: "Block 2 of 3", the mode's icon, its full name, "5 rounds",
-who picked it (Draft only), and a "Double points" badge on the final block. The opening block (round 1)
-starts play straight away — a card there would just delay the game, and it's always Flags anyway.
+**intro beat** (2 s) that plays before the first round of **every block** (Draft and Custom both),
+announcing the block: "Block 2 of 3", the mode's icon, its full name, "5 rounds", who picked it (Draft
+only), and a "Double points" badge on the final block.
+
+**Follow-up (block 1 too, `feat/party-block1-card2`):** #954 shipped the card on blocks 2..N only; the
+opener went straight into round 1. Jan flagged a fairness gap — the host clicks Start and is already
+looking at the game while the other seats are mid-transition from the lobby, so the host meets round 1's
+first flag a beat sooner. The card on **block 1** doubles as the synchronized "get ready" beat: every
+seat (host included) holds the same 2 s card, and the round clock starts only after it, so the first
+question reveals to everyone at once. `isBlockStart` now returns true at round 0 (`index >= 0`), firing
+once per block instead of `blockCount - 1`; the render + `renderBlockCard` already handled the opener
+(no pick attribution, generic "Flags" label, not the final block). Verified in-browser: a fresh game
+opens on a "Block 1 of 2 · Flags · 5 rounds" card before round 1.
 
 **The shape: pure presentation, no server / room / wire touch.** The client already learns the block's
 mode from what it holds — `lastPick.modeId` on a drafted block (precise: the exact stat, the exact flag
@@ -911,8 +920,8 @@ and the round + clock + veil start only when the beat ends, so it costs no answe
 client (host included) holds the same beat, it introduces no clock drift (the host's authoritative
 reveal clock simply starts after the card, like everyone else's).
 
-- `flags/partyPlan.js` — `isBlockStart(index, total)` (first round of block 2..N; mirror of
-  `isBlockBoundary`) (+ tested).
+- `flags/partyPlan.js` — `isBlockStart(index, total)` (first round of every block, opener included;
+  sibling of `isBlockBoundary`) (+ tested).
 - `flags/partyTiming.js` — `BLOCK_INTRO_SECONDS = 2` (the beat).
 - `flagParty/page.js` — exported `blockModeId(lastPick, roundId)` (which mode to announce; pinned in
   `modeLabels.test.js`); the `#pt-blockcard` render + the `armBlockIntro` hold that gates the round
