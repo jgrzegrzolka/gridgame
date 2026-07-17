@@ -969,11 +969,18 @@ while watching someone else pick the next block. Root cause was the exact `.part
 trap: `.pick-hand { display: flex }` outweighs the UA `[hidden] { display: none }`, so `renderPick`
 setting `pickHand.hidden = true` on the watcher didn't actually hide it — and its cards aren't
 cleared between picks, so the picker's own old hand stayed on screen under the "X is choosing" panel.
-Fix is one CSS line mirroring the section precedent: `.pick-hand[hidden], .pick-watch[hidden],
-.break-mvp[hidden], .blockcard-pick[hidden] { display: none }` (the last two share the trap but were
-masked by having their content cleared; spelled out so a future change can't resurface it). Client
-CSS only. Reproduced + fixed with two real clients: at the second pick the watcher's `#pick-hand`
-still holds 10 stale cards but now computes `display:none`, and only the watch panel shows.
+Fix mirrors the section precedent — a `[hidden] { display: none }` guard for the affected class.
+Reproduced + fixed with two real clients: at the second pick the watcher's `#pick-hand` still holds 10
+stale cards but now computes `display:none`, and only the watch panel shows.
+
+**Swept the whole bug class, pinned by a test.** Rather than fix only `.pick-hand`, a new
+`flagParty/hiddenGuards.test.js` derives the invariant from source: every flagParty element with a
+bare-class flex display (index.css) that is toggled via `.hidden` (page.js) MUST have the guard. It
+found **six** — `.pick-hand`, `.pick-watch`, `.break-mvp`, `.blockcard-pick` (the pick screen), plus
+two genuine latent bugs it turned up: `.round-timer` (the countdown bar leaked into the reveal, which
+is meant to show no timer) and `.party-mode` (a guest in the lobby would see the host-only Draft /
+Custom doors). All six now guarded; the test fails if any future flex-and-hidden element misses its
+guard, so this can't bite a third time (after `.game-tile` in prod and this). Client CSS + test only.
 
 ## Open decisions (settle as they come up, not now)
 
