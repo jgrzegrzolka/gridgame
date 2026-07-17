@@ -14,7 +14,12 @@
  * seat survives: the room code is in the URL and the pid is persisted, so a
  * reload rejoins). These pure helpers decide when that reload is safe (once)
  * versus when we've already tried and must stop to avoid a reload loop.
+ *
+ * **Skew is not only about round ids.** A server can deal a round this build
+ * knows by id but in a shape it can't render — see {@link canRenderQuestion}.
  */
+
+import { superlativeMetricByRoundId, canLabelDirection } from '../flags/partyRounds/superlativeCatalog.js';
 
 /**
  * The round ids this build can actually render: the two fixed picture rounds
@@ -29,6 +34,46 @@
  */
 export function renderableRoundIds(superlativeRoundIds) {
   return new Set(['flagPick', 'mapPick', ...superlativeRoundIds]);
+}
+
+/**
+ * Can this build render the question the server actually dealt?
+ *
+ * Knowing the `roundId` was never the whole question, and treating it as if it
+ * were left a hole this guard was meant to cover. A superlative round's prompt
+ * is a DIRECTION, and the set of directions a metric is dealt in lives in the
+ * same catalog on both sides of a two-deploy split (PartyKit / SWA). Flip a
+ * metric's `direction` from `'most'` to `null` and the server deals 'least' on a
+ * round id every open tab already knows — the id check passes, and the page
+ * renders the 'most' label ("Largest coffee production") over a question whose
+ * answer is the *smallest* producer. Every player picks the biggest flag and is
+ * scored wrong, with nothing on screen suggesting anything is off.
+ *
+ * Silent mis-scoring is the worst outcome available here: worse than a crash,
+ * which is at least visible, and far worse than a reload. So a direction we have
+ * no copy for is treated exactly like an unknown round id — proof the server is
+ * ahead of us, routed to the same one-shot reload.
+ *
+ * Picture rounds (flag-pick, map-pick) carry a country code as their prompt, not
+ * a direction, so only the id matters for them.
+ *
+ * `roundId` is optional on the wire type, and a question without one is treated
+ * as unrenderable — matching what this call site already did (`Set.has(undefined)`
+ * is false), just said out loud now rather than resting on
+ * `tsconfig.ui.json` having `strictNullChecks` off.
+ *
+ * @param {{ roundId?: string, prompt: string } | null | undefined} question the
+ *   server's question; nullish means none dealt yet, which is not a skew signal.
+ * @param {Set<string>} knownRoundIds from {@link renderableRoundIds}
+ * @returns {boolean}
+ */
+export function canRenderQuestion(question, knownRoundIds) {
+  if (!question) return true;
+  const { roundId } = question;
+  if (!roundId || !knownRoundIds.has(roundId)) return false;
+  const metric = superlativeMetricByRoundId(roundId);
+  if (!metric) return true;
+  return canLabelDirection(metric, question.prompt === 'least' ? 'least' : 'most');
 }
 
 /**

@@ -13,7 +13,7 @@ import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByRoundId, hintFor } from '../flags/partyRounds/superlativeCatalog.js';
-import { renderableRoundIds, roundRenderAction } from './staleGuard.js';
+import { renderableRoundIds, roundRenderAction, canRenderQuestion } from './staleGuard.js';
 import { buildAvatar, shareUrl } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
@@ -979,11 +979,14 @@ export function bootFlagParty() {
     // Leaving (or not yet in) the final screen re-arms the one-shot celebration.
     if (state.phase !== 'final') finalCelebrated = false;
     if (state.phase === 'question' || state.phase === 'reveal') {
-      // A round id this build can't render means the server is a build ahead of
+      // A question this build can't render means the server is a build ahead of
       // us (its deploy landed while this tab stayed open). Reload onto the new
       // build once; the seat survives (room code in URL, pid persisted).
+      // `canRenderQuestion` judges the whole question, not just its round id — a
+      // known metric dealt in a direction we have no copy for is skew too, and
+      // rendering it anyway would mis-score silently.
       const q = state.question;
-      const action = q ? roundRenderAction(KNOWN_ROUND_IDS.has(q.roundId), updateReloadTried()) : 'render';
+      const action = roundRenderAction(canRenderQuestion(q, KNOWN_ROUND_IDS), updateReloadTried());
       if (action === 'reload') { markUpdateReload(); stopClock(); stopVeil(); window.location.reload(); return; }
       if (action === 'blocked') { stopClock(); stopVeil(); showSection('round'); renderUpdateNotice(); return; }
       clearUpdateReload();
